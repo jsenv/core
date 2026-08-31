@@ -120,7 +120,7 @@ const css = /* css */ `
      movement goes from a tab of this row to another one of its tabs (see
      markIndicatorTakesPart). */
   :root:is([data-navi-route-transition], [data-navi-route-travel])
-    .navi_nav:not([${BETWEEN_TABS_ATTRIBUTE}])
+    .navi_nav:not([data-nav-between-tabs])
     .navi_current_indicator {
     view-transition-name: none;
   }

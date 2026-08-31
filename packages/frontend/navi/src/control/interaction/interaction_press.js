@@ -133,13 +133,13 @@ import.meta.css = /* css */ `
   /* What a touch may do on an element that takes a swipe: the axis the swipe walks
      is taken, the other is left to the page — so a row is swiped sideways and the
      list still scrolls under the same finger. */
-  [${SWIPE_AXES_ATTRIBUTE}="x"] {
+  [data-swipe="x"] {
     touch-action: pan-y;
   }
-  [${SWIPE_AXES_ATTRIBUTE}="y"] {
+  [data-swipe="y"] {
     touch-action: pan-x;
   }
-  [${SWIPE_AXES_ATTRIBUTE}="xy"] {
+  [data-swipe="xy"] {
     touch-action: none;
   }
 
@@ -147,7 +147,7 @@ import.meta.css = /* css */ `
      a press held still, and does not always route that through an event that can be
      refused. Same reason as the drag sources in @jsenv/dom: it has to be true
      before the finger lands. */
-  [${LONGPRESS_ATTRIBUTE}] {
+  [data-longpress] {
     -webkit-touch-callout: none;
   }
 

@@ -10,7 +10,7 @@ import { Z_INDEX_EDITING } from "./z_indexes.js";
  *   inset 0 -1px 0 0 color;   // Bottom border
  */
 
-export const css = /* css */ `
+const css = /* css */ `
   .navi_table_root {
     position: relative;
     max-width: var(--table-max-width, none);
@@ -212,3 +212,9 @@ export const css = /* css */ `
     outline: 2px solid var(--editing-border-color);
   }
 `;
+// Called from the render of <Table>, never at module scope: a page without a
+// table must not carry this sheet, and a build that sees no caller drops the
+// css with the function.
+export const installTableCss = () => {
+  import.meta.css = css;
+};

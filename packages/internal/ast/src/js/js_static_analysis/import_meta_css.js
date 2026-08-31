@@ -22,8 +22,7 @@ export const analyzeImportMetaCssAssignment = (
     return;
   }
   // "const css = `...`; import.meta.css = css;" — the css is where the constant
-  // is declared. Resolved only for an assignment sitting at the top level of the
-  // module, where the name can only be the module's own constant.
+  // is declared, and that is where it is read and rewritten.
   const nodeHoldingContent =
     assignedNode.type === "Identifier"
       ? findModuleConstantValue(assignedNode.name, { ast, ancestors })
@@ -75,12 +74,8 @@ export const analyzeImportMetaCssAssignment = (
 };
 
 const findModuleConstantValue = (name, { ast, ancestors }) => {
-  const isTopLevelAssignment =
-    ancestors.length === 3 &&
-    ancestors[0].type === "Program" &&
-    ancestors[1].type === "ExpressionStatement";
-  if (!isTopLevelAssignment) {
-    // a name read from inside a function can be a local one
+  if (isShadowed(name, ancestors)) {
+    // the name stands for something declared closer than the module
     return null;
   }
   for (const node of ast.body) {
@@ -100,4 +95,104 @@ const findModuleConstantValue = (name, { ast, ancestors }) => {
     }
   }
   return null;
+};
+
+// Walks out from the assignment towards the module: a name declared on the way
+// is not the module constant, whatever the module declares under it.
+const isShadowed = (name, ancestors) => {
+  for (let i = ancestors.length - 1; i >= 0; i--) {
+    const node = ancestors[i];
+    if (node.type === "Program") {
+      return false;
+    }
+    if (
+      node.type === "FunctionDeclaration" ||
+      node.type === "FunctionExpression" ||
+      node.type === "ArrowFunctionExpression"
+    ) {
+      for (const param of node.params) {
+        if (patternDeclares(param, name)) {
+          return true;
+        }
+      }
+      continue;
+    }
+    if (node.type === "CatchClause") {
+      if (node.param && patternDeclares(node.param, name)) {
+        return true;
+      }
+      continue;
+    }
+    if (node.type === "BlockStatement" || node.type === "StaticBlock") {
+      if (bodyDeclares(node.body, name)) {
+        return true;
+      }
+      continue;
+    }
+    if (
+      node.type === "ForStatement" ||
+      node.type === "ForInStatement" ||
+      node.type === "ForOfStatement"
+    ) {
+      const init = node.init || node.left;
+      if (init && init.type === "VariableDeclaration") {
+        for (const declarator of init.declarations) {
+          if (patternDeclares(declarator.id, name)) {
+            return true;
+          }
+        }
+      }
+      continue;
+    }
+  }
+  return false;
+};
+
+const bodyDeclares = (body, name) => {
+  for (const node of body) {
+    if (node.type === "VariableDeclaration") {
+      for (const declarator of node.declarations) {
+        if (patternDeclares(declarator.id, name)) {
+          return true;
+        }
+      }
+      continue;
+    }
+    if (
+      (node.type === "FunctionDeclaration" ||
+        node.type === "ClassDeclaration") &&
+      node.id &&
+      node.id.name === name
+    ) {
+      return true;
+    }
+  }
+  return false;
+};
+
+const patternDeclares = (pattern, name) => {
+  if (!pattern) {
+    return false;
+  }
+  if (pattern.type === "Identifier") {
+    return pattern.name === name;
+  }
+  if (pattern.type === "AssignmentPattern") {
+    return patternDeclares(pattern.left, name);
+  }
+  if (pattern.type === "RestElement") {
+    return patternDeclares(pattern.argument, name);
+  }
+  if (pattern.type === "ArrayPattern") {
+    return pattern.elements.some((element) => patternDeclares(element, name));
+  }
+  if (pattern.type === "ObjectPattern") {
+    return pattern.properties.some((property) =>
+      patternDeclares(
+        property.type === "RestElement" ? property.argument : property.value,
+        name,
+      ),
+    );
+  }
+  return false;
 };

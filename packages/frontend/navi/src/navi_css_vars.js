@@ -7,7 +7,7 @@ import {
   visualViewportHeightSignal,
   visualViewportWidthSignal,
 } from "./layout/responsive.js";
-import { SAFE_AREA_CSS } from "./layout/safe_area.js";
+import "./layout/safe_area.js";
 // Side-effect import: turns the on-screen keyboard into something that
 // overlays the app instead of resizing the viewport, which is navi's default
 // (see that module for why, and safe_area.js's own
@@ -23,33 +23,6 @@ const computedStyle = getComputedStyle(button);
 const controlDefaultFontFamily = computedStyle.fontFamily;
 const controlDefaultFontSize = computedStyle.fontSize;
 document.body.removeChild(button);
-
-// The color keywords derived from the ink. Written once and declared on every
-// paper — :root, and each surface that is a new one (popup, callout) — so what
-// a container pinned for its own paper does not reach the surface. The -mix
-// ratios (see :root) are read where this is declared.
-const INK_DERIVED_COLOR_TOKENS_CSS = `
-  --navi-color-secondary: color-mix(
-    in srgb,
-    currentColor var(--navi-color-secondary-mix),
-    transparent
-  );
-  --navi-color-emphasis: color-mix(
-    in srgb,
-    currentColor var(--navi-color-emphasis-mix),
-    black
-  );
-  --navi-color-discrete: color-mix(
-    in srgb,
-    currentColor var(--navi-color-discrete-mix),
-    transparent
-  );
-  --navi-color-hint: color-mix(
-    in srgb,
-    currentColor var(--navi-color-hint-mix),
-    transparent
-  );
-`;
 
 const css = /* css */ `
   @layer navi {
@@ -294,7 +267,6 @@ const css = /* css */ `
       --navi-color-discrete-mix: 60%;
       --navi-color-hint-mix: 25%;
       --navi-color-primary: var(--navi-surface-text-color);
-      ${INK_DERIVED_COLOR_TOKENS_CSS}
 
       /* What a control shows while it holds nothing: the ::placeholder of an
          input, the empty value slot of a picker. One place for the whole app:
@@ -308,27 +280,52 @@ const css = /* css */ `
       --navi-placeholder-font-style: normal;
     }
 
-    /* A surface is a new paper: its color keywords are computed against the
-       ink it writes in, not the container's — the :root formulas again,
-       re-declared so a container's own value for one of them stops here. On
-       the element itself, so it beats that value whatever the layer; an app
-       that wants a surface to keep its container's ink says so on the
-       surface, unlayered, and wins in turn.
-       A popup writes in --navi-popup-color. */
+    /* A surface is a new paper: it writes in an ink of its own, and the
+       keywords below are computed against that ink rather than the
+       container's. A popup writes in --navi-popup-color. */
     .navi_popover,
     .navi_dialog {
       --navi-color-primary: var(--navi-popup-color);
-      ${INK_DERIVED_COLOR_TOKENS_CSS}
     }
     /* A callout writes in the UA's own ink: callout.js sets color: revert on
        a [popover] element, which the UA styles CanvasText. */
     .navi_callout {
       --navi-color-primary: CanvasText;
-      ${INK_DERIVED_COLOR_TOKENS_CSS}
+    }
+
+    /* The keywords derived from the ink, declared on every paper — :root, and
+       each surface that is a new one — so what a container pinned for its own
+       paper stops at the surface. The -mix ratios (see :root) are read where
+       this is declared, and each paper resolves currentColor as its own. On
+       the element itself, so a surface beats the container's value whatever
+       the layer; an app that wants a surface to keep its container's ink says
+       so on the surface, unlayered, and wins in turn. */
+    :root,
+    .navi_popover,
+    .navi_dialog,
+    .navi_callout {
+      --navi-color-secondary: color-mix(
+        in srgb,
+        currentColor var(--navi-color-secondary-mix),
+        transparent
+      );
+      --navi-color-emphasis: color-mix(
+        in srgb,
+        currentColor var(--navi-color-emphasis-mix),
+        black
+      );
+      --navi-color-discrete: color-mix(
+        in srgb,
+        currentColor var(--navi-color-discrete-mix),
+        transparent
+      );
+      --navi-color-hint: color-mix(
+        in srgb,
+        currentColor var(--navi-color-hint-mix),
+        transparent
+      );
     }
   }
-
-  ${SAFE_AREA_CSS}
 
   /* Hidden appearance */
   input[navi-visually-hidden],

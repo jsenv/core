@@ -31,7 +31,7 @@
  * docs/css_architecture.md.
  */
 
-export const SAFE_AREA_CSS = /* css */ `
+const SAFE_AREA_CSS = /* css */ `
   /* Declared as lengths so that they COMPUTE to one: an unregistered custom
      property keeps the calc() it was written as, and the sum below is then a
      string no one can read back. Reading it off the computed style — which a
@@ -161,3 +161,4 @@ export const SAFE_AREA_CSS = /* css */ `
     }
   }
 `;
+import.meta.css = SAFE_AREA_CSS;

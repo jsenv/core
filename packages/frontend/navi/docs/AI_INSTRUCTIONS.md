@@ -112,6 +112,9 @@ consistency across the app, not from any single call site.
   overrides, in that preference order), and what a popup inherits from the
   element that opened it: which tokens a surface takes back, the color
   keywords and their `-mix` ratios, and why a ratio is a `:root` knob only.
+  Read its first section before writing any `import.meta.css`: the build parses
+  that css, and a `${}` the build cannot read costs the whole stylesheet its
+  comments, its transpilation, its `url()` assets and its minification.
 - `docs/safe_area.md` — where the app is in the window and what covers it:
   the two inset families (`--navi-app-inset-*` for what is pinned to an edge,
   `--navi-safe-area-inset-*` for what flows inside), how an app declares itself

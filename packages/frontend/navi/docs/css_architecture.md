@@ -10,6 +10,224 @@ Navi components are styled through a combination of CSS custom properties (varia
 
 ---
 
+## Where CSS lives: `import.meta.css`
+
+A navi component declares its stylesheet with `import.meta.css`, and the build
+**parses that css**. Everything below depends on it staying parseable.
+
+```js
+const css = /* css */ `
+  .navi_button {
+    height: var(--button-height);
+  }
+`;
+import.meta.css = css;
+```
+
+The `css` constant may be declared next to the assignment or anywhere in the same
+module — the build follows the name to where it is declared. What it cannot
+follow is a name coming from **another** module: `import.meta.css = importedCss`
+is read only when the constant belongs to the module doing the assignment.
+
+**Keep the assignment in a render, not at module scope.** A component's
+stylesheet is adopted when the component first renders, so a page that never
+renders it never carries it, and a bundler that sees no caller drops the css
+along with the code. `import.meta.css = css` at the top level of a module makes
+the sheet a module side effect: it lands on every page importing the module, for
+a component that may never appear, and nothing can shake it out.
+
+That is also how a stylesheet shared between components is written — a module of
+its own, exposing an install function its callers run from their render:
+
+```js
+// input_css.js
+const inputCss = /* css */ `
+  @layer navi {
+    .navi_input {
+      /* ... */
+    }
+  }
+`;
+// Keyed on this module, so the controls drawn as a .navi_input box share one
+// stylesheet instead of each carrying a copy.
+export const installInputCss = () => {
+  import.meta.css = inputCss;
+};
+```
+
+```js
+// textarea.jsx
+import { installInputCss } from "./input_css.js";
+
+export const Textarea = (props) => {
+  installInputCss();
+  import.meta.css = css; // this component's own css, and nothing else
+  // ...
+};
+```
+
+Note the setter is keyed by module: **two assignments in one module do not add
+up**, the second replaces the first. One `import.meta.css` per module — which is
+why the shared sheet has to live in a module of its own rather than be
+concatenated into the component's.
+
+The exception is a module that is a side effect by design — `navi_css_vars.js`
+and the sheets it pulls in are the app's tokens, always needed, and assign at
+module scope on purpose.
+
+### `${}` blinds the whole stylesheet
+
+A substitution the build cannot read makes the **entire** template opaque — not
+just the line it sits on — and everything below is lost for all of it:
+
+- **comments ship to production**, with every space and newline
+- **nothing is transpiled**: no nesting lowering, no prefixing, no fallback for
+  the browsers the app targets
+- **`url("./icon.svg")` is never seen**: the file is not part of the build, not
+  copied, not hashed, and the url resolves against the document instead of the
+  module — it 404s in production
+- **nothing is checked**: an unclosed brace or an invalid value reaches the
+  browser instead of failing the build
+- **nothing is minified**
+
+So a `${}` is not a small convenience: it opts a component's whole stylesheet
+out of the build. The one shape that survives is a substitution standing exactly
+**where a css value stands** — inside a rule block, after the `:` of a
+declaration, not in a string, not in `url()`, not in a selector, a property name
+or an at-rule prelude:
+
+```js
+// read, transformed, and the expression put back
+import.meta.css = /* css */ `
+  .panel {
+    transition: translate ${SETTLE_DURATION_MS}ms ease-out;
+  }
+`;
+```
+
+Anything else ships verbatim, silently. Do not rely on the distinction: write css
+without substitutions.
+
+### Writing css without `${}`
+
+**A value the JS knows → a custom property.** The css stays static, and the value
+changes without building a new stylesheet:
+
+```js
+// avoid
+const setPanelWidth = (width) => {
+  import.meta.css = `.panel { width: ${width}; }`;
+};
+
+// prefer
+import.meta.css = /* css */ `
+  .panel {
+    width: var(--panel-width, 300px);
+  }
+`;
+const setPanelWidth = (element, width) => {
+  element.style.setProperty("--panel-width", width);
+};
+```
+
+**An attribute or class name held in a JS constant → write it out in the css.**
+This is the most common way navi's own stylesheets used to go blind: a constant
+exists because JS sets the attribute, and the css then reads it through a
+substitution. Keep the constant for the JS side and write the selector literally
+— it is one string, and it buys back the whole stylesheet:
+
+```js
+const SWIPE_AXES_ATTRIBUTE = "data-swipe";
+
+// avoid
+import.meta.css = `[${SWIPE_AXES_ATTRIBUTE}="x"] { touch-action: pan-y; }`;
+
+// prefer
+import.meta.css = /* css */ `
+  [data-swipe="x"] {
+    touch-action: pan-y;
+  }
+`;
+element.setAttribute(SWIPE_AXES_ATTRIBUTE, "x");
+```
+
+**A selector you did not want to repeat → nesting.** Reaching into JS for a name
+to avoid typing a selector twice trades a whole stylesheet for a little
+repetition; `&` removes the repetition without leaving css:
+
+```js
+// prefer
+import.meta.css = /* css */ `
+  .navi_button {
+    color: black;
+    &[data-loading] {
+      opacity: 0.5;
+    }
+  }
+`;
+```
+
+**A variant → a data attribute, both branches written out.** A condition in JS
+picking a declaration hides the css; a condition picking an attribute does not:
+
+```js
+// avoid
+import.meta.css = `.badge { color: ${tone === "danger" ? "red" : "blue"}; }`;
+
+// prefer
+import.meta.css = /* css */ `
+  .badge {
+    color: blue;
+    &[data-tone="danger"] {
+      color: red;
+    }
+  }
+`;
+```
+
+**A block of declarations repeated in several rules → a selector list.** A css
+fragment held in a JS constant and interpolated into three rules is three blind
+stylesheets; the same declarations under one selector list are css:
+
+```js
+// prefer
+import.meta.css = /* css */ `
+  :root,
+  .navi_popover,
+  .navi_dialog {
+    --navi-color-hint: color-mix(
+      in srgb,
+      currentColor var(--navi-color-hint-mix),
+      transparent
+    );
+  }
+`;
+```
+
+**A whole stylesheet shared between modules → a module exposing an install
+function**, as shown at the top of this section.
+
+### Beware when moving a shared sheet out
+
+Splitting a chunk out of a template changes **cascade order**: the extracted
+sheet is adopted by the install call, which runs before the component's own
+assignment, so it now comes _before_ that sheet instead of after it. That matters only when the two carry
+the same selector at the same specificity and in the same layer — check for that
+before splitting. In navi, `popup_css.js` and `surface_text_css.js` overlap
+`.navi_dialog` and `.navi_popover` with dialog's and popover's own css, which is
+why they are still concatenated.
+
+### The build target has to match the css
+
+The css is transpiled for the runtimes the build targets, so a target older than
+what the css uses is silently lowered. `light-dark()` under a target below Chrome
+123 becomes `var(--lightningcss-light, …) var(--lightningcss-dark, …)`, an
+invalid declaration — the color is simply not applied. navi's own build targets
+Chrome 123 because navi's css uses `light-dark()`; an app targeting older
+browsers must not use css newer than its target.
+
+---
+
 ## Layer structure
 
 ```

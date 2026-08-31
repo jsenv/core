@@ -9,7 +9,7 @@ await build({
       buildRelativeUrl: "./jsenv_navi.js",
       mode: "package",
       runtimeCompat: {
-        chrome: "90",
+        chrome: "123",
       },
       ignore: {
         "file://**/node_modules/": true,

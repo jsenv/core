@@ -63,7 +63,7 @@
  * Registered as lengths for the same reason the safe area is (safe_area.js):
  * the band has to be readable in pixels at the moment a page leaves.
  */
-export const TRANSITION_WINDOW_CSS = /* css */ `
+const TRANSITION_WINDOW_CSS = /* css */ `
   @property --navi-transition-cover-top {
     syntax: "<length>";
     inherits: true;
@@ -94,6 +94,13 @@ export const TRANSITION_WINDOW_CSS = /* css */ `
     }
   }
 `;
+
+// Called from the render of whatever needs the window, never at module scope:
+// a page that never travels between routes must not carry this sheet, and a
+// build that sees no caller drops the css with the function.
+export const installTransitionWindowCss = () => {
+  import.meta.css = TRANSITION_WINDOW_CSS;
+};
 
 const WINDOW_TOP_PROPERTY = "--navi-transition-window-top";
 const WINDOW_LEFT_PROPERTY = "--navi-transition-window-left";

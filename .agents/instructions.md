@@ -240,27 +240,44 @@ element.setAttribute("data-tone", tone);
 versions it; built in JS it is on its own. When the url truly is dynamic, keep it out of
 the template and set it as a custom property, so at least the css around it stays readable.
 
-**A shared block of css → a `.css` file.** Composing a stylesheet out of css chunks held
-in JS constants (`${SHARED_TOKENS_CSS}`) blinds every template that pulls one in. A css
-file imported for its stylesheet is read, checked and transformed like any other:
+**A block of declarations repeated in several rules → a selector list.** A css fragment
+held in a JS constant and interpolated into three rules is three blind stylesheets; the
+same declarations under one selector list are css.
+
+**A whole stylesheet shared between modules → a module exposing an install function.**
+The build reads `import.meta.css = name` only when `name` is declared in the same module,
+so a shared sheet cannot be pulled in as an imported constant. Give it a module of its
+own — and call the install function from a render rather than assigning at module scope,
+so the sheet stays droppable:
 
 ```js
-// avoid
-import.meta.css = `
-  ${SHARED_TOKENS_CSS}
-  .panel { color: var(--ink); }
-`;
+// avoid — every consumer carries its own copy of the shared css, and none is readable
+import.meta.css = sharedCss + css;
 
-// prefer
-import sharedTokens from "./shared_tokens.css" with { type: "css" };
-
-document.adoptedStyleSheets = [...document.adoptedStyleSheets, sharedTokens];
-import.meta.css = `
-  .panel {
+// shared_css.js
+const sharedCss = /* css */ `
+  .shared {
     color: var(--ink);
   }
 `;
+export const installSharedCss = () => {
+  import.meta.css = sharedCss;
+};
+
+// consumer.jsx
+export const Consumer = (props) => {
+  installSharedCss();
+  import.meta.css = css;
+};
 ```
+
+Two things follow from the setter being keyed by module. **Two assignments in one module
+do not add up** — the second replaces the first, so a module has one stylesheet and a
+shared sheet needs a module of its own. And the sheet is adopted **when the assignment
+runs**: from a render, a page that never renders the component never carries it and a
+bundler that sees no caller drops the css with the code; at module scope, it lands on
+every page importing the module and nothing can shake it out. Assign at module scope only
+for a module that is a side effect by design — an app's tokens, say.
 
 ##### The one substitution the build can read
 

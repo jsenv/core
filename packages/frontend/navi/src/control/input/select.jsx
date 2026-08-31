@@ -28,6 +28,7 @@
  * whole point of using a select.
  */
 
+import { installInputCss } from "./input_css.js";
 import { useRef } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
@@ -36,7 +37,6 @@ import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.
 import { Icon } from "@jsenv/navi/src/text/text.jsx";
 import { useControlProps } from "../control_hooks.jsx";
 import {
-  inputCss,
   InputPseudoClasses,
   InputPseudoElements,
   InputStyleCSSVars,
@@ -95,7 +95,8 @@ const css = /* css */ `
  *   width of its widest option.
  */
 export const Select = ({ width, multiple, ...props }) => {
-  import.meta.css = inputCss + css;
+  installInputCss();
+  import.meta.css = css;
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
   seedDefaultValueFromSignal(props);

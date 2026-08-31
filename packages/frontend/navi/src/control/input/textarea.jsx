@@ -17,13 +17,13 @@
  * any Input.
  */
 
+import { installInputCss } from "./input_css.js";
 import { useLayoutEffect, useRef } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
 import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.jsx";
 import { ControlChildrenWrapper, useControlProps } from "../control_hooks.jsx";
 import {
-  inputCss,
   InputPseudoClasses,
   InputPseudoElements,
   InputStyleCSSVars,
@@ -135,7 +135,8 @@ export const Textarea = ({
   width = "35ch",
   ...props
 }) => {
-  import.meta.css = inputCss + css;
+  installInputCss();
+  import.meta.css = css;
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
   usePlaceholderHeight(props.ref, props.placeholder);

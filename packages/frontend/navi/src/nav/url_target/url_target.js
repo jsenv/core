@@ -48,7 +48,7 @@ const css = /* css */ `
     /* Layered whole: the mark is navi's suggestion for "here is what the URL
        pointed at", not something it needs. An app replaces it, or removes it
        with animation: none, from an unlayered rule of any weight. */
-    [${URL_TARGET_ATTRIBUTE}] {
+    [data-url-target] {
       animation: navi_url_target var(--navi-url-target-duration, 2000ms)
         ease-out;
     }

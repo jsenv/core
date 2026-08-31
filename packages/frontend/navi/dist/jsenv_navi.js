@@ -38,69 +38,17 @@ installImportMetaCssBuild(import.meta);/**
  * any of these, and a number is the last resort, not the first tool.
  */
 
-const css$15 = /* css */`
-  @layer navi {
-    :root {
-      /* A control that overlaps its neighbours (the members of a Group share
-         one border along each seam) and has to paint in front of them while
-         the user is on it: its border color change, then its focus ring, which
-         a neighbour painted later would otherwise slice in half. Focus above
-         hover, since a focused member can sit next to a hovered one. */
-      --navi-z-index-control-hovered: 1;
-      --navi-z-index-control-focused: 2;
-
-      /* A control the user is not on and yet still has to paint in front: one
-         holding something open (a picker showing its list, an expandable
-         header). Its border keeps the color the open state gives it, while
-         hover and focus have both moved on — into the popup, or onto whatever
-         the pointer travelled to next — so neither of the two values above is
-         there to raise it, and the neighbour painted after it cuts the very
-         border that says what is open. Above both: the member holding the
-         popup open outranks a member merely hovered or focused. */
-      --navi-z-index-control-expanded: 3;
-
-      /* Kept stuck while something scrolls under it: a list header, the head
-         and foot of a side panel, a table's sticky cells, the header and
-         footer of any scrolling Box. Above raised controls — a control
-         scrolling past must go under the header that pins the column it
-         belongs to, never over it.
-
-         A sticky element is a positioned one, so it already wins against
-         everything in the flow — the band is what it takes to also win against
-         what the page positioned itself, which loses to DOM order otherwise
-         (a sticky part is written before what scrolls under it). Box applies
-         it by default, isolated, and lets a call site write auto back:
-         --box-header-z-index / --box-footer-z-index. <Box sticky> gets it from
-         the prop itself, for the same reason and with the same way out (an
-         explicit zIndex, "auto" included).
-
-         "While stuck" is the condition the name states, and it costs something
-         to ignore: a sticky part at rest is a block in the flow with nothing
-         passing under it, and the band there is what slices whatever a
-         neighbouring row lets out of its box. CSS cannot express the
-         condition — an element cannot read its own stuck state — so it takes
-         measuring, which List does (it marks its parts with a navi-stuck
-         attribute against its own scroller and applies the band only there,
-         see --list-*-z-index in list.jsx) and Box does not: a generic
-         scrolling area does not know what it was given to scroll, and dropping
-         to auto there loses to a single position: relative. */
-      --navi-z-index-sticky: 10;
-
-      /* Pinned to the viewport, over the whole page: FixedBar. A decade of its
-         own and well above the sticky band, so that no sticky cell and no
-         hovered control can ever be seen crossing it. */
-      --navi-z-index-bar: 100;
-
-      /* Popups: Dialog/Popover with layer="local", their backdrop, and the
-         validation callouts. Above everything the page can produce, which is
-         the whole point of the gap — a popup never has to guess. Each opened
-         popup adds its stack order on top, so the last one opened wins.
-         Dialog/Popover with layer="top" use the browser top layer instead and
-         appear in no scale at all. */
-      --navi-z-index-popup: 1000;
-      --navi-z-index-callout: var(--navi-z-index-popup);
-    }
+const css$15 = /* css */`@layer navi {
+  :root {
+    --navi-z-index-control-hovered: 1;
+    --navi-z-index-control-focused: 2;
+    --navi-z-index-control-expanded: 3;
+    --navi-z-index-sticky: 10;
+    --navi-z-index-bar: 100;
+    --navi-z-index-popup: 1000;
+    --navi-z-index-callout: var(--navi-z-index-popup);
   }
+}
 `;
 import.meta.css = [css$15, "@jsenv/navi/src/navi_z_indexes.js"];
 
@@ -371,26 +319,23 @@ installImportMetaCssBuild(import.meta);/**
  * the very first render and the browser does everything on its own.
  */
 const URL_TARGET_ATTRIBUTE = "data-url-target";
-const css$14 = /* css */`
-  @layer navi {
-    /* Layered whole: the mark is navi's suggestion for "here is what the URL
-       pointed at", not something it needs. An app replaces it, or removes it
-       with animation: none, from an unlayered rule of any weight. */
-    [${URL_TARGET_ATTRIBUTE}] {
-      animation: navi_url_target var(--navi-url-target-duration, 2000ms)
+const css$14 = /* css */`@layer navi {
+  [data-url-target] {
+    animation: navi_url_target var(--navi-url-target-duration, 2s)
         ease-out;
+  }
+
+  @keyframes navi_url_target {
+    from {
+      box-shadow: 0 0 0 3px
+          var(--navi-url-target-color, light-dark(#4476ff, #3b82f6));
     }
 
-    @keyframes navi_url_target {
-      from {
-        box-shadow: 0 0 0 3px
-          var(--navi-url-target-color, light-dark(#4476ff, #3b82f6));
-      }
-      to {
-        box-shadow: 0 0 0 3px transparent;
-      }
+    to {
+      box-shadow: 0 0 0 3px #0000;
     }
   }
+}
 `;
 import.meta.css = [css$14, "@jsenv/navi/src/nav/url_target/url_target.js"];
 let urlTargetOptions = {
@@ -753,14 +698,13 @@ const useActionStatus = (action) => {
   };
 };
 
-installImportMetaCssBuild(import.meta);const css$13 = /* css */`
-  .action_error {
-    margin-top: 0;
-    margin-bottom: 20px;
-    padding: 20px;
-    background: #fdd;
-    border: 1px solid red;
-  }
+installImportMetaCssBuild(import.meta);const css$13 = /* css */`.action_error {
+  background: #fdd;
+  border: 1px solid red;
+  margin-top: 0;
+  margin-bottom: 20px;
+  padding: 20px;
+}
 `;
 const renderIdleDefault = () => null;
 const renderLoadingDefault = () => null;
@@ -5949,54 +5893,51 @@ installImportMetaCssBuild(import.meta);/**
  * (see calloutTemplate in callout.js).
  */
 
-const css$12 = /* css */`
-  .navi_callout_status_icon {
-    --x-callout-status-icon-color: var(--navi-callout-neutral-color);
+const css$12 = /* css */`.navi_callout_status_icon {
+  --x-callout-status-icon-color: var(--navi-callout-neutral-color);
+  box-sizing: border-box;
+  aspect-ratio: 1;
+  color: #fff;
+  vertical-align: middle;
+  background-color: var(--x-callout-status-icon-color);
+  border-radius: 2px;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 1em;
+  height: 1em;
+  display: inline-flex;
 
-    display: inline-flex;
-    box-sizing: border-box;
-    aspect-ratio: 1 / 1;
-    width: 1em;
-    height: 1em;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    vertical-align: middle;
-    background-color: var(--x-callout-status-icon-color);
-    border-radius: 2px;
-
-    &[data-status="success"] {
-      --x-callout-status-icon-color: var(--navi-callout-success-color);
-    }
-    &[data-status="info"] {
-      --x-callout-status-icon-color: var(--navi-callout-info-color);
-    }
-    &[data-status="warning"] {
-      --x-callout-status-icon-color: var(--navi-callout-warning-color);
-    }
-    &[data-status="error"] {
-      --x-callout-status-icon-color: var(--navi-callout-error-color);
-    }
-    &[data-shape="circle"] {
-      border-radius: 50%;
-    }
-
-    /* The svg takes the whole square and the glyph keeps its share of it
-       inside the viewBox (see CALLOUT_STATUS_GLYPH_VIEWBOX). Sized as a
-       fraction of the square instead, the svg box lands on a fractional
-       device pixel and the rasteriser snaps the glyph a pixel off centre —
-       visible on a small badge, where the glyph is only a few pixels wide. */
-    svg {
-      width: 100%;
-      height: 100%;
-    }
+  &[data-status="success"] {
+    --x-callout-status-icon-color: var(--navi-callout-success-color);
   }
-  /* Inside an <Icon>, the icon box is the size: fill it. */
-  .navi_icon > .navi_callout_status_icon {
+
+  &[data-status="info"] {
+    --x-callout-status-icon-color: var(--navi-callout-info-color);
+  }
+
+  &[data-status="warning"] {
+    --x-callout-status-icon-color: var(--navi-callout-warning-color);
+  }
+
+  &[data-status="error"] {
+    --x-callout-status-icon-color: var(--navi-callout-error-color);
+  }
+
+  &[data-shape="circle"] {
+    border-radius: 50%;
+  }
+
+  & svg {
     width: 100%;
     height: 100%;
   }
+}
+
+.navi_icon > .navi_callout_status_icon {
+  width: 100%;
+  height: 100%;
+}
 `;
 
 /**
@@ -10631,60 +10572,45 @@ const LONGPRESS_SLOP_ATTRIBUTE = "data-longpress-slop";
 // DOM at render time, for the CSS below and for the boxes above to read.
 const SWIPE_AXES_ATTRIBUTE = "data-swipe";
 const LONGPRESS_ATTRIBUTE = "data-longpress";
-import.meta.css = [/* css */`
-  /* Declared, so the browser sees a NUMBER it can interpolate and calculate with:
-     what a swipe reveals behind the element is drawn from this, and an undeclared
-     custom property only ever jumps from one value to the next. Both inherited,
-     because what is drawn from them is drawn by a CHILD of the swiped element:
-     the trail behind a row is inside the row, and a value that stopped at the
-     element itself would reach 0 exactly where it is read. */
-  @property --swipe-progress {
-    syntax: "<number>";
-    inherits: true;
-    initial-value: 0;
-  }
-  @property --swipe-pulled {
-    syntax: "<length>";
-    inherits: true;
-    initial-value: 0px;
-  }
+import.meta.css = [/* css */`@property --swipe-progress {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
 
-  /* What a touch may do on an element that takes a swipe: the axis the swipe walks
-     is taken, the other is left to the page — so a row is swiped sideways and the
-     list still scrolls under the same finger. */
-  [${SWIPE_AXES_ATTRIBUTE}="x"] {
-    touch-action: pan-y;
-  }
-  [${SWIPE_AXES_ATTRIBUTE}="y"] {
-    touch-action: pan-x;
-  }
-  [${SWIPE_AXES_ATTRIBUTE}="xy"] {
-    touch-action: none;
-  }
+@property --swipe-pulled {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0;
+}
 
-  /* iOS shows its callout (Copy / Look Up) and selects the word under the finger on
-     a press held still, and does not always route that through an event that can be
-     refused. Same reason as the drag sources in @jsenv/dom: it has to be true
-     before the finger lands. */
-  [${LONGPRESS_ATTRIBUTE}] {
-    -webkit-touch-callout: none;
-  }
+[data-swipe="x"] {
+  touch-action: pan-y;
+}
 
-  /* The element follows the finger. The translate property rather than a transform,
-     so whatever transform the element (or its theme) already has is left alone. */
-  [data-swiping="left"],
-  [data-swiping="right"] {
-    translate: var(--swipe-pulled) 0;
-  }
-  [data-swiping="up"],
-  [data-swiping="down"] {
-    translate: 0 var(--swipe-pulled);
-  }
-  /* No transition while the finger holds it — the element is where the hand put
-     it — and one when the hand lets go. */
-  [data-swipe-settling] {
-    transition: translate ${SETTLE_DURATION_MS}ms ease-out;
-  }
+[data-swipe="y"] {
+  touch-action: pan-x;
+}
+
+[data-swipe="xy"] {
+  touch-action: none;
+}
+
+[data-longpress] {
+  -webkit-touch-callout: none;
+}
+
+[data-swiping="left"], [data-swiping="right"] {
+  translate: var(--swipe-pulled) 0;
+}
+
+[data-swiping="up"], [data-swiping="down"] {
+  translate: 0 var(--swipe-pulled);
+}
+
+[data-swipe-settling] {
+  transition: translate ${SETTLE_DURATION_MS}ms ease-out;
+}
 `, "@jsenv/navi/src/control/interaction/interaction_press.js"];
 defineInteractionDetector({
   name: "press",
@@ -13349,14 +13275,6 @@ defineInteractionDetector({
     };
   },
 });
-
-const useRunOnMount = (action, Component) => {
-  useEffect(() => {
-    action.run({
-      reason: `<${Component.name} /> mounted`,
-    });
-  }, []);
-};
 
 const useArraySignalMembership = (...args) => {
   if (args.length < 2) {
@@ -17130,6 +17048,7 @@ const useForceRender = () => {
 const useAsyncData = (promiseOrAction, {
   loading = "delegate",
   error = "delegate",
+  run,
   onLoad
 } = {}) => {
   const isAction = Boolean(promiseOrAction && promiseOrAction.isAction);
@@ -17143,6 +17062,7 @@ const useAsyncData = (promiseOrAction, {
     return useActionAsyncData(promiseOrAction, {
       loadingEffect: loading,
       errorEffect: error,
+      run,
       onLoad
     });
   }
@@ -17161,6 +17081,7 @@ const dismissedActionPendingPromiseWeakMap = new WeakMap();
 const useActionAsyncData = (action, {
   loadingEffect,
   errorEffect,
+  run,
   onLoad
 }) => {
   const loadingRef = useContext(LoadingContext);
@@ -17168,6 +17089,25 @@ const useActionAsyncData = (action, {
     throw new Error("Missing <Loading>");
   }
   useOnLoad(action, onLoad);
+
+  // `run: true` — this component owns the request, so it is what starts it, and
+  // it starts it from the render rather than from an effect: a component that
+  // suspends has no effects, so a run written in one would be waiting for
+  // itself. Asking twice costs nothing — a running or completed action is a
+  // no-op — which is what makes starting it while rendering sound. From there
+  // the wait is the ordinary one: suspended into <Loading>, or drawn by the
+  // component under `loading: true`, exactly as for data someone else ran.
+  if (run && action.runningStateSignal.peek() === IDLE && action.paramsSignal.peek() !== undefined) {
+    const runResult = action.run({
+      reason: "useAsyncData({ run: true })"
+    });
+    // Nobody awaits this run, and a rejection nobody awaits is an unhandled
+    // one — in dev, an overlay over a component already saying what failed.
+    // The failure is held by the action, and this hook is what reads it.
+    if (runResult && typeof runResult.catch === "function") {
+      runResult.catch(() => {});
+    }
+  }
 
   // Use peek() instead of .value to avoid subscribing this component to the signal.
   // Reading .value would make Preact re-render the component reactively when the state
@@ -17204,7 +17144,10 @@ const useActionAsyncData = (action, {
       unsubscribeFromRunningState();
       unsubscribeFromData();
     };
-  }, []);
+    // Bound to the action, not to the mount: params given as a plain object
+    // make another action instance, and the component would otherwise stay
+    // subscribed to the state of the one it no longer reads.
+  }, [action]);
   if (runningState === COMPLETED) {
     return [action.dataSignal.peek(), false, undefined];
   }
@@ -20260,288 +20203,176 @@ installImportMetaCssBuild(import.meta);/**
  *    style can only be determined once the node is available.
  */
 const BoxForwardedPropsContext = createContext({});
-import.meta.css = [/* css */`
-  /* A scrolling area, and the three layout roles that live in one. Declared
-     here rather than in dialog.jsx/popover.jsx because it has nothing to do
-     with popups: anything that scrolls can want a title that stays put. Those
-     two just carry [data-scrollable] on their own root.
+import.meta.css = [/* css */`[data-scrollable] > .navi_loading_outline_wrapper, [data-scrollable] > * > .navi_loading_outline_wrapper {
+  --loading-outline-min-inset: 0px;
+}
 
-     Two shapes:
-     - header/footer alone: the container itself scrolls and they stick to its
-       edges;
-     - a body as well: the body is the only thing that scrolls, so the other two
-       simply sit outside it and need no stickiness at all.
+[data-drag-travel*="x"] [data-scrollable] {
+  overscroll-behavior-x: contain !important;
+}
 
-     Padding belongs on the parts, not on the scrolling box: padding on a
-     scroller sits INSIDE the scrollbars, so the content ends up centered
-     between them — and a control flush against the edge of a scrolling area
-     overflows it (a focus outline is drawn outside the control it belongs to)
-     and raises a scrollbar of its own. */
-  /* A control sitting right against the edge of what scrolls must keep its
-     loading outline within its own box: the outline is drawn a couple pixels
-     outside the control (see loading_outline.jsx), and that bleed alone is
-     enough to make the area scrollable — a scrollbar appearing and disappearing
-     as things load. Only what the scroller directly contains is against that
-     edge; anything nested deeper has room around it and keeps the outline it
-     asked for, hence the child combinators. Written on the outline itself
-     rather than on the control, because the var inherits: setting it on a
-     container would reach every control below it, edge or not. */
-  [data-scrollable] > .navi_loading_outline_wrapper,
-  [data-scrollable] > * > .navi_loading_outline_wrapper {
-    --loading-outline-min-inset: 0px;
+[data-drag-travel*="y"] [data-scrollable] {
+  overscroll-behavior-y: contain !important;
+}
+
+[data-scrollable] {
+  overflow: var(--x-scrollable-overflow, auto);
+  --box-header-z-index: var(--navi-z-index-sticky);
+  --box-footer-z-index: var(--navi-z-index-sticky);
+  isolation: isolate;
+
+  &[data-scrollable-overflow="scroll"] {
+    --x-scrollable-overflow: scroll;
   }
 
-  /* A scroller inside a box that TRAVELS keeps its leftovers to itself: what a
-     list has left of a gesture once it has reached its end must not reach the
-     page, or the page moves behind a travel that is already answering the same
-     finger. The rule belongs to @jsenv/dom's drag_to_travel — this is the part
-     of it only navi can write.
-
-     What a browser is asked, and where, is not the same everywhere: Blink asks
-     every scroll container between the pointer and the page, so containing the
-     travelling box answers for everything inside it; Gecko and WebKit ask only
-     the ones that actually scroll, so the box — which travels, it does not
-     scroll — is walked past and the SCROLLER itself has to be told. drag_to_
-     travel says it to everything inside the box for those two, and to the box
-     alone on Blink, where saying it to everything turns anything that clips
-     (an ellipsis, a rounded card, the invisible checkbox covering a selectable
-     row) into a dead zone under the wheel — a scroll container with nothing to
-     scroll, and Blink stops at it.
-
-     Which leaves, on Blink, a travelling box that does NOT clip: nothing is
-     asked, and the leftovers reach the page. RouteTravel is that box, and
-     cannot be made to clip — a scroll container there would become the nearest
-     one for every "position: sticky" inside the pages it holds.
-
-     So navi contains what it KNOWS scrolls. [data-scrollable] is worn by a Box
-     that ASKED for overflow auto/scroll (see below), never by one that merely
-     clips: containing it costs nothing on the engines where the rule above
-     already covers it, and on Blink it is what keeps a list inside a travelling
-     page from taking the page with it. What is left over is a scroller nobody
-     declared — a bare div with an overflow of its own, a textarea, a widget
-     from elsewhere: those still hand their leftovers up, on Blink, under a box
-     that does not clip. */
-  [data-drag-travel*="x"] [data-scrollable] {
-    overscroll-behavior-x: contain !important;
-  }
-  [data-drag-travel*="y"] [data-scrollable] {
-    overscroll-behavior-y: contain !important;
+  & > [data-header] {
+    z-index: var(--box-header-z-index);
+    border-bottom: 1px solid var(--navi-separator-color-default);
+    border-top-left-radius: inherit;
+    border-top-right-radius: inherit;
+    position: sticky;
+    top: 0;
   }
 
-  [data-scrollable] {
-    overflow: var(--x-scrollable-overflow, auto);
-    --box-header-z-index: var(--navi-z-index-sticky);
-    --box-footer-z-index: var(--navi-z-index-sticky);
-    /* The band stays inside this box: without a stacking context here, "in
-       front of my body" would be read as "in front of everything on the page"
-       and a header would reach past a bar or a popup — which is exactly what
-       the decades in navi_z_indexes.js are there to prevent. See
-       docs/z_index.md. */
-    isolation: isolate;
+  & > [data-footer] {
+    z-index: var(--box-footer-z-index);
+    border-top: 1px solid var(--navi-separator-color-default);
+    border-bottom-right-radius: inherit;
+    border-bottom-left-radius: inherit;
+    position: sticky;
+    bottom: 0;
+  }
 
-    &[data-scrollable-overflow="scroll"] {
-      --x-scrollable-overflow: scroll;
+  &:has( > [data-body]) {
+    --x-scrollable-overflow: hidden;
+    flex-direction: column;
+    display: flex;
+
+    & > [data-header], & > [data-footer] {
+      z-index: auto;
+      flex-shrink: 0;
+      position: static;
     }
 
-    /* A real border and not a box-shadow: a shadow is drawn outside the box, so
-       it lands on top of whatever comes next in the painting order and loses to
-       it — a body painting its own background over the line that was meant to
-       separate them. The border belongs to the part itself and is always
-       visible; the pixel it adds shifts nothing, these parts never shrink. */
-    /* The corners are the container's, not the part's: a header sitting at the
-       top of a rounded box has to follow that curve or it paints square over
-       it (a dark header in a rounded popup is where this shows). inherit and
-       not a value of its own, so whoever rounds the box rounds these too. */
-    > [data-header] {
-      position: sticky;
-      top: 0;
-      z-index: var(--box-header-z-index);
-      border-bottom: 1px solid var(--navi-separator-color-default);
+    & > [data-body] {
       border-top-left-radius: inherit;
       border-top-right-radius: inherit;
-    }
-    > [data-footer] {
-      position: sticky;
-      bottom: 0;
-      z-index: var(--box-footer-z-index);
-      border-top: 1px solid var(--navi-separator-color-default);
       border-bottom-right-radius: inherit;
       border-bottom-left-radius: inherit;
-    }
-
-    &:has(> [data-body]) {
-      /* A column, declared here rather than expected from the caller: the three
-         parts only make sense stacked, and the body needs a flex context to be
-         told "take what is left" below. */
-      display: flex;
-      flex-direction: column;
-      /* the body is the only thing that scrolls */
-      --x-scrollable-overflow: hidden;
-
-      > [data-header],
-      > [data-footer] {
-        /* Nothing scrolls under them here — the body does that, next to them —
-           so they are back to being blocks in the flow, and stacking is not
-           their business anymore. */
-        position: static;
-        z-index: auto;
-        flex-shrink: 0;
-      }
-
-      > [data-body] {
-        /* Shrinks when there is not enough room (and then scrolls), but never
-           grows: a short body leaves the footer right under it rather than
-           pushed to the bottom of a container it does not fill.
-           min-height: a flex child refuses to shrink below its content unless
-           told it may, and without that the body grows instead of scrolling */
-        min-height: 0;
-        flex: 0 1 auto;
-
-        /* The same reading as the header's corners above, on all four: a body
-           follows the corners of the box it is drawn in — which is also what
-           it clips its content to, the overflow just above. */
-        border-top-left-radius: inherit;
-        border-top-right-radius: inherit;
-        border-bottom-right-radius: inherit;
-        border-bottom-left-radius: inherit;
-        /* Overflow makes it focusable via tab: apply the outline styles */
-        outline-width: var(--navi-focus-outline-width);
-        /* Outline must appear ON the body, not outside */
-        /* Because for instance when body is within dialog or slide with overflow: hidden it would not be visible */
-        outline-offset: calc(-1 * var(--navi-focus-outline-width));
-        overflow: auto;
-
-        &:focus-visible {
-          outline-style: solid;
-        }
-      }
-
-      /* A corner a header or a footer covers is not the body's to follow:
-         what the body meets there is their flat separator line, not a curve,
-         and a radius against it shows the box through the gap it opens. */
-      > [data-header] ~ [data-body] {
-        border-top-left-radius: 0;
-        border-top-right-radius: 0;
-      }
-      > [data-body]:has(~ [data-footer]) {
-        border-bottom-right-radius: 0;
-        border-bottom-left-radius: 0;
-      }
-
-      /* A body with no padding of its own holds content running edge to edge:
-         whatever sits at one of its ends is drawn ON the corner the body just
-         resolved, so a radius of its own there carves a notch out of it. The
-         body already clips to that corner, which makes "none" the right radius
-         for what lands on it — square, and the body draws the curve. The ask
-         travels down as a corner claim (see group.jsx) so a navi control
-         answers it wherever it sits inside. */
-      > [data-body][data-body-flush] {
-        > :first-child {
-          --x-corner-top-left-radius: 0;
-          --x-corner-top-right-radius: 0;
-        }
-        > :last-child {
-          --x-corner-bottom-right-radius: 0;
-          --x-corner-bottom-left-radius: 0;
-        }
-      }
-    }
-  }
-
-  /* A corner claim travels down (see group.jsx) because the member joined to
-     its neighbours is not always the thing that draws the frame: it can be a
-     bare wrapper, a tooltip, a link, and the control inside is what has to
-     square. That only holds while the wrapper adds nothing of its own. A box
-     that paints a background or a border, or that insets what it holds, IS the
-     frame at that spot — what is inside it sits on padding or on that
-     background, never on the corner the group squared — so the claim stops
-     here, exactly as a control stops it once it has answered. */
-  [navi-box-frame] > * {
-    --x-corner-top-left-radius: initial;
-    --x-corner-top-right-radius: initial;
-    --x-corner-bottom-right-radius: initial;
-    --x-corner-bottom-left-radius: initial;
-  }
-
-  @layer navi {
-    /*
-    When using square/circle/aspectRatio prop we expect box to respect the aspect ratio.
-    But within flex containers or stuff like that the min-width/min-height auto
-    will prevent the item from shrinking to respect aspect-ratio
-    We put that in a layer navi + a specific attribute so that it's very easy to override this
-    */
-    [navi-aspect-ratio] {
-      min-width: 0;
+      outline-width: var(--navi-focus-outline-width);
+      outline-offset: calc(-1 * var(--navi-focus-outline-width));
+      flex: 0 auto;
       min-height: 0;
+      overflow: auto;
+
+      &:focus-visible {
+        outline-style: solid;
+      }
     }
+
+    & > [data-header] ~ [data-body] {
+      border-top-left-radius: 0;
+      border-top-right-radius: 0;
+    }
+
+    & > [data-body]:has( ~ [data-footer]) {
+      border-bottom-right-radius: 0;
+      border-bottom-left-radius: 0;
+    }
+
+    & > [data-body][data-body-flush] {
+      & > :first-child {
+        --x-corner-top-left-radius: 0;
+        --x-corner-top-right-radius: 0;
+      }
+
+      & > :last-child {
+        --x-corner-bottom-right-radius: 0;
+        --x-corner-bottom-left-radius: 0;
+      }
+    }
+  }
+}
+
+[navi-box-frame] > * {
+  --x-corner-top-left-radius: initial;
+  --x-corner-top-right-radius: initial;
+  --x-corner-bottom-right-radius: initial;
+  --x-corner-bottom-left-radius: initial;
+}
+
+@layer navi {
+  [navi-aspect-ratio] {
+    min-width: 0;
+    min-height: 0;
+  }
+}
+
+[navi-box-flow="inline"] {
+  display: inline;
+}
+
+[navi-box-flow="block"] {
+  display: block;
+}
+
+[navi-box-flow="inline-block"] {
+  display: inline-block;
+}
+
+[navi-box-flow="flex-x"] {
+  display: flex;
+}
+
+[navi-box-flow="flex-y"] {
+  flex-direction: column;
+  display: flex;
+}
+
+[navi-box-flow="inline-flex-x"] {
+  display: inline-flex;
+}
+
+[navi-box-flow="inline-flex-y"] {
+  flex-direction: column;
+  display: inline-flex;
+}
+
+[navi-box-flow="grid"] {
+  display: grid;
+
+  &[navi-box-flow-column] {
+    grid-auto-flow: column;
   }
 
-  /* We force a given display style using html attribute instead of inline style */
-  /* No particular reason for this, logic could be moved to inline style like the rest */
-  /* It was an attempt to see if attributes where a good candidate to set style based on props */
-  /* Actullay it's not that much as it make the attribute and CSS complexity explode */
-  /* For now it's kept here and must be outside layer navi to be able to override any given display
-  Set by navi itself on their default display */
-  [navi-box-flow="inline"] {
-    display: inline;
+  &[navi-box-flow-row] {
+    grid-auto-flow: row;
   }
-  [navi-box-flow="block"] {
-    display: block;
-  }
-  [navi-box-flow="inline-block"] {
-    display: inline-block;
-  }
-  [navi-box-flow="flex-x"] {
-    display: flex;
-  }
-  [navi-box-flow="flex-y"] {
-    display: flex;
-    flex-direction: column;
-  }
-  [navi-box-flow="inline-flex-x"] {
-    display: inline-flex;
-  }
-  [navi-box-flow="inline-flex-y"] {
-    display: inline-flex;
-    flex-direction: column;
-  }
-  [navi-box-flow="grid"] {
-    display: grid;
-    &[navi-box-flow-column] {
-      grid-auto-flow: column;
-    }
-    &[navi-box-flow-row] {
-      grid-auto-flow: row;
-    }
-    &[navi-box-flow-column][navi-box-flow-row] {
-      grid-auto-flow: unset;
-    }
-  }
-  [navi-box-flow="inline-grid"] {
-    display: inline-grid;
-    &[navi-box-flow-column] {
-      grid-auto-flow: column;
-    }
-    &[navi-box-flow-row] {
-      grid-auto-flow: row;
-    }
-    &[navi-box-flow-column][navi-box-flow-row] {
-      grid-auto-flow: unset;
-    }
-  }
-  /*
-  To set display on component, code usually do something like: 
-  .component_class { display: component_display; }
 
-  It overrides the default behavior of [hidden] attribute!
-  This needs to be explicitly handled with:
-  .component_class[hidden] { display: none; }
-
-  To avoid this extra work and potential mistakes we force the default behavior of [hidden] attribute.
-  */
-  [hidden] {
-    display: none !important;
+  &[navi-box-flow-column][navi-box-flow-row] {
+    grid-auto-flow: unset;
   }
+}
+
+[navi-box-flow="inline-grid"] {
+  display: inline-grid;
+
+  &[navi-box-flow-column] {
+    grid-auto-flow: column;
+  }
+
+  &[navi-box-flow-row] {
+    grid-auto-flow: row;
+  }
+
+  &[navi-box-flow-column][navi-box-flow-row] {
+    grid-auto-flow: unset;
+  }
+}
+
+[hidden] {
+  display: none !important;
+}
 `, "@jsenv/navi/src/box/box.jsx"];
 const PSEUDO_CLASSES_DEFAULT = [];
 const PSEUDO_ELEMENTS_DEFAULT = [];
@@ -21533,108 +21364,97 @@ installImportMetaCssBuild(import.meta);/**
  * During dimensional transitions, both .target_slot and .outgoing_slot have their dimensions
  * explicitly set to prevent dom_nodes reflow and maintain visual consistency.
  */
-import.meta.css = [/* css */`
-  * {
-    box-sizing: border-box;
-  }
+import.meta.css = [/* css */`* {
+  box-sizing: border-box;
+}
 
-  .ui_transition {
-    --transition-duration: 300ms;
-    --justify-content: center;
-    --align-items: center;
+.ui_transition {
+  --transition-duration: .3s;
+  --justify-content: center;
+  --align-items: center;
+  --x-transition-duration: var(--transition-duration);
+  --x-justify-content: var(--justify-content);
+  --x-align-items: var(--align-items);
+  position: relative;
+}
 
-    --x-transition-duration: var(--transition-duration);
-    --x-justify-content: var(--justify-content);
-    --x-align-items: var(--align-items);
+.ui_transition[data-align-x="start"] {
+  --x-justify-content: flex-start;
+}
 
-    position: relative;
-  }
-  /* Alignment controls */
-  .ui_transition[data-align-x="start"] {
-    --x-justify-content: flex-start;
-  }
-  .ui_transition[data-align-x="center"] {
-    --x-justify-content: center;
-  }
-  .ui_transition[data-align-x="end"] {
-    --x-justify-content: flex-end;
-  }
-  .ui_transition[data-align-y="start"] {
-    --x-align-items: flex-start;
-  }
-  .ui_transition[data-align-y="center"] {
-    --x-align-items: center;
-  }
-  .ui_transition[data-align-y="end"] {
-    --x-align-items: flex-end;
-  }
+.ui_transition[data-align-x="center"] {
+  --x-justify-content: center;
+}
 
-  .ui_transition,
-  .ui_transition_active_group,
-  .ui_transition_previous_group,
-  .ui_transition_target_slot,
-  .ui_transition_previous_target_slot,
-  .ui_transition_outgoing_slot,
-  .ui_transition_previous_outgoing_slot {
-    width: 100%;
-    height: 100%;
-  }
+.ui_transition[data-align-x="end"] {
+  --x-justify-content: flex-end;
+}
 
-  .ui_transition_target_slot,
-  .ui_transition_outgoing_slot,
-  .ui_transition_previous_target_slot,
-  .ui_transition_previous_outgoing_slot {
-    display: flex;
-    align-items: var(--x-align-items);
-    justify-content: var(--x-justify-content);
-  }
-  .ui_transition_target_slot[data-items-width-overflow],
-  .ui_transition_previous_target_slot[data-items-width-overflow],
-  .ui_transition_previous_target_slot[data-items-width-overflow],
-  .ui_transition_previous_outgoing_slot[data-items-width-overflow] {
-    --x-justify-content: flex-start;
-  }
-  .ui_transition_target_slot[data-items-height-overflow],
-  .ui_transition_previous_slot[data-items-height-overflow],
-  .ui_transition_previous_target_slot[data-items-height-overflow],
-  .ui_transition_previous_outgoing_slot[data-items-height-overflow] {
-    --x-align-items: flex-start;
-  }
+.ui_transition[data-align-y="start"] {
+  --x-align-items: flex-start;
+}
 
-  .ui_transition_active_group {
-    position: relative;
-  }
-  .ui_transition_target_slot {
-    position: relative;
-  }
-  .ui_transition_outgoing_slot,
-  .ui_transition_previous_outgoing_slot {
-    position: absolute;
-    top: 0;
-    left: 0;
-  }
-  .ui_transition_previous_group {
-    position: absolute;
-    inset: 0;
-  }
-  .ui_transition[data-only-previous-group] .ui_transition_previous_group {
-    position: relative;
-  }
+.ui_transition[data-align-y="center"] {
+  --x-align-items: center;
+}
 
-  .ui_transition_target_slot_background {
-    position: absolute;
-    top: 0;
-    left: 0;
-    z-index: -1;
-    display: none;
-    width: var(--target-slot-width, 100%);
-    height: var(--target-slot-height, 100%);
-    background: var(--target-slot-background, transparent);
-    pointer-events: none;
-  }
-  .ui_transition[data-transitioning] .ui_transition_target_slot_background {
-    display: block;
-  }
+.ui_transition[data-align-y="end"] {
+  --x-align-items: flex-end;
+}
+
+.ui_transition, .ui_transition_active_group, .ui_transition_previous_group, .ui_transition_target_slot, .ui_transition_previous_target_slot, .ui_transition_outgoing_slot, .ui_transition_previous_outgoing_slot {
+  width: 100%;
+  height: 100%;
+}
+
+.ui_transition_target_slot, .ui_transition_outgoing_slot, .ui_transition_previous_target_slot, .ui_transition_previous_outgoing_slot {
+  align-items: var(--x-align-items);
+  justify-content: var(--x-justify-content);
+  display: flex;
+}
+
+.ui_transition_target_slot[data-items-width-overflow], .ui_transition_previous_target_slot[data-items-width-overflow], .ui_transition_previous_target_slot[data-items-width-overflow], .ui_transition_previous_outgoing_slot[data-items-width-overflow] {
+  --x-justify-content: flex-start;
+}
+
+.ui_transition_target_slot[data-items-height-overflow], .ui_transition_previous_slot[data-items-height-overflow], .ui_transition_previous_target_slot[data-items-height-overflow], .ui_transition_previous_outgoing_slot[data-items-height-overflow] {
+  --x-align-items: flex-start;
+}
+
+.ui_transition_active_group, .ui_transition_target_slot {
+  position: relative;
+}
+
+.ui_transition_outgoing_slot, .ui_transition_previous_outgoing_slot {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.ui_transition_previous_group {
+  position: absolute;
+  inset: 0;
+}
+
+.ui_transition[data-only-previous-group] .ui_transition_previous_group {
+  position: relative;
+}
+
+.ui_transition_target_slot_background {
+  z-index: -1;
+  width: var(--target-slot-width, 100%);
+  height: var(--target-slot-height, 100%);
+  background: var(--target-slot-background, transparent);
+  pointer-events: none;
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.ui_transition[data-transitioning] .ui_transition_target_slot_background {
+  display: block;
+}
 `, "@jsenv/navi/src/transition/ui_transition.js"];
 const CONTENT_ID_ATTRIBUTE = "data-content-id";
 const CONTENT_PHASE_ATTRIBUTE = "data-content-phase";
@@ -22473,12 +22293,34 @@ const createRoutePattern = (
 
   // Build queryConnectionMap directly from searchParams
   const queryConnectionMap = new Map();
-  for (const [paramName, paramSignal] of Object.entries(searchParams)) {
+  for (const [paramName, searchParam] of Object.entries(searchParams)) {
+    // A search param is the signal it syncs with, or that signal plus what the
+    // state is worth ON THIS ROUTE: `{ signal, default }`. One state can start
+    // somewhere else depending on the page it is read on — a wizard's step
+    // opens on the first question where one is created and on the summary where
+    // one is edited — without the state having to know which routes exist, and
+    // without a route and a signal having to name each other.
+    const paramSignal = searchParam.signal || searchParam;
+    const routeDefaultValue = searchParam.signal
+      ? searchParam.default
+      : undefined;
     const signalId = paramSignal.__signalId;
     const registryEntry = globalSignalRegistry.get(signalId);
     if (registryEntry) {
       const { signal, options } = registryEntry;
       const connection = { paramName, signal, paramType: "query", ...options };
+      if (routeDefaultValue !== undefined) {
+        // Everything that asks "is this the default" asks this route, so the
+        // param stays out of the address on the step this page opens on, and
+        // an address that names none puts the state back on it.
+        connection.staticDefaultValue = routeDefaultValue;
+        connection.dynamicDefaultSignal = null;
+        connection.getDefaultValue = () => routeDefaultValue;
+        connection.isDefaultValue = (value) =>
+          compareTwoJsValues(value, routeDefaultValue);
+        connection.isCustomValue = (value) =>
+          value !== undefined && !compareTwoJsValues(value, routeDefaultValue);
+      }
       queryConnectionMap.set(paramName, connection);
     }
   }
@@ -23338,8 +23180,41 @@ const createRoutePattern = (
     return paramsWithWeak;
   };
 
+  // A path param nothing answers for is READ from the url being amended. The
+  // url is the truth about where one stands; rebuilding the pattern without it
+  // would drop the segment and move the page — writing one search param must
+  // never do that. A param a signal is bound to is left alone: the signal
+  // answers for it, and buildMostPreciseUrl reads it.
+  const carryOverPathParams = (currentUrl, params) => {
+    let paramsWithPath = params;
+    let currentParams;
+    for (const segment of parsedPattern.segments) {
+      if (segment.type !== "param") {
+        continue;
+      }
+      const paramName = segment.name;
+      if (paramName in paramsWithPath || pathConnectionMap.has(paramName)) {
+        continue;
+      }
+      if (currentParams === undefined) {
+        currentParams = applyOn(currentUrl) || null;
+      }
+      if (!currentParams || currentParams[paramName] === undefined) {
+        continue;
+      }
+      if (paramsWithPath === params) {
+        paramsWithPath = { ...params };
+      }
+      paramsWithPath[paramName] = currentParams[paramName];
+    }
+    return paramsWithPath;
+  };
+
   const buildUrlPreservingPath = (currentUrl, params = {}) => {
     params = carryOverWeakParams(currentUrl, params);
+    if (currentUrl) {
+      params = carryOverPathParams(currentUrl, params);
+    }
     const relativeBuiltUrl = buildMostPreciseUrl(params);
     if (!currentUrl) {
       return resolveRouteUrl(relativeBuiltUrl);
@@ -24594,11 +24469,17 @@ let isUpdatingRoutesFromUrl = false;
  * @param {string} pattern - The url pattern, where `:name` is a path param and
  *   `:name=${signal}` binds that param to a signal.
  * @param {object} [options]
- * @param {Object<string, import("@preact/signals").Signal>} [options.searchParams]
+ * @param {Object<string, import("@preact/signals").Signal | {signal: import("@preact/signals").Signal, default?: any}>} [options.searchParams]
  *   Search params this route two-way syncs with, by name. The signal and the url
  *   are the same state: writing the signal rewrites the address, an address
  *   arriving from outside writes the signal, and the param disappears from the
  *   url while the signal holds its default.
+ *   `{ signal, default }` says what that state is worth ON THIS ROUTE: the same
+ *   step opens a creation wizard on its first question and an edition one on
+ *   its summary, each address staying clean on the step its page opens on. One
+ *   state, and the page one is on decides where it starts — which is why this
+ *   is said here rather than as a dynamic default on the signal: a signal and
+ *   the route declaring it cannot name each other.
  *   Writing one AMENDS the history entry one is on — a param qualifies the
  *   screen, it is not a place, and one entry per write turns a single
  *   back-press into as many as the user moved. A state whose values ARE places
@@ -25287,6 +25168,7 @@ This prevents cross-test pollution and ensures clean state.`,
             if (!newMatching) {
               // Route doesn't match - check if any matching route extracts this parameter
               let parameterExtractedByMatchingRoute = false;
+              let parameterDeclaredByMatchingRoute = false;
               let matchingRouteInSameFamily = false;
 
               for (const otherRoute of routeSet) {
@@ -25300,11 +25182,21 @@ This prevents cross-test pollution and ensures clean state.`,
                   parameterExtractedByMatchingRoute = true;
                 }
 
+                // Same param, on the page one is arriving at: what it is worth
+                // there is that page's business, url or no url — it may open on
+                // a default of its own (see searchParams' `{ signal, default }`).
+                const otherPattern =
+                  getRoutePrivateProperties(otherRoute).routePattern;
+                if (
+                  otherPattern.queryConnectionMap.has(paramName) ||
+                  otherPattern.pathConnectionMap.has(paramName)
+                ) {
+                  parameterDeclaredByMatchingRoute = true;
+                }
+
                 // Same family = same topmost ancestor
                 // (familyRoot, computed in setupRoutePatterns)
-                const otherPatternObj =
-                  getRoutePrivateProperties(otherRoute).routePattern;
-                if (otherPatternObj.familyRoot === routePattern.familyRoot) {
+                if (otherPattern.familyRoot === routePattern.familyRoot) {
                   matchingRouteInSameFamily = true;
                 }
               }
@@ -25313,7 +25205,10 @@ This prevents cross-test pollution and ensures clean state.`,
               // whatever the family and whatever the default. Coming back by a
               // url that does not carry the param comes back to a blank screen.
               if (connection.weak) {
-                if (!parameterExtractedByMatchingRoute) {
+                if (
+                  !parameterExtractedByMatchingRoute &&
+                  !parameterDeclaredByMatchingRoute
+                ) {
                   const defaultValue = connection.getDefaultValue();
                   if (debug) {
                     console.debug(
@@ -27338,7 +27233,7 @@ const releaseTransitionFurniture = (owner) => {
   }
 };
 
-/**
+installImportMetaCssBuild(import.meta);/**
  * The window two pages are seen through while one replaces the other, measured
  * once and published for the length of the movement.
  *
@@ -27403,38 +27298,46 @@ const releaseTransitionFurniture = (owner) => {
  * Registered as lengths for the same reason the safe area is (safe_area.js):
  * the band has to be readable in pixels at the moment a page leaves.
  */
-const TRANSITION_WINDOW_CSS = /* css */ `
-  @property --navi-transition-cover-top {
-    syntax: "<length>";
-    inherits: true;
-    initial-value: 0px;
-  }
-  @property --navi-transition-cover-right {
-    syntax: "<length>";
-    inherits: true;
-    initial-value: 0px;
-  }
-  @property --navi-transition-cover-bottom {
-    syntax: "<length>";
-    inherits: true;
-    initial-value: 0px;
-  }
-  @property --navi-transition-cover-left {
-    syntax: "<length>";
-    inherits: true;
-    initial-value: 0px;
-  }
+const TRANSITION_WINDOW_CSS = /* css */`@property --navi-transition-cover-top {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0;
+}
 
-  @layer navi {
-    :root {
-      --navi-transition-cover-top: 0px;
-      --navi-transition-cover-right: 0px;
-      --navi-transition-cover-bottom: 0px;
-      --navi-transition-cover-left: 0px;
-    }
+@property --navi-transition-cover-right {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0;
+}
+
+@property --navi-transition-cover-bottom {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0;
+}
+
+@property --navi-transition-cover-left {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0;
+}
+
+@layer navi {
+  :root {
+    --navi-transition-cover-top: 0px;
+    --navi-transition-cover-right: 0px;
+    --navi-transition-cover-bottom: 0px;
+    --navi-transition-cover-left: 0px;
   }
+}
 `;
 
+// Called from the render of whatever needs the window, never at module scope:
+// a page that never travels between routes must not carry this sheet, and a
+// build that sees no caller drops the css with the function.
+const installTransitionWindowCss = () => {
+  import.meta.css = [TRANSITION_WINDOW_CSS, "@jsenv/navi/src/nav/transition_window.js"];
+};
 const WINDOW_TOP_PROPERTY = "--navi-transition-window-top";
 const WINDOW_LEFT_PROPERTY = "--navi-transition-window-left";
 const WINDOW_WIDTH_PROPERTY = "--navi-transition-window-width";
@@ -27447,20 +27350,7 @@ const OLD_BAND_TOP_PROPERTY = "--navi-transition-old-band-top";
 const OLD_BAND_RIGHT_PROPERTY = "--navi-transition-old-band-right";
 const OLD_BAND_BOTTOM_PROPERTY = "--navi-transition-old-band-bottom";
 const OLD_BAND_LEFT_PROPERTY = "--navi-transition-old-band-left";
-const WINDOW_PROPERTIES = [
-  WINDOW_TOP_PROPERTY,
-  WINDOW_LEFT_PROPERTY,
-  WINDOW_WIDTH_PROPERTY,
-  WINDOW_HEIGHT_PROPERTY,
-  WINDOW_OLD_TOP_PROPERTY,
-  WINDOW_OLD_LEFT_PROPERTY,
-  WINDOW_NEW_TOP_PROPERTY,
-  WINDOW_NEW_LEFT_PROPERTY,
-  OLD_BAND_TOP_PROPERTY,
-  OLD_BAND_RIGHT_PROPERTY,
-  OLD_BAND_BOTTOM_PROPERTY,
-  OLD_BAND_LEFT_PROPERTY,
-];
+const WINDOW_PROPERTIES = [WINDOW_TOP_PROPERTY, WINDOW_LEFT_PROPERTY, WINDOW_WIDTH_PROPERTY, WINDOW_HEIGHT_PROPERTY, WINDOW_OLD_TOP_PROPERTY, WINDOW_OLD_LEFT_PROPERTY, WINDOW_NEW_TOP_PROPERTY, WINDOW_NEW_LEFT_PROPERTY, OLD_BAND_TOP_PROPERTY, OLD_BAND_RIGHT_PROPERTY, OLD_BAND_BOTTOM_PROPERTY, OLD_BAND_LEFT_PROPERTY];
 
 // Whose numbers are currently published. The window belongs to the movement
 // that measured it, and only that one may take it down: a movement ending
@@ -27474,13 +27364,12 @@ let windowOwner = null;
  * stands and what its furniture left free, which the arriving state answers
  * for differently and which nothing can be read back from once it is gone.
  */
-const measureTransitionWindowState = (element) => {
+const measureTransitionWindowState = element => {
   return {
     rect: element.getBoundingClientRect(),
-    band: readBand(),
+    band: readBand()
   };
 };
-
 const holdTransitionWindow = (owner, element, stateBefore) => {
   const rectBefore = stateBefore.rect;
   const bandBefore = stateBefore.band;
@@ -27491,14 +27380,13 @@ const holdTransitionWindow = (owner, element, stateBefore) => {
   // one leaving, a page arriving taller would be cut itself, and either one
   // standing higher up than the other would be cut across.
   const top = rectBefore.top < rectAfter.top ? rectBefore.top : rectAfter.top;
-  const left =
-    rectBefore.left < rectAfter.left ? rectBefore.left : rectAfter.left;
-  const bottom =
-    rectBefore.bottom > rectAfter.bottom ? rectBefore.bottom : rectAfter.bottom;
-  const right =
-    rectBefore.right > rectAfter.right ? rectBefore.right : rectAfter.right;
+  const left = rectBefore.left < rectAfter.left ? rectBefore.left : rectAfter.left;
+  const bottom = rectBefore.bottom > rectAfter.bottom ? rectBefore.bottom : rectAfter.bottom;
+  const right = rectBefore.right > rectAfter.right ? rectBefore.right : rectAfter.right;
   windowOwner = owner;
-  const { style } = document.documentElement;
+  const {
+    style
+  } = document.documentElement;
   style.setProperty(WINDOW_TOP_PROPERTY, `${top}px`);
   style.setProperty(WINDOW_LEFT_PROPERTY, `${left}px`);
   style.setProperty(WINDOW_WIDTH_PROPERTY, `${right - left}px`);
@@ -27518,12 +27406,14 @@ const holdTransitionWindow = (owner, element, stateBefore) => {
 // window stands at the held height, the box is at its own — and an invisible
 // one: the page arriving is fully in place, and the strip below it that the
 // window still covers shows the page leaving only while it is still on screen.
-const releaseTransitionWindow = (owner) => {
+const releaseTransitionWindow = owner => {
   if (owner !== windowOwner) {
     return;
   }
   windowOwner = null;
-  const { style } = document.documentElement;
+  const {
+    style
+  } = document.documentElement;
   for (const property of WINDOW_PROPERTIES) {
     style.removeProperty(property);
   }
@@ -27539,13 +27429,9 @@ const BAND_UNKNOWN = 1e6;
 // edges) plus what covers the box from inside the document.
 const readBand = () => {
   const computedStyle = getComputedStyle(document.documentElement);
-  const readEdge = (edge) => {
-    const safeArea = parseFloat(
-      computedStyle.getPropertyValue(`--navi-safe-area-inset-${edge}`),
-    );
-    const cover = parseFloat(
-      computedStyle.getPropertyValue(`--navi-transition-cover-${edge}`),
-    );
+  const readEdge = edge => {
+    const safeArea = parseFloat(computedStyle.getPropertyValue(`--navi-safe-area-inset-${edge}`));
+    const cover = parseFloat(computedStyle.getPropertyValue(`--navi-transition-cover-${edge}`));
     // A browser that cannot register a custom property hands back the calc()
     // it was written as rather than what it computes to (see safe_area.js).
     if (!Number.isFinite(safeArea) || !Number.isFinite(cover)) {
@@ -27557,7 +27443,7 @@ const readBand = () => {
     top: readEdge("top"),
     right: readEdge("right"),
     bottom: readEdge("bottom"),
-    left: readEdge("left"),
+    left: readEdge("left")
   };
 };
 
@@ -27576,15 +27462,9 @@ const readBand = () => {
 const bandTheCutMayBeRelaxedTo = (bandBefore, bandAfter, rectAfter) => {
   return {
     top: rectAfter.top < bandAfter.top ? bandAfter.top : bandBefore.top,
-    right:
-      rectAfter.right > window.innerWidth - bandAfter.right
-        ? bandAfter.right
-        : bandBefore.right,
-    bottom:
-      rectAfter.bottom > window.innerHeight - bandAfter.bottom
-        ? bandAfter.bottom
-        : bandBefore.bottom,
-    left: rectAfter.left < bandAfter.left ? bandAfter.left : bandBefore.left,
+    right: rectAfter.right > window.innerWidth - bandAfter.right ? bandAfter.right : bandBefore.right,
+    bottom: rectAfter.bottom > window.innerHeight - bandAfter.bottom ? bandAfter.bottom : bandBefore.bottom,
+    left: rectAfter.left < bandAfter.left ? bandAfter.left : bandBefore.left
   };
 };
 
@@ -27679,502 +27559,272 @@ const ROUTE_TRAVEL_ATTRIBUTE = "data-navi-route-travel";
 // the root pictures must NOT move (they carry the whole viewport, blank bands
 // included).
 
-const css$10 = /* css */`
-  ${TRANSITION_WINDOW_CSS}
+const css$10 = /* css */`:root[data-navi-route-transition] [data-navi-route-transition-area] {
+  view-transition-name: navi-route-transition;
+}
 
-  /* The marked region is a picture of its own for the length of a transition of
-     OURS, and only then — the name is what makes the pages a picture the
-     movement below can carry.
-
-     Named outside that, it would be a picture during every view transition the
-     APPLICATION starts — two rows swapping, a list changing — and a page is
-     several screens tall: its picture is the whole element, drawn in the top
-     layer from wherever the element starts, so it paints over the fixed bars
-     and past the bottom of the screen for the length of a movement that has
-     nothing to do with the pages. Unnamed, it stays part of the document's own
-     picture, where the browser cuts it at the viewport like everything else. */
+@supports (view-transition-group: contain) {
   :root[data-navi-route-transition] [data-navi-route-transition-area] {
-    view-transition-name: navi-route-transition;
+    view-transition-group: contain;
   }
+}
 
-  /* A named descendant — a thumbnail named for a morph, a row named for a
-     reorder gesture — is a hole in the area's picture and a group of its own.
-     Nested groups keep that group inside the area's, which is what cuts it at
-     the pages' edge instead of letting it paint across the screen. What it does
-     NOT do is make it travel: the movement is carried by the area's two
-     pictures, and a group is not one of them, so a named descendant stands
-     where it was captured while the pages slide under it. A morph wants exactly
-     that; a component that names its parts for changes of its own does not, and
-     drops its names for the length of the movement (see list.jsx). A browser
-     without nested groups is warned instead (see
-     warnAboutNamesEscapingArea). */
-  @supports (view-transition-group: contain) {
-    :root[data-navi-route-transition] [data-navi-route-transition-area] {
-      view-transition-group: contain;
-    }
-  }
-
-  /* Only while a transition of OURS is playing: everything below changes how
-     the document animates, and the document belongs to the application the
-     rest of the time. */
-  :root[data-navi-route-transition] {
-    /* With an area marked, the page AROUND it is not taken as one picture —
-       so exactly one of the two names below exists at a time, and the
-       movements can be written once for both. It is also the only way the
-       furniture can take part in the movement: photographed with the whole
-       document it is one picture the size of the screen, and a bar can be
-       neither held where it stands nor moved with the page it belongs to
-       inside it. Each bar is photographed on its own instead (see
-       transition_furniture.js), and nothing shows through where the pages are
-       — their two pictures cover the area's rectangle between them at every
-       moment. */
-    &[data-navi-route-transition-target="area"] {
-      view-transition-name: none;
-
-      /* Where the pages are cut, and how far they travel — said on the root so
-         that EVERY picture of the movement inherits them, not just the pages':
-         a fixed bar or a popup travelling with the page it belongs to
-         (transition_furniture.js) crosses the same window's worth of distance
-         the pages do, whatever its own size. The pages are then cut with what
-         is written here, on their group below.
-
-         The cut: the area's own box, and on top of it whatever covers the area.
-         The pictures are drawn in the top layer, so they cover a fixed bar as
-         easily as anything else — and the area runs UNDER the bars by design:
-         that is what a fixed bar is for, and what the room it gives back is
-         for. An area taller than the screen therefore ends below the bottom
-         bar, and a scrolled one starts above the top bar, so the movement would
-         be watched painting over them for its whole length.
-
-         Two bands are left free, and they answer for two different things: the
-         app's own safe area (layout/safe_area.js), everything pinned to the
-         WINDOW's edges, and --navi-transition-cover-* (transition_window.js),
-         what covers the area from inside the document — a sticky header above
-         the pages covers the top of the area exactly as a fixed bar covers the
-         top of the screen. Both are read rather than asked for, so one that
-         grows, shrinks or unmounts mid-transition is followed without anything
-         being told.
-
-         Read live, though, they describe the state ARRIVING and nothing else,
-         so the cut is taken at the smaller of that and the band the state
-         being left kept free (--navi-transition-old-band-*, photographed while
-         both still existed). Furniture standing in BOTH states is the frame:
-         the pages move behind it and are cut at it. Furniture standing in one
-         of them is part of what changes, and cutting the page being left at a
-         bar it never had shows its own header being sliced instead of
-         leaving. */
-      --navi-route-transition-clip-top: max(
-        0px,
-        min(
-            var(--navi-safe-area-inset-top) + var(--navi-transition-cover-top),
-            var(--navi-transition-old-band-top)
-          ) - var(--navi-transition-window-top)
-      );
-      --navi-route-transition-clip-left: max(
-        0px,
-        min(
-            var(--navi-safe-area-inset-left) + var(--navi-transition-cover-left),
-            var(--navi-transition-old-band-left)
-          ) - var(--navi-transition-window-left)
-      );
-      --navi-route-transition-clip-bottom: max(
-        0px,
+:root[data-navi-route-transition] {
+  &[data-navi-route-transition-target="area"] {
+    view-transition-name: none;
+    --navi-route-transition-clip-top: max(0px,
+        min(var(--navi-safe-area-inset-top) + var(--navi-transition-cover-top),
+            var(--navi-transition-old-band-top)) - var(--navi-transition-window-top));
+    --navi-route-transition-clip-left: max(0px,
+        min(var(--navi-safe-area-inset-left) + var(--navi-transition-cover-left),
+            var(--navi-transition-old-band-left)) - var(--navi-transition-window-left));
+    --navi-route-transition-clip-bottom: max(0px,
         var(--navi-transition-window-top) +
           var(--navi-transition-window-height) +
-          min(
-            var(--navi-safe-area-inset-bottom) +
+          min(var(--navi-safe-area-inset-bottom) +
               var(--navi-transition-cover-bottom),
-            var(--navi-transition-old-band-bottom)
-          ) -
-          100dvh
-      );
-      --navi-route-transition-clip-right: max(
-        0px,
+            var(--navi-transition-old-band-bottom)) -
+          100dvh);
+    --navi-route-transition-clip-right: max(0px,
         var(--navi-transition-window-left) +
           var(--navi-transition-window-width) +
-          min(
-            var(--navi-safe-area-inset-right) +
+          min(var(--navi-safe-area-inset-right) +
               var(--navi-transition-cover-right),
-            var(--navi-transition-old-band-right)
-          ) -
-          100dvw
-      );
+            var(--navi-transition-old-band-right)) -
+          100dvw);
+    --navi-route-transition-travel-x: calc(var(--navi-transition-window-width) - var(--navi-route-transition-clip-left) - var(--navi-route-transition-clip-right));
+    --navi-route-transition-travel-y: calc(var(--navi-transition-window-height) - var(--navi-route-transition-clip-top) - var(--navi-route-transition-clip-bottom));
 
-      /* How far a page travels: the WINDOW it is seen through, not its own
-         size. A page is as tall as its content — several screens of it — and a
-         movement measured on the picture would send it thousands of pixels
-         away, off screen for most of the transition and flying past at the
-         end. What one page crossing another means is one window's worth of
-         movement, whatever the pages are made of (see the keyframes). */
-      --navi-route-transition-travel-x: calc(
-        var(--navi-transition-window-width) - var(
-            --navi-route-transition-clip-left
-          ) - var(--navi-route-transition-clip-right)
-      );
-      --navi-route-transition-travel-y: calc(
-        var(--navi-transition-window-height) - var(
-            --navi-route-transition-clip-top
-          ) - var(--navi-route-transition-clip-bottom)
-      );
-
-      /* The pages travel OVER the furniture. Everything else captured while an
-         area is marked wears a name of navi's own for the length of the
-         movement (transition_furniture.js): a bar the two states share is one
-         group the browser holds where it stands, and a bar only one of them
-         has stands there too, with no counterpart to move to. Both belong
-         under the pages — that is what lets a page come over a bar that is
-         going away, and a page leaving uncover the bar arriving behind it.
-
-         An open popup is the one piece that goes the other way: it stands in
-         the top layer, over everything the document paints, so its picture
-         stands over the pages rather than under them — a page sliding under a
-         dialog, not over it (the class comes from layout/popup_css.js).
-
-         Ordered here rather than left to the DOM, which decides it otherwise:
-         where an application puts its bars relative to the area is its own
-         business. A name, a class and \`*\` weigh the same, so the rules are
-         read in the order they are written. */
-      &::view-transition-group(*) {
-        z-index: 0;
-      }
-      &::view-transition-group(navi-route-transition) {
-        z-index: 1;
-      }
-      &::view-transition-group(.navi_popup) {
-        z-index: 2;
-      }
-
-      /* And on the transition's own clock, whatever was captured. How long the
-         movement lasts is a fact about the movement, not about the pages: a bar
-         left on the browser's own 250ms would be gone a third of the way into a
-         longer one, instead of being covered by the page coming over it. */
-      &::view-transition-group(*),
-      &::view-transition-old(*),
-      &::view-transition-new(*) {
-        animation-duration: var(--navi-route-transition-duration, 300ms);
-      }
+    &::view-transition-group(*) {
+      z-index: 0;
     }
 
-    &::view-transition-old(root),
-    &::view-transition-new(root),
-    &::view-transition-old(navi-route-transition),
-    &::view-transition-new(navi-route-transition) {
-      /* Written on the direction alone, so a relation with no type — the
-         browser's cross-fade — answers to it like every other. */
-      animation-duration: var(--navi-route-transition-duration, 300ms);
-    }
-
-    /* The window the pages are seen through, when it is an area. Nothing here
-       names \`root\`: the root picture IS the window when the whole document
-       travels, already the size of the screen and already cut by it. */
-    &::view-transition-group(navi-route-transition),
-    &::view-transition-image-pair(navi-route-transition) {
-      /* The pages are cut at the edge of the area they move in. Said HERE and
-         nowhere else: these pictures are drawn in the top layer, so no
-         overflow on any element of the document can reach them. */
-      overflow: clip;
-    }
-    /* The nested groups of named descendants, cut at that same edge. On its own
-       rule: a selector a browser cannot parse takes the whole list it is
-       written in down with it, and the pages must be cut everywhere. */
-    &::view-transition-group-children(navi-route-transition) {
-      overflow: clip;
-    }
     &::view-transition-group(navi-route-transition) {
-      /* Held still for the whole transition, at the rectangle that contains
-         both states (see transition_window.js). Held by dropping the group's
-         animation rather than by winning against it with !important. The
-         browser puts the group where the ARRIVING area stands, so it is moved
-         from there back to the window's own corner. */
-      top: calc(
-        var(--navi-transition-window-top) - var(
-            --navi-transition-window-new-top
-          )
-      );
-      left: calc(
-        var(--navi-transition-window-left) - var(
-            --navi-transition-window-new-left
-          )
-      );
-      width: var(--navi-transition-window-width);
-      height: var(--navi-transition-window-height);
-      /* And cut at what covers the area, on top of that (the band is worked
-         out on the root above). */
-      clip-path: inset(
-        var(--navi-route-transition-clip-top)
+      z-index: 1;
+    }
+
+    &::view-transition-group(.navi_popup) {
+      z-index: 2;
+    }
+
+    &::view-transition-group(*), &::view-transition-old(*), &::view-transition-new(*) {
+      animation-duration: var(--navi-route-transition-duration, .3s);
+    }
+  }
+
+  &::view-transition-old(root), &::view-transition-new(root), &::view-transition-old(navi-route-transition), &::view-transition-new(navi-route-transition) {
+    animation-duration: var(--navi-route-transition-duration, .3s);
+  }
+
+  &::view-transition-group(navi-route-transition), &::view-transition-image-pair(navi-route-transition) {
+    overflow: clip;
+  }
+
+  &::view-transition-group-children(navi-route-transition) {
+    overflow: clip;
+  }
+
+  &::view-transition-group(navi-route-transition) {
+    top: calc(var(--navi-transition-window-top) - var(--navi-transition-window-new-top));
+    left: calc(var(--navi-transition-window-left) - var(--navi-transition-window-new-left));
+    width: var(--navi-transition-window-width);
+    height: var(--navi-transition-window-height);
+    clip-path: inset(var(--navi-route-transition-clip-top)
           var(--navi-route-transition-clip-right)
           var(--navi-route-transition-clip-bottom)
-          var(--navi-route-transition-clip-left)
-      );
-      animation-name: none;
+          var(--navi-route-transition-clip-left));
+    animation-name: none;
+  }
+
+  &::view-transition-old(navi-route-transition) {
+    top: calc(var(--navi-transition-window-old-top) - var(--navi-transition-window-top));
+    left: calc(var(--navi-transition-window-old-left) - var(--navi-transition-window-left));
+  }
+
+  &::view-transition-new(navi-route-transition) {
+    top: calc(var(--navi-transition-window-new-top) - var(--navi-transition-window-top));
+    left: calc(var(--navi-transition-window-new-left) - var(--navi-transition-window-left));
+  }
+
+  &[data-navi-route-transition-type] {
+    &::view-transition-old(root), &::view-transition-new(root), &::view-transition-old(navi-route-transition), &::view-transition-new(navi-route-transition) {
+      object-fit: none;
+      object-position: top left;
+      mix-blend-mode: normal;
+      width: auto;
+      height: auto;
+      animation-fill-mode: both;
     }
-    /* Each picture at the corner its own state stood at, which is not the
-       window's: the window contains both states, and a state that is scrolled
-       — or that stands under a bar the other one does not have — is somewhere
-       inside it (see transition_window.js). Offset here rather than by
-       \`translate\`, which the movement itself uses. */
-    &::view-transition-old(navi-route-transition) {
-      top: calc(
-        var(--navi-transition-window-old-top) - var(
-            --navi-transition-window-top
-          )
-      );
-      left: calc(
-        var(--navi-transition-window-old-left) - var(
-            --navi-transition-window-left
-          )
-      );
-    }
-    &::view-transition-new(navi-route-transition) {
-      top: calc(
-        var(--navi-transition-window-new-top) - var(
-            --navi-transition-window-top
-          )
-      );
-      left: calc(
-        var(--navi-transition-window-new-left) - var(
-            --navi-transition-window-left
-          )
-      );
+  }
+
+  &[data-navi-route-transition-type="slide-x"] {
+    &[data-navi-route-transition="forward"] {
+      --navi-route-transition-leave: navi-route-transition-leave-towards-start;
+      --navi-route-transition-enter: navi-route-transition-enter-from-end;
     }
 
-    /* ------------------------------------------------------------------
-       The movements. One of \`root\` and \`navi-route-transition\` exists at a
-       time (see the opt-out above), so each is written for both.
-       ------------------------------------------------------------------ */
-    /* What a NAMED movement is made of, whatever the movement is — the types
-       navi ships and the ones an application writes alike. The attribute is
-       present for a type and only for a type ("cross-fade" normalizes to no
-       type at all, "none" starts nothing), so the browser's own cross-fade
-       keeps every default below: scaling one picture into the other and seeing
-       through both IS the movement there. */
-    &[data-navi-route-transition-type] {
-      &::view-transition-old(root),
-      &::view-transition-new(root),
-      &::view-transition-old(navi-route-transition),
-      &::view-transition-new(navi-route-transition) {
-        width: auto;
-        /* Each picture at the size it was taken at: a page is not resized by
-           the page it crosses. The picture is as wide as the box the browser
-           gives it — the arriving one's — so a page leaving a narrower box (a
-           scrollbar appeared, a side panel closed) would be seen zooming over
-           the length of the movement, and one leaving a shorter box would be
-           seen inflating. */
-        height: auto;
-        object-fit: none;
-        object-position: top left;
-        /* Two pages crossing are two solid things, and seeing through one to
-           the other says they are the same page changing its mind. A movement
-           that fades on one of its two sides wants the opposite, and says so —
-           see zoom below. */
-        mix-blend-mode: normal;
-        animation-fill-mode: both;
-      }
+    &[data-navi-route-transition="back"] {
+      --navi-route-transition-leave: navi-route-transition-leave-towards-end;
+      --navi-route-transition-enter: navi-route-transition-enter-from-start;
+    }
+  }
+
+  &[data-navi-route-transition-type="slide-y"] {
+    &[data-navi-route-transition="forward"] {
+      --navi-route-transition-leave: navi-route-transition-leave-towards-top;
+      --navi-route-transition-enter: navi-route-transition-enter-from-bottom;
     }
 
-    /* Which keyframes a page leaves and arrives by, said as a VALUE on the
-       root rather than only as a rule on the pictures. That pair IS the
-       movement, and the pages are not the only thing playing it: a fixed bar
-       the two states do not share travels with the page it belongs to, and its
-       picture wears a name nobody can write a selector for (it is per element
-       — see transition_furniture.js). Read from here, it is given the same
-       two. A type an application defines its own way is free to publish them
-       and have its furniture travel too. */
-    &[data-navi-route-transition-type="slide-x"] {
-      &[data-navi-route-transition="forward"] {
-        --navi-route-transition-leave: navi-route-transition-leave-towards-start;
-        --navi-route-transition-enter: navi-route-transition-enter-from-end;
-      }
-      &[data-navi-route-transition="back"] {
-        --navi-route-transition-leave: navi-route-transition-leave-towards-end;
-        --navi-route-transition-enter: navi-route-transition-enter-from-start;
-      }
+    &[data-navi-route-transition="back"] {
+      --navi-route-transition-leave: navi-route-transition-leave-towards-bottom;
+      --navi-route-transition-enter: navi-route-transition-enter-from-top;
+    }
+  }
+
+  &[data-navi-route-transition-type="cover-x"] {
+    &[data-navi-route-transition="forward"] {
+      --navi-route-transition-leave: navi-route-transition-still;
+      --navi-route-transition-enter: navi-route-transition-enter-from-end;
     }
 
-    /* The same four movements, along the other axis: the start of a column is
-       its top, so going forward there is the page rising and the next one
-       coming up from below. */
-    &[data-navi-route-transition-type="slide-y"] {
-      &[data-navi-route-transition="forward"] {
-        --navi-route-transition-leave: navi-route-transition-leave-towards-top;
-        --navi-route-transition-enter: navi-route-transition-enter-from-bottom;
-      }
-      &[data-navi-route-transition="back"] {
-        --navi-route-transition-leave: navi-route-transition-leave-towards-bottom;
-        --navi-route-transition-enter: navi-route-transition-enter-from-top;
-      }
-    }
+    &[data-navi-route-transition="back"] {
+      --navi-route-transition-leave: navi-route-transition-leave-towards-end;
+      --navi-route-transition-enter: navi-route-transition-still;
 
-    /* One page over the other, the way a sheet covers a desk: the page
-       arriving slides in ON TOP of one that does not move, and going back it
-       slides off, uncovering it. The still page is animated all the same — to
-       a keyframe that goes nowhere — because left to the browser it would
-       fade. */
-    &[data-navi-route-transition-type="cover-x"] {
-      &[data-navi-route-transition="forward"] {
-        --navi-route-transition-leave: navi-route-transition-still;
-        --navi-route-transition-enter: navi-route-transition-enter-from-end;
-      }
-      &[data-navi-route-transition="back"] {
-        --navi-route-transition-leave: navi-route-transition-leave-towards-end;
-        --navi-route-transition-enter: navi-route-transition-still;
-        &::view-transition-old(root),
-        &::view-transition-old(navi-route-transition) {
-          /* The page leaving is the cover: it must slide off ABOVE the one it
-             uncovers, against the browser's default of drawing the new page on
-             top. */
-          z-index: 1;
-        }
-      }
-    }
-    &[data-navi-route-transition-type="cover-y"] {
-      &[data-navi-route-transition="forward"] {
-        --navi-route-transition-leave: navi-route-transition-still;
-        --navi-route-transition-enter: navi-route-transition-enter-from-bottom;
-      }
-      &[data-navi-route-transition="back"] {
-        --navi-route-transition-leave: navi-route-transition-leave-towards-bottom;
-        --navi-route-transition-enter: navi-route-transition-still;
-        &::view-transition-old(root),
-        &::view-transition-old(navi-route-transition) {
-          z-index: 1;
-        }
-      }
-    }
-
-    /* Going deeper is coming closer: the page arriving lands from slightly too
-       big, and going back it is the page leaving that grows away. The other
-       side fades, which is what the browser would have done there anyway —
-       written out so that this type says both of its halves like every
-       other. */
-    &[data-navi-route-transition-type="zoom"] {
-      &[data-navi-route-transition="forward"] {
-        --navi-route-transition-leave: navi-route-transition-fade-out;
-        --navi-route-transition-enter: navi-route-transition-zoom-in;
-      }
-      &[data-navi-route-transition="back"] {
-        --navi-route-transition-leave: navi-route-transition-zoom-out;
-        --navi-route-transition-enter: navi-route-transition-fade-in;
-      }
-      &::view-transition-old(root),
-      &::view-transition-new(root),
-      &::view-transition-old(navi-route-transition),
-      &::view-transition-new(navi-route-transition) {
-        /* One side of this one is a fade, and a fade is two half-transparent
-           pictures: they must ADD up rather than cover each other, or the page
-           behind shows through the middle of the movement. */
-        mix-blend-mode: plus-lighter;
-      }
-    }
-
-    /* The pages play what the type published. Written once for the types navi
-       ships and for those only: a type an application defines writes its own
-       rule, and one of navi's here would race it on cascade order. */
-    &[data-navi-route-transition-type="slide-x"],
-    &[data-navi-route-transition-type="slide-y"],
-    &[data-navi-route-transition-type="cover-x"],
-    &[data-navi-route-transition-type="cover-y"],
-    &[data-navi-route-transition-type="zoom"] {
-      &::view-transition-old(root),
-      &::view-transition-old(navi-route-transition) {
-        animation-name: var(--navi-route-transition-leave);
-      }
-      &::view-transition-new(root),
-      &::view-transition-new(navi-route-transition) {
-        animation-name: var(--navi-route-transition-enter);
-      }
-    }
-
-    /* Eased, which is a taste about THESE four: a custom type says its own
-       curve, and zoom keeps the browser's. */
-    &[data-navi-route-transition-type="slide-x"],
-    &[data-navi-route-transition-type="slide-y"],
-    &[data-navi-route-transition-type="cover-x"],
-    &[data-navi-route-transition-type="cover-y"] {
-      &::view-transition-old(root),
-      &::view-transition-new(root),
-      &::view-transition-old(navi-route-transition),
-      &::view-transition-new(navi-route-transition) {
-        animation-timing-function: ease;
+      &::view-transition-old(root), &::view-transition-old(navi-route-transition) {
+        z-index: 1;
       }
     }
   }
 
-  /* One window's worth of movement. The fallback is the picture's own size,
-     which is what the window is when the whole document travels: the root
-     picture IS the viewport. */
-  @keyframes navi-route-transition-leave-towards-start {
-    to {
-      translate: calc(-1 * var(--navi-route-transition-travel-x, 100%)) 0;
+  &[data-navi-route-transition-type="cover-y"] {
+    &[data-navi-route-transition="forward"] {
+      --navi-route-transition-leave: navi-route-transition-still;
+      --navi-route-transition-enter: navi-route-transition-enter-from-bottom;
+    }
+
+    &[data-navi-route-transition="back"] {
+      --navi-route-transition-leave: navi-route-transition-leave-towards-bottom;
+      --navi-route-transition-enter: navi-route-transition-still;
+
+      &::view-transition-old(root), &::view-transition-old(navi-route-transition) {
+        z-index: 1;
+      }
     }
   }
-  @keyframes navi-route-transition-enter-from-end {
-    from {
-      translate: var(--navi-route-transition-travel-x, 100%) 0;
+
+  &[data-navi-route-transition-type="zoom"] {
+    &[data-navi-route-transition="forward"] {
+      --navi-route-transition-leave: navi-route-transition-fade-out;
+      --navi-route-transition-enter: navi-route-transition-zoom-in;
+    }
+
+    &[data-navi-route-transition="back"] {
+      --navi-route-transition-leave: navi-route-transition-zoom-out;
+      --navi-route-transition-enter: navi-route-transition-fade-in;
+    }
+
+    &::view-transition-old(root), &::view-transition-new(root), &::view-transition-old(navi-route-transition), &::view-transition-new(navi-route-transition) {
+      mix-blend-mode: plus-lighter;
     }
   }
-  @keyframes navi-route-transition-leave-towards-end {
-    to {
-      translate: var(--navi-route-transition-travel-x, 100%) 0;
+
+  &[data-navi-route-transition-type="slide-x"], &[data-navi-route-transition-type="slide-y"], &[data-navi-route-transition-type="cover-x"], &[data-navi-route-transition-type="cover-y"], &[data-navi-route-transition-type="zoom"] {
+    &::view-transition-old(root), &::view-transition-old(navi-route-transition) {
+      animation-name: var(--navi-route-transition-leave);
+    }
+
+    &::view-transition-new(root), &::view-transition-new(navi-route-transition) {
+      animation-name: var(--navi-route-transition-enter);
     }
   }
-  @keyframes navi-route-transition-enter-from-start {
-    from {
-      translate: calc(-1 * var(--navi-route-transition-travel-x, 100%)) 0;
+
+  &[data-navi-route-transition-type="slide-x"], &[data-navi-route-transition-type="slide-y"], &[data-navi-route-transition-type="cover-x"], &[data-navi-route-transition-type="cover-y"] {
+    &::view-transition-old(root), &::view-transition-new(root), &::view-transition-old(navi-route-transition), &::view-transition-new(navi-route-transition) {
+      animation-timing-function: ease;
     }
   }
-  @keyframes navi-route-transition-leave-towards-top {
-    to {
-      translate: 0 calc(-1 * var(--navi-route-transition-travel-y, 100%));
-    }
+}
+
+@keyframes navi-route-transition-leave-towards-start {
+  to {
+    translate: calc(-1 * var(--navi-route-transition-travel-x, 100%)) 0;
   }
-  @keyframes navi-route-transition-enter-from-bottom {
-    from {
-      translate: 0 var(--navi-route-transition-travel-y, 100%);
-    }
+}
+
+@keyframes navi-route-transition-enter-from-end {
+  from {
+    translate: var(--navi-route-transition-travel-x, 100%) 0;
   }
-  @keyframes navi-route-transition-leave-towards-bottom {
-    to {
-      translate: 0 var(--navi-route-transition-travel-y, 100%);
-    }
+}
+
+@keyframes navi-route-transition-leave-towards-end {
+  to {
+    translate: var(--navi-route-transition-travel-x, 100%) 0;
   }
-  @keyframes navi-route-transition-enter-from-top {
-    from {
-      translate: 0 calc(-1 * var(--navi-route-transition-travel-y, 100%));
-    }
+}
+
+@keyframes navi-route-transition-enter-from-start {
+  from {
+    translate: calc(-1 * var(--navi-route-transition-travel-x, 100%)) 0;
   }
-  @keyframes navi-route-transition-zoom-in {
-    from {
-      opacity: 0;
-      scale: 1.1;
-    }
+}
+
+@keyframes navi-route-transition-leave-towards-top {
+  to {
+    translate: 0 calc(-1 * var(--navi-route-transition-travel-y, 100%));
   }
-  @keyframes navi-route-transition-zoom-out {
-    to {
-      opacity: 0;
-      scale: 1.1;
-    }
+}
+
+@keyframes navi-route-transition-enter-from-bottom {
+  from {
+    translate: 0 var(--navi-route-transition-travel-y, 100%);
   }
-  /* Standing still, said as an animation: naming it replaces the browser's own
-     fade on that side, which is the whole point. */
-  @keyframes navi-route-transition-still {
-    to {
-      translate: 0 0;
-    }
+}
+
+@keyframes navi-route-transition-leave-towards-bottom {
+  to {
+    translate: 0 var(--navi-route-transition-travel-y, 100%);
   }
-  /* The browser's own fade, written out: a movement says both of its halves,
-     so that whoever else plays it (transition_furniture.js) can be given the
-     same one. */
-  @keyframes navi-route-transition-fade-out {
-    to {
-      opacity: 0;
-    }
+}
+
+@keyframes navi-route-transition-enter-from-top {
+  from {
+    translate: 0 calc(-1 * var(--navi-route-transition-travel-y, 100%));
   }
-  @keyframes navi-route-transition-fade-in {
-    from {
-      opacity: 0;
-    }
+}
+
+@keyframes navi-route-transition-zoom-in {
+  from {
+    opacity: 0;
+    scale: 1.1;
   }
+}
+
+@keyframes navi-route-transition-zoom-out {
+  to {
+    opacity: 0;
+    scale: 1.1;
+  }
+}
+
+@keyframes navi-route-transition-still {
+  to {
+    translate: 0;
+  }
+}
+
+@keyframes navi-route-transition-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes navi-route-transition-fade-in {
+  from {
+    opacity: 0;
+  }
+}
 `;
 
 /**
@@ -28202,6 +27852,7 @@ const RouteTransitionArea = ({
   ...rest
 }) => {
   import.meta.css = [css$10, "@jsenv/navi/src/nav/route_transition.jsx"];
+  installTransitionWindowCss();
   const props = {
     ...rest,
     [TRANSITION_AREA_ATTRIBUTE]: ""
@@ -28259,6 +27910,7 @@ const RouteTransitionArea = ({
  */
 const defineRouteTransition = (from, to, transition) => {
   import.meta.css = [css$10, "@jsenv/navi/src/nav/route_transition.jsx"];
+  installTransitionWindowCss();
   const {
     type,
     duration
@@ -28295,6 +27947,7 @@ const defineRouteTransition = (from, to, transition) => {
  */
 const defineRouteDefaultTransition = transition => {
   import.meta.css = [css$10, "@jsenv/navi/src/nav/route_transition.jsx"];
+  installTransitionWindowCss();
   const value = normalizeTransition(transition);
   defaultTransition = value;
   return () => {
@@ -28934,386 +28587,232 @@ const DRAGGED_ATTRIBUTE = "data-navi-route-travel-dragged";
 const TURNED_ATTRIBUTE = "data-navi-route-travel-turned";
 // The name the box wears while it travels, and only then (see nameForTravel).
 const TRAVEL_NAME = "navi-route-travel";
-const css$$ = /* css */`
-  ${TRANSITION_WINDOW_CSS}
+const css$$ = /* css */`.navi_route_travel {
+  position: relative;
 
-  /* The name that makes the page inside this box a picture of its own during a
-     transition — rather than part of the one big picture the document takes, so
-     the two pages can move past each other while everything else stays where it
-     is — is not written here: it is worn only for the length of a travel (see
-     nameForTravel). A name belongs to ONE element at a time, and a page can hold
-     several of these boxes at once — a section of the url and a search param of
-     the root route are two rows of tabs, both live, and only one of them is ever
-     travelling. */
-  .navi_route_travel {
-    position: relative;
-
-    /* What a touch may do here — only where a touch travels at all
-       (data-travel-by-drag, set from travelByDrag): the axis the pages travel
-       on is taken, the other one is left to the page, so a list still scrolls
-       under the same finger. A box that takes no gesture takes no axis either:
-       it is a plain box around the page, and everything in it scrolls as it
-       would anywhere else. Same reading as SlideContainer's own. */
-    &[data-travel-by-drag="x"] {
-      touch-action: pan-y;
-    }
-    &[data-travel-by-drag="y"] {
-      touch-action: pan-x;
-    }
+  &[data-travel-by-drag="x"] {
+    touch-action: pan-y;
   }
 
-  /* Only while a travel of OURS is playing: everything below changes how the
-     document animates, and the document belongs to the application the rest of
-     the time. */
-  :root[${TRAVEL_ATTRIBUTE}] {
-    /* The page around the box is NOT taken as a picture, against the browser's
-       own default: an element that has been captured is not painted where it
-       was and cannot be pointed at either — every press lands on the document
-       root instead. Capturing the whole page therefore freezes it in both
-       senses at once, and a tab row beside a travel is dead for the length of
-       every travel: nothing highlights, the cursor is an arrow, a press on the
-       tab one changed one's mind about goes nowhere.
+  &[data-travel-by-drag="y"] {
+    touch-action: pan-x;
+  }
+}
 
-       Left live, the page around answers as it always did, and nothing shows
-       through where the pages are: the box IS captured (it is named below), so
-       it paints nothing of its own, and the two pictures cover its rectangle
-       between them at every moment of the travel. */
-    view-transition-name: none;
+:root[data-navi-route-travel] {
+  view-transition-name: none;
 
-    /* The pictures are looked at, never touched: they are drawn in the top
-       layer, above everything, so a hand reaching for a page that is still
-       sliding would land on the picture of it and the box below would never
-       hear the press. Nothing here is interactive — what the finger is
-       reaching for is the travel underneath, and it must reach it. */
-    &::view-transition,
-    &::view-transition-group(*),
-    &::view-transition-image-pair(*),
-    &::view-transition-old(*),
-    &::view-transition-new(*) {
-      pointer-events: none;
-    }
+  &::view-transition, &::view-transition-group(*), &::view-transition-image-pair(*), &::view-transition-old(*), &::view-transition-new(*) {
+    pointer-events: none;
+  }
 
-    &::view-transition-old(navi-route-travel),
-    &::view-transition-new(navi-route-travel) {
-      /* Each picture at the size it was taken at: a page is not resized by the
-         page it crosses. Told to fill a box whose height is being animated, a
-         picture is STRETCHED with it — the page leaving is then seen squashing
-         upwards, or zooming, over the length of the travel, when all it is
-         doing is walking off the edge. */
-      height: auto;
-      object-fit: none;
-      object-position: top left;
-      /* The default cross-fade, dropped: two pages sliding past each other are
-         two solid things, and seeing through one to the other says they are the
-         same page changing its mind. */
-      mix-blend-mode: normal;
-    }
-    /* Each picture at the corner its own box stood at, which is not the
-       window's: the window contains both boxes, and the two are at the same
-       place in the layout without being at the same place in the window — one
-       page is scrolled and the other is not, so the box being left starts
-       higher up. Left at the window's own corner the page being left would be
-       seen jumping back to its top before it even begins to leave. Offset here
-       rather than by \`translate\`, which the movement itself uses, and at its
-       own size rather than the group's so that nothing is cut off the far side
-       of the shift (see transition_window.js). */
-    &::view-transition-old(navi-route-travel) {
-      top: calc(
-        var(--navi-transition-window-old-top) - var(
-            --navi-transition-window-top
-          )
-      );
-      left: calc(
-        var(--navi-transition-window-old-left) - var(
-            --navi-transition-window-left
-          )
-      );
-      width: auto;
-    }
-    &::view-transition-new(navi-route-travel) {
-      top: calc(
-        var(--navi-transition-window-new-top) - var(
-            --navi-transition-window-top
-          )
-      );
-      left: calc(
-        var(--navi-transition-window-new-left) - var(
-            --navi-transition-window-left
-          )
-      );
-      width: auto;
-    }
-    /* The pages are cut at the edge of the box they travel in. Said HERE and
-       nowhere else: these pictures are drawn in the top layer, so no overflow
-       on any element of the document — not the box's own, not a frame around
-       it — can reach them. Without it a page being pulled in is seen sliding
-       across whatever sits beside the box. */
-    &::view-transition-group(navi-route-travel),
-    &::view-transition-image-pair(navi-route-travel) {
-      overflow: clip;
-    }
-    &::view-transition-group(navi-route-travel) {
-      /* The window the two pictures are seen through, held still for the whole
-         travel at the rectangle that contains both boxes (see
-         transition_window.js): the group is what CLIPS, and the browser
-         animates it from the box being left to the box arriving — so the
-         window moves and shrinks under the pictures, cutting the page leaving
-         from the bottom, progressively. The box does end up at the arriving
-         page's height, and that is right; what must not happen is the user
-         watching it get there.
+  &::view-transition-old(navi-route-travel), &::view-transition-new(navi-route-travel) {
+    object-fit: none;
+    object-position: top left;
+    mix-blend-mode: normal;
+    height: auto;
+  }
 
-         Held by dropping the group's animation rather than by winning against
-         it with !important. The browser puts the group where the ARRIVING box
-         stands, so it is moved from there back to the window's own corner. */
-      top: calc(
-        var(--navi-transition-window-top) - var(
-            --navi-transition-window-new-top
-          )
-      );
-      left: calc(
-        var(--navi-transition-window-left) - var(
-            --navi-transition-window-new-left
-          )
-      );
-      width: var(--navi-transition-window-width);
-      height: var(--navi-transition-window-height);
+  &::view-transition-old(navi-route-travel) {
+    top: calc(var(--navi-transition-window-old-top) - var(--navi-transition-window-top));
+    left: calc(var(--navi-transition-window-old-left) - var(--navi-transition-window-left));
+    width: auto;
+  }
 
-      /* Cut at what covers the box, on top of being cut at the box. The
-         pictures are drawn in the top layer, so they cover a fixed bar as
-         easily as anything else — and the box they travel in runs UNDER the
-         bars by design: that is what a fixed bar is for, and what the room it
-         gives back is for. A box scrolled by so much as a pixel therefore
-         starts above the top bar and ends below the bottom one, and the travel
-         would be watched painting over both for its whole length.
+  &::view-transition-new(navi-route-travel) {
+    top: calc(var(--navi-transition-window-new-top) - var(--navi-transition-window-top));
+    left: calc(var(--navi-transition-window-new-left) - var(--navi-transition-window-left));
+    width: auto;
+  }
 
-         Two bands are left free, and they answer for two different things: the
-         app's own safe area (layout/safe_area.js), everything pinned to the
-         WINDOW's edges, and --navi-transition-cover-* (transition_window.js),
-         what covers the box from inside the document — a sticky row of tabs
-         above the pages covers the top of the box exactly as a fixed bar covers
-         the top of the screen. Both are read rather than asked for, so one that
-         grows, shrinks or unmounts mid-travel is followed without anything
-         being told.
+  &::view-transition-group(navi-route-travel), &::view-transition-image-pair(navi-route-travel) {
+    overflow: clip;
+  }
 
-         Read live, though, they describe the state ARRIVING and nothing else,
-         so the cut is taken at the smaller of that and the band the state
-         being left kept free (--navi-transition-old-band-*, photographed while
-         both still existed). Furniture standing in BOTH states is the frame:
-         the pages move behind it and are cut at it. Furniture standing in one
-         of them is part of what changes, and cutting the page being left at a
-         bar it never had shows its own header being sliced instead of
-         leaving. */
-      --navi-route-travel-clip-top: max(
-        0px,
-        min(
-            var(--navi-safe-area-inset-top) + var(--navi-transition-cover-top),
-            var(--navi-transition-old-band-top)
-          ) - var(--navi-transition-window-top)
-      );
-      --navi-route-travel-clip-left: max(
-        0px,
-        min(
-            var(--navi-safe-area-inset-left) + var(--navi-transition-cover-left),
-            var(--navi-transition-old-band-left)
-          ) - var(--navi-transition-window-left)
-      );
-      --navi-route-travel-clip-bottom: max(
-        0px,
+  &::view-transition-group(navi-route-travel) {
+    top: calc(var(--navi-transition-window-top) - var(--navi-transition-window-new-top));
+    left: calc(var(--navi-transition-window-left) - var(--navi-transition-window-new-left));
+    width: var(--navi-transition-window-width);
+    height: var(--navi-transition-window-height);
+    --navi-route-travel-clip-top: max(0px,
+        min(var(--navi-safe-area-inset-top) + var(--navi-transition-cover-top),
+            var(--navi-transition-old-band-top)) - var(--navi-transition-window-top));
+    --navi-route-travel-clip-left: max(0px,
+        min(var(--navi-safe-area-inset-left) + var(--navi-transition-cover-left),
+            var(--navi-transition-old-band-left)) - var(--navi-transition-window-left));
+    --navi-route-travel-clip-bottom: max(0px,
         var(--navi-transition-window-top) +
           var(--navi-transition-window-height) +
-          min(
-            var(--navi-safe-area-inset-bottom) +
+          min(var(--navi-safe-area-inset-bottom) +
               var(--navi-transition-cover-bottom),
-            var(--navi-transition-old-band-bottom)
-          ) -
-          100dvh
-      );
-      --navi-route-travel-clip-right: max(
-        0px,
+            var(--navi-transition-old-band-bottom)) -
+          100dvh);
+    --navi-route-travel-clip-right: max(0px,
         var(--navi-transition-window-left) +
           var(--navi-transition-window-width) +
-          min(
-            var(--navi-safe-area-inset-right) +
+          min(var(--navi-safe-area-inset-right) +
               var(--navi-transition-cover-right),
-            var(--navi-transition-old-band-right)
-          ) -
-          100dvw
-      );
-      clip-path: inset(
-        var(--navi-route-travel-clip-top) var(--navi-route-travel-clip-right)
+            var(--navi-transition-old-band-right)) -
+          100dvw);
+    clip-path: inset(var(--navi-route-travel-clip-top) var(--navi-route-travel-clip-right)
           var(--navi-route-travel-clip-bottom)
-          var(--navi-route-travel-clip-left)
-      );
-      animation-duration: var(--navi-route-travel-duration, 300ms);
-      animation-name: none;
-    }
+          var(--navi-route-travel-clip-left));
+    animation-duration: var(--navi-route-travel-duration, .3s);
+    animation-name: none;
+  }
+}
+
+:root[data-navi-route-travel-held] {
+  &::view-transition-group(*), &::view-transition-old(*), &::view-transition-new(*) {
+    animation-play-state: paused;
+  }
+}
+
+:root[data-navi-route-travel] {
+  &::view-transition-old(navi-route-travel), &::view-transition-new(navi-route-travel) {
+    animation-duration: var(--navi-route-travel-duration, .3s);
+    animation-timing-function: ease;
+    animation-fill-mode: both;
+  }
+}
+
+:root[data-navi-route-travel-turned] {
+  &::view-transition-group(*) {
+    display: none;
   }
 
-  /* Held by a finger: nothing moves on its own, and where the pictures stand is
-     set by hand (scrubTravel). In CSS rather than paused in JS because JS
-     cannot pause what does not exist yet: a transition is ready several frames
-     after it is asked for — a navigation and a render later — and those frames
-     are the beginning of the gesture. Played at their own pace, a quick swipe
-     would be over before it was ever taken in hand, which is exactly what one
-     sees: the page arriving lands at once instead of following the thumb. */
-  :root[${HOLD_ATTRIBUTE}] {
-    &::view-transition-group(*),
-    &::view-transition-old(*),
-    &::view-transition-new(*) {
-      animation-play-state: paused;
-    }
+  &::view-transition-group(navi-route-travel) {
+    display: block;
+  }
+}
+
+:root[data-navi-route-travel-dragged] {
+  &::view-transition-group(navi-route-travel), &::view-transition-old(navi-route-travel), &::view-transition-new(navi-route-travel) {
+    animation-timing-function: linear;
+  }
+}
+
+:root[data-navi-route-travel="forward"] {
+  &::view-transition-old(navi-route-travel) {
+    animation-name: navi-route-travel-leave-towards-start;
   }
 
-  /* Longhands, never the \`animation\` shorthand: the shorthand also writes
-     animation-play-state, so it would set these back to running and undo the
-     hold above — a finger would then watch the pages travel on their own. */
-  :root[${TRAVEL_ATTRIBUTE}] {
-    &::view-transition-old(navi-route-travel),
-    &::view-transition-new(navi-route-travel) {
-      animation-duration: var(--navi-route-travel-duration, 300ms);
-      animation-timing-function: ease;
-      animation-fill-mode: both;
-    }
+  &::view-transition-new(navi-route-travel) {
+    animation-name: navi-route-travel-enter-from-end;
+  }
+}
+
+:root[data-navi-route-travel="back"] {
+  &::view-transition-old(navi-route-travel) {
+    animation-name: navi-route-travel-leave-towards-end;
   }
 
-  /* A travel that turned around takes its pages with it and nothing else. Every
-     other thing the transition carries — a bar under a tab row, a header — was
-     PHOTOGRAPHED when the transition began: where it stood, and where it was
-     going to stand. Both are fixed, and the second one is now a place nobody is
-     going to. Worse, the thing itself has moved on in the live page (the bar is
-     already under the tab one is heading for), so the picture and the thing are
-     in two places at once — and two bars is what one sees.
-
-     So the pictures of everything that is not the pages are dropped, and those
-     things are simply left where they are, live. A jump rather than a slide, on
-     the one gesture that cannot have both. */
-  :root[${TURNED_ATTRIBUTE}] {
-    &::view-transition-group(*) {
-      display: none;
-    }
-    /* …except the pages, which are what a travel is about. Listed after, so it
-       wins on order rather than on a specificity war. */
-    &::view-transition-group(navi-route-travel) {
-      display: block;
-    }
+  &::view-transition-new(navi-route-travel) {
+    animation-name: navi-route-travel-enter-from-start;
   }
+}
 
-  /* Under a finger, the pace IS the finger: an eased travel would run ahead of
-     it in the middle of the gesture and lag behind it at the ends, and what one
-     feels then is the page leaving on its own rather than being pushed. The
-     curve of the movement is the hand's, and it is already in the pull. Kept
-     linear once it is let go of too: changing the curve of an animation that is
-     halfway through moves the picture without anything having moved. */
-  :root[${DRAGGED_ATTRIBUTE}] {
-    &::view-transition-group(navi-route-travel),
-    &::view-transition-old(navi-route-travel),
-    &::view-transition-new(navi-route-travel) {
-      animation-timing-function: linear;
-    }
-  }
-  :root[${TRAVEL_ATTRIBUTE}="forward"] {
+:root[data-navi-route-travel-axis="y"] {
+  &[data-navi-route-travel="forward"] {
     &::view-transition-old(navi-route-travel) {
-      animation-name: navi-route-travel-leave-towards-start;
+      animation-name: navi-route-travel-leave-towards-top;
     }
+
     &::view-transition-new(navi-route-travel) {
-      animation-name: navi-route-travel-enter-from-end;
+      animation-name: navi-route-travel-enter-from-bottom;
     }
   }
-  :root[${TRAVEL_ATTRIBUTE}="back"] {
+
+  &[data-navi-route-travel="back"] {
     &::view-transition-old(navi-route-travel) {
-      animation-name: navi-route-travel-leave-towards-end;
+      animation-name: navi-route-travel-leave-towards-bottom;
     }
+
     &::view-transition-new(navi-route-travel) {
-      animation-name: navi-route-travel-enter-from-start;
+      animation-name: navi-route-travel-enter-from-top;
     }
+  }
+}
+
+@keyframes navi-route-travel-leave-towards-start {
+  from {
+    translate: 0;
   }
 
-  /* The same four movements, along the axis the pages are laid out on: the
-     start of a column is its top, so going forward there is the page rising and
-     the next one coming up from below. */
-  :root[${TRAVEL_AXIS_ATTRIBUTE}="y"] {
-    &[${TRAVEL_ATTRIBUTE}="forward"] {
-      &::view-transition-old(navi-route-travel) {
-        animation-name: navi-route-travel-leave-towards-top;
-      }
-      &::view-transition-new(navi-route-travel) {
-        animation-name: navi-route-travel-enter-from-bottom;
-      }
-    }
-    &[${TRAVEL_ATTRIBUTE}="back"] {
-      &::view-transition-old(navi-route-travel) {
-        animation-name: navi-route-travel-leave-towards-bottom;
-      }
-      &::view-transition-new(navi-route-travel) {
-        animation-name: navi-route-travel-enter-from-top;
-      }
-    }
+  to {
+    translate: -100%;
+  }
+}
+
+@keyframes navi-route-travel-enter-from-end {
+  from {
+    translate: 100%;
   }
 
-  @keyframes navi-route-travel-leave-towards-start {
-    from {
-      translate: 0 0;
-    }
-    to {
-      translate: -100% 0;
-    }
+  to {
+    translate: 0;
   }
-  @keyframes navi-route-travel-enter-from-end {
-    from {
-      translate: 100% 0;
-    }
-    to {
-      translate: 0 0;
-    }
+}
+
+@keyframes navi-route-travel-leave-towards-end {
+  from {
+    translate: 0;
   }
-  @keyframes navi-route-travel-leave-towards-end {
-    from {
-      translate: 0 0;
-    }
-    to {
-      translate: 100% 0;
-    }
+
+  to {
+    translate: 100%;
   }
-  @keyframes navi-route-travel-enter-from-start {
-    from {
-      translate: -100% 0;
-    }
-    to {
-      translate: 0 0;
-    }
+}
+
+@keyframes navi-route-travel-enter-from-start {
+  from {
+    translate: -100%;
   }
-  @keyframes navi-route-travel-leave-towards-top {
-    from {
-      translate: 0 0;
-    }
-    to {
-      translate: 0 -100%;
-    }
+
+  to {
+    translate: 0;
   }
-  @keyframes navi-route-travel-enter-from-bottom {
-    from {
-      translate: 0 100%;
-    }
-    to {
-      translate: 0 0;
-    }
+}
+
+@keyframes navi-route-travel-leave-towards-top {
+  from {
+    translate: 0;
   }
-  @keyframes navi-route-travel-leave-towards-bottom {
-    from {
-      translate: 0 0;
-    }
-    to {
-      translate: 0 100%;
-    }
+
+  to {
+    translate: 0 -100%;
   }
-  @keyframes navi-route-travel-enter-from-top {
-    from {
-      translate: 0 -100%;
-    }
-    to {
-      translate: 0 0;
-    }
+}
+
+@keyframes navi-route-travel-enter-from-bottom {
+  from {
+    translate: 0 100%;
   }
+
+  to {
+    translate: 0;
+  }
+}
+
+@keyframes navi-route-travel-leave-towards-bottom {
+  from {
+    translate: 0;
+  }
+
+  to {
+    translate: 0 100%;
+  }
+}
+
+@keyframes navi-route-travel-enter-from-top {
+  from {
+    translate: 0 -100%;
+  }
+
+  to {
+    translate: 0;
+  }
+}
 `;
 
 /**
@@ -29378,6 +28877,7 @@ const RouteTravel = ({
   ...rest
 }) => {
   import.meta.css = [css$$, "@jsenv/navi/src/nav/route_travel.jsx"];
+  installTransitionWindowCss();
   const elementRef = useRef();
   const gestureRef = useRef(null);
   // The travel in hand: the transition keeping the picture of the page being
@@ -38357,19 +37857,18 @@ const setupNetworkMonitoring = () => {
 };
 setupNetworkMonitoring();
 
-installImportMetaCssBuild(import.meta);const css$_ = /* css */`
-  .navi_loading_indicator_fluid_container {
-    position: relative;
-    display: flex;
-    width: 100%;
-    height: 100%;
-    border-radius: inherit;
-    opacity: 1;
+installImportMetaCssBuild(import.meta);const css$_ = /* css */`.navi_loading_indicator_fluid_container {
+  border-radius: inherit;
+  opacity: 1;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  position: relative;
 
-    &[data-visually-hidden] {
-      opacity: 0;
-    }
+  &[data-visually-hidden] {
+    opacity: 0;
   }
+}
 `;
 
 /**
@@ -38594,41 +38093,25 @@ const LoadingRectangleSvg = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$Z = /* css */`
-  .navi_loading_outline_wrapper {
-    position: absolute;
-    /* Controls place the outline slightly outside their box, right on top of
-       their border. Inside something that scrolls that bleed is enough to make
-       the area scrollable, so such a container sets --loading-outline-min-inset
-       to 0px to keep the outline within the control: a scrollbar appearing
-       just because something started loading is worse than an outline drawn a
-       couple pixels inward. The var is only ever read here (never set on this
-       element) so it keeps inheriting from whichever container declared it. */
-    top: max(
-      var(--loading-outline-min-inset, -100vh),
-      var(--loading-rectangle-top, 0px)
-    );
-    right: max(
-      var(--loading-outline-min-inset, -100vh),
-      var(--loading-rectangle-right, 0px)
-    );
-    bottom: max(
-      var(--loading-outline-min-inset, -100vh),
-      var(--loading-rectangle-bottom, 0px)
-    );
-    left: max(
-      var(--loading-outline-min-inset, -100vh),
-      var(--loading-rectangle-left, 0px)
-    );
-    z-index: 1;
-    border-radius: inherit;
-    pointer-events: none;
+installImportMetaCssBuild(import.meta);const css$Z = /* css */`.navi_loading_outline_wrapper {
+  top: max(var(--loading-outline-min-inset, -100vh),
+      var(--loading-rectangle-top, 0px));
+  right: max(var(--loading-outline-min-inset, -100vh),
+      var(--loading-rectangle-right, 0px));
+  bottom: max(var(--loading-outline-min-inset, -100vh),
+      var(--loading-rectangle-bottom, 0px));
+  left: max(var(--loading-outline-min-inset, -100vh),
+      var(--loading-rectangle-left, 0px));
+  z-index: 1;
+  border-radius: inherit;
+  pointer-events: none;
+  position: absolute;
 
-    &[hidden] {
-      display: block;
-      opacity: 0;
-    }
+  &[hidden] {
+    opacity: 0;
+    display: block;
   }
+}
 `;
 const LoadingOutline = props => {
   import.meta.css = [css$Z, "@jsenv/navi/src/graphic/loading/loading_outline.jsx"];
@@ -38766,12 +38249,11 @@ const LoadingOutlineWithPortal = props => {
 };
 
 installImportMetaCssBuild(import.meta);// # TextAnchor — how it works
-const css$Y = /* css */`
-  .navi_text_anchor {
-    vertical-align: baseline;
-    user-select: none;
-    overflow: hidden;
-  }
+const css$Y = /* css */`.navi_text_anchor {
+  vertical-align: baseline;
+  user-select: none;
+  overflow: hidden;
+}
 `;
 
 /**
@@ -39022,303 +38504,231 @@ const selectByTextStrings = (element, range, startText, endText) => {
 };
 
 installImportMetaCssBuild(import.meta);// https://jsfiddle.net/v5xzJ/4/
-const css$X = /* css */`
-  @layer navi {
-    /* Same reason as .navi_icon below: the display here is a starting point,
-       and box.jsx's unlayered [navi-box-flow] attributes have to win over it.
-       The rest is appearance a caller may want back. */
-    .navi_text {
-      &[data-skeleton] {
-        border-radius: 0.2em;
-      }
-
-      &[data-capitalize] {
-        text-transform: capitalize;
-
-        .navi_text_sizer {
-          .navi_text {
-            display: inline-block; /* We need inline-block to match the pseudo element */
-          }
-        }
-      }
-      &[data-shrinkwrap] {
-        display: inline-block;
-      }
-    }
-  }
-
-  time.navi_text {
-    font-variant-numeric: tabular-nums;
-  }
-
-  *[data-navi-space] {
-  }
-
+const css$X = /* css */`@layer navi {
   .navi_text {
-    position: relative;
-
-    /* There is a chrome specific bug that prevents text-transform: capitalize to be applied in nested DOM structure */
-    /* The CSS below ensure capitalize is propagated to the bold clones */
-    &[data-capitalize] {
-      &::first-letter {
-        text-transform: uppercase;
-      }
-      .navi_text_sizer_placeholder::first-letter {
-        text-transform: uppercase;
-      }
-      .navi_text_sizer_overlay::first-letter {
-        text-transform: uppercase;
-      }
-    }
-
-    .navi_text_sizer,
-    .navi_text_sizer_placeholder,
-    .navi_text_sizer_overlay {
-      display: inherit;
-      width: inherit;
-      min-width: inherit;
-      height: inherit;
-      min-height: inherit;
-      flex-grow: inherit;
-      align-items: inherit;
-      align-self: inherit;
-      justify-content: inherit;
-      gap: inherit;
-      text-align: inherit;
-      border-radius: inherit;
-    }
-
-    &[data-text-overflow] {
-      display: block;
-      min-width: 0;
-      text-overflow: ellipsis;
-      /* Only the inline axis has something to truncate, so the clip must not
-         constrain the block one: overflow hidden would make the element a
-         scroll container, whose flex automatic minimum size is 0, and inside a
-         column flex container shorter than 1lh the text then shrinks under its
-         own line box and gets cut through the glyphs. The margin leaves room
-         for ink drawn outside the advance width. */
-      overflow: clip;
-      overflow-wrap: normal;
-      /* The padding-box keyword is redundant (it is the default box) but
-         Chromium drops the declaration when a bare calc() follows. */
-      overflow-clip-margin: padding-box calc((1lh - 1em) / 2);
-    }
-
     &[data-skeleton] {
-      max-width: 100%;
-      /* Children stay in the DOM to preserve natural layout dimensions,
-         but are hidden so only the skeleton is visible. */
-      visibility: hidden;
+      border-radius: .2em;
+    }
 
-      /* When there are no children a placeholder "W" is injected (see JSX).
-         It must stretch to the full available width so the skeleton
-         fills the container rather than collapsing to a single character. */
-      .navi_text_skeleton_children_placeholder {
-        display: inline-flex;
-        width: 100%;
-      }
+    &[data-capitalize] {
+      text-transform: capitalize;
 
-      /* Three-level structure to respect padding AND border-radius:
-
-         1. navi_text_skeleton_container — absolutely fills the border box
-            (inset:0), then applies padding:inherit so its content box equals
-            the parent's content box. line-height:normal prevents the container
-            from inheriting a large line-height that would make it taller than
-            the border box. border-radius:inherit passes the radius down.
-            visibility:visible overrides the parent's visibility:hidden.
-
-         2. navi_text_skeleton_inset — a relative block that fills 100% of the
-            container's content box (= parent's content box). It is the
-            positioned ancestor for the absolutely placed skeleton bar.
-            border-radius:inherit chains the radius further down.
-
-         3. navi_text_skeleton — the visible gradient bar. position:absolute
-            inset:0 fills the inset box precisely. border-radius:inherit
-            finally applies the radius at this level, which is now correctly
-            sized to the content area. */
-      .navi_text_skeleton_container {
-        position: absolute;
-        inset: 0;
-        padding: inherit;
-        line-height: normal;
-        border-radius: inherit;
-        visibility: visible;
-      }
-
-      .navi_text_skeleton_inset {
-        position: relative;
-        display: inline-flex;
-        width: 100%;
-        height: 100%;
-        border-radius: inherit;
-      }
-
-      .navi_text_skeleton {
-        position: absolute;
-        inset: 0;
-        background: linear-gradient(
-          90deg,
-          #e0e0e0 25%,
-          #f0f0f0 50%,
-          #e0e0e0 75%
-        );
-        background-size: 200% 100%;
-        border-radius: inherit;
-      }
-
-      &[data-loading] {
-        .navi_text_skeleton {
-          animation: navi_text_skeleton_shimmer 1.5s infinite;
+      & .navi_text_sizer {
+        & .navi_text {
+          display: inline-block;
         }
       }
     }
-  }
 
-  @keyframes navi_text_skeleton_shimmer {
-    0% {
-      background-position: 200% 0;
-    }
-    100% {
-      background-position: -200% 0;
-    }
-  }
-
-  .navi_text_sizer {
-    position: relative;
-    display: inline-block;
-
-    .navi_text_sizer_placeholder {
-      opacity: 0;
-    }
-    .navi_text_sizer_overlay {
-      position: absolute;
-      inset: 0;
-    }
-  }
-
-  .navi_text_bold_background {
-    position: absolute;
-    top: 0;
-    left: 0;
-    color: currentColor;
-    font-weight: normal;
-    background: currentColor;
-    background-clip: text;
-    -webkit-background-clip: text;
-    transform-origin: center;
-    -webkit-text-fill-color: transparent;
-    opacity: 0;
-  }
-  .navi_text[data-contains-absolute-child] {
-    display: inline-block;
-  }
-  .navi_text[data-bold] {
-    .navi_text_bold_background {
-      opacity: 1;
-    }
-  }
-
-  /* ── Icon ── */
-
-  @layer navi {
-    /* Ensure data attributes from box.jsx can win to update display */
-    .navi_icon {
-      display: inline-flex;
-      box-sizing: border-box;
-      max-width: 100%;
-      /* An icon never grows past the box it sits in, so a glyph can never make
-         a line of text taller than the text itself. lineOverflow="allow" opts
-         out, for an icon that is an affordance rather than a character — a
-         control's chevron or clear button, sized to be touched, not read. */
-      max-height: 100%;
-
-      &[data-line-overflow="allow"] {
-        max-height: none;
-      }
+    &[data-shrinkwrap] {
+      display: inline-block;
     }
   }
 
   .navi_icon {
-    white-space: nowrap;
-    vertical-align: inherit;
+    box-sizing: border-box;
+    max-width: 100%;
+    max-height: 100%;
+    display: inline-flex;
 
-    &[data-icon-char] {
-      aspect-ratio: 1/1;
-      /* The width is stated, not left to the aspect ratio. Derived through the
-         ratio it would be capped by max-width: 100% of a content-sized parent
-         (a button's content, a picker's slot) whose width depends on the icon —
-         a cyclic percentage that iOS WebKit resolves to 0, collapsing the icon
-         and the parent with it. */
-      width: round(1em, 1px);
-      min-width: 0;
-      height: round(1em, 1px);
-      max-height: round(1em, 1px);
-      flex-grow: 0 !important;
-      align-items: center;
-      justify-content: center;
+    &[data-line-overflow="allow"] {
+      max-height: none;
+    }
+  }
+}
 
-      /* fillLine: measured on the line box (1lh) instead of the character box
-         (1em). The icon still stays inside the line — it just uses all of it,
-         which is what an icon standing on its own in a control's slot wants,
-         where a glyph sitting among letters wants to match their size. */
-      &[data-fill-line] {
-        width: round(1lh, 1px);
-        height: round(1lh, 1px);
-        max-height: round(1lh, 1px);
+time.navi_text {
+  font-variant-numeric: tabular-nums;
+}
+
+.navi_text {
+  position: relative;
+
+  &[data-capitalize] {
+    &:first-letter, & .navi_text_sizer_placeholder:first-letter, & .navi_text_sizer_overlay:first-letter {
+      text-transform: uppercase;
+    }
+  }
+
+  & .navi_text_sizer, & .navi_text_sizer_placeholder, & .navi_text_sizer_overlay {
+    display: inherit;
+    width: inherit;
+    min-width: inherit;
+    height: inherit;
+    min-height: inherit;
+    flex-grow: inherit;
+    align-items: inherit;
+    align-self: inherit;
+    justify-content: inherit;
+    gap: inherit;
+    text-align: inherit;
+    border-radius: inherit;
+  }
+
+  &[data-text-overflow] {
+    text-overflow: ellipsis;
+    overflow-wrap: normal;
+    overflow-clip-margin: padding-box calc((1lh - 1em) / 2);
+    min-width: 0;
+    display: block;
+    overflow: clip;
+  }
+
+  &[data-skeleton] {
+    visibility: hidden;
+    max-width: 100%;
+
+    & .navi_text_skeleton_children_placeholder {
+      width: 100%;
+      display: inline-flex;
+    }
+
+    & .navi_text_skeleton_container {
+      padding: inherit;
+      border-radius: inherit;
+      visibility: visible;
+      line-height: normal;
+      position: absolute;
+      inset: 0;
+    }
+
+    & .navi_text_skeleton_inset {
+      border-radius: inherit;
+      width: 100%;
+      height: 100%;
+      display: inline-flex;
+      position: relative;
+    }
+
+    & .navi_text_skeleton {
+      border-radius: inherit;
+      background: linear-gradient(90deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%) 0 0 / 200% 100%;
+      position: absolute;
+      inset: 0;
+    }
+
+    &[data-loading] {
+      & .navi_text_skeleton {
+        animation: 1.5s infinite navi_text_skeleton_shimmer;
       }
+    }
+  }
+}
 
-      svg,
-      img {
-        width: 100%;
-        height: 100%;
-      }
-      svg {
-        overflow: visible;
-      }
-    }
-    &[data-flow-inline] {
-      width: 1em;
-      height: 1em;
-    }
-    &[data-interactive] {
-      cursor: pointer;
-    }
-    &[data-icon-text] {
-      -webkit-font-smoothing: antialiased;
-      text-rendering: optimizeLegibility;
-    }
+@keyframes navi_text_skeleton_shimmer {
+  0% {
+    background-position: 200% 0;
   }
 
-  /* A block icon whose width follows from its height through the aspect ratio
-     has nothing for max-width: 100% to measure against when the parent is
-     content-sized (same cyclic percentage as above); the height already bounds
-     it. data-width-fixed alone (an explicit width) keeps the cap. */
-  .navi_icon[data-height-fixed]:not([data-width-fixed]),
-  .navi_icon[data-width-fixed][data-height-fixed] {
-    max-width: none;
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.navi_text_sizer {
+  display: inline-block;
+  position: relative;
+
+  & .navi_text_sizer_placeholder {
+    opacity: 0;
   }
 
-  .navi_icon > svg,
-  .navi_icon > img {
-    width: 100%;
-    height: 100%;
+  & .navi_text_sizer_overlay {
+    position: absolute;
+    inset: 0;
   }
-  .navi_icon[data-width-fixed] > svg,
-  .navi_icon[data-width-fixed] > img {
-    width: 100%;
-    height: auto;
+}
+
+.navi_text_bold_background {
+  color: currentColor;
+  transform-origin: center;
+  -webkit-text-fill-color: transparent;
+  opacity: 0;
+  background: currentColor text;
+  font-weight: normal;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.navi_text[data-contains-absolute-child] {
+  display: inline-block;
+}
+
+.navi_text[data-bold] {
+  & .navi_text_bold_background {
+    opacity: 1;
   }
-  .navi_icon[data-height-fixed] > svg,
-  .navi_icon[data-height-fixed] > img {
-    width: auto;
-    height: 100%;
+}
+
+.navi_icon {
+  white-space: nowrap;
+  vertical-align: inherit;
+
+  &[data-icon-char] {
+    aspect-ratio: 1;
+    justify-content: center;
+    align-items: center;
+    width: round(1em, 1px);
+    min-width: 0;
+    height: round(1em, 1px);
+    max-height: round(1em, 1px);
+    flex-grow: 0 !important;
+
+    &[data-fill-line] {
+      width: round(1lh, 1px);
+      height: round(1lh, 1px);
+      max-height: round(1lh, 1px);
+    }
+
+    & svg, & img {
+      width: 100%;
+      height: 100%;
+    }
+
+    & svg {
+      overflow: visible;
+    }
   }
-  .navi_icon[data-width-fixed][data-height-fixed] > svg,
-  .navi_icon[data-width-fixed][data-height-fixed] > img {
-    width: 100%;
-    height: 100%;
+
+  &[data-flow-inline] {
+    width: 1em;
+    height: 1em;
   }
+
+  &[data-interactive] {
+    cursor: pointer;
+  }
+
+  &[data-icon-text] {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizelegibility;
+  }
+}
+
+.navi_icon[data-height-fixed]:not([data-width-fixed]), .navi_icon[data-width-fixed][data-height-fixed] {
+  max-width: none;
+}
+
+.navi_icon > svg, .navi_icon > img {
+  width: 100%;
+  height: 100%;
+}
+
+.navi_icon[data-width-fixed] > svg, .navi_icon[data-width-fixed] > img {
+  width: 100%;
+  height: auto;
+}
+
+.navi_icon[data-height-fixed] > svg, .navi_icon[data-height-fixed] > img {
+  width: auto;
+  height: 100%;
+}
+
+.navi_icon[data-width-fixed][data-height-fixed] > svg, .navi_icon[data-width-fixed][data-height-fixed] > img {
+  width: 100%;
+  height: 100%;
+}
 `;
 const REGULAR_SPACE = jsx("span", {
   "data-navi-space": "",
@@ -40037,290 +39447,243 @@ const useDimColorWhen = (elementRef, shouldDim) => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$W = /* css */`
-  @layer navi {
-    .navi_link {
-      --link-border-radius: unset;
-      --link-outline-color: var(--navi-focus-outline-color);
-      --link-loader-color: var(--navi-loader-color);
-      --link-background: unset;
-      --link-background-current: unset;
-      --link-background-selected: light-dark(#bbdefb, #2563eb);
-      --link-color: var(--navi-link-color);
-      --link-color-visited: var(
-        --navi-link-color-visited,
-        color-mix(in srgb, var(--link-color), black 40%)
-      );
+installImportMetaCssBuild(import.meta);const css$W = /* css */`@layer navi {
+  .navi_link {
+    --link-border-radius: unset;
+    --link-outline-color: var(--navi-focus-outline-color);
+    --link-loader-color: var(--navi-loader-color);
+    --link-background: unset;
+    --link-background-current: unset;
+    --link-background-selected: light-dark(#bbdefb, #2563eb);
+    --link-color: var(--navi-link-color);
+    --link-color-visited: var(--navi-link-color-visited, color-mix(in srgb, var(--link-color), black 40%));
+    --link-color-pressed: var(--navi-link-color-pressed);
+    --link-text-decoration: underline;
+    --link-text-decoration-hover: var(--link-text-decoration);
+    --link-cursor: pointer;
+    --link-outline-width: 2px;
+    --link-current-indicator-size: 2px;
+    --link-current-indicator-spacing: 0;
+    --link-current-indicator-color: var(--navi-link-current-indicator-color);
+  }
+}
 
-      --link-color-pressed: var(--navi-link-color-pressed);
-      --link-text-decoration: underline;
-      --link-text-decoration-hover: var(--link-text-decoration);
-      --link-cursor: pointer;
-      --link-outline-width: 2px;
+.navi_link {
+  --x-link-contrasting-color: black;
+  --x-link-background: var(--link-background-color, var(--link-background));
+  --x-link-background-hover: var(--link-background-color-hover, var(--link-background-color, var(--link-background-hover)));
+  --x-link-background-selected: var(--link-background-color-selected, var(--link-background-selected));
+  --x-link-background-current: var(--link-background-color-current, var(--link-background-current, var(--link-background-color, var(--link-background))));
+  --x-link-color: var(--link-color);
+  --x-link-color-hover: var(--link-color-hover, var(--link-color));
+  --x-link-color-visited: var(--link-color-visited);
+  --x-link-color-current: var(--link-color-current);
+  --x-link-color-pressed: var(--link-color-pressed);
+  --x-link-text-decoration: var(--link-text-decoration);
+  --x-link-text-decoration-hover: var(--link-text-decoration-hover);
+  --x-link-cursor: var(--link-cursor);
+  --x-link-padding-top: var(--link-padding-top, var(--link-padding-y, var(--link-padding, 0px)));
+  --x-link-padding-right: var(--link-padding-right, var(--link-padding-x, var(--link-padding, 0px)));
+  --x-link-padding-bottom: var(--link-padding-bottom, var(--link-padding-y, var(--link-padding, 0px)));
+  --x-link-padding-left: var(--link-padding-left, var(--link-padding-x, var(--link-padding, 0px)));
+  aspect-ratio: inherit;
+  padding-top: var(--x-link-padding-top);
+  padding-right: var(--x-link-padding-right);
+  padding-bottom: var(--x-link-padding-bottom);
+  padding-left: var(--x-link-padding-left);
+  color: var(--x-link-color);
+  text-decoration: var(--x-link-text-decoration);
+  background: var(--x-link-background);
+  border-radius: var(--link-border-radius);
+  outline-width: 0;
+  outline-style: solid;
+  outline-color: var(--link-outline-color);
+  cursor: var(--x-link-cursor);
+  position: relative;
 
-      --link-current-indicator-size: 2px;
-      --link-current-indicator-spacing: 0;
-      --link-current-indicator-color: var(--navi-link-current-indicator-color);
+  & .navi_current_indicator {
+    z-index: 1;
+    background: none;
+    border-radius: .1px;
+    display: flex;
+    position: absolute;
+  }
+
+  &[data-current-indicator-position="top"] {
+    margin-top: var(--link-current-indicator-spacing);
+
+    & .navi_current_indicator {
+      width: 100%;
+      height: var(--link-current-indicator-size);
+      top: 0;
+      left: 0;
     }
   }
 
-  .navi_link {
-    --x-link-contrasting-color: black;
+  &[data-current-indicator-position="bottom"] {
+    margin-bottom: var(--link-current-indicator-spacing);
 
-    --x-link-background: var(--link-background-color, var(--link-background));
-    --x-link-background-hover: var(
-      --link-background-color-hover,
-      var(--link-background-color, var(--link-background-hover))
-    );
-    --x-link-background-selected: var(
-      --link-background-color-selected,
-      var(--link-background-selected)
-    );
-    --x-link-background-current: var(
-      --link-background-color-current,
-      var(
-        --link-background-current,
-        var(--link-background-color, var(--link-background))
-      )
-    );
-    --x-link-color: var(--link-color);
-    --x-link-color-hover: var(--link-color-hover, var(--link-color));
-    --x-link-color-visited: var(--link-color-visited);
-    --x-link-color-current: var(--link-color-current);
-    --x-link-color-pressed: var(--link-color-pressed);
-    --x-link-text-decoration: var(--link-text-decoration);
-    --x-link-text-decoration-hover: var(--link-text-decoration-hover);
-    --x-link-cursor: var(--link-cursor);
-
-    /* Resolve padding shorthands into directional vars */
-    --x-link-padding-top: var(
-      --link-padding-top,
-      var(--link-padding-y, var(--link-padding, 0px))
-    );
-    --x-link-padding-right: var(
-      --link-padding-right,
-      var(--link-padding-x, var(--link-padding, 0px))
-    );
-    --x-link-padding-bottom: var(
-      --link-padding-bottom,
-      var(--link-padding-y, var(--link-padding, 0px))
-    );
-    --x-link-padding-left: var(
-      --link-padding-left,
-      var(--link-padding-x, var(--link-padding, 0px))
-    );
-
-    position: relative;
-    aspect-ratio: inherit;
-    padding-top: var(--x-link-padding-top);
-    padding-right: var(--x-link-padding-right);
-    padding-bottom: var(--x-link-padding-bottom);
-    padding-left: var(--x-link-padding-left);
-    color: var(--x-link-color);
-    text-decoration: var(--x-link-text-decoration);
-    background: var(--x-link-background);
-    border-radius: var(--link-border-radius);
-    outline-width: 0;
-    outline-style: solid;
-    outline-color: var(--link-outline-color);
-    cursor: var(--x-link-cursor);
-
-    .navi_current_indicator {
-      position: absolute;
-      z-index: 1;
-      display: flex;
-      background: transparent;
-      border-radius: 0.1px;
+    & .navi_current_indicator {
+      width: 100%;
+      height: var(--link-current-indicator-size);
+      bottom: 0;
+      left: 0;
     }
-    &[data-current-indicator-position="top"] {
-      margin-top: var(--link-current-indicator-spacing);
+  }
 
-      .navi_current_indicator {
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: var(--link-current-indicator-size);
-      }
-    }
-    &[data-current-indicator-position="bottom"] {
-      margin-bottom: var(--link-current-indicator-spacing);
+  &[data-current-indicator-position="left"] {
+    margin-left: var(--link-current-indicator-spacing);
 
-      .navi_current_indicator {
-        bottom: 0;
-        left: 0;
-        width: 100%;
-        height: var(--link-current-indicator-size);
-      }
+    & .navi_current_indicator {
+      width: var(--link-current-indicator-size);
+      height: 100%;
+      top: 0;
+      left: 0;
     }
-    &[data-current-indicator-position="left"] {
-      margin-left: var(--link-current-indicator-spacing);
+  }
 
-      .navi_current_indicator {
-        top: 0;
-        left: 0;
-        width: var(--link-current-indicator-size);
-        height: 100%;
-      }
-    }
-    &[data-current-indicator-position="right"] {
-      margin-right: var(--link-current-indicator-spacing);
+  &[data-current-indicator-position="right"] {
+    margin-right: var(--link-current-indicator-spacing);
 
-      .navi_current_indicator {
-        top: 0;
-        right: 0;
-        width: var(--link-current-indicator-size);
-        height: 100%;
-      }
+    & .navi_current_indicator {
+      width: var(--link-current-indicator-size);
+      height: 100%;
+      top: 0;
+      right: 0;
     }
+  }
 
-    [data-icon-text] {
-      display: inline-block; /* Allow to skip the underlining */
-    }
+  & [data-icon-text] {
+    display: inline-block;
+  }
 
-    /* Interactive */
-    &[data-interactive] {
-      cursor: pointer;
-    }
-    /* Visited */
-    &[data-visited] {
-      --x-link-color: var(--x-link-color-visited);
-      &[data-anchor] {
-        /* Visited is meant to help user see what links he already seen / what remains to discover */
-        /* But anchor links are already in the area user is currently seeing */
-        /* No need for a special color for visited anchors */
-        --x-link-color: var(--link-color);
-      }
-    }
+  &[data-interactive] {
+    cursor: pointer;
+  }
+
+  &[data-visited] {
+    --x-link-color: var(--x-link-color-visited);
+
     &[data-anchor] {
-      /* Usually better to have some spacing between the anchor and the scroll top */
-      scroll-margin-block: calc(1em + var(--link-outline-width) + 1px);
+      --x-link-color: var(--link-color);
     }
-    /* Hover */
-    &[data-hover] {
-      --x-link-background: var(--x-link-background-hover);
-      --x-link-color: var(--x-link-color-hover);
-      --x-link-text-decoration: var(--x-link-text-decoration-hover);
-    }
-    &[data-focus-visible] {
-      outline-width: var(--link-outline-width);
-    }
-    /* Pressed */
-    &[data-pressed] {
-      /* Redefine it otherwise [data-visited] prevails */
-      --x-link-color: var(--x-link-color-pressed);
-    }
-    /* Current */
-    &[data-href-current] {
+  }
+
+  &[data-anchor] {
+    scroll-margin-block: calc(1em + var(--link-outline-width) + 1px);
+  }
+
+  &[data-hover] {
+    --x-link-background: var(--x-link-background-hover);
+    --x-link-color: var(--x-link-color-hover);
+    --x-link-text-decoration: var(--x-link-text-decoration-hover);
+  }
+
+  &[data-focus-visible] {
+    outline-width: var(--link-outline-width);
+  }
+
+  &[data-pressed] {
+    --x-link-color: var(--x-link-color-pressed);
+  }
+
+  &[data-href-current] {
+    --x-link-color: var(--link-color-current);
+    --x-link-cursor: default;
+    --x-link-background: var(--x-link-background-current);
+
+    &[data-anchor] {
+      --x-link-cursor: pointer;
       --x-link-color: var(--link-color-current);
-      --x-link-cursor: default;
-      --x-link-background: var(--x-link-background-current);
+    }
 
-      &[data-anchor] {
-        /* For anchor links, we want to keep the pointer cursor to indicate interactivity */
-        /* as anchor link will still scroll to the section even if it's the current page */
-        --x-link-cursor: pointer;
-        --x-link-color: var(--link-color-current); /* override visited */
-      }
-      &[data-current-effect-bold] {
-        font-weight: bold;
-      }
-      .navi_current_indicator {
-        background: var(--link-current-indicator-color);
-      }
+    &[data-current-effect-bold] {
+      font-weight: bold;
     }
-    /* Selected */
-    &[aria-selected] {
-      position: relative;
 
-      input[type="checkbox"] {
-        position: absolute;
-        opacity: 0;
-      }
+    & .navi_current_indicator {
+      background: var(--link-current-indicator-color);
     }
-    &[data-selected] {
-      --x-link-background: var(--x-link-background-selected);
-      --x-link-color: var(--link-color-selected);
-    }
-    /* Focus */
-    &[data-focus],
-    &[data-focus-visible] {
-      position: relative;
-      z-index: 1; /* Ensure focus outline is above other elements */
-    }
-    /* Readonly */
-    &[data-readonly] > * {
-      opacity: 0.5;
-    }
-    /* Disabled */
-    &[data-disabled] {
-      pointer-events: none;
-    }
-    &[data-disabled] > * {
-      opacity: 0.5;
-    }
-    /* Reveal on interaction */
-    &[data-reveal-on-interaction] {
-      --anchor-spacing: 0px; /* outline width + 1px */
+  }
 
-      display: inline-flex;
-      width: round(1em, 1px);
-      height: round(1em, 1px);
-      /* height: 1lh; */
-      margin-right: var(--anchor-spacing);
-      margin-left: round(calc(-1 * calc(1em + var(--anchor-spacing))), 1px);
-      align-items: center;
-      justify-content: center;
-      font-size: 1em;
-      text-decoration: none;
+  &[aria-selected] {
+    position: relative;
+
+    & input[type="checkbox"] {
       opacity: 0;
-      /* The anchor link is displayed only on :hover */
-      /* So we "need" a visual indicator when it's shown by focus */
-      /* (even if it's focused by mouse aka not :focus-visible) */
-      /* otherwise we might wonder why we see this UI element */
-      &[data-focus] {
-        outline-width: 2px;
-      }
-      &[data-hover],
-      &[data-focus],
-      &[data-focus-visible] {
-        opacity: 1;
-      }
+      position: absolute;
+    }
+  }
+
+  &[data-selected] {
+    --x-link-background: var(--x-link-background-selected);
+    --x-link-color: var(--link-color-selected);
+  }
+
+  &[data-focus], &[data-focus-visible] {
+    z-index: 1;
+    position: relative;
+  }
+
+  &[data-readonly] > * {
+    opacity: .5;
+  }
+
+  &[data-disabled] {
+    pointer-events: none;
+  }
+
+  &[data-disabled] > * {
+    opacity: .5;
+  }
+
+  &[data-reveal-on-interaction] {
+    --anchor-spacing: 0px;
+    width: round(1em, 1px);
+    height: round(1em, 1px);
+    margin-right: var(--anchor-spacing);
+    margin-left: round(calc(-1 * calc(1em + var(--anchor-spacing))), 1px);
+    opacity: 0;
+    justify-content: center;
+    align-items: center;
+    font-size: 1em;
+    text-decoration: none;
+    display: inline-flex;
+
+    &[data-focus] {
+      outline-width: 2px;
     }
 
-    .anchor_icon {
-      margin-left: -0.1em;
+    &[data-hover], &[data-focus], &[data-focus-visible] {
+      opacity: 1;
     }
+  }
 
-    &[data-variant="text"] {
-      --link-color: unset;
-      --link-text-decoration: none;
-    }
-    &[data-variant="icon"] {
-      --link-color: unset;
-      --link-text-decoration: none;
-    }
-    &[data-variant="tab"] {
-      --link-background-hover: color-mix(
-        in srgb,
+  & .anchor_icon {
+    margin-left: -.1em;
+  }
+
+  &[data-variant="text"], &[data-variant="icon"] {
+    --link-color: unset;
+    --link-text-decoration: none;
+  }
+
+  &[data-variant="tab"] {
+    --link-background-hover: color-mix(in srgb,
         var(--link-background, transparent),
-        var(--x-link-contrasting-color) 15%
-      );
-      --link-color: unset;
-      --link-text-decoration: none;
-      white-space: nowrap;
-      user-select: none;
+        var(--x-link-contrasting-color) 15%);
+    --link-color: unset;
+    --link-text-decoration: none;
+    white-space: nowrap;
+    user-select: none;
 
-      &[data-current-effect-shadow][data-href-current] {
-        --x-link-box-shadow-size: 0.1em;
-        --x-link-box-shadow-halo: 0.3em;
-        --x-link-shadow-color: color-mix(
-          in srgb,
+    &[data-current-effect-shadow][data-href-current] {
+      --x-link-box-shadow-size: .1em;
+      --x-link-box-shadow-halo: .3em;
+      --x-link-shadow-color: color-mix(in srgb,
           var(--x-link-contrasting-color) 40%,
-          transparent
-        );
-
-        box-shadow:
-          inset 0 var(--x-link-box-shadow-size) var(--x-link-box-shadow-halo)
+          transparent);
+      box-shadow: inset 0 var(--x-link-box-shadow-size) var(--x-link-box-shadow-halo)
             var(--x-link-shadow-color),
           inset 0 calc(-1 * var(--x-link-box-shadow-size))
             var(--x-link-box-shadow-halo) var(--x-link-shadow-color),
@@ -40328,13 +39691,13 @@ installImportMetaCssBuild(import.meta);const css$W = /* css */`
             var(--x-link-shadow-color),
           inset calc(-1 * var(--x-link-box-shadow-size)) 0
             var(--x-link-box-shadow-halo) var(--x-link-shadow-color);
-      }
     }
   }
+}
 
-  *:hover > .navi_link[data-reveal-on-interaction] {
-    opacity: 1;
-  }
+:hover > .navi_link[data-reveal-on-interaction] {
+  opacity: 1;
+}
 `;
 const LinkStyleCSSVars = {
   "outlineColor": "--link-outline-color",
@@ -41007,250 +40370,178 @@ let navCount = 0;
 // Worn by a nav of routes while a route movement between two of its tabs is
 // pictured (see markIndicatorTakesPart, and the CSS below for what it decides).
 const BETWEEN_TABS_ATTRIBUTE = "data-nav-between-tabs";
-const css$V = /* css */`
-  @layer navi {
-    .navi_nav {
-      --nav-border: none;
-      --nav-padding: 0px;
-      --nav-border-radius: 0px;
-      --nav-background: transparent;
-      --nav-current-indicator-size: 2px;
-      --nav-current-indicator-color: var(--navi-link-current-indicator-color);
+const css$V = /* css */`@layer navi {
+  .navi_nav {
+    --nav-border: none;
+    --nav-padding: 0px;
+    --nav-border-radius: 0px;
+    --nav-background: transparent;
+    --nav-current-indicator-size: 2px;
+    --nav-current-indicator-color: var(--navi-link-current-indicator-color);
+  }
+}
+
+.navi_nav[data-nav-indicator] {
+  position: relative;
+
+  & > .navi_nav_indicator {
+    --x-nav-indicator-position: calc(var(--nav-indicator-position) + var(--slide-travel-progress) *
+          var(--nav-indicator-position-delta));
+    --x-nav-indicator-length: calc(var(--nav-indicator-length) + var(--slide-travel-progress) *
+          var(--nav-indicator-length-delta));
+    z-index: 1;
+    background: var(--nav-current-indicator-color);
+    pointer-events: none;
+    border-radius: .1px;
+    position: absolute;
+  }
+
+  &:not([data-nav-indicator-measured]) > .navi_nav_indicator {
+    display: none;
+  }
+
+  &[data-nav-indicator="top"], &[data-nav-indicator="bottom"] {
+    & > .navi_nav_indicator {
+      left: calc(var(--x-nav-indicator-position) * 1px);
+      width: calc(var(--x-nav-indicator-length) * 1px);
+      height: var(--nav-current-indicator-size);
     }
   }
 
-  /* The bar of a nav whose tabs are SLIDES: one element for the whole row,
-     placed over the current tab and interpolated towards the one the picture
-     leans on (see paintIndicatorGeometry). The two ends are written in pixels
-     as plain numbers, so the whole of the movement is a calc() the browser
-     runs itself — the trait then follows a finger dragging the slides without a
-     render per frame, and rides the same animation as the track when the travel
-     was asked for rather than dragged.
-     No named view transition here, unlike the bar of a nav made of routes:
-     there is no transition to be part of — the slides travel under an animation
-     of their own, which a finger can hold. */
-  .navi_nav[data-nav-indicator] {
+  &[data-nav-indicator="top"] > .navi_nav_indicator {
+    top: 0;
+  }
+
+  &[data-nav-indicator="bottom"] > .navi_nav_indicator {
+    bottom: 0;
+  }
+
+  &[data-nav-indicator="left"], &[data-nav-indicator="right"] {
+    & > .navi_nav_indicator {
+      top: calc(var(--x-nav-indicator-position) * 1px);
+      width: var(--nav-current-indicator-size);
+      height: calc(var(--x-nav-indicator-length) * 1px);
+    }
+  }
+
+  &[data-nav-indicator="left"] > .navi_nav_indicator {
+    left: 0;
+  }
+
+  &[data-nav-indicator="right"] > .navi_nav_indicator {
+    right: 0;
+  }
+}
+
+.navi_nav .navi_link[data-href-current] .navi_current_indicator {
+  view-transition-name: var(--nav-indicator-name);
+}
+
+:root:is([data-navi-route-transition], [data-navi-route-travel]) .navi_nav:not([data-nav-between-tabs]) .navi_current_indicator {
+  view-transition-name: none;
+}
+
+.navi_nav {
+  width: fit-content;
+  padding-top: var(--nav-padding-top, var(--nav-padding-y, var(--nav-padding, unset)));
+  padding-right: var(--nav-padding-right, var(--nav-padding-x, var(--nav-padding, unset)));
+  padding-bottom: var(--nav-padding-bottom, var(--nav-padding-y, var(--nav-padding, unset)));
+  padding-left: var(--nav-padding-left, var(--nav-padding-x, var(--nav-padding, unset)));
+  background: var(--nav-background);
+  border: var(--nav-border);
+  border-radius: var(--nav-border-radius);
+  justify-content: stretch;
+  display: flex;
+
+  & .navi_link {
+    user-select: none;
+    --x-nav-child-border-radius: calc(var(--nav-border-radius) - var(--nav-padding));
+    --x-nav-link-border-radius: var(--link-border-radius, var(--x-nav-child-border-radius));
+
+    &:first-child {
+      border-top-left-radius: var(--x-nav-link-border-radius);
+      border-bottom-left-radius: var(--x-nav-link-border-radius);
+    }
+
+    &:last-child {
+      border-top-right-radius: var(--x-nav-link-border-radius);
+      border-bottom-right-radius: var(--x-nav-link-border-radius);
+    }
+  }
+
+  &[data-link-border-radius-inherit] {
+    & .navi_link {
+      --link-border-radius: var(--x-nav-child-border-radius);
+      border-top-left-radius: var(--link-border-radius);
+      border-top-right-radius: var(--link-border-radius);
+      border-bottom-right-radius: var(--link-border-radius);
+      border-bottom-left-radius: var(--link-border-radius);
+    }
+  }
+
+  &[data-expand-x] {
+    flex-grow: 1;
+
+    &:not([data-vertical]) .navi_link {
+      flex: 1;
+      justify-content: center;
+    }
+  }
+
+  &[data-expand-y][data-vertical] {
+    & .navi_link {
+      flex: 1;
+    }
+  }
+
+  &[data-vertical] {
+    align-items: stretch;
+  }
+
+  &[data-panel-position] {
+    --nav-border-color: transparent;
+    --nav-tab-border-radius: 0px;
+    --x-nav-panel-background: var(--nav-panel-background, var(--link-background-current, white));
+    z-index: 1;
     position: relative;
 
-    > .navi_nav_indicator {
-      --x-nav-indicator-position: calc(
-        var(--nav-indicator-position) + var(--slide-travel-progress) *
-          var(--nav-indicator-position-delta)
-      );
-      --x-nav-indicator-length: calc(
-        var(--nav-indicator-length) + var(--slide-travel-progress) *
-          var(--nav-indicator-length-delta)
-      );
+    & .navi_link {
+      border: 1px solid #0000;
 
-      position: absolute;
-      z-index: 1;
-      background: var(--nav-current-indicator-color);
-      border-radius: 0.1px;
-      pointer-events: none;
-    }
-    /* Nothing to draw until the row has been measured: a tab bar whose current
-       tab is not among its links (a container on a slide no tab names) has no
-       place to put the trait. */
-    &:not([data-nav-indicator-measured]) > .navi_nav_indicator {
-      display: none;
-    }
-
-    &[data-nav-indicator="top"],
-    &[data-nav-indicator="bottom"] {
-      > .navi_nav_indicator {
-        left: calc(var(--x-nav-indicator-position) * 1px);
-        width: calc(var(--x-nav-indicator-length) * 1px);
-        height: var(--nav-current-indicator-size);
-      }
-    }
-    &[data-nav-indicator="top"] > .navi_nav_indicator {
-      top: 0;
-    }
-    &[data-nav-indicator="bottom"] > .navi_nav_indicator {
-      bottom: 0;
-    }
-
-    &[data-nav-indicator="left"],
-    &[data-nav-indicator="right"] {
-      > .navi_nav_indicator {
-        top: calc(var(--x-nav-indicator-position) * 1px);
-        width: var(--nav-current-indicator-size);
-        height: calc(var(--x-nav-indicator-length) * 1px);
-      }
-    }
-    &[data-nav-indicator="left"] > .navi_nav_indicator {
-      left: 0;
-    }
-    &[data-nav-indicator="right"] > .navi_nav_indicator {
-      right: 0;
-    }
-  }
-
-  /* The bar under the current tab of a nav made of routes is NAMED: a change
-     played as a view transition then finds it on both pictures and moves it
-     from the tab it was under to the tab it is under, which is all "the bar
-     slides" is. The name is the row's (--nav-indicator-name, absent when the
-     row asked for no slide) and only the bar one can see wears it: every tab
-     holds a bar, and a name belongs to one element at a time. */
-  .navi_nav .navi_link[data-href-current] .navi_current_indicator {
-    view-transition-name: var(--nav-indicator-name);
-  }
-  /* Named for a movement it takes part in, and for that alone. While the PAGES
-     are the ones moving — a route transition, a route travel — a name lifts the
-     bar out of its page's picture into a picture of its own, and a picture of
-     its own is precisely what does not travel: it stands where it was captured,
-     fading, while the row slides away under it. Right when the row is on both
-     sides and the bar has a tab to glide to; wrong anywhere else, where the bar
-     must leave or arrive with its row. So the name is dropped unless the
-     movement goes from a tab of this row to another one of its tabs (see
-     markIndicatorTakesPart). */
-  :root:is([data-navi-route-transition], [data-navi-route-travel])
-    .navi_nav:not([${BETWEEN_TABS_ATTRIBUTE}])
-    .navi_current_indicator {
-    view-transition-name: none;
-  }
-
-  .navi_nav {
-    display: flex;
-    width: fit-content;
-    padding-top: var(
-      --nav-padding-top,
-      var(--nav-padding-y, var(--nav-padding, unset))
-    );
-    padding-right: var(
-      --nav-padding-right,
-      var(--nav-padding-x, var(--nav-padding, unset))
-    );
-    padding-bottom: var(
-      --nav-padding-bottom,
-      var(--nav-padding-y, var(--nav-padding, unset))
-    );
-    padding-left: var(
-      --nav-padding-left,
-      var(--nav-padding-x, var(--nav-padding, unset))
-    );
-    justify-content: stretch;
-    background: var(--nav-background);
-    border: var(--nav-border);
-    border-radius: var(--nav-border-radius);
-    /* overflow-x: auto; */
-    /* overflow-y: hidden; */
-
-    .navi_link {
-      user-select: none;
-
-      --x-nav-child-border-radius: calc(
-        var(--nav-border-radius) - var(--nav-padding)
-      );
-      --x-nav-link-border-radius: var(
-        --link-border-radius,
-        var(--x-nav-child-border-radius)
-      );
-
-      &:first-child {
-        border-top-left-radius: var(--x-nav-link-border-radius);
-        border-bottom-left-radius: var(--x-nav-link-border-radius);
-      }
-      &:last-child {
-        border-top-right-radius: var(--x-nav-link-border-radius);
-        border-bottom-right-radius: var(--x-nav-link-border-radius);
+      &[data-href-current] {
+        border-color: var(--nav-border-color);
       }
     }
 
-    &[data-link-border-radius-inherit] {
-      .navi_link {
-        --link-border-radius: var(--x-nav-child-border-radius);
-        border-top-left-radius: var(--link-border-radius);
-        border-top-right-radius: var(--link-border-radius);
-        border-bottom-right-radius: var(--link-border-radius);
-        border-bottom-left-radius: var(--link-border-radius);
-      }
-    }
+    &[data-panel-position="after"] {
+      margin-bottom: -1px;
 
-    /* A nav asked to expand is a nav whose tabs share it: one equal slice each,
-       the label in the middle of the target that slice makes — a row that fills
-       its container while its tabs sit at their text width stops in the middle,
-       and gives every tab a different size to aim at.
-       The main axis only: a vertical nav expanding horizontally fills the width
-       (align-items below) rather than sharing its height between its tabs. */
-    &[data-expand-x] {
-      flex-grow: 1;
-
-      &:not([data-vertical]) .navi_link {
-        flex: 1;
-        justify-content: center;
-      }
-    }
-    &[data-expand-y][data-vertical] {
-      .navi_link {
-        flex: 1;
-      }
-    }
-    /* Vertical layout */
-    &[data-vertical] {
-      /* overflow-x: hidden; */
-      /* overflow-y: auto; */
-      align-items: stretch;
-    }
-
-    /* Folder tabs: the current tab and the panel share one surface. Every tab
-       carries the panel's line on the side facing it, and the current one
-       paints that side with the panel background instead, so the line opens
-       there. The negative margin makes the two lines overlap — without it the
-       panel's own line would still be drawn under the tabs; and since a tab
-       background is painted under its border too, a tab with a background of
-       its own would otherwise hide the panel's line over its width.
-
-       The line is 1px and never thicker: past that, the corner where a square
-       tab meets the panel shows the miter as a visible notch. */
-    &[data-panel-position] {
-      --nav-border-color: transparent;
-      --nav-tab-border-radius: 0px;
-
-      --x-nav-panel-background: var(
-        --nav-panel-background,
-        var(--link-background-current, white)
-      );
-
-      position: relative;
-      z-index: 1;
-
-      .navi_link {
-        border: 1px solid transparent;
+      & .navi_link {
+        border-bottom-color: var(--nav-border-color);
 
         &[data-href-current] {
-          border-color: var(--nav-border-color);
+          border-bottom-color: var(--x-nav-panel-background);
+          border-top-left-radius: var(--nav-tab-border-radius);
+          border-top-right-radius: var(--nav-tab-border-radius);
         }
       }
+    }
 
-      &[data-panel-position="after"] {
-        margin-bottom: -1px;
+    &[data-panel-position="before"] {
+      margin-top: -1px;
 
-        .navi_link {
-          border-bottom-color: var(--nav-border-color);
+      & .navi_link {
+        border-top-color: var(--nav-border-color);
 
-          &[data-href-current] {
-            border-bottom-color: var(--x-nav-panel-background);
-            border-top-left-radius: var(--nav-tab-border-radius);
-            border-top-right-radius: var(--nav-tab-border-radius);
-          }
-        }
-      }
-      &[data-panel-position="before"] {
-        margin-top: -1px;
-
-        .navi_link {
-          border-top-color: var(--nav-border-color);
-
-          &[data-href-current] {
-            border-top-color: var(--x-nav-panel-background);
-            border-bottom-right-radius: var(--nav-tab-border-radius);
-            border-bottom-left-radius: var(--nav-tab-border-radius);
-          }
+        &[data-href-current] {
+          border-top-color: var(--x-nav-panel-background);
+          border-bottom-right-radius: var(--nav-tab-border-radius);
+          border-bottom-left-radius: var(--nav-tab-border-radius);
         }
       }
     }
   }
+}
 `;
 const NavStyleCSSVars = {
   border: "--nav-border",
@@ -41883,235 +41174,207 @@ installImportMetaCssBuild(import.meta);/**
  * Border width participates in layout (it is added to the tab and page
  * padding): a thick border grows the binder rather than eating into the text.
  */
-const css$U = /* css */`
-  @layer navi {
-    .navi_binder {
-      --binder-border-width: var(--navi-control-border-width);
-      --binder-border-radius: var(--navi-control-border-radius);
-      /* The tabs' own corners. Their own knob because the two answer different
-         questions: the outer radius follows the container the binder sits in
-         (square when it fills the page), the tab radius is the tabs' shape. */
-      --binder-tab-border-radius: var(--binder-border-radius);
-      --binder-border-color: var(--navi-control-border-color);
-      --binder-background: var(--navi-surface-color);
-      /* The tabs that are not open read as the same paper, slightly shaded:
-         derived from the border color so one override themes both, in light
-         and dark alike. */
-      --binder-tab-background: color-mix(
-        in srgb,
-        var(--binder-border-color) 12%,
-        var(--binder-background)
-      );
-      --binder-tab-border-color: var(--binder-border-color);
-      --binder-tab-color: var(--navi-color-secondary);
-      --binder-tab-background-hover: color-mix(
-        in srgb,
-        var(--binder-border-color) 22%,
-        var(--binder-background)
-      );
-      --binder-padding-x: var(--navi-s);
-      --binder-padding-y: var(--navi-xs);
-      --binder-page-padding: var(--navi-m);
-    }
-  }
-
+const css$U = /* css */`@layer navi {
   .navi_binder {
-    position: relative;
-    display: flex;
-    width: fit-content;
+    --binder-border-width: var(--navi-control-border-width);
+    --binder-border-radius: var(--navi-control-border-radius);
+    --binder-tab-border-radius: var(--binder-border-radius);
+    --binder-border-color: var(--navi-control-border-color);
+    --binder-background: var(--navi-surface-color);
+    --binder-tab-background: color-mix(in srgb,
+        var(--binder-border-color) 12%,
+        var(--binder-background));
+    --binder-tab-border-color: var(--binder-border-color);
+    --binder-tab-color: var(--navi-color-secondary);
+    --binder-tab-background-hover: color-mix(in srgb,
+        var(--binder-border-color) 22%,
+        var(--binder-background));
+    --binder-padding-x: var(--navi-s);
+    --binder-padding-y: var(--navi-xs);
+    --binder-page-padding: var(--navi-m);
+  }
+}
+
+.navi_binder {
+  align-items: stretch;
+  width: fit-content;
+  display: flex;
+  position: relative;
+
+  &[data-tabs-position="top"] {
+    flex-direction: column;
+  }
+
+  &[data-tabs-position="bottom"] {
+    flex-direction: column-reverse;
+  }
+
+  &[data-tabs-position="left"] {
+    flex-direction: row;
+  }
+
+  &[data-tabs-position="right"] {
+    flex-direction: row-reverse;
+  }
+}
+
+.navi_binder_outline {
+  z-index: 1;
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+}
+
+.navi_binder_tabs {
+  display: flex;
+
+  .navi_binder[data-tabs-position="top"] &, .navi_binder[data-tabs-position="bottom"] & {
+    width: 0;
+    min-width: 100%;
+  }
+
+  .navi_binder[data-tabs-position="left"] &, .navi_binder[data-tabs-position="right"] & {
+    height: 0;
+    min-height: 100%;
+  }
+
+  .navi_binder[data-tabs-position="top"] & {
+    align-items: flex-end;
+  }
+
+  .navi_binder[data-tabs-position="bottom"] & {
+    align-items: flex-start;
+  }
+
+  .navi_binder[data-tabs-position="left"] &, .navi_binder[data-tabs-position="right"] & {
+    flex-direction: column;
     align-items: stretch;
+  }
+}
 
-    &[data-tabs-position="top"] {
-      flex-direction: column;
-    }
-    &[data-tabs-position="bottom"] {
-      flex-direction: column-reverse;
-    }
-    &[data-tabs-position="left"] {
-      flex-direction: row;
-    }
-    &[data-tabs-position="right"] {
-      flex-direction: row-reverse;
-    }
+.navi_binder_tab {
+  z-index: 0;
+  min-width: 0;
+  min-height: 0;
+  padding: var(--binder-padding-y) var(--binder-padding-x);
+  color: var(--binder-tab-color);
+  font: inherit;
+  text-align: center;
+  background: var(--binder-tab-background);
+  border: var(--binder-border-width) solid var(--binder-tab-border-color);
+  cursor: pointer;
+  flex: 0 auto;
+  text-decoration: none;
+  position: relative;
+
+  .navi_binder[data-tabs-align="stretch"] & {
+    flex: 1 1 0;
   }
 
-  .navi_binder_outline {
-    position: absolute;
-    inset: 0;
-    z-index: 1;
-    pointer-events: none;
-    overflow: visible;
+  &[data-hover] {
+    background: var(--binder-tab-background-hover);
   }
 
-  .navi_binder_tabs {
-    display: flex;
-    /* The page decides how wide the binder is; the tab row only fills it.
-       Sizing it to 0 keeps its labels out of the binder's intrinsic size (a
-       long one would otherwise stretch the whole thing) while min-size brings
-       it back to the width the page settled on — which is what leaves the
-       labels something to truncate against. */
-    .navi_binder[data-tabs-position="top"] &,
-    .navi_binder[data-tabs-position="bottom"] & {
-      width: 0;
-      min-width: 100%;
-    }
-    .navi_binder[data-tabs-position="left"] &,
-    .navi_binder[data-tabs-position="right"] & {
-      height: 0;
-      min-height: 100%;
-    }
-    /* Tabs of unequal size line up on the page side, so the junction band is
-       one straight line whatever their content. */
-    .navi_binder[data-tabs-position="top"] & {
-      align-items: flex-end;
-    }
-    .navi_binder[data-tabs-position="bottom"] & {
-      align-items: flex-start;
-    }
-    /* A column of tabs is as wide as its widest one, all of them that wide, so
-       the junction band is one straight line here too. */
-    .navi_binder[data-tabs-position="left"] &,
-    .navi_binder[data-tabs-position="right"] & {
-      flex-direction: column;
-      align-items: stretch;
-    }
+  &[data-focus-visible] {
+    z-index: 3;
+    outline: var(--navi-focus-outline-width) solid
+        var(--navi-focus-outline-color);
+    outline-offset: calc(-1 * var(--navi-focus-outline-width));
   }
 
-  .navi_binder_tab {
-    position: relative;
-    z-index: 0;
-    /* A flex item refuses to go under its content unless told to; without this
-       a long label widens the tab row instead of truncating. */
+  &[data-current] {
+    z-index: 2;
+    color: inherit;
+    cursor: default;
+    background: none;
+    border-color: #0000;
+  }
+
+  &:not(:first-child) {
+    margin-inline-start: calc(-1 * var(--binder-border-width));
+  }
+
+  .navi_binder[data-tabs-position="top"] & {
+    margin-bottom: var(--binder-border-width);
+    border-radius: var(--binder-tab-border-radius)
+        var(--binder-tab-border-radius) 0 0;
+    border-bottom: none;
+  }
+
+  .navi_binder[data-tabs-position="bottom"] & {
+    margin-top: var(--binder-border-width);
+    border-radius: 0 0 var(--binder-tab-border-radius)
+        var(--binder-tab-border-radius);
+    border-top: none;
+  }
+
+  .navi_binder[data-tabs-position="left"] & {
+    margin-right: var(--binder-border-width);
+    border-radius: var(--binder-tab-border-radius) 0 0
+        var(--binder-tab-border-radius);
+    border-right: none;
+  }
+
+  .navi_binder[data-tabs-position="right"] & {
+    margin-left: var(--binder-border-width);
+    border-radius: 0 var(--binder-tab-border-radius)
+        var(--binder-tab-border-radius) 0;
+    border-left: none;
+  }
+
+  .navi_binder[data-tabs-position="left"] &:not(:first-child), .navi_binder[data-tabs-position="right"] &:not(:first-child) {
+    margin-inline-start: 0;
+    margin-top: calc(-1 * var(--binder-border-width));
+  }
+}
+
+.navi_binder_tab_label {
+  display: block;
+
+  &[data-max-lines="1"] {
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+
+  &[data-max-lines]:not([data-max-lines="1"]) {
+    -webkit-line-clamp: var(--binder-tab-max-lines);
+    -webkit-box-orient: vertical;
+    display: -webkit-box;
+    overflow: hidden;
+  }
+}
+
+.navi_binder_page {
+  z-index: 2;
+  padding: calc(var(--binder-page-padding) + var(--binder-border-width));
+  color: inherit;
+  flex: 1;
+  position: relative;
+
+  .navi_binder[data-scrollable-page] & {
     min-width: 0;
     min-height: 0;
-    /* The border is part of the tab's box on every tab, current one included
-       (transparent there — the path draws it), so opening a tab never moves
-       anything. */
-    padding: var(--binder-padding-y) var(--binder-padding-x);
-    flex: 0 1 auto;
-    color: var(--binder-tab-color);
-    font: inherit;
-    text-align: center;
-    text-decoration: none;
-    background: var(--binder-tab-background);
-    border: var(--binder-border-width) solid var(--binder-tab-border-color);
-    cursor: pointer;
-    /* "stretch" is an equal share each, whatever a tab holds — a basis read
-       from the content would hand the longest label the widest tab. */
-    .navi_binder[data-tabs-align="stretch"] & {
-      flex: 1 1 0;
-    }
-
-    /* The navi attributes rather than the CSS pseudo-classes: they are what a
-       demo can hold with pseudoState={{ ":focus-visible": true }}. */
-    &[data-hover] {
-      background: var(--binder-tab-background-hover);
-    }
-    /* The ring would be cut by the neighbours and by the outline band around
-       it, so it is drawn inside and lifted above them. */
-    &[data-focus-visible] {
-      z-index: 3;
-      outline: var(--navi-focus-outline-width) solid
-        var(--navi-focus-outline-color);
-      outline-offset: calc(-1 * var(--navi-focus-outline-width));
-    }
-    &[data-current] {
-      z-index: 2;
-      color: inherit;
-      background: transparent;
-      border-color: transparent;
-      cursor: default;
-    }
-    /* Adjacent tabs share one line rather than stacking two borders. */
-    &:not(:first-child) {
-      margin-inline-start: calc(-1 * var(--binder-border-width));
-    }
-
-    /* The margin on the page side is the junction band the path draws in; the
-       corners away from the page are the ones that round. */
-    .navi_binder[data-tabs-position="top"] & {
-      margin-bottom: var(--binder-border-width);
-      border-bottom: none;
-      border-radius: var(--binder-tab-border-radius)
-        var(--binder-tab-border-radius) 0 0;
-    }
-    .navi_binder[data-tabs-position="bottom"] & {
-      margin-top: var(--binder-border-width);
-      border-top: none;
-      border-radius: 0 0 var(--binder-tab-border-radius)
-        var(--binder-tab-border-radius);
-    }
-    .navi_binder[data-tabs-position="left"] & {
-      margin-right: var(--binder-border-width);
-      border-right: none;
-      border-radius: var(--binder-tab-border-radius) 0 0
-        var(--binder-tab-border-radius);
-    }
-    .navi_binder[data-tabs-position="right"] & {
-      margin-left: var(--binder-border-width);
-      border-left: none;
-      border-radius: 0 var(--binder-tab-border-radius)
-        var(--binder-tab-border-radius) 0;
-    }
-    /* A column of tabs shares its main axis with the block direction, where
-       margin-inline-start would collapse the wrong pair. */
-    .navi_binder[data-tabs-position="left"] &:not(:first-child),
-    .navi_binder[data-tabs-position="right"] &:not(:first-child) {
-      margin-inline-start: 0;
-      margin-top: calc(-1 * var(--binder-border-width));
-    }
+    overflow: auto;
   }
 
-  /* A tab that grows with its label would push the binder wider than the page
-     it opens; by default a label stays on one line and is cut with an ellipsis.
-     maxLines={n} lets it use n lines, maxLines={false} lets it wrap freely. */
-  .navi_binder_tab_label {
-    display: block;
-
-    &[data-max-lines="1"] {
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      overflow: hidden;
-    }
-    &[data-max-lines]:not([data-max-lines="1"]) {
-      display: -webkit-box;
-      overflow: hidden;
-      -webkit-box-orient: vertical;
-      -webkit-line-clamp: var(--binder-tab-max-lines);
-    }
+  .navi_binder[data-tabs-position="top"] & {
+    padding-top: var(--binder-page-padding);
   }
 
-  .navi_binder_page {
-    position: relative;
-    z-index: 2;
-    /* Same reservation as the tabs, on the three sides the path runs along. */
-    padding: calc(var(--binder-page-padding) + var(--binder-border-width));
-    flex: 1;
-    color: inherit;
-
-    /* An app shell: the binder is the window, the page is what scrolls in it,
-       and the tab row stays put without being fixed — it is simply the part of
-       the binder that does not scroll. min-size:0 because a flex item refuses
-       to shrink under its content, which is what makes overflow do nothing. */
-    .navi_binder[data-scrollable-page] & {
-      min-width: 0;
-      min-height: 0;
-      overflow: auto;
-    }
-
-    .navi_binder[data-tabs-position="top"] & {
-      padding-top: var(--binder-page-padding);
-    }
-    .navi_binder[data-tabs-position="bottom"] & {
-      padding-bottom: var(--binder-page-padding);
-    }
-    .navi_binder[data-tabs-position="left"] & {
-      padding-left: var(--binder-page-padding);
-    }
-    .navi_binder[data-tabs-position="right"] & {
-      padding-right: var(--binder-page-padding);
-    }
+  .navi_binder[data-tabs-position="bottom"] & {
+    padding-bottom: var(--binder-page-padding);
   }
+
+  .navi_binder[data-tabs-position="left"] & {
+    padding-left: var(--binder-page-padding);
+  }
+
+  .navi_binder[data-tabs-position="right"] & {
+    padding-right: var(--binder-page-padding);
+  }
+}
 `;
 const BinderStyleCSSVars = {
   borderWidth: "--binder-border-width",
@@ -42683,109 +41946,79 @@ installImportMetaCssBuild(import.meta);/**
  *    added to the size asked for exactly like the notch inset is, so the
  *    content still gets the size the prop names.
  */
-const css$T = /* css */`
-  @layer navi {
-    :root {
-      --navi-fixed-bar-width: 56px;
-      --navi-fixed-bar-height: 56px;
-      --navi-fixed-bar-max-width: none;
-      --navi-fixed-bar-background: var(--navi-surface-color);
-      --navi-fixed-bar-border-width: 1px;
-      --navi-fixed-bar-border-color: var(--navi-separator-color-default);
-      /* Along the bar only — across it there is nothing to add, that direction
-         is what the width/height prop names. None by default: a row of items
-         sharing the whole strip is as common as a toolbar wanting air at its
-         ends, and only the second can ask. */
-      --navi-fixed-bar-padding: 0px;
-    }
+const css$T = /* css */`@layer navi {
+  :root {
+    --navi-fixed-bar-width: 56px;
+    --navi-fixed-bar-height: 56px;
+    --navi-fixed-bar-max-width: none;
+    --navi-fixed-bar-background: var(--navi-surface-color);
+    --navi-fixed-bar-border-width: 1px;
+    --navi-fixed-bar-border-color: var(--navi-separator-color-default);
+    --navi-fixed-bar-padding: 0px;
+  }
+}
+
+.navi_fixed_bar {
+  z-index: var(--navi-z-index-bar);
+  box-sizing: border-box;
+  background: var(--navi-fixed-bar-background);
+  align-items: center;
+  margin: auto;
+  display: flex;
+  position: fixed;
+
+  &[data-area="top"], &[data-area="bottom"] {
+    right: var(--navi-app-inset-right);
+    left: var(--navi-app-inset-left);
+    max-width: var(--navi-fixed-bar-max-width);
+    padding-right: calc(var(--navi-fixed-bar-padding) + env(safe-area-inset-right));
+    padding-left: calc(var(--navi-fixed-bar-padding) + env(safe-area-inset-left));
   }
 
-  .navi_fixed_bar {
-    position: fixed;
-    z-index: var(--navi-z-index-bar);
-    display: flex;
-    box-sizing: border-box;
-    margin: auto;
-    align-items: center;
-    background: var(--navi-fixed-bar-background);
-
-    /* Along the bar, the two insets that can bite into it there are added to
-       the padding asked for: in landscape the notch is on a side, and a top bar
-       whose padding ignored it would put its first item under it. */
-    &[data-area="top"],
-    &[data-area="bottom"] {
-      right: var(--navi-app-inset-right);
-      left: var(--navi-app-inset-left);
-      /* No width of its own: pinned to both edges, the used width absorbs the
-         padding instead of being inflated by it. max-width then narrows it and
-         the auto margins re-center it. */
-      max-width: var(--navi-fixed-bar-max-width);
-      padding-right: calc(
-        var(--navi-fixed-bar-padding) + env(safe-area-inset-right)
-      );
-      padding-left: calc(
-        var(--navi-fixed-bar-padding) + env(safe-area-inset-left)
-      );
-    }
-    &[data-area="left"],
-    &[data-area="right"] {
-      top: var(--navi-app-inset-top);
-      bottom: var(--navi-app-inset-bottom);
-      padding-top: calc(
-        var(--navi-fixed-bar-padding) + env(safe-area-inset-top)
-      );
-      padding-bottom: calc(
-        var(--navi-fixed-bar-padding) + env(safe-area-inset-bottom)
-      );
-      flex-direction: column;
-    }
-
-    /* Across the bar, the inset of the edge it is pinned to is padding AND is
-       added to the size, and the hairline on the content side is added the
-       same way: the background then runs under the notch, the line stands
-       clear of the content, and the content keeps the whole width/height asked
-       for. */
-    &[data-area="top"] {
-      top: var(--navi-app-inset-top);
-      height: calc(
-        var(--navi-fixed-bar-height) + env(safe-area-inset-top) +
-          var(--navi-fixed-bar-border-width)
-      );
-      padding-top: env(safe-area-inset-top);
-      border-bottom: var(--navi-fixed-bar-border-width) solid
-        var(--navi-fixed-bar-border-color);
-    }
-    &[data-area="bottom"] {
-      bottom: var(--navi-app-inset-bottom);
-      height: calc(
-        var(--navi-fixed-bar-height) + env(safe-area-inset-bottom) +
-          var(--navi-fixed-bar-border-width)
-      );
-      padding-bottom: env(safe-area-inset-bottom);
-      border-top: var(--navi-fixed-bar-border-width) solid
-        var(--navi-fixed-bar-border-color);
-    }
-    &[data-area="left"] {
-      left: var(--navi-app-inset-left);
-      width: calc(
-        var(--navi-fixed-bar-width) + env(safe-area-inset-left) +
-          var(--navi-fixed-bar-border-width)
-      );
-      padding-left: env(safe-area-inset-left);
-      border-right: var(--navi-fixed-bar-border-width) solid
-        var(--navi-fixed-bar-border-color);
-    }
-    &[data-area="right"] {
-      right: var(--navi-app-inset-right);
-      width: calc(
-        var(--navi-fixed-bar-width) + env(safe-area-inset-right) +
-          var(--navi-fixed-bar-border-width)
-      );
-      padding-right: env(safe-area-inset-right);
-      border-left: var(--navi-fixed-bar-border-width) solid
-        var(--navi-fixed-bar-border-color);
-    }
+  &[data-area="left"], &[data-area="right"] {
+    top: var(--navi-app-inset-top);
+    bottom: var(--navi-app-inset-bottom);
+    padding-top: calc(var(--navi-fixed-bar-padding) + env(safe-area-inset-top));
+    padding-bottom: calc(var(--navi-fixed-bar-padding) + env(safe-area-inset-bottom));
+    flex-direction: column;
   }
+
+  &[data-area="top"] {
+    top: var(--navi-app-inset-top);
+    height: calc(var(--navi-fixed-bar-height) + env(safe-area-inset-top) +
+          var(--navi-fixed-bar-border-width));
+    padding-top: env(safe-area-inset-top);
+    border-bottom: var(--navi-fixed-bar-border-width) solid
+        var(--navi-fixed-bar-border-color);
+  }
+
+  &[data-area="bottom"] {
+    bottom: var(--navi-app-inset-bottom);
+    height: calc(var(--navi-fixed-bar-height) + env(safe-area-inset-bottom) +
+          var(--navi-fixed-bar-border-width));
+    padding-bottom: env(safe-area-inset-bottom);
+    border-top: var(--navi-fixed-bar-border-width) solid
+        var(--navi-fixed-bar-border-color);
+  }
+
+  &[data-area="left"] {
+    left: var(--navi-app-inset-left);
+    width: calc(var(--navi-fixed-bar-width) + env(safe-area-inset-left) +
+          var(--navi-fixed-bar-border-width));
+    padding-left: env(safe-area-inset-left);
+    border-right: var(--navi-fixed-bar-border-width) solid
+        var(--navi-fixed-bar-border-color);
+  }
+
+  &[data-area="right"] {
+    right: var(--navi-app-inset-right);
+    width: calc(var(--navi-fixed-bar-width) + env(safe-area-inset-right) +
+          var(--navi-fixed-bar-border-width));
+    padding-right: env(safe-area-inset-right);
+    border-left: var(--navi-fixed-bar-border-width) solid
+        var(--navi-fixed-bar-border-color);
+  }
+}
 `;
 const FixedBarStyleCSSVars = {
   // width/height go through the vars the size calc reads: written as plain
@@ -43104,79 +42337,81 @@ const useFocusGroup = (
 };
 
 installImportMetaCssBuild(import.meta);const rightArrowPath = "M680-480L360-160l-80-80 240-240-240-240 80-80 320 320z";
-const css$R = /* css */`
-  .navi_summary_marker {
-    width: 1em;
-    height: 1em;
-    flex-shrink: 0;
-    line-height: 1em;
+const css$R = /* css */`.navi_summary_marker {
+  flex-shrink: 0;
+  width: 1em;
+  height: 1em;
+  line-height: 1em;
 
-    .navi_summary_marker_loading_container {
-      transform: scale(0.3);
-      transition: transform 0.3s linear;
+  & .navi_summary_marker_loading_container {
+    transition: transform .3s linear;
+    transform: scale(.3);
 
-      .navi_summary_marker_background_circle,
-      .navi_summary_marker_foreground_circle {
-        opacity: 0;
-        transition: opacity 0.3s ease-in-out;
-      }
-
-      .navi_summary_marker_foreground_circle {
-        stroke-dasharray: 503 1507; /* ~25% of circle perimeter */
-        stroke-dashoffset: 0;
-        animation: progress-around-circle 1.5s linear infinite;
-      }
+    & .navi_summary_marker_background_circle, & .navi_summary_marker_foreground_circle {
+      opacity: 0;
+      transition: opacity .3s ease-in-out;
     }
 
-    /* One chevron, rotated: the transition only ever plays on a direction
-       change, so the first paint shows the resting direction with no
-       movement. */
-    .navi_summary_marker_arrow_group {
-      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-
-      &[data-direction="right"] {
-        transform: rotate(0deg);
-      }
-      &[data-direction="down"] {
-        transform: rotate(90deg);
-      }
-      &[data-direction="up"] {
-        transform: rotate(-90deg);
-      }
-      &[data-direction="left"] {
-        transform: rotate(180deg);
-      }
-    }
-
-    .navi_summary_marker_arrow {
-      opacity: 1;
-      transition: opacity 0.3s ease-in-out;
-    }
-
-    &[data-loading] {
-      .navi_summary_marker_loading_container {
-        transform: scale(1);
-
-        .navi_summary_marker_background_circle {
-          opacity: 0.2;
-        }
-        .navi_summary_marker_foreground_circle {
-          opacity: 1;
-        }
-      }
-      .navi_summary_marker_arrow {
-        opacity: 0;
-      }
-    }
-  }
-  @keyframes progress-around-circle {
-    0% {
+    & .navi_summary_marker_foreground_circle {
+      stroke-dasharray: 503 1507;
       stroke-dashoffset: 0;
-    }
-    100% {
-      stroke-dashoffset: -2010;
+      animation: 1.5s linear infinite progress-around-circle;
     }
   }
+
+  & .navi_summary_marker_arrow_group {
+    transition: transform .3s cubic-bezier(.34, 1.56, .64, 1);
+
+    &[data-direction="right"] {
+      transform: rotate(0);
+    }
+
+    &[data-direction="down"] {
+      transform: rotate(90deg);
+    }
+
+    &[data-direction="up"] {
+      transform: rotate(-90deg);
+    }
+
+    &[data-direction="left"] {
+      transform: rotate(180deg);
+    }
+  }
+
+  & .navi_summary_marker_arrow {
+    opacity: 1;
+    transition: opacity .3s ease-in-out;
+  }
+
+  &[data-loading] {
+    & .navi_summary_marker_loading_container {
+      transform: scale(1);
+
+      & .navi_summary_marker_background_circle {
+        opacity: .2;
+      }
+
+      & .navi_summary_marker_foreground_circle {
+        opacity: 1;
+      }
+    }
+
+    & .navi_summary_marker_arrow {
+      opacity: 0;
+    }
+  }
+}
+
+@keyframes progress-around-circle {
+  0% {
+    stroke-dashoffset: 0;
+  }
+
+  100% {
+    stroke-dashoffset: -2010px;
+  }
+}
 `;
 
 /**
@@ -43239,41 +42474,40 @@ const SummaryMarker = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$Q = /* css */`
-  .navi_details {
-    position: relative;
-    z-index: 1;
-    display: flex;
-    flex-shrink: 0;
+installImportMetaCssBuild(import.meta);const css$Q = /* css */`.navi_details {
+  z-index: 1;
+  flex-direction: column;
+  flex-shrink: 0;
+  display: flex;
+  position: relative;
+
+  & summary {
+    cursor: pointer;
+    user-select: none;
     flex-direction: column;
+    flex-shrink: 0;
+    display: flex;
 
-    summary {
+    &:focus {
+      z-index: 1;
+    }
+
+    & .navi_summary_body {
+      flex-direction: row;
+      align-items: center;
+      gap: .2em;
+      width: 100%;
       display: flex;
-      flex-shrink: 0;
-      flex-direction: column;
-      cursor: pointer;
-      user-select: none;
 
-      &:focus {
-        z-index: 1;
-      }
-
-      .navi_summary_body {
-        display: flex;
-        width: 100%;
-        flex-direction: row;
+      & .navi_summary_label {
+        flex: 1;
         align-items: center;
-        gap: 0.2em;
-
-        .navi_summary_label {
-          display: flex;
-          flex: 1;
-          align-items: center;
-          gap: 0.2em;
-        }
+        gap: .2em;
+        display: flex;
       }
     }
   }
+}
 `;
 const Details = props => {
   const refDefault = useRef();
@@ -43718,162 +42952,133 @@ installImportMetaCssBuild(import.meta);/**
  * UI when it comes first). Once settled open the clipping is released, so a
  * popover or focus ring inside is not cut at the edges.
  */
-const css$P = /* css */`
-  .navi_expandable {
-    position: relative;
-    display: flex;
+const css$P = /* css */`.navi_expandable {
+  flex-direction: column;
+  flex-shrink: 0;
+  display: flex;
+  position: relative;
+
+  & > .navi_expandable_ui {
+    cursor: pointer;
+    user-select: none;
+    flex-direction: row;
     flex-shrink: 0;
-    flex-direction: column;
+    align-items: center;
+    gap: .2em;
+    display: flex;
 
-    > .navi_expandable_ui {
-      display: flex;
+    &:focus-visible {
+      outline-offset: 1px;
+      border-radius: 4px;
+      outline: 2px solid accentcolor;
+    }
+
+    & > .navi_expandable_marker {
       flex-shrink: 0;
-      flex-direction: row;
       align-items: center;
-      gap: 0.2em;
-      cursor: pointer;
-      user-select: none;
+      display: flex;
+    }
 
-      &:focus-visible {
-        border-radius: 4px;
-        outline: 2px solid AccentColor;
-        outline-offset: 1px;
-      }
+    & > .navi_expandable_ui_label {
+      flex: 1;
+      align-items: center;
+      gap: .2em;
+      display: flex;
+    }
+  }
 
-      > .navi_expandable_marker {
-        display: flex;
-        flex-shrink: 0;
-        align-items: center;
-      }
+  & > .navi_expandable_content_container {
+    clip-path: inset(-9999px -9999px 0);
+    grid-template-rows: 0fr;
+    display: grid;
+    position: relative;
 
-      > .navi_expandable_ui_label {
-        display: flex;
-        flex: 1;
-        align-items: center;
-        gap: 0.2em;
+    & > .navi_expandable_content_sizer {
+      min-height: 0;
+      display: grid;
+    }
+  }
+
+  &[aria-expanded="true"] > .navi_expandable_content_container {
+    grid-template-rows: 1fr;
+  }
+
+  &[data-content-first]:not([data-layout="column"]) > .navi_expandable_content_container {
+    clip-path: inset(0 -9999px -9999px);
+    align-content: end;
+
+    & > .navi_expandable_content_sizer {
+      align-content: end;
+    }
+  }
+
+  &[data-layout="column"] {
+    flex-direction: row;
+
+    & > .navi_expandable_ui {
+      flex-direction: column;
+      align-items: center;
+
+      & > .navi_expandable_ui_label {
+        flex-direction: column;
       }
     }
 
-    > .navi_expandable_content_container {
-      position: relative;
-      display: grid;
+    & > .navi_expandable_content_container {
+      clip-path: inset(-9999px 0 0 -9999px);
       grid-template-rows: 0fr;
-      /* The clip lives here, on the moving box, because the content inside
-         keeps its final size during the animation (see the top comment) and
-         overflows the track on purpose. One-sided (a clip-path with the free
-         sides pushed far out) rather than overflow: hidden: only the side
-         being revealed hides anything, so a badge sticking out of the other
-         sides is visible from the very first frame of the movement. */
-      clip-path: inset(-9999px -9999px 0 -9999px);
+      grid-template-columns: 0fr;
 
-      /* The sizer is what lets the track actually collapse: min-height 0 on
-         an auto-sized item zeroes its min-content contribution. The frozen
-         content cannot play that role itself — a definite height makes the
-         contribution definite too, and the track then never goes below it. */
-      > .navi_expandable_content_sizer {
-        display: grid;
+      & > .navi_expandable_content_sizer {
+        min-width: 0;
         min-height: 0;
       }
     }
+
     &[aria-expanded="true"] > .navi_expandable_content_container {
       grid-template-rows: 1fr;
-    }
-    /* Content before the UI: revealed against the UI side — the edge touching
-       the UI stays, the far edge is what gets uncovered. Said at BOTH levels:
-       a transitioning fr resolves once for the container's own size and once
-       more inside it (the row is fraction² high), so the row must be glued to
-       the container's UI edge and the oversized frozen content to the row's —
-       anchoring only the inner one leaves the content following the drifting
-       fraction² row. */
-    &[data-content-first]:not([data-layout="column"])
-      > .navi_expandable_content_container {
-      align-content: end;
-      clip-path: inset(0 -9999px -9999px -9999px);
-
-      > .navi_expandable_content_sizer {
-        align-content: end;
-      }
+      grid-template-columns: 1fr;
     }
 
-    /* The parts sit side by side, sharing their height: the UI part becomes a
-       vertical strip and the content expands horizontally, on the columns
-       track — the rows track collapses too, so a closed expandable is only as
-       tall as its UI (the content, unmounted or 0-wide, says nothing about
-       the height it will bring). */
-    &[data-layout="column"] {
-      flex-direction: row;
+    &[data-closed-content-sized] > .navi_expandable_content_container {
+      grid-template-rows: none;
+    }
 
-      > .navi_expandable_ui {
-        flex-direction: column;
-        align-items: center;
+    &[data-content-first] > .navi_expandable_content_container {
+      clip-path: inset(-9999px -9999px 0 0);
+      justify-content: end;
 
-        > .navi_expandable_ui_label {
-          flex-direction: column;
-        }
-      }
-      > .navi_expandable_content_container {
-        grid-template-columns: 0fr;
-        grid-template-rows: 0fr;
-        /* Both tracks reveal: clip the far side of each (right and bottom),
-           the UI side and the top stay free. */
-        clip-path: inset(-9999px 0 0 -9999px);
-
-        > .navi_expandable_content_sizer {
-          min-width: 0;
-          min-height: 0;
-        }
-      }
-      &[aria-expanded="true"] > .navi_expandable_content_container {
-        grid-template-columns: 1fr;
-        grid-template-rows: 1fr;
-      }
-      /* mountWhenClosed: the content is built and width-frozen while closed
-         (see the component), so it can size the height at all times — the
-         expandable then keeps one stable height and only the width reveals. */
-      &[data-closed-content-sized] > .navi_expandable_content_container {
-        grid-template-rows: none;
-      }
-      &[data-content-first] > .navi_expandable_content_container {
+      & > .navi_expandable_content_sizer {
         justify-content: end;
-        clip-path: inset(-9999px -9999px 0 0);
-
-        > .navi_expandable_content_sizer {
-          justify-content: end;
-        }
       }
-    }
-
-    &[data-animation] > .navi_expandable_content_container {
-      transition:
-        grid-template-rows var(--navi-expandable-animation-duration, 0.3s) ease,
-        grid-template-columns var(--navi-expandable-animation-duration, 0.3s)
-          ease;
-    }
-    @media (prefers-reduced-motion: reduce) {
-      &[data-animation] > .navi_expandable_content_container {
-        transition: none;
-      }
-    }
-    /* Settled open: stop clipping entirely, so a popover, a focus ring or a
-       dragged element inside the content can spill out on any side. Settled
-       closed: clip every side — the collapsed box must show nothing, a
-       stick-out included. In between (any movement, opening or closing) the
-       one-sided clips above apply. */
-    &[aria-expanded="true"][data-settled] > .navi_expandable_content_container {
-      clip-path: none;
-    }
-    &:not([aria-expanded="true"])[data-settled]
-      > .navi_expandable_content_container {
-      clip-path: inset(0 0 0 0);
-    }
-    &[data-content-scrolls]
-      > .navi_expandable_content_container
-      > .navi_expandable_content_sizer
-      > .navi_expandable_content {
-      max-height: var(--navi-expandable-max-content-height);
-      overflow-y: auto;
     }
   }
+
+  &[data-animation] > .navi_expandable_content_container {
+    transition: grid-template-rows var(--navi-expandable-animation-duration, .3s) ease,
+        grid-template-columns var(--navi-expandable-animation-duration, .3s)
+          ease;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &[data-animation] > .navi_expandable_content_container {
+      transition: none;
+    }
+  }
+
+  &[aria-expanded="true"][data-settled] > .navi_expandable_content_container {
+    clip-path: none;
+  }
+
+  &:not([aria-expanded="true"])[data-settled] > .navi_expandable_content_container {
+    clip-path: inset(0);
+  }
+
+  &[data-content-scrolls] > .navi_expandable_content_container > .navi_expandable_content_sizer > .navi_expandable_content {
+    max-height: var(--navi-expandable-max-content-height);
+    overflow-y: auto;
+  }
+}
 `;
 const ExpandableContext = createContext(null);
 const useExpandableContext = partName => {
@@ -44717,82 +43922,61 @@ const useAccentColorAttributes = (
   }, [ref, accentColor, elementSelector, colorProperty]);
 };
 
-installImportMetaCssBuild(import.meta);const css$O = /* css */`
-  @layer navi {
-    .navi_checkbox {
-      --switch-margin: 0; /* Useful to reserve space for outline */
-      /* Padding uses px and not em otherwise it can be resolved to a float which does not play well */
-      /* With the translation calc in some configurations. In the end 2px is nice in all sizes and can still be configured for exceptions */
-      --switch-padding: 2px;
-      --switch-thumb-size: calc(1em - var(--switch-padding) * 2);
-      --switch-width: calc(1.4em - var(--switch-padding) * 2);
-      --switch-border-radius: calc(
-        var(--switch-thumb-size) / 2 + calc(var(--switch-padding) * 2)
-      );
-      --switch-thumb-border-radius: 50%;
-      --switch-background-color: light-dark(#767676, #8e8e93);
-      --switch-background-color-checked: var(--accent-color);
-      --switch-background-color-hover: color-mix(
-        in srgb,
-        var(--switch-background-color) 60%,
-        white
-      );
-      --switch-background-color-readonly: color-mix(
-        in srgb,
-        var(--switch-background-color) 40%,
-        transparent
-      );
-      --switch-background-color-disabled: color-mix(
-        in srgb,
-        var(--switch-background-color) 15%,
-        #d3d3d3
-      );
-      --switch-background-color-hover-checked: color-mix(
-        in srgb,
-        var(--switch-background-color-checked) 90%,
-        black
-      );
-      --switch-background-color-readonly-checked: color-mix(
-        in srgb,
-        var(--switch-background-color-checked) 40%,
-        transparent
-      );
-      --switch-background-color-disabled-checked: color-mix(
-        in srgb,
-        var(--switch-background-color-checked) 15%,
-        #d3d3d3
-      );
-      --switch-thumb-color: white;
-
-      &[data-accent-very-light] {
-        --switch-thumb-color: rgb(55, 55, 55);
-      }
-    }
-  }
-
+installImportMetaCssBuild(import.meta);const css$O = /* css */`@layer navi {
   .navi_checkbox {
-    .navi_switch {
-      width: var(--switch-thumb-size);
-      height: var(--switch-thumb-size);
-      border-radius: var(--switch-thumb-border-radius);
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-      fill: var(--switch-thumb-color);
-      transform: translateX(0);
-      transition: transform 0.2s ease;
-      user-select: none;
-    }
+    --switch-margin: 0;
+    --switch-padding: 2px;
+    --switch-thumb-size: calc(1em - var(--switch-padding) * 2);
+    --switch-width: calc(1.4em - var(--switch-padding) * 2);
+    --switch-border-radius: calc(var(--switch-thumb-size) / 2 + calc(var(--switch-padding) * 2));
+    --switch-thumb-border-radius: 50%;
+    --switch-background-color: light-dark(#767676, #8e8e93);
+    --switch-background-color-checked: var(--accent-color);
+    --switch-background-color-hover: color-mix(in srgb,
+        var(--switch-background-color) 60%,
+        white);
+    --switch-background-color-readonly: color-mix(in srgb,
+        var(--switch-background-color) 40%,
+        transparent);
+    --switch-background-color-disabled: color-mix(in srgb,
+        var(--switch-background-color) 15%,
+        #d3d3d3);
+    --switch-background-color-hover-checked: color-mix(in srgb,
+        var(--switch-background-color-checked) 90%,
+        black);
+    --switch-background-color-readonly-checked: color-mix(in srgb,
+        var(--switch-background-color-checked) 40%,
+        transparent);
+    --switch-background-color-disabled-checked: color-mix(in srgb,
+        var(--switch-background-color-checked) 15%,
+        #d3d3d3);
+    --switch-thumb-color: white;
 
-    &[data-checked] {
-      .navi_switch {
-        transform: translateX(
-          calc(
-            var(--switch-width) - var(--switch-thumb-size) +
-              var(--switch-padding)
-          )
-        );
-      }
+    &[data-accent-very-light] {
+      --switch-thumb-color: #373737;
     }
   }
+}
+
+.navi_checkbox {
+  & .navi_switch {
+    width: var(--switch-thumb-size);
+    height: var(--switch-thumb-size);
+    border-radius: var(--switch-thumb-border-radius);
+    fill: var(--switch-thumb-color);
+    user-select: none;
+    transition: transform .2s;
+    transform: translateX(0);
+    box-shadow: 0 1px 3px #0003;
+  }
+
+  &[data-checked] {
+    & .navi_switch {
+      transform: translateX(calc(var(--switch-width) - var(--switch-thumb-size) +
+              var(--switch-padding)));
+    }
+  }
+}
 `;
 const SwitchUI = () => {
   import.meta.css = [css$O, "@jsenv/navi/src/control/input/switch_ui.jsx"];
@@ -44837,325 +44021,247 @@ const useCheckableProps = (props, options) => {
   return result;
 };
 
-installImportMetaCssBuild(import.meta);const css$N = /* css */`
-  @layer navi {
-    .navi_checkbox {
-      --border-radius: var(--navi-checkbox-border-radius);
-      --border-width: var(--navi-control-border-width);
-      /* Focus outline */
-      --outline-width: var(--navi-focus-outline-width);
-      --outline-offset: calc(0.5 * var(--outline-width));
-      --outline-color: var(--navi-focus-outline-color);
-      /* Focus outline end */
-      --margin: 3px 3px 3px 4px;
-      --font-size: var(--navi-control-font-size);
-      --font-family: var(--navi-control-font-family);
-      --width: round(1em, 1px);
-      --height: round(1em, 1px);
-      --loader-color: var(--navi-loader-color);
-      --border-color: var(--navi-control-border-color);
-      --background-color: white;
-      --accent-color: var(--navi-control-accent-color);
-      --background-color-checked: var(--accent-color);
-      --border-color-checked: var(--accent-color);
-      --checkmark-color: white;
-      --cursor: pointer;
-      --color-mix-light: black;
-      --color-mix-dark: white;
-      --color-mix: var(--color-mix-dark);
-
-      /* Hover */
-      --border-color-hover: color-mix(in srgb, var(--border-color) 60%, black);
-      --border-color-hover-checked: color-mix(
-        in srgb,
-        var(--border-color-checked) 80%,
-        var(--color-mix)
-      );
-      --background-color-hover: var(--background-color);
-      --background-color-hover-checked: color-mix(
-        in srgb,
-        var(--background-color-checked) 80%,
-        var(--color-mix)
-      );
-      /* Readonly */
-      --border-color-readonly: color-mix(
-        in srgb,
-        var(--border-color) 30%,
-        white
-      );
-      --border-color-readonly-checked: #d3d3d3;
-      --background-color-readonly-checked: color-mix(
-        in srgb,
-        var(--background-color-checked) 30%,
-        grey
-      );
-      --checkmark-color-readonly: #eeeeee;
-      /* Disabled */
-      --border-color-disabled: var(--border-color-readonly);
-      --background-color-disabled: rgba(248, 248, 248, 0.7);
-      --checkmark-color-disabled: #eeeeee;
-      --border-color-disabled-checked: #d3d3d3;
-      --background-color-disabled-checked: #d3d3d3;
-
-      /* Button specific */
-      --button-border-color: light-dark(#767676, #8e8e93);
-      --button-background-color: light-dark(#f3f4f6, #2d3748);
-      --button-border-color-hover: color-mix(
-        in srgb,
-        var(--button-border-color) 70%,
-        black
-      );
-      --button-background-color-hover: color-mix(
-        in srgb,
-        var(--button-background-color) 95%,
-        black
-      );
-    }
-  }
-
+installImportMetaCssBuild(import.meta);const css$N = /* css */`@layer navi {
   .navi_checkbox {
-    --x-background-color: var(--background-color);
-    --x-border-color: var(--border-color);
-    --x-checkmark-color: var(--checkmark-color);
-    --x-cursor: var(--cursor);
+    --border-radius: var(--navi-checkbox-border-radius);
+    --border-width: var(--navi-control-border-width);
+    --outline-width: var(--navi-focus-outline-width);
+    --outline-offset: calc(.5 * var(--outline-width));
+    --outline-color: var(--navi-focus-outline-color);
+    --margin: 3px 3px 3px 4px;
+    --font-size: var(--navi-control-font-size);
+    --font-family: var(--navi-control-font-family);
+    --width: round(1em, 1px);
+    --height: round(1em, 1px);
+    --loader-color: var(--navi-loader-color);
+    --border-color: var(--navi-control-border-color);
+    --background-color: white;
+    --accent-color: var(--navi-control-accent-color);
+    --background-color-checked: var(--accent-color);
+    --border-color-checked: var(--accent-color);
+    --checkmark-color: white;
+    --cursor: pointer;
+    --color-mix-light: black;
+    --color-mix-dark: white;
+    --color-mix: var(--color-mix-dark);
+    --border-color-hover: color-mix(in srgb, var(--border-color) 60%, black);
+    --border-color-hover-checked: color-mix(in srgb,
+        var(--border-color-checked) 80%,
+        var(--color-mix));
+    --background-color-hover: var(--background-color);
+    --background-color-hover-checked: color-mix(in srgb,
+        var(--background-color-checked) 80%,
+        var(--color-mix));
+    --border-color-readonly: color-mix(in srgb,
+        var(--border-color) 30%,
+        white);
+    --border-color-readonly-checked: #d3d3d3;
+    --background-color-readonly-checked: color-mix(in srgb,
+        var(--background-color-checked) 30%,
+        grey);
+    --checkmark-color-readonly: #eee;
+    --border-color-disabled: var(--border-color-readonly);
+    --background-color-disabled: #f8f8f8b3;
+    --checkmark-color-disabled: #eee;
+    --border-color-disabled-checked: #d3d3d3;
+    --background-color-disabled-checked: #d3d3d3;
+    --button-border-color: light-dark(#767676, #8e8e93);
+    --button-background-color: light-dark(#f3f4f6, #2d3748);
+    --button-border-color-hover: color-mix(in srgb,
+        var(--button-border-color) 70%,
+        black);
+    --button-background-color-hover: color-mix(in srgb,
+        var(--button-background-color) 95%,
+        black);
+  }
+}
 
-    position: relative;
-    display: inline-flex;
-    box-sizing: border-box;
-    width: var(--width);
-    min-width: var(--width); /* Do not allow to shrink */
-    height: var(--height);
-    min-height: var(--height); /* Do not allow to shrink */
-    margin: var(--margin);
-    font-size: var(--font-size);
-    font-family: var(--font-family);
-    background-color: var(--x-background-color);
-    border-width: var(--border-width);
-    border-style: solid;
-    border-color: var(--x-border-color);
-    /* Squared from the outside, corner by corner: a checkbox in a group can
-       arrive wrapped (in a label, in a row carrying a state), and the ask then
-       travels down as inherited custom properties rather than as a radius
-       landing on this element. Each corner falls back to the checkbox's own
-       radius when nothing asks for anything. */
-    border-top-left-radius: var(
-      --x-corner-top-left-radius,
-      var(--border-radius)
-    );
-    border-top-right-radius: var(
-      --x-corner-top-right-radius,
-      var(--border-radius)
-    );
-    border-bottom-right-radius: var(
-      --x-corner-bottom-right-radius,
-      var(--border-radius)
-    );
-    border-bottom-left-radius: var(
-      --x-corner-bottom-left-radius,
-      var(--border-radius)
-    );
-    outline-width: var(--outline-width);
-    outline-style: none;
-    outline-color: var(--outline-color);
-    outline-offset: var(--outline-offset);
+.navi_checkbox {
+  --x-background-color: var(--background-color);
+  --x-border-color: var(--border-color);
+  --x-checkmark-color: var(--checkmark-color);
+  --x-cursor: var(--cursor);
+  box-sizing: border-box;
+  width: var(--width);
+  min-width: var(--width);
+  height: var(--height);
+  min-height: var(--height);
+  margin: var(--margin);
+  font-size: var(--font-size);
+  font-family: var(--font-family);
+  background-color: var(--x-background-color);
+  border-width: var(--border-width);
+  border-style: solid;
+  border-color: var(--x-border-color);
+  border-top-left-radius: var(--x-corner-top-left-radius, var(--border-radius));
+  border-top-right-radius: var(--x-corner-top-right-radius, var(--border-radius));
+  border-bottom-right-radius: var(--x-corner-bottom-right-radius, var(--border-radius));
+  border-bottom-left-radius: var(--x-corner-bottom-left-radius, var(--border-radius));
+  outline-width: var(--outline-width);
+  outline-style: none;
+  outline-color: var(--outline-color);
+  outline-offset: var(--outline-offset);
+  display: inline-flex;
+  position: relative;
 
-    .navi_control_input {
-      position: absolute;
-      inset: 0;
-      margin: 0;
-      border: none;
-      border-radius: inherit;
-      opacity: 0;
-      appearance: none; /* This allows border-radius to have an effect */
-      cursor: var(--x-cursor);
-    }
+  & .navi_control_input {
+    border-radius: inherit;
+    opacity: 0;
+    appearance: none;
+    cursor: var(--x-cursor);
+    border: none;
+    margin: 0;
+    position: absolute;
+    inset: 0;
+  }
 
-    .navi_checkbox_accent_probe {
-      position: absolute;
-      width: 0;
-      height: 0;
-      background-color: var(--accent-color);
-      visibility: hidden;
-      pointer-events: none;
-    }
+  & .navi_checkbox_accent_probe {
+    background-color: var(--accent-color);
+    visibility: hidden;
+    pointer-events: none;
+    width: 0;
+    height: 0;
+    position: absolute;
+  }
 
-    .navi_checkbox_icon {
-      display: flex;
-      aspect-ratio: inherit;
-      height: 1em;
-      align-items: center;
-      justify-content: center;
-    }
+  & .navi_checkbox_icon {
+    aspect-ratio: inherit;
+    justify-content: center;
+    align-items: center;
+    height: 1em;
+    display: flex;
+  }
 
-    /* Focus */
-    &[data-focus-visible] {
-      z-index: 1;
-      outline-style: solid;
-    }
-    /* Hover */
-    &[data-hover] {
-      --x-background-color: var(--background-color-hover);
-      --x-border-color: var(--border-color-hover);
+  &[data-focus-visible] {
+    z-index: 1;
+    outline-style: solid;
+  }
 
-      &[data-checked] {
-        --x-border-color: var(--border-color-hover-checked);
-        --x-background-color: var(--background-color-hover-checked);
-      }
-    }
-    /* Checked */
+  &[data-hover] {
+    --x-background-color: var(--background-color-hover);
+    --x-border-color: var(--border-color-hover);
+
     &[data-checked] {
-      --x-background-color: var(--background-color-checked);
-      --x-border-color: var(--border-color-checked);
-    }
-    /* Readonly */
-    &[data-readonly],
-    &[data-readonly][data-hover] {
-      --x-border-color: var(--border-color-readonly);
-      --x-background-color: var(--background-color-readonly);
-      --x-cursor: default;
-
-      &[data-checked] {
-        --x-border-color: var(--border-color-readonly-checked);
-        --x-background-color: var(--background-color-readonly-checked);
-        --x-checkmark-color: var(--checkmark-color-readonly);
-      }
-    }
-    /* Disabled */
-    &[data-disabled] {
-      --x-border-color: var(--border-color-disabled);
-      --x-background-color: var(--background-color-disabled);
-      --x-cursor: default;
-
-      &[data-checked] {
-        --x-border-color: var(--border-color-disabled-checked);
-        --x-background-color: var(--background-color-disabled-checked);
-        --x-checkmark-color: var(--checkmark-color-disabled);
-      }
-    }
-
-    /* Accent color adaptations */
-    &[data-accent-light] {
-      --color-mix: var(--color-mix-light);
-    }
-
-    /* Checkbox variant */
-    &[data-variant="checkbox"] {
-      .navi_checkbox_marker {
-        width: 100%;
-        height: 100%;
-        opacity: 0;
-        stroke: var(--x-checkmark-color);
-        transform: scale(0.5);
-      }
-
-      &[data-checked] {
-        .navi_checkbox_marker {
-          opacity: 1;
-          transform: scale(1);
-          transition-property: opacity, transform;
-          transition-duration: 0.15s;
-          transition-timing-function: ease;
-        }
-      }
-
-      &[data-accent-very-light] {
-        --x-background-color: rgba(0, 0, 0, 0.15);
-        &[data-checked] {
-          --x-background-color: var(--background-color-checked);
-        }
-      }
-      &[data-accent-needs-dark-fg] {
-        --x-checkmark-color: rgb(55, 55, 55);
-      }
-    }
-
-    /* Switch variant */
-    &[data-variant="switch"] {
-      --switch-outer-width: calc(var(--switch-width) + var(--switch-padding));
-      --margin: var(--switch-margin);
-      --width: var(--switch-outer-width);
-      --height: unset;
-      --border-radius: var(--switch-border-radius);
-      --background-color: var(--switch-background-color);
-      --background-color-hover: var(--switch-background-color-hover);
-      --background-color-readonly: var(--switch-background-color-readonly);
-      --background-color-disabled: var(--switch-background-color-disabled);
-      --background-color-checked: var(--switch-background-color-checked);
-      --background-color-hover-checked: var(
-        --switch-background-color-hover-checked
-      );
-      --background-color-readonly-checked: var(
-        --switch-background-color-readonly-checked
-      );
-      --background-color-disabled-checked: var(
-        --switch-background-color-disabled-checked
-      );
-
-      position: relative;
-      /* We compute ourselves the width + padding otherwise during */
-      /* translation subpixel rounding makes the thumb feels too much to the right by 1px */
-      /* We use !important to win over anything that would be set globally */
-      box-sizing: content-box !important;
-      min-width: var(--switch-outer-width);
-      padding: var(--switch-padding);
-      background-color: var(--x-background-color);
-      border-color: transparent;
-    }
-
-    &[data-variant="icon"] {
-      --margin: 0;
-      --width: auto;
-      --height: auto;
-
-      background: none;
-      border: none;
-    }
-
-    &[data-variant="button"] {
-      --margin: 0;
-      --width: auto;
-      --height: auto;
-      --border-color: var(--button-border-color);
-      --border-color-hover: var(--button-border-color-hover);
-      --background-color: var(--button-background-color);
-      --background-color-hover: var(--button-background-color-hover);
-      --background-color-readonly: var(--button-background-color-readonly);
-      --background-color-disabled: var(--button-background-color-disabled);
-      --border-color-checked: var(--button-border-color);
-      --background-color-checked: var(--button-background-color);
-
-      padding-top: var(
-        --button-padding-top,
-        var(
-          --button-padding-y,
-          var(--button-padding, var(--button-padding-y-default))
-        )
-      );
-      padding-right: var(
-        --button-padding-right,
-        var(
-          --button-padding-x,
-          var(--button-padding, var(--button-padding-x-default))
-        )
-      );
-      padding-bottom: var(
-        --button-padding-bottom,
-        var(
-          --button-padding-y,
-          var(--button-padding, var(--button-padding-y-default))
-        )
-      );
-      padding-left: var(
-        --button-padding-left,
-        var(
-          --button-padding-x,
-          var(--button-padding, var(--button-padding-x-default))
-        )
-      );
-      align-items: center;
-      justify-content: center;
+      --x-border-color: var(--border-color-hover-checked);
+      --x-background-color: var(--background-color-hover-checked);
     }
   }
+
+  &[data-checked] {
+    --x-background-color: var(--background-color-checked);
+    --x-border-color: var(--border-color-checked);
+  }
+
+  &[data-readonly], &[data-readonly][data-hover] {
+    --x-border-color: var(--border-color-readonly);
+    --x-background-color: var(--background-color-readonly);
+    --x-cursor: default;
+
+    &[data-checked] {
+      --x-border-color: var(--border-color-readonly-checked);
+      --x-background-color: var(--background-color-readonly-checked);
+      --x-checkmark-color: var(--checkmark-color-readonly);
+    }
+  }
+
+  &[data-disabled] {
+    --x-border-color: var(--border-color-disabled);
+    --x-background-color: var(--background-color-disabled);
+    --x-cursor: default;
+
+    &[data-checked] {
+      --x-border-color: var(--border-color-disabled-checked);
+      --x-background-color: var(--background-color-disabled-checked);
+      --x-checkmark-color: var(--checkmark-color-disabled);
+    }
+  }
+
+  &[data-accent-light] {
+    --color-mix: var(--color-mix-light);
+  }
+
+  &[data-variant="checkbox"] {
+    & .navi_checkbox_marker {
+      opacity: 0;
+      width: 100%;
+      height: 100%;
+      stroke: var(--x-checkmark-color);
+      transform: scale(.5);
+    }
+
+    &[data-checked] {
+      & .navi_checkbox_marker {
+        opacity: 1;
+        transition-property: opacity, transform;
+        transition-duration: .15s;
+        transition-timing-function: ease;
+        transform: scale(1);
+      }
+    }
+
+    &[data-accent-very-light] {
+      --x-background-color: #00000026;
+
+      &[data-checked] {
+        --x-background-color: var(--background-color-checked);
+      }
+    }
+
+    &[data-accent-needs-dark-fg] {
+      --x-checkmark-color: #373737;
+    }
+  }
+
+  &[data-variant="switch"] {
+    --switch-outer-width: calc(var(--switch-width) + var(--switch-padding));
+    --margin: var(--switch-margin);
+    --width: var(--switch-outer-width);
+    --height: unset;
+    --border-radius: var(--switch-border-radius);
+    --background-color: var(--switch-background-color);
+    --background-color-hover: var(--switch-background-color-hover);
+    --background-color-readonly: var(--switch-background-color-readonly);
+    --background-color-disabled: var(--switch-background-color-disabled);
+    --background-color-checked: var(--switch-background-color-checked);
+    --background-color-hover-checked: var(--switch-background-color-hover-checked);
+    --background-color-readonly-checked: var(--switch-background-color-readonly-checked);
+    --background-color-disabled-checked: var(--switch-background-color-disabled-checked);
+    min-width: var(--switch-outer-width);
+    padding: var(--switch-padding);
+    background-color: var(--x-background-color);
+    border-color: #0000;
+    position: relative;
+    box-sizing: content-box !important;
+  }
+
+  &[data-variant="icon"] {
+    --margin: 0;
+    --width: auto;
+    --height: auto;
+    background: none;
+    border: none;
+  }
+
+  &[data-variant="button"] {
+    --margin: 0;
+    --width: auto;
+    --height: auto;
+    --border-color: var(--button-border-color);
+    --border-color-hover: var(--button-border-color-hover);
+    --background-color: var(--button-background-color);
+    --background-color-hover: var(--button-background-color-hover);
+    --background-color-readonly: var(--button-background-color-readonly);
+    --background-color-disabled: var(--button-background-color-disabled);
+    --border-color-checked: var(--button-border-color);
+    --background-color-checked: var(--button-background-color);
+    padding-top: var(--button-padding-top, var(--button-padding-y, var(--button-padding, var(--button-padding-y-default))));
+    padding-right: var(--button-padding-right, var(--button-padding-x, var(--button-padding, var(--button-padding-x-default))));
+    padding-bottom: var(--button-padding-bottom, var(--button-padding-y, var(--button-padding, var(--button-padding-y-default))));
+    padding-left: var(--button-padding-left, var(--button-padding-x, var(--button-padding, var(--button-padding-x-default))));
+    justify-content: center;
+    align-items: center;
+  }
+}
 `;
 const InputCheckbox = props => {
   const defaultRef = useRef();
@@ -45305,65 +44411,56 @@ const CheckboxButtonStyleCSSVars = {
 const CheckboxPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":checked", ":-navi-loading"];
 const CheckboxPseudoElements = ["::-navi-loader", "::-navi-checkmark"];
 
-installImportMetaCssBuild(import.meta);const css$M = /* css */`
-  @layer navi {
-    /* Layered on purpose, rules included: a Field and its Label are chrome an
-       app restyles wholesale (its own label color, its own spacing), and
-       nothing declared here is structural — a cursor, a dimmed color, and
-       spacing that already has --spacing-with-control as its knob. So an app
-       rule of any weight takes them back, no specificity games. */
-    .navi_label {
-      --label-required-indicator-color: var(--navi-color-danger, #b42318);
+installImportMetaCssBuild(import.meta);const css$M = /* css */`@layer navi {
+  .navi_label {
+    --label-required-indicator-color: var(--navi-color-danger, #b42318);
 
-      &[data-control-connected] {
-        cursor: pointer;
-        user-select: none;
-      }
-      &[data-readonly],
-      &[data-disabled] {
-        color: rgba(0, 0, 0, 0.5);
-        cursor: default;
-      }
-
-      .navi_label_required_indicator {
-        /* not a space in the text: it would be part of what a double-click
-           selects, and would collapse differently depending on the markup */
-        padding-left: 0.25em;
-        color: var(--label-required-indicator-color);
-      }
+    &[data-control-connected] {
+      cursor: pointer;
+      user-select: none;
     }
 
-    [navi-field] {
-      --spacing-with-control: var(--navi-xs);
-
-      .navi_checkbox {
-        --margin: 0;
-      }
-      .navi_radio {
-        --margin: 0;
-      }
+    &[data-readonly], &[data-disabled] {
+      color: #00000080;
+      cursor: default;
     }
 
-    /* Field container: padding on Label extends its interactive zone */
-    :not(label)[navi-field] {
-      > [navi-control] + .navi_label {
-        padding-left: var(--spacing-with-control);
+    & .navi_label_required_indicator {
+      color: var(--label-required-indicator-color);
+      padding-left: .25em;
+    }
+  }
+
+  [navi-field] {
+    --spacing-with-control: var(--navi-xs);
+
+    & .navi_checkbox, & .navi_radio {
+      --margin: 0;
+    }
+  }
+
+  :not(label)[navi-field] {
+    & > [navi-control] + .navi_label {
+      padding-left: var(--spacing-with-control);
+    }
+
+    & > .navi_label:first-child {
+      padding-right: var(--spacing-with-control);
+    }
+
+    &[data-vertical] {
+      & > .navi_label:first-child {
+        padding-right: 0;
+        padding-bottom: var(--spacing-with-control);
       }
-      > .navi_label:first-child {
-        padding-right: var(--spacing-with-control);
-      }
-      &[data-vertical] {
-        > .navi_label:first-child {
-          padding-right: 0;
-          padding-bottom: var(--spacing-with-control);
-        }
-        > [navi-control] + .navi_label {
-          padding-top: var(--spacing-with-control);
-          padding-left: 0;
-        }
+
+      & > [navi-control] + .navi_label {
+        padding-top: var(--spacing-with-control);
+        padding-left: 0;
       }
     }
   }
+}
 `;
 
 /**
@@ -45619,362 +44716,284 @@ const InputSlot = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$L = /* css */`
-  @layer navi {
-    .navi_radio {
-      --margin: 3px 3px 3px 5px;
-      --outline-offset: 1px;
-      --outline-width: 2px;
-      /* Rounding ensures outline is visually a nice circle */
-      --width: round(1em, 1px);
-      --height: round(1em, 1px);
-
-      --color-mix-light: black;
-      --color-mix-dark: white;
-      --color-mix: var(--color-mix-dark);
-
-      --outline-color: var(--navi-focus-outline-color);
-      --loader-color: var(--navi-loader-color);
-      --border-color: var(--navi-control-border-color);
-      --background-color: white;
-      --background-color-checked: var(--background-color);
-      --accent-color: var(--navi-control-accent-color);
-      --radiomark-color: var(--accent-color);
-      --border-color-checked: var(--accent-color);
-      --cursor: pointer;
-      --font-size: var(--navi-control-font-size);
-      --font-family: var(--navi-control-font-family);
-
-      /* Hover */
-      --border-color-hover: color-mix(in srgb, var(--border-color) 60%, black);
-      --border-color-hover-checked: color-mix(
-        in srgb,
+installImportMetaCssBuild(import.meta);const css$L = /* css */`@layer navi {
+  .navi_radio {
+    --margin: 3px 3px 3px 5px;
+    --outline-offset: 1px;
+    --outline-width: 2px;
+    --width: round(1em, 1px);
+    --height: round(1em, 1px);
+    --color-mix-light: black;
+    --color-mix-dark: white;
+    --color-mix: var(--color-mix-dark);
+    --outline-color: var(--navi-focus-outline-color);
+    --loader-color: var(--navi-loader-color);
+    --border-color: var(--navi-control-border-color);
+    --background-color: white;
+    --background-color-checked: var(--background-color);
+    --accent-color: var(--navi-control-accent-color);
+    --radiomark-color: var(--accent-color);
+    --border-color-checked: var(--accent-color);
+    --cursor: pointer;
+    --font-size: var(--navi-control-font-size);
+    --font-family: var(--navi-control-font-family);
+    --border-color-hover: color-mix(in srgb, var(--border-color) 60%, black);
+    --border-color-hover-checked: color-mix(in srgb,
         var(--border-color-checked) 80%,
-        var(--color-mix)
-      );
-      --radiomark-color-hover: color-mix(
-        in srgb,
+        var(--color-mix));
+    --radiomark-color-hover: color-mix(in srgb,
         var(--radiomark-color) 80%,
-        var(--color-mix)
-      );
-      --background-color-hover: var(--background-color);
-      --background-color-hover-checked: var(--background-color);
-      /* Readonly */
-      --border-color-readonly: color-mix(
-        in srgb,
+        var(--color-mix));
+    --background-color-hover: var(--background-color);
+    --background-color-hover-checked: var(--background-color);
+    --border-color-readonly: color-mix(in srgb,
         var(--border-color) 30%,
-        white
-      );
-      --background-color-readonly: var(--background-color);
-      --radiomark-color-readonly: color-mix(
-        in srgb,
+        white);
+    --background-color-readonly: var(--background-color);
+    --radiomark-color-readonly: color-mix(in srgb,
         var(--radiomark-color) 30%,
-        grey
-      );
-      --border-color-readonly-checked: color-mix(
-        in srgb,
+        grey);
+    --border-color-readonly-checked: color-mix(in srgb,
         var(--radiomark-color) 30%,
-        transparent
-      );
-      --background-color-readonly-checked: var(--border-color-readonly-checked);
-      /* Disabled */
-      --border-color-disabled: var(--border-color-readonly);
-      --background-color-disabled: rgba(248, 248, 248, 0.7);
-      --radiomark-color-disabled: #d3d3d3;
-      --border-color-checked-disabled: #d3d3d3;
-      --background-color-disabled-checked: var(--background-color);
-
-      /* Button specific */
-      --button-border-width: 1px;
-      --button-border-color: transparent;
-      --button-background-color: transparent;
-      --button-border-color-hover: color-mix(
-        in srgb,
+        transparent);
+    --background-color-readonly-checked: var(--border-color-readonly-checked);
+    --border-color-disabled: var(--border-color-readonly);
+    --background-color-disabled: #f8f8f8b3;
+    --radiomark-color-disabled: #d3d3d3;
+    --border-color-checked-disabled: #d3d3d3;
+    --background-color-disabled-checked: var(--background-color);
+    --button-border-width: 1px;
+    --button-border-color: transparent;
+    --button-background-color: transparent;
+    --button-border-color-hover: color-mix(in srgb,
         var(--button-border-color) 70%,
-        black
-      );
-      --button-background-color-hover: color-mix(
-        in srgb,
+        black);
+    --button-background-color-hover: color-mix(in srgb,
         var(--button-border-color) 95%,
-        black
-      );
-      --button-border-color-checked: var(--accent-color);
-      --button-background-color-checked: transparent;
-      --button-border-color-readonly: #eeeeee;
-      --button-background-color-readonly: #d3d3d3;
-      --button-border-color-disabled: var(--border-color-readonly);
-      --button-background-color-disabled: var(--background-color-readonly);
+        black);
+    --button-border-color-checked: var(--accent-color);
+    --button-background-color-checked: transparent;
+    --button-border-color-readonly: #eee;
+    --button-background-color-readonly: #d3d3d3;
+    --button-border-color-disabled: var(--border-color-readonly);
+    --button-background-color-disabled: var(--background-color-readonly);
+  }
+}
+
+.navi_radio {
+  --x-outline-offset: var(--outline-offset);
+  --x-outline-width: var(--outline-width);
+  --x-border-width: var(--border-width);
+  --x-width: var(--width);
+  --x-height: var(--height);
+  --x-outline-color: var(--outline-color);
+  --x-background-color: var(--background-color);
+  --x-border-color: var(--border-color);
+  --x-radiomark-color: var(--radiomark-color);
+  --x-cursor: var(--cursor);
+  box-sizing: border-box;
+  width: var(--x-width);
+  min-width: var(--x-width);
+  height: var(--x-height);
+  min-height: var(--x-height);
+  margin: var(--margin);
+  font-size: var(--font-size);
+  font-family: var(--font-family);
+  outline-width: var(--x-outline-width);
+  outline-style: none;
+  outline-color: var(--x-outline-color);
+  outline-offset: var(--x-outline-offset);
+  display: inline-flex;
+  position: relative;
+
+  & .navi_radio_accent_probe {
+    background-color: var(--accent-color);
+    visibility: hidden;
+    pointer-events: none;
+    width: 0;
+    height: 0;
+    position: absolute;
+  }
+
+  & .navi_control_input {
+    border-radius: inherit;
+    opacity: 0;
+    appearance: none;
+    cursor: var(--x-cursor);
+    border: none;
+    margin: 0;
+    padding: 0;
+    position: absolute;
+    inset: 0;
+  }
+
+  &[data-focus-visible] {
+    z-index: 1;
+    outline-style: solid;
+  }
+
+  &[data-hover] {
+    --x-background-color: var(--background-color-hover);
+    --x-border-color: var(--border-color-hover);
+    --x-radiomark-color: var(--radiomark-color-hover);
+
+    &[data-checked] {
+      --x-background-color: var(--background-color-hover-checked);
+      --x-border-color: var(--border-color-hover-checked);
     }
   }
 
-  .navi_radio {
-    --x-outline-offset: var(--outline-offset);
-    --x-outline-width: var(--outline-width);
-    --x-border-width: var(--border-width);
-    --x-width: var(--width);
-    --x-height: var(--height);
-    --x-outline-color: var(--outline-color);
-    --x-background-color: var(--background-color);
-    --x-border-color: var(--border-color);
-    --x-radiomark-color: var(--radiomark-color);
-    --x-cursor: var(--cursor);
+  &[data-checked] {
+    --x-background-color: var(--background-color-checked);
+    --x-border-color: var(--border-color-checked);
+  }
 
-    position: relative;
-    display: inline-flex;
-    box-sizing: border-box;
-    width: var(--x-width);
-    min-width: var(--x-width); /* Do not allow to shrink */
-    height: var(--x-height);
-    min-height: var(--x-height); /* Do not allow to shrink */
-    margin: var(--margin);
-    font-size: var(--font-size);
-    font-family: var(--font-family);
-    outline-width: var(--x-outline-width);
-    outline-style: none;
-    outline-color: var(--x-outline-color);
-    outline-offset: var(--x-outline-offset);
+  &[data-readonly] {
+    --x-cursor: default;
+    --x-background-color: var(--background-color-readonly);
+    --x-border-color: var(--border-color-readonly);
+    --x-radiomark-color: var(--radiomark-color-readonly);
 
-    .navi_radio_accent_probe {
-      position: absolute;
-      width: 0;
-      height: 0;
-      background-color: var(--accent-color);
-      visibility: hidden;
-      pointer-events: none;
+    & .navi_radio_dashed_border {
+      display: none;
     }
 
-    .navi_control_input {
-      position: absolute;
-      inset: 0;
-      margin: 0;
-      padding: 0;
-      border: none;
-      border-radius: inherit;
-      opacity: 0;
-      appearance: none; /* This allows border-radius to have an effect */
-      cursor: var(--x-cursor);
-    }
-
-    /* Focus */
-    &[data-focus-visible] {
-      z-index: 1;
-      outline-style: solid;
-    }
-    /* Hover */
-    &[data-hover] {
-      --x-background-color: var(--background-color-hover);
-      --x-border-color: var(--border-color-hover);
-      --x-radiomark-color: var(--radiomark-color-hover);
-
-      &[data-checked] {
-        --x-background-color: var(--background-color-hover-checked);
-        --x-border-color: var(--border-color-hover-checked);
-      }
-    }
-    /* Checked */
     &[data-checked] {
-      --x-background-color: var(--background-color-checked);
-      --x-border-color: var(--border-color-checked);
-    }
-    /* Readonly */
-    &[data-readonly] {
-      --x-cursor: default;
-      --x-background-color: var(--background-color-readonly);
-      --x-border-color: var(--border-color-readonly);
+      --x-background-color: var(--background-color-readonly-checked);
+      --x-border-color: var(--border-color-readonly-checked);
       --x-radiomark-color: var(--radiomark-color-readonly);
-
-      .navi_radio_dashed_border {
-        display: none;
-      }
-      &[data-checked] {
-        --x-background-color: var(--background-color-readonly-checked);
-        --x-border-color: var(--border-color-readonly-checked);
-        --x-radiomark-color: var(--radiomark-color-readonly);
-      }
     }
-    /* Disabled */
-    &[data-disabled] {
-      --x-cursor: default;
-      --x-background-color: var(--background-color-disabled);
+  }
+
+  &[data-disabled] {
+    --x-cursor: default;
+    --x-background-color: var(--background-color-disabled);
+    --x-border-color: var(--border-color-disabled);
+    --x-radiomark-color: var(--radiomark-color-disabled);
+
+    &[data-checked] {
+      --x-background-color: var(--background-color-disabled-checked);
       --x-border-color: var(--border-color-disabled);
       --x-radiomark-color: var(--radiomark-color-disabled);
+    }
+  }
 
-      &[data-checked] {
-        --x-background-color: var(--background-color-disabled-checked);
-        --x-border-color: var(--border-color-disabled);
-        --x-radiomark-color: var(--radiomark-color-disabled);
+  &[data-accent-light] {
+    --color-mix: var(--color-mix-light);
+  }
+
+  &[data-accent-very-light] {
+    --x-background-color: #00000026;
+
+    &[data-checked] {
+      --x-background-color: #00000026;
+    }
+  }
+
+  &[data-variant="radio"] {
+    border-radius: 50%;
+    justify-content: center;
+    align-items: center;
+    display: inline-flex;
+
+    & svg {
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+    }
+
+    & .navi_radio_border {
+      fill: var(--x-background-color);
+      stroke: var(--x-border-color);
+    }
+
+    & .navi_radio_dashed_border {
+      display: none;
+    }
+
+    & .navi_radio_marker {
+      opacity: 0;
+      fill: var(--x-radiomark-color);
+      transform-origin: center;
+      pointer-events: none;
+      transform: scale(.3);
+    }
+
+    &[data-transition] {
+      & .navi_radio_border, & .navi_radio_dashed_border, & .navi_radio_marker {
+        transition: all .15s;
       }
     }
 
-    &[data-accent-light] {
-      --color-mix: var(--color-mix-light);
-    }
-
-    &[data-accent-very-light] {
-      --x-background-color: rgba(0, 0, 0, 0.15);
-      &[data-checked] {
-        --x-background-color: rgba(0, 0, 0, 0.15);
-      }
-    }
-
-    /* Radio variant */
-    &[data-variant="radio"] {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 50%;
-
-      svg {
-        /* A viewBox gives the svg a ratio but no size; without an explicit
-           size some engines fall back to the 300x150 default of a replaced
-           element (WebKit trunk / iOS 26.5) and the ring paints huge. */
-        width: 100%;
-        height: 100%;
-        overflow: visible;
-      }
-
-      .navi_radio_border {
-        fill: var(--x-background-color);
-        stroke: var(--x-border-color);
-      }
-      .navi_radio_dashed_border {
-        display: none;
-      }
-      .navi_radio_marker {
-        opacity: 0;
-        fill: var(--x-radiomark-color);
-        transform: scale(0.3);
-        transform-origin: center;
-        pointer-events: none;
-      }
-
-      &[data-transition] {
-        .navi_radio_border {
-          transition: all 0.15s ease;
-        }
-        .navi_radio_dashed_border {
-          transition: all 0.15s ease;
-        }
-        .navi_radio_marker {
-          transition: all 0.15s ease;
-        }
-      }
-
-      &[data-checked] {
-        .navi_radio_marker {
-          opacity: 1;
-          transform: scale(1);
-        }
-      }
-    }
-
-    /* Icon variant */
-    &[data-variant="icon"] {
-      --width: auto;
-      --height: auto;
-      --outline-offset: 2px;
-      --outline-width: 2px;
-    }
-
-    /* Button variant */
-    &[data-variant="button"] {
-      --margin: 0;
-      --outline-offset: 0px;
-      --width: auto;
-      --height: auto;
-      --border-color: var(--button-border-color);
-      --border-color-hover: var(--button-border-color-hover);
-      --background-color: var(--button-background-color);
-      --background-color-hover: var(--button-background-color-hover);
-      --background-color-readonly: var(--button-background-color-readonly);
-      --background-color-disabled: var(--button-background-color-disabled);
-      --border-color-checked: var(--button-border-color);
-      --background-color-checked: var(--button-background-color);
-
-      padding-top: var(
-        --button-padding-top,
-        var(
-          --button-padding-y,
-          var(--button-padding, var(--button-padding-y-default))
-        )
-      );
-      padding-right: var(
-        --button-padding-right,
-        var(
-          --button-padding-x,
-          var(--button-padding, var(--button-padding-x-default))
-        )
-      );
-      padding-bottom: var(
-        --button-padding-bottom,
-        var(
-          --button-padding-y,
-          var(--button-padding, var(--button-padding-y-default))
-        )
-      );
-      padding-left: var(
-        --button-padding-left,
-        var(
-          --button-padding-x,
-          var(--button-padding, var(--button-padding-x-default))
-        )
-      );
-      align-items: center;
-      justify-content: center;
-      background-color: var(--x-background-color);
-      border-width: var(--button-border-width);
-      border-style: solid;
-      border-color: var(--x-border-color);
-      /* Squared from the outside, corner by corner: a row of these is the
-         segmented control a Group is for, and one of them can arrive wrapped
-         (in a tooltip, in a label) — so the ask travels down as inherited
-         custom properties rather than as a radius landing on this element. */
-      border-top-left-radius: var(
-        --x-corner-top-left-radius,
-        var(--button-border-radius)
-      );
-      border-top-right-radius: var(
-        --x-corner-top-right-radius,
-        var(--button-border-radius)
-      );
-      border-bottom-right-radius: var(
-        --x-corner-bottom-right-radius,
-        var(--button-border-radius)
-      );
-      border-bottom-left-radius: var(
-        --x-corner-bottom-left-radius,
-        var(--button-border-radius)
-      );
-
-      .navi_icon,
-      img {
-        border-radius: inherit;
-      }
-
-      &[data-hover] {
-        --x-background-color: var(--button-background-color-hover);
-        --x-border-color: var(--button-border-color-hover);
-      }
-      &[data-checked] {
-        --x-border-color: var(--button-border-color-checked);
-        --x-background-color: var(--button-background-color-checked);
-
-        box-shadow:
-          inset 0 2px 4px rgba(0, 0, 0, 0.15),
-          inset 0 0 0 1px var(--button-border-color-checked),
-          0 0 0 3px
-            color-mix(
-              in srgb,
-              var(--button-border-color-checked) 25%,
-              transparent
-            );
-      }
-      &[data-disabled] {
-        --x-border-color: var(--button-border-color-disabled);
-        --x-background-color: var(--button-background-color-disabled);
+    &[data-checked] {
+      & .navi_radio_marker {
+        opacity: 1;
+        transform: scale(1);
       }
     }
   }
+
+  &[data-variant="icon"] {
+    --width: auto;
+    --height: auto;
+    --outline-offset: 2px;
+    --outline-width: 2px;
+  }
+
+  &[data-variant="button"] {
+    --margin: 0;
+    --outline-offset: 0px;
+    --width: auto;
+    --height: auto;
+    --border-color: var(--button-border-color);
+    --border-color-hover: var(--button-border-color-hover);
+    --background-color: var(--button-background-color);
+    --background-color-hover: var(--button-background-color-hover);
+    --background-color-readonly: var(--button-background-color-readonly);
+    --background-color-disabled: var(--button-background-color-disabled);
+    --border-color-checked: var(--button-border-color);
+    --background-color-checked: var(--button-background-color);
+    padding-top: var(--button-padding-top, var(--button-padding-y, var(--button-padding, var(--button-padding-y-default))));
+    padding-right: var(--button-padding-right, var(--button-padding-x, var(--button-padding, var(--button-padding-x-default))));
+    padding-bottom: var(--button-padding-bottom, var(--button-padding-y, var(--button-padding, var(--button-padding-y-default))));
+    padding-left: var(--button-padding-left, var(--button-padding-x, var(--button-padding, var(--button-padding-x-default))));
+    background-color: var(--x-background-color);
+    border-width: var(--button-border-width);
+    border-style: solid;
+    border-color: var(--x-border-color);
+    border-top-left-radius: var(--x-corner-top-left-radius, var(--button-border-radius));
+    border-top-right-radius: var(--x-corner-top-right-radius, var(--button-border-radius));
+    border-bottom-right-radius: var(--x-corner-bottom-right-radius, var(--button-border-radius));
+    border-bottom-left-radius: var(--x-corner-bottom-left-radius, var(--button-border-radius));
+    justify-content: center;
+    align-items: center;
+
+    & .navi_icon, & img {
+      border-radius: inherit;
+    }
+
+    &[data-hover] {
+      --x-background-color: var(--button-background-color-hover);
+      --x-border-color: var(--button-border-color-hover);
+    }
+
+    &[data-checked] {
+      --x-border-color: var(--button-border-color-checked);
+      --x-background-color: var(--button-background-color-checked);
+      box-shadow: inset 0 2px 4px #00000026,
+          inset 0 0 0 1px var(--button-border-color-checked),
+          0 0 0 3px
+            color-mix(in srgb,
+              var(--button-border-color-checked) 25%,
+              transparent);
+    }
+
+    &[data-disabled] {
+      --x-border-color: var(--button-border-color-disabled);
+      --x-background-color: var(--button-background-color-disabled);
+    }
+  }
+}
 `;
 const InputRadio = props => {
   const defaultRef = useRef();
@@ -46149,298 +45168,236 @@ const RadioButtonStyleCSSVars = {
 const RadioPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":checked", ":-navi-loading"];
 const RadioPseudoElements = ["::-navi-loader", "::-navi-radiomark"];
 
-installImportMetaCssBuild(import.meta);const css$K = /* css */`
-  @layer navi {
-    .navi_input_range {
-      --border-radius: 6px;
-      --border-width: var(--navi-control-border-width);
-      /* Focus outline */
-      --outline-border-radius: var(--navi-control-border-radius);
-      --outline-width: var(--navi-focus-outline-width);
-      --outline-offset: var(--outline-width);
-      --outline-color: var(--navi-focus-outline-color);
-      /* Focus outline end */
-      --height: 8px;
-      --thumb-size: 16px;
-      --thumb-width: var(--thumb-size);
-      --thumb-height: var(--thumb-size);
-      --thumb-border-radius: 100%;
-      --thumb-cursor: pointer;
-      /* Range can contains text (legend etc) */
-      --font-size: var(--navi-control-font-size);
-      --font-family: var(--navi-control-font-family);
-
-      --loader-color: var(--navi-loader-color);
-      --accent-color: var(--navi-control-accent-color);
-      --color-mix-light: black;
-      --color-mix-dark: white;
-      --color-mix: var(--color-mix-dark);
-
-      --border-color: rgb(150, 150, 150);
-      --track-border-color: color-mix(
-        in srgb,
-        var(--border-color) 35%,
-        transparent
-      );
-      --background-color: #efefef;
-      --fill-color: var(--accent-color);
-      --thumb-color: var(--accent-color);
-      /* Hover */
-      --border-color-hover: color-mix(in srgb, var(--border-color) 75%, black);
-      --track-border-color-hover: color-mix(
-        in srgb,
-        var(--track-border-color) 75%,
-        black
-      );
-      --track-color-hover: color-mix(
-        in srgb,
-        var(--fill-color) 95%,
-        var(--color-mix)
-      );
-      --fill-color-hover: color-mix(
-        in srgb,
-        var(--fill-color) 80%,
-        var(--color-mix)
-      );
-      --thumb-color-hover: color-mix(
-        in srgb,
-        var(--thumb-color) 80%,
-        var(--color-mix)
-      );
-      /* Pressed */
-      --border-color-pressed: color-mix(
-        in srgb,
-        var(--border-color) 50%,
-        transparent
-      );
-      --track-border-color-pressed: var(--border-color-pressed);
-      --background-color-pressed: color-mix(
-        in srgb,
-        var(--background-color) 75%,
-        white
-      );
-      --fill-color-pressed: color-mix(in srgb, var(--fill-color) 75%, white);
-      --thumb-color-pressed: color-mix(in srgb, var(--thumb-color) 75%, white);
-      /* Readonly */
-      --border-color-readonly: color-mix(
-        in srgb,
-        var(--border-color) 30%,
-        white
-      );
-      --track-border-color-readonly: var(--border-color);
-      --background-color-readonly: var(--background-color);
-      --fill-color-readonly: color-mix(in srgb, var(--fill-color) 30%, grey);
-      --thumb-color-readonly: var(--fill-color-readonly);
-      /* Disabled */
-      --background-color-disabled: color-mix(
-        in srgb,
-        var(--background-color) 60%,
-        transparent
-      );
-      --border-color-disabled: #b1b1b1;
-      --track-border-color-disabled: var(--border-color-disabled);
-      --fill-color-disabled: #cbcbcb;
-      --thumb-color-disabled: #cbcbcb;
-    }
-  }
-
+installImportMetaCssBuild(import.meta);const css$K = /* css */`@layer navi {
   .navi_input_range {
-    --x-fill-ratio: 0;
-    --x-border-color: var(--border-color);
-    --x-track-border-color: var(--track-border-color);
-    --x-background-color: var(--background-color);
-    --x-fill-color: var(--fill-color);
-    --x-thumb-color: var(--thumb-color);
-    --x-thumb-border: none;
-    --x-thumb-cursor: var(--thumb-cursor);
-    /* Squared from the outside, corner by corner — resolved here once because
-       what draws the frame is not this element but the three layers stacked
-       below it (background, track, fill), which cannot take it by inherit the
-       way a control with a single frame does. A range can arrive wrapped, so
-       the ask travels down as inherited custom properties; each corner falls
-       back to the track's own radius when nothing asks for anything. */
-    --x-range-corner-top-left: var(
-      --x-corner-top-left-radius,
-      var(--border-radius)
-    );
-    --x-range-corner-top-right: var(
-      --x-corner-top-right-radius,
-      var(--border-radius)
-    );
-    --x-range-corner-bottom-right: var(
-      --x-corner-bottom-right-radius,
-      var(--border-radius)
-    );
-    --x-range-corner-bottom-left: var(
-      --x-corner-bottom-left-radius,
-      var(--border-radius)
-    );
+    --border-radius: 6px;
+    --border-width: var(--navi-control-border-width);
+    --outline-border-radius: var(--navi-control-border-radius);
+    --outline-width: var(--navi-focus-outline-width);
+    --outline-offset: var(--outline-width);
+    --outline-color: var(--navi-focus-outline-color);
+    --height: 8px;
+    --thumb-size: 16px;
+    --thumb-width: var(--thumb-size);
+    --thumb-height: var(--thumb-size);
+    --thumb-border-radius: 100%;
+    --thumb-cursor: pointer;
+    --font-size: var(--navi-control-font-size);
+    --font-family: var(--navi-control-font-family);
+    --loader-color: var(--navi-loader-color);
+    --accent-color: var(--navi-control-accent-color);
+    --color-mix-light: black;
+    --color-mix-dark: white;
+    --color-mix: var(--color-mix-dark);
+    --border-color: #969696;
+    --track-border-color: color-mix(in srgb,
+        var(--border-color) 35%,
+        transparent);
+    --background-color: #efefef;
+    --fill-color: var(--accent-color);
+    --thumb-color: var(--accent-color);
+    --border-color-hover: color-mix(in srgb, var(--border-color) 75%, black);
+    --track-border-color-hover: color-mix(in srgb,
+        var(--track-border-color) 75%,
+        black);
+    --track-color-hover: color-mix(in srgb,
+        var(--fill-color) 95%,
+        var(--color-mix));
+    --fill-color-hover: color-mix(in srgb,
+        var(--fill-color) 80%,
+        var(--color-mix));
+    --thumb-color-hover: color-mix(in srgb,
+        var(--thumb-color) 80%,
+        var(--color-mix));
+    --border-color-pressed: color-mix(in srgb,
+        var(--border-color) 50%,
+        transparent);
+    --track-border-color-pressed: var(--border-color-pressed);
+    --background-color-pressed: color-mix(in srgb,
+        var(--background-color) 75%,
+        white);
+    --fill-color-pressed: color-mix(in srgb, var(--fill-color) 75%, white);
+    --thumb-color-pressed: color-mix(in srgb, var(--thumb-color) 75%, white);
+    --border-color-readonly: color-mix(in srgb,
+        var(--border-color) 30%,
+        white);
+    --track-border-color-readonly: var(--border-color);
+    --background-color-readonly: var(--background-color);
+    --fill-color-readonly: color-mix(in srgb, var(--fill-color) 30%, grey);
+    --thumb-color-readonly: var(--fill-color-readonly);
+    --background-color-disabled: color-mix(in srgb,
+        var(--background-color) 60%,
+        transparent);
+    --border-color-disabled: #b1b1b1;
+    --track-border-color-disabled: var(--border-color-disabled);
+    --fill-color-disabled: #cbcbcb;
+    --thumb-color-disabled: #cbcbcb;
+  }
+}
 
-    position: relative;
-    box-sizing: border-box;
-    width: fit-content;
-    height: var(--height);
-    margin: 2px;
-    flex-direction: row;
-    align-items: center;
-    font-size: var(--font-size);
-    font-family: var(--font-family);
-    /* The ring around the whole control, which follows the claim too: a range
-       squared along a seam must not keep a rounded ring over it. */
-    border-top-left-radius: var(
-      --x-corner-top-left-radius,
-      var(--outline-border-radius)
-    );
-    border-top-right-radius: var(
-      --x-corner-top-right-radius,
-      var(--outline-border-radius)
-    );
-    border-bottom-right-radius: var(
-      --x-corner-bottom-right-radius,
-      var(--outline-border-radius)
-    );
-    border-bottom-left-radius: var(
-      --x-corner-bottom-left-radius,
-      var(--outline-border-radius)
-    );
-    outline-width: var(--outline-width);
-    outline-style: none;
-    outline-color: var(--outline-color);
-    outline-offset: var(--outline-offset);
+.navi_input_range {
+  --x-fill-ratio: 0;
+  --x-border-color: var(--border-color);
+  --x-track-border-color: var(--track-border-color);
+  --x-background-color: var(--background-color);
+  --x-fill-color: var(--fill-color);
+  --x-thumb-color: var(--thumb-color);
+  --x-thumb-border: none;
+  --x-thumb-cursor: var(--thumb-cursor);
+  --x-range-corner-top-left: var(--x-corner-top-left-radius, var(--border-radius));
+  --x-range-corner-top-right: var(--x-corner-top-right-radius, var(--border-radius));
+  --x-range-corner-bottom-right: var(--x-corner-bottom-right-radius, var(--border-radius));
+  --x-range-corner-bottom-left: var(--x-corner-bottom-left-radius, var(--border-radius));
+  box-sizing: border-box;
+  width: fit-content;
+  height: var(--height);
+  font-size: var(--font-size);
+  font-family: var(--font-family);
+  border-top-left-radius: var(--x-corner-top-left-radius, var(--outline-border-radius));
+  border-top-right-radius: var(--x-corner-top-right-radius, var(--outline-border-radius));
+  border-bottom-right-radius: var(--x-corner-bottom-right-radius, var(--outline-border-radius));
+  border-bottom-left-radius: var(--x-corner-bottom-left-radius, var(--outline-border-radius));
+  outline-width: var(--outline-width);
+  outline-style: none;
+  outline-color: var(--outline-color);
+  outline-offset: var(--outline-offset);
+  flex-direction: row;
+  align-items: center;
+  margin: 2px;
+  position: relative;
 
-    .navi_control_input {
-      margin: 0;
-      opacity: 0;
-      --webkit-appearance: none;
-      min-width: inherit;
-      font-size: inherit;
-      appearance: none;
+  & .navi_control_input {
+    opacity: 0;
+    --webkit-appearance: none;
+    min-width: inherit;
+    font-size: inherit;
+    appearance: none;
+    margin: 0;
 
-      &::-webkit-slider-thumb {
-        width: var(--thumb-width);
-        height: var(--thumb-height);
-        border-radius: var(--thumb-border-radius);
-        -webkit-appearance: none;
-        cursor: var(--x-thumb-cursor);
-      }
-    }
-
-    .navi_input_range_accent_probe {
-      position: absolute;
-      width: 0;
-      height: 0;
-      background-color: var(--accent-color);
-      visibility: hidden;
-      pointer-events: none;
-    }
-
-    .navi_input_range_background {
-      position: absolute;
-      width: 100%;
-      height: var(--height);
-      background: var(--x-background-color);
-      border-width: var(--border-width);
-      border-style: solid;
-      border-color: var(--x-border-color);
-      border-top-left-radius: var(--x-range-corner-top-left);
-      border-top-right-radius: var(--x-range-corner-top-right);
-      border-bottom-right-radius: var(--x-range-corner-bottom-right);
-      border-bottom-left-radius: var(--x-range-corner-bottom-left);
-    }
-    .navi_input_range_track {
-      position: absolute;
-      box-sizing: border-box;
-      width: 100%;
-      height: var(--height);
-      border-width: var(--border-width);
-      border-style: solid;
-      border-color: var(--x-track-border-color);
-      border-top-left-radius: var(--x-range-corner-top-left);
-      border-top-right-radius: var(--x-range-corner-top-right);
-      border-bottom-right-radius: var(--x-range-corner-bottom-right);
-      border-bottom-left-radius: var(--x-range-corner-bottom-left);
-    }
-    .navi_input_range_fill {
-      position: absolute;
-      width: 100%;
-      height: var(--height);
-      background: var(--x-fill-color);
-      background-clip: content-box;
-      border-top-left-radius: var(--x-range-corner-top-left);
-      border-top-right-radius: var(--x-range-corner-top-right);
-      border-bottom-right-radius: var(--x-range-corner-bottom-right);
-      border-bottom-left-radius: var(--x-range-corner-bottom-left);
-      clip-path: inset(0 calc((1 - var(--x-fill-ratio)) * 100%) 0 0);
-    }
-    .navi_input_range_thumb {
-      position: absolute;
-      left: calc(
-        var(--x-fill-ratio) * (100% - var(--thumb-size)) + var(--thumb-size) / 2
-      );
+    &::-webkit-slider-thumb {
       width: var(--thumb-width);
       height: var(--thumb-height);
-      background: var(--x-thumb-color);
-      border: var(--x-thumb-border);
       border-radius: var(--thumb-border-radius);
-      transform: translateX(-50%);
+      -webkit-appearance: none;
       cursor: var(--x-thumb-cursor);
     }
-    .navi_input_range_focus_proxy {
-      position: absolute;
-      inset: 0;
-      opacity: 0;
-    }
-
-    /* Hover */
-    &[data-hover] {
-      --x-border-color: var(--border-color-hover);
-      --x-track-border-color: var(--track-border-color-hover);
-      --x-fill-color: var(--fill-color-hover);
-      --x-thumb-color: var(--thumb-color-hover);
-    }
-    /* Pressed */
-    &[data-pressed] {
-      --x-border-color: var(--border-color-pressed);
-      --x-track-border-color: var(--track-border-color-pressed);
-      --x-background-color: var(--background-color-pressed);
-      --x-fill-color: var(--fill-color-pressed);
-      --x-thumb-color: var(--thumb-color-pressed);
-    }
-    /* Focus */
-    &[data-focus-visible] {
-      outline-style: solid;
-    }
-    /* Readonly */
-    &[data-readonly] {
-      --x-background-color: var(--background-color-readonly);
-      --x-track-border-color: var(--track-border-color-readonly);
-      --x-border-color: var(--border-color-readonly);
-      --x-fill-color: var(--fill-color-readonly);
-      --x-thumb-color: var(--thumb-color-readonly);
-      --x-thumb-cursor: default;
-    }
-    /* Disabled */
-    &[data-disabled] {
-      --x-background-color: var(--background-color-disabled);
-      --x-border-color: var(--border-color-disabled);
-      --x-track-border-color: var(--track-border-color-disabled);
-      --x-fill-color: var(--fill-color-disabled);
-      --x-thumb-color: var(--thumb-color-disabled);
-      --x-thumb-cursor: default;
-      --x-accent-color: var(--accent-color-disabled);
-    }
-    /* Callout (info, warning, error) */
-    &[data-callout] {
-    }
-
-    &[data-accent-light] {
-      --color-mix: var(--color-mix-light);
-    }
-    &[data-accent-very-light] {
-      --background-color: rgba(0, 0, 0, 0.15);
-      --track-border-color: rgba(0, 0, 0, 0.25);
-    }
   }
+
+  & .navi_input_range_accent_probe {
+    background-color: var(--accent-color);
+    visibility: hidden;
+    pointer-events: none;
+    width: 0;
+    height: 0;
+    position: absolute;
+  }
+
+  & .navi_input_range_background {
+    width: 100%;
+    height: var(--height);
+    background: var(--x-background-color);
+    border-width: var(--border-width);
+    border-style: solid;
+    border-color: var(--x-border-color);
+    border-top-left-radius: var(--x-range-corner-top-left);
+    border-top-right-radius: var(--x-range-corner-top-right);
+    border-bottom-right-radius: var(--x-range-corner-bottom-right);
+    border-bottom-left-radius: var(--x-range-corner-bottom-left);
+    position: absolute;
+  }
+
+  & .navi_input_range_track {
+    box-sizing: border-box;
+    width: 100%;
+    height: var(--height);
+    border-width: var(--border-width);
+    border-style: solid;
+    border-color: var(--x-track-border-color);
+    border-top-left-radius: var(--x-range-corner-top-left);
+    border-top-right-radius: var(--x-range-corner-top-right);
+    border-bottom-right-radius: var(--x-range-corner-bottom-right);
+    border-bottom-left-radius: var(--x-range-corner-bottom-left);
+    position: absolute;
+  }
+
+  & .navi_input_range_fill {
+    width: 100%;
+    height: var(--height);
+    background: var(--x-fill-color);
+    border-top-left-radius: var(--x-range-corner-top-left);
+    border-top-right-radius: var(--x-range-corner-top-right);
+    border-bottom-right-radius: var(--x-range-corner-bottom-right);
+    border-bottom-left-radius: var(--x-range-corner-bottom-left);
+    clip-path: inset(0 calc((1 - var(--x-fill-ratio)) * 100%) 0 0);
+    background-clip: content-box;
+    position: absolute;
+  }
+
+  & .navi_input_range_thumb {
+    left: calc(var(--x-fill-ratio) * (100% - var(--thumb-size)) + var(--thumb-size) / 2);
+    width: var(--thumb-width);
+    height: var(--thumb-height);
+    background: var(--x-thumb-color);
+    border: var(--x-thumb-border);
+    border-radius: var(--thumb-border-radius);
+    cursor: var(--x-thumb-cursor);
+    position: absolute;
+    transform: translateX(-50%);
+  }
+
+  & .navi_input_range_focus_proxy {
+    opacity: 0;
+    position: absolute;
+    inset: 0;
+  }
+
+  &[data-hover] {
+    --x-border-color: var(--border-color-hover);
+    --x-track-border-color: var(--track-border-color-hover);
+    --x-fill-color: var(--fill-color-hover);
+    --x-thumb-color: var(--thumb-color-hover);
+  }
+
+  &[data-pressed] {
+    --x-border-color: var(--border-color-pressed);
+    --x-track-border-color: var(--track-border-color-pressed);
+    --x-background-color: var(--background-color-pressed);
+    --x-fill-color: var(--fill-color-pressed);
+    --x-thumb-color: var(--thumb-color-pressed);
+  }
+
+  &[data-focus-visible] {
+    outline-style: solid;
+  }
+
+  &[data-readonly] {
+    --x-background-color: var(--background-color-readonly);
+    --x-track-border-color: var(--track-border-color-readonly);
+    --x-border-color: var(--border-color-readonly);
+    --x-fill-color: var(--fill-color-readonly);
+    --x-thumb-color: var(--thumb-color-readonly);
+    --x-thumb-cursor: default;
+  }
+
+  &[data-disabled] {
+    --x-background-color: var(--background-color-disabled);
+    --x-border-color: var(--border-color-disabled);
+    --x-track-border-color: var(--track-border-color-disabled);
+    --x-fill-color: var(--fill-color-disabled);
+    --x-thumb-color: var(--thumb-color-disabled);
+    --x-thumb-cursor: default;
+    --x-accent-color: var(--accent-color-disabled);
+  }
+
+  &[data-accent-light] {
+    --color-mix: var(--color-mix-light);
+  }
+
+  &[data-accent-very-light] {
+    --background-color: #00000026;
+    --track-border-color: #00000040;
+  }
+}
 `;
 const InputRange = props => {
   const defaultRef = useRef();
@@ -46629,6 +45586,287 @@ const createComponentResolver = resolvers => {
     });
   };
   return renderComponent;
+};
+
+installImportMetaCssBuild(import.meta);// The .navi_input box, in a module of its own: a page may render a Textarea or
+// a Select without any Input, so none of them can rely on another having run.
+const inputCss = /* css */`@layer navi {
+  .navi_input {
+    --border-radius: var(--navi-control-border-radius);
+    --border-width: var(--navi-control-border-width);
+    --outline-width: var(--navi-focus-outline-width);
+    --outline-offset: calc(-.5 * var(--outline-width));
+    --outline-color: var(--navi-focus-outline-color);
+    --font-size: var(--navi-control-font-size);
+    --font-family: var(--navi-control-font-family);
+    --loader-color: var(--navi-loader-color);
+    --border-color: var(--navi-control-border-color);
+    --background-color: var(--navi-surface-color);
+    --color: currentColor;
+    --color-dimmed: color-mix(in srgb, currentColor 60%, transparent);
+    --placeholder-color: var(--navi-placeholder-color);
+    --placeholder-font-style: var(--navi-placeholder-font-style);
+    --border-color-hover: color-mix(in srgb, var(--border-color) 70%, black);
+    --background-color-hover: color-mix(in srgb,
+        var(--background-color) 95%,
+        black);
+    --color-hover: var(--color);
+    --border-color-active: color-mix(in srgb, var(--border-color) 90%, black);
+    --border-color-focus: var(--border-color);
+    --background-color-focus: var(--background-color);
+    --border-color-readonly: color-mix(in srgb,
+        var(--border-color) 45%,
+        transparent);
+    --background-color-readonly: var(--background-color-hover);
+    --color-readonly: color-mix(in srgb, var(--color) 65%, transparent);
+    --border-color-disabled: var(--border-color-readonly);
+    --background-color-disabled: color-mix(in srgb,
+        var(--background-color) 95%,
+        grey);
+    --color-disabled: var(--color-dimmed);
+  }
+}
+
+.navi_input {
+  --x-border-color: var(--border-color);
+  --x-background-color: var(--background-color);
+  --x-color: var(--color);
+  --x-placeholder-color: var(--placeholder-color);
+  --x-placeholder-font-style: var(--placeholder-font-style);
+  --x-padding-top: var(--padding-top, var(--padding-y, var(--padding, var(--navi-control-padding-y-default))));
+  --x-padding-right: var(--padding-right, var(--padding-x, var(--padding, var(--navi-control-padding-x-default))));
+  --x-padding-bottom: var(--padding-bottom, var(--padding-y, var(--padding, var(--navi-control-padding-y-default))));
+  --x-padding-left: var(--padding-left, var(--padding-x, var(--padding, var(--navi-control-padding-x-default))));
+  box-sizing: border-box;
+  width: fit-content;
+  height: fit-content;
+  padding-top: var(--x-padding-top);
+  padding-bottom: var(--x-padding-bottom);
+  color: var(--x-color);
+  font-size: var(--font-size);
+  font-family: var(--font-family);
+  text-align: initial;
+  line-height: var(--navi-control-line-height);
+  background-color: var(--x-background-color);
+  border-width: var(--border-width);
+  border-style: solid;
+  border-color: var(--x-border-color);
+  border-top-left-radius: var(--x-corner-top-left-radius, var(--border-radius));
+  border-top-right-radius: var(--x-corner-top-right-radius, var(--border-radius));
+  border-bottom-right-radius: var(--x-corner-bottom-right-radius, var(--border-radius));
+  border-bottom-left-radius: var(--x-corner-bottom-left-radius, var(--border-radius));
+  outline-width: var(--outline-width);
+  outline-color: var(--outline-color);
+  outline-offset: var(--outline-offset);
+  cursor: inherit;
+  pointer-events: auto;
+  flex-direction: row;
+  display: inline-flex;
+  position: relative;
+
+  & .navi_control_input, & .navi_input_text {
+    box-sizing: content-box;
+    min-width: 1ch;
+    margin-top: calc(-1 * var(--x-padding-top));
+    margin-bottom: calc(-1 * var(--x-padding-bottom));
+    padding-top: var(--x-padding-top);
+    padding-right: var(--x-padding-right);
+    padding-bottom: var(--x-padding-bottom);
+    padding-left: var(--x-padding-left);
+    color: inherit;
+    font-size: inherit;
+    text-align: inherit;
+    font-family: inherit;
+    line-height: var(--navi-control-line-height);
+    border-radius: inherit;
+    background: none;
+    border: none;
+    outline: none;
+    flex-grow: 1;
+
+    &::placeholder {
+      color: var(--x-placeholder-color);
+      font-style: var(--x-placeholder-font-style);
+    }
+
+    &:-webkit-autofill {
+      -webkit-box-shadow: 0 0 0 1000px var(--x-background-color) inset;
+    }
+
+    &:-internal-autofill-selected {
+      -webkit-text-fill-color: var(--x-color) !important;
+    }
+
+    &[type="search"] {
+      -webkit-appearance: textfield;
+
+      &::-webkit-search-cancel-button {
+        display: none;
+      }
+    }
+  }
+
+  & .navi_input_text {
+    min-height: 1lh;
+  }
+
+  & .navi_input_text_value {
+    text-overflow: clip;
+    white-space: nowrap;
+    width: 100%;
+    display: block;
+    overflow: hidden;
+  }
+
+  & .navi_input_slot {
+    --x-corner-top-left-radius: initial;
+    --x-corner-top-right-radius: initial;
+    --x-corner-bottom-right-radius: initial;
+    --x-corner-bottom-left-radius: initial;
+    margin-right: var(--slot-spacing, calc(2px + .1em));
+    margin-left: var(--slot-spacing, calc(2px + .1em));
+    color: #5e4e4e;
+
+    &[data-left] {
+      order: -1;
+    }
+
+    & .navi_button {
+      font-size: inherit;
+      font-family: inherit;
+
+      &:before {
+        top: calc(-1 * var(--x-padding-top));
+        right: calc(-1 * var(--slot-spacing, calc(2px + .1em)));
+        bottom: calc(-1 * var(--x-padding-bottom));
+        left: calc(-1 * var(--slot-spacing, calc(2px + .1em)));
+        content: "";
+        position: absolute;
+      }
+    }
+  }
+
+  &[data-hover] {
+    --x-background-color: var(--background-color-hover);
+    --x-border-color: var(--border-color-hover);
+    --x-color: var(--color-hover);
+  }
+
+  &[data-readonly] {
+    --x-border-color: var(--border-color-readonly);
+    --x-background-color: var(--background-color-readonly);
+    --x-color: var(--color-readonly);
+  }
+
+  &[data-focus-visible] {
+    --x-background-color: var(--background-color-focus);
+    --x-border-color: transparent;
+    outline-style: solid;
+  }
+
+  &[data-disabled] {
+    --x-border-color: var(--border-color-disabled);
+    --x-background-color: var(--background-color-disabled);
+    --x-color: var(--color-disabled);
+  }
+
+  &[data-callout] {
+    --x-border-color: var(--callout-color);
+    --x-outline-color: var(--callout-color);
+  }
+
+  &[data-background-transparent] {
+    --background-color-hover: var(--background-color);
+    --background-color-focus: var(--navi-surface-color);
+
+    &[data-focus] {
+      --x-background-color: var(--background-color-focus);
+    }
+  }
+
+  &[data-variant="discrete"], &[data-variant="discrete-border"] {
+    --background-color: transparent;
+    --background-color-hover: var(--background-color);
+    --background-color-focus: var(--navi-surface-color);
+
+    &[data-focus] {
+      --x-background-color: var(--background-color-focus);
+    }
+
+    &[data-readonly], &[data-disabled] {
+      --x-background-color: var(--background-color);
+    }
+
+    &[data-background] {
+      --background-color-focus: transparent;
+    }
+  }
+
+  &[data-variant="discrete"] {
+    --border-color: transparent;
+
+    &[data-focus] {
+      --x-border-color: color-mix(in srgb,
+          var(--border-color) 55%,
+          transparent);
+    }
+  }
+
+  &[data-variant="text"] {
+    --x-background-color: transparent;
+    --x-border-color: transparent;
+    cursor: inherit;
+  }
+
+  &[data-variant="underline"] {
+    --x-background-color: transparent;
+    border: none;
+    border-radius: 0;
+    padding-left: 0;
+    padding-right: 0;
+
+    & .navi_input_real_input_wrapper {
+      flex-grow: 1;
+      display: inline-flex;
+      position: relative;
+    }
+
+    & .navi_input_underline {
+      top: calc(100% - 1px);
+      right: var(--x-padding-right);
+      left: var(--x-padding-left);
+      background-color: var(--x-border-color);
+      pointer-events: none;
+      height: 1px;
+      position: absolute;
+    }
+
+    &[data-hover] {
+      --x-background-color: transparent;
+    }
+
+    &[data-focus-visible] {
+      --x-background-color: transparent;
+      outline-style: none;
+
+      & .navi_input_underline {
+        background-color: var(--outline-color);
+        height: 2px;
+      }
+    }
+
+    &[data-readonly], &[data-disabled] {
+      --x-background-color: transparent;
+    }
+  }
+}
+`;
+// Called from the render of every control drawn as a .navi_input box, never at
+// module scope: a page without one must not carry this sheet, and a build that
+// sees no caller drops the css with the function. Keyed on this module, so the
+// three controls share one stylesheet instead of each carrying a copy.
+const installInputCss = () => {
+  import.meta.css = [inputCss, "@jsenv/navi/src/control/input/input_css.js"];
 };
 
 const InputModeResolver = props => {
@@ -46892,442 +46130,302 @@ const ButtonWithRoute = props => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$J = /* css */`
-  @layer navi {
-    .navi_button {
-      --button-border-radius: var(--navi-control-border-radius);
-      --button-border-width: var(--navi-control-border-width);
-      --button-cta-background-color: var(--navi-accent-color);
-      /* Focus outline */
-      --button-outline-width: var(--navi-focus-outline-width);
-      --button-outline-offset: calc(-0.5 * var(--button-outline-width));
-      --button-outline-color: var(--navi-focus-outline-color);
-      /* Focus outline end */
-      --button-padding-x-default: var(--navi-button-padding-x-default);
-      --button-padding-y-default: var(--navi-button-padding-y-default);
-      --button-loader-color: var(--navi-loader-color);
-      --button-border-color: var(--navi-control-border-color);
-      --button-background-color: var(
-        --button-background,
-        var(--navi-button-background-color)
-      );
-      --button-color: currentColor;
-      --button-cursor: pointer;
-      --button-font-size: var(--navi-control-font-size);
-      --button-font-family: var(--navi-control-font-family);
-
-      /* Hover */
-      --button-border-color-hover: color-mix(
-        in srgb,
-        var(--button-border-color) 70%,
-        black
-      );
-      --button-background-color-hover: color-mix(
-        in srgb,
-        var(--button-background-color) 95%,
-        black
-      );
-      --button-color-hover: var(--button-color);
-      /* Current: the button points at the page one is already on. Nothing by
-         default — it is a nav item that wants to say so, not every button. */
-      --button-border-color-current: var(--button-border-color);
-      --button-background-color-current: var(--button-background-color);
-      --button-color-current: var(--button-color);
-      /* Pressed */
-      --button-border-color-pressed: color-mix(
-        in srgb,
-        var(--button-border-color) 90%,
-        black
-      );
-      /* Readonly */
-      /* Fading toward the surface, not toward white: "washed out" means
-         closer to the paper behind the button, whatever color that paper is
-         (white here IS the surface only in the light theme). */
-      --button-border-color-readonly: color-mix(
-        in srgb,
-        var(--button-border-color) 30%,
-        var(--navi-surface-color)
-      );
-      --button-background-color-readonly: var(--button-background-color);
-      --button-color-readonly: color-mix(
-        in srgb,
-        var(--button-color) 30%,
-        transparent
-      );
-      /* Disabled */
-      --button-border-color-disabled: var(--button-border-color-readonly);
-      --button-background-color-disabled: var(
-        --button-background-color-readonly
-      );
-      --button-color-disabled: var(--button-color-readonly);
-
-      /* Here to be easy to override */
-      /* Layered, this one and the three below: display so box.jsx's unlayered
-         [navi-box-flow] can put the button inline-flex, the font and the line
-         so an app's own button typography wins without having to go through
-         the --button-* variables. */
-      display: inline-block;
-      font-size: var(--button-font-size);
-      font-family: var(--button-font-family);
-      /* A form control comes with a line of its own from the browser, and that
-         line is "normal": a label holding an emoji would then be taller than
-         the same label without one. The page's line, like the page's font. */
-      line-height: var(--navi-control-line-height);
-    }
-  }
-
-  a.navi_button {
-    text-align: center;
-    text-decoration: none;
-  }
-
+installImportMetaCssBuild(import.meta);const css$J = /* css */`@layer navi {
   .navi_button {
-    --x-button-outline-offset: var(--button-outline-offset);
-    --x-button-border-color: var(--button-border-color);
-    /* The shorthand wins over the parts when it is given, which is what makes
-       border="none" remove the line: the parts alone can only ever describe
-       a border, never the absence of one. */
-    --x-button-border: var(
-      --button-border,
-      var(--button-border-width) solid var(--x-button-border-color)
-    );
-    --x-button-background: var(--button-background);
-    --x-button-background-color: var(--button-background-color);
-    --x-button-color: var(--button-color);
-    --x-button-cursor: var(--button-cursor);
+    --button-border-radius: var(--navi-control-border-radius);
+    --button-border-width: var(--navi-control-border-width);
+    --button-cta-background-color: var(--navi-accent-color);
+    --button-outline-width: var(--navi-focus-outline-width);
+    --button-outline-offset: calc(-.5 * var(--button-outline-width));
+    --button-outline-color: var(--navi-focus-outline-color);
+    --button-padding-x-default: var(--navi-button-padding-x-default);
+    --button-padding-y-default: var(--navi-button-padding-y-default);
+    --button-loader-color: var(--navi-loader-color);
+    --button-border-color: var(--navi-control-border-color);
+    --button-background-color: var(--button-background, var(--navi-button-background-color));
+    --button-color: currentColor;
+    --button-cursor: pointer;
+    --button-font-size: var(--navi-control-font-size);
+    --button-font-family: var(--navi-control-font-family);
+    --button-border-color-hover: color-mix(in srgb,
+        var(--button-border-color) 70%,
+        black);
+    --button-background-color-hover: color-mix(in srgb,
+        var(--button-background-color) 95%,
+        black);
+    --button-color-hover: var(--button-color);
+    --button-border-color-current: var(--button-border-color);
+    --button-background-color-current: var(--button-background-color);
+    --button-color-current: var(--button-color);
+    --button-border-color-pressed: color-mix(in srgb,
+        var(--button-border-color) 90%,
+        black);
+    --button-border-color-readonly: color-mix(in srgb,
+        var(--button-border-color) 30%,
+        var(--navi-surface-color));
+    --button-background-color-readonly: var(--button-background-color);
+    --button-color-readonly: color-mix(in srgb,
+        var(--button-color) 30%,
+        transparent);
+    --button-border-color-disabled: var(--button-border-color-readonly);
+    --button-background-color-disabled: var(--button-background-color-readonly);
+    --button-color-disabled: var(--button-color-readonly);
+    font-size: var(--button-font-size);
+    font-family: var(--button-font-family);
+    line-height: var(--navi-control-line-height);
+    display: inline-block;
+  }
+}
 
-    position: relative;
+a.navi_button {
+  text-align: center;
+  text-decoration: none;
+}
+
+.navi_button {
+  --x-button-outline-offset: var(--button-outline-offset);
+  --x-button-border-color: var(--button-border-color);
+  --x-button-border: var(--button-border, var(--button-border-width) solid var(--x-button-border-color));
+  --x-button-background: var(--button-background);
+  --x-button-background-color: var(--button-background-color);
+  --x-button-color: var(--button-color);
+  --x-button-cursor: var(--button-cursor);
+  box-sizing: border-box;
+  aspect-ratio: inherit;
+  color: var(--x-button-color);
+  border-top-left-radius: var(--x-corner-top-left-radius, var(--button-border-radius));
+  border-top-right-radius: var(--x-corner-top-right-radius, var(--button-border-radius));
+  border-bottom-right-radius: var(--x-corner-bottom-right-radius, var(--button-border-radius));
+  border-bottom-left-radius: var(--x-corner-bottom-left-radius, var(--button-border-radius));
+  cursor: var(--x-button-cursor);
+  touch-action: manipulation;
+  user-select: none;
+  background: none;
+  border: none;
+  outline: none;
+  padding: 0;
+  position: relative;
+
+  & .navi_button_content {
+    --x-corner-top-left-radius: initial;
+    --x-corner-top-right-radius: initial;
+    --x-corner-bottom-right-radius: initial;
+    --x-corner-bottom-left-radius: initial;
+    display: inherit;
     box-sizing: border-box;
     aspect-ratio: inherit;
-    padding: 0;
-    color: var(--x-button-color);
-    background: none;
-    border: none;
-    /* Squared from the outside, corner by corner: a Group asks the member it
-       joins for square corners along the seam, and the button it means may
-       arrive wrapped (in a tooltip, in a link), so the ask travels down as
-       inherited custom properties rather than as a selector aimed at the
-       button. Each corner falls back to the button's own radius when nothing
-       asks for anything. */
-    border-top-left-radius: var(
-      --x-corner-top-left-radius,
-      var(--button-border-radius)
-    );
-    border-top-right-radius: var(
-      --x-corner-top-right-radius,
-      var(--button-border-radius)
-    );
-    border-bottom-right-radius: var(
-      --x-corner-bottom-right-radius,
-      var(--button-border-radius)
-    );
-    border-bottom-left-radius: var(
-      --x-corner-bottom-left-radius,
-      var(--button-border-radius)
-    );
-    outline: none;
-    cursor: var(--x-button-cursor);
-    touch-action: manipulation;
-    user-select: none;
+    width: 100%;
+    height: 100%;
+    padding-top: var(--button-padding-top, var(--button-padding-y, var(--button-padding, var(--button-padding-y-default))));
+    padding-right: var(--button-padding-right, var(--button-padding-x, var(--button-padding, var(--button-padding-x-default))));
+    padding-bottom: var(--button-padding-bottom, var(--button-padding-y, var(--button-padding, var(--button-padding-y-default))));
+    padding-left: var(--button-padding-left, var(--button-padding-x, var(--button-padding, var(--button-padding-x-default))));
+    align-items: inherit;
+    justify-content: inherit;
+    color: inherit;
+    vertical-align: inherit;
+    background: var(--x-button-background);
+    background-color: var(--x-button-background-color, var(--x-button-background));
+    border: var(--x-button-border);
+    border-radius: inherit;
+    outline-width: var(--button-outline-width);
+    outline-color: var(--button-outline-color);
+    outline-offset: var(--button-outline-offset);
+    transition-property: transform;
+    transition-duration: .15s;
+    transition-timing-function: cubic-bezier(.4, 0, .2, 1);
+    position: relative;
 
-    .navi_button_content {
-      /* The ask stops here: this element is the button's frame, so what is
-         inside it (a popover the button opens, a button of its own) is no
-         longer at the seam. */
-      --x-corner-top-left-radius: initial;
-      --x-corner-top-right-radius: initial;
-      --x-corner-bottom-right-radius: initial;
-      --x-corner-bottom-left-radius: initial;
-
-      position: relative;
-      display: inherit;
-      box-sizing: border-box;
-      aspect-ratio: inherit;
-      width: 100%;
-      height: 100%;
-      padding-top: var(
-        --button-padding-top,
-        var(
-          --button-padding-y,
-          var(--button-padding, var(--button-padding-y-default))
-        )
-      );
-      padding-right: var(
-        --button-padding-right,
-        var(
-          --button-padding-x,
-          var(--button-padding, var(--button-padding-x-default))
-        )
-      );
-      padding-bottom: var(
-        --button-padding-bottom,
-        var(
-          --button-padding-y,
-          var(--button-padding, var(--button-padding-y-default))
-        )
-      );
-      padding-left: var(
-        --button-padding-left,
-        var(
-          --button-padding-x,
-          var(--button-padding, var(--button-padding-x-default))
-        )
-      );
-      align-items: inherit;
-      justify-content: inherit;
-      color: inherit;
-      vertical-align: inherit;
-      background: var(--x-button-background);
-      background-color: var(
-        --x-button-background-color,
-        var(--x-button-background)
-      );
-      border: var(--x-button-border);
+    & .navi_button_shadow {
+      inset: calc(-1 * var(--x-button-outer-width));
       border-radius: inherit;
-      outline-width: var(--button-outline-width);
-      outline-color: var(--button-outline-color);
-      outline-offset: var(--button-outline-offset);
-      transition-property: transform;
-      transition-duration: 0.15s;
-      transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-
-      .navi_button_shadow {
-        position: absolute;
-        inset: calc(-1 * var(--x-button-outer-width));
-        border-radius: inherit;
-        pointer-events: none;
-      }
-
-      & > img {
-        border-radius: inherit;
-      }
+      pointer-events: none;
+      position: absolute;
     }
 
-    /* Current */
-    &[data-href-current] {
-      --x-button-border-color: var(--button-border-color-current);
-      --x-button-background-color: var(--button-background-color-current);
-      --x-button-color: var(--button-color-current);
+    & > img {
+      border-radius: inherit;
     }
-    /* Hover */
-    &[data-hover] {
-      --x-button-border-color: var(--button-border-color-hover);
-      --x-button-background-color: var(--button-background-color-hover);
-      --x-button-color: var(--button-color-hover);
-    }
-    /* Pressed */
-    &[data-pressed] {
-      --x-button-outline-color: var(--button-border-color-pressed);
-    }
-    &[data-pressed] {
-      .navi_button_content {
-        transform: scale(0.9);
-      }
-    }
-    &[data-pressed] {
-      .navi_button_shadow {
-        box-shadow:
-          inset 0 3px 6px rgba(0, 0, 0, 0.2),
-          inset 0 1px 2px rgba(0, 0, 0, 0.3),
-          inset 0 0 0 1px rgba(0, 0, 0, 0.1),
-          inset 2px 0 4px rgba(0, 0, 0, 0.1),
-          inset -2px 0 4px rgba(0, 0, 0, 0.1);
-      }
-    }
-    /* Readonly */
-    &[data-readonly] {
-      --x-button-border-color: var(--button-border-color-readonly);
-      --x-button-background-color: var(--button-background-color-readonly);
-      --x-button-color: var(--button-color-readonly);
-      --x-button-cursor: default;
-    }
-    /* Focus */
-    &[data-focus-visible] {
-      --x-button-border-color: transparent;
+  }
 
-      .navi_button_content {
-        outline-style: solid;
-      }
-    }
-    /* Disabled */
-    &[data-disabled] {
-      --x-button-border-color: var(--button-border-color-disabled);
-      --x-button-background-color: var(--button-background-color-disabled);
-      --x-button-color: var(--button-color-disabled);
-      --x-button-cursor: default;
+  &[data-href-current] {
+    --x-button-border-color: var(--button-border-color-current);
+    --x-button-background-color: var(--button-background-color-current);
+    --x-button-color: var(--button-color-current);
+  }
 
-      /* Remove pressed effects */
-      .navi_button_content {
-        transform: none;
+  &[data-hover] {
+    --x-button-border-color: var(--button-border-color-hover);
+    --x-button-background-color: var(--button-background-color-hover);
+    --x-button-color: var(--button-color-hover);
+  }
 
-        .navi_button_shadow {
-          box-shadow: none;
-        }
-      }
-    }
-    /* Callout (info, warning, error) */
-    &[data-callout] {
-      --x-button-border-color: var(--callout-color);
-    }
+  &[data-pressed] {
+    --x-button-outline-color: var(--button-border-color-pressed);
+  }
 
-    /* A variant states what the caller did NOT: the frameless ones below move
-       the DEFAULTS (--button-*) and never the resolved values (--x-button-*),
-       so a backgroundColor/background/borderColor prop — which lands inline on
-       this same element — still wins. Two things come with that: the
-       transparent default is written as a fallback of --button-background, so
-       the background prop feeds --button-background-color through it; and the
-       per-state defaults are re-pointed at the base one, otherwise the @layer
-       formulas (hover = 5% black over the background, readonly = the same)
-       would repaint a box the variant just took away. */
+  &[data-pressed] {
+    & .navi_button_content {
+      transform: scale(.9);
+    }
+  }
 
-    /* discrete: background on hover, and nothing else — no box at rest, and no
-       shrink when pressed. What is drawn IS the content (a chevron, a number,
-       a word), and shrinking it under the finger reads as the content itself
-       flinching rather than as a button being pressed. */
-    &[data-variant="discrete"] {
-      --button-border-width: 0;
-      --button-border-color: transparent;
-      --button-border-color-hover: var(--button-border-color);
-      --button-border-color-current: var(--button-border-color);
-      --button-border-color-readonly: var(--button-border-color);
-      --button-border-color-disabled: var(--button-border-color);
-      --button-background-color: var(--button-background, transparent);
-      /* The hover wash is mixed INTO the background instead of replacing it:
-         over the transparent default it is exactly the 8% of currentColor it
-         has always been, and over a backgroundColor the caller gave it darkens
-         that color rather than erasing it. */
-      --button-background-color-hover: color-mix(
-        in srgb,
-        currentColor 8%,
-        var(--button-background-color)
-      );
-      --button-background-color-readonly: var(--button-background-color);
-      --button-background-color-disabled: var(--button-background-color);
+  &[data-pressed] {
+    & .navi_button_shadow {
+      box-shadow: inset 0 3px 6px #0003, inset 0 1px 2px #0000004d, inset 0 0 0 1px #0000001a, inset 2px 0 4px #0000001a, inset -2px 0 4px #0000001a;
+    }
+  }
 
-      &[data-pressed] {
-        .navi_button_content {
-          transform: none;
-        }
-      }
-    }
-    /* bare: discrete, minus the background on hover. For a control whose own
-       drawing IS the button (a carousel bullet, a swatch), where a box lighting
-       up around it would be the button showing through the only thing one is
-       supposed to see. It stays a button in every other way: focusable, ringed
-       on focus, commandable. */
-    &[data-variant="bare"] {
-      --button-border-width: 0;
-      --button-border-color: transparent;
-      --button-border-color-hover: var(--button-border-color);
-      --button-border-color-current: var(--button-border-color);
-      --button-border-color-readonly: var(--button-border-color);
-      --button-border-color-disabled: var(--button-border-color);
-      --button-background-color: var(--button-background, transparent);
-      --button-background-color-hover: var(--button-background-color);
-      --button-background-color-readonly: var(--button-background-color);
-      --button-background-color-disabled: var(--button-background-color);
+  &[data-readonly] {
+    --x-button-border-color: var(--button-border-color-readonly);
+    --x-button-background-color: var(--button-background-color-readonly);
+    --x-button-color: var(--button-color-readonly);
+    --x-button-cursor: default;
+  }
 
-      &[data-pressed] {
-        .navi_button_content {
-          transform: none;
-        }
-      }
-    }
-    /* discrete-border: border on hover */
-    &[data-variant="discrete-border"] {
-      --button-background-color: var(--button-background, transparent);
-      --button-background-color-hover: var(--button-background-color);
-      --button-background-color-readonly: var(--button-background-color);
-      --button-background-color-disabled: var(--button-background-color);
-      /* The border is the whole point of this variant: it is absent at rest
-         and drawn on hover, so only the resting color goes transparent — the
-         hover one keeps the @layer formula, now mixed from whatever
-         borderColor the caller gave. */
-      --x-button-border-color: transparent;
+  &[data-focus-visible] {
+    --x-button-border-color: transparent;
 
-      &[data-hover] {
-        --x-button-border-color: var(--button-border-color-hover);
-      }
-      &[data-readonly],
-      &[data-disabled] {
-        --x-button-border-color: transparent;
-      }
+    & .navi_button_content {
+      outline-style: solid;
     }
-    /* border variant: no background, border only */
-    &[data-variant="border"] {
-      --button-background-color: var(--button-background, transparent);
-      --button-background-color-hover: color-mix(
-        in srgb,
-        currentColor 8%,
-        var(--button-background-color)
-      );
-      --button-background-color-readonly: var(--button-background-color);
-      --button-background-color-disabled: var(--button-background-color);
-    }
-    /* Last word on the shrink, over whatever the variant decided: the variant
-       guesses from how the button is drawn, and that guess is wrong as soon as
-       the content is a box of its own — a discrete button holding a filled
-       pill reads as a button being pressed, not as its content flinching. */
-    &[data-press-effect="scale"][data-pressed] {
-      .navi_button_content {
-        transform: scale(0.9);
-      }
-    }
-    &[data-press-effect="none"][data-pressed] {
-      .navi_button_content {
-        transform: none;
-      }
-    }
+  }
 
-    &[data-icon] {
-      --button-padding: 0;
-      display: inline-flex;
-    }
-    /* cta: call-to-action — special background, border matches background */
-    &[data-cta] {
-      --x-button-background-color: var(--button-cta-background-color);
-      --x-button-border-color: var(--button-cta-background-color);
-      --x-button-color: white;
+  &[data-disabled] {
+    --x-button-border-color: var(--button-border-color-disabled);
+    --x-button-background-color: var(--button-background-color-disabled);
+    --x-button-color: var(--button-color-disabled);
+    --x-button-cursor: default;
 
-      &[data-hover] {
-        --x-button-background-color: color-mix(
-          in srgb,
-          var(--button-cta-background-color) 85%,
-          white
-        );
-        --x-button-border-color: color-mix(
-          in srgb,
-          var(--button-cta-background-color) 85%,
-          white
-        );
-      }
-      &[data-readonly] {
-        --x-button-background-color: color-mix(
-          in srgb,
-          var(--button-cta-background-color) 50%,
-          white
-        );
-        --x-button-border-color: color-mix(
-          in srgb,
-          var(--button-cta-background-color) 50%,
-          white
-        );
-      }
-      &[data-disabled] {
-        --x-button-background-color: color-mix(
-          in srgb,
-          var(--button-cta-background-color) 40%,
-          white
-        );
-        --x-button-border-color: color-mix(
-          in srgb,
-          var(--button-cta-background-color) 40%,
-          white
-        );
-        --x-button-color: color-mix(in srgb, white 60%, transparent);
+    & .navi_button_content {
+      transform: none;
+
+      & .navi_button_shadow {
+        box-shadow: none;
       }
     }
   }
+
+  &[data-callout] {
+    --x-button-border-color: var(--callout-color);
+  }
+
+  &[data-variant="discrete"] {
+    --button-border-width: 0;
+    --button-border-color: transparent;
+    --button-border-color-hover: var(--button-border-color);
+    --button-border-color-current: var(--button-border-color);
+    --button-border-color-readonly: var(--button-border-color);
+    --button-border-color-disabled: var(--button-border-color);
+    --button-background-color: var(--button-background, transparent);
+    --button-background-color-hover: color-mix(in srgb,
+        currentColor 8%,
+        var(--button-background-color));
+    --button-background-color-readonly: var(--button-background-color);
+    --button-background-color-disabled: var(--button-background-color);
+
+    &[data-pressed] {
+      & .navi_button_content {
+        transform: none;
+      }
+    }
+  }
+
+  &[data-variant="bare"] {
+    --button-border-width: 0;
+    --button-border-color: transparent;
+    --button-border-color-hover: var(--button-border-color);
+    --button-border-color-current: var(--button-border-color);
+    --button-border-color-readonly: var(--button-border-color);
+    --button-border-color-disabled: var(--button-border-color);
+    --button-background-color: var(--button-background, transparent);
+    --button-background-color-hover: var(--button-background-color);
+    --button-background-color-readonly: var(--button-background-color);
+    --button-background-color-disabled: var(--button-background-color);
+
+    &[data-pressed] {
+      & .navi_button_content {
+        transform: none;
+      }
+    }
+  }
+
+  &[data-variant="discrete-border"] {
+    --button-background-color: var(--button-background, transparent);
+    --button-background-color-hover: var(--button-background-color);
+    --button-background-color-readonly: var(--button-background-color);
+    --button-background-color-disabled: var(--button-background-color);
+    --x-button-border-color: transparent;
+
+    &[data-hover] {
+      --x-button-border-color: var(--button-border-color-hover);
+    }
+
+    &[data-readonly], &[data-disabled] {
+      --x-button-border-color: transparent;
+    }
+  }
+
+  &[data-variant="border"] {
+    --button-background-color: var(--button-background, transparent);
+    --button-background-color-hover: color-mix(in srgb,
+        currentColor 8%,
+        var(--button-background-color));
+    --button-background-color-readonly: var(--button-background-color);
+    --button-background-color-disabled: var(--button-background-color);
+  }
+
+  &[data-press-effect="scale"][data-pressed] {
+    & .navi_button_content {
+      transform: scale(.9);
+    }
+  }
+
+  &[data-press-effect="none"][data-pressed] {
+    & .navi_button_content {
+      transform: none;
+    }
+  }
+
+  &[data-icon] {
+    --button-padding: 0;
+    display: inline-flex;
+  }
+
+  &[data-cta] {
+    --x-button-background-color: var(--button-cta-background-color);
+    --x-button-border-color: var(--button-cta-background-color);
+    --x-button-color: white;
+
+    &[data-hover] {
+      --x-button-background-color: color-mix(in srgb,
+          var(--button-cta-background-color) 85%,
+          white);
+      --x-button-border-color: color-mix(in srgb,
+          var(--button-cta-background-color) 85%,
+          white);
+    }
+
+    &[data-readonly] {
+      --x-button-background-color: color-mix(in srgb,
+          var(--button-cta-background-color) 50%,
+          white);
+      --x-button-border-color: color-mix(in srgb,
+          var(--button-cta-background-color) 50%,
+          white);
+    }
+
+    &[data-disabled] {
+      --x-button-background-color: color-mix(in srgb,
+          var(--button-cta-background-color) 40%,
+          white);
+      --x-button-border-color: color-mix(in srgb,
+          var(--button-cta-background-color) 40%,
+          white);
+      --x-button-color: #fff9;
+    }
+  }
+}
 `;
 const ButtonUI = props => {
   import.meta.css = [css$J, "@jsenv/navi/src/control/input/button_ui.jsx"];
@@ -48168,7 +47266,7 @@ const useAutoSelectReadOnly = (props) => {
   return { onFocus, onMouseDown, onPointerDown };
 };
 
-installImportMetaCssBuild(import.meta);/**
+/**
  * Input component for all textual input types.
  *
  * Note pour plus tard: un jour on voudra un cas field-sizing: content;
@@ -48227,388 +47325,7 @@ installImportMetaCssBuild(import.meta);/**
  * variant="text" is the odd one: it renders no <input> at all, just the value
  * as text — see InputTextualAsText below for what it is for and what it drops.
  */
-const inputCss = /* css */`
-  @layer navi {
-    .navi_input {
-      --border-radius: var(--navi-control-border-radius);
-      --border-width: var(--navi-control-border-width);
-      /* Focus outline */
-      --outline-width: var(--navi-focus-outline-width);
-      --outline-offset: calc(-0.5 * var(--outline-width));
-      --outline-color: var(--navi-focus-outline-color);
-      /* Focus outline end */
-      --font-size: var(--navi-control-font-size);
-      --font-family: var(--navi-control-font-family);
-      --loader-color: var(--navi-loader-color);
-      --border-color: var(--navi-control-border-color);
-      --background-color: var(--navi-surface-color);
-      --color: currentColor;
-      --color-dimmed: color-mix(in srgb, currentColor 60%, transparent);
-      --placeholder-color: var(--navi-placeholder-color);
-      --placeholder-font-style: var(--navi-placeholder-font-style);
-      /* Hover */
-      --border-color-hover: color-mix(in srgb, var(--border-color) 70%, black);
-      --background-color-hover: color-mix(
-        in srgb,
-        var(--background-color) 95%,
-        black
-      );
-      --color-hover: var(--color);
-      /* Active */
-      --border-color-active: color-mix(in srgb, var(--border-color) 90%, black);
-      /* Focus */
-      --border-color-focus: var(--border-color);
-      --background-color-focus: var(--background-color);
-      /* Readonly */
-      --border-color-readonly: color-mix(
-        in srgb,
-        var(--border-color) 45%,
-        transparent
-      );
-      --background-color-readonly: var(--background-color-hover);
-      --color-readonly: color-mix(in srgb, var(--color) 65%, transparent);
-      /* Disabled */
-      --border-color-disabled: var(--border-color-readonly);
-      --background-color-disabled: color-mix(
-        in srgb,
-        var(--background-color) 95%,
-        grey
-      );
-      --color-disabled: var(--color-dimmed);
-    }
-  }
 
-  .navi_input {
-    --x-border-color: var(--border-color);
-    --x-background-color: var(--background-color);
-    --x-color: var(--color);
-    --x-placeholder-color: var(--placeholder-color);
-    --x-placeholder-font-style: var(--placeholder-font-style);
-    --x-padding-top: var(
-      --padding-top,
-      var(--padding-y, var(--padding, var(--navi-control-padding-y-default)))
-    );
-    --x-padding-right: var(
-      --padding-right,
-      var(--padding-x, var(--padding, var(--navi-control-padding-x-default)))
-    );
-    --x-padding-bottom: var(
-      --padding-bottom,
-      var(--padding-y, var(--padding, var(--navi-control-padding-y-default)))
-    );
-    --x-padding-left: var(
-      --padding-left,
-      var(--padding-x, var(--padding, var(--navi-control-padding-x-default)))
-    );
-
-    position: relative;
-    display: inline-flex;
-    box-sizing: border-box;
-    width: fit-content;
-    height: fit-content;
-    padding-top: var(--x-padding-top);
-    padding-bottom: var(--x-padding-bottom);
-    flex-direction: row;
-    color: var(--x-color);
-    font-size: var(--font-size);
-    font-family: var(--font-family);
-    text-align: initial;
-    /* On the root, not only on the field: what sits beside the field — a unit
-       slot, a prefix, an icon — is text of the same box and has to land on
-       the same row as what is typed. A slot left on the page's line would sit
-       a fraction of a pixel away from the field's own, and read as misaligned
-       ("+33" next to a number). The field repeats it below because a form
-       control does not inherit it. */
-    line-height: var(--navi-control-line-height);
-    background-color: var(--x-background-color);
-    border-width: var(--border-width);
-    border-style: solid;
-    border-color: var(--x-border-color);
-    /* Squared from the outside, corner by corner: an input is not always the
-       member a Group joins — it can arrive wrapped (in a Box carrying a state,
-       in a tooltip) — so the ask travels down as inherited custom properties
-       rather than as a radius landing on this element. Each corner falls back
-       to the input's own radius when nothing asks for anything. */
-    border-top-left-radius: var(
-      --x-corner-top-left-radius,
-      var(--border-radius)
-    );
-    border-top-right-radius: var(
-      --x-corner-top-right-radius,
-      var(--border-radius)
-    );
-    border-bottom-right-radius: var(
-      --x-corner-bottom-right-radius,
-      var(--border-radius)
-    );
-    border-bottom-left-radius: var(
-      --x-corner-bottom-left-radius,
-      var(--border-radius)
-    );
-    outline-width: var(--outline-width);
-    outline-color: var(--outline-color);
-    outline-offset: var(--outline-offset);
-    cursor: inherit;
-    pointer-events: auto;
-
-    /* The text of variant="text" is measured with the real thing rather than
-       beside it: same padding, same margins, same room — so the two are the
-       same box and a field's style can move without one of them staying
-       behind. */
-    .navi_control_input,
-    .navi_input_text {
-      box-sizing: content-box;
-      min-width: 1ch;
-      margin-top: calc(-1 * var(--x-padding-top));
-      margin-bottom: calc(-1 * var(--x-padding-bottom));
-      padding-top: var(--x-padding-top);
-      padding-right: var(--x-padding-right);
-      padding-bottom: var(--x-padding-bottom);
-      padding-left: var(--x-padding-left);
-      flex-grow: 1;
-      color: inherit;
-      font-size: inherit;
-      /* A form control does not inherit the font on its own — the browser has
-         one of its own for it, monospace for a <textarea> — so the box's font
-         (--navi-control-font-family) is handed down by hand. Its line comes
-         from the page's token for the same reason: what is typed must sit on
-         the same line as what displays it afterwards, emoji included. */
-      font-family: inherit;
-      text-align: inherit;
-      line-height: var(--navi-control-line-height);
-      background: none;
-      border: none;
-      border-radius: inherit;
-      outline: none;
-
-      &::placeholder {
-        color: var(--x-placeholder-color);
-        font-style: var(--x-placeholder-font-style);
-      }
-      /* Webkit is putting a slight blue bckground on autofilled input */
-      /* For now we override with out custom background color */
-      /* Ideally we'll later provide a custom data attribute with ability to see styles when autofilled */
-      &:-webkit-autofill {
-        -webkit-box-shadow: 0 0 0 1000px var(--x-background-color) inset;
-      }
-      /* Webkit is putting some nasty styles after automplete that look as follow */
-      /* input:-internal-autofill-selected { color: FieldText !important; } */
-      /* Fortunately we can override it as follow */
-      &:-internal-autofill-selected {
-        -webkit-text-fill-color: var(--x-color) !important;
-      }
-
-      &[type="search"] {
-        -webkit-appearance: textfield;
-
-        &::-webkit-search-cancel-button {
-          display: none;
-        }
-      }
-    }
-
-    .navi_input_text {
-      /* Nothing to read yet is still a line: the box may not collapse just
-         because the value is empty. */
-      min-height: 1lh;
-    }
-    /* The value is cut by a box of its own, and that is the whole reason it
-       exists: a field ends its text at the content edge, while an overflow set
-       on the padded box would let it run through the padding — the same value
-       would then lose a character on one side and not on the other. This box
-       IS the content edge, so both stop on the same letter.
-       Cut rather than wrapped (a second line would be taller than the field),
-       and cut rather than ellipsed (an ellipsis costs a character the field
-       does not lose). */
-    .navi_input_text_value {
-      display: block;
-      /* The whole content box, short value or not: a field's text is laid out
-         in the full width whatever it holds, so text-align lands in the same
-         place on both. */
-      width: 100%;
-      text-overflow: clip;
-      white-space: nowrap;
-      overflow: hidden;
-    }
-
-    .navi_input_slot {
-      /* A corner claimed from the outside (see group.jsx) is the frame's, and
-         what lives in here is not the frame — a button in a slot, the content
-         of a popup — so the ask stops at this boundary. */
-      --x-corner-top-left-radius: initial;
-      --x-corner-top-right-radius: initial;
-      --x-corner-bottom-right-radius: initial;
-      --x-corner-bottom-left-radius: initial;
-
-      margin-right: var(--slot-spacing, calc(2px + 0.1em));
-      margin-left: var(--slot-spacing, calc(2px + 0.1em));
-      color: #5e4e4e;
-
-      &[data-left] {
-        order: -1;
-      }
-      &[data-right] {
-      }
-
-      .navi_button {
-        font-size: inherit;
-        /* A <button> does not inherit the font on its own — same as the
-           <input> above — and what stands in a slot is measured on the line
-           box (Icon fillLine is 1lh): left on the browser's own font, the
-           clear cross would resolve 1lh against a font the field is not
-           written in, and the field would change height the moment the icon
-           is replaced by the button. */
-        font-family: inherit;
-
-        /* A button in a slot (e.g. the clear cross) is drawn small but must
-           not be small to hit: the spacing around it — the slot margins on the
-           sides, the input padding above and below — belongs to its clickable
-           zone. The visual stays untouched; only the hit area grows. */
-        &::before {
-          position: absolute;
-          top: calc(-1 * var(--x-padding-top));
-          right: calc(-1 * var(--slot-spacing, calc(2px + 0.1em)));
-          bottom: calc(-1 * var(--x-padding-bottom));
-          left: calc(-1 * var(--slot-spacing, calc(2px + 0.1em)));
-          content: "";
-        }
-      }
-    }
-
-    /* Hover */
-    &[data-hover] {
-      --x-background-color: var(--background-color-hover);
-      --x-border-color: var(--border-color-hover);
-      --x-color: var(--color-hover);
-    }
-    /* Readonly */
-    &[data-readonly] {
-      --x-border-color: var(--border-color-readonly);
-      --x-background-color: var(--background-color-readonly);
-      --x-color: var(--color-readonly);
-    }
-    /* Focus */
-    &[data-focus-visible] {
-      --x-background-color: var(--background-color-focus);
-      --x-border-color: transparent;
-      outline-style: solid;
-    }
-    /* Disabled */
-    &[data-disabled] {
-      --x-border-color: var(--border-color-disabled);
-      --x-background-color: var(--background-color-disabled);
-      --x-color: var(--color-disabled);
-    }
-    /* Callout (info, warning, error) */
-    &[data-callout] {
-      --x-border-color: var(--callout-color);
-      --x-outline-color: var(--callout-color);
-    }
-
-    /* A transparent background is a resting look, not an editing one: while
-       the field has focus it turns solid so text is not typed over whatever
-       sits behind it. */
-    &[data-background-transparent] {
-      --background-color-hover: var(--background-color);
-      --background-color-focus: var(--navi-surface-color);
-
-      &[data-focus] {
-        --x-background-color: var(--background-color-focus);
-      }
-    }
-
-    &[data-variant="discrete"],
-    &[data-variant="discrete-border"] {
-      /* An inline backgroundColor prop overrides this default */
-      --background-color: transparent;
-      --background-color-hover: var(--background-color);
-      --background-color-focus: var(--navi-surface-color);
-
-      &[data-focus] {
-        --x-background-color: var(--background-color-focus);
-      }
-      &[data-readonly] {
-        --x-background-color: var(--background-color);
-      }
-      &[data-disabled] {
-        --x-background-color: var(--background-color);
-      }
-      /* With an explicit background color the movement flips: colored at
-         rest and on hover, back to transparent while being edited. */
-      &[data-background] {
-        --background-color-focus: transparent;
-      }
-    }
-    /* The border is part of what makes a field look like a field, so a
-       discrete one does without it until it is interacted with — same idea
-       as the background above, and the two come back together.
-       discrete-border keeps the border: only the background recedes. */
-    &[data-variant="discrete"] {
-      --border-color: transparent;
-
-      &[data-focus] {
-        --x-border-color: color-mix(
-          in srgb,
-          var(--border-color) 55%,
-          transparent
-        );
-      }
-    }
-
-    /* The box of a field, without a field in it: the border is kept and made
-       invisible rather than dropped, and the background goes with it, so what
-       is left is text sitting exactly where the value would be — swap one for
-       the other and nothing on the page moves. */
-    &[data-variant="text"] {
-      --x-background-color: transparent;
-      --x-border-color: transparent;
-      cursor: inherit;
-    }
-
-    &[data-variant="underline"] {
-      border: none;
-      border-radius: 0;
-      --x-background-color: transparent;
-      padding-right: 0;
-      padding-left: 0;
-
-      .navi_input_real_input_wrapper {
-        position: relative;
-        display: inline-flex;
-        flex-grow: 1;
-      }
-
-      .navi_input_underline {
-        position: absolute;
-        top: calc(100% - 1px);
-        right: var(--x-padding-right);
-        left: var(--x-padding-left);
-        height: 1px;
-        background-color: var(--x-border-color);
-        pointer-events: none;
-      }
-
-      &[data-hover] {
-        --x-background-color: transparent;
-      }
-      &[data-focus-visible] {
-        --x-background-color: transparent;
-        outline-style: none;
-
-        .navi_input_underline {
-          height: 2px;
-          background-color: var(--outline-color);
-        }
-      }
-      &[data-readonly] {
-        --x-background-color: transparent;
-      }
-      &[data-disabled] {
-        --x-background-color: transparent;
-      }
-    }
-  }
-`;
 const InputHeadlessResolver = props => {
   const Next = useNextResolver();
   if (props.headless) {
@@ -48648,7 +47365,7 @@ const useInputTextualProps = props => {
   });
 };
 const InputTextualUI = props => {
-  import.meta.css = [inputCss, "@jsenv/navi/src/control/input/input_textual.jsx"];
+  installInputCss();
   // Spacing props travel to CSS as a raw custom property value, so the size
   // keywords have to become lengths here — "s" reaching CSS untouched makes the
   // declaration invalid, silently, and the gap just goes away.
@@ -48717,7 +47434,6 @@ const InputTextualUI = props => {
     // input may have left/right icons and we want the anchor to target the input element
     // which is where the interaction can happen
     ,
-
     "data-callout-anchor": ".navi_control_input",
     children: [jsx(LoadingOutline, {
       loading: loading,
@@ -48774,7 +47490,7 @@ const resolveWidthFromMaxLength = (maxLength, inputMode) => {
 // spacing, colors, className, style.
 const INPUT_ONLY_PROPS = ["value", "defaultValue", "signal", "id", "maxLength", "inputMode", "width", "variant", "type", "name", "placeholder", "required", "readOnly", "disabled", "loading", "error", "min", "max", "step", "pattern", "autoComplete", "autoCorrect", "spellcheck", "charGuard", "maxLengthGuard", "list", "suggestions", "headless", "fieldSizing", "action", "uiAction", "ui", "children"];
 const InputTextualAsText = props => {
-  import.meta.css = [inputCss, "@jsenv/navi/src/control/input/input_textual.jsx"];
+  installInputCss();
   // The id a Field handed down, which is what its Label points at.
   const controlId = useContext(ControlIdContext);
   const {
@@ -49469,62 +48185,35 @@ installImportMetaCssBuild(import.meta);/**
  * shared sheet is registered here too — a page may render a Textarea without
  * any Input.
  */
-const css$I = /* css */`
-  .navi_textarea {
-    textarea {
-      min-height: calc(var(--textarea-min-rows, 1.5) * 1lh);
-      /* Above maxRows the box stops growing and the content scrolls. The
-         99999 fallback means "no cap" without needing a conditional rule. */
-      max-height: calc(var(--textarea-max-rows, 99999) * 1lh);
-      field-sizing: content;
-      /* Explicit, never normal, for two independent reasons.
-         minRows/maxRows are lengths in lh, and with line-height normal the lh
-         unit resolves to a theoretical value that does not match the real
-         rendered line — the box then jumps by a few pixels the moment the first
-         character replaces the theory with a real line.
-         And a line box under "normal" takes the height of the tallest font it
-         holds, so the one line carrying an emoji stands taller than the ones
-         around it — and a tighter line would cut the top off the glyph.
-         The number is the page's own (--navi-line-height, 1.25), snapped to
-         the pixel like every control's: a message typed here and the same
-         message displayed afterwards sit on the same line, emoji included.
-         Bound to the token rather than inherited so it can never come back as
-         "normal" from a container that sets one. See docs/typography.md. */
-      line-height: var(--navi-control-line-height);
-      /* The control grows itself; resizable below hands the handle back. */
-      resize: none;
-      overflow: auto;
-      /* A placeholder must be readable in full before anything is typed: a
-         field that opens already scrolled reads as a field that already has
-         text in it. The lines it wraps to are counted (see
-         usePlaceholderHeight) because they only exist once laid out, and they
-         only raise the floor while the placeholder is what is being shown —
-         what is typed sizes the box on its own. A count of lines rather than
-         a height, so the floor is on the same grid as minRows. */
-      &:placeholder-shown {
-        min-height: max(
-          calc(var(--textarea-min-rows, 1.5) * 1lh),
-          calc(var(--x-textarea-placeholder-rows, 0) * 1lh)
-        );
-      }
-    }
-    &[data-resizable] {
-      .navi_control_input {
-        height: calc(var(--textarea-min-rows, 1.5) * 1lh);
-        /* The two are exclusive: with field-sizing content the browser removes
-         the resize handle (the size follows the content, there is nothing to
-         drag). resizable means the hand takes over — fixed sizing, starting
-         at minRows, and the drag writes its own inline height from there. */
-        field-sizing: fixed;
-        resize: vertical;
-      }
+const css$I = /* css */`.navi_textarea {
+  & textarea {
+    min-height: calc(var(--textarea-min-rows, 1.5) * 1lh);
+    max-height: calc(var(--textarea-max-rows, 99999) * 1lh);
+    field-sizing: content;
+    line-height: var(--navi-control-line-height);
+    resize: none;
+    overflow: auto;
+
+    &:placeholder-shown {
+      min-height: max(calc(var(--textarea-min-rows, 1.5) * 1lh),
+          calc(var(--x-textarea-placeholder-rows, 0) * 1lh));
     }
   }
-  .navi_textarea_char_count {
-    color: color-mix(in srgb, currentColor 60%, transparent);
-    font-size: 0.75em;
-    user-select: none;
+
+  &[data-resizable] {
+    & .navi_control_input {
+      height: calc(var(--textarea-min-rows, 1.5) * 1lh);
+      field-sizing: fixed;
+      resize: vertical;
+    }
   }
+}
+
+.navi_textarea_char_count {
+  color: color-mix(in srgb, currentColor 60%, transparent);
+  user-select: none;
+  font-size: .75em;
+}
 `;
 
 // minRows/maxRows are read by the CSS above, so they travel the way every
@@ -49574,7 +48263,8 @@ const Textarea = ({
   width = "35ch",
   ...props
 }) => {
-  import.meta.css = [inputCss + css$I, "@jsenv/navi/src/control/input/textarea.jsx"];
+  installInputCss();
+  import.meta.css = [css$I, "@jsenv/navi/src/control/input/textarea.jsx"];
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
   usePlaceholderHeight(props.ref, props.placeholder);
@@ -49766,49 +48456,43 @@ installImportMetaCssBuild(import.meta);/**
  * takes for it to land ON the text and not merely near it is the contract
  * described on `Editable` below.
  */
-const css$H = /* css */`
-  .navi_editable_wrapper {
-    --inset-top: 0px;
-    --inset-right: 0px;
-    --inset-bottom: 0px;
-    --inset-left: 0px;
+const css$H = /* css */`.navi_editable_wrapper {
+  --inset-top: 0px;
+  --inset-right: 0px;
+  --inset-bottom: 0px;
+  --inset-left: 0px;
+  top: var(--inset-top);
+  right: var(--inset-right);
+  bottom: var(--inset-bottom);
+  left: var(--inset-left);
+  font-size: inherit;
+  font-family: inherit;
+  line-height: inherit;
+  border-radius: inherit;
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
 
-    position: absolute;
-    top: var(--inset-top);
-    right: var(--inset-right);
-    bottom: var(--inset-bottom);
-    left: var(--inset-left);
+  & .navi_input {
     font-size: inherit;
+    border-radius: inherit;
+    font-family: inherit;
+  }
+
+  & input, & textarea {
+    font-weight: inherit;
+    font-size: inherit;
+    text-align: inherit;
     font-family: inherit;
     line-height: inherit;
     border-radius: inherit;
-    opacity: 0;
-    pointer-events: none;
-
-    /* The field takes the place of the text, so the text is what decides how
-       it is drawn — a control's own font (its size and family come from
-       --navi-control-*) would make the value change size the moment one edits
-       it. Unlayered, so it wins over the control's own sheet. */
-    .navi_input {
-      font-size: inherit;
-      font-family: inherit;
-      border-radius: inherit;
-    }
-    input,
-    textarea {
-      font-weight: inherit;
-      font-size: inherit;
-      font-family: inherit;
-      text-align: inherit;
-      line-height: inherit;
-      border-radius: inherit;
-    }
-
-    &[data-editing] {
-      opacity: 1;
-      pointer-events: auto;
-    }
   }
+
+  &[data-editing] {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
 `;
 
 /**
@@ -50504,152 +49188,60 @@ installImportMetaCssBuild(import.meta);/**
  * meet are drawn once instead of twice, and only the outer corners stay
  * rounded. See docs/control_group.md.
  */
-const css$G = /* css */`
-  .navi_group {
-    --group-border-width: var(--navi-control-border-width);
+const css$G = /* css */`.navi_group {
+  --group-border-width: var(--navi-control-border-width);
 
-    /* Two ways of asking for a square corner, and no selector ever reaching
-       inside a member:
-       - the property, on the member itself: a navi control declares the radius
-         of its frame on its own root, and the inner element that draws that
-         frame inherits it;
-       - the custom property, which travels: a member can be an enrobage (a
-         tooltip, a link) around the control that carries the frame, so the ask
-         also goes down as --x-corner-*-radius, which a control reads as an
-         override of its own radius. Private (the --x- prefix): navi's own
-         controls answer it, an app never writes it. Whoever answers it also
-         stops it (see .navi_button_content in button_ui.jsx), so a button
-         deeper in — the clear cross in a picker's slot, the Save of a form in
-         a popup the member opens — never mistakes itself for the seam.
-       Both are asked of members only (see just below for what one is): the
-       second one alone being reset by a popup would leave the first one
-       reaching it. */
-
-    /* What the group counts as a member — a child on its line, spelled
-       *:not([navi-out-of-flow]) here and at every seam below. Not every child
-       is one. A popup renders inside its opener's own subtree — a Dialog
-       written next to the Button that opens it lands as a child of the group
-       itself, and brings its backdrop (and, for layer="local", its clip
-       wrapper) along; a callout anchored on a <button> is mounted in that
-       button's parent, which is the group too. All of them are out of flow:
-       none is ever at a seam, and none is between two members either. Counted
-       as members they take a corner meant for a real one — a dialog in the
-       middle of a row comes out square — and, worse, they move the real ones:
-       a row of one button plus the dialog it opens has no :only-child left, so
-       the lone button squares the side it joins nothing on. Read off a marker
-       the elements set themselves (see popover.jsx, dialog.jsx, callout.js)
-       rather than named class by class here: a layout component knowing the
-       private classes of every component that can open something is exactly
-       what the corner claims above exist to avoid. */
-    > *:not([navi-out-of-flow]) {
-      /* Members overlap by the width of one border, so along each seam one of
-         the two borders covers the other. Whichever member the user is on has
-         to be the one on top: it is the one whose border changes color, and
-         the one whose focus ring goes all the way around — half a ring, cut by
-         the neighbour painted after it, is what this avoids. z-index needs a
-         positioned element to mean anything, hence position: relative.
-         Deliberately not paired with isolation: isolate — a stacking context
-         here would also trap the popup of a picker held in the group, which
-         counts on its own band reaching the whole page. What keeps these
-         values from escaping is instead that everything they could reach is a
-         band above them (see navi_z_indexes.js). */
-      &:hover,
-      &[data-hover] {
-        position: relative;
-        z-index: var(--navi-z-index-control-hovered);
-      }
-
-      /* Three spellings for one thing — the member showing a focus ring. Some
-         controls take the focus on their own root (a button); others wrap a
-         real input and draw the ring on their frame while the keyboard is held
-         somewhere inside (a picker, a spin). The ring is what must not be
-         sliced, so the member holding it is raised whether it wears the state
-         itself or merely contains it. */
-      &:focus-visible,
-      &[data-focus-visible],
-      &:has([data-focus-visible]) {
-        position: relative;
-        z-index: var(--navi-z-index-control-focused);
-      }
-
-      /* The member holding something open. Neither of the two above covers it:
-         the click that opened the popup gives no focus ring, the focus itself
-         left for the popup's content, and the pointer is free to travel to a
-         neighbour — yet the member keeps the border color its open state gives
-         it, and that border is exactly what the neighbour painted after it
-         slices. Read as a state, not as a pseudo-class: :active only lasts as
-         long as the button is held down, and while it is held :hover is true
-         anyway, so it would add nothing here.
-
-         :has, for the same reason as focus-visible above — the group member
-         can be an enrobage around the control that expands — and reaching a
-         popup held inline (a Popover with layer="local" renders inside its
-         member) costs nothing: that popup only reads expanded while its own
-         member is, which is the member this raises. A popup that is a child of
-         the group itself wears aria-expanded too, and is not a member:
-         position/z-index here would fight the placement it does its own way. */
-      &[aria-expanded="true"],
-      &:has([aria-expanded="true"]) {
-        position: relative;
-        z-index: var(--navi-z-index-control-expanded);
-      }
+  & > :not([navi-out-of-flow]) {
+    &:hover, &[data-hover] {
+      z-index: var(--navi-z-index-control-hovered);
+      position: relative;
     }
 
-    /* Where two members meet, stated as the relationship itself rather than as
-       positions in the child list: the corner a member loses is the one facing
-       a member, and the child list holds more than members (see above).
-       A group of one — or of one member and the popup it opens — matches
-       neither rule and keeps the radius it has on its own. */
-
-    /* Horizontal (default) */
-    &:not([data-vertical]) {
-      /* A member with a member before it: its left corners are on that seam,
-         and it is the one pulled back so the two borders there become one
-         line — same relationship, so the same rule. */
-      > *:not([navi-out-of-flow]) ~ *:not([navi-out-of-flow]) {
-        margin-left: calc(var(--border-width, var(--group-border-width)) * -1);
-
-        --x-corner-top-left-radius: 0;
-        --x-corner-bottom-left-radius: 0;
-
-        border-top-left-radius: 0 !important;
-        border-bottom-left-radius: 0 !important;
-      }
-
-      /* A member with a member after it: its right corners are on that seam. */
-      > *:not([navi-out-of-flow]):has(~ *:not([navi-out-of-flow])) {
-        --x-corner-top-right-radius: 0;
-        --x-corner-bottom-right-radius: 0;
-
-        border-top-right-radius: 0 !important;
-        border-bottom-right-radius: 0 !important;
-      }
+    &:focus-visible, &[data-focus-visible], &:has([data-focus-visible]) {
+      z-index: var(--navi-z-index-control-focused);
+      position: relative;
     }
 
-    /* Vertical */
-    &[data-vertical] {
-      /* A member with a member above it — see the horizontal block's own
-         comments, this is the same thing turned a quarter. */
-      > *:not([navi-out-of-flow]) ~ *:not([navi-out-of-flow]) {
-        margin-top: calc(var(--border-width, var(--group-border-width)) * -1);
-
-        --x-corner-top-left-radius: 0;
-        --x-corner-top-right-radius: 0;
-
-        border-top-left-radius: 0 !important;
-        border-top-right-radius: 0 !important;
-      }
-
-      /* A member with a member below it. */
-      > *:not([navi-out-of-flow]):has(~ *:not([navi-out-of-flow])) {
-        --x-corner-bottom-right-radius: 0;
-        --x-corner-bottom-left-radius: 0;
-
-        border-bottom-right-radius: 0 !important;
-        border-bottom-left-radius: 0 !important;
-      }
+    &[aria-expanded="true"], &:has([aria-expanded="true"]) {
+      z-index: var(--navi-z-index-control-expanded);
+      position: relative;
     }
   }
+
+  &:not([data-vertical]) {
+    & > :not([navi-out-of-flow]) ~ :not([navi-out-of-flow]) {
+      margin-left: calc(var(--border-width, var(--group-border-width)) * -1);
+      --x-corner-top-left-radius: 0;
+      --x-corner-bottom-left-radius: 0;
+      border-top-left-radius: 0 !important;
+      border-bottom-left-radius: 0 !important;
+    }
+
+    & > :not([navi-out-of-flow]):has( ~ :not([navi-out-of-flow])) {
+      --x-corner-top-right-radius: 0;
+      --x-corner-bottom-right-radius: 0;
+      border-top-right-radius: 0 !important;
+      border-bottom-right-radius: 0 !important;
+    }
+  }
+
+  &[data-vertical] {
+    & > :not([navi-out-of-flow]) ~ :not([navi-out-of-flow]) {
+      margin-top: calc(var(--border-width, var(--group-border-width)) * -1);
+      --x-corner-top-left-radius: 0;
+      --x-corner-top-right-radius: 0;
+      border-top-left-radius: 0 !important;
+      border-top-right-radius: 0 !important;
+    }
+
+    & > :not([navi-out-of-flow]):has( ~ :not([navi-out-of-flow])) {
+      --x-corner-bottom-right-radius: 0;
+      --x-corner-bottom-left-radius: 0;
+      border-bottom-right-radius: 0 !important;
+      border-bottom-left-radius: 0 !important;
+    }
+  }
+}
 `;
 const Group = ({
   children,
@@ -50856,149 +49448,66 @@ installImportMetaCssBuild(import.meta);/**
  * So: nothing scrollable between the cap and the slides (a shared [data-body]
  * around them IS a scroller, see box.jsx), and `overflow="auto"` on each Slide.
  */
-const css$F = /* css */`
-  /* Where the picture stands relative to the slide that is current, in boxes
-     (see paintTravelProgress). Declared, so that it is a NUMBER the browser can
-     interpolate: the trait an indicator draws has to travel with the slides,
-     and an undeclared custom property only ever jumps from one value to the
-     next. Inherited, so anything drawn inside the box can read it, and 0 by
-     default — at rest there is nothing to lean towards. */
-  @property --slide-travel-progress {
-    syntax: "<number>";
-    inherits: true;
-    initial-value: 0;
+const css$F = /* css */`@property --slide-travel-progress {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
+.navi_slide_container {
+  border-radius: inherit;
+  flex: 0 auto;
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  position: relative;
+  overflow: hidden;
+
+  &:focus {
+    outline: none;
   }
 
-  /* Every slide in the same grid cell: the box then measures itself on the
-     LARGEST of them, in both directions, without anything being measured by
-     hand — which is also why nothing here resizes as the slides change. Each
-     slide travels by exactly one box, so a short one and a tall one move the
-     same distance. */
-  .navi_slide_container {
-    /* The ring of the slide holding the keyboard is drawn on the CONTAINER,
-       not on the slide: a slide is deliberately square (its corners belong to
-       this box, see [data-slide] below), so a ring drawn on one would come out
-       square inside a rounded box and cut across the curve. Here it follows
-       whatever radius this box was given.
-       Not on the track either, for the other half of the reason: the track is
-       what travels, and a ring riding along would slide out of the frame for
-       the length of a travel. The two have the same geometry at rest, so
-       nothing is lost by drawing it on the one that stays still.
-       :has(), not a class set from JS: which slide is showing its focus is
-       something the DOM already says. */
-    position: relative;
-    display: grid;
+  &[data-travel-by-drag="x"] {
+    touch-action: pan-y;
+  }
+
+  &[data-travel-by-drag="y"] {
+    touch-action: pan-x;
+  }
+
+  &[data-travel-by-drag="xy"] {
+    touch-action: none;
+  }
+
+  &[data-focus-visible] {
+    outline-width: var(--navi-focus-outline-width);
+    outline-style: var(--navi-focus-outline-style, solid);
+    outline-color: var(--navi-focus-outline-color);
+    outline-offset: calc(-.5 * var(--navi-focus-outline-width));
+  }
+
+  & > [data-slide-track] {
+    border-radius: inherit;
     min-width: 0;
     min-height: 0;
-    /* Never bigger than what holds it: the box is as big as its largest slide,
-       but a slide scrolls its own body, so the room it would need is not room
-       it must be given. Shrinking is enough for that (the slides then scroll);
-       GROWING is a decision the caller makes with expandY, for a box that must
-       fill a container it does not need — see the dialog demo. */
-    flex: 0 1 auto;
-    /* Passed down rather than owned: this is usually the whole content of a
-       rounded popup, and a slide (with its header) has to follow that curve —
-       nothing between them may flatten it on the way. */
-    border-radius: inherit;
-    overflow: hidden;
+    translate: var(--slide-container-offset, 0);
+    grid-area: 1 / 1;
+    display: grid;
 
-    /* The browser's own ring, suppressed in favour of the one below: this box
-       is focusable (see its tabIndex) and would otherwise get the UA outline
-       drawn on top of ours, on its own terms. Same as the wheel does. */
-    &:focus {
-      outline: none;
-    }
-
-    /* What a touch may do here: the axis the slides travel on is taken (it is
-       what the gesture drags), the other one is left to the page — so a
-       carousel in an article is swiped sideways and the article still scrolls
-       under the same finger. A map travelling both ways takes both.
-       A scroller INSIDE a slide is not concerned: touch-action is read up to
-       the scroll container the gesture would move, so a row that scrolls
-       sideways within a slide still scrolls sideways. */
-    &[data-travel-by-drag="x"] {
-      touch-action: pan-y;
-    }
-    &[data-travel-by-drag="y"] {
-      touch-action: pan-x;
-    }
-    &[data-travel-by-drag="xy"] {
-      touch-action: none;
-    }
-    /* Outside the box, which is where an outline is drawn by default: nothing
-       inside can paint over it (the slides are all within), and this box's own
-       overflow does not clip it either — an element's outline is not its own
-       overflow's business. So it needs no element of its own, unlike the
-       wheel's ring, which marks a window inside the wheel. */
-    &[data-focus-visible] {
-      outline-width: var(--navi-focus-outline-width);
-      /* A style of its own, not the shorthand, so whoever holds this box can
-         take the ring over by setting the variable to "none" — the delegation
-         offered by data-focus-outline-delegate. */
-      outline-style: var(--navi-focus-outline-style, solid);
-      outline-color: var(--navi-focus-outline-color);
-      outline-offset: calc(-0.5 * var(--navi-focus-outline-width));
-    }
-
-    /* ONE thing moves: the track. The slides are laid out once and for all,
-       each at its own place on the map, and never transition — so two
-       neighbours cannot end up a pixel apart mid-travel the way two transitions
-       running side by side can. It also means one transitionend, one duration,
-       one easing, whatever the number of slides. */
-    > [data-slide-track] {
-      display: grid;
+    & > [data-slide] {
       min-width: 0;
       min-height: 0;
+      translate: var(--slide-offset, 0);
+      border-radius: 0;
+      outline: none;
       grid-area: 1 / 1;
-      border-radius: inherit;
-      /* Where the track IS. Moving there is animated from JS (see the layout
-         effect's own track.animate): a transition would have to be watched from
-         the outside to know when it ends, and "when it ends" is what a looping
-         container needs to be exact about. An animation is asked directly —
-         it has a finished promise of its own. */
-      translate: var(--slide-container-offset, 0);
+    }
 
-      > [data-slide] {
-        /* All in the one cell, so the box is as big as its largest slide and
-           the others stretch to it (grid stretches by default) rather than
-           floating in a corner of it. No display of its own here: a slide is a
-           Box and keeps whatever it was given. */
-        min-width: 0;
-        min-height: 0;
-        grid-area: 1 / 1;
-        /* Square, deliberately: two rounded slides passing each other leave a
-           pinched gap between their curves where the page shows through. The
-           corners belong to the container, which clips them (overflow: hidden
-           above) — so what one sees is rounded at rest and butt-jointed in
-           motion, with nothing between two slides at any point of the travel. */
-        border-radius: 0;
-        /* Never on the slide: the ring is drawn on the container above, which
-           is where the corners are. */
-        outline: none;
-        /* Its place on the map, in boxes — not a movement: same percentage
-           reference as the track's own (both are the size of the box), so the
-           distance the track travels is exactly the distance between two
-           slides. */
-        translate: var(--slide-offset, 0);
-      }
-      /* Off stage: everything but the slide one is looking at and, while the
-         track moves, the slide one is leaving. A travel is one box long
-         whatever the distance on the map (the two are placed a box apart for
-         the occasion, see the layout effect), so the slides in between are
-         never crossed — but on a map wider than one box they would still sit
-         in the frame, and a tab bar jumping from the first tab to the last must
-         show those two and nothing else.
-         visibility, not display: this box is measured on its LARGEST slide, and
-         a slide taken out of the layout would take its size out with it. */
-      > [data-slide][data-slide-offstage] {
-        visibility: hidden;
-      }
-      /* Nothing here for a slide not on screen: [inert] (set from JS) already
-         takes it out of reach of the pointer, of Tab and of a screen reader —
-         one attribute instead of pointer-events plus aria-hidden, and the only
-         one the browser does not argue with about a focused descendant. */
+    & > [data-slide][data-slide-offstage] {
+      visibility: hidden;
     }
   }
+}
 `;
 
 // How much of a travel is left to make, as a fraction of the travel that was
@@ -51267,12 +49776,13 @@ const readArea = slideElement => slideElement.getAttribute("data-slide-area") ||
  *   docs/control_object.md#a-settings-sheet) or move them by writing it.
  *   Excludes `current`; `onCurrentChange` still fires, for the `cause` and for
  *   the right to refuse.
- *   An area written from outside is WALKED to, not jumped to: every slide
- *   between here and there is asked to let go the way a key going that way
- *   would ask it, and the first one that holds (`preventNav`, a `required` step
- *   still unanswered) is where one stops — after which the signal is written
- *   with the area actually shown, so it says where one IS and never where one
- *   asked to be.
+ *   An area written from outside is WALKED to, not jumped to — the first one
+ *   included, which is the one an address arrives as: every slide between here
+ *   and there is asked to let go the way a key going that way would ask it, and
+ *   the first one that holds (`preventNav`, a `required` step still unanswered)
+ *   is where one stops — after which the signal is written with the area
+ *   actually shown, so it says where one IS and never where one asked to be.
+ *   The walk starts from where the state itself opens (see `defaultCurrent`).
  *   PUTTING THE AREA IN THE URL is that binding and nothing more: hand it a
  *   `stateSignal` a route declares as a search param, and `?step=<area>` is
  *   written on every travel, read on a load, a bookmark, a link, a traversal —
@@ -51285,12 +49795,13 @@ const readArea = slideElement => slideElement.getAttribute("data-slide-area") ||
  *   ```jsx
  *   <SlideContainer signal={stepSignal}>
  *   ```
- *   Where it opens is the state's own default (`stateSignal`'s first argument —
- *   a signal there, for a start that depends on where one is), and the param
- *   stays out of the address while the area IS that default. `weak` keeps the
- *   step from being inherited by links built to that route. Written by
- *   replacement unless the state says `history: "push"`, and even then a slide
- *   reached by DRAGGING replaces — see docs/navigation.md.
+ *   Where it opens is the state's own default (`stateSignal`'s first argument,
+ *   or the route's own `{ signal, default }` where the same state starts
+ *   elsewhere depending on the page), and the param stays out of the address
+ *   while the area IS that default. `weak` keeps the step from being inherited
+ *   by links built to that route. Written by replacement unless the state says
+ *   `history: "push"`, and even then a slide reached by DRAGGING replaces — see
+ *   docs/navigation.md.
  * @param {string} [props.defaultCurrent] - which slide to open on, for a
  *   container that owns its position. Mount-only, like every other `default*`:
  *   it says where one starts, not where one is — say `current` for that.
@@ -51402,9 +49913,13 @@ const SlideContainer = ({
   // moment a slide appears before it, and there is nothing to renumber here.
   // This is where the container's own answer lives, and it is the only one the
   // picture is drawn from — an area coming from outside is a REQUEST that has
-  // to be walked to first (see the effect reading currentFromCaller). At mount
-  // there is no road to walk yet, so what the caller holds is taken as it is.
-  const [currentAreaState, setCurrentAreaState] = useState(() => (currentSignal ? currentSignal.peek() : currentProp) ?? defaultCurrent);
+  // to be walked to (see the effect reading currentFromCaller), and THE FIRST
+  // ONE TOO: an address typed, shared, or kept from a session that has moved on
+  // only ever arrives as the first value, so taking it as it is would be
+  // walking past every lock in exactly the case the locks are there for.
+  // So the picture starts where the state itself would open (a stateSignal's
+  // own default), or on `defaultCurrent`, and the walk goes from there.
+  const [currentAreaState, setCurrentAreaState] = useState(() => currentSignal?.options?.getDefaultValue?.() ?? defaultCurrent);
   // The slide this container is travelling to while its controller has not been
   // told yet (commit="rest"): for the length of that travel the container is
   // ahead of whoever holds `current`, and this is where it keeps its own answer
@@ -51490,7 +50005,9 @@ const SlideContainer = ({
   // what this container put there is not news. Without it, a container ahead of
   // its own state (commit="rest", where the picture arrives before the change
   // is told) would read its own lateness as an order to go back.
-  const areaAskedSeenRef = useRef(currentSignal ? currentSignal.peek() : currentProp);
+  // Undefined at mount on purpose: the first area held outside is news like any
+  // other, and it is walked to rather than opened on.
+  const areaAskedSeenRef = useRef(undefined);
   // Where the container stands, said where the caller holds it.
   //
   // Whether a slide is a place one came from is the STATE's own business (see
@@ -52236,6 +50753,11 @@ const SlideContainer = ({
   // `?step=done` cannot open a confirmation screen for something nobody sent.
   // Whatever comes of it, the state is then written with the area actually
   // shown: it says where one IS, never where one asked to be.
+  //
+  // Read on every render rather than subscribed to a dependency: the slides are
+  // not always there when the request is (a screen whose content arrives a
+  // request later), and what nothing has answered yet must still be answered
+  // once it can be.
   useLayoutEffect(() => {
     if (currentFromCaller === undefined) {
       return;
@@ -52245,12 +50767,18 @@ const SlideContainer = ({
       // it wrote itself.
       return;
     }
-    areaAskedSeenRef.current = currentFromCaller;
     // Where the box IS, read off the DOM: `current` is undefined until someone
     // names a slide, and the container standing on its first one is a fact only
     // the map knows (see the layout effect that paints it).
     const areaOnScreen = containerRef.current?.getAttribute(SLIDE_CURRENT_ATTRIBUTE);
-    if (!areaOnScreen || currentFromCaller === areaOnScreen) {
+    if (!areaOnScreen) {
+      // There are no slides yet, so there is no road to walk and nothing to
+      // refuse. Nothing is remembered either: this request has not been
+      // answered, and the render that brings the slides asks it again.
+      return;
+    }
+    areaAskedSeenRef.current = currentFromCaller;
+    if (currentFromCaller === areaOnScreen) {
       return;
     }
     const reached = reachableTowards(areaOnScreen, currentFromCaller);
@@ -52280,7 +50808,7 @@ const SlideContainer = ({
       cause: "state",
       event: null
     });
-  }, [currentFromCaller]);
+  });
 
   // The press kept during a roll, taken once the window rests and the travel is
   // given back (noTravel off): by direction when there was one, so it is read
@@ -59118,39 +57646,26 @@ installImportMetaCssBuild(import.meta);/**
  * and only under its own `sizeFromAnchor`) pass through untouched via
  * `...rest` to whichever of Popover/Dialog actually renders.
  */
-const css$C = /* css */`
-  @layer navi {
-    .navi_popup {
-      --popup-border-radius: var(--navi-popup-border-radius);
-      --popup-border-width: 1px;
-      --popup-border-color: var(--navi-popup-border-color);
+const css$C = /* css */`@layer navi {
+  .navi_popup {
+    --popup-border-radius: var(--navi-popup-border-radius);
+    --popup-border-width: 1px;
+    --popup-border-color: var(--navi-popup-border-color);
+    line-height: var(--navi-line-height);
 
-      /* A popup is a page of its own, opened from a control: it is written on
-         the page's line, as the number, so each text it holds keeps a line
-         relative to its own size. Its element sits under the control that
-         opens it (a Picker holds its popup children inside its root), and
-         line-height inherits as computed: the control's line is a length
-         (--navi-control-line-height), and inherited it would arrive as that
-         control's pixels — a 12px caption on an 18px picker's 23px rows.
-         Layered, like the dialog padding below: both are what navi puts there
-         in the absence of anything else, and an app writing its own line or
-         its own popup padding is meant to win. */
-      line-height: var(--navi-line-height);
+    &.navi_popover {
+      --popover-border-radius: var(--popup-border-radius);
+      --popover-border-width: var(--popup-border-width);
+      --popover-border-color: var(--popup-border-color);
+    }
 
-      &.navi_popover {
-        --popover-border-radius: var(--popup-border-radius);
-        --popover-border-width: var(--popup-border-width);
-        --popover-border-color: var(--popup-border-color);
-      }
-
-      &.navi_dialog {
-        --dialog-border-radius: var(--popup-border-radius);
-        --dialog-border-color: var(--popup-border-color);
-
-        padding: 0;
-      }
+    &.navi_dialog {
+      --dialog-border-radius: var(--popup-border-radius);
+      --dialog-border-color: var(--popup-border-color);
+      padding: 0;
     }
   }
+}
 `;
 
 /**
@@ -59309,163 +57824,78 @@ const Popup = props => {
 };
 Popup.Close = PopupClose;
 
-installImportMetaCssBuild(import.meta);const css$B = /* css */`
-  .navi_picker {
-    /* Sizing ceilings (maxmax), background, box-shadow, outline, padding,
-       overflow... are already handled correctly by Popup/Popover/Dialog
-       themselves — nothing to redefine here. Only the picker's own look
-       (border color/radius/width, background) needs bridging into the vars
-       Popover/Dialog actually consume, plus a couple of genuinely
-       picker-specific bits below (anchor-width min-width, the nested list). */
+installImportMetaCssBuild(import.meta);const css$B = /* css */`.navi_picker {
+  &[aria-haspopup="listbox"] {
+    & .navi_popover {
+      --popover-border-radius: var(--picker-popup-border-radius, var(--picker-border-radius));
+      --popover-border-width: var(--picker-border-width);
+      --popover-border-color: var(--x-picker-border-color);
+      --popover-background-color: var(--picker-popup-background-color, var(--navi-popup-background-color));
+      --popover-outline-width: var(--picker-outline-width);
+      --popover-outline-color: var(--picker-outline-color);
+      --popover-max-height: var(--picker-popover-max-height);
+      min-width: var(--picker-popover-min-width, var(--anchor-width, 0px));
+      cursor: default;
 
-    /* popover */
-    &[aria-haspopup="listbox"] {
-      .navi_popover {
-        --popover-border-radius: var(
-          --picker-popup-border-radius,
-          var(--picker-border-radius)
-        );
-        --popover-border-width: var(--picker-border-width);
-        --popover-border-color: var(--x-picker-border-color);
-        /* The sheet is the popup's own, never the trigger's paint: a variant
-           that takes the box away from the trigger (icon, discrete, headless
-           all paint it transparent) must not take the sheet with it. The trim
-           above still echoes the field — a transparent edge still leaves a
-           readable surface; the surface does not.
-
-           With an explicit fallback, unlike --popover-max-height below: the
-           popover paints background-color from this var with no fallback of
-           its own, so a declaration invalid at computed-value time would not
-           step aside for the @layer default — it makes the var guaranteed-
-           invalid, and the sheet goes transparent. */
-        --popover-background-color: var(
-          --picker-popup-background-color,
-          var(--navi-popup-background-color)
-        );
-        --popover-outline-width: var(--picker-outline-width);
-        --popover-outline-color: var(--picker-outline-color);
-        /* No fallback on purpose: when the picker's own popoverMaxHeight prop
-           is unset this declaration is invalid at computed-value time, which
-           leaves --popover-max-height unset and lets the popover fall back to
-           --popover-max-height-default. */
-        --popover-max-height: var(--picker-popover-max-height);
-
-        /* At least as wide as the trigger — unless popupWidthFitContent, then
-           let the content (e.g. a Wheel) size the popover (see picker.jsx). */
-        min-width: var(--picker-popover-min-width, var(--anchor-width, 0px));
-        cursor: default; /* Reset pointer cursor within the select */
-
-        /* The list scrolls inside the popover */
-        .navi_list_container {
-          width: 100%;
-          /* The list's radius var, not border-radius itself: the longhands it
-             feeds are what read the --x-corner-*-radius claims coming from
-             outside (a header/footer covering a corner, a flush body — see
-             box.jsx). Writing the shorthand here would flatten those four
-             longhands back to one curve and square nothing. */
-          --list-border-radius: max(
-            0px,
-            var(--picker-border-radius) - var(--picker-border-width)
-          );
-          overscroll-behavior: none;
-
-          /* Skipped when the list asks for overflow="visible": that ask is
-             about escaping every box the list sits in, and this selector is
-             specific enough to win over the list's own rules and silently put
-             the scroll back. */
-          &:not([data-overflow-visible]) {
-            overflow: auto;
-          }
-        }
-      }
-
-      &[aria-expanded="true"] {
-        &[navi-popover-mode="overlay"] {
-          /* When sizes uses float AND the border uses border-radius it's possible it's possible to see some pixels
-          of the underlying select borders. We hide them to ensure this cannot happen.  */
-          border-color: transparent;
-        }
-
-        /* Popover itself has no opinion on its content's own layout (plain
-           div, block by default) — the picker's content needs to stack
-           vertically. */
-        .navi_popover {
-          display: flex;
-          flex-direction: column;
-        }
-      }
-    }
-
-    /* dialog */
-    &[aria-haspopup="dialog"] {
-      .navi_dialog {
-        --dialog-border-radius: var(
-          --picker-popup-border-radius,
-          var(--picker-border-radius)
-        );
-        /* Explicit fallback, for the same reason as --popover-background-color
-           above: the dialog paints border-width from this var with no fallback
-           of its own, so an unset dialogBorderWidth would leave the var
-           guaranteed-invalid and border-width at its initial "medium" (3px).
-           0px is the dialog's own default. */
-        --dialog-border-width: var(--picker-dialog-border-width, 0px);
-        --dialog-border-color: var(--x-picker-border-color);
-        /* The picker's own surface is not this one — see the popover branch,
-           including why the fallback is spelled out. */
-        --dialog-background-color: var(
-          --picker-popup-background-color,
-          var(--navi-popup-background-color)
-        );
-        --dialog-outline-width: var(--picker-outline-width);
-        --dialog-outline-color: var(--picker-outline-color);
-
-        /* No fallback on purpose (same as --popover-max-height above): unset
-           picker props leave these declarations invalid at computed-value
-           time, so the dialog keeps its own floors/ceilings. */
-        --dialog-min-width: var(--picker-dialog-min-width);
-        --dialog-min-height: var(--picker-dialog-min-height);
-        --dialog-max-width: var(--picker-dialog-max-width);
-        --dialog-max-height: var(--picker-dialog-max-height);
-
-        /* Nothing bridges the trigger's width in here: a dialog does not
-           follow its anchor's box (dialog.jsx, sizeFromAnchor) — it is not
-           visually attached to the trigger, so it is sized by its content,
-           and dialogMinWidth/dialogMinHeight are how a caller says otherwise.
-           Only the cursor reset below is picker-specific here. */
-        cursor: default; /* Reset pointer cursor within the select */
-
-        /* Dialog already applies display: flex to [open] itself, but
-           defaults to row — the picker's content needs to stack vertically. */
-        &[open] {
-          flex-direction: column;
-        }
-      }
-
-      .navi_list_container {
-        width: 100%;
-        /* See the popover block above: the var, not the shorthand, so the
-           corner claims survive. */
-        --list-border-radius: max(
-          0px,
-          var(--picker-border-radius) - var(--picker-border-width)
-        );
+      & .navi_list_container {
+        --list-border-radius: max(0px,
+            var(--picker-border-radius) - var(--picker-border-width));
         overscroll-behavior: none;
+        width: 100%;
 
-        /* See the popover block above: overflow="visible" on the list must not
-           be overridden back into a scroll by this rule. */
         &:not([data-overflow-visible]) {
           overflow: auto;
         }
       }
     }
 
-    /* popupWidthFitContent (picker.jsx): drop the trigger-width floor so the
-       popup shrinks to its content. Popover-only — the dialog has no such
-       floor to drop (see the dialog block above). */
-    &[data-popup-width-fit-content] {
-      --picker-popover-min-width: 0px;
+    &[aria-expanded="true"] {
+      &[navi-popover-mode="overlay"] {
+        border-color: #0000;
+      }
+
+      & .navi_popover {
+        flex-direction: column;
+        display: flex;
+      }
     }
   }
+
+  &[aria-haspopup="dialog"] {
+    & .navi_dialog {
+      --dialog-border-radius: var(--picker-popup-border-radius, var(--picker-border-radius));
+      --dialog-border-width: var(--picker-dialog-border-width, 0px);
+      --dialog-border-color: var(--x-picker-border-color);
+      --dialog-background-color: var(--picker-popup-background-color, var(--navi-popup-background-color));
+      --dialog-outline-width: var(--picker-outline-width);
+      --dialog-outline-color: var(--picker-outline-color);
+      --dialog-min-width: var(--picker-dialog-min-width);
+      --dialog-min-height: var(--picker-dialog-min-height);
+      --dialog-max-width: var(--picker-dialog-max-width);
+      --dialog-max-height: var(--picker-dialog-max-height);
+      cursor: default;
+
+      &[open] {
+        flex-direction: column;
+      }
+    }
+
+    & .navi_list_container {
+      --list-border-radius: max(0px,
+          var(--picker-border-radius) - var(--picker-border-width));
+      overscroll-behavior: none;
+      width: 100%;
+
+      &:not([data-overflow-visible]) {
+        overflow: auto;
+      }
+    }
+  }
+
+  &[data-popup-width-fit-content] {
+    --picker-popover-min-width: 0px;
+  }
+}
 `;
 const PickerCustomResolver = props => {
   import.meta.css = [css$B, "@jsenv/navi/src/control/picker/picker_custom.jsx"];
@@ -60328,21 +58758,20 @@ installImportMetaCssBuild(import.meta);/**
  * looking again. Anything else that closes the popup (the cancel button,
  * Escape, a click outside) is no.
  */
-const css$A = /* css */`
-  .navi_picker_confirm_body {
-    display: flex;
-    min-width: 180px;
-    max-width: 320px;
-    padding: var(--navi-m);
-    flex-direction: column;
-    gap: var(--navi-m);
-  }
+const css$A = /* css */`.navi_picker_confirm_body {
+  min-width: 180px;
+  max-width: 320px;
+  padding: var(--navi-m);
+  gap: var(--navi-m);
+  flex-direction: column;
+  display: flex;
+}
 
-  .navi_picker_confirm_actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: var(--navi-s);
-  }
+.navi_picker_confirm_actions {
+  justify-content: flex-end;
+  gap: var(--navi-s);
+  display: flex;
+}
 `;
 const PickerConfirmResolver = props => {
   import.meta.css = [css$A, "@jsenv/navi/src/control/picker/picker_confirm.jsx"];
@@ -60669,38 +59098,34 @@ const LoadingIndicator = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$z = /* css */`
-  @layer navi {
-    .navi_separator {
-      --size: 1px;
-      --color: var(--navi-separator-color-default);
-      --margin: 0.5em;
-    }
-  }
-
+installImportMetaCssBuild(import.meta);const css$z = /* css */`@layer navi {
   .navi_separator {
-    width: 100%;
-    height: var(--size);
-    /* Logical, not top/bottom: "start" is above a horizontal rule and to the
-       left of a vertical one, so the same two vars place both. */
-    margin-top: var(--margin-start, var(--margin));
-    margin-bottom: var(--margin-end, var(--margin));
-    flex-shrink: 0;
-    background: var(--color);
-    border: none;
-
-    &[data-vertical] {
-      display: inline-block;
-
-      width: var(--size);
-      height: 1lh;
-      margin-top: 0;
-      margin-right: var(--margin-end, var(--margin));
-      margin-bottom: 0;
-      margin-left: var(--margin-start, var(--margin));
-      vertical-align: bottom;
-    }
+    --size: 1px;
+    --color: var(--navi-separator-color-default);
+    --margin: .5em;
   }
+}
+
+.navi_separator {
+  width: 100%;
+  height: var(--size);
+  margin-top: var(--margin-start, var(--margin));
+  margin-bottom: var(--margin-end, var(--margin));
+  background: var(--color);
+  border: none;
+  flex-shrink: 0;
+
+  &[data-vertical] {
+    width: var(--size);
+    height: 1lh;
+    margin-top: 0;
+    margin-right: var(--margin-end, var(--margin));
+    margin-bottom: 0;
+    margin-left: var(--margin-start, var(--margin));
+    vertical-align: bottom;
+    display: inline-block;
+  }
+}
 `;
 
 /**
@@ -61240,195 +59665,142 @@ const ListItemFooter = props => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$y = /* css */`
-  @layer navi {
-    .navi_list_container[navi-selectable] {
-      /* Focus outline */
-      --list-item-outline-width: var(--navi-focus-outline-width);
-      /* here we draw the outline ON the item, not outside of it */
-      /* This ensure the outline is visible even when there is scrollbars (which happens a lot on list items) */
-      --list-item-outline-offset: calc(-1 * var(--list-item-outline-width));
-      --list-item-outline-color: var(--navi-focus-outline-color);
-      /* Focus outline end */
-      --list-item-border-color: var(--navi-control-border-color);
-      --list-item-padding-x-default: var(--navi-list-item-padding-x-default);
-      --list-item-padding-y-default: var(--navi-list-item-padding-y-default);
-
-      /* Hover (mouse) */
-      --list-item-background-color-hover: light-dark(#f5f5f5, #2a2a2a);
-      --list-item-color-hover: var(--list-item-color);
-      /* Pointed by mouse — subtle, just a shade above background */
-      --list-item-background-color-mouse-pointed: light-dark(#ebebeb, #303030);
-      --list-item-color-mouse-pointed: var(--list-item-color);
-      /* Pointed by keyboard — subtle light blue highlight */
-      --list-item-color-keyboard-pointed: var(--list-item-color);
-      --list-item-background-color-keyboard-pointed: light-dark(
-        #c2dcff,
-        #1c3a6e
-      );
-      /* Pointed by proxy */
-      --list-item-background-color-pointed: light-dark(#dbeafe, #1c3a6e);
-      --list-item-color-pointed: var(--list-item-color);
-      /* Selected — vivid blue accent */
-      --list-item-color-selected: white;
-      --list-item-background-color-selected: var(--navi-accent-color);
-      --list-item-border-color-selected: var(
-        --list-item-background-color-selected
-      );
-      /* Disabled */
-      --list-item-color-disabled: light-dark(#aaa, #555);
-      --list-item-background-color-disabled: var(--list-item-background-color);
-    }
-  }
-
+installImportMetaCssBuild(import.meta);const css$y = /* css */`@layer navi {
   .navi_list_container[navi-selectable] {
-    &[data-callout] {
-      --x-list-border-color: var(--callout-color);
-    }
+    --list-item-outline-width: var(--navi-focus-outline-width);
+    --list-item-outline-offset: calc(-1 * var(--list-item-outline-width));
+    --list-item-outline-color: var(--navi-focus-outline-color);
+    --list-item-border-color: var(--navi-control-border-color);
+    --list-item-padding-x-default: var(--navi-list-item-padding-x-default);
+    --list-item-padding-y-default: var(--navi-list-item-padding-y-default);
+    --list-item-background-color-hover: light-dark(#f5f5f5, #2a2a2a);
+    --list-item-color-hover: var(--list-item-color);
+    --list-item-background-color-mouse-pointed: light-dark(#ebebeb, #303030);
+    --list-item-color-mouse-pointed: var(--list-item-color);
+    --list-item-color-keyboard-pointed: var(--list-item-color);
+    --list-item-background-color-keyboard-pointed: light-dark(#c2dcff, #1c3a6e);
+    --list-item-background-color-pointed: light-dark(#dbeafe, #1c3a6e);
+    --list-item-color-pointed: var(--list-item-color);
+    --list-item-color-selected: white;
+    --list-item-background-color-selected: var(--navi-accent-color);
+    --list-item-border-color-selected: var(--list-item-background-color-selected);
+    --list-item-color-disabled: light-dark(#aaa, #555);
+    --list-item-background-color-disabled: var(--list-item-background-color);
+  }
+}
 
-    .navi_list_item {
-      --x-list-item-cursor: default;
-      --x-list-item-border-color: var(--list-item-border-color);
-
-      position: relative;
-      font-size: var(--navi-control-font-size);
-      font-family: var(--navi-control-font-family);
-      /* A selectable item is a control: it stands in a row with pickers and
-         inputs (a horizontal list of choices), so it takes the control line
-         with the control font — the same number of pixels tall as them. */
-      line-height: var(--navi-control-line-height);
-    }
+.navi_list_container[navi-selectable] {
+  &[data-callout] {
+    --x-list-border-color: var(--callout-color);
   }
 
-  .navi_list_container[navi-selectable] {
-    .navi_list_fallback,
-    .navi_list_search_fallback {
-      --list-item-padding-x-default: inherit;
-      --list-item-padding-y-default: inherit;
-    }
+  & .navi_list_item {
+    --x-list-item-cursor: default;
+    --x-list-item-border-color: var(--list-item-border-color);
+    font-size: var(--navi-control-font-size);
+    font-family: var(--navi-control-font-family);
+    line-height: var(--navi-control-line-height);
+    position: relative;
   }
+}
 
-  .navi_list_item[navi-selectable] {
+.navi_list_container[navi-selectable] {
+  & .navi_list_fallback, & .navi_list_search_fallback {
     --list-item-padding-x-default: inherit;
     --list-item-padding-y-default: inherit;
+  }
+}
 
-    outline-width: var(--list-item-outline-width);
-    outline-color: var(--list-item-outline-color);
-    outline-offset: var(--list-item-outline-offset);
-    cursor: var(--x-list-item-cursor);
+.navi_list_item[navi-selectable] {
+  --list-item-padding-x-default: inherit;
+  --list-item-padding-y-default: inherit;
+  outline-width: var(--list-item-outline-width);
+  outline-color: var(--list-item-outline-color);
+  outline-offset: var(--list-item-outline-offset);
+  cursor: var(--x-list-item-cursor);
 
-    .navi_checkbox {
-      --margin: 0;
-    }
-    .navi_radio {
-      --margin: 0;
-    }
+  & .navi_checkbox, & .navi_radio {
+    --margin: 0;
+  }
 
-    &[navi-selectable] {
-      user-select: none;
-    }
-    &[navi-selectable-area-all] {
-      --x-list-item-cursor: pointer;
-      pointer-events: none;
+  &[navi-selectable] {
+    user-select: none;
+  }
 
-      [navi-selectable-real-input] {
-        z-index: 0;
-        outline: none;
-        opacity: 0;
-        clip-path: none;
-        cursor: var(--x-list-item-cursor);
-        pointer-events: auto;
-      }
+  &[navi-selectable-area-all] {
+    --x-list-item-cursor: pointer;
+    pointer-events: none;
 
-      /* A popup opened from the row is not part of the row: it is shown over
-         the page — in the browser's own top layer for a modal one — and only
-         happens to be declared here. pointer-events is inherited, so without
-         this it inherits the row's own "none" and nothing inside it can be
-         clicked, however far from the row it is painted. Matched on what makes
-         an element a popup to the browser rather than on navi's own attribute:
-         anything shown over the page has the same claim, navi's or not. */
-      dialog,
-      [popover] {
-        pointer-events: auto;
-      }
+    & [navi-selectable-real-input] {
+      z-index: 0;
+      opacity: 0;
+      clip-path: none;
+      cursor: var(--x-list-item-cursor);
+      pointer-events: auto;
+      outline: none;
     }
 
-    &[data-interactive] {
-      cursor: pointer;
-      user-select: none;
-    }
-    &[data-hover] {
-      --x-list-item-color: var(--list-item-color-mouse-pointed);
-      --x-list-item-background-color: var(
-        --list-item-background-color-mouse-pointed
-      );
-    }
-    &[data-pointed] {
-      --x-list-item-color: var(--list-item-color-pointed);
-      --x-list-item-background-color: var(--list-item-background-color-pointed);
-    }
-    /* No input proxy: focused,selected */
-    &:not(:has(input[navi-control-proxy-for])) {
-      &:has([navi-selectable-real-input][data-focus-visible]) {
-        --x-list-item-color: var(--list-item-color-keyboard-pointed);
-        --x-list-item-background-color: var(
-          --list-item-background-color-keyboard-pointed
-        );
-        outline-style: solid;
-        /* When outline displayed + border radius behind the outline we can see some pixels of borders + background */
-        /* To avoid this we need to hide borders and background */
-        /* border transparent + background clip padding box work */
-        /* We set background clip only here otherwise we would have the pixel issue all the time between borders and background  */
-        --x-list-item-border-color: transparent;
-        background-clip: padding-box;
-
-        /* Selected must win over keyboard-pointed */
-        &[data-selected] {
-          --x-list-item-background-color: var(
-            --list-item-background-color-selected,
-            var(--list-item-background-color-keyboard-pointed)
-          );
-          --x-list-item-color: var(
-            --list-item-color-selected,
-            var(--list-item-color-keyboard-pointed)
-          );
-        }
-      }
-
-      &[data-selected] {
-        --x-list-item-border-color: var(--list-item-border-color-selected);
-        --x-list-item-background-color: var(
-          --list-item-background-color-selected
-        );
-        --x-list-item-color: var(--list-item-color-selected);
-
-        &[data-hover] {
-          --x-list-item-background-color: var(
-            --list-item-background-color-selected,
-            var(--list-item-background-color-mouse-pointed)
-          ) !important;
-        }
-
-        input,
-        .navi_picker_content {
-          color: revert;
-        }
-      }
-    }
-
-    &[data-disabled] {
-      --x-list-item-color: var(--list-item-color-disabled);
-      --x-list-item-background-color: var(
-        --list-item-background-color-disabled
-      );
-      --x-list-item-cursor: default;
-      pointer-events: none;
-    }
-    &[data-readonly] {
-      --x-list-item-color: var(--list-item-color-disabled);
-      --x-list-item-cursor: default;
+    & dialog, & [popover] {
+      pointer-events: auto;
     }
   }
+
+  &[data-interactive] {
+    cursor: pointer;
+    user-select: none;
+  }
+
+  &[data-hover] {
+    --x-list-item-color: var(--list-item-color-mouse-pointed);
+    --x-list-item-background-color: var(--list-item-background-color-mouse-pointed);
+  }
+
+  &[data-pointed] {
+    --x-list-item-color: var(--list-item-color-pointed);
+    --x-list-item-background-color: var(--list-item-background-color-pointed);
+  }
+
+  &:not(:has(input[navi-control-proxy-for])) {
+    &:has([navi-selectable-real-input][data-focus-visible]) {
+      --x-list-item-color: var(--list-item-color-keyboard-pointed);
+      --x-list-item-background-color: var(--list-item-background-color-keyboard-pointed);
+      --x-list-item-border-color: transparent;
+      background-clip: padding-box;
+      outline-style: solid;
+
+      &[data-selected] {
+        --x-list-item-background-color: var(--list-item-background-color-selected, var(--list-item-background-color-keyboard-pointed));
+        --x-list-item-color: var(--list-item-color-selected, var(--list-item-color-keyboard-pointed));
+      }
+    }
+
+    &[data-selected] {
+      --x-list-item-border-color: var(--list-item-border-color-selected);
+      --x-list-item-background-color: var(--list-item-background-color-selected);
+      --x-list-item-color: var(--list-item-color-selected);
+
+      &[data-hover] {
+        --x-list-item-background-color: var(--list-item-background-color-selected, var(--list-item-background-color-mouse-pointed)) !important;
+      }
+
+      & input, & .navi_picker_content {
+        color: revert;
+      }
+    }
+  }
+
+  &[data-disabled] {
+    --x-list-item-color: var(--list-item-color-disabled);
+    --x-list-item-background-color: var(--list-item-background-color-disabled);
+    --x-list-item-cursor: default;
+    pointer-events: none;
+  }
+
+  &[data-readonly] {
+    --x-list-item-color: var(--list-item-color-disabled);
+    --x-list-item-cursor: default;
+  }
+}
 `;
 const SelectableListMultipleContext = createContext(false);
 // A single-select list whose selected row, pressed again, lets go: what its
@@ -62106,703 +60478,423 @@ const ListRowContext = createContext(null);
 // row takes its place in the collection by slot: the place is then the list's
 // to move, and the row's to follow — see createListVirtual.
 const ListSlotContext = createContext(null);
-const css$x = /* css */`
-  @layer navi {
-    .navi_list_container {
-      --list-outline-width: 1px;
-      --list-border-radius: 4px;
-      /* A list is a box with rows in it: it says where it starts and where it
-         ends. The default is on the -default var, not on --list-border-width
-         itself, so that the borderWidth prop (which writes the latter inline)
-         wins wherever a default is put in its way — see the popup case. */
-      --list-border-width-default: 1px;
-      --list-border-color: light-dark(#ccc, #555);
-      --list-background-color: light-dark(#fff, #1e1e1e);
-
-      /* A sticky part paints over the rows only while it IS stuck — which is
-         what --navi-z-index-sticky says it is for ("kept stuck while something
-         scrolls under it"). At rest it is a block in the flow with nothing
-         passing under it, and a 10 there is what slices whatever a neighbouring
-         row lets out of its box: a focus ring, a badge, a stamp. See
-         useStuckStickyParts for the navi-stuck attribute these read.
-
-         With "auto" at rest, a card whose badge overflows into the label
-         below it gets past it by saying z-index: 1 on that badge — a literal,
-         in the card, against its own neighbour, which is what docs/z_index.md
-         asks for. These variables are the escape hatch for what that cannot
-         reach, not the usual answer. Mind that a negative value here is
-         compared against the page: it needs a stacking context between the
-         label and the nearest opaque background, or the label goes behind that
-         background and disappears. */
-      --list-header-z-index: auto;
-      --list-header-z-index-stuck: var(--navi-z-index-sticky);
-      --list-footer-z-index: auto;
-      --list-footer-z-index-stuck: var(--navi-z-index-sticky);
-      --list-group-label-z-index: auto;
-      --list-group-label-z-index-stuck: var(--navi-z-index-sticky);
-    }
-    .navi_list_item {
-      --list-item-padding-x-default: 0px;
-      --list-item-padding-y-default: 0px;
-      --list-item-color: inherit;
-      --list-item-font-weight: inherit;
-      --list-item-background-color: transparent;
-
-      /* Highlight (CSS Highlight API match) */
-      --list-item-color-highlight: inherit;
-      --list-item-background-color-highlight: #ffe066;
-
-      /* Here to be overridable by box layout props such as flex */
-      display: inline-block;
-    }
-  }
-
-  .navi_list_item_group_label {
-    --list-group-label-background-color: var(--list-background-color);
-  }
-  .navi_list_item_header {
-    background: var(--list-background-color);
-  }
-  .navi_list_item_footer {
-    background: var(--list-background-color);
-  }
-
-  /* A list that IS the content of a popup draws no border of its own: the popup
-     already drew it, and two frames around the same rows read as a box in a box
-     (the Picker's list, a select's suggestions). Only the default is dropped —
-     a borderWidth asked for explicitly still applies. */
-  :where([popover], dialog) > .navi_list_container,
-  .navi_list_container[popover] {
-    --list-border-width-default: 0px;
-  }
-
-  /* Same reasoning, for the corners: a dialog squares off whatever corner
-     lands on its container's own (see the data-flush-* rules in dialog.jsx —
-     a bottom sheet from dockedOnSmallTouchScreen squares its two bottom ones). A list
-     drawn right against that corner has to square the same one, otherwise its
-     own radius carves a notch out of the popup's square corner. Direct child
-     only: any deeper and the list is presumably inset from the popup's edge,
-     where its own radius is the right one. */
-  .navi_dialog[data-flush-top][data-flush-left] > .navi_list_container {
-    border-top-left-radius: 0;
-  }
-  .navi_dialog[data-flush-top][data-flush-right] > .navi_list_container {
-    border-top-right-radius: 0;
-  }
-  .navi_dialog[data-flush-bottom][data-flush-right] > .navi_list_container {
-    border-bottom-right-radius: 0;
-  }
-  .navi_dialog[data-flush-bottom][data-flush-left] > .navi_list_container {
-    border-bottom-left-radius: 0;
-  }
-
+const css$x = /* css */`@layer navi {
   .navi_list_container {
-    --x-list-border-radius: var(--list-border-radius);
-    --x-list-border-width: var(
-      --list-border-width,
-      var(--list-border-width-default)
-    );
-    --x-list-border-color: var(--list-border-color);
-    --x-list-background-color: var(--list-background-color);
-    /* When typing inside an input browser tries to keep caret visible */
-    /* For input within a sticky element inside a scrollable container */
-    /* Browser will try to scroll that input into view */
-    /* When that scrollable container has a scroll padding it causes scroll on each keystroke */
-    /* Even putting a scroll margin on the input won't fix */
-    /* The only solution is to use scroll-margins on each item that can scroll */
-    /* This is why these props are named list-scroll-spacing-top and applied via scroll-margin on items */
-    --x-list-scroll-spacing-top: calc(
-      var(--list-header-height, 0px) + var(--list-scroll-padding-top, 0px)
-    );
-    --x-list-scroll-spacing-bottom: calc(
-      var(--list-footer-height, 0px) + var(--list-scroll-padding-bottom, 0px)
-    );
-    --x-list-scroll-spacing-left: calc(
-      var(--list-header-width, 0px) + var(--list-scroll-padding-left, 0px)
-    );
-    --x-list-scroll-spacing-right: calc(
-      var(--list-footer-width, 0px) + var(--list-scroll-padding-right, 0px)
-    );
-
-    display: flex;
-    min-width: 0;
-    /* fit-content by default, but never wider than the parent */
-    max-width: 100%;
-    flex-direction: column;
-    background-color: var(--x-list-background-color);
-    border: var(--x-list-border-width) solid var(--x-list-border-color);
-    /* Squared from the outside, corner by corner: whoever draws the surface
-       the list is laid on says which corners are the list's to draw (a popup's
-       body does, see box.jsx), and each corner falls back to the list's own
-       radius when nothing asks for anything. */
-    border-top-left-radius: var(
-      --x-corner-top-left-radius,
-      var(--x-list-border-radius)
-    );
-    border-top-right-radius: var(
-      --x-corner-top-right-radius,
-      var(--x-list-border-radius)
-    );
-    border-bottom-right-radius: var(
-      --x-corner-bottom-right-radius,
-      var(--x-list-border-radius)
-    );
-    border-bottom-left-radius: var(
-      --x-corner-bottom-left-radius,
-      var(--x-list-border-radius)
-    );
-
-    transition: opacity 0.2s ease;
-    /* overflow:hidden is required on the container (not the inner scroll element)
-       so that border-radius clips the content correctly. Without it, items near
-       the corners would visually overflow the rounded corners during scroll. */
-    overflow: hidden;
-
-    /* overflow="visible" asks for the exact opposite of the clipping above: the
-       content must be free to paint outside the list's box and to overflow into
-       whatever scroll container is around it. Setting it on the inner scroll
-       element alone changes nothing visible — this frame would clip it right
-       back — so the frame has to let go of it too, and with it of the rounded
-       corners it was clipping to. The two cannot both be true.
-       An axis asked to be visible pairs with "clip" on the other one rather
-       than "hidden": mixing visible with a scrollport value makes the browser
-       compute the visible one to "auto" (a scrollport again), while
-       visible/clip is the one pairing it keeps as written. */
-    &[data-overflow-visible="both"] {
-      overflow: visible;
-    }
-    &[data-overflow-visible="x"] {
-      overflow-x: visible;
-      overflow-y: clip;
-    }
-    &[data-overflow-visible="y"] {
-      overflow-x: clip;
-      overflow-y: visible;
-    }
-
-    .navi_list_scroll_container {
-      /* The ask stops here: this element is inside the list's frame, so a row
-         or a control it holds is not at the surface's corner. */
-      --x-corner-top-left-radius: initial;
-      --x-corner-top-right-radius: initial;
-      --x-corner-bottom-right-radius: initial;
-      --x-corner-bottom-left-radius: initial;
-
-      width: inherit;
-      min-width: inherit;
-      max-width: var(--list-max-width, inherit);
-      max-height: var(--list-max-height, inherit);
-      flex-wrap: inherit;
-      overflow: auto;
-      /* The list keeps its own rows still (see the scroll anchoring in
-         list.jsx): two of them doing it at once compensate for each other's
-         compensation, and the browser's own is blind to the fillers resizing
-         under it anyway. */
-      overflow-anchor: none;
-      overscroll-behavior: inherit; /* inherit select behavior */
-      scrollbar-width: inherit;
-    }
-
-    /* Any scroller other than "self": the list does not scroll, something
-       around it does. Its own scroll box must then be transparent to
-       layout — otherwise it would cap the list at a height of its own and
-       start a second, nested scroll inside the page's. */
-    &[data-scroller] {
-      max-height: none;
-      overflow: visible;
-
-      .navi_list_scroll_container {
-        max-height: none;
-        overflow: visible;
-      }
-    }
-
-    /* A scroll moves the rows under a motionless pointer: the browser then
-       fires mouseenter/mouseleave for every row crossing the cursor, and
-       whoever reacts to hover (a highlight elsewhere, a prefetch, a map) pays
-       for those while the scroll animation runs. Out of hit-testing, the
-       browser suppresses them all — see utils/scroll_activity.js for who
-       writes navi-scrolling. The scroller itself keeps its own hit-testing, so
-       the wheel and the scrollbar go on reaching it. */
-    &:not([navi-hover-while-scrolling]) .navi_list:is([navi-scrolling] *) {
-      pointer-events: none;
-    }
-
-    /* Scrolling with the page means sticking to the viewport, and whatever the
-       app puts in front of that viewport — a FixedBar, a band of its own — is
-       in front of the label too: without the offset a sticky label lands behind
-       it. The safe area is what that adds up to (see layout/safe_area.js) and
-       it is 0px when nothing covers the top. */
-    &[data-scroller="document"] {
-      --x-list-group-label-top: var(--navi-safe-area-inset-top);
-    }
-
-    &[data-expand-x] {
-      width: 100%;
-    }
-    &[data-expand-y] {
-      --list-max-height: none;
-
-      /* expandY grows the container to fill its parent (flex-grow, applied by
-         Box). The scroll container must then fill that grown height and take
-         over the internal scroll — flex:1 fills it, min-height:0 lets it shrink
-         below its content so overflow:auto scrolls instead of the content
-         pushing past the container (which overflow:hidden would just clip). */
-      .navi_list_scroll_container {
-        min-height: 0;
-        flex: 1;
-      }
-    }
-    /* :not(:has(...)) — a header or a footer is content of its own (a title, a
-       count, an "add" call to action) and is often most useful exactly when the
-       items are gone, so a list carrying one is never "nothing to display".
-       nothingToDisplay only ever counts items, which is right for it: this is
-       the one place that knows the chrome is there too. */
-    &[navi-nothing-to-display]:not(
-        :has(.navi_list_item_header, .navi_list_item_footer)
-      ) {
-      display: none;
-    }
-    &[popover] {
-      position: absolute;
-      inset: unset;
-      display: none;
-      max-width: 95vw;
-      margin: 0;
-      padding: 0;
-
-      &:popover-open {
-        display: flex;
-      }
-      .navi_list {
-        width: 100%;
-      }
-    }
-  }
-
-  .navi_list {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-    flex-wrap: inherit;
-    list-style: none;
-    outline: none; /* Focus is displayed on the container */
+    --list-outline-width: 1px;
+    --list-border-radius: 4px;
+    --list-border-width-default: 1px;
+    --list-border-color: light-dark(#ccc, #555);
+    --list-background-color: light-dark(#fff, #1e1e1e);
+    --list-header-z-index: auto;
+    --list-header-z-index-stuck: var(--navi-z-index-sticky);
+    --list-footer-z-index: auto;
+    --list-footer-z-index-stuck: var(--navi-z-index-sticky);
+    --list-group-label-z-index: auto;
+    --list-group-label-z-index-stuck: var(--navi-z-index-sticky);
   }
 
   .navi_list_item {
-    --x-list-item-color: var(--list-item-color);
-    --x-list-item-background-color: var(--list-item-background-color);
-    --x-list-item-font-weight: var(--list-item-font-weight);
-    --x-list-item-border-width: var(--list-item-border-width, 0px);
-    --x-list-item-border-color: var(--list-item-border-color, black);
+    --list-item-padding-x-default: 0px;
+    --list-item-padding-y-default: 0px;
+    --list-item-color: inherit;
+    --list-item-font-weight: inherit;
+    --list-item-background-color: transparent;
+    --list-item-color-highlight: inherit;
+    --list-item-background-color-highlight: #ffe066;
+    display: inline-block;
+  }
+}
 
-    box-sizing: border-box;
-    min-width: 0;
-    max-width: 100%;
-    padding-top: var(
-      --list-item-padding-top,
-      var(
-        --list-item-padding-y,
-        var(--list-item-padding, var(--list-item-padding-y-default))
-      )
-    );
-    padding-right: var(
-      --list-item-padding-right,
-      var(
-        --list-item-padding-x,
-        var(--list-item-padding, var(--list-item-padding-x-default))
-      )
-    );
-    padding-bottom: var(
-      --list-item-padding-bottom,
-      var(
-        --list-item-padding-y,
-        var(--list-item-padding, var(--list-item-padding-y-default))
-      )
-    );
-    padding-left: var(
-      --list-item-padding-left,
-      var(
-        --list-item-padding-x,
-        var(--list-item-padding, var(--list-item-padding-x-default))
-      )
-    );
-    color: var(--x-list-item-color);
-    font-weight: var(--x-list-item-font-weight);
-    background-color: var(--x-list-item-background-color);
-    border: var(--x-list-item-border-width) solid
+.navi_list_item_group_label {
+  --list-group-label-background-color: var(--list-background-color);
+}
+
+.navi_list_item_header, .navi_list_item_footer {
+  background: var(--list-background-color);
+}
+
+:where([popover], dialog) > .navi_list_container, .navi_list_container[popover] {
+  --list-border-width-default: 0px;
+}
+
+.navi_dialog[data-flush-top][data-flush-left] > .navi_list_container {
+  border-top-left-radius: 0;
+}
+
+.navi_dialog[data-flush-top][data-flush-right] > .navi_list_container {
+  border-top-right-radius: 0;
+}
+
+.navi_dialog[data-flush-bottom][data-flush-right] > .navi_list_container {
+  border-bottom-right-radius: 0;
+}
+
+.navi_dialog[data-flush-bottom][data-flush-left] > .navi_list_container {
+  border-bottom-left-radius: 0;
+}
+
+.navi_list_container {
+  --x-list-border-radius: var(--list-border-radius);
+  --x-list-border-width: var(--list-border-width, var(--list-border-width-default));
+  --x-list-border-color: var(--list-border-color);
+  --x-list-background-color: var(--list-background-color);
+  --x-list-scroll-spacing-top: calc(var(--list-header-height, 0px) + var(--list-scroll-padding-top, 0px));
+  --x-list-scroll-spacing-bottom: calc(var(--list-footer-height, 0px) + var(--list-scroll-padding-bottom, 0px));
+  --x-list-scroll-spacing-left: calc(var(--list-header-width, 0px) + var(--list-scroll-padding-left, 0px));
+  --x-list-scroll-spacing-right: calc(var(--list-footer-width, 0px) + var(--list-scroll-padding-right, 0px));
+  background-color: var(--x-list-background-color);
+  border: var(--x-list-border-width) solid var(--x-list-border-color);
+  border-top-left-radius: var(--x-corner-top-left-radius, var(--x-list-border-radius));
+  border-top-right-radius: var(--x-corner-top-right-radius, var(--x-list-border-radius));
+  border-bottom-right-radius: var(--x-corner-bottom-right-radius, var(--x-list-border-radius));
+  border-bottom-left-radius: var(--x-corner-bottom-left-radius, var(--x-list-border-radius));
+  flex-direction: column;
+  min-width: 0;
+  max-width: 100%;
+  transition: opacity .2s;
+  display: flex;
+  overflow: hidden;
+
+  &[data-overflow-visible="both"] {
+    overflow: visible;
+  }
+
+  &[data-overflow-visible="x"] {
+    overflow: visible clip;
+  }
+
+  &[data-overflow-visible="y"] {
+    overflow: clip visible;
+  }
+
+  & .navi_list_scroll_container {
+    --x-corner-top-left-radius: initial;
+    --x-corner-top-right-radius: initial;
+    --x-corner-bottom-right-radius: initial;
+    --x-corner-bottom-left-radius: initial;
+    width: inherit;
+    min-width: inherit;
+    max-width: var(--list-max-width, inherit);
+    max-height: var(--list-max-height, inherit);
+    flex-wrap: inherit;
+    overflow-anchor: none;
+    overscroll-behavior: inherit;
+    scrollbar-width: inherit;
+    overflow: auto;
+  }
+
+  &[data-scroller] {
+    max-height: none;
+    overflow: visible;
+
+    & .navi_list_scroll_container {
+      max-height: none;
+      overflow: visible;
+    }
+  }
+
+  &:not([navi-hover-while-scrolling]) .navi_list:is([navi-scrolling] *) {
+    pointer-events: none;
+  }
+
+  &[data-scroller="document"] {
+    --x-list-group-label-top: var(--navi-safe-area-inset-top);
+  }
+
+  &[data-expand-x] {
+    width: 100%;
+  }
+
+  &[data-expand-y] {
+    --list-max-height: none;
+
+    & .navi_list_scroll_container {
+      flex: 1;
+      min-height: 0;
+    }
+  }
+
+  &[navi-nothing-to-display]:not(:has(.navi_list_item_header, .navi_list_item_footer)) {
+    display: none;
+  }
+
+  &[popover] {
+    inset: unset;
+    max-width: 95vw;
+    margin: 0;
+    padding: 0;
+    display: none;
+    position: absolute;
+
+    &:popover-open {
+      display: flex;
+    }
+
+    & .navi_list {
+      width: 100%;
+    }
+  }
+}
+
+.navi_list {
+  box-sizing: border-box;
+  flex-wrap: inherit;
+  outline: none;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.navi_list_item {
+  --x-list-item-color: var(--list-item-color);
+  --x-list-item-background-color: var(--list-item-background-color);
+  --x-list-item-font-weight: var(--list-item-font-weight);
+  --x-list-item-border-width: var(--list-item-border-width, 0px);
+  --x-list-item-border-color: var(--list-item-border-color, black);
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+  padding-top: var(--list-item-padding-top, var(--list-item-padding-y, var(--list-item-padding, var(--list-item-padding-y-default))));
+  padding-right: var(--list-item-padding-right, var(--list-item-padding-x, var(--list-item-padding, var(--list-item-padding-x-default))));
+  padding-bottom: var(--list-item-padding-bottom, var(--list-item-padding-y, var(--list-item-padding, var(--list-item-padding-y-default))));
+  padding-left: var(--list-item-padding-left, var(--list-item-padding-x, var(--list-item-padding, var(--list-item-padding-x-default))));
+  color: var(--x-list-item-color);
+  font-weight: var(--x-list-item-font-weight);
+  background-color: var(--x-list-item-background-color);
+  border: var(--x-list-item-border-width) solid
       var(--x-list-item-border-color);
-    border-radius: var(--list-item-border-radius, 0px);
-    /*
-    CSS impossible d'obtenir un layout qui ferait en gros:
-    width = max(min(max-content, 100%), unbreakable-content)
-    Donc 3 options:
-    - Laisser le contenu overflow
-      - moche, background ne suit pas
-      -> NOPE
-    - Force overflow hidden + ellipsis
-      - casse la lisibilité des mots insécables
-      - possible d'optin en utilisant maxLines sur le ListItem
-      -> Bien mais pas par défaut
-    - Forcer le retour a la ligne des mot inécables
-      - Aucun des inconvénient ci dessus 
-      -> Comportement par défaut
-    */
-    overflow-wrap: anywhere;
-    /* When list has sticky header/footer, put a scroll padding */
-    scroll-margin-top: var(--x-list-scroll-spacing-top);
-    scroll-margin-right: var(--x-list-scroll-spacing-right);
-    scroll-margin-bottom: var(--x-list-scroll-spacing-bottom);
-    scroll-margin-left: var(--x-list-scroll-spacing-left);
+  border-radius: var(--list-item-border-radius, 0px);
+  overflow-wrap: anywhere;
+  scroll-margin-top: var(--x-list-scroll-spacing-top);
+  scroll-margin-right: var(--x-list-scroll-spacing-right);
+  scroll-margin-bottom: var(--x-list-scroll-spacing-bottom);
+  scroll-margin-left: var(--x-list-scroll-spacing-left);
 
-    /* The "invisible_and_inert" search no-match mode keeps items in the DOM
-       (to preserve layout) but hides them — it sets BOTH aria-hidden and inert.
-       Scope to that pair so the presentation placeholders that are only
-       aria-hidden (skeleton rows, the loader) stay visible. */
+  &[aria-hidden="true"][inert] {
+    opacity: 0;
+  }
+
+  &[navi-muted] {
+    opacity: .35;
+  }
+
+  & .navi_list_item_error_message {
+    flex: 1;
+  }
+
+  & .navi_list_item_error_dismiss {
+    color: inherit;
+    font: inherit;
+    opacity: .8;
+    cursor: pointer;
+    background: none;
+    border: 1px solid;
+    border-radius: 4px;
+    flex: none;
+    padding: 2px 8px;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+
+  &[navi-error] {
+    color: light-dark(#b91c1c, #fca5a5);
+    background: light-dark(#fef2f2, #7f1d1d40);
+    align-items: flex-start;
+    gap: 8px;
+    display: flex;
+  }
+
+  &[navi-readonly] {
+    opacity: .6;
+    cursor: default;
+    user-select: none;
+    position: relative;
+  }
+}
+
+.navi_list_virtual_filler {
+  height: var(--size-to-fill, 0px);
+  flex-shrink: 0;
+  list-style: none;
+  display: inline-block;
+}
+
+.navi_list_container[data-horizontal] {
+  --list-max-height: none;
+
+  & .navi_list_virtual_filler {
+    width: var(--size-to-fill, 0px);
+    height: 100%;
+  }
+}
+
+.navi_list[navi-box-flow="grid"] > .navi_list_virtual_filler, .navi_list[navi-box-flow="grid"] > .navi_separator {
+  grid-column: 1 / -1;
+}
+
+.navi_list_item_header {
+  z-index: var(--list-header-z-index);
+  order: -2;
+  position: sticky;
+  top: 0;
+  left: 0;
+
+  &[navi-stuck] {
+    z-index: var(--list-header-z-index-stuck);
+  }
+}
+
+.navi_list_fallback, .navi_list_search_fallback {
+  color: light-dark(#888, #aaa);
+  order: -1;
+
+  &[navi-default] {
+    padding-top: var(--list-item-padding-top, var(--list-item-padding-y, var(--list-item-padding, var(--list-item-padding-y-default))));
+    padding-right: var(--list-item-padding-right, var(--list-item-padding-x, var(--list-item-padding, var(--list-item-padding-x-default))));
+    padding-bottom: var(--list-item-padding-bottom, var(--list-item-padding-y, var(--list-item-padding, var(--list-item-padding-y-default))));
+    padding-left: var(--list-item-padding-left, var(--list-item-padding-x, var(--list-item-padding, var(--list-item-padding-x-default))));
+    text-align: center;
+    user-select: none;
+    display: inline;
+  }
+}
+
+.navi_list_loader {
+  color: light-dark(#888, #aaa);
+  justify-content: center;
+  align-items: center;
+  padding: 12px;
+  display: flex;
+}
+
+.navi_list_loading_fallback {
+  display: flex;
+}
+
+.navi_list_failed_rows {
+  height: var(--size-to-fill, 0px);
+  flex-shrink: 0;
+  list-style: none;
+  display: block;
+
+  & > * {
+    position: sticky;
+    top: 0;
+  }
+}
+
+.navi_list_error {
+  color: light-dark(#b91c1c, #fca5a5);
+  font-size: .9em;
+  line-height: var(--navi-line-height);
+  background: light-dark(#fef2f2, #7f1d1d40);
+  border: 1px solid light-dark(#fecaca, #f8717166);
+  border-radius: 6px;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 8px;
+  padding: 10px 12px;
+  display: flex;
+}
+
+.navi_list_error_icon {
+  font-size: 1em;
+  line-height: var(--navi-line-height);
+  flex: none;
+}
+
+.navi_list_item > .navi_loading_outline_wrapper, .navi_list_item > * > .navi_loading_outline_wrapper, .navi_list_item_header > * > .navi_loading_outline_wrapper, .navi_list_item_footer > * > .navi_loading_outline_wrapper {
+  --loading-outline-min-inset: 0px;
+}
+
+.navi_list_item_footer {
+  z-index: var(--list-footer-z-index);
+  order: 2;
+  position: sticky;
+  bottom: 0;
+  right: 0;
+
+  &[navi-stuck] {
+    z-index: var(--list-footer-z-index-stuck);
+  }
+}
+
+::highlight(navi-search-match) {
+  color: var(--list-item-color-highlight);
+  background-color: var(--list-item-background-color-highlight);
+}
+
+.navi_list_item_group {
+  min-width: 100%;
+
+  & .navi_list_item_group_label {
+    top: var(--list-group-label-top, var(--x-list-group-label-top, 0px));
+    z-index: var(--list-group-label-z-index);
+    background-color: var(--list-group-label-background-color);
+    user-select: none;
+    display: block;
+    position: sticky;
+
+    &[navi-stuck] {
+      z-index: var(--list-group-label-z-index-stuck);
+    }
+
+    &[navi-default] {
+      color: light-dark(#888, #aaa);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      padding: 4px 12px 2px;
+      font-size: .75em;
+      font-weight: 600;
+    }
+
     &[aria-hidden="true"][inert] {
       opacity: 0;
     }
-
-    &[navi-muted] {
-      opacity: 0.35;
-    }
-
-    /* A row that cannot be acted on right now (see ListItemReal): it says so
-       by dimming, and stops taking clicks — including on the buttons it holds,
-       which is the whole point (the row is what is read-only, not one of its
-       parts). Positioned so the loading outline it may draw has a box to sit
-       on. */
-    /* Same inline callout as the list's own error (.navi_list_error), scoped to
-       one row. The message takes the room, the way out sits at the end. */
-    .navi_list_item_error_message {
-      flex: 1;
-    }
-    .navi_list_item_error_dismiss {
-      padding: 2px 8px;
-      flex: none;
-      color: inherit;
-      font: inherit;
-      background: transparent;
-      border: 1px solid currentColor;
-      border-radius: 4px;
-      opacity: 0.8;
-      cursor: pointer;
-
-      &:hover {
-        opacity: 1;
-      }
-    }
-
-    &[navi-error] {
-      display: flex;
-      align-items: flex-start;
-      gap: 8px;
-      color: light-dark(#b91c1c, #fca5a5);
-      background: light-dark(#fef2f2, rgba(127, 29, 29, 0.25));
-    }
-
-    &[navi-readonly] {
-      position: relative;
-      opacity: 0.6;
-      cursor: default;
-      /* NOT pointer-events: none — the press has to reach the row so it can
-         say why it does nothing (see ListItemReal). What the row holds is
-         neutralized by the capture-phase handlers there instead. */
-      user-select: none;
-    }
   }
 
-  /* Virtual scroll fillers — must remain invisible.
-     The browser may briefly flash them during scroll before the render window
-     updates, so giving them a visible background would cause visual glitches. */
-  .navi_list_virtual_filler {
-    display: inline-block;
-    height: var(--size-to-fill, 0px);
-    flex-shrink: 0; /* prevent eventual flex parent from shrinking fillers */
+  & .navi_list_item_group_list {
+    flex-direction: column;
+    width: 100%;
+    margin: 0;
+    padding: 0;
     list-style: none;
-  }
-  .navi_list_container[data-horizontal] {
-    --list-max-height: none;
-
-    .navi_list_virtual_filler {
-      width: var(--size-to-fill, 0px);
-      height: 100%;
-    }
-  }
-
-  /* List's own columns prop (see ListColumnsContext) sets grid on .navi_list
-     itself — Box reflects that as navi-box-flow="grid" (see box.jsx), which
-     this keys off directly rather than threading the columns value through
-     React just for this. A grid track only ever spans the single column it
-     is placed in by default, so without this the filler would collapse into
-     just the first column's width instead of reserving height across the
-     whole row. */
-  .navi_list[navi-box-flow="grid"] > .navi_list_virtual_filler {
-    grid-column: 1 / -1;
-  }
-
-  /* Same reasoning as the filler rule above, for the separator (the default
-     Separator rendered between items when List's own separator prop is
-     set): a grid track only ever spans the single column it is placed in
-     by default, so without this it would collapse into just the first
-     column's width instead of the full row. */
-  .navi_list[navi-box-flow="grid"] > .navi_separator {
-    grid-column: 1 / -1;
-  }
-
-  /* Empty state — hidden by default, shown when no list items are rendered.
-     order: 1 pushes fallbacks after all regular items in flex column layout.
-     The list children are open-ended (headers, presentation items, real items),
-     so we cannot control where the consumer places the fallback nodes in the DOM.
-     Using order ensures fallbacks always appear after items regardless of DOM order.
-     matchFallback intentionally shares the same order as fallback so it appears
-     at the same visual position — after an input if present but before any items
-     still displayed (non-matching items remain in DOM, invisible_and_inert or muted):
-       1. Input (sticky header, order: -2)
-       2. searchFallback (order: -1)
-       3. invisible/dim items (regular order, after DOM flow)
-       4. HOT FIX OF THE DEAD for bottom filler + preact issue: order: 1
-       5. sticky footer (order: 2)
-  */
-  /* order: 0 keeps the header pinned before fallbacks (order: 1) in flex order,
-     ensuring the header (e.g. a search input) always appears above them. */
-  .navi_list_item_header {
-    position: sticky;
-    top: 0;
-    left: 0;
-    z-index: var(--list-header-z-index);
-    order: -2;
-
-    &[navi-stuck] {
-      z-index: var(--list-header-z-index-stuck);
-    }
-  }
-  .navi_list_fallback,
-  .navi_list_search_fallback {
-    order: -1;
-    color: light-dark(#888, #aaa);
-    &[navi-default] {
-      display: inline;
-      padding-top: var(
-        --list-item-padding-top,
-        var(
-          --list-item-padding-y,
-          var(--list-item-padding, var(--list-item-padding-y-default))
-        )
-      );
-      padding-right: var(
-        --list-item-padding-right,
-        var(
-          --list-item-padding-x,
-          var(--list-item-padding, var(--list-item-padding-x-default))
-        )
-      );
-      padding-bottom: var(
-        --list-item-padding-bottom,
-        var(
-          --list-item-padding-y,
-          var(--list-item-padding, var(--list-item-padding-y-default))
-        )
-      );
-      padding-left: var(
-        --list-item-padding-left,
-        var(
-          --list-item-padding-x,
-          var(--list-item-padding, var(--list-item-padding-x-default))
-        )
-      );
-      text-align: center;
-      user-select: none;
-    }
-  }
-  /* Loading placeholders (see List's loading / loadingFallback / renderSkeleton).
-     A skeleton row reuses <Text loading> for the shimmer bar; the loader row
-     centers a spinner; a custom loadingFallback is only given a row to live in,
-     its own markup does the layout. */
-  .navi_list_loader {
     display: flex;
-    padding: 12px;
-    align-items: center;
-    justify-content: center;
-    color: light-dark(#888, #aaa);
-  }
-  .navi_list_loading_fallback {
-    display: flex;
-  }
-  /* The room of rows that were asked for and never came (see List.Items). It
-     keeps their height — the scrollbar has no reason to move because a fetch
-     failed — and what it says is stuck to the top of it, so it is on screen for
-     as long as the hole is. */
-  .navi_list_failed_rows {
-    display: block;
-    height: var(--size-to-fill, 0px);
-    flex-shrink: 0;
-    list-style: none;
 
-    > * {
-      position: sticky;
-      top: 0;
+    & .navi_list_item {
+      scroll-margin-top: calc(var(--x-list-scroll-spacing-top) + var(--list-group-label-height, 0px));
+      scroll-margin-left: calc(var(--x-list-scroll-spacing-left) + var(--list-group-label-width, 0px));
     }
   }
 
-  /* Error state (List error prop): an inline callout describing why the list
-     failed to load, shown in place of the items. */
-  .navi_list_error {
-    display: flex;
-    margin: 8px;
-    padding: 10px 12px;
-    align-items: flex-start;
-    gap: 8px;
-    color: light-dark(#b91c1c, #fca5a5);
-    font-size: 0.9em;
-    line-height: var(--navi-line-height);
-    background: light-dark(#fef2f2, rgba(127, 29, 29, 0.25));
-    border: 1px solid light-dark(#fecaca, rgba(248, 113, 113, 0.4));
-    border-radius: 6px;
+  &[data-hidden-while-empty]:not(:has([navi-list-item-real])) {
+    display: none;
   }
-  .navi_list_error_icon {
-    flex: none;
-    font-size: 1em;
-    line-height: var(--navi-line-height);
-  }
-  /* Same rule as [data-scrollable] in box.jsx, said again for this scroller:
-     what an item holds IS against the edge of the scroll container — the list
-     element between the two is markup, not spacing — so its loading outline
-     stays inside its own box rather than raising a scrollbar. */
-  .navi_list_item > .navi_loading_outline_wrapper,
-  .navi_list_item > * > .navi_loading_outline_wrapper,
-  .navi_list_item_header > * > .navi_loading_outline_wrapper,
-  .navi_list_item_footer > * > .navi_loading_outline_wrapper {
-    --loading-outline-min-inset: 0px;
-  }
+}
 
-  /* order: 2 pins the footer after fallbacks (order: 1) and all items. */
-  .navi_list_item_footer {
-    position: sticky;
-    right: 0;
-    bottom: 0;
-    z-index: var(--list-footer-z-index);
-    order: 2;
+@supports (view-transition-group: contain) {
+  :root:not([data-navi-route-transition], [data-navi-route-travel]) .navi_list_container[data-item-transition] {
+    view-transition-name: match-element;
+    view-transition-class: navi_list_transition;
+    view-transition-group: contain;
 
-    &[navi-stuck] {
-      z-index: var(--list-footer-z-index-stuck);
+    & [data-view-transition-name] {
+      view-transition-name: attr(data-view-transition-name type(<custom-ident>));
+      view-transition-class: navi_list_item;
     }
   }
+}
 
-  ::highlight(navi-search-match) {
-    color: var(--list-item-color-highlight);
-    background-color: var(--list-item-background-color-highlight);
-  }
+::view-transition-group-children(.navi_list_transition) {
+  overflow: clip;
+}
 
-  /* Hide groups that have no rendered items. */
-  .navi_list_item_group {
-    min-width: 100%;
-
-    .navi_list_item_group_label {
-      position: sticky;
-      top: var(--list-group-label-top, var(--x-list-group-label-top, 0px));
-      z-index: var(--list-group-label-z-index);
-      display: block;
-      background-color: var(--list-group-label-background-color);
-      user-select: none;
-
-      &[navi-stuck] {
-        z-index: var(--list-group-label-z-index-stuck);
-      }
-
-      &[navi-default] {
-        padding: 4px 12px 2px;
-        color: light-dark(#888, #aaa);
-        font-weight: 600;
-        font-size: 0.75em;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-      }
-
-      /* A group whose rows all failed the search keeps its height (its rows are
-         still there, invisible) — the label must disappear with them, otherwise
-         the list shows a title standing over nothing. Same aria-hidden + inert
-         pair as the rows themselves. */
-      &[aria-hidden="true"][inert] {
-        opacity: 0;
-      }
-    }
-    .navi_list_item_group_list {
-      display: flex;
-      width: 100%;
-      margin: 0;
-      padding: 0;
-      flex-direction: column;
-      list-style: none;
-
-      /* Items inside a group must account for the sticky group label height
-         on top of the list's global header/scroll-padding spacing. */
-      .navi_list_item {
-        scroll-margin-top: calc(
-          var(--x-list-scroll-spacing-top) + var(--list-group-label-height, 0px)
-        );
-        scroll-margin-left: calc(
-          var(--x-list-scroll-spacing-left) + var(--list-group-label-width, 0px)
-        );
-      }
-    }
-
-    &[data-hidden-while-empty]:not(:has([navi-list-item-real])) {
-      display: none;
-    }
-  }
-
-  /* <List itemTransition>: the rows are named — a change the application wraps
-     in a view transition is then seen row by row — and the pictures of the rows
-     are drawn INSIDE the picture of the list, which is what lets the list's edge
-     cut them.
-
-     Whether any of it happens is decided HERE and not in JS: rows that are named
-     without being contained animate across the page (the pictures live in the
-     top layer, where no overflow of the document reaches them), which is worse
-     than not animating at all. So a browser with no nested groups gets no name
-     either, and the change simply happens.
-
-     Named for a change of the list's own, and for that alone: while the PAGES
-     are the ones moving — a route transition, a route travel — the list is part
-     of what travels, and a picture of its own is precisely what does not
-     travel. A page is carried by its own picture; anything named inside it is
-     lifted out of that picture into a group of its own, which stays where it
-     was captured while the page slides away under it. So the names are dropped
-     for the length of such a movement and the list crosses the screen with the
-     page, as a block. */
-  @supports (view-transition-group: contain) {
-    :root:not([data-navi-route-transition], [data-navi-route-travel])
-      .navi_list_container[data-item-transition] {
-      /* The list needs a name to be a group at all; which name does not matter,
-         only that no other element in the document carries it. */
-      view-transition-name: match-element;
-      view-transition-class: navi_list_transition;
-      view-transition-group: contain;
-
-      /* A row is paired across the change by the id of the item it holds, never
-         by the element that happens to hold it: rows are recycled as the list
-         scrolls, and pairing on the element would pair the wrong two. */
-      [data-view-transition-name] {
-        view-transition-name: attr(
-          data-view-transition-name type(<custom-ident>)
-        );
-        view-transition-class: navi_list_item;
-      }
-    }
-  }
-
-  /* The list's edge, during the transition. */
-  ::view-transition-group-children(.navi_list_transition) {
-    overflow: clip;
-  }
-  /* The list box is the same thing before and after — only its rows moved — and
-     a cross-fade of something onto itself is a flicker. */
-  ::view-transition-old(.navi_list_transition),
-  ::view-transition-new(.navi_list_transition) {
-    mix-blend-mode: normal;
-    animation: none;
-  }
+::view-transition-old(.navi_list_transition), ::view-transition-new(.navi_list_transition) {
+  mix-blend-mode: normal;
+  animation: none;
+}
 `;
 const ListUI = props => {
   import.meta.css = [css$x, "@jsenv/navi/src/control/list/list.jsx"];
@@ -66875,117 +64967,76 @@ const createBadgeRegistry = () => {
   };
 };
 
-installImportMetaCssBuild(import.meta);const css$w = /* css */`
-  @layer navi {
+installImportMetaCssBuild(import.meta);const css$w = /* css */`@layer navi;
+
+.navi_badge {
+  --font-size: .7em;
+  --badge-padding-x-default: .8em;
+  --badge-padding-y-default: .4em;
+  --x-badge-padding-top: var(--badge-padding-top, var(--badge-padding-y, var(--badge-padding, var(--badge-padding-y-default))));
+  --x-badge-padding-right: var(--badge-padding-right, var(--badge-padding-x, var(--badge-padding, var(--badge-padding-x-default))));
+  --x-badge-padding-bottom: var(--badge-padding-bottom, var(--badge-padding-y, var(--badge-padding, var(--badge-padding-y-default))));
+  --x-badge-padding-left: var(--badge-padding-left, var(--badge-padding-x, var(--badge-padding, var(--badge-padding-x-default))));
+  --x-background: var(--background, light-dark(#e0e0e0, #3a3a3a));
+  --x-background-color: var(--background-color, var(--x-background));
+  --x-color: var(--color, white);
+  max-width: 200px;
+  padding-top: var(--x-badge-padding-top);
+  padding-right: var(--x-badge-padding-right);
+  padding-bottom: var(--x-badge-padding-bottom);
+  padding-left: var(--x-badge-padding-left);
+  color: var(--x-color);
+  font-size: var(--font-size);
+  text-box: trim-both cap alphabetic;
+  background: var(--x-background);
+  background-color: var(--x-background-color);
+  border-radius: 1em;
+  align-items: stretch;
+  display: inline;
+  position: relative;
+
+  &[data-accent-needs-dark-fg] {
+    --x-color: var(--color, #333);
   }
-  .navi_badge {
-    --font-size: 0.7em;
-    --badge-padding-x-default: 0.8em;
-    --badge-padding-y-default: 0.4em;
 
-    /* Each side resolves the most specific value it was given, from the side
-       itself down to the axis, the shorthand, then the default. Resolved once
-       here because the close button below reuses these to cancel the badge
-       padding on the edge it sits on. */
-    --x-badge-padding-top: var(
-      --badge-padding-top,
-      var(
-        --badge-padding-y,
-        var(--badge-padding, var(--badge-padding-y-default))
-      )
-    );
-    --x-badge-padding-right: var(
-      --badge-padding-right,
-      var(
-        --badge-padding-x,
-        var(--badge-padding, var(--badge-padding-x-default))
-      )
-    );
-    --x-badge-padding-bottom: var(
-      --badge-padding-bottom,
-      var(
-        --badge-padding-y,
-        var(--badge-padding, var(--badge-padding-y-default))
-      )
-    );
-    --x-badge-padding-left: var(
-      --badge-padding-left,
-      var(
-        --badge-padding-x,
-        var(--badge-padding, var(--badge-padding-x-default))
-      )
-    );
-
-    --x-background: var(--background, light-dark(#e0e0e0, #3a3a3a));
-    --x-background-color: var(--background-color, var(--x-background));
-    /* Default: white text — works on colored backgrounds.
-       Overridden to dark when the bg is light enough (data-accent-needs-dark-fg)
-       or when no background prop is passed (data-badge-default-bg). */
-    --x-color: var(--color, white);
-
-    position: relative;
+  &[data-text-overflow] {
     display: inline;
-    max-width: 200px;
-    padding-top: var(--x-badge-padding-top);
-    padding-right: var(--x-badge-padding-right);
-    padding-bottom: var(--x-badge-padding-bottom);
-    padding-left: var(--x-badge-padding-left);
-    align-items: stretch;
-    color: var(--x-color);
-    font-size: var(--font-size);
-    /* Cuts the font's half-leading above the first line and below the last one,
-       down to cap-height/baseline: the padding becomes the only vertical space
-       and the text is exactly centered. Space between wrapped lines is left
-       untouched, unlike a line-height tweak. */
-    text-box: trim-both cap alphabetic;
-    background: var(--x-background);
-    background-color: var(--x-background-color);
-    border-radius: 1em;
 
-    /* Light colored background needs dark text */
-    &[data-accent-needs-dark-fg] {
-      --x-color: var(--color, #333);
-    }
-
-    &[data-text-overflow] {
-      display: inline;
-
-      .navi_text_overflow_wrapper {
-        /* Keep badge text and button together */
-        gap: 0;
-      }
-    }
-
-    [role="button"] {
-      display: inline-flex;
-      margin-top: calc(-1 * var(--x-badge-padding-top));
-      margin-bottom: calc(-1 * var(--x-badge-padding-bottom));
-      padding-top: var(--x-badge-padding-top);
-      padding-right: calc(var(--x-badge-padding-right) / 2);
-      padding-bottom: var(--x-badge-padding-bottom);
-      padding-left: calc(var(--x-badge-padding-left) / 2);
-      align-items: center;
-      cursor: pointer;
-      pointer-events: auto;
-      user-select: none;
-
-      &:first-child {
-        margin-left: calc(-1 * var(--x-badge-padding-left));
-        border-top-left-radius: inherit;
-        border-bottom-left-radius: inherit;
-      }
-
-      &:last-child {
-        margin-right: calc(-1 * var(--x-badge-padding-right));
-        border-top-right-radius: inherit;
-        border-bottom-right-radius: inherit;
-      }
-
-      &:hover {
-        background: rgba(0, 0, 0, 0.15);
-      }
+    & .navi_text_overflow_wrapper {
+      gap: 0;
     }
   }
+
+  & [role="button"] {
+    margin-top: calc(-1 * var(--x-badge-padding-top));
+    margin-bottom: calc(-1 * var(--x-badge-padding-bottom));
+    padding-top: var(--x-badge-padding-top);
+    padding-right: calc(var(--x-badge-padding-right) / 2);
+    padding-bottom: var(--x-badge-padding-bottom);
+    padding-left: calc(var(--x-badge-padding-left) / 2);
+    cursor: pointer;
+    pointer-events: auto;
+    user-select: none;
+    align-items: center;
+    display: inline-flex;
+
+    &:first-child {
+      margin-left: calc(-1 * var(--x-badge-padding-left));
+      border-top-left-radius: inherit;
+      border-bottom-left-radius: inherit;
+    }
+
+    &:last-child {
+      margin-right: calc(-1 * var(--x-badge-padding-right));
+      border-top-right-radius: inherit;
+      border-bottom-right-radius: inherit;
+    }
+
+    &:hover {
+      background: #00000026;
+    }
+  }
+}
 `;
 const Badge = props => {
   const badgeList = useContext(BadgeListContext);
@@ -67075,32 +65126,26 @@ const BadgeButtonUI = props => {
 };
 Badge.Button = BadgeButton;
 
-installImportMetaCssBuild(import.meta);const css$v = /* css */`
-  @layer navi {
-  }
-  .navi_badge_list {
-    flex-wrap: wrap;
+installImportMetaCssBuild(import.meta);const css$v = /* css */`@layer navi;
 
-    &[navi-badge-list-clone] {
-      position: absolute;
-      width: 100%;
-      visibility: hidden;
-      pointer-events: none;
-    }
+.navi_badge_list {
+  flex-wrap: wrap;
 
-    /* maxLines renders every badge for one layout, reads where the rows fell,
-       then renders again with only what fits. The in-between is hidden rather
-       than clipped: the badges that don't make it must leave the DOM, not sit
-       there cut in half. Both renders land in the same frame (the second one
-       is queued from a layout effect), so nothing shows up half measured. */
-    &[navi-badge-list-measuring] {
-      visibility: hidden;
-    }
+  &[navi-badge-list-clone] {
+    visibility: hidden;
+    pointer-events: none;
+    width: 100%;
+    position: absolute;
   }
 
-  .navi_badge.navi_badge_more {
-    white-space: nowrap;
+  &[navi-badge-list-measuring] {
+    visibility: hidden;
   }
+}
+
+.navi_badge.navi_badge_more {
+  white-space: nowrap;
+}
 `;
 
 // Groups badges by the row they wrapped onto.
@@ -67559,32 +65604,21 @@ const BadgeListContent = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$u = /* css */`
-  .navi_color {
-    display: block;
-    aspect-ratio: 1/1;
-    height: 1em;
-    height: 1lh;
-    background-color: currentColor;
-    border: 1px solid rgba(0, 0, 0, 0.2);
-    border-radius: 2px;
+installImportMetaCssBuild(import.meta);const css$u = /* css */`.navi_color {
+  aspect-ratio: 1;
+  background-color: currentColor;
+  border: 1px solid #0003;
+  border-radius: 2px;
+  height: 1lh;
+  display: block;
 
-    &[navi-color-empty] {
-      background-image:
-        linear-gradient(45deg, #ccc 25%, transparent 25%),
-        linear-gradient(-45deg, #ccc 25%, transparent 25%),
-        linear-gradient(45deg, transparent 75%, #ccc 75%),
-        linear-gradient(-45deg, transparent 75%, #ccc 75%);
-      background-position:
-        0 0,
-        0 3px,
-        3px -3px,
-        -3px 0;
-      background-size: 6px 6px;
-      /* Checkerboard pattern to convey "no color / transparent" */
-      background-color: white;
-    }
+  &[navi-color-empty] {
+    background-color: #fff;
+    background-image: linear-gradient(45deg, #ccc 25%, #0000 25%), linear-gradient(-45deg, #ccc 25%, #0000 25%), linear-gradient(45deg, #0000 75%, #ccc 75%), linear-gradient(-45deg, #0000 75%, #ccc 75%);
+    background-position: 0 0, 0 3px, 3px -3px, -3px 0;
+    background-size: 6px 6px;
   }
+}
 `;
 const Color = ({
   children,
@@ -68097,595 +66131,379 @@ const PickerFileUI = asPickerOwnUI(() => {
   return String(value);
 });
 
-installImportMetaCssBuild(import.meta);const css$t = /* css */`
-  @layer navi {
-    .navi_picker {
-      --picker-border-radius: var(--navi-control-border-radius);
-      --picker-border-width: var(--navi-control-border-width);
-      /* Focus outline */
-      --picker-outline-width: var(--navi-focus-outline-width);
-      --picker-outline-offset: calc(-0.5 * var(--picker-outline-width));
-      --picker-outline-color: var(--navi-focus-outline-color);
-      /* Focus outline end */
-      --picker-padding-x-default: var(--navi-picker-padding-x-default);
-      --picker-padding-y-default: var(--navi-picker-padding-y-default);
-      --picker-font-size: var(--navi-control-font-size);
-      --picker-font-family: var(--navi-control-font-family);
-      --picker-loader-color: var(--navi-loader-color);
-      --picker-border-color: var(--navi-control-border-color);
-      --picker-background-color: white;
-      --picker-color: currentColor;
-      --picker-placeholder-color: var(--navi-placeholder-color);
-      --picker-placeholder-font-style: var(--navi-placeholder-font-style);
-      --picker-color-dimmed: color-mix(in srgb, currentColor 60%, transparent);
-      /* Hover */
-      --picker-border-color-hover: color-mix(
-        in srgb,
-        var(--picker-border-color) 70%,
-        black
-      );
-      --picker-background-color-hover: color-mix(
-        in srgb,
-        var(--picker-background-color) 95%,
-        black
-      );
-      /* Readonly */
-      --picker-border-color-readonly: color-mix(
-        in srgb,
-        var(--picker-border-color) 45%,
-        transparent
-      );
-      --picker-background-color-readonly: var(--picker-background-color);
-      --picker-color-readonly: var(--picker-color-dimmed);
-      /* Disabled */
-      --picker-border-color-disabled: var(--picker-border-color-readonly);
-      --picker-background-color-disabled: color-mix(
-        in srgb,
-        var(--picker-background-color) 95%,
-        grey
-      );
-      --picker-color-disabled: var(--picker-color-dimmed);
-      /* Icon */
-      --picker-icon-color: #5e4e4e;
-      --picker-icon-color-readonly: color-mix(
-        in srgb,
-        var(--picker-icon-color) 45%,
-        transparent
-      );
-      --picker-icon-color-disabled: var(--picker-icon-color-readonly);
-      /* Where the slots sit INSIDE the box, visible only once the box is bigger
-         than what it holds (a width/height the caller gave it). Distinct from
-         textAlign, which places the text inside the value slot; this places the
-         slots themselves. */
-      --picker-align-x-default: flex-start;
-      --picker-align-y-default: center;
-    }
-  }
-
+installImportMetaCssBuild(import.meta);const css$t = /* css */`@layer navi {
   .navi_picker {
-    --x-picker-background-color: var(--picker-background-color);
-    --x-picker-border-color: var(--picker-border-color);
-    --x-picker-padding-top: var(
-      --picker-padding-top,
-      var(
-        --picker-padding-y,
-        var(--picker-padding, var(--picker-padding-y-default))
-      )
-    );
-    --x-picker-padding-right: var(
-      --picker-padding-right,
-      var(
-        --picker-padding-x,
-        var(--picker-padding, var(--picker-padding-x-default))
-      )
-    );
-    --x-picker-padding-left: var(
-      --picker-padding-left,
-      var(
-        --picker-padding-x,
-        var(--picker-padding, var(--picker-padding-x-default))
-      )
-    );
-    --x-picker-padding-bottom: var(
-      --picker-padding-bottom,
-      var(
-        --picker-padding-y,
-        var(--picker-padding, var(--picker-padding-y-default))
-      )
-    );
-    --x-picker-color: var(--picker-color);
-    --x-picker-icon-color: var(--picker-icon-color);
-    --x-picker-align-x: var(--picker-align-x, var(--picker-align-x-default));
-    --x-picker-align-y: var(--picker-align-y, var(--picker-align-y-default));
+    --picker-border-radius: var(--navi-control-border-radius);
+    --picker-border-width: var(--navi-control-border-width);
+    --picker-outline-width: var(--navi-focus-outline-width);
+    --picker-outline-offset: calc(-.5 * var(--picker-outline-width));
+    --picker-outline-color: var(--navi-focus-outline-color);
+    --picker-padding-x-default: var(--navi-picker-padding-x-default);
+    --picker-padding-y-default: var(--navi-picker-padding-y-default);
+    --picker-font-size: var(--navi-control-font-size);
+    --picker-font-family: var(--navi-control-font-family);
+    --picker-loader-color: var(--navi-loader-color);
+    --picker-border-color: var(--navi-control-border-color);
+    --picker-background-color: white;
+    --picker-color: currentColor;
+    --picker-placeholder-color: var(--navi-placeholder-color);
+    --picker-placeholder-font-style: var(--navi-placeholder-font-style);
+    --picker-color-dimmed: color-mix(in srgb, currentColor 60%, transparent);
+    --picker-border-color-hover: color-mix(in srgb,
+        var(--picker-border-color) 70%,
+        black);
+    --picker-background-color-hover: color-mix(in srgb,
+        var(--picker-background-color) 95%,
+        black);
+    --picker-border-color-readonly: color-mix(in srgb,
+        var(--picker-border-color) 45%,
+        transparent);
+    --picker-background-color-readonly: var(--picker-background-color);
+    --picker-color-readonly: var(--picker-color-dimmed);
+    --picker-border-color-disabled: var(--picker-border-color-readonly);
+    --picker-background-color-disabled: color-mix(in srgb,
+        var(--picker-background-color) 95%,
+        grey);
+    --picker-color-disabled: var(--picker-color-dimmed);
+    --picker-icon-color: #5e4e4e;
+    --picker-icon-color-readonly: color-mix(in srgb,
+        var(--picker-icon-color) 45%,
+        transparent);
+    --picker-icon-color-disabled: var(--picker-icon-color-readonly);
+    --picker-align-x-default: flex-start;
+    --picker-align-y-default: center;
+  }
+}
 
-    /* Deliberately NOT positioned: the popup children live in here, and a
-       layer="local" Popover/Dialog takes its nearest positioned ancestor as
-       containing block — the trigger would cap it at the height of one line and
-       clip it. Everything that needs a containing block (the custom-UI input
-       overlay, the loading outline) lives in .navi_picker_box below instead.
-       This element stays a real box so the sizing props a caller puts on the
-       picker (minWidth, expandX…) still apply; the box just fills it. */
-    display: inline-flex;
+.navi_picker {
+  --x-picker-background-color: var(--picker-background-color);
+  --x-picker-border-color: var(--picker-border-color);
+  --x-picker-padding-top: var(--picker-padding-top, var(--picker-padding-y, var(--picker-padding, var(--picker-padding-y-default))));
+  --x-picker-padding-right: var(--picker-padding-right, var(--picker-padding-x, var(--picker-padding, var(--picker-padding-x-default))));
+  --x-picker-padding-left: var(--picker-padding-left, var(--picker-padding-x, var(--picker-padding, var(--picker-padding-x-default))));
+  --x-picker-padding-bottom: var(--picker-padding-bottom, var(--picker-padding-y, var(--picker-padding, var(--picker-padding-y-default))));
+  --x-picker-color: var(--picker-color);
+  --x-picker-icon-color: var(--picker-icon-color);
+  --x-picker-align-x: var(--picker-align-x, var(--picker-align-x-default));
+  --x-picker-align-y: var(--picker-align-y, var(--picker-align-y-default));
+  box-sizing: border-box;
+  max-width: 100%;
+  color: var(--x-picker-color);
+  font-size: var(--picker-font-size);
+  font-family: var(--picker-font-family);
+  text-align: inherit;
+  line-height: var(--navi-control-line-height);
+  border-top-left-radius: var(--x-corner-top-left-radius, var(--picker-border-radius));
+  border-top-right-radius: var(--x-corner-top-right-radius, var(--picker-border-radius));
+  border-bottom-right-radius: var(--x-corner-bottom-right-radius, var(--picker-border-radius));
+  border-bottom-left-radius: var(--x-corner-bottom-left-radius, var(--picker-border-radius));
+  display: inline-flex;
+
+  & .navi_picker_box {
+    --x-corner-top-left-radius: initial;
+    --x-corner-top-right-radius: initial;
+    --x-corner-bottom-right-radius: initial;
+    --x-corner-bottom-left-radius: initial;
     box-sizing: border-box;
+    min-width: 0;
     max-width: 100%;
-    /* Inherited properties stay here: a caller's own size/color lands on this
-       element, and re-declaring them on the box below would override what it
-       would otherwise inherit. */
-    color: var(--x-picker-color);
-    font-size: var(--picker-font-size);
-    font-family: var(--picker-font-family);
-    text-align: inherit;
-    /* The control line, like the control font: a picker is drawn by hand next
-       to inputs that sit on it, and its box is sized in lh — the same number
-       of pixels, or a picker and an input in one row are not the same height
-       and their text is not on the same row. */
-    line-height: var(--navi-control-line-height);
-    /* The frame is drawn by the box, but its radius is declared here, on the
-       control root, like every other navi control does — so anything styling
-       the picker from the outside (a Group squaring the corners it joins) has
-       one element to talk to, and the box follows.
-       Corner by corner rather than as the shorthand: a picker is not always
-       the member a Group joins — it can arrive wrapped (in a Box carrying a
-       state, in a link, in a tooltip), and the ask then travels down as
-       inherited custom properties instead of landing on this element as a
-       radius. Each corner falls back to the picker's own radius when nothing
-       asks for anything. */
-    border-top-left-radius: var(
-      --x-corner-top-left-radius,
-      var(--picker-border-radius)
-    );
-    border-top-right-radius: var(
-      --x-corner-top-right-radius,
-      var(--picker-border-radius)
-    );
-    border-bottom-right-radius: var(
-      --x-corner-bottom-right-radius,
-      var(--picker-border-radius)
-    );
-    border-bottom-left-radius: var(
-      --x-corner-bottom-left-radius,
-      var(--picker-border-radius)
-    );
+    min-height: calc(1lh + var(--x-picker-padding-top) + var(--x-picker-padding-bottom));
+    padding-top: var(--x-picker-padding-top);
+    padding-right: 0;
+    padding-bottom: var(--x-picker-padding-bottom);
+    align-items: var(--x-picker-align-y);
+    justify-content: var(--x-picker-align-x);
+    background-color: var(--x-picker-background-color);
+    border-width: var(--picker-border-width);
+    border-style: solid;
+    border-color: var(--x-picker-border-color);
+    border-radius: inherit;
+    outline-width: var(--picker-outline-width);
+    outline-style: none;
+    outline-color: var(--picker-outline-color);
+    outline-offset: var(--picker-outline-offset);
+    cursor: var(--x-picker-cursor, pointer);
+    pointer-events: auto;
+    flex-direction: row;
+    flex: auto;
+    padding-left: 0;
+    display: inline-flex;
+    position: relative;
+  }
 
-    .navi_picker_box {
-      /* The ask stops here: this element is the picker's frame, so nothing it
-         holds is at the seam — the chevron and the clear cross in the slot, a
-         button in a custom UI. */
-      --x-corner-top-left-radius: initial;
-      --x-corner-top-right-radius: initial;
-      --x-corner-bottom-right-radius: initial;
-      --x-corner-bottom-left-radius: initial;
+  & .navi_picker_value {
+    min-width: 0;
+    max-width: 100%;
+    margin-top: calc(-1 * var(--x-picker-padding-top));
+    margin-bottom: calc(-1 * var(--x-picker-padding-bottom));
+    padding-top: var(--x-picker-padding-top);
+    padding-right: var(--x-picker-padding-right);
+    padding-bottom: var(--x-picker-padding-bottom);
+    padding-left: var(--x-picker-padding-left);
+    justify-content: inherit;
+    pointer-events: none;
+    user-select: none;
+    flex-grow: 1;
+    display: inline-block;
 
+    &[data-picker-facade] {
+      line-height: var(--navi-line-height);
+    }
+
+    &[navi-placeholder] {
+      color: var(--picker-placeholder-color);
+      font-style: var(--picker-placeholder-font-style);
+    }
+
+    &:has(.navi_badge_list) {
+      -webkit-line-clamp: none !important;
+      text-overflow: clip !important;
+      white-space: normal !important;
+      -webkit-box-orient: horizontal !important;
+      display: inline-flex !important;
+      overflow: visible !important;
+    }
+
+    & [data-own-target] {
+      pointer-events: auto;
       position: relative;
-      display: inline-flex;
-      box-sizing: border-box;
-      min-width: 0;
-      max-width: 100%;
-      min-height: calc(
-        1lh + var(--x-picker-padding-top) + var(--x-picker-padding-bottom)
-      );
-      padding-top: var(--x-picker-padding-top);
-      padding-right: 0;
-      padding-bottom: var(--x-picker-padding-bottom);
-      padding-left: 0;
-      flex: 1 1 auto;
-      flex-direction: row;
-      align-items: var(--x-picker-align-y);
-      justify-content: var(--x-picker-align-x);
-      background-color: var(--x-picker-background-color);
-      border-width: var(--picker-border-width);
-      border-style: solid;
-      border-color: var(--x-picker-border-color);
-      border-radius: inherit;
-      outline-width: var(--picker-outline-width);
-      outline-style: none;
-      outline-color: var(--picker-outline-color);
-      outline-offset: var(--picker-outline-offset);
-      cursor: var(--x-picker-cursor, pointer);
+    }
+  }
+
+  & .navi_picker_right_slot {
+    height: 1lh;
+    margin-right: var(--picker-slot-spacing, calc(var(--x-picker-padding-right) * .5));
+    color: var(--x-picker-icon-color);
+    pointer-events: none;
+    flex-shrink: 0;
+    justify-content: center;
+    align-self: flex-start;
+    align-items: center;
+    display: inline-flex;
+
+    & .navi_icon:not([data-line-overflow="allow"]) {
+      max-height: 100%;
+    }
+
+    & .navi_button, & .navi_picker {
       pointer-events: auto;
-      /* user-select: none; */
     }
 
-    .navi_picker_value {
-      display: inline-block;
-      min-width: 0;
-      max-width: 100%;
-      margin-top: calc(-1 * var(--x-picker-padding-top));
-      margin-bottom: calc(-1 * var(--x-picker-padding-bottom));
-      padding-top: var(--x-picker-padding-top);
-      padding-right: var(--x-picker-padding-right);
-      padding-bottom: var(--x-picker-padding-bottom);
-      padding-left: var(--x-picker-padding-left);
-      flex-grow: 1;
-      justify-content: inherit;
-      pointer-events: none;
-      user-select: none;
-
-      /* The value the picker draws itself is the control's own text, at the
-         control's font size: it keeps the control line, snapped to the pixel
-         like the field around it. A caller's "ui" is the caller's own drawing
-         of the control, and it is written on the page's line, as the number,
-         so each text it holds keeps a line relative to its own size. The
-         control line is a length (--navi-control-line-height), and inherited
-         it would arrive as the control's pixels: a 14px label under an 18px
-         picker's 23px line carries ~5px of leading above and below that no
-         glyph occupies and nothing on screen explains. Same reason a popup
-         takes the number — see .navi_popup in popup.jsx. */
-      &[data-picker-facade] {
-        line-height: var(--navi-line-height);
-      }
-
-      &[navi-placeholder] {
-        color: var(--picker-placeholder-color);
-        font-style: var(--picker-placeholder-font-style);
-      }
-
-      /* A <BadgeList> caps its own rows: it renders the badges that fit and a
-         "+N" badge for the rest, reading the number from MaxLinesContext right
-         below. The picker must then not clamp on top of it — line-clamp turns
-         the value into a -webkit-box and single-line truncation into a
-         nowrap block, either of which takes the badge list out of the
-         inline-flex layout it needs. maxLines writes those as inline styles on
-         the element, hence !important. */
-      &:has(.navi_badge_list) {
-        display: inline-flex !important;
-        -webkit-line-clamp: none !important;
-        overflow: visible !important;
-        -webkit-box-orient: horizontal !important;
-        text-overflow: clip !important;
-        white-space: normal !important;
-      }
-
-      /* The façade is transparent to the pointer — a press on what it draws
-         means "open the picker". An own target is the exception, the same way
-         the clear cross is one in the slot below: it says the press is aimed at
-         IT, so it has to be reachable at all.
-         Positioned as well as pointable: the input covering the box
-         (see [navi-ui-custom] below) is absolute, so it paints over every
-         static element of the façade whatever their pointer-events say — and
-         the press then reaches the input, which is the picker. No offset, so
-         nothing moves; this only puts the own target in the same paint layer
-         as the things it has to be reachable through. */
-      [data-own-target] {
-        position: relative;
-        pointer-events: auto;
-      }
-    }
-    .navi_picker_right_slot {
-      display: inline-flex;
-      height: 1em;
-      height: 1lh;
-      /* Half the horizontal padding by default, so what sits in the slot lines
-         up with the gutter the value already has; slotSpacing overrides it */
-      margin-right: var(
-        --picker-slot-spacing,
-        calc(var(--x-picker-padding-right) * 0.5)
-      );
-      flex-shrink: 0;
-      align-items: center;
-      align-self: flex-start;
-      justify-content: center;
-      color: var(--x-picker-icon-color);
-      /* Transparent to the pointer: the chevron is decoration, and a click on
-         it means "open the picker", which is what the input underneath does. */
-      pointer-events: none;
-
-      /* :not(...) — the slot is one line tall, and an icon fills it rather than
-         stretching it. An icon that opted out of that cap (Icon's lineOverflow,
-         which the slot's own icons use) is asking to be bigger than the line,
-         so this must not put the cap back. */
-      .navi_icon:not([data-line-overflow="allow"]) {
-        max-height: 100%;
-      }
-      /* The clear cross is the exception — it is a real target with its own
-         intention (clear, the opposite of open), so it takes its clicks back.
-         A button, or a picker when the cross asks first (see clearConfirm). */
-      .navi_button,
-      .navi_picker {
-        pointer-events: auto;
-      }
-      /* Drawn small but not small to hit: the spacing around the cross — the
-         slot margins on the sides, the picker padding above and below —
-         belongs to its clickable zone, the same zone the clear cross of an
-         input claims. The visual stays untouched; only the hit area grows.
-         On the box for a picker: the picker root is not positioned. */
-      .navi_button,
-      .navi_picker .navi_picker_box {
-        &::before {
-          position: absolute;
-          top: calc(-1 * var(--x-picker-padding-top));
-          right: calc(
-            -1 *
-              var(
-                --picker-slot-spacing,
-                calc(var(--x-picker-padding-right) * 0.5)
-              )
-          );
-          bottom: calc(-1 * var(--x-picker-padding-bottom));
-          left: calc(
-            -1 *
-              var(
-                --picker-slot-spacing,
-                calc(var(--x-picker-padding-right) * 0.5)
-              )
-          );
-          content: "";
-        }
-      }
-    }
-    &[navi-single-line] {
-      .navi_picker_right_slot {
-        align-self: var(--x-picker-align-y);
-      }
-    }
-    .navi_picker_input {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      background: none;
-      border: none;
-      border-radius: inherit;
-      outline: none;
-      cursor: inherit;
-      pointer-events: auto;
-
-      &::-webkit-calendar-picker-indicator {
-        cursor: inherit;
-      }
-    }
-
-    &[navi-ui-custom] {
-      .navi_picker_input {
+    & .navi_button, & .navi_picker .navi_picker_box {
+      &:before {
+        top: calc(-1 * var(--x-picker-padding-top));
+        right: calc(-1 *
+              var(--picker-slot-spacing, calc(var(--x-picker-padding-right) * .5)));
+        bottom: calc(-1 * var(--x-picker-padding-bottom));
+        left: calc(-1 *
+              var(--picker-slot-spacing, calc(var(--x-picker-padding-right) * .5)));
+        content: "";
         position: absolute;
-        top: calc(-1 * var(--picker-border-width));
-        right: calc(-1 * var(--picker-border-width));
-        bottom: calc(-1 * var(--picker-border-width));
-        left: calc(-1 * var(--picker-border-width));
-        /* Reset width/height for input color */
-        width: auto;
-        height: auto;
-
-        opacity: 0;
-        appearance: none;
-      }
-    }
-
-    .navi_picker_content {
-      /* The other side of the frame: what a picker holds here is what its
-         popup shows, and a popup is never at a seam. Popover and Dialog stop
-         the ask at their own root too — this covers content that reaches the
-         popup through neither. */
-      --x-corner-top-left-radius: initial;
-      --x-corner-top-right-radius: initial;
-      --x-corner-bottom-right-radius: initial;
-      --x-corner-bottom-left-radius: initial;
-
-      display: contents;
-      /* What opens from a control is a page of its own, not part of that
-         control's type scale: it is written at the control font by name,
-         rather than by inheriting the size the picker itself is drawn at. A
-         caller who sizes a picker to the façade it holds (so the padding, the
-         corners and the chevron the picker draws in em land on the text the
-         caller actually wrote) would otherwise take the popup down with it:
-         its title, and everything in it that does not state a size of its
-         own. Same reason the popup is written on the page's line rather than
-         the control's — see .navi_popup in popup.jsx. */
-      font-size: var(--navi-control-font-size);
-      text-align: initial; /* Don't inherit picker text align */
-    }
-
-    /* Hover */
-    &[data-hover] {
-      --x-picker-background-color: var(--picker-background-color-hover);
-      --x-picker-border-color: var(--picker-border-color-hover);
-    }
-    /* Readonly */
-    &[data-readonly] {
-      --x-picker-border-color: var(--picker-border-color-readonly);
-      --x-picker-background-color: var(--picker-background-color-readonly);
-      --x-picker-color: var(--picker-color-readonly);
-      --x-picker-icon-color: var(--picker-icon-color-readonly);
-      --x-picker-cursor: default;
-    }
-    /* Read-only and still opening, so it still says so under the pointer.
-       Before the disabled block below on purpose: a disabled picker opens
-       nothing, read-only or not. */
-    &[data-readonly-opens] {
-      --x-picker-cursor: pointer;
-    }
-    /* Focus. The second selector is the state held by hand (pseudoState on
-       the picker lands on this root, which is never focused for real): a demo
-       showing the ring without a Tab press. */
-    &[data-focus-within]:has(.navi_picker_input[data-focus-visible]),
-    &[data-focus-visible] {
-      --x-picker-border-color: transparent;
-
-      .navi_picker_box {
-        outline-style: solid;
-      }
-    }
-    /* Disabled */
-    &[data-disabled] {
-      --x-picker-border-color: var(--picker-border-color-disabled);
-      --x-picker-background-color: var(--picker-background-color-disabled);
-      --x-picker-color: var(--picker-color-disabled);
-      --x-picker-icon-color: var(--picker-icon-color-disabled);
-      --x-picker-cursor: default;
-    }
-    /* Callout (info, warning, error) */
-    &[data-callout] {
-      --x-picker-border-color: var(--callout-color);
-    }
-
-    /* A variant states what the caller did NOT: it moves the DEFAULTS
-       (--picker-*) and never the resolved values (--x-picker-*), so a
-       backgroundColor/borderColor/padding prop — which lands inline on this
-       same element — still wins. The per-state defaults are re-pointed at the
-       base one too, otherwise the @layer formulas (hover = 5% black over the
-       background, disabled = 5% grey) would repaint a box the variant just
-       took away. */
-    &[data-variant="icon"] {
-      --picker-padding-x-default: 0;
-      --picker-padding-y-default: 0;
-      /* Nothing but the icon is drawn here, so a width/height the caller gave
-         it is a target area, not a text column: the icon belongs in its middle.
-         A default, like everything else a variant moves, so alignX still wins. */
-      --picker-align-x-default: center;
-      --picker-border-width: 0px; /* must carry a unit (px) — used in calc() to offset the custom input overlay */
-      --picker-border-color: transparent;
-      --picker-border-color-hover: var(--picker-border-color);
-      --picker-border-color-readonly: var(--picker-border-color);
-      --picker-border-color-disabled: var(--picker-border-color);
-      --picker-background-color: transparent;
-      --picker-background-color-hover: var(--picker-background-color);
-      --picker-background-color-readonly: var(--picker-background-color);
-      --picker-background-color-disabled: var(--picker-background-color);
-      --x-picker-icon-color: currentColor;
-
-      /* The value holds nothing but the icon, so it takes the icon's width
-         rather than the box's: the box's justify-content is then what places
-         it, and alignX means something. */
-      .navi_picker_value {
-        flex-grow: 0;
-      }
-    }
-    /* discrete: no box at rest, a background on hover — the same word Button
-       uses, and the same drawing. What is read is the value, not the field
-       around it; the chevron in the right slot is what still says it opens. */
-    &[data-variant="discrete"] {
-      --picker-border-width: 0px; /* must carry a unit (px) — used in calc() to offset the custom input overlay */
-      --picker-border-color: transparent;
-      --picker-border-color-hover: var(--picker-border-color);
-      --picker-border-color-readonly: var(--picker-border-color);
-      --picker-border-color-disabled: var(--picker-border-color);
-      --picker-background-color: transparent;
-      /* The hover wash is mixed INTO the background instead of replacing it:
-         over the transparent default it is exactly the 8% of currentColor it
-         has always been, and over a backgroundColor the caller gave it darkens
-         that color rather than erasing it. */
-      --picker-background-color-hover: color-mix(
-        in srgb,
-        currentColor 8%,
-        var(--picker-background-color)
-      );
-      --picker-background-color-readonly: var(--picker-background-color);
-      --picker-background-color-disabled: var(--picker-background-color);
-    }
-    &[data-variant="headless"] {
-      --picker-padding-x-default: 0;
-      --picker-padding-y-default: 0;
-      --picker-border-width: 0px; /* must carry a unit (px) — used in calc() to offset the custom input overlay */
-      --picker-border-color: transparent;
-      --picker-border-color-hover: var(--picker-border-color);
-      --picker-border-color-readonly: var(--picker-border-color);
-      --picker-border-color-disabled: var(--picker-border-color);
-      --picker-background-color: transparent;
-      --picker-background-color-hover: var(--picker-background-color);
-      --picker-background-color-readonly: var(--picker-background-color);
-      --picker-background-color-disabled: var(--picker-background-color);
-      --x-picker-icon-color: currentColor;
-
-      .navi_picker_box {
-        position: absolute;
-        inset: 0;
-        z-index: -1;
-      }
-    }
-    /* bare: the caller's drawing IS the trigger. No frame, no control line, no
-       slot beside it, no clamp on it — the picker takes the size of what the ui
-       draws, to the pixel, and does nothing to it but catch the press. For a
-       picker that is a whole piece of a layout (a column of a card, a tile)
-       rather than a field: the same drawing can then sit alone somewhere else
-       and be the same box in both places. */
-    &[data-variant="bare"] {
-      --picker-padding-x-default: 0;
-      --picker-padding-y-default: 0;
-      /* The box holds the drawing rather than placing it inside itself: a
-         height the caller gave the picker belongs to the drawing too. */
-      --picker-align-y-default: stretch;
-      --picker-border-width: 0px; /* must carry a unit (px) — used in calc() to offset the custom input overlay */
-      --picker-border-color: transparent;
-      --picker-border-color-hover: var(--picker-border-color);
-      --picker-border-color-readonly: var(--picker-border-color);
-      --picker-border-color-disabled: var(--picker-border-color);
-      --picker-background-color: transparent;
-      --picker-background-color-hover: var(--picker-background-color);
-      --picker-background-color-readonly: var(--picker-background-color);
-      --picker-background-color-disabled: var(--picker-background-color);
-      --x-picker-icon-color: currentColor;
-
-      /* The drawing is the caller's, so it is written on the page's line at
-         the page's size — the control font and the control line belong to the
-         field-like drawings, which this one is not. */
-      font-size: inherit;
-      font-family: inherit;
-      line-height: inherit;
-
-      .navi_picker_box {
-        /* A field is at least one line tall whatever it holds; this is not a
-           field, so its height is the drawing's and nothing else. */
-        min-height: 0;
-      }
-    }
-    /* button: drawn as a Button is, from the same tokens (see button_ui.jsx
-       and the --navi-button-* vars) — its surface, its padding, a centered
-       label, its washed-out read-only and disabled — for a picker that IS a
-       button with a popup behind it (a confirm). The value slot draws the
-       label (the ui prop), and no slot follows it: nothing says "this opens",
-       what it opens says it. Hover keeps the picker's own formulas, which are
-       the button's already. */
-    &[data-variant="button"] {
-      --picker-padding-x-default: var(--navi-button-padding-x-default);
-      --picker-padding-y-default: var(--navi-button-padding-y-default);
-      --picker-align-x-default: center;
-      --picker-background-color: var(--navi-button-background-color);
-      /* Read-only / disabled: fading toward the surface, not toward
-         transparent — the button's own rule. */
-      --picker-border-color-readonly: color-mix(
-        in srgb,
-        var(--picker-border-color) 30%,
-        var(--navi-surface-color)
-      );
-      --picker-background-color-readonly: var(--picker-background-color);
-      --picker-color-readonly: color-mix(
-        in srgb,
-        var(--picker-color) 30%,
-        transparent
-      );
-      --picker-border-color-disabled: var(--picker-border-color-readonly);
-      --picker-background-color-disabled: var(
-        --picker-background-color-readonly
-      );
-      --picker-color-disabled: var(--picker-color-readonly);
-
-      text-align: center;
-    }
-    /* text: a word in a sentence, marked by the dotted line under it — the way
-       a term one can ask about is marked. No box, no slot; the font is the
-       sentence's own, so the word sits in its line like the ones around it. */
-    &[data-variant="text"] {
-      --picker-padding-x-default: 0;
-      --picker-padding-y-default: 0;
-      --picker-border-width: 0px; /* must carry a unit (px) — used in calc() to offset the custom input overlay */
-      --picker-border-color: transparent;
-      --picker-border-color-hover: var(--picker-border-color);
-      --picker-border-color-readonly: var(--picker-border-color);
-      --picker-border-color-disabled: var(--picker-border-color);
-      --picker-background-color: transparent;
-      --picker-background-color-hover: var(--picker-background-color);
-      --picker-background-color-readonly: var(--picker-background-color);
-      --picker-background-color-disabled: var(--picker-background-color);
-
-      font-size: inherit;
-      font-family: inherit;
-      text-decoration: underline dotted;
-      text-underline-offset: 0.2em;
-
-      &[data-hover] {
-        text-decoration-style: solid;
       }
     }
   }
+
+  &[navi-single-line] {
+    & .navi_picker_right_slot {
+      align-self: var(--x-picker-align-y);
+    }
+  }
+
+  & .navi_picker_input {
+    box-sizing: border-box;
+    border-radius: inherit;
+    cursor: inherit;
+    pointer-events: auto;
+    background: none;
+    border: none;
+    outline: none;
+    margin: 0;
+    padding: 0;
+
+    &::-webkit-calendar-picker-indicator {
+      cursor: inherit;
+    }
+  }
+
+  &[navi-ui-custom] {
+    & .navi_picker_input {
+      top: calc(-1 * var(--picker-border-width));
+      right: calc(-1 * var(--picker-border-width));
+      bottom: calc(-1 * var(--picker-border-width));
+      left: calc(-1 * var(--picker-border-width));
+      opacity: 0;
+      appearance: none;
+      width: auto;
+      height: auto;
+      position: absolute;
+    }
+  }
+
+  & .navi_picker_content {
+    --x-corner-top-left-radius: initial;
+    --x-corner-top-right-radius: initial;
+    --x-corner-bottom-right-radius: initial;
+    --x-corner-bottom-left-radius: initial;
+    font-size: var(--navi-control-font-size);
+    text-align: initial;
+    display: contents;
+  }
+
+  &[data-hover] {
+    --x-picker-background-color: var(--picker-background-color-hover);
+    --x-picker-border-color: var(--picker-border-color-hover);
+  }
+
+  &[data-readonly] {
+    --x-picker-border-color: var(--picker-border-color-readonly);
+    --x-picker-background-color: var(--picker-background-color-readonly);
+    --x-picker-color: var(--picker-color-readonly);
+    --x-picker-icon-color: var(--picker-icon-color-readonly);
+    --x-picker-cursor: default;
+  }
+
+  &[data-readonly-opens] {
+    --x-picker-cursor: pointer;
+  }
+
+  &[data-focus-within]:has(.navi_picker_input[data-focus-visible]), &[data-focus-visible] {
+    --x-picker-border-color: transparent;
+
+    & .navi_picker_box {
+      outline-style: solid;
+    }
+  }
+
+  &[data-disabled] {
+    --x-picker-border-color: var(--picker-border-color-disabled);
+    --x-picker-background-color: var(--picker-background-color-disabled);
+    --x-picker-color: var(--picker-color-disabled);
+    --x-picker-icon-color: var(--picker-icon-color-disabled);
+    --x-picker-cursor: default;
+  }
+
+  &[data-callout] {
+    --x-picker-border-color: var(--callout-color);
+  }
+
+  &[data-variant="icon"] {
+    --picker-padding-x-default: 0;
+    --picker-padding-y-default: 0;
+    --picker-align-x-default: center;
+    --picker-border-width: 0px;
+    --picker-border-color: transparent;
+    --picker-border-color-hover: var(--picker-border-color);
+    --picker-border-color-readonly: var(--picker-border-color);
+    --picker-border-color-disabled: var(--picker-border-color);
+    --picker-background-color: transparent;
+    --picker-background-color-hover: var(--picker-background-color);
+    --picker-background-color-readonly: var(--picker-background-color);
+    --picker-background-color-disabled: var(--picker-background-color);
+    --x-picker-icon-color: currentColor;
+
+    & .navi_picker_value {
+      flex-grow: 0;
+    }
+  }
+
+  &[data-variant="discrete"] {
+    --picker-border-width: 0px;
+    --picker-border-color: transparent;
+    --picker-border-color-hover: var(--picker-border-color);
+    --picker-border-color-readonly: var(--picker-border-color);
+    --picker-border-color-disabled: var(--picker-border-color);
+    --picker-background-color: transparent;
+    --picker-background-color-hover: color-mix(in srgb,
+        currentColor 8%,
+        var(--picker-background-color));
+    --picker-background-color-readonly: var(--picker-background-color);
+    --picker-background-color-disabled: var(--picker-background-color);
+  }
+
+  &[data-variant="headless"] {
+    --picker-padding-x-default: 0;
+    --picker-padding-y-default: 0;
+    --picker-border-width: 0px;
+    --picker-border-color: transparent;
+    --picker-border-color-hover: var(--picker-border-color);
+    --picker-border-color-readonly: var(--picker-border-color);
+    --picker-border-color-disabled: var(--picker-border-color);
+    --picker-background-color: transparent;
+    --picker-background-color-hover: var(--picker-background-color);
+    --picker-background-color-readonly: var(--picker-background-color);
+    --picker-background-color-disabled: var(--picker-background-color);
+    --x-picker-icon-color: currentColor;
+
+    & .navi_picker_box {
+      z-index: -1;
+      position: absolute;
+      inset: 0;
+    }
+  }
+
+  &[data-variant="bare"] {
+    --picker-padding-x-default: 0;
+    --picker-padding-y-default: 0;
+    --picker-align-y-default: stretch;
+    --picker-border-width: 0px;
+    --picker-border-color: transparent;
+    --picker-border-color-hover: var(--picker-border-color);
+    --picker-border-color-readonly: var(--picker-border-color);
+    --picker-border-color-disabled: var(--picker-border-color);
+    --picker-background-color: transparent;
+    --picker-background-color-hover: var(--picker-background-color);
+    --picker-background-color-readonly: var(--picker-background-color);
+    --picker-background-color-disabled: var(--picker-background-color);
+    --x-picker-icon-color: currentColor;
+    font-size: inherit;
+    font-family: inherit;
+    line-height: inherit;
+
+    & .navi_picker_box {
+      min-height: 0;
+    }
+  }
+
+  &[data-variant="button"] {
+    --picker-padding-x-default: var(--navi-button-padding-x-default);
+    --picker-padding-y-default: var(--navi-button-padding-y-default);
+    --picker-align-x-default: center;
+    --picker-background-color: var(--navi-button-background-color);
+    --picker-border-color-readonly: color-mix(in srgb,
+        var(--picker-border-color) 30%,
+        var(--navi-surface-color));
+    --picker-background-color-readonly: var(--picker-background-color);
+    --picker-color-readonly: color-mix(in srgb,
+        var(--picker-color) 30%,
+        transparent);
+    --picker-border-color-disabled: var(--picker-border-color-readonly);
+    --picker-background-color-disabled: var(--picker-background-color-readonly);
+    --picker-color-disabled: var(--picker-color-readonly);
+    text-align: center;
+  }
+
+  &[data-variant="text"] {
+    --picker-padding-x-default: 0;
+    --picker-padding-y-default: 0;
+    --picker-border-width: 0px;
+    --picker-border-color: transparent;
+    --picker-border-color-hover: var(--picker-border-color);
+    --picker-border-color-readonly: var(--picker-border-color);
+    --picker-border-color-disabled: var(--picker-border-color);
+    --picker-background-color: transparent;
+    --picker-background-color-hover: var(--picker-background-color);
+    --picker-background-color-readonly: var(--picker-background-color);
+    --picker-background-color-disabled: var(--picker-background-color);
+    font-size: inherit;
+    text-underline-offset: .2em;
+    font-family: inherit;
+    text-decoration: underline dotted;
+
+    &[data-hover] {
+      text-decoration-style: solid;
+    }
+  }
+}
 `;
 const PickerButton = props => {
   import.meta.css = [css$t, "@jsenv/navi/src/control/picker/picker.jsx"];
@@ -69272,418 +67090,242 @@ installImportMetaCssBuild(import.meta);/**
  * refuse it on purpose, which is what keeps the focus where the travel happens
  * instead of moving it into a slide that is about to leave.
  */
-const css$s = /* css */`
-  @layer navi {
-    .navi_picker_spin {
-      /* A picker one steps through is still a picker: what themes every picker
-         padding themes this one too. */
-      --picker-spin-padding-x-default: var(--navi-picker-padding-x-default);
-      --picker-spin-padding-y-default: var(--navi-picker-padding-y-default);
-    }
-    /* Written in what it is written with, for a value one TYPES: a field is as
-       wide as the digits in it and no wider, so the room around them has to
-       come from here — and the two chevrons, which take the same, are then big
-       enough to be aimed at with a finger. Said as a default, so a padding prop
-       still wins. */
-    .navi_picker_spin:has(> .navi_picker_spin_middle > .navi_input) {
-      --picker-spin-padding-x-default: 0.6em;
-      --picker-spin-padding-y-default: 0.25em;
-    }
-  }
-
+const css$s = /* css */`@layer navi {
   .navi_picker_spin {
-    /* The padding is written on what is inside the box rather than on the box
-       — the value takes all four sides, the two chevrons only the vertical ones
-       — so the four sides are resolved once here, in the side-then-axis-then
-       -shorthand order a Box resolves them in. What writes them: the padding
-       props, through PICKER_SPIN_STYLE_CSS_VARS below. */
-    --x-picker-spin-padding-top: var(
-      --picker-spin-padding-top,
-      var(
-        --picker-spin-padding-y,
-        var(--picker-spin-padding, var(--picker-spin-padding-y-default))
-      )
-    );
-    --x-picker-spin-padding-right: var(
-      --picker-spin-padding-right,
-      var(
-        --picker-spin-padding-x,
-        var(--picker-spin-padding, var(--picker-spin-padding-x-default))
-      )
-    );
-    --x-picker-spin-padding-bottom: var(
-      --picker-spin-padding-bottom,
-      var(
-        --picker-spin-padding-y,
-        var(--picker-spin-padding, var(--picker-spin-padding-y-default))
-      )
-    );
-    --x-picker-spin-padding-left: var(
-      --picker-spin-padding-left,
-      var(
-        --picker-spin-padding-x,
-        var(--picker-spin-padding, var(--picker-spin-padding-x-default))
-      )
-    );
-    /* What the loading outline is drawn around. */
-    position: relative;
-    /* Written in the control font, like the picker it wraps: the value and its
-       two chevrons are a control, not running text. */
-    font-size: var(--navi-control-font-size);
-    font-family: var(--navi-control-font-family);
-    /* Framed like every other control (see navi_css_vars.js): what one steps
-       through is a value one edits, and a box around it is what says so. Said
-       as CSS rather than as defaults on the Box, so borderWidth="0" or a radius
-       of one's own still wins — an inline style beats a stylesheet. */
-    border: var(--navi-control-border-width) solid
+    --picker-spin-padding-x-default: var(--navi-picker-padding-x-default);
+    --picker-spin-padding-y-default: var(--navi-picker-padding-y-default);
+  }
+
+  .navi_picker_spin:has( > .navi_picker_spin_middle > .navi_input) {
+    --picker-spin-padding-x-default: .6em;
+    --picker-spin-padding-y-default: .25em;
+  }
+}
+
+.navi_picker_spin {
+  --x-picker-spin-padding-top: var(--picker-spin-padding-top, var(--picker-spin-padding-y, var(--picker-spin-padding, var(--picker-spin-padding-y-default))));
+  --x-picker-spin-padding-right: var(--picker-spin-padding-right, var(--picker-spin-padding-x, var(--picker-spin-padding, var(--picker-spin-padding-x-default))));
+  --x-picker-spin-padding-bottom: var(--picker-spin-padding-bottom, var(--picker-spin-padding-y, var(--picker-spin-padding, var(--picker-spin-padding-y-default))));
+  --x-picker-spin-padding-left: var(--picker-spin-padding-left, var(--picker-spin-padding-x, var(--picker-spin-padding, var(--picker-spin-padding-x-default))));
+  font-size: var(--navi-control-font-size);
+  font-family: var(--navi-control-font-family);
+  border: var(--navi-control-border-width) solid
       var(--navi-control-border-color);
-    /* Squared from the outside, corner by corner: a spin is not always the
-       member a Group joins — it can arrive wrapped — so the ask travels down
-       as inherited custom properties rather than as a radius landing on this
-       element. The chevrons take these corners back by inherit (see below), so
-       they follow. */
-    border-top-left-radius: var(
-      --x-corner-top-left-radius,
-      var(--navi-control-border-radius)
-    );
-    border-top-right-radius: var(
-      --x-corner-top-right-radius,
-      var(--navi-control-border-radius)
-    );
-    border-bottom-right-radius: var(
-      --x-corner-bottom-right-radius,
-      var(--navi-control-border-radius)
-    );
-    border-bottom-left-radius: var(
-      --x-corner-bottom-left-radius,
-      var(--navi-control-border-radius)
-    );
-    outline-width: var(--navi-focus-outline-width);
-    /* Just outside the border, never on it: the ring belongs to the whole
-       control — the two chevrons included, since pressing one lands the
-       keyboard here (see navi-focus-delegate below). */
-    outline-color: var(--navi-focus-outline-color);
-    outline-offset: 0px;
-  }
-  /* The middle holds the keyboard, and this box wears its ring: whatever is in
-     there fills it, so a ring of its own would be drawn a pixel inside this
-     border and two rings that close together read as a mistake. Same offer a
-     dialog and a popover answer (data-focus-outline-delegate, see
-     slide_container.jsx), and the same reply — the delegate stands down; a
-     field says it with an outline of zero width instead (see Spin's own
-     outlineWidth below).
-     Said on this box too (the first selector): nothing focuses it for real —
-     it is the middle that takes the keyboard — but it is where the ring is
-     drawn, so a demo can hold it there and show what it looks like. */
-  .navi_picker_spin[data-focus-visible],
-  .navi_picker_spin:has([data-focus-outline-delegate][data-focus-visible]),
-  .navi_picker_spin:has(.navi_input[data-focus-visible]) {
-    outline-style: solid;
-  }
-  .navi_picker_spin [data-focus-outline-delegate] {
-    --navi-focus-outline-style: none;
-  }
-  /* Same fading every navi control does when it is not to be touched (the
-     border first, the words too once it is out of service): what is inside is
-     three pieces of ours, so the box says it for all of them. */
-  .navi_picker_spin[data-readonly] {
-    border-color: color-mix(
-      in srgb,
+  border-top-left-radius: var(--x-corner-top-left-radius, var(--navi-control-border-radius));
+  border-top-right-radius: var(--x-corner-top-right-radius, var(--navi-control-border-radius));
+  border-bottom-right-radius: var(--x-corner-bottom-right-radius, var(--navi-control-border-radius));
+  border-bottom-left-radius: var(--x-corner-bottom-left-radius, var(--navi-control-border-radius));
+  outline-width: var(--navi-focus-outline-width);
+  outline-color: var(--navi-focus-outline-color);
+  outline-offset: 0px;
+  position: relative;
+}
+
+.navi_picker_spin[data-focus-visible], .navi_picker_spin:has([data-focus-outline-delegate][data-focus-visible]), .navi_picker_spin:has(.navi_input[data-focus-visible]) {
+  outline-style: solid;
+}
+
+.navi_picker_spin [data-focus-outline-delegate] {
+  --navi-focus-outline-style: none;
+}
+
+.navi_picker_spin[data-readonly] {
+  border-color: color-mix(in srgb,
       var(--navi-control-border-color) 45%,
-      transparent
-    );
+      transparent);
 
-    [data-slide] {
-      color: color-mix(in srgb, currentColor 60%, transparent);
-    }
-  }
-  .navi_picker_spin[data-disabled] {
-    color: color-mix(in srgb, currentColor 40%, transparent);
-    border-color: color-mix(
-      in srgb,
-      var(--navi-control-border-color) 30%,
-      transparent
-    );
-  }
-  /* The middle, as a box of its own: the headless picker draws nothing and
-     covers whatever is positioned around it, and THAT box is where the browser
-     opens its calendar. Around the whole control it would open under a chevron;
-     around the value it opens under the value one pressed. */
-  .navi_picker_spin_middle {
-    /* The ask stops here: the frame is the spin's box, and the picker or the
-       field standing in the middle of it is behind that frame, not at a seam. */
-    --x-corner-top-left-radius: initial;
-    --x-corner-top-right-radius: initial;
-    --x-corner-bottom-right-radius: initial;
-    --x-corner-bottom-left-radius: initial;
-
-    position: relative;
-    display: flex;
-    min-width: 0;
-    flex: 1 1 0;
-  }
-  /* The hidden picker, centred and no wider than it needs to be: the browser
-     opens its calendar from the box the input occupies, and it chooses which
-     corner. Over the whole middle that choice is a coin toss between one end
-     and the other; over a narrow box in the middle, whichever corner it picks
-     is under the value one pressed. */
-  .navi_picker_spin_middle > .navi_picker {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: 50%;
-    width: min(100%, var(--picker-spin-picker-width, 12ch));
-    translate: -50% 0;
-  }
-  /* A middle one types into is the field itself: it takes the whole room
-     between the chevrons rather than sitting in the centre of it, so the
-     caret is where the value is and a click anywhere in the middle lands in
-     the field. */
-  .navi_picker_spin_middle > .navi_input {
-    min-width: 0;
-    flex: 1 1 auto;
-  }
-  /* The same room around a value one TYPES as around one one picks (the
-     [data-slide] rule below writes it there): without it the column is as
-     narrow as the two digits in it, and a number pressed against both sides
-     reads as a field too small for what it holds. Handed to the field as its
-     own padding rather than kept by the middle: the field then IS the column —
-     it fills it, and a click anywhere in it lands on the caret. */
-  .navi_picker_spin_middle > .navi_input {
-    --padding-right: var(--x-picker-spin-padding-right);
-    --padding-left: var(--x-picker-spin-padding-left);
-  }
-  /* Where the padding lands: all four sides on the value, the two vertical
-     ones on the chevrons below — the same number above and below is what makes
-     the three one line rather than three boxes, while sideways it is the room
-     between the value and the chevron it would otherwise touch. Not on the box
-     itself: that would push the chevrons off the corners they are rounded by.
-
-     Centred, always: the middle holds three values of three different lengths,
-     and a value that starts where the last one ended reads as a jump. */
-  .navi_picker_spin [data-slide] {
-    padding-top: var(--x-picker-spin-padding-top);
-    padding-right: var(--x-picker-spin-padding-right);
-    padding-bottom: var(--x-picker-spin-padding-bottom);
-    padding-left: var(--x-picker-spin-padding-left);
-    text-align: center;
-    overflow: hidden;
-  }
-  /* The middle opens the picker, so it says so under the pointer — and stops
-     saying it the moment pressing it would only get an answer about why not. */
-  .navi_picker_spin [data-slide-container] {
-    cursor: pointer;
-  }
-  .navi_picker_spin[data-readonly] [data-slide-container],
-  .navi_picker_spin[data-disabled] [data-slide-container] {
-    cursor: default;
-  }
-  /* Kept inside its own slide: the three values share one cell, so anything
-     sticking out would be written across the two beside it. A value too long
-     for the box simply wraps — the box grows, and the words are all there; say
-     maxLines to cut it instead, which the text itself knows how to do. */
-  .navi_picker_spin [data-slide] > * {
-    max-width: 100%;
-    overflow: hidden;
-  }
-  /* As tall as one line of what it steps through — not half the box: what one
-     presses is a chevron. Its height is its own, rather than the middle's, so a
-     value that wraps does not turn the two into towers; the font is the one
-     around it, so "one line" means the same on both sides. */
-  .navi_picker_spin > .navi_picker_spin_way_out {
-    box-sizing: border-box;
-    height: calc(
-      1lh + var(--x-picker-spin-padding-top) +
-        var(--x-picker-spin-padding-bottom)
-    );
-    padding-top: var(--x-picker-spin-padding-top);
-    padding-bottom: var(--x-picker-spin-padding-bottom);
-    color: inherit;
-    background: none;
-    border: none;
-    /* Square by default, and rounded back only where the box is rounded (see
-       below): the corners that give onto the value have nothing to follow, and
-       a radius there would show as a notch in the pressed background. */
-    border-radius: 0;
-    cursor: pointer;
-    /* Pressed with a finger as readily as with a mouse: no double-tap zoom to
-       wait for between two presses, and no word of the value getting selected
-       under the finger of someone holding one down. */
-    touch-action: manipulation;
-    user-select: none;
-    -webkit-user-select: none;
-  }
-  /* Said as data-hover rather than :hover: a touch browser synthesizes the
-     enter and never the leave, so a CSS :hover would stay grey under the last
-     chevron pressed until something else was touched. What tracks it (see
-     pseudo_styles.js) knows there is no hover on such a device and simply does
-     not set the attribute. */
-  .navi_picker_spin > .navi_picker_spin_way_out[data-hover] {
-    background: color-mix(in srgb, currentColor 8%, transparent);
-  }
-  /* Nothing that way: still there, still pressable — pressing it is how one
-     learns why (see WayOut's own callout). */
-  .navi_picker_spin > .navi_picker_spin_way_out[data-unavailable] {
-    color: color-mix(in srgb, currentColor 35%, transparent);
-  }
-  .navi_picker_spin[data-readonly] > .navi_picker_spin_way_out,
-  .navi_picker_spin[data-disabled] > .navi_picker_spin_way_out {
-    cursor: default;
-  }
-  /* Square beside the value, full width above and below it: a way out is as
-     wide as what it steps through when it sits across it. */
-  .navi_picker_spin:not([data-vertical]) > .navi_picker_spin_way_out {
-    aspect-ratio: 1;
-    justify-content: center;
-  }
-  /* Standing up, a chevron takes the whole width and whatever height is left
-     over: a box taller than the three pieces in it (a height of its own, room
-     asked for around the value) would otherwise leave a strip of nothing
-     between the chevron and the border, and one pressing what looks like the
-     bottom of the box would hit nothing. */
-  .navi_picker_spin[data-vertical] > .navi_picker_spin_way_out {
-    width: 100%;
-    height: auto;
-    min-height: calc(
-      1lh + var(--x-picker-spin-padding-top) +
-        var(--x-picker-spin-padding-bottom)
-    );
-    flex: 1 0 auto;
-    justify-content: center;
-  }
-  /* The corners of the box belong to what sits in them: a chevron in the corner
-     of a rounded spin is rounded there too, and nowhere else — the two corners
-     it does not own stay at the 0 above. Said with inherit rather than clipped
-     away with overflow, which would cut the focus ring of the very button it
-     rounds.
-     Which chevron is which is asked of the chevron itself (data-way-out) rather
-     than of its place among its siblings: the loading outline is a <span> too
-     and it is written first, so :first-of-type named IT and the chevron at the
-     start went unrounded. */
-  .navi_picker_spin:not([data-vertical])
-    > .navi_picker_spin_way_out[data-way-out="start"] {
-    border-start-start-radius: inherit;
-    border-end-start-radius: inherit;
-  }
-  .navi_picker_spin:not([data-vertical])
-    > .navi_picker_spin_way_out[data-way-out="end"] {
-    border-start-end-radius: inherit;
-    border-end-end-radius: inherit;
-  }
-  .navi_picker_spin[data-vertical]
-    > .navi_picker_spin_way_out[data-way-out="start"] {
-    border-start-start-radius: inherit;
-    border-start-end-radius: inherit;
-  }
-  .navi_picker_spin[data-vertical]
-    > .navi_picker_spin_way_out[data-way-out="end"] {
-    border-end-end-radius: inherit;
-    border-end-start-radius: inherit;
-  }
-
-  /* ── SpinGroup ─────────────────────────────────────────────────────────────
-     Several spins read as one value: an hour is "7h30", not a 7 next to a 30.
-     So the frame goes around the group, the spins inside give theirs up, and
-     what sits between them (an "h", a ":") is inside the frame with them. */
-  .navi_spin_group {
-    /* What the loading outline is drawn around. */
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    font-size: var(--navi-control-font-size);
-    font-family: var(--navi-control-font-family);
-    border: var(--navi-control-border-width) solid
-      var(--navi-control-border-color);
-    /* Squared from the outside, corner by corner (see .navi_picker_spin
-       above): the group is the member a Group joins, and it can arrive
-       wrapped. The spins inside give their radius up and take the corners of
-       this one back through inherit, so they follow. */
-    border-top-left-radius: var(
-      --x-corner-top-left-radius,
-      var(--navi-control-border-radius)
-    );
-    border-top-right-radius: var(
-      --x-corner-top-right-radius,
-      var(--navi-control-border-radius)
-    );
-    border-bottom-right-radius: var(
-      --x-corner-bottom-right-radius,
-      var(--navi-control-border-radius)
-    );
-    border-bottom-left-radius: var(
-      --x-corner-bottom-left-radius,
-      var(--navi-control-border-radius)
-    );
-    outline-width: var(--navi-focus-outline-width);
-    outline-color: var(--navi-focus-outline-color);
-    outline-offset: 0px;
-  }
-  /* A value one PICKS has nowhere of its own to wear a ring — its middle is a
-     container that hands the ring over (data-focus-outline-delegate) — so the
-     group wears it for that spin. A value one TYPES keeps its own, on the
-     field: the spins in a group are edited one at a time, and the ring is what
-     says which one the keyboard is in. */
-  .navi_spin_group[data-focus-visible],
-  .navi_spin_group:has([data-focus-outline-delegate][data-focus-visible]) {
-    outline-style: solid;
-  }
-  .navi_spin_group .navi_picker_spin {
-    border: none;
-    border-radius: 0;
-  }
-  /* The corners of the group belong to the spins sitting in them, and through
-     them to their chevrons, which are rounded by whatever their spin is. */
-  .navi_spin_group > .navi_picker_spin:first-child {
-    border-start-start-radius: inherit;
-    border-end-start-radius: inherit;
-  }
-  .navi_spin_group > .navi_picker_spin:last-child {
-    border-start-end-radius: inherit;
-    border-end-end-radius: inherit;
-  }
-  .navi_spin_group .navi_picker_spin[data-focus-visible],
-  .navi_spin_group
-    .navi_picker_spin:has([data-focus-outline-delegate][data-focus-visible]),
-  .navi_spin_group .navi_picker_spin:has(.navi_input[data-focus-visible]) {
-    outline-style: none;
-  }
-  /* Fading the frame is the group's to do, since the frame is the group's. */
-  .navi_spin_group[data-readonly],
-  .navi_spin_group[data-loading] {
-    border-color: color-mix(
-      in srgb,
-      var(--navi-control-border-color) 45%,
-      transparent
-    );
-  }
-  .navi_spin_group[data-disabled] {
-    color: color-mix(in srgb, currentColor 40%, transparent);
-    border-color: color-mix(
-      in srgb,
-      var(--navi-control-border-color) 30%,
-      transparent
-    );
-  }
-  /* As tall as the spins beside it, so what it says lands on their line. */
-  .navi_spin_group_separator {
-    display: flex;
-    align-items: center;
-    align-self: stretch;
-    justify-content: center;
-    color: inherit;
-    white-space: nowrap;
-    user-select: none;
-  }
-  /* The "h" fades with the values it sits between: it is one control, and a
-     word left black beside two grey numbers reads as half a control out of
-     service. Same mixes as the spins' own (see above). */
-  .navi_spin_group[data-readonly] .navi_spin_group_separator,
-  .navi_spin_group[data-loading] .navi_spin_group_separator {
+  & [data-slide] {
     color: color-mix(in srgb, currentColor 60%, transparent);
   }
-  .navi_spin_group[data-disabled] .navi_spin_group_separator {
-    color: color-mix(in srgb, currentColor 40%, transparent);
-  }
+}
+
+.navi_picker_spin[data-disabled] {
+  color: color-mix(in srgb, currentColor 40%, transparent);
+  border-color: color-mix(in srgb,
+      var(--navi-control-border-color) 30%,
+      transparent);
+}
+
+.navi_picker_spin_middle {
+  --x-corner-top-left-radius: initial;
+  --x-corner-top-right-radius: initial;
+  --x-corner-bottom-right-radius: initial;
+  --x-corner-bottom-left-radius: initial;
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  position: relative;
+}
+
+.navi_picker_spin_middle > .navi_picker {
+  width: min(100%, var(--picker-spin-picker-width, 12ch));
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  translate: -50%;
+}
+
+.navi_picker_spin_middle > .navi_input {
+  --padding-right: var(--x-picker-spin-padding-right);
+  --padding-left: var(--x-picker-spin-padding-left);
+  flex: auto;
+  min-width: 0;
+}
+
+.navi_picker_spin [data-slide] {
+  padding-top: var(--x-picker-spin-padding-top);
+  padding-right: var(--x-picker-spin-padding-right);
+  padding-bottom: var(--x-picker-spin-padding-bottom);
+  padding-left: var(--x-picker-spin-padding-left);
+  text-align: center;
+  overflow: hidden;
+}
+
+.navi_picker_spin [data-slide-container] {
+  cursor: pointer;
+}
+
+.navi_picker_spin[data-readonly] [data-slide-container], .navi_picker_spin[data-disabled] [data-slide-container] {
+  cursor: default;
+}
+
+.navi_picker_spin [data-slide] > * {
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.navi_picker_spin > .navi_picker_spin_way_out {
+  box-sizing: border-box;
+  height: calc(1lh + var(--x-picker-spin-padding-top) +
+        var(--x-picker-spin-padding-bottom));
+  padding-top: var(--x-picker-spin-padding-top);
+  padding-bottom: var(--x-picker-spin-padding-bottom);
+  color: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  background: none;
+  border: none;
+  border-radius: 0;
+}
+
+.navi_picker_spin > .navi_picker_spin_way_out[data-hover] {
+  background: color-mix(in srgb, currentColor 8%, transparent);
+}
+
+.navi_picker_spin > .navi_picker_spin_way_out[data-unavailable] {
+  color: color-mix(in srgb, currentColor 35%, transparent);
+}
+
+.navi_picker_spin[data-readonly] > .navi_picker_spin_way_out, .navi_picker_spin[data-disabled] > .navi_picker_spin_way_out {
+  cursor: default;
+}
+
+.navi_picker_spin:not([data-vertical]) > .navi_picker_spin_way_out {
+  aspect-ratio: 1;
+  justify-content: center;
+}
+
+.navi_picker_spin[data-vertical] > .navi_picker_spin_way_out {
+  width: 100%;
+  height: auto;
+  min-height: calc(1lh + var(--x-picker-spin-padding-top) +
+        var(--x-picker-spin-padding-bottom));
+  flex: 1 0 auto;
+  justify-content: center;
+}
+
+.navi_picker_spin:not([data-vertical]) > .navi_picker_spin_way_out[data-way-out="start"] {
+  border-start-start-radius: inherit;
+  border-end-start-radius: inherit;
+}
+
+.navi_picker_spin:not([data-vertical]) > .navi_picker_spin_way_out[data-way-out="end"] {
+  border-start-end-radius: inherit;
+  border-end-end-radius: inherit;
+}
+
+.navi_picker_spin[data-vertical] > .navi_picker_spin_way_out[data-way-out="start"] {
+  border-start-start-radius: inherit;
+  border-start-end-radius: inherit;
+}
+
+.navi_picker_spin[data-vertical] > .navi_picker_spin_way_out[data-way-out="end"] {
+  border-end-end-radius: inherit;
+  border-end-start-radius: inherit;
+}
+
+.navi_spin_group {
+  font-size: var(--navi-control-font-size);
+  font-family: var(--navi-control-font-family);
+  border: var(--navi-control-border-width) solid
+      var(--navi-control-border-color);
+  border-top-left-radius: var(--x-corner-top-left-radius, var(--navi-control-border-radius));
+  border-top-right-radius: var(--x-corner-top-right-radius, var(--navi-control-border-radius));
+  border-bottom-right-radius: var(--x-corner-bottom-right-radius, var(--navi-control-border-radius));
+  border-bottom-left-radius: var(--x-corner-bottom-left-radius, var(--navi-control-border-radius));
+  outline-width: var(--navi-focus-outline-width);
+  outline-color: var(--navi-focus-outline-color);
+  outline-offset: 0px;
+  align-items: center;
+  display: inline-flex;
+  position: relative;
+}
+
+.navi_spin_group[data-focus-visible], .navi_spin_group:has([data-focus-outline-delegate][data-focus-visible]) {
+  outline-style: solid;
+}
+
+.navi_spin_group .navi_picker_spin {
+  border: none;
+  border-radius: 0;
+}
+
+.navi_spin_group > .navi_picker_spin:first-child {
+  border-start-start-radius: inherit;
+  border-end-start-radius: inherit;
+}
+
+.navi_spin_group > .navi_picker_spin:last-child {
+  border-start-end-radius: inherit;
+  border-end-end-radius: inherit;
+}
+
+.navi_spin_group .navi_picker_spin[data-focus-visible], .navi_spin_group .navi_picker_spin:has([data-focus-outline-delegate][data-focus-visible]), .navi_spin_group .navi_picker_spin:has(.navi_input[data-focus-visible]) {
+  outline-style: none;
+}
+
+.navi_spin_group[data-readonly], .navi_spin_group[data-loading] {
+  border-color: color-mix(in srgb,
+      var(--navi-control-border-color) 45%,
+      transparent);
+}
+
+.navi_spin_group[data-disabled] {
+  color: color-mix(in srgb, currentColor 40%, transparent);
+  border-color: color-mix(in srgb,
+      var(--navi-control-border-color) 30%,
+      transparent);
+}
+
+.navi_spin_group_separator {
+  color: inherit;
+  white-space: nowrap;
+  user-select: none;
+  justify-content: center;
+  align-self: stretch;
+  align-items: center;
+  display: flex;
+}
+
+.navi_spin_group[data-readonly] .navi_spin_group_separator, .navi_spin_group[data-loading] .navi_spin_group_separator {
+  color: color-mix(in srgb, currentColor 60%, transparent);
+}
+
+.navi_spin_group[data-disabled] .navi_spin_group_separator {
+  color: color-mix(in srgb, currentColor 40%, transparent);
+}
 `;
 
 /**
@@ -70831,14 +68473,13 @@ const TimeRangeSpin = ({
 };
 
 installImportMetaCssBuild(import.meta);// TOFIX: select in data then reset, it reset to red/blue instead of red/blue/green
-const css$r = /* css */`
-  .navi_checkbox_group {
-    border-style: solid;
+const css$r = /* css */`.navi_checkbox_group {
+  border-style: solid;
 
-    &[data-callout] {
-      border-color: var(--callout-color);
-    }
+  &[data-callout] {
+    border-color: var(--callout-color);
   }
+}
 `;
 
 /**
@@ -70989,32 +68630,29 @@ const formatIntlUnit = (unit, {
   }
 };
 
-installImportMetaCssBuild(import.meta);const css$q = /* css */`
-  .navi_input_duration {
-    --duration-separator-spacing: 4px;
-    --loader-color: var(--navi-loader-color);
+installImportMetaCssBuild(import.meta);const css$q = /* css */`.navi_input_duration {
+  --duration-separator-spacing: 4px;
+  --loader-color: var(--navi-loader-color);
+  position: relative;
 
-    position: relative; /* For loading outline  */
-
-    .navi_label {
-      &[data-separator] {
-        .navi_unit {
-          margin-right: 1ch;
-          margin-right: calc(1ch + var(--duration-separator-spacing));
-        }
-      }
-    }
-
-    .navi_input {
-      --padding-x: 0;
-
-      .navi_input_slot {
-        --slot-spacing: var(--duration-separator-spacing);
-
-        margin-right: calc(var(--slot-spacing) / 2);
+  & .navi_label {
+    &[data-separator] {
+      & .navi_unit {
+        margin-right: 1ch;
+        margin-right: calc(1ch + var(--duration-separator-spacing));
       }
     }
   }
+
+  & .navi_input {
+    --padding-x: 0;
+
+    & .navi_input_slot {
+      --slot-spacing: var(--duration-separator-spacing);
+      margin-right: calc(var(--slot-spacing) / 2);
+    }
+  }
+}
 `;
 
 /**
@@ -71558,14 +69196,13 @@ const InputDurationPart = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$p = /* css */`
-  .navi_radio_group {
-    border-style: solid;
+installImportMetaCssBuild(import.meta);const css$p = /* css */`.navi_radio_group {
+  border-style: solid;
 
-    &[data-callout] {
-      border-color: var(--callout-color);
-    }
+  &[data-callout] {
+    border-color: var(--callout-color);
   }
+}
 `;
 const RadioGroup = props => {
   const refDefault = useRef(null);
@@ -71636,38 +69273,28 @@ installImportMetaCssBuild(import.meta);/**
  * control is drawn — the list it opens stays the platform's own, which is the
  * whole point of using a select.
  */
-const css$o = /* css */`
-  .navi_input.navi_select {
-    .navi_control_input {
-      /* Room for the chevron, which sits over the padding rather than beside
-         the control — anything beside it would be a click that misses. */
-      padding-right: calc(var(--x-padding-right) + 1em);
-      /* Same line as every other field (see --navi-line-height): a select and
-         an input side by side must be the same height, and lh units elsewhere
-         in the box need a real number to resolve against. */
-      line-height: var(--navi-control-line-height);
-      /* The closed control is drawn by us so it matches the other fields; the
-         list it opens is untouched and stays the system's. */
-      appearance: none;
-      cursor: pointer;
-    }
-    &[data-readonly] .navi_control_input,
-    &[data-disabled] .navi_control_input {
-      cursor: inherit;
-    }
-
-    .navi_select_arrow {
-      position: absolute;
-      top: 50%;
-      right: var(--x-padding-right);
-      display: flex;
-      color: var(--color-dimmed);
-      translate: 0 -50%;
-      /* The arrow is drawn on top of the control it belongs to: a click on it
-         must reach the select and open the list. */
-      pointer-events: none;
-    }
+const css$o = /* css */`.navi_input.navi_select {
+  & .navi_control_input {
+    padding-right: calc(var(--x-padding-right) + 1em);
+    line-height: var(--navi-control-line-height);
+    appearance: none;
+    cursor: pointer;
   }
+
+  &[data-readonly] .navi_control_input, &[data-disabled] .navi_control_input {
+    cursor: inherit;
+  }
+
+  & .navi_select_arrow {
+    top: 50%;
+    right: var(--x-padding-right);
+    color: var(--color-dimmed);
+    pointer-events: none;
+    display: flex;
+    position: absolute;
+    translate: 0 -50%;
+  }
+}
 `;
 
 /**
@@ -71692,7 +69319,8 @@ const Select = ({
   multiple,
   ...props
 }) => {
-  import.meta.css = [inputCss + css$o, "@jsenv/navi/src/control/input/select.jsx"];
+  installInputCss();
+  import.meta.css = [css$o, "@jsenv/navi/src/control/input/select.jsx"];
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
   seedDefaultValueFromSignal(props);
@@ -71760,27 +69388,20 @@ installImportMetaCssBuild(import.meta);/**
  * running: one loading outline around both, which is why each half is told
  * `loadingOutline={false}`.
  */
-const css$n = /* css */`
-  /* Around the pair rather than in it: the outline is drawn against this
-     element and follows its corners, and a Group counts its own children to
-     know which corners to square — an outline among them would be one of the
-     halves. Hence a box holding a group, rather than the group itself. */
-  .navi_split_button {
-    position: relative;
-    display: inline-flex;
-    border-radius: var(--navi-control-border-radius);
+const css$n = /* css */`.navi_split_button {
+  border-radius: var(--navi-control-border-radius);
+  display: inline-flex;
+  position: relative;
 
-    > .navi_group {
-      flex: 1 1 auto;
-    }
+  & > .navi_group {
+    flex: auto;
   }
-  /* The chevron half is a button with a headless picker behind it: the picker
-     box is inset: 0 of whatever is positioned above it, and that must be the
-     chevron alone, not the whole split button. */
-  .navi_split_button_menu {
-    position: relative;
-    display: flex;
-  }
+}
+
+.navi_split_button_menu {
+  display: flex;
+  position: relative;
+}
 `;
 
 /**
@@ -72524,490 +70145,321 @@ installImportMetaCssBuild(import.meta);/*
  * accessors (top/height vs left/width) chosen from `horizontal`, and the CSS has
  * a [data-horizontal] variant.
  */
-const css$m = /* css */`
-  .navi_wheel_container {
-    /* Row size and emphasis band are read together: the band is what a value
-       must cross to lose its emphasis, and the row is how far it has to travel
-       to swap with its neighbour. A row much taller than the band leaves a dead
-       zone — a wheel resting between two rows emphasises NEITHER value, since
-       both glyphs are outside the band. Keeping the row within ~1.2× the band
-       removes it: whatever the position, something is always inside. */
-    --wheel-item-height: round(1.8em, 1px);
-    --wheel-emphasis-size: round(1.5em, 1px);
-    --wheel-item-width: 3.5ch;
-    --wheel-visible-count: 3;
-    /* ONE colour to set: --wheel-color is the wheel's colour, worn by the value
-       in the window. The neighbours are a washed-out version of it (blended
-       toward transparent, then dimmed further by the fade), so tinting the
-       wheel takes a single declaration and stays coherent. Override
-       --wheel-neighbor-color for a neighbour colour of its own. */
-    --wheel-color: light-dark(#111, #eee);
-    --wheel-neighbor-color: color-mix(
-      in srgb,
+const css$m = /* css */`.navi_wheel_container {
+  --wheel-item-height: round(1.8em, 1px);
+  --wheel-emphasis-size: round(1.5em, 1px);
+  --wheel-item-width: 3.5ch;
+  --wheel-visible-count: 3;
+  --wheel-color: light-dark(#111, #eee);
+  --wheel-neighbor-color: color-mix(in srgb,
       var(--wheel-color) 45%,
-      transparent
-    );
-
-    position: relative; /* for the loading outline */
-    display: inline-flex;
-    color: var(--wheel-color);
-    font-size: var(--navi-control-font-size);
-    font-family: var(--navi-control-font-family);
-    /* Bordered like every other control: the box a user can interact with is
-       visible without having to hover or guess. border="none" opts out. */
-    border: var(--navi-control-border-width) solid
+      transparent);
+  color: var(--wheel-color);
+  font-size: var(--navi-control-font-size);
+  font-family: var(--navi-control-font-family);
+  border: var(--navi-control-border-width) solid
       var(--navi-control-border-color);
-    border-radius: var(--navi-control-border-radius);
+  border-radius: var(--navi-control-border-radius);
+  display: inline-flex;
+  position: relative;
 
-    &:focus {
-      /* Keyboard focus rings the center window only (see .navi_wheel_focus_ring) —
-       the neighbours are just hints, so the ring belongs on the selected value,
-       not the whole column. The spinbutton container is the focusable element, so
-       suppress its own UA outline in favour of the ring. [data-focus-visible] lets
-       a caller force the ring. */
-      outline: none;
-    }
-    &[data-focus-visible] {
-      .navi_wheel_focus_ring {
-        outline: var(--navi-focus-outline-width) solid
+  &:focus {
+    outline: none;
+  }
+
+  &[data-focus-visible] {
+    & .navi_wheel_focus_ring {
+      outline: var(--navi-focus-outline-width) solid
           var(--navi-focus-outline-color);
-        /* Inset so overflow: hidden on the viewport doesn't clip the ring. */
-        outline-offset: calc(0.5 * var(--navi-focus-outline-width));
-      }
-    }
-
-    /* Readonly dims the whole wheel; disabled dims it further. Both go through
-       --wheel-color, so the neighbours follow along (they are mixed from it). */
-    &[data-readonly] {
-      --wheel-color: light-dark(#666, #999);
-    }
-    &[data-disabled] {
-      --wheel-color: light-dark(rgba(0, 0, 0, 0.32), rgba(255, 255, 255, 0.38));
-    }
-    &[data-readonly],
-    &[data-disabled] {
-      /* Rows can't take a click, so the wheel-level readonly callout is the only
-         one — no per-row callouts fire. */
-      .navi_wheel_item {
-        pointer-events: none;
-      }
+      outline-offset: calc(.5 * var(--navi-focus-outline-width));
     }
   }
 
-  /* Holds the value for the form. Invisible and inert: it keeps a box (for the
-     callout to anchor to) but never takes focus, pointer, or paint. */
-  .navi_wheel_input {
-    position: absolute;
-    inset: 0;
-    width: auto;
-    height: auto;
-    opacity: 0;
-    appearance: none;
-    pointer-events: none;
+  &[data-readonly] {
+    --wheel-color: light-dark(#666, #999);
   }
 
-  .navi_wheel_viewport {
-    position: relative;
-    /* Default before the first pointer move; updateCursor refines it to plain in
-       the center window. The rows inherit this. */
-    cursor: pointer;
-    touch-action: none;
-    /* No native scroll: the list track is positioned by transform (see
-       renderPos). Overflow clips the off-center rows; touch-action:none routes
-       drags to our pointer handlers instead of the browser's scroll. */
-    overflow: hidden;
-  }
-  /* TWO COPIES OF THE SAME ROWS, stacked and moved together. The base layer
-     paints every row in the neighbour colour and wears the fade (and, with
-     [data-zoom], is the one scaled down); the center layer paints the same rows
-     in the wheel's colour, clipped to the emphasis band — so what is inside the
-     band is emphasised and nothing else is.
-     Emphasis is thus a property of the WINDOW, not of a row: a row gains it
-     progressively as it slides in — half in, half emphasised — which no
-     per-row style could do, and it survives resting between two rows (where a
-     fade alone leaves nothing emphasised at all). */
-  .navi_wheel_layer[data-layer="base"] {
-    color: var(--wheel-neighbor-color);
-    /* In flow: this copy is what gives the viewport (and so the whole wheel,
-       which is fit-content) its size — the center layer is an overlay on top of
-       it and measures nothing.
-       The fade belongs to this layer, not to the viewport: on the viewport it
-       would dim the center layer too, and the window edges (where the gradient
-       is already partly transparent) would wash the selected value out —
-       exactly where it must be at full strength. no-repeat so the rows
-       overflowing this box are masked out rather than showing a repeated
-       gradient tile. */
-    -webkit-mask-image: var(--wheel-fade);
-    mask-image: var(--wheel-fade);
-    -webkit-mask-repeat: no-repeat;
-    mask-repeat: no-repeat;
-  }
-  .navi_wheel_layer[data-layer="center"] {
-    position: absolute;
-    inset: 0;
-    color: var(--wheel-color);
-    /* The base rows underneath take the clicks (this copy sits on top of them). */
-    pointer-events: none;
-  }
-  .navi_wheel_list {
-    display: flex;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-    /* Virtual scroll position: JS writes --wheel-offset (px, already rounded to a
-       whole pixel) on the viewport each frame — one write, inherited by both
-       layers, so they can never drift apart — and CSS decides how to apply it.
-       translate3d keeps the track on its own composited layer for smooth
-       momentum/glide. */
-    transform: translate3d(0, var(--wheel-offset, 0px), 0);
-    /* NO will-change: transform. translate3d already composites the track;
-       will-change additionally pins it to its own layer, which the glass panes'
-       backdrop-filter then samples with a bright fringe (halo) around each glyph. */
+  &[data-disabled] {
+    --wheel-color: light-dark(#00000052, #ffffff61);
   }
 
-  /* type is informative metadata; a couple of types get a rendering hint.
-     "integer" wants figures to line up column-to-column across rows. */
-  .navi_wheel_container[data-wheel-type="integer"] {
-    font-variant-numeric: tabular-nums;
+  &[data-readonly], &[data-disabled] {
+    & .navi_wheel_item {
+      pointer-events: none;
+    }
   }
+}
 
-  .navi_wheel_item {
-    position: relative;
-    display: flex;
-    flex: none;
-    align-items: center;
-    justify-content: center;
-    /* NO colour here: a row takes it from the layer it belongs to (see
-       .navi_wheel_layer), which is what makes the same row read as neighbour
-       below and as selected above. */
-    font-weight: 600;
-    text-align: center;
-    white-space: nowrap;
-    /* Cursor is set on the viewport by pointer position (see updateCursor) and
-       inherited here, so it stays fixed to the center window rather than flipping
-       as rows scroll under the pointer. */
-    user-select: none;
-    /* NO content-visibility here, ever. content-visibility: auto was tried
-       (to skip painting clipped rows) and it breaks the first opening of any
-       popup holding a wheel: rows born inside a closed dialog are "skipped"
-       with no last-remembered size, so they measure as empty (padding-only) on
-       the open's own layout — the dialog positions itself against that width
-       and visibly slides once the real width lands. The un-skip only happens
-       at the next update-the-rendering step: no forced reflow can read the
-       true size any earlier, making the bug unfixable from the dialog side.
-       There is also nothing left to win: the window renders only
-       visibleCount + 2 recycled rows, all in or against the viewport. */
-  }
+.navi_wheel_input {
+  opacity: 0;
+  appearance: none;
+  pointer-events: none;
+  width: auto;
+  height: auto;
+  position: absolute;
+  inset: 0;
+}
 
-  /* Orientation-specific sizing/layout. The mask worn by the base layer: the
-     neighbours dissolve progressively toward the edges, like a physical wheel
-     curving away, and the emphasis band is cut clean out of it — inside the
-     band only the center layer paints. Both jobs are one gradient because they
-     run along the same axis; a second mask layer composited out would need
-     mask-composite, whose prefixed Safari form takes different keywords.
-     Cutting the band matters as soon as the two layers draw a row differently
-     ([data-zoom] shrinks the base one): the glyphs no longer coincide, and the
-     one underneath would show through as a grey ghost around the other. */
-  .navi_wheel_container {
-    --wheel-fade: linear-gradient(
-      var(--wheel-fade-direction),
+.navi_wheel_viewport {
+  cursor: pointer;
+  touch-action: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.navi_wheel_layer[data-layer="base"] {
+  color: var(--wheel-neighbor-color);
+  -webkit-mask-image: var(--wheel-fade);
+  mask-image: var(--wheel-fade);
+  mask-repeat: no-repeat;
+}
+
+.navi_wheel_layer[data-layer="center"] {
+  color: var(--wheel-color);
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+}
+
+.navi_wheel_list {
+  transform: translate3d(0, var(--wheel-offset, 0px), 0);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+}
+
+.navi_wheel_container[data-wheel-type="integer"] {
+  font-variant-numeric: tabular-nums;
+}
+
+.navi_wheel_item {
+  text-align: center;
+  white-space: nowrap;
+  user-select: none;
+  flex: none;
+  justify-content: center;
+  align-items: center;
+  font-weight: 600;
+  display: flex;
+  position: relative;
+}
+
+.navi_wheel_container {
+  --wheel-fade: linear-gradient(var(--wheel-fade-direction),
       transparent 0%,
-      rgba(0, 0, 0, 0.6) 32%,
+      #0009 32%,
       #000 var(--wheel-band-inset),
       transparent var(--wheel-band-inset),
       transparent calc(100% - var(--wheel-band-inset)),
       #000 calc(100% - var(--wheel-band-inset)),
-      rgba(0, 0, 0, 0.6) 68%,
-      transparent 100%
-    );
+      #0009 68%,
+      transparent 100%);
 
-    /* Two invisible panes cover the rows on each side of the center window, used
-       only for optional effects (the fade already dims): [data-glass] frosts
-       (blurs) them; [data-frame-border] lines the edge facing the window. The
-       .navi_wheel_focus_ring outlines the window itself. Pane geometry, the ring
-       geometry, and the frame edges are all orientation-specific, so they live in
-       the branches below and reuse them. */
-    .navi_wheel_pane {
-      position: absolute;
-      z-index: 1;
-      border: 0 solid
-        var(
-          --wheel-frame-color,
-          light-dark(rgba(0, 0, 0, 0.14), rgba(255, 255, 255, 0.18))
-        );
-      pointer-events: none;
-    }
-    .navi_wheel_focus_ring {
-      position: absolute;
-      z-index: 2;
-      /* The wheel's own, whatever it was given: a ring with a radius of its own
-         would go its own way the moment a caller rounds the wheel. */
-      border-radius: inherit;
-      pointer-events: none;
-    }
-    /* The loading outline (rendered as a container child, outside the viewport)
-       tracks the center window like the focus ring, above the glass/fade so it
-       is never dimmed. Geometry lives in the orientation branches. */
-    .navi_wheel_outline_wrapper {
-      position: absolute;
-      z-index: 3;
-      border-radius: inherit;
-      pointer-events: none;
-    }
-
-    /* Zoom: the size difference is obtained by SHRINKING the base layer, never
-       by growing the center one — the centered value keeps its natural size, so
-       it can't spill over the wheel's border or into a neighbouring column, and
-       the wheel needs no extra room to be zoomed. --wheel-zoom stays the ratio
-       between centered and neighbour (1.3 = the center reads 30% bigger).
-       Only the base layer is scaled, so a value is shrunk exactly over the part
-       of it that is OUTSIDE the band: sliding into the center it grows from the
-       edge inwards. The scale property (not transform) leaves the track's
-       translate3d alone, and scaling each row about its own center keeps the row
-       grid intact, so nothing in the geometry or the wrap math sees it. */
-    &[data-zoom] .navi_wheel_layer[data-layer="base"] .navi_wheel_item {
-      scale: calc(1 / var(--wheel-zoom, 1.3));
-    }
-
-    &[data-glass] .navi_wheel_pane {
-      /* A faint frost tint under the blur flattens the halo a bare
-         backdrop-filter leaves around dark glyphs; saturate revives the colours
-         the blur washes out, for a truer glass look. Tune via --wheel-glass-*. */
-      background: light-dark(
-        rgba(255, 255, 255, var(--wheel-glass-tint, 0.3)),
-        rgba(0, 0, 0, var(--wheel-glass-tint, 0.3))
-      );
-      backdrop-filter: blur(var(--wheel-glass-blur, 1.5px))
-        saturate(var(--wheel-glass-saturate, 160%));
-      -webkit-backdrop-filter: blur(var(--wheel-glass-blur, 1.5px))
-        saturate(var(--wheel-glass-saturate, 160%));
-    }
-
-    &:not([data-horizontal]) {
-      --wheel-fade-direction: to bottom;
-      /* Distance from a viewport edge to the center window / to the emphasis
-         band (the band is the narrower of the two, see --wheel-emphasis-size). */
-      --wheel-window-inset: calc((100% - var(--wheel-item-height)) / 2);
-      --wheel-band-inset: calc((100% - var(--wheel-emphasis-size)) / 2);
-
-      /* As wide as the rows ON SCREEN, which is not the same as "as wide as
-         the widest value": the rows are a handful of recycled slots, so a wheel
-         whose labels are not all the same width resizes as one scrolls — "9"
-         becoming "10" widens it mid-glide, and whatever holds it (a popup)
-         moves under the finger. Give such a wheel a width and the question is
-         settled once; the per-row padding stays where it is, inside it, and
-         stays scrollable. Digits are the case where this does not arise on its
-         own: data-wheel-type="integer" makes them tabular above, so they all
-         advance the same — until one of them takes a digit more. */
-      width: fit-content;
-
-      .navi_wheel_viewport {
-        width: 100%;
-        height: calc(var(--wheel-item-height) * var(--wheel-visible-count));
-      }
-      .navi_wheel_layer[data-layer="base"] {
-        /* The fade must span the VIEWPORT, so the layer wearing it is the size
-           of the viewport — its track (taller: visibleCount + 2 rows) overflows
-           it and is clipped by the viewport. Only the cross axis (width) is left
-           to the content, since that is what sizes the wheel. */
-        height: 100%;
-      }
-      .navi_wheel_layer[data-layer="center"] {
-        /* Around the GLYPH, not around the row: a row is taller than the digits
-           it holds (line box + padding), so a row-sized band would keep a value
-           fully emphasised for the first third of a scroll and only then start
-           cutting it. Sized on the glyph, it starts changing as soon as the
-           wheel moves. */
-        clip-path: inset(var(--wheel-band-inset) 0);
-      }
-      .navi_wheel_list {
-        flex-direction: column;
-      }
-      .navi_wheel_item {
-        /* Fixed main-axis size (height); the cross axis follows the content.
-           box-sizing so per-item padding (below) doesn't grow the fixed row. */
-        box-sizing: border-box;
-        height: var(--wheel-item-height);
-        padding-block: var(--navi-wheel-item-padding-main-default, 0px);
-        /* No breathing room by default — the wheel shows its true content size.
-           Spacing is the caller's choice, set PER ITEM (each Wheel.Item is a Box:
-           paddingX here, since horizontal is the cross axis of a vertical wheel) so
-           the padded area stays scrollable. Global defaults are the axis-named CSS
-           vars — cross = perpendicular to scroll (the gap), main = along scroll. */
-        padding-inline: var(--navi-wheel-item-padding-cross-default, 0px);
-        /* A full-row line-height so the glyph's line box fills the (even) row
-           height and centers on a WHOLE pixel. A "normal" line box is ~15px (odd):
-           centered in a 32px row it lands on a .5 sub-pixel, and .5 rounds one way
-           for this transformed track and the other for the static separators — a
-           1px vertical misalignment. Matching var(--wheel-item-height) here and on
-           the separators removes the .5. Vertical only: a horizontal wheel has no
-           row height to fill, and forcing it would blow up the separator height. */
-        line-height: var(--wheel-item-height);
-      }
-      .navi_wheel_pane {
-        right: 0;
-        left: 0;
-        height: var(--wheel-window-inset);
-        &[data-side="start"] {
-          top: 0;
-        }
-        &[data-side="end"] {
-          bottom: 0;
-        }
-      }
-      .navi_wheel_focus_ring,
-      .navi_wheel_outline_wrapper {
-        top: var(--wheel-window-inset);
-        right: 0;
-        bottom: var(--wheel-window-inset);
-        left: 0;
-        height: auto;
-      }
-      &[data-frame-border] .navi_wheel_pane {
-        &[data-side="start"] {
-          border-bottom-width: 1px;
-        }
-        &[data-side="end"] {
-          border-top-width: 1px;
-        }
-      }
-    }
-
-    &[data-horizontal] {
-      --wheel-fade-direction: to right;
-      /* A cell is about as wide as the value it holds, so the band is the whole
-         cell (unlike the vertical case — see the note there). */
-      --wheel-emphasis-size: var(--wheel-item-width);
-      /* Distance from a viewport edge to the center window / to the emphasis
-         band (see the vertical branch). */
-      --wheel-window-inset: calc((100% - var(--wheel-item-width)) / 2);
-      --wheel-band-inset: calc((100% - var(--wheel-emphasis-size)) / 2);
-
-      /* The cross axis follows the rows on screen — same story as the vertical
-         branch above, and the same answer: say a height when the rows are not
-         all as tall as each other. */
-      height: fit-content;
-
-      .navi_wheel_viewport {
-        width: calc(var(--wheel-item-width) * var(--wheel-visible-count));
-        height: 100%;
-      }
-      .navi_wheel_layer[data-layer="base"] {
-        /* Viewport-sized along the scroll axis so the fade spans it (see the
-           vertical branch); the cross axis (height) follows the content. */
-        width: 100%;
-      }
-      .navi_wheel_layer[data-layer="center"] {
-        clip-path: inset(0 var(--wheel-band-inset));
-      }
-      .navi_wheel_list {
-        flex-direction: row;
-        /* Horizontal wheels scroll along X (see --wheel-offset on the base rule). */
-        transform: translate3d(var(--wheel-offset, 0px), 0, 0);
-      }
-      .navi_wheel_item {
-        /* Fixed main-axis size (width); the cross axis (vertical here) follows the
-           content. Same axis-named global defaults as the vertical branch, mapped
-           to this orientation: cross = block (vertical), main = inline. 0 by
-           default; opt in per item (paddingY here — see the vertical note). */
-        box-sizing: border-box;
-        width: var(--wheel-item-width);
-        padding-block: var(--navi-wheel-item-padding-cross-default, 0px);
-        padding-inline: var(--navi-wheel-item-padding-main-default, 0px);
-      }
-      .navi_wheel_pane {
-        top: 0;
-        bottom: 0;
-        width: var(--wheel-window-inset);
-        &[data-side="start"] {
-          left: 0;
-        }
-        &[data-side="end"] {
-          right: 0;
-        }
-      }
-      .navi_wheel_focus_ring,
-      .navi_wheel_outline_wrapper {
-        top: 0;
-        right: var(--wheel-window-inset);
-        bottom: 0;
-        left: var(--wheel-window-inset);
-        width: auto;
-      }
-      &[data-frame-border] .navi_wheel_pane {
-        &[data-side="start"] {
-          border-right-width: 1px;
-        }
-        &[data-side="end"] {
-          border-left-width: 1px;
-        }
-      }
-    }
+  & .navi_wheel_pane {
+    z-index: 1;
+    border: 0 solid
+        var(--wheel-frame-color, light-dark(#00000024, #ffffff2e));
+    pointer-events: none;
+    position: absolute;
   }
 
-  /* ── WheelGroup ─────────────────────────────────────────────────────────────
-     Several wheels with separators (e.g. ":") between them. The separator column
-     keeps its natural content width (small for ":", wide for a word like "hours")
-     and is not scrollable. Spacing around a wheel is that wheel's own item padding
-     (set per Wheel.Item, see .navi_wheel_item) so it stays scrollable — a group
-     with no padding shows the wheels at their true content width. */
-  .navi_wheel_group {
-    display: inline-flex;
-    align-items: center;
-    /* ONE border around the whole group — hours, ":" and minutes are read as a
-       single control, so each wheel drops its own (a box per column would cut
-       the group into pieces and box the separator out of it). */
-    border: var(--navi-control-border-width) solid
-      var(--navi-control-border-color);
-    border-radius: var(--navi-control-border-radius);
+  & .navi_wheel_focus_ring {
+    z-index: 2;
+    border-radius: inherit;
+    pointer-events: none;
+    position: absolute;
+  }
 
-    .navi_wheel_container {
-      border: none;
+  & .navi_wheel_outline_wrapper {
+    z-index: 3;
+    border-radius: inherit;
+    pointer-events: none;
+    position: absolute;
+  }
+
+  &[data-zoom] .navi_wheel_layer[data-layer="base"] .navi_wheel_item {
+    scale: calc(1 / var(--wheel-zoom, 1.3));
+  }
+
+  &[data-glass] .navi_wheel_pane {
+    background: light-dark(rgba(255, 255, 255, var(--wheel-glass-tint, .3)), rgba(0, 0, 0, var(--wheel-glass-tint, .3)));
+    -webkit-backdrop-filter: blur(var(--wheel-glass-blur, 1.5px))
+        saturate(var(--wheel-glass-saturate, 160%));
+  }
+
+  &:not([data-horizontal]) {
+    --wheel-fade-direction: to bottom;
+    --wheel-window-inset: calc((100% - var(--wheel-item-height)) / 2);
+    --wheel-band-inset: calc((100% - var(--wheel-emphasis-size)) / 2);
+    width: fit-content;
+
+    & .navi_wheel_viewport {
+      width: 100%;
+      height: calc(var(--wheel-item-height) * var(--wheel-visible-count));
     }
 
-    &:not([data-horizontal]) {
-      /* Same full-row line-height as .navi_wheel_item so the glyph centers on a
-         whole pixel and lands on the numbers' line (see the note there). Without
-         it the separator sits ~1px off the transformed numbers. Vertical only: on
-         a horizontal group it has no row height to fill and would over-tall the
-         separator. */
-      .navi_wheel_group_separator {
-        line-height: var(--wheel-item-height);
-      }
+    & .navi_wheel_layer[data-layer="base"] {
+      height: 100%;
     }
-    &[data-horizontal] {
+
+    & .navi_wheel_layer[data-layer="center"] {
+      clip-path: inset(var(--wheel-band-inset) 0);
+    }
+
+    & .navi_wheel_list {
       flex-direction: column;
-      align-items: center;
+    }
+
+    & .navi_wheel_item {
+      box-sizing: border-box;
+      height: var(--wheel-item-height);
+      padding-block: var(--navi-wheel-item-padding-main-default, 0px);
+      padding-inline: var(--navi-wheel-item-padding-cross-default, 0px);
+      line-height: var(--wheel-item-height);
+    }
+
+    & .navi_wheel_pane {
+      height: var(--wheel-window-inset);
+      left: 0;
+      right: 0;
+
+      &[data-side="start"] {
+        top: 0;
+      }
+
+      &[data-side="end"] {
+        bottom: 0;
+      }
+    }
+
+    & .navi_wheel_focus_ring, & .navi_wheel_outline_wrapper {
+      top: var(--wheel-window-inset);
+      right: 0;
+      bottom: var(--wheel-window-inset);
+      height: auto;
+      left: 0;
+    }
+
+    &[data-frame-border] .navi_wheel_pane {
+      &[data-side="start"] {
+        border-bottom-width: 1px;
+      }
+
+      &[data-side="end"] {
+        border-top-width: 1px;
+      }
     }
   }
-  .navi_wheel_group_separator {
-    /* Stretch to the group height (= the wheels' height) and center the content,
-       landing it on the middle (selected) row and sharing the numbers' baseline
-       (right for words / letters like "ZZ"). A sibling of the wheels, so it does
-       NOT inherit their --wheel-item-height — re-expose it here (same value as
-       .navi_wheel_container). */
-    --wheel-item-height: round(1.8em, 1px);
 
-    display: flex;
+  &[data-horizontal] {
+    --wheel-fade-direction: to right;
+    --wheel-emphasis-size: var(--wheel-item-width);
+    --wheel-window-inset: calc((100% - var(--wheel-item-width)) / 2);
+    --wheel-band-inset: calc((100% - var(--wheel-emphasis-size)) / 2);
+    height: fit-content;
+
+    & .navi_wheel_viewport {
+      width: calc(var(--wheel-item-width) * var(--wheel-visible-count));
+      height: 100%;
+    }
+
+    & .navi_wheel_layer[data-layer="base"] {
+      width: 100%;
+    }
+
+    & .navi_wheel_layer[data-layer="center"] {
+      clip-path: inset(0 var(--wheel-band-inset));
+    }
+
+    & .navi_wheel_list {
+      transform: translate3d(var(--wheel-offset, 0px), 0, 0);
+      flex-direction: row;
+    }
+
+    & .navi_wheel_item {
+      box-sizing: border-box;
+      width: var(--wheel-item-width);
+      padding-block: var(--navi-wheel-item-padding-cross-default, 0px);
+      padding-inline: var(--navi-wheel-item-padding-main-default, 0px);
+    }
+
+    & .navi_wheel_pane {
+      width: var(--wheel-window-inset);
+      top: 0;
+      bottom: 0;
+
+      &[data-side="start"] {
+        left: 0;
+      }
+
+      &[data-side="end"] {
+        right: 0;
+      }
+    }
+
+    & .navi_wheel_focus_ring, & .navi_wheel_outline_wrapper {
+      top: 0;
+      right: var(--wheel-window-inset);
+      bottom: 0;
+      left: var(--wheel-window-inset);
+      width: auto;
+    }
+
+    &[data-frame-border] .navi_wheel_pane {
+      &[data-side="start"] {
+        border-right-width: 1px;
+      }
+
+      &[data-side="end"] {
+        border-left-width: 1px;
+      }
+    }
+  }
+}
+
+.navi_wheel_group {
+  border: var(--navi-control-border-width) solid
+      var(--navi-control-border-color);
+  border-radius: var(--navi-control-border-radius);
+  align-items: center;
+  display: inline-flex;
+
+  & .navi_wheel_container {
+    border: none;
+  }
+
+  &:not([data-horizontal]) {
+    & .navi_wheel_group_separator {
+      line-height: var(--wheel-item-height);
+    }
+  }
+
+  &[data-horizontal] {
+    flex-direction: column;
     align-items: center;
-    align-self: stretch;
-    justify-content: center;
-    color: var(--wheel-color, light-dark(#111, #eee));
-    font-weight: 600;
-    font-size: var(--navi-control-font-size);
-    font-family: var(--navi-control-font-family);
-    white-space: nowrap;
+  }
+}
 
-    user-select: none;
-  }
-  /* SVG ":" (Wheel.Colon). Height ≈ the digits' cap height so the two dots
-     span a similar range; centered in the row (flex) → dots on the numbers'
-     optical center. Width follows the viewBox aspect. */
-  .navi_wheel_colon {
-    display: block;
-    width: auto;
-    height: round(1em, 1px);
-  }
+.navi_wheel_group_separator {
+  --wheel-item-height: round(1.8em, 1px);
+  color: var(--wheel-color, light-dark(#111, #eee));
+  font-weight: 600;
+  font-size: var(--navi-control-font-size);
+  font-family: var(--navi-control-font-family);
+  white-space: nowrap;
+  user-select: none;
+  justify-content: center;
+  align-self: stretch;
+  align-items: center;
+  display: flex;
+}
+
+.navi_wheel_colon {
+  width: auto;
+  height: round(1em, 1px);
+  display: block;
+}
 `;
 
 // Fling physics (px per ms). WHEEL_MAX_VELOCITY caps the MOUSE-WHEEL settle
@@ -74793,27 +72245,13 @@ installImportMetaCssBuild(import.meta);/**
  * underneath for what pushing cannot fix (a start so late the span no longer
  * fits in the day).
  */
-const css$l = /* css */`
-  /* The words around a span's wheels ("De", "à"): one line box, the height
-     of a wheel row (--wheel-item-height re-exposed, same value as
-     .navi_wheel_container), centered against the wheels by the group. The
-     box's strut — this element's own font — is what places the baseline,
-     exactly where a wheel row places its numbers'; and because the content
-     stays in inline flow, anything written INSIDE at another size still
-     sits on that same baseline. Two things this depends on: the label is a
-     <Text size={size}> so its em — and therefore this line-height — is the
-     SAME em as the wheel rows' (a label left at the control font under
-     bigger wheels computes a shorter row and its baseline drifts); and no
-     flex centering of the content (centering re-centers a smaller glyph,
-     baselines are not centers). */
-  .navi_time_range_label {
-    --wheel-item-height: round(1.8em, 1px);
-
-    color: var(--wheel-color, light-dark(#111, #eee));
-    line-height: var(--wheel-item-height);
-    white-space: nowrap;
-    user-select: none;
-  }
+const css$l = /* css */`.navi_time_range_label {
+  --wheel-item-height: round(1.8em, 1px);
+  color: var(--wheel-color, light-dark(#111, #eee));
+  line-height: var(--wheel-item-height);
+  white-space: nowrap;
+  user-select: none;
+}
 `;
 const HOUR_COUNT = 24;
 const MINUTES_PER_HOUR = 60;
@@ -75555,125 +72993,125 @@ const Z_INDEX_DROP_PREVIEW = Z_INDEX_STICKY_CORNER + 1;
 
 const Z_INDEX_TABLE_UI = Z_INDEX_STICKY_CORNER + 1;
 
-installImportMetaCssBuild(import.meta);const css$k = /* css */`
-  .navi_table_drag_clone_container {
-    position: absolute;
-    top: var(--table-visual-top);
-    left: var(--table-visual-left);
-    width: var(--table-visual-width);
-    height: var(--table-visual-height);
-    /* background: rgba(0, 0, 0, 0.5); */
-  }
+installImportMetaCssBuild(import.meta);const css$k = /* css */`.navi_table_drag_clone_container {
+  top: var(--table-visual-top);
+  left: var(--table-visual-left);
+  width: var(--table-visual-width);
+  height: var(--table-visual-height);
+  position: absolute;
+}
 
-  .navi_table_cell[data-grabbed]::before,
-  .navi_table_cell[data-grabbed]::after {
-    box-shadow: none !important;
-  }
+.navi_table_cell[data-grabbed]:before, .navi_table_cell[data-grabbed]:after {
+  box-shadow: none !important;
+}
 
-  /* We preprend ".navi_table_container" to ensure it propertly overrides */
-  .navi_table_drag_clone_container .navi_table_cell {
-    opacity: ${0};
-  }
+.navi_table_drag_clone_container .navi_table_cell {
+  opacity: ${0};
+}
 
-  .navi_table_drag_clone_container .navi_table_cell[data-grabbed] {
-    opacity: 0.7;
-  }
+.navi_table_drag_clone_container .navi_table_cell[data-grabbed] {
+  opacity: .7;
+}
 
-  .navi_table_drag_clone_container .navi_table_cell_sticky_frontier {
-    opacity: 0;
-  }
+.navi_table_drag_clone_container .navi_table_cell_sticky_frontier {
+  opacity: 0;
+}
 
-  .navi_table_drag_clone_container .navi_table_cell[data-sticky-left],
-  .navi_table_drag_clone_container .navi_table_cell[data-sticky-top] {
-    position: relative;
-  }
+.navi_table_drag_clone_container .navi_table_cell[data-sticky-left], .navi_table_drag_clone_container .navi_table_cell[data-sticky-top] {
+  position: relative;
+}
 
-  .navi_table_cell_foreground {
-    position: absolute;
-    inset: 0;
-    z-index: ${Z_INDEX_CELL_FOREGROUND};
-    background: lightgrey;
-    opacity: 0;
-    pointer-events: none;
-  }
-  .navi_table_cell[data-first-row] .navi_table_cell_foreground {
-    background-color: grey;
-  }
-  .navi_table_cell_foreground[data-visible] {
-    opacity: 1;
-  }
+.navi_table_cell_foreground {
+  z-index: ${Z_INDEX_CELL_FOREGROUND};
+  opacity: 0;
+  pointer-events: none;
+  background: #d3d3d3;
+  position: absolute;
+  inset: 0;
+}
 
-  .navi_table_drag_clone_container .navi_table_cell_foreground {
-    background-color: rgba(255, 255, 255, 0.2);
-    opacity: 1;
-    backdrop-filter: blur(10px);
-  }
-  .navi_table_drag_clone_container
-    .navi_table_cell[data-first-row][data-grabbed] {
-    opacity: 1;
-  }
-  .navi_table_drag_clone_container
-    .navi_table_cell[data-first-row]
-    .navi_table_cell_foreground {
-    opacity: 0;
-  }
+.navi_table_cell[data-first-row] .navi_table_cell_foreground {
+  background-color: gray;
+}
 
-  .navi_table_column_drop_preview {
-    position: absolute;
-    top: var(--column-top);
-    left: var(--column-left);
-    z-index: ${Z_INDEX_DROP_PREVIEW};
-    width: var(--column-width);
-    height: var(--column-height);
-    /* Invisible container - just for positioning */
-    background: transparent;
-    border: none;
-    pointer-events: none;
-  }
+.navi_table_cell_foreground[data-visible] {
+  opacity: 1;
+}
 
-  .navi_table_column_drop_preview_line {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: 0; /* Default: left edge for dropping before */
-    width: 4px;
-    background: rgba(0, 0, 255, 0.5);
-    opacity: 0;
-    transform: translateX(-50%);
-  }
-  .navi_table_column_drop_preview[data-after]
-    .navi_table_column_drop_preview_line {
-    left: 100%; /* Right edge for dropping after */
-  }
-  .navi_table_column_drop_preview[data-visible]
-    .navi_table_column_drop_preview_line {
-    opacity: 1;
-  }
+.navi_table_drag_clone_container .navi_table_cell_foreground {
+  opacity: 1;
+  backdrop-filter: blur(10px);
+  background-color: #fff3;
+}
 
-  .navi_table_column_drop_preview .arrow_positioner {
-    position: absolute;
-    left: 0; /* Default: left edge for dropping before */
-    display: flex;
-    color: rgba(0, 0, 255, 0.5);
-    opacity: 0;
-    transform: translateX(-50%);
-  }
-  .navi_table_column_drop_preview[data-after] .arrow_positioner {
-    left: 100%; /* Right edge for dropping after */
-  }
-  .navi_table_column_drop_preview[data-visible] .arrow_positioner {
-    opacity: 1;
-  }
-  .navi_table_column_drop_preview .arrow_positioner[data-top] {
-    top: -10px;
-  }
-  .navi_table_column_drop_preview .arrow_positioner[data-bottom] {
-    bottom: -10px;
-  }
-  .arrow_positioner svg {
-    width: 10px;
-    height: 10px;
-  }
+.navi_table_drag_clone_container .navi_table_cell[data-first-row][data-grabbed] {
+  opacity: 1;
+}
+
+.navi_table_drag_clone_container .navi_table_cell[data-first-row] .navi_table_cell_foreground {
+  opacity: 0;
+}
+
+.navi_table_column_drop_preview {
+  top: var(--column-top);
+  left: var(--column-left);
+  z-index: ${Z_INDEX_DROP_PREVIEW};
+  width: var(--column-width);
+  height: var(--column-height);
+  pointer-events: none;
+  background: none;
+  border: none;
+  position: absolute;
+}
+
+.navi_table_column_drop_preview_line {
+  opacity: 0;
+  background: #0000ff80;
+  width: 4px;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  transform: translateX(-50%);
+}
+
+.navi_table_column_drop_preview[data-after] .navi_table_column_drop_preview_line {
+  left: 100%;
+}
+
+.navi_table_column_drop_preview[data-visible] .navi_table_column_drop_preview_line {
+  opacity: 1;
+}
+
+.navi_table_column_drop_preview .arrow_positioner {
+  color: #0000ff80;
+  opacity: 0;
+  display: flex;
+  position: absolute;
+  left: 0;
+  transform: translateX(-50%);
+}
+
+.navi_table_column_drop_preview[data-after] .arrow_positioner {
+  left: 100%;
+}
+
+.navi_table_column_drop_preview[data-visible] .arrow_positioner {
+  opacity: 1;
+}
+
+.navi_table_column_drop_preview .arrow_positioner[data-top] {
+  top: -10px;
+}
+
+.navi_table_column_drop_preview .arrow_positioner[data-bottom] {
+  bottom: -10px;
+}
+
+.arrow_positioner svg {
+  width: 10px;
+  height: 10px;
+}
 `;
 const TableDragContext = createContext();
 const useTableDragContextValue = ({
@@ -76008,162 +73446,171 @@ installImportMetaCssBuild(import.meta);const ROW_MIN_HEIGHT = 30;
 const ROW_MAX_HEIGHT = 100;
 const COLUMN_MIN_WIDTH = 50;
 const COLUMN_MAX_WIDTH = 500;
-const css$j = /* css */`
-  @layer navi {
-    .navi_table {
-      --table-resizer-handle-color: #063b7c;
-      --table-resizer-color: #387ec9;
-    }
+const css$j = /* css */`@layer navi {
+  .navi_table {
+    --table-resizer-handle-color: #063b7c;
+    --table-resizer-color: #387ec9;
   }
+}
 
-  .navi_table_cell {
-    /* ensure table cell padding does not count when we say column = 50px we want a column of 50px, not 50px + paddings */
-    box-sizing: border-box;
-  }
+.navi_table_cell {
+  box-sizing: border-box;
+}
 
-  .navi_table_cell_resize_handle {
-    position: absolute;
-    /* background: orange; */
-    /* opacity: 0.5; */
-    z-index: ${Z_INDEX_RESIZER_HANDLE};
-  }
-  .navi_table_cell_resize_handle[data-left],
-  .navi_table_cell_resize_handle[data-right] {
-    top: 0;
-    bottom: 0;
-    width: 8px;
-    cursor: ew-resize;
-  }
-  .navi_table_cell_resize_handle[data-left] {
-    left: 0;
-  }
-  .navi_table_cell_resize_handle[data-right] {
-    right: 0;
-  }
+.navi_table_cell_resize_handle {
+  z-index: ${Z_INDEX_RESIZER_HANDLE};
+  position: absolute;
+}
 
-  .navi_table_cell_resize_handle[data-top],
-  .navi_table_cell_resize_handle[data-bottom] {
-    right: 0;
-    left: 0;
-    height: 8px;
-    cursor: ns-resize;
-  }
-  .navi_table_cell_resize_handle[data-top] {
-    top: 0;
-  }
-  .navi_table_cell_resize_handle[data-bottom] {
-    bottom: 0;
-  }
+.navi_table_cell_resize_handle[data-left], .navi_table_cell_resize_handle[data-right] {
+  cursor: ew-resize;
+  width: 8px;
+  top: 0;
+  bottom: 0;
+}
 
-  .navi_table_column_resizer {
-    position: absolute;
-    top: var(--table-visual-top);
-    left: var(--table-column-resizer-left);
-    width: 10px;
-    height: var(--table-visual-height);
-    opacity: 0;
-    pointer-events: none;
-  }
-  .navi_table_column_resize_handle {
-    position: absolute;
-    top: 50%;
-    /* opacity: 0.5; */
-    width: 5px;
-    height: 100%;
-    height: 26px;
-    max-height: 80%;
-    background: var(--table-resizer-handle-color);
-    border-radius: 15px;
-    transform: translateY(-50%);
-  }
-  .navi_table_column_resize_handle[data-left] {
-    left: 2px;
-  }
-  .navi_table_column_resize_handle[data-right] {
-    right: 3px;
-  }
-  .navi_table_column_resize_handle_container {
-    position: absolute;
-    top: 0;
-    right: 0;
-    left: -10px;
-    height: var(--table-cell-height);
-  }
-  .navi_table_column_resizer_line {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: -3px;
-    width: 5px;
-    background: var(--table-resizer-color);
-    opacity: 0;
-    transition: opacity 0.1s ease;
-  }
-  .navi_table_column_resizer[data-hover],
-  .navi_table_column_resizer[data-grabbed] {
-    opacity: 1;
-  }
-  .navi_table_column_resizer[data-hover] {
-    transition-delay: 150ms; /* Delay before showing hover effect */
-  }
-  .navi_table_column_resizer[data-grabbed] .navi_table_column_resizer_line {
-    opacity: 1;
-  }
+.navi_table_cell_resize_handle[data-left] {
+  left: 0;
+}
 
-  .navi_table_row_resizer {
-    position: absolute;
-    top: var(--table-row-resizer-top);
-    left: var(--table-visual-left);
-    width: var(--table-visual-width);
-    height: 10px;
-    opacity: 0;
-    pointer-events: none;
-  }
-  .navi_table_row_resize_handle {
-    position: absolute;
-    left: 50%;
-    width: 100%;
-    /* opacity: 0.5; */
-    width: 26px;
-    max-width: 80%;
-    height: 5px;
-    background: var(--table-resizer-handle-color);
-    border-radius: 15px;
-    transform: translateX(-50%);
-  }
-  .navi_table_row_resize_handle[data-top] {
-    top: 2px;
-  }
-  .navi_table_row_resize_handle[data-bottom] {
-    bottom: 3px;
-  }
-  .navi_table_row_resize_handle_container {
-    position: absolute;
-    top: -10px;
-    bottom: 0;
-    left: 0;
-    width: var(--table-cell-width);
-  }
-  .navi_table_row_resizer_line {
-    position: absolute;
-    top: -3px;
-    right: 0;
-    left: 0;
-    height: 5px;
-    background: var(--table-resizer-color);
-    opacity: 0;
-    transition: opacity 0.1s ease;
-  }
-  .navi_table_row_resizer[data-hover],
-  .navi_table_row_resizer[data-grabbed] {
-    opacity: 1;
-  }
-  .navi_table_row_resizer[data-hover] {
-    transition-delay: 150ms; /* Delay before showing hover effect */
-  }
-  .navi_table_row_resizer[data-grabbed] .navi_table_row_resizer_line {
-    opacity: 1;
-  }
+.navi_table_cell_resize_handle[data-right] {
+  right: 0;
+}
+
+.navi_table_cell_resize_handle[data-top], .navi_table_cell_resize_handle[data-bottom] {
+  cursor: ns-resize;
+  height: 8px;
+  left: 0;
+  right: 0;
+}
+
+.navi_table_cell_resize_handle[data-top] {
+  top: 0;
+}
+
+.navi_table_cell_resize_handle[data-bottom] {
+  bottom: 0;
+}
+
+.navi_table_column_resizer {
+  top: var(--table-visual-top);
+  left: var(--table-column-resizer-left);
+  width: 10px;
+  height: var(--table-visual-height);
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+}
+
+.navi_table_column_resize_handle {
+  background: var(--table-resizer-handle-color);
+  border-radius: 15px;
+  width: 5px;
+  height: 26px;
+  max-height: 80%;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.navi_table_column_resize_handle[data-left] {
+  left: 2px;
+}
+
+.navi_table_column_resize_handle[data-right] {
+  right: 3px;
+}
+
+.navi_table_column_resize_handle_container {
+  height: var(--table-cell-height);
+  position: absolute;
+  top: 0;
+  left: -10px;
+  right: 0;
+}
+
+.navi_table_column_resizer_line {
+  background: var(--table-resizer-color);
+  opacity: 0;
+  width: 5px;
+  transition: opacity .1s;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -3px;
+}
+
+.navi_table_column_resizer[data-hover], .navi_table_column_resizer[data-grabbed] {
+  opacity: 1;
+}
+
+.navi_table_column_resizer[data-hover] {
+  transition-delay: .15s;
+}
+
+.navi_table_column_resizer[data-grabbed] .navi_table_column_resizer_line {
+  opacity: 1;
+}
+
+.navi_table_row_resizer {
+  top: var(--table-row-resizer-top);
+  left: var(--table-visual-left);
+  width: var(--table-visual-width);
+  opacity: 0;
+  pointer-events: none;
+  height: 10px;
+  position: absolute;
+}
+
+.navi_table_row_resize_handle {
+  background: var(--table-resizer-handle-color);
+  border-radius: 15px;
+  width: 26px;
+  max-width: 80%;
+  height: 5px;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.navi_table_row_resize_handle[data-top] {
+  top: 2px;
+}
+
+.navi_table_row_resize_handle[data-bottom] {
+  bottom: 3px;
+}
+
+.navi_table_row_resize_handle_container {
+  width: var(--table-cell-width);
+  position: absolute;
+  top: -10px;
+  bottom: 0;
+  left: 0;
+}
+
+.navi_table_row_resizer_line {
+  background: var(--table-resizer-color);
+  opacity: 0;
+  height: 5px;
+  transition: opacity .1s;
+  position: absolute;
+  top: -3px;
+  left: 0;
+  right: 0;
+}
+
+.navi_table_row_resizer[data-hover], .navi_table_row_resizer[data-grabbed] {
+  opacity: 1;
+}
+
+.navi_table_row_resizer[data-hover] {
+  transition-delay: .15s;
+}
+
+.navi_table_row_resizer[data-grabbed] .navi_table_row_resizer_line {
+  opacity: 1;
+}
 `;
 
 // Column resize components
@@ -76639,101 +74086,93 @@ const findPreviousTableRow = currentRow => {
   return currentIndex > 0 ? allRows[currentIndex - 1] : null;
 };
 
-installImportMetaCssBuild(import.meta);const css$i = /* css */`
-  @layer navi {
-    .navi_table {
-      --selection-border-color: var(--navi-selection-border-color, #0078d4);
-      --selection-background-color: var(
-        --navi-selection-background-color,
-        #eaf1fd
-      );
-    }
+installImportMetaCssBuild(import.meta);const css$i = /* css */`@layer navi {
+  .navi_table {
+    --selection-border-color: var(--navi-selection-border-color, #0078d4);
+    --selection-background-color: var(--navi-selection-background-color, #eaf1fd);
   }
+}
 
-  .navi_table_cell[aria-selected="true"] {
-    background-color: var(--selection-background-color);
-  }
+.navi_table_cell[aria-selected="true"] {
+  background-color: var(--selection-background-color);
+}
 
-  /* One border */
-  .navi_table_cell[data-selection-border-top]::after {
-    box-shadow: inset 0 1px 0 0 var(--selection-border-color);
-  }
-  .navi_table_cell[data-selection-border-right]::after {
-    box-shadow: inset -1px 0 0 0 var(--selection-border-color);
-  }
-  .navi_table_cell[data-selection-border-bottom]::after {
-    box-shadow: inset 0 -1px 0 0 var(--selection-border-color);
-  }
-  .navi_table_cell[data-selection-border-left]::after {
-    box-shadow: inset 1px 0 0 0 var(--selection-border-color);
-  }
+.navi_table_cell[data-selection-border-top]:after {
+  box-shadow: inset 0 1px 0 0 var(--selection-border-color);
+}
 
-  /* Two border combinations */
-  .navi_table_cell[data-selection-border-top][data-selection-border-right]::after {
-    box-shadow:
-      inset 0 1px 0 0 var(--selection-border-color),
+.navi_table_cell[data-selection-border-right]:after {
+  box-shadow: inset -1px 0 0 0 var(--selection-border-color);
+}
+
+.navi_table_cell[data-selection-border-bottom]:after {
+  box-shadow: inset 0 -1px 0 0 var(--selection-border-color);
+}
+
+.navi_table_cell[data-selection-border-left]:after {
+  box-shadow: inset 1px 0 0 0 var(--selection-border-color);
+}
+
+.navi_table_cell[data-selection-border-top][data-selection-border-right]:after {
+  box-shadow: inset 0 1px 0 0 var(--selection-border-color),
       inset -1px 0 0 0 var(--selection-border-color);
-  }
-  .navi_table_cell[data-selection-border-top][data-selection-border-bottom]::after {
-    box-shadow:
-      inset 0 1px 0 0 var(--selection-border-color),
-      inset 0 -1px 0 0 var(--selection-border-color);
-  }
-  .navi_table_cell[data-selection-border-top][data-selection-border-left]::after {
-    box-shadow:
-      inset 0 1px 0 0 var(--selection-border-color),
-      inset 1px 0 0 0 var(--selection-border-color);
-  }
-  .navi_table_cell[data-selection-border-right][data-selection-border-bottom]::after {
-    box-shadow:
-      inset -1px 0 0 0 var(--selection-border-color),
-      inset 0 -1px 0 0 var(--selection-border-color);
-  }
-  .navi_table_cell[data-selection-border-right][data-selection-border-left]::after {
-    box-shadow:
-      inset -1px 0 0 0 var(--selection-border-color),
-      inset 1px 0 0 0 var(--selection-border-color);
-  }
-  .navi_table_cell[data-selection-border-bottom][data-selection-border-left]::after {
-    box-shadow:
-      inset 0 -1px 0 0 var(--selection-border-color),
-      inset 1px 0 0 0 var(--selection-border-color);
-  }
+}
 
-  /* Three border combinations */
-  .navi_table_cell[data-selection-border-top][data-selection-border-right][data-selection-border-bottom]::after {
-    box-shadow:
-      inset 0 1px 0 0 var(--selection-border-color),
+.navi_table_cell[data-selection-border-top][data-selection-border-bottom]:after {
+  box-shadow: inset 0 1px 0 0 var(--selection-border-color),
+      inset 0 -1px 0 0 var(--selection-border-color);
+}
+
+.navi_table_cell[data-selection-border-top][data-selection-border-left]:after {
+  box-shadow: inset 0 1px 0 0 var(--selection-border-color),
+      inset 1px 0 0 0 var(--selection-border-color);
+}
+
+.navi_table_cell[data-selection-border-right][data-selection-border-bottom]:after {
+  box-shadow: inset -1px 0 0 0 var(--selection-border-color),
+      inset 0 -1px 0 0 var(--selection-border-color);
+}
+
+.navi_table_cell[data-selection-border-right][data-selection-border-left]:after {
+  box-shadow: inset -1px 0 0 0 var(--selection-border-color),
+      inset 1px 0 0 0 var(--selection-border-color);
+}
+
+.navi_table_cell[data-selection-border-bottom][data-selection-border-left]:after {
+  box-shadow: inset 0 -1px 0 0 var(--selection-border-color),
+      inset 1px 0 0 0 var(--selection-border-color);
+}
+
+.navi_table_cell[data-selection-border-top][data-selection-border-right][data-selection-border-bottom]:after {
+  box-shadow: inset 0 1px 0 0 var(--selection-border-color),
       inset -1px 0 0 0 var(--selection-border-color),
       inset 0 -1px 0 0 var(--selection-border-color);
-  }
-  .navi_table_cell[data-selection-border-top][data-selection-border-bottom][data-selection-border-left]::after {
-    box-shadow:
-      inset 0 1px 0 0 var(--selection-border-color),
-      inset 0 -1px 0 0 var(--selection-border-color),
-      inset 1px 0 0 0 var(--selection-border-color);
-  }
-  .navi_table_cell[data-selection-border-top][data-selection-border-right][data-selection-border-left]::after {
-    box-shadow:
-      inset 0 1px 0 0 var(--selection-border-color),
-      inset -1px 0 0 0 var(--selection-border-color),
-      inset 1px 0 0 0 var(--selection-border-color);
-  }
-  .navi_table_cell[data-selection-border-right][data-selection-border-bottom][data-selection-border-left]::after {
-    box-shadow:
-      inset -1px 0 0 0 var(--selection-border-color),
-      inset 0 -1px 0 0 var(--selection-border-color),
-      inset 1px 0 0 0 var(--selection-border-color);
-  }
+}
 
-  /* Four border combinations (full selection) */
-  .navi_table_cell[data-selection-border-top][data-selection-border-right][data-selection-border-bottom][data-selection-border-left]::after {
-    box-shadow:
-      inset 0 1px 0 0 var(--selection-border-color),
+.navi_table_cell[data-selection-border-top][data-selection-border-bottom][data-selection-border-left]:after {
+  box-shadow: inset 0 1px 0 0 var(--selection-border-color),
+      inset 0 -1px 0 0 var(--selection-border-color),
+      inset 1px 0 0 0 var(--selection-border-color);
+}
+
+.navi_table_cell[data-selection-border-top][data-selection-border-right][data-selection-border-left]:after {
+  box-shadow: inset 0 1px 0 0 var(--selection-border-color),
+      inset -1px 0 0 0 var(--selection-border-color),
+      inset 1px 0 0 0 var(--selection-border-color);
+}
+
+.navi_table_cell[data-selection-border-right][data-selection-border-bottom][data-selection-border-left]:after {
+  box-shadow: inset -1px 0 0 0 var(--selection-border-color),
+      inset 0 -1px 0 0 var(--selection-border-color),
+      inset 1px 0 0 0 var(--selection-border-color);
+}
+
+.navi_table_cell[data-selection-border-top][data-selection-border-right][data-selection-border-bottom][data-selection-border-left]:after {
+  box-shadow: inset 0 1px 0 0 var(--selection-border-color),
       inset -1px 0 0 0 var(--selection-border-color),
       inset 0 -1px 0 0 var(--selection-border-color),
       inset 1px 0 0 0 var(--selection-border-color);
-  }
+}
 `;
 const useTableSelectionController = ({
   tableRef,
@@ -77212,245 +74651,175 @@ const useTableStickyContextValue = ({
 };
 
 installImportMetaCssBuild(import.meta);// TODO: sticky left/top frontier should likely use "followPosition"
-const css$h = /* css */`
-  @layer navi {
-    .navi_table {
-      --sticky-frontier-color: #c0c0c0;
-      --sticky-frontier-size: 12px;
-      --sticky-frontier-ghost-size: 8px;
-    }
+const css$h = /* css */`@layer navi {
+  .navi_table {
+    --sticky-frontier-color: silver;
+    --sticky-frontier-size: 12px;
+    --sticky-frontier-ghost-size: 8px;
   }
+}
 
-  .navi_table_cell[data-sticky-top] {
-    position: sticky;
-    top: var(--sticky-group-item-top, 0);
-    z-index: ${Z_INDEX_STICKY_ROW};
-  }
-  .navi_table_cell[data-sticky-left] {
-    position: sticky;
-    left: var(--sticky-group-item-left, 0);
-    z-index: ${Z_INDEX_STICKY_COLUMN};
-  }
-  .navi_table_cell[data-sticky-left][data-sticky-top] {
-    position: sticky;
-    top: var(--sticky-group-item-top, 0);
-    left: var(--sticky-group-item-left, 0);
-    z-index: ${Z_INDEX_STICKY_CORNER};
-  }
+.navi_table_cell[data-sticky-top] {
+  top: var(--sticky-group-item-top, 0);
+  z-index: ${Z_INDEX_STICKY_ROW};
+  position: sticky;
+}
 
-  /* Useful because drag gesture will read this value to detect <col>, <tr> virtual position */
-  .navi_col {
-    left: var(--sticky-group-item-left, 0);
-  }
-  .navi_tr {
-    top: var(--sticky-group-item-top, 0);
-  }
+.navi_table_cell[data-sticky-left] {
+  left: var(--sticky-group-item-left, 0);
+  z-index: ${Z_INDEX_STICKY_COLUMN};
+  position: sticky;
+}
 
-  .navi_table_sticky_frontier {
-    position: absolute;
-    cursor: grab;
-    pointer-events: auto;
-  }
+.navi_table_cell[data-sticky-left][data-sticky-top] {
+  top: var(--sticky-group-item-top, 0);
+  left: var(--sticky-group-item-left, 0);
+  z-index: ${Z_INDEX_STICKY_CORNER};
+  position: sticky;
+}
 
-  .navi_table_sticky_frontier[data-left] {
-    top: calc(var(--table-visual-top) + var(--sticky-group-top));
-    left: calc(var(--table-visual-left) + var(--sticky-group-left));
-    width: var(--sticky-frontier-size);
-    height: calc(var(--table-visual-height) - var(--sticky-group-top));
-    background: linear-gradient(
-      to right,
-      rgba(0, 0, 0, 0.1) 0%,
-      rgba(0, 0, 0, 0) 100%
-    );
-  }
+.navi_col {
+  left: var(--sticky-group-item-left, 0);
+}
 
-  .navi_table_sticky_frontier[data-top] {
-    top: calc(var(--table-visual-top) + var(--sticky-group-top));
-    left: calc(var(--table-visual-left) + var(--sticky-group-left));
-    width: calc(var(--table-visual-width) - var(--sticky-group-left));
-    height: var(--sticky-frontier-size);
-    background: linear-gradient(
-      to bottom,
-      rgba(0, 0, 0, 0.1) 0%,
-      rgba(0, 0, 0, 0) 100%
-    );
-  }
+.navi_tr {
+  top: var(--sticky-group-item-top, 0);
+}
 
-  .navi_table_sticky_frontier_ghost,
-  .navi_table_sticky_frontier_preview {
-    position: absolute;
-    opacity: 0;
-    pointer-events: none;
-  }
-  .navi_table_sticky_frontier_ghost {
-    z-index: ${Z_INDEX_STICKY_FRONTIER_GHOST};
-    background: rgba(68, 71, 70, 0.5);
-  }
-  .navi_table_sticky_frontier_preview {
-    z-index: ${Z_INDEX_STICKY_FRONTIER_PREVIEW};
-    background: rgba(56, 121, 200, 0.5);
-  }
-  .navi_table_sticky_frontier_ghost[data-visible],
-  .navi_table_sticky_frontier_preview[data-visible] {
-    opacity: 1;
-  }
-  .navi_table_sticky_frontier_ghost[data-left],
-  .navi_table_sticky_frontier_preview[data-left] {
-    top: 0;
-    width: var(--sticky-frontier-ghost-size);
-    height: var(--table-height, 100%);
-  }
-  .navi_table_sticky_frontier_ghost[data-left] {
-    left: var(--sticky-frontier-ghost-position, 0px);
-  }
-  .navi_table_sticky_frontier_preview[data-left] {
-    left: var(--sticky-frontier-preview-position, 0px);
-  }
+.navi_table_sticky_frontier {
+  cursor: grab;
+  pointer-events: auto;
+  position: absolute;
+}
 
-  .navi_table_sticky_frontier_ghost[data-top],
-  .navi_table_sticky_frontier_preview[data-top] {
-    left: 0;
-    width: var(--table-width, 100%);
-    height: var(--sticky-frontier-ghost-size);
-  }
+.navi_table_sticky_frontier[data-left] {
+  top: calc(var(--table-visual-top) + var(--sticky-group-top));
+  left: calc(var(--table-visual-left) + var(--sticky-group-left));
+  width: var(--sticky-frontier-size);
+  height: calc(var(--table-visual-height) - var(--sticky-group-top));
+  background: linear-gradient(to right, #0000001a 0%, #0000 100%);
+}
 
-  .navi_table_sticky_frontier_ghost[data-top] {
-    top: var(--sticky-frontier-ghost-position, 0px);
-  }
-  .navi_table_sticky_frontier_preview[data-top] {
-    top: var(--sticky-frontier-preview-position, 0px);
-  }
+.navi_table_sticky_frontier[data-top] {
+  top: calc(var(--table-visual-top) + var(--sticky-group-top));
+  left: calc(var(--table-visual-left) + var(--sticky-group-left));
+  width: calc(var(--table-visual-width) - var(--sticky-group-left));
+  height: var(--sticky-frontier-size);
+  background: linear-gradient(#0000001a 0%, #0000 100%);
+}
 
-  /* Positioning adjustments for ::after pseudo-elements on cells adjacent to sticky frontiers */
-  /* These ensure selection and focus borders align with the ::before borders */
-  .navi_table[data-border-collapse]
-    .navi_table_cell[data-after-sticky-left-frontier]::after {
-    left: 0;
-  }
+.navi_table_sticky_frontier_ghost, .navi_table_sticky_frontier_preview {
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+}
 
-  .navi_table[data-border-collapse]
-    .navi_table_cell[data-after-sticky-top-frontier]::after {
-    top: 0;
-  }
+.navi_table_sticky_frontier_ghost {
+  z-index: ${Z_INDEX_STICKY_FRONTIER_GHOST};
+  background: #44474680;
+}
 
-  /* Base borders for sticky cells (will be overridden by frontier rules) */
-  .navi_table[data-border-collapse] .navi_table_cell[data-sticky-left]::before {
-    box-shadow:
+.navi_table_sticky_frontier_preview {
+  z-index: ${Z_INDEX_STICKY_FRONTIER_PREVIEW};
+  background: #3879c880;
+}
+
+.navi_table_sticky_frontier_ghost[data-visible], .navi_table_sticky_frontier_preview[data-visible] {
+  opacity: 1;
+}
+
+.navi_table_sticky_frontier_ghost[data-left], .navi_table_sticky_frontier_preview[data-left] {
+  width: var(--sticky-frontier-ghost-size);
+  height: var(--table-height, 100%);
+  top: 0;
+}
+
+.navi_table_sticky_frontier_ghost[data-left] {
+  left: var(--sticky-frontier-ghost-position, 0px);
+}
+
+.navi_table_sticky_frontier_preview[data-left] {
+  left: var(--sticky-frontier-preview-position, 0px);
+}
+
+.navi_table_sticky_frontier_ghost[data-top], .navi_table_sticky_frontier_preview[data-top] {
+  width: var(--table-width, 100%);
+  height: var(--sticky-frontier-ghost-size);
+  left: 0;
+}
+
+.navi_table_sticky_frontier_ghost[data-top] {
+  top: var(--sticky-frontier-ghost-position, 0px);
+}
+
+.navi_table_sticky_frontier_preview[data-top] {
+  top: var(--sticky-frontier-preview-position, 0px);
+}
+
+.navi_table[data-border-collapse] .navi_table_cell[data-after-sticky-left-frontier]:after {
+  left: 0;
+}
+
+.navi_table[data-border-collapse] .navi_table_cell[data-after-sticky-top-frontier]:after {
+  top: 0;
+}
+
+.navi_table[data-border-collapse] .navi_table_cell[data-sticky-left]:before, .navi_table[data-border-collapse] .navi_table_cell[data-sticky-top]:before {
+  box-shadow: inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+}
+
+.navi_table[data-border-collapse] .navi_table_cell[data-first-row][data-sticky-left]:before, .navi_table[data-border-collapse] .navi_table_cell[data-first-row][data-sticky-top]:before {
+  box-shadow: inset 0 1px 0 0 var(--border-color),
       inset -1px 0 0 0 var(--border-color),
       inset 0 -1px 0 0 var(--border-color);
-  }
+}
 
-  .navi_table[data-border-collapse] .navi_table_cell[data-sticky-top]::before {
-    box-shadow:
+.navi_table[data-border-collapse] .navi_table_cell[data-first-column][data-sticky-left]:before, .navi_table[data-border-collapse] .navi_table_cell[data-first-column][data-sticky-top]:before {
+  box-shadow: inset 1px 0 0 0 var(--border-color),
       inset -1px 0 0 0 var(--border-color),
       inset 0 -1px 0 0 var(--border-color);
-  }
+}
 
-  /* Header row sticky cells need top border */
-  .navi_table[data-border-collapse]
-    .navi_table_cell[data-first-row][data-sticky-left]::before {
-    box-shadow:
-      inset 0 1px 0 0 var(--border-color),
-      inset -1px 0 0 0 var(--border-color),
-      inset 0 -1px 0 0 var(--border-color);
-  }
-
-  .navi_table[data-border-collapse]
-    .navi_table_cell[data-first-row][data-sticky-top]::before {
-    box-shadow:
-      inset 0 1px 0 0 var(--border-color),
-      inset -1px 0 0 0 var(--border-color),
-      inset 0 -1px 0 0 var(--border-color);
-  }
-
-  /* First column sticky cells need left border */
-  .navi_table[data-border-collapse]
-    .navi_table_cell[data-first-column][data-sticky-left]::before {
-    box-shadow:
+.navi_table[data-border-collapse] .navi_table_cell[data-first-row][data-first-column][data-sticky-left]:before, .navi_table[data-border-collapse] .navi_table_cell[data-first-row][data-first-column][data-sticky-top]:before {
+  box-shadow: inset 0 1px 0 0 var(--border-color),
       inset 1px 0 0 0 var(--border-color),
       inset -1px 0 0 0 var(--border-color),
       inset 0 -1px 0 0 var(--border-color);
-  }
+}
 
-  .navi_table[data-border-collapse]
-    .navi_table_cell[data-first-column][data-sticky-top]::before {
-    box-shadow:
+.navi_table[data-border-collapse] .navi_table_cell[data-after-sticky-left-frontier]:before {
+  box-shadow: inset 1px 0 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+}
+
+.navi_table[data-border-collapse] .navi_table_cell[data-first-row][data-after-sticky-left-frontier]:before {
+  box-shadow: inset 0 1px 0 0 var(--border-color),
       inset 1px 0 0 0 var(--border-color),
       inset -1px 0 0 0 var(--border-color),
       inset 0 -1px 0 0 var(--border-color);
-  }
+}
 
-  /* Header first column sticky cells get all four regular borders */
-  .navi_table[data-border-collapse]
-    .navi_table_cell[data-first-row][data-first-column][data-sticky-left]::before,
-  .navi_table[data-border-collapse]
-    .navi_table_cell[data-first-row][data-first-column][data-sticky-top]::before {
-    box-shadow:
-      inset 0 1px 0 0 var(--border-color),
+.navi_table[data-border-collapse] .navi_table_cell[data-after-sticky-top-frontier]:before {
+  box-shadow: inset 0 1px 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+}
+
+.navi_table[data-border-collapse] .navi_table_cell[data-first-row][data-after-sticky-top-frontier]:before, .navi_table[data-border-collapse] .navi_table_cell[data-first-column][data-after-sticky-top-frontier]:before {
+  box-shadow: inset 0 1px 0 0 var(--border-color),
       inset 1px 0 0 0 var(--border-color),
       inset -1px 0 0 0 var(--border-color),
       inset 0 -1px 0 0 var(--border-color);
-  }
+}
 
-  /* Borders for cells immediately after sticky frontiers */
-
-  /* Left border for the column after sticky-x-frontier */
-  .navi_table[data-border-collapse]
-    .navi_table_cell[data-after-sticky-left-frontier]::before {
-    box-shadow:
-      inset 1px 0 0 0 var(--border-color),
-      inset -1px 0 0 0 var(--border-color),
-      inset 0 -1px 0 0 var(--border-color);
-  }
-
-  /* Header cells after sticky-x-frontier also need top border (for border-collapse) */
-  .navi_table[data-border-collapse]
-    .navi_table_cell[data-first-row][data-after-sticky-left-frontier]::before {
-    box-shadow:
-      inset 0 1px 0 0 var(--border-color),
-      inset 1px 0 0 0 var(--border-color),
-      inset -1px 0 0 0 var(--border-color),
-      inset 0 -1px 0 0 var(--border-color);
-  }
-
-  /* Top border for the row after sticky-y-frontier */
-  .navi_table[data-border-collapse]
-    .navi_table_cell[data-after-sticky-top-frontier]::before {
-    box-shadow:
+.navi_table[data-border-collapse] .navi_table_cell[data-after-sticky-left-frontier][data-after-sticky-top-frontier]:before {
+  box-shadow: inset 1px 0 0 0 var(--border-color),
       inset 0 1px 0 0 var(--border-color),
       inset -1px 0 0 0 var(--border-color),
       inset 0 -1px 0 0 var(--border-color);
-  }
-
-  /* Header cells after sticky-y-frontier also need left border (for border-collapse) */
-  .navi_table[data-border-collapse]
-    .navi_table_cell[data-first-row][data-after-sticky-top-frontier]::before {
-    box-shadow:
-      inset 0 1px 0 0 var(--border-color),
-      inset 1px 0 0 0 var(--border-color),
-      inset -1px 0 0 0 var(--border-color),
-      inset 0 -1px 0 0 var(--border-color);
-  }
-
-  /* First column cells after sticky-y-frontier need all four borders (for border-collapse) */
-  .navi_table[data-border-collapse]
-    .navi_table_cell[data-first-column][data-after-sticky-top-frontier]::before {
-    box-shadow:
-      inset 0 1px 0 0 var(--border-color),
-      inset 1px 0 0 0 var(--border-color),
-      inset -1px 0 0 0 var(--border-color),
-      inset 0 -1px 0 0 var(--border-color);
-  }
-
-  /* Corner case: cell after both sticky frontiers */
-  .navi_table[data-border-collapse]
-    .navi_table_cell[data-after-sticky-left-frontier][data-after-sticky-top-frontier]::before {
-    box-shadow:
-      inset 1px 0 0 0 var(--border-color),
-      inset 0 1px 0 0 var(--border-color),
-      inset -1px 0 0 0 var(--border-color),
-      inset 0 -1px 0 0 var(--border-color);
-  }
+}
 `;
 const TableStickyFrontier = ({
   tableRef
@@ -77674,6 +75043,7 @@ const initMoveStickyFrontierViaPointer = (pointerdownEvent, {
   });
 };
 
+installImportMetaCssBuild(import.meta);
 /*
  * Box-shadow border mapping template:
  *
@@ -77684,218 +75054,202 @@ const initMoveStickyFrontierViaPointer = (pointerdownEvent, {
  *   inset 0 -1px 0 0 color;   // Bottom border
  */
 
-const css$g = /* css */ `
-  .navi_table_root {
-    position: relative;
-    max-width: var(--table-max-width, none);
-    max-height: var(--table-max-height, none);
-  }
+const css$g = /* css */`.navi_table_root {
+  max-width: var(--table-max-width, none);
+  max-height: var(--table-max-height, none);
+  position: relative;
+}
 
-  .navi_table_container {
-    --border-color: #e1e1e1;
-    --focus-border-color: #0078d4;
-    position: relative;
-  }
+.navi_table_container {
+  --border-color: #e1e1e1;
+  --focus-border-color: #0078d4;
+  position: relative;
+}
 
-  .navi_table {
-    border-radius: 2px;
-    border-spacing: 0; /* Required for manual border collapse */
-  }
-  .navi_table_cell {
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    background-color: var(--background-color, transparent);
-    overflow: hidden;
-  }
+.navi_table {
+  border-spacing: 0;
+  border-radius: 2px;
+}
 
-  .navi_table_cell[data-align-x="start"] {
-    text-align: left;
-  }
-  .navi_table_cell[data-align-x="center"] {
-    text-align: center;
-  }
-  .navi_table_cell[data-align-y="end"] {
-    text-align: right;
-  }
-  .navi_table_cell[data-align-x="start"] {
-    vertical-align: top;
-  }
-  .navi_table_cell[data-align-y="center"] {
-    vertical-align: middle;
-  }
-  .navi_table_cell[data-align-y="end"] {
-    vertical-align: bottom;
-  }
+.navi_table_cell {
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background-color: var(--background-color, transparent);
+  overflow: hidden;
+}
 
-  /* Table borders using ::before pseudo-elements */
-  /* Default: each cell draws all its own borders (no border-collapse) */
-  .navi_table_cell {
-    /* Required for pseudo-element positioning */
-    position: relative;
-    border: none; /* Remove default borders - we'll use pseudo-elements */
-  }
+.navi_table_cell[data-align-x="start"] {
+  text-align: left;
+}
 
-  .navi_table_cell::before {
-    position: absolute;
-    inset: 0;
-    box-shadow:
-      inset 0 1px 0 0 var(--border-color),
+.navi_table_cell[data-align-x="center"] {
+  text-align: center;
+}
+
+.navi_table_cell[data-align-y="end"] {
+  text-align: right;
+}
+
+.navi_table_cell[data-align-x="start"] {
+  vertical-align: top;
+}
+
+.navi_table_cell[data-align-y="center"] {
+  vertical-align: middle;
+}
+
+.navi_table_cell[data-align-y="end"] {
+  vertical-align: bottom;
+}
+
+.navi_table_cell {
+  border: none;
+  position: relative;
+}
+
+.navi_table_cell:before {
+  box-shadow: inset 0 1px 0 0 var(--border-color),
       inset 1px 0 0 0 var(--border-color),
       inset -1px 0 0 0 var(--border-color),
       inset 0 -1px 0 0 var(--border-color);
-    pointer-events: none;
-    content: "";
-  }
-  .navi_table_cell::after {
-    position: absolute;
-    /* Default: include bottom and right borders (owned by this cell) */
-    inset: 0;
-    pointer-events: none;
-    content: "";
-  }
+  pointer-events: none;
+  content: "";
+  position: absolute;
+  inset: 0;
+}
 
-  /* padding */
-  .navi_table_cell {
-    --cell-padding-left: 12px;
-    --cell-padding-right: 12px;
+.navi_table_cell:after {
+  pointer-events: none;
+  content: "";
+  position: absolute;
+  inset: 0;
+}
 
-    padding-top: 8px;
-    padding-right: var(--cell-padding-right);
-    padding-bottom: 8px;
-    padding-left: var(--cell-padding-left);
-  }
-  .navi_table_cell[data-width-xxs] {
-    padding-right: 0;
-    padding-left: 0;
-  }
-  .navi_table_cell[data-height-xxs] {
-    padding-top: 0;
-    padding-bottom: 0;
-  }
-  .navi_table_cell[data-editing] input {
-    padding-right: var(--cell-padding-right);
-    padding-left: var(--cell-padding-left);
-  }
-  .navi_table [data-sticky-left-frontier] {
-    /* padding-left: 12px; */
-    /* 12 px + 5px of the sticky frontier */
-    /* padding-right: 17px; */
-  }
+.navi_table_cell {
+  --cell-padding-left: 12px;
+  --cell-padding-right: 12px;
+  padding-top: 8px;
+  padding-right: var(--cell-padding-right);
+  padding-bottom: 8px;
+  padding-left: var(--cell-padding-left);
+}
 
-  .navi_table_cell {
-    user-select: none;
-  }
+.navi_table_cell[data-width-xxs] {
+  padding-left: 0;
+  padding-right: 0;
+}
 
-  /* Number column specific styling */
-  .navi_row_number_cell {
-    color: #666;
-    font-weight: 500;
-    text-align: center;
-    background: #fafafa;
-    user-select: none;
-  }
+.navi_table_cell[data-height-xxs] {
+  padding-top: 0;
+  padding-bottom: 0;
+}
 
-  .navi_table_cell_content_bold_clone {
-    display: block; /* in-flow so it contributes to width */
-    height: 0; /* zero height so it doesn't change layout height */
-    font-weight: bold; /* force bold to compute max width */
-    visibility: hidden; /* not visible */
-    pointer-events: none; /* inert */
-    overflow: hidden; /* avoid any accidental height */
-  }
+.navi_table_cell[data-editing] input {
+  padding-right: var(--cell-padding-right);
+  padding-left: var(--cell-padding-left);
+}
 
-  /* Border-collapse mode: each cell only owns specific borders to avoid doubling */
+.navi_table_cell {
+  user-select: none;
+}
 
-  /* Base rule: all cells get right and bottom borders */
-  .navi_table[data-border-collapse] .navi_table_cell::before {
-    box-shadow:
+.navi_row_number_cell {
+  color: #666;
+  text-align: center;
+  user-select: none;
+  background: #fafafa;
+  font-weight: 500;
+}
+
+.navi_table_cell_content_bold_clone {
+  visibility: hidden;
+  pointer-events: none;
+  height: 0;
+  font-weight: bold;
+  display: block;
+  overflow: hidden;
+}
+
+.navi_table[data-border-collapse] .navi_table_cell:before {
+  box-shadow: inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+}
+
+.navi_table[data-border-collapse] .navi_table_cell[data-first-row]:before {
+  box-shadow: inset 0 1px 0 0 var(--border-color),
       inset -1px 0 0 0 var(--border-color),
       inset 0 -1px 0 0 var(--border-color);
-  }
+}
 
-  /* Header cells (all th) get top border in addition to right and bottom */
-  .navi_table[data-border-collapse] .navi_table_cell[data-first-row]::before {
-    box-shadow:
-      inset 0 1px 0 0 var(--border-color),
+.navi_table[data-border-collapse] .navi_table_cell[data-first-column]:before {
+  box-shadow: inset 1px 0 0 0 var(--border-color),
       inset -1px 0 0 0 var(--border-color),
       inset 0 -1px 0 0 var(--border-color);
-  }
+}
 
-  /* First column cells get left border in addition to right and bottom */
-  .navi_table[data-border-collapse]
-    .navi_table_cell[data-first-column]::before {
-    box-shadow:
+.navi_table[data-border-collapse] .navi_table_cell[data-first-row][data-first-column]:before {
+  box-shadow: inset 0 1px 0 0 var(--border-color),
       inset 1px 0 0 0 var(--border-color),
       inset -1px 0 0 0 var(--border-color),
       inset 0 -1px 0 0 var(--border-color);
-  }
+}
 
-  /* Header first column gets all four borders */
-  .navi_table[data-border-collapse]
-    .navi_table_cell[data-first-row][data-first-column]::before {
-    box-shadow:
-      inset 0 1px 0 0 var(--border-color),
-      inset 1px 0 0 0 var(--border-color),
-      inset -1px 0 0 0 var(--border-color),
-      inset 0 -1px 0 0 var(--border-color);
-  }
+.navi_table_cell[data-focus] {
+  outline: none;
+}
 
-  /* Focus styles */
-  .navi_table_cell[data-focus] {
-    outline: none; /* Remove default outline */
-  }
-
-  .navi_table_cell[data-focus]::after {
-    box-shadow:
-      inset 0 2px 0 0 var(--focus-border-color),
+.navi_table_cell[data-focus]:after {
+  box-shadow: inset 0 2px 0 0 var(--focus-border-color),
       inset -2px 0 0 0 var(--focus-border-color),
       inset 0 -2px 0 0 var(--focus-border-color),
       inset 2px 0 0 0 var(--focus-border-color) !important;
-  }
+}
 
-  .navi_table {
-    font-size: 16px;
-    font-family: Arial;
+.navi_table {
+  --editing-border-color: #a8c7fa;
+  font-family: Arial;
+  font-size: 16px;
+}
 
-    --editing-border-color: #a8c7fa;
-  }
+.navi_table_cell[data-editing] .navi_table_cell_content {
+  outline-offset: 0px;
+  outline: 2px solid #a8c7fa;
+}
 
-  .navi_table_cell[data-editing] .navi_table_cell_content {
-    outline: 2px solid #a8c7fa;
-    outline-offset: 0px;
-  }
+.navi_table_cell[data-editing] input {
+  border: none;
+  border-radius: 0;
+  flex-grow: 1;
+  width: 100%;
+  height: 100%;
+  font-size: 16px;
+  display: inline-flex;
+}
 
-  .navi_table_cell[data-editing] input {
-    display: inline-flex;
-    width: 100%;
-    height: 100%;
-    flex-grow: 1;
-    font-size: 16px;
-    border: none;
-    border-radius: 0; /* match table cell border-radius */
-  }
+.navi_table_cell[data-editing] input[type="number"]::-webkit-inner-spin-button {
+  width: 14px;
+  height: 30px;
+}
 
-  .navi_table_cell[data-editing]
-    input[type="number"]::-webkit-inner-spin-button {
-    width: 14px;
-    height: 30px;
-  }
-
-  .navi_table_cell[data-editing] {
-    z-index: ${Z_INDEX_EDITING};
-    outline: 2px solid var(--editing-border-color);
-  }
+.navi_table_cell[data-editing] {
+  z-index: ${Z_INDEX_EDITING};
+  outline: 2px solid var(--editing-border-color);
+}
 `;
+// Called from the render of <Table>, never at module scope: a page without a
+// table must not carry this sheet, and a build that sees no caller drops the
+// css with the function.
+const installTableCss = () => {
+  import.meta.css = [css$g, "@jsenv/navi/src/control/table/table_css.js"];
+};
 
-installImportMetaCssBuild(import.meta);const css$f = /* css */`
-  .navi_table_ui {
-    position: fixed;
-    inset: 0;
-    z-index: ${Z_INDEX_TABLE_UI};
-    pointer-events: none; /* UI elements must use pointer-events: auto if they need to be interactive */
-    overflow: hidden; /* Ensure UI elements cannot impact scrollbars of the document  */
-    /* background: rgba(0, 255, 0, 0.2); */
-  }
+installImportMetaCssBuild(import.meta);const css$f = /* css */`.navi_table_ui {
+  z-index: ${Z_INDEX_TABLE_UI};
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+}
 `;
 const TableUI = forwardRef((props, ref) => {
   import.meta.css = [css$f, "@jsenv/navi/src/control/table/table_ui.jsx"];
@@ -77934,7 +75288,7 @@ const TableUI = forwardRef((props, ref) => {
   }), document.body);
 });
 
-installImportMetaCssBuild(import.meta);/**
+/**
  * Table Component with Custom Border and Selection System
  *
  * PROBLEM: We want to draw selected table cells with a clear visual perimeter
@@ -77985,6 +75339,7 @@ installImportMetaCssBuild(import.meta);/**
  * - Delete a column (how?)
  * - Update table column info (I guess a down arrow icon which opens a meny when clicked for instance)
  */
+
 const [useColumnTrackerProviders, useRegisterColumn, useColumnByIndex] = createIsolatedItemTracker();
 const TableRowTrackerContext = createContext(null);
 const useRegisterRow = rowItem => {
@@ -78004,7 +75359,7 @@ const RowIndexContext = createContext();
 const TableSectionContext = createContext();
 const useIsInTableHead = () => useContext(TableSectionContext) === "head";
 const Table = props => {
-  import.meta.css = [css$g, "@jsenv/navi/src/control/table/table.jsx"];
+  installTableCss();
   const tableDefaultRef = useRef();
   const tableDefaultId = `table-${useId()}`;
   const {
@@ -78490,7 +75845,6 @@ const TableCell = props => {
     // we use [data-focus] so that the attribute can be copied
     // to the dragged cell copies
     ,
-
     "data-focus": activeElement === ref.current ? "" : undefined,
     "data-first-row": isFirstRow ? "" : undefined,
     "data-first-column": isFirstColumn ? "" : undefined,
@@ -78514,7 +75868,6 @@ const TableCell = props => {
     // drag_to_travel.js). Said here rather than left to whoever puts a table in
     // a swipeable page: they cannot know, and this can.
     ,
-
     "data-no-drag-travel": innerCanDragColumn ? "" : undefined,
     onClick: onClick,
     onPointerDown: e => {
@@ -78585,7 +75938,6 @@ const RowNumberCol = ({
     // minWidth={minWidth}
     // maxWidth={maxWidth}
     ,
-
     immovable: immovable,
     ...rest
   });
@@ -78832,40 +76184,19 @@ const normalizeKey = (key) => {
   return key;
 };
 
-installImportMetaCssBuild(import.meta);const css$e = /* css */`
-  .navi_shortcut_container[data-visually-hidden] {
-    /* Visually hidden container - doesn't affect layout */
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    margin: -1px;
-    padding: 0;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-
-    /* Ensure it's not interactable */
-    opacity: 0;
-    pointer-events: none;
-  }
-
-  .navi_shortcut_button[data-visually-hidden] {
-    /* Visually hidden but accessible to screen readers */
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    margin: -1px;
-    padding: 0;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-
-    /* Ensure it's not focusable via tab navigation */
-    opacity: 0;
-    pointer-events: none;
-  }
+installImportMetaCssBuild(import.meta);const css$e = /* css */`.navi_shortcut_container[data-visually-hidden], .navi_shortcut_button[data-visually-hidden] {
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  border: 0;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  position: absolute;
+  overflow: hidden;
+}
 `;
 const ActiveKeyboardShortcuts = ({
   visible
@@ -78909,33 +76240,32 @@ const KeyboardShortcutAriaElement = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$d = /* css */`
-  @layer navi {
-    .navi_clipboard_container {
-      --height: 1.5em;
-      --notif-spacing: 0.5em;
-    }
-  }
-
+installImportMetaCssBuild(import.meta);const css$d = /* css */`@layer navi {
   .navi_clipboard_container {
-    position: relative;
-    display: inline-flex;
-    height: var(--height);
-    align-items: center;
-
-    .navi_copied_notif {
-      position: absolute;
-      top: calc(-1 * var(--notif-spacing));
-      right: 0;
-      padding: 0.2em 0.5em;
-      color: white;
-      font-size: 80%;
-      white-space: nowrap;
-      background: black;
-      border-radius: 3px;
-      transform: translateY(-100%);
-    }
+    --height: 1.5em;
+    --notif-spacing: .5em;
   }
+}
+
+.navi_clipboard_container {
+  height: var(--height);
+  align-items: center;
+  display: inline-flex;
+  position: relative;
+
+  & .navi_copied_notif {
+    top: calc(-1 * var(--notif-spacing));
+    color: #fff;
+    white-space: nowrap;
+    background: #000;
+    border-radius: 3px;
+    padding: .2em .5em;
+    font-size: 80%;
+    position: absolute;
+    right: 0;
+    transform: translateY(-100%);
+  }
+}
 `;
 const ButtonCopyToClipboard = ({
   children,
@@ -79026,160 +76356,103 @@ const formatNumber = (value, { lang = languagesSignal.value } = {}) => {
   return new Intl.NumberFormat(lang).format(value);
 };
 
-installImportMetaCssBuild(import.meta);const css$c = /* css */`
-  @layer navi {
+installImportMetaCssBuild(import.meta);const css$c = /* css */`@layer navi;
+
+.navi_text.navi_badge_count {
+  white-space: nowrap;
+  --font-size: .7em;
+  --x-background: var(--background);
+  --x-background-color: var(--background-color, var(--x-background));
+  --x-color-contrasting: var(--navi-color-white);
+  --x-color: var(--color, var(--x-color-contrasting));
+  --badge-count-padding-x-default: .5em;
+  --badge-count-padding-y-default: .3em;
+  --x-badge-count-padding-top: var(--badge-count-padding-top, var(--badge-count-padding-y, var(--badge-count-padding, var(--badge-count-padding-y-default))));
+  --x-badge-count-padding-right: var(--badge-count-padding-right, var(--badge-count-padding-x, var(--badge-count-padding, var(--badge-count-padding-x-default))));
+  --x-badge-count-padding-bottom: var(--badge-count-padding-bottom, var(--badge-count-padding-y, var(--badge-count-padding, var(--badge-count-padding-y-default))));
+  --x-badge-count-padding-left: var(--badge-count-padding-left, var(--badge-count-padding-x, var(--badge-count-padding, var(--badge-count-padding-x-default))));
+  color: var(--x-color);
+  font-size: var(--font-size);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--navi-line-height);
+  vertical-align: inherit;
+  position: relative;
+
+  &[data-accent-needs-dark-fg] {
+    --x-color-contrasting: var(--navi-color-black);
   }
-  .navi_text.navi_badge_count {
-    /* Important to prevent anchor from breaking to a new line */
-    white-space: nowrap;
-    --font-size: 0.7em;
-    --x-background: var(--background);
-    --x-background-color: var(--background-color, var(--x-background));
-    --x-color-contrasting: var(--navi-color-white);
-    --x-color: var(--color, var(--x-color-contrasting));
-    --badge-count-padding-x-default: 0.5em;
-    /* Ink to edge: ~6px above and below the digits at the default size, for
-       ~7px on the sides — a little less than the sides, which is what reads
-       as balanced on a pill; 0.2em read as squashed. */
-    --badge-count-padding-y-default: 0.3em;
 
-    /* Each side resolves the most specific value it was given, from the side
-       itself down to the axis, the shorthand, then the default. */
-    --x-badge-count-padding-top: var(
-      --badge-count-padding-top,
-      var(
-        --badge-count-padding-y,
-        var(--badge-count-padding, var(--badge-count-padding-y-default))
-      )
-    );
-    --x-badge-count-padding-right: var(
-      --badge-count-padding-right,
-      var(
-        --badge-count-padding-x,
-        var(--badge-count-padding, var(--badge-count-padding-x-default))
-      )
-    );
-    --x-badge-count-padding-bottom: var(
-      --badge-count-padding-bottom,
-      var(
-        --badge-count-padding-y,
-        var(--badge-count-padding, var(--badge-count-padding-y-default))
-      )
-    );
-    --x-badge-count-padding-left: var(
-      --badge-count-padding-left,
-      var(
-        --badge-count-padding-x,
-        var(--badge-count-padding, var(--badge-count-padding-x-default))
-      )
-    );
+  &[data-loading] {
+    --x-background: transparent;
+    --x-background-color: transparent;
+    --x-color: var(--x-color-contrasting);
+  }
 
+  & .navi_count_badge_overflow {
     position: relative;
-    color: var(--x-color);
-    font-size: var(--font-size);
-    font-variant-numeric: tabular-nums;
-    /* Its own line, relative to its own font: inherited from a control it
-       would arrive as that control's pixels (a button's 17px), and a badge
-       drawn bigger or smaller than the button's text would get a line box
-       that does not match its glyph — a digit off its circle's center. */
-    line-height: var(--navi-line-height);
-    vertical-align: inherit;
+  }
 
-    &[data-accent-needs-dark-fg] {
-      --x-color-contrasting: var(--navi-color-black);
-    }
+  &[data-ellipse] {
+    padding-top: var(--x-badge-count-padding-top);
+    padding-right: var(--x-badge-count-padding-right);
+    padding-bottom: var(--x-badge-count-padding-bottom);
+    padding-left: var(--x-badge-count-padding-left);
+    background: var(--x-background);
+    background-color: var(--x-background-color);
+    border-radius: 1em;
 
-    &[data-loading] {
-      --x-background: transparent;
-      --x-background-color: transparent;
-      /* Force constrasting color while loading */
-      --x-color: var(--x-color-contrasting);
-    }
-
-    .navi_count_badge_overflow {
-      position: relative;
-    }
-
-    /* Ellipse */
-    &[data-ellipse] {
-      padding-top: var(--x-badge-count-padding-top);
-      padding-right: var(--x-badge-count-padding-right);
-      padding-bottom: var(--x-badge-count-padding-bottom);
-      padding-left: var(--x-badge-count-padding-left);
-      background: var(--x-background);
-      background-color: var(--x-background-color);
-      border-radius: 1em;
-
-      /* For ellipse + single char force the circle aspect as it's prettier */
-      &[data-single-char] {
-        /* The digit sits in a square content box that the radius rounds into a
-           circle, so no padding is needed to obtain the shape. Sizing is
-           content-box: a padding prop then grows the square from the outside —
-           a bigger circle, or a pill on one axis — instead of eating into it
-           and pushing the digit out. */
-        --badge-count-padding-x-default: 0;
-        --badge-count-padding-y-default: 0;
-
-        display: inline-block;
-        box-sizing: content-box;
-        width: 1.6em;
-        height: 1.6em;
-        text-align: center;
-        line-height: 1.6em;
-        /* Larger than any half-height it can reach, so the shape stays fully
-           round whatever the padding adds. */
-        border-radius: 100em;
-      }
-    }
-
-    /* Circle */
-    &[data-circle] {
-      --x-number-font-size: var(--font-size);
-      /* Same as the single char ellipse: the radius comes from the number of
-         characters, padding grows it from the outside. */
+    &[data-single-char] {
       --badge-count-padding-x-default: 0;
       --badge-count-padding-y-default: 0;
-
-      display: inline-flex;
       box-sizing: content-box;
-      aspect-ratio: 1/1;
-      width: var(--x-radius);
-      height: var(--x-radius);
-      padding-top: var(--x-badge-count-padding-top);
-      padding-right: var(--x-badge-count-padding-right);
-      padding-bottom: var(--x-badge-count-padding-bottom);
-      padding-left: var(--x-badge-count-padding-left);
-      align-items: center;
-      justify-content: center;
-      background: var(--x-background);
-      background-color: var(--x-background-color);
+      text-align: center;
       border-radius: 100em;
-
-      &[data-single-char] {
-        --x-radius: 1.6em;
-        --x-number-font-size: unset;
-      }
-      &[data-two-chars] {
-        /* 1.8em of the badge font is 1.26em of the text's: inside the line
-           (1.25), so a circle beside a button's label does not make that
-           button taller than its neighbours. 2em did, by a pixel and a half. */
-        --x-radius: 1.8em;
-        --x-number-font-size: unset;
-      }
-      &[data-three-chars] {
-        --x-radius: 2.4em;
-        --x-number-font-size: 0.8em;
-      }
-      &[data-four-chars] {
-        --x-radius: 2.4em;
-        --x-number-font-size: 0.8em;
-      }
-
-      .navi_badge_count_text {
-        font-size: var(--x-number-font-size);
-      }
+      width: 1.6em;
+      height: 1.6em;
+      line-height: 1.6em;
+      display: inline-block;
     }
   }
+
+  &[data-circle] {
+    --x-number-font-size: var(--font-size);
+    --badge-count-padding-x-default: 0;
+    --badge-count-padding-y-default: 0;
+    box-sizing: content-box;
+    aspect-ratio: 1;
+    width: var(--x-radius);
+    height: var(--x-radius);
+    padding-top: var(--x-badge-count-padding-top);
+    padding-right: var(--x-badge-count-padding-right);
+    padding-bottom: var(--x-badge-count-padding-bottom);
+    padding-left: var(--x-badge-count-padding-left);
+    background: var(--x-background);
+    background-color: var(--x-background-color);
+    border-radius: 100em;
+    justify-content: center;
+    align-items: center;
+    display: inline-flex;
+
+    &[data-single-char] {
+      --x-radius: 1.6em;
+      --x-number-font-size: unset;
+    }
+
+    &[data-two-chars] {
+      --x-radius: 1.8em;
+      --x-number-font-size: unset;
+    }
+
+    &[data-three-chars], &[data-four-chars] {
+      --x-radius: 2.4em;
+      --x-number-font-size: .8em;
+    }
+
+    & .navi_badge_count_text {
+      font-size: var(--x-number-font-size);
+    }
+  }
+}
 `;
 const BadgeCountOverflow = () => jsx("span", {
   className: "navi_count_badge_overflow",
@@ -79347,22 +76620,21 @@ const BadgeCountCircle = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$b = /* css */`
-  @layer navi {
-    .navi_caption {
-      --color: #6b7280;
-    }
-
-    @media (prefers-color-scheme: dark) {
-      .navi_caption {
-        --color: rgb(129, 134, 140);
-      }
-    }
-  }
-
+installImportMetaCssBuild(import.meta);const css$b = /* css */`@layer navi {
   .navi_caption {
-    color: var(--color);
+    --color: #6b7280;
   }
+
+  @media (prefers-color-scheme: dark) {
+    .navi_caption {
+      --color: #81868c;
+    }
+  }
+}
+
+.navi_caption {
+  color: var(--color);
+}
 `;
 const Caption = ({
   className,
@@ -79781,53 +77053,54 @@ const WarningSvg = () => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$a = /* css */`
-  @layer navi {
-    .navi_message_box {
-      --background-color-info: var(--navi-info-color-light);
-      --color-info: var(--navi-info-color);
-      --background-color-success: var(--navi-success-color-light);
-      --color-success: var(--navi-success-color);
-      --background-color-warning: var(--navi-warning-color-light);
-      --color-warning: var(--navi-warning-color);
-      --background-color-error: var(--navi-error-color-light);
-      --color-error: var(--navi-error-color);
-    }
-  }
-
+installImportMetaCssBuild(import.meta);const css$a = /* css */`@layer navi {
   .navi_message_box {
-    --x-message-background-color: var(--background-color-info);
-    --x-message-color: var(--color-info);
-    /* color: var(--x-color); */
-    background-color: var(--x-message-background-color);
+    --background-color-info: var(--navi-info-color-light);
+    --color-info: var(--navi-info-color);
+    --background-color-success: var(--navi-success-color-light);
+    --color-success: var(--navi-success-color);
+    --background-color-warning: var(--navi-warning-color-light);
+    --color-warning: var(--navi-warning-color);
+    --background-color-error: var(--navi-error-color-light);
+    --color-error: var(--navi-error-color);
+  }
+}
 
-    > .navi_icon {
-      flex-shrink: 0;
-    }
-  }
+.navi_message_box {
+  --x-message-background-color: var(--background-color-info);
+  --x-message-color: var(--color-info);
+  background-color: var(--x-message-background-color);
 
-  .navi_message_box[data-status-info] {
-    --x-message-background-color: var(--background-color-info);
-    --x-message-color: var(--color-info);
+  & > .navi_icon {
+    flex-shrink: 0;
   }
-  .navi_message_box[data-status-success] {
-    --x-message-background-color: var(--background-color-success);
-    --x-message-color: var(--color-success);
-  }
-  .navi_message_box[data-status-warning] {
-    --x-message-background-color: var(--background-color-warning);
-    --x-message-color: var(--color-warning);
-  }
-  .navi_message_box[data-status-error] {
-    --x-message-background-color: var(--background-color-error);
-    --x-message-color: var(--color-error);
-  }
+}
 
-  .navi_message_box[data-left-stripe] {
-    border-left: 6px solid var(--x-message-color);
-    border-top-left-radius: 6px;
-    border-bottom-left-radius: 6px;
-  }
+.navi_message_box[data-status-info] {
+  --x-message-background-color: var(--background-color-info);
+  --x-message-color: var(--color-info);
+}
+
+.navi_message_box[data-status-success] {
+  --x-message-background-color: var(--background-color-success);
+  --x-message-color: var(--color-success);
+}
+
+.navi_message_box[data-status-warning] {
+  --x-message-background-color: var(--background-color-warning);
+  --x-message-color: var(--color-warning);
+}
+
+.navi_message_box[data-status-error] {
+  --x-message-background-color: var(--background-color-error);
+  --x-message-color: var(--color-error);
+}
+
+.navi_message_box[data-left-stripe] {
+  border-left: 6px solid var(--x-message-color);
+  border-top-left-radius: 6px;
+  border-bottom-left-radius: 6px;
+}
 `;
 const MessageBox = ({
   status = "info",
@@ -79913,59 +77186,60 @@ const MessageBoxPseudoClasses = [":-navi-status-info", ":-navi-status-success", 
 const MessageBoxStatusContext = createContext();
 const MessageBoxReportTitleChildContext = createContext();
 
-installImportMetaCssBuild(import.meta);const css$9 = /* css */`
-  @layer navi {
-  }
+installImportMetaCssBuild(import.meta);const css$9 = /* css */`@layer navi;
 
-  .navi_quantity {
-    display: inline-flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.3em;
+.navi_quantity {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: .3em;
+  line-height: 1;
+  display: inline-flex;
+
+  & .navi_quantity_label {
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    font-size: .75em;
+    font-weight: 600;
     line-height: 1;
+  }
 
-    .navi_quantity_label {
-      font-weight: 600;
-      font-size: 0.75em;
-      text-transform: uppercase;
-      line-height: 1;
-      letter-spacing: 0.06em;
+  & .navi_quantity_body {
+    & .navi_unit {
+      font-weight: normal;
     }
-    .navi_quantity_body {
-      .navi_unit {
-        font-weight: normal;
-      }
-    }
-    .navi_quantity_value {
-      font-variant-numeric: tabular-nums;
+  }
+
+  & .navi_quantity_value {
+    font-variant-numeric: tabular-nums;
+  }
+
+  &[data-readonly] {
+    opacity: .7;
+    cursor: default;
+  }
+
+  &[data-disabled] {
+    opacity: .4;
+    cursor: not-allowed;
+    user-select: none;
+  }
+
+  &[data-unit-bottom] {
+    & .navi_quantity_value {
+      text-align: center;
+      width: 100%;
+      display: inline-block;
     }
 
-    &[data-readonly] {
-      opacity: 0.7;
-      cursor: default;
-    }
-
-    &[data-disabled] {
-      opacity: 0.4;
-      cursor: not-allowed;
-      user-select: none;
-    }
-
-    &[data-unit-bottom] {
-      .navi_quantity_value {
-        display: inline-block;
-        width: 100%;
+    & .navi_quantity_body {
+      & .navi_unit {
         text-align: center;
-      }
-      .navi_quantity_body {
-        .navi_unit {
-          display: inline-block;
-          width: 100%;
-          text-align: center;
-        }
+        width: 100%;
+        display: inline-block;
       }
     }
   }
+}
 `;
 
 /**
@@ -80062,124 +77336,121 @@ const parseQuantityValue = children => {
   return Number.isNaN(parsed) ? children : parsed;
 };
 
-installImportMetaCssBuild(import.meta);const css$8 = /* css */`
-  @layer navi {
-    .navi_meter {
-      --loader-color: var(--navi-loader-color);
-      --track-color: #efefef;
-      --border-color: #cbcbcb;
-      --border-width: 1px;
-      --border-radius: 5px;
-      --height: 1em;
-      --width: 5em;
-
-      /* Semantic fill colors, matching native meter on Chrome/macOS */
-      --fill-color-optimum: light-dark(#0f7c0f, #4caf50);
-      --fill-color-suboptimum: light-dark(#fdb900, #ffc107);
-      --fill-color-even-less-good: light-dark(#d83b01, #f44336);
-
-      --x-color: white;
-      --x-shadow-color: black;
-      --shadow-size: 0.5em;
-    }
-  }
-
+installImportMetaCssBuild(import.meta);const css$8 = /* css */`@layer navi {
   .navi_meter {
+    --loader-color: var(--navi-loader-color);
+    --track-color: #efefef;
+    --border-color: #cbcbcb;
+    --border-width: 1px;
+    --border-radius: 5px;
+    --height: 1em;
+    --width: 5em;
+    --fill-color-optimum: light-dark(#0f7c0f, #4caf50);
+    --fill-color-suboptimum: light-dark(#fdb900, #ffc107);
+    --fill-color-even-less-good: light-dark(#d83b01, #f44336);
+    --x-color: white;
+    --x-shadow-color: black;
+    --shadow-size: .5em;
+  }
+}
+
+.navi_meter {
+  box-sizing: border-box;
+  width: var(--width);
+  height: var(--height);
+  vertical-align: middle;
+  align-items: center;
+  display: inline-flex;
+  position: relative;
+
+  & .navi_meter_track_container {
+    width: 100%;
+    height: calc(var(--height) * .5);
+    border-radius: var(--border-radius);
     position: relative;
-    display: inline-flex;
-    box-sizing: border-box;
-    width: var(--width);
-    height: var(--height);
-    align-items: center;
-    vertical-align: middle;
 
-    .navi_meter_track_container {
-      position: relative;
-      width: 100%;
-      height: calc(var(--height) * 0.5);
-      border-radius: var(--border-radius);
-
-      .navi_meter_track {
-        position: absolute;
-        inset: 0;
-        background-color: var(--track-color);
-        border: var(--border-width) solid var(--border-color);
-        border-radius: inherit;
-      }
-
-      .navi_meter_fill {
-        position: absolute;
-        inset: 0;
-        background-clip: content-box;
-        background-color: var(--x-fill-color);
-        border-width: var(--border-width);
-        border-style: solid;
-        border-color: transparent;
-        border-radius: inherit;
-        clip-path: inset(0 calc((1 - var(--x-fill-ratio, 0)) * 100%) 0 0);
-      }
-
-      .navi_meter_caption {
-        position: absolute;
-        inset: 0;
-        z-index: 1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: var(--x-color);
-        font-size: calc(var(--height) * 0.55);
-        text-shadow:
-          0 0 var(--shadow-size) var(--x-shadow-color),
-          0 0 calc(var(--shadow-size) * 0.5) var(--x-shadow-color);
-        white-space: nowrap;
-        pointer-events: none;
-        user-select: none;
-      }
+    & .navi_meter_track {
+      background-color: var(--track-color);
+      border: var(--border-width) solid var(--border-color);
+      border-radius: inherit;
+      position: absolute;
+      inset: 0;
     }
 
-    &[data-disabled] {
-      opacity: 0.4;
+    & .navi_meter_fill {
+      background-clip: content-box;
+      background-color: var(--x-fill-color);
+      border-width: var(--border-width);
+      border-radius: inherit;
+      clip-path: inset(0 calc((1 - var(--x-fill-ratio, 0)) * 100%) 0 0);
+      border-style: solid;
+      border-color: #0000;
+      position: absolute;
+      inset: 0;
     }
 
-    &[data-accent-needs-dark-fg] {
-      --x-color: black;
-      --x-shadow-color: white;
-    }
-
-    /* When caption is shown, the track takes the full height */
-    &[data-has-caption] {
-      .navi_meter_track_container {
-        height: var(--height);
-      }
-    }
-    /* fillOnly: hide the empty track background */
-    &[data-fill-only] {
-      .navi_meter_track {
-        background-color: transparent;
-        border-color: transparent;
-      }
-    }
-    &[data-fill-round] {
-      .navi_meter_fill {
-        width: calc(var(--x-fill-ratio) * 100%);
-        clip-path: unset;
-      }
-    }
-    /* borderless: remove border */
-    &[data-borderless] {
-      .navi_meter_track {
-        border-color: transparent;
-      }
-    }
-    &[data-transition] {
-      .navi_meter_fill {
-        transition: clip-path 0.4s ease;
-      }
-      &[data-fill-round] .navi_meter_fill {
-        transition: width 0.4s ease;
-      }
+    & .navi_meter_caption {
+      z-index: 1;
+      color: var(--x-color);
+      font-size: calc(var(--height) * .55);
+      text-shadow: 0 0 var(--shadow-size) var(--x-shadow-color),
+          0 0 calc(var(--shadow-size) * .5) var(--x-shadow-color);
+      white-space: nowrap;
+      pointer-events: none;
+      user-select: none;
+      justify-content: center;
+      align-items: center;
+      display: flex;
+      position: absolute;
+      inset: 0;
     }
   }
+
+  &[data-disabled] {
+    opacity: .4;
+  }
+
+  &[data-accent-needs-dark-fg] {
+    --x-color: black;
+    --x-shadow-color: white;
+  }
+
+  &[data-has-caption] {
+    & .navi_meter_track_container {
+      height: var(--height);
+    }
+  }
+
+  &[data-fill-only] {
+    & .navi_meter_track {
+      background-color: #0000;
+      border-color: #0000;
+    }
+  }
+
+  &[data-fill-round] {
+    & .navi_meter_fill {
+      width: calc(var(--x-fill-ratio) * 100%);
+      clip-path: unset;
+    }
+  }
+
+  &[data-borderless] {
+    & .navi_meter_track {
+      border-color: #0000;
+    }
+  }
+
+  &[data-transition] {
+    & .navi_meter_fill {
+      transition: clip-path .4s;
+    }
+
+    &[data-fill-round] .navi_meter_fill {
+      transition: width .4s;
+    }
+  }
+}
 `;
 const Meter = ({
   value = 0,
@@ -80325,25 +77596,24 @@ const Paragraph = props => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$7 = /* css */`
-  .navi_text_box {
-    min-width: 0;
-    align-items: flex-start;
-  }
+installImportMetaCssBuild(import.meta);const css$7 = /* css */`.navi_text_box {
+  align-items: flex-start;
+  min-width: 0;
+}
 
-  .navi_text_box_content {
-    white-space: normal;
-    word-break: break-word;
-    overflow-wrap: anywhere;
-  }
+.navi_text_box_content {
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
 
-  .navi_text_box[data-single-line] .navi_text_box_content {
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    word-break: normal;
-    overflow: hidden;
-    overflow-wrap: normal;
-  }
+.navi_text_box[data-single-line] .navi_text_box_content {
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  word-break: normal;
+  overflow-wrap: normal;
+  overflow: hidden;
+}
 `;
 
 /**
@@ -80413,14 +77683,13 @@ const adjustWidth = (boxEl, contentEl) => {
   contentEl.style.width = `${Math.ceil(optimalWidth)}px`;
 };
 
-installImportMetaCssBuild(import.meta);const css$6 = /* css */`
-  .navi_message_box {
-    .navi_title {
-      margin-top: 0;
-      margin-bottom: var(--navi-s);
-      color: var(--x-message-color);
-    }
+installImportMetaCssBuild(import.meta);const css$6 = /* css */`.navi_message_box {
+  & .navi_title {
+    margin-top: 0;
+    margin-bottom: var(--navi-s);
+    color: var(--x-message-color);
   }
+}
 `;
 const Title = props => {
   import.meta.css = [css$6, "@jsenv/navi/src/text/title.jsx"];
@@ -80447,45 +77716,35 @@ const useTitleLevel = () => {
 };
 const TitlePseudoClasses = [":hover"];
 
-installImportMetaCssBuild(import.meta);const css$5 = /* css */`
-  @keyframes navi_image_shimmer {
-    0% {
-      background-position: -200% 0;
-    }
-    100% {
-      background-position: 200% 0;
-    }
+installImportMetaCssBuild(import.meta);const css$5 = /* css */`@keyframes navi_image_shimmer {
+  0% {
+    background-position: -200% 0;
   }
-  .navi_image {
-    &[navi-placeholder] {
-      background-image:
-        linear-gradient(
-          105deg,
+
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.navi_image {
+  &[navi-placeholder] {
+    background-image: linear-gradient(105deg,
           transparent 30%,
-          color-mix(
-              in srgb,
+          color-mix(in srgb,
               var(--placeholder-color) 0%,
-              var(--placeholder-shimmer-color) 14%
-            )
+              var(--placeholder-shimmer-color) 14%)
             50%,
-          transparent 70%
-        ),
-        radial-gradient(
-          ellipse at 40% 40%,
-          color-mix(
-              in srgb,
+          transparent 70%),
+        radial-gradient(ellipse at 40% 40%,
+          color-mix(in srgb,
               var(--placeholder-color) 70%,
-              var(--placeholder-shimmer-color) 30%
-            )
+              var(--placeholder-shimmer-color) 30%)
             0%,
-          var(--placeholder-color) 70%
-        );
-      background-size:
-        200% 100%,
-        100% 100%;
-      animation: navi_image_shimmer 2s linear infinite;
-    }
+          var(--placeholder-color) 70%);
+    background-size: 200% 100%, 100% 100%;
+    animation: 2s linear infinite navi_image_shimmer;
   }
+}
 `;
 const DEFAULT_PLACEHOLDER_LIGHT = "#d4d8dd";
 const DEFAULT_PLACEHOLDER_DARK = "#374151";
@@ -80568,15 +77827,14 @@ installImportMetaCssBuild(import.meta);/**
  * @param {ReactNode[]} props.children - SVG elements (first is base, rest are overlays)
  * @returns {ReactElement} A composed SVG with all elements properly masked
  */
-const css$4 = /* css */`
-  .svg_mask_content * {
-    color: black !important;
-    opacity: 1 !important;
-    fill: black !important;
-    fill-opacity: 1 !important;
-    stroke: black !important;
-    stroke-opacity: 1 !important;
-  }
+const css$4 = /* css */`.svg_mask_content * {
+  color: #000 !important;
+  opacity: 1 !important;
+  fill: #000 !important;
+  fill-opacity: 1 !important;
+  stroke: #000 !important;
+  stroke-opacity: 1 !important;
+}
 `;
 const SVGMaskOverlay = ({
   viewBox,
@@ -80646,64 +77904,40 @@ installImportMetaCssBuild(import.meta);/**
  * space the outer box genuinely occupies — so a narrow window shrinks the card
  * and still shows that room, instead of pushing it against the edges.
  */
-const css$3 = /* css */`
-  @layer navi {
-    .navi_card_layout {
-      --layout-margin: 30px;
-      --layout-padding: 20px;
-      --layout-background: var(--navi-surface-color);
-      --layout-border-width: 2px;
-      --layout-border-color: var(--navi-popup-border-color);
-      --layout-border-radius: 10px;
-      --layout-min-width: 300px;
-      --layout-min-height: auto;
-    }
-  }
+const css$3 = /* css */`@layer navi {
   .navi_card_layout {
-    padding-top: var(
-      --layout-margin-top,
-      var(--layout-margin-y, var(--layout-margin))
-    );
-    padding-right: var(
-      --layout-margin-right,
-      var(--layout-margin-x, var(--layout-margin))
-    );
-    padding-bottom: var(
-      --layout-margin-bottom,
-      var(--layout-margin-y, var(--layout-margin))
-    );
-    padding-left: var(
-      --layout-margin-left,
-      var(--layout-margin-x, var(--layout-margin))
-    );
+    --layout-margin: 30px;
+    --layout-padding: 20px;
+    --layout-background: var(--navi-surface-color);
+    --layout-border-width: 2px;
+    --layout-border-color: var(--navi-popup-border-color);
+    --layout-border-radius: 10px;
+    --layout-min-width: 300px;
+    --layout-min-height: auto;
   }
+}
 
-  .navi_card {
-    min-width: var(--layout-min-width);
-    min-height: var(--layout-min-height);
-    padding-top: var(
-      --layout-padding-top,
-      var(--layout-padding-y, var(--layout-padding))
-    );
-    padding-right: var(
-      --layout-padding-right,
-      var(--layout-padding-x, var(--layout-padding))
-    );
-    padding-bottom: var(
-      --layout-padding-bottom,
-      var(--layout-padding-y, var(--layout-padding))
-    );
-    padding-left: var(
-      --layout-padding-left,
-      var(--layout-padding-x, var(--layout-padding))
-    );
-    background: var(--layout-background);
-    background-color: var(--layout-background-color, var(--layout-background));
-    border-width: var(--layout-border-width);
-    border-style: solid;
-    border-color: var(--layout-border-color);
-    border-radius: var(--layout-border-radius);
-  }
+.navi_card_layout {
+  padding-top: var(--layout-margin-top, var(--layout-margin-y, var(--layout-margin)));
+  padding-right: var(--layout-margin-right, var(--layout-margin-x, var(--layout-margin)));
+  padding-bottom: var(--layout-margin-bottom, var(--layout-margin-y, var(--layout-margin)));
+  padding-left: var(--layout-margin-left, var(--layout-margin-x, var(--layout-margin)));
+}
+
+.navi_card {
+  min-width: var(--layout-min-width);
+  min-height: var(--layout-min-height);
+  padding-top: var(--layout-padding-top, var(--layout-padding-y, var(--layout-padding)));
+  padding-right: var(--layout-padding-right, var(--layout-padding-x, var(--layout-padding)));
+  padding-bottom: var(--layout-padding-bottom, var(--layout-padding-y, var(--layout-padding)));
+  padding-left: var(--layout-padding-left, var(--layout-padding-x, var(--layout-padding)));
+  background: var(--layout-background);
+  background-color: var(--layout-background-color, var(--layout-background));
+  border-width: var(--layout-border-width);
+  border-style: solid;
+  border-color: var(--layout-border-color);
+  border-radius: var(--layout-border-radius);
+}
 `;
 const CardLayoutStyleCSSVars = {
   margin: "--layout-margin",
@@ -80818,198 +78052,157 @@ installImportMetaCssBuild(import.meta);/**
  * drag under the finger, in CSS alone. The path is not concerned: it moves
  * on answers, never on movement.
  */
-const css$2 = /* css */`
-  .navi_step_list {
-    /* The knobs: one accent for everything filled — the dots and the line
-       share it, because the fill has ONE meaning (answered) and a meaning
-       does not change color. Muted is what is not answered, on-accent
-       writes on filled dots. Said from OUTSIDE (any ancestor — a dark band,
-       a themed app) on the plain names; resolved here through an
-       indirection (--x-…, the way Button does), because a default written
-       on the plain name on this very element would beat anything an
-       ancestor says. */
-    --x-step-list-accent: var(--step-list-accent, #4f8ef7);
-    --x-step-list-on-accent: var(--step-list-on-accent, white);
-    --x-step-list-muted: var(--step-list-muted, light-dark(#8a93a8, #8b99b8));
-    --x-step-list-line: var(
-      --step-list-line,
-      light-dark(#c9d0dd, rgba(255, 255, 255, 0.35))
-    );
-    --x-step-list-current-color: var(
-      --step-list-current-color,
-      light-dark(#1c2433, white)
-    );
-    /* How long a movement takes — the path sweeping, the halo sliding. One
-       number for all of them: they tell one story. */
-    --x-step-list-duration: var(--step-list-duration, 300ms);
+const css$2 = /* css */`.navi_step_list {
+  --x-step-list-accent: var(--step-list-accent, #4f8ef7);
+  --x-step-list-on-accent: var(--step-list-on-accent, white);
+  --x-step-list-muted: var(--step-list-muted, light-dark(#8a93a8, #8b99b8));
+  --x-step-list-line: var(--step-list-line, light-dark(#c9d0dd, #ffffff59));
+  --x-step-list-current-color: var(--step-list-current-color, light-dark(#1c2433, #fff));
+  --x-step-list-duration: var(--step-list-duration, .3s);
+  height: 64px;
+  display: block;
+  position: relative;
+}
 
-    position: relative;
-    display: block;
-    height: 64px;
-  }
-  .navi_step_list_rail {
-    position: absolute;
-    top: 0;
-    left: 0;
-    pointer-events: none;
-  }
-  /* The road not walked yet. */
-  .navi_step_list_rail line {
-    stroke: var(--x-step-list-line);
-    stroke-width: 2;
-    stroke-dasharray: 4 5;
-  }
-  .navi_step_list_rail circle {
-    fill: none;
-    stroke: var(--x-step-list-muted);
-    stroke-width: 1.5;
-  }
-  .navi_step_list_rail text {
-    font-weight: 600;
-    font-size: 12px;
-    fill: var(--x-step-list-muted);
-  }
-  /* The current dot says so in the drawing itself, not only by its halo: on
-     a dark band a muted number under a faint ring reads as nothing. Said in
-     the base layer only (see renderRail) — a current dot the path has
-     covered keeps the filled colors. */
-  .navi_step_list_rail g[data-current] circle {
-    stroke: var(--x-step-list-current-color);
-  }
-  .navi_step_list_rail g[data-current] text {
-    fill: var(--x-step-list-current-color);
-  }
-  /* A step answered has its dot filled, wherever the path stands: answered
-     out of order it stands alone, a filled dot between dashed segments.
-     After the current rule on purpose: answered wins the drawing, the halo
-     says current. */
-  .navi_step_list_rail g[data-done] circle {
-    fill: var(--x-step-list-accent);
-    stroke: var(--x-step-list-accent);
-  }
-  .navi_step_list_rail g[data-done] text {
-    fill: var(--x-step-list-on-accent);
-  }
-  /* The path: same drawing, filled, revealed up to the fill's edge — the
-     answered prefix plus its segment of appetite (see the top comment). The
-     clip is set inline (a width in px); transitioning it is what makes an
-     answered step SWEEP its dot and the line onward rather than pop. */
-  .navi_step_list_rail_filled {
-    transition: clip-path var(--x-step-list-duration) ease;
-  }
-  .navi_step_list_rail_filled line {
-    stroke: var(--x-step-list-accent);
-    stroke-dasharray: none;
-  }
-  .navi_step_list_rail_filled circle {
-    fill: var(--x-step-list-accent);
-    stroke: var(--x-step-list-accent);
-  }
-  .navi_step_list_rail_filled text {
-    fill: var(--x-step-list-on-accent);
-  }
-  /* The position: a halo around the dot being looked at. It slides from dot
-     to dot (transform, transitioned) — the g moves, the circle inside is
-     drawn at x=0. */
-  .navi_step_list_marker {
-    transition: transform var(--x-step-list-duration) ease;
-  }
-  .navi_step_list_marker circle {
-    fill: none;
-    stroke: color-mix(in srgb, var(--x-step-list-accent) 65%, transparent);
-    stroke-width: 1.5;
-  }
+.navi_step_list_rail {
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
 
-  /* Connected to slides: the movement is not this component's anymore. The
-     container paints --slide-travel-progress here (this element follows it,
-     see data-slide-container-follows) — an asked-for travel animates it, a
-     finger drags it — and everything below is a calc() of that number, so
-     the halo and the path move per frame in CSS alone.
-     Position, in dots-x px: where the picture is right now. */
-  .navi_step_list[data-slide-container-follows] {
-    --step-list-position: calc(
-      var(--step-list-pos-x, 0) + var(--slide-travel-progress) *
-        var(--step-list-pos-dx, 0)
-    );
-  }
-  .navi_step_list[data-slide-container-follows] .navi_step_list_marker {
-    transform: translateX(calc(var(--step-list-position) * 1px));
-    transition: none;
-  }
+.navi_step_list_rail line {
+  stroke: var(--x-step-list-line);
+  stroke-width: 2px;
+  stroke-dasharray: 4 5;
+}
 
-  /* One press target per step, covering the dot AND the label under it. The
-     feedback is NOT the whole surface: a rectangle would say the whole band
-     is a button, when the affordance is the dot — so hover and focus land on
-     a circle drawn over the dot, plus the label brightening.
-     --step-dot-x anchors both on the dot, wherever the dot sits in the slot:
-     the first and last slots are asymmetric (cut at the container's edge,
-     see the geometry in the component). */
-  .navi_step_list_slot {
-    position: absolute;
-    top: 0;
-    box-sizing: border-box;
-    height: 100%;
-  }
-  /* Doubled selector: the button's own state formulas (a readonly color
-     mixed at the variant level) are declared in navi's stylesheet, injected
-     after this one — specificity is what makes these values the ones read. */
-  .navi_step_list .navi_step_list_step {
-    position: relative;
-    display: block;
-    width: 100%;
-    height: 100%;
-    padding: 0;
-    font-size: 12px;
-    outline: none;
-    --button-color: var(--x-step-list-muted);
-    --button-color-readonly: var(--x-step-list-muted);
-    /* The button's own focus ring, silenced: it would outline the whole
-       press surface, and the ring this list draws is the one around the dot
-       (see below) — two rings read as a mistake. Width rather than style,
-       because the dot sets its own style in full. */
-    --button-outline-width: 0px;
-  }
-  /* Centered on the dot: same vertical middle as the rail (top 0, height 34,
-     cy 17). A real element rather than a ::before, because it is also what a
-     callout anchors to (data-callout-anchor needs a selector) — a message
-     about a step points at its CIRCLE, not at the press surface. */
-  .navi_step_list_dot {
-    position: absolute;
-    top: 17px;
-    left: var(--step-dot-x);
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    translate: -50% -50%;
-    pointer-events: none;
-  }
-  .navi_step_list_step:hover .navi_step_list_dot,
-  .navi_step_list_step[data-hover] .navi_step_list_dot {
-    background: color-mix(in srgb, var(--x-step-list-accent) 15%, transparent);
-  }
-  .navi_step_list .navi_step_list_step:hover,
-  .navi_step_list .navi_step_list_step[data-hover] {
-    --button-color: var(--x-step-list-current-color);
-  }
-  .navi_step_list_step:focus-visible .navi_step_list_dot,
-  .navi_step_list_step[data-focus-visible] .navi_step_list_dot {
-    outline-width: var(--navi-focus-outline-width);
-    outline-style: solid;
-    outline-color: var(--navi-focus-outline-color);
-    outline-offset: 1px;
-  }
-  .navi_step_list_label {
-    position: absolute;
-    bottom: 6px;
-    left: var(--step-dot-x);
-    white-space: nowrap;
-    translate: -50% 0;
-  }
-  .navi_step_list .navi_step_list_step[data-current] {
-    font-weight: 600;
-    --button-color: var(--x-step-list-current-color);
-    --button-color-readonly: var(--x-step-list-current-color);
-  }
+.navi_step_list_rail circle {
+  fill: none;
+  stroke: var(--x-step-list-muted);
+  stroke-width: 1.5px;
+}
+
+.navi_step_list_rail text {
+  fill: var(--x-step-list-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.navi_step_list_rail g[data-current] circle {
+  stroke: var(--x-step-list-current-color);
+}
+
+.navi_step_list_rail g[data-current] text {
+  fill: var(--x-step-list-current-color);
+}
+
+.navi_step_list_rail g[data-done] circle {
+  fill: var(--x-step-list-accent);
+  stroke: var(--x-step-list-accent);
+}
+
+.navi_step_list_rail g[data-done] text {
+  fill: var(--x-step-list-on-accent);
+}
+
+.navi_step_list_rail_filled {
+  transition: clip-path var(--x-step-list-duration) ease;
+}
+
+.navi_step_list_rail_filled line {
+  stroke: var(--x-step-list-accent);
+  stroke-dasharray: none;
+}
+
+.navi_step_list_rail_filled circle {
+  fill: var(--x-step-list-accent);
+  stroke: var(--x-step-list-accent);
+}
+
+.navi_step_list_rail_filled text {
+  fill: var(--x-step-list-on-accent);
+}
+
+.navi_step_list_marker {
+  transition: transform var(--x-step-list-duration) ease;
+}
+
+.navi_step_list_marker circle {
+  fill: none;
+  stroke: color-mix(in srgb, var(--x-step-list-accent) 65%, transparent);
+  stroke-width: 1.5px;
+}
+
+.navi_step_list[data-slide-container-follows] {
+  --step-list-position: calc(var(--step-list-pos-x, 0) + var(--slide-travel-progress) *
+        var(--step-list-pos-dx, 0));
+}
+
+.navi_step_list[data-slide-container-follows] .navi_step_list_marker {
+  transform: translateX(calc(var(--step-list-position) * 1px));
+  transition: none;
+}
+
+.navi_step_list_slot {
+  box-sizing: border-box;
+  height: 100%;
+  position: absolute;
+  top: 0;
+}
+
+.navi_step_list .navi_step_list_step {
+  --button-color: var(--x-step-list-muted);
+  --button-color-readonly: var(--x-step-list-muted);
+  --button-outline-width: 0px;
+  outline: none;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  font-size: 12px;
+  display: block;
+  position: relative;
+}
+
+.navi_step_list_dot {
+  top: 17px;
+  left: var(--step-dot-x);
+  pointer-events: none;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  position: absolute;
+  translate: -50% -50%;
+}
+
+.navi_step_list_step:hover .navi_step_list_dot, .navi_step_list_step[data-hover] .navi_step_list_dot {
+  background: color-mix(in srgb, var(--x-step-list-accent) 15%, transparent);
+}
+
+.navi_step_list .navi_step_list_step:hover, .navi_step_list .navi_step_list_step[data-hover] {
+  --button-color: var(--x-step-list-current-color);
+}
+
+.navi_step_list_step:focus-visible .navi_step_list_dot, .navi_step_list_step[data-focus-visible] .navi_step_list_dot {
+  outline-width: var(--navi-focus-outline-width);
+  outline-style: solid;
+  outline-color: var(--navi-focus-outline-color);
+  outline-offset: 1px;
+}
+
+.navi_step_list_label {
+  bottom: 6px;
+  left: var(--step-dot-x);
+  white-space: nowrap;
+  position: absolute;
+  translate: -50%;
+}
+
+.navi_step_list .navi_step_list_step[data-current] {
+  --button-color: var(--x-step-list-current-color);
+  --button-color-readonly: var(--x-step-list-current-color);
+  font-weight: 600;
+}
 `;
 const RAIL_H = 34;
 const DOT_R = 11;
@@ -81415,35 +78608,20 @@ const Step = ({
 };
 StepList.Item = Step;
 
-installImportMetaCssBuild(import.meta);const css$1 = /* css */`
-  @layer navi {
-    .navi_viewport_layout {
-      --layout-padding: 40px;
-      /* The page's own paper: the shared surface token, so a dark theme gets a
-         dark page without every screen overriding it. */
-      --layout-background: var(--navi-surface-color);
-    }
-  }
-
+installImportMetaCssBuild(import.meta);const css$1 = /* css */`@layer navi {
   .navi_viewport_layout {
-    padding-top: var(
-      --layout-padding-top,
-      var(--layout-padding-y, var(--layout-padding))
-    );
-    padding-right: var(
-      --layout-padding-right,
-      var(--layout-padding-x, var(--layout-padding))
-    );
-    padding-bottom: var(
-      --layout-padding-bottom,
-      var(--layout-padding-y, var(--layout-padding))
-    );
-    padding-left: var(
-      --layout-padding-left,
-      var(--layout-padding-x, var(--layout-padding))
-    );
-    background: var(--layout-background);
+    --layout-padding: 40px;
+    --layout-background: var(--navi-surface-color);
   }
+}
+
+.navi_viewport_layout {
+  padding-top: var(--layout-padding-top, var(--layout-padding-y, var(--layout-padding)));
+  padding-right: var(--layout-padding-right, var(--layout-padding-x, var(--layout-padding)));
+  padding-bottom: var(--layout-padding-bottom, var(--layout-padding-y, var(--layout-padding)));
+  padding-left: var(--layout-padding-left, var(--layout-padding-x, var(--layout-padding)));
+  background: var(--layout-background);
+}
 `;
 const ViewportLayoutStyleCSSVars = {
   padding: "--layout-padding",
@@ -81500,156 +78678,108 @@ installImportMetaCssBuild(import.meta);/**
  * unless asked to (`sizeFromAnchor`, see dialog.jsx), which a side panel
  * never does: its `width`/`height` props are what size it.
  */
-const css = /* css */`
-  .navi_side_panel {
-    /* Side panel create a barriere with the content that is full size */
-    /* So by default they don't have border-radius */
-    --popup-border-radius: 0px;
+const css = /* css */`.navi_side_panel {
+  --popup-border-radius: 0px;
+  width: var(--navi-side-panel-width, auto);
+  height: var(--navi-side-panel-height, auto);
 
-    /* Content-sized by default (each custom property is unset unless the
-       matching \`width\`/\`height\` prop is passed, and var() falls back to
-       "auto") — forced otherwise. Both set unconditionally regardless of
-       \`side\`: whichever axis isn't the docked one gets overridden again
-       below by the perpendicular-fill rules, at higher specificity, unless
-       the corresponding prop was actually passed (see there for why an
-       explicit value still wins even on that axis). */
-    width: var(--navi-side-panel-width, auto);
-    height: var(--navi-side-panel-height, auto);
+  &[data-layer="top"] {
+    --popover-max-height: var(--navi-vvh);
+    --popover-maxmax-height: var(--navi-vvh);
+    --popover-maxmax-width: var(--navi-vvw);
+    --dialog-maxmax-height: var(--navi-vvh);
+    --dialog-maxmax-width: var(--navi-vvw);
 
-    /* layer="top": the container is the viewport itself, so the
-       perpendicular axis and the popup's own ceiling both use
-       \`--navi-vvh\`/\`--navi-vvw\` (kept in sync with window.visualViewport,
-       see navi_css_vars.js) instead of a plain 100%/100dvh, which tracks
-       the *layout* viewport instead — that doesn't shrink when e.g. the
-       on-screen keyboard opens, unlike the *visible* one. The viewport
-       itself has no border-radius to inherit, hence 0 below rather than
-       "inherit" (see layer="local" below). */
-    &[data-layer="top"] {
-      --popover-max-height: var(--navi-vvh);
-      --popover-maxmax-height: var(--navi-vvh);
-      --popover-maxmax-width: var(--navi-vvw);
-      --dialog-maxmax-height: var(--navi-vvh);
-      --dialog-maxmax-width: var(--navi-vvw);
-
-      &[navi-side="left"],
-      &[navi-side="right"] {
-        /* An explicit \`height\` prop still wins here (see the base rule
-           above) — only the fallback (no \`height\` given) differs by layer. */
-        height: var(--navi-side-panel-height, var(--navi-vvh));
-      }
-      &[navi-side="top"],
-      &[navi-side="bottom"] {
-        width: var(--navi-side-panel-width, var(--navi-vvw));
-      }
-      &[navi-side="left"] {
-        border-top-left-radius: 0;
-        border-bottom-left-radius: 0;
-      }
-      &[navi-side="right"] {
-        border-top-right-radius: 0;
-        border-bottom-right-radius: 0;
-      }
-      &[navi-side="top"] {
-        border-top-left-radius: 0;
-        border-top-right-radius: 0;
-      }
-      &[navi-side="bottom"] {
-        border-bottom-right-radius: 0;
-        border-bottom-left-radius: 0;
-      }
+    &[navi-side="left"], &[navi-side="right"] {
+      height: var(--navi-side-panel-height, var(--navi-vvh));
     }
 
-    /* layer="local": the container is a real DOM ancestor, so plain 100%
-       already tracks it correctly on the perpendicular axis — the popup's
-       own ceiling there is neutralized instead (a comfortably large but
-       still valid length, not "none": these vars feed a CSS min(), which
-       treats "none" as invalid and falls back to its own initial value
-       rather than using ours). The *docked* axis keeps a real ceiling
-       though (90% of the container, a percentage resolving correctly here
-       since the popup's own containing block, .navi_popover_clip_wrapper/
-       .navi_dialog_clip_wrapper, is inset: 0 within that same container) —
-       an oversized explicit width/height prop should shrink to fit rather
-       than overflow the container or force it to scroll. The real
-       container's own corner may itself be rounded, hence "inherit" below
-       rather than 0 (see layer="top" above) — border-radius isn't
-       naturally an inherited property, so this must be explicit. */
-    &[data-layer="local"] {
-      &[navi-side="left"],
-      &[navi-side="right"] {
-        --popover-maxmax-height: 100000px;
-        --dialog-maxmax-height: 100000px;
-        --popover-max-height: 100000px;
-        --popover-maxmax-width: 90%;
-        --dialog-maxmax-width: 90%;
-        height: var(--navi-side-panel-height, 100%);
-      }
-      &[navi-side="top"],
-      &[navi-side="bottom"] {
-        --popover-maxmax-width: 100000px;
-        --dialog-maxmax-width: 100000px;
-        --popover-maxmax-height: 90%;
-        --dialog-maxmax-height: 90%;
-        --popover-max-height: 90%;
-        width: var(--navi-side-panel-width, 100%);
-      }
-      &[navi-side="left"] {
-        border-top-left-radius: inherit;
-        border-bottom-left-radius: inherit;
-      }
-      &[navi-side="right"] {
-        border-top-right-radius: inherit;
-        border-bottom-right-radius: inherit;
-      }
-      &[navi-side="top"] {
-        border-top-left-radius: inherit;
-        border-top-right-radius: inherit;
-      }
-      &[navi-side="bottom"] {
-        border-bottom-right-radius: inherit;
-        border-bottom-left-radius: inherit;
-      }
+    &[navi-side="top"], &[navi-side="bottom"] {
+      width: var(--navi-side-panel-width, var(--navi-vvw));
     }
 
-    /* What a touch may do on a panel that closes by being pushed back (see
-       swipe_to_close.js): a left/right panel scrolls its own content
-       downwards and travels sideways, so the two never compete and the
-       browser is told to leave the sideways one alone — which also keeps a
-       swipe near the screen edge from being read as "go back" instead. A
-       top/bottom panel travels the way it scrolls: nothing can be given away
-       there without losing the scroll, so the gesture is settled by
-       swipe_to_close.js's own reading of what is still scrollable, and the
-       browser keeps both axes. */
-    &[data-swipe-to-close][navi-side="left"],
-    &[data-swipe-to-close][navi-side="right"] {
-      touch-action: pan-y;
+    &[navi-side="left"] {
+      border-top-left-radius: 0;
+      border-bottom-left-radius: 0;
     }
 
-    /* Sticky regardless of side: the panel's own content always stacks
-       (and scrolls) top-to-bottom, whether the panel itself is docked to
-       the left/right or the top/bottom of the viewport/container — so
-       "top" for the head and "bottom" for the foot are the right offsets
-       either way, not something that needs to vary with navi-side. Each
-       needs its own opaque background since scrollable content otherwise
-       shows through underneath while stuck. */
-    .navi_side_panel_head,
-    .navi_side_panel_foot {
-      position: sticky;
-      z-index: var(--navi-z-index-sticky);
-      background-color: var(--navi-popup-background-color);
+    &[navi-side="right"] {
+      border-top-right-radius: 0;
+      border-bottom-right-radius: 0;
     }
-    /* The separator token, not the popup border: these lines split two
-       regions of the panel's own surface (the head/foot from what scrolls
-       under them), they are not the panel's edge. */
-    .navi_side_panel_head {
-      top: 0;
-      border-bottom: 1px solid var(--navi-separator-color-default);
+
+    &[navi-side="top"] {
+      border-top-left-radius: 0;
+      border-top-right-radius: 0;
     }
-    .navi_side_panel_foot {
-      bottom: 0;
-      padding: 12px 16px;
-      border-top: 1px solid var(--navi-separator-color-default);
+
+    &[navi-side="bottom"] {
+      border-bottom-right-radius: 0;
+      border-bottom-left-radius: 0;
     }
   }
+
+  &[data-layer="local"] {
+    &[navi-side="left"], &[navi-side="right"] {
+      --popover-maxmax-height: 100000px;
+      --dialog-maxmax-height: 100000px;
+      --popover-max-height: 100000px;
+      --popover-maxmax-width: 90%;
+      --dialog-maxmax-width: 90%;
+      height: var(--navi-side-panel-height, 100%);
+    }
+
+    &[navi-side="top"], &[navi-side="bottom"] {
+      --popover-maxmax-width: 100000px;
+      --dialog-maxmax-width: 100000px;
+      --popover-maxmax-height: 90%;
+      --dialog-maxmax-height: 90%;
+      --popover-max-height: 90%;
+      width: var(--navi-side-panel-width, 100%);
+    }
+
+    &[navi-side="left"] {
+      border-top-left-radius: inherit;
+      border-bottom-left-radius: inherit;
+    }
+
+    &[navi-side="right"] {
+      border-top-right-radius: inherit;
+      border-bottom-right-radius: inherit;
+    }
+
+    &[navi-side="top"] {
+      border-top-left-radius: inherit;
+      border-top-right-radius: inherit;
+    }
+
+    &[navi-side="bottom"] {
+      border-bottom-right-radius: inherit;
+      border-bottom-left-radius: inherit;
+    }
+  }
+
+  &[data-swipe-to-close][navi-side="left"], &[data-swipe-to-close][navi-side="right"] {
+    touch-action: pan-y;
+  }
+
+  & .navi_side_panel_head, & .navi_side_panel_foot {
+    z-index: var(--navi-z-index-sticky);
+    background-color: var(--navi-popup-background-color);
+    position: sticky;
+  }
+
+  & .navi_side_panel_head {
+    border-bottom: 1px solid var(--navi-separator-color-default);
+    top: 0;
+  }
+
+  & .navi_side_panel_foot {
+    border-top: 1px solid var(--navi-separator-color-default);
+    padding: 12px 16px;
+    bottom: 0;
+  }
+}
 `;
 
 /**
@@ -82012,5 +79142,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, CalloutStatusIcon, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, Expandable, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, InfoSvg, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, OfflineError, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTransitionArea, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, SpinGroup, SplitButton, StarSvg, Step, StepList, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, TimeRange, TimeRangeSpin, TimeRangeWheel, TimeSpin, TimeWheel, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, canNavBackSignal, canNavForwardSignal, coarsePointerSignal, compareTwoJsValues, constraintFromValidityRule, createAction, createAvailableConstraint, createI18n, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineRouteDefaultTransition, defineRouteTransition, detectHorizontalOverflow, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, errorIsDisplayed, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isOfflineError, isRowSelected, isScrolling, isToday, languagesSignal, localStorageSignal, markErrorAsDisplayedBy, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, scrollActivitySignal, setBaseUrl, setNetworkPolicy, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, smallTouchScreenSignal, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutElement, useCalloutRequestClose, useCanNavBack, useCanNavForward, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useNetworkPolicyReason, useOrderedColumns, usePopupMode, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideContainer, useSlideValue, useStateArray, useTitleLevel, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, CalloutStatusIcon, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, Expandable, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, InfoSvg, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, OfflineError, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTransitionArea, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, SpinGroup, SplitButton, StarSvg, Step, StepList, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, TimeRange, TimeRangeSpin, TimeRangeWheel, TimeSpin, TimeWheel, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, canNavBackSignal, canNavForwardSignal, coarsePointerSignal, compareTwoJsValues, constraintFromValidityRule, createAction, createAvailableConstraint, createI18n, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineRouteDefaultTransition, defineRouteTransition, detectHorizontalOverflow, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, errorIsDisplayed, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isOfflineError, isRowSelected, isScrolling, isToday, languagesSignal, localStorageSignal, markErrorAsDisplayedBy, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, scrollActivitySignal, setBaseUrl, setNetworkPolicy, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, smallTouchScreenSignal, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutElement, useCalloutRequestClose, useCanNavBack, useCanNavForward, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useNetworkPolicyReason, useOrderedColumns, usePopupMode, useRouteStatus, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideContainer, useSlideValue, useStateArray, useTitleLevel, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi.js.map

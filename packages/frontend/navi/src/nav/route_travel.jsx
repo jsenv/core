@@ -61,7 +61,7 @@ import {
   holdTransitionWindow,
   measureTransitionWindowState,
   releaseTransitionWindow,
-  TRANSITION_WINDOW_CSS,
+  installTransitionWindowCss,
 } from "./transition_window.js";
 import {
   holdRenderingForRouting,
@@ -112,8 +112,6 @@ const TURNED_ATTRIBUTE = "data-navi-route-travel-turned";
 const TRAVEL_NAME = "navi-route-travel";
 
 const css = /* css */ `
-  ${TRANSITION_WINDOW_CSS}
-
   /* The name that makes the page inside this box a picture of its own during a
      transition — rather than part of the one big picture the document takes, so
      the two pages can move past each other while everything else stays where it
@@ -142,7 +140,7 @@ const css = /* css */ `
   /* Only while a travel of OURS is playing: everything below changes how the
      document animates, and the document belongs to the application the rest of
      the time. */
-  :root[${TRAVEL_ATTRIBUTE}] {
+  :root[data-navi-route-travel] {
     /* The page around the box is NOT taken as a picture, against the browser's
        own default: an element that has been captured is not painted where it
        was and cannot be pointed at either — every press lands on the document
@@ -333,7 +331,7 @@ const css = /* css */ `
      are the beginning of the gesture. Played at their own pace, a quick swipe
      would be over before it was ever taken in hand, which is exactly what one
      sees: the page arriving lands at once instead of following the thumb. */
-  :root[${HOLD_ATTRIBUTE}] {
+  :root[data-navi-route-travel-held] {
     &::view-transition-group(*),
     &::view-transition-old(*),
     &::view-transition-new(*) {
@@ -344,7 +342,7 @@ const css = /* css */ `
   /* Longhands, never the \`animation\` shorthand: the shorthand also writes
      animation-play-state, so it would set these back to running and undo the
      hold above — a finger would then watch the pages travel on their own. */
-  :root[${TRAVEL_ATTRIBUTE}] {
+  :root[data-navi-route-travel] {
     &::view-transition-old(navi-route-travel),
     &::view-transition-new(navi-route-travel) {
       animation-duration: var(--navi-route-travel-duration, 300ms);
@@ -364,7 +362,7 @@ const css = /* css */ `
      So the pictures of everything that is not the pages are dropped, and those
      things are simply left where they are, live. A jump rather than a slide, on
      the one gesture that cannot have both. */
-  :root[${TURNED_ATTRIBUTE}] {
+  :root[data-navi-route-travel-turned] {
     &::view-transition-group(*) {
       display: none;
     }
@@ -381,14 +379,14 @@ const css = /* css */ `
      curve of the movement is the hand's, and it is already in the pull. Kept
      linear once it is let go of too: changing the curve of an animation that is
      halfway through moves the picture without anything having moved. */
-  :root[${DRAGGED_ATTRIBUTE}] {
+  :root[data-navi-route-travel-dragged] {
     &::view-transition-group(navi-route-travel),
     &::view-transition-old(navi-route-travel),
     &::view-transition-new(navi-route-travel) {
       animation-timing-function: linear;
     }
   }
-  :root[${TRAVEL_ATTRIBUTE}="forward"] {
+  :root[data-navi-route-travel="forward"] {
     &::view-transition-old(navi-route-travel) {
       animation-name: navi-route-travel-leave-towards-start;
     }
@@ -396,7 +394,7 @@ const css = /* css */ `
       animation-name: navi-route-travel-enter-from-end;
     }
   }
-  :root[${TRAVEL_ATTRIBUTE}="back"] {
+  :root[data-navi-route-travel="back"] {
     &::view-transition-old(navi-route-travel) {
       animation-name: navi-route-travel-leave-towards-end;
     }
@@ -408,8 +406,8 @@ const css = /* css */ `
   /* The same four movements, along the axis the pages are laid out on: the
      start of a column is its top, so going forward there is the page rising and
      the next one coming up from below. */
-  :root[${TRAVEL_AXIS_ATTRIBUTE}="y"] {
-    &[${TRAVEL_ATTRIBUTE}="forward"] {
+  :root[data-navi-route-travel-axis="y"] {
+    &[data-navi-route-travel="forward"] {
       &::view-transition-old(navi-route-travel) {
         animation-name: navi-route-travel-leave-towards-top;
       }
@@ -417,7 +415,7 @@ const css = /* css */ `
         animation-name: navi-route-travel-enter-from-bottom;
       }
     }
-    &[${TRAVEL_ATTRIBUTE}="back"] {
+    &[data-navi-route-travel="back"] {
       &::view-transition-old(navi-route-travel) {
         animation-name: navi-route-travel-leave-towards-bottom;
       }
@@ -552,6 +550,7 @@ export const RouteTravel = ({
   ...rest
 }) => {
   import.meta.css = css;
+  installTransitionWindowCss();
   const elementRef = useRef();
   const gestureRef = useRef(null);
   // The travel in hand: the transition keeping the picture of the page being

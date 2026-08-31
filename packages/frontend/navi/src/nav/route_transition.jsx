@@ -87,7 +87,7 @@ import {
   holdTransitionWindow,
   measureTransitionWindowState,
   releaseTransitionWindow,
-  TRANSITION_WINDOW_CSS,
+  installTransitionWindowCss,
 } from "./transition_window.js";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import { ensureDocumentStartViewTransition } from "../transition/start_view_transition_polyfill.js";
@@ -124,8 +124,6 @@ const ROUTE_TRAVEL_ATTRIBUTE = "data-navi-route-travel";
 // included).
 
 const css = /* css */ `
-  ${TRANSITION_WINDOW_CSS}
-
   /* The marked region is a picture of its own for the length of a transition of
      OURS, and only then — the name is what makes the pages a picture the
      movement below can carry.
@@ -643,6 +641,7 @@ const css = /* css */ `
  */
 export const RouteTransitionArea = ({ children, ...rest }) => {
   import.meta.css = css;
+  installTransitionWindowCss();
   const props = { ...rest, [TRANSITION_AREA_ATTRIBUTE]: "" };
   return <Box {...props}>{children}</Box>;
 };
@@ -694,6 +693,7 @@ export const RouteTransitionArea = ({ children, ...rest }) => {
  */
 export const defineRouteTransition = (from, to, transition) => {
   import.meta.css = css;
+  installTransitionWindowCss();
   const { type, duration } = normalizeTransition(transition);
   const relation = {
     from: normalizePage(from),
@@ -727,6 +727,7 @@ export const defineRouteTransition = (from, to, transition) => {
  */
 export const defineRouteDefaultTransition = (transition) => {
   import.meta.css = css;
+  installTransitionWindowCss();
   const value = normalizeTransition(transition);
   defaultTransition = value;
   return () => {
