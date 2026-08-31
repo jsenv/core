@@ -68,12 +68,14 @@ const SKELETON_LIST_ITEM_CLASS = "navi_list_item_skeleton";
 // inside it (see ListItems): a run draws the rows it frames and holds the room
 // of the others.
 const RenderWindowContext = createContext(null);
-// Carries List's own `columns` prop (a grid-template-columns value, e.g.
+// Carries List's own `itemColumns` prop (a grid-template-columns value, e.g.
 // "1fr auto auto") down to each ListItem/filler/fallback so they can render
 // as a subgrid row instead of a flex row — see ListItem's own use of this
-// context, and List's own `columns` doc, for the full rationale (table-like
+// context, and List's own `itemColumns` doc, for the full rationale (table-like
 // column sizing that stays correct across a virtualized, windowed item set).
-const ListColumnsContext = createContext(null);
+// List's own `columns` never reaches here: it lays the items themselves into
+// the track's columns, and an item then occupies a cell like anything else.
+const ListItemColumnsContext = createContext(null);
 // Carries the separator element/function down to each ListItem so separators
 // are only rendered between items that actually mount (post-filter, post-window).
 const SeparatorContext = createContext(null);
@@ -216,8 +218,11 @@ const css = /* css */ `
 
     display: flex;
     min-width: 0;
-    /* fit-content by default, but never wider than the parent */
-    max-width: 100%;
+    /* fit-content by default, but never wider than the parent. A maxWidth is
+       the width of the LIST — its border, its background, the box a margin
+       centers — and not only of the scroll box inside it, so the cap lands
+       here as well as on .navi_list_scroll_container below. */
+    max-width: var(--list-max-width, 100%);
     flex-direction: column;
     background-color: var(--x-list-background-color);
     border: var(--x-list-border-width) solid var(--x-list-border-color);
@@ -282,7 +287,6 @@ const css = /* css */ `
       min-width: inherit;
       max-width: var(--list-max-width, inherit);
       max-height: var(--list-max-height, inherit);
-      flex-wrap: inherit;
       overflow: auto;
       /* The list keeps its own rows still (see the scroll anchoring in
          list.jsx): two of them doing it at once compensate for each other's
@@ -374,7 +378,6 @@ const css = /* css */ `
     box-sizing: border-box;
     margin: 0;
     padding: 0;
-    flex-wrap: inherit;
     list-style: none;
     outline: none; /* Focus is displayed on the container */
   }
@@ -520,13 +523,12 @@ const css = /* css */ `
     }
   }
 
-  /* List's own columns prop (see ListColumnsContext) sets grid on .navi_list
-     itself — Box reflects that as navi-box-flow="grid" (see box.jsx), which
-     this keys off directly rather than threading the columns value through
-     React just for this. A grid track only ever spans the single column it
-     is placed in by default, so without this the filler would collapse into
-     just the first column's width instead of reserving height across the
-     whole row. */
+  /* Either of List's column props makes .navi_list a grid — Box reflects that
+     as navi-box-flow="grid" (see box.jsx), which this keys off directly rather
+     than threading the value through React just for this. A grid track only
+     ever spans the single column it is placed in by default, so without this
+     the filler would collapse into just the first column's width instead of
+     reserving height across the whole row. */
   .navi_list[navi-box-flow="grid"] > .navi_list_virtual_filler {
     grid-column: 1 / -1;
   }
@@ -820,6 +822,7 @@ const ListUI = (props) => {
     hoverWhileScrolling = false,
     lockSize,
     columns,
+    itemColumns,
     searchText,
     searchNoMatchMode = "remove",
     loading,
@@ -1100,6 +1103,7 @@ const ListUI = (props) => {
       styleCSSVars={LIST_STYLE_CSS_VARS}
       pseudoClasses={LIST_PSEUDO_CLASSES}
       hasChildUsingForwardedProps
+      childPropSet={LIST_TRACK_PROP_SET}
       onnavi_request_scroll={(e) => {
         if (!Object.hasOwn(e.detail, "id")) {
           console.warn(
@@ -1131,6 +1135,7 @@ const ListUI = (props) => {
         horizontal={horizontal}
         spacing={spacing}
         columns={columns}
+        itemColumns={itemColumns}
         tracker={tracker}
         renderWindow={renderWindow}
         virtual={virtual}
@@ -1197,12 +1202,47 @@ const ListFirstResolver = (props) => {
  *   horizontal?: boolean,
  *   spacing?: string,
  *   columns?: string,
+ *   itemColumns?: string,
+ *   alignX?: string,
+ *   alignY?: string,
+ *   flexWrap?: boolean,
  *   expandX?: boolean,
  *   expandY?: boolean,
  *   expand?: boolean,
  *   children?: import("preact").ComponentChildren,
  *   [key: string]: any,
  * }>}
+ * @param {string} [props.columns]
+ *   The list's own columns: a `grid-template-columns` value the ITEMS are laid
+ *   into — a sheet of icons (`repeat(auto-fill, minmax(2.5rem, 1fr))`), a row of
+ *   choices (`repeat(3, minmax(0, 1fr))`). Each item takes one cell, and an item
+ *   meant to take a whole line says so for itself
+ *   (`style={{ gridColumn: "1 / -1" }}`). Several items to a line is a shape the
+ *   list cannot virtualize — its render window and the room it holds for the
+ *   rows it does not draw both count one item per line — so it is for a set of
+ *   items the caller renders whole, not for a `<List.Items>` collection.
+ * @param {string} [props.itemColumns]
+ *   The columns inside an ITEM: a `grid-template-columns` value each item fills
+ *   with its own children, a table whose cells line up down the list. Every item
+ *   becomes a subgrid row spanning all the columns, so a column is as wide as
+ *   the widest cell in it among the rows actually in the DOM — real column
+ *   sizing that stays right as the window moves. Rows of a table, then, where
+ *   `columns` above is a grid of items; the two cannot both be set.
+ * @param {string} [props.alignX]
+ *   Where the items sit across the track — `alignX="center"` centres a
+ *   horizontal list's row of items inside a list wider than they are. Together
+ *   with `alignY`, `align` and `flexWrap`, this reaches the `<ul>` holding the
+ *   items rather than the frame drawn around it: the frame's only child is the
+ *   scroll box, which fills it and has nothing to arrange.
+ * @param {boolean} [props.flexWrap]
+ *   Lets a horizontal list's items fall to the next line instead of running
+ *   past the edge — a row of choices under a `maxWidth`, say. Same caveat as
+ *   `columns` above: a line holding several items is not virtualizable.
+ * @param {string} [props.overflow]
+ *   `"visible"` lets the items paint outside the list — a check in a row's
+ *   corner, a badge crossing the edge. A list clips by default, which is what
+ *   its rounded corners and its scroll box need, and the two cannot both be
+ *   true: asking for visible gives up the clipping, corners included.
  * @param {boolean} [props.itemTransition]
  *   Names each row, so a change the application wraps in
  *   `document.startViewTransition` is seen row by row — rows moving to their new
@@ -1330,6 +1370,7 @@ const ListContent = ({
   horizontal,
   spacing,
   columns,
+  itemColumns,
   tracker,
   renderWindow,
   virtual,
@@ -1375,6 +1416,7 @@ const ListContent = ({
         horizontal={horizontal}
         spacing={spacing}
         columns={columns}
+        itemColumns={itemColumns}
         {...listProps}
         tracker={tracker}
         renderWindow={renderWindow}
@@ -1387,6 +1429,12 @@ const ListContent = ({
     </Box>
   );
 };
+// Where the items sit is a question about the track (the <ul>), not about the
+// frame around it: the frame's only child is the scroll box, which fills it and
+// has nothing to arrange. Box moves these out of the container's own props and
+// into BoxForwardedPropsContext, which ListContent reads and hands to the <ul>
+// — the same route `horizontal`, `spacing` and the column props take by hand.
+const LIST_TRACK_PROP_SET = new Set(["align", "alignX", "alignY", "flexWrap"]);
 const LIST_STYLE_CSS_VARS = {
   maxHeight: "--list-max-height",
   maxWidth: "--list-max-width",
@@ -2968,6 +3016,7 @@ const UnorderedList = ({
   horizontal,
   spacing,
   columns,
+  itemColumns,
   children,
   ...rest
 }) => {
@@ -2977,12 +3026,22 @@ const UnorderedList = ({
   // already tells us the list is empty (see ListUI's loadingPlaceholderShown).
   const suppressFallback = loadingPlaceholderShown || Boolean(error);
 
+  // One track, one template: the two column props are the same
+  // grid-template-columns seen from either end, and only differ in what an
+  // item does with it (see useItemColumnsOverrideProps).
+  if (columns && itemColumns) {
+    console.warn(
+      `List: "columns" and "itemColumns" cannot both be set — they define the same track. "columns" lays the items into the columns; "itemColumns" gives each item the columns its own children fill.`,
+    );
+  }
+  const trackColumns = columns || itemColumns;
+
   return (
     <Box
       as="ul"
-      flex={columns ? undefined : horizontal ? "x" : "y"}
-      grid={columns ? true : undefined}
-      gridTemplateColumns={columns}
+      flex={trackColumns ? undefined : horizontal ? "x" : "y"}
+      grid={trackColumns ? true : undefined}
+      gridTemplateColumns={trackColumns}
       {...rest}
       spacing={spacing}
       baseClassName="navi_list"
@@ -2998,9 +3057,11 @@ const UnorderedList = ({
               <ListItemTrackerContext.Provider value={tracker}>
                 <ListVirtualContext.Provider value={virtual}>
                   <ListRowContext.Provider value={null}>
-                    <ListColumnsContext.Provider value={columns || null}>
+                    <ListItemColumnsContext.Provider
+                      value={columns ? null : itemColumns || null}
+                    >
                       <ListDeclaredChildren>{children}</ListDeclaredChildren>
-                    </ListColumnsContext.Provider>
+                    </ListItemColumnsContext.Provider>
                   </ListRowContext.Provider>
                 </ListVirtualContext.Provider>
               </ListItemTrackerContext.Provider>
@@ -3064,8 +3125,8 @@ const VirtualFiller = ({ edge, itemCount, virtualItemSize }) => {
   );
 };
 
-// List's own `columns` prop (see ListColumnsContext) turns a list item into
-// a subgrid row instead of a flex row: its own children become direct grid
+// List's own `itemColumns` prop (see ListItemColumnsContext) turns a list item
+// into a subgrid row instead of a flex row: its own children become direct grid
 // items of List's own <ul>, so column widths are computed from whichever
 // rows are actually in the DOM (the currently-windowed items plus the
 // always-mounted header/footer) — real grid/table column sizing, not a
@@ -3075,11 +3136,10 @@ const VirtualFiller = ({ edge, itemCount, virtualItemSize }) => {
 // this they'd silently stay flex rows and break column alignment against
 // the rest of the grid). `flex` is force-cleared here because Box picks
 // flex over grid when both are set (see box.jsx's own boxFlow resolution),
-// so a caller-provided `flex` prop (leftover from a non-columns usage)
-// would otherwise silently win over this.
-const useListItemColumnsOverrideProps = (callerStyle) => {
-  const columns = useContext(ListColumnsContext);
-  if (!columns) {
+// so a caller-provided `flex` prop would otherwise silently win over this.
+const useItemColumnsOverrideProps = (callerStyle) => {
+  const itemColumns = useContext(ListItemColumnsContext);
+  if (!itemColumns) {
     return undefined;
   }
   return {
@@ -3129,9 +3189,9 @@ const ListItemPresentationResolver = (props) => {
   return <Next {...props} />;
 };
 const ListItemPresentation = (props) => {
-  const columnsOverrideProps = useListItemColumnsOverrideProps(props.style);
+  const itemColumnsOverrideProps = useItemColumnsOverrideProps(props.style);
 
-  return <Box as="li" {...props} {...columnsOverrideProps} />;
+  return <Box as="li" {...props} {...itemColumnsOverrideProps} />;
 };
 // A <List.Item skeleton> — a non-interactive placeholder row shown while a list
 // is loading. It is presentation-only (not tracked, not selectable, aria-hidden)
@@ -3151,7 +3211,7 @@ const ListItemSkeleton = (props) => {
   // block; "s" is enough air for them to be seen as separate rows.
   // eslint-disable-next-line no-unused-vars
   const { skeleton, children, paddingY = "s", ...rest } = props;
-  const columnsOverrideProps = useListItemColumnsOverrideProps(rest.style);
+  const itemColumnsOverrideProps = useItemColumnsOverrideProps(rest.style);
 
   return (
     <Box
@@ -3160,7 +3220,7 @@ const ListItemSkeleton = (props) => {
       aria-hidden="true"
       paddingY={paddingY}
       {...rest}
-      {...columnsOverrideProps}
+      {...itemColumnsOverrideProps}
       baseClassName={`navi_list_item ${SKELETON_LIST_ITEM_CLASS}`}
     >
       {children ?? <Text loading />}
@@ -3328,7 +3388,7 @@ const ListItemReal = (props) => {
   // if any (there is no standalone highlight prop — see ListItem's own doc).
   useSearchHighlight(ref, matchInfo?.matchRanges, [children, hidden]);
 
-  const columnsOverrideProps = useListItemColumnsOverrideProps(rest.style);
+  const itemColumnsOverrideProps = useItemColumnsOverrideProps(rest.style);
   // <List itemTransition>: the row carries the name it is to be paired by, and
   // the stylesheet turns it into a view-transition-name where a browser can
   // draw it inside the list (see the @supports block in the css above).
@@ -3401,7 +3461,7 @@ const ListItemReal = (props) => {
       id={id}
       navi-list-item-real=""
       {...rest}
-      {...columnsOverrideProps}
+      {...itemColumnsOverrideProps}
       index={undefined}
       selected={undefined}
       // We use aria-hidden and not hidden because hidden would be forced to
