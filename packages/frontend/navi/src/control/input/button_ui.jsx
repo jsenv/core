@@ -410,49 +410,54 @@ const css = /* css */ `
       --button-padding: 0;
       display: inline-flex;
     }
-    /* cta: call-to-action — special background, border matches background */
+    /* cta: call-to-action — a filled button whose border matches its fill.
+       Like the variants above it moves the DEFAULTS, so a backgroundColor /
+       borderColor / color prop still wins; and its per-state formulas are
+       re-pointed at the base variables, so they compose with whatever color it
+       ends up filled with. A CTA lightens toward white where an ordinary
+       button darkens toward black: it is already the darkest thing around. */
     &[data-cta] {
-      --x-button-background-color: var(--button-cta-background-color);
-      --x-button-border-color: var(--button-cta-background-color);
-      --x-button-color: white;
-
-      &[data-hover] {
-        --x-button-background-color: color-mix(
-          in srgb,
-          var(--button-cta-background-color) 85%,
-          white
-        );
-        --x-button-border-color: color-mix(
-          in srgb,
-          var(--button-cta-background-color) 85%,
-          white
-        );
-      }
-      &[data-readonly] {
-        --x-button-background-color: color-mix(
-          in srgb,
-          var(--button-cta-background-color) 50%,
-          white
-        );
-        --x-button-border-color: color-mix(
-          in srgb,
-          var(--button-cta-background-color) 50%,
-          white
-        );
-      }
-      &[data-disabled] {
-        --x-button-background-color: color-mix(
-          in srgb,
-          var(--button-cta-background-color) 40%,
-          white
-        );
-        --x-button-border-color: color-mix(
-          in srgb,
-          var(--button-cta-background-color) 40%,
-          white
-        );
-        --x-button-color: color-mix(in srgb, white 60%, transparent);
-      }
+      --button-background-color: var(
+        --button-background,
+        var(--button-cta-background-color)
+      );
+      --button-border-color: var(--button-cta-background-color);
+      --button-color: white;
+      --button-background-color-hover: color-mix(
+        in srgb,
+        var(--button-background-color) 85%,
+        white
+      );
+      --button-border-color-hover: color-mix(
+        in srgb,
+        var(--button-border-color) 85%,
+        white
+      );
+      --button-background-color-readonly: color-mix(
+        in srgb,
+        var(--button-background-color) 50%,
+        white
+      );
+      --button-border-color-readonly: color-mix(
+        in srgb,
+        var(--button-border-color) 50%,
+        white
+      );
+      --button-background-color-disabled: color-mix(
+        in srgb,
+        var(--button-background-color) 40%,
+        white
+      );
+      --button-border-color-disabled: color-mix(
+        in srgb,
+        var(--button-border-color) 40%,
+        white
+      );
+      --button-color-disabled: color-mix(
+        in srgb,
+        var(--button-color) 60%,
+        transparent
+      );
     }
   }
 `;

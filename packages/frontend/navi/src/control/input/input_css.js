@@ -331,19 +331,40 @@ const inputCss = /* css */ `
     /* The box of a field, without a field in it: the border is kept and made
        invisible rather than dropped, and the background goes with it, so what
        is left is text sitting exactly where the value would be — swap one for
-       the other and nothing on the page moves. */
+       the other and nothing on the page moves. Defaults, like the variants
+       above: a backgroundColor / borderColor prop lands inline on this same
+       element and still wins, and the per-state variables are re-pointed at
+       the base ones, otherwise the hover wash and the disabled grey would draw
+       a box the variant just took away. */
     &[data-variant="text"] {
-      --x-background-color: transparent;
-      --x-border-color: transparent;
+      --background-color: transparent;
+      --background-color-hover: var(--background-color);
+      --background-color-focus: var(--background-color);
+      --background-color-readonly: var(--background-color);
+      --background-color-disabled: var(--background-color);
+      --border-color: transparent;
+      --border-color-hover: var(--border-color);
+      --border-color-readonly: var(--border-color);
+      --border-color-disabled: var(--border-color);
       cursor: inherit;
     }
 
+    /* The line under the field is the whole box: no background, no frame, only
+       the rule drawn by .navi_input_underline — which keeps reading
+       --x-border-color, so a borderColor prop still colors it. The background
+       goes to a default the caller can override, with the per-state ones
+       re-pointed at it so no box comes back on hover or while disabled. */
     &[data-variant="underline"] {
-      border: none;
-      border-radius: 0;
-      --x-background-color: transparent;
+      --background-color: transparent;
+      --background-color-hover: var(--background-color);
+      --background-color-focus: var(--background-color);
+      --background-color-readonly: var(--background-color);
+      --background-color-disabled: var(--background-color);
       padding-right: 0;
       padding-left: 0;
+
+      border: none;
+      border-radius: 0;
 
       .navi_input_real_input_wrapper {
         position: relative;
@@ -361,23 +382,13 @@ const inputCss = /* css */ `
         pointer-events: none;
       }
 
-      &[data-hover] {
-        --x-background-color: transparent;
-      }
       &[data-focus-visible] {
-        --x-background-color: transparent;
         outline-style: none;
 
         .navi_input_underline {
           height: 2px;
           background-color: var(--outline-color);
         }
-      }
-      &[data-readonly] {
-        --x-background-color: transparent;
-      }
-      &[data-disabled] {
-        --x-background-color: transparent;
       }
     }
   }

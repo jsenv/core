@@ -504,7 +504,7 @@ const css = /* css */ `
       --picker-background-color-hover: var(--picker-background-color);
       --picker-background-color-readonly: var(--picker-background-color);
       --picker-background-color-disabled: var(--picker-background-color);
-      --x-picker-icon-color: currentColor;
+      --picker-icon-color: currentColor;
 
       /* The value holds nothing but the icon, so it takes the icon's width
          rather than the box's: the box's justify-content is then what places
@@ -547,7 +547,7 @@ const css = /* css */ `
       --picker-background-color-hover: var(--picker-background-color);
       --picker-background-color-readonly: var(--picker-background-color);
       --picker-background-color-disabled: var(--picker-background-color);
-      --x-picker-icon-color: currentColor;
+      --picker-icon-color: currentColor;
 
       .navi_picker_box {
         position: absolute;
@@ -577,7 +577,7 @@ const css = /* css */ `
       --picker-background-color-hover: var(--picker-background-color);
       --picker-background-color-readonly: var(--picker-background-color);
       --picker-background-color-disabled: var(--picker-background-color);
-      --x-picker-icon-color: currentColor;
+      --picker-icon-color: currentColor;
 
       /* The drawing is the caller's, so it is written on the page's line at
          the page's size — the control font and the control line belong to the
