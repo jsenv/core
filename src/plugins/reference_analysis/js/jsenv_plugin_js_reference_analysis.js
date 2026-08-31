@@ -1,4 +1,8 @@
-import { getUrlForContentInsideJs, parseJsUrls } from "@jsenv/ast";
+import {
+  getUrlForContentInsideJs,
+  parseJsUrls,
+  renderCssTemplateLiteral,
+} from "@jsenv/ast";
 import {
   isWebWorkerEntryPointReference,
   isWebWorkerUrlInfo,
@@ -70,9 +74,17 @@ const parseAndTransformJsReferences = async (
 
     sequentialActions.push(async () => {
       await inlineUrlInfo.cook();
-      const replacement = JS_QUOTES.escapeSpecialChars(inlineUrlInfo.content, {
-        quote,
-      });
+      const { substitutions } = inlineReferenceInfo;
+      const replacement = substitutions
+        ? // the expressions the template holds take their placeholder's place
+          // back; a template literal is written whatever the runtime supports,
+          // transpilation runs after and lowers it when it has to
+          renderCssTemplateLiteral(inlineUrlInfo.content, substitutions)
+        : JS_QUOTES.escapeSpecialChars(inlineUrlInfo.content, { quote });
+      if (replacement === null) {
+        // a placeholder did not survive: the source stays as it was written
+        return;
+      }
       magicSource.replace({
         start: inlineReferenceInfo.start,
         end: inlineReferenceInfo.end,

@@ -1,0 +1,1 @@
+import{installImportMetaCssBuild as t}from"/js/import_meta_css_build.js";t(import.meta);const s=".constant{color:red}";import.meta.css=[s,"@jsenv/core/tests/dev_and_build/import_meta_css_static/client/constant.js"];export const constantCss=s;

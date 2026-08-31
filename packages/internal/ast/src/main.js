@@ -52,5 +52,6 @@ export { visitJsAstUntil } from "./js/visit_js_ast_until.js";
 export { visitJsAst } from "./js/visit_js_ast.js";
 export { getImportMetaPropertyName } from "./js/import_meta.js";
 export { getUrlForContentInsideJs } from "./js/js_inline_content_url.js";
+export { renderCssTemplateLiteral } from "./js/js_static_analysis/css_template_substitutions.js";
 
 export { generateUrlForInlineContent } from "./inline_content_url.js";

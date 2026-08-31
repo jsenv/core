@@ -116,12 +116,15 @@
       });
       setupRoutes([CREATE_ROUTE, EDIT_ROUTE]);
 
+      // L'adresse, coupée à son dernier segment: cette page vit sous un long
+      // chemin de repo, et ce qu'on regarde ici tient dans la fin.
       const Address = () => {
         const url = useDocumentUrl();
         const { pathname, search } = new URL(url);
+        const lastSegment = pathname.slice(pathname.lastIndexOf("/") + 1);
         return (
           <div className="address" data-testid="address">
-            {pathname}
+            …/{lastSegment}
             {search}
           </div>
         );

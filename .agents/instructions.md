@@ -141,7 +141,8 @@ how to run them.
 
 ### CSS
 
-- CSS-in-JS using `import.meta.css` for component styles
+- CSS-in-JS using `import.meta.css` for component styles — read the `${}` section
+  closing this chapter before writing one
 - CSS variables for theming and customization
 - `light-dark()` for automatic theme switching
 - **Transitions/animations play on change, never on first paint**: a transition or animation must fire when something _changes_ (interaction, state update, value change) — not when the component first mounts, the page loads, or an already-open element re-renders. A user should never see an element animate into its initial state just because the page appeared. Techniques, roughly in order of preference:
@@ -151,6 +152,142 @@ how to run them.
   - **Simplest of all — no transition at all**: if the emphasis can be positional/compositional (e.g. a fixed overlay the content moves under) rather than a per-element state flip, there's nothing to animate on mount by construction. Prefer this when it fits.
     This applies to color/opacity/transform transitions and keyframe animations alike.
 - **Anything that moves over time**: read [.agents/skills/animations/SKILL.md](skills/animations/SKILL.md) — who owns the state while something animates, how an interrupted movement picks up, how it keeps up with a user faster than it, and where view transitions may live.
+
+#### `${}` in `import.meta.css`
+
+**A `${}` costs the whole template, not just the line it sits on.** The build reads
+`import.meta.css` by parsing its content as css. A substitution it cannot read makes the
+whole template opaque, and everything the css pipeline does is lost for all of it:
+
+- **Comments ship to production**, with every space and newline, in every build.
+- **Nothing is transpiled**: no nesting lowering, no prefixing, no fallback for the
+  runtimes `runtimeCompat` targets. What is written is what the browser gets.
+- **`url("./icon.svg")` is never seen**: the file is not part of the build, not copied,
+  not hashed, and the url the browser resolves is relative to the document instead of the
+  module. It silently 404s in production.
+- **Nothing is checked**: a typo'd property, an unclosed brace, an invalid value — the
+  browser finds them, the build does not.
+- **Nothing is minified.**
+
+So a `${}` is not a small convenience, it is opting a component's whole stylesheet out of
+the build. Write css without one; the ways below cover nearly every reason to reach for it.
+
+##### Instead of a `${}`
+
+**A value the JS knows → a custom property set from JS.** The css stays static, and the
+value can change without building a new stylesheet:
+
+```js
+// avoid
+const setPanelWidth = (width) => {
+  import.meta.css = `.panel { width: ${width}; }`;
+};
+
+// prefer
+import.meta.css = `
+  .panel {
+    width: var(--panel-width, 300px);
+  }
+`;
+const setPanelWidth = (element, width) => {
+  element.style.setProperty("--panel-width", width);
+};
+```
+
+**A name you did not want to repeat → css nesting.** Reaching into JS for a class or
+attribute name to avoid typing a selector twice trades a whole stylesheet for a little
+repetition; `&` removes the repetition without leaving css:
+
+```js
+// avoid
+const ROOT = ".my_button";
+import.meta.css = `
+  ${ROOT} { color: black; }
+  ${ROOT}[data-loading] { opacity: 0.5; }
+`;
+
+// prefer
+import.meta.css = `
+  .my_button {
+    color: black;
+    &[data-loading] {
+      opacity: 0.5;
+    }
+  }
+`;
+```
+
+**A variant → a data attribute, both branches written out.** A condition in JS picking a
+declaration hides the css; a condition in JS picking an attribute does not:
+
+```js
+// avoid
+import.meta.css = `.badge { color: ${tone === "danger" ? "red" : "blue"}; }`;
+
+// prefer
+import.meta.css = `
+  .badge {
+    color: blue;
+    &[data-tone="danger"] {
+      color: red;
+    }
+  }
+`;
+element.setAttribute("data-tone", tone);
+```
+
+**An asset → a literal `url()`.** Written literally, the build follows it, copies it and
+versions it; built in JS it is on its own. When the url truly is dynamic, keep it out of
+the template and set it as a custom property, so at least the css around it stays readable.
+
+**A shared block of css → a `.css` file.** Composing a stylesheet out of css chunks held
+in JS constants (`${SHARED_TOKENS_CSS}`) blinds every template that pulls one in. A css
+file imported for its stylesheet is read, checked and transformed like any other:
+
+```js
+// avoid
+import.meta.css = `
+  ${SHARED_TOKENS_CSS}
+  .panel { color: var(--ink); }
+`;
+
+// prefer
+import sharedTokens from "./shared_tokens.css" with { type: "css" };
+
+document.adoptedStyleSheets = [...document.adoptedStyleSheets, sharedTokens];
+import.meta.css = `
+  .panel {
+    color: var(--ink);
+  }
+`;
+```
+
+##### The one substitution the build can read
+
+A substitution standing exactly **where a css value stands** does not blind the build: it
+is swapped for `var(--jsenv-css-substitution-N)`, the css is parsed and transformed as
+usual, and the expression takes the placeholder's place back afterwards.
+
+```js
+import.meta.css = /* css */ `
+  /* stripped, like any comment */
+  .panel {
+    padding: ${gap} 4px;
+    color: ${color};
+  }
+`;
+// built: `.panel{padding:${gap} 4px;color:${color}}`
+```
+
+It holds only when **all** of these are true — the expression is inside a rule block,
+after the `:` of a declaration, and not inside a string, inside `url()`, in an at-rule
+prelude, in a selector or in a property name — and the placeholder must come out of the
+css transformation exactly once (a prefixed duplicate makes it twice).
+
+When any of it fails the template ships verbatim, with every consequence listed above, and
+**nothing is logged**. So this is a safety net for value substitutions, not a licence to
+interpolate: a custom property is still the better answer, it keeps the css static _and_
+lets the value change without rebuilding a stylesheet.
 
 ## @jsenv/navi Specifics
 

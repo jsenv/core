@@ -1,3 +1,5 @@
+import "./constant.js";
+
 // static css: goes through the css pipeline (comments, minification, url())
 import.meta.css = /* css */ `
   /* a comment */
@@ -7,12 +9,24 @@ import.meta.css = /* css */ `
   }
 `;
 
+// a substitution standing where a css value stands: the css is still readable,
+// the expression takes its placeholder's place back
 export const setBodyColor = (color) => {
-  // dynamic css: left untouched, it is not static css
   import.meta.css = /* css */ `
     /* a comment */
     body {
       color: ${color};
+    }
+  `;
+};
+
+// a substitution standing anywhere else: nothing can stand for it, the css
+// is shipped as it is written
+export const setSelectorColor = (selector) => {
+  import.meta.css = /* css */ `
+    /* a comment */
+    ${selector} {
+      color: red;
     }
   `;
 };

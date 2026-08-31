@@ -22,9 +22,9 @@ base/client/main.html:15:40
   at reference.resolve (@jsenv/core/src/kitchen/url_graph/references.js:385:38)
   at createResolveAndFinalize (@jsenv/core/src/kitchen/url_graph/references.js:41:41)
   at Object.found (@jsenv/core/src/kitchen/url_graph/references.js:63:23)
-  at onExternalReference (@jsenv/core/src/plugins/reference_analysis/js/jsenv_plugin_js_reference_analysis.js:131:44)
-  at parseAndTransformJsReferences (@jsenv/core/src/plugins/reference_analysis/js/jsenv_plugin_js_reference_analysis.js:184:7)
-  at js_module (@jsenv/core/src/plugins/reference_analysis/js/jsenv_plugin_js_reference_analysis.js:25:18)
+  at onExternalReference (@jsenv/core/src/plugins/reference_analysis/js/jsenv_plugin_js_reference_analysis.js:143:44)
+  at parseAndTransformJsReferences (@jsenv/core/src/plugins/reference_analysis/js/jsenv_plugin_js_reference_analysis.js:196:7)
+  at js_module (@jsenv/core/src/plugins/reference_analysis/js/jsenv_plugin_js_reference_analysis.js:29:18)
 ```
 
 ---

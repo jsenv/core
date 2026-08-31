@@ -186,8 +186,7 @@
         Link,
         setUrlTargetOptions,
         Text,
-        useActionStatus,
-        useRunOnMount,
+        useAsyncData,
         useUrlTargetId,
       } from "@jsenv/navi";
       import { DemoHeader } from "../../internal/demo_header.jsx";
@@ -265,8 +264,11 @@
       );
 
       const RadarPage = () => {
-        const { data: radars, loading, error } = useActionStatus(loadRadars);
-        useRunOnMount(loadRadars, RadarPage);
+        const [radars, loading, error] = useAsyncData(loadRadars, {
+          run: true,
+          loading: true,
+          error: true,
+        });
 
         return (
           <Box flex="y" spacing="s" expandX>

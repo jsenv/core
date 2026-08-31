@@ -134,9 +134,12 @@ export const parseJsUrls = ({
     ExportAllDeclaration: (node) => {
       analyzeExportAllDeclaration(node, { onUrl });
     },
-    AssignmentExpression: (node) => {
+    AssignmentExpression: (node, ancestors) => {
       if (inlineContent && isJsModule && isImportMetaCssAssignment(node)) {
         analyzeImportMetaCssAssignment(node, {
+          js,
+          ast,
+          ancestors,
           onInlineContent,
         });
       }

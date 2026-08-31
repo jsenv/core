@@ -21,10 +21,11 @@
  * import.meta.css = css;
  * ```
  *
- * A css written directly as a string or a template literal without substitution
- * is analyzed by "jsenv:js_reference_analysis" as an inline css: it goes through
- * the css pipeline (transpilation, url() resolution, minification, comments).
- * A template literal with substitutions cannot be read statically and is shipped as-is.
+ * "jsenv:js_reference_analysis" reads the css assigned here as an inline css and
+ * sends it through the css pipeline: transpilation, url() resolution, minification,
+ * comments. A "${}" standing where a css value stands is swapped for a placeholder
+ * and put back afterwards; anywhere else it makes the template unreadable and the
+ * css is shipped exactly as written, with everything the pipeline does lost.
  *
  */
 

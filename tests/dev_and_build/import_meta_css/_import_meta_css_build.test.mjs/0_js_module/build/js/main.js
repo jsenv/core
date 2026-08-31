@@ -49,27 +49,24 @@ const installImportMetaCssBuild$1 = (importMeta) => {
 };
 
 installImportMetaCssBuild$1(import.meta);const setBodyBackgroundColor = color => {
-  import.meta.css = [         `
-    body {
-      background-color: ${color};
-    }
-  `, "@jsenv/core/tests/dev_and_build/import_meta_css/client/a.js"];
+  import.meta.css = [         `body {
+  background-color: ${color};
+}
+`, "@jsenv/core/tests/dev_and_build/import_meta_css/client/a.js"];
 };
 
 installImportMetaCssBuild$1(import.meta);const setBodyColor = color => {
-  import.meta.css = [         `
-    body {
-      color: ${color};
-    }
-  `, "@jsenv/core/tests/dev_and_build/import_meta_css/client/b.js"];
+  import.meta.css = [         `body {
+  color: ${color};
+}
+`, "@jsenv/core/tests/dev_and_build/import_meta_css/client/b.js"];
 };
 
 installImportMetaCssBuild$1(import.meta);const setBodyFontSize = size => {
-  import.meta.css = [         `
-    body {
-      font-size: ${size};
-    }
-  `, "@jsenv/core/tests/dev_and_build/import_meta_css/client/c.js"];
+  import.meta.css = [         `body {
+  font-size: ${size};
+}
+`, "@jsenv/core/tests/dev_and_build/import_meta_css/client/c.js"];
 };
 
 
@@ -126,7 +123,10 @@ installImportMetaCssBuild$1(import.meta);const installImportMetaCssBuild = impor
 };
 installImportMetaCssBuild(import.meta);
 const setBodyFontStyle = style => {
-  import.meta.css = [`body { font-style: ${style}; }`, "/d.js"];
+  import.meta.css = [`body {
+  font-style: ${style};
+}
+`, "/d.js"];
 };
 
 const getBodyFontSize = () => window.getComputedStyle(document.body).fontSize;
