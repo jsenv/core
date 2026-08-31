@@ -1743,7 +1743,12 @@
       // ── Clearing ─────────────────────────────────────────────────────────────
 
       const FRUITS = ["Apple", "Cherry", "Elderberry"];
-      const FruitList = ({ selected }) => (
+      // No `selected` on the rows: the picker holds the value and places the
+      // list from it. Saying it twice makes the rows their own owner, and the
+      // list then answers the picker with what it was told rather than with
+      // what the user just did — the clear cross empties the picker and the
+      // list puts the old value straight back (navi warns about it).
+      const FruitList = () => (
         <List selectable command="--navi-send">
           {FRUITS.map((fruit, i) => (
             <ListItem
@@ -1752,7 +1757,6 @@
               id={`fruit_${fruit}`}
               index={i}
               value={fruit}
-              selected={selected === fruit}
               paddingX="m"
               paddingY="s"
             >
@@ -1788,7 +1792,7 @@
                   setValue(v);
                 }}
               >
-                <FruitList selected={value} />
+                <FruitList />
               </Picker>
             </Field>
           </Subsection>
@@ -1829,7 +1833,7 @@
                   value={value.fruit}
                   action={(fruit) => action({ fruit })}
                 >
-                  <FruitList selected={value.fruit} />
+                  <FruitList />
                 </Picker>
               </Field>
             )}

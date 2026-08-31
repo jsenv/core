@@ -317,6 +317,9 @@ registerNaviCommand("--navi-update", (source, event, { argument }) => {
       dispatchRequestInteraction(target, {
         event,
         name: "--navi-update",
+        // The source may have claimed the press to send this very command — see
+        // the requester in onRequestInteraction.
+        requester: source,
         prevented: () => event.preventDefault(),
         allowed: () => {
           const commandValue = resolveCommandValue(source, event);
@@ -355,6 +358,9 @@ registerNaviCommand("--navi-clear", (source, event) => {
     dispatchRequestInteraction(target, {
       event: clearEvent,
       name: "--navi-clear",
+      // The source may have claimed the press to send this very command — see
+      // the requester in onRequestInteraction.
+      requester: source,
       prevented: () => clearEvent.preventDefault(),
       allowed: () => {
         // What the control holds, before it holds nothing: the clear is
@@ -442,6 +448,9 @@ registerNaviCommand("--navi-reset", (source, event) => {
       dispatchRequestInteraction(target, {
         event,
         name: "--navi-reset",
+        // The source may have claimed the press to send this very command — see
+        // the requester in onRequestInteraction.
+        requester: source,
         prevented: () => event.preventDefault(),
         allowed: () => dispatchRequestResetUIState(target, event),
       });

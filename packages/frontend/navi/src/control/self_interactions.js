@@ -129,8 +129,19 @@ const CLICK_SELECTOR = selfInteractionSelector("click");
  * The closest element CLAIMING THE PRESS wins, not the closest one claiming
  * anything: an affordance that took only the drag is transparent here, exactly
  * as it is to the drag readers when it took only the click.
+ *
+ * @param {Event} event The gesture being arbitrated.
+ * @param {Element} controlHost The control asking whether the press is its own.
+ * @param {Element} [requester] Who asked this control to act, when someone did
+ *   — the source of a command, typically. The claim answers "was this press
+ *   yours or the affordance's"; it says nothing about a request that affordance
+ *   is making, and the answer there is always yes.
  */
-export const isAimedAtSelfInteractionsBelow = (event, controlHost) => {
+export const isAimedAtSelfInteractionsBelow = (
+  event,
+  controlHost,
+  requester,
+) => {
   const target = event?.target;
   if (!target || typeof target.closest !== "function") {
     return false;
@@ -142,6 +153,13 @@ export const isAimedAtSelfInteractionsBelow = (event, controlHost) => {
   // The claim is against what is ABOVE it: the control that IS the claimer, and
   // any control living inside it, are being aimed at like anything else.
   if (claimer === controlHost || claimer.contains(controlHost)) {
+    return false;
+  }
+  // The claimer is the one asking. Its claim took the press so IT would decide
+  // what the press means, and this is that decision arriving — a clear cross
+  // sending "--navi-clear" to the field it sits in. Stepping back here would be
+  // the control refusing the very request the claim exists to let through.
+  if (requester && (claimer === requester || claimer.contains(requester))) {
     return false;
   }
   // From the root rather than the host: a layered control (a picker holding an

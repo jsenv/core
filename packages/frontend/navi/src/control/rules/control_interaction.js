@@ -197,12 +197,21 @@ export const createControlInteraction = (
 
 export const dispatchRequestInteraction = (
   element,
-  { event, name = "", prevented, allowed, always, ...detailRest } = {},
+  {
+    event,
+    name = "",
+    requester,
+    prevented,
+    allowed,
+    always,
+    ...detailRest
+  } = {},
 ) => {
   const controlHost = findControlHost(element) || element;
   return dispatchInternalCustomEvent(controlHost, "navi_request_interaction", {
     event,
     name,
+    requester,
     prevented,
     allowed,
     always,
@@ -224,6 +233,9 @@ export const onRequestInteraction = (
     // through (see READONLY_CONSTRAINT).
     intent = "write",
     bypassInteractivity = false,
+    // Who asked, when the control is not answering the gesture on its own —
+    // the source of a command (see the self-interactions step-back below).
+    requester,
     prevented,
     allowed,
     always,
@@ -257,7 +269,9 @@ export const onRequestInteraction = (
   // reaction never happened, so its `prevented`/`always` (an
   // `e.preventDefault()`, for most of them) have nothing to undo and would take
   // the press from the affordance itself.
-  if (isAimedAtSelfInteractionsBelow(event, controlHost)) {
+  // Unless that element is the one asking: what it took the press to decide is
+  // arriving here, and it is this control's to answer.
+  if (isAimedAtSelfInteractionsBelow(event, controlHost, requester)) {
     debugInteraction(
       event,
       `"${name}" is for a self-interactions element below`,

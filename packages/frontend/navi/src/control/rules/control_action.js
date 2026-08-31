@@ -48,6 +48,11 @@ export const dispatchRequestAction = (
   return dispatchRequestInteraction(element, {
     event,
     name,
+    // The gate needs it as much as the action does: the requester may be an
+    // affordance that claimed the press to ask for this very action, and the
+    // control must not read that claim as "this press was not for me" — see
+    // isAimedAtSelfInteractionsBelow.
+    requester: actionOptions.requester,
     prevented,
     allowed: () => {
       allowed?.();
