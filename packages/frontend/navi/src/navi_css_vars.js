@@ -84,7 +84,17 @@ const css = /* css */ `
       -webkit-tap-highlight-color: var(--navi-tap-highlight-color);
       --navi-tap-highlight-color: transparent;
 
-      --navi-control-font-family: ${controlDefaultFontFamily};
+      /* A face of their own for the controls, and nothing else on the page.
+         Undeclared here on purpose: controls write in inherit, so what a
+         container says reaches the button, the field and the picker inside it,
+         and a value on :root would resolve here and wall that off again. Set
+         it to give the controls their own face, on the whole app or on one
+         subtree:
+
+           :root {
+             --navi-control-font-family: system-ui;
+           }
+      */
       --navi-control-font-size: ${controlDefaultFontSize};
       --navi-control-border-radius: 2px;
       /* A checkbox is only ~1em wide: applying a control radius meant for
@@ -230,6 +240,14 @@ const css = /* css */ `
       /* Layered: the document's line is what navi writes on when the app says
          nothing, so the app's own body rule wins. */
       line-height: var(--navi-line-height);
+      /* The face everything is written in, controls included — they inherit
+         it rather than carrying one of their own, so an app names its typeface
+         once, wherever it wants it to start: on the document, on a section, on
+         a popup opened with font="…". The browser's own control face rather
+         than the document's default, so that a page saying nothing gets its
+         text and its buttons in one face instead of two.
+         Layered like the line above, so the app's own rule wins. */
+      font-family: ${controlDefaultFontFamily};
       /* The same line for a control, snapped to the pixel. The browser lays a
          line out at its exact height but paints the glyph on a pixel row: at
          the default control size (13.333px) the line is 16.666px, and the

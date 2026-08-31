@@ -5596,8 +5596,19 @@ const CLICK_SELECTOR = selfInteractionSelector("click");
  * The closest element CLAIMING THE PRESS wins, not the closest one claiming
  * anything: an affordance that took only the drag is transparent here, exactly
  * as it is to the drag readers when it took only the click.
+ *
+ * @param {Event} event The gesture being arbitrated.
+ * @param {Element} controlHost The control asking whether the press is its own.
+ * @param {Element} [requester] Who asked this control to act, when someone did
+ *   — the source of a command, typically. The claim answers "was this press
+ *   yours or the affordance's"; it says nothing about a request that affordance
+ *   is making, and the answer there is always yes.
  */
-const isAimedAtSelfInteractionsBelow = (event, controlHost) => {
+const isAimedAtSelfInteractionsBelow = (
+  event,
+  controlHost,
+  requester,
+) => {
   const target = event?.target;
   if (!target || typeof target.closest !== "function") {
     return false;
@@ -5609,6 +5620,13 @@ const isAimedAtSelfInteractionsBelow = (event, controlHost) => {
   // The claim is against what is ABOVE it: the control that IS the claimer, and
   // any control living inside it, are being aimed at like anything else.
   if (claimer === controlHost || claimer.contains(controlHost)) {
+    return false;
+  }
+  // The claimer is the one asking. Its claim took the press so IT would decide
+  // what the press means, and this is that decision arriving — a clear cross
+  // sending "--navi-clear" to the field it sits in. Stepping back here would be
+  // the control refusing the very request the claim exists to let through.
+  if (requester && (claimer === requester || claimer.contains(requester))) {
     return false;
   }
   // From the root rather than the host: a layered control (a picker holding an
@@ -9802,12 +9820,21 @@ const createControlInteraction = (
 
 const dispatchRequestInteraction = (
   element,
-  { event, name = "", prevented, allowed, always, ...detailRest } = {},
+  {
+    event,
+    name = "",
+    requester,
+    prevented,
+    allowed,
+    always,
+    ...detailRest
+  } = {},
 ) => {
   const controlHost = findControlHost(element) || element;
   return dispatchInternalCustomEvent(controlHost, "navi_request_interaction", {
     event,
     name,
+    requester,
     prevented,
     allowed,
     always,
@@ -9829,6 +9856,9 @@ const onRequestInteraction = (
     // through (see READONLY_CONSTRAINT).
     intent = "write",
     bypassInteractivity = false,
+    // Who asked, when the control is not answering the gesture on its own —
+    // the source of a command (see the self-interactions step-back below).
+    requester,
     prevented,
     allowed,
     always,
@@ -9862,7 +9892,9 @@ const onRequestInteraction = (
   // reaction never happened, so its `prevented`/`always` (an
   // `e.preventDefault()`, for most of them) have nothing to undo and would take
   // the press from the affordance itself.
-  if (isAimedAtSelfInteractionsBelow(event, controlHost)) {
+  // Unless that element is the one asking: what it took the press to decide is
+  // arriving here, and it is this control's to answer.
+  if (isAimedAtSelfInteractionsBelow(event, controlHost, requester)) {
     debugInteraction(
       event,
       `"${name}" is for a self-interactions element below`,
@@ -9947,6 +9979,11 @@ const dispatchRequestAction = (
   return dispatchRequestInteraction(element, {
     event,
     name,
+    // The gate needs it as much as the action does: the requester may be an
+    // affordance that claimed the press to ask for this very action, and the
+    // control must not read that claim as "this press was not for me" — see
+    // isAimedAtSelfInteractionsBelow.
+    requester: actionOptions.requester,
     prevented,
     allowed: () => {
       allowed?.();
@@ -30404,6 +30441,9 @@ registerNaviCommand("--navi-update", (source, event, { argument }) => {
       dispatchRequestInteraction(target, {
         event,
         name: "--navi-update",
+        // The source may have claimed the press to send this very command — see
+        // the requester in onRequestInteraction.
+        requester: source,
         prevented: () => event.preventDefault(),
         allowed: () => {
           const commandValue = resolveCommandValue(source, event);
@@ -30442,6 +30482,9 @@ registerNaviCommand("--navi-clear", (source, event) => {
     dispatchRequestInteraction(target, {
       event: clearEvent,
       name: "--navi-clear",
+      // The source may have claimed the press to send this very command — see
+      // the requester in onRequestInteraction.
+      requester: source,
       prevented: () => clearEvent.preventDefault(),
       allowed: () => {
         // What the control holds, before it holds nothing: the clear is
@@ -30529,6 +30572,9 @@ registerNaviCommand("--navi-reset", (source, event) => {
       dispatchRequestInteraction(target, {
         event,
         name: "--navi-reset",
+        // The source may have claimed the press to send this very command — see
+        // the requester in onRequestInteraction.
+        requester: source,
         prevented: () => event.preventDefault(),
         allowed: () => dispatchRequestResetUIState(target, event),
       });
@@ -44206,7 +44252,7 @@ installImportMetaCssBuild(import.meta);const css$P = /* css */`@layer navi {
     --button-color: currentColor;
     --button-cursor: pointer;
     --button-font-size: var(--navi-control-font-size);
-    --button-font-family: var(--navi-control-font-family);
+    --button-font-family: var(--navi-control-font-family, inherit);
     --button-border-color-hover: color-mix(in srgb,
         var(--button-border-color) 70%,
         black);
@@ -44453,37 +44499,30 @@ a.navi_button {
   }
 
   &[data-cta] {
-    --x-button-background-color: var(--button-cta-background-color);
-    --x-button-border-color: var(--button-cta-background-color);
-    --x-button-color: white;
-
-    &[data-hover] {
-      --x-button-background-color: color-mix(in srgb,
-          var(--button-cta-background-color) 85%,
-          white);
-      --x-button-border-color: color-mix(in srgb,
-          var(--button-cta-background-color) 85%,
-          white);
-    }
-
-    &[data-readonly] {
-      --x-button-background-color: color-mix(in srgb,
-          var(--button-cta-background-color) 50%,
-          white);
-      --x-button-border-color: color-mix(in srgb,
-          var(--button-cta-background-color) 50%,
-          white);
-    }
-
-    &[data-disabled] {
-      --x-button-background-color: color-mix(in srgb,
-          var(--button-cta-background-color) 40%,
-          white);
-      --x-button-border-color: color-mix(in srgb,
-          var(--button-cta-background-color) 40%,
-          white);
-      --x-button-color: #fff9;
-    }
+    --button-background-color: var(--button-background, var(--button-cta-background-color));
+    --button-border-color: var(--button-cta-background-color);
+    --button-color: white;
+    --button-background-color-hover: color-mix(in srgb,
+        var(--button-background-color) 85%,
+        white);
+    --button-border-color-hover: color-mix(in srgb,
+        var(--button-border-color) 85%,
+        white);
+    --button-background-color-readonly: color-mix(in srgb,
+        var(--button-background-color) 50%,
+        white);
+    --button-border-color-readonly: color-mix(in srgb,
+        var(--button-border-color) 50%,
+        white);
+    --button-background-color-disabled: color-mix(in srgb,
+        var(--button-background-color) 40%,
+        white);
+    --button-border-color-disabled: color-mix(in srgb,
+        var(--button-border-color) 40%,
+        white);
+    --button-color-disabled: color-mix(in srgb,
+        var(--button-color) 60%,
+        transparent);
   }
 }
 `;
@@ -45426,7 +45465,7 @@ installImportMetaCssBuild(import.meta);const css$M = /* css */`@layer navi {
     --outline-color: var(--navi-focus-outline-color);
     --margin: 3px 3px 3px 4px;
     --font-size: var(--navi-control-font-size);
-    --font-family: var(--navi-control-font-family);
+    --font-family: var(--navi-control-font-family, inherit);
     --width: round(1em, 1px);
     --height: round(1em, 1px);
     --loader-color: var(--navi-loader-color);
@@ -46132,7 +46171,7 @@ installImportMetaCssBuild(import.meta);const css$K = /* css */`@layer navi {
     --border-color-checked: var(--accent-color);
     --cursor: pointer;
     --font-size: var(--navi-control-font-size);
-    --font-family: var(--navi-control-font-family);
+    --font-family: var(--navi-control-font-family, inherit);
     --border-color-hover: color-mix(in srgb, var(--border-color) 60%, black);
     --border-color-hover-checked: color-mix(in srgb,
         var(--border-color-checked) 80%,
@@ -46579,7 +46618,7 @@ installImportMetaCssBuild(import.meta);const css$J = /* css */`@layer navi {
     --thumb-border-radius: 100%;
     --thumb-cursor: pointer;
     --font-size: var(--navi-control-font-size);
-    --font-family: var(--navi-control-font-family);
+    --font-family: var(--navi-control-font-family, inherit);
     --loader-color: var(--navi-loader-color);
     --accent-color: var(--navi-control-accent-color);
     --color-mix-light: black;
@@ -46927,7 +46966,7 @@ const inputCss = /* css */`@layer navi {
     --outline-offset: calc(-.5 * var(--outline-width));
     --outline-color: var(--navi-focus-outline-color);
     --font-size: var(--navi-control-font-size);
-    --font-family: var(--navi-control-font-family);
+    --font-family: var(--navi-control-font-family, inherit);
     --loader-color: var(--navi-loader-color);
     --border-color: var(--navi-control-border-color);
     --background-color: var(--navi-surface-color);
@@ -47142,13 +47181,24 @@ const inputCss = /* css */`@layer navi {
   }
 
   &[data-variant="text"] {
-    --x-background-color: transparent;
-    --x-border-color: transparent;
+    --background-color: transparent;
+    --background-color-hover: var(--background-color);
+    --background-color-focus: var(--background-color);
+    --background-color-readonly: var(--background-color);
+    --background-color-disabled: var(--background-color);
+    --border-color: transparent;
+    --border-color-hover: var(--border-color);
+    --border-color-readonly: var(--border-color);
+    --border-color-disabled: var(--border-color);
     cursor: inherit;
   }
 
   &[data-variant="underline"] {
-    --x-background-color: transparent;
+    --background-color: transparent;
+    --background-color-hover: var(--background-color);
+    --background-color-focus: var(--background-color);
+    --background-color-readonly: var(--background-color);
+    --background-color-disabled: var(--background-color);
     border: none;
     border-radius: 0;
     padding-left: 0;
@@ -47170,22 +47220,13 @@ const inputCss = /* css */`@layer navi {
       position: absolute;
     }
 
-    &[data-hover] {
-      --x-background-color: transparent;
-    }
-
     &[data-focus-visible] {
-      --x-background-color: transparent;
       outline-style: none;
 
       & .navi_input_underline {
         background-color: var(--outline-color);
         height: 2px;
       }
-    }
-
-    &[data-readonly], &[data-disabled] {
-      --x-background-color: transparent;
     }
   }
 }
@@ -59395,7 +59436,12 @@ const PickerConfirmResolver = props => {
   return jsx(Next, {
     ...props,
     type: "navi_js",
-    allowNameless: true,
+    allowNameless: true
+    // No chevron, no clear cross, whatever variant the trigger is drawn in:
+    // both announce a value, and a question holds none.
+    ,
+
+    picksNothing: true,
     variant: variant,
     mode: mode,
     focusCapture: focusCapture,
@@ -60264,7 +60310,7 @@ installImportMetaCssBuild(import.meta);const css$y = /* css */`@layer navi {
     --x-list-item-cursor: default;
     --x-list-item-border-color: var(--list-item-border-color);
     font-size: var(--navi-control-font-size);
-    font-family: var(--navi-control-font-family);
+    font-family: var(--navi-control-font-family, inherit);
     line-height: var(--navi-control-line-height);
     position: relative;
   }
@@ -66707,7 +66753,7 @@ installImportMetaCssBuild(import.meta);const css$t = /* css */`@layer navi {
     --picker-padding-x-default: var(--navi-picker-padding-x-default);
     --picker-padding-y-default: var(--navi-picker-padding-y-default);
     --picker-font-size: var(--navi-control-font-size);
-    --picker-font-family: var(--navi-control-font-family);
+    --picker-font-family: var(--navi-control-font-family, inherit);
     --picker-loader-color: var(--navi-loader-color);
     --picker-border-color: var(--navi-control-border-color);
     --picker-background-color: white;
@@ -66807,6 +66853,7 @@ installImportMetaCssBuild(import.meta);const css$t = /* css */`@layer navi {
     padding-bottom: var(--x-picker-padding-bottom);
     padding-left: var(--x-picker-padding-left);
     justify-content: inherit;
+    text-align: var(--picker-align-x, var(--picker-text-align-default));
     pointer-events: none;
     user-select: none;
     flex-grow: 1;
@@ -66965,7 +67012,7 @@ installImportMetaCssBuild(import.meta);const css$t = /* css */`@layer navi {
     --picker-background-color-hover: var(--picker-background-color);
     --picker-background-color-readonly: var(--picker-background-color);
     --picker-background-color-disabled: var(--picker-background-color);
-    --x-picker-icon-color: currentColor;
+    --picker-icon-color: currentColor;
 
     & .navi_picker_value {
       flex-grow: 0;
@@ -66998,7 +67045,7 @@ installImportMetaCssBuild(import.meta);const css$t = /* css */`@layer navi {
     --picker-background-color-hover: var(--picker-background-color);
     --picker-background-color-readonly: var(--picker-background-color);
     --picker-background-color-disabled: var(--picker-background-color);
-    --x-picker-icon-color: currentColor;
+    --picker-icon-color: currentColor;
 
     & .navi_picker_box {
       z-index: -1;
@@ -67020,7 +67067,7 @@ installImportMetaCssBuild(import.meta);const css$t = /* css */`@layer navi {
     --picker-background-color-hover: var(--picker-background-color);
     --picker-background-color-readonly: var(--picker-background-color);
     --picker-background-color-disabled: var(--picker-background-color);
-    --x-picker-icon-color: currentColor;
+    --picker-icon-color: currentColor;
     font-size: inherit;
     font-family: inherit;
     line-height: inherit;
@@ -67045,7 +67092,7 @@ installImportMetaCssBuild(import.meta);const css$t = /* css */`@layer navi {
     --picker-border-color-disabled: var(--picker-border-color-readonly);
     --picker-background-color-disabled: var(--picker-background-color-readonly);
     --picker-color-disabled: var(--picker-color-readonly);
-    text-align: center;
+    --picker-text-align-default: center;
   }
 
   &[data-variant="text"] {
@@ -67111,6 +67158,11 @@ const PickerButton = props => {
     // not come back. The cross is then a confirm picker (see
     // picker_confirm.jsx), and the clear only goes out on yes.
     clearConfirm,
+    // Nothing is picked here: the popup asks a question rather than holding an
+    // answer, so the trigger draws a label and never a value. Set by the
+    // confirm resolver (see picker_confirm.jsx), which is the picker that is
+    // one — a caller whose popup is a menu of actions says it for themselves.
+    picksNothing,
     readOnly,
     error
   } = props;
@@ -67124,17 +67176,19 @@ const PickerButton = props => {
   const isSingleLine = maxLines === 1;
   // Same rule as the root: phrasing content inside a sentence.
   const ContentTag = variant === "text" ? "span" : "div";
-  // Which variants get the right slot — the chevron saying "this opens", and
-  // the cross replacing it once there is something to clear.
-  // Not the ones that draw no value beside it: an icon picker IS its icon, a
-  // headless one draws nothing, a button says what it opens with its label, a
+  // Who gets the right slot — the chevron saying "this opens", and the cross
+  // replacing it once there is something to clear. Both are about a value, so
+  // the slot follows the value and not the drawing: `picksNothing` has none to
+  // announce and none to take back, whatever variant it is drawn in.
+  // Then the variants that draw no value beside it: an icon picker IS its icon,
+  // a headless one draws nothing, a button says what it opens with its label, a
   // word in a sentence has no room for furniture. Nor a picker rendering the
   // browser's own control ("default").
   // Nor a bare one: the picker is that drawing's box to the pixel, so anything
   // navi adds beside it either grows the box or covers what the caller drew.
   // The pieces are the caller's to place there instead — a <Picker.Clear /> in
   // their own layout (see warnOnClearableWithoutSlot).
-  const hasRightSlot = variant !== "icon" && variant !== "headless" && variant !== "button" && variant !== "text" && variant !== "bare" && ui !== "default";
+  const hasRightSlot = !picksNothing && variant !== "icon" && variant !== "headless" && variant !== "button" && variant !== "text" && variant !== "bare" && ui !== "default";
   const inputRef = useRef(null);
   const [pickerRemainingProps, inputProps, facadeChildrenProps] = useControlFacadeProps({
     ...props,
@@ -67213,6 +67267,7 @@ const PickerButton = props => {
         rightSlotIconSize: undefined,
         rightSlot: undefined,
         clearConfirm: undefined,
+        picksNothing: undefined,
         openWhileReadOnly: undefined,
         ui: undefined,
         maxLines: undefined,
@@ -67765,7 +67820,7 @@ const css$s = /* css */`@layer navi {
   --x-picker-spin-padding-bottom: var(--picker-spin-padding-bottom, var(--picker-spin-padding-y, var(--picker-spin-padding, var(--picker-spin-padding-y-default))));
   --x-picker-spin-padding-left: var(--picker-spin-padding-left, var(--picker-spin-padding-x, var(--picker-spin-padding, var(--picker-spin-padding-x-default))));
   font-size: var(--navi-control-font-size);
-  font-family: var(--navi-control-font-family);
+  font-family: var(--navi-control-font-family, inherit);
   border: var(--navi-control-border-width) solid
       var(--navi-control-border-color);
   border-top-left-radius: var(--x-corner-top-left-radius, var(--navi-control-border-radius));
@@ -67915,7 +67970,7 @@ const css$s = /* css */`@layer navi {
 
 .navi_spin_group {
   font-size: var(--navi-control-font-size);
-  font-family: var(--navi-control-font-family);
+  font-family: var(--navi-control-font-family, inherit);
   border: var(--navi-control-border-width) solid
       var(--navi-control-border-color);
   border-top-left-radius: var(--x-corner-top-left-radius, var(--navi-control-border-radius));
@@ -70813,7 +70868,7 @@ const css$m = /* css */`.navi_wheel_container {
       transparent);
   color: var(--wheel-color);
   font-size: var(--navi-control-font-size);
-  font-family: var(--navi-control-font-family);
+  font-family: var(--navi-control-font-family, inherit);
   border: var(--navi-control-border-width) solid
       var(--navi-control-border-color);
   border-radius: var(--navi-control-border-radius);
@@ -71103,7 +71158,7 @@ const css$m = /* css */`.navi_wheel_container {
   color: var(--wheel-color, light-dark(#111, #eee));
   font-weight: 600;
   font-size: var(--navi-control-font-size);
-  font-family: var(--navi-control-font-family);
+  font-family: var(--navi-control-font-family, inherit);
   white-space: nowrap;
   user-select: none;
   justify-content: center;
@@ -75864,7 +75919,6 @@ const css$g = /* css */`.navi_table_root {
 
 .navi_table {
   --editing-border-color: #a8c7fa;
-  font-family: Arial;
   font-size: 16px;
 }
 

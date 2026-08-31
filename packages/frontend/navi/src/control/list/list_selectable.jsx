@@ -79,7 +79,7 @@ const css = /* css */ `
 
       position: relative;
       font-size: var(--navi-control-font-size);
-      font-family: var(--navi-control-font-family);
+      font-family: var(--navi-control-font-family, inherit);
       /* A selectable item is a control: it stands in a row with pickers and
          inputs (a horizontal list of choices), so it takes the control line
          with the control font — the same number of pixels tall as them. */

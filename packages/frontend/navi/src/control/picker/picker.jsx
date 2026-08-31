@@ -73,7 +73,7 @@ const css = /* css */ `
       --picker-padding-x-default: var(--navi-picker-padding-x-default);
       --picker-padding-y-default: var(--navi-picker-padding-y-default);
       --picker-font-size: var(--navi-control-font-size);
-      --picker-font-family: var(--navi-control-font-family);
+      --picker-font-family: var(--navi-control-font-family, inherit);
       --picker-loader-color: var(--navi-loader-color);
       --picker-border-color: var(--navi-control-border-color);
       --picker-background-color: white;
@@ -261,6 +261,15 @@ const css = /* css */ `
       padding-left: var(--x-picker-padding-left);
       flex-grow: 1;
       justify-content: inherit;
+      /* alignX places the value box inside the picker (justify-content on the
+         box above); this is what places the TEXT inside that box, which is the
+         same intention for a picker whose value is a word — the box fills the
+         picker, so moving it alone moves nothing anyone can see.
+         Two variables, not --x-picker-align-x: unset, the declaration is
+         dropped and the text keeps the alignment of the column the picker sits
+         in, which is what a field wants. A variant asking for its own says so
+         with --picker-text-align-default. */
+      text-align: var(--picker-align-x, var(--picker-text-align-default));
       pointer-events: none;
       user-select: none;
 
@@ -622,8 +631,10 @@ const css = /* css */ `
         --picker-background-color-readonly
       );
       --picker-color-disabled: var(--picker-color-readonly);
-
-      text-align: center;
+      /* A label sits in the middle of its button, and it is the text that has
+         to move: --picker-align-x-default centers the box, which already fills
+         the button. */
+      --picker-text-align-default: center;
     }
     /* text: a word in a sentence, marked by the dotted line under it — the way
        a term one can ask about is marked. No box, no slot; the font is the
@@ -657,7 +668,6 @@ const PickerButton = (props) => {
   import.meta.css = css;
   warnOnUnknownPickerType(props);
   warnOnUIDrawnByNobody(props);
-  warnOnClearableWithoutSlot(props);
   if (typeof props.maxLines === "string") {
     props.maxLines = parseInt(props.maxLines);
   }
@@ -696,6 +706,11 @@ const PickerButton = (props) => {
     // not come back. The cross is then a confirm picker (see
     // picker_confirm.jsx), and the clear only goes out on yes.
     clearConfirm,
+    // Nothing is picked here: the popup asks a question rather than holding an
+    // answer, so the trigger draws a label and never a value. Set by the
+    // confirm resolver (see picker_confirm.jsx), which is the picker that is
+    // one — a caller whose popup is a menu of actions says it for themselves.
+    picksNothing,
     readOnly,
     error,
   } = props;
@@ -710,10 +725,12 @@ const PickerButton = (props) => {
   const isSingleLine = maxLines === 1;
   // Same rule as the root: phrasing content inside a sentence.
   const ContentTag = variant === "text" ? "span" : "div";
-  // Which variants get the right slot — the chevron saying "this opens", and
-  // the cross replacing it once there is something to clear.
-  // Not the ones that draw no value beside it: an icon picker IS its icon, a
-  // headless one draws nothing, a button says what it opens with its label, a
+  // Who gets the right slot — the chevron saying "this opens", and the cross
+  // replacing it once there is something to clear. Both are about a value, so
+  // the slot follows the value and not the drawing: `picksNothing` has none to
+  // announce and none to take back, whatever variant it is drawn in.
+  // Then the variants that draw no value beside it: an icon picker IS its icon,
+  // a headless one draws nothing, a button says what it opens with its label, a
   // word in a sentence has no room for furniture. Nor a picker rendering the
   // browser's own control ("default").
   // Nor a bare one: the picker is that drawing's box to the pixel, so anything
@@ -721,12 +738,14 @@ const PickerButton = (props) => {
   // The pieces are the caller's to place there instead — a <Picker.Clear /> in
   // their own layout (see warnOnClearableWithoutSlot).
   const hasRightSlot =
+    !picksNothing &&
     variant !== "icon" &&
     variant !== "headless" &&
     variant !== "button" &&
     variant !== "text" &&
     variant !== "bare" &&
     ui !== "default";
+  warnOnClearableWithoutSlot(props, hasRightSlot);
   const inputRef = useRef(null);
   const [pickerRemainingProps, inputProps, facadeChildrenProps] =
     useControlFacadeProps(
@@ -805,6 +824,7 @@ const PickerButton = (props) => {
         rightSlotIconSize={undefined}
         rightSlot={undefined}
         clearConfirm={undefined}
+        picksNothing={undefined}
         openWhileReadOnly={undefined}
         ui={undefined}
         maxLines={undefined}
@@ -1405,6 +1425,7 @@ const PickerFirstResolver = (props) => {
  *   popupBorderRadius?: number | string,
  *   dialogBorderWidth?: number | string,
  *   clearable?: boolean,
+ *   picksNothing?: boolean,
  *   popupLayer?: "top" | "local",
  *   popupTestId?: string,
  *   confirmTestId?: string,
@@ -1529,6 +1550,10 @@ const PickerFirstResolver = (props) => {
  * @param {import("preact").ComponentChildren} [rightSlot] Same place, rendered
  *   as-is: no `<Icon>` around it, nothing `aria-hidden`. This is where an
  *   interactive right slot goes.
+ * @param {boolean} [picksNothing] The popup asks something rather than holding
+ *   an answer, so the trigger draws a label and never a value: no chevron, no
+ *   clear cross, in any variant. `type="confirm"` says it for itself; say it
+ *   for a popup of your own that is a menu of actions rather than a choice.
  * @param {string|import("preact").ComponentChildren} [clearConfirm] The
  *   question asked before the clear cross clears anything — the `message` of
  *   the `<Picker type="confirm">` the cross then is, plain text or JSX. Asked
@@ -1688,36 +1713,35 @@ const warnOnUIDrawnByNobody = (props) => {
   );
 };
 
-// `clearable` is "put the cross in the right slot", and these variants have no
-// slot to put it in — so the prop lands nowhere. Said out loud, because a
-// caller asking for a cross and getting none has no way to tell "ignored here"
-// from "broken".
+// `clearable` is "put the cross in the right slot", and a picker without one is
+// handed the prop and drops it. Said out loud, because a caller asking for a
+// cross and getting none has no way to tell "ignored here" from "broken".
 const clearableWithoutSlotWarnedSet = new Set();
-const warnOnClearableWithoutSlot = (props) => {
+const warnOnClearableWithoutSlot = (props, hasRightSlot) => {
   if (!import.meta.dev) {
     return;
   }
-  const { clearable, variant } = props;
-  if (!clearable || SLOTLESS_PICKER_VARIANT_SET.has(variant) === false) {
+  const { clearable, variant, picksNothing } = props;
+  if (!clearable || hasRightSlot) {
     return;
   }
-  if (clearableWithoutSlotWarnedSet.has(variant)) {
+  const key = picksNothing ? "picks-nothing" : variant;
+  if (clearableWithoutSlotWarnedSet.has(key)) {
     return;
   }
-  clearableWithoutSlotWarnedSet.add(variant);
+  clearableWithoutSlotWarnedSet.add(key);
+  if (picksNothing) {
+    console.warn(
+      `[navi] <Picker type="confirm" clearable> — a picker that picks nothing holds nothing to clear, so no cross is drawn.`,
+    );
+    return;
+  }
   console.warn(
     `[navi] <Picker variant="${variant}" clearable> — that variant has no right slot, so no cross is drawn. ` +
       `Draw it where it belongs instead: <Picker variant="${variant}" ui={<YourDrawing>… <Picker.Clear /></YourDrawing>}>. ` +
       `It is the same cross, and it takes itself away when there is nothing left to clear.`,
   );
 };
-const SLOTLESS_PICKER_VARIANT_SET = new Set([
-  "icon",
-  "headless",
-  "button",
-  "text",
-  "bare",
-]);
 
 const warnOnUnknownPickerType = (props) => {
   if (!import.meta.dev) {

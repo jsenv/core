@@ -11,7 +11,7 @@ const inputCss = /* css */ `
       --outline-color: var(--navi-focus-outline-color);
       /* Focus outline end */
       --font-size: var(--navi-control-font-size);
-      --font-family: var(--navi-control-font-family);
+      --font-family: var(--navi-control-font-family, inherit);
       --loader-color: var(--navi-loader-color);
       --border-color: var(--navi-control-border-color);
       --background-color: var(--navi-surface-color);
@@ -142,10 +142,10 @@ const inputCss = /* css */ `
       color: inherit;
       font-size: inherit;
       /* A form control does not inherit the font on its own — the browser has
-         one of its own for it, monospace for a <textarea> — so the box's font
-         (--navi-control-font-family) is handed down by hand. Its line comes
-         from the page's token for the same reason: what is typed must sit on
-         the same line as what displays it afterwards, emoji included. */
+         one of its own for it, monospace for a <textarea> — so the box's face
+         is handed down by hand. Its line comes from the page's token for the
+         same reason: what is typed must sit on the same line as what displays
+         it afterwards, emoji included. */
       font-family: inherit;
       text-align: inherit;
       line-height: var(--navi-control-line-height);

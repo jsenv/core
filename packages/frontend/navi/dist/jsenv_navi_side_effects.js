@@ -357,7 +357,6 @@ const css = /* css */`@layer navi {
     --navi-loader-color: light-dark(#355fcc, #3b82f6);
     -webkit-tap-highlight-color: var(--navi-tap-highlight-color);
     --navi-tap-highlight-color: transparent;
-    --navi-control-font-family: ${controlDefaultFontFamily};
     --navi-control-font-size: ${controlDefaultFontSize};
     --navi-control-border-radius: 2px;
     --navi-checkbox-border-radius: min(var(--navi-control-border-radius),
@@ -423,6 +422,7 @@ const css = /* css */`@layer navi {
     --navi-typo-xxl: 1.5rem;
     --navi-line-height: 1.25;
     line-height: var(--navi-line-height);
+    font-family: ${controlDefaultFontFamily};
     --navi-control-line-height: round(calc(var(--navi-line-height) * 1em),
         1px);
     --navi-color-secondary-mix: 80%;

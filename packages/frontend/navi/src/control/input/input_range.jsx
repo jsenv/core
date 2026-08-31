@@ -24,7 +24,7 @@ const css = /* css */ `
       --thumb-cursor: pointer;
       /* Range can contains text (legend etc) */
       --font-size: var(--navi-control-font-size);
-      --font-family: var(--navi-control-font-family);
+      --font-family: var(--navi-control-font-family, inherit);
 
       --loader-color: var(--navi-loader-color);
       --accent-color: var(--navi-control-accent-color);

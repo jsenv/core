@@ -181,7 +181,6 @@ const css = /* css */ `
 
   .navi_table {
     font-size: 16px;
-    font-family: Arial;
 
     --editing-border-color: #a8c7fa;
   }

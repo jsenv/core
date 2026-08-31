@@ -29,7 +29,7 @@ const css = /* css */ `
       --border-color-checked: var(--accent-color);
       --cursor: pointer;
       --font-size: var(--navi-control-font-size);
-      --font-family: var(--navi-control-font-family);
+      --font-family: var(--navi-control-font-family, inherit);
 
       /* Hover */
       --border-color-hover: color-mix(in srgb, var(--border-color) 60%, black);

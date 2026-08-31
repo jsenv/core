@@ -109,7 +109,7 @@ const css = /* css */ `
     display: inline-flex;
     color: var(--wheel-color);
     font-size: var(--navi-control-font-size);
-    font-family: var(--navi-control-font-family);
+    font-family: var(--navi-control-font-family, inherit);
     /* Bordered like every other control: the box a user can interact with is
        visible without having to hover or guess. border="none" opts out. */
     border: var(--navi-control-border-width) solid
@@ -552,7 +552,7 @@ const css = /* css */ `
     color: var(--wheel-color, light-dark(#111, #eee));
     font-weight: 600;
     font-size: var(--navi-control-font-size);
-    font-family: var(--navi-control-font-family);
+    font-family: var(--navi-control-font-family, inherit);
     white-space: nowrap;
 
     user-select: none;

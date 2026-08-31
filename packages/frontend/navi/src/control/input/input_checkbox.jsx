@@ -18,7 +18,7 @@ const css = /* css */ `
       /* Focus outline end */
       --margin: 3px 3px 3px 4px;
       --font-size: var(--navi-control-font-size);
-      --font-family: var(--navi-control-font-family);
+      --font-family: var(--navi-control-font-family, inherit);
       --width: round(1em, 1px);
       --height: round(1em, 1px);
       --loader-color: var(--navi-loader-color);

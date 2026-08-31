@@ -298,8 +298,9 @@ comment naming who is supposed to win:
   attributes can still change the display;
 - the text properties a surface takes back from its opener
   (`surface_text_css.js`), so an app that wants one of them back says so;
-- the `[data-url-target]` mark, the document's `line-height`, a Field's spacing
-  and a Label's dimmed color — appearance with no structural role;
+- the `[data-url-target]` mark, the document's `line-height` and
+  `font-family`, a Field's spacing and a Label's dimmed color — appearance with
+  no structural role;
 - `[data-navi-safe-area]`'s padding (`safe_area.js`), which is a suggestion for
   an element the **app** owns.
 

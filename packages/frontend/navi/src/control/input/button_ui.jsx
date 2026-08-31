@@ -41,7 +41,7 @@ const css = /* css */ `
       --button-color: currentColor;
       --button-cursor: pointer;
       --button-font-size: var(--navi-control-font-size);
-      --button-font-family: var(--navi-control-font-family);
+      --button-font-family: var(--navi-control-font-family, inherit);
 
       /* Hover */
       --button-border-color-hover: color-mix(

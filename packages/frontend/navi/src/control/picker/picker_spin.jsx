@@ -124,7 +124,7 @@ const css = /* css */ `
     /* Written in the control font, like the picker it wraps: the value and its
        two chevrons are a control, not running text. */
     font-size: var(--navi-control-font-size);
-    font-family: var(--navi-control-font-family);
+    font-family: var(--navi-control-font-family, inherit);
     /* Framed like every other control (see navi_css_vars.js): what one steps
        through is a value one edits, and a box around it is what says so. Said
        as CSS rather than as defaults on the Box, so borderWidth="0" or a radius
@@ -385,7 +385,7 @@ const css = /* css */ `
     display: inline-flex;
     align-items: center;
     font-size: var(--navi-control-font-size);
-    font-family: var(--navi-control-font-family);
+    font-family: var(--navi-control-font-family, inherit);
     border: var(--navi-control-border-width) solid
       var(--navi-control-border-color);
     /* Squared from the outside, corner by corner (see .navi_picker_spin
