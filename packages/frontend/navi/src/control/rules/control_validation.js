@@ -57,7 +57,10 @@ import { dispatchPublicCustomEvent, getElementSignature } from "@jsenv/dom";
 
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 import { findControlProxyTargetController } from "../controller_registry.js";
-import { getConstraintMessage } from "./constraint_message.js";
+import {
+  getConstraintMessage,
+  getMessageString,
+} from "./constraint_message.js";
 import { createOpenToken } from "./control_callout.js";
 import { DISPLAYABLE_CONSTRAINT } from "./validation/displayable_constraint.js";
 import { MAX_LINE_BREAKS_CONSTRAINT } from "./validation/max_line_breaks_constraint.js";
@@ -250,7 +253,9 @@ export const createControlValidation = (
         typeof checkResult === "string"
           ? { message: checkResult }
           : checkResult;
-      constraintValidityInfo.messageString = constraintValidityInfo.message;
+      constraintValidityInfo.messageString = getMessageString(
+        constraintValidityInfo.message,
+      );
       debugUIState(
         `${elementSig} constraint "${constraint.name}" failed -> ${constraintValidityInfo.message}`,
       );
@@ -294,10 +299,15 @@ export const createControlValidation = (
       if (titleLess) {
         const element = controller.ref.current;
         if (element) {
-          element.setAttribute(
-            "title",
-            activeFailedConstraintInfo.messageString,
-          );
+          const { messageString } = activeFailedConstraintInfo;
+          if (messageString) {
+            element.setAttribute("title", messageString);
+          } else {
+            // The message has no one-line form (an element, typically): the
+            // callout shows it whole, and the tooltip stays empty rather than
+            // saying "[object Object]".
+            element.removeAttribute("title");
+          }
         }
       }
     } else {

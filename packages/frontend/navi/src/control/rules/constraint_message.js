@@ -40,6 +40,26 @@ export const extractMessageAndRemainingProps = (props) => {
   return [ownMessages, remaining];
 };
 
+/**
+ * The one-line form of a constraint message, or `undefined` when it has none.
+ *
+ * A message is not always a sentence: it can be an `Error`, or a whole element
+ * (an `errorMapping` returning JSX to put a link inside the callout). Those
+ * still render fine in the callout, but they have no one-line form, and
+ * anything that needs one — a `title` attribute, a caller drawing its own
+ * summary — must be given nothing rather than `String(message)`, which writes
+ * "[object Object]" on the screen.
+ */
+export const getMessageString = (message) => {
+  if (typeof message === "string") {
+    return message;
+  }
+  if (Error.isError(message)) {
+    return message.message;
+  }
+  return undefined;
+};
+
 export const getConstraintMessage = (
   controller,
   constraint,

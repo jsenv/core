@@ -30,7 +30,15 @@ validation message on the **requester** (the submit button, not the form):
 
 - `errorMapping(error)` turns the raw error into what to show: a string, an
   `Error`, an element, or `{ message, target }` to point the message at another
-  element.
+  element. Two returns matter as much as those:
+  - **`return error` — the error untouched — is how a mapping says "not mine"**.
+    It is then shown exactly as if there were no mapping at all, so a mapping
+    only has to know about the cases it dresses.
+  - **returning nothing displays nothing**, on purpose: that is how one
+    particular error is swallowed, per error, where `actionErrorEffect="none"`
+    says it once for the whole control. Beware of it as a default — a mapping
+    whose last branch falls off the end swallows everything it did not
+    recognize, and the person sees the button return to idle with no message.
 - The message is a constraint on the control (`navi_action_error`) rather than a
   render of its own, and it **auto-resets on the next action**: hitting submit
   again clears it and re-submits, instead of the form being stuck invalid.
@@ -46,6 +54,49 @@ validation message on the **requester** (the submit button, not the form):
   by the message or the boundary). Its siblings on every control with an
   `action` — `onActionStart`, `onActionEnd`, `onActionAborted` — are in
   [actions.md](./actions.md#the-instance-a-control-runs).
+
+#### A refusal that carries a link
+
+The callout is not limited to a sentence. When the refusal has somewhere to go —
+"this slot is already taken by that game" — the mapping returns an element and
+the callout holds it, link included:
+
+```jsx
+<Form
+  action={GAME.POST.bindParams(values)}
+  errorMapping={(error) => {
+    const conflict = error.conflict;
+    if (!conflict) return error; // not mine: shown as-is
+    return (
+      <>
+        Ce créneau est déjà pris par{" "}
+        <Link route={GAME_ROUTE} routeParams={{ id: conflict.game_id }}>
+          cette partie
+        </Link>
+      </>
+    );
+  }}
+>
+```
+
+That is the whole thing: the message arrives on the button that was pressed, it
+survives whatever ran before it (a `command` waits for its own action), and it
+clears itself on the next submit. A refusal with a destination does **not** need
+a render of its own in the page.
+
+Two consequences of the message being an element:
+
+- it is rendered as a **preact tree of its own** into the callout, not as part
+  of the app tree, so it receives no context from the app. Anything reading
+  global signals — a navi `<Link route>`, a store — works; anything expecting an
+  app `Context.Provider` above it does not, and has to be given what it needs
+  through props;
+- it has no one-line form, so nothing derives a `title` from it — the callout is
+  the only place it is shown. A string or an `Error` message still writes the
+  control's `title` when the control has none of its own.
+
+[form_error_mapping_jsx demo](../src/control/demos/form_error_mapping_jsx/demo.html)
+shows a mapping answering with a different component per error kind.
 
 ### A screen's data failed — a route action
 

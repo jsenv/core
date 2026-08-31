@@ -80,6 +80,13 @@ export const useExecuteAction = (
     let message;
     if (errorMapping) {
       const errorMappingResult = errorMapping(error);
+      // Anything the chain below does not recognize — nothing returned, above
+      // all — leaves `message` undefined and the control displays nothing. That
+      // is the contract, and both halves of it are useful:
+      // - returning nothing says "don't show this one", per error, where
+      //   actionErrorEffect="none" says it once for the whole control;
+      // - not handling an error means returning it untouched (`return error`),
+      //   and it is then shown exactly as if there were no mapping at all.
       if (typeof errorMappingResult === "string") {
         message = errorMappingResult;
       } else if (Error.isError(errorMappingResult)) {

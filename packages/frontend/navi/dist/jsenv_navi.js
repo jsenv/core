@@ -5354,6 +5354,26 @@ const extractMessageAndRemainingProps = (props) => {
   return [ownMessages, remaining];
 };
 
+/**
+ * The one-line form of a constraint message, or `undefined` when it has none.
+ *
+ * A message is not always a sentence: it can be an `Error`, or a whole element
+ * (an `errorMapping` returning JSX to put a link inside the callout). Those
+ * still render fine in the callout, but they have no one-line form, and
+ * anything that needs one — a `title` attribute, a caller drawing its own
+ * summary — must be given nothing rather than `String(message)`, which writes
+ * "[object Object]" on the screen.
+ */
+const getMessageString = (message) => {
+  if (typeof message === "string") {
+    return message;
+  }
+  if (Error.isError(message)) {
+    return message.message;
+  }
+  return undefined;
+};
+
 const getConstraintMessage = (
   controller,
   constraint,
@@ -12147,7 +12167,9 @@ const createControlValidation = (
         typeof checkResult === "string"
           ? { message: checkResult }
           : checkResult;
-      constraintValidityInfo.messageString = constraintValidityInfo.message;
+      constraintValidityInfo.messageString = getMessageString(
+        constraintValidityInfo.message,
+      );
       debugUIState(
         `${elementSig} constraint "${constraint.name}" failed -> ${constraintValidityInfo.message}`,
       );
@@ -12189,10 +12211,15 @@ const createControlValidation = (
       if (titleLess) {
         const element = controller.ref.current;
         if (element) {
-          element.setAttribute(
-            "title",
-            activeFailedConstraintInfo.messageString,
-          );
+          const { messageString } = activeFailedConstraintInfo;
+          if (messageString) {
+            element.setAttribute("title", messageString);
+          } else {
+            // The message has no one-line form (an element, typically): the
+            // callout shows it whole, and the tooltip stays empty rather than
+            // saying "[object Object]".
+            element.removeAttribute("title");
+          }
         }
       }
     } else {
@@ -12589,6 +12616,13 @@ const useExecuteAction = (
     let message;
     if (errorMapping) {
       const errorMappingResult = errorMapping(error);
+      // Anything the chain below does not recognize — nothing returned, above
+      // all — leaves `message` undefined and the control displays nothing. That
+      // is the contract, and both halves of it are useful:
+      // - returning nothing says "don't show this one", per error, where
+      //   actionErrorEffect="none" says it once for the whole control;
+      // - not handling an error means returning it untouched (`return error`),
+      //   and it is then shown exactly as if there were no mapping at all.
       if (typeof errorMappingResult === "string") {
         message = errorMappingResult;
       } else if (Error.isError(errorMappingResult)) {
