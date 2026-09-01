@@ -4,7 +4,7 @@
  */
 import { installImportMetaCssBuild, windowHeightSignal, windowWidthSignal, visualViewportHeightSignal, visualViewportWidthSignal, getAppHeight, getAppWidth, coarsePointerSignal, smallTouchScreenSignal } from "./jsenv_navi_side_effects.js";
 export { disableVirtualKeyboardOverlay } from "./jsenv_navi_side_effects.js";
-import { elementIsFocusable, createIterableWeakSet, dispatchInternalCustomEvent, dispatchCustomEvent, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, getElementSignature, createPubSub, findEvent, createValueEffect, findFocusDelegateTarget, findFocusable, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, markDragSource, startDragTo, createEventGroupLogger, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, normalizeStyles, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, scrollRoomTowards, getScrollContainer, closestOpenableAncestor, isAncestorOpen, isDisplayedDespiteClosedAncestor, observeAncestorOpenState, getAncestorOpenType, findBefore, findAfter, resolveCSSSize, hasCSSSizeUnit, initFocusGroup, scrollIntoViewScoped, stringifyStyle as stringifyStyle$1, resolveOklchLightness, contrastColor, isTouchDrivenEvent, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, onAncestorReopen, canScroll, measureWidestChildRow, performTabNavigation, wheelGestureIsTakenFrom, releaseWheelGesture, claimWheelGesture, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
+import { elementIsFocusable, createIterableWeakSet, dispatchInternalCustomEvent, dispatchCustomEvent, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, getElementSignature, createPubSub, findEvent, createValueEffect, findFocusDelegateTarget, findFocusable, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, markDragSource, startDragTo, createEventGroupLogger, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, normalizeStyles, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, scrollRoomTowards, getScrollContainer, closestOpenableAncestor, isAncestorOpen, isDisplayedDespiteClosedAncestor, observeAncestorOpenState, getAncestorOpenType, findBefore, findAfter, resolveCSSSize, hasCSSSizeUnit, releaseWheelGesture, getScrollIntoViewScopedOffsets, wheelGestureIsTakenFrom, claimWheelGesture, scrollIntoViewScoped, initFocusGroup, stringifyStyle as stringifyStyle$1, resolveOklchLightness, contrastColor, isTouchDrivenEvent, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, onAncestorReopen, canScroll, measureWidestChildRow, performTabNavigation, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
 export { chainEvent, clickIsSuppressed, contrastColor, findEvent, startDragTo } from "@jsenv/dom";
 import { signal, computed, effect, untracked, batch, useComputed, useSignal } from "@preact/signals";
 import { isValidElement, h, Fragment, createContext, render, toChildArray, options, cloneElement } from "preact";
@@ -3184,8 +3184,11 @@ const SYMBOL_OBJECT_SIGNAL = Symbol.for("navi_object_signal");
  * - prerun actions may have no other reference yet, so
  *   prerunProtectionRegistry pins them for a few minutes.
  *
- * An action run never throws: failures land in errorSignal and are reported
- * once, by one rule, in action_error_report.js (see the comment in onRunError).
+ * A failing run rejects, and writes its error into errorSignal as well. The
+ * callers that cannot take a rejection — a run started from a signal effect, a
+ * control that already draws the failure — swallow it where they start it, and
+ * that is where an error nobody displayed is reported once, by one rule (see
+ * run_unwatched.js and action_error_report.js).
  *
  * Blast radius: this file is the substrate of routing (route_action.js,
  * action_run_effect.js), resources (state/rest) and every control's `action`
@@ -3568,16 +3571,27 @@ ${lines.join("\n")}`);
 
       const actionToRunPrivateProperties =
         getActionPrivateProperties(actionToPrerunOrRun);
-      const performRunResult = actionToRunPrivateProperties.performRun({
-        globalAbortSignal,
-        abortSignal: effectiveSignal,
-        reason,
-        event,
-        isPrerun,
-        onComplete,
-        onAbort,
-        onError,
-      });
+      let performRunResult;
+      try {
+        performRunResult = actionToRunPrivateProperties.performRun({
+          globalAbortSignal,
+          abortSignal: effectiveSignal,
+          reason,
+          event,
+          isPrerun,
+          onComplete,
+          onAbort,
+          onError,
+        });
+      } catch (error) {
+        // A synchronous callback that threw. Caught here so the update carries
+        // on — the other actions of the same update have nothing to do with
+        // this one — and given back further down to whoever asked for THIS
+        // action, still as a throw.
+        activationWeakSet.add(actionToPrerunOrRun);
+        resultArray.push({ type: "sync_error", error });
+        return;
+      }
       activationWeakSet.add(actionToPrerunOrRun);
 
       if (performRunResult && typeof performRunResult.then === "function") {
@@ -3623,14 +3637,30 @@ ${lines.join("\n")}`);
     requestedResult = null;
   } else if (hasAsync) {
     requestedResult = Promise.all(
-      resultArray.map((item) =>
-        item.type === "sync" ? item.result : item.promise,
-      ),
+      resultArray.map((item) => {
+        if (item.type === "sync") {
+          return item.result;
+        }
+        if (item.type === "sync_error") {
+          return Promise.reject(item.error);
+        }
+        return item.promise;
+      }),
     );
   } else {
+    const itemFailed = resultArray.find((item) => item.type === "sync_error");
+    if (itemFailed) {
+      // Nothing of this update is left to do, so the failure can leave the way
+      // it arrived: thrown, to the caller that asked for that action.
+      throw itemFailed.error;
+    }
     requestedResult = resultArray.map((item) => item.result);
   }
 
+  // Settled rather than raced: a failure here is one outcome among several —
+  // the other actions of the same update ran too, and "the update is over" must
+  // not become "one of them failed". Waiting on this never rejects, which is
+  // what lets a navigation be waited on (see via_navigation.js).
   const allResult = allThenableArray.length
     ? Promise.allSettled(allThenableArray)
     : null;
@@ -4239,18 +4269,29 @@ const createAction = (callback, rootOptions = {}) => {
             onError?.(error, { event, action, args });
           });
 
-          // The error is in errorSignal; from here it is the UI's, and running
-          // the action is not the place to decide whether the UI wants it —
-          // that answer does not exist yet at this instant (see
-          // action_error_report.js). So the run never throws: it settles with
-          // the error as its value, and being displayed or not is constated
-          // afterwards, in one place, by one rule.
           if (onError) {
             // Asking for the error IS taking it.
             markErrorAsDisplayedBy(error, "onError");
           }
-          reportErrorIfNobodyDisplaysIt(error, { action });
+          // Handed back, not delivered: failRun decides whether this leaves as
+          // a throw or as a rejection, because only the caller below knows
+          // which of the two this run was. The error is in errorSignal either
+          // way — a screen reads it there, whether or not anything was waiting.
           return error;
+        };
+
+        // A failure leaves the run the way it came: thrown when the callback
+        // threw synchronously — code that knows this action is synchronous
+        // writes a plain `try/catch` around the call and has to find it there —
+        // and rejected when the run was asynchronous, since the throw below
+        // then happens inside a `then`. An abort is neither: it settles with
+        // its reason as its value, the way it always has.
+        const failRun = (error) => {
+          const errorSettled = onRunError(error);
+          if (runningStateSignal.peek() === ABORTED) {
+            return errorSettled;
+          }
+          throw errorSettled;
         };
 
         try {
@@ -4290,12 +4331,12 @@ const createAction = (callback, rootOptions = {}) => {
           }
           return Promise.all(thenableArray).then(() => {
             if (rejected) {
-              return onRunError(rejectedValue);
+              return failRun(rejectedValue);
             }
             return onRunEnd();
           });
         } catch (e) {
-          return onRunError(e);
+          return failRun(e);
         }
       };
 
@@ -4706,6 +4747,46 @@ const isPlainObject = (obj) => {
 };
 
 /**
+ * Starts a run navi has nobody to await.
+ *
+ * A failing run does not stay quiet: it throws when the callback threw
+ * synchronously, and rejects when it was asynchronous (see failRun in
+ * actions.js). That is what makes `ACTION(params)` behave like any other call
+ * that can fail — and code that lets such a failure go gets the runtime's own
+ * unhandled-error report, which is the right answer for it.
+ *
+ * Some runs have no such caller by construction — one started from a signal
+ * effect because its params changed, one whose failure the control that started
+ * it already draws, a routing whose result every caller drops. Their failure
+ * would be an anonymous unhandled one, naming the machinery instead of what
+ * failed. They start here, which is why the run itself is passed rather than
+ * its result: both deliveries have to be taken.
+ *
+ * And taking them is what obliges this place to ask the other question: did
+ * anything ever display this error? The answer does not exist yet at this
+ * instant — a route action fails before the page that shows it exists — so it is
+ * asked with a deadline, once, in action_error_report.js.
+ *
+ * The error is never hidden: it stays in the action's `errorSignal`, which is
+ * where a screen reads it.
+ */
+const runUnwatched = (startRun) => {
+  let result;
+  try {
+    result = startRun();
+  } catch (error) {
+    reportErrorIfNobodyDisplaysIt(error);
+    return undefined;
+  }
+  if (result && typeof result.catch === "function") {
+    result.catch((error) => {
+      reportErrorIfNobodyDisplaysIt(error);
+    });
+  }
+  return result;
+};
+
+/**
  * Reactively runs an action whenever the params derived from signals change.
  *
  * @param {object} action - The action to run.
@@ -4734,12 +4815,6 @@ const isPlainObject = (obj) => {
 // one — in dev, an error overlay thrown over a page that is already saying what
 // went wrong. Nothing is lost by dropping it: the failure is held by the action
 // itself, and whoever reads it (useAsyncData, <Button action>) is what shows it.
-const runUnwatched = (result) => {
-  if (result && typeof result.catch === "function") {
-    result.catch(() => {});
-  }
-};
-
 const actionRunEffect = (
   action,
   deriveActionParamsFromSignals,
@@ -4783,7 +4858,9 @@ const actionRunEffect = (
           // falsy params, don't run
           return;
         }
-        runUnwatched(actionTarget.run({ reason: "truthy params first run" }));
+        runUnwatched(() =>
+          actionTarget.run({ reason: "truthy params first run" }),
+        );
         return;
       }
 
@@ -4800,18 +4877,18 @@ const actionRunEffect = (
         }
         if (!actionTargetPrevious.params) {
           // coming from falsy-params state: action may already be cached, avoid unnecessary rerun
-          runUnwatched(
+          runUnwatched(() =>
             actionTarget.run({ reason: "params restored from falsy state" }),
           );
         } else {
-          runUnwatched(actionTarget.rerun({ reason: "params modified" }));
+          runUnwatched(() => actionTarget.rerun({ reason: "params modified" }));
         }
       }
     },
     ...options,
   });
   if (actionParamsSignal.peek()) {
-    runUnwatched(
+    runUnwatched(() =>
       actionRunnedByThisEffect.run({ reason: "initial truthy params" }),
     );
   }
@@ -5693,6 +5770,16 @@ const ActionRequesterContext = createContext();
  * Whichever mode, the affordance's own handler runs from inside its own gate
  * rather than from the DOM: a caller's `onClick` fires before any of this, and
  * would go off from a button drawn greyed.
+ *
+ * These two answer about the GESTURE. Whose VALUE an element carries is a third
+ * question, and `standalone` is where it is answered (see useUIStateController).
+ * They are said separately because they genuinely come apart: a door that holds
+ * no value of its own can still write into the control around it — it is
+ * `standalone` and must still shut when that control is read-only — and an
+ * affordance can claim a press without ever being a field. Something that is
+ * its own on all three counts says all three (a diskette filing a name into the
+ * reader's own address book: `selfInteractions="click"`,
+ * `whenSelfInteractionsBlocked="ignore"`, `standalone`).
  */
 
 
@@ -10245,6 +10332,35 @@ const watchActionCompletion = (element, dispatchAction) => {
   };
 };
 
+/**
+ * What follows the control's OWN action: it runs once that action has
+ * succeeded, and not at all otherwise.
+ *
+ * The outcome arrives in one of three shapes and each decides differently:
+ * - the gate turned the request down (`result === false`): nothing happened,
+ *   so nothing follows;
+ * - the action is running: what follows waits for it, and an error or an abort
+ *   drops it — whatever the action left in front of the user stays;
+ * - it is already settled, or never started at all. A control with nothing to
+ *   run leaves no outcome behind, and no outcome means nothing went wrong.
+ */
+const runWhenActionSucceeded = (completion, callback) => {
+  if (completion.result === false) {
+    return;
+  }
+  if (completion.isRunning) {
+    completion.whenSucceeded(callback);
+    return;
+  }
+  let succeeded = true;
+  completion.whenSettled(({ error, aborted }) => {
+    succeeded = !error && !aborted;
+  });
+  if (succeeded) {
+    callback();
+  }
+};
+
 const tryActionAfterInteractionAllowed = (
   element,
   {
@@ -12905,7 +13021,10 @@ const useExecuteAction = (
         });
       };
 
-      return runAction();
+      // The control is already holding the failure — the error side effect
+      // above drew the callout, or threw it at the boundary — so nothing here
+      // is waiting on the rejection.
+      return runUnwatched(runAction);
     },
     [elementRef, errorEffect],
   );
@@ -17419,15 +17538,11 @@ const useActionAsyncData = (action, {
   // the wait is the ordinary one: suspended into <Loading>, or drawn by the
   // component under `loading: true`, exactly as for data someone else ran.
   if (run && action.runningStateSignal.peek() === IDLE && action.paramsSignal.peek() !== undefined) {
-    const runResult = action.run({
+    // Nothing waits on this run: the failure is held by the action, and this
+    // hook is what reads it back.
+    runUnwatched(() => action.run({
       reason: "useAsyncData({ run: true })"
-    });
-    // Nobody awaits this run, and a rejection nobody awaits is an unhandled
-    // one — in dev, an overlay over a component already saying what failed.
-    // The failure is held by the action, and this hook is what reads it.
-    if (runResult && typeof runResult.catch === "function") {
-      runResult.catch(() => {});
-    }
+    }));
   }
 
   // Use peek() instead of .value to avoid subscribing this component to the signal.
@@ -17538,12 +17653,6 @@ const useActionAsyncData = (action, {
     throw actionError;
   }
 
-  // RUNNING with loadingEffect: "use" — return stale data + loading flag, no suspend
-  if (loadingEffect === "use" && runningState === RUNNING) {
-    const staleData = action.dataSignal.peek();
-    return [staleData, true, undefined];
-  }
-
   // An action without params has nothing to run and no one to start it: this is
   // where a route action lands when its params getter returns false. It is not a
   // load in progress, so there is nothing to wait for — suspending here would
@@ -17551,6 +17660,17 @@ const useActionAsyncData = (action, {
   // stay hidden for good, silently.
   if (runningState !== RUNNING && action.paramsSignal.peek() === undefined) {
     return [action.dataSignal.peek(), false, undefined];
+  }
+
+  // `loading: true` says the component draws its own wait, so this hook never
+  // suspends: running, or holding params nobody has started yet — a debounced
+  // binding that just retargeted, an aborted run, a run this very render is
+  // about to issue. Either way what is on screen is not the current answer,
+  // which is what `loading` says. Suspending would not draw a spinner: it swaps
+  // the subtree for the boundary, and everything under it remounts — a dialog
+  // open inside it is then closed, by a hook the caller told to stay out of it.
+  if (loadingEffect === "use") {
+    return [action.dataSignal.peek(), true, undefined];
   }
 
   // IDLE or RUNNING with loadingEffect: "delegate" — suspend
@@ -26329,18 +26449,12 @@ const setupBrowserIntegrationViaHistory = ({
     // something at the first announcement has a definite place to give it back.
     publishBeforeRouting({ url, ...options });
     try {
-      const routingResult = applyRoutingTask(url, options);
-      if (routingResult && typeof routingResult.then === "function") {
-        // Every caller below drops this value — a click handler has nothing to
-        // do with what the routing returns — so a rejection here would become
-        // an anonymous unhandled one, pointing at the navigation rather than at
-        // what failed. It goes to the single place that knows what to do with
-        // an error nobody displays (see action_error_report.js).
-        routingResult.catch((e) => {
-          reportErrorIfNobodyDisplaysIt(e);
-        });
-      }
-      return routingResult;
+      // Every caller below drops this value — a click handler has nothing to do
+      // with what the routing returns — so a rejection here would become an
+      // anonymous unhandled one, pointing at the navigation rather than at what
+      // failed. Taken, and passed to the one place that knows what to do with
+      // an error nobody displays (see run_unwatched.js).
+      return runUnwatched(() => applyRoutingTask(url, options));
     } finally {
       publishAfterRouting({ url, ...options });
     }
@@ -32755,20 +32869,21 @@ const ParentUIStateControllerContext = createContext();
  */
 const useUIStateController = (
   props,
-  {
-    controlInfo,
-    syncDomState,
-    uiActionInternal,
-    persists,
-    allowNameless = false,
-  } = {},
+  { controlInfo, syncDomState, uiActionInternal, persists, standalone } = {},
 ) => {
   const debugPopup = useDebugPopup();
   const debugInteraction = useDebugInteraction();
   const debugUIState = useDebugUIState();
   const debugFocus = useDebugFocus();
 
-  const parentUIStateController = useContext(ParentUIStateControllerContext);
+  // The whole of `standalone`: with no parent to register into, the effect
+  // below has nobody to call, and every question a group asks about its
+  // children is asked about someone else. Read here rather than filtered by
+  // each group shape in turn, so a control that answers for itself is out of
+  // the value on the way up AND out of the reset, the validation cascade and
+  // the distribution on the way down.
+  const parentFromContext = useContext(ParentUIStateControllerContext);
+  const parentUIStateController = standalone ? undefined : parentFromContext;
   const formContext = useContext(FormContext);
   if (persists === undefined && formContext) {
     persists = true;
@@ -32842,7 +32957,6 @@ const useUIStateController = (
         parentUIStateController,
         parentUiStateSignalHolder,
         isProxy,
-        allowNameless,
         emptyUIState,
         // Set here too, not only in `update` below: a control rendered once and
         // never re-rendered would otherwise never say whether it was GIVEN a
@@ -33508,16 +33622,12 @@ const GROUP_DEFAULTS = {
   single: {
     // The same exclusions canRegisterAsFacadeChild already makes below (the
     // picker façade asked the very same question: which child IS the value).
-    // Buttons and links never hold one, and neither does a control that
-    // declared itself nameless. A control *carrying* navi-list is the search
-    // box driving some other list — not the list itself, which stays a
+    // Buttons and links never hold one. A control *carrying* navi-list is the
+    // search box driving some other list — not the list itself, which stays a
     // perfectly good single value here (one item, or the array a multiple list
     // exposes). Excluding the searcher is what leaves the list alone.
     childControlFilter: (child) => {
       if (child.controlType === "button" || child.controlType === "link") {
-        return false;
-      }
-      if (child.allowNameless) {
         return false;
       }
       if (child.props?.["navi-list"]) {
@@ -33544,7 +33654,7 @@ const GROUP_DEFAULTS = {
     aggregateChildStates: (children) => {
       const groupValues = {};
       for (const child of children) {
-        const { name, allowNameless, emptyUIState } = child;
+        const { name, emptyUIState } = child;
         // A control holding nothing writes its own empty, not a hole: the key
         // is in the object either way, and what is read from it keeps the shape
         // the reader was promised (see resolveEmptyUIState).
@@ -33553,13 +33663,6 @@ const GROUP_DEFAULTS = {
             ? emptyUIState
             : child.uiState;
         if (!name) {
-          if (allowNameless) {
-            // A control that says it is not a field is not one, whatever it
-            // holds: a picker used as a door holds the shape its popup draws,
-            // and merging that in would put the popup's keys in the object as
-            // if the door had been a group.
-            continue;
-          }
           // A nameless GROUP is a grouping, not a value: it exists to hold its
           // children together (a WheelGroup sharing navigation, a fieldset-ish
           // cluster) without claiming a key of its own, so what it holds is
@@ -33672,6 +33775,7 @@ const useUIGroupStateController = (
     uiActionInternal,
     allowCapture = false,
     cascadeValidationToChildren = false,
+    standalone,
   },
 ) => {
   const debugPopup = useDebugPopup();
@@ -33707,7 +33811,11 @@ const useUIGroupStateController = (
         `Either use a known controlType/stateType or provide aggregateChildStates and distributeChildUIState explicitly.`,
     );
   }
-  const parentUIStateController = useContext(ParentUIStateControllerContext);
+  // See the leaf controller's own `standalone` above: the same opt-out, and a
+  // group taking it also takes its whole subtree out — the controls inside it
+  // register into IT, and it registers into nobody.
+  const parentFromContext = useContext(ParentUIStateControllerContext);
+  const parentUIStateController = standalone ? undefined : parentFromContext;
   // A bound signal seeds the group the way `defaultValue` does — uncontrolled,
   // with the signal's current value as what it starts on. Write-back is handled
   // by applyState's own boundSignal; the read half is below: children are
@@ -34478,7 +34586,6 @@ const EMPTY_OBJECT = {};
  */
 const useUIFacadeStateController = (props, realUIStateController) => {
   const firstChildControllerRef = useRef(null);
-  const namelessChildSetRef = useRef(new Set());
   const updatingRef = useRef(false);
   const debugPopup = useDebugPopup();
   const debugInteraction = useDebugInteraction();
@@ -34506,16 +34613,9 @@ const useUIFacadeStateController = (props, realUIStateController) => {
         if (childController.isProxy) {
           return false;
         }
-        if (childController.allowNameless) {
-          // A control saying it is not a field is not the one the picker talks
-          // to: the search box above the list, the "select all" switch beside
-          // it. It is there to help find the answer, not to be it.
-          namelessChildSetRef.current.add(childController);
-          return false;
-        }
         if (childController.props["navi-list"]) {
-          // Controls with navi-list act as standalone list navigators and should
-          // not be treated as the picker's synced child.
+          // Controls with navi-list act as list navigators driving some other
+          // list, not as the picker's synced child.
           return false;
         }
         return true;
@@ -34533,10 +34633,6 @@ const useUIFacadeStateController = (props, realUIStateController) => {
         }
         const child = firstChildControllerRef.current;
         if (!child) {
-          warnPopupHasNothingButNamelessControls(
-            props,
-            namelessChildSetRef.current,
-          );
           return;
         }
         updatingRef.current = true;
@@ -34571,7 +34667,7 @@ const useUIFacadeStateController = (props, realUIStateController) => {
                 `A picker talks to ONE control: the first one receives the picker's whole value and is the only one read back, ` +
                 `so this one is neither filled nor collected. ` +
                 `A popup holding several values needs one group around them — wrap them in a <ControlGroup>, name each control inside it, and give the picker type="object". ` +
-                `A control that is there to FIND the answer rather than be it (a search box, a "select all") says so with allowNameless and steps out of the way.`,
+                `A control that answers for itself rather than for the picker — a search box, a list acting on every touch — says so with standalone and steps out of the way.`,
               child,
             );
           } else {
@@ -34698,11 +34794,6 @@ const useUIFacadeStateController = (props, realUIStateController) => {
 
 const describePicker = (props) =>
   `<Picker${props.name ? ` name="${props.name}"` : ""}${props.type ? ` type="${props.type}"` : ""}>`;
-const warnPopupHasNothingButNamelessControls = (props, namelessChildSet) => {
-  {
-    return;
-  }
-};
 
 /**
  * Returns true when `e` should trigger parent notification (child → parent bubbling).
@@ -34975,19 +35066,19 @@ const ControlgroupChildrenWrapper = ({
  */
 const useControlProps = (props, {
   controlType,
-  allowNameless: allowNamelessByDefault,
   persists,
   uiActionInternal
 }) => {
   const debugUIState = useDebugUIState();
   const debugAction = useDebugAction();
 
-  // A control that is not a field: it opens something, it goes somewhere, and
-  // the group around it must expect no value from it — no name, and no warning
-  // about the missing name. Buttons and links say so from inside navi; the prop
-  // is how a control used as a door says the same thing from the outside.
-  const allowNameless = props.allowNameless ?? allowNamelessByDefault;
-  delete props.allowNameless;
+  // This control answers for itself: whatever group it sits in expects nothing
+  // from it and gives it nothing back. See useUIStateController, which is where
+  // the whole of it happens.
+  const {
+    standalone
+  } = props;
+  delete props.standalone;
   const idDefault = useId();
   const controlId = useContext(ControlIdContext);
   props.id = props.id || controlId || idDefault;
@@ -35043,7 +35134,7 @@ const useControlProps = (props, {
   const uiStateController = useUIStateController(props, {
     controlInfo,
     syncDomState,
-    allowNameless,
+    standalone,
     persists,
     uiActionInternal
   });
@@ -35242,28 +35333,7 @@ const useControlProps = (props, {
           if (!deferredCommand) {
             return;
           }
-          if (completion.result === false) {
-            // The action was turned down (a failing constraint, a gate saying
-            // no) — nothing happened, so nothing follows.
-            return;
-          }
-          if (completion.isRunning) {
-            completion.whenSucceeded(deferredCommand);
-            return;
-          }
-          // Synchronous: already settled, and how it ended still decides. An
-          // action that never started (nothing to run) leaves no outcome, and
-          // the command runs as it always did.
-          let succeeded = true;
-          completion.whenSettled(({
-            error,
-            aborted
-          }) => {
-            succeeded = !error && !aborted;
-          });
-          if (succeeded) {
-            deferredCommand();
-          }
+          runWhenActionSucceeded(completion, deferredCommand);
         };
         return {
           keyDown: keyDownDefault,
@@ -36024,8 +36094,10 @@ const useControlgroupProps = (props, {
   cascadeValidationToChildren = false
 }) => {
   const {
-    action
+    action,
+    standalone
   } = props;
+  delete props.standalone;
   const uiGroupStateController = useUIGroupStateController(props, controlType, {
     stateType,
     childControlFilter,
@@ -36035,7 +36107,8 @@ const useControlgroupProps = (props, {
     wantRequesterButtonState,
     uiActionInternal,
     allowCapture,
-    cascadeValidationToChildren
+    cascadeValidationToChildren,
+    standalone
   });
   const [boundAction] = useActionBoundToOneParam(action, uiGroupStateController.uiStateSignal);
   // Mirror single-input behaviour: a controlled value with nobody listening
@@ -40403,8 +40476,7 @@ const LinkPlain = props => {
     selectionController
   });
   const [controlRootProps, controlHostProps] = useControlProps(props, {
-    controlType: "link",
-    allowNameless: true
+    controlType: "link"
   });
   const {
     basePseudoState
@@ -40836,6 +40908,10 @@ let navCount = 0;
 // Worn by a nav of routes while a route movement between two of its tabs is
 // pictured (see markIndicatorTakesPart, and the CSS below for what it decides).
 const BETWEEN_TABS_ATTRIBUTE = "data-nav-between-tabs";
+// What one notch of a wheel that counts in LINES is worth on a row that counts
+// in pixels. A rough line, deliberately: nothing here needs to agree with a
+// paragraph, only to move the row about as far as a notch moves a page.
+const WHEEL_LINE_SIZE = 16;
 const css$W = /* css */`@layer navi {
   .navi_nav {
     --nav-border: none;
@@ -40918,6 +40994,14 @@ const css$W = /* css */`@layer navi {
   border-radius: var(--nav-border-radius);
   justify-content: stretch;
   display: flex;
+
+  &[data-scrollable] {
+    max-width: 100%;
+  }
+
+  &[data-scrollable][data-vertical] {
+    max-height: 100%;
+  }
 
   & .navi_link {
     user-select: none;
@@ -41087,6 +41171,39 @@ const Nav = ({
   const slideContainerElementRef = useRef(null);
   const indicatorPosition = slideContainer ? positionOfCurrentIndicator(currentIndicator, vertical) : null;
 
+  // Which tab of this row is the one being shown: the slide the container says
+  // it is on, or, for a row of routes, the link the browser is on.
+  const getCurrentTabElement = () => {
+    const navElement = navRef.current;
+    if (!navElement) {
+      return null;
+    }
+    const containerElement = slideContainerElementRef.current;
+    if (!containerElement) {
+      return navElement.querySelector("[data-href-current]");
+    }
+    const currentArea = containerElement.getAttribute(SLIDE_CURRENT_ATTRIBUTE);
+    if (currentArea === null) {
+      return null;
+    }
+    return navElement.querySelector(`[data-slide-target="${CSS.escape(currentArea)}"]`);
+  };
+  // …and which one the picture leans on while it is not on the current one:
+  // the slide a finger is pulling in, the slide an animation is leaving. There
+  // is one only while a travel is playing.
+  const getTowardTabElement = () => {
+    const navElement = navRef.current;
+    const containerElement = slideContainerElementRef.current;
+    if (!navElement || !containerElement) {
+      return null;
+    }
+    const towardArea = containerElement.getAttribute(SLIDE_TOWARD_ATTRIBUTE);
+    if (towardArea === null) {
+      return null;
+    }
+    return navElement.querySelector(`[data-slide-target="${CSS.escape(towardArea)}"]`);
+  };
+
   // Where the trait is and where it is headed, as four numbers of pixels the
   // CSS above interpolates between (see the .navi_nav_indicator rules). Written
   // by hand rather than rendered: it is read off the row as it stands, and the
@@ -41100,8 +41217,7 @@ const Nav = ({
     }
     const tabElements = Array.from(navElement.querySelectorAll("[data-slide-target]"));
     const areaOf = tabElement => tabElement.getAttribute("data-slide-target");
-    const currentArea = containerElement.getAttribute("data-slide-current");
-    const currentIndex = tabElements.findIndex(tabElement => areaOf(tabElement) === currentArea);
+    const currentIndex = tabElements.indexOf(getCurrentTabElement());
     if (currentIndex === -1) {
       // On a slide no tab in this row names: there is no tab to sit under.
       navElement.removeAttribute("data-nav-indicator-measured");
@@ -41143,6 +41259,226 @@ const Nav = ({
   // about the row as it is now.
   const paintIndicatorGeometryRef = useRef(null);
   paintIndicatorGeometryRef.current = paintIndicatorGeometry;
+
+  // A row of tabs wider than the box holding it scrolls (the caller asks for
+  // that with overflowX) — and then saying which tab one is on is not enough,
+  // that tab must be somewhere one can see. The trait needs nothing here: it
+  // is placed with offsetLeft, inside the row, so it rides along.
+  // The ROW is what gets scrolled, never the tab: element.scrollIntoView()
+  // walks every scrolling ancestor it finds, and a tab row lives in sheets
+  // that sit on pages that scroll — bringing a tab into sight must move the
+  // row and nothing else.
+  const tabInSightRef = useRef(null);
+  const keepCurrentTabInSight = () => {
+    const navElement = navRef.current;
+    const currentTabElement = getCurrentTabElement();
+    // Brought into sight once, and then left where it is: the row scrolls, so
+    // the user may have pushed it elsewhere since to read the other tabs, and
+    // a render that changed none of this has no business taking that back.
+    if (currentTabElement === tabInSightRef.current) {
+      return;
+    }
+    tabInSightRef.current = currentTabElement;
+    if (!currentTabElement) {
+      return;
+    }
+    scrollIntoViewScoped(currentTabElement, {
+      container: navElement
+    });
+  };
+
+  // …and while a travel is playing the row gets there AT THE PACE OF THE
+  // TRAVEL, off the very number the trait is drawn from: the container
+  // publishes how far between the two slides the picture stands
+  // (--slide-travel-progress, written on this row — see followerElements), and
+  // the row is scrolled the same fraction of the way between the two tabs. The
+  // slides gliding while the tabs jump at the end is one movement told twice.
+  //
+  // Read frame by frame, because that number is nobody's news: under a finger
+  // the container writes it per frame with no announcement (a write is not a
+  // change), and for a travel that was asked for it is the browser that
+  // animates it. So the row samples it, exactly as the trait does — except that
+  // a scroll offset is not a thing CSS can be handed.
+  const travelScrollRef = useRef(null);
+  const syncTabScroll = ({
+    afterAFrame
+  } = {}) => {
+    const navElement = navRef.current;
+    if (!navElement) {
+      return;
+    }
+    const currentTabElement = getCurrentTabElement();
+    const towardTabElement = getTowardTabElement();
+    if (!currentTabElement || !towardTabElement) {
+      travelScrollRef.current = null;
+      // Nothing is travelling — but a travel that was ASKED for is announced a
+      // breath after the slide it lands on, so a row that lands the moment the
+      // current tab changes lands ahead of the movement it should have ridden,
+      // and the slides then glide towards a row already there. Giving it a
+      // frame costs nothing: the slides have not moved either.
+      // Only for a row of slides, and only once — a row of routes has no travel
+      // to ride, and the second look is the one that lands.
+      if (slideContainer && !afterAFrame && tabInSightRef.current && tabInSightRef.current !== currentTabElement) {
+        scheduleTabScrollSync({
+          nextFrame: true
+        });
+        return;
+      }
+      // Nowhere between: the row lands where it belongs.
+      keepCurrentTabInSight();
+      return;
+    }
+    let travel = travelScrollRef.current;
+    if (!travel || travel.from !== currentTabElement || travel.toward !== towardTabElement) {
+      // The two ends, measured once for this travel: measuring them again on a
+      // row that has since moved would be measuring from the answer.
+      const fromOffsets = getScrollIntoViewScopedOffsets(currentTabElement, {
+        container: navElement
+      });
+      const towardOffsets = getScrollIntoViewScopedOffsets(towardTabElement, {
+        container: navElement
+      });
+      // Signed the way the container counts: +1 when the picture leans on a
+      // slide sitting BEFORE the current one, -1 when it sits after — the same
+      // reading paintIndicatorGeometry does of the same number.
+      const sign = currentTabElement.compareDocumentPosition(towardTabElement) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
+      travel = {
+        from: currentTabElement,
+        toward: towardTabElement,
+        left: fromOffsets.left,
+        top: fromOffsets.top,
+        leftDelta: (towardOffsets.left - fromOffsets.left) * sign,
+        topDelta: (towardOffsets.top - fromOffsets.top) * sign
+      };
+      travelScrollRef.current = travel;
+    }
+    const progress = parseFloat(getComputedStyle(navElement).getPropertyValue("--slide-travel-progress")) || 0;
+    navElement.scrollTo({
+      left: travel.left + progress * travel.leftDelta,
+      top: travel.top + progress * travel.topDelta,
+      // The row is being driven frame by frame: a caller who asked for smooth
+      // scrolling asked it of a scroll that lands, not of one that is held.
+      behavior: "instant"
+    });
+    scheduleTabScrollSync({
+      nextFrame: true
+    });
+  };
+  const syncTabScrollRef = useRef(null);
+  syncTabScrollRef.current = syncTabScroll;
+
+  // When to look: on the next frame while a travel is being followed, and
+  // otherwise at the end of the current task. A MICROTASK and not a frame,
+  // because the two are told apart in the same breath — a travel that was
+  // asked for announces the slide it lands on before it announces the one it
+  // is leaving, so a row settling straight away would jump to the destination
+  // and only then be asked to travel there. And it is still before the paint,
+  // which a frame is not: a row that opens on a far tab must be scrolled
+  // already the first time it is seen.
+  const syncScheduledRef = useRef(false);
+  const syncFrameRef = useRef(0);
+  const scheduleTabScrollSync = ({
+    nextFrame
+  } = {}) => {
+    if (syncScheduledRef.current) {
+      return;
+    }
+    syncScheduledRef.current = true;
+    const run = () => {
+      syncScheduledRef.current = false;
+      syncFrameRef.current = 0;
+      syncTabScrollRef.current({
+        afterAFrame: nextFrame
+      });
+    };
+    if (nextFrame) {
+      syncFrameRef.current = requestAnimationFrame(run);
+    } else {
+      queueMicrotask(run);
+    }
+  };
+  const scheduleTabScrollSyncRef = useRef(null);
+  scheduleTabScrollSyncRef.current = scheduleTabScrollSync;
+  useLayoutEffect(() => {
+    return () => {
+      cancelAnimationFrame(syncFrameRef.current);
+    };
+  }, []);
+
+  // The row watches its own size and reads itself again when it changes — a
+  // badge count, a font that just arrived, a window resized: what was written
+  // is pixels, where the trait sits and how far the row is scrolled, and
+  // pixels measured on a row of another width are wrong. A row that had no
+  // width at all is the same story with a sharper edge: inside a closed
+  // <dialog> everything measures 0, and the current tab does not change when
+  // the dialog opens, so nothing else would ever look again.
+  // A scroll takes no size from anything, so this stays quiet while the row is
+  // being pushed around by hand.
+  useLayoutEffect(() => {
+    const sizeObserver = new ResizeObserver(() => {
+      paintIndicatorGeometryRef.current();
+      // What was brought into sight was brought there for another row.
+      tabInSightRef.current = null;
+      scheduleTabScrollSyncRef.current();
+    });
+    sizeObserver.observe(navRef.current);
+    return () => {
+      sizeObserver.disconnect();
+    };
+  }, []);
+
+  // A row that scrolls sideways, and a mouse that only turns one way. A
+  // vertical wheel is left to the vertical axis, which a row of tabs does not
+  // have: the push goes past the row to the page, and the tabs stay where they
+  // were — a row a trackpad can push around and a mouse cannot reach at all.
+  // Up and further along are the same wish here, so the push moves the row.
+  // Only for a row that scrolls on ONE axis: one that scrolls the way the
+  // wheel turns already has the answer it wants, and taking the push would be
+  // answering it twice.
+  useLayoutEffect(() => {
+    const navElement = navRef.current;
+    const onWheel = wheelEvent => {
+      // The burst is already somebody else's — a box travelling under the
+      // pointer, a wheel picker — and stays theirs until it dies out, wherever
+      // the pointer has drifted since (see wheel_gesture.js).
+      if (wheelGestureIsTakenFrom(navElement)) {
+        return;
+      }
+      const {
+        deltaX,
+        deltaY
+      } = wheelEvent;
+      if (Math.abs(deltaY) <= Math.abs(deltaX)) {
+        // Sideways already: the browser knows where to put it.
+        return;
+      }
+      const scrollableWidth = navElement.scrollWidth - navElement.clientWidth;
+      const scrollableHeight = navElement.scrollHeight - navElement.clientHeight;
+      if (scrollableWidth <= 0 || scrollableHeight > 0) {
+        return;
+      }
+      // Not every wheel speaks in pixels: some count lines, some count pages.
+      const notch = wheelEvent.deltaMode === 1 ? WHEEL_LINE_SIZE : wheelEvent.deltaMode === 2 ? navElement.clientWidth : 1;
+      const scrollLeftBefore = navElement.scrollLeft;
+      const scrollLeftWanted = Math.max(0, Math.min(scrollableWidth, scrollLeftBefore + deltaY * notch));
+      if (scrollLeftWanted === scrollLeftBefore) {
+        // The row is at its end and the hand is still pushing: what is left
+        // over is the page's, exactly as it would have been without any of
+        // this.
+        return;
+      }
+      wheelEvent.preventDefault();
+      claimWheelGesture(navElement);
+      navElement.scrollLeft = scrollLeftWanted;
+    };
+    navElement.addEventListener("wheel", onWheel, {
+      passive: false
+    });
+    return () => {
+      navElement.removeEventListener("wheel", onWheel);
+      releaseWheelGesture(navElement);
+    };
+  }, []);
   useLayoutEffect(() => {
     if (!slideContainer) {
       return undefined;
@@ -41156,6 +41492,7 @@ const Nav = ({
     const readContainer = () => {
       setCurrentSlideArea(containerElement.getAttribute(SLIDE_CURRENT_ATTRIBUTE) ?? undefined);
       paintIndicatorGeometryRef.current();
+      scheduleTabScrollSyncRef.current();
     };
     readContainer();
     // Where one is and what the picture leans on are written on the container,
@@ -41165,16 +41502,8 @@ const Nav = ({
     // because a write is not a change — the attribute the trait follows is
     // written on every frame of a gesture with the same value in it.
     containerElement.addEventListener(SLIDE_STATE_EVENT, readContainer);
-    // A row whose tabs changed width — a badge count, a font that just
-    // arrived, a window resized — is measured again: what was written is
-    // pixels, and pixels go stale.
-    const sizeObserver = new ResizeObserver(() => {
-      paintIndicatorGeometryRef.current();
-    });
-    sizeObserver.observe(navRef.current);
     return () => {
       containerElement.removeEventListener(SLIDE_STATE_EVENT, readContainer);
-      sizeObserver.disconnect();
       slideContainerElementRef.current = null;
     };
   }, [slideContainer]);
@@ -41183,6 +41512,7 @@ const Nav = ({
   // and no observer above watches this row's own children.
   useLayoutEffect(() => {
     paintIndicatorGeometry();
+    scheduleTabScrollSync();
   });
 
   // Whether the bar keeps its name for the route movement about to be pictured
@@ -43850,7 +44180,7 @@ const Expandable = props => {
     }
     if (hasAction) {
       if (nextOpen) {
-        effectiveAction.run();
+        runUnwatched(() => effectiveAction.run());
       } else {
         effectiveAction.abort();
       }
@@ -44001,7 +44331,7 @@ const Expandable = props => {
   // Mounted already open: the content is visible, its data is due.
   useEffect(() => {
     if (openedRef.current && hasAction) {
-      effectiveAction.run();
+      runUnwatched(() => effectiveAction.run());
     }
   }, []);
   const onRootKeyDown = keyboardEvent => {
@@ -44817,8 +45147,7 @@ const ButtonUI = props => {
     loadingOutline = true
   } = props;
   const [buttonControlRootProps, buttonControlHostProps, controlChildrenWrapperProps] = useControlProps(props, {
-    controlType: "button",
-    allowNameless: true
+    controlType: "button"
   });
   const {
     basePseudoState,
@@ -49882,30 +50211,18 @@ const Form = props => {
   // is a different component: same group, no <form> element and none of the
   // browser machinery that comes with it.
   const isNested = Boolean(useContext(FormContext));
-  const form = isNested ? jsx(FormNested, {
+  return isNested ? jsx(FormNested, {
     ...props
   }) : jsx(FormControl, {
     ...props
   });
-  if (props.standalone) {
-    // Nothing above to register with: the group hooks read the parent from
-    // this context, so emptying it here is the whole opt-out.
-    return jsx(ParentUIStateControllerContext.Provider, {
-      value: undefined,
-      children: form
-    });
-  }
-  return form;
 };
 
 // What both forms are made of: one group, one context for what is inside it.
-// standalone is read by Form above and never goes further — least of all to the
-// DOM.
 const useFormGroup = props => {
   const propsForGroup = {
     ...props
   };
-  delete propsForGroup.standalone;
   delete propsForGroup.canSendWhileUnchanged;
   delete propsForGroup.pristineKey;
   // Not the generic control `command`, which a control triggers on its own ui
@@ -58795,13 +59112,13 @@ const PickerCustomResolver = props => {
     if (circle) {
       props.variant = "icon";
     }
-    // A door, never a field (see `allowNameless`): the form around it expects
-    // no value from it, and no name. So the trigger answers to "button" — it is
-    // pressed to read something, never typed into — the same thing a confirm
-    // picker says through `picksNothing` (see picker.jsx). Said as the role
-    // here rather than through that prop: `picksNothing` also takes the right
-    // slot away, and the status icon a callout trigger draws sits in it.
-    props.allowNameless = true;
+    // A door, never a field (see `standalone`): the form around it expects no
+    // value from it. So the trigger answers to "button" — it is pressed to read
+    // something, never typed into — the same thing a confirm picker says
+    // through `picksNothing` (see picker.jsx). Said as the role here rather
+    // than through that prop: `picksNothing` also takes the right slot away,
+    // and the status icon a callout trigger draws sits in it.
+    props.standalone = true;
     if (props.role === undefined) {
       props.role = "button";
     }
@@ -59643,7 +59960,8 @@ installImportMetaCssBuild(import.meta);/**
  *
  * Yes is said with `--navi-confirm` (see commands.js). The popup closes on it,
  * and only then does the picker do what it was standing in for — run its
- * `action`, or trigger its `command` — so the work runs on the trigger, where
+ * `action`, trigger its `command`, or both, the command following the action
+ * and only if it succeeded — so the work runs on the trigger, where
  * the loading state and the error callout are drawn, and where the user is
  * looking again. Anything else that closes the popup (the cancel button,
  * Escape, a click outside) is no.
@@ -59705,21 +60023,31 @@ const PickerConfirmResolver = props => {
   // trigger.
   const onConfirm = confirmEvent => {
     const inputEl = getPickerInput(ref.current);
-    if (action !== undefined) {
-      dispatchRequestAction(inputEl, {
-        event: confirmEvent,
-        name: "confirm"
-      });
+    const runCommand = () => {
+      triggerNaviCommand(inputEl, command, confirmEvent);
+    };
+    if (action === undefined) {
+      if (command) {
+        runCommand();
+      }
       return;
     }
+    // Both props on one trigger means "do this, then go there": the action runs
+    // and the command follows it, only if it worked — a delete that fails must
+    // not send the user to the list it did not leave. Same rule a `<Button
+    // action command>` has (see onButtonInteractionAllowed in control_hooks).
+    const completion = watchActionCompletion(findControlHost(inputEl) || inputEl, () => dispatchRequestAction(inputEl, {
+      event: confirmEvent,
+      name: "confirm"
+    }));
     if (command) {
-      triggerNaviCommand(inputEl, command, confirmEvent);
+      runWhenActionSucceeded(completion, runCommand);
     }
   };
   return jsx(Next, {
     ...props,
     type: "navi_js",
-    allowNameless: true
+    standalone: true
     // No chevron, no clear cross, whatever variant the trigger is drawn in:
     // both announce a value, and a question holds none.
     ,
@@ -62119,6 +62447,7 @@ const ListFirstResolver = props => {
  *   deselectable?: boolean,
  *   maxLength?: number,
  *   maxLengthGuard?: number,
+ *   standalone?: boolean,
  *   action?: (value: any) => void,
  *   uiAction?: (value: any) => void,
  *   popover?: boolean,
@@ -62294,6 +62623,12 @@ const ListFirstResolver = props => {
  *   taking — and `uiAction` is not called. The selected ones stay takeable
  *   back, so a selection that arrived too long can always be brought back
  *   under the limit. Implies `maxLength` for validity.
+ * @param {boolean} [props.standalone]
+ *   This list answers for itself: it does not register with the control group
+ *   or picker around it, so its selection stays out of that value and nothing
+ *   coming down — a distributed value, a reset — reaches it. What a popup whose
+ *   one answer is spread over several lists says, so that none of them is taken
+ *   for the answer itself.
  */
 const List = createComponentResolver([ListFirstResolver, ListSelectableResolver, ListUI]);
 const ListContent = ({
@@ -66060,8 +66395,7 @@ const BadgeButtonUI = props => {
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
   const [buttonRootProps, buttonHostProps] = useControlProps(props, {
-    controlType: "button",
-    allowNameless: true
+    controlType: "button"
   });
   return jsx(Text, {
     className: "navi_badge_button",
@@ -70725,7 +71059,7 @@ const SplitButton = props => {
         }), jsx(Picker, {
           id: menuId,
           variant: "headless",
-          allowNameless: true,
+          standalone: true,
           anchor: rootRef,
           ...popupProps,
           readOnly: readOnly,

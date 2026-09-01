@@ -421,8 +421,8 @@ const css = /* css */`@layer navi {
     --navi-typo-xl: 1.25rem;
     --navi-typo-xxl: 1.5rem;
     --navi-line-height: 1.25;
-    line-height: var(--navi-line-height);
     font-family: ${controlDefaultFontFamily};
+    line-height: var(--navi-line-height);
     --navi-control-line-height: round(calc(var(--navi-line-height) * 1em),
         1px);
     --navi-color-secondary-mix: 80%;

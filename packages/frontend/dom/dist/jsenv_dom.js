@@ -7525,16 +7525,35 @@ const getScrollbarState = (
  */
 const scrollIntoViewScoped = (
   el,
+  { container = getScrollContainer(el), ...rest } = {},
+) => {
+  if (!container) {
+    return;
+  }
+  container.scrollTo(
+    getScrollIntoViewScopedOffsets(el, { container, ...rest }),
+  );
+};
+
+/**
+ * Where the container would have to be scrolled for `el` to be in view — the
+ * measure scrollIntoViewScoped acts on, handed out on its own for whoever must
+ * stand BETWEEN two such answers rather than land on one: a row of tabs
+ * scrolled the same fraction of the way as the slides it names are travelling
+ * (see navi's <Nav>).
+ *
+ * @param {Element} el
+ * @param {object} options - the same as scrollIntoViewScoped's.
+ * @returns {{left: number, top: number}}
+ */
+const getScrollIntoViewScopedOffsets = (
+  el,
   {
     container = getScrollContainer(el),
     block = "nearest",
     inline = "nearest",
   } = {},
 ) => {
-  if (!container) {
-    return;
-  }
-
   const containerRect = container.getBoundingClientRect();
   const elRect = el.getBoundingClientRect();
   const style = getComputedStyle(el);
@@ -7609,10 +7628,10 @@ const scrollIntoViewScoped = (
     }
   }
 
-  container.scrollTo({
+  return {
     left: newScrollLeft,
     top: newScrollTop,
-  });
+  };
 };
 
 /**
@@ -13412,7 +13431,16 @@ const DRAG_RESISTANCE = 0.3;
 // nothing to this gesture and is passed through (see DRAG_IGNORED_SELECTOR in
 // drag_to.js). And so is a popover or a dialog: a layer OVER the box, whose
 // press only bubbles through the box because the layer is anchored in it.
-const DRAG_EXCLUDED_SELECTOR = ["input", "textarea", "select", '[contenteditable=""]', '[contenteditable="true"]', "[data-drag-handle]", "[data-no-drag-travel]", '[data-self-interactions~="drag"]', '[data-self-interactions~="*"]', "[popover]", "dialog"].join(",");
+const DRAG_EXCLUDED_SELECTOR = [
+// The fields that read the pointer as it MOVES: a caret dragged through text,
+// a thumb pushed along its rail, a spinner. The ones that only read the
+// press — a checkbox, a radio, a colour, a file — are buttons by another
+// name, and like a button they let the drag through, the click they would
+// have made swallowed on the way out. Which matters more than the list makes
+// it look: a selectable row is covered by an invisible radio of its own, so
+// excluding every input at once means a list of rows inside a travelling box
+// that no finger can push.
+'input:not([type="checkbox"], [type="radio"], [type="button"], [type="submit"], [type="reset"], [type="image"], [type="color"], [type="file"])', "textarea", "select", '[contenteditable=""]', '[contenteditable="true"]', "[data-drag-handle]", "[data-no-drag-travel]", '[data-self-interactions~="drag"]', '[data-self-interactions~="*"]', "[popover]", "dialog"].join(",");
 
 // Which axes a box travels on, one attribute per gesture, said in the DOM by
 // whoever owns the box: it is what a box ABOVE another reads to know the
@@ -20059,4 +20087,4 @@ const useResizeStatus = (elementRef, { as = "number" } = {}) => {
   };
 };
 
-export { EASING, ELEMENT_SIZE_CHANGE, activeElementSignal, addActiveElementEffect, addAttributeEffect, allowWheelThrough, appendStyles, applyNewPosition, canScroll, captureScrollState, chainEvent, claimWheelGesture, clickIsSuppressed, closestOpenableAncestor, contrastColor, createBackgroundColorTransition, createBackgroundTransition, createBorderRadiusTransition, createBorderTransition, createDragGestureController, createDragToMoveGestureController, createEventGroupLogger, createGroupTransitionController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createValueEffect, createWidthTransition, cubicBezier, dispatchCustomEvent, dispatchInternalCustomEvent, dispatchPublicCustomEvent, dragAfterIntent, elementIsFocusable, elementIsVisibleForFocus, elementIsVisuallyVisible, findAfter, findAncestor, findBefore, findDescendant, findEvent, findFocusDelegateTarget, findFocusable, findSelfOrAncestorFixedPosition, formatEventSideEffect, getAncestorOpenType, getAvailableHeight, getAvailableWidth, getBackground, getBackgroundColor, getBorder, getBorderRadius, getBorderSizes, getContrastRatio, getDefaultStyles, getDragCoordinates, getDropTargetInfo, getElementSignature, getFirstVisuallyVisibleAncestor, getFocusVisibilityInfo, getHeight, getHeightWithoutTransition, getInnerHeight, getInnerWidth, getKeyboardEventDefaultAction, getLuminance, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getOpacity, getOpacityWithoutTransition, getPaddingSizes, getPositionedParent, getPositioningScrollOffset, getPreferedColorScheme, getScrollBox, getScrollContainer, getScrollContainerSet, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getTranslateX, getTranslateXWithoutTransition, getTranslateY, getVirtualKeyboardOverlayHeight, getVisuallyVisibleInfo, getWidth, getWidthWithoutTransition, hasCSSSizeUnit, initFlexDetailsSet, initFocusGroup, initPositionSticky, isAncestorOpen, isDisplayedDespiteClosedAncestor, isPrimaryButtonEvent, isSameColor, isScrollable, isTouchDrivenEvent, markDragSource, measureLongestVisualLineWidth, measureScrollbar, measureWidestChildRow, mergeOneStyle, mergeTwoStyles, normalizeKeyboardKey, normalizeStyle, normalizeStyles, observeAncestorOpenState, onAncestorReopen, parsePositionArea, parseStyle, performTabNavigation, pickPositionRelativeTo, prefersDarkColors, prefersLightColors, preventFocusNav, preventFocusNavViaKeyboard, preventIntermediateScrollbar, releaseWheelGesture, resolveCSSColor, resolveCSSSize, resolveColorLuminance, resolveOklchLightness, scrollIntoViewScoped, scrollIntoViewWithStickyAwareness, scrollRoomTowards, setAttribute, setAttributes, setStyles, setVirtualKeyboardOverlaysContent, snapToPixel, startDragTo, startDragToResizeGesture, startDragToTravel, stickyAsRelativeCoords, stringifyStyle, subscribeVirtualKeyboardGeometryChange, subscribeVisualViewportResizeSettled, subscribeWindowResizeSettled, suppressClickAfterGesture, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect, waitForPressHeld, watchWheelTravel, wheelGestureIsTakenFrom };
+export { EASING, ELEMENT_SIZE_CHANGE, activeElementSignal, addActiveElementEffect, addAttributeEffect, allowWheelThrough, appendStyles, applyNewPosition, canScroll, captureScrollState, chainEvent, claimWheelGesture, clickIsSuppressed, closestOpenableAncestor, contrastColor, createBackgroundColorTransition, createBackgroundTransition, createBorderRadiusTransition, createBorderTransition, createDragGestureController, createDragToMoveGestureController, createEventGroupLogger, createGroupTransitionController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createValueEffect, createWidthTransition, cubicBezier, dispatchCustomEvent, dispatchInternalCustomEvent, dispatchPublicCustomEvent, dragAfterIntent, elementIsFocusable, elementIsVisibleForFocus, elementIsVisuallyVisible, findAfter, findAncestor, findBefore, findDescendant, findEvent, findFocusDelegateTarget, findFocusable, findSelfOrAncestorFixedPosition, formatEventSideEffect, getAncestorOpenType, getAvailableHeight, getAvailableWidth, getBackground, getBackgroundColor, getBorder, getBorderRadius, getBorderSizes, getContrastRatio, getDefaultStyles, getDragCoordinates, getDropTargetInfo, getElementSignature, getFirstVisuallyVisibleAncestor, getFocusVisibilityInfo, getHeight, getHeightWithoutTransition, getInnerHeight, getInnerWidth, getKeyboardEventDefaultAction, getLuminance, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getOpacity, getOpacityWithoutTransition, getPaddingSizes, getPositionedParent, getPositioningScrollOffset, getPreferedColorScheme, getScrollBox, getScrollContainer, getScrollContainerSet, getScrollIntoViewScopedOffsets, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getTranslateX, getTranslateXWithoutTransition, getTranslateY, getVirtualKeyboardOverlayHeight, getVisuallyVisibleInfo, getWidth, getWidthWithoutTransition, hasCSSSizeUnit, initFlexDetailsSet, initFocusGroup, initPositionSticky, isAncestorOpen, isDisplayedDespiteClosedAncestor, isPrimaryButtonEvent, isSameColor, isScrollable, isTouchDrivenEvent, markDragSource, measureLongestVisualLineWidth, measureScrollbar, measureWidestChildRow, mergeOneStyle, mergeTwoStyles, normalizeKeyboardKey, normalizeStyle, normalizeStyles, observeAncestorOpenState, onAncestorReopen, parsePositionArea, parseStyle, performTabNavigation, pickPositionRelativeTo, prefersDarkColors, prefersLightColors, preventFocusNav, preventFocusNavViaKeyboard, preventIntermediateScrollbar, releaseWheelGesture, resolveCSSColor, resolveCSSSize, resolveColorLuminance, resolveOklchLightness, scrollIntoViewScoped, scrollIntoViewWithStickyAwareness, scrollRoomTowards, setAttribute, setAttributes, setStyles, setVirtualKeyboardOverlaysContent, snapToPixel, startDragTo, startDragToResizeGesture, startDragToTravel, stickyAsRelativeCoords, stringifyStyle, subscribeVirtualKeyboardGeometryChange, subscribeVisualViewportResizeSettled, subscribeWindowResizeSettled, suppressClickAfterGesture, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect, waitForPressHeld, watchWheelTravel, wheelGestureIsTakenFrom };
