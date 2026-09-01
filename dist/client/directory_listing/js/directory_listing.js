@@ -85,7 +85,7 @@ const ErrorMessage = () => {
   errorSuggestion = u($, {
     children: [u("span", {
       className: "icon",
-      children: "\uD83D\uDD0D"
+      children: "🔍"
     }), " Check available routes in", " ", u("a", {
       href: "/.internal/route_inspector",
       children: "route inspector"
