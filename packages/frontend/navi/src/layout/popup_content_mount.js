@@ -49,7 +49,7 @@ export const MOUNT_DEFAULT = "from-first-open";
 export const usePopupContentMount = (
   openController,
   ref,
-  { children, mount = MOUNT_DEFAULT },
+  { mount = MOUNT_DEFAULT },
 ) => {
   const mountedAlways = mount === "always";
   const [contentMounted, setContentMounted] = useState(
@@ -89,5 +89,5 @@ export const usePopupContentMount = (
     }
   }, [mountedAlways]);
 
-  return contentMounted ? children : null;
+  return contentMounted;
 };

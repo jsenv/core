@@ -476,14 +476,14 @@ const scheduleMountOpen = (run) => {
 // a popup that already has a stable one, and that id is what identifies its
 // open state too.
 const NO_NAV_STATE = { id: undefined, type: "replace" };
-const resolveNavStateProp = (navState, popupId) => {
+const resolveNavStateProp = (navState, popupId, name) => {
   if (!navState) {
     return NO_NAV_STATE;
   }
   if (navState === true) {
     if (import.meta.dev && !popupId) {
       console.warn(
-        `[navi] "popup" got navState={true} but has no "id" to store its open state under. Give the popup an id, or pass the key as navState="some_id".`,
+        `[navi] "${name}" got navState={true} but has no "id" to store its open state under. Give it an id, or pass the key as navState="some_id".`,
       );
     }
     return { id: popupId, type: "replace" };
@@ -501,17 +501,24 @@ const resolveNavStateProp = (navState, popupId) => {
  * its popup as it was.
  *
  * Shared between `useOpenControllerByProps` below (Dialog/Popover driving their
- * own controller) and `picker_custom.jsx` (which owns its controller but wants
- * the same skip-if-already-matching / open-or-requestClose control flow).
+ * own controller), `picker_custom.jsx` (which owns its controller but wants
+ * the same skip-if-already-matching / open-or-requestClose control flow) and
+ * `expandable.jsx` (open in flow rather than on a layer, same decision).
  *
  * @param {{ open: (e: Event, detail?: object) => void, requestClose: (e: Event, detail?: object) => void, opened: boolean }} openController
  * @param {{ id?: string, open?: boolean|"interaction", defaultOpen?: boolean|"interaction", signal?: import("@preact/signals").Signal<boolean>, navState?: boolean|string|{id?: string, type?: "push"|"replace"} }} props
+ * @param {string} [name] What the dev warnings call the thing being opened.
  */
-export const useOpenPropsEffectOnOpenController = (openController, props) => {
+export const useOpenPropsEffectOnOpenController = (
+  openController,
+  props,
+  name = "popup",
+) => {
   const { signal, defaultOpen, navState } = props;
   const { id: navStateId, type: navStateType } = resolveNavStateProp(
     navState,
     props.id,
+    name,
   );
   // Called unconditionally (it answers with no-ops for an absent id), like
   // every other hook here.
@@ -523,11 +530,11 @@ export const useOpenPropsEffectOnOpenController = (openController, props) => {
     if (import.meta.dev && (signal || Object.hasOwn(props, "open"))) {
       const ignored = signal ? "signal" : "open";
       console.warn(
-        `[navi] "popup" got both "navState" and "${ignored}". "navState" is the source of truth; "${ignored}" is ignored. Pass only one.`,
+        `[navi] "${name}" got both "navState" and "${ignored}". "navState" is the source of truth; "${ignored}" is ignored. Pass only one.`,
       );
     }
   } else if (signal) {
-    warnSignalCollision(props, "popup", "open");
+    warnSignalCollision(props, name, "open");
   }
   // What the caller holds, however they hold it: the history entry when there
   // is a `navState`, an `open` they re-render themselves, or a `signal` this
@@ -625,7 +632,7 @@ export const useOpenPropsEffectOnOpenController = (openController, props) => {
   }, [open]);
 };
 
-export const useOpenControllerByProps = (props) => {
+export const useOpenControllerByProps = (props, name) => {
   const { onClose } = props;
   // Lets an uncontrolled consumer (no openController of its own) still react
   // to a self-initiated close (Escape, backdrop click, its own close button)
@@ -635,6 +642,6 @@ export const useOpenControllerByProps = (props) => {
   const openController = useOpenController(() =>
     onClose ? { onClose } : undefined,
   );
-  useOpenPropsEffectOnOpenController(openController, props);
+  useOpenPropsEffectOnOpenController(openController, props, name);
   return openController;
 };

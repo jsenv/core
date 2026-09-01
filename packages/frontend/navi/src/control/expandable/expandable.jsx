@@ -25,10 +25,17 @@
  *
  * The root never looks at its children: which parts are there, in which order,
  * is none of its business. It publishes a context and the parts take what they
- * need from it — including WHEN to arm the reveal, which <Expandable.Content>
- * asks for from its own layout effect. That is what lets a part re-render
- * later than the root (a memoized subtree does exactly that): the measurement
- * runs in the commit that put the content in the DOM, whichever one that is.
+ * need from it.
+ *
+ * Deciding to open or to close is the same decision a Dialog or a Popover
+ * takes — the same props behind it (`open`/`defaultOpen`/`signal`/`navState`),
+ * the same commands in front of it, the same refusable close — so it is taken
+ * in the same place: an open controller (see open_controller.js). What belongs
+ * to an expandable is only what opening LOOKS like, which is `openEffect` and
+ * the cleanup it returns. Both render synchronously (flushSyncRendering)
+ * before measuring, so the DOM is in the state they are about to measure —
+ * that, and not any inspection of the children, is what makes a part free to
+ * re-render later than the root (a memoized subtree does exactly that).
  *
  * Reach for it knowingly: expanding in-flow SHIFTS the layout — everything
  * below (or beside) moves when it opens. A Popover, Dialog, Picker or Callout
@@ -48,17 +55,18 @@
  *   and answer the `navi_command`/`navi_request_open`/`navi_request_close`
  *   events.
  *
- * Content is not built until the first expansion and stays built afterwards —
- * same policy, same `mount` prop as popups (see popup_content_mount.js):
- * `"always"` builds it right away, `"while-opened"` throws it away once the
- * collapse settles (so a closing animation still plays on real content).
+ * Content is not built until the first expansion and stays built afterwards:
+ * a popup's policy, and its code (`usePopupContentMount`, see
+ * popup_content_mount.js) — `"always"` builds it right away, `"while-opened"`
+ * throws it away once the collapse settles, so a closing animation still plays
+ * on real content.
  *
  * The animation is a REVEAL, not a resize: the expandable's own footprint
  * grows/shrinks progressively (the content's grid track interpolates
  * 0fr <-> 1fr — rows for the stacked layout, columns for `layout="column"`),
  * but the content inside is laid out at its final size for the whole movement
- * (its animated dimension is frozen to the measured final value, see the
- * [opened] effect) and the container simply uncovers it. Text never rewraps
+ * (its animated dimension is frozen to the measured final value, see
+ * freezeContentSize) and the container simply uncovers it. Text never rewraps
  * mid-animation. The content is revealed from its UI side (pinned against the
  * UI when it comes first). Once settled open the clipping is released, so a
  * popover or focus ring inside is not cut at the edges.
@@ -72,7 +80,6 @@ import {
 import { createContext } from "preact";
 import {
   useContext,
-  useEffect,
   useId,
   useLayoutEffect,
   useRef,
@@ -84,10 +91,15 @@ import { useAction } from "../../action/use_action.js";
 import { runUnwatched } from "../../action/run_unwatched.js";
 import { useActionStatus } from "../../action/use_action_status.js";
 import { Box } from "../../box/box.jsx";
-import { MOUNT_DEFAULT } from "../../layout/popup_content_mount.js";
+import { useOpenControllerByProps } from "../../layout/open_controller.js";
+import {
+  MOUNT_DEFAULT,
+  usePopupContentMount,
+} from "../../layout/popup_content_mount.js";
 import { whenTransitionSettles } from "../../layout/popup_shared.js";
+import { flushSyncRendering } from "../../utils/flush_sync_rendering.js";
+import { moveFocusTo } from "../../utils/focus/focus_transfer.js";
 import { onNaviCommand } from "../commands.js";
-import { warnSignalCollision } from "../control_value.js";
 import { SummaryMarker } from "../details/summary_marker.jsx";
 
 const css = /* css */ `
@@ -275,6 +287,8 @@ const useExpandableContext = (partName) => {
  *   open?: boolean,
  *   defaultOpen?: boolean,
  *   signal?: import("@preact/signals").Signal<boolean>,
+ *   navState?: boolean | string | { id?: string, type?: "push" | "replace" },
+ *   onClose?: (event: Event) => void,
  *   onToggle?: (event: Event) => void,
  *   action?: Function,
  *   loading?: boolean,
@@ -296,10 +310,19 @@ const useExpandableContext = (partName) => {
  *   `<Expandable.Content>` as children instead.
  * @param open - Drives the state from outside: the expandable opens/closes to
  *   match every change of this prop, but user interaction can still toggle it
- *   in between (same semantics as Dialog/Popover's own `open`).
+ *   in between. Same open controller as Dialog/Popover, so the four props
+ *   below behave exactly as they do there (see open_controller.js).
  * @param defaultOpen - Uncontrolled, mount-only initial state.
  * @param signal - Two-way binding: the expandable follows the signal and
  *   writes back into it whenever it toggles on its own. Excludes `open`.
+ * @param navState - Keeps the open state in the history entry, so a screen
+ *   left and come back to finds its sections as they were: `true` uses the
+ *   expandable's own `id`, a string names the key, `{ id, type }` chooses
+ *   between rewriting the entry ("replace", the default) and pushing one
+ *   ("push"), where closing goes back. Source of truth — excludes
+ *   `open`/`signal`.
+ * @param onClose - Called when the expandable actually closes, whatever asked
+ *   for it. Not preventable.
  * @param onToggle - Listens the "toggle" event dispatched on the root (a
  *   ToggleEvent with newState/oldState where supported). Fires on every actual
  *   state change, never on mount.
@@ -319,15 +342,17 @@ const useExpandableContext = (partName) => {
  *   whatever order they are written in — and an expandable with no
  *   `<Expandable.UI>` at all, driven from `open`/`signal` by a toggle of the
  *   app's own, can still say which way it opens.
- * @param autoFocus - Off by default (the focus stays on the UI part when
- *   opening). `true` moves the focus into the content on open — the
- *   `[autofocus]` element if any, the first focusable otherwise. Whatever the
- *   setting, closing while the focus is inside the content hands it back to
- *   the UI part (it would otherwise be lost to the closed, inert content).
+ * @param autoFocus - Off by default (the keyboard stays where it is when the
+ *   expandable opens). `true` hands the focus to the content through the same
+ *   transfer a popup uses — the ladder picks the target (`navi-autofocus`
+ *   first, see focus_transfer.js) and closing gives the keyboard back where it
+ *   came from. An expandable that mounts already open never takes it. Whatever
+ *   the setting, closing while the focus sits inside the content hands it back
+ *   to the UI part (it would otherwise be lost to the closed, inert content).
  * @param maxContentHeight - Caps the content height; taller content scrolls
  *   inside the expandable instead of growing it.
- * @param mount - When the content is built and thrown away, same three values
- *   as a popup's (see popup_content_mount.js). `"from-first-open"` (the
+ * @param mount - When the content is built and thrown away, a popup's own
+ *   three values and a popup's own code (see popup_content_mount.js). `"from-first-open"` (the
  *   default) builds it on the first expansion and keeps it afterwards.
  *   `"always"` builds it right away; in layout="column" it also gives the
  *   closed expandable its content's height (the content is kept laid out at
@@ -338,12 +363,17 @@ const useExpandableContext = (partName) => {
  */
 export const Expandable = (props) => {
   import.meta.css = css;
+  /* The open props are read from `props` by the open controller below; they
+     are named here only to keep them out of `rest`, and so out of the DOM. */
+  /* eslint-disable no-unused-vars */
   const {
     ref,
     ui,
     open,
     defaultOpen,
     signal,
+    navState,
+    onClose,
     action,
     loading,
     animation = false,
@@ -358,6 +388,7 @@ export const Expandable = (props) => {
     children,
     ...rest
   } = props;
+  /* eslint-enable no-unused-vars */
 
   const defaultRef = useRef();
   const rootRef = ref || defaultRef;
@@ -365,37 +396,36 @@ export const Expandable = (props) => {
   const contentContainerRef = useRef();
   const contentId = useId();
   const isColumn = layout === "column";
-  const mountedAlways = mount === "always";
-  const mountedWhileOpened = mount === "while-opened";
-  const closedContentSized = isColumn && mountedAlways;
-
-  if (signal) {
-    warnSignalCollision(props, "expandable", "open");
-  }
-  // Reading .value during render is what subscribes the expandable to it.
-  const openRequested = signal ? signal.value : open;
-  const [opened, setOpened] = useState(() =>
-    Boolean(openRequested === undefined ? defaultOpen : openRequested),
-  );
-  const openedRef = useRef(opened);
-  openedRef.current = opened;
+  const closedContentSized = isColumn && mount === "always";
 
   const hasAction = Boolean(action);
   const effectiveAction = useAction(action);
   const { loading: actionLoading } = useActionStatus(effectiveAction);
 
-  const [contentMounted, setContentMounted] = useState(
-    () => mountedAlways || opened,
+  // Registered before the open controller, so this cleanup runs before its own
+  // unmount safety net (see useOpenController): a close fired on the way out
+  // still does its bookkeeping, it just has no tree left to move.
+  const unmountedRef = useRef(false);
+  useLayoutEffect(() => {
+    return () => {
+      unmountedRef.current = true;
+    };
+  }, []);
+  const openController = useOpenControllerByProps(props, "expandable");
+  // What the controller decided, mirrored for the render (aria-expanded, the
+  // content's inert, the marker). Written only from `openEffect` and the
+  // cleanup it returns, and synchronously (see flushSyncRendering), so the DOM
+  // is already in the new state when what follows measures it.
+  const [opened, setOpened] = useState(false);
+  // Fully open (or fully closed) and no longer moving — what releases the
+  // clipping, see the CSS.
+  const [settled, setSettled] = useState(true);
+  const contentMounted = usePopupContentMount(
+    openController,
+    contentContainerRef,
+    { mount },
   );
 
-  // Fully open and no longer moving — what allows overflow to become visible
-  // (see the CSS) and what mount="while-opened" waits for before emptying.
-  const [settled, setSettled] = useState(true);
-
-  // Read before the close touches the DOM: flipping the content to inert can
-  // blur what it held, so by effect time the focus to hand back to the UI part
-  // could already be gone.
-  const focusedBeforeCloseRef = useRef(null);
   // The pointer press that is about to toggle can blur the focused field
   // before the click ever fires — so what held the focus has to be remembered
   // at pointerdown time.
@@ -409,12 +439,7 @@ export const Expandable = (props) => {
   // released once the movement settles.
   const freezeContentSize = () => {
     const contentContainer = contentContainerRef.current;
-    const contentElement = contentContainer
-      ? contentContainer.firstElementChild.firstElementChild
-      : null;
-    if (!contentElement) {
-      return;
-    }
+    const contentElement = contentContainer.firstElementChild.firstElementChild;
     const rect = contentElement.getBoundingClientRect();
     if (isColumn) {
       // Both, not just the width: a max-height-capped content otherwise
@@ -426,56 +451,172 @@ export const Expandable = (props) => {
     }
   };
 
-  // Where the last paint left the track, measured before the toggle commits:
-  // 0 when fully closed, partway when reopening during a collapse. Read here
-  // rather than in the effect — a layout read after the commit would also be
-  // the first style recalc of the open state, starting the track transition
-  // right there; once canceled (to measure the final size), a new transition
-  // to the same end value refuses to start and the reveal jumps.
-  const revealStartSizeRef = useRef(null);
+  // A movement still playing: what a new one cancels before starting, so a
+  // reveal interrupted halfway does not have the previous settle release its
+  // frozen size under it.
+  const cancelSettleWatchRef = useRef(null);
+  const cancelSettleWatch = () => {
+    cancelSettleWatchRef.current?.();
+    cancelSettleWatchRef.current = null;
+  };
+  const watchSettle = () => {
+    const contentContainer = contentContainerRef.current;
+    const contentElement = contentContainer.firstElementChild.firstElementChild;
+    cancelSettleWatchRef.current = whenTransitionSettles(
+      contentContainer,
+      () => {
+        cancelSettleWatchRef.current = null;
+        contentElement.style.width = "";
+        contentElement.style.height = "";
+        setSettled(true);
+      },
+    );
+  };
 
-  const toggleTo = (nextOpen) => {
-    nextOpen = Boolean(nextOpen);
-    if (nextOpen === openedRef.current) {
-      return;
-    }
-    openedRef.current = nextOpen;
-    if (nextOpen) {
-      if (animation) {
-        const contentContainer = contentContainerRef.current;
-        revealStartSizeRef.current = contentContainer
-          ? contentContainer.getBoundingClientRect()
-          : null;
-      }
-      setContentMounted(true);
+  // The reveal needs the content at its final size before the track starts
+  // moving, and that size only exists in the open state — the reflow trick
+  // (see instructions.md, CSS section), with transitions suppressed BEFORE the
+  // first layout read: this runs pre-paint, so any earlier read would itself be
+  // the first recalc of the open state and would start the track transition.
+  const armReveal = (startRect) => {
+    const contentContainer = contentContainerRef.current;
+    const contentElement = contentContainer.firstElementChild.firstElementChild;
+    contentContainer.style.transitionProperty = "none";
+    const finalRect = contentElement.getBoundingClientRect();
+    if (isColumn) {
+      contentElement.style.width = `${finalRect.width}px`;
+      contentElement.style.height = `${finalRect.height}px`;
     } else {
+      contentElement.style.height = `${finalRect.height}px`;
+    }
+    // Put the tracks back where the last paint left them and let the
+    // transition play from there. In fr — px does not interpolate with fr.
+    const startFrOf = (startSize, finalSize) =>
+      finalSize > 0 ? startSize / finalSize : 0;
+    if (isColumn) {
+      contentContainer.style.gridTemplateColumns = `${startFrOf(
+        startRect ? startRect.width : 0,
+        finalRect.width,
+      )}fr`;
+      if (!closedContentSized) {
+        // The height opens alongside the width (a closed column expandable is
+        // only as tall as its UI) — unless the closed content already sizes
+        // it, where only the width has anywhere to go.
+        contentContainer.style.gridTemplateRows = `${startFrOf(
+          startRect ? startRect.height : 0,
+          finalRect.height,
+        )}fr`;
+      }
+    } else {
+      contentContainer.style.gridTemplateRows = `${startFrOf(
+        startRect ? startRect.height : 0,
+        finalRect.height,
+      )}fr`;
+    }
+    // That starting frame must be genuinely rendered to transition from it,
+    // and transitions re-enabled BEFORE the flip back to the open value —
+    // same order as popover.jsx's own reflow trick.
+    contentContainer.getBoundingClientRect();
+    contentContainer.style.transitionProperty = "";
+    contentContainer.style.gridTemplateColumns = "";
+    contentContainer.style.gridTemplateRows = "";
+  };
+
+  // What opening LOOKS like here, and how to undo it — the one thing an
+  // expandable owns that a popup does not (see open_controller.js). Reassigned
+  // on every render so it always closes over the latest props.
+  openController.openEffect = (openEvent) => {
+    const contentContainer = contentContainerRef.current;
+    // `silent`: the expandable was already open when the page appeared
+    // (`open`/`defaultOpen` at mount). Nothing changed for anyone to be told
+    // about, nothing was ever shown closed to move away from, and a page must
+    // not have its focus stolen by a section that was simply already open — so
+    // an opening that was never an opening plays nothing, says nothing and
+    // takes nothing. The action it carries still runs: its content is due.
+    const silent = Boolean(openEvent.detail.silent);
+    const revealing = animation && !silent && Boolean(contentContainer);
+    // Where the last paint left the track — 0 when fully closed, partway when
+    // reopening during a collapse — read while the DOM still says closed.
+    const startRect = revealing
+      ? contentContainer.getBoundingClientRect()
+      : null;
+    cancelSettleWatch();
+    flushSyncRendering(() => {
+      setOpened(true);
+      setSettled(!revealing);
+    });
+    if (hasAction) {
+      runUnwatched(() => effectiveAction.run());
+    }
+    // autoFocus off (the default): the keyboard stays where it is, and with no
+    // transfer there is nothing to restore on close either.
+    const restoreFocus =
+      autoFocus && !silent && contentContainer
+        ? openController.transferFocusOnOpen(contentContainer)
+        : null;
+    if (revealing) {
+      armReveal(startRect);
+      watchSettle();
+    }
+    if (!silent) {
+      rootRef.current.dispatchEvent(createToggleEvent(true));
+    }
+
+    return (closeEvent) => {
+      if (unmountedRef.current) {
+        return;
+      }
+      const contentContainerAtClose = contentContainerRef.current;
+      // Read while the content still holds what it holds: the close is about
+      // to make it inert, which blurs whatever is inside it.
       const activeElement = document.activeElement;
-      focusedBeforeCloseRef.current =
+      const focusedBeforeClose =
         !activeElement || activeElement === document.body
           ? focusedAtPointerDownRef.current
           : activeElement;
-      if (animation) {
-        // Now, while the content is still fully laid out — by effect time the
-        // track is already heading to 0 (the opening case measures in the
-        // effect instead, where the just-mounted content exists).
-        freezeContentSize();
-      }
-    }
-    focusedAtPointerDownRef.current = null;
-    setOpened(nextOpen);
-    // Flipped here, before the closing/opening commit, so effects of that very
-    // commit already see the movement as started — mount="while-opened" must not
-    // read a stale "settled" and empty the content under a closing animation.
-    setSettled(!animation);
-    if (signal) {
-      signal.value = nextOpen;
-    }
-    if (hasAction) {
-      if (nextOpen) {
-        runUnwatched(() => effectiveAction.run());
-      } else {
+      focusedAtPointerDownRef.current = null;
+      if (hasAction) {
         effectiveAction.abort();
       }
+      cancelSettleWatch();
+      const collapsing = animation && Boolean(contentContainerAtClose);
+      if (collapsing) {
+        // Now, while the content is still fully laid out — the collapsing
+        // track uncovers a content frozen at that size.
+        freezeContentSize();
+      }
+      flushSyncRendering(() => {
+        setOpened(false);
+        setSettled(!collapsing);
+      });
+      if (restoreFocus) {
+        restoreFocus(closeEvent);
+      } else if (
+        focusedBeforeClose &&
+        contentContainerAtClose &&
+        contentContainerAtClose.contains(focusedBeforeClose)
+      ) {
+        const uiElement = uiRef.current;
+        if (uiElement) {
+          moveFocusTo(uiElement);
+        } else {
+          // Nothing of the expandable's own can hold the keyboard (no UI
+          // part): the focus only has to leave the content becoming inert.
+          focusedBeforeClose.blur();
+        }
+      }
+      if (collapsing) {
+        watchSettle();
+      }
+      rootRef.current.dispatchEvent(createToggleEvent(false));
+    };
+  };
+
+  const toggle = (event) => {
+    if (openController.opened) {
+      openController.requestClose(event, { isCancel: true });
+    } else {
+      openController.open(event);
     }
   };
 
@@ -484,147 +625,10 @@ export const Expandable = (props) => {
     if (!contentContainer) {
       return null;
     }
-    const autofocusElement = contentContainer.querySelector("[autofocus]");
-    if (autofocusElement) {
-      return autofocusElement;
-    }
     return findAfter(contentContainer, elementIsFocusable, {
       root: contentContainer,
     });
   };
-
-  // Follow `open`/`signal` changes after mount (the initial value is already
-  // in the state above). A self-initiated toggle that wrote the signal lands
-  // here too and no-ops, since the state already matches.
-  const isFirstOpenRequestedRunRef = useRef(true);
-  useLayoutEffect(() => {
-    if (isFirstOpenRequestedRunRef.current) {
-      isFirstOpenRequestedRunRef.current = false;
-      return;
-    }
-    if (openRequested === undefined) {
-      return;
-    }
-    toggleTo(openRequested);
-  }, [openRequested]);
-
-  // A state change: tell the world (the "toggle" event) and take the keyboard
-  // back if the closing content held it. Skipped on mount — nothing changed,
-  // so no event exists (and a page must not have its focus stolen by an
-  // expandable that was simply already open).
-  const isFirstOpenedRunRef = useRef(true);
-  useLayoutEffect(() => {
-    if (isFirstOpenedRunRef.current) {
-      isFirstOpenedRunRef.current = false;
-      return;
-    }
-    const root = rootRef.current;
-    root.dispatchEvent(createToggleEvent(opened));
-    if (opened) {
-      return;
-    }
-    const focusedBeforeClose = focusedBeforeCloseRef.current;
-    focusedBeforeCloseRef.current = null;
-    if (
-      focusedBeforeClose &&
-      contentContainerRef.current &&
-      contentContainerRef.current.contains(focusedBeforeClose)
-    ) {
-      const uiElement = uiRef.current;
-      if (uiElement) {
-        uiElement.focus();
-      } else {
-        // Nothing of the expandable's own can hold the keyboard (no UI part):
-        // the focus only has to leave the content becoming inert.
-        focusedBeforeClose.blur();
-      }
-    }
-  }, [opened]);
-
-  // Everything a state change owes the content: the focus it may take, and the
-  // reveal, which measures it. Ran by <Expandable.Content> from its own layout
-  // effect — the commit where the content really is in the DOM — and returns
-  // that effect's cleanup.
-  const applyOpenedToContent = () => {
-    if (opened && autoFocus) {
-      const firstFocusableElement = findFirstFocusableInContent();
-      if (firstFocusableElement) {
-        firstFocusableElement.focus();
-      }
-    }
-    if (!animation) {
-      return undefined;
-    }
-    const contentContainer = contentContainerRef.current;
-    const contentElement = contentContainer.firstElementChild.firstElementChild;
-    if (opened) {
-      // The reveal needs the content at its final size before the track
-      // starts moving, and the final size only exists in the open state —
-      // the reflow trick (see instructions.md, CSS section), with transitions
-      // suppressed BEFORE the first layout read: this runs pre-paint, so any
-      // earlier read would itself be the first recalc of the open state and
-      // would start the track transition (see revealStartSizeRef).
-      contentContainer.style.transitionProperty = "none";
-      const finalRect = contentElement.getBoundingClientRect();
-      if (isColumn) {
-        contentElement.style.width = `${finalRect.width}px`;
-        contentElement.style.height = `${finalRect.height}px`;
-      } else {
-        contentElement.style.height = `${finalRect.height}px`;
-      }
-      // Put the tracks back where the last paint left them and let the
-      // transition play from there. In fr — px does not interpolate with fr.
-      const startRect = revealStartSizeRef.current;
-      revealStartSizeRef.current = null;
-      const startFrOf = (startSize, finalSize) =>
-        finalSize > 0 ? startSize / finalSize : 0;
-      if (isColumn) {
-        contentContainer.style.gridTemplateColumns = `${startFrOf(
-          startRect ? startRect.width : 0,
-          finalRect.width,
-        )}fr`;
-        if (!closedContentSized) {
-          // The height opens alongside the width (a closed column expandable
-          // is only as tall as its UI) — unless the closed content already
-          // sizes it, where only the width has anywhere to go.
-          contentContainer.style.gridTemplateRows = `${startFrOf(
-            startRect ? startRect.height : 0,
-            finalRect.height,
-          )}fr`;
-        }
-      } else {
-        contentContainer.style.gridTemplateRows = `${startFrOf(
-          startRect ? startRect.height : 0,
-          finalRect.height,
-        )}fr`;
-      }
-      // That starting frame must be genuinely rendered to transition from it,
-      // and transitions re-enabled BEFORE the flip back to the open value —
-      // same order as popover.jsx's own reflow trick.
-      contentContainer.getBoundingClientRect();
-      contentContainer.style.transitionProperty = "";
-      contentContainer.style.gridTemplateColumns = "";
-      contentContainer.style.gridTemplateRows = "";
-    }
-    // (closing froze the content in toggleTo, while it was still laid out)
-    const cancel = whenTransitionSettles(contentContainer, () => {
-      contentElement.style.width = "";
-      contentElement.style.height = "";
-      setSettled(true);
-    });
-    return cancel;
-  };
-
-  useLayoutEffect(() => {
-    if (settled && !opened && mountedWhileOpened) {
-      setContentMounted(false);
-    }
-  }, [settled, opened, mountedWhileOpened]);
-  useLayoutEffect(() => {
-    if (mountedAlways) {
-      setContentMounted(true);
-    }
-  }, [mountedAlways]);
 
   // closedContentSized (column + mount="always"): the closed content sizes
   // the height (see the CSS), which is only right if it lies at its OPEN
@@ -649,13 +653,6 @@ export const Expandable = (props) => {
     contentContainer.getBoundingClientRect();
     contentContainer.style.transitionProperty = "";
   }, [closedContentSized, opened, settled, contentMounted]);
-
-  // Mounted already open: the content is visible, its data is due.
-  useEffect(() => {
-    if (openedRef.current && hasAction) {
-      runUnwatched(() => effectiveAction.run());
-    }
-  }, []);
 
   const onRootKeyDown = (keyboardEvent) => {
     if (!arrowKeyShortcuts) {
@@ -683,9 +680,9 @@ export const Expandable = (props) => {
       if (document.activeElement !== uiRef.current) {
         return;
       }
-      if (!openedRef.current) {
+      if (!openController.opened) {
         keyboardEvent.preventDefault();
-        toggleTo(true);
+        openController.open(keyboardEvent);
         return;
       }
       const firstFocusableElementInContent = findFirstFocusableInContent();
@@ -693,20 +690,19 @@ export const Expandable = (props) => {
         return;
       }
       keyboardEvent.preventDefault();
-      firstFocusableElementInContent.focus();
+      moveFocusTo(firstFocusableElementInContent);
       return;
     }
     if (key === closeKeyShortcut) {
-      if (!openedRef.current) {
+      if (!openController.opened) {
         return;
       }
       const uiElement = uiRef.current;
+      keyboardEvent.preventDefault();
       if (document.activeElement === uiElement) {
-        keyboardEvent.preventDefault();
-        toggleTo(false);
+        openController.requestClose(keyboardEvent, { isCancel: true });
       } else {
-        keyboardEvent.preventDefault();
-        uiElement.focus();
+        moveFocusTo(uiElement);
       }
     }
   };
@@ -728,7 +724,7 @@ export const Expandable = (props) => {
         return;
       }
     }
-    toggleTo(!openedRef.current);
+    toggle(clickEvent);
   };
 
   // Space/Enter on the UI part itself (role button) — a key pressed on a
@@ -743,7 +739,7 @@ export const Expandable = (props) => {
     const { key } = keyboardEvent;
     if (key === " " || key === "Enter") {
       keyboardEvent.preventDefault();
-      toggleTo(!openedRef.current);
+      toggle(keyboardEvent);
     }
   };
 
@@ -768,8 +764,7 @@ export const Expandable = (props) => {
     hasAction,
     effectiveAction,
     markerDirection,
-    applyOpenedToContent,
-    toggleTo,
+    openController,
     onUIClick,
     onUIPointerDown,
     onUIKeyDown,
@@ -811,11 +806,17 @@ export const Expandable = (props) => {
       }}
       onnavi_request_open={(e) => {
         rest.onnavi_request_open?.(e);
-        toggleTo(true);
+        openController.open(e);
       }}
       onnavi_request_close={(e) => {
         rest.onnavi_request_close?.(e);
-        toggleTo(false);
+        const closing = openController.requestClose(e, {
+          isCancel: e.detail?.isCancel,
+        });
+        if (!closing) {
+          // Said back to whoever asked: --navi-close:all stops climbing here.
+          e.preventDefault();
+        }
       }}
       onKeyDown={(e) => {
         rest.onKeyDown?.(e);
@@ -859,7 +860,7 @@ const ExpandableUI = ({ marker, children, ...rest }) => {
     opened,
     loading,
     markerDirection,
-    toggleTo,
+    openController,
     onUIClick,
     onUIPointerDown,
     onUIKeyDown,
@@ -886,11 +887,11 @@ const ExpandableUI = ({ marker, children, ...rest }) => {
         onnavi_command: (e) => {
           onNaviCommand(e);
         },
-        onnavi_request_open: () => {
-          toggleTo(true);
+        onnavi_request_open: (e) => {
+          openController.open(e);
         },
-        onnavi_request_close: () => {
-          toggleTo(false);
+        onnavi_request_close: (e) => {
+          openController.requestClose(e, { isCancel: e.detail?.isCancel });
         },
       }}
       {...rest}
@@ -928,24 +929,9 @@ const ExpandableContent = ({ children, ...rest }) => {
     contentMounted,
     hasAction,
     effectiveAction,
-    applyOpenedToContent,
     contentContainerRef,
     contentId,
   } = useExpandableContext("Content");
-
-  // The focus move and the reveal are the root's, but they measure the content
-  // and can only run once it is in the DOM — which is this commit, the one
-  // that rendered it. Skipped on mount: nothing has changed yet, and an
-  // expandable that was simply already open must neither animate nor take the
-  // focus.
-  const isFirstOpenedRunRef = useRef(true);
-  useLayoutEffect(() => {
-    if (isFirstOpenedRunRef.current) {
-      isFirstOpenedRunRef.current = false;
-      return undefined;
-    }
-    return applyOpenedToContent();
-  }, [opened]);
 
   let content = children;
   if (hasAction) {

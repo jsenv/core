@@ -769,10 +769,10 @@ const usePopoverProps = (props) => {
   // the latest prop. Called by openController.open() before the content is
   // built: what this popup opens ON is known before anything reads it.
   openController.onOpen = onOpen || null;
-  const children = usePopupContentMount(openController, props.ref, {
-    children: childrenProp,
+  const contentMounted = usePopupContentMount(openController, props.ref, {
     mount,
   });
+  const children = contentMounted ? childrenProp : null;
   const isTopLayer = layer === "top";
   const ref = props.ref;
   const backdropRef = useRef();
