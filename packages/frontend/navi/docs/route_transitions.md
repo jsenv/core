@@ -34,6 +34,37 @@ of a bottom bar, side by side, neither before the other — a cut is the honest
 rendering of that fact. Resist the urge to fill every navigation with movement;
 declare the relations that exist and let the rest cut.
 
+## A page opened from anywhere
+
+One shape of page has no pair to write. Its door is in the fixed furniture — a
+gear in the top bar, a "+" in the tab bar — so it is opened from every screen of
+the app and closed back onto whichever one the reader was on. The relation is
+real and it is a single sentence ("the settings come down over the screen you
+were on, and go back up"), but there are twenty-five `from` pages and not one of
+them is the point.
+
+Leave the `from` out:
+
+```js
+defineRouteTransition(null, SETTINGS_PAGE, "cover-top");
+```
+
+Arriving there plays forward from wherever, leaving plays back to wherever. The
+back half is what this exists for: closing such a page is almost always a back —
+the close button running `--navi-nav-back`, the browser's back button, a swipe —
+and a traversal carries no link and therefore no request, so `routeTransition` on
+the way in has no counterpart on the way out. Written on the destination, the way
+out is found the same way the way in was, with nothing to remember per history
+entry.
+
+It is tried last, after every written pair, so a pair naming the same destination
+still owns its crossing — the map, where it was drawn, is more precise than "from
+wherever". And it is not `defineRouteDefaultTransition`: a default is about every
+navigation nothing was said about, this is about ONE destination whose door
+happens to be everywhere. Write it for a page whose door really is furniture; a
+page reached from a screen has that screen to be paired with, and the pair says
+more.
+
 ## Choosing a movement
 
 - **`slide-x`** — going INTO something: a list item opened, a card followed, a
@@ -42,10 +73,13 @@ declare the relations that exist and let the rest cut.
   taught.
 - **`slide-y`** — the same relation on a vertical arrangement, when the layout
   genuinely reads as a column.
-- **`cover-x` / `cover-y`** — a page that INTERRUPTS rather than continues:
-  settings, a composer, anything modal-like that one returns from to find the
-  page beneath unchanged. The covered page holding still is the point — it
-  promises "you are not leaving, this is on top".
+- **`cover-right` / `cover-left` / `cover-bottom` / `cover-top`** — a page that
+  INTERRUPTS rather than continues: settings, a composer, anything modal-like
+  that one returns from to find the page beneath unchanged. The covered page
+  holding still is the point — it promises "you are not leaving, this is on
+  top". The edge named is the one the page comes IN from, and the one to name is
+  where its door is: a composer opened from a bottom bar covers from the bottom,
+  settings pulled down from a top bar cover from the top.
 - **`zoom`** — a detail brought closer: a photo, a card expanded into a page.
 - **`cross-fade`** — a soft change with no spatial claim. Use it where a cut
   feels harsh but no direction would be true.
@@ -284,7 +318,7 @@ const ALERT_CREATE_ROUTE = route("/me/alerts/create");
 const ALERT_DETAIL_ROUTE = route("/me/alerts/:alertId"); // "create" is an alertId
 
 defineRouteTransition(ALERTS_ROUTE, ALERT_DETAIL_ROUTE, "slide-x");
-defineRouteTransition(ALERTS_ROUTE, ALERT_CREATE_ROUTE, "cover-y");
+defineRouteTransition(ALERTS_ROUTE, ALERT_CREATE_ROUTE, "cover-bottom");
 ```
 
 On `/me/alerts/create` both detail and create are current; the page mentioned

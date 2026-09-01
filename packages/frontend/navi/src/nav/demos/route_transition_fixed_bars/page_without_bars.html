@@ -109,7 +109,7 @@
       const SETTINGS_ROUTE = route("/reglages");
       setupRoutes([ALERT_CREATE_ROUTE, ALERTS_ROUTE, SETTINGS_ROUTE]);
 
-      defineRouteTransition(ALERTS_ROUTE, ALERT_CREATE_ROUTE, "cover-y");
+      defineRouteTransition(ALERTS_ROUTE, ALERT_CREATE_ROUTE, "cover-bottom");
       defineRouteTransition(ALERTS_ROUTE, SETTINGS_ROUTE, "slide-x");
 
       const LongPage = ({ title, color, rows, links }) => (

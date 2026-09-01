@@ -2,22 +2,33 @@
  * Expandable: an in-flow disclosure — a UI part that reveals a content part.
  * It covers the same ground as <Details> with structural differences:
  *
- * - the two parts are explicit and free to order/orient:
+ * - the two parts are explicit, and are Boxes:
  *
  *     <Expandable>
  *       <Expandable.UI>See more</Expandable.UI>
  *       <Expandable.Content>…</Expandable.Content>
  *     </Expandable>
  *
- *   Content after UI expands below (the <details> shape), Content before UI
- *   expands above; `layout="column"` puts the parts side by side (sharing
- *   their height), the content then expanding horizontally. The marker
- *   chevron follows: it points right while closed and toward where the
- *   content went while open (down, up, or left). The common shape has a
- *   shorthand: `ui` prop + children as content.
+ *   `openDirection` decides where the content is revealed — down (the
+ *   <details> shape) or up, left or right in `layout="column"`, where the
+ *   parts sit side by side sharing their height. It places the parts too
+ *   (CSS `order`), so an expandable revealing upward can still be written UI
+ *   first, and an expandable with no UI part at all — driven from
+ *   `open`/`signal` by a toggle of the app's own — can say which way it
+ *   opens. The marker chevron follows: it points right while closed and
+ *   toward where the content went while open (down, up, or left). The common
+ *   shape has a shorthand: `ui` prop + children as content.
+ *
  * - the UI part is the focusable toggle itself (role button, Space/Enter,
  *   arrow keys) and accepts any markup: controls inside it keep their own
  *   behavior, the marker is purely decorative.
+ *
+ * The root never looks at its children: which parts are there, in which order,
+ * is none of its business. It publishes a context and the parts take what they
+ * need from it — including WHEN to arm the reveal, which <Expandable.Content>
+ * asks for from its own layout effect. That is what lets a part re-render
+ * later than the root (a memoized subtree does exactly that): the measurement
+ * runs in the commit that put the content in the DOM, whichever one that is.
  *
  * Reach for it knowingly: expanding in-flow SHIFTS the layout — everything
  * below (or beside) moves when it opens. A Popover, Dialog, Picker or Callout
@@ -58,7 +69,7 @@ import {
   getKeyboardEventDefaultAction,
   stringifyStyle,
 } from "@jsenv/dom";
-import { cloneElement, createContext, toChildArray } from "preact";
+import { createContext } from "preact";
 import {
   useContext,
   useEffect,
@@ -85,6 +96,18 @@ const css = /* css */ `
     display: flex;
     flex-shrink: 0;
     flex-direction: column;
+
+    /* Where the content is revealed places the parts, whatever order they are
+       written in: an app is free to keep the UI part first in the DOM (where
+       the tab order comes from) and reveal the content above it. */
+    &[data-open-direction="down"] > .navi_expandable_content_container,
+    &[data-open-direction="right"] > .navi_expandable_content_container {
+      order: 1;
+    }
+    &[data-open-direction="up"] > .navi_expandable_ui,
+    &[data-open-direction="left"] > .navi_expandable_ui {
+      order: 1;
+    }
 
     > .navi_expandable_ui {
       display: flex;
@@ -139,15 +162,13 @@ const css = /* css */ `
     &[aria-expanded="true"] > .navi_expandable_content_container {
       grid-template-rows: 1fr;
     }
-    /* Content before the UI: revealed against the UI side — the edge touching
-       the UI stays, the far edge is what gets uncovered. Said at BOTH levels:
-       a transitioning fr resolves once for the container's own size and once
-       more inside it (the row is fraction² high), so the row must be glued to
-       the container's UI edge and the oversized frozen content to the row's —
-       anchoring only the inner one leaves the content following the drifting
-       fraction² row. */
-    &[data-content-first]:not([data-layout="column"])
-      > .navi_expandable_content_container {
+    /* Revealed upward: the bottom edge stays and the top is what gets
+       uncovered. Said at BOTH levels: a transitioning fr resolves once for the
+       container's own size and once more inside it (the row is fraction²
+       high), so the row must be glued to the container's bottom edge and the
+       oversized frozen content to the row's — anchoring only the inner one
+       leaves the content following the drifting fraction² row. */
+    &[data-open-direction="up"] > .navi_expandable_content_container {
       align-content: end;
       clip-path: inset(0 -9999px -9999px -9999px);
 
@@ -194,7 +215,7 @@ const css = /* css */ `
       &[data-closed-content-sized] > .navi_expandable_content_container {
         grid-template-rows: none;
       }
-      &[data-content-first] > .navi_expandable_content_container {
+      &[data-open-direction="left"] > .navi_expandable_content_container {
         justify-content: end;
         clip-path: inset(-9999px -9999px 0 0);
 
@@ -259,6 +280,7 @@ const useExpandableContext = (partName) => {
  *   loading?: boolean,
  *   animation?: boolean,
  *   layout?: "row" | "column",
+ *   openDirection?: "down" | "up" | "right" | "left",
  *   autoFocus?: boolean,
  *   maxContentHeight?: string | number,
  *   mount?: "always" | "from-first-open" | "while-opened",
@@ -291,6 +313,12 @@ const useExpandableContext = (partName) => {
  * @param layout - `"row"` (default): the parts stack, the content expands
  *   vertically. `"column"`: the parts sit side by side sharing their height,
  *   the content expands horizontally next to the UI part.
+ * @param openDirection - Where the content is revealed: `"down"` (default) or
+ *   `"up"` in the stacked layout, `"right"` (default) or `"left"` in
+ *   `layout="column"`. It also places the parts, so the direction holds
+ *   whatever order they are written in — and an expandable with no
+ *   `<Expandable.UI>` at all, driven from `open`/`signal` by a toggle of the
+ *   app's own, can still say which way it opens.
  * @param autoFocus - Off by default (the focus stays on the UI part when
  *   opening). `true` moves the focus into the content on open — the
  *   `[autofocus]` element if any, the first focusable otherwise. Whatever the
@@ -320,6 +348,7 @@ export const Expandable = (props) => {
     loading,
     animation = false,
     layout,
+    openDirection,
     autoFocus,
     maxContentHeight,
     mount = MOUNT_DEFAULT,
@@ -479,34 +508,48 @@ export const Expandable = (props) => {
     toggleTo(openRequested);
   }, [openRequested]);
 
-  // A state change: tell the world (the "toggle" event), move the focus, and
-  // set up the reveal. Skipped on mount — nothing changed, so neither the
-  // event nor a transition exists (and a page must not have its focus stolen
-  // by an expandable that was simply already open).
+  // A state change: tell the world (the "toggle" event) and take the keyboard
+  // back if the closing content held it. Skipped on mount — nothing changed,
+  // so no event exists (and a page must not have its focus stolen by an
+  // expandable that was simply already open).
   const isFirstOpenedRunRef = useRef(true);
   useLayoutEffect(() => {
     if (isFirstOpenedRunRef.current) {
       isFirstOpenedRunRef.current = false;
-      return undefined;
+      return;
     }
     const root = rootRef.current;
     root.dispatchEvent(createToggleEvent(opened));
     if (opened) {
-      if (autoFocus) {
-        const firstFocusableElement = findFirstFocusableInContent();
-        if (firstFocusableElement) {
-          firstFocusableElement.focus();
-        }
+      return;
+    }
+    const focusedBeforeClose = focusedBeforeCloseRef.current;
+    focusedBeforeCloseRef.current = null;
+    if (
+      focusedBeforeClose &&
+      contentContainerRef.current &&
+      contentContainerRef.current.contains(focusedBeforeClose)
+    ) {
+      const uiElement = uiRef.current;
+      if (uiElement) {
+        uiElement.focus();
+      } else {
+        // Nothing of the expandable's own can hold the keyboard (no UI part):
+        // the focus only has to leave the content becoming inert.
+        focusedBeforeClose.blur();
       }
-    } else {
-      const focusedBeforeClose = focusedBeforeCloseRef.current;
-      focusedBeforeCloseRef.current = null;
-      if (
-        focusedBeforeClose &&
-        contentContainerRef.current &&
-        contentContainerRef.current.contains(focusedBeforeClose)
-      ) {
-        uiRef.current.focus();
+    }
+  }, [opened]);
+
+  // Everything a state change owes the content: the focus it may take, and the
+  // reveal, which measures it. Ran by <Expandable.Content> from its own layout
+  // effect — the commit where the content really is in the DOM — and returns
+  // that effect's cleanup.
+  const applyOpenedToContent = () => {
+    if (opened && autoFocus) {
+      const firstFocusableElement = findFirstFocusableInContent();
+      if (firstFocusableElement) {
+        firstFocusableElement.focus();
       }
     }
     if (!animation) {
@@ -518,9 +561,9 @@ export const Expandable = (props) => {
       // The reveal needs the content at its final size before the track
       // starts moving, and the final size only exists in the open state —
       // the reflow trick (see instructions.md, CSS section), with transitions
-      // suppressed BEFORE the first layout read: this effect runs pre-paint,
-      // so any earlier read would itself be the first recalc of the open
-      // state and would start the track transition (see revealStartSizeRef).
+      // suppressed BEFORE the first layout read: this runs pre-paint, so any
+      // earlier read would itself be the first recalc of the open state and
+      // would start the track transition (see revealStartSizeRef).
       contentContainer.style.transitionProperty = "none";
       const finalRect = contentElement.getBoundingClientRect();
       if (isColumn) {
@@ -570,7 +613,7 @@ export const Expandable = (props) => {
       setSettled(true);
     });
     return cancel;
-  }, [opened]);
+  };
 
   useLayoutEffect(() => {
     if (settled && !opened && mountedWhileOpened) {
@@ -616,6 +659,12 @@ export const Expandable = (props) => {
 
   const onRootKeyDown = (keyboardEvent) => {
     if (!arrowKeyShortcuts) {
+      return;
+    }
+    // The shortcuts all speak about the UI part — opening from it, stepping
+    // into the content, stepping back to it. Without one the expandable is
+    // driven from outside and the keys belong to whatever drives it.
+    if (!uiRef.current) {
       return;
     }
     // A nested expandable (deeper, so heard first) already answered this key.
@@ -698,19 +747,19 @@ export const Expandable = (props) => {
     }
   };
 
-  // Where the content went, so the marker can point at it while open (closed
-  // always points right): below by default, above when the content part comes
-  // first, beside for layout="column" (the chevron then points back toward
-  // the UI: left).
-  const childArray = toChildArray(children);
-  const firstPart = childArray.find(
-    (child) =>
-      child &&
-      (child.type === ExpandableUI || child.type === ExpandableContent),
-  );
-  const hasParts = Boolean(firstPart);
-  const contentFirst = hasParts && firstPart.type === ExpandableContent;
-  const openDirection = isColumn ? "left" : contentFirst ? "up" : "down";
+  // Only the two directions the layout has room for: a column layout reveals
+  // sideways, a stacked one vertically.
+  const revealDirection = isColumn
+    ? openDirection === "left"
+      ? "left"
+      : "right"
+    : openDirection === "up"
+      ? "up"
+      : "down";
+  // While open the marker points at the content, while closed always right.
+  // In a column layout it points back toward the UI part whichever side the
+  // content took, "right" being the closed direction already.
+  const markerDirection = isColumn ? "left" : revealDirection;
 
   const expandableContextValue = {
     opened,
@@ -718,7 +767,8 @@ export const Expandable = (props) => {
     contentMounted,
     hasAction,
     effectiveAction,
-    openDirection,
+    markerDirection,
+    applyOpenedToContent,
     toggleTo,
     onUIClick,
     onUIPointerDown,
@@ -728,23 +778,17 @@ export const Expandable = (props) => {
     contentId,
   };
 
-  // Explicit parts win; the `ui` prop + children is the shorthand for the
-  // common shape (UI above, content below). Parts are cloned on every render:
-  // reference-stable children would be bailed out of the commit, leaving
-  // their context subscription to re-render them asynchronously — after the
-  // [opened] effect above, which measures the content they render.
-  const body = hasParts ? (
-    childArray.map((child) =>
-      child && (child.type === ExpandableUI || child.type === ExpandableContent)
-        ? cloneElement(child)
-        : child,
-    )
-  ) : (
-    <>
-      <ExpandableUI>{ui}</ExpandableUI>
-      <ExpandableContent>{children}</ExpandableContent>
-    </>
-  );
+  // The `ui` prop is the shorthand for the common shape: it names the UI part
+  // and children are the content. Without it the children ARE the parts.
+  const body =
+    ui === undefined ? (
+      children
+    ) : (
+      <>
+        <ExpandableUI>{ui}</ExpandableUI>
+        <ExpandableContent>{children}</ExpandableContent>
+      </>
+    );
 
   return (
     <Box
@@ -752,7 +796,7 @@ export const Expandable = (props) => {
       baseClassName="navi_expandable"
       aria-expanded={opened ? "true" : "false"}
       data-layout={isColumn ? "column" : undefined}
-      data-content-first={contentFirst ? "" : undefined}
+      data-open-direction={revealDirection}
       data-animation={animation ? "" : undefined}
       data-settled={settled ? "" : undefined}
       data-content-scrolls={maxContentHeight === undefined ? undefined : ""}
@@ -800,19 +844,21 @@ export const Expandable = (props) => {
  * The always-visible part that reveals the content: the focusable toggle
  * itself (role button — click, Space/Enter, arrow keys), holding the marker
  * plus whatever it is given — any markup, a function of `{ open }` included.
- * Controls inside it keep their own behavior and do not toggle. Its position
- * among the parts decides where the content goes (before the content: content
- * below/right; after it: content above/left).
+ * Controls inside it keep their own behavior and do not toggle. A Box, so it
+ * takes the layout and style props every Box takes.
  *
  * @type {import("preact").FunctionComponent<{
+ *   marker?: false | import("preact").ComponentChildren,
  *   children?: import("preact").ComponentChildren | ((state: { open: boolean }) => import("preact").ComponentChildren),
  * }>}
+ * @param marker - The chevron drawn before the label. `false` removes it (a UI
+ *   part that is already an icon has no room for one); any node replaces it.
  */
-const ExpandableUI = ({ children, ...rest }) => {
+const ExpandableUI = ({ marker, children, ...rest }) => {
   const {
     opened,
     loading,
-    openDirection,
+    markerDirection,
     toggleTo,
     onUIClick,
     onUIPointerDown,
@@ -821,9 +867,9 @@ const ExpandableUI = ({ children, ...rest }) => {
     contentId,
   } = useExpandableContext("UI");
   return (
-    <div
+    <Box
       ref={uiRef}
-      className="navi_expandable_ui"
+      baseClassName="navi_expandable_ui"
       role="button"
       tabIndex={0}
       aria-expanded={opened}
@@ -849,23 +895,30 @@ const ExpandableUI = ({ children, ...rest }) => {
       }}
       {...rest}
     >
-      <span className="navi_expandable_marker" aria-hidden="true">
-        <SummaryMarker
-          open={opened}
-          loading={loading}
-          openDirection={openDirection}
-        />
-      </span>
+      {marker === false ? null : (
+        <span className="navi_expandable_marker" aria-hidden="true">
+          {marker === undefined ? (
+            <SummaryMarker
+              open={opened}
+              loading={loading}
+              openDirection={markerDirection}
+            />
+          ) : (
+            marker
+          )}
+        </span>
+      )}
       <div className="navi_expandable_ui_label">
         {typeof children === "function" ? children({ open: opened }) : children}
       </div>
-    </div>
+    </Box>
   );
 };
 
 /**
- * The revealed part. With an `action` on the Expandable, children may be a
- * function `(data) => ui` or a branches object — see ActionRenderer.
+ * The revealed part, a Box like the UI part. With an `action` on the
+ * Expandable, children may be a function `(data) => ui` or a branches object —
+ * see ActionRenderer.
  *
  * @type {import("preact").FunctionComponent<{}>}
  */
@@ -875,9 +928,25 @@ const ExpandableContent = ({ children, ...rest }) => {
     contentMounted,
     hasAction,
     effectiveAction,
+    applyOpenedToContent,
     contentContainerRef,
     contentId,
   } = useExpandableContext("Content");
+
+  // The focus move and the reveal are the root's, but they measure the content
+  // and can only run once it is in the DOM — which is this commit, the one
+  // that rendered it. Skipped on mount: nothing has changed yet, and an
+  // expandable that was simply already open must neither animate nor take the
+  // focus.
+  const isFirstOpenedRunRef = useRef(true);
+  useLayoutEffect(() => {
+    if (isFirstOpenedRunRef.current) {
+      isFirstOpenedRunRef.current = false;
+      return undefined;
+    }
+    return applyOpenedToContent();
+  }, [opened]);
+
   let content = children;
   if (hasAction) {
     content = (
@@ -885,10 +954,10 @@ const ExpandableContent = ({ children, ...rest }) => {
     );
   }
   return (
-    <div
+    <Box
       ref={contentContainerRef}
       id={contentId}
-      className="navi_expandable_content_container"
+      baseClassName="navi_expandable_content_container"
       inert={opened ? undefined : true}
       {...rest}
     >
@@ -897,7 +966,7 @@ const ExpandableContent = ({ children, ...rest }) => {
           {contentMounted ? content : null}
         </div>
       </div>
-    </div>
+    </Box>
   );
 };
 

@@ -56,6 +56,11 @@ const css = /* css */ `
       --link-cursor: pointer;
       --link-outline-width: 2px;
 
+      /* How far to each side the glyphs of a bold-by-paint label are drawn
+         (see currentEffectBold): the weight of the effect, and the one thing
+         about it a caller may want to dial. */
+      --link-current-effect-bold-thickness: 0.02em;
+
       --link-current-indicator-size: 2px;
       --link-current-indicator-spacing: 0;
       --link-current-indicator-color: var(--navi-link-current-indicator-color);
@@ -219,7 +224,21 @@ const css = /* css */ `
         --x-link-cursor: pointer;
         --x-link-color: var(--link-color-current); /* override visited */
       }
-      &[data-current-effect-bold] {
+      /* Two ways to become bold without the label changing width, and the
+         attribute says which one was asked for.
+         Painted: the glyphs are drawn a hair to each side of themselves rather
+         than set in the bold face, so there is nothing to hold space for and
+         the label stays ONE piece of text — which is what a test, a screen
+         reader and textContent read to know where one is.
+         Held: the real bold face, its width reserved by an invisible copy of
+         the label rendered bold underneath (holdSpaceForStyle in text.jsx).
+         True bold, at the price of the label appearing twice in textContent. */
+      &[data-current-effect-bold="text-shadow"] {
+        text-shadow:
+          var(--link-current-effect-bold-thickness) 0 0 currentColor,
+          calc(-1 * var(--link-current-effect-bold-thickness)) 0 0 currentColor;
+      }
+      &[data-current-effect-bold="hold-space"] {
         font-weight: bold;
       }
       .navi_current_indicator {
@@ -463,8 +482,17 @@ Object.assign(PSEUDO_CLASSES, {
  *   `"tab"` renders a tab-like affordance.
  * @param {boolean|"top"|"bottom"|"left"|"right"} [props.currentIndicator] - A
  *   bar drawn on the given edge (or bottom when `true`) while current.
- * @param {boolean} [props.currentEffectBold] - Bold the text while current
- *   (reserving the bold width so layout doesn't shift).
+ * @param {boolean|"text-shadow"|"hold-space"} [props.currentEffectBold] - Bold
+ *   the label while current, without its width changing — a row of tabs must
+ *   not jump when one becomes current. Which is a choice of two:
+ *   - `"text-shadow"` (what `true` means): the weight is PAINTED, the glyphs
+ *     drawn a hair to each side of themselves
+ *     (`--link-current-effect-bold-thickness`). The label stays one piece of
+ *     text, so `textContent` and anything reading it still see it once.
+ *   - `"hold-space"`: the real bold face, its width held by an invisible copy
+ *     of the label rendered bold underneath. True bold — and the label then
+ *     appears TWICE in `textContent`, which a test asserting on the element's
+ *     text reads (see `holdSpaceForStyle` in `text.jsx`).
  * @param {boolean} [props.currentEffectShadow] - Inset-shadow effect while
  *   current (used with `variant="tab"`).
  * @param {boolean|import("preact").ComponentChild} [props.startIcon] - Icon
@@ -698,6 +726,12 @@ const LinkPlain = (props) => {
   const startIconEl = startIcon;
   const endIconEl = innerEndIcon;
 
+  // Bold by painting the glyphs unless asked for the bold face itself, because
+  // that one costs a second copy of the label in the element's text (see the
+  // css above).
+  const currentEffectBoldTechnique =
+    currentEffectBold === true ? "text-shadow" : currentEffectBold || undefined;
+
   // Where the bar goes: said here, or once for the whole row by the <Nav>
   // around this link.
   const currentIndicatorAsked = currentIndicator ?? nav?.currentIndicator;
@@ -792,7 +826,11 @@ const LinkPlain = (props) => {
       onnavi_value={(e) => {
         e.detail.setValue(value);
       }}
-      holdSpaceForStyle={currentEffectBold ? { fontWeight: "bold" } : undefined}
+      holdSpaceForStyle={
+        currentEffectBoldTechnique === "hold-space"
+          ? { fontWeight: "bold" }
+          : undefined
+      }
       preventSpaceUnderlines
       // A trailing icon (the anchor arrow, the blank-target one) belongs to the
       // text it follows: without this the browser may break the line right
@@ -800,7 +838,7 @@ const LinkPlain = (props) => {
       attachLastChild={Boolean(endIconEl)}
       // Visual
       data-variant={variant}
-      data-current-effect-bold={currentEffectBold ? "" : undefined}
+      data-current-effect-bold={currentEffectBoldTechnique}
       data-current-effect-shadow={currentEffectShadow ? "" : undefined}
       data-current-indicator-position={currentIndicatorPosition}
       data-anchor={anchor ? "" : undefined}

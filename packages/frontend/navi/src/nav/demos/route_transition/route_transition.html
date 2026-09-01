@@ -175,7 +175,7 @@
       defineRouteTransition(RADARS_ROUTE, GAME_ROUTE, "slide-x");
       defineRouteTransition(PARTIES_ROUTE, REGLAGES_ROUTE, "slide-y");
       defineRouteTransition(RADARS_ROUTE, REGLAGES_ROUTE, "slide-y");
-      defineRouteTransition(PROFIL_ROUTE, REGLAGES_ROUTE, "cover-y");
+      defineRouteTransition(PROFIL_ROUTE, REGLAGES_ROUTE, "cover-bottom");
       // Pas de type : le cross-fade du navigateur.
       defineRouteTransition(PARTIES_ROUTE, PROFIL_ROUTE);
       defineRouteTransition(RADARS_ROUTE, PROFIL_ROUTE);
@@ -372,7 +372,7 @@
                 {[
                   `defineRouteTransition(PARTIES, GAME, "slide-x"); // idem RADARS`,
                   `defineRouteTransition(PARTIES, RÉGLAGES, "slide-y"); // idem RADARS`,
-                  `defineRouteTransition(PROFIL, RÉGLAGES, "cover-y");`,
+                  `defineRouteTransition(PROFIL, RÉGLAGES, "cover-bottom");`,
                   `defineRouteTransition(PARTIES, PROFIL); // cross-fade — idem RADARS`,
                   `defineRouteTransition(PROFIL, BADGES, "zoom");`,
                   `defineRouteTransition(PROFIL, STATS, "spin"); // CSS de la page`,

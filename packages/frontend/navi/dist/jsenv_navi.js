@@ -28064,6 +28064,21 @@ installImportMetaCssBuild(import.meta);/**
  * the reverse of another, so B → A can be given a movement of its own, or
  * silenced with "none", by writing it (see findRelation).
  *
+ * One shape of page has no pair to write: the one whose door is in the fixed
+ * furniture — a gear in a top bar, a "+" in a tab bar — and which is therefore
+ * opened from every screen and closed back onto whichever one the reader was
+ * on. The relation is real and it is a single sentence; only the `from` is
+ * missing, so it is left out:
+ *
+ *   defineRouteTransition(null, SETTINGS_PAGE, "cover-top");
+ *
+ * Arriving there plays forward from wherever, leaving plays back to wherever,
+ * and that is what lets the back button close it the way it opened — a
+ * traversal carries no request, and nothing has to remember per history entry
+ * what the press that created it had asked for. It is tried after every
+ * written pair, and it is not defineRouteDefaultTransition: a default is about
+ * every navigation nothing was said about, this is about ONE destination.
+ *
  * The relation says WHEN something plays and which way; the transition says
  * WHAT plays — a movement navi ships, or a name the application defines in its
  * own CSS (see the JSDoc below). Said without one, the relation plays the
@@ -28252,7 +28267,7 @@ const css$11 = /* css */`:root[data-navi-route-transition] [data-navi-route-tran
     }
   }
 
-  &[data-navi-route-transition-type="cover-x"] {
+  &[data-navi-route-transition-type="cover-right"] {
     &[data-navi-route-transition="forward"] {
       --navi-route-transition-leave: navi-route-transition-still;
       --navi-route-transition-enter: navi-route-transition-enter-from-end;
@@ -28261,14 +28276,22 @@ const css$11 = /* css */`:root[data-navi-route-transition] [data-navi-route-tran
     &[data-navi-route-transition="back"] {
       --navi-route-transition-leave: navi-route-transition-leave-towards-end;
       --navi-route-transition-enter: navi-route-transition-still;
-
-      &::view-transition-old(root), &::view-transition-old(navi-route-transition) {
-        z-index: 1;
-      }
     }
   }
 
-  &[data-navi-route-transition-type="cover-y"] {
+  &[data-navi-route-transition-type="cover-left"] {
+    &[data-navi-route-transition="forward"] {
+      --navi-route-transition-leave: navi-route-transition-still;
+      --navi-route-transition-enter: navi-route-transition-enter-from-start;
+    }
+
+    &[data-navi-route-transition="back"] {
+      --navi-route-transition-leave: navi-route-transition-leave-towards-start;
+      --navi-route-transition-enter: navi-route-transition-still;
+    }
+  }
+
+  &[data-navi-route-transition-type="cover-bottom"] {
     &[data-navi-route-transition="forward"] {
       --navi-route-transition-leave: navi-route-transition-still;
       --navi-route-transition-enter: navi-route-transition-enter-from-bottom;
@@ -28277,7 +28300,23 @@ const css$11 = /* css */`:root[data-navi-route-transition] [data-navi-route-tran
     &[data-navi-route-transition="back"] {
       --navi-route-transition-leave: navi-route-transition-leave-towards-bottom;
       --navi-route-transition-enter: navi-route-transition-still;
+    }
+  }
 
+  &[data-navi-route-transition-type="cover-top"] {
+    &[data-navi-route-transition="forward"] {
+      --navi-route-transition-leave: navi-route-transition-still;
+      --navi-route-transition-enter: navi-route-transition-enter-from-top;
+    }
+
+    &[data-navi-route-transition="back"] {
+      --navi-route-transition-leave: navi-route-transition-leave-towards-top;
+      --navi-route-transition-enter: navi-route-transition-still;
+    }
+  }
+
+  &[data-navi-route-transition-type="cover-right"], &[data-navi-route-transition-type="cover-left"], &[data-navi-route-transition-type="cover-bottom"], &[data-navi-route-transition-type="cover-top"] {
+    &[data-navi-route-transition="back"] {
       &::view-transition-old(root), &::view-transition-old(navi-route-transition) {
         z-index: 1;
       }
@@ -28300,7 +28339,7 @@ const css$11 = /* css */`:root[data-navi-route-transition] [data-navi-route-tran
     }
   }
 
-  &[data-navi-route-transition-type="slide-x"], &[data-navi-route-transition-type="slide-y"], &[data-navi-route-transition-type="cover-x"], &[data-navi-route-transition-type="cover-y"], &[data-navi-route-transition-type="zoom"] {
+  &[data-navi-route-transition-type="slide-x"], &[data-navi-route-transition-type="slide-y"], &[data-navi-route-transition-type="cover-right"], &[data-navi-route-transition-type="cover-left"], &[data-navi-route-transition-type="cover-bottom"], &[data-navi-route-transition-type="cover-top"], &[data-navi-route-transition-type="zoom"] {
     &::view-transition-old(root), &::view-transition-old(navi-route-transition) {
       animation-name: var(--navi-route-transition-leave);
     }
@@ -28310,7 +28349,7 @@ const css$11 = /* css */`:root[data-navi-route-transition] [data-navi-route-tran
     }
   }
 
-  &[data-navi-route-transition-type="slide-x"], &[data-navi-route-transition-type="slide-y"], &[data-navi-route-transition-type="cover-x"], &[data-navi-route-transition-type="cover-y"] {
+  &[data-navi-route-transition-type="slide-x"], &[data-navi-route-transition-type="slide-y"], &[data-navi-route-transition-type="cover-right"], &[data-navi-route-transition-type="cover-left"], &[data-navi-route-transition-type="cover-bottom"], &[data-navi-route-transition-type="cover-top"] {
     &::view-transition-old(root), &::view-transition-new(root), &::view-transition-old(navi-route-transition), &::view-transition-new(navi-route-transition) {
       animation-timing-function: ease;
     }
@@ -28435,10 +28474,17 @@ const RouteTransitionArea = ({
 };
 
 /**
- * Declare how a pair of routes moves against each other.
+ * Declare how a pair of routes moves against each other — or how one route is
+ * entered, from wherever its door happens to be.
  *
- * @param {object} from - a route, or `{ route, params }` when the page is a
- *   param of a route rather than a route of its own.
+ * @param {object|null} from - a route, or `{ route, params }` when the page is
+ *   a param of a route rather than a route of its own. `null` says the page is
+ *   reached FROM ANYWHERE: its door is in the furniture (a gear in the top
+ *   bar, a "+" in the tab bar) rather than on a screen, so there is no pair to
+ *   write it on. Arriving at `to` from any page then plays forward and leaving
+ *   it for any page plays back, which is what makes the back button close it
+ *   the way it opened. Tried last, after every written pair: a pair naming the
+ *   same destination still owns its crossing.
  * @param {object} to - same forms. Going from `from` to `to` plays forward,
  *   the reverse plays back — unless the reverse is written as a relation of
  *   its own, which then owns that way (a movement of its own, or `"none"` for
@@ -28452,8 +28498,11 @@ const RouteTransitionArea = ({
  *   Omitted, the browser's own cross-fade. Shipped with navi:
  *   - `"slide-x"`, `"slide-y"`: the two pages slide past each other, forward
  *     towards the start of the axis;
- *   - `"cover-x"`, `"cover-y"`: the page arriving slides in OVER one that does
- *     not move, and slides off it on the way back;
+ *   - `"cover-right"`, `"cover-left"`, `"cover-bottom"`, `"cover-top"`: the
+ *     page arriving slides in OVER one that does not move, and slides off it
+ *     on the way back. The edge named is the one it comes IN from, which is
+ *     where its door is: a page reached from a bottom bar covers from the
+ *     bottom, one pulled down from a top bar covers from the top;
  *   - `"zoom"`: the deeper page is the closer one — it lands from slightly too
  *     big, and grows away when left;
  *   - `"none"`: nothing, said out loud — written on one way of a pair, it cuts
@@ -28484,6 +28533,9 @@ const RouteTransitionArea = ({
 const defineRouteTransition = (from, to, transition) => {
   import.meta.css = [css$11, "@jsenv/navi/src/nav/route_transition.jsx"];
   installTransitionWindowCss();
+  if (!to) {
+    throw new TypeError(`defineRouteTransition needs a destination: "to" is ${to}. The page reached from anywhere is written defineRouteTransition(null, THAT_PAGE, ...) — there is no relation the other way round, a page LEFT for anywhere being the back half of that one.`);
+  }
   const {
     type,
     duration
@@ -28652,13 +28704,15 @@ const rebuildWatcher = () => {
   }
   // Every page any relation mentions, each once: the position of the current
   // page in this list is what turns "some signal moved" into "the document
-  // went from page A to page B".
+  // went from page A to page B". A relation written from anywhere mentions one
+  // page only — the other end is whatever the reader was on, and -1 is how it
+  // reads here.
   const pages = [];
   for (const {
     from,
     to
   } of relations) {
-    if (pageIndexOf$1(pages, from) === -1) {
+    if (from && pageIndexOf$1(pages, from) === -1) {
       pages.push(from);
     }
     if (pageIndexOf$1(pages, to) === -1) {
@@ -28678,10 +28732,15 @@ const rebuildWatcher = () => {
       firstReading = false;
       return;
     }
-    if (index === -1 || fromIndex === -1 || fromIndex === index) {
+    if (fromIndex === index) {
       return;
     }
-    const found = findRelation(pages[fromIndex], pages[index]);
+    // A page in no relation at all is a real end of the crossing, not a
+    // missing one: it is the "anywhere" a page reached from the furniture is
+    // opened over and closed back onto (see findRelation).
+    const fromPage = fromIndex === -1 ? null : pages[fromIndex];
+    const toPage = index === -1 ? null : pages[index];
+    const found = findRelation(fromPage, toPage);
     if (!found && !navigationRequest) {
       // No relation says anything about these two and this navigation asked
       // for nothing: they are side by side, and silence is the fact — not a
@@ -28700,7 +28759,7 @@ const rebuildWatcher = () => {
       return;
     }
     beginTransition({
-      page: pages[index],
+      page: toPage,
       url: navigationUrl,
       // Which way it plays: what the navigation itself said first — the link
       // being pressed is where the way the app is being walked is known — then
@@ -28777,13 +28836,23 @@ observeAfterRouting(() => {
   releaseRoutingRenderingHold();
 });
 
-// The exact way travelled first, over the whole registry, and only then the
-// reverses: a relation written B → A owns that way, and being the reverse of
-// one written A → B never outranks it. This is what makes reciprocity a
-// default rather than a decree — write the way back to give it a movement of
-// its own, or "none" to silence it.
+// The exact way travelled first, over the whole registry, then the reverses,
+// and last the pages written from anywhere.
+//
+// A relation written B → A owns that way, and being the reverse of one written
+// A → B never outranks it. This is what makes reciprocity a default rather
+// than a decree — write the way back to give it a movement of its own, or
+// "none" to silence it.
+//
+// A page reached from anywhere is tried after every pair, so a pair naming the
+// same destination still owns its crossing — the map, where it was drawn, is
+// more precise than "from wherever". Arriving is read before leaving: between
+// two such pages, the one being opened says what plays.
 const findRelation = (fromPage, toPage) => {
   for (const relation of relations) {
+    if (!relation.from) {
+      continue;
+    }
     if (samePage$1(relation.from, fromPage) && samePage$1(relation.to, toPage)) {
       return {
         direction: "forward",
@@ -28792,7 +28861,32 @@ const findRelation = (fromPage, toPage) => {
     }
   }
   for (const relation of relations) {
+    if (!relation.from) {
+      continue;
+    }
     if (samePage$1(relation.from, toPage) && samePage$1(relation.to, fromPage)) {
+      return {
+        direction: "back",
+        relation
+      };
+    }
+  }
+  for (const relation of relations) {
+    if (relation.from) {
+      continue;
+    }
+    if (samePage$1(relation.to, toPage)) {
+      return {
+        direction: "forward",
+        relation
+      };
+    }
+  }
+  for (const relation of relations) {
+    if (relation.from) {
+      continue;
+    }
+    if (samePage$1(relation.to, fromPage)) {
       return {
         direction: "back",
         relation
@@ -28906,10 +29000,11 @@ const beginTransition = ({
       // rendered has already resolved the wait by the next line.
       releaseRendering();
       if (page === null) {
-        // A default transition: which page is arriving is unknown, and some
-        // navigations render no route at all (a search param bound to a
-        // signal) — waited on, those would freeze the page until the browser
-        // gives up. The wait is raced with a short timer instead.
+        // Which page is arriving is unknown — a default transition, or a page
+        // reached from anywhere being left for wherever — and some navigations
+        // render no route at all (a search param bound to a signal): waited
+        // on, those would freeze the page until the browser gives up. The wait
+        // is raced with a short timer instead.
         await Promise.race([renderWait.rendered, waitMs(50)]);
       } else if (pageIsCurrent$1(page)) {
         await renderWait.rendered;
@@ -29034,10 +29129,18 @@ const armRouteRenderWait$1 = () => {
   };
 };
 const waitMs = ms => new Promise(resolve => setTimeout(resolve, ms));
-const normalizePage$1 = page => page.isRoute ? {
-  route: page,
-  params: undefined
-} : page;
+
+// A page written as the route itself, and the page written nowhere: `from`
+// may be left out, which is a relation about arriving at `to` from anywhere.
+const normalizePage$1 = page => {
+  if (!page) {
+    return null;
+  }
+  return page.isRoute ? {
+    route: page,
+    params: undefined
+  } : page;
+};
 
 // Two pages are the same page when they select the same thing, not when they
 // were written by the same hand.
@@ -30592,6 +30695,117 @@ const nameForTravel = element => {
 };
 const unnameAfterTravel = element => {
   element.style.viewTransitionName = "";
+};
+
+/**
+ * What covers the box a route movement plays in, from INSIDE the document: a
+ * sticky row of tabs above a `<RouteTravel>`, a header pinned to the top of a
+ * scroller. The element says it is there, this measures what it takes and
+ * publishes it under --navi-transition-cover-* — the slot transition_window.js
+ * declares and explains, and which nothing but the element covering the box can
+ * fill: the safe area answers for what is pinned to the WINDOW's edges, and a
+ * sticky row is none of those.
+ *
+ * The pictures of a transition are drawn in the top layer, above every z-index
+ * of the document, so a band left uncounted here is a band the pictures slide
+ * over instead of being cut at.
+ *
+ * Same shape as the room a fixed bar gives back (layout/fixed_bar/
+ * fixed_bar_space.js): measured rather than declared, and the largest of the
+ * elements sharing an edge rather than their sum — during a route movement the
+ * outgoing and the incoming row are both mounted, pinned to the same edge, one
+ * over the other. Nothing takes its layout from these variables, though, so the
+ * write happens where it is measured, with no frame to wait for.
+ */
+
+
+const sizeMapByEdge = new Map();
+// What is currently on <html> for each edge (absent = the variable is not set).
+// Several elements sharing an edge means most calls compute the same largest
+// size again, and a size that has not changed is a style recalculation of the
+// whole document for nothing.
+const writtenValueByEdge = new Map();
+
+/**
+ * @param {import("preact").RefObject<Element>} elementRef - The element
+ *   covering the box.
+ * @param {"top"|"right"|"bottom"|"left"} [edge="top"] - Which side of the box
+ *   it covers. Its size across that edge is what gets published; the edge's own
+ *   band (the safe area, the fixed bars) is already counted, so an element
+ *   states its own size and nothing else.
+ */
+const useTransitionCover = (elementRef, edge = "top") => {
+  installTransitionWindowCss();
+
+  const measureCover = (element) => {
+    const { width, height } = element.getBoundingClientRect();
+    return edge === "left" || edge === "right" ? width : height;
+  };
+
+  // Anything a render can change — the row's content, a size prop, a theme
+  // variable — is measured in that same commit: a movement starting on the
+  // render that grew the row is cut at the row as it now is.
+  useLayoutEffect(() => {
+    const element = elementRef.current;
+    if (!element) {
+      return;
+    }
+    writeCover(edge, element, measureCover(element));
+  });
+
+  // What no render caused: a font arriving late, content coming from outside, a
+  // rotation.
+  useLayoutEffect(() => {
+    const element = elementRef.current;
+    if (!element) {
+      return undefined;
+    }
+    const resizeObserver = new ResizeObserver(() => {
+      writeCover(edge, element, measureCover(element));
+    });
+    resizeObserver.observe(element);
+    return () => {
+      resizeObserver.disconnect();
+      writeCover(edge, element, null);
+    };
+  }, [edge]);
+};
+
+const writeCover = (edge, element, size) => {
+  let sizeMap = sizeMapByEdge.get(edge);
+  if (!sizeMap) {
+    sizeMap = new Map();
+    sizeMapByEdge.set(edge, sizeMap);
+  }
+  if (size === null) {
+    sizeMap.delete(element);
+  } else {
+    sizeMap.set(element, size);
+  }
+  let largestSize = 0;
+  for (const coverSize of sizeMap.values()) {
+    if (coverSize > largestSize) {
+      largestSize = coverSize;
+    }
+  }
+  const property = `--navi-transition-cover-${edge}`;
+  const { style } = document.documentElement;
+  if (sizeMap.size === 0) {
+    // Back to the zero the sheet declares, rather than a zero written over it:
+    // a page with no sticky row must read what navi says, not what the last one
+    // left behind.
+    if (writtenValueByEdge.has(edge)) {
+      writtenValueByEdge.delete(edge);
+      style.removeProperty(property);
+    }
+    return;
+  }
+  const value = `${largestSize}px`;
+  if (writtenValueByEdge.get(edge) === value) {
+    return;
+  }
+  writtenValueByEdge.set(edge, value);
+  style.setProperty(property, value);
 };
 
 const routeAction = (
@@ -39632,6 +39846,12 @@ const shouldInjectSpacingBetween = (left, right) => {
  *   An invisible placeholder rendered with those styles reserves the space; the
  *   real visible text is layered on top via `position: absolute`.
  *   Best combined with `noWrap` — does not work reliably on multi-line text.
+ *   The placeholder is a SECOND copy of the children: it is `aria-hidden`, so
+ *   the accessible name is right, but the text appears twice in `textContent`
+ *   — which is what a test asserting on the element's text reads. Where the
+ *   element's text must stay single (a tab, a label a test matches on), reserve
+ *   the space some other way; `Link`'s `currentEffectBold` paints the weight by
+ *   default and comes here only when asked to (`"hold-space"`).
  *
  * @param {boolean} [boldStable]
  *   Alternative to `holdSpaceForStyle` for multi-line text. Keeps a consistent
@@ -40131,6 +40351,7 @@ installImportMetaCssBuild(import.meta);const css$X = /* css */`@layer navi {
     --link-text-decoration-hover: var(--link-text-decoration);
     --link-cursor: pointer;
     --link-outline-width: 2px;
+    --link-current-effect-bold-thickness: .02em;
     --link-current-indicator-size: 2px;
     --link-current-indicator-spacing: 0;
     --link-current-indicator-color: var(--navi-link-current-indicator-color);
@@ -40266,7 +40487,12 @@ installImportMetaCssBuild(import.meta);const css$X = /* css */`@layer navi {
       --x-link-color: var(--link-color-current);
     }
 
-    &[data-current-effect-bold] {
+    &[data-current-effect-bold="text-shadow"] {
+      text-shadow: var(--link-current-effect-bold-thickness) 0 0 currentColor,
+          calc(-1 * var(--link-current-effect-bold-thickness)) 0 0 currentColor;
+    }
+
+    &[data-current-effect-bold="hold-space"] {
       font-weight: bold;
     }
 
@@ -40479,8 +40705,17 @@ Object.assign(PSEUDO_CLASSES, {
  *   `"tab"` renders a tab-like affordance.
  * @param {boolean|"top"|"bottom"|"left"|"right"} [props.currentIndicator] - A
  *   bar drawn on the given edge (or bottom when `true`) while current.
- * @param {boolean} [props.currentEffectBold] - Bold the text while current
- *   (reserving the bold width so layout doesn't shift).
+ * @param {boolean|"text-shadow"|"hold-space"} [props.currentEffectBold] - Bold
+ *   the label while current, without its width changing — a row of tabs must
+ *   not jump when one becomes current. Which is a choice of two:
+ *   - `"text-shadow"` (what `true` means): the weight is PAINTED, the glyphs
+ *     drawn a hair to each side of themselves
+ *     (`--link-current-effect-bold-thickness`). The label stays one piece of
+ *     text, so `textContent` and anything reading it still see it once.
+ *   - `"hold-space"`: the real bold face, its width held by an invisible copy
+ *     of the label rendered bold underneath. True bold — and the label then
+ *     appears TWICE in `textContent`, which a test asserting on the element's
+ *     text reads (see `holdSpaceForStyle` in `text.jsx`).
  * @param {boolean} [props.currentEffectShadow] - Inset-shadow effect while
  *   current (used with `variant="tab"`).
  * @param {boolean|import("ignore:preact").ComponentChild} [props.startIcon] - Icon
@@ -40710,6 +40945,11 @@ const LinkPlain = props => {
   const startIconEl = startIcon;
   const endIconEl = innerEndIcon;
 
+  // Bold by painting the glyphs unless asked for the bold face itself, because
+  // that one costs a second copy of the label in the element's text (see the
+  // css above).
+  const currentEffectBoldTechnique = currentEffectBold === true ? "text-shadow" : currentEffectBold || undefined;
+
   // Where the bar goes: said here, or once for the whole row by the <Nav>
   // around this link.
   const currentIndicatorAsked = currentIndicator ?? nav?.currentIndicator;
@@ -40799,7 +41039,7 @@ const LinkPlain = props => {
     onnavi_value: e => {
       e.detail.setValue(value);
     },
-    holdSpaceForStyle: currentEffectBold ? {
+    holdSpaceForStyle: currentEffectBoldTechnique === "hold-space" ? {
       fontWeight: "bold"
     } : undefined,
     preventSpaceUnderlines: true
@@ -40813,7 +41053,7 @@ const LinkPlain = props => {
     ,
 
     "data-variant": variant,
-    "data-current-effect-bold": currentEffectBold ? "" : undefined,
+    "data-current-effect-bold": currentEffectBoldTechnique,
     "data-current-effect-shadow": currentEffectShadow ? "" : undefined,
     "data-current-indicator-position": currentIndicatorPosition,
     "data-anchor": anchor ? "" : undefined,
@@ -41051,6 +41291,10 @@ const css$W = /* css */`@layer navi {
     --nav-current-indicator-size: 2px;
     --nav-current-indicator-color: var(--navi-link-current-indicator-color);
   }
+
+  .navi_nav .navi_link {
+    --link-current-indicator-color: var(--nav-current-indicator-color);
+  }
 }
 
 .navi_nav[data-nav-indicator] {
@@ -41061,8 +41305,14 @@ const css$W = /* css */`@layer navi {
           var(--nav-indicator-position-delta));
     --x-nav-indicator-length: calc(var(--nav-indicator-length) + var(--slide-travel-progress) *
           var(--nav-indicator-length-delta));
+    --x-nav-indicator-color: var(--nav-indicator-color, var(--nav-current-indicator-color));
+    --x-nav-indicator-color-toward: var(--nav-indicator-color-toward, var(--x-nav-indicator-color));
     z-index: 1;
-    background: var(--nav-current-indicator-color);
+    background: color-mix(in srgb,
+        var(--x-nav-indicator-color-toward)
+          calc(var(--slide-travel-progress) * var(--nav-indicator-toward-sign, 0) *
+              100%),
+        var(--x-nav-indicator-color));
     pointer-events: none;
     border-radius: .1px;
     position: absolute;
@@ -41127,6 +41377,11 @@ const css$W = /* css */`@layer navi {
 
   &[data-scrollable] {
     max-width: 100%;
+
+    & .navi_link {
+      white-space: nowrap;
+      flex: none;
+    }
   }
 
   &[data-scrollable][data-vertical] {
@@ -41162,13 +41417,13 @@ const css$W = /* css */`@layer navi {
   &[data-expand-x] {
     flex-grow: 1;
 
-    &:not([data-vertical]) .navi_link {
+    &:not([data-vertical]):not([data-scrollable]) .navi_link {
       flex: 1;
       justify-content: center;
     }
   }
 
-  &[data-expand-y][data-vertical] {
+  &[data-expand-y][data-vertical]:not([data-scrollable]) {
     & .navi_link {
       flex: 1;
     }
@@ -41256,6 +41511,10 @@ const positionOfCurrentIndicator = (currentIndicator, vertical) => {
  * @param {boolean|"top"|"bottom"|"left"|"right"} [props.currentIndicator] - the
  *   bar that says which tab one is on, said once here rather than on every
  *   `<Link>`. A link may still say otherwise for itself.
+ *   Its colour belongs to the tab it is under: `currentIndicatorColor` here is
+ *   what every tab inherits, and a tab declaring
+ *   `--nav-current-indicator-color` for itself is arrived at in its own colour
+ *   — the bar changes colour as it travels rather than once it lands.
  * @param {boolean} [props.currentIndicatorSlides=true] - whether that bar
  *   travels from the tab it was under to the tab it is under now, instead of
  *   going out on one and coming back on the other. For a nav made of routes it
@@ -41334,11 +41593,11 @@ const Nav = ({
     return navElement.querySelector(`[data-slide-target="${CSS.escape(towardArea)}"]`);
   };
 
-  // Where the trait is and where it is headed, as four numbers of pixels the
-  // CSS above interpolates between (see the .navi_nav_indicator rules). Written
-  // by hand rather than rendered: it is read off the row as it stands, and the
-  // travel it must agree with starts in the same frame the container publishes
-  // it — a render would land after the movement had begun.
+  // Where the trait is, where it is headed, and in which colour at each end —
+  // the numbers the CSS above interpolates between (see the .navi_nav_indicator
+  // rules). Written by hand rather than rendered: it is read off the row as it
+  // stands, and the travel it must agree with starts in the same frame the
+  // container publishes it — a render would land after the movement had begun.
   const paintIndicatorGeometry = () => {
     const navElement = navRef.current;
     const containerElement = slideContainerElementRef.current;
@@ -41360,13 +41619,29 @@ const Nav = ({
       position: tabElement.offsetLeft,
       length: tabElement.offsetWidth
     };
+    // The colour a tab asks the bar to be under it. Read from the tab and not
+    // from the row, so a tab that says nothing gives the row's value back —
+    // it inherits it (see the css above) — and one that says something gives
+    // its own. Empty when neither resolves to anything: the css then falls
+    // back on its own, rather than being handed a colour that is not one.
+    const colorOf = tabElement => getComputedStyle(tabElement).getPropertyValue("--link-current-indicator-color").trim();
+    const writeColor = (property, color) => {
+      if (color) {
+        navElement.style.setProperty(property, color);
+      } else {
+        navElement.style.removeProperty(property);
+      }
+    };
     const currentMeasure = measure(tabElements[currentIndex]);
     const towardArea = containerElement.getAttribute("data-slide-travel-toward");
     const towardIndex = tabElements.findIndex(tabElement => areaOf(tabElement) === towardArea);
     let positionDelta = 0;
     let lengthDelta = 0;
+    let towardSign = 0;
+    let towardColor = "";
     if (towardIndex !== -1 && towardIndex !== currentIndex) {
-      const towardMeasure = measure(tabElements[towardIndex]);
+      const towardTabElement = tabElements[towardIndex];
+      const towardMeasure = measure(towardTabElement);
       // What one box of travel is worth in pixels of this row, signed so that
       // the trait is exactly on the other tab when the progress is at its own
       // end: the container counts +1 when the picture leans on a slide sitting
@@ -41374,6 +41649,8 @@ const Nav = ({
       const sign = towardIndex > currentIndex ? -1 : 1;
       positionDelta = (towardMeasure.position - currentMeasure.position) * sign;
       lengthDelta = (towardMeasure.length - currentMeasure.length) * sign;
+      towardSign = sign;
+      towardColor = colorOf(towardTabElement);
     }
     const {
       style
@@ -41382,6 +41659,9 @@ const Nav = ({
     style.setProperty("--nav-indicator-length", currentMeasure.length);
     style.setProperty("--nav-indicator-position-delta", positionDelta);
     style.setProperty("--nav-indicator-length-delta", lengthDelta);
+    style.setProperty("--nav-indicator-toward-sign", towardSign);
+    writeColor("--nav-indicator-color", colorOf(tabElements[currentIndex]));
+    writeColor("--nav-indicator-color-toward", towardColor);
     navElement.setAttribute("data-nav-indicator-measured", "");
   };
   // Reached through a ref by everything watching the DOM below: those watchers
@@ -42857,7 +43137,15 @@ installImportMetaCssBuild(import.meta);/**
  *    keeps its bars against its own edges.
  * 2. **It gives its space back.** Being fixed it covers the content: without a
  *    reserve the end of a long page stays under it, unreachable. It publishes
- *    what it takes on <html> — see fixed_bar_space.js.
+ *    what it takes on <html> — see fixed_bar_space.js. An edge holds ONE bar:
+ *    bars sharing an edge are pinned to it one over the other, so the room
+ *    given back is the largest of them and never their sum — which is what the
+ *    two bars of a page transition need, and what makes a deliberately stacked
+ *    second bar unexpressible. A second strip under the first belongs to the
+ *    flow: `position: sticky` at `top: var(--navi-fixed-bar-space-top)`, which
+ *    puts it under whatever the bar of the moment is worth, and
+ *    `useTransitionCover` (nav/transition_cover.js) so the pictures of a route
+ *    movement are cut at it.
  * 3. **It reaches under the notch.** `env(safe-area-inset-*)` is padding, so
  *    the content is pushed in while the background keeps running to the edge of
  *    the screen. Across the bar that inset is added to `width`/`height` too, so
@@ -42972,7 +43260,9 @@ const FixedBarStyleCSSVars = {
  *   borderColor?: string,
  * }>}
  * @param {"top"|"bottom"|"left"|"right"} [props.area="top"] - Which edge of
- *   the window it is pinned to.
+ *   the window it is pinned to. One bar per edge: a second one does not stack
+ *   under the first, it sits on it (see this file's top comment for the strip
+ *   that does stack).
  * @param {string|number} [props.height] - For a bar on the top or bottom
  * @param {string|number} [props.width] - …and for one on a side. The safe-area
  *   inset is NOT part of it: it is added on top, so the content keeps the size
@@ -43945,22 +44235,33 @@ installImportMetaCssBuild(import.meta);/**
  * Expandable: an in-flow disclosure — a UI part that reveals a content part.
  * It covers the same ground as <Details> with structural differences:
  *
- * - the two parts are explicit and free to order/orient:
+ * - the two parts are explicit, and are Boxes:
  *
  *     <Expandable>
  *       <Expandable.UI>See more</Expandable.UI>
  *       <Expandable.Content>…</Expandable.Content>
  *     </Expandable>
  *
- *   Content after UI expands below (the <details> shape), Content before UI
- *   expands above; `layout="column"` puts the parts side by side (sharing
- *   their height), the content then expanding horizontally. The marker
- *   chevron follows: it points right while closed and toward where the
- *   content went while open (down, up, or left). The common shape has a
- *   shorthand: `ui` prop + children as content.
+ *   `openDirection` decides where the content is revealed — down (the
+ *   <details> shape) or up, left or right in `layout="column"`, where the
+ *   parts sit side by side sharing their height. It places the parts too
+ *   (CSS `order`), so an expandable revealing upward can still be written UI
+ *   first, and an expandable with no UI part at all — driven from
+ *   `open`/`signal` by a toggle of the app's own — can say which way it
+ *   opens. The marker chevron follows: it points right while closed and
+ *   toward where the content went while open (down, up, or left). The common
+ *   shape has a shorthand: `ui` prop + children as content.
+ *
  * - the UI part is the focusable toggle itself (role button, Space/Enter,
  *   arrow keys) and accepts any markup: controls inside it keep their own
  *   behavior, the marker is purely decorative.
+ *
+ * The root never looks at its children: which parts are there, in which order,
+ * is none of its business. It publishes a context and the parts take what they
+ * need from it — including WHEN to arm the reveal, which <Expandable.Content>
+ * asks for from its own layout effect. That is what lets a part re-render
+ * later than the root (a memoized subtree does exactly that): the measurement
+ * runs in the commit that put the content in the DOM, whichever one that is.
  *
  * Reach for it knowingly: expanding in-flow SHIFTS the layout — everything
  * below (or beside) moves when it opens. A Popover, Dialog, Picker or Callout
@@ -44000,6 +44301,10 @@ const css$Q = /* css */`.navi_expandable {
   flex-shrink: 0;
   display: flex;
   position: relative;
+
+  &[data-open-direction="down"] > .navi_expandable_content_container, &[data-open-direction="right"] > .navi_expandable_content_container, &[data-open-direction="up"] > .navi_expandable_ui, &[data-open-direction="left"] > .navi_expandable_ui {
+    order: 1;
+  }
 
   & > .navi_expandable_ui {
     cursor: pointer;
@@ -44046,7 +44351,7 @@ const css$Q = /* css */`.navi_expandable {
     grid-template-rows: 1fr;
   }
 
-  &[data-content-first]:not([data-layout="column"]) > .navi_expandable_content_container {
+  &[data-open-direction="up"] > .navi_expandable_content_container {
     clip-path: inset(0 -9999px -9999px);
     align-content: end;
 
@@ -44087,7 +44392,7 @@ const css$Q = /* css */`.navi_expandable {
       grid-template-rows: none;
     }
 
-    &[data-content-first] > .navi_expandable_content_container {
+    &[data-open-direction="left"] > .navi_expandable_content_container {
       clip-path: inset(-9999px -9999px 0 0);
       justify-content: end;
 
@@ -44143,6 +44448,7 @@ const useExpandableContext = partName => {
  *   loading?: boolean,
  *   animation?: boolean,
  *   layout?: "row" | "column",
+ *   openDirection?: "down" | "up" | "right" | "left",
  *   autoFocus?: boolean,
  *   maxContentHeight?: string | number,
  *   mount?: "always" | "from-first-open" | "while-opened",
@@ -44175,6 +44481,12 @@ const useExpandableContext = partName => {
  * @param layout - `"row"` (default): the parts stack, the content expands
  *   vertically. `"column"`: the parts sit side by side sharing their height,
  *   the content expands horizontally next to the UI part.
+ * @param openDirection - Where the content is revealed: `"down"` (default) or
+ *   `"up"` in the stacked layout, `"right"` (default) or `"left"` in
+ *   `layout="column"`. It also places the parts, so the direction holds
+ *   whatever order they are written in — and an expandable with no
+ *   `<Expandable.UI>` at all, driven from `open`/`signal` by a toggle of the
+ *   app's own, can still say which way it opens.
  * @param autoFocus - Off by default (the focus stays on the UI part when
  *   opening). `true` moves the focus into the content on open — the
  *   `[autofocus]` element if any, the first focusable otherwise. Whatever the
@@ -44204,6 +44516,7 @@ const Expandable = props => {
     loading,
     animation = false,
     layout,
+    openDirection,
     autoFocus,
     maxContentHeight,
     mount = MOUNT_DEFAULT,
@@ -44345,30 +44658,44 @@ const Expandable = props => {
     toggleTo(openRequested);
   }, [openRequested]);
 
-  // A state change: tell the world (the "toggle" event), move the focus, and
-  // set up the reveal. Skipped on mount — nothing changed, so neither the
-  // event nor a transition exists (and a page must not have its focus stolen
-  // by an expandable that was simply already open).
+  // A state change: tell the world (the "toggle" event) and take the keyboard
+  // back if the closing content held it. Skipped on mount — nothing changed,
+  // so no event exists (and a page must not have its focus stolen by an
+  // expandable that was simply already open).
   const isFirstOpenedRunRef = useRef(true);
   useLayoutEffect(() => {
     if (isFirstOpenedRunRef.current) {
       isFirstOpenedRunRef.current = false;
-      return undefined;
+      return;
     }
     const root = rootRef.current;
     root.dispatchEvent(createToggleEvent(opened));
     if (opened) {
-      if (autoFocus) {
-        const firstFocusableElement = findFirstFocusableInContent();
-        if (firstFocusableElement) {
-          firstFocusableElement.focus();
-        }
+      return;
+    }
+    const focusedBeforeClose = focusedBeforeCloseRef.current;
+    focusedBeforeCloseRef.current = null;
+    if (focusedBeforeClose && contentContainerRef.current && contentContainerRef.current.contains(focusedBeforeClose)) {
+      const uiElement = uiRef.current;
+      if (uiElement) {
+        uiElement.focus();
+      } else {
+        // Nothing of the expandable's own can hold the keyboard (no UI part):
+        // the focus only has to leave the content becoming inert.
+        focusedBeforeClose.blur();
       }
-    } else {
-      const focusedBeforeClose = focusedBeforeCloseRef.current;
-      focusedBeforeCloseRef.current = null;
-      if (focusedBeforeClose && contentContainerRef.current && contentContainerRef.current.contains(focusedBeforeClose)) {
-        uiRef.current.focus();
+    }
+  }, [opened]);
+
+  // Everything a state change owes the content: the focus it may take, and the
+  // reveal, which measures it. Ran by <Expandable.Content> from its own layout
+  // effect — the commit where the content really is in the DOM — and returns
+  // that effect's cleanup.
+  const applyOpenedToContent = () => {
+    if (opened && autoFocus) {
+      const firstFocusableElement = findFirstFocusableInContent();
+      if (firstFocusableElement) {
+        firstFocusableElement.focus();
       }
     }
     if (!animation) {
@@ -44380,9 +44707,9 @@ const Expandable = props => {
       // The reveal needs the content at its final size before the track
       // starts moving, and the final size only exists in the open state —
       // the reflow trick (see instructions.md, CSS section), with transitions
-      // suppressed BEFORE the first layout read: this effect runs pre-paint,
-      // so any earlier read would itself be the first recalc of the open
-      // state and would start the track transition (see revealStartSizeRef).
+      // suppressed BEFORE the first layout read: this runs pre-paint, so any
+      // earlier read would itself be the first recalc of the open state and
+      // would start the track transition (see revealStartSizeRef).
       contentContainer.style.transitionProperty = "none";
       const finalRect = contentElement.getBoundingClientRect();
       if (isColumn) {
@@ -44422,7 +44749,7 @@ const Expandable = props => {
       setSettled(true);
     });
     return cancel;
-  }, [opened]);
+  };
   useLayoutEffect(() => {
     if (settled && !opened && mountedWhileOpened) {
       setContentMounted(false);
@@ -44466,6 +44793,12 @@ const Expandable = props => {
   }, []);
   const onRootKeyDown = keyboardEvent => {
     if (!arrowKeyShortcuts) {
+      return;
+    }
+    // The shortcuts all speak about the UI part — opening from it, stepping
+    // into the content, stepping back to it. Without one the expandable is
+    // driven from outside and the keys belong to whatever drives it.
+    if (!uiRef.current) {
       return;
     }
     // A nested expandable (deeper, so heard first) already answered this key.
@@ -44549,22 +44882,21 @@ const Expandable = props => {
     }
   };
 
-  // Where the content went, so the marker can point at it while open (closed
-  // always points right): below by default, above when the content part comes
-  // first, beside for layout="column" (the chevron then points back toward
-  // the UI: left).
-  const childArray = toChildArray(children);
-  const firstPart = childArray.find(child => child && (child.type === ExpandableUI || child.type === ExpandableContent));
-  const hasParts = Boolean(firstPart);
-  const contentFirst = hasParts && firstPart.type === ExpandableContent;
-  const openDirection = isColumn ? "left" : contentFirst ? "up" : "down";
+  // Only the two directions the layout has room for: a column layout reveals
+  // sideways, a stacked one vertically.
+  const revealDirection = isColumn ? openDirection === "left" ? "left" : "right" : openDirection === "up" ? "up" : "down";
+  // While open the marker points at the content, while closed always right.
+  // In a column layout it points back toward the UI part whichever side the
+  // content took, "right" being the closed direction already.
+  const markerDirection = isColumn ? "left" : revealDirection;
   const expandableContextValue = {
     opened,
     loading: loading || hasAction && actionLoading,
     contentMounted,
     hasAction,
     effectiveAction,
-    openDirection,
+    markerDirection,
+    applyOpenedToContent,
     toggleTo,
     onUIClick,
     onUIPointerDown,
@@ -44574,12 +44906,9 @@ const Expandable = props => {
     contentId
   };
 
-  // Explicit parts win; the `ui` prop + children is the shorthand for the
-  // common shape (UI above, content below). Parts are cloned on every render:
-  // reference-stable children would be bailed out of the commit, leaving
-  // their context subscription to re-render them asynchronously — after the
-  // [opened] effect above, which measures the content they render.
-  const body = hasParts ? childArray.map(child => child && (child.type === ExpandableUI || child.type === ExpandableContent) ? cloneElement(child) : child) : jsxs(Fragment$1, {
+  // The `ui` prop is the shorthand for the common shape: it names the UI part
+  // and children are the content. Without it the children ARE the parts.
+  const body = ui === undefined ? children : jsxs(Fragment$1, {
     children: [jsx(ExpandableUI, {
       children: ui
     }), jsx(ExpandableContent, {
@@ -44591,7 +44920,7 @@ const Expandable = props => {
     baseClassName: "navi_expandable",
     "aria-expanded": opened ? "true" : "false",
     "data-layout": isColumn ? "column" : undefined,
-    "data-content-first": contentFirst ? "" : undefined,
+    "data-open-direction": revealDirection,
     "data-animation": animation ? "" : undefined,
     "data-settled": settled ? "" : undefined,
     "data-content-scrolls": maxContentHeight === undefined ? undefined : "",
@@ -44631,22 +44960,25 @@ const Expandable = props => {
  * The always-visible part that reveals the content: the focusable toggle
  * itself (role button — click, Space/Enter, arrow keys), holding the marker
  * plus whatever it is given — any markup, a function of `{ open }` included.
- * Controls inside it keep their own behavior and do not toggle. Its position
- * among the parts decides where the content goes (before the content: content
- * below/right; after it: content above/left).
+ * Controls inside it keep their own behavior and do not toggle. A Box, so it
+ * takes the layout and style props every Box takes.
  *
  * @type {import("ignore:preact").FunctionComponent<{
+ *   marker?: false | import("ignore:preact").ComponentChildren,
  *   children?: import("ignore:preact").ComponentChildren | ((state: { open: boolean }) => import("ignore:preact").ComponentChildren),
  * }>}
+ * @param marker - The chevron drawn before the label. `false` removes it (a UI
+ *   part that is already an icon has no room for one); any node replaces it.
  */
 const ExpandableUI = ({
+  marker,
   children,
   ...rest
 }) => {
   const {
     opened,
     loading,
-    openDirection,
+    markerDirection,
     toggleTo,
     onUIClick,
     onUIPointerDown,
@@ -44654,9 +44986,9 @@ const ExpandableUI = ({
     uiRef,
     contentId
   } = useExpandableContext("UI");
-  return jsxs("div", {
+  return jsxs(Box, {
     ref: uiRef,
-    className: "navi_expandable_ui",
+    baseClassName: "navi_expandable_ui",
     role: "button",
     tabIndex: 0,
     "aria-expanded": opened,
@@ -44681,14 +45013,14 @@ const ExpandableUI = ({
       toggleTo(false);
     },
     ...rest,
-    children: [jsx("span", {
+    children: [marker === false ? null : jsx("span", {
       className: "navi_expandable_marker",
       "aria-hidden": "true",
-      children: jsx(SummaryMarker, {
+      children: marker === undefined ? jsx(SummaryMarker, {
         open: opened,
         loading: loading,
-        openDirection: openDirection
-      })
+        openDirection: markerDirection
+      }) : marker
     }), jsx("div", {
       className: "navi_expandable_ui_label",
       children: typeof children === "function" ? children({
@@ -44699,8 +45031,9 @@ const ExpandableUI = ({
 };
 
 /**
- * The revealed part. With an `action` on the Expandable, children may be a
- * function `(data) => ui` or a branches object — see ActionRenderer.
+ * The revealed part, a Box like the UI part. With an `action` on the
+ * Expandable, children may be a function `(data) => ui` or a branches object —
+ * see ActionRenderer.
  *
  * @type {import("ignore:preact").FunctionComponent<{}>}
  */
@@ -44713,9 +45046,24 @@ const ExpandableContent = ({
     contentMounted,
     hasAction,
     effectiveAction,
+    applyOpenedToContent,
     contentContainerRef,
     contentId
   } = useExpandableContext("Content");
+
+  // The focus move and the reveal are the root's, but they measure the content
+  // and can only run once it is in the DOM — which is this commit, the one
+  // that rendered it. Skipped on mount: nothing has changed yet, and an
+  // expandable that was simply already open must neither animate nor take the
+  // focus.
+  const isFirstOpenedRunRef = useRef(true);
+  useLayoutEffect(() => {
+    if (isFirstOpenedRunRef.current) {
+      isFirstOpenedRunRef.current = false;
+      return undefined;
+    }
+    return applyOpenedToContent();
+  }, [opened]);
   let content = children;
   if (hasAction) {
     content = jsx(ActionRenderer, {
@@ -44723,10 +45071,10 @@ const ExpandableContent = ({
       children: children
     });
   }
-  return jsx("div", {
+  return jsx(Box, {
     ref: contentContainerRef,
     id: contentId,
-    className: "navi_expandable_content_container",
+    baseClassName: "navi_expandable_content_container",
     inert: opened ? undefined : true,
     ...rest,
     children: jsx("div", {
@@ -80746,5 +81094,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, CalloutStatusIcon, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, ControlSwap, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, Expandable, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, InfoSvg, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, OfflineError, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTransitionArea, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, SpinGroup, SplitButton, StarSvg, Step, StepList, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, TimeRange, TimeRangeSpin, TimeRangeWheel, TimeSpin, TimeWheel, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, canNavBackSignal, canNavForwardSignal, coarsePointerSignal, compareTwoJsValues, constraintFromValidityRule, createAction, createAvailableConstraint, createI18n, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineRouteDefaultTransition, defineRouteTransition, detectHorizontalOverflow, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, errorIsDisplayed, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isOfflineError, isRowSelected, isScrolling, isToday, languagesSignal, localStorageSignal, markErrorAsDisplayedBy, moveArrayItemByIndex, moveFocusTo, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, scrollActivitySignal, setBaseUrl, setNetworkPolicy, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, smallTouchScreenSignal, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutElement, useCalloutRequestClose, useCanNavBack, useCanNavForward, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useNetworkPolicyReason, useOrderedColumns, usePopupMode, useRouteStatus, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideContainer, useSlideValue, useStateArray, useTitleLevel, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, CalloutStatusIcon, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, ControlSwap, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, Expandable, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, InfoSvg, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, OfflineError, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTransitionArea, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, SpinGroup, SplitButton, StarSvg, Step, StepList, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, TimeRange, TimeRangeSpin, TimeRangeWheel, TimeSpin, TimeWheel, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, canNavBackSignal, canNavForwardSignal, coarsePointerSignal, compareTwoJsValues, constraintFromValidityRule, createAction, createAvailableConstraint, createI18n, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineRouteDefaultTransition, defineRouteTransition, detectHorizontalOverflow, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, errorIsDisplayed, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isOfflineError, isRowSelected, isScrolling, isToday, languagesSignal, localStorageSignal, markErrorAsDisplayedBy, moveArrayItemByIndex, moveFocusTo, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, scrollActivitySignal, setBaseUrl, setNetworkPolicy, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, smallTouchScreenSignal, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutElement, useCalloutRequestClose, useCanNavBack, useCanNavForward, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useNetworkPolicyReason, useOrderedColumns, usePopupMode, useRouteStatus, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideContainer, useSlideValue, useStateArray, useTitleLevel, useTransitionCover, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi.js.map

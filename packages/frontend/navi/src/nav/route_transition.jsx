@@ -23,6 +23,21 @@
  * the reverse of another, so B → A can be given a movement of its own, or
  * silenced with "none", by writing it (see findRelation).
  *
+ * One shape of page has no pair to write: the one whose door is in the fixed
+ * furniture — a gear in a top bar, a "+" in a tab bar — and which is therefore
+ * opened from every screen and closed back onto whichever one the reader was
+ * on. The relation is real and it is a single sentence; only the `from` is
+ * missing, so it is left out:
+ *
+ *   defineRouteTransition(null, SETTINGS_PAGE, "cover-top");
+ *
+ * Arriving there plays forward from wherever, leaving plays back to wherever,
+ * and that is what lets the back button close it the way it opened — a
+ * traversal carries no request, and nothing has to remember per history entry
+ * what the press that created it had asked for. It is tried after every
+ * written pair, and it is not defineRouteDefaultTransition: a default is about
+ * every navigation nothing was said about, this is about ONE destination.
+ *
  * The relation says WHEN something plays and which way; the transition says
  * WHAT plays — a movement navi ships, or a name the application defines in its
  * own CSS (see the JSDoc below). Said without one, the relation plays the
@@ -449,10 +464,12 @@ const css = /* css */ `
 
     /* One page over the other, the way a sheet covers a desk: the page
        arriving slides in ON TOP of one that does not move, and going back it
-       slides off, uncovering it. The still page is animated all the same — to
-       a keyframe that goes nowhere — because left to the browser it would
-       fade. */
-    &[data-navi-route-transition-type="cover-x"] {
+       slides off, uncovering it. The edge in the name is the one it comes IN
+       from, which is where its door is: a page reached from a bottom bar comes
+       up from the bottom, one pulled down from a top bar comes down from the
+       top. The still page is animated all the same — to a keyframe that goes
+       nowhere — because left to the browser it would fade. */
+    &[data-navi-route-transition-type="cover-right"] {
       &[data-navi-route-transition="forward"] {
         --navi-route-transition-leave: navi-route-transition-still;
         --navi-route-transition-enter: navi-route-transition-enter-from-end;
@@ -460,16 +477,19 @@ const css = /* css */ `
       &[data-navi-route-transition="back"] {
         --navi-route-transition-leave: navi-route-transition-leave-towards-end;
         --navi-route-transition-enter: navi-route-transition-still;
-        &::view-transition-old(root),
-        &::view-transition-old(navi-route-transition) {
-          /* The page leaving is the cover: it must slide off ABOVE the one it
-             uncovers, against the browser's default of drawing the new page on
-             top. */
-          z-index: 1;
-        }
       }
     }
-    &[data-navi-route-transition-type="cover-y"] {
+    &[data-navi-route-transition-type="cover-left"] {
+      &[data-navi-route-transition="forward"] {
+        --navi-route-transition-leave: navi-route-transition-still;
+        --navi-route-transition-enter: navi-route-transition-enter-from-start;
+      }
+      &[data-navi-route-transition="back"] {
+        --navi-route-transition-leave: navi-route-transition-leave-towards-start;
+        --navi-route-transition-enter: navi-route-transition-still;
+      }
+    }
+    &[data-navi-route-transition-type="cover-bottom"] {
       &[data-navi-route-transition="forward"] {
         --navi-route-transition-leave: navi-route-transition-still;
         --navi-route-transition-enter: navi-route-transition-enter-from-bottom;
@@ -477,6 +497,26 @@ const css = /* css */ `
       &[data-navi-route-transition="back"] {
         --navi-route-transition-leave: navi-route-transition-leave-towards-bottom;
         --navi-route-transition-enter: navi-route-transition-still;
+      }
+    }
+    &[data-navi-route-transition-type="cover-top"] {
+      &[data-navi-route-transition="forward"] {
+        --navi-route-transition-leave: navi-route-transition-still;
+        --navi-route-transition-enter: navi-route-transition-enter-from-top;
+      }
+      &[data-navi-route-transition="back"] {
+        --navi-route-transition-leave: navi-route-transition-leave-towards-top;
+        --navi-route-transition-enter: navi-route-transition-still;
+      }
+    }
+    /* Going back, the page leaving is the cover: it must slide off ABOVE the
+       one it uncovers, against the browser's default of drawing the new page
+       on top. */
+    &[data-navi-route-transition-type="cover-right"],
+    &[data-navi-route-transition-type="cover-left"],
+    &[data-navi-route-transition-type="cover-bottom"],
+    &[data-navi-route-transition-type="cover-top"] {
+      &[data-navi-route-transition="back"] {
         &::view-transition-old(root),
         &::view-transition-old(navi-route-transition) {
           z-index: 1;
@@ -514,8 +554,10 @@ const css = /* css */ `
        rule, and one of navi's here would race it on cascade order. */
     &[data-navi-route-transition-type="slide-x"],
     &[data-navi-route-transition-type="slide-y"],
-    &[data-navi-route-transition-type="cover-x"],
-    &[data-navi-route-transition-type="cover-y"],
+    &[data-navi-route-transition-type="cover-right"],
+    &[data-navi-route-transition-type="cover-left"],
+    &[data-navi-route-transition-type="cover-bottom"],
+    &[data-navi-route-transition-type="cover-top"],
     &[data-navi-route-transition-type="zoom"] {
       &::view-transition-old(root),
       &::view-transition-old(navi-route-transition) {
@@ -531,8 +573,10 @@ const css = /* css */ `
        curve, and zoom keeps the browser's. */
     &[data-navi-route-transition-type="slide-x"],
     &[data-navi-route-transition-type="slide-y"],
-    &[data-navi-route-transition-type="cover-x"],
-    &[data-navi-route-transition-type="cover-y"] {
+    &[data-navi-route-transition-type="cover-right"],
+    &[data-navi-route-transition-type="cover-left"],
+    &[data-navi-route-transition-type="cover-bottom"],
+    &[data-navi-route-transition-type="cover-top"] {
       &::view-transition-old(root),
       &::view-transition-new(root),
       &::view-transition-old(navi-route-transition),
@@ -647,10 +691,17 @@ export const RouteTransitionArea = ({ children, ...rest }) => {
 };
 
 /**
- * Declare how a pair of routes moves against each other.
+ * Declare how a pair of routes moves against each other — or how one route is
+ * entered, from wherever its door happens to be.
  *
- * @param {object} from - a route, or `{ route, params }` when the page is a
- *   param of a route rather than a route of its own.
+ * @param {object|null} from - a route, or `{ route, params }` when the page is
+ *   a param of a route rather than a route of its own. `null` says the page is
+ *   reached FROM ANYWHERE: its door is in the furniture (a gear in the top
+ *   bar, a "+" in the tab bar) rather than on a screen, so there is no pair to
+ *   write it on. Arriving at `to` from any page then plays forward and leaving
+ *   it for any page plays back, which is what makes the back button close it
+ *   the way it opened. Tried last, after every written pair: a pair naming the
+ *   same destination still owns its crossing.
  * @param {object} to - same forms. Going from `from` to `to` plays forward,
  *   the reverse plays back — unless the reverse is written as a relation of
  *   its own, which then owns that way (a movement of its own, or `"none"` for
@@ -664,8 +715,11 @@ export const RouteTransitionArea = ({ children, ...rest }) => {
  *   Omitted, the browser's own cross-fade. Shipped with navi:
  *   - `"slide-x"`, `"slide-y"`: the two pages slide past each other, forward
  *     towards the start of the axis;
- *   - `"cover-x"`, `"cover-y"`: the page arriving slides in OVER one that does
- *     not move, and slides off it on the way back;
+ *   - `"cover-right"`, `"cover-left"`, `"cover-bottom"`, `"cover-top"`: the
+ *     page arriving slides in OVER one that does not move, and slides off it
+ *     on the way back. The edge named is the one it comes IN from, which is
+ *     where its door is: a page reached from a bottom bar covers from the
+ *     bottom, one pulled down from a top bar covers from the top;
  *   - `"zoom"`: the deeper page is the closer one — it lands from slightly too
  *     big, and grows away when left;
  *   - `"none"`: nothing, said out loud — written on one way of a pair, it cuts
@@ -696,6 +750,11 @@ export const RouteTransitionArea = ({ children, ...rest }) => {
 export const defineRouteTransition = (from, to, transition) => {
   import.meta.css = css;
   installTransitionWindowCss();
+  if (!to) {
+    throw new TypeError(
+      `defineRouteTransition needs a destination: "to" is ${to}. The page reached from anywhere is written defineRouteTransition(null, THAT_PAGE, ...) — there is no relation the other way round, a page LEFT for anywhere being the back half of that one.`,
+    );
+  }
   const { type, duration } = normalizeTransition(transition);
   const relation = {
     from: normalizePage(from),
@@ -846,10 +905,12 @@ const rebuildWatcher = () => {
   }
   // Every page any relation mentions, each once: the position of the current
   // page in this list is what turns "some signal moved" into "the document
-  // went from page A to page B".
+  // went from page A to page B". A relation written from anywhere mentions one
+  // page only — the other end is whatever the reader was on, and -1 is how it
+  // reads here.
   const pages = [];
   for (const { from, to } of relations) {
-    if (pageIndexOf(pages, from) === -1) {
+    if (from && pageIndexOf(pages, from) === -1) {
       pages.push(from);
     }
     if (pageIndexOf(pages, to) === -1) {
@@ -869,10 +930,15 @@ const rebuildWatcher = () => {
       firstReading = false;
       return;
     }
-    if (index === -1 || fromIndex === -1 || fromIndex === index) {
+    if (fromIndex === index) {
       return;
     }
-    const found = findRelation(pages[fromIndex], pages[index]);
+    // A page in no relation at all is a real end of the crossing, not a
+    // missing one: it is the "anywhere" a page reached from the furniture is
+    // opened over and closed back onto (see findRelation).
+    const fromPage = fromIndex === -1 ? null : pages[fromIndex];
+    const toPage = index === -1 ? null : pages[index];
+    const found = findRelation(fromPage, toPage);
     if (!found && !navigationRequest) {
       // No relation says anything about these two and this navigation asked
       // for nothing: they are side by side, and silence is the fact — not a
@@ -891,7 +957,7 @@ const rebuildWatcher = () => {
       return;
     }
     beginTransition({
-      page: pages[index],
+      page: toPage,
       url: navigationUrl,
       // Which way it plays: what the navigation itself said first — the link
       // being pressed is where the way the app is being walked is known — then
@@ -968,19 +1034,48 @@ observeAfterRouting(() => {
   releaseRoutingRenderingHold();
 });
 
-// The exact way travelled first, over the whole registry, and only then the
-// reverses: a relation written B → A owns that way, and being the reverse of
-// one written A → B never outranks it. This is what makes reciprocity a
-// default rather than a decree — write the way back to give it a movement of
-// its own, or "none" to silence it.
+// The exact way travelled first, over the whole registry, then the reverses,
+// and last the pages written from anywhere.
+//
+// A relation written B → A owns that way, and being the reverse of one written
+// A → B never outranks it. This is what makes reciprocity a default rather
+// than a decree — write the way back to give it a movement of its own, or
+// "none" to silence it.
+//
+// A page reached from anywhere is tried after every pair, so a pair naming the
+// same destination still owns its crossing — the map, where it was drawn, is
+// more precise than "from wherever". Arriving is read before leaving: between
+// two such pages, the one being opened says what plays.
 const findRelation = (fromPage, toPage) => {
   for (const relation of relations) {
+    if (!relation.from) {
+      continue;
+    }
     if (samePage(relation.from, fromPage) && samePage(relation.to, toPage)) {
       return { direction: "forward", relation };
     }
   }
   for (const relation of relations) {
+    if (!relation.from) {
+      continue;
+    }
     if (samePage(relation.from, toPage) && samePage(relation.to, fromPage)) {
+      return { direction: "back", relation };
+    }
+  }
+  for (const relation of relations) {
+    if (relation.from) {
+      continue;
+    }
+    if (samePage(relation.to, toPage)) {
+      return { direction: "forward", relation };
+    }
+  }
+  for (const relation of relations) {
+    if (relation.from) {
+      continue;
+    }
+    if (samePage(relation.to, fromPage)) {
       return { direction: "back", relation };
     }
   }
@@ -1107,10 +1202,11 @@ const beginTransition = ({ page, url, direction, type, duration }) => {
       // rendered has already resolved the wait by the next line.
       releaseRendering();
       if (page === null) {
-        // A default transition: which page is arriving is unknown, and some
-        // navigations render no route at all (a search param bound to a
-        // signal) — waited on, those would freeze the page until the browser
-        // gives up. The wait is raced with a short timer instead.
+        // Which page is arriving is unknown — a default transition, or a page
+        // reached from anywhere being left for wherever — and some navigations
+        // render no route at all (a search param bound to a signal): waited
+        // on, those would freeze the page until the browser gives up. The wait
+        // is raced with a short timer instead.
         await Promise.race([renderWait.rendered, waitMs(50)]);
       } else if (pageIsCurrent(page)) {
         await renderWait.rendered;
@@ -1242,8 +1338,14 @@ const armRouteRenderWait = () => {
 
 const waitMs = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const normalizePage = (page) =>
-  page.isRoute ? { route: page, params: undefined } : page;
+// A page written as the route itself, and the page written nowhere: `from`
+// may be left out, which is a relation about arriving at `to` from anywhere.
+const normalizePage = (page) => {
+  if (!page) {
+    return null;
+  }
+  return page.isRoute ? { route: page, params: undefined } : page;
+};
 
 // Two pages are the same page when they select the same thing, not when they
 // were written by the same hand.

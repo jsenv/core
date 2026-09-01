@@ -544,6 +544,12 @@ const shouldInjectSpacingBetween = (left, right) => {
  *   An invisible placeholder rendered with those styles reserves the space; the
  *   real visible text is layered on top via `position: absolute`.
  *   Best combined with `noWrap` — does not work reliably on multi-line text.
+ *   The placeholder is a SECOND copy of the children: it is `aria-hidden`, so
+ *   the accessible name is right, but the text appears twice in `textContent`
+ *   — which is what a test asserting on the element's text reads. Where the
+ *   element's text must stay single (a tab, a label a test matches on), reserve
+ *   the space some other way; `Link`'s `currentEffectBold` paints the weight by
+ *   default and comes here only when asked to (`"hold-space"`).
  *
  * @param {boolean} [boldStable]
  *   Alternative to `holdSpaceForStyle` for multi-line text. Keeps a consistent

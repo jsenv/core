@@ -124,6 +124,10 @@ export {
   defineRouteTransition,
 } from "./src/nav/route_transition.jsx";
 export { RouteTravel } from "./src/nav/route_travel.jsx";
+// What covers the box a route movement plays in from inside the document — a
+// sticky row above the pages — so its pictures are cut at it instead of sliding
+// over it (see src/nav/transition_cover.js).
+export { useTransitionCover } from "./src/nav/transition_cover.js";
 export { anyMatchingRouteSignal, routeAction } from "./src/nav/route_action.js";
 export { rawUrlPart, setBaseUrl } from "./src/nav/route_pattern.js";
 export {

@@ -449,7 +449,8 @@
           <Heading id="parts">Parts</Heading>
           <p>
             <code>Expandable.UI</code> and <code>Expandable.Content</code> given
-            explicitly; their order decides where the content goes.
+            explicitly; <code>openDirection</code> decides where the content
+            goes — the parts below are always written UI first.
           </p>
           <div className="demo-row">
             <div className="demo-box">
@@ -463,18 +464,18 @@
             </div>
             <div className="demo-box">
               <p className="demo-caption">
-                Content then UI, in flow: the UI and the text after it are
+                openDirection="up", in flow: the UI and the text after it are
                 pushed down
               </p>
               <p style="color: #90a4ae">Page content before the expandable.</p>
-              <Expandable animation>
+              <Expandable animation openDirection="up">
+                <Expandable.UI>Details</Expandable.UI>
                 <Expandable.Content>
                   <div className="demo-content">
                     <p>Revealed above the UI.</p>
                     <p>Two lines of content.</p>
                   </div>
                 </Expandable.Content>
-                <Expandable.UI>Details</Expandable.UI>
               </Expandable>
               <p style="color: #90a4ae">Page content after the expandable.</p>
             </div>
@@ -486,19 +487,20 @@
               <p style="color: #90a4ae">Page content before the expandable.</p>
               <Expandable
                 animation
+                openDirection="up"
                 absolute
                 bottom="12"
                 left="12"
                 right="12"
                 backgroundColor="white"
               >
+                <Expandable.UI>Details</Expandable.UI>
                 <Expandable.Content>
                   <div className="demo-content">
                     <p>Revealed above the UI.</p>
                     <p>Two lines of content.</p>
                   </div>
                 </Expandable.Content>
-                <Expandable.UI>Details</Expandable.UI>
               </Expandable>
               <p style="color: #90a4ae">Page content after the expandable.</p>
             </div>
@@ -516,7 +518,7 @@
           </p>
           <div className="demo-row">
             <div className="demo-box">
-              <p className="demo-caption">content to the right</p>
+              <p className="demo-caption">content to the right (default)</p>
               <Expandable layout="column" animation>
                 <Expandable.UI style="background: #eceff1; padding: 4px">
                   More
@@ -532,9 +534,12 @@
             </div>
             <div className="demo-box">
               <p className="demo-caption">
-                content to the left (Content then UI)
+                content to the left (openDirection="left")
               </p>
-              <Expandable layout="column" animation>
+              <Expandable layout="column" animation openDirection="left">
+                <Expandable.UI style="background: #eceff1; padding: 4px">
+                  More
+                </Expandable.UI>
                 <Expandable.Content>
                   <div className="demo-content">
                     A paragraph long enough to wrap on several lines at its
@@ -542,9 +547,6 @@
                     shape.
                   </div>
                 </Expandable.Content>
-                <Expandable.UI style="background: #eceff1; padding: 4px">
-                  More
-                </Expandable.UI>
               </Expandable>
             </div>
           </div>

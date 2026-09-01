@@ -15,7 +15,15 @@
  *    keeps its bars against its own edges.
  * 2. **It gives its space back.** Being fixed it covers the content: without a
  *    reserve the end of a long page stays under it, unreachable. It publishes
- *    what it takes on <html> — see fixed_bar_space.js.
+ *    what it takes on <html> — see fixed_bar_space.js. An edge holds ONE bar:
+ *    bars sharing an edge are pinned to it one over the other, so the room
+ *    given back is the largest of them and never their sum — which is what the
+ *    two bars of a page transition need, and what makes a deliberately stacked
+ *    second bar unexpressible. A second strip under the first belongs to the
+ *    flow: `position: sticky` at `top: var(--navi-fixed-bar-space-top)`, which
+ *    puts it under whatever the bar of the moment is worth, and
+ *    `useTransitionCover` (nav/transition_cover.js) so the pictures of a route
+ *    movement are cut at it.
  * 3. **It reaches under the notch.** `env(safe-area-inset-*)` is padding, so
  *    the content is pushed in while the background keeps running to the edge of
  *    the screen. Across the bar that inset is added to `width`/`height` too, so
@@ -167,7 +175,9 @@ const FixedBarStyleCSSVars = {
  *   borderColor?: string,
  * }>}
  * @param {"top"|"bottom"|"left"|"right"} [props.area="top"] - Which edge of
- *   the window it is pinned to.
+ *   the window it is pinned to. One bar per edge: a second one does not stack
+ *   under the first, it sits on it (see this file's top comment for the strip
+ *   that does stack).
  * @param {string|number} [props.height] - For a bar on the top or bottom
  * @param {string|number} [props.width] - …and for one on a side. The safe-area
  *   inset is NOT part of it: it is added on top, so the content keeps the size

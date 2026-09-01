@@ -44,6 +44,15 @@ const css = /* css */ `
       --nav-current-indicator-size: 2px;
       --nav-current-indicator-color: var(--navi-link-current-indicator-color);
     }
+    /* What the row says about the bar reaches its tabs under the name a tab
+       answers to, so the two natures of row take one declaration: the bar is
+       drawn per tab in a row of routes and once for the whole row in a row of
+       slides, and a caller colouring a tab should not have to know which.
+       A tab that says otherwise for itself is what makes the bar arrive on it
+       in its colour (see paintIndicatorGeometry). */
+    .navi_nav .navi_link {
+      --link-current-indicator-color: var(--nav-current-indicator-color);
+    }
   }
 
   /* The bar of a nav whose tabs are SLIDES: one element for the whole row,
@@ -68,10 +77,33 @@ const css = /* css */ `
         var(--nav-indicator-length) + var(--slide-travel-progress) *
           var(--nav-indicator-length-delta)
       );
+      /* The colour of the two tabs the bar stands between, read off them and
+         mixed at the very fraction the position is interpolated at: the trait
+         changes colour AS IT TRAVELS, which is what belonging to the tab it is
+         under means. The sign is the one the deltas above carry, so a fraction
+         of zero — nothing to lean towards — is the current tab's colour alone.
+         Both fall back to the row's when a tab has nothing of its own to say
+         (see paintIndicatorGeometry: it writes nothing it could not read). */
+      --x-nav-indicator-color: var(
+        --nav-indicator-color,
+        var(--nav-current-indicator-color)
+      );
+      --x-nav-indicator-color-toward: var(
+        --nav-indicator-color-toward,
+        var(--x-nav-indicator-color)
+      );
 
       position: absolute;
       z-index: 1;
-      background: var(--nav-current-indicator-color);
+      background: color-mix(
+        in srgb,
+        var(--x-nav-indicator-color-toward)
+          calc(
+            var(--slide-travel-progress) * var(--nav-indicator-toward-sign, 0) *
+              100%
+          ),
+        var(--x-nav-indicator-color)
+      );
       border-radius: 0.1px;
       pointer-events: none;
     }
@@ -169,6 +201,19 @@ const css = /* css */ `
        first. The ceiling is what makes the overflow real. */
     &[data-scrollable] {
       max-width: 100%;
+
+      /* …and a row that does not decide its own width does not share it
+         either: every tab keeps the size of its own label, does not shrink and
+         does not wrap. Tabs at an equal share each is what makes an overflow
+         impossible — ten of them always fit, so the row never scrolls and what
+         one cannot read is every tab at once. Said here rather than on each
+         tab: the row is the one that knows it may overflow.
+         A tab that wants otherwise still says so for itself — a prop on the
+         <Link> lands as an inline style, which wins over this. */
+      .navi_link {
+        flex: none;
+        white-space: nowrap;
+      }
     }
     &[data-scrollable][data-vertical] {
       max-height: 100%;
@@ -210,16 +255,19 @@ const css = /* css */ `
        its container while its tabs sit at their text width stops in the middle,
        and gives every tab a different size to aim at.
        The main axis only: a vertical nav expanding horizontally fills the width
-       (align-items below) rather than sharing its height between its tabs. */
+       (align-items below) rather than sharing its height between its tabs.
+       The row itself still grows when it may overflow; only the sharing is off
+       there, since a share of the row is a size that always fits (see
+       [data-scrollable] above). */
     &[data-expand-x] {
       flex-grow: 1;
 
-      &:not([data-vertical]) .navi_link {
+      &:not([data-vertical]):not([data-scrollable]) .navi_link {
         flex: 1;
         justify-content: center;
       }
     }
-    &[data-expand-y][data-vertical] {
+    &[data-expand-y][data-vertical]:not([data-scrollable]) {
       .navi_link {
         flex: 1;
       }
@@ -328,6 +376,10 @@ const positionOfCurrentIndicator = (currentIndicator, vertical) => {
  * @param {boolean|"top"|"bottom"|"left"|"right"} [props.currentIndicator] - the
  *   bar that says which tab one is on, said once here rather than on every
  *   `<Link>`. A link may still say otherwise for itself.
+ *   Its colour belongs to the tab it is under: `currentIndicatorColor` here is
+ *   what every tab inherits, and a tab declaring
+ *   `--nav-current-indicator-color` for itself is arrived at in its own colour
+ *   — the bar changes colour as it travels rather than once it lands.
  * @param {boolean} [props.currentIndicatorSlides=true] - whether that bar
  *   travels from the tab it was under to the tab it is under now, instead of
  *   going out on one and coming back on the other. For a nav made of routes it
@@ -412,11 +464,11 @@ export const Nav = ({
     );
   };
 
-  // Where the trait is and where it is headed, as four numbers of pixels the
-  // CSS above interpolates between (see the .navi_nav_indicator rules). Written
-  // by hand rather than rendered: it is read off the row as it stands, and the
-  // travel it must agree with starts in the same frame the container publishes
-  // it — a render would land after the movement had begun.
+  // Where the trait is, where it is headed, and in which colour at each end —
+  // the numbers the CSS above interpolates between (see the .navi_nav_indicator
+  // rules). Written by hand rather than rendered: it is read off the row as it
+  // stands, and the travel it must agree with starts in the same frame the
+  // container publishes it — a render would land after the movement had begun.
   const paintIndicatorGeometry = () => {
     const navElement = navRef.current;
     const containerElement = slideContainerElementRef.current;
@@ -437,6 +489,22 @@ export const Nav = ({
       vertical
         ? { position: tabElement.offsetTop, length: tabElement.offsetHeight }
         : { position: tabElement.offsetLeft, length: tabElement.offsetWidth };
+    // The colour a tab asks the bar to be under it. Read from the tab and not
+    // from the row, so a tab that says nothing gives the row's value back —
+    // it inherits it (see the css above) — and one that says something gives
+    // its own. Empty when neither resolves to anything: the css then falls
+    // back on its own, rather than being handed a colour that is not one.
+    const colorOf = (tabElement) =>
+      getComputedStyle(tabElement)
+        .getPropertyValue("--link-current-indicator-color")
+        .trim();
+    const writeColor = (property, color) => {
+      if (color) {
+        navElement.style.setProperty(property, color);
+      } else {
+        navElement.style.removeProperty(property);
+      }
+    };
     const currentMeasure = measure(tabElements[currentIndex]);
     const towardArea = containerElement.getAttribute(
       "data-slide-travel-toward",
@@ -446,8 +514,11 @@ export const Nav = ({
     );
     let positionDelta = 0;
     let lengthDelta = 0;
+    let towardSign = 0;
+    let towardColor = "";
     if (towardIndex !== -1 && towardIndex !== currentIndex) {
-      const towardMeasure = measure(tabElements[towardIndex]);
+      const towardTabElement = tabElements[towardIndex];
+      const towardMeasure = measure(towardTabElement);
       // What one box of travel is worth in pixels of this row, signed so that
       // the trait is exactly on the other tab when the progress is at its own
       // end: the container counts +1 when the picture leans on a slide sitting
@@ -455,12 +526,17 @@ export const Nav = ({
       const sign = towardIndex > currentIndex ? -1 : 1;
       positionDelta = (towardMeasure.position - currentMeasure.position) * sign;
       lengthDelta = (towardMeasure.length - currentMeasure.length) * sign;
+      towardSign = sign;
+      towardColor = colorOf(towardTabElement);
     }
     const { style } = navElement;
     style.setProperty("--nav-indicator-position", currentMeasure.position);
     style.setProperty("--nav-indicator-length", currentMeasure.length);
     style.setProperty("--nav-indicator-position-delta", positionDelta);
     style.setProperty("--nav-indicator-length-delta", lengthDelta);
+    style.setProperty("--nav-indicator-toward-sign", towardSign);
+    writeColor("--nav-indicator-color", colorOf(tabElements[currentIndex]));
+    writeColor("--nav-indicator-color-toward", towardColor);
     navElement.setAttribute("data-nav-indicator-measured", "");
   };
   // Reached through a ref by everything watching the DOM below: those watchers

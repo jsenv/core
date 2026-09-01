@@ -153,7 +153,7 @@
       // ouvre DEPUIS elles est une relation de paire, écrite sur la route nue —
       // elle vaut donc depuis n'importe quelle section.
       defineRouteTransition(PARTIES_ROUTE, GAME_ROUTE, "slide-x");
-      defineRouteTransition(PARTIES_ROUTE, REGLAGES_ROUTE, "cover-y");
+      defineRouteTransition(PARTIES_ROUTE, REGLAGES_ROUTE, "cover-bottom");
 
       const GoBackButton = () => (
         <button onClick={() => window.history.back()}>←</button>
@@ -268,7 +268,7 @@
                 {[
                   `<RouteTravel> anime les 3 sections (une rangée, le pouce la pousse)`,
                   `defineRouteTransition(PARTIES, GAME, "slide-x");`,
-                  `defineRouteTransition(PARTIES, RÉGLAGES, "cover-y");`,
+                  `defineRouteTransition(PARTIES, RÉGLAGES, "cover-bottom");`,
                 ].join("\n")}
               </pre>
             </div>

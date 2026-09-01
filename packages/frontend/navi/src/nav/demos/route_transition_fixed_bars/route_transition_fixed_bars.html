@@ -54,6 +54,7 @@
       import { render } from "preact";
       import { useLayoutEffect } from "preact/hooks";
       import {
+        Button,
         FixedBar,
         Link,
         Nav,
@@ -67,17 +68,24 @@
       const ME_ROUTE = route("/me");
       const ME_EDIT_ROUTE = route("/me/edit");
       const PLACES_ROUTE = route("/places");
-      setupRoutes([ME_EDIT_ROUTE, ME_ROUTE, PLACES_ROUTE]);
+      const REGLAGES_ROUTE = route("/reglages");
+      setupRoutes([ME_EDIT_ROUTE, ME_ROUTE, PLACES_ROUTE, REGLAGES_ROUTE]);
 
       defineRouteTransition(ME_ROUTE, ME_EDIT_ROUTE, "slide-x");
-      defineRouteTransition(ME_ROUTE, PLACES_ROUTE, "cover-y");
+      defineRouteTransition(ME_ROUTE, PLACES_ROUTE, "cover-bottom");
+      // La porte des réglages est dans la barre du haut: on les ouvre depuis
+      // n'importe quelle page et on les referme sur celle qu'on lisait. Aucune
+      // paire à écrire — le `from` est laissé de côté, et la moitié "retour"
+      // joue pour le bouton fermer comme pour celui du navigateur.
+      defineRouteTransition(null, REGLAGES_ROUTE, "cover-top");
 
       // Les liens sont répétés tous les cinq rangs: on part — et on revient —
       // depuis n'importe quelle position de défilement, ce qui est la seule
       // façon de voir ce que la page quittée fait de la sienne.
-      const LongPage = ({ title, color, rows, links }) => (
+      const LongPage = ({ title, color, rows, links, close }) => (
         <div className="pages" style={{ background: color }}>
           <h1 className="page_title">{title}</h1>
+          {close}
           {Array.from({ length: rows }, (_, index) => (
             <div key={index}>
               {index % 5 === 0 &&
@@ -162,6 +170,20 @@
         />
       );
 
+      const ReglagesPage = () => (
+        <LongPage
+          title="Réglages"
+          color="#f3ecfb"
+          rows={20}
+          close={
+            <Button className="card" command="--navi-nav-back:/me">
+              ✕ Fermer les réglages
+            </Button>
+          }
+          links={[]}
+        />
+      );
+
       const AppIndex = () => {
         useLayoutEffect(() => {
           ME_ROUTE.redirectTo();
@@ -172,13 +194,19 @@
       const App = () => (
         <>
           <FixedBar area="top" height="56">
-            <div className="bar_content">Barre du haut</div>
+            <div className="bar_content">
+              Barre du haut
+              <Link route={REGLAGES_ROUTE} data-testid="reglages_link">
+                ⚙ Réglages
+              </Link>
+            </div>
           </FixedBar>
           <RouteTransitionArea>
             <Route>
               <Route route={ME_EDIT_ROUTE} element={MeEditPage} />
               <Route route={ME_ROUTE} element={MePage} />
               <Route route={PLACES_ROUTE} element={PlacesPage} />
+              <Route route={REGLAGES_ROUTE} element={ReglagesPage} />
               <Route fallback element={AppIndex} />
             </Route>
           </RouteTransitionArea>
