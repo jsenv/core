@@ -1,6 +1,6 @@
 import { signal } from "@preact/signals";
 
-import { reportErrorIfNobodyDisplaysIt } from "../../action/action_error_report.js";
+import { runUnwatched } from "../../action/run_unwatched.js";
 import { setActionDispatcher } from "../../action/actions.js";
 import { executeWithCleanup } from "../../utils/execute_with_cleanup.js";
 import { whenRenderingResumes } from "../rendering_hold.js";
@@ -168,18 +168,12 @@ export const setupBrowserIntegrationViaHistory = ({
     // something at the first announcement has a definite place to give it back.
     publishBeforeRouting({ url, ...options });
     try {
-      const routingResult = applyRoutingTask(url, options);
-      if (routingResult && typeof routingResult.then === "function") {
-        // Every caller below drops this value — a click handler has nothing to
-        // do with what the routing returns — so a rejection here would become
-        // an anonymous unhandled one, pointing at the navigation rather than at
-        // what failed. It goes to the single place that knows what to do with
-        // an error nobody displays (see action_error_report.js).
-        routingResult.catch((e) => {
-          reportErrorIfNobodyDisplaysIt(e);
-        });
-      }
-      return routingResult;
+      // Every caller below drops this value — a click handler has nothing to do
+      // with what the routing returns — so a rejection here would become an
+      // anonymous unhandled one, pointing at the navigation rather than at what
+      // failed. Taken, and passed to the one place that knows what to do with
+      // an error nobody displays (see run_unwatched.js).
+      return runUnwatched(() => applyRoutingTask(url, options));
     } finally {
       publishAfterRouting({ url, ...options });
     }

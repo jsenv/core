@@ -70,6 +70,7 @@ import {
 
 import { ActionRenderer } from "../../action/action_renderer.jsx";
 import { useAction } from "../../action/use_action.js";
+import { runUnwatched } from "../../action/run_unwatched.js";
 import { useActionStatus } from "../../action/use_action_status.js";
 import { Box } from "../../box/box.jsx";
 import { MOUNT_DEFAULT } from "../../layout/popup_content_mount.js";
@@ -442,7 +443,7 @@ export const Expandable = (props) => {
     }
     if (hasAction) {
       if (nextOpen) {
-        effectiveAction.run();
+        runUnwatched(() => effectiveAction.run());
       } else {
         effectiveAction.abort();
       }
@@ -609,7 +610,7 @@ export const Expandable = (props) => {
   // Mounted already open: the content is visible, its data is due.
   useEffect(() => {
     if (openedRef.current && hasAction) {
-      effectiveAction.run();
+      runUnwatched(() => effectiveAction.run());
     }
   }, []);
 

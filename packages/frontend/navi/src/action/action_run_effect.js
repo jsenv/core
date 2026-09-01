@@ -2,6 +2,7 @@ import { computed } from "@preact/signals";
 
 import { stringifyForDisplay } from "../utils/stringify_for_display.js";
 import { createAction } from "./actions.js";
+import { runUnwatched } from "./run_unwatched.js";
 
 /**
  * Reactively runs an action whenever the params derived from signals change.
@@ -32,12 +33,6 @@ import { createAction } from "./actions.js";
 // one — in dev, an error overlay thrown over a page that is already saying what
 // went wrong. Nothing is lost by dropping it: the failure is held by the action
 // itself, and whoever reads it (useAsyncData, <Button action>) is what shows it.
-const runUnwatched = (result) => {
-  if (result && typeof result.catch === "function") {
-    result.catch(() => {});
-  }
-};
-
 export const actionRunEffect = (
   action,
   deriveActionParamsFromSignals,
@@ -81,7 +76,9 @@ export const actionRunEffect = (
           // falsy params, don't run
           return;
         }
-        runUnwatched(actionTarget.run({ reason: "truthy params first run" }));
+        runUnwatched(() =>
+          actionTarget.run({ reason: "truthy params first run" }),
+        );
         return;
       }
 
@@ -98,18 +95,18 @@ export const actionRunEffect = (
         }
         if (!actionTargetPrevious.params) {
           // coming from falsy-params state: action may already be cached, avoid unnecessary rerun
-          runUnwatched(
+          runUnwatched(() =>
             actionTarget.run({ reason: "params restored from falsy state" }),
           );
         } else {
-          runUnwatched(actionTarget.rerun({ reason: "params modified" }));
+          runUnwatched(() => actionTarget.rerun({ reason: "params modified" }));
         }
       }
     },
     ...options,
   });
   if (actionParamsSignal.peek()) {
-    runUnwatched(
+    runUnwatched(() =>
       actionRunnedByThisEffect.run({ reason: "initial truthy params" }),
     );
   }

@@ -9,6 +9,7 @@ import { useCallback, useLayoutEffect, useState } from "preact/hooks";
 import { registerGlobalConstraint } from "../control/rules/control_validation.js";
 import { useResetErrorBoundary } from "../error_boundary_context.js";
 import { useDebugAction } from "../navi_debug.jsx";
+import { runUnwatched } from "./run_unwatched.js";
 
 const actionErrorWeakMap = new WeakMap();
 const NAVI_ACTION_ERROR_CONSTRAINT = {
@@ -255,7 +256,10 @@ export const useExecuteAction = (
         });
       };
 
-      return runAction();
+      // The control is already holding the failure — the error side effect
+      // above drew the callout, or threw it at the boundary — so nothing here
+      // is waiting on the rejection.
+      return runUnwatched(runAction);
     },
     [elementRef, errorEffect],
   );

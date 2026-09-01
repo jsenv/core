@@ -169,15 +169,47 @@ server runs too, or both — is `docs/field_validation.md`.
 
 ## What a failing action does
 
-It writes the error into `errorSignal`, moves to `FAILED`, and stops.
+It writes the error into `errorSignal`, moves to `FAILED`, and hands the failure
+back to whoever asked for the run.
 
-**A run never rejects.** `run()`, `rerun()`, `prerun()` settle with the error as
-their value. Nothing about a failed action arrives as a rejected promise, so
-there is no floating rejection to catch and no navigation that has to await one
-to stay quiet. Code that wants the error asks for it — `useAsyncData`,
-`errorSignal`, or an `onError` passed to the run.
+**A failing run fails the way it ran.** `run()`, `rerun()`, `prerun()` — and
+`ACTION(params)`, which is `bindParams(params).rerun()` — reject with the error
+when the callback was asynchronous, and **throw it synchronously** when it was
+not: code that knows its action is synchronous writes a plain `try/catch` around
+the call and has to find the failure there, not in a rejected promise it never
+awaited. Either way it fails like any other call that can fail, and an action
+awaiting another one fails with it:
 
-Why it does no more than that: **at the instant an action fails, nothing can
+```js
+// GROUP.LEAVE fails → this rejects → the button's action fails → the button
+// shows the error, and a command following it does not run
+<Button action={() => GROUP.LEAVE({ id: group.id })} />
+```
+
+The error is in `errorSignal` all the same: a screen reads it there whether or
+not anything was waiting on the promise. `useAsyncData`, `errorSignal` and an
+`onError` passed to the run are still how a render asks for it.
+
+Code that lets such a rejection float gets the runtime's own unhandled-error
+report — window `error`, the jsenv overlay in dev — and that is the right answer
+for it: nothing had to guess whether someone was waiting.
+
+**Some runs have nobody to reject at**, and they say so where they start: one
+started from a signal effect because its params changed, one whose failure the
+control that started it already draws, a routing whose result every caller drops.
+They pass through [`runUnwatched()`](../src/action/run_unwatched.js), which takes
+the rejection without hiding the error — it stays in `errorSignal`. That is the
+whole list of places navi swallows one, and taking it is what obliges that place
+to ask the next question: did anything display this error? (below).
+
+Two things must never become a rejection, and do not. **A navigation**: the
+routing's promise is what the browser calls the navigation itself, and rejecting
+it would abort a navigation whose page is busy explaining what failed. **The end
+of an update**: several actions run for one update, so their outcomes are
+gathered with `allSettled` — one failure is an outcome to record, not something
+that takes the other five down.
+
+Why the failure does no more than that: **at the instant an action fails, nothing can
 know whether a screen will display it.** A route action runs before its page
 renders — often before that page exists — so any decision made there about "will
 someone show this?" is a guess, and it is wrong for the most common case in the

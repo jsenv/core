@@ -400,32 +400,52 @@ graph: what used to be refreshed by the parent's own response is now refreshed
 only by these rules. When a parent field genuinely depends on a child mutation,
 say so with `dependencies` rather than relying on a rerun that will not happen.
 
-## Binding params instead of wrapping in an arrow
+## A function calling the verb, or the instance
 
-Every action exposes `bindParams()`, which returns an action instance with its
-own state. Pass that instance to a component:
+Both forms are real, and what separates them is narrower than it looks:
 
 ```jsx
-// ✓ loading, error and disabled states come for free
+// a function that calls the verb — the nominal form
+<Button action={() => GAME_CANDIDATES.POST({ id: game.id, user_id })}>
+  Accept
+</Button>
+
+// the instance, bound to its params
 <Button action={GAME_CANDIDATES.POST.bindParams({ id: game.id, user_id })}>
   Accept
 </Button>
 ```
 
+The function gives up almost nothing. Either way the button is busy while the
+write runs, shows the error if it fails and goes back to what it held; either way
+what runs inside is the same resource run, so the store is updated and the
+actions this mutation invalidates rerun the same. The failure travels too — the
+call fails, so the action around it fails
+([error_handling.md](./error_handling.md#what-a-failing-action-does)).
+
+What `bindParams` adds, and it adds only this, is **identity**: everyone binding
+the same params holds one instance, so a run started in one place is visible from
+another. Reach for it when something else on screen has to see this very run — a
+user row in a side explorer going loading while the main page renames that user,
+two affordances for the same delete that must both go busy at once. Nothing else
+in the stack answers that question: the store holds the data, not who is
+currently writing it.
+
+Where it does not pay, and most call sites are here: one affordance, in one
+place, that nobody else watches. A `bindParams({ id })` written per row builds an
+identity nothing reads, and a plain function says the gesture more directly.
+
+What genuinely loses what a resource gives is neither of those two, but a
+callback that goes around the verb:
+
 ```jsx
-// ✗ an inline arrow throws away the per-params action state
+// ✗ no resource run at all: nothing updates the store, nothing is invalidated
 <Button
-  action={async () => {
-    await acceptCandidate(game.id, user_id);
-  }}
+  action={() => fetch(`/games/${game.id}/candidates`, { method: "POST" })}
 >
   Accept
 </Button>
 ```
-
-The arrow works, but nothing tracks it: no per-row spinner, no error surfaced on
-the button that caused it, no deduplication of concurrent runs, no autorerun of
-the actions this mutation should invalidate. See [actions.md](./actions.md).
 
 Away from a component, where the run is a gesture and not something to render,
 an action is callable: `GAME.DELETE({ id })` is

@@ -82,7 +82,8 @@ consistency across the app, not from any single call site.
 - `docs/error_handling.md` — the two kinds of error and how navi keeps them
   apart: where an error is shown depending on where it came from (a control's
   action shows it on what was clicked, a route action replaces the page, a
-  refused value is validation and not an error at all), why a run never rejects,
+  refused value is validation and not an error at all), what a failing run
+  rejects with and who is allowed to swallow that rejection,
   the `__handled_by__` mark that means "this error is on screen somewhere" (and
   what `preact/debug` throws over your app without it), what becomes of an error
   nobody displays, and the two rules any error boundary must follow — mark only

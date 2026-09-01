@@ -57,9 +57,18 @@ flow — where the params are known at that moment and the run is the point:
 const deleteGame = (game) => GAME.DELETE({ id: game.id });
 ```
 
-Use `bindParams` when what you need is the **instance**, not the run: to hand it
-to a component that will run it and read its state
-(`<Button action={GAME.DELETE.bindParams({ id })}>`), or to keep a handle on it.
+A run that fails hands the failure back — it **rejects**, or **throws
+synchronously** when the callback was synchronous — so a gesture behaves like any
+other call that can fail: an `await` on it throws, and an action awaiting it
+fails with it, which is what puts the error on the control that asked for the
+gesture, with nothing to write for it. See [error_handling.md](./error_handling.md#what-a-failing-action-does)
+for the runs that have nobody to reject at, and what they do instead.
+
+Use `bindParams` when what you need is the **instance**, not the run: to keep a
+handle on it, or so that a run started in one place is visible from another —
+that shared identity is the whole of what it adds, and a control does not need it
+to draw its own busy and error states (see
+[resource.md](./resource.md#a-function-calling-the-verb-or-the-instance)).
 Note that calling the action `rerun()`s it — the run happens even if that
 instance already holds data, which is what you want from a gesture and not what
 you want from a component asking for data.
@@ -315,7 +324,7 @@ is a popup the picker already owns, and the work runs back on the trigger.
   type="confirm"
   ui="Leave this group"
   message="Leave this group? An invitation will be needed to come back."
-  action={PLAYER_GROUP.LEAVE.bindParams({ id: group.id })}
+  action={() => PLAYER_GROUP.LEAVE({ id: group.id })}
   command="--navi-nav-to:/me/groups"
 />
 ```
@@ -336,10 +345,10 @@ say it is done, or letting the route land on its empty state, are as good as
 leaving for the list; what the `command` settles is only that the success is
 what decides.
 
-The action is the instance, not an arrow around it — `bindParams` is what gives
-the trigger its busy state and its error callout, and the reason is the same one
-[resource.md](./resource.md#binding-params-instead-of-wrapping-in-an-arrow)
-gives for every write.
+A function calling the verb, not the instance: the trigger is busy and draws the
+error either way, and `bindParams` earns its place only when something else on
+screen must see this very run — see
+[resource.md](./resource.md#a-function-calling-the-verb-or-the-instance).
 
 On a link — a `Link`, a `<Button href>` or `<Button route>` — the three fire on
 the press, before the navigation, and the navigation waits for none of them: a

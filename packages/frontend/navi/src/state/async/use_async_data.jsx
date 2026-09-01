@@ -21,6 +21,7 @@ import {
   IDLE,
   RUNNING,
 } from "../../action/action_run_states.js";
+import { runUnwatched } from "../../action/run_unwatched.js";
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 import { documentUrlSignal } from "../../nav/browser_integration/document_url_signal.js";
 import { publishRouteRender } from "../../nav/route_render.js";
@@ -162,13 +163,9 @@ const useActionAsyncData = (
     action.runningStateSignal.peek() === IDLE &&
     action.paramsSignal.peek() !== undefined
   ) {
-    const runResult = action.run({ reason: "useAsyncData({ run: true })" });
-    // Nobody awaits this run, and a rejection nobody awaits is an unhandled
-    // one — in dev, an overlay over a component already saying what failed.
-    // The failure is held by the action, and this hook is what reads it.
-    if (runResult && typeof runResult.catch === "function") {
-      runResult.catch(() => {});
-    }
+    // Nothing waits on this run: the failure is held by the action, and this
+    // hook is what reads it back.
+    runUnwatched(() => action.run({ reason: "useAsyncData({ run: true })" }));
   }
 
   // Use peek() instead of .value to avoid subscribing this component to the signal.

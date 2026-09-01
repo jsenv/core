@@ -33,7 +33,7 @@
 import { clickIsSuppressed } from "@jsenv/dom";
 import { signal } from "@preact/signals";
 
-import { reportErrorIfNobodyDisplaysIt } from "../../action/action_error_report.js";
+import { runUnwatched } from "../../action/run_unwatched.js";
 import { setActionDispatcher } from "../../action/actions.js";
 import { executeWithCleanup } from "../../utils/execute_with_cleanup.js";
 import { whenRenderingResumes } from "../rendering_hold.js";
@@ -183,13 +183,24 @@ export const setupBrowserIntegrationViaNavigation = ({
         routingAbortController.abort(abortEvent.reason);
       });
     }
-    const { allResult, requestedResult } = applyRouting(url, {
-      globalAbortSignal: globalAbortController.signal,
-      abortSignal: routingAbortController.signal,
-      reason,
-      navigationType,
-      isVisited,
-      state,
+    // Every caller drops what the routing returns — the handler below waits on
+    // allResult instead — so a failure travelling that way would be an
+    // anonymous unhandled one, naming the navigation rather than what failed.
+    // The call is inside, not only its result: a route action throwing
+    // synchronously must not take the navigation down either. Same treatment,
+    // same reason, as via_history.js.
+    let allResult;
+    runUnwatched(() => {
+      const routingResult = applyRouting(url, {
+        globalAbortSignal: globalAbortController.signal,
+        abortSignal: routingAbortController.signal,
+        reason,
+        navigationType,
+        isVisited,
+        state,
+      });
+      allResult = routingResult.allResult;
+      return routingResult.requestedResult;
     });
     // Same rule, same timing as via_history.js's own, and the same reading of
     // a replace: only the row that travels knows one of its own is an arrival.
@@ -204,7 +215,7 @@ export const setupBrowserIntegrationViaNavigation = ({
         abortController = undefined;
       },
     );
-    return { allResult, requestedResult };
+    return { allResult };
   };
 
   // window.location.reload() — jsenv's hot reload uses it — must stay a full
@@ -361,9 +372,7 @@ export const setupBrowserIntegrationViaNavigation = ({
           // the page, never thrown at the navigation: rejected here, the
           // browser would abort a navigation whose page is busy explaining
           // what went wrong.
-          await Promise.resolve(allResult).catch((e) => {
-            reportErrorIfNobodyDisplaysIt(e);
-          });
+          await Promise.resolve(allResult).catch(() => {});
         } finally {
           publishAfterRouting({ url, navigationType });
         }

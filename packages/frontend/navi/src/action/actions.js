@@ -19,10 +19,7 @@ import {
   IDLE,
   RUNNING,
 } from "./action_run_states.js";
-import {
-  markErrorAsDisplayedBy,
-  reportErrorIfNobodyDisplaysIt,
-} from "./action_error_report.js";
+import { markErrorAsDisplayedBy } from "./action_error_report.js";
 import { isRerunHeldByNetworkPolicy } from "./network_policy.js";
 import { SYMBOL_OBJECT_SIGNAL } from "./symbol_object_signal.js";
 
@@ -55,8 +52,11 @@ import { SYMBOL_OBJECT_SIGNAL } from "./symbol_object_signal.js";
  * - prerun actions may have no other reference yet, so
  *   prerunProtectionRegistry pins them for a few minutes.
  *
- * An action run never throws: failures land in errorSignal and are reported
- * once, by one rule, in action_error_report.js (see the comment in onRunError).
+ * A failing run rejects, and writes its error into errorSignal as well. The
+ * callers that cannot take a rejection — a run started from a signal effect, a
+ * control that already draws the failure — swallow it where they start it, and
+ * that is where an error nobody displayed is reported once, by one rule (see
+ * run_unwatched.js and action_error_report.js).
  *
  * Blast radius: this file is the substrate of routing (route_action.js,
  * action_run_effect.js), resources (state/rest) and every control's `action`
@@ -521,16 +521,27 @@ ${lines.join("\n")}`);
 
       const actionToRunPrivateProperties =
         getActionPrivateProperties(actionToPrerunOrRun);
-      const performRunResult = actionToRunPrivateProperties.performRun({
-        globalAbortSignal,
-        abortSignal: effectiveSignal,
-        reason,
-        event,
-        isPrerun,
-        onComplete,
-        onAbort,
-        onError,
-      });
+      let performRunResult;
+      try {
+        performRunResult = actionToRunPrivateProperties.performRun({
+          globalAbortSignal,
+          abortSignal: effectiveSignal,
+          reason,
+          event,
+          isPrerun,
+          onComplete,
+          onAbort,
+          onError,
+        });
+      } catch (error) {
+        // A synchronous callback that threw. Caught here so the update carries
+        // on — the other actions of the same update have nothing to do with
+        // this one — and given back further down to whoever asked for THIS
+        // action, still as a throw.
+        activationWeakSet.add(actionToPrerunOrRun);
+        resultArray.push({ type: "sync_error", error });
+        return;
+      }
       activationWeakSet.add(actionToPrerunOrRun);
 
       if (performRunResult && typeof performRunResult.then === "function") {
@@ -576,14 +587,30 @@ ${lines.join("\n")}`);
     requestedResult = null;
   } else if (hasAsync) {
     requestedResult = Promise.all(
-      resultArray.map((item) =>
-        item.type === "sync" ? item.result : item.promise,
-      ),
+      resultArray.map((item) => {
+        if (item.type === "sync") {
+          return item.result;
+        }
+        if (item.type === "sync_error") {
+          return Promise.reject(item.error);
+        }
+        return item.promise;
+      }),
     );
   } else {
+    const itemFailed = resultArray.find((item) => item.type === "sync_error");
+    if (itemFailed) {
+      // Nothing of this update is left to do, so the failure can leave the way
+      // it arrived: thrown, to the caller that asked for that action.
+      throw itemFailed.error;
+    }
     requestedResult = resultArray.map((item) => item.result);
   }
 
+  // Settled rather than raced: a failure here is one outcome among several —
+  // the other actions of the same update ran too, and "the update is over" must
+  // not become "one of them failed". Waiting on this never rejects, which is
+  // what lets a navigation be waited on (see via_navigation.js).
   const allResult = allThenableArray.length
     ? Promise.allSettled(allThenableArray)
     : null;
@@ -1192,18 +1219,29 @@ export const createAction = (callback, rootOptions = {}) => {
             onError?.(error, { event, action, args });
           });
 
-          // The error is in errorSignal; from here it is the UI's, and running
-          // the action is not the place to decide whether the UI wants it —
-          // that answer does not exist yet at this instant (see
-          // action_error_report.js). So the run never throws: it settles with
-          // the error as its value, and being displayed or not is constated
-          // afterwards, in one place, by one rule.
           if (onError) {
             // Asking for the error IS taking it.
             markErrorAsDisplayedBy(error, "onError");
           }
-          reportErrorIfNobodyDisplaysIt(error, { action });
+          // Handed back, not delivered: failRun decides whether this leaves as
+          // a throw or as a rejection, because only the caller below knows
+          // which of the two this run was. The error is in errorSignal either
+          // way — a screen reads it there, whether or not anything was waiting.
           return error;
+        };
+
+        // A failure leaves the run the way it came: thrown when the callback
+        // threw synchronously — code that knows this action is synchronous
+        // writes a plain `try/catch` around the call and has to find it there —
+        // and rejected when the run was asynchronous, since the throw below
+        // then happens inside a `then`. An abort is neither: it settles with
+        // its reason as its value, the way it always has.
+        const failRun = (error) => {
+          const errorSettled = onRunError(error);
+          if (runningStateSignal.peek() === ABORTED) {
+            return errorSettled;
+          }
+          throw errorSettled;
         };
 
         try {
@@ -1243,12 +1281,12 @@ export const createAction = (callback, rootOptions = {}) => {
           }
           return Promise.all(thenableArray).then(() => {
             if (rejected) {
-              return onRunError(rejectedValue);
+              return failRun(rejectedValue);
             }
             return onRunEnd();
           });
         } catch (e) {
-          return onRunError(e);
+          return failRun(e);
         }
       };
 
