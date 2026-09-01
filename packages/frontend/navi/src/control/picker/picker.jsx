@@ -1326,6 +1326,15 @@ const PickerInput = (props) => {
       {...props}
       readOnly={readOnlyForced ? true : readOnly}
       data-readonly-forced={readOnlyForced ? "" : undefined}
+      // An <input> by tag and a door by nature: this one opens a popup on the
+      // press and reads nothing at all as the pointer moves — no caret dragged
+      // through it (the press selects the whole value and preventDefaults, see
+      // useAutoSelectReadOnly), no content of its own to scroll. So the gesture
+      // readers must not treat it as the field it looks like: without this, a
+      // box that travels by drag refuses to travel from a picker, which is a
+      // hole under the finger in the middle of a page (see PRESS_ONLY_ATTRIBUTE
+      // in @jsenv/dom's drag_to_travel.js).
+      data-press-only=""
       ui={undefined}
       className="navi_picker_input"
       pseudoClasses={PickerInputPseudoClasses}

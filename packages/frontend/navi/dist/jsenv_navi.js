@@ -4,7 +4,7 @@
  */
 import { installImportMetaCssBuild, windowHeightSignal, windowWidthSignal, visualViewportHeightSignal, visualViewportWidthSignal, getAppHeight, getAppWidth, coarsePointerSignal, smallTouchScreenSignal } from "./jsenv_navi_side_effects.js";
 export { disableVirtualKeyboardOverlay } from "./jsenv_navi_side_effects.js";
-import { elementIsFocusable, createIterableWeakSet, dispatchInternalCustomEvent, dispatchCustomEvent, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, getElementSignature, createPubSub, findEvent, createValueEffect, findFocusDelegateTarget, findFocusable, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, markDragSource, startDragTo, createEventGroupLogger, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, normalizeStyles, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, scrollRoomTowards, getScrollContainer, closestOpenableAncestor, isAncestorOpen, isDisplayedDespiteClosedAncestor, observeAncestorOpenState, getAncestorOpenType, findBefore, findAfter, resolveCSSSize, hasCSSSizeUnit, releaseWheelGesture, getScrollIntoViewScopedOffsets, wheelGestureIsTakenFrom, claimWheelGesture, scrollIntoViewScoped, initFocusGroup, stringifyStyle as stringifyStyle$1, resolveOklchLightness, contrastColor, isTouchDrivenEvent, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, onAncestorReopen, canScroll, measureWidestChildRow, performTabNavigation, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
+import { elementIsFocusable, createIterableWeakSet, dispatchInternalCustomEvent, dispatchCustomEvent, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, getElementSignature, createPubSub, findEvent, createValueEffect, findFocusDelegateTarget, findFocusable, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, markDragSource, startDragTo, createEventGroupLogger, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, normalizeStyles, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, scrollRoomTowards, getScrollContainer, closestOpenableAncestor, isAncestorOpen, isDisplayedDespiteClosedAncestor, observeAncestorOpenState, getAncestorOpenType, findBefore, findAfter, resolveCSSSize, hasCSSSizeUnit, releaseWheelGesture, getScrollIntoViewScopedOffsets, wheelGestureIsTakenFrom, claimWheelGesture, scrollIntoViewScoped, initFocusGroup, stringifyStyle as stringifyStyle$1, resolveOklchLightness, contrastColor, isTouchDrivenEvent, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, onAncestorReopen, isPressDisputedByDrag, canScroll, measureWidestChildRow, performTabNavigation, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
 export { chainEvent, clickIsSuppressed, contrastColor, findEvent, startDragTo } from "@jsenv/dom";
 import { signal, computed, effect, untracked, batch, useComputed, useSignal } from "@preact/signals";
 import { isValidElement, h, Fragment, createContext, render, toChildArray, options, cloneElement } from "preact";
@@ -59776,7 +59776,7 @@ const PickerCustom = props => {
       // could then never form. So the picker steps back and opens on the click,
       // which the browser only delivers if the press stayed a press (a gesture
       // swallows the click it leaves behind).
-      const pressIsDisputed = interactionsDisputeThePress(props.interactions);
+      const interactionsDispute = interactionsDisputeThePress(props.interactions);
       Object.assign(pickerProps, {
         eventReactionDefinitions: {
           mouseDown: e => {
@@ -59795,7 +59795,14 @@ const PickerCustom = props => {
                 })
               };
             }
-            if (pressIsDisputed) {
+            // The same dispute, said by a box AROUND the picker rather than
+            // by the picker itself: a page that travels between tabs under the
+            // finger, a panel that swipes closed, a card carried out of a
+            // list. Asked of the DOM here rather than of the props at render,
+            // because that is where such a box says what it travels by — and
+            // asked at every press, since what the picker sits in is not the
+            // picker's to know at mount.
+            if (interactionsDispute || isPressDisputedByDrag(e.target)) {
               return null;
             }
             return {
@@ -59814,7 +59821,7 @@ const PickerCustom = props => {
             }
             // When a label is clicked it transfers focus to the select
             // in that case we want to open it (otherwise we have already opened on mousedown interaction)
-            // And when a gesture disputes the press (see pressIsDisputed
+            // And when a gesture disputes the press (see the two disputes
             // above), this is where the picker opens for real.
             return {
               name: e.detail === 0 ? "click (keyboard or progammatic) to open picker" : "click to open picker",
@@ -68517,7 +68524,18 @@ const PickerInput = props => {
     as: "input",
     ...props,
     readOnly: readOnlyForced ? true : readOnly,
-    "data-readonly-forced": readOnlyForced ? "" : undefined,
+    "data-readonly-forced": readOnlyForced ? "" : undefined
+    // An <input> by tag and a door by nature: this one opens a popup on the
+    // press and reads nothing at all as the pointer moves — no caret dragged
+    // through it (the press selects the whole value and preventDefaults, see
+    // useAutoSelectReadOnly), no content of its own to scroll. So the gesture
+    // readers must not treat it as the field it looks like: without this, a
+    // box that travels by drag refuses to travel from a picker, which is a
+    // hole under the finger in the middle of a page (see PRESS_ONLY_ATTRIBUTE
+    // in @jsenv/dom's drag_to_travel.js).
+    ,
+
+    "data-press-only": "",
     ui: undefined,
     className: "navi_picker_input",
     pseudoClasses: PickerInputPseudoClasses,

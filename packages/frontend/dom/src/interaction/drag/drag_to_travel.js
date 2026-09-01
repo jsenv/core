@@ -173,31 +173,97 @@ const DRAG_FLICK_DISTANCE = 8;
 // way. Let go and it comes back — a wall one can lean on, never walk through.
 const DRAG_RESISTANCE = 0.3;
 
-// What a drag must not start on: something that reads the pointer itself, whole,
-// with no axis left to share. A button or a link is not in the list — dragging
-// from one travels, and the click it would have made is swallowed on the way
-// out. A drag SOURCE is not either: it says which way it goes and only takes
-// that (see DRAG_SOURCE_AXES_ATTRIBUTE) — but a dedicated handle is, being a
-// place whose only purpose is to be taken hold of, from the first pixel. And so
-// is an element naming `drag` among its own interactions: it said the grab is
-// ITS, here, rather than the box's — and one that named only the click said
-// nothing to this gesture and is passed through (see DRAG_IGNORED_SELECTOR in
-// drag_to.js). And so is a popover or a dialog: a layer OVER the box, whose
-// press only bubbles through the box because the layer is anchored in it.
+// The gestures a browser ALREADY answers where a pointer goes down, named here
+// rather than guessed at from a tag: what is native is the whole reason a travel
+// must not start there. A caret dragged through text, a thumb pushed along its
+// rail, a menu fed by everything that follows the press — taking the press from
+// one of those takes away something the element cannot offer a second time, and
+// a travel is never worth that.
+//
+// What is NOT in the list has nothing to lose. A button or a link is out on
+// purpose: dragging from one travels, and the click it would have made is
+// swallowed on the way out. So are the inputs that read the press and nothing
+// after it (a checkbox, a radio, a colour, a file) — buttons by another name.
+// Which matters more than it looks: a selectable row is covered by an invisible
+// radio of its own, so excluding every input at once means a list of rows inside
+// a travelling box that no finger can push.
+//
+// Every entry answers "never", and the entry is where a softer answer would be
+// written if one turned out to be worth it — per hand, since that is where these
+// gestures differ. The one that comes to mind is a travel a MOUSE could still
+// ask for by holding still first, a hold meaning nothing to a mouse in a text
+// field: it is not here because the browser has already begun a selection at the
+// press, and nothing hands that back mid-gesture — the travel would drag a
+// selection along with it. With a finger the hold is the selection UI itself, so
+// there is nothing to take there either.
+const PRESSED_INPUT_TYPES = [
+  '[type="checkbox"]',
+  '[type="radio"]',
+  '[type="button"]',
+  '[type="submit"]',
+  '[type="reset"]',
+  '[type="image"]',
+  '[type="color"]',
+  '[type="file"]',
+].join(",");
+const NATIVE_POINTER_GESTURES = [
+  {
+    // The value follows the pointer, pixel by pixel: a thumb along its rail, a
+    // spinner clicked up and down. There is no moment in that which could be
+    // given away — the gesture IS the pointer.
+    selector: 'input[type="range"],input[type="number"]',
+  },
+  {
+    // The text answers the pointer, and differently per hand: a mouse drags a
+    // caret through it (a selection), a finger drags the field's own content
+    // sideways when it overflows, and a finger held still opens the selection
+    // UI. Three things a field is for, against one travel that has a whole box
+    // to start from.
+    selector: [
+      `input:not(${PRESSED_INPUT_TYPES},[type="range"],[type="number"])`,
+      "textarea",
+      '[contenteditable=""]',
+      '[contenteditable="true"]',
+    ].join(","),
+  },
+  {
+    // A menu opens under the pointer and the browser keeps the rest of the
+    // gesture: dragged over, it picks an option.
+    selector: "select",
+  },
+];
+
+// …and what an element says against its own tag. Every line above is about what
+// an element DOES, and a tag only says what it IS: a picker's façade is an
+// <input> that opens a popup on the press and reads nothing at all as the
+// pointer moves (it selects its own text on mousedown, and that is the whole of
+// it). Only the element knows that, so only the element can say it — and having
+// said it, it is a button by another name like the others, and a travel starts
+// there like anywhere else.
+//
+// Said rather than found, and said on the element the pointer lands on: a
+// promise about a gesture has to be readable before the gesture exists, from
+// nothing but the DOM under the finger. And it is a promise: an element that
+// says it while the browser still answers the pointer there (a range, a field
+// that can really be typed in) has not made a travel possible, it has taken the
+// gesture the user was making away from them.
+const PRESS_ONLY_ATTRIBUTE = "data-press-only";
+const NATIVE_POINTER_GESTURE_SELECTOR = NATIVE_POINTER_GESTURES.map(
+  ({ selector }) => `:is(${selector}):not([${PRESS_ONLY_ATTRIBUTE}])`,
+).join(",");
+
+// What a drag must not start on: what answers the pointer natively (above),
+// plus what has said the gesture is its own. A drag SOURCE is not in the list:
+// it says which way it goes and only takes that (see DRAG_SOURCE_AXES_ATTRIBUTE)
+// — but a dedicated handle is, being a place whose only purpose is to be taken
+// hold of, from the first pixel. And so is an element naming `drag` among its
+// own interactions: it said the grab is ITS, here, rather than the box's — and
+// one that named only the click said nothing to this gesture and is passed
+// through (see DRAG_IGNORED_SELECTOR in drag_to.js). And so is a popover or a
+// dialog: a layer OVER the box, whose press only bubbles through the box because
+// the layer is anchored in it.
 const DRAG_EXCLUDED_SELECTOR = [
-  // The fields that read the pointer as it MOVES: a caret dragged through text,
-  // a thumb pushed along its rail, a spinner. The ones that only read the
-  // press — a checkbox, a radio, a colour, a file — are buttons by another
-  // name, and like a button they let the drag through, the click they would
-  // have made swallowed on the way out. Which matters more than the list makes
-  // it look: a selectable row is covered by an invisible radio of its own, so
-  // excluding every input at once means a list of rows inside a travelling box
-  // that no finger can push.
-  'input:not([type="checkbox"], [type="radio"], [type="button"], [type="submit"], [type="reset"], [type="image"], [type="color"], [type="file"])',
-  "textarea",
-  "select",
-  '[contenteditable=""]',
-  '[contenteditable="true"]',
+  NATIVE_POINTER_GESTURE_SELECTOR,
   "[data-drag-handle]",
   "[data-no-drag-travel]",
   '[data-self-interactions~="drag"]',
@@ -983,4 +1049,42 @@ export const watchWheelTravel = (element, { axes = "xy", onStep }) => {
 const isPressExcluded = (target, element) => {
   const excluded = target.closest(DRAG_EXCLUDED_SELECTOR);
   return Boolean(excluded) && !excluded.contains(element);
+};
+
+/**
+ * Whether a press landing on `element` may become the gesture of something
+ * around it — a box that travels by drag, an object carried out of a list. Or
+ * of the element itself, when the element is that box: the gesture is still one
+ * the press is being asked for.
+ *
+ * The question a control that acts ON THE PRESS has to ask before it acts: a
+ * picker opening its popup at the pointerdown, the way a native select does,
+ * is right only while nothing else disputes that press. Where a box above
+ * travels, the finger going down is the beginning of something that is not yet
+ * a choice — answering there both answers for a user who has chosen nothing and
+ * takes the press from a gesture that could then never form. What such a control
+ * does instead is wait for the click, which the browser only delivers if the
+ * press stayed a press: a gesture swallows the one it leaves behind.
+ *
+ * Asked of the DOM at the press rather than worked out at render, because that
+ * is where the answer lives: the box above says what it travels by
+ * (DRAG_AXES_ATTRIBUTE, DRAG_SOURCE_AXES_ATTRIBUTE), and whether the press is
+ * takeable at all is the same question the gesture itself asks a moment later —
+ * a field the travel would never have started on disputes nothing, and a control
+ * inside one goes on acting on the press.
+ *
+ * @param {Element} element Where the press landed.
+ * @returns {boolean}
+ */
+export const isPressDisputedByDrag = (element) => {
+  if (!element || typeof element.closest !== "function") {
+    return false;
+  }
+  const dragged = element.closest(
+    `[${DRAG_AXES_ATTRIBUTE}],[${DRAG_SOURCE_AXES_ATTRIBUTE}]`,
+  );
+  if (!dragged) {
+    return false;
+  }
+  return !isPressExcluded(element, dragged);
 };

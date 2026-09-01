@@ -142,6 +142,7 @@ export {
 } from "./src/interaction/drag/drag_to.js";
 export { startDragToResizeGesture } from "./src/interaction/drag/drag_to_resize_gesture.js";
 export {
+  isPressDisputedByDrag,
   scrollRoomTowards,
   startDragToTravel,
   watchWheelTravel,

@@ -1,4 +1,4 @@
-import { dispatchCustomEvent } from "@jsenv/dom";
+import { dispatchCustomEvent, isPressDisputedByDrag } from "@jsenv/dom";
 import { createPortal } from "preact/compat";
 import { useContext, useId, useRef } from "preact/hooks";
 
@@ -771,7 +771,9 @@ const PickerCustom = (props) => {
       // could then never form. So the picker steps back and opens on the click,
       // which the browser only delivers if the press stayed a press (a gesture
       // swallows the click it leaves behind).
-      const pressIsDisputed = interactionsDisputeThePress(props.interactions);
+      const interactionsDispute = interactionsDisputeThePress(
+        props.interactions,
+      );
 
       Object.assign(pickerProps, {
         eventReactionDefinitions: {
@@ -789,7 +791,14 @@ const PickerCustom = (props) => {
                 allowed: () => requestClose(e, { isCancel: true }),
               };
             }
-            if (pressIsDisputed) {
+            // The same dispute, said by a box AROUND the picker rather than
+            // by the picker itself: a page that travels between tabs under the
+            // finger, a panel that swipes closed, a card carried out of a
+            // list. Asked of the DOM here rather than of the props at render,
+            // because that is where such a box says what it travels by — and
+            // asked at every press, since what the picker sits in is not the
+            // picker's to know at mount.
+            if (interactionsDispute || isPressDisputedByDrag(e.target)) {
               return null;
             }
             return {
@@ -811,7 +820,7 @@ const PickerCustom = (props) => {
             }
             // When a label is clicked it transfers focus to the select
             // in that case we want to open it (otherwise we have already opened on mousedown interaction)
-            // And when a gesture disputes the press (see pressIsDisputed
+            // And when a gesture disputes the press (see the two disputes
             // above), this is where the picker opens for real.
             return {
               name:
