@@ -41,7 +41,6 @@ ruleTester.run(
         errors: [
           {
             message: `"invalidParam" not found in "sevenParamFunction" params`,
-            type: "Property",
           },
         ],
       },

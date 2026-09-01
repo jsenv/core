@@ -1,6 +1,5 @@
 module.exports = {
   plugins: [
-    "@babel/plugin-syntax-import-attributes",
     [
       "@babel/plugin-syntax-optional-chaining-assign",
       {
@@ -10,6 +9,7 @@ module.exports = {
     [
       "@babel/plugin-transform-react-jsx",
       {
+        runtime: "classic",
         pragma: "React.createElement",
         pragmaFrag: "React.Fragment",
       },
@@ -17,7 +17,7 @@ module.exports = {
     [
       "@babel/plugin-syntax-decorators",
       {
-        decoratorsBeforeExport: true,
+        version: "2023-11",
       },
     ],
   ],

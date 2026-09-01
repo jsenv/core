@@ -40,7 +40,6 @@ simpleFunction({ used: "test" });`,
         {
           messageId: "not_found_param",
           data: { param: "extraParam", func: `"simpleFunction" params` },
-          type: "Property",
         },
       ],
     },

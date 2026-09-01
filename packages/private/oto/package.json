@@ -30,8 +30,7 @@
     "preact": "11.0.0-beta.0"
   },
   "devDependencies": {
-    "@babel/plugin-syntax-import-attributes": "7.29.7",
-    "@babel/plugin-transform-react-jsx": "7.29.7",
+    "@babel/plugin-transform-react-jsx": "8.0.1",
     "@jsenv/assert": "../../tooling/assert",
     "@jsenv/core": "../../../",
     "@jsenv/custom-elements-redefine": "../../frontend/custom-elements-redefine",
@@ -39,12 +38,12 @@
     "@jsenv/plugin-preact": "../../related/plugin-preact",
     "@jsenv/test": "../../related/test",
     "@playwright/browser-chromium": "1.62.1",
-    "eslint": "9.39.2",
+    "eslint": "10.9.1",
     "open": "11.0.1",
     "prettier": "3.9.6",
     "prettier-plugin-organize-imports": "4.3.0"
   },
   "volta": {
-    "node": "22.13.1"
+    "node": "22.18.0"
   }
 }

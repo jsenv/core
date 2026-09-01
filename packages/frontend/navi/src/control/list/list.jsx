@@ -282,7 +282,10 @@ const css = /* css */ `
       --x-corner-top-right-radius: initial;
       --x-corner-bottom-right-radius: initial;
       --x-corner-bottom-left-radius: initial;
-
+      /* This box carries the list's padding (see LIST_PADDING_PROP_SET) while
+         the sizes it takes are the sizes of the list itself: the padding has
+         to fit inside them rather than grow the box past its frame. */
+      box-sizing: border-box;
       width: inherit;
       min-width: inherit;
       max-width: var(--list-max-width, inherit);
@@ -797,6 +800,22 @@ const css = /* css */ `
   }
 `;
 
+/* A padding on a list is space between its frame and its rows, so it belongs on
+   the scroll box and not on the frame around it: on the frame it insets the
+   scroll box as a whole, and the scrollbar — which is drawn at the edge of what
+   scrolls — comes off the list's edge by that same amount, floating in the
+   middle of the padding. On the scroll box the scrollbar stays against the
+   border and the padding is what separates the rows from it. */
+const LIST_PADDING_PROP_SET = new Set([
+  "padding",
+  "paddingX",
+  "paddingY",
+  "paddingTop",
+  "paddingRight",
+  "paddingBottom",
+  "paddingLeft",
+]);
+
 const ListUI = (props) => {
   import.meta.css = css;
   const {
@@ -838,6 +857,13 @@ const ListUI = (props) => {
     virtual,
     ...rest
   } = props;
+  const scrollBoxPaddingProps = {};
+  for (const name of LIST_PADDING_PROP_SET) {
+    if (name in rest) {
+      scrollBoxPaddingProps[name] = rest[name];
+      delete rest[name];
+    }
+  }
   // Accept a string (e.g. from an HTML attribute: renderBudget="50") the
   // same way a bare number would work — arithmetic below (renderBudget / 2,
   // start + renderBudget, etc.) would silently misbehave on a raw string
@@ -1143,6 +1169,7 @@ const ListUI = (props) => {
         overflow={overflow}
         overflowX={overflowX}
         overflowY={overflowY}
+        scrollBoxPaddingProps={scrollBoxPaddingProps}
       >
         {content}
       </ListContent>
@@ -1385,6 +1412,7 @@ const ListContent = ({
   overflow,
   overflowX,
   overflowY,
+  scrollBoxPaddingProps,
   children,
 }) => {
   const listProps = useContext(BoxForwardedPropsContext);
@@ -1394,6 +1422,7 @@ const ListContent = ({
       overflow={overflow}
       overflowX={overflowX}
       overflowY={overflowY}
+      {...scrollBoxPaddingProps}
     >
       <UnorderedList
         role={role}

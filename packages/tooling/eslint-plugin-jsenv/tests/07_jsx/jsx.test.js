@@ -86,7 +86,6 @@ export const App = () => {
         {
           messageId: "not_found_param",
           data: { param: "b", func: `<Toto> props` },
-          type: "JSXAttribute",
         },
       ],
     },
@@ -111,12 +110,10 @@ export const App = () => {
         {
           messageId: "not_found_param",
           data: { param: "disabled", func: `<Button> props` },
-          type: "JSXAttribute",
         },
         {
           messageId: "not_found_param",
           data: { param: "size", func: `<Button> props` },
-          type: "JSXAttribute",
         },
       ],
     },
@@ -141,7 +138,6 @@ export const App = () => {
         {
           messageId: "not_found_param",
           data: { param: "unknownProp", func: `<Button> props` },
-          type: "JSXAttribute",
         },
       ],
     },
@@ -166,12 +162,10 @@ export const App = () => {
         {
           messageId: "not_found_param",
           data: { param: "extra", func: `<ComponentWithoutProps> props` },
-          type: "JSXAttribute",
         },
         {
           messageId: "not_found_param",
           data: { param: "another", func: `<ComponentWithoutProps> props` },
-          type: "JSXAttribute",
         },
       ],
     },
@@ -202,7 +196,6 @@ export const App = () => {
         {
           messageId: "not_found_param",
           data: { param: "extra", func: `<Some> props` },
-          type: "JSXAttribute",
           suggestions: [
             {
               desc: "Remove 'extra'",

@@ -86,7 +86,6 @@ ruleTester.run("no-unknown-params with many parameters", noUnknownParamsRule, {
       errors: [
         {
           message: `"unknownParam" not found in "processComplexData" params`,
-          type: "Property",
         },
       ],
     },

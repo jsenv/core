@@ -12,6 +12,7 @@ import * as regexpPlugin from "eslint-plugin-regexp";
 import globals from "globals";
 import { existsSync, readFileSync } from "node:fs";
 import { explicitGlobals } from "./explicit_globals.js";
+import { reactPluginEslint10Compat } from "./react_plugin_eslint_10_compat.js";
 import { rulesImportRelax } from "./rules_import_relax.js";
 import { rulesOffPrettier } from "./rules_off_prettier.js";
 import { rulesReactRelax } from "./rules_react_relax.js";
@@ -141,8 +142,14 @@ export const eslintConfigRelax = ({
   const parserOptions = {
     ecmaVersion: 2022,
     sourceType: "module",
-    ecmaFeatures: { jsx: true },
     regexpUnicodeSets: true,
+    // "@babel/eslint-parser" 8 reads only ecmaFeatures.globalReturn; every other
+    // syntax is opted into through Babel's own parser plugins.
+    babelOptions: {
+      parserOpts: {
+        plugins: ["jsx", "decorators", "importAttributes"],
+      },
+    },
   };
   const globalsForNodeModule = {
     ...globals.node,
@@ -258,7 +265,7 @@ export const eslintConfigRelax = ({
     {
       files: ["**/*.jsx"],
       plugins: {
-        react: reactPlugin,
+        react: reactPluginEslint10Compat(reactPlugin),
       },
       settings: {
         react: {

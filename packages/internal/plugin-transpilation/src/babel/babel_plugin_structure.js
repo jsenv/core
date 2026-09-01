@@ -1,3 +1,4 @@
+import { babelPluginAsyncToPromises } from "@jsenv/js-module-fallback";
 import { createRequire } from "node:module";
 
 import { getBabelHelperFileUrl } from "./babel_helper_directory/babel_helper_directory.js";
@@ -49,7 +50,7 @@ export const getBaseBabelPluginStructure = ({
   // }
   if (isBabelPluginNeeded("transform-async-to-promises")) {
     babelPluginStructure["transform-async-to-promises"] = [
-      requireBabelPlugin("babel-plugin-transform-async-to-promises"),
+      babelPluginAsyncToPromises,
       {
         topLevelAwait: "ignore", // will be handled by "jsenv:top_level_await" plugin
         externalHelpers: false,

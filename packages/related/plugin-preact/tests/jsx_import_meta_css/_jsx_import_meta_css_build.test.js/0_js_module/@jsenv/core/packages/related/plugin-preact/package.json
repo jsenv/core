@@ -1,6 +1,9 @@
 {
   "name": "@jsenv/plugin-preact",
-  "version": "1.8.2",
+  "version": "1.9.0",
+  "engines": {
+    "node": "^22.18.0 || >=24.11.0"
+  },
   "type": "module",
   "repository": {
     "type": "git",
@@ -21,11 +24,10 @@
     "@jsenv/core": "*"
   },
   "dependencies": {
-    "@babel/plugin-transform-react-jsx": "7.29.7",
-    "@babel/plugin-transform-react-jsx-development": "7.29.7",
-    "@babel/plugin-transform-react-jsx-source": "7.29.7",
-    "@jsenv/ast": "6.9.3",
-    "@jsenv/sourcemap": "1.4.2",
+    "@babel/plugin-transform-react-jsx": "8.0.1",
+    "@babel/plugin-transform-react-jsx-development": "8.0.1",
+    "@jsenv/ast": "6.10.0",
+    "@jsenv/sourcemap": "1.4.3",
     "@jsenv/url-meta": "8.5.7",
     "@prefresh/babel-plugin": "0.5.3",
     "@prefresh/core": "1.5.10",

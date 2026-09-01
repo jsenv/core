@@ -63,19 +63,15 @@ ruleTester.run(
         errors: [
           {
             message: `"age" not found in "createUser" params (defined in ./user-ops.js)`,
-            type: "Property",
           },
           {
             message: `"force" not found in "updateUser" params (defined in ./user-ops.js)`,
-            type: "Property",
           },
           {
             message: `"strict" not found in "validateEmail" params (defined in ./validators.js)`,
-            type: "Property",
           },
           {
             message: `"throwOnError" not found in "validateData" params (defined in ./validators.js)`,
-            type: "Property",
           },
         ],
       },

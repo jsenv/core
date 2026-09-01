@@ -83,7 +83,6 @@ ruleTester.run("no-unknown-params safeguards", noUnknownParamsRule, {
             secondFunc: `"f2" params`,
             available: "p1, p2",
           },
-          type: "Property",
         },
         {
           messageId: "not_found_param_chain_with_suggestions",
@@ -93,7 +92,6 @@ ruleTester.run("no-unknown-params safeguards", noUnknownParamsRule, {
             secondFunc: `"f2" params`,
             available: "p1, p2",
           },
-          type: "Property",
         },
       ],
     },

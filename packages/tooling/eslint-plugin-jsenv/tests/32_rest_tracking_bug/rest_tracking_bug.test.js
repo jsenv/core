@@ -107,7 +107,6 @@ ruleTester.run(
               secondFunc: `"build" params`,
               available: "expectedFileCount, logLevel",
             },
-            type: "Property",
           },
         ],
       },

@@ -53,7 +53,6 @@ greet({  }); // 'xyz' is completely unknown and different from expected params
         {
           messageId: "not_found_param", // Falls back to basic message
           data: { param: "xyz", func: `"greet" params` },
-          type: "Property",
         },
       ],
     },
@@ -75,7 +74,6 @@ authenticate({ username: "john" }); // 'passwd' should suggest 'password'
             func: `"authenticate" params`,
             suggestions: "password",
           },
-          type: "Property",
           suggestions: [
             {
               desc: "Remove 'passwd'",
@@ -113,7 +111,6 @@ validate({ email: "test@example.com", phone: "123" }); // 'extra' should trigger
         {
           messageId: "not_found_param", // Enhanced message for extraneous params
           data: { param: "extra", func: `"validate" params` },
-          type: "Property",
         },
       ],
     },
@@ -139,7 +136,6 @@ step1({ id: 1, name: "John", email: "john@test.com" }); // Should show available
             secondFunc: `"step2" params`,
             available: "id, name, email, config",
           },
-          type: "Property",
         },
       ],
     },

@@ -37,7 +37,6 @@ toto("hello", { b: 1, c: 2 });
         {
           messageId: "not_found_param",
           data: { param: "d", func: `"toto" params` },
-          type: "Property",
         },
       ],
     },

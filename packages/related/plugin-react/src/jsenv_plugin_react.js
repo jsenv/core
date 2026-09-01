@@ -95,12 +95,12 @@ const jsenvPluginJsxAndRefresh = ({
                   {
                     runtime: "automatic",
                     importSource: "react",
+                    // babel 8 folded "@babel/plugin-transform-react-jsx-source"
+                    // into this option of the development plugin
+                    ...(urlInfo.context.dev ? { sourceSelf: true } : {}),
                   },
                 ],
               ]
-            : []),
-          ...(jsxEnabled && urlInfo.context.dev
-            ? ["@babel/plugin-transform-react-jsx-source"]
             : []),
           ...(refreshEnabled
             ? [["react-refresh/babel", { skipEnvCheck: true }]]

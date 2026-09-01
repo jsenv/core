@@ -64,7 +64,7 @@ export const noUnknownParamsRule = {
   },
 
   create(context) {
-    debug("Initializing noUnknownParamsRule for file:", context.getFilename());
+    debug("Initializing noUnknownParamsRule for file:", context.filename);
 
     // Get configuration options with defaults
     const options = context.options[0] || {};
@@ -82,7 +82,7 @@ export const noUnknownParamsRule = {
         if (node.id && node.id.type === "Identifier") {
           functionDefinitions.set(node.id.name, {
             node,
-            sourceFile: context.getFilename(),
+            sourceFile: context.filename,
           });
         }
       },
@@ -98,7 +98,7 @@ export const noUnknownParamsRule = {
         ) {
           functionDefinitions.set(node.id.name, {
             node: node.init,
-            sourceFile: context.getFilename(),
+            sourceFile: context.filename,
           });
         } else if (
           node.id &&
@@ -112,7 +112,7 @@ export const noUnknownParamsRule = {
             // console.log("Debug: Found wrapped function", node.id.name, "->", wrappedFunction);
             functionDefinitions.set(node.id.name, {
               node: wrappedFunction,
-              sourceFile: context.getFilename(),
+              sourceFile: context.filename,
             });
           }
         }
@@ -126,7 +126,7 @@ export const noUnknownParamsRule = {
         ) {
           functionDefinitions.set(node.declaration.id.name, {
             node: node.declaration,
-            sourceFile: context.getFilename(),
+            sourceFile: context.filename,
           });
         } else if (node.declaration?.type === "VariableDeclaration") {
           for (const declarator of node.declaration.declarations) {
@@ -137,7 +137,7 @@ export const noUnknownParamsRule = {
             ) {
               functionDefinitions.set(declarator.id.name, {
                 node: declarator.init,
-                sourceFile: context.getFilename(),
+                sourceFile: context.filename,
               });
             }
           }
@@ -151,7 +151,7 @@ export const noUnknownParamsRule = {
         ) {
           functionDefinitions.set(node.declaration.id.name, {
             node: node.declaration,
-            sourceFile: context.getFilename(),
+            sourceFile: context.filename,
           });
         }
       },

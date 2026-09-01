@@ -73,7 +73,6 @@ ruleTester.run("no-unknown-params scope resolution", noUnknownParamsRule, {
           };
           
           build({ 
-            type: "production",
             bundling: true, 
             minification: false 
           });

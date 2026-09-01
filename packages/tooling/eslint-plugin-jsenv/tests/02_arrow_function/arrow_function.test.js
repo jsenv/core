@@ -29,7 +29,6 @@ bar({ x: 5 });`,
         {
           messageId: "not_found_param",
           data: { param: "y", func: `"bar" params` },
-          type: "Property",
         },
       ],
     },

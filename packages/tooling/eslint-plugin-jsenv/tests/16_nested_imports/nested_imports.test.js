@@ -102,7 +102,6 @@ ruleTester.run("no-unknown-params with nested imports", noUnknownParamsRule, {
       errors: [
         {
           message: `"unknownDeepParam" not found in "handleItemWithDeepNesting" params`,
-          type: "Property",
         },
       ],
     },

@@ -77,7 +77,7 @@ export const convertJsModuleToJsClassic = async ({
           ]
         : [
             [
-              require("babel-plugin-transform-async-to-promises"),
+              customAsyncToPromises,
               {
                 asyncAwait: false, // already handled + we might not needs it at all
                 topLevelAwait: "simple",

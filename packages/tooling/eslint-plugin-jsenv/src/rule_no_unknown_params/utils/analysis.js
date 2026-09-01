@@ -712,7 +712,7 @@ function reportUnknownParam({
     functionDef,
     functionDefinitions,
     givenNames,
-    context.getFilename(),
+    context.filename,
     maxChainDepth,
     functionDefWrapper.sourceFile,
     options,

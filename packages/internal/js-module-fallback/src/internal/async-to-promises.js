@@ -1,8 +1,4 @@
-import { createRequire} from 'node:module';
-
 import helpers_string_1 from "./helpers-string.js";
-
-const require = createRequire(import.meta.url);
 
 "use strict";
 
@@ -135,8 +131,7 @@ const nodeIsAsyncSet = new WeakSet();
 let helpers;
 const alwaysTruthy = Object.keys(constantStaticMethods);
 const numberNames = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"];
-function default_1({ types, traverse, transformFromAst, version, }) {
-    const isNewBabel = !/^6\./.test(version);
+function default_1({ types, traverse, parseSync, transformFromAstSync, }) {
     function cloneNode(node) {
         const result = types.cloneDeep(node);
         if (types.isIdentifier(node) || types.isMemberExpression(node)) {
@@ -160,7 +155,15 @@ function default_1({ types, traverse, transformFromAst, version, }) {
         let contextPath = parentPath;
         while (contextPath != null) {
             if (contextPath.context) {
-                const result = contextPath.context.create(parentPath.node, [node], 0, "dummy");
+                // babel 8 dropped TraversalContext#create; paths are built by NodePath.get
+                const result = parentPath.constructor.get({
+                    hub: parentPath.hub,
+                    parentPath,
+                    parent: parentPath.node,
+                    container: [node],
+                    listKey: "dummy",
+                    key: 0,
+                });
                 result.setContext(contextPath.context);
                 return result;
             }
@@ -3126,23 +3129,15 @@ function default_1({ types, traverse, transformFromAst, version, }) {
                             },
                         },
                     ];
-                    const helperAst = require(isNewBabel ? "@babel/core" : "babylon").parse(helpers_string_1, {
+                    const helperAst = parseSync(helpers_string_1, {
                         sourceType: "module",
                         filename: "helpers.js",
                     });
-                    if (isNewBabel) {
-                        transformFromAst(helperAst, helpers_string_1, {
-                            babelrc: false,
-                            configFile: false,
-                            plugins,
-                        });
-                    }
-                    else {
-                        transformFromAst(helperAst, helpers_string_1, {
-                            babelrc: false,
-                            plugins,
-                        });
-                    }
+                    transformFromAstSync(helperAst, helpers_string_1, {
+                        babelrc: false,
+                        configFile: false,
+                        plugins,
+                    });
                     helpers = newHelpers;
                 }
                 const helper = helpers[name];

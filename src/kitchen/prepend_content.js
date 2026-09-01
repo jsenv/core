@@ -100,7 +100,7 @@ const babelPluginPrependCodeInJsModule = (babel) => {
     visitor: {
       Program: (programPath, state) => {
         const { codeToPrepend } = state.opts;
-        const astToPrepend = babel.parse(codeToPrepend);
+        const astToPrepend = babel.parseSync(codeToPrepend);
         const bodyNodePaths = programPath.get("body");
         for (const bodyNodePath of bodyNodePaths) {
           if (bodyNodePath.node.type === "ImportDeclaration") {

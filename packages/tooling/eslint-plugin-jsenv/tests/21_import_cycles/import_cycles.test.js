@@ -58,7 +58,6 @@ ruleTester.run("no-unknown-params with import cycles", noUnknownParamsRule, {
       errors: [
         {
           message: `"invalidParam" not found in "helperFunction" params (defined in ./file_b.js)`,
-          type: "Property",
         },
       ],
     },

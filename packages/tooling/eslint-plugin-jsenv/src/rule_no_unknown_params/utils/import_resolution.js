@@ -317,9 +317,7 @@ function parseContent(filePath, content, context) {
 
     // Clone parser options to avoid frozen object issues
     let parserOptions = {
-      ...(context.languageOptions?.parserOptions ||
-        context.parserOptions ||
-        {}),
+      ...(context.languageOptions?.parserOptions || {}),
     };
 
     // Add essential parsing options
@@ -366,7 +364,7 @@ function getParser(context) {
   }
 
   // Try to get ESLint's default parser (espree) from the source code
-  const sourceCode = context.getSourceCode();
+  const sourceCode = context.sourceCode;
   if (
     sourceCode &&
     sourceCode.parserServices &&
@@ -441,8 +439,8 @@ function resolveImportsWithCycleDetection(
   currentDepth,
   maxDepth,
 ) {
-  const sourceCode = context.getSourceCode();
-  const filename = context.getFilename();
+  const sourceCode = context.sourceCode;
+  const filename = context.filename;
   const settings = context.settings;
 
   // Skip if no filename (like in tests without filename)

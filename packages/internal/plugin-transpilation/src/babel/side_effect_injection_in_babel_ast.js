@@ -18,7 +18,7 @@ export const injectSideEffectFileIntoBabelAst = ({
     return;
   }
   const sidEffectFileContent = readFileSync(new URL(sideEffectFileUrl), "utf8");
-  const sideEffectFileContentAst = babel.parse(sidEffectFileContent);
+  const sideEffectFileContentAst = babel.parseSync(sidEffectFileContent);
   if (isJsModule) {
     injectAstAfterImport(programPath, sideEffectFileContentAst);
     return;

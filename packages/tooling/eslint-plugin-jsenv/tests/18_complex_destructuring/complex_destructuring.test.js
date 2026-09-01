@@ -104,7 +104,6 @@ ruleTester.run(
         errors: [
           {
             message: `"unknownTopLevel" not found in "processUser" params`,
-            type: "Property",
           },
         ],
       },

@@ -81,7 +81,7 @@ const babelPluginMetadataExpressionPaths = (
   babel,
   { replaceMap = {}, allowConflictingReplacements = false },
 ) => {
-  const { traverse, parse, types } = babel;
+  const { traverse, parseSync, types } = babel;
   const replacementMap = new Map();
   const valueExpressionSet = new Set();
 
@@ -91,7 +91,7 @@ const babelPluginMetadataExpressionPaths = (
     pre: (state) => {
       // https://github.com/babel/babel/blob/d50e78d45b608f6e0f6cc33aeb22f5db5027b153/packages/babel-traverse/src/path/replacement.js#L93
       const parseExpression = (value) => {
-        const expressionNode = parse(value, state.opts).program.body[0]
+        const expressionNode = parseSync(value, state.opts).program.body[0]
           .expression;
         traverse.removeProperties(expressionNode);
         return expressionNode;

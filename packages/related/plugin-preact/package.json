@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-preact",
-  "version": "1.8.3",
+  "version": "1.9.0",
   "type": "module",
   "repository": {
     "type": "git",
@@ -8,6 +8,9 @@
     "directory": "packages/related/plugin-preact"
   },
   "license": "MIT",
+  "engines": {
+    "node": "^22.18.0 || >=24.11.0"
+  },
   "exports": {
     ".": {
       "import": "./src/main.js"
@@ -21,10 +24,9 @@
     "@jsenv/core": "*"
   },
   "dependencies": {
-    "@babel/plugin-transform-react-jsx": "7.29.7",
-    "@babel/plugin-transform-react-jsx-development": "7.29.7",
-    "@babel/plugin-transform-react-jsx-source": "7.29.7",
-    "@jsenv/ast": "6.9.3",
+    "@babel/plugin-transform-react-jsx": "8.0.1",
+    "@babel/plugin-transform-react-jsx-development": "8.0.1",
+    "@jsenv/ast": "6.10.0",
     "@jsenv/sourcemap": "1.4.3",
     "@jsenv/url-meta": "8.5.7",
     "@prefresh/babel-plugin": "0.5.3",
