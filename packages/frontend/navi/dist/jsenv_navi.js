@@ -7073,12 +7073,19 @@ const ARROW_SPACING = 8;
 // (closest "[aria-expanded]", see commands.js): a button inside the callout
 // closes the callout, not the picker or dialog around it. Never "false" — a
 // closed callout is removed, not kept.
+//
+// role="status" is the floor, not the final value: a message appearing without
+// the user asking for it is a live region, and a callout carrying no status at
+// all still owes one. A status raises it (the addStatusEffect swapping in
+// "alert" for warning/error), and it is also the name a test reaches the
+// callout by — navi's classes and ids are not a contract (docs/testid.md).
 const calloutTemplate = /* html */`
   <div
     class="navi_callout"
     popover="manual"
     navi-out-of-flow=""
     aria-expanded="true"
+    role="status"
   >
     <div class="navi_callout_box">
       <div class="navi_callout_frame"></div>
@@ -66945,6 +66952,10 @@ installImportMetaCssBuild(import.meta);const css$t = /* css */`@layer navi {
   --x-picker-padding-right: var(--picker-padding-right, var(--picker-padding-x, var(--picker-padding, var(--picker-padding-x-default))));
   --x-picker-padding-left: var(--picker-padding-left, var(--picker-padding-x, var(--picker-padding, var(--picker-padding-x-default))));
   --x-picker-padding-bottom: var(--picker-padding-bottom, var(--picker-padding-y, var(--picker-padding, var(--picker-padding-y-default))));
+  --x-picker-press-padding-top: var(--picker-press-padding-top, var(--picker-press-padding-y, var(--picker-press-padding, 0px)));
+  --x-picker-press-padding-right: var(--picker-press-padding-right, var(--picker-press-padding-x, var(--picker-press-padding, 0px)));
+  --x-picker-press-padding-bottom: var(--picker-press-padding-bottom, var(--picker-press-padding-y, var(--picker-press-padding, 0px)));
+  --x-picker-press-padding-left: var(--picker-press-padding-left, var(--picker-press-padding-x, var(--picker-press-padding, 0px)));
   --x-picker-color: var(--picker-color);
   --x-picker-icon-color: var(--picker-icon-color);
   --x-picker-align-x: var(--picker-align-x, var(--picker-align-x-default));
@@ -67091,14 +67102,17 @@ installImportMetaCssBuild(import.meta);const css$t = /* css */`@layer navi {
 
   &[navi-ui-custom] {
     & .navi_picker_input {
-      top: calc(-1 * var(--picker-border-width));
-      right: calc(-1 * var(--picker-border-width));
-      bottom: calc(-1 * var(--picker-border-width));
-      left: calc(-1 * var(--picker-border-width));
-      opacity: 0;
-      appearance: none;
+      top: calc(-1 * (var(--picker-border-width) + var(--x-picker-press-padding-top)));
+      right: calc(-1 *
+            (var(--picker-border-width) + var(--x-picker-press-padding-right)));
+      bottom: calc(-1 *
+            (var(--picker-border-width) + var(--x-picker-press-padding-bottom)));
+      left: calc(-1 * (var(--picker-border-width) + var(--x-picker-press-padding-left)));
       width: auto;
       height: auto;
+      font: inherit;
+      opacity: 0;
+      appearance: none;
       position: absolute;
     }
   }
@@ -67278,6 +67292,12 @@ const PickerButton = props => {
   // keywords have to become lengths here — "s" reaching CSS untouched makes
   // the declaration invalid, silently, and the gap just goes away.
   props.slotSpacing = resolveSpacingSize(props.slotSpacing);
+  for (const pressPaddingPropName of PRESS_PADDING_PROP_NAMES) {
+    const pressPadding = props[pressPaddingPropName];
+    if (pressPadding !== undefined) {
+      props[pressPaddingPropName] = stringifySpacingStyle(pressPadding);
+    }
+  }
   const {
     ref,
     variant,
@@ -67836,6 +67856,13 @@ const isOpeningKeyboardOnMobile = type => {
 const NON_MOBILE_KEYBOARD_TYPES = new Set(["date", "month", "week", "time", "datetime-local", "color"]);
 const PICKER_BUTTON_PSEUDO_CLASSES = [":hover", ":focus", ":focus-visible", ":focus-within", ":read-only", ":disabled", ":-navi-loading", ":-navi-expanded", ":-navi-has-value"];
 const PickerInputPseudoClasses = [":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading", ":-navi-has-value", ":-navi-expanded"];
+
+// Spacing props that are not the names of real CSS styles, so Box hands them to
+// the custom property untouched: a size keyword would reach CSS as the word "s"
+// and a number as a unitless one, either of which makes the calc() using it
+// invalid and drops the press area back to the box. Hence the pass in
+// PickerButton, which turns them into lengths.
+const PRESS_PADDING_PROP_NAMES = ["pressPadding", "pressPaddingX", "pressPaddingY", "pressPaddingTop", "pressPaddingRight", "pressPaddingBottom", "pressPaddingLeft"];
 const PickerStyleCSSVars = {
   "outlineWidth": "--picker-outline-width",
   "borderWidth": "--picker-border-width",
@@ -67849,6 +67876,13 @@ const PickerStyleCSSVars = {
   "popupBorderRadius": "--picker-popup-border-radius",
   "dialogBorderWidth": "--picker-dialog-border-width",
   "slotSpacing": "--picker-slot-spacing",
+  "pressPadding": "--picker-press-padding",
+  "pressPaddingX": "--picker-press-padding-x",
+  "pressPaddingY": "--picker-press-padding-y",
+  "pressPaddingTop": "--picker-press-padding-top",
+  "pressPaddingRight": "--picker-press-padding-right",
+  "pressPaddingBottom": "--picker-press-padding-bottom",
+  "pressPaddingLeft": "--picker-press-padding-left",
   // alignX/alignY resolve to these two on a flex-x box; naming the CSS style
   // (not the prop) is what styleCSSVars matches, so justifyContent/alignItems
   // passed directly land in the same variables.

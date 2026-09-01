@@ -2,7 +2,10 @@ import { performTabNavigation } from "@jsenv/dom";
 import { useContext, useEffect, useRef } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
-import { resolveSpacingSize } from "@jsenv/navi/src/box/box_style_util.js";
+import {
+  resolveSpacingSize,
+  stringifySpacingStyle,
+} from "@jsenv/navi/src/box/box_style_util.js";
 import { ChevronDownSvg } from "@jsenv/navi/src/graphic/icons/chevron_updown_svg.jsx";
 import { CloseSvg } from "@jsenv/navi/src/graphic/icons/close_svg.jsx";
 import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.jsx";
@@ -155,6 +158,28 @@ const css = /* css */ `
         --picker-padding-y,
         var(--picker-padding, var(--picker-padding-y-default))
       )
+    );
+    /* How far a press reaches past the box. Zero unless a caller asks: the
+       press area IS the box — which under variant="bare" is the drawing's box
+       to the pixel — and only a drawing that paints outside its own box has
+       anything to add here (see pressPadding). No --picker-*-default behind
+       these like the padding above: nothing is drawn out there, so no variant
+       has a look to state about it. */
+    --x-picker-press-padding-top: var(
+      --picker-press-padding-top,
+      var(--picker-press-padding-y, var(--picker-press-padding, 0px))
+    );
+    --x-picker-press-padding-right: var(
+      --picker-press-padding-right,
+      var(--picker-press-padding-x, var(--picker-press-padding, 0px))
+    );
+    --x-picker-press-padding-bottom: var(
+      --picker-press-padding-bottom,
+      var(--picker-press-padding-y, var(--picker-press-padding, 0px))
+    );
+    --x-picker-press-padding-left: var(
+      --picker-press-padding-left,
+      var(--picker-press-padding-x, var(--picker-press-padding, 0px))
     );
     --x-picker-color: var(--picker-color);
     --x-picker-icon-color: var(--picker-icon-color);
@@ -410,14 +435,34 @@ const css = /* css */ `
     &[navi-ui-custom] {
       .navi_picker_input {
         position: absolute;
-        top: calc(-1 * var(--picker-border-width));
-        right: calc(-1 * var(--picker-border-width));
-        bottom: calc(-1 * var(--picker-border-width));
-        left: calc(-1 * var(--picker-border-width));
+        /* This input IS the press area: what the picker draws is transparent to
+           the pointer, and a press anywhere over this box is what opens the
+           popup. So it covers the box — and whatever pressPadding* asks for
+           around it, for a drawing that paints outside the box it measures. */
+        top: calc(
+          -1 * (var(--picker-border-width) + var(--x-picker-press-padding-top))
+        );
+        right: calc(
+          -1 *
+            (var(--picker-border-width) + var(--x-picker-press-padding-right))
+        );
+        bottom: calc(
+          -1 *
+            (var(--picker-border-width) + var(--x-picker-press-padding-bottom))
+        );
+        left: calc(
+          -1 * (var(--picker-border-width) + var(--x-picker-press-padding-left))
+        );
         /* Reset width/height for input color */
         width: auto;
         height: auto;
 
+        /* Nothing of this input is ever seen (opacity below) and its size is
+           the four insets above — so its font is only ever read as the unit
+           the lengths in them are written in. It has to be the picker's own,
+           or an em of press padding means the UA's 13.33px Arial instead of
+           the text the caller drew it against. */
+        font: inherit;
         opacity: 0;
         appearance: none;
       }
@@ -675,6 +720,12 @@ const PickerButton = (props) => {
   // keywords have to become lengths here — "s" reaching CSS untouched makes
   // the declaration invalid, silently, and the gap just goes away.
   props.slotSpacing = resolveSpacingSize(props.slotSpacing);
+  for (const pressPaddingPropName of PRESS_PADDING_PROP_NAMES) {
+    const pressPadding = props[pressPaddingPropName];
+    if (pressPadding !== undefined) {
+      props[pressPaddingPropName] = stringifySpacingStyle(pressPadding);
+    }
+  }
   const {
     ref,
     variant,
@@ -1299,6 +1350,21 @@ const PickerInputPseudoClasses = [
   ":-navi-expanded",
 ];
 
+// Spacing props that are not the names of real CSS styles, so Box hands them to
+// the custom property untouched: a size keyword would reach CSS as the word "s"
+// and a number as a unitless one, either of which makes the calc() using it
+// invalid and drops the press area back to the box. Hence the pass in
+// PickerButton, which turns them into lengths.
+const PRESS_PADDING_PROP_NAMES = [
+  "pressPadding",
+  "pressPaddingX",
+  "pressPaddingY",
+  "pressPaddingTop",
+  "pressPaddingRight",
+  "pressPaddingBottom",
+  "pressPaddingLeft",
+];
+
 const PickerStyleCSSVars = {
   "outlineWidth": "--picker-outline-width",
   "borderWidth": "--picker-border-width",
@@ -1312,6 +1378,13 @@ const PickerStyleCSSVars = {
   "popupBorderRadius": "--picker-popup-border-radius",
   "dialogBorderWidth": "--picker-dialog-border-width",
   "slotSpacing": "--picker-slot-spacing",
+  "pressPadding": "--picker-press-padding",
+  "pressPaddingX": "--picker-press-padding-x",
+  "pressPaddingY": "--picker-press-padding-y",
+  "pressPaddingTop": "--picker-press-padding-top",
+  "pressPaddingRight": "--picker-press-padding-right",
+  "pressPaddingBottom": "--picker-press-padding-bottom",
+  "pressPaddingLeft": "--picker-press-padding-left",
   // alignX/alignY resolve to these two on a flex-x box; naming the CSS style
   // (not the prop) is what styleCSSVars matches, so justifyContent/alignItems
   // passed directly land in the same variables.
@@ -1472,7 +1545,11 @@ const PickerFirstResolver = (props) => {
  *   everywhere else opening the popup. There is no right slot beside it either,
  *   so what a field would have got from navi this drawing places itself: a
  *   `<Picker.Clear />` where the cross belongs, laid out like anything else it
- *   holds.
+ *   holds. What the picker catches the press over is that box and no more, so
+ *   a drawing that paints outside it on purpose — an affordance in the margin
+ *   beside it, out of the flow so the rest keeps its width — is drawn and
+ *   opens nothing; `pressPadding` is how far the press area follows it out
+ *   there.
  * @param {boolean} [readOnly] Nothing in this picker can be changed — and it
  *   still opens, so what is in the popup can be read: everything in there is
  *   held read-only in turn, each control greying out and saying why on its own.
@@ -1602,6 +1679,22 @@ const PickerFirstResolver = (props) => {
  *   prop name Input uses for its own slots. Accepts a spacing token ("s",
  *   "m"…) like any other spacing prop, or a length. Defaults to half the
  *   horizontal padding.
+ * @param {number|string} [pressPadding] How far a press counts as the trigger
+ *   past the picker's own box — a spacing token ("s", "m"…) or a length, zero
+ *   by default. What the picker draws is transparent to the pointer: the press
+ *   lands on an invisible input covering the box, so the box is the whole
+ *   answer to "does this open". That is right while what is drawn stays inside
+ *   it, which is what `variant="bare"` measures. A `ui` that paints OUTSIDE
+ *   its box on purpose — a chevron pushed into the margin beside it, so the
+ *   label under it keeps the width it has when nothing opens — draws something
+ *   nobody can press, and this is how far the press area goes to reach it. The
+ *   press area only; nothing moves and nothing is drawn. Font-relative lengths
+ *   are read against the picker's own text, so "0.75em" is the drawing's em.
+ *   Only the sides that overhang: the area grows over whatever is next to the
+ *   picker, and takes the presses aimed at it.
+ * @param {number|string} [pressPaddingX] Same, left and right only;
+ *   `pressPaddingY` top and bottom, `pressPaddingTop`/`Right`/`Bottom`/`Left`
+ *   one side each.
  * @param {number|string} [popoverMaxHeight] Soft cap on the popover's height
  *   (default 300px). The popover shrinks below it when space is tight.
  * @param {number|string} [dialogMinWidth] Floor on the dialog's width. A dialog

@@ -1030,12 +1030,19 @@ const ARROW_SPACING = 8;
 // (closest "[aria-expanded]", see commands.js): a button inside the callout
 // closes the callout, not the picker or dialog around it. Never "false" — a
 // closed callout is removed, not kept.
+//
+// role="status" is the floor, not the final value: a message appearing without
+// the user asking for it is a live region, and a callout carrying no status at
+// all still owes one. A status raises it (the addStatusEffect swapping in
+// "alert" for warning/error), and it is also the name a test reaches the
+// callout by — navi's classes and ids are not a contract (docs/testid.md).
 const calloutTemplate = /* html */ `
   <div
     class="navi_callout"
     popover="manual"
     navi-out-of-flow=""
     aria-expanded="true"
+    role="status"
   >
     <div class="navi_callout_box">
       <div class="navi_callout_frame"></div>
