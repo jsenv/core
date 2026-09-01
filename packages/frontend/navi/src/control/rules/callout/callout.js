@@ -308,6 +308,11 @@ const css = /* css */ `
  * @param {Object} options - Configuration options
  * @param {HTMLElement} [options.anchorElement] - Element the callout should follow. If not provided or too big, callout will be centered in viewport
  * @param {string} [options.status=""] - Callout status: "info" | "warning" | "error" | "success"
+ * @param {string} [options.testId] - `data-testid` on the callout element. The callout is
+ *   drawn by navi, so nothing the caller renders can carry the name a test needs — same
+ *   situation as a picker's `popupTestId` (see docs/testid.md). A role is already there
+ *   for free (`status`/`alert`); reach for this when the role is not enough to tell two
+ *   callouts apart.
  * @param {Function} [options.onClose] - Callback when callout is closed
  * @param {boolean} [options.closeOnClickOutside] - Whether to close on outside clicks (defaults to true for "info" status)
  * @param {boolean} [options.icon=true] - Whether the status icon is shown beside the message.
@@ -356,6 +361,7 @@ export const openCallout = (
     // "success" - positive feedback (e.g., "Changes saved successfully")
     // "" - neutral information
     status = "",
+    testId,
     onClose,
     closeOnClickOutside = status === "info",
     closeOnFocusLeave = closeOnClickOutside,
@@ -555,6 +561,15 @@ export const openCallout = (
         calloutElement.setAttribute("data-icon", "none");
       } else {
         calloutElement.removeAttribute("data-icon");
+      }
+    }
+    if (Object.hasOwn(options, "testId")) {
+      // Per message, like the cross below: a callout is a slot several things
+      // speak through, and the one speaking is what a test is looking at.
+      if (options.testId) {
+        calloutElement.setAttribute("data-testid", options.testId);
+      } else {
+        calloutElement.removeAttribute("data-testid");
       }
     }
     if (Object.hasOwn(options, "closeButton")) {
@@ -992,7 +1007,7 @@ export const openCallout = (
     });
   }
 
-  update(message, { status, icon, closeButton });
+  update(message, { status, testId, icon, closeButton });
 
   // positionCallout itself handles both "no anchorElement at all" and "a
   // real one pickPositionRelativeTo's own isAnchorTooBig rejects" (see its

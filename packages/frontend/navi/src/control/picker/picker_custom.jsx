@@ -933,6 +933,7 @@ const PickerContentInsidePopup = (props) => {
         <PickerCalloutPopup
           {...popupProps}
           pickerRef={props.ref}
+          testId={popupTestId}
           status={calloutStatus}
           icon={calloutIcon}
           closeButton={calloutCloseButton}
@@ -1015,6 +1016,7 @@ const PickerCalloutPopup = ({
   anchor,
   openController,
   pickerRef,
+  testId,
   status,
   icon,
   closeButton,
@@ -1046,6 +1048,10 @@ const PickerCalloutPopup = ({
           : anchor;
     calloutManager.addOpenToken(PICKER_CALLOUT_CONTENT_TOKEN, {
       message: hostRef.current,
+      // The popup a `popupTestId` names is this callout: it is the surface the
+      // picker opens, drawn by navi, so it is the one thing the caller cannot
+      // name from its own children.
+      testId,
       // "none" is the picker's word for it; the callout's is no status at all.
       status: status === "none" ? undefined : status,
       icon,

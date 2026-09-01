@@ -5432,6 +5432,11 @@ const CONTROL_ATTRIBUTE_SET = new Set([
   "spellcheck",
   "autoCorrect",
   "aria-controls",
+  // The name goes where the role is: the root box has none, so an aria-label
+  // left on it names nothing at all, while the host is what the user focuses
+  // and what a screen reader announces (and what getByRole({ name }) reads).
+  "aria-label",
+  "aria-labelledby",
   "tabIndex",
   "command",
   "commandFor",
@@ -6419,6 +6424,11 @@ const css$12 = /* css */`
  * @param {Object} options - Configuration options
  * @param {HTMLElement} [options.anchorElement] - Element the callout should follow. If not provided or too big, callout will be centered in viewport
  * @param {string} [options.status=""] - Callout status: "info" | "warning" | "error" | "success"
+ * @param {string} [options.testId] - `data-testid` on the callout element. The callout is
+ *   drawn by navi, so nothing the caller renders can carry the name a test needs — same
+ *   situation as a picker's `popupTestId` (see docs/testid.md). A role is already there
+ *   for free (`status`/`alert`); reach for this when the role is not enough to tell two
+ *   callouts apart.
  * @param {Function} [options.onClose] - Callback when callout is closed
  * @param {boolean} [options.closeOnClickOutside] - Whether to close on outside clicks (defaults to true for "info" status)
  * @param {boolean} [options.icon=true] - Whether the status icon is shown beside the message.
@@ -6465,6 +6475,7 @@ const openCallout = (message, {
   // "success" - positive feedback (e.g., "Changes saved successfully")
   // "" - neutral information
   status = "",
+  testId,
   onClose,
   closeOnClickOutside = status === "info",
   closeOnFocusLeave = closeOnClickOutside,
@@ -6640,6 +6651,15 @@ const openCallout = (message, {
         calloutElement.setAttribute("data-icon", "none");
       } else {
         calloutElement.removeAttribute("data-icon");
+      }
+    }
+    if (Object.hasOwn(options, "testId")) {
+      // Per message, like the cross below: a callout is a slot several things
+      // speak through, and the one speaking is what a test is looking at.
+      if (options.testId) {
+        calloutElement.setAttribute("data-testid", options.testId);
+      } else {
+        calloutElement.removeAttribute("data-testid");
       }
     }
     if (Object.hasOwn(options, "closeButton")) {
@@ -7042,6 +7062,7 @@ const openCallout = (message, {
   }
   update(message, {
     status,
+    testId,
     icon,
     closeButton
   });
@@ -7698,7 +7719,7 @@ const generateSvgWithoutArrow = (width, height) => {
  *
  * Usage:
  *   const myToken = createOpenToken();
- *   calloutManager.addOpenToken(myToken, { message, status, anchorElement, event, skipFocus, onClose });
+ *   calloutManager.addOpenToken(myToken, { message, status, testId, anchorElement, event, skipFocus, onClose });
  *   calloutManager.removeOpenToken(myToken, event);
  *   calloutManager.requestCloseCallout(event, debugReason); // force-close all
  *   calloutManager.callout  // current open callout or null
@@ -7744,6 +7765,7 @@ const createCalloutManager = (
         const [, remainingTokenData] = tokens.entries().next().value;
         callout.update(remainingTokenData.message, {
           status: remainingTokenData.status,
+          testId: remainingTokenData.testId,
           icon: remainingTokenData.icon,
           closeButton: remainingTokenData.closeButton,
         });
@@ -7770,6 +7792,7 @@ const createCalloutManager = (
     {
       message,
       status,
+      testId,
       icon,
       closeButton,
       anchorElement,
@@ -7784,12 +7807,13 @@ const createCalloutManager = (
     }
     const calloutOptions = {
       status,
+      testId,
       icon,
       closeButton,
       closeOnClickOutside: status !== "error",
     };
 
-    tokens.set(token, { message, status, icon, closeButton, onClose });
+    tokens.set(token, { message, status, testId, icon, closeButton, onClose });
     if (callout) {
       callout.update(message, calloutOptions);
       return;
@@ -59315,6 +59339,7 @@ const PickerContentInsidePopup = props => {
     children: isCallout ? jsx(PickerCalloutPopup, {
       ...popupProps,
       pickerRef: props.ref,
+      testId: popupTestId,
       status: calloutStatus,
       icon: calloutIcon,
       closeButton: calloutCloseButton,
@@ -59379,6 +59404,7 @@ const PickerCalloutPopup = ({
   anchor,
   openController,
   pickerRef,
+  testId,
   status,
   icon,
   closeButton,
@@ -59404,6 +59430,10 @@ const PickerCalloutPopup = ({
     const anchorElement = anchor === pickerRef ? undefined : anchor && "current" in anchor ? anchor.current : anchor;
     calloutManager.addOpenToken(PICKER_CALLOUT_CONTENT_TOKEN, {
       message: hostRef.current,
+      // The popup a `popupTestId` names is this callout: it is the surface the
+      // picker opens, drawn by navi, so it is the one thing the caller cannot
+      // name from its own children.
+      testId,
       // "none" is the picker's word for it; the callout's is no status at all.
       status: status === "none" ? undefined : status,
       icon,

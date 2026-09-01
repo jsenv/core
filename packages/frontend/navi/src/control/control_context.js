@@ -26,6 +26,11 @@ export const CONTROL_ATTRIBUTE_SET = new Set([
   "spellcheck",
   "autoCorrect",
   "aria-controls",
+  // The name goes where the role is: the root box has none, so an aria-label
+  // left on it names nothing at all, while the host is what the user focuses
+  // and what a screen reader announces (and what getByRole({ name }) reads).
+  "aria-label",
+  "aria-labelledby",
   "tabIndex",
   "command",
   "commandFor",

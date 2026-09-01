@@ -78,6 +78,27 @@ than to the box around it (`id`, `name`, `type`, `value`, `tabIndex`,
 so a `data-test-id` or a `data-qa` of your own would name the wrapper, which is
 the second reason to keep the standard spelling.
 
+`aria-label` and `aria-labelledby` take the same road, and for the reason the
+section above gives: the name has to be where the role is. The root box has no
+role — it is a wrapper — so a name left on it would be announced by nothing and
+found by nothing, while the host is what the user focuses and what
+`getByRole(role, { name })` and `getByLabel()` read.
+
+```jsx
+<Picker variant="icon" aria-label="Aide" ui={<Icon>…</Icon>} />
+```
+
+```html
+<div class="navi_picker" navi-control="picker" aria-expanded="false">
+  <input navi-control-host="picker" aria-label="Aide" readonly />
+</div>
+```
+
+Which role that host answers to is the control's own: a picker's host is an
+`<input>` (`textbox`), a button's is a `<button>`. A picker trigger is not
+`getByRole("button")`, whatever it is drawn like — target its name, or give it
+a `data-testid`.
+
 When the wrapper IS what the test wants — a whole field with its label and its
 error message, a section, a row — put the testid on the surrounding component
 (`<Field data-testid="email-field">`, `<Box data-testid="cart-row">`); anything
@@ -97,7 +118,32 @@ Most tests do not need it — a testid on what the popup holds (`<Box
 data-testid="place-pick">` among the children) names the screen, not the frame,
 and is the better name for a test that reads or clicks the content. Reach for
 `popupTestId` when the frame IS what the test looks at: a screenshot of the
-popup's surface, its position, its size, its backdrop.
+popup's surface, its position, its size, its backdrop. It names the popup in
+every mode, including `mode="callout"`, where the frame is a callout rather
+than a sheet.
+
+## A callout is a role first
+
+A callout — a control's `readOnlyMessage` or failing constraint, a
+`mode="callout"` picker, a direct `openCallout()` — is drawn by navi from end to
+end: the application supplies the sentence and nothing else, so there is often
+nothing of its own to name. It carries a role for that, and the role is the
+contract: `alert` when it says something went wrong (`warning`, `error`),
+`status` otherwise (`info`, `success`, or no status at all).
+
+```js
+await page.getByRole("button", { name: "Publier" }).click();
+await expect(page.getByRole("alert")).toHaveText("Il manque le lieu");
+```
+
+That is not a testing convenience: a message appearing without the user asking
+for it is what a live region is for, and the role is what makes a screen reader
+read it out. A test targeting it asserts that.
+
+When the role is not enough — two callouts up at once, a screenshot of one
+particular surface — `openCallout` takes a `testId`, and a picker's
+`popupTestId` covers the one it opens. Waiting on `.navi_callout` is the thing
+to replace: it is a navi class like any other.
 
 `<ControlSwap.Side>` answers the same situation the other way: the cap at the
 end of the row is drawn by navi, and every prop the side does not use for

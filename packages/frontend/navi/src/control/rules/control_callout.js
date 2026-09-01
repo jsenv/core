@@ -7,7 +7,7 @@
  *
  * Usage:
  *   const myToken = createOpenToken();
- *   calloutManager.addOpenToken(myToken, { message, status, anchorElement, event, skipFocus, onClose });
+ *   calloutManager.addOpenToken(myToken, { message, status, testId, anchorElement, event, skipFocus, onClose });
  *   calloutManager.removeOpenToken(myToken, event);
  *   calloutManager.requestCloseCallout(event, debugReason); // force-close all
  *   calloutManager.callout  // current open callout or null
@@ -60,6 +60,7 @@ export const createCalloutManager = (
         const [, remainingTokenData] = tokens.entries().next().value;
         callout.update(remainingTokenData.message, {
           status: remainingTokenData.status,
+          testId: remainingTokenData.testId,
           icon: remainingTokenData.icon,
           closeButton: remainingTokenData.closeButton,
         });
@@ -86,6 +87,7 @@ export const createCalloutManager = (
     {
       message,
       status,
+      testId,
       icon,
       closeButton,
       anchorElement,
@@ -100,12 +102,13 @@ export const createCalloutManager = (
     }
     const calloutOptions = {
       status,
+      testId,
       icon,
       closeButton,
       closeOnClickOutside: status !== "error",
     };
 
-    tokens.set(token, { message, status, icon, closeButton, onClose });
+    tokens.set(token, { message, status, testId, icon, closeButton, onClose });
     if (callout) {
       callout.update(message, calloutOptions);
       return;
