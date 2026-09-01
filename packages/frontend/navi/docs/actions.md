@@ -296,6 +296,51 @@ one that asks something of a control near it is a `command` (a value proposed is
 [control_value.md](./control_value.md#a-button-that-proposes-a-value-is---navi-update)).
 Reaching for a plain `onClick` usually means one of those was missed.
 
+An `action` and a `command` on the same press are one gesture in two halves, and
+the command is the second one: it waits for the action and runs only if it
+succeeded. "Leave the group, then go back to the list" therefore never leaves
+anyone on a list they are still in — a failure or an abort drops the command and
+the error stays on the control, where the user is looking. `<Picker
+type="confirm">` follows the same rule with its `action` and `command`, and a
+form says it as `data-after-send`.
+
+### Deleting something, then leaving the page it was on
+
+The everyday form of that pair, and the press is a `<Picker type="confirm">`
+rather than a `<Button>`: what is destroyed is asked about first, the question
+is a popup the picker already owns, and the work runs back on the trigger.
+
+```jsx
+<Picker
+  type="confirm"
+  ui="Leave this group"
+  message="Leave this group? An invitation will be needed to come back."
+  action={PLAYER_GROUP.LEAVE.bindParams({ id: group.id })}
+  command="--navi-nav-to:/me/groups"
+/>
+```
+
+Yes closes the question and the request goes from the trigger — busy while it
+runs, an error callout on it if it fails — and the list is reached only once the
+group is really gone. A failure leaves the reader on the page of a group they
+are still in, which is the truth, with the reason in front of them.
+
+Navigating first and awaiting after — `navTo(...)` then `await leave(...)` — buys
+the frame where this page would render without what it displays, and pays for it
+with a reader standing in a list that still holds the group they think they left,
+told nothing. There is usually no frame to buy anyway: the response and the
+navigation land in the same task.
+
+Where to go afterwards is the app's decision, not navi's. Staying on the page to
+say it is done, or letting the route land on its empty state, are as good as
+leaving for the list; what the `command` settles is only that the success is
+what decides.
+
+The action is the instance, not an arrow around it — `bindParams` is what gives
+the trigger its busy state and its error callout, and the reason is the same one
+[resource.md](./resource.md#binding-params-instead-of-wrapping-in-an-arrow)
+gives for every write.
+
 On a link — a `Link`, a `<Button href>` or `<Button route>` — the three fire on
 the press, before the navigation, and the navigation waits for none of them: a
 `command="--navi-close"` closes the sheet the link leaves, an `action` that

@@ -54,7 +54,10 @@ import { usePromiseAsyncData } from "./use_promise_async_data.js";
  *
  * When `loading` is not set (default), the component suspends until data is
  * ready, so `data` is always defined when the component renders and `loading`
- * is always `false`.
+ * is always `false`. With `loading: true` the component never suspends: every
+ * wait — running, settling, or params nobody has started yet — comes back as
+ * `loading`, so the subtree it draws is never swapped for the boundary above
+ * and remounted.
  *
  * When `error` is not set (default), any action failure causes the component
  * to throw, so `error` is always `undefined` when the component renders.
@@ -285,12 +288,6 @@ const useActionAsyncData = (
     throw actionError;
   }
 
-  // RUNNING with loadingEffect: "use" — return stale data + loading flag, no suspend
-  if (loadingEffect === "use" && runningState === RUNNING) {
-    const staleData = action.dataSignal.peek();
-    return [staleData, true, undefined];
-  }
-
   // An action without params has nothing to run and no one to start it: this is
   // where a route action lands when its params getter returns false. It is not a
   // load in progress, so there is nothing to wait for — suspending here would
@@ -298,6 +295,17 @@ const useActionAsyncData = (
   // stay hidden for good, silently.
   if (runningState !== RUNNING && action.paramsSignal.peek() === undefined) {
     return [action.dataSignal.peek(), false, undefined];
+  }
+
+  // `loading: true` says the component draws its own wait, so this hook never
+  // suspends: running, or holding params nobody has started yet — a debounced
+  // binding that just retargeted, an aborted run, a run this very render is
+  // about to issue. Either way what is on screen is not the current answer,
+  // which is what `loading` says. Suspending would not draw a spinner: it swaps
+  // the subtree for the boundary, and everything under it remounts — a dialog
+  // open inside it is then closed, by a hook the caller told to stay out of it.
+  if (loadingEffect === "use") {
+    return [action.dataSignal.peek(), true, undefined];
   }
 
   // IDLE or RUNNING with loadingEffect: "delegate" — suspend
