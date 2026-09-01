@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-transpilation",
-  "version": "1.7.0",
+  "version": "1.7.1",
   "type": "module",
   "description": "TODO",
   "repository": {
@@ -46,7 +46,7 @@
     "@babel/plugin-transform-unicode-property-regex": "8.0.1",
     "@babel/plugin-transform-unicode-regex": "8.0.1",
     "@jsenv/ast": "6.10.0",
-    "@jsenv/js-module-fallback": "1.6.0",
+    "@jsenv/js-module-fallback": "1.6.1",
     "@jsenv/sourcemap": "1.4.3",
     "@jsenv/urls": "2.9.10",
     "@jsenv/utils": "2.3.1",

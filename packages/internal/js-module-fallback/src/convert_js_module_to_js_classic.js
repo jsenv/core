@@ -1,5 +1,5 @@
 import { applyBabelPlugins, babelPluginAsyncToPromises } from "@jsenv/ast";
-import { composeTwoSourcemaps } from "@jsenv/sourcemap";
+import { composeTwoSourcemaps, SOURCEMAP } from "@jsenv/sourcemap";
 import { urlToRelativeUrl } from "@jsenv/urls";
 import { createRequire } from "node:module";
 
@@ -90,7 +90,13 @@ export const convertJsModuleToJsClassic = async ({
             require("@babel/plugin-transform-modules-umd"),
           ]),
     ],
-    input,
+    // the sourcemap is passed as "inputSourcemap"; a "sourceMappingURL" comment
+    // left in the content names the file produced by the previous step and would
+    // send babel looking for that ".map" next to "inputUrl"
+    input: SOURCEMAP.removeComment({
+      contentType: "text/javascript",
+      content: input,
+    }),
     inputIsJsModule: true,
     inputUrl,
     outputUrl,
