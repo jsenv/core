@@ -151,6 +151,12 @@ const css = /* css */ `
 
       > .navi_control_swap_slot {
         display: flex;
+        /* A pane is a window wide, never wider: on the automatic minimum
+           size its floor is its content's, and a control that outgrows the
+           window (a search field the day its clear cross appears) pushes the
+           pane with it — the next pane then no longer starts at one window,
+           and the travel lands the row off by the overflow. */
+        min-width: 0;
         flex: 0 0 100cqw;
 
         /* A control is exactly as big as its content on its own (a navi one is

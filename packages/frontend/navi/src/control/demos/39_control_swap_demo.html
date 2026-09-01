@@ -352,6 +352,32 @@
                 </ControlSwap>
               </div>
             </Variant>
+            {/* La croix qui remplace la loupe le jour où le champ tient
+                quelque chose ÉLARGIT le champ, et un volet fait la largeur de
+                la fenêtre: à 24px dans 320px il n'y a plus de mou, donc le
+                volet suivait son contenu et partait plus large que la fenêtre
+                — la voie se décalait de ce débordement et la bascule tombait à
+                côté. Rempli, ce volet-ci doit tenir exactement comme le vide
+                au-dessus. */}
+            <Variant caption="fontSize 24px, champ rempli">
+              <div class="phone" style="font-size: 24px">
+                <ControlSwap defaultValue="what">
+                  {whereSide()}
+                  <ControlSwap.Side
+                    name="what"
+                    icon={<SearchSvg />}
+                    label="Rechercher"
+                  >
+                    <Input
+                      type="search"
+                      icon={null}
+                      defaultValue="hh"
+                      placeholder="Rechercher…"
+                    />
+                  </ControlSwap.Side>
+                </ControlSwap>
+              </div>
+            </Variant>
             <Variant caption="--navi-control-swap-size: 40px">
               <div class="phone">
                 <ControlSwap style={{ "--navi-control-swap-size": "40px" }}>

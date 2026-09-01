@@ -45542,6 +45542,7 @@ const css$O = /* css */`.navi_control_swap {
 
     & > .navi_control_swap_slot {
       flex: 0 0 100cqw;
+      min-width: 0;
       display: flex;
 
       & > * {
