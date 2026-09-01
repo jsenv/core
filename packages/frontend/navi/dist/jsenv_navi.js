@@ -565,1041 +565,6 @@ effect(() => {
 });
 
 /**
- * Where an action error goes when nothing displays it.
- *
- * An action that fails writes the error into its `errorSignal` and stops there.
- * It cannot know whether a screen is going to show it: at the instant it fails,
- * the screen that will is often not even mounted — a route action runs before
- * its page renders, which is precisely the case a guess made at failure time
- * gets wrong. So nothing is guessed. The error is let go, and whoever displays
- * it SAYS so by marking it; what nobody ever took is reported as unhandled.
- *
- * The mark is `__handled_by__`, the same one the jsenv supervisor reads to stay
- * out of the way of an error the app is already showing — one mark, one meaning:
- * "this is on screen somewhere".
- *
- * The whole picture, control errors and validation included: docs/error_handling.md
- */
-
-const markErrorAsDisplayedBy = (error, by) => {
-  if (error && typeof error === "object") {
-    error.__handled_by__ = by;
-  }
-};
-
-const errorIsDisplayed = (error) => {
-  return Boolean(error && error.__handled_by__);
-};
-
-/**
- * A render has read this error — it is now the render tree's business, not this
- * module's, and there is nothing left to report.
- *
- * Whatever the reader does with it is already covered without any deadline: it
- * displays it (and marks it), or it throws it, and a thrown error either finds a
- * boundary that displays it or reaches window on its own — `preact/debug`
- * re-throws every error a boundary caught, and an unbounded one aborts the
- * render loudly. Reporting it here as well would be a second voice saying the
- * same thing, always the wrong one, since this module cannot see which of those
- * happened.
- */
-const errorTakenByRenderSet = new WeakSet();
-const markErrorAsTakenByRender = (error) => {
-  if (error && typeof error === "object") {
-    errorTakenByRenderSet.add(error);
-  }
-};
-
-/**
- * When the answer "nobody took it" is final.
- *
- * The floor is one macrotask: every render that could take the error — Preact's
- * queue, a Suspense boundary settling on the failure, the boundary above it —
- * happens in microtasks.
- *
- * That floor is enough for an action failing under a page that is already on
- * screen, and far too early for a route action: it fails ON the url change,
- * before its page exists, and that page cannot render until the routing that
- * asked for the data is over. Measured on an offline navigation, the screen
- * displaying the error arrived ~12ms after this deadline — so the app was told
- * it had displayed nothing while it was displaying it.
- *
- * The browser integration knows when the document has stopped moving and hands
- * that over here (see installReportDeadlineExtension); nothing else does, and
- * this module stays free of the DOM. Waiting longer costs nothing now that a
- * read is enough to call this off: what still reaches the report was read by no
- * render at all, and a late report about that is as good as a prompt one.
- */
-let waitForDocumentSettled = null;
-const installReportDeadlineExtension = (fn) => {
-  waitForDocumentSettled = fn;
-};
-
-/**
- * Rethrown rather than logged: an error nobody took is an unhandled error, and
- * the runtime already knows what to do with those (window "error" event, jsenv
- * overlay in dev). Same trick preact/debug uses for the same reason.
- */
-const errorReportedSet = new WeakSet();
-const reportErrorIfNobodyDisplaysIt = (error, { action } = {}) => {
-  const decide = () => {
-    if (errorIsDisplayed(error) || errorTakenByRenderSet.has(error)) {
-      return;
-    }
-    if (error && typeof error === "object") {
-      // The same error can reach here from more than one direction (the run
-      // that produced it, the routing promise carrying it): it is one error and
-      // it is reported once.
-      if (errorReportedSet.has(error)) {
-        return;
-      }
-      errorReportedSet.add(error);
-    }
-    if (action && error && typeof error === "object" && !error.action) {
-      error.action = action;
-    }
-    throw error;
-  };
-
-  setTimeout(() => {
-    if (errorIsDisplayed(error) || errorTakenByRenderSet.has(error)) {
-      // Already taken within the microtasks that followed the failure: the
-      // common case, and there is nothing to wait for.
-      return;
-    }
-    if (waitForDocumentSettled) {
-      waitForDocumentSettled(decide);
-      return;
-    }
-    decide();
-  });
-};
-
-const actionPrivatePropertiesWeakMap = new WeakMap();
-const getActionPrivateProperties = (action) => {
-  const actionPrivateProperties = actionPrivatePropertiesWeakMap.get(action);
-  if (!actionPrivateProperties) {
-    throw new Error(`Cannot find action private properties for "${action}"`);
-  }
-  return actionPrivateProperties;
-};
-const setActionPrivateProperties = (action, properties) => {
-  actionPrivatePropertiesWeakMap.set(action, properties);
-};
-
-const IDLE = { id: "idle" };
-const RUNNING = { id: "running" };
-const ABORTED = { id: "aborted" };
-const FAILED = { id: "failed" };
-const COMPLETED = { id: "completed" };
-
-const useActionStatus = (action) => {
-  if (!action) {
-    return {
-      params: undefined,
-      runningState: IDLE,
-      isPrerun: false,
-      idle: true,
-      loading: false,
-      aborted: false,
-      error: null,
-      completed: false,
-      data: undefined,
-    };
-  }
-  const {
-    paramsSignal,
-    runningStateSignal,
-    isPrerunSignal,
-    errorSignal,
-    dataSignal,
-  } = action;
-  const params = paramsSignal.value;
-  const isPrerun = isPrerunSignal.value;
-  const runningState = runningStateSignal.value;
-  const idle = runningState === IDLE;
-  const aborted = runningState === ABORTED;
-  const error = errorSignal.value;
-  const loading = runningState === RUNNING;
-  const completed = runningState === COMPLETED;
-  const data = dataSignal.value;
-
-  return {
-    params,
-    runningState,
-    isPrerun,
-    idle,
-    loading,
-    aborted,
-    error,
-    completed,
-    data,
-  };
-};
-
-installImportMetaCssBuild(import.meta);const css$14 = /* css */`.action_error {
-  background: #fdd;
-  border: 1px solid red;
-  margin-top: 0;
-  margin-bottom: 20px;
-  padding: 20px;
-}
-`;
-const renderIdleDefault = () => null;
-const renderLoadingDefault = () => null;
-const renderAbortedDefault = () => null;
-const renderErrorDefault = error => {
-  let routeErrorText = error && error.message ? error.message : error;
-  return jsxs("p", {
-    className: "action_error",
-    children: ["An error occured: ", routeErrorText]
-  });
-};
-const renderCompletedDefault = () => null;
-const ActionRenderer = ({
-  action,
-  children,
-  disabled
-}) => {
-  import.meta.css = [css$14, "@jsenv/navi/src/action/action_renderer.jsx"];
-  if (action === undefined) {
-    throw new Error("ActionRenderer requires an action to render, but none was provided.");
-  }
-  let renderBranches;
-  if (typeof children === "function") {
-    renderBranches = {
-      completed: children
-    };
-  } else if (isValidElement(children)) {
-    renderBranches = {
-      always: () => children
-    };
-  } else if (isPlainObject$2(children)) {
-    renderBranches = children;
-  } else {
-    renderBranches = {
-      completed: children
-    };
-  }
-  const {
-    idle: renderIdle = renderIdleDefault,
-    loading: renderLoading = renderLoadingDefault,
-    aborted: renderAborted = renderAbortedDefault,
-    error: renderError = renderErrorDefault,
-    completed: renderCompleted,
-    always: renderAlways
-  } = renderBranches;
-  const {
-    idle,
-    loading,
-    aborted,
-    error,
-    completed,
-    data
-  } = useActionStatus(action);
-  const UIRenderedPromise = useUIRenderedPromise(action);
-  const [errorBoundary, resetErrorBoundary] = useErrorBoundary();
-  useLayoutEffect(() => {
-    resetErrorBoundary();
-  }, [action, loading, idle, resetErrorBoundary]);
-  useLayoutEffect(() => {
-    UIRenderedPromise.resolve();
-    return () => {
-      actionUIRenderedPromiseWeakMap.delete(action);
-    };
-  }, [action]);
-  if (disabled) {
-    return null;
-  }
-  // If renderAlways is provided, it wins and handles all rendering
-  if (renderAlways) {
-    return renderAlways({
-      idle,
-      loading,
-      aborted,
-      completed,
-      error,
-      data
-    });
-  }
-  if (idle) {
-    return renderIdle(action);
-  }
-  if (errorBoundary) {
-    // Displaying it is what makes it handled (see action_error_report.js)
-    markErrorAsDisplayedBy(errorBoundary, "<ActionRenderer>");
-    return renderError(errorBoundary, "ui_error", action);
-  }
-  if (aborted) {
-    return renderAborted(action);
-  }
-  let renderCompletedSafe;
-  if (renderCompleted) {
-    renderCompletedSafe = renderCompleted;
-  } else {
-    const {
-      ui
-    } = getActionPrivateProperties(action);
-    if (ui.renderCompleted) {
-      renderCompletedSafe = ui.renderCompleted;
-    } else {
-      renderCompletedSafe = renderCompletedDefault;
-    }
-  }
-  if (loading) {
-    if (action.canDisplayOldData && data !== undefined) {
-      return renderCompletedSafe(data, action);
-    }
-    return renderLoading(action);
-  }
-  if (error) {
-    markErrorAsDisplayedBy(error, "<ActionRenderer>");
-    return renderError(error, "action_error", action);
-  }
-  return renderCompletedSafe(data, action);
-};
-const defaultPromise = Promise.resolve();
-defaultPromise.resolve = () => {};
-const actionUIRenderedPromiseWeakMap = new WeakMap();
-const useUIRenderedPromise = action => {
-  if (!action) {
-    return defaultPromise;
-  }
-  const actionUIRenderedPromise = actionUIRenderedPromiseWeakMap.get(action);
-  if (actionUIRenderedPromise) {
-    return actionUIRenderedPromise;
-  }
-  let resolve;
-  const promise = new Promise(res => {
-    resolve = res;
-  });
-  promise.resolve = resolve;
-  actionUIRenderedPromiseWeakMap.set(action, promise);
-  return promise;
-};
-const isPlainObject$2 = obj => {
-  if (typeof obj !== "object" || obj === null) {
-    return false;
-  }
-  let proto = obj;
-  while (Object.getPrototypeOf(proto) !== null) {
-    proto = Object.getPrototypeOf(proto);
-  }
-  return Object.getPrototypeOf(obj) === proto || Object.getPrototypeOf(obj) === null;
-};
-
-const isSignal = (value) => {
-  return getSignalType(value) !== null;
-};
-
-const BRAND_SYMBOL = Symbol.for("preact-signals");
-const getSignalType = (value) => {
-  if (!value || typeof value !== "object") {
-    return null;
-  }
-
-  if (value.brand !== BRAND_SYMBOL) {
-    return null;
-  }
-
-  if (typeof value._fn === "function") {
-    return "computed";
-  }
-
-  return "signal";
-};
-
-const MAX_ENTRIES = 5;
-
-const stringifyForDisplay = (
-  value,
-  maxDepth = 2,
-  currentDepth = 0,
-  options = {},
-) => {
-  const { asFunctionArgs = false } = options;
-  const indent = "  ".repeat(currentDepth);
-  const nextIndent = "  ".repeat(currentDepth + 1);
-
-  if (currentDepth >= maxDepth) {
-    return typeof value === "object" && value !== null
-      ? "[Object]"
-      : String(value);
-  }
-
-  if (value === null) {
-    return "null";
-  }
-  if (value === undefined) {
-    return "undefined";
-  }
-  if (typeof value === "string") {
-    return `"${value}"`;
-  }
-  if (typeof value === "number" || typeof value === "boolean") {
-    return String(value);
-  }
-  if (typeof value === "function") {
-    return `[Function ${value.name || "anonymous"}]`;
-  }
-  if (value instanceof Date) {
-    return `Date(${value.toISOString()})`;
-  }
-  if (value instanceof RegExp) {
-    return value.toString();
-  }
-
-  if (Array.isArray(value)) {
-    const openBracket = asFunctionArgs ? "(" : "[";
-    const closeBracket = asFunctionArgs ? ")" : "]";
-
-    if (value.length === 0) return `${openBracket}${closeBracket}`;
-
-    // Display arrays with only one element on a single line
-    if (value.length === 1) {
-      const item = stringifyForDisplay(
-        value[0],
-        maxDepth,
-        currentDepth + 1,
-        // Remove asFunctionArgs for nested calls
-        { ...options, asFunctionArgs: false },
-      );
-      return `${openBracket}${item}${closeBracket}`;
-    }
-
-    if (value.length > MAX_ENTRIES) {
-      const preview = value
-        .slice(0, MAX_ENTRIES)
-        .map(
-          (v) =>
-            `${nextIndent}${stringifyForDisplay(v, maxDepth, currentDepth + 1, { ...options, asFunctionArgs: false })}`,
-        );
-      return `${openBracket}\n${preview.join(",\n")},\n${nextIndent}...${value.length - MAX_ENTRIES} more\n${indent}${closeBracket}`;
-    }
-
-    const items = value.map(
-      (v) =>
-        `${nextIndent}${stringifyForDisplay(v, maxDepth, currentDepth + 1, { ...options, asFunctionArgs: false })}`,
-    );
-    return `${openBracket}\n${items.join(",\n")}\n${indent}${closeBracket}`;
-  }
-
-  if (typeof value === "object") {
-    const signalType = getSignalType(value);
-    if (signalType) {
-      const signalValue = value.peek();
-      const prefix = signalType === "computed" ? "computed" : "signal";
-      return `${prefix}(${stringifyForDisplay(signalValue, maxDepth, currentDepth, { ...options, asFunctionArgs: false })})`;
-    }
-
-    const entries = Object.entries(value);
-    if (entries.length === 0) return "{}";
-
-    // ✅ Inclure les clés avec valeurs undefined/null
-    const allEntries = [];
-    for (const [key, val] of entries) {
-      allEntries.push([key, val]);
-    }
-
-    // Ajouter les clés avec undefined (que Object.entries omet)
-    const descriptor = Object.getOwnPropertyDescriptors(value);
-    for (const [key, desc] of Object.entries(descriptor)) {
-      if (desc.value === undefined && !entries.some(([k]) => k === key)) {
-        allEntries.push([key, undefined]);
-      }
-    }
-
-    // Display objects with only one key on a single line
-    if (allEntries.length === 1) {
-      const [key, val] = allEntries[0];
-      const valueStr = stringifyForDisplay(val, maxDepth, currentDepth + 1, {
-        ...options,
-        asFunctionArgs: false,
-      });
-      return `{ ${key}: ${valueStr} }`;
-    }
-
-    if (allEntries.length > MAX_ENTRIES) {
-      const preview = allEntries
-        .slice(0, MAX_ENTRIES)
-        .map(
-          ([k, v]) =>
-            `${nextIndent}${k}: ${stringifyForDisplay(v, maxDepth, currentDepth + 1, { ...options, asFunctionArgs: false })}`,
-        );
-      return `{\n${preview.join(",\n")},\n${nextIndent}...${allEntries.length - MAX_ENTRIES} more\n${indent}}`;
-    }
-
-    const pairs = allEntries.map(
-      ([k, v]) =>
-        `${nextIndent}${k}: ${stringifyForDisplay(v, maxDepth, currentDepth + 1, { ...options, asFunctionArgs: false })}`,
-    );
-    return `{\n${pairs.join(",\n")}\n${indent}}`;
-  }
-
-  return String(value);
-};
-
-/*
- * Deep structural equality for arbitrary JS values — what `===` can't do but this
- * codebase constantly needs: memoization cache keys ({ id: 1 } equal to { id: 1 }),
- * effect/memo dependency checks, signal/store change detection, and action
- * parameter deduplication.
- *
- * Beyond recursive object/array comparison it covers the edge cases `===` gets
- * "wrong" for equality purposes: NaN equals NaN, Date compared by time value,
- * cycles don't loop (a set of the pairs being compared guards circular refs),
- * and same-type is required
- * before descending. Functions, signals, and objects with nothing enumerable to
- * compare (a Set, a Map, an element, a URL), are equal by reference only —
- * nothing in them says whether two are "the same". Cheap paths run first: reference
- * equality, then the identity short-circuit below, then array length before
- * element-by-element.
- *
- * SYMBOL_IDENTITY. Two *different* object instances can be declared "conceptually
- * the same" by sharing a SYMBOL_IDENTITY value; the comparison then treats them as
- * equal with no deep walk. This is what lets a spread copy ({ ...params, extra })
- * still count as the same params as the original, and lets objects reconstructed
- * across a serialization boundary be recognized as one entity — the cases where a
- * content comparison would be too slow, or too strict to see them as equal. Use
- * Symbol.for() so the marker is the same symbol across modules/contexts:
- *
- *   const id = Symbol.for("params");
- *   a[SYMBOL_IDENTITY] = id;
- *   b[SYMBOL_IDENTITY] = id;
- *   compareTwoJsValues(a, b); // true immediately, no property walk
- */
-
-
-// Marks objects with a conceptual identity that transcends reference equality —
-// see the file comment. Symbol.for keeps it one shared symbol across modules.
-const SYMBOL_IDENTITY = Symbol.for("navi_object_identity");
-
-/**
- * Deeply compares two values for structural equality.
- *
- * @param {any} rootA - First value.
- * @param {any} rootB - Second value.
- * @param {object} [options]
- * @param {(a: any, b: any, keyOrIndex: any, recurse: (a: any, b: any) => boolean) => boolean} [options.keyComparator]
- *   Custom comparator for object properties / array elements. Receives the internal
- *   `compare` as its last argument so it can defer to the default behavior.
- * @param {boolean} [options.ignoreArrayOrder=false] - Compare arrays as multisets:
- *   equal when they contain the same elements regardless of order.
- * @param {Iterable<string>} [options.lightKeySet] - Object keys to compare first —
- *   cheaper or likelier-to-differ ones — to short-circuit before the remaining keys.
- * @returns {boolean} true if the values are deeply equal.
- */
-const compareTwoJsValues = (
-  rootA,
-  rootB,
-  { keyComparator, ignoreArrayOrder = false, lightKeySet } = {},
-) => {
-  const seenSet = new Set();
-  const compare = (a, b) => {
-    if (a === b) {
-      return true;
-    }
-    const aIsIsTruthy = Boolean(a);
-    const bIsTruthy = Boolean(b);
-    if (aIsIsTruthy && !bIsTruthy) {
-      return false;
-    }
-    if (!aIsIsTruthy && !bIsTruthy) {
-      // null, undefined, 0, false, NaN
-      if (isNaN(a) && isNaN(b)) {
-        return true;
-      }
-      return a === b;
-    }
-    const aType = typeof a;
-    const bType = typeof b;
-    if (aType !== bType) {
-      return false;
-    }
-    if (aType === "function") {
-      // Not the same function (reference equality came first), and nothing in
-      // a function says whether two of them do the same thing.
-      return false;
-    }
-    const aIsPrimitive =
-      a === null || (aType !== "object" && aType !== "function");
-    const bIsPrimitive =
-      b === null || (bType !== "object" && bType !== "function");
-    if (aIsPrimitive !== bIsPrimitive) {
-      return false;
-    }
-    if (aIsPrimitive && bIsPrimitive) {
-      return a === b;
-    }
-    // Back on something still being compared: a cycle. No loop, and no answer
-    // either — equal by a route that never ends is not equal.
-    if (seenSet.has(a) || seenSet.has(b)) {
-      return false;
-    }
-    // Held only while a and b are being compared, not for the rest of the
-    // walk: the same object is rightly met again elsewhere — in an unordered
-    // array every element of a is tried against every element of b.
-    seenSet.add(a);
-    seenSet.add(b);
-    const result = compareComposite(a, b);
-    seenSet.delete(a);
-    seenSet.delete(b);
-    return result;
-  };
-  const compareComposite = (a, b) => {
-    const aIsArray = Array.isArray(a);
-    const bIsArray = Array.isArray(b);
-    if (aIsArray !== bIsArray) {
-      return false;
-    }
-    if (aIsArray) {
-      // compare arrays
-      if (a.length !== b.length) {
-        return false;
-      }
-      if (ignoreArrayOrder) {
-        // Unordered array comparison: each element in 'a' must have a match in 'b'
-        const usedIndices = new Set();
-        for (let i = 0; i < a.length; i++) {
-          const aValue = a[i];
-          let foundMatch = false;
-
-          for (let j = 0; j < b.length; j++) {
-            if (usedIndices.has(j)) {
-              continue; // Already matched with another element
-            }
-            const bValue = b[j];
-            if (compareAt(aValue, bValue, i)) {
-              foundMatch = true;
-              usedIndices.add(j);
-              break;
-            }
-          }
-          if (!foundMatch) {
-            return false;
-          }
-        }
-        return true;
-      }
-      // Ordered array comparison (original behavior)
-      let i = 0;
-      while (i < a.length) {
-        const aValue = a[i];
-        const bValue = b[i];
-        if (!compareAt(aValue, bValue, i)) {
-          return false;
-        }
-        i++;
-      }
-      return true;
-    }
-    // compare objects
-    const aIdentity = a[SYMBOL_IDENTITY];
-    const bIdentity = b[SYMBOL_IDENTITY];
-    if (
-      aIdentity === bIdentity &&
-      SYMBOL_IDENTITY in a &&
-      SYMBOL_IDENTITY in b
-    ) {
-      return true;
-    }
-    // Date objects must be compared by time value, not by enumerable keys (which are empty)
-    const aIsDate = a instanceof Date;
-    const bIsDate = b instanceof Date;
-    if (aIsDate !== bIsDate) {
-      return false;
-    }
-    if (aIsDate) {
-      return a.getTime() === b.getTime();
-    }
-    // A signal is a source of truth, not a value: two of them holding the same
-    // thing right now say nothing about the next tick, and one may change while
-    // the other does not. Their internals (the current value, a version
-    // counter) are enumerable, so without this they would be walked and two
-    // unrelated signals would pass for one — a params signal owned by one
-    // screen would then be handed the action bound to another's.
-    if (isSignal(a) || isSignal(b)) {
-      return false;
-    }
-    const aKeys = Object.keys(a);
-    const bKeys = Object.keys(b);
-    if (aKeys.length !== bKeys.length) {
-      return false;
-    }
-    if (aKeys.length === 0 && (!isPlainObject$1(a) || !isPlainObject$1(b))) {
-      // A Set, a Map, an element, a URL: nothing enumerable to tell two of them
-      // apart, so they are the same one or they are not — and they are not,
-      // reference equality came first.
-      return false;
-    }
-    if (lightKeySet) {
-      // compare light keys first, then remaining keys
-      // (optimization for cases where some keys are more likely to differ and/or faster to compare)
-      const keySet = new Set(aKeys);
-      for (const lightKey of lightKeySet) {
-        const aValue = a[lightKey];
-        const bValue = b[lightKey];
-        if (!compareAt(aValue, bValue, lightKey)) {
-          return false;
-        }
-        keySet.delete(lightKey);
-      }
-      for (const key of keySet) {
-        const aValue = a[key];
-        const bValue = b[key];
-        if (!compareAt(aValue, bValue, key)) {
-          return false;
-        }
-      }
-    } else {
-      for (const key of aKeys) {
-        const aValue = a[key];
-        const bValue = b[key];
-        if (!compareAt(aValue, bValue, key)) {
-          return false;
-        }
-      }
-    }
-    return true;
-  };
-  const compareAt = keyComparator
-    ? (a, b, keyOrArrayIndex) => keyComparator(a, b, keyOrArrayIndex, compare)
-    : compare;
-
-  return compare(rootA, rootB);
-};
-
-const isPlainObject$1 = (value) => {
-  const prototype = Object.getPrototypeOf(value);
-  return prototype === Object.prototype || prototype === null;
-};
-
-const debounceSignal = (
-  signalToDebounce,
-  { delay = 300, deepCompare = true } = {},
-) => {
-  let timeoutId;
-  let latestValue = signalToDebounce.peek();
-  const debouncedSignal = signal(latestValue);
-
-  effect(() => {
-    const value = signalToDebounce.value;
-    const debouncedValue = debouncedSignal.peek();
-    if (
-      deepCompare
-        ? compareTwoJsValues(value, debouncedValue)
-        : value === debouncedValue
-    ) {
-      return;
-    }
-    clearTimeout(timeoutId);
-    latestValue = value;
-    timeoutId = setTimeout(() => {
-      debouncedSignal.value = latestValue;
-    }, delay);
-  });
-
-  debouncedSignal.flush = () => {
-    clearTimeout(timeoutId);
-    debouncedSignal.value = latestValue;
-  };
-  // Whoever reads the debounced value gets the previous one during the delay,
-  // with nothing saying a newer one is on its way. This says it.
-  debouncedSignal.settlingSignal = computed(() => {
-    return !compareTwoJsValues(signalToDebounce.value, debouncedSignal.value);
-  });
-
-  return debouncedSignal;
-};
-
-const debouncedSignalCache = new WeakMap();
-
-/**
- * The one debounced signal for a given source and delay.
- *
- * Two callers asking the same question of the same signal must wait on the same
- * answer: a debounced signal per caller is a timer per caller, and the actions
- * derived from them are then several instances of what is one request.
- */
-const getDebouncedSignal = (signalToDebounce, delay) => {
-  let byDelay = debouncedSignalCache.get(signalToDebounce);
-  if (!byDelay) {
-    byDelay = new Map();
-    debouncedSignalCache.set(signalToDebounce, byDelay);
-  }
-  const existing = byDelay.get(delay);
-  if (existing) {
-    return existing;
-  }
-  const debouncedSignal = debounceSignal(signalToDebounce, { delay });
-  byDelay.set(delay, debouncedSignal);
-  return debouncedSignal;
-};
-
-/**
- * jsenv/navi - createJsValueWeakMap
- *
- * Key/value cache with true ephemeron behavior and deep equality support.
- *
- * Features:
- * - Mutual retention: key keeps value alive, value keeps key alive
- * - Deep equality: different objects with same content are treated as identical keys
- * - Automatic GC: entries are eligible for collection when unreferenced
- * - Iteration support: can iterate over live entries for deep equality lookup
- *
- * Implementation:
- * - Dual WeakMap (key->value, value->key) provides ephemeron behavior
- * - WeakRef registry enables iteration without preventing GC
- * - Primitives stored in Map (permanent retention - avoid for keys)
- *
- * Use case: Action caching where params (key) and action (value) should have
- * synchronized lifetimes while allowing natural garbage collection.
- */
-
-
-const createJsValueWeakMap = () => {
-  // Core ephemeron maps for mutual retention
-  const keyToValue = new WeakMap(); // key -> value
-  const valueToKey = new WeakMap(); // value -> key
-
-  // Registry for iteration/deep equality (holds WeakRefs)
-  const keyRegistry = new Set(); // Set of WeakRef(key)
-
-  // Primitive cache
-  const primitiveCache = new Map();
-
-  function cleanupKeyRegistry() {
-    for (const keyRef of keyRegistry) {
-      if (keyRef.deref() === undefined) {
-        keyRegistry.delete(keyRef);
-      }
-    }
-  }
-
-  return {
-    *[Symbol.iterator]() {
-      cleanupKeyRegistry();
-      for (const keyRef of keyRegistry) {
-        const key = keyRef.deref();
-        if (key && keyToValue.has(key)) {
-          yield [key, keyToValue.get(key)];
-        }
-      }
-      for (const [k, v] of primitiveCache) {
-        yield [k, v];
-      }
-    },
-
-    get(key) {
-      const isObject =
-        key && (typeof key === "object" || typeof key === "function");
-      if (isObject) {
-        // Fast path: exact key match
-        if (keyToValue.has(key)) {
-          return keyToValue.get(key);
-        }
-
-        // Slow path: deep equality search
-        cleanupKeyRegistry();
-        for (const keyRef of keyRegistry) {
-          const existingKey = keyRef.deref();
-          if (existingKey && compareTwoJsValues(existingKey, key)) {
-            return keyToValue.get(existingKey);
-          }
-        }
-        return undefined;
-      }
-      return primitiveCache.get(key);
-    },
-
-    set(key, value) {
-      const isObject =
-        key && (typeof key === "object" || typeof key === "function");
-      if (isObject) {
-        cleanupKeyRegistry();
-
-        // Remove existing deep-equal key
-        for (const keyRef of keyRegistry) {
-          const existingKey = keyRef.deref();
-          if (existingKey && compareTwoJsValues(existingKey, key)) {
-            const existingValue = keyToValue.get(existingKey);
-            keyToValue.delete(existingKey);
-            valueToKey.delete(existingValue);
-            keyRegistry.delete(keyRef);
-            break;
-          }
-        }
-
-        // Set ephemeron pair
-        keyToValue.set(key, value);
-        valueToKey.set(value, key);
-        keyRegistry.add(new WeakRef(key));
-      } else {
-        primitiveCache.set(key, value);
-      }
-    },
-
-    delete(key) {
-      const isObject =
-        key && (typeof key === "object" || typeof key === "function");
-      if (isObject) {
-        cleanupKeyRegistry();
-
-        // Try exact match first
-        if (keyToValue.has(key)) {
-          const value = keyToValue.get(key);
-          keyToValue.delete(key);
-          valueToKey.delete(value);
-
-          // Remove from registry
-          for (const keyRef of keyRegistry) {
-            if (keyRef.deref() === key) {
-              keyRegistry.delete(keyRef);
-              break;
-            }
-          }
-          return true;
-        }
-
-        // Try deep equality
-        for (const keyRef of keyRegistry) {
-          const existingKey = keyRef.deref();
-          if (existingKey && compareTwoJsValues(existingKey, key)) {
-            const value = keyToValue.get(existingKey);
-            keyToValue.delete(existingKey);
-            valueToKey.delete(value);
-            keyRegistry.delete(keyRef);
-            return true;
-          }
-        }
-        return false;
-      }
-      return primitiveCache.delete(key);
-    },
-
-    getStats: () => {
-      cleanupKeyRegistry();
-      const aliveKeys = Array.from(keyRegistry).filter((ref) =>
-        ref.deref(),
-      ).length;
-
-      return {
-        ephemeronPairs: {
-          total: keyRegistry.size,
-          alive: aliveKeys,
-          note: "True ephemeron: key ↔ value mutual retention via dual WeakMap",
-        },
-        primitive: {
-          total: primitiveCache.size,
-          note: "Primitive keys never GC'd",
-        },
-      };
-    },
-  };
-};
-
-const MERGE_AS_PRIMITIVE_SYMBOL = Symbol("navi_merge_as_primitive");
-
-const mergeTwoJsValues = (firstValue, secondValue) => {
-  const firstIsPrimitive =
-    firstValue === null ||
-    typeof firstValue !== "object" ||
-    MERGE_AS_PRIMITIVE_SYMBOL in firstValue;
-
-  if (firstIsPrimitive) {
-    return secondValue;
-  }
-  const secondIsPrimitive =
-    secondValue === null ||
-    typeof secondValue !== "object" ||
-    MERGE_AS_PRIMITIVE_SYMBOL in secondValue;
-  if (secondIsPrimitive) {
-    return secondValue;
-  }
-  const objectMerge = {};
-  const firstKeys = Object.keys(firstValue);
-  const secondKeys = Object.keys(secondValue);
-  let hasChanged = false;
-
-  // First loop: check for keys in first object and recursively merge with second
-  for (const key of firstKeys) {
-    const firstValueForKey = firstValue[key];
-    const secondHasKey = secondKeys.includes(key);
-
-    if (secondHasKey) {
-      const secondValueForKey = secondValue[key];
-      const mergedValue = mergeTwoJsValues(firstValueForKey, secondValueForKey);
-      objectMerge[key] = mergedValue;
-      if (mergedValue !== firstValueForKey) {
-        hasChanged = true;
-      }
-    } else {
-      objectMerge[key] = firstValueForKey;
-    }
-  }
-
-  for (const key of secondKeys) {
-    if (firstKeys.includes(key)) {
-      continue;
-    }
-    objectMerge[key] = secondValue[key];
-    hasChanged = true;
-  }
-
-  if (!hasChanged) {
-    return firstValue;
-  }
-  return objectMerge;
-};
-
-/**
- * Creates an effect that uses WeakRef to prevent garbage collection of referenced values.
- *
- * This utility is useful when you want to create reactive effects that watch objects
- * without preventing those objects from being garbage collected. If any of the referenced
- * values is collected, the effect automatically disposes itself.
- *
- * @param {Array} values - Array of values to create weak references for
- * @param {Function} callback - Function to call when the effect runs, receives dereferenced values as arguments
- * @returns {Function} dispose - Function to manually dispose the effect
- *
- * @example
- * ```js
- * const objectA = { name: "A" };
- * const objectB = { name: "B" };
- * const prefixSignal = signal('demo');
- *
- * const dispose = weakEffect([objectA, objectB], (a, b) => {
- *   const prefix = prefixSignal.value
- *   console.log(prefix, a.name, b.name);
- * });
- *
- * // Effect will auto-dispose if objectA or objectB where garbage collected
- * // or can be manually disposed:
- * dispose();
- * ```
- */
-const weakEffect = (values, callback) => {
-  const weakRefSet = new Set();
-  for (const value of values) {
-    weakRefSet.add(new WeakRef(value));
-  }
-  const dispose = effect(() => {
-    const values = [];
-    for (const weakRef of weakRefSet) {
-      const value = weakRef.deref();
-      if (value === undefined) {
-        dispose();
-        return;
-      }
-      values.push(value);
-    }
-    callback(...values);
-  });
-  return dispose;
-};
-
-/**
  * Interpolates a template string, replacing `[key]` placeholders with values.
  *
  * Usable on its own — no i18n instance required — whenever a sentence should
@@ -3031,6 +1996,27 @@ naviI18n.addAll({
   },
 });
 
+const isSignal = (value) => {
+  return getSignalType(value) !== null;
+};
+
+const BRAND_SYMBOL = Symbol.for("preact-signals");
+const getSignalType = (value) => {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  if (value.brand !== BRAND_SYMBOL) {
+    return null;
+  }
+
+  if (typeof value._fn === "function") {
+    return "computed";
+  }
+
+  return "signal";
+};
+
 /*
  * The network policy: one declaration saying whether a request may go out,
  * read by the action layer rather than by every callback.
@@ -3084,6 +2070,7 @@ const networkPolicySignal = signal({
  * });
  */
 const setNetworkPolicy = (source, { readOnlyMessage } = {}) => {
+  silenceOfflineErrors();
   networkPolicySignal.value = { source, readOnlyMessage };
 };
 
@@ -3138,6 +2125,48 @@ const isOfflineError = (error) => {
   return Boolean(error && error.offline);
 };
 
+/**
+ * An offline error is not one, and nobody is to be told about it as if it were.
+ *
+ * It says "run with what you have, ask nothing" — a state the app itself
+ * declared, about a request that never left. There is no bug to point at, no
+ * stack worth reading, and a screen is already saying it in words the person
+ * understands.
+ *
+ * navi's own report leaves it alone (action_error_report.js). What is left is
+ * the screen displaying it: it does so by throwing the error to a boundary, and
+ * `preact/debug` re-emits on `window` every error a boundary caught — on
+ * purpose, for React devtools compatibility. Uncancelled, that lands as an
+ * uncaught error in the console, over a page calmly explaining there is no
+ * network. Cancelling the event is what says it is handled: the browser drops
+ * the console line, and the jsenv supervisor skips prevented events too.
+ *
+ * Both shapes a failure travels in are covered, since which one it is depends
+ * on whether the resource callback happened to be async — the throw reaching
+ * `window`, and the rejection nobody caught.
+ *
+ * Scoped to the policy's own error and to nothing else — every other error a
+ * boundary caught, and every other rejection let go, stays exactly as loud as
+ * it is.
+ */
+let offlineErrorSilenced = false;
+const silenceOfflineErrors = () => {
+  if (offlineErrorSilenced || typeof window === "undefined") {
+    return;
+  }
+  offlineErrorSilenced = true;
+  window.addEventListener("error", (errorEvent) => {
+    if (isOfflineError(errorEvent.error)) {
+      errorEvent.preventDefault();
+    }
+  });
+  window.addEventListener("unhandledrejection", (rejectionEvent) => {
+    if (isOfflineError(rejectionEvent.reason)) {
+      rejectionEvent.preventDefault();
+    }
+  });
+};
+
 const readReason = (source) => {
   if (!source) {
     return null;
@@ -3151,6 +2180,1078 @@ const readReason = (source) => {
     reason = source;
   }
   return reason || null;
+};
+
+/**
+ * Where an action error goes when nothing displays it.
+ *
+ * An action that fails writes the error into its `errorSignal` and stops there.
+ * It cannot know whether a screen is going to show it: at the instant it fails,
+ * the screen that will is often not even mounted — a route action runs before
+ * its page renders, which is precisely the case a guess made at failure time
+ * gets wrong. So nothing is guessed. The error is let go, and whoever displays
+ * it SAYS so by marking it; what nobody ever took is reported as unhandled.
+ *
+ * The mark is `__handled_by__`, the same one the jsenv supervisor reads to stay
+ * out of the way of an error the app is already showing — one mark, one meaning:
+ * "this is on screen somewhere".
+ *
+ * The whole picture, control errors and validation included: docs/error_handling.md
+ */
+
+
+const markErrorAsDisplayedBy = (error, by) => {
+  if (error && typeof error === "object") {
+    error.__handled_by__ = by;
+  }
+};
+
+const errorIsDisplayed = (error) => {
+  return Boolean(error && error.__handled_by__);
+};
+
+/**
+ * A render has read this error — it is now the render tree's business, not this
+ * module's, and there is nothing left to report.
+ *
+ * Whatever the reader does with it is already covered without any deadline: it
+ * displays it (and marks it), or it throws it, and a thrown error either finds a
+ * boundary that displays it or reaches window on its own — `preact/debug`
+ * re-throws every error a boundary caught, and an unbounded one aborts the
+ * render loudly. Reporting it here as well would be a second voice saying the
+ * same thing, always the wrong one, since this module cannot see which of those
+ * happened.
+ */
+const errorTakenByRenderSet = new WeakSet();
+const markErrorAsTakenByRender = (error) => {
+  if (error && typeof error === "object") {
+    errorTakenByRenderSet.add(error);
+  }
+};
+
+/**
+ * When the answer "nobody took it" is final.
+ *
+ * The floor is one macrotask: every render that could take the error — Preact's
+ * queue, a Suspense boundary settling on the failure, the boundary above it —
+ * happens in microtasks.
+ *
+ * That floor is enough for an action failing under a page that is already on
+ * screen, and far too early for a route action: it fails ON the url change,
+ * before its page exists, and that page cannot render until the routing that
+ * asked for the data is over. Measured on an offline navigation, the screen
+ * displaying the error arrived ~12ms after this deadline — so the app was told
+ * it had displayed nothing while it was displaying it.
+ *
+ * The browser integration knows when the document has stopped moving and hands
+ * that over here (see installReportDeadlineExtension); nothing else does, and
+ * this module stays free of the DOM. Waiting longer costs nothing now that a
+ * read is enough to call this off: what still reaches the report was read by no
+ * render at all, and a late report about that is as good as a prompt one.
+ */
+let waitForDocumentSettled = null;
+const installReportDeadlineExtension = (fn) => {
+  waitForDocumentSettled = fn;
+};
+
+/**
+ * The failures of one moment: reported, still waiting to know whether anything
+ * took them. A url change fails its route actions together, so they wait here
+ * together — which is what lets the throw below say something about the others.
+ */
+const errorPendingDecisionSet = new Set();
+
+/**
+ * A render stopped mid-way cannot read what came after it.
+ *
+ * `useAsyncData` delegates a failure by throwing it out of the render — that is
+ * how the error reaches the boundary that displays it. The render ends on that
+ * line, so every action the component reads BELOW it is never read, including
+ * one that was going to display its own error. "Nobody read it" is still true
+ * of those, but the reason is no longer that the app forgot: nothing COULD read
+ * them. Left alone, the order of two hook calls decides whether an app is told
+ * it has a bug — a rule nobody can see.
+ *
+ * So the throw says it for them: the failures waiting for the same answer at
+ * that instant are failures no render could reach, and the report has nothing
+ * to say about them. What is on screen is the failure the render was stopped
+ * at, which is the same story.
+ *
+ * This is about the failures that already exist when the render is cut short.
+ * An action of the same page failing LATER — after the page was replaced by
+ * what displays the first failure — is not covered and is still reported: at
+ * that point nothing distinguishes it from an action nobody reads.
+ */
+const errorNoRenderCouldReachSet = new WeakSet();
+const markErrorAsStoppingRender = (error) => {
+  for (const errorPendingDecision of errorPendingDecisionSet) {
+    if (errorPendingDecision !== error) {
+      errorNoRenderCouldReachSet.add(errorPendingDecision);
+    }
+  }
+};
+
+/**
+ * An offline error is never reported: the app declared the state that produced
+ * it, the request never left, and there is nothing for a developer to fix. It
+ * is data a screen shows, and it stays data whether or not one does (see
+ * network_policy.js, which also keeps it out of the browser console).
+ */
+const errorIsAccountedFor = (error) => {
+  return (
+    errorIsDisplayed(error) ||
+    errorTakenByRenderSet.has(error) ||
+    errorNoRenderCouldReachSet.has(error) ||
+    isOfflineError(error)
+  );
+};
+
+/**
+ * Rethrown rather than logged: an error nobody took is an unhandled error, and
+ * the runtime already knows what to do with those (window "error" event, jsenv
+ * overlay in dev). Same trick preact/debug uses for the same reason.
+ */
+const errorReportedSet = new WeakSet();
+const reportErrorIfNobodyDisplaysIt = (error, { action } = {}) => {
+  if (error && typeof error === "object") {
+    errorPendingDecisionSet.add(error);
+  }
+  const decide = () => {
+    errorPendingDecisionSet.delete(error);
+    if (errorIsAccountedFor(error)) {
+      return;
+    }
+    if (error && typeof error === "object") {
+      // The same error can reach here from more than one direction (the run
+      // that produced it, the routing promise carrying it): it is one error and
+      // it is reported once.
+      if (errorReportedSet.has(error)) {
+        return;
+      }
+      errorReportedSet.add(error);
+    }
+    if (action && error && typeof error === "object" && !error.action) {
+      error.action = action;
+    }
+    throw error;
+  };
+
+  setTimeout(() => {
+    if (errorIsAccountedFor(error)) {
+      // Already taken within the microtasks that followed the failure: the
+      // common case, and there is nothing to wait for.
+      errorPendingDecisionSet.delete(error);
+      return;
+    }
+    if (waitForDocumentSettled) {
+      waitForDocumentSettled(decide);
+      return;
+    }
+    decide();
+  });
+};
+
+const actionPrivatePropertiesWeakMap = new WeakMap();
+const getActionPrivateProperties = (action) => {
+  const actionPrivateProperties = actionPrivatePropertiesWeakMap.get(action);
+  if (!actionPrivateProperties) {
+    throw new Error(`Cannot find action private properties for "${action}"`);
+  }
+  return actionPrivateProperties;
+};
+const setActionPrivateProperties = (action, properties) => {
+  actionPrivatePropertiesWeakMap.set(action, properties);
+};
+
+const IDLE = { id: "idle" };
+const RUNNING = { id: "running" };
+const ABORTED = { id: "aborted" };
+const FAILED = { id: "failed" };
+const COMPLETED = { id: "completed" };
+
+const useActionStatus = (action) => {
+  if (!action) {
+    return {
+      params: undefined,
+      runningState: IDLE,
+      isPrerun: false,
+      idle: true,
+      loading: false,
+      aborted: false,
+      error: null,
+      completed: false,
+      data: undefined,
+    };
+  }
+  const {
+    paramsSignal,
+    runningStateSignal,
+    isPrerunSignal,
+    errorSignal,
+    dataSignal,
+  } = action;
+  const params = paramsSignal.value;
+  const isPrerun = isPrerunSignal.value;
+  const runningState = runningStateSignal.value;
+  const idle = runningState === IDLE;
+  const aborted = runningState === ABORTED;
+  const error = errorSignal.value;
+  const loading = runningState === RUNNING;
+  const completed = runningState === COMPLETED;
+  const data = dataSignal.value;
+
+  return {
+    params,
+    runningState,
+    isPrerun,
+    idle,
+    loading,
+    aborted,
+    error,
+    completed,
+    data,
+  };
+};
+
+installImportMetaCssBuild(import.meta);const css$14 = /* css */`.action_error {
+  background: #fdd;
+  border: 1px solid red;
+  margin-top: 0;
+  margin-bottom: 20px;
+  padding: 20px;
+}
+`;
+const renderIdleDefault = () => null;
+const renderLoadingDefault = () => null;
+const renderAbortedDefault = () => null;
+const renderErrorDefault = error => {
+  let routeErrorText = error && error.message ? error.message : error;
+  return jsxs("p", {
+    className: "action_error",
+    children: ["An error occured: ", routeErrorText]
+  });
+};
+const renderCompletedDefault = () => null;
+const ActionRenderer = ({
+  action,
+  children,
+  disabled
+}) => {
+  import.meta.css = [css$14, "@jsenv/navi/src/action/action_renderer.jsx"];
+  if (action === undefined) {
+    throw new Error("ActionRenderer requires an action to render, but none was provided.");
+  }
+  let renderBranches;
+  if (typeof children === "function") {
+    renderBranches = {
+      completed: children
+    };
+  } else if (isValidElement(children)) {
+    renderBranches = {
+      always: () => children
+    };
+  } else if (isPlainObject$2(children)) {
+    renderBranches = children;
+  } else {
+    renderBranches = {
+      completed: children
+    };
+  }
+  const {
+    idle: renderIdle = renderIdleDefault,
+    loading: renderLoading = renderLoadingDefault,
+    aborted: renderAborted = renderAbortedDefault,
+    error: renderError = renderErrorDefault,
+    completed: renderCompleted,
+    always: renderAlways
+  } = renderBranches;
+  const {
+    idle,
+    loading,
+    aborted,
+    error,
+    completed,
+    data
+  } = useActionStatus(action);
+  const UIRenderedPromise = useUIRenderedPromise(action);
+  const [errorBoundary, resetErrorBoundary] = useErrorBoundary();
+  useLayoutEffect(() => {
+    resetErrorBoundary();
+  }, [action, loading, idle, resetErrorBoundary]);
+  useLayoutEffect(() => {
+    UIRenderedPromise.resolve();
+    return () => {
+      actionUIRenderedPromiseWeakMap.delete(action);
+    };
+  }, [action]);
+  if (disabled) {
+    return null;
+  }
+  // If renderAlways is provided, it wins and handles all rendering
+  if (renderAlways) {
+    return renderAlways({
+      idle,
+      loading,
+      aborted,
+      completed,
+      error,
+      data
+    });
+  }
+  if (idle) {
+    return renderIdle(action);
+  }
+  if (errorBoundary) {
+    // Displaying it is what makes it handled (see action_error_report.js)
+    markErrorAsDisplayedBy(errorBoundary, "<ActionRenderer>");
+    return renderError(errorBoundary, "ui_error", action);
+  }
+  if (aborted) {
+    return renderAborted(action);
+  }
+  let renderCompletedSafe;
+  if (renderCompleted) {
+    renderCompletedSafe = renderCompleted;
+  } else {
+    const {
+      ui
+    } = getActionPrivateProperties(action);
+    if (ui.renderCompleted) {
+      renderCompletedSafe = ui.renderCompleted;
+    } else {
+      renderCompletedSafe = renderCompletedDefault;
+    }
+  }
+  if (loading) {
+    if (action.canDisplayOldData && data !== undefined) {
+      return renderCompletedSafe(data, action);
+    }
+    return renderLoading(action);
+  }
+  if (error) {
+    markErrorAsDisplayedBy(error, "<ActionRenderer>");
+    return renderError(error, "action_error", action);
+  }
+  return renderCompletedSafe(data, action);
+};
+const defaultPromise = Promise.resolve();
+defaultPromise.resolve = () => {};
+const actionUIRenderedPromiseWeakMap = new WeakMap();
+const useUIRenderedPromise = action => {
+  if (!action) {
+    return defaultPromise;
+  }
+  const actionUIRenderedPromise = actionUIRenderedPromiseWeakMap.get(action);
+  if (actionUIRenderedPromise) {
+    return actionUIRenderedPromise;
+  }
+  let resolve;
+  const promise = new Promise(res => {
+    resolve = res;
+  });
+  promise.resolve = resolve;
+  actionUIRenderedPromiseWeakMap.set(action, promise);
+  return promise;
+};
+const isPlainObject$2 = obj => {
+  if (typeof obj !== "object" || obj === null) {
+    return false;
+  }
+  let proto = obj;
+  while (Object.getPrototypeOf(proto) !== null) {
+    proto = Object.getPrototypeOf(proto);
+  }
+  return Object.getPrototypeOf(obj) === proto || Object.getPrototypeOf(obj) === null;
+};
+
+const MAX_ENTRIES = 5;
+
+const stringifyForDisplay = (
+  value,
+  maxDepth = 2,
+  currentDepth = 0,
+  options = {},
+) => {
+  const { asFunctionArgs = false } = options;
+  const indent = "  ".repeat(currentDepth);
+  const nextIndent = "  ".repeat(currentDepth + 1);
+
+  if (currentDepth >= maxDepth) {
+    return typeof value === "object" && value !== null
+      ? "[Object]"
+      : String(value);
+  }
+
+  if (value === null) {
+    return "null";
+  }
+  if (value === undefined) {
+    return "undefined";
+  }
+  if (typeof value === "string") {
+    return `"${value}"`;
+  }
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  if (typeof value === "function") {
+    return `[Function ${value.name || "anonymous"}]`;
+  }
+  if (value instanceof Date) {
+    return `Date(${value.toISOString()})`;
+  }
+  if (value instanceof RegExp) {
+    return value.toString();
+  }
+
+  if (Array.isArray(value)) {
+    const openBracket = asFunctionArgs ? "(" : "[";
+    const closeBracket = asFunctionArgs ? ")" : "]";
+
+    if (value.length === 0) return `${openBracket}${closeBracket}`;
+
+    // Display arrays with only one element on a single line
+    if (value.length === 1) {
+      const item = stringifyForDisplay(
+        value[0],
+        maxDepth,
+        currentDepth + 1,
+        // Remove asFunctionArgs for nested calls
+        { ...options, asFunctionArgs: false },
+      );
+      return `${openBracket}${item}${closeBracket}`;
+    }
+
+    if (value.length > MAX_ENTRIES) {
+      const preview = value
+        .slice(0, MAX_ENTRIES)
+        .map(
+          (v) =>
+            `${nextIndent}${stringifyForDisplay(v, maxDepth, currentDepth + 1, { ...options, asFunctionArgs: false })}`,
+        );
+      return `${openBracket}\n${preview.join(",\n")},\n${nextIndent}...${value.length - MAX_ENTRIES} more\n${indent}${closeBracket}`;
+    }
+
+    const items = value.map(
+      (v) =>
+        `${nextIndent}${stringifyForDisplay(v, maxDepth, currentDepth + 1, { ...options, asFunctionArgs: false })}`,
+    );
+    return `${openBracket}\n${items.join(",\n")}\n${indent}${closeBracket}`;
+  }
+
+  if (typeof value === "object") {
+    const signalType = getSignalType(value);
+    if (signalType) {
+      const signalValue = value.peek();
+      const prefix = signalType === "computed" ? "computed" : "signal";
+      return `${prefix}(${stringifyForDisplay(signalValue, maxDepth, currentDepth, { ...options, asFunctionArgs: false })})`;
+    }
+
+    const entries = Object.entries(value);
+    if (entries.length === 0) return "{}";
+
+    // ✅ Inclure les clés avec valeurs undefined/null
+    const allEntries = [];
+    for (const [key, val] of entries) {
+      allEntries.push([key, val]);
+    }
+
+    // Ajouter les clés avec undefined (que Object.entries omet)
+    const descriptor = Object.getOwnPropertyDescriptors(value);
+    for (const [key, desc] of Object.entries(descriptor)) {
+      if (desc.value === undefined && !entries.some(([k]) => k === key)) {
+        allEntries.push([key, undefined]);
+      }
+    }
+
+    // Display objects with only one key on a single line
+    if (allEntries.length === 1) {
+      const [key, val] = allEntries[0];
+      const valueStr = stringifyForDisplay(val, maxDepth, currentDepth + 1, {
+        ...options,
+        asFunctionArgs: false,
+      });
+      return `{ ${key}: ${valueStr} }`;
+    }
+
+    if (allEntries.length > MAX_ENTRIES) {
+      const preview = allEntries
+        .slice(0, MAX_ENTRIES)
+        .map(
+          ([k, v]) =>
+            `${nextIndent}${k}: ${stringifyForDisplay(v, maxDepth, currentDepth + 1, { ...options, asFunctionArgs: false })}`,
+        );
+      return `{\n${preview.join(",\n")},\n${nextIndent}...${allEntries.length - MAX_ENTRIES} more\n${indent}}`;
+    }
+
+    const pairs = allEntries.map(
+      ([k, v]) =>
+        `${nextIndent}${k}: ${stringifyForDisplay(v, maxDepth, currentDepth + 1, { ...options, asFunctionArgs: false })}`,
+    );
+    return `{\n${pairs.join(",\n")}\n${indent}}`;
+  }
+
+  return String(value);
+};
+
+/*
+ * Deep structural equality for arbitrary JS values — what `===` can't do but this
+ * codebase constantly needs: memoization cache keys ({ id: 1 } equal to { id: 1 }),
+ * effect/memo dependency checks, signal/store change detection, and action
+ * parameter deduplication.
+ *
+ * Beyond recursive object/array comparison it covers the edge cases `===` gets
+ * "wrong" for equality purposes: NaN equals NaN, Date compared by time value,
+ * cycles don't loop (a set of the pairs being compared guards circular refs),
+ * and same-type is required
+ * before descending. Functions, signals, and objects with nothing enumerable to
+ * compare (a Set, a Map, an element, a URL), are equal by reference only —
+ * nothing in them says whether two are "the same". Cheap paths run first: reference
+ * equality, then the identity short-circuit below, then array length before
+ * element-by-element.
+ *
+ * SYMBOL_IDENTITY. Two *different* object instances can be declared "conceptually
+ * the same" by sharing a SYMBOL_IDENTITY value; the comparison then treats them as
+ * equal with no deep walk. This is what lets a spread copy ({ ...params, extra })
+ * still count as the same params as the original, and lets objects reconstructed
+ * across a serialization boundary be recognized as one entity — the cases where a
+ * content comparison would be too slow, or too strict to see them as equal. Use
+ * Symbol.for() so the marker is the same symbol across modules/contexts:
+ *
+ *   const id = Symbol.for("params");
+ *   a[SYMBOL_IDENTITY] = id;
+ *   b[SYMBOL_IDENTITY] = id;
+ *   compareTwoJsValues(a, b); // true immediately, no property walk
+ */
+
+
+// Marks objects with a conceptual identity that transcends reference equality —
+// see the file comment. Symbol.for keeps it one shared symbol across modules.
+const SYMBOL_IDENTITY = Symbol.for("navi_object_identity");
+
+/**
+ * Deeply compares two values for structural equality.
+ *
+ * @param {any} rootA - First value.
+ * @param {any} rootB - Second value.
+ * @param {object} [options]
+ * @param {(a: any, b: any, keyOrIndex: any, recurse: (a: any, b: any) => boolean) => boolean} [options.keyComparator]
+ *   Custom comparator for object properties / array elements. Receives the internal
+ *   `compare` as its last argument so it can defer to the default behavior.
+ * @param {boolean} [options.ignoreArrayOrder=false] - Compare arrays as multisets:
+ *   equal when they contain the same elements regardless of order.
+ * @param {Iterable<string>} [options.lightKeySet] - Object keys to compare first —
+ *   cheaper or likelier-to-differ ones — to short-circuit before the remaining keys.
+ * @returns {boolean} true if the values are deeply equal.
+ */
+const compareTwoJsValues = (
+  rootA,
+  rootB,
+  { keyComparator, ignoreArrayOrder = false, lightKeySet } = {},
+) => {
+  const seenSet = new Set();
+  const compare = (a, b) => {
+    if (a === b) {
+      return true;
+    }
+    const aIsIsTruthy = Boolean(a);
+    const bIsTruthy = Boolean(b);
+    if (aIsIsTruthy && !bIsTruthy) {
+      return false;
+    }
+    if (!aIsIsTruthy && !bIsTruthy) {
+      // null, undefined, 0, false, NaN
+      if (isNaN(a) && isNaN(b)) {
+        return true;
+      }
+      return a === b;
+    }
+    const aType = typeof a;
+    const bType = typeof b;
+    if (aType !== bType) {
+      return false;
+    }
+    if (aType === "function") {
+      // Not the same function (reference equality came first), and nothing in
+      // a function says whether two of them do the same thing.
+      return false;
+    }
+    const aIsPrimitive =
+      a === null || (aType !== "object" && aType !== "function");
+    const bIsPrimitive =
+      b === null || (bType !== "object" && bType !== "function");
+    if (aIsPrimitive !== bIsPrimitive) {
+      return false;
+    }
+    if (aIsPrimitive && bIsPrimitive) {
+      return a === b;
+    }
+    // Back on something still being compared: a cycle. No loop, and no answer
+    // either — equal by a route that never ends is not equal.
+    if (seenSet.has(a) || seenSet.has(b)) {
+      return false;
+    }
+    // Held only while a and b are being compared, not for the rest of the
+    // walk: the same object is rightly met again elsewhere — in an unordered
+    // array every element of a is tried against every element of b.
+    seenSet.add(a);
+    seenSet.add(b);
+    const result = compareComposite(a, b);
+    seenSet.delete(a);
+    seenSet.delete(b);
+    return result;
+  };
+  const compareComposite = (a, b) => {
+    const aIsArray = Array.isArray(a);
+    const bIsArray = Array.isArray(b);
+    if (aIsArray !== bIsArray) {
+      return false;
+    }
+    if (aIsArray) {
+      // compare arrays
+      if (a.length !== b.length) {
+        return false;
+      }
+      if (ignoreArrayOrder) {
+        // Unordered array comparison: each element in 'a' must have a match in 'b'
+        const usedIndices = new Set();
+        for (let i = 0; i < a.length; i++) {
+          const aValue = a[i];
+          let foundMatch = false;
+
+          for (let j = 0; j < b.length; j++) {
+            if (usedIndices.has(j)) {
+              continue; // Already matched with another element
+            }
+            const bValue = b[j];
+            if (compareAt(aValue, bValue, i)) {
+              foundMatch = true;
+              usedIndices.add(j);
+              break;
+            }
+          }
+          if (!foundMatch) {
+            return false;
+          }
+        }
+        return true;
+      }
+      // Ordered array comparison (original behavior)
+      let i = 0;
+      while (i < a.length) {
+        const aValue = a[i];
+        const bValue = b[i];
+        if (!compareAt(aValue, bValue, i)) {
+          return false;
+        }
+        i++;
+      }
+      return true;
+    }
+    // compare objects
+    const aIdentity = a[SYMBOL_IDENTITY];
+    const bIdentity = b[SYMBOL_IDENTITY];
+    if (
+      aIdentity === bIdentity &&
+      SYMBOL_IDENTITY in a &&
+      SYMBOL_IDENTITY in b
+    ) {
+      return true;
+    }
+    // Date objects must be compared by time value, not by enumerable keys (which are empty)
+    const aIsDate = a instanceof Date;
+    const bIsDate = b instanceof Date;
+    if (aIsDate !== bIsDate) {
+      return false;
+    }
+    if (aIsDate) {
+      return a.getTime() === b.getTime();
+    }
+    // A signal is a source of truth, not a value: two of them holding the same
+    // thing right now say nothing about the next tick, and one may change while
+    // the other does not. Their internals (the current value, a version
+    // counter) are enumerable, so without this they would be walked and two
+    // unrelated signals would pass for one — a params signal owned by one
+    // screen would then be handed the action bound to another's.
+    if (isSignal(a) || isSignal(b)) {
+      return false;
+    }
+    const aKeys = Object.keys(a);
+    const bKeys = Object.keys(b);
+    if (aKeys.length !== bKeys.length) {
+      return false;
+    }
+    if (aKeys.length === 0 && (!isPlainObject$1(a) || !isPlainObject$1(b))) {
+      // A Set, a Map, an element, a URL: nothing enumerable to tell two of them
+      // apart, so they are the same one or they are not — and they are not,
+      // reference equality came first.
+      return false;
+    }
+    if (lightKeySet) {
+      // compare light keys first, then remaining keys
+      // (optimization for cases where some keys are more likely to differ and/or faster to compare)
+      const keySet = new Set(aKeys);
+      for (const lightKey of lightKeySet) {
+        const aValue = a[lightKey];
+        const bValue = b[lightKey];
+        if (!compareAt(aValue, bValue, lightKey)) {
+          return false;
+        }
+        keySet.delete(lightKey);
+      }
+      for (const key of keySet) {
+        const aValue = a[key];
+        const bValue = b[key];
+        if (!compareAt(aValue, bValue, key)) {
+          return false;
+        }
+      }
+    } else {
+      for (const key of aKeys) {
+        const aValue = a[key];
+        const bValue = b[key];
+        if (!compareAt(aValue, bValue, key)) {
+          return false;
+        }
+      }
+    }
+    return true;
+  };
+  const compareAt = keyComparator
+    ? (a, b, keyOrArrayIndex) => keyComparator(a, b, keyOrArrayIndex, compare)
+    : compare;
+
+  return compare(rootA, rootB);
+};
+
+const isPlainObject$1 = (value) => {
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+};
+
+const debounceSignal = (
+  signalToDebounce,
+  { delay = 300, deepCompare = true } = {},
+) => {
+  let timeoutId;
+  let latestValue = signalToDebounce.peek();
+  const debouncedSignal = signal(latestValue);
+
+  effect(() => {
+    const value = signalToDebounce.value;
+    const debouncedValue = debouncedSignal.peek();
+    if (
+      deepCompare
+        ? compareTwoJsValues(value, debouncedValue)
+        : value === debouncedValue
+    ) {
+      return;
+    }
+    clearTimeout(timeoutId);
+    latestValue = value;
+    timeoutId = setTimeout(() => {
+      debouncedSignal.value = latestValue;
+    }, delay);
+  });
+
+  debouncedSignal.flush = () => {
+    clearTimeout(timeoutId);
+    debouncedSignal.value = latestValue;
+  };
+  // Whoever reads the debounced value gets the previous one during the delay,
+  // with nothing saying a newer one is on its way. This says it.
+  debouncedSignal.settlingSignal = computed(() => {
+    return !compareTwoJsValues(signalToDebounce.value, debouncedSignal.value);
+  });
+
+  return debouncedSignal;
+};
+
+const debouncedSignalCache = new WeakMap();
+
+/**
+ * The one debounced signal for a given source and delay.
+ *
+ * Two callers asking the same question of the same signal must wait on the same
+ * answer: a debounced signal per caller is a timer per caller, and the actions
+ * derived from them are then several instances of what is one request.
+ */
+const getDebouncedSignal = (signalToDebounce, delay) => {
+  let byDelay = debouncedSignalCache.get(signalToDebounce);
+  if (!byDelay) {
+    byDelay = new Map();
+    debouncedSignalCache.set(signalToDebounce, byDelay);
+  }
+  const existing = byDelay.get(delay);
+  if (existing) {
+    return existing;
+  }
+  const debouncedSignal = debounceSignal(signalToDebounce, { delay });
+  byDelay.set(delay, debouncedSignal);
+  return debouncedSignal;
+};
+
+/**
+ * jsenv/navi - createJsValueWeakMap
+ *
+ * Key/value cache with true ephemeron behavior and deep equality support.
+ *
+ * Features:
+ * - Mutual retention: key keeps value alive, value keeps key alive
+ * - Deep equality: different objects with same content are treated as identical keys
+ * - Automatic GC: entries are eligible for collection when unreferenced
+ * - Iteration support: can iterate over live entries for deep equality lookup
+ *
+ * Implementation:
+ * - Dual WeakMap (key->value, value->key) provides ephemeron behavior
+ * - WeakRef registry enables iteration without preventing GC
+ * - Primitives stored in Map (permanent retention - avoid for keys)
+ *
+ * Use case: Action caching where params (key) and action (value) should have
+ * synchronized lifetimes while allowing natural garbage collection.
+ */
+
+
+const createJsValueWeakMap = () => {
+  // Core ephemeron maps for mutual retention
+  const keyToValue = new WeakMap(); // key -> value
+  const valueToKey = new WeakMap(); // value -> key
+
+  // Registry for iteration/deep equality (holds WeakRefs)
+  const keyRegistry = new Set(); // Set of WeakRef(key)
+
+  // Primitive cache
+  const primitiveCache = new Map();
+
+  function cleanupKeyRegistry() {
+    for (const keyRef of keyRegistry) {
+      if (keyRef.deref() === undefined) {
+        keyRegistry.delete(keyRef);
+      }
+    }
+  }
+
+  return {
+    *[Symbol.iterator]() {
+      cleanupKeyRegistry();
+      for (const keyRef of keyRegistry) {
+        const key = keyRef.deref();
+        if (key && keyToValue.has(key)) {
+          yield [key, keyToValue.get(key)];
+        }
+      }
+      for (const [k, v] of primitiveCache) {
+        yield [k, v];
+      }
+    },
+
+    get(key) {
+      const isObject =
+        key && (typeof key === "object" || typeof key === "function");
+      if (isObject) {
+        // Fast path: exact key match
+        if (keyToValue.has(key)) {
+          return keyToValue.get(key);
+        }
+
+        // Slow path: deep equality search
+        cleanupKeyRegistry();
+        for (const keyRef of keyRegistry) {
+          const existingKey = keyRef.deref();
+          if (existingKey && compareTwoJsValues(existingKey, key)) {
+            return keyToValue.get(existingKey);
+          }
+        }
+        return undefined;
+      }
+      return primitiveCache.get(key);
+    },
+
+    set(key, value) {
+      const isObject =
+        key && (typeof key === "object" || typeof key === "function");
+      if (isObject) {
+        cleanupKeyRegistry();
+
+        // Remove existing deep-equal key
+        for (const keyRef of keyRegistry) {
+          const existingKey = keyRef.deref();
+          if (existingKey && compareTwoJsValues(existingKey, key)) {
+            const existingValue = keyToValue.get(existingKey);
+            keyToValue.delete(existingKey);
+            valueToKey.delete(existingValue);
+            keyRegistry.delete(keyRef);
+            break;
+          }
+        }
+
+        // Set ephemeron pair
+        keyToValue.set(key, value);
+        valueToKey.set(value, key);
+        keyRegistry.add(new WeakRef(key));
+      } else {
+        primitiveCache.set(key, value);
+      }
+    },
+
+    delete(key) {
+      const isObject =
+        key && (typeof key === "object" || typeof key === "function");
+      if (isObject) {
+        cleanupKeyRegistry();
+
+        // Try exact match first
+        if (keyToValue.has(key)) {
+          const value = keyToValue.get(key);
+          keyToValue.delete(key);
+          valueToKey.delete(value);
+
+          // Remove from registry
+          for (const keyRef of keyRegistry) {
+            if (keyRef.deref() === key) {
+              keyRegistry.delete(keyRef);
+              break;
+            }
+          }
+          return true;
+        }
+
+        // Try deep equality
+        for (const keyRef of keyRegistry) {
+          const existingKey = keyRef.deref();
+          if (existingKey && compareTwoJsValues(existingKey, key)) {
+            const value = keyToValue.get(existingKey);
+            keyToValue.delete(existingKey);
+            valueToKey.delete(value);
+            keyRegistry.delete(keyRef);
+            return true;
+          }
+        }
+        return false;
+      }
+      return primitiveCache.delete(key);
+    },
+
+    getStats: () => {
+      cleanupKeyRegistry();
+      const aliveKeys = Array.from(keyRegistry).filter((ref) =>
+        ref.deref(),
+      ).length;
+
+      return {
+        ephemeronPairs: {
+          total: keyRegistry.size,
+          alive: aliveKeys,
+          note: "True ephemeron: key ↔ value mutual retention via dual WeakMap",
+        },
+        primitive: {
+          total: primitiveCache.size,
+          note: "Primitive keys never GC'd",
+        },
+      };
+    },
+  };
+};
+
+const MERGE_AS_PRIMITIVE_SYMBOL = Symbol("navi_merge_as_primitive");
+
+const mergeTwoJsValues = (firstValue, secondValue) => {
+  const firstIsPrimitive =
+    firstValue === null ||
+    typeof firstValue !== "object" ||
+    MERGE_AS_PRIMITIVE_SYMBOL in firstValue;
+
+  if (firstIsPrimitive) {
+    return secondValue;
+  }
+  const secondIsPrimitive =
+    secondValue === null ||
+    typeof secondValue !== "object" ||
+    MERGE_AS_PRIMITIVE_SYMBOL in secondValue;
+  if (secondIsPrimitive) {
+    return secondValue;
+  }
+  const objectMerge = {};
+  const firstKeys = Object.keys(firstValue);
+  const secondKeys = Object.keys(secondValue);
+  let hasChanged = false;
+
+  // First loop: check for keys in first object and recursively merge with second
+  for (const key of firstKeys) {
+    const firstValueForKey = firstValue[key];
+    const secondHasKey = secondKeys.includes(key);
+
+    if (secondHasKey) {
+      const secondValueForKey = secondValue[key];
+      const mergedValue = mergeTwoJsValues(firstValueForKey, secondValueForKey);
+      objectMerge[key] = mergedValue;
+      if (mergedValue !== firstValueForKey) {
+        hasChanged = true;
+      }
+    } else {
+      objectMerge[key] = firstValueForKey;
+    }
+  }
+
+  for (const key of secondKeys) {
+    if (firstKeys.includes(key)) {
+      continue;
+    }
+    objectMerge[key] = secondValue[key];
+    hasChanged = true;
+  }
+
+  if (!hasChanged) {
+    return firstValue;
+  }
+  return objectMerge;
+};
+
+/**
+ * Creates an effect that uses WeakRef to prevent garbage collection of referenced values.
+ *
+ * This utility is useful when you want to create reactive effects that watch objects
+ * without preventing those objects from being garbage collected. If any of the referenced
+ * values is collected, the effect automatically disposes itself.
+ *
+ * @param {Array} values - Array of values to create weak references for
+ * @param {Function} callback - Function to call when the effect runs, receives dereferenced values as arguments
+ * @returns {Function} dispose - Function to manually dispose the effect
+ *
+ * @example
+ * ```js
+ * const objectA = { name: "A" };
+ * const objectB = { name: "B" };
+ * const prefixSignal = signal('demo');
+ *
+ * const dispose = weakEffect([objectA, objectB], (a, b) => {
+ *   const prefix = prefixSignal.value
+ *   console.log(prefix, a.name, b.name);
+ * });
+ *
+ * // Effect will auto-dispose if objectA or objectB where garbage collected
+ * // or can be manually disposed:
+ * dispose();
+ * ```
+ */
+const weakEffect = (values, callback) => {
+  const weakRefSet = new Set();
+  for (const value of values) {
+    weakRefSet.add(new WeakRef(value));
+  }
+  const dispose = effect(() => {
+    const values = [];
+    for (const weakRef of weakRefSet) {
+      const value = weakRef.deref();
+      if (value === undefined) {
+        dispose();
+        return;
+      }
+      values.push(value);
+    }
+    callback(...values);
+  });
+  return dispose;
 };
 
 const SYMBOL_OBJECT_SIGNAL = Symbol.for("navi_object_signal");
@@ -17659,6 +17760,12 @@ const useActionAsyncData = (action, {
     }
     // Not marked: nothing is displayed yet — the boundary that catches this is
     // what says so, and only if it has something to show.
+    //
+    // And this render ends here: an action read further down — the one that was
+    // going to display its own error — is never reached. Said out loud, so the
+    // report does not blame the app for a failure nothing could take (see
+    // action_error_report.js).
+    markErrorAsStoppingRender(actionError);
     throw actionError;
   }
 

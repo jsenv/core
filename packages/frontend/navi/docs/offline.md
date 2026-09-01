@@ -78,6 +78,13 @@ depends on what was asked:
   `reason` is the policy's value. `isOfflineError(error)` tells it apart from a
   request that left and never came back — that one is the app's `fetch`
   rejecting, and the app names it.
+
+  It is an error only in the way it travels. Nothing treats it as a bug: navi
+  never reports it as unhandled, and the window `error` event a boundary's
+  display produces in dev is cancelled, so neither the browser console nor the
+  jsenv overlay says anything. The person reads the screen; nobody else has to
+  hear about it.
+
 - **A write is refused before the press.** A control bound to a `POST`, `PUT`,
   `PATCH` or `DELETE` action — or any control inside a `<Form>` bound to one —
   is read-only while the policy holds, and answers the press with

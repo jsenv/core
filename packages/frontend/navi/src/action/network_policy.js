@@ -56,6 +56,7 @@ const networkPolicySignal = signal({
  * });
  */
 export const setNetworkPolicy = (source, { readOnlyMessage } = {}) => {
+  silenceOfflineErrors();
   networkPolicySignal.value = { source, readOnlyMessage };
 };
 
@@ -108,6 +109,48 @@ export class OfflineError extends Error {
 
 export const isOfflineError = (error) => {
   return Boolean(error && error.offline);
+};
+
+/**
+ * An offline error is not one, and nobody is to be told about it as if it were.
+ *
+ * It says "run with what you have, ask nothing" — a state the app itself
+ * declared, about a request that never left. There is no bug to point at, no
+ * stack worth reading, and a screen is already saying it in words the person
+ * understands.
+ *
+ * navi's own report leaves it alone (action_error_report.js). What is left is
+ * the screen displaying it: it does so by throwing the error to a boundary, and
+ * `preact/debug` re-emits on `window` every error a boundary caught — on
+ * purpose, for React devtools compatibility. Uncancelled, that lands as an
+ * uncaught error in the console, over a page calmly explaining there is no
+ * network. Cancelling the event is what says it is handled: the browser drops
+ * the console line, and the jsenv supervisor skips prevented events too.
+ *
+ * Both shapes a failure travels in are covered, since which one it is depends
+ * on whether the resource callback happened to be async — the throw reaching
+ * `window`, and the rejection nobody caught.
+ *
+ * Scoped to the policy's own error and to nothing else — every other error a
+ * boundary caught, and every other rejection let go, stays exactly as loud as
+ * it is.
+ */
+let offlineErrorSilenced = false;
+const silenceOfflineErrors = () => {
+  if (offlineErrorSilenced || typeof window === "undefined") {
+    return;
+  }
+  offlineErrorSilenced = true;
+  window.addEventListener("error", (errorEvent) => {
+    if (isOfflineError(errorEvent.error)) {
+      errorEvent.preventDefault();
+    }
+  });
+  window.addEventListener("unhandledrejection", (rejectionEvent) => {
+    if (isOfflineError(rejectionEvent.reason)) {
+      rejectionEvent.preventDefault();
+    }
+  });
 };
 
 const readReason = (source) => {

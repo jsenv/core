@@ -256,6 +256,24 @@ finds a boundary that displays it, or reaches window on its own, since
 render loudly. Reporting it here too would be a second voice, and the wrong one:
 this module cannot see which of those happened.
 
+**And a render stopped in the middle read nothing after it.** `useAsyncData`
+delegates a failure by throwing it out of the render — that is how the error
+reaches the boundary. The render ends on that line, so a second `useAsyncData`
+below it, even one asking for `error: true`, is never called and never claims
+its own error. "Nobody read it" would then be true and meaningless: the order of
+two hook calls would decide whether the app is told it has a bug. So the throw
+speaks for the failures waiting for the same answer alongside it — a url change
+fails its route actions together — and none of them is reported. What is on
+screen is the failure the render was stopped at, which is the same story. A
+failure arriving _later_, after the page was replaced by what displays the first
+one, is not covered: nothing tells it apart from an action nobody reads.
+
+One error is never reported whoever looks at it: an **`OfflineError`**. The app
+declared the state that produced it and the request never left, so there is no
+bug to point at — it is data a screen shows. navi also cancels the window
+`error` event that displaying it produces in dev, which keeps the browser
+console and the jsenv overlay out of it ([offline.md](./offline.md)).
+
 So what reaches the report is an error **nothing looked at** — an action nobody
 reads, a prerun for a page never opened. And _when_ it is reported follows from
 that:

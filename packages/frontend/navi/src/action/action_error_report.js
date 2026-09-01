@@ -15,6 +15,8 @@
  * The whole picture, control errors and validation included: docs/error_handling.md
  */
 
+import { isOfflineError } from "./network_policy.js";
+
 export const markErrorAsDisplayedBy = (error, by) => {
   if (error && typeof error === "object") {
     error.__handled_by__ = by;
@@ -70,14 +72,70 @@ export const installReportDeadlineExtension = (fn) => {
 };
 
 /**
+ * The failures of one moment: reported, still waiting to know whether anything
+ * took them. A url change fails its route actions together, so they wait here
+ * together — which is what lets the throw below say something about the others.
+ */
+const errorPendingDecisionSet = new Set();
+
+/**
+ * A render stopped mid-way cannot read what came after it.
+ *
+ * `useAsyncData` delegates a failure by throwing it out of the render — that is
+ * how the error reaches the boundary that displays it. The render ends on that
+ * line, so every action the component reads BELOW it is never read, including
+ * one that was going to display its own error. "Nobody read it" is still true
+ * of those, but the reason is no longer that the app forgot: nothing COULD read
+ * them. Left alone, the order of two hook calls decides whether an app is told
+ * it has a bug — a rule nobody can see.
+ *
+ * So the throw says it for them: the failures waiting for the same answer at
+ * that instant are failures no render could reach, and the report has nothing
+ * to say about them. What is on screen is the failure the render was stopped
+ * at, which is the same story.
+ *
+ * This is about the failures that already exist when the render is cut short.
+ * An action of the same page failing LATER — after the page was replaced by
+ * what displays the first failure — is not covered and is still reported: at
+ * that point nothing distinguishes it from an action nobody reads.
+ */
+const errorNoRenderCouldReachSet = new WeakSet();
+export const markErrorAsStoppingRender = (error) => {
+  for (const errorPendingDecision of errorPendingDecisionSet) {
+    if (errorPendingDecision !== error) {
+      errorNoRenderCouldReachSet.add(errorPendingDecision);
+    }
+  }
+};
+
+/**
+ * An offline error is never reported: the app declared the state that produced
+ * it, the request never left, and there is nothing for a developer to fix. It
+ * is data a screen shows, and it stays data whether or not one does (see
+ * network_policy.js, which also keeps it out of the browser console).
+ */
+const errorIsAccountedFor = (error) => {
+  return (
+    errorIsDisplayed(error) ||
+    errorTakenByRenderSet.has(error) ||
+    errorNoRenderCouldReachSet.has(error) ||
+    isOfflineError(error)
+  );
+};
+
+/**
  * Rethrown rather than logged: an error nobody took is an unhandled error, and
  * the runtime already knows what to do with those (window "error" event, jsenv
  * overlay in dev). Same trick preact/debug uses for the same reason.
  */
 const errorReportedSet = new WeakSet();
 export const reportErrorIfNobodyDisplaysIt = (error, { action } = {}) => {
+  if (error && typeof error === "object") {
+    errorPendingDecisionSet.add(error);
+  }
   const decide = () => {
-    if (errorIsDisplayed(error) || errorTakenByRenderSet.has(error)) {
+    errorPendingDecisionSet.delete(error);
+    if (errorIsAccountedFor(error)) {
       return;
     }
     if (error && typeof error === "object") {
@@ -96,9 +154,10 @@ export const reportErrorIfNobodyDisplaysIt = (error, { action } = {}) => {
   };
 
   setTimeout(() => {
-    if (errorIsDisplayed(error) || errorTakenByRenderSet.has(error)) {
+    if (errorIsAccountedFor(error)) {
       // Already taken within the microtasks that followed the failure: the
       // common case, and there is nothing to wait for.
+      errorPendingDecisionSet.delete(error);
       return;
     }
     if (waitForDocumentSettled) {

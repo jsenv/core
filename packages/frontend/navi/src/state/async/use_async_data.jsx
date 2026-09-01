@@ -13,6 +13,7 @@ import {
 
 import {
   markErrorAsDisplayedBy,
+  markErrorAsStoppingRender,
   markErrorAsTakenByRender,
 } from "../../action/action_error_report.js";
 import {
@@ -282,6 +283,12 @@ const useActionAsyncData = (
     }
     // Not marked: nothing is displayed yet — the boundary that catches this is
     // what says so, and only if it has something to show.
+    //
+    // And this render ends here: an action read further down — the one that was
+    // going to display its own error — is never reached. Said out loud, so the
+    // report does not blame the app for a failure nothing could take (see
+    // action_error_report.js).
+    markErrorAsStoppingRender(actionError);
     throw actionError;
   }
 
