@@ -477,6 +477,17 @@ Object.assign(PSEUDO_CLASSES, {
  *   (`navi_value`); defaults to `href`.
  * @param {boolean} [props.current] - Forces the "current" state on (otherwise
  *   derived from the href/route).
+ * @param {import("../route.js").Route|import("../route.js").Route[]} [props.currentExcept] -
+ *   Route(s) inside this link's own that are NOT it: while one of them matches,
+ *   the link is not current even though its route still is. A bar entry
+ *   standing for a whole section, and one place under that section the entry
+ *   does not stand for — settings reached from everywhere and shown over
+ *   whatever the reader was on. Nothing about the routing changes: the url is
+ *   in the section, only the link stops claiming "you are here".
+ * @param {import("../route.js").Route|import("../route.js").Route[]} [props.currentAlso] -
+ *   Route(s) other than this link's own that are it: the link is current while
+ *   one of them matches. The other side of `currentExcept` — an entry standing
+ *   for more than the one page it opens. `currentExcept` wins over it.
  * @param {"text"|"icon"|"tab"} [props.variant] - Visual variant
  *   (`data-variant`); `"text"`/`"icon"` drop the link color/underline,
  *   `"tab"` renders a tab-like affordance.
@@ -549,16 +560,35 @@ export const Link = (props) => {
   if (props.route) {
     return <LinkWithRoute {...props} />;
   }
+  if (import.meta.dev && (props.currentExcept || props.currentAlso)) {
+    console.warn(
+      `currentExcept/currentAlso amend what the link's own route says about being current, so they need a "route" prop.`,
+    );
+  }
   return <LinkPlain {...props} />;
 };
-const LinkWithRoute = ({ route, routeParams, current, children, ...rest }) => {
+const LinkWithRoute = ({
+  route,
+  routeParams,
+  current,
+  currentExcept,
+  currentAlso,
+  children,
+  ...rest
+}) => {
   if (import.meta.dev) {
     assertRoute(route);
   }
   const url = route.buildUrl(routeParams);
   const { matching } = useRouteStatus(route);
   const paramsAreMatching = route.matchesParams(routeParams);
-  const linkMatching = matching && paramsAreMatching;
+  const someExceptedRouteMatching = useSomeRouteMatching(currentExcept);
+  const someAlsoRouteMatching = useSomeRouteMatching(currentAlso);
+  // "Except" is a veto: a route named there is somewhere else, whatever the
+  // rest of the reading says.
+  const linkMatching =
+    !someExceptedRouteMatching &&
+    ((matching && paramsAreMatching) || someAlsoRouteMatching);
   const innerCurrent = current || linkMatching;
 
   return (
@@ -566,6 +596,25 @@ const LinkWithRoute = ({ route, routeParams, current, children, ...rest }) => {
       {children || route.buildRelativeUrl(routeParams)}
     </Link>
   );
+};
+// A route, or a list of them, read as one answer: does any of them match.
+// Reading matchingSignal during the render is what subscribes the component to
+// it, so every route is read even once one has answered yes — stopping early
+// would leave the component deaf to the ones it skipped.
+const useSomeRouteMatching = (routes) => {
+  if (!routes) {
+    return false;
+  }
+  let someMatching = false;
+  for (const route of Array.isArray(routes) ? routes : [routes]) {
+    if (import.meta.dev) {
+      assertRoute(route);
+    }
+    if (route.matchingSignal.value) {
+      someMatching = true;
+    }
+  }
+  return someMatching;
 };
 
 const LinkPlain = (props) => {
@@ -770,6 +819,8 @@ const LinkPlain = (props) => {
       revealOnInteraction={undefined}
       variant={undefined}
       current={undefined}
+      currentExcept={undefined}
+      currentAlso={undefined}
       currentIndicator={undefined}
       currentEffectBold={undefined}
       currentEffectShadow={undefined}
@@ -818,7 +869,11 @@ const LinkPlain = (props) => {
       aria-controls={slide ? nav?.slideContainer : undefined}
       tabIndex={slide ? (props.tabIndex ?? 0) : props.tabIndex}
       role={slide ? "tab" : props.role}
-      aria-current={isCurrent ? "page" : undefined}
+      // The same reading the paint uses: what the link claims about being
+      // where the reader is has to be one claim, said to the eye and to a
+      // screen reader alike. A slide is not a page — that tab says it with
+      // aria-selected below.
+      aria-current={!slide && innerCurrent ? "page" : undefined}
       aria-selected={
         slide ? innerCurrent : selectionContext ? selected : undefined
       }
