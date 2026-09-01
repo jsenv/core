@@ -185,6 +185,14 @@ const css = /* css */ `
  *   required at all for a purely command-driven panel (an `id` plus a
  *   `<Button command="--navi-toggle" commandFor={id}>` elsewhere, same as
  *   `Dialog`/`Popover` themselves — see either's own doc).
+ * @param {boolean|string|{id?: string, type?: "push"|"replace"}} [props.navState] -
+ *   Keeps the open state in the history entry, so a screen left and come back
+ *   to finds its panel as it was: `true` uses the panel's own `id`, a string
+ *   names the key, `{ id, type }` chooses between rewriting the entry
+ *   ("replace", the default) and pushing one ("push"), where closing goes
+ *   back — which is what makes the phone's back gesture close the panel.
+ *   Forwarded as-is to `Popup`; source of truth, so it excludes `open` and
+ *   `signal` (see `Dialog`/`Popover`'s own `navState`).
  * @param {(event: Event) => void} [props.onClose] - Called when the panel
  *   actually closes (see `Dialog`/`Popover`'s own `onClose`).
  * @param {"left"|"right"|"top"|"bottom"} [props.side="right"] - Which
