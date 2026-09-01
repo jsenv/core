@@ -118,13 +118,28 @@ export const triggerNaviCommand = (
     return false;
   }
   const { target, implementation } = execute;
-  return dispatchCustomEvent(target, "navi_command", {
+  // The event is how the target takes part in what it was asked to do (a popup
+  // closing on --navi-close also has its own things to do); the command itself
+  // is the implementation, and it must not depend on someone listening. Nobody
+  // does when the target has left the document — a trigger whose own action
+  // took it away, which is the shape of "delete this, then leave the page it
+  // was on" (see runWhenActionSucceeded in rules/control_action.js): the
+  // command is decided while the trigger is there and runs once the action has
+  // succeeded, by which time the row it stood in is gone. So the command runs
+  // here rather than being lost in silence.
+  const detail = {
     command,
     event,
     source: element,
     implementation,
     value,
-  });
+    answered: false,
+  };
+  const dispatched = dispatchCustomEvent(target, "navi_command", detail);
+  if (!detail.answered) {
+    implementation();
+  }
+  return dispatched;
 };
 
 // Returns the target explicitly declared via HTML attributes (commandfor / navi-command-target),
@@ -273,6 +288,7 @@ export const onNaviCommand = (e, { debugCommand = () => {} } = {}) => {
     console.warn(`navi_command event is missing detail.implementation`, e);
     return false;
   }
+  e.detail.answered = true;
   const commandTarget = e.currentTarget;
   debugCommand(
     event,

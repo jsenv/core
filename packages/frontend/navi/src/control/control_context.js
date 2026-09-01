@@ -120,6 +120,15 @@ export const CONTROL_PROP_SET = new Set([
 
   "charGuard",
   "maxLengthGuard",
+
+  // This control answers for itself: it registers into no group, no form and no
+  // picker around it (see useUIStateController). It belongs here rather than
+  // being deleted off `props` where it is read: props is the vnode's own object
+  // and Preact hands the SAME one back on a re-render the component triggers
+  // itself, so a prop deleted on the first render is simply gone on the second
+  // — and the control, no longer standalone, walked into the group it had
+  // stepped out of.
+  "standalone",
 ]);
 
 /**

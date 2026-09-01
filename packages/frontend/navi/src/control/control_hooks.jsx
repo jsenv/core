@@ -184,7 +184,6 @@ export const useControlProps = (
   // from it and gives it nothing back. See useUIStateController, which is where
   // the whole of it happens.
   const { standalone } = props;
-  delete props.standalone;
 
   const idDefault = useId();
   const controlId = useContext(ControlIdContext);
@@ -1316,7 +1315,6 @@ export const useControlgroupProps = (
   },
 ) => {
   const { action, standalone } = props;
-  delete props.standalone;
 
   const uiGroupStateController = useUIGroupStateController(props, controlType, {
     stateType,
