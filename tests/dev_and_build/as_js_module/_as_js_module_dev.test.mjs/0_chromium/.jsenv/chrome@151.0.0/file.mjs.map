@@ -1,16 +1,12 @@
 {
   "version": 3,
-  "names": [
-    "root",
-    "__answer__",
-    "window"
-  ],
+  "names": [],
   "sources": [
     "base/client/file.js"
   ],
   "sourcesContent": [
     "(function (root) {\n  root.__answer__ = 42;\n})(this);\n"
   ],
-  "mappings": "AAAA,CAAC,UAAUA,IAAI,EAAE;EACfA,IAAI,CAACC,UAAU,GAAG,EAAE;AACtB,CAAC,EAAAC,MAAM,CAAC",
+  "mappings": "AAAA,CAAC,UAAU,IAAI,EAAE;EACf,IAAI,CAAC,UAAU,GAAG,EAAE;AACtB,CAAC,QAAM,CAAC",
   "ignoreList": []
 }

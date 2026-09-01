@@ -42,13 +42,13 @@ export const rulesImportRelax = {
   ],
   "import-x/no-extraneous-dependencies": ["error"],
   "import-x/no-self-import": ["error"],
-  // The cycle search is unbounded by default: it walks the whole dependency
-  // graph reachable from every import. Under eslint 10 that exhausts the heap
-  // (8GB is not enough on this repo) where eslint 9 completed, so the depth has
-  // to be capped. 10 keeps cycles across packages visible — the ones worth
-  // catching here — and only misses chains longer than that.
-  // Remove the cap once eslint-plugin-import-x stops retaining the whole graph.
-  "import-x/no-cycle": ["error", { maxDepth: 10 }],
+  // The cycle search follows every import by default, node_modules included.
+  // Under eslint 10 that exhausts the heap (8GB is not enough on a codebase
+  // importing a large bundle) where eslint 9 completed, and a cycle found
+  // inside node_modules is not something the project can fix anyway.
+  // A project whose own packages resolve outside the linted package (a
+  // monorepo) keeps them in scope with "import-x/internal-regex".
+  "import-x/no-cycle": ["error", { ignoreExternal: true }],
   "import-x/no-useless-path-segments": ["error"],
   // named imports are definitely better than import default
   // but some tools expect you to use default export.

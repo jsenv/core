@@ -22,7 +22,8 @@ if (process.argv[2] === "@jsenv/core") {
   process.argv[2] = "./tests/";
 }
 await executeTestPlan({
-  // remembers how long each execution took to start the longest ones first
+  // remembers how long each execution took; add parallel: { maxAhead: 1 } to
+  // let the longest one start ahead of its turn
   executionTimings: true,
   logs: {
     level: "info",

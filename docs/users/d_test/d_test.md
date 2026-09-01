@@ -443,9 +443,23 @@ The default value is 75%: on a machine running 8 executions in parallel, up to 6
 
 When only heavy executions remain, they run as `parallel.max` allows.
 
-### 3.4.5 Starting the longest executions first
+### 3.4.5 parallel.maxAhead
 
-With a fixed number of slots, a long execution started last holds one of them while every other slot is idle. `executionTimings` lets jsenv remember how long each execution took so the next run starts the long ones first.
+Executions start in the order the filesystem gives them, which is also the order they are reported in: the run progresses where it is read.
+
+One departure from that order pays for itself: an execution still running once everything after it is done decides alone when the run ends, so the time it spends waiting for its turn is time the whole run waits at the end. `maxAhead` is the number of slots that can be given to such an execution, started ahead of its turn.
+
+| maxAhead | Slots given to an execution started ahead of its turn |
+| -------- | ----------------------------------------------------- |
+| 0        | None: every execution starts at its turn              |
+| 1        | One                                                   |
+| 2        | Two                                                   |
+
+The default value is 0. The remaining slots keep the natural order on purpose: starting the heaviest executions of the plan all at once makes them fight for cpu and memory, [maxCpu](#342-parallelmaxcpu)/[maxMemory](#343-parallelmaxmemory) then pause the whole plan, and the logs stop moving because nothing near the beginning of the plan is running.
+
+An execution is started ahead of its turn only when it is longer than the average of what remains **and** longer than what remains after it divided by `parallel.max`, which is what makes it the one still running at the end. An execution that would be reached soon anyway, or one that has plenty of work behind it, gains nothing and is left where it is.
+
+This needs to know how long executions take, which is what `executionTimings` remembers:
 
 ```js
 import { executeTestPlan, nodeWorkerThread } from "@jsenv/test";
@@ -453,6 +467,9 @@ import { executeTestPlan, nodeWorkerThread } from "@jsenv/test";
 await executeTestPlan({
   rootDirectoryUrl: import.meta.resolve("../"),
   executionTimings: true,
+  parallel: {
+    maxAhead: 1,
+  },
   testPlan: {
     "./src/**/*.test.mjs": {
       node: {
@@ -465,9 +482,9 @@ await executeTestPlan({
 
 Durations are written to `.jsenv/jsenv_tests_timings.json`, which can be added to `.gitignore`.
 
-Only the order in which executions **start** changes: they keep the index they got from the filesystem and are still reported in that order. An execution never seen before is assumed to last as long as the median one, so a new test file is not pushed to the end of the run just for being new.
+Only the order in which executions **start** changes: they keep the index they got from the filesystem and are still reported in that order. An execution never seen before is assumed to last as long as the median one, so a new test file is not mistaken for a short one.
 
-This is off by default: it makes the start order depend on a file written by a previous run, which a test plan snapshotting its own execution order cannot afford.
+`executionTimings` is off by default: it makes the start order depend on a file written by a previous run, which a test plan snapshotting its own execution order cannot afford.
 
 ### 3.4.6 Locking a shared resource
 
@@ -512,7 +529,7 @@ A file needing more than that says so itself:
 
 Durations are written as `500ms`, `90s` or `2m`. The declaration is a **directive**: it belongs to the directive prologue, at the top of the file, before the imports — comments may precede it. A `jsenv:` directive jsenv cannot read makes the run fail immediately, naming the file: nothing else would report a typo, and the file would silently fall back to the default duration.
 
-A file allocated more time than the default is also treated as a heavy execution: it is started earlier and counted against [parallel.maxHeavy](#344-parallelmaxheavy).
+A file allocated more time than the default is also treated as a heavy execution: it is counted against [parallel.maxHeavy](#344-parallelmaxheavy). What a file allocates is a budget, not a duration; it says nothing about when it is worth starting it, which is measured instead (see [parallel.maxAhead](#345-parallelmaxahead)).
 
 When the duration is computed rather than fixed, ask for it from the file instead:
 

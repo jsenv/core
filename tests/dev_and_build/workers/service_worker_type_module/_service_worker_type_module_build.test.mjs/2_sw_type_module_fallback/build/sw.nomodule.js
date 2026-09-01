@@ -1,6 +1,6 @@
 self.resourcesFromJsenvBuild = {
   "/main.html": {
-    "version": "567dbf1b"
+    "version": "28eef952"
   },
   "/css/style.css": {
     "version": "2e9d11a2",
@@ -24,37 +24,15 @@ self.resourcesFromJsenvBuild = {
 })(typeof globalThis !== "undefined" ? globalThis : typeof self !== "undefined" ? self : this, function () {
   "use strict";
 
-  function _await(value, then, direct) {
-    if (direct) {
-      return then ? then(value) : value;
-    }
-    if (!value || !value.then) {
-      value = Promise.resolve(value);
-    }
-    return then ? value.then(then) : value;
-  }
-  function _async(f) {
-    return function () {
-      for (var args = [], i = 0; i < arguments.length; i++) {
-        args[i] = arguments[i];
-      }
-      try {
-        return Promise.resolve(f.apply(this, args));
-      } catch (e) {
-        return Promise.reject(e);
-      }
-    };
-  }
   self.order = [];
-  self.addEventListener("message", _async(function (messageEvent) {
+  self.addEventListener("message", async messageEvent => {
     if (messageEvent.data === "inspect") {
       messageEvent.ports[0].postMessage({
         order: self.order,
         resourcesFromJsenvBuild: self.resourcesFromJsenvBuild
       });
     }
-    return _await();
-  }));
+  });
   const fn = ([a]) => {
     console.log(a);
   };

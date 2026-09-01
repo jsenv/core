@@ -26,6 +26,11 @@ export default [
     importResolutionDevConditions: ["dev:jsenv"],
   }),
   {
+    settings: {
+      // our own packages resolve outside the linted package, so "no-cycle"
+      // would treat them as external and stop at the package boundary
+      "import-x/internal-regex": "^@jsenv/",
+    },
     rules: {
       "no-debugger": ["off"],
       "jsenv/no-unknown-params": process.env.CI

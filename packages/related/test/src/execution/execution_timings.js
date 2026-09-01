@@ -2,11 +2,11 @@
  * Remembers, from one run to the next, how long each execution took and how much
  * time it asked for (see requestAllocatedMs).
  *
- * What it is for: with a fixed number of parallel slots, the moment a long
- * execution starts decides when the whole run ends. Started last it keeps one
- * slot busy while every other one is idle; started first it runs while the short
- * ones fill the slots around it. Knowing the durations of the previous run is
- * what allows to start the long ones first.
+ * What it is for: with a fixed number of parallel slots, an execution still
+ * running when everything after it is done decides alone when the run ends.
+ * Started last it keeps one slot busy while every other one is idle. Knowing
+ * the durations of the previous run is what allows to recognize that execution
+ * and start it ahead of its turn (see "parallel.maxAhead").
  *
  * Only the start order is affected: executions keep the index they got from the
  * filesystem, so they are still reported in that order.
@@ -31,33 +31,36 @@ export const createExecutionTimings = ({ fileUrl }) => {
       }
       return previousEntry.allocatedMsRequested;
     },
-    sortByLongestFirst: (executionArray) => {
+    // how long each execution is expected to take on this run
+    estimateDurations: (executionArray) => {
       const durationMsMap = new Map();
       const durationMsArray = [];
       for (const execution of executionArray) {
+        if (execution.skipped) {
+          // a skipped execution costs nothing; it must not weigh on what is
+          // expected from the others
+          durationMsMap.set(execution, 0);
+          continue;
+        }
         const previousEntry = previousEntryMap.get(execution.name);
         if (previousEntry) {
           durationMsMap.set(execution, previousEntry.durationMs);
           durationMsArray.push(previousEntry.durationMs);
         }
       }
-      if (durationMsArray.length === 0) {
-        return executionArray;
-      }
       // an execution never seen before is assumed to last as long as the median:
-      // being new is not a reason to be pushed at the end of the run
+      // being new is not a reason to be considered short
       durationMsArray.sort((a, b) => a - b);
       const medianDurationMs =
-        durationMsArray[Math.floor(durationMsArray.length / 2)];
-      // sort is stable: executions with the same estimation stay in the order
-      // they were found on the filesystem
-      return [...executionArray].sort((leftExecution, rightExecution) => {
-        const leftDurationMs =
-          durationMsMap.get(leftExecution) ?? medianDurationMs;
-        const rightDurationMs =
-          durationMsMap.get(rightExecution) ?? medianDurationMs;
-        return rightDurationMs - leftDurationMs;
-      });
+        durationMsArray.length === 0
+          ? 0
+          : durationMsArray[Math.floor(durationMsArray.length / 2)];
+      for (const execution of executionArray) {
+        if (!durationMsMap.has(execution)) {
+          durationMsMap.set(execution, medianDurationMs);
+        }
+      }
+      return durationMsMap;
     },
     record: (execution) => {
       const { status, timings } = execution.result;

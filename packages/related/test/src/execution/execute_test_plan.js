@@ -47,7 +47,7 @@ import { assertAndNormalizeWebServer } from "./web_server_param.js";
  * @param {Object} [testPlanParameters.webServer] Web server info; required when executing test on browsers
  * @param {Object} testPlanParameters.testPlan Object associating files with runtimes where they will be executed
  * @param {Object|false} [testPlanParameters.parallel] Maximum amount of execution running at the same time
- * @param {Object|false} [testPlanParameters.executionTimings=false] Remembers how long executions took to start the longest ones first on the next run
+ * @param {Object|false} [testPlanParameters.executionTimings=false] Remembers how long executions took; on the next run "parallel.maxAhead" uses it to start the longest ones ahead of their turn
  * @param {number} [testPlanParameters.defaultMsAllocatedPerExecution=30000] Milliseconds after which execution is aborted and considered as failed by timeout
  * @param {boolean} [testPlanParameters.failFast=false] Fails immediatly when a test execution fails
  * @param {Object|false} [testPlanParameters.coverage=false] Controls if coverage is collected during files executions
@@ -109,6 +109,9 @@ const parallelDefault = {
   // percentage resolved against parallel.max; an execution is heavy when it is
   // allocated more time than the others (see defaultMsAllocatedPerExecution)
   maxHeavy: "75%",
+  // how many slots may be given to an execution started ahead of its turn;
+  // 0 keeps the order given by the filesystem (see "executionTimings")
+  maxAhead: 0,
 };
 const executionTimingsDefault = {
   fileUrl: undefined,
@@ -443,6 +446,20 @@ export const executeTestPlan = async ({
         } else {
           throw new TypeError(
             `parallel.maxHeavy must be a number or a percentage, got ${maxHeavy}`,
+          );
+        }
+
+        const maxAhead = parallel.maxAhead;
+        if (typeof maxAhead === "string") {
+          const maxAheadAsRatio = assertPercentageAndConvertToRatio(maxAhead);
+          parallel.maxAhead = Math.round(maxAheadAsRatio * parallel.max);
+        } else if (typeof maxAhead === "number") {
+          if (maxAhead < 0) {
+            parallel.maxAhead = 0;
+          }
+        } else {
+          throw new TypeError(
+            `parallel.maxAhead must be a number or a percentage, got ${maxAhead}`,
           );
         }
       }
@@ -1024,7 +1041,7 @@ To fix this warning:
       const callWhenPreviousExecutionAreDone = createCallOrderer();
 
       // an execution allowed more time than the others is a heavy one: it is
-      // both worth starting early and worth not having too many of at once
+      // worth not having too many of at once
       const heavyExecutionSet = new Set();
       for (const execution of executionPlanifiedArray) {
         if (execution.skipped) {
@@ -1043,13 +1060,91 @@ To fix this warning:
           }
         }
       }
-      const executionStartOrderArray = timingsMemory
-        ? timingsMemory.sortByLongestFirst(executionPlanifiedArray)
-        : executionPlanifiedArray;
-
-      const executionRemainingSet = new Set(executionStartOrderArray);
+      const executionRemainingSet = new Set(executionPlanifiedArray);
       const executionExecutingSet = new Set();
+      // the executions currently running ahead of their turn
+      const executionAheadSet = new Set();
       const lockedResourceSet = new Set();
+      const findResourceLockedByAnother = (execution) => {
+        if (!execution.params.locks) {
+          return null;
+        }
+        return (
+          execution.params.locks.find((resourceToLock) =>
+            lockedResourceSet.has(resourceToLock),
+          ) || null
+        );
+      };
+      const durationMsMap =
+        timingsMemory && parallel.maxAhead > 0
+          ? timingsMemory.estimateDurations(executionPlanifiedArray)
+          : null;
+      /*
+       * Executions start in the order the filesystem gives them, which is also
+       * the order they are reported in: the run then progresses where it is
+       * read. One departure from that order pays for itself: an execution still
+       * running once everything after it is done decides alone when the run
+       * ends, so the time it spends waiting for its turn is time the whole run
+       * waits at the end. "parallel.maxAhead" says how many slots can be spent
+       * on such an execution; the other slots keep the natural order, because
+       * starting the heaviest executions of the plan all at once makes them
+       * fight for cpu and memory, which pauses everything (see maxCpu/maxMemory).
+       */
+      const pickExecutionToStartAhead = (executionPickedSet) => {
+        if (!durationMsMap) {
+          // nothing remembers which execution is the long one
+          return null;
+        }
+        if (
+          executionAheadSet.size + executionPickedSet.size >=
+          parallel.maxAhead
+        ) {
+          return null;
+        }
+        const executionRemainingArray = [...executionRemainingSet];
+        // what a remaining execution costs on average; the last one to start is
+        // always the one still running at the end, so without this reference the
+        // slot would go to whichever execution happens to be last rather than to
+        // a long one
+        let msRemainingTotal = 0;
+        let executionRemainingCount = 0;
+        for (const execution of executionRemainingArray) {
+          const durationMs = durationMsMap.get(execution);
+          if (durationMs > 0) {
+            msRemainingTotal += durationMs;
+            executionRemainingCount++;
+          }
+        }
+        if (executionRemainingCount === 0) {
+          return null;
+        }
+        const msAverage = msRemainingTotal / executionRemainingCount;
+        let executionAhead = null;
+        let executionAheadMs = 0;
+        // the executions are visited backwards so that, for each one, the time
+        // still to be spent after it is already known
+        let msAfter = 0;
+        let index = executionRemainingArray.length;
+        while (index--) {
+          const execution = executionRemainingArray[index];
+          const durationMs = durationMsMap.get(execution);
+          if (
+            // the ones about to start anyway have nothing to gain
+            index >= parallel.max &&
+            durationMs > msAverage &&
+            durationMs > executionAheadMs &&
+            // it would still be running when everything after it is done
+            durationMs > msAfter / parallel.max &&
+            !executionPickedSet.has(execution) &&
+            !findResourceLockedByAnother(execution)
+          ) {
+            executionAhead = execution;
+            executionAheadMs = durationMs;
+          }
+          msAfter += durationMs;
+        }
+        return executionAhead;
+      };
       const start = async (execution) => {
         execution.fileExecutionCount = Object.keys(
           testPlanResult.results[execution.fileRelativeUrl],
@@ -1100,6 +1195,7 @@ To fix this warning:
         }
         mutateCountersAfterExecutionEnds(counters, execution);
         executionExecutingSet.delete(execution);
+        executionAheadSet.delete(execution);
         for (const afterEachCallback of afterEachCallbackSet) {
           afterEachCallback(execution, testPlanResult, testPlanHelpers);
         }
@@ -1127,8 +1223,21 @@ To fix this warning:
             heavyExecutingCount++;
           }
         }
+        // the executions allowed to run ahead of their turn are considered
+        // first: the slot they take is the whole point
+        const executionPickedSet = new Set();
+        while (true) {
+          const executionAhead = pickExecutionToStartAhead(executionPickedSet);
+          if (!executionAhead) {
+            break;
+          }
+          executionPickedSet.add(executionAhead);
+        }
         const promises = [];
-        for (const executionCandidate of executionRemainingSet) {
+        for (const executionCandidate of new Set([
+          ...executionPickedSet,
+          ...executionRemainingSet,
+        ])) {
           if (executionExecutingSet.size >= parallel.max) {
             break;
           }
@@ -1161,21 +1270,20 @@ To fix this warning:
                 continue;
               }
             }
-            if (executionCandidate.params.locks) {
-              const resourceLockedByAnother =
-                executionCandidate.params.locks.find((resourceToLock) =>
-                  lockedResourceSet.has(resourceToLock),
-                );
-              if (resourceLockedByAnother) {
-                logger.debug(
-                  `"${resourceLockedByAnother}" is locked, ${executionCandidate.name} will wait until it is released by a previous execution`,
-                );
-                continue;
-              }
+            const resourceLockedByAnother =
+              findResourceLockedByAnother(executionCandidate);
+            if (resourceLockedByAnother) {
+              logger.debug(
+                `"${resourceLockedByAnother}" is locked, ${executionCandidate.name} will wait until it is released by a previous execution`,
+              );
+              continue;
             }
           }
           if (heavyExecutionSet.has(executionCandidate)) {
             heavyExecutingCount++;
+          }
+          if (executionPickedSet.has(executionCandidate)) {
+            executionAheadSet.add(executionCandidate);
           }
           const promise = (async () => {
             await start(executionCandidate);
