@@ -185,7 +185,15 @@ const DRAG_RESISTANCE = 0.3;
 // drag_to.js). And so is a popover or a dialog: a layer OVER the box, whose
 // press only bubbles through the box because the layer is anchored in it.
 const DRAG_EXCLUDED_SELECTOR = [
-  "input",
+  // The fields that read the pointer as it MOVES: a caret dragged through text,
+  // a thumb pushed along its rail, a spinner. The ones that only read the
+  // press — a checkbox, a radio, a colour, a file — are buttons by another
+  // name, and like a button they let the drag through, the click they would
+  // have made swallowed on the way out. Which matters more than the list makes
+  // it look: a selectable row is covered by an invisible radio of its own, so
+  // excluding every input at once means a list of rows inside a travelling box
+  // that no finger can push.
+  'input:not([type="checkbox"], [type="radio"], [type="button"], [type="submit"], [type="reset"], [type="image"], [type="color"], [type="file"])',
   "textarea",
   "select",
   '[contenteditable=""]',

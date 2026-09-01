@@ -141,6 +141,35 @@ export const watchActionCompletion = (element, dispatchAction) => {
   };
 };
 
+/**
+ * What follows the control's OWN action: it runs once that action has
+ * succeeded, and not at all otherwise.
+ *
+ * The outcome arrives in one of three shapes and each decides differently:
+ * - the gate turned the request down (`result === false`): nothing happened,
+ *   so nothing follows;
+ * - the action is running: what follows waits for it, and an error or an abort
+ *   drops it — whatever the action left in front of the user stays;
+ * - it is already settled, or never started at all. A control with nothing to
+ *   run leaves no outcome behind, and no outcome means nothing went wrong.
+ */
+export const runWhenActionSucceeded = (completion, callback) => {
+  if (completion.result === false) {
+    return;
+  }
+  if (completion.isRunning) {
+    completion.whenSucceeded(callback);
+    return;
+  }
+  let succeeded = true;
+  completion.whenSettled(({ error, aborted }) => {
+    succeeded = !error && !aborted;
+  });
+  if (succeeded) {
+    callback();
+  }
+};
+
 export const tryActionAfterInteractionAllowed = (
   element,
   {

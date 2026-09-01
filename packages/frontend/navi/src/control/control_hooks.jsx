@@ -38,6 +38,7 @@ import { isMatchingFocusVisible } from "@jsenv/navi/src/box/pseudo_styles.js";
 import { useComposeElementRef } from "@jsenv/navi/src/box/ref_composition/use_element_ref.js";
 import {
   dispatchRequestAction,
+  runWhenActionSucceeded,
   tryActionAfterInteractionAllowed,
   watchActionCompletion,
 } from "@jsenv/navi/src/control/rules/control_action.js";
@@ -455,25 +456,7 @@ export const useControlProps = (
           if (!deferredCommand) {
             return;
           }
-          if (completion.result === false) {
-            // The action was turned down (a failing constraint, a gate saying
-            // no) — nothing happened, so nothing follows.
-            return;
-          }
-          if (completion.isRunning) {
-            completion.whenSucceeded(deferredCommand);
-            return;
-          }
-          // Synchronous: already settled, and how it ended still decides. An
-          // action that never started (nothing to run) leaves no outcome, and
-          // the command runs as it always did.
-          let succeeded = true;
-          completion.whenSettled(({ error, aborted }) => {
-            succeeded = !error && !aborted;
-          });
-          if (succeeded) {
-            deferredCommand();
-          }
+          runWhenActionSucceeded(completion, deferredCommand);
         };
 
         return {

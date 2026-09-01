@@ -34,6 +34,14 @@ Two `bindParams` with equal params give **the same instance** (deep equality),
 which is what makes state shared between two components asking for the same
 thing, and what deduplicates their requests.
 
+It is the params that are compared, never what produced them: four components
+deriving the same question through four `computed` of their own still ask it
+once, and read one state. So a derived params signal can be built wherever it is
+convenient — a `useMemo` per caller included — and nothing has to arrange for
+one instance of it. What this rests on is params being plain data: a `Set`, a
+`Map`, an element, a function or a signal inside them is compared by reference,
+and four callers then really do make four requests.
+
 An action is callable, and calling it is the short way to bind and run in one
 go:
 

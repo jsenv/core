@@ -1478,7 +1478,8 @@ const PickerFirstResolver = (props) => {
  *
  * `type="confirm"` is the picker that asks "are you sure?" before doing what it
  * stands for: its popup is the question, `ui` its label, and yes runs its
- * `action` or triggers its `command` once the popup has closed — see
+ * `action` and triggers its `command` once the popup has closed (the command
+ * follows the action, and only if it succeeded) — see
  * picker_confirm.jsx, and `message`, `confirmLabel`, `cancelLabel`,
  * `focusOnOpen` below.
  *

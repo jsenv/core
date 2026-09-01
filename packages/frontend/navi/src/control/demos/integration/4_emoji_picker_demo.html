@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>Emoji du groupe</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 40px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      #container {
+        max-width: 620px;
+        margin: 0 auto;
+      }
+      h1 {
+        margin: 0 0 4px;
+        font-size: 1.25rem;
+      }
+      h2 {
+        margin: 0 0 4px;
+        font-size: 1.1rem;
+      }
+      .intro {
+        margin: 0 0 20px;
+        color: #555;
+        font-size: 13px;
+        line-height: 1.5;
+      }
+      .demo-section {
+        margin-bottom: 24px;
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      .caption {
+        margin: 0 0 16px;
+        color: #555;
+        font-size: 13px;
+      }
+      /* Onze familles sur une ligne large comme un téléphone: la ligne défile,
+         et sa barre de défilement n'a rien à dire de plus que les onglets qui
+         dépassent déjà d'un bord. */
+      .emoji_tabs {
+        scrollbar-width: none;
+      }
+      .emoji_tabs::-webkit-scrollbar {
+        display: none;
+      }
+      .emoji_sheet {
+        border: 1px solid #e5e5e5;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      .result {
+        margin: 16px 0 0;
+        font-family: monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <h1>Emoji du groupe</h1>
+      <p class="intro">
+        Un emoji par groupe, choisi dans une planche rangée par famille. Les
+        familles sont des onglets au-dessus des planches: on les prend une à une
+        ou on fait glisser la planche d'une famille à l'autre.
+      </p>
+      <div id="app"></div>
+    </div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import {
+        Box,
+        Button,
+        Field,
+        Form,
+        Input,
+        Label,
+        Link,
+        List,
+        Nav,
+        Picker,
+        Slide,
+        SlideContainer,
+        Text,
+      } from "@jsenv/navi";
+      import { render } from "preact";
+      import { useId, useState } from "preact/hooks";
+
+      // Une famille tient sur une ligne: c'est aussi comme ça qu'on la lit.
+      const family = (area, label, emojis) => ({
+        area,
+        label,
+        emojis: emojis.split(" "),
+      });
+      const EMOJI_FAMILIES = [
+        family(
+          "souriants",
+          "Souriants",
+          "😀 😅 🙂 😉 😍 🤩 😘 😜 🤔 🤫 😴 😢 😡 🥳 🤯 😎",
+        ),
+        family(
+          "gestes",
+          "Gestes",
+          "👋 🤚 ✌️ 🤞 🤙 👍 👎 👊 👏 🙌 🤝 🙏 💪 🫶 ☝️ ✋",
+        ),
+        family(
+          "personnes",
+          "Personnes",
+          "🧑 👩 👨 🧓 👶 🧑‍🍳 🧑‍🎤 🧑‍🚀 🕵️ 💃 🕺 🧗 🏄 🚴 🤸 🧘",
+        ),
+        family(
+          "animaux",
+          "Animaux",
+          "🐶 🐱 🦊 🐻 🐼 🐨 🦁 🐮 🐷 🐸 🐵 🦉 🦅 🐢 🐬 🦋",
+        ),
+        family(
+          "nature",
+          "Nature",
+          "🌿 🌱 🌳 🌵 🍀 🌸 🌻 🌹 🍁 🌊 🔥 ❄️ ⛅ 🌈 🌙 ⭐",
+        ),
+        family(
+          "nourriture",
+          "Nourriture",
+          "🍕 🍔 🌮 🍜 🍣 🥗 🥐 🧀 🍎 🍓 🍇 🥑 🍫 🍰 ☕ 🍺",
+        ),
+        family(
+          "voyages",
+          "Voyages",
+          "✈️ 🚂 🚗 🚕 🛵 🚲 ⛵ 🚀 🏝️ 🏔️ 🏕️ 🗺️ 🧳 🏨 🗼 🌍",
+        ),
+        family(
+          "activites",
+          "Activités",
+          "⚽ 🏀 🎾 🏐 🏓 🥏 🎳 🏸 🥋 🏊 ⛷️ 🎣 🎸 🎲 🎯 🎬",
+        ),
+        family(
+          "objets",
+          "Objets",
+          "💡 🔑 📷 📱 💻 ⌚ 🔧 🧭 📚 ✏️ 📎 🔍 🎁 🕯️ 🧲 ⏰",
+        ),
+        family(
+          "symboles",
+          "Symboles",
+          "❤️ 🧡 💛 💚 💙 💜 🖤 ✨ ⚡ 💥 ♻️ ✅ ❌ ⚠️ 🔔 🎵",
+        ),
+        family(
+          "drapeaux",
+          "Drapeaux",
+          "🇫🇷 🇧🇪 🇨🇭 🇪🇸 🇮🇹 🇩🇪 🇬🇧 🇵🇹 🇳🇱 🇸🇪 🇯🇵 🇧🇷 🇨🇦 🇲🇦 🇸🇳 🏴‍☠️",
+        ),
+      ];
+
+      // Sur quelle planche on ouvre: celle qui tient l'emoji déjà noté, et à
+      // défaut la première.
+      const familyOfEmoji = (emoji) => {
+        const found = EMOJI_FAMILIES.find(({ emojis }) =>
+          emojis.includes(emoji),
+        );
+        return (found ?? EMOJI_FAMILIES[0]).area;
+      };
+
+      const EmojiSheet = ({ name, value, action, command }) => {
+        const id = useId();
+        const slideContainerId = `${id}_familles`;
+
+        return (
+          <Box className="emoji_sheet" flex="y" maxWidth="300px">
+            <Nav
+              className="emoji_tabs"
+              slideContainer={slideContainerId}
+              currentIndicator
+              overflowX="auto"
+              overflowY="hidden"
+            >
+              {EMOJI_FAMILIES.map(({ area, label }) => (
+                <Link key={area} slide={area} variant="tab" padding="m">
+                  {label}
+                </Link>
+              ))}
+            </Nav>
+            <SlideContainer
+              id={slideContainerId}
+              defaultCurrent={familyOfEmoji(value)}
+            >
+              {EMOJI_FAMILIES.map(({ area, emojis }) => (
+                <Slide key={area} area={area}>
+                  <List
+                    name={name}
+                    selectable
+                    command={command}
+                    action={action}
+                    columns="repeat(auto-fill, minmax(2.5rem, 1fr))"
+                    height="180px"
+                    /* Le trait est celui de la planche, pas celui d'une
+                       famille: dessiné par la liste il voyagerait avec elle,
+                       et on verrait le cadre glisser en changeant d'onglet. */
+                    border="none"
+                    padding="s"
+                    spacing="xs"
+                  >
+                    {emojis.map((emoji) => (
+                      <List.Item
+                        key={emoji}
+                        value={emoji}
+                        selected={value === emoji}
+                        size="1.5rem"
+                        alignX="center"
+                        alignY="center"
+                        padding="xs"
+                      >
+                        {emoji}
+                      </List.Item>
+                    ))}
+                  </List>
+                </Slide>
+              ))}
+            </SlideContainer>
+          </Box>
+        );
+      };
+
+      const EmojiPicker = ({ value, ...props }) => (
+        <Picker
+          type="text"
+          value={value}
+          ui={<Text size="1.5rem">{value ?? "🙂"}</Text>}
+          popupWidthFitContent
+          // Rouverte, la planche se remet sur la famille de l'emoji noté: elle
+          // est rebâtie à chaque ouverture plutôt que gardée telle qu'on l'a
+          // laissée.
+          mount="while-opened"
+          {...props}
+        >
+          <EmojiSheet value={value} command="--navi-send" />
+        </Picker>
+      );
+
+      const InlineSection = () => {
+        const [emoji, setEmoji] = useState("🦊");
+
+        return (
+          <div className="demo-section">
+            <h2>Sur place</h2>
+            <p className="caption">
+              La planche est la page: l'emoji est pris là où il est.
+            </p>
+            <EmojiSheet name="emoji" value={emoji} action={setEmoji} />
+            <p className="result">{emoji}</p>
+          </div>
+        );
+      };
+
+      const PickerSection = () => {
+        const [emoji, setEmoji] = useState("🥐");
+
+        return (
+          <div className="demo-section">
+            <h2>Dans un picker</h2>
+            <p className="caption">
+              Le bouton porte l'emoji du groupe; la planche s'ouvre dessus.
+            </p>
+            <EmojiPicker
+              name="emoji_groupe"
+              aria-label="Emoji du groupe"
+              value={emoji}
+              action={setEmoji}
+            />
+          </div>
+        );
+      };
+
+      const FarFamilySection = () => {
+        const [emoji, setEmoji] = useState("🇸🇳");
+
+        return (
+          <div className="demo-section">
+            <h2>Une famille au bout de la ligne</h2>
+            <p className="caption">
+              Un drapeau: la dernière des onze familles, et la ligne d'onglets
+              est trop courte pour les montrer toutes.
+            </p>
+            <EmojiPicker
+              name="emoji_drapeau"
+              aria-label="Emoji du groupe"
+              value={emoji}
+              action={setEmoji}
+            />
+          </div>
+        );
+      };
+
+      const FormSection = () => {
+        const [groupSent, setGroupSent] = useState(null);
+        const [emoji, setEmoji] = useState("⚽");
+
+        return (
+          <div className="demo-section">
+            <h2>Dans un formulaire</h2>
+            <p className="caption">Le nom du groupe et son emoji, ensemble.</p>
+            <Form
+              action={(data) => {
+                setGroupSent(`${data.emoji_equipe} ${data.nom_equipe}`);
+              }}
+            >
+              <Box flex="y" alignX="start" spacing="l">
+                <Box flex="x" alignY="end" spacing="m">
+                  <Field vertical>
+                    <Label>Nom</Label>
+                    <Input name="nom_equipe" defaultValue="Les renards" />
+                  </Field>
+                  <EmojiPicker
+                    name="emoji_equipe"
+                    aria-label="Emoji du groupe"
+                    value={emoji}
+                    action={setEmoji}
+                  />
+                </Box>
+                <Button type="submit">Valider</Button>
+              </Box>
+            </Form>
+            {groupSent && <p className="result">{groupSent}</p>}
+          </div>
+        );
+      };
+
+      const App = () => (
+        <>
+          <InlineSection />
+          <PickerSection />
+          <FarFamilySection />
+          <FormSection />
+        </>
+      );
+
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>

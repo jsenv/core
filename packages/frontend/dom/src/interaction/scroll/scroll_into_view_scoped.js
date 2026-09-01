@@ -22,16 +22,35 @@ import { getScrollContainer } from "./scroll_container.js";
  */
 export const scrollIntoViewScoped = (
   el,
+  { container = getScrollContainer(el), ...rest } = {},
+) => {
+  if (!container) {
+    return;
+  }
+  container.scrollTo(
+    getScrollIntoViewScopedOffsets(el, { container, ...rest }),
+  );
+};
+
+/**
+ * Where the container would have to be scrolled for `el` to be in view — the
+ * measure scrollIntoViewScoped acts on, handed out on its own for whoever must
+ * stand BETWEEN two such answers rather than land on one: a row of tabs
+ * scrolled the same fraction of the way as the slides it names are travelling
+ * (see navi's <Nav>).
+ *
+ * @param {Element} el
+ * @param {object} options - the same as scrollIntoViewScoped's.
+ * @returns {{left: number, top: number}}
+ */
+export const getScrollIntoViewScopedOffsets = (
+  el,
   {
     container = getScrollContainer(el),
     block = "nearest",
     inline = "nearest",
   } = {},
 ) => {
-  if (!container) {
-    return;
-  }
-
   const containerRect = container.getBoundingClientRect();
   const elRect = el.getBoundingClientRect();
   const style = getComputedStyle(el);
@@ -106,8 +125,8 @@ export const scrollIntoViewScoped = (
     }
   }
 
-  container.scrollTo({
+  return {
     left: newScrollLeft,
     top: newScrollTop,
-  });
+  };
 };

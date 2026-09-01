@@ -9,7 +9,8 @@
  *
  * Yes is said with `--navi-confirm` (see commands.js). The popup closes on it,
  * and only then does the picker do what it was standing in for — run its
- * `action`, or trigger its `command` — so the work runs on the trigger, where
+ * `action`, trigger its `command`, or both, the command following the action
+ * and only if it succeeded — so the work runs on the trigger, where
  * the loading state and the error callout are drawn, and where the user is
  * looking again. Anything else that closes the popup (the cancel button,
  * Escape, a click outside) is no.
@@ -19,8 +20,13 @@ import { MOUNT_DEFAULT } from "@jsenv/navi/src/layout/popup_content_mount.js";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { triggerNaviCommand } from "../commands.js";
+import { findControlHost } from "../control_dom.js";
 import { Button } from "../input/button.jsx";
-import { dispatchRequestAction } from "../rules/control_action.js";
+import {
+  dispatchRequestAction,
+  runWhenActionSucceeded,
+  watchActionCompletion,
+} from "../rules/control_action.js";
 import { getPickerInput } from "./picker_custom.jsx";
 
 const css = /* css */ `
@@ -85,15 +91,29 @@ export const PickerConfirmResolver = (props) => {
   // trigger.
   const onConfirm = (confirmEvent) => {
     const inputEl = getPickerInput(ref.current);
-    if (action !== undefined) {
-      dispatchRequestAction(inputEl, {
-        event: confirmEvent,
-        name: "confirm",
-      });
+    const runCommand = () => {
+      triggerNaviCommand(inputEl, command, confirmEvent);
+    };
+    if (action === undefined) {
+      if (command) {
+        runCommand();
+      }
       return;
     }
+    // Both props on one trigger means "do this, then go there": the action runs
+    // and the command follows it, only if it worked — a delete that fails must
+    // not send the user to the list it did not leave. Same rule a `<Button
+    // action command>` has (see onButtonInteractionAllowed in control_hooks).
+    const completion = watchActionCompletion(
+      findControlHost(inputEl) || inputEl,
+      () =>
+        dispatchRequestAction(inputEl, {
+          event: confirmEvent,
+          name: "confirm",
+        }),
+    );
     if (command) {
-      triggerNaviCommand(inputEl, command, confirmEvent);
+      runWhenActionSucceeded(completion, runCommand);
     }
   };
 
