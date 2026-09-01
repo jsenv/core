@@ -888,264 +888,6 @@ const isPlainObject$2 = obj => {
   return Object.getPrototypeOf(obj) === proto || Object.getPrototypeOf(obj) === null;
 };
 
-/*
- * Deep structural equality for arbitrary JS values — what `===` can't do but this
- * codebase constantly needs: memoization cache keys ({ id: 1 } equal to { id: 1 }),
- * effect/memo dependency checks, signal/store change detection, and action
- * parameter deduplication.
- *
- * Beyond recursive object/array comparison it covers the edge cases `===` gets
- * "wrong" for equality purposes: NaN equals NaN, Date compared by time value,
- * cycles don't loop (a set of the pairs being compared guards circular refs),
- * and same-type is required
- * before descending. Functions, and objects with nothing enumerable to compare
- * (a Set, a Map, an element, a URL), are equal by reference only — nothing in
- * them says whether two are "the same". Cheap paths run first: reference
- * equality, then the identity short-circuit below, then array length before
- * element-by-element.
- *
- * SYMBOL_IDENTITY. Two *different* object instances can be declared "conceptually
- * the same" by sharing a SYMBOL_IDENTITY value; the comparison then treats them as
- * equal with no deep walk. This is what lets a spread copy ({ ...params, extra })
- * still count as the same params as the original, and lets objects reconstructed
- * across a serialization boundary be recognized as one entity — the cases where a
- * content comparison would be too slow, or too strict to see them as equal. Use
- * Symbol.for() so the marker is the same symbol across modules/contexts:
- *
- *   const id = Symbol.for("params");
- *   a[SYMBOL_IDENTITY] = id;
- *   b[SYMBOL_IDENTITY] = id;
- *   compareTwoJsValues(a, b); // true immediately, no property walk
- */
-
-// Marks objects with a conceptual identity that transcends reference equality —
-// see the file comment. Symbol.for keeps it one shared symbol across modules.
-const SYMBOL_IDENTITY = Symbol.for("navi_object_identity");
-
-/**
- * Deeply compares two values for structural equality.
- *
- * @param {any} rootA - First value.
- * @param {any} rootB - Second value.
- * @param {object} [options]
- * @param {(a: any, b: any, keyOrIndex: any, recurse: (a: any, b: any) => boolean) => boolean} [options.keyComparator]
- *   Custom comparator for object properties / array elements. Receives the internal
- *   `compare` as its last argument so it can defer to the default behavior.
- * @param {boolean} [options.ignoreArrayOrder=false] - Compare arrays as multisets:
- *   equal when they contain the same elements regardless of order.
- * @param {Iterable<string>} [options.lightKeySet] - Object keys to compare first —
- *   cheaper or likelier-to-differ ones — to short-circuit before the remaining keys.
- * @returns {boolean} true if the values are deeply equal.
- */
-const compareTwoJsValues = (
-  rootA,
-  rootB,
-  { keyComparator, ignoreArrayOrder = false, lightKeySet } = {},
-) => {
-  const seenSet = new Set();
-  const compare = (a, b) => {
-    if (a === b) {
-      return true;
-    }
-    const aIsIsTruthy = Boolean(a);
-    const bIsTruthy = Boolean(b);
-    if (aIsIsTruthy && !bIsTruthy) {
-      return false;
-    }
-    if (!aIsIsTruthy && !bIsTruthy) {
-      // null, undefined, 0, false, NaN
-      if (isNaN(a) && isNaN(b)) {
-        return true;
-      }
-      return a === b;
-    }
-    const aType = typeof a;
-    const bType = typeof b;
-    if (aType !== bType) {
-      return false;
-    }
-    if (aType === "function") {
-      // Not the same function (reference equality came first), and nothing in
-      // a function says whether two of them do the same thing.
-      return false;
-    }
-    const aIsPrimitive =
-      a === null || (aType !== "object" && aType !== "function");
-    const bIsPrimitive =
-      b === null || (bType !== "object" && bType !== "function");
-    if (aIsPrimitive !== bIsPrimitive) {
-      return false;
-    }
-    if (aIsPrimitive && bIsPrimitive) {
-      return a === b;
-    }
-    // Back on something still being compared: a cycle. No loop, and no answer
-    // either — equal by a route that never ends is not equal.
-    if (seenSet.has(a) || seenSet.has(b)) {
-      return false;
-    }
-    // Held only while a and b are being compared, not for the rest of the
-    // walk: the same object is rightly met again elsewhere — in an unordered
-    // array every element of a is tried against every element of b.
-    seenSet.add(a);
-    seenSet.add(b);
-    const result = compareComposite(a, b);
-    seenSet.delete(a);
-    seenSet.delete(b);
-    return result;
-  };
-  const compareComposite = (a, b) => {
-    const aIsArray = Array.isArray(a);
-    const bIsArray = Array.isArray(b);
-    if (aIsArray !== bIsArray) {
-      return false;
-    }
-    if (aIsArray) {
-      // compare arrays
-      if (a.length !== b.length) {
-        return false;
-      }
-      if (ignoreArrayOrder) {
-        // Unordered array comparison: each element in 'a' must have a match in 'b'
-        const usedIndices = new Set();
-        for (let i = 0; i < a.length; i++) {
-          const aValue = a[i];
-          let foundMatch = false;
-
-          for (let j = 0; j < b.length; j++) {
-            if (usedIndices.has(j)) {
-              continue; // Already matched with another element
-            }
-            const bValue = b[j];
-            if (compareAt(aValue, bValue, i)) {
-              foundMatch = true;
-              usedIndices.add(j);
-              break;
-            }
-          }
-          if (!foundMatch) {
-            return false;
-          }
-        }
-        return true;
-      }
-      // Ordered array comparison (original behavior)
-      let i = 0;
-      while (i < a.length) {
-        const aValue = a[i];
-        const bValue = b[i];
-        if (!compareAt(aValue, bValue, i)) {
-          return false;
-        }
-        i++;
-      }
-      return true;
-    }
-    // compare objects
-    const aIdentity = a[SYMBOL_IDENTITY];
-    const bIdentity = b[SYMBOL_IDENTITY];
-    if (
-      aIdentity === bIdentity &&
-      SYMBOL_IDENTITY in a &&
-      SYMBOL_IDENTITY in b
-    ) {
-      return true;
-    }
-    // Date objects must be compared by time value, not by enumerable keys (which are empty)
-    const aIsDate = a instanceof Date;
-    const bIsDate = b instanceof Date;
-    if (aIsDate !== bIsDate) {
-      return false;
-    }
-    if (aIsDate) {
-      return a.getTime() === b.getTime();
-    }
-    const aKeys = Object.keys(a);
-    const bKeys = Object.keys(b);
-    if (aKeys.length !== bKeys.length) {
-      return false;
-    }
-    if (aKeys.length === 0 && (!isPlainObject$1(a) || !isPlainObject$1(b))) {
-      // A Set, a Map, an element, a URL: nothing enumerable to tell two of them
-      // apart, so they are the same one or they are not — and they are not,
-      // reference equality came first.
-      return false;
-    }
-    if (lightKeySet) {
-      // compare light keys first, then remaining keys
-      // (optimization for cases where some keys are more likely to differ and/or faster to compare)
-      const keySet = new Set(aKeys);
-      for (const lightKey of lightKeySet) {
-        const aValue = a[lightKey];
-        const bValue = b[lightKey];
-        if (!compareAt(aValue, bValue, lightKey)) {
-          return false;
-        }
-        keySet.delete(lightKey);
-      }
-      for (const key of keySet) {
-        const aValue = a[key];
-        const bValue = b[key];
-        if (!compareAt(aValue, bValue, key)) {
-          return false;
-        }
-      }
-    } else {
-      for (const key of aKeys) {
-        const aValue = a[key];
-        const bValue = b[key];
-        if (!compareAt(aValue, bValue, key)) {
-          return false;
-        }
-      }
-    }
-    return true;
-  };
-  const compareAt = keyComparator
-    ? (a, b, keyOrArrayIndex) => keyComparator(a, b, keyOrArrayIndex, compare)
-    : compare;
-
-  return compare(rootA, rootB);
-};
-
-const isPlainObject$1 = (value) => {
-  const prototype = Object.getPrototypeOf(value);
-  return prototype === Object.prototype || prototype === null;
-};
-
-const debounceSignal = (
-  signalToDebounce,
-  { delay = 300, deepCompare = true } = {},
-) => {
-  let timeoutId;
-  let latestValue = signalToDebounce.peek();
-  const debouncedSignal = signal(latestValue);
-
-  effect(() => {
-    const value = signalToDebounce.value;
-    const debouncedValue = debouncedSignal.peek();
-    if (
-      deepCompare
-        ? compareTwoJsValues(value, debouncedValue)
-        : value === debouncedValue
-    ) {
-      return;
-    }
-    clearTimeout(timeoutId);
-    latestValue = value;
-    timeoutId = setTimeout(() => {
-      debouncedSignal.value = latestValue;
-    }, delay);
-  });
-
-  debouncedSignal.flush = () => {
-    clearTimeout(timeoutId);
-    debouncedSignal.value = latestValue;
-  };
-
-  return debouncedSignal;
-};
-
 const isSignal = (value) => {
   return getSignalType(value) !== null;
 };
@@ -1295,6 +1037,303 @@ const stringifyForDisplay = (
   }
 
   return String(value);
+};
+
+/*
+ * Deep structural equality for arbitrary JS values — what `===` can't do but this
+ * codebase constantly needs: memoization cache keys ({ id: 1 } equal to { id: 1 }),
+ * effect/memo dependency checks, signal/store change detection, and action
+ * parameter deduplication.
+ *
+ * Beyond recursive object/array comparison it covers the edge cases `===` gets
+ * "wrong" for equality purposes: NaN equals NaN, Date compared by time value,
+ * cycles don't loop (a set of the pairs being compared guards circular refs),
+ * and same-type is required
+ * before descending. Functions, signals, and objects with nothing enumerable to
+ * compare (a Set, a Map, an element, a URL), are equal by reference only —
+ * nothing in them says whether two are "the same". Cheap paths run first: reference
+ * equality, then the identity short-circuit below, then array length before
+ * element-by-element.
+ *
+ * SYMBOL_IDENTITY. Two *different* object instances can be declared "conceptually
+ * the same" by sharing a SYMBOL_IDENTITY value; the comparison then treats them as
+ * equal with no deep walk. This is what lets a spread copy ({ ...params, extra })
+ * still count as the same params as the original, and lets objects reconstructed
+ * across a serialization boundary be recognized as one entity — the cases where a
+ * content comparison would be too slow, or too strict to see them as equal. Use
+ * Symbol.for() so the marker is the same symbol across modules/contexts:
+ *
+ *   const id = Symbol.for("params");
+ *   a[SYMBOL_IDENTITY] = id;
+ *   b[SYMBOL_IDENTITY] = id;
+ *   compareTwoJsValues(a, b); // true immediately, no property walk
+ */
+
+
+// Marks objects with a conceptual identity that transcends reference equality —
+// see the file comment. Symbol.for keeps it one shared symbol across modules.
+const SYMBOL_IDENTITY = Symbol.for("navi_object_identity");
+
+/**
+ * Deeply compares two values for structural equality.
+ *
+ * @param {any} rootA - First value.
+ * @param {any} rootB - Second value.
+ * @param {object} [options]
+ * @param {(a: any, b: any, keyOrIndex: any, recurse: (a: any, b: any) => boolean) => boolean} [options.keyComparator]
+ *   Custom comparator for object properties / array elements. Receives the internal
+ *   `compare` as its last argument so it can defer to the default behavior.
+ * @param {boolean} [options.ignoreArrayOrder=false] - Compare arrays as multisets:
+ *   equal when they contain the same elements regardless of order.
+ * @param {Iterable<string>} [options.lightKeySet] - Object keys to compare first —
+ *   cheaper or likelier-to-differ ones — to short-circuit before the remaining keys.
+ * @returns {boolean} true if the values are deeply equal.
+ */
+const compareTwoJsValues = (
+  rootA,
+  rootB,
+  { keyComparator, ignoreArrayOrder = false, lightKeySet } = {},
+) => {
+  const seenSet = new Set();
+  const compare = (a, b) => {
+    if (a === b) {
+      return true;
+    }
+    const aIsIsTruthy = Boolean(a);
+    const bIsTruthy = Boolean(b);
+    if (aIsIsTruthy && !bIsTruthy) {
+      return false;
+    }
+    if (!aIsIsTruthy && !bIsTruthy) {
+      // null, undefined, 0, false, NaN
+      if (isNaN(a) && isNaN(b)) {
+        return true;
+      }
+      return a === b;
+    }
+    const aType = typeof a;
+    const bType = typeof b;
+    if (aType !== bType) {
+      return false;
+    }
+    if (aType === "function") {
+      // Not the same function (reference equality came first), and nothing in
+      // a function says whether two of them do the same thing.
+      return false;
+    }
+    const aIsPrimitive =
+      a === null || (aType !== "object" && aType !== "function");
+    const bIsPrimitive =
+      b === null || (bType !== "object" && bType !== "function");
+    if (aIsPrimitive !== bIsPrimitive) {
+      return false;
+    }
+    if (aIsPrimitive && bIsPrimitive) {
+      return a === b;
+    }
+    // Back on something still being compared: a cycle. No loop, and no answer
+    // either — equal by a route that never ends is not equal.
+    if (seenSet.has(a) || seenSet.has(b)) {
+      return false;
+    }
+    // Held only while a and b are being compared, not for the rest of the
+    // walk: the same object is rightly met again elsewhere — in an unordered
+    // array every element of a is tried against every element of b.
+    seenSet.add(a);
+    seenSet.add(b);
+    const result = compareComposite(a, b);
+    seenSet.delete(a);
+    seenSet.delete(b);
+    return result;
+  };
+  const compareComposite = (a, b) => {
+    const aIsArray = Array.isArray(a);
+    const bIsArray = Array.isArray(b);
+    if (aIsArray !== bIsArray) {
+      return false;
+    }
+    if (aIsArray) {
+      // compare arrays
+      if (a.length !== b.length) {
+        return false;
+      }
+      if (ignoreArrayOrder) {
+        // Unordered array comparison: each element in 'a' must have a match in 'b'
+        const usedIndices = new Set();
+        for (let i = 0; i < a.length; i++) {
+          const aValue = a[i];
+          let foundMatch = false;
+
+          for (let j = 0; j < b.length; j++) {
+            if (usedIndices.has(j)) {
+              continue; // Already matched with another element
+            }
+            const bValue = b[j];
+            if (compareAt(aValue, bValue, i)) {
+              foundMatch = true;
+              usedIndices.add(j);
+              break;
+            }
+          }
+          if (!foundMatch) {
+            return false;
+          }
+        }
+        return true;
+      }
+      // Ordered array comparison (original behavior)
+      let i = 0;
+      while (i < a.length) {
+        const aValue = a[i];
+        const bValue = b[i];
+        if (!compareAt(aValue, bValue, i)) {
+          return false;
+        }
+        i++;
+      }
+      return true;
+    }
+    // compare objects
+    const aIdentity = a[SYMBOL_IDENTITY];
+    const bIdentity = b[SYMBOL_IDENTITY];
+    if (
+      aIdentity === bIdentity &&
+      SYMBOL_IDENTITY in a &&
+      SYMBOL_IDENTITY in b
+    ) {
+      return true;
+    }
+    // Date objects must be compared by time value, not by enumerable keys (which are empty)
+    const aIsDate = a instanceof Date;
+    const bIsDate = b instanceof Date;
+    if (aIsDate !== bIsDate) {
+      return false;
+    }
+    if (aIsDate) {
+      return a.getTime() === b.getTime();
+    }
+    // A signal is a source of truth, not a value: two of them holding the same
+    // thing right now say nothing about the next tick, and one may change while
+    // the other does not. Their internals (the current value, a version
+    // counter) are enumerable, so without this they would be walked and two
+    // unrelated signals would pass for one — a params signal owned by one
+    // screen would then be handed the action bound to another's.
+    if (isSignal(a) || isSignal(b)) {
+      return false;
+    }
+    const aKeys = Object.keys(a);
+    const bKeys = Object.keys(b);
+    if (aKeys.length !== bKeys.length) {
+      return false;
+    }
+    if (aKeys.length === 0 && (!isPlainObject$1(a) || !isPlainObject$1(b))) {
+      // A Set, a Map, an element, a URL: nothing enumerable to tell two of them
+      // apart, so they are the same one or they are not — and they are not,
+      // reference equality came first.
+      return false;
+    }
+    if (lightKeySet) {
+      // compare light keys first, then remaining keys
+      // (optimization for cases where some keys are more likely to differ and/or faster to compare)
+      const keySet = new Set(aKeys);
+      for (const lightKey of lightKeySet) {
+        const aValue = a[lightKey];
+        const bValue = b[lightKey];
+        if (!compareAt(aValue, bValue, lightKey)) {
+          return false;
+        }
+        keySet.delete(lightKey);
+      }
+      for (const key of keySet) {
+        const aValue = a[key];
+        const bValue = b[key];
+        if (!compareAt(aValue, bValue, key)) {
+          return false;
+        }
+      }
+    } else {
+      for (const key of aKeys) {
+        const aValue = a[key];
+        const bValue = b[key];
+        if (!compareAt(aValue, bValue, key)) {
+          return false;
+        }
+      }
+    }
+    return true;
+  };
+  const compareAt = keyComparator
+    ? (a, b, keyOrArrayIndex) => keyComparator(a, b, keyOrArrayIndex, compare)
+    : compare;
+
+  return compare(rootA, rootB);
+};
+
+const isPlainObject$1 = (value) => {
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+};
+
+const debounceSignal = (
+  signalToDebounce,
+  { delay = 300, deepCompare = true } = {},
+) => {
+  let timeoutId;
+  let latestValue = signalToDebounce.peek();
+  const debouncedSignal = signal(latestValue);
+
+  effect(() => {
+    const value = signalToDebounce.value;
+    const debouncedValue = debouncedSignal.peek();
+    if (
+      deepCompare
+        ? compareTwoJsValues(value, debouncedValue)
+        : value === debouncedValue
+    ) {
+      return;
+    }
+    clearTimeout(timeoutId);
+    latestValue = value;
+    timeoutId = setTimeout(() => {
+      debouncedSignal.value = latestValue;
+    }, delay);
+  });
+
+  debouncedSignal.flush = () => {
+    clearTimeout(timeoutId);
+    debouncedSignal.value = latestValue;
+  };
+  // Whoever reads the debounced value gets the previous one during the delay,
+  // with nothing saying a newer one is on its way. This says it.
+  debouncedSignal.settlingSignal = computed(() => {
+    return !compareTwoJsValues(signalToDebounce.value, debouncedSignal.value);
+  });
+
+  return debouncedSignal;
+};
+
+const debouncedSignalCache = new WeakMap();
+
+/**
+ * The one debounced signal for a given source and delay.
+ *
+ * Two callers asking the same question of the same signal must wait on the same
+ * answer: a debounced signal per caller is a timer per caller, and the actions
+ * derived from them are then several instances of what is one request.
+ */
+const getDebouncedSignal = (signalToDebounce, delay) => {
+  let byDelay = debouncedSignalCache.get(signalToDebounce);
+  if (!byDelay) {
+    byDelay = new Map();
+    debouncedSignalCache.set(signalToDebounce, byDelay);
+  }
+  const existing = byDelay.get(delay);
+  if (existing) {
+    return existing;
+  }
+  const debouncedSignal = debounceSignal(signalToDebounce, { delay });
+  byDelay.set(delay, debouncedSignal);
+  return debouncedSignal;
 };
 
 /**
@@ -3157,6 +3196,10 @@ const SYMBOL_OBJECT_SIGNAL = Symbol.for("navi_object_signal");
  * routing or lists.
  */
 
+// Params waiting to settle exist only under a debounced binding; every other
+// action answers "no" so nobody has to check whether it can be asked.
+const NOT_SETTLING_SIGNAL = signal(false);
+
 let DEBUG$2 = false;
 const enableDebugActions = () => {
   DEBUG$2 = true;
@@ -3816,12 +3859,53 @@ const createAction = (callback, rootOptions = {}) => {
         ...options,
       });
     };
+    /**
+     * The action instance for these params.
+     *
+     * @param {any} newParamsOrSignal - params, or a signal holding them (the
+     *   result then retargets itself as the signal changes), or an object whose
+     *   values may be signals.
+     * @param {object} [options]
+     * @param {number} [options.debounce] - milliseconds the params must stay
+     *   stable before the instance follows them. What it buys is a screen that
+     *   owns its params — a search box, a picker — asking one question instead
+     *   of one per keystroke, without an effect: the binding IS the delay.
+     *   Only for a signal; params that cannot change have nothing to settle.
+     *   During the delay the instance is still the previous one, holding the
+     *   previous answer — `paramsSettlingSignal` is what says a newer one is
+     *   coming, and `useAsyncData(action, { loading: true })` reads it.
+     */
     const bindParams = (newParamsOrSignal, options = {}) => {
+      const { debounce, ...optionsWithoutDebounce } = options;
+      if (debounce) {
+        if (!isSignal(newParamsOrSignal)) {
+          console.warn(
+            `bindParams({ debounce }) expects a signal, received ${typeof newParamsOrSignal}: params that cannot change have nothing to settle.`,
+          );
+        } else {
+          // The delay lives in a signal derived from theirs, one per (signal,
+          // delay): the cache below then keys on it like on any other signal,
+          // so two call sites asking the same question with the same delay get
+          // the one instance, and two different delays get two.
+          const debouncedParamsSignal = getDebouncedSignal(
+            newParamsOrSignal,
+            debounce,
+          );
+          return bindParams(debouncedParamsSignal, {
+            ...optionsWithoutDebounce,
+            syncParams: debouncedParamsSignal.flush,
+            paramsSettlingSignal: debouncedParamsSignal.settlingSignal,
+          });
+        }
+      }
       const existingChildAction = childActionWeakMap.get(newParamsOrSignal);
       if (existingChildAction) {
         return existingChildAction;
       }
-      const childAction = _bindParams(newParamsOrSignal, options);
+      const childAction = _bindParams(
+        newParamsOrSignal,
+        optionsWithoutDebounce,
+      );
       childActionWeakMap.set(newParamsOrSignal, childAction);
       if (childAction !== action) {
         // binding that added nothing resolves to the action itself; it must
@@ -3964,6 +4048,7 @@ const createAction = (callback, rootOptions = {}) => {
       },
 
       paramsSignal,
+      paramsSettlingSignal: NOT_SETTLING_SIGNAL,
       runningStateSignal,
       isPrerunSignal,
       valueSignal,
@@ -4297,6 +4382,7 @@ const createActionProxyFromSignal = (
     inheritData = true,
     onChange,
     syncParams,
+    paramsSettlingSignal = NOT_SETTLING_SIGNAL,
   } = {},
 ) => {
   const actionTargetChangeCallbackSet = new Set();
@@ -4473,6 +4559,7 @@ const createActionProxyFromSignal = (
     meta: action.meta,
 
     paramsSignal: proxyParamsSignal,
+    paramsSettlingSignal,
     isPrerunSignal: proxySignal("isPrerunSignal", "isPrerun"),
     runningStateSignal: proxySignal("runningStateSignal", "runningState"),
     errorSignal: proxySignal("errorSignal", "error"),
@@ -4629,7 +4716,9 @@ const isPlainObject = (obj) => {
  * @param {number} [options.debounce] - When set, the action is only run once the derived params
  *   have been stable for this many milliseconds. Useful to avoid firing a backend call on every
  *   keystroke: set `debounce: 500` and the request is sent only after the user stops interacting
- *   with the filters for 500 ms.
+ *   with the filters for 500 ms. During that delay the action still holds the previous answer;
+ *   `action.paramsSettlingSignal` is what says a newer one is coming, and
+ *   `useAsyncData(action, { loading: true })` reads it.
  *
  *   Example — auto-refresh a result list while the user tweaks filters:
  *   ```js
@@ -4659,7 +4748,7 @@ const actionRunEffect = (
   if (typeof action === "function") {
     action = createAction(action);
   }
-  let actionParamsSignal = computed(() => {
+  const actionParamsSignal = computed(() => {
     const params = deriveActionParamsFromSignals();
     action.debug(
       `Derived params for action "${action}": ${stringifyForDisplay(params)}`,
@@ -4677,14 +4766,8 @@ const actionRunEffect = (
     }
     return params;
   });
-  if (debounce) {
-    actionParamsSignal = debounceSignal(actionParamsSignal, {
-      delay: debounce,
-    });
-  }
-
   const actionRunnedByThisEffect = action.bindParams(actionParamsSignal, {
-    syncParams: debounce ? actionParamsSignal.flush : undefined,
+    debounce,
     onChange: (actionTarget, actionTargetPrevious, { explicitRunIntent }) => {
       if (explicitRunIntent) {
         // The caller already issued an explicit run/rerun/prerun/reset/abort —
@@ -15174,8 +15257,12 @@ const createResource = (
     idKey,
     uniqueKeys,
 
+    // Reactive reads, not hooks: they subscribe the render that calls them to
+    // the store's array signal. Nothing hook-shaped inside, so a loop or a
+    // condition is fine. `useAllByIds` skips the ids the store does not hold.
     useArray: () => store.arraySignal.value,
     useById: (id) => store.select(idKey, id),
+    useAllByIds: (idArray) => store.selectAll(idArray),
 
     withParams: undefined,
     one: undefined,
@@ -17374,14 +17461,34 @@ const useActionAsyncData = (action, {
       }
       setTick(n => n + 1);
     });
+    // A debounced binding waits before it retargets, so nothing above changes
+    // while the delay runs — but what is on screen is already out of date.
+    let settlingNotificationIsInitial = true;
+    const unsubscribeFromParamsSettling = action.paramsSettlingSignal.subscribe(() => {
+      if (settlingNotificationIsInitial) {
+        settlingNotificationIsInitial = false;
+        return;
+      }
+      setTick(n => n + 1);
+    });
     return () => {
       unsubscribeFromRunningState();
       unsubscribeFromData();
+      unsubscribeFromParamsSettling();
     };
     // Bound to the action, not to the mount: params given as a plain object
     // make another action instance, and the component would otherwise stay
     // subscribed to the state of the one it no longer reads.
   }, [action]);
+
+  // The params moved and the run has not started: under a debounce the action
+  // is still the previous one, COMPLETED with the previous answer. There is no
+  // run to await yet, so nothing can be suspended on — but a component drawing
+  // its own wait can say the answer on screen is on its way out, which is the
+  // whole reason it asked for `loading`.
+  if (loadingEffect === "use" && runningState !== FAILED && action.paramsSettlingSignal.peek()) {
+    return [action.dataSignal.peek(), true, undefined];
+  }
   if (runningState === COMPLETED) {
     return [action.dataSignal.peek(), false, undefined];
   }
@@ -28105,8 +28212,10 @@ const RouteTransitionArea = ({
  * @param {object} to - same forms. Going from `from` to `to` plays forward,
  *   the reverse plays back — unless the reverse is written as a relation of
  *   its own, which then owns that way (a movement of its own, or `"none"` for
- *   a plain cut). A change between two pages no relation was written for plays
- *   nothing.
+ *   a plain cut). Written with the SAME movement it owns that way all the
+ *   same, so both crossings play forward and the pair can never say "back":
+ *   that pair is warned about. A change between two pages no relation was
+ *   written for plays nothing.
  * @param {string|{type?: string, duration?: number|string}} [transition] -
  *   what plays: a type name, or `{ type, duration }` to also say how long
  *   (`--navi-route-transition-duration` says it for everyone otherwise).
@@ -28155,6 +28264,7 @@ const defineRouteTransition = (from, to, transition) => {
     type,
     duration
   };
+  warnAboutBothWaysWritten(relation);
   relations.push(relation);
   rebuildWatcher();
   return () => {
@@ -28748,6 +28858,38 @@ const currentPageIndex$1 = pages => {
     warnPagesBothCurrent(pages[currentIndex], pages[i]);
   }
   return currentIndex;
+};
+
+// Both ways of a pair written with the SAME movement. The exact way travelled
+// is searched before any reverse (see findRelation), so each way then finds
+// its own relation and BOTH play forward: the pair loses the one thing a
+// direction is for. That is not a resolution to fix — it is what makes
+// reciprocity a default — it is a definition with no reading under which it is
+// what the author meant, so it is said here, where both relations are known.
+// Narrow on purpose: a different type is the asymmetry the reverse exists for,
+// "none" is silence said out loud, and a different duration is a way out taken
+// slower.
+const warnAboutBothWaysWritten = ({
+  from,
+  to,
+  type,
+  duration
+}) => {
+  const reverse = relations.find(candidate => samePage$1(candidate.from, to) && samePage$1(candidate.to, from));
+  if (!reverse) {
+    return;
+  }
+  if (reverse.type !== type || reverse.duration !== duration) {
+    return;
+  }
+  if (type === "none") {
+    return;
+  }
+  // The one already written is named first: that is the order the application
+  // wrote them in, and the order it will find them in to fix them.
+  const written = `${describePage(reverse.from)} → ${describePage(reverse.to)}`;
+  const added = `${describePage(from)} → ${describePage(to)}`;
+  warnOnce(`both-ways-written:${written}|${added}`, `${written} and ${added} are both written with the same movement, so BOTH crossings play forward and this pair can never say "back" — the back button included. A relation written for the exact way travelled wins over being the reverse of another (see findRelation), which is what makes reciprocity the default: write the way back only to give it a DIFFERENT movement, or "none" to silence it. A single crossing that walks the map backwards says so on itself instead: <Link routeTransition={{ direction: "forward" }}>, or navTo(url, { routeTransition: { direction: "forward" } }).`);
 };
 const warnPagesBothCurrent = (pageKept, pageIgnored) => {
   const kept = describePage(pageKept);
@@ -58654,8 +58796,15 @@ const PickerCustomResolver = props => {
       props.variant = "icon";
     }
     // A door, never a field (see `allowNameless`): the form around it expects
-    // no value from it, and no name.
+    // no value from it, and no name. So the trigger answers to "button" — it is
+    // pressed to read something, never typed into — the same thing a confirm
+    // picker says through `picksNothing` (see picker.jsx). Said as the role
+    // here rather than through that prop: `picksNothing` also takes the right
+    // slot away, and the status icon a callout trigger draws sits in it.
     props.allowNameless = true;
+    if (props.role === undefined) {
+      props.role = "button";
+    }
     // A word in a sentence asks for a plain tooltip — no icon in the callout,
     // no status color; an icon one presses is the callout's own status icon,
     // and says "info" like the callout it opens.
@@ -67364,6 +67513,11 @@ const PickerButton = props => {
     // confirm resolver (see picker_confirm.jsx), which is the picker that is
     // one — a caller whose popup is a menu of actions says it for themselves.
     picksNothing,
+    // Where the caller's own role goes: onto the host, beside the name (see
+    // control_context.js) — a role and a name on two different elements name
+    // nothing at all. Left unsaid, a picker that picks nothing takes "button"
+    // (see PickerInput below).
+    role,
     readOnly,
     error
   } = props;
@@ -67418,6 +67572,21 @@ const PickerButton = props => {
   // clearing being a modification like any other.
   const interactive = !basePseudoState[":disabled"] && !basePseudoState[":read-only"] && !loading;
   usePickerErrorCallout(uiStateController, error);
+  // What the picker really is, said on the element that holds the name and
+  // takes the focus (the host input below): a picker that picks nothing is a
+  // door — its popup is a question (type="confirm") or something to read
+  // (mode="callout", which says it for itself) — and a door is pressed. So it
+  // answers to "button" rather than to the "textbox" its <input> would
+  // otherwise be, which is both what a screen reader announces and what
+  // getByRole("button", { name }) finds. A picker holding a value stays a
+  // textbox: it does hold text.
+  const hostRole = role ?? (picksNothing ? "button" : undefined);
+  // And what that button is called, when the caller wrote it as a drawing
+  // rather than as a word: a door draws no value, so what sits in its value
+  // slot IS its label — the `ui` a caller gave it, or its placeholder. Skipped
+  // the moment the caller names it themselves (aria-label/aria-labelledby),
+  // which is the only way to name a door drawn as an icon.
+  const hostLabelId = hostRole === "button" && inputProps["aria-label"] === undefined && inputProps["aria-labelledby"] === undefined && variant !== "headless" && ui !== "default" ? `${inputProps.id}_picker_label` : undefined;
   // What the picker knows about itself, for the pieces it does not place: the
   // drawings of its value (Picker.UI.*), and the affordances a caller may put
   // in their own `ui` (Picker.Clear) as much as the ones it puts in its slot.
@@ -67464,6 +67633,7 @@ const PickerButton = props => {
         basePseudoState: basePseudoState,
         styleCSSVars: PickerStyleCSSVars,
         variant: undefined,
+        role: undefined,
         rightSlotIcon: undefined,
         rightSlotIconSize: undefined,
         rightSlot: undefined,
@@ -67512,6 +67682,8 @@ const PickerButton = props => {
               color: "var(--picker-loader-color)",
               inset: -2
             }), jsx(PickerInput, {
+              role: hostRole,
+              "aria-labelledby": hostLabelId,
               tabIndex: variant === "headless" ? -1 : undefined,
               "aria-hidden": variant === "headless" ? "true" : undefined,
               ...inputProps,
@@ -67587,6 +67759,10 @@ const PickerButton = props => {
               }
             }), variant === "headless" || ui === "default" ? null : jsx(Text, {
               className: "navi_picker_value"
+              // Only when it names the trigger (see hostLabelId above).
+              ,
+
+              id: hostLabelId
               // Tells the caller's own drawing of the control from the value
               // the picker draws itself, so each is written on its own line
               // (see .navi_picker_value in the CSS above).

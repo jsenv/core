@@ -94,10 +94,28 @@ found by nothing, while the host is what the user focuses and what
 </div>
 ```
 
-Which role that host answers to is the control's own: a picker's host is an
-`<input>` (`textbox`), a button's is a `<button>`. A picker trigger is not
-`getByRole("button")`, whatever it is drawn like — target its name, or give it
-a `data-testid`.
+Which role that host answers to is what the control really is, not what it is
+drawn like: a button's host is a `<button>`, and a picker's host is an
+`<input>` — a `textbox`, because it holds text the user chose.
+
+A picker that picks nothing is the exception, and answers to `button`: its
+popup is a question (`type="confirm"`) or something to read
+(`mode="callout"`), so it is a door, and a door is pressed. Its name is the
+label it draws — the `ui` you gave it, or its placeholder — unless you name it
+yourself:
+
+```jsx
+<Picker type="confirm" ui="Delete" action={deleteFile} />
+<Picker mode="callout" aria-label="Aide" ui={<Icon>…</Icon>}>…</Picker>
+```
+
+```js
+await page.getByRole("button", { name: "Delete" }).click();
+await page.getByRole("button", { name: "Aide" }).click();
+```
+
+A trigger drawn as an icon draws no words, so `aria-label` is the only thing
+that can name it — for the test and for a screen reader alike.
 
 When the wrapper IS what the test wants — a whole field with its label and its
 error message, a section, a row — put the testid on the surrounding component

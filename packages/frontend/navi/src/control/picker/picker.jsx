@@ -762,6 +762,11 @@ const PickerButton = (props) => {
     // confirm resolver (see picker_confirm.jsx), which is the picker that is
     // one — a caller whose popup is a menu of actions says it for themselves.
     picksNothing,
+    // Where the caller's own role goes: onto the host, beside the name (see
+    // control_context.js) — a role and a name on two different elements name
+    // nothing at all. Left unsaid, a picker that picks nothing takes "button"
+    // (see PickerInput below).
+    role,
     readOnly,
     error,
   } = props;
@@ -828,6 +833,28 @@ const PickerButton = (props) => {
   const interactive =
     !basePseudoState[":disabled"] && !basePseudoState[":read-only"] && !loading;
   usePickerErrorCallout(uiStateController, error);
+  // What the picker really is, said on the element that holds the name and
+  // takes the focus (the host input below): a picker that picks nothing is a
+  // door — its popup is a question (type="confirm") or something to read
+  // (mode="callout", which says it for itself) — and a door is pressed. So it
+  // answers to "button" rather than to the "textbox" its <input> would
+  // otherwise be, which is both what a screen reader announces and what
+  // getByRole("button", { name }) finds. A picker holding a value stays a
+  // textbox: it does hold text.
+  const hostRole = role ?? (picksNothing ? "button" : undefined);
+  // And what that button is called, when the caller wrote it as a drawing
+  // rather than as a word: a door draws no value, so what sits in its value
+  // slot IS its label — the `ui` a caller gave it, or its placeholder. Skipped
+  // the moment the caller names it themselves (aria-label/aria-labelledby),
+  // which is the only way to name a door drawn as an icon.
+  const hostLabelId =
+    hostRole === "button" &&
+    inputProps["aria-label"] === undefined &&
+    inputProps["aria-labelledby"] === undefined &&
+    variant !== "headless" &&
+    ui !== "default"
+      ? `${inputProps.id}_picker_label`
+      : undefined;
   // What the picker knows about itself, for the pieces it does not place: the
   // drawings of its value (Picker.UI.*), and the affordances a caller may put
   // in their own `ui` (Picker.Clear) as much as the ones it puts in its slot.
@@ -871,6 +898,7 @@ const PickerButton = (props) => {
         basePseudoState={basePseudoState}
         styleCSSVars={PickerStyleCSSVars}
         variant={undefined}
+        role={undefined}
         rightSlotIcon={undefined}
         rightSlotIconSize={undefined}
         rightSlot={undefined}
@@ -915,6 +943,8 @@ const PickerButton = (props) => {
               />
             )}
             <PickerInput
+              role={hostRole}
+              aria-labelledby={hostLabelId}
               tabIndex={variant === "headless" ? -1 : undefined}
               aria-hidden={variant === "headless" ? "true" : undefined}
               {...inputProps}
@@ -1000,6 +1030,8 @@ const PickerButton = (props) => {
             {variant === "headless" || ui === "default" ? null : (
               <Text
                 className="navi_picker_value"
+                // Only when it names the trigger (see hostLabelId above).
+                id={hostLabelId}
                 // Tells the caller's own drawing of the control from the value
                 // the picker draws itself, so each is written on its own line
                 // (see .navi_picker_value in the CSS above).
