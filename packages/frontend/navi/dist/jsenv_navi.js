@@ -5686,6 +5686,15 @@ const CONTROL_PROP_SET = new Set([
 
   "charGuard",
   "maxLengthGuard",
+
+  // This control answers for itself: it registers into no group, no form and no
+  // picker around it (see useUIStateController). It belongs here rather than
+  // being deleted off `props` where it is read: props is the vnode's own object
+  // and Preact hands the SAME one back on a re-render the component triggers
+  // itself, so a prop deleted on the first render is simply gone on the second
+  // — and the control, no longer standalone, walked into the group it had
+  // stepped out of.
+  "standalone",
 ]);
 
 /**
@@ -30621,13 +30630,28 @@ const triggerNaviCommand = (
     return false;
   }
   const { target, implementation } = execute;
-  return dispatchCustomEvent(target, "navi_command", {
+  // The event is how the target takes part in what it was asked to do (a popup
+  // closing on --navi-close also has its own things to do); the command itself
+  // is the implementation, and it must not depend on someone listening. Nobody
+  // does when the target has left the document — a trigger whose own action
+  // took it away, which is the shape of "delete this, then leave the page it
+  // was on" (see runWhenActionSucceeded in rules/control_action.js): the
+  // command is decided while the trigger is there and runs once the action has
+  // succeeded, by which time the row it stood in is gone. So the command runs
+  // here rather than being lost in silence.
+  const detail = {
     command,
     event,
     source: element,
     implementation,
     value,
-  });
+    answered: false,
+  };
+  const dispatched = dispatchCustomEvent(target, "navi_command", detail);
+  if (!detail.answered) {
+    implementation();
+  }
+  return dispatched;
 };
 
 // Returns the target explicitly declared via HTML attributes (commandfor / navi-command-target),
@@ -30758,6 +30782,7 @@ const onNaviCommand = (e, { debugCommand = () => {} } = {}) => {
     console.warn(`navi_command event is missing detail.implementation`, e);
     return false;
   }
+  e.detail.answered = true;
   const commandTarget = e.currentTarget;
   debugCommand(
     event,
@@ -35078,7 +35103,6 @@ const useControlProps = (props, {
   const {
     standalone
   } = props;
-  delete props.standalone;
   const idDefault = useId();
   const controlId = useContext(ControlIdContext);
   props.id = props.id || controlId || idDefault;
@@ -36097,7 +36121,6 @@ const useControlgroupProps = (props, {
     action,
     standalone
   } = props;
-  delete props.standalone;
   const uiGroupStateController = useUIGroupStateController(props, controlType, {
     stateType,
     childControlFilter,
