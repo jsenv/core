@@ -1,9 +1,6 @@
 {
   "name": "@jsenv/plugin-preact",
   "version": "1.9.0",
-  "engines": {
-    "node": "^22.18.0 || >=24.11.0"
-  },
   "type": "module",
   "repository": {
     "type": "git",
@@ -11,6 +8,9 @@
     "directory": "packages/related/plugin-preact"
   },
   "license": "MIT",
+  "engines": {
+    "node": "^22.18.0 || >=24.11.0"
+  },
   "exports": {
     ".": {
       "import": "./src/main.js"

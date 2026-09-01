@@ -25,7 +25,9 @@ await executeTestPlan({
   // remembers how long each execution took; add parallel: { maxAhead: 1 } to
   // let the longest one start ahead of its turn
   executionTimings: true,
-  maxAhead: 1,
+  parallel: {
+    maxAhead: 1,
+  },
   logs: {
     level: "info",
     platformInfo: true,
