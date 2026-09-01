@@ -475,12 +475,12 @@ Minification reduces file size and is enabled by default.
 
 The minifiers used are:
 
-| File type                | Minifier used                                                              |
-| ------------------------ | -------------------------------------------------------------------------- |
-| js module and js classic | [terser](https://github.com/terser/terser)<sup>↗</sup>                     |
-| html and svg             | [html-minifier](https://github.com/kangax/html-minifier)<sup>↗</sup>       |
-| css                      | [lightningcss](https://github.com/parcel-bundler/lightningcss)<sup>↗</sup> |
-| json                     | White spaces are removed using JSON.stringify                              |
+| File type                | Minifier used                                                                      |
+| ------------------------ | ---------------------------------------------------------------------------------- |
+| js module and js classic | [terser](https://github.com/terser/terser)<sup>↗</sup>                             |
+| html and svg             | [html-minifier-terser](https://github.com/terser/html-minifier-terser)<sup>↗</sup> |
+| css                      | [lightningcss](https://github.com/parcel-bundler/lightningcss)<sup>↗</sup>         |
+| json                     | White spaces are removed using JSON.stringify                                      |
 
 You can configure which files to minify:
 
@@ -506,6 +506,32 @@ await build({
 ```
 
 To disable minification, use `minification: false`.
+
+### HTML comments
+
+HTML is minified with comments removed. Some comments are meaningful after the
+build though: a marker a server looks for to inject content, a server side
+include, a legal banner. These are preserved:
+
+```html
+<!--! kept: starts with "!" -->
+<!--# kept: server side include -->
+<!-- removed -->
+```
+
+Use `keepComments` to change which comments survive; the comment text, without
+`<!--` and `-->`, is tested against each regexp:
+
+```js
+minification: {
+  html: {
+    // keep "<!-- INJECT_HERE -->" on top of the default ones
+    keepComments: [/^!/, /^\s*#/, /INJECT/],
+  },
+},
+```
+
+Use `html: { removeComments: false }` to keep every comment.
 
 ## 2.5 Build urls
 

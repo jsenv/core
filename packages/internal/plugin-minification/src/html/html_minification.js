@@ -1,9 +1,6 @@
-import { createRequire } from "node:module";
-
-// https://github.com/kangax/html-minifier#options-quick-reference
-export const minifyHtml = (htmlUrlInfo, options = {}) => {
-  const require = createRequire(import.meta.url);
-  const { minify } = require("html-minifier");
+// https://github.com/terser/html-minifier-terser#options-quick-reference
+export const minifyHtml = async (htmlUrlInfo, options = {}) => {
+  const { minify } = await import("html-minifier-terser");
 
   const {
     // usually HTML will contain a few markup, it's better to keep white spaces
@@ -16,13 +13,21 @@ export const minifyHtml = (htmlUrlInfo, options = {}) => {
     preserveLineBreaks = true,
     removeComments = true,
     conservativeCollapse = false,
+    // comments are sometimes meaningful to whoever reads the HTML after the build:
+    // a server injecting content at a marker, an SSI directive, a legal banner, ...
+    // these are kept even when removeComments is true.
+    // the comment text (without "<!--" and "-->") is tested against each regexp
+    // "<!--! ... -->" -> legal/banner comments, same convention as CSS and JS minifiers
+    // "<!--# ... -->" -> server side includes
+    keepComments = [/^!/, /^\s*#/],
   } = options;
 
-  const htmlMinified = minify(htmlUrlInfo.content, {
+  const htmlMinified = await minify(htmlUrlInfo.content, {
     collapseWhitespace,
     conservativeCollapse,
     removeComments,
     preserveLineBreaks,
+    ignoreCustomComments: keepComments,
   });
   return htmlMinified;
 };

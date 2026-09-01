@@ -15,10 +15,10 @@
   },
   "devDependencies": {
     "@jsenv/assert": "4.5.7",
-    "@jsenv/core": "41.5.0",
+    "@jsenv/core": "41.5.1",
     "@jsenv/eslint-config-relax": "2.0.0",
     "@jsenv/plugin-bundling": "2.10.20",
-    "@jsenv/plugin-minification": "1.7.13",
+    "@jsenv/plugin-minification": "1.7.14",
     "@jsenv/test": "3.7.39",
     "eslint": "10.9.1",
     "open": "11.0.1",
