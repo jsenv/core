@@ -45,7 +45,7 @@ const writeHostsFileOnWindows = async ({
 
   if (needsSudo) {
     const require = createRequire(import.meta.url);
-    const sudoPrompt = require("sudo-prompt");
+    const sudoPrompt = require("@vscode/sudo-prompt");
     onBeforeExecCommand(updateHostsFileCommand);
     await new Promise((resolve, reject) => {
       sudoPrompt.exec(
