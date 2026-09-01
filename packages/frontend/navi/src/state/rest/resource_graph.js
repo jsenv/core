@@ -272,8 +272,12 @@ const createResource = (
     idKey,
     uniqueKeys,
 
+    // Reactive reads, not hooks: they subscribe the render that calls them to
+    // the store's array signal. Nothing hook-shaped inside, so a loop or a
+    // condition is fine. `useAllByIds` skips the ids the store does not hold.
     useArray: () => store.arraySignal.value,
     useById: (id) => store.select(idKey, id),
+    useAllByIds: (idArray) => store.selectAll(idArray),
 
     withParams: undefined,
     one: undefined,

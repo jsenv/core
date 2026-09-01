@@ -60,7 +60,11 @@ Two recommendations that matter more than the individual choices:
 - **Keep reciprocity.** The way back being the same movement reversed is what
   makes the map hold together; it is the default, and breaking it (a relation
   written for the exact way travelled wins over being the reverse of another)
-  should answer a real asymmetry in the app, not a styling whim.
+  should answer a real asymmetry in the app, not a styling whim. Write the way
+  back only to say something DIFFERENT — another movement, or `"none"`. Written
+  with the same one, both crossings find their own relation and both play
+  forward, and the pair can never say "back" again, the back button included;
+  navi warns when it sees that pair defined.
 
 ## A default transition — when
 
@@ -103,7 +107,7 @@ and no other**:
 <Link
   route={GAME_ROUTE}
   routeParams={{ id }}
-  transition={{ direction: "back" }}
+  routeTransition={{ direction: "back" }}
 >
   {badge.gameName}
 </Link>

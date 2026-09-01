@@ -65,8 +65,10 @@ consistency across the app, not from any single call site.
   routing, actions, layout (`Box`), typography, icons, forms/validation,
   `Table`, dialogs, popovers.
 - `docs/resource.md` — REST state: `resource()`, relationships, callback return
-  contracts, autorerun rules. Companion files: `docs/actions.md`,
-  `docs/resource_with_params.md`, `docs/resource_dependencies.md`.
+  contracts, autorerun rules, and the second question a screen asks over one
+  collection (searching it is that collection's own `GET_MANY`). Companion
+  files: `docs/actions.md`, `docs/resource_with_params.md`,
+  `docs/resource_dependencies.md`.
 - `docs/list_refresh.md` — what a write sends back to the network and what stays
   on screen meanwhile: stale data returned by `useAsyncData({ loading: true })`,
   what updates from a response without any request, `rerunOn` and its defaults,
@@ -342,7 +344,10 @@ consistency across the app, not from any single call site.
   sub-resource (`/games/:id/candidates`) as an `op`/`type` discriminator inside
   one verb's callback. Read `docs/resource.md` before writing a resource — the
   callback return contracts differ per relationship method and are not
-  guessable.
+  guessable. Searching a collection is that collection's `GET_MANY` with one
+  more param, never a resource or an action of its own: two `GET_MANY` on one
+  resource do not compete (each holds its own ids, the store is shared), and
+  rows a search returns are then the same objects as everywhere else.
 - **`Box`** is the layout primitive (Flexbox wrapper: `flex`, `flex="y"` for
   column, `grid`, `alignX`/`alignY`). Prefer it over raw CSS for layout inside
   Navi apps.

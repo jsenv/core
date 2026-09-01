@@ -1,6 +1,5 @@
 import { computed } from "@preact/signals";
 
-import { debounceSignal } from "../state/debounce_signal.js";
 import { stringifyForDisplay } from "../utils/stringify_for_display.js";
 import { createAction } from "./actions.js";
 
@@ -15,7 +14,9 @@ import { createAction } from "./actions.js";
  * @param {number} [options.debounce] - When set, the action is only run once the derived params
  *   have been stable for this many milliseconds. Useful to avoid firing a backend call on every
  *   keystroke: set `debounce: 500` and the request is sent only after the user stops interacting
- *   with the filters for 500 ms.
+ *   with the filters for 500 ms. During that delay the action still holds the previous answer;
+ *   `action.paramsSettlingSignal` is what says a newer one is coming, and
+ *   `useAsyncData(action, { loading: true })` reads it.
  *
  *   Example — auto-refresh a result list while the user tweaks filters:
  *   ```js
@@ -45,7 +46,7 @@ export const actionRunEffect = (
   if (typeof action === "function") {
     action = createAction(action);
   }
-  let actionParamsSignal = computed(() => {
+  const actionParamsSignal = computed(() => {
     const params = deriveActionParamsFromSignals();
     action.debug(
       `Derived params for action "${action}": ${stringifyForDisplay(params)}`,
@@ -63,14 +64,8 @@ export const actionRunEffect = (
     }
     return params;
   });
-  if (debounce) {
-    actionParamsSignal = debounceSignal(actionParamsSignal, {
-      delay: debounce,
-    });
-  }
-
   const actionRunnedByThisEffect = action.bindParams(actionParamsSignal, {
-    syncParams: debounce ? actionParamsSignal.flush : undefined,
+    debounce,
     onChange: (actionTarget, actionTargetPrevious, { explicitRunIntent }) => {
       if (explicitRunIntent) {
         // The caller already issued an explicit run/rerun/prerun/reset/abort —

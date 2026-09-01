@@ -119,6 +119,64 @@ screen until the rows are asked for again. Give the screen its own way to ask
 It reads a collection, so it lives on the resource itself (or on a
 `withParams()` of it), not on a relation.
 
+## Searching the same collection
+
+A screen showing a collection asks a second question about it soon enough: the
+list draws a page, a search box goes looking in the whole base for what the page
+does not hold. Same entity, same ids — so it is the same `GET_MANY`, with one
+more param:
+
+```js
+const USER = resource("user", {
+  GET_MANY: ({ scope, search }, { signal }) =>
+    fetchJson(`/users?${new URLSearchParams({ scope, search })}`, { signal }),
+});
+
+const pageAction = USER.GET_MANY.bindParams({ scope: "seatable" });
+const searchAction = USER.GET_MANY.bindParams({
+  scope: "seatable",
+  search: searchSignal,
+});
+```
+
+Not a resource of its own, and not a `createAction` sitting beside the resource.
+Those answer with **detached copies**: the user a search found is a different
+object from the same user everywhere else on screen — it does not follow an
+update, and a mutation writes to the one it is not. The resource's own
+`GET_MANY` upserts what comes back like any other read, so one object per user
+answers both questions.
+
+**Two `GET_MANY` on one resource do not compete.** Each bound instance keeps its
+own array of ids and resolves it against the shared store, so answering the
+search leaves the page's list as it was — clear the search box and every row it
+had is still there. ["A `*_MANY` callback replaces the collection
+wholesale"](#when-the-backend-answers-a-sub-route-with-the-whole-parent), below,
+is about the rows the store keeps for one owner — not about what some other
+action reading the same resource is showing.
+
+It is `bindParams`, not `withParams`: a `withParams()` carves an autorerun scope
+(a POST at the root does not reach into it), and a word someone typed is not a
+scope — the search must refresh after a write like the list does
+([resource_with_params.md](./resource_with_params.md)).
+
+The lifecycle a search wants comes with being an action: `loading` while the
+word is in flight, the run before it aborted through its `signal`, typing
+debounced by the effect driving it —
+`actionRunEffect(searchAction, () => …, { debounce: 300 })` where the app owns
+the request, a `stateSignal` when the word is in the address. A word already
+asked is answered by the instance that asked it, with no second request
+([actions.md](./actions.md#reading-an-action)).
+
+What stays the app's is what to KEEP of a search once the word changes — the
+rows someone picked out of it and expects to still see under the next word.
+Keep their **ids**, not the objects: an object is a snapshot, and it stops
+following its row the moment anything writes to it. `RESOURCE.useAllByIds(ids)`
+reads those rows as they are now — a kept id turned back into something that
+stays fresh, and the ids the store no longer holds simply drop out.
+`RESOURCE.useById(id)` is the singular, `RESOURCE.useArray()` the whole store;
+all three subscribe the render that calls them, and none is a hook (a `.map()`
+over them is fine).
+
 ## Relations: pick one of the four methods
 
 A backend sub-route (`/games/:id/candidates`, `/games/:id/candidates/:userId/seen`)
@@ -282,7 +340,9 @@ This is the common REST shape, and it is the reason `op` dispatch feels
 attractive: a full-parent response absorbs into a parent `PATCH` with no
 thinking. Model the relation anyway and absorb the response in the callback —
 `resource()` gives a plural callback for exactly this: **any `*_MANY` callback
-replaces the collection wholesale**.
+replaces the collection wholesale** — the rows the store keeps for that owner,
+not what some other action reading the same resource is showing (see
+[Searching the same collection](#searching-the-same-collection)).
 
 ```js
 const GAME_CANDIDATES = GAME.scopedMany("candidates", {

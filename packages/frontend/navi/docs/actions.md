@@ -63,6 +63,28 @@ const userAction = getUser.bindParams({ id: userIdSignal });
 // a new params value reruns it
 ```
 
+`{ debounce }` puts a delay between the signal and the instance, for params that
+move faster than a request should — a search box, a wheel, a slider:
+
+```js
+const searchAction = USER.GET_MANY.bindParams(questionSignal, {
+  debounce: 300,
+});
+const [found, searching] = useAsyncData(searchAction, {
+  run: true,
+  loading: true,
+});
+```
+
+There is no effect here and nothing to own: the delay lives in the binding, and
+two call sites passing the same signal and the same delay get the same instance,
+so the four components of one screen reading the same question ask it once. That
+is the shape to reach for whenever the screen owns its params signal.
+`actionRunEffect` is the other one, and what it adds is the run: use it when the request must go out whether or not something
+is drawing it. During the delay the instance is still the previous one, holding
+the previous answer — `loading` is what says a newer one is coming, don't
+compare params by hand to find out.
+
 ## Running: `run`, `rerun`, `prerun`, `reset`
 
 | Method     | Does                                                                     |

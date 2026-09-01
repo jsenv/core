@@ -654,8 +654,10 @@ export const RouteTransitionArea = ({ children, ...rest }) => {
  * @param {object} to - same forms. Going from `from` to `to` plays forward,
  *   the reverse plays back — unless the reverse is written as a relation of
  *   its own, which then owns that way (a movement of its own, or `"none"` for
- *   a plain cut). A change between two pages no relation was written for plays
- *   nothing.
+ *   a plain cut). Written with the SAME movement it owns that way all the
+ *   same, so both crossings play forward and the pair can never say "back":
+ *   that pair is warned about. A change between two pages no relation was
+ *   written for plays nothing.
  * @param {string|{type?: string, duration?: number|string}} [transition] -
  *   what plays: a type name, or `{ type, duration }` to also say how long
  *   (`--navi-route-transition-duration` says it for everyone otherwise).
@@ -701,6 +703,7 @@ export const defineRouteTransition = (from, to, transition) => {
     type,
     duration,
   };
+  warnAboutBothWaysWritten(relation);
   relations.push(relation);
   rebuildWatcher();
   return () => {
@@ -1289,6 +1292,38 @@ const currentPageIndex = (pages) => {
     warnPagesBothCurrent(pages[currentIndex], pages[i]);
   }
   return currentIndex;
+};
+
+// Both ways of a pair written with the SAME movement. The exact way travelled
+// is searched before any reverse (see findRelation), so each way then finds
+// its own relation and BOTH play forward: the pair loses the one thing a
+// direction is for. That is not a resolution to fix — it is what makes
+// reciprocity a default — it is a definition with no reading under which it is
+// what the author meant, so it is said here, where both relations are known.
+// Narrow on purpose: a different type is the asymmetry the reverse exists for,
+// "none" is silence said out loud, and a different duration is a way out taken
+// slower.
+const warnAboutBothWaysWritten = ({ from, to, type, duration }) => {
+  const reverse = relations.find(
+    (candidate) => samePage(candidate.from, to) && samePage(candidate.to, from),
+  );
+  if (!reverse) {
+    return;
+  }
+  if (reverse.type !== type || reverse.duration !== duration) {
+    return;
+  }
+  if (type === "none") {
+    return;
+  }
+  // The one already written is named first: that is the order the application
+  // wrote them in, and the order it will find them in to fix them.
+  const written = `${describePage(reverse.from)} → ${describePage(reverse.to)}`;
+  const added = `${describePage(from)} → ${describePage(to)}`;
+  warnOnce(
+    `both-ways-written:${written}|${added}`,
+    `${written} and ${added} are both written with the same movement, so BOTH crossings play forward and this pair can never say "back" — the back button included. A relation written for the exact way travelled wins over being the reverse of another (see findRelation), which is what makes reciprocity the default: write the way back only to give it a DIFFERENT movement, or "none" to silence it. A single crossing that walks the map backwards says so on itself instead: <Link routeTransition={{ direction: "forward" }}>, or navTo(url, { routeTransition: { direction: "forward" } }).`,
+  );
 };
 
 const warnPagesBothCurrent = (pageKept, pageIgnored) => {

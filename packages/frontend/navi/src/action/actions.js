@@ -2,6 +2,7 @@ import { createIterableWeakSet } from "@jsenv/dom";
 import { prefixFirstAndIndentRemainingLines } from "@jsenv/humanize";
 import { batch, computed, effect, signal } from "@preact/signals";
 
+import { getDebouncedSignal } from "../state/debounce_signal.js";
 import { isSignal } from "../utils/is_signal.js";
 import { createJsValueWeakMap } from "../utils/js_value_weak_map.js";
 import { mergeTwoJsValues } from "../utils/merge_two_js_values.js";
@@ -65,6 +66,10 @@ import { SYMBOL_OBJECT_SIGNAL } from "./symbol_object_signal.js";
  * src/nav/tests (node) — src/action/*.test.js alone proves nothing about
  * routing or lists.
  */
+
+// Params waiting to settle exist only under a debounced binding; every other
+// action answers "no" so nobody has to check whether it can be asked.
+const NOT_SETTLING_SIGNAL = signal(false);
 
 let DEBUG = false;
 export const enableDebugActions = () => {
@@ -807,12 +812,53 @@ export const createAction = (callback, rootOptions = {}) => {
         ...options,
       });
     };
+    /**
+     * The action instance for these params.
+     *
+     * @param {any} newParamsOrSignal - params, or a signal holding them (the
+     *   result then retargets itself as the signal changes), or an object whose
+     *   values may be signals.
+     * @param {object} [options]
+     * @param {number} [options.debounce] - milliseconds the params must stay
+     *   stable before the instance follows them. What it buys is a screen that
+     *   owns its params — a search box, a picker — asking one question instead
+     *   of one per keystroke, without an effect: the binding IS the delay.
+     *   Only for a signal; params that cannot change have nothing to settle.
+     *   During the delay the instance is still the previous one, holding the
+     *   previous answer — `paramsSettlingSignal` is what says a newer one is
+     *   coming, and `useAsyncData(action, { loading: true })` reads it.
+     */
     const bindParams = (newParamsOrSignal, options = {}) => {
+      const { debounce, ...optionsWithoutDebounce } = options;
+      if (debounce) {
+        if (!isSignal(newParamsOrSignal)) {
+          console.warn(
+            `bindParams({ debounce }) expects a signal, received ${typeof newParamsOrSignal}: params that cannot change have nothing to settle.`,
+          );
+        } else {
+          // The delay lives in a signal derived from theirs, one per (signal,
+          // delay): the cache below then keys on it like on any other signal,
+          // so two call sites asking the same question with the same delay get
+          // the one instance, and two different delays get two.
+          const debouncedParamsSignal = getDebouncedSignal(
+            newParamsOrSignal,
+            debounce,
+          );
+          return bindParams(debouncedParamsSignal, {
+            ...optionsWithoutDebounce,
+            syncParams: debouncedParamsSignal.flush,
+            paramsSettlingSignal: debouncedParamsSignal.settlingSignal,
+          });
+        }
+      }
       const existingChildAction = childActionWeakMap.get(newParamsOrSignal);
       if (existingChildAction) {
         return existingChildAction;
       }
-      const childAction = _bindParams(newParamsOrSignal, options);
+      const childAction = _bindParams(
+        newParamsOrSignal,
+        optionsWithoutDebounce,
+      );
       childActionWeakMap.set(newParamsOrSignal, childAction);
       if (childAction !== action) {
         // binding that added nothing resolves to the action itself; it must
@@ -955,6 +1001,7 @@ export const createAction = (callback, rootOptions = {}) => {
       },
 
       paramsSignal,
+      paramsSettlingSignal: NOT_SETTLING_SIGNAL,
       runningStateSignal,
       isPrerunSignal,
       valueSignal,
@@ -1288,6 +1335,7 @@ const createActionProxyFromSignal = (
     inheritData = true,
     onChange,
     syncParams,
+    paramsSettlingSignal = NOT_SETTLING_SIGNAL,
   } = {},
 ) => {
   const actionTargetChangeCallbackSet = new Set();
@@ -1464,6 +1512,7 @@ const createActionProxyFromSignal = (
     meta: action.meta,
 
     paramsSignal: proxyParamsSignal,
+    paramsSettlingSignal,
     isPrerunSignal: proxySignal("isPrerunSignal", "isPrerun"),
     runningStateSignal: proxySignal("runningStateSignal", "runningState"),
     errorSignal: proxySignal("errorSignal", "error"),

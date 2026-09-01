@@ -8,9 +8,9 @@
  * "wrong" for equality purposes: NaN equals NaN, Date compared by time value,
  * cycles don't loop (a set of the pairs being compared guards circular refs),
  * and same-type is required
- * before descending. Functions, and objects with nothing enumerable to compare
- * (a Set, a Map, an element, a URL), are equal by reference only — nothing in
- * them says whether two are "the same". Cheap paths run first: reference
+ * before descending. Functions, signals, and objects with nothing enumerable to
+ * compare (a Set, a Map, an element, a URL), are equal by reference only —
+ * nothing in them says whether two are "the same". Cheap paths run first: reference
  * equality, then the identity short-circuit below, then array length before
  * element-by-element.
  *
@@ -27,6 +27,8 @@
  *   b[SYMBOL_IDENTITY] = id;
  *   compareTwoJsValues(a, b); // true immediately, no property walk
  */
+
+import { isSignal } from "./is_signal.js";
 
 // Marks objects with a conceptual identity that transcends reference equality —
 // see the file comment. Symbol.for keeps it one shared symbol across modules.
@@ -169,6 +171,15 @@ export const compareTwoJsValues = (
     }
     if (aIsDate) {
       return a.getTime() === b.getTime();
+    }
+    // A signal is a source of truth, not a value: two of them holding the same
+    // thing right now say nothing about the next tick, and one may change while
+    // the other does not. Their internals (the current value, a version
+    // counter) are enumerable, so without this they would be walked and two
+    // unrelated signals would pass for one — a params signal owned by one
+    // screen would then be handed the action bound to another's.
+    if (isSignal(a) || isSignal(b)) {
+      return false;
     }
     const aKeys = Object.keys(a);
     const bKeys = Object.keys(b);

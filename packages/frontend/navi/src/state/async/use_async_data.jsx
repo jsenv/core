@@ -44,6 +44,14 @@ import { usePromiseAsyncData } from "./use_promise_async_data.js";
  * refresh is in progress. Whether to show `data` or a loading indicator when
  * `loading` is `true` is entirely up to the component.
  *
+ * `loading` covers the delay of a debounced binding
+ * (`bindParams(paramsSignal, { debounce })`, `actionRunEffect({ debounce })`)
+ * as well as the run itself: from the moment the params move, what is on screen
+ * is the previous answer, and a screen showing "searching…" while someone types
+ * needs to know it. Suspending has nothing to wait on during that delay, so
+ * only `loading: true` reads it — the default keeps showing the previous answer
+ * until the run really starts.
+ *
  * When `loading` is not set (default), the component suspends until data is
  * ready, so `data` is always defined when the component renders and `loading`
  * is always `false`.
@@ -193,14 +201,40 @@ const useActionAsyncData = (
       }
       setTick((n) => n + 1);
     });
+    // A debounced binding waits before it retargets, so nothing above changes
+    // while the delay runs — but what is on screen is already out of date.
+    let settlingNotificationIsInitial = true;
+    const unsubscribeFromParamsSettling = action.paramsSettlingSignal.subscribe(
+      () => {
+        if (settlingNotificationIsInitial) {
+          settlingNotificationIsInitial = false;
+          return;
+        }
+        setTick((n) => n + 1);
+      },
+    );
     return () => {
       unsubscribeFromRunningState();
       unsubscribeFromData();
+      unsubscribeFromParamsSettling();
     };
     // Bound to the action, not to the mount: params given as a plain object
     // make another action instance, and the component would otherwise stay
     // subscribed to the state of the one it no longer reads.
   }, [action]);
+
+  // The params moved and the run has not started: under a debounce the action
+  // is still the previous one, COMPLETED with the previous answer. There is no
+  // run to await yet, so nothing can be suspended on — but a component drawing
+  // its own wait can say the answer on screen is on its way out, which is the
+  // whole reason it asked for `loading`.
+  if (
+    loadingEffect === "use" &&
+    runningState !== FAILED &&
+    action.paramsSettlingSignal.peek()
+  ) {
+    return [action.dataSignal.peek(), true, undefined];
+  }
 
   if (runningState === COMPLETED) {
     return [action.dataSignal.peek(), false, undefined];
