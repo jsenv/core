@@ -1531,6 +1531,7 @@ const PickerFirstResolver = (props) => {
  *   dialogBorderWidth?: number | string,
  *   clearable?: boolean,
  *   picksNothing?: boolean,
+ *   standalone?: boolean,
  *   popupLayer?: "top" | "local",
  *   popupTestId?: string,
  *   confirmTestId?: string,
@@ -1754,9 +1755,11 @@ const PickerFirstResolver = (props) => {
  *   trigger is one piece of a bigger control (the chevron half of a split
  *   button) points at the whole control, so the popup lines up with it and is
  *   at least as wide as it.
- * @param {boolean} [allowNameless] - This picker is a door, not a field: it
- *   opens something and holds no value of its own, so the form or group around
- *   it expects nothing from it and says nothing about its missing name.
+ * @param {boolean} [standalone] - This picker answers for itself: it does not
+ *   register with the control group around it, so what it holds never becomes
+ *   part of that group's value and nothing that group does — distributing,
+ *   resetting, validating — reaches it. For a door that only opens something,
+ *   and for a picker that commits on its own inside a form.
  * @param {"close"|"cancel"|"capture"} [pointerInteractionOutsideEffect="close"]
  *   What a click outside the popup does: close and keep ("close"), close and
  *   put back the value at open ("cancel"), or nothing at all ("capture"). The

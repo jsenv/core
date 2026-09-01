@@ -237,9 +237,6 @@ const css = /* css */ `
          line whether it is typed in a field or drawn in the page.
          See docs/typography.md. */
       --navi-line-height: 1.25;
-      /* Layered: the document's line is what navi writes on when the app says
-         nothing, so the app's own body rule wins. */
-      line-height: var(--navi-line-height);
       /* The face everything is written in, controls included — they inherit
          it rather than carrying one of their own, so an app names its typeface
          once, wherever it wants it to start: on the document, on a section, on
@@ -248,6 +245,9 @@ const css = /* css */ `
          text and its buttons in one face instead of two.
          Layered like the line above, so the app's own rule wins. */
       font-family: ${controlDefaultFontFamily};
+      /* Layered: the document's line is what navi writes on when the app says
+         nothing, so the app's own body rule wins. */
+      line-height: var(--navi-line-height);
       /* The same line for a control, snapped to the pixel. The browser lays a
          line out at its exact height but paints the glyph on a pixel row: at
          the default control size (13.333px) the line is 16.666px, and the

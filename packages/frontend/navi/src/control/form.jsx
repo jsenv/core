@@ -30,16 +30,17 @@ import {
 import { FormContext } from "./form_context.js";
 import { isUIStateHeld } from "./held_ui_state.js";
 import { dispatchRequestAction } from "./rules/control_action.js";
-import { ParentUIStateControllerContext } from "./ui_state_controller.js";
 import { dispatchRequestResetUIState } from "./ui_state_dom.js";
 
 /**
  * @param {object} props
  * @param {boolean} [props.standalone] - Its value is its own: the form does not
  *   register with the control group around it (a Picker, another form…), so
- *   what is typed in it never becomes part of that group's value. For a form
- *   that lives INSIDE something else while answering a different question —
- *   "create the thing I am about to pick" inside a picker, say.
+ *   what is typed in it never becomes part of that group's value, and nothing
+ *   that group does — distributing a value, resetting, cascading validation —
+ *   reaches it. For a form that lives INSIDE something else while answering a
+ *   different question — "create the thing I am about to pick" inside a picker,
+ *   say. Every control takes the same prop, for the same reason.
  * @param {boolean} [props.canSendWhileUnchanged] - Send even when nothing changed. By
  *   default a form only acts on an answer that is actually new: submitting a
  *   form nobody touched — one just rendered, one whose fields still hold their
@@ -91,29 +92,12 @@ export const Form = (props) => {
   // is a different component: same group, no <form> element and none of the
   // browser machinery that comes with it.
   const isNested = Boolean(useContext(FormContext));
-  const form = isNested ? (
-    <FormNested {...props} />
-  ) : (
-    <FormControl {...props} />
-  );
-  if (props.standalone) {
-    // Nothing above to register with: the group hooks read the parent from
-    // this context, so emptying it here is the whole opt-out.
-    return (
-      <ParentUIStateControllerContext.Provider value={undefined}>
-        {form}
-      </ParentUIStateControllerContext.Provider>
-    );
-  }
-  return form;
+  return isNested ? <FormNested {...props} /> : <FormControl {...props} />;
 };
 
 // What both forms are made of: one group, one context for what is inside it.
-// standalone is read by Form above and never goes further — least of all to the
-// DOM.
 const useFormGroup = (props) => {
   const propsForGroup = { ...props };
-  delete propsForGroup.standalone;
   delete propsForGroup.canSendWhileUnchanged;
   delete propsForGroup.pristineKey;
   // Not the generic control `command`, which a control triggers on its own ui

@@ -115,20 +115,21 @@ export const ParentUIStateControllerContext = createContext();
  */
 export const useUIStateController = (
   props,
-  {
-    controlInfo,
-    syncDomState,
-    uiActionInternal,
-    persists,
-    allowNameless = false,
-  } = {},
+  { controlInfo, syncDomState, uiActionInternal, persists, standalone } = {},
 ) => {
   const debugPopup = useDebugPopup();
   const debugInteraction = useDebugInteraction();
   const debugUIState = useDebugUIState();
   const debugFocus = useDebugFocus();
 
-  const parentUIStateController = useContext(ParentUIStateControllerContext);
+  // The whole of `standalone`: with no parent to register into, the effect
+  // below has nobody to call, and every question a group asks about its
+  // children is asked about someone else. Read here rather than filtered by
+  // each group shape in turn, so a control that answers for itself is out of
+  // the value on the way up AND out of the reset, the validation cascade and
+  // the distribution on the way down.
+  const parentFromContext = useContext(ParentUIStateControllerContext);
+  const parentUIStateController = standalone ? undefined : parentFromContext;
   const formContext = useContext(FormContext);
   if (persists === undefined && formContext) {
     persists = true;
@@ -202,7 +203,6 @@ export const useUIStateController = (
         parentUIStateController,
         parentUiStateSignalHolder,
         isProxy,
-        allowNameless,
         emptyUIState,
         // Set here too, not only in `update` below: a control rendered once and
         // never re-rendered would otherwise never say whether it was GIVEN a
@@ -869,16 +869,12 @@ const GROUP_DEFAULTS = {
   single: {
     // The same exclusions canRegisterAsFacadeChild already makes below (the
     // picker façade asked the very same question: which child IS the value).
-    // Buttons and links never hold one, and neither does a control that
-    // declared itself nameless. A control *carrying* navi-list is the search
-    // box driving some other list — not the list itself, which stays a
+    // Buttons and links never hold one. A control *carrying* navi-list is the
+    // search box driving some other list — not the list itself, which stays a
     // perfectly good single value here (one item, or the array a multiple list
     // exposes). Excluding the searcher is what leaves the list alone.
     childControlFilter: (child) => {
       if (child.controlType === "button" || child.controlType === "link") {
-        return false;
-      }
-      if (child.allowNameless) {
         return false;
       }
       if (child.props?.["navi-list"]) {
@@ -905,7 +901,7 @@ const GROUP_DEFAULTS = {
     aggregateChildStates: (children) => {
       const groupValues = {};
       for (const child of children) {
-        const { name, allowNameless, emptyUIState } = child;
+        const { name, emptyUIState } = child;
         // A control holding nothing writes its own empty, not a hole: the key
         // is in the object either way, and what is read from it keeps the shape
         // the reader was promised (see resolveEmptyUIState).
@@ -914,13 +910,6 @@ const GROUP_DEFAULTS = {
             ? emptyUIState
             : child.uiState;
         if (!name) {
-          if (allowNameless) {
-            // A control that says it is not a field is not one, whatever it
-            // holds: a picker used as a door holds the shape its popup draws,
-            // and merging that in would put the popup's keys in the object as
-            // if the door had been a group.
-            continue;
-          }
           // A nameless GROUP is a grouping, not a value: it exists to hold its
           // children together (a WheelGroup sharing navigation, a fieldset-ish
           // cluster) without claiming a key of its own, so what it holds is
@@ -1033,6 +1022,7 @@ export const useUIGroupStateController = (
     uiActionInternal,
     allowCapture = false,
     cascadeValidationToChildren = false,
+    standalone,
   },
 ) => {
   const debugPopup = useDebugPopup();
@@ -1068,7 +1058,11 @@ export const useUIGroupStateController = (
         `Either use a known controlType/stateType or provide aggregateChildStates and distributeChildUIState explicitly.`,
     );
   }
-  const parentUIStateController = useContext(ParentUIStateControllerContext);
+  // See the leaf controller's own `standalone` above: the same opt-out, and a
+  // group taking it also takes its whole subtree out — the controls inside it
+  // register into IT, and it registers into nobody.
+  const parentFromContext = useContext(ParentUIStateControllerContext);
+  const parentUIStateController = standalone ? undefined : parentFromContext;
   // A bound signal seeds the group the way `defaultValue` does — uncontrolled,
   // with the signal's current value as what it starts on. Write-back is handled
   // by applyState's own boundSignal; the read half is below: children are
@@ -1846,7 +1840,6 @@ const EMPTY_OBJECT = {};
  */
 export const useUIFacadeStateController = (props, realUIStateController) => {
   const firstChildControllerRef = useRef(null);
-  const namelessChildSetRef = useRef(new Set());
   const updatingRef = useRef(false);
   const debugPopup = useDebugPopup();
   const debugInteraction = useDebugInteraction();
@@ -1874,16 +1867,9 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
         if (childController.isProxy) {
           return false;
         }
-        if (childController.allowNameless) {
-          // A control saying it is not a field is not the one the picker talks
-          // to: the search box above the list, the "select all" switch beside
-          // it. It is there to help find the answer, not to be it.
-          namelessChildSetRef.current.add(childController);
-          return false;
-        }
         if (childController.props["navi-list"]) {
-          // Controls with navi-list act as standalone list navigators and should
-          // not be treated as the picker's synced child.
+          // Controls with navi-list act as list navigators driving some other
+          // list, not as the picker's synced child.
           return false;
         }
         return true;
@@ -1901,10 +1887,6 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
         }
         const child = firstChildControllerRef.current;
         if (!child) {
-          warnPopupHasNothingButNamelessControls(
-            props,
-            namelessChildSetRef.current,
-          );
           return;
         }
         updatingRef.current = true;
@@ -1940,7 +1922,7 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
                 `A picker talks to ONE control: the first one receives the picker's whole value and is the only one read back, ` +
                 `so this one is neither filled nor collected. ` +
                 `A popup holding several values needs one group around them — wrap them in a <ControlGroup>, name each control inside it, and give the picker type="object". ` +
-                `A control that is there to FIND the answer rather than be it (a search box, a "select all") says so with allowNameless and steps out of the way.`,
+                `A control that answers for itself rather than for the picker — a search box, a list acting on every touch — says so with standalone and steps out of the way.`,
               child,
             );
           } else {
@@ -2074,33 +2056,6 @@ const describePicker = (props) =>
 // object as its own value and writes it wherever it is bound — a signal, the
 // url, which is where "[object Object]" comes from. Said out loud because
 // nothing else will: the push succeeds, the control just shows nonsense.
-/**
- * `allowNameless` says two things at once, and inside a popup the second one
- * bites: "I am not a field" also means "I am not what the picker talks to". Put
- * on the ONE control a popup holds, it leaves the picker with nobody to fill —
- * the popup opens blank on a value the picker is holding, and nothing is said.
- */
-const namelessOnlyWarnedSet = new WeakSet();
-const warnPopupHasNothingButNamelessControls = (props, namelessChildSet) => {
-  if (!import.meta.dev) {
-    return;
-  }
-  if (namelessChildSet.size === 0) {
-    return;
-  }
-  const [firstNamelessChild] = namelessChildSet;
-  if (namelessOnlyWarnedSet.has(firstNamelessChild)) {
-    return;
-  }
-  namelessOnlyWarnedSet.add(firstNamelessChild);
-  console.warn(
-    `[navi] the ${describePicker(props)} popup holds nothing but allowNameless controls, so the picker has nobody to fill and the popup opens blank. ` +
-      `Inside a popup, allowNameless also means "the picker does not talk to me" — it is for the search box BESIDE the answer, not for the answer itself. ` +
-      `Drop it from the control that IS the value.`,
-    firstNamelessChild,
-  );
-};
-
 const cannotHoldWarnedSet = new WeakSet();
 const warnIfChildCannotHold = (props, child, newUIState) => {
   if (!import.meta.dev) {

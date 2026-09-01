@@ -1174,6 +1174,7 @@ const ListFirstResolver = (props) => {
  *   deselectable?: boolean,
  *   maxLength?: number,
  *   maxLengthGuard?: number,
+ *   standalone?: boolean,
  *   action?: (value: any) => void,
  *   uiAction?: (value: any) => void,
  *   popover?: boolean,
@@ -1349,6 +1350,12 @@ const ListFirstResolver = (props) => {
  *   taking — and `uiAction` is not called. The selected ones stay takeable
  *   back, so a selection that arrived too long can always be brought back
  *   under the limit. Implies `maxLength` for validity.
+ * @param {boolean} [props.standalone]
+ *   This list answers for itself: it does not register with the control group
+ *   or picker around it, so its selection stays out of that value and nothing
+ *   coming down — a distributed value, a reset — reaches it. What a popup whose
+ *   one answer is spread over several lists says, so that none of them is taken
+ *   for the answer itself.
  */
 export const List = createComponentResolver([
   ListFirstResolver,

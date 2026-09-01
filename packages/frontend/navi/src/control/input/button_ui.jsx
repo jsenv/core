@@ -490,7 +490,6 @@ export const ButtonUI = (props) => {
     controlChildrenWrapperProps,
   ] = useControlProps(props, {
     controlType: "button",
-    allowNameless: true,
   });
   const { basePseudoState, children } = buttonControlHostProps;
   const loading = basePseudoState[":-navi-loading"];

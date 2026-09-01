@@ -157,21 +157,37 @@ holds it back and says what it is waiting for.
 </Button>
 ```
 
-## A control that is not a field
+## A control that answers for itself
 
 A control inside a form is expected to carry a value under its name, and a
 nameless one is warned about — its state would silently stay out of what is
-sent. A control that only opens something (a picker whose popup draws a shape, a
-row whose value is carried by a hidden input beside it) says so with
-`allowNameless`:
+sent. But some controls inside a form are not answering the form's question at
+all: a picker that commits what it holds on its own, a door that only opens
+something, a list acting on every touch. They say so with `standalone`:
 
 ```jsx
-<Picker allowNameless ui={…}>
+<Picker standalone ui={…} action={commit} />
 ```
 
-It is then neither collected nor complained about — and inside a picker's popup
-it is not the control the picker talks to either, which is what lets a search
-box sit above the list that IS the answer (see
+`standalone` is not a filter, it is the absence of a relationship: the control
+does not register with the group around it. Nothing goes up — its value is not
+collected, and the form stays unchanged whatever it does — and nothing comes
+down either: the form's reset does not reach it, nor does its validation
+cascade.
+
+What it does **not** say is "ignore everything around me". `disabled`,
+`readOnly` and `loading` travel on their own contexts and go on reaching it,
+and that is deliberate: a door that carries no value of its own can still
+write into the form through what its popup does, and a read-only form must
+still shut it. An affordance that genuinely writes nowhere says that
+separately, with `whenSelfInteractionsBlocked="ignore"` — as it says whose
+press it is with `selfInteractions`. Three questions, three props (see
+[interactions.md](./interactions.md#the-third-question-whose-value-is-it)).
+
+Every control takes the prop, groups included — `<Form standalone>` is the
+same sentence, and so is a `<List standalone>` inside a picker's popup, which
+is what lets a search box or a second list sit beside the one that IS the
+answer (see
 [control_object.md](./control_object.md#a-picker-whose-value-is-an-object)).
 
 ## See also

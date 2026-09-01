@@ -298,7 +298,7 @@ about components, not about the DOM.
 ### Composing a value, or doing work
 
 A picker mirrors **one** control in its popup — the first one that is not a
-button, a link or a control saying it is not the answer (`allowNameless`). That
+button, a link or a control that answers for itself (`standalone`). That
 mirror is what makes `<Picker><List selectable/></Picker>` work with nothing
 wired: the picker's value IS the list's, both ways, and the picker's `action`
 runs on it when the popup closes.

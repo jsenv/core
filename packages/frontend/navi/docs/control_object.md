@@ -80,9 +80,10 @@ there.
 ```
 
 A nameless **leaf** is a different story: it is a control whose value has
-nowhere to go, and it is warned about. When that is deliberate — a control that
-only opens something — say so with `allowNameless` (see
-[form_changed.md](./form_changed.md#a-control-that-is-not-a-field)).
+nowhere to go, and it is warned about. A control that is not answering this
+group's question at all — one that only opens something, one that commits on
+its own — says so with `standalone` and leaves the group entirely (see
+[form_changed.md](./form_changed.md#a-control-that-answers-for-itself)).
 
 ## A picker whose value is an object
 
@@ -117,19 +118,25 @@ Two things to get right:
   url.
 - **A control that helps FIND the answer is not the answer.** A search box above
   a long list, a "select all" beside it: they are tools, and a tool says so with
-  `allowNameless`. The picker then walks past it and talks to the list, which is
+  `standalone`. The picker then walks past it and talks to the list, which is
   what a popup made of one choice and the means to reach it needs. Never put it
   on the control that IS the value — the picker would have nobody left to fill,
-  and the popup would open blank on a value it holds (navi says so in dev).
+  and the popup would open blank on a value it holds.
 
 ```jsx
 <Picker name="place_ids" type="array">
-  <Input allowNameless placeholder="chercher" navi-list="places" />
+  <Input standalone placeholder="chercher" navi-list="places" />
   <List id="places" selectable multiple>
     …
   </List>
 </Picker>
 ```
+
+A popup can also hold **no** answer for the picker: several lists that are the
+same one choice, each acting on every touch, nothing read back on close. Mark
+them all `standalone` and the picker talks to none of them — the shape to reach
+for when one `ControlGroup` around them would be wrong, because its value would
+be one key per list where the answer is a single value.
 
 ## A group holds what it was given
 

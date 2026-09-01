@@ -212,7 +212,12 @@ consistency across the app, not from any single call site.
   which fields count as already held (a `defaultValue` is a suggestion, a
   `signal` carrying something is an answer). Read it before a screen that
   modifies an existing resource (`pristineKey`), and before reaching for
-  `canSendWhileUnchanged` because a submit "does nothing".
+  `canSendWhileUnchanged` because a submit "does nothing". It also holds
+  `standalone`, the prop EVERY control takes to stay out of the form, picker or
+  group around it — a door that opens something, a picker that commits on its
+  own, a list acting on every touch. Read it before writing a control inside a
+  group whose value it has no business joining; and note what it does not say
+  (`disabled`/`readOnly`/`loading` go on reaching it).
 - `distributeChildStates` on a group — the way down asked once for ALL the
   children, when they cannot be placed one at a time (four seats where who sits
   down decides who moves), and asked again whenever one of them speaks, so the
@@ -283,7 +288,9 @@ consistency across the app, not from any single call site.
   that picks one of its three modes (does it write to the control it sits in?),
   the `Box` form that claims interactions and nothing more (so an affordance
   keeps its own drawing instead of becoming a control), and what the claim does
-  NOT stop (a plain `onClick` on an ancestor).
+  NOT stop (a plain `onClick` on an ancestor). It also draws the line with
+  `standalone`: those two answer about the GESTURE, `standalone` about the
+  VALUE, and they are three separate props because they come apart.
   Read it before reading the pointer by hand — who owns a press between nested
   boxes, and what a touch may do, are decided before the first pixel moves and
   cannot be got right from outside navi — and before stopping the propagation of

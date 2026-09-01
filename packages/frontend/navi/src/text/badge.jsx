@@ -189,7 +189,6 @@ const BadgeButtonUI = (props) => {
   props.ref = props.ref || defaultRef;
   const [buttonRootProps, buttonHostProps] = useControlProps(props, {
     controlType: "button",
-    allowNameless: true,
   });
 
   return (

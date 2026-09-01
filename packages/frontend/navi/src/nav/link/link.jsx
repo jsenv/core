@@ -583,7 +583,6 @@ const LinkPlain = (props) => {
 
   const [controlRootProps, controlHostProps] = useControlProps(props, {
     controlType: "link",
-    allowNameless: true,
   });
   const { basePseudoState } = controlHostProps;
   const readOnly = basePseudoState[":read-only"];

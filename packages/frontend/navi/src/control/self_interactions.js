@@ -52,6 +52,16 @@
  * Whichever mode, the affordance's own handler runs from inside its own gate
  * rather than from the DOM: a caller's `onClick` fires before any of this, and
  * would go off from a button drawn greyed.
+ *
+ * These two answer about the GESTURE. Whose VALUE an element carries is a third
+ * question, and `standalone` is where it is answered (see useUIStateController).
+ * They are said separately because they genuinely come apart: a door that holds
+ * no value of its own can still write into the control around it — it is
+ * `standalone` and must still shut when that control is read-only — and an
+ * affordance can claim a press without ever being a field. Something that is
+ * its own on all three counts says all three (a diskette filing a name into the
+ * reader's own address book: `selfInteractions="click"`,
+ * `whenSelfInteractionsBlocked="ignore"`, `standalone`).
  */
 
 import { useContext } from "preact/hooks";

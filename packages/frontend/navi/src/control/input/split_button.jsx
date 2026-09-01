@@ -290,7 +290,7 @@ export const SplitButton = (props) => {
           <Picker
             id={menuId}
             variant="headless"
-            allowNameless
+            standalone
             anchor={rootRef}
             {...popupProps}
             readOnly={readOnly}

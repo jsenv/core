@@ -558,11 +558,11 @@ the edge one grabs to carry it.
 
 So the claim names its interactions, and what it does not name stays the zone's:
 
-| written                        | takes                     | leaves                              |
-| ------------------------------ | ------------------------- | ----------------------------------- |
-| `selfInteractions="click"`     | the press                 | the grab — the card is still carried by it |
-| `selfInteractions="click drag"`| both                      | —                                   |
-| `selfInteractions="*"`         | every gesture, now and later | —                                |
+| written                         | takes                        | leaves                                     |
+| ------------------------------- | ---------------------------- | ------------------------------------------ |
+| `selfInteractions="click"`      | the press                    | the grab — the card is still carried by it |
+| `selfInteractions="click drag"` | both                         | —                                          |
+| `selfInteractions="*"`          | every gesture, now and later | —                                          |
 
 `"*"` is there for the case where it is true, not as a shorthand: it is the one
 value that will silently swallow a gesture navi has not shipped yet.
@@ -578,11 +578,11 @@ becomes of the affordance where the zone around it is disabled or read-only.
 The claimed interactions are its subject, and only them: the ones left to the
 zone were never this element's to block.
 
-| what it does                                                 | written                                      | on a blocked zone                         |
-| ------------------------------------------------------------ | -------------------------------------------- | ----------------------------------------- |
-| writes to it (a cross that removes, a stepper)               | nothing — `"hide"` is the default            | it goes                                   |
-| writes to it, and its presence says there is something there | `whenSelfInteractionsBlocked="refuse"`       | it stays and refuses with a callout       |
-| never touches it (a diskette saving into MY address book)    | `whenSelfInteractionsBlocked="ignore"`       | nothing changes: still lit, still pressed |
+| what it does                                                 | written                                | on a blocked zone                         |
+| ------------------------------------------------------------ | -------------------------------------- | ----------------------------------------- |
+| writes to it (a cross that removes, a stepper)               | nothing — `"hide"` is the default      | it goes                                   |
+| writes to it, and its presence says there is something there | `whenSelfInteractionsBlocked="refuse"` | it stays and refuses with a callout       |
+| never touches it (a diskette saving into MY address book)    | `whenSelfInteractionsBlocked="ignore"` | nothing changes: still lit, still pressed |
 
 A greyed cross that still removes is worse than no cross — hence the default.
 `"ignore"` is the other extreme and the caller owns it: the zone's read-only is
@@ -592,6 +592,28 @@ when that is really the case.
 
 Busy is not on the list because busy does not block: it is the read-only a
 running action sets on its way that does.
+
+#### The third question: whose value is it?
+
+`selfInteractions` and `whenSelfInteractionsBlocked` are about the **gesture** —
+who a pointer event belongs to, and what a block on the box around it does to
+that gesture. Whose **value** an element carries is a separate question, and
+`standalone` answers it: the control does not register with the form, picker or
+group around it, so what it holds never joins that value (see
+[form_changed.md](./form_changed.md#a-control-that-answers-for-itself)).
+
+The three come apart, which is why they are three props:
+
+| the element                                             | says                                                                        |
+| ------------------------------------------------------- | --------------------------------------------------------------------------- |
+| a chip's cross                                          | `selfInteractions` — it is a button, it never carried a value               |
+| a door opening a sheet that writes into the form        | `standalone` — no value of its own, but a read-only form must still shut it |
+| a diskette filing a name into the reader's address book | all three — own press, block is not about it, own value                     |
+
+Reading `standalone` as "ignore everything around me" is the trap: `disabled`,
+`readOnly` and `loading` travel on their own contexts and go on reaching it,
+because "what do I hold" and "may anything be changed here" are not the same
+question.
 
 #### On something you draw yourself
 

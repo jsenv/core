@@ -174,22 +174,16 @@ export const ControlgroupChildrenWrapper = ({
  */
 export const useControlProps = (
   props,
-  {
-    controlType,
-    allowNameless: allowNamelessByDefault,
-    persists,
-    uiActionInternal,
-  },
+  { controlType, persists, uiActionInternal },
 ) => {
   const debugUIState = useDebugUIState();
   const debugAction = useDebugAction();
 
-  // A control that is not a field: it opens something, it goes somewhere, and
-  // the group around it must expect no value from it — no name, and no warning
-  // about the missing name. Buttons and links say so from inside navi; the prop
-  // is how a control used as a door says the same thing from the outside.
-  const allowNameless = props.allowNameless ?? allowNamelessByDefault;
-  delete props.allowNameless;
+  // This control answers for itself: whatever group it sits in expects nothing
+  // from it and gives it nothing back. See useUIStateController, which is where
+  // the whole of it happens.
+  const { standalone } = props;
+  delete props.standalone;
 
   const idDefault = useId();
   const controlId = useContext(ControlIdContext);
@@ -251,7 +245,7 @@ export const useControlProps = (
   const uiStateController = useUIStateController(props, {
     controlInfo,
     syncDomState,
-    allowNameless,
+    standalone,
     persists,
     uiActionInternal,
   });
@@ -1338,7 +1332,8 @@ export const useControlgroupProps = (
     cascadeValidationToChildren = false,
   },
 ) => {
-  const { action } = props;
+  const { action, standalone } = props;
+  delete props.standalone;
 
   const uiGroupStateController = useUIGroupStateController(props, controlType, {
     stateType,
@@ -1350,6 +1345,7 @@ export const useControlgroupProps = (
     uiActionInternal,
     allowCapture,
     cascadeValidationToChildren,
+    standalone,
   });
   const [boundAction] = useActionBoundToOneParam(
     action,

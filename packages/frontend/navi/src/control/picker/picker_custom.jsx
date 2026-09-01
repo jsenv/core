@@ -206,13 +206,13 @@ export const PickerCustomResolver = (props) => {
     if (circle) {
       props.variant = "icon";
     }
-    // A door, never a field (see `allowNameless`): the form around it expects
-    // no value from it, and no name. So the trigger answers to "button" — it is
-    // pressed to read something, never typed into — the same thing a confirm
-    // picker says through `picksNothing` (see picker.jsx). Said as the role
-    // here rather than through that prop: `picksNothing` also takes the right
-    // slot away, and the status icon a callout trigger draws sits in it.
-    props.allowNameless = true;
+    // A door, never a field (see `standalone`): the form around it expects no
+    // value from it. So the trigger answers to "button" — it is pressed to read
+    // something, never typed into — the same thing a confirm picker says
+    // through `picksNothing` (see picker.jsx). Said as the role here rather
+    // than through that prop: `picksNothing` also takes the right slot away,
+    // and the status icon a callout trigger draws sits in it.
+    props.standalone = true;
     if (props.role === undefined) {
       props.role = "button";
     }

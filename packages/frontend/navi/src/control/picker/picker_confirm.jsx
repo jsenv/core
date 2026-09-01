@@ -101,7 +101,7 @@ export const PickerConfirmResolver = (props) => {
     <Next
       {...props}
       type="navi_js"
-      allowNameless
+      standalone
       // No chevron, no clear cross, whatever variant the trigger is drawn in:
       // both announce a value, and a question holds none.
       picksNothing
