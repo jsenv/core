@@ -1,4 +1,4 @@
-import { babelPluginAsyncToPromises } from "@jsenv/js-module-fallback";
+import { babelPluginAsyncToPromises } from "@jsenv/ast";
 import { createRequire } from "node:module";
 
 import { getBabelHelperFileUrl } from "./babel_helper_directory/babel_helper_directory.js";

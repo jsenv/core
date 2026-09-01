@@ -1,5 +1,4 @@
-import { applyBabelPlugins } from "@jsenv/ast";
-import { babelPluginAsyncToPromises } from "@jsenv/js-module-fallback";
+import { applyBabelPlugins, babelPluginAsyncToPromises } from "@jsenv/ast";
 
 export const jsenvPluginTopLevelAwait = ({ needJsModuleFallback }) => {
   return {

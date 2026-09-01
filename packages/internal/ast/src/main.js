@@ -45,6 +45,13 @@ export { parseCssUrls } from "./css/parse_css_urls.js";
 
 // js
 export { applyBabelPlugins } from "./js/apply_babel_plugins.js";
+// Fork of "babel-plugin-transform-async-to-promises". It was forked for
+// https://github.com/rpetrich/babel-plugin-transform-async-to-promises/issues/84
+// and the upstream package is unmaintained since 2022, so it also never got the
+// babel 8 fixes (parse/transformFromAst became async-only, TraversalContext#create
+// is gone). It lives in this package because this package has no dist: every
+// consumer reads the same source, so no build has to run before another one.
+export { default as babelPluginAsyncToPromises } from "./js/async_to_promises/async-to-promises.js";
 export { injectJsImport } from "./js/babel_utils.js";
 export { parseJsWithAcorn } from "./js/parse_js_with_acorn.js";
 export { parseJsUrls } from "./js/parse_js_urls.js";

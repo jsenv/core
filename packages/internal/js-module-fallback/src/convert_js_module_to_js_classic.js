@@ -1,12 +1,10 @@
-import { applyBabelPlugins } from "@jsenv/ast";
+import { applyBabelPlugins, babelPluginAsyncToPromises } from "@jsenv/ast";
 import { composeTwoSourcemaps } from "@jsenv/sourcemap";
 import { urlToRelativeUrl } from "@jsenv/urls";
 import { createRequire } from "node:module";
 
 import { babelPluginTransformImportMetaResolve } from "./internal/babel_plugin_transform_import_meta_resolve.js";
 import { babelPluginTransformImportMetaUrl } from "./internal/babel_plugin_transform_import_meta_url.js";
-// because of https://github.com/rpetrich/babel-plugin-transform-async-to-promises/issues/84
-import customAsyncToPromises from "./internal/async-to-promises.js";
 
 export const systemJsClientFileUrlDefault = import.meta
   .resolve("./client/s.js?as_js_classic");
@@ -68,7 +66,7 @@ export const convertJsModuleToJsClassic = async ({
             ],
             require("@babel/plugin-transform-modules-systemjs"),
             [
-              customAsyncToPromises,
+              babelPluginAsyncToPromises,
               {
                 asyncAwait: false, // already handled + we might not needs it at all
                 topLevelAwait: "return",
@@ -77,7 +75,7 @@ export const convertJsModuleToJsClassic = async ({
           ]
         : [
             [
-              customAsyncToPromises,
+              babelPluginAsyncToPromises,
               {
                 asyncAwait: false, // already handled + we might not needs it at all
                 topLevelAwait: "simple",

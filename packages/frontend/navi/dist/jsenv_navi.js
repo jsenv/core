@@ -38892,7 +38892,7 @@ const TextAnchor = ({
       className: "navi_text_anchor",
       "aria-hidden": "true",
       hidden: true,
-      children: "\u200B"
+      children: "​"
     })]
   });
 };
@@ -39301,7 +39301,7 @@ const REGULAR_SPACE = jsx("span", {
 const FAKE_SPACE = jsx("span", {
   "data-navi-space": "",
   style: "padding-left: 0.25em",
-  children: "\u200B"
+  children: "​"
 });
 const CustomWidthSpace = ({
   value,
@@ -39324,13 +39324,13 @@ const CustomWidthSpace = ({
         children: " "
       }), jsx("span", {
         style: `padding-left: ${value}`,
-        children: "\u200B"
+        children: "​"
       })]
     });
   }
   return jsx("span", {
     style: `padding-left: ${value}`,
-    children: "\u200B"
+    children: "​"
   });
 };
 
@@ -39929,7 +39929,7 @@ const Icon = ({
       ref: textRef,
       children: [jsx("span", {
         style: "user-select:none",
-        children: "\u200B"
+        children: "​"
       }), innerChildren]
     })
   });
@@ -54026,7 +54026,7 @@ const TimeRelative = ({
   if (children === undefined) {
     return jsx(TimeText, {
       ...props,
-      children: "\u2013"
+      children: "–"
     });
   }
   const date = toDate(children);
@@ -61821,6 +61821,7 @@ const css$x = /* css */`@layer navi {
     --x-corner-top-right-radius: initial;
     --x-corner-bottom-right-radius: initial;
     --x-corner-bottom-left-radius: initial;
+    box-sizing: border-box;
     width: inherit;
     min-width: inherit;
     max-width: var(--list-max-width, inherit);
@@ -62143,6 +62144,14 @@ const css$x = /* css */`@layer navi {
   animation: none;
 }
 `;
+
+/* A padding on a list is space between its frame and its rows, so it belongs on
+   the scroll box and not on the frame around it: on the frame it insets the
+   scroll box as a whole, and the scrollbar — which is drawn at the edge of what
+   scrolls — comes off the list's edge by that same amount, floating in the
+   middle of the padding. On the scroll box the scrollbar stays against the
+   border and the padding is what separates the rows from it. */
+const LIST_PADDING_PROP_SET = new Set(["padding", "paddingX", "paddingY", "paddingTop", "paddingRight", "paddingBottom", "paddingLeft"]);
 const ListUI = props => {
   import.meta.css = [css$x, "@jsenv/navi/src/control/list/list.jsx"];
   const {
@@ -62184,6 +62193,13 @@ const ListUI = props => {
     virtual,
     ...rest
   } = props;
+  const scrollBoxPaddingProps = {};
+  for (const name of LIST_PADDING_PROP_SET) {
+    if (name in rest) {
+      scrollBoxPaddingProps[name] = rest[name];
+      delete rest[name];
+    }
+  }
   // Accept a string (e.g. from an HTML attribute: renderBudget="50") the
   // same way a bare number would work — arithmetic below (renderBudget / 2,
   // start + renderBudget, etc.) would silently misbehave on a raw string
@@ -62338,7 +62354,7 @@ const ListUI = props => {
       children: [jsx("span", {
         className: "navi_list_error_icon",
         "aria-hidden": "true",
-        children: "\u26A0"
+        children: "⚠"
       }), jsx("span", {
         children: error === true ? "Something went wrong." : error
       })]
@@ -62441,6 +62457,7 @@ const ListUI = props => {
       overflow: overflow,
       overflowX: overflowX,
       overflowY: overflowY,
+      scrollBoxPaddingProps: scrollBoxPaddingProps,
       children: content
     })
   });
@@ -62678,6 +62695,7 @@ const ListContent = ({
   overflow,
   overflowX,
   overflowY,
+  scrollBoxPaddingProps,
   children
 }) => {
   const listProps = useContext(BoxForwardedPropsContext);
@@ -62686,6 +62704,7 @@ const ListContent = ({
     overflow: overflow,
     overflowX: overflowX,
     overflowY: overflowY,
+    ...scrollBoxPaddingProps,
     children: jsx(UnorderedList, {
       role: role,
       fallback: fallback,
@@ -64703,7 +64722,7 @@ const ListItemReal = props => {
       children: [jsx("span", {
         className: "navi_list_error_icon",
         "aria-hidden": "true",
-        children: "\u26A0"
+        children: "⚠"
       }), jsx("span", {
         className: "navi_list_item_error_message",
         children: error === true ? "Something went wrong." : error
@@ -65586,7 +65605,7 @@ const ListItemsFailure = ({
     children: [jsx("span", {
       className: "navi_list_error_icon",
       "aria-hidden": "true",
-      children: "\u26A0"
+      children: "⚠"
     }), jsx("span", {
       className: "navi_list_item_error_message",
       children: error && error.message ? error.message : naviI18n("list.rows_failed")
@@ -77747,7 +77766,7 @@ const ButtonCopyToClipboard = ({
       className: "navi_copied_notif",
       "aria-hidden": copied ? "false" : "true",
       opacity: copied ? 1 : 0,
-      children: "Copi\xE9 !"
+      children: "Copié !"
     }), jsx(Button, {
       className: "navi_copy_button",
       flex: "y",

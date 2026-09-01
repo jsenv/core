@@ -116,28 +116,28 @@ const createUnicode = ({
   const UNICODE = {
     supported,
     get COMMAND_RAW() {
-      return "\u276F" ;
+      return "❯" ;
     },
     get OK_RAW() {
-      return "\u2714" ;
+      return "✔" ;
     },
     get FAILURE_RAW() {
-      return "\u2716" ;
+      return "✖" ;
     },
     get DEBUG_RAW() {
-      return "\u25C6" ;
+      return "◆" ;
     },
     get INFO_RAW() {
-      return UNICODE.supported ? "\u2139" : "i";
+      return UNICODE.supported ? "ℹ" : "i";
     },
     get WARNING_RAW() {
-      return "\u26A0" ;
+      return "⚠" ;
     },
     get CIRCLE_CROSS_RAW() {
-      return "\u24E7" ;
+      return "ⓧ" ;
     },
     get CIRCLE_DOTTED_RAW() {
-      return "\u25CC" ;
+      return "◌" ;
     },
     get COMMAND() {
       return ANSI.color(UNICODE.COMMAND_RAW, ANSI.GREY); // ANSI_MAGENTA)
@@ -161,7 +161,7 @@ const createUnicode = ({
       return ANSI.color(UNICODE.CIRCLE_CROSS_RAW, ANSI.RED);
     },
     get ELLIPSIS() {
-      return "\u2026" ;
+      return "…" ;
     }
   };
   return UNICODE;
