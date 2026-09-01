@@ -6,7 +6,23 @@ import { applyBabelPlugins } from "@jsenv/ast";
 import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs";
 import { createMagicSource } from "@jsenv/sourcemap";
 import { URL_META } from "@jsenv/url-meta";
+import { fileURLToPath } from "node:url";
 import { jsenvPluginReactRefreshPreamble } from "./jsenv_plugin_react_refresh_preamble.js";
+
+// Babel resolves bare plugin names from the project root, where our own
+// dependencies are not guaranteed to be installed (they are hoisted only when
+// the app happens to depend on them too). Resolving them from here and handing
+// babel an absolute path makes it work whatever the node_modules layout is.
+const babelPluginFileCache = new Map();
+const babelPluginFile = (specifier) => {
+  const fromCache = babelPluginFileCache.get(specifier);
+  if (fromCache) {
+    return fromCache;
+  }
+  const file = fileURLToPath(import.meta.resolve(specifier));
+  babelPluginFileCache.set(specifier, file);
+  return file;
+};
 
 export const jsenvPluginReact = ({
   asJsModuleLogLevel,
@@ -89,9 +105,11 @@ const jsenvPluginJsxAndRefresh = ({
           ...(jsxEnabled
             ? [
                 [
-                  urlInfo.context.dev
-                    ? "@babel/plugin-transform-react-jsx-development"
-                    : "@babel/plugin-transform-react-jsx",
+                  babelPluginFile(
+                    urlInfo.context.dev
+                      ? "@babel/plugin-transform-react-jsx-development"
+                      : "@babel/plugin-transform-react-jsx",
+                  ),
                   {
                     runtime: "automatic",
                     importSource: "react",
@@ -103,7 +121,7 @@ const jsenvPluginJsxAndRefresh = ({
               ]
             : []),
           ...(refreshEnabled
-            ? [["react-refresh/babel", { skipEnvCheck: true }]]
+            ? [[babelPluginFile("react-refresh/babel"), { skipEnvCheck: true }]]
             : []),
         ];
         let { code, map } = await applyBabelPlugins({

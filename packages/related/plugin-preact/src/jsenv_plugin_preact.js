@@ -11,6 +11,48 @@ import {
 } from "@jsenv/ast";
 import { createMagicSource } from "@jsenv/sourcemap";
 import { URL_META } from "@jsenv/url-meta";
+import { fileURLToPath } from "node:url";
+
+// Babel resolves bare plugin names from the project root, where our own
+// dependencies are not guaranteed to be installed (they are hoisted only when
+// the app happens to depend on them too). Resolving them from here and handing
+// babel an absolute path makes it work whatever the node_modules layout is.
+const babelPluginFileCache = new Map();
+const babelPluginFile = (specifier) => {
+  const fromCache = babelPluginFileCache.get(specifier);
+  if (fromCache) {
+    return fromCache;
+  }
+  const file = fileURLToPath(import.meta.resolve(specifier));
+  babelPluginFileCache.set(specifier, file);
+  return file;
+};
+
+// "@prefresh/babel-plugin" rewrites "createContext()" into a memoized version of
+// itself and calls path.skip() before path.replaceWith() so that babel does not
+// enter the "createContext()" call it just generated.
+// Babel 8 requeue(), called by replaceWith(), resets shouldSkip, so that call is
+// visited again and the rewrite recurses until the stack blows up.
+// Re-skipping once the visitor is done restores the babel 7 behaviour.
+let prefreshBabelPluginPromise;
+const loadPrefreshBabelPlugin = () => {
+  prefreshBabelPluginPromise ||= import("@prefresh/babel-plugin").then(
+    ({ default: prefreshBabelPlugin }) =>
+      (babel, options) => {
+        const plugin = prefreshBabelPlugin(babel, options);
+        const { CallExpression } = plugin.visitor;
+        plugin.visitor.CallExpression = function (path, state) {
+          const nodeBeforeVisit = path.node;
+          CallExpression.call(this, path, state);
+          if (path.node !== nodeBeforeVisit) {
+            path.skip();
+          }
+        };
+        return plugin;
+      },
+  );
+  return prefreshBabelPluginPromise;
+};
 
 export const jsenvPluginPreact = ({
   jsxTranspilation = true,
@@ -123,9 +165,11 @@ export const jsenvPluginPreact = ({
             ...(jsxEnabled
               ? [
                   [
-                    urlInfo.context.dev
-                      ? "@babel/plugin-transform-react-jsx-development"
-                      : "@babel/plugin-transform-react-jsx",
+                    babelPluginFile(
+                      urlInfo.context.dev
+                        ? "@babel/plugin-transform-react-jsx-development"
+                        : "@babel/plugin-transform-react-jsx",
+                    ),
                     {
                       runtime: "automatic",
                       importSource: "preact",
@@ -136,8 +180,10 @@ export const jsenvPluginPreact = ({
                   ],
                 ]
               : []),
-            ...(hookNamesEnabled ? ["babel-plugin-transform-hook-names"] : []),
-            ...(refreshEnabled ? ["@prefresh/babel-plugin"] : []),
+            ...(hookNamesEnabled
+              ? [babelPluginFile("babel-plugin-transform-hook-names")]
+              : []),
+            ...(refreshEnabled ? [await loadPrefreshBabelPlugin()] : []),
           ],
           input: urlInfo.content,
           inputIsJsModule: true,
