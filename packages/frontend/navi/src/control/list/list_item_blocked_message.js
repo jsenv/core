@@ -22,10 +22,16 @@ export const listItemBusyMessage = (loading, props) => {
   return naviI18n("constraint.busy.item", props);
 };
 
-/** Why the row cannot be acted on, in the row's own terms. */
+/**
+ * Why the row cannot be acted on, in the row's own terms — or in the caller's,
+ * where it gave them. The same two props every navi control answers a refusal
+ * with (`readOnlyMessage`, `busyMessage`), so a row and the control it carries
+ * cannot end up saying two different things about one press: whichever of them
+ * catches it, the sentence is the same.
+ */
 export const listItemBlockedMessage = (loading, props) => {
-  if (!loading) {
-    return naviI18n("constraint.readonly.item", props);
+  if (loading) {
+    return props.busyMessage ?? listItemBusyMessage(loading, props);
   }
-  return listItemBusyMessage(loading, props);
+  return props.readOnlyMessage ?? naviI18n("constraint.readonly.item", props);
 };

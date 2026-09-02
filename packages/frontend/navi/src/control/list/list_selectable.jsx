@@ -586,11 +586,14 @@ const ListItemSelectable = (props) => {
     selected,
     pointed,
     selectableArea = "all",
-    // The ROW is waiting, not only the control it carries: the outline, the
-    // press it swallows and the sentence saying what for are drawn one level
-    // up (see ListItemReal), so this is handed both ways rather than left in
-    // `rest`, where it would only ever reach the hidden input.
+    // True of the ROW as much as of the control it carries, so both are told.
+    // Left in `rest` they would reach the hidden input alone — the control
+    // system claims them (they are control props) and the row would never see
+    // them, which for a row means no outline, no dimming, no press swallowed
+    // and none of the buttons it contains held back (see ListItemReal). Any
+    // prop a row and a control both understand belongs here.
     loading,
+    readOnly,
     // The row's own click handler, kept out of the control props below: those
     // describe the hidden input that carries the selection, and a caller
     // writing onClick on a <List.Item> is talking about the row they see.
@@ -617,23 +620,31 @@ const ListItemSelectable = (props) => {
       ? `constraint.readonly.selection`
       : `constraint.readonly.choice`
     : `constraint.readonly.option`;
+  // Handed to the row as well as to the control: whichever of the two catches
+  // the press answers it, and they must not answer it differently.
+  const readOnlyMessageResolved =
+    props.readOnlyMessage ?? naviI18n(readOnlyMessageKey, props);
+  const busyMessageResolved =
+    props.busyMessage ??
+    (loading
+      ? listItemBusyMessage(loading, props)
+      : naviI18n(
+          multiple ? `constraint.busy.selection` : `constraint.busy.choice`,
+          props,
+        ));
   const inputRef = useRef();
   const inputType = multiple ? "checkbox" : "radio";
   const inputId = `${id}_input`;
   inputRef.nullCanHappen = true; // virtualization
   const [checkableRootProps, checkableProps, controlChildrenWrapperProps] =
     useCheckableProps({
-      readOnlyMessage: naviI18n(readOnlyMessageKey, props),
+      readOnlyMessage: readOnlyMessageResolved,
       // What the row itself is waiting for when it says so, the wait of the
       // list around it otherwise — said as the selection where several things
       // are taken, as the choice where one thing is.
-      busyMessage: loading
-        ? listItemBusyMessage(loading, props)
-        : naviI18n(
-            multiple ? `constraint.busy.selection` : `constraint.busy.choice`,
-            props,
-          ),
+      busyMessage: busyMessageResolved,
       loading,
+      readOnly,
       ...rest,
       ref: inputRef,
       id: inputId,
@@ -643,17 +654,19 @@ const ListItemSelectable = (props) => {
       ...(hasSelectedProp ? { checked: selected } : null),
     });
   const { checked, value, basePseudoState, children } = checkableProps;
-  const readOnly = basePseudoState[":read-only"];
+  // Everything holding the control back, not only the row's own `readOnly`
+  // above: the list above it, a maxLengthGuard with no room left.
+  const readOnlyResolved = basePseudoState[":read-only"];
   const realInputContextValue = useMemo(() => {
     return {
       id: inputId,
       type: inputType,
       checked,
-      readOnly,
+      readOnly: readOnlyResolved,
       value,
       deselectable,
     };
-  }, [inputId, inputType, checked, readOnly, value, deselectable]);
+  }, [inputId, inputType, checked, readOnlyResolved, value, deselectable]);
 
   return (
     <Next
@@ -678,6 +691,9 @@ const ListItemSelectable = (props) => {
       ref={props.ref}
       onClick={onClick}
       loading={loading}
+      readOnly={readOnly}
+      readOnlyMessage={readOnlyMessageResolved}
+      busyMessage={busyMessageResolved}
       selectable={undefined}
       navi-selectable-area-all={selectableArea === "all" ? "" : undefined}
     >

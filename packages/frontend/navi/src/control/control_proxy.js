@@ -74,16 +74,30 @@ export const findControlProxies = (el) => {
 };
 
 /**
- * Given a real control element, returns the proxy that visually represents it.
+ * Given a real control element, returns the proxy a gesture on the control
+ * lands on — the one thing said about the control is drawn on.
  *
  * Use when you need a single visible stand-in for the real control — anchoring
  * a callout, for instance. Anything notifying proxies of a state change wants
  * `findControlProxies` instead, so a control represented by several of them
  * updates all of them.
  *
- * Returns `null` when no proxy exists for `el`.
+ * A proxy the pointer cannot reach is drawn for the control without standing
+ * for it: the surface around it takes the presses for everything it holds, so
+ * that surface is where a refusal about the control belongs — not a box inside
+ * it the finger never has to find. A selectable list row whose whole area is
+ * the click target is exactly that arrangement (see `selectableArea`), and it
+ * is read from the arrangement itself rather than from a flag repeating it:
+ * where a gesture can land IS pointer-events.
+ *
+ * Returns `null` when no proxy stands for `el`.
  */
 export const findControlProxy = (el) => {
-  const [firstProxy = null] = findControlProxies(el);
-  return firstProxy;
+  for (const proxyElement of findControlProxies(el)) {
+    if (getComputedStyle(proxyElement).pointerEvents === "none") {
+      continue;
+    }
+    return proxyElement;
+  }
+  return null;
 };

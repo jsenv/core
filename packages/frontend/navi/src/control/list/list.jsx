@@ -3501,6 +3501,9 @@ const ListItemReal = (props) => {
       {...itemColumnsOverrideProps}
       index={undefined}
       selected={undefined}
+      // Read by listItemBlockedMessage, not by the element.
+      readOnlyMessage={undefined}
+      busyMessage={undefined}
       // We use aria-hidden and not hidden because hidden would be forced to
       // display: none while here we want to keep it in the DOM to avoid layout shift
       // but visually hidden
