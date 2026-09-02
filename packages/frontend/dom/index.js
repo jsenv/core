@@ -116,6 +116,7 @@ export {
 export {
   getScrollIntoViewScopedOffsets,
   scrollIntoViewScoped,
+  scrollIntoViewThroughScrollables,
 } from "./src/interaction/scroll/scroll_into_view_scoped.js";
 export { scrollIntoViewWithStickyAwareness } from "./src/interaction/scroll/scroll_into_view_sticky_aware.js";
 export { trapScrollInside } from "./src/interaction/scroll/scroll_trap.js";

@@ -28,6 +28,7 @@ import {
   measureLongestVisualLineWidth,
   pickPositionRelativeTo,
   resolveCSSColor,
+  scrollIntoViewThroughScrollables,
   visibleRectEffect,
 } from "@jsenv/dom";
 import { isValidElement } from "preact";
@@ -944,7 +945,12 @@ export const openCallout = (
     // that whole window: by the time anything measures anchorElement, it's
     // already at its final position, so there's no transient frame left to
     // latch onto.
-    anchorElement.scrollIntoView({ behavior: "instant", block: "nearest" });
+    // Through the boxes that scroll and none of the ones that only clip: an
+    // `overflow: hidden` card takes a scroll no user can give back.
+    scrollIntoViewThroughScrollables(anchorElement, {
+      behavior: "instant",
+      block: "nearest",
+    });
     allowWheelThrough(calloutElement, visualAnchorElement);
     anchorElement.setAttribute("data-callout", calloutId);
     addTeardown(({ event }) => {
