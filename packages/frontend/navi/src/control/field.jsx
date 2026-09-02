@@ -7,7 +7,6 @@ import {
 } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
-import { resolveSpacingSize } from "../box/box_style_util.js";
 import { ControlIdContext, MessagePropsRefContext } from "./control_context.js";
 import { subscribeToControlState } from "./control_label_state.js";
 import { extractMessageAndRemainingProps } from "./rules/constraint_message.js";
@@ -126,12 +125,11 @@ const FieldAsLabel = (props) => {
   );
 };
 const FieldCSSVars = {
-  spacingWithControl: "--spacing-with-control",
+  spacingWithControl: ["--spacing-with-control", "padding"],
 };
 const FieldAsContainer = (props) => {
   import.meta.css = css;
   const { children } = props;
-  props.spacingWithControl = resolveSpacingSize(props.spacingWithControl);
   const isVertical = props.flex === "y";
   const [messageProps, remainingProps] = extractMessageAndRemainingProps({
     ...props,

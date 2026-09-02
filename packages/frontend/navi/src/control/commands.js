@@ -73,7 +73,32 @@ import {
  *   when that is not the element asking: a menu opened by a press belongs at the
  *   point the press happened, and the row that was pressed is not that point.
  */
-export const triggerNaviCommand = (
+export const triggerNaviCommand = (element, command, event, options) => {
+  const run = resolveNaviCommand(element, command, event, options);
+  return run ? run() : false;
+};
+
+/**
+ * The same command, in its two moments: WHAT it aims at, decided here and now,
+ * and what it then does, in the function returned. One caller needs them apart
+ * — a button whose command waits for its own action (see the command trigger in
+ * ui_state_controller.js) — and it needs it because resolution reads the DOM
+ * AROUND the source: the closest expandable, the parent control, the slide it
+ * stands in. An action that succeeds has usually re-rendered the tree it was
+ * asked from, which is what an action is for, so by then the source is
+ * detached: `closest` walks a subtree the popup is no longer in, and a command
+ * that had a perfectly good target at the press finds none and is dropped with
+ * a warning — the popup stays open over a request that went through.
+ *
+ * Freezing the target at the press is also what one means by it: the popup
+ * pressed in is the popup to close, even when the press is what emptied it.
+ * What the command DOES stays live — every handler reads the state it needs
+ * inside its implementation, never while resolving.
+ *
+ * Returns undefined when there is nothing to run (unknown command, no target).
+ * See triggerNaviCommand's jsdoc for the parameters.
+ */
+export const resolveNaviCommand = (
   element,
   command,
   event,
@@ -88,7 +113,7 @@ export const triggerNaviCommand = (
     NAVI_COMMANDS[command] || NAVI_COMMANDS[commandName(command)];
   if (!naviCommand) {
     console.warn(`Unknown command "${command}"`);
-    return false;
+    return undefined;
   }
   // Check for explicit HTML target overrides early so a misconfigured commandfor
   // attribute (id not found) aborts immediately rather than silently falling back
@@ -96,7 +121,7 @@ export const triggerNaviCommand = (
   const explicitTarget = resolveExplicitTarget(element);
   if (explicitTarget === null) {
     // attribute was present but target not found — already warned inside resolveExplicitTarget
-    return false;
+    return undefined;
   }
   const execute = naviCommand.commandHandler(element, event, {
     // Whatever followed the colon: "--navi-go-to-slide:edit" → "edit".
@@ -109,37 +134,40 @@ export const triggerNaviCommand = (
   });
   if (!execute) {
     if (optional) {
-      return false;
+      return undefined;
     }
     console.warn(
       `"${command}" triggered on element but no suitable target found`,
       element,
     );
-    return false;
+    return undefined;
   }
   const { target, implementation } = execute;
-  // The event is how the target takes part in what it was asked to do (a popup
-  // closing on --navi-close also has its own things to do); the command itself
-  // is the implementation, and it must not depend on someone listening. Nobody
-  // does when the target has left the document — a trigger whose own action
-  // took it away, which is the shape of "delete this, then leave the page it
-  // was on" (see runWhenActionSucceeded in rules/control_action.js): the
-  // command is decided while the trigger is there and runs once the action has
-  // succeeded, by which time the row it stood in is gone. So the command runs
-  // here rather than being lost in silence.
-  const detail = {
-    command,
-    event,
-    source: element,
-    implementation,
-    value,
-    answered: false,
+  return () => {
+    // The event is how the target takes part in what it was asked to do (a
+    // popup closing on --navi-close also has its own things to do); the command
+    // itself is the implementation, and it must not depend on someone
+    // listening. Nobody does when the target has left the document — a trigger
+    // whose own action took it away, which is the shape of "delete this, then
+    // leave the page it was on" (see runWhenActionSucceeded in
+    // rules/control_action.js): the command was decided above, while the
+    // trigger was there, and runs once the action has succeeded, by which time
+    // the row it stood in is gone. So the command runs here rather than being
+    // lost in silence.
+    const detail = {
+      command,
+      event,
+      source: element,
+      implementation,
+      value,
+      answered: false,
+    };
+    const dispatched = dispatchCustomEvent(target, "navi_command", detail);
+    if (!detail.answered) {
+      implementation();
+    }
+    return dispatched;
   };
-  const dispatched = dispatchCustomEvent(target, "navi_command", detail);
-  if (!detail.answered) {
-    implementation();
-  }
-  return dispatched;
 };
 
 // Returns the target explicitly declared via HTML attributes (commandfor / navi-command-target),

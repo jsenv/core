@@ -265,7 +265,7 @@ const css = /* css */ `
 const BinderStyleCSSVars = {
   borderWidth: "--binder-border-width",
   borderRadius: "--binder-border-radius",
-  tabBorderRadius: "--binder-tab-border-radius",
+  tabBorderRadius: ["--binder-tab-border-radius", "borderRadius"],
   borderColor: "--binder-border-color",
   background: "--binder-background",
   tabBackground: "--binder-tab-background",
@@ -274,7 +274,7 @@ const BinderStyleCSSVars = {
   tabColor: "--binder-tab-color",
   paddingX: "--binder-padding-x",
   paddingY: "--binder-padding-y",
-  pagePadding: "--binder-page-padding",
+  pagePadding: ["--binder-page-padding", "padding"],
 };
 
 const TABS_ALIGN_TO_JUSTIFY_CONTENT = {
@@ -434,12 +434,12 @@ export const Binder = ({
       data-tabs-position={tabsPosition}
       data-tabs-align={tabsAlign}
       data-scrollable-page={scrollablePage ? "" : undefined}
-      borderWidth={withPixelUnit(borderWidth)}
-      borderRadius={withPixelUnit(borderRadius)}
-      tabBorderRadius={withPixelUnit(tabBorderRadius)}
-      paddingX={withPixelUnit(paddingX)}
-      paddingY={withPixelUnit(paddingY)}
-      pagePadding={withPixelUnit(pagePadding)}
+      borderWidth={borderWidth}
+      borderRadius={borderRadius}
+      tabBorderRadius={tabBorderRadius}
+      paddingX={paddingX}
+      paddingY={paddingY}
+      pagePadding={pagePadding}
       {...props}
       styleCSSVars={BinderStyleCSSVars}
     >
@@ -675,13 +675,4 @@ const measureDrawing = ({ rootEl, vertical, tabsFirst }) => {
       gapAfterTabs: mainSize - (mainStartOf(lastTabEl) + mainSizeOf(lastTabEl)),
     },
   };
-};
-
-// A bare number in a CSS var stays a bare number and the declaration is
-// dropped; every length prop here is in pixels when it is not spelled out.
-const withPixelUnit = (value) => {
-  if (typeof value === "number") {
-    return `${value}px`;
-  }
-  return value;
 };

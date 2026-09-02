@@ -396,6 +396,13 @@ an abort — leaves the popup where it is. Same rule a form already follows for
 what comes after its send (`data-after-send`, see `resolveAfterSend` in
 commands.js).
 
+The action is free to replace that button while it runs — and it usually does:
+what came back is put in the store, the tree re-renders, and the branch the
+button stood in goes with it. The popup closes all the same. What the command
+aims at is read at the press, while the button is still in the document (see
+`resolveNaviCommand` in commands.js); only the running of it waits. The popup
+pressed in is the popup that closes, even when the press is what emptied it.
+
 The wait is why closing **from inside** the action still does not close: while
 the action runs, the button that started it is busy, and a busy control is
 exactly what a popup refuses to close over (see the top of this page). The

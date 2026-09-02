@@ -81,6 +81,43 @@ await snapshotTests(import.meta.url, ({ test }) => {
             format: "long",
           }),
         ],
+        // September is the date to spell apart: "septembre" abbreviates, "mai" does not
+        [
+          "2026-09-02",
+          "short",
+          "fr",
+          formatDay(new Date("2026-09-02T09:00:00"), {
+            lang: "fr",
+            format: "short",
+          }),
+        ],
+        [
+          "2026-09-02",
+          "{ weekday: long, month: short }",
+          "fr",
+          formatDay(new Date("2026-09-02T09:00:00"), {
+            lang: "fr",
+            format: { weekday: "long", month: "short" },
+          }),
+        ],
+        [
+          "2026-09-02",
+          "{ month: short }",
+          "fr",
+          formatDay(new Date("2026-09-02T09:00:00"), {
+            lang: "fr",
+            format: { month: "short" },
+          }),
+        ],
+        [
+          "2026-09-02",
+          "{ weekday: long, month: short }",
+          "en",
+          formatDay(new Date("2026-09-02T09:00:00"), {
+            lang: "en",
+            format: { weekday: "long", month: "short" },
+          }),
+        ],
       ],
     );
   });

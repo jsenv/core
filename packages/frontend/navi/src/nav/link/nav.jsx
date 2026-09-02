@@ -349,7 +349,7 @@ const NavStyleCSSVars = {
   paddingLeft: "--nav-padding-left",
   background: "--nav-background",
   currentIndicatorColor: "--nav-current-indicator-color",
-  currentIndicatorSize: "--nav-current-indicator-size",
+  currentIndicatorSize: ["--nav-current-indicator-size", "height"],
 };
 
 const positionOfCurrentIndicator = (currentIndicator, vertical) => {

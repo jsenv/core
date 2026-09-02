@@ -16,7 +16,7 @@ import {
   useDebugUIState,
 } from "../navi_debug.jsx";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
-import { triggerNaviCommand } from "./commands.js";
+import { resolveNaviCommand, triggerNaviCommand } from "./commands.js";
 import { warnSignalCollision } from "./control_value.js";
 import {
   findProxyControllers,
@@ -285,18 +285,26 @@ export const useUIStateController = (
                 debugUIState(
                   `triggering command "${command}" for "${controlType}"`,
                 );
-                const runCommand = () => {
-                  triggerNaviCommand(element, command, e);
-                };
                 // What the press means may not be due yet: a button with an
                 // action of its own runs the work first and lets its command
                 // follow only once that work succeeded (see control_hooks).
                 // The command is handed over rather than run; nobody claiming
                 // it means now.
+                //
+                // Only the RUN waits. What the command aims at is decided here,
+                // while the button is still in the document, because that is
+                // what resolving reads — the popup around it, the control above
+                // it — and the action it waits for is likely to re-render that
+                // away before it succeeds. Resolved late, the command would
+                // find nothing to aim at and be dropped (see
+                // resolveNaviCommand).
                 if (controller.commandDeferral) {
-                  controller.commandDeferral(runCommand);
+                  const runCommand = resolveNaviCommand(element, command, e);
+                  if (runCommand) {
+                    controller.commandDeferral(runCommand);
+                  }
                 } else {
-                  runCommand();
+                  triggerNaviCommand(element, command, e);
                 }
               }
             }

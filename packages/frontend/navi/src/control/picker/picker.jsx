@@ -2,10 +2,6 @@ import { performTabNavigation } from "@jsenv/dom";
 import { useContext, useEffect, useRef } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
-import {
-  resolveSpacingSize,
-  stringifySpacingStyle,
-} from "@jsenv/navi/src/box/box_style_util.js";
 import { ChevronDownSvg } from "@jsenv/navi/src/graphic/icons/chevron_updown_svg.jsx";
 import { CloseSvg } from "@jsenv/navi/src/graphic/icons/close_svg.jsx";
 import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.jsx";
@@ -716,16 +712,6 @@ const PickerButton = (props) => {
   if (typeof props.maxLines === "string") {
     props.maxLines = parseInt(props.maxLines);
   }
-  // Spacing props travel to CSS as a raw custom property value, so the size
-  // keywords have to become lengths here — "s" reaching CSS untouched makes
-  // the declaration invalid, silently, and the gap just goes away.
-  props.slotSpacing = resolveSpacingSize(props.slotSpacing);
-  for (const pressPaddingPropName of PRESS_PADDING_PROP_NAMES) {
-    const pressPadding = props[pressPaddingPropName];
-    if (pressPadding !== undefined) {
-      props[pressPaddingPropName] = stringifySpacingStyle(pressPadding);
-    }
-  }
   const {
     ref,
     variant,
@@ -1391,41 +1377,29 @@ const PickerInputPseudoClasses = [
   ":-navi-expanded",
 ];
 
-// Spacing props that are not the names of real CSS styles, so Box hands them to
-// the custom property untouched: a size keyword would reach CSS as the word "s"
-// and a number as a unitless one, either of which makes the calc() using it
-// invalid and drops the press area back to the box. Hence the pass in
-// PickerButton, which turns them into lengths.
-const PRESS_PADDING_PROP_NAMES = [
-  "pressPadding",
-  "pressPaddingX",
-  "pressPaddingY",
-  "pressPaddingTop",
-  "pressPaddingRight",
-  "pressPaddingBottom",
-  "pressPaddingLeft",
-];
-
+// A pair is [the css variable, the style whose values the prop is written in]:
+// popupBorderRadius takes what borderRadius takes, dialogMinWidth what minWidth
+// takes — see box.jsx's readCSSVarEntry.
 const PickerStyleCSSVars = {
   "outlineWidth": "--picker-outline-width",
   "borderWidth": "--picker-border-width",
   "borderRadius": "--picker-border-radius",
-  "popoverMaxHeight": "--picker-popover-max-height",
-  "dialogMinWidth": "--picker-dialog-min-width",
-  "dialogMinHeight": "--picker-dialog-min-height",
-  "dialogMaxWidth": "--picker-dialog-max-width",
-  "dialogMaxHeight": "--picker-dialog-max-height",
+  "popoverMaxHeight": ["--picker-popover-max-height", "maxHeight"],
+  "dialogMinWidth": ["--picker-dialog-min-width", "minWidth"],
+  "dialogMinHeight": ["--picker-dialog-min-height", "minHeight"],
+  "dialogMaxWidth": ["--picker-dialog-max-width", "maxWidth"],
+  "dialogMaxHeight": ["--picker-dialog-max-height", "maxHeight"],
   "popupBackgroundColor": "--picker-popup-background-color",
-  "popupBorderRadius": "--picker-popup-border-radius",
-  "dialogBorderWidth": "--picker-dialog-border-width",
-  "slotSpacing": "--picker-slot-spacing",
-  "pressPadding": "--picker-press-padding",
-  "pressPaddingX": "--picker-press-padding-x",
-  "pressPaddingY": "--picker-press-padding-y",
-  "pressPaddingTop": "--picker-press-padding-top",
-  "pressPaddingRight": "--picker-press-padding-right",
-  "pressPaddingBottom": "--picker-press-padding-bottom",
-  "pressPaddingLeft": "--picker-press-padding-left",
+  "popupBorderRadius": ["--picker-popup-border-radius", "borderRadius"],
+  "dialogBorderWidth": ["--picker-dialog-border-width", "borderWidth"],
+  "slotSpacing": ["--picker-slot-spacing", "margin"],
+  "pressPadding": ["--picker-press-padding", "padding"],
+  "pressPaddingX": ["--picker-press-padding-x", "padding"],
+  "pressPaddingY": ["--picker-press-padding-y", "padding"],
+  "pressPaddingTop": ["--picker-press-padding-top", "padding"],
+  "pressPaddingRight": ["--picker-press-padding-right", "padding"],
+  "pressPaddingBottom": ["--picker-press-padding-bottom", "padding"],
+  "pressPaddingLeft": ["--picker-press-padding-left", "padding"],
   // alignX/alignY resolve to these two on a flex-x box; naming the CSS style
   // (not the prop) is what styleCSSVars matches, so justifyContent/alignItems
   // passed directly land in the same variables.

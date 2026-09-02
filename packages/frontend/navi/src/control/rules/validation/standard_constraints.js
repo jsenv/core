@@ -802,7 +802,7 @@ const formatDateIso = (iso, inputType) => {
   const locale = languagesSignal.value;
   if (inputType === "month") {
     const date = new Date(`${iso}-01T00:00:00`);
-    return formatMonth(date, locale);
+    return formatMonth(date, { lang: locale });
   }
   // date, week, datetime-local: extract YYYY-MM-DD part and parse as local date
   const isoMatch = /^(\d{4}-\d{2}-\d{2})/.exec(iso);
@@ -814,5 +814,5 @@ const formatDateIso = (iso, inputType) => {
   if (isNaN(date.getTime())) {
     return iso;
   }
-  return formatDay(date, locale, { long: true });
+  return formatDay(date, { lang: locale });
 };
