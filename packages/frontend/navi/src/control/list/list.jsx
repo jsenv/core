@@ -27,6 +27,8 @@ import { Box, BoxForwardedPropsContext } from "../../box/box.jsx";
 import { LoadingIndicator } from "../../graphic/loading/loading_indicator.jsx";
 import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
 import { openCallout } from "../rules/callout/callout.js";
+import { findControlHost, isControlRoot } from "../control_dom.js";
+import { dispatchRequestInteraction } from "../rules/control_interaction.js";
 import { Separator } from "../../layout/separator.jsx";
 import { useDebugScroll } from "../../navi_debug.jsx";
 import { naviI18n } from "../../text/navi_i18n.js";
@@ -3466,8 +3468,27 @@ const ListItemReal = (props) => {
     if (event.button !== 0 || isOverlaidOnRow(event)) {
       return;
     }
-    blockInteraction(event);
     pressStartedHereRef.current = true;
+    // A row that IS a control has one already able to answer this, in the same
+    // words it uses for the keyboard, and it is the one the callout would be
+    // anchored on either way — two answers would be two callouts on one anchor,
+    // toggling each other off (see `reopen` in openCallout).
+    //
+    // Asked before the press is blocked, not after: a gate handed an event
+    // already prevented reads it as "someone else took this one" and steps
+    // back without a word (see onRequestInteraction).
+    const controlHost = isControlRoot(event.currentTarget)
+      ? findControlHost(event.currentTarget)
+      : null;
+    if (controlHost) {
+      dispatchRequestInteraction(controlHost, {
+        event,
+        name: "press on a blocked row",
+      });
+      blockInteraction(event);
+      return;
+    }
+    blockInteraction(event);
     // One at a time, and not the one that just dismissed it (see the refs).
     if (calloutRef.current && calloutRef.current.opened) {
       return;

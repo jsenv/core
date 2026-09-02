@@ -590,6 +590,12 @@ about a value the affordance does not write, so answering "read-only" to a
 gesture that was never going to write anything says nothing true. Use it only
 when that is really the case.
 
+navi's own `<Dialog.Close />` is the second canonical case: a read-only picker
+still opens, and leaving what it opened writes nothing to it — so the cross is
+`"ignore"` and a hand-written one must say the same, or it refuses the press
+aimed at the way out (see
+[popup_open.md](./popup_open.md#the-close-cross)).
+
 Busy is not on the list because busy does not block: it is the read-only a
 running action sets on its way that does.
 

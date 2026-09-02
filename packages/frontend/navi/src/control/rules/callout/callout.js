@@ -876,6 +876,33 @@ export const openCallout = (
       calloutCloseButton;
     focusTarget.focus({ preventScroll: true });
   }
+  close_on_escape_from_anywhere: {
+    // Escape closes a callout by reaching its anchor (above), which works while
+    // the anchor holds the keyboard. Some do not: a callout opened with
+    // `skipFocus` leaves the focus where it was, and a press on a blocked list
+    // row leaves it nowhere at all — the row refuses the press, focus included.
+    // The callout is then unreachable by keyboard, and "click somewhere else to
+    // make it go" is not an answer for someone not using a pointer.
+    //
+    // Only for the ones that cannot be heard otherwise, and only while they are
+    // open: a callout the anchor can hear about is left to the anchor, so
+    // Escape goes on meaning what it means where the user is.
+    if (anchorElement && anchorElement.contains(document.activeElement)) {
+      break close_on_escape_from_anywhere;
+    }
+    const onDocumentKeydown = (e) => {
+      if (e.key !== "Escape") {
+        return;
+      }
+      requestClose(e, "escape_key");
+      e.stopPropagation();
+      e.preventDefault();
+    };
+    document.addEventListener("keydown", onDocumentKeydown, true);
+    addTeardown(() => {
+      document.removeEventListener("keydown", onDocumentKeydown, true);
+    });
+  }
   close_on_custom_event: {
     const handleCustomCloseEvent = (e) => {
       onRequestClose(e);

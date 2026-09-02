@@ -167,8 +167,11 @@ consistency across the app, not from any single call site.
   RESORT for a decision that is not a press — with the rule that decides most
   reviews: the `event` it takes is the gesture you were handed, threaded down to
   the call, never a `new CustomEvent()` built on the spot (that is for a timer,
-  an action settling, a signal changing, and nothing else). Read it before
-  calling `triggerNaviCommand`, before passing `open` to a popup, and before an
+  an action settling, a signal changing, and nothing else). Also the close
+  cross: `<Dialog.Close />` exists, it is the way out and so the one affordance
+  the surrounding read-only/disabled does not reach, and it asks rather than
+  forces. Read it before calling `triggerNaviCommand`, before passing `open` to
+  a popup, before writing a close button by hand, and before an
   `onOpen`/`onClose` writing a signal.
 - `docs/autofocus.md` — who gets the keyboard when a popup opens or a slide
   arrives, and whether a ring shows on it: the ladder navi walks, what

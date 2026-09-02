@@ -104,9 +104,13 @@
         Box,
         setupRoutes,
         SelectableInput,
+        Text,
       } from "@jsenv/navi";
       import { CallLog, useCallLog } from "./utils/call_log.jsx";
-      import { FakeBackend } from "@jsenv/navi/src/internal/fake_backend.jsx";
+      import {
+        createFakeBackend,
+        FakeBackend,
+      } from "@jsenv/navi/src/internal/fake_backend.jsx";
 
       const searchFruitSignal = stateSignal("", {
         id: "search_fruit",
@@ -143,6 +147,7 @@
                 </div>
                 <IconInputDemo />
                 <SwitchDemo />
+                <ButtonSurfaceDemo />
                 <BgColorDemo />
                 <ManualAreaDemo />
                 <LegendDemo />
@@ -190,6 +195,9 @@
                   </li>
                   <li>
                     <a href="#switch">Switch appearance</a>
+                  </li>
+                  <li>
+                    <a href="#button-surface">Button</a>
                   </li>
                   <li>
                     <a href="#bg-color">Background color indicator</a>
@@ -1469,6 +1477,179 @@
                     ? `Selected: ${selectedMultiple.join(", ")}`
                     : ""}
                 </div>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      // ── Button as the interaction surface ──────────────────────────────────────
+
+      const BUTTON_PEOPLE = ["Marie", "Damien", "Paul"];
+      // The button IS the mark: a row shows what it holds the way a checkbox
+      // does, so the background stays out of it.
+      const BUTTON_LIST_STYLE = {
+        "--list-item-background-color-selected": "transparent",
+        "--list-item-color-selected": "inherit",
+      };
+
+      const PersonRow = ({
+        name,
+        index,
+        listId,
+        selected,
+        readOnly,
+        readOnlyMessage,
+        action,
+      }) => {
+        const rowId = `${listId}_${name.toLowerCase()}`;
+        return (
+          <List.Item
+            selectable
+            index={index}
+            id={rowId}
+            value={name}
+            selectableArea="manual"
+            readOnly={readOnly}
+            readOnlyMessage={readOnlyMessage}
+            flex
+            spacing="s"
+            alignY="center"
+            paddingX="s"
+            paddingY="xs"
+          >
+            <Text expandX>{name}</Text>
+            <Button
+              id={`${rowId}_btn`}
+              variant={selected ? "discrete" : undefined}
+              paddingX="m"
+              paddingY="xs"
+              command={selected ? "--navi-unselect" : "--navi-select"}
+              commandFor={listId}
+              command-value={rowId}
+              action={action}
+            >
+              {selected ? "Annuler" : "Choisir"}
+            </Button>
+          </List.Item>
+        );
+      };
+
+      const seatBackend = createFakeBackend({ value: null });
+
+      const ButtonRadioDemo = () => {
+        const [selected, setSelected] = useState(null);
+        const [pending, setPending] = useState(null);
+        return (
+          <FakeBackend backend={seatBackend}>
+            {() => (
+              <List
+                id="btn_radio_list"
+                selectable
+                deselectable
+                expandX
+                style={BUTTON_LIST_STYLE}
+                uiAction={(v) => setSelected(v ?? null)}
+              >
+                {BUTTON_PEOPLE.map((name, index) => (
+                  <PersonRow
+                    key={name}
+                    name={name}
+                    index={index}
+                    listId="btn_radio_list"
+                    selected={selected === name}
+                    readOnly={pending !== null}
+                    readOnlyMessage="Un siège est en cours d'attribution."
+                    action={async () => {
+                      const taken = selected === name ? null : name;
+                      setPending(name);
+                      try {
+                        await seatBackend.call("PUT /seat", () => {
+                          seatBackend.setValue(taken);
+                          return taken;
+                        });
+                      } finally {
+                        setPending(null);
+                      }
+                    }}
+                  />
+                ))}
+              </List>
+            )}
+          </FakeBackend>
+        );
+      };
+
+      const inviteBackend = createFakeBackend({ value: [] });
+
+      const ButtonCheckboxDemo = () => {
+        const [selected, setSelected] = useState([]);
+        const [pending, setPending] = useState([]);
+        return (
+          <FakeBackend backend={inviteBackend}>
+            {() => (
+              <List
+                id="btn_check_list"
+                selectable
+                multiple
+                expandX
+                style={BUTTON_LIST_STYLE}
+                uiAction={(v) => setSelected(v || [])}
+              >
+                {BUTTON_PEOPLE.map((name, index) => (
+                  <PersonRow
+                    key={name}
+                    name={name}
+                    index={index}
+                    listId="btn_check_list"
+                    selected={selected.includes(name)}
+                    readOnly={pending.includes(name)}
+                    readOnlyMessage="Invitation en cours."
+                    action={async () => {
+                      const invited = selected.includes(name);
+                      setPending((p) => [...p, name]);
+                      try {
+                        await inviteBackend.call(
+                          `${invited ? "DELETE" : "POST"} /invitations/${name}`,
+                          () => {
+                            const held = inviteBackend.valueSignal.peek();
+                            inviteBackend.setValue(
+                              invited
+                                ? held.filter((n) => n !== name)
+                                : [...held, name],
+                            );
+                            return name;
+                          },
+                        );
+                      } finally {
+                        setPending((p) => p.filter((n) => n !== name));
+                      }
+                    }}
+                  />
+                ))}
+              </List>
+            )}
+          </FakeBackend>
+        );
+      };
+
+      const ButtonSurfaceDemo = () => {
+        return (
+          <div id="button-surface" className="demo-section">
+            <h2>Button</h2>
+            <div className="two-col">
+              <div>
+                <div className="col-label">
+                  Single — one seat, so the others wait with it
+                </div>
+                <ButtonRadioDemo />
+              </div>
+              <div>
+                <div className="col-label">
+                  Multiple — each row waits alone. Press two before answering
+                  either
+                </div>
+                <ButtonCheckboxDemo />
               </div>
             </div>
           </div>

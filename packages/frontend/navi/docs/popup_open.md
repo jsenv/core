@@ -12,6 +12,7 @@ What opens a `Dialog` or a `Popover`, and who owns the fact that it is open.
 - [A press that opens a popup and acts on it](#a-press-that-opens-a-popup-and-acts-on-it)
 - [Reacting to open and close](#reacting-to-open-and-close)
 - [Escape cancels, the other gestures keep](#escape-cancels-the-other-gestures-keep)
+- [The close cross](#the-close-cross)
 - [When the app holds the open state](#when-the-app-holds-the-open-state)
 - [A popup that loads data](#a-popup-that-loads-data)
 - [What the popup holds while it is closed](#what-the-popup-holds-while-it-is-closed)
@@ -423,12 +424,12 @@ that fails does so behind a closed popup**.
 The gestures that close a popup do not all mean the same thing, and that is on
 purpose:
 
-| gesture                         | what it means | who decides                                         |
-| ------------------------------- | ------------- | --------------------------------------------------- |
-| Escape                          | cancel        | `escapeEffect="cancel"` (default)                   |
-| a click outside                 | close, keep   | `pointerInteractionOutsideEffect="close"` (default) |
-| a close button (`--navi-close`) | close, keep   | the button                                          |
-| `--navi-cancel` on a button     | cancel        | the button                                          |
+| gesture                        | what it means | who decides                                         |
+| ------------------------------ | ------------- | --------------------------------------------------- |
+| Escape                         | cancel        | `escapeEffect="cancel"` (default)                   |
+| a click outside                | close, keep   | `pointerInteractionOutsideEffect="close"` (default) |
+| a close cross (`--navi-close`) | close, keep   | [the cross](#the-close-cross)                       |
+| `--navi-cancel` on a button    | cancel        | the button                                          |
 
 Escape says "forget it". It is the one gesture that has meant that everywhere,
 for as long as there have been dialogs, and navi keeps it that way. **A popup
@@ -499,6 +500,69 @@ cross first.
 A dialog picker's cancel also goes back in history, so anything written to the
 url while it was open (a route `stateSignal`, a search param) goes back with it
 — one more reason Escape and the click outside are not interchangeable.
+
+## The close cross
+
+The cross is navi's own: `<Dialog.Close />`, `<Popover.Close />`,
+`<Popup.Close />` — one component under three names, reached from whichever
+popup is being written. The caller places it, and nothing else:
+
+```jsx
+<Dialog id="duration">
+  <Box header flex="x" alignY="center" padding="s">
+    <Box expandX>Durée de la partie</Box>
+    <Dialog.Close />
+  </Box>
+  …
+</Dialog>
+```
+
+It comes with the things a hand-written cross has to remember: the `aria-label`
+in the active language (`label` overrides it), and the padding that turns a
+three-millimetre glyph into a target a thumb can hit.
+
+### It is the way out, so the state around it does not reach it
+
+**A close button written by hand refuses the press inside a read-only control.**
+A read-only `Picker` still opens — what it holds is often a shape only its popup
+draws, and reading it changes nothing — and it hands its popup that same
+read-only so every control in there refuses on its own terms. The cross is not
+one of those controls: closing writes nothing to the picker. `<Dialog.Close />`
+says so (`whenSelfInteractionsBlocked="ignore"`, see
+[interactions.md](./interactions.md)); a `<Button command="--navi-close" />`
+does not, wears the read-only it was handed, and answers a press aimed at the
+way out with "this action is not available right now".
+
+The same holds for a disabled zone, and for a form busy sending: the way out of
+a popup is never held by the state of what the popup belongs to.
+
+If a cross really has to be hand-written — it is drawn into a bigger affordance
+of the app's own, say — it carries the claim itself:
+
+```jsx
+<Button command="--navi-close" icon whenSelfInteractionsBlocked="ignore">
+  …
+</Button>
+```
+
+### It asks, it does not force
+
+Being exempt from the state around it is not being exempt from the popup's
+answer. The cross sends `--navi-close`, which reaches the popup as a close
+REQUEST — the same one Escape and the click outside make — and the popup
+decides:
+
+- a control inside it is mid-action → the close is refused, and that control
+  says why ([above](#the-popup-owns-its-open-state));
+- `onRequestClose` calls `preventDefault()` → the popup stays open;
+- a `Picker` takes the close as an answer, so it validates what its popup holds
+  and runs its action on the way out — and an invalid value keeps it open.
+
+The cross therefore lands exactly where a click outside lands: same request,
+same refusals, same "close, keep". A popup that must not be dismissed at a given
+moment says so in its own `onRequestClose`, where Escape and the backdrop are
+refused too — not by hiding or disabling the cross, which only removes the one
+way out that is visible.
 
 ## When the app holds the open state
 
