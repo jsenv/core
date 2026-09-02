@@ -1501,17 +1501,36 @@ naviI18n.addAll({
     fr: "Cette action est en cours...",
     en: "This action is in progress...",
   },
+  // What a ROW is waiting on: the row as a thing the list holds, joining it,
+  // leaving it or being saved. Said "à la liste" / "to the list" on purpose —
+  // in a selectable list, "en cours d'ajout" alone reads as "being added to
+  // the selection", which is the sentence below and a different event.
   "constraint.busy.item": {
     fr: "Cet élément est en cours de synchronisation.",
     en: "This item is being synchronized.",
   },
   "constraint.busy.item.adding": {
-    fr: "Cet élément est en cours d'ajout.",
-    en: "This item is being added.",
+    fr: "Cet élément est en cours d'ajout à la liste.",
+    en: "This item is being added to the list.",
   },
   "constraint.busy.item.removing": {
-    fr: "Cet élément est en cours de suppression.",
-    en: "This item is being removed.",
+    fr: "Cet élément est en cours de retrait de la liste.",
+    en: "This item is being removed from the list.",
+  },
+  "constraint.busy.item.updating": {
+    fr: "Cet élément est en cours de mise à jour.",
+    en: "This item is being updated.",
+  },
+  // What the LIST is waiting on: the choice just made, on its way. The subject
+  // is the selection, never a row — the row this is shown on is the one the
+  // user just pressed, which is not the one being committed.
+  "constraint.busy.selection": {
+    fr: "La sélection est en cours d'enregistrement...",
+    en: "This selection is being saved...",
+  },
+  "constraint.busy.choice": {
+    fr: "Le choix est en cours d'enregistrement...",
+    en: "This choice is being saved...",
   },
   "constraint.busy.default": {
     fr: "Cet élément est occupé.",
@@ -2945,6 +2964,13 @@ const debounceSignal = (
         ? compareTwoJsValues(value, debouncedValue)
         : value === debouncedValue
     ) {
+      // The signal came back to where the debounced one already is: whatever it
+      // passed through on the way is not on its way any more. Leaving the timer
+      // armed would publish that in-between value once the delay elapses, and
+      // settlingSignal would then say a newer value is coming, forever.
+      clearTimeout(timeoutId);
+      timeoutId = undefined;
+      latestValue = debouncedValue;
       return;
     }
     clearTimeout(timeoutId);
@@ -4005,6 +4031,9 @@ const createAction = (callback, rootOptions = {}) => {
      *   During the delay the instance is still the previous one, holding the
      *   previous answer — `paramsSettlingSignal` is what says a newer one is
      *   coming, and `useAsyncData(action, { loading: true })` reads it.
+     *   The instance follows where the signal settles, never a value it only
+     *   passed through: a signal back where it started before the delay elapses
+     *   asks nothing.
      */
     const bindParams = (newParamsOrSignal, options = {}) => {
       const { debounce, ...optionsWithoutDebounce } = options;
@@ -4900,7 +4929,9 @@ const runUnwatched = (startRun) => {
  *   keystroke: set `debounce: 500` and the request is sent only after the user stops interacting
  *   with the filters for 500 ms. During that delay the action still holds the previous answer;
  *   `action.paramsSettlingSignal` is what says a newer one is coming, and
- *   `useAsyncData(action, { loading: true })` reads it.
+ *   `useAsyncData(action, { loading: true })` reads it. The run follows where
+ *   the params settle, never a value they only passed through: params back
+ *   where they started before the delay elapses run nothing.
  *
  *   Example — auto-refresh a result list while the user tweaks filters:
  *   ```js
@@ -5594,6 +5625,7 @@ const CONSTRAINT_NAME_TO_PROP = {
   min_special_char: "minSpecialCharMessage",
   one_of: "oneOfMessage",
   readonly: "readOnlyMessage",
+  busy: "busyMessage",
   available: "availableMessage",
 };
 
@@ -6209,18 +6241,32 @@ const findControlProxies = (el) => {
 };
 
 /**
- * Given a real control element, returns the proxy that visually represents it.
+ * Given a real control element, returns the proxy a gesture on the control
+ * lands on — the one thing said about the control is drawn on.
  *
  * Use when you need a single visible stand-in for the real control — anchoring
  * a callout, for instance. Anything notifying proxies of a state change wants
  * `findControlProxies` instead, so a control represented by several of them
  * updates all of them.
  *
- * Returns `null` when no proxy exists for `el`.
+ * A proxy the pointer cannot reach is drawn for the control without standing
+ * for it: the surface around it takes the presses for everything it holds, so
+ * that surface is where a refusal about the control belongs — not a box inside
+ * it the finger never has to find. A selectable list row whose whole area is
+ * the click target is exactly that arrangement (see `selectableArea`), and it
+ * is read from the arrangement itself rather than from a flag repeating it:
+ * where a gesture can land IS pointer-events.
+ *
+ * Returns `null` when no proxy stands for `el`.
  */
 const findControlProxy = (el) => {
-  const [firstProxy = null] = findControlProxies(el);
-  return firstProxy;
+  for (const proxyElement of findControlProxies(el)) {
+    if (getComputedStyle(proxyElement).pointerEvents === "none") {
+      continue;
+    }
+    return proxyElement;
+  }
+  return null;
 };
 
 /**
@@ -8008,6 +8054,11 @@ const generateSvgWithoutArrow = (width, height) => {
  */
 
 
+// The close reason the manager gives itself when the callout has to be drawn on
+// another element: it tears the callout down and opens it again, and this is
+// what tells that apart from the callout being dismissed.
+const MOVING_TO_ANOTHER_ANCHOR = "moving_to_another_anchor";
+
 /**
  * Creates an opaque token used as a key for callout open reasons.
  * Each caller (validation, interaction, …) owns one token.
@@ -8031,9 +8082,105 @@ const createCalloutManager = (
   const [notifyCalloutOpen, onCalloutOpen] = createPubSub();
 
   let callout = null;
+  // Where the open callout is drawn. What a token points at is compared against
+  // it to know whether showing that token is a new message on the same element
+  // or the same conversation moving to another one.
+  let calloutAnchorElement = null;
   // Tracks open tokens → their constraint info.
   // The callout closes automatically when the last token is removed.
   const tokens = new Map();
+
+  const openCalloutForToken = (tokenData, event) => {
+    const { anchorElement } = tokenData;
+    calloutAnchorElement = anchorElement;
+    const removeCloseOnCleanup = addTeardown?.(() => {
+      requestCloseCallout(new CustomEvent("cleanup"), "cleanup");
+    });
+    // `openResults` is referenced in onClose which runs later — forward ref is intentional.
+    let openResults = [];
+    callout = openCallout(tokenData.message, {
+      status: tokenData.status,
+      testId: tokenData.testId,
+      icon: tokenData.icon,
+      closeButton: tokenData.closeButton,
+      closeOnClickOutside: tokenData.status !== "error",
+      anchorElement,
+      openingEvent: event,
+      skipFocus: tokenData.skipFocus,
+      debug: debugPopup,
+      onClose: ({
+        event: closeEvent,
+        reason,
+        shouldTransferFocusFromCallout,
+      }) => {
+        removeCloseOnCleanup?.();
+        for (const result of openResults) {
+          if (typeof result === "function") {
+            result();
+          }
+        }
+        callout = null;
+        calloutAnchorElement = null;
+        if (reason === MOVING_TO_ANOTHER_ANCHOR) {
+          // The control still has the same things to say, on another element:
+          // the tokens stand and nothing was dismissed, so neither the token
+          // callbacks nor the focus hand-back below apply.
+          return;
+        }
+        // User dismissed the callout — notify all active tokens then clear.
+        // Told what closed it: a token whose content is a popup of its own (a
+        // picker in callout mode) closes that popup on the same event.
+        for (const [, otherTokenData] of tokens) {
+          otherTokenData.onClose?.({ event: closeEvent, reason });
+        }
+        tokens.clear();
+        const element = controller.ref.current;
+        if (
+          shouldTransferFocusFromCallout &&
+          element &&
+          !element.closest('[aria-hidden="true"]')
+        ) {
+          const focusTarget =
+            findFocusDelegateTarget(anchorElement) || anchorElement;
+          debugFocus(
+            closeEvent,
+            `callout is closing with focus, give focus back to the control ${getElementSignature(focusTarget)}.focus()`,
+          );
+          focusTarget.focus();
+        }
+      },
+    });
+    openResults = notifyCalloutOpen(event);
+  };
+
+  // What a token has to say, drawn where that token points. A control has one
+  // callout, so a token takes it over from whoever held it — and a token about
+  // another element (an action refused about the row that was pressed, on a
+  // list that owns the action) moves it there, because a sentence about a row
+  // drawn on the list is a sentence pointing at the wrong thing.
+  const showToken = (tokenData, event) => {
+    if (tokenData.anchorElement && !tokenData.anchorElement.isConnected) {
+      // What the token pointed at has left the page — a row removed while its
+      // refusal was still waiting behind another one. There is nothing left to
+      // draw on there, and the control holding the token is still here, so it
+      // takes it (same rule as an action error whose requester is gone, see
+      // use_execute_action.js).
+      tokenData.anchorElement = controller.ref.current;
+    }
+    if (callout) {
+      if (tokenData.anchorElement === calloutAnchorElement) {
+        callout.update(tokenData.message, {
+          status: tokenData.status,
+          testId: tokenData.testId,
+          icon: tokenData.icon,
+          closeButton: tokenData.closeButton,
+        });
+        return;
+      }
+      callout.requestClose(event, MOVING_TO_ANOTHER_ANCHOR);
+    }
+    openCalloutForToken(tokenData, event);
+  };
 
   // Remove a token. Closes the callout only when no tokens remain.
   // If other tokens are still active, updates the callout to show the first remaining one.
@@ -8045,12 +8192,7 @@ const createCalloutManager = (
     if (tokens.size > 0) {
       if (callout) {
         const [, remainingTokenData] = tokens.entries().next().value;
-        callout.update(remainingTokenData.message, {
-          status: remainingTokenData.status,
-          testId: remainingTokenData.testId,
-          icon: remainingTokenData.icon,
-          closeButton: remainingTokenData.closeButton,
-        });
+        showToken(remainingTokenData, event);
       }
       return false;
     }
@@ -8087,70 +8229,21 @@ const createCalloutManager = (
       removeOpenToken(token, event);
       return;
     }
-    const calloutOptions = {
+    const tokenData = {
+      message,
       status,
       testId,
       icon,
       closeButton,
-      closeOnClickOutside: status !== "error",
-    };
-
-    tokens.set(token, { message, status, testId, icon, closeButton, onClose });
-    if (callout) {
-      callout.update(message, calloutOptions);
-      return;
-    }
-    const resolvedAnchorElement = anchorElement || controller.ref.current;
-    const removeCloseOnCleanup = addTeardown?.(() => {
-      requestCloseCallout(new CustomEvent("cleanup"), "cleanup");
-    });
-    // `openResults` is referenced in onClose which runs later — forward ref is intentional.
-    let openResults = [];
-    callout = openCallout(message, {
-      ...calloutOptions,
-      anchorElement: resolvedAnchorElement,
-      openingEvent: event,
       skipFocus,
-      debug: debugPopup,
-      onClose: ({
-        event: closeEvent,
-        reason,
-        shouldTransferFocusFromCallout,
-      }) => {
-        removeCloseOnCleanup?.();
-        for (const result of openResults) {
-          if (typeof result === "function") {
-            result();
-          }
-        }
-        callout = null;
-        // User dismissed the callout — notify all active tokens then clear.
-        // Told what closed it: a token whose content is a popup of its own (a
-        // picker in callout mode) closes that popup on the same event.
-        for (const [, tokenData] of tokens) {
-          tokenData.onClose?.({ event: closeEvent, reason });
-        }
-        tokens.clear();
-        const element = controller.ref.current;
-        if (
-          shouldTransferFocusFromCallout &&
-          element &&
-          !element.closest('[aria-hidden="true"]')
-        ) {
-          const focusTarget =
-            findFocusDelegateTarget(resolvedAnchorElement) ||
-            resolvedAnchorElement;
-          debugFocus(
-            closeEvent,
-            `callout is closing with focus, give focus back to the control ${getElementSignature(focusTarget)}.focus()`,
-          );
-          focusTarget.focus();
-        }
-      },
-    });
-    // `onOpen` can be a createPubSub publisher — its return value is an array of cleanup fns.
-    // Or just a plain callback — wrap the single return value in an array.
-    openResults = notifyCalloutOpen(event);
+      onClose,
+      // Resolved as the token is added, and kept with it: a token shown later
+      // (when the one covering it goes) must be drawn where it was pointing at
+      // the time, and the control itself is where a token pointing nowhere goes.
+      anchorElement: anchorElement || controller.ref.current,
+    };
+    tokens.set(token, tokenData);
+    showToken(tokenData, event);
   };
 
   const calloutManager = {
@@ -8176,9 +8269,18 @@ const BUSY_CONSTRAINT = {
   transient: true,
   // Unlike readonly/disabled, a busy element DOES block its parent from
   // submitting — the element is mid-operation and cannot safely participate.
-  check: (field) => {
+  check: (field, { intent } = {}) => {
     const isBusy = isControlBusy(field);
     if (!isBusy) {
+      return null;
+    }
+
+    // Busy, and what it opens still opens: a picker's answer lives in a shape
+    // only its popup draws, and refusing to open leaves it unreadable for as
+    // long as the wait lasts. Opening reads and nothing more — the same
+    // exemption read-only makes, on the same controls (see
+    // READONLY_CONSTRAINT), so that "read" means one thing to both.
+    if (intent === "read" && field.readOnlyOpens) {
       return null;
     }
 
@@ -8199,9 +8301,9 @@ CONSTRAINT_ATTRIBUTE_SET.add("data-busy");
 // whether it may finally close, a slide whether it may move on).
 //
 // The action's running state is a signal, so it is already right there. A
-// control busy only because the group above is running the action it asked for
-// has no state of its own to read — the group's answer IS its answer, so it
-// asks upward and inherits the same live reading.
+// control busy only because the group above is waiting has no state of its own
+// to read — the group's answer IS its answer, so it asks upward and inherits
+// the same live reading.
 const isControlBusy = (field) => {
   if (field.loadingFromOwnProp) {
     return true;
@@ -8225,7 +8327,7 @@ const isControlBusy = (field) => {
       return true;
     }
   }
-  if (field.loadingFromParent) {
+  if (field.loadingFromAbove) {
     const parent = field.parentUIStateController;
     return parent ? isControlBusy(parent) : false;
   }
@@ -10063,6 +10165,9 @@ const createControlInteraction = (
   let failingManagedInteraction = null;
   // The title this rule put on the element, if any (see checkInteractivity).
   let titleWritten = null;
+  // The constraint this control last refused a press with, while that refusal
+  // is on screen — what refreshReport has to take back once it stops holding.
+  let reportedConstraint = null;
 
   const checkInteractivity = ({ event, intent = "write" } = {}) => {
     interactionFailedConstraintInfo = null;
@@ -10153,12 +10258,41 @@ const createControlInteraction = (
 
     const canInteract =
       !interactionFailedConstraintInfo && !failingManagedInteraction;
-    // When the control is now interactable, remove the interaction token
+    // When the control can be interacted with, remove the interaction token
     // so the callout closes if no other tokens (e.g. validation) are active.
     if (canInteract) {
       callout.removeOpenToken(INTERACTION_TOKEN, event);
+      reportedConstraint = null;
     }
     return canInteract;
+  };
+
+  // What this rule says out loud is a LIVE reading, and nothing else comes back
+  // to correct it: busy stops being true on its own (see BUSY_CONSTRAINT's
+  // `transient`), and read-only inherited from a group goes with the run that
+  // set it. Read again whenever the control's interactivity moves, so a refusal
+  // is taken back once what it says stops being true — a callout left open over
+  // a control it no longer describes also sits on top of it and swallows the
+  // next press.
+  //
+  // Only when something WAS said: reading a control that has refused nothing
+  // would start writing titles nobody asked for.
+  const refreshReport = (event) => {
+    const constraintReported = reportedConstraint;
+    if (!constraintReported && titleWritten === null) {
+      return;
+    }
+    checkInteractivity({ event });
+    if (!reportedConstraint) {
+      return;
+    }
+    if (interactionFailedConstraintInfo?.constraint === constraintReported) {
+      return;
+    }
+    // Held still, but by something else — and the press that was answered is
+    // long over, so it is taken back rather than answered a second time.
+    callout.removeOpenToken(INTERACTION_TOKEN, event);
+    reportedConstraint = null;
   };
 
   const reportInteractivity = ({ event } = {}) => {
@@ -10167,6 +10301,7 @@ const createControlInteraction = (
       failingManagedInteraction.reportInteractivity({ event });
       return;
     }
+    reportedConstraint = interactionFailedConstraintInfo.constraint;
     debugInteraction(
       event,
       `reportInteractivity (${interactionFailedConstraintInfo.name})`,
@@ -10189,6 +10324,7 @@ const createControlInteraction = (
   const controlInteraction = {
     checkInteractivity,
     reportInteractivity,
+    refreshReport,
   };
   Object.defineProperty(controlInteraction, "interactionFailedConstraintInfo", {
     get: () => interactionFailedConstraintInfo,
@@ -10237,6 +10373,10 @@ const onRequestInteraction = (
     // through (see READONLY_CONSTRAINT).
     intent = "write",
     bypassInteractivity = false,
+    // navi continuing a gesture on its own rather than a user asking for
+    // something: the decision still applies, the explanation does not (see
+    // below).
+    automatic = false,
     // Who asked, when the control is not answering the gesture on its own —
     // the source of a command (see the self-interactions step-back below).
     requester,
@@ -10297,7 +10437,16 @@ const onRequestInteraction = (
         const reason = failedInfo
           ? `failing interaction constraint "${failedInfo.name}"`
           : "not interactable";
-        ci.reportInteractivity({ event });
+        // A refusal is explained to whoever asked, and an automatic follow-up
+        // has nobody waiting for one: a group whose action a part just asked
+        // for is busy running exactly that (see auto_group_action in
+        // control_hooks.jsx), so the follow-up is turned down — which is what
+        // keeps the action from running twice — while the press that started
+        // it went through. Saying "this element is busy" there answers an
+        // accepted press with a refusal.
+        if (!automatic) {
+          ci.reportInteractivity({ event });
+        }
         onPrevented(reason);
         return false;
       }
@@ -10351,6 +10500,11 @@ const dispatchRequestAction = (
   {
     event,
     name = "dispatchRequestAction",
+    // The gate's own options, named here so they reach it: everything left in
+    // actionOptions goes to the action alone, so a gate option arriving under
+    // any other name is dropped without a word.
+    automatic,
+    bypassInteractivity,
     prevented,
     allowed,
     always,
@@ -10360,6 +10514,8 @@ const dispatchRequestAction = (
   return dispatchRequestInteraction(element, {
     event,
     name,
+    automatic,
+    bypassInteractivity,
     // The gate needs it as much as the action does: the requester may be an
     // affordance that claimed the press to ask for this very action, and the
     // control must not read that claim as "this press was not for me" — see
@@ -12965,9 +13121,10 @@ const useExecuteAction = (
   }, [error]);
 
   const addErrorMessage = (error, { requester } = {}) => {
-    // The error is stored on the element that owns the action (the form/element itself).
-    // The requester (e.g. submit button) is stored as the callout display target
-    // so the validation message appears on the button, not the form.
+    // The error is stored on the element that owns the action (the form/element
+    // itself). The requester — the submit button that sent, the row of a list
+    // whose command sent — is stored as the callout display target, so the
+    // message appears on whoever asked rather than on the whole control.
     const element = elementRef.current;
     let target = requester;
     // A requester that is no longer on the page is not a place to show
@@ -31300,6 +31457,12 @@ const anyMatchingRouteSignal = (routes) => {
  * @param {Element} [options.anchor] Where a popup this opens should be placed,
  *   when that is not the element asking: a menu opened by a press belongs at the
  *   point the press happened, and the row that was pressed is not that point.
+ * @param {Element} [options.requester] Who asked, when that is not the source.
+ *   A group triggers its own command from itself — what the command aims at is
+ *   read around the group, not around the child — while the gesture was on one
+ *   of its children, and what a refusal is about is that child. Same role as
+ *   the submit button a form's send names: the action belongs to the control,
+ *   the answer is drawn on whoever asked for it.
  */
 const triggerNaviCommand = (element, command, event, options) => {
   const run = resolveNaviCommand(element, command, event, options);
@@ -31330,7 +31493,7 @@ const resolveNaviCommand = (
   element,
   command,
   event,
-  { optional, value, anchor } = {},
+  { optional, value, anchor, requester } = {},
 ) => {
   if (!event) {
     throw new Error(
@@ -31359,6 +31522,7 @@ const resolveNaviCommand = (
     // source: the attribute form has a `value` to read (`<Button value={id}>`),
     // a JS decision has none, and both must be able to say the same thing.
     value,
+    requester,
   });
   if (!execute) {
     if (optional) {
@@ -31542,7 +31706,8 @@ const onNaviCommand = (e, { debugCommand = () => {} } = {}) => {
 };
 
 const NAVI_COMMANDS = {};
-// commandHandler(source, event) → { target, implementation } | undefined
+// commandHandler(source, event, { argument, anchor, value, requester })
+//   → { target, implementation } | undefined
 // - Each handler calls resolveExplicitTarget(source) first, then falls back to
 //   its own DOM resolution logic (closest expandable, parent control, etc.).
 // - Returns undefined when no target can be found — this is a normal outcome for
@@ -31780,7 +31945,7 @@ const resolveAfterSend = (target, requester) => {
   return undefined;
 };
 
-registerNaviCommand("--navi-send", (source, event) => {
+registerNaviCommand("--navi-send", (source, event, { requester }) => {
   const expandable = resolveExpandableAround(source);
   const target =
     resolveExplicitTarget(source) ||
@@ -31823,14 +31988,21 @@ registerNaviCommand("--navi-send", (source, event) => {
   return {
     target,
     implementation: () => {
-      let requester = source;
-      if (!source.matches(submitSelector)) {
-        // When present, use the first submit button as the requester, not the input.
-        // This aligns with browser behavior where Enter in a text input triggers
-        // the first submit button of the form, not the input itself.
-        const firstButtonSubmitting = target.querySelector(submitSelector);
-        if (firstButtonSubmitting) {
-          requester = firstButtonSubmitting;
+      // Who asked, taken from whoever triggered the command when it said so —
+      // a group sends from itself and names the child the gesture was on (see
+      // triggerNaviCommand's `requester`). Named means named: the stand-in
+      // below is for a source nobody spoke for.
+      let sendRequester = requester;
+      if (!sendRequester) {
+        sendRequester = source;
+        if (!source.matches(submitSelector)) {
+          // When present, use the first submit button as the requester, not the input.
+          // This aligns with browser behavior where Enter in a text input triggers
+          // the first submit button of the form, not the input itself.
+          const firstButtonSubmitting = target.querySelector(submitSelector);
+          if (firstButtonSubmitting) {
+            sendRequester = firstButtonSubmitting;
+          }
         }
       }
       // Nothing is committed when a constraint fails, so nothing is decided
@@ -31844,7 +32016,7 @@ registerNaviCommand("--navi-send", (source, event) => {
       // from the response writes it on the form while it runs
       // (data-after-send), and this is what picks it up.
       const runAfterSend = () => {
-        const afterSend = resolveAfterSend(target, requester);
+        const afterSend = resolveAfterSend(target, sendRequester);
         if (!afterSend) {
           return;
         }
@@ -31879,7 +32051,7 @@ registerNaviCommand("--navi-send", (source, event) => {
               initiator.preventDefault();
             }
           },
-          requester,
+          requester: sendRequester,
         }),
       );
       if (sent === false || invalid) {
@@ -34140,8 +34312,20 @@ const useUIStateController = (
         resetUIState: (e) => {
           controller.setUIState(controller.state, e);
         },
+        // What the control shows becomes what is acknowledged: the outside said
+        // yes to it, so it is where a rollback goes back to. Left alone for a
+        // control whose value is GIVEN — the prop is already its truth — and
+        // while a newer request waits behind this one, whose own answer is what
+        // will settle what is accepted.
+        acknowledgeUIState: () => {
+          if (controller.hasStateProp || controller.queuedActionAllowedEvent) {
+            return;
+          }
+          controller.state = controller.uiState;
+        },
         onActionEnd: (e) => {
           debugUIState(`"${controlType}" actionEnd called`);
+          acknowledgeOwnAction(controller);
           controller.rules.validation.syncValidity(e);
         },
         onActionError: (e) => {
@@ -34349,6 +34533,18 @@ const firstDefinedChildUIState = (children) => {
     }
   }
   return undefined;
+};
+
+// A run that came back with a yes settles what the control is worth — but only
+// for the control the run BELONGS to. Anything with a `command` still fires its
+// own navi_action_* events (it is given a placeholder action so they exist),
+// and taking those for an acknowledgement is how a row would remember its own
+// selection as accepted and hand it back on the group's rollback.
+const acknowledgeOwnAction = (controller) => {
+  if (!controller.props.action) {
+    return;
+  }
+  controller.acknowledgeUIState();
 };
 
 // Default aggregate/distribute implementations keyed by controlType or stateType.
@@ -34818,7 +35014,7 @@ const useUIGroupStateController = (
               { except: actingChild },
             );
           }
-          applyState(groupUIState, e);
+          applyState(groupUIState, e, { actingChild });
         } else if (notifyExternal === "silent") {
           controller.syncInternalState(groupUIState);
           s.parentUIStateController?.onChildUIAction(controller, e, {
@@ -34872,7 +35068,11 @@ const useUIGroupStateController = (
         childUIStateController.setUIState(childNewState, e);
       };
 
-      const applyState = (newUIState, e, { internalBehavior = false } = {}) => {
+      const applyState = (
+        newUIState,
+        e,
+        { internalBehavior = false, actingChild } = {},
+      ) => {
         const { controller } = s;
         const currentUIState = controller.uiState;
         controller.uiState = newUIState;
@@ -34893,7 +35093,10 @@ const useUIGroupStateController = (
         s.parentUIStateController?.onChildUIAction(controller, e, {
           stateChanged: true,
         });
-        controller.onUIAction(e, { skipCommand: internalBehavior });
+        controller.onUIAction(e, {
+          skipCommand: internalBehavior,
+          actingChild,
+        });
         const el = controller.ref.current;
         if (el) {
           dispatchInternalCustomEvent(el, "navi_ui_state_change", {
@@ -35032,7 +35235,7 @@ const useUIGroupStateController = (
           uiStateSignal.value = newUIState;
           publishUIState(newUIState);
         },
-        onUIAction: (e, { skipCommand } = {}) => {
+        onUIAction: (e, { skipCommand, actingChild } = {}) => {
           const currentUIState = controller.uiState;
           // The same write applyState/onChange make (see writeBoundSignal), for
           // the case where the state did not move but the user acted all the
@@ -35046,7 +35249,14 @@ const useUIGroupStateController = (
           if (!skipCommand && controller.props.command) {
             const el = controller.ref.current;
             if (el) {
-              triggerNaviCommand(el, controller.props.command, e);
+              // The command is the GROUP's — what it aims at is read around the
+              // group, not around the child — but the child is who asked, and a
+              // refusal is drawn on whoever asked (see triggerNaviCommand's
+              // `requester`). Without it a list refusing a name says so at its
+              // own foot, rows away from the name that was touched.
+              triggerNaviCommand(el, controller.props.command, e, {
+                requester: actingChild?.ref.current,
+              });
             }
           }
         },
@@ -35141,7 +35351,7 @@ const useUIGroupStateController = (
               actingChild: childUIStateController,
             });
           } else {
-            controller.onUIAction(e);
+            controller.onUIAction(e, { actingChild: childUIStateController });
           }
         },
         unregisterChild: (childUIStateController) => {
@@ -35203,7 +35413,19 @@ const useUIGroupStateController = (
           }
           onChange(e, { notifyExternal: true });
         },
+        // The group was told yes, so what each of its parts shows is accepted
+        // too: a group holds no value of its own — its rollback puts the
+        // children back where they were (see resetUIState), and they can only
+        // go back to what was acknowledged if they were told.
+        acknowledgeUIState: () => {
+          for (const c of childUIStateControllerArray) {
+            if (shouldPropagateStateToChild(c)) {
+              c.acknowledgeUIState();
+            }
+          }
+        },
         onActionEnd: (e) => {
+          acknowledgeOwnAction(controller);
           controller.rules.validation.syncValidity(e);
         },
         onActionError: (e) => {
@@ -35291,7 +35513,21 @@ const useUIGroupStateController = (
       // down last time. A popup reopened on another subject hands down the very
       // same empty value it did before, and the selection left inside it from
       // the previous opening is what has to go.
-      if (hasValueProp && !compareTwoJsValues(value, controller.uiState)) {
+      //
+      // Except while the group is asking about that very difference: the run in
+      // flight carries what the user just chose, and the value is what the
+      // owner holds until it answers. Putting the children back on it here
+      // would take the choice off the screen on the first re-render — which the
+      // run itself causes, by making the group busy — so the press would appear
+      // to do nothing until the answer arrived, and the rollback on a refusal
+      // would have nothing left to undo.
+      const askingAboutIt =
+        controller.actionInFlight || controller.queuedActionAllowedEvent;
+      if (
+        hasValueProp &&
+        !askingAboutIt &&
+        !compareTwoJsValues(value, controller.uiState)
+      ) {
         placeChildrenFrom(value);
       }
       if (
@@ -37188,10 +37424,19 @@ const useInteractiveProps = (props, {
     // live source rather than from the rendered aria-busy, which conflates all
     // three and is a frame behind. See its own comment.
     uiStateController.loadingFromOwnProp = Boolean(loading);
-    uiStateController.loadingFromParent = loadingFromParent;
+    // The group above waiting on something, which reaches every control in it:
+    // each one is held for as long as that lasts, and "wait" is what they have
+    // to say about it — not the read-only they wear to express it, which is a
+    // settled word (see BUSY_CONSTRAINT and READONLY_CONSTRAINT).
+    uiStateController.loadingFromAbove = Boolean(controlLoading);
     // Read by BUSY_CONSTRAINT: an optimistic control stays interactive while
     // its bound action runs (a new toggle replaces the run instead of waiting).
     uiStateController.optimistic = Boolean(optimistic);
+    // What the interaction rule last refused is only true while the control is
+    // held; the state it was read from moves here (see refreshReport).
+    useLayoutEffect(() => {
+      uiStateController.rules.interaction.refreshReport(new CustomEvent("interactivity_change"));
+    }, [disabledResolved, readOnlyResolved, loadingResolved, controlLoading, uiStateController]);
     Object.assign(controlHostProps, {
       "required": requiredResolved,
       "aria-busy": loadingResolved ? "true" : "false",
@@ -37538,16 +37783,13 @@ const useInteractiveProps = (props, {
               event: e.detail.eventChain[0],
               name: "auto_group_action",
               requester: e.detail.requester,
-              // The interactivity gate is not re-asked: the user already
-              // interacted — with the child, whose gate said yes — and this
-              // follow-up is automatic. Asking again would also answer
-              // wrong: this event is dispatched inside the batch() that
-              // settles the child's action, where a bound action still
-              // READS as running (its state is mirrored through a signal
-              // effect the batch defers, see watchActionCompletion) — the
-              // busy constraint would refuse the group for an action that
-              // is already over. The validity gate still applies.
-              bypassInteractivity: true
+              // Nobody asked for this one: it is the group's own continuation
+              // of a press the child's gate already accepted. The gate still
+              // decides — a group told to send by its own `command` is
+              // already running that very action, and letting this through
+              // would run it a second time — but a refusal here is not
+              // reported, since the press it would answer went through.
+              automatic: true
             });
           }
         }
@@ -62011,6 +62253,42 @@ const ListItemFooter = props => {
   });
 };
 
+// What a row may say it is waiting on, all of them about the row as a thing
+// the LIST holds: joining it, leaving it, or being saved where it is. A
+// selectable row waiting on the list's own send is a different event with a
+// different subject — the selection, not the row (see list_selectable.jsx).
+const LOADING_REASON_SET = new Set(["adding", "removing", "updating"]);
+
+/**
+ * What a row waiting on something has to say when it is pressed. `loading` may
+ * say WHAT it is waiting for: a row being created is not simply "busy", and
+ * saying which one it is tells the user what to expect.
+ *
+ * Shared with the selectable row, which carries the same `loading` on the
+ * hidden input holding its selection — the row and that control must answer a
+ * press with one sentence, whichever of them catches it.
+ */
+const listItemBusyMessage = (loading, props) => {
+  if (LOADING_REASON_SET.has(loading)) {
+    return naviI18n(`constraint.busy.item.${loading}`, props);
+  }
+  return naviI18n("constraint.busy.item", props);
+};
+
+/**
+ * Why the row cannot be acted on, in the row's own terms — or in the caller's,
+ * where it gave them. The same two props every navi control answers a refusal
+ * with (`readOnlyMessage`, `busyMessage`), so a row and the control it carries
+ * cannot end up saying two different things about one press: whichever of them
+ * catches it, the sentence is the same.
+ */
+const listItemBlockedMessage = (loading, props) => {
+  if (loading) {
+    return props.busyMessage ?? listItemBusyMessage(loading, props);
+  }
+  return props.readOnlyMessage ?? naviI18n("constraint.readonly.item", props);
+};
+
 installImportMetaCssBuild(import.meta);const css$y = /* css */`@layer navi {
   .navi_list_container[navi-selectable] {
     --list-item-outline-width: var(--navi-focus-outline-width);
@@ -62226,7 +62504,17 @@ const ListSelectable = props => {
     }
     return kept;
   };
-  const [listControlRootProps, listControlProps, childrenWrapperProps] = useControlgroupProps(props, {
+  const [listControlRootProps, listControlProps, childrenWrapperProps] = useControlgroupProps({
+    // The defaults of the group this IS (see CheckboxGroup / RadioGroup):
+    // what a selectable list shows is a claim about what was accepted, so
+    // a run that ends without an answer puts the rows back where they were
+    // — a row left ticked over a refusal says the opposite of what
+    // happened, and the error callout beside it does not untick it.
+    resetOnCancel: true,
+    resetOnAbort: true,
+    resetOnError: true,
+    ...props
+  }, {
     stateType: multiple ? "array" : "",
     controlType: multiple ? "checkbox_group" : "radio_group",
     aggregateChildStates
@@ -62513,6 +62801,14 @@ const ListItemSelectable = props => {
     selected,
     pointed,
     selectableArea = "all",
+    // True of the ROW as much as of the control it carries, so both are told.
+    // Left in `rest` they would reach the hidden input alone — the control
+    // system claims them (they are control props) and the row would never see
+    // them, which for a row means no outline, no dimming, no press swallowed
+    // and none of the buttons it contains held back (see ListItemReal). Any
+    // prop a row and a control both understand belongs here.
+    loading,
+    readOnly,
     // The row's own click handler, kept out of the control props below: those
     // describe the hidden input that carries the selection, and a caller
     // writing onClick on a <List.Item> is talking about the row they see.
@@ -62523,23 +62819,33 @@ const ListItemSelectable = props => {
   // A checkbox toggles on its own; only a radio has to be told it may let go.
   const deselectable = useContext(SelectableListDeselectableContext) && !multiple;
   // Whose reason it is that this row cannot be taken. Read-only reaching it
-  // from above is the LIST's, and what is settled is then the whole answer —
-  // said as the selection where several things are taken, as the choice where
-  // one thing is. Said of each row in turn, "this option is not available"
-  // describes something else entirely: a list where each row happens to be
-  // unavailable for its own reasons, which goes on being said that way. Busy
-  // is not settled either: a list waiting on something says nothing about what
-  // will be possible once it is done, so the row keeps its own words.
+  // from above is the LIST's, and that is the whole answer — said as the
+  // selection where several things are taken, as the choice where one thing
+  // is. Said of each row in turn, "this option is not available" describes
+  // something else entirely: a list where each row happens to be unavailable
+  // for its own reasons, which is what a row held on its own says.
+  //
+  // A list waiting on something is not unavailable, it is not answering yet —
+  // busy rather than read-only (see BUSY_CONSTRAINT, which is asked first),
+  // and the wait is about the same thing the read-only would be about.
   const readOnlyFromAbove = useContext(ReadOnlyContext);
-  const loadingFromAbove = useContext(LoadingContext$1);
-  const answerIsSettled = Boolean(readOnlyFromAbove) && !loadingFromAbove;
-  const readOnlyMessageKey = answerIsSettled ? multiple ? `constraint.readonly.selection` : `constraint.readonly.choice` : `constraint.readonly.option`;
+  const readOnlyMessageKey = readOnlyFromAbove ? multiple ? `constraint.readonly.selection` : `constraint.readonly.choice` : `constraint.readonly.option`;
+  // Handed to the row as well as to the control: whichever of the two catches
+  // the press answers it, and they must not answer it differently.
+  const readOnlyMessageResolved = props.readOnlyMessage ?? naviI18n(readOnlyMessageKey, props);
+  const busyMessageResolved = props.busyMessage ?? (loading ? listItemBusyMessage(loading, props) : naviI18n(multiple ? `constraint.busy.selection` : `constraint.busy.choice`, props));
   const inputRef = useRef();
   const inputType = multiple ? "checkbox" : "radio";
   const inputId = `${id}_input`;
   inputRef.nullCanHappen = true; // virtualization
   const [checkableRootProps, checkableProps, controlChildrenWrapperProps] = useCheckableProps({
-    readOnlyMessage: naviI18n(readOnlyMessageKey, props),
+    readOnlyMessage: readOnlyMessageResolved,
+    // What the row itself is waiting for when it says so, the wait of the
+    // list around it otherwise — said as the selection where several things
+    // are taken, as the choice where one thing is.
+    busyMessage: busyMessageResolved,
+    loading,
+    readOnly,
     ...rest,
     ref: inputRef,
     id: inputId,
@@ -62556,17 +62862,19 @@ const ListItemSelectable = props => {
     basePseudoState,
     children
   } = checkableProps;
-  const readOnly = basePseudoState[":read-only"];
+  // Everything holding the control back, not only the row's own `readOnly`
+  // above: the list above it, a maxLengthGuard with no room left.
+  const readOnlyResolved = basePseudoState[":read-only"];
   const realInputContextValue = useMemo(() => {
     return {
       id: inputId,
       type: inputType,
       checked,
-      readOnly,
+      readOnly: readOnlyResolved,
       value,
       deselectable
     };
-  }, [inputId, inputType, checked, readOnly, value, deselectable]);
+  }, [inputId, inputType, checked, readOnlyResolved, value, deselectable]);
   return jsxs(Next, {
     id: id,
     index: index,
@@ -62588,6 +62896,10 @@ const ListItemSelectable = props => {
     },
     ref: props.ref,
     onClick: onClick,
+    loading: loading,
+    readOnly: readOnly,
+    readOnlyMessage: readOnlyMessageResolved,
+    busyMessage: busyMessageResolved,
     selectable: undefined,
     "navi-selectable-area-all": selectableArea === "all" ? "" : undefined,
     children: [jsx(SelectableRealInput, {
@@ -65761,7 +66073,7 @@ const ListItemReal = props => {
     if (calloutRef.current && calloutRef.current.opened) {
       return;
     }
-    calloutRef.current = openCallout(blockedMessage(loading, readOnly, props), {
+    calloutRef.current = openCallout(listItemBlockedMessage(loading, props), {
       anchorElement: event.currentTarget,
       status: "info",
       openingEvent: event
@@ -65788,6 +66100,11 @@ const ListItemReal = props => {
     ...itemColumnsOverrideProps,
     index: undefined,
     selected: undefined
+    // Read by listItemBlockedMessage, not by the element.
+    ,
+
+    readOnlyMessage: undefined,
+    busyMessage: undefined
     // We use aria-hidden and not hidden because hidden would be forced to
     // display: none while here we want to keep it in the DOM to avoid layout shift
     // but visually hidden
@@ -65837,18 +66154,6 @@ const ListItemReal = props => {
       inset: -1
     })]
   });
-};
-// Why the row cannot be acted on, in the row's own terms. `loading` may say
-// what it is waiting for ("adding", "removing"): a row being created is not
-// simply "busy", and saying which one it is tells the user what to expect.
-const blockedMessage = (loading, readOnly, props) => {
-  if (!loading) {
-    return naviI18n("constraint.readonly.item", props);
-  }
-  if (loading === "adding" || loading === "removing") {
-    return naviI18n(`constraint.busy.item.${loading}`, props);
-  }
-  return naviI18n("constraint.busy.item", props);
 };
 const LIST_ITEM_STYLE_CSS_VARS = {
   "borderRadius": "--list-item-border-radius",
@@ -65904,7 +66209,7 @@ const LIST_ITEM_STYLE_CSS_VARS = {
  *   skeleton?: boolean,
  *   error?: boolean | import("ignore:preact").ComponentChildren,
  *   onErrorDismiss?: (event: Event) => void,
- *   loading?: boolean | "adding" | "removing",
+ *   loading?: boolean | "adding" | "removing" | "updating",
  *   readOnly?: boolean,
  *   filtered?: boolean,
  *   hidden?: boolean,
@@ -65945,12 +66250,17 @@ const LIST_ITEM_STYLE_CSS_VARS = {
  *   like the list's own error. `true` shows a generic sentence. When
  *   `onErrorDismiss` is given, a dismiss button is drawn next to the message
  *   and calls it.
- * @param {boolean|"adding"|"removing"} [props.loading]
+ * @param {boolean|"adding"|"removing"|"updating"} [props.loading]
  *   The row is waiting on something: it draws a loading outline and, like
  *   readOnly, stops taking clicks. Works on any item, not only a selectable
- *   one — a list is edited row by row. Pass "adding" or "removing" rather than
- *   true to say WHAT it is waiting for, which is what a press on it then
- *   answers.
+ *   one — a list is edited row by row. Rather than true, say WHAT it is
+ *   waiting for, which is what a press on it then answers: "adding" (joining
+ *   the list), "removing" (leaving it), "updating" (being saved where it is).
+ *
+ *   All three are about the row as a thing the LIST holds, never about the
+ *   selection: a selectable row taken while its list sends says so on its own
+ *   ("la sélection est en cours d'enregistrement"), and needs no `loading` for
+ *   that.
  * @param {boolean} [props.readOnly]
  *   The row cannot be acted on: dimmed and click-through-proof, buttons inside
  *   it included.
