@@ -81,10 +81,21 @@ export const TextAnchor = ({
   // which reads as the child "jumping" even though nothing about its own
   // geometry changed. useDisplayedLayoutEffect skips the initial run in
   // that case and reruns once the ancestor actually opens instead.
+  //
+  // It is asked about the CHILD, not about the anchor: the anchor is this
+  // effect's own measuring device, displayed or not according to what the
+  // effect last decided (see the hidden attribute below), so asking whether
+  // it is on screen answers with that decision rather than with a fact about
+  // the screen. On the façade of something closed — an icon in a picker's
+  // trigger, where the openable ancestor is the picker itself — that answer
+  // is "hidden", the correction waits for the popup to open, and the icon
+  // jumps half a pixel on the first click. The child is what is being
+  // positioned, and it is on screen exactly when the correction means
+  // something.
   useDisplayedLayoutEffect(
-    anchorRef,
-    (anchorEl) => {
-      const childEl = childRef.current;
+    childRef,
+    (childEl) => {
+      const anchorEl = anchorRef.current;
       if (!anchorEl || !childEl) {
         return;
       }

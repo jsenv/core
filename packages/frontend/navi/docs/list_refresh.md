@@ -27,13 +27,15 @@ The short answer:
 | never completed yet   | `undefined` | `true`    |
 | running after success | previous    | `true`    |
 | completed             | fresh       | `false`   |
+| failed after success  | previous    | `false`   |
+| failed, error closed  | `undefined` | `false`   |
 
 So the emptiness test is `data === undefined`, never `loading`:
 
 ```js
 const [items, loading] = useAsyncData(ACTION, { loading: true });
 if (items === undefined) {
-  return null; // first load: there is nothing to show yet
+  return <RadarListSkeleton loading={loading} />; // nothing to show yet
 }
 return <RadarList radars={items} busy={loading} />; // re-read: stay on screen
 ```
@@ -48,9 +50,22 @@ if (loading) {
 Read `loading` as "what you are displaying is from before", not "there is
 nothing to display".
 
+The two answer different questions — _is there anything to show_ and _is
+anything on its way_ — so a screen reads both, and a skeleton is given `loading`
+rather than deducing it from emptiness. The four combinations, and what each one
+draws, are in [data_states.md](./data_states.md).
+
 `<List loading>` is the first-load answer, not the refresh one: it replaces the
 rows with skeletons. Pass it while stale rows exist and they disappear — same
 mistake as `loading ? null :`, one level down.
+
+The `failed after success` row is the same rule at the other end: a refresh that
+failed does not unmake the rows either. With `error: true` the failure comes
+back **beside** them, so the list stays and the failure is said over it — a
+strip above the rows, a retry, `dismissError()` to close the strip without
+asking anything again. Taking the rows away is `<ErrorBoundary>`'s job, and only
+when the screen genuinely cannot be drawn — see
+[data_states.md](./data_states.md).
 
 ## What updates without a request
 

@@ -69,6 +69,17 @@ consistency across the app, not from any single call site.
   collection (searching it is that collection's own `GET_MANY`). Companion
   files: `docs/actions.md`, `docs/resource_with_params.md`,
   `docs/resource_dependencies.md`.
+- `docs/data_states.md` — what a screen draws while its data is loading,
+  missing, stale or failed: the three questions `data`, `loading` and `error`
+  answer separately, the four combinations of the first two and what each one
+  means, and the invariant that `loading: true` never suspends — so a component
+  drawing its own states is never taken away, with the dialog, the scroll
+  position and the retry button it was holding. Also why a skeleton is TOLD
+  whether it is loading rather than deducing it from emptiness, why an error
+  arrives beside the data rather than in place of it, and what `dismissError()`
+  does and does not do. Read it before drawing a skeleton on `!data`, before
+  hiding content because `error` is set, and before adding a state flag of your
+  own next to what the hook already returns.
 - `docs/list_refresh.md` — what a write sends back to the network and what stays
   on screen meanwhile: stale data returned by `useAsyncData({ loading: true })`,
   what updates from a response without any request, `rerunOn` and its defaults,

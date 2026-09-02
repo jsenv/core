@@ -140,6 +140,15 @@ const [game, loading, error, dismissError] = useAsyncData(gameAction, {
 });
 ```
 
+`game` and `error` arrive **together**: a refresh that failed does not unmake
+the answer the action already had, so the screen keeps what it has and says the
+failure on it, and `dismissError()` takes that message away without asking
+anything again. That is the whole difference between the two shapes — a boundary
+replaces the subtree by definition, this one writes on it — so reach for the
+boundary when the failure means the screen cannot be drawn at all, and for this
+when it means one thing about it is out of date. How the component draws the
+states it is handed is [data_states.md](./data_states.md).
+
 And one row rather than the whole list: `<List.Item error>` replaces the row's
 content with the message — what the row stood for did not happen, so drawing it
 as if it had would be a lie.

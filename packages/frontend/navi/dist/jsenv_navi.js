@@ -17635,7 +17635,9 @@ const useActionAsyncData = (action, {
   onLoad
 }) => {
   const loadingRef = useContext(LoadingContext);
-  if (!loadingRef) {
+  // The boundary is where a suspension lands, so only the delegating path needs
+  // one: `loading: true` draws the wait itself and never suspends.
+  if (!loadingRef && loadingEffect !== "use") {
     throw new Error(`Missing <Loading>: useAsyncData delegates the wait, so it needs a <Loading> boundary above it — or "loading: true" to draw that wait here.`);
   }
   useOnLoad(action, onLoad);
@@ -17719,15 +17721,19 @@ const useActionAsyncData = (action, {
   }
   if (runningState === FAILED) {
     if (dismissedActionWeakSet.has(action)) {
+      // Dismissing removes the error and nothing else: what is handed back is
+      // the action's state without it — the data it holds, and no run in
+      // progress. Holding nothing is one of those states, not a wait, so a
+      // component drawing its own states gets it rather than being suspended
+      // away from the retry it is offering.
       const staleData = action.dataSignal.peek();
-      if (staleData !== undefined) {
-        // Dismissed with stale data — return it so children render normally
+      if (staleData !== undefined || loadingEffect === "use") {
         return [staleData, false, undefined];
       }
-      // Dismissed with no data — suspend until the action re-runs.
-      // A never-resolving promise would leave the component stuck forever,
-      // so we use an action-specific promise that resolves on RUNNING,
-      // which lets the component re-render and go through the normal loading path.
+      // Nothing to hand over and the waits are delegated: there is no state
+      // this component can draw, so it waits. The promise resolves on RUNNING
+      // rather than never, so a run started from anywhere brings it back
+      // through the ordinary loading path instead of leaving it stuck.
       let dismissedPromise = dismissedActionPendingPromiseWeakMap.get(action);
       if (!dismissedPromise) {
         dismissedPromise = new Promise(resolve => {
@@ -17756,7 +17762,10 @@ const useActionAsyncData = (action, {
         dismissedActionWeakSet.add(action);
         setTick(n => n + 1);
       };
-      return [undefined, false, actionError, dismissError];
+      // The previous answer is still there and a failed refresh does not unmake
+      // it, so both are handed over: the component can say the failure over the
+      // content it already has instead of choosing between the two.
+      return [action.dataSignal.peek(), false, actionError, dismissError];
     }
     // Not marked: nothing is displayed yet — the boundary that catches this is
     // what says so, and only if it has something to show.
@@ -39522,8 +39531,19 @@ const TextAnchor = ({
   // which reads as the child "jumping" even though nothing about its own
   // geometry changed. useDisplayedLayoutEffect skips the initial run in
   // that case and reruns once the ancestor actually opens instead.
-  useDisplayedLayoutEffect(anchorRef, anchorEl => {
-    const childEl = childRef.current;
+  //
+  // It is asked about the CHILD, not about the anchor: the anchor is this
+  // effect's own measuring device, displayed or not according to what the
+  // effect last decided (see the hidden attribute below), so asking whether
+  // it is on screen answers with that decision rather than with a fact about
+  // the screen. On the façade of something closed — an icon in a picker's
+  // trigger, where the openable ancestor is the picker itself — that answer
+  // is "hidden", the correction waits for the popup to open, and the icon
+  // jumps half a pixel on the first click. The child is what is being
+  // positioned, and it is on screen exactly when the correction means
+  // something.
+  useDisplayedLayoutEffect(childRef, childEl => {
+    const anchorEl = anchorRef.current;
     if (!anchorEl || !childEl) {
       return;
     }

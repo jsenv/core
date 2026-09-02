@@ -41,10 +41,10 @@ import { usePromiseAsyncData } from "./use_promise_async_data.js";
  * - `loading` — `true` while the action is running (only when `loading: true` is passed)
  * - `error`   — the Error thrown by the action (only when `error: true` is passed)
  *
- * Stale data is always returned: when an action re-runs, the previous `data`
- * remains available so the component can keep showing stale content while the
- * refresh is in progress. Whether to show `data` or a loading indicator when
- * `loading` is `true` is entirely up to the component.
+ * Stale data is always returned: the previous `data` remains available while
+ * the action re-runs and after a run has failed, so a screen that had something
+ * to show never has it taken away. What is drawn over it — a loading indicator,
+ * the error, nothing — is entirely up to the component.
  *
  * `loading` covers the delay of a debounced binding
  * (`bindParams(paramsSignal, { debounce })`, `actionRunEffect({ debounce })`)
@@ -57,12 +57,21 @@ import { usePromiseAsyncData } from "./use_promise_async_data.js";
  * When `loading` is not set (default), the component suspends until data is
  * ready, so `data` is always defined when the component renders and `loading`
  * is always `false`. With `loading: true` the component never suspends: every
- * wait — running, settling, or params nobody has started yet — comes back as
- * `loading`, so the subtree it draws is never swapped for the boundary above
- * and remounted.
+ * state — running, settling, params nobody has started yet, a failure whose
+ * message was dismissed — comes back as a value, so the subtree it draws is
+ * never swapped for the boundary above and remounted.
  *
  * When `error` is not set (default), any action failure causes the component
- * to throw, so `error` is always `undefined` when the component renders.
+ * to throw, so `error` is always `undefined` when the component renders. With
+ * `error: true` the failure arrives beside the data the action already had — a
+ * message on the content, not one in place of it. `dismissError()` removes the
+ * message and nothing else: nothing is asked again, and what comes back is the
+ * same state minus the error — the same data, or none at all when nothing ever
+ * came back.
+ *
+ * `data === undefined` says there is nothing to show and `loading` says whether
+ * anything is on its way: a skeleton reads both, or it claims a load nobody
+ * started (see docs/list_refresh.md).
  *
  * @param {import("../../action/actions.js").Action} action
  * @param {{ loading?: true, error?: true, run?: true, onLoad?: (data: any, context: {params: any}) => void }} [options]
@@ -107,6 +116,17 @@ import { usePromiseAsyncData } from "./use_promise_async_data.js";
  * @example <caption>Handle error inline</caption>
  * const [user, , error] = useAsyncData(userAction, { error: true });
  * if (error) return <ErrorCard message={error.message} />;
+ *
+ * @example <caption>Say the failure over the rows already on screen</caption>
+ * const [items, , error, dismissError] = useAsyncData(listAction, { error: true });
+ * // First failure: items === undefined  → only the message
+ * // Failed refresh: items === <stale>   → the message above the rows
+ * return (
+ *   <>
+ *     {error && <ErrorStrip error={error} onClose={dismissError} />}
+ *     {items && <List items={items} />}
+ *   </>
+ * );
  */
 export const useAsyncData = (
   promiseOrAction,
@@ -145,7 +165,9 @@ const useActionAsyncData = (
   { loadingEffect, errorEffect, run, onLoad },
 ) => {
   const loadingRef = useContext(LoadingContext);
-  if (!loadingRef) {
+  // The boundary is where a suspension lands, so only the delegating path needs
+  // one: `loading: true` draws the wait itself and never suspends.
+  if (!loadingRef && loadingEffect !== "use") {
     throw new Error(
       `Missing <Loading>: useAsyncData delegates the wait, so it needs a <Loading> boundary above it — or "loading: true" to draw that wait here.`,
     );
@@ -242,15 +264,19 @@ const useActionAsyncData = (
   }
   if (runningState === FAILED) {
     if (dismissedActionWeakSet.has(action)) {
+      // Dismissing removes the error and nothing else: what is handed back is
+      // the action's state without it — the data it holds, and no run in
+      // progress. Holding nothing is one of those states, not a wait, so a
+      // component drawing its own states gets it rather than being suspended
+      // away from the retry it is offering.
       const staleData = action.dataSignal.peek();
-      if (staleData !== undefined) {
-        // Dismissed with stale data — return it so children render normally
+      if (staleData !== undefined || loadingEffect === "use") {
         return [staleData, false, undefined];
       }
-      // Dismissed with no data — suspend until the action re-runs.
-      // A never-resolving promise would leave the component stuck forever,
-      // so we use an action-specific promise that resolves on RUNNING,
-      // which lets the component re-render and go through the normal loading path.
+      // Nothing to hand over and the waits are delegated: there is no state
+      // this component can draw, so it waits. The promise resolves on RUNNING
+      // rather than never, so a run started from anywhere brings it back
+      // through the ordinary loading path instead of leaving it stuck.
       let dismissedPromise = dismissedActionPendingPromiseWeakMap.get(action);
       if (!dismissedPromise) {
         dismissedPromise = new Promise((resolve) => {
@@ -279,7 +305,10 @@ const useActionAsyncData = (
         dismissedActionWeakSet.add(action);
         setTick((n) => n + 1);
       };
-      return [undefined, false, actionError, dismissError];
+      // The previous answer is still there and a failed refresh does not unmake
+      // it, so both are handed over: the component can say the failure over the
+      // content it already has instead of choosing between the two.
+      return [action.dataSignal.peek(), false, actionError, dismissError];
     }
     // Not marked: nothing is displayed yet — the boundary that catches this is
     // what says so, and only if it has something to show.

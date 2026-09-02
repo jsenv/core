@@ -205,7 +205,10 @@
               </li>
               <li>
                 Pass <code>error: true</code> to receive the <code>error</code>{" "}
-                object and handle it inline instead of throwing.
+                object and handle it inline instead of throwing. It arrives
+                beside <code>data</code>, not in place of it: a refresh that
+                failed leaves the previous value in <code>data</code>, so the
+                component can say the failure over the content it already shows.
               </li>
             </ul>
             <p class="demo-description">
@@ -513,7 +516,7 @@
                 Outer count: {outerCount}
               </button>
             }
-            description="Pass both loading: true and error: true to handle everything inline. The component stays mounted throughout — local state is preserved across fetches. On first load, data is undefined and the component renders a skeleton itself."
+            description="Pass both loading: true and error: true to handle everything inline. The component stays mounted throughout — local state is preserved across fetches. On first load, data is undefined and the component renders a skeleton itself; once a fetch has succeeded, a failing one keeps the fields on screen and puts the message above them."
           >
             <FetchControls
               action={() => {
@@ -536,30 +539,31 @@
           error: true,
         });
         const [count, setCount] = useState(0);
-        if (error) {
-          return (
-            <div class="card-error">
-              <span style={{ fontSize: "1.2em" }}>⚠️</span>{" "}
-              <strong>Something went wrong</strong>
-              <div
-                style={{
-                  fontFamily: "monospace",
-                  fontSize: "0.9em",
-                  margin: "8px 0",
-                }}
-              >
-                {error.message}
-              </div>
-              <Button onClick={dismissError}>Dismiss</Button>
-              <Button action={action}>Retry</Button>
+        const errorStrip = error ? (
+          <div class="card-error">
+            <span style={{ fontSize: "1.2em" }}>⚠️</span>{" "}
+            <strong>Something went wrong</strong>
+            <div
+              style={{
+                fontFamily: "monospace",
+                fontSize: "0.9em",
+                margin: "8px 0",
+              }}
+            >
+              {error.message}
             </div>
-          );
-        }
-        if (loading && !user) {
-          return <UserCardSkeleton />;
+            <Button onClick={dismissError}>Dismiss</Button>
+            <Button action={action}>Retry</Button>
+          </div>
+        ) : null;
+        // Nothing has come back yet: the message if there is one, and
+        // otherwise the skeleton, told whether anything is on its way.
+        if (!user) {
+          return errorStrip || <UserCardSkeleton loading={loading} />;
         }
         return (
           <>
+            {errorStrip}
             <UserCardFields
               name={user.name}
               email={user.email}
@@ -567,7 +571,7 @@
               onIncrement={() => setCount((n) => n + 1)}
               outerCount={outerCount}
             />
-            {user && loading && <RefreshingIndicator />}
+            {loading && <RefreshingIndicator />}
           </>
         );
       };
@@ -701,11 +705,13 @@
           </DemoSection>
         );
       };
-      const UserCardSkeleton = () => {
+      // `loading` drives the shimmer: the bars are still while nothing is on its
+      // way, so the card never claims a load nobody started.
+      const UserCardSkeleton = ({ loading = true }) => {
         return (
           <UserCardFields
-            name={<Text loading width="80" />}
-            email={<Text loading width="140" />}
+            name={<Text skeleton loading={loading} width="80" />}
+            email={<Text skeleton loading={loading} width="140" />}
           />
         );
       };
