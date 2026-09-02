@@ -7522,17 +7522,50 @@ const getScrollbarState = (
  * @param {Element} [options.container] - The scroll container to scroll. Defaults to getScrollContainer(el).
  * @param {"start"|"center"|"end"|"nearest"} [options.block="nearest"] - Vertical alignment.
  * @param {"start"|"center"|"end"|"nearest"} [options.inline="nearest"] - Horizontal alignment.
+ * @param {"auto"|"instant"|"smooth"} [options.behavior] - Left out, the container's CSS scroll-behavior decides; "instant" is for a caller that measures the result in the same tick.
  */
 const scrollIntoViewScoped = (
   el,
-  { container = getScrollContainer(el), ...rest } = {},
+  { container = getScrollContainer(el), behavior, ...rest } = {},
 ) => {
   if (!container) {
     return;
   }
-  container.scrollTo(
-    getScrollIntoViewScopedOffsets(el, { container, ...rest }),
-  );
+  container.scrollTo({
+    behavior,
+    ...getScrollIntoViewScopedOffsets(el, { container, ...rest }),
+  });
+};
+
+/**
+ * Scrolls `el` into view in every scroll container between it and the
+ * document, innermost first — the chain `Element.prototype.scrollIntoView`
+ * walks, minus the boxes nobody can scroll back.
+ *
+ * `overflow: hidden` is the one that matters: it IS a scroll container, so
+ * the native call spends scroll on it as readily as on any other, and there
+ * it is spent for good — no scrollbar, no wheel, no touch gives it back. A
+ * card clipping a drawing, holding something that overlaps its edge by 2px,
+ * ends up 2px off until it re-renders. Only the containers `isScrollable`
+ * recognizes on its own (without `includeHidden`) are moved; the ones that
+ * merely clip are left where they are.
+ *
+ * Each container measures `el` where the inner ones just put it, so the outer
+ * ones see the final position rather than the one they started from.
+ *
+ * @param {Element} el - The element to scroll into view.
+ * @param {object} options - the same as scrollIntoViewScoped's, minus container.
+ */
+const scrollIntoViewThroughScrollables = (el, options) => {
+  for (const scrollContainer of getScrollContainerSet(el)) {
+    // getScrollContainerSet already skips what only clips, except at the end
+    // of the chain: with nothing scrollable left to find it hands back the
+    // document scroller, which a scroll lock may have turned into a clip too.
+    if (!isScrollable(scrollContainer)) {
+      continue;
+    }
+    scrollIntoViewScoped(el, { ...options, container: scrollContainer });
+  }
 };
 
 /**
@@ -7554,7 +7587,6 @@ const getScrollIntoViewScopedOffsets = (
     inline = "nearest",
   } = {},
 ) => {
-  const containerRect = container.getBoundingClientRect();
   const elRect = el.getBoundingClientRect();
   const style = getComputedStyle(el);
 
@@ -7565,15 +7597,35 @@ const getScrollIntoViewScopedOffsets = (
 
   const currentScrollTop = container.scrollTop;
   const currentScrollLeft = container.scrollLeft;
-  const containerHeight = containerRect.height;
-  const containerWidth = containerRect.width;
+
+  // Where the container shows its content, in the coordinates
+  // getBoundingClientRect speaks. The document scroller is a case apart: what
+  // it shows is the viewport, sitting at the origin of those coordinates,
+  // while its own box is the whole page and travels with the scroll — reading
+  // that box would count the scroll twice and compare the element to the
+  // height of the document rather than the height of the screen.
+  let containerTop;
+  let containerLeft;
+  let containerHeight;
+  let containerWidth;
+  if (container === container.ownerDocument.scrollingElement) {
+    containerTop = 0;
+    containerLeft = 0;
+    containerHeight = container.clientHeight;
+    containerWidth = container.clientWidth;
+  } else {
+    const containerRect = container.getBoundingClientRect();
+    containerTop = containerRect.top;
+    containerLeft = containerRect.left;
+    containerHeight = containerRect.height;
+    containerWidth = containerRect.width;
+  }
 
   // Element position relative to the container's scroll origin.
-  const elTop =
-    elRect.top - containerRect.top + currentScrollTop - scrollMarginTop;
+  const elTop = elRect.top - containerTop + currentScrollTop - scrollMarginTop;
   const elBottom = elTop + elRect.height + scrollMarginTop + scrollMarginBottom;
   const elLeft =
-    elRect.left - containerRect.left + currentScrollLeft - scrollMarginLeft;
+    elRect.left - containerLeft + currentScrollLeft - scrollMarginLeft;
   const elRight = elLeft + elRect.width + scrollMarginLeft + scrollMarginRight;
 
   let newScrollTop = currentScrollTop;
@@ -9455,6 +9507,14 @@ installImportMetaCssBuild(import.meta);/**
  * A tap is left alone by that: a press that goes nowhere is still a press, which
  * is what a piece that is also a link or a card needs.
  *
+ * A HOLD is not, and nothing in such a place is text to select. Taking the wait
+ * away takes away the only thing that answered a finger held still, so the
+ * browser answers it alone: its own long press selects the word under the thumb,
+ * and the card the hand meant to carry is left blue and handled. Said to every
+ * pointer — a mouse there drags from the first few pixels, so a selection begun
+ * there is one that could never be finished either. What says its press is its
+ * own keeps its text (see the stylesheet below).
+ *
  * It is opt-in and cannot be anything else. Nothing here can see whether the
  * surroundings scroll — a page scrolls by default, an overflow is one CSS
  * property away, and getting it wrong the wrong way means the list runs away
@@ -9499,6 +9559,11 @@ const css$4 = /* css */`[data-drag-handle], [data-drag-source] {
 
 [data-drag-on-contact] [data-drag-source], [data-drag-source][data-drag-on-contact] {
   touch-action: pinch-zoom;
+  user-select: none;
+}
+
+[data-drag-on-contact] [data-drag-ignore], [data-drag-on-contact] [popover], [data-drag-on-contact] dialog, [data-drag-on-contact] :is(input:not([data-press-only]), textarea), [data-drag-on-contact] :is([contenteditable=""], [contenteditable="true"]) {
+  user-select: text;
 }
 
 [data-drag-ignore], [data-self-interactions~="drag"], [data-self-interactions~="*"], [data-drag-source] [popover], [data-drag-source] dialog {
@@ -20174,4 +20239,4 @@ const useResizeStatus = (elementRef, { as = "number" } = {}) => {
   };
 };
 
-export { EASING, ELEMENT_SIZE_CHANGE, activeElementSignal, addActiveElementEffect, addAttributeEffect, allowWheelThrough, appendStyles, applyNewPosition, canScroll, captureScrollState, chainEvent, claimWheelGesture, clickIsSuppressed, closestOpenableAncestor, contrastColor, createBackgroundColorTransition, createBackgroundTransition, createBorderRadiusTransition, createBorderTransition, createDragGestureController, createDragToMoveGestureController, createEventGroupLogger, createGroupTransitionController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createValueEffect, createWidthTransition, cubicBezier, dispatchCustomEvent, dispatchInternalCustomEvent, dispatchPublicCustomEvent, dragAfterIntent, elementIsFocusable, elementIsVisibleForFocus, elementIsVisuallyVisible, findAfter, findAncestor, findBefore, findDescendant, findEvent, findFocusDelegateTarget, findFocusable, findSelfOrAncestorFixedPosition, formatEventSideEffect, getAncestorOpenType, getAvailableHeight, getAvailableWidth, getBackground, getBackgroundColor, getBorder, getBorderRadius, getBorderSizes, getContrastRatio, getDefaultStyles, getDragCoordinates, getDropTargetInfo, getElementSignature, getFirstVisuallyVisibleAncestor, getFocusVisibilityInfo, getHeight, getHeightWithoutTransition, getInnerHeight, getInnerWidth, getKeyboardEventDefaultAction, getLuminance, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getOpacity, getOpacityWithoutTransition, getPaddingSizes, getPositionedParent, getPositioningScrollOffset, getPreferedColorScheme, getScrollBox, getScrollContainer, getScrollContainerSet, getScrollIntoViewScopedOffsets, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getTranslateX, getTranslateXWithoutTransition, getTranslateY, getVirtualKeyboardOverlayHeight, getVisuallyVisibleInfo, getWidth, getWidthWithoutTransition, hasCSSSizeUnit, initFlexDetailsSet, initFocusGroup, initPositionSticky, isAncestorOpen, isDisplayedDespiteClosedAncestor, isPressDisputedByDrag, isPrimaryButtonEvent, isSameColor, isScrollable, isTouchDrivenEvent, markDragSource, measureLongestVisualLineWidth, measureScrollbar, measureWidestChildRow, mergeOneStyle, mergeTwoStyles, normalizeKeyboardKey, normalizeStyle, normalizeStyles, observeAncestorOpenState, onAncestorReopen, parsePositionArea, parseStyle, performTabNavigation, pickPositionRelativeTo, prefersDarkColors, prefersLightColors, preventFocusNav, preventFocusNavViaKeyboard, preventIntermediateScrollbar, releaseWheelGesture, resolveCSSColor, resolveCSSSize, resolveColorLuminance, resolveOklchLightness, scrollIntoViewScoped, scrollIntoViewWithStickyAwareness, scrollRoomTowards, setAttribute, setAttributes, setStyles, setVirtualKeyboardOverlaysContent, snapToPixel, startDragTo, startDragToResizeGesture, startDragToTravel, stickyAsRelativeCoords, stringifyStyle, subscribeVirtualKeyboardGeometryChange, subscribeVisualViewportResizeSettled, subscribeWindowResizeSettled, suppressClickAfterGesture, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect, waitForPressHeld, watchWheelTravel, wheelGestureIsTakenFrom };
+export { EASING, ELEMENT_SIZE_CHANGE, activeElementSignal, addActiveElementEffect, addAttributeEffect, allowWheelThrough, appendStyles, applyNewPosition, canScroll, captureScrollState, chainEvent, claimWheelGesture, clickIsSuppressed, closestOpenableAncestor, contrastColor, createBackgroundColorTransition, createBackgroundTransition, createBorderRadiusTransition, createBorderTransition, createDragGestureController, createDragToMoveGestureController, createEventGroupLogger, createGroupTransitionController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createValueEffect, createWidthTransition, cubicBezier, dispatchCustomEvent, dispatchInternalCustomEvent, dispatchPublicCustomEvent, dragAfterIntent, elementIsFocusable, elementIsVisibleForFocus, elementIsVisuallyVisible, findAfter, findAncestor, findBefore, findDescendant, findEvent, findFocusDelegateTarget, findFocusable, findSelfOrAncestorFixedPosition, formatEventSideEffect, getAncestorOpenType, getAvailableHeight, getAvailableWidth, getBackground, getBackgroundColor, getBorder, getBorderRadius, getBorderSizes, getContrastRatio, getDefaultStyles, getDragCoordinates, getDropTargetInfo, getElementSignature, getFirstVisuallyVisibleAncestor, getFocusVisibilityInfo, getHeight, getHeightWithoutTransition, getInnerHeight, getInnerWidth, getKeyboardEventDefaultAction, getLuminance, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getOpacity, getOpacityWithoutTransition, getPaddingSizes, getPositionedParent, getPositioningScrollOffset, getPreferedColorScheme, getScrollBox, getScrollContainer, getScrollContainerSet, getScrollIntoViewScopedOffsets, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getTranslateX, getTranslateXWithoutTransition, getTranslateY, getVirtualKeyboardOverlayHeight, getVisuallyVisibleInfo, getWidth, getWidthWithoutTransition, hasCSSSizeUnit, initFlexDetailsSet, initFocusGroup, initPositionSticky, isAncestorOpen, isDisplayedDespiteClosedAncestor, isPressDisputedByDrag, isPrimaryButtonEvent, isSameColor, isScrollable, isTouchDrivenEvent, markDragSource, measureLongestVisualLineWidth, measureScrollbar, measureWidestChildRow, mergeOneStyle, mergeTwoStyles, normalizeKeyboardKey, normalizeStyle, normalizeStyles, observeAncestorOpenState, onAncestorReopen, parsePositionArea, parseStyle, performTabNavigation, pickPositionRelativeTo, prefersDarkColors, prefersLightColors, preventFocusNav, preventFocusNavViaKeyboard, preventIntermediateScrollbar, releaseWheelGesture, resolveCSSColor, resolveCSSSize, resolveColorLuminance, resolveOklchLightness, scrollIntoViewScoped, scrollIntoViewThroughScrollables, scrollIntoViewWithStickyAwareness, scrollRoomTowards, setAttribute, setAttributes, setStyles, setVirtualKeyboardOverlaysContent, snapToPixel, startDragTo, startDragToResizeGesture, startDragToTravel, stickyAsRelativeCoords, stringifyStyle, subscribeVirtualKeyboardGeometryChange, subscribeVisualViewportResizeSettled, subscribeWindowResizeSettled, suppressClickAfterGesture, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect, waitForPressHeld, watchWheelTravel, wheelGestureIsTakenFrom };

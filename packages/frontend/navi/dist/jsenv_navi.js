@@ -4,7 +4,7 @@
  */
 import { installImportMetaCssBuild, windowHeightSignal, windowWidthSignal, visualViewportHeightSignal, visualViewportWidthSignal, getAppHeight, getAppWidth, coarsePointerSignal, smallTouchScreenSignal } from "./jsenv_navi_side_effects.js";
 export { disableVirtualKeyboardOverlay } from "./jsenv_navi_side_effects.js";
-import { elementIsFocusable, createIterableWeakSet, dispatchInternalCustomEvent, dispatchCustomEvent, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, getElementSignature, createPubSub, findEvent, createValueEffect, findFocusDelegateTarget, findFocusable, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, markDragSource, startDragTo, createEventGroupLogger, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, normalizeStyles, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, scrollRoomTowards, getScrollContainer, closestOpenableAncestor, isAncestorOpen, isDisplayedDespiteClosedAncestor, observeAncestorOpenState, getAncestorOpenType, findBefore, findAfter, resolveCSSSize, hasCSSSizeUnit, releaseWheelGesture, getScrollIntoViewScopedOffsets, wheelGestureIsTakenFrom, claimWheelGesture, scrollIntoViewScoped, initFocusGroup, isTouchDrivenEvent, stringifyStyle as stringifyStyle$1, resolveOklchLightness, contrastColor, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, onAncestorReopen, isPressDisputedByDrag, canScroll, measureWidestChildRow, performTabNavigation, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
+import { elementIsFocusable, createIterableWeakSet, dispatchInternalCustomEvent, dispatchCustomEvent, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, getElementSignature, createPubSub, findEvent, createValueEffect, findFocusDelegateTarget, findFocusable, scrollIntoViewThroughScrollables, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, markDragSource, startDragTo, createEventGroupLogger, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, normalizeStyles, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, scrollRoomTowards, getScrollContainer, closestOpenableAncestor, isAncestorOpen, isDisplayedDespiteClosedAncestor, observeAncestorOpenState, getAncestorOpenType, findBefore, findAfter, resolveCSSSize, hasCSSSizeUnit, releaseWheelGesture, getScrollIntoViewScopedOffsets, wheelGestureIsTakenFrom, claimWheelGesture, scrollIntoViewScoped, initFocusGroup, isTouchDrivenEvent, stringifyStyle as stringifyStyle$1, resolveOklchLightness, contrastColor, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, onAncestorReopen, isPressDisputedByDrag, canScroll, measureWidestChildRow, performTabNavigation, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
 export { chainEvent, clickIsSuppressed, contrastColor, findEvent, startDragTo } from "@jsenv/dom";
 import { signal, computed, effect, untracked, batch, useComputed, useSignal } from "@preact/signals";
 import { isValidElement, h, Fragment, createContext, render, toChildArray, options, cloneElement } from "preact";
@@ -7284,7 +7284,9 @@ const openCallout = (message, {
     // that whole window: by the time anything measures anchorElement, it's
     // already at its final position, so there's no transient frame left to
     // latch onto.
-    anchorElement.scrollIntoView({
+    // Through the boxes that scroll and none of the ones that only clip: an
+    // `overflow: hidden` card takes a scroll no user can give back.
+    scrollIntoViewThroughScrollables(anchorElement, {
       behavior: "instant",
       block: "nearest"
     });
@@ -8276,13 +8278,20 @@ const formatCompactNumber = (value, lang) => {
  * Formats a date as a human-readable day string.
  *
  * @param {Date} date
- * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"numeric" }} [options]
+ * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"numeric"|{ weekday?: "long"|"short"|"narrow", month?: "long"|"short"|"narrow"|"numeric" } }} [options]
+ *   A string spells the weekday and the month the same way. An object spells
+ *   them apart, each key defaulting to `"long"`: a narrow card usually wants
+ *   the weekday whole (it is the reading anchor) and the month abbreviated (it
+ *   is where the characters are — "septembre" is 9 of them, "sept." reads the
+ *   same). `"numeric"` stays a string-only spelling: it drops the weekday and
+ *   writes the whole date in digits.
  *
  * @example
  * formatDay(new Date(), { lang: "fr" })                    // "lundi 11 mai" (long, default)
  * formatDay(new Date(), { lang: "fr", format: "short" })  // "lun. 11 mai"
  * formatDay(new Date(), { lang: "fr", format: "narrow" }) // "lu. 11 mai"
  * formatDay(new Date(), { lang: "fr", format: "numeric" }) // "11/05/2026"
+ * formatDay(new Date(), { lang: "fr", format: { weekday: "long", month: "short" } }) // "mercredi 2 sept."
  */
 const formatDay = (
   date,
@@ -8295,10 +8304,12 @@ const formatDay = (
       year: "numeric",
     }).format(date);
   }
+  const { weekday = "long", month = "long" } =
+    typeof format === "string" ? { weekday: format, month: format } : format;
   return new Intl.DateTimeFormat(lang, {
-    weekday: format, // "long", "short", or "narrow"
+    weekday, // "long", "short", or "narrow"
     day: "numeric",
-    month: format,
+    month,
   }).format(date);
 };
 
@@ -9909,7 +9920,7 @@ const formatDateIso = (iso, inputType) => {
   const locale = languagesSignal.value;
   if (inputType === "month") {
     const date = new Date(`${iso}-01T00:00:00`);
-    return formatMonth(date, locale);
+    return formatMonth(date, { lang: locale });
   }
   // date, week, datetime-local: extract YYYY-MM-DD part and parse as local date
   const isoMatch = /^(\d{4}-\d{2}-\d{2})/.exec(iso);
@@ -9921,7 +9932,7 @@ const formatDateIso = (iso, inputType) => {
   if (isNaN(date.getTime())) {
     return iso;
   }
-  return formatDay(date, locale);
+  return formatDay(date, { lang: locale });
 };
 
 const READONLY_CONSTRAINT = {
@@ -11045,6 +11056,12 @@ installImportMetaCssBuild(import.meta);/**
  * wants the right click to do what the hold does says so, with `contextmenu`
  * beside it.
  *
+ * It DOES take the selection, and so does a swipe: nothing under either is text
+ * to select, because the browser answers that same press by selecting the word
+ * under the thumb and leaves it selected once its menu is gone. What never
+ * answered the press keeps its text — a field, a popover, a dialog (see the
+ * stylesheet below).
+ *
  * A hold CAN open a popup while the finger is still down — a menu appearing under
  * a waiting finger, which is the native gesture. navi's Popover is `popover="manual"`
  * and owns its own dismissal, so the `pointerup` that ends the press is not read as
@@ -11127,6 +11144,14 @@ import.meta.css = [/* css */`@property --swipe-progress {
 
 [data-longpress] {
   -webkit-touch-callout: none;
+}
+
+[data-longpress], [data-swipe] {
+  user-select: none;
+}
+
+:is([data-longpress], [data-swipe]) :is([data-drag-ignore], [popover], dialog), :is([data-longpress], [data-swipe]) :is(input:not([data-press-only]), textarea), :is([data-longpress], [data-swipe]) :is([contenteditable=""], [contenteditable="true"]) {
+  user-select: text;
 }
 
 [data-swiping="left"], [data-swiping="right"] {
@@ -18925,9 +18950,15 @@ const getHowToHandleStyleProp = (name) => {
   }
   return getStyle;
 };
-const prepareStyleValue = (existingValue, value, name, styleContext) => {
+// The css value `name` would take, written in the scale that style is read in:
+// "s" on a spacing style is a length, "s" on a typo style is a font size, and a
+// bare number gets the unit the style expects.
+const stringifyStyleValue = (value, name, styleContext) => {
   const stringifier = getStringifier(name);
-  const cssValue = stringifier(value, name, styleContext);
+  return stringifier(value, name, styleContext);
+};
+const prepareStyleValue = (existingValue, value, name, styleContext) => {
+  const cssValue = stringifyStyleValue(value, name, styleContext);
   const mergedValue = mergeOneStyle(existingValue, cssValue, name, "css");
   return mergedValue;
 };
@@ -20963,6 +20994,15 @@ import.meta.css = [/* css */`[data-scrollable] > .navi_loading_outline_wrapper, 
 const PSEUDO_CLASSES_DEFAULT = [];
 const PSEUDO_ELEMENTS_DEFAULT = [];
 const STYLE_CSS_VARS_DEFAULT = {};
+// An entry of styleCSSVars is the css variable the prop writes into, alone when
+// the prop is named after a css style — Box then already knows how to read its
+// value — or paired with the style whose values it borrows when it is not.
+const readCSSVarEntry = entry => {
+  if (Array.isArray(entry)) {
+    return entry;
+  }
+  return [entry, null];
+};
 // When only pseudoStateSelector is set (no visualSelector), the box owns its
 // visual identity. Only event handlers and these explicit props are forwarded
 // to the inner semantic/interactive child element.
@@ -20973,7 +21013,7 @@ const PSEUDO_STATE_CHILD_PROP_SET = new Set(["tabIndex", "tabindex"]);
  *   as?: string,
  *   className?: string,
  *   style?: import("ignore:preact").JSX.CSSProperties & { [pseudo: string]: import("ignore:preact").JSX.CSSProperties },
- *   styleCSSVars?: { [stylePropName: string]: string },
+ *   styleCSSVars?: { [propName: string]: string | [string, string] },
  *   inline?: boolean,
  *   block?: boolean,
  *   flex?: "x" | "y" | boolean,
@@ -21334,7 +21374,7 @@ const computeBox = (props, parentBoxFlow) => {
     const canForwardToChild = hasChildUsingForwardedProps;
     const addStyle = (value, name, styleContext, stylesTarget) => {
       const mergedValue = prepareStyleValue(stylesTarget[name], value, name, styleContext);
-      const cssVar = styleContext.styleCSSVars[name];
+      const [cssVar] = readCSSVarEntry(styleContext.styleCSSVars[name]);
       if (cssVar) {
         addCSSVar(mergedValue, cssVar, stylesTarget);
         if (name === "borderRadius" && value === "inherit") {
@@ -21455,10 +21495,18 @@ const computeBox = (props, parentBoxFlow) => {
         }
         return;
       }
-      const cssVarName = styleCSSVars[name];
-      if (cssVarName) {
+      const cssVarEntry = styleCSSVars[name];
+      if (cssVarEntry) {
         if (value !== undefined) {
-          addCSSVar(value, cssVarName, boxStylesTarget);
+          const [cssVarName, valueStyleName] = readCSSVarEntry(cssVarEntry);
+          const cssValue = valueStyleName ? stringifyStyleValue(value, valueStyleName, styleContext) : value;
+          if (isSizeSpacingKey(cssValue)) {
+            // A size keyword reaching a custom property stays that word: every
+            // declaration reading the variable is then invalid, drops back to
+            // its initial value, and says nothing about it.
+            console.warn(`"${name}" cannot take the size keyword "${cssValue}": it goes into ${cssVarName} as-is, which makes every declaration reading that variable invalid. Pass "${stringifySpacingStyle(cssValue)}" instead.`);
+          }
+          addCSSVar(cssValue, cssVarName, boxStylesTarget);
         }
         return;
       }
@@ -31253,7 +31301,32 @@ const anyMatchingRouteSignal = (routes) => {
  *   when that is not the element asking: a menu opened by a press belongs at the
  *   point the press happened, and the row that was pressed is not that point.
  */
-const triggerNaviCommand = (
+const triggerNaviCommand = (element, command, event, options) => {
+  const run = resolveNaviCommand(element, command, event, options);
+  return run ? run() : false;
+};
+
+/**
+ * The same command, in its two moments: WHAT it aims at, decided here and now,
+ * and what it then does, in the function returned. One caller needs them apart
+ * — a button whose command waits for its own action (see the command trigger in
+ * ui_state_controller.js) — and it needs it because resolution reads the DOM
+ * AROUND the source: the closest expandable, the parent control, the slide it
+ * stands in. An action that succeeds has usually re-rendered the tree it was
+ * asked from, which is what an action is for, so by then the source is
+ * detached: `closest` walks a subtree the popup is no longer in, and a command
+ * that had a perfectly good target at the press finds none and is dropped with
+ * a warning — the popup stays open over a request that went through.
+ *
+ * Freezing the target at the press is also what one means by it: the popup
+ * pressed in is the popup to close, even when the press is what emptied it.
+ * What the command DOES stays live — every handler reads the state it needs
+ * inside its implementation, never while resolving.
+ *
+ * Returns undefined when there is nothing to run (unknown command, no target).
+ * See triggerNaviCommand's jsdoc for the parameters.
+ */
+const resolveNaviCommand = (
   element,
   command,
   event,
@@ -31268,7 +31341,7 @@ const triggerNaviCommand = (
     NAVI_COMMANDS[command] || NAVI_COMMANDS[commandName(command)];
   if (!naviCommand) {
     console.warn(`Unknown command "${command}"`);
-    return false;
+    return undefined;
   }
   // Check for explicit HTML target overrides early so a misconfigured commandfor
   // attribute (id not found) aborts immediately rather than silently falling back
@@ -31276,7 +31349,7 @@ const triggerNaviCommand = (
   const explicitTarget = resolveExplicitTarget(element);
   if (explicitTarget === null) {
     // attribute was present but target not found — already warned inside resolveExplicitTarget
-    return false;
+    return undefined;
   }
   const execute = naviCommand.commandHandler(element, event, {
     // Whatever followed the colon: "--navi-go-to-slide:edit" → "edit".
@@ -31289,37 +31362,40 @@ const triggerNaviCommand = (
   });
   if (!execute) {
     if (optional) {
-      return false;
+      return undefined;
     }
     console.warn(
       `"${command}" triggered on element but no suitable target found`,
       element,
     );
-    return false;
+    return undefined;
   }
   const { target, implementation } = execute;
-  // The event is how the target takes part in what it was asked to do (a popup
-  // closing on --navi-close also has its own things to do); the command itself
-  // is the implementation, and it must not depend on someone listening. Nobody
-  // does when the target has left the document — a trigger whose own action
-  // took it away, which is the shape of "delete this, then leave the page it
-  // was on" (see runWhenActionSucceeded in rules/control_action.js): the
-  // command is decided while the trigger is there and runs once the action has
-  // succeeded, by which time the row it stood in is gone. So the command runs
-  // here rather than being lost in silence.
-  const detail = {
-    command,
-    event,
-    source: element,
-    implementation,
-    value,
-    answered: false,
+  return () => {
+    // The event is how the target takes part in what it was asked to do (a
+    // popup closing on --navi-close also has its own things to do); the command
+    // itself is the implementation, and it must not depend on someone
+    // listening. Nobody does when the target has left the document — a trigger
+    // whose own action took it away, which is the shape of "delete this, then
+    // leave the page it was on" (see runWhenActionSucceeded in
+    // rules/control_action.js): the command was decided above, while the
+    // trigger was there, and runs once the action has succeeded, by which time
+    // the row it stood in is gone. So the command runs here rather than being
+    // lost in silence.
+    const detail = {
+      command,
+      event,
+      source: element,
+      implementation,
+      value,
+      answered: false,
+    };
+    const dispatched = dispatchCustomEvent(target, "navi_command", detail);
+    if (!detail.answered) {
+      implementation();
+    }
+    return dispatched;
   };
-  const dispatched = dispatchCustomEvent(target, "navi_command", detail);
-  if (!detail.answered) {
-    implementation();
-  }
-  return dispatched;
 };
 
 // Returns the target explicitly declared via HTML attributes (commandfor / navi-command-target),
@@ -33731,18 +33807,26 @@ const useUIStateController = (
                 debugUIState(
                   `triggering command "${command}" for "${controlType}"`,
                 );
-                const runCommand = () => {
-                  triggerNaviCommand(element, command, e);
-                };
                 // What the press means may not be due yet: a button with an
                 // action of its own runs the work first and lets its command
                 // follow only once that work succeeded (see control_hooks).
                 // The command is handed over rather than run; nobody claiming
                 // it means now.
+                //
+                // Only the RUN waits. What the command aims at is decided here,
+                // while the button is still in the document, because that is
+                // what resolving reads — the popup around it, the control above
+                // it — and the action it waits for is likely to re-render that
+                // away before it succeeds. Resolved late, the command would
+                // find nothing to aim at and be dropped (see
+                // resolveNaviCommand).
                 if (controller.commandDeferral) {
-                  controller.commandDeferral(runCommand);
+                  const runCommand = resolveNaviCommand(element, command, e);
+                  if (runCommand) {
+                    controller.commandDeferral(runCommand);
+                  }
                 } else {
-                  runCommand();
+                  triggerNaviCommand(element, command, e);
                 }
               }
             }
@@ -36355,6 +36439,14 @@ const useControlProps = (props, {
         return false;
       }
       const control = ref.current;
+      if (!control) {
+        // The ui action the reaction ran a line earlier is free to take this
+        // control away: a list row answering its popup's question closes it, and
+        // mount="while-opened" unmounts the row. Nothing left to read a value
+        // from, and what the press was for has already happened (the button and
+        // link reactions bail on the same ground).
+        return false;
+      }
       const currentValue = readControlValue(control);
       // For checkables: skip value dedup. The browser only fires `input` when state
       // actually changes, so there is no spurious double-dispatch to guard against.
@@ -41904,7 +41996,7 @@ const NavStyleCSSVars = {
   paddingLeft: "--nav-padding-left",
   background: "--nav-background",
   currentIndicatorColor: "--nav-current-indicator-color",
-  currentIndicatorSize: "--nav-current-indicator-size"
+  currentIndicatorSize: ["--nav-current-indicator-size", "height"]
 };
 const positionOfCurrentIndicator = (currentIndicator, vertical) => {
   if (currentIndicator === true) {
@@ -42999,7 +43091,7 @@ const css$V = /* css */`@layer navi {
 const BinderStyleCSSVars = {
   borderWidth: "--binder-border-width",
   borderRadius: "--binder-border-radius",
-  tabBorderRadius: "--binder-tab-border-radius",
+  tabBorderRadius: ["--binder-tab-border-radius", "borderRadius"],
   borderColor: "--binder-border-color",
   background: "--binder-background",
   tabBackground: "--binder-tab-background",
@@ -43008,7 +43100,7 @@ const BinderStyleCSSVars = {
   tabColor: "--binder-tab-color",
   paddingX: "--binder-padding-x",
   paddingY: "--binder-padding-y",
-  pagePadding: "--binder-page-padding"
+  pagePadding: ["--binder-page-padding", "padding"]
 };
 const TABS_ALIGN_TO_JUSTIFY_CONTENT = {
   start: "flex-start",
@@ -43159,12 +43251,12 @@ const Binder = ({
     "data-tabs-position": tabsPosition,
     "data-tabs-align": tabsAlign,
     "data-scrollable-page": scrollablePage ? "" : undefined,
-    borderWidth: withPixelUnit(borderWidth),
-    borderRadius: withPixelUnit(borderRadius),
-    tabBorderRadius: withPixelUnit(tabBorderRadius),
-    paddingX: withPixelUnit(paddingX),
-    paddingY: withPixelUnit(paddingY),
-    pagePadding: withPixelUnit(pagePadding),
+    borderWidth: borderWidth,
+    borderRadius: borderRadius,
+    tabBorderRadius: tabBorderRadius,
+    paddingX: paddingX,
+    paddingY: paddingY,
+    pagePadding: pagePadding,
     ...props,
     styleCSSVars: BinderStyleCSSVars,
     children: [jsx(BinderOutline, {
@@ -43395,15 +43487,6 @@ const measureDrawing = ({
       gapAfterTabs: mainSize - (mainStartOf(lastTabEl) + mainSizeOf(lastTabEl))
     }
   };
-};
-
-// A bare number in a CSS var stays a bare number and the declaration is
-// dropped; every length prop here is in pixels when it is not spelled out.
-const withPixelUnit = value => {
-  if (typeof value === "number") {
-    return `${value}px`;
-  }
-  return value;
 };
 
 /**
@@ -48121,14 +48204,13 @@ const FieldAsLabel = props => {
   });
 };
 const FieldCSSVars = {
-  spacingWithControl: "--spacing-with-control"
+  spacingWithControl: ["--spacing-with-control", "padding"]
 };
 const FieldAsContainer = props => {
   import.meta.css = [css$L, "@jsenv/navi/src/control/field.jsx"];
   const {
     children
   } = props;
-  props.spacingWithControl = resolveSpacingSize(props.spacingWithControl);
   const isVertical = props.flex === "y";
   const [messageProps, remainingProps] = extractMessageAndRemainingProps({
     ...props,
@@ -50242,10 +50324,6 @@ const useInputTextualProps = props => {
 };
 const InputTextualUI = props => {
   installInputCss();
-  // Spacing props travel to CSS as a raw custom property value, so the size
-  // keywords have to become lengths here — "s" reaching CSS untouched makes the
-  // declaration invalid, silently, and the gap just goes away.
-  props.slotSpacing = resolveSpacingSize(props.slotSpacing);
   const {
     ui,
     variant,
@@ -50450,7 +50528,7 @@ const RealInput = ({
 // Shared with textarea.jsx: a textarea is styled as a .navi_input box, so the
 // two read the same style props and pseudo states.
 const InputStyleCSSVars = {
-  "slotSpacing": "--slot-spacing",
+  "slotSpacing": ["--slot-spacing", "margin"],
   "outlineWidth": "--outline-width",
   "borderWidth": "--border-width",
   "borderRadius": "--border-radius",
@@ -51088,6 +51166,10 @@ const css$I = /* css */`.navi_textarea {
     }
   }
 
+  &[data-width-from-container] {
+    contain: inline-size;
+  }
+
   &[data-resizable] {
     & .navi_control_input {
       height: calc(var(--textarea-min-rows, 1.5) * 1lh);
@@ -51138,9 +51220,13 @@ const TextareaStyleCSSVars = {
  * @param {number} [maxLength] The character limit, validated at submit. Pair
  *   with `maxLengthGuard` to block typing past it, and render a
  *   TextareaCharCount to show it.
- * @param {string} [width="35ch"] The control's width. Fixed on purpose: with
- *   field-sizing the width would otherwise follow the longest line, and a box
- *   that widens while one types is a box one chases.
+ * @param {string} [width="35ch"] The control's width. A length by default, on
+ *   purpose: with field-sizing the width would otherwise follow the longest
+ *   line, and a box that widens while one types is a box one chases. A
+ *   percentage means "fill what contains me" and holds the same promise — the
+ *   control then takes the width it is given without having a say in it, even
+ *   inside a container that sizes itself from its content (a Popover, a
+ *   Picker's popup), where the text wraps instead of widening the popup.
  */
 const Textarea = ({
   // Destructured, never deleted off the props object: Preact reuses the same
@@ -51167,8 +51253,21 @@ const Textarea = ({
   // element they would become its text content.
   delete hostProps.children;
   const loading = basePseudoState[":-navi-loading"];
+
+  // A percentage is not a definite length: while a container is being sized
+  // from its content it cannot be resolved, so the box falls back to its own
+  // max-content — which `field-sizing: content` makes the longest line typed,
+  // and the field widens the very box it asked to fill. The CSS above takes
+  // that vote away, which is why the percentage lands on the contained box
+  // rather than on the field: the field fills it from the inside (flex-grow
+  // in input_css.js).
+  const widthFromContainer = String(width).includes("%");
   delete rootProps.width;
-  hostProps.width = width;
+  if (widthFromContainer) {
+    rootProps.width = width;
+  } else {
+    hostProps.width = width;
+  }
   return jsxs(Box, {
     as: "span",
     inline: true,
@@ -51177,6 +51276,7 @@ const Textarea = ({
     ...rootProps,
     basePseudoState: basePseudoState,
     "data-resizable": resizable ? "" : undefined,
+    "data-width-from-container": widthFromContainer ? "" : undefined,
     styleCSSVars: TextareaStyleCSSVars,
     pseudoStateSelector: ".navi_control_input",
     pseudoClasses: InputPseudoClasses,
@@ -68801,16 +68901,6 @@ const PickerButton = props => {
   if (typeof props.maxLines === "string") {
     props.maxLines = parseInt(props.maxLines);
   }
-  // Spacing props travel to CSS as a raw custom property value, so the size
-  // keywords have to become lengths here — "s" reaching CSS untouched makes
-  // the declaration invalid, silently, and the gap just goes away.
-  props.slotSpacing = resolveSpacingSize(props.slotSpacing);
-  for (const pressPaddingPropName of PRESS_PADDING_PROP_NAMES) {
-    const pressPadding = props[pressPaddingPropName];
-    if (pressPadding !== undefined) {
-      props[pressPaddingPropName] = stringifySpacingStyle(pressPadding);
-    }
-  }
   const {
     ref,
     variant,
@@ -69408,32 +69498,29 @@ const NON_MOBILE_KEYBOARD_TYPES = new Set(["date", "month", "week", "time", "dat
 const PICKER_BUTTON_PSEUDO_CLASSES = [":hover", ":focus", ":focus-visible", ":focus-within", ":read-only", ":disabled", ":-navi-loading", ":-navi-expanded", ":-navi-has-value"];
 const PickerInputPseudoClasses = [":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading", ":-navi-has-value", ":-navi-expanded"];
 
-// Spacing props that are not the names of real CSS styles, so Box hands them to
-// the custom property untouched: a size keyword would reach CSS as the word "s"
-// and a number as a unitless one, either of which makes the calc() using it
-// invalid and drops the press area back to the box. Hence the pass in
-// PickerButton, which turns them into lengths.
-const PRESS_PADDING_PROP_NAMES = ["pressPadding", "pressPaddingX", "pressPaddingY", "pressPaddingTop", "pressPaddingRight", "pressPaddingBottom", "pressPaddingLeft"];
+// A pair is [the css variable, the style whose values the prop is written in]:
+// popupBorderRadius takes what borderRadius takes, dialogMinWidth what minWidth
+// takes — see box.jsx's readCSSVarEntry.
 const PickerStyleCSSVars = {
   "outlineWidth": "--picker-outline-width",
   "borderWidth": "--picker-border-width",
   "borderRadius": "--picker-border-radius",
-  "popoverMaxHeight": "--picker-popover-max-height",
-  "dialogMinWidth": "--picker-dialog-min-width",
-  "dialogMinHeight": "--picker-dialog-min-height",
-  "dialogMaxWidth": "--picker-dialog-max-width",
-  "dialogMaxHeight": "--picker-dialog-max-height",
+  "popoverMaxHeight": ["--picker-popover-max-height", "maxHeight"],
+  "dialogMinWidth": ["--picker-dialog-min-width", "minWidth"],
+  "dialogMinHeight": ["--picker-dialog-min-height", "minHeight"],
+  "dialogMaxWidth": ["--picker-dialog-max-width", "maxWidth"],
+  "dialogMaxHeight": ["--picker-dialog-max-height", "maxHeight"],
   "popupBackgroundColor": "--picker-popup-background-color",
-  "popupBorderRadius": "--picker-popup-border-radius",
-  "dialogBorderWidth": "--picker-dialog-border-width",
-  "slotSpacing": "--picker-slot-spacing",
-  "pressPadding": "--picker-press-padding",
-  "pressPaddingX": "--picker-press-padding-x",
-  "pressPaddingY": "--picker-press-padding-y",
-  "pressPaddingTop": "--picker-press-padding-top",
-  "pressPaddingRight": "--picker-press-padding-right",
-  "pressPaddingBottom": "--picker-press-padding-bottom",
-  "pressPaddingLeft": "--picker-press-padding-left",
+  "popupBorderRadius": ["--picker-popup-border-radius", "borderRadius"],
+  "dialogBorderWidth": ["--picker-dialog-border-width", "borderWidth"],
+  "slotSpacing": ["--picker-slot-spacing", "margin"],
+  "pressPadding": ["--picker-press-padding", "padding"],
+  "pressPaddingX": ["--picker-press-padding-x", "padding"],
+  "pressPaddingY": ["--picker-press-padding-y", "padding"],
+  "pressPaddingTop": ["--picker-press-padding-top", "padding"],
+  "pressPaddingRight": ["--picker-press-padding-right", "padding"],
+  "pressPaddingBottom": ["--picker-press-padding-bottom", "padding"],
+  "pressPaddingLeft": ["--picker-press-padding-left", "padding"],
   // alignX/alignY resolve to these two on a flex-x box; naming the CSS style
   // (not the prop) is what styleCSSVars matches, so justifyContent/alignItems
   // passed directly land in the same variables.
