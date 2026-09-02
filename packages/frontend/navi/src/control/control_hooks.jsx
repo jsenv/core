@@ -809,6 +809,14 @@ export const useControlProps = (
         return false;
       }
       const control = ref.current;
+      if (!control) {
+        // The ui action the reaction ran a line earlier is free to take this
+        // control away: a list row answering its popup's question closes it, and
+        // mount="while-opened" unmounts the row. Nothing left to read a value
+        // from, and what the press was for has already happened (the button and
+        // link reactions bail on the same ground).
+        return false;
+      }
       const currentValue = readControlValue(control);
       // For checkables: skip value dedup. The browser only fires `input` when state
       // actually changes, so there is no spurious double-dispatch to guard against.
