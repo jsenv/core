@@ -68,6 +68,15 @@ const readOnlyMessage = (field) => {
   if (reason === "network-policy") {
     return getNetworkPolicyReadOnlyMessage();
   }
+  // As many runs as the surface allows are already out (see parallel_guard.js):
+  // what stops the press is the queue, and it says how long it is.
+  if (reason === "parallel-guard") {
+    const { max } = field.parallelGuard;
+    return naviI18n("constraint.readonly.parallel_guard", {
+      max,
+      s: max > 1 ? "s" : "",
+    });
+  }
   // A send button held back by the form above it, which holds nothing new (see
   // Button's own `readOnlyWhileFormUnchanged`) — what stops the press is not the
   // button, it is the form still waiting for a change, so that is what it says.

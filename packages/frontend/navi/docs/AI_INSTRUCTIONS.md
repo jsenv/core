@@ -109,7 +109,9 @@ consistency across the app, not from any single call site.
   it, clearing it a moment later loses the selection silently. Read it before
   putting `loading` on a row whose button is working, before
   `<List readOnly={pending}>`, and before writing a second spinner next to the
-  one a control already draws.
+  one a control already draws. Also `parallelGuard` — how many of a list's rows
+  may be acting at once, four by default, `Infinity` to lift it: it counts runs
+  where `maxLengthGuard` counts values.
 - `docs/error_handling.md` — the two kinds of error and how navi keeps them
   apart: where an error is shown depending on where it came from (a control's
   action shows it on what was clicked, a route action replaces the page, a

@@ -61,6 +61,7 @@ import {
   selfInteractionsAttributeValue,
   selfInteractionsIgnoreBlock,
 } from "./self_interactions.js";
+import { ParallelGuardContext } from "./parallel_guard.js";
 import {
   ActionContext,
   ActionRequesterContext,
@@ -1561,6 +1562,7 @@ const useInteractiveProps = (
     const controlRequired = useContext(RequiredContext);
     const controlLoadingFromAbove = useContext(LoadingContext);
     const parentActionRequester = useContext(ActionRequesterContext);
+    const parallelGuard = useContext(ParallelGuardContext);
     const parentAction = useContext(ActionContext);
     const actionStatus = useActionStatus(boundAction);
     const networkPolicyReason = useNetworkPolicyReason();
@@ -1605,11 +1607,22 @@ const useInteractiveProps = (
         Boolean(
           zoneStateApplies && parentAction && isWriteAction(parentAction),
         ));
+    // Held back because the surface above already has as many runs in flight as
+    // it allows (see parallel_guard.js). Only a control that would START one:
+    // anything without an action of its own runs nothing and has nothing to
+    // wait its turn for.
+    const heldByParallelGuard = Boolean(
+      zoneStateApplies &&
+      parallelGuard &&
+      props.action &&
+      parallelGuard.blocks(uiStateController),
+    );
     const readOnlyBase =
       readOnly ||
       controlReadOnly ||
       loadingBase ||
       readOnlyFromParentMaxLengthGuard ||
+      heldByParallelGuard ||
       controlInfo.readOnlyUncontrolled ||
       heldByNetworkPolicy;
     // An optimistic control trusts its action to succeed: the state the user
@@ -1664,6 +1677,13 @@ const useInteractiveProps = (
       controlHostProps.readOnly = readOnlyResolved;
     } else {
       controlHostProps["aria-readonly"] = readOnlyResolved ? "true" : "false";
+    }
+    // Read by READONLY_CONSTRAINT to say how many runs are already out, and by
+    // the action handlers below, which are where a run joins and leaves the
+    // count (a labelled block away, hence through the controller).
+    uiStateController.parallelGuard = parallelGuard;
+    if (heldByParallelGuard) {
+      controlHostProps["data-readonly-reason"] = "parallel-guard";
     }
     if (heldByNetworkPolicy) {
       // Read by READONLY_CONSTRAINT; wins over any other reason the control
@@ -1914,6 +1934,7 @@ const useInteractiveProps = (
         // carried by every navi_action_* event of that run).
         uiStateController.pendingActionEvent = e.detail.event;
         uiStateController.actionInFlight = true;
+        uiStateController.parallelGuard?.claim(uiStateController);
         // The very instance this run uses, resolved now — while the UI state
         // still holds the value the run was made for. detail.action may be a
         // proxy following that state, and by the time anyone wants to abort
@@ -1929,6 +1950,7 @@ const useInteractiveProps = (
         e.detail.addSideEffect((outcome) => {
           uiStateController.actionInFlight = false;
           uiStateController.runningAction = null;
+          uiStateController.parallelGuard?.release(uiStateController);
           const queuedEvent = uiStateController.queuedActionAllowedEvent;
           if (!queuedEvent) {
             return;

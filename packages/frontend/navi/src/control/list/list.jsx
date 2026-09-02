@@ -37,6 +37,7 @@ import { useItemTracker } from "../../utils/item_tracker/use_item_tracker.js";
 import { withPropsClassName } from "../../utils/with_props_class_name.js";
 import { useDisplayedLayoutEffect } from "../../utils/use_displayed_layout_effect.js";
 import { getUIStateControllerById } from "../controller_registry.js";
+import { ParallelGuardContext, useParallelGuard } from "../parallel_guard.js";
 import { ListItemHeaderOrFooterResolver } from "./list_item_header_footer.jsx";
 import { listItemBlockedMessage } from "./list_item_blocked_message.js";
 import {
@@ -1179,6 +1180,12 @@ const ListUI = (props) => {
     </Box>
   );
 };
+// How many of a list's own rows may be acting at once, when the rows are what
+// carry the action. Four rather than none: a list is a place where the same
+// gesture is available many times over, and nothing else stops a long one from
+// putting a request out for every row it draws.
+const PARALLEL_GUARD_DEFAULT = 4;
+
 const ListFirstResolver = (props) => {
   const Next = useNextResolver();
   const refDefault = useRef(null);
@@ -1190,8 +1197,15 @@ const ListFirstResolver = (props) => {
     virtualRef.current = createListVirtual();
   }
   props.virtual = virtualRef.current;
+  const parallelGuard = useParallelGuard(
+    props.parallelGuard ?? PARALLEL_GUARD_DEFAULT,
+  );
 
-  return <Next {...props} />;
+  return (
+    <ParallelGuardContext.Provider value={parallelGuard}>
+      <Next {...props} parallelGuard={undefined} />
+    </ParallelGuardContext.Provider>
+  );
 };
 
 /**
@@ -1204,6 +1218,7 @@ const ListFirstResolver = (props) => {
  *   deselectable?: boolean,
  *   maxLength?: number,
  *   maxLengthGuard?: number,
+ *   parallelGuard?: number,
  *   standalone?: boolean,
  *   action?: (value: any) => void,
  *   uiAction?: (value: any) => void,
@@ -1380,6 +1395,13 @@ const ListFirstResolver = (props) => {
  *   taking — and `uiAction` is not called. The selected ones stay takeable
  *   back, so a selection that arrived too long can always be brought back
  *   under the limit. Implies `maxLength` for validity.
+ * @param {number} [props.parallelGuard=4]
+ *   How many runs the rows may have in flight at once, for a list whose rows
+ *   carry their own `action` (a button per row). While that many are out, every
+ *   row that is not running goes read-only and says how many it is waiting on;
+ *   the next press is possible again as soon as one comes back. `Infinity`
+ *   lifts it. Counts runs, not values — `maxLengthGuard` above is the one that
+ *   says how many things the selection may hold.
  * @param {boolean} [props.standalone]
  *   This list answers for itself: it does not register with the control group
  *   or picker around it, so its selection stays out of that value and nothing

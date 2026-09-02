@@ -12,6 +12,7 @@ wait very differently, and what decides it is one thing:
 - [Who draws the wait, and who answers a press](#who-draws-the-wait-and-who-answers-a-press)
 - [Read-only, not loading](#read-only-not-loading)
 - [Hold the rows, not the list](#hold-the-rows-not-the-list)
+- [How many at once: `parallelGuard`](#how-many-at-once-parallelguard)
 
 Live examples: the **Button** section of
 `src/control/demos/13_list_selectable_demo.html` shows both, side by side, over
@@ -119,3 +120,26 @@ answer whenever the answer comes:
 <List.Item readOnly={pending !== null} />   // all of them: one at a time
 <List.Item readOnly={pending.includes(name)} />  // this one: each on its own
 ```
+
+## How many at once: `parallelGuard`
+
+A list is a place where the same gesture is available many times over, and
+nothing about a row's own action stops someone from starting one on every row it
+draws — a dozen requests in flight because the list happened to be long.
+
+So a list allows **four runs at once by default**. While that many are out,
+every row that is not running goes read-only and says how many it is waiting on;
+the next press is possible again the moment one comes back.
+
+```jsx
+<List parallelGuard={2}>      // stricter
+<List parallelGuard={Infinity}>  // lifted, without taking it out of the tree
+```
+
+It counts runs, not values — which is the whole difference from `maxLengthGuard`
+next to it: that one says how many things the selection may HOLD, this one how
+many may be HAPPENING. A list can carry either, or both, and they refuse for
+unrelated reasons.
+
+Only a control that would start a run is held: a row with nothing to run, or a
+button that merely fires a command, never waits its turn.

@@ -423,6 +423,11 @@ naviI18n.addAll({
     fr: "Cette action attend une modification.",
     en: "This action is waiting for a change.",
   },
+  // parallelGuard: the surface already has as many runs in flight as it allows
+  "constraint.readonly.parallel_guard": {
+    fr: "[max] action[s] déjà en cours, attendez qu'une se termine.",
+    en: "[max] action[s] already in progress, wait for one to finish.",
+  },
   "constraint.readonly.network_policy": {
     fr: "Hors ligne : ça ne peut pas partir.",
     en: "Offline: this cannot be sent.",

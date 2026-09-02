@@ -1485,7 +1485,7 @@
 
       // ── Button as the interaction surface ──────────────────────────────────────
 
-      const BUTTON_PEOPLE = ["Marie", "Damien", "Paul"];
+      const BUTTON_PEOPLE = ["Marie", "Damien", "Paul", "Sophie", "Jacques"];
       // The button IS the mark: a row shows what it holds the way a checkbox
       // does, so the background stays out of it.
       const BUTTON_LIST_STYLE = {
@@ -1598,6 +1598,7 @@
                 selectable
                 multiple
                 expandX
+                parallelGuard={2}
                 style={BUTTON_LIST_STYLE}
                 uiAction={(v) => setSelected(v || [])}
               >
@@ -1651,8 +1652,9 @@
               </div>
               <div>
                 <div className="col-label">
-                  Multiple — each row waits alone. Press two before answering
-                  either
+                  Multiple — each row waits alone.{" "}
+                  <code>parallelGuard={"{2}"}</code> (4 by default): press a
+                  third before answering either
                 </div>
                 <ButtonCheckboxDemo />
               </div>
