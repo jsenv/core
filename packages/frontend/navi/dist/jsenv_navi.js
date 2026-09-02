@@ -3301,15 +3301,23 @@ const SYMBOL_OBJECT_SIGNAL = Symbol.for("navi_object_signal");
  * resolves priorities between the four operation sets (reset > rerun > run >
  * prerun) and performs them.
  *
- * Memory design (the surprising part): nothing here keeps actions alive.
- * Child actions are held through ephemerons (createJsValueWeakMap) so a child
- * and its params are garbage-collected together, running actions live in
- * iterable *weak* sets, and property/signal mirroring uses weakEffect. Two
+ * Memory design (the surprising part): by default nothing here keeps actions
+ * alive. Child actions are held through ephemerons (createJsValueWeakMap) so a
+ * child and its params are garbage-collected together, running actions live in
+ * iterable *weak* sets, and property/signal mirroring uses weakEffect. Three
  * consequences to be aware of:
  * - an action can exist in several places only if everyone shares the same
  *   instance (the caches above are what makes lookups return it);
  * - prerun actions may have no other reference yet, so
- *   prerunProtectionRegistry pins them for a few minutes.
+ *   prerunProtectionRegistry pins them until they answer;
+ * - an answer outlives the screen that asked for it only where the question
+ *   declared `keep` (createKeptAnswerRegistry); everything else is asked again.
+ *
+ * What makes that design fragile: reading an action's signals from inside an
+ * effect subscribes that effect to them, and the root action never dies — so
+ * the effect, and everything its closure holds, never dies either. Stringifying
+ * an action for a debug message is the easy way to do it by accident, which is
+ * why toString peeks.
  *
  * A failing run rejects, and writes its error into errorSignal as well. The
  * callers that cannot take a rejection — a run started from a signal effect, a
@@ -3423,6 +3431,58 @@ const prerunProtectionRegistry = (() => {
     unprotect,
   };
 })();
+
+/**
+ * The answers a root action keeps once the screen that asked for them is gone.
+ *
+ * An action holds its answer for exactly as long as something references it, so
+ * without this the lifetime of an answer is whatever the garbage collector
+ * decides: coming back to a screen re-asks the same question, or does not,
+ * depending on when a collection happened to run.
+ *
+ * Age is read when someone looks an answer up, never on a timer. A screen
+ * nobody is on must not talk to the network, and an answer expiring under a
+ * screen someone IS on would empty it mid-read.
+ */
+const createKeptAnswerRegistry = ({ ms, max }) => {
+  // insertion order is recency order: looking an answer up re-inserts it, so
+  // the first key is always the least recently used one
+  const answeredAtMap = new Map();
+
+  return {
+    keep: (action) => {
+      answeredAtMap.delete(action);
+      answeredAtMap.set(action, Date.now());
+      if (max === undefined) {
+        return;
+      }
+      while (answeredAtMap.size > max) {
+        const [leastRecentlyUsed] = answeredAtMap.keys();
+        answeredAtMap.delete(leastRecentlyUsed);
+      }
+    },
+
+    drop: (action) => {
+      answeredAtMap.delete(action);
+    },
+
+    touch: (action) => {
+      const answeredAt = answeredAtMap.get(action);
+      if (answeredAt === undefined) {
+        return;
+      }
+      answeredAtMap.delete(action);
+      if (ms !== undefined && Date.now() - answeredAt > ms) {
+        // reset rather than drop the instance: equal params must keep giving
+        // the same action, otherwise whoever still holds this one would be
+        // reading a different instance than whoever asks for it next.
+        action.reset({ reason: "kept answer expired" });
+        return;
+      }
+      answeredAtMap.set(action, answeredAt);
+    },
+  };
+};
 
 const formatActionSet = (actionSet, prefix = "") => {
   let message = prefix;
@@ -3823,12 +3883,38 @@ const mergeActionParams = (currentParams, newParams) => {
 };
 
 const actionWeakMap = new WeakMap();
+/**
+ * Wraps an async callback into an action: a question, its answer, and the
+ * signals saying where that answer is.
+ *
+ * @param {Function} callback
+ * @param {object} [rootOptions]
+ * @param {{ ms?: number, max?: number }} [rootOptions.keep] - how long an
+ *   answer stays good once it has landed. Without it an answer lives exactly as
+ *   long as something references it: the screen that asked goes away, and
+ *   coming back asks the same question again at a moment nothing in the code
+ *   decides.
+ *
+ *   `ms` counts from the moment the answer landed; `max` caps how many answers
+ *   are held at once, the least recently looked-at going first. Age is read
+ *   when someone looks, never on a timer — a screen nobody is on must not talk
+ *   to the network — and an expired answer is `reset()`, so the question goes
+ *   back out through whoever asks for it next.
+ *
+ *   It is declared here rather than on each binding because the answer to "how
+ *   long is this still true?" belongs to the question: a court list is good for
+ *   the session, a count of people watching grows on its own and is worth a few
+ *   minutes, a payment status is worth nothing at all.
+ */
 const createAction = (callback, rootOptions = {}) => {
   const existing = actionWeakMap.get(callback);
   if (existing) {
     return existing;
   }
 
+  const keptAnswerRegistry = rootOptions.keep
+    ? createKeptAnswerRegistry(rootOptions.keep)
+    : null;
   let rootAction;
 
   const createActionCore = (options, { parentAction } = {}) => {
@@ -4060,6 +4146,9 @@ const createAction = (callback, rootOptions = {}) => {
       }
       const existingChildAction = childActionWeakMap.get(newParamsOrSignal);
       if (existingChildAction) {
+        if (keptAnswerRegistry) {
+          keptAnswerRegistry.touch(existingChildAction);
+        }
         return existingChildAction;
       }
       const childAction = _bindParams(
@@ -4198,7 +4287,10 @@ const createAction = (callback, rootOptions = {}) => {
         paramsSignal.value = nextParams;
         return true;
       },
-      toString: () => action.callSource,
+      // peek: an action gets stringified into debug messages built inside
+      // effects, and subscribing there would keep those effects — and everything
+      // their closures hold — alive for as long as the action itself.
+      toString: () => actionCallSourceSignal.peek(),
       meta,
       debug: (...args) => {
         if (!meta.debug && !DEBUG$2) {
@@ -4362,6 +4454,9 @@ const createAction = (callback, rootOptions = {}) => {
             onComplete?.(data, action);
             completeSideEffectCleanup = completeSideEffect?.(action);
           });
+          if (keptAnswerRegistry) {
+            keptAnswerRegistry.keep(action);
+          }
           if (DEBUG$2) {
             console.log(`"${action}": completed`);
           }
@@ -4477,6 +4572,9 @@ const createAction = (callback, rootOptions = {}) => {
         }
 
         prerunProtectionRegistry.unprotect(action);
+        if (keptAnswerRegistry) {
+          keptAnswerRegistry.drop(action);
+        }
 
         if (sideEffectCleanup) {
           sideEffectCleanup(reason);
@@ -4726,7 +4824,7 @@ const createActionProxyFromSignal = (
       );
     },
     replaceParams: null, // Will be set below
-    toString: () => actionProxy.callSource,
+    toString: () => callSourceSignal.peek(), // peek: see the action's toString
     meta: action.meta,
 
     paramsSignal: proxyParamsSignal,
@@ -7266,6 +7364,33 @@ const openCallout = (message, {
     const focusTarget = findFocusDelegateTarget(anchorElement) || findFocusable(anchorElement) || calloutCloseButton;
     focusTarget.focus({
       preventScroll: true
+    });
+  }
+  close_on_escape_from_anywhere: {
+    // Escape closes a callout by reaching its anchor (above), which works while
+    // the anchor holds the keyboard. Some do not: a callout opened with
+    // `skipFocus` leaves the focus where it was, and a press on a blocked list
+    // row leaves it nowhere at all — the row refuses the press, focus included.
+    // The callout is then unreachable by keyboard, and "click somewhere else to
+    // make it go" is not an answer for someone not using a pointer.
+    //
+    // Only for the ones that cannot be heard otherwise, and only while they are
+    // open: a callout the anchor can hear about is left to the anchor, so
+    // Escape goes on meaning what it means where the user is.
+    if (anchorElement && anchorElement.contains(document.activeElement)) {
+      break close_on_escape_from_anywhere;
+    }
+    const onDocumentKeydown = e => {
+      if (e.key !== "Escape") {
+        return;
+      }
+      requestClose(e, "escape_key");
+      e.stopPropagation();
+      e.preventDefault();
+    };
+    document.addEventListener("keydown", onDocumentKeydown, true);
+    addTeardown(() => {
+      document.removeEventListener("keydown", onDocumentKeydown, true);
     });
   }
   {
@@ -56989,6 +57114,15 @@ const PopupClose = ({
     command: "--navi-close",
     icon: true,
     variant: "discrete"
+    // Dismissing writes nothing to whatever control the popup belongs to, so
+    // that control's read-only and disabled are not about this cross: a
+    // read-only picker still opens to be read (see readonly_constraint.js),
+    // and what is opened has to be closable. Whether closing is allowed at
+    // this instant is the popup's own question, answered by the popup — a
+    // dialog holds the close while an action inside it runs (see
+    // findBusyElementInside in dialog.jsx).
+    ,
+    whenSelfInteractionsBlocked: "ignore"
     // The cross is drawn at the control size, which is a few millimetres
     // wide; the padding is what makes it a target a thumb can hit.
     ,
@@ -66067,8 +66201,25 @@ const ListItemReal = props => {
     if (event.button !== 0 || isOverlaidOnRow(event)) {
       return;
     }
-    blockInteraction(event);
     pressStartedHereRef.current = true;
+    // A row that IS a control has one already able to answer this, in the same
+    // words it uses for the keyboard, and it is the one the callout would be
+    // anchored on either way — two answers would be two callouts on one anchor,
+    // toggling each other off (see `reopen` in openCallout).
+    //
+    // Asked before the press is blocked, not after: a gate handed an event
+    // already prevented reads it as "someone else took this one" and steps
+    // back without a word (see onRequestInteraction).
+    const controlHost = isControlRoot(event.currentTarget) ? findControlHost(event.currentTarget) : null;
+    if (controlHost) {
+      dispatchRequestInteraction(controlHost, {
+        event,
+        name: "press on a blocked row"
+      });
+      blockInteraction(event);
+      return;
+    }
+    blockInteraction(event);
     // One at a time, and not the one that just dismissed it (see the refs).
     if (calloutRef.current && calloutRef.current.opened) {
       return;
