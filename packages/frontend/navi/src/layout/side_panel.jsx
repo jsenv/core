@@ -278,7 +278,11 @@ export const SidePanel = ({
   return (
     <Popup
       mode={mode}
-      open={open}
+      // Spread rather than written: the collision warning between `signal` and
+      // `open` asks whether the prop is THERE, not what it holds, so a panel
+      // handed a signal and nothing else would be told off for an `open` only
+      // this line ever put on it.
+      {...(open === undefined ? null : { open })}
       signal={signal}
       defaultOpen={defaultOpen}
       onClose={onClose}

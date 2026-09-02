@@ -533,7 +533,10 @@ is nav state by construction.
 
 The two meet when the signal IS a route's: a search-param `stateSignal` given to
 `signal` puts the open state in the address itself, where a link can point at
-it.
+it. That is also the shape a popup takes when it is a LAYER over the screen —
+settings opened from every screen and closed back onto the one the reader was on
+— and what the address may and may not claim there is a decision of its own:
+[navigation.md](./navigation.md#a-layer-over-the-screen-what-its-address-may-say).
 
 ### `open`, and what it costs
 

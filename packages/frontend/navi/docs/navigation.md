@@ -19,6 +19,14 @@ linking to them, and turning them into tabs.
 - [Tabs that are not routes](#tabs-that-are-not-routes)
   - [A `SlideContainer` in the URL: a position that is not a place one came from](#a-slidecontainer-in-the-url-a-position-that-is-not-a-place-one-came-from)
   - [A state whose values ARE places: `history: "push"`](#a-state-whose-values-are-places-history-push)
+- [A layer over the screen: what its address may say](#a-layer-over-the-screen-what-its-address-may-say)
+  - [Why a layer is a routing question at all](#why-a-layer-is-a-routing-question-at-all)
+  - [`/me/settings` names a place the reader is not at](#mesettings-names-a-place-the-reader-is-not-at)
+  - [It is not "use a search param"](#it-is-not-use-a-search-param)
+  - [What the search param buys: the way back is in the address](#what-the-search-param-buys-the-way-back-is-in-the-address)
+  - [The wiring](#the-wiring)
+  - [Places inside the layer](#places-inside-the-layer)
+  - [What it costs](#what-it-costs)
 
 ## The rule that decides everything else: the position belongs in the URL
 
@@ -747,3 +755,162 @@ not one. What travels is the box, and the address is a label on where the box
 stands. A position several parts of the app must react to is still a route.
 
 Demo: [../src/layout/demos/8_slide_container_demo.html](../src/layout/demos/8_slide_container_demo.html).
+
+## A layer over the screen: what its address may say
+
+Some things are opened from everywhere and drawn OVER whatever the reader was
+looking at: the settings behind a gear in the top bar, a photo, a help sheet.
+Closing one puts the reader back exactly where they were — not on a page the app
+picked, on the one they had. And the address has to hold it, for the same reasons
+every other position does: a reload lands on it, a link opens on it, the back
+button closes it.
+
+### Why a layer is a routing question at all
+
+Layout should not decide routing. But routing decides a great deal of what is on
+screen: which page is mounted, whose data loads, which bar entry lights up, which
+movement plays between two screens. An address is not a label — it is read by
+everything — so a layer, which is a pure fact of layout, cannot be given just any
+address.
+
+The rule that falls out of it, and the whole of this section:
+
+> The URL may say what is drawn OVER the screen. It must never name a place the
+> reader is not at.
+
+### `/me/settings` names a place the reader is not at
+
+Settings opened from anywhere and drawn over anything are not inside `/me`, even
+when they conceptually belong to "me". Written `/me/settings`, the router
+believes otherwise, and everything that reads the router inherits the belief:
+
+- the bar entry for the "me" section lights up while the settings cover a game;
+- `/me` matches, so the screen the reader was on is REPLACED. The covering is a
+  fiction that lasts as long as the animation, and the page beneath is gone;
+- a route transition plays a crossing between two pages that never crossed, and
+  its back half plays on every way out — the sheet lifts to reveal a page that
+  was never underneath;
+- and it is wrong on the way out too: closing does not return to `/me`, it
+  returns to wherever the reader was, which the address never said.
+
+These do not get fixed one at a time. `currentExcept` stops one link from
+claiming "you are here"; a `"none"` relation silences one crossing; a hand-rolled
+`active` replaces one reading. Each patches a reader of the lie without removing
+it, and the next reader arrives quietly wrong.
+
+### It is not "use a search param"
+
+`/settings` at the top level does not claim to be inside `/me` — it is honest
+about not being there, and every symptom above goes with it. What it still is,
+though, is a PAGE: it names a screen, so the screen beneath is gone, and closing
+has nowhere written to return to. `whatever/settings` is the same answer in a
+longer word.
+
+So the rule is not about search params. It is about not claiming a position. A
+path can be honest; what a path cannot do is carry what is underneath.
+
+### What the search param buys: the way back is in the address
+
+`/places?settings` says two things at once — which screen the reader is on, and
+what is drawn over it. That is what makes closing exact from a cold start: a
+reload, a link someone sent, a new tab. The layer's address CONTAINS the address
+of what it covers, so "close" needs no memory at all.
+
+`/settings` has to remember instead. In practice the browser often does — after a
+reload the session's history is still there, so a back-press lands somewhere —
+but that is the BROWSER's memory of this tab, not the address. A link someone
+else opens has none of it, and neither does a bookmark. Only the address travels,
+which is what makes the param shape the right model rather than the convenient
+one.
+
+### The wiring
+
+```js
+const settingsSignal = stateSignal(false, {
+  id: "settings",
+  type: "boolean",
+  weak: true,
+  history: "push",
+});
+export const ROOT_ROUTE = route("/", {
+  searchParams: { settings: settingsSignal },
+});
+```
+
+```jsx
+<Button command="--navi-toggle" commandFor="settings_panel">⚙</Button>
+…
+<SidePanel id="settings_panel" signal={settingsSignal} side="top" expandY />
+```
+
+Every piece of it answers something:
+
+- **declared on the ROOT route**, so the layer opens over every screen. Declared
+  on one route it would only exist there, and a door in the furniture is on every
+  screen ([Search params](#search-params));
+- **`weak`**, so a link built to a page never inherits a layer that happens to be
+  open. A layer qualifies one visit; it is not part of anyone's address;
+- **`history: "push"`**, so the layer is a place one came from and the back button
+  closes it. The closing itself is never an entry of its own — see
+  [popup_open.md](./popup_open.md), which owns what a `signal` bound to a URL
+  writes on open, on close, and on cancel;
+- **the panel is rendered outside the page area**, next to the router rather than
+  inside it. It is drawn over the pages and the fixed bars alike, and it stays
+  mounted while closed so it has somewhere to animate from;
+- **`expandY`**, because a sheet is content-tall by default and a layer covers
+  the screen. It is also what any tab row inside it must NOT be given: `expand`
+  is both axes, and in the panel's own column that makes the row eat the height
+  and push everything below it off screen;
+- **no `defineRouteTransition` for it.** Nothing crosses: the page beneath does
+  not change, so there is no pair of pages and no movement between them. A layer
+  has an entrance of its own, and route transitions are for pages replacing pages
+  ([route_transitions.md](./route_transitions.md)).
+
+### Places inside the layer
+
+A layer big enough to have tabs holds them the way a wizard does — a search param
+of its own, `oneOf` its pages, replacing rather than pushing, so the back button
+closes the layer instead of stepping back one tab. Everything in
+[A `SlideContainer` in the URL](#a-slidecontainer-in-the-url-a-position-that-is-not-a-place-one-came-from)
+applies unchanged, and a layer is exactly the case that section names for
+`SlideContainer` over `RouteTravel`: a popup lives in the browser's top layer,
+where two pages cannot stand side by side.
+
+```js
+const settingsTabSignal = stateSignal("account", {
+  id: "settings_tab",
+  oneOf: ["account", "alerts", "advanced"],
+  weak: true,
+});
+```
+
+The address then grows and shrinks with what the reader does: `/me` closed,
+`/me?settings` open on the tab it opens on, `/me?settings&settings_tab=alerts`
+one tab further, and back to `/me?settings` returning to the first.
+
+Two params, because they answer two questions — is the layer there, and which of
+its pages is shown. One param whose value is "which page of the layer, or none"
+(`?settings=alerts`) is arguably the shape the address wants, and it is not
+expressible today: a popup says its open state as a boolean, so it would
+overwrite the tab on every open.
+
+### What it costs
+
+This is a compromise, and it is worth stating rather than discovering:
+
+- **the page beneath stays mounted and alive under an opaque layer.** Its actions
+  keep running, refreshing, retrying, for something nobody can see. Nothing tells
+  a route "you are covered", and nothing should be inferred from a layer being
+  open — the reader is still on that page, and will be back on it in a moment;
+- **the router knows nothing about layers.** `<Route>` renders pages; the layer is
+  drawn beside them by the application. The address is honest about it, but "over"
+  is not a routing concept, and no `<Route>` shape expresses it;
+- **the app really is on the page underneath**, which is right for `aria-current`,
+  for the bar, for a link built while the layer is open — and is exactly wrong for
+  anything wanting "the settings are what is current". If something needs to
+  answer that, it reads the layer's own state, not the router.
+
+Demo:
+[../src/nav/demos/route_transition_fixed_bars/route_transition_fixed_bars.html](../src/nav/demos/route_transition_fixed_bars/route_transition_fixed_bars.html)
+— a bar holding both doors side by side: notifications, a page that replaces the
+screen with a route transition, and settings, a layer that covers it.

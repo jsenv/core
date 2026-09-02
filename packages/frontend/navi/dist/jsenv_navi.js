@@ -27613,6 +27613,105 @@ const releaseTransitionDestination = (owner) => {
 };
 
 /**
+ * The press that lands on a control the movement turned into a picture.
+ *
+ * A captured element is dead in both senses: it stops being painted where it
+ * stands, and nothing hit-tests to it — the press falls through to the nearest
+ * ancestor still being painted, whatever the pseudo-elements are told about
+ * pointer events. For the pages that is the whole point: both are pictures of
+ * somewhere the reader is no longer, or not yet.
+ *
+ * For the DOOR it is not. A page reached from the furniture — a gear in a top
+ * bar, a "+" in a tab bar — is opened and closed by the same control, and that
+ * control is standing exactly where its picture is drawn: the bar the two
+ * states share is one group the browser holds still. So a press on it during
+ * those few hundred milliseconds is aimed at what the reader can see, and
+ * swallowing it makes the toggle feel stuck at the very moment it is being used
+ * as one — press to open, press again to close.
+ *
+ * A control therefore may ask to keep answering, and while a route transition
+ * plays the press is caught at the document and handed to it when it fell
+ * inside its rectangle — which is where the hand thinks it pressed. The same
+ * move route_travel.jsx makes for the box a finger reaches for mid-flight.
+ *
+ * ASKED FOR, never derived, and that is the whole safety of it: only the
+ * application knows the control does not move. One that travels with the pages
+ * has a rectangle where it WILL be, not where it is seen, and a press handed to
+ * it fires something the reader never aimed at — worse than the press being
+ * lost. Hence the dev warning below for a control found inside the area.
+ *
+ * The click alone is re-aimed, not the pointer stream that leads to it: what
+ * has to survive is the press meaning what it meant, and the press feedback is
+ * lost anyway — the control is a picture, so nothing it paints for its own
+ * `:active` state reaches the screen. Synthesising a pointerdown with no
+ * pointer behind it would start gestures (a drag, a hold) that no pointerup
+ * ever ends.
+ */
+
+// Worn by a control that keeps answering while the pages move. Written by
+// <Link pressableDuringRouteTransition> / <Button pressableDuringRouteTransition>,
+// and by hand on anything else — this module owns the name and does the reading.
+const PRESSABLE_ATTRIBUTE = "data-navi-route-transition-pressable";
+const PRESSABLE_SELECTOR = `[${PRESSABLE_ATTRIBUTE}]`;
+
+let pressOwner = null;
+
+const holdTransitionPress = (owner, areaElement) => {
+  pressOwner = owner;
+  // Adding the same listener twice is a no-op, so a movement taking over from
+  // another needs nothing but the new owner.
+  document.addEventListener("click", onDocumentClick, true);
+};
+
+const releaseTransitionPress = (owner) => {
+  if (owner !== pressOwner) {
+    return;
+  }
+  pressOwner = null;
+  document.removeEventListener("click", onDocumentClick, true);
+};
+
+const onDocumentClick = (clickEvent) => {
+  // A click of our own making, or one an application dispatched by hand: both
+  // are already aimed, and re-aiming them by coordinates that mean nothing
+  // (0, 0 for a synthetic click) would fire whatever sits in the corner.
+  if (!clickEvent.isTrusted) {
+    return;
+  }
+  const pressables = document.querySelectorAll(PRESSABLE_SELECTOR);
+  if (pressables.length === 0) {
+    return;
+  }
+  const { target, clientX, clientY } = clickEvent;
+  for (const pressable of pressables) {
+    if (pressable.contains(target)) {
+      // It got there on its own: nothing has been photographed yet, or the
+      // control is not part of what was.
+      return;
+    }
+  }
+  for (const pressable of pressables) {
+    const { left, right, top, bottom } = pressable.getBoundingClientRect();
+    if (
+      clientX < left ||
+      clientX > right ||
+      clientY < top ||
+      clientY > bottom
+    ) {
+      continue;
+    }
+    // The document is not where this press was going. Stopped here so the
+    // application sees ONE click, on the control it was aimed at, rather than
+    // two: this one falling through and the one below.
+    clickEvent.stopPropagation();
+    pressable.dispatchEvent(
+      new clickEvent.constructor(clickEvent.type, clickEvent),
+    );
+    return;
+  }
+};
+
+/**
  * The furniture around the pages — the fixed bars, and the popups standing
  * over them in the top layer — photographed with them for the length of a
  * route transition, so that a piece of it belonging to ONE of the two states
@@ -28039,6 +28138,178 @@ const bandTheCutMayBeRelaxedTo = (bandBefore, bandAfter, rectAfter) => {
   };
 };
 
+/**
+ * A view transition already playing, walked back to where it started.
+ *
+ * The way back is not a second transition. A transition photographs the state
+ * it leaves, so one started to undo another photographs the state being undone:
+ * the pictures then animate FROM where the reader is TO where they were, which
+ * is a way forward to somewhere, not a return. The same pictures are run
+ * backwards instead, and the state is put back UNDER them before they are
+ * dropped — the two are the same thing at the instant they are swapped, so
+ * nothing is seen changing.
+ *
+ * The way back is paid for in DISTANCE, not in time. A movement is eased: at
+ * half of its TIME the pictures have covered ~80% of their distance, so one
+ * caught "half-way" by the eye has barely begun by the clock. Rewound at -1 it
+ * plays those few milliseconds back through the steep end of the curve — nearly
+ * the whole visible distance collapses into two frames, and what one sees is a
+ * snap, not a return. So the pictures are walked over how far they LOOK from
+ * where they are going, at the movement's own pace, each animation at the rate
+ * that gets it there in that time.
+ *
+ * Where they visibly stand is computed from the clock THROUGH the easing curve,
+ * never read off the pseudo-elements: getComputedStyle on them answers with the
+ * un-animated value — the animated one lives on the compositor, where no
+ * reading from here reaches. It is the same trap as the playbackRate setter,
+ * which is why every rate below is handed over with updatePlaybackRate.
+ */
+
+const viewTransitionAnimations = () => {
+  const animations = [];
+  for (const animation of document.getAnimations()) {
+    const pseudoElement = animation.effect?.pseudoElement;
+    if (pseudoElement && pseudoElement.startsWith("::view-transition")) {
+      animations.push(animation);
+    }
+  }
+  return animations;
+};
+
+/**
+ * The animation carrying the movement, not the first that comes: everything a
+ * movement takes along is animated too — a bar held where it stands, a trait
+ * under a tab row, a popup travelling with its page — each with a pace of its
+ * own. A time read on one of those and turned into a fraction of ANOTHER lands
+ * anywhere, over 1 more often than not, which reads as a movement already over.
+ * The names are tried in order, so a caller can say "the pages, or the document
+ * when the pages are the document".
+ */
+const findLeadAnimation = (animations, leadNames) => {
+  for (const leadName of leadNames) {
+    const found = animations.find((candidate) =>
+      candidate.effect?.pseudoElement?.includes(leadName),
+    );
+    if (found) {
+      return found;
+    }
+  }
+  return null;
+};
+
+// How far the pictures visibly are into their movement, between 0 and 1.
+const visibleProgress = (animation) => {
+  const timing = animation.effect.getComputedTiming();
+  const duration = timing.delay + timing.activeDuration;
+  if (!duration) {
+    return null;
+  }
+  const temporal = animation.currentTime / duration;
+  // The easing sits on the keyframes, where a CSS animation's
+  // animation-timing-function ends up. "ease" is what these movements play;
+  // anything else (linear under a finger) maps time to distance one for one.
+  const easing = animation.effect.getKeyframes()[0]?.easing;
+  const ratio =
+    easing === "ease" ? easedProgress(temporal, CSS_EASE) : temporal;
+  return { duration, ratio };
+};
+
+// A frame's worth of movement is not a movement: under it the pictures are home
+// already, and a rate computed over it is a division by nearly nothing.
+const ONE_FRAME = 17;
+
+// How long the walk should take, and 0 where the movement cannot say — a lead
+// nobody named, a duration of nothing. The rates below fall back to the
+// movement's own pace there, which is the browser's answer and the only one
+// left.
+const walkTime = (animations, leadNames, remaining) => {
+  const lead = findLeadAnimation(animations, leadNames);
+  const visible = lead ? visibleProgress(lead) : null;
+  if (!visible) {
+    return 0;
+  }
+  const ratio = remaining ? 1 - visible.ratio : visible.ratio;
+  return ratio * visible.duration;
+};
+
+/**
+ * The pictures, sent back to the state the movement left. Returns false when
+ * there are no pictures — a movement the browser skipped, or one whose
+ * animations it has not created yet.
+ */
+const walkPicturesHome = (animations, leadNames) => {
+  if (animations.length === 0) {
+    return false;
+  }
+  const wallTime = walkTime(animations, leadNames, false);
+  for (const animation of animations) {
+    const timeCovered = animation.currentTime;
+    const rate =
+      wallTime > ONE_FRAME && timeCovered > 0 ? -(timeCovered / wallTime) : -1;
+    animation.updatePlaybackRate(rate);
+  }
+  return true;
+};
+
+/**
+ * The pictures, sent on to the state the movement was going to — a way back
+ * that is itself turned round, when the door is pressed a third time. The same
+ * arithmetic read from the other end: what is left to cover, walked at the
+ * movement's own pace.
+ */
+const walkPicturesOn = (animations, leadNames) => {
+  if (animations.length === 0) {
+    return false;
+  }
+  const wallTime = walkTime(animations, leadNames, true);
+  for (const animation of animations) {
+    const timing = animation.effect.getComputedTiming();
+    const timeLeft =
+      timing.delay + timing.activeDuration - animation.currentTime;
+    const rate = wallTime > ONE_FRAME && timeLeft > 0 ? timeLeft / wallTime : 1;
+    animation.updatePlaybackRate(rate);
+  }
+  return true;
+};
+
+/**
+ * When the pictures have arrived, whichever way they were walking. A rejection
+ * is an outcome — animations cancelled by a transition that took this one's
+ * place — and the caller finds nothing left to undo either way.
+ */
+const whenPicturesArrived = (animations) => {
+  if (animations.length === 0) {
+    // Nothing to run — a transition the browser skipped, or one that never
+    // became ready. There is no picture to undo either, so what the caller does
+    // next is the state alone.
+    return Promise.resolve();
+  }
+  return Promise.all(
+    animations.map((animation) => animation.finished.catch(() => {})),
+  );
+};
+
+// CSS `ease`, evaluated: time in, distance out. Solved numerically because the
+// curve is parametric — two cubics sharing a parameter, with no closed form for
+// one against the other. Twenty halvings put the answer well under a pixel of a
+// screen-wide movement.
+const CSS_EASE = [0.25, 0.1, 0.25, 1];
+const bezierAxis = (s, a, b) =>
+  3 * (1 - s) * (1 - s) * s * a + 3 * (1 - s) * s * s * b + s * s * s;
+const easedProgress = (x, [x1, y1, x2, y2]) => {
+  let low = 0;
+  let high = 1;
+  for (let i = 0; i < 20; i++) {
+    const mid = (low + high) / 2;
+    if (bezierAxis(mid, x1, x2) < x) {
+      low = mid;
+    } else {
+      high = mid;
+    }
+  }
+  return bezierAxis((low + high) / 2, y1, y2);
+};
+
 installImportMetaCssBuild(import.meta);/**
  * How two routes move against each other, said one relation at a time —
  * without putting them in a row, and without a box in the tree.
@@ -28110,6 +28381,17 @@ installImportMetaCssBuild(import.meta);/**
  * rendering_hold.js for how the picture is kept honest). A browser without
  * view transitions navigates without the movement.
  *
+ * A movement can be turned round. A page whose door is in the furniture is
+ * opened and closed by the same control, so the press that closes it often
+ * lands while it is still opening: the navigation answering is exactly the way
+ * back of the one on screen, and the pictures are walked backwards with the
+ * state put under them before they are dropped (see
+ * turnRunningTransitionRound). A second transition cannot do this — it
+ * photographs the state being undone — and it would first skip the one playing,
+ * which is the page snapping fully open before it closes. That press has to
+ * arrive at all, and everything photographed is deaf to the pointer for the
+ * length of the movement: transition_press.js is the other half.
+ *
  * However many relations are defined, there is ONE watcher: every definition
  * lands in a shared registry, and the watcher is rebuilt over the whole of it
  * — a navigation is a single fact about the document, and the first relation
@@ -28134,6 +28416,10 @@ const TRANSITION_TARGET_ATTRIBUTE = "data-navi-route-transition-target";
 // for that navigation and for no other — the next one is back to the relations.
 const TRANSITION_REQUEST_ATTRIBUTE = "data-navi-route-transition-request";
 const AREA_NAME = "navi-route-transition";
+// The pictures carrying the movement, among everything else it takes along —
+// the pages', or the document's own when the pages ARE the document (see
+// findLeadAnimation).
+const LEAD_NAMES = [AREA_NAME, "root"];
 // route_travel.jsx wears this on the root for the length of one of its
 // travels (its TRAVEL_ATTRIBUTE — a comment there mirrors this one). Read by
 // name rather than imported: importing route_travel.jsx would pull the whole
@@ -28735,6 +29021,12 @@ const rebuildWatcher = () => {
     if (fromIndex === index) {
       return;
     }
+    if (navigationAnimated) {
+      // The movement on screen was turned round for this very navigation (see
+      // turnRunningTransitionRound): it is already being answered, by the
+      // pictures the relations would otherwise photograph over.
+      return;
+    }
     // A page in no relation at all is a real end of the crossing, not a
     // missing one: it is the "anywhere" a page reached from the furniture is
     // opened over and closed back onto (see findRelation).
@@ -28761,6 +29053,7 @@ const rebuildWatcher = () => {
     beginTransition({
       page: toPage,
       url: navigationUrl,
+      fromUrl: navigationFromUrl,
       // Which way it plays: what the navigation itself said first — the link
       // being pressed is where the way the app is being walked is known — then
       // the relation, and forward for a navigation that asked for a movement
@@ -28787,6 +29080,12 @@ const rebuildWatcher = () => {
 let defaultTransition = null;
 let navigationRequest = null;
 let navigationUrl = null;
+// Where the document stands as the navigation begins — the other end of the
+// crossing, and what lets the NEXT navigation be recognised as this one's way
+// back. Read off the document url rather than off window.location: a traversal
+// on a browser without the Navigation API is announced from "popstate", where
+// the address has already moved and location would answer with the destination.
+let navigationFromUrl = null;
 let navigationAnimated = false;
 
 // The two ends of every navigation, watched from here on. The picture of the
@@ -28799,18 +29098,28 @@ observeBeforeRouting(details => {
   navigationAnimated = false;
   navigationRequest = readNavigationRequest(details);
   navigationUrl = details.url;
+  navigationFromUrl = documentUrlSignal.peek();
   if (relations.length === 0 && !defaultTransition && !navigationRequest) {
     return;
   }
   holdRenderingForRouting();
+  // Said HERE, before the relations have their say: what is on screen may be
+  // this navigation's own way back, and that is a fact about the two ends of
+  // the crossing alone. A pair written "none" would silence a movement — it
+  // must not silence the undoing of one already playing.
+  if (turnRunningTransitionRound(navigationFromUrl, navigationUrl)) {
+    navigationAnimated = true;
+  }
 });
 observeAfterRouting(() => {
   const request = navigationRequest;
   const url = navigationUrl;
+  const fromUrl = navigationFromUrl;
   // Read here and dropped here: a request answers for the navigation it was
   // made on, and the next one is back to the relations.
   navigationRequest = null;
   navigationUrl = null;
+  navigationFromUrl = null;
   if (!navigationAnimated && (request || defaultTransition)) {
     const {
       type,
@@ -28820,6 +29129,7 @@ observeAfterRouting(() => {
       beginTransition({
         page: null,
         url,
+        fromUrl,
         // A default has no direction: nothing says which of two arbitrary
         // pages is before the other, and the attribute is then worn empty —
         // present for whoever keys on "one of ours is playing", silent on the
@@ -28903,6 +29213,7 @@ let currentTransition = null;
 const beginTransition = ({
   page,
   url,
+  fromUrl,
   direction,
   type,
   duration
@@ -28917,7 +29228,15 @@ const beginTransition = ({
     console.warn("A RouteTravel is animating this navigation; the route transition defined between these routes is skipped. Animate a pair of routes with RouteTravel or defineRouteTransition, not both.");
     return;
   }
-  const transition = {};
+  // The two ends of the crossing, kept for the length of the movement: they are
+  // what lets the navigation after this one be recognised as its way back (see
+  // turnRunningTransitionRound).
+  const transition = {
+    fromUrl: absoluteUrl(fromUrl),
+    url: absoluteUrl(url),
+    walkHome: null,
+    releaseReverting: null
+  };
   currentTransition = transition;
   // Said before the picture is taken: whoever names something for a movement
   // between two pages decides on it now (see transition_destination.js).
@@ -28934,6 +29253,10 @@ const beginTransition = ({
     warnOnce("several-areas", `${areaElements.length} elements carry ${TRANSITION_AREA_ATTRIBUTE}. They all take the same view-transition-name, and a name belongs to one element at a time: the browser refuses EVERY view transition of the document while this holds. Mark the one element the pages live in.`);
   }
   const areaElement = areaElements.length > 0 ? areaElements[0] : null;
+  // Everything about to be photographed goes deaf to the pointer; the controls
+  // that asked to keep answering are heard at the document instead (see
+  // transition_press.js).
+  holdTransitionPress(transition);
   // The area as it stands before anything moves, and the band the furniture
   // around it leaves free: rendering is held, so both are still the page being
   // left (see transition_window.js).
@@ -29027,6 +29350,13 @@ const beginTransition = ({
     // ending late must not strip what a later one is wearing.
     renderWait.stop();
     releaseRendering();
+    // The hold a way back took, when it is still standing: the pictures were
+    // turned round a second time and played out, or something else took the
+    // document over mid-walk. A hold nobody gives back freezes the page.
+    if (transition.releaseReverting) {
+      transition.releaseReverting();
+      transition.releaseReverting = null;
+    }
     if (currentTransition === transition) {
       currentTransition = null;
       documentElement.removeAttribute(TRANSITION_ATTRIBUTE);
@@ -29035,14 +29365,98 @@ const beginTransition = ({
       releaseTransitionWindow(transition);
       releaseTransitionDestination(transition);
       releaseTransitionFurniture(transition);
+      releaseTransitionPress(transition);
       if (restoreDuration) {
         restoreDuration();
       }
     }
   };
+  transition.viewTransition = viewTransition;
   viewTransition.ready.then(viewTransitionReady, ignoreSkipped$1);
   viewTransition.finished.then(end, end);
 };
+
+/**
+ * The movement playing, turned round rather than replaced: this navigation is
+ * exactly the way back of the one on screen — the door pressed again while the
+ * page it opened is still arriving.
+ *
+ * A second transition cannot do this. It photographs the state it leaves, which
+ * here is the state being undone, and animates from there to the one the reader
+ * came from: a way forward to somewhere, not a return. It also skips the one
+ * playing, so the page snaps fully open before it slides back off — the
+ * teleport a toggle must never show. The same pictures are walked back instead,
+ * and the state is put under them before they are dropped (see
+ * view_transition_revert.js).
+ *
+ * Only the exact way back qualifies. Anything else — a third page, a bar entry
+ * — is a different crossing, and gets a movement of its own.
+ */
+const turnRunningTransitionRound = (fromUrl, url) => {
+  const running = currentTransition;
+  if (!running || !running.viewTransition || !fromUrl || !url) {
+    return false;
+  }
+  const from = absoluteUrl(fromUrl);
+  const to = absoluteUrl(url);
+  const isWayBack = !running.walkHome && from === running.url && to === running.fromUrl;
+  // The door pressed a third time, while the way back is still being walked:
+  // the pictures turn round once more, where the last press left them, rather
+  // than a fresh movement starting over them.
+  const isWayInAgain = running.walkHome && from === running.fromUrl && to === running.url;
+  if (!isWayBack && !isWayInAgain) {
+    return false;
+  }
+  const animations = viewTransitionAnimations();
+  if (isWayInAgain) {
+    // The token is dropped first: the walk it stands for is the one that must
+    // not arrive anywhere anymore, and its promise is still pending.
+    running.walkHome = null;
+    walkPicturesOn(animations, LEAD_NAMES);
+    // The pages stay held. The pictures are going to the state they were going
+    // to all along, which is the one the DOM has held since the way back began
+    // — what must not land under them is the render the way back queued. The
+    // hold is given back when the movement ends (see end).
+    return true;
+  }
+  if (!walkPicturesHome(animations, LEAD_NAMES)) {
+    // The pictures do not exist yet: the movement was asked for a frame ago and
+    // the browser has not taken them. There is nothing to turn round, and this
+    // navigation gets a movement of its own — which skips the one that never
+    // played, and nothing was on screen to teleport.
+    return false;
+  }
+  // Which walk home this is, so the one that arrives is the one still wanted: a
+  // walk turned round mid-way leaves a promise nobody cancelled, and it settles
+  // when the pictures reach the far end.
+  const walkHome = {};
+  running.walkHome = walkHome;
+  // The pages are held where they are until the pictures are home. The picture
+  // of the state ARRIVING is live — it is the element being drawn, not a
+  // photograph of it — so a page put back under it while it is still on screen
+  // shows on BOTH sides of the movement, and the way back is watched happening
+  // to nothing.
+  const releaseRendering = takeoverRoutingRenderingHold();
+  running.releaseReverting = releaseRendering;
+  whenPicturesArrived(animations).then(() => {
+    if (currentTransition !== running || running.walkHome !== walkHome) {
+      // Turned round again on the way home, or replaced by another movement
+      // altogether: whoever did that owns the pictures now.
+      return;
+    }
+    running.walkHome = null;
+    running.releaseReverting = null;
+    // The state goes back UNDER the pictures before they are dropped, so the
+    // two are the same thing at the instant they are swapped.
+    releaseRendering();
+    running.viewTransition.skipTransition();
+  });
+  return true;
+};
+
+// Null rather than a url built out of nothing: two crossings that both failed
+// to say where they went must not look like each other's way back.
+const absoluteUrl = url => url ? new URL(url, window.location.href).href : null;
 
 // A transition skipped by another one starting is an outcome, not a failure.
 const ignoreSkipped$1 = () => {};
@@ -29271,6 +29685,12 @@ installImportMetaCssBuild(import.meta);/**
  * was to where it is, on the same clock as the pages. That is why the tab row
  * can stay where it is, outside this box, and still move with the finger.
  */
+const TRAVEL_LEAD_NAMES = ["navi-route-travel"];
+
+// A browser with no view transitions of its own has no picture of the page
+// being left, so there is nothing to drag: the gesture is still read (it is how
+// one asks to change tab with a thumb), and the change happens on release, as a
+// press on the tab would have done.
 const CAN_KEEP_PICTURE = Boolean(document.startViewTransition && !document.startViewTransition.isPolyfill);
 const startViewTransition = ensureDocumentStartViewTransition();
 
@@ -29901,34 +30321,9 @@ const RouteTravel = ({
     // may go on rendering, and a tab row beside the box keeps answering.
     const releaseRendering = freezeRouteRender();
     const animations = travelAnimations(travel);
-    // The way back is paid for in DISTANCE, not in time. The way in is eased:
-    // at half of its TIME the pictures have covered ~80% of their distance, so
-    // a travel caught "half-way" by the eye has barely begun by the clock.
-    // Rewound at -1 it plays those few milliseconds back through the steep end
-    // of the curve — nearly the whole visible distance collapses into two
-    // frames, and what one sees is a snap, not a return. So the pictures are
-    // walked home over `how far they LOOK from home`, at the travel's own
-    // pace, each animation at the rate that gets it there in that time.
-    const wallTime = revertWalkTime(animations);
-    for (const animation of animations) {
-      const timeLeft = animation.currentTime;
-      const rate = wallTime > 17 && timeLeft > 0 ? -(timeLeft / wallTime) : -1;
-      // updatePlaybackRate, never the playbackRate setter: these animations
-      // run on the compositor, and the setter is a non-seamless change there —
-      // on screen the pictures jump straight to their end state while the
-      // Animation object ticks backwards unseen. What one sees then is the
-      // travel SNAPPING home instead of returning, and no reading of
-      // getAnimations() will say so: only the compositor knows, and
-      // updatePlaybackRate is how a new rate is handed to it in flight.
-      animation.updatePlaybackRate(rate);
-    }
+    walkPicturesHome(animations, TRAVEL_LEAD_NAMES);
     releaseHold(travel);
-    const backAtTheStart = animations.length ? Promise.all(animations.map(animation => animation.finished.catch(() => {}))) :
-    // Nothing to run backwards — a transition the browser skipped, or one
-    // that never became ready. There is no picture to undo either, so the
-    // way back is the state alone.
-    Promise.resolve();
-    backAtTheStart.then(async () => {
+    whenPicturesArrived(animations).then(async () => {
       try {
         pageAskedForRef.current = travel.fromPage;
         // The page that was left is put back UNDER the picture before the
@@ -30463,13 +30858,7 @@ const travelAnimations = travel => {
   if (travel.animations) {
     return travel.animations;
   }
-  const animations = [];
-  for (const animation of document.getAnimations()) {
-    const pseudoElement = animation.effect?.pseudoElement;
-    if (pseudoElement && pseudoElement.startsWith("::view-transition")) {
-      animations.push(animation);
-    }
-  }
+  const animations = viewTransitionAnimations();
   if (animations.length) {
     travel.animations = animations;
   }
@@ -30481,12 +30870,7 @@ const travelAnimations = travel => {
 // reaching for it must find it where it IS.
 const ratioOfTravel = travel => {
   const animations = travelAnimations(travel);
-  // The pages' own animation, not the first that comes: everything the travel
-  // carries along is animated too (a trait under a tab row, the page behind),
-  // each with a duration of its own. A time read on one of those and turned
-  // into a fraction of ANOTHER lands anywhere — over 1 more often than not,
-  // which reads as a travel already over and jumps the pictures to their end.
-  const animation = animations.find(candidate => candidate.effect?.pseudoElement?.includes("navi-route-travel")) || animations[0];
+  const animation = findLeadAnimation(animations, TRAVEL_LEAD_NAMES) || animations[0];
   if (!animation) {
     return travel.ratio;
   }
@@ -30496,52 +30880,6 @@ const ratioOfTravel = travel => {
     return travel.ratio;
   }
   return animation.currentTime / duration;
-};
-
-// CSS `ease`, evaluated: time in, distance out. Solved numerically because
-// the curve is parametric — two cubics sharing a parameter, with no closed
-// form for one against the other. Twenty halvings put the answer well under
-// a pixel of a screen-wide travel.
-const CSS_EASE = [0.25, 0.1, 0.25, 1];
-const bezierAxis = (s, a, b) => 3 * (1 - s) * (1 - s) * s * a + 3 * (1 - s) * s * s * b + s * s * s;
-const easedProgress = (x, [x1, y1, x2, y2]) => {
-  let low = 0;
-  let high = 1;
-  for (let i = 0; i < 20; i++) {
-    const mid = (low + high) / 2;
-    if (bezierAxis(mid, x1, x2) < x) {
-      low = mid;
-    } else {
-      high = mid;
-    }
-  }
-  return bezierAxis((low + high) / 2, y1, y2);
-};
-
-// How long the way back should take: the distance the pictures visibly are
-// from home, converted to time at the travel's own pace. The distance is
-// computed from the clock THROUGH the easing curve, never read off the
-// pseudo-elements: getComputedStyle on them answers with the un-animated
-// value — the animated one lives on the compositor, where no reading from
-// here reaches (the same trap as the playbackRate setter above).
-const revertWalkTime = animations => {
-  const animation = animations.find(candidate => candidate.effect?.pseudoElement?.includes("navi-route-travel"));
-  if (!animation) {
-    return 0;
-  }
-  const timing = animation.effect.getComputedTiming();
-  const duration = timing.delay + timing.activeDuration;
-  if (!duration) {
-    return 0;
-  }
-  const temporal = animation.currentTime / duration;
-  // The easing sits on the keyframes, where a CSS animation's
-  // animation-timing-function ends up. "ease" is what our travels play;
-  // anything else (linear under a finger, see the DRAGGED attribute) maps
-  // time to distance one for one.
-  const easing = animation.effect.getKeyframes()[0]?.easing;
-  const visibleRatio = easing === "ease" ? easedProgress(temporal, CSS_EASE) : temporal;
-  return visibleRatio * duration;
 };
 
 // Where the two pictures stand, said as a moment in the movement they would
@@ -40700,6 +41038,17 @@ Object.assign(PSEUDO_CLASSES, {
  *   (`navi_value`); defaults to `href`.
  * @param {boolean} [props.current] - Forces the "current" state on (otherwise
  *   derived from the href/route).
+ * @param {import("../route.js").Route|import("../route.js").Route[]} [props.currentExcept] -
+ *   Route(s) inside this link's own that are NOT it: while one of them matches,
+ *   the link is not current even though its route still is. A bar entry
+ *   standing for a whole section, and one place under that section the entry
+ *   does not stand for — settings reached from everywhere and shown over
+ *   whatever the reader was on. Nothing about the routing changes: the url is
+ *   in the section, only the link stops claiming "you are here".
+ * @param {import("../route.js").Route|import("../route.js").Route[]} [props.currentAlso] -
+ *   Route(s) other than this link's own that are it: the link is current while
+ *   one of them matches. The other side of `currentExcept` — an entry standing
+ *   for more than the one page it opens. `currentExcept` wins over it.
  * @param {"text"|"icon"|"tab"} [props.variant] - Visual variant
  *   (`data-variant`); `"text"`/`"icon"` drop the link color/underline,
  *   `"tab"` renders a tab-like affordance.
@@ -40743,6 +41092,16 @@ Object.assign(PSEUDO_CLASSES, {
  *   the pair's movement and only turns it round, which is what the rare way
  *   round a pair usually needs. Said nowhere else, the relations answer as
  *   they always do.
+ * @param {boolean} [props.pressableDuringRouteTransition] - Keep answering
+ *   presses while a route transition plays. Everything a movement photographs
+ *   goes deaf to the pointer for its whole length — a captured element is not
+ *   painted where it stands, so nothing hit-tests to it — which is right for
+ *   the pages and wrong for the door that opened them: a control in a bar the
+ *   two states share is standing exactly where its picture is drawn, and a
+ *   press on it is aimed at what the reader can see. Say it there, and only
+ *   there: a control that TRAVELS with the pages has a rectangle where it will
+ *   be, not where it is seen, and a press handed to it fires something nobody
+ *   aimed at.
  * @param {boolean} [props.replace] - Go to the destination by TAKING THE PLACE
  *   of the current history entry instead of stacking onto it: the link stays a
  *   link (an address, a middle click, the keyboard, `aria-current`), only the
@@ -40781,6 +41140,8 @@ const LinkWithRoute = ({
   route,
   routeParams,
   current,
+  currentExcept,
+  currentAlso,
   children,
   ...rest
 }) => {
@@ -40789,7 +41150,11 @@ const LinkWithRoute = ({
     matching
   } = useRouteStatus(route);
   const paramsAreMatching = route.matchesParams(routeParams);
-  const linkMatching = matching && paramsAreMatching;
+  const someExceptedRouteMatching = useSomeRouteMatching(currentExcept);
+  const someAlsoRouteMatching = useSomeRouteMatching(currentAlso);
+  // "Except" is a veto: a route named there is somewhere else, whatever the
+  // rest of the reading says.
+  const linkMatching = !someExceptedRouteMatching && (matching && paramsAreMatching || someAlsoRouteMatching);
   const innerCurrent = current || linkMatching;
   return jsx(Link, {
     href: url,
@@ -40797,6 +41162,22 @@ const LinkWithRoute = ({
     ...rest,
     children: children || route.buildRelativeUrl(routeParams)
   });
+};
+// A route, or a list of them, read as one answer: does any of them match.
+// Reading matchingSignal during the render is what subscribes the component to
+// it, so every route is read even once one has answered yes — stopping early
+// would leave the component deaf to the ones it skipped.
+const useSomeRouteMatching = routes => {
+  if (!routes) {
+    return false;
+  }
+  let someMatching = false;
+  for (const route of Array.isArray(routes) ? routes : [routes]) {
+    if (route.matchingSignal.value) {
+      someMatching = true;
+    }
+  }
+  return someMatching;
 };
 const LinkPlain = props => {
   const defaultRef = useRef();
@@ -40821,6 +41202,7 @@ const LinkPlain = props => {
     revealOnInteraction = false,
     hrefFallback = !anchor,
     routeTransition,
+    pressableDuringRouteTransition,
     replace,
     children
   } = props;
@@ -40981,6 +41363,8 @@ const LinkPlain = props => {
     revealOnInteraction: undefined,
     variant: undefined,
     current: undefined,
+    currentExcept: undefined,
+    currentAlso: undefined,
     currentIndicator: undefined,
     currentEffectBold: undefined,
     currentEffectShadow: undefined,
@@ -40990,8 +41374,12 @@ const LinkPlain = props => {
     endIcon: undefined,
     hrefFallback: undefined,
     routeTransition: undefined,
+    pressableDuringRouteTransition: undefined,
     replace: undefined,
     "data-navi-route-transition-request": routeTransitionRequest,
+    ...(pressableDuringRouteTransition ? {
+      [PRESSABLE_ATTRIBUTE]: ""
+    } : null),
     ...replaceRequest,
     // The control's own handlers first — the interaction gate, the caller's
     // onClick/onKeyDown, the command and the action — then what only a link
@@ -41032,8 +41420,14 @@ const LinkPlain = props => {
     commandfor: slide ? nav?.slideContainer : undefined,
     "aria-controls": slide ? nav?.slideContainer : undefined,
     tabIndex: slide ? props.tabIndex ?? 0 : props.tabIndex,
-    role: slide ? "tab" : props.role,
-    "aria-current": isCurrent ? "page" : undefined,
+    role: slide ? "tab" : props.role
+    // The same reading the paint uses: what the link claims about being
+    // where the reader is has to be one claim, said to the eye and to a
+    // screen reader alike. A slide is not a page — that tab says it with
+    // aria-selected below.
+    ,
+
+    "aria-current": !slide && innerCurrent ? "page" : undefined,
     "aria-selected": slide ? innerCurrent : selectionContext ? selected : undefined,
     "data-value-event": "navi_value",
     onnavi_value: e => {
@@ -44373,6 +44767,58 @@ const resolveNavStateProp = (navState, popupId, name) => {
   return { id: navState.id || popupId, type: navState.type || "replace" };
 };
 
+// What a write of the open state is worth in the history, when the signal
+// holding it is bound to a url (a route's `searchParams`, see route.js). A
+// plain signal has no `set` and takes the value as it always did.
+const writeInSignal = (signal, value, { history }) => {
+  if (signal.set) {
+    signal.set(value, { history });
+    return;
+  }
+  signal.value = value;
+};
+
+// The popup says where it is, into a `signal` the caller holds — and when that
+// signal lives in a url, saying so is a navigation. It is worth exactly what
+// the same move is worth when the open state lives in the history entry
+// instead (see useNavState's own leave()):
+// - the opening is worth what the state declares (`history: "push"` for a
+//   popup one can back out of, the default replacement for one that merely
+//   qualifies the screen one is on);
+// - the closing is never an entry of its own. Stacking one would leave the
+//   entry that carries the popup BEHIND the reader, and their next back press
+//   would walk straight back into the popup they just closed.
+// A cancel (Escape, the backdrop, --navi-cancel) goes back to before the
+// opening rather than rewriting the entry, so everything else written to the
+// url while the popup was open goes back with it. A close that is not a cancel
+// keeps those writes and only drops the popup.
+const writeOpenedInSignal = (signal, opened, event) => {
+  if (signal.peek() === opened) {
+    // The signal already says so, meaning this open/close IS what it asked
+    // for: a back press that took the popup out of the url, the application
+    // writing it. Nothing to write back — and nothing to go back to either,
+    // since the navigation navBack would undo is the one that asked for this.
+    return;
+  }
+  if (opened) {
+    signal.value = true;
+    return;
+  }
+  if (
+    event?.detail?.isCancel &&
+    signal.options?.getHistory?.() === "push" &&
+    // Nothing of this document behind: the popup was opened by the url itself
+    // (a shared link, a bookmark). navBack would do nothing at all there, so
+    // the entry is rewritten instead — the address must not keep saying open
+    // about a popup that just closed.
+    canNavBackSignal.peek()
+  ) {
+    navBack();
+    return;
+  }
+  writeInSignal(signal, false, { history: "replace" });
+};
+
 /**
  * Keeps an open controller in sync with where the caller says the popup should
  * be: an `open`/`defaultOpen` pair, a `signal`, or a `navState` — the open
@@ -44431,7 +44877,7 @@ const useOpenPropsEffectOnOpenController = (
             }
           }
           if (signal) {
-            signal.value = opened;
+            writeOpenedInSignal(signal, opened, event);
           }
         }
       : null;
@@ -44490,8 +44936,10 @@ const useOpenPropsEffectOnOpenController = (
     // The request can be refused (a busy form denying the close): the popup
     // then stays where it was, and whoever holds the open state is told so —
     // otherwise it would keep saying "closed" about a popup still open.
+    // Written over rather than stacked on: a refusal corrects the state that
+    // asked, it is not a place one came from.
     if (signal) {
-      signal.value = openController.opened;
+      writeInSignal(signal, openController.opened, { history: "replace" });
     }
     if (navStateId && openController.opened) {
       enterNavState();
@@ -46218,6 +46666,7 @@ const ButtonUI = props => {
     target,
     rel,
     replace,
+    pressableDuringRouteTransition,
     // visual
     variant,
     pressEffect,
@@ -46268,6 +46717,12 @@ const ButtonUI = props => {
   const replaceRequest = replace ? {
     [LINK_REPLACE_ATTRIBUTE]: ""
   } : null;
+
+  // Worn as an attribute too, and read at the document by whoever catches the
+  // press a movement would have swallowed (see transition_press.js).
+  const pressableRequest = pressableDuringRouteTransition ? {
+    [PRESSABLE_ATTRIBUTE]: ""
+  } : null;
   const visualSelector = ".navi_button_content";
   useAccentColorAttributes(ref, null, {
     elementSelector: visualSelector
@@ -46296,6 +46751,8 @@ const ButtonUI = props => {
     rel: innerRel,
     replace: undefined,
     ...replaceRequest,
+    pressableDuringRouteTransition: undefined,
+    ...pressableRequest,
     // Respond with the JS prop value directly so callers (e.g. resolveCommandValue)
     // get the original type instead of the DOM-coerced string (e.g. "[object Object]").
     onnavi_get_value: e => {
@@ -46519,6 +46976,13 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  *   `--navi-nav-to` command — by TAKING THE PLACE of the current history entry
  *   rather than stacking on it: what `<Link replace>` says, for a press drawn
  *   as a button.
+ * @param {boolean} [pressableDuringRouteTransition] Keep answering presses
+ *   while a route transition plays: what a movement photographs goes deaf to
+ *   the pointer for its whole length, and the door that opened the page — a
+ *   button in a bar the two states share, standing exactly where its picture is
+ *   drawn — must still close it. What `<Link pressableDuringRouteTransition>`
+ *   says, for the other half of a toggle. Only for a control that does not
+ *   travel with the pages.
  * @param {Function} [action] On a button with an `href` or a `route`, the
  *   same order as a Link's: it runs on the press, before the navigation, and
  *   the navigation does not wait for it (see Link's `action`).
@@ -80760,6 +81224,14 @@ const css = /* css */`.navi_side_panel {
  *   required at all for a purely command-driven panel (an `id` plus a
  *   `<Button command="--navi-toggle" commandFor={id}>` elsewhere, same as
  *   `Dialog`/`Popover` themselves — see either's own doc).
+ * @param {boolean|string|{id?: string, type?: "push"|"replace"}} [props.navState] -
+ *   Keeps the open state in the history entry, so a screen left and come back
+ *   to finds its panel as it was: `true` uses the panel's own `id`, a string
+ *   names the key, `{ id, type }` chooses between rewriting the entry
+ *   ("replace", the default) and pushing one ("push"), where closing goes
+ *   back — which is what makes the phone's back gesture close the panel.
+ *   Forwarded as-is to `Popup`; source of truth, so it excludes `open` and
+ *   `signal` (see `Dialog`/`Popover`'s own `navState`).
  * @param {(event: Event) => void} [props.onClose] - Called when the panel
  *   actually closes (see `Dialog`/`Popover`'s own `onClose`).
  * @param {"left"|"right"|"top"|"bottom"} [props.side="right"] - Which
@@ -80841,8 +81313,16 @@ const SidePanel = ({
   import.meta.css = [css, "@jsenv/navi/src/layout/side_panel.jsx"];
   const onSwipePointerDown = swipeToClose ? createSwipeToClose(side) : null;
   return jsx(Popup, {
-    mode: mode,
-    open: open,
+    mode: mode
+    // Spread rather than written: the collision warning between `signal` and
+    // `open` asks whether the prop is THERE, not what it holds, so a panel
+    // handed a signal and nothing else would be told off for an `open` only
+    // this line ever put on it.
+    ,
+
+    ...(open === undefined ? null : {
+      open
+    }),
     signal: signal,
     defaultOpen: defaultOpen,
     onClose: onClose,

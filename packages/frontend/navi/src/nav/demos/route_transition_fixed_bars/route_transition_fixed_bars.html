@@ -59,6 +59,10 @@
         background: #f3ecfb;
         border-bottom: 1px solid rgba(0, 0, 0, 0.1);
       }
+      .overlay_tabs {
+        background: #f3ecfb;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+      }
       .overlay_body {
         padding: 16px;
         background: #f3ecfb;
@@ -78,6 +82,8 @@
         Route,
         RouteTransitionArea,
         SidePanel,
+        Slide,
+        SlideContainer,
         defineRouteTransition,
         route,
         setupRoutes,
@@ -100,8 +106,20 @@
         weak: true,
         history: "push",
       });
+      // Le calque a des places à lui. Elles amendent l'entrée d'histoire au
+      // lieu d'en empiler une: le retour ferme les réglages, il ne recule pas
+      // d'un onglet. Et le param disparaît de l'adresse tant que l'onglet est
+      // celui d'origine — /me?reglages, puis /me?reglages&reglages_onglet=alertes.
+      const reglagesOngletSignal = stateSignal("compte", {
+        id: "reglages_onglet",
+        oneOf: ["compte", "alertes", "avance"],
+        weak: true,
+      });
       const ROOT_ROUTE = route("/", {
-        searchParams: { reglages: reglagesSignal },
+        searchParams: {
+          reglages: reglagesSignal,
+          reglages_onglet: reglagesOngletSignal,
+        },
       });
       setupRoutes([
         ME_EDIT_ROUTE,
@@ -279,12 +297,14 @@
 
       // La croix tombe là où était la roue: le panneau prend tout l'écran,
       // barres comprises, et refait la ligne du haut à son compte.
+      const REGLAGES_SLIDES_ID = "reglages_slides";
       const ReglagesOverlay = () => (
         <SidePanel
           id={REGLAGES_PANEL_ID}
           signal={reglagesSignal}
           side="top"
-          height="100%"
+          expandY
+          style={{ background: "#f3ecfb" }}
           animation
           data-testid="reglages_panel"
         >
@@ -299,14 +319,51 @@
               ✕
             </Button>
           </SidePanel.Head>
-          <div className="overlay_body">
-            {Array.from({ length: 12 }, (_, index) => (
-              <div key={index} className="page_row">
-                Réglage {index + 1}
-              </div>
-            ))}
-          </div>
+          {/* Des onglets, pas des routes: un calque est dans la couche du
+              dessus, où deux pages ne peuvent pas tenir côte à côte. */}
+          <Nav
+            className="overlay_tabs"
+            slideContainer={REGLAGES_SLIDES_ID}
+            expandX
+            currentIndicator
+          >
+            <Link slide="compte" variant="tab" padding="m">
+              Compte
+            </Link>
+            <Link slide="alertes" variant="tab" padding="m">
+              Alertes
+            </Link>
+            <Link slide="avance" variant="tab" padding="m">
+              Avancé
+            </Link>
+          </Nav>
+          <SlideContainer
+            id={REGLAGES_SLIDES_ID}
+            signal={reglagesOngletSignal}
+            expandY
+            data-testid="reglages_slides"
+          >
+            <Slide area="compte">
+              <ReglagesSection title="Compte" rows={6} />
+            </Slide>
+            <Slide area="alertes">
+              <ReglagesSection title="Alertes" rows={4} />
+            </Slide>
+            <Slide area="avance">
+              <ReglagesSection title="Avancé" rows={8} />
+            </Slide>
+          </SlideContainer>
         </SidePanel>
+      );
+
+      const ReglagesSection = ({ title, rows }) => (
+        <div className="overlay_body">
+          {Array.from({ length: rows }, (_, index) => (
+            <div key={index} className="page_row">
+              {title} — réglage {index + 1}
+            </div>
+          ))}
+        </div>
       );
 
       const AppIndex = () => {

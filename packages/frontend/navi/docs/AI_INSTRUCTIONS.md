@@ -331,9 +331,14 @@ consistency across the app, not from any single call site.
   restored on reload without a route and without an entry per step: a search
   param signal handed to a `SlideContainer`, walked to rather than jumped to,
   and `history: "push"` for the states whose values ARE places (with the write
-  that says otherwise, `signal.set(v, { history })`). Read it before writing any
-  routing code — the position of the user belongs in the URL by default, and
-  that decision is not retrofittable.
+  that says otherwise, `signal.set(v, { history })`). It also holds the rule for
+  an OVERLAY — something opened from every screen and drawn over whatever the
+  reader was on: the URL may say what is drawn over the screen, it must never
+  name a place the reader is not at, which is why `/me/settings` is wrong for it
+  and `/places?settings` is right (the layer's address contains the address of
+  what it covers, so closing is exact even from a shared link). Read it before
+  writing any routing code — the position of the user belongs in the URL by
+  default, and that decision is not retrofittable.
 - Source code and demos on GitHub:
   https://github.com/jsenv/core/tree/main/packages/frontend/navi — where to go
   when the built export's JSDoc doesn't answer the question (see "Where the

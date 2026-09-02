@@ -65,6 +65,14 @@ happens to be everywhere. Write it for a page whose door really is furniture; a
 page reached from a screen has that screen to be paired with, and the pair says
 more.
 
+**Such a page is still a PAGE**, and that is the question to settle before
+writing the relation: it takes the screen's place, and the reader comes back to
+whatever the router puts there — not necessarily to what they were on. A door in
+the furniture whose destination must be drawn OVER the screen, and must give it
+back exactly on closing, is not a page at all: it is a layer, its address says so
+differently, and no relation is written for it. See
+[navigation.md](./navigation.md#a-layer-over-the-screen-what-its-address-may-say).
+
 ## Choosing a movement
 
 - **`slide-x`** — going INTO something: a list item opened, a card followed, a
