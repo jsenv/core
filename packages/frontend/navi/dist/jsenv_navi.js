@@ -34483,7 +34483,12 @@ const GROUP_DEFAULTS = {
       }
       // Merged in on the way up (see above), so on the way down it takes the
       // whole object and picks out its own keys — the same value it produced.
-      if (isNamelessGrouping(child, child.uiState)) {
+      // Only for a child with no name of its own: the same condition the
+      // aggregate applies before merging. A NAMED child holding an object (a
+      // `type="object"` picker, say) answers for one key, and the object it is
+      // not mentioned in says nothing about it — handing it the whole value
+      // would make it hold the group.
+      if (!childName && isNamelessGrouping(child, child.uiState)) {
         return newUIState;
       }
       if (
@@ -34771,7 +34776,17 @@ const useUIGroupStateController = (
           e,
           `${controlType}.getUIState -> ${JSON.stringify(groupUIState)}`,
         );
-        if (notifyExternal === true) {
+        if (notifyExternal === true || notifyExternal === "if-it-moves") {
+          if (
+            notifyExternal === "if-it-moves" &&
+            compareTwoJsValues(groupUIState, controller.uiState)
+          ) {
+            // A child confirming what it already shows, to a group already
+            // worth it: the value arrived while the popup was open and the
+            // group reacted then. One trip through a picker is one answer, so
+            // there is nothing left to say here.
+            return;
+          }
           // Somebody answered: what the group is worth is what its children say
           // between them, from here on.
           controller.stateGivenFromAbove = false;
@@ -35085,7 +35100,7 @@ const useUIGroupStateController = (
         onChildUIAction: (
           childUIStateController,
           e,
-          { stateChanged, silent },
+          { stateChanged, silent, onlyIfGroupValueMoves },
         ) => {
           const delegatedTo = delegatedChildrenRef.current.get(
             childUIStateController,
@@ -35094,6 +35109,7 @@ const useUIGroupStateController = (
             delegatedTo.onChildUIAction(childUIStateController, e, {
               stateChanged,
               silent,
+              onlyIfGroupValueMoves,
             });
             return;
           }
@@ -35108,7 +35124,11 @@ const useUIGroupStateController = (
           );
           if (stateChanged) {
             onChange(e, {
-              notifyExternal: silent ? "silent" : true,
+              notifyExternal: silent
+                ? "silent"
+                : onlyIfGroupValueMoves
+                  ? "if-it-moves"
+                  : true,
               actingChild: childUIStateController,
             });
           } else {
@@ -51839,6 +51859,17 @@ const isUIStateHeld = (controller) => {
  * `command` on a control is its reaction to being used, and this is a
  * confirmation happening elsewhere, whose own command (the picker's) is already
  * running.
+ *
+ * And up one, to the group the control answers to: a picker inside a form is
+ * one of its fields, and a form is worth what its fields say. What the popup
+ * put there arrived through a mount sync, which is deliberately silent — a
+ * popup opening is nobody answering (see onChange in ui_state_controller.js) —
+ * so this is the first moment the form can be told.
+ *
+ * That group only hears about it when it moves: a value the user picked in the
+ * popup reached it already, and one trip through a picker is one answer. Down
+ * the subtree the reaction re-runs either way — a control saying again what it
+ * holds says the same thing, and it is where a signal is written.
  */
 const commitUIStateAsAnswer = (controller, e) => {
   if (!controller) {
@@ -51846,6 +51877,10 @@ const commitUIStateAsAnswer = (controller, e) => {
   }
   const answering = controller.facadeChild || controller;
   commitSubtree(answering, e);
+  controller.parentUIStateController?.onChildUIAction(controller, e, {
+    stateChanged: true,
+    onlyIfGroupValueMoves: true,
+  });
 };
 const commitSubtree = (controller, e) => {
   controller.onUIAction?.(e, { skipCommand: true });

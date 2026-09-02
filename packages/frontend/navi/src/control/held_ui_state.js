@@ -64,6 +64,17 @@ export const isUIStateHeld = (controller) => {
  * `command` on a control is its reaction to being used, and this is a
  * confirmation happening elsewhere, whose own command (the picker's) is already
  * running.
+ *
+ * And up one, to the group the control answers to: a picker inside a form is
+ * one of its fields, and a form is worth what its fields say. What the popup
+ * put there arrived through a mount sync, which is deliberately silent — a
+ * popup opening is nobody answering (see onChange in ui_state_controller.js) —
+ * so this is the first moment the form can be told.
+ *
+ * That group only hears about it when it moves: a value the user picked in the
+ * popup reached it already, and one trip through a picker is one answer. Down
+ * the subtree the reaction re-runs either way — a control saying again what it
+ * holds says the same thing, and it is where a signal is written.
  */
 export const commitUIStateAsAnswer = (controller, e) => {
   if (!controller) {
@@ -71,6 +82,10 @@ export const commitUIStateAsAnswer = (controller, e) => {
   }
   const answering = controller.facadeChild || controller;
   commitSubtree(answering, e);
+  controller.parentUIStateController?.onChildUIAction(controller, e, {
+    stateChanged: true,
+    onlyIfGroupValueMoves: true,
+  });
 };
 const commitSubtree = (controller, e) => {
   controller.onUIAction?.(e, { skipCommand: true });

@@ -961,7 +961,12 @@ const GROUP_DEFAULTS = {
       }
       // Merged in on the way up (see above), so on the way down it takes the
       // whole object and picks out its own keys — the same value it produced.
-      if (isNamelessGrouping(child, child.uiState)) {
+      // Only for a child with no name of its own: the same condition the
+      // aggregate applies before merging. A NAMED child holding an object (a
+      // `type="object"` picker, say) answers for one key, and the object it is
+      // not mentioned in says nothing about it — handing it the whole value
+      // would make it hold the group.
+      if (!childName && isNamelessGrouping(child, child.uiState)) {
         return newUIState;
       }
       if (
@@ -1256,7 +1261,17 @@ export const useUIGroupStateController = (
           e,
           `${controlType}.getUIState -> ${JSON.stringify(groupUIState)}`,
         );
-        if (notifyExternal === true) {
+        if (notifyExternal === true || notifyExternal === "if-it-moves") {
+          if (
+            notifyExternal === "if-it-moves" &&
+            compareTwoJsValues(groupUIState, controller.uiState)
+          ) {
+            // A child confirming what it already shows, to a group already
+            // worth it: the value arrived while the popup was open and the
+            // group reacted then. One trip through a picker is one answer, so
+            // there is nothing left to say here.
+            return;
+          }
           // Somebody answered: what the group is worth is what its children say
           // between them, from here on.
           controller.stateGivenFromAbove = false;
@@ -1570,7 +1585,7 @@ export const useUIGroupStateController = (
         onChildUIAction: (
           childUIStateController,
           e,
-          { stateChanged, silent },
+          { stateChanged, silent, onlyIfGroupValueMoves },
         ) => {
           const delegatedTo = delegatedChildrenRef.current.get(
             childUIStateController,
@@ -1579,6 +1594,7 @@ export const useUIGroupStateController = (
             delegatedTo.onChildUIAction(childUIStateController, e, {
               stateChanged,
               silent,
+              onlyIfGroupValueMoves,
             });
             return;
           }
@@ -1593,7 +1609,11 @@ export const useUIGroupStateController = (
           );
           if (stateChanged) {
             onChange(e, {
-              notifyExternal: silent ? "silent" : true,
+              notifyExternal: silent
+                ? "silent"
+                : onlyIfGroupValueMoves
+                  ? "if-it-moves"
+                  : true,
               actingChild: childUIStateController,
             });
           } else {
