@@ -97,6 +97,19 @@ consistency across the app, not from any single call site.
   Read it before adding verbs to `rerunOn`, hiding a list on `loading`,
   remounting a list with a `key` to refresh it, or reporting that a page
   stopped refreshing since a transition was defined on its pair.
+- `docs/list_action.md` — a list that acts on what it holds, and the one thing
+  that decides how it waits: where the `action` lives. On the `<List>` it is the
+  selection being sent and the whole list waits; on a row's own button it is a
+  call about that row and the other rows stay live. Also who draws the wait and
+  answers a press when a row carries a control (the control, always — the row is
+  the fallback for a row that holds nothing but text), why such a row is
+  `readOnly` and never `loading`, and the one that works by luck: a list held
+  read-only refuses the `--navi-select` its own button fires on success, and
+  whether it lands comes down to a tick — clearing the flag in a `finally` saves
+  it, clearing it a moment later loses the selection silently. Read it before
+  putting `loading` on a row whose button is working, before
+  `<List readOnly={pending}>`, and before writing a second spinner next to the
+  one a control already draws.
 - `docs/error_handling.md` — the two kinds of error and how navi keeps them
   apart: where an error is shown depending on where it came from (a control's
   action shows it on what was clicked, a route action replaces the page, a

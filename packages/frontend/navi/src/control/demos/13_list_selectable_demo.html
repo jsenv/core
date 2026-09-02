@@ -1522,6 +1522,11 @@
             <Button
               id={`${rowId}_btn`}
               variant={selected ? "discrete" : undefined}
+              // The discrete variant drops the border, and a row that changes
+              // height as its button changes state makes the whole list jump.
+              // Kept at its width, transparent — which is what discrete already
+              // paints it.
+              borderWidth="1"
               paddingX="m"
               paddingY="xs"
               command={selected ? "--navi-unselect" : "--navi-select"}
