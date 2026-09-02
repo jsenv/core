@@ -69,6 +69,17 @@ const css = /* css */ `
         );
       }
     }
+    /* The field sizes itself from what is typed, and a shrink-to-fit
+       container — a Popover, a Picker's popup — has nothing else to measure,
+       so it takes that longest line as its own width: the popup widens with
+       the text and the text never wraps. Size containment keeps the measure
+       inside this box, so the container is sized by the rest of its content
+       and this box fills the width that comes back. Only when the width comes
+       from the container: a length is a measure the container is meant to
+       read. */
+    &[data-width-from-container] {
+      contain: inline-size;
+    }
     &[data-resizable] {
       .navi_control_input {
         height: calc(var(--textarea-min-rows, 1.5) * 1lh);
@@ -122,9 +133,13 @@ const TextareaStyleCSSVars = {
  * @param {number} [maxLength] The character limit, validated at submit. Pair
  *   with `maxLengthGuard` to block typing past it, and render a
  *   TextareaCharCount to show it.
- * @param {string} [width="35ch"] The control's width. Fixed on purpose: with
- *   field-sizing the width would otherwise follow the longest line, and a box
- *   that widens while one types is a box one chases.
+ * @param {string} [width="35ch"] The control's width. A length by default, on
+ *   purpose: with field-sizing the width would otherwise follow the longest
+ *   line, and a box that widens while one types is a box one chases. A
+ *   percentage means "fill what contains me" and holds the same promise — the
+ *   control then takes the width it is given without having a say in it, even
+ *   inside a container that sizes itself from its content (a Popover, a
+ *   Picker's popup), where the text wraps instead of widening the popup.
  */
 export const Textarea = ({
   // Destructured, never deleted off the props object: Preact reuses the same
@@ -150,8 +165,20 @@ export const Textarea = ({
   delete hostProps.children;
   const loading = basePseudoState[":-navi-loading"];
 
+  // A percentage is not a definite length: while a container is being sized
+  // from its content it cannot be resolved, so the box falls back to its own
+  // max-content — which `field-sizing: content` makes the longest line typed,
+  // and the field widens the very box it asked to fill. The CSS above takes
+  // that vote away, which is why the percentage lands on the contained box
+  // rather than on the field: the field fills it from the inside (flex-grow
+  // in input_css.js).
+  const widthFromContainer = String(width).includes("%");
   delete rootProps.width;
-  hostProps.width = width;
+  if (widthFromContainer) {
+    rootProps.width = width;
+  } else {
+    hostProps.width = width;
+  }
 
   return (
     <Box
@@ -162,6 +189,7 @@ export const Textarea = ({
       {...rootProps}
       basePseudoState={basePseudoState}
       data-resizable={resizable ? "" : undefined}
+      data-width-from-container={widthFromContainer ? "" : undefined}
       styleCSSVars={TextareaStyleCSSVars}
       pseudoStateSelector=".navi_control_input"
       pseudoClasses={InputPseudoClasses}

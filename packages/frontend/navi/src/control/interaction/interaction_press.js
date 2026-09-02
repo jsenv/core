@@ -53,6 +53,12 @@
  * wants the right click to do what the hold does says so, with `contextmenu`
  * beside it.
  *
+ * It DOES take the selection, and so does a swipe: nothing under either is text
+ * to select, because the browser answers that same press by selecting the word
+ * under the thumb and leaves it selected once its menu is gone. What never
+ * answered the press keeps its text — a field, a popover, a dialog (see the
+ * stylesheet below).
+ *
  * A hold CAN open a popup while the finger is still down — a menu appearing under
  * a waiting finger, which is the native gesture. navi's Popover is `popover="manual"`
  * and owns its own dismissal, so the `pointerup` that ends the press is not read as
@@ -149,6 +155,36 @@ import.meta.css = /* css */ `
      before the finger lands. */
   [data-longpress] {
     -webkit-touch-callout: none;
+  }
+
+  /* And nothing under either gesture is text to select. Both answer the press
+     themselves — one what a finger held still means, the other what a finger
+     leaving sideways means — while the browser answers that same press with a
+     selection of its own: the word under the thumb, blue, with handles, still
+     there once the press is over. The callout above is the iOS half of it; this is
+     what the other engines make of the same press, said to a mouse too, which
+     cannot finish a selection begun where the press is a swipe.
+     Prefixed too: Safari only took the property unprefixed at 17. */
+  [data-longpress],
+  [data-swipe] {
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  /* Except what never answered that press: something saying its press is its own
+     business, a layer OVER the element, and a field, whose caret is placed by
+     dragging through its text — a door that only looks like one has no text of its
+     own to place a caret in. The same list, read for the same reason, as the drag
+     sources in @jsenv/dom (see DRAG_IGNORED_SELECTOR in drag_to.js).
+     Given as text and not as auto: auto computes to none under a parent that is
+     none, so it would give back nothing. */
+  :is([data-longpress], [data-swipe])
+    :is([data-drag-ignore], [popover], dialog),
+  :is([data-longpress], [data-swipe])
+    :is(input:not([data-press-only]), textarea),
+  :is([data-longpress], [data-swipe])
+    :is([contenteditable=""], [contenteditable="true"]) {
+    user-select: text;
+    -webkit-user-select: text;
   }
 
   /* The element follows the finger. The translate property rather than a transform,

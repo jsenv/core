@@ -790,6 +790,16 @@ container above it does not take the gesture:
   the browser's menu. Declare `contextmenu` beside it to make the right click do
   the same thing. (A held _finger_ is the system's own context-menu gesture, and
   that one is refused while the wait runs.)
+- **Where the press already means something, text is not selected.** An element
+  declaring `longpress` or a swipe, and a drag source standing in a
+  `data-drag-on-contact` place, keep their text unselectable: the browser answers
+  that same press with a selection of its own — the word under the thumb, blue,
+  with handles — and nothing takes it back once the press is over. For every
+  pointer, mouse included, which cannot finish a selection begun where the press
+  is a gesture. What never answered that press keeps its text: a field, a popover
+  or a dialog opened from inside, and anything marked `data-drag-ignore`. A drag
+  source taken by long press is not concerned — the grab happens first, and the
+  gesture refuses the selection for its own length.
 - **A swipe cannot also be dragged out of the page.** An element declaring a
   swipe gets `draggable={false}` and its `dragstart` refused — a native drag _is_
   press-and-move, and a link or an image is draggable without anyone asking. One

@@ -31,6 +31,14 @@
  * A tap is left alone by that: a press that goes nowhere is still a press, which
  * is what a piece that is also a link or a card needs.
  *
+ * A HOLD is not, and nothing in such a place is text to select. Taking the wait
+ * away takes away the only thing that answered a finger held still, so the
+ * browser answers it alone: its own long press selects the word under the thumb,
+ * and the card the hand meant to carry is left blue and handled. Said to every
+ * pointer — a mouse there drags from the first few pixels, so a selection begun
+ * there is one that could never be finished either. What says its press is its
+ * own keeps its text (see the stylesheet below).
+ *
  * It is opt-in and cannot be anything else. Nothing here can see whether the
  * surroundings scroll — a page scrolls by default, an overflow is one CSS
  * property away, and getting it wrong the wrong way means the list runs away
@@ -94,6 +102,31 @@ const css = /* css */ `
        may travel from the first pixel. Zoom is kept: it belongs to the reader,
        not to the gesture, and two fingers are never a drag. */
     touch-action: pinch-zoom;
+    /* And nothing here is text to select — the wait is gone, so a finger held
+       still is answered by nobody but the browser, whose long press selects the
+       word under the thumb (see the top of this file). Everywhere else the
+       selection is only refused for the length of the gesture, from the gesture
+       itself (see the selectstart refused in drag_gesture.js).
+       Prefixed too: Safari only took the property unprefixed at 17, and an older
+       iPhone is exactly what this long press comes from. */
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  /* Except where the press was never the drag's: something saying its press is
+     its own business and a layer OVER the surface (the same list, read for the
+     same reason, as DRAG_IGNORED_SELECTOR in drag_to.js), plus a field, whose
+     caret is placed by dragging through its text — a door that only looks like
+     one has no text of its own to place a caret in (see PRESS_ONLY_ATTRIBUTE in
+     drag_to_travel.js).
+     Given as text and not as auto: auto computes to none under a parent that is
+     none, so it would give back nothing. */
+  [data-drag-on-contact] [data-drag-ignore],
+  [data-drag-on-contact] [popover],
+  [data-drag-on-contact] dialog,
+  [data-drag-on-contact] :is(input:not([data-press-only]), textarea),
+  [data-drag-on-contact] :is([contenteditable=""], [contenteditable="true"]) {
+    user-select: text;
+    -webkit-user-select: text;
   }
   /* Only what took the grab: an affordance that claimed the click alone keeps
      the source's touch-action, so the long press that picks the object up still
