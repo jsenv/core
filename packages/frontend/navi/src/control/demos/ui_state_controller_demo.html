@@ -1159,11 +1159,10 @@
             <h2>Reset (--navi-reset)</h2>
             <Box flex="y" spacing="m" alignX="start">
               <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
-                <code>Button command="--navi-reset"</code> remet les champs à
-                leur <code>defaultValue</code>. Si un champ n'a pas de{" "}
-                <code>defaultValue</code>, il revient à vide. À utiliser quand
-                on veut annuler les modifications sans effacer les valeurs
-                initiales.
+                <code>Button command="--navi-reset"</code> remet les champs à la
+                dernière valeur acceptée : leur <code>defaultValue</code> tant
+                que rien n'a été envoyé, la valeur envoyée ensuite. Si un champ
+                n'a pas de <code>defaultValue</code>, il revient à vide.
               </p>
               <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
                 nickNameSignalB :{" "}

@@ -618,8 +618,20 @@ export const useUIStateController = (
         resetUIState: (e) => {
           controller.setUIState(controller.state, e);
         },
+        // What the control shows becomes what is acknowledged: the outside said
+        // yes to it, so it is where a rollback goes back to. Left alone for a
+        // control whose value is GIVEN — the prop is already its truth — and
+        // while a newer request waits behind this one, whose own answer is what
+        // will settle what is accepted.
+        acknowledgeUIState: () => {
+          if (controller.hasStateProp || controller.queuedActionAllowedEvent) {
+            return;
+          }
+          controller.state = controller.uiState;
+        },
         onActionEnd: (e) => {
           debugUIState(`"${controlType}" actionEnd called`);
+          acknowledgeOwnAction(controller);
           controller.rules.validation.syncValidity(e);
         },
         onActionError: (e) => {
@@ -827,6 +839,18 @@ const firstDefinedChildUIState = (children) => {
     }
   }
   return undefined;
+};
+
+// A run that came back with a yes settles what the control is worth — but only
+// for the control the run BELONGS to. Anything with a `command` still fires its
+// own navi_action_* events (it is given a placeholder action so they exist),
+// and taking those for an acknowledgement is how a row would remember its own
+// selection as accepted and hand it back on the group's rollback.
+const acknowledgeOwnAction = (controller) => {
+  if (!controller.props.action) {
+    return;
+  }
+  controller.acknowledgeUIState();
 };
 
 // Default aggregate/distribute implementations keyed by controlType or stateType.
@@ -1702,7 +1726,19 @@ export const useUIGroupStateController = (
           }
           onChange(e, { notifyExternal: true });
         },
+        // The group was told yes, so what each of its parts shows is accepted
+        // too: a group holds no value of its own — its rollback puts the
+        // children back where they were (see resetUIState), and they can only
+        // go back to what was acknowledged if they were told.
+        acknowledgeUIState: () => {
+          for (const c of childUIStateControllerArray) {
+            if (shouldPropagateStateToChild(c)) {
+              c.acknowledgeUIState();
+            }
+          }
+        },
         onActionEnd: (e) => {
+          acknowledgeOwnAction(controller);
           controller.rules.validation.syncValidity(e);
         },
         onActionError: (e) => {
@@ -1790,7 +1826,21 @@ export const useUIGroupStateController = (
       // down last time. A popup reopened on another subject hands down the very
       // same empty value it did before, and the selection left inside it from
       // the previous opening is what has to go.
-      if (hasValueProp && !compareTwoJsValues(value, controller.uiState)) {
+      //
+      // Except while the group is asking about that very difference: the run in
+      // flight carries what the user just chose, and the value is what the
+      // owner holds until it answers. Putting the children back on it here
+      // would take the choice off the screen on the first re-render — which the
+      // run itself causes, by making the group busy — so the press would appear
+      // to do nothing until the answer arrived, and the rollback on a refusal
+      // would have nothing left to undo.
+      const askingAboutIt =
+        controller.actionInFlight || controller.queuedActionAllowedEvent;
+      if (
+        hasValueProp &&
+        !askingAboutIt &&
+        !compareTwoJsValues(value, controller.uiState)
+      ) {
         placeChildrenFrom(value);
       }
       if (
