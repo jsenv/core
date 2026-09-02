@@ -17,7 +17,9 @@ import { runUnwatched } from "./run_unwatched.js";
  *   keystroke: set `debounce: 500` and the request is sent only after the user stops interacting
  *   with the filters for 500 ms. During that delay the action still holds the previous answer;
  *   `action.paramsSettlingSignal` is what says a newer one is coming, and
- *   `useAsyncData(action, { loading: true })` reads it.
+ *   `useAsyncData(action, { loading: true })` reads it. The run follows where
+ *   the params settle, never a value they only passed through: params back
+ *   where they started before the delay elapses run nothing.
  *
  *   Example — auto-refresh a result list while the user tweaks filters:
  *   ```js

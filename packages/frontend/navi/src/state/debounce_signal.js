@@ -18,6 +18,13 @@ export const debounceSignal = (
         ? compareTwoJsValues(value, debouncedValue)
         : value === debouncedValue
     ) {
+      // The signal came back to where the debounced one already is: whatever it
+      // passed through on the way is not on its way any more. Leaving the timer
+      // armed would publish that in-between value once the delay elapses, and
+      // settlingSignal would then say a newer value is coming, forever.
+      clearTimeout(timeoutId);
+      timeoutId = undefined;
+      latestValue = debouncedValue;
       return;
     }
     clearTimeout(timeoutId);

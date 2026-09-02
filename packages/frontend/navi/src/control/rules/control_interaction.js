@@ -59,6 +59,9 @@ export const createControlInteraction = (
   let failingManagedInteraction = null;
   // The title this rule put on the element, if any (see checkInteractivity).
   let titleWritten = null;
+  // The constraint this control last refused a press with, while that refusal
+  // is on screen — what refreshReport has to take back once it stops holding.
+  let reportedConstraint = null;
 
   const checkInteractivity = ({ event, intent = "write" } = {}) => {
     interactionFailedConstraintInfo = null;
@@ -149,12 +152,41 @@ export const createControlInteraction = (
 
     const canInteract =
       !interactionFailedConstraintInfo && !failingManagedInteraction;
-    // When the control is now interactable, remove the interaction token
+    // When the control can be interacted with, remove the interaction token
     // so the callout closes if no other tokens (e.g. validation) are active.
     if (canInteract) {
       callout.removeOpenToken(INTERACTION_TOKEN, event);
+      reportedConstraint = null;
     }
     return canInteract;
+  };
+
+  // What this rule says out loud is a LIVE reading, and nothing else comes back
+  // to correct it: busy stops being true on its own (see BUSY_CONSTRAINT's
+  // `transient`), and read-only inherited from a group goes with the run that
+  // set it. Read again whenever the control's interactivity moves, so a refusal
+  // is taken back once what it says stops being true — a callout left open over
+  // a control it no longer describes also sits on top of it and swallows the
+  // next press.
+  //
+  // Only when something WAS said: reading a control that has refused nothing
+  // would start writing titles nobody asked for.
+  const refreshReport = (event) => {
+    const constraintReported = reportedConstraint;
+    if (!constraintReported && titleWritten === null) {
+      return;
+    }
+    checkInteractivity({ event });
+    if (!reportedConstraint) {
+      return;
+    }
+    if (interactionFailedConstraintInfo?.constraint === constraintReported) {
+      return;
+    }
+    // Held still, but by something else — and the press that was answered is
+    // long over, so it is taken back rather than answered a second time.
+    callout.removeOpenToken(INTERACTION_TOKEN, event);
+    reportedConstraint = null;
   };
 
   const reportInteractivity = ({ event } = {}) => {
@@ -163,6 +195,7 @@ export const createControlInteraction = (
       failingManagedInteraction.reportInteractivity({ event });
       return;
     }
+    reportedConstraint = interactionFailedConstraintInfo.constraint;
     debugInteraction(
       event,
       `reportInteractivity (${interactionFailedConstraintInfo.name})`,
@@ -185,6 +218,7 @@ export const createControlInteraction = (
   const controlInteraction = {
     checkInteractivity,
     reportInteractivity,
+    refreshReport,
   };
   Object.defineProperty(controlInteraction, "interactionFailedConstraintInfo", {
     get: () => interactionFailedConstraintInfo,
@@ -233,6 +267,10 @@ export const onRequestInteraction = (
     // through (see READONLY_CONSTRAINT).
     intent = "write",
     bypassInteractivity = false,
+    // navi continuing a gesture on its own rather than a user asking for
+    // something: the decision still applies, the explanation does not (see
+    // below).
+    automatic = false,
     // Who asked, when the control is not answering the gesture on its own —
     // the source of a command (see the self-interactions step-back below).
     requester,
@@ -293,7 +331,16 @@ export const onRequestInteraction = (
         const reason = failedInfo
           ? `failing interaction constraint "${failedInfo.name}"`
           : "not interactable";
-        ci.reportInteractivity({ event });
+        // A refusal is explained to whoever asked, and an automatic follow-up
+        // has nobody waiting for one: a group whose action a part just asked
+        // for is busy running exactly that (see auto_group_action in
+        // control_hooks.jsx), so the follow-up is turned down — which is what
+        // keeps the action from running twice — while the press that started
+        // it went through. Saying "this element is busy" there answers an
+        // accepted press with a refusal.
+        if (!automatic) {
+          ci.reportInteractivity({ event });
+        }
         onPrevented(reason);
         return false;
       }

@@ -69,6 +69,13 @@ consistency across the app, not from any single call site.
   collection (searching it is that collection's own `GET_MANY`). Companion
   files: `docs/actions.md`, `docs/resource_with_params.md`,
   `docs/resource_dependencies.md`.
+- `docs/actions.md` — an action and its params: when to call the action versus
+  bind an instance, what a failing run does, the four ways to run one. Read the
+  debounce part before putting a delay on params — a debounced binding follows
+  where its signal SETTLES and never a value it only passed through, settling is
+  a comparison and not a countdown, and the in-between states a gesture writes
+  are real params that `batch()` or a better-shaped question must handle, not
+  the delay.
 - `docs/data_states.md` — what a screen draws while its data is loading,
   missing, stale or failed: the three questions `data`, `loading` and `error`
   answer separately, the four combinations of the first two and what each one

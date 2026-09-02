@@ -854,6 +854,9 @@ export const createAction = (callback, rootOptions = {}) => {
      *   During the delay the instance is still the previous one, holding the
      *   previous answer — `paramsSettlingSignal` is what says a newer one is
      *   coming, and `useAsyncData(action, { loading: true })` reads it.
+     *   The instance follows where the signal settles, never a value it only
+     *   passed through: a signal back where it started before the delay elapses
+     *   asks nothing.
      */
     const bindParams = (newParamsOrSignal, options = {}) => {
       const { debounce, ...optionsWithoutDebounce } = options;

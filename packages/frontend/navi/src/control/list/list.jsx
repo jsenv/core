@@ -36,6 +36,7 @@ import { withPropsClassName } from "../../utils/with_props_class_name.js";
 import { useDisplayedLayoutEffect } from "../../utils/use_displayed_layout_effect.js";
 import { getUIStateControllerById } from "../controller_registry.js";
 import { ListItemHeaderOrFooterResolver } from "./list_item_header_footer.jsx";
+import { listItemBlockedMessage } from "./list_item_blocked_message.js";
 import {
   ListItemSelectableResolver,
   ListSelectableResolver,
@@ -3471,7 +3472,7 @@ const ListItemReal = (props) => {
     if (calloutRef.current && calloutRef.current.opened) {
       return;
     }
-    calloutRef.current = openCallout(blockedMessage(loading, readOnly, props), {
+    calloutRef.current = openCallout(listItemBlockedMessage(loading, props), {
       anchorElement: event.currentTarget,
       status: "info",
       openingEvent: event,
@@ -3564,18 +3565,6 @@ const ListItemReal = (props) => {
     </Box>
   );
 };
-// Why the row cannot be acted on, in the row's own terms. `loading` may say
-// what it is waiting for ("adding", "removing"): a row being created is not
-// simply "busy", and saying which one it is tells the user what to expect.
-const blockedMessage = (loading, readOnly, props) => {
-  if (!loading) {
-    return naviI18n("constraint.readonly.item", props);
-  }
-  if (loading === "adding" || loading === "removing") {
-    return naviI18n(`constraint.busy.item.${loading}`, props);
-  }
-  return naviI18n("constraint.busy.item", props);
-};
 
 const LIST_ITEM_STYLE_CSS_VARS = {
   "borderRadius": "--list-item-border-radius",
@@ -3631,7 +3620,7 @@ const LIST_ITEM_STYLE_CSS_VARS = {
  *   skeleton?: boolean,
  *   error?: boolean | import("preact").ComponentChildren,
  *   onErrorDismiss?: (event: Event) => void,
- *   loading?: boolean | "adding" | "removing",
+ *   loading?: boolean | "adding" | "removing" | "updating",
  *   readOnly?: boolean,
  *   filtered?: boolean,
  *   hidden?: boolean,
@@ -3672,12 +3661,17 @@ const LIST_ITEM_STYLE_CSS_VARS = {
  *   like the list's own error. `true` shows a generic sentence. When
  *   `onErrorDismiss` is given, a dismiss button is drawn next to the message
  *   and calls it.
- * @param {boolean|"adding"|"removing"} [props.loading]
+ * @param {boolean|"adding"|"removing"|"updating"} [props.loading]
  *   The row is waiting on something: it draws a loading outline and, like
  *   readOnly, stops taking clicks. Works on any item, not only a selectable
- *   one — a list is edited row by row. Pass "adding" or "removing" rather than
- *   true to say WHAT it is waiting for, which is what a press on it then
- *   answers.
+ *   one — a list is edited row by row. Rather than true, say WHAT it is
+ *   waiting for, which is what a press on it then answers: "adding" (joining
+ *   the list), "removing" (leaving it), "updating" (being saved where it is).
+ *
+ *   All three are about the row as a thing the LIST holds, never about the
+ *   selection: a selectable row taken while its list sends says so on its own
+ *   ("la sélection est en cours d'enregistrement"), and needs no `loading` for
+ *   that.
  * @param {boolean} [props.readOnly]
  *   The row cannot be acted on: dimmed and click-through-proof, buttons inside
  *   it included.

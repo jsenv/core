@@ -12,11 +12,8 @@ import { Box } from "@jsenv/navi/src/box/box.jsx";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { useFocusGroup } from "@jsenv/navi/src/utils/focus/use_focus_group.js";
-import {
-  ControlIdContext,
-  LoadingContext,
-  ReadOnlyContext,
-} from "../control_context.js";
+import { ControlIdContext, ReadOnlyContext } from "../control_context.js";
+import { listItemBusyMessage } from "./list_item_blocked_message.js";
 import {
   ControlChildrenWrapper,
   ControlgroupChildrenWrapper,
@@ -576,6 +573,11 @@ const ListItemSelectable = (props) => {
     selected,
     pointed,
     selectableArea = "all",
+    // The ROW is waiting, not only the control it carries: the outline, the
+    // press it swallows and the sentence saying what for are drawn one level
+    // up (see ListItemReal), so this is handed both ways rather than left in
+    // `rest`, where it would only ever reach the hidden input.
+    loading,
     // The row's own click handler, kept out of the control props below: those
     // describe the hidden input that carries the selection, and a caller
     // writing onClick on a <List.Item> is talking about the row they see.
@@ -587,17 +589,17 @@ const ListItemSelectable = (props) => {
   const deselectable =
     useContext(SelectableListDeselectableContext) && !multiple;
   // Whose reason it is that this row cannot be taken. Read-only reaching it
-  // from above is the LIST's, and what is settled is then the whole answer —
-  // said as the selection where several things are taken, as the choice where
-  // one thing is. Said of each row in turn, "this option is not available"
-  // describes something else entirely: a list where each row happens to be
-  // unavailable for its own reasons, which goes on being said that way. Busy
-  // is not settled either: a list waiting on something says nothing about what
-  // will be possible once it is done, so the row keeps its own words.
+  // from above is the LIST's, and that is the whole answer — said as the
+  // selection where several things are taken, as the choice where one thing
+  // is. Said of each row in turn, "this option is not available" describes
+  // something else entirely: a list where each row happens to be unavailable
+  // for its own reasons, which is what a row held on its own says.
+  //
+  // A list waiting on something is not unavailable, it is not answering yet —
+  // busy rather than read-only (see BUSY_CONSTRAINT, which is asked first),
+  // and the wait is about the same thing the read-only would be about.
   const readOnlyFromAbove = useContext(ReadOnlyContext);
-  const loadingFromAbove = useContext(LoadingContext);
-  const answerIsSettled = Boolean(readOnlyFromAbove) && !loadingFromAbove;
-  const readOnlyMessageKey = answerIsSettled
+  const readOnlyMessageKey = readOnlyFromAbove
     ? multiple
       ? `constraint.readonly.selection`
       : `constraint.readonly.choice`
@@ -609,6 +611,16 @@ const ListItemSelectable = (props) => {
   const [checkableRootProps, checkableProps, controlChildrenWrapperProps] =
     useCheckableProps({
       readOnlyMessage: naviI18n(readOnlyMessageKey, props),
+      // What the row itself is waiting for when it says so, the wait of the
+      // list around it otherwise — said as the selection where several things
+      // are taken, as the choice where one thing is.
+      busyMessage: loading
+        ? listItemBusyMessage(loading, props)
+        : naviI18n(
+            multiple ? `constraint.busy.selection` : `constraint.busy.choice`,
+            props,
+          ),
+      loading,
       ...rest,
       ref: inputRef,
       id: inputId,
@@ -652,6 +664,7 @@ const ListItemSelectable = (props) => {
       }}
       ref={props.ref}
       onClick={onClick}
+      loading={loading}
       selectable={undefined}
       navi-selectable-area-all={selectableArea === "all" ? "" : undefined}
     >

@@ -106,6 +106,7 @@
         SelectableInput,
       } from "@jsenv/navi";
       import { CallLog, useCallLog } from "./utils/call_log.jsx";
+      import { FakeBackend } from "@jsenv/navi/src/internal/fake_backend.jsx";
 
       const searchFruitSignal = stateSignal("", {
         id: "search_fruit",
@@ -132,6 +133,7 @@
               <BasicDemo />
               <ListValueDemo />
               <ReadOnlyDemo />
+              <UpdatingDemo />
               <ExternalControlDemo />
               <FormDemo />
               <ValidationDemo />
@@ -167,6 +169,9 @@
               </li>
               <li>
                 <a href="#readonly">ReadOnly items</a>
+              </li>
+              <li>
+                <a href="#updating">Updating</a>
               </li>
               <li>
                 <a href="#external-control">External control</a>
@@ -673,6 +678,79 @@
                 </div>
               </div>
             </div>
+          </div>
+        );
+      };
+
+      // ── Updating ───────────────────────────────────────────────────────────────
+
+      const UPDATING_ROWS = [
+        { id: "plain", label: "Marie", props: {} },
+        { id: "adding", label: "Damien", props: { loading: "adding" } },
+        { id: "removing", label: "Paul", props: { loading: "removing" } },
+        { id: "updating", label: "Jacques", props: { loading: "updating" } },
+        { id: "waiting", label: "Sophie", props: { loading: true } },
+      ];
+
+      const UpdatingDemo = () => {
+        const [log, pushLog] = useCallLog();
+        return (
+          <div id="updating" className="demo-section">
+            <h2>Updating</h2>
+
+            <div className="col-label">
+              One row at a time — <code>loading</code>: the row joining the
+              list, leaving it, being saved
+            </div>
+            <List selectable multiple expandX>
+              {UPDATING_ROWS.map(({ id, label, props }, index) => (
+                <List.Item
+                  selectable
+                  key={id}
+                  index={index}
+                  id={`updating_${id}`}
+                  value={label}
+                  flex
+                  spacing="s"
+                  {...props}
+                >
+                  <SelectableInput />
+                  {label}
+                </List.Item>
+              ))}
+            </List>
+
+            <div className="col-label" style={{ marginTop: 24 }}>
+              The whole list — the selection on its way. Press a name, then
+              another one before the backend answers
+            </div>
+            <FakeBackend value={[]}>
+              {({ action }) => (
+                <List
+                  selectable
+                  multiple
+                  expandX
+                  uiAction={(v) => pushLog("uiAction", v)}
+                  action={action}
+                >
+                  {["Marie", "Damien", "Paul", "Sophie"].map((name, index) => (
+                    <List.Item
+                      selectable
+                      key={name}
+                      index={index}
+                      id={`updating_send_${name.toLowerCase()}`}
+                      value={name}
+                      flex
+                      spacing="s"
+                    >
+                      <SelectableInput />
+                      {name}
+                    </List.Item>
+                  ))}
+                </List>
+              )}
+            </FakeBackend>
+            <CallLog entries={log} />
           </div>
         );
       };

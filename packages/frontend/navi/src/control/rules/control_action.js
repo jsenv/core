@@ -39,6 +39,11 @@ export const dispatchRequestAction = (
   {
     event,
     name = "dispatchRequestAction",
+    // The gate's own options, named here so they reach it: everything left in
+    // actionOptions goes to the action alone, so a gate option arriving under
+    // any other name is dropped without a word.
+    automatic,
+    bypassInteractivity,
     prevented,
     allowed,
     always,
@@ -48,6 +53,8 @@ export const dispatchRequestAction = (
   return dispatchRequestInteraction(element, {
     event,
     name,
+    automatic,
+    bypassInteractivity,
     // The gate needs it as much as the action does: the requester may be an
     // affordance that claimed the press to ask for this very action, and the
     // control must not read that claim as "this press was not for me" — see

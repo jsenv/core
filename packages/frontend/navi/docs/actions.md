@@ -102,6 +102,40 @@ is drawing it. During the delay the instance is still the previous one, holding
 the previous answer — `loading` is what says a newer one is coming, don't
 compare params by hand to find out.
 
+### A debounced signal asks where it settles, not where it passed
+
+The delay publishes where the signal **settles**, never a value it only passed
+through on the way. A question that goes `A → B → A` inside the delay is the
+question `A`: no request goes out for `B`, and `loading` never went up. Only a
+signal that is somewhere new once the delay elapses moves the binding.
+
+That is load-bearing rather than a nicety, because settling is a **comparison,
+not a countdown**: `paramsSettlingSignal` is true while the signal and the
+binding differ and false when they agree. Move the binding to a value the signal
+is not on and nothing is left that could make them agree again — the screen is
+told a newer answer is coming, with no delay still running to bring one, and
+only another write to the source frees it. So a value the source never settled
+on does not cost a stale request, it costs a screen stuck on "loading".
+
+### The in-between states of a gesture are real params
+
+The delay decides _when_ a question goes out, never _which_ one is coherent: it
+sees every write, including the ones a gesture only passes through. Moving an
+item from one slot to another by filling the new slot and then emptying the old
+one is two writes, and between them the item is in both — a state nobody meant
+to ask about, and a question the delay would happily send if it landed there.
+
+Make the intermediate not matter, rather than counting on the delay to hide it.
+Two ways, both worth having on their own:
+
+- **`batch()` the writes that belong to one gesture**, so the intermediate state
+  never exists at all — not for the delay, not for a render, not for a
+  validation rule reading the same signals.
+- **Shape the question so states that are equivalent compare equal.** Params are
+  compared deeply, so a list whose order carries nothing asks a new question
+  every time it is rearranged; sent deduplicated and sorted, rearranging stops
+  changing the question — better than asking it late.
+
 ## Running: `run`, `rerun`, `prerun`, `reset`
 
 | Method     | Does                                                                     |

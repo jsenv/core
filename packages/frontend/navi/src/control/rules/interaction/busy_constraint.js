@@ -13,9 +13,18 @@ export const BUSY_CONSTRAINT = {
   transient: true,
   // Unlike readonly/disabled, a busy element DOES block its parent from
   // submitting — the element is mid-operation and cannot safely participate.
-  check: (field) => {
+  check: (field, { intent } = {}) => {
     const isBusy = isControlBusy(field);
     if (!isBusy) {
+      return null;
+    }
+
+    // Busy, and what it opens still opens: a picker's answer lives in a shape
+    // only its popup draws, and refusing to open leaves it unreadable for as
+    // long as the wait lasts. Opening reads and nothing more — the same
+    // exemption read-only makes, on the same controls (see
+    // READONLY_CONSTRAINT), so that "read" means one thing to both.
+    if (intent === "read" && field.readOnlyOpens) {
       return null;
     }
 
@@ -36,9 +45,9 @@ CONSTRAINT_ATTRIBUTE_SET.add("data-busy");
 // whether it may finally close, a slide whether it may move on).
 //
 // The action's running state is a signal, so it is already right there. A
-// control busy only because the group above is running the action it asked for
-// has no state of its own to read — the group's answer IS its answer, so it
-// asks upward and inherits the same live reading.
+// control busy only because the group above is waiting has no state of its own
+// to read — the group's answer IS its answer, so it asks upward and inherits
+// the same live reading.
 const isControlBusy = (field) => {
   if (field.loadingFromOwnProp) {
     return true;
@@ -62,7 +71,7 @@ const isControlBusy = (field) => {
       return true;
     }
   }
-  if (field.loadingFromParent) {
+  if (field.loadingFromAbove) {
     const parent = field.parentUIStateController;
     return parent ? isControlBusy(parent) : false;
   }

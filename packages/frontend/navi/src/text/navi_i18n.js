@@ -435,17 +435,36 @@ naviI18n.addAll({
     fr: "Cette action est en cours...",
     en: "This action is in progress...",
   },
+  // What a ROW is waiting on: the row as a thing the list holds, joining it,
+  // leaving it or being saved. Said "à la liste" / "to the list" on purpose —
+  // in a selectable list, "en cours d'ajout" alone reads as "being added to
+  // the selection", which is the sentence below and a different event.
   "constraint.busy.item": {
     fr: "Cet élément est en cours de synchronisation.",
     en: "This item is being synchronized.",
   },
   "constraint.busy.item.adding": {
-    fr: "Cet élément est en cours d'ajout.",
-    en: "This item is being added.",
+    fr: "Cet élément est en cours d'ajout à la liste.",
+    en: "This item is being added to the list.",
   },
   "constraint.busy.item.removing": {
-    fr: "Cet élément est en cours de suppression.",
-    en: "This item is being removed.",
+    fr: "Cet élément est en cours de retrait de la liste.",
+    en: "This item is being removed from the list.",
+  },
+  "constraint.busy.item.updating": {
+    fr: "Cet élément est en cours de mise à jour.",
+    en: "This item is being updated.",
+  },
+  // What the LIST is waiting on: the choice just made, on its way. The subject
+  // is the selection, never a row — the row this is shown on is the one the
+  // user just pressed, which is not the one being committed.
+  "constraint.busy.selection": {
+    fr: "La sélection est en cours d'enregistrement...",
+    en: "This selection is being saved...",
+  },
+  "constraint.busy.choice": {
+    fr: "Le choix est en cours d'enregistrement...",
+    en: "This choice is being saved...",
   },
   "constraint.busy.default": {
     fr: "Cet élément est occupé.",

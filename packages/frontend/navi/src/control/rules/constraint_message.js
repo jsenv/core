@@ -19,6 +19,7 @@ export const CONSTRAINT_NAME_TO_PROP = {
   min_special_char: "minSpecialCharMessage",
   one_of: "oneOfMessage",
   readonly: "readOnlyMessage",
+  busy: "busyMessage",
   available: "availableMessage",
 };
 

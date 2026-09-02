@@ -1628,10 +1628,27 @@ const useInteractiveProps = (
     // live source rather than from the rendered aria-busy, which conflates all
     // three and is a frame behind. See its own comment.
     uiStateController.loadingFromOwnProp = Boolean(loading);
-    uiStateController.loadingFromParent = loadingFromParent;
+    // The group above waiting on something, which reaches every control in it:
+    // each one is held for as long as that lasts, and "wait" is what they have
+    // to say about it — not the read-only they wear to express it, which is a
+    // settled word (see BUSY_CONSTRAINT and READONLY_CONSTRAINT).
+    uiStateController.loadingFromAbove = Boolean(controlLoading);
     // Read by BUSY_CONSTRAINT: an optimistic control stays interactive while
     // its bound action runs (a new toggle replaces the run instead of waiting).
     uiStateController.optimistic = Boolean(optimistic);
+    // What the interaction rule last refused is only true while the control is
+    // held; the state it was read from moves here (see refreshReport).
+    useLayoutEffect(() => {
+      uiStateController.rules.interaction.refreshReport(
+        new CustomEvent("interactivity_change"),
+      );
+    }, [
+      disabledResolved,
+      readOnlyResolved,
+      loadingResolved,
+      controlLoading,
+      uiStateController,
+    ]);
 
     Object.assign(controlHostProps, {
       "required": requiredResolved,
@@ -1989,16 +2006,13 @@ const useInteractiveProps = (
               event: e.detail.eventChain[0],
               name: "auto_group_action",
               requester: e.detail.requester,
-              // The interactivity gate is not re-asked: the user already
-              // interacted — with the child, whose gate said yes — and this
-              // follow-up is automatic. Asking again would also answer
-              // wrong: this event is dispatched inside the batch() that
-              // settles the child's action, where a bound action still
-              // READS as running (its state is mirrored through a signal
-              // effect the batch defers, see watchActionCompletion) — the
-              // busy constraint would refuse the group for an action that
-              // is already over. The validity gate still applies.
-              bypassInteractivity: true,
+              // Nobody asked for this one: it is the group's own continuation
+              // of a press the child's gate already accepted. The gate still
+              // decides — a group told to send by its own `command` is
+              // already running that very action, and letting this through
+              // would run it a second time — but a refusal here is not
+              // reported, since the press it would answer went through.
+              automatic: true,
             });
           }
         }
