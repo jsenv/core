@@ -37,14 +37,18 @@
     <p class="repro">
       A tie-break cell: a <code>type="object"</code> picker named
       <code>set1_tie_break</code>, sitting on the most likely score (7-4), in a
-      form the score sheet drives with a signal.
+      form the score sheet drives with a signal. The cell is mounted by
+      <strong>Mount the cell</strong>, the way the real sheet mounts it when a
+      set stands one game apart.
       <br />
       <strong>Open the popup and press Noter without turning a wheel</strong> —
       the form value below must gain
-      <code>set1_tie_break: {"{"} winner: 7, loser: 4 {"}"}</code>. Same for a
-      click outside. <strong>Escape</strong> cancels and must leave the form
-      alone, and so must never opening the popup at all: a suggestion is not an
-      answer until it is confirmed.
+      <code>set1_tie_break: {"{"} winner: 7, loser: 4 {"}"}</code>, and the
+      form's uiAction must fire exactly once. This holds whichever order the two
+      gestures come in: mounting the cell before or after typing in
+      <code>set1_winner</code>. <strong>Escape</strong> cancels and must leave
+      the form alone, and so must never opening the popup at all: a suggestion
+      is not an answer until it is confirmed.
     </p>
     <div id="app"></div>
     <script type="module" jsenv-type="module/jsx">
@@ -61,58 +65,73 @@
       } from "@jsenv/navi";
 
       const scoreSignal = signal({ set1_winner: 6 });
+      const cellMountedSignal = signal(false);
       const WINNERS = [7, 8, 9, 10];
       const LOSERS = [0, 1, 2, 3, 4, 5, 6];
 
+      const TieBreakCell = () => (
+        <Picker
+          id="tie_break"
+          name="set1_tie_break"
+          type="object"
+          defaultValue={{ winner: 7, loser: 4 }}
+          ui={<TieBreakLabel />}
+        >
+          <Form command="--navi-close" canSendWhileUnchanged>
+            <Box flex="y" spacing="s" padding="s">
+              <WheelGroup>
+                <Wheel name="winner" type="integer" defaultValue={7}>
+                  {WINNERS.map((w) => (
+                    <Wheel.Item key={w} value={w} paddingX="s">
+                      {w}
+                    </Wheel.Item>
+                  ))}
+                </Wheel>
+                <WheelGroup.Separator>-</WheelGroup.Separator>
+                <Wheel name="loser" type="integer" defaultValue={4}>
+                  {LOSERS.map((l) => (
+                    <Wheel.Item key={l} value={l} paddingX="s">
+                      {l}
+                    </Wheel.Item>
+                  ))}
+                </Wheel>
+              </WheelGroup>
+              <Button id="noter" command="--navi-send">
+                Noter
+              </Button>
+            </Box>
+          </Form>
+        </Picker>
+      );
+
+      const TieBreakLabel = () => {
+        const tieBreak = scoreSignal.value.set1_tie_break;
+        return (
+          <span>
+            {tieBreak ? `${tieBreak.winner}-${tieBreak.loser}` : "tie?"}
+          </span>
+        );
+      };
+
       const App = () => {
-        const score = scoreSignal.value;
-        const tieBreak = score.set1_tie_break;
+        const cellMounted = cellMountedSignal.value;
         return (
           <Box flex="y" spacing="m" alignX="start">
+            <Button
+              id="mount_cell"
+              onClick={() => {
+                cellMountedSignal.value = !cellMountedSignal.peek();
+              }}
+            >
+              {cellMounted ? "Unmount the cell" : "Mount the cell"}
+            </Button>
             <Form signal={scoreSignal}>
               <Box flex="x" spacing="m" alignY="center">
                 <Input id="winner_field" name="set1_winner" type="number" />
-                <Picker
-                  id="tie_break"
-                  name="set1_tie_break"
-                  type="object"
-                  defaultValue={{ winner: 7, loser: 4 }}
-                  ui={
-                    <span>
-                      {tieBreak
-                        ? `${tieBreak.winner}-${tieBreak.loser}`
-                        : "tie?"}
-                    </span>
-                  }
-                >
-                  <Form command="--navi-close" canSendWhileUnchanged>
-                    <Box flex="y" spacing="s" padding="s">
-                      <WheelGroup>
-                        <Wheel name="winner" type="integer" defaultValue={7}>
-                          {WINNERS.map((w) => (
-                            <Wheel.Item key={w} value={w} paddingX="s">
-                              {w}
-                            </Wheel.Item>
-                          ))}
-                        </Wheel>
-                        <WheelGroup.Separator>-</WheelGroup.Separator>
-                        <Wheel name="loser" type="integer" defaultValue={4}>
-                          {LOSERS.map((l) => (
-                            <Wheel.Item key={l} value={l} paddingX="s">
-                              {l}
-                            </Wheel.Item>
-                          ))}
-                        </Wheel>
-                      </WheelGroup>
-                      <Button id="noter" command="--navi-send">
-                        Noter
-                      </Button>
-                    </Box>
-                  </Form>
-                </Picker>
+                {cellMounted && <TieBreakCell />}
               </Box>
             </Form>
-            <pre id="score">{JSON.stringify(score)}</pre>
+            <pre id="score">{JSON.stringify(scoreSignal.value)}</pre>
           </Box>
         );
       };

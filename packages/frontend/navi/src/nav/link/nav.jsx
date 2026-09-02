@@ -254,15 +254,17 @@ const css = /* css */ `
        the label in the middle of the target that slice makes — a row that fills
        its container while its tabs sit at their text width stops in the middle,
        and gives every tab a different size to aim at.
+       The sharing only: how the row itself takes the space is the expandX/expandY
+       prop's answer on the Box, which is the one that knows whether the parent
+       runs in that direction (filling the width of a column parent and growing
+       inside a row parent are two different declarations).
        The main axis only: a vertical nav expanding horizontally fills the width
        (align-items below) rather than sharing its height between its tabs.
-       The row itself still grows when it may overflow; only the sharing is off
-       there, since a share of the row is a size that always fits (see
+       And a row that may overflow shares nothing: a share of the row is a size
+       that always fits, so there would be no overflow left to scroll (see
        [data-scrollable] above). */
-    &[data-expand-x] {
-      flex-grow: 1;
-
-      &:not([data-vertical]):not([data-scrollable]) .navi_link {
+    &[data-expand-x]:not([data-vertical]):not([data-scrollable]) {
+      .navi_link {
         flex: 1;
         justify-content: center;
       }

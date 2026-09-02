@@ -34779,12 +34779,15 @@ const useUIGroupStateController = (
         if (notifyExternal === true || notifyExternal === "if-it-moves") {
           if (
             notifyExternal === "if-it-moves" &&
-            compareTwoJsValues(groupUIState, controller.uiState)
+            compareTwoJsValues(groupUIState, controller.announcedUIState)
           ) {
-            // A child confirming what it already shows, to a group already
-            // worth it: the value arrived while the popup was open and the
-            // group reacted then. One trip through a picker is one answer, so
-            // there is nothing left to say here.
+            // A child confirming what it already shows, to a group that has
+            // already said it: the value arrived while the popup was open and
+            // the group reacted then. One trip through a picker is one answer,
+            // so there is nothing left to say here. Measured against what was
+            // announced rather than against what the group holds — a picker
+            // mounting into a form folds its suggestion into that silently, and
+            // a value nobody was ever told is not one that has been said.
             return;
           }
           // Somebody answered: what the group is worth is what its children say
@@ -34873,6 +34876,11 @@ const useUIGroupStateController = (
         const { controller } = s;
         const currentUIState = controller.uiState;
         controller.uiState = newUIState;
+        // What the outside was last told, which is not what the group is worth:
+        // a child mounting into a group that derived its own value moves that
+        // value through syncInternalState, deliberately without telling anybody
+        // (see onChange). Only what goes through here has been said out loud.
+        controller.announcedUIState = newUIState;
         uiStateSignal.value = newUIState;
         debugUIGroup(
           e,
@@ -34905,6 +34913,7 @@ const useUIGroupStateController = (
         hasDefaultValueProp,
         props,
         uiState: stateInitial,
+        announcedUIState: stateInitial,
         // Whether what the group holds was HANDED to it (a parent distributing,
         // a picker filling its popup, a value prop) rather than worked out from
         // its children. What it protects is read in onChange.
@@ -41940,10 +41949,8 @@ const css$W = /* css */`@layer navi {
     }
   }
 
-  &[data-expand-x] {
-    flex-grow: 1;
-
-    &:not([data-vertical]):not([data-scrollable]) .navi_link {
+  &[data-expand-x]:not([data-vertical]):not([data-scrollable]) {
+    & .navi_link {
       flex: 1;
       justify-content: center;
     }
