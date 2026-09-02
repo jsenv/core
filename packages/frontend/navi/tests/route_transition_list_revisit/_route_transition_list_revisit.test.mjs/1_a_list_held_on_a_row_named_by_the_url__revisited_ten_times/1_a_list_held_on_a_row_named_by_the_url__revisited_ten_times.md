@@ -31,7 +31,7 @@ return {
     "many_asked_on_each_revisit": "0000000000",
     "rows_drawn_on_each_revisit": "30,30,30,30,30,30,30,30,30,30",
     "same_node_on_each_revisit": "----------",
-    "transitions_played": 40,
+    "transitions_played": 20,
     "transition_left_on_root": false,
     "errors": []
   }

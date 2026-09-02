@@ -32,7 +32,7 @@ return {
     },
     "many_asked_on_each_revisit": "0000000000",
     "rows_drawn_on_each_revisit": "1,1,1,1,1,1,1,1,1,1",
-    "transitions_played": 30,
+    "transitions_played": 10,
     "transition_left_on_root": false,
     "errors": [],
     "revisits": "10/10 lawful: never left (same node, no ask) or truly came back (remounted, one ask)"

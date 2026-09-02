@@ -67,20 +67,36 @@ const devServer = await startDevServer({
 const browser = await chromium.launch({ headless: true });
 
 // The movement is what the two mounts differ by, so a mount that played none
-// would make the comparison say nothing: the attribute worn by the root for
-// the length of a transition is watched, and counted.
+// would make the comparison say nothing: the attribute the root wears for the
+// length of a transition is watched, and its ARRIVALS are counted. Only its
+// arrivals — the observer is filtered to that one attribute and reads the edge
+// rather than the presence, so neither a rewrite of the attribute nor anything
+// else written to the root while a movement plays lands in the number.
 const watchTransitions = (page) =>
   page.addInitScript(() => {
     /* eslint-disable no-undef */
     window.transitionsPlayed = 0;
     document.addEventListener("DOMContentLoaded", () => {
+      const isPlaying = () =>
+        document.documentElement.hasAttribute("data-navi-route-transition");
+      // A movement already playing when the watch starts has played.
+      let wasPlaying = isPlaying();
+      if (wasPlaying) {
+        window.transitionsPlayed++;
+      }
       new MutationObserver(() => {
-        if (
-          document.documentElement.hasAttribute("data-navi-route-transition")
-        ) {
+        const playing = isPlaying();
+        if (playing === wasPlaying) {
+          return;
+        }
+        wasPlaying = playing;
+        if (playing) {
           window.transitionsPlayed++;
         }
-      }).observe(document.documentElement, { attributes: true });
+      }).observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ["data-navi-route-transition"],
+      });
     });
     /* eslint-enable no-undef */
   });
