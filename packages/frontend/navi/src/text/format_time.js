@@ -23,13 +23,20 @@ const formatCompactNumber = (value, lang) => {
  * Formats a date as a human-readable day string.
  *
  * @param {Date} date
- * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"numeric" }} [options]
+ * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"numeric"|{ weekday?: "long"|"short"|"narrow", month?: "long"|"short"|"narrow"|"numeric" } }} [options]
+ *   A string spells the weekday and the month the same way. An object spells
+ *   them apart, each key defaulting to `"long"`: a narrow card usually wants
+ *   the weekday whole (it is the reading anchor) and the month abbreviated (it
+ *   is where the characters are — "septembre" is 9 of them, "sept." reads the
+ *   same). `"numeric"` stays a string-only spelling: it drops the weekday and
+ *   writes the whole date in digits.
  *
  * @example
  * formatDay(new Date(), { lang: "fr" })                    // "lundi 11 mai" (long, default)
  * formatDay(new Date(), { lang: "fr", format: "short" })  // "lun. 11 mai"
  * formatDay(new Date(), { lang: "fr", format: "narrow" }) // "lu. 11 mai"
  * formatDay(new Date(), { lang: "fr", format: "numeric" }) // "11/05/2026"
+ * formatDay(new Date(), { lang: "fr", format: { weekday: "long", month: "short" } }) // "mercredi 2 sept."
  */
 export const formatDay = (
   date,
@@ -42,10 +49,12 @@ export const formatDay = (
       year: "numeric",
     }).format(date);
   }
+  const { weekday = "long", month = "long" } =
+    typeof format === "string" ? { weekday: format, month: format } : format;
   return new Intl.DateTimeFormat(lang, {
-    weekday: format, // "long", "short", or "narrow"
+    weekday, // "long", "short", or "narrow"
     day: "numeric",
-    month: format,
+    month,
   }).format(date);
 };
 

@@ -37,7 +37,8 @@ import { Text } from "./text.jsx";
  *
  * @param {"date"|"month"|"datetime"|"time"|"hour"|"minute"|"second"|"duration"|"relative"} [type="relative"]
  *   Controls the display format:
- *   - `"date"`     → "lundi 11 mai" (long by default); `format="short"` → "lun. 11 mai"; `format="numeric"` → "11/05/2026"
+ *   - `"date"`     → "lundi 11 mai" (long by default); `format="short"` → "lun. 11 mai"; `format="numeric"` → "11/05/2026";
+ *                    `format={{ weekday: "long", month: "short" }}` spells the two apart → "mercredi 2 sept."
  *   - `"month"`    → "juin 2026"
  *   - `"datetime"` → "lun. 11 mai, 14:30" (long); `format="short"` → "11 mai, 14:30"; `format="narrow"` → "11/05, 14:30"
  *   - `"time"`     → time-of-day as duration by default (e.g. "14:30" → "14 heures 30");
@@ -67,7 +68,7 @@ import { Text } from "./text.jsx";
  * @param {boolean} [bare]
  *   When true, strips the past-tense literal ("il y a", "ago") and returns only integer + unit.
  *   Only applies to the past state of `type="relative"`.
- * @param {"long"|"short"|"narrow"|"compact"|"numeric"|"timestring"|"iso"} [format="long"]
+ * @param {"long"|"short"|"narrow"|"compact"|"numeric"|"timestring"|"iso"|{ weekday?: "long"|"short"|"narrow", month?: "long"|"short"|"narrow"|"numeric" }} [format="long"]
  *   Controls the verbosity of the output. Defaults to `"long"` for all types.
  *   - `"short"`      → Intl short (e.g. "2 h et 15 min", short month for dates/datetimes, no weekday for datetime)
  *   - `"narrow"`     → Intl narrow (e.g. "2h 15min", numeric month for datetime)
@@ -75,6 +76,11 @@ import { Text } from "./text.jsx";
  *   - `"numeric"`    → numeric date, only for `type="date"` (e.g. "11/09/2026")
  *   - `"timestring"` → clock display for `type="time"`, `type="minute"`, `type="hour"`, and `type="second"` (e.g. "14:30", "01:30" for 90s)
  *   - `"iso"`        → ISO 8601 string, only for `type="duration"` (e.g. "PT2H15M")
+ *   - an object      → `type="date"` only, one verbosity per part
+ *                      (`{ weekday: "long", month: "short" }`): a narrow card
+ *                      keeps the weekday whole, since that is what the eye
+ *                      lands on, and abbreviates the month, since that is
+ *                      where the characters are.
  * @param {boolean} [forceUnit=false]
  *   Keeps the value in the unit named by `type` however big it gets, for
  *   `type="hour"`, `"minute"` and `"second"`: 36 hours reads "36 heures"
