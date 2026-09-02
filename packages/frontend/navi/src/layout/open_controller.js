@@ -7,7 +7,11 @@ import {
 import { useLayoutEffect, useRef } from "preact/hooks";
 
 import { useDebugInteraction } from "@jsenv/navi/src/navi_debug.jsx";
-import { useNavState } from "../nav/browser_integration/browser_integration.js";
+import { canNavBackSignal } from "../nav/browser_integration/document_back_and_forward.js";
+import {
+  navBack,
+  useNavState,
+} from "../nav/browser_integration/browser_integration.js";
 import { warnSignalCollision } from "../control/control_value.js";
 import {
   prepareFocusTransfer,
@@ -494,6 +498,58 @@ const resolveNavStateProp = (navState, popupId, name) => {
   return { id: navState.id || popupId, type: navState.type || "replace" };
 };
 
+// What a write of the open state is worth in the history, when the signal
+// holding it is bound to a url (a route's `searchParams`, see route.js). A
+// plain signal has no `set` and takes the value as it always did.
+const writeInSignal = (signal, value, { history }) => {
+  if (signal.set) {
+    signal.set(value, { history });
+    return;
+  }
+  signal.value = value;
+};
+
+// The popup says where it is, into a `signal` the caller holds — and when that
+// signal lives in a url, saying so is a navigation. It is worth exactly what
+// the same move is worth when the open state lives in the history entry
+// instead (see useNavState's own leave()):
+// - the opening is worth what the state declares (`history: "push"` for a
+//   popup one can back out of, the default replacement for one that merely
+//   qualifies the screen one is on);
+// - the closing is never an entry of its own. Stacking one would leave the
+//   entry that carries the popup BEHIND the reader, and their next back press
+//   would walk straight back into the popup they just closed.
+// A cancel (Escape, the backdrop, --navi-cancel) goes back to before the
+// opening rather than rewriting the entry, so everything else written to the
+// url while the popup was open goes back with it. A close that is not a cancel
+// keeps those writes and only drops the popup.
+const writeOpenedInSignal = (signal, opened, event) => {
+  if (signal.peek() === opened) {
+    // The signal already says so, meaning this open/close IS what it asked
+    // for: a back press that took the popup out of the url, the application
+    // writing it. Nothing to write back — and nothing to go back to either,
+    // since the navigation navBack would undo is the one that asked for this.
+    return;
+  }
+  if (opened) {
+    signal.value = true;
+    return;
+  }
+  if (
+    event?.detail?.isCancel &&
+    signal.options?.getHistory?.() === "push" &&
+    // Nothing of this document behind: the popup was opened by the url itself
+    // (a shared link, a bookmark). navBack would do nothing at all there, so
+    // the entry is rewritten instead — the address must not keep saying open
+    // about a popup that just closed.
+    canNavBackSignal.peek()
+  ) {
+    navBack();
+    return;
+  }
+  writeInSignal(signal, false, { history: "replace" });
+};
+
 /**
  * Keeps an open controller in sync with where the caller says the popup should
  * be: an `open`/`defaultOpen` pair, a `signal`, or a `navState` — the open
@@ -564,7 +620,7 @@ export const useOpenPropsEffectOnOpenController = (
             }
           }
           if (signal) {
-            signal.value = opened;
+            writeOpenedInSignal(signal, opened, event);
           }
         }
       : null;
@@ -623,8 +679,10 @@ export const useOpenPropsEffectOnOpenController = (
     // The request can be refused (a busy form denying the close): the popup
     // then stays where it was, and whoever holds the open state is told so —
     // otherwise it would keep saying "closed" about a popup still open.
+    // Written over rather than stacked on: a refusal corrects the state that
+    // asked, it is not a place one came from.
     if (signal) {
-      signal.value = openController.opened;
+      writeInSignal(signal, openController.opened, { history: "replace" });
     }
     if (navStateId && openController.opened) {
       enterNavState();

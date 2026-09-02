@@ -36,17 +36,6 @@
         color: #555;
         font-size: 13px;
       }
-      /* L'adresse, telle quelle: c'est elle qu'on regarde sur cette page. */
-      .address {
-        padding: 6px 10px;
-        color: #1a237e;
-        font-size: 13px;
-        font-family: ui-monospace, monospace;
-        white-space: nowrap;
-        background: #eaf2fd;
-        border-radius: 6px;
-        overflow-x: auto;
-      }
       .slides {
         border: 1px solid #d5dbe6;
         border-radius: 8px;
@@ -83,8 +72,8 @@
         Slide,
         SlideContainer,
         stateSignal,
-        useDocumentUrl,
       } from "@jsenv/navi";
+      import { DemoAddress } from "../../internal/demo_address.jsx";
       import { DemoHeader } from "../../internal/demo_header.jsx";
       import { DocumentToc } from "../../internal/document_toc.jsx";
 
@@ -115,20 +104,6 @@
         searchParams: { step: { signal: stepSignal, default: "recap" } },
       });
       setupRoutes([CREATE_ROUTE, EDIT_ROUTE]);
-
-      // L'adresse, coupée à son dernier segment: cette page vit sous un long
-      // chemin de repo, et ce qu'on regarde ici tient dans la fin.
-      const Address = () => {
-        const url = useDocumentUrl();
-        const { pathname, search } = new URL(url);
-        const lastSegment = pathname.slice(pathname.lastIndexOf("/") + 1);
-        return (
-          <div className="address" data-testid="address">
-            …/{lastSegment}
-            {search}
-          </div>
-        );
-      };
 
       const WIZARD_STEPS = [
         { area: "quand", label: "Quand" },
@@ -181,7 +156,7 @@
             dessus: <code>signal={"{stepSignal}"}</code>.
           </p>
           <Box flex="y" spacing="s">
-            <Address />
+            <DemoAddress />
             <WizardSlides signal={stepSignal} id="wizard" testid="wizard" />
           </Box>
         </div>
@@ -197,7 +172,7 @@
             n'est envoyé.
           </p>
           <Box flex="y" spacing="s">
-            <Address />
+            <DemoAddress />
             <Box flex spacing="s">
               <Button
                 onClick={() => {
@@ -267,7 +242,7 @@
             <code>{'{ signal, default: "recap" }'}</code> sur /edit.
           </p>
           <Box flex="y" spacing="s">
-            <Address />
+            <DemoAddress />
             <Box flex spacing="s">
               <Link
                 route={CREATE_ROUTE}
@@ -309,7 +284,7 @@
             d'historique. Au doigt, non.
           </p>
           <Box flex="y" spacing="s">
-            <Address />
+            <DemoAddress />
             <Box flex spacing="s">
               <Button
                 command="--navi-left"

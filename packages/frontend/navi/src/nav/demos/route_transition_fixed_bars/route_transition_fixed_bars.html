@@ -41,10 +41,27 @@
       .bar_content {
         display: flex;
         width: 100%;
+        padding: 0 16px;
         align-items: center;
-        justify-content: center;
+        justify-content: space-between;
         gap: 16px;
         font-weight: 600;
+      }
+      /* Même hauteur et même marge que la barre du haut: la croix tombe là où
+         était la roue. */
+      .overlay_head {
+        display: flex;
+        height: 56px;
+        padding: 0 16px;
+        align-items: center;
+        justify-content: space-between;
+        font-weight: 600;
+        background: #f3ecfb;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+      }
+      .overlay_body {
+        padding: 16px;
+        background: #f3ecfb;
       }
     </style>
   </head>
@@ -60,28 +77,53 @@
         Nav,
         Route,
         RouteTransitionArea,
+        SidePanel,
         defineRouteTransition,
         route,
         setupRoutes,
+        stateSignal,
         useRouteStatus,
       } from "@jsenv/navi";
 
       const ME_ROUTE = route("/me");
       const ME_EDIT_ROUTE = route("/me/edit");
       const PLACES_ROUTE = route("/places");
-      const REGLAGES_ROUTE = route("/reglages");
-      setupRoutes([ME_EDIT_ROUTE, ME_ROUTE, PLACES_ROUTE, REGLAGES_ROUTE]);
+      const NOTIFICATIONS_ROUTE = route("/notifications");
+      // Les réglages ne sont pas une page: ils sont une chose de plus vraie de
+      // l'adresse qu'on est déjà en train de lire. Déclaré sur la racine, le
+      // param vaut partout — /me?reglages, /places?reglages — donc l'adresse
+      // du calque contient celle de ce qu'il recouvre, rechargement et lien
+      // partagé compris. "push": le bouton retour du navigateur les referme.
+      const reglagesSignal = stateSignal(false, {
+        id: "reglages",
+        type: "boolean",
+        weak: true,
+        history: "push",
+      });
+      const ROOT_ROUTE = route("/", {
+        searchParams: { reglages: reglagesSignal },
+      });
+      setupRoutes([
+        ME_EDIT_ROUTE,
+        ME_ROUTE,
+        PLACES_ROUTE,
+        NOTIFICATIONS_ROUTE,
+        ROOT_ROUTE,
+      ]);
 
       defineRouteTransition(ME_ROUTE, ME_EDIT_ROUTE, "slide-x");
       defineRouteTransition(ME_ROUTE, PLACES_ROUTE, "cover-bottom");
-      // La porte des réglages est dans la barre du haut: on les ouvre depuis
-      // n'importe quelle page et on les referme sur celle qu'on lisait. Aucune
-      // paire à écrire — le `from` est laissé de côté, et la moitié "retour"
-      // joue pour le bouton fermer comme pour celui du navigateur.
-      defineRouteTransition(null, REGLAGES_ROUTE, {
+      // La porte des notifications est dans la barre du haut: on les ouvre
+      // depuis n'importe quelle page et on les referme sur celle qu'on lisait.
+      // Aucune paire à écrire — le `from` est laissé de côté, et la moitié
+      // "retour" joue pour le bouton fermer comme pour celui du navigateur.
+      // 900 ms pour avoir le temps d'appuyer pendant le mouvement.
+      defineRouteTransition(null, NOTIFICATIONS_ROUTE, {
         type: "cover-top",
         duration: 900,
       });
+      // Rien n'est écrit pour les réglages: ils ne remplacent aucune page, ils
+      // se posent dessus, et un calque a son mouvement à lui.
 
       // Les liens sont répétés tous les cinq rangs: on part — et on revient —
       // depuis n'importe quelle position de défilement, ce qui est la seule
@@ -174,47 +216,98 @@
         />
       );
 
-      const ReglagesPage = () => (
+      const NotificationsPage = () => (
         <LongPage
-          title="Réglages"
+          title="Notifications"
           color="#f3ecfb"
           rows={20}
           close={
             <Button className="card" command="--navi-nav-back:/me">
-              ✕ Fermer les réglages
+              ✕ Fermer les notifications
             </Button>
           }
           links={[]}
         />
       );
 
-      // La roue ouvre les réglages et les referme: un seul bouton, deux
+      // UNE PAGE QUI EN REMPLACE UNE AUTRE.
+      // La cloche ouvre les notifications et les referme: un seul bouton, deux
       // moitiés. Pendant la descente de la feuille, la barre du haut est une
-      // photo — ce que la roue demande avec pressableDuringRouteTransition,
+      // photo — ce que la cloche demande avec pressableDuringRouteTransition,
       // c'est de répondre quand même à un appui qui la vise.
-      const ReglagesDoor = () => {
-        const { matching } = useRouteStatus(REGLAGES_ROUTE);
+      const NotificationsDoor = () => {
+        const { matching } = useRouteStatus(NOTIFICATIONS_ROUTE);
         if (matching) {
           return (
             <Button
               command="--navi-nav-back:/me"
               pressableDuringRouteTransition
-              data-testid="reglages_door"
+              data-testid="notifications_door"
             >
-              ✕ Réglages
+              ✕ Notifications
             </Button>
           );
         }
         return (
           <Link
-            route={REGLAGES_ROUTE}
+            route={NOTIFICATIONS_ROUTE}
             pressableDuringRouteTransition
-            data-testid="reglages_door"
+            data-testid="notifications_door"
           >
-            ⚙ Réglages
+            🔔 Notifications
           </Link>
         );
       };
+
+      // UN CALQUE QUI SE POSE SUR LA PAGE, QUELLE QU'ELLE SOIT.
+      // La roue ne mène nulle part: elle ouvre le panneau, et le panneau écrit
+      // son ouverture dans l'adresse. La page dessous ne change pas — on la
+      // retrouve telle quelle en refermant, depuis n'importe quel écran — et
+      // la barre du bas continue de dire vrai, puisqu'on est bien resté là.
+      const REGLAGES_PANEL_ID = "reglages_panel";
+      const ReglagesDoor = () => (
+        <Button
+          variant="discrete"
+          command="--navi-toggle"
+          commandFor={REGLAGES_PANEL_ID}
+          aria-label="Ouvrir les réglages"
+          data-testid="reglages_door"
+        >
+          ⚙
+        </Button>
+      );
+
+      // La croix tombe là où était la roue: le panneau prend tout l'écran,
+      // barres comprises, et refait la ligne du haut à son compte.
+      const ReglagesOverlay = () => (
+        <SidePanel
+          id={REGLAGES_PANEL_ID}
+          signal={reglagesSignal}
+          side="top"
+          height="100%"
+          animation
+          data-testid="reglages_panel"
+        >
+          <SidePanel.Head className="overlay_head">
+            <strong>Réglages</strong>
+            <Button
+              command="--navi-close"
+              variant="discrete"
+              aria-label="Fermer les réglages"
+              data-testid="reglages_close"
+            >
+              ✕
+            </Button>
+          </SidePanel.Head>
+          <div className="overlay_body">
+            {Array.from({ length: 12 }, (_, index) => (
+              <div key={index} className="page_row">
+                Réglage {index + 1}
+              </div>
+            ))}
+          </div>
+        </SidePanel>
+      );
 
       const AppIndex = () => {
         useLayoutEffect(() => {
@@ -227,7 +320,8 @@
         <>
           <FixedBar area="top" height="56">
             <div className="bar_content">
-              Barre du haut
+              <NotificationsDoor />
+              <span>Barre du haut</span>
               <ReglagesDoor />
             </div>
           </FixedBar>
@@ -236,10 +330,13 @@
               <Route route={ME_EDIT_ROUTE} element={MeEditPage} />
               <Route route={ME_ROUTE} element={MePage} />
               <Route route={PLACES_ROUTE} element={PlacesPage} />
-              <Route route={REGLAGES_ROUTE} element={ReglagesPage} />
+              <Route route={NOTIFICATIONS_ROUTE} element={NotificationsPage} />
               <Route fallback element={AppIndex} />
             </Route>
           </RouteTransitionArea>
+          {/* Hors de l'aire: le panneau se pose par-dessus les pages ET les
+              barres, et il reste monté fermé pour pouvoir sortir en glissant. */}
+          <ReglagesOverlay />
           <FixedBar area="bottom" height="64">
             <Nav className="bar_content" expand currentIndicator>
               <Link variant="tab" route={ME_ROUTE} padding="m">

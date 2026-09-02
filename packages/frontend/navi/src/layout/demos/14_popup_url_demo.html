@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>Popups & url</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 40px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      #container {
+        max-width: 760px;
+        margin: 0 auto;
+      }
+      h2 {
+        margin: 0 0 16px;
+        font-size: 1.1rem;
+        scroll-margin-top: 12px;
+      }
+      h3 {
+        margin: 24px 0 8px;
+        font-size: 0.95rem;
+      }
+      .demo-section {
+        margin-bottom: 24px;
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      .caption {
+        margin: 0 0 8px;
+        color: #555;
+        font-size: 13px;
+      }
+      .demo-column {
+        min-width: 220px;
+        padding: 16px;
+        flex: 1;
+        background: #f8fafc;
+        border: 1px solid #dde3ec;
+        border-radius: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <div id="app"></div>
+    </div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import {
+        Box,
+        Button,
+        Dialog,
+        Expandable,
+        Link,
+        Popover,
+        reload,
+        route,
+        setupRoutes,
+        SidePanel,
+        stateSignal,
+      } from "@jsenv/navi";
+      import { DemoAddress } from "../../internal/demo_address.jsx";
+      import { DemoHeader } from "../../internal/demo_header.jsx";
+      import { DocumentToc } from "../../internal/document_toc.jsx";
+
+      const editSignal = stateSignal(false, {
+        id: "edit",
+        type: "boolean",
+        weak: true,
+      });
+      const menuSignal = stateSignal(false, {
+        id: "menu",
+        type: "boolean",
+        weak: true,
+      });
+      const tipSignal = stateSignal(false, {
+        id: "tip",
+        type: "boolean",
+        weak: true,
+      });
+      const detailsSignal = stateSignal(false, {
+        id: "details",
+        type: "boolean",
+        weak: true,
+      });
+      const settingsSignal = stateSignal(false, {
+        id: "settings",
+        type: "boolean",
+        weak: true,
+      });
+      const photoSignal = stateSignal(false, {
+        id: "photo",
+        type: "boolean",
+        weak: true,
+        history: "push",
+      });
+
+      const ROUTE = route("/", {
+        searchParams: {
+          edit: editSignal,
+          menu: menuSignal,
+          tip: tipSignal,
+          details: detailsSignal,
+          settings: settingsSignal,
+          photo: photoSignal,
+        },
+      });
+      setupRoutes([ROUTE]);
+
+      const NominalDemo = () => (
+        <div className="demo-section">
+          <h2 id="nominal">Cas nominal</h2>
+          <p className="caption">
+            L'ouverture est un search param de la route:{" "}
+            <code>signal={"{editSignal}"}</code>.
+          </p>
+          <Box flex="y" spacing="s">
+            <DemoAddress />
+            <Box flex spacing="s">
+              <Button
+                command="--navi-toggle"
+                commandFor="edit_dialog"
+                data-testid="open_edit"
+                paddingY="xxs"
+                paddingX="s"
+              >
+                Modifier
+              </Button>
+            </Box>
+            <Dialog id="edit_dialog" signal={editSignal} data-testid="edit">
+              <Box flex="y" spacing="s" padding="m">
+                <span>Le formulaire.</span>
+                <Button
+                  command="--navi-close"
+                  data-testid="close_edit"
+                  paddingY="xxs"
+                  paddingX="s"
+                >
+                  Fermer
+                </Button>
+              </Box>
+            </Dialog>
+          </Box>
+        </div>
+      );
+
+      const ElsewhereDemo = () => (
+        <div className="demo-section">
+          <h2 id="ailleurs">Les mêmes props ailleurs</h2>
+          <Box flex="y" spacing="s">
+            <DemoAddress />
+            <h3 id="side_panel">SidePanel</h3>
+            <Box flex spacing="s">
+              <Button
+                command="--navi-toggle"
+                commandFor="menu_panel"
+                data-testid="open_menu"
+                paddingY="xxs"
+                paddingX="s"
+              >
+                Menu
+              </Button>
+            </Box>
+            <SidePanel id="menu_panel" signal={menuSignal} data-testid="menu">
+              <Box flex="y" spacing="s" padding="m">
+                <span>Le menu.</span>
+                <Button
+                  command="--navi-close"
+                  data-testid="close_menu"
+                  paddingY="xxs"
+                  paddingX="s"
+                >
+                  Fermer
+                </Button>
+              </Box>
+            </SidePanel>
+
+            <h3 id="popover">Popover</h3>
+            <p className="caption">
+              Une adresse n'a aucun bouton derrière elle:{" "}
+              <code>anchor="tip_anchor"</code> dit contre quoi se placer.
+            </p>
+            <Box flex spacing="s">
+              <Button
+                id="tip_anchor"
+                command="--navi-toggle"
+                commandFor="tip_popover"
+                data-testid="open_tip"
+                paddingY="xxs"
+                paddingX="s"
+              >
+                Astuce
+              </Button>
+            </Box>
+            <Popover
+              id="tip_popover"
+              anchor="tip_anchor"
+              signal={tipSignal}
+              data-testid="tip"
+              padding="m"
+            >
+              <Box flex="y" spacing="s">
+                <span>L'astuce.</span>
+                <Button
+                  command="--navi-close"
+                  data-testid="close_tip"
+                  paddingY="xxs"
+                  paddingX="s"
+                >
+                  Fermer
+                </Button>
+              </Box>
+            </Popover>
+
+            <h3 id="expandable">Expandable</h3>
+            <Expandable
+              id="details_expandable"
+              ui="Détails"
+              signal={detailsSignal}
+              data-testid="details"
+            >
+              <Box padding="m">Le détail.</Box>
+            </Expandable>
+          </Box>
+        </div>
+      );
+
+      const FromAddressDemo = () => (
+        <div className="demo-section">
+          <h2 id="depuis_l_adresse">Une adresse ouvre</h2>
+          <p className="caption">
+            Le <code>?edit</code> du cas nominal, écrit par un lien —{" "}
+            <code>routeParams={"{{ edit: true }}"}</code> — puis rechargé tel
+            quel.
+          </p>
+          <Box flex="y" spacing="s">
+            <DemoAddress />
+            <Box flex spacing="s">
+              <Link
+                route={ROUTE}
+                routeParams={{ edit: true }}
+                data-testid="link_to_edit"
+                padding="s"
+              >
+                Le formulaire
+              </Link>
+              <Link route={ROUTE} data-testid="link_to_page" padding="s">
+                La page
+              </Link>
+              <Button
+                onClick={() => {
+                  reload();
+                }}
+                data-testid="reload"
+                paddingY="xxs"
+                paddingX="s"
+              >
+                Recharger
+              </Button>
+            </Box>
+          </Box>
+        </div>
+      );
+
+      const HistoryDemo = () => (
+        <div className="demo-section">
+          <h2 id="retour">Ce que l'ouverture pèse dans l'historique</h2>
+          <p className="caption">
+            Le même popup deux fois; seul l'état qui le porte change.
+          </p>
+          <Box flex="y" spacing="s">
+            <DemoAddress />
+            <Box flex spacing="m">
+              <div className="demo-column">
+                <p className="caption">
+                  <code>stateSignal(false, {"{ … }"})</code>
+                </p>
+                <Button
+                  command="--navi-toggle"
+                  commandFor="settings_dialog"
+                  data-testid="open_settings"
+                  paddingY="xxs"
+                  paddingX="s"
+                >
+                  Réglages
+                </Button>
+                <Dialog
+                  id="settings_dialog"
+                  signal={settingsSignal}
+                  data-testid="settings"
+                >
+                  <Box flex="y" spacing="s" padding="m">
+                    <span>Les réglages.</span>
+                    <Box flex spacing="s">
+                      <Button
+                        command="--navi-cancel"
+                        data-testid="cancel_settings"
+                        paddingY="xxs"
+                        paddingX="s"
+                      >
+                        Annuler
+                      </Button>
+                      <Button
+                        command="--navi-close"
+                        data-testid="save_settings"
+                        paddingY="xxs"
+                        paddingX="s"
+                      >
+                        Enregistrer
+                      </Button>
+                    </Box>
+                  </Box>
+                </Dialog>
+              </div>
+              <div className="demo-column">
+                <p className="caption">
+                  <code>stateSignal(false, {'{ …, history: "push" }'})</code>
+                </p>
+                <Button
+                  command="--navi-toggle"
+                  commandFor="photo_dialog"
+                  data-testid="open_photo"
+                  paddingY="xxs"
+                  paddingX="s"
+                >
+                  La photo
+                </Button>
+                <Dialog
+                  id="photo_dialog"
+                  signal={photoSignal}
+                  data-testid="photo"
+                >
+                  <Box flex="y" spacing="s" padding="m">
+                    <span>La photo, en grand.</span>
+                    <Box flex spacing="s">
+                      <Button
+                        command="--navi-cancel"
+                        data-testid="cancel_photo"
+                        paddingY="xxs"
+                        paddingX="s"
+                      >
+                        Annuler
+                      </Button>
+                      <Button
+                        command="--navi-close"
+                        data-testid="save_photo"
+                        paddingY="xxs"
+                        paddingX="s"
+                      >
+                        Enregistrer
+                      </Button>
+                    </Box>
+                  </Box>
+                </Dialog>
+              </div>
+            </Box>
+          </Box>
+        </div>
+      );
+
+      const App = () => (
+        <Box flex="y" spacing="l">
+          <DemoHeader
+            title="Popups & url"
+            previous={{
+              href: "./13_popup_loading_demo.html",
+              label: "Popup & chargement",
+            }}
+          />
+          <div className="demo-section">
+            <DocumentToc />
+            <Button
+              onClick={() => {
+                editSignal.value = undefined;
+                menuSignal.value = undefined;
+                tipSignal.value = undefined;
+                detailsSignal.value = undefined;
+                settingsSignal.value = undefined;
+                photoSignal.value = undefined;
+              }}
+              data-testid="reset_all"
+              paddingY="xxs"
+              paddingX="s"
+            >
+              Tout remettre à zéro
+            </Button>
+          </div>
+          <NominalDemo />
+          <ElsewhereDemo />
+          <FromAddressDemo />
+          <HistoryDemo />
+        </Box>
+      );
+
+      render(<App />, document.querySelector("#app"));
+    </script>
+  </body>
+</html>
