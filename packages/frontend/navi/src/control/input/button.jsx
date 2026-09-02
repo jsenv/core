@@ -130,6 +130,13 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  *   `--navi-nav-to` command — by TAKING THE PLACE of the current history entry
  *   rather than stacking on it: what `<Link replace>` says, for a press drawn
  *   as a button.
+ * @param {boolean} [pressableDuringRouteTransition] Keep answering presses
+ *   while a route transition plays: what a movement photographs goes deaf to
+ *   the pointer for its whole length, and the door that opened the page — a
+ *   button in a bar the two states share, standing exactly where its picture is
+ *   drawn — must still close it. What `<Link pressableDuringRouteTransition>`
+ *   says, for the other half of a toggle. Only for a control that does not
+ *   travel with the pages.
  * @param {Function} [action] On a button with an `href` or a `route`, the
  *   same order as a Link's: it runs on the press, before the navigation, and
  *   the navigation does not wait for it (see Link's `action`).

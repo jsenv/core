@@ -69,6 +69,17 @@
  * rendering_hold.js for how the picture is kept honest). A browser without
  * view transitions navigates without the movement.
  *
+ * A movement can be turned round. A page whose door is in the furniture is
+ * opened and closed by the same control, so the press that closes it often
+ * lands while it is still opening: the navigation answering is exactly the way
+ * back of the one on screen, and the pictures are walked backwards with the
+ * state put under them before they are dropped (see
+ * turnRunningTransitionRound). A second transition cannot do this — it
+ * photographs the state being undone — and it would first skip the one playing,
+ * which is the page snapping fully open before it closes. That press has to
+ * arrive at all, and everything photographed is deaf to the pointer for the
+ * length of the movement: transition_press.js is the other half.
+ *
  * However many relations are defined, there is ONE watcher: every definition
  * lands in a shared registry, and the watcher is rebuilt over the whole of it
  * — a navigation is a single fact about the document, and the first relation
@@ -81,6 +92,7 @@ import {
   observeAfterRouting,
   observeBeforeRouting,
 } from "./browser_integration/before_routing.js";
+import { documentUrlSignal } from "./browser_integration/document_url_signal.js";
 import { Box } from "../box/box.jsx";
 import { observeRouteRender } from "./route.jsx";
 import {
@@ -92,6 +104,10 @@ import {
   holdTransitionDestination,
   releaseTransitionDestination,
 } from "./transition_destination.js";
+import {
+  holdTransitionPress,
+  releaseTransitionPress,
+} from "./transition_press.js";
 import {
   FURNITURE_NAME_PREFIX,
   holdTransitionFurniture,
@@ -106,6 +122,12 @@ import {
 } from "./transition_window.js";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import { ensureDocumentStartViewTransition } from "../transition/start_view_transition_polyfill.js";
+import {
+  viewTransitionAnimations,
+  walkPicturesHome,
+  walkPicturesOn,
+  whenPicturesArrived,
+} from "../transition/view_transition_revert.js";
 
 const startViewTransition = ensureDocumentStartViewTransition();
 
@@ -127,6 +149,10 @@ const TRANSITION_TARGET_ATTRIBUTE = "data-navi-route-transition-target";
 // for that navigation and for no other — the next one is back to the relations.
 const TRANSITION_REQUEST_ATTRIBUTE = "data-navi-route-transition-request";
 const AREA_NAME = "navi-route-transition";
+// The pictures carrying the movement, among everything else it takes along —
+// the pages', or the document's own when the pages ARE the document (see
+// findLeadAnimation).
+const LEAD_NAMES = [AREA_NAME, "root"];
 // route_travel.jsx wears this on the root for the length of one of its
 // travels (its TRAVEL_ATTRIBUTE — a comment there mirrors this one). Read by
 // name rather than imported: importing route_travel.jsx would pull the whole
@@ -933,6 +959,12 @@ const rebuildWatcher = () => {
     if (fromIndex === index) {
       return;
     }
+    if (navigationAnimated) {
+      // The movement on screen was turned round for this very navigation (see
+      // turnRunningTransitionRound): it is already being answered, by the
+      // pictures the relations would otherwise photograph over.
+      return;
+    }
     // A page in no relation at all is a real end of the crossing, not a
     // missing one: it is the "anywhere" a page reached from the furniture is
     // opened over and closed back onto (see findRelation).
@@ -959,6 +991,7 @@ const rebuildWatcher = () => {
     beginTransition({
       page: toPage,
       url: navigationUrl,
+      fromUrl: navigationFromUrl,
       // Which way it plays: what the navigation itself said first — the link
       // being pressed is where the way the app is being walked is known — then
       // the relation, and forward for a navigation that asked for a movement
@@ -986,6 +1019,12 @@ const rebuildWatcher = () => {
 let defaultTransition = null;
 let navigationRequest = null;
 let navigationUrl = null;
+// Where the document stands as the navigation begins — the other end of the
+// crossing, and what lets the NEXT navigation be recognised as this one's way
+// back. Read off the document url rather than off window.location: a traversal
+// on a browser without the Navigation API is announced from "popstate", where
+// the address has already moved and location would answer with the destination.
+let navigationFromUrl = null;
 let navigationAnimated = false;
 
 // The two ends of every navigation, watched from here on. The picture of the
@@ -998,24 +1037,35 @@ observeBeforeRouting((details) => {
   navigationAnimated = false;
   navigationRequest = readNavigationRequest(details);
   navigationUrl = details.url;
+  navigationFromUrl = documentUrlSignal.peek();
   if (relations.length === 0 && !defaultTransition && !navigationRequest) {
     return;
   }
   holdRenderingForRouting();
+  // Said HERE, before the relations have their say: what is on screen may be
+  // this navigation's own way back, and that is a fact about the two ends of
+  // the crossing alone. A pair written "none" would silence a movement — it
+  // must not silence the undoing of one already playing.
+  if (turnRunningTransitionRound(navigationFromUrl, navigationUrl)) {
+    navigationAnimated = true;
+  }
 });
 observeAfterRouting(() => {
   const request = navigationRequest;
   const url = navigationUrl;
+  const fromUrl = navigationFromUrl;
   // Read here and dropped here: a request answers for the navigation it was
   // made on, and the next one is back to the relations.
   navigationRequest = null;
   navigationUrl = null;
+  navigationFromUrl = null;
   if (!navigationAnimated && (request || defaultTransition)) {
     const { type, duration } = resolveTransition(request, defaultTransition);
     if (type !== "none") {
       beginTransition({
         page: null,
         url,
+        fromUrl,
         // A default has no direction: nothing says which of two arbitrary
         // pages is before the other, and the attribute is then worn empty —
         // present for whoever keys on "one of ours is playing", silent on the
@@ -1087,7 +1137,7 @@ const findRelation = (fromPage, toPage) => {
 // attributes over, and only their owner may take them off.
 let currentTransition = null;
 
-const beginTransition = ({ page, url, direction, type, duration }) => {
+const beginTransition = ({ page, url, fromUrl, direction, type, duration }) => {
   navigationAnimated = true;
   const documentElement = document.documentElement;
   // One navigation, one animator. A RouteTravel box already travelling this
@@ -1100,7 +1150,15 @@ const beginTransition = ({ page, url, direction, type, duration }) => {
     );
     return;
   }
-  const transition = {};
+  // The two ends of the crossing, kept for the length of the movement: they are
+  // what lets the navigation after this one be recognised as its way back (see
+  // turnRunningTransitionRound).
+  const transition = {
+    fromUrl: absoluteUrl(fromUrl),
+    url: absoluteUrl(url),
+    walkHome: null,
+    releaseReverting: null,
+  };
   currentTransition = transition;
   // Said before the picture is taken: whoever names something for a movement
   // between two pages decides on it now (see transition_destination.js).
@@ -1122,6 +1180,10 @@ const beginTransition = ({ page, url, direction, type, duration }) => {
     );
   }
   const areaElement = areaElements.length > 0 ? areaElements[0] : null;
+  // Everything about to be photographed goes deaf to the pointer; the controls
+  // that asked to keep answering are heard at the document instead (see
+  // transition_press.js).
+  holdTransitionPress(transition, areaElement);
   // The area as it stands before anything moves, and the band the furniture
   // around it leaves free: rendering is held, so both are still the page being
   // left (see transition_window.js).
@@ -1229,6 +1291,13 @@ const beginTransition = ({ page, url, direction, type, duration }) => {
     // ending late must not strip what a later one is wearing.
     renderWait.stop();
     releaseRendering();
+    // The hold a way back took, when it is still standing: the pictures were
+    // turned round a second time and played out, or something else took the
+    // document over mid-walk. A hold nobody gives back freezes the page.
+    if (transition.releaseReverting) {
+      transition.releaseReverting();
+      transition.releaseReverting = null;
+    }
     if (currentTransition === transition) {
       currentTransition = null;
       documentElement.removeAttribute(TRANSITION_ATTRIBUTE);
@@ -1237,14 +1306,101 @@ const beginTransition = ({ page, url, direction, type, duration }) => {
       releaseTransitionWindow(transition);
       releaseTransitionDestination(transition);
       releaseTransitionFurniture(transition);
+      releaseTransitionPress(transition);
       if (restoreDuration) {
         restoreDuration();
       }
     }
   };
+  transition.viewTransition = viewTransition;
   viewTransition.ready.then(viewTransitionReady, ignoreSkipped);
   viewTransition.finished.then(end, end);
 };
+
+/**
+ * The movement playing, turned round rather than replaced: this navigation is
+ * exactly the way back of the one on screen — the door pressed again while the
+ * page it opened is still arriving.
+ *
+ * A second transition cannot do this. It photographs the state it leaves, which
+ * here is the state being undone, and animates from there to the one the reader
+ * came from: a way forward to somewhere, not a return. It also skips the one
+ * playing, so the page snaps fully open before it slides back off — the
+ * teleport a toggle must never show. The same pictures are walked back instead,
+ * and the state is put under them before they are dropped (see
+ * view_transition_revert.js).
+ *
+ * Only the exact way back qualifies. Anything else — a third page, a bar entry
+ * — is a different crossing, and gets a movement of its own.
+ */
+const turnRunningTransitionRound = (fromUrl, url) => {
+  const running = currentTransition;
+  if (!running || !running.viewTransition || !fromUrl || !url) {
+    return false;
+  }
+  const from = absoluteUrl(fromUrl);
+  const to = absoluteUrl(url);
+  const isWayBack =
+    !running.walkHome && from === running.url && to === running.fromUrl;
+  // The door pressed a third time, while the way back is still being walked:
+  // the pictures turn round once more, where the last press left them, rather
+  // than a fresh movement starting over them.
+  const isWayInAgain =
+    running.walkHome && from === running.fromUrl && to === running.url;
+  if (!isWayBack && !isWayInAgain) {
+    return false;
+  }
+  const animations = viewTransitionAnimations();
+  if (isWayInAgain) {
+    // The token is dropped first: the walk it stands for is the one that must
+    // not arrive anywhere anymore, and its promise is still pending.
+    running.walkHome = null;
+    walkPicturesOn(animations, LEAD_NAMES);
+    // The pages stay held. The pictures are going to the state they were going
+    // to all along, which is the one the DOM has held since the way back began
+    // — what must not land under them is the render the way back queued. The
+    // hold is given back when the movement ends (see end).
+    return true;
+  }
+  if (!walkPicturesHome(animations, LEAD_NAMES)) {
+    // The pictures do not exist yet: the movement was asked for a frame ago and
+    // the browser has not taken them. There is nothing to turn round, and this
+    // navigation gets a movement of its own — which skips the one that never
+    // played, and nothing was on screen to teleport.
+    return false;
+  }
+  // Which walk home this is, so the one that arrives is the one still wanted: a
+  // walk turned round mid-way leaves a promise nobody cancelled, and it settles
+  // when the pictures reach the far end.
+  const walkHome = {};
+  running.walkHome = walkHome;
+  // The pages are held where they are until the pictures are home. The picture
+  // of the state ARRIVING is live — it is the element being drawn, not a
+  // photograph of it — so a page put back under it while it is still on screen
+  // shows on BOTH sides of the movement, and the way back is watched happening
+  // to nothing.
+  const releaseRendering = takeoverRoutingRenderingHold();
+  running.releaseReverting = releaseRendering;
+  whenPicturesArrived(animations).then(() => {
+    if (currentTransition !== running || running.walkHome !== walkHome) {
+      // Turned round again on the way home, or replaced by another movement
+      // altogether: whoever did that owns the pictures now.
+      return;
+    }
+    running.walkHome = null;
+    running.releaseReverting = null;
+    // The state goes back UNDER the pictures before they are dropped, so the
+    // two are the same thing at the instant they are swapped.
+    releaseRendering();
+    running.viewTransition.skipTransition();
+  });
+  return true;
+};
+
+// Null rather than a url built out of nothing: two crossings that both failed
+// to say where they went must not look like each other's way back.
+const absoluteUrl = (url) =>
+  url ? new URL(url, window.location.href).href : null;
 
 // A transition skipped by another one starting is an outcome, not a failure.
 const ignoreSkipped = () => {};

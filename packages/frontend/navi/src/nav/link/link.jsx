@@ -20,6 +20,7 @@ import { Icon, markAsOutsideTextFlow, Text } from "../../text/text.jsx";
 import { useDocumentUrl } from "../browser_integration/document_url_signal.js";
 import { getHrefTargetInfo } from "../browser_integration/href_target_info.js";
 import { LINK_REPLACE_ATTRIBUTE } from "../browser_integration/link_replace.js";
+import { PRESSABLE_ATTRIBUTE } from "../transition_press.js";
 import { useIsVisited } from "../browser_integration/use_is_visited.js";
 import { BinderItemContext } from "../binder/binder_context.js";
 import { NavContext } from "./nav_context.js";
@@ -531,6 +532,16 @@ Object.assign(PSEUDO_CLASSES, {
  *   the pair's movement and only turns it round, which is what the rare way
  *   round a pair usually needs. Said nowhere else, the relations answer as
  *   they always do.
+ * @param {boolean} [props.pressableDuringRouteTransition] - Keep answering
+ *   presses while a route transition plays. Everything a movement photographs
+ *   goes deaf to the pointer for its whole length — a captured element is not
+ *   painted where it stands, so nothing hit-tests to it — which is right for
+ *   the pages and wrong for the door that opened them: a control in a bar the
+ *   two states share is standing exactly where its picture is drawn, and a
+ *   press on it is aimed at what the reader can see. Say it there, and only
+ *   there: a control that TRAVELS with the pages has a rectangle where it will
+ *   be, not where it is seen, and a press handed to it fires something nobody
+ *   aimed at.
  * @param {boolean} [props.replace] - Go to the destination by TAKING THE PLACE
  *   of the current history entry instead of stacking onto it: the link stays a
  *   link (an address, a middle click, the keyboard, `aria-current`), only the
@@ -641,6 +652,7 @@ const LinkPlain = (props) => {
     revealOnInteraction = false,
     hrefFallback = !anchor,
     routeTransition,
+    pressableDuringRouteTransition,
     replace,
 
     children,
@@ -830,8 +842,12 @@ const LinkPlain = (props) => {
       endIcon={undefined}
       hrefFallback={undefined}
       routeTransition={undefined}
+      pressableDuringRouteTransition={undefined}
       replace={undefined}
       data-navi-route-transition-request={routeTransitionRequest}
+      {...(pressableDuringRouteTransition
+        ? { [PRESSABLE_ATTRIBUTE]: "" }
+        : null)}
       {...replaceRequest}
       // The control's own handlers first — the interaction gate, the caller's
       // onClick/onKeyDown, the command and the action — then what only a link

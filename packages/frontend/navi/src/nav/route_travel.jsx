@@ -78,6 +78,16 @@ import {
   ensureDocumentStartViewTransition,
   holdViewTransition,
 } from "../transition/start_view_transition_polyfill.js";
+import {
+  findLeadAnimation,
+  viewTransitionAnimations,
+  walkPicturesHome,
+  whenPicturesArrived,
+} from "../transition/view_transition_revert.js";
+
+// The pictures carrying a travel, among everything else the movement takes
+// along (see findLeadAnimation).
+const TRAVEL_LEAD_NAMES = ["navi-route-travel"];
 
 // A browser with no view transitions of its own has no picture of the page
 // being left, so there is nothing to drag: the gesture is still read (it is how
@@ -867,37 +877,9 @@ export const RouteTravel = ({
     // may go on rendering, and a tab row beside the box keeps answering.
     const releaseRendering = freezeRouteRender();
     const animations = travelAnimations(travel);
-    // The way back is paid for in DISTANCE, not in time. The way in is eased:
-    // at half of its TIME the pictures have covered ~80% of their distance, so
-    // a travel caught "half-way" by the eye has barely begun by the clock.
-    // Rewound at -1 it plays those few milliseconds back through the steep end
-    // of the curve — nearly the whole visible distance collapses into two
-    // frames, and what one sees is a snap, not a return. So the pictures are
-    // walked home over `how far they LOOK from home`, at the travel's own
-    // pace, each animation at the rate that gets it there in that time.
-    const wallTime = revertWalkTime(animations);
-    for (const animation of animations) {
-      const timeLeft = animation.currentTime;
-      const rate = wallTime > 17 && timeLeft > 0 ? -(timeLeft / wallTime) : -1;
-      // updatePlaybackRate, never the playbackRate setter: these animations
-      // run on the compositor, and the setter is a non-seamless change there —
-      // on screen the pictures jump straight to their end state while the
-      // Animation object ticks backwards unseen. What one sees then is the
-      // travel SNAPPING home instead of returning, and no reading of
-      // getAnimations() will say so: only the compositor knows, and
-      // updatePlaybackRate is how a new rate is handed to it in flight.
-      animation.updatePlaybackRate(rate);
-    }
+    walkPicturesHome(animations, TRAVEL_LEAD_NAMES);
     releaseHold(travel);
-    const backAtTheStart = animations.length
-      ? Promise.all(
-          animations.map((animation) => animation.finished.catch(() => {})),
-        )
-      : // Nothing to run backwards — a transition the browser skipped, or one
-        // that never became ready. There is no picture to undo either, so the
-        // way back is the state alone.
-        Promise.resolve();
-    backAtTheStart.then(async () => {
+    whenPicturesArrived(animations).then(async () => {
       try {
         pageAskedForRef.current = travel.fromPage;
         // The page that was left is put back UNDER the picture before the
@@ -1435,13 +1417,7 @@ const travelAnimations = (travel) => {
   if (travel.animations) {
     return travel.animations;
   }
-  const animations = [];
-  for (const animation of document.getAnimations()) {
-    const pseudoElement = animation.effect?.pseudoElement;
-    if (pseudoElement && pseudoElement.startsWith("::view-transition")) {
-      animations.push(animation);
-    }
-  }
+  const animations = viewTransitionAnimations();
   if (animations.length) {
     travel.animations = animations;
   }
@@ -1453,15 +1429,8 @@ const travelAnimations = (travel) => {
 // reaching for it must find it where it IS.
 const ratioOfTravel = (travel) => {
   const animations = travelAnimations(travel);
-  // The pages' own animation, not the first that comes: everything the travel
-  // carries along is animated too (a trait under a tab row, the page behind),
-  // each with a duration of its own. A time read on one of those and turned
-  // into a fraction of ANOTHER lands anywhere — over 1 more often than not,
-  // which reads as a travel already over and jumps the pictures to their end.
   const animation =
-    animations.find((candidate) =>
-      candidate.effect?.pseudoElement?.includes("navi-route-travel"),
-    ) || animations[0];
+    findLeadAnimation(animations, TRAVEL_LEAD_NAMES) || animations[0];
   if (!animation) {
     return travel.ratio;
   }
@@ -1471,56 +1440,6 @@ const ratioOfTravel = (travel) => {
     return travel.ratio;
   }
   return animation.currentTime / duration;
-};
-
-// CSS `ease`, evaluated: time in, distance out. Solved numerically because
-// the curve is parametric — two cubics sharing a parameter, with no closed
-// form for one against the other. Twenty halvings put the answer well under
-// a pixel of a screen-wide travel.
-const CSS_EASE = [0.25, 0.1, 0.25, 1];
-const bezierAxis = (s, a, b) =>
-  3 * (1 - s) * (1 - s) * s * a + 3 * (1 - s) * s * s * b + s * s * s;
-const easedProgress = (x, [x1, y1, x2, y2]) => {
-  let low = 0;
-  let high = 1;
-  for (let i = 0; i < 20; i++) {
-    const mid = (low + high) / 2;
-    if (bezierAxis(mid, x1, x2) < x) {
-      low = mid;
-    } else {
-      high = mid;
-    }
-  }
-  return bezierAxis((low + high) / 2, y1, y2);
-};
-
-// How long the way back should take: the distance the pictures visibly are
-// from home, converted to time at the travel's own pace. The distance is
-// computed from the clock THROUGH the easing curve, never read off the
-// pseudo-elements: getComputedStyle on them answers with the un-animated
-// value — the animated one lives on the compositor, where no reading from
-// here reaches (the same trap as the playbackRate setter above).
-const revertWalkTime = (animations) => {
-  const animation = animations.find((candidate) =>
-    candidate.effect?.pseudoElement?.includes("navi-route-travel"),
-  );
-  if (!animation) {
-    return 0;
-  }
-  const timing = animation.effect.getComputedTiming();
-  const duration = timing.delay + timing.activeDuration;
-  if (!duration) {
-    return 0;
-  }
-  const temporal = animation.currentTime / duration;
-  // The easing sits on the keyframes, where a CSS animation's
-  // animation-timing-function ends up. "ease" is what our travels play;
-  // anything else (linear under a finger, see the DRAGGED attribute) maps
-  // time to distance one for one.
-  const easing = animation.effect.getKeyframes()[0]?.easing;
-  const visibleRatio =
-    easing === "ease" ? easedProgress(temporal, CSS_EASE) : temporal;
-  return visibleRatio * duration;
 };
 
 // Where the two pictures stand, said as a moment in the movement they would

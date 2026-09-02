@@ -5,6 +5,7 @@ import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
 import { useDocumentUrl } from "../../nav/browser_integration/document_url_signal.js";
 import { getHrefTargetInfo } from "../../nav/browser_integration/href_target_info.js";
 import { LINK_REPLACE_ATTRIBUTE } from "../../nav/browser_integration/link_replace.js";
+import { PRESSABLE_ATTRIBUTE } from "../../nav/transition_press.js";
 import { Text, markAsOutsideTextFlow } from "../../text/text.jsx";
 import { useAccentColorAttributes } from "../../utils/use_accent_color_attributes.js";
 import { ControlChildrenWrapper, useControlProps } from "../control_hooks.jsx";
@@ -472,6 +473,7 @@ export const ButtonUI = (props) => {
     target,
     rel,
     replace,
+    pressableDuringRouteTransition,
 
     // visual
     variant,
@@ -526,6 +528,12 @@ export const ButtonUI = (props) => {
   // anchor by the click handler, off the source by --navi-nav-to.
   const replaceRequest = replace ? { [LINK_REPLACE_ATTRIBUTE]: "" } : null;
 
+  // Worn as an attribute too, and read at the document by whoever catches the
+  // press a movement would have swallowed (see transition_press.js).
+  const pressableRequest = pressableDuringRouteTransition
+    ? { [PRESSABLE_ATTRIBUTE]: "" }
+    : null;
+
   const visualSelector = ".navi_button_content";
   useAccentColorAttributes(ref, null, {
     elementSelector: visualSelector,
@@ -554,6 +562,8 @@ export const ButtonUI = (props) => {
       rel={innerRel}
       replace={undefined}
       {...replaceRequest}
+      pressableDuringRouteTransition={undefined}
+      {...pressableRequest}
       // Respond with the JS prop value directly so callers (e.g. resolveCommandValue)
       // get the original type instead of the DOM-coerced string (e.g. "[object Object]").
       onnavi_get_value={(e) => {

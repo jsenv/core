@@ -63,6 +63,7 @@
         defineRouteTransition,
         route,
         setupRoutes,
+        useRouteStatus,
       } from "@jsenv/navi";
 
       const ME_ROUTE = route("/me");
@@ -77,7 +78,10 @@
       // n'importe quelle page et on les referme sur celle qu'on lisait. Aucune
       // paire à écrire — le `from` est laissé de côté, et la moitié "retour"
       // joue pour le bouton fermer comme pour celui du navigateur.
-      defineRouteTransition(null, REGLAGES_ROUTE, "cover-top");
+      defineRouteTransition(null, REGLAGES_ROUTE, {
+        type: "cover-top",
+        duration: 900,
+      });
 
       // Les liens sont répétés tous les cinq rangs: on part — et on revient —
       // depuis n'importe quelle position de défilement, ce qui est la seule
@@ -184,6 +188,34 @@
         />
       );
 
+      // La roue ouvre les réglages et les referme: un seul bouton, deux
+      // moitiés. Pendant la descente de la feuille, la barre du haut est une
+      // photo — ce que la roue demande avec pressableDuringRouteTransition,
+      // c'est de répondre quand même à un appui qui la vise.
+      const ReglagesDoor = () => {
+        const { matching } = useRouteStatus(REGLAGES_ROUTE);
+        if (matching) {
+          return (
+            <Button
+              command="--navi-nav-back:/me"
+              pressableDuringRouteTransition
+              data-testid="reglages_door"
+            >
+              ✕ Réglages
+            </Button>
+          );
+        }
+        return (
+          <Link
+            route={REGLAGES_ROUTE}
+            pressableDuringRouteTransition
+            data-testid="reglages_door"
+          >
+            ⚙ Réglages
+          </Link>
+        );
+      };
+
       const AppIndex = () => {
         useLayoutEffect(() => {
           ME_ROUTE.redirectTo();
@@ -196,9 +228,7 @@
           <FixedBar area="top" height="56">
             <div className="bar_content">
               Barre du haut
-              <Link route={REGLAGES_ROUTE} data-testid="reglages_link">
-                ⚙ Réglages
-              </Link>
+              <ReglagesDoor />
             </div>
           </FixedBar>
           <RouteTransitionArea>
