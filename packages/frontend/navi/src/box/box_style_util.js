@@ -767,9 +767,15 @@ export const getHowToHandleStyleProp = (name) => {
   }
   return getStyle;
 };
-export const prepareStyleValue = (existingValue, value, name, styleContext) => {
+// The css value `name` would take, written in the scale that style is read in:
+// "s" on a spacing style is a length, "s" on a typo style is a font size, and a
+// bare number gets the unit the style expects.
+export const stringifyStyleValue = (value, name, styleContext) => {
   const stringifier = getStringifier(name);
-  const cssValue = stringifier(value, name, styleContext);
+  return stringifier(value, name, styleContext);
+};
+export const prepareStyleValue = (existingValue, value, name, styleContext) => {
+  const cssValue = stringifyStyleValue(value, name, styleContext);
   const mergedValue = mergeOneStyle(existingValue, cssValue, name, "css");
   return mergedValue;
 };

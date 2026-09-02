@@ -69,8 +69,11 @@ import { BoxFlowContext } from "./box_flow_context.jsx";
 import {
   getHowToHandleStyleProp,
   getVisualChildStylePropStrategy,
+  isSizeSpacingKey,
   isStyleProp,
   prepareStyleValue,
+  stringifySpacingStyle,
+  stringifyStyleValue,
 } from "./box_style_util.js";
 import { getDefaultDisplay } from "./display_defaults.js";
 import {
@@ -370,6 +373,15 @@ import.meta.css = /* css */ `
 const PSEUDO_CLASSES_DEFAULT = [];
 const PSEUDO_ELEMENTS_DEFAULT = [];
 const STYLE_CSS_VARS_DEFAULT = {};
+// An entry of styleCSSVars is the css variable the prop writes into, alone when
+// the prop is named after a css style — Box then already knows how to read its
+// value — or paired with the style whose values it borrows when it is not.
+const readCSSVarEntry = (entry) => {
+  if (Array.isArray(entry)) {
+    return entry;
+  }
+  return [entry, null];
+};
 // When only pseudoStateSelector is set (no visualSelector), the box owns its
 // visual identity. Only event handlers and these explicit props are forwarded
 // to the inner semantic/interactive child element.
@@ -380,7 +392,7 @@ const PSEUDO_STATE_CHILD_PROP_SET = new Set(["tabIndex", "tabindex"]);
  *   as?: string,
  *   className?: string,
  *   style?: import("preact").JSX.CSSProperties & { [pseudo: string]: import("preact").JSX.CSSProperties },
- *   styleCSSVars?: { [stylePropName: string]: string },
+ *   styleCSSVars?: { [propName: string]: string | [string, string] },
  *   inline?: boolean,
  *   block?: boolean,
  *   flex?: "x" | "y" | boolean,
@@ -759,7 +771,7 @@ const computeBox = (props, parentBoxFlow) => {
         name,
         styleContext,
       );
-      const cssVar = styleContext.styleCSSVars[name];
+      const [cssVar] = readCSSVarEntry(styleContext.styleCSSVars[name]);
       if (cssVar) {
         addCSSVar(mergedValue, cssVar, stylesTarget);
         if (name === "borderRadius" && value === "inherit") {
@@ -923,10 +935,22 @@ const computeBox = (props, parentBoxFlow) => {
         }
         return;
       }
-      const cssVarName = styleCSSVars[name];
-      if (cssVarName) {
+      const cssVarEntry = styleCSSVars[name];
+      if (cssVarEntry) {
         if (value !== undefined) {
-          addCSSVar(value, cssVarName, boxStylesTarget);
+          const [cssVarName, valueStyleName] = readCSSVarEntry(cssVarEntry);
+          const cssValue = valueStyleName
+            ? stringifyStyleValue(value, valueStyleName, styleContext)
+            : value;
+          if (isSizeSpacingKey(cssValue)) {
+            // A size keyword reaching a custom property stays that word: every
+            // declaration reading the variable is then invalid, drops back to
+            // its initial value, and says nothing about it.
+            console.warn(
+              `"${name}" cannot take the size keyword "${cssValue}": it goes into ${cssVarName} as-is, which makes every declaration reading that variable invalid. Pass "${stringifySpacingStyle(cssValue)}" instead.`,
+            );
+          }
+          addCSSVar(cssValue, cssVarName, boxStylesTarget);
         }
         return;
       }
