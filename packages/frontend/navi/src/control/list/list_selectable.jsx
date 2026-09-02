@@ -289,11 +289,24 @@ const ListSelectable = (props) => {
     return kept;
   };
   const [listControlRootProps, listControlProps, childrenWrapperProps] =
-    useControlgroupProps(props, {
-      stateType: multiple ? "array" : "",
-      controlType: multiple ? "checkbox_group" : "radio_group",
-      aggregateChildStates,
-    });
+    useControlgroupProps(
+      {
+        // The defaults of the group this IS (see CheckboxGroup / RadioGroup):
+        // what a selectable list shows is a claim about what was accepted, so
+        // a run that ends without an answer puts the rows back where they were
+        // — a row left ticked over a refusal says the opposite of what
+        // happened, and the error callout beside it does not untick it.
+        resetOnCancel: true,
+        resetOnAbort: true,
+        resetOnError: true,
+        ...props,
+      },
+      {
+        stateType: multiple ? "array" : "",
+        controlType: multiple ? "checkbox_group" : "radio_group",
+        aggregateChildStates,
+      },
+    );
   const uiGroupStateController = getUIStateControllerById(listControlProps.id);
   useFocusGroup(ref, {
     direction: focusGroupDirection,

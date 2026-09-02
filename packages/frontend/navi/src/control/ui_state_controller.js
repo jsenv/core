@@ -1303,7 +1303,7 @@ export const useUIGroupStateController = (
               { except: actingChild },
             );
           }
-          applyState(groupUIState, e);
+          applyState(groupUIState, e, { actingChild });
         } else if (notifyExternal === "silent") {
           controller.syncInternalState(groupUIState);
           s.parentUIStateController?.onChildUIAction(controller, e, {
@@ -1357,7 +1357,11 @@ export const useUIGroupStateController = (
         childUIStateController.setUIState(childNewState, e);
       };
 
-      const applyState = (newUIState, e, { internalBehavior = false } = {}) => {
+      const applyState = (
+        newUIState,
+        e,
+        { internalBehavior = false, actingChild } = {},
+      ) => {
         const { controller } = s;
         const currentUIState = controller.uiState;
         controller.uiState = newUIState;
@@ -1378,7 +1382,10 @@ export const useUIGroupStateController = (
         s.parentUIStateController?.onChildUIAction(controller, e, {
           stateChanged: true,
         });
-        controller.onUIAction(e, { skipCommand: internalBehavior });
+        controller.onUIAction(e, {
+          skipCommand: internalBehavior,
+          actingChild,
+        });
         const el = controller.ref.current;
         if (el) {
           dispatchInternalCustomEvent(el, "navi_ui_state_change", {
@@ -1517,7 +1524,7 @@ export const useUIGroupStateController = (
           uiStateSignal.value = newUIState;
           publishUIState(newUIState);
         },
-        onUIAction: (e, { skipCommand } = {}) => {
+        onUIAction: (e, { skipCommand, actingChild } = {}) => {
           const currentUIState = controller.uiState;
           // The same write applyState/onChange make (see writeBoundSignal), for
           // the case where the state did not move but the user acted all the
@@ -1531,7 +1538,14 @@ export const useUIGroupStateController = (
           if (!skipCommand && controller.props.command) {
             const el = controller.ref.current;
             if (el) {
-              triggerNaviCommand(el, controller.props.command, e);
+              // The command is the GROUP's — what it aims at is read around the
+              // group, not around the child — but the child is who asked, and a
+              // refusal is drawn on whoever asked (see triggerNaviCommand's
+              // `requester`). Without it a list refusing a name says so at its
+              // own foot, rows away from the name that was touched.
+              triggerNaviCommand(el, controller.props.command, e, {
+                requester: actingChild?.ref.current,
+              });
             }
           }
         },
@@ -1626,7 +1640,7 @@ export const useUIGroupStateController = (
               actingChild: childUIStateController,
             });
           } else {
-            controller.onUIAction(e);
+            controller.onUIAction(e, { actingChild: childUIStateController });
           }
         },
         unregisterChild: (childUIStateController) => {

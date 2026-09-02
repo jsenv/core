@@ -72,6 +72,12 @@ import {
  * @param {Element} [options.anchor] Where a popup this opens should be placed,
  *   when that is not the element asking: a menu opened by a press belongs at the
  *   point the press happened, and the row that was pressed is not that point.
+ * @param {Element} [options.requester] Who asked, when that is not the source.
+ *   A group triggers its own command from itself — what the command aims at is
+ *   read around the group, not around the child — while the gesture was on one
+ *   of its children, and what a refusal is about is that child. Same role as
+ *   the submit button a form's send names: the action belongs to the control,
+ *   the answer is drawn on whoever asked for it.
  */
 export const triggerNaviCommand = (element, command, event, options) => {
   const run = resolveNaviCommand(element, command, event, options);
@@ -102,7 +108,7 @@ export const resolveNaviCommand = (
   element,
   command,
   event,
-  { optional, value, anchor } = {},
+  { optional, value, anchor, requester } = {},
 ) => {
   if (!event) {
     throw new Error(
@@ -131,6 +137,7 @@ export const resolveNaviCommand = (
     // source: the attribute form has a `value` to read (`<Button value={id}>`),
     // a JS decision has none, and both must be able to say the same thing.
     value,
+    requester,
   });
   if (!execute) {
     if (optional) {
@@ -332,7 +339,8 @@ export const onNaviCommand = (e, { debugCommand = () => {} } = {}) => {
 };
 
 const NAVI_COMMANDS = {};
-// commandHandler(source, event) → { target, implementation } | undefined
+// commandHandler(source, event, { argument, anchor, value, requester })
+//   → { target, implementation } | undefined
 // - Each handler calls resolveExplicitTarget(source) first, then falls back to
 //   its own DOM resolution logic (closest expandable, parent control, etc.).
 // - Returns undefined when no target can be found — this is a normal outcome for
@@ -571,7 +579,7 @@ const resolveAfterSend = (target, requester) => {
   return undefined;
 };
 
-registerNaviCommand("--navi-send", (source, event) => {
+registerNaviCommand("--navi-send", (source, event, { requester }) => {
   const expandable = resolveExpandableAround(source);
   const target =
     resolveExplicitTarget(source) ||
@@ -614,14 +622,21 @@ registerNaviCommand("--navi-send", (source, event) => {
   return {
     target,
     implementation: () => {
-      let requester = source;
-      if (!source.matches(submitSelector)) {
-        // When present, use the first submit button as the requester, not the input.
-        // This aligns with browser behavior where Enter in a text input triggers
-        // the first submit button of the form, not the input itself.
-        const firstButtonSubmitting = target.querySelector(submitSelector);
-        if (firstButtonSubmitting) {
-          requester = firstButtonSubmitting;
+      // Who asked, taken from whoever triggered the command when it said so —
+      // a group sends from itself and names the child the gesture was on (see
+      // triggerNaviCommand's `requester`). Named means named: the stand-in
+      // below is for a source nobody spoke for.
+      let sendRequester = requester;
+      if (!sendRequester) {
+        sendRequester = source;
+        if (!source.matches(submitSelector)) {
+          // When present, use the first submit button as the requester, not the input.
+          // This aligns with browser behavior where Enter in a text input triggers
+          // the first submit button of the form, not the input itself.
+          const firstButtonSubmitting = target.querySelector(submitSelector);
+          if (firstButtonSubmitting) {
+            sendRequester = firstButtonSubmitting;
+          }
         }
       }
       // Nothing is committed when a constraint fails, so nothing is decided
@@ -635,7 +650,7 @@ registerNaviCommand("--navi-send", (source, event) => {
       // from the response writes it on the form while it runs
       // (data-after-send), and this is what picks it up.
       const runAfterSend = () => {
-        const afterSend = resolveAfterSend(target, requester);
+        const afterSend = resolveAfterSend(target, sendRequester);
         if (!afterSend) {
           return;
         }
@@ -670,7 +685,7 @@ registerNaviCommand("--navi-send", (source, event) => {
               initiator.preventDefault();
             }
           },
-          requester,
+          requester: sendRequester,
         }),
       );
       if (sent === false || invalid) {

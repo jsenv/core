@@ -65,9 +65,10 @@ export const useExecuteAction = (
   }, [error]);
 
   const addErrorMessage = (error, { requester } = {}) => {
-    // The error is stored on the element that owns the action (the form/element itself).
-    // The requester (e.g. submit button) is stored as the callout display target
-    // so the validation message appears on the button, not the form.
+    // The error is stored on the element that owns the action (the form/element
+    // itself). The requester — the submit button that sent, the row of a list
+    // whose command sent — is stored as the callout display target, so the
+    // message appears on whoever asked rather than on the whole control.
     const element = elementRef.current;
     let target = requester;
     // A requester that is no longer on the page is not a place to show
@@ -106,7 +107,7 @@ export const useExecuteAction = (
     }
     const controller = element.__uiStateController__;
     if (controller) {
-      setActionError(controller, message, { requester, target });
+      setActionError(controller, message, { target });
     }
   };
   const removeErrorMessage = () => {
