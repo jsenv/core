@@ -17,6 +17,7 @@ import {
   getElementSignature,
   getKeyboardEventDefaultAction,
 } from "@jsenv/dom";
+import { computed, signal } from "@preact/signals";
 import {
   useCallback,
   useContext,
@@ -133,7 +134,7 @@ export const ControlgroupChildrenWrapper = ({
   readOnly,
   loading,
   boundAction,
-  actionRequester,
+  actionRequesterSignal,
 }) => (
   <MessagePropsRefContext.Provider value={undefined}>
     <ControlIdContext.Provider value={undefined}>
@@ -144,7 +145,9 @@ export const ControlgroupChildrenWrapper = ({
               <RequiredContext.Provider value={required}>
                 <LoadingContext.Provider value={loading}>
                   <ActionContext.Provider value={boundAction}>
-                    <ActionRequesterContext.Provider value={actionRequester}>
+                    <ActionRequesterContext.Provider
+                      value={actionRequesterSignal}
+                    >
                       {children}
                     </ActionRequesterContext.Provider>
                   </ActionContext.Provider>
@@ -1359,7 +1362,19 @@ export const useControlgroupProps = (
     props.readOnly = true;
   }
 
-  const [actionRequester, setActionRequester] = useState();
+  // Who pressed for the action the group is running, held in a SIGNAL and not
+  // in render state: every control in the group reads it (to wear the group's
+  // busy state when it is the one that asked), so as a plain context value a
+  // new requester would force-re-render every one of them — a click on one row
+  // of a selectable list re-rendering the whole list. The signal keeps the
+  // context value stable; each control subscribes to its own "is it me"
+  // computed (see loadingFromParent below), so a requester change re-renders
+  // exactly the control it leaves and the one it lands on.
+  const actionRequesterSignalRef = useRef(null);
+  if (actionRequesterSignalRef.current === null) {
+    actionRequesterSignalRef.current = signal(undefined);
+  }
+  const actionRequesterSignal = actionRequesterSignalRef.current;
   const [controlRootProps, controlgroupProps] = useInteractiveProps(props, {
     uiStateController: uiGroupStateController,
     boundAction,
@@ -1382,7 +1397,7 @@ export const useControlgroupProps = (
       readOnly,
       loading,
       boundAction,
-      actionRequester,
+      actionRequesterSignal,
     }),
     [
       uiGroupStateController,
@@ -1392,7 +1407,7 @@ export const useControlgroupProps = (
       readOnly,
       loading,
       boundAction,
-      actionRequester,
+      actionRequesterSignal,
     ],
   );
 
@@ -1407,7 +1422,7 @@ export const useControlgroupProps = (
       // any element wears: a <fieldset maxlength> means nothing.
       "maxLength": undefined,
       "onnavi_action_allowed": (e) => {
-        setActionRequester(e.detail.requester);
+        actionRequesterSignal.value = e.detail.requester;
         controlgroupProps.onnavi_action_allowed(e);
       },
       "navi-control-group": "",
@@ -1561,7 +1576,19 @@ const useInteractiveProps = (
     const controlReadOnlyFromAbove = useContext(ReadOnlyContext);
     const controlRequired = useContext(RequiredContext);
     const controlLoadingFromAbove = useContext(LoadingContext);
-    const parentActionRequester = useContext(ActionRequesterContext);
+    // A SIGNAL holding the element whose press the group's action is wearing
+    // (see useControlgroupProps). Subscribed to through a per-control computed
+    // rather than read raw: `.value` read here directly would re-render every
+    // control of the group on each new requester — the computed's boolean only
+    // changes for the control the requester leaves and the one it lands on.
+    const parentActionRequesterSignal = useContext(ActionRequesterContext);
+    const isActionRequesterComputed = useMemo(
+      () =>
+        parentActionRequesterSignal
+          ? computed(() => parentActionRequesterSignal.value === ref.current)
+          : null,
+      [parentActionRequesterSignal],
+    );
     const parallelGuard = useContext(ParallelGuardContext);
     const parentAction = useContext(ActionContext);
     const actionStatus = useActionStatus(boundAction);
@@ -1584,7 +1611,7 @@ const useInteractiveProps = (
     // for (a submit button wearing its form's submission), as opposed to busy
     // on its own say-so.
     const loadingFromParent = Boolean(
-      controlLoading && parentActionRequester === ref.current,
+      controlLoading && isActionRequesterComputed?.value,
     );
     const loadingBase = loading || loadingFromParent;
     // Read-only because the selection above guards its length

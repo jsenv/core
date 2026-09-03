@@ -14170,24 +14170,6 @@ const WHEEL_FADE_RUN = 2;
 // but to the hand these are two gestures, and the second is answered like a
 // first event: with a screen, now, not with credit towards one.
 const WHEEL_REGROW_RUN = 2;
-// A hand scrolling the OTHER axis over that same tail is a new gesture too,
-// and one that is not ours — but it has to be told apart from the tail's own
-// wobble: at the end of a fade the deltas are a pixel or two on each axis, and
-// read alone such an event says "the other axis" as easily as it says nothing.
-// Three things separate a scroll from those crumbs, and all three are asked
-// for before an event is handed back:
-// - the other axis clearly dominates the event (the same bar a drag uses to
-//   give up its press) — a diagonal crumb says nothing;
-// - the event is the size of a hand (WHEEL_CROSS_CONFIRM_DELTA — crumbs never
-//   reach it), or the run is GROWING event over event, which is a scroll
-//   ramping up from rest and never what decay looks like;
-// - and it is a RUN (one more event for the growing read, which starts from
-//   sizes a crumb also has): wobble is isolated, a scroll insists.
-// What the run costs a real scroll is its first event or two — a few pixels,
-// one notch of a stepped wheel; what it saves a slide is its own scroller
-// creeping under a travel, a header detaching from the edge of the box.
-const WHEEL_CROSS_RUN = 2;
-const WHEEL_CROSS_CONFIRM_DELTA = 10;
 
 /**
  * A travel asked for with a wheel, and it asks for a WHOLE ONE.
@@ -14333,65 +14315,39 @@ const watchWheelTravel = (element, {
         lastMagnitude: 0,
         fadeRun: 0,
         growRun: 0,
-        crossRun: 0,
-        crossMagnitude: 0,
-        crossHandedBack: false,
         faded: false,
         stepped: false
       };
       document.documentElement.setAttribute(GESTURE_ATTRIBUTE, "");
       document.documentElement.setAttribute(WALKING_ATTRIBUTE, axis);
     }
-    // The other axis, on a stream that is momentum only: a hand is never
-    // perfectly straight, so cross-axis events WITHIN a push are the push's own
-    // wobble and are swallowed below — but once our axis has faded to a tail,
-    // a hand pushing the other way is a NEW gesture, and on an axis this box
-    // does not travel it is not ours at all: it belongs to whatever scrolls
-    // under the pointer, and it is handed back untouched. Not swallowed, and
-    // not renewing the claim either — an ignored scroll must not keep alive
-    // the very gesture that ignores it, while the tail of ours goes on being
-    // absorbed by the events still on our axis. Only a scroll is handed back,
-    // though, never the tail's own wobble — see WHEEL_CROSS_RUN.
-    if (axis !== gesture.axis && gesture.faded && !axes.includes(axis)) {
-      if (gesture.crossHandedBack) {
-        // Already recognized as a scroll: the whole rest of it is its own.
-        return;
-      }
-      const ownDelta = Math.abs(gesture.axis === "x" ? wheelEvent.deltaX : wheelEvent.deltaY);
-      const crossDelta = Math.abs(delta);
-      const dominant = crossDelta > ownDelta * AXIS_CROSS_DOMINANCE;
-      const handSized = crossDelta >= WHEEL_CROSS_CONFIRM_DELTA;
-      const growing = crossDelta > gesture.crossMagnitude;
-      if (dominant && (handSized || growing)) {
-        gesture.crossRun += 1;
-        gesture.crossMagnitude = crossDelta;
-        if (gesture.crossRun >= (handSized ? WHEEL_CROSS_RUN : WHEEL_CROSS_RUN + 1)) {
-          gesture.crossHandedBack = true;
-          return;
-        }
-      } else {
-        gesture.crossRun = 0;
-        gesture.crossMagnitude = 0;
-      }
-    }
     // Ours from here, on both axes: what the browser would do with the leftover
     // — scroll the page behind the box, bounce it, go back in history — is one
-    // gesture answered twice.
+    // gesture answered twice. On the other axis that swallowing is absolute —
+    // there is no per-event reading that tells a scroll's onset from the
+    // tail's own wobble (end-of-fade crumbs land on either axis, and a
+    // diagonal swipe's tail carries hand-sized deltas on both), and a crumb
+    // let through scrolls the slide's own content under the travel, a header
+    // creeping off the edge of the box.
     wheelEvent.preventDefault();
-    // …and said on every event of it, because a claim nobody renews is a
-    // gesture that is over: silence is the only end a wheel has.
+    if (axis !== gesture.axis) {
+      // The other axis mid-gesture: a hand is never perfectly straight, and the
+      // axis was decided when the gesture set off. Swallowed, but NOT renewing
+      // the claim below: silence is the only end a wheel gesture has, and it
+      // is silence ON ITS AXIS. Renewed by what it eats, the gesture would
+      // outlive its own stream — a hand starting a scroll over the tail would
+      // extend, event by event, the very deadness it is waiting out. Left to
+      // lapse, the claim dies shortly after our axis goes quiet (and on a
+      // system where touching the surface kills the old momentum, that is
+      // moments after the new scroll begins) — the browser then answers the
+      // rest of the scroll itself.
+      return;
+    }
+    // …and said on every event on our axis, because a claim nobody renews is a
+    // gesture that is over.
     claimWheelGesture(element, {
       onEnd: forgetGesture
     });
-    if (axis !== gesture.axis) {
-      // The other axis mid-gesture: a hand is never perfectly straight, and the
-      // axis was decided when the gesture set off.
-      return;
-    }
-    // Back on our axis: whatever cross-axis run was building was wobble.
-    gesture.crossRun = 0;
-    gesture.crossMagnitude = 0;
-    gesture.crossHandedBack = false;
     if (sign !== gesture.sign) {
       // Turned around: what was adding up was going the other way.
       gesture.sign = sign;

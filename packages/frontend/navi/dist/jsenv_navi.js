@@ -34356,6 +34356,15 @@ const useUIStateController = (
                 ) {
                   continue;
                 }
+                // Only the sibling that IS checked has anything to let go of.
+                // Asked anyway, an already-unchecked sibling still runs the
+                // tail of its own setUIState (uiAction and all) — and a group
+                // of N radios then pays N-1 of those on every selection, which
+                // is what made every row of a selectable list re-render per
+                // click.
+                if (siblingController.uiState === undefined) {
+                  continue;
+                }
                 siblingController.setUIState(undefined, siblingUncheckEvent);
               }
             }
@@ -36368,7 +36377,7 @@ const ControlgroupChildrenWrapper = ({
   readOnly,
   loading,
   boundAction,
-  actionRequester
+  actionRequesterSignal
 }) => jsx(MessagePropsRefContext.Provider, {
   value: undefined,
   children: jsx(ControlIdContext.Provider, {
@@ -36388,7 +36397,7 @@ const ControlgroupChildrenWrapper = ({
                 children: jsx(ActionContext.Provider, {
                   value: boundAction,
                   children: jsx(ActionRequesterContext.Provider, {
-                    value: actionRequester,
+                    value: actionRequesterSignal,
                     children: children
                   })
                 })
@@ -37480,7 +37489,20 @@ const useControlgroupProps = (props, {
   if (implicitReadOnly && !props.readOnly) {
     props.readOnly = true;
   }
-  const [actionRequester, setActionRequester] = useState();
+
+  // Who pressed for the action the group is running, held in a SIGNAL and not
+  // in render state: every control in the group reads it (to wear the group's
+  // busy state when it is the one that asked), so as a plain context value a
+  // new requester would force-re-render every one of them — a click on one row
+  // of a selectable list re-rendering the whole list. The signal keeps the
+  // context value stable; each control subscribes to its own "is it me"
+  // computed (see loadingFromParent below), so a requester change re-renders
+  // exactly the control it leaves and the one it lands on.
+  const actionRequesterSignalRef = useRef(null);
+  if (actionRequesterSignalRef.current === null) {
+    actionRequesterSignalRef.current = signal(undefined);
+  }
+  const actionRequesterSignal = actionRequesterSignalRef.current;
   const [controlRootProps, controlgroupProps] = useInteractiveProps(props, {
     uiStateController: uiGroupStateController,
     boundAction,
@@ -37504,8 +37526,8 @@ const useControlgroupProps = (props, {
     readOnly,
     loading,
     boundAction,
-    actionRequester
-  }), [uiGroupStateController, controlgroupProps.name, controlgroupProps.required, disabled, readOnly, loading, boundAction, actionRequester]);
+    actionRequesterSignal
+  }), [uiGroupStateController, controlgroupProps.name, controlgroupProps.required, disabled, readOnly, loading, boundAction, actionRequesterSignal]);
   return [controlRootProps, {
     ...controlgroupProps,
     "name": undefined,
@@ -37517,7 +37539,7 @@ const useControlgroupProps = (props, {
     // any element wears: a <fieldset maxlength> means nothing.
     "maxLength": undefined,
     "onnavi_action_allowed": e => {
-      setActionRequester(e.detail.requester);
+      actionRequesterSignal.value = e.detail.requester;
       controlgroupProps.onnavi_action_allowed(e);
     },
     "navi-control-group": ""
@@ -37680,7 +37702,13 @@ const useInteractiveProps = (props, {
     const controlReadOnlyFromAbove = useContext(ReadOnlyContext);
     const controlRequired = useContext(RequiredContext);
     const controlLoadingFromAbove = useContext(LoadingContext$1);
-    const parentActionRequester = useContext(ActionRequesterContext);
+    // A SIGNAL holding the element whose press the group's action is wearing
+    // (see useControlgroupProps). Subscribed to through a per-control computed
+    // rather than read raw: `.value` read here directly would re-render every
+    // control of the group on each new requester — the computed's boolean only
+    // changes for the control the requester leaves and the one it lands on.
+    const parentActionRequesterSignal = useContext(ActionRequesterContext);
+    const isActionRequesterComputed = useMemo(() => parentActionRequesterSignal ? computed(() => parentActionRequesterSignal.value === ref.current) : null, [parentActionRequesterSignal]);
     const parallelGuard = useContext(ParallelGuardContext);
     const parentAction = useContext(ActionContext);
     const actionStatus = useActionStatus(boundAction);
@@ -37707,7 +37735,7 @@ const useInteractiveProps = (props, {
     // Busy because the group above is running the action THIS control asked
     // for (a submit button wearing its form's submission), as opposed to busy
     // on its own say-so.
-    const loadingFromParent = Boolean(controlLoading && parentActionRequester === ref.current);
+    const loadingFromParent = Boolean(controlLoading && isActionRequesterComputed?.value);
     const loadingBase = loading || loadingFromParent;
     // Read-only because the selection above guards its length
     // (`maxLengthGuard`) and this one would make it longer: it can be pointed
@@ -42414,6 +42442,20 @@ const BETWEEN_TABS_ATTRIBUTE = "data-nav-between-tabs";
 // in pixels. A rough line, deliberately: nothing here needs to agree with a
 // paragraph, only to move the row about as far as a notch moves a page.
 const WHEEL_LINE_SIZE = 16;
+
+// The animation a slide container puts on this row to bring the travel's
+// progress home (see animateTravelProgress in slide_container.jsx) — the cheap
+// source of that number while a travel plays (see syncTabScroll). Its starting
+// value is read off the keyframes here, once: the frame loop only ever asks
+// the animation how far along it is.
+const rememberProgressAnimation = (navElement, travel) => {
+  const animation = navElement.getAnimations().find(candidate => {
+    const keyframes = candidate.effect?.getKeyframes?.();
+    return keyframes?.[0] && "--slide-travel-progress" in keyframes[0];
+  });
+  travel.progressAnimation = animation;
+  travel.progressFrom = animation ? parseFloat(animation.effect.getKeyframes()[0]["--slide-travel-progress"]) || 0 : 0;
+};
 const css$W = /* css */`@layer navi {
   .navi_nav {
     --nav-border: none;
@@ -42740,8 +42782,27 @@ const Nav = ({
     if (currentIndex === -1) {
       // On a slide no tab in this row names: there is no tab to sit under.
       navElement.removeAttribute("data-nav-indicator-measured");
+      indicatorPaintedForRef.current = null;
       return;
     }
+    // Everything below is measured off the DOM (offsets force a layout, the
+    // colours a style resolve), and what it depends on is exactly two facts:
+    // which tab is current and which one the travel leans toward. A travel
+    // announces its state several times between those two changing — painted
+    // each time, the same measurement is paid again on frames the travel is
+    // drawn on. The size observer clears the memo, since the same pair on a
+    // resized row measures differently.
+    const towardAreaNow = containerElement.getAttribute("data-slide-travel-toward");
+    const paintedFor = indicatorPaintedForRef.current;
+    if (paintedFor && paintedFor.currentTabElement === tabElements[currentIndex] && paintedFor.towardArea === towardAreaNow && paintedFor.tabCount === tabElements.length && paintedFor.vertical === vertical) {
+      return;
+    }
+    indicatorPaintedForRef.current = {
+      currentTabElement: tabElements[currentIndex],
+      towardArea: towardAreaNow,
+      tabCount: tabElements.length,
+      vertical
+    };
     const measure = tabElement => vertical ? {
       position: tabElement.offsetTop,
       length: tabElement.offsetHeight
@@ -42763,7 +42824,7 @@ const Nav = ({
       }
     };
     const currentMeasure = measure(tabElements[currentIndex]);
-    const towardArea = containerElement.getAttribute("data-slide-travel-toward");
+    const towardArea = towardAreaNow;
     const towardIndex = tabElements.findIndex(tabElement => areaOf(tabElement) === towardArea);
     let positionDelta = 0;
     let lengthDelta = 0;
@@ -42799,6 +42860,9 @@ const Nav = ({
   // about the row as it is now.
   const paintIndicatorGeometryRef = useRef(null);
   paintIndicatorGeometryRef.current = paintIndicatorGeometry;
+  // What the last paint measured for — see the memo at the top of
+  // paintIndicatorGeometry.
+  const indicatorPaintedForRef = useRef(null);
 
   // A row of tabs wider than the box holding it scrolls (the caller asks for
   // that with overflowX) — and then saying which tab one is on is not enough,
@@ -42870,6 +42934,20 @@ const Nav = ({
     }
     let travel = travelScrollRef.current;
     if (!travel || travel.from !== currentTabElement || travel.toward !== towardTabElement) {
+      // Everything that holds for the whole travel is read here and only here
+      // — the frame loop below runs sixty times a second and every layout or
+      // style read in it is paid on the very frames the travel is drawn on.
+      // A row that cannot scroll has nowhere to ride the travel to: remembered
+      // on the travel, and the loop is not even armed for it.
+      const rideable = navElement.scrollWidth > navElement.clientWidth + 1 || navElement.scrollHeight > navElement.clientHeight + 1;
+      if (!rideable) {
+        travelScrollRef.current = {
+          from: currentTabElement,
+          toward: towardTabElement,
+          rideable
+        };
+        return;
+      }
       // The two ends, measured once for this travel: measuring them again on a
       // row that has since moved would be measuring from the answer.
       const fromOffsets = getScrollIntoViewScopedOffsets(currentTabElement, {
@@ -42885,14 +42963,46 @@ const Nav = ({
       travel = {
         from: currentTabElement,
         toward: towardTabElement,
+        rideable,
         left: fromOffsets.left,
         top: fromOffsets.top,
         leftDelta: (towardOffsets.left - fromOffsets.left) * sign,
         topDelta: (towardOffsets.top - fromOffsets.top) * sign
       };
+      rememberProgressAnimation(navElement, travel);
       travelScrollRef.current = travel;
     }
-    const progress = parseFloat(getComputedStyle(navElement).getPropertyValue("--slide-travel-progress")) || 0;
+    if (!travel.rideable) {
+      return;
+    }
+    // How far between the two slides the picture stands, read WITHOUT
+    // getComputedStyle: computing the style of an element whose registered
+    // property is animating is a full style resolve, and per frame it is what
+    // ate the travel's frame budget on a throttled phone. The number has two
+    // cheap sources, and the container guarantees one of them on this very
+    // element (see paintTravelProgress / animateTravelProgress in
+    // slide_container.jsx): a travel that plays on its own ANIMATES the
+    // property here — its eased progress is on the animation itself
+    // (getComputedTiming().progress is the transformed, post-easing progress)
+    // — and a finger writes it as INLINE style per frame, readable as a plain
+    // string.
+    let progress;
+    let eased = travel.progressAnimation ? travel.progressAnimation.effect.getComputedTiming().progress : null;
+    if (eased === null) {
+      // No animation, or one that is over: the travel may have been
+      // re-animated since (a chained travel between the same two tabs), so
+      // look again before falling back to the finger's inline value.
+      rememberProgressAnimation(navElement, travel);
+      eased = travel.progressAnimation ? travel.progressAnimation.effect.getComputedTiming().progress : null;
+    }
+    if (eased === null) {
+      progress = parseFloat(navElement.style.getPropertyValue("--slide-travel-progress")) || 0;
+    } else {
+      // The animation walks the property from `progressFrom` to 0 (see
+      // animateTravelProgress); its value at this instant is the same
+      // interpolation, done here in arithmetic instead of in style.
+      progress = travel.progressFrom * (1 - eased);
+    }
     navElement.scrollTo({
       left: travel.left + progress * travel.leftDelta,
       top: travel.top + progress * travel.topDelta,
@@ -42956,6 +43066,8 @@ const Nav = ({
   // being pushed around by hand.
   useLayoutEffect(() => {
     const sizeObserver = new ResizeObserver(() => {
+      // The same pair of tabs measures differently on a row of another size.
+      indicatorPaintedForRef.current = null;
       paintIndicatorGeometryRef.current();
       // What was brought into sight was brought there for another row.
       tabInSightRef.current = null;
@@ -46984,7 +47096,9 @@ const useNextResolver = () => useContext(NextResolverContext);
  * ResolverIndexContext tracks which resolver is next so that when a resolver
  * re-renders and calls Next, the chain resumes from the correct position.
  */
-const createComponentResolver = resolvers => {
+const createComponentResolver = (resolvers, {
+  pure
+} = {}) => {
   const ResolverIndexContext = createContext(0);
   const ChainRunner = props => {
     const index = useContext(ResolverIndexContext);
@@ -47024,7 +47138,45 @@ const createComponentResolver = resolvers => {
       })
     });
   };
-  return renderComponent;
+  if (!pure) {
+    return renderComponent;
+  }
+  // The chain does not run again for props that say the same thing. The
+  // signals integration already promises this for any component that READS a
+  // signal ("props all === the previous ones → no render", relied on across
+  // list.jsx) — but a chain head reads none, so without this a parent
+  // re-rendering walks every resolver of every instance to conclude nothing
+  // changed. For a component rendered by the hundred (a list's items), that
+  // walk IS the cost of the parent's render. What still updates through the
+  // bail: context (Preact re-renders subscribers directly) and signals (their
+  // own subscription) — which is every way navi hands data down other than
+  // props.
+  // A FUNCTION component assigning shouldComponentUpdate on its own instance
+  // (the pattern preact/compat's memo uses), and deliberately not a class: a
+  // ref given to a class component is attached to the class INSTANCE, while a
+  // function component receives it as a plain prop — and the chain forwards
+  // it to the element the caller was reaching for.
+  function PureRenderComponent(props) {
+    this.shouldComponentUpdate = pureShouldComponentUpdate;
+    return renderComponent(props);
+  }
+  return PureRenderComponent;
+};
+function pureShouldComponentUpdate(nextProps) {
+  return shallowDiffers(this.props, nextProps);
+}
+const shallowDiffers = (a, b) => {
+  for (const key in a) {
+    if (!(key in b)) {
+      return true;
+    }
+  }
+  for (const key in b) {
+    if (a[key] !== b[key]) {
+      return true;
+    }
+  }
+  return false;
 };
 
 const ButtonRouteResolver = props => {
@@ -53225,9 +53377,17 @@ const ratioOfOneTravel = (track, from, to, targetBefore) => {
 const trackOffsetPx = (track, containerElement) => {
   const trackRect = track.getBoundingClientRect();
   const containerRect = containerElement.getBoundingClientRect();
+  // Against the box the track RESTS in — the content box, past the border
+  // (clientLeft/clientTop are the border widths; the box never has a
+  // scrollbar nor padding, see the top-of-file comment on padding). Measured
+  // against the border box, a border reads as that many pixels of translate
+  // nothing ever asked for — and it COMPOUNDS: every travel interrupted
+  // mid-flight re-measures the track and carries the error into its "from",
+  // so rapid back-and-forth gestures stack a 1px border into a visible
+  // vertical drift of the whole track.
   return {
-    x: trackRect.x - containerRect.x,
-    y: trackRect.y - containerRect.y
+    x: trackRect.x - containerRect.x - containerElement.clientLeft,
+    y: trackRect.y - containerRect.y - containerElement.clientTop
   };
 };
 const offsetToPx = (offset, box) => {
@@ -66795,7 +66955,13 @@ const LIST_ITEM_STYLE_CSS_VARS = {
  *   search-driven scroll-to-top-match behavior. `matchRanges` are [start, end]
  *   ranges highlighted via the CSS Highlight API.
  */
-const ListItem = createComponentResolver([ListItemFirstResolver, ListItemRowResolver, ListItemSkeletonResolver, ListItemSelectableResolver, ListItemHeaderOrFooterResolver, ListItemPresentationResolver, ListItemUI]);
+const ListItem = createComponentResolver([ListItemFirstResolver, ListItemRowResolver, ListItemSkeletonResolver, ListItemSelectableResolver, ListItemHeaderOrFooterResolver, ListItemPresentationResolver, ListItemUI],
+// Rendered by the hundred, and almost always with the same primitive props:
+// a selection change re-renders the list, and every row but two has nothing
+// to change.
+{
+  pure: true
+});
 List.Item = ListItem;
 
 // Everything the list knows about the collection while its children are being

@@ -419,6 +419,15 @@ export const useUIStateController = (
                 ) {
                   continue;
                 }
+                // Only the sibling that IS checked has anything to let go of.
+                // Asked anyway, an already-unchecked sibling still runs the
+                // tail of its own setUIState (uiAction and all) — and a group
+                // of N radios then pays N-1 of those on every selection, which
+                // is what made every row of a selectable list re-render per
+                // click.
+                if (siblingController.uiState === undefined) {
+                  continue;
+                }
                 siblingController.setUIState(undefined, siblingUncheckEvent);
               }
             }
