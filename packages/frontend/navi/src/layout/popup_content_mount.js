@@ -134,7 +134,12 @@ export const usePopupContentMount = (
     const anchorElement =
       typeof anchor === "string"
         ? document.getElementById(anchor)
-        : (anchor.current ?? anchor);
+        : // A ref is unwrapped even when it holds nothing: an expandable with
+          // no UI part hands an empty ref over, and the ref object itself is
+          // truthy — it would reach addEventListener below and throw.
+          "current" in anchor
+          ? anchor.current
+          : anchor;
     if (!anchorElement) {
       return undefined;
     }

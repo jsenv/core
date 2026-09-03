@@ -901,8 +901,10 @@ const usePopoverProps = (props) => {
       }
     } else if (anchor) {
       // anchor prop is a ref or a DOM element — always a real anchor,
-      // regardless of anchorCustomEventDetail.
-      anchorElement = anchor.current ?? anchor;
+      // regardless of anchorCustomEventDetail. A ref is unwrapped even when it
+      // holds nothing: falling back to the ref object itself would pass the
+      // "is there an anchor?" test below with something that has no box.
+      anchorElement = "current" in anchor ? anchor.current : anchor;
     } else if (anchorCustomEventDetail === "override") {
       anchorElement = e.detail.anchor;
     }
