@@ -4,7 +4,7 @@
  */
 import { installImportMetaCssBuild, windowHeightSignal, windowWidthSignal, visualViewportHeightSignal, visualViewportWidthSignal, getAppHeight, getAppWidth, coarsePointerSignal, smallTouchScreenSignal } from "./jsenv_navi_side_effects.js";
 export { disableVirtualKeyboardOverlay } from "./jsenv_navi_side_effects.js";
-import { elementIsFocusable, createIterableWeakSet, dispatchInternalCustomEvent, dispatchCustomEvent, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, getElementSignature, createPubSub, findEvent, createValueEffect, findFocusDelegateTarget, findFocusable, scrollIntoViewThroughScrollables, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, markDragSource, startDragTo, createEventGroupLogger, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, normalizeStyles, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, scrollRoomTowards, getScrollContainer, closestOpenableAncestor, isAncestorOpen, isDisplayedDespiteClosedAncestor, observeAncestorOpenState, getAncestorOpenType, findBefore, findAfter, resolveCSSSize, hasCSSSizeUnit, releaseWheelGesture, getScrollIntoViewScopedOffsets, wheelGestureIsTakenFrom, claimWheelGesture, scrollIntoViewScoped, initFocusGroup, isTouchDrivenEvent, stringifyStyle as stringifyStyle$1, resolveOklchLightness, contrastColor, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, onAncestorReopen, isPressDisputedByDrag, canScroll, measureWidestChildRow, performTabNavigation, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
+import { elementIsFocusable, createIterableWeakSet, dispatchInternalCustomEvent, dispatchCustomEvent, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, getElementSignature, createPubSub, findEvent, createValueEffect, findFocusDelegateTarget, findFocusable, scrollIntoViewThroughScrollables, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, keepTouchRefusable, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, markDragSource, startDragTo, createEventGroupLogger, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, normalizeStyles, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, scrollRoomTowards, getScrollContainer, closestOpenableAncestor, isAncestorOpen, isDisplayedDespiteClosedAncestor, observeAncestorOpenState, getAncestorOpenType, findBefore, findAfter, resolveCSSSize, hasCSSSizeUnit, releaseWheelGesture, getScrollIntoViewScopedOffsets, wheelGestureIsTakenFrom, claimWheelGesture, scrollIntoViewScoped, initFocusGroup, isTouchDrivenEvent, stringifyStyle as stringifyStyle$1, resolveOklchLightness, contrastColor, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, onAncestorReopen, isPressDisputedByDrag, canScroll, measureWidestChildRow, performTabNavigation, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
 export { chainEvent, clickIsSuppressed, contrastColor, findEvent, startDragTo } from "@jsenv/dom";
 import { signal, computed, effect, untracked, batch, useComputed, useSignal } from "@preact/signals";
 import { isValidElement, h, Fragment, createContext, render, toChildArray, options, cloneElement } from "preact";
@@ -2904,6 +2904,15 @@ const compareTwoJsValues = (
     const bKeys = Object.keys(b);
     if (aKeys.length !== bKeys.length) {
       return false;
+    }
+    // The same number of keys is not the same keys, and only a's are walked
+    // below. A key b does not have reads as undefined, so { include: undefined }
+    // and { search: "a" } would compare "include" (undefined on both sides),
+    // never look at "search", and pass for equal.
+    for (const bKey of bKeys) {
+      if (!Object.hasOwn(a, bKey)) {
+        return false;
+      }
     }
     if (aKeys.length === 0 && (!isPlainObject$1(a) || !isPlainObject$1(b))) {
       // A Set, a Map, an element, a URL: nothing enumerable to tell two of them
@@ -11528,6 +11537,17 @@ defineInteractionDetector({
       element.addEventListener("dragstart", onDragStart);
       undo.push(() => {
         element.removeEventListener("dragstart", onDragStart);
+      });
+
+      // A touch this element may take has to be refusable before the finger
+      // lands, or the browser can cancel an established swipe mid-gesture by
+      // scrolling the list around it along the axis touch-action leaves free —
+      // same rule, same moment as the attributes above (see keepTouchRefusable).
+      element.addEventListener("touchmove", keepTouchRefusable, {
+        passive: false
+      });
+      undo.push(() => {
+        element.removeEventListener("touchmove", keepTouchRefusable);
       });
     }
     if (hasLongPress) {
@@ -31190,7 +31210,14 @@ const RouteTravel = ({
     ,
 
     "data-travel-by-drag": travelByDrag ? axis : undefined,
-    "data-travel-by-wheel": travelByDrag ? axis : undefined,
+    "data-travel-by-wheel": travelByDrag ? axis : undefined
+    // A touch this box may take has to be refusable before the finger lands,
+    // or the browser can cancel an established travel mid-swipe by scrolling
+    // the axis touch-action leaves it — see keepTouchRefusable for why a JSX
+    // prop is enough (an element-level touchmove listener is non-passive).
+    ,
+
+    onTouchMove: travelByDrag ? keepTouchRefusable : undefined,
     onPointerDown: onPointerDown,
     children: children
   });
@@ -34130,6 +34157,11 @@ const useUIStateController = (
 
         state: stateInitial,
         uiState: stateInitial,
+        // What a bound signal last said — the change detector for writes coming
+        // from the outside. Kept apart from `state` on purpose: `state` is the
+        // last ACCEPTED value (the rollback target), and a signal echoing the
+        // control's own unconfirmed write moves this field without moving it.
+        stateFromSignalPrevious: stateInitial,
         uiStateSignal,
         // What this control holds by ITSELF — the same signal as above unless
         // it is a button inheriting from the control around it (see `inherit`).
@@ -34640,22 +34672,43 @@ const useUIStateController = (
         if (controller.hasStateProp) {
           controller.hasStateProp = false;
           controller.state = stateInitial;
+          controller.stateFromSignalPrevious = stateInitial;
         }
         if (controlInfo.signal) {
           // The other half of a bound signal: the control follows it when
-          // something else writes it. Compared against `state` (what the signal
-          // last said), never against the ui state — otherwise typing into an
+          // something else writes it. Compared against what the signal last
+          // said, never against the ui state — otherwise typing into an
           // uncontrolled control would be undone on the next render. A write
           // coming from the control itself lands here with the value already in
           // place, and setUIState treats an unchanged state as a no-op.
-          const currentState = controller.state;
-          if (!compareTwoJsValues(stateFromSignal, currentState)) {
-            controller.state = stateFromSignal;
-            if (!optimisticWorkInFlight) {
-              controller.setUIState(
-                stateFromSignal,
-                new CustomEvent("state_prop_change"),
-              );
+          if (
+            !compareTwoJsValues(
+              stateFromSignal,
+              controller.stateFromSignalPrevious,
+            )
+          ) {
+            controller.stateFromSignalPrevious = stateFromSignal;
+            // On a control that runs an action, a signal matching the ui state
+            // is the echo of the control's own write (setUIState wrote the
+            // signal at the press — for a picker, at the pick, before the
+            // close even runs the action). `state` is the rollback target —
+            // the last value the outside accepted — and the echo must not
+            // become it: resetOnError would then "restore" the very value the
+            // server is about to refuse. The action settles `state` on its
+            // own: success acknowledges (state = uiState), failure resets to
+            // the state kept here. A control with no action has no such
+            // settlement, so it keeps following the signal.
+            const signalEchoesOwnWrite =
+              Boolean(props.action) &&
+              compareTwoJsValues(stateFromSignal, controller.uiState);
+            if (!signalEchoesOwnWrite) {
+              controller.state = stateFromSignal;
+              if (!optimisticWorkInFlight) {
+                controller.setUIState(
+                  stateFromSignal,
+                  new CustomEvent("state_prop_change"),
+                );
+              }
             }
           }
         }
@@ -37881,6 +37934,30 @@ const useInteractiveProps = (props, {
       resetOnError,
       optimistic
     } = props;
+    // The DOM's word for the unconfirmed moment: an optimistic control paints
+    // the value before the server accepts it, and stays interactive while the
+    // run is out — aria-busy says "false" on purpose. This attribute is the
+    // only trace of that moment, for an app that wants to dim or mark the
+    // value until it is confirmed: `[data-optimistic]` on the control host and
+    // its control root. Written at the run's boundaries rather than from
+    // render: the bound action is a proxy following the UI state, so once the
+    // state moves ahead of the running instance the proxy stops reporting the
+    // run (same trap as the queue below).
+    const syncOptimisticAttribute = on => {
+      const el = ref.current;
+      if (!el) {
+        return;
+      }
+      const controlRoot = findControlRoot(el);
+      const targets = controlRoot && controlRoot !== el ? [el, controlRoot] : [el];
+      for (const target of targets) {
+        if (on) {
+          target.setAttribute("data-optimistic", "");
+        } else {
+          target.removeAttribute("data-optimistic");
+        }
+      }
+    };
     Object.assign(controlHostProps, {
       onFocus: e => {
         // Transfer programmatic focus to the delegate target (navi-focus-delegate or navi-control-proxy-for)
@@ -37967,6 +38044,9 @@ const useInteractiveProps = (props, {
         uiStateController.pendingActionEvent = e.detail.event;
         uiStateController.actionInFlight = true;
         uiStateController.parallelGuard?.claim(uiStateController);
+        if (optimistic) {
+          syncOptimisticAttribute(true);
+        }
         // The very instance this run uses, resolved now — while the UI state
         // still holds the value the run was made for. detail.action may be a
         // proxy following that state, and by the time anyone wants to abort
@@ -37984,6 +38064,7 @@ const useInteractiveProps = (props, {
           uiStateController.parallelGuard?.release(uiStateController);
           const queuedEvent = uiStateController.queuedActionAllowedEvent;
           if (!queuedEvent) {
+            syncOptimisticAttribute(false);
             return;
           }
           if (outcome.error) {
@@ -37991,6 +38072,7 @@ const useInteractiveProps = (props, {
             // known state (resetOnError above), and what was queued was built
             // on top of the state that just failed.
             uiStateController.queuedActionAllowedEvent = null;
+            syncOptimisticAttribute(false);
             return;
           }
           // A microtask later, not right here: this runs inside the batch()
@@ -45869,32 +45951,56 @@ const resolveAutoAnimationKind = (anchor, parsedPositionArea) => {
  * use_displayed_layout_effect.js).
  *
  * The `mount` prop moves that line. "closed" is two states, not one — never
- * opened yet, and closed again after an opening — and the three values answer
+ * opened yet, and closed again after an opening — and the four values answer
  * both at once:
  *
- * | mount             | before the first open | after a close |
- * | ----------------- | --------------------- | ------------- |
- * | "always"          | mounted               | mounted       |
- * | "from-first-open" | not mounted           | mounted       |
- * | "while-opened"    | not mounted           | not mounted   |
+ * | mount             | before the first open       | after a close |
+ * | ----------------- | --------------------------- | ------------- |
+ * | "always"          | mounted                     | mounted       |
+ * | "idle"            | mounted once the page idles | mounted       |
+ * | "from-first-open" | not mounted                 | mounted       |
+ * | "while-opened"    | not mounted                 | not mounted   |
  *
  * "always" is for content something else depends on before any opening: a
  * value the popup's owner reads off its own children, fields a form around it
  * collects on submit, a size measured from outside.
  *
+ * "idle" is "always" minus the cost on the critical render: the page appears
+ * without the content, and the browser builds it in an idle moment after
+ * load — so by the time anyone clicks, it is usually already there.
+ *
  * "while-opened" is the opposite end: content that must be rebuilt from
  * scratch every time, because what it shows is read once at build time and can
  * change while the popup is closed — an uncontrolled field seeded from a
  * `defaultValue`, a form whose fresh state is its initial state.
+ *
+ * On top of whichever value is picked, intent on the anchor warms the content:
+ * a pointer entering the popup's anchor, or focus landing in it, builds the
+ * content ahead of the click that will open it. Deferring the build to the
+ * opening puts its whole cost in the frame right after the click — the frame
+ * where a delay is felt hardest — while the ~100-300ms between hovering a
+ * trigger and pressing it are free. The warming render is asynchronous
+ * (batched, not flushed): nothing here needs the content in the DOM before
+ * the click, only before the open that follows it.
  */
 
 
 const MOUNT_DEFAULT = "from-first-open";
 
+// requestIdleCallback is missing from Safari; a timeout is close enough there.
+const requestIdle = (callback) =>
+  typeof requestIdleCallback === "function"
+    ? requestIdleCallback(callback)
+    : setTimeout(callback, 300);
+const cancelIdle = (id) =>
+  typeof cancelIdleCallback === "function"
+    ? cancelIdleCallback(id)
+    : clearTimeout(id);
+
 const usePopupContentMount = (
   openController,
   ref,
-  { mount = MOUNT_DEFAULT },
+  { mount = MOUNT_DEFAULT, anchor },
 ) => {
   const mountedAlways = mount === "always";
   const [contentMounted, setContentMounted] = useState(
@@ -45933,6 +46039,42 @@ const usePopupContentMount = (
       setContentMounted(true);
     }
   }, [mountedAlways]);
+  useEffect(() => {
+    if (mount !== "idle" || contentMounted) {
+      return undefined;
+    }
+    const idleId = requestIdle(() => {
+      setContentMounted(true);
+    });
+    return () => {
+      cancelIdle(idleId);
+    };
+  }, [mount, contentMounted]);
+  // Warm on intent (see the top comment). The anchor accepts the same shapes
+  // Popover resolves at open time — a string id, a ref, an element — but is
+  // resolved here at effect time: an id that matches nothing yet simply
+  // doesn't warm, the open still mounts the content like it always does.
+  useEffect(() => {
+    if (contentMounted || !anchor) {
+      return undefined;
+    }
+    const anchorElement =
+      typeof anchor === "string"
+        ? document.getElementById(anchor)
+        : (anchor.current ?? anchor);
+    if (!anchorElement) {
+      return undefined;
+    }
+    const warm = () => {
+      setContentMounted(true);
+    };
+    anchorElement.addEventListener("pointerenter", warm);
+    anchorElement.addEventListener("focusin", warm);
+    return () => {
+      anchorElement.removeEventListener("pointerenter", warm);
+      anchorElement.removeEventListener("focusin", warm);
+    };
+  }, [contentMounted, anchor]);
 
   return contentMounted;
 };
@@ -46167,7 +46309,7 @@ const useExpandableContext = partName => {
  *   openDirection?: "down" | "up" | "right" | "left",
  *   autoFocus?: boolean,
  *   maxContentHeight?: string | number,
- *   mount?: "always" | "from-first-open" | "while-opened",
+ *   mount?: "always" | "idle" | "from-first-open" | "while-opened",
  *   arrowKeyShortcuts?: boolean,
  *   openKeyShortcut?: string,
  *   closeKeyShortcut?: string,
@@ -46222,14 +46364,17 @@ const useExpandableContext = partName => {
  * @param maxContentHeight - Caps the content height; taller content scrolls
  *   inside the expandable instead of growing it.
  * @param mount - When the content is built and thrown away, a popup's own
- *   three values and a popup's own code (see popup_content_mount.js). `"from-first-open"` (the
+ *   values and a popup's own code (see popup_content_mount.js). `"from-first-open"` (the
  *   default) builds it on the first expansion and keeps it afterwards.
  *   `"always"` builds it right away; in layout="column" it also gives the
  *   closed expandable its content's height (the content is kept laid out at
  *   its open width), so opening only reveals the width instead of changing the
- *   height too. `"while-opened"` throws the content away once the collapse
+ *   height too. `"idle"` builds it in a browser idle moment after load.
+ *   `"while-opened"` throws the content away once the collapse
  *   settles — after the closing animation, so it still plays on real
- *   content — and rebuilds it from scratch on every expansion.
+ *   content — and rebuilds it from scratch on every expansion. Whatever the
+ *   value, intent on the UI part (pointer entering it, focus landing in it)
+ *   builds the content ahead of the click.
  */
 const Expandable = props => {
   import.meta.css = [css$Q, "@jsenv/navi/src/control/expandable/expandable.jsx"];
@@ -46291,8 +46436,12 @@ const Expandable = props => {
   // Fully open (or fully closed) and no longer moving — what releases the
   // clipping, see the CSS.
   const [settled, setSettled] = useState(true);
-  const contentMounted = usePopupContentMount(openController, contentContainerRef, {
-    mount
+  const contentMounted = usePopupContentMount(openController, contentContainerRef,
+  // The UI part is what the user aims at to expand — the closest thing an
+  // expandable has to a popup's anchor, warming the content on intent.
+  {
+    mount,
+    anchor: uiRef
   });
 
   // The pointer press that is about to toggle can blur the focused field
@@ -55275,6 +55424,15 @@ const SlideContainer = ({
       ,
 
       "data-travel-by-drag": dragAxes ?? undefined
+      // …and said as a listener too, from the same render: a touch this box may
+      // take has to be refusable before the finger lands, and being registered
+      // is the whole of it — see keepTouchRefusable for why a JSX prop is
+      // enough here (an element-level touchmove listener is non-passive).
+      // Without it, a swipe the box has taken can be cancelled mid-gesture by
+      // the browser scrolling the page along the axis touch-action leaves it.
+      ,
+
+      onTouchMove: dragAxes ? keepTouchRefusable : undefined
       // The same fact for a wheel, and only for that second reason: this box
       // takes the push, whatever the box around it also travels on.
       ,
@@ -57950,15 +58108,19 @@ const css$E = /* css */`
  *   open controller (see `open_controller.js`) for a caller that wants to
  *   drive open/close itself instead of `open`/`defaultOpen`/`onClose` (used
  *   by `picker_custom.jsx`).
- * @param {"always"|"from-first-open"|"while-opened"} [props.mount] - When
+ * @param {"always"|"idle"|"from-first-open"|"while-opened"} [props.mount] - When
  *   `children` are built and thrown away (see popup_content_mount.js).
  *   `"from-first-open"` (the default) builds them on the first open and keeps
  *   them afterwards. `"always"` builds them right away, for content something
  *   depends on while the popup is still closed: a value read off it, fields a
  *   surrounding form collects on submit, a size measured from outside.
- *   `"while-opened"` throws them away once the popup has finished closing, for
- *   content whose fresh state is its initial state: an uncontrolled field
- *   seeded from a `defaultValue` that changed while the popup was closed.
+ *   `"idle"` builds them in a browser idle moment after load — "always" minus
+ *   the cost on the critical render. `"while-opened"` throws them away once
+ *   the popup has finished closing, for content whose fresh state is its
+ *   initial state: an uncontrolled field seeded from a `defaultValue` that
+ *   changed while the popup was closed. Whatever the value, intent on the
+ *   anchor (pointer entering it, focus landing in it) builds the content
+ *   ahead of the click.
  * @param {import("ignore:preact").ComponentChildren} props.children
  */
 const Dialog = props => {
@@ -58203,7 +58365,8 @@ const useDialogProps = props => {
   // built: what this popup opens ON is known before anything reads it.
   openController.onOpen = onOpen || null;
   const contentMounted = usePopupContentMount(openController, props.ref, {
-    mount
+    mount,
+    anchor
   });
   const children = contentMounted ? childrenProp : null;
   const isModal = layer === "top";
@@ -59417,15 +59580,19 @@ const css$D = /* css */`
  *   open controller (see `open_controller.js`) for a caller that wants to
  *   drive open/close itself instead of `open`/`defaultOpen`/`onClose` (used
  *   by `picker_custom.jsx`/`side_panel.jsx`).
- * @param {"always"|"from-first-open"|"while-opened"} [props.mount] - When
+ * @param {"always"|"idle"|"from-first-open"|"while-opened"} [props.mount] - When
  *   `children` are built and thrown away (see popup_content_mount.js).
  *   `"from-first-open"` (the default) builds them on the first open and keeps
  *   them afterwards. `"always"` builds them right away, for content something
  *   depends on while the popup is still closed: a value read off it, fields a
  *   surrounding form collects on submit, a size measured from outside.
- *   `"while-opened"` throws them away once the popup has finished closing, for
- *   content whose fresh state is its initial state: an uncontrolled field
- *   seeded from a `defaultValue` that changed while the popup was closed.
+ *   `"idle"` builds them in a browser idle moment after load — "always" minus
+ *   the cost on the critical render. `"while-opened"` throws them away once
+ *   the popup has finished closing, for content whose fresh state is its
+ *   initial state: an uncontrolled field seeded from a `defaultValue` that
+ *   changed while the popup was closed. Whatever the value, intent on the
+ *   anchor (pointer entering it, focus landing in it) builds the content
+ *   ahead of the click.
  * @param {import("ignore:preact").ComponentChildren} props.children
  */
 const Popover = props => {
@@ -59648,7 +59815,8 @@ const usePopoverProps = props => {
   // built: what this popup opens ON is known before anything reads it.
   openController.onOpen = onOpen || null;
   const contentMounted = usePopupContentMount(openController, props.ref, {
-    mount
+    mount,
+    anchor
   });
   const children = contentMounted ? childrenProp : null;
   const isTopLayer = layer === "top";
@@ -60588,7 +60756,7 @@ const css$C = /* css */`@layer navi {
  * @param {string} [props.className] - Merged with the shared
  *   `"navi_popup"` class (see this file's own CSS) rather than replacing
  *   it.
- * @param {"always"|"from-first-open"|"while-opened"} [props.mount] - When
+ * @param {"always"|"idle"|"from-first-open"|"while-opened"} [props.mount] - When
  *   `children` are built and thrown away (see popup_content_mount.js).
  *   `"from-first-open"` (the default) builds them on the first open and keeps
  *   them afterwards. `"always"` builds them right away, for content something
@@ -60885,7 +61053,13 @@ const PickerCustom = props => {
     // What a `--navi-confirm` said inside the popup means, once the popup has
     // closed on it. A confirm picker is the one saying something (see
     // picker_confirm.jsx): its press, deferred until the question is answered.
-    onConfirm
+    onConfirm,
+    // The popup's lifecycle, the same pair Dialog and Popover take. Taken on
+    // the picker and chained into its own openController below: the picker
+    // hands the popup that controller, and a controlled Dialog/Popover reads
+    // no onOpen/onClose of its own.
+    onOpen,
+    onClose
   } = props;
   // Resolve the id the same way useControlProps does (own id > Field's id > generated id)
   // before computing popupId below, so two Pickers without an explicit id never collide.
@@ -60919,6 +61093,8 @@ const PickerCustom = props => {
   delete pickerProps.defaultOpen;
   delete pickerProps.escapeEffect;
   delete pickerProps.onConfirm;
+  delete pickerProps.onOpen;
+  delete pickerProps.onClose;
   // Read below for the popup alone; on the trigger it would land on the DOM as
   // an unknown attribute holding a ref object.
   delete pickerProps.anchor;
@@ -60927,6 +61103,13 @@ const PickerCustom = props => {
     popupProps,
     actionEvent: "custom"
   });
+  if (pickerProps.resetOnError === undefined) {
+    // The picker's action fails after its popup closed on the value: nobody is
+    // left mid-edit, so the value the server refused rolls back to the last
+    // accepted one and the error callout says why — the same default
+    // PickerNative takes.
+    pickerProps.resetOnError = true;
+  }
   // ref
   const popupRef = useRef(null);
   popupProps.ref = popupRef;
@@ -60983,6 +61166,7 @@ const PickerCustom = props => {
       // isUIStateHeld). Read at open, before anything inside can change it.
       const heldAtOpen = isUIStateHeld(getPickerInput(ref.current)?.__uiStateController__);
       debugPopup(openEvent, `picker opened, store value at open`, valueAtOpen, heldAtOpen ? `(held)` : `(a suggestion, not an answer yet)`);
+      onOpen?.(openEvent);
       return {
         onRequestClose: requestCloseEvent => {
           if (requestCloseEvent.detail.isCancel) {
@@ -61065,6 +61249,9 @@ const PickerCustom = props => {
           if (confirmEvent && !closeEvent.detail.isCancel) {
             onConfirm?.(confirmEvent);
           }
+          // Last, after the value bookkeeping above: whoever listens reads the
+          // picker's value as it ends up — committed, or restored on a cancel.
+          onClose?.(closeEvent);
         }
       };
     });
@@ -82127,7 +82314,14 @@ const SidePanel = ({
     ,
 
     "data-drag-travel": swipeToClose ? SWIPE_AXIS_BY_SIDE[side] : undefined,
-    "data-travel-by-drag": swipeToClose ? SWIPE_AXIS_BY_SIDE[side] : undefined,
+    "data-travel-by-drag": swipeToClose ? SWIPE_AXIS_BY_SIDE[side] : undefined
+    // A touch this panel may take has to be refusable before the finger
+    // lands, or the browser can cancel the close gesture mid-swipe by
+    // scrolling the panel's content — see keepTouchRefusable for why a JSX
+    // prop is enough (an element-level touchmove listener is non-passive).
+    ,
+
+    onTouchMove: swipeToClose ? keepTouchRefusable : undefined,
     ...rest,
     onPointerDown: pointerDownEvent => {
       rest.onPointerDown?.(pointerDownEvent);

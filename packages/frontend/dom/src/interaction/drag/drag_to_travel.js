@@ -890,6 +890,13 @@ const WHEEL_NEXT_STEP_DELTA = 600;
 // slides. Two events in a row are asked for rather than one, because a hand
 // wavers and momentum does not.
 const WHEEL_FADE_RUN = 2;
+// …and the same fact read the other way: momentum only ever weakens, so a
+// stream already recognized as momentum that GROWS twice in a row is a hand
+// pushing again — a second swipe thrown while the tail of the first is still
+// streaming. The browser sees one unbroken burst (the tail never went silent),
+// but to the hand these are two gestures, and the second is answered like a
+// first event: with a screen, now, not with credit towards one.
+const WHEEL_REGROW_RUN = 2;
 
 /**
  * A travel asked for with a wheel, and it asks for a WHOLE ONE.
@@ -1027,6 +1034,8 @@ export const watchWheelTravel = (element, { axes = "xy", onStep }) => {
         pushed: 0,
         lastMagnitude: 0,
         fadeRun: 0,
+        growRun: 0,
+        faded: false,
         stepped: false,
       };
       document.documentElement.setAttribute(GESTURE_ATTRIBUTE, "");
@@ -1050,6 +1059,8 @@ export const watchWheelTravel = (element, { axes = "xy", onStep }) => {
       gesture.pushed = 0;
       gesture.lastMagnitude = 0;
       gesture.fadeRun = 0;
+      gesture.growRun = 0;
+      gesture.faded = false;
       gesture.stepped = false;
     }
     if (!gesture.stepped) {
@@ -1064,11 +1075,28 @@ export const watchWheelTravel = (element, { axes = "xy", onStep }) => {
     const magnitude = Math.abs(delta);
     if (magnitude < gesture.lastMagnitude) {
       gesture.fadeRun += 1;
+      gesture.growRun = 0;
+      if (gesture.fadeRun >= WHEEL_FADE_RUN) {
+        // Momentum, recognized — and remembered past the next growth: fadeRun
+        // is transient (one louder event resets it), while what the regrow
+        // rule below needs to know is that a tail WAS established at all.
+        gesture.faded = true;
+      }
     } else if (magnitude > gesture.lastMagnitude) {
       // Back up again — a hand asking for more. Momentum never does this.
       gesture.fadeRun = 0;
+      gesture.growRun += 1;
     }
     gesture.lastMagnitude = magnitude;
+    // A second push, thrown while the tail of the first still streams (see
+    // WHEEL_REGROW_RUN): a new gesture to the hand, whatever the stream says.
+    if (gesture.faded && gesture.growRun >= WHEEL_REGROW_RUN) {
+      gesture.faded = false;
+      gesture.growRun = 0;
+      gesture.pushed = 0;
+      onStep({ axis: gesture.axis, sign: gesture.sign, event: wheelEvent });
+      return;
+    }
     if (gesture.fadeRun >= WHEEL_FADE_RUN) {
       return;
     }
