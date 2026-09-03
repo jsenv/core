@@ -8,6 +8,8 @@
  *   has nothing to do, because an action with no params suspends forever.
  */
 
+"jsenv:allocate 30s";
+
 import { startDevServer } from "@jsenv/core";
 import { jsenvPluginPreact } from "@jsenv/plugin-preact";
 import { snapshotTests } from "@jsenv/snapshot";
