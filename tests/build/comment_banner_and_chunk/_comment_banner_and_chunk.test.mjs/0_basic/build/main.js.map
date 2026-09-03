@@ -4,7 +4,7 @@
     "../client/lib.js"
   ],
   "names": [],
-  "mappings": ";;;;;AAAY,CAAA,CAAA,CAAA,CAAA,CAAA,CAAC,CAAA,CAAA,CAAA,CAAA,CAAK,CAAA,CAAA,CAAG,CAAA,CAAA",
+  "mappings": ";;;;;AAAY,KAAA,CAAC,KAAK,CAAA,CAAA,CAAG,EAAA",
   "sourcesContent": [
     "export const value = 42;\n"
   ]
