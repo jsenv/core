@@ -38,6 +38,9 @@ export const getCorePlugins = ({
   runtimeCompat,
   packageDirectory,
   sourceFilesConfig,
+  // during build, a dev-flavored entry point sets dev: true
+  // (during dev the kitchen context already says so, no need to pass it)
+  dev,
 
   referenceAnalysis = {},
   nodeEsmResolution = {},
@@ -134,6 +137,7 @@ export const getCorePlugins = ({
             resolutionConfig: nodeEsmResolution,
             packageConditions,
             packageConditionsConfig,
+            dev,
           }),
         ]
       : []),
@@ -151,7 +155,7 @@ export const getCorePlugins = ({
 
     jsenvPluginImportMetaCss(),
     jsenvPluginCommonJsGlobals(),
-    jsenvPluginImportMetaScenarios(),
+    jsenvPluginImportMetaScenarios({ dev }),
     ...(scenarioPlaceholders ? [jsenvPluginGlobalScenarios()] : []),
     jsenvPluginNodeRuntime({ runtimeCompat }),
 

@@ -117,6 +117,12 @@ import { jsenvPluginMappings } from "./jsenv_plugin_mappings.js";
  *        Relative URL where this entry point will be written in the build directory
  * @param {object} [entryPoint.runtimeCompat]
  *        Runtime compatibility configuration for this entry point
+ * @param {boolean} [entryPoint.dev=false]
+ *        Produce a dev-flavored build: import.meta.dev is replaced by true
+ *        (instead of undefined) and dependencies resolve their "development"
+ *        package export condition (instead of "production"). Meant for packages
+ *        publishing two flavors, the dev one exposed to consumers via the
+ *        "development" condition in their package.json "exports"
  * @param {string} [entryPoint.assetsDirectory]
  *        Directory where asset files will be written for this entry point
  * @param {string|url} [entryPoint.base]
@@ -240,12 +246,10 @@ entryPoints: {
         let runtimeType;
         {
           if (isBareSpecifier(key)) {
-            const packageConditions = [
-              "development",
-              "dev:*",
-              "node",
-              "import",
-            ];
+            // "development" is not resolved here on purpose: it points at a
+            // package's dev-flavored dist, which is not a build input;
+            // "dev:*" points at sources, which are.
+            const packageConditions = ["dev:*", "node", "import"];
             try {
               const { url, type } = applyNodeEsmResolution({
                 conditions: packageConditions,
@@ -979,6 +983,7 @@ entryPoints: {
 const entryPointDefaultParams = {
   buildRelativeUrl: undefined,
   mode: undefined,
+  dev: false,
   runtimeCompat: undefined,
   plugins: [],
   mappings: undefined,
@@ -1034,6 +1039,7 @@ const prepareEntryPointBuild = async (
   let {
     buildRelativeUrl,
     mode,
+    dev,
     runtimeCompat,
     plugins,
     mappings,
@@ -1214,6 +1220,7 @@ const prepareEntryPointBuild = async (
       packageDirectory,
       rootDirectoryUrl: sourceDirectoryUrl,
       runtimeCompat,
+      dev,
       referenceAnalysis,
       nodeEsmResolution,
       packageConditions,

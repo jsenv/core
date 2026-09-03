@@ -7,13 +7,18 @@
  * - left as is to be evaluated to undefined (import.meta.build but it's the dev server)
  * - replaced by undefined (import.meta.dev but it's build; the goal is to ensure it's tree-shaked)
  *
+ * A build can also be dev-flavored (build({ entryPoints: { "./file.js": { dev: true } } })):
+ * import.meta.dev is then replaced by true, so a package can publish a build
+ * that keeps its dev-only code, exposed to consumers via the "development"
+ * package export condition.
+ *
  * TODO: ideally during dev we would keep import.meta.dev and ensure we set it to true rather than replacing it with true?
  */
 
 import { getImportMetaPropertyName, visitJsAst } from "@jsenv/ast";
 import { createMagicSource } from "@jsenv/sourcemap";
 
-export const jsenvPluginImportMetaScenarios = () => {
+export const jsenvPluginImportMetaScenarios = ({ dev } = {}) => {
   return {
     name: "jsenv:import_meta_scenario",
     appliesDuring: "*",
@@ -43,17 +48,19 @@ export const jsenvPluginImportMetaScenarios = () => {
             }
           },
         });
-        const { dev, build } = importMetaScenarioNodes;
+        const devNodes = importMetaScenarioNodes.dev;
+        const buildNodes = importMetaScenarioNodes.build;
         const replacements = [];
         const replace = (node, value) => {
           replacements.push({ node, value });
         };
         if (urlInfo.context.build) {
           // during build ensure replacement for tree-shaking
-          dev.forEach((node) => {
-            replace(node, "undefined");
+          // (or for keeping dev code when the build is dev-flavored)
+          devNodes.forEach((node) => {
+            replace(node, dev ? "true" : "undefined");
           });
-          build.forEach((node) => {
+          buildNodes.forEach((node) => {
             replace(node, "true");
           });
         } else {
@@ -61,7 +68,7 @@ export const jsenvPluginImportMetaScenarios = () => {
           // it will be evaluated to undefined.
           // Moreover it can be surprising to see some "undefined"
           // when source file contains "import.meta.build"
-          dev.forEach((node) => {
+          devNodes.forEach((node) => {
             replace(node, "true");
           });
         }

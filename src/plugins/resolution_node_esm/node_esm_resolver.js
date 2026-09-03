@@ -20,6 +20,8 @@ export const createNodeEsmResolver = ({
   packageDirectory,
   runtimeCompat,
   rootDirectoryUrl,
+  dev,
+  build,
   packageConditions = {},
   packageConditionsConfig,
   preservesSymlink,
@@ -37,6 +39,8 @@ export const createNodeEsmResolver = ({
       packageConditionsConfig,
       rootDirectoryUrl,
       runtimeCompat,
+      dev,
+      build,
       preservesSymlink,
     },
   );
@@ -198,6 +202,8 @@ const createBuildPackageConditions = (
     packageConditionsConfig,
     rootDirectoryUrl,
     runtimeCompat,
+    dev,
+    build,
     preservesSymlink,
   },
 ) => {
@@ -287,8 +293,19 @@ const createBuildPackageConditions = (
     };
 
     const conditionDefaultResolvers = {
+      // "dev:*" conditions target packages under active development: they
+      // apply to files resolved outside node_modules (sources, workspace
+      // symlinks), never to installed packages.
       "dev:*": devResolver,
-      "development": devResolver,
+      // "development"/"production" follow the ecosystem semantics
+      // (Vite, webpack): they describe how the app runs, not where the
+      // package lives, so they apply to every package, node_modules
+      // included. Dev server resolves "development"; build resolves
+      // "production", unless the build is dev-flavored
+      // (build({ entryPoints: { "./file.js": { dev: true } } }))
+      // in which case it resolves "development" too.
+      "development": Boolean(dev),
+      "production": Boolean(build) && !dev,
       "node": nodeRuntimeEnabled,
       "browser": !nodeRuntimeEnabled,
       "import": true,

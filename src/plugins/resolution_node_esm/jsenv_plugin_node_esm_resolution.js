@@ -5,6 +5,7 @@ export const jsenvPluginNodeEsmResolution = ({
   resolutionConfig = {},
   packageConditions,
   packageConditionsConfig = {},
+  dev,
 }) => {
   let nodeEsmResolverDefault;
   const resolverMap = new Map();
@@ -26,6 +27,8 @@ export const jsenvPluginNodeEsmResolution = ({
       packageDirectory,
       runtimeCompat: kitchenContext.runtimeCompat,
       rootDirectoryUrl: kitchenContext.rootDirectoryUrl,
+      dev: dev === undefined ? kitchenContext.dev : dev,
+      build: kitchenContext.build,
       packageConditions,
       packageConditionsConfig: {
         ...kitchenContext.packageConditionsConfig,
@@ -43,6 +46,8 @@ export const jsenvPluginNodeEsmResolution = ({
         packageDirectory,
         runtimeCompat: kitchenContext.runtimeCompat,
         rootDirectoryUrl: kitchenContext.rootDirectoryUrl,
+        dev: dev === undefined ? kitchenContext.dev : dev,
+        build: kitchenContext.build,
         // preservesSymlink: true,
         packageConditions,
         packageConditionsConfig: {

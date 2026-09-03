@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/navi",
-  "version": "0.29.183",
+  "version": "0.29.184",
   "type": "module",
   "description": "Library of components including navigation to create frontend applications",
   "repository": {
@@ -16,6 +16,7 @@
   "exports": {
     ".": {
       "dev:jsenv": "./index.js",
+      "development": "./dist/dev/jsenv_navi.js",
       "default": "./dist/jsenv_navi.js"
     },
     "./format_time": {
@@ -59,6 +60,8 @@
     "./src/navi_z_indexes.js",
     "./src/control/interaction/*.js",
     "./dist/jsenv_navi_side_effects.js",
-    "./dist/jsenv_navi.js"
+    "./dist/jsenv_navi.js",
+    "./dist/dev/jsenv_navi.js",
+    "./dist/dev/jsenv_navi_side_effects.js"
   ]
 }
