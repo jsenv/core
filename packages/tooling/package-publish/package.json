@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/package-publish",
-  "version": "1.11.49",
+  "version": "1.11.50",
   "type": "module",
   "description": "Publish package to one or many registry.",
   "repository": {

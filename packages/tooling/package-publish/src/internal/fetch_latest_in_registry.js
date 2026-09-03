@@ -8,7 +8,7 @@ export const fetchLatestInRegistry = async ({
   token,
 }) => {
   const requestUrl = `${registryUrl}/${packageName}`;
-  const response = await fetch(requestUrl, {
+  const response = await fetchWithRetryOnTransientError(requestUrl, {
     method: "GET",
     headers: {
       // "user-agent": "jsenv",
@@ -36,6 +36,40 @@ export const fetchLatestInRegistry = async ({
   }
   const packageObject = await response.json();
   return packageObject.versions[packageObject["dist-tags"].latest];
+};
+
+// The registry (or a middlebox) sometimes closes a keep-alive socket while a
+// request is in flight, surfacing as "fetch failed" with ECONNRESET. Fetching a
+// whole workspace fires many requests at once so one reset per run is common.
+// These failures are transient by nature and cannot be prevented client-side,
+// so retry a couple of times before giving up.
+const TRANSIENT_NETWORK_ERROR_CODES = [
+  "ECONNRESET",
+  "ETIMEDOUT",
+  "EPIPE",
+  "EAI_AGAIN",
+  "UND_ERR_SOCKET",
+];
+const fetchWithRetryOnTransientError = async (url, options) => {
+  let attemptCount = 0;
+  while (true) {
+    attemptCount++;
+    try {
+      return await fetch(url, options);
+    } catch (e) {
+      const errorCode = e.cause?.code;
+      if (
+        attemptCount >= 3 ||
+        !TRANSIENT_NETWORK_ERROR_CODES.includes(errorCode)
+      ) {
+        throw e;
+      }
+      const delay = attemptCount * 500;
+      await new Promise((resolve) => {
+        setTimeout(resolve, delay);
+      });
+    }
+  }
 };
 
 const writeUnexpectedResponseStatus = ({

@@ -715,9 +715,20 @@ const css = /* css */ `
       }
       /* The value holds nothing but the icon, so it takes the icon's width
          rather than the box's: the box's justify-content is then what places
-         it, and alignX means something. */
+         it, and alignX means something.
+         And it holds it as a box rather than on a line. An icon dropped in an
+         inline formatting context is given the LINE's height, not its own — the
+         zero-width anchor <Text> measures against sits in that flow and makes
+         the value one full line tall — so the trigger ends up taller than the
+         icon by whatever leading the line carries, and the icon is then nudged
+         onto a baseline no text is written on. A flex parent is also how
+         TextAnchor is told there is no surrounding text to align to, so it
+         stops correcting for one. This is what makes an icon trigger measure
+         its drawing, the way .navi_button_content does under [data-icon]. */
       .navi_picker_value {
+        display: inline-flex;
         flex-grow: 0;
+        align-items: center;
       }
     }
   }

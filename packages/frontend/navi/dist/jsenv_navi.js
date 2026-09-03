@@ -69966,6 +69966,8 @@ installImportMetaCssBuild(import.meta);const css$t = /* css */`@layer navi {
 
     & .navi_picker_value {
       flex-grow: 0;
+      align-items: center;
+      display: inline-flex;
     }
   }
 }
