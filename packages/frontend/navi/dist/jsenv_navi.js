@@ -28829,6 +28829,11 @@ const css$11 = /* css */`:root[data-navi-route-transition] [data-navi-route-tran
 }
 
 :root[data-navi-route-transition] {
+  &::view-transition {
+    clip-path: inset(var(--navi-app-inset-top) var(--navi-app-inset-right)
+          var(--navi-app-inset-bottom) var(--navi-app-inset-left));
+  }
+
   &[data-navi-route-transition-target="area"] {
     view-transition-name: none;
     --navi-route-transition-clip-top: max(0px,
