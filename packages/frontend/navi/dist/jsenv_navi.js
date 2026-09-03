@@ -55366,7 +55366,9 @@ const TimeDate = ({
       now
     });
     if (offset >= -1 && offset <= 1) {
-      text = `${base} (${formatDayRelative(offset, lang)})`;
+      text = `${base} (${formatDayRelative(offset, {
+        lang
+      })})`;
     } else {
       text = base;
     }

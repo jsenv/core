@@ -39,6 +39,7 @@ import {
 } from "@jsenv/humanize";
 import { applyNodeEsmResolution } from "@jsenv/node-esm-resolution";
 import { startMonitoringMemoryUsage } from "@jsenv/os-metrics";
+import { URL_META } from "@jsenv/url-meta";
 import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
 import { jsenvPluginMinification } from "@jsenv/plugin-minification";
 import { jsenvPluginJsModuleFallback } from "@jsenv/plugin-transpilation";
@@ -858,10 +859,31 @@ entryPoints: {
             ).href;
             packageSideEffectUrlSet.add(sideEffectFileUrl);
           }
+          // A side effect entry is outdated (and pruned) only when this build
+          // owns it: it is inside the build directory AND the clean patterns
+          // would remove it. A file kept by buildDirectoryCleanPatterns
+          // belongs to another build writing inside this directory (e.g. a
+          // dev-flavored build in a subdirectory, possibly running in
+          // parallel): its entries must be preserved, like files outside the
+          // build directory.
+          const cleanAssociations = URL_META.resolveAssociations(
+            { remove: buildDirectoryCleanPatterns },
+            buildDirectoryUrl,
+          );
+          const isOwnedByThisBuild = (url) => {
+            if (!urlIsOrIsInsideOf(url, buildDirectoryUrl)) {
+              return false;
+            }
+            const { remove } = URL_META.applyAssociations({
+              url,
+              associations: cleanAssociations,
+            });
+            return Boolean(remove);
+          };
           let hasSomeOutdatedSideEffectUrl = false;
           for (const packageSideEffectUrl of packageSideEffectUrlSet) {
             if (
-              urlIsOrIsInsideOf(packageSideEffectUrl, buildDirectoryUrl) &&
+              isOwnedByThisBuild(packageSideEffectUrl) &&
               !buildSideEffectUrlSet.has(packageSideEffectUrl)
             ) {
               hasSomeOutdatedSideEffectUrl = true;
