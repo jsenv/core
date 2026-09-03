@@ -1489,6 +1489,11 @@ naviI18n.addAll({
     fr: "Cette action attend une modification.",
     en: "This action is waiting for a change.",
   },
+  // parallelGuard: the surface already has as many runs in flight as it allows
+  "constraint.readonly.parallel_guard": {
+    fr: "[max] action[s] déjà en cours, attendez qu'une se termine.",
+    en: "[max] action[s] already in progress, wait for one to finish.",
+  },
   "constraint.readonly.network_policy": {
     fr: "Hors ligne : ça ne peut pas partir.",
     en: "Offline: this cannot be sent.",
@@ -8365,7 +8370,16 @@ const createCalloutManager = (
       // Resolved as the token is added, and kept with it: a token shown later
       // (when the one covering it goes) must be drawn where it was pointing at
       // the time, and the control itself is where a token pointing nowhere goes.
-      anchorElement: anchorElement || controller.ref.current,
+      //
+      // Unless the control has somewhere better to send it, which is why it is
+      // given the event: a control drawn by something else — a list row whose
+      // selection is a visually hidden checkbox — answers for a whole box, and
+      // the sentence belongs where the press landed inside it rather than in
+      // its middle (see getCalloutAnchorElement in list_selectable.jsx).
+      anchorElement:
+        anchorElement ||
+        controller.getCalloutAnchorElement?.(event) ||
+        controller.ref.current,
     };
     tokens.set(token, tokenData);
     showToken(tokenData, event);
@@ -10226,6 +10240,15 @@ const readOnlyMessage = (field) => {
   // network_policy.js), in the policy's own words.
   if (reason === "network-policy") {
     return getNetworkPolicyReadOnlyMessage();
+  }
+  // As many runs as the surface allows are already out (see parallel_guard.js):
+  // what stops the press is the queue, and it says how long it is.
+  if (reason === "parallel-guard") {
+    const { max } = field.parallelGuard;
+    return naviI18n("constraint.readonly.parallel_guard", {
+      max,
+      s: max > 1 ? "s" : "",
+    });
   }
   // A send button held back by the form above it, which holds nothing new (see
   // Button's own `readOnlyWhileFormUnchanged`) — what stops the press is not the
@@ -33523,6 +33546,70 @@ document.body.addEventListener(
 );
 
 /**
+ * How many runs a surface lets happen at once.
+ *
+ * A list whose rows each carry their own action is a place to act, row by row,
+ * and nothing about it stops someone from starting a run on every row before
+ * any of them comes back: a dozen requests in flight, a dozen rows waiting, and
+ * a server asked to do a dozen things at once because a list happened to be
+ * long. The guard is what makes the surface say "not yet" instead — the rows
+ * that are not running go read-only and say what they are waiting for, and the
+ * next press is possible again the moment one of the runs comes back.
+ *
+ * It counts runs, not values — which is what separates it from
+ * `maxLengthGuard`, the one that says how many things a selection may HOLD.
+ * Both refuse a gesture; they refuse it for unrelated reasons and a surface can
+ * carry either, or both.
+ */
+const ParallelGuardContext = createContext(null);
+
+/**
+ * @param {number} max - how many runs may be in flight at once. `Infinity`
+ *   lifts the guard without taking it out of the tree.
+ */
+const useParallelGuard = (max) => {
+  const guardRef = useRef(null);
+  if (!guardRef.current) {
+    // A Set rather than a counter: a control asks about ITSELF (its own run is
+    // never what blocks it), and a start that arrives twice for one run must
+    // not be counted twice.
+    const runningSet = new Set();
+    const runningCountSignal = signal(0);
+    const guard = {
+      max,
+      runningCountSignal,
+      claim: (controller) => {
+        if (runningSet.has(controller)) {
+          return;
+        }
+        runningSet.add(controller);
+        runningCountSignal.value = runningSet.size;
+      },
+      release: (controller) => {
+        if (!runningSet.delete(controller)) {
+          return;
+        }
+        runningCountSignal.value = runningSet.size;
+      },
+      blocks: (controller) => {
+        if (guard.max === Infinity) {
+          return false;
+        }
+        if (runningSet.has(controller)) {
+          return false;
+        }
+        // Read through the signal so a control held back re-renders — and
+        // becomes pressable again — the moment one of the runs comes back.
+        return runningCountSignal.value >= guard.max;
+      },
+    };
+    guardRef.current = guard;
+  }
+  guardRef.current.max = max;
+  return guardRef.current;
+};
+
+/**
  * How a control tells the labels pointing at it what it is (disabled, readOnly,
  * required) and when it goes away.
  *
@@ -34437,6 +34524,9 @@ const useUIStateController = (
         resetUIState: (e) => {
           controller.setUIState(controller.state, e);
         },
+        // Read by the callout manager when it has nowhere else to point.
+        getCalloutAnchorElement: (event) =>
+          resolveCalloutAnchorElement(controller.ref.current, event),
         // What the control shows becomes what is acknowledged: the outside said
         // yes to it, so it is where a rollback goes back to. Left alone for a
         // control whose value is GIVEN — the prop is already its truth — and
@@ -34658,6 +34748,44 @@ const firstDefinedChildUIState = (children) => {
     }
   }
   return undefined;
+};
+
+// Where a control that cannot point at itself puts what it has to say.
+//
+// A control drawn by something ELSE answers for a box bigger than itself: a
+// list row's selection is a visually hidden checkbox inside a whole pressable
+// row, so a callout anchored on the control lands in the middle of that row,
+// pointing at nothing. What the press landed on is what the sentence is about
+// — another control in the same box takes it (the button that invites, the
+// picker that opens), and the box itself takes what was aimed at the box.
+//
+// Answering null leaves the callout where it would have gone, which is also
+// what a box asks for once and for all with `data-callout-anchor="item"`.
+const resolveCalloutAnchorElement = (element, event) => {
+  if (!element || !element.closest("[navi-visually-hidden]")) {
+    return null;
+  }
+  const target = event?.target;
+  if (!target || !target.closest) {
+    return null;
+  }
+  const controlRoot = findControlRoot(element);
+  if (
+    !controlRoot ||
+    controlRoot.getAttribute("data-callout-anchor") === "item"
+  ) {
+    return null;
+  }
+  const controlHost = target.closest("[navi-control-host]");
+  if (
+    !controlHost ||
+    controlHost === element ||
+    !controlRoot.contains(controlHost) ||
+    controlHost.closest("[navi-visually-hidden]")
+  ) {
+    return null;
+  }
+  return controlHost;
 };
 
 // A run that came back with a yes settles what the control is worth — but only
@@ -37495,6 +37623,7 @@ const useInteractiveProps = (props, {
     const controlRequired = useContext(RequiredContext);
     const controlLoadingFromAbove = useContext(LoadingContext$1);
     const parentActionRequester = useContext(ActionRequesterContext);
+    const parallelGuard = useContext(ParallelGuardContext);
     const parentAction = useContext(ActionContext);
     const actionStatus = useActionStatus(boundAction);
     const networkPolicyReason = useNetworkPolicyReason();
@@ -37532,7 +37661,12 @@ const useInteractiveProps = (props, {
     // why (see network_policy.js): a press that looks accepted and fails after
     // is what the policy exists to avoid.
     const heldByNetworkPolicy = networkPolicyReason !== null && (isWriteAction(boundAction) || Boolean(zoneStateApplies && parentAction && isWriteAction(parentAction)));
-    const readOnlyBase = readOnly || controlReadOnly || loadingBase || readOnlyFromParentMaxLengthGuard || controlInfo.readOnlyUncontrolled || heldByNetworkPolicy;
+    // Held back because the surface above already has as many runs in flight as
+    // it allows (see parallel_guard.js). Only a control that would START one:
+    // anything without an action of its own runs nothing and has nothing to
+    // wait its turn for.
+    const heldByParallelGuard = Boolean(zoneStateApplies && parallelGuard && props.action && parallelGuard.blocks(uiStateController));
+    const readOnlyBase = readOnly || controlReadOnly || loadingBase || readOnlyFromParentMaxLengthGuard || heldByParallelGuard || controlInfo.readOnlyUncontrolled || heldByNetworkPolicy;
     // An optimistic control trusts its action to succeed: the state the user
     // just set stays visible and interactive while the action runs — no
     // loading, no readonly. On failure resetOnError rolls the state back and
@@ -37576,6 +37710,13 @@ const useInteractiveProps = (props, {
       controlHostProps.readOnly = readOnlyResolved;
     } else {
       controlHostProps["aria-readonly"] = readOnlyResolved ? "true" : "false";
+    }
+    // Read by READONLY_CONSTRAINT to say how many runs are already out, and by
+    // the action handlers below, which are where a run joins and leaves the
+    // count (a labelled block away, hence through the controller).
+    uiStateController.parallelGuard = parallelGuard;
+    if (heldByParallelGuard) {
+      controlHostProps["data-readonly-reason"] = "parallel-guard";
     }
     if (heldByNetworkPolicy) {
       // Read by READONLY_CONSTRAINT; wins over any other reason the control
@@ -37820,6 +37961,7 @@ const useInteractiveProps = (props, {
         // carried by every navi_action_* event of that run).
         uiStateController.pendingActionEvent = e.detail.event;
         uiStateController.actionInFlight = true;
+        uiStateController.parallelGuard?.claim(uiStateController);
         // The very instance this run uses, resolved now — while the UI state
         // still holds the value the run was made for. detail.action may be a
         // proxy following that state, and by the time anyone wants to abort
@@ -37834,6 +37976,7 @@ const useInteractiveProps = (props, {
         e.detail.addSideEffect(outcome => {
           uiStateController.actionInFlight = false;
           uiStateController.runningAction = null;
+          uiStateController.parallelGuard?.release(uiStateController);
           const queuedEvent = uiStateController.queuedActionAllowedEvent;
           if (!queuedEvent) {
             return;
@@ -57108,6 +57251,7 @@ const translateOf = (axis, distance) =>
 
 const PopupClose = ({
   label,
+  iconSize,
   ...rest
 }) => {
   return jsx(Button, {
@@ -57131,6 +57275,7 @@ const PopupClose = ({
     "aria-label": label === undefined ? naviI18n("button.close") : label,
     ...rest,
     children: jsx(Icon, {
+      size: iconSize,
       children: jsx(CloseSvg, {})
     })
   });
@@ -64007,6 +64152,11 @@ const ListUI = props => {
     })
   });
 };
+// How many of a list's own rows may be acting at once, when the rows are what
+// carry the action. Four rather than none: a list is a place where the same
+// gesture is available many times over, and nothing else stops a long one from
+// putting a request out for every row it draws.
+const PARALLEL_GUARD_DEFAULT = 4;
 const ListFirstResolver = props => {
   const Next = useNextResolver();
   const refDefault = useRef(null);
@@ -64018,8 +64168,13 @@ const ListFirstResolver = props => {
     virtualRef.current = createListVirtual();
   }
   props.virtual = virtualRef.current;
-  return jsx(Next, {
-    ...props
+  const parallelGuard = useParallelGuard(props.parallelGuard ?? PARALLEL_GUARD_DEFAULT);
+  return jsx(ParallelGuardContext.Provider, {
+    value: parallelGuard,
+    children: jsx(Next, {
+      ...props,
+      parallelGuard: undefined
+    })
   });
 };
 
@@ -64033,6 +64188,7 @@ const ListFirstResolver = props => {
  *   deselectable?: boolean,
  *   maxLength?: number,
  *   maxLengthGuard?: number,
+ *   parallelGuard?: number,
  *   standalone?: boolean,
  *   action?: (value: any) => void,
  *   uiAction?: (value: any) => void,
@@ -64209,6 +64365,13 @@ const ListFirstResolver = props => {
  *   taking — and `uiAction` is not called. The selected ones stay takeable
  *   back, so a selection that arrived too long can always be brought back
  *   under the limit. Implies `maxLength` for validity.
+ * @param {number} [props.parallelGuard=4]
+ *   How many runs the rows may have in flight at once, for a list whose rows
+ *   carry their own `action` (a button per row). While that many are out, every
+ *   row that is not running goes read-only and says how many it is waiting on;
+ *   the next press is possible again as soon as one comes back. `Infinity`
+ *   lifts it. Counts runs, not values — `maxLengthGuard` above is the one that
+ *   says how many things the selection may hold.
  * @param {boolean} [props.standalone]
  *   This list answers for itself: it does not register with the control group
  *   or picker around it, so its selection stays out of that value and nothing

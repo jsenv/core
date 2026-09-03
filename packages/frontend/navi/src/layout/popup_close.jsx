@@ -22,11 +22,17 @@ import { naviI18n } from "../text/navi_i18n.js";
  *
  * @type {import("preact").FunctionComponent<{
  *   label?: string,
+ *   iconSize?: number | string,
  * } & Record<string, any>>}
  * @param {string} [props.label] - What assistive tech reads for the cross
  *   (navi's own "Close" text by default, in the active language).
+ * @param {number|string} [props.iconSize] - How big the cross is drawn, apart
+ *   from the box around it. Unset, the glyph follows the button's font size
+ *   like a character, and `size` moves glyph and padding together. Set it when
+ *   the cross stands in for an affordance the app draws elsewhere and has to
+ *   land on the same pixels: `padding="s" iconSize="m"`.
  */
-export const PopupClose = ({ label, ...rest }) => {
+export const PopupClose = ({ label, iconSize, ...rest }) => {
   return (
     <Button
       command="--navi-close"
@@ -47,7 +53,7 @@ export const PopupClose = ({ label, ...rest }) => {
       aria-label={label === undefined ? naviI18n("button.close") : label}
       {...rest}
     >
-      <Icon>
+      <Icon size={iconSize}>
         <CloseSvg />
       </Icon>
     </Button>

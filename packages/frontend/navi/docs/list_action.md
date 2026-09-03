@@ -80,6 +80,26 @@ press so nothing inside it acts, then asks the control it carries to explain —
 one callout, one sentence, the same on the pointer and on the keyboard, and the
 caller's `readOnlyMessage` / `busyMessage` respected either way.
 
+And it lands **where the press landed**. A row answers for a whole box, and its
+own control is a visually hidden checkbox, so a sentence anchored on that would
+sit in the middle of the row pointing at nothing. Pressed on the button, it
+belongs on the button; pressed on the row's own surface, on the row:
+
+| what was pressed                                | where the sentence appears |
+| ----------------------------------------------- | -------------------------- |
+| the button of a row whose own run is going      | the button                 |
+| the name of that same row                       | the row                    |
+| the button of a row held back by something else | the button                 |
+
+The last one needs nothing special: that row is not blocked, so the press
+reaches the button and the button's own gate answers it.
+
+A row that would rather always take it says so once:
+
+```jsx
+<List.Item data-callout-anchor="item" />
+```
+
 ## Read-only, not loading
 
 A row whose button is working is **not loading** — the button is. The row is in

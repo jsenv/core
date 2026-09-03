@@ -207,7 +207,16 @@ export const createCalloutManager = (
       // Resolved as the token is added, and kept with it: a token shown later
       // (when the one covering it goes) must be drawn where it was pointing at
       // the time, and the control itself is where a token pointing nowhere goes.
-      anchorElement: anchorElement || controller.ref.current,
+      //
+      // Unless the control has somewhere better to send it, which is why it is
+      // given the event: a control drawn by something else — a list row whose
+      // selection is a visually hidden checkbox — answers for a whole box, and
+      // the sentence belongs where the press landed inside it rather than in
+      // its middle (see getCalloutAnchorElement in list_selectable.jsx).
+      anchorElement:
+        anchorElement ||
+        controller.getCalloutAnchorElement?.(event) ||
+        controller.ref.current,
     };
     tokens.set(token, tokenData);
     showToken(tokenData, event);

@@ -17,6 +17,7 @@ import {
 } from "../navi_debug.jsx";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import { resolveNaviCommand, triggerNaviCommand } from "./commands.js";
+import { findControlRoot } from "./control_dom.js";
 import { warnSignalCollision } from "./control_value.js";
 import {
   findProxyControllers,
@@ -618,6 +619,9 @@ export const useUIStateController = (
         resetUIState: (e) => {
           controller.setUIState(controller.state, e);
         },
+        // Read by the callout manager when it has nowhere else to point.
+        getCalloutAnchorElement: (event) =>
+          resolveCalloutAnchorElement(controller.ref.current, event),
         // What the control shows becomes what is acknowledged: the outside said
         // yes to it, so it is where a rollback goes back to. Left alone for a
         // control whose value is GIVEN — the prop is already its truth — and
@@ -839,6 +843,44 @@ const firstDefinedChildUIState = (children) => {
     }
   }
   return undefined;
+};
+
+// Where a control that cannot point at itself puts what it has to say.
+//
+// A control drawn by something ELSE answers for a box bigger than itself: a
+// list row's selection is a visually hidden checkbox inside a whole pressable
+// row, so a callout anchored on the control lands in the middle of that row,
+// pointing at nothing. What the press landed on is what the sentence is about
+// — another control in the same box takes it (the button that invites, the
+// picker that opens), and the box itself takes what was aimed at the box.
+//
+// Answering null leaves the callout where it would have gone, which is also
+// what a box asks for once and for all with `data-callout-anchor="item"`.
+const resolveCalloutAnchorElement = (element, event) => {
+  if (!element || !element.closest("[navi-visually-hidden]")) {
+    return null;
+  }
+  const target = event?.target;
+  if (!target || !target.closest) {
+    return null;
+  }
+  const controlRoot = findControlRoot(element);
+  if (
+    !controlRoot ||
+    controlRoot.getAttribute("data-callout-anchor") === "item"
+  ) {
+    return null;
+  }
+  const controlHost = target.closest("[navi-control-host]");
+  if (
+    !controlHost ||
+    controlHost === element ||
+    !controlRoot.contains(controlHost) ||
+    controlHost.closest("[navi-visually-hidden]")
+  ) {
+    return null;
+  }
+  return controlHost;
 };
 
 // A run that came back with a yes settles what the control is worth — but only
