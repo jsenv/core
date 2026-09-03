@@ -186,6 +186,15 @@ export const compareTwoJsValues = (
     if (aKeys.length !== bKeys.length) {
       return false;
     }
+    // The same number of keys is not the same keys, and only a's are walked
+    // below. A key b does not have reads as undefined, so { include: undefined }
+    // and { search: "a" } would compare "include" (undefined on both sides),
+    // never look at "search", and pass for equal.
+    for (const bKey of bKeys) {
+      if (!Object.hasOwn(a, bKey)) {
+        return false;
+      }
+    }
     if (aKeys.length === 0 && (!isPlainObject(a) || !isPlainObject(b))) {
       // A Set, a Map, an element, a URL: nothing enumerable to tell two of them
       // apart, so they are the same one or they are not — and they are not,

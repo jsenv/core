@@ -297,7 +297,7 @@ const useExpandableContext = (partName) => {
  *   openDirection?: "down" | "up" | "right" | "left",
  *   autoFocus?: boolean,
  *   maxContentHeight?: string | number,
- *   mount?: "always" | "from-first-open" | "while-opened",
+ *   mount?: "always" | "idle" | "from-first-open" | "while-opened",
  *   arrowKeyShortcuts?: boolean,
  *   openKeyShortcut?: string,
  *   closeKeyShortcut?: string,
@@ -352,14 +352,17 @@ const useExpandableContext = (partName) => {
  * @param maxContentHeight - Caps the content height; taller content scrolls
  *   inside the expandable instead of growing it.
  * @param mount - When the content is built and thrown away, a popup's own
- *   three values and a popup's own code (see popup_content_mount.js). `"from-first-open"` (the
+ *   values and a popup's own code (see popup_content_mount.js). `"from-first-open"` (the
  *   default) builds it on the first expansion and keeps it afterwards.
  *   `"always"` builds it right away; in layout="column" it also gives the
  *   closed expandable its content's height (the content is kept laid out at
  *   its open width), so opening only reveals the width instead of changing the
- *   height too. `"while-opened"` throws the content away once the collapse
+ *   height too. `"idle"` builds it in a browser idle moment after load.
+ *   `"while-opened"` throws the content away once the collapse
  *   settles — after the closing animation, so it still plays on real
- *   content — and rebuilds it from scratch on every expansion.
+ *   content — and rebuilds it from scratch on every expansion. Whatever the
+ *   value, intent on the UI part (pointer entering it, focus landing in it)
+ *   builds the content ahead of the click.
  */
 export const Expandable = (props) => {
   import.meta.css = css;
@@ -423,7 +426,9 @@ export const Expandable = (props) => {
   const contentMounted = usePopupContentMount(
     openController,
     contentContainerRef,
-    { mount },
+    // The UI part is what the user aims at to expand — the closest thing an
+    // expandable has to a popup's anchor, warming the content on intent.
+    { mount, anchor: uiRef },
   );
 
   // The pointer press that is about to toggle can blur the focused field

@@ -342,6 +342,12 @@ const PickerCustom = (props) => {
     // closed on it. A confirm picker is the one saying something (see
     // picker_confirm.jsx): its press, deferred until the question is answered.
     onConfirm,
+    // The popup's lifecycle, the same pair Dialog and Popover take. Taken on
+    // the picker and chained into its own openController below: the picker
+    // hands the popup that controller, and a controlled Dialog/Popover reads
+    // no onOpen/onClose of its own.
+    onOpen,
+    onClose,
   } = props;
   // Resolve the id the same way useControlProps does (own id > Field's id > generated id)
   // before computing popupId below, so two Pickers without an explicit id never collide.
@@ -376,6 +382,8 @@ const PickerCustom = (props) => {
   delete pickerProps.defaultOpen;
   delete pickerProps.escapeEffect;
   delete pickerProps.onConfirm;
+  delete pickerProps.onOpen;
+  delete pickerProps.onClose;
   // Read below for the popup alone; on the trigger it would land on the DOM as
   // an unknown attribute holding a ref object.
   delete pickerProps.anchor;
@@ -384,6 +392,13 @@ const PickerCustom = (props) => {
     popupProps,
     actionEvent: "custom",
   });
+  if (pickerProps.resetOnError === undefined) {
+    // The picker's action fails after its popup closed on the value: nobody is
+    // left mid-edit, so the value the server refused rolls back to the last
+    // accepted one and the error callout says why — the same default
+    // PickerNative takes.
+    pickerProps.resetOnError = true;
+  }
   // ref
   const popupRef = useRef(null);
   popupProps.ref = popupRef;
@@ -447,6 +462,7 @@ const PickerCustom = (props) => {
         valueAtOpen,
         heldAtOpen ? `(held)` : `(a suggestion, not an answer yet)`,
       );
+      onOpen?.(openEvent);
 
       return {
         onRequestClose: (requestCloseEvent) => {
@@ -547,6 +563,9 @@ const PickerCustom = (props) => {
           if (confirmEvent && !closeEvent.detail.isCancel) {
             onConfirm?.(confirmEvent);
           }
+          // Last, after the value bookkeeping above: whoever listens reads the
+          // picker's value as it ends up — committed, or restored on a cancel.
+          onClose?.(closeEvent);
         },
       };
     });

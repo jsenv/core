@@ -75,7 +75,7 @@ import {
   ReadOnlyContext,
   RequiredContext,
 } from "./control_context.js";
-import { findControlHost } from "./control_dom.js";
+import { findControlHost, findControlRoot } from "./control_dom.js";
 import { interactionsDisputeThePress } from "./interaction/interactions.js";
 import {
   publishControlStateToLabels,
@@ -1845,6 +1845,31 @@ const useInteractiveProps = (
       resetOnError,
       optimistic,
     } = props;
+    // The DOM's word for the unconfirmed moment: an optimistic control paints
+    // the value before the server accepts it, and stays interactive while the
+    // run is out — aria-busy says "false" on purpose. This attribute is the
+    // only trace of that moment, for an app that wants to dim or mark the
+    // value until it is confirmed: `[data-optimistic]` on the control host and
+    // its control root. Written at the run's boundaries rather than from
+    // render: the bound action is a proxy following the UI state, so once the
+    // state moves ahead of the running instance the proxy stops reporting the
+    // run (same trap as the queue below).
+    const syncOptimisticAttribute = (on) => {
+      const el = ref.current;
+      if (!el) {
+        return;
+      }
+      const controlRoot = findControlRoot(el);
+      const targets =
+        controlRoot && controlRoot !== el ? [el, controlRoot] : [el];
+      for (const target of targets) {
+        if (on) {
+          target.setAttribute("data-optimistic", "");
+        } else {
+          target.removeAttribute("data-optimistic");
+        }
+      }
+    };
     Object.assign(controlHostProps, {
       onFocus: (e) => {
         // Transfer programmatic focus to the delegate target (navi-focus-delegate or navi-control-proxy-for)
@@ -1935,6 +1960,9 @@ const useInteractiveProps = (
         uiStateController.pendingActionEvent = e.detail.event;
         uiStateController.actionInFlight = true;
         uiStateController.parallelGuard?.claim(uiStateController);
+        if (optimistic) {
+          syncOptimisticAttribute(true);
+        }
         // The very instance this run uses, resolved now — while the UI state
         // still holds the value the run was made for. detail.action may be a
         // proxy following that state, and by the time anyone wants to abort
@@ -1953,6 +1981,7 @@ const useInteractiveProps = (
           uiStateController.parallelGuard?.release(uiStateController);
           const queuedEvent = uiStateController.queuedActionAllowedEvent;
           if (!queuedEvent) {
+            syncOptimisticAttribute(false);
             return;
           }
           if (outcome.error) {
@@ -1960,6 +1989,7 @@ const useInteractiveProps = (
             // known state (resetOnError above), and what was queued was built
             // on top of the state that just failed.
             uiStateController.queuedActionAllowedEvent = null;
+            syncOptimisticAttribute(false);
             return;
           }
           // A microtask later, not right here: this runs inside the batch()

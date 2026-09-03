@@ -1503,6 +1503,8 @@ const PickerFirstResolver = (props) => {
  *   cancelLabel?: import("preact").ComponentChildren,
  *   focusOnOpen?: "confirm" | "cancel" | "none",
  *   onConfirm?: (confirmEvent: CustomEvent) => void,
+ *   onOpen?: (openEvent: CustomEvent) => void,
+ *   onClose?: (closeEvent: CustomEvent) => void,
  *   maxLines?: number,
  *   slotSpacing?: number | string,
  *   popoverMaxHeight?: number | string,
@@ -1688,6 +1690,20 @@ const PickerFirstResolver = (props) => {
  * @param {(confirmEvent: CustomEvent) => void} [onConfirm] Called once the
  *   popup has closed on a `--navi-confirm` said inside it. What a confirm
  *   picker uses to run its press; a picker of any type may listen too.
+ * @param {(openEvent: CustomEvent) => void} [onOpen] Called when the popup
+ *   opens, whatever asked for it (a press, a command, history bringing it
+ *   back). You most likely do NOT need this pair: "the user validated" is
+ *   already `action` — it fires on every close that keeps (click outside, the
+ *   cross, Enter, a `--navi-send` inside the popup) and never on a cancel.
+ *   Reach for `onOpen`/`onClose` only for the one thing `action` cannot say:
+ *   the popup being up at all, independent of the value — e.g. a derived
+ *   computation held while the sheet is open, released on close.
+ * @param {(closeEvent: CustomEvent) => void} [onClose] Called when the popup
+ *   actually closes — not preventable, and (see `onOpen`) not the way to know
+ *   the user validated: that is `action`. `closeEvent.detail.isCancel` tells a
+ *   cancel (Escape, the back gesture) from a close that keeps. Fires after the
+ *   picker's value has settled — committed, or restored on a cancel — so the
+ *   value read in here is the one the picker ends up holding.
  * @param {number|string} [rightSlotIconSize="inherit"] How big what sits in the
  *   right slot is drawn — the chevron, a `rightSlotIcon`, or the clear button's
  *   cross. "inherit" takes the picker's own font size.
@@ -1772,7 +1788,7 @@ const PickerFirstResolver = (props) => {
  *   Both are elements navi builds, which a test may not name by class (see
  *   docs/testid.md).
  * @param {string} [cancelTestId]
- * @param {"always"|"from-first-open"|"while-opened"} [mount] The popup's own
+ * @param {"always"|"idle"|"from-first-open"|"while-opened"} [mount] The popup's own
  *   (see Popup): when the children are built and thrown away. Left out, a
  *   picker told no value builds them right away (`"always"`) — it reads its
  *   value off the control they hold — and one told a value waits for the first

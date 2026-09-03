@@ -130,6 +130,7 @@ export { allowWheelThrough } from "./src/interaction/scroll/wheel_through.js";
 // interaction/drag
 export {
   dragAfterIntent,
+  keepTouchRefusable,
   markDragSource,
 } from "./src/interaction/drag/drag_after_intent.js";
 export { getDragCoordinates } from "./src/interaction/drag/drag_element_positioner.js";

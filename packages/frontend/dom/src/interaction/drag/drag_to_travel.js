@@ -163,11 +163,22 @@ const DRAG_START_THRESHOLD = 10;
 // has clearly begun is an intention: asking for the box to be dragged all the
 // way across turns a travel into work.
 const DRAG_COMMIT_RATIO = 0.3;
-// A flick travels whatever the distance: the hand said "away" quickly, which is
-// the whole gesture — px/ms of pointer, and a few pixels to tell it from a tap
-// that shook.
-const DRAG_FLICK_VELOCITY = 0.4;
-const DRAG_FLICK_DISTANCE = 8;
+// A hand still moving towards what it is pulling in when it lets go has said
+// where this goes, however slowly: an intention still being acted on at the
+// lift travels whatever the distance. The bar sits just above stillness —
+// capacitive jitter and a hand settling before it lifts measure under it — so
+// only a release at rest is left to the position alone (the commit ratio).
+// It has to sit that low for another reason too: velocity is averaged over
+// the trailing window (see createVelocityMeter) and the release repeats the
+// last position a moment later, both pulling the measure down from the speed
+// the fingertip actually has. A few pixels of pull are asked besides, to tell
+// a movement from a tap that shook.
+const DRAG_DRIFT_VELOCITY = 0.03;
+const DRAG_DRIFT_DISTANCE = 8;
+// Thrown back: a hand moving AWAY from what it was bringing in this fast asks
+// for it to be put back, whatever the distance already covered. Well above the
+// drift bar, so a hand merely wavering as it lets go does not read as a throw.
+const DRAG_THROW_BACK_VELOCITY = 0.3;
 // Pulling towards nothing: what travels follows at a fraction of the finger, so
 // the gesture is answered (something moves) while saying there is nothing that
 // way. Let go and it comes back — a wall one can lean on, never walk through.
@@ -409,21 +420,27 @@ const travelsAfter = ({
     return true;
   }
   const sign = pulled > 0 ? 1 : -1;
-  const goingFast = Math.abs(velocity) > DRAG_FLICK_VELOCITY;
   // A hand that is still moving says where it is going, and it says it about
-  // BOTH answers. Going away from what it was bringing in is "put it back",
-  // whatever the distance already covered — which is the whole of what one asks
-  // for when catching something in flight and throwing it back the other way.
-  // Without this the picture alone decides, and a screen caught at two thirds
-  // and thrown back still arrives: the gesture was read as the place it was let
-  // go of rather than as a movement.
-  if (goingFast && Math.sign(velocity) !== sign) {
+  // BOTH answers. Going away from what it was bringing in fast is "put it
+  // back", whatever the distance already covered — which is the whole of what
+  // one asks for when catching something in flight and throwing it back the
+  // other way. Without this the picture alone decides, and a screen caught at
+  // two thirds and thrown back still arrives: the gesture was read as the
+  // place it was let go of rather than as a movement.
+  if (
+    Math.abs(velocity) > DRAG_THROW_BACK_VELOCITY &&
+    Math.sign(velocity) !== sign
+  ) {
     return false;
   }
-  // …and going towards it travels whatever the distance: the hand said "away"
-  // quickly, which is the whole gesture.
-  const flicked = goingFast && Math.abs(pulled) > DRAG_FLICK_DISTANCE;
-  return flicked || Math.abs(pulled) > size * commitRatio;
+  // …and going towards it travels, however slowly: see DRAG_DRIFT_VELOCITY.
+  const drifting =
+    Math.abs(velocity) > DRAG_DRIFT_VELOCITY && Math.sign(velocity) === sign;
+  if (drifting && Math.abs(pulled) > DRAG_DRIFT_DISTANCE) {
+    return true;
+  }
+  // At rest: the position is the only witness left.
+  return Math.abs(pulled) > size * commitRatio;
 };
 
 /**
@@ -678,13 +695,22 @@ export const startDragToTravel = (
           travelBack: Boolean(started.travelBack),
           travelOn: Boolean(started.travelOn),
           slack: started.slack || 0,
-          // The pixels spent deciding the axis are not pulled back — what
-          // travels sets off from where the finger is at that moment rather
-          // than jumping the threshold it just crossed. Except when the intent
-          // was established before the press (see immediate): there was no
-          // threshold to cross, so every pixel since the grab is the hand's and
-          // is owed to it.
-          origin: immediate ? 0 : covered,
+          // Only what the intent threshold cost is withheld, so what travels
+          // does not jump those few pixels at the start — and nothing more:
+          // a fast gesture arrives coalesced, and the first report can carry
+          // most of a flick. Charged whole, the flick would set off with
+          // nothing left of itself to have pulled, move nothing on screen and
+          // be refused at the release for it. Except when the intent was
+          // established before the press (see immediate): there was no
+          // threshold to cross, so every pixel since the grab is the hand's
+          // and is owed to it.
+          origin: immediate
+            ? 0
+            : covered > DRAG_START_THRESHOLD
+              ? DRAG_START_THRESHOLD
+              : covered < -DRAG_START_THRESHOLD
+                ? -DRAG_START_THRESHOLD
+                : covered,
           pulled: started.slack || 0,
         };
         document.documentElement.setAttribute(WALKING_ATTRIBUTE, axis);

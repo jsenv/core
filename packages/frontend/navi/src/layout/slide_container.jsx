@@ -82,6 +82,7 @@ import {
 import { Box } from "../box/box.jsx";
 import {
   dispatchCustomEvent,
+  keepTouchRefusable,
   scrollRoomTowards,
   startDragToTravel,
   watchWheelTravel,
@@ -2476,6 +2477,13 @@ export const SlideContainer = ({
       // has seen the gesture — and it is also what a box HOLDING this one reads
       // to know the gesture is not its own (see drag_to_travel.js).
       data-travel-by-drag={dragAxes ?? undefined}
+      // …and said as a listener too, from the same render: a touch this box may
+      // take has to be refusable before the finger lands, and being registered
+      // is the whole of it — see keepTouchRefusable for why a JSX prop is
+      // enough here (an element-level touchmove listener is non-passive).
+      // Without it, a swipe the box has taken can be cancelled mid-gesture by
+      // the browser scrolling the page along the axis touch-action leaves it.
+      onTouchMove={dragAxes ? keepTouchRefusable : undefined}
       // The same fact for a wheel, and only for that second reason: this box
       // takes the push, whatever the box around it also travels on.
       data-travel-by-wheel={scrollAxes ?? undefined}

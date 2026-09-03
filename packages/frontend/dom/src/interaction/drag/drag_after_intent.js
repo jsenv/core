@@ -167,7 +167,17 @@ import.meta.css = css;
  * on its way home is pressed through the pictures of a view transition, and the
  * touch lands on the document root (see letCopyBeCaught in drag_to.js). Same
  * rule, other element — and it has to be the same function, or the listener put
- * down is not the one taken back off.
+ * down is not the one taken back off. A box that TRAVELS says it too, from its
+ * own render: given as a JSX prop (`onTouchMove={keepTouchRefusable}`), next to
+ * the attribute naming its axes.
+ *
+ * Registered `{ passive: false }` where it is added by hand — but a framework's
+ * event prop cannot say that (Preact's third addEventListener argument is only
+ * useCapture), and it does not need to: passive-by-default only covers
+ * touchmove listeners on window, document and document.body, so on any other
+ * element a plain addEventListener is non-passive already. The document root is
+ * exactly the one place this goes down where the explicit option is load-
+ * bearing.
  */
 export const keepTouchRefusable = () => {
   // Being registered IS the whole of it — see above.

@@ -143,7 +143,7 @@ const css = /* css */ `
  * @param {string} [props.className] - Merged with the shared
  *   `"navi_popup"` class (see this file's own CSS) rather than replacing
  *   it.
- * @param {"always"|"from-first-open"|"while-opened"} [props.mount] - When
+ * @param {"always"|"idle"|"from-first-open"|"while-opened"} [props.mount] - When
  *   `children` are built and thrown away (see popup_content_mount.js).
  *   `"from-first-open"` (the default) builds them on the first open and keeps
  *   them afterwards. `"always"` builds them right away, for content something

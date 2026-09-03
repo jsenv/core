@@ -219,6 +219,11 @@ export const useUIStateController = (
 
         state: stateInitial,
         uiState: stateInitial,
+        // What a bound signal last said — the change detector for writes coming
+        // from the outside. Kept apart from `state` on purpose: `state` is the
+        // last ACCEPTED value (the rollback target), and a signal echoing the
+        // control's own unconfirmed write moves this field without moving it.
+        stateFromSignalPrevious: stateInitial,
         uiStateSignal,
         // What this control holds by ITSELF — the same signal as above unless
         // it is a button inheriting from the control around it (see `inherit`).
@@ -730,22 +735,43 @@ export const useUIStateController = (
         if (controller.hasStateProp) {
           controller.hasStateProp = false;
           controller.state = stateInitial;
+          controller.stateFromSignalPrevious = stateInitial;
         }
         if (controlInfo.signal) {
           // The other half of a bound signal: the control follows it when
-          // something else writes it. Compared against `state` (what the signal
-          // last said), never against the ui state — otherwise typing into an
+          // something else writes it. Compared against what the signal last
+          // said, never against the ui state — otherwise typing into an
           // uncontrolled control would be undone on the next render. A write
           // coming from the control itself lands here with the value already in
           // place, and setUIState treats an unchanged state as a no-op.
-          const currentState = controller.state;
-          if (!compareTwoJsValues(stateFromSignal, currentState)) {
-            controller.state = stateFromSignal;
-            if (!optimisticWorkInFlight) {
-              controller.setUIState(
-                stateFromSignal,
-                new CustomEvent("state_prop_change"),
-              );
+          if (
+            !compareTwoJsValues(
+              stateFromSignal,
+              controller.stateFromSignalPrevious,
+            )
+          ) {
+            controller.stateFromSignalPrevious = stateFromSignal;
+            // On a control that runs an action, a signal matching the ui state
+            // is the echo of the control's own write (setUIState wrote the
+            // signal at the press — for a picker, at the pick, before the
+            // close even runs the action). `state` is the rollback target —
+            // the last value the outside accepted — and the echo must not
+            // become it: resetOnError would then "restore" the very value the
+            // server is about to refuse. The action settles `state` on its
+            // own: success acknowledges (state = uiState), failure resets to
+            // the state kept here. A control with no action has no such
+            // settlement, so it keeps following the signal.
+            const signalEchoesOwnWrite =
+              Boolean(props.action) &&
+              compareTwoJsValues(stateFromSignal, controller.uiState);
+            if (!signalEchoesOwnWrite) {
+              controller.state = stateFromSignal;
+              if (!optimisticWorkInFlight) {
+                controller.setUIState(
+                  stateFromSignal,
+                  new CustomEvent("state_prop_change"),
+                );
+              }
             }
           }
         }

@@ -20,36 +20,60 @@
  * use_displayed_layout_effect.js).
  *
  * The `mount` prop moves that line. "closed" is two states, not one — never
- * opened yet, and closed again after an opening — and the three values answer
+ * opened yet, and closed again after an opening — and the four values answer
  * both at once:
  *
- * | mount             | before the first open | after a close |
- * | ----------------- | --------------------- | ------------- |
- * | "always"          | mounted               | mounted       |
- * | "from-first-open" | not mounted           | mounted       |
- * | "while-opened"    | not mounted           | not mounted   |
+ * | mount             | before the first open       | after a close |
+ * | ----------------- | --------------------------- | ------------- |
+ * | "always"          | mounted                     | mounted       |
+ * | "idle"            | mounted once the page idles | mounted       |
+ * | "from-first-open" | not mounted                 | mounted       |
+ * | "while-opened"    | not mounted                 | not mounted   |
  *
  * "always" is for content something else depends on before any opening: a
  * value the popup's owner reads off its own children, fields a form around it
  * collects on submit, a size measured from outside.
  *
+ * "idle" is "always" minus the cost on the critical render: the page appears
+ * without the content, and the browser builds it in an idle moment after
+ * load — so by the time anyone clicks, it is usually already there.
+ *
  * "while-opened" is the opposite end: content that must be rebuilt from
  * scratch every time, because what it shows is read once at build time and can
  * change while the popup is closed — an uncontrolled field seeded from a
  * `defaultValue`, a form whose fresh state is its initial state.
+ *
+ * On top of whichever value is picked, intent on the anchor warms the content:
+ * a pointer entering the popup's anchor, or focus landing in it, builds the
+ * content ahead of the click that will open it. Deferring the build to the
+ * opening puts its whole cost in the frame right after the click — the frame
+ * where a delay is felt hardest — while the ~100-300ms between hovering a
+ * trigger and pressing it are free. The warming render is asynchronous
+ * (batched, not flushed): nothing here needs the content in the DOM before
+ * the click, only before the open that follows it.
  */
 
-import { useLayoutEffect, useState } from "preact/hooks";
+import { useEffect, useLayoutEffect, useState } from "preact/hooks";
 
 import { flushSyncRendering } from "../utils/flush_sync_rendering.js";
 import { whenTransitionSettles } from "./popup_shared.js";
 
 export const MOUNT_DEFAULT = "from-first-open";
 
+// requestIdleCallback is missing from Safari; a timeout is close enough there.
+const requestIdle = (callback) =>
+  typeof requestIdleCallback === "function"
+    ? requestIdleCallback(callback)
+    : setTimeout(callback, 300);
+const cancelIdle = (id) =>
+  typeof cancelIdleCallback === "function"
+    ? cancelIdleCallback(id)
+    : clearTimeout(id);
+
 export const usePopupContentMount = (
   openController,
   ref,
-  { mount = MOUNT_DEFAULT },
+  { mount = MOUNT_DEFAULT, anchor },
 ) => {
   const mountedAlways = mount === "always";
   const [contentMounted, setContentMounted] = useState(
@@ -88,6 +112,42 @@ export const usePopupContentMount = (
       setContentMounted(true);
     }
   }, [mountedAlways]);
+  useEffect(() => {
+    if (mount !== "idle" || contentMounted) {
+      return undefined;
+    }
+    const idleId = requestIdle(() => {
+      setContentMounted(true);
+    });
+    return () => {
+      cancelIdle(idleId);
+    };
+  }, [mount, contentMounted]);
+  // Warm on intent (see the top comment). The anchor accepts the same shapes
+  // Popover resolves at open time — a string id, a ref, an element — but is
+  // resolved here at effect time: an id that matches nothing yet simply
+  // doesn't warm, the open still mounts the content like it always does.
+  useEffect(() => {
+    if (contentMounted || !anchor) {
+      return undefined;
+    }
+    const anchorElement =
+      typeof anchor === "string"
+        ? document.getElementById(anchor)
+        : (anchor.current ?? anchor);
+    if (!anchorElement) {
+      return undefined;
+    }
+    const warm = () => {
+      setContentMounted(true);
+    };
+    anchorElement.addEventListener("pointerenter", warm);
+    anchorElement.addEventListener("focusin", warm);
+    return () => {
+      anchorElement.removeEventListener("pointerenter", warm);
+      anchorElement.removeEventListener("focusin", warm);
+    };
+  }, [contentMounted, anchor]);
 
   return contentMounted;
 };
