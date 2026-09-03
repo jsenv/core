@@ -1,10 +1,10 @@
 import { parseHtml, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, stringifyHtmlAst, applyBabelPlugins, generateUrlForInlineContent, injectJsenvScript, parseJsWithAcorn, visitHtmlNodes, analyzeScriptNode, getHtmlNodeText, getHtmlNodeAttribute, getHtmlNodePosition, getUrlForContentInsideHtml, setHtmlNodeAttributes, setHtmlNodeText, parseCssUrls, getHtmlNodeAttributePosition, parseSrcSet, removeHtmlNodeText, parseJsUrls, getUrlForContentInsideJs, renderCssTemplateLiteral, visitJsAst, getImportMetaPropertyName, visitJsAstUntil, analyzeLinkNode, findHtmlNode, removeHtmlNode, insertHtmlNodeAfter } from "@jsenv/ast";
+import { lookupPackageDirectory, urlIsOrIsInsideOf, registerDirectoryLifecycle, urlToRelativeUrl, createDetailedMessage, stringifyUrlSite, generateContentFrame, validateResponseIntegrity, ensureWindowsDriveLetter, setUrlFilename, moveUrl, getCallerPosition, urlToBasename, urlToExtension, asSpecifierWithoutSearch, asUrlWithoutSearch, injectQueryParamsIntoSpecifier, bufferToEtag, isFileSystemPath, urlToPathname, setUrlBasename, urlToFileSystemPath, writeFileSync, createLogger, URL_META, applyNodeEsmResolution, normalizeUrl, ANSI, RUNTIME_COMPAT, CONTENT_TYPE, readPackageAtOrNull, urlToFilename, DATA_URL, errorToHTML, normalizeImportMap, composeTwoImportMaps, resolveImport, JS_QUOTES, readCustomConditionsFromProcessArgs, collectFiles, readEntryStatSync, applyFileSystemMagicResolution, getExtensionsToTry, ensurePathnameTrailingSlash, compareFileUrls, setUrlExtension, isSpecifierForNodeBuiltin, injectQueryParams, renderDetails, humanizeDuration, humanizeFileSize, renderTable, renderBigSection, distributePercentages, humanizeMemory, comparePathnames, UNICODE, escapeRegexpSpecialChars, injectQueryParamIntoSpecifierWithoutEncoding, renderUrlOrRelativeUrlFilename, assertAndNormalizeDirectoryUrl, Abort, raceProcessTeardownEvents, startMonitoringMemoryUsage, inferRuntimeCompatFromClosestPackage, browserDefaultRuntimeCompat, nodeDefaultRuntimeCompat, clearDirectorySync, createTaskLog, createLookupPackageDirectory, ensureEmptyDirectory, updateJsonFileSync, createDynamicLog } from "./jsenv_core_packages.js";
 import { bundleJsModules, jsenvPluginBundling } from "@jsenv/plugin-bundling";
 import { jsenvPluginMinification } from "@jsenv/plugin-minification";
 import { jsenvPluginTranspilation, jsenvPluginJsModuleFallback } from "@jsenv/plugin-transpilation";
 import { memoryUsage } from "node:process";
 import { readFileSync, existsSync, realpathSync, readdirSync, lstatSync, statSync } from "node:fs";
-import { lookupPackageDirectory, urlIsOrIsInsideOf, registerDirectoryLifecycle, urlToRelativeUrl, createDetailedMessage, stringifyUrlSite, generateContentFrame, validateResponseIntegrity, ensureWindowsDriveLetter, setUrlFilename, moveUrl, getCallerPosition, urlToBasename, urlToExtension, asSpecifierWithoutSearch, asUrlWithoutSearch, injectQueryParamsIntoSpecifier, bufferToEtag, isFileSystemPath, urlToPathname, setUrlBasename, urlToFileSystemPath, writeFileSync, createLogger, URL_META, applyNodeEsmResolution, normalizeUrl, ANSI, RUNTIME_COMPAT, CONTENT_TYPE, readPackageAtOrNull, urlToFilename, DATA_URL, errorToHTML, normalizeImportMap, composeTwoImportMaps, resolveImport, JS_QUOTES, readCustomConditionsFromProcessArgs, collectFiles, readEntryStatSync, applyFileSystemMagicResolution, getExtensionsToTry, ensurePathnameTrailingSlash, compareFileUrls, setUrlExtension, isSpecifierForNodeBuiltin, injectQueryParams, renderDetails, humanizeDuration, humanizeFileSize, renderTable, renderBigSection, distributePercentages, humanizeMemory, comparePathnames, UNICODE, escapeRegexpSpecialChars, injectQueryParamIntoSpecifierWithoutEncoding, renderUrlOrRelativeUrlFilename, assertAndNormalizeDirectoryUrl, Abort, raceProcessTeardownEvents, startMonitoringMemoryUsage, inferRuntimeCompatFromClosestPackage, browserDefaultRuntimeCompat, nodeDefaultRuntimeCompat, clearDirectorySync, createTaskLog, createLookupPackageDirectory, ensureEmptyDirectory, updateJsonFileSync, createDynamicLog } from "./jsenv_core_packages.js";
 import { pathToFileURL } from "node:url";
 import { generateSourcemapFileUrl, createMagicSource, composeTwoSourcemaps, generateSourcemapDataUrl, SOURCEMAP } from "@jsenv/sourcemap";
 import { createPluginsController } from "@jsenv/server/src/plugins_controller.js";
@@ -13185,10 +13185,31 @@ entryPoints: {
             ).href;
             packageSideEffectUrlSet.add(sideEffectFileUrl);
           }
+          // A side effect entry is outdated (and pruned) only when this build
+          // owns it: it is inside the build directory AND the clean patterns
+          // would remove it. A file kept by buildDirectoryCleanPatterns
+          // belongs to another build writing inside this directory (e.g. a
+          // dev-flavored build in a subdirectory, possibly running in
+          // parallel): its entries must be preserved, like files outside the
+          // build directory.
+          const cleanAssociations = URL_META.resolveAssociations(
+            { remove: buildDirectoryCleanPatterns },
+            buildDirectoryUrl,
+          );
+          const isOwnedByThisBuild = (url) => {
+            if (!urlIsOrIsInsideOf(url, buildDirectoryUrl)) {
+              return false;
+            }
+            const { remove } = URL_META.applyAssociations({
+              url,
+              associations: cleanAssociations,
+            });
+            return Boolean(remove);
+          };
           let hasSomeOutdatedSideEffectUrl = false;
           for (const packageSideEffectUrl of packageSideEffectUrlSet) {
             if (
-              urlIsOrIsInsideOf(packageSideEffectUrl, buildDirectoryUrl) &&
+              isOwnedByThisBuild(packageSideEffectUrl) &&
               !buildSideEffectUrlSet.has(packageSideEffectUrl)
             ) {
               hasSomeOutdatedSideEffectUrl = true;

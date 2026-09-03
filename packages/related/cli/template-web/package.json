@@ -15,7 +15,7 @@
   },
   "devDependencies": {
     "@jsenv/assert": "4.5.7",
-    "@jsenv/core": "41.5.4",
+    "@jsenv/core": "41.5.5",
     "@jsenv/eslint-config-relax": "2.0.0",
     "@jsenv/plugin-bundling": "2.10.20",
     "@jsenv/plugin-minification": "1.7.15",
