@@ -221,6 +221,18 @@ const css = /* css */ `
        to filter). An entrance animation moves the popover through scale and
        transform instead, which compose under it: see popup_css.js. */
 
+    /* The clamped max, not --popover-maxmax-*: that one ignores what the
+       placement left available, which reaches here through
+       --container-position-remaining-* (see applyNewPosition) — the min()
+       in --x-popover-max-* accounts for both. Mirrors Dialog's own
+       data-expand-x/y rules. */
+    &[data-expand-x] {
+      width: var(--x-popover-max-width);
+    }
+    &[data-expand-y] {
+      height: var(--x-popover-max-height);
+    }
+
     /* The via-attribute renderer starts hidden for free (native UA default
        for any [popover] element, same as <dialog> without [open]) — the
        custom renderer is a plain div with no such native default, so
@@ -465,6 +477,14 @@ const css = /* css */ `
  * @param {string} [props.minHeight] - Maps to `--popover-min-height`, same
  *   clamping as `minWidth`.
  * @param {string} [props.maxHeight] - Maps to `--popover-max-height`.
+ * @param {boolean} [props.expand] - Shorthand for both `expandX`/`expandY`
+ *   below.
+ * @param {boolean} [props.expandX] - Stretches the popover to
+ *   `--x-popover-max-width` (`data-expand-x`) — the full width its own
+ *   ceiling and the placement leave available — instead of its content
+ *   width. Same meaning as `Dialog`'s own `expandX`.
+ * @param {boolean} [props.expandY] - Same, vertically
+ *   (`--x-popover-max-height`, `data-expand-y`).
  * @param {"auto"|"frozen"} [props.sizing="auto"] - `"auto"`: the popover
  *   follows its content for as long as it stays open. `"frozen"`: it is
  *   measured once and held at that size until it closes — what no longer fits
@@ -746,6 +766,13 @@ const usePopoverProps = (props) => {
     // "auto" (default) → the popover follows its content. "frozen" → measured
     // once, held at that size while open. See this prop's own JSDoc above.
     sizing = "auto",
+    // Destructured (not left in ...rest) so they reach the DOM as the
+    // data-expand-x/y attributes the CSS above reads, never as Box's own
+    // expandX/expandY style props — a popover's fill is its clamped max
+    // (--x-popover-max-*), not a percentage of whatever holds it.
+    expand,
+    expandX,
+    expandY,
     animation,
     anchor,
     anchorCustomEventDetail = "override",
@@ -1536,6 +1563,8 @@ const usePopoverProps = (props) => {
     id,
     tabIndex,
     "data-layer": layer,
+    "data-expand-x": expand || expandX ? "" : undefined,
+    "data-expand-y": expand || expandY ? "" : undefined,
     "navi-animation": isAutoAnimation ? undefined : animation,
     // See backdropProps' own identical prop above for the full reasoning
     // (kept once, not repeated here).

@@ -216,6 +216,15 @@ const css = /* css */ `
  *   own `minWidth`.
  * @param {string|number} [props.minHeight] - Forwarded as-is to `Popup`'s
  *   own `minHeight`.
+ * @param {boolean} [props.expandX] - Forwarded as-is to `Popup`: the panel
+ *   fills its width ceiling instead of sizing to its content. Meaningful
+ *   for a `left`/`right` panel (its docked axis — the perpendicular one
+ *   already fills); whichever renderer `Popup` picks, this is the same
+ *   fill the `width` prop would give with the ceiling as its value.
+ * @param {boolean} [props.expandY] - Same, vertically — the docked axis of
+ *   a `top`/`bottom` panel. Give a panel whose content may grow past the
+ *   screen this (or an explicit `height`): a definite height is what lets
+ *   a scroller inside it engage instead of the whole panel overflowing.
  * @param {"top"|"local"} [props.layer="top"] - `"top"` (default): docks
  *   against the app's own screen — the viewport, narrowed to the app's
  *   rectangle when it declares `--navi-app-max-width` (real top-layer

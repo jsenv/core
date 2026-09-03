@@ -124,12 +124,13 @@ const css = /* css */ `
  *   understand it identically: `"frozen"` holds the surface at the size it was
  *   measured at while it stays open, so acting on what it contains moves the
  *   content and not the surface. See either component's own doc.
- * @param {boolean} [props.expand] - Dialog-mode only: shorthand for both
- *   `expandX`/`expandY` below. No effect in popover mode.
- * @param {boolean} [props.expandX] - Dialog-mode only: stretches the dialog
- *   to `--dialog-maxmax-width` (`data-expand-x`).
- * @param {boolean} [props.expandY] - Dialog-mode only: stretches the dialog
- *   to `--dialog-maxmax-height` (`data-expand-y`).
+ * @param {boolean} [props.expand] - Shorthand for both `expandX`/`expandY`
+ *   below.
+ * @param {boolean} [props.expandX] - Stretches the popup to the full width
+ *   its renderer allows (`data-expand-x`: `--x-dialog-max-width` /
+ *   `--x-popover-max-width`) instead of its content width — same meaning
+ *   whichever mode the screen-size resolution picks.
+ * @param {boolean} [props.expandY] - Same, vertically (`data-expand-y`).
  * @param {boolean} [props.scrollCapture] - Forwarded as-is.
  * @param {boolean} [props.open] - Forwarded as-is (controlled).
  * @param {import("@preact/signals").Signal<boolean>} [props.signal] -
@@ -219,6 +220,9 @@ export const Popup = (props) => {
       scrollCapture={scrollCapture === "popover" || scrollCapture}
       positionAreaFixed={positionAreaFixed}
       className={withPropsClassName("navi_popup", className)}
+      expand={expand}
+      expandX={expandX}
+      expandY={expandY}
     >
       {childrenWithMode}
     </Popover>

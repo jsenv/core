@@ -346,6 +346,18 @@ const css = /* css */ `
       }
     }
     .navi_picker_right_slot {
+      /* The field's own metrics, captured here, on the element that belongs to
+         it: what sits in the slot can be a picker of its own (the confirm
+         cross), and that one re-declares every --x-picker-* for itself — its
+         hit area would then be measured against its own zero padding instead
+         of the field's. Read by the ::before below. */
+      --x-picker-slot-hit-y-top: var(--x-picker-padding-top);
+      --x-picker-slot-hit-y-bottom: var(--x-picker-padding-bottom);
+      --x-picker-slot-hit-x: var(
+        --picker-slot-spacing,
+        calc(var(--x-picker-padding-right) * 0.5)
+      );
+
       display: inline-flex;
       height: 1em;
       height: 1lh;
@@ -387,22 +399,10 @@ const css = /* css */ `
       .navi_picker .navi_picker_box {
         &::before {
           position: absolute;
-          top: calc(-1 * var(--x-picker-padding-top));
-          right: calc(
-            -1 *
-              var(
-                --picker-slot-spacing,
-                calc(var(--x-picker-padding-right) * 0.5)
-              )
-          );
-          bottom: calc(-1 * var(--x-picker-padding-bottom));
-          left: calc(
-            -1 *
-              var(
-                --picker-slot-spacing,
-                calc(var(--x-picker-padding-right) * 0.5)
-              )
-          );
+          top: calc(-1 * var(--x-picker-slot-hit-y-top));
+          right: calc(-1 * var(--x-picker-slot-hit-x));
+          bottom: calc(-1 * var(--x-picker-slot-hit-y-bottom));
+          left: calc(-1 * var(--x-picker-slot-hit-x));
           content: "";
         }
       }
@@ -538,13 +538,10 @@ const css = /* css */ `
        base one too, otherwise the @layer formulas (hover = 5% black over the
        background, disabled = 5% grey) would repaint a box the variant just
        took away. */
+    /* icon: an icon trigger with nothing painted around it. The shape is the
+       icon prop's, which this variant carries (see [data-icon] below); what it
+       adds is the absence of a surface. */
     &[data-variant="icon"] {
-      --picker-padding-x-default: 0;
-      --picker-padding-y-default: 0;
-      /* Nothing but the icon is drawn here, so a width/height the caller gave
-         it is a target area, not a text column: the icon belongs in its middle.
-         A default, like everything else a variant moves, so alignX still wins. */
-      --picker-align-x-default: center;
       --picker-border-width: 0px; /* must carry a unit (px) — used in calc() to offset the custom input overlay */
       --picker-border-color: transparent;
       --picker-border-color-hover: var(--picker-border-color);
@@ -555,13 +552,6 @@ const css = /* css */ `
       --picker-background-color-readonly: var(--picker-background-color);
       --picker-background-color-disabled: var(--picker-background-color);
       --picker-icon-color: currentColor;
-
-      /* The value holds nothing but the icon, so it takes the icon's width
-         rather than the box's: the box's justify-content is then what places
-         it, and alignX means something. */
-      .navi_picker_value {
-        flex-grow: 0;
-      }
     }
     /* discrete: no box at rest, a background on hover — the same word Button
        uses, and the same drawing. What is read is the value, not the field
@@ -702,6 +692,34 @@ const css = /* css */ `
         text-decoration-style: solid;
       }
     }
+    /* The trigger is one icon: its box is that icon's box plus whatever padding
+       was asked for, and nothing else — no gutter for a slot it does not have,
+       and none of the control line a field is held to. So it measures the same
+       as <Button icon> and can stand in a row of icon buttons.
+       A shape rather than a surface, like the button's own icon prop: it says
+       nothing about the paint, so any variant can be drawn as one and keep its
+       own (a discrete icon trigger keeps the discrete hover wash). After the
+       variants on purpose — they move the same defaults, and the shape is the
+       more precise ask. */
+    &[data-icon] {
+      --picker-padding-x-default: 0;
+      --picker-padding-y-default: 0;
+      /* A width/height the caller gave it is a target area, not a text column:
+         the icon belongs in its middle. A default, so alignX still wins. */
+      --picker-align-x-default: center;
+
+      .navi_picker_box {
+        /* A field is at least one line tall whatever it holds; an icon is as
+           tall as it is drawn. */
+        min-height: 0;
+      }
+      /* The value holds nothing but the icon, so it takes the icon's width
+         rather than the box's: the box's justify-content is then what places
+         it, and alignX means something. */
+      .navi_picker_value {
+        flex-grow: 0;
+      }
+    }
   }
 `;
 
@@ -715,6 +733,9 @@ const PickerButton = (props) => {
   const {
     ref,
     variant,
+    // The trigger is one icon — its box is that icon's, the way <Button icon>
+    // means it. A shape, so it composes with the variant painting around it.
+    icon,
     rightSlotIcon,
     rightSlotIconSize = "inherit",
     // What goes in the right slot as-is — no <Icon> around it, so a caller can
@@ -767,21 +788,29 @@ const PickerButton = (props) => {
   const isSingleLine = maxLines === 1;
   // Same rule as the root: phrasing content inside a sentence.
   const ContentTag = variant === "text" ? "span" : "div";
+  // One icon and nothing else: the trigger IS the drawing, so it has no slot
+  // beside it and no line of text to be as tall as. `variant="icon"` says that
+  // shape and "no surface either" in one word.
+  const isIcon = Boolean(icon) || variant === "icon";
   // Who gets the right slot — the chevron saying "this opens", and the cross
   // replacing it once there is something to clear. Both are about a value, so
   // the slot follows the value and not the drawing: `picksNothing` has none to
   // announce and none to take back, whatever variant it is drawn in.
-  // Then the variants that draw no value beside it: an icon picker IS its icon,
-  // a headless one draws nothing, a button says what it opens with its label, a
-  // word in a sentence has no room for furniture. Nor a picker rendering the
-  // browser's own control ("default").
+  // `rightSlot={null}` is the caller asking for no slot at all: the slot is a
+  // box with a gutter of its own, so an empty one is a few pixels of nothing at
+  // the end of the trigger, and the trigger's center is no longer its drawing's.
+  // Then the drawings that hold no value beside them: an icon trigger IS its
+  // icon, a headless one draws nothing, a button says what it opens with its
+  // label, a word in a sentence has no room for furniture. Nor a picker
+  // rendering the browser's own control ("default").
   // Nor a bare one: the picker is that drawing's box to the pixel, so anything
   // navi adds beside it either grows the box or covers what the caller drew.
   // The pieces are the caller's to place there instead — a <Picker.Clear /> in
   // their own layout (see warnOnClearableWithoutSlot).
   const hasRightSlot =
     !picksNothing &&
-    variant !== "icon" &&
+    rightSlot !== null &&
+    !isIcon &&
     variant !== "headless" &&
     variant !== "button" &&
     variant !== "text" &&
@@ -875,6 +904,7 @@ const PickerButton = (props) => {
         baseClassName="navi_picker"
         pseudoClasses={PICKER_BUTTON_PSEUDO_CLASSES}
         data-variant={variant}
+        data-icon={isIcon ? "" : undefined}
         navi-picker=""
         navi-single-line={isSingleLine ? "" : undefined}
         navi-ui-custom={ui === "default" ? undefined : ""}
@@ -884,6 +914,7 @@ const PickerButton = (props) => {
         basePseudoState={basePseudoState}
         styleCSSVars={PickerStyleCSSVars}
         variant={undefined}
+        icon={undefined}
         role={undefined}
         rightSlotIcon={undefined}
         rightSlotIconSize={undefined}
@@ -1044,7 +1075,7 @@ const PickerButton = (props) => {
                     wraps flex rows, which line-clamp never sees. */}
                   <MaxLinesContext.Provider value={maxLines}>
                     {ui === undefined ? (
-                      variant === "icon" ? (
+                      isIcon ? (
                         // An icon picker draws no value, so there is no slot
                         // beside it either — the icon that would have sat in
                         // that slot IS the trigger, and a caller's own `ui`
@@ -1492,6 +1523,7 @@ const PickerFirstResolver = (props) => {
  *   positionArea?: string,
  *   popupWidthFitContent?: boolean,
  *   variant?: "icon" | "circle" | "headless" | "discrete" | "button" | "text" | "bare" | "picker",
+ *   icon?: boolean,
  *   alignX?: "start" | "center" | "end",
  *   alignY?: "start" | "center" | "end" | "stretch",
  *   rightSlotIcon?: import("preact").ComponentChildren,
@@ -1645,7 +1677,9 @@ const PickerFirstResolver = (props) => {
  *   — the drawing holds what it needs (`<Picker.Clear />`) and places it.
  * @param {import("preact").ComponentChildren} [rightSlot] Same place, rendered
  *   as-is: no `<Icon>` around it, nothing `aria-hidden`. This is where an
- *   interactive right slot goes.
+ *   interactive right slot goes. `null` takes the slot away entirely — the
+ *   gutter it carries with it, so the trigger measures its drawing and centers
+ *   on it.
  * @param {boolean} [picksNothing] The popup asks something rather than holding
  *   an answer, so the trigger draws a label and never a value: no chevron, no
  *   clear cross, in any variant. `type="confirm"` says it for itself; say it
@@ -1673,6 +1707,13 @@ const PickerFirstResolver = (props) => {
  *   takes. `"picker"` (or an explicit
  *   `variant={undefined}`) asks a confirm or callout picker for the field-like
  *   drawing every other picker has.
+ * @param {boolean} [icon] The trigger is one icon — the `ui`, or the chevron
+ *   when there is none. Its box is that icon's box plus the padding asked for
+ *   and nothing else: no right slot, and no control line to be as tall as, so
+ *   it measures the same as `<Button icon>` and stands in a row of icon
+ *   buttons. A shape, not a paint: the variant still decides what is drawn
+ *   around it, so `variant="discrete" icon` is the discrete hover wash on an
+ *   icon-sized square. `variant="icon"` is this shape with no surface at all.
  * @param {import("preact").ComponentChildren} [message] `type="confirm"`: the
  *   question, in the popup's default body — text, or JSX when it needs an
  *   emphasis, a link. Left out, a generic "are you sure?" in the current
@@ -1849,15 +1890,23 @@ const warnOnClearableWithoutSlot = (props, hasRightSlot) => {
   if (!import.meta.dev) {
     return;
   }
-  const { clearable, variant, picksNothing } = props;
+  const { clearable, variant, icon, rightSlot, picksNothing } = props;
   if (!clearable || hasRightSlot) {
     return;
   }
-  const key = picksNothing ? "picks-nothing" : variant;
-  if (clearableWithoutSlotWarnedSet.has(key)) {
+  // What took the slot away: what the message names, and what makes two
+  // pickers the same case.
+  const cause = picksNothing
+    ? "picks-nothing"
+    : rightSlot === null
+      ? "rightSlot={null}"
+      : icon
+        ? "icon"
+        : `variant="${variant}"`;
+  if (clearableWithoutSlotWarnedSet.has(cause)) {
     return;
   }
-  clearableWithoutSlotWarnedSet.add(key);
+  clearableWithoutSlotWarnedSet.add(cause);
   if (picksNothing) {
     console.warn(
       `[navi] <Picker type="confirm" clearable> — a picker that picks nothing holds nothing to clear, so no cross is drawn.`,
@@ -1865,8 +1914,8 @@ const warnOnClearableWithoutSlot = (props, hasRightSlot) => {
     return;
   }
   console.warn(
-    `[navi] <Picker variant="${variant}" clearable> — that variant has no right slot, so no cross is drawn. ` +
-      `Draw it where it belongs instead: <Picker variant="${variant}" ui={<YourDrawing>… <Picker.Clear /></YourDrawing>}>. ` +
+    `[navi] <Picker ${cause} clearable> — that leaves no right slot, so no cross is drawn. ` +
+      `Draw it where it belongs instead: <Picker ${cause} ui={<YourDrawing>… <Picker.Clear /></YourDrawing>}>. ` +
       `It is the same cross, and it takes itself away when there is nothing left to clear.`,
   );
 };

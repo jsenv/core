@@ -59430,6 +59430,18 @@ const css$D = /* css */`
        to filter). An entrance animation moves the popover through scale and
        transform instead, which compose under it: see popup_css.js. */
 
+    /* The clamped max, not --popover-maxmax-*: that one ignores what the
+       placement left available, which reaches here through
+       --container-position-remaining-* (see applyNewPosition) — the min()
+       in --x-popover-max-* accounts for both. Mirrors Dialog's own
+       data-expand-x/y rules. */
+    &[data-expand-x] {
+      width: var(--x-popover-max-width);
+    }
+    &[data-expand-y] {
+      height: var(--x-popover-max-height);
+    }
+
     /* The via-attribute renderer starts hidden for free (native UA default
        for any [popover] element, same as <dialog> without [open]) — the
        custom renderer is a plain div with no such native default, so
@@ -59674,6 +59686,14 @@ const css$D = /* css */`
  * @param {string} [props.minHeight] - Maps to `--popover-min-height`, same
  *   clamping as `minWidth`.
  * @param {string} [props.maxHeight] - Maps to `--popover-max-height`.
+ * @param {boolean} [props.expand] - Shorthand for both `expandX`/`expandY`
+ *   below.
+ * @param {boolean} [props.expandX] - Stretches the popover to
+ *   `--x-popover-max-width` (`data-expand-x`) — the full width its own
+ *   ceiling and the placement leave available — instead of its content
+ *   width. Same meaning as `Dialog`'s own `expandX`.
+ * @param {boolean} [props.expandY] - Same, vertically
+ *   (`--x-popover-max-height`, `data-expand-y`).
  * @param {"auto"|"frozen"} [props.sizing="auto"] - `"auto"`: the popover
  *   follows its content for as long as it stays open. `"frozen"`: it is
  *   measured once and held at that size until it closes — what no longer fits
@@ -59954,6 +59974,13 @@ const usePopoverProps = props => {
     // "auto" (default) → the popover follows its content. "frozen" → measured
     // once, held at that size while open. See this prop's own JSDoc above.
     sizing = "auto",
+    // Destructured (not left in ...rest) so they reach the DOM as the
+    // data-expand-x/y attributes the CSS above reads, never as Box's own
+    // expandX/expandY style props — a popover's fill is its clamped max
+    // (--x-popover-max-*), not a percentage of whatever holds it.
+    expand,
+    expandX,
+    expandY,
     animation,
     anchor,
     anchorCustomEventDetail = "override",
@@ -60683,6 +60710,8 @@ const usePopoverProps = props => {
     id,
     tabIndex,
     "data-layer": layer,
+    "data-expand-x": expand || expandX ? "" : undefined,
+    "data-expand-y": expand || expandY ? "" : undefined,
     "navi-animation": isAutoAnimation ? undefined : animation,
     // See backdropProps' own identical prop above for the full reasoning
     // (kept once, not repeated here).
@@ -60906,12 +60935,13 @@ const css$C = /* css */`@layer navi {
  *   understand it identically: `"frozen"` holds the surface at the size it was
  *   measured at while it stays open, so acting on what it contains moves the
  *   content and not the surface. See either component's own doc.
- * @param {boolean} [props.expand] - Dialog-mode only: shorthand for both
- *   `expandX`/`expandY` below. No effect in popover mode.
- * @param {boolean} [props.expandX] - Dialog-mode only: stretches the dialog
- *   to `--dialog-maxmax-width` (`data-expand-x`).
- * @param {boolean} [props.expandY] - Dialog-mode only: stretches the dialog
- *   to `--dialog-maxmax-height` (`data-expand-y`).
+ * @param {boolean} [props.expand] - Shorthand for both `expandX`/`expandY`
+ *   below.
+ * @param {boolean} [props.expandX] - Stretches the popup to the full width
+ *   its renderer allows (`data-expand-x`: `--x-dialog-max-width` /
+ *   `--x-popover-max-width`) instead of its content width — same meaning
+ *   whichever mode the screen-size resolution picks.
+ * @param {boolean} [props.expandY] - Same, vertically (`data-expand-y`).
  * @param {boolean} [props.scrollCapture] - Forwarded as-is.
  * @param {boolean} [props.open] - Forwarded as-is (controlled).
  * @param {import("@preact/signals").Signal<boolean>} [props.signal] -
@@ -60994,6 +61024,9 @@ const Popup = props => {
     scrollCapture: scrollCapture === "popover" || scrollCapture,
     positionAreaFixed: positionAreaFixed,
     className: withPropsClassName("navi_popup", className),
+    expand: expand,
+    expandX: expandX,
+    expandY: expandY,
     children: childrenWithMode
   });
 };
@@ -69692,6 +69725,9 @@ installImportMetaCssBuild(import.meta);const css$t = /* css */`@layer navi {
   }
 
   & .navi_picker_right_slot {
+    --x-picker-slot-hit-y-top: var(--x-picker-padding-top);
+    --x-picker-slot-hit-y-bottom: var(--x-picker-padding-bottom);
+    --x-picker-slot-hit-x: var(--picker-slot-spacing, calc(var(--x-picker-padding-right) * .5));
     height: 1lh;
     margin-right: var(--picker-slot-spacing, calc(var(--x-picker-padding-right) * .5));
     color: var(--x-picker-icon-color);
@@ -69712,12 +69748,10 @@ installImportMetaCssBuild(import.meta);const css$t = /* css */`@layer navi {
 
     & .navi_button, & .navi_picker .navi_picker_box {
       &:before {
-        top: calc(-1 * var(--x-picker-padding-top));
-        right: calc(-1 *
-              var(--picker-slot-spacing, calc(var(--x-picker-padding-right) * .5)));
-        bottom: calc(-1 * var(--x-picker-padding-bottom));
-        left: calc(-1 *
-              var(--picker-slot-spacing, calc(var(--x-picker-padding-right) * .5)));
+        top: calc(-1 * var(--x-picker-slot-hit-y-top));
+        right: calc(-1 * var(--x-picker-slot-hit-x));
+        bottom: calc(-1 * var(--x-picker-slot-hit-y-bottom));
+        left: calc(-1 * var(--x-picker-slot-hit-x));
         content: "";
         position: absolute;
       }
@@ -69811,9 +69845,6 @@ installImportMetaCssBuild(import.meta);const css$t = /* css */`@layer navi {
   }
 
   &[data-variant="icon"] {
-    --picker-padding-x-default: 0;
-    --picker-padding-y-default: 0;
-    --picker-align-x-default: center;
     --picker-border-width: 0px;
     --picker-border-color: transparent;
     --picker-border-color-hover: var(--picker-border-color);
@@ -69824,10 +69855,6 @@ installImportMetaCssBuild(import.meta);const css$t = /* css */`@layer navi {
     --picker-background-color-readonly: var(--picker-background-color);
     --picker-background-color-disabled: var(--picker-background-color);
     --picker-icon-color: currentColor;
-
-    & .navi_picker_value {
-      flex-grow: 0;
-    }
   }
 
   &[data-variant="discrete"] {
@@ -69927,6 +69954,20 @@ installImportMetaCssBuild(import.meta);const css$t = /* css */`@layer navi {
       text-decoration-style: solid;
     }
   }
+
+  &[data-icon] {
+    --picker-padding-x-default: 0;
+    --picker-padding-y-default: 0;
+    --picker-align-x-default: center;
+
+    & .navi_picker_box {
+      min-height: 0;
+    }
+
+    & .navi_picker_value {
+      flex-grow: 0;
+    }
+  }
 }
 `;
 const PickerButton = props => {
@@ -69937,6 +69978,9 @@ const PickerButton = props => {
   const {
     ref,
     variant,
+    // The trigger is one icon — its box is that icon's, the way <Button icon>
+    // means it. A shape, so it composes with the variant painting around it.
+    icon,
     rightSlotIcon,
     rightSlotIconSize = "inherit",
     // What goes in the right slot as-is — no <Icon> around it, so a caller can
@@ -69988,19 +70032,26 @@ const PickerButton = props => {
   const isSingleLine = maxLines === 1;
   // Same rule as the root: phrasing content inside a sentence.
   const ContentTag = variant === "text" ? "span" : "div";
+  // One icon and nothing else: the trigger IS the drawing, so it has no slot
+  // beside it and no line of text to be as tall as. `variant="icon"` says that
+  // shape and "no surface either" in one word.
+  const isIcon = Boolean(icon) || variant === "icon";
   // Who gets the right slot — the chevron saying "this opens", and the cross
   // replacing it once there is something to clear. Both are about a value, so
   // the slot follows the value and not the drawing: `picksNothing` has none to
   // announce and none to take back, whatever variant it is drawn in.
-  // Then the variants that draw no value beside it: an icon picker IS its icon,
-  // a headless one draws nothing, a button says what it opens with its label, a
-  // word in a sentence has no room for furniture. Nor a picker rendering the
-  // browser's own control ("default").
+  // `rightSlot={null}` is the caller asking for no slot at all: the slot is a
+  // box with a gutter of its own, so an empty one is a few pixels of nothing at
+  // the end of the trigger, and the trigger's center is no longer its drawing's.
+  // Then the drawings that hold no value beside them: an icon trigger IS its
+  // icon, a headless one draws nothing, a button says what it opens with its
+  // label, a word in a sentence has no room for furniture. Nor a picker
+  // rendering the browser's own control ("default").
   // Nor a bare one: the picker is that drawing's box to the pixel, so anything
   // navi adds beside it either grows the box or covers what the caller drew.
   // The pieces are the caller's to place there instead — a <Picker.Clear /> in
   // their own layout (see warnOnClearableWithoutSlot).
-  const hasRightSlot = !picksNothing && variant !== "icon" && variant !== "headless" && variant !== "button" && variant !== "text" && variant !== "bare" && ui !== "default";
+  const hasRightSlot = !picksNothing && rightSlot !== null && !isIcon && variant !== "headless" && variant !== "button" && variant !== "text" && variant !== "bare" && ui !== "default";
   const inputRef = useRef(null);
   const [pickerRemainingProps, inputProps, facadeChildrenProps] = useControlFacadeProps({
     ...props,
@@ -70081,6 +70132,7 @@ const PickerButton = props => {
         baseClassName: "navi_picker",
         pseudoClasses: PICKER_BUTTON_PSEUDO_CLASSES,
         "data-variant": variant,
+        "data-icon": isIcon ? "" : undefined,
         "navi-picker": "",
         "navi-single-line": isSingleLine ? "" : undefined,
         "navi-ui-custom": ui === "default" ? undefined : "",
@@ -70090,6 +70142,7 @@ const PickerButton = props => {
         basePseudoState: basePseudoState,
         styleCSSVars: PickerStyleCSSVars,
         variant: undefined,
+        icon: undefined,
         role: undefined,
         rightSlotIcon: undefined,
         rightSlotIconSize: undefined,
@@ -70240,7 +70293,7 @@ const PickerButton = props => {
               children: jsx(PickerOwnContent, {
                 children: jsx(MaxLinesContext.Provider, {
                   value: maxLines,
-                  children: ui === undefined ? variant === "icon" ?
+                  children: ui === undefined ? isIcon ?
                   // An icon picker draws no value, so there is no slot
                   // beside it either — the icon that would have sat in
                   // that slot IS the trigger, and a caller's own `ui`
@@ -82391,6 +82444,15 @@ const css = /* css */`.navi_side_panel {
  *   own `minWidth`.
  * @param {string|number} [props.minHeight] - Forwarded as-is to `Popup`'s
  *   own `minHeight`.
+ * @param {boolean} [props.expandX] - Forwarded as-is to `Popup`: the panel
+ *   fills its width ceiling instead of sizing to its content. Meaningful
+ *   for a `left`/`right` panel (its docked axis — the perpendicular one
+ *   already fills); whichever renderer `Popup` picks, this is the same
+ *   fill the `width` prop would give with the ceiling as its value.
+ * @param {boolean} [props.expandY] - Same, vertically — the docked axis of
+ *   a `top`/`bottom` panel. Give a panel whose content may grow past the
+ *   screen this (or an explicit `height`): a definite height is what lets
+ *   a scroller inside it engage instead of the whole panel overflowing.
  * @param {"top"|"local"} [props.layer="top"] - `"top"` (default): docks
  *   against the app's own screen — the viewport, narrowed to the app's
  *   rectangle when it declares `--navi-app-max-width` (real top-layer
