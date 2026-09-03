@@ -146,13 +146,26 @@ const css = /* css */ `
       }
 
       .navi_text_skeleton {
+        /* The bar stands in for text, so it is painted with the text's own
+           ink: every paper already gets that color right, while a fixed grey
+           vanishes into half of them. The shimmer is a denser band of the same
+           ink — a lighter one would have to name a paper color nothing here
+           knows. */
+        --x-skeleton-color: var(
+          --skeleton-color,
+          color-mix(in srgb, currentColor 22%, transparent)
+        );
+        --x-skeleton-shimmer-color: var(
+          --skeleton-shimmer-color,
+          color-mix(in srgb, currentColor 20%, var(--x-skeleton-color))
+        );
         position: absolute;
         inset: 0;
         background: linear-gradient(
           90deg,
-          #e0e0e0 25%,
-          #f0f0f0 50%,
-          #e0e0e0 75%
+          var(--x-skeleton-color) 25%,
+          var(--x-skeleton-shimmer-color) 50%,
+          var(--x-skeleton-color) 75%
         );
         background-size: 200% 100%;
         border-radius: inherit;
@@ -524,7 +537,7 @@ const shouldInjectSpacingBetween = (left, right) => {
  *   Renders a shimmer skeleton animation in place of the text content.
  *
  * @param {boolean} [skeleton]
- *   Same as `loading` but without the shimmer animation — a static grey bar.
+ *   Same as `loading` but without the shimmer animation — the bar held still.
  *
  * @param {boolean} [attachLastChild]
  *   Keeps the last child on the same line as the word before it — a trailing

@@ -41461,8 +41461,14 @@ time.navi_text {
     }
 
     & .navi_text_skeleton {
+      --x-skeleton-color: var(--skeleton-color, color-mix(in srgb, currentColor 22%, transparent));
+      --x-skeleton-shimmer-color: var(--skeleton-shimmer-color, color-mix(in srgb, currentColor 20%, var(--x-skeleton-color)));
+      background: linear-gradient(90deg,
+          var(--x-skeleton-color) 25%,
+          var(--x-skeleton-shimmer-color) 50%,
+          var(--x-skeleton-color) 75%);
       border-radius: inherit;
-      background: linear-gradient(90deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%) 0 0 / 200% 100%;
+      background-size: 200% 100%;
       position: absolute;
       inset: 0;
     }
@@ -41803,7 +41809,7 @@ const shouldInjectSpacingBetween = (left, right) => {
  *   Renders a shimmer skeleton animation in place of the text content.
  *
  * @param {boolean} [skeleton]
- *   Same as `loading` but without the shimmer animation — a static grey bar.
+ *   Same as `loading` but without the shimmer animation — the bar held still.
  *
  * @param {boolean} [attachLastChild]
  *   Keeps the last child on the same line as the word before it — a trailing

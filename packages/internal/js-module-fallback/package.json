@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/js-module-fallback",
-  "version": "1.6.2",
+  "version": "1.6.3",
   "type": "module",
   "repository": {
     "type": "git",
@@ -36,7 +36,7 @@
     "@babel/plugin-transform-modules-systemjs": "8.0.1",
     "@babel/plugin-transform-modules-umd": "8.0.1",
     "@jsenv/ast": "6.10.1",
-    "@jsenv/sourcemap": "1.4.3",
+    "@jsenv/sourcemap": "1.4.4",
     "@jsenv/urls": "2.9.10"
   },
   "devDependencies": {

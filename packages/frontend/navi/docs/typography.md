@@ -233,3 +233,10 @@ container). It measures and pins the width to that longest line.
 the same bar without the animation. The children stay in the DOM (hidden), so
 the block keeps the size the real text will have — pass the eventual text, not a
 placeholder, whenever it is known.
+
+The bar stands in for text and is painted with the text's own ink, so it is seen
+on whatever paper it lands on — a pale card, a filled one where the ink flips —
+without being told what that paper is. Where the surrounding ink is the wrong
+cue, `--skeleton-color` and `--skeleton-shimmer-color` (the moving band) take it
+over; navi declares neither, so both can be set on the element or on any
+container above it.

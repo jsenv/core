@@ -40,8 +40,14 @@ export const createMagicSource = (content) => {
         content: code,
         get sourcemap() {
           if (map === undefined) {
+            // "boundary" = a mapping per word boundary. Per-character maps
+            // (hires: true) only add sub-word precision and cost ~25% of a
+            // package build in generation + composition + GC; line-level maps
+            // (hires: false) are cheaper still but collapse heavily rewritten
+            // lines (JSX) to their edit points. Word precision is what
+            // breakpoints, stack traces and devtools hovers actually consume.
             map = magicString.generateMap({
-              hires: true,
+              hires: "boundary",
               includeContent: true,
               source,
             });
