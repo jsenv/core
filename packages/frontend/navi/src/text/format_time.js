@@ -1,12 +1,21 @@
 /**
- * Pure vanilla JS time formatting utilities.
+ * Pure vanilla JS time formatting utilities, usable outside the browser.
+ *
+ * Exposed as `@jsenv/navi/format_time` so code that has no preact (a backend
+ * writing dates into push notifications, say) shares the exact same wording
+ * as the `<Time>` components. Everything this module imports must stay free
+ * of preact/@preact/signals. `lang` defaults to the runtime language source
+ * (see runtime_lang.js): `languagesSignal` in a browser bundle — live, and
+ * subscribing a rendering component like any signal read — the runtime's own
+ * locale elsewhere.
+ *
  * All functions accept an optional `{ now }` parameter for testability.
  */
 
 import { parseDuration } from "@jsenv/validity";
 
-import { languagesSignal } from "./lang_signal.js";
 import { naviI18n } from "./navi_i18n.js";
+import { getRuntimeLang } from "./runtime_lang.js";
 
 // Our own compact/custom duration notation interpolates raw numbers
 // directly (unlike Intl.DurationFormat, which groups thousands on its own,
@@ -23,30 +32,45 @@ const formatCompactNumber = (value, lang) => {
  * Formats a date as a human-readable day string.
  *
  * @param {Date} date
- * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"numeric"|{ weekday?: "long"|"short"|"narrow", month?: "long"|"short"|"narrow"|"numeric" } }} [options]
+ * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"numeric"|{ weekday?: "long"|"short"|"narrow", month?: "long"|"short"|"narrow"|"numeric" }, year?: boolean|"auto", now?: Date }} [options]
  *   A string spells the weekday and the month the same way. An object spells
  *   them apart, each key defaulting to `"long"`: a narrow card usually wants
  *   the weekday whole (it is the reading anchor) and the month abbreviated (it
  *   is where the characters are — "septembre" is 9 of them, "sept." reads the
  *   same). `"numeric"` stays a string-only spelling: it drops the weekday and
  *   writes the whole date in digits.
+ * @param {boolean|"auto"} [options.year=true]
+ *   Whether the `"numeric"` spelling writes the year: `false` drops it
+ *   ("30/07", the day/month order still following the locale), `"auto"` drops
+ *   it only when the date is in the current year (`now`'s year). The spelled
+ *   formats never write the year, so they ignore it.
  *
  * @example
  * formatDay(new Date(), { lang: "fr" })                    // "lundi 11 mai" (long, default)
  * formatDay(new Date(), { lang: "fr", format: "short" })  // "lun. 11 mai"
  * formatDay(new Date(), { lang: "fr", format: "narrow" }) // "lu. 11 mai"
  * formatDay(new Date(), { lang: "fr", format: "numeric" }) // "11/05/2026"
+ * formatDay(new Date(), { lang: "fr", format: "numeric", year: false }) // "11/05"
  * formatDay(new Date(), { lang: "fr", format: { weekday: "long", month: "short" } }) // "mercredi 2 sept."
  */
 export const formatDay = (
   date,
-  { lang = languagesSignal.value, format = "long" } = {},
+  {
+    lang = getRuntimeLang(),
+    format = "long",
+    year = true,
+    now = new Date(),
+  } = {},
 ) => {
   if (format === "numeric") {
+    const yearWritten =
+      year === "auto"
+        ? date.getFullYear() !== now.getFullYear()
+        : year !== false;
     return new Intl.DateTimeFormat(lang, {
       day: "2-digit",
       month: "2-digit",
-      year: "numeric",
+      ...(yearWritten ? { year: "numeric" } : {}),
     }).format(date);
   }
   const { weekday = "long", month = "long" } =
@@ -102,9 +126,7 @@ const SENTINEL_DATE = new Date(9999, 10, 28); // 28 Nov 9999 — day≠month, bo
 const getToken = (key, lang) =>
   naviI18n(`time.placeholder.${key}`, undefined, { lang });
 
-export const formatDatePlaceholder = ({
-  lang = languagesSignal.value,
-} = {}) => {
+export const formatDatePlaceholder = ({ lang = getRuntimeLang() } = {}) => {
   const parts = new Intl.DateTimeFormat(lang, {
     day: "numeric",
     month: "numeric",
@@ -127,7 +149,7 @@ export const formatDatePlaceholder = ({
 };
 
 export const formatMonthPlaceholder = ({
-  lang = languagesSignal.value,
+  lang = getRuntimeLang(),
   format = "long",
 } = {}) => {
   const parts = new Intl.DateTimeFormat(lang, {
@@ -148,14 +170,12 @@ export const formatMonthPlaceholder = ({
     .join("");
 };
 
-export const formatWeekPlaceholder = ({
-  lang = languagesSignal.value,
-} = {}) => {
+export const formatWeekPlaceholder = ({ lang = getRuntimeLang() } = {}) => {
   return `${getToken("week", lang)} xx / ${getToken(lang)}`;
 };
 
 export const formatDatetimePlaceholder = ({
-  lang = languagesSignal.value,
+  lang = getRuntimeLang(),
   format = "long",
 } = {}) => {
   const intlOptions =
@@ -224,7 +244,7 @@ export const formatDayRelative = (offset, lang) => {
 
 export const formatMonth = (
   date,
-  { lang = languagesSignal.value, format = "long" } = {},
+  { lang = getRuntimeLang(), format = "long" } = {},
 ) => {
   return new Intl.DateTimeFormat(lang, {
     month: format, // "long", "short", or "narrow"
@@ -237,7 +257,7 @@ export const formatMonth = (
  */
 export const formatDatetime = (
   date,
-  { lang = languagesSignal.value, format = "long" } = {},
+  { lang = getRuntimeLang(), format = "long" } = {},
 ) => {
   if (format === "long") {
     return new Intl.DateTimeFormat(lang, {
@@ -273,6 +293,172 @@ export const formatTime = (date, lang) => {
     hour: "2-digit",
     minute: "2-digit",
   }).format(date);
+};
+
+/**
+ * Formats a time-of-day the way `<Time type="time">` writes it, as a plain
+ * string — for the places a component cannot go (a `title` attribute, a push
+ * notification).
+ *
+ * @param {Date|number|string} value
+ *   A Date, a ms timestamp, or an "HH:MM"/"HH:MM:SS" string. Only the clock
+ *   time is read. A nullish value renders the "--:--" placeholder; an
+ *   unparseable one is returned as-is, stringified.
+ * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"compact"|"timestring", pad?: boolean, precision?: "hour"|"minute" }} [options]
+ *   The options `<Time type="time">` takes: `"timestring"` is the clock
+ *   "14:30"; the other formats write the time as a duration-shaped phrase —
+ *   see {@link formatMinuteDuration}'s `clockStyle` for what `pad` and
+ *   `precision` shape in `format="compact"`.
+ *
+ * @example
+ * formatTimeOfDay(date, { lang: "fr" })                                  // "14 heures 30" (long, default)
+ * formatTimeOfDay(date, { lang: "fr", format: "timestring" })            // "14:30"
+ * formatTimeOfDay(date, { lang: "fr", format: "compact" })               // "14h30"
+ * formatTimeOfDay(date, { lang: "fr", format: "compact", pad: false })   // "8h30", "8h"
+ */
+export const formatTimeOfDay = (
+  value,
+  {
+    lang = getRuntimeLang(),
+    format = "long",
+    pad = true,
+    precision = pad ? "minute" : "hour",
+  } = {},
+) => {
+  if (value === undefined || value === null) {
+    return "--:--";
+  }
+  const date = toTimeOfDay(value);
+  // toDate turns a non-finite number into an Invalid Date, which is an object
+  if (!date || isNaN(date.getTime())) {
+    return String(value);
+  }
+  if (format === "timestring") {
+    return formatTime(date, lang);
+  }
+  const totalMinutes = date.getHours() * 60 + date.getMinutes();
+  // clockStyle: this is always a time-of-day here, never a duration — keeps
+  // a zero hour instead of dropping it (midnight would otherwise be
+  // indistinguishable from an actual 5-minute duration), and in
+  // format="compact" also zero-pads a single-digit hour so "5h30"/"0h05"
+  // read as "05h30"/"00h05", closer to a "HH:MM" clock.
+  if (date.getHours() !== 0 || format !== "long") {
+    // At midnight, short/narrow/compact keep the "0 h"/"0h" hour part —
+    // "0 h et 5 min"/"0h 5min"/"00h05" — rather than substituting a
+    // translated "midnight" word, which would look out of place squeezed
+    // into these otherwise terse, symbol-based formats.
+    return formatMinuteDuration(totalMinutes, {
+      lang,
+      format,
+      clockStyle: true,
+      pad,
+      precision,
+    });
+  }
+  // Midnight (hour 0) at format="long" can't go through
+  // formatMinuteDuration's own default zero-hour handling: it drops a
+  // zero-valued unit entirely (by design — a real 5-minute duration should
+  // print as "5 minutes", not "0 hours 5 minutes"), so "00:05" would
+  // otherwise render identically to an actual 5-minute duration, silently
+  // losing the fact that it's midnight. Every other hour keeps at least its
+  // own "N hour(s)" wording as a hint that this is a time-of-day — only
+  // hour 0 loses that hint entirely.
+  const midnightWord = naviI18n("time.midnight", undefined, { lang });
+  if (midnightWord === "time.midnight") {
+    // No "midnight" translation registered for this language — fall back
+    // to this language's own literal "0 heure(s)" wording instead (still
+    // better than leaking the untranslated key, or substituting an
+    // English word that wouldn't grammatically match the rest of the
+    // sentence in whatever language this actually is).
+    return formatMinuteDuration(totalMinutes, {
+      lang,
+      format,
+      clockStyle: true,
+    });
+  }
+  // Swap just the "0 heure(s)" part of the Intl-generated duration
+  // string for the translated "midnight" word, keeping everything else
+  // (the conjunction, the minutes part) exactly as Intl would produce
+  // for this locale — formatToParts tags each token with the unit it
+  // belongs to, so the swap doesn't need to know the locale's own
+  // grammar/word order. Only ever one hour-tagged group per call
+  // (hours is always 0 or absent here), but guarded anyway in case a
+  // future Intl implementation ever splits it into more parts.
+  const parts = new Intl.DurationFormat(lang, {
+    style: "long",
+    hoursDisplay: "always",
+  }).formatToParts({ hours: 0, minutes: date.getMinutes() });
+  let hourGroupReplaced = false;
+  return parts
+    .map((part) => {
+      if (part.unit !== "hour") {
+        return part.value;
+      }
+      if (hourGroupReplaced) {
+        return "";
+      }
+      hourGroupReplaced = true;
+      return midnightWord;
+    })
+    .join("");
+};
+
+/**
+ * Formats a span between two times-of-day the way `<TimeRange>` writes it, as
+ * a plain string — "8h–10h", "11h30–14h00", "14 heures 30 – 16 heures".
+ *
+ * Applies `<TimeRange>`'s shared-precision rule: the two bounds are written
+ * to the same precision, decided by the pair — any bound with minutes gives
+ * minutes to both, zero included ("11h30–14h00", never "11h30–14h").
+ *
+ * @param {Date|number|string} from
+ * @param {Date|number|string} to
+ *   Each bound accepts what {@link formatTimeOfDay} accepts; a nullish bound
+ *   renders its "--:--" placeholder.
+ * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"compact"|"timestring", pad?: boolean, precision?: "hour"|"minute", separator?: string }} [options]
+ *   `precision` writes both bounds at this precision instead of the one the
+ *   pair calls for. `separator` defaults to the `"time.range_separator"` navi
+ *   text (an en dash), tightened against both bounds in `format="compact"` —
+ *   where the span is one short token — and spaced out otherwise.
+ *
+ * @example
+ * formatTimeRange("08:00", "10:00", { lang: "fr", format: "compact", pad: false }) // "8h–10h"
+ * formatTimeRange("11:30", "14:00", { lang: "fr", format: "compact", pad: false }) // "11h30–14h00"
+ */
+export const formatTimeRange = (
+  from,
+  to,
+  {
+    lang = getRuntimeLang(),
+    format = "long",
+    pad = true,
+    precision = resolveTimeRangePrecision(from, to, { format, pad }),
+    separator = naviI18n("time.range_separator", undefined, { lang }),
+  } = {},
+) => {
+  const boundOptions = { lang, format, pad, precision };
+  const fromText = formatTimeOfDay(from, boundOptions);
+  const toText = formatTimeOfDay(to, boundOptions);
+  if (format === "compact") {
+    return `${fromText}${separator}${toText}`;
+  }
+  return `${fromText} ${separator} ${toText}`;
+};
+
+// The two bounds of a span are written to the same precision, decided by the
+// pair: "8h–10h" as long as neither has minutes, "11h30–14h00" as soon as one
+// of them does. Only ever a question for the unpadded compact clock — the
+// padded one always writes "08h00", and the spelled-out formats name their
+// units, leaving no shape for the eye to trip on.
+export const resolveTimeRangePrecision = (from, to, { format, pad }) => {
+  if (pad || format !== "compact") {
+    return "minute";
+  }
+  const hasMinutes = (value) => {
+    const date = toTimeOfDay(value);
+    return Boolean(date) && !isNaN(date.getTime()) && date.getMinutes() !== 0;
+  };
+  return hasMinutes(from) || hasMinutes(to) ? "minute" : "hour";
 };
 
 /**
@@ -329,7 +515,7 @@ export const formatTime = (date, lang) => {
 export const formatMinuteDuration = (
   minutes,
   {
-    lang = languagesSignal.value,
+    lang = getRuntimeLang(),
     format = "long",
     clockStyle = false,
     pad = true,
@@ -426,7 +612,7 @@ const formatSingleUnit = (value, unit, { lang, format }) => {
  * formatHourDuration(36, { lang: "fr", forceUnit: true })      // "36 heures"
  */
 export const formatHourDuration = (hours, options = {}) => {
-  const { lang = languagesSignal.value, format = "long", forceUnit } = options;
+  const { lang = getRuntimeLang(), format = "long", forceUnit } = options;
   if (hours === 0 || (forceUnit && Number.isInteger(hours))) {
     return formatSingleUnit(hours, "hour", { lang, format });
   }
@@ -454,7 +640,7 @@ export const formatHourDuration = (hours, options = {}) => {
  */
 export const formatSecondDuration = (
   seconds,
-  { lang = languagesSignal.value, format = "long", forceUnit = false } = {},
+  { lang = getRuntimeLang(), format = "long", forceUnit = false } = {},
 ) => {
   if (seconds < 0) {
     // the d/h/m/s split below only holds for a positive value; formatting the
@@ -519,7 +705,7 @@ export const formatSecondDuration = (
  */
 export const formatDuration = (
   duration,
-  { lang = languagesSignal.value, format = "long" } = {},
+  { lang = getRuntimeLang(), format = "long" } = {},
 ) => {
   if (typeof duration === "string") {
     duration = parseDuration(duration) ?? {};
@@ -671,12 +857,7 @@ const smallestUnitOf = (duration) => {
  */
 const formatTimeAgo = (
   date,
-  {
-    lang = languagesSignal.value,
-    now = new Date(),
-    bare,
-    format = "long",
-  } = {},
+  { lang = getRuntimeLang(), now = new Date(), bare, format = "long" } = {},
 ) => {
   const rtf = new Intl.RelativeTimeFormat(lang, {
     numeric: "auto",
@@ -749,12 +930,7 @@ const formatTimeAgo = (
 export const formatTimeRelative = (
   start,
   durationMs = 0,
-  {
-    lang = languagesSignal.value,
-    now = new Date(),
-    bare,
-    format = "long",
-  } = {},
+  { lang = getRuntimeLang(), now = new Date(), bare, format = "long" } = {},
 ) => {
   const startMs = start instanceof Date ? start.getTime() : Number(start);
   const endMs = startMs + durationMs;
@@ -878,4 +1054,43 @@ const YEAR = 365 * DAY;
 // Compares calendar days in local time (ignores the clock time)
 const toLocalDayKey = (date) => {
   return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+};
+
+/**
+ * Coerces what `<Time>` accepts as a value — a Date, a ms timestamp, a
+ * parseable string — into a Date, or null when it cannot. `parseString`
+ * lets a caller claim the string forms it recognizes ("HH:MM" for a
+ * time-of-day, "YYYY-MM" for a month…) before the generic ones apply.
+ */
+export const toDate = (value, parseString) => {
+  if (value instanceof Date) {
+    return value;
+  }
+  if (typeof value === "number") {
+    return new Date(value);
+  }
+  if (typeof value === "string") {
+    if (parseString) {
+      return parseString(value);
+    }
+    // "YYYY-MM-DD" — use local midnight to avoid UTC shift
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      const d = new Date(`${value}T00:00:00`);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    // ISO / other parseable strings
+    const d = new Date(value);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  return null;
+};
+
+export const toTimeOfDay = (value) => {
+  return toDate(value, (string) => {
+    if (/^\d{2}:\d{2}(?::\d{2})?$/.test(string)) {
+      const d = new Date(`1970-01-01T${string}`);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    return null;
+  });
 };

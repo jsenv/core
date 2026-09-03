@@ -42,5 +42,21 @@ await build({
         },
       },
     },
+    // The pure formatters, importable where preact is not installed (a
+    // backend writing dates into notifications) — see format_time.js's own
+    // top comment. Built as its own entry so `@jsenv/navi/format_time`
+    // resolves to a bundle with no preact/@preact/signals in it.
+    "./src/text/format_time.js": {
+      buildRelativeUrl: "./jsenv_navi_format_time.js",
+      mode: "package",
+      runtimeCompat: {
+        chrome: "123",
+        node: "20.0.0",
+      },
+      ignore: {
+        "file://**/node_modules/": true,
+        "file://**/node_modules/@jsenv/": false,
+      },
+    },
   },
 });

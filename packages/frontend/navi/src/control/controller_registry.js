@@ -57,8 +57,9 @@ export const onUIStateControllerCreated = (uiStateController) => {
       if (existing && existing !== uiStateController) {
         console.warn(
           `[navi] Two controls share the same id "${id}" ("${existing.controlType}" and "${controlType}"). ` +
-            `This happens when multiple controls are placed inside a single <Field>: the Field provides one id via context and both controls consume it. ` +
-            `Put each control in its own <Field>, or give one of them an explicit id.`,
+            `Lookups by id resolve to an arbitrary one of them, and when either unmounts it deletes the registry entry, leaving the surviving control unreachable (undefined uiState, dead picker buttons). ` +
+            `Common causes: several controls inside a single <Field> (the Field provides one id via context and every control consumes it — put each control in its own <Field>, or give one an explicit id), ` +
+            `or the same content mounted twice (e.g. two popups sharing an id prefix while both hold their content).`,
         );
       }
     }

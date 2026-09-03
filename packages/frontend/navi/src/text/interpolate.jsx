@@ -1,4 +1,13 @@
-import { interpolateText } from "./interpolate_text.js";
+import { Fragment, h, isValidElement } from "preact";
+import { installInterpolateJsx, interpolateText } from "./interpolate_text.js";
+
+// interpolate_text.js is deliberately preact-free (it sits under createI18n
+// and the pure formatters); the JSX half of interpolation is installed from
+// here, the module every JSX interpolation goes through.
+installInterpolateJsx({
+  isValidElement,
+  createFragment: (children) => h(Fragment, null, children),
+});
 
 /*
  * Technical note: although the component is named Interpolate and its primary

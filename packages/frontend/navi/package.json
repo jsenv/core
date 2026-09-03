@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/navi",
-  "version": "0.29.181",
+  "version": "0.29.182",
   "type": "module",
   "description": "Library of components including navigation to create frontend applications",
   "repository": {
@@ -17,6 +17,10 @@
     ".": {
       "dev:jsenv": "./index.js",
       "default": "./dist/jsenv_navi.js"
+    },
+    "./format_time": {
+      "dev:jsenv": "./src/text/format_time.js",
+      "default": "./dist/jsenv_navi_format_time.js"
     },
     "./*": "./*"
   },
@@ -49,6 +53,7 @@
     "access": "public"
   },
   "sideEffects": [
+    "./src/text/lang_signal.js",
     "./src/navi_instance.js",
     "./src/navi_css_vars.js",
     "./src/navi_z_indexes.js",

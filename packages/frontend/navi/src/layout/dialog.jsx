@@ -1696,9 +1696,15 @@ const useDialogProps = (props) => {
       onKeyDownShortcuts(e);
     },
     "onCancel": (e) => {
-      // Native "cancel" (Escape) only ever fires for a modal (showModal())
-      // dialog — the custom renderer's own Escape handling lives in
-      // onKeyDownShortcuts above instead.
+      // The dialog's own "cancel" (Escape on a modal showModal() dialog —
+      // the custom renderer's Escape handling lives in onKeyDownShortcuts
+      // above) fires on the dialog element itself. But a child
+      // <input type="file"> also fires a BUBBLING "cancel" when the user
+      // dismisses the file chooser (per the HTML spec), and it lands here
+      // too; only the dialog's own cancel means "close".
+      if (e.target !== e.currentTarget) {
+        return;
+      }
       openController.requestClose(e, { isCancel: true });
     },
     children,

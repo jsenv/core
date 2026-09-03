@@ -51,6 +51,14 @@
  * trigger and pressing it are free. The warming render is asynchronous
  * (batched, not flushed): nothing here needs the content in the DOM before
  * the click, only before the open that follows it.
+ *
+ * "while-opened" content is never warmed. That mode promises two things
+ * warming would break: the content is built at open time (so a `defaultValue`
+ * read at build time is fresh, not seeded at pointer-enter time), and it is
+ * only ever mounted between an open and a close — unmounting happens on close,
+ * so a warmed popup that never opens would keep its content in the document
+ * indefinitely. Callers lean on that guarantee (e.g. several pickers sharing
+ * one set of content ids because only one content exists at a time).
  */
 
 import { useEffect, useLayoutEffect, useState } from "preact/hooks";
@@ -123,12 +131,13 @@ export const usePopupContentMount = (
       cancelIdle(idleId);
     };
   }, [mount, contentMounted]);
-  // Warm on intent (see the top comment). The anchor accepts the same shapes
-  // Popover resolves at open time — a string id, a ref, an element — but is
-  // resolved here at effect time: an id that matches nothing yet simply
-  // doesn't warm, the open still mounts the content like it always does.
+  // Warm on intent (see the top comment; "while-opened" is excluded there).
+  // The anchor accepts the same shapes Popover resolves at open time — a
+  // string id, a ref, an element — but is resolved here at effect time: an id
+  // that matches nothing yet simply doesn't warm, the open still mounts the
+  // content like it always does.
   useEffect(() => {
-    if (contentMounted || !anchor) {
+    if (contentMounted || !anchor || mount === "while-opened") {
       return undefined;
     }
     const anchorElement =
@@ -152,7 +161,7 @@ export const usePopupContentMount = (
       anchorElement.removeEventListener("pointerenter", warm);
       anchorElement.removeEventListener("focusin", warm);
     };
-  }, [contentMounted, anchor]);
+  }, [contentMounted, anchor, mount]);
 
   return contentMounted;
 };

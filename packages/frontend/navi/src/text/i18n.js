@@ -1,5 +1,5 @@
 import { interpolateText } from "./interpolate_text.js";
-import { languagesSignal } from "./lang_signal.js";
+import { getRuntimeLang } from "./runtime_lang.js";
 
 /**
  * Creates a lightweight i18n instance: a central place where an app declares
@@ -45,10 +45,12 @@ import { languagesSignal } from "./lang_signal.js";
  *   The active language (BCP 47 tag or ordered array of tags) — named
  *   "runtime" rather than "system" because there is no actual access to the
  *   OS/user's system language from a browser, only `navigator.languages` (or
- *   an explicit override) at runtime. Defaults to `languagesSignal.value`, read
- *   fresh on every `format()`/`has()` call (not frozen at creation time) —
- *   so overriding the language app-wide via `setPreferredLanguage()`/
- *   `setSupportedLanguages()` (see lang_signal.js) is picked up here too.
+ *   an explicit override) at runtime. Defaults to the shared runtime language
+ *   source (see runtime_lang.js) — `languagesSignal.value` in a browser
+ *   bundle, the runtime's own locale elsewhere — read fresh on every
+ *   `format()`/`has()` call (not frozen at creation time), so overriding the
+ *   language app-wide via `setPreferredLanguage()`/`setSupportedLanguages()`
+ *   (see lang_signal.js) is picked up here too.
  *   Passing an explicit `runtimeLang` opts out of that and stays fixed for
  *   this instance's whole lifetime.
  *
@@ -96,28 +98,29 @@ export const createI18n = ({ keyLang, fallbackLang, runtimeLang } = {}) => {
   // resolve to, so it's what invalidates their own small caches.
   let languageMapVersion = 0;
 
-  // Without an explicit runtimeLang, languagesSignal.value is re-read fresh on
-  // every call rather than frozen here via languagesSignal.peek() — freezing it
-  // would silently ignore setPreferredLanguage()/setSupportedLanguages() (see
-  // lang_signal.js) for the rest of this instance's life.
+  // Without an explicit runtimeLang, the runtime language source is re-read
+  // fresh on every call rather than frozen here — freezing it would silently
+  // ignore setPreferredLanguage()/setSupportedLanguages() (see lang_signal.js)
+  // for the rest of this instance's life.
   const hasExplicitRuntimeLang = runtimeLang !== undefined;
 
   // matchBestLang does real work (a Map lookup per candidate, a possible
   // "fr-CA" → "fr" split-and-retry loop) — worth skipping on every single
   // format()/has() call in the common case, since what it resolves to only
   // ever changes when languageMap itself changes (addLangKeys) or, for the
-  // non-explicit case, when languagesSignal.value itself changes (preferred
-  // language, supported languages, or "languagechange" — see lang_signal.js,
-  // languagesSignal is a computed() so its reference is stable when none of its
-  // own dependencies actually changed) — comparing those two cheaply
-  // (===) is enough to know the cached result below is still valid.
+  // non-explicit case, when the runtime lang itself changes (preferred
+  // language, supported languages, or "languagechange" — see lang_signal.js;
+  // its languagesSignal is a computed() so its reference is stable when none
+  // of its own dependencies actually changed, and the signal-free fallback is
+  // a cached string) — comparing those two cheaply (===) is enough to know
+  // the cached result below is still valid.
   let cachedActiveLang;
   let cachedActiveLangRuntimeLang;
   let cachedActiveLangVersion = -1;
   const getActiveLang = () => {
     const currentRuntimeLang = hasExplicitRuntimeLang
       ? runtimeLang
-      : languagesSignal.value;
+      : getRuntimeLang();
     if (
       cachedActiveLangVersion === languageMapVersion &&
       cachedActiveLangRuntimeLang === currentRuntimeLang

@@ -10,6 +10,7 @@ import { useDebugInteraction } from "@jsenv/navi/src/navi_debug.jsx";
 import { canNavBackSignal } from "../nav/browser_integration/document_back_and_forward.js";
 import {
   navBack,
+  navTo,
   useNavState,
 } from "../nav/browser_integration/browser_integration.js";
 import { warnSignalCollision } from "../control/control_value.js";
@@ -516,13 +517,18 @@ const writeInSignal = (signal, value, { history }) => {
 // - the opening is worth what the state declares (`history: "push"` for a
 //   popup one can back out of, the default replacement for one that merely
 //   qualifies the screen one is on);
-// - the closing is never an entry of its own. Stacking one would leave the
-//   entry that carries the popup BEHIND the reader, and their next back press
-//   would walk straight back into the popup they just closed.
+// - the closing is never an entry of its own, and never leaves the pushed
+//   entry standing either. Stacking one would leave the entry that carries
+//   the popup BEHIND the reader (their next back press walks straight back
+//   into the popup they just closed); keeping the pushed entry would leave
+//   two entries describing the same closed screen (their next back press
+//   appears to do nothing).
 // A cancel (Escape, the backdrop, --navi-cancel) goes back to before the
-// opening rather than rewriting the entry, so everything else written to the
-// url while the popup was open goes back with it. A close that is not a cancel
-// keeps those writes and only drops the popup.
+// opening, so everything else written to the url while the popup was open
+// goes back with it. A close that is not a cancel goes back too, but keeps
+// those writes: they are spelled into the url first (only the signal knows
+// how "closed" reads there), and that url is written onto the entry the back
+// lands on.
 const writeOpenedInSignal = (signal, opened, event) => {
   if (signal.peek() === opened) {
     // The signal already says so, meaning this open/close IS what it asked
@@ -536,15 +542,28 @@ const writeOpenedInSignal = (signal, opened, event) => {
     return;
   }
   if (
-    event?.detail?.isCancel &&
     signal.options?.getHistory?.() === "push" &&
     // Nothing of this document behind: the popup was opened by the url itself
     // (a shared link, a bookmark). navBack would do nothing at all there, so
-    // the entry is rewritten instead — the address must not keep saying open
+    // the entry is rewritten in place — the address must not keep saying open
     // about a popup that just closed.
     canNavBackSignal.peek()
   ) {
-    navBack();
+    if (event?.detail?.isCancel) {
+      navBack();
+      return;
+    }
+    writeInSignal(signal, false, { history: "replace" });
+    const urlToKeep = window.location.href;
+    navBack().then((landed) => {
+      if (!landed) {
+        return;
+      }
+      // Often nothing at all: with no other write made while the popup was
+      // open, the entry landed on already reads urlToKeep and navTo skips
+      // the navigation entirely.
+      navTo(urlToKeep, { replace: true });
+    });
     return;
   }
   writeInSignal(signal, false, { history: "replace" });
@@ -613,9 +632,9 @@ export const useOpenPropsEffectOnOpenController = (
             if (opened) {
               enterNavState();
             } else {
-              // Under type "push" a cancel goes back rather than rewriting the
-              // entry, so everything else written to the url while the popup
-              // was open goes back with it (see useNavState's own leave()).
+              // Under type "push" a cancel discards everything written while
+              // the popup was open — it goes back with the entry; a confirmed
+              // close keeps those writes (see useNavState's own leave()).
               leaveNavState({ isBack: Boolean(event?.detail?.isCancel) });
             }
           }

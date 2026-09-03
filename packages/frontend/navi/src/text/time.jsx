@@ -16,9 +16,13 @@ import {
   formatMonthPlaceholder,
   formatSecondDuration,
   formatTime,
+  formatTimeOfDay,
   formatTimeRelative,
   formatWeekPlaceholder,
   getRelativeDay,
+  resolveTimeRangePrecision,
+  toDate,
+  toTimeOfDay,
 } from "./format_time.js";
 import { languagesSignal } from "./lang_signal.js";
 import { naviI18n } from "./navi_i18n.js";
@@ -100,6 +104,10 @@ import { Text } from "./text.jsx";
  *   `pad` implies; the one reason to force `"minute"` on an unpadded clock is
  *   to agree with a partner that has minutes of its own, which is what
  *   `<TimeRange>` does for you.
+ * @param {boolean|"auto"} [year=true]
+ *   `type="date"` + `format="numeric"` only — whether the year is written.
+ *   `false` drops it ("30/07", the day/month order still following the
+ *   locale), `"auto"` drops it only when the date is in the current year.
  * @param {boolean} [dayLabel]
  *   When true and `type="date"`, appends the locale-aware relative label
  *   ("hier", "aujourd'hui", "demain") when the date is yesterday, today, or tomorrow.
@@ -143,11 +151,12 @@ const TimeDate = ({
   children,
   lang = languagesSignal.value,
   format = "long",
+  year,
   dayLabel,
   now,
   ...props
 }) => {
-  if (children === undefined) {
+  if (children === undefined || children === null) {
     return (
       <TimeText {...props} capitalize={false}>
         {formatDatePlaceholder({ lang })}
@@ -166,7 +175,7 @@ const TimeDate = ({
     return <TimeText {...props}>{String(children)}</TimeText>;
   }
 
-  const base = formatDay(date, { lang, format });
+  const base = formatDay(date, { lang, format, year, now });
   let text;
   if (dayLabel) {
     const offset = getRelativeDay(date, { now });
@@ -195,7 +204,7 @@ const TimeMonth = ({
   format = "long",
   ...props
 }) => {
-  if (children === undefined) {
+  if (children === undefined || children === null) {
     return (
       <TimeText {...props}>{formatMonthPlaceholder({ lang, format })}</TimeText>
     );
@@ -242,7 +251,7 @@ const TimeDatetime = ({
   format = "long",
   ...props
 }) => {
-  if (children === undefined) {
+  if (children === undefined || children === null) {
     return (
       <TimeText {...props} capitalize={false}>
         {formatDatetimePlaceholder({ lang, format })}
@@ -269,10 +278,10 @@ const TimeTime = ({
   lang = languagesSignal.value,
   format = "long",
   pad = true,
-  precision = pad ? "minute" : "hour",
+  precision,
   ...props
 }) => {
-  if (children === undefined) {
+  if (children === undefined || children === null) {
     return <TimeText {...props}>--:--</TimeText>;
   }
 
@@ -285,89 +294,10 @@ const TimeTime = ({
   const hh = String(date.getHours()).padStart(2, "0");
   const mm = String(date.getMinutes()).padStart(2, "0");
   const dateTime = `${hh}:${mm}`; // See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
-  if (format === "timestring") {
-    return (
-      <TimeText dateTime={dateTime} {...props}>
-        {formatTime(date, lang)}
-      </TimeText>
-    );
-  }
-  const totalMinutes = date.getHours() * 60 + date.getMinutes();
-  // Midnight (hour 0) can't go through formatMinuteDuration's own default
-  // zero-hour handling: it drops a zero-valued unit entirely (by design — a
-  // real 5-minute duration should print as "5 minutes", not "0 hours 5
-  // minutes"), so "00:05" would otherwise render identically to an actual
-  // 5-minute duration, silently losing the fact that it's midnight. Every
-  // other hour keeps at least its own "N hour(s)" wording as a hint that
-  // this is a time-of-day, not a duration — only hour 0 loses that hint
-  // entirely.
-  // clockStyle: this is always a time-of-day here, never a duration — keeps
-  // a zero hour instead of dropping it (midnight would otherwise be
-  // indistinguishable from an actual 5-minute duration), and in
-  // format="compact" also zero-pads a single-digit hour so "5h30"/"0h05"
-  // read as "05h30"/"00h05", closer to a "HH:MM" clock.
-  let text;
-  if (date.getHours() !== 0) {
-    text = formatMinuteDuration(totalMinutes, {
-      lang,
-      format,
-      clockStyle: true,
-      pad,
-      precision,
-    });
-  } else if (format !== "long") {
-    // short/narrow/compact: keep the "0 h"/"0h" hour part instead of
-    // dropping it — e.g. "0 h et 5 min"/"0h 5min"/"00h05" — rather than
-    // substituting a translated "midnight" word, which would look out of
-    // place squeezed into these otherwise terse, symbol-based formats.
-    text = formatMinuteDuration(totalMinutes, {
-      lang,
-      format,
-      clockStyle: true,
-      pad,
-      precision,
-    });
-  } else {
-    const midnightWord = naviI18n("time.midnight", undefined, { lang });
-    if (midnightWord === "time.midnight") {
-      // No "midnight" translation registered for this language — fall back
-      // to this language's own literal "0 heure(s)" wording instead (still
-      // better than leaking the untranslated key, or substituting an
-      // English word that wouldn't grammatically match the rest of the
-      // sentence in whatever language this actually is).
-      text = formatMinuteDuration(totalMinutes, {
-        lang,
-        format,
-        clockStyle: true,
-      });
-    } else {
-      // Swap just the "0 heure(s)" part of the Intl-generated duration
-      // string for the translated "midnight" word, keeping everything else
-      // (the conjunction, the minutes part) exactly as Intl would produce
-      // for this locale — formatToParts tags each token with the unit it
-      // belongs to, so the swap doesn't need to know the locale's own
-      // grammar/word order. Only ever one hour-tagged group per call
-      // (hours is always 0 or absent here), but guarded anyway in case a
-      // future Intl implementation ever splits it into more parts.
-      const parts = new Intl.DurationFormat(lang, {
-        style: "long",
-        hoursDisplay: "always",
-      }).formatToParts({ hours: 0, minutes: date.getMinutes() });
-      let hourGroupReplaced = false;
-      text = parts
-        .map((part) => {
-          if (part.unit !== "hour") {
-            return part.value;
-          }
-          if (hourGroupReplaced) {
-            return "";
-          }
-          hourGroupReplaced = true;
-          return midnightWord;
-        })
-        .join("");
-    }
-  }
+  // The whole clock shaping (timestring, clockStyle, the midnight wording)
+  // lives in formatTimeOfDay so a plain string — a `title` attribute, a
+  // notification — reads exactly like this component.
+  const text = formatTimeOfDay(date, { lang, format, pad, precision });
   return (
     <TimeText dateTime={dateTime} {...props}>
       {text}
@@ -382,7 +312,7 @@ const TimeMinute = ({
   forceUnit = false,
   ...props
 }) => {
-  if (children === undefined) {
+  if (children === undefined || children === null) {
     return (
       <TimeText {...props}>{format === "timestring" ? "--:--" : "--"}</TimeText>
     );
@@ -418,7 +348,7 @@ const TimeSecond = ({
   forceUnit = false,
   ...props
 }) => {
-  if (children === undefined) {
+  if (children === undefined || children === null) {
     return (
       <TimeText {...props}>
         {format === "timestring" ? "--:--:--" : "--"}
@@ -456,7 +386,7 @@ const TimeHour = ({
   forceUnit = false,
   ...props
 }) => {
-  if (children === undefined) {
+  if (children === undefined || children === null) {
     return (
       <TimeText {...props}>{format === "timestring" ? "--:--" : "--"}</TimeText>
     );
@@ -546,7 +476,7 @@ const TimeRelative = ({
   bare,
   ...props
 }) => {
-  if (children === undefined) {
+  if (children === undefined || children === null) {
     return <TimeText {...props}>–</TimeText>;
   }
 
@@ -629,7 +559,7 @@ export const TimeRange = ({
   if (type === "time") {
     boundProps.pad = pad;
     boundProps.precision =
-      precision ?? resolvePairPrecision(from, to, { format, pad });
+      precision ?? resolveTimeRangePrecision(from, to, { format, pad });
   }
   // compact writes the whole span as one short token ("8h–10h"): nothing
   // around the separator, and no break inside it. The other formats are
@@ -646,53 +576,4 @@ export const TimeRange = ({
       <Time {...boundProps}>{to}</Time>
     </Text>
   );
-};
-
-// The two bounds of a span are written to the same precision, decided by the
-// pair: "8h–10h" as long as neither has minutes, "11h30–14h00" as soon as one
-// of them does. Only ever a question for the unpadded compact clock — the
-// padded one always writes "08h00", and the spelled-out formats name their
-// units, leaving no shape for the eye to trip on.
-const resolvePairPrecision = (from, to, { format, pad }) => {
-  if (pad || format !== "compact") {
-    return "minute";
-  }
-  const hasMinutes = (value) => {
-    const date = toTimeOfDay(value);
-    return Boolean(date) && !isNaN(date.getTime()) && date.getMinutes() !== 0;
-  };
-  return hasMinutes(from) || hasMinutes(to) ? "minute" : "hour";
-};
-
-const toTimeOfDay = (value) => {
-  return toDate(value, (string) => {
-    if (/^\d{2}:\d{2}(?::\d{2})?$/.test(string)) {
-      const d = new Date(`1970-01-01T${string}`);
-      return isNaN(d.getTime()) ? null : d;
-    }
-    return null;
-  });
-};
-
-const toDate = (value, parseString) => {
-  if (value instanceof Date) {
-    return value;
-  }
-  if (typeof value === "number") {
-    return new Date(value);
-  }
-  if (typeof value === "string") {
-    if (parseString) {
-      return parseString(value);
-    }
-    // "YYYY-MM-DD" — use local midnight to avoid UTC shift
-    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-      const d = new Date(`${value}T00:00:00`);
-      return isNaN(d.getTime()) ? null : d;
-    }
-    // ISO / other parseable strings
-    const d = new Date(value);
-    return isNaN(d.getTime()) ? null : d;
-  }
-  return null;
 };

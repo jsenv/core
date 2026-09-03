@@ -1,5 +1,7 @@
 import { computed, signal } from "@preact/signals";
 
+import { setRuntimeLangSource } from "./runtime_lang.js";
+
 const DEFAULT_LANG = "en";
 
 /**
@@ -131,3 +133,14 @@ export const languagesSignal = computed(() => {
   );
   return filteredLanguages.length > 0 ? filteredLanguages : supportedLanguages;
 });
+
+// Every formatter/i18n call that receives no explicit `lang` falls back to
+// runtime_lang.js's source; in a browser bundle that source is this signal,
+// so naviI18n()/formatDay()/… follow navigator.languages,
+// setPreferredLanguage() and setSupportedLanguages() live. runtime_lang.js
+// must not import this module — staying signal-free is what keeps
+// format_time.js importable outside the browser — so the wiring lives here,
+// on the signal side. This module is listed in package.json "sideEffects"
+// so a bundler never drops this call (nor the "languagechange" listener
+// above).
+setRuntimeLangSource(() => languagesSignal.value);

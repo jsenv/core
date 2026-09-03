@@ -279,6 +279,8 @@ export {
   formatMonth,
   formatSecondDuration,
   formatTime,
+  formatTimeOfDay,
+  formatTimeRange,
   formatTimeRelative,
 } from "./src/text/format_time.js";
 export { Icon } from "./src/text/text.jsx";

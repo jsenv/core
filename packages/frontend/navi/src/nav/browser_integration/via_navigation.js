@@ -458,16 +458,25 @@ export const setupBrowserIntegrationViaNavigation = ({
     // document_back_and_forward.js). navigation.back() throws with nowhere to
     // go, so the two are asked together.
     if (canNavBackSignal.peek() && navigation.canGoBack) {
-      navigation.back();
-      return;
+      const { committed } = navigation.back();
+      // Committed: the traverse's own navigate event has been answered, so
+      // the document url and state already say where it landed. An aborted
+      // back (another navigation preempting it) lands nowhere — said with
+      // `false`, so a caller waiting to write onto the landed entry knows
+      // not to.
+      return committed.then(
+        () => true,
+        () => false,
+      );
     }
     if (fallback === undefined) {
-      return;
+      return undefined;
     }
     // Replace, not push: pushing the fallback would put the screen just left
     // one press ahead, and the device's own back button would walk straight
     // back into it — a loop with no way out of the app.
     navTo(fallback, { replace: true });
+    return undefined;
   };
   const navForward = () => {
     if (navigation.canGoForward) {

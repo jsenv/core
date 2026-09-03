@@ -10,6 +10,7 @@ import {
   windowIsLoadingSignal,
   workingWhile,
 } from "./document_loading_signal.js";
+import { canNavBackSignal } from "./document_back_and_forward.js";
 import { documentStateSignal } from "./document_state_signal.js";
 import { documentUrlSignal } from "./document_url_signal.js";
 import { setupBrowserIntegrationViaHistory } from "./via_history.js";
@@ -189,6 +190,12 @@ export const reload = browserIntegration.reload;
  *   Where to land when there is nothing of this document behind. It takes the
  *   place of the current entry rather than stacking on it. Without it, a
  *   navBack() with nowhere to go does nothing.
+ * @returns {Promise<boolean>|undefined}
+ *   When there is something to go back to: a promise resolved once the back
+ *   has landed and been applied (`true` — the document url and state say
+ *   where it landed), or `false` when the traversal was preempted and landed
+ *   nowhere. `undefined` otherwise — nothing happened, or the fallback took
+ *   the current entry's place.
  */
 export const navBack = browserIntegration.navBack;
 export const navForward = browserIntegration.navForward;
@@ -310,25 +317,43 @@ const useNavStateBasic = (
   };
 
   // leave(): navigate AWAY FROM this state (navBack in push mode, replace in replace mode).
-  // isBack: when true (cancel close in push mode), call history.back() to restore the
-  //   pre-open state — discards any in-progress edits.
-  //   When false (confirmed close), replace the pushed entry instead: preserves the
-  //   current URL state (e.g. a new picker value) while removing the popup key.
+  // isBack: when true (cancel close in push mode), the pushed entry is popped and
+  //   everything written while it was entered (url, sibling state keys) is
+  //   discarded with it. When false (confirmed close), those writes are kept —
+  //   only this key is dropped.
+  // Both push-mode closes pop the pushed entry. A keep-close that merely
+  // rewrote it in place would leave two entries describing the same closed
+  // screen — same url, same state — and the next back press would appear to do
+  // nothing. So the keep path goes back like the cancel does, then writes what
+  // must be kept onto the entry the back lands on. Only with nothing of this
+  // document behind (the state was entered on a cold-loaded url, navBack has
+  // nowhere to go) does it rewrite in place.
   const leave = ({ isBack } = {}) => {
     enteredRef.current = false;
     const currentStateCopy = browserIntegration.getDocumentState() || {};
     if (!Object.hasOwn(currentStateCopy, id)) {
       return;
     }
-    if (effectiveType === "push" && isBack) {
-      browserIntegration.navBack();
-    } else {
+    if (effectiveType === "push" && canNavBackSignal.peek()) {
+      if (isBack) {
+        browserIntegration.navBack();
+        return;
+      }
+      const urlToKeep = window.location.href;
       delete currentStateCopy[id];
-      navTo(window.location.href, {
-        replace: true,
-        state: currentStateCopy,
+      browserIntegration.navBack().then((landed) => {
+        if (!landed) {
+          return;
+        }
+        navTo(urlToKeep, { replace: true, state: currentStateCopy });
       });
+      return;
     }
+    delete currentStateCopy[id];
+    navTo(window.location.href, {
+      replace: true,
+      state: currentStateCopy,
+    });
   };
 
   return [currentValue, enter, leave];

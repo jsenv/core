@@ -420,16 +420,26 @@ export const setupBrowserIntegrationViaHistory = ({
 
   const navBack = ({ fallback } = {}) => {
     if (canNavBackSignal.peek()) {
+      // Resolved once the back has landed: the "popstate" it is answered with
+      // reaches the routing listener first (registered at setup, before this
+      // one), so whoever awaits this reads a document url and state that
+      // already say where it landed.
+      const landedPromise = new Promise((resolve) => {
+        window.addEventListener("popstate", () => resolve(true), {
+          once: true,
+        });
+      });
       window.history.back();
-      return;
+      return landedPromise;
     }
     if (fallback === undefined) {
-      return;
+      return undefined;
     }
     // Replace, not push: pushing the fallback would put the screen just left
     // one press ahead, and the device's own back button would walk straight
     // back into it — a loop with no way out of the app.
     navTo(fallback, { replace: true });
+    return undefined;
   };
 
   const navForward = () => {

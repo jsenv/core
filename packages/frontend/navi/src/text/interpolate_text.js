@@ -1,4 +1,14 @@
-import { Fragment, h, isValidElement } from "preact";
+// The JSX half of interpolation (VNode detection, fragment assembly) is
+// installed by interpolate.jsx rather than imported: this module sits under
+// createI18n and the pure formatters (format_time.js), which must stay
+// importable where preact is not installed. Until installed, a VNode
+// replacement is neither detected nor assembled — values are joined as
+// strings — which is only reachable by passing a VNode without going through
+// <Interpolate>.
+let jsx = null;
+export const installInterpolateJsx = (runtime) => {
+  jsx = runtime;
+};
 
 /**
  * Interpolates a template string, replacing `[key]` placeholders with values.
@@ -57,7 +67,7 @@ export const interpolateText = (
     if (typeof value === "function") {
       value = value();
     }
-    if (isValidElement(value)) {
+    if (jsx && jsx.isValidElement(value)) {
       if (allowJsx) {
         hasVnode = true;
       } else {
@@ -71,8 +81,7 @@ export const interpolateText = (
   if (!hasVnode) {
     return resolved.join("");
   }
-  // h(Fragment) instead of JSX (<>{resolved}</>) to keep this file as .js
-  return h(Fragment, null, resolved);
+  return jsx.createFragment(resolved);
 };
 
 // Resolves a placeholder key against the replacements object.
