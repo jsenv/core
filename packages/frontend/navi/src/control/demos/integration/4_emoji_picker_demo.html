@@ -164,30 +164,43 @@
         return (found ?? EMOJI_FAMILIES[0]).area;
       };
 
-      const EmojiSheet = ({ name, value, action, command }) => {
+      const EmojiSheet = ({
+        name,
+        value,
+        action,
+        command,
+        families = EMOJI_FAMILIES,
+        width = "300px",
+        // Pas de hauteur imposée: la liste est aussi haute que ses emojis, et
+        // rien ne défile verticalement dans les planches.
+        listHeight,
+        nav = true,
+      }) => {
         const id = useId();
         const slideContainerId = `${id}_familles`;
 
         return (
-          <Box className="emoji_sheet" flex="y" maxWidth="300px">
-            <Nav
-              className="emoji_tabs"
-              slideContainer={slideContainerId}
-              currentIndicator
-              overflowX="auto"
-              overflowY="hidden"
-            >
-              {EMOJI_FAMILIES.map(({ area, label }) => (
-                <Link key={area} slide={area} variant="tab" padding="m">
-                  {label}
-                </Link>
-              ))}
-            </Nav>
+          <Box className="emoji_sheet" flex="y" maxWidth={width}>
+            {nav && (
+              <Nav
+                className="emoji_tabs"
+                slideContainer={slideContainerId}
+                currentIndicator
+                overflowX="auto"
+                overflowY="hidden"
+              >
+                {families.map(({ area, label }) => (
+                  <Link key={area} slide={area} variant="tab" padding="m">
+                    {label}
+                  </Link>
+                ))}
+              </Nav>
+            )}
             <SlideContainer
               id={slideContainerId}
               defaultCurrent={familyOfEmoji(value)}
             >
-              {EMOJI_FAMILIES.map(({ area, emojis }) => (
+              {families.map(({ area, emojis }) => (
                 <Slide key={area} area={area}>
                   <List
                     name={name}
@@ -195,7 +208,7 @@
                     command={command}
                     action={action}
                     columns="repeat(auto-fill, minmax(2.5rem, 1fr))"
-                    height="180px"
+                    height={listHeight}
                     /* Le trait est celui de la planche, pas celui d'une
                        famille: dessiné par la liste il voyagerait avec elle,
                        et on verrait le cadre glisser en changeant d'onglet. */
@@ -250,6 +263,40 @@
               La planche est la page: l'emoji est pris là où il est.
             </p>
             <EmojiSheet name="emoji" value={emoji} action={setEmoji} />
+            <p className="result">{emoji}</p>
+          </div>
+        );
+      };
+
+      const WideSection = () => {
+        const [emoji, setEmoji] = useState("🐶");
+        const [navVisible, setNavVisible] = useState(false);
+
+        return (
+          <div className="demo-section">
+            <h2>Large, quatre familles</h2>
+            <p className="caption">
+              Quatre familles, planche large, la liste tient sans défiler.
+            </p>
+            <p>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={navVisible}
+                  onChange={(e) => setNavVisible(e.target.checked)}
+                />{" "}
+                nav
+              </label>
+            </p>
+            <EmojiSheet
+              name="emoji_large"
+              value={emoji}
+              action={setEmoji}
+              families={EMOJI_FAMILIES.slice(0, 4)}
+              width="480px"
+              listHeight="240px"
+              nav={navVisible}
+            />
             <p className="result">{emoji}</p>
           </div>
         );
@@ -331,6 +378,7 @@
       const App = () => (
         <>
           <InlineSection />
+          <WideSection />
           <PickerSection />
           <FarFamilySection />
           <FormSection />
