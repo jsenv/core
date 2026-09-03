@@ -34,6 +34,24 @@ const BETWEEN_TABS_ATTRIBUTE = "data-nav-between-tabs";
 // paragraph, only to move the row about as far as a notch moves a page.
 const WHEEL_LINE_SIZE = 16;
 
+// The animation a slide container puts on this row to bring the travel's
+// progress home (see animateTravelProgress in slide_container.jsx) — the cheap
+// source of that number while a travel plays (see syncTabScroll). Its starting
+// value is read off the keyframes here, once: the frame loop only ever asks
+// the animation how far along it is.
+const rememberProgressAnimation = (navElement, travel) => {
+  const animation = navElement.getAnimations().find((candidate) => {
+    const keyframes = candidate.effect?.getKeyframes?.();
+    return keyframes?.[0] && "--slide-travel-progress" in keyframes[0];
+  });
+  travel.progressAnimation = animation;
+  travel.progressFrom = animation
+    ? parseFloat(
+        animation.effect.getKeyframes()[0]["--slide-travel-progress"],
+      ) || 0
+    : 0;
+};
+
 const css = /* css */ `
   @layer navi {
     .navi_nav {
@@ -485,8 +503,35 @@ export const Nav = ({
     if (currentIndex === -1) {
       // On a slide no tab in this row names: there is no tab to sit under.
       navElement.removeAttribute("data-nav-indicator-measured");
+      indicatorPaintedForRef.current = null;
       return;
     }
+    // Everything below is measured off the DOM (offsets force a layout, the
+    // colours a style resolve), and what it depends on is exactly two facts:
+    // which tab is current and which one the travel leans toward. A travel
+    // announces its state several times between those two changing — painted
+    // each time, the same measurement is paid again on frames the travel is
+    // drawn on. The size observer clears the memo, since the same pair on a
+    // resized row measures differently.
+    const towardAreaNow = containerElement.getAttribute(
+      "data-slide-travel-toward",
+    );
+    const paintedFor = indicatorPaintedForRef.current;
+    if (
+      paintedFor &&
+      paintedFor.currentTabElement === tabElements[currentIndex] &&
+      paintedFor.towardArea === towardAreaNow &&
+      paintedFor.tabCount === tabElements.length &&
+      paintedFor.vertical === vertical
+    ) {
+      return;
+    }
+    indicatorPaintedForRef.current = {
+      currentTabElement: tabElements[currentIndex],
+      towardArea: towardAreaNow,
+      tabCount: tabElements.length,
+      vertical,
+    };
     const measure = (tabElement) =>
       vertical
         ? { position: tabElement.offsetTop, length: tabElement.offsetHeight }
@@ -508,9 +553,7 @@ export const Nav = ({
       }
     };
     const currentMeasure = measure(tabElements[currentIndex]);
-    const towardArea = containerElement.getAttribute(
-      "data-slide-travel-toward",
-    );
+    const towardArea = towardAreaNow;
     const towardIndex = tabElements.findIndex(
       (tabElement) => areaOf(tabElement) === towardArea,
     );
@@ -546,6 +589,9 @@ export const Nav = ({
   // about the row as it is now.
   const paintIndicatorGeometryRef = useRef(null);
   paintIndicatorGeometryRef.current = paintIndicatorGeometry;
+  // What the last paint measured for — see the memo at the top of
+  // paintIndicatorGeometry.
+  const indicatorPaintedForRef = useRef(null);
 
   // A row of tabs wider than the box holding it scrolls (the caller asks for
   // that with overflowX) — and then saying which tab one is on is not enough,
@@ -620,6 +666,22 @@ export const Nav = ({
       travel.from !== currentTabElement ||
       travel.toward !== towardTabElement
     ) {
+      // Everything that holds for the whole travel is read here and only here
+      // — the frame loop below runs sixty times a second and every layout or
+      // style read in it is paid on the very frames the travel is drawn on.
+      // A row that cannot scroll has nowhere to ride the travel to: remembered
+      // on the travel, and the loop is not even armed for it.
+      const rideable =
+        navElement.scrollWidth > navElement.clientWidth + 1 ||
+        navElement.scrollHeight > navElement.clientHeight + 1;
+      if (!rideable) {
+        travelScrollRef.current = {
+          from: currentTabElement,
+          toward: towardTabElement,
+          rideable,
+        };
+        return;
+      }
       // The two ends, measured once for this travel: measuring them again on a
       // row that has since moved would be measuring from the answer.
       const fromOffsets = getScrollIntoViewScopedOffsets(currentTabElement, {
@@ -639,19 +701,53 @@ export const Nav = ({
       travel = {
         from: currentTabElement,
         toward: towardTabElement,
+        rideable,
         left: fromOffsets.left,
         top: fromOffsets.top,
         leftDelta: (towardOffsets.left - fromOffsets.left) * sign,
         topDelta: (towardOffsets.top - fromOffsets.top) * sign,
       };
+      rememberProgressAnimation(navElement, travel);
       travelScrollRef.current = travel;
     }
-    const progress =
-      parseFloat(
-        getComputedStyle(navElement).getPropertyValue(
-          "--slide-travel-progress",
-        ),
-      ) || 0;
+    if (!travel.rideable) {
+      return;
+    }
+    // How far between the two slides the picture stands, read WITHOUT
+    // getComputedStyle: computing the style of an element whose registered
+    // property is animating is a full style resolve, and per frame it is what
+    // ate the travel's frame budget on a throttled phone. The number has two
+    // cheap sources, and the container guarantees one of them on this very
+    // element (see paintTravelProgress / animateTravelProgress in
+    // slide_container.jsx): a travel that plays on its own ANIMATES the
+    // property here — its eased progress is on the animation itself
+    // (getComputedTiming().progress is the transformed, post-easing progress)
+    // — and a finger writes it as INLINE style per frame, readable as a plain
+    // string.
+    let progress;
+    let eased = travel.progressAnimation
+      ? travel.progressAnimation.effect.getComputedTiming().progress
+      : null;
+    if (eased === null) {
+      // No animation, or one that is over: the travel may have been
+      // re-animated since (a chained travel between the same two tabs), so
+      // look again before falling back to the finger's inline value.
+      rememberProgressAnimation(navElement, travel);
+      eased = travel.progressAnimation
+        ? travel.progressAnimation.effect.getComputedTiming().progress
+        : null;
+    }
+    if (eased === null) {
+      progress =
+        parseFloat(
+          navElement.style.getPropertyValue("--slide-travel-progress"),
+        ) || 0;
+    } else {
+      // The animation walks the property from `progressFrom` to 0 (see
+      // animateTravelProgress); its value at this instant is the same
+      // interpolation, done here in arithmetic instead of in style.
+      progress = travel.progressFrom * (1 - eased);
+    }
     navElement.scrollTo({
       left: travel.left + progress * travel.leftDelta,
       top: travel.top + progress * travel.topDelta,
@@ -709,6 +805,8 @@ export const Nav = ({
   // being pushed around by hand.
   useLayoutEffect(() => {
     const sizeObserver = new ResizeObserver(() => {
+      // The same pair of tabs measures differently on a row of another size.
+      indicatorPaintedForRef.current = null;
       paintIndicatorGeometryRef.current();
       // What was brought into sight was brought there for another row.
       tabInSightRef.current = null;
