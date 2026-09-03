@@ -158,6 +158,12 @@ import.meta.css = /* css */ `
 // How far a pointer goes before it is a travel rather than a click: below this
 // a press that wandered a pixel is still a press, and nothing budges.
 const DRAG_START_THRESHOLD = 10;
+// How much the cross axis must dominate the travel axis, over the first
+// reported pixels, to take the press away from the box (see the axis decision
+// in onDrag). Sized against the two hands it separates: a thumb's arc leans up
+// to about twice as far off-axis as along it at the start of a sideways swipe,
+// while a scroll is four or five times purer than that on its own axis.
+const AXIS_CROSS_DOMINANCE = 2;
 // How much of a box has to be pulled for letting go to carry on rather than put
 // things back, when the caller does not say. Under half, because a gesture that
 // has clearly begun is an intention: asking for the box to be dragged all the
@@ -655,12 +661,30 @@ export const startDragToTravel = (
           // ONE axis, decided by the first movement reported and never
           // revisited: a diagonal would ask for two travels at once and only
           // one thing can arrive.
+          //
+          // The axis this box travels is favoured in that reading: a thumb
+          // swiping a box sideways moves along an ARC, and its first reported
+          // pixels — which are all this decision ever sees — lean off-axis
+          // far more than the gesture does. Read even, that lean hands the
+          // whole gesture to an axis nobody meant (the press is given up, and
+          // the hand's remaining hundred pixels are read by no one). So the
+          // cross axis has to win CLEARLY to take the press — and a gesture
+          // that is really the page's own (a scroll is near-pure on its axis
+          // from the first pixel) still is, at once, whole.
           const reachX = Math.abs(coveredOn("x", gestureInfo));
           const reachY = Math.abs(coveredOn("y", gestureInfo));
           if (!reachX && !reachY) {
             return;
           }
-          axis = reachX >= reachY ? "x" : "y";
+          const travelsX = axesLeft.includes("x");
+          const travelsY = axesLeft.includes("y");
+          if (travelsX && !travelsY) {
+            axis = reachY > reachX * AXIS_CROSS_DOMINANCE ? "y" : "x";
+          } else if (travelsY && !travelsX) {
+            axis = reachX > reachY * AXIS_CROSS_DOMINANCE ? "x" : "y";
+          } else {
+            axis = reachX >= reachY ? "x" : "y";
+          }
           if (!axesLeft.includes(axis)) {
             giveUp();
             return;

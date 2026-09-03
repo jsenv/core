@@ -67,6 +67,7 @@
  */
 
 import {
+  keepTouchRefusable,
   startDragToTravel,
   suppressClickAfterGesture,
   waitForPressHeld,
@@ -255,6 +256,17 @@ defineInteractionDetector({
       element.addEventListener("dragstart", onDragStart);
       undo.push(() => {
         element.removeEventListener("dragstart", onDragStart);
+      });
+
+      // A touch this element may take has to be refusable before the finger
+      // lands, or the browser can cancel an established swipe mid-gesture by
+      // scrolling the list around it along the axis touch-action leaves free —
+      // same rule, same moment as the attributes above (see keepTouchRefusable).
+      element.addEventListener("touchmove", keepTouchRefusable, {
+        passive: false,
+      });
+      undo.push(() => {
+        element.removeEventListener("touchmove", keepTouchRefusable);
       });
     }
     if (hasLongPress) {

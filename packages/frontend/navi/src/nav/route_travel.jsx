@@ -41,6 +41,7 @@ import { computed } from "@preact/signals";
 
 import {
   getScrollContainer,
+  keepTouchRefusable,
   scrollRoomTowards,
   startDragToTravel,
   watchWheelTravel,
@@ -1381,6 +1382,11 @@ export const RouteTravel = ({
       // this box walks it too.
       data-travel-by-drag={travelByDrag ? axis : undefined}
       data-travel-by-wheel={travelByDrag ? axis : undefined}
+      // A touch this box may take has to be refusable before the finger lands,
+      // or the browser can cancel an established travel mid-swipe by scrolling
+      // the axis touch-action leaves it — see keepTouchRefusable for why a JSX
+      // prop is enough (an element-level touchmove listener is non-passive).
+      onTouchMove={travelByDrag ? keepTouchRefusable : undefined}
       onPointerDown={onPointerDown}
     >
       {children}

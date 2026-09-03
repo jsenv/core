@@ -11,7 +11,7 @@
  * unless asked to (`sizeFromAnchor`, see dialog.jsx), which a side panel
  * never does: its `width`/`height` props are what size it.
  */
-import { stringifyStyle } from "@jsenv/dom";
+import { keepTouchRefusable, stringifyStyle } from "@jsenv/dom";
 
 import { Box } from "../box/box.jsx";
 import { withPropsClassName } from "../utils/with_props_class_name.js";
@@ -306,6 +306,11 @@ export const SidePanel = ({
       // know this axis is already walked (see @jsenv/dom's drag_to_travel).
       data-drag-travel={swipeToClose ? SWIPE_AXIS_BY_SIDE[side] : undefined}
       data-travel-by-drag={swipeToClose ? SWIPE_AXIS_BY_SIDE[side] : undefined}
+      // A touch this panel may take has to be refusable before the finger
+      // lands, or the browser can cancel the close gesture mid-swipe by
+      // scrolling the panel's content — see keepTouchRefusable for why a JSX
+      // prop is enough (an element-level touchmove listener is non-passive).
+      onTouchMove={swipeToClose ? keepTouchRefusable : undefined}
       {...rest}
       onPointerDown={(pointerDownEvent) => {
         rest.onPointerDown?.(pointerDownEvent);
