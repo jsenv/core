@@ -16,21 +16,35 @@ and are referenced from here rather than restated.
 ## What the rules are
 
 - A press is not a gesture until it has wandered ~10px, and the axis it leans on
-  then is the axis it walks, for good. **Except on something already moving**:
-  there the hand said what it wanted by reaching for it, so the gesture answers
-  from its first pixel and owes it every one of them — asking it to cross a
-  threshold is asking twice, and over those pixels the thing it is holding
-  answers to nobody. A diagonal would ask for two travels at
+  then is the axis it walks, for good — how that axis is read, and why the
+  reading is biased, has [a section of its own
+  below](#the-axis-is-read-once-and-read-with-a-bias). **Except on something
+  already moving**: there the hand said what it wanted by reaching for it, so
+  the gesture answers from its first pixel and owes it every one of them —
+  asking it to cross a threshold is asking twice, and over those pixels the
+  thing it is holding answers to nobody. A diagonal would ask for two travels at
   once and only one screen can arrive.
-- Letting go carries on when about a third of a box has been pulled, or on a
-  flick, whatever the distance — a gesture that has clearly begun is an
-  intention, and asking for a screen to be dragged all the way across turns a
-  travel into work.
-- **A hand still moving says where it is going, and it says it both ways.** Away
-  from what was being brought in, it means "put it back" whatever the distance
-  already covered — otherwise a screen caught in flight and thrown back still
-  arrives, because the picture alone decided. A slow nudge is not a throw: there
-  the distance decides, as usual.
+- **Of the way covered when the gesture forms, only the threshold is withheld**
+  — never the whole first report. Movement reports are coalesced to frames, so
+  the faster the gesture the bigger its first report is: charged whole, a flick
+  delivered in one report sets off with nothing left of itself to have pulled —
+  it moves nothing on screen and is refused at the release for it, and what the
+  hand feels is a swipe that did strictly nothing.
+- **A hand still moving when it lets go says where this goes, and it says it
+  both ways.** Towards what it was bringing in, the travel carries on — however
+  slowly and whatever the distance: an intention still being acted on at the
+  lift. Away from it, fast, everything goes back whatever the distance already
+  covered — otherwise a screen caught in flight and thrown back still arrives,
+  because the picture alone decided. Only a release at rest, or a slow retreat,
+  is judged by the picture — about a third of a box — because there the
+  position is the only witness left.
+- **The bars those verdicts compare against sit well below the speed the
+  fingertip actually has, and they must.** Velocity is averaged over a trailing
+  window (pointer events arrive irregularly, and the last one before a release
+  often repeats its coordinates — measured on that pair alone, every throw ends
+  at zero), and the release itself adds one more sample at the same place a
+  moment later. Both pull the measure down from the hand's peak: a threshold
+  sized against the hand refuses the hand.
 - Pulling towards nothing follows the finger at a fraction of its distance and
   comes back: a wall one can lean on, never walk through.
 - **A direction that will be refused is one of those walls, and it must be a
@@ -51,6 +65,43 @@ and are referenced from here rather than restated.
   turning around moves the picture at once. Measured from the origin instead, a
   hand that came in fast would push against a screen that does not answer for as
   many pixels as it went too far.
+
+## The axis is read once, and read with a bias
+
+The axis is decided on the first movement report after the threshold and never
+revisited. That report is ~10-25px of movement, and for a thumb those pixels
+misstate the gesture: a thumb swiping sideways moves along an ARC, and the
+start of the arc leans off-axis far more than the swipe does. Read even
+(whichever axis covered more), the lean hands the whole press to an axis
+nobody meant — and a press given up is given up WHOLE: the hand's remaining
+hundred pixels are read by no one, and what it feels is a swipe that did
+nothing at all.
+
+So on a box that travels one axis, the reading is biased towards that axis:
+the cross axis takes the press only when it clearly dominates the first
+report (2×, `AXIS_CROSS_DOMINANCE`). A gesture that really belongs to the
+other axis — a scroll — is near-pure on its axis from the first pixel (4-6×),
+so it still leaves whole, at once, in the same tick. A box that travels both
+axes keeps the even reading: every answer is a travel there, and there is
+nothing to protect.
+
+Why the decision cannot simply wait for more evidence — this boundary is
+physics, not caution:
+
+- the browser is racing for the same press, on the axis `touch-action` leaves
+  it, and it holds off only while the touchmoves are being refused;
+- refusing a touchmove is **irreversible for that touch**: whether the stream
+  can scroll is decided at its first refusable move, and un-refusing later
+  resurrects nothing;
+- so every frame spent gathering evidence is a frame of the page's scroll
+  spent, for good. A decision deferred until the arc has proven itself would
+  make every genuinely vertical swipe over the box a dead gesture — the exact
+  bug, mirrored onto the page.
+
+The bias moves the frame-one boundary to where the two hands actually
+separate; nothing can remove the boundary. A first report steeper than the
+bias (a start more than twice off-axis) is genuinely ambiguous with a scroll
+and goes to the page — which at least answers it visibly.
 
 ## Two inputs, one travel
 
@@ -82,6 +133,28 @@ Two things say "the hand asked again", and a stream only ever has one of them:
   trackpad picking up again is a hand pushing again. One flick — rise, peak,
   decay — is therefore one step, and a second flick over the tail of the first
   is heard as its own.
+
+Both are read against a stream that never announces itself: the browser sees
+one unbroken burst (the tail of the first push never went silent), so "the
+hand asked again" is reconstructed, never received. Two consequences are easy
+to get wrong from there:
+
+- **a second push is answered like a first event — a screen, now** — never with
+  credit towards one. The price a screen after the first costs (an accumulated
+  delta, deliberately steep) exists to keep momentum from walking slides on its
+  own; charged to a hand that pushed again over the tail, it reads as "my
+  swipes are ignored until I wait for silence". The stream itself says which is
+  which: once it has faded into a recognized tail, growing **twice in a row**
+  is a hand (`WHEEL_REGROW_RUN`) — decay jitter bumps up in isolated events and
+  never twice consecutively.
+- **the other axis, over a faded stream, is not ours to swallow.** Within a
+  push, cross-axis events are the push's own wobble and are eaten with the
+  rest — a hand is never perfectly straight. But once our axis is momentum
+  only, a hand pushing the other way is a NEW gesture, and on an axis the box
+  does not travel it is not ours at all: it is handed back to whatever scrolls
+  under the pointer, untouched, and it does not renew the claim either. Renewed
+  by what it swallows, the gesture would be kept alive by the very scroll it
+  ignores — every attempt extending the silence it was waiting for.
 
 Taking it is also the only way to stop the browser from answering it: on a
 laptop a horizontal two-finger swipe IS the back-navigation gesture, and a
@@ -442,11 +515,29 @@ hold:
   moves are read from the window, filtered by pointer id, so nothing is missed
   for not owning the pointer.
 
-And the refusal has to be _listened for_ from the grab, even though it only
-refuses later: whether a touchmove can be refused at all is decided when the
-touch begins, from the non-passive listeners present at that moment. Registered
-afterwards, the listener is handed events that are already `cancelable: false` —
-it runs, it calls `preventDefault`, and nothing happens.
+And the refusal has to be _listenable_ **before the finger lands**, even though
+it only refuses later: whether a touchmove can be refused at all is decided
+when the touch begins, from the non-passive listeners present at that moment.
+Registered at the pointerdown it is already too late — the events arrive
+`cancelable: false`, the listener runs, calls `preventDefault`, and nothing
+happens. What that costs is not the start of the gesture but its middle: the
+travel takes the press fine (the axis the browser was left never moved), and
+then the thumb's arc bends towards the axis `touch-action` leaves to the page —
+the browser starts the page's own scroll and CANCELS the pointer stream, and
+the screen the hand was carrying snaps back with the finger still down.
+
+So every box that travels says it from its own render, next to the attribute
+naming its axes: `onTouchMove={keepTouchRefusable}` — a no-op listener whose
+being registered is the whole of it (the same function everything picked up
+and carried registers, see `keepTouchRefusable` in drag_after_intent.js). A
+JSX prop is enough because the passive-by-default intervention only covers
+`window`, `document` and `document.body`: on any other element a plain
+listener is non-passive already — which matters, because a framework's event
+prop cannot say `passive: false`. The one place the explicit option is
+load-bearing is a listener that goes down on the document root (see
+drag_to.js). And a surface whose swipe starts only from a grip carrying
+`touch-action: none` needs none of this: the browser was never offered
+anything there to take back.
 
 ### A navi component that reads the pointer marks ITSELF
 
@@ -552,3 +643,40 @@ dropped, and those things are left where they are, live: the bar jumps to the
 tab one is heading for instead of sliding to a tab one is not. A slide would be
 nicer, and it is not available — the browser measured both of its ends before
 the hand changed its mind, and neither can be asked for again.
+
+## Verifying a gesture
+
+A gesture is verified the way movement is (see the animations skill,
+"Verifying") — driven synthetically, read as numbers — but what has to be
+synthesized is the HAND'S imperfection, because that is where gesture bugs
+live. A gesture simulated as clean, evenly-spaced points along one axis passes
+forever and proves nothing:
+
+- **coalesce**: deliver a whole flick in one or two moves — that is what a
+  fast thumb looks like to the main thread;
+- **arc**: lean the first points off-axis the way a thumb does, and only then
+  commit to the axis;
+- **interleave**: start the second gesture while the first one's travel — or
+  its momentum tail — is still playing, and sweep the delay between the two;
+- **for a wheel**: a swipe is a ramp, a peak and a decaying tail at frame
+  rate, and the interesting cases live in the tail — a second swipe over it, a
+  cross-axis scroll into it, decay jitter that must not step.
+
+The reading side has traps of its own:
+
+- coordinates measured off an element that is mid-travel are stale by dispatch
+  time — aim at where the CONTAINER is, never at where the content was;
+- a scripted gesture's wall-clock is diluted by driver round-trips, so
+  measured velocities come out below the numbers written in the script — read
+  the measured ones, not the intended ones;
+- what the real browser does with an unclaimed touch — take it for a pan and
+  cancel the stream, kill a momentum tail the moment a finger lands — does not
+  exist in emulation at all. Claims about it are only ever settled on a
+  device (and the Firefox wheel limitation above is the same kind of fact).
+
+What to read while it runs: the `navi_drag_*` events (grab, start, release)
+say which stage a press reached and with what velocity; the box's state
+attribute (`data-slide-current`, the URL) says what came of it; the track's
+measured position, sampled across frames, says what the screen did in
+between — including the mini-movements and stalls no end-state check ever
+sees.

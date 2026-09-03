@@ -1041,6 +1041,18 @@ export const watchWheelTravel = (element, { axes = "xy", onStep }) => {
       document.documentElement.setAttribute(GESTURE_ATTRIBUTE, "");
       document.documentElement.setAttribute(WALKING_ATTRIBUTE, axis);
     }
+    // The other axis, on a stream that is momentum only: a hand is never
+    // perfectly straight, so cross-axis events WITHIN a push are the push's own
+    // wobble and are swallowed below — but once our axis has faded to a tail,
+    // a hand pushing the other way is a NEW gesture, and on an axis this box
+    // does not travel it is not ours at all: it belongs to whatever scrolls
+    // under the pointer, and it is handed back untouched. Not swallowed, and
+    // not renewing the claim either — an ignored scroll must not keep alive
+    // the very gesture that ignores it, while the tail of ours goes on being
+    // absorbed by the events still on our axis.
+    if (axis !== gesture.axis && gesture.faded && !axes.includes(axis)) {
+      return;
+    }
     // Ours from here, on both axes: what the browser would do with the leftover
     // — scroll the page behind the box, bounce it, go back in history — is one
     // gesture answered twice.
