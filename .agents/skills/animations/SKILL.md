@@ -95,6 +95,12 @@ move that never finished, then travels back. Two traps:
   rather than reading `getComputedStyle(el).translate`: mid-animation between
   a px keyframe and a % one the computed value is a `calc(-19% - 210px)` that
   no simple parse survives, and a `NaN` duration handed to `animate()` throws.
+  And measure against that box's **content box** (subtract its
+  `clientLeft`/`clientTop`), which is where the moving element rests: measured
+  against the border box, the border reads as that many pixels of translate
+  nothing asked for — on BOTH axes — and the error compounds at every
+  interruption, since each new "from" carries it again. Rapid back-and-forth
+  over a 1px border is a whole track visibly drifting off its axis.
 - An already-moving element gets `ease-out`, not `ease`: an ease-in from a
   moving state stalls it for an instant right where the eye is following it.
 

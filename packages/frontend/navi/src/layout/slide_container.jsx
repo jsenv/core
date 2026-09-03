@@ -287,9 +287,17 @@ const ratioOfOneTravel = (track, from, to, targetBefore) => {
 const trackOffsetPx = (track, containerElement) => {
   const trackRect = track.getBoundingClientRect();
   const containerRect = containerElement.getBoundingClientRect();
+  // Against the box the track RESTS in — the content box, past the border
+  // (clientLeft/clientTop are the border widths; the box never has a
+  // scrollbar nor padding, see the top-of-file comment on padding). Measured
+  // against the border box, a border reads as that many pixels of translate
+  // nothing ever asked for — and it COMPOUNDS: every travel interrupted
+  // mid-flight re-measures the track and carries the error into its "from",
+  // so rapid back-and-forth gestures stack a 1px border into a visible
+  // vertical drift of the whole track.
   return {
-    x: trackRect.x - containerRect.x,
-    y: trackRect.y - containerRect.y,
+    x: trackRect.x - containerRect.x - containerElement.clientLeft,
+    y: trackRect.y - containerRect.y - containerElement.clientTop,
   };
 };
 
