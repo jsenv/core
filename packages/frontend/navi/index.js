@@ -273,7 +273,11 @@ export {
   formatDatetime,
   formatDay,
   formatDayRelative,
+  formatDuration,
+  formatHourDuration,
+  formatMinuteDuration,
   formatMonth,
+  formatSecondDuration,
   formatTime,
   formatTimeRelative,
 } from "./src/text/format_time.js";

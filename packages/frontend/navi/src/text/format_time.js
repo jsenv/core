@@ -499,8 +499,13 @@ export const formatSecondDuration = (
  * are preserved as-is and non-numeric mid-edit values (e.g. "2a") are rendered
  * with their unit symbol rather than being stringified.
  *
- * @param {{ years?: any, months?: any, weeks?: any, days?: any,
- *           hours?: any, minutes?: any, seconds?: any, milliseconds?: any }} duration
+ * @param {string|number|{ years?: any, months?: any, weeks?: any, days?: any,
+ *           hours?: any, minutes?: any, seconds?: any, milliseconds?: any }} duration -
+ *   A string goes through {@link parseDuration} ("PT1H30M", "1h30"), a number
+ *   is read as seconds. Each unit is written with the value it carries: 90
+ *   minutes reads "90 minutes", never "1 heure 30" — the variants that
+ *   promote a count into bigger units are {@link formatMinuteDuration},
+ *   {@link formatHourDuration} and {@link formatSecondDuration}.
  * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"compact" }} [options]
  *
  * @example
