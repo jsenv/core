@@ -3,7 +3,10 @@
 // - new SharedWorker()
 // - navigator.serviceWorker.register()
 export const isWebWorkerEntryPointReference = (reference) => {
-  if (reference.subtype === "new_url_first_arg") {
+  if (
+    reference.subtype === "new_url_first_arg" ||
+    reference.subtype === "import_meta_resolve"
+  ) {
     return ["worker", "service_worker", "shared_worker"].includes(
       reference.expectedSubtype,
     );

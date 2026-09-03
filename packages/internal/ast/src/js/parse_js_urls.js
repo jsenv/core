@@ -144,8 +144,20 @@ export const parseJsUrls = ({
         });
       }
     },
-    CallExpression: (node) => {
+    CallExpression: (node, ancestors) => {
       if (isJsModule && isImportMetaResolveCall(node)) {
+        const parent = ancestors[ancestors.length - 2];
+        if (
+          parent &&
+          (isNewWorkerCall(parent) ||
+            isNewSharedWorkerCall(parent) ||
+            isServiceWorkerRegisterCall(parent)) &&
+          parent.arguments[0] === node
+        ) {
+          // the worker call analysis emits this url with the worker metadata
+          // (expectedType, expectedSubtype)
+          return;
+        }
         analyzeImportMetaResolveCall(node, { onUrl });
         return;
       }
