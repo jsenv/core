@@ -14163,6 +14163,31 @@ const WHEEL_NEXT_STEP_DELTA = 600;
 // slides. Two events in a row are asked for rather than one, because a hand
 // wavers and momentum does not.
 const WHEEL_FADE_RUN = 2;
+// …and the same fact read the other way: momentum only ever weakens, so a
+// stream already recognized as momentum that GROWS twice in a row is a hand
+// pushing again — a second swipe thrown while the tail of the first is still
+// streaming. The browser sees one unbroken burst (the tail never went silent),
+// but to the hand these are two gestures, and the second is answered like a
+// first event: with a screen, now, not with credit towards one.
+const WHEEL_REGROW_RUN = 2;
+// A hand scrolling the OTHER axis over that same tail is a new gesture too,
+// and one that is not ours — but it has to be told apart from the tail's own
+// wobble: at the end of a fade the deltas are a pixel or two on each axis, and
+// read alone such an event says "the other axis" as easily as it says nothing.
+// Three things separate a scroll from those crumbs, and all three are asked
+// for before an event is handed back:
+// - the other axis clearly dominates the event (the same bar a drag uses to
+//   give up its press) — a diagonal crumb says nothing;
+// - the event is the size of a hand (WHEEL_CROSS_CONFIRM_DELTA — crumbs never
+//   reach it), or the run is GROWING event over event, which is a scroll
+//   ramping up from rest and never what decay looks like;
+// - and it is a RUN (one more event for the growing read, which starts from
+//   sizes a crumb also has): wobble is isolated, a scroll insists.
+// What the run costs a real scroll is its first event or two — a few pixels,
+// one notch of a stepped wheel; what it saves a slide is its own scroller
+// creeping under a travel, a header detaching from the edge of the box.
+const WHEEL_CROSS_RUN = 2;
+const WHEEL_CROSS_CONFIRM_DELTA = 10;
 
 /**
  * A travel asked for with a wheel, and it asks for a WHOLE ONE.
@@ -14307,10 +14332,47 @@ const watchWheelTravel = (element, {
         pushed: 0,
         lastMagnitude: 0,
         fadeRun: 0,
+        growRun: 0,
+        crossRun: 0,
+        crossMagnitude: 0,
+        crossHandedBack: false,
+        faded: false,
         stepped: false
       };
       document.documentElement.setAttribute(GESTURE_ATTRIBUTE, "");
       document.documentElement.setAttribute(WALKING_ATTRIBUTE, axis);
+    }
+    // The other axis, on a stream that is momentum only: a hand is never
+    // perfectly straight, so cross-axis events WITHIN a push are the push's own
+    // wobble and are swallowed below — but once our axis has faded to a tail,
+    // a hand pushing the other way is a NEW gesture, and on an axis this box
+    // does not travel it is not ours at all: it belongs to whatever scrolls
+    // under the pointer, and it is handed back untouched. Not swallowed, and
+    // not renewing the claim either — an ignored scroll must not keep alive
+    // the very gesture that ignores it, while the tail of ours goes on being
+    // absorbed by the events still on our axis. Only a scroll is handed back,
+    // though, never the tail's own wobble — see WHEEL_CROSS_RUN.
+    if (axis !== gesture.axis && gesture.faded && !axes.includes(axis)) {
+      if (gesture.crossHandedBack) {
+        // Already recognized as a scroll: the whole rest of it is its own.
+        return;
+      }
+      const ownDelta = Math.abs(gesture.axis === "x" ? wheelEvent.deltaX : wheelEvent.deltaY);
+      const crossDelta = Math.abs(delta);
+      const dominant = crossDelta > ownDelta * AXIS_CROSS_DOMINANCE;
+      const handSized = crossDelta >= WHEEL_CROSS_CONFIRM_DELTA;
+      const growing = crossDelta > gesture.crossMagnitude;
+      if (dominant && (handSized || growing)) {
+        gesture.crossRun += 1;
+        gesture.crossMagnitude = crossDelta;
+        if (gesture.crossRun >= (handSized ? WHEEL_CROSS_RUN : WHEEL_CROSS_RUN + 1)) {
+          gesture.crossHandedBack = true;
+          return;
+        }
+      } else {
+        gesture.crossRun = 0;
+        gesture.crossMagnitude = 0;
+      }
     }
     // Ours from here, on both axes: what the browser would do with the leftover
     // — scroll the page behind the box, bounce it, go back in history — is one
@@ -14326,12 +14388,18 @@ const watchWheelTravel = (element, {
       // axis was decided when the gesture set off.
       return;
     }
+    // Back on our axis: whatever cross-axis run was building was wobble.
+    gesture.crossRun = 0;
+    gesture.crossMagnitude = 0;
+    gesture.crossHandedBack = false;
     if (sign !== gesture.sign) {
       // Turned around: what was adding up was going the other way.
       gesture.sign = sign;
       gesture.pushed = 0;
       gesture.lastMagnitude = 0;
       gesture.fadeRun = 0;
+      gesture.growRun = 0;
+      gesture.faded = false;
       gesture.stepped = false;
     }
     if (!gesture.stepped) {
@@ -14350,11 +14418,32 @@ const watchWheelTravel = (element, {
     const magnitude = Math.abs(delta);
     if (magnitude < gesture.lastMagnitude) {
       gesture.fadeRun += 1;
+      gesture.growRun = 0;
+      if (gesture.fadeRun >= WHEEL_FADE_RUN) {
+        // Momentum, recognized — and remembered past the next growth: fadeRun
+        // is transient (one louder event resets it), while what the regrow
+        // rule below needs to know is that a tail WAS established at all.
+        gesture.faded = true;
+      }
     } else if (magnitude > gesture.lastMagnitude) {
       // Back up again — a hand asking for more. Momentum never does this.
       gesture.fadeRun = 0;
+      gesture.growRun += 1;
     }
     gesture.lastMagnitude = magnitude;
+    // A second push, thrown while the tail of the first still streams (see
+    // WHEEL_REGROW_RUN): a new gesture to the hand, whatever the stream says.
+    if (gesture.faded && gesture.growRun >= WHEEL_REGROW_RUN) {
+      gesture.faded = false;
+      gesture.growRun = 0;
+      gesture.pushed = 0;
+      onStep({
+        axis: gesture.axis,
+        sign: gesture.sign,
+        event: wheelEvent
+      });
+      return;
+    }
     if (gesture.fadeRun >= WHEEL_FADE_RUN) {
       return;
     }

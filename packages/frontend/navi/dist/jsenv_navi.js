@@ -46061,7 +46061,12 @@ const usePopupContentMount = (
     const anchorElement =
       typeof anchor === "string"
         ? document.getElementById(anchor)
-        : (anchor.current ?? anchor);
+        : // A ref is unwrapped even when it holds nothing: an expandable with
+          // no UI part hands an empty ref over, and the ref object itself is
+          // truthy — it would reach addEventListener below and throw.
+          "current" in anchor
+          ? anchor.current
+          : anchor;
     if (!anchorElement) {
       return undefined;
     }
@@ -58520,8 +58525,10 @@ const useDialogProps = props => {
       }
     } else if (anchor) {
       // anchor prop is a ref or a DOM element — always a real anchor,
-      // regardless of anchorCustomEventDetail.
-      anchorElement = anchor.current ?? anchor;
+      // regardless of anchorCustomEventDetail. A ref is unwrapped even when it
+      // holds nothing: falling back to the ref object itself would pass the
+      // "is there an anchor?" test below with something that has no box.
+      anchorElement = "current" in anchor ? anchor.current : anchor;
     } else if (anchorCustomEventDetail === "override") {
       // e.g. the button that triggered a --navi-toggle/--navi-open command,
       // already resolved from detail.anchor/detail.source by the caller
@@ -59931,8 +59938,10 @@ const usePopoverProps = props => {
       }
     } else if (anchor) {
       // anchor prop is a ref or a DOM element — always a real anchor,
-      // regardless of anchorCustomEventDetail.
-      anchorElement = anchor.current ?? anchor;
+      // regardless of anchorCustomEventDetail. A ref is unwrapped even when it
+      // holds nothing: falling back to the ref object itself would pass the
+      // "is there an anchor?" test below with something that has no box.
+      anchorElement = "current" in anchor ? anchor.current : anchor;
     } else if (anchorCustomEventDetail === "override") {
       anchorElement = e.detail.anchor;
     }

@@ -1041,30 +1041,31 @@ export const watchWheelTravel = (element, { axes = "xy", onStep }) => {
       document.documentElement.setAttribute(GESTURE_ATTRIBUTE, "");
       document.documentElement.setAttribute(WALKING_ATTRIBUTE, axis);
     }
-    // The other axis, on a stream that is momentum only: a hand is never
-    // perfectly straight, so cross-axis events WITHIN a push are the push's own
-    // wobble and are swallowed below — but once our axis has faded to a tail,
-    // a hand pushing the other way is a NEW gesture, and on an axis this box
-    // does not travel it is not ours at all: it belongs to whatever scrolls
-    // under the pointer, and it is handed back untouched. Not swallowed, and
-    // not renewing the claim either — an ignored scroll must not keep alive
-    // the very gesture that ignores it, while the tail of ours goes on being
-    // absorbed by the events still on our axis.
-    if (axis !== gesture.axis && gesture.faded && !axes.includes(axis)) {
-      return;
-    }
     // Ours from here, on both axes: what the browser would do with the leftover
     // — scroll the page behind the box, bounce it, go back in history — is one
-    // gesture answered twice.
+    // gesture answered twice. On the other axis that swallowing is absolute —
+    // there is no per-event reading that tells a scroll's onset from the
+    // tail's own wobble (end-of-fade crumbs land on either axis, and a
+    // diagonal swipe's tail carries hand-sized deltas on both), and a crumb
+    // let through scrolls the slide's own content under the travel, a header
+    // creeping off the edge of the box.
     wheelEvent.preventDefault();
-    // …and said on every event of it, because a claim nobody renews is a
-    // gesture that is over: silence is the only end a wheel has.
-    claimWheelGesture(element, { onEnd: forgetGesture });
     if (axis !== gesture.axis) {
       // The other axis mid-gesture: a hand is never perfectly straight, and the
-      // axis was decided when the gesture set off.
+      // axis was decided when the gesture set off. Swallowed, but NOT renewing
+      // the claim below: silence is the only end a wheel gesture has, and it
+      // is silence ON ITS AXIS. Renewed by what it eats, the gesture would
+      // outlive its own stream — a hand starting a scroll over the tail would
+      // extend, event by event, the very deadness it is waiting out. Left to
+      // lapse, the claim dies shortly after our axis goes quiet (and on a
+      // system where touching the surface kills the old momentum, that is
+      // moments after the new scroll begins) — the browser then answers the
+      // rest of the scroll itself.
       return;
     }
+    // …and said on every event on our axis, because a claim nobody renews is a
+    // gesture that is over.
+    claimWheelGesture(element, { onEnd: forgetGesture });
     if (sign !== gesture.sign) {
       // Turned around: what was adding up was going the other way.
       gesture.sign = sign;

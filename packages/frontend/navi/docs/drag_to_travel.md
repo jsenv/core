@@ -147,14 +147,25 @@ to get wrong from there:
   which: once it has faded into a recognized tail, growing **twice in a row**
   is a hand (`WHEEL_REGROW_RUN`) — decay jitter bumps up in isolated events and
   never twice consecutively.
-- **the other axis, over a faded stream, is not ours to swallow.** Within a
-  push, cross-axis events are the push's own wobble and are eaten with the
-  rest — a hand is never perfectly straight. But once our axis is momentum
-  only, a hand pushing the other way is a NEW gesture, and on an axis the box
-  does not travel it is not ours at all: it is handed back to whatever scrolls
-  under the pointer, untouched, and it does not renew the claim either. Renewed
-  by what it swallows, the gesture would be kept alive by the very scroll it
-  ignores — every attempt extending the silence it was waiting for.
+- **cross-axis events are swallowed absolutely, and they renew nothing.** A
+  hand is never perfectly straight, so events leaning the other way are the
+  gesture's own wobble and are eaten with the rest — and there the swallowing
+  has to be total, because no per-event reading tells a scroll's onset from
+  that wobble. It was tried, and every filter leaks: end-of-fade crumbs are a
+  pixel or two landing on either axis (a `(0,1)` event is "clearly the other
+  axis" by any dominance test), a slightly diagonal swipe's tail carries
+  hand-sized deltas on both axes, and one crumb let through scrolls the
+  slide's own content under the travel — a header creeping off the edge of the
+  box, one pixel per leak. Do not re-attempt a "hand it back when it is really
+  a scroll" heuristic; the honest boundary is elsewhere: a swallowed
+  cross-axis event does NOT renew the claim. Silence is the only end a wheel
+  gesture has, and it is silence ON ITS AXIS — renewed by what it eats, the
+  gesture would outlive its own stream, and a hand starting a scroll over the
+  tail would extend, event by event, the very deadness it was waiting out.
+  Left to lapse, the claim dies shortly after the travel axis goes quiet (on a
+  system where touching the surface kills the old momentum, that is moments
+  after the new scroll begins), and the browser answers the rest of the scroll
+  itself.
 
 Taking it is also the only way to stop the browser from answering it: on a
 laptop a horizontal two-finger swipe IS the back-navigation gesture, and a
