@@ -3737,15 +3737,21 @@ const LIST_ITEM_STYLE_CSS_VARS = {
  *   search-driven scroll-to-top-match behavior. `matchRanges` are [start, end]
  *   ranges highlighted via the CSS Highlight API.
  */
-export const ListItem = createComponentResolver([
-  ListItemFirstResolver,
-  ListItemRowResolver,
-  ListItemSkeletonResolver,
-  ListItemSelectableResolver,
-  ListItemHeaderOrFooterResolver,
-  ListItemPresentationResolver,
-  ListItemUI,
-]);
+export const ListItem = createComponentResolver(
+  [
+    ListItemFirstResolver,
+    ListItemRowResolver,
+    ListItemSkeletonResolver,
+    ListItemSelectableResolver,
+    ListItemHeaderOrFooterResolver,
+    ListItemPresentationResolver,
+    ListItemUI,
+  ],
+  // Rendered by the hundred, and almost always with the same primitive props:
+  // a selection change re-renders the list, and every row but two has nothing
+  // to change.
+  { pure: true },
+);
 List.Item = ListItem;
 
 // Everything the list knows about the collection while its children are being

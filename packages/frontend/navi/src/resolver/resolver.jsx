@@ -26,7 +26,7 @@ export const useNextResolver = () => useContext(NextResolverContext);
  * ResolverIndexContext tracks which resolver is next so that when a resolver
  * re-renders and calls Next, the chain resumes from the correct position.
  */
-export const createComponentResolver = (resolvers) => {
+export const createComponentResolver = (resolvers, { pure } = {}) => {
   const ResolverIndexContext = createContext(0);
 
   const ChainRunner = (props) => {
@@ -65,5 +65,45 @@ export const createComponentResolver = (resolvers) => {
     );
   };
 
-  return renderComponent;
+  if (!pure) {
+    return renderComponent;
+  }
+  // The chain does not run again for props that say the same thing. The
+  // signals integration already promises this for any component that READS a
+  // signal ("props all === the previous ones → no render", relied on across
+  // list.jsx) — but a chain head reads none, so without this a parent
+  // re-rendering walks every resolver of every instance to conclude nothing
+  // changed. For a component rendered by the hundred (a list's items), that
+  // walk IS the cost of the parent's render. What still updates through the
+  // bail: context (Preact re-renders subscribers directly) and signals (their
+  // own subscription) — which is every way navi hands data down other than
+  // props.
+  // A FUNCTION component assigning shouldComponentUpdate on its own instance
+  // (the pattern preact/compat's memo uses), and deliberately not a class: a
+  // ref given to a class component is attached to the class INSTANCE, while a
+  // function component receives it as a plain prop — and the chain forwards
+  // it to the element the caller was reaching for.
+  function PureRenderComponent(props) {
+    this.shouldComponentUpdate = pureShouldComponentUpdate;
+    return renderComponent(props);
+  }
+  return PureRenderComponent;
+};
+
+function pureShouldComponentUpdate(nextProps) {
+  return shallowDiffers(this.props, nextProps);
+}
+
+const shallowDiffers = (a, b) => {
+  for (const key in a) {
+    if (!(key in b)) {
+      return true;
+    }
+  }
+  for (const key in b) {
+    if (a[key] !== b[key]) {
+      return true;
+    }
+  }
+  return false;
 };
