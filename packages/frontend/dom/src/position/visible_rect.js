@@ -80,6 +80,22 @@ const getVisibleViewportRect = () => {
   };
 };
 
+// The window is not always all the app's: an app simulating a narrower
+// screen (say a 600px column centered in a wide window) wants everything
+// pickPositionRelativeTo places against the viewport — dialogs, popovers,
+// side panels — kept to its own rectangle rather than the window's. The
+// embedder declares that rectangle here, as insets from the window's edges
+// ({ left, top, right, bottom } in px — see @jsenv/navi's
+// --navi-app-inset-*, the CSS twin of this). A callback rather than a
+// value so it stays live without a subscription; read on each placement.
+// Placement only: visibleRectEffect keeps reading the real viewport —
+// whether something is on screen is a fact about the window, not about
+// the rectangle an app confines itself to.
+let getPlacementViewportInsets = null;
+export const setPlacementViewportInsets = (getInsets) => {
+  getPlacementViewportInsets = getInsets;
+};
+
 const isEditableElement = (element) => {
   if (!element) {
     return false;
@@ -1132,12 +1148,24 @@ export const pickPositionRelativeTo = (
   } = {},
 ) => {
   // Needed before hasValidAnchor below.
-  const {
+  let {
     left: viewportLeft,
     top: viewportTop,
     width: viewportWidth,
     height: viewportHeight,
   } = getVisibleViewportRect();
+  // Narrowed to the embedder's own rectangle (see setPlacementViewportInsets)
+  // before anything reads it: the available area, the flip decisions, the
+  // clamps and the viewport-as-anchor rect below all follow, so an element
+  // docked to an edge lands flush against the app's edge rather than the
+  // window's.
+  if (getPlacementViewportInsets) {
+    const placementInsets = getPlacementViewportInsets();
+    viewportLeft += placementInsets.left;
+    viewportTop += placementInsets.top;
+    viewportWidth -= placementInsets.left + placementInsets.right;
+    viewportHeight -= placementInsets.top + placementInsets.bottom;
+  }
 
   // Resolved early: everything below that would otherwise reach for
   // viewportLeft/Top/Width/Height instead uses these, so a "local" popover

@@ -151,11 +151,14 @@ _sizes_ must fit what is actually visible.
 and turns the bottom bar's number red when it goes under the keyboard. On a
 phone; a desktop has no keyboard to open.
 
-## Current limitation
+## Placement follows level 1
 
-Popup **placement** does not follow level 1 yet: `pickPositionRelativeTo` (in
-`@jsenv/dom`) still computes against the real viewport. Invisible for anything
-centered on its cross axis — which is what a dialog does nearly always — but a
-`positionArea` like `bottom-start` or a `SidePanel` sits against the window's
-edge rather than the app column's. See "Current limitations" in
+Popup **placement** answers to the level-1 rectangle too: `getAppInsets`
+(`src/layout/responsive.js`) is the JS reading of the level-1 bands, and
+`pickPositionRelativeTo` (in `@jsenv/dom`) computes against the visual
+viewport narrowed by them (`setPlacementViewportInsets`, wired in
+`navi_css_vars.js`). Invisible for anything centered on its cross axis —
+which is what a dialog does nearly always — but it is what puts a
+`positionArea` like `bottom-start` or a `SidePanel` against the app column's
+edge rather than the window's. See "Placement follows the same rectangle" in
 `css_architecture.md`.

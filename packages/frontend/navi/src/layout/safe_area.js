@@ -27,8 +27,10 @@
  * edge already reaches under the notch and counts it in its own size (see
  * fixed_bar.jsx), so adding both would reserve it twice.
  *
- * Sizes only, not placement, for the time being — see "Current limitations" in
- * docs/css_architecture.md.
+ * JS placement answers to the level-1 rectangle too: getAppInsets
+ * (layout/responsive.js) is its reading of these same bands, handed to
+ * pickPositionRelativeTo via setPlacementViewportInsets (see
+ * navi_css_vars.js).
  */
 
 const SAFE_AREA_CSS = /* css */ `

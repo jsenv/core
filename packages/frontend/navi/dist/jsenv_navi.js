@@ -82251,18 +82251,18 @@ const css = /* css */`.navi_side_panel {
   height: var(--navi-side-panel-height, auto);
 
   &[data-layer="top"] {
-    --popover-max-height: var(--navi-vvh);
-    --popover-maxmax-height: var(--navi-vvh);
-    --popover-maxmax-width: var(--navi-vvw);
-    --dialog-maxmax-height: var(--navi-vvh);
-    --dialog-maxmax-width: var(--navi-vvw);
+    --popover-max-height: var(--navi-app-height);
+    --popover-maxmax-height: var(--navi-app-height);
+    --popover-maxmax-width: var(--navi-app-width);
+    --dialog-maxmax-height: var(--navi-app-height);
+    --dialog-maxmax-width: var(--navi-app-width);
 
     &[navi-side="left"], &[navi-side="right"] {
-      height: var(--navi-side-panel-height, var(--navi-vvh));
+      height: var(--navi-side-panel-height, var(--navi-app-height));
     }
 
     &[navi-side="top"], &[navi-side="bottom"] {
-      width: var(--navi-side-panel-width, var(--navi-vvw));
+      width: var(--navi-side-panel-width, var(--navi-app-width));
     }
 
     &[navi-side="left"] {
@@ -82392,8 +82392,10 @@ const css = /* css */`.navi_side_panel {
  * @param {string|number} [props.minHeight] - Forwarded as-is to `Popup`'s
  *   own `minHeight`.
  * @param {"top"|"local"} [props.layer="top"] - `"top"` (default): docks
- *   against the viewport (real top-layer rendering, matches a fixed,
- *   always-on-screen drawer). `"local"`: docks against the panel's own
+ *   against the app's own screen — the viewport, narrowed to the app's
+ *   rectangle when it declares `--navi-app-max-width` (real top-layer
+ *   rendering, matches a fixed, always-on-screen drawer). `"local"`: docks
+ *   against the panel's own
  *   positioned DOM ancestor instead, confined to (and clipped by) it — for
  *   a drawer that only takes over part of the page rather than the whole
  *   viewport.

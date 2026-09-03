@@ -560,28 +560,25 @@ from the app. Two reasons:
   that knob, so a popup that genuinely needs its own `maxWidth` can still say so
   without any of them escaping the app's screen.
 
-##### Current limitations
+##### Placement follows the same rectangle
 
-`--navi-app-max-width` caps how big a popup may get; it does not move where one
-is placed. Placement is still computed against the real viewport
-(`pickPositionRelativeTo`, in `@jsenv/dom`). That is invisible for anything
+`--navi-app-max-width` moves where a popup is placed, not only how big it may
+get. Placement is computed against the visual viewport narrowed to the app's
+own rectangle: navi hands the centered bands to `@jsenv/dom` once
+(`setPlacementViewportInsets`, wired in `navi_css_vars.js`), and
+`pickPositionRelativeTo` reads them on every placement. Invisible for anything
 centered on its cross axis — `center`, `bottom`, `top`, which is what a dialog
-does nearly always — but shows for anything anchored to an edge: a
-`positionArea` like `bottom-start`, a `SidePanel`. Those sit against the
-window's edge rather than the app column's, so they stay on the real viewport
-for now (`side_panel.jsx` restates `--dialog-maxmax-width` as the full viewport
-on purpose).
+does nearly always — but it is what puts anything anchored to an edge (a
+`positionArea` like `bottom-start`, a `SidePanel`) flush against the app
+column's edge rather than the window's. `FixedBar` reads the same description
+through CSS instead: it is pinned to `--navi-app-inset-*` (see
+`docs/safe_area.md`), which says where the app's rectangle is in the window
+rather than how wide it may be.
 
-`FixedBar` is the exception, and shows the shape of the fix: it is pinned to
-`--navi-app-inset-*` (see `docs/safe_area.md`), which describes where the app's
-rectangle is in the window rather than how wide it may be. Making the rest
-follow means narrowing the container rect placement is computed against, inside
-`pickPositionRelativeTo`, to that same rectangle.
-
-Note that an app can already get all of it, placement included, by rendering
-itself in an iframe of the target width: the viewport then genuinely _is_ the
-app's screen and no token is needed at all. `--navi-app-max-width` is the answer
-for an app that does not want to pay that price.
+Note that an app can also get all of it by rendering itself in an iframe of
+the target width: the viewport then genuinely _is_ the app's screen and no
+token is needed at all. `--navi-app-max-width` is the answer for an app that
+does not want to pay that price.
 
 ### 3. Direct rule override (avoid unless necessary)
 

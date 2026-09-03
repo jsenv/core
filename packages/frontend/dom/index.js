@@ -174,6 +174,7 @@ export {
   ELEMENT_SIZE_CHANGE,
   parsePositionArea,
   pickPositionRelativeTo,
+  setPlacementViewportInsets,
   visibleRectEffect,
 } from "./src/position/visible_rect.js";
 export {

@@ -83,6 +83,23 @@ const readAppMax = (propertyName) => {
 };
 export const getAppWidth = () =>
   Math.min(visualViewportWidthSignal.value, readAppMax("--navi-app-max-width"));
+// The JS reading of --navi-app-inset-* (see safe_area.js): the centered bands
+// between the window's edges and the app's own rectangle. Handed to
+// @jsenv/dom (setPlacementViewportInsets, wired in navi_css_vars.js) so
+// placement keeps to the same rectangle the CSS size caps describe. The
+// keyboard is deliberately absent, unlike in the CSS twin: the placement
+// viewport already subtracts the keyboard overlay itself (see
+// getVisibleViewportRect in @jsenv/dom's visible_rect.js), so carrying it
+// here too would count it twice.
+export const getAppInsets = () => {
+  const vvWidth = visualViewportWidthSignal.value;
+  const vvHeight = visualViewportHeightSignal.value;
+  const appMaxWidth = readAppMax("--navi-app-max-width");
+  const appMaxHeight = readAppMax("--navi-app-max-height");
+  const bandX = appMaxWidth < vvWidth ? (vvWidth - appMaxWidth) / 2 : 0;
+  const bandY = appMaxHeight < vvHeight ? (vvHeight - appMaxHeight) / 2 : 0;
+  return { left: bandX, top: bandY, right: bandX, bottom: bandY };
+};
 // Minus what the keyboard covers, so this stays the JS reading of the very
 // same rectangle --navi-app-height describes in CSS (see safe_area.js's own
 // --navi-keyboard-inset-bottom). Zero unless the app opted into the keyboard

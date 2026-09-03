@@ -1,9 +1,11 @@
 /**
  * Regroup CSS vars that makes sense to share across all navi components.
  */
+import { setPlacementViewportInsets } from "@jsenv/dom";
 import { effect } from "@preact/signals";
 
 import {
+  getAppInsets,
   visualViewportHeightSignal,
   visualViewportWidthSignal,
 } from "./layout/responsive.js";
@@ -58,8 +60,8 @@ const css = /* css */ `
 
          Read from the insets rather than as a min() of its own so that the
          width and the placement come from ONE description of where the app is
-         (see layout/safe_area.js). Placement does not follow yet everywhere —
-         see "Current limitations" in docs/css_architecture.md. */
+         (see layout/safe_area.js). Placement follows the same rectangle: see
+         setPlacementViewportInsets at the bottom of this file. */
       --navi-app-width: calc(
         var(--navi-vvw) - var(--navi-app-inset-left) - var(
             --navi-app-inset-right
@@ -386,3 +388,12 @@ effect(() => {
     `${visualViewportHeightSignal.value}px`,
   );
 });
+
+// Placement follows the same rectangle the size caps above describe: the JS
+// that positions popups (pickPositionRelativeTo in @jsenv/dom) computes
+// against the visual viewport narrowed by the app's own bands, so a dialog
+// centers on the app column and a side panel docks flush against the app's
+// edge rather than the window's. Here rather than in each component, for the
+// same reason as virtual_keyboard.js above: one decision about the whole
+// window.
+setPlacementViewportInsets(getAppInsets);

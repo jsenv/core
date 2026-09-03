@@ -1,4 +1,4 @@
-import { getVirtualKeyboardOverlayHeight, subscribeWindowResizeSettled, subscribeVisualViewportResizeSettled, setVirtualKeyboardOverlaysContent } from "@jsenv/dom";
+import { getVirtualKeyboardOverlayHeight, subscribeWindowResizeSettled, subscribeVisualViewportResizeSettled, setVirtualKeyboardOverlaysContent, setPlacementViewportInsets } from "@jsenv/dom";
 import { signal, computed, effect } from "@preact/signals";
 
 const installImportMetaCssBuild = (importMeta) => {
@@ -129,6 +129,23 @@ const readAppMax = (propertyName) => {
 };
 const getAppWidth = () =>
   Math.min(visualViewportWidthSignal.value, readAppMax("--navi-app-max-width"));
+// The JS reading of --navi-app-inset-* (see safe_area.js): the centered bands
+// between the window's edges and the app's own rectangle. Handed to
+// @jsenv/dom (setPlacementViewportInsets, wired in navi_css_vars.js) so
+// placement keeps to the same rectangle the CSS size caps describe. The
+// keyboard is deliberately absent, unlike in the CSS twin: the placement
+// viewport already subtracts the keyboard overlay itself (see
+// getVisibleViewportRect in @jsenv/dom's visible_rect.js), so carrying it
+// here too would count it twice.
+const getAppInsets = () => {
+  const vvWidth = visualViewportWidthSignal.value;
+  const vvHeight = visualViewportHeightSignal.value;
+  const appMaxWidth = readAppMax("--navi-app-max-width");
+  const appMaxHeight = readAppMax("--navi-app-max-height");
+  const bandX = appMaxWidth < vvWidth ? (vvWidth - appMaxWidth) / 2 : 0;
+  const bandY = appMaxHeight < vvHeight ? (vvHeight - appMaxHeight) / 2 : 0;
+  return { left: bandX, top: bandY, right: bandX, bottom: bandY };
+};
 // Minus what the keyboard covers, so this stays the JS reading of the very
 // same rectangle --navi-app-height describes in CSS (see safe_area.js's own
 // --navi-keyboard-inset-bottom). Zero unless the app opted into the keyboard
@@ -231,8 +248,10 @@ installImportMetaCssBuild(import.meta);/**
  * edge already reaches under the notch and counts it in its own size (see
  * fixed_bar.jsx), so adding both would reserve it twice.
  *
- * Sizes only, not placement, for the time being — see "Current limitations" in
- * docs/css_architecture.md.
+ * JS placement answers to the level-1 rectangle too: getAppInsets
+ * (layout/responsive.js) is its reading of these same bands, handed to
+ * pickPositionRelativeTo via setPlacementViewportInsets (see
+ * navi_css_vars.js).
  */
 
 const SAFE_AREA_CSS = /* css */`@property --navi-safe-area-inset-top {
@@ -488,6 +507,15 @@ effect(() => {
   document.documentElement.style.setProperty("--navi-vvw", `${visualViewportWidthSignal.value}px`);
   document.documentElement.style.setProperty("--navi-vvh", `${visualViewportHeightSignal.value}px`);
 });
+
+// Placement follows the same rectangle the size caps above describe: the JS
+// that positions popups (pickPositionRelativeTo in @jsenv/dom) computes
+// against the visual viewport narrowed by the app's own bands, so a dialog
+// centers on the app column and a side panel docks flush against the app's
+// edge rather than the window's. Here rather than in each component, for the
+// same reason as virtual_keyboard.js above: one decision about the whole
+// window.
+setPlacementViewportInsets(getAppInsets);
 
 export { coarsePointerSignal, disableVirtualKeyboardOverlay, getAppHeight, getAppWidth, installImportMetaCssBuild, smallTouchScreenSignal, visualViewportHeightSignal, visualViewportWidthSignal, windowHeightSignal, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi_side_effects.js.map

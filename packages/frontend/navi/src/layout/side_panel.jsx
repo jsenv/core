@@ -34,30 +34,34 @@ const css = /* css */ `
     width: var(--navi-side-panel-width, auto);
     height: var(--navi-side-panel-height, auto);
 
-    /* layer="top": the container is the viewport itself, so the
-       perpendicular axis and the popup's own ceiling both use
-       \`--navi-vvh\`/\`--navi-vvw\` (kept in sync with window.visualViewport,
-       see navi_css_vars.js) instead of a plain 100%/100dvh, which tracks
-       the *layout* viewport instead — that doesn't shrink when e.g. the
-       on-screen keyboard opens, unlike the *visible* one. The viewport
-       itself has no border-radius to inherit, hence 0 below rather than
-       "inherit" (see layer="local" below). */
+    /* layer="top": the container is the app's own screen —
+       \`--navi-app-height\`/\`--navi-app-width\` (see navi_css_vars.js), the
+       visual viewport minus the bands an app declaring
+       \`--navi-app-max-width\` asked for — so the perpendicular axis and the
+       popup's own ceiling both track it instead of a plain 100%/100dvh,
+       which follows the *layout* viewport — that doesn't shrink when e.g.
+       the on-screen keyboard opens, unlike the *visible* one. Placement
+       answers to the same rectangle (setPlacementViewportInsets, wired in
+       navi_css_vars.js), so a docked panel sits flush against the app's own
+       edge, not the window's. The viewport itself has no border-radius to
+       inherit, hence 0 below rather than "inherit" (see layer="local"
+       below). */
     &[data-layer="top"] {
-      --popover-max-height: var(--navi-vvh);
-      --popover-maxmax-height: var(--navi-vvh);
-      --popover-maxmax-width: var(--navi-vvw);
-      --dialog-maxmax-height: var(--navi-vvh);
-      --dialog-maxmax-width: var(--navi-vvw);
+      --popover-max-height: var(--navi-app-height);
+      --popover-maxmax-height: var(--navi-app-height);
+      --popover-maxmax-width: var(--navi-app-width);
+      --dialog-maxmax-height: var(--navi-app-height);
+      --dialog-maxmax-width: var(--navi-app-width);
 
       &[navi-side="left"],
       &[navi-side="right"] {
         /* An explicit \`height\` prop still wins here (see the base rule
            above) — only the fallback (no \`height\` given) differs by layer. */
-        height: var(--navi-side-panel-height, var(--navi-vvh));
+        height: var(--navi-side-panel-height, var(--navi-app-height));
       }
       &[navi-side="top"],
       &[navi-side="bottom"] {
-        width: var(--navi-side-panel-width, var(--navi-vvw));
+        width: var(--navi-side-panel-width, var(--navi-app-width));
       }
       &[navi-side="left"] {
         border-top-left-radius: 0;
@@ -213,8 +217,10 @@ const css = /* css */ `
  * @param {string|number} [props.minHeight] - Forwarded as-is to `Popup`'s
  *   own `minHeight`.
  * @param {"top"|"local"} [props.layer="top"] - `"top"` (default): docks
- *   against the viewport (real top-layer rendering, matches a fixed,
- *   always-on-screen drawer). `"local"`: docks against the panel's own
+ *   against the app's own screen — the viewport, narrowed to the app's
+ *   rectangle when it declares `--navi-app-max-width` (real top-layer
+ *   rendering, matches a fixed, always-on-screen drawer). `"local"`: docks
+ *   against the panel's own
  *   positioned DOM ancestor instead, confined to (and clipped by) it — for
  *   a drawer that only takes over part of the page rather than the whole
  *   viewport.
