@@ -201,6 +201,23 @@ const css = /* css */ `
      the document animates, and the document belongs to the application the
      rest of the time. */
   :root[data-navi-route-transition] {
+    /* Everything the movement draws, cut at the app's own rectangle
+       (--navi-app-inset-*, layout/safe_area.js). On a device the screen's edge
+       does this by construction; an app narrowed with --navi-app-max-width has
+       glass beside it that is not the app's to paint, and the pictures are
+       drawn in the top layer, where no clip of the document reaches them — a
+       dialog or a bar travelling with its page would otherwise be watched
+       sliding across that glass. Said on the pseudo-tree's root so ONE rule
+       answers for every picture: the pages have a tighter cut of their own
+       below, and the furniture pictures (transition_furniture.js) have only
+       this one. Zero insets make the rectangle the screen, and this a no-op. */
+    &::view-transition {
+      clip-path: inset(
+        var(--navi-app-inset-top) var(--navi-app-inset-right)
+          var(--navi-app-inset-bottom) var(--navi-app-inset-left)
+      );
+    }
+
     /* With an area marked, the page AROUND it is not taken as one picture —
        so exactly one of the two names below exists at a time, and the
        movements can be written once for both. It is also the only way the
