@@ -330,7 +330,7 @@ const TimeMinute = ({
   let text;
   if (format === "timestring") {
     const date = new Date(1970, 0, 1, totalHours, remainingMinutes, 0);
-    text = formatTime(date, lang);
+    text = formatTime(date, { lang });
   } else {
     text = formatMinuteDuration(minutes, { lang, format, forceUnit });
   }
@@ -406,7 +406,7 @@ const TimeHour = ({
       totalMinutes % 60,
       0,
     );
-    return <TimeText {...props}>{formatTime(date, lang)}</TimeText>;
+    return <TimeText {...props}>{formatTime(date, { lang })}</TimeText>;
   }
   const text = formatHourDuration(hours, { lang, format, forceUnit });
   return <TimeText {...props}>{text}</TimeText>;

@@ -7,17 +7,17 @@ return table(
     [
       "2026-05-11T14:30:00",
       "fr",
-      formatTime(new Date("2026-05-11T14:30:00"), "fr"),
+      formatTime(new Date("2026-05-11T14:30:00"), { lang: "fr" }),
     ],
     [
       "2026-05-11T09:05:00",
       "fr",
-      formatTime(new Date("2026-05-11T09:05:00"), "fr"),
+      formatTime(new Date("2026-05-11T09:05:00"), { lang: "fr" }),
     ],
     [
       "2026-05-11T14:30:00",
       "en",
-      formatTime(new Date("2026-05-11T14:30:00"), "en"),
+      formatTime(new Date("2026-05-11T14:30:00"), { lang: "en" }),
     ],
   ],
 );

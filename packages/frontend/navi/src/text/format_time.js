@@ -32,7 +32,7 @@ const formatCompactNumber = (value, lang) => {
  * Formats a date as a human-readable day string.
  *
  * @param {Date} date
- * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"numeric"|{ weekday?: "long"|"short"|"narrow", month?: "long"|"short"|"narrow"|"numeric" }, year?: boolean|"auto", now?: Date }} [options]
+ * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"numeric"|{ weekday?: "long"|"short"|"narrow", month?: "long"|"short"|"narrow"|"numeric" }, year?: boolean|"auto", now?: Date, timeZone?: string }} [options]
  *   A string spells the weekday and the month the same way. An object spells
  *   them apart, each key defaulting to `"long"`: a narrow card usually wants
  *   the weekday whole (it is the reading anchor) and the month abbreviated (it
@@ -44,6 +44,12 @@ const formatCompactNumber = (value, lang) => {
  *   ("30/07", the day/month order still following the locale), `"auto"` drops
  *   it only when the date is in the current year (`now`'s year). The spelled
  *   formats never write the year, so they ignore it.
+ * @param {string} [options.timeZone]
+ *   IANA zone the instant is worded in ("Europe/Paris"); defaults to the
+ *   runtime's own zone. The case is a server wording an instant for readers
+ *   in a known zone — a game at 00:30 Paris must not be dated the previous
+ *   day just because the process clock runs on UTC. `year: "auto"` reads both
+ *   years in that zone too.
  *
  * @example
  * formatDay(new Date(), { lang: "fr" })                    // "lundi 11 mai" (long, default)
@@ -60,17 +66,19 @@ export const formatDay = (
     format = "long",
     year = true,
     now = new Date(),
+    timeZone,
   } = {},
 ) => {
   if (format === "numeric") {
     const yearWritten =
       year === "auto"
-        ? date.getFullYear() !== now.getFullYear()
+        ? readYear(date, timeZone) !== readYear(now, timeZone)
         : year !== false;
     return new Intl.DateTimeFormat(lang, {
       day: "2-digit",
       month: "2-digit",
       ...(yearWritten ? { year: "numeric" } : {}),
+      timeZone,
     }).format(date);
   }
   const { weekday = "long", month = "long" } =
@@ -79,6 +87,7 @@ export const formatDay = (
     weekday, // "long", "short", or "narrow"
     day: "numeric",
     month,
+    timeZone,
   }).format(date);
 };
 
@@ -244,20 +253,22 @@ export const formatDayRelative = (offset, lang) => {
 
 export const formatMonth = (
   date,
-  { lang = getRuntimeLang(), format = "long" } = {},
+  { lang = getRuntimeLang(), format = "long", timeZone } = {},
 ) => {
   return new Intl.DateTimeFormat(lang, {
     month: format, // "long", "short", or "narrow"
     year: "numeric",
+    timeZone,
   }).format(date);
 };
 
 /**
  * Formats a date as "lun. 11 mai, 14:30" (long), "11 mai, 14:30" (short), "11/05, 14:30" (narrow).
+ * `timeZone` words the instant in that IANA zone instead of the runtime's own.
  */
 export const formatDatetime = (
   date,
-  { lang = getRuntimeLang(), format = "long" } = {},
+  { lang = getRuntimeLang(), format = "long", timeZone } = {},
 ) => {
   if (format === "long") {
     return new Intl.DateTimeFormat(lang, {
@@ -266,6 +277,7 @@ export const formatDatetime = (
       month: "long",
       hour: "2-digit",
       minute: "2-digit",
+      timeZone,
     }).format(date);
   }
   if (format === "narrow") {
@@ -274,6 +286,7 @@ export const formatDatetime = (
       month: "2-digit",
       hour: "2-digit",
       minute: "2-digit",
+      timeZone,
     }).format(date);
   }
   // "short": no weekday
@@ -282,16 +295,22 @@ export const formatDatetime = (
     month: "short",
     hour: "2-digit",
     minute: "2-digit",
+    timeZone,
   }).format(date);
 };
 
 /**
  * Formats a date as "14:30".
+ * `timeZone` words the instant in that IANA zone instead of the runtime's own.
  */
-export const formatTime = (date, lang) => {
+export const formatTime = (
+  date,
+  { lang = getRuntimeLang(), timeZone } = {},
+) => {
   return new Intl.DateTimeFormat(lang, {
     hour: "2-digit",
     minute: "2-digit",
+    timeZone,
   }).format(date);
 };
 
@@ -304,11 +323,16 @@ export const formatTime = (date, lang) => {
  *   A Date, a ms timestamp, or an "HH:MM"/"HH:MM:SS" string. Only the clock
  *   time is read. A nullish value renders the "--:--" placeholder; an
  *   unparseable one is returned as-is, stringified.
- * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"compact"|"timestring", pad?: boolean, precision?: "hour"|"minute" }} [options]
+ * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"compact"|"timestring", pad?: boolean, precision?: "hour"|"minute", timeZone?: string }} [options]
  *   The options `<Time type="time">` takes: `"timestring"` is the clock
  *   "14:30"; the other formats write the time as a duration-shaped phrase —
  *   see {@link formatMinuteDuration}'s `clockStyle` for what `pad` and
  *   `precision` shape in `format="compact"`.
+ * @param {string} [options.timeZone]
+ *   IANA zone the instant's clock is read in ("Europe/Paris"); defaults to
+ *   the runtime's own zone. Only applies to a Date/timestamp — an
+ *   "HH:MM" string is already a wall-clock reading, there is nothing to
+ *   move to another zone, so it ignores this.
  *
  * @example
  * formatTimeOfDay(date, { lang: "fr" })                                  // "14 heures 30" (long, default)
@@ -323,6 +347,7 @@ export const formatTimeOfDay = (
     format = "long",
     pad = true,
     precision = pad ? "minute" : "hour",
+    timeZone,
   } = {},
 ) => {
   if (value === undefined || value === null) {
@@ -333,16 +358,20 @@ export const formatTimeOfDay = (
   if (!date || isNaN(date.getTime())) {
     return String(value);
   }
+  // An "HH:MM" string is a wall-clock reading, not an instant — re-reading
+  // it in another zone would shift what the caller already spelled out.
+  const zone = typeof value === "string" ? undefined : timeZone;
   if (format === "timestring") {
-    return formatTime(date, lang);
+    return formatTime(date, { lang, timeZone: zone });
   }
-  const totalMinutes = date.getHours() * 60 + date.getMinutes();
+  const { hours, minutes } = readClock(date, zone);
+  const totalMinutes = hours * 60 + minutes;
   // clockStyle: this is always a time-of-day here, never a duration — keeps
   // a zero hour instead of dropping it (midnight would otherwise be
   // indistinguishable from an actual 5-minute duration), and in
   // format="compact" also zero-pads a single-digit hour so "5h30"/"0h05"
   // read as "05h30"/"00h05", closer to a "HH:MM" clock.
-  if (date.getHours() !== 0 || format !== "long") {
+  if (hours !== 0 || format !== "long") {
     // At midnight, short/narrow/compact keep the "0 h"/"0h" hour part —
     // "0 h et 5 min"/"0h 5min"/"00h05" — rather than substituting a
     // translated "midnight" word, which would look out of place squeezed
@@ -387,7 +416,7 @@ export const formatTimeOfDay = (
   const parts = new Intl.DurationFormat(lang, {
     style: "long",
     hoursDisplay: "always",
-  }).formatToParts({ hours: 0, minutes: date.getMinutes() });
+  }).formatToParts({ hours: 0, minutes });
   let hourGroupReplaced = false;
   return parts
     .map((part) => {
@@ -415,11 +444,12 @@ export const formatTimeOfDay = (
  * @param {Date|number|string} to
  *   Each bound accepts what {@link formatTimeOfDay} accepts; a nullish bound
  *   renders its "--:--" placeholder.
- * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"compact"|"timestring", pad?: boolean, precision?: "hour"|"minute", separator?: string }} [options]
+ * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"compact"|"timestring", pad?: boolean, precision?: "hour"|"minute", separator?: string, timeZone?: string }} [options]
  *   `precision` writes both bounds at this precision instead of the one the
  *   pair calls for. `separator` defaults to the `"time.range_separator"` navi
  *   text (an en dash), tightened against both bounds in `format="compact"` —
- *   where the span is one short token — and spaced out otherwise.
+ *   where the span is one short token — and spaced out otherwise. `timeZone`
+ *   reads both bounds' clocks in that IANA zone — see {@link formatTimeOfDay}.
  *
  * @example
  * formatTimeRange("08:00", "10:00", { lang: "fr", format: "compact", pad: false }) // "8h–10h"
@@ -432,11 +462,12 @@ export const formatTimeRange = (
     lang = getRuntimeLang(),
     format = "long",
     pad = true,
-    precision = resolveTimeRangePrecision(from, to, { format, pad }),
+    timeZone,
+    precision = resolveTimeRangePrecision(from, to, { format, pad, timeZone }),
     separator = naviI18n("time.range_separator", undefined, { lang }),
   } = {},
 ) => {
-  const boundOptions = { lang, format, pad, precision };
+  const boundOptions = { lang, format, pad, precision, timeZone };
   const fromText = formatTimeOfDay(from, boundOptions);
   const toText = formatTimeOfDay(to, boundOptions);
   if (format === "compact") {
@@ -450,13 +481,23 @@ export const formatTimeRange = (
 // of them does. Only ever a question for the unpadded compact clock — the
 // padded one always writes "08h00", and the spelled-out formats name their
 // units, leaving no shape for the eye to trip on.
-export const resolveTimeRangePrecision = (from, to, { format, pad }) => {
+export const resolveTimeRangePrecision = (
+  from,
+  to,
+  { format, pad, timeZone },
+) => {
   if (pad || format !== "compact") {
     return "minute";
   }
   const hasMinutes = (value) => {
     const date = toTimeOfDay(value);
-    return Boolean(date) && !isNaN(date.getTime()) && date.getMinutes() !== 0;
+    if (!date || isNaN(date.getTime())) {
+      return false;
+    }
+    // Same rule as formatTimeOfDay: a string is a wall-clock reading, only
+    // an instant is re-read in `timeZone`.
+    const zone = typeof value === "string" ? undefined : timeZone;
+    return readClock(date, zone).minutes !== 0;
   };
   return hasMinutes(from) || hasMinutes(to) ? "minute" : "hour";
 };
@@ -1093,4 +1134,41 @@ export const toTimeOfDay = (value) => {
     }
     return null;
   });
+};
+
+// Reads the wall-clock hour/minute of an instant — in the runtime's own zone
+// by default, in `timeZone` when given. A Date only carries local getters, so
+// another zone's clock has to come out of Intl parts (hourCycle h23 so
+// midnight reads hour 0, never 24).
+const readClock = (date, timeZone) => {
+  if (!timeZone) {
+    return { hours: date.getHours(), minutes: date.getMinutes() };
+  }
+  const parts = new Intl.DateTimeFormat("en", {
+    timeZone,
+    hour: "numeric",
+    minute: "numeric",
+    hourCycle: "h23",
+  }).formatToParts(date);
+  let hours = 0;
+  let minutes = 0;
+  for (const part of parts) {
+    if (part.type === "hour") {
+      hours = Number(part.value);
+    } else if (part.type === "minute") {
+      minutes = Number(part.value);
+    }
+  }
+  return { hours, minutes };
+};
+
+// Reads the calendar year of an instant in `timeZone` (the runtime's own zone
+// when not given) — what formatDay's `year: "auto"` compares.
+const readYear = (date, timeZone) => {
+  if (!timeZone) {
+    return date.getFullYear();
+  }
+  return Number(
+    new Intl.DateTimeFormat("en", { timeZone, year: "numeric" }).format(date),
+  );
 };

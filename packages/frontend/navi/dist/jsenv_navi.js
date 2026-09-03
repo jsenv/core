@@ -55546,7 +55546,9 @@ const TimeMinute = ({
   let text;
   if (format === "timestring") {
     const date = new Date(1970, 0, 1, totalHours, remainingMinutes, 0);
-    text = formatTime(date, lang);
+    text = formatTime(date, {
+      lang
+    });
   } else {
     text = formatMinuteDuration(minutes, {
       lang,
@@ -55626,7 +55628,9 @@ const TimeHour = ({
     const date = new Date(1970, 0, 1, Math.floor(totalMinutes / 60), totalMinutes % 60, 0);
     return jsx$1(TimeText, {
       ...props,
-      children: formatTime(date, lang)
+      children: formatTime(date, {
+        lang
+      })
     });
   }
   const text = formatHourDuration(hours, {
