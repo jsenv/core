@@ -1574,6 +1574,8 @@ const PickerFirstResolver = (props) => {
  *   escapeEffect?: "cancel" | "close",
  *   pointerInteractionOutsideEffect?: "close" | "cancel" | "capture",
  *   backdropVariant?: "auto" | "discrete" | "invisible",
+ *   backdropColor?: string,
+ *   backdropFilter?: string,
  *   ref?: import("preact").RefObject<HTMLElement>,
  *   [key: string]: any,
  * }>}
@@ -1822,6 +1824,11 @@ const PickerFirstResolver = (props) => {
  *   is the paint `pointerInteractionOutsideEffect` implies, `"discrete"` a
  *   barely-there dim, `"invisible"` fully transparent. For a picker that closes on
  *   an outside click without wanting to dim the page for it.
+ * @param {string} [backdropColor] The wash the popup paints over what is
+ *   behind, for this picker alone. See Dialog's own doc.
+ * @param {string} [backdropFilter] What that wash does to the picture
+ *   underneath (`"blur(4px)"`), independently of what a click outside does.
+ *   See Dialog's own doc.
  * @param {number|string} [marginWithContainer] Minimum gap kept between the
  *   popup and the edges of what contains it (the viewport, or the picker's own
  *   positioned ancestor for `popupLayer="local"`). Caps the popup's size as

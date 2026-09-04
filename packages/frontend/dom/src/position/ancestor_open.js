@@ -59,6 +59,12 @@ export const isAncestorOpen = (ancestor) => {
  * own closed-state CSS ([navi-hidden], :not([popover])) for the custom
  * renderers — so nothing inside one answers true here, while everything a
  * trigger keeps on screen does.
+ *
+ * Ask it about an ancestor that is closed AND settled — on mount, or when
+ * setting up a long-lived observer. A surface animating its way out still has a
+ * box for the length of the animation (transition-behavior: allow-discrete on
+ * display/overlay), so asked at the instant one closes this says "on screen"
+ * about something on its way off it.
  */
 export const isDisplayedDespiteClosedAncestor = (element) => {
   if (typeof element.checkVisibility !== "function") {

@@ -188,6 +188,15 @@ consistency across the app, not from any single call site.
   forces. Read it before calling `triggerNaviCommand`, before passing `open` to
   a popup, before writing a close button by hand, and before an
   `onOpen`/`onClose` writing a signal.
+- `docs/popup_backdrop.md` — what a popup lays between itself and the page
+  behind: the two independent questions it answers (what an outside press does,
+  how far what is behind withdraws), the `backdropColor`/`backdropFilter` props
+  for one popup and the `--navi-backdrop-*` colour+filter token pairs for the
+  whole app, and why a blur is not a property of
+  `pointerInteractionOutsideEffect="capture"` — a backdrop that closes can blur.
+  Read it before writing CSS to paint a backdrop: it is a sibling element for
+  `Popover`/`layer="local"` and a pseudo-element for a modal `Dialog`, so a rule
+  hanging off the popup's own class reaches one and not the other.
 - `docs/autofocus.md` — who gets the keyboard when a popup opens or a slide
   arrives, and whether a ring shows on it: the ladder navi walks, what
   `autoFocus` means on a surface (`true` = the surface takes it, for a popup

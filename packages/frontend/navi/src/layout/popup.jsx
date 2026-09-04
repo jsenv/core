@@ -110,6 +110,10 @@ const css = /* css */ `
  *   how visible the backdrop is, independently of what an outside click
  *   does. Unlike `pointerInteractionOutsideEffect` above, this one needs no
  *   default here — `"auto"` already means the same thing on both sides.
+ * @param {string} [props.backdropColor] - Forwarded as-is (both understand it
+ *   identically): the wash the backdrop paints over what is behind.
+ * @param {string} [props.backdropFilter] - Forwarded as-is: what that wash
+ *   does to the picture underneath, `"blur(4px)"` and the like.
  * @param {boolean|"auto"|"fading"|"scaling"|"sliding"|"expanding"|`slide-from-${string}`|`expand-${string}`} [props.animation]
  *   - Forwarded as-is.
  * @param {string} [props.animationDuration] - Forwarded as-is.

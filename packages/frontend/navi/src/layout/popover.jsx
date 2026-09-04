@@ -318,8 +318,18 @@ const css = /* css */ `
     z-index: calc(var(--navi-z-index-popup) + var(--popover-stack-order, 0));
     margin: 0;
     padding: 0;
-    background: transparent;
+    /* What this backdrop paints, in two variables the rules below write as
+       defaults — so the backdropColor/backdropFilter props, inline on this
+       very element, beat all of them. Declared unconditionally first so a
+       variable inherited from a dialog this popover was opened from can never
+       reach the paint. A colour and a filter travel together everywhere a
+       backdrop is painted: see navi_css_vars.js for why a blur is not tied to
+       what an outside click does. */
+    --backdrop-background: transparent;
+    --backdrop-filter: none;
+    background: var(--backdrop-background);
     border: none;
+    backdrop-filter: var(--backdrop-filter);
     /* Always clickable while actually rendered (display: none/hidePopover()
        while genuinely closed already makes it non-interactive on its own)
        — an outside click should close the popover even while it's still
@@ -350,11 +360,12 @@ const css = /* css */ `
     /* Makes pointerInteractionOutsideEffect have a visible impact on backdrop */
     &[data-pointer-interaction-outside="close"],
     &[data-pointer-interaction-outside="cancel"] {
-      background: var(--navi-backdrop-close-background);
+      --backdrop-background: var(--navi-backdrop-close-background);
+      --backdrop-filter: var(--navi-backdrop-close-backdrop-filter);
     }
     &[data-pointer-interaction-outside="capture"] {
-      background: var(--navi-backdrop-capture-background);
-      backdrop-filter: var(--navi-backdrop-capture-backdrop-filter);
+      --backdrop-background: var(--navi-backdrop-capture-background);
+      --backdrop-filter: var(--navi-backdrop-capture-backdrop-filter);
     }
 
     /* backdropVariant overrides whatever the effect above picked — same
@@ -363,12 +374,14 @@ const css = /* css */ `
        and still pointer-events: auto, so an outside click keeps doing
        exactly what pointerInteractionOutsideEffect says. */
     &[data-backdrop-variant="discrete"] {
-      background: var(--navi-backdrop-discrete-background);
-      backdrop-filter: none;
+      --backdrop-background: var(--navi-backdrop-discrete-background);
+      --backdrop-filter: var(--navi-backdrop-discrete-backdrop-filter);
     }
+    /* The one backdrop with nothing to blur through: "invisible" paints
+       nothing at all, and a filter would still be seen. */
     &[data-backdrop-variant="invisible"] {
-      background: transparent;
-      backdrop-filter: none;
+      --backdrop-background: transparent;
+      --backdrop-filter: none;
     }
 
     /* navi-animation mirrors the content popover's own resolved value (set
@@ -448,6 +461,17 @@ const css = /* css */ `
  *   changes how much the popover insists on being the thing you deal with.
  *   Ignored when `pointerInteractionOutsideEffect="none"` (there is no
  *   backdrop at all then, and outside clicks pass through).
+ * @param {string} [props.backdropColor] - The wash painted over what is
+ *   behind, for this popup alone: any CSS color (`"rgb(6 10 20 / 88%)"`).
+ *   Wins over `backdropVariant` and over the theme tokens
+ *   (`--navi-backdrop-*-background`), which is where the same choice goes
+ *   when it is the whole app's.
+ * @param {string} [props.backdropFilter] - What that same wash does to the
+ *   picture underneath: `"blur(4px)"` to keep the page behind recognisable
+ *   while it stops being readable. A `backdrop-filter` value, so
+ *   `saturate()`/`grayscale()` work too. How far what is behind withdraws is
+ *   a question of paint, not of what an outside click does — a backdrop that
+ *   closes can blur.
  * @param {boolean} [props.scrollCapture] - Traps scroll gestures inside the
  *   popover so the page/container behind it can't scroll while it's open.
  * @param {boolean} [props.focusCapture] - Traps Tab navigation inside the
@@ -761,6 +785,12 @@ const usePopoverProps = (props) => {
     // the paint the effect implies; "discrete"/"none" tone it down or
     // remove it entirely without giving up the outside click.
     backdropVariant = "auto",
+    // The paint itself, when the tokens behind backdropVariant are not what
+    // this one popover wants. Named/forwarded rather than left in ...rest:
+    // rest lands on the popover element, and these belong to its backdrop,
+    // which is a sibling element (see this file's top comment).
+    backdropColor,
+    backdropFilter,
     scrollCapture,
     focusCapture,
     // "auto" (default) → the popover follows its content. "frozen" → measured
@@ -1524,6 +1554,8 @@ const usePopoverProps = (props) => {
     "animationDuration": rest.animationDuration,
     "data-pointer-interaction-outside": pointerInteractionOutsideEffect,
     "data-backdrop-variant": backdropVariant,
+    backdropColor,
+    backdropFilter,
     "onMouseDown": (mouseDownEvent) => {
       if (mouseDownEvent.button !== 0) {
         return;
@@ -1642,6 +1674,8 @@ const POPOVER_PSEUDO_CLASSES = [
 // handling).
 const POPUP_STYLE_CSS_VARS = {
   animationDuration: "--popup-animation-duration",
+  backdropColor: "--backdrop-background",
+  backdropFilter: "--backdrop-filter",
   minWidth: "--popover-min-width",
   maxWidth: "--popover-max-width",
   minHeight: "--popover-min-height",

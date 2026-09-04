@@ -8,6 +8,7 @@ import { getStyle } from "../style/dom_styles.js";
 import {
   closestOpenableAncestor,
   isAncestorOpen,
+  isDisplayedDespiteClosedAncestor,
   observeAncestorOpenState,
   selfOrClosestOpenableAncestor,
 } from "./ancestor_open.js";
@@ -694,7 +695,23 @@ export const visibleRectEffect = (
       let currentOpenableAncestor = selfOrClosestOpenableAncestor(element);
       while (currentOpenableAncestor) {
         const openableAncestor = currentOpenableAncestor;
-        if (!isAncestorOpen(openableAncestor)) {
+        const openableAncestorIsOpen = isAncestorOpen(openableAncestor);
+        // A closed openable that keeps `element` on screen is the *trigger* of
+        // what is closed rather than the thing itself — a picker's root, an
+        // expandable's header, a <summary> all carry aria-expanded/open for a
+        // surface they are not part of, and `element` here belongs to the
+        // façade they keep showing the whole time. Its closed state hides
+        // nothing of this element, so it must not count as a state that does.
+        //
+        // Read once, here, and kept for the effect's lifetime: the layout only
+        // answers this question honestly about an ancestor that is already
+        // closed and settled. Asked at the instant a surface closes, it still
+        // says "on screen" for as long as a close animation keeps a box for it,
+        // which is the opposite answer — so a surface closing later goes on
+        // counting, unasked.
+        const elementIsInAncestorFacade =
+          !openableAncestorIsOpen && isDisplayedDespiteClosedAncestor(element);
+        if (!openableAncestorIsOpen && !elementIsInAncestorFacade) {
           ancestorClosedCount++;
           pauseResizeWatching();
         }
@@ -703,6 +720,9 @@ export const visibleRectEffect = (
           // eslint-disable-next-line no-loop-func
           ({ isOpen, toggleEvent }) => {
             if (!isOpen) {
+              if (elementIsInAncestorFacade) {
+                return;
+              }
               ancestorClosedCount++;
               pauseResizeWatching();
               // Invalidates check()'s own "did anything actually change"
@@ -731,7 +751,7 @@ export const visibleRectEffect = (
               );
               return;
             }
-            if (ancestorClosedCount > 0) {
+            if (!elementIsInAncestorFacade && ancestorClosedCount > 0) {
               ancestorClosedCount--;
             }
             if (ancestorClosedCount === 0) {

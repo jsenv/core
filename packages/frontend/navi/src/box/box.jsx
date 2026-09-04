@@ -156,6 +156,13 @@ import.meta.css = /* css */ `
 
   [data-scrollable] {
     overflow: var(--x-scrollable-overflow, auto);
+    /* What lands here has to land IN the area, not on its edge: a control
+       scrolled flush against it reads as half-swallowed by whatever comes next
+       (a footer, the edge of a popup) and the ring it draws around itself is
+       cut off. The browser scrolls to a border box and knows nothing of that
+       ring, so the room is reserved here instead — for its own scroll-into-view
+       as much as for navi's (scroll_into_view_scoped.js in @jsenv/dom). */
+    scroll-padding: var(--navi-scroll-padding, var(--navi-s));
     --box-header-z-index: var(--navi-z-index-sticky);
     --box-footer-z-index: var(--navi-z-index-sticky);
     /* The band stays inside this box: without a stacking context here, "in
@@ -236,6 +243,9 @@ import.meta.css = /* css */ `
         /* Because for instance when body is within dialog or slide with overflow: hidden it would not be visible */
         outline-offset: calc(-1 * var(--navi-focus-outline-width));
         overflow: auto;
+        /* Same room as the scrolling area above, on the part that took over the
+           scrolling from it. */
+        scroll-padding: var(--navi-scroll-padding, var(--navi-s));
 
         &:focus-visible {
           outline-style: solid;

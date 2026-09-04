@@ -110,7 +110,13 @@ const css = /* css */ `
     To ensure ti goes above we put a z-index: 1, I hope it won't bite use in the future */
     z-index: 1;
     /* Callout styles */
-    display: block;
+    /* No display declared here on purpose: the UA rule hiding a closed popover
+       is the only thing that takes a hidden callout off screen, and any author
+       display beats it (author origin wins over the UA stylesheet whatever the
+       specificity). Overridden, hidePopover() leaves the box painted — out of
+       the top layer, so laid out against the nearest positioned ancestor while
+       its placement is written in document coordinates: drawn at the wrong
+       place instead of not at all. */
     height: auto; /* User agent reset */
     margin: 0;
     padding: 0; /* User agent reset */

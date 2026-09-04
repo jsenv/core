@@ -156,12 +156,19 @@ const css = /* css */ `
          dialog.jsx / popover.jsx): it is a new surface, so it does not write
          in whatever the container it was declared in writes in. */
       --navi-popup-color: var(--navi-surface-text-color);
+      /* A backdrop's paint is a colour AND a filter, one pair per kind of
+         backdrop: how much the page behind must stop competing for the eye is
+         a different question from what an outside click does, so a backdrop
+         that closes on that click can blur too. Only "capture" blurs by
+         default. */
       --navi-backdrop-close-background: rgba(0, 0, 0, 0.08);
+      --navi-backdrop-close-backdrop-filter: none;
       /* backdropVariant="discrete": the popup still catches every outside
          click, it just stops announcing that it did. For an affordance one
          reaches past rather than through — the dim is there to mark the layer,
          not to push the page behind it away. */
       --navi-backdrop-discrete-background: rgba(0, 0, 0, 0.02);
+      --navi-backdrop-discrete-backdrop-filter: none;
       /* "capture" means the rest of the page is fully non-interactive —
          blurred, not just dimmed, so it reads as clearly secondary and
          pulls visual focus onto the popover's own content. */

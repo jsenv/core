@@ -91,6 +91,13 @@ export const createDragElementPositioner = (
   // returns null (document.documentElement instead — see its own doc).
   const positionedParent = getPositionedParent(elementToMove || element);
   const scrollContainer = getScrollContainer(element);
+  // Whether what MOVES is pinned to the viewport — a copy carried above the page
+  // in the top layer, a fixed panel dragged by its handle. Such a thing does not
+  // travel with any scroll, so the scroll that happens while it is carried is
+  // none of its business (see getScrollOffsets).
+  const elementMovedIsPinnedToViewport = Boolean(
+    findSelfOrAncestorFixedPosition(elementToMove || element),
+  );
   const [getPositionOffsets, getScrollOffsets] = createGetOffsets({
     positionedParent,
     referencePositionedParent: referenceElement
@@ -100,6 +107,7 @@ export const createDragElementPositioner = (
     referenceScrollContainer: referenceElement
       ? getScrollContainer(referenceElement)
       : scrollContainer,
+    elementMovedIsPinnedToViewport,
   });
 
   scrollable_current: {
@@ -152,6 +160,7 @@ const createGetOffsets = ({
   referencePositionedParent,
   scrollContainer,
   referenceScrollContainer,
+  elementMovedIsPinnedToViewport,
 }) => {
   const samePositionedParent = positionedParent === referencePositionedParent;
   const getScrollOffsets = createGetScrollOffsets(
@@ -159,6 +168,7 @@ const createGetOffsets = ({
     referenceScrollContainer,
     positionedParent,
     samePositionedParent,
+    elementMovedIsPinnedToViewport,
   );
 
   if (samePositionedParent) {
@@ -363,6 +373,7 @@ const createGetScrollOffsets = (
   referenceScrollContainer,
   positionedParent,
   samePositionedParent,
+  elementMovedIsPinnedToViewport,
 ) => {
   const getGetScrollOffsetsSameContainer = () => {
     const scrollContainerIsDocument = scrollContainer === documentElement;
@@ -384,9 +395,14 @@ const createGetScrollOffsets = (
         return getScrollOffsetsFixed;
       }
     }
+    // A thing pinned to the viewport is inside nothing that scrolls: the page
+    // can run under it and it stays where it is. So it takes the frozen offset
+    // below whatever containment says — and the document, as a scroll container,
+    // answers "yes, it is inside me" to everything.
     const positionedParentIsInsideScrollContainer =
-      referenceScrollContainer === documentElement ||
-      referenceScrollContainer.contains(positionedParent);
+      !elementMovedIsPinnedToViewport &&
+      (referenceScrollContainer === documentElement ||
+        referenceScrollContainer.contains(positionedParent));
     if (!positionedParentIsInsideScrollContainer) {
       // positionedParent is outside the scroll container (e.g. clone in document.body
       // while tracking an element inside a custom scroll container).

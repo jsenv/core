@@ -282,6 +282,15 @@ const css = /* css */ `
        scroll (a short body, an axis with nowhere to go) must not travel to
        whatever is behind. */
     overscroll-behavior: none;
+    /* What the backdrop paints, resolved on the dialog rather than on the
+       pseudo-element that paints it: ::backdrop takes no inline style and
+       carries no attribute of its own, so the backdropColor/backdropFilter
+       props land here — inline, beating every rule below — and the
+       pseudo-element inherits whichever won. A colour and a filter travel
+       together everywhere a backdrop is painted: see navi_css_vars.js for
+       why a blur is not tied to what an outside click does. */
+    --backdrop-background: var(--navi-backdrop-close-background);
+    --backdrop-filter: var(--navi-backdrop-close-backdrop-filter);
 
     /* Docking answers a different question than --dialog-max-width: a sheet
        spans its container's full width, flush against the two side edges —
@@ -332,6 +341,7 @@ const css = /* css */ `
     &[data-flush-bottom][data-flush-left] {
       border-bottom-left-radius: 0;
     }
+
     /* The placement is a translate, so the translate property is spoken for
        here (see applyNewPosition in visible_rect.js, which owns it and animates
        it itself through the Web Animations API rather than through this file's
@@ -339,26 +349,26 @@ const css = /* css */ `
        to filter). An entrance animation moves the dialog through scale and
        transform instead, which compose under it: see popup_css.js. */
 
+    &[data-pointer-interaction-outside="capture"] {
+      --backdrop-background: var(--navi-backdrop-capture-background);
+      --backdrop-filter: var(--navi-backdrop-capture-backdrop-filter);
+    }
+    /* backdropVariant, after the rules it overrides: same specificity, so
+       order is what decides. showModal() still makes the page inert either
+       way — only the paint goes away. */
+    &[data-backdrop-variant="discrete"] {
+      --backdrop-background: var(--navi-backdrop-discrete-background);
+      --backdrop-filter: var(--navi-backdrop-discrete-backdrop-filter);
+    }
+    /* The one backdrop with nothing to blur through: "invisible" paints
+       nothing at all, and a filter would still be seen. */
+    &[data-backdrop-variant="invisible"] {
+      --backdrop-background: transparent;
+      --backdrop-filter: none;
+    }
     &::backdrop {
-      background: var(--navi-backdrop-close-background);
-    }
-    &[data-pointer-interaction-outside="capture"]::backdrop {
-      background: var(--navi-backdrop-capture-background);
-      backdrop-filter: var(--navi-backdrop-capture-backdrop-filter);
-    }
-
-    /* backdropVariant, keyed off the originating element (a
-       pseudo-element carries no attributes of its own — same reasoning as
-       the capture rule just above). After the rules it overrides: same
-       specificity, so order is what decides. showModal() still makes the
-       page inert either way — only the paint goes away. */
-    &[data-backdrop-variant="discrete"]::backdrop {
-      background: var(--navi-backdrop-discrete-background);
-      backdrop-filter: none;
-    }
-    &[data-backdrop-variant="invisible"]::backdrop {
-      background: transparent;
-      backdrop-filter: none;
+      background: var(--backdrop-background);
+      backdrop-filter: var(--backdrop-filter);
     }
 
     /* Nested under &[navi-animation] (not the other way around) so every
@@ -468,6 +478,17 @@ const css = /* css */ `
        in openEffect) gets pointer-events: none mid-transition. */
     pointer-events: auto;
 
+    /* Painted through the same two variables as the via-attribute renderer's
+       ::backdrop (see them for what each rule is for) — here they resolve on
+       the element that paints, which is also the element the
+       backdropColor/backdropFilter props are set on. Declared unconditionally
+       first so a variable inherited from a dialog this popup was opened from
+       can never reach the paint. */
+    --backdrop-background: transparent;
+    --backdrop-filter: none;
+    background: var(--backdrop-background);
+    backdrop-filter: var(--backdrop-filter);
+
     /* A plain div, unlike dialogEl itself (a real <dialog>, natively hidden
        by default until .show()/.showModal() adds [open]) — needs its own
        starting-hidden mechanism. [navi-hidden] is set from useDialogProps'
@@ -484,23 +505,20 @@ const css = /* css */ `
     /* Makes pointerInteractionOutsideEffect have a visible impact on backdrop */
     &[data-pointer-interaction-outside="close"],
     &[data-pointer-interaction-outside="cancel"] {
-      background: var(--navi-backdrop-close-background);
+      --backdrop-background: var(--navi-backdrop-close-background);
+      --backdrop-filter: var(--navi-backdrop-close-backdrop-filter);
     }
     &[data-pointer-interaction-outside="capture"] {
-      background: var(--navi-backdrop-capture-background);
-      backdrop-filter: var(--navi-backdrop-capture-backdrop-filter);
+      --backdrop-background: var(--navi-backdrop-capture-background);
+      --backdrop-filter: var(--navi-backdrop-capture-backdrop-filter);
     }
-
-    /* Same override as the via-attribute renderer's own ::backdrop rules
-       above, on the real element this renderer uses instead — see them for
-       the specificity/ordering reasoning. */
     &[data-backdrop-variant="discrete"] {
-      background: var(--navi-backdrop-discrete-background);
-      backdrop-filter: none;
+      --backdrop-background: var(--navi-backdrop-discrete-background);
+      --backdrop-filter: var(--navi-backdrop-discrete-backdrop-filter);
     }
     &[data-backdrop-variant="invisible"] {
-      background: transparent;
-      backdrop-filter: none;
+      --backdrop-background: transparent;
+      --backdrop-filter: none;
     }
 
     /* overlay is a no-op here (this backdrop is a plain div, never a
@@ -627,6 +645,17 @@ const css = /* css */ `
  *   barely-there dim. `"invisible"`: fully transparent. The dialog stays modal
  *   either way — this only changes how much it insists visually, never what
  *   an outside click does or whether the page behind stays reachable.
+ * @param {string} [props.backdropColor] - The wash painted over what is
+ *   behind, for this popup alone: any CSS color (`"rgb(6 10 20 / 88%)"`).
+ *   Wins over `backdropVariant` and over the theme tokens
+ *   (`--navi-backdrop-*-background`), which is where the same choice goes
+ *   when it is the whole app's.
+ * @param {string} [props.backdropFilter] - What that same wash does to the
+ *   picture underneath: `"blur(4px)"` to keep the page behind recognisable
+ *   while it stops being readable. A `backdrop-filter` value, so
+ *   `saturate()`/`grayscale()` work too. How far what is behind withdraws is
+ *   a question of paint, not of what an outside click does — a backdrop that
+ *   closes can blur.
  * @param {boolean} [props.scrollCapture] - Traps scroll gestures inside the
  *   dialog so the page/container behind it can't scroll while it's open.
  *   A `layer="local"` dialog always locks its own positioned ancestor's
@@ -963,6 +992,13 @@ const useDialogProps = (props) => {
     // always modal, so "none" here never makes the page behind reachable:
     // it only stops the dim from being drawn.
     backdropVariant = "auto",
+    // The paint itself, when the tokens behind backdropVariant are not what
+    // this one dialog wants. Named/forwarded rather than left in ...rest:
+    // rest lands on the dialog element, and these belong to the backdrop —
+    // which is the pseudo-element of one renderer and a sibling of the other,
+    // so both objects below get them (see this file's CSS).
+    backdropColor,
+    backdropFilter,
     scrollCapture: scrollCaptureProp,
     // "auto" (default) → the dialog follows its content. "frozen" → measured
     // once, held at that size while open. See this prop's own JSDoc above.
@@ -1683,6 +1719,8 @@ const useDialogProps = (props) => {
     "animationDuration": rest.animationDuration,
     "data-pointer-interaction-outside": pointerInteractionOutsideEffect,
     "data-backdrop-variant": backdropVariant,
+    backdropColor,
+    backdropFilter,
   });
   Object.assign(contentProps, {
     tabIndex,
@@ -1716,6 +1754,11 @@ const useDialogProps = (props) => {
     // as the prop just above (and harmless for the custom renderer, whose
     // real backdrop element gets it via backdropProps).
     "data-backdrop-variant": backdropVariant,
+    // Read by the native ::backdrop, which inherits them from here (see this
+    // file's CSS) — the custom renderer's own backdrop element gets them via
+    // backdropProps above.
+    backdropColor,
+    backdropFilter,
     "styleCSSVars": DIALOG_STYLE_CSS_VARS,
     ...rest,
     ...autoFocusProps,
@@ -1851,6 +1894,8 @@ const DIALOG_PSEUDO_CLASSES = [
 // an inline border-radius would outrank them.
 const DIALOG_STYLE_CSS_VARS = {
   animationDuration: "--popup-animation-duration",
+  backdropColor: "--backdrop-background",
+  backdropFilter: "--backdrop-filter",
   borderRadius: "--dialog-border-radius",
   minWidth: "--dialog-min-width",
   maxWidth: "--dialog-max-width",
