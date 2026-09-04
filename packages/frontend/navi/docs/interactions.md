@@ -161,11 +161,12 @@ rows, a row that leaves): navi does not make it disappear.
 All four are the same gesture — the element is picked up and carried — and what
 differs is the release. One detector reads them all, because it is one press.
 
-`toss` **combines** with either of the two others: dropped on another item the
-element changes places, thrown far and fast it is gotten rid of. `move`,
-`reorder` and `land` do **not** combine with each other — an element either goes
-where it is put, takes a place in a list, or comes down on a place, and one
-release cannot mean two of those (a dev warning says so).
+`toss` **combines** with `reorder` and with `land`: dropped on another item the
+element changes places, thrown far and fast it is gotten rid of. It does **not**
+combine with `move`, and neither do `reorder` and `land` with each other — one
+release cannot mean two of those. Declared together, the copy-carrying one wins
+and `move` is never answered — the element itself never travels, and a release
+that is not the other outcome means nothing at all (a dev warning says so).
 
 `move` carries the element ITSELF and leaves it where it was put; the others
 carry a copy and put the original back. That is the same difference said in layout
@@ -187,11 +188,12 @@ be a scroll container at all (`overflow` anything but `visible`), since there is
 nothing else for "inside" to mean. A `move` whose answer rejects travels back, because a
 place the application would not accept must not stay on screen as if it had.
 
-**Declaring `toss` frees the area by itself.** What is dragged is otherwise kept
+**A copy that can be thrown frees its own area.** What is dragged is otherwise kept
 inside its scroll area — right for a reorder, since a row belongs to its list, and
 fatal for a throw: the copy hits the edge of the list, no distance is ever covered,
-so no throw can happen and no sideways movement is even visible. So the two
-together let it leave.
+so no throw can happen and no sideways movement is even visible. So `toss` lifts
+that constraint for the copy it carries — it is not a way to free a `move`, which
+says `data-drag-free`.
 
 ```jsx
 <List.Item
@@ -355,7 +357,8 @@ carried does not stand among the places — a palette BESIDE the surface it fill
 marker drawn INSIDE the surface it can be put back on — say what holds both with
 `data-drop-container`. It holds the places rather than being one, so it goes on an
 ancestor of them: a surface that is itself the place is never found from inside
-itself.
+itself. Missed, nothing lands and nothing says why — so the first press on a
+`land` with no place in reach warns, and names the surface it is standing on.
 
 ```jsx
 <div data-drop-container>

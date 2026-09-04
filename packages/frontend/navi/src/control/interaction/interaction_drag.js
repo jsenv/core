@@ -218,9 +218,20 @@ defineInteractionDetector({
       return undefined;
     }
     const tellsWhenGrabbed = types.includes(GRAB);
-    if (import.meta.dev && canMove && (canReorder || canLand)) {
+    // `startDragTo` arbitrates the same conflicts and says so too, and that voice
+    // is not heard from here: @jsenv/dom publishes one build with `import.meta.dev`
+    // false, so nothing of its dev code exists for whoever consumes navi. What a
+    // caller wrote is `interactions`, so this is also where the warning can name it.
+    if (import.meta.dev && canMove && (canReorder || canLand || canToss)) {
+      // The other three all carry a copy and put the original back — there is no
+      // move anywhere in that gesture, so the element itself never travels.
+      const other = canLand ? LAND : canReorder ? REORDER : TOSS;
+      const instead =
+        other === TOSS
+          ? ` Something that can be put down anywhere AND thrown away declares "${LAND}" rather than "${MOVE}": its detail says where the copy came down, which is what a surface answers with.`
+          : "";
       console.warn(
-        `interactions: "move" and "${canReorder ? REORDER : LAND}" cannot both answer one release — an element either goes where it is put, or takes the place the list/board gives it. "${canReorder ? REORDER : LAND}" wins here.`,
+        `interactions: "${MOVE}" and "${other}" cannot both answer one release — "${MOVE}" leaves the element where the hand put it, "${other}" carries a copy and puts the original back. "${other}" wins here, so the element never travels.${instead}`,
       );
     }
     if (import.meta.dev && canReorder && canLand) {
@@ -278,7 +289,16 @@ defineInteractionDetector({
     // moment, not an outcome, and the gesture must not read it as one.
     const effects = types.filter((type) => type !== GRAB);
 
+    // Whether there is anywhere to land, asked at the first press rather than
+    // here: the places are drawn by whatever renders them, which at setup may
+    // not have happened yet.
+    let placesLookedFor = false;
+
     const onPointerDown = (pointerDownEvent) => {
+      if (import.meta.dev && canLand && !placesLookedFor) {
+        placesLookedFor = true;
+        warnWhenNothingToLandOn(element, dropContainer, tossBy);
+      }
       // What this element says a release can mean. The gesture then runs only what
       // those need — no copy for a move, no drop hint for something that can only
       // be thrown away.
@@ -355,3 +375,39 @@ defineInteractionDetector({
     };
   },
 });
+
+// A place is looked for INSIDE the container and nowhere else, so the surface a
+// piece already stands on is not one of them — a search never finds what it starts
+// from. Nothing then happens at all, and where `release-outside` is on it is worse
+// than nothing: every release is away from every place, so every release gets rid
+// of the thing.
+const warnWhenNothingToLandOn = (element, dropContainer, tossBy) => {
+  const container = dropContainer || element.parentElement;
+  if (!container) {
+    return;
+  }
+  for (const droppable of container.querySelectorAll(
+    `[${DROPPABLE_ATTRIBUTE}]`,
+  )) {
+    if (droppable !== element) {
+      return;
+    }
+  }
+  const consequence = tossBy.includes("release-outside")
+    ? ` Every release is then away from every place, which ${TOSS_BY_ATTRIBUTE}="release-outside" reads as a toss.`
+    : " Nothing answers a release.";
+  const droppableAround = element.parentElement?.closest(
+    `[${DROPPABLE_ATTRIBUTE}]`,
+  );
+  if (droppableAround) {
+    console.warn(
+      `interactions: "${LAND}" has nowhere to land — this element sits INSIDE the only place there is, and places are looked for inside ${dropContainer ? `the [${DROP_CONTAINER_ATTRIBUTE}]` : `the element's parent`}, never above it.${consequence} Put ${DROP_CONTAINER_ATTRIBUTE} on an ancestor of both, so the surface is among the places rather than around them.`,
+      droppableAround,
+    );
+    return;
+  }
+  console.warn(
+    `interactions: "${LAND}" has nowhere to land — nothing marked ${DROPPABLE_ATTRIBUTE} is inside ${dropContainer ? `the [${DROP_CONTAINER_ATTRIBUTE}]` : `the element's parent`}, which is where the places are looked for.${consequence} Mark them, and when they are not siblings of this element put ${DROP_CONTAINER_ATTRIBUTE} on an ancestor of both.`,
+    container,
+  );
+};
