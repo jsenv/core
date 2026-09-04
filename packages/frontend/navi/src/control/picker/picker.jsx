@@ -1886,6 +1886,12 @@ const warnOnUIDrawnByNobody = (props) => {
   if (variant !== "headless" || ui === undefined || ui === "default") {
     return;
   }
+  if (pickerUIIsNaviOwn(ui)) {
+    // What a `type` resolver puts there for a picker that did not name a
+    // drawing (see picker_types.jsx). Nobody wrote it, so there is nobody to
+    // tell that it is not drawn.
+    return;
+  }
   uiDrawnByNobodyWarned = true;
   console.warn(
     `[navi] <Picker variant="headless" ui={…}> — a headless picker draws nothing, so this "ui" is never rendered. ` +

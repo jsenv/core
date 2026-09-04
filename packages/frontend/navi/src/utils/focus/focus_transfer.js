@@ -508,13 +508,18 @@ const getFocusedBeforeTransfer = (e) => {
   // there is to know.
   const initiator = e?.detail?.eventChain ? e.detail.eventChain[0] : null;
   if (initiator) {
-    if (initiator.type === "mousedown") {
-      // if we we had let browser give focus, the element would be the one that would be focused
-      return initiator.currentTarget;
-    }
-    if (initiator.type === "click") {
-      // label use case
-      return initiator.currentTarget;
+    if (initiator.type === "mousedown" || initiator.type === "click") {
+      // The listener's element, not the target: it is where the focus would
+      // have landed had we let the browser give it (mousedown), and the control
+      // a press on a <label> is about (click).
+      //
+      // `currentTarget` is only readable while the event is being dispatched,
+      // and an opening asked for LATER carries an event whose dispatch is over
+      // — a command triggered from inside a view transition's update callback,
+      // a press replayed once something it was waiting for arrived. There is
+      // no element to read there, and whatever holds the focus is then all
+      // there is to know.
+      return initiator.currentTarget || document.activeElement;
     }
   }
   return document.activeElement;

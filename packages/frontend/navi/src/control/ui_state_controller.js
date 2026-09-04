@@ -1406,7 +1406,29 @@ export const useUIGroupStateController = (
           }
           applyState(groupUIState, e, { actingChild });
         } else if (notifyExternal === "silent") {
+          const uiStateBefore = controller.uiState;
           controller.syncInternalState(groupUIState);
+          if (
+            !controller.stateGivenFromAbove &&
+            !compareTwoJsValues(groupUIState, uiStateBefore)
+          ) {
+            // A group that works out its own value gains a key when a control
+            // arrives holding something — one revealed by a button, a picker
+            // mounted once the screen has something to ask about. Nobody is
+            // TOLD (that is what silent means: announcedUIState stays where it
+            // was, no action runs), but a bound signal is not somebody being
+            // told, it is where the value is read: left behind it says the
+            // group holds less than it does, and the difference only surfaces
+            // on send.
+            //
+            // Only when the value really moved, and only for a group that
+            // derived it: one still showing a value it was handed holds that
+            // value unchanged here (see above), and a child coming or going
+            // without changing what the group is worth — a row scrolled out of
+            // a virtualized list whose selection the aggregate keeps — has
+            // nothing to write back.
+            writeBoundSignal(groupUIState);
+          }
           s.parentUIStateController?.onChildUIAction(controller, e, {
             stateChanged: true,
             silent: true,
@@ -1422,11 +1444,12 @@ export const useUIGroupStateController = (
       // for a group whose value is its children's put together.
       //
       // Called from every path where what the group holds really moves:
-      // applyState when the change is notified outward, syncInternalState when
-      // the group only brings itself up to date, and the value arriving from
-      // above (see isPropagateDownEvent). Which one it is gets decided at each
-      // call site rather than guessed at here — the initial push and the
-      // mount/unmount syncs leave the signal alone.
+      // applyState when the change is notified outward, the mount/unmount syncs
+      // when the group only brings itself up to date, and the value arriving
+      // from above (see isPropagateDownEvent). Which one it is gets decided at
+      // each call site rather than guessed at here — the initial push, and any
+      // sync of a group that is showing a value it was handed, leave the signal
+      // alone.
       const writeBoundSignal = (newUIState) => {
         const boundSignal = s.props?.signal;
         if (boundSignal) {

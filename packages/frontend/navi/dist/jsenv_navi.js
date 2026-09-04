@@ -32461,13 +32461,18 @@ const getFocusedBeforeTransfer = (e) => {
   // there is to know.
   const initiator = e?.detail?.eventChain ? e.detail.eventChain[0] : null;
   if (initiator) {
-    if (initiator.type === "mousedown") {
-      // if we we had let browser give focus, the element would be the one that would be focused
-      return initiator.currentTarget;
-    }
-    if (initiator.type === "click") {
-      // label use case
-      return initiator.currentTarget;
+    if (initiator.type === "mousedown" || initiator.type === "click") {
+      // The listener's element, not the target: it is where the focus would
+      // have landed had we let the browser give it (mousedown), and the control
+      // a press on a <label> is about (click).
+      //
+      // `currentTarget` is only readable while the event is being dispatched,
+      // and an opening asked for LATER carries an event whose dispatch is over
+      // — a command triggered from inside a view transition's update callback,
+      // a press replayed once something it was waiting for arrived. There is
+      // no element to read there, and whatever holds the focus is then all
+      // there is to know.
+      return initiator.currentTarget || document.activeElement;
     }
   }
   return document.activeElement;
@@ -34472,7 +34477,29 @@ const useUIGroupStateController = (
           }
           applyState(groupUIState, e, { actingChild });
         } else if (notifyExternal === "silent") {
+          const uiStateBefore = controller.uiState;
           controller.syncInternalState(groupUIState);
+          if (
+            !controller.stateGivenFromAbove &&
+            !compareTwoJsValues(groupUIState, uiStateBefore)
+          ) {
+            // A group that works out its own value gains a key when a control
+            // arrives holding something — one revealed by a button, a picker
+            // mounted once the screen has something to ask about. Nobody is
+            // TOLD (that is what silent means: announcedUIState stays where it
+            // was, no action runs), but a bound signal is not somebody being
+            // told, it is where the value is read: left behind it says the
+            // group holds less than it does, and the difference only surfaces
+            // on send.
+            //
+            // Only when the value really moved, and only for a group that
+            // derived it: one still showing a value it was handed holds that
+            // value unchanged here (see above), and a child coming or going
+            // without changing what the group is worth — a row scrolled out of
+            // a virtualized list whose selection the aggregate keeps — has
+            // nothing to write back.
+            writeBoundSignal(groupUIState);
+          }
           s.parentUIStateController?.onChildUIAction(controller, e, {
             stateChanged: true,
             silent: true,
@@ -34488,11 +34515,12 @@ const useUIGroupStateController = (
       // for a group whose value is its children's put together.
       //
       // Called from every path where what the group holds really moves:
-      // applyState when the change is notified outward, syncInternalState when
-      // the group only brings itself up to date, and the value arriving from
-      // above (see isPropagateDownEvent). Which one it is gets decided at each
-      // call site rather than guessed at here — the initial push and the
-      // mount/unmount syncs leave the signal alone.
+      // applyState when the change is notified outward, the mount/unmount syncs
+      // when the group only brings itself up to date, and the value arriving
+      // from above (see isPropagateDownEvent). Which one it is gets decided at
+      // each call site rather than guessed at here — the initial push, and any
+      // sync of a group that is showing a value it was handed, leave the signal
+      // alone.
       const writeBoundSignal = (newUIState) => {
         const boundSignal = s.props?.signal;
         if (boundSignal) {
