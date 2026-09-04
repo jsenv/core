@@ -1120,6 +1120,39 @@
                 animationDuration={animationDuration}
               />
             </div>
+            <Heading id="backdrop-paint">
+              backdropColor / backdropFilter
+            </Heading>
+            <div class="demo-row">
+              <PointerInteractionOutsideDemo
+                label="auto (default)"
+                pointerInteractionOutsideEffect="close"
+                animation={animation}
+                animationDuration={animationDuration}
+              />
+              <PointerInteractionOutsideDemo
+                label='backdropColor="rgb(6 10 20 / 55%)"'
+                pointerInteractionOutsideEffect="close"
+                backdropColor="rgb(6 10 20 / 55%)"
+                animation={animation}
+                animationDuration={animationDuration}
+              />
+              <PointerInteractionOutsideDemo
+                label='+ backdropFilter="blur(4px)"'
+                pointerInteractionOutsideEffect="close"
+                backdropColor="rgb(6 10 20 / 55%)"
+                backdropFilter="blur(4px)"
+                animation={animation}
+                animationDuration={animationDuration}
+              />
+              <PointerInteractionOutsideDemo
+                label='backdropFilter="blur(4px)"'
+                pointerInteractionOutsideEffect="close"
+                backdropFilter="blur(4px)"
+                animation={animation}
+                animationDuration={animationDuration}
+              />
+            </div>
             <AnimateControls {...controlsProps} />
           </section>
         );
@@ -1313,13 +1346,7 @@
       // The backdrop's opacity (see the CSS at the top) makes "close"/
       // "capture" visually distinct from "none" (fully transparent) without
       // needing more prose.
-      const PointerInteractionOutsideDemo = ({
-        label,
-        pointerInteractionOutsideEffect,
-        backdropVariant,
-        animation,
-        animationDuration,
-      }) => {
+      const PointerInteractionOutsideDemo = ({ label, ...props }) => {
         const popoverId = useId();
 
         return (
@@ -1330,11 +1357,8 @@
             <Popover
               id={popoverId}
               borderRadius="8px"
-              pointerInteractionOutsideEffect={pointerInteractionOutsideEffect}
-              backdropVariant={backdropVariant}
-              animation={animation}
-              animationDuration={animationDuration}
               className="demo_popover_box"
+              {...props}
             >
               <p style={{ marginTop: 0 }}>{label}</p>
               <Button command="--navi-close">Close</Button>
