@@ -3815,7 +3815,7 @@ const createDynamicLog = ({
   };
 
   let lastOutput = "";
-  let lastOutputFromOutside = "";
+  let wroteFromOutside = false;
   let clearAttemptResult;
   let writing = false;
 
@@ -3864,7 +3864,7 @@ const createDynamicLog = ({
     }
     let stringToWrite = string;
     if (lastOutput) {
-      if (lastOutputFromOutside) {
+      if (wroteFromOutside) {
         // We don't want to clear logs written by other code,
         // it makes output unreadable and might erase precious information
         // To detect this we put a spy on the stream.
@@ -3872,7 +3872,7 @@ const createDynamicLog = ({
         // something else than this code has written in the stream
         // so we just write without clearing (append instead of replacing)
         lastOutput = "";
-        lastOutputFromOutside = "";
+        wroteFromOutside = false;
       } else {
         stringToWrite = `${getErasePreviousOutput()}${string}`;
       }
@@ -3903,7 +3903,7 @@ const createDynamicLog = ({
     update(ouputAfterCallback);
   };
 
-  const writeFromOutsideEffect = (value) => {
+  const writeFromOutsideEffect = () => {
     if (!lastOutput) {
       // we don't care if the log never wrote anything
       // or if last update() wrote an empty string
@@ -3912,8 +3912,10 @@ const createDynamicLog = ({
     if (writing) {
       return;
     }
-    lastOutputFromOutside = value;
-    dynamicLog.onWriteFromOutside(value);
+    wroteFromOutside = true;
+    // the outside output is already in the stream: whoever reacts to this must
+    // leave it alone, only stop refreshing above it
+    dynamicLog.onWriteFromOutside();
   };
 
   let removeStreamSpy;
@@ -3940,7 +3942,7 @@ const createDynamicLog = ({
       removeStreamSpy();
       removeStreamSpy = null;
       lastOutput = "";
-      lastOutputFromOutside = "";
+      wroteFromOutside = false;
     }
   };
 
@@ -3958,26 +3960,19 @@ const createDynamicLog = ({
 // is that node.js will later throw error if stream gets closed
 // while something listening data on it
 const spyStreamOutput = (stream, callback) => {
-  let output = "";
   let installed = true;
   const originalWrite = stream.write;
   stream.write = function (...args /* chunk, encoding, callback */) {
-    output += args;
-    callback(output);
+    callback();
     return originalWrite.call(this, ...args);
   };
 
-  const uninstall = () => {
+  return () => {
     if (!installed) {
       return;
     }
     stream.write = originalWrite;
     installed = false;
-  };
-
-  return () => {
-    uninstall();
-    return output;
   };
 };
 
@@ -4043,10 +4038,15 @@ const startSpinner = ({
   spinner.stop = stop;
 
   if (stopOnVerticalOverflow) {
-    dynamicLog.onVerticalOverflow = stop;
+    dynamicLog.onVerticalOverflow = () => {
+      stop();
+    };
   }
   if (stopOnWriteFromOutside) {
-    dynamicLog.onWriteFromOutside = stop;
+    // the spinner freezes on its current frame and the other output goes below
+    dynamicLog.onWriteFromOutside = () => {
+      stop();
+    };
   }
 
   return spinner;

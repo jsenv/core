@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/ast",
-  "version": "6.10.2",
+  "version": "6.10.3",
   "type": "module",
   "description": "Parse and transform HTML, CSS and JS",
   "repository": {
@@ -29,8 +29,8 @@
     "@babel/core": "8.0.1",
     "@babel/helper-module-imports": "8.0.0",
     "@babel/parser": "8.0.4",
-    "@jsenv/humanize": "1.8.0",
-    "@jsenv/urls": "2.9.11",
+    "@jsenv/humanize": "1.8.1",
+    "@jsenv/urls": "2.9.12",
     "@jsenv/utils": "2.3.1",
     "acorn": "8.18.0",
     "acorn-import-attributes": "1.9.5",

@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/lighthouse-impact",
-  "version": "4.2.54",
+  "version": "4.2.55",
   "type": "module",
   "description": "Package description",
   "repository": {
@@ -28,9 +28,9 @@
   "dependencies": {
     "@jsenv/abort": "4.3.1",
     "@jsenv/dynamic-import-worker": "1.2.1",
-    "@jsenv/filesystem": "4.15.21",
-    "@jsenv/github-pull-request-impact": "1.8.48",
-    "@jsenv/humanize": "1.8.0",
+    "@jsenv/filesystem": "4.15.22",
+    "@jsenv/github-pull-request-impact": "1.8.49",
+    "@jsenv/humanize": "1.8.1",
     "lighthouse": "13.4.1"
   },
   "devDependencies": {

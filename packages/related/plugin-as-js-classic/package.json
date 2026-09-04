@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-as-js-classic",
-  "version": "1.6.58",
+  "version": "1.6.59",
   "type": "module",
   "repository": {
     "type": "git",
@@ -18,9 +18,9 @@
     "/src/"
   ],
   "dependencies": {
-    "@jsenv/js-module-fallback": "1.6.6",
-    "@jsenv/plugin-bundling": "2.10.25",
-    "@jsenv/urls": "2.9.11"
+    "@jsenv/js-module-fallback": "1.6.7",
+    "@jsenv/plugin-bundling": "2.10.26",
+    "@jsenv/urls": "2.9.12"
   },
   "devDependencies": {
     "@jsenv/assert": "../../tooling/assert",

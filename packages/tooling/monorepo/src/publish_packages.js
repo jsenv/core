@@ -1,5 +1,10 @@
-import { createLogger, UNICODE } from "@jsenv/humanize";
+import { createLogger, createTaskLog, UNICODE } from "@jsenv/humanize";
 import { publish } from "@jsenv/package-publish/src/internal/publish.js";
+import {
+  checkVersionStatusInRegistry,
+  VERSION_STATUS,
+  waitForStagedVersionToLand,
+} from "@jsenv/package-publish/src/internal/staged_version.js";
 import { collectWorkspacePackages } from "./internal/collect_workspace_packages.js";
 import {
   compareTwoPackageVersions,
@@ -7,6 +12,8 @@ import {
 } from "./internal/compare_two_package_versions.js";
 import { fetchWorkspaceLatests } from "./internal/fetch_workspace_latests.js";
 import { syncPackagesVersions } from "./sync_packages_versions.js";
+
+const REGISTRY_URL = "https://registry.npmjs.org";
 
 export const publishPackages = async ({ directoryUrl, packagesRelations }) => {
   const versionsInSync = await ensureVersionsAreInSync({
@@ -41,31 +48,75 @@ export const publishPackages = async ({ directoryUrl, packagesRelations }) => {
     return;
   }
 
-  const packageSlugs = toPublishPackageNames.map(
-    (name) => `${name}@${workspacePackages[name].packageObject.version}`,
+  const token = process.env.NPM_TOKEN;
+  const statusTask = createTaskLog(`check versions on registry`);
+  let packageInfos;
+  try {
+    packageInfos = await Promise.all(
+      toPublishPackageNames.map(async (packageName) => {
+        const workspacePackage = workspacePackages[packageName];
+        const packageVersion = workspacePackage.packageObject.version;
+        const versionStatus = await checkVersionStatusInRegistry({
+          registryUrl: REGISTRY_URL,
+          packageName,
+          packageVersion,
+          token,
+        });
+        return {
+          packageName,
+          packageVersion,
+          packageSlug: `${packageName}@${packageVersion}`,
+          rootDirectoryUrl: new URL("./", workspacePackage.packageUrl),
+          versionStatus,
+        };
+      }),
+    );
+    statusTask.done();
+  } catch (e) {
+    statusTask.fail();
+    throw e;
+  }
+  const packagesToPublish = packageInfos.filter(
+    ({ versionStatus }) => versionStatus === VERSION_STATUS.ABSENT,
+  );
+  const stagedPackages = packageInfos.filter(
+    ({ versionStatus }) => versionStatus === VERSION_STATUS.STAGED,
   );
 
-  console.log(`${UNICODE.INFO} ${
-    toPublishPackageNames.length
-  } packages to publish
-  - ${packageSlugs.join(`
+  if (packagesToPublish.length === 0 && stagedPackages.length === 0) {
+    console.log(`${UNICODE.OK} packages are published on registry`);
+    return;
+  }
+  if (packagesToPublish.length) {
+    console.log(`${UNICODE.INFO} ${packagesToPublish.length} packages to publish
+  - ${packagesToPublish.map(({ packageSlug }) => packageSlug).join(`
   - `)}`);
-  await toPublishPackageNames.reduce(
-    async (previous, toPublishPackageName, index) => {
-      await previous;
-      await publish({
-        logger: createLogger({ logLevel: "info" }),
-        packageSlug: packageSlugs[index],
-        rootDirectoryUrl: new URL(
-          "./",
-          workspacePackages[toPublishPackageName].packageUrl,
-        ),
-        registryUrl: "https://registry.npmjs.org",
-        token: process.env.NPM_TOKEN,
-      });
-    },
-    Promise.resolve(),
-  );
+  }
+  if (stagedPackages.length) {
+    console.log(`${UNICODE.INFO} ${stagedPackages.length} packages staged on registry, waiting for it to publish them
+  - ${stagedPackages.map(({ packageSlug }) => packageSlug).join(`
+  - `)}`);
+  }
+
+  // a staged version cannot be published again, the registry only needs time to
+  // expose it; the others go through "npm publish"
+  for (const { packageName, packageVersion } of stagedPackages) {
+    await waitForStagedVersionToLand({
+      registryUrl: REGISTRY_URL,
+      packageName,
+      packageVersion,
+      token,
+    });
+  }
+  for (const { packageSlug, rootDirectoryUrl } of packagesToPublish) {
+    await publish({
+      logger: createLogger({ logLevel: "info" }),
+      packageSlug,
+      rootDirectoryUrl,
+      registryUrl: REGISTRY_URL,
+      token,
+    });
+  }
 };
 
 /*

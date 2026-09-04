@@ -62,10 +62,15 @@ export const startSpinner = ({
   spinner.stop = stop;
 
   if (stopOnVerticalOverflow) {
-    dynamicLog.onVerticalOverflow = stop;
+    dynamicLog.onVerticalOverflow = () => {
+      stop();
+    };
   }
   if (stopOnWriteFromOutside) {
-    dynamicLog.onWriteFromOutside = stop;
+    // the spinner freezes on its current frame and the other output goes below
+    dynamicLog.onWriteFromOutside = () => {
+      stop();
+    };
   }
 
   return spinner;
