@@ -8196,14 +8196,13 @@ const languagesSignal = computed(() => {
 });
 
 // Every formatter/i18n call that receives no explicit `lang` falls back to
-// runtime_lang.js's source; in a browser bundle that source is this signal,
-// so naviI18n()/formatDay()/… follow navigator.languages,
-// setPreferredLanguage() and setSupportedLanguages() live. runtime_lang.js
-// must not import this module — staying signal-free is what keeps
-// format_time.js importable outside the browser — so the wiring lives here,
-// on the signal side. This module is listed in package.json "sideEffects"
-// so a bundler never drops this call (nor the "languagechange" listener
-// above).
+// @jsenv/humanize's runtime language source; pointing it at this signal is
+// what makes naviI18n()/formatDay()/… follow navigator.languages,
+// setPreferredLanguage() and setSupportedLanguages() live. That source is
+// signal-free on its own — that is what keeps the formatters importable on a
+// server — so the wiring lives here, on the signal side. This module is
+// listed in package.json "sideEffects" so a bundler never drops this call
+// (nor the "languagechange" listener above).
 setRuntimeLangSource(() => languagesSignal.value);
 
 /**
@@ -79743,9 +79742,10 @@ const CodeBox = ({
   });
 };
 
-// interpolate_text.js is deliberately preact-free (it sits under createI18n
-// and the pure formatters); the JSX half of interpolation is installed from
-// here, the module every JSX interpolation goes through.
+// @jsenv/humanize's interpolateText is deliberately preact-free (it sits under
+// createI18n and the formatters, which must stay importable on a server); the
+// JSX half of interpolation is installed from here, the module every JSX
+// interpolation goes through.
 installInterpolateJsx({
   isValidElement,
   createFragment: children => h(Fragment$1, null, children)
