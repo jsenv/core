@@ -257,6 +257,15 @@ const css = /* css */ `
   }
 
   [navi-drag-clone] {
+    /* The copy takes the wrapper's box, and nothing the page said about where
+       the ORIGINAL stands may place it: a piece drawn at "left: 40px; top:
+       130px" on its board, a marker centred by a translate, a card pushed by a
+       margin — the copy carries all of that, inline styles included, and would
+       sit that far from the wrapper's corner (so from the hand) if it were let
+       to. !important because an inline "left" beats any rule that is not. */
+    position: absolute !important;
+    inset: 0 !important;
+    margin: 0 !important;
     /* Cast by the copy itself rather than by the box around it, so it takes the
        shape of the thing — a rounded row throws a rounded shadow. Its value is a
        var read on the copy, which IS the dragged element: what being carried
@@ -266,6 +275,7 @@ const css = /* css */ `
     box-shadow: var(--drag-clone-shadow, 0 12px 28px rgba(0, 0, 0, 0.22));
     transform: scale(var(--drag-clone-scale, 1.03));
     transform-origin: var(--drag-origin);
+    translate: none !important;
     transition:
       transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
       box-shadow 0.15s ease;
