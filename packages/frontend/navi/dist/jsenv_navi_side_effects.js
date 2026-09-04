@@ -56,10 +56,9 @@ const windowHeightSignal = signal(window.innerHeight);
 
 // Debounced (not a raw "resize" listener) — see window_size.js's own
 // module comment: mobile fires a transient "resize" when the browser's own
-// UI chrome (address bar, etc.) briefly shows/hides, and this needs to
-// settle on the exact same tick as visualViewport's own debounced resize
-// below and Popover/Dialog's own repositioning, or one flickers a moment
-// out of sync with the others.
+// UI chrome (address bar, etc.) briefly shows/hides, and this needs to settle
+// on the same tick as Popover/Dialog's own repositioning, or one flickers a
+// moment out of sync with the others.
 subscribeWindowResizeSettled(() => {
   windowWidthSignal.value = window.innerWidth;
   windowHeightSignal.value = window.innerHeight;
@@ -82,6 +81,32 @@ if (vv) {
     visualViewportWidthSignal.value = vv.width;
     visualViewportHeightSignal.value = vv.height;
   };
+  // The two directions are not equally trustworthy, and treating them alike is
+  // what makes one of the two bugs unavoidable.
+  //
+  // SMALLER is believed at once. Something now covers the screen, and what is
+  // sized against these numbers — the dialog/popover ceilings, through
+  // --navi-vvh (navi_css_vars.js) — has to answer the smaller screen in the
+  // same frame the placement does. The placement reads the viewport live (see
+  // getVisibleViewportRect in @jsenv/dom), so a ceiling arriving a debounce
+  // later means a box sized for a screen that is gone, placed in the one that
+  // replaced it.
+  //
+  // BIGGER waits for the resize to settle, because growing back is the reading
+  // a mobile browser lies about: going straight from one field to the next
+  // fires a blur/focus pair that briefly reports the full height again, with
+  // the keyboard never having left. Believed, it flicks every popup back to
+  // full height and down again between two taps — the "two inputs" case in
+  // Dialog's own demo. Nothing is lost by waiting: a keyboard that really left
+  // stays gone, and the settled event lands 100ms later.
+  vv.addEventListener("resize", () => {
+    if (
+      vv.width < visualViewportWidthSignal.peek() ||
+      vv.height < visualViewportHeightSignal.peek()
+    ) {
+      update();
+    }
+  });
   subscribeVisualViewportResizeSettled(update);
   vv.addEventListener("scroll", update);
 }
@@ -405,7 +430,9 @@ const css = /* css */ `@layer navi {
     --navi-popup-background-color: var(--navi-surface-color);
     --navi-popup-color: var(--navi-surface-text-color);
     --navi-backdrop-close-background: #00000014;
+    --navi-backdrop-close-backdrop-filter: none;
     --navi-backdrop-discrete-background: #00000005;
+    --navi-backdrop-discrete-backdrop-filter: none;
     --navi-backdrop-capture-background: #ffffff14;
     --navi-backdrop-capture-backdrop-filter: blur(30px) saturate(180%);
     --navi-link-color: #00e;

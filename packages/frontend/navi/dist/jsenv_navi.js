@@ -4,7 +4,7 @@
  */
 import { installImportMetaCssBuild, windowHeightSignal, windowWidthSignal, visualViewportHeightSignal, visualViewportWidthSignal, getAppHeight, getAppWidth, coarsePointerSignal, smallTouchScreenSignal } from "./jsenv_navi_side_effects.js";
 export { disableVirtualKeyboardOverlay } from "./jsenv_navi_side_effects.js";
-import { elementIsFocusable, createIterableWeakSet, dispatchInternalCustomEvent, dispatchCustomEvent, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, getElementSignature, createPubSub, findEvent, createValueEffect, findFocusDelegateTarget, findFocusable, scrollIntoViewThroughScrollables, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, keepTouchRefusable, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, markDragSource, startDragTo, createEventGroupLogger, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, normalizeStyles, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, scrollRoomTowards, getScrollContainer, closestOpenableAncestor, isAncestorOpen, isDisplayedDespiteClosedAncestor, observeAncestorOpenState, getAncestorOpenType, findBefore, findAfter, resolveCSSSize, hasCSSSizeUnit, releaseWheelGesture, getScrollIntoViewScopedOffsets, wheelGestureIsTakenFrom, claimWheelGesture, scrollIntoViewScoped, initFocusGroup, isTouchDrivenEvent, stringifyStyle as stringifyStyle$1, resolveOklchLightness, contrastColor, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, onAncestorReopen, isPressDisputedByDrag, canScroll, measureWidestChildRow, performTabNavigation, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
+import { elementIsFocusable, createIterableWeakSet, dispatchInternalCustomEvent, dispatchCustomEvent, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, getElementSignature, createPubSub, findEvent, createValueEffect, findFocusDelegateTarget, findFocusable, scrollIntoViewThroughScrollables, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, keepTouchRefusable, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, markDragSource, startDragTo, createEventGroupLogger, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, normalizeStyles, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, scrollRoomTowards, getScrollContainer, closestOpenableAncestor, isAncestorOpen, isDisplayedDespiteClosedAncestor, observeAncestorOpenState, getAncestorOpenType, findBefore, findAfter, resolveCSSSize, hasCSSSizeUnit, releaseWheelGesture, getScrollIntoViewScopedOffsets, wheelGestureIsTakenFrom, claimWheelGesture, scrollIntoViewScoped, initFocusGroup, isTouchDrivenEvent, stringifyStyle as stringifyStyle$1, resolveOklchLightness, contrastColor, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, getVirtualKeyboardOverlayHeight, onAncestorReopen, isPressDisputedByDrag, canScroll, measureWidestChildRow, performTabNavigation, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
 export { chainEvent, clickIsSuppressed, contrastColor, createDragGestureController, dragAfterIntent, findEvent, markDragSource, startDragTo } from "@jsenv/dom";
 import { signal, computed, effect, untracked, batch, useComputed, useSignal } from "@preact/signals";
 import { isValidElement, createContext, render, h, toChildArray, options, cloneElement, Fragment as Fragment$1 } from "preact";
@@ -5904,7 +5904,13 @@ const css$12 = /* css */ `
     To ensure ti goes above we put a z-index: 1, I hope it won't bite use in the future */
     z-index: 1;
     /* Callout styles */
-    display: block;
+    /* No display declared here on purpose: the UA rule hiding a closed popover
+       is the only thing that takes a hidden callout off screen, and any author
+       display beats it (author origin wins over the UA stylesheet whatever the
+       specificity). Overridden, hidePopover() leaves the box painted — out of
+       the top layer, so laid out against the nearest positioned ancestor while
+       its placement is written in document coordinates: drawn at the wrong
+       place instead of not at all. */
     height: auto; /* User agent reset */
     margin: 0;
     padding: 0; /* User agent reset */
@@ -10358,17 +10364,27 @@ const swipeTypeOf = (axis, pulled) => {
  * two, refuse.
  *
  *   interactions={{ land: (event) => {
- *     const { fromId, toId, syncCloneWithDropTarget } = event.detail;
+ *     const { fromId, toId, x, y, syncCloneWithDropTarget } = event.detail;
  *     …
  *   }}}
  *
  * `toId` is an element and never null: a copy over nothing is a release that meant
- * nothing, and the interaction does not happen at all.
+ * nothing, and the interaction does not happen at all — unless the element says
+ * `data-toss-by="release-outside"` (see below), which gives that release a
+ * meaning of its own.
+ *
+ * WHERE ON IT, in `x`, `y`, `width`, `height`: the box the copy came down in,
+ * measured inside the place — its border and its scroll taken out. A place that is
+ * a SURFACE — a plan, a map, a floor — has no element under the copy to name and
+ * nothing to swap with: where it came down IS the answer, and `toId` says which
+ * surface rather than which piece.
  *
  * `syncCloneWithDropTarget` takes an element here, which `reorder` has no use for:
  * a place of a board can be larger than what stands on it (a quarter of a court, a
  * square holding a smaller piece), and the copy has to come down where the piece
- * will be rather than filling the place. Left alone, it lands on the place itself.
+ * will be rather than filling the place. Left alone, it lands on the place itself —
+ * so a surface either passes what the thing becomes or does not call it at all,
+ * which leaves the copy where the hand put it, over the thing appearing there.
  *
  * WHICH ELEMENTS ARE PLACES: those marked `data-droppable`, and only those.
  * Declaring `land` says an element can be CARRIED, which on a board is a different
@@ -10377,9 +10393,30 @@ const swipeTypeOf = (axis, pulled) => {
  * case (dropped on a piece, the two swap). A list has no such distinction — every
  * row is both, which is why `reorder` needs no marker in the markup.
  *
- * The set of places is looked for inside the carried element's PARENT, so a place
- * and a piece are siblings: a piece nested inside its place would see only that
- * one, and have nowhere else to go.
+ * WHERE THE PLACES ARE LOOKED FOR: inside the carried element's PARENT, so a place
+ * and a piece are siblings — and `data-drop-container` on an ancestor says
+ * otherwise. Two arrangements need it, and both are the same one: what is carried
+ * does not stand among the places. A palette is a strip BESIDE the surface it
+ * fills, a marker already placed is drawn INSIDE the surface it can be put back
+ * on, and in each case the search must cover what holds both. It holds the places
+ * rather than being one — a surface carrying it would never be found from inside
+ * itself. It is also what lets the copy travel there: named, the area it may cross
+ * is the page rather than the source's own scroll area.
+ *
+ *   <div data-drop-container>
+ *     <aside>{shapes.map((shape) => <Shape interactions={{ land: add }} />)}</aside>
+ *     <Plan id="plan" data-droppable>…</Plan>
+ *   </div>
+ *
+ * HOW A TOSS IS MADE: `data-toss-by`, beside `toss`. A THROW (`"throw"`, the
+ * default) is far AND fast — the flick that gets rid of something, a list's
+ * gesture, and it is judged before any landing. A RELEASE OUTSIDE
+ * (`"release-outside"`) has no place under it — dragging a marker off a plan and
+ * letting go, deliberate and never a flick, a surface's gesture. Each is named on
+ * its own because each is wrong where the other is right: on a plan a fast drag
+ * that ends ON it has not asked for the thing to go, and on a list a row let go of
+ * beside it is a row put back. Both at once is
+ * `data-toss-by="throw release-outside"`.
  *
  * Nothing of the gesture is decided here. `startDragTo` owns all of it — the
  * copy carried above the page while the original keeps its place in the layout, the
@@ -10469,6 +10506,8 @@ const REORDERABLE_ATTRIBUTE = "data-reorderable";
 // The same for `land`, except the markup is what writes it: a place of a board is
 // not the same thing as a piece of it (see the top of this file).
 const DROPPABLE_ATTRIBUTE = "data-droppable";
+// What holds the places, when the carried element does not stand among them.
+const DROP_CONTAINER_ATTRIBUTE = "data-drop-container";
 // Which axes the drag walks: "x", "y" or "xy". Its default is not the same for
 // every outcome — a list runs one way, and something being put somewhere goes
 // wherever it is put.
@@ -10478,6 +10517,10 @@ const SLOP_ATTRIBUTE = "data-drag-slop";
 const THRESHOLD_ATTRIBUTE = "data-drag-threshold";
 const TOSS_DISTANCE_ATTRIBUTE = "data-toss-distance";
 const TOSS_SPEED_ATTRIBUTE = "data-toss-speed";
+// How a toss is made here: "throw" (far and fast), "release-outside" (let go of
+// away from every place), or both.
+const TOSS_BY_ATTRIBUTE = "data-toss-by";
+const TOSS_BY_DEFAULT = "throw";
 
 defineInteractionDetector({
   name: "drag",
@@ -10508,6 +10551,16 @@ defineInteractionDetector({
       // the hand takes it: a board has places all around, a thing put somewhere has
       // two axes to be put along, and a throw goes where it was thrown.
       (canReorder && !canLand && !canToss ? "y" : "xy");
+    // Where the places are, and what a release away from all of them means —
+    // both read at setup for the same reason as the axes: they are what the
+    // gesture is about, and it is what holds the two sides of it that says them.
+    const dropContainer = element.closest(`[${DROP_CONTAINER_ATTRIBUTE}]`);
+    const tossByHolder = element.closest(`[${TOSS_BY_ATTRIBUTE}]`);
+    const tossBy = (
+      tossByHolder?.getAttribute(TOSS_BY_ATTRIBUTE) || TOSS_BY_DEFAULT
+    )
+      .trim()
+      .split(/\s+/);
 
     if (canReorder) {
       element.setAttribute(REORDERABLE_ATTRIBUTE, "");
@@ -10534,23 +10587,29 @@ defineInteractionDetector({
           : canReorder
             ? `[${REORDERABLE_ATTRIBUTE}]`
             : undefined,
+        containerElement: dropContainer || undefined,
         getItemId: (itemElement) => itemElement.id,
         direction: { x: axes.includes("x"), y: axes.includes("y") },
         // Where it may go, said in the DOM. A thing that is put somewhere stays
         // inside what one can SEE of its container ("scrollport", not "scroll":
         // the scrollable area can be far larger than the box, and "inside the box"
-        // is what a hand expects). `data-drag-free` lifts that. Left alone for a
-        // throw, which frees the area on its own — it has to be able to leave.
-        areaConstraint: element.closest(`[data-drag-free]`)
-          ? "none"
-          : canMove
-            ? "scrollport"
-            : undefined,
+        // is what a hand expects). `data-drag-free` lifts that, and so does a
+        // named container of places: they are somewhere else by construction, and
+        // a copy kept in its own scroll area could never reach them. Left alone
+        // for a throw, which frees the area on its own — it has to be able to
+        // leave.
+        areaConstraint:
+          dropContainer || element.closest(`[data-drag-free]`)
+            ? "none"
+            : canMove
+              ? "scrollport"
+              : undefined,
         threshold: readConfig(THRESHOLD_ATTRIBUTE, undefined),
         longPressDelay: readConfig(DELAY_ATTRIBUTE, undefined),
         longPressSlop: readConfig(SLOP_ATTRIBUTE, undefined),
         tossDistance: readConfig(TOSS_DISTANCE_ATTRIBUTE, undefined),
         tossSpeed: readConfig(TOSS_SPEED_ATTRIBUTE, undefined),
+        tossBy,
         // The one moment the gesture has that is not a release. Said here rather
         // than from the press that led to it, because the press is only one of the
         // two ways in: a finger holds still, a mouse travels a few pixels, and it
@@ -10573,12 +10632,7 @@ defineInteractionDetector({
             toId,
             syncCloneWithDropTarget,
           }),
-        onLand: (fromId, toId, syncCloneWithDropTarget) =>
-          trigger(LAND, pointerDownEvent, {
-            fromId,
-            toId,
-            syncCloneWithDropTarget,
-          }),
+        onLand: (detail) => trigger(LAND, pointerDownEvent, detail),
         onToss: ({ gestureInfo }) =>
           trigger(TOSS, pointerDownEvent, {
             id: element.id,
@@ -19670,6 +19724,7 @@ import.meta.css = /* css */[`[data-scrollable] > .navi_loading_outline_wrapper, 
 
 [data-scrollable] {
   overflow: var(--x-scrollable-overflow, auto);
+  scroll-padding: var(--navi-scroll-padding, var(--navi-s));
   --box-header-z-index: var(--navi-z-index-sticky);
   --box-footer-z-index: var(--navi-z-index-sticky);
   isolation: isolate;
@@ -19714,8 +19769,9 @@ import.meta.css = /* css */[`[data-scrollable] > .navi_loading_outline_wrapper, 
       border-bottom-left-radius: inherit;
       outline-width: var(--navi-focus-outline-width);
       outline-offset: calc(-1 * var(--navi-focus-outline-width));
-      flex: 0 auto;
       min-height: 0;
+      scroll-padding: var(--navi-scroll-padding, var(--navi-s));
+      flex: 0 auto;
       overflow: auto;
 
       &:focus-visible {
@@ -44401,6 +44457,7 @@ const mayHaveHiddenFocus = (event) => {
   );
 };
 
+const scrollportHeightMap = new WeakMap();
 /**
  * Scrolls whatever holds focus inside `popupEl` back into view, if the popup
  * getting shorter has pushed it out.
@@ -44415,14 +44472,27 @@ const mayHaveHiddenFocus = (event) => {
  * past its bottom edge — visually, swallowed by the footer. The browser does
  * not redo a scroll-into-view it already answered, so this does.
  *
+ * Only what the shrink itself hid, though: with the keyboard up the user reads
+ * the rest of the popup by scrolling the field away — to reach the submit under
+ * it, typically — and the room keeps changing while they do (a keyboard settling
+ * in two steps, a suggestion strip, a browser bar). Answering each of those by
+ * scrolling the field back takes the popup away from wherever they had just
+ * scrolled it, over and over: what they were reading cannot be reached at all
+ * without blurring the field first, and the popup reads as unscrollable. So the
+ * field is brought back only when it was in view before the room shrank, which
+ * one remembered number answers: a resize moves neither scrollTop nor the
+ * element's offset inside the scrolled content, so measuring against the height
+ * the scrollport HAD is measuring the state before the change.
+ *
  * Scoped to the field's own scroll container (never the page): a popup traps
  * scrolling precisely so the document underneath cannot move, and a plain
  * scrollIntoView walks past a container whose scrollbar isn't visible — see
  * scrollIntoViewScoped's own doc.
  *
- * "nearest": the smallest scroll that makes it visible, and none at all when
- * it already is — so this is free to call on every resize, and never fights
- * where the user had scrolled to.
+ * "nearest": the smallest scroll that makes it visible, and none at all when it
+ * already is. Where it lands is the container's own business — a navi scroller
+ * keeps a band free at its edges so a field never comes back glued to one (see
+ * scroll-padding in box.jsx).
  */
 const keepFocusedElementVisible = (popupEl) => {
   const { activeElement } = document;
@@ -44432,7 +44502,49 @@ const keepFocusedElementVisible = (popupEl) => {
   if (!popupEl.contains(activeElement)) {
     return;
   }
-  scrollIntoViewScoped(activeElement, { block: "nearest" });
+  const scrollContainer = getScrollContainer(activeElement);
+  if (!scrollContainer || !popupEl.contains(scrollContainer)) {
+    // What scrolls the field is outside the popup, which means the page: a
+    // popup holds it still on purpose (trapScrollInside), so there is nothing
+    // here to scroll back.
+    return;
+  }
+  const scrollportHeight = scrollContainer.clientHeight;
+  const scrollportHeightBefore = scrollportHeightMap.get(scrollContainer);
+  scrollportHeightMap.set(scrollContainer, scrollportHeight);
+  if (scrollportHeightBefore !== undefined) {
+    if (scrollportHeight >= scrollportHeightBefore) {
+      // Nothing was taken away, so nothing was hidden by this.
+      return;
+    }
+    if (
+      !isVisibleInScrollport(
+        activeElement,
+        scrollContainer,
+        scrollportHeightBefore,
+      )
+    ) {
+      return;
+    }
+  }
+  scrollIntoViewScoped(activeElement, {
+    container: scrollContainer,
+    block: "nearest",
+  });
+};
+
+// Whether any part of `el` was showing in `container` back when its scrollport
+// was `scrollportHeight` tall. Both boxes are read now: the container may have
+// moved as well as shrunk (a centered dialog re-centers itself), and the
+// difference between the two tops is what that move leaves alone.
+const isVisibleInScrollport = (el, container, scrollportHeight) => {
+  const elRect = el.getBoundingClientRect();
+  const containerRect = container.getBoundingClientRect();
+  const elTop = elRect.top - containerRect.top + container.scrollTop;
+  const elBottom = elTop + elRect.height;
+  const scrollportTop = container.scrollTop;
+  const scrollportBottom = scrollportTop + scrollportHeight;
+  return elBottom > scrollportTop && elTop < scrollportBottom;
 };
 
 /**
@@ -44477,6 +44589,32 @@ const whenTransitionSettles = (el, onSettled) => {
     }
     stopWatching();
   };
+};
+
+/**
+ * Drops the document's text selection when it lives inside `el`, leaving a
+ * selection made elsewhere on the page alone.
+ *
+ * A popup being closed takes its content with it, and a selection is a claim
+ * on content the user can still act on: kept, it would outlive the surface it
+ * was made on — painted on the box for the length of its exit transition, with
+ * the handles and the copy toolbar a phone draws from the live selection
+ * hanging over something that is going away — and reappear with the box on
+ * the next opening. Dropping the selection is the only way to remove that
+ * chrome: a `user-select: none` on the closing box hides the highlight in some
+ * browsers only, and the handles are the browser's own, drawn from the
+ * selection object rather than from any style.
+ */
+const clearTextSelectionInside = (el) => {
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) {
+    return;
+  }
+  const range = selection.getRangeAt(0);
+  if (!el.contains(range.commonAncestorContainer)) {
+    return;
+  }
+  selection.removeAllRanges();
 };
 
 /**
@@ -56135,6 +56273,15 @@ const css$E = /* css */`
        scroll (a short body, an axis with nowhere to go) must not travel to
        whatever is behind. */
     overscroll-behavior: none;
+    /* What the backdrop paints, resolved on the dialog rather than on the
+       pseudo-element that paints it: ::backdrop takes no inline style and
+       carries no attribute of its own, so the backdropColor/backdropFilter
+       props land here — inline, beating every rule below — and the
+       pseudo-element inherits whichever won. A colour and a filter travel
+       together everywhere a backdrop is painted: see navi_css_vars.js for
+       why a blur is not tied to what an outside click does. */
+    --backdrop-background: var(--navi-backdrop-close-background);
+    --backdrop-filter: var(--navi-backdrop-close-backdrop-filter);
 
     /* Docking answers a different question than --dialog-max-width: a sheet
        spans its container's full width, flush against the two side edges —
@@ -56185,6 +56332,7 @@ const css$E = /* css */`
     &[data-flush-bottom][data-flush-left] {
       border-bottom-left-radius: 0;
     }
+
     /* The placement is a translate, so the translate property is spoken for
        here (see applyNewPosition in visible_rect.js, which owns it and animates
        it itself through the Web Animations API rather than through this file's
@@ -56192,26 +56340,26 @@ const css$E = /* css */`
        to filter). An entrance animation moves the dialog through scale and
        transform instead, which compose under it: see popup_css.js. */
 
+    &[data-pointer-interaction-outside="capture"] {
+      --backdrop-background: var(--navi-backdrop-capture-background);
+      --backdrop-filter: var(--navi-backdrop-capture-backdrop-filter);
+    }
+    /* backdropVariant, after the rules it overrides: same specificity, so
+       order is what decides. showModal() still makes the page inert either
+       way — only the paint goes away. */
+    &[data-backdrop-variant="discrete"] {
+      --backdrop-background: var(--navi-backdrop-discrete-background);
+      --backdrop-filter: var(--navi-backdrop-discrete-backdrop-filter);
+    }
+    /* The one backdrop with nothing to blur through: "invisible" paints
+       nothing at all, and a filter would still be seen. */
+    &[data-backdrop-variant="invisible"] {
+      --backdrop-background: transparent;
+      --backdrop-filter: none;
+    }
     &::backdrop {
-      background: var(--navi-backdrop-close-background);
-    }
-    &[data-pointer-interaction-outside="capture"]::backdrop {
-      background: var(--navi-backdrop-capture-background);
-      backdrop-filter: var(--navi-backdrop-capture-backdrop-filter);
-    }
-
-    /* backdropVariant, keyed off the originating element (a
-       pseudo-element carries no attributes of its own — same reasoning as
-       the capture rule just above). After the rules it overrides: same
-       specificity, so order is what decides. showModal() still makes the
-       page inert either way — only the paint goes away. */
-    &[data-backdrop-variant="discrete"]::backdrop {
-      background: var(--navi-backdrop-discrete-background);
-      backdrop-filter: none;
-    }
-    &[data-backdrop-variant="invisible"]::backdrop {
-      background: transparent;
-      backdrop-filter: none;
+      background: var(--backdrop-background);
+      backdrop-filter: var(--backdrop-filter);
     }
 
     /* Nested under &[navi-animation] (not the other way around) so every
@@ -56321,6 +56469,17 @@ const css$E = /* css */`
        in openEffect) gets pointer-events: none mid-transition. */
     pointer-events: auto;
 
+    /* Painted through the same two variables as the via-attribute renderer's
+       ::backdrop (see them for what each rule is for) — here they resolve on
+       the element that paints, which is also the element the
+       backdropColor/backdropFilter props are set on. Declared unconditionally
+       first so a variable inherited from a dialog this popup was opened from
+       can never reach the paint. */
+    --backdrop-background: transparent;
+    --backdrop-filter: none;
+    background: var(--backdrop-background);
+    backdrop-filter: var(--backdrop-filter);
+
     /* A plain div, unlike dialogEl itself (a real <dialog>, natively hidden
        by default until .show()/.showModal() adds [open]) — needs its own
        starting-hidden mechanism. [navi-hidden] is set from useDialogProps'
@@ -56337,23 +56496,20 @@ const css$E = /* css */`
     /* Makes pointerInteractionOutsideEffect have a visible impact on backdrop */
     &[data-pointer-interaction-outside="close"],
     &[data-pointer-interaction-outside="cancel"] {
-      background: var(--navi-backdrop-close-background);
+      --backdrop-background: var(--navi-backdrop-close-background);
+      --backdrop-filter: var(--navi-backdrop-close-backdrop-filter);
     }
     &[data-pointer-interaction-outside="capture"] {
-      background: var(--navi-backdrop-capture-background);
-      backdrop-filter: var(--navi-backdrop-capture-backdrop-filter);
+      --backdrop-background: var(--navi-backdrop-capture-background);
+      --backdrop-filter: var(--navi-backdrop-capture-backdrop-filter);
     }
-
-    /* Same override as the via-attribute renderer's own ::backdrop rules
-       above, on the real element this renderer uses instead — see them for
-       the specificity/ordering reasoning. */
     &[data-backdrop-variant="discrete"] {
-      background: var(--navi-backdrop-discrete-background);
-      backdrop-filter: none;
+      --backdrop-background: var(--navi-backdrop-discrete-background);
+      --backdrop-filter: var(--navi-backdrop-discrete-backdrop-filter);
     }
     &[data-backdrop-variant="invisible"] {
-      background: transparent;
-      backdrop-filter: none;
+      --backdrop-background: transparent;
+      --backdrop-filter: none;
     }
 
     /* overlay is a no-op here (this backdrop is a plain div, never a
@@ -56480,6 +56636,17 @@ const css$E = /* css */`
  *   barely-there dim. `"invisible"`: fully transparent. The dialog stays modal
  *   either way — this only changes how much it insists visually, never what
  *   an outside click does or whether the page behind stays reachable.
+ * @param {string} [props.backdropColor] - The wash painted over what is
+ *   behind, for this popup alone: any CSS color (`"rgb(6 10 20 / 88%)"`).
+ *   Wins over `backdropVariant` and over the theme tokens
+ *   (`--navi-backdrop-*-background`), which is where the same choice goes
+ *   when it is the whole app's.
+ * @param {string} [props.backdropFilter] - What that same wash does to the
+ *   picture underneath: `"blur(4px)"` to keep the page behind recognisable
+ *   while it stops being readable. A `backdrop-filter` value, so
+ *   `saturate()`/`grayscale()` work too. How far what is behind withdraws is
+ *   a question of paint, not of what an outside click does — a backdrop that
+ *   closes can blur.
  * @param {boolean} [props.scrollCapture] - Traps scroll gestures inside the
  *   dialog so the page/container behind it can't scroll while it's open.
  *   A `layer="local"` dialog always locks its own positioned ancestor's
@@ -56816,6 +56983,13 @@ const useDialogProps = props => {
     // always modal, so "none" here never makes the page behind reachable:
     // it only stops the dim from being drawn.
     backdropVariant = "auto",
+    // The paint itself, when the tokens behind backdropVariant are not what
+    // this one dialog wants. Named/forwarded rather than left in ...rest:
+    // rest lands on the dialog element, and these belong to the backdrop —
+    // which is the pseudo-element of one renderer and a sibling of the other,
+    // so both objects below get them (see this file's CSS).
+    backdropColor,
+    backdropFilter,
     scrollCapture: scrollCaptureProp,
     // "auto" (default) → the dialog follows its content. "frozen" → measured
     // once, held at that size while open. See this prop's own JSDoc above.
@@ -57244,6 +57418,33 @@ const useDialogProps = props => {
       // recheck its own position whenever this dialog itself moves is
       // handled generically by applyNewPosition itself (dispatches
       // navi_position_change on every call) — nothing to do here.
+      logPlacement(triggerEvent, position);
+    };
+    // The whole picture in one line: where the dialog ended up, and what it
+    // believed about the room when it decided. Both are needed together — a box
+    // that looks wrong on screen while these numbers are right means something
+    // covers the screen that no API describes (a phone's autofill/suggestion
+    // strip), and the absence of a line after the keyboard arrives means the
+    // placement was never asked to run again.
+    const logPlacement = (triggerEvent, position) => {
+      // The decided target, never the current rect: the placement animates, so
+      // a box read right after applying one is somewhere between the two and
+      // reads like a decision nobody took.
+      const {
+        visualViewport
+      } = window;
+      // Reads nothing that brings the layout up to date — no getComputedStyle,
+      // no window.innerWidth/innerHeight. That is the very thing this line is
+      // here to observe (see getVisibleViewportRect in @jsenv/dom): a log that
+      // forced it would hand the NEXT placement a fresh viewport and hide the
+      // bug it was printed to show. Everything below is either already computed
+      // (the pick's own numbers, "room" being the room it had) or free to read.
+      const message = `placed on "${triggerEvent ? triggerEvent.type : "open"}": ${Math.round(position.width)}x${Math.round(position.height)} at ${Math.round(position.top)}->${Math.round(position.top + position.height)} | room ${Math.round(position.containerHeightAvailable)} | viewport ${Math.round(visualViewport.width)}x${Math.round(visualViewport.height)} +${Math.round(visualViewport.offsetLeft)},${Math.round(visualViewport.offsetTop)} | keyboard ${getVirtualKeyboardOverlayHeight()}`;
+      if (triggerEvent) {
+        debugPopup(triggerEvent, message);
+      } else {
+        debugPopup(message);
+      }
     };
     // Cleared here rather than on close, where the box is deliberately left
     // frozen at the size it was closing at (see the closing function's own
@@ -57391,6 +57592,7 @@ const useDialogProps = props => {
     }
     return closeEvent => {
       debugPopup(`"${closeEvent.type}" on ${getElementSignature(closeEvent.target)} -> closeDialog`);
+      clearTextSelectionInside(dialogEl);
       dialogEl.setAttribute("aria-expanded", "false");
       if (!isModal) {
         openLocalDialogCount = Math.max(0, openLocalDialogCount - 1);
@@ -57478,7 +57680,9 @@ const useDialogProps = props => {
     "styleCSSVars": DIALOG_STYLE_CSS_VARS,
     "animationDuration": rest.animationDuration,
     "data-pointer-interaction-outside": pointerInteractionOutsideEffect,
-    "data-backdrop-variant": backdropVariant
+    "data-backdrop-variant": backdropVariant,
+    backdropColor,
+    backdropFilter
   });
   Object.assign(contentProps, {
     tabIndex,
@@ -57512,6 +57716,11 @@ const useDialogProps = props => {
     // as the prop just above (and harmless for the custom renderer, whose
     // real backdrop element gets it via backdropProps).
     "data-backdrop-variant": backdropVariant,
+    // Read by the native ::backdrop, which inherits them from here (see this
+    // file's CSS) — the custom renderer's own backdrop element gets them via
+    // backdropProps above.
+    backdropColor,
+    backdropFilter,
     "styleCSSVars": DIALOG_STYLE_CSS_VARS,
     ...rest,
     ...autoFocusProps,
@@ -57628,6 +57837,8 @@ const DIALOG_PSEUDO_CLASSES = [":hover", ":active", ":focus", ":focus-visible", 
 // an inline border-radius would outrank them.
 const DIALOG_STYLE_CSS_VARS = {
   animationDuration: "--popup-animation-duration",
+  backdropColor: "--backdrop-background",
+  backdropFilter: "--backdrop-filter",
   borderRadius: "--dialog-border-radius",
   minWidth: "--dialog-min-width",
   maxWidth: "--dialog-max-width",
@@ -57861,8 +58072,18 @@ const css$D = /* css */`
     z-index: calc(var(--navi-z-index-popup) + var(--popover-stack-order, 0));
     margin: 0;
     padding: 0;
-    background: transparent;
+    /* What this backdrop paints, in two variables the rules below write as
+       defaults — so the backdropColor/backdropFilter props, inline on this
+       very element, beat all of them. Declared unconditionally first so a
+       variable inherited from a dialog this popover was opened from can never
+       reach the paint. A colour and a filter travel together everywhere a
+       backdrop is painted: see navi_css_vars.js for why a blur is not tied to
+       what an outside click does. */
+    --backdrop-background: transparent;
+    --backdrop-filter: none;
+    background: var(--backdrop-background);
     border: none;
+    backdrop-filter: var(--backdrop-filter);
     /* Always clickable while actually rendered (display: none/hidePopover()
        while genuinely closed already makes it non-interactive on its own)
        — an outside click should close the popover even while it's still
@@ -57893,11 +58114,12 @@ const css$D = /* css */`
     /* Makes pointerInteractionOutsideEffect have a visible impact on backdrop */
     &[data-pointer-interaction-outside="close"],
     &[data-pointer-interaction-outside="cancel"] {
-      background: var(--navi-backdrop-close-background);
+      --backdrop-background: var(--navi-backdrop-close-background);
+      --backdrop-filter: var(--navi-backdrop-close-backdrop-filter);
     }
     &[data-pointer-interaction-outside="capture"] {
-      background: var(--navi-backdrop-capture-background);
-      backdrop-filter: var(--navi-backdrop-capture-backdrop-filter);
+      --backdrop-background: var(--navi-backdrop-capture-background);
+      --backdrop-filter: var(--navi-backdrop-capture-backdrop-filter);
     }
 
     /* backdropVariant overrides whatever the effect above picked — same
@@ -57906,12 +58128,14 @@ const css$D = /* css */`
        and still pointer-events: auto, so an outside click keeps doing
        exactly what pointerInteractionOutsideEffect says. */
     &[data-backdrop-variant="discrete"] {
-      background: var(--navi-backdrop-discrete-background);
-      backdrop-filter: none;
+      --backdrop-background: var(--navi-backdrop-discrete-background);
+      --backdrop-filter: var(--navi-backdrop-discrete-backdrop-filter);
     }
+    /* The one backdrop with nothing to blur through: "invisible" paints
+       nothing at all, and a filter would still be seen. */
     &[data-backdrop-variant="invisible"] {
-      background: transparent;
-      backdrop-filter: none;
+      --backdrop-background: transparent;
+      --backdrop-filter: none;
     }
 
     /* navi-animation mirrors the content popover's own resolved value (set
@@ -57991,6 +58215,17 @@ const css$D = /* css */`
  *   changes how much the popover insists on being the thing you deal with.
  *   Ignored when `pointerInteractionOutsideEffect="none"` (there is no
  *   backdrop at all then, and outside clicks pass through).
+ * @param {string} [props.backdropColor] - The wash painted over what is
+ *   behind, for this popup alone: any CSS color (`"rgb(6 10 20 / 88%)"`).
+ *   Wins over `backdropVariant` and over the theme tokens
+ *   (`--navi-backdrop-*-background`), which is where the same choice goes
+ *   when it is the whole app's.
+ * @param {string} [props.backdropFilter] - What that same wash does to the
+ *   picture underneath: `"blur(4px)"` to keep the page behind recognisable
+ *   while it stops being readable. A `backdrop-filter` value, so
+ *   `saturate()`/`grayscale()` work too. How far what is behind withdraws is
+ *   a question of paint, not of what an outside click does — a backdrop that
+ *   closes can blur.
  * @param {boolean} [props.scrollCapture] - Traps scroll gestures inside the
  *   popover so the page/container behind it can't scroll while it's open.
  * @param {boolean} [props.focusCapture] - Traps Tab navigation inside the
@@ -58302,6 +58537,12 @@ const usePopoverProps = props => {
     // the paint the effect implies; "discrete"/"none" tone it down or
     // remove it entirely without giving up the outside click.
     backdropVariant = "auto",
+    // The paint itself, when the tokens behind backdropVariant are not what
+    // this one popover wants. Named/forwarded rather than left in ...rest:
+    // rest lands on the popover element, and these belong to its backdrop,
+    // which is a sibling element (see this file's top comment).
+    backdropColor,
+    backdropFilter,
     scrollCapture,
     focusCapture,
     // "auto" (default) → the popover follows its content. "frozen" → measured
@@ -58896,6 +59137,7 @@ const usePopoverProps = props => {
     // reason: only ever built here.
     return closeEvent => {
       debugPopup(closeEvent, `closePopover()`);
+      clearTextSelectionInside(popoverEl);
       popoverEl.setAttribute("aria-expanded", "false");
       // Set regardless of isTopLayer — see the open side's own identical
       // comment (openEffect above) for why hidePopover() alone isn't
@@ -59011,6 +59253,8 @@ const usePopoverProps = props => {
     "animationDuration": rest.animationDuration,
     "data-pointer-interaction-outside": pointerInteractionOutsideEffect,
     "data-backdrop-variant": backdropVariant,
+    backdropColor,
+    backdropFilter,
     "onMouseDown": mouseDownEvent => {
       if (mouseDownEvent.button !== 0) {
         return;
@@ -59115,6 +59359,8 @@ const POPOVER_PSEUDO_CLASSES = [":hover", ":active", ":focus", ":focus-visible",
 // handling).
 const POPUP_STYLE_CSS_VARS = {
   animationDuration: "--popup-animation-duration",
+  backdropColor: "--backdrop-background",
+  backdropFilter: "--backdrop-filter",
   minWidth: "--popover-min-width",
   maxWidth: "--popover-max-width",
   minHeight: "--popover-min-height",
@@ -59233,6 +59479,10 @@ const css$C = /* css */`@layer navi {
  *   how visible the backdrop is, independently of what an outside click
  *   does. Unlike `pointerInteractionOutsideEffect` above, this one needs no
  *   default here — `"auto"` already means the same thing on both sides.
+ * @param {string} [props.backdropColor] - Forwarded as-is (both understand it
+ *   identically): the wash the backdrop paints over what is behind.
+ * @param {string} [props.backdropFilter] - Forwarded as-is: what that wash
+ *   does to the picture underneath, `"blur(4px)"` and the like.
  * @param {boolean|"auto"|"fading"|"scaling"|"sliding"|"expanding"|`slide-from-${string}`|`expand-${string}`} [props.animation]
  *   - Forwarded as-is.
  * @param {string} [props.animationDuration] - Forwarded as-is.
@@ -60101,6 +60351,8 @@ const PickerContentInsidePopup = props => {
     // Named/forwarded rather than left in ...rest: rest goes to the picker
     // element itself, not the popup, and this belongs to the popup.
     backdropVariant,
+    backdropColor,
+    backdropFilter,
     dialogExpand,
     dialogExpandX,
     dialogExpandY,
@@ -60176,6 +60428,8 @@ const PickerContentInsidePopup = props => {
       scrollCapture: scrollCapture,
       pointerInteractionOutsideEffect: pointerLock ? "capture" : pointerInteractionOutsideEffect,
       backdropVariant: backdropVariant,
+      backdropColor: backdropColor,
+      backdropFilter: backdropFilter,
       focusCapture: isPopover ? focusCapture : undefined,
       expand: isPopover ? undefined : dialogExpand,
       expandX: isPopover ? undefined : dialogExpandX,
@@ -71251,6 +71505,8 @@ const css$n = /* css */`.navi_split_button {
  *   dockedOnSmallTouchScreen?: boolean,
  *   marginWithContainer?: number | string,
  *   backdropVariant?: "auto" | "discrete" | "invisible",
+ *   backdropColor?: string,
+ *   backdropFilter?: string,
  *   pointerInteractionOutsideEffect?: "close" | "cancel" | "capture",
  *   escapeEffect?: "cancel" | "close",
  *   popupLayer?: "top" | "local",
@@ -71297,6 +71553,7 @@ const css$n = /* css */`.navi_split_button {
  * `dialogMaxWidth`/`Height`,
  * `marginWithContainer`, `popoverMode`, `popoverSpacing`, `popupLayer`,
  * `popupTestId`, `popupWidthFitContent`, `popoverMaxHeight`, `backdropVariant`,
+ * `backdropColor`, `backdropFilter`,
  * `pointerInteractionOutsideEffect`, `escapeEffect`, `closeOnFocusOut`,
  * `scrollCapture`, `focusCapture`, `popupBackgroundColor`,
  * `popupBorderRadius`, `animation`. See picker.jsx for what each one says.
@@ -71497,7 +71754,7 @@ const SplitButton = props => {
 // What the Picker's popup answers to — Picker's own popup props, named here so
 // a caller reaches all of them through the split button (see picker.jsx's JSDoc
 // for what each one says).
-const POPUP_PROP_SET = new Set(["mode", "popupLayer", "popupTestId", "positionArea", "popoverMode", "popoverSpacing", "popupWidthFitContent", "popoverMaxHeight", "dialogMinWidth", "dialogMinHeight", "dialogMaxWidth", "dialogMaxHeight", "dialogExpand", "dialogExpandX", "dialogExpandY", "dockedOnSmallTouchScreen", "marginWithContainer", "backdropVariant", "pointerInteractionOutsideEffect", "escapeEffect", "closeOnFocusOut", "scrollCapture", "focusCapture", "popupBackgroundColor", "popupBorderRadius", "animation"]);
+const POPUP_PROP_SET = new Set(["mode", "popupLayer", "popupTestId", "positionArea", "popoverMode", "popoverSpacing", "popupWidthFitContent", "popoverMaxHeight", "dialogMinWidth", "dialogMinHeight", "dialogMaxWidth", "dialogMaxHeight", "dialogExpand", "dialogExpandX", "dialogExpandY", "dockedOnSmallTouchScreen", "marginWithContainer", "backdropVariant", "backdropColor", "backdropFilter", "pointerInteractionOutsideEffect", "escapeEffect", "closeOnFocusOut", "scrollCapture", "focusCapture", "popupBackgroundColor", "popupBorderRadius", "animation"]);
 const splitPopupProps = props => {
   const popupProps = {};
   const boxProps = {};

@@ -4524,15 +4524,31 @@ const waitForPressHeld = (
     }
     cancelPress(pointerEndEvent);
   };
+  // Somebody else settled what this press is. Taking the pointer is how a gesture
+  // says it — and it says it about the same finger this wait is counting on, so
+  // whatever the press turned out to be, it is not a hold. Two waits on one press
+  // is the ordinary case rather than an odd one: an element that can be picked up
+  // AND held answers a finger with two delays, the shorter one wins, and without
+  // this the longer one would answer a hundred milliseconds into the carry.
+  // The listener goes with the countdown, so the gesture THIS wait starts (which
+  // captures the pointer from inside onPressHeld) never reaches it.
+  const onGotPointerCapture = (captureEvent) => {
+    if (captureEvent.pointerId !== pointerId) {
+      return;
+    }
+    cancelPress(captureEvent);
+  };
   // On window rather than on the element: the finger can leave it, and the
   // element itself can be taken out of the document while the press is waiting.
   window.addEventListener("pointermove", onPointerMove);
   window.addEventListener("pointerup", onPointerEnd);
   window.addEventListener("pointercancel", onPointerEnd);
+  window.addEventListener("gotpointercapture", onGotPointerCapture, true);
   countdownCleanupCallbacks.push(() => {
     window.removeEventListener("pointermove", onPointerMove);
     window.removeEventListener("pointerup", onPointerEnd);
     window.removeEventListener("pointercancel", onPointerEnd);
+    window.removeEventListener("gotpointercapture", onGotPointerCapture, true);
   });
 
   onPressStart?.(pressEvent);
@@ -7515,7 +7531,8 @@ const getScrollbarState = (
  * scrollIntoViewScoped avoids this by targeting one container explicitly.
  *
  * Uses scrollTo() so CSS scroll-behavior:smooth on the container is respected.
- * Respects scroll-margin-* on the element.
+ * Respects scroll-margin-* on the element and scroll-padding-* on the
+ * container.
  *
  * @param {Element} el - The element to scroll into view.
  * @param {object} options
@@ -7621,6 +7638,31 @@ const getScrollIntoViewScopedOffsets = (
     containerWidth = containerRect.width;
   }
 
+  // The band the container keeps free at each of its edges for whatever is
+  // scrolled to — what a sticky header, a footer or a fixed bar reserves so an
+  // element does not land underneath it (see navi's safe_area.js). The
+  // scrollport shrinks by it on both axes, and every alignment below is against
+  // that smaller rectangle.
+  const containerStyle = getComputedStyle(container);
+  const scrollPaddingTop = resolveScrollPadding(
+    containerStyle.scrollPaddingTop,
+    containerHeight,
+  );
+  const scrollPaddingBottom = resolveScrollPadding(
+    containerStyle.scrollPaddingBottom,
+    containerHeight,
+  );
+  const scrollPaddingLeft = resolveScrollPadding(
+    containerStyle.scrollPaddingLeft,
+    containerWidth,
+  );
+  const scrollPaddingRight = resolveScrollPadding(
+    containerStyle.scrollPaddingRight,
+    containerWidth,
+  );
+  const viewHeight = containerHeight - scrollPaddingTop - scrollPaddingBottom;
+  const viewWidth = containerWidth - scrollPaddingLeft - scrollPaddingRight;
+
   // Element position relative to the container's scroll origin.
   const elTop = elRect.top - containerTop + currentScrollTop - scrollMarginTop;
   const elBottom = elTop + elRect.height + scrollMarginTop + scrollMarginBottom;
@@ -7628,55 +7670,67 @@ const getScrollIntoViewScopedOffsets = (
     elRect.left - containerLeft + currentScrollLeft - scrollMarginLeft;
   const elRight = elLeft + elRect.width + scrollMarginLeft + scrollMarginRight;
 
+  // The two scroll positions that put the element against one edge of the view
+  // or the other — every alignment below is one of them, or a point between.
+  const scrollTopPuttingElAtViewStart = elTop - scrollPaddingTop;
+  const scrollTopPuttingElAtViewEnd =
+    elBottom - containerHeight + scrollPaddingBottom;
+  const viewStart = currentScrollTop + scrollPaddingTop;
+  const viewEnd = currentScrollTop + containerHeight - scrollPaddingBottom;
+
   let newScrollTop = currentScrollTop;
   if (block === "start") {
-    newScrollTop = elTop;
+    newScrollTop = scrollTopPuttingElAtViewStart;
   } else if (block === "end") {
-    newScrollTop = elBottom - containerHeight;
+    newScrollTop = scrollTopPuttingElAtViewEnd;
   } else if (block === "center") {
-    newScrollTop = elTop + (elRect.height - containerHeight) / 2;
+    newScrollTop = elTop + (elRect.height - viewHeight) / 2 - scrollPaddingTop;
   } else {
     // nearest: scroll only if partially or fully out of view.
-    // When the element is taller than the container, only scroll if it is
+    // When the element is taller than the view, only scroll if it is
     // completely out of view — otherwise it is already as visible as possible.
-    const scrollBottom = currentScrollTop + containerHeight;
     const elHeight = elBottom - elTop;
-    if (elHeight <= containerHeight) {
-      if (elTop < currentScrollTop) {
-        newScrollTop = elTop;
-      } else if (elBottom > scrollBottom) {
-        newScrollTop = elBottom - containerHeight;
+    if (elHeight <= viewHeight) {
+      if (elTop < viewStart) {
+        newScrollTop = scrollTopPuttingElAtViewStart;
+      } else if (elBottom > viewEnd) {
+        newScrollTop = scrollTopPuttingElAtViewEnd;
       }
-    } else if (elBottom < currentScrollTop) {
-      newScrollTop = elBottom - containerHeight;
-    } else if (elTop > scrollBottom) {
-      newScrollTop = elTop;
+    } else if (elBottom < viewStart) {
+      newScrollTop = scrollTopPuttingElAtViewEnd;
+    } else if (elTop > viewEnd) {
+      newScrollTop = scrollTopPuttingElAtViewStart;
     }
   }
 
+  const scrollLeftPuttingElAtViewStart = elLeft - scrollPaddingLeft;
+  const scrollLeftPuttingElAtViewEnd =
+    elRight - containerWidth + scrollPaddingRight;
+  const viewLeftEdge = currentScrollLeft + scrollPaddingLeft;
+  const viewRightEdge = currentScrollLeft + containerWidth - scrollPaddingRight;
+
   let newScrollLeft = currentScrollLeft;
   if (inline === "start") {
-    newScrollLeft = elLeft;
+    newScrollLeft = scrollLeftPuttingElAtViewStart;
   } else if (inline === "end") {
-    newScrollLeft = elRight - containerWidth;
+    newScrollLeft = scrollLeftPuttingElAtViewEnd;
   } else if (inline === "center") {
-    newScrollLeft = elLeft + (elRect.width - containerWidth) / 2;
+    newScrollLeft = elLeft + (elRect.width - viewWidth) / 2 - scrollPaddingLeft;
   } else {
     // nearest: scroll only if partially or fully out of view.
-    // When the element is wider than the container, only scroll if it is
+    // When the element is wider than the view, only scroll if it is
     // completely out of view — otherwise it is already as visible as possible.
-    const scrollRight = currentScrollLeft + containerWidth;
     const elWidth = elRight - elLeft;
-    if (elWidth <= containerWidth) {
-      if (elLeft < currentScrollLeft) {
-        newScrollLeft = elLeft;
-      } else if (elRight > scrollRight) {
-        newScrollLeft = elRight - containerWidth;
+    if (elWidth <= viewWidth) {
+      if (elLeft < viewLeftEdge) {
+        newScrollLeft = scrollLeftPuttingElAtViewStart;
+      } else if (elRight > viewRightEdge) {
+        newScrollLeft = scrollLeftPuttingElAtViewEnd;
       }
-    } else if (elRight < currentScrollLeft) {
-      newScrollLeft = elRight - containerWidth;
-    } else if (elLeft > scrollRight) {
-      newScrollLeft = elLeft;
+    } else if (elRight < viewLeftEdge) {
+      newScrollLeft = scrollLeftPuttingElAtViewEnd;
+    } else if (elLeft > viewRightEdge) {
+      newScrollLeft = scrollLeftPuttingElAtViewStart;
     }
   }
 
@@ -7684,6 +7738,20 @@ const getScrollIntoViewScopedOffsets = (
     left: newScrollLeft,
     top: newScrollTop,
   };
+};
+
+// "auto" is the one keyword scroll-padding takes, and it means "the browser
+// picks" — which is 0 everywhere in practice. Percentages resolve against the
+// scrollport, and getComputedStyle hands them back as written.
+const resolveScrollPadding = (value, scrollportSize) => {
+  const number = parseFloat(value);
+  if (Number.isNaN(number)) {
+    return 0;
+  }
+  if (value.endsWith("%")) {
+    return (number / 100) * scrollportSize;
+  }
+  return number;
 };
 
 /**
@@ -9978,6 +10046,13 @@ const createDragElementPositioner = (
   // returns null (document.documentElement instead — see its own doc).
   const positionedParent = getPositionedParent(elementToMove || element);
   const scrollContainer = getScrollContainer(element);
+  // Whether what MOVES is pinned to the viewport — a copy carried above the page
+  // in the top layer, a fixed panel dragged by its handle. Such a thing does not
+  // travel with any scroll, so the scroll that happens while it is carried is
+  // none of its business (see getScrollOffsets).
+  const elementMovedIsPinnedToViewport = Boolean(
+    findSelfOrAncestorFixedPosition(elementToMove || element),
+  );
   const [getPositionOffsets, getScrollOffsets] = createGetOffsets({
     positionedParent,
     referencePositionedParent: referenceElement
@@ -9987,6 +10062,7 @@ const createDragElementPositioner = (
     referenceScrollContainer: referenceElement
       ? getScrollContainer(referenceElement)
       : scrollContainer,
+    elementMovedIsPinnedToViewport,
   });
 
   {
@@ -10039,6 +10115,7 @@ const createGetOffsets = ({
   referencePositionedParent,
   scrollContainer,
   referenceScrollContainer,
+  elementMovedIsPinnedToViewport,
 }) => {
   const samePositionedParent = positionedParent === referencePositionedParent;
   const getScrollOffsets = createGetScrollOffsets(
@@ -10046,6 +10123,7 @@ const createGetOffsets = ({
     referenceScrollContainer,
     positionedParent,
     samePositionedParent,
+    elementMovedIsPinnedToViewport,
   );
 
   if (samePositionedParent) {
@@ -10250,6 +10328,7 @@ const createGetScrollOffsets = (
   referenceScrollContainer,
   positionedParent,
   samePositionedParent,
+  elementMovedIsPinnedToViewport,
 ) => {
   const getGetScrollOffsetsSameContainer = () => {
     const scrollContainerIsDocument = scrollContainer === documentElement;
@@ -10271,9 +10350,14 @@ const createGetScrollOffsets = (
         return getScrollOffsetsFixed;
       }
     }
+    // A thing pinned to the viewport is inside nothing that scrolls: the page
+    // can run under it and it stays where it is. So it takes the frozen offset
+    // below whatever containment says — and the document, as a scroll container,
+    // answers "yes, it is inside me" to everything.
     const positionedParentIsInsideScrollContainer =
-      referenceScrollContainer === documentElement ||
-      referenceScrollContainer.contains(positionedParent);
+      !elementMovedIsPinnedToViewport &&
+      (referenceScrollContainer === documentElement ||
+        referenceScrollContainer.contains(positionedParent));
     if (!positionedParentIsInsideScrollContainer) {
       // positionedParent is outside the scroll container (e.g. clone in document.body
       // while tracking an element inside a custom scroll container).
@@ -12066,6 +12150,7 @@ const css$1 = /* css */ `.navi_drop_hint {
   transform: scale(var(--drag-clone-scale, 1.03));
   transform-origin: var(--drag-origin);
   transition: transform .15s cubic-bezier(.34, 1.56, .64, 1), box-shadow .15s;
+  translate: none !important;
 }
 
 @starting-style {
@@ -12095,90 +12180,6 @@ import.meta.css = [css$1, "@jsenv/dom/src/interaction/drag/drag_to.js"];
 // if it had landed on it.
 const DRAG_IGNORED_SELECTOR =
   '[data-drag-ignore],[data-self-interactions~="drag"],[data-self-interactions~="*"],[popover],dialog';
-
-/**
- * Starts a drag-to-reorder interaction on a list item.
- *
- * Handles the full reorder UX:
- * - Activates only once the intent is established — a short movement with a mouse, a long
- *   press with a finger (see `dragAfterIntent`), so that neither a click nor a scroll
- *   reorders anything by accident.
- * - Clones the grabbed element and moves the clone while the original stays hidden in place
- *   (keeps the layout intact so other items don't shift during the drag).
- * - The clone and the drop-hint live in the dragged element's own parent, so the CSS vars
- *   that dress them (`--drag-clone-shadow`, `--drop-hint-size`, …) reach them by plain
- *   inheritance, and so do the rules the list writes for its items.
- * - Shows a drop-hint line indicating where the item will land.
- * - Drop-target detection is intersection-based: the clone's bounding rect is compared
- *   against every item that matches `itemSelector` in the scroll container.
- * - No-ops are filtered: releasing on the grabbed element itself, or in a position that
- *   would leave it at exactly the same index, never triggers `onReorder`.
- * - On a valid drop, the clone animates to the drop position via the View Transitions API,
- *   `onReorder` is called inside the transition callback so the DOM update and the animation
- *   are captured together, then the clone is removed.
- * - On a cancelled drop (pointer released with no valid target), the clone is removed
- *   immediately without calling `onReorder`.
- *
- * IDs are used as the bridge between DOM elements and JS state because:
- * - Not all DOM elements matching `itemSelector` may be valid drop targets
- *   (holes in the structure), so DOM indices don't reliably map to state indices.
- * - Virtual lists render fewer DOM nodes than the total item count, so
- *   DOM-index-based counting would be wrong.
- *
- * Any option not listed below is forwarded to `createDragToMoveGestureController`
- * (`areaConstraint`, `autoScrollAreaPadding`, `stickyFrontiers`…), except
- * `releasePositionEffect`, always `"manual"` here: what moves is the clone, and it
- * is removed on release, so there is no position to commit or cancel.
- *
- * @param {PointerEvent} event
- *   The `pointerdown` event that may become a reorder.
- * @param {object} options
- * @param {Element} [options.draggedElement=event.currentTarget]
- *   The list item to drag.
- * @param {Element} [options.containerElement=draggedElement.parentElement]
- *   Element searched with `itemSelector` to find the items to drop between.
- * @param {string} [options.itemSelector]
- *   CSS selector that matches all list items inside `containerElement`.
- *   Used for drop-target detection and no-op filtering. Left out, nothing is a
- *   drop target: no hint is drawn and no reorder can be answered — which is what
- *   a drag that only ever throws the thing away asks for.
- * @param {function} options.getItemId
- *   Returns the stable ID for a given DOM element.
- *   Signature: `getItemId(element) → id`.
- * @param {function} options.onReorder
- *   Called when the user drops the item in a new position.
- *   Signature: `onReorder(fromId, toId, syncCloneWithDropTarget)`.
- *   - `fromId`: stable ID of the dragged item.
- *   - `toId`: stable ID of the item to insert before, or `null` to append at the end.
- *   - `syncCloneWithDropTarget`: call it synchronously inside a
- *     `document.startViewTransition` callback, next to the DOM mutation, so the
- *     clone is captured at its landing position.
- * @param {(detail: {gestureInfo: object, dropTarget: Element|null}) => "reorder"|"toss"|"cancel"} [options.resolveDrop]
- *   What THIS release means, when the answer is not simply "a target was found or
- *   not": the same grab can be meant to reorder or to get rid of the thing, and
- *   only the caller knows which — far and fast is a throw, over a row is a move.
- *   Left out, a drop target reorders and anything else is cancelled.
- * @param {(detail: {gestureInfo: object}) => Promise|void} [options.onToss]
- *   The release was a throw. The clone leaves the screen the way it was thrown
- *   while this runs; it comes back if the promise rejects, because the thing still
- *   exists and the screen has to say so.
- * @param {object} [options.direction={ x: false, y: true }]
- *   Axes along which dragging is allowed. Passed to `createDragToMoveGestureController`.
- * @param {number} [options.threshold=5]
- *   Distance (px) a mouse must travel before the press becomes a drag.
- * @param {boolean|"if-touch"} [options.longPress="if-touch"]
- *   Which pointers start the drag by holding still instead of by travelling.
- * @param {number} [options.longPressDelay=400]
- *   How long (ms) such a pointer must stay down.
- * @param {number} [options.longPressSlop=8]
- *   How far (px) it may drift during that wait before the press is abandoned.
- * @param {function} [options.onPressStart]
- *   The pointer went down and the wait began (a cue that the press counts).
- * @param {function} [options.onPressCancel]
- *   The pointer moved or lifted before the wait was over.
- * @param {function} [options.onPress]
- *   The wait completed and the item is now held (haptics, scale…).
- */
 
 /**
  * Creates a gesture controller that moves elements via drag.
@@ -12588,25 +12589,43 @@ const createDragToMoveGestureController = ({
  *   It was put somewhere. The position is already committed when this runs — the
  *   hand let go of it there — and travels back if the promise rejects.
  * @param {Element} [options.containerElement=draggedElement.parentElement]
- *   Searched with `itemSelector` for the items to drop between.
+ *   Where the places are looked for with `itemSelector`, and where the drop hint
+ *   is drawn. The parent covers a list and a board, whose items are siblings of
+ *   what is carried; anything else has to be said — a palette beside the surface
+ *   it fills, a piece drawn INSIDE the place it can be put back on.
  * @param {string} [options.itemSelector] What matches the items of the list.
- * @param {function} [options.getItemId] `getItemId(element) → id`.
+ *   Left out, nothing is a place: no hint is drawn and no landing can be
+ *   answered, which is what a drag that only ever throws the thing away asks for.
+ * @param {function} [options.getItemId] `getItemId(element) → id`. An id rather
+ *   than a DOM index, because the two do not match: a list draws fewer rows than
+ *   it has, a search reorders them, and the structure may have holes.
  * @param {function} [options.onReorder]
  *   `onReorder(fromId, toId, syncCloneWithDropTarget)` — see its own note below.
  * @param {(detail: {gestureInfo: object}) => Promise|void} [options.onToss]
  *   It was thrown away. The copy leaves the screen while this runs and comes back
  *   if the promise rejects, because the thing still exists and the screen has to
  *   say so.
- * @param {function} [options.onLand]
- *   `onLand(fromId, toId, syncCloneWithDropTarget)` — it came down on `toId`, which
- *   is an element and never null: nothing under the copy is a cancelled release.
- *   The copy is held until what comes back settles, exactly like `onReorder`.
- *   `syncCloneWithDropTarget` takes an element when the place is not the shape of
- *   what stands on it: the copy then takes THAT box instead of the target's.
+ * @param {(detail: {fromId: string, toId: string, x: number, y: number, width: number, height: number, syncCloneWithDropTarget: Function}) => Promise|void} [options.onLand]
+ *   It came down on `toId`, which is an element and never null: nothing under the
+ *   copy is a cancelled release. `x`/`y`/`width`/`height` say WHERE on it, which
+ *   is the whole answer when the place is a surface — a plan, a map — with no
+ *   element under the copy to name. The copy is held until what comes back
+ *   settles, exactly like `onReorder`. `syncCloneWithDropTarget` takes an element
+ *   when the place is not the shape of what stands on it: the copy then takes
+ *   THAT box instead of the target's.
  * @param {number} [options.tossDistance=110] How far a throw goes, in px.
  * @param {number} [options.tossSpeed=0.45] And how fast, in px/ms. BOTH are asked
  *   for: one without the other is moving the thing while hesitating, and nothing is
  *   thrown away on a hesitation.
+ * @param {("throw"|"release-outside")[]} [options.tossBy=["throw"]] How a toss
+ *   is made here. A THROW is far and fast — the flick that gets rid of something,
+ *   a list's gesture, judged before any landing. A RELEASE OUTSIDE has no place
+ *   under it — dragging something off the surface it belongs to and letting go,
+ *   deliberate and never a flick, a surface's gesture. Each is asked for on its
+ *   own: a surface wants only the second (a fast drag across it that ends ON it
+ *   has not asked for the thing to go), a list only the first (a row let go of
+ *   beside its list is a row put back). With no place to be outside of (no
+ *   `itemSelector`), every release is outside.
  *
  * Everything else is forwarded to `createDragToMoveGestureController`
  * (`areaConstraint`, `autoScrollAreaPadding`, `direction`…) and to `dragAfterIntent`
@@ -12721,6 +12740,8 @@ const startDragToMoveElement = (
 // hesitating, and nothing is thrown away on a hesitation — it comes back.
 const TOSS_DISTANCE_TO_COMMIT = 110;
 const TOSS_SPEED_TO_COMMIT = 0.45;
+// The flick is how a list gets rid of a row; a surface says otherwise.
+const TOSS_BY_DEFAULT = ["throw"];
 
 const resolveDropMeaning = ({
   gestureInfo,
@@ -12730,6 +12751,7 @@ const resolveDropMeaning = ({
   canLand,
   tossDistance = TOSS_DISTANCE_TO_COMMIT,
   tossSpeed = TOSS_SPEED_TO_COMMIT,
+  tossBy = TOSS_BY_DEFAULT,
 }) => {
   if (gestureInfo.cancelled) {
     // Nobody let go of anything: the gesture was taken away mid-air (the
@@ -12737,7 +12759,7 @@ const resolveDropMeaning = ({
     // to be at that moment is not a place it was put.
     return "cancel";
   }
-  if (canToss) {
+  if (canToss && tossBy.includes("throw")) {
     const { xDelta, yDelta } = gestureInfo.layout;
     const distance = Math.hypot(xDelta, yDelta);
     if (distance > tossDistance && gestureInfo.velocity > tossSpeed) {
@@ -12750,6 +12772,21 @@ const resolveDropMeaning = ({
     }
     if (canReorder) {
       return "reorder";
+    }
+  }
+  if (canToss && tossBy.includes("release-outside")) {
+    // Let go of away from every place: the other way of meaning "get rid of
+    // this", and the one a surface asks for — off the plan and down is
+    // deliberate, never a flick.
+    //
+    // "Away from every place" is the last frame's answer, not the one above: a
+    // row let go of where it already was has no place to INSERT it at and still
+    // has a place under it. And it has to have gone somewhere to be away from
+    // anything — picked up and put straight back down is a hand that changed its
+    // mind, not a thing dropped over nothing.
+    const { xDelta, yDelta } = gestureInfo.layout;
+    if ((xDelta || yDelta) && !gestureInfo.dropTargetInfo) {
+      return "toss";
     }
   }
   return "cancel";
@@ -12788,6 +12825,7 @@ const startDragToCarryCopy = (
     onToss,
     tossDistance,
     tossSpeed,
+    tossBy,
     // A list runs one way and reordering walks it; a board has places all around,
     // so something landing on one of them goes wherever the hand takes it.
     direction = canLand ? { x: true, y: true } : { x: false, y: true },
@@ -12853,10 +12891,12 @@ const startDragToCarryCopy = (
             ? createDropHint()
             : null;
         if (dropHintEl) {
-          // In the container it draws into, which is where its own vars are set: the
+          // Among the places it lights up, which is where its own vars are set: the
           // shape of a drop hint is a property of the list or board it belongs to,
-          // and reading it from there is inheritance rather than a hand-off.
-          draggedElement.parentElement.appendChild(dropHintEl);
+          // and reading it from there is inheritance rather than a hand-off. The
+          // copy goes the other way (see createDragClone) — it is dressed by where
+          // the thing it copies stands, which may be a palette far from here.
+          containerElement.appendChild(dropHintEl);
         }
         // The hint first, the clone second: that order is what stacks them in the
         // top layer. A copy taken back in hand is already up there, and the hint
@@ -13027,6 +13067,7 @@ const startDragToCarryCopy = (
             canLand,
             tossDistance,
             tossSpeed,
+            tossBy,
           });
 
           // Let go of and still on the screen: from here until it is taken away
@@ -13075,12 +13116,17 @@ const startDragToCarryCopy = (
               await settleCloneBack(cloneWrapper, draggedElement);
             }
           } else if (dropMeans === "land") {
+            // Read before the copy is put down: landing bakes its position and
+            // drops the transform, and where it came down is where the hand let
+            // go of it.
+            const landedAt = getRectInside(cloneWrapper, currentReleaseElement);
             await landCopyOn(currentReleaseElement, (syncCloneWithDropTarget) =>
-              onLand(
-                getItemId(draggedElement),
-                getItemId(currentReleaseElement),
+              onLand({
+                fromId: getItemId(draggedElement),
+                toId: getItemId(currentReleaseElement),
+                ...landedAt,
                 syncCloneWithDropTarget,
-              ),
+              }),
             );
           } else if (dropMeans === "reorder") {
             await landCopyOn(currentReleaseElement, (syncCloneWithDropTarget) =>
@@ -13133,6 +13179,28 @@ const setCloneViewportRect = (cloneWrapper, el) => {
   cloneWrapper.style.setProperty("--clone-left", `${rect.left}px`);
   cloneWrapper.style.setProperty("--clone-width", `${rect.width}px`);
   cloneWrapper.style.setProperty("--clone-height", `${rect.height}px`);
+};
+
+// Where one box sits inside another, in that other's own content: its border and
+// its scroll are taken out, so the numbers say where IN the thing rather than
+// where in what is visible of it at that moment.
+const getRectInside = (element, containerElement) => {
+  const rect = element.getBoundingClientRect();
+  const containerRect = containerElement.getBoundingClientRect();
+  return {
+    x:
+      rect.left -
+      containerRect.left -
+      containerElement.clientLeft +
+      containerElement.scrollLeft,
+    y:
+      rect.top -
+      containerRect.top -
+      containerElement.clientTop +
+      containerElement.scrollTop,
+    width: rect.width,
+    height: rect.height,
+  };
 };
 
 // Creates the two-layer clone structure used for drag-to-reorder.
@@ -13383,6 +13451,17 @@ const createDragClone = (element, pointerEvent) => {
   // (The original wears it too, but it is hidden — see navi-drag-clone-source.)
   elementClone.setAttribute("data-grabbed", "");
   elementClone.style.viewTransitionName = "navi-drag-clone";
+  // The copy takes the wrapper's box, and nothing the page said about where the
+  // ORIGINAL stands may place it: a piece drawn at "left: 40px; top: 130px" on
+  // its board, a marker centred by a translate, a card pushed by a margin — the
+  // deep copy carries all of that, inline styles included, and would sit that far
+  // from the wrapper's corner, so from the hand. Written inline on the copy
+  // because that is the one place that outranks both the inline values it copied
+  // and any rule of the page's, without a stylesheet having to shout !important.
+  elementClone.style.position = "absolute";
+  elementClone.style.inset = "0";
+  elementClone.style.margin = "0";
+  elementClone.style.translate = "none";
 
   wrapper.appendChild(elementClone);
   // Beside the thing it copies, so it stands where that thing stands: every
@@ -14672,6 +14751,12 @@ const isAncestorOpen = (ancestor) => {
  * own closed-state CSS ([navi-hidden], :not([popover])) for the custom
  * renderers — so nothing inside one answers true here, while everything a
  * trigger keeps on screen does.
+ *
+ * Ask it about an ancestor that is closed AND settled — on mount, or when
+ * setting up a long-lived observer. A surface animating its way out still has a
+ * box for the length of the animation (transition-behavior: allow-discrete on
+ * display/overlay), so asked at the instant one closes this says "on screen"
+ * about something on its way off it.
  */
 const isDisplayedDespiteClosedAncestor = (element) => {
   if (typeof element.checkVisibility !== "function") {
@@ -15332,6 +15417,20 @@ window.addEventListener("resize", (event) => {
 const getVisibleViewportRect = () => {
   const visualViewport = window.visualViewport;
   const documentElement = document.documentElement;
+  // Read FIRST, before the visual viewport just below — and used again in the
+  // branch further down, so it is a read this function needs either way.
+  //
+  // The visual viewport's own numbers are refreshed with the frame's geometry,
+  // and reading the layout viewport is what brings that geometry up to date.
+  // Read them the other way round and the answer is the state as it was before
+  // the caller's own measuring — every caller here measures an element moments
+  // later, with getBoundingClientRect/offsetHeight, which forces exactly that
+  // update. The box would then be measured in one layout state and placed in
+  // another; on a phone opening its keyboard the two are a screen apart, the
+  // popup lands where the pre-keyboard viewport put it, and nothing after
+  // corrects it. Costs no extra layout: it moves the one the caller triggers
+  // anyway rather than adding a second.
+  const layoutViewportHeight = window.innerHeight;
   if (!visualViewport) {
     return {
       left: 0,
@@ -15358,8 +15457,8 @@ const getVisibleViewportRect = () => {
   ) {
     offsetLeft = 0;
     offsetTop = 0;
-    if (window.innerHeight > height) {
-      height = window.innerHeight;
+    if (layoutViewportHeight > height) {
+      height = layoutViewportHeight;
     }
   }
   return {
@@ -15971,7 +16070,23 @@ const visibleRectEffect = (
       let currentOpenableAncestor = selfOrClosestOpenableAncestor(element);
       while (currentOpenableAncestor) {
         const openableAncestor = currentOpenableAncestor;
-        if (!isAncestorOpen(openableAncestor)) {
+        const openableAncestorIsOpen = isAncestorOpen(openableAncestor);
+        // A closed openable that keeps `element` on screen is the *trigger* of
+        // what is closed rather than the thing itself — a picker's root, an
+        // expandable's header, a <summary> all carry aria-expanded/open for a
+        // surface they are not part of, and `element` here belongs to the
+        // façade they keep showing the whole time. Its closed state hides
+        // nothing of this element, so it must not count as a state that does.
+        //
+        // Read once, here, and kept for the effect's lifetime: the layout only
+        // answers this question honestly about an ancestor that is already
+        // closed and settled. Asked at the instant a surface closes, it still
+        // says "on screen" for as long as a close animation keeps a box for it,
+        // which is the opposite answer — so a surface closing later goes on
+        // counting, unasked.
+        const elementIsInAncestorFacade =
+          !openableAncestorIsOpen && isDisplayedDespiteClosedAncestor(element);
+        if (!openableAncestorIsOpen && !elementIsInAncestorFacade) {
           ancestorClosedCount++;
           pauseResizeWatching();
         }
@@ -15980,6 +16095,9 @@ const visibleRectEffect = (
           // eslint-disable-next-line no-loop-func
           ({ isOpen, toggleEvent }) => {
             if (!isOpen) {
+              if (elementIsInAncestorFacade) {
+                return;
+              }
               ancestorClosedCount++;
               pauseResizeWatching();
               // Invalidates check()'s own "did anything actually change"
@@ -16008,7 +16126,7 @@ const visibleRectEffect = (
               );
               return;
             }
-            if (ancestorClosedCount > 0) {
+            if (!elementIsInAncestorFacade && ancestorClosedCount > 0) {
               ancestorClosedCount--;
             }
             if (ancestorClosedCount === 0) {
@@ -17030,21 +17148,17 @@ const parseTransitionDurationMs = (element, cssVarName, fallbackMs) => {
  * A second reposition landing mid-animation cancels the pending one and
  * flushes its own registered callbacks immediately (same spirit as a real
  * `transitioncancel`), so nothing is left waiting on a superseded `onEnd`.
+ * Every second reposition, animated or not — see
+ * cancelPendingPositionTransition, which applyNewPosition calls on the path
+ * that does not come through here.
  *
- * `commitStyles()` below isn't what makes the final position correct —
- * `applyNewPosition` already sets the specified `left`/`top` before this
- * animation starts, so it takes back over once the active duration elapses
- * regardless. It just makes that explicit instead of relying on `fill:
- * "none"` timing, and drops the finished Animation instead of leaving it.
+ * `commitStyles()` below is what the specified `translate` reads once the
+ * active duration elapses, so it must only ever run while this animation is
+ * still the current placement: it writes THIS animation's target, which a
+ * placement landing after it has already superseded.
  */
 const notifyPositionTransition = (element, animation) => {
-  const pending = pendingPositionTransitions.get(element);
-  if (pending) {
-    pending.animation.cancel();
-    for (const callback of pending.endCallbacks) {
-      callback();
-    }
-  }
+  cancelPendingPositionTransition(element);
   const endCallbacks = [];
   dispatchCustomEvent(element, "navi_position_transition", {
     onEnd: (callback) => {
@@ -17072,6 +17186,31 @@ const notifyPositionTransition = (element, animation) => {
     .catch(() => {
       // Cancelled by a subsequent reposition — already flushed above.
     });
+};
+
+/**
+ * Ends the placement animation in flight on `element`, if any, and flushes what
+ * was waiting on it — what a new placement owes the old one, whether or not it
+ * animates itself.
+ *
+ * The non-animated case is the one worth naming: a placement that just writes
+ * `translate` leaves an animation started a moment earlier running, and that
+ * animation commits ITS target when it ends, on top of the value written since.
+ * The box then lands where a viewport that no longer exists put it, and nothing
+ * comes after to correct it — a phone opening its keyboard fires exactly this
+ * sequence, an animated "resize" followed by focus/size deliveries that do not
+ * animate.
+ */
+const cancelPendingPositionTransition = (element) => {
+  const pending = pendingPositionTransitions.get(element);
+  if (!pending) {
+    return;
+  }
+  pendingPositionTransitions.delete(element);
+  pending.animation.cancel();
+  for (const callback of pending.endCallbacks) {
+    callback();
+  }
 };
 
 /**
@@ -17196,6 +17335,8 @@ const applyNewPosition = (
       },
     );
     notifyPositionTransition(element, animation);
+  } else {
+    cancelPendingPositionTransition(element);
   }
   // The specified translate is set to its final target right away,
   // regardless of `shouldTransition` — the animation above only plays the
