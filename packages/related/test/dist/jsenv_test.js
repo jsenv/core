@@ -5052,7 +5052,9 @@ const startMonitoringCpuUsage = () => {
 
 const startMonitoringMemoryUsage = () => {
   const processMemoryUsageMonitoring = startMonitoringMetric(() => {
-    return memoryUsage().rss;
+    // memoryUsage.rss() reads only rss; the full memoryUsage() computes
+    // every field and shows up in build profiles
+    return memoryUsage.rss();
   });
   const osMemoryUsageMonitoring = startMonitoringMetric(() => {
     const total = totalmem();

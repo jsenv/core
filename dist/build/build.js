@@ -8520,30 +8520,46 @@ const jsenvPluginImportMetaCss = () => {
           const relativeUrl = packageName
             ? `${packageName}${relativePathInPackage}`
             : relativePathInPackage;
-          const { code } = await applyBabelPlugins({
-            babelPlugins: [
-              [babelPluginRewriteImportMetaCssAssignment, { relativeUrl }],
-            ],
-            input: urlInfo.content,
-            inputIsJsModule: true,
-            inputUrl: urlInfo.originalUrl,
-            outputUrl: urlInfo.generatedUrl,
-            // the map would be dropped: the content sent back carries none
-            options: { sourceMaps: false },
+          // wrap each `import.meta.css = X` right-hand side into
+          // [X, relativeUrl]: two insertions around the existing expression,
+          // so content and sourcemap stay untouched everywhere else
+          const assignmentsToWrap = [];
+          visitJsAst(urlInfo.contentAst, {
+            AssignmentExpression: (node) => {
+              if (node.operator !== "=") {
+                return;
+              }
+              if (getImportMetaPropertyName(node.left) !== "css") {
+                return;
+              }
+              if (node.right.type === "ArrayExpression") {
+                // already in array form (pre-built file)
+                return;
+              }
+              assignmentsToWrap.push(node);
+            },
           });
-          if (code === urlInfo.content) {
-            // all assignments were already in array form (pre-built file) — nothing to do
+          if (assignmentsToWrap.length === 0) {
             return null;
           }
+          const magicSource = createMagicSource(urlInfo.content);
+          for (const assignment of assignmentsToWrap) {
+            const { right } = assignment;
+            magicSource.insert({ position: right.start, text: "[" });
+            magicSource.insert({
+              position: right.end,
+              text: `, ${JSON.stringify(relativeUrl)}]`,
+            });
+          }
           return injectImportMetaCss(urlInfo, {
-            content: code,
+            magicSource,
             importFrom: importMetaCssBuildClientFileUrl,
             importName: "installImportMetaCssBuild",
             importAs: "__installImportMetaCssBuild__",
           });
         }
         return injectImportMetaCss(urlInfo, {
-          content: urlInfo.content,
+          magicSource: createMagicSource(urlInfo.content),
           importFrom: importMetaCssDevClientFileUrl,
           importName: "installImportMetaCssDev",
           importAs: "__installImportMetaCssDev__",
@@ -8576,44 +8592,9 @@ const hasModuleScopeAssignment = (ast) => {
   return false;
 };
 
-const babelPluginRewriteImportMetaCssAssignment = (
-  { types: t },
-  { relativeUrl },
-) => {
-  return {
-    name: "rewrite-import-meta-css-assignment",
-    visitor: {
-      AssignmentExpression(path) {
-        const { left, right } = path.node;
-        if (left.type !== "MemberExpression") {
-          return;
-        }
-        const { object, property } = left;
-        if (object.type !== "MetaProperty") {
-          return;
-        }
-        if (object.meta.name !== "import" || object.property.name !== "meta") {
-          return;
-        }
-        if (property.name !== "css") {
-          return;
-        }
-        // already transformed (e.g. pre-built file): leave as-is
-        if (right.type === "ArrayExpression") {
-          return;
-        }
-        path.node.right = t.arrayExpression([
-          right,
-          t.stringLiteral(relativeUrl),
-        ]);
-      },
-    },
-  };
-};
-
 const injectImportMetaCss = (
   urlInfo,
-  { content, importFrom, importName, importAs, hot },
+  { magicSource, importFrom, importName, importAs, hot },
 ) => {
   const importMetaCssClientFileReference = urlInfo.dependencies.inject({
     parentUrl: urlInfo.url,
@@ -8648,9 +8629,8 @@ ${importVariableName}(import.meta);
 
 `;
 
-  return {
-    content: `${prelude.replace(/\n/g, "")}${content}`,
-  };
+  magicSource.prepend(prelude);
+  return magicSource.toContentAndSourcemap();
 };
 
 // Some "smart" default applied to decide what should hot reload / fullreload:

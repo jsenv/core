@@ -28,6 +28,11 @@ export const createMagicSource = (content) => {
       edits.push({ type: "replace", start, end, replacement });
       magicString.overwrite(start, end, replacement);
     },
+    insert: ({ position, text }) => {
+      touched = true;
+      edits.push({ type: "insert", position, text });
+      magicString.appendLeft(position, text);
+    },
     remove: ({ start, end }) => {
       touched = true;
       edits.push({ type: "remove", start, end });

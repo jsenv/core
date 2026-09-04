@@ -407,20 +407,44 @@ const asFlatAssociations = (associations) => {
   return flatAssociations;
 };
 
+// The same associations object is matched against the same urls over and
+// over (node esm resolution conditions, ignore checks: once per reference).
+// Matched values are memoized per (associations, url); the returned object
+// stays built fresh on every call (callers may mutate it). The per-url map
+// is capped: in a long-lived dev server, urls carry changing search params
+// (?hot=timestamp) and would otherwise accumulate without bound.
+const matchedValuesCacheMap = new WeakMap();
+const MATCHED_VALUES_CACHE_LIMIT = 4096;
+
 const applyAssociations = ({ url, associations }) => {
   if (url && typeof url.href === "string") url = url.href;
   assertUrlLike(url);
-  const flatAssociations = asFlatAssociations(associations);
-  let associatedValue = {};
-  for (const pattern of Object.keys(flatAssociations)) {
-    const { matched } = applyPatternMatching({
-      pattern,
-      url,
-    });
-    if (matched) {
-      const value = flatAssociations[pattern];
-      associatedValue = deepAssign(associatedValue, value);
+  let urlCache = matchedValuesCacheMap.get(associations);
+  if (!urlCache) {
+    urlCache = new Map();
+    matchedValuesCacheMap.set(associations, urlCache);
+  }
+  let matchedValues = urlCache.get(url);
+  if (!matchedValues) {
+    const flatAssociations = asFlatAssociations(associations);
+    matchedValues = [];
+    for (const pattern of Object.keys(flatAssociations)) {
+      const { matched } = applyPatternMatching({
+        pattern,
+        url,
+      });
+      if (matched) {
+        matchedValues.push(flatAssociations[pattern]);
+      }
     }
+    if (urlCache.size >= MATCHED_VALUES_CACHE_LIMIT) {
+      urlCache.clear();
+    }
+    urlCache.set(url, matchedValues);
+  }
+  let associatedValue = {};
+  for (const value of matchedValues) {
+    associatedValue = deepAssign(associatedValue, value);
   }
   return associatedValue;
 };

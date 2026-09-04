@@ -37,6 +37,14 @@ export const applyContentEditsOnSourcemap = (sourcemap, { content, edits }) => {
       prependText = edit.text + prependText;
       continue;
     }
+    if (edit.type === "insert") {
+      spans.push({
+        start: edit.position,
+        end: edit.position,
+        replacement: edit.text,
+      });
+      continue;
+    }
     spans.push({
       start: edit.start,
       end: edit.end,
