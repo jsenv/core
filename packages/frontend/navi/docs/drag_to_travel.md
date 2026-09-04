@@ -227,7 +227,7 @@ outside it.
 A drag reads the same press a travel does and holds the pointer from it, so the
 two share a finger exactly as two travelling boxes do: what is picked up says
 which axes it walks (`data-drag-source`, written from `data-drag-axis` by
-`interactions={{ move, reorder, land, toss }}` — see `docs/interactions.md`), and
+`interactions={{ move, reorder, land, toss, leave }}` — see `docs/interactions.md`), and
 the box above keeps what is left. A list reordered along its own line inside a
 row of slides swiped sideways: both gestures live, and neither had to be told
 about the other.
@@ -565,7 +565,7 @@ outside — and will not find out until they watch a page leave under their
 finger. The component knows, so the component says it.
 
 _Currently marked: the wheel viewport, the table resize handles, the cells of a
-table whose columns can be dragged._
+table whose columns can be dragged, a surface declaring `pan` or `zoom`._
 
 ## The two consumers that travel between screens
 

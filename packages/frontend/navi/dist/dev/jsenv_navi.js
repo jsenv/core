@@ -4,7 +4,7 @@
  */
 import { installImportMetaCssBuild, windowHeightSignal, windowWidthSignal, visualViewportHeightSignal, visualViewportWidthSignal, getAppHeight, getAppWidth, coarsePointerSignal, smallTouchScreenSignal } from "./jsenv_navi_side_effects.js";
 export { disableVirtualKeyboardOverlay } from "./jsenv_navi_side_effects.js";
-import { elementIsFocusable, createIterableWeakSet, dispatchInternalCustomEvent, dispatchCustomEvent, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, getElementSignature, createPubSub, findEvent, createValueEffect, findFocusDelegateTarget, findFocusable, scrollIntoViewThroughScrollables, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, keepTouchRefusable, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, markDragSource, startDragTo, createEventGroupLogger, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, normalizeStyles, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, scrollRoomTowards, getScrollContainer, closestOpenableAncestor, isAncestorOpen, isDisplayedDespiteClosedAncestor, observeAncestorOpenState, getAncestorOpenType, findBefore, findAfter, resolveCSSSize, hasCSSSizeUnit, releaseWheelGesture, getScrollIntoViewScopedOffsets, wheelGestureIsTakenFrom, claimWheelGesture, scrollIntoViewScoped, initFocusGroup, isTouchDrivenEvent, stringifyStyle as stringifyStyle$1, resolveOklchLightness, contrastColor, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, getVirtualKeyboardOverlayHeight, onAncestorReopen, isPressDisputedByDrag, canScroll, measureWidestChildRow, performTabNavigation, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
+import { elementIsFocusable, createIterableWeakSet, dispatchInternalCustomEvent, dispatchCustomEvent, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, getElementSignature, createPubSub, findEvent, createValueEffect, findFocusDelegateTarget, findFocusable, scrollIntoViewThroughScrollables, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, keepTouchRefusable, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, markDragSource, startDragTo, installPanZoom, createEventGroupLogger, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, normalizeStyles, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, scrollRoomTowards, getScrollContainer, closestOpenableAncestor, isAncestorOpen, isDisplayedDespiteClosedAncestor, observeAncestorOpenState, getAncestorOpenType, findBefore, findAfter, resolveCSSSize, hasCSSSizeUnit, releaseWheelGesture, getScrollIntoViewScopedOffsets, wheelGestureIsTakenFrom, claimWheelGesture, scrollIntoViewScoped, initFocusGroup, isTouchDrivenEvent, stringifyStyle as stringifyStyle$1, resolveOklchLightness, contrastColor, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, getVirtualKeyboardOverlayHeight, onAncestorReopen, isPressDisputedByDrag, canScroll, measureWidestChildRow, performTabNavigation, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
 export { chainEvent, clickIsSuppressed, contrastColor, createDragGestureController, dragAfterIntent, findEvent, markDragSource, startDragTo } from "@jsenv/dom";
 import { signal, computed, effect, untracked, batch, useComputed, useSignal } from "@preact/signals";
 import { isValidElement, createContext, render, h, toChildArray, options, cloneElement, Fragment as Fragment$1 } from "preact";
@@ -10500,26 +10500,31 @@ const swipeTypeOf = (axis, pulled) => {
 };
 
 /**
- * `move`, `reorder`, `land`, `toss` — one grab, and what letting go of it means.
+ * `move`, `reorder`, `land`, `toss`, `leave` — one grab, and what letting go of
+ * it means.
  *
- * All four are the same gesture: the element is picked up and carried. What
+ * All five are the same gesture: the element is picked up and carried. What
  * differs is the answer at the release, so one detector reads them all — it is one
  * press, and something has to arbitrate it.
  *
  *   interactions={{ reorder: moveBefore, toss: remove }}
  *   interactions={{ land: swapPlaces }}
- *   interactions={{ move: remember }}
+ *   interactions={{ move: remember, leave: remove }}
  *
- * `toss` combines with `reorder` and with `land`: a task dragged onto another
- * changes places, the same task thrown far and fast is gotten rid of. The three
- * others do not combine with each other — an element either goes where it is put,
- * takes a place in a list, or comes down on a place, and no two of those answers
- * can both be true of one release.
+ * `toss` and `leave` each combine with `reorder` and with `land`: a task dragged
+ * onto another changes places, the same task thrown far and fast is gotten rid
+ * of, a marker let go of off its plan is removed. `leave` combines with `move` as
+ * well. `move`, `reorder` and `land` do not combine with each other — an element
+ * either goes where it is put, takes a place in a list, or comes down on a place,
+ * and no two of those answers can both be true of one release.
  *
  * `move` carries the element ITSELF and leaves it where it was put; the others
  * carry a copy and put the original back. That is the same difference said in
  * layout terms: something moved has a new place of its own, something reordered
- * had its place taken by the list.
+ * had its place taken by the list. Where that place is KEPT is the answer's:
+ * an application that redraws the element from state while answering (a new
+ * `left`/`top`) owns the position from then on, and the drag's own translate
+ * goes; one that draws nothing leaves it to the element, where it is baked in.
  *
  * `reorder` VS `land`: both come down on an item, and what separates them is what
  * a place IS. A row of a list is a place BETWEEN two others — free by construction,
@@ -10535,9 +10540,8 @@ const swipeTypeOf = (axis, pulled) => {
  *   }}}
  *
  * `toId` is an element and never null: a copy over nothing is a release that meant
- * nothing, and the interaction does not happen at all — unless the element says
- * `data-toss-by="release-outside"` (see below), which gives that release a
- * meaning of its own.
+ * nothing, and the interaction does not happen at all — unless the element
+ * declares `leave` (see below), which gives that release a meaning of its own.
  *
  * WHERE ON IT, in `x`, `y`, `width`, `height`: the box the copy came down in,
  * measured inside the place — its border and its scroll taken out. A place that is
@@ -10574,15 +10578,30 @@ const swipeTypeOf = (axis, pulled) => {
  *     <Plan id="plan" data-droppable>…</Plan>
  *   </div>
  *
- * HOW A TOSS IS MADE: `data-toss-by`, beside `toss`. A THROW (`"throw"`, the
- * default) is far AND fast — the flick that gets rid of something, a list's
- * gesture, and it is judged before any landing. A RELEASE OUTSIDE
- * (`"release-outside"`) has no place under it — dragging a marker off a plan and
- * letting go, deliberate and never a flick, a surface's gesture. Each is named on
- * its own because each is wrong where the other is right: on a plan a fast drag
- * that ends ON it has not asked for the thing to go, and on a list a row let go of
- * beside it is a row put back. Both at once is
- * `data-toss-by="throw release-outside"`.
+ * LET GO OF AWAY FROM EVERY PLACE: `leave`. A throw is a GESTURE — far and fast,
+ * the flick that gets rid of a row, judged before any landing. A release outside
+ * is a PLACE — the hand let go with nothing under the thing, judged after a
+ * landing was looked for. They share the outcome an application usually attaches
+ * to them and nothing else, so each has its name: `toss` is the throw, `leave` is
+ * the release outside, and neither reads the other's rules — there is no speed to
+ * a release, and on a plan a fast drag that ends ON it has not asked for the
+ * thing to go.
+ *
+ *   interactions={{
+ *     move: (event) => remember(event.detail.x, event.detail.y),
+ *     leave: () => remove(id),
+ *   }}
+ *
+ * Beside `land` or `reorder`, "outside" is away from every place. Beside `move`
+ * — the element itself travels, and nothing is a place — it is outside the
+ * surface the element stands in: the nearest `data-droppable` ancestor, or,
+ * without one, what can be seen of the scroll container. Either way it is judged
+ * on the element's box no longer overlapping it, not on the pointer, which is
+ * still well inside the frame when a 30px marker has just left it. The detail is
+ * `toss`'s, `{ id, x, y }`, the distance travelled being what an exit is animated
+ * with. A refused `leave` travels back, as a refused `move` does; picked up and
+ * put straight back down stays a cancel — it has to have gone somewhere to be
+ * away from anything.
  *
  * Nothing of the gesture is decided here. `startDragTo` owns all of it — the
  * copy carried above the page while the original keeps its place in the layout, the
@@ -10630,7 +10649,7 @@ const swipeTypeOf = (axis, pulled) => {
  *
  *   interactions={{ toss: remove, grab: () => navigator.vibrate?.(10) }}
  *
- * The four above all answer the RELEASE, and between the press and the release
+ * The five above all answer the RELEASE, and between the press and the release
  * there is one instant that counts for the hand making the gesture: the one where
  * the object stops being pressed and starts being held. `grab` is that instant,
  * and it is the same one whichever way the drag was entered — a finger held still,
@@ -10644,7 +10663,7 @@ const swipeTypeOf = (axis, pulled) => {
  *
  * It is told, not asked: `grab` reports, so what it returns is not waited on and
  * preventing its event does not call the gesture off. And it is not an interaction
- * on its own — declared without one of the four above there is no gesture for it
+ * on its own — declared without one of the five above there is no gesture for it
  * to be the beginning of.
  *
  * A `longpress` needs nothing of this: it already happens at the moment the hold
@@ -10664,6 +10683,8 @@ const REORDER = "reorder";
 // for a file being dropped on the page would get this one and read it as such.
 const LAND = "land";
 const TOSS = "toss";
+// Let go of away from every place — not a throw, which is judged on its speed.
+const LEAVE = "leave";
 // The moment the press stops being a press and becomes a hold on the object.
 const GRAB = "grab";
 
@@ -10680,14 +10701,9 @@ const DROP_CONTAINER_ATTRIBUTE = "data-drop-container";
 const AXIS_ATTRIBUTE = "data-drag-axis";
 const DELAY_ATTRIBUTE = "data-drag-delay";
 const SLOP_ATTRIBUTE = "data-drag-slop";
-const THRESHOLD_ATTRIBUTE = "data-drag-threshold";
+const THRESHOLD_ATTRIBUTE$1 = "data-drag-threshold";
 const TOSS_DISTANCE_ATTRIBUTE = "data-toss-distance";
 const TOSS_SPEED_ATTRIBUTE = "data-toss-speed";
-// How a toss is made here: "throw" (far and fast), "release-outside" (let go of
-// away from every place), or both.
-const TOSS_BY_ATTRIBUTE = "data-toss-by";
-const TOSS_BY_DEFAULT = "throw";
-const TOSS_WAYS = ["throw", "release-outside"];
 
 defineInteractionDetector({
   name: "drag",
@@ -10696,6 +10712,7 @@ defineInteractionDetector({
     type === REORDER ||
     type === LAND ||
     type === TOSS ||
+    type === LEAVE ||
     type === GRAB,
   // The press is the beginning of the gesture, not an answer: nothing may read
   // it until it is known whether the hand is dragging or just pressing.
@@ -10705,12 +10722,13 @@ defineInteractionDetector({
     const canReorder = types.includes(REORDER);
     const canLand = types.includes(LAND);
     const canToss = types.includes(TOSS);
-    if (!canMove && !canReorder && !canLand && !canToss) {
+    const canLeave = types.includes(LEAVE);
+    if (!canMove && !canReorder && !canLand && !canToss && !canLeave) {
       // Only "grab": there is no gesture to be taken by, so there is no moment to
       // be told about either.
       {
         console.warn(
-          `interactions: "${GRAB}" says when a drag takes hold, so it needs a drag to say it about. Declare it beside "${MOVE}", "${REORDER}", "${LAND}" or "${TOSS}".`,
+          `interactions: "${GRAB}" says when a drag takes hold, so it needs a drag to say it about. Declare it beside "${MOVE}", "${REORDER}", "${LAND}", "${TOSS}" or "${LEAVE}".`,
         );
       }
       return undefined;
@@ -10726,7 +10744,7 @@ defineInteractionDetector({
       const other = canLand ? LAND : canReorder ? REORDER : TOSS;
       const instead =
         other === TOSS
-          ? ` Something that can be put down anywhere AND thrown away declares "${LAND}" rather than "${MOVE}": its detail says where the copy came down, which is what a surface answers with.`
+          ? ` Something that moves in place AND goes away when dragged off its surface declares "${LEAVE}" beside "${MOVE}": a release outside the surface is what "${LEAVE}" answers, and it is not a throw.`
           : "";
       console.warn(
         `interactions: "${MOVE}" and "${other}" cannot both answer one release — "${MOVE}" leaves the element where the hand put it, "${other}" carries a copy and puts the original back. "${other}" wins here, so the element never travels.${instead}`,
@@ -10744,34 +10762,23 @@ defineInteractionDetector({
       axisHolder?.getAttribute(AXIS_ATTRIBUTE) ||
       // A list runs one way, and reordering walks it. Anything else goes wherever
       // the hand takes it: a board has places all around, a thing put somewhere has
-      // two axes to be put along, and a throw goes where it was thrown.
-      (canReorder && !canLand && !canToss ? "y" : "xy");
-    // Where the places are, and what a release away from all of them means —
-    // both read at setup for the same reason as the axes: they are what the
-    // gesture is about, and it is what holds the two sides of it that says them.
+      // two axes to be put along, a throw goes where it was thrown and a thing
+      // that leaves goes out by whichever edge.
+      (canReorder && !canLand && !canToss && !canLeave ? "y" : "xy");
+    // Where the places are, read at setup for the same reason as the axes: they
+    // are what the gesture is about, and it is what holds the two sides of it
+    // that says them.
     const dropContainer = element.closest(`[${DROP_CONTAINER_ATTRIBUTE}]`);
-    const tossByHolder = element.closest(`[${TOSS_BY_ATTRIBUTE}]`);
-    const tossBy = (
-      tossByHolder?.getAttribute(TOSS_BY_ATTRIBUTE) || TOSS_BY_DEFAULT
-    )
-      .trim()
-      .split(/\s+/);
-    {
-      for (const way of tossBy) {
-        if (!TOSS_WAYS.includes(way)) {
-          console.warn(
-            `interactions: "${way}" is not a way a toss is made. ${TOSS_BY_ATTRIBUTE} takes "${TOSS_WAYS.join('", "')}", or both.`,
-          );
-        }
-      }
-      if (
-        tossBy.includes("release-outside") &&
-        (!canToss || (!canReorder && !canLand))
-      ) {
-        console.warn(
-          `interactions: ${TOSS_BY_ATTRIBUTE}="release-outside" makes a release away from every place mean the thing is gotten rid of, so it needs both "${TOSS}" and places to be away from. Declare "${TOSS}" beside "${REORDER}" or "${LAND}".`,
-        );
-      }
+    // What a `leave` is outside of when nothing is a place: the surface the
+    // element stands in. Looked for above the parent — the element itself may be
+    // a place of its own (a piece that receives), which is not what it is inside.
+    const outsideOf =
+      element.parentElement.closest(`[${DROPPABLE_ATTRIBUTE}]`) || undefined;
+    if (canLeave && !canLand && !canReorder && !outsideOf) {
+      console.warn(
+        `interactions: "${LEAVE}" is judged against the surface this element stands in, and nothing above it is marked ${DROPPABLE_ATTRIBUTE} — so it is judged against what can be seen of the scroll container, which on a page is the window. Mark the surface it leaves.`,
+        element,
+      );
     }
 
     if (canReorder) {
@@ -10795,7 +10802,7 @@ defineInteractionDetector({
     const onPointerDown = (pointerDownEvent) => {
       if (canLand && !placesLookedFor) {
         placesLookedFor = true;
-        warnWhenNothingToLandOn(element, dropContainer, tossBy);
+        warnWhenNothingToLandOn(element, dropContainer, canLeave);
       }
       // What this element says a release can mean. The gesture then runs only what
       // those need — no copy for a move, no drop hint for something that can only
@@ -10809,6 +10816,7 @@ defineInteractionDetector({
             ? `[${REORDERABLE_ATTRIBUTE}]`
             : undefined,
         containerElement: dropContainer || undefined,
+        outsideOf,
         getItemId: (itemElement) => itemElement.id,
         direction: { x: axes.includes("x"), y: axes.includes("y") },
         // Where it may go, said in the DOM. A thing that is put somewhere stays
@@ -10816,21 +10824,20 @@ defineInteractionDetector({
         // the scrollable area can be far larger than the box, and "inside the box"
         // is what a hand expects). `data-drag-free` lifts that, and so does a
         // named container of places: they are somewhere else by construction, and
-        // a copy kept in its own scroll area could never reach them. Left alone
-        // for a throw, which frees the area on its own — it has to be able to
-        // leave.
+        // a copy kept in its own scroll area could never reach them. So does
+        // "leave": a thing let go of outside has to be able to get there. Left
+        // alone for a throw, which frees the area on its own.
         areaConstraint:
-          dropContainer || element.closest(`[data-drag-free]`)
+          dropContainer || element.closest(`[data-drag-free]`) || canLeave
             ? "none"
             : canMove
               ? "scrollport"
               : undefined,
-        threshold: readConfig(THRESHOLD_ATTRIBUTE, undefined),
+        threshold: readConfig(THRESHOLD_ATTRIBUTE$1, undefined),
         longPressDelay: readConfig(DELAY_ATTRIBUTE, undefined),
         longPressSlop: readConfig(SLOP_ATTRIBUTE, undefined),
         tossDistance: readConfig(TOSS_DISTANCE_ATTRIBUTE, undefined),
         tossSpeed: readConfig(TOSS_SPEED_ATTRIBUTE, undefined),
-        tossBy,
         // The one moment the gesture has that is not a release. Said here rather
         // than from the press that led to it, because the press is only one of the
         // two ways in: a finger holds still, a mouse travels a few pixels, and it
@@ -10844,7 +10851,7 @@ defineInteractionDetector({
               });
             }
           : undefined,
-        // Handed straight back in all three cases: what `trigger` returns is a
+        // Handed straight back in every case: what `trigger` returns is a
         // promise while the answer is still going, which is what the gesture waits
         // on before it lets go of what it carries.
         onReorder: (fromId, toId, syncCloneWithDropTarget) =>
@@ -10861,6 +10868,8 @@ defineInteractionDetector({
             x: gestureInfo.layout.xDelta,
             y: gestureInfo.layout.yDelta,
           }),
+        onLeave: ({ x, y }) =>
+          trigger(LEAVE, pointerDownEvent, { id: element.id, x, y }),
         onMove: ({ x, y }) => trigger(MOVE, pointerDownEvent, { x, y }),
       });
     };
@@ -10876,10 +10885,9 @@ defineInteractionDetector({
 
 // A place is looked for INSIDE the container and nowhere else, so the surface a
 // piece already stands on is not one of them — a search never finds what it starts
-// from. Nothing then happens at all, and where `release-outside` is on it is worse
-// than nothing: every release is away from every place, so every release gets rid
-// of the thing.
-const warnWhenNothingToLandOn = (element, dropContainer, tossBy) => {
+// from. Nothing then happens at all, and beside `leave` it is worse than nothing:
+// every release is away from every place, so every release is a leave.
+const warnWhenNothingToLandOn = (element, dropContainer, canLeave) => {
   const container = dropContainer || element.parentElement;
   if (!container) {
     return;
@@ -10891,8 +10899,8 @@ const warnWhenNothingToLandOn = (element, dropContainer, tossBy) => {
       return;
     }
   }
-  const consequence = tossBy.includes("release-outside")
-    ? ` Every release is then away from every place, which ${TOSS_BY_ATTRIBUTE}="release-outside" reads as a toss.`
+  const consequence = canLeave
+    ? ` Every release is then away from every place, which "${LEAVE}" answers.`
     : " Nothing answers a release.";
   const droppableAround = element.parentElement?.closest(
     `[${DROPPABLE_ATTRIBUTE}]`,
@@ -10909,6 +10917,71 @@ const warnWhenNothingToLandOn = (element, dropContainer, tossBy) => {
     container,
   );
 };
+
+/**
+ * `pan`, `zoom` — a surface under the hand.
+ *
+ *   <Box
+ *     interactions={{
+ *       pan: (event) => moveCenterBy(event.detail),    // { x, y } since the last one
+ *       zoom: (event) => zoomBy(event.detail),         // { factor, x, y }
+ *     }}
+ *   />
+ *
+ * Neither is an outcome: both are a stream, reported on every frame while the
+ * hand is still moving, and navi otherwise names only what happens once (see
+ * "A gesture whose product is a value" in docs/interactions.md). They are named
+ * here because of what has to be settled BEFORE the press, which is what
+ * `interactions` exists for: `touch-action` on the surface, said from a
+ * stylesheet since a browser decides what a touch may do when it lands; the pan
+ * stepping back for what is carried ACROSS the surface (a marker declaring
+ * `move`, a handle) and for what answers the pointer on its own; the pinch not
+ * beginning as a pan under its first finger; the wheel and the pinch writing
+ * one `zoom`. A handle turned, a sun dragged around a plan have none of that to
+ * arbitrate — the handle is the whole surface of the gesture — and stay
+ * unnamed.
+ *
+ * `pan`'s detail is the movement since the previous `pan`, in px. `zoom`'s is
+ * the factor (above 1 is in) and the point of the surface it is around,
+ * measured inside its border — the point between the fingers, or under the
+ * wheel. What a pixel of pan means in the application's coordinates, and
+ * whether the zoom is continuous or stepped, is the application's.
+ *
+ * Declared alone, `zoom` leaves one pointer to whatever else reads it and takes
+ * only two fingers and the wheel; `pan` alone leaves the wheel to the page.
+ *
+ * Nothing of the gesture is decided here — `installPanZoom` in @jsenv/dom owns
+ * the pointers, the capture, the wheel burst and the click left behind. This
+ * says which names the element answers with, and hands the numbers over.
+ */
+
+
+const PAN = "pan";
+const ZOOM = "zoom";
+// The same attribute a carried element reads: how far a pointer travels before
+// it is a gesture rather than a press.
+const THRESHOLD_ATTRIBUTE = "data-drag-threshold";
+
+defineInteractionDetector({
+  name: "surface",
+  claims: (type) => type === PAN || type === ZOOM,
+  // A press on the surface may be a tap, a hold or the beginning of a pan, and
+  // nothing may read it as the first until the pointer has said which.
+  disputesPress: true,
+  setup: (element, trigger, { types, readConfig }) => {
+    const canPan = types.includes(PAN);
+    const canZoom = types.includes(ZOOM);
+    return installPanZoom(element, {
+      threshold: readConfig(THRESHOLD_ATTRIBUTE, undefined),
+      onPan: canPan
+        ? ({ event, x, y }) => trigger(PAN, event, { x, y })
+        : undefined,
+      onZoom: canZoom
+        ? ({ event, factor, x, y }) => trigger(ZOOM, event, { factor, x, y })
+        : undefined,
+    });
+  },
+});
 
 // used by form elements such as <input>, <select>, <textarea> to have their own action bound to a single parameter
 // when inside a <form> the form params are updated when the form element single param is updated
@@ -20206,9 +20279,14 @@ const PSEUDO_STATE_CHILD_PROP_SET = new Set(["tabIndex", "tabindex"]);
  *   preventInitialTransition?: boolean,
  *   separator?: import("ignore:preact").ComponentChildren | ((index: number) => import("ignore:preact").ComponentChildren),
  *   selfInteractions?: string,
+ *   interactions?: { [type: string]: "request_action" | "request_ui_action" | ((event: Event) => void) | false | null | undefined },
  *   children?: import("ignore:preact").ComponentChildren,
  *   [key: string]: any,
  * }>}
+ * @param {object} [interactions] What this box answers, by interaction name
+ *   (see docs/interactions.md). A plain box has no wiring of its own: it does
+ *   nothing with `action` (that is a control's prop), so a click on it is
+ *   declared here like any other interaction: `interactions={{ click: fn }}`.
  */
 const Box = props => {
   const {
@@ -20348,6 +20426,14 @@ const computeBox = (props, parentBoxFlow) => {
     rest[SELF_INTERACTIONS_ATTRIBUTE] = selfInteractionsAttributeValue(selfInteractions);
   }
   let as = asProp;
+  if (Object.hasOwn(rest, "action")) {
+    // A control (Button, Link, a field) takes `action` off its props before
+    // reaching here, so an `action` still present is one nothing will run. A
+    // string is a form's own attribute and stays.
+    if (typeof rest.action !== "string") {
+      console.warn(`Box: "action" is a control's prop and a plain box does nothing with it. To answer a click, declare it as an interaction: interactions={{ click: fn }}.`);
+    }
+  }
 
   // A box that scrolls is what gives header/footer/body their meaning, and
   // saying overflow="auto" is already saying it — no second prop for the same

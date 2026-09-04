@@ -143,6 +143,7 @@ export {
   startDragTo,
 } from "./src/interaction/drag/drag_to.js";
 export { startDragToResizeGesture } from "./src/interaction/drag/drag_to_resize_gesture.js";
+export { installPanZoom } from "./src/interaction/drag/pan_zoom.js";
 export {
   isPressDisputedByDrag,
   scrollRoomTowards,

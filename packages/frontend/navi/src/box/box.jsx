@@ -418,9 +418,14 @@ const PSEUDO_STATE_CHILD_PROP_SET = new Set(["tabIndex", "tabindex"]);
  *   preventInitialTransition?: boolean,
  *   separator?: import("preact").ComponentChildren | ((index: number) => import("preact").ComponentChildren),
  *   selfInteractions?: string,
+ *   interactions?: { [type: string]: "request_action" | "request_ui_action" | ((event: Event) => void) | false | null | undefined },
  *   children?: import("preact").ComponentChildren,
  *   [key: string]: any,
  * }>}
+ * @param {object} [interactions] What this box answers, by interaction name
+ *   (see docs/interactions.md). A plain box has no wiring of its own: it does
+ *   nothing with `action` (that is a control's prop), so a click on it is
+ *   declared here like any other interaction: `interactions={{ click: fn }}`.
  */
 export const Box = (props) => {
   const { ref, children, separator, interactions, ...computeProps } = props;
@@ -560,6 +565,16 @@ const computeBox = (props, parentBoxFlow) => {
       selfInteractionsAttributeValue(selfInteractions);
   }
   let as = asProp;
+  if (import.meta.dev && Object.hasOwn(rest, "action")) {
+    // A control (Button, Link, a field) takes `action` off its props before
+    // reaching here, so an `action` still present is one nothing will run. A
+    // string is a form's own attribute and stays.
+    if (typeof rest.action !== "string") {
+      console.warn(
+        `Box: "action" is a control's prop and a plain box does nothing with it. To answer a click, declare it as an interaction: interactions={{ click: fn }}.`,
+      );
+    }
+  }
 
   // A box that scrolls is what gives header/footer/body their meaning, and
   // saying overflow="auto" is already saying it — no second prop for the same

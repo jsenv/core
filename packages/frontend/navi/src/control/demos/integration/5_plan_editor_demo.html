@@ -115,6 +115,29 @@
         position: absolute;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
       }
+      /* Le point de l'adresse: posé par le géocodeur, déplacé à la main. Il
+         voyage lui-même (move), donc il reste dessiné dans le plan et se coupe
+         au bord en sortant — ce qu'on veut: il part. */
+      .address {
+        position: absolute;
+        width: 22px;
+        height: 22px;
+        color: white;
+        font-weight: 600;
+        font-size: 12px;
+        text-align: center;
+        line-height: 22px;
+        background: #b03030;
+        border: 2px solid white;
+        border-radius: 50%;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+        user-select: none;
+      }
+      .address_status {
+        margin: 8px 0 0;
+        color: #6b7482;
+        font-size: 12px;
+      }
       /* Une forme de la banque est un modèle, pas la chose: son exemplaire part
          sur le plan et elle reste là où on va la reprendre. (navi cache la
          source d'une copie qui voyage — ici, la source n'est pas ce qui bouge.) */
@@ -182,6 +205,9 @@
       import { useRef, useState } from "preact/hooks";
 
       const MAP_SIZE = 420;
+      // Où le géocodeur a mis l'adresse: c'est là que le point revient quand on
+      // le sort du plan.
+      const GEOCODED_POINT = { x: 230, y: 250 };
 
       // Ce qu'on peut poser, et de quelle taille: la vignette de la banque a la
       // taille de la forme qu'elle devient, donc elle se pose là où on la voit.
@@ -230,6 +256,10 @@
         const anchorPointRef = useRef(null);
         const addPointRef = useRef({ x: 0, y: 0 });
         const mapRef = useRef(null);
+        // La position du point est un état, et le point est dessiné depuis lui:
+        // navi voit qu'il a été redessiné en répondant à "move" et lâche sa
+        // propre translation, sinon le point irait deux fois plus loin.
+        const [addressPoint, setAddressPoint] = useState(GEOCODED_POINT);
 
         const addShape = (kind, x, y) => {
           setItems((previous) => [
@@ -309,7 +339,9 @@
             <p class="caption">
               Faites glisser une forme de la banque sur le plan pour l'y poser,
               une forme du plan pour la déplacer, et hors du plan (ou dans la
-              banque) pour l'enlever. Maintenez le doigt sur une forme pour la
+              banque) pour l'enlever. Le point rouge est l'adresse: déplacez-le
+              pour corriger le géocodeur, sortez-le du plan pour le remettre où
+              le géocodeur l'avait mis. Maintenez le doigt sur une forme pour la
               changer, sur le plan vide pour en ajouter une là.
             </p>
             {/* Ce qui tient la banque ET le plan: les places qu'on cherche ne
@@ -331,13 +363,7 @@
                   />
                 ))}
               </div>
-              <div
-                ref={mapRef}
-                className="map"
-                id="plan_map"
-                data-droppable
-                data-toss-by="release-outside"
-              >
+              <div ref={mapRef} className="map" id="plan_map" data-droppable>
                 {/* Le plan vide: les formes sont posées par-dessus, donc un
                     appui sur l'une d'elles n'arrive jamais ici. */}
                 <Box
@@ -365,14 +391,43 @@
                           const { x, y } = event.detail;
                           moveShape(item.id, x, y);
                         },
-                        toss: () => removeShape(item.id),
+                        leave: () => removeShape(item.id),
                         longpress: (event) => openItemMenu(item, event),
                       }}
                     />
                   );
                 })}
+                {/* L'élément lui-même voyage: "move" le laisse où la main l'a
+                    mis, "leave" répond quand il est lâché hors du plan — le
+                    plan est le [data-droppable] au-dessus de lui. */}
+                <Box
+                  id="plan_address"
+                  className="address"
+                  title="Adresse"
+                  style={{
+                    left: `${addressPoint.x - 11}px`,
+                    top: `${addressPoint.y - 11}px`,
+                  }}
+                  interactions={{
+                    move: (event) => {
+                      const { x, y } = event.detail;
+                      setAddressPoint((previous) => ({
+                        x: previous.x + x,
+                        y: previous.y + y,
+                      }));
+                    },
+                    leave: () => setAddressPoint(GEOCODED_POINT),
+                  }}
+                >
+                  A
+                </Box>
               </div>
             </div>
+            <p className="address_status">
+              {addressPoint === GEOCODED_POINT
+                ? "Adresse là où le géocodeur l'a mise."
+                : `Adresse décalée de ${Math.round(addressPoint.x - GEOCODED_POINT.x)}, ${Math.round(addressPoint.y - GEOCODED_POINT.y)} px par rapport au géocodeur.`}
+            </p>
             {/* Un carré d'un pixel qu'on déplace: une ancre est un élément, un
                 point n'en est pas un. */}
             <div

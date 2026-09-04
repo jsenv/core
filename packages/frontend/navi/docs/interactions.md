@@ -40,9 +40,13 @@ one — `Box`, `List.Item`, `Button`, `Link`, the field components. Its keys are
 />
 ```
 
-`action` is untouched by this and keeps its own wiring — a click on a button, a
-change on a field. `interactions` is the other half: everything that is not that
-natural one.
+`action` is a control's prop and is untouched by this: a control keeps its own
+wiring — a click on a button, a change on a field — and `interactions` is the
+other half, everything that is not that natural one. A plain `Box` has no such
+wiring: it does nothing with `action` (dev warns), and a click on it is declared
+like any other interaction, `interactions={{ click: onSelect }}`. The click the
+browser fires after a drag is already suppressed, so `click` sits next to `move`
+or `grab` without fighting them.
 
 ### The three values
 
@@ -62,8 +66,9 @@ condition: `{ swipe_right: canArchive && archive }`.
 | `mousedown` `mouseup` `click` `dblclick` `contextmenu` | the browser's own events                       |
 | `swipe_left` `swipe_right` `swipe_up` `swipe_down`     | a press that travels                           |
 | `longpress`                                            | a press held still                             |
-| `move` `reorder` `land` `toss`                         | the element carried, and what letting go means |
+| `move` `reorder` `land` `toss` `leave`                 | the element carried, and what letting go means |
 | `grab`                                                 | the instant a drag takes hold of it            |
+| `pan` `zoom`                                           | a surface under the hand, or under a wheel     |
 | `"keyboard:<shortcut>"`                                | keys, e.g. `"keyboard:ctrl+backspace"`         |
 
 A name nothing knows how to detect produces a dev warning naming the detectors
@@ -156,17 +161,19 @@ comes back once it settles — a failure leaves the row in place so it can be tr
 again. What a success does to the element is yours (a list that redemands its
 rows, a row that leaves): navi does not make it disappear.
 
-## Carrying something: `move`, `reorder`, `land`, `toss`
+## Carrying something: `move`, `reorder`, `land`, `toss`, `leave`
 
-All four are the same gesture — the element is picked up and carried — and what
+All five are the same gesture — the element is picked up and carried — and what
 differs is the release. One detector reads them all, because it is one press.
 
-`toss` **combines** with `reorder` and with `land`: dropped on another item the
-element changes places, thrown far and fast it is gotten rid of. It does **not**
-combine with `move`, and neither do `reorder` and `land` with each other — one
-release cannot mean two of those. Declared together, the copy-carrying one wins
-and `move` is never answered — the element itself never travels, and a release
-that is not the other outcome means nothing at all (a dev warning says so).
+`toss` and `leave` each **combine** with `reorder` and with `land`: dropped on
+another item the element changes places, thrown far and fast it is gotten rid of,
+let go of away from every place it leaves. `leave` combines with `move` as well.
+`toss` does **not** combine with `move`, and neither do `reorder` and `land` with
+each other — one release cannot mean two of those. Declared together, the
+copy-carrying one wins and `move` is never answered — the element itself never
+travels, and a release that is not the other outcome means nothing at all (a dev
+warning says so).
 
 `move` carries the element ITSELF and leaves it where it was put; the others
 carry a copy and put the original back. That is the same difference said in layout
@@ -188,12 +195,22 @@ be a scroll container at all (`overflow` anything but `visible`), since there is
 nothing else for "inside" to mean. A `move` whose answer rejects travels back, because a
 place the application would not accept must not stay on screen as if it had.
 
+**Where the position is kept is the answer's.** An element drawn from state —
+`left`/`top` computed from a position the application holds — is redrawn by the
+handler above, and from then on its layout owns the position: navi sees the
+element drawn elsewhere while the answer was given and lets go of its own
+translate, so the thing does not land twice as far as the hand went. A handler
+that draws nothing (a token on a free canvas) leaves the position to the element,
+where it is baked in. Nothing to declare either way — but a handler whose draw
+comes later than its answer has to return the promise of that draw.
+
 **A copy that can be thrown frees its own area.** What is dragged is otherwise kept
 inside its scroll area — right for a reorder, since a row belongs to its list, and
 fatal for a throw: the copy hits the edge of the list, no distance is ever covered,
 so no throw can happen and no sideways movement is even visible. So `toss` lifts
-that constraint for the copy it carries — it is not a way to free a `move`, which
-says `data-drag-free`.
+that constraint for the copy it carries, and `leave` lifts it for whatever it is
+declared on — a thing that can be let go of outside has to be able to get there.
+Neither is a way to free a plain `move`, which says `data-drag-free`.
 
 ```jsx
 <List.Item
@@ -213,7 +230,7 @@ says `data-drag-free`.
 ```
 
 The gesture is `startDragTo`'s, whole: `move` carries the element itself, the
-other two carry a copy above the page while the original keeps its place, with a
+others carry a copy above the page while the original keeps its place, with a
 drop hint, drop targets found by intersection, no-op drops filtered out, and the
 flight of a thrown copy plus its return when the answer refuses. Only what the
 declared outcomes need runs — no copy for a move, no hint for something
@@ -246,36 +263,28 @@ name what moves.
 | `data-drag-delay` `data-drag-slop` `data-drag-threshold` | when the press becomes a grab          |
 | `data-drag-on-contact`                                   | a finger may drag by travelling too    |
 | `data-toss-distance` `data-toss-speed`                   | how far and how fast counts as a throw |
-| `data-toss-by="throw"\|"release-outside"`                | how a toss is made here                |
 | `data-drop-container`                                    | where the places are looked for        |
 
-### How a toss is made: `data-toss-by`
+### Let go of away from every place: `leave`
 
-`toss` names the outcome — the thing is gotten rid of — and a hand has two ways of
-saying it, each right where the other is wrong:
-
-- **`throw`** (the default): far **and** fast — that pair is what a flick is, and
-  it is asked for together because one without the other is moving something while
-  hesitating. A list's gesture. It is judged before any landing: a row sent across
-  the screen has not asked to swap places with whatever it flew over.
-- **`release-outside`**: let go with no place under it. Dragging a marker off the plan it
-  sits on and letting go is slow and deliberate — a surface's gesture, and the only
-  one it wants, because on a plan a fast drag that ends ON it has not asked for the
-  thing to go.
-
-The same `toss` either way, with the same flight off the screen and the same
-return if the answer rejects. Both at once is
-`data-toss-by="throw release-outside"`.
+A throw is a **gesture**: far and fast, the flick that gets rid of a row, judged
+before any landing. A release outside is a **place**: the hand let go with nothing
+under the thing, judged after a landing was looked for. They share the outcome an
+application usually attaches to them and nothing else — so `toss` is the throw,
+`leave` is the release outside, and neither reads the other's rules. There is no
+speed to a release; a fast drag across a plan that ends ON it has not asked for the
+thing to go, and a row pulled sideways out of its list and let go is a row put
+back, not a row deleted — a list declares `toss`, a surface declares `leave`.
 
 ```jsx
 <div data-drop-container>
-  <Plan id="plan" data-droppable data-toss-by="release-outside">
+  <Plan id="plan" data-droppable>
     {markers.map((marker) => (
       <Marker
         id={marker.id}
         interactions={{
           land: (event) => moveTo(marker.id, event.detail),
-          toss: () => remove(marker.id),
+          leave: () => remove(marker.id),
         }}
       />
     ))}
@@ -283,11 +292,36 @@ return if the answer rejects. Both at once is
 </div>
 ```
 
-`release-outside` is never the default because the same release means the
-opposite on a list: a row pulled sideways out of it and let go is a row put back, not a row
-deleted. And it needs places to be outside OF — declared next to `toss` alone,
-with nothing that can receive the thing, every release is outside and a dev
-warning says so.
+`leave` combines with every other outcome. Beside `land` or `reorder`, "outside" is
+away from every place. Beside `move` — the element itself travels, and nothing is a
+place — it is outside the surface the element stands in: the nearest
+`data-droppable` ancestor, or, without one, what can be seen of the scroll
+container (a dev warning says which). Either way it is judged on the element's
+box no longer overlapping it, not on the pointer, which is still well inside the
+frame when a small marker has just left it.
+
+```jsx
+<Plan data-droppable>
+  <Marker
+    interactions={{
+      move: (event) => remember(event.detail.x, event.detail.y),
+      leave: () => remove(marker.id),
+    }}
+  />
+</Plan>
+```
+
+Its detail is `toss`'s — `{ id, x, y }`, the distance travelled being what an exit
+is animated with. Picked up and put straight back down stays a cancel: it has to
+have gone somewhere to be away from anything.
+
+What the thing does while the answer is asked follows what was carried. A copy
+fades where it was let go of; the element itself stays where the hand put it. A
+resolve takes the copy away and lets go of the element's position — the
+application has removed the thing, or drawn it where it goes back to (the address
+point returns to where the geocoder put it) — and a reject brings either back, as
+a refused `move` does. A surface that clips its overflow clips the element on its
+way out; the copy a `land` carries lives in the top layer and does not.
 
 ### A finger that does not have to wait: `data-drag-on-contact`
 
@@ -515,7 +549,7 @@ thing it copies, and dressed by where that thing stands.
 
 ### Saying the grab is acquired: `grab`
 
-The three above answer the **release**. Between the press and the release there is
+The interactions above answer the **release**. Between the press and the release there is
 one instant that counts for the hand: the one where the object stops being pressed
 and starts being held. `grab` is that instant — the same one whichever way the drag
 was entered, a finger held still or a mouse travelled a few pixels.
@@ -539,8 +573,8 @@ Nothing here is about vibration: a sound, a class, a measure are the same moment
 
 `grab` **reports, it does not ask**: what it returns is not waited on, and
 preventing its event does not call the gesture off. And it is not an interaction on
-its own — declared without `move`, `reorder` or `toss` there is no gesture for it to
-be the beginning of, and a dev warning says so. Its detail carries `pointerType` and
+its own — declared without one of the five above there is no gesture for it to be
+the beginning of, and a dev warning says so. Its detail carries `pointerType` and
 the `gestureInfo`.
 
 A `longpress` needs none of this: it already happens at the moment the hold is
@@ -623,7 +657,8 @@ back to it.
 `data-drag-axis` says which axes the drag walks, and its default is not the same
 for every outcome: `reorder` alone walks the list (`y`, or `x` for a list that runs
 sideways), while a `move` goes wherever it is put, a `land` wherever the board has
-places and a `toss` wherever it was thrown (`xy`). `data-drag-delay`,
+places, a `toss` wherever it was thrown and a `leave` out by whichever edge (`xy`).
+`data-drag-delay`,
 `data-drag-slop`, `data-drag-threshold` tune when the press becomes a grab.
 
 ### An affordance inside somebody else's box: `selfInteractions`
@@ -876,19 +911,63 @@ container above it does not take the gesture:
 `docs/drag_to_travel.md`). navi's own swipes do the equivalent with
 `data-travel-by-drag`.
 
+## A surface under the hand: `pan`, `zoom`
+
+A plan drawn over an aerial photo, a map, a floor: one box the hand drags to look
+elsewhere on, pinches or rolls a wheel over to look closer at, with things carried
+across it that must not drag the surface along.
+
+```jsx
+<Box
+  interactions={{
+    pan: (event) => moveCenterBy(event.detail), // { x, y } since the last one
+    zoom: (event) => zoomBy(event.detail), // { factor, x, y }
+  }}
+>
+  {markers.map((marker) => (
+    <Marker interactions={{ move: (event) => place(marker, event.detail) }} />
+  ))}
+</Box>
+```
+
+Both are a **stream**, reported on every frame: `pan` says how far the hand has
+moved since the previous `pan`, in px; `zoom` by what factor (above 1 is in) and
+around which point of the surface, measured inside its border — the point between
+the fingers, or under the wheel. Two fingers are one gesture, the point between
+them panning and the distance between them zooming, and a finger lifting
+re-anchors on what is left. What a pixel of pan means in your coordinates, and
+whether the zoom is continuous or stepped, is yours: the numbers are the numbers.
+
+What navi holds is what has to be settled **before** the press: `touch-action` on
+the surface, said from a stylesheet because a browser decides what a touch may do
+when it lands; the pan stepping back for what is carried across the surface (a
+`move`, a handle, a field, a popover — the same list a travelling box steps back
+for); the pinch not beginning as a pan under its first finger; the wheel and the
+pinch writing one `zoom`; the capture, the pointer the browser drops, the click
+the release leaves behind. A pointer pans only once it has travelled a few px
+(`data-drag-threshold`), so a tap stays a tap and a `longpress` declared beside
+`pan` still gets its hold.
+
+Declared alone, `zoom` takes two fingers and the wheel and leaves one pointer to
+whatever else reads it; `pan` alone leaves the wheel to the page.
+
 ## A gesture whose product is a value
 
-`move`, `reorder`, `land` and `toss` answer the same question — where did the
-element end up — because all four carry it. A rotation does not: what comes out of
+`move`, `reorder`, `land`, `toss` and `leave` answer the same question — where did
+the element end up — because all five carry it. A rotation does not: what comes out of
 it is an angle, and the handle that produced it stays exactly where it is. Same for
-a scale, a zoom, a plan panned under the finger.
+a scale, or a sun dragged around a plan to set the hour.
 
 navi names none of those, and it is not an oversight: an interaction names an
 **outcome** — something that happened once, that can be told, refused, awaited.
 There is no outcome here, only a number read while the hand is still moving, and
 what to do with it (snap it to the neighbouring court, draw it, keep it in a
-signal) is knowledge navi does not have. So it hands over the machinery instead
-and leaves the paint alone:
+signal) is knowledge navi does not have. `pan` and `zoom` above are the one
+exception, and not for the number: a surface has an arbitration to settle before
+the press — what it yields to, what a touch on it may do — and arbitration is
+what `interactions` is for. A handle has none; it is the whole surface of its own
+gesture. So for those navi hands over the machinery instead and leaves the paint
+alone:
 
 ```js
 import { createDragGestureController, dragAfterIntent } from "@jsenv/navi";
@@ -991,7 +1070,9 @@ travels above it: `data-no-drag-travel` (see `docs/drag_to_travel.md`).
 - `src/control/interaction/interaction_press.js` — swipes and holds, and what a
   swipe writes on the element.
 - `src/control/interaction/interaction_drag.js` — `move`, `reorder`, `land`,
-  `toss` and the `grab` moment.
+  `toss`, `leave` and the `grab` moment.
+- `src/control/interaction/interaction_surface.js` — `pan` and `zoom`, on
+  `installPanZoom` from `@jsenv/dom`.
 - `src/control/interaction/interaction_keyboard.js`,
   `interaction_native.js` — the other two detectors.
 - `@jsenv/dom` — `src/interaction/drag/drag_gesture.js` (the loop, its options and
@@ -999,7 +1080,8 @@ travels above it: `data-no-drag-travel` (see `docs/drag_to_travel.md`).
   press becomes a drag, and what a source says in the stylesheet).
 - `src/control/demos/38_interactions_demo.html` — every case above, plus a
   mailbox, a board whose places are zones and the same board whose places are the
-  pieces, and a custom gesture registered from the page.
+  pieces, a surface panned and zoomed, and a custom gesture registered from the
+  page.
 - `src/control/demos/integration/5_plan_editor_demo.html` — a place that is a
   surface: shapes dragged out of a bank onto a plan, moved on it, and dragged off
-  it to go.
+  it to go; and an address point that travels itself (`move` + `leave`).

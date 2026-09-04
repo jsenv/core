@@ -323,6 +323,53 @@
         box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
       }
 
+      /* A surface drawn from three numbers the hand writes: where it has been
+         panned to and how far it is zoomed. The grid is the surface's own
+         background, so it goes on forever; what stands on it is in a layer of
+         no size at the origin, moved and scaled with it. */
+      .surface {
+        position: relative;
+        height: 260px;
+        background:
+          repeating-linear-gradient(
+            0deg,
+            #dfe5ee 0 1px,
+            transparent 1px calc(24px * var(--surface-zoom, 1))
+          ),
+          repeating-linear-gradient(
+            90deg,
+            #dfe5ee 0 1px,
+            transparent 1px calc(24px * var(--surface-zoom, 1))
+          );
+        background-position: var(--surface-x, 0px) var(--surface-y, 0px);
+        border: 1px solid #dde3ec;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      .surface_layer {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 0;
+        height: 0;
+        transform: translate(var(--surface-x, 0px), var(--surface-y, 0px))
+          scale(var(--surface-zoom, 1));
+        transform-origin: 0 0;
+        overflow: visible;
+      }
+      .surface_readout {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        padding: 2px 8px;
+        color: #4a5260;
+        font-size: 12px;
+        font-variant-numeric: tabular-nums;
+        background: rgba(255, 255, 255, 0.85);
+        border-radius: 999px;
+        pointer-events: none;
+      }
+
       /* A padel court, said with what makes it one and nothing else: upright, a
          net across the middle, and four places big enough to read a name in. */
       .padel {
@@ -712,6 +759,7 @@
           <ReorderDemo />
           <TossDemo />
           <MoveDemo />
+          <SurfaceDemo />
           <CustomDetectorDemo />
           <CombinationsDemo />
           <ConcreteCasesDemo />
@@ -1534,6 +1582,95 @@
           };
         },
       });
+
+      // ── Pan and zoom ─────────────────────────────────────────────────────
+
+      const SurfaceDemo = () => {
+        // Where the surface has been taken, and how far it is zoomed: the three
+        // numbers it is drawn from.
+        const [view, setView] = useState({ x: 0, y: 0, zoom: 1 });
+        // The token's place is state too, in the surface's own coordinates: the
+        // demo redraws it from what "move" says, and navi lets go of its
+        // translate once it sees the token drawn elsewhere.
+        const [tokenPoint, setTokenPoint] = useState({ x: 40, y: 60 });
+        const clampZoom = (zoom) => {
+          if (zoom < 0.25) {
+            return 0.25;
+          }
+          if (zoom > 8) {
+            return 8;
+          }
+          return zoom;
+        };
+        return (
+          <div class="demo-section">
+            <Heading id="surface">Pan and zoom</Heading>
+            <p class="legend">
+              Drag the surface to pan it; pinch it, or roll the wheel over it,
+              to zoom around the point under the hand. The token is carried, not
+              the surface under it — a press on it is the token's own. Its
+              position is state, in the surface's coordinates: what{" "}
+              <code>move</code> says is divided by the zoom before it is kept.
+            </p>
+            <Box
+              className="surface"
+              style={{
+                "--surface-x": `${view.x}px`,
+                "--surface-y": `${view.y}px`,
+                "--surface-zoom": view.zoom,
+              }}
+              interactions={{
+                pan: (event) => {
+                  const { x, y } = event.detail;
+                  setView((previous) => ({
+                    ...previous,
+                    x: previous.x + x,
+                    y: previous.y + y,
+                  }));
+                },
+                zoom: (event) => {
+                  const { factor, x, y } = event.detail;
+                  setView((previous) => {
+                    const zoom = clampZoom(previous.zoom * factor);
+                    // The point under the hand stays under it: what was there
+                    // before is drawn there after, at the new scale.
+                    const ratio = zoom / previous.zoom;
+                    return {
+                      zoom,
+                      x: x - (x - previous.x) * ratio,
+                      y: y - (y - previous.y) * ratio,
+                    };
+                  });
+                },
+              }}
+            >
+              <div className="surface_layer">
+                <Token
+                  id="token_on_surface"
+                  label="carried"
+                  style={{
+                    left: `${tokenPoint.x}px`,
+                    top: `${tokenPoint.y}px`,
+                  }}
+                  interactions={{
+                    move: (event) => {
+                      const { x, y } = event.detail;
+                      setTokenPoint((previous) => ({
+                        x: previous.x + x / view.zoom,
+                        y: previous.y + y / view.zoom,
+                      }));
+                    },
+                  }}
+                />
+              </div>
+              <span className="surface_readout">
+                {Math.round(view.zoom * 100)}% · {Math.round(view.x)},{" "}
+                {Math.round(view.y)}
+              </span>
+            </Box>
+          </div>
+        );
+      };
 
       const CustomDetectorDemo = () => {
         const [entries, push, clear] = useCallLog();

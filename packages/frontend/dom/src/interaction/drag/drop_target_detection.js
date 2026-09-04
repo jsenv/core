@@ -243,7 +243,7 @@ const findTargetByGeometry = (targetElements, dragElementRect) => {
   return bestElement;
 };
 
-const rectangleAreIntersecting = (r1, r2) => {
+export const rectangleAreIntersecting = (r1, r2) => {
   return !(
     r2.left > r1.right ||
     r2.right < r1.left ||

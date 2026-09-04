@@ -8557,7 +8557,7 @@ const isolateInteractions = (elements) => {
 
 installImportMetaCssBuild(import.meta);
 
-const css$5 = /* css */ `.navi_drag_gesture_backdrop {
+const css$6 = /* css */ `.navi_drag_gesture_backdrop {
   touch-action: none;
   user-select: none;
   position: fixed;
@@ -8568,7 +8568,7 @@ const css$5 = /* css */ `.navi_drag_gesture_backdrop {
   outline: none;
 }
 `;
-import.meta.css = [css$5, "@jsenv/dom/src/interaction/drag/drag_gesture.js"];
+import.meta.css = [css$6, "@jsenv/dom/src/interaction/drag/drag_gesture.js"];
 
 /*
  * Who asked for the capture of a pointer, last. This module is the only place
@@ -9632,7 +9632,7 @@ installImportMetaCssBuild(import.meta);
    lets the page scroll and still makes the refusal effective — provided the
    listener that will refuse is already known too, which is markDragSource's
    half of the same rule. */
-const css$4 = /* css */ `[data-drag-handle], [data-drag-source] {
+const css$5 = /* css */ `[data-drag-handle], [data-drag-source] {
   -webkit-touch-callout: none;
 }
 
@@ -9662,7 +9662,7 @@ const css$4 = /* css */ `[data-drag-handle], [data-drag-source] {
   touch-action: auto;
 }
 `;
-import.meta.css = [css$4, "@jsenv/dom/src/interaction/drag/drag_after_intent.js"];
+import.meta.css = [css$5, "@jsenv/dom/src/interaction/drag/drag_after_intent.js"];
 
 /*
  * A press that may become a drag has to be refusable before anyone knows it is
@@ -10407,7 +10407,7 @@ const getDragCoordinates = (
 
 installImportMetaCssBuild(import.meta);
 
-const css$3 = /* css */ `.navi_constraint_feedback_line {
+const css$4 = /* css */ `.navi_constraint_feedback_line {
   z-index: 9998;
   visibility: hidden;
   transform-origin: 0;
@@ -10423,7 +10423,7 @@ const css$3 = /* css */ `.navi_constraint_feedback_line {
 `;
 
 const setupConstraintFeedbackLine = () => {
-  import.meta.css = [css$3, "@jsenv/dom/src/interaction/drag/constraint_feedback_line.js"];
+  import.meta.css = [css$4, "@jsenv/dom/src/interaction/drag/constraint_feedback_line.js"];
   const constraintFeedbackLine = createConstraintFeedbackLine();
 
   // Track last known mouse position for constraint feedback line during scroll
@@ -10510,7 +10510,7 @@ let currentConstraintMarkers = [];
 let currentReferenceElementMarker = null;
 let currentElementMarker = null;
 
-const css$2 = /* css */ `.navi_debug_markers_container {
+const css$3 = /* css */ `.navi_debug_markers_container {
   z-index: 999998;
   pointer-events: none;
   --marker-size: ${MARKER_SIZE}px;
@@ -10679,7 +10679,7 @@ const css$2 = /* css */ `.navi_debug_markers_container {
 `;
 
 const setupDragDebugMarkers = (dragGesture, { referenceElement }) => {
-  import.meta.css = [css$2, "@jsenv/dom/src/interaction/drag/drag_debug_markers.js"];
+  import.meta.css = [css$3, "@jsenv/dom/src/interaction/drag/drag_debug_markers.js"];
 
   // Clean up any existing persistent markers from previous drag gestures
   {
@@ -12013,7 +12013,7 @@ const TOSS_DURATION_MS = 320;
 // Far enough to be off any screen, in the direction the hand was going.
 const TOSS_DISTANCE = 900;
 
-const css$1 = /* css */ `.navi_drop_hint {
+const css$2 = /* css */ `.navi_drop_hint {
   inset: auto;
   top: var(--drop-hint-y);
   left: calc(var(--drop-target-left) + var(--drop-hint-margin-x, 0px));
@@ -12162,7 +12162,7 @@ const css$1 = /* css */ `.navi_drop_hint {
 `;
 // At module scope, not inside startDragTo: the cursor rules above say who
 // can start a drag, and they have to be true BEFORE anyone drags anything.
-import.meta.css = [css$1, "@jsenv/dom/src/interaction/drag/drag_to.js"];
+import.meta.css = [css$2, "@jsenv/dom/src/interaction/drag/drag_to.js"];
 
 // What a press must not be read from at all. `data-drag-ignore` is said by
 // something whose press is its own business — a text one wants to select, a
@@ -12578,16 +12578,33 @@ const createDragToMoveGestureController = ({
  * Starts a drag, for one or more of the outcomes listed.
  *
  * @param {PointerEvent} event The `pointerdown` that may become a drag.
- * @param {("move"|"reorder"|"toss"|"land")[]} effects
+ * @param {("move"|"reorder"|"toss"|"land"|"leave")[]} effects
  *   What letting go of this element can mean. `reorder`, `toss` and `land` carry a
- *   copy; `move` carries the element itself. Asking for `move` and `reorder`
- *   together is asking one release to mean two things, and so is asking for
- *   `reorder` and `land`.
+ *   copy; `move` carries the element itself, and `leave` goes with either. Asking
+ *   for `move` and `reorder` together is asking one release to mean two things,
+ *   and so is asking for `reorder` and `land`.
  * @param {object} [options]
  * @param {Element} [options.draggedElement=event.currentTarget]
  * @param {(detail: {gestureInfo: object, x: number, y: number}) => Promise|void} [options.onMove]
- *   It was put somewhere. The position is already committed when this runs — the
- *   hand let go of it there — and travels back if the promise rejects.
+ *   It was put somewhere. It is left where the hand let go of it while this
+ *   runs, and travels back if the promise rejects. Once it resolves the position
+ *   has one owner: the caller's layout, when the caller drew the element
+ *   somewhere while answering (a new `left`/`top` from state, a new `transform`,
+ *   a node rebuilt), and the element's own translate otherwise, baked in — see
+ *   settleMovedElement.
+ * @param {(detail: {gestureInfo: object, x: number, y: number}) => Promise|void} [options.onLeave]
+ *   It was let go of away from every place: with places (`itemSelector`), away
+ *   from all of them; without, out of `outsideOf`. Beside `move` the element
+ *   itself is left where the hand put it while this runs, and the answer says
+ *   what becomes of that position — let go of on a resolve (the caller has
+ *   removed the thing, or drawn it where it goes back to), travelled home on a
+ *   reject. Beside a copy, the copy fades where it was let go of and comes back
+ *   if the promise rejects. Picked up and put straight back down is a cancel:
+ *   it has to have gone somewhere to be away from anything.
+ * @param {Element} [options.outsideOf] The box a `leave` is outside of, when
+ *   nothing is a place. Left out, what can be seen of the scroll container.
+ *   Judged on the carried box no longer overlapping it — not on the pointer,
+ *   which is still well inside the frame when a small thing has just left it.
  * @param {Element} [options.containerElement=draggedElement.parentElement]
  *   Where the places are looked for with `itemSelector`, and where the drop hint
  *   is drawn. The parent covers a list and a board, whose items are siblings of
@@ -12616,16 +12633,8 @@ const createDragToMoveGestureController = ({
  * @param {number} [options.tossDistance=110] How far a throw goes, in px.
  * @param {number} [options.tossSpeed=0.45] And how fast, in px/ms. BOTH are asked
  *   for: one without the other is moving the thing while hesitating, and nothing is
- *   thrown away on a hesitation.
- * @param {("throw"|"release-outside")[]} [options.tossBy=["throw"]] How a toss
- *   is made here. A THROW is far and fast — the flick that gets rid of something,
- *   a list's gesture, judged before any landing. A RELEASE OUTSIDE has no place
- *   under it — dragging something off the surface it belongs to and letting go,
- *   deliberate and never a flick, a surface's gesture. Each is asked for on its
- *   own: a surface wants only the second (a fast drag across it that ends ON it
- *   has not asked for the thing to go), a list only the first (a row let go of
- *   beside its list is a row put back). With no place to be outside of (no
- *   `itemSelector`), every release is outside.
+ *   thrown away on a hesitation. A throw is judged before any landing; a release
+ *   with no place under it is `leave`'s, not a toss — there is no speed to it.
  *
  * Everything else is forwarded to `createDragToMoveGestureController`
  * (`areaConstraint`, `autoScrollAreaPadding`, `direction`…) and to `dragAfterIntent`
@@ -12655,32 +12664,48 @@ const startDragTo = (
   if (!isPrimaryButtonEvent(event)) {
     return undefined;
   }
+  const canMove = effects.includes("move");
   const canReorder = effects.includes("reorder");
   const canToss = effects.includes("toss");
   const canLand = effects.includes("land");
-  if (canReorder || canToss || canLand) {
+  const canLeave = effects.includes("leave");
+  // A `leave` on its own carries a copy too: nothing keeps the element where it
+  // was put, so the original stays until the answer says it is gone.
+  if (canReorder || canToss || canLand || (canLeave && !canMove)) {
     return startDragToCarryCopy(event, {
       draggedElement,
       canReorder,
       canToss,
       canLand,
+      canLeave,
       ...options,
     });
   }
-  return startDragToMoveElement(event, { draggedElement, ...options });
+  return startDragToMoveElement(event, {
+    draggedElement,
+    canLeave,
+    ...options,
+  });
 };
 
 /**
- * The element ITSELF is carried, and keeps the place the hand gave it.
+ * The element ITSELF is carried, and keeps the place the hand gave it — or is let
+ * go of away from it, when it can `leave`.
  *
- * No copy, unlike the two others: what is being moved is the thing and not a
+ * No copy, unlike the others: what is being moved is the thing and not a
  * stand-in for it, so there is nothing to put back and nothing to reveal.
  */
 const startDragToMoveElement = (
   event,
   {
     draggedElement,
+    canLeave,
     onMove,
+    onLeave,
+    outsideOf,
+    // A thing that can be let go of outside has to be able to get there. Same
+    // reason and same shape as the default of the copy path below.
+    areaConstraint = canLeave ? "none" : undefined,
     threshold,
     longPress,
     longPressDelay,
@@ -12697,6 +12722,7 @@ const startDragToMoveElement = (
     () => {
       const gestureController = createDragToMoveGestureController({
         releasePositionEffect: "manual",
+        areaConstraint,
         ...options,
       });
       const dragGesture = gestureController.grabViaPointer(event, {
@@ -12712,15 +12738,35 @@ const startDragToMoveElement = (
           gestureInfo.cancelPosition();
           return;
         }
-        // Committed before the answer rather than after: the hand let go of it
-        // there, and a thing that snaps home while a request is in flight says the
-        // gesture was not understood.
-        gestureInfo.commitPosition();
+        if (
+          canLeave &&
+          !gestureInfo.cancelled &&
+          isOutsideOf(gestureInfo, outsideOf)
+        ) {
+          // Left where the hand let go of it while the answer is asked — a thing
+          // that snaps home with the request in flight says the gesture was not
+          // understood. The answer then says what becomes of that position: let
+          // go of on a resolve, since the caller has removed the thing or drawn
+          // it where it goes back to; travelled home on a reject.
+          try {
+            await onLeave?.({ gestureInfo, x: xDelta, y: yDelta });
+            gestureInfo.cancelPosition();
+          } catch {
+            gestureInfo.cancelPositionAnimated();
+          }
+          return;
+        }
+        // Kept where the hand let go of it while the answer is asked — a thing
+        // that snaps home with the request in flight says the gesture was not
+        // understood — and settled once the answer is in.
+        const layoutBeforeAnswer = readOwnLayout(draggedElement);
         try {
           await onMove?.({ gestureInfo, x: xDelta, y: yDelta });
         } catch {
           gestureInfo.cancelPositionAnimated();
+          return;
         }
+        settleMovedElement(draggedElement, gestureInfo, layoutBeforeAnswer);
       });
       return dragGesture;
     },
@@ -12736,22 +12782,64 @@ const startDragToMoveElement = (
   );
 };
 
+/**
+ * Who holds the position of a moved element once the answer is in. Two owners
+ * are possible and the element can only have one: the drag's own translate, for
+ * a thing whose place is the hand's alone (a token on a free canvas), or the
+ * caller's layout, for a thing drawn from state (a court at so many metres from
+ * the place point, its `left`/`top` computed from that). Both kept, the thing
+ * lands twice as far as the hand went.
+ *
+ * The answer does not say which, so the element is asked: drawn somewhere else
+ * by the caller while the answer was given — a new `left`, a new inline
+ * `transform`, a node thrown away and rebuilt — its layout holds the position
+ * and the translate goes. Drawn nowhere, the translate is all there is, and it
+ * is baked in. Read from the layout and never from the screen, so a page that
+ * scrolled while the answer was awaited reads as nothing; and read from the
+ * inline style rather than the computed one, which the translate itself is
+ * part of.
+ *
+ * A caller that draws later than it answers (a store rendering on its own
+ * schedule) has to make the answer wait for the draw: what is read here is what
+ * has happened by then.
+ */
+const settleMovedElement = (element, gestureInfo, layoutBeforeAnswer) => {
+  const layoutAfterAnswer = readOwnLayout(element);
+  const drawnElsewhere =
+    !layoutAfterAnswer.connected ||
+    layoutAfterAnswer.offsetLeft !== layoutBeforeAnswer.offsetLeft ||
+    layoutAfterAnswer.offsetTop !== layoutBeforeAnswer.offsetTop ||
+    layoutAfterAnswer.transform !== layoutBeforeAnswer.transform ||
+    layoutAfterAnswer.translate !== layoutBeforeAnswer.translate;
+  if (drawnElsewhere) {
+    gestureInfo.cancelPosition();
+  } else {
+    gestureInfo.commitPosition();
+  }
+};
+const readOwnLayout = (element) => ({
+  connected: element.isConnected,
+  offsetLeft: element.offsetLeft,
+  offsetTop: element.offsetTop,
+  transform: element.style.transform,
+  translate: element.style.translate,
+});
+
 // Far and fast, both at once: one without the other is moving the thing while
 // hesitating, and nothing is thrown away on a hesitation — it comes back.
 const TOSS_DISTANCE_TO_COMMIT = 110;
 const TOSS_SPEED_TO_COMMIT = 0.45;
-// The flick is how a list gets rid of a row; a surface says otherwise.
-const TOSS_BY_DEFAULT = ["throw"];
 
 const resolveDropMeaning = ({
   gestureInfo,
   hasDropTarget,
+  releasedOutside,
   canReorder,
   canToss,
   canLand,
+  canLeave,
   tossDistance = TOSS_DISTANCE_TO_COMMIT,
   tossSpeed = TOSS_SPEED_TO_COMMIT,
-  tossBy = TOSS_BY_DEFAULT,
 }) => {
   if (gestureInfo.cancelled) {
     // Nobody let go of anything: the gesture was taken away mid-air (the
@@ -12759,7 +12847,7 @@ const resolveDropMeaning = ({
     // to be at that moment is not a place it was put.
     return "cancel";
   }
-  if (canToss && tossBy.includes("throw")) {
+  if (canToss) {
     const { xDelta, yDelta } = gestureInfo.layout;
     const distance = Math.hypot(xDelta, yDelta);
     if (distance > tossDistance && gestureInfo.velocity > tossSpeed) {
@@ -12774,19 +12862,14 @@ const resolveDropMeaning = ({
       return "reorder";
     }
   }
-  if (canToss && tossBy.includes("release-outside")) {
-    // Let go of away from every place: the other way of meaning "get rid of
-    // this", and the one a surface asks for — off the plan and down is
-    // deliberate, never a flick.
-    //
-    // "Away from every place" is the last frame's answer, not the one above: a
-    // row let go of where it already was has no place to INSERT it at and still
-    // has a place under it. And it has to have gone somewhere to be away from
-    // anything — picked up and put straight back down is a hand that changed its
-    // mind, not a thing dropped over nothing.
+  if (canLeave && releasedOutside) {
+    // Let go of away from every place — off the plan and down, deliberate and
+    // never a flick. It has to have gone somewhere to be away from anything:
+    // picked up and put straight back down is a hand that changed its mind, not
+    // a thing dropped over nothing.
     const { xDelta, yDelta } = gestureInfo.layout;
-    if ((xDelta || yDelta) && !gestureInfo.dropTargetInfo) {
-      return "toss";
+    if (xDelta || yDelta) {
+      return "leave";
     }
   }
   return "cancel";
@@ -12807,28 +12890,34 @@ const startDragToCarryCopy = (
     canReorder,
     canToss,
     canLand,
-    // Something that can be thrown away has to be able to LEAVE. The default of
-    // the layer below keeps what is dragged inside its scroll area, which is right
-    // for a reorder (a row belongs to its list) and makes a throw impossible — the
-    // copy hits the edge of the list and no distance is ever covered, so no throw
-    // ever happens and no sideways movement is even visible.
+    canLeave,
+    // Something that can be thrown away, or let go of outside, has to be able to
+    // LEAVE. The default of the layer below keeps what is dragged inside its
+    // scroll area, which is right for a reorder (a row belongs to its list) and
+    // makes a throw impossible — the copy hits the edge of the list and no
+    // distance is ever covered, so no throw ever happens and no sideways movement
+    // is even visible.
     // Destructured with the default here rather than written at the call below: a
     // caller passing `areaConstraint: undefined` (which is what saying nothing
     // through an options object looks like) would otherwise put the layer below
     // back on its own default and undo this.
-    areaConstraint = canToss ? "none" : undefined,
+    areaConstraint = canToss || canLeave ? "none" : undefined,
     containerElement = draggedElement.parentElement,
     itemSelector,
     getItemId,
     onReorder,
     onLand,
     onToss,
+    onLeave,
+    outsideOf,
     tossDistance,
     tossSpeed,
-    tossBy,
     // A list runs one way and reordering walks it; a board has places all around,
-    // so something landing on one of them goes wherever the hand takes it.
-    direction = canLand ? { x: true, y: true } : { x: false, y: true },
+    // so something landing on one of them goes wherever the hand takes it — and
+    // so does something that can leave, whichever edge it leaves by.
+    direction = canLand || canLeave
+      ? { x: true, y: true }
+      : { x: false, y: true },
     threshold,
     longPress,
     longPressDelay,
@@ -13059,15 +13148,25 @@ const startDragToCarryCopy = (
           const hasDropTarget = canLand
             ? currentReleaseElement !== undefined
             : currentBeforeElement !== undefined;
+          // "Away from every place" is the last frame's answer, not
+          // `hasDropTarget`: a row let go of where it already was has no place
+          // to INSERT it at and still has a place under it. With nothing that is
+          // a place, it is out of the box the thing belongs to.
+          const releasedOutside =
+            canLeave &&
+            (dropHintEl
+              ? !gestureInfo.dropTargetInfo
+              : isOutsideOf(gestureInfo, outsideOf));
           const dropMeans = resolveDropMeaning({
             gestureInfo,
             hasDropTarget,
+            releasedOutside,
             canReorder,
             canToss,
             canLand,
+            canLeave,
             tossDistance,
             tossSpeed,
-            tossBy,
           });
 
           // Let go of and still on the screen: from here until it is taken away
@@ -13113,6 +13212,13 @@ const startDragToCarryCopy = (
               // It still exists, so the screen has to say so: the copy comes back
               // over the original, and taking it away then reveals the row in
               // place.
+              await settleCloneBack(cloneWrapper, draggedElement);
+            }
+          } else if (dropMeans === "leave") {
+            setCloneViewportRect(cloneWrapper, cloneWrapper);
+            gestureInfo.cancelPosition();
+            const gone = await letCloneGo(cloneWrapper, gestureInfo, onLeave);
+            if (!gone) {
               await settleCloneBack(cloneWrapper, draggedElement);
             }
           } else if (dropMeans === "land") {
@@ -13277,6 +13383,54 @@ const tossCloneAway = async (cloneWrapper, gestureInfo, onToss) => {
   } catch {
     return false;
   }
+};
+
+/**
+ * The copy fades where the hand let go of it, and the caller says what being let
+ * go of there meant. Resolves true when it is really gone.
+ *
+ * No flight, unlike a throw: nothing was thrown. The thing was put down over
+ * nothing, and it goes from there — the same attribute as a throw, so that a
+ * refusal brings it back the same way.
+ */
+const letCloneGo = async (cloneWrapper, gestureInfo, onLeave) => {
+  cloneWrapper.dataset.tossed = "away";
+  try {
+    const { xDelta, yDelta } = gestureInfo.layout;
+    await onLeave?.({ gestureInfo, x: xDelta, y: yDelta });
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+// Whether what is carried has left the box entirely. The box rather than the
+// pointer: a small thing dragged past the edge of its frame has left it while
+// the hand is still well inside.
+const isOutsideOf = (gestureInfo, outsideOf) => {
+  const carried = gestureInfo.elementImpacted || gestureInfo.element;
+  const carriedRect = carried.getBoundingClientRect();
+  const frameRect = outsideOf
+    ? outsideOf.getBoundingClientRect()
+    : getVisibleRect(gestureInfo.scrollContainer);
+  return !rectangleAreIntersecting(carriedRect, frameRect);
+};
+
+// What can be seen of a scroll container, in viewport coordinates.
+const getVisibleRect = (scrollContainer) => {
+  if (scrollContainer === document.documentElement) {
+    const { clientWidth, clientHeight } = scrollContainer;
+    return { left: 0, top: 0, right: clientWidth, bottom: clientHeight };
+  }
+  const rect = scrollContainer.getBoundingClientRect();
+  const left = rect.left + scrollContainer.clientLeft;
+  const top = rect.top + scrollContainer.clientTop;
+  return {
+    left,
+    top,
+    right: left + scrollContainer.clientWidth,
+    bottom: top + scrollContainer.clientHeight,
+  };
 };
 
 /**
@@ -14688,6 +14842,253 @@ const isPressDisputedByDrag = (element) => {
     return false;
   }
   return !isPressExcluded(element, dragged);
+};
+
+installImportMetaCssBuild(import.meta);
+
+const SURFACE_ATTRIBUTE = "data-pan-zoom-surface";
+
+const css$1 = /* css */ `[data-pan-zoom-surface] {
+  touch-action: none;
+  user-select: none;
+}
+`;
+import.meta.css = [css$1, "@jsenv/dom/src/interaction/drag/pan_zoom.js"];
+
+// How far a wheel travels to double the zoom, or halve it: about three notches
+// of a mouse. A trackpad pinch arrives as a wheel too (ctrl held, small deltas,
+// many events) and reads the same way.
+const WHEEL_DISTANCE_PER_DOUBLING = 300;
+const WHEEL_LINE_HEIGHT = 16;
+const WHEEL_PAGE_HEIGHT = 400;
+
+// What a press on the surface is NOT for it: what answers the pointer on its own
+// (a field, a handle, a popover…), what is carried across the surface (a drag
+// source, a thing that said the press is its own), and a surface inside this
+// one. The nearest word wins: the surface is in the list too, so a press on it
+// or on plain content in it finds the surface first.
+const YIELDED_SELECTOR = `${DRAG_EXCLUDED_SELECTOR},[data-drag-source],[data-drag-ignore],[${SURFACE_ATTRIBUTE}]`;
+
+/**
+ * Makes an element a surface that pans under the hand and zooms between two
+ * fingers or under a wheel.
+ *
+ * @param {Element} element
+ * @param {object} options
+ * @param {(detail: {event: PointerEvent, x: number, y: number}) => void} [options.onPan]
+ *   The hand moved: `x`/`y` are how far since the last report, in px.
+ * @param {(detail: {event: PointerEvent|WheelEvent, factor: number, x: number, y: number}) => void} [options.onZoom]
+ *   The zoom changed by `factor` (above 1 is in) around the point `x`/`y` of the
+ *   surface, measured inside its border. Left out, a wheel over the surface is
+ *   left to the page, and two fingers only pan.
+ * @param {number} [options.threshold=5] How far a pointer travels before it pans.
+ * @returns {() => void} Takes it all back.
+ */
+const installPanZoom = (
+  element,
+  { onPan, onZoom, threshold = 5 } = {},
+) => {
+  element.setAttribute(SURFACE_ATTRIBUTE, "");
+  // A travelling box above must not take the press this reads (see
+  // drag_to_travel.js): the surface says so itself, being the one that knows.
+  element.setAttribute("data-no-drag-travel", "");
+
+  // Every pointer down on the surface, where it is and where it landed.
+  const pointers = new Map();
+  let active = false;
+  // Where the hand was at the last report: the point between the pointers, and
+  // the distance between the first two.
+  let anchor = null;
+  let disarmClickSuppression = null;
+
+  const pointOnSurface = (clientX, clientY) => {
+    const rect = element.getBoundingClientRect();
+    return {
+      x: clientX - rect.left - element.clientLeft,
+      y: clientY - rect.top - element.clientTop,
+    };
+  };
+
+  const readHand = (where = "now") => {
+    let sumX = 0;
+    let sumY = 0;
+    for (const pointer of pointers.values()) {
+      sumX += where === "now" ? pointer.x : pointer.startX;
+      sumY += where === "now" ? pointer.y : pointer.startY;
+    }
+    const count = pointers.size;
+    const hand = { x: sumX / count, y: sumY / count, distance: 0 };
+    if (count >= 2) {
+      const [first, second] = pointers.values();
+      hand.distance =
+        where === "now"
+          ? Math.hypot(second.x - first.x, second.y - first.y)
+          : Math.hypot(
+              second.startX - first.startX,
+              second.startY - first.startY,
+            );
+    }
+    return hand;
+  };
+
+  const activate = (anchorWhere) => {
+    active = true;
+    for (const pointerId of pointers.keys()) {
+      element.setPointerCapture(pointerId);
+    }
+    anchor = readHand(anchorWhere);
+    // The click the release leaves behind is not for what is under the hand.
+    disarmClickSuppression = suppressClickAfterGesture();
+  };
+
+  const report = (event) => {
+    const hand = readHand();
+    if (onZoom && anchor.distance && hand.distance) {
+      const factor = hand.distance / anchor.distance;
+      if (factor !== 1) {
+        onZoom({ event, factor, ...pointOnSurface(anchor.x, anchor.y) });
+      }
+    }
+    const x = hand.x - anchor.x;
+    const y = hand.y - anchor.y;
+    if (onPan && (x || y)) {
+      onPan({ event, x, y });
+    }
+    anchor = hand;
+  };
+
+  const end = () => {
+    window.removeEventListener("pointermove", onPointerMove, true);
+    window.removeEventListener("pointerup", onPointerEnd, true);
+    window.removeEventListener("pointercancel", onPointerEnd, true);
+    if (active) {
+      active = false;
+      anchor = null;
+      disarmClickSuppression();
+      disarmClickSuppression = null;
+    }
+  };
+
+  const onPointerDown = (event) => {
+    // A secondary button (right click and friends) is a context menu.
+    if (!isPrimaryButtonEvent(event)) {
+      return;
+    }
+    const yieldedTo = event.target.closest(YIELDED_SELECTOR);
+    if (yieldedTo && yieldedTo !== element && element.contains(yieldedTo)) {
+      return;
+    }
+    if (pointers.size === 0) {
+      // On the window rather than on the surface, filtered by id: nothing is
+      // captured until the travel proves the intent, and a pointer that leaves
+      // the surface meanwhile must still be heard.
+      window.addEventListener("pointermove", onPointerMove, true);
+      window.addEventListener("pointerup", onPointerEnd, true);
+      window.addEventListener("pointercancel", onPointerEnd, true);
+    }
+    pointers.set(event.pointerId, {
+      x: event.clientX,
+      y: event.clientY,
+      startX: event.clientX,
+      startY: event.clientY,
+    });
+    if (active) {
+      element.setPointerCapture(event.pointerId);
+      anchor = readHand();
+      return;
+    }
+    if (pointers.size >= 2) {
+      activate("now");
+    }
+  };
+
+  const onPointerMove = (event) => {
+    const pointer = pointers.get(event.pointerId);
+    if (!pointer) {
+      return;
+    }
+    pointer.x = event.clientX;
+    pointer.y = event.clientY;
+    if (!active) {
+      const travelled = Math.hypot(
+        pointer.x - pointer.startX,
+        pointer.y - pointer.startY,
+      );
+      if (travelled < threshold) {
+        return;
+      }
+      // Anchored where the hand LANDED: the pixels that proved the intent are
+      // replayed by the first report, so the surface catches up with the finger
+      // rather than starting from under it.
+      activate("start");
+    }
+    report(event);
+  };
+
+  const onPointerEnd = (event) => {
+    if (!pointers.delete(event.pointerId)) {
+      return;
+    }
+    if (pointers.size === 0) {
+      end();
+      return;
+    }
+    if (active) {
+      anchor = readHand();
+    }
+  };
+
+  // A capture that goes while the pointer is still down is the browser dropping
+  // it (or another gesture taking it): that pointer is over for this one. After
+  // a pointerup it has already been let go of, and this says nothing.
+  const onLostPointerCapture = (event) => {
+    if (active) {
+      onPointerEnd(event);
+    }
+  };
+
+  const onWheel = (event) => {
+    // A burst somebody above is already answering (a row of slides travelling
+    // under the wheel) is theirs; one that began here is held for as long as it
+    // lasts, so drifting over the edge does not hand its tail to the page.
+    if (wheelGestureIsTakenFrom(element)) {
+      return;
+    }
+    claimWheelGesture(element);
+    // Taken whole, whichever way it leans: the browser would scroll the page
+    // with it, or on a laptop read a sideways swipe as "go back".
+    event.preventDefault();
+    const deltaY =
+      event.deltaMode === 1
+        ? event.deltaY * WHEEL_LINE_HEIGHT
+        : event.deltaMode === 2
+          ? event.deltaY * WHEEL_PAGE_HEIGHT
+          : event.deltaY;
+    if (!deltaY) {
+      return;
+    }
+    onZoom({
+      event,
+      factor: 2 ** (-deltaY / WHEEL_DISTANCE_PER_DOUBLING),
+      ...pointOnSurface(event.clientX, event.clientY),
+    });
+  };
+
+  element.addEventListener("pointerdown", onPointerDown);
+  element.addEventListener("lostpointercapture", onLostPointerCapture);
+  if (onZoom) {
+    element.addEventListener("wheel", onWheel, { passive: false });
+  }
+
+  return () => {
+    end();
+    pointers.clear();
+    element.removeEventListener("pointerdown", onPointerDown);
+    element.removeEventListener("lostpointercapture", onLostPointerCapture);
+    element.removeEventListener("wheel", onWheel);
+    element.removeAttribute(SURFACE_ATTRIBUTE);
+    element.removeAttribute("data-no-drag-travel");
+  };
 };
 
 // Shared by navi's own use_displayed_layout_effect.js (rich "navi_displayed"
@@ -20644,4 +21045,4 @@ const useResizeStatus = (elementRef, { as = "number" } = {}) => {
   };
 };
 
-export { EASING, ELEMENT_SIZE_CHANGE, activeElementSignal, addActiveElementEffect, addAttributeEffect, allowWheelThrough, appendStyles, applyNewPosition, canScroll, captureScrollState, chainEvent, claimWheelGesture, clickIsSuppressed, closestOpenableAncestor, contrastColor, createBackgroundColorTransition, createBackgroundTransition, createBorderRadiusTransition, createBorderTransition, createDragGestureController, createDragToMoveGestureController, createEventGroupLogger, createGroupTransitionController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createValueEffect, createWidthTransition, cubicBezier, dispatchCustomEvent, dispatchInternalCustomEvent, dispatchPublicCustomEvent, dragAfterIntent, elementIsFocusable, elementIsVisibleForFocus, elementIsVisuallyVisible, findAfter, findAncestor, findBefore, findDescendant, findEvent, findFocusDelegateTarget, findFocusable, findSelfOrAncestorFixedPosition, formatEventSideEffect, getAncestorOpenType, getAvailableHeight, getAvailableWidth, getBackground, getBackgroundColor, getBorder, getBorderRadius, getBorderSizes, getContrastRatio, getDefaultStyles, getDragCoordinates, getDropTargetInfo, getElementSignature, getFirstVisuallyVisibleAncestor, getFocusVisibilityInfo, getHeight, getHeightWithoutTransition, getInnerHeight, getInnerWidth, getKeyboardEventDefaultAction, getLuminance, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getOpacity, getOpacityWithoutTransition, getPaddingSizes, getPositionedParent, getPositioningScrollOffset, getPreferedColorScheme, getScrollBox, getScrollContainer, getScrollContainerSet, getScrollIntoViewScopedOffsets, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getTranslateX, getTranslateXWithoutTransition, getTranslateY, getVirtualKeyboardOverlayHeight, getVisuallyVisibleInfo, getWidth, getWidthWithoutTransition, hasCSSSizeUnit, initFlexDetailsSet, initFocusGroup, initPositionSticky, isAncestorOpen, isDisplayedDespiteClosedAncestor, isPressDisputedByDrag, isPrimaryButtonEvent, isSameColor, isScrollable, isTouchDrivenEvent, keepTouchRefusable, markDragSource, measureLongestVisualLineWidth, measureScrollbar, measureWidestChildRow, mergeOneStyle, mergeTwoStyles, normalizeKeyboardKey, normalizeStyle, normalizeStyles, observeAncestorOpenState, onAncestorReopen, parsePositionArea, parseStyle, performTabNavigation, pickPositionRelativeTo, prefersDarkColors, prefersLightColors, preventFocusNav, preventFocusNavViaKeyboard, preventIntermediateScrollbar, releaseWheelGesture, resolveCSSColor, resolveCSSSize, resolveColorLuminance, resolveOklchLightness, scrollIntoViewScoped, scrollIntoViewThroughScrollables, scrollIntoViewWithStickyAwareness, scrollRoomTowards, setAttribute, setAttributes, setPlacementViewportInsets, setStyles, setVirtualKeyboardOverlaysContent, snapToPixel, startDragTo, startDragToResizeGesture, startDragToTravel, stickyAsRelativeCoords, stringifyStyle, subscribeVirtualKeyboardGeometryChange, subscribeVisualViewportResizeSettled, subscribeWindowResizeSettled, suppressClickAfterGesture, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect, waitForPressHeld, watchWheelTravel, wheelGestureIsTakenFrom };
+export { EASING, ELEMENT_SIZE_CHANGE, activeElementSignal, addActiveElementEffect, addAttributeEffect, allowWheelThrough, appendStyles, applyNewPosition, canScroll, captureScrollState, chainEvent, claimWheelGesture, clickIsSuppressed, closestOpenableAncestor, contrastColor, createBackgroundColorTransition, createBackgroundTransition, createBorderRadiusTransition, createBorderTransition, createDragGestureController, createDragToMoveGestureController, createEventGroupLogger, createGroupTransitionController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createValueEffect, createWidthTransition, cubicBezier, dispatchCustomEvent, dispatchInternalCustomEvent, dispatchPublicCustomEvent, dragAfterIntent, elementIsFocusable, elementIsVisibleForFocus, elementIsVisuallyVisible, findAfter, findAncestor, findBefore, findDescendant, findEvent, findFocusDelegateTarget, findFocusable, findSelfOrAncestorFixedPosition, formatEventSideEffect, getAncestorOpenType, getAvailableHeight, getAvailableWidth, getBackground, getBackgroundColor, getBorder, getBorderRadius, getBorderSizes, getContrastRatio, getDefaultStyles, getDragCoordinates, getDropTargetInfo, getElementSignature, getFirstVisuallyVisibleAncestor, getFocusVisibilityInfo, getHeight, getHeightWithoutTransition, getInnerHeight, getInnerWidth, getKeyboardEventDefaultAction, getLuminance, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getOpacity, getOpacityWithoutTransition, getPaddingSizes, getPositionedParent, getPositioningScrollOffset, getPreferedColorScheme, getScrollBox, getScrollContainer, getScrollContainerSet, getScrollIntoViewScopedOffsets, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getTranslateX, getTranslateXWithoutTransition, getTranslateY, getVirtualKeyboardOverlayHeight, getVisuallyVisibleInfo, getWidth, getWidthWithoutTransition, hasCSSSizeUnit, initFlexDetailsSet, initFocusGroup, initPositionSticky, installPanZoom, isAncestorOpen, isDisplayedDespiteClosedAncestor, isPressDisputedByDrag, isPrimaryButtonEvent, isSameColor, isScrollable, isTouchDrivenEvent, keepTouchRefusable, markDragSource, measureLongestVisualLineWidth, measureScrollbar, measureWidestChildRow, mergeOneStyle, mergeTwoStyles, normalizeKeyboardKey, normalizeStyle, normalizeStyles, observeAncestorOpenState, onAncestorReopen, parsePositionArea, parseStyle, performTabNavigation, pickPositionRelativeTo, prefersDarkColors, prefersLightColors, preventFocusNav, preventFocusNavViaKeyboard, preventIntermediateScrollbar, releaseWheelGesture, resolveCSSColor, resolveCSSSize, resolveColorLuminance, resolveOklchLightness, scrollIntoViewScoped, scrollIntoViewThroughScrollables, scrollIntoViewWithStickyAwareness, scrollRoomTowards, setAttribute, setAttributes, setPlacementViewportInsets, setStyles, setVirtualKeyboardOverlaysContent, snapToPixel, startDragTo, startDragToResizeGesture, startDragToTravel, stickyAsRelativeCoords, stringifyStyle, subscribeVirtualKeyboardGeometryChange, subscribeVisualViewportResizeSettled, subscribeWindowResizeSettled, suppressClickAfterGesture, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect, waitForPressHeld, watchWheelTravel, wheelGestureIsTakenFrom };

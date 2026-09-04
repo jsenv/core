@@ -279,7 +279,7 @@ const NATIVE_POINTER_GESTURE_SELECTOR = NATIVE_POINTER_GESTURES.map(
 // through (see DRAG_IGNORED_SELECTOR in drag_to.js). And so is a popover or a
 // dialog: a layer OVER the box, whose press only bubbles through the box because
 // the layer is anchored in it.
-const DRAG_EXCLUDED_SELECTOR = [
+export const DRAG_EXCLUDED_SELECTOR = [
   NATIVE_POINTER_GESTURE_SELECTOR,
   "[data-drag-handle]",
   "[data-no-drag-travel]",

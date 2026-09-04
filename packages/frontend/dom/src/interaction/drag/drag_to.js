@@ -21,16 +21,24 @@
  *   place, swap the two, refuse) is the caller's. The answer says WHERE on it as
  *   well, which is all there is to say when the place is a surface — a plan, a
  *   map — with no element under the copy to name.
+ * - **leave**: it is let go of AWAY from every place — off the plan it stood on,
+ *   with nothing under it. Not a throw: slow and deliberate, judged after a
+ *   landing was looked for and none was found. What that means is the caller's
+ *   (the marker is removed, the court goes back to the row of unplaced ones).
  *
  * The caller lists which outcomes ITS element can answer, and only the machinery
  * those need runs: no copy for a move, no drop hint for something that can only be
- * thrown away, no landing looked for where nothing lands. `reorder` and `toss`
- * combine (dropped on a row, or thrown off the screen); `move` and `reorder` cannot
- * both be true of one release, and the caller is the one who must not ask for both.
+ * thrown away, no landing looked for where nothing lands. `toss` and `leave` each
+ * combine with `reorder`, with `land` and with each other (dropped on a row,
+ * thrown off the screen, let go of beside the list); `leave` combines with `move`
+ * as well — the element itself travels, and is either put down where it is or let
+ * go of outside. `move` cannot combine with what carries a copy, and `reorder`
+ * and `land` cannot both be true of one release; the caller is the one who must
+ * not ask for both.
  *
  * `createDragToMoveGestureController` below is the layer under all of that — the
  * translation, the auto-scroll, the constraints — and stays usable on its own for
- * anything that is none of the three (a table column being dragged, a sticky
+ * anything that is none of the five (a table column being dragged, a sticky
  * frontier being moved).
  */
 
@@ -48,7 +56,10 @@ import {
   createDragGestureController,
   isPrimaryButtonEvent,
 } from "./drag_gesture.js";
-import { getDropTargetInfo } from "./drop_target_detection.js";
+import {
+  getDropTargetInfo,
+  rectangleAreIntersecting,
+} from "./drop_target_detection.js";
 import { applyStickyFrontiersToAutoScrollArea } from "./sticky_frontiers.js";
 
 const dragStyleController = createStyleController("drag_to_move");
@@ -245,8 +256,10 @@ const css = /* css */ `
     touch-action: pinch-zoom;
   }
 
-  /* Ce qui a été lancé: il continue dans la direction du geste jusqu'à sortir de
-     l'écran, et revient par le même chemin si la réponse refuse. */
+  /* Ce qui a été lancé continue dans la direction du geste jusqu'à sortir de
+     l'écran; ce qui a été lâché dans le vide s'efface sur place (même attribut,
+     sans translate). L'un comme l'autre revient par le même chemin si la
+     réponse refuse. */
   [navi-drag-clone-wrapper][data-tossed] {
     transition:
       translate ${TOSS_DURATION_MS}ms ease-out,
@@ -733,16 +746,33 @@ const warnAboutTransformsOutsideTransform = (element) => {
  * Starts a drag, for one or more of the outcomes listed.
  *
  * @param {PointerEvent} event The `pointerdown` that may become a drag.
- * @param {("move"|"reorder"|"toss"|"land")[]} effects
+ * @param {("move"|"reorder"|"toss"|"land"|"leave")[]} effects
  *   What letting go of this element can mean. `reorder`, `toss` and `land` carry a
- *   copy; `move` carries the element itself. Asking for `move` and `reorder`
- *   together is asking one release to mean two things, and so is asking for
- *   `reorder` and `land`.
+ *   copy; `move` carries the element itself, and `leave` goes with either. Asking
+ *   for `move` and `reorder` together is asking one release to mean two things,
+ *   and so is asking for `reorder` and `land`.
  * @param {object} [options]
  * @param {Element} [options.draggedElement=event.currentTarget]
  * @param {(detail: {gestureInfo: object, x: number, y: number}) => Promise|void} [options.onMove]
- *   It was put somewhere. The position is already committed when this runs — the
- *   hand let go of it there — and travels back if the promise rejects.
+ *   It was put somewhere. It is left where the hand let go of it while this
+ *   runs, and travels back if the promise rejects. Once it resolves the position
+ *   has one owner: the caller's layout, when the caller drew the element
+ *   somewhere while answering (a new `left`/`top` from state, a new `transform`,
+ *   a node rebuilt), and the element's own translate otherwise, baked in — see
+ *   settleMovedElement.
+ * @param {(detail: {gestureInfo: object, x: number, y: number}) => Promise|void} [options.onLeave]
+ *   It was let go of away from every place: with places (`itemSelector`), away
+ *   from all of them; without, out of `outsideOf`. Beside `move` the element
+ *   itself is left where the hand put it while this runs, and the answer says
+ *   what becomes of that position — let go of on a resolve (the caller has
+ *   removed the thing, or drawn it where it goes back to), travelled home on a
+ *   reject. Beside a copy, the copy fades where it was let go of and comes back
+ *   if the promise rejects. Picked up and put straight back down is a cancel:
+ *   it has to have gone somewhere to be away from anything.
+ * @param {Element} [options.outsideOf] The box a `leave` is outside of, when
+ *   nothing is a place. Left out, what can be seen of the scroll container.
+ *   Judged on the carried box no longer overlapping it — not on the pointer,
+ *   which is still well inside the frame when a small thing has just left it.
  * @param {Element} [options.containerElement=draggedElement.parentElement]
  *   Where the places are looked for with `itemSelector`, and where the drop hint
  *   is drawn. The parent covers a list and a board, whose items are siblings of
@@ -771,16 +801,8 @@ const warnAboutTransformsOutsideTransform = (element) => {
  * @param {number} [options.tossDistance=110] How far a throw goes, in px.
  * @param {number} [options.tossSpeed=0.45] And how fast, in px/ms. BOTH are asked
  *   for: one without the other is moving the thing while hesitating, and nothing is
- *   thrown away on a hesitation.
- * @param {("throw"|"release-outside")[]} [options.tossBy=["throw"]] How a toss
- *   is made here. A THROW is far and fast — the flick that gets rid of something,
- *   a list's gesture, judged before any landing. A RELEASE OUTSIDE has no place
- *   under it — dragging something off the surface it belongs to and letting go,
- *   deliberate and never a flick, a surface's gesture. Each is asked for on its
- *   own: a surface wants only the second (a fast drag across it that ends ON it
- *   has not asked for the thing to go), a list only the first (a row let go of
- *   beside its list is a row put back). With no place to be outside of (no
- *   `itemSelector`), every release is outside.
+ *   thrown away on a hesitation. A throw is judged before any landing; a release
+ *   with no place under it is `leave`'s, not a toss — there is no speed to it.
  *
  * Everything else is forwarded to `createDragToMoveGestureController`
  * (`areaConstraint`, `autoScrollAreaPadding`, `direction`…) and to `dragAfterIntent`
@@ -810,11 +832,15 @@ export const startDragTo = (
   if (!isPrimaryButtonEvent(event)) {
     return undefined;
   }
+  const canMove = effects.includes("move");
   const canReorder = effects.includes("reorder");
   const canToss = effects.includes("toss");
   const canLand = effects.includes("land");
-  if (canReorder || canToss || canLand) {
-    if (import.meta.dev && effects.includes("move")) {
+  const canLeave = effects.includes("leave");
+  // A `leave` on its own carries a copy too: nothing keeps the element where it
+  // was put, so the original stays until the answer says it is gone.
+  if (canReorder || canToss || canLand || (canLeave && !canMove)) {
+    if (import.meta.dev && canMove) {
       console.warn(
         `startDragTo: "move" and "reorder"/"toss"/"land" cannot both answer one release — one keeps the element where it was put, the others carry a copy and put the original back. Ignoring "move".`,
       );
@@ -829,23 +855,35 @@ export const startDragTo = (
       canReorder,
       canToss,
       canLand,
+      canLeave,
       ...options,
     });
   }
-  return startDragToMoveElement(event, { draggedElement, ...options });
+  return startDragToMoveElement(event, {
+    draggedElement,
+    canLeave,
+    ...options,
+  });
 };
 
 /**
- * The element ITSELF is carried, and keeps the place the hand gave it.
+ * The element ITSELF is carried, and keeps the place the hand gave it — or is let
+ * go of away from it, when it can `leave`.
  *
- * No copy, unlike the two others: what is being moved is the thing and not a
+ * No copy, unlike the others: what is being moved is the thing and not a
  * stand-in for it, so there is nothing to put back and nothing to reveal.
  */
 const startDragToMoveElement = (
   event,
   {
     draggedElement,
+    canLeave,
     onMove,
+    onLeave,
+    outsideOf,
+    // A thing that can be let go of outside has to be able to get there. Same
+    // reason and same shape as the default of the copy path below.
+    areaConstraint = canLeave ? "none" : undefined,
     threshold,
     longPress,
     longPressDelay,
@@ -862,6 +900,7 @@ const startDragToMoveElement = (
     () => {
       const gestureController = createDragToMoveGestureController({
         releasePositionEffect: "manual",
+        areaConstraint,
         ...options,
       });
       const dragGesture = gestureController.grabViaPointer(event, {
@@ -877,15 +916,35 @@ const startDragToMoveElement = (
           gestureInfo.cancelPosition();
           return;
         }
-        // Committed before the answer rather than after: the hand let go of it
-        // there, and a thing that snaps home while a request is in flight says the
-        // gesture was not understood.
-        gestureInfo.commitPosition();
+        if (
+          canLeave &&
+          !gestureInfo.cancelled &&
+          isOutsideOf(gestureInfo, outsideOf)
+        ) {
+          // Left where the hand let go of it while the answer is asked — a thing
+          // that snaps home with the request in flight says the gesture was not
+          // understood. The answer then says what becomes of that position: let
+          // go of on a resolve, since the caller has removed the thing or drawn
+          // it where it goes back to; travelled home on a reject.
+          try {
+            await onLeave?.({ gestureInfo, x: xDelta, y: yDelta });
+            gestureInfo.cancelPosition();
+          } catch {
+            gestureInfo.cancelPositionAnimated();
+          }
+          return;
+        }
+        // Kept where the hand let go of it while the answer is asked — a thing
+        // that snaps home with the request in flight says the gesture was not
+        // understood — and settled once the answer is in.
+        const layoutBeforeAnswer = readOwnLayout(draggedElement);
         try {
           await onMove?.({ gestureInfo, x: xDelta, y: yDelta });
         } catch {
           gestureInfo.cancelPositionAnimated();
+          return;
         }
+        settleMovedElement(draggedElement, gestureInfo, layoutBeforeAnswer);
       });
       return dragGesture;
     },
@@ -901,22 +960,64 @@ const startDragToMoveElement = (
   );
 };
 
+/**
+ * Who holds the position of a moved element once the answer is in. Two owners
+ * are possible and the element can only have one: the drag's own translate, for
+ * a thing whose place is the hand's alone (a token on a free canvas), or the
+ * caller's layout, for a thing drawn from state (a court at so many metres from
+ * the place point, its `left`/`top` computed from that). Both kept, the thing
+ * lands twice as far as the hand went.
+ *
+ * The answer does not say which, so the element is asked: drawn somewhere else
+ * by the caller while the answer was given — a new `left`, a new inline
+ * `transform`, a node thrown away and rebuilt — its layout holds the position
+ * and the translate goes. Drawn nowhere, the translate is all there is, and it
+ * is baked in. Read from the layout and never from the screen, so a page that
+ * scrolled while the answer was awaited reads as nothing; and read from the
+ * inline style rather than the computed one, which the translate itself is
+ * part of.
+ *
+ * A caller that draws later than it answers (a store rendering on its own
+ * schedule) has to make the answer wait for the draw: what is read here is what
+ * has happened by then.
+ */
+const settleMovedElement = (element, gestureInfo, layoutBeforeAnswer) => {
+  const layoutAfterAnswer = readOwnLayout(element);
+  const drawnElsewhere =
+    !layoutAfterAnswer.connected ||
+    layoutAfterAnswer.offsetLeft !== layoutBeforeAnswer.offsetLeft ||
+    layoutAfterAnswer.offsetTop !== layoutBeforeAnswer.offsetTop ||
+    layoutAfterAnswer.transform !== layoutBeforeAnswer.transform ||
+    layoutAfterAnswer.translate !== layoutBeforeAnswer.translate;
+  if (drawnElsewhere) {
+    gestureInfo.cancelPosition();
+  } else {
+    gestureInfo.commitPosition();
+  }
+};
+const readOwnLayout = (element) => ({
+  connected: element.isConnected,
+  offsetLeft: element.offsetLeft,
+  offsetTop: element.offsetTop,
+  transform: element.style.transform,
+  translate: element.style.translate,
+});
+
 // Far and fast, both at once: one without the other is moving the thing while
 // hesitating, and nothing is thrown away on a hesitation — it comes back.
 const TOSS_DISTANCE_TO_COMMIT = 110;
 const TOSS_SPEED_TO_COMMIT = 0.45;
-// The flick is how a list gets rid of a row; a surface says otherwise.
-const TOSS_BY_DEFAULT = ["throw"];
 
 const resolveDropMeaning = ({
   gestureInfo,
   hasDropTarget,
+  releasedOutside,
   canReorder,
   canToss,
   canLand,
+  canLeave,
   tossDistance = TOSS_DISTANCE_TO_COMMIT,
   tossSpeed = TOSS_SPEED_TO_COMMIT,
-  tossBy = TOSS_BY_DEFAULT,
 }) => {
   if (gestureInfo.cancelled) {
     // Nobody let go of anything: the gesture was taken away mid-air (the
@@ -924,7 +1025,7 @@ const resolveDropMeaning = ({
     // to be at that moment is not a place it was put.
     return "cancel";
   }
-  if (canToss && tossBy.includes("throw")) {
+  if (canToss) {
     const { xDelta, yDelta } = gestureInfo.layout;
     const distance = Math.hypot(xDelta, yDelta);
     if (distance > tossDistance && gestureInfo.velocity > tossSpeed) {
@@ -939,19 +1040,14 @@ const resolveDropMeaning = ({
       return "reorder";
     }
   }
-  if (canToss && tossBy.includes("release-outside")) {
-    // Let go of away from every place: the other way of meaning "get rid of
-    // this", and the one a surface asks for — off the plan and down is
-    // deliberate, never a flick.
-    //
-    // "Away from every place" is the last frame's answer, not the one above: a
-    // row let go of where it already was has no place to INSERT it at and still
-    // has a place under it. And it has to have gone somewhere to be away from
-    // anything — picked up and put straight back down is a hand that changed its
-    // mind, not a thing dropped over nothing.
+  if (canLeave && releasedOutside) {
+    // Let go of away from every place — off the plan and down, deliberate and
+    // never a flick. It has to have gone somewhere to be away from anything:
+    // picked up and put straight back down is a hand that changed its mind, not
+    // a thing dropped over nothing.
     const { xDelta, yDelta } = gestureInfo.layout;
-    if ((xDelta || yDelta) && !gestureInfo.dropTargetInfo) {
-      return "toss";
+    if (xDelta || yDelta) {
+      return "leave";
     }
   }
   return "cancel";
@@ -972,28 +1068,34 @@ const startDragToCarryCopy = (
     canReorder,
     canToss,
     canLand,
-    // Something that can be thrown away has to be able to LEAVE. The default of
-    // the layer below keeps what is dragged inside its scroll area, which is right
-    // for a reorder (a row belongs to its list) and makes a throw impossible — the
-    // copy hits the edge of the list and no distance is ever covered, so no throw
-    // ever happens and no sideways movement is even visible.
+    canLeave,
+    // Something that can be thrown away, or let go of outside, has to be able to
+    // LEAVE. The default of the layer below keeps what is dragged inside its
+    // scroll area, which is right for a reorder (a row belongs to its list) and
+    // makes a throw impossible — the copy hits the edge of the list and no
+    // distance is ever covered, so no throw ever happens and no sideways movement
+    // is even visible.
     // Destructured with the default here rather than written at the call below: a
     // caller passing `areaConstraint: undefined` (which is what saying nothing
     // through an options object looks like) would otherwise put the layer below
     // back on its own default and undo this.
-    areaConstraint = canToss ? "none" : undefined,
+    areaConstraint = canToss || canLeave ? "none" : undefined,
     containerElement = draggedElement.parentElement,
     itemSelector,
     getItemId,
     onReorder,
     onLand,
     onToss,
+    onLeave,
+    outsideOf,
     tossDistance,
     tossSpeed,
-    tossBy,
     // A list runs one way and reordering walks it; a board has places all around,
-    // so something landing on one of them goes wherever the hand takes it.
-    direction = canLand ? { x: true, y: true } : { x: false, y: true },
+    // so something landing on one of them goes wherever the hand takes it — and
+    // so does something that can leave, whichever edge it leaves by.
+    direction = canLand || canLeave
+      ? { x: true, y: true }
+      : { x: false, y: true },
     threshold,
     longPress,
     longPressDelay,
@@ -1224,15 +1326,25 @@ const startDragToCarryCopy = (
           const hasDropTarget = canLand
             ? currentReleaseElement !== undefined
             : currentBeforeElement !== undefined;
+          // "Away from every place" is the last frame's answer, not
+          // `hasDropTarget`: a row let go of where it already was has no place
+          // to INSERT it at and still has a place under it. With nothing that is
+          // a place, it is out of the box the thing belongs to.
+          const releasedOutside =
+            canLeave &&
+            (dropHintEl
+              ? !gestureInfo.dropTargetInfo
+              : isOutsideOf(gestureInfo, outsideOf));
           const dropMeans = resolveDropMeaning({
             gestureInfo,
             hasDropTarget,
+            releasedOutside,
             canReorder,
             canToss,
             canLand,
+            canLeave,
             tossDistance,
             tossSpeed,
-            tossBy,
           });
 
           // Let go of and still on the screen: from here until it is taken away
@@ -1278,6 +1390,13 @@ const startDragToCarryCopy = (
               // It still exists, so the screen has to say so: the copy comes back
               // over the original, and taking it away then reveals the row in
               // place.
+              await settleCloneBack(cloneWrapper, draggedElement);
+            }
+          } else if (dropMeans === "leave") {
+            setCloneViewportRect(cloneWrapper, cloneWrapper);
+            gestureInfo.cancelPosition();
+            const gone = await letCloneGo(cloneWrapper, gestureInfo, onLeave);
+            if (!gone) {
               await settleCloneBack(cloneWrapper, draggedElement);
             }
           } else if (dropMeans === "land") {
@@ -1442,6 +1561,54 @@ const tossCloneAway = async (cloneWrapper, gestureInfo, onToss) => {
   } catch {
     return false;
   }
+};
+
+/**
+ * The copy fades where the hand let go of it, and the caller says what being let
+ * go of there meant. Resolves true when it is really gone.
+ *
+ * No flight, unlike a throw: nothing was thrown. The thing was put down over
+ * nothing, and it goes from there — the same attribute as a throw, so that a
+ * refusal brings it back the same way.
+ */
+const letCloneGo = async (cloneWrapper, gestureInfo, onLeave) => {
+  cloneWrapper.dataset.tossed = "away";
+  try {
+    const { xDelta, yDelta } = gestureInfo.layout;
+    await onLeave?.({ gestureInfo, x: xDelta, y: yDelta });
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+// Whether what is carried has left the box entirely. The box rather than the
+// pointer: a small thing dragged past the edge of its frame has left it while
+// the hand is still well inside.
+const isOutsideOf = (gestureInfo, outsideOf) => {
+  const carried = gestureInfo.elementImpacted || gestureInfo.element;
+  const carriedRect = carried.getBoundingClientRect();
+  const frameRect = outsideOf
+    ? outsideOf.getBoundingClientRect()
+    : getVisibleRect(gestureInfo.scrollContainer);
+  return !rectangleAreIntersecting(carriedRect, frameRect);
+};
+
+// What can be seen of a scroll container, in viewport coordinates.
+const getVisibleRect = (scrollContainer) => {
+  if (scrollContainer === document.documentElement) {
+    const { clientWidth, clientHeight } = scrollContainer;
+    return { left: 0, top: 0, right: clientWidth, bottom: clientHeight };
+  }
+  const rect = scrollContainer.getBoundingClientRect();
+  const left = rect.left + scrollContainer.clientLeft;
+  const top = rect.top + scrollContainer.clientTop;
+  return {
+    left,
+    top,
+    right: left + scrollContainer.clientWidth,
+    bottom: top + scrollContainer.clientHeight,
+  };
 };
 
 /**
