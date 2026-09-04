@@ -362,6 +362,17 @@ export { moveFocusTo } from "./src/utils/focus/focus_transfer.js";
 
 // Interactions
 export { startDragTo } from "@jsenv/dom";
+// For a drag whose product is a VALUE — an angle, a scale, an offset — rather
+// than an element that ends up somewhere. navi names the second kind and not the
+// first (see docs/interactions.md), so what it hands over here is the machinery:
+// when a press becomes a drag, the loop that follows the pointer, and what an
+// element must say BEFORE the finger lands for its touch to be refusable at all.
+// Re-exported so that does not cost an app a direct dependency on @jsenv/dom.
+export {
+  createDragGestureController,
+  dragAfterIntent,
+  markDragSource,
+} from "@jsenv/dom";
 // The escape hatch for a window-capture click listener that may run before the
 // gesture click suppressor and must stand aside on its own. A last resort —
 // see its JSDoc in @jsenv/dom (click_suppression.js) for the one situation

@@ -328,6 +328,11 @@ consistency across the app, not from any single call site.
   NOT stop (a plain `onClick` on an ancestor). It also draws the line with
   `standalone`: those two answer about the GESTURE, `standalone` about the
   VALUE, and they are three separate props because they come apart.
+  And it says what happens when the gesture's product is a VALUE — an angle, a
+  scale, a plan panned under the finger — rather than an element that ends up
+  somewhere: no interaction names that, so navi hands over the machinery
+  (`createDragGestureController`, `dragAfterIntent`, `markDragSource`, all
+  re-exported from navi) with the three traps it takes care of.
   Read it before reading the pointer by hand — who owns a press between nested
   boxes, and what a touch may do, are decided before the first pixel moves and
   cannot be got right from outside navi — and before stopping the propagation of

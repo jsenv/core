@@ -50,6 +50,50 @@ import.meta.css = css;
  */
 const captureHolderByPointerId = new Map();
 
+/**
+ * The drag loop: it takes the pointer, follows it, and says when it is let go of.
+ * What the movement MEANS is the caller's — this one carries nothing, moves
+ * nothing and commits nothing on its own, which is what makes it the primitive
+ * for a gesture whose product is a value (an angle, a scale, an offset) rather
+ * than an element that ends up somewhere.
+ *
+ * While it runs it owns the document: everything but the dragged element (and the
+ * `[data-droppable]` places) goes inert, a backdrop unifies the cursor and takes
+ * the pointer events, the focus moves to what is held and comes back at the
+ * release, and the selection is refused for the length of the gesture.
+ *
+ * Whether the element may be grabbed AT ALL is decided before the finger lands
+ * and elsewhere: see `markDragSource` in drag_after_intent.js for the
+ * touch-action half, and `dragAfterIntent` for when a press becomes a drag.
+ *
+ * @param {object} [options]
+ * @param {string} [options.name] Carried on `gestureInfo`, for whoever reads a gesture they did not start.
+ * @param {(gestureInfo: object) => void} [options.onGrab]
+ *   The pointer went down: there is a gesture, which may still turn out to be a press.
+ * @param {(gestureInfo: object) => void} [options.onDragStart] The threshold was crossed — this one IS a drag.
+ * @param {(gestureInfo: object, someLayoutChange: boolean) => void} [options.onDrag]
+ *   Every move, and every scroll of the container: `someLayoutChange` is false when
+ *   nothing about the element changed, which still matters to whatever sticks to the scroll.
+ * @param {(gestureInfo: object) => void} [options.onRelease]
+ *   The hand let go — or did not: `gestureInfo.cancelled` says the gesture was taken away
+ *   (the browser took the touch to scroll with, another gesture took the pointer), and a
+ *   release nobody asked for says nothing about where things belong, so nothing read from
+ *   it may be committed.
+ * @param {number} [options.threshold=5] How far (px) the pointer travels before the drag starts. `0` starts it at the grab.
+ * @param {{x: boolean, y: boolean}} [options.direction] Which axes the gesture reads.
+ * @param {"auto"|"manual"} [options.documentInteractions="auto"]
+ *   `"manual"` leaves the document alone — no inertness, no backdrop, no focus taken. For a
+ *   gesture that only measures and hands over (see `dragAfterIntent`).
+ * @param {boolean} [options.backdrop=true]
+ * @param {number} [options.backdropZIndex=999999]
+ * @returns {{grab: function, grabViaPointer: function}}
+ *   `grabViaPointer(pointerdownEvent, { element, direction, cursor, scrollContainer })` for a
+ *   gesture a hand starts, `grab({ element, grabX, grabY })` for one nothing pressed. Both give
+ *   back the gesture — `gestureInfo` (its `layout` with `xDelta`/`yDelta`, its velocity, the way
+ *   it is going), `drag`, `release`, and `addDragCallback`/`addReleaseCallback` for whoever joins
+ *   after it started. `grabViaPointer` gives back `null` when the press is not one it can read: a
+ *   secondary button, a text node.
+ */
 export const createDragGestureController = (options = {}) => {
   const {
     name,

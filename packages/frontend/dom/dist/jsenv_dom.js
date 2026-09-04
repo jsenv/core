@@ -8487,17 +8487,9 @@ const isolateInteractions = (elements) => {
   };
 };
 
-installImportMetaCssBuild(import.meta);/**
- * Drag Gesture System
- *
- * TODO: rename moveX/moveY en juste x/y
- * puisque move c'est perturbant sachant que c'est drag + scroll
- * et que drag c'est juste la partie mouvement de la souris
- *
- * donc juste x/y ca seras surement mieux
- *
- */
-const css$5 = /* css */`.navi_drag_gesture_backdrop {
+installImportMetaCssBuild(import.meta);
+
+const css$5 = /* css */ `.navi_drag_gesture_backdrop {
   touch-action: none;
   user-select: none;
   position: fixed;
@@ -8521,6 +8513,51 @@ import.meta.css = [css$5, "@jsenv/dom/src/interaction/drag/drag_gesture.js"];
  * apart: `lostpointercapture` says the same thing either way.
  */
 const captureHolderByPointerId = new Map();
+
+/**
+ * The drag loop: it takes the pointer, follows it, and says when it is let go of.
+ * What the movement MEANS is the caller's — this one carries nothing, moves
+ * nothing and commits nothing on its own, which is what makes it the primitive
+ * for a gesture whose product is a value (an angle, a scale, an offset) rather
+ * than an element that ends up somewhere.
+ *
+ * While it runs it owns the document: everything but the dragged element (and the
+ * `[data-droppable]` places) goes inert, a backdrop unifies the cursor and takes
+ * the pointer events, the focus moves to what is held and comes back at the
+ * release, and the selection is refused for the length of the gesture.
+ *
+ * Whether the element may be grabbed AT ALL is decided before the finger lands
+ * and elsewhere: see `markDragSource` in drag_after_intent.js for the
+ * touch-action half, and `dragAfterIntent` for when a press becomes a drag.
+ *
+ * @param {object} [options]
+ * @param {string} [options.name] Carried on `gestureInfo`, for whoever reads a gesture they did not start.
+ * @param {(gestureInfo: object) => void} [options.onGrab]
+ *   The pointer went down: there is a gesture, which may still turn out to be a press.
+ * @param {(gestureInfo: object) => void} [options.onDragStart] The threshold was crossed — this one IS a drag.
+ * @param {(gestureInfo: object, someLayoutChange: boolean) => void} [options.onDrag]
+ *   Every move, and every scroll of the container: `someLayoutChange` is false when
+ *   nothing about the element changed, which still matters to whatever sticks to the scroll.
+ * @param {(gestureInfo: object) => void} [options.onRelease]
+ *   The hand let go — or did not: `gestureInfo.cancelled` says the gesture was taken away
+ *   (the browser took the touch to scroll with, another gesture took the pointer), and a
+ *   release nobody asked for says nothing about where things belong, so nothing read from
+ *   it may be committed.
+ * @param {number} [options.threshold=5] How far (px) the pointer travels before the drag starts. `0` starts it at the grab.
+ * @param {{x: boolean, y: boolean}} [options.direction] Which axes the gesture reads.
+ * @param {"auto"|"manual"} [options.documentInteractions="auto"]
+ *   `"manual"` leaves the document alone — no inertness, no backdrop, no focus taken. For a
+ *   gesture that only measures and hands over (see `dragAfterIntent`).
+ * @param {boolean} [options.backdrop=true]
+ * @param {number} [options.backdropZIndex=999999]
+ * @returns {{grab: function, grabViaPointer: function}}
+ *   `grabViaPointer(pointerdownEvent, { element, direction, cursor, scrollContainer })` for a
+ *   gesture a hand starts, `grab({ element, grabX, grabY })` for one nothing pressed. Both give
+ *   back the gesture — `gestureInfo` (its `layout` with `xDelta`/`yDelta`, its velocity, the way
+ *   it is going), `drag`, `release`, and `addDragCallback`/`addReleaseCallback` for whoever joins
+ *   after it started. `grabViaPointer` gives back `null` when the press is not one it can read: a
+ *   secondary button, a text node.
+ */
 const createDragGestureController = (options = {}) => {
   const {
     name,
@@ -8529,18 +8566,17 @@ const createDragGestureController = (options = {}) => {
     onDrag,
     onRelease,
     threshold = 5,
-    direction: defaultDirection = {
-      x: true,
-      y: true
-    },
+    direction: defaultDirection = { x: true, y: true },
     documentInteractions = "auto",
     backdrop = true,
-    backdropZIndex = 999999
+    backdropZIndex = 999999,
   } = options;
+
   const dragGestureController = {
     grab: null,
-    gravViaPointer: null
+    gravViaPointer: null,
   };
+
   const grab = ({
     element,
     direction = defaultDirection,
@@ -8550,7 +8586,7 @@ const createDragGestureController = (options = {}) => {
     cursor = "grabbing",
     scrollContainer = document.documentElement,
     layoutScrollableLeft: scrollableLeftAtGrab = 0,
-    layoutScrollableTop: scrollableTopAtGrab = 0
+    layoutScrollableTop: scrollableTopAtGrab = 0,
   } = {}) => {
     if (!element) {
       throw new Error("element is required");
@@ -8558,6 +8594,7 @@ const createDragGestureController = (options = {}) => {
     if (!direction.x && !direction.y) {
       return null;
     }
+
     const [publishBeforeDrag, addBeforeDragCallback] = createPubSub();
     const [publishDrag, addDragCallback] = createPubSub();
     const [publishRelease, addReleaseCallback] = createPubSub();
@@ -8567,15 +8604,13 @@ const createDragGestureController = (options = {}) => {
     if (onRelease) {
       addReleaseCallback(onRelease);
     }
+
     const scrollLeftAtGrab = scrollContainer.scrollLeft;
     const scrollTopAtGrab = scrollContainer.scrollTop;
     const leftAtGrab = scrollLeftAtGrab + scrollableLeftAtGrab;
     const topAtGrab = scrollTopAtGrab + scrollableTopAtGrab;
     const createLayout = (x, y) => {
-      const {
-        scrollLeft,
-        scrollTop
-      } = scrollContainer;
+      const { scrollLeft, scrollTop } = scrollContainer;
       const left = scrollableLeftAtGrab + x;
       const top = scrollableTopAtGrab + y;
       const scrollableLeft = left - scrollLeft;
@@ -8595,30 +8630,33 @@ const createDragGestureController = (options = {}) => {
         top,
         // Delta since grab (number representing how much we dragged)
         xDelta: left - leftAtGrab,
-        yDelta: top - topAtGrab
+        yDelta: top - topAtGrab,
       };
       return layoutProps;
     };
-    const grabLayout = createLayout(grabX + scrollContainer.scrollLeft, grabY + scrollContainer.scrollTop);
+
+    const grabLayout = createLayout(
+      grabX + scrollContainer.scrollLeft,
+      grabY + scrollContainer.scrollTop,
+    );
     const gestureInfo = {
       name,
       direction,
       started: !threshold,
       status: "grabbed",
+
       element,
       scrollContainer,
-      grabX,
-      // x grab coordinate (excluding scroll)
-      grabY,
-      // y grab coordinate (excluding scroll)
+      grabX, // x grab coordinate (excluding scroll)
+      grabY, // y grab coordinate (excluding scroll)
       grabLayout,
       leftAtGrab,
       topAtGrab,
-      dragX: grabX,
-      // coordinate of the last drag (excluding scroll of the scrollContainer)
-      dragY: grabY,
-      // coordinate of the last drag (excluding scroll of the scrollContainer)
+
+      dragX: grabX, // coordinate of the last drag (excluding scroll of the scrollContainer)
+      dragY: grabY, // coordinate of the last drag (excluding scroll of the scrollContainer)
       layout: grabLayout,
+
       isGoingUp: undefined,
       isGoingDown: undefined,
       isGoingLeft: undefined,
@@ -8627,11 +8665,13 @@ const createDragGestureController = (options = {}) => {
       intentGoingDown: false,
       intentGoingLeft: false,
       intentGoingRight: false,
+
       // How fast the pointer is going, in px/ms, signed per axis
       // (see measureVelocity)
       velocityX: 0,
       velocityY: 0,
       velocity: 0,
+
       // metadata about interaction sources
       grabEvent: event,
       dragEvent: null,
@@ -8640,7 +8680,7 @@ const createDragGestureController = (options = {}) => {
       // the touch to scroll with, another gesture took the pointer. Whoever
       // reads it must not commit anything — a release that was not asked for
       // says nothing about where things belong.
-      cancelled: false
+      cancelled: false,
     };
     definePropertyAsReadOnly(gestureInfo, "name");
     definePropertyAsReadOnly(gestureInfo, "direction");
@@ -8656,6 +8696,7 @@ const createDragGestureController = (options = {}) => {
     // matter of speed, and the gesture is the only place that sees the timing of
     // the events it receives.
     const measureVelocity = createVelocityMeter(grabX, grabY);
+
     document_interactions: {
       if (documentInteractions === "manual") {
         break document_interactions;
@@ -8668,18 +8709,23 @@ const createDragGestureController = (options = {}) => {
       2. Break the visual feedback (inconsistent cursors, hover states)
       3. Cause unwanted scrolling (keyboard shortcuts, wheel events in restricted directions)
       4. Create accessibility issues (focus jumping, screen reader confusion)
-       STRATEGY: Create a controlled interaction environment by:
+
+      STRATEGY: Create a controlled interaction environment by:
       1. VISUAL CONTROL: Use a backdrop to unify cursor appearance and block pointer events
       2. INTERACTION ISOLATION: Make non-dragged elements inert to prevent interference
       3. FOCUS MANAGEMENT: Control focus location and prevent focus changes during drag
       4. SELECTIVE SCROLLING: Allow scrolling only in directions supported by the drag gesture
-       IMPLEMENTATION:
+
+      IMPLEMENTATION:
       */
 
       // 1. INTERACTION ISOLATION: Make everything except the dragged element inert
       // This prevents keyboard events, pointer interactions, and screen reader navigation
       // on non-relevant elements during the drag operation
-      const cleanupInert = isolateInteractions([element, ...Array.from(document.querySelectorAll("[data-droppable]"))]);
+      const cleanupInert = isolateInteractions([
+        element,
+        ...Array.from(document.querySelectorAll("[data-droppable]")),
+      ]);
       addReleaseCallback(() => {
         cleanupInert();
       });
@@ -8696,14 +8742,14 @@ const createDragGestureController = (options = {}) => {
         // Handle wheel events on backdrop for directionally-constrained drag gestures
         // (e.g., table column resize should only allow horizontal scrolling)
         if (!direction.x || !direction.y) {
-          backdropElement.onwheel = e => {
+          backdropElement.onwheel = (e) => {
             e.preventDefault();
             const scrollX = direction.x ? e.deltaX : 0;
             const scrollY = direction.y ? e.deltaY : 0;
             scrollContainer.scrollBy({
               left: scrollX,
               top: scrollY,
-              behavior: "auto"
+              behavior: "auto",
             });
           };
         }
@@ -8714,9 +8760,7 @@ const createDragGestureController = (options = {}) => {
       }
 
       // 3. FOCUS MANAGEMENT: Control and stabilize focus during drag
-      const {
-        activeElement
-      } = document;
+      const { activeElement } = document;
       const focusableElement = findFocusable(element);
       // Focus the dragged element (or document.body as fallback) to establish clear focus context
       // This also ensure any keydown event listened by the currently focused element
@@ -8724,17 +8768,17 @@ const createDragGestureController = (options = {}) => {
       const elementToFocus = focusableElement || document.body;
       elementToFocus.setAttribute("data-drag-focus", "");
       elementToFocus.focus({
-        preventScroll: true
+        preventScroll: true,
       });
       addReleaseCallback(() => {
         elementToFocus.removeAttribute("data-drag-focus");
         // Restore original focus on release
         activeElement.focus({
-          preventScroll: true
+          preventScroll: true,
         });
       });
       // Prevent Tab navigation entirely (focus should stay stable)
-      const onkeydown = e => {
+      const onkeydown = (e) => {
         if (e.key === "Tab") {
           e.preventDefault();
           return;
@@ -8747,16 +8791,27 @@ const createDragGestureController = (options = {}) => {
 
       // 4. SELECTIVE SCROLLING: Allow keyboard scrolling only in supported directions
       {
-        const onDocumentKeydown = keyboardEvent => {
+        const onDocumentKeydown = (keyboardEvent) => {
           // Vertical scrolling keys - prevent if vertical movement not supported
-          if (keyboardEvent.key === "ArrowUp" || keyboardEvent.key === "ArrowDown" || keyboardEvent.key === " " || keyboardEvent.key === "PageUp" || keyboardEvent.key === "PageDown" || keyboardEvent.key === "Home" || keyboardEvent.key === "End") {
+          if (
+            keyboardEvent.key === "ArrowUp" ||
+            keyboardEvent.key === "ArrowDown" ||
+            keyboardEvent.key === " " ||
+            keyboardEvent.key === "PageUp" ||
+            keyboardEvent.key === "PageDown" ||
+            keyboardEvent.key === "Home" ||
+            keyboardEvent.key === "End"
+          ) {
             if (!direction.y) {
               keyboardEvent.preventDefault();
             }
             return;
           }
           // Horizontal scrolling keys - prevent if horizontal movement not supported
-          if (keyboardEvent.key === "ArrowLeft" || keyboardEvent.key === "ArrowRight") {
+          if (
+            keyboardEvent.key === "ArrowLeft" ||
+            keyboardEvent.key === "ArrowRight"
+          ) {
             if (!direction.x) {
               keyboardEvent.preventDefault();
             }
@@ -8773,38 +8828,36 @@ const createDragGestureController = (options = {}) => {
     // Set up scroll event handling to adjust drag position when scrolling occurs
     {
       let isHandlingScroll = false;
-      const handleScroll = scrollEvent => {
+      const handleScroll = (scrollEvent) => {
         if (isHandlingScroll) {
           return;
         }
         isHandlingScroll = true;
-        drag(gestureInfo.dragX, gestureInfo.dragY, {
-          event: scrollEvent
-        });
+        drag(gestureInfo.dragX, gestureInfo.dragY, { event: scrollEvent });
         isHandlingScroll = false;
       };
-      const scrollEventReceiver = scrollContainer === document.documentElement ? document : scrollContainer;
+      const scrollEventReceiver =
+        scrollContainer === document.documentElement
+          ? document
+          : scrollContainer;
       scrollEventReceiver.addEventListener("scroll", handleScroll, {
-        passive: true
+        passive: true,
       });
       addReleaseCallback(() => {
         scrollEventReceiver.removeEventListener("scroll", handleScroll, {
-          passive: true
+          passive: true,
         });
       });
     }
+
     const determineDragData = ({
       dragX,
       dragY,
       dragEvent,
-      isRelease = false
+      isRelease = false,
     }) => {
       // === ÉTAT INITIAL (au moment du grab) ===
-      const {
-        grabX,
-        grabY,
-        grabLayout
-      } = gestureInfo;
+      const { grabX, grabY, grabLayout } = gestureInfo;
       // === CE QUI EST DEMANDÉ (où on veut aller) ===
       // Calcul de la direction basé sur le mouvement précédent
       // (ne tient pas compte du mouvement final une fois les contraintes appliquées)
@@ -8816,38 +8869,56 @@ const createDragGestureController = (options = {}) => {
       const isGoingRight = dragX > currentDragX;
       const isGoingUp = dragY < currentDragY;
       const isGoingDown = dragY > currentDragY;
-      const layoutXRequested = direction.x ? scrollContainer.scrollLeft + (dragX - grabX) : grabLayout.scrollLeft;
-      const layoutYRequested = direction.y ? scrollContainer.scrollTop + (dragY - grabY) : grabLayout.scrollTop;
+
+      const layoutXRequested = direction.x
+        ? scrollContainer.scrollLeft + (dragX - grabX)
+        : grabLayout.scrollLeft;
+      const layoutYRequested = direction.y
+        ? scrollContainer.scrollTop + (dragY - grabY)
+        : grabLayout.scrollTop;
       const layoutRequested = createLayout(layoutXRequested, layoutYRequested);
       const currentLayout = gestureInfo.layout;
       let layout;
-      if (layoutRequested.x === currentLayout.x && layoutRequested.y === currentLayout.y) {
+      if (
+        layoutRequested.x === currentLayout.x &&
+        layoutRequested.y === currentLayout.y
+      ) {
         layout = currentLayout;
       } else {
         // === APPLICATION DES CONTRAINTES ===
         let layoutConstrained = layoutRequested;
         const limitLayout = (left, top) => {
-          layoutConstrained = createLayout(left === undefined ? layoutConstrained.x : left - scrollableLeftAtGrab, top === undefined ? layoutConstrained.y : top - scrollableTopAtGrab);
+          layoutConstrained = createLayout(
+            left === undefined
+              ? layoutConstrained.x
+              : left - scrollableLeftAtGrab,
+            top === undefined ? layoutConstrained.y : top - scrollableTopAtGrab,
+          );
         };
+
         publishBeforeDrag(layoutRequested, currentLayout, limitLayout, {
           dragEvent,
-          isRelease
+          isRelease,
         });
         // === ÉTAT FINAL ===
         layout = layoutConstrained;
       }
+
       const dragData = {
         dragX,
         dragY,
         layout,
+
         isGoingLeft,
         isGoingRight,
         isGoingUp,
         isGoingDown,
+
         status: isRelease ? "released" : "dragging",
         dragEvent: isRelease ? gestureInfo.dragEvent : dragEvent,
-        releaseEvent: isRelease ? dragEvent : null
+        releaseEvent: isRelease ? dragEvent : null,
       };
+
       if (isRelease) {
         return dragData;
       }
@@ -8872,6 +8943,7 @@ const createDragGestureController = (options = {}) => {
       }
       return dragData;
     };
+
     const markAsStarted = () => {
       const clickSuppressionIsOver = suppressClickAfterGesture();
       addReleaseCallback(clickSuppressionIsOver);
@@ -8884,7 +8956,7 @@ const createDragGestureController = (options = {}) => {
       // would then outlive it: what one sees is a click swallowed long after
       // the drag it belonged to.
       dispatchPublicCustomEvent(element, "navi_drag_start", {
-        gestureInfo
+        gestureInfo,
       });
       onDragStart?.(gestureInfo);
     };
@@ -8899,19 +8971,18 @@ const createDragGestureController = (options = {}) => {
       gestureInfo.started = true;
       markAsStarted();
     };
-    const drag = (dragX = gestureInfo.dragX,
-    // Scroll container relative X coordinate
-    dragY = gestureInfo.dragY,
-    // Scroll container relative Y coordinate
-    {
-      event = new CustomEvent("programmatic"),
-      isRelease = false
-    } = {}) => {
+
+    const drag = (
+      dragX = gestureInfo.dragX, // Scroll container relative X coordinate
+      dragY = gestureInfo.dragY, // Scroll container relative Y coordinate
+      { event = new CustomEvent("programmatic"), isRelease = false } = {},
+    ) => {
+
       const dragData = determineDragData({
         dragX,
         dragY,
         dragEvent: event,
-        isRelease
+        isRelease,
       });
       const [velocityX, velocityY] = measureVelocity(dragX, dragY);
       const startedPrevious = gestureInfo.started;
@@ -8941,36 +9012,33 @@ const createDragGestureController = (options = {}) => {
       const someLayoutChange = gestureInfo.layout !== layoutPrevious;
       dispatchPublicCustomEvent(element, "navi_drag", {
         gestureInfo,
-        someLayoutChange
+        someLayoutChange,
       });
-      publishDrag(gestureInfo,
-      // we still publish drag event even when unchanged
-      // because UI might need to adjust when document scrolls
-      // even if nothing truly changes visually the element
-      // can decide to stick to the scroll for example
-      someLayoutChange);
+      publishDrag(
+        gestureInfo,
+        // we still publish drag event even when unchanged
+        // because UI might need to adjust when document scrolls
+        // even if nothing truly changes visually the element
+        // can decide to stick to the scroll for example
+        someLayoutChange,
+      );
     };
+
     const release = ({
       event = new CustomEvent("programmatic"),
       cancelled = event.type === "pointercancel",
       releaseX = gestureInfo.dragX,
-      releaseY = gestureInfo.dragY
+      releaseY = gestureInfo.dragY,
     } = {}) => {
       // Written before the last drag is reported, so the callbacks reading the
       // end of the gesture all see the same one.
       gestureInfo.cancelled = cancelled;
-      drag(releaseX, releaseY, {
-        event,
-        isRelease: true
-      });
-      dispatchPublicCustomEvent(element, "navi_drag_release", {
-        gestureInfo
-      });
+      drag(releaseX, releaseY, { event, isRelease: true });
+      dispatchPublicCustomEvent(element, "navi_drag_release", { gestureInfo });
       publishRelease(gestureInfo);
     };
-    dispatchPublicCustomEvent(element, "navi_drag_grab", {
-      gestureInfo
-    });
+
+    dispatchPublicCustomEvent(element, "navi_drag_grab", { gestureInfo });
     onGrab?.(gestureInfo);
     const dragGesture = {
       gestureInfo,
@@ -8979,11 +9047,12 @@ const createDragGestureController = (options = {}) => {
       addReleaseCallback,
       start,
       drag,
-      release
+      release,
     };
     return dragGesture;
   };
   dragGestureController.grab = grab;
+
   const initDragByPointer = (grabEvent, dragOptions, initializer) => {
     if (!isPrimaryButtonEvent(grabEvent)) {
       return null;
@@ -8993,11 +9062,8 @@ const createDragGestureController = (options = {}) => {
       // target is a text node
       return null;
     }
-    const mouseEventCoords = mouseEvent => {
-      const {
-        clientX,
-        clientY
-      } = mouseEvent;
+    const mouseEventCoords = (mouseEvent) => {
+      const { clientX, clientY } = mouseEvent;
       return [clientX, clientY];
     };
     const [grabX, grabY] = mouseEventCoords(grabEvent);
@@ -9005,23 +9071,21 @@ const createDragGestureController = (options = {}) => {
       grabX,
       grabY,
       event: grabEvent,
-      ...dragOptions
+      ...dragOptions,
     });
-    const dragViaPointer = dragEvent => {
+    const dragViaPointer = (dragEvent) => {
       const [mouseDragX, mouseDragY] = mouseEventCoords(dragEvent);
       dragGesture.drag(mouseDragX, mouseDragY, {
-        event: dragEvent
+        event: dragEvent,
       });
     };
-    const releaseViaPointer = (pointerEvent, {
-      cancelled
-    } = {}) => {
+    const releaseViaPointer = (pointerEvent, { cancelled } = {}) => {
       const [mouseReleaseX, mouseReleaseY] = mouseEventCoords(pointerEvent);
       dragGesture.release({
         event: pointerEvent,
         cancelled,
         releaseX: mouseReleaseX,
-        releaseY: mouseReleaseY
+        releaseY: mouseReleaseY,
       });
     };
     dragGesture.dragViaPointer = dragViaPointer;
@@ -9040,7 +9104,7 @@ const createDragGestureController = (options = {}) => {
      * everybody: the element would stop being selectable even when nobody is
      * dragging it. Here it is refused for the length of one gesture.
      */
-    const preventSelectStart = selectStartEvent => {
+    const preventSelectStart = (selectStartEvent) => {
       selectStartEvent.preventDefault();
     };
     document.addEventListener("selectstart", preventSelectStart);
@@ -9075,7 +9139,7 @@ const createDragGestureController = (options = {}) => {
      * waiting for a click that never comes costs nothing until then.
      */
     removePendingMultiClickListener();
-    const onClick = clickEvent => {
+    const onClick = (clickEvent) => {
       const clickCount = clickEvent.detail;
       if (clickCount < 2) {
         return;
@@ -9091,7 +9155,10 @@ const createDragGestureController = (options = {}) => {
       // is doing its own selecting — a second opinion there would only fight
       // it.
       const clickTarget = clickEvent.target;
-      if (clickTarget !== grabEvent.target && !clickTarget.contains(grabEvent.target)) {
+      if (
+        clickTarget !== grabEvent.target &&
+        !clickTarget.contains(grabEvent.target)
+      ) {
         return;
       }
       // Text the page says is not selectable stays not selectable: a
@@ -9117,204 +9184,204 @@ const createDragGestureController = (options = {}) => {
       onMove: dragViaPointer,
       onRelease: releaseViaPointer,
       gestureInfo: dragGesture.gestureInfo,
-      dragGesture
+      dragGesture,
     });
     dragGesture.addReleaseCallback(() => {
       cleanup();
     });
     return dragGesture;
   };
+
   const grabViaPointer = (grabEvent, options) => {
     if (grabEvent.type === "pointerdown") {
-      return initDragByPointer(grabEvent, options, ({
-        onMove,
-        onRelease,
-        gestureInfo,
-        dragGesture
-      }) => {
-        // Captured on something that will still be there at the end of the
-        // gesture: the browser releases the capture when its element leaves the
-        // document, and a gesture whose own effect replaces the DOM under the
-        // finger would lose the pointer at its first move. Callers whose target
-        // is stable have nothing to say and keep it.
-        const target = options?.pointerCaptureElement || grabEvent.target;
-        // The capture is ONE per pointer for the whole document: taking it is
-        // taking it away from whoever had it, who is then told the exact same
-        // thing it is told when its own gesture ends. So it is taken when this
-        // gesture is established and not a moment earlier — for most callers
-        // that is the grab itself (the intent was settled before, by a handle
-        // or a long press), and for a caller that is still deciding what the
-        // press means, it is whenever it says so (see capturePointer).
-        let captured = false;
-        dragGesture.capturePointer = () => {
-          captured = true;
-          // Written down before it is taken: this is the only place a capture
-          // is ever taken from, so what this map says is who asked for it
-          // last — which is what tells a hand-over from a capture the browser
-          // dropped on its own (see onCaptureLost).
-          captureHolderByPointerId.set(grabEvent.pointerId, dragGesture);
-          target.setPointerCapture(grabEvent.pointerId);
-        };
-        if (!options?.pointerCaptureDeferred) {
-          dragGesture.capturePointer();
-        }
-        /*
-         * A touchmove left alone is the browser deciding the touch belongs to
-         * it: it takes it to scroll with, and a touch it has taken is a pointer
-         * stream it CANCELS — the gesture dies mid-move, the finger is still
-         * down, and nothing reads it anymore.
-         *
-         * Refused only once the gesture is established (a `touch-action: none`
-         * would take the touch from everyone who merely brushes past the
-         * element), but LISTENED FOR from the grab: whether a touchmove can be
-         * refused at all is decided when the touch begins, from the listeners
-         * present at that moment. Registered later, the listener is handed
-         * events that are already `cancelable: false` — refusing them does
-         * nothing, and the reason is invisible in the code that refuses.
-         *
-         * On the window in capture AND on the grabbed element: a touch keeps
-         * being dispatched at the node it started on, and a gesture may take
-         * that node out of the document (a page that travels navigates) — from
-         * then on the event never passes through the window on its way
-         * anywhere.
-         */
-        const preventTouchScroll = touchMoveEvent => {
-          if (gestureInfo.started && touchMoveEvent.cancelable) {
-            touchMoveEvent.preventDefault();
+      return initDragByPointer(
+        grabEvent,
+        options,
+        ({ onMove, onRelease, gestureInfo, dragGesture }) => {
+          // Captured on something that will still be there at the end of the
+          // gesture: the browser releases the capture when its element leaves the
+          // document, and a gesture whose own effect replaces the DOM under the
+          // finger would lose the pointer at its first move. Callers whose target
+          // is stable have nothing to say and keep it.
+          const target = options?.pointerCaptureElement || grabEvent.target;
+          // The capture is ONE per pointer for the whole document: taking it is
+          // taking it away from whoever had it, who is then told the exact same
+          // thing it is told when its own gesture ends. So it is taken when this
+          // gesture is established and not a moment earlier — for most callers
+          // that is the grab itself (the intent was settled before, by a handle
+          // or a long press), and for a caller that is still deciding what the
+          // press means, it is whenever it says so (see capturePointer).
+          let captured = false;
+          dragGesture.capturePointer = () => {
+            captured = true;
+            // Written down before it is taken: this is the only place a capture
+            // is ever taken from, so what this map says is who asked for it
+            // last — which is what tells a hand-over from a capture the browser
+            // dropped on its own (see onCaptureLost).
+            captureHolderByPointerId.set(grabEvent.pointerId, dragGesture);
+            target.setPointerCapture(grabEvent.pointerId);
+          };
+          if (!options?.pointerCaptureDeferred) {
+            dragGesture.capturePointer();
           }
-        };
-        const grabTarget = grabEvent.target;
-        window.addEventListener("touchmove", preventTouchScroll, {
-          passive: false,
-          capture: true
-        });
-        grabTarget.addEventListener("touchmove", preventTouchScroll, {
-          passive: false
-        });
-        // Only OUR capture ending is this gesture's business:
-        // lostpointercapture bubbles, so a descendant giving up its own capture
-        // walks straight into this listener. That is not a rare shape — it is
-        // exactly what happens when a gesture hands over to another one (a
-        // press that becomes a drag releases its intermediate gesture, held on
-        // the pressed element, while the real one is being held on a container
-        // above it), and taken as our own it kills the new gesture one
-        // millisecond after it started.
-        //
-        // And when it IS ours, it is a loss and never an end: the ends a
-        // gesture has are the pointer going up and the pointer being
-        // cancelled, both listened for below. What a loss MEANS is the
-        // question, and the event does not answer it — two very different
-        // things arrive as the same one:
-        //
-        // - it was HANDED OVER: another gesture took the pointer, or the
-        //   element it was held on left the document. There is nothing to go
-        //   on with, and what was being carried must go back rather than land
-        //   wherever the hand happened to be.
-        // - it was simply LET GO OF by the browser, with the hand still down
-        //   and still moving. It happens, and not rarely: the capture is a
-        //   guarantee that events keep coming to one element, and the browser
-        //   drops it for reasons of its own that no code here can see. Killing
-        //   the gesture for that is dropping an object mid-air — the copy
-        //   vanishes, the place the hint had lit up is thrown away, and the
-        //   hand is left having done nothing.
-        //
-        // They are told apart by who asked (see captureHolderByPointerId): a
-        // capture nobody here took, on an element still in the document, was
-        // let go of. The gesture does not need it — every move and the release
-        // are read at the WINDOW, not at the element — so it goes on.
-        const onCaptureLost = pointerEvent => {
-          if (!captured || pointerEvent.target !== target) {
-            return;
-          }
-          const handedOver = captureHolderByPointerId.get(grabEvent.pointerId) !== dragGesture;
-          if (!handedOver && target.isConnected) {
-            // Nobody took it and the element it was held on is still there:
-            // the browser let the capture go by itself, which it does — a
-            // node moved by a re-render and put straight back, a decision of
-            // its own we are not told the reason for. The hand has not let go
-            // of anything, so neither does the gesture: it is a guarantee that
-            // was lost, not the gesture. Every move and the release are read
-            // at the window (see below), so it goes on without it rather than
-            // dropping what is still being carried — and the drop the hand was
-            // aiming at, which the hint had already lit up, still happens.
-            captured = false;
-            return;
-          }
-          onRelease(pointerEvent, {
-            cancelled: true
+          /*
+           * A touchmove left alone is the browser deciding the touch belongs to
+           * it: it takes it to scroll with, and a touch it has taken is a pointer
+           * stream it CANCELS — the gesture dies mid-move, the finger is still
+           * down, and nothing reads it anymore.
+           *
+           * Refused only once the gesture is established (a `touch-action: none`
+           * would take the touch from everyone who merely brushes past the
+           * element), but LISTENED FOR from the grab: whether a touchmove can be
+           * refused at all is decided when the touch begins, from the listeners
+           * present at that moment. Registered later, the listener is handed
+           * events that are already `cancelable: false` — refusing them does
+           * nothing, and the reason is invisible in the code that refuses.
+           *
+           * On the window in capture AND on the grabbed element: a touch keeps
+           * being dispatched at the node it started on, and a gesture may take
+           * that node out of the document (a page that travels navigates) — from
+           * then on the event never passes through the window on its way
+           * anywhere.
+           */
+          const preventTouchScroll = (touchMoveEvent) => {
+            if (gestureInfo.started && touchMoveEvent.cancelable) {
+              touchMoveEvent.preventDefault();
+            }
+          };
+          const grabTarget = grabEvent.target;
+          window.addEventListener("touchmove", preventTouchScroll, {
+            passive: false,
+            capture: true,
           });
-        };
-        target.addEventListener("lostpointercapture", onCaptureLost);
-        target.addEventListener("pointercancel", onRelease);
-        target.addEventListener("pointerup", onRelease);
-        // Read from the window rather than from the element while the pointer
-        // is not this gesture's: without a capture a move is delivered to
-        // whatever is under the pointer, and a hand that has left the element
-        // is exactly the hand this gesture is trying to make sense of. The
-        // capture phase reaches the window before anything else, captured or
-        // not, so there is one place to read whichever way the gesture ends up.
-        const onPointerMove = pointerEvent => {
-          if (pointerEvent.pointerId !== grabEvent.pointerId) {
-            return;
-          }
-          onMove(pointerEvent);
-        };
-        window.addEventListener("pointermove", onPointerMove, true);
-        // The end of the pointer is also listened for on the window, because
-        // the end is the one event a gesture cannot afford to miss and the
-        // element it is captured on is not always on its way: a pointer can
-        // be delivered somewhere else entirely (a browser view transition
-        // sends presses to the document root), and a cancel dispatched there
-        // never passes through this element. Missed, the gesture never ends —
-        // whatever it was holding stays held.
-        let released = false;
-        const onPointerEnd = pointerEvent => {
-          if (pointerEvent.pointerId !== grabEvent.pointerId || released) {
-            return;
-          }
-          released = true;
-          onRelease(pointerEvent);
-        };
-        window.addEventListener("pointerup", onPointerEnd, true);
-        window.addEventListener("pointercancel", onPointerEnd, true);
-        return () => {
-          // Listeners first, capture last: giving the pointer back is the
-          // one thing here that can throw, and a gesture that fails to clean
-          // up half way is worse than one that never cleaned up at all — its
-          // listeners stay on the element and answer the NEXT gesture, from
-          // a gesture whose pointer is long gone.
-          window.removeEventListener("touchmove", preventTouchScroll, {
-            capture: true
+          grabTarget.addEventListener("touchmove", preventTouchScroll, {
+            passive: false,
           });
-          grabTarget.removeEventListener("touchmove", preventTouchScroll);
-          target.removeEventListener("lostpointercapture", onCaptureLost);
-          target.removeEventListener("pointercancel", onRelease);
-          window.removeEventListener("pointermove", onPointerMove, true);
-          target.removeEventListener("pointerup", onRelease);
-          window.removeEventListener("pointerup", onPointerEnd, true);
-          window.removeEventListener("pointercancel", onPointerEnd, true);
-          // Only what this gesture took, and only while there is something to
-          // give back: a capture on that element may be someone else's (two
-          // gestures reading the same press hold the same node), and a pointer
-          // that is up no longer exists — the browser has already dropped the
-          // capture with it, and asking again throws ("No active pointer with
-          // the given id is found") on the most ordinary release there is.
-          if (captureHolderByPointerId.get(grabEvent.pointerId) === dragGesture) {
-            captureHolderByPointerId.delete(grabEvent.pointerId);
-          }
-          if (captured && target.hasPointerCapture(grabEvent.pointerId)) {
-            target.releasePointerCapture(grabEvent.pointerId);
-          }
-        };
-      });
+          // Only OUR capture ending is this gesture's business:
+          // lostpointercapture bubbles, so a descendant giving up its own capture
+          // walks straight into this listener. That is not a rare shape — it is
+          // exactly what happens when a gesture hands over to another one (a
+          // press that becomes a drag releases its intermediate gesture, held on
+          // the pressed element, while the real one is being held on a container
+          // above it), and taken as our own it kills the new gesture one
+          // millisecond after it started.
+          //
+          // And when it IS ours, it is a loss and never an end: the ends a
+          // gesture has are the pointer going up and the pointer being
+          // cancelled, both listened for below. What a loss MEANS is the
+          // question, and the event does not answer it — two very different
+          // things arrive as the same one:
+          //
+          // - it was HANDED OVER: another gesture took the pointer, or the
+          //   element it was held on left the document. There is nothing to go
+          //   on with, and what was being carried must go back rather than land
+          //   wherever the hand happened to be.
+          // - it was simply LET GO OF by the browser, with the hand still down
+          //   and still moving. It happens, and not rarely: the capture is a
+          //   guarantee that events keep coming to one element, and the browser
+          //   drops it for reasons of its own that no code here can see. Killing
+          //   the gesture for that is dropping an object mid-air — the copy
+          //   vanishes, the place the hint had lit up is thrown away, and the
+          //   hand is left having done nothing.
+          //
+          // They are told apart by who asked (see captureHolderByPointerId): a
+          // capture nobody here took, on an element still in the document, was
+          // let go of. The gesture does not need it — every move and the release
+          // are read at the WINDOW, not at the element — so it goes on.
+          const onCaptureLost = (pointerEvent) => {
+            if (!captured || pointerEvent.target !== target) {
+              return;
+            }
+            const handedOver =
+              captureHolderByPointerId.get(grabEvent.pointerId) !== dragGesture;
+            if (!handedOver && target.isConnected) {
+              // Nobody took it and the element it was held on is still there:
+              // the browser let the capture go by itself, which it does — a
+              // node moved by a re-render and put straight back, a decision of
+              // its own we are not told the reason for. The hand has not let go
+              // of anything, so neither does the gesture: it is a guarantee that
+              // was lost, not the gesture. Every move and the release are read
+              // at the window (see below), so it goes on without it rather than
+              // dropping what is still being carried — and the drop the hand was
+              // aiming at, which the hint had already lit up, still happens.
+              captured = false;
+              return;
+            }
+            onRelease(pointerEvent, { cancelled: true });
+          };
+          target.addEventListener("lostpointercapture", onCaptureLost);
+          target.addEventListener("pointercancel", onRelease);
+          target.addEventListener("pointerup", onRelease);
+          // Read from the window rather than from the element while the pointer
+          // is not this gesture's: without a capture a move is delivered to
+          // whatever is under the pointer, and a hand that has left the element
+          // is exactly the hand this gesture is trying to make sense of. The
+          // capture phase reaches the window before anything else, captured or
+          // not, so there is one place to read whichever way the gesture ends up.
+          const onPointerMove = (pointerEvent) => {
+            if (pointerEvent.pointerId !== grabEvent.pointerId) {
+              return;
+            }
+            onMove(pointerEvent);
+          };
+          window.addEventListener("pointermove", onPointerMove, true);
+          // The end of the pointer is also listened for on the window, because
+          // the end is the one event a gesture cannot afford to miss and the
+          // element it is captured on is not always on its way: a pointer can
+          // be delivered somewhere else entirely (a browser view transition
+          // sends presses to the document root), and a cancel dispatched there
+          // never passes through this element. Missed, the gesture never ends —
+          // whatever it was holding stays held.
+          let released = false;
+          const onPointerEnd = (pointerEvent) => {
+            if (pointerEvent.pointerId !== grabEvent.pointerId || released) {
+              return;
+            }
+            released = true;
+            onRelease(pointerEvent);
+          };
+          window.addEventListener("pointerup", onPointerEnd, true);
+          window.addEventListener("pointercancel", onPointerEnd, true);
+          return () => {
+            // Listeners first, capture last: giving the pointer back is the
+            // one thing here that can throw, and a gesture that fails to clean
+            // up half way is worse than one that never cleaned up at all — its
+            // listeners stay on the element and answer the NEXT gesture, from
+            // a gesture whose pointer is long gone.
+            window.removeEventListener("touchmove", preventTouchScroll, {
+              capture: true,
+            });
+            grabTarget.removeEventListener("touchmove", preventTouchScroll);
+            target.removeEventListener("lostpointercapture", onCaptureLost);
+            target.removeEventListener("pointercancel", onRelease);
+            window.removeEventListener("pointermove", onPointerMove, true);
+            target.removeEventListener("pointerup", onRelease);
+            window.removeEventListener("pointerup", onPointerEnd, true);
+            window.removeEventListener("pointercancel", onPointerEnd, true);
+            // Only what this gesture took, and only while there is something to
+            // give back: a capture on that element may be someone else's (two
+            // gestures reading the same press hold the same node), and a pointer
+            // that is up no longer exists — the browser has already dropped the
+            // capture with it, and asking again throws ("No active pointer with
+            // the given id is found") on the most ordinary release there is.
+            if (
+              captureHolderByPointerId.get(grabEvent.pointerId) === dragGesture
+            ) {
+              captureHolderByPointerId.delete(grabEvent.pointerId);
+            }
+            if (captured && target.hasPointerCapture(grabEvent.pointerId)) {
+              target.releasePointerCapture(grabEvent.pointerId);
+            }
+          };
+        },
+      );
     }
     if (grabEvent.type === "mousedown") {
-      console.warn(`Received "mousedown" event, "pointerdown" events are recommended to perform drag gestures.`);
-      return initDragByPointer(grabEvent, options, ({
-        onMove,
-        onRelease
-      }) => {
-        const onPointerUp = pointerEvent => {
+      console.warn(
+        `Received "mousedown" event, "pointerdown" events are recommended to perform drag gestures.`,
+      );
+      return initDragByPointer(grabEvent, options, ({ onMove, onRelease }) => {
+        const onPointerUp = (pointerEvent) => {
           // <button disabled> for example does not emit mouseup if we release mouse over it
           // -> we add "pointerup" to catch mouseup occuring on disabled element
           if (pointerEvent.pointerType === "mouse") {
@@ -9331,15 +9398,19 @@ const createDragGestureController = (options = {}) => {
         };
       });
     }
-    throw new Error(`Unsupported "${grabEvent.type}" evenet passed to grabViaPointer. "pointerdown" was expected.`);
+    throw new Error(
+      `Unsupported "${grabEvent.type}" evenet passed to grabViaPointer. "pointerdown" was expected.`,
+    );
   };
   dragGestureController.grabViaPointer = grabViaPointer;
+
   return dragGestureController;
 };
 
 // Only the primary button drags: a right click (or any secondary button) opens
 // a context menu, it never grabs anything.
-const isPrimaryButtonEvent = event => event.button === undefined || event.button === 0;
+const isPrimaryButtonEvent = (event) =>
+  event.button === undefined || event.button === 0;
 
 /*
  * Speed over the last VELOCITY_WINDOW_MS rather than between the last two
@@ -9352,18 +9423,11 @@ const isPrimaryButtonEvent = event => event.button === undefined || event.button
  */
 const VELOCITY_WINDOW_MS = 100;
 const createVelocityMeter = (grabX, grabY) => {
-  const samples = [{
-    time: performance.now(),
-    x: grabX,
-    y: grabY
-  }];
+  const samples = [{ time: performance.now(), x: grabX, y: grabY }];
+
   const measureVelocity = (x, y) => {
     const time = performance.now();
-    samples.push({
-      time,
-      x,
-      y
-    });
+    samples.push({ time, x, y });
     while (samples.length > 2 && time - samples[1].time > VELOCITY_WINDOW_MS) {
       samples.shift();
     }
@@ -9374,14 +9438,17 @@ const createVelocityMeter = (grabX, grabY) => {
     }
     return [(x - oldestSample.x) / elapsed, (y - oldestSample.y) / elapsed];
   };
+
   return measureVelocity;
 };
+
 const definePropertyAsReadOnly = (object, propertyName) => {
   Object.defineProperty(object, propertyName, {
     writable: false,
-    value: object[propertyName]
+    value: object[propertyName],
   });
 };
+
 const NOOP = () => {};
 let removePendingMultiClickListener = NOOP;
 
@@ -9427,12 +9494,11 @@ const selectParagraphAtPoint = (x, y) => {
   paragraphRange.selectNodeContents(block);
   selection.addRange(paragraphRange);
 };
-const getClosestBlock = node => {
+
+const getClosestBlock = (node) => {
   let element = node.nodeType === 1 ? node : node.parentElement;
   while (element) {
-    const {
-      display
-    } = window.getComputedStyle(element);
+    const { display } = window.getComputedStyle(element);
     // Everything that is not laid out as a line inside another line: the first
     // ancestor that breaks the flow is the one whose text reads as a paragraph
     // of its own.
@@ -9443,6 +9509,7 @@ const getClosestBlock = node => {
   }
   return null;
 };
+
 const createCaretRange = (x, y) => {
   if (document.caretPositionFromPoint) {
     const caretPosition = document.caretPositionFromPoint(x, y);
@@ -9459,7 +9526,8 @@ const createCaretRange = (x, y) => {
   }
   return null;
 };
-const isSelectable = element => {
+
+const isSelectable = (element) => {
   if (!element || element.nodeType !== 1) {
     return true;
   }
@@ -9467,6 +9535,7 @@ const isSelectable = element => {
   const userSelect = computedStyle.userSelect || computedStyle.webkitUserSelect;
   return userSelect !== "none";
 };
+
 const collapseSelection = () => {
   const selection = window.getSelection();
   if (selection && !selection.isCollapsed) {
@@ -9474,53 +9543,7 @@ const collapseSelection = () => {
   }
 };
 
-installImportMetaCssBuild(import.meta);/**
- * When a press becomes a drag.
- *
- * A pointer going down on a draggable element is ambiguous — it may be a click,
- * a text selection, a scroll, or a drag — and starting the gesture right away
- * would steal all the others. This module picks which signal resolves the
- * ambiguity for the pointer at hand, and only then hands over to the real
- * gesture.
- *
- * There is one gesture, with a trigger per pointer:
- * - a dedicated handle ([data-drag-handle]) says it outright: drag on contact
- * - a mouse resolves it by distance — a mouse scrolls with its wheel, so travel
- *   can only mean drag
- * - a finger resolves it by time — travel is exactly what a scroll looks like,
- *   so the only unambiguous signal left is a finger that does NOT move
- *
- * Whichever trigger fired, it has established the intent: the gesture then
- * starts at the first pixel, without a second threshold to cross.
- *
- * WHEN A FINGER MAY TRAVEL TOO: [data-drag-on-contact].
- *
- * The wait a finger is asked for is not a rule about fingers, it is the answer to
- * an ambiguity — travel means scroll as much as it means drag, so the two have to
- * be told apart. Where nothing scrolls the ambiguity does not exist, and the wait
- * is asking the hand to prove something nothing else could have meant: inside a
- * dialog that holds the page still, a finger travelling on a piece can only be
- * carrying it.
- *
- * So the attribute says that place, not that element — put on the dialog, every
- * source inside it reads by distance like a mouse does, at the same few pixels.
- * A tap is left alone by that: a press that goes nowhere is still a press, which
- * is what a piece that is also a link or a card needs.
- *
- * A HOLD is not, and nothing in such a place is text to select. Taking the wait
- * away takes away the only thing that answered a finger held still, so the
- * browser answers it alone: its own long press selects the word under the thumb,
- * and the card the hand meant to carry is left blue and handled. Said to every
- * pointer — a mouse there drags from the first few pixels, so a selection begun
- * there is one that could never be finished either. What says its press is its
- * own keeps its text (see the stylesheet below).
- *
- * It is opt-in and cannot be anything else. Nothing here can see whether the
- * surroundings scroll — a page scrolls by default, an overflow is one CSS
- * property away, and getting it wrong the wrong way means the list runs away
- * under the finger that meant to reorder it. Only the application knows it has
- * taken the scroll away.
- */
+installImportMetaCssBuild(import.meta);
 
 /* At module scope, and on the markers rather than on the pressed element: both
    rules below have to be true BEFORE the finger lands — a stylesheet, never a
@@ -9541,7 +9564,7 @@ installImportMetaCssBuild(import.meta);/**
    lets the page scroll and still makes the refusal effective — provided the
    listener that will refuse is already known too, which is markDragSource's
    half of the same rule. */
-const css$4 = /* css */`[data-drag-handle], [data-drag-source] {
+const css$4 = /* css */ `[data-drag-handle], [data-drag-source] {
   -webkit-touch-callout: none;
 }
 
@@ -9632,9 +9655,7 @@ const keepTouchRefusable = () => {
  */
 const markDragSource = (element, axes = "xy") => {
   element.setAttribute("data-drag-source", axes);
-  element.addEventListener("touchmove", keepTouchRefusable, {
-    passive: false
-  });
+  element.addEventListener("touchmove", keepTouchRefusable, { passive: false });
   return () => {
     element.removeAttribute("data-drag-source");
     element.removeEventListener("touchmove", keepTouchRefusable);
@@ -9671,40 +9692,49 @@ const markDragSource = (element, axes = "xy") => {
  * @param {function} [options.onPress]
  *   The wait completed and the object is now held (haptics, scale…).
  */
-const dragAfterIntent = (grabEvent, dragGestureInitializer, {
-  threshold = 5,
-  longPress = "if-touch",
-  longPressDelay = 400,
-  longPressSlop = 8,
-  onPressStart,
-  onPressCancel,
-  onPress
-} = {}) => {
+const dragAfterIntent = (
+  grabEvent,
+  dragGestureInitializer,
+  {
+    threshold = 5,
+    longPress = "if-touch",
+    longPressDelay = 400,
+    longPressSlop = 8,
+    onPressStart,
+    onPressCancel,
+    onPress,
+  } = {},
+) => {
   if (!isPrimaryButtonEvent(grabEvent)) {
     return;
   }
   const target = grabEvent.target;
-  const isDedicatedHandle = target.closest && target.closest("[data-drag-handle]");
+  const isDedicatedHandle =
+    target.closest && target.closest("[data-drag-handle]");
   if (isDedicatedHandle) {
     startDragGesture(dragGestureInitializer);
     return;
   }
-  const startsOnLongPress = longPress === true || longPress === "if-touch" && grabEvent.pointerType === "touch" &&
-  // The wait tells a scroll from a drag, and here there is no scroll to tell
-  // it from — see [data-drag-on-contact] at the top of this file.
-  !(target.closest && target.closest("[data-drag-on-contact]"));
+  const startsOnLongPress =
+    longPress === true ||
+    (longPress === "if-touch" &&
+      grabEvent.pointerType === "touch" &&
+      // The wait tells a scroll from a drag, and here there is no scroll to tell
+      // it from — see [data-drag-on-contact] at the top of this file.
+      !(target.closest && target.closest("[data-drag-on-contact]")));
   if (startsOnLongPress) {
     dragAfterLongPress(grabEvent, dragGestureInitializer, {
       longPressDelay,
       longPressSlop,
       onPressStart,
       onPressCancel,
-      onPress
+      onPress,
     });
     return;
   }
   dragAfterDistance(grabEvent, dragGestureInitializer, threshold);
 };
+
 const startDragGesture = (dragGestureInitializer, catchUpEvent) => {
   const dragGesture = dragGestureInitializer();
   if (!dragGesture) {
@@ -9718,6 +9748,7 @@ const startDragGesture = (dragGestureInitializer, catchUpEvent) => {
   }
   return dragGesture;
 };
+
 const dragAfterDistance = (grabEvent, dragGestureInitializer, threshold) => {
   const significantDragGestureController = createDragGestureController({
     threshold,
@@ -9725,28 +9756,28 @@ const dragAfterDistance = (grabEvent, dragGestureInitializer, threshold) => {
     // user should still be able to scroll or interact with the document
     // only once the gesture is significant we take control
     documentInteractions: "manual",
-    onDragStart: gestureInfo => {
+    onDragStart: (gestureInfo) => {
       significantDragGesture.release(); // kill that gesture
       startDragGesture(dragGestureInitializer, gestureInfo.dragEvent);
-    }
+    },
   });
-  const significantDragGesture = significantDragGestureController.grabViaPointer(grabEvent, {
-    element: grabEvent.target,
-    // This one owns nothing: it measures a distance to find out whether there
-    // is a gesture at all, and it is over the moment there is. Taking the
-    // pointer for that would take it from whoever is already holding this same
-    // element for a gesture of their own — and giving it back at the threshold
-    // would tell them theirs is over.
-    pointerCaptureDeferred: true
-  });
+  const significantDragGesture =
+    significantDragGestureController.grabViaPointer(grabEvent, {
+      element: grabEvent.target,
+      // This one owns nothing: it measures a distance to find out whether there
+      // is a gesture at all, and it is over the moment there is. Taking the
+      // pointer for that would take it from whoever is already holding this same
+      // element for a gesture of their own — and giving it back at the threshold
+      // would tell them theirs is over.
+      pointerCaptureDeferred: true,
+    });
 };
-const dragAfterLongPress = (grabEvent, dragGestureInitializer, {
-  longPressDelay,
-  longPressSlop,
-  onPressStart,
-  onPressCancel,
-  onPress
-}) => {
+
+const dragAfterLongPress = (
+  grabEvent,
+  dragGestureInitializer,
+  { longPressDelay, longPressSlop, onPressStart, onPressCancel, onPress },
+) => {
   /*
    * Nothing is done here to keep the touch refusable: whether it can be refused
    * at all was settled when the finger landed, from what the element already
@@ -9760,9 +9791,7 @@ const dragAfterLongPress = (grabEvent, dragGestureInitializer, {
     slop: longPressSlop,
     onPressStart,
     onPressCancel,
-    onPressHeld: (pressEvent, {
-      endPress
-    }) => {
+    onPressHeld: (pressEvent, { endPress }) => {
       onPress?.(pressEvent);
       const dragGesture = startDragGesture(dragGestureInitializer);
       if (!dragGesture) {
@@ -9772,7 +9801,7 @@ const dragAfterLongPress = (grabEvent, dragGestureInitializer, {
       dragGesture.addReleaseCallback(() => {
         endPress();
       });
-    }
+    },
   });
 };
 
@@ -10292,7 +10321,9 @@ const getDragCoordinates = (
   return [leftRelativeToScrollContainer, topRelativeToScrollContainer];
 };
 
-installImportMetaCssBuild(import.meta);const css$3 = /* css */`.navi_constraint_feedback_line {
+installImportMetaCssBuild(import.meta);
+
+const css$3 = /* css */ `.navi_constraint_feedback_line {
   z-index: 9998;
   visibility: hidden;
   transform-origin: 0;
@@ -10306,6 +10337,7 @@ installImportMetaCssBuild(import.meta);const css$3 = /* css */`.navi_constraint_
   visibility: visible;
 }
 `;
+
 const setupConstraintFeedbackLine = () => {
   import.meta.css = [css$3, "@jsenv/dom/src/interaction/drag/constraint_feedback_line.js"];
   const constraintFeedbackLine = createConstraintFeedbackLine();
@@ -10315,17 +10347,18 @@ const setupConstraintFeedbackLine = () => {
   let lastMouseY = null;
 
   // Internal function to update constraint feedback line
-  const onDrag = gestureInfo => {
-    const {
-      grabEvent,
-      dragEvent
-    } = gestureInfo;
-    if (grabEvent.type === "programmatic" ||
-    // dragEvent can be null when only mousedown without yet any mousemove
-    !dragEvent || dragEvent.type === "programmatic") {
+  const onDrag = (gestureInfo) => {
+    const { grabEvent, dragEvent } = gestureInfo;
+    if (
+      grabEvent.type === "programmatic" ||
+      // dragEvent can be null when only mousedown without yet any mousemove
+      !dragEvent ||
+      dragEvent.type === "programmatic"
+    ) {
       // programmatic drag
       return;
     }
+
     const mouseX = dragEvent.clientX;
     const mouseY = dragEvent.clientY;
     // Use last known position if current position not available (e.g., during scroll)
@@ -10338,6 +10371,7 @@ const setupConstraintFeedbackLine = () => {
     // Store current mouse position for potential use during scroll
     lastMouseX = mouseX;
     lastMouseY = mouseY;
+
     const grabClientX = grabEvent.clientX;
     const grabClientY = grabEvent.clientY;
 
@@ -10366,28 +10400,33 @@ const setupConstraintFeedbackLine = () => {
     constraintFeedbackLine.style.opacity = `${maxOpacity * opacityFactor}`;
     constraintFeedbackLine.setAttribute("data-visible", "");
   };
+
   return {
     onDrag,
     onRelease: () => {
       constraintFeedbackLine.remove();
-    }
+    },
   };
 };
+
 const createConstraintFeedbackLine = () => {
   const line = document.createElement("div");
   line.className = "navi_constraint_feedback_line";
-  line.title = "Constraint feedback - shows distance between mouse and moving grab point";
+  line.title =
+    "Constraint feedback - shows distance between mouse and moving grab point";
   document.body.appendChild(line);
   return line;
 };
 
-installImportMetaCssBuild(import.meta);// Keep visual markers (debug markers, obstacle markers, constraint feedback line) in DOM after drag ends
+installImportMetaCssBuild(import.meta);
 const MARKER_SIZE = 12;
+
 let currentDebugMarkers = [];
 let currentConstraintMarkers = [];
 let currentReferenceElementMarker = null;
 let currentElementMarker = null;
-const css$2 = /* css */`.navi_debug_markers_container {
+
+const css$2 = /* css */ `.navi_debug_markers_container {
   z-index: 999998;
   pointer-events: none;
   --marker-size: ${MARKER_SIZE}px;
@@ -10554,9 +10593,8 @@ const css$2 = /* css */`.navi_debug_markers_container {
   left: 0;
 }
 `;
-const setupDragDebugMarkers = (dragGesture, {
-  referenceElement
-}) => {
+
+const setupDragDebugMarkers = (dragGesture, { referenceElement }) => {
   import.meta.css = [css$2, "@jsenv/dom/src/interaction/drag/drag_debug_markers.js"];
 
   // Clean up any existing persistent markers from previous drag gestures
@@ -10567,27 +10605,29 @@ const setupDragDebugMarkers = (dragGesture, {
       container.innerHTML = ""; // Clear all markers efficiently
     }
   }
-  const {
-    direction,
-    scrollContainer
-  } = dragGesture.gestureInfo;
+
+  const { direction, scrollContainer } = dragGesture.gestureInfo;
+
   return {
-    onConstraints: (constraints, {
-      left,
-      top,
-      right,
-      bottom,
-      autoScrollArea
-    }) => {
+    onConstraints: (
+      constraints,
+      { left, top, right, bottom, autoScrollArea },
+    ) => {
       // Schedule removal of previous markers if they exist
       const previousDebugMarkers = [...currentDebugMarkers];
       const previousConstraintMarkers = [...currentConstraintMarkers];
       const previousReferenceElementMarker = currentReferenceElementMarker;
       const previousElementMarker = currentElementMarker;
-      if (previousDebugMarkers.length > 0 || previousConstraintMarkers.length > 0 || previousReferenceElementMarker || previousElementMarker) {
+
+      if (
+        previousDebugMarkers.length > 0 ||
+        previousConstraintMarkers.length > 0 ||
+        previousReferenceElementMarker ||
+        previousElementMarker
+      ) {
         setTimeout(() => {
-          previousDebugMarkers.forEach(marker => marker.remove());
-          previousConstraintMarkers.forEach(marker => marker.remove());
+          previousDebugMarkers.forEach((marker) => marker.remove());
+          previousConstraintMarkers.forEach((marker) => marker.remove());
           if (previousReferenceElementMarker) {
             previousReferenceElementMarker.remove();
           }
@@ -10616,7 +10656,7 @@ const setupDragDebugMarkers = (dragGesture, {
         bottom,
         scrollContainer,
         label: elementLabel,
-        color: elementColor
+        color: elementColor,
       });
 
       // Create reference element marker if reference element exists
@@ -10626,47 +10666,52 @@ const setupDragDebugMarkers = (dragGesture, {
           top,
           right,
           bottom,
-          scrollContainer
+          scrollContainer,
         });
       }
 
       // Collect all markers to be created, then merge duplicates
       const markersToCreate = [];
+
       {
         if (direction.x) {
           markersToCreate.push({
-            name: autoScrollArea.paddingLeft ? `autoscroll.left + padding(${autoScrollArea.paddingLeft})` : "autoscroll.left",
+            name: autoScrollArea.paddingLeft
+              ? `autoscroll.left + padding(${autoScrollArea.paddingLeft})`
+              : "autoscroll.left",
             x: autoScrollArea.left,
             y: 0,
-            color: "0 128 0",
-            // green
-            side: "left"
+            color: "0 128 0", // green
+            side: "left",
           });
           markersToCreate.push({
-            name: autoScrollArea.paddingRight ? `autoscroll.right + padding(${autoScrollArea.paddingRight})` : "autoscroll.right",
+            name: autoScrollArea.paddingRight
+              ? `autoscroll.right + padding(${autoScrollArea.paddingRight})`
+              : "autoscroll.right",
             x: autoScrollArea.right,
             y: 0,
-            color: "0 128 0",
-            // green
-            side: "right"
+            color: "0 128 0", // green
+            side: "right",
           });
         }
         if (direction.y) {
           markersToCreate.push({
-            name: autoScrollArea.paddingTop ? `autoscroll.top + padding(${autoScrollArea.paddingTop})` : "autoscroll.top",
+            name: autoScrollArea.paddingTop
+              ? `autoscroll.top + padding(${autoScrollArea.paddingTop})`
+              : "autoscroll.top",
             x: 0,
             y: autoScrollArea.top,
-            color: "255 0 0",
-            // red
-            side: "top"
+            color: "255 0 0", // red
+            side: "top",
           });
           markersToCreate.push({
-            name: autoScrollArea.paddingBottom ? `autoscroll.bottom + padding(${autoScrollArea.paddingBottom})` : "autoscroll.bottom",
+            name: autoScrollArea.paddingBottom
+              ? `autoscroll.bottom + padding(${autoScrollArea.paddingBottom})`
+              : "autoscroll.bottom",
             x: 0,
             y: autoScrollArea.bottom,
-            color: "255 165 0",
-            // orange
-            side: "bottom"
+            color: "255 165 0", // orange
+            side: "bottom",
           });
         }
       }
@@ -10674,9 +10719,7 @@ const setupDragDebugMarkers = (dragGesture, {
       // Process each constraint individually to preserve names
       for (const constraint of constraints) {
         if (constraint.type === "bounds") {
-          const {
-            bounds
-          } = constraint;
+          const { bounds } = constraint;
 
           // Create individual markers for each bound with constraint name
           if (direction.x) {
@@ -10685,9 +10728,8 @@ const setupDragDebugMarkers = (dragGesture, {
                 name: `${constraint.name}.left`,
                 x: bounds.left,
                 y: 0,
-                color: "128 0 128",
-                // purple
-                side: "left"
+                color: "128 0 128", // purple
+                side: "left",
               });
             }
             if (bounds.right !== undefined) {
@@ -10697,9 +10739,8 @@ const setupDragDebugMarkers = (dragGesture, {
                 name: `${constraint.name}.right`,
                 x: bounds.right,
                 y: 0,
-                color: "128 0 128",
-                // purple
-                side: "right"
+                color: "128 0 128", // purple
+                side: "right",
               });
             }
           }
@@ -10709,9 +10750,8 @@ const setupDragDebugMarkers = (dragGesture, {
                 name: `${constraint.name}.top`,
                 x: 0,
                 y: bounds.top,
-                color: "128 0 128",
-                // purple
-                side: "top"
+                color: "128 0 128", // purple
+                side: "top",
               });
             }
             if (bounds.bottom !== undefined) {
@@ -10721,28 +10761,37 @@ const setupDragDebugMarkers = (dragGesture, {
                 name: `${constraint.name}.bottom`,
                 x: 0,
                 y: bounds.bottom,
-                color: "128 0 128",
-                // purple
-                side: "bottom"
+                color: "128 0 128", // purple
+                side: "bottom",
               });
             }
           }
         } else if (constraint.type === "obstacle") {
-          const obstacleMarker = createObstacleMarker(constraint, scrollContainer);
+          const obstacleMarker = createObstacleMarker(
+            constraint,
+            scrollContainer,
+          );
           currentConstraintMarkers.push(obstacleMarker);
         }
       }
 
       // Create markers with merging for overlapping positions
-      const createdMarkers = createMergedMarkers(markersToCreate, scrollContainer);
-      currentDebugMarkers.push(...createdMarkers.filter(m => m.type !== "constraint"));
-      currentConstraintMarkers.push(...createdMarkers.filter(m => m.type === "constraint"));
+      const createdMarkers = createMergedMarkers(
+        markersToCreate,
+        scrollContainer,
+      );
+      currentDebugMarkers.push(
+        ...createdMarkers.filter((m) => m.type !== "constraint"),
+      );
+      currentConstraintMarkers.push(
+        ...createdMarkers.filter((m) => m.type === "constraint"),
+      );
     },
     onRelease: () => {
       {
         return;
       }
-    }
+    },
   };
 };
 
@@ -10761,9 +10810,8 @@ const getMarkersContainer = () => {
 // Convert document-relative coordinates to viewport coordinates for marker positioning
 // Takes the scroll container into account for proper positioning relative to the container
 const getDebugMarkerPos = (x, y, scrollContainer, side = null) => {
-  const {
-    documentElement
-  } = document;
+  const { documentElement } = document;
+
   const leftWithoutScroll = x - scrollContainer.scrollLeft;
   const topWithoutScroll = y - scrollContainer.scrollTop;
   let baseX;
@@ -10795,6 +10843,7 @@ const getDebugMarkerPos = (x, y, scrollContainer, side = null) => {
   // For obstacles and other markers: use converted coordinates directly
   return [baseX, baseY];
 };
+
 const createMergedMarkers = (markersToCreate, scrollContainer) => {
   const mergedMarkers = [];
   const positionMap = new Map();
@@ -10802,6 +10851,7 @@ const createMergedMarkers = (markersToCreate, scrollContainer) => {
   // Group markers by position and side
   for (const marker of markersToCreate) {
     const key = `${marker.x},${marker.y},${marker.side}`;
+
     if (!positionMap.has(key)) {
       positionMap.set(key, []);
     }
@@ -10819,36 +10869,43 @@ const createMergedMarkers = (markersToCreate, scrollContainer) => {
     } else {
       // Multiple markers at same position - merge labels
       const firstMarker = markers[0];
-      const combinedName = markers.map(m => m.name).join(" + ");
+      const combinedName = markers.map((m) => m.name).join(" + ");
 
       // Use the first marker's color, or mix colors if needed
-      const domMarker = createDebugMarker({
-        ...firstMarker,
-        name: combinedName
-      }, scrollContainer);
-      domMarker.type = markers.some(m => m.name.includes("Bound")) ? "constraint" : "visible";
+      const domMarker = createDebugMarker(
+        {
+          ...firstMarker,
+          name: combinedName,
+        },
+        scrollContainer,
+      );
+      domMarker.type = markers.some((m) => m.name.includes("Bound"))
+        ? "constraint"
+        : "visible";
       mergedMarkers.push(domMarker);
     }
   }
+
   return mergedMarkers;
 };
-const createDebugMarker = ({
-  name,
-  x,
-  y,
-  color = "255 0 0",
-  side
-}, scrollContainer) => {
+
+const createDebugMarker = (
+  { name, x, y, color = "255 0 0", side },
+  scrollContainer,
+) => {
   // Convert coordinates from document-relative to viewport
   const [viewportX, viewportY] = getDebugMarkerPos(x, y, scrollContainer, side);
+
   const marker = document.createElement("div");
   marker.className = `navi_debug_marker`;
   marker.setAttribute(`data-${side}`, "");
   // Set the color as a CSS custom property
   marker.style.setProperty("--marker-color", `rgb(${color})`);
   // Position markers exactly at the boundary coordinates
-  marker.style.left = side === "right" ? `${viewportX - MARKER_SIZE}px` : `${viewportX}px`;
-  marker.style.top = side === "bottom" ? `${viewportY - MARKER_SIZE}px` : `${viewportY}px`;
+  marker.style.left =
+    side === "right" ? `${viewportX - MARKER_SIZE}px` : `${viewportX}px`;
+  marker.style.top =
+    side === "bottom" ? `${viewportY - MARKER_SIZE}px` : `${viewportY}px`;
   marker.title = name;
 
   // Add label
@@ -10856,6 +10913,7 @@ const createDebugMarker = ({
   label.className = `navi_debug_marker_label`;
   label.textContent = name;
   marker.appendChild(label);
+
   const container = getMarkersContainer();
   container.appendChild(marker);
   return marker;
@@ -10865,7 +10923,13 @@ const createObstacleMarker = (obstacleObj, scrollContainer) => {
   const height = obstacleObj.bounds.bottom - obstacleObj.bounds.top;
 
   // Convert document-relative coordinates to viewport coordinates
-  const [x, y] = getDebugMarkerPos(obstacleObj.bounds.left, obstacleObj.bounds.top, scrollContainer, "obstacle");
+  const [x, y] = getDebugMarkerPos(
+    obstacleObj.bounds.left,
+    obstacleObj.bounds.top,
+    scrollContainer,
+    "obstacle",
+  );
+
   const marker = document.createElement("div");
   marker.className = "navi_obstacle_marker";
   marker.style.left = `${x}px`;
@@ -10879,10 +10943,12 @@ const createObstacleMarker = (obstacleObj, scrollContainer) => {
   label.className = "navi_obstacle_marker_label";
   label.textContent = obstacleObj.name;
   marker.appendChild(label);
+
   const container = getMarkersContainer();
   container.appendChild(marker);
   return marker;
 };
+
 const createElementMarker = ({
   left,
   top,
@@ -10890,12 +10956,13 @@ const createElementMarker = ({
   bottom,
   scrollContainer,
   label = "Element",
-  color = "0, 200, 0" // Default green color
+  color = "0, 200, 0", // Default green color
 }) => {
   const width = right - left;
   const height = bottom - top;
   // Convert document-relative coordinates to viewport coordinates
   const [x, y] = getDebugMarkerPos(left, top, scrollContainer, "element");
+
   const marker = document.createElement("div");
   marker.className = "navi_element_marker";
   marker.style.left = `${x}px`;
@@ -10913,21 +10980,24 @@ const createElementMarker = ({
   labelEl.className = "navi_element_marker_label";
   labelEl.textContent = label;
   marker.appendChild(labelEl);
+
   const container = getMarkersContainer();
   container.appendChild(marker);
   return marker;
 };
+
 const createReferenceElementMarker = ({
   left,
   top,
   right,
   bottom,
-  scrollContainer
+  scrollContainer,
 }) => {
   const width = right - left;
   const height = bottom - top;
   // Convert document-relative coordinates to viewport coordinates
   const [x, y] = getDebugMarkerPos(left, top, scrollContainer, "reference");
+
   const marker = document.createElement("div");
   marker.className = "navi_reference_element_marker";
   marker.style.left = `${x}px`;
@@ -10941,6 +11011,7 @@ const createReferenceElementMarker = ({
   label.className = "navi_reference_element_marker_label";
   label.textContent = "Reference Element";
   marker.appendChild(label);
+
   const container = getMarkersContainer();
   container.appendChild(marker);
   return marker;
@@ -11847,39 +11918,8 @@ const createStickyFrontierOnAxis = (
   return matchingStickyFrontiers;
 };
 
-installImportMetaCssBuild(import.meta);/**
- * A drag, and what it is FOR.
- *
- * What a hand does is always the same — pick the thing up, carry it, let go — so
- * the gesture is not what distinguishes these. What distinguishes them is the
- * outcome the caller asked for, and that is what `startDragTo` takes:
- *
- * - **move**: it stays where it was put. The element ITSELF travels and keeps the
- *   place the hand gave it.
- * - **reorder**: it takes a place in a list. A COPY travels while the original
- *   keeps its place in the layout, which is what makes the gesture possible at
- *   all — nothing else moves while the hand looks for a place, so there is a
- *   stable row of items to look between.
- * - **toss**: it is gotten rid of. The same copy, for the opposite reason: the
- *   original stays until the answer says it is really gone.
- * - **land**: it comes down ON something. Also a copy, and the closest to
- *   `reorder` — the difference is what a target IS: a row of a list is a place
- *   BETWEEN two others, whereas a square of a board is a place of its own, which
- *   may already be taken. So nothing is inserted and nothing is a no-op: the
- *   answer is "this one came down on that one", and what that means (take the
- *   place, swap the two, refuse) is the caller's.
- *
- * The caller lists which outcomes ITS element can answer, and only the machinery
- * those need runs: no copy for a move, no drop hint for something that can only be
- * thrown away, no landing looked for where nothing lands. `reorder` and `toss`
- * combine (dropped on a row, or thrown off the screen); `move` and `reorder` cannot
- * both be true of one release, and the caller is the one who must not ask for both.
- *
- * `createDragToMoveGestureController` below is the layer under all of that — the
- * translation, the auto-scroll, the constraints — and stays usable on its own for
- * anything that is none of the three (a table column being dragged, a sticky
- * frontier being moved).
- */
+installImportMetaCssBuild(import.meta);
+
 const dragStyleController = createStyleController("drag_to_move");
 
 // How long the copy takes to leave the screen, and to come back. Written into the
@@ -11888,7 +11928,8 @@ const dragStyleController = createStyleController("drag_to_move");
 const TOSS_DURATION_MS = 320;
 // Far enough to be off any screen, in the direction the hand was going.
 const TOSS_DISTANCE = 900;
-const css$1 = /* css */`.navi_drop_hint {
+
+const css$1 = /* css */ `.navi_drop_hint {
   inset: auto;
   top: var(--drop-hint-y);
   left: calc(var(--drop-target-left) + var(--drop-hint-margin-x, 0px));
@@ -12052,7 +12093,8 @@ import.meta.css = [css$1, "@jsenv/dom/src/interaction/drag/drag_to.js"];
 // stays a descendant of whatever it is anchored in (a callout next to a button,
 // in the card that carries both), and the press bubbles through the surface as
 // if it had landed on it.
-const DRAG_IGNORED_SELECTOR = '[data-drag-ignore],[data-self-interactions~="drag"],[data-self-interactions~="*"],[popover],dialog';
+const DRAG_IGNORED_SELECTOR =
+  '[data-drag-ignore],[data-self-interactions~="drag"],[data-self-interactions~="*"],[popover],dialog';
 
 /**
  * Starts a drag-to-reorder interaction on a list item.
@@ -12213,13 +12255,12 @@ const createDragToMoveGestureController = ({
   cancelAnimationEasing = "ease-out",
   ...options
 } = {}) => {
-  const initGrabToMoveElement = (dragGesture, {
-    element,
-    referenceElement,
-    elementToMove,
-    convertScrollablePosition
-  }) => {
+  const initGrabToMoveElement = (
+    dragGesture,
+    { element, referenceElement, elementToMove, convertScrollablePosition },
+  ) => {
     const scrollContainer = dragGesture.gestureInfo.scrollContainer;
+
     const direction = dragGesture.gestureInfo.direction;
     // elementImpacted is either an externally provided elementToMove (e.g. a drag clone)
     const elementImpacted = elementToMove || element;
@@ -12227,9 +12268,13 @@ const createDragToMoveGestureController = ({
     // (e.g. a drag clone passed by the caller) or the element itself.
     // Capture any pre-existing translate so we can accumulate on top of it
     // rather than resetting it to zero on the first drag event.
-    const transformAtGrab = dragStyleController.getUnderlyingValue(elementImpacted, "transform");
+    const transformAtGrab = dragStyleController.getUnderlyingValue(
+      elementImpacted,
+      "transform",
+    );
     const translateXAtGrab = transformAtGrab.translateX;
     const translateYAtGrab = transformAtGrab.translateY;
+
     const cancelPosition = () => {
       dragStyleController.clear(elementImpacted);
     };
@@ -12239,7 +12284,7 @@ const createDragToMoveGestureController = ({
     // animation has only to bridge the two.
     const cancelPositionAnimated = ({
       duration = cancelAnimationDuration,
-      easing = cancelAnimationEasing
+      easing = cancelAnimationEasing,
     } = {}) => {
       const transformWhileHeld = getComputedStyle(elementImpacted).transform;
       cancelPosition();
@@ -12249,14 +12294,10 @@ const createDragToMoveGestureController = ({
       }
       // No fill: the element already sits at its resting transform, the
       // animation only replays the way back to it.
-      return elementImpacted.animate([{
-        transform: transformWhileHeld
-      }, {
-        transform: transformAtRest
-      }], {
-        duration,
-        easing
-      });
+      return elementImpacted.animate(
+        [{ transform: transformWhileHeld }, { transform: transformAtRest }],
+        { duration, easing },
+      );
     };
     const commitPosition = () => {
       dragStyleController.commit(elementImpacted);
@@ -12264,6 +12305,7 @@ const createDragToMoveGestureController = ({
     dragGesture.gestureInfo.cancelPosition = cancelPosition;
     dragGesture.gestureInfo.cancelPositionAnimated = cancelPositionAnimated;
     dragGesture.gestureInfo.commitPosition = commitPosition;
+
     dragGesture.addReleaseCallback(() => {
       if (releasePositionEffect === "cancel") {
         cancelPosition();
@@ -12274,6 +12316,7 @@ const createDragToMoveGestureController = ({
       }
       // "manual": caller handles cleanup, do nothing.
     });
+
     let elementWidth;
     let elementHeight;
     {
@@ -12285,6 +12328,7 @@ const createDragToMoveGestureController = ({
       updateElementDimension();
       dragGesture.addBeforeDragCallback(updateElementDimension);
     }
+
     let scrollArea;
     {
       // Snapshot at grab time so that DOM mutations during dragging
@@ -12293,9 +12337,10 @@ const createDragToMoveGestureController = ({
         left: 0,
         top: 0,
         right: scrollContainer.scrollWidth,
-        bottom: scrollContainer.scrollHeight
+        bottom: scrollContainer.scrollHeight,
       };
     }
+
     let scrollport;
     let autoScrollArea;
     {
@@ -12306,11 +12351,14 @@ const createDragToMoveGestureController = ({
         scrollport = getScrollport(scrollBox, scrollContainer);
         autoScrollArea = scrollport;
         if (stickyFrontiers) {
-          autoScrollArea = applyStickyFrontiersToAutoScrollArea(autoScrollArea, {
-            scrollContainer,
-            direction
-            // dragGestureName,
-          });
+          autoScrollArea = applyStickyFrontiersToAutoScrollArea(
+            autoScrollArea,
+            {
+              scrollContainer,
+              direction,
+              // dragGestureName,
+            },
+          );
         }
         if (autoScrollAreaPadding > 0) {
           autoScrollArea = {
@@ -12321,7 +12369,7 @@ const createDragToMoveGestureController = ({
             left: autoScrollArea.left + autoScrollAreaPadding,
             top: autoScrollArea.top + autoScrollAreaPadding,
             right: autoScrollArea.right - autoScrollAreaPadding,
-            bottom: autoScrollArea.bottom - autoScrollAreaPadding
+            bottom: autoScrollArea.bottom - autoScrollAreaPadding,
           };
         }
       };
@@ -12344,77 +12392,97 @@ const createDragToMoveGestureController = ({
       obstacleAttributeName,
       showConstraintFeedbackLine,
       showDebugMarkers,
-      referenceElement
+      referenceElement,
     });
-    dragGesture.addBeforeDragCallback((layoutRequested, currentLayout, limitLayout, {
-      dragEvent
-    }) => {
-      dragConstraints.applyConstraints(layoutRequested, currentLayout, limitLayout, {
-        elementWidth,
-        elementHeight,
-        scrollArea,
-        scrollport,
-        hasCrossedScrollportLeftOnce,
-        hasCrossedScrollportTopOnce,
-        autoScrollArea,
-        dragEvent
-      });
-    });
-    const dragToMove = gestureInfo => {
-      const {
-        isGoingDown,
-        isGoingUp,
-        isGoingLeft,
-        isGoingRight,
-        layout
-      } = gestureInfo;
+    dragGesture.addBeforeDragCallback(
+      (layoutRequested, currentLayout, limitLayout, { dragEvent }) => {
+        dragConstraints.applyConstraints(
+          layoutRequested,
+          currentLayout,
+          limitLayout,
+          {
+            elementWidth,
+            elementHeight,
+            scrollArea,
+            scrollport,
+            hasCrossedScrollportLeftOnce,
+            hasCrossedScrollportTopOnce,
+            autoScrollArea,
+            dragEvent,
+          },
+        );
+      },
+    );
+
+    const dragToMove = (gestureInfo) => {
+      const { isGoingDown, isGoingUp, isGoingLeft, isGoingRight, layout } =
+        gestureInfo;
       const left = layout.left;
       const top = layout.top;
       const right = left + elementWidth;
       const bottom = top + elementHeight;
+
       {
-        hasCrossedScrollportLeftOnce = hasCrossedScrollportLeftOnce || left < scrollport.left;
-        hasCrossedScrollportTopOnce = hasCrossedScrollportTopOnce || top < scrollport.top;
-        const getScrollMove = axis => {
+        hasCrossedScrollportLeftOnce =
+          hasCrossedScrollportLeftOnce || left < scrollport.left;
+        hasCrossedScrollportTopOnce =
+          hasCrossedScrollportTopOnce || top < scrollport.top;
+
+        const getScrollMove = (axis) => {
           const isGoingPositive = axis === "x" ? isGoingRight : isGoingDown;
           if (isGoingPositive) {
             const elementEnd = axis === "x" ? right : bottom;
-            const autoScrollAreaEnd = axis === "x" ? autoScrollArea.right : autoScrollArea.bottom;
+            const autoScrollAreaEnd =
+              axis === "x" ? autoScrollArea.right : autoScrollArea.bottom;
+
             if (elementEnd <= autoScrollAreaEnd) {
               return 0;
             }
             const scrollAmountNeeded = elementEnd - autoScrollAreaEnd;
             return scrollAmountNeeded;
           }
+
           const isGoingNegative = axis === "x" ? isGoingLeft : isGoingUp;
           if (!isGoingNegative) {
             return 0;
           }
+
           const referenceOrEl = referenceElement || element;
-          const canAutoScrollNegative = axis === "x" ? !referenceOrEl.hasAttribute("data-sticky-left") || hasCrossedScrollportLeftOnce : !referenceOrEl.hasAttribute("data-sticky-top") || hasCrossedScrollportTopOnce;
+          const canAutoScrollNegative =
+            axis === "x"
+              ? !referenceOrEl.hasAttribute("data-sticky-left") ||
+                hasCrossedScrollportLeftOnce
+              : !referenceOrEl.hasAttribute("data-sticky-top") ||
+                hasCrossedScrollportTopOnce;
           if (!canAutoScrollNegative) {
             return 0;
           }
+
           const elementStart = axis === "x" ? left : top;
-          const autoScrollAreaStart = axis === "x" ? autoScrollArea.left : autoScrollArea.top;
+          const autoScrollAreaStart =
+            axis === "x" ? autoScrollArea.left : autoScrollArea.top;
           if (elementStart >= autoScrollAreaStart) {
             return 0;
           }
+
           const scrollAmountNeeded = autoScrollAreaStart - elementStart;
           return -scrollAmountNeeded;
         };
+
         let scrollLeftTarget;
         let scrollTopTarget;
         if (direction.x) {
           const containerScrollLeftMove = getScrollMove("x");
           if (containerScrollLeftMove) {
-            scrollLeftTarget = scrollContainer.scrollLeft + containerScrollLeftMove;
+            scrollLeftTarget =
+              scrollContainer.scrollLeft + containerScrollLeftMove;
           }
         }
         if (direction.y) {
           const containerScrollTopMove = getScrollMove("y");
           if (containerScrollTopMove) {
-            scrollTopTarget = scrollContainer.scrollTop + containerScrollTopMove;
+            scrollTopTarget =
+              scrollContainer.scrollTop + containerScrollTopMove;
           }
         }
         // now we know what to do, do it
@@ -12425,12 +12493,13 @@ const createDragToMoveGestureController = ({
           scrollContainer.scrollTop = scrollTopTarget;
         }
       }
+
       {
-        const {
+        const { scrollableLeft, scrollableTop } = layout;
+        const [positionedLeft, positionedTop] = convertScrollablePosition(
           scrollableLeft,
-          scrollableTop
-        } = layout;
-        const [positionedLeft, positionedTop] = convertScrollablePosition(scrollableLeft, scrollableTop);
+          scrollableTop,
+        );
         // Build the transform to apply, preserving any transforms that were
         // already on the element before the grab (e.g. rotate from another
         // controller), and accumulating from the pre-grab translate baseline.
@@ -12442,32 +12511,33 @@ const createDragToMoveGestureController = ({
         // the distance covered. Dragging moves things on screen, so its translate
         // has to come first, whatever else the element carries. The spread still
         // wins on the value when the element already had a translate of its own.
-        const transform = {
-          translateX: 0,
-          translateY: 0,
-          ...transformAtGrab
-        };
+        const transform = { translateX: 0, translateY: 0, ...transformAtGrab };
         if (direction.x) {
           const leftTarget = positionedLeft;
           const leftAtGrab = dragGesture.gestureInfo.leftAtGrab;
           const leftDelta = leftTarget - leftAtGrab;
-          const translateX = translateXAtGrab ? translateXAtGrab + leftDelta : leftDelta;
+          const translateX = translateXAtGrab
+            ? translateXAtGrab + leftDelta
+            : leftDelta;
           transform.translateX = translateX;
         }
         if (direction.y) {
           const topTarget = positionedTop;
           const topAtGrab = dragGesture.gestureInfo.topAtGrab;
           const topDelta = topTarget - topAtGrab;
-          const translateY = translateYAtGrab ? translateYAtGrab + topDelta : topDelta;
+          const translateY = translateYAtGrab
+            ? translateYAtGrab + topDelta
+            : topDelta;
           transform.translateY = translateY;
         }
         dragStyleController.set(elementImpacted, {
-          transform
+          transform,
         });
       }
     };
     dragGesture.addDragCallback(dragToMove);
   };
+
   const dragGestureController = createDragGestureController(options);
   const grab = dragGestureController.grab;
   dragGestureController.grab = ({
@@ -12478,23 +12548,28 @@ const createDragToMoveGestureController = ({
     ...rest
   } = {}) => {
     const scrollContainer = getScrollContainer(referenceElement || element);
-    const [elementScrollableLeft, elementScrollableTop, convertScrollablePosition] = createDragElementPositioner(element, referenceElement, elementToMove);
+    const [
+      elementScrollableLeft,
+      elementScrollableTop,
+      convertScrollablePosition,
+    ] = createDragElementPositioner(element, referenceElement, elementToMove);
     const dragGesture = grab({
       element,
       scrollContainer,
       layoutScrollableLeft: elementScrollableLeft,
       layoutScrollableTop: elementScrollableTop,
       event,
-      ...rest
+      ...rest,
     });
     initGrabToMoveElement(dragGesture, {
       element,
       referenceElement,
       elementToMove,
-      convertScrollablePosition
+      convertScrollablePosition,
     });
     return dragGesture;
   };
+
   return dragGestureController;
 };
 
@@ -12547,10 +12622,11 @@ const createDragToMoveGestureController = ({
  * The gesture holds its copy until what `onReorder` returns settles, so returning
  * the transition is what makes the landing continuous.
  */
-const startDragTo = (event, effects, {
-  draggedElement = event.currentTarget,
-  ...options
-} = {}) => {
+const startDragTo = (
+  event,
+  effects,
+  { draggedElement = event.currentTarget, ...options } = {},
+) => {
   // An area that opted out of dragging (a text one wants to select, a control that
   // owns the gesture, a callout): the press there is none of our business.
   if (isPressIgnored(event.target, draggedElement)) {
@@ -12569,13 +12645,10 @@ const startDragTo = (event, effects, {
       canReorder,
       canToss,
       canLand,
-      ...options
+      ...options,
     });
   }
-  return startDragToMoveElement(event, {
-    draggedElement,
-    ...options
-  });
+  return startDragToMoveElement(event, { draggedElement, ...options });
 };
 
 /**
@@ -12584,70 +12657,71 @@ const startDragTo = (event, effects, {
  * No copy, unlike the two others: what is being moved is the thing and not a
  * stand-in for it, so there is nothing to put back and nothing to reveal.
  */
-const startDragToMoveElement = (event, {
-  draggedElement,
-  onMove,
-  threshold,
-  longPress,
-  longPressDelay,
-  longPressSlop,
-  onPressStart,
-  onPressCancel,
-  onPress,
-  ...options
-}) => {
-  event.preventDefault();
-  return dragAfterIntent(event, () => {
-    const gestureController = createDragToMoveGestureController({
-      releasePositionEffect: "manual",
-      ...options
-    });
-    const dragGesture = gestureController.grabViaPointer(event, {
-      element: draggedElement
-    });
-    if (!dragGesture) {
-      return null;
-    }
-    dragGesture.addReleaseCallback(async gestureInfo => {
-      const {
-        xDelta,
-        yDelta
-      } = gestureInfo.layout;
-      if (!xDelta && !yDelta) {
-        // Picked up and put back down: nothing moved, so nobody is told.
-        gestureInfo.cancelPosition();
-        return;
-      }
-      // Committed before the answer rather than after: the hand let go of it
-      // there, and a thing that snaps home while a request is in flight says the
-      // gesture was not understood.
-      gestureInfo.commitPosition();
-      try {
-        await onMove?.({
-          gestureInfo,
-          x: xDelta,
-          y: yDelta
-        });
-      } catch {
-        gestureInfo.cancelPositionAnimated();
-      }
-    });
-    return dragGesture;
-  }, {
+const startDragToMoveElement = (
+  event,
+  {
+    draggedElement,
+    onMove,
     threshold,
     longPress,
     longPressDelay,
     longPressSlop,
     onPressStart,
     onPressCancel,
-    onPress
-  });
+    onPress,
+    ...options
+  },
+) => {
+  event.preventDefault();
+  return dragAfterIntent(
+    event,
+    () => {
+      const gestureController = createDragToMoveGestureController({
+        releasePositionEffect: "manual",
+        ...options,
+      });
+      const dragGesture = gestureController.grabViaPointer(event, {
+        element: draggedElement,
+      });
+      if (!dragGesture) {
+        return null;
+      }
+      dragGesture.addReleaseCallback(async (gestureInfo) => {
+        const { xDelta, yDelta } = gestureInfo.layout;
+        if (!xDelta && !yDelta) {
+          // Picked up and put back down: nothing moved, so nobody is told.
+          gestureInfo.cancelPosition();
+          return;
+        }
+        // Committed before the answer rather than after: the hand let go of it
+        // there, and a thing that snaps home while a request is in flight says the
+        // gesture was not understood.
+        gestureInfo.commitPosition();
+        try {
+          await onMove?.({ gestureInfo, x: xDelta, y: yDelta });
+        } catch {
+          gestureInfo.cancelPositionAnimated();
+        }
+      });
+      return dragGesture;
+    },
+    {
+      threshold,
+      longPress,
+      longPressDelay,
+      longPressSlop,
+      onPressStart,
+      onPressCancel,
+      onPress,
+    },
+  );
 };
 
 // Far and fast, both at once: one without the other is moving the thing while
 // hesitating, and nothing is thrown away on a hesitation — it comes back.
 const TOSS_DISTANCE_TO_COMMIT = 110;
 const TOSS_SPEED_TO_COMMIT = 0.45;
+
 const resolveDropMeaning = ({
   gestureInfo,
   hasDropTarget,
@@ -12655,7 +12729,7 @@ const resolveDropMeaning = ({
   canToss,
   canLand,
   tossDistance = TOSS_DISTANCE_TO_COMMIT,
-  tossSpeed = TOSS_SPEED_TO_COMMIT
+  tossSpeed = TOSS_SPEED_TO_COMMIT,
 }) => {
   if (gestureInfo.cancelled) {
     // Nobody let go of anything: the gesture was taken away mid-air (the
@@ -12664,10 +12738,7 @@ const resolveDropMeaning = ({
     return "cancel";
   }
   if (canToss) {
-    const {
-      xDelta,
-      yDelta
-    } = gestureInfo.layout;
+    const { xDelta, yDelta } = gestureInfo.layout;
     const distance = Math.hypot(xDelta, yDelta);
     if (distance > tossDistance && gestureInfo.velocity > tossSpeed) {
       return "toss";
@@ -12692,47 +12763,44 @@ const resolveDropMeaning = ({
  * for the opposite reason: the original stays until the answer says it is really
  * gone.
  */
-const startDragToCarryCopy = (event, {
-  draggedElement,
-  canReorder,
-  canToss,
-  canLand,
-  // Something that can be thrown away has to be able to LEAVE. The default of
-  // the layer below keeps what is dragged inside its scroll area, which is right
-  // for a reorder (a row belongs to its list) and makes a throw impossible — the
-  // copy hits the edge of the list and no distance is ever covered, so no throw
-  // ever happens and no sideways movement is even visible.
-  // Destructured with the default here rather than written at the call below: a
-  // caller passing `areaConstraint: undefined` (which is what saying nothing
-  // through an options object looks like) would otherwise put the layer below
-  // back on its own default and undo this.
-  areaConstraint = canToss ? "none" : undefined,
-  containerElement = draggedElement.parentElement,
-  itemSelector,
-  getItemId,
-  onReorder,
-  onLand,
-  onToss,
-  tossDistance,
-  tossSpeed,
-  // A list runs one way and reordering walks it; a board has places all around,
-  // so something landing on one of them goes wherever the hand takes it.
-  direction = canLand ? {
-    x: true,
-    y: true
-  } : {
-    x: false,
-    y: true
+const startDragToCarryCopy = (
+  event,
+  {
+    draggedElement,
+    canReorder,
+    canToss,
+    canLand,
+    // Something that can be thrown away has to be able to LEAVE. The default of
+    // the layer below keeps what is dragged inside its scroll area, which is right
+    // for a reorder (a row belongs to its list) and makes a throw impossible — the
+    // copy hits the edge of the list and no distance is ever covered, so no throw
+    // ever happens and no sideways movement is even visible.
+    // Destructured with the default here rather than written at the call below: a
+    // caller passing `areaConstraint: undefined` (which is what saying nothing
+    // through an options object looks like) would otherwise put the layer below
+    // back on its own default and undo this.
+    areaConstraint = canToss ? "none" : undefined,
+    containerElement = draggedElement.parentElement,
+    itemSelector,
+    getItemId,
+    onReorder,
+    onLand,
+    onToss,
+    tossDistance,
+    tossSpeed,
+    // A list runs one way and reordering walks it; a board has places all around,
+    // so something landing on one of them goes wherever the hand takes it.
+    direction = canLand ? { x: true, y: true } : { x: false, y: true },
+    threshold,
+    longPress,
+    longPressDelay,
+    longPressSlop,
+    onPressStart,
+    onPressCancel,
+    onPress,
+    ...options
   },
-  threshold,
-  longPress,
-  longPressDelay,
-  longPressSlop,
-  onPressStart,
-  onPressCancel,
-  onPress,
-  ...options
-}) => {
+) => {
   // An area that opted out of dragging (a text one wants to select, a control
   // that owns the gesture, a callout): the press there is none of our business.
   if (isPressIgnored(event.target, draggedElement)) {
@@ -12748,243 +12816,310 @@ const startDragToCarryCopy = (event, {
   // had got to.
   const startCarry = (pointerEvent, cloneWrapperCaught, onCarryStart) => {
     pointerEvent.preventDefault();
-    return dragAfterIntent(pointerEvent, () => {
-      // Here and nowhere else is where a press has turned into a carry — the
-      // one moment both ways in (a finger held still, a mouse travelled)
-      // agree on.
-      onCarryStart?.();
-      const cloneWrapper = cloneWrapperCaught || createDragClone(draggedElement, pointerEvent);
-      if (cloneWrapperCaught) {
-        liftDragClone(cloneWrapperCaught, pointerEvent);
-      }
-      draggedElement.setAttribute("navi-drag-clone-source", "");
-      const gestureController = createDragToMoveGestureController({
-        direction,
-        releasePositionEffect: "manual",
-        areaConstraint,
-        ...options
-      });
-      const dragGesture = gestureController.grabViaPointer(pointerEvent, {
-        element: draggedElement,
-        elementToMove: cloneWrapper
-      });
-      // getDropTargetInfo uses gestureInfo.elementImpacted to compute the dragged rect.
-      // Point it at the clone so drop detection tracks the clone's current position.
-      dragGesture.gestureInfo.elementImpacted = cloneWrapper;
+    return dragAfterIntent(
+      pointerEvent,
+      () => {
+        // Here and nowhere else is where a press has turned into a carry — the
+        // one moment both ways in (a finger held still, a mouse travelled)
+        // agree on.
+        onCarryStart?.();
+        const cloneWrapper =
+          cloneWrapperCaught || createDragClone(draggedElement, pointerEvent);
+        if (cloneWrapperCaught) {
+          liftDragClone(cloneWrapperCaught, pointerEvent);
+        }
+        draggedElement.setAttribute("navi-drag-clone-source", "");
 
-      // No place to land, no hint: an element that can only be thrown away has
-      // nowhere to be put. What the hint LOOKS like follows what a place is here —
-      // a line in the gap between two items, or the place itself lit up.
-      const dropHintEl = canLand ? createDropSurface() : canReorder ? createDropHint() : null;
-      if (dropHintEl) {
-        // In the container it draws into, which is where its own vars are set: the
-        // shape of a drop hint is a property of the list or board it belongs to,
-        // and reading it from there is inheritance rather than a hand-off.
-        draggedElement.parentElement.appendChild(dropHintEl);
-      }
-      // The hint first, the clone second: that order is what stacks them in the
-      // top layer. A copy taken back in hand is already up there, and the hint
-      // just went above it — shown again it returns to the top, where what the
-      // hand carries belongs.
-      dropHintEl?.showPopover();
-      if (cloneWrapperCaught) {
-        cloneWrapper.hidePopover();
-      }
-      cloneWrapper.showPopover();
-
-      // currentBeforeElement: element before which the grabbed item will be inserted (null = end)
-      // currentReleaseElement: the actual hovered drop target — used to snap the clone on release
-      let currentBeforeElement;
-      let currentReleaseElement;
-      const clearDropHintDOM = () => {
-        if (!dropHintEl) {
-          return;
-        }
-        dropHintEl.removeAttribute("data-drop-edge");
-        dropHintEl.removeAttribute("data-drop-over");
-        dropHintEl.style.removeProperty("--drop-target-top");
-        dropHintEl.style.removeProperty("--drop-target-bottom");
-        dropHintEl.style.removeProperty("--drop-target-left");
-        dropHintEl.style.removeProperty("--drop-target-width");
-        dropHintEl.style.removeProperty("--drop-target-height");
-      };
-      const clearDropHint = () => {
-        currentBeforeElement = undefined;
-        currentReleaseElement = undefined;
-        clearDropHintDOM();
-      };
-      dragGesture.addDragCallback(gestureInfo => {
-        if (!dropHintEl) {
-          return;
-        }
-        const allItems = [];
-        const items = [];
-        for (const el of containerElement.querySelectorAll(itemSelector)) {
-          // The copy in hand is a clone of an item, attributes included, and it
-          // lives in this same parent: it matches the selector without being
-          // an item. Excluded here rather than by stripping attributes off the
-          // clone, because a custom itemSelector (a class, a tag) would still
-          // match it.
-          if (cloneWrapper.contains(el)) {
-            continue;
-          }
-          allItems.push(el);
-          if (el !== draggedElement) {
-            items.push(el);
-          }
-        }
-        const dropTargetInfo = getDropTargetInfo(gestureInfo, items, {
-          // The edges of a LIST: above the first row means the top of it, below
-          // the last one means the end of it. A board has no such reading — away
-          // from every place is away from every place.
-          fallbackToEdge: !canLand
+        const gestureController = createDragToMoveGestureController({
+          direction,
+          releasePositionEffect: "manual",
+          areaConstraint,
+          ...options,
         });
-        gestureInfo.dropTargetInfo = dropTargetInfo || null;
-        if (!dropTargetInfo) {
-          clearDropHint();
-          return;
+        const dragGesture = gestureController.grabViaPointer(pointerEvent, {
+          element: draggedElement,
+          elementToMove: cloneWrapper,
+        });
+        // getDropTargetInfo uses gestureInfo.elementImpacted to compute the dragged rect.
+        // Point it at the clone so drop detection tracks the clone's current position.
+        dragGesture.gestureInfo.elementImpacted = cloneWrapper;
+
+        // No place to land, no hint: an element that can only be thrown away has
+        // nowhere to be put. What the hint LOOKS like follows what a place is here —
+        // a line in the gap between two items, or the place itself lit up.
+        const dropHintEl = canLand
+          ? createDropSurface()
+          : canReorder
+            ? createDropHint()
+            : null;
+        if (dropHintEl) {
+          // In the container it draws into, which is where its own vars are set: the
+          // shape of a drop hint is a property of the list or board it belongs to,
+          // and reading it from there is inheritance rather than a hand-off.
+          draggedElement.parentElement.appendChild(dropHintEl);
         }
-        if (canLand) {
-          // The whole element is the target, so which of its edges the copy came
-          // in by says nothing: there is no gap to be on one side of.
-          const dropElement = dropTargetInfo.element;
-          if (dropElement === currentReleaseElement) {
+        // The hint first, the clone second: that order is what stacks them in the
+        // top layer. A copy taken back in hand is already up there, and the hint
+        // just went above it — shown again it returns to the top, where what the
+        // hand carries belongs.
+        dropHintEl?.showPopover();
+        if (cloneWrapperCaught) {
+          cloneWrapper.hidePopover();
+        }
+        cloneWrapper.showPopover();
+
+        // currentBeforeElement: element before which the grabbed item will be inserted (null = end)
+        // currentReleaseElement: the actual hovered drop target — used to snap the clone on release
+        let currentBeforeElement;
+        let currentReleaseElement;
+
+        const clearDropHintDOM = () => {
+          if (!dropHintEl) {
             return;
           }
-          currentReleaseElement = dropElement;
-          const dropRect = dropElement.getBoundingClientRect();
-          dropHintEl.setAttribute("data-drop-over", "");
-          dropHintEl.style.setProperty("--drop-target-top", `${dropRect.top}px`);
-          dropHintEl.style.setProperty("--drop-target-left", `${dropRect.left}px`);
-          dropHintEl.style.setProperty("--drop-target-width", `${dropRect.width}px`);
-          dropHintEl.style.setProperty("--drop-target-height", `${dropRect.height}px`);
-          return;
-        }
-        // Convert {element, edge} to a beforeElement using the items array
-        // (not nextElementSibling, which breaks if non-item elements exist between items).
-        //   edge "start" → insert before the hovered element
-        //   edge "end"   → insert before the next item (null = append at end)
-        const edge = dropTargetInfo.elementSide.y;
-        const hoveredIndex = items.indexOf(dropTargetInfo.element);
-        const beforeElement = edge === "start" ? dropTargetInfo.element : items[hoveredIndex + 1] ?? null;
-        // Detect no-op: result would leave the grabbed element in the same position.
-        const elementIndex = allItems.indexOf(draggedElement);
-        const elementNextItem = allItems[elementIndex + 1] ?? null;
-        const isNoop = beforeElement === elementNextItem;
-        if (isNoop) {
-          clearDropHint();
-          return;
-        }
-        // Early return if nothing changed.
-        const releaseElement = dropTargetInfo.element;
-        if (beforeElement === currentBeforeElement && releaseElement === currentReleaseElement) {
-          return;
-        }
-        currentBeforeElement = beforeElement;
-        currentReleaseElement = releaseElement;
-        // Update drop hint CSS vars.
-        // beforeElement = null → insert at end (hint after last item)
-        // beforeElement = X    → insert before X (hint at top edge of X)
-        const anchorEl = beforeElement || items[items.length - 1];
-        const anchorEdge = beforeElement !== null ? "top" : "bottom";
-        // Viewport coordinates, straight from the anchor row: the hint is fixed
-        // in the page (see its CSS), so there is no container box to be relative
-        // to and no scroll offset to add back.
-        const anchorRect = anchorEl.getBoundingClientRect();
-        dropHintEl.setAttribute("data-drop-edge", anchorEdge);
-        dropHintEl.style.setProperty("--drop-target-top", `${anchorRect.top}px`);
-        dropHintEl.style.setProperty("--drop-target-bottom", `${anchorRect.bottom}px`);
-        dropHintEl.style.setProperty("--drop-target-left", `${anchorRect.left}px`);
-        dropHintEl.style.setProperty("--drop-target-width", `${anchorRect.width}px`);
-      });
-      dragGesture.addReleaseCallback(async gestureInfo => {
-        clearDropHintDOM();
-        dropHintEl?.remove();
+          dropHintEl.removeAttribute("data-drop-edge");
+          dropHintEl.removeAttribute("data-drop-over");
+          dropHintEl.style.removeProperty("--drop-target-top");
+          dropHintEl.style.removeProperty("--drop-target-bottom");
+          dropHintEl.style.removeProperty("--drop-target-left");
+          dropHintEl.style.removeProperty("--drop-target-width");
+          dropHintEl.style.removeProperty("--drop-target-height");
+        };
 
-        // What THIS release means, from what the element said it can answer. A
-        // throw is asked about first: it is the more insistent of the two, and a
-        // hand that sent the thing across the screen has not asked for it to swap
-        // places with whatever it happened to fly over.
-        const hasDropTarget = canLand ? currentReleaseElement !== undefined : currentBeforeElement !== undefined;
-        const dropMeans = resolveDropMeaning({
-          gestureInfo,
-          hasDropTarget,
-          canReorder,
-          canToss,
-          canLand,
-          tossDistance,
-          tossSpeed
+        const clearDropHint = () => {
+          currentBeforeElement = undefined;
+          currentReleaseElement = undefined;
+          clearDropHintDOM();
+        };
+
+        dragGesture.addDragCallback((gestureInfo) => {
+          if (!dropHintEl) {
+            return;
+          }
+          const allItems = [];
+          const items = [];
+          for (const el of containerElement.querySelectorAll(itemSelector)) {
+            // The copy in hand is a clone of an item, attributes included, and it
+            // lives in this same parent: it matches the selector without being
+            // an item. Excluded here rather than by stripping attributes off the
+            // clone, because a custom itemSelector (a class, a tag) would still
+            // match it.
+            if (cloneWrapper.contains(el)) {
+              continue;
+            }
+            allItems.push(el);
+            if (el !== draggedElement) {
+              items.push(el);
+            }
+          }
+
+          const dropTargetInfo = getDropTargetInfo(gestureInfo, items, {
+            // The edges of a LIST: above the first row means the top of it, below
+            // the last one means the end of it. A board has no such reading — away
+            // from every place is away from every place.
+            fallbackToEdge: !canLand,
+          });
+          gestureInfo.dropTargetInfo = dropTargetInfo || null;
+          if (!dropTargetInfo) {
+            clearDropHint();
+            return;
+          }
+          if (canLand) {
+            // The whole element is the target, so which of its edges the copy came
+            // in by says nothing: there is no gap to be on one side of.
+            const dropElement = dropTargetInfo.element;
+            if (dropElement === currentReleaseElement) {
+              return;
+            }
+            currentReleaseElement = dropElement;
+            const dropRect = dropElement.getBoundingClientRect();
+            dropHintEl.setAttribute("data-drop-over", "");
+            dropHintEl.style.setProperty(
+              "--drop-target-top",
+              `${dropRect.top}px`,
+            );
+            dropHintEl.style.setProperty(
+              "--drop-target-left",
+              `${dropRect.left}px`,
+            );
+            dropHintEl.style.setProperty(
+              "--drop-target-width",
+              `${dropRect.width}px`,
+            );
+            dropHintEl.style.setProperty(
+              "--drop-target-height",
+              `${dropRect.height}px`,
+            );
+            return;
+          }
+          // Convert {element, edge} to a beforeElement using the items array
+          // (not nextElementSibling, which breaks if non-item elements exist between items).
+          //   edge "start" → insert before the hovered element
+          //   edge "end"   → insert before the next item (null = append at end)
+          const edge = dropTargetInfo.elementSide.y;
+          const hoveredIndex = items.indexOf(dropTargetInfo.element);
+          const beforeElement =
+            edge === "start"
+              ? dropTargetInfo.element
+              : (items[hoveredIndex + 1] ?? null);
+          // Detect no-op: result would leave the grabbed element in the same position.
+          const elementIndex = allItems.indexOf(draggedElement);
+          const elementNextItem = allItems[elementIndex + 1] ?? null;
+          const isNoop = beforeElement === elementNextItem;
+          if (isNoop) {
+            clearDropHint();
+            return;
+          }
+          // Early return if nothing changed.
+          const releaseElement = dropTargetInfo.element;
+          if (
+            beforeElement === currentBeforeElement &&
+            releaseElement === currentReleaseElement
+          ) {
+            return;
+          }
+          currentBeforeElement = beforeElement;
+          currentReleaseElement = releaseElement;
+          // Update drop hint CSS vars.
+          // beforeElement = null → insert at end (hint after last item)
+          // beforeElement = X    → insert before X (hint at top edge of X)
+          const anchorEl = beforeElement || items[items.length - 1];
+          const anchorEdge = beforeElement !== null ? "top" : "bottom";
+          // Viewport coordinates, straight from the anchor row: the hint is fixed
+          // in the page (see its CSS), so there is no container box to be relative
+          // to and no scroll offset to add back.
+          const anchorRect = anchorEl.getBoundingClientRect();
+          dropHintEl.setAttribute("data-drop-edge", anchorEdge);
+          dropHintEl.style.setProperty(
+            "--drop-target-top",
+            `${anchorRect.top}px`,
+          );
+          dropHintEl.style.setProperty(
+            "--drop-target-bottom",
+            `${anchorRect.bottom}px`,
+          );
+          dropHintEl.style.setProperty(
+            "--drop-target-left",
+            `${anchorRect.left}px`,
+          );
+          dropHintEl.style.setProperty(
+            "--drop-target-width",
+            `${anchorRect.width}px`,
+          );
         });
 
-        // Let go of and still on the screen: from here until it is taken away
-        // the copy can be taken back in hand (see letCopyBeCaught).
-        const copyLetGoOf = letCopyBeCaught(cloneWrapper, (pointerDownEvent, whenCarried) => startCarry(pointerDownEvent, cloneWrapper, whenCarried));
+        dragGesture.addReleaseCallback(async (gestureInfo) => {
+          clearDropHintDOM();
+          dropHintEl?.remove();
 
-        // The copy stops where the hand left it, and the answer is given a way to
-        // take it the rest of the way — synchronously, inside a view transition, so
-        // it is captured where it lands rather than where it was let go of.
-        const landCopyOn = async (targetElement, answer) => {
-          const clone = cloneWrapper.firstElementChild;
-          // Bake the current visual position (transform included) into the CSS vars
-          // so the copy stays where the user released it when the transform goes.
-          setCloneViewportRect(cloneWrapper, cloneWrapper);
-          gestureInfo.cancelPosition();
-          // Where the copy comes down is not always the thing it came down ON: a
-          // place of a board can be larger than what stands on it, and the copy
-          // has to keep its own size and land where the item will be. Said with
-          // an element, because the caller has one — the piece already standing
-          // there, the empty slot waiting.
-          const syncCloneWithDropTarget = (landingElement = targetElement) => {
-            setCloneViewportRect(cloneWrapper, landingElement);
-            // Removing this attr drops the CSS scale, so the browser captures the
-            // copy at scale 1 as the "new" state.
-            clone.removeAttribute("navi-drag-clone");
+          // What THIS release means, from what the element said it can answer. A
+          // throw is asked about first: it is the more insistent of the two, and a
+          // hand that sent the thing across the screen has not asked for it to swap
+          // places with whatever it happened to fly over.
+          const hasDropTarget = canLand
+            ? currentReleaseElement !== undefined
+            : currentBeforeElement !== undefined;
+          const dropMeans = resolveDropMeaning({
+            gestureInfo,
+            hasDropTarget,
+            canReorder,
+            canToss,
+            canLand,
+            tossDistance,
+            tossSpeed,
+          });
+
+          // Let go of and still on the screen: from here until it is taken away
+          // the copy can be taken back in hand (see letCopyBeCaught).
+          const copyLetGoOf = letCopyBeCaught(
+            cloneWrapper,
+            (pointerDownEvent, whenCarried) =>
+              startCarry(pointerDownEvent, cloneWrapper, whenCarried),
+          );
+
+          // The copy stops where the hand left it, and the answer is given a way to
+          // take it the rest of the way — synchronously, inside a view transition, so
+          // it is captured where it lands rather than where it was let go of.
+          const landCopyOn = async (targetElement, answer) => {
+            const clone = cloneWrapper.firstElementChild;
+            // Bake the current visual position (transform included) into the CSS vars
+            // so the copy stays where the user released it when the transform goes.
+            setCloneViewportRect(cloneWrapper, cloneWrapper);
+            gestureInfo.cancelPosition();
+            // Where the copy comes down is not always the thing it came down ON: a
+            // place of a board can be larger than what stands on it, and the copy
+            // has to keep its own size and land where the item will be. Said with
+            // an element, because the caller has one — the piece already standing
+            // there, the empty slot waiting.
+            const syncCloneWithDropTarget = (
+              landingElement = targetElement,
+            ) => {
+              setCloneViewportRect(cloneWrapper, landingElement);
+              // Removing this attr drops the CSS scale, so the browser captures the
+              // copy at scale 1 as the "new" state.
+              clone.removeAttribute("navi-drag-clone");
+            };
+            await answer(syncCloneWithDropTarget);
           };
-          await answer(syncCloneWithDropTarget);
-        };
-        if (dropMeans === "toss") {
-          // Bake the position the hand left it at, so the flight starts from
-          // there rather than from where the clone was declared.
-          setCloneViewportRect(cloneWrapper, cloneWrapper);
-          gestureInfo.cancelPosition();
-          const gone = await tossCloneAway(cloneWrapper, gestureInfo, onToss);
-          if (!gone) {
-            // It still exists, so the screen has to say so: the copy comes back
-            // over the original, and taking it away then reveals the row in
-            // place.
-            await settleCloneBack(cloneWrapper, draggedElement);
+
+          if (dropMeans === "toss") {
+            // Bake the position the hand left it at, so the flight starts from
+            // there rather than from where the clone was declared.
+            setCloneViewportRect(cloneWrapper, cloneWrapper);
+            gestureInfo.cancelPosition();
+            const gone = await tossCloneAway(cloneWrapper, gestureInfo, onToss);
+            if (!gone) {
+              // It still exists, so the screen has to say so: the copy comes back
+              // over the original, and taking it away then reveals the row in
+              // place.
+              await settleCloneBack(cloneWrapper, draggedElement);
+            }
+          } else if (dropMeans === "land") {
+            await landCopyOn(currentReleaseElement, (syncCloneWithDropTarget) =>
+              onLand(
+                getItemId(draggedElement),
+                getItemId(currentReleaseElement),
+                syncCloneWithDropTarget,
+              ),
+            );
+          } else if (dropMeans === "reorder") {
+            await landCopyOn(currentReleaseElement, (syncCloneWithDropTarget) =>
+              onReorder(
+                getItemId(draggedElement),
+                currentBeforeElement ? getItemId(currentBeforeElement) : null,
+                syncCloneWithDropTarget,
+              ),
+            );
           }
-        } else if (dropMeans === "land") {
-          await landCopyOn(currentReleaseElement, syncCloneWithDropTarget => onLand(getItemId(draggedElement), getItemId(currentReleaseElement), syncCloneWithDropTarget));
-        } else if (dropMeans === "reorder") {
-          await landCopyOn(currentReleaseElement, syncCloneWithDropTarget => onReorder(getItemId(draggedElement), currentBeforeElement ? getItemId(currentBeforeElement) : null, syncCloneWithDropTarget));
-        }
-        if (await copyLetGoOf.settled()) {
-          // In a hand again: the copy, and the place kept for it, are the new
-          // gesture's — this one has nothing left to take away.
-          return;
-        }
-        draggedElement.removeAttribute("navi-drag-clone-source");
-        cloneWrapper.remove();
-      });
-      return dragGesture;
-    }, {
-      threshold,
-      // A copy caught on its way home is not an ambiguous press: the hand
-      // reached for something moving, and the press was already matched
-      // against the copy's own box before it got here. The wait a finger is
-      // asked for elsewhere tells a scroll from a drag, and there is no scroll
-      // to tell it from — the copy covers that spot from the top layer. Asked
-      // for anyway it cannot even be answered: the wait is about as long as the
-      // journey, so the thing is home before the proof is done, while a mouse
-      // takes it in five pixels.
-      longPress: cloneWrapperCaught ? false : longPress,
-      longPressDelay,
-      longPressSlop,
-      onPressStart,
-      onPressCancel,
-      onPress
-    });
+          if (await copyLetGoOf.settled()) {
+            // In a hand again: the copy, and the place kept for it, are the new
+            // gesture's — this one has nothing left to take away.
+            return;
+          }
+          draggedElement.removeAttribute("navi-drag-clone-source");
+          cloneWrapper.remove();
+        });
+
+        return dragGesture;
+      },
+      {
+        threshold,
+        // A copy caught on its way home is not an ambiguous press: the hand
+        // reached for something moving, and the press was already matched
+        // against the copy's own box before it got here. The wait a finger is
+        // asked for elsewhere tells a scroll from a drag, and there is no scroll
+        // to tell it from — the copy covers that spot from the top layer. Asked
+        // for anyway it cannot even be answered: the wait is about as long as the
+        // journey, so the thing is home before the proof is done, while a mouse
+        // takes it in five pixels.
+        longPress: cloneWrapperCaught ? false : longPress,
+        longPressDelay,
+        longPressSlop,
+        onPressStart,
+        onPressCancel,
+        onPress,
+      },
+    );
   };
   return startCarry(event);
 };
@@ -13017,7 +13152,7 @@ const setCloneViewportRect = (cloneWrapper, el) => {
 
 // The chevron is the one the table's column drop preview uses, rotated by the
 // CSS above so each cap points into the line.
-const dropHintTemplate = /* html */`
+const dropHintTemplate = /* html */ `
   <div
     class="navi_drop_hint"
     popover="manual"
@@ -13043,6 +13178,7 @@ const createDropHint = () => {
   div.innerHTML = dropHintTemplate.trim();
   return div.firstElementChild;
 };
+
 const createDropSurface = () => {
   const div = document.createElement("div");
   div.className = "navi_drop_surface";
@@ -13061,17 +13197,14 @@ const createDropSurface = () => {
  * that means "get rid of this" — nobody waits to watch it go.
  */
 const tossCloneAway = async (cloneWrapper, gestureInfo, onToss) => {
-  const {
-    xDelta,
-    yDelta
-  } = gestureInfo.layout;
+  const { xDelta, yDelta } = gestureInfo.layout;
   const distance = Math.hypot(xDelta, yDelta) || 1;
   cloneWrapper.dataset.tossed = "away";
-  cloneWrapper.style.translate = `${xDelta / distance * TOSS_DISTANCE}px ${yDelta / distance * TOSS_DISTANCE}px`;
+  cloneWrapper.style.translate = `${(xDelta / distance) * TOSS_DISTANCE}px ${
+    (yDelta / distance) * TOSS_DISTANCE
+  }px`;
   try {
-    await onToss?.({
-      gestureInfo
-    });
+    await onToss?.({ gestureInfo });
     return true;
   } catch {
     return false;
@@ -13088,11 +13221,17 @@ const tossCloneAway = async (cloneWrapper, gestureInfo, onToss) => {
  */
 const settleCloneBack = (cloneWrapper, sourceElement) => {
   const sourceRect = sourceElement.getBoundingClientRect();
-  const releaseLeft = parseFloat(cloneWrapper.style.getPropertyValue("--clone-left"));
-  const releaseTop = parseFloat(cloneWrapper.style.getPropertyValue("--clone-top"));
+  const releaseLeft = parseFloat(
+    cloneWrapper.style.getPropertyValue("--clone-left"),
+  );
+  const releaseTop = parseFloat(
+    cloneWrapper.style.getPropertyValue("--clone-top"),
+  );
   cloneWrapper.dataset.tossed = "back";
-  cloneWrapper.style.translate = `${sourceRect.left - releaseLeft}px ${sourceRect.top - releaseTop}px`;
-  return new Promise(resolve => {
+  cloneWrapper.style.translate = `${sourceRect.left - releaseLeft}px ${
+    sourceRect.top - releaseTop
+  }px`;
+  return new Promise((resolve) => {
     setTimeout(resolve, TOSS_DURATION_MS);
   });
 };
@@ -13132,23 +13271,20 @@ const settleCloneBack = (cloneWrapper, sourceElement) => {
 const letCopyBeCaught = (cloneWrapper, carryAgain) => {
   let caught = false;
   let pressIsOver = Promise.resolve();
-  const onPointerDown = pointerDownEvent => {
-    const {
-      left,
-      right,
-      top,
-      bottom
-    } = cloneWrapper.getBoundingClientRect();
-    const {
-      clientX,
-      clientY
-    } = pointerDownEvent;
-    if (clientX < left || clientX > right || clientY < top || clientY > bottom) {
+  const onPointerDown = (pointerDownEvent) => {
+    const { left, right, top, bottom } = cloneWrapper.getBoundingClientRect();
+    const { clientX, clientY } = pointerDownEvent;
+    if (
+      clientX < left ||
+      clientX > right ||
+      clientY < top ||
+      clientY > bottom
+    ) {
       // Somewhere else on the page: this press is not about the copy.
       return;
     }
     let pressIsOverResolve;
-    pressIsOver = new Promise(resolve => {
+    pressIsOver = new Promise((resolve) => {
       pressIsOverResolve = resolve;
     });
     const onPointerEnd = () => {
@@ -13176,9 +13312,8 @@ const letCopyBeCaught = (cloneWrapper, carryAgain) => {
   // caught with a finger and can with a mouse.
   const root = document.documentElement;
   root.setAttribute("data-drag-catchable", "");
-  root.addEventListener("touchmove", keepTouchRefusable, {
-    passive: false
-  });
+  root.addEventListener("touchmove", keepTouchRefusable, { passive: false });
+
   return {
     settled: async () => {
       // A hand that lets go and presses again while the copy is still there is
@@ -13193,7 +13328,7 @@ const letCopyBeCaught = (cloneWrapper, carryAgain) => {
       root.removeAttribute("data-drag-catchable");
       root.removeEventListener("touchmove", keepTouchRefusable);
       return caught;
-    }
+    },
   };
 };
 
@@ -13203,11 +13338,16 @@ const letCopyBeCaught = (cloneWrapper, carryAgain) => {
 // again is somewhere else on it — so taking one back hands it both again.
 const liftDragClone = (cloneWrapper, pointerEvent) => {
   const rect = cloneWrapper.getBoundingClientRect();
-  cloneWrapper.style.setProperty("--drag-origin", `${pointerEvent.clientX - rect.left}px ${pointerEvent.clientY - rect.top}px`);
+  cloneWrapper.style.setProperty(
+    "--drag-origin",
+    `${pointerEvent.clientX - rect.left}px ${pointerEvent.clientY - rect.top}px`,
+  );
   cloneWrapper.firstElementChild.setAttribute("navi-drag-clone", "");
 };
+
 const createDragClone = (element, pointerEvent) => {
   const rect = element.getBoundingClientRect();
+
   const wrapper = document.createElement("div");
   wrapper.setAttribute("navi-drag-clone-wrapper", "");
   // A copy can be caught on its way home (see settleCloneBack), which is a press
@@ -13223,7 +13363,10 @@ const createDragClone = (element, pointerEvent) => {
   // Grab point within the element — used as transform-origin so the
   // scale(1.15) expands from where the user clicked, not the element center.
   // These offsets are element-relative so viewport coords are correct here.
-  wrapper.style.setProperty("--drag-origin", `${pointerEvent.clientX - rect.left}px ${pointerEvent.clientY - rect.top}px`);
+  wrapper.style.setProperty(
+    "--drag-origin",
+    `${pointerEvent.clientX - rect.left}px ${pointerEvent.clientY - rect.top}px`,
+  );
   const elementClone = element.cloneNode(true);
   // A deep copy copies the ids too, and two elements answering to one id is a
   // document that lies: getElementById picks whichever comes first, an anchor
@@ -13240,6 +13383,7 @@ const createDragClone = (element, pointerEvent) => {
   // (The original wears it too, but it is hidden — see navi-drag-clone-source.)
   elementClone.setAttribute("data-grabbed", "");
   elementClone.style.viewTransitionName = "navi-drag-clone";
+
   wrapper.appendChild(elementClone);
   // Beside the thing it copies, so it stands where that thing stands: every
   // inherited value and every custom property the original reads, the copy reads
@@ -13248,6 +13392,7 @@ const createDragClone = (element, pointerEvent) => {
   // whatever its depth in the tree, and being fixed keeps it out of the
   // scrollable overflow of the list it sits in.
   element.parentElement.appendChild(wrapper);
+
   return wrapper;
 };
 
@@ -13329,44 +13474,7 @@ const getResizeDirection = (element) => {
   return { x, y };
 };
 
-installImportMetaCssBuild(import.meta);/**
- * What a drag means when it TRAVELS: a whole screen pushed aside to bring in the
- * next one — slides inside one box, pages that are URLs.
- *
- * The pointer itself is not read here: reading a press, waiting for it to become
- * a gesture, capturing it, measuring how fast it goes, swallowing the click it
- * would have made is one gesture system for the whole codebase
- * (@jsenv/dom's drag_gesture + drag_after_intent), and this asks it for the
- * plain version — nothing carried, so no backdrop over the page, nothing made
- * inert, no focus taken: a screen slides and the page keeps its scrolling and
- * its keyboard.
- *
- * What IS here is everything that makes a travel a travel rather than a
- * carry — and it is policy, not plumbing:
- * - the axis is LOCKED by the first movement, instead of being constrained
- *   ahead of time;
- * - a press becomes a gesture by distance for every pointer, finger included:
- *   a swipe is a travel, and asking a finger to hold still first (the rule for
- *   picking an object up) would mean waiting before being allowed to swipe;
- * - what travels walks ONE BOX, resists past its ends, and is measured from
- *   where the finger is once it gets there — unless the caller has another box
- *   to offer at that edge, and then the gesture walks on into it;
- * - letting go is a question with an answer: a third of a box, or a flick.
- *
- * What is NOT here is geometry: how big a box is, what lies one step that way,
- * what to paint while the finger moves. The caller knows those and nothing else
- * does — this reads the gesture and calls back.
- *
- * Who owns a gesture is decided in three places, and all three are read here:
- * - what says so itself, with [data-no-drag-travel] or by being a field — a
- *   component that reads the pointer marks itself, because the container it
- *   ends up in cannot know what it is;
- * - a scroller between the pointer and the box with room left that way, which
- *   keeps the gesture until it has none;
- * - another box that travels, between the pointer and this one: the innermost
- *   one walks the axis it walks, and leaves the others whatever axis it does
- *   not (see axesLeftBy).
- */
+installImportMetaCssBuild(import.meta);
 
 // While a pointer is on something that travels: said on the document, because
 // what has to be told is the document.
@@ -13375,7 +13483,8 @@ const GESTURE_ATTRIBUTE = "data-drag-travel-gesture";
 // …and while one is actually travelling something, which is a later moment and
 // takes more away (see the CSS).
 const WALKING_ATTRIBUTE = "data-drag-travel-walking";
-import.meta.css = [/* css */`
+
+import.meta.css = /* css */ [`
   :root[${GESTURE_ATTRIBUTE}] {
     /* The bounce the browser plays when a gesture reaches the end of a page —
        and the swipe that goes back in history with it. Both are the browser
@@ -13535,24 +13644,42 @@ const DRAG_RESISTANCE = 0.3;
 // press, and nothing hands that back mid-gesture — the travel would drag a
 // selection along with it. With a finger the hold is the selection UI itself, so
 // there is nothing to take there either.
-const PRESSED_INPUT_TYPES = ['[type="checkbox"]', '[type="radio"]', '[type="button"]', '[type="submit"]', '[type="reset"]', '[type="image"]', '[type="color"]', '[type="file"]'].join(",");
-const NATIVE_POINTER_GESTURES = [{
-  // The value follows the pointer, pixel by pixel: a thumb along its rail, a
-  // spinner clicked up and down. There is no moment in that which could be
-  // given away — the gesture IS the pointer.
-  selector: 'input[type="range"],input[type="number"]'
-}, {
-  // The text answers the pointer, and differently per hand: a mouse drags a
-  // caret through it (a selection), a finger drags the field's own content
-  // sideways when it overflows, and a finger held still opens the selection
-  // UI. Three things a field is for, against one travel that has a whole box
-  // to start from.
-  selector: [`input:not(${PRESSED_INPUT_TYPES},[type="range"],[type="number"])`, "textarea", '[contenteditable=""]', '[contenteditable="true"]'].join(",")
-}, {
-  // A menu opens under the pointer and the browser keeps the rest of the
-  // gesture: dragged over, it picks an option.
-  selector: "select"
-}];
+const PRESSED_INPUT_TYPES = [
+  '[type="checkbox"]',
+  '[type="radio"]',
+  '[type="button"]',
+  '[type="submit"]',
+  '[type="reset"]',
+  '[type="image"]',
+  '[type="color"]',
+  '[type="file"]',
+].join(",");
+const NATIVE_POINTER_GESTURES = [
+  {
+    // The value follows the pointer, pixel by pixel: a thumb along its rail, a
+    // spinner clicked up and down. There is no moment in that which could be
+    // given away — the gesture IS the pointer.
+    selector: 'input[type="range"],input[type="number"]',
+  },
+  {
+    // The text answers the pointer, and differently per hand: a mouse drags a
+    // caret through it (a selection), a finger drags the field's own content
+    // sideways when it overflows, and a finger held still opens the selection
+    // UI. Three things a field is for, against one travel that has a whole box
+    // to start from.
+    selector: [
+      `input:not(${PRESSED_INPUT_TYPES},[type="range"],[type="number"])`,
+      "textarea",
+      '[contenteditable=""]',
+      '[contenteditable="true"]',
+    ].join(","),
+  },
+  {
+    // A menu opens under the pointer and the browser keeps the rest of the
+    // gesture: dragged over, it picks an option.
+    selector: "select",
+  },
+];
 
 // …and what an element says against its own tag. Every line above is about what
 // an element DOES, and a tag only says what it IS: a picker's façade is an
@@ -13569,9 +13696,9 @@ const NATIVE_POINTER_GESTURES = [{
 // that can really be typed in) has not made a travel possible, it has taken the
 // gesture the user was making away from them.
 const PRESS_ONLY_ATTRIBUTE = "data-press-only";
-const NATIVE_POINTER_GESTURE_SELECTOR = NATIVE_POINTER_GESTURES.map(({
-  selector
-}) => `:is(${selector}):not([${PRESS_ONLY_ATTRIBUTE}])`).join(",");
+const NATIVE_POINTER_GESTURE_SELECTOR = NATIVE_POINTER_GESTURES.map(
+  ({ selector }) => `:is(${selector}):not([${PRESS_ONLY_ATTRIBUTE}])`,
+).join(",");
 
 // What a drag must not start on: what answers the pointer natively (above),
 // plus what has said the gesture is its own. A drag SOURCE is not in the list:
@@ -13583,7 +13710,15 @@ const NATIVE_POINTER_GESTURE_SELECTOR = NATIVE_POINTER_GESTURES.map(({
 // through (see DRAG_IGNORED_SELECTOR in drag_to.js). And so is a popover or a
 // dialog: a layer OVER the box, whose press only bubbles through the box because
 // the layer is anchored in it.
-const DRAG_EXCLUDED_SELECTOR = [NATIVE_POINTER_GESTURE_SELECTOR, "[data-drag-handle]", "[data-no-drag-travel]", '[data-self-interactions~="drag"]', '[data-self-interactions~="*"]', "[popover]", "dialog"].join(",");
+const DRAG_EXCLUDED_SELECTOR = [
+  NATIVE_POINTER_GESTURE_SELECTOR,
+  "[data-drag-handle]",
+  "[data-no-drag-travel]",
+  '[data-self-interactions~="drag"]',
+  '[data-self-interactions~="*"]',
+  "[popover]",
+  "dialog",
+].join(",");
 
 // Which axes a box travels on, one attribute per gesture, said in the DOM by
 // whoever owns the box: it is what a box ABOVE another reads to know the
@@ -13603,8 +13738,12 @@ const DRAG_SOURCE_AXES_ATTRIBUTE = "data-drag-source";
 // covers everything. So a gesture that happened on it is not the gesture of any
 // box it merely sits on top of, and every walk up the tree from the pointer
 // ends here: the boxes above are behind, and behind is not under the finger.
-const TOP_LAYER_SELECTOR = [":popover-open", "dialog:modal", ":fullscreen"].join(",");
-const isTopLayer = element => {
+const TOP_LAYER_SELECTOR = [
+  ":popover-open",
+  "dialog:modal",
+  ":fullscreen",
+].join(",");
+const isTopLayer = (element) => {
   return element.matches(TOP_LAYER_SELECTOR);
 };
 
@@ -13675,12 +13814,10 @@ const scrollRoomTowards = (fromElement, stopElement, axis, sign) => {
       return false;
     }
     const size = axis === "x" ? element.clientWidth : element.clientHeight;
-    const scrollSize = axis === "x" ? element.scrollWidth : element.scrollHeight;
+    const scrollSize =
+      axis === "x" ? element.scrollWidth : element.scrollHeight;
     if (scrollSize > size + 1) {
-      const {
-        overflowX,
-        overflowY
-      } = getComputedStyle(element);
+      const { overflowX, overflowY } = getComputedStyle(element);
       const overflow = axis === "x" ? overflowX : overflowY;
       if (overflow === "auto" || overflow === "scroll") {
         const position = axis === "x" ? element.scrollLeft : element.scrollTop;
@@ -13706,7 +13843,7 @@ const travelsAfter = ({
   size,
   velocity,
   towardsSomething,
-  commitRatio
+  commitRatio,
 }) => {
   if (!towardsSomething) {
     return false;
@@ -13727,11 +13864,15 @@ const travelsAfter = ({
   // other way. Without this the picture alone decides, and a screen caught at
   // two thirds and thrown back still arrives: the gesture was read as the
   // place it was let go of rather than as a movement.
-  if (Math.abs(velocity) > DRAG_THROW_BACK_VELOCITY && Math.sign(velocity) !== sign) {
+  if (
+    Math.abs(velocity) > DRAG_THROW_BACK_VELOCITY &&
+    Math.sign(velocity) !== sign
+  ) {
     return false;
   }
   // …and going towards it travels, however slowly: see DRAG_DRIFT_VELOCITY.
-  const drifting = Math.abs(velocity) > DRAG_DRIFT_VELOCITY && Math.sign(velocity) === sign;
+  const drifting =
+    Math.abs(velocity) > DRAG_DRIFT_VELOCITY && Math.sign(velocity) === sign;
   if (drifting && Math.abs(pulled) > DRAG_DRIFT_DISTANCE) {
     return true;
   }
@@ -13799,17 +13940,20 @@ const travelsAfter = ({
  *   refused it. Nothing was painted and nothing has to be put back — this is
  *   only so the caller can forget the gesture it is holding.
  */
-const startDragToTravel = (pointerDownEvent, {
-  element,
-  axes = "xy",
-  immediate = false,
-  commitRatio = DRAG_COMMIT_RATIO,
-  onStart,
-  onPull,
-  onEnd,
-  onEdge = () => false,
-  onGiveUp = () => {}
-}) => {
+const startDragToTravel = (
+  pointerDownEvent,
+  {
+    element,
+    axes = "xy",
+    immediate = false,
+    commitRatio = DRAG_COMMIT_RATIO,
+    onStart,
+    onPull,
+    onEnd,
+    onEdge = () => false,
+    onGiveUp = () => {},
+  },
+) => {
   const target = pointerDownEvent.target;
   if (!target.closest || isPressExcluded(target, element)) {
     return null;
@@ -13818,8 +13962,15 @@ const startDragToTravel = (pointerDownEvent, {
   // anything between them that is picked up and carried the same way: the
   // gesture is theirs, and this one is left with the axes none of them walks —
   // none at all, most of the time, and then there is no gesture here to read.
-  const axesLeftByTravels = axesLeftBy(axes, target, element, DRAG_AXES_ATTRIBUTE);
-  const axesLeft = axesLeftByTravels && axesLeftBy(axesLeftByTravels, target, element, DRAG_SOURCE_AXES_ATTRIBUTE);
+  const axesLeftByTravels = axesLeftBy(
+    axes,
+    target,
+    element,
+    DRAG_AXES_ATTRIBUTE,
+  );
+  const axesLeft =
+    axesLeftByTravels &&
+    axesLeftBy(axesLeftByTravels, target, element, DRAG_SOURCE_AXES_ATTRIBUTE);
   if (!axesLeft) {
     return null;
   }
@@ -13835,6 +13986,7 @@ const startDragToTravel = (pointerDownEvent, {
   let travel = null;
   let dragGesture = null;
   let over = false;
+
   const finish = () => {
     if (over) {
       return;
@@ -13848,7 +14000,7 @@ const startDragToTravel = (pointerDownEvent, {
   // A press that never became a travel: the intent never resolved, or the axis
   // it leaned on is not one this box walks. Nothing was painted and nothing has
   // to be put back — the caller is only told so it can forget the gesture.
-  const onPressOver = pointerEvent => {
+  const onPressOver = (pointerEvent) => {
     if (pointerEvent.pointerId !== pointerDownEvent.pointerId || travel) {
       return;
     }
@@ -13869,8 +14021,11 @@ const startDragToTravel = (pointerDownEvent, {
   // layout the gesture computes for something being carried: nothing is being
   // carried here, and a scroll happening meanwhile must not read as a finger
   // that moved.
-  const coveredOn = (axis, gestureInfo) => axis === "x" ? gestureInfo.dragX - gestureInfo.grabX : gestureInfo.dragY - gestureInfo.grabY;
-  const pullOf = gestureInfo => {
+  const coveredOn = (axis, gestureInfo) =>
+    axis === "x"
+      ? gestureInfo.dragX - gestureInfo.grabX
+      : gestureInfo.dragY - gestureInfo.grabY;
+  const pullOf = (gestureInfo) => {
     const covered = coveredOn(travel.axis, gestureInfo);
     return travel.slack + (covered - travel.origin);
   };
@@ -13884,7 +14039,7 @@ const startDragToTravel = (pointerDownEvent, {
     const next = onEdge({
       axis: travel.axis,
       sign,
-      event: gestureInfo.dragEvent
+      event: gestureInfo.dragEvent,
     });
     if (!next || !next.size) {
       return null;
@@ -13902,6 +14057,7 @@ const startDragToTravel = (pointerDownEvent, {
     travel.origin = coveredOn(travel.axis, gestureInfo) - pulled;
     return pulled;
   };
+
   const controller = createDragGestureController({
     // The threshold is left at its default and never crossed: what says this
     // press has become a gesture is the intent module below, which calls
@@ -13916,7 +14072,7 @@ const startDragToTravel = (pointerDownEvent, {
     onDragStart: () => {
       document.documentElement.setAttribute(GESTURE_ATTRIBUTE, "");
     },
-    onDrag: gestureInfo => {
+    onDrag: (gestureInfo) => {
       // Releasing a gesture reports one last move, so giving one up would come
       // back through here and give it up again, forever.
       if (over) {
@@ -13982,7 +14138,7 @@ const startDragToTravel = (pointerDownEvent, {
           axis,
           sign,
           target,
-          event: gestureInfo.dragEvent
+          event: gestureInfo.dragEvent,
         });
         if (!started || !started.size) {
           giveUp();
@@ -14003,17 +14159,21 @@ const startDragToTravel = (pointerDownEvent, {
           // established before the press (see immediate): there was no
           // threshold to cross, so every pixel since the grab is the hand's
           // and is owed to it.
-          origin: immediate ? 0 : covered > DRAG_START_THRESHOLD ? DRAG_START_THRESHOLD : covered < -DRAG_START_THRESHOLD ? -DRAG_START_THRESHOLD : covered,
-          pulled: started.slack || 0
+          origin: immediate
+            ? 0
+            : covered > DRAG_START_THRESHOLD
+              ? DRAG_START_THRESHOLD
+              : covered < -DRAG_START_THRESHOLD
+                ? -DRAG_START_THRESHOLD
+                : covered,
+          pulled: started.slack || 0,
         };
         document.documentElement.setAttribute(WALKING_ATTRIBUTE, axis);
         // The travel exists: from here the pointer is this box's, and it is
         // followed wherever it goes.
         dragGesture.capturePointer();
       }
-      const {
-        axis
-      } = travel;
+      const { axis } = travel;
       let pulled = pullOf(gestureInfo);
       // Which side is being pulled in: dragging to the right brings in what is
       // on the left, which is what comes BEFORE.
@@ -14051,7 +14211,8 @@ const startDragToTravel = (pointerDownEvent, {
             // from where the finger IS once it has reached the end, so turning
             // around moves the picture at once instead of first walking back
             // over the distance the hand went too far.
-            travel.origin = coveredOn(axis, gestureInfo) - (pulled - travel.slack);
+            travel.origin =
+              coveredOn(axis, gestureInfo) - (pulled - travel.slack);
           } else {
             pulled = relayed;
             size = travel.size;
@@ -14064,46 +14225,42 @@ const startDragToTravel = (pointerDownEvent, {
         pulled,
         size,
         progress: pulled / size,
-        event: gestureInfo.dragEvent
+        event: gestureInfo.dragEvent,
       });
     },
-    onRelease: gestureInfo => {
+    onRelease: (gestureInfo) => {
       if (over || !travel) {
         return;
       }
       finish();
-      const {
-        axis,
-        size,
-        pulled,
-        slack
-      } = travel;
+      const { axis, size, pulled, slack } = travel;
       const towardsSomething = pulled > 0 ? travel.travelBack : travel.travelOn;
-      const velocity = axis === "x" ? gestureInfo.velocityX : gestureInfo.velocityY;
+      const velocity =
+        axis === "x" ? gestureInfo.velocityX : gestureInfo.velocityY;
       // A gesture taken away rather than let go of (the browser scrolling
       // something else, a call coming in, another gesture taking the pointer)
       // said nothing: things go back.
       const releaseEvent = gestureInfo.releaseEvent || gestureInfo.dragEvent;
-      const {
-        cancelled
-      } = gestureInfo;
+      const { cancelled } = gestureInfo;
       onEnd({
         axis,
         pulled,
         size,
         sign: pulled > 0 ? 1 : -1,
-        travels: !cancelled && travelsAfter({
-          pulled,
-          slack,
-          size,
-          velocity,
-          towardsSomething,
-          commitRatio
-        }),
+        travels:
+          !cancelled &&
+          travelsAfter({
+            pulled,
+            slack,
+            size,
+            velocity,
+            towardsSomething,
+            commitRatio,
+          }),
         cancelled,
-        event: releaseEvent
+        event: releaseEvent,
       });
-    }
+    },
   });
 
   // When a press becomes a gesture, and by which rule. A travel is a swipe, so
@@ -14125,7 +14282,7 @@ const startDragToTravel = (pointerDownEvent, {
       // would be taken away from whoever else is reading the same press for
       // gestures that give themselves up one event later. It is claimed once
       // the travel exists, in onDrag below.
-      pointerCaptureDeferred: true
+      pointerCaptureDeferred: true,
     });
     return dragGesture;
   };
@@ -14138,16 +14295,17 @@ const startDragToTravel = (pointerDownEvent, {
   } else {
     dragAfterIntent(pointerDownEvent, grab, {
       longPress: false,
-      threshold: DRAG_START_THRESHOLD
+      threshold: DRAG_START_THRESHOLD,
     });
   }
   window.addEventListener("pointerup", onPressOver);
   window.addEventListener("pointercancel", onPressOver);
+
   return {
     stop: () => {
       finish();
       dragGesture?.release();
-    }
+    },
   };
 };
 
@@ -14219,11 +14377,9 @@ const WHEEL_REGROW_RUN = 2;
  *   scrolls, and pushing content to the right reveals its left.
  * @returns {() => void} stop listening.
  */
-const watchWheelTravel = (element, {
-  axes = "xy",
-  onStep
-}) => {
+const watchWheelTravel = (element, { axes = "xy", onStep }) => {
   let gesture = null;
+
   const forgetGesture = () => {
     gesture = null;
     document.documentElement.removeAttribute(GESTURE_ATTRIBUTE);
@@ -14236,10 +14392,8 @@ const watchWheelTravel = (element, {
   // pseudo-elements are told about pointer-events. Heard on the box alone, a
   // gesture that sets a travel off loses every event after the first — and the
   // page scrolls behind the travel with everything that was not taken.
-  const isOverElement = wheelEvent => {
-    const {
-      target
-    } = wheelEvent;
+  const isOverElement = (wheelEvent) => {
+    const { target } = wheelEvent;
     if (element.contains(target)) {
       return true;
     }
@@ -14253,26 +14407,22 @@ const watchWheelTravel = (element, {
     if (!target.contains(element)) {
       return false;
     }
-    const {
-      left,
-      right,
-      top,
-      bottom
-    } = element.getBoundingClientRect();
-    const {
-      clientX,
-      clientY
-    } = wheelEvent;
-    return clientX >= left && clientX <= right && clientY >= top && clientY <= bottom;
+    const { left, right, top, bottom } = element.getBoundingClientRect();
+    const { clientX, clientY } = wheelEvent;
+    return (
+      clientX >= left && clientX <= right && clientY >= top && clientY <= bottom
+    );
   };
-  const onWheel = wheelEvent => {
+
+  const onWheel = (wheelEvent) => {
     // The burst is already somebody else's — the box inside this one, a wheel
     // picker, whoever answered its first event. It is theirs to the end of it,
     // wherever the pointer has drifted since (see wheel_gesture.js).
     if (wheelGestureIsTakenFrom(element)) {
       return;
     }
-    const axis = Math.abs(wheelEvent.deltaX) > Math.abs(wheelEvent.deltaY) ? "x" : "y";
+    const axis =
+      Math.abs(wheelEvent.deltaX) > Math.abs(wheelEvent.deltaY) ? "x" : "y";
     const delta = axis === "x" ? wheelEvent.deltaX : wheelEvent.deltaY;
     if (!delta) {
       return;
@@ -14297,15 +14447,16 @@ const watchWheelTravel = (element, {
       // it — the same claims a press is read against (see the top of this
       // file), and all of them are answered by giving the gesture up whole:
       // nothing is prevented and the browser scrolls as it would have.
-      const {
-        target
-      } = wheelEvent;
-      if (target.closest && isPressExcluded(target, element) || scrollRoomTowards(target, element, axis, sign) ||
-      // …plus the third: a box below this one that travels on this axis. Its
-      // watcher hears the same wheel event this one does — they all listen at
-      // the document — so without this both step, and one push moves two
-      // things.
-      !axesLeftBy(axis, target, element, WHEEL_AXES_ATTRIBUTE)) {
+      const { target } = wheelEvent;
+      if (
+        (target.closest && isPressExcluded(target, element)) ||
+        scrollRoomTowards(target, element, axis, sign) ||
+        // …plus the third: a box below this one that travels on this axis. Its
+        // watcher hears the same wheel event this one does — they all listen at
+        // the document — so without this both step, and one push moves two
+        // things.
+        !axesLeftBy(axis, target, element, WHEEL_AXES_ATTRIBUTE)
+      ) {
         return;
       }
       gesture = {
@@ -14316,7 +14467,7 @@ const watchWheelTravel = (element, {
         fadeRun: 0,
         growRun: 0,
         faded: false,
-        stepped: false
+        stepped: false,
       };
       document.documentElement.setAttribute(GESTURE_ATTRIBUTE, "");
       document.documentElement.setAttribute(WALKING_ATTRIBUTE, axis);
@@ -14345,9 +14496,7 @@ const watchWheelTravel = (element, {
     }
     // …and said on every event on our axis, because a claim nobody renews is a
     // gesture that is over.
-    claimWheelGesture(element, {
-      onEnd: forgetGesture
-    });
+    claimWheelGesture(element, { onEnd: forgetGesture });
     if (sign !== gesture.sign) {
       // Turned around: what was adding up was going the other way.
       gesture.sign = sign;
@@ -14364,11 +14513,7 @@ const watchWheelTravel = (element, {
       // happen pushes harder rather than waiting. Everything a threshold could
       // buy here is bought by what a screen AFTER this one costs.
       gesture.stepped = true;
-      onStep({
-        axis: gesture.axis,
-        sign: gesture.sign,
-        event: wheelEvent
-      });
+      onStep({ axis: gesture.axis, sign: gesture.sign, event: wheelEvent });
       return;
     }
     const magnitude = Math.abs(delta);
@@ -14393,11 +14538,7 @@ const watchWheelTravel = (element, {
       gesture.faded = false;
       gesture.growRun = 0;
       gesture.pushed = 0;
-      onStep({
-        axis: gesture.axis,
-        sign: gesture.sign,
-        event: wheelEvent
-      });
+      onStep({ axis: gesture.axis, sign: gesture.sign, event: wheelEvent });
       return;
     }
     if (gesture.fadeRun >= WHEEL_FADE_RUN) {
@@ -14408,20 +14549,15 @@ const watchWheelTravel = (element, {
       return;
     }
     gesture.pushed = 0;
-    onStep({
-      axis: gesture.axis,
-      sign: gesture.sign,
-      event: wheelEvent
-    });
+    onStep({ axis: gesture.axis, sign: gesture.sign, event: wheelEvent });
   };
+
   document.addEventListener("wheel", onWheel, {
     passive: false,
-    capture: true
+    capture: true,
   });
   return () => {
-    document.removeEventListener("wheel", onWheel, {
-      capture: true
-    });
+    document.removeEventListener("wheel", onWheel, { capture: true });
     // Handed back rather than left to lapse: a box that is gone must not hold a
     // gesture the boxes still there are asking about.
     releaseWheelGesture(element);
@@ -14462,11 +14598,13 @@ const isPressExcluded = (target, element) => {
  * @param {Element} element Where the press landed.
  * @returns {boolean}
  */
-const isPressDisputedByDrag = element => {
+const isPressDisputedByDrag = (element) => {
   if (!element || typeof element.closest !== "function") {
     return false;
   }
-  const dragged = element.closest(`[${DRAG_AXES_ATTRIBUTE}],[${DRAG_SOURCE_AXES_ATTRIBUTE}]`);
+  const dragged = element.closest(
+    `[${DRAG_AXES_ATTRIBUTE}],[${DRAG_SOURCE_AXES_ATTRIBUTE}]`,
+  );
   if (!dragged) {
     return false;
   }
@@ -14681,36 +14819,17 @@ const getWidth = (element) => {
   return width;
 };
 
-installImportMetaCssBuild(import.meta);/**
- * Position Sticky Polyfill
- *
- * This module provides a workaround for position:sticky limitations when used with
- * overflow:auto/hidden parent elements (see https://github.com/w3c/csswg-drafts/issues/865).
- *
- * How it works:
- * 1. Creates a placeholder clone of the sticky element to maintain document flow
- * 2. Positions the real element using fixed positioning relative to viewport
- * 3. Adjusts position on scroll to emulate position:sticky behavior
- * 4. Handles parent boundary detection to keep element within its container
- * 5. Updates dimensions on resize and DOM changes
- *
- * Usage:
- * ```
- * const cleanup = initPositionSticky(element);
- * // Later when no longer needed
- * cleanup();
- * ```
- *
- * The element should have a CSS "top" value specified (e.g., top: 10px).
- */
-const css = /* css */`[data-position-sticky-placeholder] {
+installImportMetaCssBuild(import.meta);
+
+const css = /* css */ `[data-position-sticky-placeholder] {
   opacity: 0 !important;
   width: auto !important;
   height: auto !important;
   position: static !important;
 }
 `;
-const initPositionSticky = element => {
+
+const initPositionSticky = (element) => {
   import.meta.css = [css, "@jsenv/dom/src/position/position_sticky.js"];
   const computedStyle = getComputedStyle(element);
   const topCssValue = computedStyle.top;
@@ -14735,10 +14854,20 @@ const initPositionSticky = element => {
       break;
     }
     const style = getComputedStyle(scrollContainer);
-    if (xScrollContainer === null && (style.overflowX === "auto" || style.overflowX === "hidden" || style.overflowX === "scroll")) {
+    if (
+      xScrollContainer === null &&
+      (style.overflowX === "auto" ||
+        style.overflowX === "hidden" ||
+        style.overflowX === "scroll")
+    ) {
       xScrollContainer = scrollContainer;
     }
-    if (yScrollContainer === null && (style.overflowY === "auto" || style.overflowY === "hidden" || style.overflowY === "scroll")) {
+    if (
+      yScrollContainer === null &&
+      (style.overflowY === "auto" ||
+        style.overflowY === "hidden" ||
+        style.overflowY === "scroll")
+    ) {
       yScrollContainer = scrollContainer;
     }
   }
@@ -14747,6 +14876,7 @@ const initPositionSticky = element => {
   if (!needsPolyfillX && !needsPolyfillY) {
     return () => {}; // Native sticky will work fine on both axes
   }
+
   const cleanupCallbackSet = new Set();
   const cleanup = () => {
     for (const cleanupCallback of cleanupCallbackSet) {
@@ -14754,6 +14884,7 @@ const initPositionSticky = element => {
     }
     cleanupCallbackSet.clear();
   };
+
   const parentElement = element.parentElement;
   const createPlaceholderClone = () => {
     const clone = element.cloneNode(true);
@@ -14761,13 +14892,16 @@ const initPositionSticky = element => {
     clone.removeAttribute("data-sticky");
     return clone;
   };
+
   let placeholder = createPlaceholderClone();
   parentElement.insertBefore(placeholder, element);
   cleanupCallbackSet.add(() => {
     placeholder.remove();
   });
+
   let width = getWidth(element);
   let height = getHeight(element);
+
   const updateSize = () => {
     const newPlaceholder = createPlaceholderClone();
     parentElement.replaceChild(newPlaceholder, placeholder);
@@ -14776,12 +14910,14 @@ const initPositionSticky = element => {
     height = getHeight(placeholder);
     updatePosition();
   };
+
   const updatePosition = () => {
     // Ensure placeholder dimensions match element
     setStyles(placeholder, {
       width: `${width}px`,
-      height: `${height}px`
+      height: `${height}px`,
     });
+
     const placeholderRect = placeholder.getBoundingClientRect();
     const parentRect = parentElement.getBoundingClientRect();
 
@@ -14795,12 +14931,12 @@ const initPositionSticky = element => {
     // -420 <= 250 → stuck → element.style.left = 250px (main's left edge). ✓
     //
     // If no intermediate scroll container exists, use 0 (document/viewport edge).
-    const yContainerRect = yScrollContainer ? yScrollContainer.getBoundingClientRect() : {
-      top: 0
-    };
-    const xContainerRect = xScrollContainer ? xScrollContainer.getBoundingClientRect() : {
-      left: 0
-    };
+    const yContainerRect = yScrollContainer
+      ? yScrollContainer.getBoundingClientRect()
+      : { top: 0 };
+    const xContainerRect = xScrollContainer
+      ? xScrollContainer.getBoundingClientRect()
+      : { left: 0 };
     const topThreshold = yContainerRect.top + top;
     const leftThreshold = xContainerRect.left + left;
 
@@ -14843,6 +14979,7 @@ const initPositionSticky = element => {
     } else {
       leftPosition = placeholderRect.left;
     }
+
     element.style.top = `${topPosition}px`;
     element.style.left = `${Math.round(leftPosition)}px`;
     element.style.width = `${width}px`;
@@ -14855,15 +14992,18 @@ const initPositionSticky = element => {
       element.removeAttribute("data-sticky");
     }
   };
+
   {
     const restorePositionStyle = forceStyles(element, {
       "position": "fixed",
       "z-index": 1,
-      "will-change": "transform" // Hint for hardware acceleration
+      "will-change": "transform", // Hint for hardware acceleration
     });
     cleanupCallbackSet.add(restorePositionStyle);
   }
+
   updatePosition();
+
   {
     const handleScroll = () => {
       updatePosition();
@@ -14874,16 +15014,15 @@ const initPositionSticky = element => {
     const listenTargets = new Set(scrollContainerSet);
     listenTargets.add(document.documentElement);
     for (const scrollTarget of listenTargets) {
-      scrollTarget.addEventListener("scroll", handleScroll, {
-        passive: true
-      });
+      scrollTarget.addEventListener("scroll", handleScroll, { passive: true });
       cleanupCallbackSet.add(() => {
         scrollTarget.removeEventListener("scroll", handleScroll, {
-          passive: true
+          passive: true,
         });
       });
     }
   }
+
   {
     let animationFrame = null;
     const resizeObserver = new ResizeObserver(() => {
@@ -14902,6 +15041,7 @@ const initPositionSticky = element => {
       animationFrame = null;
     });
   }
+
   {
     const mutationObserver = new MutationObserver(() => {
       updateSize();
@@ -14909,12 +15049,13 @@ const initPositionSticky = element => {
     mutationObserver.observe(element, {
       childList: true,
       subtree: true,
-      characterData: true
+      characterData: true,
     });
     cleanupCallbackSet.add(() => {
       mutationObserver.disconnect();
     });
   }
+
   return cleanup;
 };
 

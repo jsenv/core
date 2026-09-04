@@ -781,6 +781,70 @@ container above it does not take the gesture:
 `docs/drag_to_travel.md`). navi's own swipes do the equivalent with
 `data-travel-by-drag`.
 
+## A gesture whose product is a value
+
+`move`, `reorder`, `land` and `toss` answer the same question — where did the
+element end up — because all four carry it. A rotation does not: what comes out of
+it is an angle, and the handle that produced it stays exactly where it is. Same for
+a scale, a zoom, a plan panned under the finger.
+
+navi names none of those, and it is not an oversight: an interaction names an
+**outcome** — something that happened once, that can be told, refused, awaited.
+There is no outcome here, only a number read while the hand is still moving, and
+what to do with it (snap it to the neighbouring court, draw it, keep it in a
+signal) is knowledge navi does not have. So it hands over the machinery instead
+and leaves the paint alone:
+
+```js
+import { createDragGestureController, dragAfterIntent } from "@jsenv/navi";
+
+const onPointerDown = (pointerDownEvent) => {
+  dragAfterIntent(pointerDownEvent, () => {
+    const controller = createDragGestureController({
+      onDrag: (gestureInfo) => {
+        const { xDelta, yDelta } = gestureInfo.layout;
+        angleSignal.value = snapToNeighbours(angleFromDelta(xDelta, yDelta));
+      },
+      onRelease: (gestureInfo) => {
+        if (gestureInfo.cancelled) {
+          return;
+        }
+        COURT.PUT.run({ angle: angleSignal.peek() });
+      },
+    });
+    return controller.grabViaPointer(pointerDownEvent, {
+      element: pointerDownEvent.currentTarget,
+    });
+  });
+};
+```
+
+An element that ends up somewhere is NOT this: that one is `move`, and doing it by
+hand gives up the constraint, the commit and the way back when the answer refuses.
+
+Three things come with the machinery, and they are the reason not to write it again:
+
+- **When the press becomes a drag** is `dragAfterIntent`, and the answer is not one
+  policy but three: a `data-drag-handle` exists only to drag, so it takes the
+  gesture on contact; a mouse resolves it by distance; a finger resolves it by
+  TIME, because travel is exactly what a scroll looks like. One timer for every
+  pointer makes the mouse wait for something it never had to prove.
+- **A touch has to be refusable before it is refused.** `touch-action` must be
+  non-`auto` when the finger LANDS: after that the touch is on the compositor's
+  fast path, every `preventDefault` is an intervention, and on Android the scroll
+  runs away with the object. `markDragSource(element, axes)` says it from a
+  stylesheet, on the source itself — which is how what surrounds it keeps
+  scrolling. A blanket `touch-action: none` on the container buys the same drag by
+  taking the pan away, and the pan then has to be written by hand too.
+- **A capture that goes was not necessarily given back.** `lostpointercapture`
+  reads the same whether the gesture handed the pointer over or the browser dropped
+  it mid-drag, which it does more often than the specification suggests. The loop
+  tells the two apart, and `gestureInfo.cancelled` is where it comes out: a release
+  nobody asked for must commit nothing.
+
+A gesture driven this way is outside the registry, so it says so itself to whatever
+travels above it: `data-no-drag-travel` (see `docs/drag_to_travel.md`).
+
 ## Things worth knowing before guessing
 
 - **A drag says its axes to whoever else answers the press.** `data-drag-axis`
@@ -834,6 +898,9 @@ container above it does not take the gesture:
   `toss` and the `grab` moment.
 - `src/control/interaction/interaction_keyboard.js`,
   `interaction_native.js` — the other two detectors.
+- `@jsenv/dom` — `src/interaction/drag/drag_gesture.js` (the loop, its options and
+  what `gestureInfo` holds) and `src/interaction/drag/drag_after_intent.js` (when a
+  press becomes a drag, and what a source says in the stylesheet).
 - `src/control/demos/38_interactions_demo.html` — every case above, plus a
   mailbox, a board whose places are zones and the same board whose places are the
   pieces, and a custom gesture registered from the page.
