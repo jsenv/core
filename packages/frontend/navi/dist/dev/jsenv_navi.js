@@ -54,7 +54,9 @@ ${urlList}
 Each one builds its own contexts, stores and registries, so what one holds is invisible to the components using another.`);
 }
 
-installImportMetaCssBuild(import.meta);/**
+installImportMetaCssBuild(import.meta);
+
+/**
  * Every z-index navi can be seen competing on, in one place, ordered.
  *
  * The point is the overview: reading this file must be enough to know what
@@ -77,7 +79,7 @@ installImportMetaCssBuild(import.meta);/**
  * any of these, and a number is the last resort, not the first tool.
  */
 
-const css$16 = /* css */`@layer navi {
+const css$16 = /* css */ `@layer navi {
   :root {
     --navi-z-index-control-hovered: 1;
     --navi-z-index-control-focused: 2;
@@ -321,44 +323,11 @@ const urlToScheme = (url) => {
   return scheme;
 };
 
-installImportMetaCssBuild(import.meta);/**
- * The element the URL designates — the one whose id is the hash — shows itself
- * when it renders, not when the URL changes.
- *
- * The browser answers a fragment at two moments only: the end of the document
- * load, and each fragment navigation. In an app whose content comes from a
- * request, both are too early — the element does not exist yet, there is
- * nothing to scroll to, and the moment passes.
- *
- * What is already acquired, and what this file therefore does not redo:
- * `:target` is live — as soon as an element carries the hash's id it matches,
- * even if it arrives a second later. The durable "this is the one" state is
- * there for free, and an app styles it in CSS. What is lost is the one-shot
- * action tied to a moment: bringing the target under the reader's eyes, and
- * saying it just arrived. That is all of what follows.
- *
- * Two decisions worth knowing before reading:
- *
- * - **navi places the target itself, every time.** The scroll the browser
- *   would have done — target against the top edge, instantly — is applied
- *   here, after layout, so one rule holds whether the target was there all
- *   along or arrived late; `setUrlTargetOptions` lets an app pick another
- *   alignment or a smooth behavior. A page with nothing to scroll simply
- *   does not move, which is the whole of the "the list already fits on screen"
- *   case — the transient mark alone then says which one was meant.
- *
- * - **Wait, but not forever.** As long as the document is working (routes,
- *   actions) the target may still arrive; once it has been idle for a moment, a
- *   month-old link to a deleted element simply brings nothing and the reader
- *   lands on the page — the right degradation.
- *
- * The case where none of this is needed is worth naming: when a list's skeleton
- * already knows the ids of its slice (they are in cache, or they come from the
- * URL), putting them on the placeholders is enough — the target then exists on
- * the very first render and the browser does everything on its own.
- */
+installImportMetaCssBuild(import.meta);
+
 const URL_TARGET_ATTRIBUTE = "data-url-target";
-const css$15 = /* css */`@layer navi {
+
+const css$15 = /* css */ `@layer navi {
   [data-url-target] {
     animation: navi_url_target var(--navi-url-target-duration, 2s)
         ease-out;
@@ -377,12 +346,13 @@ const css$15 = /* css */`@layer navi {
 }
 `;
 import.meta.css = [css$15, "@jsenv/navi/src/nav/url_target/url_target.js"];
+
 let urlTargetOptions = {
   block: "start",
   behavior: "instant",
   markDuration: 2000,
   graceAfterIdle: 1000,
-  maxWait: 10_000
+  maxWait: 10_000,
 };
 
 /**
@@ -404,15 +374,16 @@ let urlTargetOptions = {
  * @param {number} [options.maxWait=10000]
  *   Longest wait, in ms, for a document that never stops working.
  */
-const setUrlTargetOptions = options => {
-  urlTargetOptions = {
-    ...urlTargetOptions,
-    ...options
-  };
+const setUrlTargetOptions = (options) => {
+  urlTargetOptions = { ...urlTargetOptions, ...options };
   if (options.markDuration !== undefined) {
-    document.documentElement.style.setProperty("--navi-url-target-duration", `${options.markDuration}ms`);
+    document.documentElement.style.setProperty(
+      "--navi-url-target-duration",
+      `${options.markDuration}ms`,
+    );
   }
 };
+
 const urlTargetIdSignal = computed(() => {
   const documentUrl = documentUrlSignal.value;
   return urlToTargetId(documentUrl);
@@ -424,6 +395,7 @@ const urlTargetIdSignal = computed(() => {
 const useUrlTargetId = () => {
   return urlTargetIdSignal.value;
 };
+
 let stopWaitingForCurrentTarget = null;
 let currentTargetKey;
 
@@ -438,7 +410,8 @@ const rearmUrlTarget = () => {
   currentTargetKey = undefined;
   armUrlTarget(documentUrlSignal.peek());
 };
-const armUrlTarget = documentUrl => {
+
+const armUrlTarget = (documentUrl) => {
   const targetKey = urlToTargetKey(documentUrl);
   if (targetKey === currentTargetKey) {
     return;
@@ -452,7 +425,7 @@ const armUrlTarget = documentUrl => {
   if (!targetId) {
     return;
   }
-  stopWaitingForCurrentTarget = waitForElementWithId(targetId, element => {
+  stopWaitingForCurrentTarget = waitForElementWithId(targetId, (element) => {
     stopWaitingForCurrentTarget = null;
     revealUrlTarget(element);
   });
@@ -461,25 +434,22 @@ const armUrlTarget = documentUrl => {
 // The pathname and the hash, not the whole URL: a search param changing (a
 // filter, a page) is still the same page and the same target, and must not make
 // it answer a second time.
-const urlToTargetKey = url => {
-  const {
-    pathname,
-    hash
-  } = new URL(url);
+const urlToTargetKey = (url) => {
+  const { pathname, hash } = new URL(url);
   return `${pathname}${hash}`;
 };
-const urlToTargetId = url => {
-  const {
-    hash
-  } = new URL(url);
+const urlToTargetId = (url) => {
+  const { hash } = new URL(url);
   return hash ? decodeURIComponent(hash.slice(1)) : "";
 };
+
 const waitForElementWithId = (id, onFound) => {
   let mutationObserver = null;
   let stopWatchingBusy = null;
   let idleTimeout = null;
   let maxWaitTimeout = null;
   let found = false;
+
   const stopWaiting = () => {
     if (mutationObserver) {
       mutationObserver.disconnect();
@@ -492,6 +462,7 @@ const waitForElementWithId = (id, onFound) => {
     clearTimeout(idleTimeout);
     clearTimeout(maxWaitTimeout);
   };
+
   const checkForElement = () => {
     const element = document.getElementById(id);
     if (!element) {
@@ -507,21 +478,20 @@ const waitForElementWithId = (id, onFound) => {
     stopWaiting();
     onFound(element);
   };
+
   checkForElement();
   if (found) {
     return stopWaiting;
   }
+
   mutationObserver = new MutationObserver(checkForElement);
   mutationObserver.observe(document.documentElement, {
     childList: true,
     subtree: true,
     attributes: true,
-    attributeFilter: ["id"]
+    attributeFilter: ["id"],
   });
-  const {
-    graceAfterIdle,
-    maxWait
-  } = urlTargetOptions;
+  const { graceAfterIdle, maxWait } = urlTargetOptions;
   stopWatchingBusy = effect(() => {
     const documentIsBusy = documentIsBusySignal.value;
     clearTimeout(idleTimeout);
@@ -530,28 +500,26 @@ const waitForElementWithId = (id, onFound) => {
     }
   });
   maxWaitTimeout = setTimeout(stopWaiting, maxWait);
+
   return stopWaiting;
 };
-const revealUrlTarget = element => {
-  const {
-    block,
-    behavior,
-    markDuration
-  } = urlTargetOptions;
+
+const revealUrlTarget = (element) => {
+  const { block, behavior, markDuration } = urlTargetOptions;
   // The element just entered the DOM: where it sits is only known once layout
   // has run.
   requestAnimationFrame(() => {
-    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const prefersReducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
     element.scrollIntoView({
       block,
-      behavior: prefersReducedMotion ? "instant" : behavior
+      behavior: prefersReducedMotion ? "instant" : behavior,
     });
     // What the browser does when it handles a fragment itself: keyboard
     // navigation resumes from the target, not from the top of the document.
     if (elementIsFocusable(element)) {
-      element.focus({
-        preventScroll: true
-      });
+      element.focus({ preventScroll: true });
     }
     element.setAttribute(URL_TARGET_ATTRIBUTE, "");
     setTimeout(() => {
@@ -559,6 +527,7 @@ const revealUrlTarget = element => {
     }, markDuration);
   });
 };
+
 effect(() => {
   const documentUrl = documentUrlSignal.value;
   armUrlTarget(documentUrl);
@@ -2349,7 +2318,8 @@ const useActionStatus = (action) => {
   };
 };
 
-installImportMetaCssBuild(import.meta);const css$14 = /* css */`.action_error {
+installImportMetaCssBuild(import.meta);
+const css$14 = /* css */`.action_error {
   background: #fdd;
   border: 1px solid red;
   margin-top: 0;
@@ -6521,7 +6491,8 @@ const domToVNodes = node => {
   return vnodes;
 };
 
-installImportMetaCssBuild(import.meta);/**
+installImportMetaCssBuild(import.meta);
+/**
  * The icon a callout shows beside its message — a square in the status color
  * with the "!" glyph — drawable on its own, where the callout is not: on the
  * trigger that opens one (a picker in callout mode), so what one presses looks
@@ -6617,19 +6588,12 @@ const CalloutStatusIcon = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);/**
- * A callout component that mimics native browser validation messages.
- * Features:
- * - Positions above or below target element based on available space
- * - Follows target element during scrolling and resizing
- * - Automatically hides when target element is not visible
- * - Arrow automatically shows when pointing at a valid anchor element
- * - Centers in viewport when no anchor element provided or anchor is too big
- */
+installImportMetaCssBuild(import.meta);
 
 // Unique for the page's lifetime: a caller may write the id in a commandfor.
 let calloutCount = 0;
-const css$12 = /* css */`
+
+const css$12 = /* css */ `
   @layer navi {
     .navi_callout {
       /* A callout is parented to what it explains, so it inherits from it — and
@@ -6931,31 +6895,35 @@ const css$12 = /* css */`
  *   - {HTMLElement} element - The callout DOM element
  *   - {boolean} opened - Whether the callout is currently open
  */
-const openCallout = (message, {
-  anchorElement,
-  // status determines visual styling and behavior:
-  // "info" - polite announcement (e.g., "This element cannot be modified")
-  // "warning" - expected failure requiring user action (e.g., "Field is required")
-  // "error" - unexpected failure, may not be actionable (e.g., "Server error")
-  // "success" - positive feedback (e.g., "Changes saved successfully")
-  // "" - neutral information
-  status = "",
-  testId,
-  onClose,
-  closeOnClickOutside = status === "info",
-  closeOnFocusLeave = closeOnClickOutside,
-  openingEvent,
-  reopen = "toggle",
-  showErrorStack,
-  skipFocus = false,
-  icon = true,
-  closeButton = true,
-  debug = () => {}
-} = {}) => {
+const openCallout = (
+  message,
+  {
+    anchorElement,
+    // status determines visual styling and behavior:
+    // "info" - polite announcement (e.g., "This element cannot be modified")
+    // "warning" - expected failure requiring user action (e.g., "Field is required")
+    // "error" - unexpected failure, may not be actionable (e.g., "Server error")
+    // "success" - positive feedback (e.g., "Changes saved successfully")
+    // "" - neutral information
+    status = "",
+    testId,
+    onClose,
+    closeOnClickOutside = status === "info",
+    closeOnFocusLeave = closeOnClickOutside,
+    openingEvent,
+    reopen = "toggle",
+    showErrorStack,
+    skipFocus = false,
+    icon = true,
+    closeButton = true,
+    debug = () => {},
+  } = {},
+) => {
   import.meta.css = [css$12, "@jsenv/navi/src/control/rules/callout/callout.js"];
   if (debug === true) {
     debug = (e, ...args) => console.debug(`"${e.type}" -> `, ...args);
   }
+
   const originalAnchorElement = anchorElement;
   if (anchorElement) {
     const proxyElement = findControlProxy(anchorElement);
@@ -6967,7 +6935,7 @@ const openCallout = (message, {
       anchorElement = controlRoot;
     }
     const anchorVisuallyVisibleInfo = getVisuallyVisibleInfo(anchorElement, {
-      countOffscreenAsVisible: true
+      countOffscreenAsVisible: true,
     });
     if (!anchorVisuallyVisibleInfo.visible) {
       anchorElement = getFirstVisuallyVisibleAncestor(anchorElement);
@@ -6975,51 +6943,65 @@ const openCallout = (message, {
         // anchorElement is not in the DOM anymore, fallback to body
         anchorElement = document.body;
       }
-      console.warn(`anchor is not visually visible (${anchorVisuallyVisibleInfo.reason}) -> callout will anchor to first visually visible ancestor (${getElementSignature(anchorElement)})`);
+      console.warn(
+        `anchor is not visually visible (${anchorVisuallyVisibleInfo.reason}) -> callout will anchor to first visually visible ancestor (${getElementSignature(anchorElement)})`,
+      );
     }
   }
+
   if (anchorElement) {
     const calloutAlreadyThere = anchorElement.callout;
     if (calloutAlreadyThere && calloutAlreadyThere.opened) {
       if (reopen === "toggle") {
-        debug(openingEvent, `callout already open on ${getElementSignature(anchorElement)} -> close it (reopen: "toggle")`);
+        debug(
+          openingEvent,
+          `callout already open on ${getElementSignature(anchorElement)} -> close it (reopen: "toggle")`,
+        );
         calloutAlreadyThere.requestClose(openingEvent, "reopen_toggle");
         return calloutAlreadyThere;
       }
       if (reopen === "update") {
-        debug(openingEvent, `callout already open on ${getElementSignature(anchorElement)} -> update it (reopen: "update")`);
-        calloutAlreadyThere.update(message, {
-          status
-        });
+        debug(
+          openingEvent,
+          `callout already open on ${getElementSignature(anchorElement)} -> update it (reopen: "update")`,
+        );
+        calloutAlreadyThere.update(message, { status });
         return calloutAlreadyThere;
       }
     }
     warnOnReopenWithinSameEvent(anchorElement, openingEvent);
   }
+
   const callout = {
     opened: true,
     close: null,
     status: undefined,
+
     update: null,
     updatePosition: null,
-    element: null
+
+    element: null,
   };
-  debug(openingEvent, `open callout on ${getElementSignature(anchorElement)} (status=${status})`);
+
+  debug(
+    openingEvent,
+    `open callout on ${getElementSignature(anchorElement)} (status=${status})`,
+  );
+
   const [teardown, addTeardown] = createPubSub(true);
   const requestClose = (e, reason) => {
     return dispatchCustomEvent(callout.element, "navi_request_close", {
       event: e,
-      reason
+      reason,
     });
   };
-  const onRequestClose = event => {
+  const onRequestClose = (event) => {
     if (!callout.opened) {
       return;
     }
-    const {
-      reason
-    } = event.detail;
-    const clickOrSpaceOutside = reason === "click_outside" || reason === "space_outside";
+    const { reason } = event.detail;
+    const clickOrSpaceOutside =
+      reason === "click_outside" || reason === "space_outside";
     if (clickOrSpaceOutside) {
       if (!closeOnClickOutside) {
         return;
@@ -7032,28 +7014,27 @@ const openCallout = (message, {
         return;
       }
     }
+
     if (debug) {
       debug(event, `callout close (reason: ${reason})`);
     }
     const mousedownEvent = findEvent(event, "mousedown");
     if (mousedownEvent) {
-      const isInsideCallout = callout.element && callout.element.contains(event.target);
+      const isInsideCallout =
+        callout.element && callout.element.contains(event.target);
       if (isInsideCallout) {
-        debug(event, "preventing mousedown default to avoid focus change on callout close");
+        debug(
+          event,
+          "preventing mousedown default to avoid focus change on callout close",
+        );
         mousedownEvent.preventDefault(); // prevent focus change to the callout, let it on the input
       }
     }
     callout.opened = false;
-    teardown({
-      event,
-      reason
-    });
+    teardown({ event, reason });
   };
   if (onClose) {
-    addTeardown(({
-      event,
-      reason
-    }) => {
+    addTeardown(({ event, reason }) => {
       let shouldTransferFocusFromCallout = false;
       const focusOut = findEvent(event, "focusout");
       if (focusOut) {
@@ -7062,7 +7043,9 @@ const openCallout = (message, {
           shouldTransferFocusFromCallout = true;
         }
       } else {
-        const focusInsideCallout = callout.element.contains(document.activeElement);
+        const focusInsideCallout = callout.element.contains(
+          document.activeElement,
+        );
         if (focusInsideCallout) {
           shouldTransferFocusFromCallout = true;
         } else {
@@ -7070,35 +7053,39 @@ const openCallout = (message, {
           // so we can consider focus was inside callout
           const mousedownEvent = findEvent(event, "mousedown");
           if (mousedownEvent) {
-            const mousedownInsideCallout = callout.element && callout.element.contains(event.target);
+            const mousedownInsideCallout =
+              callout.element && callout.element.contains(event.target);
             if (mousedownInsideCallout) {
               shouldTransferFocusFromCallout = true;
             }
           }
         }
       }
-      onClose({
-        event,
-        reason,
-        shouldTransferFocusFromCallout
-      });
+
+      onClose({ event, reason, shouldTransferFocusFromCallout });
     });
   }
-  const [updateStatus, addStatusEffect, cleanupStatusEffects] = createValueEffect(undefined);
+
+  const [updateStatus, addStatusEffect, cleanupStatusEffects] =
+    createValueEffect(undefined);
   addTeardown(cleanupStatusEffects);
 
   // Create and add callout to document
   const calloutElement = createCalloutElement();
-  const calloutMessageElement = calloutElement.querySelector(".navi_callout_message");
-  const calloutCloseButton = calloutElement.querySelector(".navi_callout_close_button");
-  calloutCloseButton.onmousedown = e => {
+  const calloutMessageElement = calloutElement.querySelector(
+    ".navi_callout_message",
+  );
+  const calloutCloseButton = calloutElement.querySelector(
+    ".navi_callout_close_button",
+  );
+  calloutCloseButton.onmousedown = (e) => {
     if (e.button !== 0) {
       return;
     }
     requestClose(e, "mousedown_close_button");
   };
   // "click" is received for enter/space
-  calloutCloseButton.onclick = e => {
+  calloutCloseButton.onclick = (e) => {
     if (e.button !== 0) {
       return;
     }
@@ -7138,9 +7125,12 @@ const openCallout = (message, {
     // Connect callout with target element for accessibility
     if (options.status && options.status !== callout.status) {
       callout.status = options.status;
-      debug(`callout update status: ${prevStatus ?? "(none)"} -> ${options.status}`);
+      debug(
+        `callout update status: ${prevStatus ?? "(none)"} -> ${options.status}`,
+      );
       updateStatus(options.status);
     }
+
     if (Object.hasOwn(options, "closeOnClickOutside")) {
       closeOnClickOutside = options.closeOnClickOutside;
       if (closeOnClickOutside) {
@@ -7150,11 +7140,12 @@ const openCallout = (message, {
     if (Object.hasOwn(options, "closeOnFocusLeave")) {
       closeOnFocusLeave = options.closeOnFocusLeave;
     }
+
     if (isValidElement(newMessage)) {
       debug(`callout update message (jsx)`);
       renderIntoCallout(newMessage, calloutMessageElement, {
         requestClose,
-        element: calloutElement
+        element: calloutElement,
       });
     } else if (newMessage instanceof Node) {
       // Handle DOM node (cloned from CSS selector)
@@ -7165,12 +7156,13 @@ const openCallout = (message, {
       debug(`callout update message (function)`);
       clearCalloutMessage(calloutMessageElement);
       newMessage({
-        renderIntoCallout: jsx => renderIntoCallout(jsx, calloutMessageElement, {
-          requestClose,
-          element: calloutElement
-        }),
+        renderIntoCallout: (jsx) =>
+          renderIntoCallout(jsx, calloutMessageElement, {
+            requestClose,
+            element: calloutElement,
+          }),
         requestClose,
-        element: calloutElement
+        element: calloutElement,
       });
     } else {
       if (Error.isError(newMessage)) {
@@ -7189,14 +7181,17 @@ const openCallout = (message, {
         iframe.style.width = "100%";
         iframe.style.backgroundColor = "white";
         iframe.srcdoc = newMessage;
+
         debug(`callout update message (html document iframe)`);
         clearCalloutMessage(calloutMessageElement);
         calloutMessageElement.appendChild(iframe);
       } else {
-        debug(`callout update message: ${typeof newMessage === "string" ? newMessage.slice(0, 80) : String(newMessage)}`);
+        debug(
+          `callout update message: ${typeof newMessage === "string" ? newMessage.slice(0, 80) : String(newMessage)}`,
+        );
         renderHtmlIntoCallout(String(newMessage), calloutMessageElement, {
           requestClose,
-          element: calloutElement
+          element: calloutElement,
         });
       }
     }
@@ -7213,7 +7208,9 @@ const openCallout = (message, {
   // that receives data-callout and CSS vars.
   let visualAnchorElement = anchorElement;
   if (anchorElement && anchorElement !== document.body) {
-    const calloutAnchorSelector = anchorElement.getAttribute("data-callout-anchor");
+    const calloutAnchorSelector = anchorElement.getAttribute(
+      "data-callout-anchor",
+    );
     if (calloutAnchorSelector) {
       const resolvedAnchor = anchorElement.querySelector(calloutAnchorSelector);
       if (resolvedAnchor) {
@@ -7242,22 +7239,26 @@ const openCallout = (message, {
     }
     return anchorElement.parentNode || document.body;
   })();
+
   {
     // document.body as anchor means "no anchor" (the callout is docked in the
     // viewport); everything would be inside it.
-    const isInsideAnchor = target => {
+    const isInsideAnchor = (target) => {
       if (!anchorElement || anchorElement === document.body) {
         return false;
       }
       return anchorElement === target || anchorElement.contains(target);
     };
-    const handleClickOutside = event => {
+    const handleClickOutside = (event) => {
       if (event.button !== 0) {
         // right click
         return;
       }
       const clickTarget = event.target;
-      if (clickTarget === calloutElement || calloutElement.contains(clickTarget)) {
+      if (
+        clickTarget === calloutElement ||
+        calloutElement.contains(clickTarget)
+      ) {
         return;
       }
       if (isInsideAnchor(clickTarget)) {
@@ -7272,7 +7273,7 @@ const openCallout = (message, {
       }
       requestClose(event, "click_outside");
     };
-    const handleSpaceOutside = event => {
+    const handleSpaceOutside = (event) => {
       if (event.key !== " ") {
         return;
       }
@@ -7288,6 +7289,7 @@ const openCallout = (message, {
       }
       requestClose(event, "space_outside");
     };
+
     const registerClickOutsideListener = () => {
       document.addEventListener("click", handleClickOutside, true);
       document.addEventListener("keydown", handleSpaceOutside, true);
@@ -7300,19 +7302,28 @@ const openCallout = (message, {
     // matching release before listening for click-outside, otherwise the same
     // gesture's trailing click would immediately close it. Covers pointerdown too
     // (e.g. a readonly control popping its callout from a pointerdown handler).
-    const openingDownEvent = findEvent(openingEvent, "mousedown") || findEvent(openingEvent, "pointerdown");
+    const openingDownEvent =
+      findEvent(openingEvent, "mousedown") ||
+      findEvent(openingEvent, "pointerdown");
     if (closeOnClickOutside && openingEvent && openingDownEvent) {
-      const upType = openingDownEvent.type === "pointerdown" ? "pointerup" : "mouseup";
-      debug(openingEvent, `deferring click-outside listener registration until ${upType} to avoid immediate close`);
+      const upType =
+        openingDownEvent.type === "pointerdown" ? "pointerup" : "mouseup";
+      debug(
+        openingEvent,
+        `deferring click-outside listener registration until ${upType} to avoid immediate close`,
+      );
       const onUp = () => {
         setTimeout(() => {
-          debug(openingEvent, `registering click-outside listener after ${upType}`);
+          debug(
+            openingEvent,
+            `registering click-outside listener after ${upType}`,
+          );
           registerClickOutsideListener();
         });
       };
       document.addEventListener(upType, onUp, {
         once: true,
-        capture: true
+        capture: true,
       });
       addTeardown(() => {
         document.removeEventListener(upType, onUp, true);
@@ -7330,10 +7341,8 @@ const openCallout = (message, {
       // "clicked the callout" from "focus left the document entirely".
       // tabIndex=-1 keeps it out of the natural tab order.
       calloutElement.tabIndex = -1;
-      const handleFocusOut = event => {
-        const {
-          relatedTarget
-        } = event;
+      const handleFocusOut = (event) => {
+        const { relatedTarget } = event;
         if (relatedTarget && anchorElement.contains(relatedTarget)) {
           return;
         }
@@ -7354,7 +7363,7 @@ const openCallout = (message, {
     }
     calloutCloseButton.tabIndex = -1;
     calloutCloseButton.setAttribute("navi-focus-delegate", "");
-    const onAnchorKeydown = e => {
+    const onAnchorKeydown = (e) => {
       if (e.key === "Escape") {
         requestClose(e, "escape_key");
         e.stopPropagation();
@@ -7369,7 +7378,7 @@ const openCallout = (message, {
     // e.g. when close button is focused
     // Usually callout is inside anchor so the anchor would see the escape being pressed
     // but callout can be appended outside anchor when anchor cannot receive children
-    const onCalloutKeydown = e => {
+    const onCalloutKeydown = (e) => {
       if (e.key === "Escape") {
         requestClose(e, "escape_key");
         e.stopPropagation();
@@ -7400,10 +7409,11 @@ const openCallout = (message, {
     // dismiss the callout. Prefer navi-focus-delegate targets (explicit intent),
     // fall back to first generic focusable, then the callout close button for
     // anchors with no focusable descendants (e.g. a read-only group).
-    const focusTarget = findFocusDelegateTarget(anchorElement) || findFocusable(anchorElement) || calloutCloseButton;
-    focusTarget.focus({
-      preventScroll: true
-    });
+    const focusTarget =
+      findFocusDelegateTarget(anchorElement) ||
+      findFocusable(anchorElement) ||
+      calloutCloseButton;
+    focusTarget.focus({ preventScroll: true });
   }
   close_on_escape_from_anywhere: {
     // Escape closes a callout by reaching its anchor (above), which works while
@@ -7419,7 +7429,7 @@ const openCallout = (message, {
     if (anchorElement && anchorElement.contains(document.activeElement)) {
       break close_on_escape_from_anywhere;
     }
-    const onDocumentKeydown = e => {
+    const onDocumentKeydown = (e) => {
       if (e.key !== "Escape") {
         return;
       }
@@ -7433,10 +7443,13 @@ const openCallout = (message, {
     });
   }
   {
-    const handleCustomCloseEvent = e => {
+    const handleCustomCloseEvent = (e) => {
       onRequestClose(e);
     };
-    calloutElement.addEventListener("navi_request_close", handleCustomCloseEvent);
+    calloutElement.addEventListener(
+      "navi_request_close",
+      handleCustomCloseEvent,
+    );
   }
   {
     // What a command said inside the callout is aimed at, once aria-expanded
@@ -7444,10 +7457,8 @@ const openCallout = (message, {
     // popup runs the commands aimed at it. Inlined rather than onNaviCommand
     // from commands.js, which already reaches this module through the callout
     // manager and must not be reached back.
-    calloutElement.addEventListener("navi_command", e => {
-      const {
-        implementation
-      } = e.detail;
+    calloutElement.addEventListener("navi_command", (e) => {
+      const { implementation } = e.detail;
       if (typeof implementation === "function") {
         implementation();
       }
@@ -7456,28 +7467,34 @@ const openCallout = (message, {
   Object.assign(callout, {
     element: calloutElement,
     update,
-    requestClose
+    requestClose,
   });
-  addStatusEffect(status => {
+  addStatusEffect((status) => {
     if (status) {
       calloutElement.setAttribute("data-status", status);
     } else {
       calloutElement.removeAttribute("data-status");
     }
+
     if (!status || status === "info" || status === "success") {
       calloutElement.setAttribute("role", "status");
     } else if (status) {
       calloutElement.setAttribute("role", "alert");
     }
   });
+
   if (debug) {
-    debug(openingEvent, `append callout into ${getElementSignature(calloutContainer)}`);
+    debug(
+      openingEvent,
+      `append callout into ${getElementSignature(calloutContainer)}`,
+    );
   }
   calloutContainer.appendChild(calloutElement);
   calloutElement.showPopover();
   addTeardown(() => {
     calloutElement.remove();
   });
+
   if (anchorElement) {
     // "instant", not "smooth": the positioning block further down measures
     // anchorElement's geometry synchronously, in the same tick — a "smooth"
@@ -7498,18 +7515,20 @@ const openCallout = (message, {
     // `overflow: hidden` card takes a scroll no user can give back.
     scrollIntoViewThroughScrollables(anchorElement, {
       behavior: "instant",
-      block: "nearest"
+      block: "nearest",
     });
     allowWheelThrough(calloutElement, visualAnchorElement);
     anchorElement.setAttribute("data-callout", calloutId);
-    addTeardown(({
-      event
-    }) => {
+    addTeardown(({ event }) => {
       anchorElement.removeAttribute("data-callout");
       {
-        closeEventByAnchor.set(anchorElement, findEvent(event, USER_GESTURE_EVENT_TYPES) || event);
+        closeEventByAnchor.set(
+          anchorElement,
+          findEvent(event, USER_GESTURE_EVENT_TYPES) || event,
+        );
       }
     });
+
     const visualElement = (() => {
       const visualSelector = anchorElement.getAttribute("data-visual-selector");
       if (visualSelector) {
@@ -7524,11 +7543,15 @@ const openCallout = (message, {
     addTeardown(() => {
       dispatchPublicCustomEvent(visualElement, "navi_callout_close");
     });
-    addStatusEffect(status => {
+
+    addStatusEffect((status) => {
       if (!status) {
         return () => {};
       }
-      const statusColor = resolveCSSColor(`var(--callout-${status}-color)`, calloutElement);
+      const statusColor = resolveCSSColor(
+        `var(--callout-${status}-color)`,
+        calloutElement,
+      );
       anchorElement.setAttribute("data-callout-status", status);
       anchorElement.style.setProperty("--callout-color", statusColor);
       return () => {
@@ -7536,7 +7559,7 @@ const openCallout = (message, {
         anchorElement.style.removeProperty("--callout-color");
       };
     });
-    addStatusEffect(status => {
+    addStatusEffect((status) => {
       if (!status || status === "info" || status === "success") {
         visualAnchorElement.setAttribute("aria-describedby", calloutId);
         return () => {
@@ -7555,26 +7578,24 @@ const openCallout = (message, {
       delete anchorElement.callout;
     });
   }
-  update(message, {
-    status,
-    testId,
-    icon,
-    closeButton
-  });
+
+  update(message, { status, testId, icon, closeButton });
 
   // positionCallout itself handles both "no anchorElement at all" and "a
   // real one pickPositionRelativeTo's own isAnchorTooBig rejects" (see its
   // own doc) — nothing left to dispatch on here.
   const positioner = positionCallout(calloutElement, visualAnchorElement, {
     debug,
-    originalAnchorElement
+    originalAnchorElement,
   });
   addTeardown(() => {
     positioner.stop();
   });
   // The content it just rendered changed its own size, so the check must not be
   // deduped away on the grounds that the anchor did not move.
-  callout.updatePosition = () => positioner.update(new CustomEvent(ELEMENT_SIZE_CHANGE));
+  callout.updatePosition = () =>
+    positioner.update(new CustomEvent(ELEMENT_SIZE_CHANGE));
+
   return callout;
 };
 
@@ -7595,7 +7616,7 @@ const ARROW_SPACING = 8;
 // all still owes one. A status raises it (the addStatusEffect swapping in
 // "alert" for warning/error), and it is also the name a test reaches the
 // callout by — navi's classes and ids are not a contract (docs/testid.md).
-const calloutTemplate = /* html */`
+const calloutTemplate = /* html */ `
   <div
     class="navi_callout"
     popover="manual"
@@ -7663,29 +7684,39 @@ const createCalloutElement = () => {
  * @param {HTMLElement} [anchorElement] - The anchor element to stick to, if any
  * @returns {Object} - Object with update and stop functions
  */
-const positionCallout = (calloutElement, anchorElement, {
-  debug,
-  originalAnchorElement = anchorElement
-} = {}) => {
+const positionCallout = (
+  calloutElement,
+  anchorElement,
+  { debug, originalAnchorElement = anchorElement } = {},
+) => {
   // Read an attribute from the original anchor first, then the visual
   // anchor (a wrapper element that doesn't carry the data-callout-*
   // attributes) — meaningless without a real anchorElement.
-  const getAnchorAttribute = name => {
+  const getAnchorAttribute = (name) => {
     if (!anchorElement) {
       return null;
     }
-    return originalAnchorElement.getAttribute(name) ?? anchorElement.getAttribute(name);
+    return (
+      originalAnchorElement.getAttribute(name) ??
+      anchorElement.getAttribute(name)
+    );
   };
   // Get references to callout parts
   const calloutBoxElement = calloutElement.querySelector(".navi_callout_box");
-  const calloutFrameElement = calloutElement.querySelector(".navi_callout_frame");
+  const calloutFrameElement = calloutElement.querySelector(
+    ".navi_callout_frame",
+  );
   const calloutBodyElement = calloutElement.querySelector(".navi_callout_body");
-  const calloutMessageElement = calloutElement.querySelector(".navi_callout_message");
+  const calloutMessageElement = calloutElement.querySelector(
+    ".navi_callout_message",
+  );
   let alignToAnchorBox;
   if (anchorElement) {
     if (anchorElement.hasAttribute("data-callout-point-to-border-box")) {
       alignToAnchorBox = "border-box";
-    } else if (anchorElement.hasAttribute("data-callout-point-to-content-box")) {
+    } else if (
+      anchorElement.hasAttribute("data-callout-point-to-content-box")
+    ) {
       alignToAnchorBox = "content-box";
     } else {
       // Smart default: form controls and buttons are tight boxes where border-box makes sense.
@@ -7693,7 +7724,12 @@ const positionCallout = (calloutElement, anchorElement, {
       // the arrow points at visible text rather than the outer padding/border.
       const controHost = findControlHost(anchorElement) || anchorElement;
       const tagName = controHost.tagName;
-      if (tagName === "INPUT" || tagName === "SELECT" || tagName === "BUTTON" || tagName === "FIELDSET") {
+      if (
+        tagName === "INPUT" ||
+        tagName === "SELECT" ||
+        tagName === "BUTTON" ||
+        tagName === "FIELDSET"
+      ) {
         alignToAnchorBox = "border-box";
       } else {
         alignToAnchorBox = "content-box";
@@ -7724,194 +7760,250 @@ const positionCallout = (calloutElement, anchorElement, {
   calloutBoxElement.style.borderWidth = `${BORDER_WIDTH}px`;
   calloutFrameElement.style.left = `-${BORDER_WIDTH}px`;
   calloutFrameElement.style.right = `-${BORDER_WIDTH}px`;
-  const rectEffect = visibleRectEffect(anchorElement || document.documentElement, ({
-    left: anchorLeft,
-    right: anchorRight,
-    visibilityRatio
-  }, {
-    event,
-    ancestorClosed
-  }) => {
-    if (anchorElement) {
-      if (ancestorClosed) {
-        if (calloutElement.matches(":popover-open")) {
-          if (debug) {
-            debug(event, "hiding callout because an ancestor popover/dialog/details is closed");
+
+  const rectEffect = visibleRectEffect(
+    anchorElement || document.documentElement,
+    (
+      { left: anchorLeft, right: anchorRight, visibilityRatio },
+      { event, ancestorClosed },
+    ) => {
+      if (anchorElement) {
+        if (ancestorClosed) {
+          if (calloutElement.matches(":popover-open")) {
+            if (debug) {
+              debug(
+                event,
+                "hiding callout because an ancestor popover/dialog/details is closed",
+              );
+            }
+            calloutElement.hidePopover();
           }
-          calloutElement.hidePopover();
+          return;
         }
-        return;
-      }
-      if (!calloutElement.matches(":popover-open")) {
-        if (debug) {
-          debug(event, "showing callout because anchor is visible again");
+        if (!calloutElement.matches(":popover-open")) {
+          if (debug) {
+            debug(event, "showing callout because anchor is visible again");
+          }
+          calloutElement.showPopover();
         }
-        calloutElement.showPopover();
       }
-    }
-    const calloutElementClone = cloneCalloutToMeasureNaturalSize(calloutElement);
-    const position = pickPositionRelativeTo(calloutElementClone, anchorElement, {
-      alignToContainerEdgeWhenAnchorNearEdge: 20,
-      minLeft: 1,
-      // x is always center for a callout — the arrow, not positionArea's
-      // own x, is what points at the anchor horizontally.
-      positionArea: anchorElement ? getAnchorAttribute("data-callout-position") || "bottom" : "center",
-      positionAreaFixed: getAnchorAttribute("data-callout-position-fixed"),
-      // Anchor rejected as too big → dock centered, no arrow (hasValidAnchor
-      // below reports which way it went).
-      positionAreaWhenAnchorIsInvalid: "center",
-      marginWithAnchor: ARROW_HEIGHT,
-      alignToAnchorBox,
-      marginWithContainer: anchorElement && (originalAnchorElement.hasAttribute("data-callout-viewport-spacing") || anchorElement.hasAttribute("data-callout-viewport-spacing")) ? Number(getAnchorAttribute("data-callout-viewport-spacing")) : 0,
-      event
-    });
-    const {
-      hasValidAnchor,
-      positionY,
-      left: calloutLeft,
-      width: calloutWidth,
-      height: calloutHeight
-    } = position;
-    // data-position-y-current is written to the clone by pickPositionRelativeTo,
-    // copy it back to the real element so stickiness works on next call
-    const previousPositionY = calloutElement.getAttribute("data-position-y-current");
-    const positionYCurrent = calloutElementClone.getAttribute("data-position-y-current");
-    if (positionYCurrent) {
-      calloutElement.setAttribute("data-position-y-current", positionYCurrent);
-    } else {
-      calloutElement.removeAttribute("data-position-y-current");
-    }
-    if (debug && anchorElement && positionY !== previousPositionY) {
-      const anchorRect = anchorElement.getBoundingClientRect();
-      debug(event, `callout position changed: ${previousPositionY ?? "(none)"} -> ${positionY} (spaceAbove: ${position.spaceAbove.toFixed(0)}px, spaceBelow: ${position.spaceBelow.toFixed(0)}px, anchorTop: ${anchorRect.top.toFixed(0)}px, anchorBottom: ${anchorRect.bottom.toFixed(0)}px)`);
-    }
-    calloutBoxElement.style.marginTop = "";
-    calloutBoxElement.style.marginBottom = "";
-    let maxHeight;
-    if (hasValidAnchor) {
-      // Calculate arrow position to point at anchorElement element
-      let arrowLeftPosOnCallout;
-      // Determine arrow target position: explicit attribute wins, otherwise
-      // fall back to the computed text-align of the anchor element so the
-      // arrow naturally follows where the text starts.
-      const arrowPositionAttribute = getAnchorAttribute("data-callout-arrow-x");
-      const arrowPosition = arrowPositionAttribute || (() => {
-        const textAlign = getComputedStyle(anchorElement).textAlign;
-        if (textAlign === "center") {
-          return "center";
-        }
-        if (textAlign === "right" || textAlign === "end") {
-          return "end";
-        }
-        return "start";
-      })();
-      let arrowAnchorLeft;
-      calloutElement.setAttribute("data-arrow-x", arrowPosition);
-      if (arrowPosition === "start") {
-        const anchorBorderSizes = getBorderSizes(anchorElement);
-        const anchorPaddingSizes = getPaddingSizes(anchorElement);
-        // Target the left edge of the anchorElement text content (after borders + padding)
-        arrowAnchorLeft = anchorLeft + anchorBorderSizes.left + anchorPaddingSizes.left;
-      } else if (arrowPosition === "center") {
-        arrowAnchorLeft = (anchorLeft + anchorRight) / 2;
-      } else {
-        // "end"
-        const anchorBorderSizes = getBorderSizes(anchorElement);
-        const anchorPaddingSizes = getPaddingSizes(anchorElement);
-        // Target the right edge of the anchorElement text content (before borders + padding)
-        arrowAnchorLeft = anchorRight - anchorBorderSizes.right - anchorPaddingSizes.right;
-      }
-
-      // arrowAnchorLeft is viewport-relative (from visibleRectEffect).
-      // calloutLeft is document-relative (pickPositionRelativeTo adds scrollLeft).
-      // Subtract scrollLeft to bring calloutLeft to viewport coordinates before diffing.
-      const calloutViewportLeft = calloutLeft - document.documentElement.scrollLeft;
-      if (calloutViewportLeft + calloutWidth < arrowAnchorLeft) {
-        // Arrow target is beyond the right edge of the callout — pin arrow to far right
-        arrowLeftPosOnCallout = calloutWidth - ARROW_WIDTH;
-      } else {
-        arrowLeftPosOnCallout = arrowAnchorLeft - calloutViewportLeft;
-      }
-
-      // Ensure arrow stays within callout bounds with some padding
-      const minArrowPos = CORNER_RADIUS + ARROW_WIDTH / 2 + ARROW_SPACING;
-      const maxArrowPos = calloutWidth - minArrowPos;
-      arrowLeftPosOnCallout = Math.max(minArrowPos, Math.min(arrowLeftPosOnCallout, maxArrowPos));
-
-      // Force content overflow when there is not enough space to display
-      // the entirety of the callout
-      const spaceAvailable = positionY === "top" || positionY === "inset-bottom" ? position.spaceAbove : position.spaceBelow;
-      const paddingSizes = getPaddingSizes(calloutBodyElement);
-      const paddingY = paddingSizes.top + paddingSizes.bottom;
-      // spaceAbove/spaceBelow already exclude ARROW_HEIGHT (via marginWithAnchor: ARROW_HEIGHT passed to pickPositionRelativeTo)
-      const spaceNeededAroundContent = BORDER_WIDTH * 2 + paddingY;
-      const spaceAvailableForContent = spaceAvailable - spaceNeededAroundContent;
-      const contentHeight = calloutHeight - BORDER_WIDTH * 2 - paddingY;
-      const spaceRemainingAfterContent = spaceAvailableForContent - contentHeight;
-      if (spaceRemainingAfterContent < 2) {
-        maxHeight = spaceAvailableForContent;
-        calloutMessageElement.style.maxHeight = `${maxHeight}px`;
-        calloutMessageElement.style.overflowY = "scroll";
-      } else {
-        calloutMessageElement.style.maxHeight = "";
-        calloutMessageElement.style.overflowY = "";
-      }
-      const optimalBodyWidth = measureOptimalBodyWidth(calloutElementClone, {
-        maxHeight
-      });
-      calloutElementClone.remove();
-      calloutBodyElement.style.width = optimalBodyWidth !== null ? `${optimalBodyWidth}px` : "";
+      const calloutElementClone =
+        cloneCalloutToMeasureNaturalSize(calloutElement);
+      const position = pickPositionRelativeTo(
+        calloutElementClone,
+        anchorElement,
+        {
+          alignToContainerEdgeWhenAnchorNearEdge: 20,
+          minLeft: 1,
+          // x is always center for a callout — the arrow, not positionArea's
+          // own x, is what points at the anchor horizontally.
+          positionArea: anchorElement
+            ? getAnchorAttribute("data-callout-position") || "bottom"
+            : "center",
+          positionAreaFixed: getAnchorAttribute("data-callout-position-fixed"),
+          // Anchor rejected as too big → dock centered, no arrow (hasValidAnchor
+          // below reports which way it went).
+          positionAreaWhenAnchorIsInvalid: "center",
+          marginWithAnchor: ARROW_HEIGHT,
+          alignToAnchorBox,
+          marginWithContainer:
+            anchorElement &&
+            (originalAnchorElement.hasAttribute(
+              "data-callout-viewport-spacing",
+            ) ||
+              anchorElement.hasAttribute("data-callout-viewport-spacing"))
+              ? Number(getAnchorAttribute("data-callout-viewport-spacing"))
+              : 0,
+          event,
+        },
+      );
       const {
-        width,
-        height
-      } = calloutElement.getBoundingClientRect();
-      if (positionY === "top" || positionY === "inset-bottom") {
-        // Arrow at bottom, extending below the element
-        calloutFrameElement.style.top = `-${BORDER_WIDTH}px`;
-        calloutFrameElement.style.bottom = `-${BORDER_WIDTH + ARROW_HEIGHT - 0.5}px`;
-        calloutFrameElement.innerHTML = generateSvgWithBottomArrow(width, height + ARROW_HEIGHT, arrowLeftPosOnCallout);
+        hasValidAnchor,
+        positionY,
+        left: calloutLeft,
+        width: calloutWidth,
+        height: calloutHeight,
+      } = position;
+      // data-position-y-current is written to the clone by pickPositionRelativeTo,
+      // copy it back to the real element so stickiness works on next call
+      const previousPositionY = calloutElement.getAttribute(
+        "data-position-y-current",
+      );
+      const positionYCurrent = calloutElementClone.getAttribute(
+        "data-position-y-current",
+      );
+      if (positionYCurrent) {
+        calloutElement.setAttribute(
+          "data-position-y-current",
+          positionYCurrent,
+        );
       } else {
-        // Arrow at top, extending above the element
-        calloutFrameElement.style.top = `-${BORDER_WIDTH + ARROW_HEIGHT - 0.5}px`;
-        calloutFrameElement.style.bottom = `-${BORDER_WIDTH}px`;
-        calloutFrameElement.innerHTML = generateSvgWithTopArrow(width, height + ARROW_HEIGHT, arrowLeftPosOnCallout);
+        calloutElement.removeAttribute("data-position-y-current");
       }
-      calloutElement.style.opacity = visibilityRatio > 0.2 ? 1 : 0;
-    } else {
-      // Either no anchorElement at all, or a real one isAnchorTooBig
-      // rejected (see pickPositionRelativeTo's own doc) — render as a
-      // plain centered box, no arrow, opacity never gated on the
-      // (irrelevant, once centered) anchor's own visibilityRatio.
-      calloutElement.removeAttribute("data-arrow-x");
-      const viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-      const maxAllowedHeight = viewportHeight - 40;
-      if (calloutHeight > maxAllowedHeight) {
+      if (debug && anchorElement && positionY !== previousPositionY) {
+        const anchorRect = anchorElement.getBoundingClientRect();
+        debug(
+          event,
+          `callout position changed: ${previousPositionY ?? "(none)"} -> ${positionY} (spaceAbove: ${position.spaceAbove.toFixed(0)}px, spaceBelow: ${position.spaceBelow.toFixed(0)}px, anchorTop: ${anchorRect.top.toFixed(0)}px, anchorBottom: ${anchorRect.bottom.toFixed(0)}px)`,
+        );
+      }
+
+      calloutBoxElement.style.marginTop = "";
+      calloutBoxElement.style.marginBottom = "";
+
+      let maxHeight;
+      if (hasValidAnchor) {
+        // Calculate arrow position to point at anchorElement element
+        let arrowLeftPosOnCallout;
+        // Determine arrow target position: explicit attribute wins, otherwise
+        // fall back to the computed text-align of the anchor element so the
+        // arrow naturally follows where the text starts.
+        const arrowPositionAttribute = getAnchorAttribute(
+          "data-callout-arrow-x",
+        );
+        const arrowPosition =
+          arrowPositionAttribute ||
+          (() => {
+            const textAlign = getComputedStyle(anchorElement).textAlign;
+            if (textAlign === "center") {
+              return "center";
+            }
+            if (textAlign === "right" || textAlign === "end") {
+              return "end";
+            }
+            return "start";
+          })();
+        let arrowAnchorLeft;
+        calloutElement.setAttribute("data-arrow-x", arrowPosition);
+        if (arrowPosition === "start") {
+          const anchorBorderSizes = getBorderSizes(anchorElement);
+          const anchorPaddingSizes = getPaddingSizes(anchorElement);
+          // Target the left edge of the anchorElement text content (after borders + padding)
+          arrowAnchorLeft =
+            anchorLeft + anchorBorderSizes.left + anchorPaddingSizes.left;
+        } else if (arrowPosition === "center") {
+          arrowAnchorLeft = (anchorLeft + anchorRight) / 2;
+        } else {
+          // "end"
+          const anchorBorderSizes = getBorderSizes(anchorElement);
+          const anchorPaddingSizes = getPaddingSizes(anchorElement);
+          // Target the right edge of the anchorElement text content (before borders + padding)
+          arrowAnchorLeft =
+            anchorRight - anchorBorderSizes.right - anchorPaddingSizes.right;
+        }
+
+        // arrowAnchorLeft is viewport-relative (from visibleRectEffect).
+        // calloutLeft is document-relative (pickPositionRelativeTo adds scrollLeft).
+        // Subtract scrollLeft to bring calloutLeft to viewport coordinates before diffing.
+        const calloutViewportLeft =
+          calloutLeft - document.documentElement.scrollLeft;
+        if (calloutViewportLeft + calloutWidth < arrowAnchorLeft) {
+          // Arrow target is beyond the right edge of the callout — pin arrow to far right
+          arrowLeftPosOnCallout = calloutWidth - ARROW_WIDTH;
+        } else {
+          arrowLeftPosOnCallout = arrowAnchorLeft - calloutViewportLeft;
+        }
+
+        // Ensure arrow stays within callout bounds with some padding
+        const minArrowPos = CORNER_RADIUS + ARROW_WIDTH / 2 + ARROW_SPACING;
+        const maxArrowPos = calloutWidth - minArrowPos;
+        arrowLeftPosOnCallout = Math.max(
+          minArrowPos,
+          Math.min(arrowLeftPosOnCallout, maxArrowPos),
+        );
+
+        // Force content overflow when there is not enough space to display
+        // the entirety of the callout
+        const spaceAvailable =
+          positionY === "top" || positionY === "inset-bottom"
+            ? position.spaceAbove
+            : position.spaceBelow;
         const paddingSizes = getPaddingSizes(calloutBodyElement);
         const paddingY = paddingSizes.top + paddingSizes.bottom;
+        // spaceAbove/spaceBelow already exclude ARROW_HEIGHT (via marginWithAnchor: ARROW_HEIGHT passed to pickPositionRelativeTo)
         const spaceNeededAroundContent = BORDER_WIDTH * 2 + paddingY;
-        maxHeight = maxAllowedHeight - spaceNeededAroundContent;
-        calloutMessageElement.style.maxHeight = `${maxHeight}px`;
-        calloutMessageElement.style.overflowY = "scroll";
+        const spaceAvailableForContent =
+          spaceAvailable - spaceNeededAroundContent;
+        const contentHeight = calloutHeight - BORDER_WIDTH * 2 - paddingY;
+        const spaceRemainingAfterContent =
+          spaceAvailableForContent - contentHeight;
+        if (spaceRemainingAfterContent < 2) {
+          maxHeight = spaceAvailableForContent;
+          calloutMessageElement.style.maxHeight = `${maxHeight}px`;
+          calloutMessageElement.style.overflowY = "scroll";
+        } else {
+          calloutMessageElement.style.maxHeight = "";
+          calloutMessageElement.style.overflowY = "";
+        }
+
+        const optimalBodyWidth = measureOptimalBodyWidth(calloutElementClone, {
+          maxHeight,
+        });
+        calloutElementClone.remove();
+
+        calloutBodyElement.style.width =
+          optimalBodyWidth !== null ? `${optimalBodyWidth}px` : "";
+
+        const { width, height } = calloutElement.getBoundingClientRect();
+        if (positionY === "top" || positionY === "inset-bottom") {
+          // Arrow at bottom, extending below the element
+          calloutFrameElement.style.top = `-${BORDER_WIDTH}px`;
+          calloutFrameElement.style.bottom = `-${BORDER_WIDTH + ARROW_HEIGHT - 0.5}px`;
+          calloutFrameElement.innerHTML = generateSvgWithBottomArrow(
+            width,
+            height + ARROW_HEIGHT,
+            arrowLeftPosOnCallout,
+          );
+        } else {
+          // Arrow at top, extending above the element
+          calloutFrameElement.style.top = `-${BORDER_WIDTH + ARROW_HEIGHT - 0.5}px`;
+          calloutFrameElement.style.bottom = `-${BORDER_WIDTH}px`;
+          calloutFrameElement.innerHTML = generateSvgWithTopArrow(
+            width,
+            height + ARROW_HEIGHT,
+            arrowLeftPosOnCallout,
+          );
+        }
+        calloutElement.style.opacity = visibilityRatio > 0.2 ? 1 : 0;
       } else {
-        calloutMessageElement.style.maxHeight = "";
-        calloutMessageElement.style.overflowY = "";
+        // Either no anchorElement at all, or a real one isAnchorTooBig
+        // rejected (see pickPositionRelativeTo's own doc) — render as a
+        // plain centered box, no arrow, opacity never gated on the
+        // (irrelevant, once centered) anchor's own visibilityRatio.
+        calloutElement.removeAttribute("data-arrow-x");
+        const viewportHeight = window.visualViewport
+          ? window.visualViewport.height
+          : window.innerHeight;
+        const maxAllowedHeight = viewportHeight - 40;
+        if (calloutHeight > maxAllowedHeight) {
+          const paddingSizes = getPaddingSizes(calloutBodyElement);
+          const paddingY = paddingSizes.top + paddingSizes.bottom;
+          const spaceNeededAroundContent = BORDER_WIDTH * 2 + paddingY;
+          maxHeight = maxAllowedHeight - spaceNeededAroundContent;
+          calloutMessageElement.style.maxHeight = `${maxHeight}px`;
+          calloutMessageElement.style.overflowY = "scroll";
+        } else {
+          calloutMessageElement.style.maxHeight = "";
+          calloutMessageElement.style.overflowY = "";
+        }
+
+        const optimalBodyWidth = measureOptimalBodyWidth(calloutElementClone, {
+          maxHeight,
+        });
+        calloutElementClone.remove();
+
+        calloutBodyElement.style.width =
+          optimalBodyWidth !== null ? `${optimalBodyWidth}px` : "";
+
+        const { width, height } = calloutElement.getBoundingClientRect();
+        calloutFrameElement.style.top = `-${BORDER_WIDTH}px`;
+        calloutFrameElement.style.bottom = `-${BORDER_WIDTH}px`;
+        calloutFrameElement.innerHTML = generateSvgWithoutArrow(width, height);
+        calloutElement.style.opacity = 1;
       }
-      const optimalBodyWidth = measureOptimalBodyWidth(calloutElementClone, {
-        maxHeight
-      });
-      calloutElementClone.remove();
-      calloutBodyElement.style.width = optimalBodyWidth !== null ? `${optimalBodyWidth}px` : "";
-      const {
-        width,
-        height
-      } = calloutElement.getBoundingClientRect();
-      calloutFrameElement.style.top = `-${BORDER_WIDTH}px`;
-      calloutFrameElement.style.bottom = `-${BORDER_WIDTH}px`;
-      calloutFrameElement.innerHTML = generateSvgWithoutArrow(width, height);
-      calloutElement.style.opacity = 1;
-    }
-    applyNewPosition(calloutElement, position);
-  });
+      applyNewPosition(calloutElement, position);
+    },
+  );
   // Re-measures/repositions the callout whenever its own message body
   // changes size (e.g. async content loading in, a filter narrowing the
   // list) — not just when the anchor itself moves/resizes (or, with no
@@ -7919,21 +8011,40 @@ const positionCallout = (calloutElement, anchorElement, {
   // feedback-loop guard (re-checking can itself change the message body's
   // size) is handled internally by observeSize.
   rectEffect.observeSize(calloutMessageElement);
+
   return {
     update: rectEffect.check,
     stop: () => {
       rectEffect.disconnect();
-    }
+    },
   };
 };
 
 // Void elements and replaced elements cannot have children
-const VOID_ELEMENT_TAG_NAMES = new Set(["AREA", "BASE", "BR", "COL", "EMBED", "HR", "IMG", "INPUT", "LINK", "META", "PARAM", "SOURCE", "TRACK", "WBR"]);
-const canContainCallout = element => {
+const VOID_ELEMENT_TAG_NAMES = new Set([
+  "AREA",
+  "BASE",
+  "BR",
+  "COL",
+  "EMBED",
+  "HR",
+  "IMG",
+  "INPUT",
+  "LINK",
+  "META",
+  "PARAM",
+  "SOURCE",
+  "TRACK",
+  "WBR",
+]);
+const canContainCallout = (element) => {
   if (VOID_ELEMENT_TAG_NAMES.has(element.tagName)) {
     return false;
   }
-  if (element.tagName === "BUTTON" || element.getAttribute("role") === "button") {
+  if (
+    element.tagName === "BUTTON" ||
+    element.getAttribute("role") === "button"
+  ) {
     // Never mount the callout inside a button, native or role="button":
     // - a <button> cannot contain the callout's own close button
     // - presses inside the callout would bubble into the button's own press
@@ -7943,8 +8054,14 @@ const canContainCallout = element => {
   }
   return true;
 };
-const escapeHtml = string => {
-  return string.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+
+const escapeHtml = (string) => {
+  return string
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 };
 
 /**
@@ -7952,7 +8069,7 @@ const escapeHtml = string => {
  * @param {string} content - The content to check
  * @returns {boolean} - True if it looks like a complete HTML document
  */
-const isHtmlDocument = content => {
+const isHtmlDocument = (content) => {
   if (typeof content !== "string") {
     return false;
   }
@@ -7979,11 +8096,12 @@ const isHtmlDocument = content => {
 // (adjusted for the body's box-sizing and the non-message siblings — icon, gap,
 // close button). After the explicit width is set the element is exactly as wide
 // as its longest line, so no blank area remains to the right of shorter lines.
-const measureOptimalBodyWidth = (calloutElementClone, {
-  maxHeight
-} = {}) => {
-  const calloutBodyElement = calloutElementClone.querySelector(".navi_callout_body");
-  const calloutMessageElement = calloutElementClone.querySelector(".navi_callout_message");
+const measureOptimalBodyWidth = (calloutElementClone, { maxHeight } = {}) => {
+  const calloutBodyElement =
+    calloutElementClone.querySelector(".navi_callout_body");
+  const calloutMessageElement = calloutElementClone.querySelector(
+    ".navi_callout_message",
+  );
   if (maxHeight !== undefined) {
     calloutMessageElement.style.maxHeight = `${maxHeight}px`;
     calloutMessageElement.style.overflowY = "scroll";
@@ -8005,15 +8123,22 @@ const measureOptimalBodyWidth = (calloutElementClone, {
   if (bodyStyle.boxSizing === "border-box") {
     return Math.ceil(bodyRect.width - messageRect.width + longestLineWidth);
   }
-  const bodyPaddingH = parseFloat(bodyStyle.paddingLeft) + parseFloat(bodyStyle.paddingRight);
-  return Math.ceil(bodyRect.width - bodyPaddingH - messageRect.width + longestLineWidth);
+  const bodyPaddingH =
+    parseFloat(bodyStyle.paddingLeft) + parseFloat(bodyStyle.paddingRight);
+  return Math.ceil(
+    bodyRect.width - bodyPaddingH - messageRect.width + longestLineWidth,
+  );
 };
-const cloneCalloutToMeasureNaturalSize = calloutElement => {
+
+const cloneCalloutToMeasureNaturalSize = (calloutElement) => {
   // Create invisible clone to measure natural size
   const calloutElementClone = calloutElement.cloneNode(true);
   calloutElementClone.style.visibility = "hidden";
-  const calloutBodyElementClone = calloutElementClone.querySelector(".navi_callout_body");
-  const calloutMessageElementClone = calloutElementClone.querySelector(".navi_callout_message");
+  const calloutBodyElementClone =
+    calloutElementClone.querySelector(".navi_callout_body");
+  const calloutMessageElementClone = calloutElementClone.querySelector(
+    ".navi_callout_message",
+  );
   // Reset any constrained styles on the clone so it measures natural size
   calloutBodyElementClone.style.width = "";
   calloutMessageElementClone.style.maxHeight = "";
@@ -8022,6 +8147,7 @@ const cloneCalloutToMeasureNaturalSize = calloutElement => {
   // Add clone to DOM to measure
   calloutElement.parentNode.appendChild(calloutElementClone);
   calloutElementClone.showPopover();
+
   return calloutElementClone;
 };
 
@@ -8034,10 +8160,14 @@ const cloneCalloutToMeasureNaturalSize = calloutElement => {
  */
 const generateSvgWithTopArrow = (width, height, arrowPosition) => {
   // Calculate valid arrow position range
-  const arrowLeft = ARROW_WIDTH / 2 + CORNER_RADIUS + BORDER_WIDTH + ARROW_SPACING;
+  const arrowLeft =
+    ARROW_WIDTH / 2 + CORNER_RADIUS + BORDER_WIDTH + ARROW_SPACING;
   const minArrowPos = arrowLeft;
   const maxArrowPos = width - arrowLeft;
-  const constrainedArrowPos = Math.max(minArrowPos, Math.min(arrowPosition, maxArrowPos));
+  const constrainedArrowPos = Math.max(
+    minArrowPos,
+    Math.min(arrowPosition, maxArrowPos),
+  );
 
   // Calculate content height
   const contentHeight = height - ARROW_HEIGHT;
@@ -8081,7 +8211,8 @@ const generateSvgWithTopArrow = (width, height, arrowPosition) => {
     V${ARROW_HEIGHT + innerRadius + BORDER_WIDTH} 
     Q${BORDER_WIDTH},${ARROW_HEIGHT + BORDER_WIDTH} ${innerRadius + BORDER_WIDTH},${ARROW_HEIGHT + BORDER_WIDTH}
   `;
-  return /* html */`
+
+  return /* html */ `
     <svg
       width="${adjustedWidth}"
       height="${adjustedHeight}"
@@ -8105,10 +8236,14 @@ const generateSvgWithTopArrow = (width, height, arrowPosition) => {
  */
 const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
   // Calculate valid arrow position range
-  const arrowLeft = ARROW_WIDTH / 2 + CORNER_RADIUS + BORDER_WIDTH + ARROW_SPACING;
+  const arrowLeft =
+    ARROW_WIDTH / 2 + CORNER_RADIUS + BORDER_WIDTH + ARROW_SPACING;
   const minArrowPos = arrowLeft;
   const maxArrowPos = width - arrowLeft;
-  const constrainedArrowPos = Math.max(minArrowPos, Math.min(arrowPosition, maxArrowPos));
+  const constrainedArrowPos = Math.max(
+    minArrowPos,
+    Math.min(arrowPosition, maxArrowPos),
+  );
 
   // Calculate content height
   const contentHeight = height - ARROW_HEIGHT;
@@ -8152,7 +8287,8 @@ const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
     V${innerRadius + BORDER_WIDTH} 
     Q${BORDER_WIDTH},${BORDER_WIDTH} ${innerRadius + BORDER_WIDTH},${BORDER_WIDTH}
   `;
-  return /* html */`
+
+  return /* html */ `
     <svg
       width="${adjustedWidth}"
       height="${adjustedHeight}"
@@ -8174,7 +8310,7 @@ const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
  * @returns {string} - SVG markup
  */
 const generateSvgWithoutArrow = (width, height) => {
-  return /* html */`
+  return /* html */ `
     <svg
       width="${width}"
       height="${height}"
@@ -8204,7 +8340,14 @@ const generateSvgWithoutArrow = (width, height) => {
       />
     </svg>`;
 };
-const USER_GESTURE_EVENT_TYPES = ["click", "mousedown", "pointerdown", "keydown", "keyup"];
+
+const USER_GESTURE_EVENT_TYPES = [
+  "click",
+  "mousedown",
+  "pointerdown",
+  "keydown",
+  "keyup",
+];
 const closeEventByAnchor = new WeakMap();
 // A callout closed and another opened on the same anchor during a single event
 // dispatch: the bubble looks like it stayed open while it was in fact replaced,
@@ -8215,11 +8358,14 @@ const warnOnReopenWithinSameEvent = (anchorElement, openingEvent) => {
     return;
   }
   closeEventByAnchor.delete(anchorElement);
-  const stillDispatching = closeEvent.eventPhase !== Event.NONE || closeEvent === openingEvent;
+  const stillDispatching =
+    closeEvent.eventPhase !== Event.NONE || closeEvent === openingEvent;
   if (!stillDispatching) {
     return;
   }
-  console.warn(`a callout was closed and re-opened on ${getElementSignature(anchorElement)} during the same "${closeEvent.type}" event`);
+  console.warn(
+    `a callout was closed and re-opened on ${getElementSignature(anchorElement)} during the same "${closeEvent.type}" event`,
+  );
 };
 
 /**
@@ -11856,73 +12002,7 @@ defineInteractionDetector({
   },
 });
 
-installImportMetaCssBuild(import.meta);/**
- * What a press can turn out to be: a swipe, or a hold.
- *
- * One detector for both, because they dispute the SAME press and something has to
- * arbitrate them in one place — read apart, a hold that drifts three pixels both
- * opens the menu and starts putting the row away. A finger lands; it leaves
- * sideways (a swipe), it stays still (a hold), it lifts at once (a click, which is
- * not this detector's business).
- *
- * Naming the interactions in `interactions` rather than letting one callback read
- * the pointer is what lets this know, BEFORE the first pixel, which of them the
- * element takes. Two things depend on knowing that early:
- *
- * - **The arbitration between nested boxes.** A row swiped sideways lives inside a
- *   container that travels sideways too, and the innermost box must take the axis
- *   it walks — read from the DOM at the press, and only from there (see axesLeftBy
- *   in @jsenv/dom). The axis comes from the name (`swipe_left` and `swipe_right`
- *   say `x`), so the attribute is written at render time. Written during the
- *   gesture it would arrive too late: a browser decides what a touch may do when
- *   the touch BEGINS. Same for `touch-action` and iOS's callout below, which is
- *   why they are a stylesheet and not a line of JS in the pointerdown.
- *
- * - **The click a gesture leaves behind.** A hold ends with a `pointerup`, so the
- *   browser follows it with a `click` on whatever the finger was over — a link,
- *   and the page navigates as well as opening the menu.
- *
- * A swipe makes the element follow the finger — there is nothing to decide about
- * that — and says where it is up to, for the caller to draw the rest with:
- *
- * - `--swipe-pulled`: how far it has come, signed, in px.
- * - `--swipe-progress`: the same as a fraction of the element, signed.
- *
- * Both inherit, so anything inside the element can read them.
- * - `[data-swiping="left|right|up|down"]`: which way, while a finger holds it.
- * - `[data-swipe-past-threshold]`: letting go now would go through with it.
- *
- * WHAT is revealed behind is the caller's: navi does not know what putting a row
- * away looks like. A trail is usually a child of the swiped element sized off
- * `--swipe-pulled`, which is what makes those values reachable from CSS at all — a
- * sibling could not read them.
- *
- * A swipe is its own gesture, not the drag-to-travel of a slide container: it
- * borrows the same reader (`startDragToTravel`, whose axis lock, resistance, flick
- * and click-swallowing are exactly what a swipe needs) with its own settings, and
- * it is those settings that differ — a third of a row rather than a third of a
- * screen, tuned per element with `data-swipe-threshold`.
- *
- * A hold does NOT take the context menu with it. Declaring one says what a held
- * FINGER does — a finger held down being the system's own context-menu gesture,
- * which is why that one is refused while the wait runs (see waitForPressHeld). A
- * right click is not that press: it comes from the other button and it is the
- * user asking for the browser's menu, so it keeps opening it. An element that
- * wants the right click to do what the hold does says so, with `contextmenu`
- * beside it.
- *
- * It DOES take the selection, and so does a swipe: nothing under either is text
- * to select, because the browser answers that same press by selecting the word
- * under the thumb and leaves it selected once its menu is gone. What never
- * answered the press keeps its text — a field, a popover, a dialog (see the
- * stylesheet below).
- *
- * A hold CAN open a popup while the finger is still down — a menu appearing under
- * a waiting finger, which is the native gesture. navi's Popover is `popover="manual"`
- * and owns its own dismissal, so the `pointerup` that ends the press is not read as
- * an interaction outside it (the browser's light dismiss, which would close it on
- * that very event, only applies to `popover="auto"`).
- */
+installImportMetaCssBuild(import.meta);
 
 // The axis each swipe names, which is the whole reason they are named rather than
 // counted: an element that takes a horizontal swipe has to say so in the DOM
@@ -11931,20 +12011,14 @@ const AXIS_BY_SWIPE_TYPE = {
   swipe_left: "x",
   swipe_right: "x",
   swipe_up: "y",
-  swipe_down: "y"
+  swipe_down: "y",
 };
 // Which way the content goes. A drag towards positive x moves the row right, which
 // is a swipe right — and, for the travel underneath, the direction that brings in
 // what comes BEFORE (`travelBack`).
 const SWIPE_TYPE_BY_AXIS = {
-  x: {
-    positive: "swipe_right",
-    negative: "swipe_left"
-  },
-  y: {
-    positive: "swipe_down",
-    negative: "swipe_up"
-  }
+  x: { positive: "swipe_right", negative: "swipe_left" },
+  y: { positive: "swipe_down", negative: "swipe_up" },
 };
 
 // How much of the element has to be pulled for letting go to go through with it. A
@@ -11973,7 +12047,8 @@ const LONGPRESS_SLOP_ATTRIBUTE = "data-longpress-slop";
 // DOM at render time, for the CSS below and for the boxes above to read.
 const SWIPE_AXES_ATTRIBUTE = "data-swipe";
 const LONGPRESS_ATTRIBUTE = "data-longpress";
-import.meta.css = [/* css */`@property --swipe-progress {
+
+import.meta.css = /* css */ [`@property --swipe-progress {
   syntax: "<number>";
   inherits: true;
   initial-value: 0;
@@ -12021,16 +12096,14 @@ import.meta.css = [/* css */`@property --swipe-progress {
   transition: translate ${SETTLE_DURATION_MS}ms ease-out;
 }
 `, "@jsenv/navi/src/control/interaction/interaction_press.js"];
+
 defineInteractionDetector({
   name: "press",
-  claims: type => type in AXIS_BY_SWIPE_TYPE || type === "longpress",
+  claims: (type) => type in AXIS_BY_SWIPE_TYPE || type === "longpress",
   // A swipe and a hold are both "what this press turns out to be": until it
   // turns out, the press is theirs.
   disputesPress: true,
-  setup: (element, trigger, {
-    types,
-    readConfig
-  }) => {
+  setup: (element, trigger, { types, readConfig }) => {
     let axes = "";
     for (const type of types) {
       const axis = AXIS_BY_SWIPE_TYPE[type];
@@ -12039,6 +12112,7 @@ defineInteractionDetector({
       }
     }
     const hasLongPress = types.includes("longpress");
+
     const undo = [];
     const mark = (attribute, value) => {
       element.setAttribute(attribute, value);
@@ -12068,7 +12142,7 @@ defineInteractionDetector({
       // swipe cannot also be dragged out of the page, because there is one
       // gesture and it cannot mean both.
       mark("draggable", "false");
-      const onDragStart = dragStartEvent => {
+      const onDragStart = (dragStartEvent) => {
         dragStartEvent.preventDefault();
       };
       element.addEventListener("dragstart", onDragStart);
@@ -12081,7 +12155,7 @@ defineInteractionDetector({
       // scrolling the list around it along the axis touch-action leaves free —
       // same rule, same moment as the attributes above (see keepTouchRefusable).
       element.addEventListener("touchmove", keepTouchRefusable, {
-        passive: false
+        passive: false,
       });
       undo.push(() => {
         element.removeEventListener("touchmove", keepTouchRefusable);
@@ -12090,19 +12164,24 @@ defineInteractionDetector({
     if (hasLongPress) {
       mark(LONGPRESS_ATTRIBUTE, "");
     }
-    const onPointerDown = pointerDownEvent => {
+
+    const onPointerDown = (pointerDownEvent) => {
       if (pointerDownEvent.button !== 0) {
         return;
       }
       let swipe = null;
       let press = null;
+
       if (axes) {
         swipe = startSwipe(pointerDownEvent, {
           element,
           axes,
           types,
           trigger,
-          threshold: readConfig(SWIPE_THRESHOLD_ATTRIBUTE, SWIPE_THRESHOLD_DEFAULT),
+          threshold: readConfig(
+            SWIPE_THRESHOLD_ATTRIBUTE,
+            SWIPE_THRESHOLD_DEFAULT,
+          ),
           // The axis is the definitive word on what this press is: a finger that
           // has picked one is swiping, not holding. The slop below cancels most
           // holds before this (it is the smaller distance), but a press that
@@ -12111,16 +12190,14 @@ defineInteractionDetector({
           onSwipeStart: () => {
             press?.cancel();
             press = null;
-          }
+          },
         });
       }
       if (hasLongPress) {
         press = waitForPressHeld(pointerDownEvent, {
           delay: readConfig(LONGPRESS_DELAY_ATTRIBUTE, LONGPRESS_DELAY_DEFAULT),
           slop: readConfig(LONGPRESS_SLOP_ATTRIBUTE, LONGPRESS_SLOP_DEFAULT),
-          onPressHeld: (pressEvent, {
-            endPress
-          }) => {
+          onPressHeld: (pressEvent, { endPress }) => {
             // The hold won the arbitration: the swipe never got the distance it
             // needed, and must not get it from whatever the finger does next.
             swipe?.stop();
@@ -12135,9 +12212,9 @@ defineInteractionDetector({
             window.addEventListener("pointerup", onPointerEnd, true);
             window.addEventListener("pointercancel", onPointerEnd, true);
             trigger("longpress", pressEvent, {
-              pointerType: pressEvent.pointerType
+              pointerType: pressEvent.pointerType,
             });
-          }
+          },
         });
       }
     };
@@ -12145,31 +12222,28 @@ defineInteractionDetector({
     undo.push(() => {
       element.removeEventListener("pointerdown", onPointerDown);
     });
+
     return () => {
       for (const undoOne of undo) {
         undoOne();
       }
     };
-  }
+  },
 });
-const startSwipe = (pointerDownEvent, {
-  element,
-  axes,
-  types,
-  trigger,
-  threshold,
-  onSwipeStart
-}) => {
+
+const startSwipe = (
+  pointerDownEvent,
+  { element, axes, types, trigger, threshold, onSwipeStart },
+) => {
   let settleTimeout = null;
-  const paint = ({
-    pulled,
-    progress,
-    type
-  }) => {
+  const paint = ({ pulled, progress, type }) => {
     element.style.setProperty("--swipe-pulled", `${pulled}px`);
     element.style.setProperty("--swipe-progress", progress);
     element.setAttribute("data-swiping", type.slice("swipe_".length));
-    element.toggleAttribute("data-swipe-past-threshold", Math.abs(progress) >= threshold);
+    element.toggleAttribute(
+      "data-swipe-past-threshold",
+      Math.abs(progress) >= threshold,
+    );
   };
   const forget = () => {
     clearTimeout(settleTimeout);
@@ -12183,44 +12257,27 @@ const startSwipe = (pointerDownEvent, {
   // timeout rather than on transitionend: a swipe let go of at the very edge has
   // nothing left to move (the pull is clamped to the element's size), and a
   // movement that does not happen reports no end.
-  const settleTo = ({
-    pulled,
-    progress,
-    type
-  }, {
-    thenForget = true
-  } = {}) => {
+  const settleTo = ({ pulled, progress, type }, { thenForget = true } = {}) => {
     clearTimeout(settleTimeout);
     element.setAttribute("data-swipe-settling", "");
-    paint({
-      pulled,
-      progress,
-      type
-    });
+    paint({ pulled, progress, type });
     if (thenForget) {
       settleTimeout = setTimeout(forget, SETTLE_DURATION_MS);
     }
   };
+
   return startDragToTravel(pointerDownEvent, {
     element,
     axes,
     commitRatio: threshold,
-    onStart: ({
-      axis
-    }) => {
-      const {
-        positive,
-        negative
-      } = SWIPE_TYPE_BY_AXIS[axis];
+    onStart: ({ axis }) => {
+      const { positive, negative } = SWIPE_TYPE_BY_AXIS[axis];
       const hasPositive = types.includes(positive);
       const hasNegative = types.includes(negative);
       if (!hasPositive && !hasNegative) {
         return false;
       }
-      const {
-        width,
-        height
-      } = element.getBoundingClientRect();
+      const { width, height } = element.getBoundingClientRect();
       const size = axis === "x" ? width : height;
       if (!size) {
         return false;
@@ -12230,56 +12287,30 @@ const startSwipe = (pointerDownEvent, {
       element.removeAttribute("data-swipe-settling");
       // A side nothing is declared for is not refused, it resists: the gesture is
       // answered (something moves) while saying there is nothing that way.
-      return {
-        size,
-        travelBack: hasPositive,
-        travelOn: hasNegative
-      };
+      return { size, travelBack: hasPositive, travelOn: hasNegative };
     },
-    onPull: ({
-      axis,
-      pulled,
-      progress
-    }) => {
-      paint({
-        pulled,
-        progress,
-        type: swipeTypeOf(axis, pulled)
-      });
+    onPull: ({ axis, pulled, progress }) => {
+      paint({ pulled, progress, type: swipeTypeOf(axis, pulled) });
     },
-    onEnd: ({
-      axis,
-      pulled,
-      size,
-      sign,
-      travels,
-      event
-    }) => {
+    onEnd: ({ axis, pulled, size, sign, travels, event }) => {
       const type = swipeTypeOf(axis, pulled);
-      const restingPlace = {
-        pulled: 0,
-        progress: 0,
-        type
-      };
+      const restingPlace = { pulled: 0, progress: 0, type };
       if (!travels) {
         settleTo(restingPlace);
         return;
       }
       // Out, and out is where it stays for as long as the answer takes: a row that
       // comes back and leaves again says the gesture was not understood.
-      settleTo({
-        pulled: sign * size,
-        progress: sign,
-        type
-      }, {
-        thenForget: false
-      });
+      settleTo(
+        { pulled: sign * size, progress: sign, type },
+        { thenForget: false },
+      );
       const pending = trigger(type, event, {
         axis,
         sign,
         pulled,
         size,
-        progress: pulled / size
+        progress: pulled / size,
       });
       if (!pending) {
         settleTo(restingPlace);
@@ -12296,14 +12327,12 @@ const startSwipe = (pointerDownEvent, {
     },
     // Nothing to put back: onGiveUp only ever comes from a press that never became
     // a swipe, so nothing was painted by it.
-    onGiveUp: () => {}
+    onGiveUp: () => {},
   });
 };
+
 const swipeTypeOf = (axis, pulled) => {
-  const {
-    positive,
-    negative
-  } = SWIPE_TYPE_BY_AXIS[axis];
+  const { positive, negative } = SWIPE_TYPE_BY_AXIS[axis];
   return pulled > 0 ? positive : negative;
 };
 
@@ -21679,60 +21708,9 @@ const useComposeElementRef = (syncElement, externalRef) => {
   return refCallback;
 };
 
-installImportMetaCssBuild(import.meta);/**
- * Box - A Swiss Army Knife for Layout
- *
- * A regular div by default, enhanced with styling props for spacing, sizing,
- * and layout. The main value is a friendlier API over raw CSS Flexbox.
- *
- * ## Display & Layout
- *
- * - `flex` — horizontal flex container (items side by side)
- * - `flex="y"` — vertical flex container (items stacked). The prop name makes
- *   the axis explicit, avoiding the classic CSS trap where `flex-direction: column`
- *   actually stacks items vertically despite "column" feeling horizontal.
- * - `grid` — grid container
- * - `inline` — switches to inline display (works with flex and grid too)
- *
- * ## Alignment
- *
- * Instead of CSS's justify-content/align-items which swap meaning based on flex-direction:
- * - `alignX` — horizontal alignment, always
- * - `alignY` — vertical alignment, always
- *
- * ## Spacing & Sizing
- *
- * Props for margin, padding, gap, width, height, expand, shrink, and more.
- *
- * ## Pseudo-class Styles
- *
- * The `style` prop supports pseudo-class keys alongside regular CSS properties.
- * This lets you express hover, focus, and custom interaction states in one object,
- * without writing CSS or adding class names:
- *
- * ```jsx
- * <Box
- *   style={{
- *     backgroundColor: "blue",
- *     ":-navi:pressed": {
- *       backgroundColor: "darkblue",
- *     },
- *     ":hover": {
- *       backgroundColor: "lightblue",
- *     },
- *   }}
- * />
- * ```
- *
- * Styles are applied directly to the DOM (not via Preact's style prop) for two reasons:
- * 1. **Pseudo-class support**: reacting to `:hover`, `:focus`, or custom states like
- *    `:-navi:pressed` without re-rendering the component on every pseudo state change.
- * 2. **Correct initial render**: pseudo-class state must be read from the DOM node at
- *    mount time. Preact's style prop runs before the DOM exists, so the right initial
- *    style can only be determined once the node is available.
- */
+installImportMetaCssBuild(import.meta);
 const BoxForwardedPropsContext = createContext({});
-import.meta.css = [/* css */`[data-scrollable] > .navi_loading_outline_wrapper, [data-scrollable] > * > .navi_loading_outline_wrapper {
+import.meta.css = /* css */[`[data-scrollable] > .navi_loading_outline_wrapper, [data-scrollable] > * > .navi_loading_outline_wrapper {
   --loading-outline-min-inset: 0px;
 }
 
@@ -22849,68 +22827,9 @@ const monitorItemsOverflow = (container) => {
   return destroy;
 };
 
-installImportMetaCssBuild(import.meta);/**
- * UI Transition - Core Implementation
- * Provides smooth resize transitions with cross-fade effects between content states
- *
- * Content Types and Terminology:
- *
- * - ui: What the user currently sees rendered in the UI
- * - dom_nodes: The actual DOM elements that make up the visual representation
- * - content_id: Unique identifier for a content and its content_phase(s)
- * - content_phase: Intermediate states (loading spinners, error messages, empty states)
- * - content: The primary/final content we want to display (e.g., car details, user profile)
- *
- * Required HTML structure:
- *
- * <div class="ui_transition">
- *   <div class="ui_transition_active_group">
- *     <div class="ui_transition_target_slot"></div>
- *     <div class="ui_transition_outgoing_slot"></div>
- *   </div>
- *   <div class="ui_transition_previous_group">
- *     <div class="ui_transition_previous_target_slot"></div>
- *     <div class="ui_transition_previous_outgoing_slot"></div>
- *   </div>
- * </div>
- *
- * Architecture Overview:
- *
- * .ui_transition
- *   The main container that handles dimensional transitions. Its width and height animate
- *   smoothly from current to target dimensions. Has overflow:hidden to clip ui during transitions.
- *
- * .active_group
- *   Contains the ui that should be active after the transition completes. Groups both the target
- *   ui (.target_slot) and transitional ui (.outgoing_slot) as a single unit that can
- *   be manipulated together (e.g., applying transforms or slides).
- *
- * .target_slot
- *   Always contains the target ui - what should be displayed at the end of the transition.
- *   Whether transitioning to content or content_phase, this slot receives the new dom_nodes.
- *   Receives fade-in transitions (opacity 0 → 1) during all transition types.
- *
- * .outgoing_slot
- *   Holds content_phase that's being replaced during content_phase transitions. When transitioning
- *   from one content_phase to another, or from content_phase to content, the old content_phase moves
- *   here for fade-out. Receives fade-out transitions (opacity 1 → 0).
- *
- * .previous_group
- *   Used for content-to-content transitions. When switching between content (not phases),
- *   the entire .active_group dom_nodes are cloned here to fade out while the new content fades in.
- *   Can slide out when sliding transitions are enabled, otherwise fades out.
- *
- * Transition Scenarios:
- * - content → content: Car A details → Car B details (clone to previous_group)
- * - content_phase → content_phase: Loading state → Error state (move to outgoing_slot, same content_id)
- * - content → content_phase: Car A details → Loading Car B (use outgoing_slot for cross-fade)
- * - content_phase → content: Loading Car B → Car B details (use outgoing_slot for cross-fade)
- *
- * Size Transition Handling:
- * During dimensional transitions, both .target_slot and .outgoing_slot have their dimensions
- * explicitly set to prevent dom_nodes reflow and maintain visual consistency.
- */
-import.meta.css = [/* css */`* {
+installImportMetaCssBuild(import.meta);
+
+import.meta.css = /* css */ [`* {
   box-sizing: border-box;
 }
 
@@ -23002,50 +22921,73 @@ import.meta.css = [/* css */`* {
   display: block;
 }
 `, "@jsenv/navi/src/transition/ui_transition.js"];
+
 const CONTENT_ID_ATTRIBUTE = "data-content-id";
 const CONTENT_PHASE_ATTRIBUTE = "data-content-phase";
 const UNSET = {
   domNodes: [],
   domNodesClone: [],
   isEmpty: true,
+
   type: "unset",
   contentId: "unset",
   contentPhase: undefined,
   isContentPhase: false,
   isContent: false,
-  toString: () => "unset"
+  toString: () => "unset",
 };
+
 const isSameConfiguration = (configA, configB) => {
   return configA.toString() === configB.toString();
 };
-const createUITransitionController = (root, {
-  duration = 300,
-  alignX = "center",
-  alignY = "center",
-  onStateChange = () => {},
-  pauseBreakpoints = []
-} = {}) => {
+
+const createUITransitionController = (
+  root,
+  {
+    duration = 300,
+    alignX = "center",
+    alignY = "center",
+    onStateChange = () => {},
+    pauseBreakpoints = [],
+  } = {},
+) => {
   const debugConfig = {
     detection: root.hasAttribute("data-debug-detection"),
-    size: root.hasAttribute("data-debug-size")
+    size: root.hasAttribute("data-debug-size"),
   };
   const hasDebugLogs = debugConfig.size;
-  const debugDetection = message => {
+  const debugDetection = (message) => {
     if (!debugConfig.detection) return;
     console.debug(`[detection]`, message);
   };
-  const debugSize = message => {
+  const debugSize = (message) => {
     if (!debugConfig.size) return;
     console.debug(`[size]`, message);
   };
+
   const activeGroup = root.querySelector(".ui_transition_active_group");
   const targetSlot = root.querySelector(".ui_transition_target_slot");
   const outgoingSlot = root.querySelector(".ui_transition_outgoing_slot");
   const previousGroup = root.querySelector(".ui_transition_previous_group");
-  const previousTargetSlot = previousGroup?.querySelector(".ui_transition_previous_target_slot");
-  const previousOutgoingSlot = previousGroup?.querySelector(".ui_transition_previous_outgoing_slot");
-  if (!root || !activeGroup || !targetSlot || !outgoingSlot || !previousGroup || !previousTargetSlot || !previousOutgoingSlot) {
-    throw new Error("createUITransitionController requires element with .active_group, .target_slot, .outgoing_slot, .previous_group, .previous_target_slot, and .previous_outgoing_slot elements");
+  const previousTargetSlot = previousGroup?.querySelector(
+    ".ui_transition_previous_target_slot",
+  );
+  const previousOutgoingSlot = previousGroup?.querySelector(
+    ".ui_transition_previous_outgoing_slot",
+  );
+
+  if (
+    !root ||
+    !activeGroup ||
+    !targetSlot ||
+    !outgoingSlot ||
+    !previousGroup ||
+    !previousTargetSlot ||
+    !previousOutgoingSlot
+  ) {
+    throw new Error(
+      "createUITransitionController requires element with .active_group, .target_slot, .outgoing_slot, .previous_group, .previous_target_slot, and .previous_outgoing_slot elements",
+    );
   }
 
   // we maintain a background copy behind target slot to avoid showing
@@ -23053,17 +22995,17 @@ const createUITransitionController = (root, {
   const targetSlotBackground = document.createElement("div");
   targetSlotBackground.className = "ui_transition_target_slot_background";
   activeGroup.insertBefore(targetSlotBackground, targetSlot);
+
   root.style.setProperty("--x-transition-duration", `${duration}ms`);
   outgoingSlot.setAttribute("inert", "");
   previousGroup.setAttribute("inert", "");
-  const detectConfiguration = (slot, {
-    contentId,
-    contentPhase
-  } = {}) => {
+
+  const detectConfiguration = (slot, { contentId, contentPhase } = {}) => {
     const domNodes = Array.from(slot.childNodes);
     if (!domNodes) {
       return UNSET;
     }
+
     const isEmpty = domNodes.length === 0;
     let textNodeCount = 0;
     let elementNodeCount = 0;
@@ -23084,6 +23026,7 @@ const createUITransitionController = (root, {
             firstElementNode = domNode;
           }
           elementNodeCount++;
+
           if (domNode.hasAttribute("data-content-phase")) {
             const contentPhaseAttr = domNode.getAttribute("data-content-phase");
             contentPhase = contentPhaseAttr || "attr";
@@ -23095,8 +23038,11 @@ const createUITransitionController = (root, {
         const domNodeClone = domNode.cloneNode(true);
         domNodesClone.push(domNodeClone);
       }
+
       if (contentIdSlotAttr && contentIdChildAttr) {
-        console.warn(`Slot and slot child both have a [${CONTENT_ID_ATTRIBUTE}]. Slot is ${contentIdSlotAttr} and child is ${contentIdChildAttr}, using the child.`);
+        console.warn(
+          `Slot and slot child both have a [${CONTENT_ID_ATTRIBUTE}]. Slot is ${contentIdSlotAttr} and child is ${contentIdChildAttr}, using the child.`,
+        );
       }
       if (contentId === undefined) {
         contentId = contentIdChildAttr || contentIdSlotAttr || undefined;
@@ -23104,6 +23050,7 @@ const createUITransitionController = (root, {
     }
     const isOnlyTextNodes = elementNodeCount === 0 && textNodeCount > 1;
     const singleElementNode = elementNodeCount === 1 ? firstElementNode : null;
+
     contentId = contentId || getElementSignature(domNodes[0]);
     if (!contentPhase && isEmpty) {
       // Imagine code rendering null while switching to a new content
@@ -23114,16 +23061,22 @@ const createUITransitionController = (root, {
       // intermediate states.
       contentPhase = "empty";
     }
+
     let width;
     let height;
     let borderRadius;
     let border;
     let background;
+
     if (isEmpty) {
       debugSize(`measureSlot(".${slot.className}") -> it is empty`);
     } else if (singleElementNode) {
-      const visualSelector = singleElementNode.getAttribute("data-visual-selector");
-      const visualElement = visualSelector ? singleElementNode.querySelector(visualSelector) || singleElementNode : singleElementNode;
+      const visualSelector = singleElementNode.getAttribute(
+        "data-visual-selector",
+      );
+      const visualElement = visualSelector
+        ? singleElementNode.querySelector(visualSelector) || singleElementNode
+        : singleElementNode;
       const rect = visualElement.getBoundingClientRect();
       width = rect.width;
       height = rect.height;
@@ -23138,19 +23091,23 @@ const createUITransitionController = (root, {
       height = rect.height;
       debugSize(`measureSlot(".${slot.className}") -> [${width}x${height}]`);
     }
+
     const commonProperties = {
       domNodes,
       domNodesClone,
       isEmpty,
       isOnlyTextNodes,
       singleElementNode,
+
       width,
       height,
       borderRadius,
       border,
       background,
-      contentId
+
+      contentId,
     };
+
     if (contentPhase) {
       return {
         ...commonProperties,
@@ -23158,7 +23115,7 @@ const createUITransitionController = (root, {
         contentPhase,
         isContentPhase: true,
         isContent: false,
-        toString: () => `content(${contentId}).phase(${contentPhase})`
+        toString: () => `content(${contentId}).phase(${contentPhase})`,
       };
     }
     return {
@@ -23167,16 +23124,18 @@ const createUITransitionController = (root, {
       contentPhase: undefined,
       isContentPhase: false,
       isContent: true,
-      toString: () => `content(${contentId})`
+      toString: () => `content(${contentId})`,
     };
   };
+
   const targetSlotInitialConfiguration = detectConfiguration(targetSlot);
   const outgoingSlotInitialConfiguration = detectConfiguration(outgoingSlot, {
-    contentPhase: "true"
+    contentPhase: "true",
   });
   let targetSlotConfiguration = targetSlotInitialConfiguration;
   let outgoingSlotConfiguration = outgoingSlotInitialConfiguration;
   let previousTargetSlotConfiguration = UNSET;
+
   const updateSlotAttributes = () => {
     if (targetSlotConfiguration.isEmpty && outgoingSlotConfiguration.isEmpty) {
       root.setAttribute("data-only-previous-group", "");
@@ -23189,6 +23148,7 @@ const createUITransitionController = (root, {
     root.setAttribute("data-align-x", alignX);
     root.setAttribute("data-align-y", alignY);
   };
+
   const moveConfigurationIntoSlot = (configuration, slot) => {
     slot.innerHTML = "";
     for (const domNode of configuration.domNodesClone) {
@@ -23206,7 +23166,9 @@ const createUITransitionController = (root, {
       throw new Error("Unknown slot for applyConfiguration");
     }
   };
+
   updateAlignment();
+
   let transitionType = "none";
   const groupTransitionOptions = {
     // debugBreakpoints: [0.25],
@@ -23215,22 +23177,21 @@ const createUITransitionController = (root, {
       setup: () => {
         updateSlotAttributes();
         root.setAttribute("data-transitioning", "");
-        onStateChange({
-          isTransitioning: true
-        });
+        onStateChange({ isTransitioning: true });
         return {
           teardown: () => {
             root.removeAttribute("data-transitioning");
             updateSlotAttributes(); // Update positioning after transition
-            onStateChange({
-              isTransitioning: false
-            });
-          }
+            onStateChange({ isTransitioning: false });
+          },
         };
-      }
-    }
+      },
+    },
   };
-  const transitionController = createGroupTransitionController(groupTransitionOptions);
+  const transitionController = createGroupTransitionController(
+    groupTransitionOptions,
+  );
+
   const elementToClip = root;
   const morphContainerIntoTarget = () => {
     const morphTransitions = [];
@@ -23244,28 +23205,31 @@ const createUITransitionController = (root, {
       const fromHeight = previousTargetSlotConfiguration.height || 0;
       const toWidth = targetSlotConfiguration.width || 0;
       const toHeight = targetSlotConfiguration.height || 0;
-      debugSize(`transition from [${fromWidth}x${fromHeight}] to [${toWidth}x${toHeight}]`);
+      debugSize(
+        `transition from [${fromWidth}x${fromHeight}] to [${toWidth}x${toHeight}]`,
+      );
       const restoreOverflow = preventIntermediateScrollbar(root, {
         fromWidth,
         fromHeight,
         toWidth,
         toHeight,
-        onPrevent: ({
-          x,
-          y,
-          scrollContainer
-        }) => {
+        onPrevent: ({ x, y, scrollContainer }) => {
           if (x) {
-            debugSize(`Temporarily hiding horizontal overflow during transition on ${getElementSignature(scrollContainer)}`);
+            debugSize(
+              `Temporarily hiding horizontal overflow during transition on ${getElementSignature(scrollContainer)}`,
+            );
           }
           if (y) {
-            debugSize(`Temporarily hiding vertical overflow during transition on ${getElementSignature(scrollContainer)}`);
+            debugSize(
+              `Temporarily hiding vertical overflow during transition on ${getElementSignature(scrollContainer)}`,
+            );
           }
         },
         onRestore: () => {
           debugSize(`Restored overflow after transition`);
-        }
+        },
       });
+
       const onSizeTransitionFinished = () => {
         // Restore overflow when transition is complete
         restoreOverflow();
@@ -23288,63 +23252,95 @@ const createUITransitionController = (root, {
         }
       };
       // Position of "from" content within large container
-      const fromLeft = getAlignedPosition(elementToClipWidth, fromWidth, alignX);
-      const fromTop = getAlignedPosition(elementToClipHeight, fromHeight, alignY);
+      const fromLeft = getAlignedPosition(
+        elementToClipWidth,
+        fromWidth,
+        alignX,
+      );
+      const fromTop = getAlignedPosition(
+        elementToClipHeight,
+        fromHeight,
+        alignY,
+      );
       // Position of target content within large container
-      const targetLeft = getAlignedPosition(elementToClipWidth, toWidth, alignX);
-      const targetTop = getAlignedPosition(elementToClipHeight, toHeight, alignY);
-      debugSize(`Positions in container: from [${fromLeft},${fromTop}] ${fromWidth}x${fromHeight} to [${targetLeft},${targetTop}] ${toWidth}x${toHeight}`);
+      const targetLeft = getAlignedPosition(
+        elementToClipWidth,
+        toWidth,
+        alignX,
+      );
+      const targetTop = getAlignedPosition(
+        elementToClipHeight,
+        toHeight,
+        alignY,
+      );
+      debugSize(
+        `Positions in container: from [${fromLeft},${fromTop}] ${fromWidth}x${fromHeight} to [${targetLeft},${targetTop}] ${toWidth}x${toHeight}`,
+      );
       // Get border-radius values
-      const fromBorderRadius = previousTargetSlotConfiguration.borderRadius || 0;
+      const fromBorderRadius =
+        previousTargetSlotConfiguration.borderRadius || 0;
       const toBorderRadius = targetSlotConfiguration.borderRadius || 0;
       const startInsetTop = fromTop;
       const startInsetRight = elementToClipWidth - (fromLeft + fromWidth);
       const startInsetBottom = elementToClipHeight - (fromTop + fromHeight);
       const startInsetLeft = fromLeft;
+
       const endInsetTop = targetTop;
       const endInsetRight = elementToClipWidth - (targetLeft + toWidth);
       const endInsetBottom = elementToClipHeight - (targetTop + toHeight);
       const endInsetLeft = targetLeft;
+
       const startClipPath = `inset(${startInsetTop}px ${startInsetRight}px ${startInsetBottom}px ${startInsetLeft}px round ${fromBorderRadius}px)`;
       const endClipPath = `inset(${endInsetTop}px ${endInsetRight}px ${endInsetBottom}px ${endInsetLeft}px round ${toBorderRadius}px)`;
       // Create clip-path animation using Web Animations API
-      const clipAnimation = elementToClip.animate([{
-        clipPath: startClipPath
-      }, {
-        clipPath: endClipPath
-      }], {
-        duration,
-        easing: "ease",
-        fill: "forwards"
-      });
+      const clipAnimation = elementToClip.animate(
+        [{ clipPath: startClipPath }, { clipPath: endClipPath }],
+        {
+          duration,
+          easing: "ease",
+          fill: "forwards",
+        },
+      );
 
       // Handle finish
-      clipAnimation.finished.then(() => {
-        // Clear clip-path to restore normal behavior
-        elementToClip.style.clipPath = "";
-        clipAnimation.cancel();
-        onSizeTransitionFinished();
-      }).catch(() => {
-        // Animation was cancelled
-      });
+      clipAnimation.finished
+        .then(() => {
+          // Clear clip-path to restore normal behavior
+          elementToClip.style.clipPath = "";
+          clipAnimation.cancel();
+          onSizeTransitionFinished();
+        })
+        .catch(() => {
+          // Animation was cancelled
+        });
       clipAnimation.play();
     }
+
     return morphTransitions;
   };
   const fadeInTargetSlot = () => {
-    targetSlotBackground.style.setProperty("--target-slot-background", targetSlotConfiguration.background);
-    targetSlotBackground.style.setProperty("--target-slot-width", `${targetSlotConfiguration.width || 0}px`);
-    targetSlotBackground.style.setProperty("--target-slot-height", `${targetSlotConfiguration.height || 0}px`);
+    targetSlotBackground.style.setProperty(
+      "--target-slot-background",
+      targetSlotConfiguration.background,
+    );
+    targetSlotBackground.style.setProperty(
+      "--target-slot-width",
+      `${targetSlotConfiguration.width || 0}px`,
+    );
+    targetSlotBackground.style.setProperty(
+      "--target-slot-height",
+      `${targetSlotConfiguration.height || 0}px`,
+    );
     return createOpacityTransition(targetSlot, 1, {
       from: 0,
       duration,
       styleSynchronizer: "inline_style",
-      onFinish: targetSlotOpacityTransition => {
+      onFinish: (targetSlotOpacityTransition) => {
         targetSlotBackground.style.removeProperty("--target-slot-background");
         targetSlotBackground.style.removeProperty("--target-slot-width");
         targetSlotBackground.style.removeProperty("--target-slot-height");
         targetSlotOpacityTransition.cancel();
-      }
+      },
     });
   };
   const fadeOutPreviousGroup = () => {
@@ -23352,10 +23348,10 @@ const createUITransitionController = (root, {
       from: 1,
       duration,
       styleSynchronizer: "inline_style",
-      onFinish: previousGroupOpacityTransition => {
+      onFinish: (previousGroupOpacityTransition) => {
         previousGroupOpacityTransition.cancel();
         previousGroup.style.opacity = "0"; // keep previous group visually hidden
-      }
+      },
     });
   };
   const fadeOutOutgoingSlot = () => {
@@ -23363,22 +23359,27 @@ const createUITransitionController = (root, {
       duration,
       from: 1,
       styleSynchronizer: "inline_style",
-      onFinish: outgoingSlotOpacityTransition => {
+      onFinish: (outgoingSlotOpacityTransition) => {
         outgoingSlotOpacityTransition.cancel();
         outgoingSlot.style.opacity = "0"; // keep outgoing slot visually hidden
-      }
+      },
     });
   };
 
   // content_to_content transition (uses previous_group)
-  const applyContentToContentTransition = toConfiguration => {
+  const applyContentToContentTransition = (toConfiguration) => {
     // 1. move target slot to previous
     moveConfigurationIntoSlot(targetSlotConfiguration, previousTargetSlot);
     targetSlotConfiguration = toConfiguration;
     // 2. move outgoing slot to previous
     moveConfigurationIntoSlot(outgoingSlotConfiguration, previousOutgoingSlot);
     moveConfigurationIntoSlot(UNSET, outgoingSlot);
-    const transitions = [...morphContainerIntoTarget(), fadeInTargetSlot(), fadeOutPreviousGroup()];
+
+    const transitions = [
+      ...morphContainerIntoTarget(),
+      fadeInTargetSlot(),
+      fadeOutPreviousGroup(),
+    ];
     const transition = transitionController.update(transitions, {
       onFinish: () => {
         moveConfigurationIntoSlot(UNSET, previousTargetSlot);
@@ -23386,23 +23387,29 @@ const createUITransitionController = (root, {
         if (hasDebugLogs) {
           console.groupEnd();
         }
-      }
+      },
     });
     transition.play();
   };
   // content_phase_to_content_phase transition (uses outgoing_slot)
-  const applyContentPhaseToContentPhaseTransition = toConfiguration => {
+  const applyContentPhaseToContentPhaseTransition = (toConfiguration) => {
     // 1. Move target slot to outgoing
     moveConfigurationIntoSlot(targetSlotConfiguration, outgoingSlot);
     targetSlotConfiguration = toConfiguration;
-    const transitions = [...morphContainerIntoTarget(), fadeInTargetSlot(), fadeOutOutgoingSlot()];
+
+    const transitions = [
+      ...morphContainerIntoTarget(),
+      fadeInTargetSlot(),
+      fadeOutOutgoingSlot(),
+    ];
     const transition = transitionController.update(transitions, {
       onFinish: () => {
         moveConfigurationIntoSlot(UNSET, outgoingSlot);
+
         if (hasDebugLogs) {
           console.groupEnd();
         }
-      }
+      },
     });
     transition.play();
   };
@@ -23414,6 +23421,7 @@ const createUITransitionController = (root, {
     // 2. move outgoing slot to previous
     moveConfigurationIntoSlot(outgoingSlotConfiguration, previousOutgoingSlot);
     outgoingSlotConfiguration = UNSET;
+
     const transitions = [...morphContainerIntoTarget(), fadeOutPreviousGroup()];
     const transition = transitionController.update(transitions, {
       onFinish: () => {
@@ -23422,15 +23430,15 @@ const createUITransitionController = (root, {
         if (hasDebugLogs) {
           console.groupEnd();
         }
-      }
+      },
     });
     transition.play();
   };
   // Main transition method
-  const transitionTo = (newContentElement, {
-    contentPhase,
-    contentId
-  } = {}) => {
+  const transitionTo = (
+    newContentElement,
+    { contentPhase, contentId } = {},
+  ) => {
     if (contentId) {
       targetSlot.setAttribute(CONTENT_ID_ATTRIBUTE, contentId);
     } else {
@@ -23456,7 +23464,8 @@ const createUITransitionController = (root, {
     moveConfigurationIntoSlot(UNSET, previousTargetSlot);
     moveConfigurationIntoSlot(UNSET, previousOutgoingSlot);
   };
-  const targetSlotEffect = reasons => {
+
+  const targetSlotEffect = (reasons) => {
     if (root.hasAttribute("data-disabled")) {
       return;
     }
@@ -23468,7 +23477,9 @@ const createUITransitionController = (root, {
       console.debug(`- ${reasons.join("\n- ")}`);
     }
     if (isSameConfiguration(fromConfiguration, toConfiguration)) {
-      debugDetection(`already in desired state (${toConfiguration}) -> early return`);
+      debugDetection(
+        `already in desired state (${toConfiguration}) -> early return`,
+      );
       if (hasDebugLogs) {
         console.groupEnd();
       }
@@ -23477,7 +23488,9 @@ const createUITransitionController = (root, {
     const fromConfigType = fromConfiguration.type;
     const toConfigType = toConfiguration.type;
     transitionType = `${fromConfigType}_to_${toConfigType}`;
-    debugDetection(`Prepare "${transitionType}" transition (${fromConfiguration} -> ${toConfiguration})`);
+    debugDetection(
+      `Prepare "${transitionType}" transition (${fromConfiguration} -> ${toConfiguration})`,
+    );
     // content_to_empty / content_phase_to_empty
     if (toConfiguration.isEmpty) {
       applyToEmptyTransition();
@@ -23501,9 +23514,10 @@ const createUITransitionController = (root, {
     // content_to_content (default case)
     applyContentToContentTransition(toConfiguration);
   };
+
   const [teardown, addTeardown] = createPubSub();
   {
-    const mutationObserver = new MutationObserver(mutations => {
+    const mutationObserver = new MutationObserver((mutations) => {
       const reasonParts = [];
       for (const mutation of mutations) {
         if (mutation.type === "childList") {
@@ -23519,25 +23533,33 @@ const createUITransitionController = (root, {
           continue;
         }
         if (mutation.type === "attributes") {
-          const {
-            attributeName
-          } = mutation;
-          if (attributeName === CONTENT_ID_ATTRIBUTE || attributeName === CONTENT_PHASE_ATTRIBUTE) {
-            const {
-              oldValue
-            } = mutation;
+          const { attributeName } = mutation;
+          if (
+            attributeName === CONTENT_ID_ATTRIBUTE ||
+            attributeName === CONTENT_PHASE_ATTRIBUTE
+          ) {
+            const { oldValue } = mutation;
             if (oldValue === null) {
               const value = targetSlot.getAttribute(attributeName);
-              reasonParts.push(value ? `added [${attributeName}=${value}]` : `added [${attributeName}]`);
+              reasonParts.push(
+                value
+                  ? `added [${attributeName}=${value}]`
+                  : `added [${attributeName}]`,
+              );
             } else if (targetSlot.hasAttribute(attributeName)) {
               const value = targetSlot.getAttribute(attributeName);
               reasonParts.push(`[${attributeName}] ${oldValue} -> ${value}`);
             } else {
-              reasonParts.push(oldValue ? `removed [${attributeName}=${oldValue}]` : `removed [${attributeName}]`);
+              reasonParts.push(
+                oldValue
+                  ? `removed [${attributeName}=${oldValue}]`
+                  : `removed [${attributeName}]`,
+              );
             }
           }
         }
       }
+
       if (reasonParts.length === 0) {
         return;
       }
@@ -23547,19 +23569,25 @@ const createUITransitionController = (root, {
       childList: true,
       attributes: true,
       attributeFilter: [CONTENT_ID_ATTRIBUTE, CONTENT_PHASE_ATTRIBUTE],
-      characterData: false
+      characterData: false,
     });
     addTeardown(() => {
       mutationObserver.disconnect();
     });
   }
   {
-    const slots = [targetSlot, outgoingSlot, previousTargetSlot, previousOutgoingSlot];
+    const slots = [
+      targetSlot,
+      outgoingSlot,
+      previousTargetSlot,
+      previousOutgoingSlot,
+    ];
     for (const slot of slots) {
       addTeardown(monitorItemsOverflow(slot));
     }
   }
-  const setDuration = newDuration => {
+
+  const setDuration = (newDuration) => {
     duration = newDuration;
     // Update CSS variable immediately
     root.style.setProperty("--x-transition-duration", `${duration}ms`);
@@ -23569,25 +23597,27 @@ const createUITransitionController = (root, {
     alignY = newAlignY;
     updateAlignment();
   };
+
   return {
-    updateContentId: value => {
+    updateContentId: (value) => {
       if (value) {
         targetSlot.setAttribute(CONTENT_ID_ATTRIBUTE, value);
       } else {
         targetSlot.removeAttribute(CONTENT_ID_ATTRIBUTE);
       }
     },
+
     transitionTo,
     resetContent,
     setDuration,
     setAlignment,
     updateAlignment,
-    setPauseBreakpoints: value => {
+    setPauseBreakpoints: (value) => {
       groupTransitionOptions.pauseBreakpoints = value;
     },
     cleanup: () => {
       teardown();
-    }
+    },
   };
 };
 
@@ -29036,7 +29066,9 @@ const releaseTransitionFurniture = (owner) => {
   }
 };
 
-installImportMetaCssBuild(import.meta);/**
+installImportMetaCssBuild(import.meta);
+
+/**
  * The window two pages are seen through while one replaces the other, measured
  * once and published for the length of the movement.
  *
@@ -29101,7 +29133,7 @@ installImportMetaCssBuild(import.meta);/**
  * Registered as lengths for the same reason the safe area is (safe_area.js):
  * the band has to be readable in pixels at the moment a page leaves.
  */
-const TRANSITION_WINDOW_CSS = /* css */`@property --navi-transition-cover-top {
+const TRANSITION_WINDOW_CSS = /* css */ `@property --navi-transition-cover-top {
   syntax: "<length>";
   inherits: true;
   initial-value: 0;
@@ -29141,6 +29173,7 @@ const TRANSITION_WINDOW_CSS = /* css */`@property --navi-transition-cover-top {
 const installTransitionWindowCss = () => {
   import.meta.css = [TRANSITION_WINDOW_CSS, "@jsenv/navi/src/nav/transition_window.js"];
 };
+
 const WINDOW_TOP_PROPERTY = "--navi-transition-window-top";
 const WINDOW_LEFT_PROPERTY = "--navi-transition-window-left";
 const WINDOW_WIDTH_PROPERTY = "--navi-transition-window-width";
@@ -29153,7 +29186,20 @@ const OLD_BAND_TOP_PROPERTY = "--navi-transition-old-band-top";
 const OLD_BAND_RIGHT_PROPERTY = "--navi-transition-old-band-right";
 const OLD_BAND_BOTTOM_PROPERTY = "--navi-transition-old-band-bottom";
 const OLD_BAND_LEFT_PROPERTY = "--navi-transition-old-band-left";
-const WINDOW_PROPERTIES = [WINDOW_TOP_PROPERTY, WINDOW_LEFT_PROPERTY, WINDOW_WIDTH_PROPERTY, WINDOW_HEIGHT_PROPERTY, WINDOW_OLD_TOP_PROPERTY, WINDOW_OLD_LEFT_PROPERTY, WINDOW_NEW_TOP_PROPERTY, WINDOW_NEW_LEFT_PROPERTY, OLD_BAND_TOP_PROPERTY, OLD_BAND_RIGHT_PROPERTY, OLD_BAND_BOTTOM_PROPERTY, OLD_BAND_LEFT_PROPERTY];
+const WINDOW_PROPERTIES = [
+  WINDOW_TOP_PROPERTY,
+  WINDOW_LEFT_PROPERTY,
+  WINDOW_WIDTH_PROPERTY,
+  WINDOW_HEIGHT_PROPERTY,
+  WINDOW_OLD_TOP_PROPERTY,
+  WINDOW_OLD_LEFT_PROPERTY,
+  WINDOW_NEW_TOP_PROPERTY,
+  WINDOW_NEW_LEFT_PROPERTY,
+  OLD_BAND_TOP_PROPERTY,
+  OLD_BAND_RIGHT_PROPERTY,
+  OLD_BAND_BOTTOM_PROPERTY,
+  OLD_BAND_LEFT_PROPERTY,
+];
 
 // Whose numbers are currently published. The window belongs to the movement
 // that measured it, and only that one may take it down: a movement ending
@@ -29167,12 +29213,13 @@ let windowOwner = null;
  * stands and what its furniture left free, which the arriving state answers
  * for differently and which nothing can be read back from once it is gone.
  */
-const measureTransitionWindowState = element => {
+const measureTransitionWindowState = (element) => {
   return {
     rect: element.getBoundingClientRect(),
-    band: readBand()
+    band: readBand(),
   };
 };
+
 const holdTransitionWindow = (owner, element, stateBefore) => {
   const rectBefore = stateBefore.rect;
   const bandBefore = stateBefore.band;
@@ -29183,13 +29230,14 @@ const holdTransitionWindow = (owner, element, stateBefore) => {
   // one leaving, a page arriving taller would be cut itself, and either one
   // standing higher up than the other would be cut across.
   const top = rectBefore.top < rectAfter.top ? rectBefore.top : rectAfter.top;
-  const left = rectBefore.left < rectAfter.left ? rectBefore.left : rectAfter.left;
-  const bottom = rectBefore.bottom > rectAfter.bottom ? rectBefore.bottom : rectAfter.bottom;
-  const right = rectBefore.right > rectAfter.right ? rectBefore.right : rectAfter.right;
+  const left =
+    rectBefore.left < rectAfter.left ? rectBefore.left : rectAfter.left;
+  const bottom =
+    rectBefore.bottom > rectAfter.bottom ? rectBefore.bottom : rectAfter.bottom;
+  const right =
+    rectBefore.right > rectAfter.right ? rectBefore.right : rectAfter.right;
   windowOwner = owner;
-  const {
-    style
-  } = document.documentElement;
+  const { style } = document.documentElement;
   style.setProperty(WINDOW_TOP_PROPERTY, `${top}px`);
   style.setProperty(WINDOW_LEFT_PROPERTY, `${left}px`);
   style.setProperty(WINDOW_WIDTH_PROPERTY, `${right - left}px`);
@@ -29209,14 +29257,12 @@ const holdTransitionWindow = (owner, element, stateBefore) => {
 // window stands at the held height, the box is at its own — and an invisible
 // one: the page arriving is fully in place, and the strip below it that the
 // window still covers shows the page leaving only while it is still on screen.
-const releaseTransitionWindow = owner => {
+const releaseTransitionWindow = (owner) => {
   if (owner !== windowOwner) {
     return;
   }
   windowOwner = null;
-  const {
-    style
-  } = document.documentElement;
+  const { style } = document.documentElement;
   for (const property of WINDOW_PROPERTIES) {
     style.removeProperty(property);
   }
@@ -29232,9 +29278,13 @@ const BAND_UNKNOWN = 1e6;
 // edges) plus what covers the box from inside the document.
 const readBand = () => {
   const computedStyle = getComputedStyle(document.documentElement);
-  const readEdge = edge => {
-    const safeArea = parseFloat(computedStyle.getPropertyValue(`--navi-safe-area-inset-${edge}`));
-    const cover = parseFloat(computedStyle.getPropertyValue(`--navi-transition-cover-${edge}`));
+  const readEdge = (edge) => {
+    const safeArea = parseFloat(
+      computedStyle.getPropertyValue(`--navi-safe-area-inset-${edge}`),
+    );
+    const cover = parseFloat(
+      computedStyle.getPropertyValue(`--navi-transition-cover-${edge}`),
+    );
     // A browser that cannot register a custom property hands back the calc()
     // it was written as rather than what it computes to (see safe_area.js).
     if (!Number.isFinite(safeArea) || !Number.isFinite(cover)) {
@@ -29246,7 +29296,7 @@ const readBand = () => {
     top: readEdge("top"),
     right: readEdge("right"),
     bottom: readEdge("bottom"),
-    left: readEdge("left")
+    left: readEdge("left"),
   };
 };
 
@@ -29265,9 +29315,15 @@ const readBand = () => {
 const bandTheCutMayBeRelaxedTo = (bandBefore, bandAfter, rectAfter) => {
   return {
     top: rectAfter.top < bandAfter.top ? bandAfter.top : bandBefore.top,
-    right: rectAfter.right > window.innerWidth - bandAfter.right ? bandAfter.right : bandBefore.right,
-    bottom: rectAfter.bottom > window.innerHeight - bandAfter.bottom ? bandAfter.bottom : bandBefore.bottom,
-    left: rectAfter.left < bandAfter.left ? bandAfter.left : bandBefore.left
+    right:
+      rectAfter.right > window.innerWidth - bandAfter.right
+        ? bandAfter.right
+        : bandBefore.right,
+    bottom:
+      rectAfter.bottom > window.innerHeight - bandAfter.bottom
+        ? bandAfter.bottom
+        : bandBefore.bottom,
+    left: rectAfter.left < bandAfter.left ? bandAfter.left : bandBefore.left,
   };
 };
 
@@ -29443,93 +29499,7 @@ const easedProgress = (x, [x1, y1, x2, y2]) => {
   return bezierAxis((low + high) / 2, y1, y2);
 };
 
-installImportMetaCssBuild(import.meta);/**
- * How two routes move against each other, said one relation at a time —
- * without putting them in a row, and without a box in the tree.
- *
- * A page one goes INTO (a game, a profile, a place) is entered from wherever
- * one opened it, and left back out the same way. That is a fact about a PAIR
- * of pages, and only about the pairs it is written for:
- *
- *   defineRouteTransition(MY_GAMES_PAGE, GAME_PAGE, "slide-x");
- *   defineRouteTransition(RADAR_PAGE, GAME_PAGE, "slide-x");
- *
- * Going from the first page to the second plays forward, the reverse plays
- * back, and two pages never written in the same relation play nothing between
- * each other — two tabs of a bottom bar are side by side, neither is before
- * the other, and being animated by the same mechanism does not order them.
- * This is what tells this apart from <RouteTravel>: a travel box is a ROW — a
- * total order, plus a drag gesture that walks it — while this declares
- * individual relations and nothing else.
- *
- * A relation is reciprocal by DEFAULT, not by decree: the way back is the same
- * movement run the other way, because that is what lets a user build a map of
- * the app — but a relation written for the exact way travelled wins over being
- * the reverse of another, so B → A can be given a movement of its own, or
- * silenced with "none", by writing it (see findRelation).
- *
- * One shape of page has no pair to write: the one whose door is in the fixed
- * furniture — a gear in a top bar, a "+" in a tab bar — and which is therefore
- * opened from every screen and closed back onto whichever one the reader was
- * on. The relation is real and it is a single sentence; only the `from` is
- * missing, so it is left out:
- *
- *   defineRouteTransition(null, SETTINGS_PAGE, "cover-top");
- *
- * Arriving there plays forward from wherever, leaving plays back to wherever,
- * and that is what lets the back button close it the way it opened — a
- * traversal carries no request, and nothing has to remember per history entry
- * what the press that created it had asked for. It is tried after every
- * written pair, and it is not defineRouteDefaultTransition: a default is about
- * every navigation nothing was said about, this is about ONE destination.
- *
- * The relation says WHEN something plays and which way; the transition says
- * WHAT plays — a movement navi ships, or a name the application defines in its
- * own CSS (see the JSDoc below). Said without one, the relation plays the
- * browser's cross-fade.
- *
- * A relation holds for every way of reaching a page, and one navigation may
- * know better: the rare way round a pair — a badge that jumps back OUT to the
- * game it belongs to, a card that leads to the player it describes — is walked
- * against the map, and there is no telling it from the common way by the
- * routes alone. So the navigation itself may ask for something: a `<Link
- * routeTransition>`, or navTo(url, { routeTransition }). What it asks holds
- * for THAT
- * navigation and no other, and only for the fields it names — `{ direction:
- * "back" }` keeps the pair's movement and turns it round (see
- * readNavigationRequest). A pair no relation was ever written for animates the
- * same way, for the one press that asks.
- *
- * There is no box in the tree: by default what animates is the document itself
- * (its `root` view transition group), which is right for pages that ARE the
- * whole viewport. An application whose pages live between fixed bars marks the
- * region they live in with `data-navi-route-transition-area` — one attribute
- * on an element it already has — and the movement then plays on that region's
- * own pictures, clipped at its bounds, while the bars simply never move (see
- * TRANSITION_AREA_ATTRIBUTE for why the root pictures cannot do this job).
- *
- * The URL leads and the picture follows, as everywhere in navi: the change is
- * a navigation somebody else started (a <Link>, the back button), this only
- * watches it land and photographs the page being left in time (see
- * rendering_hold.js for how the picture is kept honest). A browser without
- * view transitions navigates without the movement.
- *
- * A movement can be turned round. A page whose door is in the furniture is
- * opened and closed by the same control, so the press that closes it often
- * lands while it is still opening: the navigation answering is exactly the way
- * back of the one on screen, and the pictures are walked backwards with the
- * state put under them before they are dropped (see
- * turnRunningTransitionRound). A second transition cannot do this — it
- * photographs the state being undone — and it would first skip the one playing,
- * which is the page snapping fully open before it closes. That press has to
- * arrive at all, and everything photographed is deaf to the pointer for the
- * length of the movement: transition_press.js is the other half.
- *
- * However many relations are defined, there is ONE watcher: every definition
- * lands in a shared registry, and the watcher is rebuilt over the whole of it
- * — a navigation is a single fact about the document, and the first relation
- * that speaks about it answers for it.
- */
+installImportMetaCssBuild(import.meta);
 const startViewTransition$1 = ensureDocumentStartViewTransition();
 const TRANSITION_ATTRIBUTE = "data-navi-route-transition";
 const TRANSITION_TYPE_ATTRIBUTE = "data-navi-route-transition-type";
@@ -30786,43 +30756,7 @@ const describePage = ({
   params
 }) => params ? `${route} with ${JSON.stringify(params)}` : `${route}`;
 
-installImportMetaCssBuild(import.meta);/**
- * Dragging from one route to the next, when the tabs of a page are URLs.
- *
- * A swipe shows two pages at once, and the router shows one: it mounts the
- * branch that matches the URL and nothing else, which is what makes a page
- * shareable, reloadable and findable in the history. Both are right, so the
- * second picture is not taken from the DOM — it is taken from the SCREEN. The
- * browser's view transitions keep a picture of the page being left, and this
- * hands that picture to the finger:
- *
- *   the first pixel of drag       the URL changes (replaced, not pushed) and
- *                                 the browser freezes the page being left
- *   while the finger moves        the two pictures are dragged, the old one a
- *                                 still, the new one live under it
- *   let go                        the movement plays out to the end…
- *   let go too early              …or backwards, and the URL is put back
- *
- * So the URL leads and the picture follows, which is the opposite of what one
- * would write by hand and the only order the router allows: nothing is ever
- * mounted that does not match. The page being pulled in is therefore mounting
- * WHILE it is being dragged in — it arrives as its own loading state and fills
- * in under the finger, which is honest about what is happening (it is being
- * fetched) and is the only thing that can happen without a second router.
- *
- * What travels is decided at the first pixel, like the axis: a travel brings in
- * ONE neighbour, and turning the hand around mid-drag puts the current page
- * back rather than fetching the other side. A hand that walks a whole page
- * across and keeps going is not turning around though — it is asking for the
- * next one, and the gesture relays into a second travel without being let go
- * of (see onEdge).
- *
- * Anything else that must follow the gesture — the trait under a tab bar, a
- * header — follows by being NAMED, not by being told: give it a
- * `view-transition-name` of its own and the browser animates it from where it
- * was to where it is, on the same clock as the pages. That is why the tab row
- * can stay where it is, outside this box, and still move with the finger.
- */
+installImportMetaCssBuild(import.meta);
 const TRAVEL_LEAD_NAMES = ["navi-route-travel"];
 
 // A browser with no view transitions of its own has no picture of the page
@@ -31952,14 +31886,12 @@ const RouteTravel = ({
     // stylesheet, which keeps this box's scrolling from spilling onto the
     // page (see drag_to_travel.js).
     ,
-
     "data-drag-travel": travelByDrag ? axis : undefined
     // The same fact said once per gesture, and for the other question the
     // DOM answers: a box that travels INSIDE this one — a row of slides in a
     // page — takes the axis it walks, and these are what it reads to know
     // this box walks it too.
     ,
-
     "data-travel-by-drag": travelByDrag ? axis : undefined,
     "data-travel-by-wheel": travelByDrag ? axis : undefined
     // A touch this box may take has to be refusable before the finger lands,
@@ -31967,7 +31899,6 @@ const RouteTravel = ({
     // the axis touch-action leaves it — see keepTouchRefusable for why a JSX
     // prop is enough (an element-level touchmove listener is non-passive).
     ,
-
     onTouchMove: travelByDrag ? keepTouchRefusable : undefined,
     onPointerDown: onPointerDown,
     children: children
@@ -40509,7 +40440,8 @@ const EmailSvg = () => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const LinkBlankTargetSvg = () => {
+installImportMetaCssBuild(import.meta);
+const LinkBlankTargetSvg = () => {
   return jsx$1("svg", {
     viewBox: "0 0 24 24",
     xmlns: "http://www.w3.org/2000/svg",
@@ -40706,7 +40638,8 @@ const setupNetworkMonitoring = () => {
 };
 setupNetworkMonitoring();
 
-installImportMetaCssBuild(import.meta);const css$$ = /* css */`.navi_loading_indicator_fluid_container {
+installImportMetaCssBuild(import.meta);
+const css$$ = /* css */`.navi_loading_indicator_fluid_container {
   border-radius: inherit;
   opacity: 1;
   width: 100%;
@@ -40942,7 +40875,8 @@ const LoadingRectangleSvg = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$_ = /* css */`.navi_loading_outline_wrapper {
+installImportMetaCssBuild(import.meta);
+const css$_ = /* css */`.navi_loading_outline_wrapper {
   top: max(var(--loading-outline-min-inset, -100vh),
       var(--loading-rectangle-top, 0px));
   right: max(var(--loading-outline-min-inset, -100vh),
@@ -41097,7 +41031,7 @@ const LoadingOutlineWithPortal = props => {
   });
 };
 
-installImportMetaCssBuild(import.meta);// # TextAnchor — how it works
+installImportMetaCssBuild(import.meta);
 const css$Z = /* css */`.navi_text_anchor {
   vertical-align: baseline;
   user-select: none;
@@ -41363,7 +41297,7 @@ const selectByTextStrings = (element, range, startText, endText) => {
   }
 };
 
-installImportMetaCssBuild(import.meta);// https://jsfiddle.net/v5xzJ/4/
+installImportMetaCssBuild(import.meta);
 const css$Y = /* css */`@layer navi {
   .navi_text {
     &[data-skeleton] {
@@ -42059,7 +41993,6 @@ const TextOverflow = ({
     pre: noWrap === undefined ? true : undefined
     // For paragraph we prefer to keep lines and only hide unbreakable long sections
     ,
-
     preLine: rest.as === "p" ? true : undefined,
     noWrap: noWrap,
     ...rest,
@@ -42319,7 +42252,8 @@ const useDimColorWhen = (elementRef, shouldDim) => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$X = /* css */`@layer navi {
+installImportMetaCssBuild(import.meta);
+const css$X = /* css */`@layer navi {
   .navi_link {
     --link-border-radius: unset;
     --link-outline-color: var(--navi-focus-outline-color);
@@ -43051,7 +42985,6 @@ const LinkPlain = props => {
     // focusable because it says so (tabIndex below) and it answers the two
     // keys a button answers, since that is what it behaves like.
     ,
-
     onKeyDown: e => {
       controlHostProps.onKeyDown(e);
       if (!slide || e.defaultPrevented) {
@@ -43069,7 +43002,6 @@ const LinkPlain = props => {
     // around it to place the row's own bar, and by the command above to find
     // the container across the document.
     ,
-
     "data-slide-target": slide,
     commandfor: slide ? nav?.slideContainer : undefined,
     "aria-controls": slide ? nav?.slideContainer : undefined,
@@ -43080,7 +43012,6 @@ const LinkPlain = props => {
     // screen reader alike. A slide is not a page — that tab says it with
     // aria-selected below.
     ,
-
     "aria-current": !slide && innerCurrent ? "page" : undefined,
     "aria-selected": slide ? innerCurrent : selectionContext ? selected : undefined,
     "data-value-event": "navi_value",
@@ -43095,11 +43026,9 @@ const LinkPlain = props => {
     // text it follows: without this the browser may break the line right
     // before it and leave it alone under a link long enough to wrap.
     ,
-
     attachLastChild: Boolean(endIconEl)
     // Visual
     ,
-
     "data-variant": variant,
     "data-current-effect-bold": currentEffectBoldTechnique,
     "data-current-effect-shadow": currentEffectShadow ? "" : undefined,
@@ -43318,10 +43247,7 @@ const useSlideContainer = (target) => {
   };
 };
 
-installImportMetaCssBuild(import.meta);/**
- * TabList component with support for horizontal and vertical layouts
- * https://dribbble.com/search/tabs
- */
+installImportMetaCssBuild(import.meta);
 let navCount = 0;
 // Worn by a nav of routes while a route movement between two of its tabs is
 // pictured (see markIndicatorTakesPart, and the CSS below for what it decides).
@@ -44111,12 +44037,10 @@ const Nav = ({
     // the DOM, so the container paints its progress onto this element and the
     // trait follows in CSS alone (see SlideContainer's followerElements).
     ,
-
     "data-slide-container-follows": slideContainer
     // Tabs over one screen, not links to pages: a screen reader is told so,
     // and told which way the row runs.
     ,
-
     role: slideContainer ? "tablist" : undefined,
     "aria-orientation": slideContainer && vertical ? "vertical" : undefined,
     expand: expand,
@@ -44485,31 +44409,7 @@ const buildBinderCenterlinePathBelow = ({
   return d;
 };
 
-installImportMetaCssBuild(import.meta);/**
- * A binder: tabs and the page they open, drawn as one shape.
- *
- * Unlike a `Nav`, a binder owns its content — the tab and the page it shows are
- * the same item, declared together:
- *
- *   <Binder>
- *     <Binder.Item value="a" label="Approved">…the page…</Binder.Item>
- *   </Binder>
- *
- * Layers, and why they are what they are:
- * - The outline (tab row + page, with the concave junctions around the current
- *   tab) is a single SVG path — see binder_path.js for why CSS borders cannot
- *   draw it. It covers the whole binder and sits above the inactive tabs but
- *   below the current tab and the page.
- * - The inactive tabs keep plain CSS borders: the path only runs along the
- *   current tab, so the top of an inactive tab is its own to draw. Their border
- *   width matches the path's stroke and lands in the same band, which is what
- *   makes the two read as one continuous line.
- * - Every tab reserves that band on the page side with a margin, so the stroke
- *   never lands on a tab's own edge.
- *
- * Border width participates in layout (it is added to the tab and page
- * padding): a thick border grows the binder rather than eating into the text.
- */
+installImportMetaCssBuild(import.meta);
 const css$V = /* css */`@layer navi {
   .navi_binder {
     --binder-border-width: var(--navi-control-border-width);
@@ -45241,46 +45141,7 @@ const writeSpace = (area) => {
   style.setProperty(property, value);
 };
 
-installImportMetaCssBuild(import.meta);/**
- * A strip pinned to one edge of the window, and the space it takes back from
- * the content. What goes in it is none of its business — a nav, a title, a
- * toolbar, an action.
- *
- * The four things it is here to get right, each of which is a trap:
- *
- * 1. **`position: fixed`, never sticky.** A sticky element sticks to its
- *    nearest scrolling ancestor, and an app shell almost always has one (an
- *    `overflow` somewhere) — the bar would then stick inside that box and
- *    never to the window. Fixed, centered and bounded by `maxWidth`, it also
- *    stays lined up with the content on a wide screen. It is pinned to the
- *    app's rectangle rather than to the glass (`--navi-app-inset-*`, see
- *    layout/safe_area.js): an app that declares itself narrower than the window
- *    keeps its bars against its own edges.
- * 2. **It gives its space back.** Being fixed it covers the content: without a
- *    reserve the end of a long page stays under it, unreachable. It publishes
- *    what it takes on <html> — see fixed_bar_space.js. An edge holds ONE bar:
- *    bars sharing an edge are pinned to it one over the other, so the room
- *    given back is the largest of them and never their sum — which is what the
- *    two bars of a page transition need, and what makes a deliberately stacked
- *    second bar unexpressible. A second strip under the first belongs to the
- *    flow: `position: sticky` at `top: var(--navi-fixed-bar-space-top)`, which
- *    puts it under whatever the bar of the moment is worth, and
- *    `useTransitionCover` (nav/transition_cover.js) so the pictures of a route
- *    movement are cut at it.
- * 3. **It reaches under the notch.** `env(safe-area-inset-*)` is padding, so
- *    the content is pushed in while the background keeps running to the edge of
- *    the screen. Across the bar that inset is added to `width`/`height` too, so
- *    the size asked for is the size the content gets whatever the device does;
- *    along the bar it adds to the padding asked for. Note that every
- *    `env(safe-area-inset-*)` is 0 unless the page asks for it:
- *    `<meta name="viewport" content="…, viewport-fit=cover">`.
- * 4. **Its hairline is part of its box.** The line covers the content just as
- *    the bar does, so the room given back has to include it — a line drawn
- *    outside the box (a box-shadow, an outline) is a line the content scrolls
- *    under, and a line a page transition paints over. It is a real border,
- *    added to the size asked for exactly like the notch inset is, so the
- *    content still gets the size the prop names.
- */
+installImportMetaCssBuild(import.meta);
 const css$U = /* css */`@layer navi {
   :root {
     --navi-fixed-bar-width: 56px;
@@ -45673,7 +45534,8 @@ const useFocusGroup = (
   }, [direction, wrap, skipTab, name, xSelector, ySelector]);
 };
 
-installImportMetaCssBuild(import.meta);const rightArrowPath = "M680-480L360-160l-80-80 240-240-240-240 80-80 320 320z";
+installImportMetaCssBuild(import.meta);
+const rightArrowPath = "M680-480L360-160l-80-80 240-240-240-240 80-80 320 320z";
 const css$S = /* css */`.navi_summary_marker {
   flex-shrink: 0;
   width: 1em;
@@ -45811,7 +45673,8 @@ const SummaryMarker = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$R = /* css */`.navi_details {
+installImportMetaCssBuild(import.meta);
+const css$R = /* css */`.navi_details {
   z-index: 1;
   flex-direction: column;
   flex-shrink: 0;
@@ -47208,79 +47071,7 @@ const usePopupContentMount = (
   return contentMounted;
 };
 
-installImportMetaCssBuild(import.meta);/**
- * Expandable: an in-flow disclosure — a UI part that reveals a content part.
- * It covers the same ground as <Details> with structural differences:
- *
- * - the two parts are explicit, and are Boxes:
- *
- *     <Expandable>
- *       <Expandable.UI>See more</Expandable.UI>
- *       <Expandable.Content>…</Expandable.Content>
- *     </Expandable>
- *
- *   `openDirection` decides where the content is revealed — down (the
- *   <details> shape) or up, left or right in `layout="column"`, where the
- *   parts sit side by side sharing their height. It places the parts too
- *   (CSS `order`), so an expandable revealing upward can still be written UI
- *   first, and an expandable with no UI part at all — driven from
- *   `open`/`signal` by a toggle of the app's own — can say which way it
- *   opens. The marker chevron follows: it points right while closed and
- *   toward where the content went while open (down, up, or left). The common
- *   shape has a shorthand: `ui` prop + children as content.
- *
- * - the UI part is the focusable toggle itself (role button, Space/Enter,
- *   arrow keys) and accepts any markup: controls inside it keep their own
- *   behavior, the marker is purely decorative.
- *
- * The root never looks at its children: which parts are there, in which order,
- * is none of its business. It publishes a context and the parts take what they
- * need from it.
- *
- * Deciding to open or to close is the same decision a Dialog or a Popover
- * takes — the same props behind it (`open`/`defaultOpen`/`signal`/`navState`),
- * the same commands in front of it, the same refusable close — so it is taken
- * in the same place: an open controller (see open_controller.js). What belongs
- * to an expandable is only what opening LOOKS like, which is `openEffect` and
- * the cleanup it returns. Both render synchronously (flushSyncRendering)
- * before measuring, so the DOM is in the state they are about to measure —
- * that, and not any inspection of the children, is what makes a part free to
- * re-render later than the root (a memoized subtree does exactly that).
- *
- * Reach for it knowingly: expanding in-flow SHIFTS the layout — everything
- * below (or beside) moves when it opens. A Popover, Dialog, Picker or Callout
- * answers the same click on its own layer, moving nothing, which is usually
- * the better UX: a layout that stays where it is reads and operates better —
- * all the more on small screens, mobile first of all, where the shift can
- * push most of the page away. Expandable is for content that genuinely
- * belongs in the flow (a tree, a changelog, a settings group read top to
- * bottom).
- *
- * What <details> gives for free is rebuilt here:
- * - a "toggle" event (a real ToggleEvent when the browser has it) dispatched on
- *   the root whenever the state actually changes — but never on mount, unlike
- *   the native one (see the workaround comment in details.jsx);
- * - `--navi-toggle`/`--navi-open`/`--navi-close` commands work against it: the
- *   root and the UI part carry `aria-expanded` (what the command system reads)
- *   and answer the `navi_command`/`navi_request_open`/`navi_request_close`
- *   events.
- *
- * Content is not built until the first expansion and stays built afterwards:
- * a popup's policy, and its code (`usePopupContentMount`, see
- * popup_content_mount.js) — `"always"` builds it right away, `"while-opened"`
- * throws it away once the collapse settles, so a closing animation still plays
- * on real content.
- *
- * The animation is a REVEAL, not a resize: the expandable's own footprint
- * grows/shrinks progressively (the content's grid track interpolates
- * 0fr <-> 1fr — rows for the stacked layout, columns for `layout="column"`),
- * but the content inside is laid out at its final size for the whole movement
- * (its animated dimension is frozen to the measured final value, see
- * freezeContentSize) and the container simply uncovers it. Text never rewraps
- * mid-animation. The content is revealed from its UI side (pinned against the
- * UI when it comes first). Once settled open the clipping is released, so a
- * popover or focus ring inside is not cut at the edges.
- */
+installImportMetaCssBuild(import.meta);
 const css$Q = /* css */`.navi_expandable {
   flex-direction: column;
   flex-shrink: 0;
@@ -48333,7 +48124,8 @@ const useAccentColorAttributes = (
   }, [ref, accentColor, elementSelector, colorProperty]);
 };
 
-installImportMetaCssBuild(import.meta);const css$P = /* css */`@layer navi {
+installImportMetaCssBuild(import.meta);
+const css$P = /* css */`@layer navi {
   .navi_button {
     --button-border-radius: var(--navi-control-border-radius);
     --button-border-width: var(--navi-control-border-width);
@@ -48704,7 +48496,6 @@ const ButtonUI = props => {
     // should always go through --navi-send command instead
     // without having to call preventDefault() on button clicks
     ,
-
     type: "button",
     spacing: undefined,
     cta: undefined,
@@ -48747,7 +48538,6 @@ const ButtonUI = props => {
     "data-callout-arrow-x": "center"
     // style management
     ,
-
     baseClassName: "navi_button",
     styleCSSVars: ButtonStyleCSSVars,
     pseudoClasses: ButtonPseudoClasses,
@@ -48969,42 +48759,7 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  */
 const Button = createComponentResolver([ButtonFirstResolver, ButtonRouteResolver, ButtonCommandPropResolver, ButtonUI]);
 
-installImportMetaCssBuild(import.meta);/**
- * ControlSwap: two controls taking turns on one line.
- *
- *     [👥] [ Le dimanche matin     ▾ ]                     [🔍]
- *     [👥]                           [ Rechercher…       ] [🔍]
- *
- * Four boxes on a row that is never wide enough for both controls — a phone
- * answering "what do I search IN" then "what am I looking for". The two end
- * caps are fixed: same place, same size, in both states, and either of them
- * hands the floor to the other side. That is the whole reason the caps sit
- * OUTSIDE the controls rather than being drawn inside them (a picker's façade
- * yields a zone with `selfInteractions`, a field has `Input.UI.LeftSlot`): an icon
- * that lives inside its control while open and becomes a pill once closed is
- * a switch that moves when you flip it: the finger that opened the search has
- * to travel to close it again. Out here, the same pixel does both.
- *
- * Nothing is unmounted, and nothing is resized. Two elements that never
- * coexist have nothing to interpolate between, so both controls stay mounted
- * and laid out at all times, side by side on a track twice the width of the
- * middle; the track slides, and one control pushes the other out under the cap
- * it belongs to. A share of the middle traded between two shrinking boxes
- * gives a wipe instead — each control squeezed live, text rewrapping under the
- * movement, and nothing that reads as one thing arriving over another.
- *
- * The control without the floor is off the middle rather than gone: `inert`,
- * so no finger and no Tab reaches it, and holding what was typed in it for the
- * round trip back.
- *
- * The row has ONE height, and everything in it is that tall: the caps are
- * squares of it, the controls are given it. Nothing is measured — a height
- * read off the controls could only come back through a resize observer, and a
- * cap made square with `aspect-ratio` never reads it anyway (on a flex item
- * stretched to its line, the main size is resolved from content first). It is
- * a length, `--navi-control-swap-size`, and it is the only thing to say to
- * make the row thinner or thicker.
- */
+installImportMetaCssBuild(import.meta);
 const css$O = /* css */`.navi_control_swap {
   font-size: var(--navi-control-font-size);
   --x-control-swap-size: var(--navi-control-swap-size, calc(var(--navi-control-line-height) + 2 * var(--navi-s) + 2 *
@@ -49288,7 +49043,6 @@ const ControlSwapCap = ({
     // After the caller's props, all of them: the class is what the row's own
     // CSS reaches for, and the rest is the wiring that makes the cap a cap.
     ,
-
     className: withPropsClassName("navi_control_swap_cap", capProps.className),
     "aria-expanded": active,
     "aria-controls": slotId,
@@ -49473,7 +49227,8 @@ const ControlGroup = props => {
 };
 const CONTROL_GROUP_PSEUDO_CLASSES = [":hover", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
 
-installImportMetaCssBuild(import.meta);const css$N = /* css */`@layer navi {
+installImportMetaCssBuild(import.meta);
+const css$N = /* css */`@layer navi {
   .navi_checkbox {
     --switch-margin: 0;
     --switch-padding: 2px;
@@ -49572,7 +49327,8 @@ const useCheckableProps = (props, options) => {
   return result;
 };
 
-installImportMetaCssBuild(import.meta);const css$M = /* css */`@layer navi {
+installImportMetaCssBuild(import.meta);
+const css$M = /* css */`@layer navi {
   .navi_checkbox {
     --border-radius: var(--navi-checkbox-border-radius);
     --border-width: var(--navi-control-border-width);
@@ -49885,7 +49641,6 @@ const InputCheckboxFieldInterface = props => {
     // Checkbox displayed as button are usually squarish
     // (passsing any custom width/height would auto disable aspectRatio forced by the square prop)
     ,
-
     square: variant === "button" ? true : undefined,
     ...checkboxRootProps,
     ref: boxRef,
@@ -49962,7 +49717,8 @@ const CheckboxButtonStyleCSSVars = {
 const CheckboxPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":checked", ":-navi-loading"];
 const CheckboxPseudoElements = ["::-navi-loader", "::-navi-checkmark"];
 
-installImportMetaCssBuild(import.meta);const css$L = /* css */`@layer navi {
+installImportMetaCssBuild(import.meta);
+const css$L = /* css */`@layer navi {
   .navi_label {
     --label-required-indicator-color: var(--navi-color-danger, #b42318);
 
@@ -50266,7 +50022,8 @@ const InputSlot = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$K = /* css */`@layer navi {
+installImportMetaCssBuild(import.meta);
+const css$K = /* css */`@layer navi {
   .navi_radio {
     --margin: 3px 3px 3px 5px;
     --outline-offset: 1px;
@@ -50604,7 +50361,6 @@ const InputRadioFieldInterface = props => {
     // Radio displayed as button are usually squarish
     // (passsing any custom width/height would auto disable aspectRatio forced by the square prop)
     ,
-
     square: variantResolved === "button" ? true : undefined,
     ...radioRootProps,
     ref: boxRef,
@@ -50718,7 +50474,8 @@ const RadioButtonStyleCSSVars = {
 const RadioPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":checked", ":-navi-loading"];
 const RadioPseudoElements = ["::-navi-loader", "::-navi-radiomark"];
 
-installImportMetaCssBuild(import.meta);const css$J = /* css */`@layer navi {
+installImportMetaCssBuild(import.meta);
+const css$J = /* css */`@layer navi {
   .navi_input_range {
     --border-radius: 6px;
     --border-width: var(--navi-control-border-width);
@@ -51071,9 +50828,11 @@ const RangeStyleCSSVars = {
 const RangePseudoClasses = [":hover", ":active", ":-navi-pressed", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
 const RangePseudoElements = ["::-navi-loader"];
 
-installImportMetaCssBuild(import.meta);// The .navi_input box, in a module of its own: a page may render a Textarea or
+installImportMetaCssBuild(import.meta);
+
+// The .navi_input box, in a module of its own: a page may render a Textarea or
 // a Select without any Input, so none of them can rely on another having run.
-const inputCss = /* css */`@layer navi {
+const inputCss = /* css */ `@layer navi {
   .navi_input {
     --border-radius: var(--navi-control-border-radius);
     --border-width: var(--navi-control-border-width);
@@ -52999,24 +52758,7 @@ Input.UI = {
   UnitSlot: InputUnitSlot
 };
 
-installImportMetaCssBuild(import.meta);/**
- * Multiline text control that grows with what is typed.
- *
- * Autosize is native: `field-sizing: content` lets the browser size the
- * textarea from its value — no hidden mirror textarea to measure against (the
- * technique libraries used before the property existed). `minRows`/`maxRows`
- * become min/max heights in `lh` units on top of it; past `maxRows` the
- * content scrolls.
- *
- * TextareaCharCount is the counter that goes with it, and the caller places
- * it: under the box, in a form footer, next to a label — fed with the same
- * value/signal as the textarea. The textarea draws no counter of its own.
- *
- * Styled as a `.navi_input` box (border, background, focus ring, readonly and
- * disabled fades, variants): one look for everything one types into. The
- * shared sheet is registered here too — a page may render a Textarea without
- * any Input.
- */
+installImportMetaCssBuild(import.meta);
 const css$I = /* css */`.navi_textarea {
   & textarea {
     min-height: calc(var(--textarea-min-rows, 1.5) * 1lh);
@@ -53295,21 +53037,7 @@ const RealTextarea = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);/**
- * Edition in place: a value is read where it is written, and the field editing
- * it is drawn exactly on that spot.
- *
- * The read text stays in the DOM the whole time and the field is laid over it,
- * in absolute. That is what keeps the layout still: the text is what gives the
- * box its size (a table cell especially, whose width belongs to the whole
- * column), so taking it away would resize the box the moment one starts
- * editing. The field is there at all times too — inert and transparent until
- * edition starts — so appearing costs no mount.
- *
- * Being absolute, the field lands on the closest positioned ancestor. What it
- * takes for it to land ON the text and not merely near it is the contract
- * described on `Editable` below.
- */
+installImportMetaCssBuild(import.meta);
 const css$H = /* css */`.navi_editable_wrapper {
   --inset-top: 0px;
   --inset-right: 0px;
@@ -54063,11 +53791,7 @@ HTMLFormElement.prototype.requestSubmit = function (submitter) {
 //   form.dispatchEvent(customEvent);
 // };
 
-installImportMetaCssBuild(import.meta);/**
- * A row or column of controls sharing one frame: the borders where two of them
- * meet are drawn once instead of twice, and only the outer corners stay
- * rounded. See docs/control_group.md.
- */
+installImportMetaCssBuild(import.meta);
 const css$G = /* css */`.navi_group {
   --group-border-width: var(--navi-control-border-width);
 
@@ -54260,74 +53984,7 @@ const unfreezeSize = (el) => {
   el.style.height = "";
 };
 
-installImportMetaCssBuild(import.meta);/**
- * Slides that replace one another inside one box.
- *
- * Every slide sits in the same grid cell, so the box measures itself on the
- * LARGEST of them and nothing resizes as one moves through them; a slide
- * travels by exactly one box, so a short one and a tall one move the same
- * distance.
- *
- * `layout` says where the slides are, and it takes either a word or a map:
- *
- *   <SlideContainer layout="row">        one after the other, in DOM order
- *   <SlideContainer layout="column">     the same, downwards
- *   <SlideContainer layout={["pick   edit",
- *                            "create"]}> a map of named areas
- *
- * The map is spelled the way CSS spells grid-template-areas: one string per
- * row, "." for a hole, a name repeated to span several cells. One place to read
- * the shape, drawn as it looks; a slide only says which area it is, so moving a
- * screen is an edit to the map and nothing else. There is no "grid" keyword,
- * because a grid without names says nothing — the map IS the grid. A word is
- * the map one would have drawn for a line, so it is drawn here and everything
- * below only ever knows about maps.
- *
- * A travel is ONE BOX long, whatever the distance between the two slides on the
- * map: the slide arriving is placed next to the one being left for the duration
- * and put back where the map says afterwards, so a tab bar jumping from the
- * first tab to the last shows those two and nothing else. Nobody wants to watch
- * the slides in between fly past — least of all in a tab bar, where they are
- * not a road one travels but places one goes straight to.
- *
- * A finger (or a mouse) drags the slides too: the track follows the pointer, the
- * neighbours are brought alongside for the occasion, and letting go either
- * carries on to the one being pulled in or puts the current one back — the
- * gesture decides, not the distance alone. It walks ONE AXIS, chosen from the
- * first few pixels: a diagonal would ask for two travels at once and only one
- * slide can arrive. What a gesture IS — how far it has to go, who else may
- * claim it, what letting go says — is read in drag_to_travel.js; what is here is
- * where the slides stand while it happens.
- *
- * The slides live INSIDE the box, which is what makes this work for a popup: a
- * dialog and a popover are both promoted to the browser's top layer, so no
- * container of ours could ever hold two of them side by side and translate the
- * pair. One popup holding slides of its own contents has no such problem — and
- * it is the same component in the document, in a dialog or in a popover.
- *
- * Padding belongs on the SLIDE, never on this box nor on anything above it.
- * Overflow clips at the PADDING edge, so a padding given to the container is a
- * band the clipping does not cover: a slide travelling through it is seen there
- * before it has reached the frame. And a padding above the slides does not
- * travel — the two contents crossing each other pass with nothing between them,
- * each flush against the other, instead of arriving already inset. Put on the
- * slide, the inset moves with what it insets, and a travel shows two paddings'
- * worth of gutter between the two.
- *
- * What SCROLLS is the slide too, and for the same reason read the other way
- * round: the box is as big as its largest slide, so a scroller placed above the
- * slides is always scrolling the tallest of them — stand on a short one and it
- * carries the scrollbar of a neighbour, scrolling through emptiness. The cap on
- * the height comes from above (a max-height on the popup, a column it has to
- * fit in) and must reach the slides as a CONSTRAINT rather than as a scroller:
- * this box shrinks into it (flex: 0 1 auto below), the grid hands that height
- * to every slide, and a slide with an overflow of its own scrolls only when ITS
- * content is taller than that. The tall slide scrolls; the short ones are tall
- * boxes with a short content in them, which is exactly what one wants — they
- * take the height the context imposes and ignore the height of their neighbour.
- * So: nothing scrollable between the cap and the slides (a shared [data-body]
- * around them IS a scroller, see box.jsx), and `overflow="auto"` on each Slide.
- */
+installImportMetaCssBuild(import.meta);
 const css$F = /* css */`@property --slide-travel-progress {
   syntax: "<number>";
   inherits: true;
@@ -56635,7 +56292,6 @@ const SlideContainer = ({
       // has seen the gesture — and it is also what a box HOLDING this one reads
       // to know the gesture is not its own (see drag_to_travel.js).
       ,
-
       "data-travel-by-drag": dragAxes ?? undefined
       // …and said as a listener too, from the same render: a touch this box may
       // take has to be refusable before the finger lands, and being registered
@@ -56644,18 +56300,15 @@ const SlideContainer = ({
       // Without it, a swipe the box has taken can be cancelled mid-gesture by
       // the browser scrolling the page along the axis touch-action leaves it.
       ,
-
       onTouchMove: dragAxes ? keepTouchRefusable : undefined
       // The same fact for a wheel, and only for that second reason: this box
       // takes the push, whatever the box around it also travels on.
       ,
-
       "data-travel-by-wheel": scrollAxes ?? undefined
       // The same fact, read by the shared gesture stylesheet: what scrolls
       // inside a box that travels must not spill onto the page behind it (see
       // drag_to_travel.js).
       ,
-
       "data-drag-travel": travelAxes ?? undefined,
       onPointerDown: e => {
         startDrag(e);
@@ -56666,14 +56319,12 @@ const SlideContainer = ({
       // holds nothing. It is also what makes the arrows and Home/End reachable
       // at all — a keyboard shortcut only reaches what has the focus.
       ,
-
       tabIndex: rest.tabIndex ?? 0
       // "not me, unless you have nothing else": whoever hands the focus here —
       // a popup opening, a slide arriving — reads this the same way (see
       // findFocusTarget), so this box takes the keyboard only when what is on
       // screen holds nothing that can.
       ,
-
       "navi-autofocus": "last-resort"
       // "the box around me may draw my focus ring instead of me": a container
       // filling a dialog or a popover has its ring land on the very edge the
@@ -56681,19 +56332,16 @@ const SlideContainer = ({
       // The popup answers this attribute (see dialog.jsx / popover.jsx) and
       // silences the ring below through --navi-focus-outline-style.
       ,
-
       "data-focus-outline-delegate": ""
       // Focusable and a surface, so it says what state it is in — and
       // :focus-visible is what the ring below is drawn from.
       ,
-
       pseudoClasses: SLIDE_CONTAINER_PSEUDO_CLASSES
       // A direction, never a step: on a map "next" only means something when
       // there is a single axis to walk, so everything that moves a slide — a
       // chevron, --navi-left/right/up/down, a line of code — says which way.
       // Dispatch it (bubbling) from anywhere inside to move.
       ,
-
       onnavi_slide_move: e => {
         const {
           dx,
@@ -56711,7 +56359,6 @@ const SlideContainer = ({
       // By name rather than by direction (--navi-go-to-slide): the caller says
       // where, the map says nothing about it.
       ,
-
       onnavi_slide_go_to: e => {
         const {
           area,
@@ -56725,7 +56372,6 @@ const SlideContainer = ({
       // …the ends of the walk (--navi-first / --navi-last): the same jump
       // Home and End make, said as a command so a nav bar can offer it.
       ,
-
       onnavi_slide_end: e => {
         goToEnd(e.detail.last, e);
       }
@@ -56734,7 +56380,6 @@ const SlideContainer = ({
       // business (a row goes right, a column goes down), which is exactly what
       // a command saying "onwards" leaves to it.
       ,
-
       onnavi_slide_step: e => {
         if (e.detail.goal === "next") {
           moveNext(e);
@@ -56744,7 +56389,6 @@ const SlideContainer = ({
       }
       // …and back where one came from (--navi-back).
       ,
-
       onnavi_slide_back: e => {
         const {
           slideElements
@@ -56760,7 +56404,6 @@ const SlideContainer = ({
       // …and the protocol every command target answers: without this the
       // command resolves, finds this element, and nothing runs.
       ,
-
       onnavi_command: e => {
         onNaviCommand(e);
       },
@@ -56879,7 +56522,6 @@ const Slide = ({
         // SlideContainer's own tabIndex). One stop for the whole thing rather
         // than one per screen — the shape a wheel and its values already have.
         ,
-
         ...rest,
         // The protocol every command target answers — a slide is one now
         // (--navi-done). navi_command does not bubble, so the container's own
@@ -56892,7 +56534,6 @@ const Slide = ({
         // see resolveAfterSend in commands.js). It says nothing about where to
         // go: that is read here, from this slide's own place in the walk.
         ,
-
         onnavi_done: e => {
           container?.done(slideArea);
           rest.onnavi_done?.(e);
@@ -56906,7 +56547,6 @@ const Slide = ({
         // :focus-within is the one a slide is really about: it is what tells
         // the slide holding the keyboard from the ones waiting.
         ,
-
         pseudoClasses: SLIDE_PSEUDO_CLASSES,
         children: children
       })
@@ -56962,7 +56602,6 @@ const SlideNavButton = ({
   // a slide holding nothing but its chevrons does land on one: there was
   // nothing else, which is exactly what this says.
   ,
-
   autoFocus: "last-resort",
   icon: true,
   variant: "discrete"
@@ -56982,7 +56621,6 @@ const SlideNavButton = ({
   // back the other way lands on the chevron one left by, which is where the
   // eye and the hand already are.
   ,
-
   ...rest,
   children: jsx$1(Icon, {
     lineOverflow: "allow",
@@ -58699,65 +58337,7 @@ const PopupClose = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);/**
- * A dialog is a surface, not a control: it holds no value, has no action and
- * aggregates nothing. Fields and a submit go in a `<Form>` inside it, exactly
- * as they would in the document — the form owns the answer, and the dialog owns
- * where it is shown. What the two say to each other is small and goes one way:
- * the form says it is finished (`--navi-close`, see resolveAfterSend in
- * commands.js) and the dialog closes; the dialog, before letting a close
- * through, asks what it contains whether anything is mid-action and refuses if
- * so (see findBusyElementInside below).
- *
- * A dialog is centered in the viewport by default, with no anchor to grow
- * out of or slide in from — `animation={true}`/`"auto"` resolves through
- * Popover's own no-real-anchor path (see popover.jsx's own top comment).
- * `positionArea` accepts the same grammar Popover does (see
- * popup_shared.js), even though several combinations land identically here
- * since Dialog is never really anchored — kept distinct anyway because
- * `positionArea` still picks which animation direction plays. `anchor` is
- * inert here unless something asks for it: a dialog is a surface of its own,
- * sized by its content, not a panel grown out of the control that opened it —
- * that is Popover's job. Two props ask. With `sizeFromAnchor`, the anchor's
- * box reaches the `--anchor-width`/`--anchor-height` CSS vars and becomes a
- * min-width/min-height floor. With `animation="growing"`, the anchor's box is
- * where the dialog comes from: the two are photographed and morphed into each
- * other, and back on close (popup_grow.js). Either way Dialog's own
- * positioning is never relative to the anchor, unlike Popover.
- *
- * Two rendering strategies, picked via `layer`: `DialogAsModal` (a real
- * `<dialog>`, `showModal()`, top layer — native focus trap,
- * `Escape`-to-cancel, hardware/gesture back-button dismissal, all for free)
- * and `DialogLocal` (also a real `<dialog>`, shown via the non-modal
- * `.show()` instead so it stays in normal document flow — `position:
- * absolute` relative to its own positioned ancestor, clipped by it, same
- * motivation as Popover's own `PopoverCustom`).
- *
- * `.show()` gives up everything `showModal()` gets for free, which
- * `DialogLocal` reimplements itself: a focus trap (scoped to its own
- * positioned ancestor, not `document`) and `Escape`-to-close (`.show()`
- * dialogs don't fire "cancel" on Escape the way a modal one does).
- * **Deliberately NOT reimplemented: hardware/gesture back-button
- * dismissal** — no public web API hooks into that outside the browser's own
- * native modal-dismissal stack, which only a genuine `showModal()` element
- * participates in. An accepted, intentional limitation of `layer="local"`,
- * not an oversight.
- *
- * `DialogAsModal`'s own backdrop is the native `::backdrop` pseudo-element,
- * not a real rendered element — simpler than the alternative turned out to
- * be: a `showModal()`-shown `<dialog>` makes the rest of the document
- * genuinely non-interactive while open, so a real backdrop `<div
- * popover="manual">` never actually received a `mousedown` at all (tried
- * and reverted). Outside-click detection is instead a plain
- * `document`-level `mousedown` listener, coordinate-based against
- * `dialogEl`'s own rect rather than target-based (a backdrop click doesn't
- * reliably fire `dialogEl`'s own `mousedown` either).
- *
- * `DialogLocal` wraps its dialog element in a `.navi_dialog_clip_wrapper`
- * (mirrors Popover's own `.navi_popover_clip_wrapper`) purely to absorb
- * overflow growth from a translate/scale entrance transition before it
- * reaches the real container.
- */
+installImportMetaCssBuild(import.meta);
 let openLocalDialogCount = 0;
 const css$E = /* css */`
   @layer navi {
@@ -59522,7 +59102,6 @@ const DialogLocal = props => {
       // contentProps for what reads the marker.
       // eslint-disable-next-line react/no-unknown-property
       ,
-
       "navi-out-of-flow": "",
       children: jsx$1(Box, {
         ...contentProps
@@ -60439,52 +60018,7 @@ const DIALOG_STYLE_CSS_VARS = {
 };
 Dialog.Close = PopupClose;
 
-installImportMetaCssBuild(import.meta);/**
- * A popover is a surface, not a control: it holds no value, has no action and
- * aggregates nothing — same as Dialog, see dialog.jsx's own top comment for the
- * whole reasoning. Fields and a submit go in a `<Form>` inside it; the form
- * owns the answer, the popover owns where it is shown.
- *
- * A popup positioned via `anchor`/`positionArea`. Two real rendering
- * strategies live in this file, each its own component: `PopoverViaAttribute`
- * (native Popover API, top layer) and `PopoverCustom` (`position: absolute`
- * relative to its own nearest positioned ancestor, clipped by that
- * ancestor's own `overflow` unlike the top layer). Kept as two separate
- * components rather than one branching internally — their JSX already
- * diverges (`PopoverCustom` wraps its content in an extra clip-wrapper div)
- * and collapsing them would just mean re-splitting later. `layer` picks
- * between them directly and has no opinion on anchor resolution — a real
- * `anchor` always wins over `layer` and works with either renderer.
- *
- * The backdrop (`pointerInteractionOutsideEffect`) is a sibling, not a
- * descendant, of the real popover — a stacking-context root's own
- * background always paints below even its own negative-z-index children, so
- * a z-index trick on a descendant backdrop could never sit behind the
- * popover's own background. Its hide is deferred until the browser's
- * matching "click" fires when close was triggered by a mousedown (an
- * outside click) — hiding synchronously would make the mousedown's target
- * vanish before mouseup, silently dropping that click.
- *
- * `animation="auto"` resolves to "scaling" for a real anchor or a
- * dead-center placement, "sliding" otherwise. "scaling" is the auto-pick
- * (over "expanding") because it simply reads best in practice for a popup
- * opening. A `spawnFromPointer`-style option (growing from the pointer
- * position) was tried and dropped — it added motion that competed with the
- * popover's own content for attention.
- *
- * The via-attribute renderer defaults to `position: fixed`, overridden to
- * `absolute` only when there's a real anchor that itself scrolls with the
- * document: such an anchor needs the popover to scroll in lockstep with it
- * to stay visually attached, whereas `fixed` is the more direct way to stay
- * pinned to the viewport when there's no anchor (and avoids ever extending
- * the document's own scrollable area). When the anchor itself doesn't
- * scroll with the document — it's `position: fixed`, or nested inside
- * something that is, e.g. anchored to an element inside another top-layer
- * popover/modal dialog — staying `fixed` is correct *despite* having a real
- * anchor too, since the anchor never moves on scroll either; see
- * `data-anchor-scrolls` in openEffect/the CSS below for how that's detected
- * and applied.
- */
+installImportMetaCssBuild(import.meta);
 let openLocalPopoverCount = 0;
 const css$D = /* css */`
   @layer navi {
@@ -61084,7 +60618,6 @@ const PopoverCustom = props => {
       // contentProps for what reads the marker.
       // eslint-disable-next-line react/no-unknown-property
       ,
-
       "navi-out-of-flow": "",
       children: jsx$1(Box, {
         ...contentProps
@@ -62014,28 +61547,7 @@ const resolvePositionAreaAndAnimationKind = ({
 
 Popover.Close = PopupClose;
 
-installImportMetaCssBuild(import.meta);/**
- * A lightweight version of picker_custom.jsx's own Popover/Dialog switch —
- * no picker concepts (value/action tracking, keyboard letter/arrow-to-open
- * shortcuts, history-driven expanded state):
- * just picks between rendering a Popover or a Dialog and applies the shared
- * "popup box" look (padding, background, border-radius, box-shadow) to
- * whichever one it renders.
- *
- * Mode resolution (`useResolvedPopupMode`, popup_mode.jsx) is shared with picker_custom.jsx,
- * not just mirrored — the picker needs the resolved mode itself (for its own
- * mode-dependent history/ARIA handling), not just to pick which of Popover/
- * Dialog to render, so it calls the same hook directly instead of
- * duplicating the heuristic. `Popup` itself never resets it (no
- * open/close notion of its own to hook a reset into); the picker does, via
- * the hook's own `resetMode` return value, from its own onClose.
- *
- * `layer` (shared by both — picks the top-layer vs. local-container rendering
- * strategy either way) and `anchorCustomEventDetail` (shared too: Popover
- * resolves an anchor to position against, Dialog only to size itself from,
- * and only under its own `sizeFromAnchor`) pass through untouched via
- * `...rest` to whichever of Popover/Dialog actually renders.
- */
+installImportMetaCssBuild(import.meta);
 const css$C = /* css */`@layer navi {
   .navi_popup {
     --popup-border-radius: var(--navi-popup-border-radius);
@@ -62217,7 +61729,8 @@ const Popup = props => {
 };
 Popup.Close = PopupClose;
 
-installImportMetaCssBuild(import.meta);const css$B = /* css */`.navi_picker {
+installImportMetaCssBuild(import.meta);
+const css$B = /* css */`.navi_picker {
   &[aria-haspopup="listbox"] {
     & .navi_popover {
       --popover-border-radius: var(--picker-popup-border-radius, var(--picker-border-radius));
@@ -63172,23 +62685,7 @@ const PickerCalloutPopup = ({
   );
 };
 
-installImportMetaCssBuild(import.meta);/**
- * A trigger that asks "are you sure?" before doing what it stands for.
- *
- * A picker rather than a button with a question attached: the question is
- * shown in a popup, and a picker already owns one — placed, sized, popover or
- * dialog, styled by the same props every other picker takes. This one holds no
- * value (it is a door, not a field): its popup IS the question, and the only
- * thing that comes out of it is yes or no.
- *
- * Yes is said with `--navi-confirm` (see commands.js). The popup closes on it,
- * and only then does the picker do what it was standing in for — run its
- * `action`, trigger its `command`, or both, the command following the action
- * and only if it succeeded — so the work runs on the trigger, where
- * the loading state and the error callout are drawn, and where the user is
- * looking again. Anything else that closes the popup (the cancel button,
- * Escape, a click outside) is no.
- */
+installImportMetaCssBuild(import.meta);
 const css$A = /* css */`.navi_picker_confirm_body {
   min-width: 180px;
   max-width: 320px;
@@ -63274,7 +62771,6 @@ const PickerConfirmResolver = props => {
     // No chevron, no clear cross, whatever variant the trigger is drawn in:
     // both announce a value, and a question holds none.
     ,
-
     picksNothing: true,
     variant: variant,
     mode: mode,
@@ -63285,7 +62781,6 @@ const PickerConfirmResolver = props => {
     // built on the first open, like that of a picker told its value (see
     // the `mount` resolution in picker_custom.jsx).
     ,
-
     mount: MOUNT_DEFAULT,
     message: undefined,
     confirmLabel: undefined,
@@ -63544,7 +63039,8 @@ const LoadingIndicator = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$z = /* css */`@layer navi {
+installImportMetaCssBuild(import.meta);
+const css$z = /* css */`@layer navi {
   .navi_separator {
     --size: 1px;
     --color: var(--navi-separator-color-default);
@@ -63630,7 +63126,6 @@ const Separator = ({
     // styleCSSVars — so size="4px" would set a font size and leave the line
     // as thin as it was. Last, so a caller's own style still wins.
     ,
-
     style: {
       ...cssVars({
         "--size": lengthValue(size),
@@ -64147,7 +63642,8 @@ const listItemBlockedMessage = (loading, props) => {
   return props.readOnlyMessage ?? naviI18n("constraint.readonly.item", props);
 };
 
-installImportMetaCssBuild(import.meta);const css$y = /* css */`@layer navi {
+installImportMetaCssBuild(import.meta);
+const css$y = /* css */`@layer navi {
   .navi_list_container[navi-selectable] {
     --list-item-outline-width: var(--navi-focus-outline-width);
     --list-item-outline-offset: calc(-1 * var(--list-item-outline-width));
@@ -64472,7 +63968,6 @@ const ListSelectable = props => {
     focusGroupWrap: undefined
     // Track focus inside the list: whichever item gets focus becomes current.
     ,
-
     onFocusIn: e => {
       const realInput = e.target.closest("[navi-selectable-real-input]");
       if (!realInput) {
@@ -64540,7 +64035,6 @@ const ListSelectable = props => {
     // drive it (arrows, Home/End) map onto that here, and so do the commands
     // (--navi-previous / --navi-next / --navi-first / --navi-last).
     ,
-
     onnavi_request_nav: e => {
       const {
         goal
@@ -64806,7 +64300,6 @@ const SelectableInputProxy = props => {
       // give it a specific name to avoid radio name (would unselect others)
       // (making it unique to the list would be enough, but here it's even more unique)
       ,
-
       name: `${selectableRealInputProps.id}_proxy`,
       "aria-hidden": "true",
       tabIndex: -1
@@ -64941,7 +64434,8 @@ const applySearchHighlight = (el, highlight) => {
   };
 };
 
-installImportMetaCssBuild(import.meta);const ListItemTrackerContext = createContext(null);
+installImportMetaCssBuild(import.meta);
+const ListItemTrackerContext = createContext(null);
 const GroupItemTrackerContext = createContext(null);
 const PendingScrollRefContext = createContext(null);
 // Controls how List.Item behaves when match=false (set via List searchNoMatchMode prop):
@@ -66018,7 +65512,6 @@ const ListContent = ({
       // artificially small, so they run out of room to stay stuck well
       // before the user has actually scrolled through all the content).
       ,
-
       horizontal: horizontal,
       spacing: spacing,
       columns: columns,
@@ -67664,7 +67157,6 @@ const VirtualFiller = ({
     className: "navi_list_virtual_filler"
     // eslint-disable-next-line react/no-unknown-property
     ,
-
     "navi-virtual-filler": edge,
     "aria-hidden": true,
     style: {
@@ -68044,14 +67536,12 @@ const ListItemReal = props => {
     selected: undefined
     // Read by listItemBlockedMessage, not by the element.
     ,
-
     readOnlyMessage: undefined,
     busyMessage: undefined
     // We use aria-hidden and not hidden because hidden would be forced to
     // display: none while here we want to keep it in the DOM to avoid layout shift
     // but visually hidden
     ,
-
     "aria-hidden": hidden,
     inert: hidden ? true : undefined,
     "navi-muted": muted ? "" : undefined
@@ -68060,7 +67550,6 @@ const ListItemReal = props => {
     // only of a control inside it. Loading implies read-only: a row whose
     // fate is in flight must not take another order in the meantime.
     ,
-
     "navi-loading": loading ? loading === true ? "" : loading : undefined,
     "navi-readonly": readOnly || loading ? "" : undefined,
     "aria-busy": loading ? "true" : undefined,
@@ -69522,7 +69011,6 @@ const ListItemGroup = ({
       inert: labelHidden ? true : undefined
       // eslint-disable-next-line react/no-unknown-property
       ,
-
       "navi-default": typeof label === "string" ? "" : undefined,
       children: label
     }), jsx$1("ul", {
@@ -69660,7 +69148,8 @@ const createBadgeRegistry = () => {
   };
 };
 
-installImportMetaCssBuild(import.meta);const css$w = /* css */`@layer navi;
+installImportMetaCssBuild(import.meta);
+const css$w = /* css */`@layer navi;
 
 .navi_badge {
   --font-size: .7em;
@@ -69767,7 +69256,6 @@ const BadgeUI = ({
     // cut. Halfway to the next line's cap top keeps them, still above any
     // ink from the line the clamp hides.
     ,
-
     overflowClipMargin: "content-box calc((1lh - 1cap) / 2)",
     ...props,
     styleCSSVars: BadgeStyleCSSVars,
@@ -69818,7 +69306,8 @@ const BadgeButtonUI = props => {
 };
 Badge.Button = BadgeButton;
 
-installImportMetaCssBuild(import.meta);const css$v = /* css */`@layer navi;
+installImportMetaCssBuild(import.meta);
+const css$v = /* css */`@layer navi;
 
 .navi_badge_list {
   flex-wrap: wrap;
@@ -70296,7 +69785,8 @@ const BadgeListContent = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$u = /* css */`.navi_color {
+installImportMetaCssBuild(import.meta);
+const css$u = /* css */`.navi_color {
   aspect-ratio: 1;
   background-color: currentColor;
   border: 1px solid #0003;
@@ -70324,7 +69814,6 @@ const Color = ({
     "navi-color-empty": color ? undefined : ""
     // propsCSSVars={COLOR_PROP_CSS_VAR}
     ,
-
     color: color,
     title: color,
     ...rest
@@ -70823,7 +70312,8 @@ const PickerFileUI = asPickerOwnUI(() => {
   return String(value);
 });
 
-installImportMetaCssBuild(import.meta);const css$t = /* css */`@layer navi {
+installImportMetaCssBuild(import.meta);
+const css$t = /* css */`@layer navi {
   .navi_picker {
     --picker-border-radius: var(--navi-control-border-radius);
     --picker-border-width: var(--navi-control-border-width);
@@ -71374,7 +70864,6 @@ const PickerButton = props => {
         // text-align — which is a different intention entirely (that one is the
         // textAlign prop, placing the text INSIDE the value slot).
         ,
-
         inline: true,
         flex: "x",
         baseClassName: "navi_picker",
@@ -71406,12 +70895,10 @@ const PickerButton = props => {
         // This wrapper will receive keyboard event bubbling from the picker popup content
         // we re-dispatch on the input (to get escape to close for instance)
         ,
-
         onKeyDown: inputProps.onKeyDown
         // in case request open/close are dispatched on the control root ->
         // redispatch them to the host
         ,
-
         onnavi_request_open: inputProps.onnavi_request_open,
         onnavi_request_close: inputProps.onnavi_request_close
         // `--navi-select`/`--navi-unselect` about one entry of the list the
@@ -71424,7 +70911,6 @@ const PickerButton = props => {
         // cross, is the wrong price. The picker holds the value in the first
         // place and hands it down whenever the popup is built.
         ,
-
         onnavi_request_select: e => {
           requestPickerListEntry(ref.current, inputRef.current, e, "select");
         },
@@ -71448,7 +70934,6 @@ const PickerButton = props => {
               // eslint-disable-next-line react/no-children-prop
               children: undefined // we will render children into the div
               ,
-
               ui: ui,
               onCopy: e => {
                 const pickerEl = ref.current;
@@ -71519,13 +71004,11 @@ const PickerButton = props => {
               className: "navi_picker_value"
               // Only when it names the trigger (see hostLabelId above).
               ,
-
               id: hostLabelId
               // Tells the caller's own drawing of the control from the value
               // the picker draws itself, so each is written on its own line
               // (see .navi_picker_value in the CSS above).
               ,
-
               "data-picker-facade": ui === undefined ? undefined : ""
               // A placeholder is the picker saying "nothing here yet" about
               // the value navi draws — the default rendering, or the one a
@@ -71535,7 +71018,6 @@ const PickerButton = props => {
               // caller is drawing there ("no filter", "anywhere"), so how it
               // looks empty stays theirs (documented on the ui prop below).
               ,
-
               "navi-placeholder": (ui === undefined || pickerUIIsNaviOwn(ui)) && variant !== "button" && variant !== "text" && uiStateHoldsNothing(value) ? "" : undefined,
               maxLines: maxLines,
               children: jsx$1(PickerOwnContent, {
@@ -71661,20 +71143,17 @@ const PickerClear = ({
     // handing focus back to the picker's own input is what opens the popup,
     // and clearing is the opposite intention.
     ,
-
     icon: true,
     variant: "discrete"
     // What is busy once the clear is sent is the picker — the value being
     // removed is the whole field's, and the picker already draws the wait
     // around all of it. Two outlines for one wait is one too many.
     ,
-
     loadingOutline: false
     // preventDefault, not just tabIndex="-1": a mousedown focuses its target
     // before any click happens, and this button should never hold focus at
     // all — the field keeps it.
     ,
-
     onMouseDown: e => {
       e.preventDefault();
     },
@@ -71813,7 +71292,6 @@ const PickerInput = props => {
     // hole under the finger in the middle of a page (see PRESS_ONLY_ATTRIBUTE
     // in @jsenv/dom's drag_to_travel.js).
     ,
-
     "data-press-only": "",
     ui: undefined,
     className: "navi_picker_input",
@@ -72363,35 +71841,7 @@ Picker.UI.CalendarSvg = CalendarSvg;
 Picker.UI.FileSvg = FileSvg;
 Picker.UI.ColorSvg = ColorSvg;
 
-installImportMetaCssBuild(import.meta);/**
- * A value one steps through, one press at a time: what is chosen sits between
- * the way back and the way on, and the two of them are the whole control.
- *
- * `Spin` knows nothing about what it steps through. It is handed how to move
- * one step (`valueAtStep`), how to tell two values apart (`compareValues`) and
- * what to write for one (`renderValue`); everything else — the frame, the two
- * ways out, the ends one cannot go past, the value a form carries — is the
- * same whatever the value is. `DaySpin` and `NumberSpin` at the bottom are two
- * of those answers, and a caller can write a third.
- *
- * The middle is one of two things, and that is the only real fork here:
- *
- * - a value one PICKS (`DaySpin`): a headless picker holds it, pressing the
- *   middle opens it, and the three slides of a looping container show the one
- *   before, this one and the one after — a window over a row with no end.
- * - a value one TYPES (`editable`, `NumberSpin`): the middle IS the field.
- *   Nothing travels — one cannot slide what is being typed into — and the
- *   arrows step the value where the caret already is.
- *
- * A picker, so it lives here: what one presses in the middle IS a picker, and
- * the stepping is a way of showing it. It is headless and behind the three
- * slides — there is one value being chosen, so there is one picker for it.
- *
- * Two things take the keyboard and no more: the middle (the container in the
- * picking case, the field in the typing one) and nothing else — the chevrons
- * refuse it on purpose, which is what keeps the focus where the travel happens
- * instead of moving it into a slide that is about to leave.
- */
+installImportMetaCssBuild(import.meta);
 const css$s = /* css */`@layer navi {
   .navi_picker_spin {
     --picker-spin-padding-x-default: var(--navi-picker-padding-x-default);
@@ -72919,7 +72369,6 @@ const Spin = ({
     // The states this box draws itself: the ring above is the one that is
     // asked for by hand (pseudoState) as well as held for real.
     ,
-
     size: sizeResolved,
     pseudoClasses: PICKER_SPIN_PSEUDO_CLASSES,
     styleCSSVars: PICKER_SPIN_STYLE_CSS_VARS,
@@ -72948,7 +72397,6 @@ const Spin = ({
         // The field is written as big as the box around it: a size that
         // only grew the chevrons would be half a size.
         ,
-
         size: sizeResolved
         // No frame of its own inside a frame: the spin draws it (see the
         // CSS above). The ring is the spin's too — an outline of zero width
@@ -72957,7 +72405,6 @@ const Spin = ({
         // the ring stays on the field: the spins are typed into one at a
         // time, and the ring is what says which one holds the keyboard.
         ,
-
         variant: "discrete",
         outlineWidth: group ? undefined : "0",
         textAlign: "center",
@@ -72989,7 +72436,6 @@ const Spin = ({
           // holds are long: a control that resizes as one steps through it
           // is a control one has to aim at twice.
           ,
-
           expandX: true,
           defaultCurrent: "current",
           duration: `${duration}ms`
@@ -72997,7 +72443,6 @@ const Spin = ({
           // container plays the travel and comes back to the middle, and
           // the value moves one step here, in onLoop, as it lands.
           ,
-
           loop: true,
           onLoop: ({
             dx,
@@ -73018,7 +72463,6 @@ const Spin = ({
           // then be one more Tab stop, and the focus would follow it out of
           // the box as it travels.
           ,
-
           commandFor: controlId
           // Sent whatever state the control is in: the picker is the one
           // that knows it cannot be opened right now, and refusing there is
@@ -73029,7 +72473,6 @@ const Spin = ({
           // would open the calendar a second time, right after this command
           // did.
           ,
-
           onClick: e => {
             e.preventDefault();
             triggerNaviCommand(e.currentTarget, "--navi-open", e);
@@ -73049,7 +72492,6 @@ const Spin = ({
             // way out is closed on the slide being left, so a key, a
             // chevron and a command are all stopped by the same thing.
             ,
-
             preventNavPrevious: !startAllowed,
             preventNavNext: !endAllowed,
             children: renderValue(valueShown, {
@@ -73109,18 +72551,15 @@ const WayOut = ({
     // from its place among its siblings: that is what the corners it is
     // rounded by are keyed on (see the CSS above).
     ,
-
     "data-way-out": atStart ? "start" : "end"
     // Tracked rather than left to CSS :hover, which stays on after a tap on a
     // touch device (see the CSS above).
     ,
-
     pseudoClasses: WAY_OUT_PSEUDO_CLASSES
     // Announced as a button because that is what it is to whoever cannot see
     // the chevron — and marked unavailable rather than removed when there is
     // nothing that way, so it keeps its place.
     ,
-
     role: "button",
     "aria-label": label,
     "aria-disabled": unavailableMessage ? "true" : undefined,
@@ -73130,11 +72569,9 @@ const WayOut = ({
     // middle of the box, which is what one pressed and what the answer is
     // about.
     ,
-
     "data-callout-arrow-x": "center"
     // Read by triggerNaviCommand below the same way it reads a button's own.
     ,
-
     commandfor: commandFor,
     flex: true,
     align: "center"
@@ -73143,7 +72580,6 @@ const WayOut = ({
     // forwards a click to what it labels, which would open the calendar on
     // the way past.
     ,
-
     onClick: e => {
       e.preventDefault();
     },
@@ -73167,7 +72603,6 @@ const WayOut = ({
     // release tells the two apart. A mouse has no such doubt and is answered
     // above, as it goes down, which is what makes holding one feel immediate.
     ,
-
     onPointerUp: e => {
       if (e.pointerType !== "touch") {
         return;
@@ -73186,7 +72621,6 @@ const WayOut = ({
     // opens on a phone would only get in the way of someone stepping through
     // values, and the pressed state under it would stay on once it opened.
     ,
-
     onContextMenu: e => {
       if (e.pointerType !== "touch") {
         // right click is allowed
@@ -73304,7 +72738,6 @@ const SpinGroup = props => {
     // What the frame and what sits between the spins are drawn from: the
     // spins fade themselves, and the group is what holds those two.
     ,
-
     "data-readonly": readOnly ? "" : undefined,
     "data-disabled": disabled ? "" : undefined,
     "data-loading": loading ? "" : undefined,
@@ -73532,7 +72965,6 @@ const renderDayDefault = (day, {
   // which IS one line and cuts it itself (see Text's own TextOverflow):
   // saying "you may wrap" there would undo the truncation instead.
   ,
-
   noWrap: maxLines === 1 || maxLines === "1" ? undefined : false,
   maxLines: maxLines,
   children: day
@@ -73774,7 +73206,7 @@ const TimeRangeSpin = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);// TOFIX: select in data then reset, it reset to red/blue instead of red/blue/green
+installImportMetaCssBuild(import.meta);
 const css$r = /* css */`.navi_checkbox_group {
   border-style: solid;
 
@@ -73932,7 +73364,8 @@ const formatIntlUnit = (unit, {
   }
 };
 
-installImportMetaCssBuild(import.meta);const css$q = /* css */`.navi_input_duration {
+installImportMetaCssBuild(import.meta);
+const css$q = /* css */`.navi_input_duration {
   --duration-separator-spacing: 4px;
   --loader-color: var(--navi-loader-color);
   position: relative;
@@ -74150,7 +73583,6 @@ const InputDuration = props => {
       type: "hidden",
       basePseudoState: undefined // eslint-disable-line react/no-unknown-property
       ,
-
       ...(hasValue ? {
         value: initialIsoString
       } : {
@@ -74481,7 +73913,6 @@ const InputDurationPart = ({
       // When autofocused this field should be selected
       // this help to modify the value on mobile
       ,
-
       autoFocusSelect: true,
       type: "navi_number",
       "navi-input-type": unit,
@@ -74498,7 +73929,8 @@ const InputDurationPart = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$p = /* css */`.navi_radio_group {
+installImportMetaCssBuild(import.meta);
+const css$p = /* css */`.navi_radio_group {
   border-style: solid;
 
   &[data-callout] {
@@ -74546,35 +73978,7 @@ const RadioGroupInterface = props => {
   });
 };
 
-installImportMetaCssBuild(import.meta);/**
- * A native `<select>` that is a navi control: its value enters the state of the
- * `<Form>` around it, and it takes `signal`, `uiAction`, `action`, `command`,
- * `value`/`defaultValue`, `readOnly`, `disabled`, `required` like every other
- * control.
- *
- * Native on purpose, and not a Picker: on a phone a `<select>` opens the
- * system's own full-screen list — the thing the thumb handles best and the user
- * already knows — with no popup, no positioning and no focus trap to get wrong.
- * That is the right control for a short closed list (a gender, an age bracket,
- * "who sees this"). A long, searchable list with rich content in its options is
- * Picker's problem, not this one.
- *
- * The options are the children, written as HTML: an `<optgroup>`, a `disabled`
- * option, an `<hr>` between two groups need no support from this component.
- *
- * Two things the component absorbs, both traps met before:
- * - a native `<select>` ignores `defaultValue` and reads `selected` off its
- *   options instead; here `value`/`defaultValue` mean what they mean everywhere
- *   else in navi, and the element is told what to show.
- * - a native `<select>` has no `readonly`; `readOnly` here refuses the
- *   interaction (the list does not open, a change from the keyboard is put
- *   back) and says so with `aria-readonly`.
- *
- * Styled as a `.navi_input` box so a select and an input sitting next to each
- * other are the same box. `appearance: none` only changes how the closed
- * control is drawn — the list it opens stays the platform's own, which is the
- * whole point of using a select.
- */
+installImportMetaCssBuild(import.meta);
 const css$o = /* css */`.navi_input.navi_select {
   & .navi_control_input {
     padding-right: calc(var(--x-padding-right) + 1em);
@@ -74674,25 +74078,7 @@ const Select = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);/**
- * SplitButton — one action, several variants of it.
- *
- * The left half does the thing; the right half opens the list of the other
- * ways of doing it. What choosing means is the caller's call (`chooseEffect`):
- * the chosen way becomes what the button does, or it is done right away.
- *
- * Both halves are `<Button>`s, deliberately: the chevron half has to wear the
- * exact same paint as the label half for any `cta`/`variant`/`color` the
- * caller passes, and a `<Picker variant="icon">` next to a button paints from
- * its own set of custom properties — matching them would mean restating the
- * button's palette here and keeping the copy in step forever. So the popup
- * comes from a headless `<Picker>` sitting behind the chevron button, hung off
- * the whole split button (`anchor`) so the menu lines up with it.
- *
- * The busy state is worn by the control, not by the half that happens to be
- * running: one loading outline around both, which is why each half is told
- * `loadingOutline={false}`.
- */
+installImportMetaCssBuild(import.meta);
 const css$n = /* css */`.navi_split_button {
   border-radius: var(--navi-control-border-radius);
   display: inline-flex;
@@ -74912,7 +74298,6 @@ const SplitButton = props => {
           // would sit on the baseline of a line of text that is not there,
           // with the descender space still kept below it.
           ,
-
           flex: true,
           align: "center",
           "aria-label": menuLabel,
@@ -75397,59 +74782,7 @@ const buildMatchInfo = (searchText, items, matchFn) => {
   return { scoreEntries, nonMatched, matchInfoMap };
 };
 
-installImportMetaCssBuild(import.meta);/*
- * Wheel — a single-value control rendered as an iOS-style scroll picker. A short
- * viewport shows the selected value in the middle with the neighbouring values
- * faded above/below (or left/right when `horizontal`). The selected value is
- * whichever item is closest to the center; the user changes it by scrolling,
- * dragging, clicking a neighbour, or with the arrow keys.
- *
- * A SPINBUTTON, NOT A RADIO GROUP. The whole wheel is one focusable element
- * (role=spinbutton, the container) whose value lives in an invisible input for
- * the form. Wheel.Item children only register their {value, label, itemProps}
- * with the wheel and render nothing; they carry no focusable input. The main-axis
- * arrows step the value by one row (a focus-free value change — no DOM focus moves
- * between rows, which is what makes keyboard nav cheap); the value updates
- * immediately while the selection glides to center.
- *
- * TWO LAYERS. The rows are rendered twice, one copy over the other, moved by the
- * same offset: a base layer wearing the fade (and, with `zoom`, scaled down),
- * and a center layer clipped to the emphasis band, painted in the wheel's own
- * colour. The emphasis therefore
- * belongs to the WINDOW rather than to a row — a row is emphasised over the part
- * of it that is inside the window, so it gains emphasis progressively as it
- * slides in, and a wheel resting between two rows still shows an emphasised
- * center. See .navi_wheel_layer in the CSS.
- *
- * VIRTUALIZED. The DOM is NOT the source of truth — the ordered tracked-item list
- * is. Only visibleCount + 2 <li> slots are rendered per layer (WheelWindow) and recycled: as
- * the wheel scrolls, each slot's content is refilled from trackedItems. The slots
- * re-render on demand — only when the wheel crosses a row (the window base index
- * changes) — never per frame; the per-frame motion is a single imperative
- * transform on the track (--wheel-offset, see applyOffset). All geometry is
- * computed from the value index and a measured uniform row size, not read off the
- * DOM.
- *
- * FRAMEWORK REUSE. value/defaultValue, action/uiAction, validation, states and
- * the readonly/disabled/busy callouts all come from the single-value control
- * facade (useControlFacadeProps → hidden input + facade container; see
- * picker.jsx). Wheel adds the scroll-picker rendering and these scroll behaviours:
- *   - scroll settles        → select the centered item
- *   - arrow key             → step + glide the new value to center
- *   - external value change  → scroll the selected item to center
- *
- * LOOP. A wheel wraps endlessly by default (`bounded` opts out, giving fixed
- * ends). Looping needs no extra rows: the window's slots wrap their value index
- * modulo the item count (wrapIndex), so the row after the last value shows the
- * first, seamlessly, in both directions. The position (pos) is folded back to the
- * canonical index * itemSize only when the wheel comes to rest (commitSelection),
- * never mid-glide — the transform stays bounded regardless because it is written
- * relative to the base the window currently shows (renderedBaseRef).
- *
- * ORIENTATION. Everything above is axis-agnostic: helpers read the main axis via
- * accessors (top/height vs left/width) chosen from `horizontal`, and the CSS has
- * a [data-horizontal] variant.
- */
+installImportMetaCssBuild(import.meta);
 const css$m = /* css */`.navi_wheel_container {
   --wheel-item-height: round(1.8em, 1px);
   --wheel-emphasis-size: round(1.5em, 1px);
@@ -77150,7 +76483,6 @@ function WheelUI(props) {
     // length. Because the row height is em-based (--wheel-item-height), the
     // whole wheel scales with it. An explicit itemHeight/itemWidth still wins.
     ,
-
     ...controlRootProps,
     baseClassName: "navi_wheel_container"
     // A spinbutton: one focusable element, arrows adjust the value. Disabled is
@@ -77158,7 +76490,6 @@ function WheelUI(props) {
     // scroll/click still reach the interaction gate so the "disabled" callout
     // can be shown (inert would swallow the events silently).
     ,
-
     role: "spinbutton",
     tabindex: disabled ? undefined : 0,
     "aria-valuenow": ariaValueNow,
@@ -77183,12 +76514,10 @@ function WheelUI(props) {
       className: "navi_wheel_input"
       // Ensure cannot show keyboard on mobile when focused
       ,
-
       readOnly: true,
       "data-readonly-forced": ""
       // eslint-disable-next-line react/no-children-prop
       ,
-
       children: undefined
     }), jsx$1("div", {
       className: "navi_wheel_outline_wrapper",
@@ -77535,21 +76864,7 @@ const WheelColon = props => {
 };
 Wheel.Colon = WheelColon;
 
-installImportMetaCssBuild(import.meta);/**
- * A time of day, and a span between two of them, set by turning rather than by
- * typing. A wheel only ever shows values that exist: there is no half-written
- * hour to bound and correct under the fingers, which is what a time typed digit
- * by digit puts a field through ("1" on its way to "18").
- *
- * `TimeWheel` is a `WheelGroup` of two `Wheel`s and carries a single "HH:MM",
- * like `TimeSpin` — the two are interchangeable in a form. `TimeRangeWheel` is
- * two of those and carries `{ start, end }`, with the rule such a pair always
- * has: the end comes after the start. Here that rule is lived rather than
- * checked — a bound settling pushes the other out of its way, so what the
- * wheels show at rest is always a span. The send-time constraint stays
- * underneath for what pushing cannot fix (a start so late the span no longer
- * fits in the day).
- */
+installImportMetaCssBuild(import.meta);
 const css$l = /* css */`.navi_time_range_label {
   --wheel-item-height: round(1.8em, 1px);
   color: var(--wheel-color, light-dark(#111, #eee));
@@ -77807,7 +77122,6 @@ const TimeRangeWheel = ({
           // minute) — half a time. What the pair compares is this bound's
           // whole time, read off the element the listener sits on.
           ,
-
           onnavi_wheel_settle: e => {
             keepBoundsApart("start", getUIStateFromElement(e.currentTarget), e);
           },
@@ -77836,7 +77150,6 @@ const TimeRangeWheel = ({
           // the two: said on the LATER of the two, so the answer is given where
           // the time one would have to move is (see time_range_constraint.js).
           ,
-
           "data-time-after": startId,
           "data-time-min-duration": minDuration,
           ...timeProps,
@@ -78298,7 +77611,8 @@ const Z_INDEX_DROP_PREVIEW = Z_INDEX_STICKY_CORNER + 1;
 
 const Z_INDEX_TABLE_UI = Z_INDEX_STICKY_CORNER + 1;
 
-installImportMetaCssBuild(import.meta);const css$k = /* css */`.navi_table_drag_clone_container {
+installImportMetaCssBuild(import.meta);
+const css$k = /* css */`.navi_table_drag_clone_container {
   top: var(--table-visual-top);
   left: var(--table-visual-left);
   width: var(--table-visual-width);
@@ -78747,7 +78061,8 @@ const useTableSizeContextValue = ({
   return tableSizeContextValue;
 };
 
-installImportMetaCssBuild(import.meta);const ROW_MIN_HEIGHT = 30;
+installImportMetaCssBuild(import.meta);
+const ROW_MIN_HEIGHT = 30;
 const ROW_MAX_HEIGHT = 100;
 const COLUMN_MIN_WIDTH = 50;
 const COLUMN_MAX_WIDTH = 500;
@@ -79391,7 +78706,8 @@ const findPreviousTableRow = currentRow => {
   return currentIndex > 0 ? allRows[currentIndex - 1] : null;
 };
 
-installImportMetaCssBuild(import.meta);const css$i = /* css */`@layer navi {
+installImportMetaCssBuild(import.meta);
+const css$i = /* css */`@layer navi {
   .navi_table {
     --selection-border-color: var(--navi-selection-border-color, #0078d4);
     --selection-background-color: var(--navi-selection-background-color, #eaf1fd);
@@ -79955,7 +79271,7 @@ const useTableStickyContextValue = ({
   }, [stickyLeftFrontierColumnIndex, stickyTopFrontierRowIndex]);
 };
 
-installImportMetaCssBuild(import.meta);// TODO: sticky left/top frontier should likely use "followPosition"
+installImportMetaCssBuild(import.meta);
 const css$h = /* css */`@layer navi {
   .navi_table {
     --sticky-frontier-color: silver;
@@ -80349,6 +79665,7 @@ const initMoveStickyFrontierViaPointer = (pointerdownEvent, {
 };
 
 installImportMetaCssBuild(import.meta);
+
 /*
  * Box-shadow border mapping template:
  *
@@ -80359,7 +79676,7 @@ installImportMetaCssBuild(import.meta);
  *   inset 0 -1px 0 0 color;   // Bottom border
  */
 
-const css$g = /* css */`.navi_table_root {
+const css$g = /* css */ `.navi_table_root {
   max-width: var(--table-max-width, none);
   max-height: var(--table-max-height, none);
   position: relative;
@@ -80547,7 +79864,8 @@ const installTableCss = () => {
   import.meta.css = [css$g, "@jsenv/navi/src/control/table/table_css.js"];
 };
 
-installImportMetaCssBuild(import.meta);const css$f = /* css */`.navi_table_ui {
+installImportMetaCssBuild(import.meta);
+const css$f = /* css */`.navi_table_ui {
   z-index: ${Z_INDEX_TABLE_UI};
   pointer-events: none;
   position: fixed;
@@ -81488,7 +80806,8 @@ const normalizeKey = (key) => {
   return key;
 };
 
-installImportMetaCssBuild(import.meta);const css$e = /* css */`.navi_shortcut_container[data-visually-hidden], .navi_shortcut_button[data-visually-hidden] {
+installImportMetaCssBuild(import.meta);
+const css$e = /* css */`.navi_shortcut_container[data-visually-hidden], .navi_shortcut_button[data-visually-hidden] {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   opacity: 0;
@@ -81544,7 +80863,8 @@ const KeyboardShortcutAriaElement = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$d = /* css */`@layer navi {
+installImportMetaCssBuild(import.meta);
+const css$d = /* css */`@layer navi {
   .navi_clipboard_container {
     --height: 1.5em;
     --notif-spacing: .5em;
@@ -81660,7 +80980,8 @@ const formatNumber = (value, { lang = languagesSignal.value } = {}) => {
   return new Intl.NumberFormat(lang).format(value);
 };
 
-installImportMetaCssBuild(import.meta);const css$c = /* css */`@layer navi;
+installImportMetaCssBuild(import.meta);
+const css$c = /* css */`@layer navi;
 
 .navi_text.navi_badge_count {
   white-space: nowrap;
@@ -81924,7 +81245,8 @@ const BadgeCountCircle = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$b = /* css */`@layer navi {
+installImportMetaCssBuild(import.meta);
+const css$b = /* css */`@layer navi {
   .navi_caption {
     --color: #6b7280;
   }
@@ -81949,7 +81271,6 @@ const Caption = ({
     as: "small",
     size: "0.8em" // We use em to be relative to the parent (we want to be smaller than the surrounding text)
     ,
-
     className: withPropsClassName("navi_caption", className),
     ...rest,
     styleCSSVars: CaptionStyleCSSVars
@@ -82365,7 +81686,8 @@ const WarningSvg = () => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$a = /* css */`@layer navi {
+installImportMetaCssBuild(import.meta);
+const css$a = /* css */`@layer navi {
   .navi_message_box {
     --background-color-info: var(--navi-info-color-light);
     --color-info: var(--navi-info-color);
@@ -82498,7 +81820,8 @@ const MessageBoxPseudoClasses = [":-navi-status-info", ":-navi-status-success", 
 const MessageBoxStatusContext = createContext();
 const MessageBoxReportTitleChildContext = createContext();
 
-installImportMetaCssBuild(import.meta);const css$9 = /* css */`@layer navi;
+installImportMetaCssBuild(import.meta);
+const css$9 = /* css */`@layer navi;
 
 .navi_quantity {
   flex-direction: column;
@@ -82648,7 +81971,8 @@ const parseQuantityValue = children => {
   return Number.isNaN(parsed) ? children : parsed;
 };
 
-installImportMetaCssBuild(import.meta);const css$8 = /* css */`@layer navi {
+installImportMetaCssBuild(import.meta);
+const css$8 = /* css */`@layer navi {
   .navi_meter {
     --loader-color: var(--navi-loader-color);
     --track-color: #efefef;
@@ -82908,7 +82232,8 @@ const Paragraph = props => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$7 = /* css */`.navi_text_box {
+installImportMetaCssBuild(import.meta);
+const css$7 = /* css */`.navi_text_box {
   align-items: flex-start;
   min-width: 0;
 }
@@ -82995,7 +82320,8 @@ const adjustWidth = (boxEl, contentEl) => {
   contentEl.style.width = `${Math.ceil(optimalWidth)}px`;
 };
 
-installImportMetaCssBuild(import.meta);const css$6 = /* css */`.navi_message_box {
+installImportMetaCssBuild(import.meta);
+const css$6 = /* css */`.navi_message_box {
   & .navi_title {
     margin-top: 0;
     margin-bottom: var(--navi-s);
@@ -83028,7 +82354,8 @@ const useTitleLevel = () => {
 };
 const TitlePseudoClasses = [":hover"];
 
-installImportMetaCssBuild(import.meta);const css$5 = /* css */`@keyframes navi_image_shimmer {
+installImportMetaCssBuild(import.meta);
+const css$5 = /* css */`@keyframes navi_image_shimmer {
   0% {
     background-position: -200% 0;
   }
@@ -83105,40 +82432,7 @@ const Svg = props => {
   });
 };
 
-installImportMetaCssBuild(import.meta);/**
- * SVGComposition Component
- *
- * Creates composite SVGs by combining independent SVG elements with masking.
- *
- * This component solves the challenge of combining independently created SVGs into
- * a single visual composition. Each SVG can have its own coordinate system, viewBox,
- * and styling, allowing for maximum reusability of individual icons or graphics.
- *
- * When overlaying SVGs, each subsequent overlay "cuts out" its portion from the base SVG,
- * creating a seamless integration where SVGs appear to interact with each other visually.
- *
- * Key benefits:
- * - Maintains each SVG's independence - use them individually elsewhere
- * - Handles different viewBox dimensions automatically
- * - Works with any SVG components regardless of internal implementation
- * - Supports unlimited overlay elements
- * - Creates proper masking between elements for visual integration
- *
- * Usage example combining two independent icon components:
- * ```jsx
- * <SVGMaskOverlay viewBox="0 0 24 24">
- *   <DatabaseSvg />
- *   <svg x="12" y="12" width="16" height="16" overflow="visible">
- *     <PlusSvg />
- *   </svg>
- * </SVGMaskOverlay>
- * ```
- *
- * @param {Object} props - Component properties
- * @param {string} props.viewBox - The main viewBox for the composition (required)
- * @param {ReactNode[]} props.children - SVG elements (first is base, rest are overlays)
- * @returns {ReactElement} A composed SVG with all elements properly masked
- */
+installImportMetaCssBuild(import.meta);
 const css$4 = /* css */`.svg_mask_content * {
   color: #000 !important;
   opacity: 1 !important;
@@ -83205,17 +82499,7 @@ const SVGMaskOverlay = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);/**
- * A card centered in the area it is given: a bordered, rounded, padded surface
- * with room kept all around it. It looks like a dialog and is deliberately not
- * one — it lives in the document, nothing opens or closes it, nothing is made
- * inert behind it. A sign-in screen, an empty state, a one-question page.
- *
- * The room around the card is the outer element's own padding, not a margin on
- * the card: a margin can collapse and can be scrolled past, whereas padding is
- * space the outer box genuinely occupies — so a narrow window shrinks the card
- * and still shows that room, instead of pushing it against the edges.
- */
+installImportMetaCssBuild(import.meta);
 const css$3 = /* css */`@layer navi {
   .navi_card_layout {
     --layout-margin: 30px;
@@ -83314,56 +82598,7 @@ const CardLayout = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);/**
- * Where one stands in a walk of steps, drawn as dots on a path.
- *
- * Two distinct facts, drawn separately — they usually agree, and everything
- * this component says comes from the moments they do not:
- *
- * - DONE and the PATH (the blue fill). The mental model, to keep in mind
- *   when touching any of this: the circles are THINGS TO DO, and the path is
- *   the progression along the linear walk from the first to the last — a
- *   thing done is what lets the path advance. Answering a step fills its
- *   dot AND the line onward, up to the NEXT dot: the invitation to go
- *   there. If that next step is already done the path crosses it from
- *   behind and carries on, and so forth — the fill covers the answered
- *   prefix plus one segment of appetite. It stops at the edge of the first
- *   dot not answered, which stays empty: the fill's one meaning is
- *   "answered", and the first dot is NOT filled on arrival — it becomes so
- *   by being answered. Past the fill the line is dashed, the road not
- *   walked yet; steps answered out of order are filled dots standing alone,
- *   dashed segments around them: the holes, readable at a glance.
- * - the POSITION (`current`): the step being looked at, marked by a halo
- *   around its dot and its label emphasized. It travels freely, so it can
- *   be AHEAD of the path or BEHIND it.
- *
- * Both move smoothly on change (a CSS transition each), so pressing a step
- * or answering one is seen travelling rather than jumping.
- *
- * The steps are the CHILDREN — <StepList.Item value="club">Club</StepList.Item>.
- * An Item renders nothing: it REGISTERS with the list as it renders (order
- * of rendering is the order of the steps), and the list draws everything —
- * which is what lets an Item come from anywhere: a .map(), a fragment, a
- * component of your own wrapping it. One caveat comes with reading the
- * children as they render: hand the list fresh Item vnodes on each render
- * (the usual JSX), not a memoized array a bailout would keep from rendering.
- *
- * The dots are drawn in SVG, twice: a muted layer, and a filled layer
- * clipped at the path's edge — the clip is what makes the path's progress a
- * single sweep that fills the line and the dots it crosses in one movement.
- * The line is drawn as segments between the dots (never behind them), so the
- * dots need no background of their own and the component sits on any
- * surface. Colors are CSS custom properties (see the css below), overridden
- * from outside for a dark band or a different accent.
- *
- * `slideContainer` connects the list to a <SlideContainer> by id, both ways:
- * pressing a step travels there (--navi-go-to-slide), and the position is
- * READ off the container rather than said by a prop — including mid-travel:
- * the container paints --slide-travel-progress on this element (it is a
- * follower, same mechanism as <Nav slideContainer>), so the halo rides the
- * drag under the finger, in CSS alone. The path is not concerned: it moves
- * on answers, never on movement.
- */
+installImportMetaCssBuild(import.meta);
 const css$2 = /* css */`.navi_step_list {
   --x-step-list-accent: var(--step-list-accent, #4f8ef7);
   --x-step-list-on-accent: var(--step-list-on-accent, white);
@@ -83756,7 +82991,6 @@ const StepList = ({
     // for the CSS to draw with, and the arrow keys keep walking the slides
     // from this element.
     ,
-
     "data-slide-container-follows": slideContainer,
     style: {
       ...rest.style,
@@ -83779,7 +83013,6 @@ const StepList = ({
           // Connected to slides, the position comes from the CSS calc
           // above — an inline transform would override it.
           ,
-
           style: slideContainer ? undefined : {
             transform: `translateX(${dotXs[currentIndex]}px)`
           },
@@ -83821,13 +83054,11 @@ const StepList = ({
             // page. What else a press should do is the Item's own
             // onClick, which arrived through buttonProps.
             ,
-
             command: slideContainer && travelByClick ? `--navi-go-to-slide:${step.value}` : undefined,
             commandFor: slideContainer
             // A message about a step (a callout) points at its circle,
             // above it: the label lives below.
             ,
-
             "data-callout-anchor": ".navi_step_list_dot",
             "data-callout-position": "top",
             children: [jsx$1("span", {
@@ -83920,7 +83151,8 @@ const Step = ({
 };
 StepList.Item = Step;
 
-installImportMetaCssBuild(import.meta);const css$1 = /* css */`@layer navi {
+installImportMetaCssBuild(import.meta);
+const css$1 = /* css */`@layer navi {
   .navi_viewport_layout {
     --layout-padding: 40px;
     --layout-background: var(--navi-surface-color);
@@ -83977,19 +83209,7 @@ const ViewportLayout = props => {
   });
 };
 
-installImportMetaCssBuild(import.meta);/**
- * A drawer docked flush to a viewport (or container) edge, built on top of
- * `Popup`. Sizing, the perpendicular-axis fill, and the flush-edge
- * border-radius are all resolved by this file's own CSS (keyed off the
- * `navi-side`/`data-layer` attributes) rather than computed in JS — read
- * the CSS block below instead of expecting a JS equivalent of it here.
- *
- * `anchorCustomEventDetail="ignore"` is required, not cosmetic: without it
- * Popover docks next to whatever triggered the open instead of flush against
- * the edge. Dialog needs nothing here — it never sizes itself from an anchor
- * unless asked to (`sizeFromAnchor`, see dialog.jsx), which a side panel
- * never does: its `width`/`height` props are what size it.
- */
+installImportMetaCssBuild(import.meta);
 const css = /* css */`.navi_side_panel {
   --popup-border-radius: 0px;
   width: var(--navi-side-panel-width, auto);
@@ -84215,7 +83435,6 @@ const SidePanel = ({
     // handed a signal and nothing else would be told off for an `open` only
     // this line ever put on it.
     ,
-
     ...(open === undefined ? null : {
       open
     }),
@@ -84228,7 +83447,6 @@ const SidePanel = ({
     // A side panel is flush against the edge it slides in from — none of
     // Dialog's own default gap with the container.
     ,
-
     marginWithContainer: 0,
     animation: animation === true ? `slide-from-${side}` : animation,
     pointerInteractionOutsideEffect: closeOnClickOutside ? "close" : "none",
@@ -84243,7 +83461,6 @@ const SidePanel = ({
     // the page, and it is what a box travelling inside the panel reads to
     // know this axis is already walked (see @jsenv/dom's drag_to_travel).
     ,
-
     "data-drag-travel": swipeToClose ? SWIPE_AXIS_BY_SIDE[side] : undefined,
     "data-travel-by-drag": swipeToClose ? SWIPE_AXIS_BY_SIDE[side] : undefined
     // A touch this panel may take has to be refusable before the finger
@@ -84251,7 +83468,6 @@ const SidePanel = ({
     // scrolling the panel's content — see keepTouchRefusable for why a JSX
     // prop is enough (an element-level touchmove listener is non-passive).
     ,
-
     onTouchMove: swipeToClose ? keepTouchRefusable : undefined,
     ...rest,
     onPointerDown: pointerDownEvent => {

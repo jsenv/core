@@ -219,7 +219,9 @@ const smallTouchScreenSignal = computed(() => {
   return false;
 });
 
-installImportMetaCssBuild(import.meta);/**
+installImportMetaCssBuild(import.meta);
+
+/**
  * The part of the window an app actually has, in two levels.
  *
  * Two, and not one, for a reason worth stating up front: a fixed bar is one of
@@ -254,7 +256,7 @@ installImportMetaCssBuild(import.meta);/**
  * navi_css_vars.js).
  */
 
-const SAFE_AREA_CSS = /* css */`@property --navi-safe-area-inset-top {
+const SAFE_AREA_CSS = /* css */ `@property --navi-safe-area-inset-top {
   syntax: "<length>";
   inherits: true;
   initial-value: 0;
@@ -355,9 +357,8 @@ const disableVirtualKeyboardOverlay = () => {
   setVirtualKeyboardOverlaysContent(false);
 };
 
-installImportMetaCssBuild(import.meta);/**
- * Regroup CSS vars that makes sense to share across all navi components.
- */
+installImportMetaCssBuild(import.meta);
+
 const button = document.createElement("button");
 button.style.display = "none";
 document.body.appendChild(button);
@@ -365,7 +366,8 @@ const computedStyle = getComputedStyle(button);
 const controlDefaultFontFamily = computedStyle.fontFamily;
 const controlDefaultFontSize = computedStyle.fontSize;
 document.body.removeChild(button);
-const css = /* css */`@layer navi {
+
+const css = /* css */ `@layer navi {
   :root {
     --navi-vvw: 100dvw;
     --navi-vvh: 100dvh;
@@ -503,9 +505,16 @@ input[navi-visually-hidden], button[navi-visually-hidden], div[navi-visually-hid
 }
 `;
 import.meta.css = [css, "@jsenv/navi/src/navi_css_vars.js"];
+
 effect(() => {
-  document.documentElement.style.setProperty("--navi-vvw", `${visualViewportWidthSignal.value}px`);
-  document.documentElement.style.setProperty("--navi-vvh", `${visualViewportHeightSignal.value}px`);
+  document.documentElement.style.setProperty(
+    "--navi-vvw",
+    `${visualViewportWidthSignal.value}px`,
+  );
+  document.documentElement.style.setProperty(
+    "--navi-vvh",
+    `${visualViewportHeightSignal.value}px`,
+  );
 });
 
 // Placement follows the same rectangle the size caps above describe: the JS
