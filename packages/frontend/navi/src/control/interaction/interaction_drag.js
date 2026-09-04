@@ -35,7 +35,8 @@
  *
  * `toId` is an element and never null: a copy over nothing is a release that meant
  * nothing, and the interaction does not happen at all — unless the element says
- * `data-toss-outside` (see below), which gives that release a meaning of its own.
+ * `data-toss-by="release-outside"` (see below), which gives that release a
+ * meaning of its own.
  *
  * WHERE ON IT, in `x`, `y`, `width`, `height`: the box the copy came down in,
  * measured inside the place — its border and its scroll taken out. A place that is
@@ -72,11 +73,15 @@
  *     <Plan id="plan" data-droppable>…</Plan>
  *   </div>
  *
- * WHEN LETTING GO OUTSIDE MEANS GETTING RID OF IT: `data-toss-outside`, beside
- * `toss`. A throw is far AND fast, which is the flick that gets rid of something;
- * dragging a marker off a plan and letting go is neither, and is the gesture a
- * surface asks for. So the same outcome is reached the other way — a release with
- * no place under it — and only where the markup says that release means something.
+ * HOW A TOSS IS MADE: `data-toss-by`, beside `toss`. A THROW (`"throw"`, the
+ * default) is far AND fast — the flick that gets rid of something, a list's
+ * gesture, and it is judged before any landing. A RELEASE OUTSIDE
+ * (`"release-outside"`) has no place under it — dragging a marker off a plan and
+ * letting go, deliberate and never a flick, a surface's gesture. Each is named on
+ * its own because each is wrong where the other is right: on a plan a fast drag
+ * that ends ON it has not asked for the thing to go, and on a list a row let go of
+ * beside it is a row put back. Both at once is
+ * `data-toss-by="throw release-outside"`.
  *
  * Nothing of the gesture is decided here. `startDragTo` owns all of it — the
  * copy carried above the page while the original keeps its place in the layout, the
@@ -180,8 +185,11 @@ const SLOP_ATTRIBUTE = "data-drag-slop";
 const THRESHOLD_ATTRIBUTE = "data-drag-threshold";
 const TOSS_DISTANCE_ATTRIBUTE = "data-toss-distance";
 const TOSS_SPEED_ATTRIBUTE = "data-toss-speed";
-// A release with no place under it is the other way of meaning "gotten rid of".
-const TOSS_OUTSIDE_ATTRIBUTE = "data-toss-outside";
+// How a toss is made here: "throw" (far and fast), "release-outside" (let go of
+// away from every place), or both.
+const TOSS_BY_ATTRIBUTE = "data-toss-by";
+const TOSS_BY_DEFAULT = "throw";
+const TOSS_WAYS = ["throw", "release-outside"];
 
 defineInteractionDetector({
   name: "drag",
@@ -233,15 +241,28 @@ defineInteractionDetector({
     // both read at setup for the same reason as the axes: they are what the
     // gesture is about, and it is what holds the two sides of it that says them.
     const dropContainer = element.closest(`[${DROP_CONTAINER_ATTRIBUTE}]`);
-    const tossOutside = Boolean(element.closest(`[${TOSS_OUTSIDE_ATTRIBUTE}]`));
-    if (
-      import.meta.dev &&
-      tossOutside &&
-      (!canToss || (!canReorder && !canLand))
-    ) {
-      console.warn(
-        `interactions: "${TOSS_OUTSIDE_ATTRIBUTE}" makes a release away from every place mean the thing is gotten rid of, so it needs both "${TOSS}" and places to be away from. Declare "${TOSS}" beside "${REORDER}" or "${LAND}".`,
-      );
+    const tossByHolder = element.closest(`[${TOSS_BY_ATTRIBUTE}]`);
+    const tossBy = (
+      tossByHolder?.getAttribute(TOSS_BY_ATTRIBUTE) || TOSS_BY_DEFAULT
+    )
+      .trim()
+      .split(/\s+/);
+    if (import.meta.dev) {
+      for (const way of tossBy) {
+        if (!TOSS_WAYS.includes(way)) {
+          console.warn(
+            `interactions: "${way}" is not a way a toss is made. ${TOSS_BY_ATTRIBUTE} takes "${TOSS_WAYS.join('", "')}", or both.`,
+          );
+        }
+      }
+      if (
+        tossBy.includes("release-outside") &&
+        (!canToss || (!canReorder && !canLand))
+      ) {
+        console.warn(
+          `interactions: ${TOSS_BY_ATTRIBUTE}="release-outside" makes a release away from every place mean the thing is gotten rid of, so it needs both "${TOSS}" and places to be away from. Declare "${TOSS}" beside "${REORDER}" or "${LAND}".`,
+        );
+      }
     }
 
     if (canReorder) {
@@ -291,7 +312,7 @@ defineInteractionDetector({
         longPressSlop: readConfig(SLOP_ATTRIBUTE, undefined),
         tossDistance: readConfig(TOSS_DISTANCE_ATTRIBUTE, undefined),
         tossSpeed: readConfig(TOSS_SPEED_ATTRIBUTE, undefined),
-        tossOutside,
+        tossBy,
         // The one moment the gesture has that is not a release. Said here rather
         // than from the press that led to it, because the press is only one of the
         // two ways in: a finger holds still, a mouse travels a few pixels, and it

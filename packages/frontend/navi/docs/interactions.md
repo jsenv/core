@@ -238,34 +238,39 @@ Starting a document transition is the application's call, not navi's: a
 `view-transition-name` must be unique per document, so only the application can
 name what moves.
 
-| Attribute                                                | Meaning                                         |
-| -------------------------------------------------------- | ----------------------------------------------- |
-| `data-drag-axis="x"\|"y"\|"xy"`                          | which axes the drag walks                       |
-| `data-drag-delay` `data-drag-slop` `data-drag-threshold` | when the press becomes a grab                   |
-| `data-drag-on-contact`                                   | a finger may drag by travelling too             |
-| `data-toss-distance` `data-toss-speed`                   | how far and how fast counts as a throw          |
-| `data-toss-outside`                                      | letting go away from every place is a throw too |
-| `data-drop-container`                                    | where the places are looked for                 |
+| Attribute                                                | Meaning                                |
+| -------------------------------------------------------- | -------------------------------------- |
+| `data-drag-axis="x"\|"y"\|"xy"`                          | which axes the drag walks              |
+| `data-drag-delay` `data-drag-slop` `data-drag-threshold` | when the press becomes a grab          |
+| `data-drag-on-contact`                                   | a finger may drag by travelling too    |
+| `data-toss-distance` `data-toss-speed`                   | how far and how fast counts as a throw |
+| `data-toss-by="throw"\|"release-outside"`                | how a toss is made here                |
+| `data-drop-container`                                    | where the places are looked for        |
 
-### Getting rid of it without a throw: `data-toss-outside`
+### How a toss is made: `data-toss-by`
 
-A throw is far **and** fast — that pair is what a flick is, and it is asked for
-together because one without the other is moving something while hesitating.
-Dragging a marker off the plan it sits on and letting go is neither: it is slow,
-deliberate, and it is the removal gesture a surface asks for.
+`toss` names the outcome — the thing is gotten rid of — and a hand has two ways of
+saying it, each right where the other is wrong:
 
-`data-toss-outside`, on the element or a container, gives that release its
-meaning: **let go with no place under it, and the thing is gotten rid of** — the
-same `toss`, reached the other way, with the same flight off the screen and the
-same return if the answer rejects.
+- **`throw`** (the default): far **and** fast — that pair is what a flick is, and
+  it is asked for together because one without the other is moving something while
+  hesitating. A list's gesture. It is judged before any landing: a row sent across
+  the screen has not asked to swap places with whatever it flew over.
+- **`release-outside`**: let go with no place under it. Dragging a marker off the plan it
+  sits on and letting go is slow and deliberate — a surface's gesture, and the only
+  one it wants, because on a plan a fast drag that ends ON it has not asked for the
+  thing to go.
+
+The same `toss` either way, with the same flight off the screen and the same
+return if the answer rejects. Both at once is
+`data-toss-by="throw release-outside"`.
 
 ```jsx
 <div data-drop-container>
-  <Plan id="plan" data-droppable>
+  <Plan id="plan" data-droppable data-toss-by="release-outside">
     {markers.map((marker) => (
       <Marker
         id={marker.id}
-        data-toss-outside
         interactions={{
           land: (event) => moveTo(marker.id, event.detail),
           toss: () => remove(marker.id),
@@ -276,10 +281,11 @@ same return if the answer rejects.
 </div>
 ```
 
-It is opt-in because the same release means the opposite elsewhere: a row pulled
-sideways out of its list and let go is a row put back, not a row deleted. And it
-needs places to be outside OF — declared next to `toss` alone, with nothing that
-can receive the thing, every release is outside and a dev warning says so.
+`release-outside` is never the default because the same release means the
+opposite on a list: a row pulled sideways out of it and let go is a row put back, not a row
+deleted. And it needs places to be outside OF — declared next to `toss` alone,
+with nothing that can receive the thing, every release is outside and a dev
+warning says so.
 
 ### A finger that does not have to wait: `data-drag-on-contact`
 

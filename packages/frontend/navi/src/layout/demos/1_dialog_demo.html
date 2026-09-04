@@ -319,6 +319,22 @@
         border-radius: 10px;
         box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
       }
+      .demo_dialog_keyboard_form_box {
+        width: 320px;
+        max-width: 100%;
+        background: white;
+        border: none;
+        border-radius: 10px;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+      }
+      .demo-keyboard-info {
+        padding: 12px;
+        color: #33507d;
+        font-size: 14px;
+        background: #eef3fb;
+        border: 1px solid #cfe0f5;
+        border-radius: 8px;
+      }
       .demo-keyboard-fill {
         display: flex;
         /* min-height: 0 so this block can actually be squeezed by the
@@ -485,12 +501,7 @@
 
       // No openController here: without one, Dialog creates its own and
       // self-wires to --navi-toggle/--navi-close commands.
-      const TriggeredDialog = ({
-        label,
-        animation,
-        animationDuration,
-        pointerInteractionOutsideEffect,
-      }) => {
+      const TriggeredDialog = ({ label, ...props }) => {
         const dialogId = useId();
 
         return (
@@ -498,13 +509,7 @@
             <Button command="--navi-toggle" commandFor={dialogId}>
               {label}
             </Button>
-            <Dialog
-              id={dialogId}
-              animation={animation}
-              animationDuration={animationDuration}
-              pointerInteractionOutsideEffect={pointerInteractionOutsideEffect}
-              className="demo_dialog_box"
-            >
+            <Dialog id={dialogId} className="demo_dialog_box" {...props}>
               <p style={{ marginTop: 0 }}>{label}</p>
               <Button command="--navi-close">Close</Button>
             </Dialog>
@@ -658,6 +663,43 @@
           </section>
         );
       };
+
+      const BackdropSection = () => (
+        <section class="demo-section">
+          <Heading id="backdrop">Backdrop</Heading>
+          <p>
+            Every dialog here closes on an outside click. Only the paint
+            changes.
+          </p>
+          <Heading level={3} id="backdrop-variant">
+            backdropVariant
+          </Heading>
+          <div class="demo-row">
+            <TriggeredDialog label="auto (default)" />
+            <TriggeredDialog label="discrete" backdropVariant="discrete" />
+            <TriggeredDialog label="invisible" backdropVariant="invisible" />
+          </div>
+          <Heading level={3} id="backdrop-paint">
+            backdropColor / backdropFilter
+          </Heading>
+          <div class="demo-row">
+            <TriggeredDialog label="auto (default)" />
+            <TriggeredDialog
+              label='backdropColor="rgb(6 10 20 / 55%)"'
+              backdropColor="rgb(6 10 20 / 55%)"
+            />
+            <TriggeredDialog
+              label='+ backdropFilter="blur(4px)"'
+              backdropColor="rgb(6 10 20 / 55%)"
+              backdropFilter="blur(4px)"
+            />
+            <TriggeredDialog
+              label='backdropFilter="blur(4px)"'
+              backdropFilter="blur(4px)"
+            />
+          </div>
+        </section>
+      );
 
       // Mounting a component with its dialog already open is only
       // interesting to test *on demand* — rendered directly in the page's
@@ -1957,6 +1999,53 @@
         );
       };
 
+      // No scrolling part at all: everything is a plain child of the dialog
+      // and the submit is the last of them, which is the shape a short form
+      // takes when nobody thought about the keyboard. Focusing the field takes
+      // height off the dialog itself, and the button goes under the keyboard —
+      // so the dialog is what has to scroll for it to be reachable without
+      // blurring the field first.
+      const KeyboardFormDialog = ({ label, animation, animationDuration }) => {
+        const dialogId = useId();
+        return (
+          <>
+            <Button command="--navi-toggle" commandFor={dialogId}>
+              {label}
+            </Button>
+            <Dialog
+              id={dialogId}
+              animation={animation}
+              animationDuration={animationDuration}
+              className="demo_dialog_keyboard_form_box"
+            >
+              <Form flex="y" spacing="m" padding="m">
+                <div class="demo-keyboard-info">
+                  Le nom sert à retrouver la fiche plus tard, dans la liste
+                  comme dans la recherche. Il est visible par tout le monde et
+                  apparaît en tête de chaque page qui la mentionne.
+                </div>
+                <Field vertical>
+                  <Label>Nom</Label>
+                  <Input name="name" placeholder="type something…" />
+                  <Input type="search" autoComplete="off" />
+                </Field>
+                <div class="demo-keyboard-info">
+                  Deux personnes peuvent porter le même nom, rien ne l'empêche.
+                  Ce qui distingue les fiches entre elles est leur identifiant,
+                  attribué à la création et jamais réutilisé.
+                </div>
+                <div class="demo-keyboard-info">
+                  Une fois enregistré, le nom peut encore être modifié depuis la
+                  fiche, autant de fois que nécessaire. Les anciennes valeurs
+                  restent dans l'historique.
+                </div>
+                <Button type="submit">Submit</Button>
+              </Form>
+            </Dialog>
+          </>
+        );
+      };
+
       // Both mechanisms at once, on the same dialogs. Checked (navi's own
       // default) is the VirtualKeyboard API's overlay: the viewport keeps its
       // full height and env(keyboard-inset-height) is what navi subtracts
@@ -1994,9 +2083,11 @@
             <p>
               Phone only (or a desktop device emulation with a real on-screen
               keyboard — a desktop browser never shrinks its visual viewport, so
-              nothing moves there). Both dialogs are <code>expandY</code>: their
-              height is the container ceiling, not their content, so the
-              keyboard opening is the one thing that can change it.
+              nothing moves there). The first three dialogs are{" "}
+              <code>expandY</code>: their height is the container ceiling, not
+              their content, so the keyboard opening is the one thing that can
+              change it. The last one is the opposite — sized by what is inside
+              it, and given less room than that by the keyboard.
             </p>
             <p>
               The checkbox at the bottom of the section switches which mechanism
@@ -2064,6 +2155,21 @@
                 animationDuration={animationDuration}
               />
             </div>
+            <Heading level={3} id="keyboard-submit-under-keyboard">
+              Field, then a submit at the end
+            </Heading>
+            <p>
+              Focus the field: the dialog gets shorter and the submit goes under
+              the keyboard. It has to be reachable by scrolling the dialog —
+              blurring the field to see the button again is the bug.
+            </p>
+            <div class="demo-row">
+              <KeyboardFormDialog
+                label="info + field + info + submit"
+                animation={animation}
+                animationDuration={animationDuration}
+              />
+            </div>
             <div class="demo-animate-controls">
               <label class="demo-animate-toggle">
                 <input
@@ -2124,6 +2230,7 @@
           <PositionSection />
           <GrowingSection />
           <PointerInteractionOutsideSection />
+          <BackdropSection />
           <OpenFromStartSection />
           <AdaptiveSection />
           <DockedDragSection />

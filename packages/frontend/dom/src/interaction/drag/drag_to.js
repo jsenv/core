@@ -257,15 +257,8 @@ const css = /* css */ `
   }
 
   [navi-drag-clone] {
-    /* The copy takes the wrapper's box, and nothing the page said about where
-       the ORIGINAL stands may place it: a piece drawn at "left: 40px; top:
-       130px" on its board, a marker centred by a translate, a card pushed by a
-       margin — the copy carries all of that, inline styles included, and would
-       sit that far from the wrapper's corner (so from the hand) if it were let
-       to. !important because an inline "left" beats any rule that is not. */
-    position: absolute !important;
-    inset: 0 !important;
-    margin: 0 !important;
+    /* Where the copy sits in its wrapper is written inline on it, not here —
+       see createDragClone. */
     /* Cast by the copy itself rather than by the box around it, so it takes the
        shape of the thing — a rounded row throws a rounded shadow. Its value is a
        var read on the copy, which IS the dragged element: what being carried
@@ -779,11 +772,15 @@ const warnAboutTransformsOutsideTransform = (element) => {
  * @param {number} [options.tossSpeed=0.45] And how fast, in px/ms. BOTH are asked
  *   for: one without the other is moving the thing while hesitating, and nothing is
  *   thrown away on a hesitation.
- * @param {boolean} [options.tossOutside=false] A release with no place under it
- *   means the thing is gotten rid of, instead of meaning nothing. The deliberate
- *   half of the same outcome — dragging something off the surface it belongs to
- *   and letting go is not a flick, and far-and-fast never describes it. With no
- *   place to be outside of (no `itemSelector`), every release is outside.
+ * @param {("throw"|"release-outside")[]} [options.tossBy=["throw"]] How a toss
+ *   is made here. A THROW is far and fast — the flick that gets rid of something,
+ *   a list's gesture, judged before any landing. A RELEASE OUTSIDE has no place
+ *   under it — dragging something off the surface it belongs to and letting go,
+ *   deliberate and never a flick, a surface's gesture. Each is asked for on its
+ *   own: a surface wants only the second (a fast drag across it that ends ON it
+ *   has not asked for the thing to go), a list only the first (a row let go of
+ *   beside its list is a row put back). With no place to be outside of (no
+ *   `itemSelector`), every release is outside.
  *
  * Everything else is forwarded to `createDragToMoveGestureController`
  * (`areaConstraint`, `autoScrollAreaPadding`, `direction`…) and to `dragAfterIntent`
@@ -908,6 +905,8 @@ const startDragToMoveElement = (
 // hesitating, and nothing is thrown away on a hesitation — it comes back.
 const TOSS_DISTANCE_TO_COMMIT = 110;
 const TOSS_SPEED_TO_COMMIT = 0.45;
+// The flick is how a list gets rid of a row; a surface says otherwise.
+const TOSS_BY_DEFAULT = ["throw"];
 
 const resolveDropMeaning = ({
   gestureInfo,
@@ -917,7 +916,7 @@ const resolveDropMeaning = ({
   canLand,
   tossDistance = TOSS_DISTANCE_TO_COMMIT,
   tossSpeed = TOSS_SPEED_TO_COMMIT,
-  tossOutside,
+  tossBy = TOSS_BY_DEFAULT,
 }) => {
   if (gestureInfo.cancelled) {
     // Nobody let go of anything: the gesture was taken away mid-air (the
@@ -925,7 +924,7 @@ const resolveDropMeaning = ({
     // to be at that moment is not a place it was put.
     return "cancel";
   }
-  if (canToss) {
+  if (canToss && tossBy.includes("throw")) {
     const { xDelta, yDelta } = gestureInfo.layout;
     const distance = Math.hypot(xDelta, yDelta);
     if (distance > tossDistance && gestureInfo.velocity > tossSpeed) {
@@ -940,10 +939,10 @@ const resolveDropMeaning = ({
       return "reorder";
     }
   }
-  if (canToss && tossOutside) {
-    // Let go of away from every place, and slowly enough that no throw was ever
-    // read: the other way of meaning "get rid of this", and the one a surface
-    // asks for — off the plan and down is deliberate, never a flick.
+  if (canToss && tossBy.includes("release-outside")) {
+    // Let go of away from every place: the other way of meaning "get rid of
+    // this", and the one a surface asks for — off the plan and down is
+    // deliberate, never a flick.
     //
     // "Away from every place" is the last frame's answer, not the one above: a
     // row let go of where it already was has no place to INSERT it at and still
@@ -991,7 +990,7 @@ const startDragToCarryCopy = (
     onToss,
     tossDistance,
     tossSpeed,
-    tossOutside,
+    tossBy,
     // A list runs one way and reordering walks it; a board has places all around,
     // so something landing on one of them goes wherever the hand takes it.
     direction = canLand ? { x: true, y: true } : { x: false, y: true },
@@ -1233,7 +1232,7 @@ const startDragToCarryCopy = (
             canLand,
             tossDistance,
             tossSpeed,
-            tossOutside,
+            tossBy,
           });
 
           // Let go of and still on the screen: from here until it is taken away
@@ -1617,6 +1616,17 @@ const createDragClone = (element, pointerEvent) => {
   // (The original wears it too, but it is hidden — see navi-drag-clone-source.)
   elementClone.setAttribute("data-grabbed", "");
   elementClone.style.viewTransitionName = "navi-drag-clone";
+  // The copy takes the wrapper's box, and nothing the page said about where the
+  // ORIGINAL stands may place it: a piece drawn at "left: 40px; top: 130px" on
+  // its board, a marker centred by a translate, a card pushed by a margin — the
+  // deep copy carries all of that, inline styles included, and would sit that far
+  // from the wrapper's corner, so from the hand. Written inline on the copy
+  // because that is the one place that outranks both the inline values it copied
+  // and any rule of the page's, without a stylesheet having to shout !important.
+  elementClone.style.position = "absolute";
+  elementClone.style.inset = "0";
+  elementClone.style.margin = "0";
+  elementClone.style.translate = "none";
 
   wrapper.appendChild(elementClone);
   // Beside the thing it copies, so it stands where that thing stands: every
