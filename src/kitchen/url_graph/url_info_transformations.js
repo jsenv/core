@@ -1,6 +1,7 @@
 import { writeFileSync } from "@jsenv/filesystem";
 import {
-  composeTwoSourcemaps,
+  applyContentEditsOnSourcemap,
+  composeSourcemaps,
   generateSourcemapDataUrl,
   SOURCEMAP,
 } from "@jsenv/sourcemap";
@@ -79,6 +80,84 @@ export const createUrlInfoTransformer = ({
       sourcemap.sourcesContent = undefined;
     }
     return sourcemap;
+  };
+
+  // Sourcemap composition is deferred: each transformation pushes an element
+  // here and "urlInfo.sourcemap" becomes a lazy view resolving the whole
+  // pending chain on first read (with caching, invalidated by a new push or
+  // an assignment). Any reader at any point sees a map matching the current
+  // content — the guarantee is the same as composing at each transformation.
+  //
+  // An element is either a normalized sourcemap, or a magic source edit
+  // record ({ contentEdits, getSourcemap }). Edits applied on top of an
+  // existing map become position shifts on that map — orders of magnitude
+  // cheaper than composing with a generated full-file map, and lossless:
+  // the map keeps its own density instead of being redensified by the edit
+  // map's word boundaries. When the shift cannot apply (no map below, or an
+  // unsupported edit shape), getSourcemap() materializes the generated map
+  // and composition proceeds as usual.
+  const pendingSourcemapsMap = new WeakMap();
+  const resolveSourcemapChain = (urlInfo, base, pendings) => {
+    let current = base;
+    let batch = current ? [current] : [];
+    const composeBatch = () => {
+      if (batch.length > 1) {
+        const composed = composeSourcemaps(batch);
+        current = composed ? normalizeSourcemap(urlInfo, composed) : null;
+      } else {
+        current = batch.length ? batch[0] : null;
+      }
+    };
+    for (const pending of pendings) {
+      if (!pending.contentEdits) {
+        batch.push(pending);
+        continue;
+      }
+      composeBatch();
+      if (current) {
+        const shifted = applyContentEditsOnSourcemap(
+          current,
+          pending.contentEdits,
+        );
+        if (shifted) {
+          current = shifted;
+          batch = [current];
+          continue;
+        }
+      }
+      const materialized = pending.getSourcemap();
+      batch = current ? [current] : [];
+      if (materialized) {
+        batch.push(normalizeSourcemap(urlInfo, materialized));
+      }
+    }
+    composeBatch();
+    return current;
+  };
+  const addSourcemapElement = (urlInfo, element) => {
+    const existingPendings = pendingSourcemapsMap.get(urlInfo);
+    if (existingPendings) {
+      existingPendings.push(element);
+      return;
+    }
+    const pendings = [element];
+    pendingSourcemapsMap.set(urlInfo, pendings);
+    let base = urlInfo.sourcemap;
+    Object.defineProperty(urlInfo, "sourcemap", {
+      configurable: true,
+      enumerable: true,
+      get: () => {
+        if (pendings.length > 0) {
+          base = resolveSourcemapChain(urlInfo, base, pendings);
+          pendings.length = 0;
+        }
+        return base;
+      },
+      set: (value) => {
+        pendings.length = 0;
+        base = value;
+      },
+    });
   };
 
   const resetContent = (urlInfo) => {
@@ -227,33 +306,35 @@ export const createUrlInfoTransformer = ({
     }
     // "sourcemap" is read last, and only when it will be used: a plugin can
     // hand it back as a getter that generates the map on first read, so that
-    // nothing is generated for a kitchen that throws sourcemaps away
-    const sourcemap =
-      mayHaveSourcemap(urlInfo) && shouldHandleSourcemap(urlInfo)
-        ? transformations.sourcemap
-        : null;
-    if (sourcemap) {
-      const sourcemapNormalized = normalizeSourcemap(urlInfo, sourcemap);
-      let currentSourcemap = urlInfo.sourcemap;
-      const finalSourcemap = composeTwoSourcemaps(
-        currentSourcemap,
-        sourcemapNormalized,
-      );
-      const finalSourcemapNormalized = normalizeSourcemap(
-        urlInfo,
-        finalSourcemap,
-      );
-      urlInfo.sourcemap = finalSourcemapNormalized;
-      // A plugin is allowed to modify url content
-      // without returning a sourcemap
-      // This is the case for preact and react plugins.
-      // They are currently generating wrong source mappings
-      // when used.
-      // Generating the correct sourcemap in this situation
-      // is a nightmare no-one could solve in years so
-      // jsenv won't emit a warning and use the following strategy:
-      // "no sourcemap is better than wrong sourcemap"
-      urlInfo.sourcemapIsWrong = urlInfo.sourcemapIsWrong || sourcemapIsWrong;
+    // nothing is generated for a kitchen that throws sourcemaps away.
+    // "sourcemapEdits" (magic source results) goes further: the edits are
+    // pushed and the generated map is materialized only if the shift fast
+    // path cannot apply.
+    if (mayHaveSourcemap(urlInfo) && shouldHandleSourcemap(urlInfo)) {
+      const { sourcemapEdits } = transformations;
+      if (sourcemapEdits) {
+        addSourcemapElement(urlInfo, {
+          contentEdits: sourcemapEdits,
+          getSourcemap: () => transformations.sourcemap,
+        });
+        urlInfo.sourcemapIsWrong = urlInfo.sourcemapIsWrong || sourcemapIsWrong;
+      } else {
+        const sourcemap = transformations.sourcemap;
+        if (sourcemap) {
+          addSourcemapElement(urlInfo, normalizeSourcemap(urlInfo, sourcemap));
+          // A plugin is allowed to modify url content
+          // without returning a sourcemap
+          // This is the case for preact and react plugins.
+          // They are currently generating wrong source mappings
+          // when used.
+          // Generating the correct sourcemap in this situation
+          // is a nightmare no-one could solve in years so
+          // jsenv won't emit a warning and use the following strategy:
+          // "no sourcemap is better than wrong sourcemap"
+          urlInfo.sourcemapIsWrong =
+            urlInfo.sourcemapIsWrong || sourcemapIsWrong;
+        }
+      }
     }
     if (contentModified && urlInfo.contentFinalized) {
       applyContentEffects(urlInfo);

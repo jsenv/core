@@ -64,7 +64,7 @@ export const publish = async ({
       }),
     );
     try {
-      const reason = await new Promise((resolve, reject) => {
+      const publishResult = await new Promise((resolve, reject) => {
         const command = exec(
           "npm publish --no-workspaces",
           {
@@ -105,6 +105,24 @@ export const publish = async ({
                   success: true,
                   reason: "already-published",
                 });
+              } else if (error.message.includes("previously staged version")) {
+                // The registry accepted a tarball for that version (from a run
+                // interrupted before npm confirmed, or one whose PUT it took
+                // without exposing the version yet) and refuses any further
+                // publish of it until it becomes visible. The publish did go
+                // through, so wait for the version to land.
+                resolve(
+                  waitForStagedVersionToLand({
+                    logger,
+                    registryUrl,
+                    packageName: packageObject.name,
+                    packageVersion: packageObject.version,
+                    token,
+                  }).then(() => ({
+                    success: true,
+                    reason: "already-published",
+                  })),
+                );
               }
               // github publish conflict
               else if (
@@ -138,14 +156,11 @@ export const publish = async ({
           });
         }
       });
-      if (reason === "already-published") {
+      if (publishResult.reason === "already-published") {
         publishTask.setRightText(`(already published)`);
       }
       publishTask.done();
-      return {
-        success: true,
-        reason,
-      };
+      return publishResult;
     } finally {
       restoreProcessEnv();
       restorePackageFile();
@@ -182,4 +197,76 @@ const computeRegistryKey = (packageName) => {
     return `${packageScope}:registry`;
   }
   return `registry`;
+};
+
+// A version becomes available in two steps: npm stages it, then the registry
+// makes it visible. While it is staged the registry answers 409 to a publish of
+// that same version, and once staged that version can never be published again,
+// so waiting for it is the only way through.
+const STAGED_VERSION_TIMEOUT_MS = 120_000;
+const STAGED_VERSION_POLL_INTERVAL_MS = 5_000;
+
+const waitForStagedVersionToLand = async ({
+  logger,
+  registryUrl,
+  packageName,
+  packageVersion,
+  token,
+}) => {
+  logger.info(
+    `${packageName}@${packageVersion} is staged on ${registryUrl}, waiting for the registry to publish it`,
+  );
+  const msBeforeTimeout = Date.now() + STAGED_VERSION_TIMEOUT_MS;
+  while (true) {
+    const versionIsInRegistry = await checkVersionInRegistry({
+      registryUrl,
+      packageName,
+      packageVersion,
+      token,
+    });
+    if (versionIsInRegistry) {
+      return;
+    }
+    if (Date.now() > msBeforeTimeout) {
+      throw new Error(
+        `${packageName}@${packageVersion} is staged on ${registryUrl} but did not get published. Bump the version, a staged version cannot be published again.`,
+      );
+    }
+    await new Promise((resolve) => {
+      setTimeout(resolve, STAGED_VERSION_POLL_INTERVAL_MS);
+    });
+  }
+};
+
+const checkVersionInRegistry = async ({
+  registryUrl,
+  packageName,
+  packageVersion,
+  token,
+}) => {
+  let response;
+  try {
+    response = await fetch(`${registryUrl}/${packageName}`, {
+      headers: {
+        "accept":
+          "application/vnd.npm.install-v1+json; q=1.0, application/json; q=0.8, */*",
+        // the registry is served by a cache; without this the version can stay
+        // invisible long after it landed
+        "cache-control": "no-cache",
+        ...(token
+          ? {
+              authorization: `token ${token}`,
+            }
+          : {}),
+      },
+    });
+  } catch {
+    // a network hiccup is one more reason for the version not to be there yet
+    return false;
+  }
+  if (response.status !== 200) {
+    return false;
+  }
+  const packageObject = await response.json();
+  return Boolean(packageObject.versions[packageVersion]);
 };

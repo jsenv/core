@@ -6,22 +6,31 @@ export const createMagicSource = (content) => {
   }
   const magicString = new MagicString(content);
   let touched = false;
+  // the edit list mirrors what magicString receives, in the coordinate
+  // space of the initial content: it lets a consumer holding a sourcemap
+  // for that initial content apply the edits as position shifts instead of
+  // composing with a generated map (see sourcemap_edits.js)
+  const edits = [];
 
   return {
     prepend: (string) => {
       touched = true;
+      edits.push({ type: "prepend", text: string });
       magicString.prepend(string);
     },
     append: (string) => {
       touched = true;
+      edits.push({ type: "append" });
       magicString.append(string);
     },
     replace: ({ start, end, replacement }) => {
       touched = true;
+      edits.push({ type: "replace", start, end, replacement });
       magicString.overwrite(start, end, replacement);
     },
     remove: ({ start, end }) => {
       touched = true;
+      edits.push({ type: "remove", start, end });
       magicString.remove(start, end);
     },
     toContentAndSourcemap: ({ source } = {}) => {
@@ -38,6 +47,7 @@ export const createMagicSource = (content) => {
       let map;
       return {
         content: code,
+        sourcemapEdits: { content, edits },
         get sourcemap() {
           if (map === undefined) {
             // "boundary" = a mapping per word boundary. Per-character maps
