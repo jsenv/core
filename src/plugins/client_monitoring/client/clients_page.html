@@ -69,13 +69,20 @@
         color: #374151;
         white-space: nowrap;
       }
+      /* A path is read from its end: the file tells what the tab shows, the
+         folders only where it lives. So the ellipsis eats the start. An rtl
+         line puts text-overflow at its left edge; the <bdi dir="ltr"> inside
+         keeps the path itself in reading order (a bare rtl line would move a
+         leading "/" to the end). */
       .url {
         display: inline-block;
         max-width: 240px;
         color: #374151;
+        text-align: left;
         text-overflow: ellipsis;
         white-space: nowrap;
         vertical-align: middle;
+        direction: rtl;
         overflow: hidden;
       }
       .tag {
@@ -369,7 +376,7 @@
           return '<span class="muted">—</span>';
         }
         const url = d.activeTab.url || "";
-        return `<span class="url" title="${escapeHtml(url)}">${escapeHtml(shortUrl(url))}</span>`;
+        return `<span class="url" title="${escapeHtml(url)}"><bdi dir="ltr">${escapeHtml(shortUrl(url))}</bdi></span>`;
       };
       const activityCell = (d) => {
         const a = d.lastActivity;
@@ -419,17 +426,26 @@
       const render = (clients) => {
         lastClients = clients;
         const self = selfId ? clients.find((d) => d.id === selfId) : null;
-        // Ordered by when they first connected, so rows don't reshuffle.
-        const byFirstSeen = (a, b) => a.firstSeen - b.firstSeen;
+        // The client someone is using right now comes first; among the quiet
+        // ones, the newest. A client that never reported an activity sorts
+        // after those that did.
+        const byRecency = (a, b) => {
+          const aActivity = a.lastActivity ? a.lastActivity.ts : 0;
+          const bActivity = b.lastActivity ? b.lastActivity.ts : 0;
+          if (aActivity !== bActivity) {
+            return bActivity - aActivity;
+          }
+          return b.firstSeen - a.firstSeen;
+        };
         // A headless browser is a program's, not a person's: it comes and goes
         // with a test run, so it gets its own table instead of pushing the
         // clients someone is actually browsing with out of sight.
         const others = clients
           .filter((d) => d !== self && !d.headless)
-          .sort(byFirstSeen);
+          .sort(byRecency);
         const headless = clients
           .filter((d) => d !== self && d.headless)
-          .sort(byFirstSeen);
+          .sort(byRecency);
         selfRows.innerHTML = self
           ? rowHtml(self)
           : `<tr><td class="empty" colspan="${COLSPAN}">This browser isn't registered yet — it will appear shortly.</td></tr>`;
