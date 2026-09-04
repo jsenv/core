@@ -71,6 +71,10 @@
         position: relative;
         width: 420px;
         height: 420px;
+        /* Un plan n'est pas une zone qui défile: "clip" découpe ce qui dépasse
+           sans en faire un conteneur de défilement, et le carré garde sa taille
+           quelle que soit celle de la fenêtre. */
+        flex: none;
         background-image:
           linear-gradient(#dde5d6 1px, transparent 1px),
           linear-gradient(90deg, #dde5d6 1px, transparent 1px);
@@ -78,7 +82,7 @@
         background-color: #edf1e9;
         border: 1px solid #b9c4b4;
         border-radius: 8px;
-        overflow: hidden;
+        overflow: clip;
       }
       .map_surface {
         position: absolute;
@@ -146,6 +150,13 @@
         height: 1px;
         margin: 4px 8px;
         background: #e3e6ec;
+      }
+      .menu_title {
+        padding: 6px 10px 4px;
+        color: #6b7482;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
       }
       .menu_swatch {
         width: 22px;
@@ -215,6 +226,7 @@
         // tout seul. Ce qui reste est ce que la commande ne dit pas — de quelle
         // forme il s'agit, et à quel endroit du plan on a appuyé.
         const [menuItemId, setMenuItemId] = useState(null);
+        const menuItem = items.find((item) => item.id === menuItemId);
         const anchorPointRef = useRef(null);
         const addPointRef = useRef({ x: 0, y: 0 });
         const mapRef = useRef(null);
@@ -380,6 +392,7 @@
               pointerInteractionOutsideEffect="close"
             >
               <Box flex="y" className="menu">
+                <span className="menu_title">Ajouter ici</span>
                 {KINDS.map((kind) => (
                   <Box
                     key={kind.id}
@@ -405,21 +418,26 @@
               pointerInteractionOutsideEffect="close"
             >
               <Box flex="y" className="menu">
-                {KINDS.map((kind) => (
-                  <Box
-                    key={kind.id}
-                    as="button"
-                    type="button"
-                    className="menu_item"
-                    onClick={(event) => {
-                      changeKind(menuItemId, kind);
-                      closeMenu(event);
-                    }}
-                  >
-                    <span className="menu_swatch shape" data-kind={kind.id} />
-                    {kind.label}
-                  </Box>
-                ))}
+                <span className="menu_title">
+                  {menuItem ? kindOf(menuItem.kind).label : ""}
+                </span>
+                {KINDS.filter((kind) => kind.id !== menuItem?.kind).map(
+                  (kind) => (
+                    <Box
+                      key={kind.id}
+                      as="button"
+                      type="button"
+                      className="menu_item"
+                      onClick={(event) => {
+                        changeKind(menuItemId, kind);
+                        closeMenu(event);
+                      }}
+                    >
+                      <span className="menu_swatch shape" data-kind={kind.id} />
+                      En {kind.label.toLowerCase()}
+                    </Box>
+                  ),
+                )}
                 <span className="menu_separator" />
                 <Box
                   as="button"
