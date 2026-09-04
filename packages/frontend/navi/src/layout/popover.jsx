@@ -79,6 +79,7 @@ import { surfaceTextCss } from "./surface_text_css.js";
 import { freezeSize, unfreezeSize } from "./freeze_size.js";
 import {
   armPointerDownOutsideClose,
+  clearTextSelectionInside,
   keepFocusedElementVisible,
   mayHaveHiddenFocus,
   resolveAutoAnimationKind,
@@ -1435,6 +1436,7 @@ const usePopoverProps = (props) => {
     // reason: only ever built here.
     return (closeEvent) => {
       debugPopup(closeEvent, `closePopover()`);
+      clearTextSelectionInside(popoverEl);
       popoverEl.setAttribute("aria-expanded", "false");
       // Set regardless of isTopLayer — see the open side's own identical
       // comment (openEffect above) for why hidePopover() alone isn't

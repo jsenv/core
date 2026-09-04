@@ -43,6 +43,20 @@ import {
 const getVisibleViewportRect = () => {
   const visualViewport = window.visualViewport;
   const documentElement = document.documentElement;
+  // Read FIRST, before the visual viewport just below — and used again in the
+  // branch further down, so it is a read this function needs either way.
+  //
+  // The visual viewport's own numbers are refreshed with the frame's geometry,
+  // and reading the layout viewport is what brings that geometry up to date.
+  // Read them the other way round and the answer is the state as it was before
+  // the caller's own measuring — every caller here measures an element moments
+  // later, with getBoundingClientRect/offsetHeight, which forces exactly that
+  // update. The box would then be measured in one layout state and placed in
+  // another; on a phone opening its keyboard the two are a screen apart, the
+  // popup lands where the pre-keyboard viewport put it, and nothing after
+  // corrects it. Costs no extra layout: it moves the one the caller triggers
+  // anyway rather than adding a second.
+  const layoutViewportHeight = window.innerHeight;
   if (!visualViewport) {
     return {
       left: 0,
@@ -69,8 +83,8 @@ const getVisibleViewportRect = () => {
   ) {
     offsetLeft = 0;
     offsetTop = 0;
-    if (window.innerHeight > height) {
-      height = window.innerHeight;
+    if (layoutViewportHeight > height) {
+      height = layoutViewportHeight;
     }
   }
   return {
@@ -1773,21 +1787,17 @@ const parseTransitionDurationMs = (element, cssVarName, fallbackMs) => {
  * A second reposition landing mid-animation cancels the pending one and
  * flushes its own registered callbacks immediately (same spirit as a real
  * `transitioncancel`), so nothing is left waiting on a superseded `onEnd`.
+ * Every second reposition, animated or not — see
+ * cancelPendingPositionTransition, which applyNewPosition calls on the path
+ * that does not come through here.
  *
- * `commitStyles()` below isn't what makes the final position correct —
- * `applyNewPosition` already sets the specified `left`/`top` before this
- * animation starts, so it takes back over once the active duration elapses
- * regardless. It just makes that explicit instead of relying on `fill:
- * "none"` timing, and drops the finished Animation instead of leaving it.
+ * `commitStyles()` below is what the specified `translate` reads once the
+ * active duration elapses, so it must only ever run while this animation is
+ * still the current placement: it writes THIS animation's target, which a
+ * placement landing after it has already superseded.
  */
 const notifyPositionTransition = (element, animation) => {
-  const pending = pendingPositionTransitions.get(element);
-  if (pending) {
-    pending.animation.cancel();
-    for (const callback of pending.endCallbacks) {
-      callback();
-    }
-  }
+  cancelPendingPositionTransition(element);
   const endCallbacks = [];
   dispatchCustomEvent(element, "navi_position_transition", {
     onEnd: (callback) => {
@@ -1815,6 +1825,31 @@ const notifyPositionTransition = (element, animation) => {
     .catch(() => {
       // Cancelled by a subsequent reposition — already flushed above.
     });
+};
+
+/**
+ * Ends the placement animation in flight on `element`, if any, and flushes what
+ * was waiting on it — what a new placement owes the old one, whether or not it
+ * animates itself.
+ *
+ * The non-animated case is the one worth naming: a placement that just writes
+ * `translate` leaves an animation started a moment earlier running, and that
+ * animation commits ITS target when it ends, on top of the value written since.
+ * The box then lands where a viewport that no longer exists put it, and nothing
+ * comes after to correct it — a phone opening its keyboard fires exactly this
+ * sequence, an animated "resize" followed by focus/size deliveries that do not
+ * animate.
+ */
+const cancelPendingPositionTransition = (element) => {
+  const pending = pendingPositionTransitions.get(element);
+  if (!pending) {
+    return;
+  }
+  pendingPositionTransitions.delete(element);
+  pending.animation.cancel();
+  for (const callback of pending.endCallbacks) {
+    callback();
+  }
 };
 
 /**
@@ -1939,6 +1974,8 @@ export const applyNewPosition = (
       },
     );
     notifyPositionTransition(element, animation);
+  } else {
+    cancelPendingPositionTransition(element);
   }
   // The specified translate is set to its final target right away,
   // regardless of `shouldTransition` — the animation above only plays the

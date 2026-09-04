@@ -63,6 +63,7 @@ import {
   createPubSub,
   getElementSignature,
   getPositionedParent,
+  getVirtualKeyboardOverlayHeight,
   parsePositionArea,
   pickPositionRelativeTo,
   snapToPixel,
@@ -93,6 +94,7 @@ import { createSwipeToClose, SWIPE_AXIS_BY_SIDE } from "./swipe_to_close.js";
 import { growPopupFromAnchor } from "./popup_grow.js";
 import {
   armPointerDownOutsideClose,
+  clearTextSelectionInside,
   keepFocusedElementVisible,
   mayHaveHiddenFocus,
   resolveAutoAnimationKind,
@@ -1460,6 +1462,31 @@ const useDialogProps = (props) => {
       // recheck its own position whenever this dialog itself moves is
       // handled generically by applyNewPosition itself (dispatches
       // navi_position_change on every call) — nothing to do here.
+      logPlacement(triggerEvent, position);
+    };
+    // The whole picture in one line: where the dialog ended up, and what it
+    // believed about the room when it decided. Both are needed together — a box
+    // that looks wrong on screen while these numbers are right means something
+    // covers the screen that no API describes (a phone's autofill/suggestion
+    // strip), and the absence of a line after the keyboard arrives means the
+    // placement was never asked to run again.
+    const logPlacement = (triggerEvent, position) => {
+      // The decided target, never the current rect: the placement animates, so
+      // a box read right after applying one is somewhere between the two and
+      // reads like a decision nobody took.
+      const { visualViewport } = window;
+      // Reads nothing that brings the layout up to date — no getComputedStyle,
+      // no window.innerWidth/innerHeight. That is the very thing this line is
+      // here to observe (see getVisibleViewportRect in @jsenv/dom): a log that
+      // forced it would hand the NEXT placement a fresh viewport and hide the
+      // bug it was printed to show. Everything below is either already computed
+      // (the pick's own numbers, "room" being the room it had) or free to read.
+      const message = `placed on "${triggerEvent ? triggerEvent.type : "open"}": ${Math.round(position.width)}x${Math.round(position.height)} at ${Math.round(position.top)}->${Math.round(position.top + position.height)} | room ${Math.round(position.containerHeightAvailable)} | viewport ${Math.round(visualViewport.width)}x${Math.round(visualViewport.height)} +${Math.round(visualViewport.offsetLeft)},${Math.round(visualViewport.offsetTop)} | keyboard ${getVirtualKeyboardOverlayHeight()}`;
+      if (triggerEvent) {
+        debugPopup(triggerEvent, message);
+      } else {
+        debugPopup(message);
+      }
     };
     // Cleared here rather than on close, where the box is deliberately left
     // frozen at the size it was closing at (see the closing function's own
@@ -1629,6 +1656,7 @@ const useDialogProps = (props) => {
       debugPopup(
         `"${closeEvent.type}" on ${getElementSignature(closeEvent.target)} -> closeDialog`,
       );
+      clearTextSelectionInside(dialogEl);
       dialogEl.setAttribute("aria-expanded", "false");
       if (!isModal) {
         openLocalDialogCount = Math.max(0, openLocalDialogCount - 1);

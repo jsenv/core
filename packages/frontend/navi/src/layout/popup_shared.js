@@ -166,6 +166,32 @@ export const whenTransitionSettles = (el, onSettled) => {
 };
 
 /**
+ * Drops the document's text selection when it lives inside `el`, leaving a
+ * selection made elsewhere on the page alone.
+ *
+ * A popup being closed takes its content with it, and a selection is a claim
+ * on content the user can still act on: kept, it would outlive the surface it
+ * was made on — painted on the box for the length of its exit transition, with
+ * the handles and the copy toolbar a phone draws from the live selection
+ * hanging over something that is going away — and reappear with the box on
+ * the next opening. Dropping the selection is the only way to remove that
+ * chrome: a `user-select: none` on the closing box hides the highlight in some
+ * browsers only, and the handles are the browser's own, drawn from the
+ * selection object rather than from any style.
+ */
+export const clearTextSelectionInside = (el) => {
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) {
+    return;
+  }
+  const range = selection.getRangeAt(0);
+  if (!el.contains(range.commonAncestorContainer)) {
+    return;
+  }
+  selection.removeAllRanges();
+};
+
+/**
  * Disables pointer-events on `el` until its current CSS transition settles —
  * avoids the cursor changing/something becoming clickable while the popup is
  * still visually moving into or out of place.
