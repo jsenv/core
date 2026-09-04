@@ -23,48 +23,39 @@
   To avoid that we store the event on window.beforeinstallpromptEvent.
 */
 
-import { sigref } from "@jsenv/sigi";
+import { computed, signal } from "@preact/signals";
 
-import { displayModeStandaloneRef } from "./display_mode_standalone_ref.js";
+import { displayModeStandaloneSignal } from "./display_mode_standalone_signal.js";
 import { listenEvent } from "./internal/listenEvent.js";
 import { listenAppInstalled } from "./listen_app_installed.js";
 
-let appInstalledEvent = false;
-
-const listenBeforeInstallPrompt = (callback) =>
-  listenEvent(window, "beforeinstallprompt", callback);
-
-const isAvailable = () => {
-  if (!window.beforeinstallpromptEvent) {
+const appInstalledSignal = signal(false);
+const beforeInstallPromptSignal = signal(
+  Boolean(window.beforeinstallpromptEvent),
+);
+const availableSignal = computed(() => {
+  if (!beforeInstallPromptSignal.value) {
     return false;
   }
-  if (displayModeStandaloneRef.value) {
+  if (displayModeStandaloneSignal.value) {
     return false;
   }
-  if (appInstalledEvent) {
+  if (appInstalledSignal.value) {
     return false;
   }
   return true;
-};
-const [availableRef, availableSetter] = sigref(isAvailable());
-const checkAvailabilityChange = () => {
-  availableSetter(isAvailable());
-};
+});
 
 listenAppInstalled(() => {
   // prompt "becomes" unavailable if user installs app
   // it can happen if user installs app manually from browser toolbar
   // in that case there is no point showing the install
   // button in the ui
-  appInstalledEvent = true;
-  checkAvailabilityChange();
+  appInstalledSignal.value = true;
 });
-listenBeforeInstallPrompt((beforeinstallpromptEvent) => {
+listenEvent(window, "beforeinstallprompt", (beforeinstallpromptEvent) => {
   window.beforeinstallpromptEvent = beforeinstallpromptEvent;
-  checkAvailabilityChange();
-});
-displayModeStandaloneRef.subscribe(() => {
-  checkAvailabilityChange();
+  beforeInstallPromptSignal.value = true;
 });
 
 /**
@@ -79,15 +70,15 @@ displayModeStandaloneRef.subscribe(() => {
  *     window.beforeinstallpromptEvent = event;
  *   });
  *
- * - `availableRef`: reactive ref; `availableRef.value` is true when the
- *   install prompt can be shown (browser fired "beforeinstallprompt", app not
- *   already installed, not already running standalone).
- *   `availableRef.subscribe(callback)` calls back immediately and on change.
+ * - `availableSignal`: reactive signal; `availableSignal.value` is true when
+ *   the install prompt can be shown (browser fired "beforeinstallprompt", app
+ *   not already installed, not already running standalone).
+ *   `availableSignal.subscribe(callback)` calls back immediately and on change.
  * - `prompt()`: async, must be called from a user gesture (e.g. click);
  *   resolves to true if the user accepted installation.
  */
 export const addToHomescreen = {
-  availableRef,
+  availableSignal,
   prompt: async () => {
     if (!window.beforeinstallpromptEvent) {
       console.warn(

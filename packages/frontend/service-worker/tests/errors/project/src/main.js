@@ -1,6 +1,6 @@
 import {
   createServiceWorkerFacade,
-  navigatorControllerRef,
+  navigatorControllerSignal,
   pwaLogger,
 } from "@jsenv/pwa";
 
@@ -13,7 +13,7 @@ export const swFacade = createServiceWorkerFacade({
 });
 
 const controllerSpan = document.querySelector("#controller");
-navigatorControllerRef.subscribe((controller) => {
+navigatorControllerSignal.subscribe((controller) => {
   if (controller) {
     controllerSpan.innerHTML = `${controller.meta.name}`;
   } else {

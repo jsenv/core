@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/pwa",
-  "version": "6.2.2",
+  "version": "6.2.3",
   "type": "module",
   "description": "Service worker and other progressive web application helpers",
   "repository": {
@@ -27,14 +27,15 @@
     "/docs/",
     "/src/"
   ],
-  "dependencies": {
-    "@jsenv/sigi": "0.1.12"
+  "peerDependencies": {
+    "@preact/signals": "^2.11.2"
   },
   "devDependencies": {
     "@jsenv/assert": "../../tooling/assert",
     "@jsenv/core": "../../../",
     "@jsenv/https-local": "../../tooling/https-local",
     "@jsenv/plugin-explorer": "../../related/plugin-explorer",
+    "@preact/signals": "2.11.2",
     "playwright": "1.62.1"
   },
   "publishConfig": {

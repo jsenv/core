@@ -119,7 +119,7 @@
     <script type="module">
       import {
         pwaLogger,
-        navigatorControllerRef,
+        navigatorControllerSignal,
         createServiceWorkerFacade,
       } from "@jsenv/pwa";
 
@@ -140,7 +140,7 @@
       // }
 
       const controllerSpan = document.querySelector("#controller");
-      navigatorControllerRef.subscribe((controller) => {
+      navigatorControllerSignal.subscribe((controller) => {
         if (controller) {
           controllerSpan.innerHTML = `${controller.meta.version}`;
         } else {

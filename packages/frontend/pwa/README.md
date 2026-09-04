@@ -56,7 +56,7 @@ Allow users to add your website to their device homescreen, running it in a stan
       const button = document.querySelector("#add-to-home-screen");
 
       // Called immediately with the current value, then on every change
-      addToHomescreen.availableRef.subscribe((available) => {
+      addToHomescreen.availableSignal.subscribe((available) => {
         button.disabled = !available;
       });
 
@@ -71,10 +71,10 @@ Allow users to add your website to their device homescreen, running it in a stan
 
 ### API Reference
 
-#### addToHomescreen.availableRef
+#### addToHomescreen.availableSignal
 
-A reactive ref telling if the "Add to Home Screen" prompt can be shown.
-`availableRef.value` is a boolean; `availableRef.subscribe(callback)` calls the
+A signal telling if the "Add to Home Screen" prompt can be shown.
+`availableSignal.value` is a boolean; `availableSignal.subscribe(callback)` calls the
 callback immediately with the current value and again on every change, and
 returns an unsubscribe function.
 
@@ -112,15 +112,15 @@ listenAppInstalled(() => {
 });
 ```
 
-#### displayModeStandaloneRef
+#### displayModeStandaloneSignal
 
-A reactive ref telling if the page runs in standalone display mode (launched
-from the home screen).
+A signal telling if the page runs in standalone display mode (launched from
+the home screen).
 
 ```js
-import { displayModeStandaloneRef } from "@jsenv/pwa";
+import { displayModeStandaloneSignal } from "@jsenv/pwa";
 
-displayModeStandaloneRef.subscribe((standalone) => {
+displayModeStandaloneSignal.subscribe((standalone) => {
   console.log(`Running in ${standalone ? "standalone" : "browser"} mode`);
 });
 ```
@@ -185,8 +185,10 @@ The returned facade exposes:
   }
   ```
 
-- `subscribe(callback)` — runs the callback immediately and again whenever any
-  state it reads changes; returns an unsubscribe function.
+- `stateSignal` — the signal holding `state`, for consumers composing it with
+  other signals.
+- `subscribe(callback)` — runs the callback immediately and again on every
+  state change; returns an unsubscribe function.
 - `setRegistrationPromise(promise)` — hand it the return value of
   `navigator.serviceWorker.register(url)`.
 - `checkForUpdates()` — async, resolves to `true` if an update was found.
@@ -212,9 +214,9 @@ implements this protocol. With a plain service worker script everything still
 works but degrades: `meta` stays empty and every update requires a page
 reload.
 
-#### navigatorControllerRef
+#### navigatorControllerSignal
 
-A reactive ref exposing the service worker currently controlling the page:
+A signal exposing the service worker currently controlling the page:
 `null` when not controlled, otherwise `{ meta }`.
 
 #### pwaLogger

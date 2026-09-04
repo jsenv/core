@@ -2,7 +2,7 @@
  * https://developer.mozilla.org/en-US/docs/Web/API/ServiceWorkerRegistration
  */
 
-import { sigiAdvanced } from "@jsenv/sigi";
+import { signal } from "@preact/signals";
 
 import {
   canUseServiceWorkers,
@@ -35,7 +35,8 @@ import { pwaLogger } from "./pwa_logger.js";
  *   first service worker activates, ask it to claim the page immediately
  *   instead of waiting for the next navigation.
  * @returns {Object} facade with:
- *   - `state`: reactive state object, see the shape passed to sigiAdvanced below
+ *   - `stateSignal`: signal holding the state object, see its shape below
+ *   - `state`: the state object itself (`stateSignal.value`)
  *   - `subscribe(callback)`: called immediately then on every state change;
  *     returns an unsubscribe function
  *   - `setRegistrationPromise(promise)`: give it the return value of
@@ -55,7 +56,7 @@ export const createServiceWorkerFacade = ({
 } = {}) => {
   let fromInspectPromise = null;
 
-  const { state, subscribe, mutate } = sigiAdvanced({
+  const stateSignal = signal({
     error: null,
     readyState: "", // registering, installing, installed, activating, activated
     meta: {},
@@ -66,6 +67,17 @@ export const createServiceWorkerFacade = ({
       reloadRequired: true,
     },
   });
+  // The state object is replaced, never mutated: subscribers are notified by
+  // the signal write. "update" is the one branch merged rather than replaced,
+  // so a caller can touch one of its properties in a single write.
+  const mutate = (partial) => {
+    const state = stateSignal.peek();
+    const stateWithPartial = { ...state, ...partial };
+    if (partial.update) {
+      stateWithPartial.update = { ...state.update, ...partial.update };
+    }
+    stateSignal.value = stateWithPartial;
+  };
 
   const resourceUpdateHandlers = {};
 
@@ -220,7 +232,7 @@ export const createServiceWorkerFacade = ({
       const controller = serviceWorkerAPI.controller;
       // happens when an other tab register the service worker and
       // make it control the navigator (when autoclaimOnFirstActivation is true)
-      if (controller && state.readyState === "") {
+      if (controller && stateSignal.peek().readyState === "") {
         const registration = await serviceWorkerAPI.getRegistration();
         watchRegistration(registration);
       }
@@ -236,8 +248,11 @@ export const createServiceWorkerFacade = ({
   }
 
   return {
-    state,
-    subscribe,
+    stateSignal,
+    get state() {
+      return stateSignal.value;
+    },
+    subscribe: (callback) => stateSignal.subscribe(callback),
     setRegistrationPromise: async (registrationPromise) => {
       try {
         mutate({ error: null, readyState: "registering" });

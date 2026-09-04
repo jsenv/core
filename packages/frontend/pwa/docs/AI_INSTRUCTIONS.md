@@ -12,23 +12,23 @@ Three independent features (use any of them alone):
 - **Service worker lifecycle** — `createServiceWorkerFacade()` wraps
   registration, update detection, update activation and messaging behind one
   object with reactive state. This is the core of the package.
-- **Add to home screen** — `addToHomescreen` (availability ref + `prompt()`),
-  `listenAppInstalled()`, `displayModeStandaloneRef`.
-- **Introspection** — `navigatorControllerRef` (which service worker controls
+- **Add to home screen** — `addToHomescreen` (availability signal + `prompt()`),
+  `listenAppInstalled()`, `displayModeStandaloneSignal`.
+- **Introspection** — `navigatorControllerSignal` (which service worker controls
   the page), `pwaLogger` (set `logLevel: "debug"` to see what the package does).
 
 ## Key concepts to know before guessing an API
 
-- **Reactive refs, not getter/listener pairs**: `addToHomescreen.availableRef`,
-  `displayModeStandaloneRef` and `navigatorControllerRef` are "sigref" objects
-  from `@jsenv/sigi`: read `ref.value`, and `ref.subscribe(callback)` calls the
-  callback immediately with the current value and again on every change,
-  returning an unsubscribe function. There is no `isAvailable()` /
-  `listenAvailabilityChange()` style API.
-- **The facade holds reactive state**: `swFacade.state` is a plain-looking
-  object (`error`, `readyState`, `meta`, `update: { error, readyState, meta,
-reloadRequired }`) and `swFacade.subscribe(callback)` re-runs the callback
-  when any state it reads changes. `readyState` progresses through
+- **Signals, not getter/listener pairs**: `addToHomescreen.availableSignal`,
+  `displayModeStandaloneSignal` and `navigatorControllerSignal` are
+  `@preact/signals` signals: read `signal.value`, and
+  `signal.subscribe(callback)` calls the callback immediately with the current
+  value and again on every change, returning an unsubscribe function. There is
+  no `isAvailable()` / `listenAvailabilityChange()` style API.
+- **The facade holds reactive state**: `swFacade.state` is a plain object
+  (`error`, `readyState`, `meta`, `update: { error, readyState, meta,
+reloadRequired }`) read from `swFacade.stateSignal`, and
+  `swFacade.subscribe(callback)` re-runs the callback on every state change. `readyState` progresses through
   `"registering" → "installing" → "installed" → "activating" → "activated"`
   (or `"redundant"`); `state.update.readyState === "installed"` means an update
   is ready to be activated with `swFacade.activateUpdate()`.

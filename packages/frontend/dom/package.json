@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/dom",
-  "version": "0.17.46",
+  "version": "0.17.47",
   "type": "module",
   "description": "DOM utilities for writing frontend code",
   "repository": {
@@ -34,6 +34,10 @@
   "scripts": {
     "build": "node ./scripts/build.mjs",
     "prepublishOnly": "npm run build"
+  },
+  "peerDependencies": {
+    "@preact/signals": "^2.11.2",
+    "preact": "^11.0.0-beta.2"
   },
   "dependencies": {},
   "devDependencies": {

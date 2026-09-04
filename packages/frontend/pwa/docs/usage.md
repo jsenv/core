@@ -28,8 +28,8 @@ createServiceWorkerFacade({
 
 ## Service worker: reacting to state
 
-`swFacade.subscribe(callback)` runs the callback immediately and again whenever
-any state it reads changes:
+`swFacade.subscribe(callback)` runs the callback immediately and again on every
+state change:
 
 ```js
 swFacade.subscribe(() => {
@@ -149,7 +149,7 @@ Then:
 import { addToHomescreen } from "@jsenv/pwa";
 
 const installButton = document.querySelector("#install");
-addToHomescreen.availableRef.subscribe((available) => {
+addToHomescreen.availableSignal.subscribe((available) => {
   installButton.disabled = !available;
 });
 installButton.onclick = async () => {
@@ -172,9 +172,9 @@ listenAppInstalled(() => {
 ## Display mode
 
 ```js
-import { displayModeStandaloneRef } from "@jsenv/pwa";
+import { displayModeStandaloneSignal } from "@jsenv/pwa";
 
-displayModeStandaloneRef.subscribe((standalone) => {
+displayModeStandaloneSignal.subscribe((standalone) => {
   console.log(standalone ? "running as installed app" : "running in browser");
 });
 ```
@@ -182,9 +182,9 @@ displayModeStandaloneRef.subscribe((standalone) => {
 ## Which service worker controls the page
 
 ```js
-import { navigatorControllerRef } from "@jsenv/pwa";
+import { navigatorControllerSignal } from "@jsenv/pwa";
 
-navigatorControllerRef.subscribe((controller) => {
+navigatorControllerSignal.subscribe((controller) => {
   // null when not controlled, otherwise { meta }
   console.log("controller:", controller);
 });

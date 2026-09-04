@@ -1,4 +1,4 @@
-import { sigref } from "@jsenv/sigi";
+import { signal } from "@preact/signals";
 import {
   canUseServiceWorkers,
   serviceWorkerAPI,
@@ -6,30 +6,29 @@ import {
 import { inspectServiceWorker } from "./internal/service_worker_communication.js";
 
 /**
- * Reactive ref exposing the service worker currently controlling the page.
- * `navigatorControllerRef.value` is null when the page is not controlled,
+ * Reactive signal exposing the service worker currently controlling the page.
+ * `navigatorControllerSignal.value` is null when the page is not controlled,
  * otherwise `{ meta }` where meta is the object returned by the service worker
  * script in response to the "inspect" action (empty when the script does not
- * implement it). `navigatorControllerRef.subscribe(callback)` calls back
+ * implement it). `navigatorControllerSignal.subscribe(callback)` calls back
  * immediately and on every controller change.
  */
-const [navigatorControllerRef, navigatorControllerSetter] = sigref(null);
+export const navigatorControllerSignal = signal(null);
 
 const applyControllerEffect = async () => {
   if (!canUseServiceWorkers) {
-    navigatorControllerSetter(null);
+    navigatorControllerSignal.value = null;
     return;
   }
   const { controller } = serviceWorkerAPI;
   if (!controller) {
-    navigatorControllerSetter(null);
+    navigatorControllerSignal.value = null;
     return;
   }
   const meta = await inspectServiceWorker(serviceWorkerAPI.controller);
-  navigatorControllerSetter({ meta });
+  navigatorControllerSignal.value = { meta };
 };
 applyControllerEffect();
 if (canUseServiceWorkers) {
   serviceWorkerAPI.addEventListener("controllerchange", applyControllerEffect);
 }
-export { navigatorControllerRef };
