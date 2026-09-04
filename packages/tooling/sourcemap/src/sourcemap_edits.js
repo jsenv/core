@@ -175,6 +175,8 @@ export const applyContentEditsOnSourcemap = (sourcemap, { content, edits }) => {
     );
   };
 
+  // decode() output is owned here: segments are moved (and their column
+  // mutated) into the shifted structure without copies
   const decoded = decode(sourcemap.mappings);
   const decodedShifted = [];
   const pushSegment = (newLine, segment) => {
@@ -184,7 +186,30 @@ export const applyContentEditsOnSourcemap = (sourcemap, { content, edits }) => {
     decodedShifted[newLine].push(segment);
   };
   for (let lineIndex = 0; lineIndex < decoded.length; lineIndex++) {
-    for (const segment of decoded[lineIndex]) {
+    const segments = decoded[lineIndex];
+    // whole-line fast path: no edit starts at or before this line anymore,
+    // and the tail rebase does not apply to it — the line moves as one block
+    if (
+      lineIndex !== tailOldLine &&
+      (recordIndex === records.length ||
+        records[recordIndex].startLine > lineIndex)
+    ) {
+      if (segments.length > 0) {
+        const newLine = lineIndex + lineDelta;
+        while (decodedShifted.length <= newLine) {
+          decodedShifted.push([]);
+        }
+        if (decodedShifted[newLine].length === 0) {
+          decodedShifted[newLine] = segments;
+        } else {
+          for (const segment of segments) {
+            decodedShifted[newLine].push(segment);
+          }
+        }
+      }
+      continue;
+    }
+    for (const segment of segments) {
       const column = segment[0];
       while (
         recordIndex < records.length &&
@@ -199,14 +224,19 @@ export const applyContentEditsOnSourcemap = (sourcemap, { content, edits }) => {
       ) {
         continue;
       }
-      const [newLine, newColumn] = transformPosition(lineIndex, column);
-      if (newColumn === column && newLine === lineIndex) {
-        pushSegment(newLine, segment);
-        continue;
+      let newLine;
+      let newColumn;
+      if (lineIndex === tailOldLine && column >= tailOldColumn) {
+        newLine = tailNewLine;
+        newColumn = tailNewColumn + (column - tailOldColumn);
+      } else {
+        newLine = lineIndex + lineDelta;
+        newColumn = column;
       }
-      const segmentShifted = segment.slice();
-      segmentShifted[0] = newColumn;
-      pushSegment(newLine, segmentShifted);
+      if (newColumn !== column) {
+        segment[0] = newColumn;
+      }
+      pushSegment(newLine, segment);
     }
   }
 

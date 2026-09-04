@@ -23,7 +23,7 @@
   ],
   "dependencies": {},
   "devDependencies": {
-    "@jsenv/assert": "../"
+    "@jsenv/assert": "../assert"
   },
   "publishConfig": {
     "access": "public"

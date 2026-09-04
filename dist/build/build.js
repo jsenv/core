@@ -4,7 +4,7 @@ import { bundleJsModules, jsenvPluginBundling } from "@jsenv/plugin-bundling";
 import { jsenvPluginMinification } from "@jsenv/plugin-minification";
 import { jsenvPluginTranspilation, jsenvPluginJsModuleFallback } from "@jsenv/plugin-transpilation";
 import { memoryUsage } from "node:process";
-import { readFileSync, existsSync, realpathSync, readdirSync, lstatSync, statSync } from "node:fs";
+import { readFileSync, existsSync, statSync, realpathSync, readdirSync, lstatSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { generateSourcemapFileUrl, createMagicSource, composeTwoSourcemaps, generateSourcemapDataUrl, SOURCEMAP, applyContentEditsOnSourcemap, composeSourcemaps } from "@jsenv/sourcemap";
 import { createPluginsController } from "@jsenv/server/src/plugins_controller.js";
@@ -4210,6 +4210,32 @@ const createPackageDirectory = ({
   sourceDirectoryUrl,
   lookupPackageDirectory: lookupPackageDirectory$1 = lookupPackageDirectory,
 }) => {
+  // package.json files are read constantly: node esm resolution reads them
+  // for every bare specifier, the kitchen for every package relationship.
+  // The cache is validated by mtime so a package.json change while a
+  // process keeps running (npm install during a dev server or a watch
+  // build) is seen immediately, at the cost of a single stat per read.
+  const readCache = new Map();
+  const read = (packageDirectoryUrl) => {
+    const key = String(packageDirectoryUrl);
+    let mtimeMs;
+    try {
+      mtimeMs = statSync(new URL("./package.json", key)).mtimeMs;
+    } catch (e) {
+      if (e.code === "ENOENT") {
+        return null;
+      }
+      throw e;
+    }
+    const fromCache = readCache.get(key);
+    if (fromCache && fromCache.mtimeMs === mtimeMs) {
+      return fromCache.packageJson;
+    }
+    const packageJson = readPackageAtOrNull(key);
+    readCache.set(key, { mtimeMs, packageJson });
+    return packageJson;
+  };
+
   const packageDirectory = {
     url: lookupPackageDirectory$1(sourceDirectoryUrl),
     find: (url) => {
@@ -4219,7 +4245,7 @@ const createPackageDirectory = ({
       }
       return lookupPackageDirectory$1(url);
     },
-    read: readPackageAtOrNull,
+    read,
   };
   return packageDirectory;
 };
@@ -13047,15 +13073,6 @@ entryPoints: {
     sourceDirectoryUrl,
     lookupPackageDirectory,
   });
-  const packageDirectoryCache = new Map();
-  packageDirectory.read = (url) => {
-    const fromCache = packageDirectoryCache.get(url);
-    if (fromCache !== undefined) {
-      return fromCache;
-    }
-    return readPackageAtOrNull(url);
-  };
-
   if (outDirectoryUrl === undefined) {
     if (
       process.env.CAPTURING_SIDE_EFFECTS ||

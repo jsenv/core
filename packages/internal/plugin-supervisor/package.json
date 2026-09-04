@@ -32,7 +32,7 @@
   },
   "devDependencies": {
     "@jsenv/core": "../../../",
-    "@jsenv/filesystem": "../../backend/filesystem",
+    "@jsenv/filesystem": "../../tooling/filesystem",
     "@jsenv/humanize": "../../tooling/humanize",
     "@jsenv/snapshot": "../../tooling/snapshot",
     "@jsenv/urls": "../../tooling/urls"

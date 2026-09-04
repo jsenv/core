@@ -29,7 +29,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@jsenv/database": "0.0.15",
+    "@jsenv/database": "0.0.16",
     "@jsenv/server": "17.6.3",
     "@jsenv/urls": "2.9.10",
     "@tanstack/table-core": "8.21.3",
@@ -41,7 +41,7 @@
     "@jsenv/dom": "../../frontend/dom",
     "@jsenv/navi": "../../frontend/navi",
     "@jsenv/plugin-preact": "../../related/plugin-preact",
-    "@jsenv/server": "../../server",
+    "@jsenv/server": "../server",
     "@preact/signals": "2.11.1",
     "preact": "11.0.0-beta.2"
   },

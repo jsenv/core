@@ -50,7 +50,7 @@
     "@jsenv/plugin-commonjs": "../../related/plugin-commonjs",
     "@jsenv/server": "./",
     "@jsenv/snapshot": "../../tooling/snapshot",
-    "@jsenv/url-meta": "../../tooling/url_meta",
+    "@jsenv/url-meta": "../../tooling/url-meta",
     "@jsenv/url-pattern": "../../tooling/url-pattern",
     "@jsenv/urls": "../../tooling/urls",
     "@jsenv/utils": "../../tooling/utils",

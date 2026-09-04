@@ -41,7 +41,7 @@
   },
   "devDependencies": {
     "@jsenv/core": "../../../",
-    "@jsenv/plugin-as-js-classic": "../plugin-as-js-classic"
+    "@jsenv/plugin-as-js-classic": "../../related/plugin-as-js-classic"
   },
   "publishConfig": {
     "access": "public"

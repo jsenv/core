@@ -24,7 +24,6 @@ import {
   compareFileUrls,
   createLookupPackageDirectory,
   ensureEmptyDirectory,
-  readPackageAtOrNull,
   updateJsonFileSync,
   writeFileSync,
 } from "@jsenv/filesystem";
@@ -640,15 +639,6 @@ entryPoints: {
     sourceDirectoryUrl,
     lookupPackageDirectory,
   });
-  const packageDirectoryCache = new Map();
-  packageDirectory.read = (url) => {
-    const fromCache = packageDirectoryCache.get(url);
-    if (fromCache !== undefined) {
-      return fromCache;
-    }
-    return readPackageAtOrNull(url);
-  };
-
   if (outDirectoryUrl === undefined) {
     if (
       process.env.CAPTURING_SIDE_EFFECTS ||

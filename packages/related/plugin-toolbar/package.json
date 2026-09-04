@@ -31,7 +31,7 @@
     "@jsenv/ast": "6.10.1"
   },
   "devDependencies": {
-    "@jsenv/core": "../../",
+    "@jsenv/core": "../../../",
     "@jsenv/filesystem": "../../tooling/filesystem",
     "@jsenv/plugin-toolbar": "./",
     "@jsenv/utils": "../../tooling/utils",

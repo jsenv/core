@@ -21,10 +21,9 @@
     "test:coverage": "npm run test -- --coverage"
   },
   "dependencies": {
-    "@jsenv/dom": "./packages/dom",
-    "@jsenv/navi": "./packages/navi",
+    "@jsenv/dom": "../../frontend/dom",
+    "@jsenv/navi": "../../frontend/navi",
     "@preact/signals": "2.11.1",
-    "dom": "./packages/dom",
     "hooks": "./packages/hooks",
     "matrix": "./packages/matrix",
     "preact": "11.0.0-beta.0"

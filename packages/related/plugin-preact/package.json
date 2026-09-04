@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-preact",
-  "version": "1.9.4",
+  "version": "1.9.5",
   "type": "module",
   "repository": {
     "type": "git",
@@ -28,7 +28,7 @@
     "@babel/plugin-transform-react-jsx-development": "8.0.1",
     "@jsenv/ast": "6.10.1",
     "@jsenv/sourcemap": "1.4.5",
-    "@jsenv/url-meta": "8.5.7",
+    "@jsenv/url-meta": "8.5.8",
     "@prefresh/babel-plugin": "0.5.3",
     "@prefresh/core": "1.5.11",
     "@prefresh/utils": "1.2.1",

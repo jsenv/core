@@ -1,5 +1,5 @@
 import { WebSocketResponse, pickContentType, ServerEvents, serverPluginErrorHandler, fetchDirectory, composeTwoResponses, serverPluginCORS, jsenvAccessControlAllowedHeaders, startServer } from "@jsenv/server";
-import { existsSync, readFileSync, realpathSync, readdirSync, lstatSync, statSync } from "node:fs";
+import { existsSync, statSync, readFileSync, realpathSync, readdirSync, lstatSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { urlToRelativeUrl, registerFileLifecycle, lookupPackageDirectory, readPackageAtOrNull, generateContentFrame, errorToHTML, DATA_URL, CONTENT_TYPE, normalizeImportMap, composeTwoImportMaps, resolveImport, JS_QUOTES, urlToExtension, urlToBasename, applyNodeEsmResolution, URL_META, readCustomConditionsFromProcessArgs, urlIsOrIsInsideOf, collectFiles, registerDirectoryLifecycle, readEntryStatSync, applyFileSystemMagicResolution, getExtensionsToTry, urlToFilename, asUrlWithoutSearch, ensurePathnameTrailingSlash, compareFileUrls, setUrlExtension, createDetailedMessage, stringifyUrlSite, injectQueryParamsIntoSpecifier, isSpecifierForNodeBuiltin, injectQueryParams, urlToFileSystemPath, writeFileSync, moveUrl, ensureWindowsDriveLetter, validateResponseIntegrity, setUrlFilename, getCallerPosition, asSpecifierWithoutSearch, bufferToEtag, isFileSystemPath, urlToPathname, setUrlBasename, createLogger, normalizeUrl, ANSI, RUNTIME_COMPAT, formatError, assertAndNormalizeDirectoryUrl, browserDefaultRuntimeCompat, inferRuntimeCompatFromClosestPackage, createTaskLog } from "./jsenv_core_packages.js";
 import { createPluginsController } from "@jsenv/server/src/plugins_controller.js";
@@ -354,6 +354,32 @@ const createPackageDirectory = ({
   sourceDirectoryUrl,
   lookupPackageDirectory: lookupPackageDirectory$1 = lookupPackageDirectory,
 }) => {
+  // package.json files are read constantly: node esm resolution reads them
+  // for every bare specifier, the kitchen for every package relationship.
+  // The cache is validated by mtime so a package.json change while a
+  // process keeps running (npm install during a dev server or a watch
+  // build) is seen immediately, at the cost of a single stat per read.
+  const readCache = new Map();
+  const read = (packageDirectoryUrl) => {
+    const key = String(packageDirectoryUrl);
+    let mtimeMs;
+    try {
+      mtimeMs = statSync(new URL("./package.json", key)).mtimeMs;
+    } catch (e) {
+      if (e.code === "ENOENT") {
+        return null;
+      }
+      throw e;
+    }
+    const fromCache = readCache.get(key);
+    if (fromCache && fromCache.mtimeMs === mtimeMs) {
+      return fromCache.packageJson;
+    }
+    const packageJson = readPackageAtOrNull(key);
+    readCache.set(key, { mtimeMs, packageJson });
+    return packageJson;
+  };
+
   const packageDirectory = {
     url: lookupPackageDirectory$1(sourceDirectoryUrl),
     find: (url) => {
@@ -363,7 +389,7 @@ const createPackageDirectory = ({
       }
       return lookupPackageDirectory$1(url);
     },
-    read: readPackageAtOrNull,
+    read,
   };
   return packageDirectory;
 };

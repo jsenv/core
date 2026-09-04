@@ -40,7 +40,7 @@
     "postcss-value-parser": "4.2.0"
   },
   "devDependencies": {
-    "@jsenv/assert": "../../indeppendent/tooling/assert",
+    "@jsenv/assert": "../../tooling/assert",
     "@jsenv/ast": "./",
     "@jsenv/filesystem": "../../tooling/filesystem",
     "@jsenv/snapshot": "../../tooling/snapshot"
