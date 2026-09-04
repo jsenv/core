@@ -16,7 +16,8 @@ import {
  * scrollIntoViewScoped avoids this by targeting one container explicitly.
  *
  * Uses scrollTo() so CSS scroll-behavior:smooth on the container is respected.
- * Respects scroll-margin-* on the element.
+ * Respects scroll-margin-* on the element and scroll-padding-* on the
+ * container.
  *
  * @param {Element} el - The element to scroll into view.
  * @param {object} options
@@ -122,6 +123,31 @@ export const getScrollIntoViewScopedOffsets = (
     containerWidth = containerRect.width;
   }
 
+  // The band the container keeps free at each of its edges for whatever is
+  // scrolled to — what a sticky header, a footer or a fixed bar reserves so an
+  // element does not land underneath it (see navi's safe_area.js). The
+  // scrollport shrinks by it on both axes, and every alignment below is against
+  // that smaller rectangle.
+  const containerStyle = getComputedStyle(container);
+  const scrollPaddingTop = resolveScrollPadding(
+    containerStyle.scrollPaddingTop,
+    containerHeight,
+  );
+  const scrollPaddingBottom = resolveScrollPadding(
+    containerStyle.scrollPaddingBottom,
+    containerHeight,
+  );
+  const scrollPaddingLeft = resolveScrollPadding(
+    containerStyle.scrollPaddingLeft,
+    containerWidth,
+  );
+  const scrollPaddingRight = resolveScrollPadding(
+    containerStyle.scrollPaddingRight,
+    containerWidth,
+  );
+  const viewHeight = containerHeight - scrollPaddingTop - scrollPaddingBottom;
+  const viewWidth = containerWidth - scrollPaddingLeft - scrollPaddingRight;
+
   // Element position relative to the container's scroll origin.
   const elTop = elRect.top - containerTop + currentScrollTop - scrollMarginTop;
   const elBottom = elTop + elRect.height + scrollMarginTop + scrollMarginBottom;
@@ -129,55 +155,67 @@ export const getScrollIntoViewScopedOffsets = (
     elRect.left - containerLeft + currentScrollLeft - scrollMarginLeft;
   const elRight = elLeft + elRect.width + scrollMarginLeft + scrollMarginRight;
 
+  // The two scroll positions that put the element against one edge of the view
+  // or the other — every alignment below is one of them, or a point between.
+  const scrollTopPuttingElAtViewStart = elTop - scrollPaddingTop;
+  const scrollTopPuttingElAtViewEnd =
+    elBottom - containerHeight + scrollPaddingBottom;
+  const viewStart = currentScrollTop + scrollPaddingTop;
+  const viewEnd = currentScrollTop + containerHeight - scrollPaddingBottom;
+
   let newScrollTop = currentScrollTop;
   if (block === "start") {
-    newScrollTop = elTop;
+    newScrollTop = scrollTopPuttingElAtViewStart;
   } else if (block === "end") {
-    newScrollTop = elBottom - containerHeight;
+    newScrollTop = scrollTopPuttingElAtViewEnd;
   } else if (block === "center") {
-    newScrollTop = elTop + (elRect.height - containerHeight) / 2;
+    newScrollTop = elTop + (elRect.height - viewHeight) / 2 - scrollPaddingTop;
   } else {
     // nearest: scroll only if partially or fully out of view.
-    // When the element is taller than the container, only scroll if it is
+    // When the element is taller than the view, only scroll if it is
     // completely out of view — otherwise it is already as visible as possible.
-    const scrollBottom = currentScrollTop + containerHeight;
     const elHeight = elBottom - elTop;
-    if (elHeight <= containerHeight) {
-      if (elTop < currentScrollTop) {
-        newScrollTop = elTop;
-      } else if (elBottom > scrollBottom) {
-        newScrollTop = elBottom - containerHeight;
+    if (elHeight <= viewHeight) {
+      if (elTop < viewStart) {
+        newScrollTop = scrollTopPuttingElAtViewStart;
+      } else if (elBottom > viewEnd) {
+        newScrollTop = scrollTopPuttingElAtViewEnd;
       }
-    } else if (elBottom < currentScrollTop) {
-      newScrollTop = elBottom - containerHeight;
-    } else if (elTop > scrollBottom) {
-      newScrollTop = elTop;
+    } else if (elBottom < viewStart) {
+      newScrollTop = scrollTopPuttingElAtViewEnd;
+    } else if (elTop > viewEnd) {
+      newScrollTop = scrollTopPuttingElAtViewStart;
     }
   }
 
+  const scrollLeftPuttingElAtViewStart = elLeft - scrollPaddingLeft;
+  const scrollLeftPuttingElAtViewEnd =
+    elRight - containerWidth + scrollPaddingRight;
+  const viewLeftEdge = currentScrollLeft + scrollPaddingLeft;
+  const viewRightEdge = currentScrollLeft + containerWidth - scrollPaddingRight;
+
   let newScrollLeft = currentScrollLeft;
   if (inline === "start") {
-    newScrollLeft = elLeft;
+    newScrollLeft = scrollLeftPuttingElAtViewStart;
   } else if (inline === "end") {
-    newScrollLeft = elRight - containerWidth;
+    newScrollLeft = scrollLeftPuttingElAtViewEnd;
   } else if (inline === "center") {
-    newScrollLeft = elLeft + (elRect.width - containerWidth) / 2;
+    newScrollLeft = elLeft + (elRect.width - viewWidth) / 2 - scrollPaddingLeft;
   } else {
     // nearest: scroll only if partially or fully out of view.
-    // When the element is wider than the container, only scroll if it is
+    // When the element is wider than the view, only scroll if it is
     // completely out of view — otherwise it is already as visible as possible.
-    const scrollRight = currentScrollLeft + containerWidth;
     const elWidth = elRight - elLeft;
-    if (elWidth <= containerWidth) {
-      if (elLeft < currentScrollLeft) {
-        newScrollLeft = elLeft;
-      } else if (elRight > scrollRight) {
-        newScrollLeft = elRight - containerWidth;
+    if (elWidth <= viewWidth) {
+      if (elLeft < viewLeftEdge) {
+        newScrollLeft = scrollLeftPuttingElAtViewStart;
+      } else if (elRight > viewRightEdge) {
+        newScrollLeft = scrollLeftPuttingElAtViewEnd;
       }
-    } else if (elRight < currentScrollLeft) {
-      newScrollLeft = elRight - containerWidth;
-    } else if (elLeft > scrollRight) {
-      newScrollLeft = elLeft;
+    } else if (elRight < viewLeftEdge) {
+      newScrollLeft = scrollLeftPuttingElAtViewEnd;
+    } else if (elLeft > viewRightEdge) {
+      newScrollLeft = scrollLeftPuttingElAtViewStart;
     }
   }
 
@@ -185,4 +223,18 @@ export const getScrollIntoViewScopedOffsets = (
     left: newScrollLeft,
     top: newScrollTop,
   };
+};
+
+// "auto" is the one keyword scroll-padding takes, and it means "the browser
+// picks" — which is 0 everywhere in practice. Percentages resolve against the
+// scrollport, and getComputedStyle hands them back as written.
+const resolveScrollPadding = (value, scrollportSize) => {
+  const number = parseFloat(value);
+  if (Number.isNaN(number)) {
+    return 0;
+  }
+  if (value.endsWith("%")) {
+    return (number / 100) * scrollportSize;
+  }
+  return number;
 };

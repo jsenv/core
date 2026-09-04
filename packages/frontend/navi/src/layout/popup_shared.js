@@ -7,6 +7,7 @@
 import {
   ELEMENT_SIZE_CHANGE,
   findEvent,
+  getScrollContainer,
   scrollIntoViewScoped,
 } from "@jsenv/dom";
 
@@ -30,6 +31,7 @@ export const mayHaveHiddenFocus = (event) => {
   );
 };
 
+const scrollportHeightMap = new WeakMap();
 /**
  * Scrolls whatever holds focus inside `popupEl` back into view, if the popup
  * getting shorter has pushed it out.
@@ -44,14 +46,27 @@ export const mayHaveHiddenFocus = (event) => {
  * past its bottom edge — visually, swallowed by the footer. The browser does
  * not redo a scroll-into-view it already answered, so this does.
  *
+ * Only what the shrink itself hid, though: with the keyboard up the user reads
+ * the rest of the popup by scrolling the field away — to reach the submit under
+ * it, typically — and the room keeps changing while they do (a keyboard settling
+ * in two steps, a suggestion strip, a browser bar). Answering each of those by
+ * scrolling the field back takes the popup away from wherever they had just
+ * scrolled it, over and over: what they were reading cannot be reached at all
+ * without blurring the field first, and the popup reads as unscrollable. So the
+ * field is brought back only when it was in view before the room shrank, which
+ * one remembered number answers: a resize moves neither scrollTop nor the
+ * element's offset inside the scrolled content, so measuring against the height
+ * the scrollport HAD is measuring the state before the change.
+ *
  * Scoped to the field's own scroll container (never the page): a popup traps
  * scrolling precisely so the document underneath cannot move, and a plain
  * scrollIntoView walks past a container whose scrollbar isn't visible — see
  * scrollIntoViewScoped's own doc.
  *
- * "nearest": the smallest scroll that makes it visible, and none at all when
- * it already is — so this is free to call on every resize, and never fights
- * where the user had scrolled to.
+ * "nearest": the smallest scroll that makes it visible, and none at all when it
+ * already is. Where it lands is the container's own business — a navi scroller
+ * keeps a band free at its edges so a field never comes back glued to one (see
+ * scroll-padding in box.jsx).
  */
 export const keepFocusedElementVisible = (popupEl) => {
   const { activeElement } = document;
@@ -61,7 +76,49 @@ export const keepFocusedElementVisible = (popupEl) => {
   if (!popupEl.contains(activeElement)) {
     return;
   }
-  scrollIntoViewScoped(activeElement, { block: "nearest" });
+  const scrollContainer = getScrollContainer(activeElement);
+  if (!scrollContainer || !popupEl.contains(scrollContainer)) {
+    // What scrolls the field is outside the popup, which means the page: a
+    // popup holds it still on purpose (trapScrollInside), so there is nothing
+    // here to scroll back.
+    return;
+  }
+  const scrollportHeight = scrollContainer.clientHeight;
+  const scrollportHeightBefore = scrollportHeightMap.get(scrollContainer);
+  scrollportHeightMap.set(scrollContainer, scrollportHeight);
+  if (scrollportHeightBefore !== undefined) {
+    if (scrollportHeight >= scrollportHeightBefore) {
+      // Nothing was taken away, so nothing was hidden by this.
+      return;
+    }
+    if (
+      !isVisibleInScrollport(
+        activeElement,
+        scrollContainer,
+        scrollportHeightBefore,
+      )
+    ) {
+      return;
+    }
+  }
+  scrollIntoViewScoped(activeElement, {
+    container: scrollContainer,
+    block: "nearest",
+  });
+};
+
+// Whether any part of `el` was showing in `container` back when its scrollport
+// was `scrollportHeight` tall. Both boxes are read now: the container may have
+// moved as well as shrunk (a centered dialog re-centers itself), and the
+// difference between the two tops is what that move leaves alone.
+const isVisibleInScrollport = (el, container, scrollportHeight) => {
+  const elRect = el.getBoundingClientRect();
+  const containerRect = container.getBoundingClientRect();
+  const elTop = elRect.top - containerRect.top + container.scrollTop;
+  const elBottom = elTop + elRect.height;
+  const scrollportTop = container.scrollTop;
+  const scrollportBottom = scrollportTop + scrollportHeight;
+  return elBottom > scrollportTop && elTop < scrollportBottom;
 };
 
 /**
