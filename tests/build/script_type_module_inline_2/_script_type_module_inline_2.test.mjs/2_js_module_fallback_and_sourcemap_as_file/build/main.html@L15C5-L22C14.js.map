@@ -4,7 +4,7 @@
     "../client/main.html@L15C5-L22C14.js"
   ],
   "names": [],
-  "mappings": ";;;;;;;;;;;;;;;;;;;;;;;;;;;MACe,IAAI,CAAA,CAAA,CAAA,UAAA,CAAJ,IAAI;IAAA,CAAA,CAAA;IAAA,OAAA,CAAA,CAAA,KAAA,CAAA,QAAA,CAAA,CAAA,CAAA,CAAA;MAEb,IAAI,CAAC,CAAC;MAAA,MAAA,CAAA,MAAA,CAAA,QAAA,CAAA,MAAA,CAEsC,6BAAe,CAAA,CAAA,CAAA,QAAA,CAAA,CAAA,QAAA,CAAA,MAAA,CAAA,CAAA;QAArD,sBAAsB,CAAA,CAAA,CAAA,QAAA,CAAA,MAAA;QAC5B,MAAM,CAAC,oBAAoB,CAAC,sBAAsB,CAAC;MAAA,CAAA,CAAA;IAAA;EAAA,CAAA;AAAA,CAAA,CAAA",
+  "mappings": ";;;;;;;;;;;;;;;;;;;;;;;;;;;MACe,IAAI,cAAJ,IAAI;IAAA;IAAA;MAEb,IAAI,CAAC,CAAC;MAAA,8BAEsC,6BAAe;QAArD,sBAAsB;QAC5B,MAAM,CAAC,oBAAoB,CAAC,sBAAsB,CAAC;MAAA;IAAA;EAAA;AAAA",
   "sourcesContent": [
     "\n      import { util } from \"./src/util.js\";\n\n      util();\n\n      const dynamicImportNamespace = await import(\"./src/main.js\");\n      window.resolveResultPromise(dynamicImportNamespace);\n    "
   ]

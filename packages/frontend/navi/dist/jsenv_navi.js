@@ -27373,7 +27373,7 @@ const FURNITURE_SELECTOR = `.navi_fixed_bar, .navi_popover:is(${TOP_LAYER_SELECT
 // owns it). Written out rather than imported: importing the module that owns
 // it back into this one would close a cycle.
 const TRANSITION_ATTRIBUTE$1 = "data-navi-route-transition";
-const NAME_PROPERTY = "view-transition-name";
+const NAME_PROPERTY$1 = "view-transition-name";
 const FURNITURE_NAME_PREFIX = "navi-transition-furniture-";
 
 const nameByElement = new WeakMap();
@@ -27458,7 +27458,7 @@ const nameFurnitureAround = (areaElement) => {
       name = `${FURNITURE_NAME_PREFIX}${nameCount}`;
       nameByElement.set(element, name);
     }
-    element.style.setProperty(NAME_PROPERTY, name);
+    element.style.setProperty(NAME_PROPERTY$1, name);
     namedElements.add(element);
     namesAdded.push(name);
   }
@@ -27494,7 +27494,7 @@ const releaseTransitionFurniture = (owner) => {
   }
   furnitureOwner = null;
   for (const element of namedElements) {
-    element.style.removeProperty(NAME_PROPERTY);
+    element.style.removeProperty(NAME_PROPERTY$1);
   }
   namedElements = new Set();
   if (travelStyleElement) {
@@ -44470,6 +44470,43 @@ const createOpenController = (
     document.addEventListener("click", onCaptureClick, { capture: true });
   };
 
+  // The DOM change a popup asked to have photographed (see
+  // controller.transitionChange), waiting for the browser to take the picture
+  // of the state being left. Anything the controller is asked to do meanwhile
+  // happens after it: the change is run on the spot, and the transition holding
+  // it finds nothing left to do.
+  let changeAwaitingTransition = null;
+  const flushChangeAwaitingTransition = () => {
+    const change = changeAwaitingTransition;
+    if (!change) {
+      return;
+    }
+    changeAwaitingTransition = null;
+    change();
+  };
+  const runChange = (change, { opened, event }) => {
+    const { transitionChange } = controller;
+    if (!transitionChange) {
+      change();
+      return;
+    }
+    // What the controller answers about itself does not wait for the picture:
+    // whoever just asked reads `opened` on the spot (see
+    // useOpenPropsEffectOnOpenController, which writes it back into the
+    // caller's own signal), and a request arriving before the change lands
+    // runs it first rather than reading a DOM that disagrees.
+    controller.opened = opened;
+    changeAwaitingTransition = change;
+    transitionChange(
+      () => {
+        if (changeAwaitingTransition === change) {
+          flushChangeAwaitingTransition();
+        }
+      },
+      { opened, event },
+    );
+  };
+
   const performClose = (closeEvent) => {
     controller.opened = false;
     // Read before any close effect touches the DOM: closing a native <dialog>
@@ -44552,18 +44589,23 @@ const createOpenController = (
       }
     }
 
-    // Sync the DOM closed first (releasing the focus trap) — only then run
-    // the owner's own reaction (onClose may restore focus to an element
-    // outside the popup, which the focus trap would otherwise fight while
-    // still active).
-    openEffectCleanup?.(closeEvent);
-    openEffectCleanup = null;
-    closeHandlers?.onClose?.(closeEvent);
-    closeHandlers = null;
-    // Last: the close effects above are what starts the exit transition the
-    // content must outlive (see popup_content_mount.js).
-    controller.unmountContent?.();
-    controller.onOpenedChange?.(false, closeEvent);
+    runChange(
+      () => {
+        // Sync the DOM closed first (releasing the focus trap) — only then run
+        // the owner's own reaction (onClose may restore focus to an element
+        // outside the popup, which the focus trap would otherwise fight while
+        // still active).
+        openEffectCleanup?.(closeEvent);
+        openEffectCleanup = null;
+        closeHandlers?.onClose?.(closeEvent);
+        closeHandlers = null;
+        // Last: the close effects above are what starts the exit transition the
+        // content must outlive (see popup_content_mount.js).
+        controller.unmountContent?.();
+        controller.onOpenedChange?.(false, closeEvent);
+      },
+      { opened: false, event: closeEvent },
+    );
   };
   const controller = {
     opened: false,
@@ -44582,6 +44624,15 @@ const createOpenController = (
     // The counterpart, set only when the popup was told to throw its content
     // away on close (`mount="while-opened"`). Called from performClose above.
     unmountContent: null,
+    // Set by the controlled element when the DOM change that opens or closes
+    // it has to be photographed by the browser on both sides — a document view
+    // transition, whose update callback is the only place that change can
+    // happen (Dialog's animation="growing", see popup_grow.js). Called with
+    // the change and where it leads; running it is its job, and it may run it
+    // a frame later than it was asked for. That delay is the reason a popup
+    // cannot do this from the outside: `--navi-open` runs when navi runs it,
+    // and a close arrives once the DOM already holds it.
+    transitionChange: null,
     // Told whenever `opened` actually changes, whatever asked for it — an
     // interaction, a command, a prop — with the event that asked. What lets a
     // `signal` prop reflect the popup's real state, and a `navState` prop write
@@ -44589,6 +44640,7 @@ const createOpenController = (
     // called once the open/close has fully happened rather than mid-sequence.
     onOpenedChange: null,
     open: (e, detail) => {
+      flushChangeAwaitingTransition();
       if (controller.opened || !controller.openEffect) {
         return;
       }
@@ -44664,38 +44716,44 @@ const createOpenController = (
           }
         };
       };
-      // Before mountContent, which builds the content, and before openEffect,
-      // which shows it: what the popup opens ON has to be known before either
-      // (see `onOpen` above).
-      controller.onOpen?.(requestOpenEvent);
-      // After prepareFocusTransfer, which has to record what held the focus
-      // before anything inside the popup can claim it, and before openEffect,
-      // which measures the popup to place it.
-      controller.mountContent?.();
-      // Only now — after the content has been built, before openEffect shows
-      // it. Dialog/Popover recompute aria-expanded and navi-hidden from this
-      // flag on every render, and mountContent above renders synchronously:
-      // flipping it any earlier commits an already-open DOM (aria-expanded
-      // "true", navi-hidden gone) before openEffect has run a single
-      // statement, so the "closed" frame it pins to transition from is in
-      // fact the open one and the entrance animation has nothing to play.
-      // It also gives the content it just built the opening it is documented
-      // to observe — mounted while the popup reads as closed, told it opened
-      // right after (see popup_content_mount.js and
-      // use_displayed_layout_effect.js).
-      controller.opened = true;
-      const openEffectReturnValue =
-        controller.openEffect(requestOpenEvent) || null;
-      openEffectCleanup = (closeEvent) => {
-        openEffectReturnValue?.(closeEvent);
-      };
-      closeHandlers = openHandler(requestOpenEvent) || null;
-      controller.onOpenedChange?.(true, requestOpenEvent);
+      runChange(
+        () => {
+          // Before mountContent, which builds the content, and before
+          // openEffect, which shows it: what the popup opens ON has to be
+          // known before either (see `onOpen` above).
+          controller.onOpen?.(requestOpenEvent);
+          // After prepareFocusTransfer, which has to record what held the
+          // focus before anything inside the popup can claim it, and before
+          // openEffect, which measures the popup to place it.
+          controller.mountContent?.();
+          // Only now — after the content has been built, before openEffect
+          // shows it. Dialog/Popover recompute aria-expanded and navi-hidden
+          // from this flag on every render, and mountContent above renders
+          // synchronously: flipping it any earlier commits an already-open DOM
+          // (aria-expanded "true", navi-hidden gone) before openEffect has run
+          // a single statement, so the "closed" frame it pins to transition
+          // from is in fact the open one and the entrance animation has
+          // nothing to play. It also gives the content it just built the
+          // opening it is documented to observe — mounted while the popup
+          // reads as closed, told it opened right after (see
+          // popup_content_mount.js and use_displayed_layout_effect.js).
+          controller.opened = true;
+          const openEffectReturnValue =
+            controller.openEffect(requestOpenEvent) || null;
+          openEffectCleanup = (closeEvent) => {
+            openEffectReturnValue?.(closeEvent);
+          };
+          closeHandlers = openHandler(requestOpenEvent) || null;
+          controller.onOpenedChange?.(true, requestOpenEvent);
+        },
+        { opened: true, event: requestOpenEvent },
+      );
     },
     requestClose: (
       e = new CustomEvent("programmatic", { detail: {} }),
       detail,
     ) => {
+      flushChangeAwaitingTransition();
       if (!controller.opened) {
         return true;
       }
@@ -44718,6 +44776,7 @@ const createOpenController = (
       return true;
     },
     close: (e = new CustomEvent("programmatic", { detail: {} }), detail) => {
+      flushChangeAwaitingTransition();
       if (!controller.opened) {
         return;
       }
@@ -44768,6 +44827,11 @@ const useOpenController = (openHandler) => {
   // no choice to leave open — close it for real.
   useLayoutEffect(() => {
     return () => {
+      // Nothing to photograph on the way out: the popup is leaving the
+      // document, so a movement between its box and anything else would be
+      // played on an element already detached by the time the browser gets to
+      // it (see controller.transitionChange).
+      controllerRef.current.transitionChange = null;
       controllerRef.current.close();
     };
   }, []);
@@ -56710,6 +56774,146 @@ const translateOf = (axis, distance) =>
     ? `translate(${distance}px, 0px)`
     : `translate(0px, ${distance}px)`;
 
+/**
+ * A popup that is the anchor, continued.
+ *
+ * Opening a surface out of the element that asked for it is not the surface
+ * appearing while that element stays put: it is one box becoming another. The
+ * browser draws exactly that on its own — the same `view-transition-name` on
+ * the anchor before the change and on the popup after it, and it morphs the
+ * first box into the second — so all this file does is hand that name over at
+ * the two instants it can be handed over, and give it back afterwards.
+ *
+ * The pictures are taken around a DOM change, which is why the movement cannot
+ * be written from outside: what a caller can reach — a command, `onClose` — is
+ * either before the change or after it, never around it. The change that opens
+ * a popup, and above all the one that closes it, belongs to the open
+ * controller, which is what `transitionChange` (open_controller.js) exists to
+ * let a popup wrap.
+ *
+ * One name serves the whole movement, because only one of the two boxes is on
+ * screen at a time: it names the anchor while the popup is closed, and the
+ * popup while it is open. What continues the anchor INSIDE the popup is
+ * whatever carries `data-grow`, and the popup itself when nothing does — a
+ * dialog holding the grown card plus buttons around it grows the card, a
+ * dialog that IS the grown thing grows whole.
+ *
+ * The page around stays out of the picture (`view-transition-name: none` on
+ * the root, in dialog.jsx): a captured element is not painted where it stands
+ * and cannot be pointed at either, so photographing the whole document would
+ * leave the page frozen and unpressable for the length of every opening — and
+ * of every closing, which is the moment the user is coming back to it.
+ */
+
+
+// The name the two boxes take turns wearing. A single literal one is enough,
+// and unique by construction: a document has one view transition, so it has at
+// most one popup growing, and the movement being replaced gives the name back
+// before the next one takes it (see releaseGrowInProgress).
+const NAME = "navi-popup-grow";
+const NAME_PROPERTY = "view-transition-name";
+// Worn by the root for the length of the movement — what the CSS keys the
+// page's own opt-out on, and the movement's only trace in the document.
+const ROOT_ATTRIBUTE = "data-navi-popup-grow";
+// Inside the popup, the one node that IS the anchor once it has grown.
+const TARGET_SELECTOR = "[data-grow]";
+// The popup's own animation duration, published on the root because the
+// ::view-transition tree hangs off it and inherits from nowhere else.
+const DURATION_PROPERTY = "--navi-popup-grow-duration";
+
+let releaseGrowInProgress = null;
+
+/**
+ * Runs `applyChange` — the DOM change that opens or closes `popupEl` — inside
+ * a view transition morphing the anchor's box into the popup's, or back.
+ *
+ * `opened` says which way: the box being left is the anchor when the popup is
+ * opening and the popup when it is closing, and the arriving one is only known
+ * once the change has been made (the content a popup grows into is built by
+ * that very change).
+ */
+const growPopupFromAnchor = (
+  popupEl,
+  anchorElement,
+  applyChange,
+  { opened },
+) => {
+  const startViewTransition = ensureDocumentStartViewTransition();
+  // A movement still wearing the name would make the name two elements wide,
+  // and a name belonging to two elements aborts the transition for the whole
+  // document.
+  releaseGrowInProgress?.();
+
+  const elementLeaving = opened ? anchorElement : resolveGrowTarget(popupEl);
+  const giveBackNameLeaving = wearGrowName(elementLeaving);
+  const root = document.documentElement;
+  root.setAttribute(ROOT_ATTRIBUTE, "");
+  const duration = getComputedStyle(popupEl)
+    .getPropertyValue("--popup-animation-duration")
+    .trim();
+  if (duration) {
+    // Empty would substitute into `animation-duration:` as nothing at all,
+    // which computes to 0s — a movement nobody sees rather than one at the
+    // browser's own pace.
+    root.style.setProperty(DURATION_PROPERTY, duration);
+  }
+
+  let giveBackNameArriving = null;
+  const release = () => {
+    if (releaseGrowInProgress !== release) {
+      return;
+    }
+    releaseGrowInProgress = null;
+    giveBackNameLeaving();
+    giveBackNameArriving?.();
+    root.removeAttribute(ROOT_ATTRIBUTE);
+    root.style.removeProperty(DURATION_PROPERTY);
+  };
+  releaseGrowInProgress = release;
+
+  const viewTransition = startViewTransition(() => {
+    // The name is the arriving box's from here on: worn by both, it is worn by
+    // neither. Written rather than removed, so a name the element also has
+    // from a stylesheet cannot resurface for the length of the movement.
+    elementLeaving.style.setProperty(NAME_PROPERTY, "none");
+    applyChange();
+    const elementArriving = opened
+      ? resolveGrowTarget(popupEl)
+      : // Gone from the document while the popup was open (the row it stood
+        // in was removed): nothing to arrive at, and the browser plays the
+        // popup's picture out on its own.
+        anchorElement.isConnected
+        ? anchorElement
+        : null;
+    if (elementArriving) {
+      giveBackNameArriving = wearGrowName(elementArriving);
+    }
+  });
+  viewTransition.finished.then(release, release);
+};
+
+const resolveGrowTarget = (popupEl) => {
+  const declaredTarget = popupEl.querySelector(TARGET_SELECTOR);
+  if (declaredTarget) {
+    return declaredTarget;
+  }
+  return popupEl;
+};
+
+// Wears the movement's name, and gives back whatever the element had written
+// inline of its own once the movement is over.
+const wearGrowName = (element) => {
+  const nameBefore = element.style.getPropertyValue(NAME_PROPERTY);
+  element.style.setProperty(NAME_PROPERTY, NAME);
+  return () => {
+    if (nameBefore) {
+      element.style.setProperty(NAME_PROPERTY, nameBefore);
+      return;
+    }
+    element.style.removeProperty(NAME_PROPERTY);
+  };
+};
+
 const PopupClose = ({
   label,
   iconSize,
@@ -56759,12 +56963,14 @@ installImportMetaCssBuild(import.meta);/**
  * popup_shared.js), even though several combinations land identically here
  * since Dialog is never really anchored — kept distinct anyway because
  * `positionArea` still picks which animation direction plays. `anchor` is
- * inert here unless `sizeFromAnchor` asks for it: a dialog is a surface of
- * its own, sized by its content, not a panel grown out of the control that
- * opened it — that is Popover's job. With `sizeFromAnchor`, the anchor's box
- * reaches the `--anchor-width`/`--anchor-height` CSS vars and becomes a
- * min-width/min-height floor. Either way Dialog's own positioning is never
- * relative to the anchor, unlike Popover.
+ * inert here unless something asks for it: a dialog is a surface of its own,
+ * sized by its content, not a panel grown out of the control that opened it —
+ * that is Popover's job. Two props ask. With `sizeFromAnchor`, the anchor's
+ * box reaches the `--anchor-width`/`--anchor-height` CSS vars and becomes a
+ * min-width/min-height floor. With `animation="growing"`, the anchor's box is
+ * where the dialog comes from: the two are photographed and morphed into each
+ * other, and back on close (popup_grow.js). Either way Dialog's own
+ * positioning is never relative to the anchor, unlike Popover.
  *
  * Two rendering strategies, picked via `layer`: `DialogAsModal` (a real
  * `<dialog>`, `showModal()`, top layer — native focus trap,
@@ -57209,6 +57415,27 @@ const css$E = /* css */`
     }
   }
 
+  /* While a dialog is growing out of the element that opened it
+     (popup_grow.js). The page around is deliberately NOT taken as a picture,
+     against the browser's own default: a captured element is not painted where
+     it stands and cannot be pointed at either, so photographing the document
+     would leave the whole page frozen and unpressable for the length of every
+     opening — and of every closing, which is the moment the user is coming
+     back to it. Nothing shows through where the movement is: the two boxes it
+     plays between are captured, and their pictures cover the rectangle between
+     them at every moment. */
+  :root[data-navi-popup-grow] {
+    view-transition-name: none;
+
+    /* The popup's own pace, published on the root by popup_grow.js because the
+       ::view-transition tree hangs off it and inherits from nowhere else. */
+    &::view-transition-group(navi-popup-grow),
+    &::view-transition-old(navi-popup-grow),
+    &::view-transition-new(navi-popup-grow) {
+      animation-duration: var(--navi-popup-grow-duration, 0.25s);
+    }
+  }
+
   ${surfaceTextCss}
   ${popupCss}
 `;
@@ -57302,16 +57529,25 @@ const css$E = /* css */`
  *   scroll while open (its backdrop only covers the scrollport, so scrolling
  *   there would reveal uncovered content); this prop extends the lock to the
  *   whole page. Defaults to `true` for a dialog docked by `dockedOnSmallTouchScreen`.
- * @param {boolean|"auto"|"fading"|"scaling"|"sliding"|`slide-from-${string}`} [props.animation]
+ * @param {boolean|"auto"|"fading"|"scaling"|"sliding"|"growing"|`slide-from-${string}`} [props.animation]
  *   - `true`/`"auto"` resolves to `"scaling"` for a centered `positionArea`,
  *   or a concrete `"slide-from-*"` direction otherwise. Any other explicit
- *   value is used as-is.
+ *   value is used as-is. `"growing"` is the odd one out: every other kind
+ *   moves the dialog on its own box (it scales from its own centre, slides in
+ *   from its own edge), while this one is the browser morphing the ANCHOR's
+ *   box into the dialog's, and the dialog's back into the anchor's on close —
+ *   for a dialog that is what the anchor became rather than a surface shown
+ *   over it. It needs an anchor (whatever opened the dialog, or the `anchor`
+ *   prop) and grows into whatever inside the dialog carries `data-grow`, the
+ *   dialog itself when nothing does. `"auto"` never picks it: only the caller
+ *   knows the two boxes are one object. See `popup_grow.js`.
  * @param {string} [props.animationDuration] - Maps to
  *   `--popup-animation-duration`.
  * @param {Element|{current: Element}|string} [props.anchor] - Never used for
  *   positioning (see this file's top comment), and ignored entirely unless
- *   `sizeFromAnchor` is set — then it sizes the dialog via the
- *   `--anchor-width`/`--anchor-height` CSS vars. Defaults to whatever
+ *   `sizeFromAnchor` or `animation="growing"` asks for it — the first sizes
+ *   the dialog via the `--anchor-width`/`--anchor-height` CSS vars, the second
+ *   makes the dialog come out of the anchor's own box. Defaults to whatever
  *   triggered the open (`e.detail.anchor`), if any. A string is resolved via
  *   `document.getElementById` when the dialog opens — see popover.jsx's own
  *   `anchor` doc for why (mainly `defaultOpen`).
@@ -57708,6 +57944,8 @@ const useDialogProps = props => {
     marginWithContainer
   };
   const repositionRef = useRef(null);
+  // The element this dialog came out of, held from the opening to the closing.
+  const anchorElementRef = useRef(null);
   useEffect(() => {
     repositionRef.current?.(new CustomEvent("position_props_change", {
       detail: {}
@@ -57766,19 +58004,83 @@ const useDialogProps = props => {
     flushEdges.right = expandX || x === "right" || x === "inset-right";
   }
   const isAutoAnimation = animation === true || animation === "auto";
-  // Dialog never has a real anchor (see this file's top comment), so this
-  // is always the "no anchor" path — the same one Popover's own custom
-  // renderer falls into when it has no real anchor either.
+  // The dialog and the anchor are one box, and what plays between them is the
+  // browser's own morph (popup_grow.js) — nothing this dialog does to its own
+  // box. So it arms no CSS transition of its own, which is not merely useless
+  // here but wrong: the shared [navi-animation] rule transitions `display`
+  // with allow-discrete, and a dialog kept rendered for the length of its exit
+  // is exactly what the picture taken of the state it closes into must not
+  // show.
+  const growing = animation === "growing";
+  // Dialog never has a real anchor to POSITION against (see this file's top
+  // comment), so this is always the "no anchor" path — the same one Popover's
+  // own custom renderer falls into when it has no real anchor either.
   const resolvedAnimationKind = isAutoAnimation ? resolveAutoAnimationKind(undefined, parsedPositionArea) : animation;
   // Not gated on isAutoAnimation — an explicit animation="sliding" needs a
   // concrete direction just as much as an auto-resolved one does (same as
   // Popover's own "sliding"/"expanding" resolution step in openEffect).
-  let resolvedAnimation = resolvedAnimationKind;
+  let resolvedAnimation = growing ? undefined : resolvedAnimationKind;
   if (resolvedAnimationKind === "sliding") {
     resolvedAnimation = resolveDirectionValue(parsedPositionArea.y, parsedPositionArea.x, {
       prefix: "slide-from"
     }) ?? "slide-from-top";
   }
+
+  // What this dialog was opened out of, resolved at open time rather than at
+  // render time — mainly for defaultOpen, where there's no triggering
+  // event/ref yet to read a real element from, only an id known up front. See
+  // popover.jsx's own anchor handling for the full reasoning, mirrored here
+  // identically.
+  const resolveAnchorElement = e => {
+    if (typeof anchor === "string") {
+      const anchorElementById = document.getElementById(anchor);
+      if (!anchorElementById) {
+        console.warn(`Dialog: anchor="${anchor}" did not match any element`);
+      }
+      return anchorElementById;
+    }
+    if (anchor) {
+      // anchor prop is a ref or a DOM element — always a real anchor,
+      // regardless of anchorCustomEventDetail. A ref is unwrapped even when it
+      // holds nothing: falling back to the ref object itself would pass the
+      // "is there an anchor?" tests downstream with something that has no box.
+      return "current" in anchor ? anchor.current : anchor;
+    }
+    if (anchorCustomEventDetail === "override") {
+      // e.g. the button that triggered a --navi-toggle/--navi-open command,
+      // already resolved from detail.anchor/detail.source by the caller
+      // (see UncontrolledDialog's onnavi_request_open).
+      return e.detail.anchor;
+    }
+    return undefined;
+  };
+
+  // The dialog and the anchor are the same box at two sizes, so the opening
+  // and the closing are one becoming the other. The browser draws that itself
+  // provided the change happens between its two pictures, which is what
+  // handing it to the controller buys (see popup_grow.js and
+  // open_controller.js's own transitionChange).
+  openController.transitionChange = growing ? (applyChange, {
+    opened,
+    event
+  }) => {
+    const dialogEl = ref.current;
+    // A mount-time opening was never seen closed (see openEffect's own
+    // `silent`): there is no box it comes from, because nothing was shown
+    // before it.
+    if (!dialogEl || opened && event.detail.silent) {
+      applyChange();
+      return;
+    }
+    const anchorElement = opened ? resolveAnchorElement(event) : anchorElementRef.current;
+    if (!anchorElement) {
+      applyChange();
+      return;
+    }
+    growPopupFromAnchor(dialogEl, anchorElement, applyChange, {
+      opened
+    });
+  } : null;
 
   // Sync the DOM open and return how to sync it back closed, fresh on every
   // render so it closes over the latest props (scrollLock, etc.). The
@@ -57806,28 +58108,10 @@ const useDialogProps = props => {
     // real, meaningful ancestor beyond it.
     const positionedAncestor = isModal ? document.documentElement : getPositionedParent(dialogEl.parentElement /* dialogEl is inside the clip_wrapper */);
     const [cleanup, addCleanup] = createPubSub(true);
-    let anchorElement;
-    if (typeof anchor === "string") {
-      // Resolved at open time (not render time) via getElementById — mainly
-      // for defaultOpen, where there's no triggering event/ref yet to read a
-      // real element from, only an id known up front. See popover.jsx's own
-      // anchor handling for the full reasoning, mirrored here identically.
-      anchorElement = document.getElementById(anchor);
-      if (!anchorElement) {
-        console.warn(`Dialog: anchor="${anchor}" did not match any element`);
-      }
-    } else if (anchor) {
-      // anchor prop is a ref or a DOM element — always a real anchor,
-      // regardless of anchorCustomEventDetail. A ref is unwrapped even when it
-      // holds nothing: falling back to the ref object itself would pass the
-      // "is there an anchor?" test below with something that has no box.
-      anchorElement = "current" in anchor ? anchor.current : anchor;
-    } else if (anchorCustomEventDetail === "override") {
-      // e.g. the button that triggered a --navi-toggle/--navi-open command,
-      // already resolved from detail.anchor/detail.source by the caller
-      // (see UncontrolledDialog's onnavi_request_open).
-      anchorElement = e.detail.anchor;
-    }
+    const anchorElement = resolveAnchorElement(e);
+    // Kept for the closing, which has no opening event to read it back from:
+    // the box the dialog shrinks back into is the one it came out of.
+    anchorElementRef.current = anchorElement;
     debugPopup(`"${e.type}" on ${getElementSignature(e.target)} -> openDialog`);
     if (!isModal) {
       // see openLocalDialogCount's own comment

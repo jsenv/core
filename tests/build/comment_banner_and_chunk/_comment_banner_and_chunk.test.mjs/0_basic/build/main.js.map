@@ -1,11 +1,12 @@
 {
   "version": 3,
+  "file": "main.js",
   "sources": [
     "../client/lib.js"
   ],
-  "names": [],
-  "mappings": ";;;;;AAAY,KAAA,CAAC,KAAK,CAAA,CAAA,CAAG,EAAA",
   "sourcesContent": [
     "export const value = 42;\n"
-  ]
+  ],
+  "names": [],
+  "mappings": ";;;;;AAAY,MAAC,KAAK,GAAG"
 }

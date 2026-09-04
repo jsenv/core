@@ -15,12 +15,14 @@
  * popup_shared.js), even though several combinations land identically here
  * since Dialog is never really anchored — kept distinct anyway because
  * `positionArea` still picks which animation direction plays. `anchor` is
- * inert here unless `sizeFromAnchor` asks for it: a dialog is a surface of
- * its own, sized by its content, not a panel grown out of the control that
- * opened it — that is Popover's job. With `sizeFromAnchor`, the anchor's box
- * reaches the `--anchor-width`/`--anchor-height` CSS vars and becomes a
- * min-width/min-height floor. Either way Dialog's own positioning is never
- * relative to the anchor, unlike Popover.
+ * inert here unless something asks for it: a dialog is a surface of its own,
+ * sized by its content, not a panel grown out of the control that opened it —
+ * that is Popover's job. Two props ask. With `sizeFromAnchor`, the anchor's
+ * box reaches the `--anchor-width`/`--anchor-height` CSS vars and becomes a
+ * min-width/min-height floor. With `animation="growing"`, the anchor's box is
+ * where the dialog comes from: the two are photographed and morphed into each
+ * other, and back on close (popup_grow.js). Either way Dialog's own
+ * positioning is never relative to the anchor, unlike Popover.
  *
  * Two rendering strategies, picked via `layer`: `DialogAsModal` (a real
  * `<dialog>`, `showModal()`, top layer — native focus trap,
@@ -88,6 +90,7 @@ import { popupCss } from "./popup_css.js";
 import { surfaceTextCss } from "./surface_text_css.js";
 import { freezeSize, unfreezeSize } from "./freeze_size.js";
 import { createSwipeToClose, SWIPE_AXIS_BY_SIDE } from "./swipe_to_close.js";
+import { growPopupFromAnchor } from "./popup_grow.js";
 import {
   armPointerDownOutsideClose,
   keepFocusedElementVisible,
@@ -516,6 +519,27 @@ const css = /* css */ `
     }
   }
 
+  /* While a dialog is growing out of the element that opened it
+     (popup_grow.js). The page around is deliberately NOT taken as a picture,
+     against the browser's own default: a captured element is not painted where
+     it stands and cannot be pointed at either, so photographing the document
+     would leave the whole page frozen and unpressable for the length of every
+     opening — and of every closing, which is the moment the user is coming
+     back to it. Nothing shows through where the movement is: the two boxes it
+     plays between are captured, and their pictures cover the rectangle between
+     them at every moment. */
+  :root[data-navi-popup-grow] {
+    view-transition-name: none;
+
+    /* The popup's own pace, published on the root by popup_grow.js because the
+       ::view-transition tree hangs off it and inherits from nowhere else. */
+    &::view-transition-group(navi-popup-grow),
+    &::view-transition-old(navi-popup-grow),
+    &::view-transition-new(navi-popup-grow) {
+      animation-duration: var(--navi-popup-grow-duration, 0.25s);
+    }
+  }
+
   ${surfaceTextCss}
   ${popupCss}
 `;
@@ -609,16 +633,25 @@ const css = /* css */ `
  *   scroll while open (its backdrop only covers the scrollport, so scrolling
  *   there would reveal uncovered content); this prop extends the lock to the
  *   whole page. Defaults to `true` for a dialog docked by `dockedOnSmallTouchScreen`.
- * @param {boolean|"auto"|"fading"|"scaling"|"sliding"|`slide-from-${string}`} [props.animation]
+ * @param {boolean|"auto"|"fading"|"scaling"|"sliding"|"growing"|`slide-from-${string}`} [props.animation]
  *   - `true`/`"auto"` resolves to `"scaling"` for a centered `positionArea`,
  *   or a concrete `"slide-from-*"` direction otherwise. Any other explicit
- *   value is used as-is.
+ *   value is used as-is. `"growing"` is the odd one out: every other kind
+ *   moves the dialog on its own box (it scales from its own centre, slides in
+ *   from its own edge), while this one is the browser morphing the ANCHOR's
+ *   box into the dialog's, and the dialog's back into the anchor's on close —
+ *   for a dialog that is what the anchor became rather than a surface shown
+ *   over it. It needs an anchor (whatever opened the dialog, or the `anchor`
+ *   prop) and grows into whatever inside the dialog carries `data-grow`, the
+ *   dialog itself when nothing does. `"auto"` never picks it: only the caller
+ *   knows the two boxes are one object. See `popup_grow.js`.
  * @param {string} [props.animationDuration] - Maps to
  *   `--popup-animation-duration`.
  * @param {Element|{current: Element}|string} [props.anchor] - Never used for
  *   positioning (see this file's top comment), and ignored entirely unless
- *   `sizeFromAnchor` is set — then it sizes the dialog via the
- *   `--anchor-width`/`--anchor-height` CSS vars. Defaults to whatever
+ *   `sizeFromAnchor` or `animation="growing"` asks for it — the first sizes
+ *   the dialog via the `--anchor-width`/`--anchor-height` CSS vars, the second
+ *   makes the dialog come out of the anchor's own box. Defaults to whatever
  *   triggered the open (`e.detail.anchor`), if any. A string is resolved via
  *   `document.getElementById` when the dialog opens — see popover.jsx's own
  *   `anchor` doc for why (mainly `defaultOpen`).
@@ -1021,6 +1054,8 @@ const useDialogProps = (props) => {
   const positionPropsRef = useRef(null);
   positionPropsRef.current = { positionArea, marginWithContainer };
   const repositionRef = useRef(null);
+  // The element this dialog came out of, held from the opening to the closing.
+  const anchorElementRef = useRef(null);
   useEffect(() => {
     repositionRef.current?.(
       new CustomEvent("position_props_change", { detail: {} }),
@@ -1072,22 +1107,90 @@ const useDialogProps = (props) => {
   }
 
   const isAutoAnimation = animation === true || animation === "auto";
-  // Dialog never has a real anchor (see this file's top comment), so this
-  // is always the "no anchor" path — the same one Popover's own custom
-  // renderer falls into when it has no real anchor either.
+  // The dialog and the anchor are one box, and what plays between them is the
+  // browser's own morph (popup_grow.js) — nothing this dialog does to its own
+  // box. So it arms no CSS transition of its own, which is not merely useless
+  // here but wrong: the shared [navi-animation] rule transitions `display`
+  // with allow-discrete, and a dialog kept rendered for the length of its exit
+  // is exactly what the picture taken of the state it closes into must not
+  // show.
+  const growing = animation === "growing";
+  // Dialog never has a real anchor to POSITION against (see this file's top
+  // comment), so this is always the "no anchor" path — the same one Popover's
+  // own custom renderer falls into when it has no real anchor either.
   const resolvedAnimationKind = isAutoAnimation
     ? resolveAutoAnimationKind(undefined, parsedPositionArea)
     : animation;
   // Not gated on isAutoAnimation — an explicit animation="sliding" needs a
   // concrete direction just as much as an auto-resolved one does (same as
   // Popover's own "sliding"/"expanding" resolution step in openEffect).
-  let resolvedAnimation = resolvedAnimationKind;
+  let resolvedAnimation = growing ? undefined : resolvedAnimationKind;
   if (resolvedAnimationKind === "sliding") {
     resolvedAnimation =
       resolveDirectionValue(parsedPositionArea.y, parsedPositionArea.x, {
         prefix: "slide-from",
       }) ?? "slide-from-top";
   }
+
+  // What this dialog was opened out of, resolved at open time rather than at
+  // render time — mainly for defaultOpen, where there's no triggering
+  // event/ref yet to read a real element from, only an id known up front. See
+  // popover.jsx's own anchor handling for the full reasoning, mirrored here
+  // identically.
+  const resolveAnchorElement = (e) => {
+    if (typeof anchor === "string") {
+      const anchorElementById = document.getElementById(anchor);
+      if (!anchorElementById) {
+        console.warn(`Dialog: anchor="${anchor}" did not match any element`);
+      }
+      return anchorElementById;
+    }
+    if (anchor) {
+      // anchor prop is a ref or a DOM element — always a real anchor,
+      // regardless of anchorCustomEventDetail. A ref is unwrapped even when it
+      // holds nothing: falling back to the ref object itself would pass the
+      // "is there an anchor?" tests downstream with something that has no box.
+      return "current" in anchor ? anchor.current : anchor;
+    }
+    if (anchorCustomEventDetail === "override") {
+      // e.g. the button that triggered a --navi-toggle/--navi-open command,
+      // already resolved from detail.anchor/detail.source by the caller
+      // (see UncontrolledDialog's onnavi_request_open).
+      return e.detail.anchor;
+    }
+    return undefined;
+  };
+
+  // The dialog and the anchor are the same box at two sizes, so the opening
+  // and the closing are one becoming the other. The browser draws that itself
+  // provided the change happens between its two pictures, which is what
+  // handing it to the controller buys (see popup_grow.js and
+  // open_controller.js's own transitionChange).
+  openController.transitionChange = growing
+    ? (applyChange, { opened, event }) => {
+        const dialogEl = ref.current;
+        // A mount-time opening was never seen closed (see openEffect's own
+        // `silent`): there is no box it comes from, because nothing was shown
+        // before it.
+        if (!dialogEl || (opened && event.detail.silent)) {
+          applyChange();
+          return;
+        }
+        const anchorElement = opened
+          ? resolveAnchorElement(event)
+          : anchorElementRef.current;
+        if (!anchorElement) {
+          if (import.meta.dev && opened) {
+            console.warn(
+              `[navi] Dialog has animation="growing" and no anchor to grow out of, so it simply appears. The anchor is whatever opened it — a <Button command="--navi-open">, the "source" given to triggerNaviCommand — or the "anchor" prop.`,
+            );
+          }
+          applyChange();
+          return;
+        }
+        growPopupFromAnchor(dialogEl, anchorElement, applyChange, { opened });
+      }
+    : null;
 
   // Sync the DOM open and return how to sync it back closed, fresh on every
   // render so it closes over the latest props (scrollLock, etc.). The
@@ -1123,28 +1226,10 @@ const useDialogProps = (props) => {
         );
 
     const [cleanup, addCleanup] = createPubSub(true);
-    let anchorElement;
-    if (typeof anchor === "string") {
-      // Resolved at open time (not render time) via getElementById — mainly
-      // for defaultOpen, where there's no triggering event/ref yet to read a
-      // real element from, only an id known up front. See popover.jsx's own
-      // anchor handling for the full reasoning, mirrored here identically.
-      anchorElement = document.getElementById(anchor);
-      if (!anchorElement) {
-        console.warn(`Dialog: anchor="${anchor}" did not match any element`);
-      }
-    } else if (anchor) {
-      // anchor prop is a ref or a DOM element — always a real anchor,
-      // regardless of anchorCustomEventDetail. A ref is unwrapped even when it
-      // holds nothing: falling back to the ref object itself would pass the
-      // "is there an anchor?" test below with something that has no box.
-      anchorElement = "current" in anchor ? anchor.current : anchor;
-    } else if (anchorCustomEventDetail === "override") {
-      // e.g. the button that triggered a --navi-toggle/--navi-open command,
-      // already resolved from detail.anchor/detail.source by the caller
-      // (see UncontrolledDialog's onnavi_request_open).
-      anchorElement = e.detail.anchor;
-    }
+    const anchorElement = resolveAnchorElement(e);
+    // Kept for the closing, which has no opening event to read it back from:
+    // the box the dialog shrinks back into is the one it came out of.
+    anchorElementRef.current = anchorElement;
     debugPopup(`"${e.type}" on ${getElementSignature(e.target)} -> openDialog`);
     if (!isModal) {
       // see openLocalDialogCount's own comment

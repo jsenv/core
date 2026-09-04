@@ -134,6 +134,43 @@ export const createOpenController = (
     document.addEventListener("click", onCaptureClick, { capture: true });
   };
 
+  // The DOM change a popup asked to have photographed (see
+  // controller.transitionChange), waiting for the browser to take the picture
+  // of the state being left. Anything the controller is asked to do meanwhile
+  // happens after it: the change is run on the spot, and the transition holding
+  // it finds nothing left to do.
+  let changeAwaitingTransition = null;
+  const flushChangeAwaitingTransition = () => {
+    const change = changeAwaitingTransition;
+    if (!change) {
+      return;
+    }
+    changeAwaitingTransition = null;
+    change();
+  };
+  const runChange = (change, { opened, event }) => {
+    const { transitionChange } = controller;
+    if (!transitionChange) {
+      change();
+      return;
+    }
+    // What the controller answers about itself does not wait for the picture:
+    // whoever just asked reads `opened` on the spot (see
+    // useOpenPropsEffectOnOpenController, which writes it back into the
+    // caller's own signal), and a request arriving before the change lands
+    // runs it first rather than reading a DOM that disagrees.
+    controller.opened = opened;
+    changeAwaitingTransition = change;
+    transitionChange(
+      () => {
+        if (changeAwaitingTransition === change) {
+          flushChangeAwaitingTransition();
+        }
+      },
+      { opened, event },
+    );
+  };
+
   const performClose = (closeEvent) => {
     controller.opened = false;
     // Read before any close effect touches the DOM: closing a native <dialog>
@@ -216,18 +253,23 @@ export const createOpenController = (
       }
     }
 
-    // Sync the DOM closed first (releasing the focus trap) — only then run
-    // the owner's own reaction (onClose may restore focus to an element
-    // outside the popup, which the focus trap would otherwise fight while
-    // still active).
-    openEffectCleanup?.(closeEvent);
-    openEffectCleanup = null;
-    closeHandlers?.onClose?.(closeEvent);
-    closeHandlers = null;
-    // Last: the close effects above are what starts the exit transition the
-    // content must outlive (see popup_content_mount.js).
-    controller.unmountContent?.();
-    controller.onOpenedChange?.(false, closeEvent);
+    runChange(
+      () => {
+        // Sync the DOM closed first (releasing the focus trap) — only then run
+        // the owner's own reaction (onClose may restore focus to an element
+        // outside the popup, which the focus trap would otherwise fight while
+        // still active).
+        openEffectCleanup?.(closeEvent);
+        openEffectCleanup = null;
+        closeHandlers?.onClose?.(closeEvent);
+        closeHandlers = null;
+        // Last: the close effects above are what starts the exit transition the
+        // content must outlive (see popup_content_mount.js).
+        controller.unmountContent?.();
+        controller.onOpenedChange?.(false, closeEvent);
+      },
+      { opened: false, event: closeEvent },
+    );
   };
   const controller = {
     opened: false,
@@ -246,6 +288,15 @@ export const createOpenController = (
     // The counterpart, set only when the popup was told to throw its content
     // away on close (`mount="while-opened"`). Called from performClose above.
     unmountContent: null,
+    // Set by the controlled element when the DOM change that opens or closes
+    // it has to be photographed by the browser on both sides — a document view
+    // transition, whose update callback is the only place that change can
+    // happen (Dialog's animation="growing", see popup_grow.js). Called with
+    // the change and where it leads; running it is its job, and it may run it
+    // a frame later than it was asked for. That delay is the reason a popup
+    // cannot do this from the outside: `--navi-open` runs when navi runs it,
+    // and a close arrives once the DOM already holds it.
+    transitionChange: null,
     // Told whenever `opened` actually changes, whatever asked for it — an
     // interaction, a command, a prop — with the event that asked. What lets a
     // `signal` prop reflect the popup's real state, and a `navState` prop write
@@ -253,6 +304,7 @@ export const createOpenController = (
     // called once the open/close has fully happened rather than mid-sequence.
     onOpenedChange: null,
     open: (e, detail) => {
+      flushChangeAwaitingTransition();
       if (controller.opened || !controller.openEffect) {
         return;
       }
@@ -328,38 +380,44 @@ export const createOpenController = (
           }
         };
       };
-      // Before mountContent, which builds the content, and before openEffect,
-      // which shows it: what the popup opens ON has to be known before either
-      // (see `onOpen` above).
-      controller.onOpen?.(requestOpenEvent);
-      // After prepareFocusTransfer, which has to record what held the focus
-      // before anything inside the popup can claim it, and before openEffect,
-      // which measures the popup to place it.
-      controller.mountContent?.();
-      // Only now — after the content has been built, before openEffect shows
-      // it. Dialog/Popover recompute aria-expanded and navi-hidden from this
-      // flag on every render, and mountContent above renders synchronously:
-      // flipping it any earlier commits an already-open DOM (aria-expanded
-      // "true", navi-hidden gone) before openEffect has run a single
-      // statement, so the "closed" frame it pins to transition from is in
-      // fact the open one and the entrance animation has nothing to play.
-      // It also gives the content it just built the opening it is documented
-      // to observe — mounted while the popup reads as closed, told it opened
-      // right after (see popup_content_mount.js and
-      // use_displayed_layout_effect.js).
-      controller.opened = true;
-      const openEffectReturnValue =
-        controller.openEffect(requestOpenEvent) || null;
-      openEffectCleanup = (closeEvent) => {
-        openEffectReturnValue?.(closeEvent);
-      };
-      closeHandlers = openHandler(requestOpenEvent) || null;
-      controller.onOpenedChange?.(true, requestOpenEvent);
+      runChange(
+        () => {
+          // Before mountContent, which builds the content, and before
+          // openEffect, which shows it: what the popup opens ON has to be
+          // known before either (see `onOpen` above).
+          controller.onOpen?.(requestOpenEvent);
+          // After prepareFocusTransfer, which has to record what held the
+          // focus before anything inside the popup can claim it, and before
+          // openEffect, which measures the popup to place it.
+          controller.mountContent?.();
+          // Only now — after the content has been built, before openEffect
+          // shows it. Dialog/Popover recompute aria-expanded and navi-hidden
+          // from this flag on every render, and mountContent above renders
+          // synchronously: flipping it any earlier commits an already-open DOM
+          // (aria-expanded "true", navi-hidden gone) before openEffect has run
+          // a single statement, so the "closed" frame it pins to transition
+          // from is in fact the open one and the entrance animation has
+          // nothing to play. It also gives the content it just built the
+          // opening it is documented to observe — mounted while the popup
+          // reads as closed, told it opened right after (see
+          // popup_content_mount.js and use_displayed_layout_effect.js).
+          controller.opened = true;
+          const openEffectReturnValue =
+            controller.openEffect(requestOpenEvent) || null;
+          openEffectCleanup = (closeEvent) => {
+            openEffectReturnValue?.(closeEvent);
+          };
+          closeHandlers = openHandler(requestOpenEvent) || null;
+          controller.onOpenedChange?.(true, requestOpenEvent);
+        },
+        { opened: true, event: requestOpenEvent },
+      );
     },
     requestClose: (
       e = new CustomEvent("programmatic", { detail: {} }),
       detail,
     ) => {
+      flushChangeAwaitingTransition();
       if (!controller.opened) {
         return true;
       }
@@ -382,6 +440,7 @@ export const createOpenController = (
       return true;
     },
     close: (e = new CustomEvent("programmatic", { detail: {} }), detail) => {
+      flushChangeAwaitingTransition();
       if (!controller.opened) {
         return;
       }
@@ -432,6 +491,11 @@ export const useOpenController = (openHandler) => {
   // no choice to leave open — close it for real.
   useLayoutEffect(() => {
     return () => {
+      // Nothing to photograph on the way out: the popup is leaving the
+      // document, so a movement between its box and anything else would be
+      // played on an element already detached by the time the browser gets to
+      // it (see controller.transitionChange).
+      controllerRef.current.transitionChange = null;
       controllerRef.current.close();
     };
   }, []);

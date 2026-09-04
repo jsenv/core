@@ -348,6 +348,26 @@
         background: #eef3fb;
         border: 1px solid #cfe0f5;
       }
+
+      .demo_grow_card {
+        width: 200px;
+        padding: 10px 12px;
+        color: inherit;
+        text-align: left;
+        background: #f6f9ff;
+        border: 1px solid #cfe0f5;
+        border-radius: 10px;
+      }
+      .demo_grow_card_open {
+        width: 320px;
+        padding: 20px;
+      }
+      .demo_grow_sheet {
+        --dialog-background-color: transparent;
+        --dialog-box-shadow: none;
+        align-items: center;
+        gap: 12px;
+      }
     </style>
   </head>
   <body>
@@ -413,6 +433,7 @@
         "fading",
         "scaling",
         "sliding",
+        "growing",
       ];
 
       const useAnimateControls = (storageKey) => {
@@ -488,6 +509,119 @@
               <Button command="--navi-close">Close</Button>
             </Dialog>
           </>
+        );
+      };
+
+      const GROW_MATCHES = [
+        { id: "match_a", label: "Aurore / Malo", score: "6-4 3-6" },
+        { id: "match_b", label: "Nadia / Théo", score: "7-5 6-2" },
+      ];
+
+      const GrowWholeDialog = ({ match, animationDuration }) => {
+        const dialogId = useId();
+        return (
+          <>
+            <Button
+              command="--navi-open"
+              commandFor={dialogId}
+              className="demo_grow_card"
+            >
+              {match.label}
+            </Button>
+            <Dialog
+              id={dialogId}
+              animation="growing"
+              animationDuration={animationDuration}
+              className="demo_grow_card demo_grow_card_open"
+            >
+              <Text bold>{match.label}</Text>
+              <p>{match.score}</p>
+              <Button command="--navi-close">Close</Button>
+            </Dialog>
+          </>
+        );
+      };
+
+      const GrowCardInDialog = ({ match, animationDuration }) => {
+        const dialogId = useId();
+        return (
+          <>
+            <Button
+              command="--navi-open"
+              commandFor={dialogId}
+              className="demo_grow_card"
+            >
+              {match.label}
+            </Button>
+            <Dialog
+              id={dialogId}
+              animation="growing"
+              animationDuration={animationDuration}
+              className="demo_grow_sheet"
+            >
+              <div data-grow className="demo_grow_card demo_grow_card_open">
+                <Text bold>{match.label}</Text>
+                <p>{match.score}</p>
+              </div>
+              <div class="demo-row">
+                <Button command="--navi-close" variant="discrete">
+                  Cancel
+                </Button>
+                <Button command="--navi-close">Save</Button>
+              </div>
+            </Dialog>
+          </>
+        );
+      };
+
+      const GrowingSection = () => {
+        const [slow, setSlow] = useStoredBoolean(
+          "dialog_demo_growing_slow",
+          true,
+        );
+        const animationDuration = slow ? "0.6s" : undefined;
+        return (
+          <section class="demo-section">
+            <Heading id="growing">animation="growing"</Heading>
+            <p>
+              The dialog comes out of the box that opened it, and goes back into
+              it.
+            </p>
+            <Heading level={3} id="growing-whole">
+              The dialog is the card
+            </Heading>
+            <div class="demo-row">
+              {GROW_MATCHES.map((match) => (
+                <GrowWholeDialog
+                  key={match.id}
+                  match={match}
+                  animationDuration={animationDuration}
+                />
+              ))}
+            </div>
+            <Heading level={3} id="growing-part">
+              data-grow
+            </Heading>
+            <div class="demo-row">
+              {GROW_MATCHES.map((match) => (
+                <GrowCardInDialog
+                  key={match.id}
+                  match={match}
+                  animationDuration={animationDuration}
+                />
+              ))}
+            </div>
+            <div class="demo-animate-controls">
+              <label class="demo-animate-toggle">
+                <input
+                  type="checkbox"
+                  checked={slow}
+                  onChange={(e) => setSlow(e.target.checked)}
+                />
+                Slow
+              </label>
+            </div>
+          </section>
         );
       };
 
@@ -1988,6 +2122,7 @@
           <ControlledByButtonSection />
           <ContentSizeSection />
           <PositionSection />
+          <GrowingSection />
           <PointerInteractionOutsideSection />
           <OpenFromStartSection />
           <AdaptiveSection />

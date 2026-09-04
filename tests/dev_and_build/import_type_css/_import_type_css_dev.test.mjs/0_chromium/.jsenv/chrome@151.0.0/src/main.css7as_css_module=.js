@@ -1,7 +1,7 @@
 import "/@fs@jsenv/core/src/kitchen/client/inline_content.js";
 
 const inlineContent = new __InlineContent__(
-  'body {\n  background-color: red;\n  background-image: url("/src/jsenv.png");\n}\n\n/*# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbImZpbGU6Ly8vVXNlcnMvZG1haWwvRG9jdW1lbnRzL2Rldi9qc2Vudi9jb3JlL3Rlc3RzL2Rldl9hbmRfYnVpbGQvaW1wb3J0X3R5cGVfY3NzL2NsaWVudC9zcmMvbWFpbi5jc3MiXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6IkFBQUEsSUFBSSxDQUFDO0FBQ0wsQ0FBQyxDQUFDLFVBQVUsQ0FBQyxLQUFLLENBQUMsQ0FBQyxHQUFHO0FBQ3ZCLENBQUMsQ0FBQyxVQUFVLENBQUMsS0FBSyxDQUFDLENBQUMsR0FBRyxDQUFBLGNBQUEsQ0FBQTtBQUN2QiIsInNvdXJjZXNDb250ZW50IjpbImJvZHkge1xuICBiYWNrZ3JvdW5kLWltYWdlOiB1cmwoXCIuL2pzZW52LnBuZ1wiKTtcbiAgYmFja2dyb3VuZC1jb2xvcjogcmVkO1xufVxuIl19 */\n',
+  'body {\n  background-color: red;\n  background-image: url("/src/jsenv.png");\n}\n\n/*# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbImZpbGU6Ly8vVXNlcnMvZG1haWwvRG9jdW1lbnRzL2Rldi9qc2Vudi9jb3JlL3Rlc3RzL2Rldl9hbmRfYnVpbGQvaW1wb3J0X3R5cGVfY3NzL2NsaWVudC9zcmMvbWFpbi5jc3MiXSwic291cmNlc0NvbnRlbnQiOlsiYm9keSB7XG4gIGJhY2tncm91bmQtaW1hZ2U6IHVybChcIi4vanNlbnYucG5nXCIpO1xuICBiYWNrZ3JvdW5kLWNvbG9yOiByZWQ7XG59XG4iXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6IkFBQUEsSUFBSSxDQUFDO0FBQ0wsQ0FBQyxDQUFDLFVBQVUsQ0FBQyxLQUFLLENBQUMsQ0FBQyxHQUFHLENBQUMsY0FBYSxDQUFDO0FBQ3RDLENBQUMsQ0FBQyxVQUFVLENBQUMsS0FBSyxDQUFDLENBQUMsR0FBRztBQUN2QiJ9 */\n',
   { type: "text/css" },
   //# inlinedFromUrl=base/client/src/main.css
 );

@@ -3,9 +3,9 @@
   "sources": [
     "base/client/src/main.css"
   ],
-  "names": [],
-  "mappings": "AAAA,IAAI,CAAC;AACL,CAAC,CAAC,UAAU,CAAC,KAAK,CAAC,CAAC,GAAG;AACvB,CAAC,CAAC,UAAU,CAAC,KAAK,CAAC,CAAC,GAAG,CAAA,cAAA,CAAA;AACvB",
   "sourcesContent": [
     "body {\n  background-image: url(\"./jsenv.png\");\n  background-color: red;\n}\n"
-  ]
+  ],
+  "names": [],
+  "mappings": "AAAA,IAAI,CAAC;AACL,CAAC,CAAC,UAAU,CAAC,KAAK,CAAC,CAAC,GAAG,CAAC,cAAa,CAAC;AACtC,CAAC,CAAC,UAAU,CAAC,KAAK,CAAC,CAAC,GAAG;AACvB"
 }
