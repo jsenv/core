@@ -35,7 +35,7 @@
     "@jsenv/filesystem": "../../tooling/filesystem",
     "@jsenv/plugin-toolbar": "./",
     "@jsenv/utils": "../../tooling/utils",
-    "@preact/signals": "2.11.1",
+    "@preact/signals": "2.11.2",
     "playwright": "1.62.1"
   },
   "publishConfig": {

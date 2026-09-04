@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/sigi",
-  "version": "0.1.11",
+  "version": "0.1.12",
   "type": "module",
   "description": "State management",
   "repository": {
@@ -27,7 +27,7 @@
     "/src/"
   ],
   "dependencies": {
-    "@preact/signals": "2.11.1"
+    "@preact/signals": "2.11.2"
   },
   "devDependencies": {
     "@jsenv/assert": "../../tooling/assert",

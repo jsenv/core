@@ -42,7 +42,7 @@
     "@jsenv/snapshot": "../../tooling/snapshot",
     "@jsenv/terminal-table": "../../tooling/terminal-table",
     "@jsenv/urls": "../../tooling/urls",
-    "@preact/signals": "2.11.1",
+    "@preact/signals": "2.11.2",
     "playwright": "1.62.1",
     "preact": "11.0.0-beta.2"
   },
