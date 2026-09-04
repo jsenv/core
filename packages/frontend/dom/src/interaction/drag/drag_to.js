@@ -18,7 +18,9 @@
  *   BETWEEN two others, whereas a square of a board is a place of its own, which
  *   may already be taken. So nothing is inserted and nothing is a no-op: the
  *   answer is "this one came down on that one", and what that means (take the
- *   place, swap the two, refuse) is the caller's.
+ *   place, swap the two, refuse) is the caller's. The answer says WHERE on it as
+ *   well, which is all there is to say when the place is a surface — a plan, a
+ *   map — with no element under the copy to name.
  *
  * The caller lists which outcomes ITS element can answer, and only the machinery
  * those need runs: no copy for a move, no drop hint for something that can only be
@@ -296,90 +298,6 @@ import.meta.css = css;
 // if it had landed on it.
 const DRAG_IGNORED_SELECTOR =
   '[data-drag-ignore],[data-self-interactions~="drag"],[data-self-interactions~="*"],[popover],dialog';
-
-/**
- * Starts a drag-to-reorder interaction on a list item.
- *
- * Handles the full reorder UX:
- * - Activates only once the intent is established — a short movement with a mouse, a long
- *   press with a finger (see `dragAfterIntent`), so that neither a click nor a scroll
- *   reorders anything by accident.
- * - Clones the grabbed element and moves the clone while the original stays hidden in place
- *   (keeps the layout intact so other items don't shift during the drag).
- * - The clone and the drop-hint live in the dragged element's own parent, so the CSS vars
- *   that dress them (`--drag-clone-shadow`, `--drop-hint-size`, …) reach them by plain
- *   inheritance, and so do the rules the list writes for its items.
- * - Shows a drop-hint line indicating where the item will land.
- * - Drop-target detection is intersection-based: the clone's bounding rect is compared
- *   against every item that matches `itemSelector` in the scroll container.
- * - No-ops are filtered: releasing on the grabbed element itself, or in a position that
- *   would leave it at exactly the same index, never triggers `onReorder`.
- * - On a valid drop, the clone animates to the drop position via the View Transitions API,
- *   `onReorder` is called inside the transition callback so the DOM update and the animation
- *   are captured together, then the clone is removed.
- * - On a cancelled drop (pointer released with no valid target), the clone is removed
- *   immediately without calling `onReorder`.
- *
- * IDs are used as the bridge between DOM elements and JS state because:
- * - Not all DOM elements matching `itemSelector` may be valid drop targets
- *   (holes in the structure), so DOM indices don't reliably map to state indices.
- * - Virtual lists render fewer DOM nodes than the total item count, so
- *   DOM-index-based counting would be wrong.
- *
- * Any option not listed below is forwarded to `createDragToMoveGestureController`
- * (`areaConstraint`, `autoScrollAreaPadding`, `stickyFrontiers`…), except
- * `releasePositionEffect`, always `"manual"` here: what moves is the clone, and it
- * is removed on release, so there is no position to commit or cancel.
- *
- * @param {PointerEvent} event
- *   The `pointerdown` event that may become a reorder.
- * @param {object} options
- * @param {Element} [options.draggedElement=event.currentTarget]
- *   The list item to drag.
- * @param {Element} [options.containerElement=draggedElement.parentElement]
- *   Element searched with `itemSelector` to find the items to drop between.
- * @param {string} [options.itemSelector]
- *   CSS selector that matches all list items inside `containerElement`.
- *   Used for drop-target detection and no-op filtering. Left out, nothing is a
- *   drop target: no hint is drawn and no reorder can be answered — which is what
- *   a drag that only ever throws the thing away asks for.
- * @param {function} options.getItemId
- *   Returns the stable ID for a given DOM element.
- *   Signature: `getItemId(element) → id`.
- * @param {function} options.onReorder
- *   Called when the user drops the item in a new position.
- *   Signature: `onReorder(fromId, toId, syncCloneWithDropTarget)`.
- *   - `fromId`: stable ID of the dragged item.
- *   - `toId`: stable ID of the item to insert before, or `null` to append at the end.
- *   - `syncCloneWithDropTarget`: call it synchronously inside a
- *     `document.startViewTransition` callback, next to the DOM mutation, so the
- *     clone is captured at its landing position.
- * @param {(detail: {gestureInfo: object, dropTarget: Element|null}) => "reorder"|"toss"|"cancel"} [options.resolveDrop]
- *   What THIS release means, when the answer is not simply "a target was found or
- *   not": the same grab can be meant to reorder or to get rid of the thing, and
- *   only the caller knows which — far and fast is a throw, over a row is a move.
- *   Left out, a drop target reorders and anything else is cancelled.
- * @param {(detail: {gestureInfo: object}) => Promise|void} [options.onToss]
- *   The release was a throw. The clone leaves the screen the way it was thrown
- *   while this runs; it comes back if the promise rejects, because the thing still
- *   exists and the screen has to say so.
- * @param {object} [options.direction={ x: false, y: true }]
- *   Axes along which dragging is allowed. Passed to `createDragToMoveGestureController`.
- * @param {number} [options.threshold=5]
- *   Distance (px) a mouse must travel before the press becomes a drag.
- * @param {boolean|"if-touch"} [options.longPress="if-touch"]
- *   Which pointers start the drag by holding still instead of by travelling.
- * @param {number} [options.longPressDelay=400]
- *   How long (ms) such a pointer must stay down.
- * @param {number} [options.longPressSlop=8]
- *   How far (px) it may drift during that wait before the press is abandoned.
- * @param {function} [options.onPressStart]
- *   The pointer went down and the wait began (a cue that the press counts).
- * @param {function} [options.onPressCancel]
- *   The pointer moved or lifted before the wait was over.
- * @param {function} [options.onPress]
- *   The wait completed and the item is now held (haptics, scale…).
- */
 
 /**
  * Creates a gesture controller that moves elements via drag.
@@ -823,25 +741,39 @@ const warnAboutTransformsOutsideTransform = (element) => {
  *   It was put somewhere. The position is already committed when this runs — the
  *   hand let go of it there — and travels back if the promise rejects.
  * @param {Element} [options.containerElement=draggedElement.parentElement]
- *   Searched with `itemSelector` for the items to drop between.
+ *   Where the places are looked for with `itemSelector`, and where the drop hint
+ *   is drawn. The parent covers a list and a board, whose items are siblings of
+ *   what is carried; anything else has to be said — a palette beside the surface
+ *   it fills, a piece drawn INSIDE the place it can be put back on.
  * @param {string} [options.itemSelector] What matches the items of the list.
- * @param {function} [options.getItemId] `getItemId(element) → id`.
+ *   Left out, nothing is a place: no hint is drawn and no landing can be
+ *   answered, which is what a drag that only ever throws the thing away asks for.
+ * @param {function} [options.getItemId] `getItemId(element) → id`. An id rather
+ *   than a DOM index, because the two do not match: a list draws fewer rows than
+ *   it has, a search reorders them, and the structure may have holes.
  * @param {function} [options.onReorder]
  *   `onReorder(fromId, toId, syncCloneWithDropTarget)` — see its own note below.
  * @param {(detail: {gestureInfo: object}) => Promise|void} [options.onToss]
  *   It was thrown away. The copy leaves the screen while this runs and comes back
  *   if the promise rejects, because the thing still exists and the screen has to
  *   say so.
- * @param {function} [options.onLand]
- *   `onLand(fromId, toId, syncCloneWithDropTarget)` — it came down on `toId`, which
- *   is an element and never null: nothing under the copy is a cancelled release.
- *   The copy is held until what comes back settles, exactly like `onReorder`.
- *   `syncCloneWithDropTarget` takes an element when the place is not the shape of
- *   what stands on it: the copy then takes THAT box instead of the target's.
+ * @param {(detail: {fromId: string, toId: string, x: number, y: number, width: number, height: number, syncCloneWithDropTarget: Function}) => Promise|void} [options.onLand]
+ *   It came down on `toId`, which is an element and never null: nothing under the
+ *   copy is a cancelled release. `x`/`y`/`width`/`height` say WHERE on it, which
+ *   is the whole answer when the place is a surface — a plan, a map — with no
+ *   element under the copy to name. The copy is held until what comes back
+ *   settles, exactly like `onReorder`. `syncCloneWithDropTarget` takes an element
+ *   when the place is not the shape of what stands on it: the copy then takes
+ *   THAT box instead of the target's.
  * @param {number} [options.tossDistance=110] How far a throw goes, in px.
  * @param {number} [options.tossSpeed=0.45] And how fast, in px/ms. BOTH are asked
  *   for: one without the other is moving the thing while hesitating, and nothing is
  *   thrown away on a hesitation.
+ * @param {boolean} [options.tossOutside=false] A release with no place under it
+ *   means the thing is gotten rid of, instead of meaning nothing. The deliberate
+ *   half of the same outcome — dragging something off the surface it belongs to
+ *   and letting go is not a flick, and far-and-fast never describes it. With no
+ *   place to be outside of (no `itemSelector`), every release is outside.
  *
  * Everything else is forwarded to `createDragToMoveGestureController`
  * (`areaConstraint`, `autoScrollAreaPadding`, `direction`…) and to `dragAfterIntent`
@@ -975,6 +907,7 @@ const resolveDropMeaning = ({
   canLand,
   tossDistance = TOSS_DISTANCE_TO_COMMIT,
   tossSpeed = TOSS_SPEED_TO_COMMIT,
+  tossOutside,
 }) => {
   if (gestureInfo.cancelled) {
     // Nobody let go of anything: the gesture was taken away mid-air (the
@@ -995,6 +928,21 @@ const resolveDropMeaning = ({
     }
     if (canReorder) {
       return "reorder";
+    }
+  }
+  if (canToss && tossOutside) {
+    // Let go of away from every place, and slowly enough that no throw was ever
+    // read: the other way of meaning "get rid of this", and the one a surface
+    // asks for — off the plan and down is deliberate, never a flick.
+    //
+    // "Away from every place" is the last frame's answer, not the one above: a
+    // row let go of where it already was has no place to INSERT it at and still
+    // has a place under it. And it has to have gone somewhere to be away from
+    // anything — picked up and put straight back down is a hand that changed its
+    // mind, not a thing dropped over nothing.
+    const { xDelta, yDelta } = gestureInfo.layout;
+    if ((xDelta || yDelta) && !gestureInfo.dropTargetInfo) {
+      return "toss";
     }
   }
   return "cancel";
@@ -1033,6 +981,7 @@ const startDragToCarryCopy = (
     onToss,
     tossDistance,
     tossSpeed,
+    tossOutside,
     // A list runs one way and reordering walks it; a board has places all around,
     // so something landing on one of them goes wherever the hand takes it.
     direction = canLand ? { x: true, y: true } : { x: false, y: true },
@@ -1098,10 +1047,12 @@ const startDragToCarryCopy = (
             ? createDropHint()
             : null;
         if (dropHintEl) {
-          // In the container it draws into, which is where its own vars are set: the
+          // Among the places it lights up, which is where its own vars are set: the
           // shape of a drop hint is a property of the list or board it belongs to,
-          // and reading it from there is inheritance rather than a hand-off.
-          draggedElement.parentElement.appendChild(dropHintEl);
+          // and reading it from there is inheritance rather than a hand-off. The
+          // copy goes the other way (see createDragClone) — it is dressed by where
+          // the thing it copies stands, which may be a palette far from here.
+          containerElement.appendChild(dropHintEl);
         }
         // The hint first, the clone second: that order is what stacks them in the
         // top layer. A copy taken back in hand is already up there, and the hint
@@ -1272,6 +1223,7 @@ const startDragToCarryCopy = (
             canLand,
             tossDistance,
             tossSpeed,
+            tossOutside,
           });
 
           // Let go of and still on the screen: from here until it is taken away
@@ -1320,12 +1272,17 @@ const startDragToCarryCopy = (
               await settleCloneBack(cloneWrapper, draggedElement);
             }
           } else if (dropMeans === "land") {
+            // Read before the copy is put down: landing bakes its position and
+            // drops the transform, and where it came down is where the hand let
+            // go of it.
+            const landedAt = getRectInside(cloneWrapper, currentReleaseElement);
             await landCopyOn(currentReleaseElement, (syncCloneWithDropTarget) =>
-              onLand(
-                getItemId(draggedElement),
-                getItemId(currentReleaseElement),
+              onLand({
+                fromId: getItemId(draggedElement),
+                toId: getItemId(currentReleaseElement),
+                ...landedAt,
                 syncCloneWithDropTarget,
-              ),
+              }),
             );
           } else if (dropMeans === "reorder") {
             await landCopyOn(currentReleaseElement, (syncCloneWithDropTarget) =>
@@ -1378,6 +1335,28 @@ const setCloneViewportRect = (cloneWrapper, el) => {
   cloneWrapper.style.setProperty("--clone-left", `${rect.left}px`);
   cloneWrapper.style.setProperty("--clone-width", `${rect.width}px`);
   cloneWrapper.style.setProperty("--clone-height", `${rect.height}px`);
+};
+
+// Where one box sits inside another, in that other's own content: its border and
+// its scroll are taken out, so the numbers say where IN the thing rather than
+// where in what is visible of it at that moment.
+const getRectInside = (element, containerElement) => {
+  const rect = element.getBoundingClientRect();
+  const containerRect = containerElement.getBoundingClientRect();
+  return {
+    x:
+      rect.left -
+      containerRect.left -
+      containerElement.clientLeft +
+      containerElement.scrollLeft,
+    y:
+      rect.top -
+      containerRect.top -
+      containerElement.clientTop +
+      containerElement.scrollTop,
+    width: rect.width,
+    height: rect.height,
+  };
 };
 
 // Creates the two-layer clone structure used for drag-to-reorder.

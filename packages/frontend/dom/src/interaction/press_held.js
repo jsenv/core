@@ -114,15 +114,31 @@ export const waitForPressHeld = (
     }
     cancelPress(pointerEndEvent);
   };
+  // Somebody else settled what this press is. Taking the pointer is how a gesture
+  // says it — and it says it about the same finger this wait is counting on, so
+  // whatever the press turned out to be, it is not a hold. Two waits on one press
+  // is the ordinary case rather than an odd one: an element that can be picked up
+  // AND held answers a finger with two delays, the shorter one wins, and without
+  // this the longer one would answer a hundred milliseconds into the carry.
+  // The listener goes with the countdown, so the gesture THIS wait starts (which
+  // captures the pointer from inside onPressHeld) never reaches it.
+  const onGotPointerCapture = (captureEvent) => {
+    if (captureEvent.pointerId !== pointerId) {
+      return;
+    }
+    cancelPress(captureEvent);
+  };
   // On window rather than on the element: the finger can leave it, and the
   // element itself can be taken out of the document while the press is waiting.
   window.addEventListener("pointermove", onPointerMove);
   window.addEventListener("pointerup", onPointerEnd);
   window.addEventListener("pointercancel", onPointerEnd);
+  window.addEventListener("gotpointercapture", onGotPointerCapture, true);
   countdownCleanupCallbacks.push(() => {
     window.removeEventListener("pointermove", onPointerMove);
     window.removeEventListener("pointerup", onPointerEnd);
     window.removeEventListener("pointercancel", onPointerEnd);
+    window.removeEventListener("gotpointercapture", onGotPointerCapture, true);
   });
 
   onPressStart?.(pressEvent);

@@ -29,17 +29,26 @@
  * two, refuse.
  *
  *   interactions={{ land: (event) => {
- *     const { fromId, toId, syncCloneWithDropTarget } = event.detail;
+ *     const { fromId, toId, x, y, syncCloneWithDropTarget } = event.detail;
  *     …
  *   }}}
  *
  * `toId` is an element and never null: a copy over nothing is a release that meant
- * nothing, and the interaction does not happen at all.
+ * nothing, and the interaction does not happen at all — unless the element says
+ * `data-toss-outside` (see below), which gives that release a meaning of its own.
+ *
+ * WHERE ON IT, in `x`, `y`, `width`, `height`: the box the copy came down in,
+ * measured inside the place — its border and its scroll taken out. A place that is
+ * a SURFACE — a plan, a map, a floor — has no element under the copy to name and
+ * nothing to swap with: where it came down IS the answer, and `toId` says which
+ * surface rather than which piece.
  *
  * `syncCloneWithDropTarget` takes an element here, which `reorder` has no use for:
  * a place of a board can be larger than what stands on it (a quarter of a court, a
  * square holding a smaller piece), and the copy has to come down where the piece
- * will be rather than filling the place. Left alone, it lands on the place itself.
+ * will be rather than filling the place. Left alone, it lands on the place itself —
+ * so a surface either passes what the thing becomes or does not call it at all,
+ * which leaves the copy where the hand put it, over the thing appearing there.
  *
  * WHICH ELEMENTS ARE PLACES: those marked `data-droppable`, and only those.
  * Declaring `land` says an element can be CARRIED, which on a board is a different
@@ -48,9 +57,26 @@
  * case (dropped on a piece, the two swap). A list has no such distinction — every
  * row is both, which is why `reorder` needs no marker in the markup.
  *
- * The set of places is looked for inside the carried element's PARENT, so a place
- * and a piece are siblings: a piece nested inside its place would see only that
- * one, and have nowhere else to go.
+ * WHERE THE PLACES ARE LOOKED FOR: inside the carried element's PARENT, so a place
+ * and a piece are siblings — and `data-drop-container` on an ancestor says
+ * otherwise. Two arrangements need it, and both are the same one: what is carried
+ * does not stand among the places. A palette is a strip BESIDE the surface it
+ * fills, a marker already placed is drawn INSIDE the surface it can be put back
+ * on, and in each case the search must cover what holds both. It holds the places
+ * rather than being one — a surface carrying it would never be found from inside
+ * itself. It is also what lets the copy travel there: named, the area it may cross
+ * is the page rather than the source's own scroll area.
+ *
+ *   <div data-drop-container>
+ *     <aside>{shapes.map((shape) => <Shape interactions={{ land: add }} />)}</aside>
+ *     <Plan id="plan" data-droppable>…</Plan>
+ *   </div>
+ *
+ * WHEN LETTING GO OUTSIDE MEANS GETTING RID OF IT: `data-toss-outside`, beside
+ * `toss`. A throw is far AND fast, which is the flick that gets rid of something;
+ * dragging a marker off a plan and letting go is neither, and is the gesture a
+ * surface asks for. So the same outcome is reached the other way — a release with
+ * no place under it — and only where the markup says that release means something.
  *
  * Nothing of the gesture is decided here. `startDragTo` owns all of it — the
  * copy carried above the page while the original keeps its place in the layout, the
@@ -143,6 +169,8 @@ const REORDERABLE_ATTRIBUTE = "data-reorderable";
 // The same for `land`, except the markup is what writes it: a place of a board is
 // not the same thing as a piece of it (see the top of this file).
 const DROPPABLE_ATTRIBUTE = "data-droppable";
+// What holds the places, when the carried element does not stand among them.
+const DROP_CONTAINER_ATTRIBUTE = "data-drop-container";
 // Which axes the drag walks: "x", "y" or "xy". Its default is not the same for
 // every outcome — a list runs one way, and something being put somewhere goes
 // wherever it is put.
@@ -152,6 +180,8 @@ const SLOP_ATTRIBUTE = "data-drag-slop";
 const THRESHOLD_ATTRIBUTE = "data-drag-threshold";
 const TOSS_DISTANCE_ATTRIBUTE = "data-toss-distance";
 const TOSS_SPEED_ATTRIBUTE = "data-toss-speed";
+// A release with no place under it is the other way of meaning "gotten rid of".
+const TOSS_OUTSIDE_ATTRIBUTE = "data-toss-outside";
 
 defineInteractionDetector({
   name: "drag",
@@ -199,6 +229,20 @@ defineInteractionDetector({
       // the hand takes it: a board has places all around, a thing put somewhere has
       // two axes to be put along, and a throw goes where it was thrown.
       (canReorder && !canLand && !canToss ? "y" : "xy");
+    // Where the places are, and what a release away from all of them means —
+    // both read at setup for the same reason as the axes: they are what the
+    // gesture is about, and it is what holds the two sides of it that says them.
+    const dropContainer = element.closest(`[${DROP_CONTAINER_ATTRIBUTE}]`);
+    const tossOutside = Boolean(element.closest(`[${TOSS_OUTSIDE_ATTRIBUTE}]`));
+    if (
+      import.meta.dev &&
+      tossOutside &&
+      (!canToss || (!canReorder && !canLand))
+    ) {
+      console.warn(
+        `interactions: "${TOSS_OUTSIDE_ATTRIBUTE}" makes a release away from every place mean the thing is gotten rid of, so it needs both "${TOSS}" and places to be away from. Declare "${TOSS}" beside "${REORDER}" or "${LAND}".`,
+      );
+    }
 
     if (canReorder) {
       element.setAttribute(REORDERABLE_ATTRIBUTE, "");
@@ -225,23 +269,29 @@ defineInteractionDetector({
           : canReorder
             ? `[${REORDERABLE_ATTRIBUTE}]`
             : undefined,
+        containerElement: dropContainer || undefined,
         getItemId: (itemElement) => itemElement.id,
         direction: { x: axes.includes("x"), y: axes.includes("y") },
         // Where it may go, said in the DOM. A thing that is put somewhere stays
         // inside what one can SEE of its container ("scrollport", not "scroll":
         // the scrollable area can be far larger than the box, and "inside the box"
-        // is what a hand expects). `data-drag-free` lifts that. Left alone for a
-        // throw, which frees the area on its own — it has to be able to leave.
-        areaConstraint: element.closest(`[data-drag-free]`)
-          ? "none"
-          : canMove
-            ? "scrollport"
-            : undefined,
+        // is what a hand expects). `data-drag-free` lifts that, and so does a
+        // named container of places: they are somewhere else by construction, and
+        // a copy kept in its own scroll area could never reach them. Left alone
+        // for a throw, which frees the area on its own — it has to be able to
+        // leave.
+        areaConstraint:
+          dropContainer || element.closest(`[data-drag-free]`)
+            ? "none"
+            : canMove
+              ? "scrollport"
+              : undefined,
         threshold: readConfig(THRESHOLD_ATTRIBUTE, undefined),
         longPressDelay: readConfig(DELAY_ATTRIBUTE, undefined),
         longPressSlop: readConfig(SLOP_ATTRIBUTE, undefined),
         tossDistance: readConfig(TOSS_DISTANCE_ATTRIBUTE, undefined),
         tossSpeed: readConfig(TOSS_SPEED_ATTRIBUTE, undefined),
+        tossOutside,
         // The one moment the gesture has that is not a release. Said here rather
         // than from the press that led to it, because the press is only one of the
         // two ways in: a finger holds still, a mouse travels a few pixels, and it
@@ -264,12 +314,7 @@ defineInteractionDetector({
             toId,
             syncCloneWithDropTarget,
           }),
-        onLand: (fromId, toId, syncCloneWithDropTarget) =>
-          trigger(LAND, pointerDownEvent, {
-            fromId,
-            toId,
-            syncCloneWithDropTarget,
-          }),
+        onLand: (detail) => trigger(LAND, pointerDownEvent, detail),
         onToss: ({ gestureInfo }) =>
           trigger(TOSS, pointerDownEvent, {
             id: element.id,

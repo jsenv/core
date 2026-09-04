@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>Plan du club</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 40px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      #container {
+        max-width: 720px;
+        margin: 0 auto;
+      }
+      h1 {
+        margin: 0 0 4px;
+        font-size: 1.25rem;
+      }
+      h2 {
+        margin: 0 0 4px;
+        font-size: 1.1rem;
+      }
+      .intro {
+        margin: 0 0 20px;
+        color: #555;
+        font-size: 13px;
+        line-height: 1.5;
+      }
+      .demo-section {
+        margin-bottom: 24px;
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      .caption {
+        margin: 0 0 16px;
+        color: #555;
+        font-size: 13px;
+        line-height: 1.6;
+      }
+
+      .editor {
+        display: flex;
+        align-items: flex-start;
+        gap: 20px;
+        /* La marque de l'endroit où ça peut se poser: elle se dessine parmi les
+           places, donc c'est ici qu'elle s'habille. */
+        --drop-surface-background-color: rgba(79, 143, 99, 0.1);
+        --drop-surface-border-color: #4f8f63;
+      }
+      .bank {
+        display: flex;
+        padding: 12px;
+        flex-direction: column;
+        gap: 12px;
+        background: #fbfbfc;
+        border: 1px dashed #c8ccd4;
+        border-radius: 8px;
+      }
+      .bank_title {
+        color: #6b7482;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .map {
+        position: relative;
+        width: 420px;
+        height: 420px;
+        background-image:
+          linear-gradient(#dde5d6 1px, transparent 1px),
+          linear-gradient(90deg, #dde5d6 1px, transparent 1px);
+        background-size: 30px 30px;
+        background-color: #edf1e9;
+        border: 1px solid #b9c4b4;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      .map_surface {
+        position: absolute;
+        inset: 0;
+      }
+
+      .shape {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #33383f;
+        font-size: 12px;
+        border: 1px solid;
+        border-radius: 6px;
+        user-select: none;
+      }
+      .shape[data-kind="terrain"] {
+        background: #cfe4d4;
+        border-color: #4f8f63;
+      }
+      .shape[data-kind="parking"] {
+        background: #dde3f2;
+        border-color: #5a6ea8;
+      }
+      .shape[data-kind="entree"] {
+        background: #f6e6cd;
+        border-color: #b3803a;
+      }
+      .shape_placed {
+        position: absolute;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+      }
+      /* Une forme de la banque est un modèle, pas la chose: son exemplaire part
+         sur le plan et elle reste là où on va la reprendre. (navi cache la
+         source d'une copie qui voyage — ici, la source n'est pas ce qui bouge.) */
+      .bank .shape[navi-drag-clone-source] {
+        visibility: visible;
+      }
+
+      .menu {
+        min-width: 150px;
+        padding: 4px;
+      }
+      .menu_item {
+        display: flex;
+        width: 100%;
+        padding: 8px 10px;
+        align-items: center;
+        gap: 8px;
+        color: inherit;
+        font: inherit;
+        text-align: left;
+        background: none;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      .menu_item:hover {
+        background: #eef1f6;
+      }
+      .menu_item_danger {
+        color: #b03030;
+      }
+      .menu_separator {
+        height: 1px;
+        margin: 4px 8px;
+        background: #e3e6ec;
+      }
+      .menu_swatch {
+        width: 22px;
+        height: 14px;
+        border: 1px solid;
+        border-radius: 3px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <h1>Plan du club</h1>
+      <p class="intro">
+        Un carré, et ce qu'on y installe: des terrains, des parkings, une
+        entrée.
+      </p>
+      <div id="app"></div>
+    </div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { Box, Popover, triggerNaviCommand } from "@jsenv/navi";
+      import { render } from "preact";
+      import { useRef, useState } from "preact/hooks";
+
+      const MAP_SIZE = 420;
+
+      // Ce qu'on peut poser, et de quelle taille: la vignette de la banque a la
+      // taille de la forme qu'elle devient, donc elle se pose là où on la voit.
+      const KINDS = [
+        { id: "terrain", label: "Terrain", width: 120, height: 66 },
+        { id: "parking", label: "Parking", width: 90, height: 54 },
+        { id: "entree", label: "Entrée", width: 66, height: 34 },
+      ];
+      const kindOf = (kindId) => KINDS.find((kind) => kind.id === kindId);
+
+      // Un id est unique dans le document, donc le compteur l'est aussi.
+      let itemIdCounter = 0;
+
+      const clamp = (value, max) => {
+        if (value < 0) {
+          return 0;
+        }
+        if (value > max) {
+          return max;
+        }
+        return value;
+      };
+
+      const Shape = ({ kind, ...rest }) => (
+        <Box
+          className="shape"
+          data-kind={kind.id}
+          style={{ width: `${kind.width}px`, height: `${kind.height}px` }}
+          {...rest}
+        >
+          {kind.label}
+        </Box>
+      );
+
+      const PlanEditor = () => {
+        const [items, setItems] = useState([
+          { id: "plan_item_a", kind: "terrain", x: 40, y: 40 },
+          { id: "plan_item_b", kind: "terrain", x: 40, y: 130 },
+          { id: "plan_item_c", kind: "entree", x: 300, y: 360 },
+        ]);
+        // Le menu n'est pas un état d'ici: il s'ouvre par commande et se ferme
+        // tout seul. Ce qui reste est ce que la commande ne dit pas — de quelle
+        // forme il s'agit, et à quel endroit du plan on a appuyé.
+        const [menuItemId, setMenuItemId] = useState(null);
+        const anchorPointRef = useRef(null);
+        const addPointRef = useRef({ x: 0, y: 0 });
+        const mapRef = useRef(null);
+
+        const addShape = (kind, x, y) => {
+          setItems((previous) => [
+            ...previous,
+            {
+              id: `plan_item_${++itemIdCounter}`,
+              kind: kind.id,
+              x: clamp(x, MAP_SIZE - kind.width),
+              y: clamp(y, MAP_SIZE - kind.height),
+            },
+          ]);
+        };
+        const moveShape = (itemId, x, y) => {
+          setItems((previous) =>
+            previous.map((item) => {
+              if (item.id !== itemId) {
+                return item;
+              }
+              const kind = kindOf(item.kind);
+              return {
+                ...item,
+                x: clamp(x, MAP_SIZE - kind.width),
+                y: clamp(y, MAP_SIZE - kind.height),
+              };
+            }),
+          );
+        };
+        const changeKind = (itemId, kind) => {
+          setItems((previous) =>
+            previous.map((item) =>
+              item.id === itemId ? { ...item, kind: kind.id } : item,
+            ),
+          );
+        };
+        const removeShape = (itemId) => {
+          setItems((previous) => previous.filter((item) => item.id !== itemId));
+        };
+
+        const openMenuAtPress = (interactionEvent) => {
+          const press = interactionEvent.detail.event;
+          const anchorPoint = anchorPointRef.current;
+          anchorPoint.style.left = `${press.clientX}px`;
+          anchorPoint.style.top = `${press.clientY}px`;
+          triggerNaviCommand(
+            interactionEvent.target,
+            "--navi-open",
+            interactionEvent,
+            { anchor: anchorPoint },
+          );
+        };
+        const openAddMenu = (interactionEvent) => {
+          const press = interactionEvent.detail.event;
+          const mapRect = mapRef.current.getBoundingClientRect();
+          addPointRef.current = {
+            x: press.clientX - mapRect.left,
+            y: press.clientY - mapRect.top,
+          };
+          openMenuAtPress(interactionEvent);
+        };
+        const openItemMenu = (item, interactionEvent) => {
+          setMenuItemId(item.id);
+          openMenuAtPress(interactionEvent);
+        };
+        const closeMenu = (event) => {
+          triggerNaviCommand(event.currentTarget, "--navi-close", event, {
+            optional: true,
+          });
+        };
+        const addAtPressPoint = (kind) => {
+          const { x, y } = addPointRef.current;
+          addShape(kind, x - kind.width / 2, y - kind.height / 2);
+        };
+
+        return (
+          <div className="demo-section">
+            <h2>Le plan</h2>
+            <p class="caption">
+              Faites glisser une forme de la banque sur le plan pour l'y poser,
+              une forme du plan pour la déplacer, et hors du plan (ou dans la
+              banque) pour l'enlever. Maintenez le doigt sur une forme pour la
+              changer, sur le plan vide pour en ajouter une là.
+            </p>
+            {/* Ce qui tient la banque ET le plan: les places qu'on cherche ne
+                sont ni à côté de la vignette qu'on traîne, ni autour d'une forme
+                déjà posée — elles sont dans ce carré-ci. */}
+            <div className="editor" data-drop-container>
+              <div className="bank">
+                <span className="bank_title">Banque</span>
+                {KINDS.map((kind) => (
+                  <Shape
+                    key={kind.id}
+                    kind={kind}
+                    interactions={{
+                      land: (event) => {
+                        const { x, y } = event.detail;
+                        addShape(kind, x, y);
+                      },
+                    }}
+                  />
+                ))}
+              </div>
+              <div
+                ref={mapRef}
+                className="map"
+                id="plan_map"
+                data-droppable
+                data-toss-outside
+              >
+                {/* Le plan vide: les formes sont posées par-dessus, donc un
+                    appui sur l'une d'elles n'arrive jamais ici. */}
+                <Box
+                  className="map_surface"
+                  commandfor="plan_add_menu"
+                  interactions={{ longpress: openAddMenu }}
+                />
+                {items.map((item) => {
+                  const kind = kindOf(item.kind);
+                  return (
+                    <Shape
+                      key={item.id}
+                      id={item.id}
+                      kind={kind}
+                      className="shape shape_placed"
+                      style={{
+                        width: `${kind.width}px`,
+                        height: `${kind.height}px`,
+                        left: `${item.x}px`,
+                        top: `${item.y}px`,
+                      }}
+                      commandfor="plan_item_menu"
+                      interactions={{
+                        land: (event) => {
+                          const { x, y } = event.detail;
+                          moveShape(item.id, x, y);
+                        },
+                        toss: () => removeShape(item.id),
+                        longpress: (event) => openItemMenu(item, event),
+                      }}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+            {/* Un carré d'un pixel qu'on déplace: une ancre est un élément, un
+                point n'en est pas un. */}
+            <div
+              ref={anchorPointRef}
+              style={{
+                position: "fixed",
+                width: "1px",
+                height: "1px",
+                pointerEvents: "none",
+              }}
+            />
+            <Popover
+              id="plan_add_menu"
+              positionArea="bottom-right"
+              padding="0"
+              borderRadius="10px"
+              pointerInteractionOutsideEffect="close"
+            >
+              <Box flex="y" className="menu">
+                {KINDS.map((kind) => (
+                  <Box
+                    key={kind.id}
+                    as="button"
+                    type="button"
+                    className="menu_item"
+                    onClick={(event) => {
+                      addAtPressPoint(kind);
+                      closeMenu(event);
+                    }}
+                  >
+                    <span className="menu_swatch shape" data-kind={kind.id} />
+                    {kind.label}
+                  </Box>
+                ))}
+              </Box>
+            </Popover>
+            <Popover
+              id="plan_item_menu"
+              positionArea="bottom-right"
+              padding="0"
+              borderRadius="10px"
+              pointerInteractionOutsideEffect="close"
+            >
+              <Box flex="y" className="menu">
+                {KINDS.map((kind) => (
+                  <Box
+                    key={kind.id}
+                    as="button"
+                    type="button"
+                    className="menu_item"
+                    onClick={(event) => {
+                      changeKind(menuItemId, kind);
+                      closeMenu(event);
+                    }}
+                  >
+                    <span className="menu_swatch shape" data-kind={kind.id} />
+                    {kind.label}
+                  </Box>
+                ))}
+                <span className="menu_separator" />
+                <Box
+                  as="button"
+                  type="button"
+                  className="menu_item menu_item_danger"
+                  onClick={(event) => {
+                    removeShape(menuItemId);
+                    closeMenu(event);
+                  }}
+                >
+                  Supprimer
+                </Box>
+              </Box>
+            </Popover>
+          </div>
+        );
+      };
+
+      render(<PlanEditor />, document.getElementById("app"));
+    </script>
+  </body>
+</html>

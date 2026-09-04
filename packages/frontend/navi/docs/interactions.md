@@ -238,12 +238,48 @@ Starting a document transition is the application's call, not navi's: a
 `view-transition-name` must be unique per document, so only the application can
 name what moves.
 
-| Attribute                                                | Meaning                                |
-| -------------------------------------------------------- | -------------------------------------- |
-| `data-drag-axis="x"\|"y"\|"xy"`                          | which axes the drag walks              |
-| `data-drag-delay` `data-drag-slop` `data-drag-threshold` | when the press becomes a grab          |
-| `data-drag-on-contact`                                   | a finger may drag by travelling too    |
-| `data-toss-distance` `data-toss-speed`                   | how far and how fast counts as a throw |
+| Attribute                                                | Meaning                                         |
+| -------------------------------------------------------- | ----------------------------------------------- |
+| `data-drag-axis="x"\|"y"\|"xy"`                          | which axes the drag walks                       |
+| `data-drag-delay` `data-drag-slop` `data-drag-threshold` | when the press becomes a grab                   |
+| `data-drag-on-contact`                                   | a finger may drag by travelling too             |
+| `data-toss-distance` `data-toss-speed`                   | how far and how fast counts as a throw          |
+| `data-toss-outside`                                      | letting go away from every place is a throw too |
+| `data-drop-container`                                    | where the places are looked for                 |
+
+### Getting rid of it without a throw: `data-toss-outside`
+
+A throw is far **and** fast — that pair is what a flick is, and it is asked for
+together because one without the other is moving something while hesitating.
+Dragging a marker off the plan it sits on and letting go is neither: it is slow,
+deliberate, and it is the removal gesture a surface asks for.
+
+`data-toss-outside`, on the element or a container, gives that release its
+meaning: **let go with no place under it, and the thing is gotten rid of** — the
+same `toss`, reached the other way, with the same flight off the screen and the
+same return if the answer rejects.
+
+```jsx
+<div data-drop-container>
+  <Plan id="plan" data-droppable>
+    {markers.map((marker) => (
+      <Marker
+        id={marker.id}
+        data-toss-outside
+        interactions={{
+          land: (event) => moveTo(marker.id, event.detail),
+          toss: () => remove(marker.id),
+        }}
+      />
+    ))}
+  </Plan>
+</div>
+```
+
+It is opt-in because the same release means the opposite elsewhere: a row pulled
+sideways out of its list and let go is a row put back, not a row deleted. And it
+needs places to be outside OF — declared next to `toss` alone, with nothing that
+can receive the thing, every release is outside and a dev warning says so.
 
 ### A finger that does not have to wait: `data-drag-on-contact`
 
@@ -307,9 +343,27 @@ case (dropped on a piece, the two swap, so it says `data-droppable` as well). A
 list has no such distinction, every row being both, which is why `reorder` needs
 no marker in the markup.
 
-Places are looked for among the carried element's **siblings**, so a piece must
-not be nested inside its place: nested, it would see that one place and have
-nowhere else to go. Draw the pieces beside the places, positioned over them.
+Places are looked for among the carried element's **siblings**, which is what a
+board is: pieces drawn beside the places, positioned over them. When what is
+carried does not stand among the places — a palette BESIDE the surface it fills, a
+marker drawn INSIDE the surface it can be put back on — say what holds both with
+`data-drop-container`. It holds the places rather than being one, so it goes on an
+ancestor of them: a surface that is itself the place is never found from inside
+itself.
+
+```jsx
+<div data-drop-container>
+  <aside class="palette">
+    {shapes.map((shape) => (
+      <Shape interactions={{ land: (event) => add(shape, event.detail) }} />
+    ))}
+  </aside>
+  <Plan id="plan" data-droppable />
+</div>
+```
+
+It also frees the copy's travel: the places being elsewhere by construction, a
+copy kept inside its own scroll area could never reach them.
 
 **When the place is bigger than what stands on it** — a zone holding a smaller
 card, a square holding a piece — the copy must not take the place's box, or it
@@ -328,6 +382,36 @@ land: (event) => {
   }).finished;
 };
 ```
+
+#### A place that is a surface
+
+A board's place is an element one can point at. A **surface** — a plan drawn over
+an aerial photo, a map, a floor — is one box where every point is a place, and
+"which element did it come down on" says nothing there. So the detail says
+**where**: `x`, `y`, `width`, `height`, the box the copy came down in, measured
+inside the place with its border and its scroll taken out. `toId` still names the
+surface it came down on, and nothing changes about the rest — the copy travels,
+the original stays where it was.
+
+```jsx
+<Shape
+  interactions={{
+    land: (event) => {
+      const { x, y, width, height } = event.detail;
+      addCourt(kind, { x: x + width / 2, y: y + height / 2 });
+    },
+  }}
+/>
+```
+
+The size comes along because the anchor is yours: a chip dragged out of a palette
+is not the shape it becomes, so the middle of what the hand carried is usually the
+point that was aimed at.
+
+`syncCloneWithDropTarget` is the one thing to leave alone here — called with
+nothing it takes the whole surface's box, and there is rarely an element to pass
+it either, the thing being created by the answer itself. Not calling it leaves the
+copy where the hand put it, over the thing appearing there.
 
 #### Naming what travels
 
@@ -407,9 +491,11 @@ lives in one, anything a style adds rides in the other.
 ```
 
 The hint follows what a place is: a line drawn in the gap for `reorder`, the
-place itself lit up for `land`. Both are drawn inside the carried element's
-parent, so the variables dressing them are read from the list or the board and
-reach them by plain inheritance.
+place itself lit up for `land`. Both are drawn among the places — the carried
+element's parent, or the `data-drop-container` when there is one — so the
+variables dressing them are read from the list, the board or the surface and reach
+them by plain inheritance. The copy goes the other way: it is drawn beside the
+thing it copies, and dressed by where that thing stands.
 
 | Variable                                                                                   | Dresses                 |
 | ------------------------------------------------------------------------------------------ | ----------------------- |
@@ -819,8 +905,9 @@ const onPointerDown = (pointerDownEvent) => {
 };
 ```
 
-An element that ends up somewhere is NOT this: that one is `move`, and doing it by
-hand gives up the constraint, the commit and the way back when the answer refuses.
+An element that ends up somewhere is NOT this: that one is `move` — or `land` when
+what it ends up on is a surface and a copy is what travels — and doing it by hand
+gives up the constraint, the commit and the way back when the answer refuses.
 
 Three things come with the machinery, and they are the reason not to write it again:
 
@@ -904,3 +991,6 @@ travels above it: `data-no-drag-travel` (see `docs/drag_to_travel.md`).
 - `src/control/demos/38_interactions_demo.html` — every case above, plus a
   mailbox, a board whose places are zones and the same board whose places are the
   pieces, and a custom gesture registered from the page.
+- `src/control/demos/integration/5_plan_editor_demo.html` — a place that is a
+  surface: shapes dragged out of a bank onto a plan, moved on it, and dragged off
+  it to go.
