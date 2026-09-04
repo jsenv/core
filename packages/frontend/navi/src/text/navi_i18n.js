@@ -1,4 +1,4 @@
-import { createI18n } from "./i18n.js";
+import { humanizeI18n } from "@jsenv/humanize";
 
 /**
  * The shared i18n instance holding every text @jsenv/navi components display
@@ -11,6 +11,11 @@ import { createI18n } from "./i18n.js";
  * opaque identifiers (`"list.empty"`), never the English sentence — the
  * opposite of what an app is advised to do. `docs/i18n.md` explains why.
  *
+ * It is `humanizeI18n` itself, the registry @jsenv/humanize keeps for the
+ * built-in texts of jsenv libraries: navi registers its keys in it, the
+ * formatters (`formatDay`, `formatDuration`…) read their own `time.*` words
+ * from it, and an app overriding any of them has a single handle for both.
+ *
  * The active language is read from `languagesSignal` (see lang_signal.js —
  * combines the browser's own `navigator.languages`, an optional
  * `setPreferredLanguage()` user override, and an optional
@@ -19,7 +24,7 @@ import { createI18n } from "./i18n.js";
  * Built-in key namespaces, all overridable — the registrations below are the
  * exhaustive list, read them to find the exact key to override:
  *   - `"button.*"`     — Clear, Reset, Send, Open, Close, Cancel, Confirm…
- *   - `"time.*"`       — relative time wording, duration unit symbols, date field placeholders
+ *   - `"time.*"`       — what a clock writes between hours and minutes, and how the two ends of a span are named; the wording the formatters use is registered by @jsenv/humanize
  *   - `"spin.*"`       — the ends of a steppable range
  *   - `"list.*"`       — empty/no-match/failed-rows messages
  *   - `"badge_list.*"` — the "+[count] more" overflow badge
@@ -46,7 +51,7 @@ import { createI18n } from "./i18n.js";
  *   ticket__plural: { en: "tickets", fr: "billets" },
  * });
  */
-export const naviI18n = createI18n();
+export const naviI18n = humanizeI18n;
 
 naviI18n.addAll({
   "button.clear": {
@@ -92,174 +97,6 @@ naviI18n.addAll({
   "button.remove": {
     en: "Remove",
     fr: "Retirer",
-  },
-});
-
-// Default built-in translations — apps can override any key via add()
-naviI18n.addAll({
-  "time.less_than_minute": {
-    en: "in less than a minute",
-    fr: "dans moins d'une minute",
-    de: "in weniger als einer Minute",
-    es: "en menos de un minuto",
-    it: "in meno di un minuto",
-    pt: "em menos de um minuto",
-    nl: "over minder dan een minuut",
-  },
-  "time.ongoing": {
-    en: "Ongoing",
-    fr: "En cours",
-    de: "Laufend",
-    es: "En curso",
-    it: "In corso",
-    pt: "Em andamento",
-    nl: "Bezig",
-  },
-  // [day] and [time] are replaced at runtime with the localized day/time strings
-  "time.tomorrow_at": {
-    en: "[day] at [time]",
-    fr: "[day] à [time]",
-    de: "[day] um [time]",
-    es: "[day] a las [time]",
-    it: "[day] alle [time]",
-    pt: "[day] às [time]",
-    nl: "[day] om [time]",
-  },
-  // [duration] is replaced at runtime with the formatted duration string (e.g. "1h30", "45 min")
-  "time.in_duration": {
-    en: "in [duration]",
-    fr: "dans [duration]",
-    de: "in [duration]",
-    es: "en [duration]",
-    it: "tra [duration]",
-    pt: "em [duration]",
-    nl: "over [duration]",
-  },
-  // Substituted in place of the "0 heure(s)" part of an Intl-generated
-  // duration string when <Time type="time" format="long"> renders midnight
-  // — see time.jsx's own TimeTime for why midnight can't just fall through
-  // to formatMinuteDuration like every other hour does, and how this word
-  // gets spliced in (formatToParts, not string concatenation) so the rest
-  // of the sentence (conjunction, minutes) still comes out in whatever
-  // grammar/word order this language's own Intl.DurationFormat produces.
-  // Languages without an entry here fall back to that language's own
-  // literal "0 heure(s)" wording instead (see TimeTime), never to this key.
-  "time.midnight": {
-    en: "midnight",
-    fr: "minuit",
-    de: "Mitternacht",
-    es: "medianoche",
-    it: "mezzanotte",
-    pt: "meia-noite",
-    nl: "middernacht",
-  },
-  // What <TimeRange> writes between the two bounds of a span — "8h–10h",
-  // "11 mai – 14 mai". An en dash, the mark for a span, not a hyphen.
-  "time.range_separator": {
-    en: "–",
-    fr: "–",
-    de: "–",
-    es: "–",
-    it: "–",
-    pt: "–",
-    nl: "–",
-  },
-  // Compact duration unit symbols used in "1h30", "45min", "2d", etc.
-  "time.duration.year_symbol": {
-    en: "y",
-    fr: "a",
-    de: "J",
-    es: "a",
-    it: "a",
-    pt: "a",
-    nl: "j",
-    ja: "年",
-    zh: "年",
-    ko: "년",
-  },
-  "time.duration.month_symbol": {
-    en: "mo",
-    fr: "mo",
-    de: "Mo",
-    es: "mo",
-    it: "mo",
-    pt: "mo",
-    nl: "mo",
-    ja: "月",
-    zh: "月",
-    ko: "월",
-  },
-  "time.duration.week_symbol": {
-    en: "w",
-    fr: "sem",
-    de: "W",
-    es: "sem",
-    it: "sett",
-    pt: "sem",
-    nl: "w",
-    ja: "週",
-    zh: "周",
-    ko: "주",
-  },
-  "time.duration.day_symbol": {
-    en: "d",
-    fr: "j",
-    de: "T",
-    es: "d",
-    it: "g",
-    pt: "d",
-    nl: "d",
-    ja: "日",
-    zh: "天",
-    ko: "일",
-  },
-  "time.duration.hour_symbol": {
-    en: "h",
-    fr: "h",
-    de: "h",
-    es: "h",
-    it: "h",
-    pt: "h",
-    nl: "u",
-    ja: "時間",
-    zh: "小时",
-    ko: "시간",
-  },
-  "time.duration.minute_symbol": {
-    en: "min",
-    fr: "min",
-    de: "min",
-    es: "min",
-    it: "min",
-    pt: "min",
-    nl: "min",
-    ja: "分",
-    zh: "分",
-    ko: "분",
-  },
-  "time.duration.second_symbol": {
-    en: "s",
-    fr: "s",
-    de: "s",
-    es: "s",
-    it: "s",
-    pt: "s",
-    nl: "s",
-    ja: "秒",
-    zh: "秒",
-    ko: "초",
-  },
-  "time.duration.millisecond_symbol": {
-    en: "ms",
-    fr: "ms",
-    de: "ms",
-    es: "ms",
-    it: "ms",
-    pt: "ms",
-    nl: "ms",
-    ja: "ms",
-    zh: "ms",
-    ko: "ms",
   },
 });
 
@@ -892,64 +729,5 @@ naviI18n.addAll({
   "constraint.guard.max_length.selection": {
     fr: "[max] max.",
     en: "[max] max.",
-  },
-});
-
-// Date/time placeholder tokens — shown when no value is selected
-// Override any key to adapt to your language conventions
-naviI18n.addAll({
-  "time.placeholder.day": {
-    fr: "jj",
-    en: "dd",
-    de: "TT",
-    es: "dd",
-    it: "gg",
-    pt: "dd",
-    nl: "dd",
-  },
-  "time.placeholder.month": {
-    fr: "mm",
-    en: "mm",
-    de: "MM",
-    es: "mm",
-    it: "mm",
-    pt: "mm",
-    nl: "mm",
-  },
-  "time.placeholder.year": {
-    fr: "aaaa",
-    en: "yyyy",
-    de: "JJJJ",
-    es: "aaaa",
-    it: "aaaa",
-    pt: "aaaa",
-    nl: "jjjj",
-  },
-  "time.placeholder.hour": {
-    fr: "hh",
-    en: "hh",
-    de: "hh",
-    es: "hh",
-    it: "hh",
-    pt: "hh",
-    nl: "uu",
-  },
-  "time.placeholder.minute": {
-    fr: "mm",
-    en: "mm",
-    de: "mm",
-    es: "mm",
-    it: "mm",
-    pt: "mm",
-    nl: "mm",
-  },
-  "time.placeholder.week": {
-    fr: "sem.",
-    en: "wk",
-    de: "KW",
-    es: "sem.",
-    it: "sett.",
-    pt: "sem.",
-    nl: "wk",
   },
 });

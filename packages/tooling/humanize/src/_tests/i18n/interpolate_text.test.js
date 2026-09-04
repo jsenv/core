@@ -1,7 +1,7 @@
 import { snapshotTests } from "@jsenv/snapshot";
 import { COLORS, renderTable } from "@jsenv/terminal-table";
 
-import { interpolateText } from "../interpolate_text.js";
+import { interpolateText } from "@jsenv/humanize";
 
 const BORDER = { color: COLORS.GREY };
 const cell = (value) => ({ value: String(value), border: BORDER });

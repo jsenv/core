@@ -2,17 +2,13 @@
  * https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Constraint_validation
  */
 
+import { formatDay, formatDuration, formatMonth } from "@jsenv/humanize";
 import {
   compareTwoDurations,
   durationContainsNaN,
   durationToSeconds,
 } from "@jsenv/validity";
 
-import {
-  formatDay,
-  formatDuration,
-  formatMonth,
-} from "@jsenv/navi/src/text/format_time.js";
 import { languagesSignal } from "@jsenv/navi/src/text/lang_signal.js";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";

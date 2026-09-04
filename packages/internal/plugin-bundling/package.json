@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-bundling",
-  "version": "2.10.24",
+  "version": "2.10.25",
   "type": "module",
   "repository": {
     "type": "git",
@@ -21,11 +21,11 @@
     "@jsenv/core": "*"
   },
   "dependencies": {
-    "@jsenv/humanize": "1.7.8",
-    "@jsenv/node-esm-resolution": "1.3.6",
-    "@jsenv/sourcemap": "1.4.6",
+    "@jsenv/humanize": "1.8.0",
+    "@jsenv/node-esm-resolution": "1.3.7",
+    "@jsenv/sourcemap": "1.4.7",
     "@jsenv/url-meta": "8.5.8",
-    "@jsenv/urls": "2.9.10",
+    "@jsenv/urls": "2.9.11",
     "lightningcss": "1.33.0",
     "rollup": "4.62.2"
   },

@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/sourcemap",
-  "version": "1.4.6",
+  "version": "1.4.7",
   "type": "module",
   "repository": {
     "type": "git",
@@ -16,7 +16,7 @@
     "@jridgewell/gen-mapping": "0.3.13",
     "@jridgewell/sourcemap-codec": "1.6.0",
     "@jridgewell/trace-mapping": "0.3.31",
-    "@jsenv/urls": "2.9.10",
+    "@jsenv/urls": "2.9.11",
     "magic-string": "1.2.3",
     "source-map-js": "1.2.1"
   },

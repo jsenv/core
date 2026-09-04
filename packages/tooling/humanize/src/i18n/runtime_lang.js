@@ -3,13 +3,13 @@
  * `lang` — an injectable source, deliberately free of any import.
  *
  * This module is the seam that keeps text formatting importable outside the
- * browser (`@jsenv/navi/format_time` from a backend, say): by default the
- * source is the runtime's own locale, exactly what Intl itself would pick.
- * The browser bundle swaps the source for `languagesSignal` (see
- * lang_signal.js), so the fallback follows the user's live language
- * preference — and because the source is read fresh on every call, reading it
- * during a component render subscribes the component the same way reading the
- * signal directly would.
+ * browser (a backend wording a date, say): by default the source is the
+ * runtime's own locale, exactly what Intl itself would pick. A frontend swaps
+ * the source for something live — @jsenv/navi points it at its
+ * `languagesSignal`, so the fallback follows the user's language preference,
+ * and because the source is read fresh on every call, reading it during a
+ * component render subscribes the component the same way reading the signal
+ * directly would.
  */
 
 let systemLocale;

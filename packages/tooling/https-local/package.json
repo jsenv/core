@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/https-local",
-  "version": "4.0.5",
+  "version": "4.0.6",
   "type": "module",
   "description": "A programmatic way to generate locally trusted certificates",
   "repository": {
@@ -37,9 +37,9 @@
     "test:start-node-server": "node ./scripts/certificate/start_node_server.mjs"
   },
   "dependencies": {
-    "@jsenv/filesystem": "4.15.20",
-    "@jsenv/humanize": "1.7.8",
-    "@jsenv/urls": "2.9.10",
+    "@jsenv/filesystem": "4.15.21",
+    "@jsenv/humanize": "1.8.0",
+    "@jsenv/urls": "2.9.11",
     "@vscode/sudo-prompt": "9.3.2",
     "command-exists": "1.2.9",
     "node-forge": "1.4.0",

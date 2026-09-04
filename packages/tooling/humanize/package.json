@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/humanize",
-  "version": "1.7.8",
+  "version": "1.8.0",
   "type": "module",
   "description": "Generate messages meant to read by humans",
   "repository": {
@@ -33,6 +33,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
+    "@jsenv/validity": "0.4.3",
     "ansi-escapes": "7.3.0",
     "strip-ansi": "7.2.0"
   },

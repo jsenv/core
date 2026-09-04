@@ -1,21 +1,29 @@
 /**
- * Pure vanilla JS time formatting utilities, usable outside the browser.
+ * Locale-aware time formatting: days, months, times of day, spans and
+ * durations, worded the way a reader of that language expects them.
  *
- * Exposed as `@jsenv/navi/format_time` so code that has no preact (a backend
- * writing dates into push notifications, say) shares the exact same wording
- * as the `<Time>` components. Everything this module imports must stay free
- * of preact/@preact/signals. `lang` defaults to the runtime language source
- * (see runtime_lang.js): `languagesSignal` in a browser bundle — live, and
- * subscribing a rendering component like any signal read — the runtime's own
- * locale elsewhere.
+ * It lives in a package with no frontend of its own so that a server and a
+ * browser word the same instant identically — a notification sentence and the
+ * card it points at must read the same date the same way. Nothing here touches
+ * the DOM, and nothing it imports may.
+ *
+ * `lang` defaults to the runtime language source (see ../i18n/runtime_lang.js):
+ * the runtime's own locale, or whatever a browser bundle installs in its place
+ * (@jsenv/navi points it at the user's live language preference, so reading it
+ * during a render subscribes the component). The words around the numbers come
+ * from humanizeI18n, their order and shape from Intl.
+ *
+ * Its neighbour ./time.js writes durations too, in English, for CLI
+ * output where readability beats precision — these write for the reader of an
+ * app, in their language.
  *
  * All functions accept an optional `{ now }` parameter for testability.
  */
 
 import { parseDuration } from "@jsenv/validity";
 
-import { naviI18n } from "./navi_i18n.js";
-import { getRuntimeLang } from "./runtime_lang.js";
+import { humanizeI18n } from "../i18n/humanize_i18n.js";
+import { getRuntimeLang } from "../i18n/runtime_lang.js";
 
 // Constructing an Intl formatter dominates the cost of a call (~19µs vs
 // ~0.4µs to format with a kept instance, node 26 on an M-series Mac) and
@@ -168,7 +176,7 @@ export const getRelativeDay = (date, { now = new Date() } = {}) => {
 const SENTINEL_DATE = new Date(9999, 10, 28); // 28 Nov 9999 — day≠month, both 2-digit
 
 const getToken = (key, lang) =>
-  naviI18n(`time.placeholder.${key}`, undefined, { lang });
+  humanizeI18n(`time.placeholder.${key}`, undefined, { lang });
 
 export const formatDatePlaceholder = ({ lang = getRuntimeLang() } = {}) => {
   const parts = memoIntl("DateTimeFormat", lang, {
@@ -426,7 +434,7 @@ export const formatTimeOfDay = (
   // losing the fact that it's midnight. Every other hour keeps at least its
   // own "N hour(s)" wording as a hint that this is a time-of-day — only
   // hour 0 loses that hint entirely.
-  const midnightWord = naviI18n("time.midnight", undefined, { lang });
+  const midnightWord = humanizeI18n("time.midnight", undefined, { lang });
   if (midnightWord === "time.midnight") {
     // No "midnight" translation registered for this language — fall back
     // to this language's own literal "0 heure(s)" wording instead (still
@@ -480,8 +488,9 @@ export const formatTimeOfDay = (
  *   renders its "--:--" placeholder.
  * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"compact"|"timestring", pad?: boolean, precision?: "hour"|"minute", separator?: string, timeZone?: string }} [options]
  *   `precision` writes both bounds at this precision instead of the one the
- *   pair calls for. `separator` defaults to the `"time.range_separator"` navi
- *   text (an en dash), tightened against both bounds in `format="compact"` —
+ *   pair calls for. `separator` defaults to the `"time.range_separator"`
+ *   registered text (an en dash), tightened against both bounds in
+ *   `format="compact"` —
  *   where the span is one short token — and spaced out otherwise. `timeZone`
  *   reads both bounds' clocks in that IANA zone — see {@link formatTimeOfDay}.
  *
@@ -498,7 +507,7 @@ export const formatTimeRange = (
     pad = true,
     timeZone,
     precision = resolveTimeRangePrecision(from, to, { format, pad, timeZone }),
-    separator = naviI18n("time.range_separator", undefined, { lang }),
+    separator = humanizeI18n("time.range_separator", undefined, { lang }),
   } = {},
 ) => {
   const boundOptions = { lang, format, pad, precision, timeZone };
@@ -631,9 +640,9 @@ export const formatMinuteDuration = (
     return fmt.format(duration);
   }
   // format="compact": "1j12h", "1h30", "45min", "2h" — no minute symbol when hours are present
-  const dSym = naviI18n("time.duration.day_symbol", undefined, { lang });
-  const hSym = naviI18n("time.duration.hour_symbol", undefined, { lang });
-  const mSym = naviI18n("time.duration.minute_symbol", undefined, { lang });
+  const dSym = humanizeI18n("time.duration.day_symbol", undefined, { lang });
+  const hSym = humanizeI18n("time.duration.hour_symbol", undefined, { lang });
+  const mSym = humanizeI18n("time.duration.minute_symbol", undefined, { lang });
   const dStr = d > 0 ? `${formatCompactNumber(d, lang)}${dSym}` : "";
   const hStr =
     clockStyle && pad
@@ -665,7 +674,9 @@ const formatSingleUnit = (value, unit, { lang, format }) => {
       [`${unit}s`]: value,
     });
   }
-  const symbol = naviI18n(`time.duration.${unit}_symbol`, undefined, { lang });
+  const symbol = humanizeI18n(`time.duration.${unit}_symbol`, undefined, {
+    lang,
+  });
   return `${formatCompactNumber(value, lang)}${symbol}`;
 };
 
@@ -740,10 +751,10 @@ export const formatSecondDuration = (
     return fmt.format(duration);
   }
   // compact: "1d1h30m45s", "1h30m45s", "1m30s", "45s"
-  const dSym = naviI18n("time.duration.day_symbol", undefined, { lang });
-  const hSym = naviI18n("time.duration.hour_symbol", undefined, { lang });
-  const mSym = naviI18n("time.duration.minute_symbol", undefined, { lang });
-  const sSym = naviI18n("time.duration.second_symbol", undefined, { lang });
+  const dSym = humanizeI18n("time.duration.day_symbol", undefined, { lang });
+  const hSym = humanizeI18n("time.duration.hour_symbol", undefined, { lang });
+  const mSym = humanizeI18n("time.duration.minute_symbol", undefined, { lang });
+  const sSym = humanizeI18n("time.duration.second_symbol", undefined, { lang });
   const parts = [];
   // h/m/s are bounded by construction (never need grouping); d can be
   // arbitrarily large for a long duration.
@@ -858,7 +869,7 @@ export const formatDuration = (
   const hasNonZero = (key) => has(key) && Number(duration[key]) !== 0;
 
   const sym = (key) =>
-    naviI18n(`time.duration.${key}_symbol`, undefined, { lang });
+    humanizeI18n(`time.duration.${key}_symbol`, undefined, { lang });
   const parts = [];
 
   if (hasNonZero("years")) {
@@ -984,7 +995,7 @@ const formatTimeAgo = (
  * Formats a timed event with an optional duration window.
  *
  * States:
- * - Future  (now < start)              → "dans 1 heure 30", "demain à 15h", …
+ * - Future  (now < start)              → "dans 1 heure et 30 minutes", "demain à 15 h", …
  * - Ongoing (start ≤ now < start+dur)  → "En cours"
  * - Past    (now ≥ start+dur)          → relative ("il y a 2 heures", …)
  *
@@ -994,7 +1005,7 @@ const formatTimeAgo = (
  *
  * @example
  * // 90 min from now
- * formatTimeRelative(Date.now() + 90 * 60_000, 0, { lang: "fr" }) // "dans 1 heure 30"
+ * formatTimeRelative(Date.now() + 90 * 60_000, 0, { lang: "fr" }) // "dans 1 heure et 30 minutes"
  * // currently happening (30 min window)
  * formatTimeRelative(Date.now() - 5 * 60_000, 30 * 60_000, { lang: "fr" }) // "En cours"
  * // ended 2 hours ago
@@ -1051,7 +1062,7 @@ const formatFuture = (date, diff, { lang, now, format = "long" }) => {
       lang,
       format,
     });
-    const template = naviI18n("time.in_duration", undefined, { lang });
+    const template = humanizeI18n("time.in_duration", undefined, { lang });
     if (template !== "time.in_duration") {
       return template.replace("[duration]", duration);
     }
@@ -1102,7 +1113,7 @@ const formatTomorrowAt = (date, lang) => {
     hour: "numeric",
     ...(hasMinutes ? { minute: "2-digit" } : {}),
   }).format(date);
-  const atTemplate = naviI18n("time.tomorrow_at", undefined, {
+  const atTemplate = humanizeI18n("time.tomorrow_at", undefined, {
     lang,
   });
   // atTemplate is e.g. "[day] à [time]" — replace placeholders
@@ -1114,11 +1125,11 @@ const formatTomorrowAt = (date, lang) => {
 };
 
 const getLessThanMinuteText = (lang) => {
-  return naviI18n("time.less_than_minute", undefined, { lang });
+  return humanizeI18n("time.less_than_minute", undefined, { lang });
 };
 
 const getOngoingText = (lang) => {
-  return naviI18n("time.ongoing", undefined, { lang });
+  return humanizeI18n("time.ongoing", undefined, { lang });
 };
 
 const MINUTE = 60_000;

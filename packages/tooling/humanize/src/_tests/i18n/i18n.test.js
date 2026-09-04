@@ -1,6 +1,6 @@
 import { snapshotTests } from "@jsenv/snapshot";
 
-import { createI18n } from "../i18n.js";
+import { createI18n } from "@jsenv/humanize";
 
 await snapshotTests(import.meta.url, ({ test }) => {
   // --- opaque keys (default mode) ---

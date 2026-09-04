@@ -267,9 +267,11 @@ export { BadgeList } from "./src/text/badge_list.jsx";
 export { Caption } from "./src/text/caption.jsx";
 export { Code } from "./src/text/code.jsx";
 export { Color } from "./src/text/color.jsx";
-export { createI18n } from "./src/text/i18n.js";
-export { formatNumber } from "./src/text/format_number.js";
+// The text formatting @jsenv/humanize owns — navi hands it back so an app
+// building on navi does not have to install a second package to word a date;
+// a server sharing that wording imports it from @jsenv/humanize directly.
 export {
+  createI18n,
   formatDatetime,
   formatDay,
   formatDayRelative,
@@ -277,15 +279,16 @@ export {
   formatHourDuration,
   formatMinuteDuration,
   formatMonth,
+  formatNumber,
   formatSecondDuration,
   formatTime,
   formatTimeOfDay,
   formatTimeRange,
   formatTimeRelative,
-} from "./src/text/format_time.js";
+  interpolateText,
+} from "@jsenv/humanize";
 export { Icon } from "./src/text/text.jsx";
 export { Interpolate } from "./src/text/interpolate.jsx";
-export { interpolateText } from "./src/text/interpolate_text.js";
 export {
   languagesSignal,
   setPreferredLanguage,

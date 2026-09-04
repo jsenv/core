@@ -1,9 +1,4 @@
 import {
-  durationToISOString,
-  durationToSeconds,
-  parseDuration,
-} from "@jsenv/validity";
-import {
   formatDatePlaceholder,
   formatDatetime,
   formatDatetimePlaceholder,
@@ -23,7 +18,13 @@ import {
   resolveTimeRangePrecision,
   toDate,
   toTimeOfDay,
-} from "./format_time.js";
+} from "@jsenv/humanize";
+import {
+  durationToISOString,
+  durationToSeconds,
+  parseDuration,
+} from "@jsenv/validity";
+
 import { languagesSignal } from "./lang_signal.js";
 import { naviI18n } from "./navi_i18n.js";
 import { Text } from "./text.jsx";

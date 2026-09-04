@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-toolbar",
-  "version": "1.5.39",
+  "version": "1.5.40",
   "type": "module",
   "repository": {
     "type": "git",
@@ -28,7 +28,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@jsenv/ast": "6.10.1"
+    "@jsenv/ast": "6.10.2"
   },
   "devDependencies": {
     "@jsenv/core": "../../../",

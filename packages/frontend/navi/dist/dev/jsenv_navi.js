@@ -9,9 +9,10 @@ export { chainEvent, clickIsSuppressed, contrastColor, createDragGestureControll
 import { signal, computed, effect, untracked, batch, useComputed, useSignal } from "@preact/signals";
 import { isValidElement, createContext, render, h, toChildArray, options, cloneElement, Fragment as Fragment$1 } from "preact";
 import { useErrorBoundary, useLayoutEffect, useContext, useCallback, useRef, useState, useEffect, useMemo, useId } from "preact/hooks";
-import { jsxs, jsx as jsx$1, Fragment } from "preact/jsx-runtime";
-import { prefixFirstAndIndentRemainingLines } from "@jsenv/humanize";
-import { parseDuration, durationContainsNaN, compareTwoDurations, durationToSeconds, DISPLAYABLE_RULE, MAX_LINE_BREAKS_RULE, NO_EMOJI_RULE, SINGLE_SPACE_RULE, createValidity, resolveCharClass, getCharClassMessageKey, compileCharClassAnchored, compileCharClass, CHAR_CLASS_PRESETS, durationToISOString } from "@jsenv/validity";
+import { humanizeI18n, prefixFirstAndIndentRemainingLines, setRuntimeLangSource, formatDuration, formatMonth, formatDay, resolveTimeRangePrecision, formatDatePlaceholder, toDate, getRelativeDay, formatDayRelative, formatMonthPlaceholder, formatWeekPlaceholder, formatDatetimePlaceholder, formatDatetime, toTimeOfDay, formatTimeOfDay, formatTime, formatMinuteDuration, formatSecondDuration, formatHourDuration, formatTimeRelative, formatNumber, interpolateText, installInterpolateJsx } from "@jsenv/humanize";
+export { createI18n, formatDatetime, formatDay, formatDayRelative, formatDuration, formatHourDuration, formatMinuteDuration, formatMonth, formatNumber, formatSecondDuration, formatTime, formatTimeOfDay, formatTimeRange, formatTimeRelative, interpolateText } from "@jsenv/humanize";
+import { jsxs, jsx, Fragment } from "preact/jsx-runtime";
+import { durationContainsNaN, compareTwoDurations, durationToSeconds, DISPLAYABLE_RULE, MAX_LINE_BREAKS_RULE, NO_EMOJI_RULE, SINGLE_SPACE_RULE, createValidity, resolveCharClass, getCharClassMessageKey, compileCharClassAnchored, compileCharClass, CHAR_CLASS_PRESETS, parseDuration, durationToISOString } from "@jsenv/validity";
 export { compareTwoDurations, durationContainsNaN, durationToHours, durationToISOString, durationToMinutes, durationToNumber, durationToSeconds, durationToString, parseDuration } from "@jsenv/validity";
 import { Suspense, createPortal, forwardRef } from "preact/compat";
 
@@ -533,420 +534,6 @@ effect(() => {
   armUrlTarget(documentUrl);
 });
 
-// The JSX half of interpolation (VNode detection, fragment assembly) is
-// installed by interpolate.jsx rather than imported: this module sits under
-// createI18n and the pure formatters (format_time.js), which must stay
-// importable where preact is not installed. Until installed, a VNode
-// replacement is neither detected nor assembled — values are joined as
-// strings — which is only reachable by passing a VNode without going through
-// <Interpolate>.
-let jsx = null;
-const installInterpolateJsx = (runtime) => {
-  jsx = runtime;
-};
-
-/**
- * Interpolates a template string, replacing `[key]` placeholders with values.
- *
- * Usable on its own — no i18n instance required — whenever a sentence should
- * stay readable as one string instead of being cut into JSX expressions or
- * concatenations. `<Interpolate>` is the JSX form of this function, and
- * `createI18n` runs every translation through it. See `docs/i18n.md`.
- *
- * `[]` was chosen as the placeholder delimiter (rather than `{}` or `{{}}`)
- * because it does not conflict with JSX syntax, JavaScript template literals,
- * or common punctuation in translated strings.
- *
- * @param {string} template
- *   e.g. `"Hello [name], you have [count] messages"`. A non-string is returned
- *   untouched, as is any template when `replacements` is missing.
- * @param {object} [replacements]
- *   Values keyed by placeholder name. A key can be:
- *   - a direct name — `[name]` ← `{ name: "Alice" }`
- *   - a dot-path — `[item.label]` ← `{ item: { label: "Book" } }` (a literal
- *     `"item.label"` key wins over the path)
- *
- *   A value that is a function is called at that point, so an expensive or
- *   lazily-known replacement is only computed when the placeholder is actually
- *   present in this language's template.
- *
- *   A placeholder with no matching value is left in the output as-is
- *   (`"[name]"`), making the gap visible rather than silently empty.
- * @param {object} [options]
- * @param {boolean} [options.allowJsx=false]
- *   Allow VNode replacements (what `<Interpolate>` passes). Without it, a VNode
- *   value warns and is coerced to a string.
- * @returns {string|import("preact").VNode}
- *   A plain string when every replacement is a string, a Preact fragment when
- *   at least one VNode was interpolated with `allowJsx`.
- */
-const interpolateText = (
-  template,
-  replacements,
-  { allowJsx = false } = {},
-) => {
-  if (!replacements || typeof template !== "string") {
-    return template;
-  }
-  const parts = template.split(/(\[[^\]]+\])/);
-  let hasVnode = false;
-  const resolved = [];
-  for (const part of parts) {
-    const match = part.match(/^\[([^\]]+)\]$/);
-    if (!match) {
-      resolved.push(part);
-      continue;
-    }
-    const key = match[1];
-    let value = resolveValue(replacements, key, part);
-    if (typeof value === "function") {
-      value = value();
-    }
-    if (jsx && jsx.isValidElement(value)) {
-      if (allowJsx) {
-        hasVnode = true;
-      } else {
-        console.warn(
-          `interpolateText: VNode passed for placeholder [${match[1]}] but allowJsx is false — value coerced to string`,
-        );
-      }
-    }
-    resolved.push(value);
-  }
-  if (!hasVnode) {
-    return resolved.join("");
-  }
-  return jsx.createFragment(resolved);
-};
-
-// Resolves a placeholder key against the replacements object.
-// 1. Direct lookup: replacements["item.name"]
-// 2. Dot-path lookup: replacements["item"]["name"]
-// 3. Fallback: the original placeholder string (e.g. "[item.name]")
-const resolveValue = (replacements, key, fallback) => {
-  if (key in replacements) {
-    return replacements[key];
-  }
-  const dotIndex = key.indexOf(".");
-  if (dotIndex !== -1) {
-    const head = key.slice(0, dotIndex);
-    const tail = key.slice(dotIndex + 1);
-    const parent = replacements[head];
-    if (parent && typeof parent === "object") {
-      const nested = parent[tail];
-      if (nested !== undefined) {
-        return nested;
-      }
-    }
-  }
-  return fallback;
-};
-
-/**
- * The language every formatter/i18n call falls back to when it is given no
- * `lang` — an injectable source, deliberately free of any import.
- *
- * This module is the seam that keeps text formatting importable outside the
- * browser (`@jsenv/navi/format_time` from a backend, say): by default the
- * source is the runtime's own locale, exactly what Intl itself would pick.
- * The browser bundle swaps the source for `languagesSignal` (see
- * lang_signal.js), so the fallback follows the user's live language
- * preference — and because the source is read fresh on every call, reading it
- * during a component render subscribes the component the same way reading the
- * signal directly would.
- */
-
-let systemLocale;
-let runtimeLangSource = () => {
-  systemLocale ??= new Intl.DateTimeFormat().resolvedOptions().locale;
-  return systemLocale;
-};
-
-const getRuntimeLang = () => runtimeLangSource();
-
-/**
- * @param {() => string|string[]} source - Returns the language (BCP 47 tag,
- *   or an ordered preference array) to use when a call passes no `lang`.
- */
-const setRuntimeLangSource = (source) => {
-  runtimeLangSource = source;
-};
-
-/**
- * Creates a lightweight i18n instance: a central place where an app declares
- * its texts once and reads them back translated into the active language.
- *
- * Worth using even in a single-language app — one registry beats strings
- * scattered across components, and adding a second language later becomes a
- * data change instead of a refactor. See `docs/i18n.md` for how to choose
- * between the two key styles below and how this relates to `naviI18n`.
- *
- * @param {object} [options]
- * @param {string} [options.keyLang]
- *   When set, each key also serves as its own translation for `keyLang`.
- *   This allows writing keys directly in that language (typically the language
- *   the app is written in) so only *other* languages need registering:
- *
- *   ```js
- *   const i18n = createI18n({ keyLang: "en" });
- *   i18n.add("Hello [name]!", { fr: "Bonjour [name] !" });
- *   i18n("Hello [name]!", { name: "Alice" }, { lang: "en" }); // "Hello Alice!"
- *   i18n("Hello [name]!", { name: "Alice" }, { lang: "fr" }); // "Bonjour Alice !"
- *   ```
- *
- *   `keyLang` only applies to keys passed to `add()`/`addAll()`; a key never
- *   registered stays opaque and comes back as-is.
- *
- *   Without `keyLang`, keys are opaque identifiers and every language
- *   (including the one the app was written in) must be registered explicitly:
- *
- *   ```js
- *   const i18n = createI18n();
- *   i18n.add("greeting", { en: "Hello [name]!", fr: "Bonjour [name] !" });
- *   i18n("greeting", { name: "Alice" }, { lang: "en" }); // "Hello Alice!"
- *   ```
- *
- * @param {string} [options.fallbackLang]
- *   Language consulted when the active language has no translation for a key
- *   — per key, not per language: a partially translated language falls through
- *   to `fallbackLang` only for the keys it is missing. Without it, a missing
- *   translation returns the key itself.
- *
- * @param {string|string[]} [options.runtimeLang]
- *   The active language (BCP 47 tag or ordered array of tags) — named
- *   "runtime" rather than "system" because there is no actual access to the
- *   OS/user's system language from a browser, only `navigator.languages` (or
- *   an explicit override) at runtime. Defaults to the shared runtime language
- *   source (see runtime_lang.js) — `languagesSignal.value` in a browser
- *   bundle, the runtime's own locale elsewhere — read fresh on every
- *   `format()`/`has()` call (not frozen at creation time), so overriding the
- *   language app-wide via `setPreferredLanguage()`/`setSupportedLanguages()`
- *   (see lang_signal.js) is picked up here too.
- *   Passing an explicit `runtimeLang` opts out of that and stays fixed for
- *   this instance's whole lifetime.
- *
- * ---
- *
- * ## Registration
- *
- * **`i18n.add(key, { lang: "translation" })`** — one key, multiple languages.
- *
- * **`i18n.addAll({ key: { lang: "translation" }, ... })`** — multiple keys at once.
- *
- * **`i18n.addLangKeys(lang, { key: "translation", ... })`** — full language pack
- * (useful when loading a JSON translation file).
- *
- * All three accumulate: registering a key that already exists overwrites that
- * one key and leaves the rest of the language untouched. This is what lets an
- * app override a single built-in navi text without redeclaring the others.
- *
- * A regional variant (e.g. `"fr-CA"`) automatically inherits all keys from its
- * parent (`"fr"`) that it does not explicitly override:
- * ```js
- * i18n.addLangKeys("fr", { hello: "Bonjour !" });
- * i18n.addLangKeys("fr-CA", { hello: "Allo !" }); // other "fr" keys inherited
- * ```
- * Inheritance is resolved at registration time, so register the parent first.
- *
- * ---
- *
- * ## Reading
- *
- * **`i18n(key, values?, { lang? })`** — the translation for `key`, with
- * `[placeholder]` occurrences replaced from `values` (see `interpolateText`).
- * Returns `key` itself when nothing matches, so an untranslated string still
- * renders something readable. `i18n.format` is an alias of this call.
- *
- * **`i18n.has(key, { lang? })`** — whether a translation genuinely exists,
- * i.e. how to tell "no translation" apart from "translation equal to the key".
- *
- * @returns {Function & { add, addAll, addLangKeys, has, format, languageMap }}
- */
-const createI18n = ({ keyLang, fallbackLang, runtimeLang } = {}) => {
-  const languageMap = new Map();
-  // Bumped by addLangKeys — the only thing besides the active lang itself
-  // that could change what getActiveLang()/getResolvedFallbackLang() below
-  // resolve to, so it's what invalidates their own small caches.
-  let languageMapVersion = 0;
-
-  // Without an explicit runtimeLang, the runtime language source is re-read
-  // fresh on every call rather than frozen here — freezing it would silently
-  // ignore setPreferredLanguage()/setSupportedLanguages() (see lang_signal.js)
-  // for the rest of this instance's life.
-  const hasExplicitRuntimeLang = runtimeLang !== undefined;
-
-  // matchBestLang does real work (a Map lookup per candidate, a possible
-  // "fr-CA" → "fr" split-and-retry loop) — worth skipping on every single
-  // format()/has() call in the common case, since what it resolves to only
-  // ever changes when languageMap itself changes (addLangKeys) or, for the
-  // non-explicit case, when the runtime lang itself changes (preferred
-  // language, supported languages, or "languagechange" — see lang_signal.js;
-  // its languagesSignal is a computed() so its reference is stable when none
-  // of its own dependencies actually changed, and the signal-free fallback is
-  // a cached string) — comparing those two cheaply (===) is enough to know
-  // the cached result below is still valid.
-  let cachedActiveLang;
-  let cachedActiveLangRuntimeLang;
-  let cachedActiveLangVersion = -1;
-  const getActiveLang = () => {
-    const currentRuntimeLang = hasExplicitRuntimeLang
-      ? runtimeLang
-      : getRuntimeLang();
-    if (
-      cachedActiveLangVersion === languageMapVersion &&
-      cachedActiveLangRuntimeLang === currentRuntimeLang
-    ) {
-      return cachedActiveLang;
-    }
-    cachedActiveLang = matchBestLang(currentRuntimeLang, languageMap);
-    cachedActiveLangVersion = languageMapVersion;
-    cachedActiveLangRuntimeLang = currentRuntimeLang;
-    return cachedActiveLang;
-  };
-
-  // fallbackLang is a plain, never-reactive option set once at creation —
-  // its own resolution only ever needs recomputing when languageMap does.
-  let cachedResolvedFallbackLang;
-  let cachedResolvedFallbackLangVersion = -1;
-  const getResolvedFallbackLang = () => {
-    if (!fallbackLang) {
-      return null;
-    }
-    if (cachedResolvedFallbackLangVersion === languageMapVersion) {
-      return cachedResolvedFallbackLang;
-    }
-    cachedResolvedFallbackLang = matchBestLang(fallbackLang, languageMap);
-    cachedResolvedFallbackLangVersion = languageMapVersion;
-    return cachedResolvedFallbackLang;
-  };
-
-  const addLangKeys = (lang, translations) => {
-    // Accumulate: merge with any existing translations for this lang
-    const existing = languageMap.get(lang);
-    if (existing) {
-      translations = { ...existing, ...translations };
-    }
-    // A regional variant inherits all keys not explicitly overridden
-    // e.g. "fr-CA" inherits from "fr"
-    const dashIndex = lang.indexOf("-");
-    if (dashIndex !== -1) {
-      const parentLang = lang.slice(0, dashIndex);
-      const parentTranslations = languageMap.get(parentLang);
-      if (parentTranslations) {
-        translations = { ...parentTranslations, ...translations };
-      }
-    }
-    languageMap.set(lang, translations);
-    languageMapVersion++;
-  };
-
-  const add = (key, langTranslations) => {
-    if (keyLang && !(keyLang in langTranslations)) {
-      // Auto-register the key itself as the translation for keyLang
-      addLangKeys(keyLang, { [key]: key });
-    }
-    for (const [lang, value] of Object.entries(langTranslations)) {
-      addLangKeys(lang, { [key]: value });
-    }
-  };
-
-  const addAll = (keyMap) => {
-    for (const [key, langTranslations] of Object.entries(keyMap)) {
-      add(key, langTranslations);
-    }
-  };
-
-  const _getTemplate = (key, lang) => {
-    // matchBestLang, not matchLang directly: lang can be an array (e.g.
-    // languagesSignal.value is always an ordered array — see lang_signal.js) and
-    // matchLang alone assumes a plain string, throwing
-    // on .split() otherwise.
-    const resolvedLang = lang ? matchBestLang(lang, languageMap) : null;
-    if (resolvedLang) {
-      const translations = languageMap.get(resolvedLang);
-      const translated = translations[key];
-      if (translated !== undefined) {
-        return translated;
-      }
-    }
-    const resolvedFallbackLang = getResolvedFallbackLang();
-    if (resolvedFallbackLang) {
-      const fallbackTranslations = languageMap.get(resolvedFallbackLang);
-      const fallbackTranslated = fallbackTranslations[key];
-      if (fallbackTranslated !== undefined) {
-        return fallbackTranslated;
-      }
-    }
-    // No translation found — return key as-is (opaque fallback)
-    return key;
-  };
-
-  const format = (key, values, { lang = getActiveLang() } = {}) => {
-    const template = _getTemplate(key, lang);
-    return interpolateText(template, values);
-  };
-
-  const has = (key, { lang = getActiveLang() } = {}) => {
-    const resolvedLang = lang ? matchBestLang(lang, languageMap) : null;
-    if (resolvedLang) {
-      const translations = languageMap.get(resolvedLang);
-      if (translations && key in translations) {
-        return true;
-      }
-    }
-    const resolvedFallbackLang = getResolvedFallbackLang();
-    if (resolvedFallbackLang) {
-      const fallbackTranslations = languageMap.get(resolvedFallbackLang);
-      if (fallbackTranslations && key in fallbackTranslations) {
-        return true;
-      }
-    }
-    return false;
-  };
-
-  // The i18n instance is itself a callable function
-  const i18n = (key, values, opts) => format(key, values, opts);
-  i18n.add = add;
-  i18n.addAll = addAll;
-  i18n.addLangKeys = addLangKeys;
-  i18n.has = has;
-  i18n.format = format;
-  i18n.languageMap = languageMap;
-
-  return i18n;
-};
-
-// Walk "fr-CA-variant" → "fr-CA" → "fr" until a registered lang is found
-const matchLang = (lang, languageMap) => {
-  if (languageMap.has(lang)) {
-    return lang;
-  }
-  const parts = lang.split("-");
-  while (parts.length > 1) {
-    parts.pop();
-    const candidate = parts.join("-");
-    if (languageMap.has(candidate)) {
-      return candidate;
-    }
-  }
-  return null;
-};
-
-// lang can be a string or an ordered array of preference strings
-const matchBestLang = (lang, languageMap) => {
-  if (!lang) {
-    return null;
-  }
-  const candidates = Array.isArray(lang) ? lang : [lang];
-  for (const candidate of candidates) {
-    const match = matchLang(candidate, languageMap);
-    if (match) {
-      return match;
-    }
-  }
-  return null;
-};
-
 /**
  * The shared i18n instance holding every text @jsenv/navi components display
  * on their own — validation messages, button labels, empty-list messages,
@@ -958,6 +545,11 @@ const matchBestLang = (lang, languageMap) => {
  * opaque identifiers (`"list.empty"`), never the English sentence — the
  * opposite of what an app is advised to do. `docs/i18n.md` explains why.
  *
+ * It is `humanizeI18n` itself, the registry @jsenv/humanize keeps for the
+ * built-in texts of jsenv libraries: navi registers its keys in it, the
+ * formatters (`formatDay`, `formatDuration`…) read their own `time.*` words
+ * from it, and an app overriding any of them has a single handle for both.
+ *
  * The active language is read from `languagesSignal` (see lang_signal.js —
  * combines the browser's own `navigator.languages`, an optional
  * `setPreferredLanguage()` user override, and an optional
@@ -966,7 +558,7 @@ const matchBestLang = (lang, languageMap) => {
  * Built-in key namespaces, all overridable — the registrations below are the
  * exhaustive list, read them to find the exact key to override:
  *   - `"button.*"`     — Clear, Reset, Send, Open, Close, Cancel, Confirm…
- *   - `"time.*"`       — relative time wording, duration unit symbols, date field placeholders
+ *   - `"time.*"`       — what a clock writes between hours and minutes, and how the two ends of a span are named; the wording the formatters use is registered by @jsenv/humanize
  *   - `"spin.*"`       — the ends of a steppable range
  *   - `"list.*"`       — empty/no-match/failed-rows messages
  *   - `"badge_list.*"` — the "+[count] more" overflow badge
@@ -993,7 +585,7 @@ const matchBestLang = (lang, languageMap) => {
  *   ticket__plural: { en: "tickets", fr: "billets" },
  * });
  */
-const naviI18n = createI18n();
+const naviI18n = humanizeI18n;
 
 naviI18n.addAll({
   "button.clear": {
@@ -1039,174 +631,6 @@ naviI18n.addAll({
   "button.remove": {
     en: "Remove",
     fr: "Retirer",
-  },
-});
-
-// Default built-in translations — apps can override any key via add()
-naviI18n.addAll({
-  "time.less_than_minute": {
-    en: "in less than a minute",
-    fr: "dans moins d'une minute",
-    de: "in weniger als einer Minute",
-    es: "en menos de un minuto",
-    it: "in meno di un minuto",
-    pt: "em menos de um minuto",
-    nl: "over minder dan een minuut",
-  },
-  "time.ongoing": {
-    en: "Ongoing",
-    fr: "En cours",
-    de: "Laufend",
-    es: "En curso",
-    it: "In corso",
-    pt: "Em andamento",
-    nl: "Bezig",
-  },
-  // [day] and [time] are replaced at runtime with the localized day/time strings
-  "time.tomorrow_at": {
-    en: "[day] at [time]",
-    fr: "[day] à [time]",
-    de: "[day] um [time]",
-    es: "[day] a las [time]",
-    it: "[day] alle [time]",
-    pt: "[day] às [time]",
-    nl: "[day] om [time]",
-  },
-  // [duration] is replaced at runtime with the formatted duration string (e.g. "1h30", "45 min")
-  "time.in_duration": {
-    en: "in [duration]",
-    fr: "dans [duration]",
-    de: "in [duration]",
-    es: "en [duration]",
-    it: "tra [duration]",
-    pt: "em [duration]",
-    nl: "over [duration]",
-  },
-  // Substituted in place of the "0 heure(s)" part of an Intl-generated
-  // duration string when <Time type="time" format="long"> renders midnight
-  // — see time.jsx's own TimeTime for why midnight can't just fall through
-  // to formatMinuteDuration like every other hour does, and how this word
-  // gets spliced in (formatToParts, not string concatenation) so the rest
-  // of the sentence (conjunction, minutes) still comes out in whatever
-  // grammar/word order this language's own Intl.DurationFormat produces.
-  // Languages without an entry here fall back to that language's own
-  // literal "0 heure(s)" wording instead (see TimeTime), never to this key.
-  "time.midnight": {
-    en: "midnight",
-    fr: "minuit",
-    de: "Mitternacht",
-    es: "medianoche",
-    it: "mezzanotte",
-    pt: "meia-noite",
-    nl: "middernacht",
-  },
-  // What <TimeRange> writes between the two bounds of a span — "8h–10h",
-  // "11 mai – 14 mai". An en dash, the mark for a span, not a hyphen.
-  "time.range_separator": {
-    en: "–",
-    fr: "–",
-    de: "–",
-    es: "–",
-    it: "–",
-    pt: "–",
-    nl: "–",
-  },
-  // Compact duration unit symbols used in "1h30", "45min", "2d", etc.
-  "time.duration.year_symbol": {
-    en: "y",
-    fr: "a",
-    de: "J",
-    es: "a",
-    it: "a",
-    pt: "a",
-    nl: "j",
-    ja: "年",
-    zh: "年",
-    ko: "년",
-  },
-  "time.duration.month_symbol": {
-    en: "mo",
-    fr: "mo",
-    de: "Mo",
-    es: "mo",
-    it: "mo",
-    pt: "mo",
-    nl: "mo",
-    ja: "月",
-    zh: "月",
-    ko: "월",
-  },
-  "time.duration.week_symbol": {
-    en: "w",
-    fr: "sem",
-    de: "W",
-    es: "sem",
-    it: "sett",
-    pt: "sem",
-    nl: "w",
-    ja: "週",
-    zh: "周",
-    ko: "주",
-  },
-  "time.duration.day_symbol": {
-    en: "d",
-    fr: "j",
-    de: "T",
-    es: "d",
-    it: "g",
-    pt: "d",
-    nl: "d",
-    ja: "日",
-    zh: "天",
-    ko: "일",
-  },
-  "time.duration.hour_symbol": {
-    en: "h",
-    fr: "h",
-    de: "h",
-    es: "h",
-    it: "h",
-    pt: "h",
-    nl: "u",
-    ja: "時間",
-    zh: "小时",
-    ko: "시간",
-  },
-  "time.duration.minute_symbol": {
-    en: "min",
-    fr: "min",
-    de: "min",
-    es: "min",
-    it: "min",
-    pt: "min",
-    nl: "min",
-    ja: "分",
-    zh: "分",
-    ko: "분",
-  },
-  "time.duration.second_symbol": {
-    en: "s",
-    fr: "s",
-    de: "s",
-    es: "s",
-    it: "s",
-    pt: "s",
-    nl: "s",
-    ja: "秒",
-    zh: "秒",
-    ko: "초",
-  },
-  "time.duration.millisecond_symbol": {
-    en: "ms",
-    fr: "ms",
-    de: "ms",
-    es: "ms",
-    it: "ms",
-    pt: "ms",
-    nl: "ms",
-    ja: "ms",
-    zh: "ms",
-    ko: "ms",
   },
 });
 
@@ -1839,65 +1263,6 @@ naviI18n.addAll({
   "constraint.guard.max_length.selection": {
     fr: "[max] max.",
     en: "[max] max.",
-  },
-});
-
-// Date/time placeholder tokens — shown when no value is selected
-// Override any key to adapt to your language conventions
-naviI18n.addAll({
-  "time.placeholder.day": {
-    fr: "jj",
-    en: "dd",
-    de: "TT",
-    es: "dd",
-    it: "gg",
-    pt: "dd",
-    nl: "dd",
-  },
-  "time.placeholder.month": {
-    fr: "mm",
-    en: "mm",
-    de: "MM",
-    es: "mm",
-    it: "mm",
-    pt: "mm",
-    nl: "mm",
-  },
-  "time.placeholder.year": {
-    fr: "aaaa",
-    en: "yyyy",
-    de: "JJJJ",
-    es: "aaaa",
-    it: "aaaa",
-    pt: "aaaa",
-    nl: "jjjj",
-  },
-  "time.placeholder.hour": {
-    fr: "hh",
-    en: "hh",
-    de: "hh",
-    es: "hh",
-    it: "hh",
-    pt: "hh",
-    nl: "uu",
-  },
-  "time.placeholder.minute": {
-    fr: "mm",
-    en: "mm",
-    de: "mm",
-    es: "mm",
-    it: "mm",
-    pt: "mm",
-    nl: "mm",
-  },
-  "time.placeholder.week": {
-    fr: "sem.",
-    en: "wk",
-    de: "KW",
-    es: "sem.",
-    it: "sett.",
-    pt: "sem.",
-    nl: "wk",
   },
 });
 
@@ -6432,16 +5797,16 @@ const useCalloutRequestClose = () => {
 const useCalloutElement = () => {
   return useContext(CalloutContext)?.element;
 };
-const renderIntoCallout = (jsx, calloutMessageElement, {
+const renderIntoCallout = (jsx$1, calloutMessageElement, {
   requestClose,
   element
 }) => {
-  const calloutJsx = jsx$1(CalloutContext.Provider, {
+  const calloutJsx = jsx(CalloutContext.Provider, {
     value: {
       requestClose,
       element
     },
-    children: jsx
+    children: jsx$1
   });
   render(calloutJsx, calloutMessageElement);
 };
@@ -6572,15 +5937,15 @@ const CalloutStatusIcon = ({
   shape = "square"
 }) => {
   import.meta.css = [css$13, "@jsenv/navi/src/control/rules/callout/callout_status_icon.jsx"];
-  return jsx$1("span", {
+  return jsx("span", {
     className: "navi_callout_status_icon",
     "data-status": status === "none" ? undefined : status,
     "data-shape": shape === "circle" ? "circle" : undefined,
     "aria-hidden": "true",
-    children: jsx$1("svg", {
+    children: jsx("svg", {
       viewBox: CALLOUT_STATUS_GLYPH_VIEWBOX,
       xmlns: "http://www.w3.org/2000/svg",
-      children: jsx$1("path", {
+      children: jsx("path", {
         fill: "currentColor",
         d: CALLOUT_STATUS_GLYPH_PATH
       })
@@ -8697,1213 +8062,6 @@ const DISABLED_CONSTRAINT = {
 };
 CONSTRAINT_ATTRIBUTE_SET.add("disabled");
 CONSTRAINT_ATTRIBUTE_SET.add("data-disabled");
-
-/**
- * Pure vanilla JS time formatting utilities, usable outside the browser.
- *
- * Exposed as `@jsenv/navi/format_time` so code that has no preact (a backend
- * writing dates into push notifications, say) shares the exact same wording
- * as the `<Time>` components. Everything this module imports must stay free
- * of preact/@preact/signals. `lang` defaults to the runtime language source
- * (see runtime_lang.js): `languagesSignal` in a browser bundle — live, and
- * subscribing a rendering component like any signal read — the runtime's own
- * locale elsewhere.
- *
- * All functions accept an optional `{ now }` parameter for testability.
- */
-
-
-// Constructing an Intl formatter dominates the cost of a call (~19µs vs
-// ~0.4µs to format with a kept instance, node 26 on an M-series Mac) and
-// these formatters run in render loops — a card easily writes half a dozen
-// per render — so every instance is memoized by (constructor, lang,
-// options). lang and each option value come from small closed sets, so the
-// cache stays bounded.
-const intlCache = new Map();
-const memoIntl = (constructorName, lang, options) => {
-  let key = `${constructorName}|${Array.isArray(lang) ? lang.join() : lang}`;
-  if (options) {
-    for (const optionName of Object.keys(options)) {
-      key += `|${optionName}:${options[optionName]}`;
-    }
-  }
-  const cached = intlCache.get(key);
-  if (cached) {
-    return cached;
-  }
-  const formatter = new Intl[constructorName](lang, options);
-  intlCache.set(key, formatter);
-  return formatter;
-};
-
-// Our own compact/custom duration notation interpolates raw numbers
-// directly (unlike Intl.DurationFormat, which groups thousands on its own,
-// e.g. "5 400 secondes") — this keeps that consistent without reimplementing
-// locale-aware grouping. Falls back to the raw value as-is for a
-// non-numeric mid-edit value (e.g. "2a"), which Intl.NumberFormat can't
-// format anyway.
-const formatCompactNumber = (value, lang) => {
-  const n = Number(value);
-  return Number.isFinite(n) ? memoIntl("NumberFormat", lang).format(n) : value;
-};
-
-/**
- * Formats a date as a human-readable day string.
- *
- * @param {Date} date
- * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"numeric"|{ weekday?: "long"|"short"|"narrow"|false, day?: boolean, month?: "long"|"short"|"narrow"|"numeric"|false }, year?: boolean|"auto", now?: Date, timeZone?: string }} [options]
- *   A string spells the weekday and the month the same way. An object spells
- *   them apart, each key defaulting to `"long"`: a narrow card usually wants
- *   the weekday whole (it is the reading anchor) and the month abbreviated (it
- *   is where the characters are — "septembre" is 9 of them, "sept." reads the
- *   same). `"numeric"` stays a string-only spelling: it drops the weekday and
- *   writes the whole date in digits.
- *
- *   In the object form, `false` drops a part: `{ day: false, month: false }`
- *   writes the weekday alone ("mardi"), `{ month: false }` the weekday and
- *   day-of-month ("mardi 18"), `{ weekday: false }` the date without its
- *   anchor ("18 juillet"). At least one part must stay — with all three
- *   dropped, Intl falls back to its own default date spelling.
- * @param {boolean|"auto"} [options.year=true]
- *   Whether the `"numeric"` spelling writes the year: `false` drops it
- *   ("30/07", the day/month order still following the locale), `"auto"` drops
- *   it only when the date is in the current year (`now`'s year). The spelled
- *   formats never write the year, so they ignore it.
- * @param {string} [options.timeZone]
- *   IANA zone the instant is worded in ("Europe/Paris"); defaults to the
- *   runtime's own zone. The case is a server wording an instant for readers
- *   in a known zone — a game at 00:30 Paris must not be dated the previous
- *   day just because the process clock runs on UTC. `year: "auto"` reads both
- *   years in that zone too.
- *
- * @example
- * formatDay(new Date(), { lang: "fr" })                    // "lundi 11 mai" (long, default)
- * formatDay(new Date(), { lang: "fr", format: "short" })  // "lun. 11 mai"
- * formatDay(new Date(), { lang: "fr", format: "narrow" }) // "lu. 11 mai"
- * formatDay(new Date(), { lang: "fr", format: "numeric" }) // "11/05/2026"
- * formatDay(new Date(), { lang: "fr", format: "numeric", year: false }) // "11/05"
- * formatDay(new Date(), { lang: "fr", format: { weekday: "long", month: "short" } }) // "mercredi 2 sept."
- * formatDay(new Date(), { lang: "fr", format: { day: false, month: false } }) // "mercredi"
- * formatDay(new Date(), { lang: "fr", format: { month: false } })             // "mercredi 2"
- */
-const formatDay = (
-  date,
-  {
-    lang = getRuntimeLang(),
-    format = "long",
-    year = true,
-    now = new Date(),
-    timeZone,
-  } = {},
-) => {
-  if (format === "numeric") {
-    const yearWritten =
-      year === "auto"
-        ? readYear(date, timeZone) !== readYear(now, timeZone)
-        : year !== false;
-    return memoIntl("DateTimeFormat", lang, {
-      day: "2-digit",
-      month: "2-digit",
-      ...(yearWritten ? { year: "numeric" } : {}),
-      timeZone,
-    }).format(date);
-  }
-  const {
-    weekday = "long",
-    day = true,
-    month = "long",
-  } = typeof format === "string" ? { weekday: format, month: format } : format;
-  // a `false` part is omitted, not passed: Intl rejects false as a value
-  return memoIntl("DateTimeFormat", lang, {
-    ...(weekday === false ? {} : { weekday }),
-    ...(day === false ? {} : { day: "numeric" }),
-    ...(month === false ? {} : { month }),
-    timeZone,
-  }).format(date);
-};
-
-/**
- * Returns the day offset relative to now: -1 (yesterday), 0 (today), 1 (tomorrow), or the
- * actual number of days difference for any other date.
- */
-const getRelativeDay = (date, { now = new Date() } = {}) => {
-  const dateKey = toLocalDayKey(date);
-
-  const yesterdayDate = new Date(now);
-  yesterdayDate.setDate(yesterdayDate.getDate() - 1);
-  if (dateKey === toLocalDayKey(yesterdayDate)) {
-    return -1;
-  }
-
-  if (dateKey === toLocalDayKey(now)) {
-    return 0;
-  }
-
-  const tomorrowDate = new Date(now);
-  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
-  if (dateKey === toLocalDayKey(tomorrowDate)) {
-    return 1;
-  }
-
-  const nowMidnight = new Date(now);
-  nowMidnight.setHours(0, 0, 0, 0);
-  const dateMidnight = new Date(date);
-  dateMidnight.setHours(0, 0, 0, 0);
-  return Math.round((dateMidnight - nowMidnight) / DAY);
-};
-
-/**
- * Formats a relative day offset (-1/0/1) as a locale-aware label: "hier", "aujourd'hui", "demain".
- */
-// ── Placeholder helpers ────────────────────────────────────────────────────
-// Derive locale-aware format placeholders from Intl.DateTimeFormat.formatToParts
-// using a sentinel date whose parts are unambiguous (day=28, month=11, year=9999).
-// Per-language token tables cover the most common locales; unknown langs fall
-// back to "dd/mm/yyyy".
-
-const SENTINEL_DATE = new Date(9999, 10, 28); // 28 Nov 9999 — day≠month, both 2-digit
-
-const getToken = (key, lang) =>
-  naviI18n(`time.placeholder.${key}`, undefined, { lang });
-
-const formatDatePlaceholder = ({ lang = getRuntimeLang() } = {}) => {
-  const parts = memoIntl("DateTimeFormat", lang, {
-    day: "numeric",
-    month: "numeric",
-    year: "numeric",
-  }).formatToParts(SENTINEL_DATE);
-  return parts
-    .map((p) => {
-      if (p.type === "day") {
-        return getToken("day", lang);
-      }
-      if (p.type === "month") {
-        return getToken("month", lang);
-      }
-      if (p.type === "year") {
-        return getToken("year", lang);
-      }
-      return p.value;
-    })
-    .join("");
-};
-
-const formatMonthPlaceholder = ({
-  lang = getRuntimeLang(),
-  format = "long",
-} = {}) => {
-  const parts = memoIntl("DateTimeFormat", lang, {
-    month: format,
-    year: "numeric",
-  }).formatToParts(SENTINEL_DATE);
-  return parts
-    .map((p) => {
-      if (p.type === "month") {
-        // Text month formats (long/short/narrow) → dash; numeric → token
-        return format === "numeric" ? "–" : getToken("month", lang);
-      }
-      if (p.type === "year") {
-        return getToken("year", lang);
-      }
-      return p.value;
-    })
-    .join("");
-};
-
-const formatWeekPlaceholder = ({ lang = getRuntimeLang() } = {}) => {
-  return `${getToken("week", lang)} xx / ${getToken(lang)}`;
-};
-
-const formatDatetimePlaceholder = ({
-  lang = getRuntimeLang(),
-  format = "long",
-} = {}) => {
-  const intlOptions =
-    format === "long"
-      ? {
-          weekday: "short",
-          day: "numeric",
-          month: "long",
-          hour: "2-digit",
-          minute: "2-digit",
-        }
-      : format === "narrow"
-        ? {
-            day: "2-digit",
-            month: "2-digit",
-            hour: "2-digit",
-            minute: "2-digit",
-          }
-        : {
-            day: "numeric",
-            month: "short",
-            hour: "2-digit",
-            minute: "2-digit",
-          };
-  const parts = memoIntl("DateTimeFormat", lang, intlOptions).formatToParts(
-    SENTINEL_DATE,
-  );
-  let skipNext = false;
-  return parts
-    .map((p) => {
-      if (p.type === "weekday") {
-        skipNext = true;
-        return "";
-      }
-      if (p.type === "literal" && skipNext) {
-        skipNext = false;
-        return "";
-      }
-      skipNext = false;
-      if (p.type === "day") {
-        return getToken("day", lang);
-      }
-      if (p.type === "month") {
-        return getToken("month", lang);
-      }
-      if (p.type === "hour") {
-        return getToken("hour", lang);
-      }
-      if (p.type === "minute") {
-        return getToken("minute", lang);
-      }
-      return p.value;
-    })
-    .join("")
-    .trim();
-};
-
-// ── End placeholder helpers ────────────────────────────────────────────────
-
-const formatDayRelative = (offset, { lang = getRuntimeLang() } = {}) => {
-  return memoIntl("RelativeTimeFormat", lang, {
-    numeric: "auto",
-  }).format(offset, "day");
-};
-
-const formatMonth = (
-  date,
-  { lang = getRuntimeLang(), format = "long", timeZone } = {},
-) => {
-  return memoIntl("DateTimeFormat", lang, {
-    month: format, // "long", "short", or "narrow"
-    year: "numeric",
-    timeZone,
-  }).format(date);
-};
-
-/**
- * Formats a date as "lun. 11 mai, 14:30" (long), "11 mai, 14:30" (short), "11/05, 14:30" (narrow).
- * `timeZone` words the instant in that IANA zone instead of the runtime's own.
- */
-const formatDatetime = (
-  date,
-  { lang = getRuntimeLang(), format = "long", timeZone } = {},
-) => {
-  if (format === "long") {
-    return memoIntl("DateTimeFormat", lang, {
-      weekday: "short",
-      day: "numeric",
-      month: "long",
-      hour: "2-digit",
-      minute: "2-digit",
-      timeZone,
-    }).format(date);
-  }
-  if (format === "narrow") {
-    return memoIntl("DateTimeFormat", lang, {
-      day: "2-digit",
-      month: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      timeZone,
-    }).format(date);
-  }
-  // "short": no weekday
-  return memoIntl("DateTimeFormat", lang, {
-    day: "numeric",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone,
-  }).format(date);
-};
-
-/**
- * Formats a date as "14:30".
- * `timeZone` words the instant in that IANA zone instead of the runtime's own.
- */
-const formatTime = (
-  date,
-  { lang = getRuntimeLang(), timeZone } = {},
-) => {
-  return memoIntl("DateTimeFormat", lang, {
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone,
-  }).format(date);
-};
-
-/**
- * Formats a time-of-day the way `<Time type="time">` writes it, as a plain
- * string — for the places a component cannot go (a `title` attribute, a push
- * notification).
- *
- * @param {Date|number|string} value
- *   A Date, a ms timestamp, or an "HH:MM"/"HH:MM:SS" string. Only the clock
- *   time is read. A nullish value renders the "--:--" placeholder; an
- *   unparseable one is returned as-is, stringified.
- * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"compact"|"timestring", pad?: boolean, precision?: "hour"|"minute", timeZone?: string }} [options]
- *   The options `<Time type="time">` takes: `"timestring"` is the clock
- *   "14:30"; the other formats write the time as a duration-shaped phrase —
- *   see {@link formatMinuteDuration}'s `clockStyle` for what `pad` and
- *   `precision` shape in `format="compact"`.
- * @param {string} [options.timeZone]
- *   IANA zone the instant's clock is read in ("Europe/Paris"); defaults to
- *   the runtime's own zone. Only applies to a Date/timestamp — an
- *   "HH:MM" string is already a wall-clock reading, there is nothing to
- *   move to another zone, so it ignores this.
- *
- * @example
- * formatTimeOfDay(date, { lang: "fr" })                                  // "14 heures 30" (long, default)
- * formatTimeOfDay(date, { lang: "fr", format: "timestring" })            // "14:30"
- * formatTimeOfDay(date, { lang: "fr", format: "compact" })               // "14h30"
- * formatTimeOfDay(date, { lang: "fr", format: "compact", pad: false })   // "8h30", "8h"
- */
-const formatTimeOfDay = (
-  value,
-  {
-    lang = getRuntimeLang(),
-    format = "long",
-    pad = true,
-    precision = pad ? "minute" : "hour",
-    timeZone,
-  } = {},
-) => {
-  if (value === undefined || value === null) {
-    return "--:--";
-  }
-  const date = toTimeOfDay(value);
-  // toDate turns a non-finite number into an Invalid Date, which is an object
-  if (!date || isNaN(date.getTime())) {
-    return String(value);
-  }
-  // An "HH:MM" string is a wall-clock reading, not an instant — re-reading
-  // it in another zone would shift what the caller already spelled out.
-  const zone = typeof value === "string" ? undefined : timeZone;
-  if (format === "timestring") {
-    return formatTime(date, { lang, timeZone: zone });
-  }
-  const { hours, minutes } = readClock(date, zone);
-  const totalMinutes = hours * 60 + minutes;
-  // clockStyle: this is always a time-of-day here, never a duration — keeps
-  // a zero hour instead of dropping it (midnight would otherwise be
-  // indistinguishable from an actual 5-minute duration), and in
-  // format="compact" also zero-pads a single-digit hour so "5h30"/"0h05"
-  // read as "05h30"/"00h05", closer to a "HH:MM" clock.
-  if (hours !== 0 || format !== "long") {
-    // At midnight, short/narrow/compact keep the "0 h"/"0h" hour part —
-    // "0 h et 5 min"/"0h 5min"/"00h05" — rather than substituting a
-    // translated "midnight" word, which would look out of place squeezed
-    // into these otherwise terse, symbol-based formats.
-    return formatMinuteDuration(totalMinutes, {
-      lang,
-      format,
-      clockStyle: true,
-      pad,
-      precision,
-    });
-  }
-  // Midnight (hour 0) at format="long" can't go through
-  // formatMinuteDuration's own default zero-hour handling: it drops a
-  // zero-valued unit entirely (by design — a real 5-minute duration should
-  // print as "5 minutes", not "0 hours 5 minutes"), so "00:05" would
-  // otherwise render identically to an actual 5-minute duration, silently
-  // losing the fact that it's midnight. Every other hour keeps at least its
-  // own "N hour(s)" wording as a hint that this is a time-of-day — only
-  // hour 0 loses that hint entirely.
-  const midnightWord = naviI18n("time.midnight", undefined, { lang });
-  if (midnightWord === "time.midnight") {
-    // No "midnight" translation registered for this language — fall back
-    // to this language's own literal "0 heure(s)" wording instead (still
-    // better than leaking the untranslated key, or substituting an
-    // English word that wouldn't grammatically match the rest of the
-    // sentence in whatever language this actually is).
-    return formatMinuteDuration(totalMinutes, {
-      lang,
-      format,
-      clockStyle: true,
-    });
-  }
-  // Swap just the "0 heure(s)" part of the Intl-generated duration
-  // string for the translated "midnight" word, keeping everything else
-  // (the conjunction, the minutes part) exactly as Intl would produce
-  // for this locale — formatToParts tags each token with the unit it
-  // belongs to, so the swap doesn't need to know the locale's own
-  // grammar/word order. Only ever one hour-tagged group per call
-  // (hours is always 0 or absent here), but guarded anyway in case a
-  // future Intl implementation ever splits it into more parts.
-  const parts = memoIntl("DurationFormat", lang, {
-    style: "long",
-    hoursDisplay: "always",
-  }).formatToParts({ hours: 0, minutes });
-  let hourGroupReplaced = false;
-  return parts
-    .map((part) => {
-      if (part.unit !== "hour") {
-        return part.value;
-      }
-      if (hourGroupReplaced) {
-        return "";
-      }
-      hourGroupReplaced = true;
-      return midnightWord;
-    })
-    .join("");
-};
-
-/**
- * Formats a span between two times-of-day the way `<TimeRange>` writes it, as
- * a plain string — "8h–10h", "11h30–14h00", "14 heures 30 – 16 heures".
- *
- * Applies `<TimeRange>`'s shared-precision rule: the two bounds are written
- * to the same precision, decided by the pair — any bound with minutes gives
- * minutes to both, zero included ("11h30–14h00", never "11h30–14h").
- *
- * @param {Date|number|string} from
- * @param {Date|number|string} to
- *   Each bound accepts what {@link formatTimeOfDay} accepts; a nullish bound
- *   renders its "--:--" placeholder.
- * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"compact"|"timestring", pad?: boolean, precision?: "hour"|"minute", separator?: string, timeZone?: string }} [options]
- *   `precision` writes both bounds at this precision instead of the one the
- *   pair calls for. `separator` defaults to the `"time.range_separator"` navi
- *   text (an en dash), tightened against both bounds in `format="compact"` —
- *   where the span is one short token — and spaced out otherwise. `timeZone`
- *   reads both bounds' clocks in that IANA zone — see {@link formatTimeOfDay}.
- *
- * @example
- * formatTimeRange("08:00", "10:00", { lang: "fr", format: "compact", pad: false }) // "8h–10h"
- * formatTimeRange("11:30", "14:00", { lang: "fr", format: "compact", pad: false }) // "11h30–14h00"
- */
-const formatTimeRange = (
-  from,
-  to,
-  {
-    lang = getRuntimeLang(),
-    format = "long",
-    pad = true,
-    timeZone,
-    precision = resolveTimeRangePrecision(from, to, { format, pad, timeZone }),
-    separator = naviI18n("time.range_separator", undefined, { lang }),
-  } = {},
-) => {
-  const boundOptions = { lang, format, pad, precision, timeZone };
-  const fromText = formatTimeOfDay(from, boundOptions);
-  const toText = formatTimeOfDay(to, boundOptions);
-  if (format === "compact") {
-    return `${fromText}${separator}${toText}`;
-  }
-  return `${fromText} ${separator} ${toText}`;
-};
-
-// The two bounds of a span are written to the same precision, decided by the
-// pair: "8h–10h" as long as neither has minutes, "11h30–14h00" as soon as one
-// of them does. Only ever a question for the unpadded compact clock — the
-// padded one always writes "08h00", and the spelled-out formats name their
-// units, leaving no shape for the eye to trip on.
-const resolveTimeRangePrecision = (
-  from,
-  to,
-  { format, pad, timeZone },
-) => {
-  if (pad || format !== "compact") {
-    return "minute";
-  }
-  const hasMinutes = (value) => {
-    const date = toTimeOfDay(value);
-    if (!date || isNaN(date.getTime())) {
-      return false;
-    }
-    // Same rule as formatTimeOfDay: a string is a wall-clock reading, only
-    // an instant is re-read in `timeZone`.
-    const zone = typeof value === "string" ? undefined : timeZone;
-    return readClock(date, zone).minutes !== 0;
-  };
-  return hasMinutes(from) || hasMinutes(to) ? "minute" : "hour";
-};
-
-/**
- * Formats a duration expressed in minutes as a human-readable string.
- * "long", "short", "narrow" delegate to Intl.DurationFormat.
- * "compact" uses our own notation that omits the minute symbol when hours are present.
- *
- * @param {number} minutes
- * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"compact", clockStyle?: boolean, pad?: boolean, precision?: "hour"|"minute", forceUnit?: boolean }} [options]
- * @param {boolean} [options.forceUnit=false] - Keep the value in minutes
- *   however big it gets ("2160 minutes" instead of "1 jour et 12 heures").
- *   Past 24 hours the default promotes to days, which reads better but hides
- *   the unit the caller works in.
- * @param {boolean} [options.clockStyle=false] - Set this when `minutes`
- *   represents a time-of-day rather than a real duration (used by
- *   `<Time type="time">`, see time.jsx's own TimeTime). A clock's "0" is a
- *   meaningful hour rather than "no hours": a zero-hours component is
- *   normally dropped entirely (a real 5-minute duration should print as
- *   "5 minutes", not "0 hours 5 minutes"); this keeps it instead (e.g.
- *   "0 h et 5 min"/"0h 5min"/"00h05") so midnight doesn't collapse to
- *   something indistinguishable from an actual 5-minute duration.
- *   Must not be set for plain duration formatting.
- * @param {boolean} [options.pad=true] - Zero-pad the hour to 2 digits
- *   ("08h30" rather than "8h30"). `clockStyle` + `format: "compact"` only.
- * @param {"hour"|"minute"} [options.precision="minute"] - Whether a zero
- *   minute is written: `"minute"` keeps it ("10h00"), `"hour"` drops it
- *   ("10h"). `clockStyle` + `format: "compact"` only.
- *
- *   These last two are the clock's two independent shape choices, and only
- *   `format: "compact"` has to make them — the spelled-out formats put their
- *   units in words, so "10 heures"/"10 h"/"10h" already reads as a time of
- *   day whatever the padding, and they always write the hour bare and drop a
- *   zero minute. Padded + minute ("08h00") is the column shape, where every
- *   row occupies the same width; bare + hour ("8h", "8h30") is the shape a
- *   person speaks. Bare + minute ("8h00") only ever makes sense next to a
- *   partner that has minutes of its own — see `<TimeRange>`, which is the
- *   only thing that asks for it.
- *
- * @example
- * formatMinuteDuration(90, { lang: "fr" })                       // "1 heure 30 minutes" (long, default)
- * formatMinuteDuration(90, { lang: "fr", format: "short" })     // "1 h et 30 min" (Intl short)
- * formatMinuteDuration(90, { lang: "fr", format: "narrow" })    // "1h 30min" (Intl narrow)
- * formatMinuteDuration(90, { lang: "fr", format: "compact" })   // "1h30" (custom, no minute symbol)
- * formatMinuteDuration(45, { lang: "en", format: "compact" })   // "45min"
- * formatMinuteDuration(5, { lang: "fr", format: "narrow", clockStyle: true }) // "0h 5min"
- * formatMinuteDuration(330, { lang: "fr", format: "compact", clockStyle: true }) // "05h30"
- * formatMinuteDuration(600, { lang: "fr", format: "compact", clockStyle: true }) // "10h00"
- * formatMinuteDuration(600, { lang: "fr", format: "compact", clockStyle: true, pad: false }) // "10h00"
- * formatMinuteDuration(600, { lang: "fr", format: "compact", clockStyle: true, pad: false, precision: "hour" }) // "10h"
- * formatMinuteDuration(510, { lang: "fr", format: "compact", clockStyle: true, pad: false, precision: "hour" }) // "8h30"
- * formatMinuteDuration(2160, { lang: "fr" })                     // "1 jour et 12 heures"
- * formatMinuteDuration(2160, { lang: "fr", forceUnit: true })    // "2 160 minutes"
- */
-const formatMinuteDuration = (
-  minutes,
-  {
-    lang = getRuntimeLang(),
-    format = "long",
-    clockStyle = false,
-    pad = true,
-    precision = "minute",
-    forceUnit = false,
-  } = {},
-) => {
-  if (minutes < 0) {
-    // the d/h/m split below only holds for a positive value; formatting the
-    // magnitude and putting the sign back is the only reading that works
-    return `-${formatMinuteDuration(-minutes, { lang, format, clockStyle, pad, precision, forceUnit })}`;
-  }
-  if (forceUnit || (minutes === 0 && !clockStyle)) {
-    // a zero has nothing to promote to, and rendering it as an empty string
-    // would be indistinguishable from a missing value
-    return formatSingleUnit(minutes, "minute", { lang, format });
-  }
-  const totalHours = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  // a time of day never goes past 24h, and its hour part is the clock hour
-  const d = clockStyle ? 0 : Math.floor(totalHours / 24);
-  const h = clockStyle ? totalHours : totalHours % 24;
-  if (format !== "compact" && typeof Intl.DurationFormat !== "undefined") {
-    const fmt = memoIntl("DurationFormat", lang, {
-      style: format, // "long", "short", or "narrow"
-      ...(clockStyle ? { hoursDisplay: "always" } : {}),
-    });
-    const duration = {};
-    if (d > 0) {
-      duration.days = d;
-    }
-    if (h > 0 || clockStyle || d > 0) {
-      duration.hours = h;
-    }
-    if (m > 0 || (d === 0 && h === 0)) {
-      duration.minutes = m;
-    }
-    return fmt.format(duration);
-  }
-  // format="compact": "1j12h", "1h30", "45min", "2h" — no minute symbol when hours are present
-  const dSym = naviI18n("time.duration.day_symbol", undefined, { lang });
-  const hSym = naviI18n("time.duration.hour_symbol", undefined, { lang });
-  const mSym = naviI18n("time.duration.minute_symbol", undefined, { lang });
-  const dStr = d > 0 ? `${formatCompactNumber(d, lang)}${dSym}` : "";
-  const hStr =
-    clockStyle && pad
-      ? String(h).padStart(2, "0")
-      : formatCompactNumber(h, lang);
-  if (d === 0 && h === 0 && !clockStyle) {
-    return `${m}${mSym}`;
-  }
-  if (m === 0) {
-    if (clockStyle) {
-      // "10h00" on a clock, "2h" for a real 2 hours duration — except at
-      // precision "hour", where a clock drops the zero minute too ("10h"),
-      // the way one says it out loud
-      return precision === "minute" ? `${hStr}${hSym}00` : `${hStr}${hSym}`;
-    }
-    return h === 0 ? dStr : `${dStr}${hStr}${hSym}`;
-  }
-  return `${dStr}${hStr}${hSym}${String(m).padStart(2, "0")}`;
-};
-
-// "forceUnit": stay in the unit the value is expressed in, however big it gets
-const formatSingleUnit = (value, unit, { lang, format }) => {
-  if (format !== "compact" && typeof Intl.DurationFormat !== "undefined") {
-    return memoIntl("DurationFormat", lang, {
-      style: format,
-      // Intl drops a zero-valued unit, and "0 minute" is the whole point here
-      [`${unit}sDisplay`]: "always",
-    }).format({
-      [`${unit}s`]: value,
-    });
-  }
-  const symbol = naviI18n(`time.duration.${unit}_symbol`, undefined, { lang });
-  return `${formatCompactNumber(value, lang)}${symbol}`;
-};
-
-/**
- * Formats a duration expressed in hours (possibly fractional) as a human-readable string.
- * Delegates to {@link formatMinuteDuration} after converting hours to minutes.
- *
- * @param {number} hours
- * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"compact", forceUnit?: boolean }} [options]
- * @param {boolean} [options.forceUnit=false] - Keep the value in hours however
- *   big it gets ("36 heures" instead of "1 jour et 12 heures"). Ignored for a
- *   fractional value, which has no single-unit spelling.
- *
- * @example
- * formatHourDuration(1.5, { lang: "fr" })                       // "1 heure 30 minutes" (long, default)
- * formatHourDuration(1.5, { lang: "fr", format: "compact" })   // "1h30"
- * formatHourDuration(2, { lang: "en", format: "compact" })     // "2h"
- * formatHourDuration(36, { lang: "fr" })                        // "1 jour et 12 heures"
- * formatHourDuration(36, { lang: "fr", forceUnit: true })      // "36 heures"
- */
-const formatHourDuration = (hours, options = {}) => {
-  const { lang = getRuntimeLang(), format = "long", forceUnit } = options;
-  if (hours === 0 || (forceUnit && Number.isInteger(hours))) {
-    return formatSingleUnit(hours, "hour", { lang, format });
-  }
-  // a fractional value has no single-unit spelling, it needs its minutes
-  const totalMinutes = Math.round(hours * 60);
-  return formatMinuteDuration(totalMinutes, { ...options, forceUnit: false });
-};
-
-/**
- * Formats a duration expressed in seconds as a human-readable string.
- * "long", "short", "narrow" delegate to Intl.DurationFormat.
- * "compact" uses our own symbol-based notation.
- *
- * @param {number} seconds
- * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"compact", forceUnit?: boolean }} [options]
- * @param {boolean} [options.forceUnit=false] - Keep the value in seconds
- *   however big it gets ("90 000 secondes" instead of "1 jour et 1 heure").
- *
- * @example
- * formatSecondDuration(90, { lang: "fr" })                       // "1 minute 30 secondes" (long, default)
- * formatSecondDuration(90, { lang: "fr", format: "short" })     // "1 min. et 30 s." (Intl short)
- * formatSecondDuration(90, { lang: "fr", format: "narrow" })    // "1min 30s" (Intl narrow)
- * formatSecondDuration(90, { lang: "fr", format: "compact" })   // "1m30s" (custom)
- * formatSecondDuration(45, { lang: "en", format: "compact" })   // "45s"
- */
-const formatSecondDuration = (
-  seconds,
-  { lang = getRuntimeLang(), format = "long", forceUnit = false } = {},
-) => {
-  if (seconds < 0) {
-    // the d/h/m/s split below only holds for a positive value; formatting the
-    // magnitude and putting the sign back is the only reading that works
-    return `-${formatSecondDuration(-seconds, { lang, format, forceUnit })}`;
-  }
-  if (forceUnit || seconds === 0) {
-    return formatSingleUnit(seconds, "second", { lang, format });
-  }
-  const totalHours = Math.floor(seconds / 3600);
-  const d = Math.floor(totalHours / 24);
-  const h = totalHours % 24;
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = seconds % 60;
-  if (format !== "compact" && typeof Intl.DurationFormat !== "undefined") {
-    const fmt = memoIntl("DurationFormat", lang, { style: format });
-    const duration = {};
-    if (d > 0) duration.days = d;
-    if (h > 0) duration.hours = h;
-    if (m > 0) duration.minutes = m;
-    if (s > 0 || (d === 0 && h === 0 && m === 0)) duration.seconds = s;
-    return fmt.format(duration);
-  }
-  // compact: "1d1h30m45s", "1h30m45s", "1m30s", "45s"
-  const dSym = naviI18n("time.duration.day_symbol", undefined, { lang });
-  const hSym = naviI18n("time.duration.hour_symbol", undefined, { lang });
-  const mSym = naviI18n("time.duration.minute_symbol", undefined, { lang });
-  const sSym = naviI18n("time.duration.second_symbol", undefined, { lang });
-  const parts = [];
-  // h/m/s are bounded by construction (never need grouping); d can be
-  // arbitrarily large for a long duration.
-  if (d > 0) parts.push(`${formatCompactNumber(d, lang)}${dSym}`);
-  if (h > 0) parts.push(`${h}${hSym}`);
-  if (m > 0) parts.push(`${m}${mSym}`);
-  if (s > 0 || parts.length === 0) parts.push(`${s}${sSym}`);
-  return parts.join("");
-};
-
-/**
- * Formats a duration object as a human-readable string.
- * Reads the parts directly — no conversion to seconds — so years/months/days
- * are preserved as-is and non-numeric mid-edit values (e.g. "2a") are rendered
- * with their unit symbol rather than being stringified.
- *
- * @param {string|number|{ years?: any, months?: any, weeks?: any, days?: any,
- *           hours?: any, minutes?: any, seconds?: any, milliseconds?: any }} duration -
- *   A string goes through {@link parseDuration} ("PT1H30M", "1h30"), a number
- *   is read as seconds. Each unit is written with the value it carries: 90
- *   minutes reads "90 minutes", never "1 heure 30" — the variants that
- *   promote a count into bigger units are {@link formatMinuteDuration},
- *   {@link formatHourDuration} and {@link formatSecondDuration}.
- * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"compact" }} [options]
- *
- * @example
- * formatDuration({ hours: 2, minutes: 15 }, { lang: "fr" })                       // "2 heures 15 minutes" (long, default)
- * formatDuration({ hours: 2, minutes: 15 }, { lang: "fr", format: "short" })     // "2 h et 15 min" (Intl short)
- * formatDuration({ hours: 2, minutes: 15 }, { lang: "fr", format: "narrow" })    // "2h 15min" (Intl narrow)
- * formatDuration({ hours: 2, minutes: 15 }, { lang: "fr", format: "compact" })   // "2h15" (custom, no minute symbol)
- * formatDuration({ minutes: 45 }, { lang: "fr", format: "compact" })             // "45min"
- * formatDuration({ hours: 0, minutes: 0 }, { lang: "fr" })                        // "0 minute"
- * formatDuration({ hours: "2a", minutes: "15" }, { lang: "fr", format: "compact" }) // "2ah15"
- */
-const formatDuration = (
-  duration,
-  { lang = getRuntimeLang(), format = "long" } = {},
-) => {
-  if (typeof duration === "string") {
-    duration = parseDuration(duration) ?? {};
-  } else if (typeof duration === "number") {
-    duration = { seconds: duration };
-  }
-  const has = (key) => duration[key] !== undefined && duration[key] !== null;
-
-  // "long" and "narrow" delegate to Intl.DurationFormat when available and all values are numeric.
-  //
-  // "short" always uses our own compact symbols ("2h15", "45min") because:
-  // 1. We omit the minute symbol when hours are also present ("2h15" not "2h 15 min"),
-  //    which Intl.DurationFormat style:"narrow" does not do.
-  // 2. Non-numeric mid-edit values (e.g. { hours: "2a" }) must render as-is with their
-  //    unit symbol — Intl.DurationFormat only accepts integers.
-  if (format !== "compact" && typeof Intl.DurationFormat !== "undefined") {
-    const intlDuration = {};
-    let allNumeric = true;
-    let hasNegative = false;
-    let hasPositive = false;
-    for (const key of [
-      "years",
-      "months",
-      "weeks",
-      "days",
-      "hours",
-      "minutes",
-      "seconds",
-      "milliseconds",
-    ]) {
-      if (!has(key)) {
-        continue;
-      }
-      const n = Number(duration[key]);
-      if (!isFinite(n)) {
-        allNumeric = false;
-        break;
-      }
-      if (n < 0) {
-        hasNegative = true;
-      } else if (n > 0) {
-        hasPositive = true;
-      }
-      intlDuration[key] = n;
-    }
-    // Temporal requires all components to share the same sign.
-    // Mixed-sign values (e.g. { hours: -1, minutes: 15 }) throw a RangeError.
-    if (
-      allNumeric &&
-      Object.keys(intlDuration).length > 0 &&
-      !(hasNegative && hasPositive)
-    ) {
-      if (!hasNegative && !hasPositive) {
-        return formatSingleUnit(0, smallestUnitOf(intlDuration), {
-          lang,
-          format,
-        });
-      }
-      return memoIntl("DurationFormat", lang, { style: format }).format(
-        intlDuration,
-      );
-    }
-    // Fall through to compact notation when values are non-numeric or mixed-sign
-  }
-
-  // A component explicitly present but numerically zero (e.g. the demo's own
-  // { hours: 0, minutes: 5 }) conveys no information for a genuine duration
-  // — same convention formatMinuteDuration/formatSecondDuration already
-  // follow (checking h > 0/m > 0, not merely "was a value passed") — so
-  // it's dropped here too, regardless of whether the caller included the
-  // key at all. Non-numeric mid-edit values (e.g. "2a") still count as
-  // present — Number("2a") is NaN, never === 0 — so those keep rendering
-  // as-is with their own unit symbol. When every component is zero there is
-  // nothing left to drop, so the zero itself is rendered — see below.
-  const hasNonZero = (key) => has(key) && Number(duration[key]) !== 0;
-
-  const sym = (key) =>
-    naviI18n(`time.duration.${key}_symbol`, undefined, { lang });
-  const parts = [];
-
-  if (hasNonZero("years")) {
-    parts.push(`${formatCompactNumber(duration.years, lang)}${sym("year")}`);
-  }
-  if (hasNonZero("months")) {
-    parts.push(`${formatCompactNumber(duration.months, lang)}${sym("month")}`);
-  }
-  if (hasNonZero("weeks")) {
-    parts.push(`${formatCompactNumber(duration.weeks, lang)}${sym("week")}`);
-  }
-  if (hasNonZero("days")) {
-    parts.push(`${formatCompactNumber(duration.days, lang)}${sym("day")}`);
-  }
-
-  // Hours + minutes: when both present, pad minutes to 2 digits after the h
-  // symbol — minutes stays a plain 2-digit pad (it's always 0-59 by
-  // convention), only hours goes through grouping.
-  const hSym = sym("hour");
-  const mSym = sym("minute");
-  if (hasNonZero("hours") && hasNonZero("minutes")) {
-    parts.push(
-      `${formatCompactNumber(duration.hours, lang)}${hSym}${String(duration.minutes).padStart(2, "0")}`,
-    );
-  } else if (hasNonZero("hours")) {
-    parts.push(`${formatCompactNumber(duration.hours, lang)}${hSym}`);
-  } else if (hasNonZero("minutes")) {
-    parts.push(`${formatCompactNumber(duration.minutes, lang)}${mSym}`);
-  }
-
-  if (hasNonZero("seconds")) {
-    parts.push(
-      `${formatCompactNumber(duration.seconds, lang)}${sym("second")}`,
-    );
-  }
-  if (hasNonZero("milliseconds")) {
-    parts.push(
-      `${formatCompactNumber(duration.milliseconds, lang)}${sym("millisecond")}`,
-    );
-  }
-  if (parts.length > 0) {
-    return parts.join("");
-  }
-  // everything was zero: say so in the smallest unit the caller mentioned,
-  // rather than a bare "0" whose unit the reader has to guess
-  const smallestUnit = smallestUnitOf(duration);
-  return smallestUnit ? `0${sym(smallestUnit)}` : "0";
-};
-
-const UNIT_KEYS = [
-  "years",
-  "months",
-  "weeks",
-  "days",
-  "hours",
-  "minutes",
-  "seconds",
-  "milliseconds",
-];
-const smallestUnitOf = (duration) => {
-  for (const key of [...UNIT_KEYS].reverse()) {
-    if (duration[key] !== undefined && duration[key] !== null) {
-      return key.slice(0, -1); // "seconds" -> "second"
-    }
-  }
-  return null;
-};
-
-/**
- * Formats a date relative to now: "il y a 3 jours", "dans 2 heures", etc.
- */
-const formatTimeAgo = (
-  date,
-  { lang = getRuntimeLang(), now = new Date(), bare, format = "long" } = {},
-) => {
-  const rtf = memoIntl("RelativeTimeFormat", lang, {
-    numeric: "auto",
-    style: format,
-  });
-  const nowMs = now instanceof Date ? now.getTime() : now;
-  const diff = date.getTime() - nowMs;
-  const absDiff = Math.abs(diff);
-
-  let value;
-  let unit;
-  if (absDiff < MINUTE) {
-    value = Math.round(diff / 1000);
-    unit = "second";
-  } else if (absDiff < HOUR) {
-    value = Math.round(diff / MINUTE);
-    unit = "minute";
-  } else if (absDiff < DAY) {
-    value = Math.round(diff / HOUR);
-    unit = "hour";
-  } else if (absDiff < 7 * DAY) {
-    value = Math.round(diff / DAY);
-    unit = "day";
-  } else if (absDiff < 30 * DAY) {
-    value = Math.round(diff / (7 * DAY));
-    unit = "week";
-  } else if (absDiff < YEAR) {
-    value = Math.round(diff / (30 * DAY));
-    unit = "month";
-  } else {
-    value = Math.round(diff / YEAR);
-    unit = "year";
-  }
-
-  if (!bare || value >= 0) {
-    return rtf.format(value, unit);
-  }
-  // Drop the leading past-tense literal ("il y a ", "ago ") — keep only integer + unit.
-  const parts = rtf.formatToParts(value, unit);
-  const integerIndex = parts.findIndex((p) => p.type === "integer");
-  return parts
-    .slice(integerIndex)
-    .map((p) => p.value)
-    .join("")
-    .trim();
-};
-
-/**
- * Formats a timed event with an optional duration window.
- *
- * States:
- * - Future  (now < start)              → "dans 1 heure 30", "demain à 15h", …
- * - Ongoing (start ≤ now < start+dur)  → "En cours"
- * - Past    (now ≥ start+dur)          → relative ("il y a 2 heures", …)
- *
- * @param {Date|number} start      Start of the event (Date or ms timestamp)
- * @param {number}      durationMs Duration in milliseconds (0 = instant event)
- * @param {{ lang?: string, now?: Date|number, bare?: boolean, format?: "long"|"short"|"narrow" }} options
- *
- * @example
- * // 90 min from now
- * formatTimeRelative(Date.now() + 90 * 60_000, 0, { lang: "fr" }) // "dans 1 heure 30"
- * // currently happening (30 min window)
- * formatTimeRelative(Date.now() - 5 * 60_000, 30 * 60_000, { lang: "fr" }) // "En cours"
- * // ended 2 hours ago
- * formatTimeRelative(Date.now() - 3 * 3_600_000, 3_600_000, { lang: "fr" }) // "il y a 2 heures"
- * // short format
- * formatTimeRelative(Date.now() - 3 * 3_600_000, 0, { lang: "fr", format: "short" }) // "il y a 3 h"
- */
-const formatTimeRelative = (
-  start,
-  durationMs = 0,
-  { lang = getRuntimeLang(), now = new Date(), bare, format = "long" } = {},
-) => {
-  const startMs = start instanceof Date ? start.getTime() : Number(start);
-  const endMs = startMs + durationMs;
-  const nowMs = now instanceof Date ? now.getTime() : Number(now);
-
-  if (nowMs >= startMs && nowMs < endMs) {
-    return getOngoingText(lang);
-  }
-  if (nowMs >= endMs) {
-    const refDate = endMs > startMs ? new Date(endMs) : new Date(startMs);
-    return formatTimeAgo(refDate, { lang, now, bare, format });
-  }
-
-  const diff = startMs - nowMs;
-  return formatFuture(new Date(startMs), diff, { lang, now, format });
-};
-
-const formatFuture = (date, diff, { lang, now, format = "long" }) => {
-  const rtf = memoIntl("RelativeTimeFormat", lang, {
-    numeric: "auto",
-    style: format,
-  });
-  const nowDate = now instanceof Date ? now : new Date(now);
-
-  // < 1 min
-  if (diff < MINUTE) {
-    return getLessThanMinuteText(lang);
-  }
-
-  // < 1 hour → "dans X minutes"
-  if (diff < HOUR) {
-    return rtf.format(Math.ceil(diff / MINUTE), "minute");
-  }
-
-  // 1h to 2h → "dans 1 heure 30"
-  if (diff < 2 * HOUR) {
-    const hours = Math.floor(diff / HOUR);
-    const minutes = Math.round((diff % HOUR) / MINUTE);
-    if (minutes === 0) {
-      return rtf.format(hours, "hour");
-    }
-    const duration = formatMinuteDuration(hours * 60 + minutes, {
-      lang,
-      format,
-    });
-    const template = naviI18n("time.in_duration", undefined, { lang });
-    if (template !== "time.in_duration") {
-      return template.replace("[duration]", duration);
-    }
-    return `in ${duration}`;
-  }
-
-  // < 6h → "dans X heures" (precise enough, skip tomorrow label)
-  if (diff < 6 * HOUR) {
-    return rtf.format(Math.round(diff / HOUR), "hour");
-  }
-
-  // Tomorrow (calendar day) and within ~30h → "demain à 15h"
-  const tomorrowDate = new Date(nowDate);
-  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
-  if (diff < 30 * HOUR && toLocalDayKey(date) === toLocalDayKey(tomorrowDate)) {
-    return formatTomorrowAt(date, lang);
-  }
-
-  // < 24h → "dans X heures"
-  if (diff < DAY) {
-    return rtf.format(Math.round(diff / HOUR), "hour");
-  }
-
-  // < 7 days → "dans X jours"
-  if (diff < 7 * DAY) {
-    return rtf.format(Math.round(diff / DAY), "day");
-  }
-
-  // < 30 days → "dans X semaines"
-  if (diff < 30 * DAY) {
-    return rtf.format(Math.round(diff / (7 * DAY)), "week");
-  }
-
-  // months (Intl handles "le mois prochain" when value = 1)
-  if (diff < YEAR) {
-    return rtf.format(Math.round(diff / (30 * DAY)), "month");
-  }
-
-  return rtf.format(Math.round(diff / YEAR), "year");
-};
-
-const formatTomorrowAt = (date, lang) => {
-  const dayLabel = memoIntl("RelativeTimeFormat", lang, {
-    numeric: "auto",
-  }).format(1, "day");
-  const hasMinutes = date.getMinutes() !== 0;
-  const timeLabel = memoIntl("DateTimeFormat", lang, {
-    hour: "numeric",
-    ...(hasMinutes ? { minute: "2-digit" } : {}),
-  }).format(date);
-  const atTemplate = naviI18n("time.tomorrow_at", undefined, {
-    lang,
-  });
-  // atTemplate is e.g. "[day] à [time]" — replace placeholders
-  if (atTemplate !== "time.tomorrow_at") {
-    return atTemplate.replace("[day]", dayLabel).replace("[time]", timeLabel);
-  }
-  // fallback: concatenate with a space
-  return `${dayLabel} ${timeLabel}`;
-};
-
-const getLessThanMinuteText = (lang) => {
-  return naviI18n("time.less_than_minute", undefined, { lang });
-};
-
-const getOngoingText = (lang) => {
-  return naviI18n("time.ongoing", undefined, { lang });
-};
-
-const MINUTE = 60_000;
-const HOUR = 60 * MINUTE;
-const DAY = 24 * HOUR;
-const YEAR = 365 * DAY;
-
-// Compares calendar days in local time (ignores the clock time)
-const toLocalDayKey = (date) => {
-  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
-};
-
-/**
- * Coerces what `<Time>` accepts as a value — a Date, a ms timestamp, a
- * parseable string — into a Date, or null when it cannot. `parseString`
- * lets a caller claim the string forms it recognizes ("HH:MM" for a
- * time-of-day, "YYYY-MM" for a month…) before the generic ones apply.
- */
-const toDate = (value, parseString) => {
-  if (value instanceof Date) {
-    return value;
-  }
-  if (typeof value === "number") {
-    return new Date(value);
-  }
-  if (typeof value === "string") {
-    if (parseString) {
-      return parseString(value);
-    }
-    // "YYYY-MM-DD" — use local midnight to avoid UTC shift
-    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-      const d = new Date(`${value}T00:00:00`);
-      return isNaN(d.getTime()) ? null : d;
-    }
-    // ISO / other parseable strings
-    const d = new Date(value);
-    return isNaN(d.getTime()) ? null : d;
-  }
-  return null;
-};
-
-const toTimeOfDay = (value) => {
-  return toDate(value, (string) => {
-    if (/^\d{2}:\d{2}(?::\d{2})?$/.test(string)) {
-      const d = new Date(`1970-01-01T${string}`);
-      return isNaN(d.getTime()) ? null : d;
-    }
-    return null;
-  });
-};
-
-// Reads the wall-clock hour/minute of an instant — in the runtime's own zone
-// by default, in `timeZone` when given. A Date only carries local getters, so
-// another zone's clock has to come out of Intl parts (hourCycle h23 so
-// midnight reads hour 0, never 24).
-const readClock = (date, timeZone) => {
-  if (!timeZone) {
-    return { hours: date.getHours(), minutes: date.getMinutes() };
-  }
-  const parts = memoIntl("DateTimeFormat", "en", {
-    timeZone,
-    hour: "numeric",
-    minute: "numeric",
-    hourCycle: "h23",
-  }).formatToParts(date);
-  let hours = 0;
-  let minutes = 0;
-  for (const part of parts) {
-    if (part.type === "hour") {
-      hours = Number(part.value);
-    } else if (part.type === "minute") {
-      minutes = Number(part.value);
-    }
-  }
-  return { hours, minutes };
-};
-
-// Reads the calendar year of an instant in `timeZone` (the runtime's own zone
-// when not given) — what formatDay's `year: "auto"` compares.
-const readYear = (date, timeZone) => {
-  if (!timeZone) {
-    return date.getFullYear();
-  }
-  return Number(
-    memoIntl("DateTimeFormat", "en", { timeZone, year: "numeric" }).format(
-      date,
-    ),
-  );
-};
 
 const DEFAULT_LANG = "en";
 
@@ -13799,19 +11957,19 @@ const NaviDebug = ({
   if (debugUIState === true) {
     debugUIState = debugUIStateDefault;
   }
-  return jsx$1(DebugCommandContext.Provider, {
+  return jsx(DebugCommandContext.Provider, {
     value: debugCommand,
-    children: jsx$1(DebugInteractionContext.Provider, {
+    children: jsx(DebugInteractionContext.Provider, {
       value: debugInteraction,
-      children: jsx$1(DebugFocusContext.Provider, {
+      children: jsx(DebugFocusContext.Provider, {
         value: debugFocus,
-        children: jsx$1(DebugScrollContext.Provider, {
+        children: jsx(DebugScrollContext.Provider, {
           value: debugScroll,
-          children: jsx$1(DebugPopupContext.Provider, {
+          children: jsx(DebugPopupContext.Provider, {
             value: debugPopup,
-            children: jsx$1(DebugActionContext.Provider, {
+            children: jsx(DebugActionContext.Provider, {
               value: debugAction,
-              children: jsx$1(DebugUIStateContext.Provider, {
+              children: jsx(DebugUIStateContext.Provider, {
                 value: debugUIState,
                 children: children
               })
@@ -18810,10 +16968,10 @@ const Loading = ({
     reason: "idle",
     action: null
   });
-  return jsx$1(LoadingContext.Provider, {
+  return jsx(LoadingContext.Provider, {
     value: loadingRef,
-    children: jsx$1(Suspense, {
-      fallback: jsx$1(LoadingFallback, {
+    children: jsx(Suspense, {
+      fallback: jsx(LoadingFallback, {
         loadingRef: loadingRef,
         fallback: fallback
       }),
@@ -21986,12 +20144,12 @@ const Box = props => {
   // Some/all the children needs to access remainingProps
   // to render and will provide a function to do so.
   if (props.hasChildUsingForwardedProps) {
-    innerChildren = jsx$1(BoxForwardedPropsContext.Provider, {
+    innerChildren = jsx(BoxForwardedPropsContext.Provider, {
       value: childForwardedProps,
       children: innerChildren
     });
   }
-  return jsx$1(TagName, {
+  return jsx(TagName, {
     ref: finalRef,
     className: innerClassName,
     "navi-box-flow": boxFlowIsDefault ? undefined : boxFlow,
@@ -22000,7 +20158,7 @@ const Box = props => {
     "navi-aspect-ratio": aspectRatio ? aspectRatio : undefined,
     "data-visual-selector": visualSelector,
     ...selfForwardedProps,
-    children: jsx$1(BoxFlowContext.Provider, {
+    children: jsx(BoxFlowContext.Provider, {
       value: boxFlow,
       children: innerChildren
     })
@@ -23747,23 +21905,23 @@ const UITransition = ({
     "data-debug-content": debugContent ? "" : undefined,
     children: [jsxs("div", {
       className: "ui_transition_active_group",
-      children: [jsx$1("div", {
+      children: [jsx("div", {
         className: "ui_transition_target_slot",
         "data-content-id": contentIdRef.current ? contentIdRef.current : undefined,
-        children: jsx$1(UITransitionContentIdContext.Provider, {
+        children: jsx(UITransitionContentIdContext.Provider, {
           value: uiTransitionContentIdContextValue,
           children: children
         })
-      }), jsx$1("div", {
+      }), jsx("div", {
         className: "ui_transition_outgoing_slot",
         inert: true
       })]
     }), jsxs("div", {
       className: "ui_transition_previous_group",
       inert: true,
-      children: [jsx$1("div", {
+      children: [jsx("div", {
         className: "ui_transition_previous_target_slot"
-      }), jsx$1("div", {
+      }), jsx("div", {
         className: "ui_transition_previous_outgoing_slot"
       })]
     })]
@@ -28447,11 +26605,11 @@ const debug$1 = (...args) => {
  */
 const Route = props => {
   if (props.children) {
-    return jsx$1(RouteContainer, {
+    return jsx(RouteContainer, {
       ...props
     });
   }
-  return jsx$1(RouteLeaf, {
+  return jsx(RouteLeaf, {
     ...props
   });
 };
@@ -28657,28 +26815,28 @@ const wrapBranch = (branch, wrapper) => {
 };
 const RouteLeaf = props => {
   if (props.route) {
-    return jsx$1(RouteLeafRoute, {
+    return jsx(RouteLeafRoute, {
       ...props
     });
   }
   if (props.fallback) {
-    return jsx$1(RouteLeafFallback, {
+    return jsx(RouteLeafFallback, {
       ...props
     });
   }
   // not supposed to happen?
-  return jsx$1(RouteUI, {
+  return jsx(RouteUI, {
     ...props
   });
 };
 const RouteLeafRoute = props => {
   useUITransitionContentId(props.route?.urlPattern);
-  return jsx$1(RouteUI, {
+  return jsx(RouteUI, {
     ...props
   });
 };
 const RouteLeafFallback = props => {
-  return jsx$1(RouteUI, {
+  return jsx(RouteUI, {
     ...props
   });
 };
@@ -29861,7 +28019,7 @@ const RouteTransitionArea = ({
     ...rest,
     [TRANSITION_AREA_ATTRIBUTE]: ""
   };
-  return jsx$1(Box, {
+  return jsx(Box, {
     ...props,
     children: children
   });
@@ -31877,7 +30035,7 @@ const RouteTravel = ({
       }) => travelOneStepRef.current(sign)
     });
   }, [travelByDrag, axis]);
-  return jsx$1("div", {
+  return jsx("div", {
     ...rest,
     ref: elementRef,
     className: className ? `navi_route_travel ${className}` : "navi_route_travel",
@@ -37165,15 +35323,15 @@ const NO_ACTION_YET = Symbol("no_action_yet");
 const ControlChildrenWrapper = ({
   children,
   uiStateController
-}) => jsx$1(ParentUIStateControllerContext.Provider, {
+}) => jsx(ParentUIStateControllerContext.Provider, {
   value: uiStateController,
-  children: jsx$1(MessagePropsRefContext.Provider, {
+  children: jsx(MessagePropsRefContext.Provider, {
     value: undefined,
-    children: jsx$1(ControlIdContext.Provider, {
+    children: jsx(ControlIdContext.Provider, {
       value: undefined,
-      children: jsx$1(RequiredContext.Provider, {
+      children: jsx(RequiredContext.Provider, {
         value: undefined,
-        children: jsx$1(ControlNameContext.Provider, {
+        children: jsx(ControlNameContext.Provider, {
           value: undefined,
           children: children
         })
@@ -37191,25 +35349,25 @@ const ControlgroupChildrenWrapper = ({
   loading,
   boundAction,
   actionRequesterSignal
-}) => jsx$1(MessagePropsRefContext.Provider, {
+}) => jsx(MessagePropsRefContext.Provider, {
   value: undefined,
-  children: jsx$1(ControlIdContext.Provider, {
+  children: jsx(ControlIdContext.Provider, {
     value: undefined,
-    children: jsx$1(ParentUIStateControllerContext.Provider, {
+    children: jsx(ParentUIStateControllerContext.Provider, {
       value: uiGroupStateController,
-      children: jsx$1(ControlNameContext.Provider, {
+      children: jsx(ControlNameContext.Provider, {
         value: name,
-        children: jsx$1(DisabledContext.Provider, {
+        children: jsx(DisabledContext.Provider, {
           value: disabled,
-          children: jsx$1(ReadOnlyContext.Provider, {
+          children: jsx(ReadOnlyContext.Provider, {
             value: readOnly,
-            children: jsx$1(RequiredContext.Provider, {
+            children: jsx(RequiredContext.Provider, {
               value: required,
-              children: jsx$1(LoadingContext$1.Provider, {
+              children: jsx(LoadingContext$1.Provider, {
                 value: loading,
-                children: jsx$1(ActionContext.Provider, {
+                children: jsx(ActionContext.Provider, {
                   value: boundAction,
-                  children: jsx$1(ActionRequesterContext.Provider, {
+                  children: jsx(ActionRequesterContext.Provider, {
                     value: actionRequesterSignal,
                     children: children
                   })
@@ -38474,7 +36632,7 @@ const useControlFacadeProps = (props, options) => {
 const ControlFacadeChildrenWrapper = ({
   children,
   facadeController
-}) => jsx$1(ControlChildrenWrapper, {
+}) => jsx(ControlChildrenWrapper, {
   uiStateController: facadeController,
   children: children
 });
@@ -40452,12 +38610,12 @@ const EmailSvg = () => {
   return jsxs("svg", {
     viewBox: "0 0 24 24",
     xmlns: "http://www.w3.org/2000/svg",
-    children: [jsx$1("path", {
+    children: [jsx("path", {
       d: "M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z",
       fill: "none",
       stroke: "currentColor",
       "stroke-width": "2"
-    }), jsx$1("path", {
+    }), jsx("path", {
       d: "m2 6 8 5 2 1.5 2-1.5 8-5",
       fill: "none",
       stroke: "currentColor",
@@ -40470,10 +38628,10 @@ const EmailSvg = () => {
 
 installImportMetaCssBuild(import.meta);
 const LinkBlankTargetSvg = () => {
-  return jsx$1("svg", {
+  return jsx("svg", {
     viewBox: "0 0 24 24",
     xmlns: "http://www.w3.org/2000/svg",
-    children: jsx$1("path", {
+    children: jsx("path", {
       d: "M10.0002 5H8.2002C7.08009 5 6.51962 5 6.0918 5.21799C5.71547 5.40973 5.40973 5.71547 5.21799 6.0918C5 6.51962 5 7.08009 5 8.2002V15.8002C5 16.9203 5 17.4801 5.21799 17.9079C5.40973 18.2842 5.71547 18.5905 6.0918 18.7822C6.5192 19 7.07899 19 8.19691 19H15.8031C16.921 19 17.48 19 17.9074 18.7822C18.2837 18.5905 18.5905 18.2839 18.7822 17.9076C19 17.4802 19 16.921 19 15.8031V14M20 9V4M20 4H15M20 4L13 11",
       stroke: "currentColor",
       fill: "none",
@@ -40484,10 +38642,10 @@ const LinkBlankTargetSvg = () => {
   });
 };
 const ArrowTurnRightDownSvg = () => {
-  return jsx$1("svg", {
+  return jsx("svg", {
     viewBox: "0 0 24 24",
     xmlns: "http://www.w3.org/2000/svg",
-    children: jsx$1("path", {
+    children: jsx("path", {
       d: "M4 4H11A4 4 0 0 1 15 8V20M10 15 15 20 20 15",
       fill: "none",
       stroke: "currentColor",
@@ -40498,14 +38656,14 @@ const ArrowTurnRightDownSvg = () => {
   });
 };
 const LinkAnchorSvg = () => {
-  return jsx$1("svg", {
+  return jsx("svg", {
     viewBox: "0 0 24 24",
     xmlns: "http://www.w3.org/2000/svg",
     children: jsxs("g", {
-      children: [jsx$1("path", {
+      children: [jsx("path", {
         d: "M13.2218 3.32234C15.3697 1.17445 18.8521 1.17445 21 3.32234C23.1479 5.47022 23.1479 8.95263 21 11.1005L17.4645 14.636C15.3166 16.7839 11.8342 16.7839 9.6863 14.636C9.48752 14.4373 9.30713 14.2271 9.14514 14.0075C8.90318 13.6796 8.97098 13.2301 9.25914 12.9419C9.73221 12.4688 10.5662 12.6561 11.0245 13.1435C11.0494 13.1699 11.0747 13.196 11.1005 13.2218C12.4673 14.5887 14.6834 14.5887 16.0503 13.2218L19.5858 9.6863C20.9526 8.31947 20.9526 6.10339 19.5858 4.73655C18.219 3.36972 16.0029 3.36972 14.636 4.73655L13.5754 5.79721C13.1849 6.18774 12.5517 6.18774 12.1612 5.79721C11.7706 5.40669 11.7706 4.77352 12.1612 4.383L13.2218 3.32234Z",
         fill: "currentColor"
-      }), jsx$1("path", {
+      }), jsx("path", {
         d: "M6.85787 9.6863C8.90184 7.64233 12.2261 7.60094 14.3494 9.42268C14.7319 9.75083 14.7008 10.3287 14.3444 10.685C13.9253 11.1041 13.2317 11.0404 12.7416 10.707C11.398 9.79292 9.48593 9.88667 8.27209 11.1005L4.73655 14.636C3.36972 16.0029 3.36972 18.219 4.73655 19.5858C6.10339 20.9526 8.31947 20.9526 9.6863 19.5858L10.747 18.5251C11.1375 18.1346 11.7706 18.1346 12.1612 18.5251C12.5517 18.9157 12.5517 19.5488 12.1612 19.9394L11.1005 21C8.95263 23.1479 5.47022 23.1479 3.32234 21C1.17445 18.8521 1.17445 15.3697 3.32234 13.2218L6.85787 9.6863Z",
         fill: "currentColor"
       })]
@@ -40513,30 +38671,30 @@ const LinkAnchorSvg = () => {
   });
 };
 const LinkSmsSvg = () => {
-  return jsx$1("svg", {
+  return jsx("svg", {
     viewBox: "0 0 24 24",
     xmlns: "http://www.w3.org/2000/svg",
-    children: jsx$1("path", {
+    children: jsx("path", {
       d: "M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM18 14H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z",
       fill: "currentColor"
     })
   });
 };
 const LinkGithubSvg = () => {
-  return jsx$1("svg", {
+  return jsx("svg", {
     viewBox: "0 0 24 24",
     xmlns: "http://www.w3.org/2000/svg",
-    children: jsx$1("path", {
+    children: jsx("path", {
       d: "M12 2C6.48 2 2 6.48 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0012 2z",
       fill: "currentColor"
     })
   });
 };
 const LinkCurrentSvg = () => {
-  return jsx$1("svg", {
+  return jsx("svg", {
     viewBox: "0 0 16 16",
     xmlns: "http://www.w3.org/2000/svg",
-    children: jsx$1("path", {
+    children: jsx("path", {
       d: "m 8 0 c -3.3125 0 -6 2.6875 -6 6 c 0.007812 0.710938 0.136719 1.414062 0.386719 2.078125 l -0.015625 -0.003906 c 0.636718 1.988281 3.78125 5.082031 5.625 6.929687 h 0.003906 v -0.003906 c 1.507812 -1.507812 3.878906 -3.925781 5.046875 -5.753906 c 0.261719 -0.414063 0.46875 -0.808594 0.585937 -1.171875 l -0.019531 0.003906 c 0.25 -0.664063 0.382813 -1.367187 0.386719 -2.078125 c 0 -3.3125 -2.683594 -6 -6 -6 z m 0 3.691406 c 1.273438 0 2.308594 1.035156 2.308594 2.308594 s -1.035156 2.308594 -2.308594 2.308594 c -1.273438 -0.003906 -2.304688 -1.035156 -2.304688 -2.308594 c -0.003906 -1.273438 1.03125 -2.304688 2.304688 -2.308594 z m 0 0",
       fill: "currentColor"
     })
@@ -40544,10 +38702,10 @@ const LinkCurrentSvg = () => {
 };
 
 const PhoneSvg = () => {
-  return jsx$1("svg", {
+  return jsx("svg", {
     viewBox: "0 0 24 24",
     xmlns: "http://www.w3.org/2000/svg",
-    children: jsx$1("path", {
+    children: jsx("path", {
       d: "M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z",
       fill: "currentColor"
     })
@@ -40748,12 +38906,12 @@ const LoadingIndicatorFluid = ({
       resizeObserver.disconnect();
     };
   }, []);
-  return jsx$1("span", {
+  return jsx("span", {
     ...rest,
     ref: ref,
     className: "navi_loading_indicator_fluid_container",
     "data-visually-hidden": visuallyHidden ? "" : undefined,
-    children: containerWidth > 0 && containerHeight > 0 && jsx$1(LoadingRectangleSvg, {
+    children: containerWidth > 0 && containerHeight > 0 && jsx(LoadingRectangleSvg, {
       color: color,
       radius: containerRadius,
       width: containerWidth,
@@ -40857,14 +39015,14 @@ const LoadingRectangleSvg = ({
     xmlns: "http://www.w3.org/2000/svg",
     "shape-rendering": "geometricPrecision",
     "data-radius": radius,
-    children: [isCircle ? jsx$1("circle", {
+    children: [isCircle ? jsx("circle", {
       cx: margin + drawableWidth / 2,
       cy: margin + drawableHeight / 2,
       r: actualRadius,
       fill: "none",
       stroke: trailColor,
       strokeWidth: strokeWidth
-    }) : jsx$1("rect", {
+    }) : jsx("rect", {
       x: margin,
       y: margin,
       width: drawableWidth,
@@ -40873,7 +39031,7 @@ const LoadingRectangleSvg = ({
       stroke: trailColor,
       strokeWidth: strokeWidth,
       rx: actualRadius
-    }), jsx$1("path", {
+    }), jsx("path", {
       d: rectPath,
       fill: "none",
       stroke: color,
@@ -40881,7 +39039,7 @@ const LoadingRectangleSvg = ({
       strokeLinecap: "round",
       strokeDasharray: `${segmentLength} ${gapLength}`,
       pathLength: pathLength,
-      children: jsx$1("animate", {
+      children: jsx("animate", {
         attributeName: "stroke-dashoffset",
         from: pathLength,
         to: "0",
@@ -40889,10 +39047,10 @@ const LoadingRectangleSvg = ({
         repeatCount: "indefinite",
         begin: "0s"
       }, animationKey)
-    }), jsx$1("circle", {
+    }), jsx("circle", {
       r: strokeWidth,
       fill: color,
-      children: jsx$1("animateMotion", {
+      children: jsx("animateMotion", {
         path: rectPath,
         dur: `${animationDuration}s`,
         repeatCount: "indefinite",
@@ -40931,13 +39089,13 @@ const LoadingOutline = props => {
     if (!container) {
       return props.children;
     }
-    return createPortal(jsx$1(LoadingOutlineWithPortal, {
+    return createPortal(jsx(LoadingOutlineWithPortal, {
       container: container,
       ...props,
       containerRef: undefined
     }), container);
   }
-  return jsx$1(LoadingOutlineUI, {
+  return jsx(LoadingOutlineUI, {
     ...props
   });
 };
@@ -40996,7 +39154,7 @@ const LoadingOutlineUI = props => {
   insetBottom -= lineHalfSize;
   insetLeft -= lineHalfSize;
   return jsxs(Fragment, {
-    children: [jsx$1("span", {
+    children: [jsx("span", {
       ref: rectangleRef,
       className: "navi_loading_outline_wrapper",
       style: {
@@ -41005,7 +39163,7 @@ const LoadingOutlineUI = props => {
         "--loading-rectangle-bottom": `${insetBottom}px`,
         "--loading-rectangle-left": `${insetLeft}px`
       },
-      children: jsx$1(LoadingIndicatorFluid, {
+      children: jsx(LoadingIndicatorFluid, {
         visuallyHidden: !shouldShowSpinner,
         radius: radius,
         color: color,
@@ -41043,7 +39201,7 @@ const LoadingOutlineWithPortal = props => {
     insetTop += container.querySelector("summary").offsetHeight;
   }
   return jsxs(Fragment, {
-    children: [jsx$1("div", {
+    children: [jsx("div", {
       className: "navi_loading_outline_wrapper",
       style: {
         "--loading-rectangle-top": `${insetTop}px`,
@@ -41051,7 +39209,7 @@ const LoadingOutlineWithPortal = props => {
         "--loading-rectangle-bottom": `${insetBottom}px`,
         "--loading-rectangle-left": `${insetLeft}px`
       },
-      children: shouldShowSpinner && jsx$1(LoadingIndicatorFluid, {
+      children: shouldShowSpinner && jsx(LoadingIndicatorFluid, {
         color: color,
         radius: radius
       })
@@ -41147,7 +39305,7 @@ const TextAnchor = ({
     setTopOffset(childEl, topOffset);
   }, [textAnchor, textKey, textSize, lineLayout?.size, lineLayout?.verticalAlign]);
   return jsxs(Fragment, {
-    children: [children, jsx$1("span", {
+    children: [children, jsx("span", {
       ref: anchorRef,
       className: "navi_text_anchor",
       "aria-hidden": "true",
@@ -41558,13 +39716,13 @@ time.navi_text {
   height: 100%;
 }
 `;
-const REGULAR_SPACE = jsx$1("span", {
+const REGULAR_SPACE = jsx("span", {
   "data-navi-space": "",
   children: " "
 });
 // A space that uses padding-left instead of a real space character.
 // This avoids the underline that browsers draw under spaces inside links.
-const FAKE_SPACE = jsx$1("span", {
+const FAKE_SPACE = jsx("span", {
   "data-navi-space": "",
   style: "padding-left: 0.25em",
   children: "​"
@@ -41585,16 +39743,16 @@ const CustomWidthSpace = ({
     // - Second span: a zero-width joiner (&#8203;) with padding-left set to
     //   the desired gap size. This is the only visible part.
     return jsxs("span", {
-      children: [jsx$1("span", {
+      children: [jsx("span", {
         style: "font-size: 0; line-height: 0",
         children: " "
-      }), jsx$1("span", {
+      }), jsx("span", {
         style: `padding-left: ${value}`,
         children: "​"
       })]
     });
   }
-  return jsx$1("span", {
+  return jsx("span", {
     style: `padding-left: ${value}`,
     children: "​"
   });
@@ -41650,12 +39808,12 @@ const applySpacingOnTextChildren = (children, spacing, defaultSpace) => {
   } else if (typeof spacing === "string") {
     if (isSizeSpacingKey(spacing)) {
       const value = stringifySpacingStyle(spacing);
-      separator = jsx$1(CustomWidthSpace, {
+      separator = jsx(CustomWidthSpace, {
         value: value,
         useRealSpaceChar: useRealSpaceChar
       });
     } else if (hasCSSSizeUnit(spacing) || spacing.startsWith("var(")) {
-      separator = jsx$1(CustomWidthSpace, {
+      separator = jsx(CustomWidthSpace, {
         value: spacing,
         useRealSpaceChar: useRealSpaceChar
       });
@@ -41663,7 +39821,7 @@ const applySpacingOnTextChildren = (children, spacing, defaultSpace) => {
       separator = spacing;
     }
   } else if (typeof spacing === "number") {
-    separator = jsx$1(CustomWidthSpace, {
+    separator = jsx(CustomWidthSpace, {
       value: `${spacing}px`,
       useRealSpaceChar: useRealSpaceChar
     });
@@ -41821,26 +39979,26 @@ const shouldInjectSpacingBetween = (left, right) => {
  */
 const Text = props => {
   if (props.loading || props.skeleton) {
-    return jsx$1(TextSkeleton, {
+    return jsx(TextSkeleton, {
       ...props
     });
   }
   if (props.shrinkWrap) {
-    return jsx$1(TextShrinkWrap, {
+    return jsx(TextShrinkWrap, {
       ...props
     });
   }
   if (props.maxLines === 1 || props.maxLines === "1") {
-    return jsx$1(TextOverflow, {
+    return jsx(TextOverflow, {
       ...props
     });
   }
   if (props.selectRange) {
-    return jsx$1(TextWithSelectRange, {
+    return jsx(TextWithSelectRange, {
       ...props
     });
   }
-  return jsx$1(TextUI, {
+  return jsx(TextUI, {
     ...props
   });
 };
@@ -41887,7 +40045,7 @@ const TextShrinkWrap = props => {
       window.removeEventListener("resize", applyWidth);
     };
   }, []);
-  return jsx$1(Text, {
+  return jsx(Text, {
     ...props,
     ref: ref,
     "data-shrinkwrap": "",
@@ -41940,7 +40098,7 @@ const TextUI = props => {
       bold: undefined,
       "data-bold": bold ? "" : undefined,
       "data-contains-absolute-child": "",
-      children: [jsx$1("span", {
+      children: [jsx("span", {
         className: "navi_text_bold_background",
         "aria-hidden": "true",
         children: children
@@ -41957,12 +40115,12 @@ const TextUI = props => {
       ...boxProps,
       children: [jsxs("span", {
         className: "navi_text_sizer",
-        children: [jsx$1("span", {
+        children: [jsx("span", {
           className: "navi_text_sizer_placeholder",
           "aria-hidden": "true",
           style: holdSpaceForStyle,
           children: children
-        }), jsx$1("span", {
+        }), jsx("span", {
           className: "navi_text_sizer_overlay",
           children: children
         })]
@@ -41980,12 +40138,12 @@ const TextSkeleton = ({
   ...props
 }) => {
   // Three-level structure — see CSS comment on [data-skeleton] for details.
-  const skeletonOverlay = jsx$1("span", {
+  const skeletonOverlay = jsx("span", {
     className: "navi_text_skeleton_container",
     "aria-hidden": "true",
-    children: jsx$1("span", {
+    children: jsx("span", {
       className: "navi_text_skeleton_inset",
-      children: jsx$1("span", {
+      children: jsx("span", {
         className: "navi_text_skeleton"
       })
     })
@@ -41994,12 +40152,12 @@ const TextSkeleton = ({
   // has measurable height driven by the current font-size/line-height, and the
   // skeleton fills the available width instead of shrinking to a single char.
   const hasChildren = children !== null && children !== undefined && children !== false;
-  const innerChildren = hasChildren ? children : jsx$1("span", {
+  const innerChildren = hasChildren ? children : jsx("span", {
     className: "navi_text_skeleton_children_placeholder",
     "aria-hidden": "true",
     children: "W"
   });
-  return jsx$1(Text, {
+  return jsx(Text, {
     "data-skeleton": "",
     "data-loading": loading ? "" : undefined,
     ...props,
@@ -42015,7 +40173,7 @@ const TextOverflow = ({
   children,
   ...rest
 }) => {
-  return jsx$1(Text, {
+  return jsx(Text, {
     block: true,
     as: "div",
     pre: noWrap === undefined ? true : undefined
@@ -42039,7 +40197,7 @@ const TextWithSelectRange = ({
   const defaultRef = useRef();
   const innerRef = ref || defaultRef;
   useInitialTextSelection(innerRef, selectRange);
-  return jsx$1(Text, {
+  return jsx(Text, {
     ...props,
     ref: innerRef,
     selectRange: undefined
@@ -42120,10 +40278,10 @@ const Icon = ({
   ...props
 }) => {
   import.meta.css = [css$Y, "@jsenv/navi/src/text/text.jsx"];
-  const innerChildren = href ? jsx$1("svg", {
+  const innerChildren = href ? jsx("svg", {
     width: "100%",
     height: "100%",
-    children: jsx$1("use", {
+    children: jsx("use", {
       href: href
     })
   }) : children;
@@ -42155,7 +40313,7 @@ const Icon = ({
   } : {};
   const textRef = useRef();
   if (typeof children === "string") {
-    return jsx$1(Text, {
+    return jsx(Text, {
       ...props,
       ...ariaProps,
       "data-icon-text": "",
@@ -42165,7 +40323,7 @@ const Icon = ({
     });
   }
   if (flex || grid) {
-    return jsx$1(Box, {
+    return jsx(Box, {
       square: true,
       ...props,
       ...ariaProps,
@@ -42180,7 +40338,7 @@ const Icon = ({
       children: innerChildren
     });
   }
-  return jsx$1(TextAnchor, {
+  return jsx(TextAnchor, {
     childRef: textRef,
     textAnchor: textAnchor,
     textSize: props.size,
@@ -42198,7 +40356,7 @@ const Icon = ({
       "data-interactive": onClick ? "" : undefined,
       onClick: onClick,
       ref: textRef,
-      children: [jsx$1("span", {
+      children: [jsx("span", {
         style: "user-select:none",
         children: "​"
       }), innerChildren]
@@ -42735,14 +40893,14 @@ Object.assign(PSEUDO_CLASSES, {
 const Link = props => {
   import.meta.css = [css$X, "@jsenv/navi/src/nav/link/link.jsx"];
   if (props.route) {
-    return jsx$1(LinkWithRoute, {
+    return jsx(LinkWithRoute, {
       ...props
     });
   }
   if ((props.currentExcept || props.currentAlso)) {
     console.warn(`currentExcept/currentAlso amend what the link's own route says about being current, so they need a "route" prop.`);
   }
-  return jsx$1(LinkPlain, {
+  return jsx(LinkPlain, {
     ...props
   });
 };
@@ -42769,7 +40927,7 @@ const LinkWithRoute = ({
   // rest of the reading says.
   const linkMatching = !someExceptedRouteMatching && (matching && paramsAreMatching || someAlsoRouteMatching);
   const innerCurrent = current || linkMatching;
-  return jsx$1(Link, {
+  return jsx(Link, {
     href: url,
     current: innerCurrent,
     ...rest,
@@ -42875,27 +41033,27 @@ const LinkPlain = props => {
   if (endIcon === undefined) {
     // Check for special protocol or domain-specific icons first
     if (href?.startsWith("tel:")) {
-      innerEndIcon = jsx$1(Icon, {
-        children: jsx$1(PhoneSvg, {})
+      innerEndIcon = jsx(Icon, {
+        children: jsx(PhoneSvg, {})
       });
     } else if (href?.startsWith("sms:")) {
-      innerEndIcon = jsx$1(Icon, {
-        children: jsx$1(LinkSmsSvg, {})
+      innerEndIcon = jsx(Icon, {
+        children: jsx(LinkSmsSvg, {})
       });
     } else if (href?.startsWith("mailto:")) {
-      innerEndIcon = jsx$1(Icon, {
-        children: jsx$1(EmailSvg, {})
+      innerEndIcon = jsx(Icon, {
+        children: jsx(EmailSvg, {})
       });
     } else if (href?.includes("github.com")) {
       innerEndIcon = jsxs(Icon, {
-        children: [jsx$1(LinkGithubSvg, {}), " "]
+        children: [jsx(LinkGithubSvg, {}), " "]
       });
     }
     // Fall back to default icon logic
     else if (innerTarget === "_blank") {
       if (blankTargetIcon === undefined) {
         innerEndIcon = jsxs(Icon, {
-          children: [jsx$1(LinkBlankTargetSvg, {}), " "]
+          children: [jsx(LinkBlankTargetSvg, {}), " "]
         });
       } else {
         innerEndIcon = blankTargetIcon;
@@ -42904,16 +41062,16 @@ const LinkPlain = props => {
       if (anchorIcon === undefined) {
         if (anchor) {
           if (children) ; else {
-            innerEndIcon = jsx$1(Icon, {
+            innerEndIcon = jsx(Icon, {
               children: "#"
             });
           }
         } else {
-          innerEndIcon = jsx$1(Icon, {
+          innerEndIcon = jsx(Icon, {
             className: "anchor_icon",
             textAnchor: "char-bottom",
             size: "xs",
-            children: jsx$1(ArrowTurnRightDownSvg, {})
+            children: jsx(ArrowTurnRightDownSvg, {})
           });
         }
       } else {
@@ -42952,7 +41110,7 @@ const LinkPlain = props => {
   // around this link.
   const currentIndicatorAsked = currentIndicator ?? nav?.currentIndicator;
   const currentIndicatorPosition = currentIndicatorAsked === true ? "bottom" : currentIndicatorAsked;
-  const currentIndicatorEl = currentIndicatorPosition === "left" || currentIndicatorPosition === "right" || currentIndicatorPosition === "top" || currentIndicatorPosition === "bottom" ? jsx$1(LinkCurrentIndicator, {}) : null;
+  const currentIndicatorEl = currentIndicatorPosition === "left" || currentIndicatorPosition === "right" || currentIndicatorPosition === "top" || currentIndicatorPosition === "bottom" ? jsx(LinkCurrentIndicator, {}) : null;
   const {
     onClick,
     preventDefault
@@ -43069,7 +41227,7 @@ const LinkPlain = props => {
     pseudoClasses: LinkPseudoClasses,
     pseudoElements: LinkPseudoElements,
     childrenOutsideFlow: jsxs(Fragment, {
-      children: [jsx$1(LoadingOutline, {
+      children: [jsx(LoadingOutline, {
         loading: loading,
         inset: 1,
         color: "var(--link-loader-color)"
@@ -43082,7 +41240,7 @@ const LinkPlain = props => {
 // Named by the <Nav> around the link when the link is current, from its CSS:
 // that is what makes the bar glide from one tab to the next (see nav.jsx).
 const LinkCurrentIndicator = () => {
-  return jsx$1("span", {
+  return jsx("span", {
     className: "navi_current_indicator"
   });
 };
@@ -44084,9 +42242,9 @@ const Nav = ({
       "--nav-indicator-name": indicatorNameRef.current
     } : props.style,
     styleCSSVars: NavStyleCSSVars,
-    children: [indicatorPosition && jsx$1("span", {
+    children: [indicatorPosition && jsx("span", {
       className: "navi_nav_indicator"
-    }), jsx$1(NavContext.Provider, {
+    }), jsx(NavContext.Provider, {
       value: navContextValue,
       children: children
     })]
@@ -44811,20 +42969,20 @@ const Binder = ({
     pagePadding: pagePadding,
     ...props,
     styleCSSVars: BinderStyleCSSVars,
-    children: [jsx$1(BinderOutline, {
+    children: [jsx(BinderOutline, {
       rootRef: rootRef,
       currentValue: currentValue,
       tabsPosition: tabsPosition,
       vertical: vertical,
       tabsFirst: tabsFirst
-    }), jsx$1("div", {
+    }), jsx("div", {
       className: "navi_binder_tabs",
       role: "tablist",
       "aria-orientation": vertical ? "vertical" : "horizontal",
       style: {
         justifyContent: TABS_ALIGN_TO_JUSTIFY_CONTENT[tabsAlign]
       },
-      children: items.map((item, index) => jsx$1(BinderTab, {
+      children: items.map((item, index) => jsx(BinderTab, {
         item: item,
         index: index,
         tabRefs: tabRefs,
@@ -44834,7 +42992,7 @@ const Binder = ({
         onKeyDown: onKeyDown,
         onReportCurrent: current => reportCurrent(item, current)
       }, item.value))
-    }), jsx$1("div", {
+    }), jsx("div", {
       className: "navi_binder_page",
       role: "tabpanel",
       children: currentItem?.content
@@ -44880,7 +43038,7 @@ const BinderTab = ({
     onClick,
     ...rest
   } = tabProps;
-  return jsx$1(Box, {
+  return jsx(Box, {
     as: "button",
     type: "button",
     baseClassName: "navi_binder_tab",
@@ -44898,9 +43056,9 @@ const BinderTab = ({
     },
     onKeyDown: onKeyDown,
     ...rest,
-    children: jsx$1(BinderItemContext.Provider, {
+    children: jsx(BinderItemContext.Provider, {
       value: onReportCurrent,
-      children: jsx$1("span", {
+      children: jsx("span", {
         className: "navi_binder_tab_label",
         "data-max-lines": itemMaxLines || undefined,
         style: itemMaxLines > 1 ? {
@@ -44939,17 +43097,17 @@ const BinderOutline = ({
     return () => resizeObserver.disconnect();
   }, [rootRef, measure, currentValue]);
   if (!drawing) {
-    return jsx$1("svg", {
+    return jsx("svg", {
       className: "navi_binder_outline",
       "aria-hidden": "true"
     });
   }
-  return jsx$1("svg", {
+  return jsx("svg", {
     className: "navi_binder_outline",
     "aria-hidden": "true",
     width: drawing.width,
     height: drawing.height,
-    children: jsx$1("path", {
+    children: jsx("path", {
       d: buildBinderPath({
         ...drawing.pathParams,
         tabsPosition
@@ -45346,7 +43504,7 @@ const FixedBar = ({
       setFixedBarSpace(area, barElement, null);
     };
   }, [area, vertical]);
-  return jsx$1(Box, {
+  return jsx(Box, {
     baseClassName: "navi_fixed_bar",
     "data-area": area,
     ...props,
@@ -45658,7 +43816,7 @@ const SummaryMarker = ({
 }) => {
   import.meta.css = [css$S, "@jsenv/navi/src/control/details/summary_marker.jsx"];
   const showLoading = useDebounceTrue(loading, 300);
-  return jsx$1("span", {
+  return jsx("span", {
     className: "navi_summary_marker",
     "data-loading": showLoading ? "" : undefined,
     children: jsxs("svg", {
@@ -45667,7 +43825,7 @@ const SummaryMarker = ({
       children: [jsxs("g", {
         className: "navi_summary_marker_loading_container",
         "transform-origin": "480px -480px",
-        children: [jsx$1("circle", {
+        children: [jsx("circle", {
           className: "navi_summary_marker_background_circle",
           cx: "480",
           cy: "-480",
@@ -45676,7 +43834,7 @@ const SummaryMarker = ({
           fill: "none",
           strokeWidth: "60",
           opacity: "0.2"
-        }), jsx$1("circle", {
+        }), jsx("circle", {
           className: "navi_summary_marker_foreground_circle",
           cx: "480",
           cy: "-480",
@@ -45687,11 +43845,11 @@ const SummaryMarker = ({
           strokeLinecap: "round",
           strokeDasharray: "503 1507"
         })]
-      }), jsx$1("g", {
+      }), jsx("g", {
         className: "navi_summary_marker_arrow_group",
         "data-direction": open ? openDirection : "right",
         "transform-origin": "480px -480px",
-        children: jsx$1("path", {
+        children: jsx("path", {
           className: "navi_summary_marker_arrow",
           fill: "currentColor",
           d: rightArrowPath
@@ -45741,7 +43899,7 @@ const Details = props => {
   const refDefault = useRef();
   props.ref = props.ref || refDefault;
   props.value = props.value === undefined ? "on" : props.value;
-  const details = jsx$1(DetailsField, {
+  const details = jsx(DetailsField, {
     ...props
   });
   return details;
@@ -45863,20 +44021,20 @@ const DetailsField = props => {
       });
     },
     open: open,
-    children: [jsx$1("summary", {
+    children: [jsx("summary", {
       ref: summaryRef,
       children: jsxs("div", {
         className: "navi_summary_body",
-        children: [jsx$1(SummaryMarker, {
+        children: [jsx(SummaryMarker, {
           open: open,
           loading: loading
-        }), jsx$1("div", {
+        }), jsx("div", {
           className: "navi_summary_label",
           children: label
         })]
       })
-    }), jsx$1(DetailsFieldContent, {
-      children: jsx$1(ControlChildrenWrapper, {
+    }), jsx(DetailsFieldContent, {
+      children: jsx(ControlChildrenWrapper, {
         ...controlChildrenWrapperProps,
         children: children
       })
@@ -45906,7 +44064,7 @@ const DetailsFieldContent = ({
   if (!action) {
     return children;
   }
-  return jsx$1(ActionRenderer, {
+  return jsx(ActionRenderer, {
     action: action,
     children: children
   });
@@ -47711,13 +45869,13 @@ const Expandable = props => {
   // The `ui` prop is the shorthand for the common shape: it names the UI part
   // and children are the content. Without it the children ARE the parts.
   const body = ui === undefined ? children : jsxs(Fragment, {
-    children: [jsx$1(ExpandableUI, {
+    children: [jsx(ExpandableUI, {
       children: ui
-    }), jsx$1(ExpandableContent, {
+    }), jsx(ExpandableContent, {
       children: children
     })]
   });
-  return jsx$1(Box, {
+  return jsx(Box, {
     ref: rootRef,
     baseClassName: "navi_expandable",
     "aria-expanded": opened ? "true" : "false",
@@ -47757,7 +45915,7 @@ const Expandable = props => {
       "--navi-expandable-max-content-height": stringifyStyle$1(maxContentHeight, "maxHeight"),
       ...rest.style
     },
-    children: jsx$1(ExpandableContext.Provider, {
+    children: jsx(ExpandableContext.Provider, {
       value: expandableContextValue,
       children: body
     })
@@ -47823,15 +45981,15 @@ const ExpandableUI = ({
       });
     },
     ...rest,
-    children: [marker === false ? null : jsx$1("span", {
+    children: [marker === false ? null : jsx("span", {
       className: "navi_expandable_marker",
       "aria-hidden": "true",
-      children: marker === undefined ? jsx$1(SummaryMarker, {
+      children: marker === undefined ? jsx(SummaryMarker, {
         open: opened,
         loading: loading,
         openDirection: markerDirection
       }) : marker
-    }), jsx$1("div", {
+    }), jsx("div", {
       className: "navi_expandable_ui_label",
       children: typeof children === "function" ? children({
         open: opened
@@ -47861,20 +46019,20 @@ const ExpandableContent = ({
   } = useExpandableContext("Content");
   let content = children;
   if (hasAction) {
-    content = jsx$1(ActionRenderer, {
+    content = jsx(ActionRenderer, {
       action: effectiveAction,
       children: children
     });
   }
-  return jsx$1(Box, {
+  return jsx(Box, {
     ref: contentContainerRef,
     id: contentId,
     baseClassName: "navi_expandable_content_container",
     inert: opened ? undefined : true,
     ...rest,
-    children: jsx$1("div", {
+    children: jsx("div", {
       className: "navi_expandable_content_sizer",
-      children: jsx$1("div", {
+      children: jsx("div", {
         className: "navi_expandable_content",
         children: contentMounted ? content : null
       })
@@ -47938,14 +46096,14 @@ const createComponentResolver = (resolvers, {
     }
     const Resolver = resolvers[index];
     const isLast = index === resolvers.length - 1;
-    return jsx$1(ResolverIndexContext.Provider, {
+    return jsx(ResolverIndexContext.Provider, {
       value: index + 1,
-      children: isLast ? jsx$1(NextResolverContext.Provider, {
+      children: isLast ? jsx(NextResolverContext.Provider, {
         value: null,
-        children: jsx$1(Resolver, {
+        children: jsx(Resolver, {
           ...props
         })
-      }) : jsx$1(Resolver, {
+      }) : jsx(Resolver, {
         ...props
       })
     });
@@ -47955,15 +46113,15 @@ const createComponentResolver = (resolvers, {
   // Renders ChainRunner directly — no new providers — so ResolverIndexContext
   // is inherited from the parent tree. When a resolver calls <Next>, the chain
   // resumes from index+1 (already set by the Provider wrapping that resolver).
-  const NextComponent = props => jsx$1(ChainRunner, {
+  const NextComponent = props => jsx(ChainRunner, {
     ...props
   });
   const renderComponent = props => {
-    return jsx$1(NextResolverContext.Provider, {
+    return jsx(NextResolverContext.Provider, {
       value: NextComponent,
-      children: jsx$1(ResolverIndexContext.Provider, {
+      children: jsx(ResolverIndexContext.Provider, {
         value: 0,
-        children: jsx$1(ChainRunner, {
+        children: jsx(ChainRunner, {
           ...props
         })
       })
@@ -48013,11 +46171,11 @@ const shallowDiffers = (a, b) => {
 const ButtonRouteResolver = props => {
   const Next = useNextResolver();
   if (props.route) {
-    return jsx$1(ButtonWithRoute, {
+    return jsx(ButtonWithRoute, {
       ...props
     });
   }
-  return jsx$1(Next, {
+  return jsx(Next, {
     ...props
   });
 };
@@ -48042,7 +46200,7 @@ const ButtonWithRoute = props => {
 
   // Merged into whatever the caller already holds: a button can be forced into
   // a state for a demo and still learn its own current-ness from its route.
-  return jsx$1(Next, {
+  return jsx(Next, {
     href: url,
     pseudoState: {
       ...pseudoState,
@@ -48572,13 +46730,13 @@ const ButtonUI = props => {
     pseudoElements: ButtonPseudoElements,
     visualSelector: visualSelector,
     hasChildUsingForwardedProps: true,
-    children: [jsx$1(LoadingOutline, {
+    children: [jsx(LoadingOutline, {
       loading: loadingOutline && loading,
       inset: -1,
       color: "var(--button-loader-color)"
-    }), jsx$1(ControlChildrenWrapper, {
+    }), jsx(ControlChildrenWrapper, {
       ...controlChildrenWrapperProps,
-      children: jsx$1(ButtonContent, {
+      children: jsx(ButtonContent, {
         spacing: spacing,
         children: children
       })
@@ -48595,7 +46753,7 @@ const ButtonContent = ({
     display: "inherit",
     spacing: spacing,
     className: "navi_button_content",
-    children: [children, jsx$1(ButtonShadow, {})]
+    children: [children, jsx(ButtonShadow, {})]
   });
 };
 const ButtonStyleCSSVars = {
@@ -48640,7 +46798,7 @@ const ButtonStyleCSSVars = {
 const ButtonPseudoClasses = [":-navi-href-current", ":hover", ":active", ":-navi-pressed", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
 const ButtonPseudoElements = ["::-navi-loader"];
 const ButtonShadow = () => {
-  return jsx$1("span", {
+  return jsx("span", {
     className: "navi_button_shadow"
   });
 };
@@ -48654,7 +46812,7 @@ const ButtonFirstResolver = props => {
   if (selfInteractionsHidden) {
     return null;
   }
-  return jsx$1(Next, {
+  return jsx(Next, {
     ...props
   });
 };
@@ -48709,7 +46867,7 @@ const ButtonCommandPropResolver = props => {
       }
     }
   }
-  return jsx$1(Next, {
+  return jsx(Next, {
     ...props,
     readOnlyWhileFormUnchanged: undefined,
     readOnly: readOnly
@@ -48978,17 +47136,17 @@ const ControlSwap = props => {
     "data-animation": animation ? "" : undefined,
     "data-active-index": activeIndex,
     ...rest,
-    children: [jsx$1(ControlSwapCap, {
+    children: [jsx(ControlSwapCap, {
       ref: capRefs[0],
       side: sides[0],
       slotId: `${slotIdPrefix}_0`,
       active: activeIndex === 0,
       onPress: swapOnPress
-    }), jsx$1("div", {
+    }), jsx("div", {
       className: "navi_control_swap_stage",
-      children: jsx$1("div", {
+      children: jsx("div", {
         className: "navi_control_swap_track",
-        children: sides.map((side, index) => jsx$1("div", {
+        children: sides.map((side, index) => jsx("div", {
           ref: slotRefs[index],
           id: `${slotIdPrefix}_${index}`,
           className: "navi_control_swap_slot",
@@ -48996,7 +47154,7 @@ const ControlSwap = props => {
           children: side.control
         }, side.name))
       })
-    }), jsx$1(ControlSwapCap, {
+    }), jsx(ControlSwapCap, {
       ref: capRefs[1],
       side: sides[1],
       slotId: `${slotIdPrefix}_1`,
@@ -49075,11 +47233,11 @@ const ControlSwapCap = ({
     "aria-expanded": active,
     "aria-controls": slotId,
     onClick: onPress,
-    children: [jsx$1(Icon, {
+    children: [jsx(Icon, {
       width: "50%",
       square: true,
       children: icon
-    }), badgeToDraw ? jsx$1("span", {
+    }), badgeToDraw ? jsx("span", {
       className: "navi_control_swap_badge",
       "aria-hidden": "true",
       children: badgeToDraw === true ? null : badgeToDraw
@@ -49233,7 +47391,7 @@ const ControlGroup = props => {
   const {
     children
   } = controlgroupProps;
-  return jsx$1(Box, {
+  return jsx(Box, {
     ...controlgroupRootProps,
     ...controlgroupProps,
     type: undefined
@@ -49244,7 +47402,7 @@ const ControlGroup = props => {
     distributeChildUIState: undefined,
     distributeChildStates: undefined,
     pseudoClasses: CONTROL_GROUP_PSEUDO_CLASSES,
-    children: jsx$1(ControlgroupChildrenWrapper, {
+    children: jsx(ControlgroupChildrenWrapper, {
       ...childrenWrapperProps,
       // do not propagate name to children like radio group or checkbox group does
       // (otherwise anonymous button end up using that name)
@@ -49314,12 +47472,12 @@ const css$N = /* css */`@layer navi {
 `;
 const SwitchUI = () => {
   import.meta.css = [css$N, "@jsenv/navi/src/control/input/switch_ui.jsx"];
-  return jsx$1(Box, {
+  return jsx(Box, {
     className: "navi_switch",
     as: "svg",
     viewBox: "0 0 12 12",
     "aria-hidden": "true",
-    children: jsx$1("circle", {
+    children: jsx("circle", {
       cx: "6",
       cy: "6",
       r: "5"
@@ -49603,18 +47761,18 @@ const InputCheckbox = props => {
   props.ref = props.ref || defaultRef;
   props.value = props.value === undefined ? "on" : props.value;
   if (props.headless) {
-    return jsx$1(InputCheckboxHeadless, {
+    return jsx(InputCheckboxHeadless, {
       ...props,
       headless: undefined
     });
   }
-  return jsx$1(InputCheckboxFieldInterface, {
+  return jsx(InputCheckboxFieldInterface, {
     ...props
   });
 };
 const InputCheckboxHeadless = props => {
   const [checkboxRootProps, checkboxHostProps] = useCheckableProps(props);
-  return jsx$1(RealInputCheckbox, {
+  return jsx(RealInputCheckbox, {
     pseudoClasses: CheckboxPseudoClasses,
     "navi-visually-hidden": "",
     "navi-focus-delegate": "",
@@ -49644,20 +47802,20 @@ const InputCheckboxFieldInterface = props => {
   });
   let visualVnode;
   if (variant === "icon" || icon) {
-    visualVnode = jsx$1("div", {
+    visualVnode = jsx("div", {
       className: "navi_checkbox_icon",
       "aria-hidden": "true",
       children: Array.isArray(icon) ? icon[checked ? 1 : 0] : icon
     });
   } else if (variant === "switch") {
-    visualVnode = jsx$1(SwitchUI, {});
+    visualVnode = jsx(SwitchUI, {});
   } else {
-    visualVnode = jsx$1(Box, {
+    visualVnode = jsx(Box, {
       className: "navi_checkbox_marker",
       as: "svg",
       viewBox: "0 0 12 12",
       "aria-hidden": "true",
-      children: jsx$1("path", {
+      children: jsx("path", {
         d: "M10.5 2L4.5 9L1.5 5.5",
         fill: "none",
         strokeWidth: "2"
@@ -49682,21 +47840,21 @@ const InputCheckboxFieldInterface = props => {
     basePseudoState: basePseudoState,
     pseudoClasses: CheckboxPseudoClasses,
     pseudoElements: CheckboxPseudoElements,
-    children: [jsx$1("span", {
+    children: [jsx("span", {
       className: "navi_checkbox_accent_probe",
       "aria-hidden": "true"
-    }), jsx$1(LoadingOutline, {
+    }), jsx(LoadingOutline, {
       loading: loading,
       inset: -1,
       color: "var(--loader-color)"
-    }), visualVnode, jsx$1(RealInputCheckbox, {
+    }), visualVnode, jsx(RealInputCheckbox, {
       ...checkboxHostProps,
       switch: switchProp ? "" : undefined
     })]
   });
 };
 const RealInputCheckbox = props => {
-  return jsx$1(Box, {
+  return jsx(Box, {
     ...props,
     as: "input",
     type: "checkbox",
@@ -49829,11 +47987,11 @@ const Field = props => {
     as
   } = props;
   if (as === "label") {
-    return jsx$1(FieldAsLabel, {
+    return jsx(FieldAsLabel, {
       ...props
     });
   }
-  return jsx$1(FieldAsContainer, {
+  return jsx(FieldAsContainer, {
     ...props
   });
 };
@@ -49843,7 +48001,7 @@ const FieldAsLabel = props => {
     children
   } = props;
   const isVertical = props.flex === "y";
-  return jsx$1(Label, {
+  return jsx(Label, {
     "navi-field": "",
     alignX: isVertical ? "start" : undefined,
     spacing: spacingWithControl,
@@ -49870,16 +48028,16 @@ const FieldAsContainer = props => {
   messagePropsRef.current = messageProps;
   const idDefault = useId();
   props.fieldId = props.fieldId || `field_${idDefault}`;
-  return jsx$1(Box, {
+  return jsx(Box, {
     "navi-field": "",
     styleCSSVars: FieldCSSVars,
     alignX: isVertical ? "start" : undefined,
     ...remainingProps,
     "data-vertical": isVertical ? "" : undefined,
     fieldId: undefined,
-    children: jsx$1(MessagePropsRefContext.Provider, {
+    children: jsx(MessagePropsRefContext.Provider, {
       value: messagePropsRef,
-      children: jsx$1(ControlIdContext.Provider, {
+      children: jsx(ControlIdContext.Provider, {
         value: props.fieldId,
         children: children
       })
@@ -49936,7 +48094,7 @@ const Label = props => {
   });
   const messagePropsRef = useRef();
   messagePropsRef.current = messageProps;
-  return jsx$1(Box, {
+  return jsx(Box, {
     as: "label",
     baseClassName: "navi_label",
     pseudoClasses: FIELD_PSEUDO_CLASSES,
@@ -49958,14 +48116,14 @@ const Label = props => {
       setReadOnly(false);
       setRequired(false);
     },
-    children: jsx$1(MessagePropsRefContext.Provider, {
+    children: jsx(MessagePropsRefContext.Provider, {
       value: messagePropsRef,
       children: jsxs(ControlIdContext.Provider, {
         value: props.htmlFor,
         children: [children, requiredIndicator && required &&
         // aria-hidden: the control carries `required`, which is what a
         // screen reader announces — the mark is there for the eye
-        jsx$1("span", {
+        jsx("span", {
           className: "navi_label_required_indicator",
           "aria-hidden": "true",
           children: requiredIndicator === true ? "*" : requiredIndicator
@@ -49978,13 +48136,13 @@ const Label = props => {
 const InputTextualContext = createContext(null);
 
 const InputLeftSlot = props => {
-  return jsx$1(InputSlot, {
+  return jsx(InputSlot, {
     ...props,
     side: "left"
   });
 };
 const InputRightSlot = props => {
-  return jsx$1(InputSlot, {
+  return jsx(InputSlot, {
     ...props,
     side: "right"
   });
@@ -49994,9 +48152,9 @@ const InputIconSlot = ({
   side = "right",
   ...props
 }) => {
-  return jsx$1(InputSlot, {
+  return jsx(InputSlot, {
     side: side,
-    children: jsx$1(Icon, {
+    children: jsx(Icon, {
       fillLine: true,
       ...props,
       children: children
@@ -50008,7 +48166,7 @@ const InputUnitSlot = ({
   side = "right",
   ...props
 }) => {
-  return jsx$1(InputSlot, {
+  return jsx(InputSlot, {
     side: side,
     noWrap: true,
     ...props,
@@ -50025,7 +48183,7 @@ const InputSlot = ({
     readOnly,
     disabled
   } = ctx || {};
-  return jsx$1(Label, {
+  return jsx(Label, {
     htmlFor: id,
     className: "navi_input_slot",
     disabled: disabled,
@@ -50335,18 +48493,18 @@ const InputRadio = props => {
   props.ref = props.ref || defaultRef;
   props.value = props.value === undefined ? "on" : props.value;
   if (props.headless) {
-    return jsx$1(InputRadioHeadless, {
+    return jsx(InputRadioHeadless, {
       ...props,
       headless: undefined
     });
   }
-  return jsx$1(InputRadioFieldInterface, {
+  return jsx(InputRadioFieldInterface, {
     ...props
   });
 };
 const InputRadioHeadless = props => {
   const [radioRootProps, radioHostProps] = useCheckableProps(props);
-  return jsx$1(RealInputRadio, {
+  return jsx(RealInputRadio, {
     pseudoClasses: RadioPseudoClasses,
     "navi-visually-hidden": "",
     "navi-focus-delegate": "",
@@ -50382,7 +48540,7 @@ const InputRadioFieldInterface = props => {
     visualVNode = Array.isArray(icon) ? icon[checked ? 1 : 0] : icon;
   } else {
     // variantResolved === "radio"
-    visualVNode = jsx$1(RadioSvg, {});
+    visualVNode = jsx(RadioSvg, {});
   }
   return jsxs(Box, {
     as: "span"
@@ -50401,14 +48559,14 @@ const InputRadioFieldInterface = props => {
     styleCSSVars: variantResolved === "button" ? RadioButtonStyleCSSVars : RadioStyleCSSVars,
     pseudoClasses: RadioPseudoClasses,
     pseudoElements: RadioPseudoElements,
-    children: [jsx$1("span", {
+    children: [jsx("span", {
       className: "navi_radio_accent_probe",
       "aria-hidden": "true"
-    }), jsx$1(LoadingOutline, {
+    }), jsx(LoadingOutline, {
       loading: loading,
       inset: -1,
       color: "var(--loader-color)"
-    }), visualVNode, jsx$1(RealInputRadio, {
+    }), visualVNode, jsx(RealInputRadio, {
       ...radioHostProps
     })]
   });
@@ -50418,13 +48576,13 @@ const RadioSvg = () => {
     viewBox: "0 0 12 12",
     "aria-hidden": "true",
     preserveAspectRatio: "xMidYMid meet",
-    children: [jsx$1("circle", {
+    children: [jsx("circle", {
       className: "navi_radio_border",
       cx: "6",
       cy: "6",
       r: "5.5",
       strokeWidth: "1"
-    }), jsx$1("circle", {
+    }), jsx("circle", {
       className: "navi_radio_dashed_border",
       cx: "6",
       cy: "6",
@@ -50432,7 +48590,7 @@ const RadioSvg = () => {
       strokeWidth: "1",
       strokeDasharray: "2.16 2.16",
       strokeDashoffset: "0"
-    }), jsx$1("circle", {
+    }), jsx("circle", {
       className: "navi_radio_marker",
       cx: "6",
       cy: "6",
@@ -50441,7 +48599,7 @@ const RadioSvg = () => {
   });
 };
 const RealInputRadio = props => {
-  return jsx$1(Box, {
+  return jsx(Box, {
     ...props,
     as: "input",
     baseClassName: "navi_control_input",
@@ -50737,7 +48895,7 @@ const css$J = /* css */`@layer navi {
 const InputRange = props => {
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
-  return jsx$1(InputRangeFieldInterface, {
+  return jsx(InputRangeFieldInterface, {
     ...props
   });
 };
@@ -50780,23 +48938,23 @@ const InputRangeFieldInterface = props => {
     ...rangeRootProps,
     basePseudoState: basePseudoState,
     ref: boxRef,
-    children: [jsx$1("span", {
+    children: [jsx("span", {
       className: "navi_input_range_accent_probe",
       "aria-hidden": "true"
-    }), jsx$1(LoadingOutline, {
+    }), jsx(LoadingOutline, {
       loading: loading,
       color: "var(--loader-color)",
       inset: -1
-    }), jsx$1("div", {
+    }), jsx("div", {
       className: "navi_input_range_background"
-    }), jsx$1("div", {
+    }), jsx("div", {
       className: "navi_input_range_fill"
-    }), jsx$1("div", {
+    }), jsx("div", {
       className: "navi_input_range_track"
-    }), jsx$1("div", {
+    }), jsx("div", {
       className: "navi_input_range_thumb",
       "data-callout-arrow-x": "center"
-    }), jsx$1(RangeNativeInput, {
+    }), jsx(RangeNativeInput, {
       ...rangeHostProps,
       updateFillRatio: updateFillRatio
     })]
@@ -50810,7 +48968,7 @@ const RangeNativeInput = props => {
   useLayoutEffect(() => {
     updateFillRatio();
   }, []);
-  return jsx$1(Box, {
+  return jsx(Box, {
     ...props,
     ...rangeBoxProps,
     updateFillRatio: undefined,
@@ -51144,11 +49302,11 @@ const installInputCss = () => {
 const InputModeResolver = props => {
   const Next = useNextResolver();
   if (props.inputMode === "numeric" || props.inputMode === "decimal") {
-    return jsx$1(InputModeNumericOrDecimal, {
+    return jsx(InputModeNumericOrDecimal, {
       ...props
     });
   }
-  return jsx$1(Next, {
+  return jsx(Next, {
     ...props
   });
 };
@@ -51157,7 +49315,7 @@ const InputModeNumericOrDecimal = props => {
   // Where a finger landed, to tell a tap that placed the caret from a drag that
   // selected a part of the number (see onPointerUp below).
   const pointerDownRef = useRef(null);
-  return jsx$1(Next, {
+  return jsx(Next, {
     ...props,
     // A field with no room for one more digit is a field one can only
     // REPLACE: typing into it does nothing at all, so taking the caret
@@ -51340,11 +49498,11 @@ const performArrowUpDown = e => {
 };
 
 const CloseSvg = () => {
-  return jsx$1("svg", {
+  return jsx("svg", {
     viewBox: "0 0 24 24",
     fill: "none",
     xmlns: "http://www.w3.org/2000/svg",
-    children: jsx$1("path", {
+    children: jsx("path", {
       "fill-rule": "evenodd",
       "clip-rule": "evenodd",
       d: "M5.29289 5.29289C5.68342 4.90237 6.31658 4.90237 6.70711 5.29289L12 10.5858L17.2929 5.29289C17.6834 4.90237 18.3166 4.90237 18.7071 5.29289C19.0976 5.68342 19.0976 6.31658 18.7071 6.70711L13.4142 12L18.7071 17.2929C19.0976 17.6834 19.0976 18.3166 18.7071 18.7071C18.3166 19.0976 17.6834 19.0976 17.2929 18.7071L12 13.4142L6.70711 18.7071C6.31658 19.0976 5.68342 19.0976 5.29289 18.7071C4.90237 18.3166 4.90237 17.6834 5.29289 17.2929L10.5858 12L5.29289 6.70711C4.90237 6.31658 4.90237 5.68342 5.29289 5.29289Z",
@@ -51358,10 +49516,10 @@ const CloseSvg = () => {
 // runs down-right, so the mass lands around 11.3 of the 24 box while the box
 // says 12. Centered on the box the glyph reads high and left in a square — the
 // 0.7 between the two is baked into the coordinates below.
-const SearchSvg = () => jsx$1("svg", {
+const SearchSvg = () => jsx("svg", {
   viewBox: "0 0 24 24",
   xmlns: "http://www.w3.org/2000/svg",
-  children: jsx$1("path", {
+  children: jsx("path", {
     d: "M16.2 14.7h-.79l-.28-.27C16.11 13.29 16.7 11.81 16.7 10.2 16.7 6.61 13.79 3.7 10.2 3.7S3.7 6.61 3.7 10.2 6.61 16.7 10.2 16.7c1.61 0 3.09-.59 4.23-1.57l.27 .28v.79l5 4.99L21.19 19.7l-4.99-5zm-6 0C7.71 14.7 5.7 12.69 5.7 10.2S7.71 5.7 10.2 5.7 14.7 7.71 14.7 10.2 12.69 14.7 10.2 14.7z",
     fill: "currentColor"
   })
@@ -51374,48 +49532,48 @@ const InputTypeResolver = props => {
   // very same "icon while empty, clear button once filled" affordance without
   // pretending to be a search box.
   if (props.clearable && props.type !== "search") {
-    return jsx$1(InputClearable, {
+    return jsx(InputClearable, {
       ...props
     });
   }
   if (props.type === "search") {
-    return jsx$1(InputSearch, {
+    return jsx(InputSearch, {
       ...props
     });
   }
   if (props.type === "email") {
-    return jsx$1(InputEmail, {
+    return jsx(InputEmail, {
       ...props
     });
   }
   if (props.type === "tel") {
-    return jsx$1(InputTel, {
+    return jsx(InputTel, {
       ...props
     });
   }
   if (props.type === "number") {
-    return jsx$1(InputNumber, {
+    return jsx(InputNumber, {
       ...props
     });
   }
   if (props.type === "color") {
-    return jsx$1(InputColor, {
+    return jsx(InputColor, {
       ...props
     });
   }
   if (props.type === "datetime-local") {
-    return jsx$1(InputDatetimeLocal, {
+    return jsx(InputDatetimeLocal, {
       ...props
     });
   }
-  return jsx$1(Next, {
+  return jsx(Next, {
     ...props
   });
 };
 const InputSearch = props => {
   const Next = useNextResolver();
-  return jsx$1(Next, {
-    ui: jsx$1(InputSearchUI, {
+  return jsx(Next, {
+    ui: jsx(InputSearchUI, {
       icon: props.icon
     }),
     ...props
@@ -51423,8 +49581,8 @@ const InputSearch = props => {
 };
 const InputClearable = props => {
   const Next = useNextResolver();
-  return jsx$1(Next, {
-    ui: jsx$1(InputSearchUI, {
+  return jsx(Next, {
+    ui: jsx(InputSearchUI, {
       icon: props.icon === undefined ? null : props.icon
     }),
     ...props,
@@ -51438,47 +49596,47 @@ const InputSearchUI = ({
     value,
     id
   } = useContext(InputTextualContext);
-  const searchIcon = icon === undefined ? jsx$1(SearchSvg, {}) : icon;
+  const searchIcon = icon === undefined ? jsx(SearchSvg, {}) : icon;
   const hasValue = Boolean(value);
   if (!hasValue) {
     if (!searchIcon) {
       return null;
     }
-    return jsx$1(InputIconSlot, {
+    return jsx(InputIconSlot, {
       children: searchIcon
     });
   }
-  return jsx$1(InputRightSlot, {
-    children: jsx$1(Button, {
+  return jsx(InputRightSlot, {
+    children: jsx(Button, {
       command: "--navi-clear",
       commandFor: id,
       tabIndex: "-1",
       "navi-focus-delegate": id,
       icon: true,
       variant: "discrete",
-      children: jsx$1(Icon, {
+      children: jsx(Icon, {
         fillLine: true,
-        children: jsx$1(CloseSvg, {})
+        children: jsx(CloseSvg, {})
       })
     })
   });
 };
 const InputEmail = props => {
   const Next = useNextResolver();
-  return jsx$1(Next, {
-    ui: jsx$1(InputTypeIconUI, {
+  return jsx(Next, {
+    ui: jsx(InputTypeIconUI, {
       icon: props.icon,
-      typeIcon: jsx$1(EmailSvg, {})
+      typeIcon: jsx(EmailSvg, {})
     }),
     ...props
   });
 };
 const InputTel = props => {
   const Next = useNextResolver();
-  return jsx$1(Next, {
-    ui: jsx$1(InputTypeIconUI, {
+  return jsx(Next, {
+    ui: jsx(InputTypeIconUI, {
       icon: props.icon,
-      typeIcon: jsx$1(PhoneSvg, {})
+      typeIcon: jsx(PhoneSvg, {})
     }),
     ...props
   });
@@ -51493,25 +49651,25 @@ const InputTypeIconUI = ({
   if (!iconToDraw) {
     return null;
   }
-  return jsx$1(InputIconSlot, {
+  return jsx(InputIconSlot, {
     children: iconToDraw
   });
 };
 const InputNumber = props => {
   const Next = useNextResolver();
-  return jsx$1(Next, {
+  return jsx(Next, {
     ...props
   });
 };
 const InputColor = props => {
   const Next = useNextResolver();
-  return jsx$1(Next, {
+  return jsx(Next, {
     ...props
   });
 };
 const InputDatetimeLocal = props => {
   const Next = useNextResolver();
-  return jsx$1(Next, {
+  return jsx(Next, {
     ...props
   });
 };
@@ -51519,11 +49677,11 @@ const InputDatetimeLocal = props => {
 const InputWithListResolver = props => {
   const Next = useNextResolver();
   if (props["navi-list"]) {
-    return jsx$1(InputWithList, {
+    return jsx(InputWithList, {
       ...props
     });
   }
-  return jsx$1(Next, {
+  return jsx(Next, {
     ...props
   });
 };
@@ -51600,7 +49758,7 @@ const InputWithList = props => {
       });
     }
   });
-  return jsx$1(Next, {
+  return jsx(Next, {
     role: "combobox",
     "aria-haspopup": "listbox",
     "aria-autocomplete": "list",
@@ -51616,10 +49774,10 @@ const InputWithList = props => {
 };
 
 const ChevronDownSvg$1 = () => {
-  return jsx$1("svg", {
+  return jsx("svg", {
     viewBox: "0 0 16 16",
     fill: "currentColor",
-    children: jsx$1("path", {
+    children: jsx("path", {
       d: "M4.427 7.427l3.396 3.396a.25.25 0 0 0 .354 0l3.396-3.396A.25.25 0 0 0 11.396 7H4.604a.25.25 0 0 0-.177.427z"
     })
   });
@@ -51628,11 +49786,11 @@ const ChevronDownSvg$1 = () => {
 const InputWithSuggestionsResolver = props => {
   const Next = useNextResolver();
   if (props["navi-suggestions"]) {
-    return jsx$1(InputTextualWithSuggestions, {
+    return jsx(InputTextualWithSuggestions, {
       ...props
     });
   }
-  return jsx$1(Next, {
+  return jsx(Next, {
     ...props
   });
 };
@@ -51729,7 +49887,7 @@ const InputTextualWithSuggestions = props => {
     end: () => {},
     enter: () => {}
   });
-  return jsx$1(Next, {
+  return jsx(Next, {
     role: "combobox",
     "aria-haspopup": "listbox",
     "aria-expanded": expanded,
@@ -51811,14 +49969,14 @@ const InputTextualWithSuggestions = props => {
     //   return requestListInteractionStateReset(listEl, { event: e });
     // },
     ,
-    children: children || jsx$1(InputRightSlot, {
-      children: jsx$1(Button, {
+    children: children || jsx(InputRightSlot, {
+      children: jsx(Button, {
         variant: "icon",
         command: "--navi-toggle",
         commandFor: suggestions,
-        children: jsx$1(Icon, {
+        children: jsx(Icon, {
           color: "rgba(28, 43, 52, 0.5)",
-          children: jsx$1(ChevronDownSvg$1, {})
+          children: jsx(ChevronDownSvg$1, {})
         })
       })
     })
@@ -51940,29 +50098,29 @@ const useAutoSelectReadOnly = (props) => {
 const InputHeadlessResolver = props => {
   const Next = useNextResolver();
   if (props.headless) {
-    return jsx$1(InputTextualHeadless, {
+    return jsx(InputTextualHeadless, {
       ...props
     });
   }
   if (props.type === "hidden") {
-    return jsx$1(InputHidden, {
+    return jsx(InputHidden, {
       ...props
     });
   }
-  return jsx$1(Next, {
+  return jsx(Next, {
     ...props
   });
 };
 const InputHidden = props => {
   const [inputRootProps, inputHostProps] = useInputTextualProps(props);
-  return jsx$1(RealInput, {
+  return jsx(RealInput, {
     ...inputRootProps,
     ...inputHostProps
   });
 };
 const InputTextualHeadless = props => {
   const [inputRootProps, inputHostProps] = useInputTextualProps(props);
-  return jsx$1(RealInput, {
+  return jsx(RealInput, {
     "navi-visually-hidden": "",
     "navi-focus-delegate": "",
     "aria-hidden": "true",
@@ -51996,9 +50154,9 @@ const InputTextualUI = props => {
   const disabled = basePseudoState[":disabled"];
   const readOnly = basePseudoState[":read-only"];
   const loading = basePseudoState[":-navi-loading"];
-  const childrenWithContext = jsx$1(ControlChildrenWrapper, {
+  const childrenWithContext = jsx(ControlChildrenWrapper, {
     ...controlChildrenWrapperProps,
-    children: jsx$1(InputTextualContext.Provider, {
+    children: jsx(InputTextualContext.Provider, {
       value: {
         id,
         readOnly,
@@ -52042,18 +50200,18 @@ const InputTextualUI = props => {
     // which is where the interaction can happen
     ,
     "data-callout-anchor": ".navi_control_input",
-    children: [jsx$1(LoadingOutline, {
+    children: [jsx(LoadingOutline, {
       loading: loading,
       color: "var(--loader-color)",
       inset: -1
     }), variant === "underline" ? jsxs("span", {
       className: "navi_input_real_input_wrapper",
-      children: [jsx$1(RealInput, {
+      children: [jsx(RealInput, {
         ...inputControlHostProps
-      }), jsx$1("span", {
+      }), jsx("span", {
         className: "navi_input_underline"
       })]
-    }) : jsx$1(RealInput, {
+    }) : jsx(RealInput, {
       ...inputControlHostProps
     }), childrenWithContext]
   });
@@ -52117,7 +50275,7 @@ const InputTextualAsText = props => {
   for (const inputOnlyProp of INPUT_ONLY_PROPS) {
     delete boxProps[inputOnlyProp];
   }
-  return jsx$1(Box, {
+  return jsx(Box, {
     as: "span",
     inline: true,
     flex: true,
@@ -52125,12 +50283,12 @@ const InputTextualAsText = props => {
     "data-variant": "text",
     styleCSSVars: InputStyleCSSVars,
     ...boxProps,
-    children: jsx$1(Box, {
+    children: jsx(Box, {
       as: "span",
       baseClassName: "navi_input_text",
       id: id || controlId,
       width: textWidth,
-      children: jsx$1("span", {
+      children: jsx("span", {
         className: "navi_input_text_value",
         children: valueShown
       })
@@ -52140,11 +50298,11 @@ const InputTextualAsText = props => {
 const InputTextualAsTextResolver = props => {
   const Next = useNextResolver();
   if (props.variant === "text") {
-    return jsx$1(InputTextualAsText, {
+    return jsx(InputTextualAsText, {
       ...props
     });
   }
-  return jsx$1(Next, {
+  return jsx(Next, {
     ...props
   });
 };
@@ -52152,7 +50310,7 @@ const InputTextualFirstResolver = props => {
   const Next = useNextResolver();
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
-  return jsx$1(Next, {
+  return jsx(Next, {
     ...props
   });
 };
@@ -52162,7 +50320,7 @@ const RealInput = ({
   ...domProps
 }) => {
   const autoSelectReadOnlyProps = useAutoSelectReadOnly(domProps);
-  return jsx$1(Box, {
+  return jsx(Box, {
     ...domProps,
     as: "input",
     baseClassName: "navi_control_input",
@@ -52749,21 +50907,21 @@ const Input = props => {
     type
   } = props;
   if (type === "radio") {
-    return jsx$1(InputRadio, {
+    return jsx(InputRadio, {
       ...props
     });
   }
   if (type === "checkbox") {
-    return jsx$1(InputCheckbox, {
+    return jsx(InputCheckbox, {
       ...props
     });
   }
   if (type === "range") {
-    return jsx$1(InputRange, {
+    return jsx(InputRange, {
       ...props
     });
   }
-  return jsx$1(InputTextual, {
+  return jsx(InputTextual, {
     ...props
   });
 };
@@ -52918,13 +51076,13 @@ const Textarea = ({
     pseudoClasses: InputPseudoClasses,
     pseudoElements: InputPseudoElements,
     "data-callout-anchor": ".navi_control_input",
-    children: [jsx$1(LoadingOutline, {
+    children: [jsx(LoadingOutline, {
       loading: loading,
       color: "var(--loader-color)",
       inset: -1
-    }), jsx$1(RealTextarea, {
+    }), jsx(RealTextarea, {
       ...hostProps
-    }), jsx$1(ControlChildrenWrapper, {
+    }), jsx(ControlChildrenWrapper, {
       ...childrenWrapperProps,
       children: children
     })]
@@ -52959,7 +51117,7 @@ const TextareaCharCount = ({
   import.meta.css = [css$I, "@jsenv/navi/src/control/input/textarea.jsx"];
   const resolvedValue = signal ? signal.value : value;
   const length = typeof resolvedValue === "string" ? resolvedValue.length : 0;
-  return jsx$1(Box, {
+  return jsx(Box, {
     as: "span",
     baseClassName: "navi_textarea_char_count",
     ...rest,
@@ -53053,7 +51211,7 @@ const RealTextarea = ({
   ...domProps
 }) => {
   const autoSelectReadOnlyProps = useAutoSelectReadOnly(domProps);
-  return jsx$1(Box, {
+  return jsx(Box, {
     ...domProps,
     as: "textarea",
     baseClassName: "navi_control_input",
@@ -53356,11 +51514,11 @@ const Editable = props => {
   // What is typed on several lines goes into a textarea; the props that only
   // mean something to an <input> (its type and the bounds that come with it)
   // stay on that side.
-  const control = multiline ? jsx$1(Textarea, {
+  const control = multiline ? jsx(Textarea, {
     ...controlProps,
     minRows: minRows,
     maxRows: maxRows
-  }) : jsx$1(Input, {
+  }) : jsx(Input, {
     ...controlProps,
     type: type,
     min: min,
@@ -53382,9 +51540,9 @@ const Editable = props => {
     wrapper.style.setProperty("--inset-bottom", `-${borderSizes.bottom}px`);
   });
   return jsxs(Fragment, {
-    children: [children || jsx$1("span", {
+    children: [children || jsx("span", {
       children: value
-    }), jsx$1(Box, {
+    }), jsx(Box, {
       className: "navi_editable_wrapper",
       ref: wrapperRef,
       ...wrapperProps,
@@ -53519,9 +51677,9 @@ const Form = props => {
   // is a different component: same group, no <form> element and none of the
   // browser machinery that comes with it.
   const isNested = Boolean(useContext(FormContext));
-  return isNested ? jsx$1(FormNested, {
+  return isNested ? jsx(FormNested, {
     ...props
-  }) : jsx$1(FormControl, {
+  }) : jsx(FormControl, {
     ...props
   });
 };
@@ -53589,9 +51747,9 @@ const useFormGroup = props => {
     onnavi_action_end: () => {
       uiStateController.sentUIState = withoutEmptyFields(uiStateController.uiState);
     },
-    inside: jsx$1(FormContext.Provider, {
+    inside: jsx(FormContext.Provider, {
       value: formContextValue,
-      children: jsx$1(ControlgroupChildrenWrapper, {
+      children: jsx(ControlgroupChildrenWrapper, {
         ...childrenWrapperProps,
         // do not propagate name to children like radio group or checkbox group does
         // (otherwise anonymous button end up using that name)
@@ -53612,7 +51770,7 @@ const FormControl = props => {
     onnavi_action_end,
     inside
   } = useFormGroup(props);
-  return jsx$1(Box, {
+  return jsx(Box, {
     ...formRootProps,
     ...formProps,
     onnavi_action_end: onnavi_action_end,
@@ -53654,7 +51812,7 @@ const FormNested = props => {
     onnavi_action_end,
     inside
   } = useFormGroup(props);
-  return jsx$1(Box, {
+  return jsx(Box, {
     ...formRootProps,
     ...formProps,
     onnavi_action_end: onnavi_action_end,
@@ -53882,7 +52040,7 @@ const Group = ({
   ...props
 }) => {
   import.meta.css = [css$G, "@jsenv/navi/src/control/group.jsx"];
-  return jsx$1(Box, {
+  return jsx(Box, {
     baseClassName: "navi_group",
     "data-vertical": vertical ? "" : undefined
     /* A group draws one frame around its members, so they must share their
@@ -53902,11 +52060,11 @@ const Group = ({
 // point AT something (the popup a picker opens), these are directions the user
 // can take — go back, dismiss upward — where the platform convention is a thin
 // line rather than a filled triangle.
-const ChevronLeftSvg = () => jsx$1("svg", {
+const ChevronLeftSvg = () => jsx("svg", {
   viewBox: "0 0 24 24",
   fill: "none",
   xmlns: "http://www.w3.org/2000/svg",
-  children: jsx$1("path", {
+  children: jsx("path", {
     d: "M15 4.5L7.5 12L15 19.5",
     stroke: "currentColor",
     "stroke-width": "2",
@@ -53914,11 +52072,11 @@ const ChevronLeftSvg = () => jsx$1("svg", {
     "stroke-linejoin": "round"
   })
 });
-const ChevronUpSvg = () => jsx$1("svg", {
+const ChevronUpSvg = () => jsx("svg", {
   viewBox: "0 0 24 24",
   fill: "none",
   xmlns: "http://www.w3.org/2000/svg",
-  children: jsx$1("path", {
+  children: jsx("path", {
     d: "M4.5 15L12 7.5L19.5 15",
     stroke: "currentColor",
     "stroke-width": "2",
@@ -53926,11 +52084,11 @@ const ChevronUpSvg = () => jsx$1("svg", {
     "stroke-linejoin": "round"
   })
 });
-const ChevronRightSvg = () => jsx$1("svg", {
+const ChevronRightSvg = () => jsx("svg", {
   viewBox: "0 0 24 24",
   fill: "none",
   xmlns: "http://www.w3.org/2000/svg",
-  children: jsx$1("path", {
+  children: jsx("path", {
     d: "M9 4.5L16.5 12L9 19.5",
     stroke: "currentColor",
     "stroke-width": "2",
@@ -53938,11 +52096,11 @@ const ChevronRightSvg = () => jsx$1("svg", {
     "stroke-linejoin": "round"
   })
 });
-const ChevronDownSvg = () => jsx$1("svg", {
+const ChevronDownSvg = () => jsx("svg", {
   viewBox: "0 0 24 24",
   fill: "none",
   xmlns: "http://www.w3.org/2000/svg",
-  children: jsx$1("path", {
+  children: jsx("path", {
     d: "M4.5 9L12 16.5L19.5 9",
     stroke: "currentColor",
     "stroke-width": "2",
@@ -53954,11 +52112,11 @@ const ChevronDownSvg = () => jsx$1("svg", {
 // The same chevrons against a bar: not "one step that way" but "all the way
 // that way" — the first slide, the last one. Same convention as a media
 // player's skip-to-start, which is what one already reads it as.
-const ChevronFirstSvg = () => jsx$1("svg", {
+const ChevronFirstSvg = () => jsx("svg", {
   viewBox: "0 0 24 24",
   fill: "none",
   xmlns: "http://www.w3.org/2000/svg",
-  children: jsx$1("path", {
+  children: jsx("path", {
     d: "M17 4.5L9.5 12L17 19.5M6.5 4.5V19.5",
     stroke: "currentColor",
     "stroke-width": "2",
@@ -53966,11 +52124,11 @@ const ChevronFirstSvg = () => jsx$1("svg", {
     "stroke-linejoin": "round"
   })
 });
-const ChevronLastSvg = () => jsx$1("svg", {
+const ChevronLastSvg = () => jsx("svg", {
   viewBox: "0 0 24 24",
   fill: "none",
   xmlns: "http://www.w3.org/2000/svg",
-  children: jsx$1("path", {
+  children: jsx("path", {
     d: "M7 4.5L14.5 12L7 19.5M17.5 4.5V19.5",
     stroke: "currentColor",
     "stroke-width": "2",
@@ -56310,7 +54468,7 @@ const SlideContainer = ({
     // Box rather than a plain div: it is how every navi component takes the
     // onnavi_* handlers below — they are navi's own event names, and Box is
     // what carries them onto the element.
-    jsx$1(Box, {
+    jsx(Box, {
       ...rest,
       ref: containerRef,
       baseClassName: "navi_slide_container",
@@ -56440,10 +54598,10 @@ const SlideContainer = ({
         rest.onKeyDown?.(e);
       },
       style: rest.style,
-      children: jsx$1("div", {
+      children: jsx("div", {
         "data-slide-track": "",
         ref: trackRef,
-        children: jsx$1(SlideContainerContext.Provider, {
+        children: jsx(SlideContainerContext.Provider, {
           value: {
             vertical,
             answeredAreas,
@@ -56539,11 +54697,11 @@ const Slide = ({
   useLayoutEffect(() => {
     container?.settleFocus?.(slideArea);
   });
-  return jsx$1(SlideContext.Provider, {
+  return jsx(SlideContext.Provider, {
     value: locks,
-    children: jsx$1(SlideValueContext.Provider, {
+    children: jsx(SlideValueContext.Provider, {
       value: slideValue,
-      children: jsx$1(Box, {
+      children: jsx(Box, {
         flex: "y"
         // Not focusable: the keyboard goes to what is IN a slide, and when a
         // slide holds nothing, to the container around it (see
@@ -56617,7 +54775,7 @@ const SlideNavButton = ({
   ChevronSvg,
   locked,
   ...rest
-}) => jsx$1(Button
+}) => jsx(Button
 // Read-only, not disabled and not hidden: the way out stays visible and
 // explainable (it can still be reached, hovered, described) — it just does
 // nothing while the slide is holding on to the user.
@@ -56650,9 +54808,9 @@ const SlideNavButton = ({
   // eye and the hand already are.
   ,
   ...rest,
-  children: jsx$1(Icon, {
+  children: jsx(Icon, {
     lineOverflow: "allow",
-    children: jsx$1(ChevronSvg, {})
+    children: jsx(ChevronSvg, {})
   })
 });
 
@@ -56698,7 +54856,7 @@ const SlideMove = ({
   // the render, and there is no frame where the way out is live for nothing.
   const held = (forward ? locks?.preventNavNext : locks?.preventNavPrevious) || slides.held(direction);
   const locked = held || !slides.can(direction);
-  return jsx$1(SlideNavButton, {
+  return jsx(SlideNavButton, {
     command: command,
     locked: locked,
     ChevronSvg: Svg,
@@ -56719,7 +54877,7 @@ const SlideEnd = ({
 }) => {
   const slides = useSlideContainer(rest.commandFor);
   const wayOut = last ? "last" : "first";
-  return jsx$1(SlideNavButton, {
+  return jsx(SlideNavButton, {
     command: last ? "--navi-last" : "--navi-first",
     locked: slides.held(wayOut) || !slides.can(wayOut),
     ChevronSvg: last ? ChevronLastSvg : ChevronFirstSvg,
@@ -56727,27 +54885,27 @@ const SlideEnd = ({
     ...rest
   });
 };
-const SlideFirst = props => jsx$1(SlideEnd, {
+const SlideFirst = props => jsx(SlideEnd, {
   ...props,
   last: false
 });
-const SlideLast = props => jsx$1(SlideEnd, {
+const SlideLast = props => jsx(SlideEnd, {
   ...props,
   last: true
 });
-const SlideLeft = props => jsx$1(SlideMove, {
+const SlideLeft = props => jsx(SlideMove, {
   ...props,
   direction: "left"
 });
-const SlideRight = props => jsx$1(SlideMove, {
+const SlideRight = props => jsx(SlideMove, {
   ...props,
   direction: "right"
 });
-const SlideUp = props => jsx$1(SlideMove, {
+const SlideUp = props => jsx(SlideMove, {
   ...props,
   direction: "up"
 });
-const SlideDown = props => jsx$1(SlideMove, {
+const SlideDown = props => jsx(SlideMove, {
   ...props,
   direction: "down"
 });
@@ -56764,51 +54922,51 @@ const Time = props => {
     type
   } = props;
   if (type === "date") {
-    return jsx$1(TimeDate, {
+    return jsx(TimeDate, {
       ...props
     });
   }
   if (type === "month") {
-    return jsx$1(TimeMonth, {
+    return jsx(TimeMonth, {
       ...props
     });
   }
   if (type === "week") {
-    return jsx$1(TimeWeek, {
+    return jsx(TimeWeek, {
       ...props
     });
   }
   if (type === "datetime") {
-    return jsx$1(TimeDatetime, {
+    return jsx(TimeDatetime, {
       ...props
     });
   }
   if (type === "time") {
-    return jsx$1(TimeTime, {
+    return jsx(TimeTime, {
       ...props
     });
   }
   if (type === "minute") {
-    return jsx$1(TimeMinute, {
+    return jsx(TimeMinute, {
       ...props
     });
   }
   if (type === "second") {
-    return jsx$1(TimeSecond, {
+    return jsx(TimeSecond, {
       ...props
     });
   }
   if (type === "hour") {
-    return jsx$1(TimeHour, {
+    return jsx(TimeHour, {
       ...props
     });
   }
   if (type === "duration") {
-    return jsx$1(TimeDuration, {
+    return jsx(TimeDuration, {
       ...props
     });
   }
-  return jsx$1(TimeRelative, {
+  return jsx(TimeRelative, {
     ...props
   });
 };
@@ -56822,7 +54980,7 @@ const TimeDate = ({
   ...props
 }) => {
   if (children === undefined || children === null) {
-    return jsx$1(TimeText, {
+    return jsx(TimeText, {
       ...props,
       capitalize: false,
       children: formatDatePlaceholder({
@@ -56838,7 +54996,7 @@ const TimeDate = ({
     return null;
   });
   if (!date) {
-    return jsx$1(TimeText, {
+    return jsx(TimeText, {
       ...props,
       children: String(children)
     });
@@ -56868,7 +55026,7 @@ const TimeDate = ({
   const mm = String(date.getMonth() + 1).padStart(2, "0");
   const dd = String(date.getDate()).padStart(2, "0");
   const dateTime = `${yyyy}-${mm}-${dd}`; // See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
-  return jsx$1(TimeText, {
+  return jsx(TimeText, {
     dateTime: dateTime,
     ...props,
     children: text
@@ -56881,7 +55039,7 @@ const TimeMonth = ({
   ...props
 }) => {
   if (children === undefined || children === null) {
-    return jsx$1(TimeText, {
+    return jsx(TimeText, {
       ...props,
       children: formatMonthPlaceholder({
         lang,
@@ -56897,7 +55055,7 @@ const TimeMonth = ({
     return null;
   });
   if (!date) {
-    return jsx$1(TimeText, {
+    return jsx(TimeText, {
       ...props,
       children: String(children)
     });
@@ -56909,7 +55067,7 @@ const TimeMonth = ({
   const yyyy = date.getFullYear();
   const mm = String(date.getMonth() + 1).padStart(2, "0");
   const dateTime = `${yyyy}-${mm}`; // See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
-  return jsx$1(TimeText, {
+  return jsx(TimeText, {
     dateTime: dateTime,
     ...props,
     children: text
@@ -56921,7 +55079,7 @@ const TimeWeek = ({
   ...props
 }) => {
   if (children === undefined || children === null) {
-    return jsx$1(TimeText, {
+    return jsx(TimeText, {
       ...props,
       children: formatWeekPlaceholder({
         lang
@@ -56929,7 +55087,7 @@ const TimeWeek = ({
     });
   }
   const dateTime = String(children);
-  return jsx$1(TimeText, {
+  return jsx(TimeText, {
     dateTime: dateTime,
     ...props,
     children: dateTime
@@ -56942,7 +55100,7 @@ const TimeDatetime = ({
   ...props
 }) => {
   if (children === undefined || children === null) {
-    return jsx$1(TimeText, {
+    return jsx(TimeText, {
       ...props,
       capitalize: false,
       children: formatDatetimePlaceholder({
@@ -56953,7 +55111,7 @@ const TimeDatetime = ({
   }
   const date = toDate(children);
   if (!date) {
-    return jsx$1(TimeText, {
+    return jsx(TimeText, {
       ...props,
       children: String(children)
     });
@@ -56963,7 +55121,7 @@ const TimeDatetime = ({
     format
   });
   const dateTime = date.toISOString(); // See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
-  return jsx$1(TimeText, {
+  return jsx(TimeText, {
     dateTime: dateTime,
     ...props,
     children: text
@@ -56978,7 +55136,7 @@ const TimeTime = ({
   ...props
 }) => {
   if (children === undefined || children === null) {
-    return jsx$1(TimeText, {
+    return jsx(TimeText, {
       ...props,
       children: "--:--"
     });
@@ -56986,7 +55144,7 @@ const TimeTime = ({
   const date = toTimeOfDay(children);
   // toDate turns a non-finite number into an Invalid Date, which is an object
   if (!date || isNaN(date.getTime())) {
-    return jsx$1(TimeText, {
+    return jsx(TimeText, {
       ...props,
       children: String(children)
     });
@@ -57003,7 +55161,7 @@ const TimeTime = ({
     pad,
     precision
   });
-  return jsx$1(TimeText, {
+  return jsx(TimeText, {
     dateTime: dateTime,
     ...props,
     children: text
@@ -57017,14 +55175,14 @@ const TimeMinute = ({
   ...props
 }) => {
   if (children === undefined || children === null) {
-    return jsx$1(TimeText, {
+    return jsx(TimeText, {
       ...props,
       children: format === "timestring" ? "--:--" : "--"
     });
   }
   const minutes = Number(children);
   if (!Number.isFinite(minutes)) {
-    return jsx$1(TimeText, {
+    return jsx(TimeText, {
       ...props,
       children: String(children)
     });
@@ -57047,7 +55205,7 @@ const TimeMinute = ({
       forceUnit
     });
   }
-  return jsx$1(TimeText, {
+  return jsx(TimeText, {
     dateTime: dateTime,
     ...props,
     children: text
@@ -57061,14 +55219,14 @@ const TimeSecond = ({
   ...props
 }) => {
   if (children === undefined || children === null) {
-    return jsx$1(TimeText, {
+    return jsx(TimeText, {
       ...props,
       children: format === "timestring" ? "--:--:--" : "--"
     });
   }
   const seconds = Number(children);
   if (!Number.isFinite(seconds)) {
-    return jsx$1(TimeText, {
+    return jsx(TimeText, {
       ...props,
       children: String(children)
     });
@@ -57088,7 +55246,7 @@ const TimeSecond = ({
       forceUnit
     });
   }
-  return jsx$1(TimeText, {
+  return jsx(TimeText, {
     dateTime: dateTime,
     ...props,
     children: text
@@ -57102,14 +55260,14 @@ const TimeHour = ({
   ...props
 }) => {
   if (children === undefined || children === null) {
-    return jsx$1(TimeText, {
+    return jsx(TimeText, {
       ...props,
       children: format === "timestring" ? "--:--" : "--"
     });
   }
   const hours = Number(children);
   if (!Number.isFinite(hours)) {
-    return jsx$1(TimeText, {
+    return jsx(TimeText, {
       ...props,
       children: String(children)
     });
@@ -57117,7 +55275,7 @@ const TimeHour = ({
   if (format === "timestring") {
     const totalMinutes = Math.round(hours * 60);
     const date = new Date(1970, 0, 1, Math.floor(totalMinutes / 60), totalMinutes % 60, 0);
-    return jsx$1(TimeText, {
+    return jsx(TimeText, {
       ...props,
       children: formatTime(date, {
         lang
@@ -57129,7 +55287,7 @@ const TimeHour = ({
     format,
     forceUnit
   });
-  return jsx$1(TimeText, {
+  return jsx(TimeText, {
     ...props,
     children: text
   });
@@ -57141,7 +55299,7 @@ const TimeDuration = ({
   ...props
 }) => {
   if (children === undefined || children === null) {
-    return jsx$1(TimeText, {
+    return jsx(TimeText, {
       ...props,
       children: "--"
     });
@@ -57156,7 +55314,7 @@ const TimeDuration = ({
   } else if (typeof children === "string") {
     duration = parseDuration(children);
     if (!duration) {
-      return jsx$1(TimeText, {
+      return jsx(TimeText, {
         ...props,
         children: children
       });
@@ -57164,14 +55322,14 @@ const TimeDuration = ({
   } else if (typeof children === "object") {
     duration = children;
   } else {
-    return jsx$1(TimeText, {
+    return jsx(TimeText, {
       ...props,
       children: String(children)
     });
   }
   const isoString = durationToISOString(duration) ?? String(children);
   if (format === "iso") {
-    return jsx$1(TimeText, {
+    return jsx(TimeText, {
       dateTime: isoString,
       ...props,
       children: isoString
@@ -57181,7 +55339,7 @@ const TimeDuration = ({
   if (totalSeconds === null) {
     // Non-numeric unit values (e.g. mid-edit "2ahour15minute" or { hours: "abc" }):
     // formatDuration reads the raw values and appends compact unit symbols.
-    return jsx$1(TimeText, {
+    return jsx(TimeText, {
       ...props,
       children: formatDuration(duration, {
         lang,
@@ -57190,7 +55348,7 @@ const TimeDuration = ({
     });
   }
   if (totalSeconds === 0) {
-    return jsx$1(TimeText, {
+    return jsx(TimeText, {
       ...props,
       children: "0"
     });
@@ -57199,7 +55357,7 @@ const TimeDuration = ({
     lang,
     format
   });
-  return jsx$1(TimeText, {
+  return jsx(TimeText, {
     dateTime: isoString,
     ...props,
     children: text
@@ -57214,14 +55372,14 @@ const TimeRelative = ({
   ...props
 }) => {
   if (children === undefined || children === null) {
-    return jsx$1(TimeText, {
+    return jsx(TimeText, {
       ...props,
       children: "–"
     });
   }
   const date = toDate(children);
   if (!date) {
-    return jsx$1(TimeText, {
+    return jsx(TimeText, {
       ...props,
       children: String(children)
     });
@@ -57239,14 +55397,14 @@ const TimeRelative = ({
     format
   });
   const dateTime = date.toISOString();
-  return jsx$1(TimeText, {
+  return jsx(TimeText, {
     dateTime: dateTime,
     ...props,
     children: text
   });
 };
 const TimeText = props => {
-  return jsx$1(Text, {
+  return jsx(Text, {
     as: "time",
     noWrap: true,
     ...props
@@ -57325,10 +55483,10 @@ const TimeRange = ({
     noWrap: tight,
     spacing: tight ? 0 : undefined,
     ...props,
-    children: [jsx$1(Time, {
+    children: [jsx(Time, {
       ...boundProps,
       children: from
-    }), tight ? separator : ` ${separator} `, jsx$1(Time, {
+    }), tight ? separator : ` ${separator} `, jsx(Time, {
       ...boundProps,
       children: to
     })]
@@ -58338,7 +56496,7 @@ const PopupClose = ({
   iconSize,
   ...rest
 }) => {
-  return jsx$1(Button, {
+  return jsx(Button, {
     command: "--navi-close",
     icon: true,
     variant: "discrete"
@@ -58358,9 +56516,9 @@ const PopupClose = ({
     paddingY: "s",
     "aria-label": label === undefined ? naviI18n("button.close") : label,
     ...rest,
-    children: jsx$1(Icon, {
+    children: jsx(Icon, {
       size: iconSize,
-      children: jsx$1(CloseSvg, {})
+      children: jsx(CloseSvg, {})
     })
   });
 };
@@ -59021,11 +57179,11 @@ const css$E = /* css */`
 const Dialog = props => {
   import.meta.css = [css$E, "@jsenv/navi/src/layout/dialog.jsx"];
   if (props.openController) {
-    return jsx$1(ControlledDialog, {
+    return jsx(ControlledDialog, {
       ...props
     });
   }
-  return jsx$1(UncontrolledDialog, {
+  return jsx(UncontrolledDialog, {
     ...props
   });
 };
@@ -59064,7 +57222,7 @@ const UncontrolledDialog = props => {
     };
   });
   useOpenPropsEffectOnOpenController(openController, props);
-  return jsx$1(ControlledDialog, {
+  return jsx(ControlledDialog, {
     ...props,
     open: undefined,
     signal: undefined,
@@ -59101,20 +57259,20 @@ const UncontrolledDialog = props => {
 // run.
 const ControlledDialog = props => {
   if (props.layer === "local") {
-    return jsx$1(DialogLocal, {
+    return jsx(DialogLocal, {
       ...props
     });
   }
-  return jsx$1(DialogAsModal, {
+  return jsx(DialogAsModal, {
     ...props
   });
 };
 const DialogAsModal = props => {
   const [backdropProps, contentProps] = useDialogProps(props);
   return jsxs(Fragment, {
-    children: [backdropProps && jsx$1(Box, {
+    children: [backdropProps && jsx(Box, {
       ...backdropProps
-    }), jsx$1(Box, {
+    }), jsx(Box, {
       ...contentProps
     })]
   });
@@ -59122,16 +57280,16 @@ const DialogAsModal = props => {
 const DialogLocal = props => {
   const [backdropProps, contentProps] = useDialogProps(props);
   return jsxs(Fragment, {
-    children: [backdropProps && jsx$1(Box, {
+    children: [backdropProps && jsx(Box, {
       ...backdropProps
-    }), jsx$1("div", {
+    }), jsx("div", {
       className: "navi_dialog_clip_wrapper"
       // Out of flow like the dialog it holds — see the dialog's own
       // contentProps for what reads the marker.
       // eslint-disable-next-line react/no-unknown-property
       ,
       "navi-out-of-flow": "",
-      children: jsx$1(Box, {
+      children: jsx(Box, {
         ...contentProps
       })
     })]
@@ -60529,11 +58687,11 @@ const css$D = /* css */`
 const Popover = props => {
   import.meta.css = [css$D, "@jsenv/navi/src/layout/popover.jsx"];
   if (props.openController) {
-    return jsx$1(ControlledPopover, {
+    return jsx(ControlledPopover, {
       ...props
     });
   }
-  return jsx$1(UncontrolledPopover, {
+  return jsx(UncontrolledPopover, {
     ...props
   });
 };
@@ -60570,7 +58728,7 @@ const UncontrolledPopover = props => {
     };
   });
   useOpenPropsEffectOnOpenController(openController, props);
-  return jsx$1(ControlledPopover, {
+  return jsx(ControlledPopover, {
     ...props,
     open: undefined,
     signal: undefined,
@@ -60613,11 +58771,11 @@ const UncontrolledPopover = props => {
 // still applies regardless).
 const ControlledPopover = props => {
   if (props.layer === "local") {
-    return jsx$1(PopoverCustom, {
+    return jsx(PopoverCustom, {
       ...props
     });
   }
-  return jsx$1(PopoverViaAttribute, {
+  return jsx(PopoverViaAttribute, {
     ...props
   });
 };
@@ -60628,9 +58786,9 @@ const ControlledPopover = props => {
 const PopoverViaAttribute = props => {
   const [backdropProps, contentProps] = usePopoverProps(props);
   return jsxs(Fragment, {
-    children: [backdropProps && jsx$1(Box, {
+    children: [backdropProps && jsx(Box, {
       ...backdropProps
-    }), jsx$1(Box, {
+    }), jsx(Box, {
       ...contentProps
     })]
   });
@@ -60638,16 +58796,16 @@ const PopoverViaAttribute = props => {
 const PopoverCustom = props => {
   const [backdropProps, contentProps] = usePopoverProps(props);
   return jsxs(Fragment, {
-    children: [backdropProps && jsx$1(Box, {
+    children: [backdropProps && jsx(Box, {
       ...backdropProps
-    }), jsx$1("div", {
+    }), jsx("div", {
       className: "navi_popover_clip_wrapper"
       // Out of flow like the popover it holds — see the popover's own
       // contentProps for what reads the marker.
       // eslint-disable-next-line react/no-unknown-property
       ,
       "navi-out-of-flow": "",
-      children: jsx$1(Box, {
+      children: jsx(Box, {
         ...contentProps
       })
     })]
@@ -61723,12 +59881,12 @@ const Popup = props => {
     elementRef: rest.ref
   });
   // So the content can lay itself out per mode — see usePopupMode.
-  const childrenWithMode = jsx$1(PopupModeContext.Provider, {
+  const childrenWithMode = jsx(PopupModeContext.Provider, {
     value: mode,
     children: children
   });
   if (mode === "dialog") {
-    return jsx$1(Dialog, {
+    return jsx(Dialog, {
       ...rest,
       maxWidth: maxWidth,
       pointerInteractionOutsideEffect: pointerInteractionOutsideEffect,
@@ -61740,7 +59898,7 @@ const Popup = props => {
       children: childrenWithMode
     });
   }
-  return jsx$1(Popover, {
+  return jsx(Popover, {
     ...rest,
     maxWidth: maxWidth,
     pointerInteractionOutsideEffect: pointerInteractionOutsideEffect,
@@ -61834,7 +59992,7 @@ const css$B = /* css */`.navi_picker {
 const PickerCustomResolver = props => {
   import.meta.css = [css$B, "@jsenv/navi/src/control/picker/picker_custom.jsx"];
   if (props.children === undefined) {
-    return jsx$1(PickerNative, {
+    return jsx(PickerNative, {
       ...props
     });
   }
@@ -61870,7 +60028,7 @@ const PickerCustomResolver = props => {
       props.calloutIcon = props.variant !== "text";
     }
     if (props.rightSlotIcon === undefined) {
-      props.rightSlotIcon = jsx$1(CalloutStatusIcon, {
+      props.rightSlotIcon = jsx(CalloutStatusIcon, {
         status: props.calloutStatus,
         shape: circle ? "circle" : "square"
       });
@@ -61891,18 +60049,18 @@ const PickerCustomResolver = props => {
     // how a field says its value is a JS one, kept beside the DOM (see
     // controller_registry.js) — the same thing type="array"/"object" already
     // say for their shapes.
-    return jsx$1(PickerCustom, {
+    return jsx(PickerCustom, {
       ...props,
       type: "navi_js"
     });
   }
-  return jsx$1(PickerCustom, {
+  return jsx(PickerCustom, {
     ...props
   });
 };
 const PickerNative = props => {
   const Next = useNextResolver();
-  return jsx$1(Next, {
+  return jsx(Next, {
     ...props,
     // When the picker has its own action we want to run it when native "change" event occur (native picker dialog closes)
     // not on every change of color while user is selecting a color for instance
@@ -62468,7 +60626,7 @@ const PickerCustom = props => {
       });
     }
   }
-  return jsx$1(PickerContentInsidePopup, {
+  return jsx(PickerContentInsidePopup, {
     ...pickerProps,
     mode: mode
   });
@@ -62535,7 +60693,7 @@ const PickerContentInsidePopup = props => {
   } = props;
   const isPopover = mode === "popover";
   const isCallout = mode === "callout";
-  return jsx$1(Next, {
+  return jsx(Next, {
     "aria-haspopup": isPopover ? "listbox" : "dialog",
     "navi-popover-mode": isPopover ? popoverMode : undefined,
     ...rest,
@@ -62566,18 +60724,18 @@ const PickerContentInsidePopup = props => {
         }
       });
     },
-    children: isCallout ? jsx$1(PickerCalloutPopup, {
+    children: isCallout ? jsx(PickerCalloutPopup, {
       ...popupProps,
       pickerRef: props.ref,
       testId: popupTestId,
       status: calloutStatus,
       icon: calloutIcon,
       closeButton: calloutCloseButton,
-      children: jsx$1(PopupModeContext.Provider, {
+      children: jsx(PopupModeContext.Provider, {
         value: mode,
         children: children
       })
-    }) : jsx$1(Popup, {
+    }) : jsx(Popup, {
       ...popupProps,
       "data-testid": popupTestId,
       mode: mode,
@@ -62594,7 +60752,7 @@ const PickerContentInsidePopup = props => {
       expandX: isPopover ? undefined : dialogExpandX,
       expandY: isPopover ? undefined : dialogExpandY,
       dockedOnSmallTouchScreen: isPopover ? undefined : dockedOnSmallTouchScreen,
-      children: jsx$1(PopupModeContext.Provider, {
+      children: jsx(PopupModeContext.Provider, {
         value: mode,
         children: children
       })
@@ -62698,7 +60856,7 @@ const PickerCalloutPopup = ({
   return (
     // What the picker addresses (aria-controls, the request events it
     // forwards); the callout itself lives where the callout manager puts it.
-    jsx$1(Box, {
+    jsx(Box, {
       as: "span",
       ref: ref,
       id: id,
@@ -62733,7 +60891,7 @@ const PickerConfirmResolver = props => {
   import.meta.css = [css$A, "@jsenv/navi/src/control/picker/picker_confirm.jsx"];
   const Next = useNextResolver();
   if (props.type !== "confirm") {
-    return jsx$1(Next, {
+    return jsx(Next, {
       ...props
     });
   }
@@ -62792,7 +60950,7 @@ const PickerConfirmResolver = props => {
       runWhenActionSucceeded(completion, runCommand);
     }
   };
-  return jsx$1(Next, {
+  return jsx(Next, {
     ...props,
     type: "navi_js",
     standalone: true
@@ -62816,7 +60974,7 @@ const PickerConfirmResolver = props => {
     confirmTestId: undefined,
     cancelTestId: undefined,
     focusOnOpen: undefined,
-    children: children === undefined ? jsx$1(PickerConfirmBody, {
+    children: children === undefined ? jsx(PickerConfirmBody, {
       message: message,
       confirmLabel: confirmLabel,
       cancelLabel: cancelLabel,
@@ -62836,16 +60994,16 @@ const PickerConfirmBody = ({
 }) => {
   return jsxs("div", {
     className: "navi_picker_confirm_body",
-    children: [jsx$1("div", {
+    children: [jsx("div", {
       children: message === undefined ? naviI18n("confirm.message") : message
     }), jsxs("div", {
       className: "navi_picker_confirm_actions",
-      children: [jsx$1(Button, {
+      children: [jsx(Button, {
         command: "--navi-cancel",
         autoFocus: focusOnOpen === "cancel",
         "data-testid": cancelTestId,
         children: cancelLabel
-      }), jsx$1(Button, {
+      }), jsx(Button, {
         command: "--navi-confirm",
         autoFocus: focusOnOpen === "confirm",
         "data-testid": confirmTestId,
@@ -62881,14 +61039,14 @@ const PickerNaviMinute = props => {
     step,
     value
   } = props;
-  return jsx$1(Next, {
+  return jsx(Next, {
     ...props,
     type: "minute",
     children: jsxs(Box, {
       flex: "y",
       spacing: "s",
       padding: "s",
-      children: [jsx$1(InputTextual, {
+      children: [jsx(InputTextual, {
         type: "number",
         command: "--navi-update",
         min: min,
@@ -62898,13 +61056,13 @@ const PickerNaviMinute = props => {
       }), jsxs(Box, {
         flex: true,
         spacing: "s",
-        children: [jsx$1(Button, {
+        children: [jsx(Button, {
           command: "--navi-send",
           children: "Confirmer"
-        }), jsx$1(Button, {
+        }), jsx(Button, {
           command: "--navi-clear",
           children: "Vider"
-        }), jsx$1(Button, {
+        }), jsx(Button, {
           command: "--navi-cancel",
           children: "Annuler"
         })]
@@ -62995,7 +61153,7 @@ const LoadingDotsSvg = () => {
     width: "100%",
     height: "100%",
     xmlns: "http://www.w3.org/2000/svg",
-    children: [jsx$1("rect", {
+    children: [jsx("rect", {
       fill: "currentColor",
       stroke: "currentColor",
       "stroke-width": "15",
@@ -63003,7 +61161,7 @@ const LoadingDotsSvg = () => {
       height: "30",
       x: "25",
       y: "85",
-      children: jsx$1("animate", {
+      children: jsx("animate", {
         attributeName: "opacity",
         calcMode: "spline",
         dur: "2",
@@ -63012,7 +61170,7 @@ const LoadingDotsSvg = () => {
         repeatCount: "indefinite",
         begin: "-.4"
       })
-    }), jsx$1("rect", {
+    }), jsx("rect", {
       fill: "currentColor",
       stroke: "currentColor",
       "stroke-width": "15",
@@ -63020,7 +61178,7 @@ const LoadingDotsSvg = () => {
       height: "30",
       x: "85",
       y: "85",
-      children: jsx$1("animate", {
+      children: jsx("animate", {
         attributeName: "opacity",
         calcMode: "spline",
         dur: "2",
@@ -63029,7 +61187,7 @@ const LoadingDotsSvg = () => {
         repeatCount: "indefinite",
         begin: "-.2"
       })
-    }), jsx$1("rect", {
+    }), jsx("rect", {
       fill: "currentColor",
       stroke: "currentColor",
       "stroke-width": "15",
@@ -63037,7 +61195,7 @@ const LoadingDotsSvg = () => {
       height: "30",
       x: "145",
       y: "85",
-      children: jsx$1("animate", {
+      children: jsx("animate", {
         attributeName: "opacity",
         calcMode: "spline",
         dur: "2",
@@ -63055,15 +61213,15 @@ const LoadingIndicator = ({
   ...props
 }) => {
   if (variant === "dots") {
-    return jsx$1(Icon, {
+    return jsx(Icon, {
       ...props,
-      children: jsx$1(LoadingDotsSvg, {})
+      children: jsx(LoadingDotsSvg, {})
     });
   }
-  return jsx$1(Icon, {
+  return jsx(Icon, {
     circle: true,
     ...props,
-    children: jsx$1(LoadingIndicatorFluid, {})
+    children: jsx(LoadingIndicatorFluid, {})
   });
 };
 
@@ -63143,7 +61301,7 @@ const Separator = ({
   ...props
 }) => {
   import.meta.css = [css$z, "@jsenv/navi/src/layout/separator.jsx"];
-  return jsx$1(Box, {
+  return jsx(Box, {
     as: vertical ? "span" : "hr",
     ...props,
     "data-vertical": vertical ? "" : undefined,
@@ -63584,16 +61742,16 @@ const createItemTracker = (onChange) => {
 const ListItemHeaderOrFooterResolver = props => {
   const Next = useNextResolver();
   if (props.header) {
-    return jsx$1(ListItemHeader, {
+    return jsx(ListItemHeader, {
       ...props
     });
   }
   if (props.footer) {
-    return jsx$1(ListItemFooter, {
+    return jsx(ListItemFooter, {
       ...props
     });
   }
-  return jsx$1(Next, {
+  return jsx(Next, {
     ...props
   });
 };
@@ -63608,7 +61766,7 @@ const ListItemHeader = props => {
     listContainerEl.style.setProperty("--list-header-height", `${rect.height}px`);
     listContainerEl.style.setProperty("--list-header-width", `${rect.width}px`);
   }, []);
-  return jsx$1(Next, {
+  return jsx(Next, {
     ...props,
     header: undefined,
     role: "presentation",
@@ -63626,7 +61784,7 @@ const ListItemFooter = props => {
     listContainerEl.style.setProperty("--list-footer-height", `${rect.height}px`);
     listContainerEl.style.setProperty("--list-footer-width", `${rect.width}px`);
   }, []);
-  return jsx$1(Next, {
+  return jsx(Next, {
     ...props,
     footer: undefined,
     role: "presentation",
@@ -63823,13 +61981,13 @@ const ListSelectableContext = createContext(false);
 const ListSelectableResolver = props => {
   const Next = useNextResolver();
   if (props.selectable) {
-    return jsx$1(ListSelectable, {
+    return jsx(ListSelectable, {
       ...props
     });
   }
-  return jsx$1(ListSelectableContext.Provider, {
+  return jsx(ListSelectableContext.Provider, {
     value: false,
-    children: jsx$1(Next, {
+    children: jsx(Next, {
       ...props
     })
   });
@@ -63977,7 +62135,7 @@ const ListSelectable = props => {
     }
     setCurrentId(initialEl.id);
   }, []);
-  const listVnode = jsx$1(Next, {
+  const listVnode = jsx(Next, {
     "navi-selectable": "",
     ...listControlRootProps,
     ...listControlProps,
@@ -64127,16 +62285,16 @@ const ListSelectable = props => {
         id: currentId
       });
     },
-    children: jsx$1(ControlgroupChildrenWrapper, {
+    children: jsx(ControlgroupChildrenWrapper, {
       ...childrenWrapperProps,
       children: props.children
     })
   });
-  return jsx$1(ListSelectableContext.Provider, {
+  return jsx(ListSelectableContext.Provider, {
     value: true,
-    children: jsx$1(SelectableListMultipleContext.Provider, {
+    children: jsx(SelectableListMultipleContext.Provider, {
       value: multiple,
-      children: jsx$1(SelectableListDeselectableContext.Provider, {
+      children: jsx(SelectableListDeselectableContext.Provider, {
         value: Boolean(deselectable),
         children: listVnode
       })
@@ -64153,12 +62311,12 @@ const ListItemSelectableResolver = props => {
   const isHeaderOrFooter = Boolean(props.header || props.footer);
   const selectable = props.selectable ?? (isHeaderOrFooter || props.role === "presentation" ? false : listSelectable);
   if (selectable) {
-    return jsx$1(ListItemSelectable, {
+    return jsx(ListItemSelectable, {
       ...props,
       selectable: true
     });
   }
-  return jsx$1(Next, {
+  return jsx(Next, {
     ...props
   });
 };
@@ -64282,13 +62440,13 @@ const ListItemSelectable = props => {
     busyMessage: busyMessageResolved,
     selectable: undefined,
     "navi-selectable-area-all": selectableArea === "all" ? "" : undefined,
-    children: [jsx$1(SelectableRealInput, {
+    children: [jsx(SelectableRealInput, {
       ...checkableProps,
       // eslint-disable-next-line react/no-children-prop
       children: undefined
-    }), jsx$1(SelectableRealInputContext.Provider, {
+    }), jsx(SelectableRealInputContext.Provider, {
       value: realInputContextValue,
-      children: jsx$1(ControlChildrenWrapper, {
+      children: jsx(ControlChildrenWrapper, {
         ...controlChildrenWrapperProps,
         children: children
       })
@@ -64300,7 +62458,7 @@ const SelectableRealInput = props => {
   // here for some reason we can't use <Input, so instead we use <Box
   // ideally we could use <Input but it would interfere with the control props we already create
   // in the ListItemSelectable
-  return jsx$1(Box, {
+  return jsx(Box, {
     as: "input",
     pseudoClasses: SELECTABLE_INPUT_PSEUDO_CLASSES,
     ...props,
@@ -64318,9 +62476,9 @@ const SelectableInputProxy = props => {
 
   // Reset FieldToInterfaceContext to ensure we don't read id or report our
   // states (real input should take id and report)
-  return jsx$1(ControlIdContext.Provider, {
+  return jsx(ControlIdContext.Provider, {
     value: undefined,
-    children: jsx$1(Input, {
+    children: jsx(Input, {
       ...props,
       ...selectableRealInputProps,
       id: undefined,
@@ -65142,11 +63300,11 @@ const ListUI = props => {
     content = jsxs(ListItem, {
       role: "presentation",
       baseClassName: "navi_list_item navi_list_error",
-      children: [jsx$1("span", {
+      children: [jsx("span", {
         className: "navi_list_error_icon",
         "aria-hidden": "true",
         children: "⚠"
-      }), jsx$1("span", {
+      }), jsx("span", {
         children: error === true ? "Something went wrong." : error
       })]
     });
@@ -65163,8 +63321,8 @@ const ListUI = props => {
             key: `navi-list-skeleton-separator-${skeletonIndex}`
           }));
         }
-        skeletons.push(jsx$1(Fragment$1, {
-          children: renderSkeleton ? renderSkeleton(skeletonIndex) : jsx$1(ListItem, {
+        skeletons.push(jsx(Fragment$1, {
+          children: renderSkeleton ? renderSkeleton(skeletonIndex) : jsx(ListItem, {
             skeleton: true
           })
         }, `navi-list-skeleton-${skeletonIndex}`));
@@ -65172,23 +63330,23 @@ const ListUI = props => {
       }
       content = skeletons;
     } else if (loadingFallback === "loader") {
-      content = jsx$1(ListItem, {
+      content = jsx(ListItem, {
         role: "presentation",
         "aria-hidden": "true",
         baseClassName: "navi_list_item navi_list_loader",
-        children: jsx$1(LoadingIndicator, {})
+        children: jsx(LoadingIndicator, {})
       });
     } else {
       // Custom content is not aria-hidden (unlike the bare spinner): it usually
       // carries a message worth announcing.
-      content = jsx$1(ListItem, {
+      content = jsx(ListItem, {
         role: "presentation",
         baseClassName: "navi_list_item navi_list_loading_fallback",
         children: loadingFallback
       });
     }
   }
-  return jsx$1(Box, {
+  return jsx(Box, {
     ...rest,
     ref: ref,
     baseClassName: "navi_list_container",
@@ -65225,7 +63383,7 @@ const ListUI = props => {
         reason: "navi_request_scroll"
       });
     },
-    children: jsx$1(ListContent, {
+    children: jsx(ListContent, {
       role: role,
       fallback: fallback,
       fallbackShown: emptyFallbackShown,
@@ -65270,9 +63428,9 @@ const ListFirstResolver = props => {
   }
   props.virtual = virtualRef.current;
   const parallelGuard = useParallelGuard(props.parallelGuard ?? PARALLEL_GUARD_DEFAULT);
-  return jsx$1(ParallelGuardContext.Provider, {
+  return jsx(ParallelGuardContext.Provider, {
     value: parallelGuard,
-    children: jsx$1(Next, {
+    children: jsx(Next, {
       ...props,
       parallelGuard: undefined
     })
@@ -65508,13 +63666,13 @@ const ListContent = ({
   children
 }) => {
   const listProps = useContext(BoxForwardedPropsContext);
-  return jsx$1(Box, {
+  return jsx(Box, {
     className: "navi_list_scroll_container",
     overflow: overflow,
     overflowX: overflowX,
     overflowY: overflowY,
     ...scrollBoxPaddingProps,
-    children: jsx$1(UnorderedList, {
+    children: jsx(UnorderedList, {
       role: role,
       fallback: fallback,
       fallbackShown: fallbackShown,
@@ -65548,7 +63706,7 @@ const ListContent = ({
       tracker: tracker,
       renderWindow: renderWindow,
       virtual: virtual,
-      children: jsx$1(PendingScrollRefContext.Provider, {
+      children: jsx(PendingScrollRefContext.Provider, {
         value: pendingScrollRef,
         children: children
       })
@@ -67106,27 +65264,27 @@ const UnorderedList = ({
     ...rest,
     spacing: spacing,
     baseClassName: "navi_list",
-    children: [!suppressFallback && searchFallbackShown && jsx$1(SearchFallback, {
+    children: [!suppressFallback && searchFallbackShown && jsx(SearchFallback, {
       searchFallback: searchFallback
-    }), !suppressFallback && fallbackShown && jsx$1(Fallback, {
+    }), !suppressFallback && fallbackShown && jsx(Fallback, {
       fallback: fallback
-    }), jsx$1(SearchNoMatchModeContext.Provider, {
+    }), jsx(SearchNoMatchModeContext.Provider, {
       value: searchNoMatchMode,
-      children: jsx$1(RenderWindowContext.Provider, {
+      children: jsx(RenderWindowContext.Provider, {
         value: renderWindow,
-        children: jsx$1(SeparatorContext.Provider, {
+        children: jsx(SeparatorContext.Provider, {
           value: separator ?? null,
-          children: jsx$1(ItemTransitionContext.Provider, {
+          children: jsx(ItemTransitionContext.Provider, {
             value: Boolean(itemTransition),
-            children: jsx$1(ListItemTrackerContext.Provider, {
+            children: jsx(ListItemTrackerContext.Provider, {
               value: tracker,
-              children: jsx$1(ListVirtualContext.Provider, {
+              children: jsx(ListVirtualContext.Provider, {
                 value: virtual,
-                children: jsx$1(ListRowContext.Provider, {
+                children: jsx(ListRowContext.Provider, {
                   value: null,
-                  children: jsx$1(ListItemColumnsContext.Provider, {
+                  children: jsx(ListItemColumnsContext.Provider, {
                     value: columns ? null : itemColumns || null,
-                    children: jsx$1(ListDeclaredChildren, {
+                    children: jsx(ListDeclaredChildren, {
                       children: children
                     })
                   })
@@ -67149,7 +65307,7 @@ const SearchFallback = ({
   if (searchFallback === undefined) {
     searchFallback = naviI18n("list.no_match");
   }
-  return jsx$1(ListItem, {
+  return jsx(ListItem, {
     role: "presentation",
     className: "navi_list_item navi_list_search_fallback",
     "navi-default": typeof searchFallback === "string" ? "" : undefined,
@@ -67165,7 +65323,7 @@ const Fallback = ({
   if (fallback === undefined) {
     fallback = naviI18n("list.empty");
   }
-  return jsx$1(ListItem, {
+  return jsx(ListItem, {
     role: "presentation",
     className: "navi_list_item navi_list_fallback",
     "navi-default": typeof fallback === "string" ? "" : undefined,
@@ -67181,7 +65339,7 @@ const VirtualFiller = ({
   if (!sizeToFill) {
     return null;
   }
-  return jsx$1("li", {
+  return jsx("li", {
     className: "navi_list_virtual_filler"
     // eslint-disable-next-line react/no-unknown-property
     ,
@@ -67224,7 +65382,7 @@ const ListItemFirstResolver = props => {
   const Next = useNextResolver();
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
-  return jsx$1(Next, {
+  return jsx(Next, {
     ...props
   });
 };
@@ -67237,7 +65395,7 @@ const ListItemRowResolver = props => {
   const Next = useNextResolver();
   const row = useContext(ListRowContext);
   if (!row) {
-    return jsx$1(Next, {
+    return jsx(Next, {
       ...props
     });
   }
@@ -67250,7 +65408,7 @@ const ListItemRowResolver = props => {
     rowMinWidth,
     ...rowProps
   } = row;
-  return jsx$1(Next, {
+  return jsx(Next, {
     ...rowProps,
     ...props,
     id: props.id || row.id,
@@ -67262,17 +65420,17 @@ const ListItemRowResolver = props => {
 const ListItemPresentationResolver = props => {
   const Next = useNextResolver();
   if (props.role === "presentation") {
-    return jsx$1(ListItemPresentation, {
+    return jsx(ListItemPresentation, {
       ...props
     });
   }
-  return jsx$1(Next, {
+  return jsx(Next, {
     ...props
   });
 };
 const ListItemPresentation = props => {
   const itemColumnsOverrideProps = useItemColumnsOverrideProps(props.style);
-  return jsx$1(Box, {
+  return jsx(Box, {
     as: "li",
     ...props,
     ...itemColumnsOverrideProps
@@ -67287,11 +65445,11 @@ const ListItemPresentation = props => {
 const ListItemSkeletonResolver = props => {
   const Next = useNextResolver();
   if (props.skeleton) {
-    return jsx$1(ListItemSkeleton, {
+    return jsx(ListItemSkeleton, {
       ...props
     });
   }
-  return jsx$1(Next, {
+  return jsx(Next, {
     ...props
   });
 };
@@ -67306,7 +65464,7 @@ const ListItemSkeleton = props => {
     ...rest
   } = props;
   const itemColumnsOverrideProps = useItemColumnsOverrideProps(rest.style);
-  return jsx$1(Box, {
+  return jsx(Box, {
     as: "li",
     role: "presentation",
     "aria-hidden": "true",
@@ -67314,7 +65472,7 @@ const ListItemSkeleton = props => {
     ...rest,
     ...itemColumnsOverrideProps,
     baseClassName: `navi_list_item ${SKELETON_LIST_ITEM_CLASS}`,
-    children: children ?? jsx$1(Text, {
+    children: children ?? jsx(Text, {
       loading: true
     })
   });
@@ -67396,25 +65554,25 @@ const ListItemUI = props => {
     // keeping a row that matches nothing is that nothing moves, and a divider
     // that leaves takes its own height away.
     if (!separator || props.index === 0) {
-      return jsx$1(ListItemReal, {
+      return jsx(ListItemReal, {
         ...props
       });
     }
     return jsxs(Fragment, {
       children: [cloneElement(resolveSeparatorVnode(separator, props.index - 1), {
         style: VISIBILITY_HIDDEN_STYLE
-      }), jsx$1(ListItemReal, {
+      }), jsx(ListItemReal, {
         ...props
       })]
     });
   }
   if (row) {
-    return jsx$1(ListItemReal, {
+    return jsx(ListItemReal, {
       ...props
     });
   }
   const index = props.index;
-  const listItemVnode = jsx$1(ListItemReal, {
+  const listItemVnode = jsx(ListItemReal, {
     ...props
   });
   // "Am I the first visible item?" is answered by the place the list handed
@@ -67594,20 +65752,20 @@ const ListItemReal = props => {
     } : undefined,
     ref: ref,
     children: [error ? jsxs(Fragment, {
-      children: [jsx$1("span", {
+      children: [jsx("span", {
         className: "navi_list_error_icon",
         "aria-hidden": "true",
         children: "⚠"
-      }), jsx$1("span", {
+      }), jsx("span", {
         className: "navi_list_item_error_message",
         children: error === true ? "Something went wrong." : error
-      }), onErrorDismiss && jsx$1("button", {
+      }), onErrorDismiss && jsx("button", {
         type: "button",
         className: "navi_list_item_error_dismiss",
         onClick: onErrorDismiss,
         children: naviI18n("button.close", props)
       })]
-    }) : children, loading && jsx$1(LoadingOutline, {
+    }) : children, loading && jsx(LoadingOutline, {
       loading: true,
       color: "var(--navi-loader-color)",
       inset: -1
@@ -68049,7 +66207,7 @@ const ListDeclaredChildren = ({
   const declared = [];
   declareChildren(children, parentSlotId === null ? "" : `${parentSlotId}/`, slotIds, declared);
   virtual.declareSlots(parentSlotId, slotIds);
-  return jsx$1(Fragment, {
+  return jsx(Fragment, {
     children: declared
   });
 };
@@ -68062,7 +66220,7 @@ const declareChildren = (children, prefix, slotIds, declared) => {
     } else if (child !== null && child !== undefined && child !== false && child !== true) {
       const slotId = child.key === undefined || child.key === null ? `${prefix}i${index}` : `${prefix}k${child.key}`;
       slotIds.push(slotId);
-      declared.push(jsx$1(ListSlotContext.Provider, {
+      declared.push(jsx(ListSlotContext.Provider, {
         value: slotId,
         children: child
       }, slotId));
@@ -68340,7 +66498,7 @@ const ListItems = ({
     if (!group) {
       return;
     }
-    rows.push(jsx$1(ListItemGroup, {
+    rows.push(jsx(ListItemGroup, {
       label: group.label,
       labelProps: group.labelProps,
       children: group.children
@@ -68375,7 +66533,7 @@ const ListItems = ({
   // one run, and what sits before or after it (a header, rows given one by
   // one) is not virtualized at all.
   if (windowFrom > runStart) {
-    rows.push(jsx$1(VirtualFiller, {
+    rows.push(jsx(VirtualFiller, {
       edge: "before",
       itemCount: windowFrom - runStart,
       virtualItemSize: virtualItemSize
@@ -68389,7 +66547,7 @@ const ListItems = ({
     if (rowIndex >= failureFrom && rowIndex <= failureTo) {
       closeGroup();
       const failedRowCount = failureTo - rowIndex + 1;
-      rows.push(jsx$1("li", {
+      rows.push(jsx("li", {
         className: "navi_list_failed_rows",
         style: {
           "--size-to-fill": `${failedRowCount * virtualItemSize}px`
@@ -68399,7 +66557,7 @@ const ListItems = ({
           retry: store.retry,
           start: store.failure.start,
           end: store.failure.end
-        }) : jsx$1(ListItemsFailure, {
+        }) : jsx(ListItemsFailure, {
           error: store.failure.error,
           retry: store.retry
         })
@@ -68415,14 +66573,14 @@ const ListItems = ({
     } else if (renderRowSkeleton === false) {
       // The row must still take its room: without it the rows below would
       // climb up and slide back down as the answer arrives.
-      rowVnode = jsx$1(ListItem, {
+      rowVnode = jsx(ListItem, {
         skeleton: true,
         style: VISIBILITY_HIDDEN_STYLE
       });
     } else if (renderRowSkeleton) {
       rowVnode = renderRowSkeleton(rowIndex);
     } else {
-      rowVnode = jsx$1(ListItem, {
+      rowVnode = jsx(ListItem, {
         skeleton: true
       });
     }
@@ -68438,7 +66596,7 @@ const ListItems = ({
           key: `${key}_separator`
         }), item, rowIndex);
       }
-      pushRow(jsx$1(ListRowContext.Provider, {
+      pushRow(jsx(ListRowContext.Provider, {
         value: item === undefined ? {
           id: key,
           index: rowIndex,
@@ -68455,7 +66613,7 @@ const ListItems = ({
   }
   closeGroup();
   if (runEnd > windowTo) {
-    rows.push(jsx$1(VirtualFiller, {
+    rows.push(jsx(VirtualFiller, {
       edge: "after",
       itemCount: runEnd - windowTo,
       virtualItemSize: virtualItemSize
@@ -68476,14 +66634,14 @@ const ListItemsFailure = ({
     as: "div",
     role: "presentation",
     baseClassName: "navi_list_item navi_list_error",
-    children: [jsx$1("span", {
+    children: [jsx("span", {
       className: "navi_list_error_icon",
       "aria-hidden": "true",
       children: "⚠"
-    }), jsx$1("span", {
+    }), jsx("span", {
       className: "navi_list_item_error_message",
       children: error && error.message ? error.message : naviI18n("list.rows_failed")
-    }), jsx$1("button", {
+    }), jsx("button", {
       type: "button",
       className: "navi_list_item_error_dismiss",
       onClick: retry,
@@ -69029,7 +67187,7 @@ const ListItemGroup = ({
     baseClassName: "navi_list_item_group",
     role: "presentation",
     "data-hidden-while-empty": hiddenWhileEmpty ? "" : undefined,
-    children: [jsx$1("span", {
+    children: [jsx("span", {
       ...labelRest,
       ref: labelRef,
       id: groupId,
@@ -69041,13 +67199,13 @@ const ListItemGroup = ({
       ,
       "navi-default": typeof label === "string" ? "" : undefined,
       children: label
-    }), jsx$1("ul", {
+    }), jsx("ul", {
       className: "navi_list_item_group_list",
       role: "group",
       "aria-labelledby": groupId,
-      children: jsx$1(GroupItemTrackerContext.Provider, {
+      children: jsx(GroupItemTrackerContext.Provider, {
         value: groupTracker,
-        children: jsx$1(ListDeclaredChildren, {
+        children: jsx(ListDeclaredChildren, {
           children: children
         })
       })
@@ -69060,7 +67218,7 @@ const ListItemGroup = ({
 // render at that gap.
 const resolveSeparatorVnode = (separator, gapIndex) => {
   if (separator === true) {
-    return jsx$1(Separator, {
+    return jsx(Separator, {
       margin: "0"
     });
   }
@@ -69079,18 +67237,18 @@ const PickerNaviTime = props => {
   } = props;
   const stepSeconds = timeStringToSeconds(step) ?? 1800;
   const slots = useMemo(() => generateTimeSlots(min, max, stepSeconds), [min, max, stepSeconds]);
-  return jsx$1(Next, {
+  return jsx(Next, {
     ...props,
     type: "time",
-    children: jsx$1(List, {
+    children: jsx(List, {
       selectable: true,
       command: "--navi-send",
-      children: slots.map((slot, i) => jsx$1(List.Item, {
+      children: slots.map((slot, i) => jsx(List.Item, {
         selectable: true,
         id: slot,
         index: i,
         value: slot,
-        children: jsx$1(Time, {
+        children: jsx(Time, {
           type: "time",
           children: slot
         })
@@ -69117,16 +67275,16 @@ const generateTimeSlots = (min, max, stepSeconds) => {
 const PickerPresetResolver = props => {
   const Next = useNextResolver();
   if (props.type === "navi_time") {
-    return jsx$1(PickerNaviTime, {
+    return jsx(PickerNaviTime, {
       ...props
     });
   }
   if (props.type === "navi_minute") {
-    return jsx$1(PickerNaviMinute, {
+    return jsx(PickerNaviMinute, {
       ...props
     });
   }
-  return jsx$1(Next, {
+  return jsx(Next, {
     ...props
   });
 };
@@ -69259,7 +67417,7 @@ const Badge = props => {
     badgeList.register(entryState, props);
     return null;
   }
-  return jsx$1(BadgeUI, {
+  return jsx(BadgeUI, {
     ...props
   });
 };
@@ -69275,7 +67433,7 @@ const BadgeUI = ({
     ref
   } = props;
   useAccentColorAttributes(ref, null);
-  return jsx$1(Text, {
+  return jsx(Text, {
     className: withPropsClassName("navi_badge", className),
     bold: true,
     maxLines: 1
@@ -69287,7 +67445,7 @@ const BadgeUI = ({
     overflowClipMargin: "content-box calc((1lh - 1cap) / 2)",
     ...props,
     styleCSSVars: BadgeStyleCSSVars,
-    spacing: jsx$1("span", {}),
+    spacing: jsx("span", {}),
     children: children
   });
 };
@@ -69312,7 +67470,7 @@ const BadgeButton = props => {
   if (selfInteractionsHidden) {
     return null;
   }
-  return jsx$1(BadgeButtonUI, {
+  return jsx(BadgeButtonUI, {
     ...props
   });
 };
@@ -69322,7 +67480,7 @@ const BadgeButtonUI = props => {
   const [buttonRootProps, buttonHostProps] = useControlProps(props, {
     controlType: "button"
   });
-  return jsx$1(Text, {
+  return jsx(Text, {
     className: "navi_badge_button",
     role: "button",
     onnavi_get_value: e => {
@@ -69485,23 +67643,23 @@ const BadgeList = props => {
     shrinkWrap = maxLinesFromAbove !== undefined
   } = props;
   if (maxLinesResolved !== undefined) {
-    return jsx$1(BadgeListMaxLines, {
+    return jsx(BadgeListMaxLines, {
       ...props,
       maxLines: maxLinesResolved,
       shrinkWrap: shrinkWrap
     });
   }
   if (shrinkWrap) {
-    return jsx$1(BadgeListShrinkWrap, {
+    return jsx(BadgeListShrinkWrap, {
       ...props
     });
   }
   if (max !== undefined || fallback !== undefined) {
-    return jsx$1(BadgeListCounted, {
+    return jsx(BadgeListCounted, {
       ...props
     });
   }
-  return jsx$1(BadgeListPlain, {
+  return jsx(BadgeListPlain, {
     ...props
   });
 };
@@ -69509,7 +67667,7 @@ const BadgeList = props => {
 // Nothing to measure, cap, or count: the badges render themselves — no
 // registry, no context, no effect, one element.
 const BadgeListPlain = props => {
-  return jsx$1(Box, {
+  return jsx(Box, {
     baseClassName: "navi_badge_list",
     ...BADGE_LIST_PROPS,
     ...props
@@ -69525,11 +67683,11 @@ const BadgeListCounted = ({
   ...boxProps
 }) => {
   const registry = useBadgeRegistry(children, true);
-  return jsx$1(Box, {
+  return jsx(Box, {
     baseClassName: "navi_badge_list",
     ...BADGE_LIST_PROPS,
     ...boxProps,
-    children: jsx$1(BadgeListChildren, {
+    children: jsx(BadgeListChildren, {
       registry: registry,
       max: max,
       fallback: fallback,
@@ -69604,17 +67762,17 @@ const BadgeListShrinkWrap = ({
       relative: true,
       inline: true,
       flex: "x",
-      children: [jsx$1(Box, {
+      children: [jsx(Box, {
         baseClassName: "navi_badge_list",
         ...boxProps,
         ref: measureRef,
         "aria-hidden": "true",
         "navi-badge-list-clone": ""
-      }), jsx$1(Box, {
+      }), jsx(Box, {
         baseClassName: "navi_badge_list",
         ...boxProps,
         ref: visibleRef,
-        children: jsx$1(BadgeListChildren, {
+        children: jsx(BadgeListChildren, {
           registry: registry,
           max: max,
           fallback: fallback,
@@ -69732,13 +67890,13 @@ const BadgeListMaxLines = ({
       window.removeEventListener("resize", remeasure);
     };
   }, [watchesResize, maxLines]);
-  return jsx$1(Box, {
+  return jsx(Box, {
     baseClassName: "navi_badge_list",
     ...BADGE_LIST_PROPS,
     ...boxProps,
     ref: visibleRef,
     "navi-badge-list-measuring": measuring ? "" : undefined,
-    children: jsx$1(BadgeListChildren, {
+    children: jsx(BadgeListChildren, {
       registry: registry,
       max: max,
       fallback: fallback,
@@ -69761,10 +67919,10 @@ const BadgeListChildren = ({
     return children;
   }
   return jsxs(Fragment, {
-    children: [jsx$1(BadgeListContext.Provider, {
+    children: [jsx(BadgeListContext.Provider, {
       value: registry,
       children: children
-    }), jsx$1(BadgeListContent, {
+    }), jsx(BadgeListContent, {
       registry: registry,
       fallback: fallback,
       max: max,
@@ -69802,9 +67960,9 @@ const BadgeListContent = ({
     children: [entries.slice(0, shownCount).map((badgeProps, index) =>
     // Keyed by position: a badge's own key went to the registering vnode
     // above and doesn't reach here, and badges keep no state worth moving.
-    jsx$1(BadgeUI, {
+    jsx(BadgeUI, {
       ...badgeProps
-    }, index)), hasMore && jsx$1(BadgeUI, {
+    }, index)), hasMore && jsx(BadgeUI, {
       className: "navi_badge_more",
       children: naviI18n("badge_list.more", {
         count: measuring ? count : count - shownCount
@@ -69836,7 +67994,7 @@ const Color = ({
 }) => {
   import.meta.css = [css$u, "@jsenv/navi/src/text/color.jsx"];
   const color = children || undefined;
-  return jsx$1(Box, {
+  return jsx(Box, {
     as: "span",
     className: "navi_color",
     "navi-color-empty": color ? undefined : ""
@@ -69852,66 +68010,66 @@ const Color = ({
 // };
 
 const CalendarSvg = () => {
-  return jsx$1("svg", {
+  return jsx("svg", {
     xmlns: "http://www.w3.org/2000/svg",
     viewBox: "0 0 24 24",
     fill: "currentColor",
-    children: jsx$1("path", {
+    children: jsx("path", {
       d: "M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"
     })
   });
 };
 
 const ClockSvg = () => {
-  return jsx$1("svg", {
+  return jsx("svg", {
     xmlns: "http://www.w3.org/2000/svg",
     viewBox: "0 0 24 24",
     fill: "currentColor",
-    children: jsx$1("path", {
+    children: jsx("path", {
       d: "M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"
     })
   });
 };
 
 const ColorSvg = () => {
-  return jsx$1("svg", {
+  return jsx("svg", {
     xmlns: "http://www.w3.org/2000/svg",
     viewBox: "0 0 24 24",
     fill: "currentColor",
-    children: jsx$1("path", {
+    children: jsx("path", {
       d: "M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"
     })
   });
 };
 
 const DurationSvg = () => {
-  return jsx$1("svg", {
+  return jsx("svg", {
     xmlns: "http://www.w3.org/2000/svg",
     viewBox: "0 0 24 24",
     fill: "currentColor",
-    children: jsx$1("path", {
+    children: jsx("path", {
       d: "M6 2v6l4 4-4 4v6h12v-6l-4-4 4-4V2H6zm10 14.5V20H8v-3.5l4-4 4 4zm-4-5-4-4V4h8v3.5l-4 4z"
     })
   });
 };
 
 const FileSvg = () => {
-  return jsx$1("svg", {
+  return jsx("svg", {
     xmlns: "http://www.w3.org/2000/svg",
     viewBox: "0 0 24 24",
     fill: "currentColor",
-    children: jsx$1("path", {
+    children: jsx("path", {
       d: "M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z"
     })
   });
 };
 
 const PencilSvg = () => {
-  return jsx$1("svg", {
+  return jsx("svg", {
     xmlns: "http://www.w3.org/2000/svg",
     viewBox: "0 0 24 24",
     fill: "currentColor",
-    children: jsx$1("path", {
+    children: jsx("path", {
       d: "M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"
     })
   });
@@ -69920,68 +68078,68 @@ const PencilSvg = () => {
 const PickerTypeResolver = props => {
   const Next = useNextResolver();
   if (props.type === "color") {
-    return jsx$1(PickerColor, {
+    return jsx(PickerColor, {
       ...props
     });
   }
   if (props.type === "datetime") {
-    return jsx$1(PickerDatetime, {
+    return jsx(PickerDatetime, {
       ...props
     });
   }
   if (props.type === "date") {
-    return jsx$1(PickerDate, {
+    return jsx(PickerDate, {
       ...props
     });
   }
   if (props.type === "month") {
-    return jsx$1(PickerMonth, {
+    return jsx(PickerMonth, {
       ...props
     });
   }
   if (props.type === "week") {
-    return jsx$1(PickerWeek, {
+    return jsx(PickerWeek, {
       ...props
     });
   }
   if (props.type === "time") {
-    return jsx$1(PickerTime, {
+    return jsx(PickerTime, {
       ...props
     });
   }
   if (props.type === "duration") {
-    return jsx$1(PickerDuration, {
+    return jsx(PickerDuration, {
       ...props
     });
   }
   if (props.type === "file") {
-    return jsx$1(PickerFile, {
+    return jsx(PickerFile, {
       ...props
     });
   }
   if (props.type === "text") {
-    return jsx$1(PickerText, {
+    return jsx(PickerText, {
       ...props
     });
   }
   if (props.type === "array") {
-    return jsx$1(PickerArray, {
+    return jsx(PickerArray, {
       ...props
     });
   }
   if (props.type === "object") {
-    return jsx$1(PickerObject, {
+    return jsx(PickerObject, {
       ...props
     });
   }
-  return jsx$1(Next, {
+  return jsx(Next, {
     ...props
   });
 };
 const PickerText = props => {
   const Next = useNextResolver();
-  return jsx$1(Next, {
-    rightSlotIcon: jsx$1(PencilSvg, {}),
+  return jsx(Next, {
+    rightSlotIcon: jsx(PencilSvg, {}),
     ...props
   });
 };
@@ -69992,8 +68150,8 @@ const PickerText = props => {
 // is a surface (see dialog.jsx), so there is nothing to tell it about the shape.
 const PickerObject = props => {
   const Next = useNextResolver();
-  return jsx$1(Next, {
-    ui: jsx$1(PickerObjectUI, {}),
+  return jsx(Next, {
+    ui: jsx(PickerObjectUI, {}),
     ...props,
     type: "navi_js",
     "navi-state-shape": "object"
@@ -70010,15 +68168,15 @@ const PickerObjectUI = asPickerOwnUI(() => {
     }
     return renderSafe(placeholder);
   }
-  return jsx$1(BadgeList, {
+  return jsx(BadgeList, {
     children: Object.entries(value).map(([key, val]) => {
       return jsxs(Badge, {
-        children: [jsx$1("span", {
+        children: [jsx("span", {
           style: {
             opacity: 0.6
           },
           children: key
-        }), jsx$1("span", {
+        }), jsx("span", {
           children: ":"
         }), String(val ?? "")]
       }, key);
@@ -70027,8 +68185,8 @@ const PickerObjectUI = asPickerOwnUI(() => {
 });
 const PickerArray = props => {
   const Next = useNextResolver();
-  return jsx$1(Next, {
-    ui: jsx$1(PickerArrayUI, {}),
+  return jsx(Next, {
+    ui: jsx(PickerArrayUI, {}),
     ...props,
     type: "navi_js",
     "navi-state-shape": "array"
@@ -70046,12 +68204,12 @@ const PickerArrayUI = asPickerOwnUI(() => {
     }
     return renderSafe(placeholder);
   }
-  return jsx$1(Text, {
+  return jsx(Text, {
     spacing: ", ",
     shrinkWrap: true,
     maxLines: maxLines,
     children: value.map(item => {
-      return jsx$1("span", {
+      return jsx("span", {
         children: item
       }, item);
     })
@@ -70095,24 +68253,24 @@ const PickerChip = ({
     inline: true,
     flex: true,
     ...rest,
-    children: [children, jsx$1(Badge.Button, {
+    children: [children, jsx(Badge.Button, {
       selfInteractions: "click",
       command: "--navi-unselect",
       commandFor: commandFor,
       value: value,
       "aria-label": naviI18n("button.remove"),
-      children: jsx$1(Icon, {
+      children: jsx(Icon, {
         lineOverflow: "allow",
-        children: jsx$1(CloseSvg, {})
+        children: jsx(CloseSvg, {})
       })
     })]
   });
 };
 const PickerColor = props => {
   const Next = useNextResolver();
-  return jsx$1(Next, {
-    ui: jsx$1(PickerColorUI, {}),
-    rightSlotIcon: jsx$1(ColorSvg, {}),
+  return jsx(Next, {
+    ui: jsx(PickerColorUI, {}),
+    rightSlotIcon: jsx(ColorSvg, {}),
     type: "color",
     ...props
   });
@@ -70124,19 +68282,19 @@ const PickerColorUI = asPickerOwnUI(() => {
   } = useContext(PickerContext);
   if (!value) {
     if (!placeholder) {
-      return jsx$1(Color, {});
+      return jsx(Color, {});
     }
     return renderSafe(placeholder);
   }
-  return jsx$1(Color, {
+  return jsx(Color, {
     children: value
   });
 });
 const PickerDate = props => {
   const Next = useNextResolver();
-  return jsx$1(Next, {
-    ui: jsx$1(PickerDateUI, {}),
-    rightSlotIcon: jsx$1(CalendarSvg, {}),
+  return jsx(Next, {
+    ui: jsx(PickerDateUI, {}),
+    rightSlotIcon: jsx(CalendarSvg, {}),
     ...props,
     type: "date"
   });
@@ -70148,7 +68306,7 @@ const PickerDateUI = asPickerOwnUI(props => {
   } = useContext(PickerContext);
   if (!value) {
     if (!placeholder) {
-      return jsx$1(Time, {
+      return jsx(Time, {
         type: "date",
         color: "var(--picker-placeholder-color)",
         capitalize: true,
@@ -70157,7 +68315,7 @@ const PickerDateUI = asPickerOwnUI(props => {
     }
     return renderSafe(placeholder);
   }
-  return jsx$1(Time, {
+  return jsx(Time, {
     type: "date",
     capitalize: true,
     ...props,
@@ -70166,9 +68324,9 @@ const PickerDateUI = asPickerOwnUI(props => {
 });
 const PickerMonth = props => {
   const Next = useNextResolver();
-  return jsx$1(Next, {
-    ui: jsx$1(PickerMonthUI, {}),
-    rightSlotIcon: jsx$1(CalendarSvg, {}),
+  return jsx(Next, {
+    ui: jsx(PickerMonthUI, {}),
+    rightSlotIcon: jsx(CalendarSvg, {}),
     ...props,
     type: "month"
   });
@@ -70180,7 +68338,7 @@ const PickerMonthUI = asPickerOwnUI(props => {
   } = useContext(PickerContext);
   if (!value) {
     if (!placeholder) {
-      return jsx$1(Time, {
+      return jsx(Time, {
         type: "month",
         color: "var(--picker-placeholder-color)",
         ...props
@@ -70188,7 +68346,7 @@ const PickerMonthUI = asPickerOwnUI(props => {
     }
     return renderSafe(placeholder);
   }
-  return jsx$1(Time, {
+  return jsx(Time, {
     type: "month",
     capitalize: true,
     ...props,
@@ -70197,9 +68355,9 @@ const PickerMonthUI = asPickerOwnUI(props => {
 });
 const PickerWeek = props => {
   const Next = useNextResolver();
-  return jsx$1(Next, {
-    ui: jsx$1(PickerWeekUI, {}),
-    rightSlotIcon: jsx$1(CalendarSvg, {}),
+  return jsx(Next, {
+    ui: jsx(PickerWeekUI, {}),
+    rightSlotIcon: jsx(CalendarSvg, {}),
     ...props,
     type: "week"
   });
@@ -70211,7 +68369,7 @@ const PickerWeekUI = asPickerOwnUI(props => {
   } = useContext(PickerContext);
   if (!value) {
     if (!placeholder) {
-      return jsx$1(Time, {
+      return jsx(Time, {
         type: "week",
         color: "var(--picker-placeholder-color)",
         ...props
@@ -70219,7 +68377,7 @@ const PickerWeekUI = asPickerOwnUI(props => {
     }
     return renderSafe(placeholder);
   }
-  return jsx$1(Time, {
+  return jsx(Time, {
     type: "week",
     capitalize: true,
     ...props,
@@ -70228,9 +68386,9 @@ const PickerWeekUI = asPickerOwnUI(props => {
 });
 const PickerTime = props => {
   const Next = useNextResolver();
-  return jsx$1(Next, {
-    ui: jsx$1(PickerTimeUI, {}),
-    rightSlotIcon: jsx$1(ClockSvg, {}),
+  return jsx(Next, {
+    ui: jsx(PickerTimeUI, {}),
+    rightSlotIcon: jsx(ClockSvg, {}),
     ...props,
     type: "time"
   });
@@ -70242,7 +68400,7 @@ const PickerTimeUI = asPickerOwnUI(props => {
   } = useContext(PickerContext);
   if (!value) {
     if (!placeholder) {
-      return jsx$1(Time, {
+      return jsx(Time, {
         type: "time",
         color: "var(--picker-placeholder-color)",
         ...props
@@ -70250,7 +68408,7 @@ const PickerTimeUI = asPickerOwnUI(props => {
     }
     return renderSafe(placeholder);
   }
-  return jsx$1(Time, {
+  return jsx(Time, {
     type: "time",
     ...props,
     children: value
@@ -70258,9 +68416,9 @@ const PickerTimeUI = asPickerOwnUI(props => {
 });
 const PickerDuration = props => {
   const Next = useNextResolver();
-  return jsx$1(Next, {
-    ui: jsx$1(PickerDurationUI, {}),
-    rightSlotIcon: jsx$1(DurationSvg, {}),
+  return jsx(Next, {
+    ui: jsx(PickerDurationUI, {}),
+    rightSlotIcon: jsx(DurationSvg, {}),
     ...props,
     type: "text",
     "navi-input-type": "duration"
@@ -70273,7 +68431,7 @@ const PickerDurationUI = asPickerOwnUI(props => {
   } = useContext(PickerContext);
   if (!value) {
     if (!placeholder) {
-      return jsx$1(Time, {
+      return jsx(Time, {
         type: "time",
         color: "var(--picker-placeholder-color)",
         ...props
@@ -70281,7 +68439,7 @@ const PickerDurationUI = asPickerOwnUI(props => {
     }
     return renderSafe(placeholder);
   }
-  return jsx$1(Time, {
+  return jsx(Time, {
     type: "duration",
     ...props,
     children: value
@@ -70289,9 +68447,9 @@ const PickerDurationUI = asPickerOwnUI(props => {
 });
 const PickerDatetime = props => {
   const Next = useNextResolver();
-  return jsx$1(Next, {
-    ui: jsx$1(PickerDatetimeUI, {}),
-    rightSlotIcon: jsx$1(CalendarSvg, {}),
+  return jsx(Next, {
+    ui: jsx(PickerDatetimeUI, {}),
+    rightSlotIcon: jsx(CalendarSvg, {}),
     ...props,
     type: "datetime-local"
   });
@@ -70303,7 +68461,7 @@ const PickerDatetimeUI = asPickerOwnUI(props => {
   } = useContext(PickerContext);
   if (!value) {
     if (!placeholder) {
-      return jsx$1(Time, {
+      return jsx(Time, {
         type: "datetime",
         color: "var(--picker-placeholder-color)",
         ...props
@@ -70311,16 +68469,16 @@ const PickerDatetimeUI = asPickerOwnUI(props => {
     }
     return renderSafe(placeholder);
   }
-  return jsx$1(Time, {
+  return jsx(Time, {
     type: "datetime",
     children: value
   });
 });
 const PickerFile = props => {
   const Next = useNextResolver();
-  return jsx$1(Next, {
-    ui: jsx$1(PickerFileUI, {}),
-    rightSlotIcon: jsx$1(FileSvg, {}),
+  return jsx(Next, {
+    ui: jsx(PickerFileUI, {}),
+    rightSlotIcon: jsx(FileSvg, {}),
     type: "file",
     ...props
   });
@@ -70879,7 +69037,7 @@ const PickerButton = props => {
        in its own words once told. Said from the read-only state alone, never
        from the busy one — an action running for a moment is not the same thing
        as a value nobody may change. */
-    jsx$1(ReadOnlyContext.Provider, {
+    jsx(ReadOnlyContext.Provider, {
       value: readOnlyResolved,
       children: jsxs(Box
       // A word in a sentence (variant="text") sits in a <p>, where a <div> is
@@ -70945,15 +69103,15 @@ const PickerButton = props => {
         onnavi_request_unselect: e => {
           requestPickerListEntry(ref.current, inputRef.current, e, "unselect");
         },
-        children: [jsx$1("span", {
+        children: [jsx("span", {
           className: "navi_picker_box",
           children: jsxs(PickerContext.Provider, {
             value: pickerContext,
-            children: [variant === "headless" ? null : jsx$1(LoadingOutline, {
+            children: [variant === "headless" ? null : jsx(LoadingOutline, {
               loading: loading,
               color: "var(--picker-loader-color)",
               inset: -2
-            }), jsx$1(PickerInput, {
+            }), jsx(PickerInput, {
               role: hostRole,
               "aria-labelledby": hostLabelId,
               tabIndex: variant === "headless" ? -1 : undefined,
@@ -71028,7 +69186,7 @@ const PickerButton = props => {
                 });
                 e.preventDefault();
               }
-            }), variant === "headless" || ui === "default" ? null : jsx$1(Text, {
+            }), variant === "headless" || ui === "default" ? null : jsx(Text, {
               className: "navi_picker_value"
               // Only when it names the trigger (see hostLabelId above).
               ,
@@ -71048,41 +69206,41 @@ const PickerButton = props => {
               ,
               "navi-placeholder": (ui === undefined || pickerUIIsNaviOwn(ui)) && variant !== "button" && variant !== "text" && uiStateHoldsNothing(value) ? "" : undefined,
               maxLines: maxLines,
-              children: jsx$1(PickerOwnContent, {
-                children: jsx$1(MaxLinesContext.Provider, {
+              children: jsx(PickerOwnContent, {
+                children: jsx(MaxLinesContext.Provider, {
                   value: maxLines,
                   children: ui === undefined ? isIcon ?
                   // An icon picker draws no value, so there is no slot
                   // beside it either — the icon that would have sat in
                   // that slot IS the trigger, and a caller's own `ui`
                   // replaces it like any other.
-                  jsx$1(Icon, {
+                  jsx(Icon, {
                     size: rightSlotIconSize,
                     lineOverflow: "allow",
-                    children: rightSlotIcon === undefined ? jsx$1(ChevronDownSvg$1, {}) : rightSlotIcon
-                  }) : jsx$1(PickerDefaultUI, {}) : ui
+                    children: rightSlotIcon === undefined ? jsx(ChevronDownSvg$1, {}) : rightSlotIcon
+                  }) : jsx(PickerDefaultUI, {}) : ui
                 })
               })
-            }), hasRightSlot ? jsx$1("span", {
+            }), hasRightSlot ? jsx("span", {
               className: "navi_picker_right_slot",
-              children: jsx$1(PickerOwnContent, {
-                children: clearable && pickerHasSomethingToClear(pickerContext) ? jsx$1(PickerClear, {
+              children: jsx(PickerOwnContent, {
+                children: clearable && pickerHasSomethingToClear(pickerContext) ? jsx(PickerClear, {
                   size: rightSlotIconSize
                 }) : rightSlot === undefined ?
                 // lineOverflow: what sits in the slot is an affordance, not a
                 // character — a caller asking for a bigger one wants it bigger,
                 // not capped at the height of the line it sits on
-                jsx$1(Icon, {
+                jsx(Icon, {
                   size: rightSlotIconSize,
                   lineOverflow: "allow",
-                  children: rightSlotIcon === undefined ? jsx$1(ChevronDownSvg$1, {}) : rightSlotIcon
+                  children: rightSlotIcon === undefined ? jsx(ChevronDownSvg$1, {}) : rightSlotIcon
                 }) : rightSlot
               })
             }) : null]
           })
-        }), jsx$1(ControlFacadeChildrenWrapper, {
+        }), jsx(ControlFacadeChildrenWrapper, {
           ...facadeChildrenProps,
-          children: jsx$1(ContentTag, {
+          children: jsx(ContentTag, {
             className: "navi_picker_content",
             "data-picker-content": "",
             children: children
@@ -71135,10 +69293,10 @@ const PickerClear = ({
   // lineOverflow: the cross is an affordance, not a character — a caller
   // asking for a bigger one wants it bigger, not capped at the height of the
   // line it sits on.
-  jsx$1(Icon, {
+  jsx(Icon, {
     size: size,
     lineOverflow: "allow",
-    children: children === undefined ? jsx$1(CloseSvg, {}) : children
+    children: children === undefined ? jsx(CloseSvg, {}) : children
   });
   // The press is aimed AT the cross: clearing is the opposite intention to
   // opening, and the picker's box answers a press landing anywhere in it (see
@@ -71148,7 +69306,7 @@ const PickerClear = ({
     return (
       // A picker on the façade of a picker: the cross opens the question, and
       // yes sends the clear to this picker's input.
-      jsx$1(Picker, {
+      jsx(Picker, {
         type: "confirm",
         variant: "icon",
         selfInteractions: "click",
@@ -71162,7 +69320,7 @@ const PickerClear = ({
       })
     );
   }
-  return jsx$1(Button, {
+  return jsx(Button, {
     command: "--navi-clear",
     commandFor: id,
     selfInteractions: "click",
@@ -71224,9 +69382,9 @@ const warnOnClearOutsidePicker = () => {
 // entry with it, leaving the picker looking for a controller that is gone.
 const PickerOwnContent = ({
   children
-}) => jsx$1(ControlIdContext.Provider, {
+}) => jsx(ControlIdContext.Provider, {
   value: undefined,
-  children: jsx$1(ControlNameContext.Provider, {
+  children: jsx(ControlNameContext.Provider, {
     value: undefined,
     children: children
   })
@@ -71306,7 +69464,7 @@ const PickerInput = props => {
   // picker still looks interactive (it is — just not keyboard-typeable).
   const readOnlyForced = readOnly ? false : isOpeningKeyboardOnMobile(props.type);
   const autoSelectReadOnlyProps = useAutoSelectReadOnly(props);
-  return jsx$1(Box, {
+  return jsx(Box, {
     as: "input",
     ...props,
     readOnly: readOnlyForced ? true : readOnly,
@@ -71423,7 +69581,7 @@ const PickerFirstResolver = props => {
   resolveInputProps(props, {
     controlType: "picker"
   });
-  return jsx$1(Next, {
+  return jsx(Next, {
     ...props
   });
 };
@@ -72372,7 +70530,7 @@ const Spin = ({
   const endAllowed = startIsNext ? previousAllowed : nextAllowed;
   const wayOut = atStart => {
     const isNext = atStart ? startIsNext : !startIsNext;
-    return jsx$1(WayOut, {
+    return jsx(WayOut, {
       atStart: atStart,
       onPointerDown: e => {
         wayOutPointerTypeRef.current = e.pointerType;
@@ -72392,7 +70550,7 @@ const Spin = ({
         triggerNaviCommand(e.currentTarget, command, e);
       },
       commandFor: editable ? undefined : containerId,
-      children: atStart ? vertical ? jsx$1(ChevronUpSvg, {}) : jsx$1(ChevronLeftSvg, {}) : vertical ? jsx$1(ChevronDownSvg, {}) : jsx$1(ChevronRightSvg, {})
+      children: atStart ? vertical ? jsx(ChevronUpSvg, {}) : jsx(ChevronLeftSvg, {}) : vertical ? jsx(ChevronDownSvg, {}) : jsx(ChevronRightSvg, {})
     });
   };
   return jsxs(Box, {
@@ -72409,14 +70567,14 @@ const Spin = ({
     "data-vertical": vertical ? "" : undefined,
     "data-readonly": readOnlyResolved ? "" : undefined,
     "data-disabled": disabledResolved ? "" : undefined,
-    children: [jsx$1(LoadingOutline, {
+    children: [jsx(LoadingOutline, {
       loading: loading,
       color: "var(--navi-loader-color)",
       inset: -2
-    }), wayOut(true), jsx$1("div", {
+    }), wayOut(true), jsx("div", {
       className: "navi_picker_spin_middle",
       ref: middleRef,
-      children: editable ? jsx$1(Input, {
+      children: editable ? jsx(Input, {
         ref: controlRef,
         type: type,
         name: name,
@@ -72447,7 +70605,7 @@ const Spin = ({
           uiAction?.(valueNext, stepEventRef.current ?? event);
         }
       }) : jsxs(Fragment, {
-        children: [jsx$1(Picker, {
+        children: [jsx(Picker, {
           ref: controlRef,
           id: controlId,
           type: type,
@@ -72511,14 +70669,14 @@ const Spin = ({
             e.preventDefault();
             triggerNaviCommand(e.currentTarget, "--navi-open", e);
           },
-          children: [jsx$1(Slide, {
+          children: [jsx(Slide, {
             area: "start",
             flex: true,
             align: "center",
             children: renderValue(valueAtStart, {
               maxLines
             })
-          }), jsx$1(Slide, {
+          }), jsx(Slide, {
             area: "current",
             flex: true,
             align: "center"
@@ -72531,7 +70689,7 @@ const Spin = ({
             children: renderValue(valueShown, {
               maxLines
             })
-          }), jsx$1(Slide, {
+          }), jsx(Slide, {
             area: "end",
             flex: true,
             align: "center",
@@ -72578,7 +70736,7 @@ const WayOut = ({
     }
     onPress(e);
   };
-  return jsx$1(Box, {
+  return jsx(Box, {
     as: "span",
     baseClassName: "navi_picker_spin_way_out"
     // Which end of the box it sits in, said by the chevron rather than read
@@ -72662,7 +70820,7 @@ const WayOut = ({
       }
       e.preventDefault();
     },
-    children: jsx$1(Icon, {
+    children: jsx(Icon, {
       children: children
     })
   });
@@ -72775,15 +70933,15 @@ const SpinGroup = props => {
     "data-readonly": readOnly ? "" : undefined,
     "data-disabled": disabled ? "" : undefined,
     "data-loading": loading ? "" : undefined,
-    children: [jsx$1(LoadingOutline, {
+    children: [jsx(LoadingOutline, {
       loading: loading,
       color: "var(--navi-loader-color)",
       inset: -2
-    }), jsx$1(SpinGroupContext.Provider, {
+    }), jsx(SpinGroupContext.Provider, {
       value: {
         size
       },
-      children: jsx$1(ControlgroupChildrenWrapper, {
+      children: jsx(ControlgroupChildrenWrapper, {
         ...childrenWrapperProps,
         // The group's name says where its value lands in the form; each spin
         // inside is named on its own.
@@ -72810,7 +70968,7 @@ const SPIN_GROUP_PSEUDO_CLASSES = [":focus-within",
 const SpinGroupSeparator = ({
   children,
   ...rest
-}) => jsx$1(Box, {
+}) => jsx(Box, {
   as: "span",
   ...rest,
   className: "navi_spin_group_separator",
@@ -72855,7 +71013,7 @@ const NumberSpin = ({
   growsUpward = true,
   controlProps,
   ...rest
-}) => jsx$1(Spin, {
+}) => jsx(Spin, {
   type: "navi_number",
   editable: true,
   growsUpward: growsUpward,
@@ -72961,7 +71119,7 @@ const DaySpin = ({
   format = "long",
   renderDay = renderDayDefault,
   ...rest
-}) => jsx$1(Spin, {
+}) => jsx(Spin, {
   type: "date",
   min: min,
   max: max,
@@ -72989,7 +71147,7 @@ const renderDayDefault = (day, {
   lang,
   format,
   maxLines
-} = {}) => jsx$1(Time, {
+} = {}) => jsx(Time, {
   type: "date",
   format: format,
   dayLabel: true,
@@ -73108,7 +71266,7 @@ const TimeSpin = ({
   aggregateChildStates: aggregateTime$1,
   distributeChildUIState: distributeTime$1,
   ...rest,
-  children: [jsx$1(NumberSpin, {
+  children: [jsx(NumberSpin, {
     name: "hour",
     min: 0,
     max: HOUR_MAX,
@@ -73117,9 +71275,9 @@ const TimeSpin = ({
     controlProps: {
       "aria-label": hourLabel
     }
-  }), jsx$1(SpinGroup.Separator, {
+  }), jsx(SpinGroup.Separator, {
     children: separator
-  }), jsx$1(NumberSpin, {
+  }), jsx(NumberSpin, {
     name: "minute",
     min: 0,
     max: MINUTE_MAX,
@@ -73207,10 +71365,10 @@ const TimeRangeSpin = ({
     spacing: "s",
     size: size,
     ...rest,
-    children: [startLabel === null ? null : jsx$1(Text, {
+    children: [startLabel === null ? null : jsx(Text, {
       size: size,
       children: startLabel
-    }), jsx$1(TimeSpin, {
+    }), jsx(TimeSpin, {
       id: startId,
       name: "start",
       minuteStep: minuteStep,
@@ -73219,10 +71377,10 @@ const TimeRangeSpin = ({
       size: size,
       ...timeProps,
       ...startTimeProps
-    }), endLabel === null ? null : jsx$1(Text, {
+    }), endLabel === null ? null : jsx(Text, {
       size: size,
       children: endLabel
-    }), jsx$1(TimeSpin, {
+    }), jsx(TimeSpin, {
       name: "end",
       minuteStep: minuteStep,
       pad: pad,
@@ -73275,7 +71433,7 @@ const CheckboxGroup = props => {
   props.ref = props.ref || refDefault;
   const defaultName = useId();
   props.name = props.name || `checkbox_group_${defaultName}`;
-  const checkboxGroup = jsx$1(CheckboxGroupInterface, {
+  const checkboxGroup = jsx(CheckboxGroupInterface, {
     ...props
   });
   return checkboxGroup;
@@ -73297,7 +71455,7 @@ const CheckboxGroupInterface = props => {
   useFocusGroup(ref, {
     wrap: "both"
   });
-  return jsx$1(Box, {
+  return jsx(Box, {
     as: "fieldset",
     ...checkboxGroupProps,
     ...remainingProps,
@@ -73305,7 +71463,7 @@ const CheckboxGroupInterface = props => {
     baseClassName: "navi_checkbox_group",
     "navi-checkbox-list": "",
     "data-callout-point-to-border-box": "",
-    children: jsx$1(ControlgroupChildrenWrapper, {
+    children: jsx(ControlgroupChildrenWrapper, {
       ...childrenWrapperProps,
       children: props.children
     })
@@ -73371,7 +71529,7 @@ const Unit = ({
       unitText = intlText;
     }
   }
-  return jsx$1(Text, {
+  return jsx(Text, {
     baseClassName: "navi_unit",
     size: resolvedSize,
     style: resolvedStyle,
@@ -73608,11 +71766,11 @@ const InputDuration = props => {
     unit: undefined,
     unitHour: undefined,
     ...clipboardProps,
-    children: [jsx$1(LoadingOutline, {
+    children: [jsx(LoadingOutline, {
       loading: loading,
       color: "var(--loader-color)",
       inset: -1
-    }), jsx$1("input", {
+    }), jsx("input", {
       ...groupHostProps,
       type: "hidden",
       basePseudoState: undefined // eslint-disable-line react/no-unknown-property
@@ -73622,10 +71780,10 @@ const InputDuration = props => {
       } : {
         defaultValue: initialIsoString
       })
-    }), jsx$1(ControlgroupChildrenWrapper, {
+    }), jsx(ControlgroupChildrenWrapper, {
       ...childrenWrapperProps,
       name: undefined,
-      children: jsx$1(InputDurationFields, {
+      children: jsx(InputDurationFields, {
         showHours: showHours,
         showMinutes: showMinutes,
         showSeconds: showSeconds,
@@ -73857,7 +72015,7 @@ const InputDurationFields = ({
   };
   const inputs = [];
   if (showHours) {
-    inputs.push(jsx$1(InputDurationPart, {
+    inputs.push(jsx(InputDurationPart, {
       unit: "hour",
       label: unitHour,
       textAlign: textAlignFor("hour"),
@@ -73874,7 +72032,7 @@ const InputDurationFields = ({
     }, "hour"));
   }
   if (showMinutes) {
-    inputs.push(jsx$1(InputDurationPart, {
+    inputs.push(jsx(InputDurationPart, {
       unit: "minute",
       textAlign: textAlignFor("minute"),
       ...(controlled ? {
@@ -73891,7 +72049,7 @@ const InputDurationFields = ({
     }, "minute"));
   }
   if (showSeconds) {
-    inputs.push(jsx$1(InputDurationPart, {
+    inputs.push(jsx(InputDurationPart, {
       unit: "second",
       textAlign: textAlignFor("second"),
       ...(controlled ? {
@@ -73908,7 +72066,7 @@ const InputDurationFields = ({
     }, "second"));
   }
   if (showMilliseconds) {
-    inputs.push(jsx$1(InputDurationPart, {
+    inputs.push(jsx(InputDurationPart, {
       unit: "millisecond",
       textAlign: textAlignFor("millisecond"),
       ...(controlled ? {
@@ -73934,7 +72092,7 @@ const InputDurationPart = ({
   separator,
   ...props
 }) => {
-  const unitLabel = label ?? jsx$1(Unit, {
+  const unitLabel = label ?? jsx(Unit, {
     unit: unit,
     plural: true,
     color: "secondary"
@@ -73942,7 +72100,7 @@ const InputDurationPart = ({
   return jsxs(Label, {
     flex: "y",
     "data-separator": separator || undefined,
-    children: [jsx$1(Input, {
+    children: [jsx(Input, {
       className: "navi_duration_part"
       // When autofocused this field should be selected
       // this help to modify the value on mobile
@@ -73956,7 +72114,7 @@ const InputDurationPart = ({
       variant: "underline",
       expandX: true,
       ...props,
-      children: separator ? jsx$1(Input.UI.UnitSlot, {
+      children: separator ? jsx(Input.UI.UnitSlot, {
         children: separator
       }) : undefined
     }), unitLabel]
@@ -73977,7 +72135,7 @@ const RadioGroup = props => {
   props.ref = props.ref || refDefault;
   const defaultName = useId();
   props.name = props.name || `radio_group_${defaultName}`;
-  const radioGroup = jsx$1(RadioGroupInterface, {
+  const radioGroup = jsx(RadioGroupInterface, {
     ...props
   });
   return radioGroup;
@@ -73998,14 +72156,14 @@ const RadioGroupInterface = props => {
   useFocusGroup(ref, {
     wrap: "both"
   });
-  return jsx$1(Box, {
+  return jsx(Box, {
     as: "fieldset",
     ...radioGroupProps,
     ...remainingProps,
     name: undefined,
     baseClassName: "navi_radio_group",
     "data-callout-point-to-border-box": "",
-    children: jsx$1(ControlgroupChildrenWrapper, {
+    children: jsx(ControlgroupChildrenWrapper, {
       ...childrenWrapperProps,
       children: props.children
     })
@@ -74094,19 +72252,19 @@ const Select = ({
     pseudoClasses: InputPseudoClasses,
     pseudoElements: InputPseudoElements,
     "data-callout-anchor": ".navi_control_input",
-    children: [jsx$1(LoadingOutline, {
+    children: [jsx(LoadingOutline, {
       loading: loading,
       color: "var(--loader-color)",
       inset: -1
-    }), jsx$1(Box, {
+    }), jsx(Box, {
       ...hostProps,
       as: "select",
       baseClassName: "navi_control_input"
-    }), jsx$1("span", {
+    }), jsx("span", {
       className: "navi_select_arrow",
-      children: jsx$1(Icon, {
+      children: jsx(Icon, {
         lineOverflow: "allow",
-        children: jsx$1(ChevronDownSvg$1, {})
+        children: jsx(ChevronDownSvg$1, {})
       })
     })]
   });
@@ -74229,7 +72387,7 @@ const SplitButton = props => {
     onValueChange,
     chooseEffect = "select",
     menuLabel = naviI18n("button.more_actions"),
-    menuIcon = jsx$1(ChevronDownSvg$1, {}),
+    menuIcon = jsx(ChevronDownSvg$1, {}),
     menuIconSize,
     loading,
     readOnly,
@@ -74310,12 +72468,12 @@ const SplitButton = props => {
     className: "navi_split_button",
     borderRadius: borderRadius,
     ...boxProps,
-    children: [jsx$1(LoadingOutline, {
+    children: [jsx(LoadingOutline, {
       loading: loadingResolved,
       inset: -1,
       color: "var(--button-loader-color)"
     }), jsxs(Group, {
-      children: [jsx$1(Button, {
+      children: [jsx(Button, {
         id: idResolved,
         value: valueResolved,
         action: actionResolved,
@@ -74323,7 +72481,7 @@ const SplitButton = props => {
         children: label === undefined ? optionShown?.label : label
       }), jsxs("div", {
         className: "navi_split_button_menu",
-        children: [jsx$1(Button, {
+        children: [jsx(Button, {
           icon: true,
           paddingX: "s",
           expandY: true
@@ -74338,12 +72496,12 @@ const SplitButton = props => {
           command: "--navi-open",
           commandFor: menuId,
           ...halfProps,
-          children: jsx$1(Icon, {
+          children: jsx(Icon, {
             size: menuIconSize,
             lineOverflow: "allow",
             children: menuIcon
           })
-        }), jsx$1(Picker, {
+        }), jsx(Picker, {
           id: menuId,
           variant: "headless",
           standalone: true,
@@ -74357,7 +72515,7 @@ const SplitButton = props => {
             setValueState(chosenValue);
             onValueChange?.(chosenValue, event);
           } : undefined,
-          children: chooseEffect === "select" ? jsx$1(List, {
+          children: chooseEffect === "select" ? jsx(List, {
             selectable: true,
             command: "--navi-send",
             children: options.map((option, index) => {
@@ -74366,7 +72524,7 @@ const SplitButton = props => {
                 label: optionLabel,
                 ...optionRest
               } = option;
-              return jsx$1(List.Item, {
+              return jsx(List.Item, {
                 selectable: true,
                 id: `${menuId}_${index}`,
                 index: index,
@@ -74377,18 +72535,18 @@ const SplitButton = props => {
                 children: optionLabel
               }, optionValue);
             })
-          }) : jsx$1(List, {
+          }) : jsx(List, {
             children: options.map((option, index) => {
               const {
                 value: optionValue,
                 label: optionLabel,
                 ...optionRest
               } = option;
-              return jsx$1(List.Item, {
+              return jsx(List.Item, {
                 id: `${menuId}_${index}`,
                 index: index,
                 padding: "0",
-                children: jsx$1(Button, {
+                children: jsx(Button, {
                   variant: "bare",
                   expandX: true,
                   alignX: "start",
@@ -75251,7 +73409,7 @@ const WheelGroupContext = createContext(null);
 const Wheel = props => {
   const refDefault = useRef(null);
   props.ref = props.ref || refDefault;
-  return jsx$1(WheelUI, {
+  return jsx(WheelUI, {
     ...props
   });
 };
@@ -76539,7 +74697,7 @@ function WheelUI(props) {
     pseudoClasses: WHEEL_PSEUDO_CLASSES,
     basePseudoState: basePseudoState,
     style: styleWithVars,
-    children: [jsx$1(Box, {
+    children: [jsx(Box, {
       as: "input",
       ...controlHostProps,
       onnavi_ui_state_change: onUIStateChange,
@@ -76553,9 +74711,9 @@ function WheelUI(props) {
       // eslint-disable-next-line react/no-children-prop
       ,
       children: undefined
-    }), jsx$1("div", {
+    }), jsx("div", {
       className: "navi_wheel_outline_wrapper",
-      children: jsx$1(LoadingOutline, {
+      children: jsx(LoadingOutline, {
         loading: loading,
         color: "var(--navi-loader-color)",
         inset: -1
@@ -76563,21 +74721,21 @@ function WheelUI(props) {
     }), jsxs("div", {
       className: "navi_wheel_viewport",
       "data-no-drag-travel": "",
-      children: [jsx$1("div", {
+      children: [jsx("div", {
         className: "navi_wheel_pane",
         "data-side": "start"
-      }), jsx$1(WheelItemTrackerContext.Provider, {
+      }), jsx(WheelItemTrackerContext.Provider, {
         value: trackerContextRef.current,
-        children: jsx$1(ControlFacadeChildrenWrapper, {
+        children: jsx(ControlFacadeChildrenWrapper, {
           facadeController: facadeController,
           children: children
         })
-      }), jsx$1("div", {
+      }), jsx("div", {
         className: "navi_wheel_layer",
         "data-layer": "base",
-        children: jsx$1("ul", {
+        children: jsx("ul", {
           className: "navi_wheel_list",
-          children: jsx$1(WheelWindow, {
+          children: jsx(WheelWindow, {
             centerRowSignal: centerRowSignal,
             visibleCount: visibleCount,
             tracker: tracker,
@@ -76585,24 +74743,24 @@ function WheelUI(props) {
             onBaseCommit: commitRenderedBase
           })
         })
-      }), jsx$1("div", {
+      }), jsx("div", {
         className: "navi_wheel_layer",
         "data-layer": "center",
         "aria-hidden": "true",
-        children: jsx$1("ul", {
+        children: jsx("ul", {
           className: "navi_wheel_list",
-          children: jsx$1(WheelWindow, {
+          children: jsx(WheelWindow, {
             centerRowSignal: centerRowSignal,
             visibleCount: visibleCount,
             tracker: tracker,
             isLoop: isLoop
           })
         })
-      }), jsx$1("div", {
+      }), jsx("div", {
         className: "navi_wheel_pane",
         "data-side": "end"
       })]
-    }), jsx$1("div", {
+    }), jsx("div", {
       className: "navi_wheel_focus_ring"
     })]
   });
@@ -76662,7 +74820,7 @@ const WheelWindow = ({
       index = (index % count + count) % count;
     }
     const item = trackedItems[index];
-    slots.push(jsx$1(Box, {
+    slots.push(jsx(Box, {
       as: "li",
       ...item.itemProps,
       baseClassName: "navi_wheel_item",
@@ -76814,7 +74972,7 @@ const WheelGroup = props => {
   }, [horizontal]);
 
   // A Box (not a plain div) so style props like border/padding work directly.
-  return jsx$1(Box, {
+  return jsx(Box, {
     ...controlgroupRootProps,
     ...controlgroupProps,
     // The wheel-specific props are consumed here; blank them AFTER the spreads
@@ -76832,14 +74990,14 @@ const WheelGroup = props => {
     "data-horizontal": horizontal ? "" : undefined,
     style: groupStyle,
     pseudoClasses: WHEEL_GROUP_PSEUDO_CLASSES,
-    children: jsx$1(WheelGroupContext.Provider, {
+    children: jsx(WheelGroupContext.Provider, {
       value: {
         glass,
         frameBorder,
         zoom,
         horizontal
       },
-      children: jsx$1(ControlgroupChildrenWrapper, {
+      children: jsx(ControlgroupChildrenWrapper, {
         ...childrenWrapperProps,
         // Don't propagate the group name to children (an anonymous wheel would
         // otherwise inherit it) — each wheel is named individually.
@@ -76861,7 +75019,7 @@ const WheelGroupSeparator = ({
   children,
   ...rest
 }) => {
-  return jsx$1(Box, {
+  return jsx(Box, {
     as: "span",
     ...rest,
     className: "navi_wheel_group_separator",
@@ -76883,12 +75041,12 @@ const WheelColon = props => {
     ...props,
     className: "navi_wheel_colon",
     viewBox: "0 0 8 24",
-    children: [jsx$1("circle", {
+    children: [jsx("circle", {
       cx: "4",
       cy: "8",
       r: "2",
       fill: "currentColor"
-    }), jsx$1("circle", {
+    }), jsx("circle", {
       cx: "4",
       cy: "16",
       r: "2",
@@ -76979,7 +75137,7 @@ const TimeWheel = ({
     aggregateChildStates: aggregateChildStates,
     distributeChildUIState: distributeChildUIState,
     ...rest,
-    children: [jsx$1(Wheel, {
+    children: [jsx(Wheel, {
       name: "hour",
       type: "integer",
       bounded: !loop,
@@ -76987,15 +75145,15 @@ const TimeWheel = ({
       "aria-label": hourLabel,
       defaultValue: placeholderParts ? placeholderParts.hour : undefined,
       ...wheelProps,
-      children: hourList.map(hour => jsx$1(Wheel.Item, {
+      children: hourList.map(hour => jsx(Wheel.Item, {
         value: hour,
         paddingX: "s",
         children: padTwo(hour)
       }, hour))
-    }), jsx$1(WheelGroup.Separator, {
+    }), jsx(WheelGroup.Separator, {
       size: size,
       children: separator
-    }), jsx$1(Wheel, {
+    }), jsx(Wheel, {
       name: "minute",
       type: "integer",
       bounded: !loop,
@@ -77003,7 +75161,7 @@ const TimeWheel = ({
       "aria-label": minuteLabel,
       defaultValue: placeholderParts ? placeholderParts.minute : undefined,
       ...wheelProps,
-      children: minutes.map(minute => jsx$1(Wheel.Item, {
+      children: minutes.map(minute => jsx(Wheel.Item, {
         value: minute,
         paddingX: "s",
         children: padTwo(minute)
@@ -77126,7 +75284,7 @@ const TimeRangeWheel = ({
       event: e
     });
   };
-  return jsx$1(ControlGroup, {
+  return jsx(ControlGroup, {
     flex: true,
     alignY: "center",
     spacing: "s",
@@ -77136,14 +75294,14 @@ const TimeRangeWheel = ({
     ...rest,
     children: jsxs(AnsweredContext.Provider, {
       value: answeredRef,
-      children: [jsx$1(TimeBound, {
+      children: [jsx(TimeBound, {
         labelPosition: labelPosition,
-        label: startLabel === null ? null : jsx$1(Text, {
+        label: startLabel === null ? null : jsx(Text, {
           size: size,
           className: "navi_time_range_label",
           children: startLabel
         }),
-        children: jsx$1(TimeWheel, {
+        children: jsx(TimeWheel, {
           id: startId,
           ref: startRef,
           name: "start",
@@ -77162,14 +75320,14 @@ const TimeRangeWheel = ({
           ...timeProps,
           ...startTimeProps
         })
-      }), jsx$1(TimeBound, {
+      }), jsx(TimeBound, {
         labelPosition: labelPosition,
-        label: endLabel === null ? null : jsx$1(Text, {
+        label: endLabel === null ? null : jsx(Text, {
           size: size,
           className: "navi_time_range_label",
           children: endLabel
         }),
-        children: jsx$1(TimeWheel, {
+        children: jsx(TimeWheel, {
           ref: endRef,
           name: "end",
           minuteStep: minuteStep,
@@ -77528,13 +75686,13 @@ const createIsolatedItemTracker = () => {
         items.length = 0;
         itemCountRef.current = 0;
         const listRenderId = {};
-        return jsx$1(ProducerItemCountRefContext.Provider, {
+        return jsx(ProducerItemCountRefContext.Provider, {
           value: itemCountRef,
-          children: jsx$1(ProducerListRenderIdContext.Provider, {
+          children: jsx(ProducerListRenderIdContext.Provider, {
             value: listRenderId,
             children: jsxs(ProducerTrackerContext.Provider, {
               value: itemTracker,
-              children: [children, jsx$1(FlushSentinel, {})]
+              children: [children, jsx(FlushSentinel, {})]
             })
           })
         });
@@ -77553,7 +75711,7 @@ const createIsolatedItemTracker = () => {
         // FlushSentinel (last child of ItemProducerProvider) already set
         // itemsSnapshotRef.current to the up-to-date items array before any
         // consumer rendered. Reading from the snapshot is always correct.
-        return jsx$1(ConsumerItemsContext.Provider, {
+        return jsx(ConsumerItemsContext.Provider, {
           value: itemsSnapshotRef.current,
           children: children
         });
@@ -77805,7 +75963,7 @@ const TableDragCloneContainer = forwardRef((props, ref) => {
   const {
     tableId
   } = props;
-  return jsx$1("div", {
+  return jsx("div", {
     ref: ref,
     className: "navi_table_drag_clone_container",
     "data-overlay-for": tableId
@@ -77815,25 +75973,25 @@ const TableColumnDropPreview = forwardRef((props, ref) => {
   return jsxs("div", {
     ref: ref,
     className: "navi_table_column_drop_preview",
-    children: [jsx$1("div", {
+    children: [jsx("div", {
       className: "arrow_positioner",
       "data-top": "",
-      children: jsx$1("svg", {
+      children: jsx("svg", {
         fill: "currentColor",
         viewBox: "0 0 30.727 30.727",
-        children: jsx$1("path", {
+        children: jsx("path", {
           d: "M29.994,10.183L15.363,24.812L0.733,10.184c-0.977-0.978-0.977-2.561,0-3.536c0.977-0.977,2.559-0.976,3.536,0 l11.095,11.093L26.461,6.647c0.977-0.976,2.559-0.976,3.535,0C30.971,7.624,30.971,9.206,29.994,10.183z"
         })
       })
-    }), jsx$1("div", {
+    }), jsx("div", {
       className: "navi_table_column_drop_preview_line"
-    }), jsx$1("div", {
+    }), jsx("div", {
       className: "arrow_positioner",
       "data-bottom": "",
-      children: jsx$1("svg", {
+      children: jsx("svg", {
         fill: "currentColor",
         viewBox: "0 0 30.727 30.727",
-        children: jsx$1("path", {
+        children: jsx("path", {
           d: "M29.994,20.544L15.363,5.915L0.733,20.543c-0.977,0.978-0.977,2.561,0,3.536c0.977,0.977,2.559,0.976,3.536,0 l11.095-11.093L26.461,24.08c0.977,0.976,2.559,0.976,3.535,0C30.971,23.103,30.971,21.521,29.994,20.544z"
         })
       })
@@ -78277,14 +76435,14 @@ const TableColumnResizer = props => {
     className: "navi_table_column_resizer",
     children: [jsxs("div", {
       className: "navi_table_column_resize_handle_container",
-      children: [jsx$1("div", {
+      children: [jsx("div", {
         className: "navi_table_column_resize_handle",
         "data-left": ""
-      }), jsx$1("div", {
+      }), jsx("div", {
         className: "navi_table_column_resize_handle",
         "data-right": ""
       })]
-    }), jsx$1("div", {
+    }), jsx("div", {
       className: "navi_table_column_resizer_line"
     })]
   });
@@ -78299,11 +76457,11 @@ const TableCellColumnResizeHandles = ({
   } = useContext(TableSizeContext);
   const canResize = Boolean(onColumnSizeChange);
   return jsxs(Fragment, {
-    children: [canResize && columnIndex > 0 && jsx$1(TableColumnLeftResizeHandle, {
+    children: [canResize && columnIndex > 0 && jsx(TableColumnLeftResizeHandle, {
       onRelease: width => onColumnSizeChange(width, columnIndex - 1),
       columnMinWidth: columnMinWidth,
       columnMaxWidth: columnMaxWidth
-    }), canResize && jsx$1(TableColumnRightResizeHandle, {
+    }), canResize && jsx(TableColumnRightResizeHandle, {
       onRelease: width => onColumnSizeChange(width, columnIndex),
       columnMinWidth: columnMinWidth,
       columnMaxWidth: columnMaxWidth
@@ -78320,7 +76478,7 @@ const TableColumnLeftResizeHandle = ({
   const {
     columnResizerRef
   } = useContext(TableSizeContext);
-  return jsx$1("div", {
+  return jsx("div", {
     className: "navi_table_cell_resize_handle",
     "data-no-drag-travel": "",
     "data-left": "",
@@ -78358,7 +76516,7 @@ const TableColumnRightResizeHandle = ({
   const {
     columnResizerRef
   } = useContext(TableSizeContext);
-  return jsx$1("div", {
+  return jsx("div", {
     className: "navi_table_cell_resize_handle",
     "data-no-drag-travel": "",
     "data-right": "",
@@ -78601,14 +76759,14 @@ const TableRowResizer = props => {
     className: "navi_table_row_resizer",
     children: [jsxs("div", {
       className: "navi_table_row_resize_handle_container",
-      children: [jsx$1("div", {
+      children: [jsx("div", {
         className: "navi_table_row_resize_handle",
         "data-top": ""
-      }), jsx$1("div", {
+      }), jsx("div", {
         className: "navi_table_row_resize_handle",
         "data-bottom": ""
       })]
-    }), jsx$1("div", {
+    }), jsx("div", {
       className: "navi_table_row_resizer_line"
     })]
   });
@@ -78623,11 +76781,11 @@ const TableCellRowResizeHandles = ({
   } = useContext(TableSizeContext);
   const canResize = Boolean(onRowSizeChange);
   return jsxs(Fragment, {
-    children: [canResize && rowIndex > 0 && jsx$1(TableRowTopResizeHandle, {
+    children: [canResize && rowIndex > 0 && jsx(TableRowTopResizeHandle, {
       onRelease: width => onRowSizeChange(width, rowIndex - 1),
       rowMinHeight: rowMinHeight,
       rowMaxHeight: rowMaxHeight
-    }), canResize && jsx$1(TableRowBottomResizeHandle, {
+    }), canResize && jsx(TableRowBottomResizeHandle, {
       onRelease: width => onRowSizeChange(width, rowIndex),
       rowMinHeight: rowMinHeight,
       rowMaxHeight: rowMaxHeight
@@ -78644,7 +76802,7 @@ const TableRowTopResizeHandle = ({
   const {
     rowResizerRef
   } = useContext(TableSizeContext);
-  return jsx$1("div", {
+  return jsx("div", {
     className: "navi_table_cell_resize_handle",
     "data-no-drag-travel": "",
     "data-top": "",
@@ -78682,7 +76840,7 @@ const TableRowBottomResizeHandle = ({
   const {
     rowResizerRef
   } = useContext(TableSizeContext);
-  return jsx$1("div", {
+  return jsx("div", {
     className: "navi_table_cell_resize_handle",
     "data-no-drag-travel": "",
     "data-bottom": "",
@@ -79485,27 +77643,27 @@ const TableStickyFrontier = ({
   const stickyTopFrontierGhostRef = useRef();
   const stickyTopFrontierPreviewRef = useRef();
   return jsxs(Fragment, {
-    children: [jsx$1(TableStickyLeftFrontier, {
+    children: [jsx(TableStickyLeftFrontier, {
       tableRef: tableRef,
       stickyLeftFrontierGhostRef: stickyLeftFrontierGhostRef,
       stickyLeftFrontierPreviewRef: stickyLeftFrontierPreviewRef
-    }), jsx$1(TableStickyTopFrontier, {
+    }), jsx(TableStickyTopFrontier, {
       tableRef: tableRef,
       stickyTopFrontierGhostRef: stickyTopFrontierGhostRef,
       stickyTopFrontierPreviewRef: stickyTopFrontierPreviewRef
-    }), jsx$1("div", {
+    }), jsx("div", {
       ref: stickyLeftFrontierGhostRef,
       className: "navi_table_sticky_frontier_ghost",
       "data-left": ""
-    }), jsx$1("div", {
+    }), jsx("div", {
       ref: stickyLeftFrontierPreviewRef,
       className: "navi_table_sticky_frontier_preview",
       "data-left": ""
-    }), jsx$1("div", {
+    }), jsx("div", {
       ref: stickyTopFrontierGhostRef,
       className: "navi_table_sticky_frontier_ghost",
       "data-top": ""
-    }), jsx$1("div", {
+    }), jsx("div", {
       ref: stickyTopFrontierPreviewRef,
       className: "navi_table_sticky_frontier_preview",
       "data-top": ""
@@ -79522,7 +77680,7 @@ const TableStickyLeftFrontier = ({
     onStickyLeftFrontierChange
   } = useContext(TableStickyContext);
   const canMoveFrontier = Boolean(onStickyLeftFrontierChange);
-  return jsx$1("div", {
+  return jsx("div", {
     className: "navi_table_sticky_frontier",
     "data-left": "",
     inert: !canMoveFrontier,
@@ -79564,7 +77722,7 @@ const TableStickyTopFrontier = ({
     onStickyTopFrontierChange
   } = useContext(TableStickyContext);
   const canMoveFrontier = Boolean(onStickyTopFrontierChange);
-  return jsx$1("div", {
+  return jsx("div", {
     className: "navi_table_sticky_frontier",
     "data-top": "",
     inert: !canMoveFrontier,
@@ -79936,7 +78094,7 @@ const TableUI = forwardRef((props, ref) => {
     });
     return tableVisibleRectEffect.disconnect;
   });
-  return createPortal(jsx$1("div", {
+  return createPortal(jsx("div", {
     ref: ref,
     className: "navi_table_ui",
     "data-overlay-for": tableId,
@@ -80147,7 +78305,7 @@ const Table = props => {
     columnResizerRef,
     rowResizerRef
   });
-  return jsx$1("div", {
+  return jsx("div", {
     ref: tableRootRef,
     className: "navi_table_root",
     style: {
@@ -80158,7 +78316,7 @@ const Table = props => {
     children: jsxs("div", {
       ref: tableContainerRef,
       className: "navi_table_container",
-      children: [jsx$1("table", {
+      children: [jsx("table", {
         ref: ref,
         id: id,
         className: "navi_table",
@@ -80166,19 +78324,19 @@ const Table = props => {
         "data-multiselection": selection.length > 1 ? "" : undefined,
         "data-border-collapse": borderCollapse ? "" : undefined,
         "data-droppable": "",
-        children: jsx$1(TableSizeContext.Provider, {
+        children: jsx(TableSizeContext.Provider, {
           value: tableSizeContextValue,
-          children: jsx$1(TableSelectionContext.Provider, {
+          children: jsx(TableSelectionContext.Provider, {
             value: selectionContextValue,
-            children: jsx$1(TableDragContext.Provider, {
+            children: jsx(TableDragContext.Provider, {
               value: dragContextValue,
-              children: jsx$1(TableStickyContext.Provider, {
+              children: jsx(TableStickyContext.Provider, {
                 value: stickyContextValue,
-                children: jsx$1(ColumnProducerProviderContext.Provider, {
+                children: jsx(ColumnProducerProviderContext.Provider, {
                   value: ColumnProducerProvider,
-                  children: jsx$1(ColumnConsumerProviderContext.Provider, {
+                  children: jsx(ColumnConsumerProviderContext.Provider, {
                     value: ColumnConsumerProvider,
-                    children: jsx$1(TableRowTrackerContext.Provider, {
+                    children: jsx(TableRowTrackerContext.Provider, {
                       value: rowTracker,
                       children: children
                     })
@@ -80192,19 +78350,19 @@ const Table = props => {
         ref: tableUIRef,
         tableRef: ref,
         tableId: id,
-        children: [jsx$1(TableStickyContext.Provider, {
+        children: [jsx(TableStickyContext.Provider, {
           value: stickyContextValue,
-          children: jsx$1(TableStickyFrontier, {
+          children: jsx(TableStickyFrontier, {
             tableRef: ref
           })
-        }), jsx$1(TableColumnResizer, {
+        }), jsx(TableColumnResizer, {
           ref: columnResizerRef
-        }), jsx$1(TableRowResizer, {
+        }), jsx(TableRowResizer, {
           ref: rowResizerRef
-        }), jsx$1(TableDragCloneContainer, {
+        }), jsx(TableDragCloneContainer, {
           ref: tableDragCloneContainerRef,
           tableId: id
-        }), jsx$1(TableColumnDropPreview, {
+        }), jsx(TableColumnDropPreview, {
           ref: tableColumnDropPreviewRef
         })]
       })]
@@ -80215,9 +78373,9 @@ const Colgroup = ({
   children
 }) => {
   const ColumnProducerProvider = useContext(ColumnProducerProviderContext);
-  return jsx$1("colgroup", {
+  return jsx("colgroup", {
     className: "navi_colgroup",
-    children: jsx$1(ColumnProducerProvider, {
+    children: jsx(ColumnProducerProvider, {
       children: children
     })
   });
@@ -80239,7 +78397,7 @@ const Col = ({
     stickyLeftFrontierColumnIndex
   } = useContext(TableStickyContext);
   const isStickyLeft = columnIndex <= stickyLeftFrontierColumnIndex;
-  return jsx$1("col", {
+  return jsx("col", {
     className: "navi_col",
     id: id,
     "data-sticky-left": isStickyLeft ? "" : undefined,
@@ -80254,8 +78412,8 @@ const Col = ({
 const Thead = ({
   children
 }) => {
-  return jsx$1("thead", {
-    children: jsx$1(TableSectionContext.Provider, {
+  return jsx("thead", {
+    children: jsx(TableSectionContext.Provider, {
       value: "head",
       children: children
     })
@@ -80264,8 +78422,8 @@ const Thead = ({
 const Tbody = ({
   children
 }) => {
-  return jsx$1("tbody", {
-    children: jsx$1(TableSectionContext.Provider, {
+  return jsx("tbody", {
+    children: jsx(TableSectionContext.Provider, {
       value: "body",
       children: children
     })
@@ -80306,7 +78464,7 @@ const Tr = ({
   /* We use <TableRowCells> to be able to provide <ColumnConsumerProvider />  
   that is needed by useColumnByIndex */
 
-  return jsx$1("tr", {
+  return jsx("tr", {
     className: "navi_tr",
     "data-row-id": id ? id : undefined,
     "aria-selected": isRowSelected,
@@ -80316,8 +78474,8 @@ const Tr = ({
       height: height ? `${height}px` : undefined,
       maxHeight: height ? `${height}px` : undefined
     },
-    children: jsx$1(ColumnConsumerProvider, {
-      children: jsx$1(TableRowCells, {
+    children: jsx(ColumnConsumerProvider, {
+      children: jsx(TableRowCells, {
         rowIndex: rowIndex,
         row: row,
         children: children
@@ -80337,13 +78495,13 @@ const TableRowCells = ({
 Make sure the number of <Col> in the <Colgroup> matches the number of cells in each row.`);
     }
     const columnId = column.id;
-    return jsx$1(RowContext.Provider, {
+    return jsx(RowContext.Provider, {
       value: row,
-      children: jsx$1(RowIndexContext.Provider, {
+      children: jsx(RowIndexContext.Provider, {
         value: rowIndex,
-        children: jsx$1(ColumnIndexContext.Provider, {
+        children: jsx(ColumnIndexContext.Provider, {
           value: columnIndex,
-          children: jsx$1(ColumnContext.Provider, {
+          children: jsx(ColumnContext.Provider, {
             value: column,
             children: child
           })
@@ -80553,7 +78711,7 @@ const TableCell = props => {
       }
       startEditing(e);
     },
-    children: [editable ? jsx$1(Editable, {
+    children: [editable ? jsx(Editable, {
       editing: editing,
       onEditEnd: stopEditing,
       action: action,
@@ -80563,19 +78721,19 @@ const TableCell = props => {
       height: "100%",
       width: "100%",
       children: children
-    }) : children, innerCanResizeWidth && jsx$1(TableCellColumnResizeHandles, {
+    }) : children, innerCanResizeWidth && jsx(TableCellColumnResizeHandles, {
       columnIndex: columnIndex,
       columnMinWidth: column.minWidth,
       columnMaxWidth: column.maxWidth
-    }), innerCanResizeHeight && jsx$1(TableCellRowResizeHandles, {
+    }), innerCanResizeHeight && jsx(TableCellRowResizeHandles, {
       rowIndex: rowIndex,
       rowMinHeight: row.minHeight,
       rowMaxHeight: row.maxHeight
-    }), isInTableHead && jsx$1("span", {
+    }), isInTableHead && jsx("span", {
       className: "navi_table_cell_content_bold_clone",
       "aria-hidden": "true",
       children: children
-    }), jsx$1("div", {
+    }), jsx("div", {
       className: "navi_table_cell_foreground",
       "data-visible": columnGrabbed ? "" : undefined
     })]
@@ -80588,7 +78746,7 @@ const RowNumberCol = ({
   immovable = true,
   ...rest
 }) => {
-  return jsx$1(Col, {
+  return jsx(Col, {
     id: "row_number",
     width: width
     // minWidth={minWidth}
@@ -80602,7 +78760,7 @@ const RowNumberTableCell = props => {
   const columnIndex = useContext(ColumnIndexContext);
   const rowIndex = useContext(RowIndexContext);
   const isTopLeftCell = columnIndex === 0 && rowIndex === 0;
-  return jsx$1(TableCell, {
+  return jsx(TableCell, {
     canSelectAll: isTopLeftCell,
     selfAlignX: "left",
     ...props,
@@ -80860,11 +79018,11 @@ const ActiveKeyboardShortcuts = ({
 }) => {
   import.meta.css = [css$e, "@jsenv/navi/src/keyboard/active_keyboard_shortcuts.jsx"];
   const activeShortcuts = activeShortcutsSignal.value;
-  return jsx$1("div", {
+  return jsx("div", {
     className: "navi_shortcut_container",
     "data-visually-hidden": visible ? undefined : "",
     children: activeShortcuts.map(shortcut => {
-      return jsx$1(KeyboardShortcutAriaElement, {
+      return jsx(KeyboardShortcutAriaElement, {
         visible: visible,
         keyCombination: shortcut.key,
         description: shortcut.description,
@@ -80886,7 +79044,7 @@ const KeyboardShortcutAriaElement = ({
     return null;
   }
   const ariaKeyshortcuts = generateAriaKeyShortcuts(keyCombination);
-  return jsx$1("button", {
+  return jsx("button", {
     className: "navi_shortcut_button",
     "data-visually-hidden": visible ? undefined : "",
     "aria-keyshortcuts": ariaKeyshortcuts,
@@ -80941,12 +79099,12 @@ const ButtonCopyToClipboard = ({
   return jsxs(Box, {
     className: "navi_clipboard_container",
     ...props,
-    children: [jsx$1(Box, {
+    children: [jsx(Box, {
       className: "navi_copied_notif",
       "aria-hidden": copied ? "false" : "true",
       opacity: copied ? 1 : 0,
       children: "Copié !"
-    }), jsx$1(Button, {
+    }), jsx(Button, {
       className: "navi_copy_button",
       flex: "y",
       alignY: "center",
@@ -80966,11 +79124,11 @@ const ButtonCopyToClipboard = ({
         }, 1500);
         setCopied(true);
       },
-      children: copied ? jsx$1(Icon, {
+      children: copied ? jsx(Icon, {
         color: "green",
-        children: jsx$1(CopiedIcon, {})
-      }) : jsx$1(Icon, {
-        children: jsx$1(CopyIcon, {})
+        children: jsx(CopiedIcon, {})
+      }) : jsx(Icon, {
+        children: jsx(CopyIcon, {})
       })
     })]
   });
@@ -80985,15 +79143,15 @@ const addToClipboard = async text => {
 };
 const CopyIcon = () => jsxs("svg", {
   viewBox: "0 0 16 16",
-  children: [jsx$1("path", {
+  children: [jsx("path", {
     d: "M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25Z"
-  }), jsx$1("path", {
+  }), jsx("path", {
     d: "M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0 1 14.25 11h-7.5A1.75 1.75 0 0 1 5 9.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z"
   })]
 });
-const CopiedIcon = () => jsx$1("svg", {
+const CopiedIcon = () => jsx("svg", {
   viewBox: "0 0 16 16",
-  children: jsx$1("path", {
+  children: jsx("path", {
     fill: "currentColor",
     d: "M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z"
   })
@@ -81003,15 +79161,11 @@ const Address = ({
   children,
   ...props
 }) => {
-  return jsx$1(Text, {
+  return jsx(Text, {
     as: "address",
     ...props,
     children: children
   });
-};
-
-const formatNumber = (value, { lang = languagesSignal.value } = {}) => {
-  return new Intl.NumberFormat(lang).format(value);
 };
 
 installImportMetaCssBuild(import.meta);
@@ -81113,7 +79267,7 @@ const css$c = /* css */`@layer navi;
   }
 }
 `;
-const BadgeCountOverflow = () => jsx$1("span", {
+const BadgeCountOverflow = () => jsx("span", {
   className: "navi_count_badge_overflow",
   children: "+"
 });
@@ -81121,7 +79275,7 @@ const MAX_CHAR_AS_CIRCLE = 3;
 const MAX_FOR_CIRCLE = 99;
 const BadgeCount = ({
   children,
-  maxElement = jsx$1(BadgeCountOverflow, {}),
+  maxElement = jsx(BadgeCountOverflow, {}),
   // When you use max="none" (or max > 99) it might be a good idea to force ellipse
   // so that visually the interface do not suddently switch from circle to ellipse depending on the count
   circle,
@@ -81161,7 +79315,7 @@ const BadgeCount = ({
   }
   const textKey = `${loading ? "loading-" : ""}${String(valueDisplayed)}${hasOverflow ? "-overflow" : ""}`;
   if (circle) {
-    return jsx$1(TextAnchor, {
+    return jsx(TextAnchor, {
       childRef: ref,
       textAnchor: textAnchor,
       textSize: props.size,
@@ -81179,7 +79333,7 @@ const BadgeCount = ({
   const valueFormatted = typeof valueDisplayed === "number" ? formatNumber(valueDisplayed, {
     lang
   }) : valueDisplayed;
-  return jsx$1(TextAnchor, {
+  return jsx(TextAnchor, {
     childRef: ref,
     textAnchor: textAnchor,
     textSize: props.size,
@@ -81234,7 +79388,7 @@ const BadgeCountEllipse = ({
   children,
   ...props
 }) => {
-  return jsx$1(Text, {
+  return jsx(Text, {
     className: withPropsClassName("navi_badge_count", className),
     bold: true,
     "data-ellipse": "",
@@ -81244,8 +79398,8 @@ const BadgeCountEllipse = ({
     ...props,
     styleCSSVars: BadgeCountStyleCSSVars,
     spacing: "pre",
-    children: loading ? jsx$1(Icon, {
-      children: jsx$1(LoadingDotsSvg, {})
+    children: loading ? jsx(Icon, {
+      children: jsx(LoadingDotsSvg, {})
     }) : children
   });
 };
@@ -81257,7 +79411,7 @@ const BadgeCountCircle = ({
   children,
   ...props
 }) => {
-  return jsx$1(Text, {
+  return jsx(Text, {
     className: withPropsClassName("navi_badge_count", className),
     "data-circle": "",
     bold: true,
@@ -81270,9 +79424,9 @@ const BadgeCountCircle = ({
     ...props,
     styleCSSVars: BadgeCountStyleCSSVars,
     spacing: "pre",
-    children: loading ? jsx$1(Icon, {
-      children: jsx$1(LoadingDotsSvg, {})
-    }) : jsx$1("span", {
+    children: loading ? jsx(Icon, {
+      children: jsx(LoadingDotsSvg, {})
+    }) : jsx("span", {
       className: "navi_badge_count_text",
       children: children
     })
@@ -81301,7 +79455,7 @@ const Caption = ({
   ...rest
 }) => {
   import.meta.css = [css$b, "@jsenv/navi/src/text/caption.jsx"];
-  return jsx$1(Text, {
+  return jsx(Text, {
     as: "small",
     size: "0.8em" // We use em to be relative to the parent (we want to be smaller than the surrounding text)
     ,
@@ -81329,7 +79483,7 @@ const CodeBlock = ({
   children,
   ...props
 }) => {
-  return jsx$1("code-block", {
+  return jsx("code-block", {
     "data-language": language,
     "data-escaped": escaped ? "" : null,
     ...props,
@@ -81561,16 +79715,16 @@ const CodeBlock = ({
 
 const Code = props => {
   if (props.language) {
-    return jsx$1(CodeBlock, {
+    return jsx(CodeBlock, {
       ...props
     });
   }
   if (props.box) {
-    return jsx$1(CodeBox, {
+    return jsx(CodeBox, {
       ...props
     });
   }
-  return jsx$1(Text, {
+  return jsx(Text, {
     as: "code",
     ...props
   });
@@ -81579,10 +79733,10 @@ const CodeBox = ({
   children,
   ...props
 }) => {
-  return jsx$1(Text, {
+  return jsx(Text, {
     as: "pre",
     ...props,
-    children: jsx$1(Text, {
+    children: jsx(Text, {
       as: "code",
       children: children
     })
@@ -81684,37 +79838,37 @@ const Interpolate = ({
 };
 
 const SuccessSvg = () => {
-  return jsx$1("svg", {
+  return jsx("svg", {
     viewBox: "0 0 16 16",
     fill: "currentColor",
-    children: jsx$1("path", {
+    children: jsx("path", {
       d: "M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm1.5 0a6.5 6.5 0 1 0 13 0 6.5 6.5 0 0 0-13 0Zm10.28-1.72-4.5 4.5a.75.75 0 0 1-1.06 0l-2-2a.751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018l1.47 1.47 3.97-3.97a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042Z"
     })
   });
 };
 const ErrorSvg = () => {
-  return jsx$1("svg", {
+  return jsx("svg", {
     viewBox: "0 0 16 16",
     fill: "currentColor",
-    children: jsx$1("path", {
+    children: jsx("path", {
       d: "M4.47.22A.749.749 0 0 1 5 0h6c.199 0 .389.079.53.22l4.25 4.25c.141.14.22.331.22.53v6a.749.749 0 0 1-.22.53l-4.25 4.25A.749.749 0 0 1 11 16H5a.749.749 0 0 1-.53-.22L.22 11.53A.749.749 0 0 1 0 11V5c0-.199.079-.389.22-.53Zm.84 1.28L1.5 5.31v5.38l3.81 3.81h5.38l3.81-3.81V5.31L10.69 1.5ZM8 4a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 8 4Zm0 8a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"
     })
   });
 };
 const InfoSvg$1 = () => {
-  return jsx$1("svg", {
+  return jsx("svg", {
     viewBox: "0 0 16 16",
     fill: "currentColor",
-    children: jsx$1("path", {
+    children: jsx("path", {
       d: "M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"
     })
   });
 };
 const WarningSvg = () => {
-  return jsx$1("svg", {
+  return jsx("svg", {
     viewBox: "0 0 16 16",
     fill: "currentColor",
-    children: jsx$1("path", {
+    children: jsx("path", {
       d: "M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"
     })
   });
@@ -81783,12 +79937,12 @@ const MessageBox = ({
   const [hasTitleChild, setHasTitleChild] = useState(false);
   const innerLeftStripe = leftStripe === undefined ? hasTitleChild : leftStripe;
   if (icon === true) {
-    icon = status === "info" ? jsx$1(InfoSvg$1, {}) : status === "success" ? jsx$1(SuccessSvg, {}) : status === "warning" ? jsx$1(WarningSvg, {}) : status === "error" ? jsx$1(ErrorSvg, {}) : null;
+    icon = status === "info" ? jsx(InfoSvg$1, {}) : status === "success" ? jsx(SuccessSvg, {}) : status === "warning" ? jsx(WarningSvg, {}) : status === "error" ? jsx(ErrorSvg, {}) : null;
   } else if (typeof icon === "function") {
     const Comp = icon;
-    icon = jsx$1(Comp, {});
+    icon = jsx(Comp, {});
   }
-  return jsx$1(Box, {
+  return jsx(Box, {
     as: "div",
     role: status === "info" ? "status" : "alert",
     "data-left-stripe": innerLeftStripe ? "" : undefined,
@@ -81806,31 +79960,31 @@ const MessageBox = ({
       ":-navi-status-warning": status === "warning",
       ":-navi-status-error": status === "error"
     },
-    children: jsx$1(MessageBoxStatusContext.Provider, {
+    children: jsx(MessageBoxStatusContext.Provider, {
       value: status,
       children: jsxs(MessageBoxReportTitleChildContext.Provider, {
         value: setHasTitleChild,
-        children: [icon && jsx$1(Icon, {
+        children: [icon && jsx(Icon, {
           color: "var(--x-message-color)",
           height: "1lh",
           maxHeight: "auto",
           selfAlignY: "start",
           aspectRatio: "auto",
           children: icon
-        }), jsx$1(Text, {
+        }), jsx(Text, {
           children: children
         }), onClose &&
         // A column as tall as the first line of the message, pinned to the
         // top, the button centered in it: the close button stays level
         // with the first line however many lines the message takes (same
         // layout as Callout).
-        jsx$1(Box, {
+        jsx(Box, {
           flex: true,
           alignY: "center",
           height: "1lh",
           selfAlignY: "start",
           shrink: false,
-          children: jsx$1(Button, {
+          children: jsx(Button, {
             action: onClose,
             icon: true,
             border: "none",
@@ -81841,8 +79995,8 @@ const MessageBox = ({
                 backgroundColor: "rgba(0, 0, 0, 0.1)"
               }
             },
-            children: jsx$1(Icon, {
-              children: jsx$1(CloseSvg, {})
+            children: jsx(Icon, {
+              children: jsx(CloseSvg, {})
             })
           })
         })]
@@ -81969,20 +80123,20 @@ const Quantity = ({
     spacing: "pre",
     bold: bold,
     ...props,
-    children: [label && jsx$1("span", {
+    children: [label && jsx("span", {
       className: "navi_quantity_label",
       children: label
     }), jsxs(Text, {
       className: "navi_quantity_body",
       size: size,
-      spacing: unitBottom ? jsx$1("br", {}) : undefined,
-      children: [jsx$1("span", {
+      spacing: unitBottom ? jsx("br", {}) : undefined,
+      children: [jsx("span", {
         className: "navi_quantity_value",
-        children: loading ? jsx$1(Icon, {
+        children: loading ? jsx(Icon, {
           inline: true,
-          children: jsx$1(LoadingDotsSvg, {})
+          children: jsx(LoadingDotsSvg, {})
         }) : valueFormatted
-      }), unit && jsx$1(Unit, {
+      }), unit && jsx(Unit, {
         unit: unitResolved,
         plural: isPlural,
         lang: lang,
@@ -82154,7 +80308,7 @@ const Meter = ({
   const fillRatio = max === min ? 0 : (clampedValue - min) / (max - min);
   let children = caption;
   if (children === undefined && percentage) {
-    children = jsx$1(Quantity, {
+    children = jsx(Quantity, {
       loading: loading,
       unit: "%",
       unitSizeRatio: "1",
@@ -82171,7 +80325,7 @@ const Meter = ({
   useAccentColorAttributes(ref, null, {
     elementSelector: backgroundElementSelector
   });
-  return jsx$1(Box, {
+  return jsx(Box, {
     ref: ref,
     role: "meter",
     "aria-valuenow": clampedValue,
@@ -82202,15 +80356,15 @@ const Meter = ({
     ...rest,
     children: jsxs("span", {
       className: "navi_meter_track_container",
-      children: [jsx$1(LoadingOutline, {
+      children: [jsx(LoadingOutline, {
         loading: loading,
         color: "var(--loader-color)",
         inset: -1
-      }), jsx$1("span", {
+      }), jsx("span", {
         className: "navi_meter_track"
-      }), jsx$1("span", {
+      }), jsx("span", {
         className: "navi_meter_fill"
-      }), children && jsx$1("span", {
+      }), children && jsx("span", {
         className: "navi_meter_caption",
         "aria-hidden": "true",
         children: children
@@ -82259,7 +80413,7 @@ const getMeterLevel = (value, min, max, low, high, optimum) => {
 };
 
 const Paragraph = props => {
-  return jsx$1(Text, {
+  return jsx(Text, {
     marginTop: "m",
     ...props,
     as: "p"
@@ -82335,7 +80489,7 @@ const TextBox = ({
     ...rest,
     baseClassName: "navi_text_box",
     "data-single-line": singleLine ? "" : undefined,
-    children: [iconBefore, jsx$1("span", {
+    children: [iconBefore, jsx("span", {
       ref: contentRef,
       className: "navi_text_box_content",
       children: children
@@ -82370,9 +80524,9 @@ const Title = props => {
   const titleLevel = parseInt(innerAs.slice(1));
   const reportTitleToMessageBox = useContext(MessageBoxReportTitleChildContext);
   reportTitleToMessageBox?.(true);
-  return jsx$1(TitleLevelContext.Provider, {
+  return jsx(TitleLevelContext.Provider, {
     value: titleLevel,
-    children: jsx$1(Text, {
+    children: jsx(Text, {
       bold: true,
       className: withPropsClassName("navi_title"),
       as: messageBoxStatus ? "h4" : "h1",
@@ -82440,7 +80594,7 @@ const Image = ({
   if (resolvedPlaceholder === undefined) {
     resolvedPlaceholder = placeholderDark ? DEFAULT_PLACEHOLDER_DARK : DEFAULT_PLACEHOLDER_LIGHT;
   }
-  return jsx$1(Box, {
+  return jsx(Box, {
     ...rest,
     as: "img",
     baseClassName: "navi_image",
@@ -82460,7 +80614,7 @@ const Image = ({
 };
 
 const Svg = props => {
-  return jsx$1(Box, {
+  return jsx(Box, {
     ...props,
     as: "svg"
   });
@@ -82504,7 +80658,7 @@ const SVGMaskOverlay = ({
   // Apply each mask in sequence
   overlaySvgs.forEach((overlaySvg, index) => {
     const maskId = `mask-${instanceId}-${index}`;
-    maskedElement = jsx$1("g", {
+    maskedElement = jsx("g", {
       mask: `url(#${maskId})`,
       children: maskedElement
     });
@@ -82513,14 +80667,14 @@ const SVGMaskOverlay = ({
     viewBox: viewBox,
     width: "100%",
     height: "100%",
-    children: [jsx$1("defs", {
+    children: [jsx("defs", {
       children: overlaySvgs.map((overlaySvg, index) => {
         const maskId = `mask-${instanceId}-${index}`;
 
         // IMPORTANT: clone the overlay SVG exactly as is, just add the mask class
         return jsxs("mask", {
           id: maskId,
-          children: [jsx$1("rect", {
+          children: [jsx("rect", {
             width: "100%",
             height: "100%",
             fill: "white"
@@ -82617,12 +80771,12 @@ const CardLayout = ({
   ...props
 }) => {
   import.meta.css = [css$3, "@jsenv/navi/src/layout/card_layout.jsx"];
-  return jsx$1(Box, {
+  return jsx(Box, {
     baseClassName: "navi_card_layout",
     styleCSSVars: CardLayoutStyleCSSVars,
     visualSelector: ".navi_card",
     ...props,
-    children: jsx$1(Box, {
+    children: jsx(Box, {
       flex: "y",
       className: "navi_card",
       alignX: alignX,
@@ -82984,7 +81138,7 @@ const StepList = ({
   }
   const cy = RAIL_H / 2;
   const slotWidth = dotXs.length > 1 ? dotXs[1] - dotXs[0] : width;
-  const renderRail = filled => jsx$1("svg", {
+  const renderRail = filled => jsx("svg", {
     className: filled ? "navi_step_list_rail navi_step_list_rail_filled" : "navi_step_list_rail",
     style: filled ? {
       clipPath: `inset(0 ${width - fillX}px 0 0)`
@@ -82998,16 +81152,16 @@ const StepList = ({
       // layer above anyway (see the css).
       "data-current": !filled && index === currentIndex ? "" : undefined,
       "data-done": !filled && steps[index].done ? "" : undefined,
-      children: [index > 0 ? jsx$1("line", {
+      children: [index > 0 ? jsx("line", {
         x1: dotXs[index - 1] + DOT_R + LINE_GAP,
         y1: cy,
         x2: x - DOT_R - LINE_GAP,
         y2: cy
-      }) : null, jsx$1("circle", {
+      }) : null, jsx("circle", {
         cx: x,
         cy: cy,
         r: DOT_R
-      }), jsx$1("text", {
+      }), jsx("text", {
         x: x,
         y: cy,
         dy: "0.36em",
@@ -83032,17 +81186,17 @@ const StepList = ({
         "--step-list-duration": duration
       } : undefined)
     },
-    children: [jsx$1(StepListContext.Provider, {
+    children: [jsx(StepListContext.Provider, {
       value: registry,
       children: children
     }), width > 0 && stepCount > 0 ? jsxs(Fragment, {
-      children: [renderRail(false), renderRail(true), currentIndex !== -1 && dotXs[currentIndex] !== undefined ? jsx$1("svg", {
+      children: [renderRail(false), renderRail(true), currentIndex !== -1 && dotXs[currentIndex] !== undefined ? jsx("svg", {
         className: "navi_step_list_rail",
         width: width,
         height: RAIL_H,
         viewBox: `0 0 ${width} ${RAIL_H}`,
         "aria-hidden": "true",
-        children: jsx$1("g", {
+        children: jsx("g", {
           className: "navi_step_list_marker"
           // Connected to slides, the position comes from the CSS calc
           // above — an inline transform would override it.
@@ -83050,7 +81204,7 @@ const StepList = ({
           style: slideContainer ? undefined : {
             transform: `translateX(${dotXs[currentIndex]}px)`
           },
-          children: jsx$1("circle", {
+          children: jsx("circle", {
             cx: "0",
             cy: cy,
             r: RING_R
@@ -83065,7 +81219,7 @@ const StepList = ({
         const last = index === stepCount - 1;
         const slotLeft = first ? dotXs[index] - EDGE_INSET : dotXs[index] - slotWidth / 2;
         const slotRight = last ? dotXs[index] + EDGE_INSET : dotXs[index] + slotWidth / 2;
-        return jsx$1("div", {
+        return jsx("div", {
           className: "navi_step_list_slot",
           style: {
             "left": `${slotLeft}px`,
@@ -83095,10 +81249,10 @@ const StepList = ({
             ,
             "data-callout-anchor": ".navi_step_list_dot",
             "data-callout-position": "top",
-            children: [jsx$1("span", {
+            children: [jsx("span", {
               className: "navi_step_list_dot",
               "aria-hidden": "true"
-            }), jsx$1("span", {
+            }), jsx("span", {
               className: "navi_step_list_label",
               children: step.label
             })]
@@ -83233,7 +81387,7 @@ const ViewportLayoutStyleCSSVars = {
  */
 const ViewportLayout = props => {
   import.meta.css = [css$1, "@jsenv/navi/src/layout/viewport_layout.jsx"];
-  return jsx$1(Box, {
+  return jsx(Box, {
     row: true,
     width: "100%",
     height: "100%",
@@ -83462,7 +81616,7 @@ const SidePanel = ({
 }) => {
   import.meta.css = [css, "@jsenv/navi/src/layout/side_panel.jsx"];
   const onSwipePointerDown = swipeToClose ? createSwipeToClose(side) : null;
-  return jsx$1(Popup, {
+  return jsx(Popup, {
     mode: mode
     // Spread rather than written: the collision warning between `signal` and
     // `open` asks whether the prop is THERE, not what it holds, so a panel
@@ -83534,7 +81688,7 @@ const toCssLength = (value, propertyName) => value === undefined || value === nu
  *   `"navi_side_panel_head"` class this file's own CSS targets.
  * @param {import("ignore:preact").ComponentChildren} props.children
  */
-const SidePanelHead = props => jsx$1(Box, {
+const SidePanelHead = props => jsx(Box, {
   baseClassName: "navi_side_panel_head",
   ...props
 });
@@ -83547,7 +81701,7 @@ const SidePanelHead = props => jsx$1(Box, {
  *   `"navi_side_panel_foot"` class this file's own CSS targets.
  * @param {import("ignore:preact").ComponentChildren} props.children
  */
-const SidePanelFoot = props => jsx$1(Box, {
+const SidePanelFoot = props => jsx(Box, {
   className: "navi_side_panel_foot",
   ...props
 });
@@ -83558,7 +81712,7 @@ const createSlot = (SlotRenderer = Box) => {
   const slotPropsSignal = signal();
   const Slot = () => {
     const props = slotPropsSignal.value;
-    return jsx$1(SlotRenderer, {
+    return jsx(SlotRenderer, {
       ...props,
       isFilled: Boolean(props)
     });
@@ -83610,19 +81764,19 @@ const useDependenciesDiff = (inputs) => {
   return diffRef.current;
 };
 
-const CheckSvg = () => jsx$1("svg", {
+const CheckSvg = () => jsx("svg", {
   viewBox: "0 0 24 24",
   xmlns: "http://www.w3.org/2000/svg",
-  children: jsx$1("path", {
+  children: jsx("path", {
     d: "M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z",
     fill: "currentColor"
   })
 });
 
 const ConstructionSvg = () => {
-  return jsx$1("svg", {
+  return jsx("svg", {
     viewBox: "0 0 15 15",
-    children: jsx$1("path", {
+    children: jsx("path", {
       d: "M13.5,12h-1.8L8.2,1.5C8,0.8,7,0.8,6.8,1.5L3.3,12H1.5C1.2,12,1,12.2,1,12.5v1C1,13.8,1.2,14,1.5,14h12 c0.3,0,0.5-0.2,0.5-0.5v-1C14,12.2,13.8,12,13.5,12z M7,4H8l0.7,2H6.4L7,4z M5.7,8h3.6l0.7,2H5L5.7,8z",
       fill: "currentColor"
     })
@@ -83630,10 +81784,10 @@ const ConstructionSvg = () => {
 };
 
 const ExclamationSvg = () => {
-  return jsx$1("svg", {
+  return jsx("svg", {
     viewBox: "0 0 125 300",
     xmlns: "http://www.w3.org/2000/svg",
-    children: jsx$1("path", {
+    children: jsx("path", {
       fill: "currentColor",
       d: "m25,1 8,196h59l8-196zm37,224a37,37 0 1,0 2,0z"
     })
@@ -83644,19 +81798,19 @@ const InfoSvg = () => {
   return jsxs("svg", {
     viewBox: "0 0 24 24",
     xmlns: "http://www.w3.org/2000/svg",
-    children: [jsx$1("circle", {
+    children: [jsx("circle", {
       cx: "12",
       cy: "12",
       r: "10",
       fill: "none",
       stroke: "currentColor",
       strokeWidth: "2"
-    }), jsx$1("circle", {
+    }), jsx("circle", {
       cx: "12",
       cy: "7.6",
       r: "1.4",
       fill: "currentColor"
-    }), jsx$1("path", {
+    }), jsx("path", {
       fill: "currentColor",
       d: "M10.6 10.6h2.8V18h-2.8z"
     })]
@@ -83664,10 +81818,10 @@ const InfoSvg = () => {
 };
 
 const EyeClosedSvg = () => {
-  return jsx$1("svg", {
+  return jsx("svg", {
     viewBox: "0 0 24 24",
     xmlns: "http://www.w3.org/2000/svg",
-    children: jsx$1("path", {
+    children: jsx("path", {
       "fill-rule": "evenodd",
       "clip-rule": "evenodd",
       d: "M22.2954 6.31083C22.6761 6.474 22.8524 6.91491 22.6893 7.29563L21.9999 7.00019C22.6893 7.29563 22.6894 7.29546 22.6893 7.29563L22.6886 7.29731L22.6875 7.2998L22.6843 7.30716L22.6736 7.33123C22.6646 7.35137 22.6518 7.37958 22.6352 7.41527C22.6019 7.48662 22.5533 7.58794 22.4888 7.71435C22.3599 7.967 22.1675 8.32087 21.9084 8.73666C21.4828 9.4197 20.8724 10.2778 20.0619 11.1304L21.0303 12.0987C21.3231 12.3916 21.3231 12.8665 21.0303 13.1594C20.7374 13.4523 20.2625 13.4523 19.9696 13.1594L18.969 12.1588C18.3093 12.7115 17.5528 13.2302 16.695 13.6564L17.6286 15.0912C17.8545 15.4383 17.7562 15.9029 17.409 16.1288C17.0618 16.3547 16.5972 16.2564 16.3713 15.9092L15.2821 14.2353C14.5028 14.4898 13.659 14.6628 12.7499 14.7248V16.5002C12.7499 16.9144 12.4141 17.2502 11.9999 17.2502C11.5857 17.2502 11.2499 16.9144 11.2499 16.5002V14.7248C10.3689 14.6647 9.54909 14.5004 8.78982 14.2586L7.71575 15.9093C7.48984 16.2565 7.02526 16.3548 6.67807 16.1289C6.33089 15.903 6.23257 15.4384 6.45847 15.0912L7.37089 13.689C6.5065 13.2668 5.74381 12.7504 5.07842 12.1984L4.11744 13.1594C3.82455 13.4523 3.34968 13.4523 3.05678 13.1594C2.76389 12.8665 2.76389 12.3917 3.05678 12.0988L3.98055 11.175C3.15599 10.3153 2.53525 9.44675 2.10277 8.75486C1.83984 8.33423 1.6446 7.97584 1.51388 7.71988C1.44848 7.59182 1.3991 7.48914 1.36537 7.41683C1.3485 7.38067 1.33553 7.35207 1.32641 7.33167L1.31562 7.30729L1.31238 7.29984L1.31129 7.29733L1.31088 7.29638C1.31081 7.2962 1.31056 7.29563 1.99992 7.00019L1.31088 7.29638C1.14772 6.91565 1.32376 6.474 1.70448 6.31083C2.08489 6.1478 2.52539 6.32374 2.68888 6.70381C2.68882 6.70368 2.68894 6.70394 2.68888 6.70381L2.68983 6.706L2.69591 6.71972C2.7018 6.73291 2.7114 6.7541 2.72472 6.78267C2.75139 6.83983 2.79296 6.92644 2.84976 7.03767C2.96345 7.26029 3.13762 7.58046 3.37472 7.95979C3.85033 8.72067 4.57157 9.70728 5.55561 10.6218C6.42151 11.4265 7.48259 12.1678 8.75165 12.656C9.70614 13.0232 10.7854 13.2502 11.9999 13.2502C13.2416 13.2502 14.342 13.013 15.3124 12.631C16.5738 12.1345 17.6277 11.3884 18.4866 10.5822C19.4562 9.67216 20.1668 8.69535 20.6354 7.9434C20.869 7.5685 21.0405 7.25246 21.1525 7.03286C21.2085 6.92315 21.2494 6.83776 21.2757 6.78144C21.2888 6.75328 21.2983 6.73242 21.3041 6.71943L21.31 6.70595L21.3106 6.70475C21.3105 6.70485 21.3106 6.70466 21.3106 6.70475M22.2954 6.31083C21.9147 6.14771 21.4738 6.32423 21.3106 6.70475L22.2954 6.31083ZM2.68888 6.70381C2.68882 6.70368 2.68894 6.70394 2.68888 6.70381V6.70381Z",
@@ -83679,12 +81833,12 @@ const EyeClosedSvg = () => {
 const EyeSvg = () => {
   return jsxs("svg", {
     viewBox: "0 0 24 24",
-    children: [jsx$1("path", {
+    children: [jsx("path", {
       "fill-rule": "evenodd",
       "clip-rule": "evenodd",
       d: "M12 8.25C9.92893 8.25 8.25 9.92893 8.25 12C8.25 14.0711 9.92893 15.75 12 15.75C14.0711 15.75 15.75 14.0711 15.75 12C15.75 9.92893 14.0711 8.25 12 8.25ZM9.75 12C9.75 10.7574 10.7574 9.75 12 9.75C13.2426 9.75 14.25 10.7574 14.25 12C14.25 13.2426 13.2426 14.25 12 14.25C10.7574 14.25 9.75 13.2426 9.75 12Z",
       fill: "currentColor"
-    }), jsx$1("path", {
+    }), jsx("path", {
       "fill-rule": "evenodd",
       "clip-rule": "evenodd",
       d: "M12 3.25C7.48587 3.25 4.44529 5.9542 2.68057 8.24686L2.64874 8.2882C2.24964 8.80653 1.88206 9.28392 1.63269 9.8484C1.36564 10.4529 1.25 11.1117 1.25 12C1.25 12.8883 1.36564 13.5471 1.63269 14.1516C1.88206 14.7161 2.24964 15.1935 2.64875 15.7118L2.68057 15.7531C4.44529 18.0458 7.48587 20.75 12 20.75C16.5141 20.75 19.5547 18.0458 21.3194 15.7531L21.3512 15.7118C21.7504 15.1935 22.1179 14.7161 22.3673 14.1516C22.6344 13.5471 22.75 12.8883 22.75 12C22.75 11.1117 22.6344 10.4529 22.3673 9.8484C22.1179 9.28391 21.7504 8.80652 21.3512 8.28818L21.3194 8.24686C19.5547 5.9542 16.5141 3.25 12 3.25ZM3.86922 9.1618C5.49864 7.04492 8.15036 4.75 12 4.75C15.8496 4.75 18.5014 7.04492 20.1308 9.1618C20.5694 9.73159 20.8263 10.0721 20.9952 10.4545C21.1532 10.812 21.25 11.2489 21.25 12C21.25 12.7511 21.1532 13.188 20.9952 13.5455C20.8263 13.9279 20.5694 14.2684 20.1308 14.8382C18.5014 16.9551 15.8496 19.25 12 19.25C8.15036 19.25 5.49864 16.9551 3.86922 14.8382C3.43064 14.2684 3.17374 13.9279 3.00476 13.5455C2.84684 13.188 2.75 12.7511 2.75 12C2.75 11.2489 2.84684 10.812 3.00476 10.4545C3.17374 10.0721 3.43063 9.73159 3.86922 9.1618Z",
@@ -83693,50 +81847,50 @@ const EyeSvg = () => {
   });
 };
 
-const HeartSvg = () => jsx$1("svg", {
+const HeartSvg = () => jsx("svg", {
   viewBox: "0 0 24 24",
   xmlns: "http://www.w3.org/2000/svg",
-  children: jsx$1("path", {
+  children: jsx("path", {
     d: "M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z",
     fill: "currentColor"
   })
 });
 
-const HomeSvg = () => jsx$1("svg", {
+const HomeSvg = () => jsx("svg", {
   viewBox: "0 0 24 24",
   xmlns: "http://www.w3.org/2000/svg",
-  children: jsx$1("path", {
+  children: jsx("path", {
     d: "M12 3l8 6v11h-5v-6h-6v6H4V9l8-6z",
     fill: "currentColor"
   })
 });
 
-const SettingsSvg = () => jsx$1("svg", {
+const SettingsSvg = () => jsx("svg", {
   viewBox: "0 0 24 24",
   xmlns: "http://www.w3.org/2000/svg",
-  children: jsx$1("path", {
+  children: jsx("path", {
     d: "M12 15.5c-1.9 0-3.5-1.6-3.5-3.5s1.6-3.5 3.5-3.5 3.5 1.6 3.5 3.5-1.6 3.5-3.5 3.5zM19.43 12.98c.04-.32.07-.64.07-.98 0-.34-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11.02c-.04.32-.07.64-.07.98 0 .34.03.66.07.98L2.46 14.63c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65z",
     fill: "currentColor"
   })
 });
 
-const StarSvg = () => jsx$1("svg", {
+const StarSvg = () => jsx("svg", {
   viewBox: "0 0 24 24",
   xmlns: "http://www.w3.org/2000/svg",
-  children: jsx$1("path", {
+  children: jsx("path", {
     d: "M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z",
     fill: "currentColor"
   })
 });
 
-const UserSvg = () => jsx$1("svg", {
+const UserSvg = () => jsx("svg", {
   viewBox: "0 0 24 24",
   xmlns: "http://www.w3.org/2000/svg",
-  children: jsx$1("path", {
+  children: jsx("path", {
     d: "M12 2C9.8 2 8 3.8 8 6s1.8 4 4 4 4-1.8 4-4-1.8-4-4-4zm0 12c-2.7 0-8 1.3-8 4v2h16v-2c0-2.7-5.3-4-8-4z",
     fill: "currentColor"
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, CalloutStatusIcon, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, ControlSwap, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, Expandable, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, InfoSvg, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, OfflineError, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTransitionArea, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, SpinGroup, SplitButton, StarSvg, Step, StepList, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, TimeRange, TimeRangeSpin, TimeRangeWheel, TimeSpin, TimeWheel, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, canNavBackSignal, canNavForwardSignal, coarsePointerSignal, compareTwoJsValues, constraintFromValidityRule, createAction, createAvailableConstraint, createI18n, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineRouteDefaultTransition, defineRouteTransition, detectHorizontalOverflow, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, errorIsDisplayed, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatDuration, formatHourDuration, formatMinuteDuration, formatMonth, formatNumber, formatSecondDuration, formatTime, formatTimeOfDay, formatTimeRange, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isOfflineError, isRowSelected, isScrolling, isToday, languagesSignal, localStorageSignal, markErrorAsDisplayedBy, moveArrayItemByIndex, moveFocusTo, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, scrollActivitySignal, setBaseUrl, setNetworkPolicy, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, smallTouchScreenSignal, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutElement, useCalloutRequestClose, useCanNavBack, useCanNavForward, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useNetworkPolicyReason, useOrderedColumns, usePopupMode, useRouteStatus, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideContainer, useSlideValue, useStateArray, useTitleLevel, useTransitionCover, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, CalloutStatusIcon, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, ControlSwap, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, Expandable, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, InfoSvg, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, OfflineError, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTransitionArea, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, SpinGroup, SplitButton, StarSvg, Step, StepList, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, TimeRange, TimeRangeSpin, TimeRangeWheel, TimeSpin, TimeWheel, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, canNavBackSignal, canNavForwardSignal, coarsePointerSignal, compareTwoJsValues, constraintFromValidityRule, createAction, createAvailableConstraint, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineRouteDefaultTransition, defineRouteTransition, detectHorizontalOverflow, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, errorIsDisplayed, filterTableSelection, getNowHours, getNowHoursRoundedToStep, isCellSelected, isColumnSelected, isOfflineError, isRowSelected, isScrolling, isToday, languagesSignal, localStorageSignal, markErrorAsDisplayedBy, moveArrayItemByIndex, moveFocusTo, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, scrollActivitySignal, setBaseUrl, setNetworkPolicy, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, smallTouchScreenSignal, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutElement, useCalloutRequestClose, useCanNavBack, useCanNavForward, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useNetworkPolicyReason, useOrderedColumns, usePopupMode, useRouteStatus, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideContainer, useSlideValue, useStateArray, useTitleLevel, useTransitionCover, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi.js.map

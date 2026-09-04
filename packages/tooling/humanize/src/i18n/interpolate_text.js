@@ -1,7 +1,7 @@
 // The JSX half of interpolation (VNode detection, fragment assembly) is
-// installed by interpolate.jsx rather than imported: this module sits under
-// createI18n and the pure formatters (format_time.js), which must stay
-// importable where preact is not installed. Until installed, a VNode
+// installed by the frontend using it (@jsenv/navi's interpolate.jsx) rather
+// than imported: this module sits under createI18n and the formatters, which
+// must stay importable where preact is not installed. Until installed, a VNode
 // replacement is neither detected nor assembled — values are joined as
 // strings — which is only reachable by passing a VNode without going through
 // <Interpolate>.
@@ -16,7 +16,8 @@ export const installInterpolateJsx = (runtime) => {
  * Usable on its own — no i18n instance required — whenever a sentence should
  * stay readable as one string instead of being cut into JSX expressions or
  * concatenations. `<Interpolate>` is the JSX form of this function, and
- * `createI18n` runs every translation through it. See `docs/i18n.md`.
+ * `createI18n` runs every translation through it. See @jsenv/navi's
+ * `docs/i18n.md`.
  *
  * `[]` was chosen as the placeholder delimiter (rather than `{}` or `{{}}`)
  * because it does not conflict with JSX syntax, JavaScript template literals,

@@ -1,9 +1,9 @@
 import { useRef } from "preact/hooks";
+import { formatNumber } from "@jsenv/humanize";
 
 import { LoadingDotsSvg } from "../graphic/loading/loading_dots_svg.jsx";
 import { useAccentColorAttributes } from "../utils/use_accent_color_attributes.js";
 import { withPropsClassName } from "../utils/with_props_class_name.js";
-import { formatNumber } from "./format_number.js";
 import { Icon, Text } from "./text.jsx";
 import { TextAnchor } from "./text_anchor.jsx";
 

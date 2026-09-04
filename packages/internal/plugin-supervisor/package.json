@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-supervisor",
-  "version": "1.8.20",
+  "version": "1.8.21",
   "type": "module",
   "repository": {
     "type": "git",
@@ -27,8 +27,8 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@jsenv/ast": "6.10.1",
-    "@jsenv/sourcemap": "1.4.6"
+    "@jsenv/ast": "6.10.2",
+    "@jsenv/sourcemap": "1.4.7"
   },
   "devDependencies": {
     "@jsenv/core": "../../../",

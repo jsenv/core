@@ -10,7 +10,7 @@ import {
   formatTime,
   formatTimeRelative,
   getRelativeDay,
-} from "../format_time.js";
+} from "@jsenv/humanize";
 
 // Fixed reference point: Monday 11 May 2026, 14:00:00 local time
 const NOW = new Date("2026-05-11T14:00:00");

@@ -7,8 +7,9 @@ import { getRuntimeLang } from "./runtime_lang.js";
  *
  * Worth using even in a single-language app — one registry beats strings
  * scattered across components, and adding a second language later becomes a
- * data change instead of a refactor. See `docs/i18n.md` for how to choose
- * between the two key styles below and how this relates to `naviI18n`.
+ * data change instead of a refactor. See @jsenv/navi's `docs/i18n.md` for how
+ * to choose between the two key styles below and how this relates to
+ * `humanizeI18n`, the registry the built-in texts live in.
  *
  * @param {object} [options]
  * @param {string} [options.keyLang]
@@ -46,11 +47,10 @@ import { getRuntimeLang } from "./runtime_lang.js";
  *   "runtime" rather than "system" because there is no actual access to the
  *   OS/user's system language from a browser, only `navigator.languages` (or
  *   an explicit override) at runtime. Defaults to the shared runtime language
- *   source (see runtime_lang.js) — `languagesSignal.value` in a browser
- *   bundle, the runtime's own locale elsewhere — read fresh on every
- *   `format()`/`has()` call (not frozen at creation time), so overriding the
- *   language app-wide via `setPreferredLanguage()`/`setSupportedLanguages()`
- *   (see lang_signal.js) is picked up here too.
+ *   source (see runtime_lang.js) — the runtime's own locale, or whatever a
+ *   frontend installed in its place — read fresh on every `format()`/`has()`
+ *   call (not frozen at creation time), so overriding the language app-wide
+ *   is picked up here too.
  *   Passing an explicit `runtimeLang` opts out of that and stays fixed for
  *   this instance's whole lifetime.
  *
@@ -67,7 +67,7 @@ import { getRuntimeLang } from "./runtime_lang.js";
  *
  * All three accumulate: registering a key that already exists overwrites that
  * one key and leaves the rest of the language untouched. This is what lets an
- * app override a single built-in navi text without redeclaring the others.
+ * app override a single built-in text without redeclaring the others.
  *
  * A regional variant (e.g. `"fr-CA"`) automatically inherits all keys from its
  * parent (`"fr"`) that it does not explicitly override:
@@ -100,20 +100,19 @@ export const createI18n = ({ keyLang, fallbackLang, runtimeLang } = {}) => {
 
   // Without an explicit runtimeLang, the runtime language source is re-read
   // fresh on every call rather than frozen here — freezing it would silently
-  // ignore setPreferredLanguage()/setSupportedLanguages() (see lang_signal.js)
-  // for the rest of this instance's life.
+  // ignore an app-wide language change (see runtime_lang.js) for the rest of
+  // this instance's life.
   const hasExplicitRuntimeLang = runtimeLang !== undefined;
 
   // matchBestLang does real work (a Map lookup per candidate, a possible
   // "fr-CA" → "fr" split-and-retry loop) — worth skipping on every single
   // format()/has() call in the common case, since what it resolves to only
   // ever changes when languageMap itself changes (addLangKeys) or, for the
-  // non-explicit case, when the runtime lang itself changes (preferred
-  // language, supported languages, or "languagechange" — see lang_signal.js;
-  // its languagesSignal is a computed() so its reference is stable when none
-  // of its own dependencies actually changed, and the signal-free fallback is
-  // a cached string) — comparing those two cheaply (===) is enough to know
-  // the cached result below is still valid.
+  // non-explicit case, when the runtime lang itself changes (see
+  // runtime_lang.js; an installed source is expected to keep its reference
+  // stable while nothing changed, and the default one caches its string) —
+  // comparing those two cheaply (===) is enough to know the cached result
+  // below is still valid.
   let cachedActiveLang;
   let cachedActiveLangRuntimeLang;
   let cachedActiveLangVersion = -1;
@@ -186,10 +185,9 @@ export const createI18n = ({ keyLang, fallbackLang, runtimeLang } = {}) => {
   };
 
   const _getTemplate = (key, lang) => {
-    // matchBestLang, not matchLang directly: lang can be an array (e.g.
-    // languagesSignal.value is always an ordered array — see lang_signal.js) and
-    // matchLang alone assumes a plain string, throwing
-    // on .split() otherwise.
+    // matchBestLang, not matchLang directly: lang can be an ordered array of
+    // preferences, and matchLang alone assumes a plain string, throwing on
+    // .split() otherwise.
     const resolvedLang = lang ? matchBestLang(lang, languageMap) : null;
     if (resolvedLang) {
       const translations = languageMap.get(resolvedLang);

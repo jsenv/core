@@ -1,9 +1,10 @@
 import { Fragment, h, isValidElement } from "preact";
-import { installInterpolateJsx, interpolateText } from "./interpolate_text.js";
+import { installInterpolateJsx, interpolateText } from "@jsenv/humanize";
 
-// interpolate_text.js is deliberately preact-free (it sits under createI18n
-// and the pure formatters); the JSX half of interpolation is installed from
-// here, the module every JSX interpolation goes through.
+// @jsenv/humanize's interpolateText is deliberately preact-free (it sits under
+// createI18n and the formatters, which must stay importable on a server); the
+// JSX half of interpolation is installed from here, the module every JSX
+// interpolation goes through.
 installInterpolateJsx({
   isValidElement,
   createFragment: (children) => h(Fragment, null, children),
