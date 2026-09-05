@@ -79,6 +79,7 @@ import { popupCss } from "./popup_css.js";
 import { surfaceTextCss } from "./surface_text_css.js";
 import { freezeSize, unfreezeSize } from "./freeze_size.js";
 import {
+  armOutsidePressClose,
   armPointerDownOutsideClose,
   clearTextSelectionInside,
   handlePressOnOutsideRegion,
@@ -450,6 +451,15 @@ const css = /* css */ `
  *   between the popover and the edges of its container.
  * @param {string|number} [props.marginWithAnchor=0] - Extra spacing kept
  *   between the popover and the edges of its anchor.
+ * @param {boolean} [props.backdrop=true] - Whether anything is laid between
+ *   the popover and the page at all — asked before what an outside press does
+ *   and before how the backdrop is painted. `false` leaves the page
+ *   reachable: a press outside closes the popover (per
+ *   `pointerInteractionOutsideEffect`) *and* is answered by whatever it landed
+ *   on, in the same gesture — one press where a wall would have cost two. It
+ *   is a `Popover`-level answer only for `"close"`/`"cancel"`; `"capture"` has
+ *   nothing left to absorb without a wall, and `"none"` renders none anyway.
+ *   See docs/popup_backdrop.md.
  * @param {"close"|"cancel"|"capture"|"none"} [props.pointerInteractionOutsideEffect="none"]
  *   - `"none"` (default): no backdrop at all, outside clicks pass straight
  *   through. `"close"` closes the popover on an outside click. `"capture"`
@@ -463,11 +473,12 @@ const css = /* css */ `
  *   visible the backdrop is, independently of what it does. `"auto"`: the
  *   paint `pointerInteractionOutsideEffect` implies (dimmed for
  *   `"close"`/`"cancel"`, blurred glass for `"capture"`). `"discrete"`: a
- *   barely-there dim. `"invisible"`: fully transparent. The backdrop is still
- *   rendered and still catches outside clicks in every case — this only
- *   changes how much the popover insists on being the thing you deal with.
- *   Ignored when `pointerInteractionOutsideEffect="none"` (there is no
- *   backdrop at all then, and outside clicks pass through).
+ *   barely-there dim. `"invisible"`: fully transparent — a wall that is not
+ *   seen, still rendered and still catching every outside click. This only
+ *   changes how much the popover insists on being the thing you deal with;
+ *   whether there is a wall to paint at all is `backdrop` above. Ignored when
+ *   there is none (`pointerInteractionOutsideEffect="none"`, or
+ *   `backdrop={false}`).
  * @param {string} [props.backdropColor] - The wash painted over what is
  *   behind, for this popup alone: any CSS color (`"rgb(6 10 20 / 88%)"`).
  *   Wins over `backdropVariant` and over the theme tokens
@@ -795,10 +806,17 @@ const usePopoverProps = (props) => {
     // "capture"→ absorb the press, stay open
     // "none"   → no backdrop
     pointerInteractionOutsideEffect = "none",
+    // Whether there is a wall between the popover and the page at all, asked
+    // before what a press on it does (pointerInteractionOutsideEffect) and
+    // before how it is painted (backdropVariant below). false with a closing
+    // effect is a press that both dismisses the popover and reaches whatever
+    // it landed on.
+    backdrop = true,
     // How loudly the backdrop says it is there — independent of what it
     // *does* (that's pointerInteractionOutsideEffect above). "auto" keeps
-    // the paint the effect implies; "discrete"/"none" tone it down or
-    // remove it entirely without giving up the outside click.
+    // the paint the effect implies; "discrete"/"invisible" tone it down or
+    // stop drawing it, without giving up the outside click — a wall that is
+    // not seen is still a wall (that is `backdrop` above).
     backdropVariant = "auto",
     // The paint itself, when the tokens behind backdropVariant are not what
     // this one popover wants. Named/forwarded rather than left in ...rest:
@@ -868,7 +886,12 @@ const usePopoverProps = (props) => {
   // (see resolveAutoAnimationKind).
   const isAutoAnimation = animation === true || animation === "auto";
 
-  const hasBackdrop = pointerInteractionOutsideEffect !== "none";
+  const hasBackdrop = pointerInteractionOutsideEffect !== "none" && backdrop;
+  if (!backdrop && pointerInteractionOutsideEffect === "capture") {
+    console.warn(
+      `Popover: pointerInteractionOutsideEffect="capture" needs a backdrop. Absorbing a press is what a wall does, and backdrop={false} takes it away — every press outside reaches the page, exactly as with "none".`,
+    );
+  }
   // positionPopover lives in openEffect's closure — created once, when the
   // popover opens. Reading the placement props through a ref instead of that
   // closure is what lets a change while open take effect on the spot (see the
@@ -1256,6 +1279,21 @@ const usePopoverProps = (props) => {
       // here.
     };
 
+    // With no backdrop of its own to catch a press, the popover hears an
+    // outside one from the document and takes nothing from it: it closes, and
+    // the press goes on to whatever it landed on (armOutsidePressClose).
+    if (
+      !hasBackdrop &&
+      (pointerInteractionOutsideEffect === "close" ||
+        pointerInteractionOutsideEffect === "cancel")
+    ) {
+      addCleanup(
+        armOutsidePressClose(popoverEl, {
+          openController,
+          pointerInteractionOutsideEffect,
+        }),
+      );
+    }
     if (scrollCapture) {
       addCleanup(trapScrollInside(popoverEl, { backdrop: backdropEl }));
     }

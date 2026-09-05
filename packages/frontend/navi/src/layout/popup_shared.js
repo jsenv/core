@@ -411,3 +411,88 @@ export const warnAboutUnreachableOutsideRegions = (popupEl) => {
     }
   }
 };
+
+/**
+ * Hears an outside press from the document itself, for a popup with no
+ * backdrop of its own to catch one: a modal `<dialog>` (whose native
+ * `::backdrop` dispatches nothing a handler can be put on) and any popup the
+ * caller asked to leave the page reachable (`backdrop={false}`).
+ *
+ * The press is read and never taken: no `preventDefault`, no
+ * `stopPropagation`, and the listener is on `document` rather than on
+ * anything covering the page — so what the press landed on hears it too, in
+ * the same gesture, and the popup only takes note. That is the whole point of
+ * a popup with no wall: a press outside is a press on the page, and the page
+ * answers it. The one popup where that cannot hold is the modal dialog, where
+ * the browser has already made everything behind inert before this runs.
+ *
+ * Capture phase, so a handler downstream that stops propagation cannot keep
+ * the popup open — the press is still outside whatever that handler does with
+ * it.
+ *
+ * Returns a cleanup that removes the listener.
+ */
+export const armOutsidePressClose = (
+  popupEl,
+  { openController, pointerInteractionOutsideEffect },
+) => {
+  const onDocumentMouseDown = (mouseDownEvent) => {
+    if (mouseDownEvent.button !== 0) {
+      return;
+    }
+    if (openedDuringThisPress(openController)) {
+      // The release of the press that opened it is not somebody dismissing it
+      // (see openedDuringThisPress).
+      return;
+    }
+    // The press landed inside another popup: that is a press on what is in
+    // front, not outside. Asking the target where it lives rather than asking
+    // this popup whether it was pushed — a popup in front does not have to be
+    // one this popup knows about. A popup nested inside this one falls to the
+    // containment check below as the inside press it is.
+    const popupUnderPointer = mouseDownEvent.target.closest?.(
+      `[navi-control="dialog"], [navi-control="popover"]`,
+    );
+    if (
+      popupUnderPointer &&
+      popupUnderPointer !== popupEl &&
+      !popupEl.contains(popupUnderPointer)
+    ) {
+      return;
+    }
+    // Real DOM containment wins over the rectangle below — an element
+    // genuinely inside the popup (`overflow: visible`, a negative margin, an
+    // absolutely-positioned child) can be painted outside its border box, and
+    // a press there is not outside just because its coordinates are. The
+    // popup element itself is excluded (contains() answers true for it): a
+    // press on a modal dialog's native backdrop reports the dialog as its
+    // target, there being no `::backdrop` node to be one, so treating that as
+    // contained would keep the rectangle from ever running.
+    if (
+      mouseDownEvent.target !== popupEl &&
+      popupEl.contains(mouseDownEvent.target)
+    ) {
+      return;
+    }
+    const rect = popupEl.getBoundingClientRect();
+    const isOutside =
+      mouseDownEvent.clientX < rect.left ||
+      mouseDownEvent.clientX > rect.right ||
+      mouseDownEvent.clientY < rect.top ||
+      mouseDownEvent.clientY > rect.bottom;
+    if (!isOutside) {
+      return;
+    }
+    openController.requestClose(mouseDownEvent, {
+      isCancel: pointerInteractionOutsideEffect === "cancel",
+    });
+  };
+  document.addEventListener("mousedown", onDocumentMouseDown, {
+    capture: true,
+  });
+  return () => {
+    document.removeEventListener("mousedown", onDocumentMouseDown, {
+      capture: true,
+    });
+  };
+};

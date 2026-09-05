@@ -115,10 +115,18 @@ const css = /* css */ `
  *   is unavoidably *more* intrusive once it switches to dialog mode than
  *   the exact same usage would be as a popover — worth keeping in mind for
  *   anything that relies on `Popup` and can end up on a small screen.
+ * @param {boolean} [props.backdrop] - Whether anything is laid between the
+ *   popup and the page at all: `false` lets a press outside both dismiss the
+ *   popup and reach whatever it landed on, in one gesture. Reaches the popover
+ *   only — a `Dialog` is `showModal()`'d in the `layer="top"` it defaults to,
+ *   and the page behind is then genuinely inert — so it is dropped rather than
+ *   forwarded when the mode resolution picks a top-layer dialog, the same
+ *   "only so far" as `pointerInteractionOutsideEffect` above.
  * @param {"auto"|"discrete"|"invisible"} [props.backdropVariant] - Forwarded
  *   as-is to whichever component renders (both understand it identically):
  *   how visible the backdrop is, independently of what an outside click
- *   does. Unlike `pointerInteractionOutsideEffect` above, this one needs no
+ *   does — a wall that is not seen is still a wall (that is `backdrop`
+ *   above). Unlike `pointerInteractionOutsideEffect`, this one needs no
  *   default here — `"auto"` already means the same thing on both sides.
  * @param {string} [props.backdropColor] - Forwarded as-is (both understand it
  *   identically): the wash the backdrop paints over what is behind.
@@ -184,6 +192,10 @@ export const Popup = (props) => {
     // exact same <Popup> usage behaves identically regardless of which
     // mode the automatic screen-size resolution happens to pick.
     pointerInteractionOutsideEffect = "close",
+    // Read here rather than left in ...rest so the dialog branch can drop it:
+    // a top-layer dialog is modal and has no press left to let through, and
+    // warns when asked (see Dialog's own backdrop prop).
+    backdrop,
     // Popover-only (see this component's own doc) — destructured out so
     // they're never part of ...rest, and therefore never forwarded to
     // Dialog below, where they'd otherwise leak onto the real <dialog>
@@ -221,6 +233,7 @@ export const Popup = (props) => {
         sizeFromAnchor={sizeFromAnchor}
         maxWidth={maxWidth}
         pointerInteractionOutsideEffect={pointerInteractionOutsideEffect}
+        backdrop={rest.layer === "local" ? backdrop : undefined}
         className={withPropsClassName("navi_popup", className)}
         expand={expand}
         expandX={expandX}
@@ -236,6 +249,7 @@ export const Popup = (props) => {
       {...rest}
       maxWidth={maxWidth}
       pointerInteractionOutsideEffect={pointerInteractionOutsideEffect}
+      backdrop={backdrop}
       marginWithAnchor={marginWithAnchor}
       focusCapture={focusCapture}
       positionAreaWhenAnchorIsInvalid={positionAreaWhenAnchorIsInvalid}

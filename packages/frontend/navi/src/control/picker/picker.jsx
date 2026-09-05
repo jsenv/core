@@ -1586,6 +1586,7 @@ const PickerFirstResolver = (props) => {
  *   anchor?: import("preact").RefObject<HTMLElement> | HTMLElement,
  *   escapeEffect?: "cancel" | "close",
  *   pointerInteractionOutsideEffect?: "close" | "cancel" | "capture",
+ *   backdrop?: boolean,
  *   backdropVariant?: "auto" | "discrete" | "invisible",
  *   backdropColor?: string,
  *   backdropFilter?: string,
@@ -1839,11 +1840,18 @@ const PickerFirstResolver = (props) => {
  *   put back the value at open ("cancel"), or nothing at all ("capture"). The
  *   default is what gives a popup with no confirm button its way out that
  *   keeps — see the same section.
+ * @param {boolean} [backdrop=true] Whether anything is laid between the popup
+ *   and the page at all. `false` lets a press outside both close the popup and
+ *   reach whatever it landed on, in one gesture — for a picker opened over a
+ *   page that stays as pressable as it looks (a plan, a map, a canvas), where a
+ *   wall would spend the first press on dismissing. Only the popover mode can
+ *   honour it: a dialog is modal and the page behind it is inert.
  * @param {"auto"|"discrete"|"invisible"} [backdropVariant="auto"] How visible the
  *   popup's backdrop is, independently of what a click outside does: `"auto"`
  *   is the paint `pointerInteractionOutsideEffect` implies, `"discrete"` a
- *   barely-there dim, `"invisible"` fully transparent. For a picker that closes on
- *   an outside click without wanting to dim the page for it.
+ *   barely-there dim, `"invisible"` fully transparent — a wall that is not seen
+ *   is still a wall, which is what `backdrop` above answers. For a picker that
+ *   closes on an outside click without wanting to dim the page for it.
  * @param {string} [backdropColor] The wash the popup paints over what is
  *   behind, for this picker alone. See Dialog's own doc.
  * @param {string} [backdropFilter] What that wash does to the picture

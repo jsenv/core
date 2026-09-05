@@ -916,7 +916,8 @@ const PickerContentInsidePopup = (props) => {
     // clicking outside revert instead, or "capture" to keep it open.
     pointerInteractionOutsideEffect = "close",
     // Named/forwarded rather than left in ...rest: rest goes to the picker
-    // element itself, not the popup, and this belongs to the popup.
+    // element itself, not the popup, and these belong to the popup.
+    backdrop,
     backdropVariant,
     backdropColor,
     backdropFilter,
@@ -1011,6 +1012,7 @@ const PickerContentInsidePopup = (props) => {
           pointerInteractionOutsideEffect={
             pointerLock ? "capture" : pointerInteractionOutsideEffect
           }
+          backdrop={backdrop}
           backdropVariant={backdropVariant}
           backdropColor={backdropColor}
           backdropFilter={backdropFilter}

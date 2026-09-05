@@ -93,8 +93,10 @@ const sw = self.__sw__;
    * @param {string} [options.logColor="#000000"] Text color of that badge.
    * @param {Object} [options.resources={ "/": {} }] Urls to put into the cache
    *   during "install" and to serve from cache in "fetch". Keys are urls,
-   *   relative ones resolve against the worker url (other origins are allowed).
-   *   Values:
+   *   relative ones resolve against the worker url (other origins are allowed,
+   *   their response must be readable: a 200 the worker can put in cache). The
+   *   install fails, and the worker is discarded, when any of them cannot be
+   *   cached. Values:
    *   - `{}`: unversioned url, refetched at every install with
    *     `cache: "reload"` so the HTTP cache cannot answer with a stale copy.
    *   - `{ version, versionedUrl }`: build output; `versionedUrl` is fetched
@@ -212,7 +214,7 @@ const sw = self.__sw__;
         const cache = await self.caches.open(cacheName);
         const urlsToCache = Object.keys(resources);
         const total = urlsToCache.length;
-        let installed = 0;
+        const failures = [];
         await Promise.all(
           urlsToCache.map(async (url) => {
             const resource = resources[url];
@@ -226,26 +228,30 @@ const sw = self.__sw__;
               const response = await fetchAndPutInCache(request, cache);
               if (response.status === 200) {
                 logger.info(`put "${asRelativeUrl(request.url)}" into cache`);
-                installed += 1;
               } else {
-                logger.warn(
-                  `cannot put ${request.url} into cache due to response status (${response.status})`,
+                failures.push(
+                  `${request.url} (response status ${response.status})`,
                 );
               }
             } catch (e) {
-              logger.warn(
-                `cannot put ${request.url} in cache due to error while fetching: ${e.stack}`,
-              );
+              failures.push(`${request.url} (${e.message})`);
             }
           }),
         );
-        if (installed === total) {
+        if (failures.length === 0) {
           logger.info(`install done (${total} resources added in cache)`);
-        } else {
-          logger.info(
-            `install done (${installed}/${total} resources added in cache)`,
-          );
+          return;
         }
+        // Once this worker activates the previous caches are deleted and every
+        // listed resource is served from its cache: a resource missing there
+        // would go to the network on every request, on the connection that
+        // just failed to fetch it. Failing the install discards this worker,
+        // the current one keeps serving until a next install succeeds.
+        const failureListing = failures.map((failure) => `- ${failure}`);
+        throw new Error(
+          `install failed: ${failures.length}/${total} resources could not be cached
+${failureListing.join("\n")}`,
+        );
       };
     }
 

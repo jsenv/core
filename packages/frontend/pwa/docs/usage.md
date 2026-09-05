@@ -50,7 +50,7 @@ State shape:
   meta, // object returned by the service worker script to the "inspect" action ({} otherwise)
   update: {
     error,
-    readyState, // "" | "installing" | "installed" | "activating" | "activated" | "redundant"
+    readyState, // "" | "installing" | "installed" | "activation_pending" | "activating" | "activated" | "redundant"
     meta, // meta of the new service worker script
     reloadRequired, // false when every changed resource has an update handler
   },
@@ -87,6 +87,14 @@ updateButton.onclick = async () => {
   await swFacade.activateUpdate(); // skipWaiting + claim
 };
 ```
+
+The browser activates the update only once the current worker has finished
+its in-flight events (a fetch it is still answering on a slow network, for
+instance): the promise can stay pending for a while, and it rejects when the
+update is discarded (`update.readyState === "redundant"`) or refuses. Draw the
+progress from `update.readyState` (`"activation_pending"` while the current
+worker holds the switch, then `"activating"`, `"activated"`) rather than
+keeping a control busy on the promise; `update.error` holds the failure.
 
 Once the update controls the page, every client tab reloads so no stale
 resource stays alive. To update some resources in place instead of reloading

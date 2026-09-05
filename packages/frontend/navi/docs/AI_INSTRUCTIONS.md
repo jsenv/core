@@ -189,8 +189,10 @@ consistency across the app, not from any single call site.
   a popup, before writing a close button by hand, and before an
   `onOpen`/`onClose` writing a signal.
 - `docs/popup_backdrop.md` — what a popup lays between itself and the page
-  behind: the two independent questions it answers (what an outside press does,
-  how far what is behind withdraws), where the outside begins for a popup
+  behind: the three independent questions it answers (whether there is a wall
+  at all — `backdrop={false}` lets one press both dismiss the popup and reach
+  what it landed on, which `backdropVariant="invisible"` does NOT do — what an
+  outside press does, how far what is behind withdraws), where the outside begins for a popup
   painting no surface of its own (`data-navi-popup-outside`), the
   `backdropColor`/`backdropFilter` props
   for one popup and the `--navi-backdrop-*` colour+filter token pairs for the

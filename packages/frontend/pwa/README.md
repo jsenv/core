@@ -178,7 +178,7 @@ The returned facade exposes:
     meta, // object returned by the service worker script to the "inspect" action
     update: {
       error,
-      readyState, // same values; "installed" means ready to activate
+      readyState, // same values plus "activation_pending"; "installed" means ready to activate
       meta,
       reloadRequired, // false when every changed resource has an update handler
     },
@@ -193,7 +193,12 @@ The returned facade exposes:
   `navigator.serviceWorker.register(url)`.
 - `checkForUpdates()` — async, resolves to `true` if an update was found.
 - `activateUpdate()` — async, activates the installed update (skipWaiting +
-  claim) and resolves once it controls the page.
+  claim) and resolves once it controls the page; rejects when the update is
+  discarded or refuses. The browser switches only once the current worker has
+  finished its in-flight events, which can take a while on a slow network:
+  `state.update.readyState` reports the progress (`"activation_pending"`,
+  `"activating"`, `"activated"`), so prefer drawing from it over keeping a
+  control busy on the promise.
 - `sendMessage(message)` — async, posts a message to the service worker and
   resolves with its response (see [docs/usage.md](./docs/usage.md) for the
   service-worker-side snippet).

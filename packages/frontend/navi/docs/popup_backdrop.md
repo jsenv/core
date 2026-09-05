@@ -4,8 +4,10 @@ What a `Dialog`, a `Popover` — and everything built on them: `Popup`,
 `SidePanel`, a `Picker`'s popup — lays between itself and the page it opened
 over.
 
-It answers two questions, and they are independent:
+It answers three questions, and they are independent:
 
+0. **Is there anything between the popup and the page at all?** That is
+   `backdrop`.
 1. **What does a press outside do?** Close, cancel, be absorbed, pass through.
    That is `pointerInteractionOutsideEffect`.
 2. **How far does what is behind withdraw?** Dimmed, blurred, barely marked,
@@ -15,7 +17,54 @@ It answers two questions, and they are independent:
 Keeping them apart is the whole point of this page. A popup that must close on
 an outside click — because that click is the way out of the screen — may also
 need the page behind to stop competing for the eye. How much it withdraws says
-nothing about what the click does.
+nothing about what the click does, and neither says whether the page behind is
+still reachable.
+
+## Is there a backdrop at all
+
+A backdrop is a wall: a full-screen element in front of the page, which wins
+hit-testing. That is how it absorbs a press — not by handling the event and
+stopping it, but by being what the pointer hits. Nothing behind it hears
+anything.
+
+So a popup that closes on an outside press spends that press: the first press
+dismisses, and a second one is needed to do the thing the user was already
+pointing at. That is right when the page has withdrawn — the dim says the page
+is off, and a press on it means "come back", nothing more.
+
+It is wrong when nothing withdrew. A bubble opened over a map, a plan, a canvas
+— a page that looks exactly as pressable as it did a second ago — makes the
+next press a natural continuation of the gesture, not a dismissal. Taking it to
+close the bubble spends it on something the user never asked for, and on a page
+that gave no sign it would.
+
+`backdrop={false}` is how that popup says there is no wall:
+
+```jsx
+<Popover pointerInteractionOutsideEffect="close" backdrop={false}>
+```
+
+The popup then hears an outside press from the document itself, and takes
+nothing from it: no `preventDefault`, no `stopPropagation`. It closes, and the
+same press is answered by whatever it landed on — one gesture, one press.
+
+**It is not `backdropVariant="invisible"`.** A wall that is not painted is
+still a wall, and it still eats the press; the two props answer different
+questions. `"invisible"` is for a popup that must absorb — a menu whose
+dismissing click must not also press what is under it — without dimming the
+page for it. `backdrop={false}` is for a popup that must not absorb at all.
+
+**Only a non-modal popup can honour it.** `Popover` always can, either layer. A
+`Dialog` can only in `layer="local"`: the default `layer="top"` is shown with
+`showModal()`, which makes everything behind genuinely inert before any of
+navi's code runs — there is no press left to let through, and asking for one
+warns. `Popup` follows from that: it forwards `backdrop` to its popover and
+drops it for a top-layer dialog, so the same usage that gives one press on a
+desktop costs two once the small-screen resolution picks dialog mode.
+
+`pointerInteractionOutsideEffect="capture"` and `backdrop={false}` contradict
+each other — absorbing is what a wall does — and navi warns rather than
+silently behaving like `"none"`.
 
 ## Where the outside begins
 
@@ -115,7 +164,8 @@ closes on an outside click blurs too.
 
 `backdropVariant` is the shorthand for the other direction: `"discrete"` for a
 barely-there dim, `"invisible"` for no paint at all. It never changes what the
-outside click does — the backdrop is still there and still catches it.
+outside click does — the wall is still there and still catches it. Whether
+there is a wall to paint is `backdrop`, above.
 
 `"invisible"` is the one kind with no filter token: it paints nothing, and a
 filter would still be seen.

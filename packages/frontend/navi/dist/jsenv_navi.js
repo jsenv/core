@@ -25642,11 +25642,26 @@ const restoreScrollPosition = (url) => {
 // the one before it — and that borrowed offset is what is then remembered FOR
 // it, and handed back on the way forward.
 //
+// Arrived at, which a push does not always mean. A push that keeps the pathname
+// stacks an entry over the document the reader is scrolled in — a layer opened
+// over the screen, a param whose values are places one came from (see
+// navigation.md) — and the page under the new address is the one they never
+// left. The path names the page; the search says what is drawn on or over it.
+// So `from`, the url being left, tells an arrival from the same place said
+// differently, and only the first is moved.
+//
 // The document, because the document is the scrollport in the common case. An
 // app that scrolls an element of its own scrolls it itself.
-const startAtTop = (url) => {
+const startAtTop = (url, { from } = {}) => {
+  const urlObject = new URL(url, window.location.href);
   // A fragment names where to land, and the browser is the one that finds it.
-  if (new URL(url, window.location.href).hash) {
+  if (urlObject.hash) {
+    return;
+  }
+  if (
+    from !== undefined &&
+    new URL(from, window.location.href).pathname === urlObject.pathname
+  ) {
     return;
   }
   window.scrollTo({ top: 0, left: 0, behavior: "instant" });
@@ -25921,7 +25936,10 @@ const setupBrowserIntegrationViaHistory = ({
   };
 
   const applyRoutingTask = (url, options) => {
-    const isSameUrl = url === window.location.href;
+    // Read before the history is written: the url the reader is being taken
+    // away from, which is what decides where a push lands (see startAtTop).
+    const urlLeft = window.location.href;
+    const isSameUrl = url === urlLeft;
     const {
       reason,
       navigationType, // "load", "reload", "replace", "push", "traverse"
@@ -26001,11 +26019,12 @@ const setupBrowserIntegrationViaHistory = ({
     //
     // A replace gets neither: it is the same place said differently — a param
     // settling, a state written — and moving the reader for it would throw
-    // them out of a page they never left. The one replace that IS an arrival
-    // is a row of tabs travelling, and the row says so for itself (see
+    // them out of a page they never left. A push that keeps the pathname is
+    // read the same way, by startAtTop itself. The one replace that IS an
+    // arrival is a row of tabs travelling, and the row says so for itself (see
     // route_travel.jsx).
     if (navigationType === "push") {
-      whenRenderingResumes(() => startAtTop(url));
+      whenRenderingResumes(() => startAtTop(url, { from: urlLeft }));
     } else if (navigationType === "traverse") {
       whenRenderingResumes(() => restoreScrollPosition(url));
     }
@@ -45189,6 +45208,91 @@ const handlePressOnOutsideRegion = (
 };
 
 /**
+ * Hears an outside press from the document itself, for a popup with no
+ * backdrop of its own to catch one: a modal `<dialog>` (whose native
+ * `::backdrop` dispatches nothing a handler can be put on) and any popup the
+ * caller asked to leave the page reachable (`backdrop={false}`).
+ *
+ * The press is read and never taken: no `preventDefault`, no
+ * `stopPropagation`, and the listener is on `document` rather than on
+ * anything covering the page — so what the press landed on hears it too, in
+ * the same gesture, and the popup only takes note. That is the whole point of
+ * a popup with no wall: a press outside is a press on the page, and the page
+ * answers it. The one popup where that cannot hold is the modal dialog, where
+ * the browser has already made everything behind inert before this runs.
+ *
+ * Capture phase, so a handler downstream that stops propagation cannot keep
+ * the popup open — the press is still outside whatever that handler does with
+ * it.
+ *
+ * Returns a cleanup that removes the listener.
+ */
+const armOutsidePressClose = (
+  popupEl,
+  { openController, pointerInteractionOutsideEffect },
+) => {
+  const onDocumentMouseDown = (mouseDownEvent) => {
+    if (mouseDownEvent.button !== 0) {
+      return;
+    }
+    if (openedDuringThisPress(openController)) {
+      // The release of the press that opened it is not somebody dismissing it
+      // (see openedDuringThisPress).
+      return;
+    }
+    // The press landed inside another popup: that is a press on what is in
+    // front, not outside. Asking the target where it lives rather than asking
+    // this popup whether it was pushed — a popup in front does not have to be
+    // one this popup knows about. A popup nested inside this one falls to the
+    // containment check below as the inside press it is.
+    const popupUnderPointer = mouseDownEvent.target.closest?.(
+      `[navi-control="dialog"], [navi-control="popover"]`,
+    );
+    if (
+      popupUnderPointer &&
+      popupUnderPointer !== popupEl &&
+      !popupEl.contains(popupUnderPointer)
+    ) {
+      return;
+    }
+    // Real DOM containment wins over the rectangle below — an element
+    // genuinely inside the popup (`overflow: visible`, a negative margin, an
+    // absolutely-positioned child) can be painted outside its border box, and
+    // a press there is not outside just because its coordinates are. The
+    // popup element itself is excluded (contains() answers true for it): a
+    // press on a modal dialog's native backdrop reports the dialog as its
+    // target, there being no `::backdrop` node to be one, so treating that as
+    // contained would keep the rectangle from ever running.
+    if (
+      mouseDownEvent.target !== popupEl &&
+      popupEl.contains(mouseDownEvent.target)
+    ) {
+      return;
+    }
+    const rect = popupEl.getBoundingClientRect();
+    const isOutside =
+      mouseDownEvent.clientX < rect.left ||
+      mouseDownEvent.clientX > rect.right ||
+      mouseDownEvent.clientY < rect.top ||
+      mouseDownEvent.clientY > rect.bottom;
+    if (!isOutside) {
+      return;
+    }
+    openController.requestClose(mouseDownEvent, {
+      isCancel: pointerInteractionOutsideEffect === "cancel",
+    });
+  };
+  document.addEventListener("mousedown", onDocumentMouseDown, {
+    capture: true,
+  });
+  return () => {
+    document.removeEventListener("mousedown", onDocumentMouseDown, {
+      capture: true,
+    });
+  };
+};
+
+/**
  * When a popup builds what it holds, and when it throws it away.
  *
  * A closed popup shows nothing, focuses nothing, and answers nothing: what it
@@ -57149,21 +57253,30 @@ const css$E = /* css */`
  *   --navi-app-max-width) and "vvw"/"vvh" the visual viewport itself, which
  *   shrinks when the mobile keyboard opens. Pass 0 for a dialog
  *   meant to sit flush (a side panel).
+ * @param {boolean} [props.backdrop=true] - Whether anything is laid between
+ *   the dialog and the page at all — asked before any question of what an
+ *   outside press does or how the backdrop is painted. `false` leaves the page
+ *   reachable: a press outside closes the dialog (per
+ *   `pointerInteractionOutsideEffect`) *and* is answered by whatever it landed
+ *   on, in the same gesture. **`layer="local"` only** — `showModal()` makes
+ *   everything behind genuinely inert, so a top-layer dialog has no way to let
+ *   a press through and warns instead. See docs/popup_backdrop.md.
  * @param {"close"|"cancel"|"capture"|"none"} [props.pointerInteractionOutsideEffect="close"]
  *   - `"close"` closes the dialog on an outside click. `"capture"`/`"none"`
  *   both just absorb the click without closing (visually dimmed backdrop vs.
- *   not) — a dialog is always modal one way or another, so there's always
- *   at least a click-absorbing backdrop regardless of this prop. "Outside" is
- *   the dialog's own border box; a see-through dialog whose box is bigger than
- *   what it paints marks the difference with `data-navi-popup-outside` (see
- *   docs/popup_backdrop.md).
+ *   not) — a dialog with a backdrop is modal one way or another, so there's
+ *   always at least a click-absorbing backdrop regardless of this prop.
+ *   "Outside" is the dialog's own border box; a see-through dialog whose box is
+ *   bigger than what it paints marks the difference with
+ *   `data-navi-popup-outside` (see docs/popup_backdrop.md).
  * @param {"auto"|"discrete"|"invisible"} [props.backdropVariant="auto"] - How
  *   visible the backdrop is, independently of what it does. `"auto"`: the
  *   paint `pointerInteractionOutsideEffect` implies (dimmed for
  *   `"close"`/`"cancel"`, blurred glass for `"capture"`). `"discrete"`: a
- *   barely-there dim. `"invisible"`: fully transparent. The dialog stays modal
- *   either way — this only changes how much it insists visually, never what
- *   an outside click does or whether the page behind stays reachable.
+ *   barely-there dim. `"invisible"`: fully transparent — a wall that is not
+ *   seen, still catching every press. This only changes how much the dialog
+ *   insists visually, never what an outside click does; whether there is a
+ *   wall to paint at all is `backdrop` above.
  * @param {string} [props.backdropColor] - The wash painted over what is
  *   behind, for this popup alone: any CSS color (`"rgb(6 10 20 / 88%)"`).
  *   Wins over `backdropVariant` and over the theme tokens
@@ -57512,10 +57625,16 @@ const useDialogProps = props => {
     // there's no native inert-ing, so the real backdrop below is what
     // actually makes "capture"/"none" behave the same way here too.
     pointerInteractionOutsideEffect = "close",
+    // Whether there is a wall between the dialog and the page at all, asked
+    // before what a press on it does (pointerInteractionOutsideEffect) and
+    // before how it is painted (backdropVariant below). layer="top" cannot
+    // honour false: showModal() makes the page inert before anything here
+    // runs.
+    backdrop = true,
     // How loudly the backdrop says it is there — independent of what it
-    // *does* (that's pointerInteractionOutsideEffect above). A dialog is
-    // always modal, so "none" here never makes the page behind reachable:
-    // it only stops the dim from being drawn.
+    // *does* (that's pointerInteractionOutsideEffect above). "invisible" is a
+    // wall that is not seen, not the absence of one: it only stops the dim
+    // from being drawn.
     backdropVariant = "auto",
     // The paint itself, when the tokens behind backdropVariant are not what
     // this one dialog wants. Named/forwarded rather than left in ...rest:
@@ -57568,6 +57687,12 @@ const useDialogProps = props => {
   });
   const children = contentMounted ? childrenProp : null;
   const isModal = layer === "top";
+  if (isModal && !backdrop) {
+    console.warn(`Dialog: backdrop={false} needs layer="local". A layer="top" dialog is shown with showModal(), which makes everything behind it inert before any of this runs — there is no press left to let through.`);
+  }
+  if (!backdrop && pointerInteractionOutsideEffect === "capture") {
+    console.warn(`Dialog: pointerInteractionOutsideEffect="capture" needs a backdrop. Absorbing a press is what a wall does, and backdrop={false} takes it away.`);
+  }
   const ref = props.ref;
   const expandY = Boolean(expand) || Boolean(expandYProp);
   // Only a small touch screen changes anything: on a mouse — and on a touch
@@ -58076,61 +58201,17 @@ const useDialogProps = props => {
     // FOCUS_DELAY_ON_KEYBOARD_MS).
     const restoreFocus = openController.transferFocusOnOpen(dialogEl);
 
-    // isModal outside-click detection (see this file's top comment for why
-    // this is a plain document-level listener rather than anything
-    // dialogEl/its native ::backdrop dispatches on their own) — active for
-    // the dialog's entire open lifetime, not just mid-transition.
-    if (isModal && (pointerInteractionOutsideEffect === "close" || pointerInteractionOutsideEffect === "cancel")) {
-      const onDocumentMouseDown = mouseDownEvent => {
-        if (mouseDownEvent.button !== 0) {
-          return;
-        }
-        // The click landed inside another popup: that is a click on what is in
-        // front of this dialog, not outside it. Asking the target where it
-        // lives rather than asking this dialog whether it was pushed — a popup
-        // in front does not have to be one this dialog knows about. Excludes a
-        // popup nested inside this one, which the containment check below
-        // handles as the inside click it is.
-        if (openedDuringThisPress(openController)) {
-          // The release of the press that opened it is not somebody dismissing
-          // it (see openedDuringThisPress).
-          return;
-        }
-        const popupUnderPointer = mouseDownEvent.target.closest?.(`[navi-control="dialog"], [navi-control="popover"]`);
-        if (popupUnderPointer && popupUnderPointer !== dialogEl && !dialogEl.contains(popupUnderPointer)) {
-          return;
-        }
-        // Real DOM containment wins over the coordinate check below — an
-        // element genuinely inside the dialog (e.g. one with `overflow:
-        // visible`, a negative margin, or an absolutely-positioned child)
-        // can be visually painted outside dialogEl's own bounding rect, and
-        // a click there must not count as "outside" just because its
-        // coordinates fall outside that rect. Excludes dialogEl itself
-        // though (contains() is true for the element itself, not just real
-        // descendants) — a genuine backdrop click reports target === dialogEl
-        // (there's no real ::backdrop node to be the target), so treating
-        // that case as "contained" would make the coordinate check below
-        // (the actual backdrop-vs-dialog-padding distinction) never run.
-        if (mouseDownEvent.target !== dialogEl && dialogEl.contains(mouseDownEvent.target)) {
-          return;
-        }
-        const rect = dialogEl.getBoundingClientRect();
-        const isOutside = mouseDownEvent.clientX < rect.left || mouseDownEvent.clientX > rect.right || mouseDownEvent.clientY < rect.top || mouseDownEvent.clientY > rect.bottom;
-        if (!isOutside) {
-          return;
-        }
-        openController.requestClose(mouseDownEvent, {
-          isCancel: pointerInteractionOutsideEffect === "cancel"
-        });
-      };
-      document.addEventListener("mousedown", onDocumentMouseDown, {
-        capture: true
-      });
-      addCleanup(() => {
-        document.removeEventListener("mousedown", onDocumentMouseDown, {
-          capture: true
-        });
-      });
+    // A dialog with nothing of its own between it and the page hears an
+    // outside press from the document: the modal renderer, whose native
+    // `::backdrop` dispatches nothing a handler can be put on (see this
+    // file's top comment), and a local one the caller asked to leave the page
+    // reachable. Active for the dialog's entire open lifetime, not just
+    // mid-transition.
+    if ((isModal || !backdrop) && (pointerInteractionOutsideEffect === "close" || pointerInteractionOutsideEffect === "cancel")) {
+      addCleanup(armOutsidePressClose(dialogEl, {
+        openController,
+        pointerInteractionOutsideEffect
+      }));
     }
     return closeEvent => {
       debugPopup(`"${closeEvent.type}" on ${getElementSignature(closeEvent.target)} -> closeDialog`);
@@ -58357,7 +58438,7 @@ const useDialogProps = props => {
   // openEffect above (see this file's top comment for why: neither a real
   // backdrop element nor dialogEl's own mousedown reliably fires for a
   // native ::backdrop click).
-  if (!isModal) {
+  if (!isModal && backdrop) {
     backdropProps.onMouseDown = mouseDownEvent => {
       if (mouseDownEvent.button !== 0) {
         return;
@@ -58384,7 +58465,7 @@ const useDialogProps = props => {
       // the same behavior for Dialog.
     };
   }
-  return [isModal ? null : backdropProps, contentProps];
+  return [isModal || !backdrop ? null : backdropProps, contentProps];
 };
 const DIALOG_PSEUDO_CLASSES = [":hover", ":active", ":focus", ":focus-visible", ":focus-within"];
 
@@ -58759,6 +58840,15 @@ const css$D = /* css */`
  *   between the popover and the edges of its container.
  * @param {string|number} [props.marginWithAnchor=0] - Extra spacing kept
  *   between the popover and the edges of its anchor.
+ * @param {boolean} [props.backdrop=true] - Whether anything is laid between
+ *   the popover and the page at all — asked before what an outside press does
+ *   and before how the backdrop is painted. `false` leaves the page
+ *   reachable: a press outside closes the popover (per
+ *   `pointerInteractionOutsideEffect`) *and* is answered by whatever it landed
+ *   on, in the same gesture — one press where a wall would have cost two. It
+ *   is a `Popover`-level answer only for `"close"`/`"cancel"`; `"capture"` has
+ *   nothing left to absorb without a wall, and `"none"` renders none anyway.
+ *   See docs/popup_backdrop.md.
  * @param {"close"|"cancel"|"capture"|"none"} [props.pointerInteractionOutsideEffect="none"]
  *   - `"none"` (default): no backdrop at all, outside clicks pass straight
  *   through. `"close"` closes the popover on an outside click. `"capture"`
@@ -58772,11 +58862,12 @@ const css$D = /* css */`
  *   visible the backdrop is, independently of what it does. `"auto"`: the
  *   paint `pointerInteractionOutsideEffect` implies (dimmed for
  *   `"close"`/`"cancel"`, blurred glass for `"capture"`). `"discrete"`: a
- *   barely-there dim. `"invisible"`: fully transparent. The backdrop is still
- *   rendered and still catches outside clicks in every case — this only
- *   changes how much the popover insists on being the thing you deal with.
- *   Ignored when `pointerInteractionOutsideEffect="none"` (there is no
- *   backdrop at all then, and outside clicks pass through).
+ *   barely-there dim. `"invisible"`: fully transparent — a wall that is not
+ *   seen, still rendered and still catching every outside click. This only
+ *   changes how much the popover insists on being the thing you deal with;
+ *   whether there is a wall to paint at all is `backdrop` above. Ignored when
+ *   there is none (`pointerInteractionOutsideEffect="none"`, or
+ *   `backdrop={false}`).
  * @param {string} [props.backdropColor] - The wash painted over what is
  *   behind, for this popup alone: any CSS color (`"rgb(6 10 20 / 88%)"`).
  *   Wins over `backdropVariant` and over the theme tokens
@@ -59102,10 +59193,17 @@ const usePopoverProps = props => {
     // "capture"→ absorb the press, stay open
     // "none"   → no backdrop
     pointerInteractionOutsideEffect = "none",
+    // Whether there is a wall between the popover and the page at all, asked
+    // before what a press on it does (pointerInteractionOutsideEffect) and
+    // before how it is painted (backdropVariant below). false with a closing
+    // effect is a press that both dismisses the popover and reaches whatever
+    // it landed on.
+    backdrop = true,
     // How loudly the backdrop says it is there — independent of what it
     // *does* (that's pointerInteractionOutsideEffect above). "auto" keeps
-    // the paint the effect implies; "discrete"/"none" tone it down or
-    // remove it entirely without giving up the outside click.
+    // the paint the effect implies; "discrete"/"invisible" tone it down or
+    // stop drawing it, without giving up the outside click — a wall that is
+    // not seen is still a wall (that is `backdrop` above).
     backdropVariant = "auto",
     // The paint itself, when the tokens behind backdropVariant are not what
     // this one popover wants. Named/forwarded rather than left in ...rest:
@@ -59174,7 +59272,10 @@ const usePopoverProps = props => {
   // animation={true} or "auto" always resolves to "sliding" or "scaling"
   // (see resolveAutoAnimationKind).
   const isAutoAnimation = animation === true || animation === "auto";
-  const hasBackdrop = pointerInteractionOutsideEffect !== "none";
+  const hasBackdrop = pointerInteractionOutsideEffect !== "none" && backdrop;
+  if (!backdrop && pointerInteractionOutsideEffect === "capture") {
+    console.warn(`Popover: pointerInteractionOutsideEffect="capture" needs a backdrop. Absorbing a press is what a wall does, and backdrop={false} takes it away — every press outside reaches the page, exactly as with "none".`);
+  }
   // positionPopover lives in openEffect's closure — created once, when the
   // popover opens. Reading the placement props through a ref instead of that
   // closure is what lets a change while open take effect on the spot (see the
@@ -59522,6 +59623,16 @@ const usePopoverProps = props => {
       // (dispatches navi_position_change on every call) — nothing to do
       // here.
     };
+
+    // With no backdrop of its own to catch a press, the popover hears an
+    // outside one from the document and takes nothing from it: it closes, and
+    // the press goes on to whatever it landed on (armOutsidePressClose).
+    if (!hasBackdrop && (pointerInteractionOutsideEffect === "close" || pointerInteractionOutsideEffect === "cancel")) {
+      addCleanup(armOutsidePressClose(popoverEl, {
+        openController,
+        pointerInteractionOutsideEffect
+      }));
+    }
     if (scrollCapture) {
       addCleanup(trapScrollInside(popoverEl, {
         backdrop: backdropEl
@@ -60081,10 +60192,18 @@ const css$C = /* css */`@layer navi {
  *   is unavoidably *more* intrusive once it switches to dialog mode than
  *   the exact same usage would be as a popover — worth keeping in mind for
  *   anything that relies on `Popup` and can end up on a small screen.
+ * @param {boolean} [props.backdrop] - Whether anything is laid between the
+ *   popup and the page at all: `false` lets a press outside both dismiss the
+ *   popup and reach whatever it landed on, in one gesture. Reaches the popover
+ *   only — a `Dialog` is `showModal()`'d in the `layer="top"` it defaults to,
+ *   and the page behind is then genuinely inert — so it is dropped rather than
+ *   forwarded when the mode resolution picks a top-layer dialog, the same
+ *   "only so far" as `pointerInteractionOutsideEffect` above.
  * @param {"auto"|"discrete"|"invisible"} [props.backdropVariant] - Forwarded
  *   as-is to whichever component renders (both understand it identically):
  *   how visible the backdrop is, independently of what an outside click
- *   does. Unlike `pointerInteractionOutsideEffect` above, this one needs no
+ *   does — a wall that is not seen is still a wall (that is `backdrop`
+ *   above). Unlike `pointerInteractionOutsideEffect`, this one needs no
  *   default here — `"auto"` already means the same thing on both sides.
  * @param {string} [props.backdropColor] - Forwarded as-is (both understand it
  *   identically): the wash the backdrop paints over what is behind.
@@ -60150,6 +60269,10 @@ const Popup = props => {
     // exact same <Popup> usage behaves identically regardless of which
     // mode the automatic screen-size resolution happens to pick.
     pointerInteractionOutsideEffect = "close",
+    // Read here rather than left in ...rest so the dialog branch can drop it:
+    // a top-layer dialog is modal and has no press left to let through, and
+    // warns when asked (see Dialog's own backdrop prop).
+    backdrop,
     // Popover-only (see this component's own doc) — destructured out so
     // they're never part of ...rest, and therefore never forwarded to
     // Dialog below, where they'd otherwise leak onto the real <dialog>
@@ -60183,6 +60306,7 @@ const Popup = props => {
       sizeFromAnchor: sizeFromAnchor,
       maxWidth: maxWidth,
       pointerInteractionOutsideEffect: pointerInteractionOutsideEffect,
+      backdrop: rest.layer === "local" ? backdrop : undefined,
       className: withPropsClassName("navi_popup", className),
       expand: expand,
       expandX: expandX,
@@ -60195,6 +60319,7 @@ const Popup = props => {
     ...rest,
     maxWidth: maxWidth,
     pointerInteractionOutsideEffect: pointerInteractionOutsideEffect,
+    backdrop: backdrop,
     marginWithAnchor: marginWithAnchor,
     focusCapture: focusCapture,
     positionAreaWhenAnchorIsInvalid: positionAreaWhenAnchorIsInvalid,
@@ -60973,7 +61098,8 @@ const PickerContentInsidePopup = props => {
     // clicking outside revert instead, or "capture" to keep it open.
     pointerInteractionOutsideEffect = "close",
     // Named/forwarded rather than left in ...rest: rest goes to the picker
-    // element itself, not the popup, and this belongs to the popup.
+    // element itself, not the popup, and these belong to the popup.
+    backdrop,
     backdropVariant,
     backdropColor,
     backdropFilter,
@@ -61051,6 +61177,7 @@ const PickerContentInsidePopup = props => {
       marginWithContainer: marginWithContainer === undefined && isPopover ? popoverSpacing : marginWithContainer,
       scrollCapture: scrollCapture,
       pointerInteractionOutsideEffect: pointerLock ? "capture" : pointerInteractionOutsideEffect,
+      backdrop: backdrop,
       backdropVariant: backdropVariant,
       backdropColor: backdropColor,
       backdropFilter: backdropFilter,
@@ -72133,6 +72260,7 @@ const css$n = /* css */`.navi_split_button {
  *   dialogExpandY?: boolean,
  *   dockedOnSmallTouchScreen?: boolean,
  *   marginWithContainer?: number | string,
+ *   backdrop?: boolean,
  *   backdropVariant?: "auto" | "discrete" | "invisible",
  *   backdropColor?: string,
  *   backdropFilter?: string,
@@ -72181,8 +72309,8 @@ const css$n = /* css */`.navi_split_button {
  * `dockedOnSmallTouchScreen`, `dialogExpand*`, `dialogMinWidth`/`Height`,
  * `dialogMaxWidth`/`Height`,
  * `marginWithContainer`, `popoverMode`, `popoverSpacing`, `popupLayer`,
- * `popupTestId`, `popupWidthFitContent`, `popoverMaxHeight`, `backdropVariant`,
- * `backdropColor`, `backdropFilter`,
+ * `popupTestId`, `popupWidthFitContent`, `popoverMaxHeight`, `backdrop`,
+ * `backdropVariant`, `backdropColor`, `backdropFilter`,
  * `pointerInteractionOutsideEffect`, `escapeEffect`, `closeOnFocusOut`,
  * `scrollCapture`, `focusCapture`, `popupBackgroundColor`,
  * `popupBorderRadius`, `animation`. See picker.jsx for what each one says.
@@ -72383,7 +72511,7 @@ const SplitButton = props => {
 // What the Picker's popup answers to — Picker's own popup props, named here so
 // a caller reaches all of them through the split button (see picker.jsx's JSDoc
 // for what each one says).
-const POPUP_PROP_SET = new Set(["mode", "popupLayer", "popupTestId", "positionArea", "popoverMode", "popoverSpacing", "popupWidthFitContent", "popoverMaxHeight", "dialogMinWidth", "dialogMinHeight", "dialogMaxWidth", "dialogMaxHeight", "dialogExpand", "dialogExpandX", "dialogExpandY", "dockedOnSmallTouchScreen", "marginWithContainer", "backdropVariant", "backdropColor", "backdropFilter", "pointerInteractionOutsideEffect", "escapeEffect", "closeOnFocusOut", "scrollCapture", "focusCapture", "popupBackgroundColor", "popupBorderRadius", "animation"]);
+const POPUP_PROP_SET = new Set(["mode", "popupLayer", "popupTestId", "positionArea", "popoverMode", "popoverSpacing", "popupWidthFitContent", "popoverMaxHeight", "dialogMinWidth", "dialogMinHeight", "dialogMaxWidth", "dialogMaxHeight", "dialogExpand", "dialogExpandX", "dialogExpandY", "dockedOnSmallTouchScreen", "marginWithContainer", "backdrop", "backdropVariant", "backdropColor", "backdropFilter", "pointerInteractionOutsideEffect", "escapeEffect", "closeOnFocusOut", "scrollCapture", "focusCapture", "popupBackgroundColor", "popupBorderRadius", "animation"]);
 const splitPopupProps = props => {
   const popupProps = {};
   const boxProps = {};

@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/pwa",
-  "version": "6.2.3",
+  "version": "6.2.4",
   "type": "module",
   "description": "Service worker and other progressive web application helpers",
   "repository": {
