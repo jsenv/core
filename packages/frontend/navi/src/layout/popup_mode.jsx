@@ -34,8 +34,11 @@ export const usePopupMode = () => useContext(PopupModeContext);
  *
  * @param {"dialog"|"popover"} [modeProp] - Forces one mode; `undefined` to
  *   resolve automatically.
- * @param {string} [maxWidth] - A small enough value is treated as "compact",
- *   staying a popover even in a narrow container.
+ * @param {string} [maxWidth] - A fixed length under 150px is treated as
+ *   "compact", staying a popover even in a narrow container. Read in px, em or
+ *   rem; a width given as a share (%, viewport units, calc()) says nothing
+ *   about how small the popup is and leaves the container's own width to
+ *   decide.
  * @param {object} [options]
  * @param {"top"|"local"} [options.layer] - Where the popup will live. The
  *   decision measures the room the popup will actually get: the visual
@@ -86,9 +89,38 @@ const resolvePopupMode = (modeProp, maxWidth, { layer, element }) => {
     return modeProp;
   }
   const isNarrow = getAvailableWidth(layer, element) <= 600;
-  const maxWidthPx = parseFloat(maxWidth);
-  const isCompact = isFinite(maxWidthPx) && maxWidthPx < 150;
+  const maxWidthPx = resolveFixedLength(maxWidth);
+  const isCompact = maxWidthPx !== null && maxWidthPx < 150;
   return isNarrow && !isCompact ? "dialog" : "popover";
+};
+
+// A length must be resolved before it can be compared to one: "22em" is not 22
+// pixels. px and em/rem are the values describing a fixed box, so they are the
+// ones read here — em against the root font size like rem, this being decided
+// before there is any element to resolve it against. Anything else (%,
+// viewport units, calc()) is a share of something rather than a statement that
+// the popup is small, and reads as no maxWidth at all: the same dialog a
+// narrow screen gets when nothing caps the width.
+const FIXED_LENGTH_REGEX = /^([0-9.]+)(px|em|rem)?$/;
+const resolveFixedLength = (value) => {
+  if (typeof value === "number") {
+    return value;
+  }
+  if (typeof value !== "string") {
+    return null;
+  }
+  const match = FIXED_LENGTH_REGEX.exec(value.trim());
+  if (!match) {
+    return null;
+  }
+  const [, amount, unit] = match;
+  if (unit === "em" || unit === "rem") {
+    const rootFontSize = parseFloat(
+      getComputedStyle(document.documentElement).fontSize,
+    );
+    return parseFloat(amount) * rootFontSize;
+  }
+  return parseFloat(amount);
 };
 
 // The room the popup will really get: what it is positioned and sized

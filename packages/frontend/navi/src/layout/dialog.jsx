@@ -687,8 +687,10 @@ const css = /* css */ `
  *   positioning (see this file's top comment), and ignored entirely unless
  *   `sizeFromAnchor` or `animation="growing"` asks for it — the first sizes
  *   the dialog via the `--anchor-width`/`--anchor-height` CSS vars, the second
- *   makes the dialog come out of the anchor's own box. Defaults to whatever
- *   triggered the open (`e.detail.anchor`), if any. A string is resolved via
+ *   makes the dialog come out of the anchor's own box. Used when the open
+ *   itself names none — an anchor carried by the opening event
+ *   (`e.detail.anchor`) is about that one opening and comes first; left out,
+ *   whatever triggered the open (`e.detail.source`). A string is resolved via
  *   `document.getElementById` when the dialog opens — see popover.jsx's own
  *   `anchor` doc for why (mainly `defaultOpen`).
  * @param {boolean} [props.sizeFromAnchor=false] - Whether the dialog takes the
@@ -698,10 +700,10 @@ const css = /* css */ `
  *   box is a deliberate choice (a picker-style surface meant to read as the
  *   trigger's own continuation), not the norm.
  * @param {"override"|"ignore"} [props.anchorCustomEventDetail="override"] -
- *   Whether an explicit `anchor` prop takes precedence over (`"override"`,
- *   default) or is ignored in favor of (`"ignore"`) whatever anchor the
- *   triggering event carried. Same prop as Popover's, applied to the only
- *   thing an anchor can do here: sizing, and only under `sizeFromAnchor`.
+ *   Whether the opening event is read at all: `"override"` (default) applies
+ *   the order above, `"ignore"` leaves the `anchor` prop alone with it. Same
+ *   prop as Popover's, applied to the only things an anchor can do here:
+ *   sizing under `sizeFromAnchor`, and `animation="growing"`.
  * @param {string} [props.minWidth] - Maps to `--dialog-min-width`; clamped
  *   so it can never push the dialog past `--dialog-maxmax-width` (the
  *   viewport/container-spacing ceiling) regardless of how large a value is
@@ -853,7 +855,11 @@ const UncontrolledDialog = (props) => {
       openController={openController}
       onnavi_request_open={(e) => {
         openController.open(e, {
-          anchor: e.detail?.anchor ?? e.detail?.source,
+          // Kept apart on purpose: an anchor is a place someone named, a
+          // source is only who asked — see resolveAnchorElement, where they
+          // sit on either side of the `anchor` prop.
+          anchor: e.detail?.anchor,
+          source: e.detail?.source,
           // What the command was about — a `<Button value={id}>` that opened
           // this popup ON that id. Handed to `onOpen` before anything is
           // built (see open_controller.js).
@@ -1181,6 +1187,12 @@ const useDialogProps = (props) => {
   // popover.jsx's own anchor handling for the full reasoning, mirrored here
   // identically.
   const resolveAnchorElement = (e) => {
+    const readsOpenDetail = anchorCustomEventDetail === "override";
+    if (readsOpenDetail && e.detail.anchor) {
+      // An anchor named by the open is about THIS opening, so it wins over the
+      // `anchor` prop, which says which element to answer to when nobody says.
+      return e.detail.anchor;
+    }
     if (typeof anchor === "string") {
       const anchorElementById = document.getElementById(anchor);
       if (!anchorElementById) {
@@ -1189,17 +1201,14 @@ const useDialogProps = (props) => {
       return anchorElementById;
     }
     if (anchor) {
-      // anchor prop is a ref or a DOM element — always a real anchor,
-      // regardless of anchorCustomEventDetail. A ref is unwrapped even when it
-      // holds nothing: falling back to the ref object itself would pass the
+      // anchor prop is a ref or a DOM element — a ref is unwrapped even when
+      // it holds nothing: falling back to the ref object itself would pass the
       // "is there an anchor?" tests downstream with something that has no box.
       return "current" in anchor ? anchor.current : anchor;
     }
-    if (anchorCustomEventDetail === "override") {
-      // e.g. the button that triggered a --navi-toggle/--navi-open command,
-      // already resolved from detail.anchor/detail.source by the caller
-      // (see UncontrolledDialog's onnavi_request_open).
-      return e.detail.anchor;
+    if (readsOpenDetail) {
+      // e.g. the button that triggered a --navi-toggle/--navi-open command.
+      return e.detail.source;
     }
     return undefined;
   };

@@ -1730,7 +1730,14 @@ const PickerFirstResolver = (props) => {
  *   placed anywhere else. No right slot comes with it: a cross belongs inside
  *   that drawing, at the place and the size the drawing decides, so it is
  *   `<Picker.Clear />` the `ui` holds rather than `clearable` the picker
- *   takes. `"picker"` (or an explicit
+ *   takes. `"headless"` draws nothing either, and is not the `ui`'s box but
+ *   its parent's: it stretches to whatever positioned element holds it, for a
+ *   picker put inside the thing that opens it (a button, a row) so that the
+ *   popup hangs off that whole element. A picker opened from something it does
+ *   not sit in — an object on a map saying
+ *   `triggerNaviCommand(pickerEl, "--navi-open", event, { anchor, value })` —
+ *   therefore wants an element of its own to stretch into rather than the
+ *   nearest positioned ancestor it happens to find. `"picker"` (or an explicit
  *   `variant={undefined}`) asks a confirm or callout picker for the field-like
  *   drawing every other picker has.
  * @param {boolean} [icon] The trigger is one icon — the `ui`, or the chevron

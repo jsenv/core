@@ -171,22 +171,29 @@ timing.
 
 ## The anchor
 
-A popup with no `anchor` prop uses the command's source as its anchor
-(`detail.anchor ?? detail.source`). Passing the popup itself as the source
-therefore makes it its own anchor. For `Dialog` the anchor does nothing at all
-unless `sizeFromAnchor` is passed (then, and only then, it feeds the
-`--anchor-width`/`--anchor-height` CSS vars); for `Popover`, which really is
-positioned relative to its anchor, say what the anchor is:
+A popup opens on the place the open names, on the `anchor` prop when the open
+names none, and on whoever asked when nothing else says. In that order:
+
+1. **`detail.anchor`** — what `triggerNaviCommand`'s own `anchor` option puts
+   there. It is a statement about that one opening: a menu belongs at the point
+   the press happened, and the press is the only thing that knows that point.
+2. **the `anchor` prop** — where this popup opens when nobody says.
+3. **`detail.source`** — who asked. A button therefore opens the popup on
+   itself, and a popup passed as its own source is its own anchor.
+
+For `Dialog` the anchor does nothing at all unless `sizeFromAnchor` is passed
+(then, and only then, it feeds the `--anchor-width`/`--anchor-height` CSS vars);
+for `Popover`, which really is positioned relative to its anchor, say what the
+anchor is:
 
 ```jsx
 <Popover ref={popoverRef} anchor={rowRef}>
 ```
 
-The `anchor` prop always wins over whatever the command carried.
-`anchorCustomEventDetail="ignore"` goes further and drops the event's anchor
-entirely — for a popover that must never be anchored to whatever opened it
-(`SidePanel` does this), and for a `sizeFromAnchor` dialog that must never be
-sized from it.
+`anchorCustomEventDetail="ignore"` drops the open's side of that order
+entirely, leaving the `anchor` prop alone — for a popover that must never be
+anchored to whatever opened it (`SidePanel` does this), and for a
+`sizeFromAnchor` dialog that must never be sized from it.
 
 ## Opening it ON something
 
@@ -342,6 +349,52 @@ one the picker's type carries (a pencil for `type="text"`, a calendar for
 nothing else. `rightSlotIcon`/`rightSlot` belong to the shapes that DO draw a
 value and want something beside it; under `variant="icon"` the first is only the
 default for `ui`, and the second has nowhere to go — the clear cross included.
+
+### A trigger that draws nothing, pressed from elsewhere
+
+Some things cannot be a picker's façade. An object placed on a map — absolutely
+positioned, dragged by its own `move`, drawn by pieces that sit outside its own
+box — owns its press: catching it under an invisible field is exactly what must
+not happen. The press stays the object's, and it opens the picker itself:
+
+```jsx
+<Box
+  id={court.id}
+  interactions={{
+    move: (event) => placeCourt(court, event.detail),
+    click: (event) =>
+      triggerNaviCommand(pickerRef.current, "--navi-open", event, {
+        anchor: event.currentTarget,
+        value: court.settings,
+      }),
+  }}
+/>
+
+// out of the map's flow: what draws nothing still takes a box (below)
+<div style={{ position: "relative" }}>
+  <Picker
+    ref={pickerRef}
+    variant="headless"
+    value={court.settings}
+    uiAction={(settings) => showCourt(court, settings)}
+    action={(settings) => saveCourt(court, settings)}
+  >
+    <CourtSettings />
+  </Picker>
+</div>
+```
+
+Everything a picker promises still holds — the value at open, "changed since
+open", the revert on Escape, the action on a close that keeps — and the popup
+lands on the object because the open named it (see [the
+anchor](#the-anchor)).
+
+One thing to know about `variant="headless"`: it is not the `ui`'s box but its
+parent's. It stretches to the nearest positioned element around it, so that a
+picker put INSIDE what opens it — a button, a row — hangs its popup off that
+whole element. A picker opened from something it does not sit in must therefore
+be given an element of its own to stretch into; dropped straight into the map
+frame it would cover it, and every press on the empty plan would open it.
 
 ### When a shared popup is still the right answer
 

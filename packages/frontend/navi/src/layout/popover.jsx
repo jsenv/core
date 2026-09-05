@@ -488,17 +488,20 @@ const css = /* css */ `
  * @param {string} [props.animationDuration] - Maps to
  *   `--popup-animation-duration`.
  * @param {Element|{current: Element}|string} [props.anchor] - The element the
- *   popover is positioned relative to. Defaults to whatever triggered the
- *   open (`e.detail.anchor`/`e.detail.source`), if any — with no anchor at
- *   all, the popover docks to its container instead (viewport for
- *   `layer="top"`, positioned ancestor for `layer="local"`). A string is
- *   resolved via `document.getElementById` when the popover opens — mainly
- *   useful for `defaultOpen` (there's no triggering event/ref to read a
- *   real element from yet at that point, only an id known up front).
+ *   popover is positioned relative to when the open itself names none — an
+ *   anchor carried by the opening event (`e.detail.anchor`, what
+ *   `triggerNaviCommand`'s own `anchor` option puts there) is about that one
+ *   opening and comes first. Left out, the element that asked is used
+ *   (`e.detail.source`), and with no anchor at all the popover docks to its
+ *   container instead (viewport for `layer="top"`, positioned ancestor for
+ *   `layer="local"`). A string is resolved via `document.getElementById` when
+ *   the popover opens — mainly useful for `defaultOpen` (there's no triggering
+ *   event/ref to read a real element from yet at that point, only an id known
+ *   up front).
  * @param {"override"|"ignore"} [props.anchorCustomEventDetail="override"] -
- *   Whether an explicit `anchor` prop takes precedence over
- *   (`"override"`, default) or is ignored in favor of
- *   (`"ignore"`) whatever anchor the triggering event itself carried.
+ *   Whether the opening event is read at all: `"override"` (default) applies
+ *   the order above, `"ignore"` leaves the `anchor` prop alone with it — a
+ *   popover that must always open in the same place, whoever opened it.
  * @param {string} [props.minWidth] - Maps to `--popover-min-width`; clamped
  *   so it can never push the popover past `--popover-maxmax-width` (the
  *   viewport/container-spacing ceiling) regardless of how large a value is
@@ -657,7 +660,12 @@ const UncontrolledPopover = (props) => {
       openController={openController}
       onnavi_request_open={(e) => {
         openController.open(e, {
-          anchor: e.detail?.anchor ?? e.detail?.source,
+          // Kept apart on purpose: an anchor is a place someone named, a
+          // source is only who asked — see the anchor resolution in
+          // usePopoverProps, where they sit on either side of the `anchor`
+          // prop.
+          anchor: e.detail?.anchor,
+          source: e.detail?.source,
           // What the command was about — a `<Button value={id}>` that opened
           // this popup ON that id. Handed to `onOpen` before anything is
           // built (see open_controller.js).
@@ -945,18 +953,20 @@ const usePopoverProps = (props) => {
 
     const [cleanup, addCleanup] = createPubSub(true);
 
-    // Anchor resolution is the first genuine fork: a real anchorProp works
-    // for either renderer (the custom renderer is still `position:
-    // absolute` relative to its own positioned ancestor either way — see
-    // pickPositionRelativeTo's own `container` option below for how the
-    // ancestor-relative coordinate conversion still applies) — only the
-    // triggering event's own carried anchor is via-attribute-only, since
-    // the custom renderer's own positioned ancestor is already an explicit,
-    // deliberate choice, not something to infer from whatever happened to
-    // trigger the open. Inlined rather than a standalone function since it
-    // only has this one call site.
+    // An anchor works for either renderer: the custom renderer is still
+    // `position: absolute` relative to its own positioned ancestor either way
+    // — see pickPositionRelativeTo's own `container` option below for how the
+    // ancestor-relative coordinate conversion still applies. Inlined rather
+    // than a standalone function since it only has this one call site.
+    const readsOpenDetail = anchorCustomEventDetail === "override";
     let anchorElement;
-    if (typeof anchor === "string") {
+    if (readsOpenDetail && e.detail.anchor) {
+      // An anchor named by the open is about THIS opening — a menu belongs at
+      // the point the press happened, and the press knows that point while the
+      // popover only knows what it was declared with. So it wins over the
+      // `anchor` prop, which says where to open when nobody says.
+      anchorElement = e.detail.anchor;
+    } else if (typeof anchor === "string") {
       // Resolved at open time (not render time) via getElementById — mainly
       // for defaultOpen, where there's no triggering event/ref yet to read a
       // real element from, only an id known up front (e.g. a popover nested
@@ -966,13 +976,14 @@ const usePopoverProps = (props) => {
         console.warn(`Popover: anchor="${anchor}" did not match any element`);
       }
     } else if (anchor) {
-      // anchor prop is a ref or a DOM element — always a real anchor,
-      // regardless of anchorCustomEventDetail. A ref is unwrapped even when it
-      // holds nothing: falling back to the ref object itself would pass the
+      // anchor prop is a ref or a DOM element — a ref is unwrapped even when
+      // it holds nothing: falling back to the ref object itself would pass the
       // "is there an anchor?" test below with something that has no box.
       anchorElement = "current" in anchor ? anchor.current : anchor;
-    } else if (anchorCustomEventDetail === "override") {
-      anchorElement = e.detail.anchor;
+    } else if (readsOpenDetail) {
+      // Nobody named a place and none was declared: the element that asked is
+      // the element opened against.
+      anchorElement = e.detail.source;
     }
     const hasAnchorElement = Boolean(anchorElement);
     // getPositionedParent already resolves to document.documentElement for

@@ -663,7 +663,16 @@ const PickerCustom = (props) => {
           // READONLY_CONSTRAINT.
           intent: "read",
           allowed: () => {
-            requestOpen(e);
+            // What the open said travels with it: a picker opened from
+            // somewhere else than its own trigger — an object on a map saying
+            // `triggerNaviCommand(pickerEl, "--navi-open", event, { anchor,
+            // value })` — is opened ON that anchor and told what it is about,
+            // exactly as a Popover/Dialog opened by the same command would be.
+            requestOpen(e, {
+              anchor: e.detail?.anchor,
+              source: e.detail?.source,
+              value: e.detail?.value,
+            });
           },
         });
       },

@@ -56419,8 +56419,11 @@ const usePopupMode = () => useContext(PopupModeContext);
  *
  * @param {"dialog"|"popover"} [modeProp] - Forces one mode; `undefined` to
  *   resolve automatically.
- * @param {string} [maxWidth] - A small enough value is treated as "compact",
- *   staying a popover even in a narrow container.
+ * @param {string} [maxWidth] - A fixed length under 150px is treated as
+ *   "compact", staying a popover even in a narrow container. Read in px, em or
+ *   rem; a width given as a share (%, viewport units, calc()) says nothing
+ *   about how small the popup is and leaves the container's own width to
+ *   decide.
  * @param {object} [options]
  * @param {"top"|"local"} [options.layer] - Where the popup will live. The
  *   decision measures the room the popup will actually get: the visual
@@ -56474,9 +56477,36 @@ const resolvePopupMode = (modeProp, maxWidth, {
     return modeProp;
   }
   const isNarrow = getAvailableWidth(layer, element) <= 600;
-  const maxWidthPx = parseFloat(maxWidth);
-  const isCompact = isFinite(maxWidthPx) && maxWidthPx < 150;
+  const maxWidthPx = resolveFixedLength(maxWidth);
+  const isCompact = maxWidthPx !== null && maxWidthPx < 150;
   return isNarrow && !isCompact ? "dialog" : "popover";
+};
+
+// A length must be resolved before it can be compared to one: "22em" is not 22
+// pixels. px and em/rem are the values describing a fixed box, so they are the
+// ones read here — em against the root font size like rem, this being decided
+// before there is any element to resolve it against. Anything else (%,
+// viewport units, calc()) is a share of something rather than a statement that
+// the popup is small, and reads as no maxWidth at all: the same dialog a
+// narrow screen gets when nothing caps the width.
+const FIXED_LENGTH_REGEX = /^([0-9.]+)(px|em|rem)?$/;
+const resolveFixedLength = value => {
+  if (typeof value === "number") {
+    return value;
+  }
+  if (typeof value !== "string") {
+    return null;
+  }
+  const match = FIXED_LENGTH_REGEX.exec(value.trim());
+  if (!match) {
+    return null;
+  }
+  const [, amount, unit] = match;
+  if (unit === "em" || unit === "rem") {
+    const rootFontSize = parseFloat(getComputedStyle(document.documentElement).fontSize);
+    return parseFloat(amount) * rootFontSize;
+  }
+  return parseFloat(amount);
 };
 
 // The room the popup will really get: what it is positioned and sized
@@ -57742,8 +57772,10 @@ const css$E = /* css */`
  *   positioning (see this file's top comment), and ignored entirely unless
  *   `sizeFromAnchor` or `animation="growing"` asks for it — the first sizes
  *   the dialog via the `--anchor-width`/`--anchor-height` CSS vars, the second
- *   makes the dialog come out of the anchor's own box. Defaults to whatever
- *   triggered the open (`e.detail.anchor`), if any. A string is resolved via
+ *   makes the dialog come out of the anchor's own box. Used when the open
+ *   itself names none — an anchor carried by the opening event
+ *   (`e.detail.anchor`) is about that one opening and comes first; left out,
+ *   whatever triggered the open (`e.detail.source`). A string is resolved via
  *   `document.getElementById` when the dialog opens — see popover.jsx's own
  *   `anchor` doc for why (mainly `defaultOpen`).
  * @param {boolean} [props.sizeFromAnchor=false] - Whether the dialog takes the
@@ -57753,10 +57785,10 @@ const css$E = /* css */`
  *   box is a deliberate choice (a picker-style surface meant to read as the
  *   trigger's own continuation), not the norm.
  * @param {"override"|"ignore"} [props.anchorCustomEventDetail="override"] -
- *   Whether an explicit `anchor` prop takes precedence over (`"override"`,
- *   default) or is ignored in favor of (`"ignore"`) whatever anchor the
- *   triggering event carried. Same prop as Popover's, applied to the only
- *   thing an anchor can do here: sizing, and only under `sizeFromAnchor`.
+ *   Whether the opening event is read at all: `"override"` (default) applies
+ *   the order above, `"ignore"` leaves the `anchor` prop alone with it. Same
+ *   prop as Popover's, applied to the only things an anchor can do here:
+ *   sizing under `sizeFromAnchor`, and `animation="growing"`.
  * @param {string} [props.minWidth] - Maps to `--dialog-min-width`; clamped
  *   so it can never push the dialog past `--dialog-maxmax-width` (the
  *   viewport/container-spacing ceiling) regardless of how large a value is
@@ -57908,7 +57940,11 @@ const UncontrolledDialog = props => {
     openController: openController,
     onnavi_request_open: e => {
       openController.open(e, {
-        anchor: e.detail?.anchor ?? e.detail?.source,
+        // Kept apart on purpose: an anchor is a place someone named, a
+        // source is only who asked — see resolveAnchorElement, where they
+        // sit on either side of the `anchor` prop.
+        anchor: e.detail?.anchor,
+        source: e.detail?.source,
         // What the command was about — a `<Button value={id}>` that opened
         // this popup ON that id. Handed to `onOpen` before anything is
         // built (see open_controller.js).
@@ -58233,6 +58269,12 @@ const useDialogProps = props => {
   // popover.jsx's own anchor handling for the full reasoning, mirrored here
   // identically.
   const resolveAnchorElement = e => {
+    const readsOpenDetail = anchorCustomEventDetail === "override";
+    if (readsOpenDetail && e.detail.anchor) {
+      // An anchor named by the open is about THIS opening, so it wins over the
+      // `anchor` prop, which says which element to answer to when nobody says.
+      return e.detail.anchor;
+    }
     if (typeof anchor === "string") {
       const anchorElementById = document.getElementById(anchor);
       if (!anchorElementById) {
@@ -58241,17 +58283,14 @@ const useDialogProps = props => {
       return anchorElementById;
     }
     if (anchor) {
-      // anchor prop is a ref or a DOM element — always a real anchor,
-      // regardless of anchorCustomEventDetail. A ref is unwrapped even when it
-      // holds nothing: falling back to the ref object itself would pass the
+      // anchor prop is a ref or a DOM element — a ref is unwrapped even when
+      // it holds nothing: falling back to the ref object itself would pass the
       // "is there an anchor?" tests downstream with something that has no box.
       return "current" in anchor ? anchor.current : anchor;
     }
-    if (anchorCustomEventDetail === "override") {
-      // e.g. the button that triggered a --navi-toggle/--navi-open command,
-      // already resolved from detail.anchor/detail.source by the caller
-      // (see UncontrolledDialog's onnavi_request_open).
-      return e.detail.anchor;
+    if (readsOpenDetail) {
+      // e.g. the button that triggered a --navi-toggle/--navi-open command.
+      return e.detail.source;
     }
     return undefined;
   };
@@ -59331,17 +59370,20 @@ const css$D = /* css */`
  * @param {string} [props.animationDuration] - Maps to
  *   `--popup-animation-duration`.
  * @param {Element|{current: Element}|string} [props.anchor] - The element the
- *   popover is positioned relative to. Defaults to whatever triggered the
- *   open (`e.detail.anchor`/`e.detail.source`), if any — with no anchor at
- *   all, the popover docks to its container instead (viewport for
- *   `layer="top"`, positioned ancestor for `layer="local"`). A string is
- *   resolved via `document.getElementById` when the popover opens — mainly
- *   useful for `defaultOpen` (there's no triggering event/ref to read a
- *   real element from yet at that point, only an id known up front).
+ *   popover is positioned relative to when the open itself names none — an
+ *   anchor carried by the opening event (`e.detail.anchor`, what
+ *   `triggerNaviCommand`'s own `anchor` option puts there) is about that one
+ *   opening and comes first. Left out, the element that asked is used
+ *   (`e.detail.source`), and with no anchor at all the popover docks to its
+ *   container instead (viewport for `layer="top"`, positioned ancestor for
+ *   `layer="local"`). A string is resolved via `document.getElementById` when
+ *   the popover opens — mainly useful for `defaultOpen` (there's no triggering
+ *   event/ref to read a real element from yet at that point, only an id known
+ *   up front).
  * @param {"override"|"ignore"} [props.anchorCustomEventDetail="override"] -
- *   Whether an explicit `anchor` prop takes precedence over
- *   (`"override"`, default) or is ignored in favor of
- *   (`"ignore"`) whatever anchor the triggering event itself carried.
+ *   Whether the opening event is read at all: `"override"` (default) applies
+ *   the order above, `"ignore"` leaves the `anchor` prop alone with it — a
+ *   popover that must always open in the same place, whoever opened it.
  * @param {string} [props.minWidth] - Maps to `--popover-min-width`; clamped
  *   so it can never push the popover past `--popover-maxmax-width` (the
  *   viewport/container-spacing ceiling) regardless of how large a value is
@@ -59500,7 +59542,12 @@ const UncontrolledPopover = props => {
     openController: openController,
     onnavi_request_open: e => {
       openController.open(e, {
-        anchor: e.detail?.anchor ?? e.detail?.source,
+        // Kept apart on purpose: an anchor is a place someone named, a
+        // source is only who asked — see the anchor resolution in
+        // usePopoverProps, where they sit on either side of the `anchor`
+        // prop.
+        anchor: e.detail?.anchor,
+        source: e.detail?.source,
         // What the command was about — a `<Button value={id}>` that opened
         // this popup ON that id. Handed to `onOpen` before anything is
         // built (see open_controller.js).
@@ -59778,18 +59825,20 @@ const usePopoverProps = props => {
     const silent = Boolean(e.detail.silent);
     const [cleanup, addCleanup] = createPubSub(true);
 
-    // Anchor resolution is the first genuine fork: a real anchorProp works
-    // for either renderer (the custom renderer is still `position:
-    // absolute` relative to its own positioned ancestor either way — see
-    // pickPositionRelativeTo's own `container` option below for how the
-    // ancestor-relative coordinate conversion still applies) — only the
-    // triggering event's own carried anchor is via-attribute-only, since
-    // the custom renderer's own positioned ancestor is already an explicit,
-    // deliberate choice, not something to infer from whatever happened to
-    // trigger the open. Inlined rather than a standalone function since it
-    // only has this one call site.
+    // An anchor works for either renderer: the custom renderer is still
+    // `position: absolute` relative to its own positioned ancestor either way
+    // — see pickPositionRelativeTo's own `container` option below for how the
+    // ancestor-relative coordinate conversion still applies. Inlined rather
+    // than a standalone function since it only has this one call site.
+    const readsOpenDetail = anchorCustomEventDetail === "override";
     let anchorElement;
-    if (typeof anchor === "string") {
+    if (readsOpenDetail && e.detail.anchor) {
+      // An anchor named by the open is about THIS opening — a menu belongs at
+      // the point the press happened, and the press knows that point while the
+      // popover only knows what it was declared with. So it wins over the
+      // `anchor` prop, which says where to open when nobody says.
+      anchorElement = e.detail.anchor;
+    } else if (typeof anchor === "string") {
       // Resolved at open time (not render time) via getElementById — mainly
       // for defaultOpen, where there's no triggering event/ref yet to read a
       // real element from, only an id known up front (e.g. a popover nested
@@ -59799,13 +59848,14 @@ const usePopoverProps = props => {
         console.warn(`Popover: anchor="${anchor}" did not match any element`);
       }
     } else if (anchor) {
-      // anchor prop is a ref or a DOM element — always a real anchor,
-      // regardless of anchorCustomEventDetail. A ref is unwrapped even when it
-      // holds nothing: falling back to the ref object itself would pass the
+      // anchor prop is a ref or a DOM element — a ref is unwrapped even when
+      // it holds nothing: falling back to the ref object itself would pass the
       // "is there an anchor?" test below with something that has no box.
       anchorElement = "current" in anchor ? anchor.current : anchor;
-    } else if (anchorCustomEventDetail === "override") {
-      anchorElement = e.detail.anchor;
+    } else if (readsOpenDetail) {
+      // Nobody named a place and none was declared: the element that asked is
+      // the element opened against.
+      anchorElement = e.detail.source;
     }
     const hasAnchorElement = Boolean(anchorElement);
     // getPositionedParent already resolves to document.documentElement for
@@ -60575,6 +60625,16 @@ const css$C = /* css */`@layer navi {
  *   attribute when `mode="dialog"` is picked.
  * @param {boolean} [props.focusCapture] - **Popover-only**, same guard.
  * @param {string} [props.positionAreaFixed] - **Popover-only**, same guard.
+ * @param {string} [props.positionAreaWhenAnchorIsInvalid] - **Popover-only**,
+ *   same guard.
+ * @param {boolean} [props.dockedOnSmallTouchScreen] - **Dialog-only** (a
+ *   popover is never a bottom sheet), destructured out for the same reason
+ *   turned around: it must not land on the popover element as a stray DOM
+ *   attribute when the screen-size resolution picks `mode="popover"`. Where
+ *   that resolution lands is what decides whether it applies at all, so a
+ *   popup meant to dock on a phone must not declare itself compact — see
+ *   `maxWidth` below.
+ * @param {boolean} [props.sizeFromAnchor] - **Dialog-only**, same guard.
  * @param {string} [props.positionArea] - Forwarded as-is — `Dialog` and
  *   `Popover` have different own defaults (`"center"` vs. `"bottom"`),
  *   deliberately not homogenized here (each reads best for its own typical
@@ -60607,9 +60667,9 @@ const css$C = /* css */`@layer navi {
  *   - Forwarded as-is.
  * @param {string} [props.animationDuration] - Forwarded as-is.
  * @param {string} [props.maxWidth] - Forwarded as-is to both; also read
- *   here directly to help decide the automatic `mode` (a small enough
- *   `maxWidth` is treated as "compact", staying a popover even on a small
- *   screen).
+ *   here directly to help decide the automatic `mode` (a fixed length under
+ *   150px is treated as "compact", staying a popover even on a small screen —
+ *   see `resolvePopupMode` for which lengths that reading accepts).
  * @param {string} [props.minWidth] - Forwarded as-is.
  * @param {string} [props.minHeight] - Forwarded as-is.
  * @param {string} [props.maxHeight] - Forwarded as-is.
@@ -60671,6 +60731,11 @@ const Popup = props => {
     focusCapture,
     scrollCapture,
     positionAreaFixed,
+    positionAreaWhenAnchorIsInvalid,
+    // Dialog-only, destructured out for the same reason: forwarded below only
+    // in the dialog branch, so they never reach the popover element.
+    dockedOnSmallTouchScreen,
+    sizeFromAnchor,
     ...rest
   } = props;
   const [mode] = useResolvedPopupMode(modeProp, maxWidth, {
@@ -60687,6 +60752,8 @@ const Popup = props => {
   if (mode === "dialog") {
     return jsx(Dialog, {
       ...rest,
+      dockedOnSmallTouchScreen: dockedOnSmallTouchScreen,
+      sizeFromAnchor: sizeFromAnchor,
       maxWidth: maxWidth,
       pointerInteractionOutsideEffect: pointerInteractionOutsideEffect,
       className: withPropsClassName("navi_popup", className),
@@ -60703,6 +60770,7 @@ const Popup = props => {
     pointerInteractionOutsideEffect: pointerInteractionOutsideEffect,
     marginWithAnchor: marginWithAnchor,
     focusCapture: focusCapture,
+    positionAreaWhenAnchorIsInvalid: positionAreaWhenAnchorIsInvalid,
     scrollCapture: scrollCapture === "popover" || scrollCapture,
     positionAreaFixed: positionAreaFixed,
     className: withPropsClassName("navi_popup", className),
@@ -61230,7 +61298,16 @@ const PickerCustom = props => {
           // READONLY_CONSTRAINT.
           intent: "read",
           allowed: () => {
-            requestOpen(e);
+            // What the open said travels with it: a picker opened from
+            // somewhere else than its own trigger — an object on a map saying
+            // `triggerNaviCommand(pickerEl, "--navi-open", event, { anchor,
+            // value })` — is opened ON that anchor and told what it is about,
+            // exactly as a Popover/Dialog opened by the same command would be.
+            requestOpen(e, {
+              anchor: e.detail?.anchor,
+              source: e.detail?.source,
+              value: e.detail?.value
+            });
           }
         });
       },
@@ -70617,7 +70694,14 @@ const PickerFirstResolver = props => {
  *   placed anywhere else. No right slot comes with it: a cross belongs inside
  *   that drawing, at the place and the size the drawing decides, so it is
  *   `<Picker.Clear />` the `ui` holds rather than `clearable` the picker
- *   takes. `"picker"` (or an explicit
+ *   takes. `"headless"` draws nothing either, and is not the `ui`'s box but
+ *   its parent's: it stretches to whatever positioned element holds it, for a
+ *   picker put inside the thing that opens it (a button, a row) so that the
+ *   popup hangs off that whole element. A picker opened from something it does
+ *   not sit in — an object on a map saying
+ *   `triggerNaviCommand(pickerEl, "--navi-open", event, { anchor, value })` —
+ *   therefore wants an element of its own to stretch into rather than the
+ *   nearest positioned ancestor it happens to find. `"picker"` (or an explicit
  *   `variant={undefined}`) asks a confirm or callout picker for the field-like
  *   drawing every other picker has.
  * @param {boolean} [icon] The trigger is one icon — the `ui`, or the chevron

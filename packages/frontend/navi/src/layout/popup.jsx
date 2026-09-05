@@ -86,6 +86,16 @@ const css = /* css */ `
  *   attribute when `mode="dialog"` is picked.
  * @param {boolean} [props.focusCapture] - **Popover-only**, same guard.
  * @param {string} [props.positionAreaFixed] - **Popover-only**, same guard.
+ * @param {string} [props.positionAreaWhenAnchorIsInvalid] - **Popover-only**,
+ *   same guard.
+ * @param {boolean} [props.dockedOnSmallTouchScreen] - **Dialog-only** (a
+ *   popover is never a bottom sheet), destructured out for the same reason
+ *   turned around: it must not land on the popover element as a stray DOM
+ *   attribute when the screen-size resolution picks `mode="popover"`. Where
+ *   that resolution lands is what decides whether it applies at all, so a
+ *   popup meant to dock on a phone must not declare itself compact — see
+ *   `maxWidth` below.
+ * @param {boolean} [props.sizeFromAnchor] - **Dialog-only**, same guard.
  * @param {string} [props.positionArea] - Forwarded as-is — `Dialog` and
  *   `Popover` have different own defaults (`"center"` vs. `"bottom"`),
  *   deliberately not homogenized here (each reads best for its own typical
@@ -118,9 +128,9 @@ const css = /* css */ `
  *   - Forwarded as-is.
  * @param {string} [props.animationDuration] - Forwarded as-is.
  * @param {string} [props.maxWidth] - Forwarded as-is to both; also read
- *   here directly to help decide the automatic `mode` (a small enough
- *   `maxWidth` is treated as "compact", staying a popover even on a small
- *   screen).
+ *   here directly to help decide the automatic `mode` (a fixed length under
+ *   150px is treated as "compact", staying a popover even on a small screen —
+ *   see `resolvePopupMode` for which lengths that reading accepts).
  * @param {string} [props.minWidth] - Forwarded as-is.
  * @param {string} [props.minHeight] - Forwarded as-is.
  * @param {string} [props.maxHeight] - Forwarded as-is.
@@ -182,6 +192,11 @@ export const Popup = (props) => {
     focusCapture,
     scrollCapture,
     positionAreaFixed,
+    positionAreaWhenAnchorIsInvalid,
+    // Dialog-only, destructured out for the same reason: forwarded below only
+    // in the dialog branch, so they never reach the popover element.
+    dockedOnSmallTouchScreen,
+    sizeFromAnchor,
     ...rest
   } = props;
 
@@ -202,6 +217,8 @@ export const Popup = (props) => {
     return (
       <Dialog
         {...rest}
+        dockedOnSmallTouchScreen={dockedOnSmallTouchScreen}
+        sizeFromAnchor={sizeFromAnchor}
         maxWidth={maxWidth}
         pointerInteractionOutsideEffect={pointerInteractionOutsideEffect}
         className={withPropsClassName("navi_popup", className)}
@@ -221,6 +238,7 @@ export const Popup = (props) => {
       pointerInteractionOutsideEffect={pointerInteractionOutsideEffect}
       marginWithAnchor={marginWithAnchor}
       focusCapture={focusCapture}
+      positionAreaWhenAnchorIsInvalid={positionAreaWhenAnchorIsInvalid}
       scrollCapture={scrollCapture === "popover" || scrollCapture}
       positionAreaFixed={positionAreaFixed}
       className={withPropsClassName("navi_popup", className)}
