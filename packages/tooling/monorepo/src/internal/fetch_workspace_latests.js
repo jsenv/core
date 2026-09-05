@@ -6,7 +6,7 @@ export const fetchWorkspaceLatests = async (workspacePackages) => {
   let done = 0;
   const total = packageNames.length;
   const latestVersions = {};
-  const fetchTask = createTaskLog(`fetch latest versions`);
+  const fetchTask = createTaskLog(`fetch latest versions of workspace packages`);
   try {
     await Promise.all(
       packageNames.map(async (packageName) => {

@@ -5,27 +5,25 @@ import {
   VERSION_STATUS,
   waitForStagedVersionToLand,
 } from "@jsenv/package-publish/src/internal/staged_version.js";
-import { collectWorkspacePackages } from "./internal/collect_workspace_packages.js";
 import {
   compareTwoPackageVersions,
   VERSION_COMPARE_RESULTS,
 } from "./internal/compare_two_package_versions.js";
-import { fetchWorkspaceLatests } from "./internal/fetch_workspace_latests.js";
 import { syncPackagesVersions } from "./sync_packages_versions.js";
 
 const REGISTRY_URL = "https://registry.npmjs.org";
 
 export const publishPackages = async ({ directoryUrl, packagesRelations }) => {
-  const versionsInSync = await ensureVersionsAreInSync({
+  // the sync check already read the package.json files and the registry;
+  // it hands both back so that publishing does not do it a second time
+  const syncResult = await ensureVersionsAreInSync({
     directoryUrl,
     packagesRelations,
   });
-  if (!versionsInSync) {
+  if (!syncResult) {
     return;
   }
-
-  const workspacePackages = await collectWorkspacePackages({ directoryUrl });
-  const registryLatestVersions = await fetchWorkspaceLatests(workspacePackages);
+  const { workspacePackages, registryLatestVersions } = syncResult;
   const toPublishPackageNames = Object.keys(workspacePackages).filter(
     (packageName) => {
       const workspacePackage = workspacePackages[packageName];
@@ -125,13 +123,18 @@ export const publishPackages = async ({ directoryUrl, packagesRelations }) => {
  * When versions are not in sync we ask permission to sync them before publishing.
  */
 const ensureVersionsAreInSync = async ({ directoryUrl, packagesRelations }) => {
-  const { outdatedPackageNames, versionUpdates, dependencyUpdates } =
-    await syncPackagesVersions({
-      logs: false,
-      dryRun: true,
-      directoryUrl,
-      packagesRelations,
-    });
+  const {
+    outdatedPackageNames,
+    versionUpdates,
+    dependencyUpdates,
+    workspacePackages,
+    registryLatestVersions,
+  } = await syncPackagesVersions({
+    logs: false,
+    dryRun: true,
+    directoryUrl,
+    packagesRelations,
+  });
   if (outdatedPackageNames.length) {
     console.warn(
       `${UNICODE.FAILURE} ${outdatedPackageNames.length} packages have a version older than the one published on registry
@@ -139,11 +142,11 @@ const ensureVersionsAreInSync = async ({ directoryUrl, packagesRelations }) => {
   - `)}
 Run "npm run monorepo:sync_versions" and review the changes before publishing`,
     );
-    return false;
+    return null;
   }
   const outOfSyncCount = versionUpdates.length + dependencyUpdates.length;
   if (outOfSyncCount === 0) {
-    return true;
+    return { workspacePackages, registryLatestVersions };
   }
   console.warn(`${UNICODE.WARNING} versions are not in sync, ${outOfSyncCount} things must be updated in package.json files
   - ${[
@@ -159,10 +162,20 @@ Run "npm run monorepo:sync_versions" and review the changes before publishing`,
   const confirmed = await confirm(`Sync versions and publish?`);
   if (!confirmed) {
     console.log(`${UNICODE.INFO} publish aborted, versions are not in sync`);
-    return false;
+    return null;
   }
-  await syncPackagesVersions({ directoryUrl, packagesRelations });
-  return true;
+  // the dry run has mutated its own copy of the package objects; sync again on
+  // freshly read files (but with what the registry already told us) so that the
+  // updates are actually written and the package objects match the files
+  const syncResult = await syncPackagesVersions({
+    directoryUrl,
+    packagesRelations,
+    registryLatestVersions,
+  });
+  return {
+    workspacePackages: syncResult.workspacePackages,
+    registryLatestVersions,
+  };
 };
 
 const confirm = async (question) => {

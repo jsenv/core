@@ -93,7 +93,7 @@ export const upgradeExternalVersions = async ({
   fetch_latest_versions: {
     let done = 0;
     const total = externalPackageNames.length;
-    const fetchTask = createTaskLog(`fetch latest versions`);
+    const fetchTask = createTaskLog(`fetch latest versions of external packages`);
     try {
       await Promise.all(
         externalPackageNames.map(async (externalPackageName) => {

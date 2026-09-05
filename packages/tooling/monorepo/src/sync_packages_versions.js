@@ -17,9 +17,12 @@ export const syncPackagesVersions = async ({
   dryRun = false,
   directoryUrl,
   packagesRelations = {},
+  // when the caller already knows what is on the registry it can pass it here
+  // so that a single command does not fetch the same data twice
+  registryLatestVersions,
 }) => {
   const workspacePackages = await collectWorkspacePackages({ directoryUrl });
-  const registryLatestVersions = await fetchWorkspaceLatests(workspacePackages);
+  registryLatestVersions ??= await fetchWorkspaceLatests(workspacePackages);
 
   const outdatedPackageNames = [];
   const toPublishPackageNames = [];
@@ -68,6 +71,8 @@ Use a tool like "git diff" to see the new versions and ensure this is what you w
       );
     }
     return {
+      workspacePackages,
+      registryLatestVersions,
       outdatedPackageNames,
       versionUpdates,
       dependencyUpdates,
@@ -240,6 +245,8 @@ Use a tool like "git diff" to see the new versions and ensure this is what you w
   }
 
   return {
+    workspacePackages,
+    registryLatestVersions,
     outdatedPackageNames,
     versionUpdates,
     dependencyUpdates,
