@@ -168,6 +168,11 @@ const css = /* css */ `
       --x-corner-bottom-left-radius: initial;
 
       position: relative;
+      /* Written inline rather than here (see ButtonContent): the frame follows
+         the button's display, and the caller is the only one who can say
+         otherwise — contentDisplay="contents" takes the frame out of the
+         layout. The declaration is kept as the value that would apply anyway,
+         so the rule reads as what the element is. */
       display: inherit;
       box-sizing: border-box;
       aspect-ratio: inherit;
@@ -201,8 +206,16 @@ const css = /* css */ `
           var(--button-padding, var(--button-padding-x-default))
         )
       );
+      /* The frame is not a layout of its own: it takes the button's whole
+         flow, not just its display — a flex or grid display alone says nothing
+         about the direction things run in. Without these, a button laid out in
+         a column by the app's own class would keep its children in a row: the
+         column would apply to the frame, which holds exactly one child. */
+      flex-direction: inherit;
+      flex-wrap: inherit;
       align-items: inherit;
       justify-content: inherit;
+      gap: inherit;
       color: inherit;
       vertical-align: inherit;
       background: var(--x-button-background);
@@ -275,6 +288,16 @@ const css = /* css */ `
 
       .navi_button_content {
         outline-style: solid;
+      }
+    }
+    /* The frame is out of the layout (contentDisplay="contents") and draws
+       nothing any more, the focus ring included — so the button wears it
+       itself. Same box either way: the button has no padding and no border of
+       its own, so the frame's border box was already the button's. */
+    &[data-content-display="contents"] {
+      & [data-focus-visible] {
+        outline: var(--button-outline-width) solid var(--button-outline-color);
+        outline-offset: var(--button-outline-offset);
       }
     }
     /* Disabled */
@@ -481,6 +504,7 @@ export const ButtonUI = (props) => {
     icon,
     cta,
     spacing,
+    contentDisplay,
     // Whether the button draws the loading outline itself. A button that is
     // one half of a bigger control says no: what is busy is the control, and
     // the outline belongs around the whole of it (see split_button.jsx).
@@ -552,6 +576,7 @@ export const ButtonUI = (props) => {
       // without having to call preventDefault() on button clicks
       type="button"
       spacing={undefined}
+      contentDisplay={undefined}
       cta={undefined}
       pressEffect={undefined}
       loadingOutline={undefined}
@@ -586,6 +611,7 @@ export const ButtonUI = (props) => {
         e.preventDefault();
       }}
       data-variant={variant}
+      data-content-display={contentDisplay}
       data-press-effect={pressEffect}
       data-icon={icon ? "" : undefined}
       data-cta={cta ? "" : undefined}
@@ -604,17 +630,23 @@ export const ButtonUI = (props) => {
         color="var(--button-loader-color)"
       />
       <ControlChildrenWrapper {...controlChildrenWrapperProps}>
-        <ButtonContent spacing={spacing}>{children}</ButtonContent>
+        <ButtonContent spacing={spacing} contentDisplay={contentDisplay}>
+          {children}
+        </ButtonContent>
       </ControlChildrenWrapper>
     </Box>
   );
 };
-const ButtonContent = ({ spacing, children }) => {
+// The frame the button draws around its children. Its display is written
+// inline because it is the one thing about this element that must not be
+// guessed from a stylesheet: it follows the button's own, and the caller is the
+// only one who can say otherwise (contentDisplay, "contents" above all).
+const ButtonContent = ({ spacing, contentDisplay = "inherit", children }) => {
   const boxForwardedProps = useContext(BoxForwardedPropsContext);
   return (
     <Text
       {...boxForwardedProps}
-      display="inherit"
+      display={contentDisplay}
       spacing={spacing}
       className="navi_button_content"
     >

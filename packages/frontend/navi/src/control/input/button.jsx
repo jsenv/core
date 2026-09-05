@@ -154,6 +154,19 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  *   by whether it WRITES to the control it sits in: it goes (`"hide"`, the
  *   default), `"refuse"` keeps it and refuses with a callout, `"ignore"` lets
  *   it through untouched — for an affordance that never wrote to that control.
+ * @param {string} [contentDisplay] The display of the frame the button draws
+ *   around its children. It follows the button's own by default — its display
+ *   and, a display alone saying nothing about direction, the rest of its flow
+ *   with it — so what the button is laid out as is what its children are laid
+ *   out in. `"contents"` takes that frame out of the layout entirely, for a
+ *   button whose drawing is the caller's from edge to edge — the same badge
+ *   drawn as a Box somewhere else and as a Button here: the children then ARE
+ *   the button's children, laid out by whatever lays the button out, and an
+ *   absolutely positioned one among them resolves against the button rather
+ *   than against the frame. There is no box left to paint then, so the frame's
+ *   padding, border and background go with it; the button keeps the focus ring
+ *   (it wears it itself) and loses the shrink under the finger, which has
+ *   nothing left to scale but the interactive area itself.
  */
 export const Button = createComponentResolver([
   ButtonFirstResolver,

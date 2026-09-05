@@ -46848,8 +46848,11 @@ a.navi_button {
     padding-right: var(--button-padding-right, var(--button-padding-x, var(--button-padding, var(--button-padding-x-default))));
     padding-bottom: var(--button-padding-bottom, var(--button-padding-y, var(--button-padding, var(--button-padding-y-default))));
     padding-left: var(--button-padding-left, var(--button-padding-x, var(--button-padding, var(--button-padding-x-default))));
+    flex-direction: inherit;
+    flex-wrap: inherit;
     align-items: inherit;
     justify-content: inherit;
+    gap: inherit;
     color: inherit;
     vertical-align: inherit;
     background: var(--x-button-background);
@@ -46916,6 +46919,13 @@ a.navi_button {
 
     & .navi_button_content {
       outline-style: solid;
+    }
+  }
+
+  &[data-content-display="contents"] {
+    & [data-focus-visible] {
+      outline: var(--button-outline-width) solid var(--button-outline-color);
+      outline-offset: var(--button-outline-offset);
     }
   }
 
@@ -47064,6 +47074,7 @@ const ButtonUI = props => {
     icon,
     cta,
     spacing,
+    contentDisplay,
     // Whether the button draws the loading outline itself. A button that is
     // one half of a bigger control says no: what is busy is the control, and
     // the outline belongs around the whole of it (see split_button.jsx).
@@ -47131,6 +47142,7 @@ const ButtonUI = props => {
     ,
     type: "button",
     spacing: undefined,
+    contentDisplay: undefined,
     cta: undefined,
     pressEffect: undefined,
     loadingOutline: undefined,
@@ -47165,6 +47177,7 @@ const ButtonUI = props => {
       e.preventDefault();
     },
     "data-variant": variant,
+    "data-content-display": contentDisplay,
     "data-press-effect": pressEffect,
     "data-icon": icon ? "" : undefined,
     "data-cta": cta ? "" : undefined,
@@ -47185,19 +47198,25 @@ const ButtonUI = props => {
       ...controlChildrenWrapperProps,
       children: jsx(ButtonContent, {
         spacing: spacing,
+        contentDisplay: contentDisplay,
         children: children
       })
     })]
   });
 };
+// The frame the button draws around its children. Its display is written
+// inline because it is the one thing about this element that must not be
+// guessed from a stylesheet: it follows the button's own, and the caller is the
+// only one who can say otherwise (contentDisplay, "contents" above all).
 const ButtonContent = ({
   spacing,
+  contentDisplay = "inherit",
   children
 }) => {
   const boxForwardedProps = useContext(BoxForwardedPropsContext);
   return jsxs(Text, {
     ...boxForwardedProps,
-    display: "inherit",
+    display: contentDisplay,
     spacing: spacing,
     className: "navi_button_content",
     children: [children, jsx(ButtonShadow, {})]
@@ -47389,6 +47408,19 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  *   by whether it WRITES to the control it sits in: it goes (`"hide"`, the
  *   default), `"refuse"` keeps it and refuses with a callout, `"ignore"` lets
  *   it through untouched — for an affordance that never wrote to that control.
+ * @param {string} [contentDisplay] The display of the frame the button draws
+ *   around its children. It follows the button's own by default — its display
+ *   and, a display alone saying nothing about direction, the rest of its flow
+ *   with it — so what the button is laid out as is what its children are laid
+ *   out in. `"contents"` takes that frame out of the layout entirely, for a
+ *   button whose drawing is the caller's from edge to edge — the same badge
+ *   drawn as a Box somewhere else and as a Button here: the children then ARE
+ *   the button's children, laid out by whatever lays the button out, and an
+ *   absolutely positioned one among them resolves against the button rather
+ *   than against the frame. There is no box left to paint then, so the frame's
+ *   padding, border and background go with it; the button keeps the focus ring
+ *   (it wears it itself) and loses the shrink under the finger, which has
+ *   nothing left to scale but the interactive area itself.
  */
 const Button = createComponentResolver([ButtonFirstResolver, ButtonRouteResolver, ButtonCommandPropResolver, ButtonUI]);
 
