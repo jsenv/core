@@ -106,7 +106,10 @@ const css = /* css */ `
        still is answered by nobody but the browser, whose long press selects the
        word under the thumb (see the top of this file). Everywhere else the
        selection is only refused for the length of the gesture, from the gesture
-       itself (see the selectstart refused in drag_gesture.js).
+       itself (see the selectstart refused in drag_gesture.js) — which a mouse is
+       in time for and a finger is not: the browser answers the held finger AFTER
+       the wait, so a source whose label must not be picked out says
+       user-select: none in its own stylesheet (see interactions.md).
        Prefixed too: Safari only took the property unprefixed at 17, and an older
        iPhone is exactly what this long press comes from. */
     user-select: none;

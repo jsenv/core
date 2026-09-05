@@ -322,6 +322,14 @@
       .token[data-grabbed] {
         box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
       }
+      /* The word inside is not text to read, it is the label of a thing one
+         carries — see the "user-select: none" section. Prefixed too: Safari only
+         took the property unprefixed at 17, and an older iPhone is exactly the
+         phone this matters on. */
+      .token_unselectable {
+        user-select: none;
+        -webkit-user-select: none;
+      }
 
       /* A surface drawn from three numbers the hand writes: where it has been
          panned to and how far it is zoomed. The grid is the surface's own
@@ -1505,6 +1513,50 @@
                     label="free"
                     style={{ left: "16px", top: "16px" }}
                     interactions={{ move: logMove("free of the board") }}
+                  />
+                </Box>
+              </Box>
+            </Box>
+
+            <Heading level={4} id="move-selection">
+              user-select: none
+            </Heading>
+            <p class="legend">
+              A finger held on a word is the browser's own gesture too: it picks
+              the word out, keeps the touch for its selection handles, and the
+              grab never happens. Whether it may is settled when the finger
+              LANDS, so nothing the gesture does at the end of the wait takes it
+              back — it is a stylesheet, written before the press, exactly like
+              the callout iOS raises. The second token says so; the first is
+              left to the browser. A mouse sees no difference between the two:
+              there the selection is already refused for the length of the
+              press.
+            </p>
+            <Box flex="x" spacing="l" alignY="start">
+              <Box flex="y" spacing="xs">
+                <Text size="s" color="#666">
+                  left to the browser
+                </Text>
+                <Box className="board board_small">
+                  <Token
+                    id="token_selectable"
+                    label="text"
+                    style={{ left: "16px", top: "16px" }}
+                    interactions={{ move: logMove("selectable") }}
+                  />
+                </Box>
+              </Box>
+              <Box flex="y" spacing="xs">
+                <Text size="s" color="#666">
+                  user-select: none
+                </Text>
+                <Box className="board board_small">
+                  <Token
+                    id="token_unselectable"
+                    className="token token_unselectable"
+                    label="text"
+                    style={{ left: "16px", top: "16px" }}
+                    interactions={{ move: logMove("unselectable") }}
                   />
                 </Box>
               </Box>

@@ -65,6 +65,20 @@ export const waitForPressHeld = (
 ) => {
   const { pointerId, clientX, clientY } = pressEvent;
 
+  /* The one capture that says nothing about the press. A pointer that cannot
+     hover is given a capture the moment it lands, by the browser and to the
+     element it landed on, without anybody asking — and it is announced like any
+     other, just before the first pointer event that follows. EVERY touch press
+     has it, so it cannot be read as this one having been settled: read that way,
+     the wait dies at the first pixel of a finger that was only resting on the
+     glass, which is what a finger does. That is the hold that fails one time in
+     two, on the pointer this whole module exists for.
+     Asked rather than assumed, and asked HERE: the press is the one moment where
+     a capture can only be the browser's, since nothing has taken one yet. */
+  const implicitCaptureHolder = pressEvent.target.hasPointerCapture?.(pointerId)
+    ? pressEvent.target
+    : null;
+
   const pressCleanupCallbacks = [];
   // Who is still holding the refusal. The finger holds it because the finger is
   // what the system's menu answers; the caller holds it from the moment the press
@@ -186,6 +200,12 @@ export const waitForPressHeld = (
   // captures the pointer from inside onPressHeld) never reaches it.
   const onGotPointerCapture = (captureEvent) => {
     if (captureEvent.pointerId !== pointerId) {
+      return;
+    }
+    if (captureEvent.target === implicitCaptureHolder) {
+      // The capture the press was born with, not one somebody took (see above).
+      // A gesture taking that same element instead changes nothing for the
+      // browser, so it announces nothing, and there is nothing to miss here.
       return;
     }
     cancelPress(captureEvent);

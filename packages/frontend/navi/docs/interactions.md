@@ -951,13 +951,42 @@ Almost nothing, on purpose. A **handle** (`data-drag-handle`) exists only to dra
 so it shows the hand; a **source** does not — it drags only once the intent shows,
 a plain click on it stays a click, and it is usually something else FIRST (a link,
 a card one opens). The cursor says what an element IS, and the gesture is not the
-one who knows, so it leaves it alone (`default`, not an I-beam: the text inside
-cannot be selected either).
+one who knows, so it leaves it alone (`default`, not an I-beam: with a mouse the
+text inside cannot be selected either — a finger is another matter, see below).
 
 So on a board where a piece is also clickable, the cursor is already spoken for and
 the affordance has to be said in the piece itself — a grip mark in a corner, a
 shadow appearing under the pointer, a handle. It is worth deciding, not defaulting:
 a board one may drag on is worth nothing if nobody tries.
+
+### The text inside: `user-select: none`
+
+A press on a source belongs to the drag, and the selection that press would have
+made is refused for as long as it lasts — so with a mouse, dragging across the
+label of a card never paints it blue.
+
+A finger is another matter. It is asked to hold still, and the browser answers
+that same held finger a moment later with a gesture of its own: it picks out the
+word under the thumb and keeps the touch for the handles it puts around it. The
+grab is then lost, and nothing done at the end of the wait takes it back —
+whether a finger MAY select is settled when it lands. Like the iOS callout, it is
+a stylesheet, and it has to be true before the press:
+
+```css
+.token {
+  user-select: none;
+  -webkit-user-select: none; /* Safari only took it unprefixed at 17 */
+}
+```
+
+**Most of the time that is what you want.** What can be picked up carries a
+label rather than a text to read — a token, a row, a card one moves — and the
+press is there for the drag: nobody selects the word inside a thing they are
+carrying. Keep the selection where the text IS the point (a note one copies from)
+and give that one a `data-drag-handle`: the grip drags, the text stays text.
+
+navi says it on its own in one place only, inside `[data-drag-on-contact]`, where
+there is no wait left to answer the finger with.
 
 ## Tuning
 
