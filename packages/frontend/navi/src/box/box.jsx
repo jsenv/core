@@ -418,7 +418,7 @@ const PSEUDO_STATE_CHILD_PROP_SET = new Set(["tabIndex", "tabindex"]);
  *   preventInitialTransition?: boolean,
  *   separator?: import("preact").ComponentChildren | ((index: number) => import("preact").ComponentChildren),
  *   selfInteractions?: string,
- *   interactions?: { [type: string]: "request_action" | "request_ui_action" | ((event: Event) => void) | false | null | undefined },
+ *   interactions?: { [type: string]: "request_action" | "request_ui_action" | "refuse" | ((event: Event) => void) | false | null | undefined },
  *   children?: import("preact").ComponentChildren,
  *   [key: string]: any,
  * }>}

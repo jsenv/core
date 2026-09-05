@@ -190,13 +190,45 @@
  * Told, not asked, like `grab`, and no more an interaction of its own: a moment of
  * a drag needs a drag to happen in.
  *
+ * WHEN THE HAND PULLS AND NOTHING FOLLOWS: `refuse`.
+ *
+ *   interactions={{
+ *     move: locked ? "refuse" : remember,
+ *     refuse: () => shake(),
+ *   }}
+ *
+ * Something that can be carried is not always free to be: a court whose place is
+ * settled, a marker pinned by whoever owns the plan. Taking the interaction away
+ * — `move: false` — makes the element deaf rather than locked: the press is then
+ * nobody's, so whatever it stands on answers it (a surface pans under an object
+ * that was aimed at), and the hand pulling is told nothing at all. A thing that
+ * does not move and says nothing reads as a screen that is broken, and the hand
+ * insists.
+ *
+ * So the interaction stays declared and says "refuse" in place of what it does.
+ * The press remains the element's, the threshold is the same one — a mouse
+ * travelling, a finger holding still, the first pixel inside a
+ * `data-drag-on-contact` — and at the instant the grab would have been acquired
+ * there is none: nothing translates, no copy is made, no release is answered.
+ * `refuse` is that instant. The click the press leaves behind is swallowed as a
+ * real drag's is: it was answered, by the refusal.
+ *
+ * One outcome refusing refuses the whole gesture — the five answer one carry, and
+ * something that must not be carried has none of them.
+ *
+ * Told, not asked, like `grab` and `release`, and no more an interaction of its
+ * own. Its detail is `{ pointerType }`: there is no `gestureInfo` because there
+ * was no gesture, and what the feedback wants to know is which hand asked — a
+ * vibration for a finger, nothing more for a mouse whose cursor has already said
+ * it.
+ *
  * What the copy LOOKS like is the application's too. A copy of a transparent
  * element is invisible — a row usually gets its background from the list around it,
  * which the copy has left — so it is dressed through the attributes the gesture
  * writes: `navi-drag-clone` on the copy, `navi-drag-clone-source` on the original.
  */
 
-import { markDragSource, startDragTo } from "@jsenv/dom";
+import { markDragSource, refuseDragTo, startDragTo } from "@jsenv/dom";
 
 import { defineInteractionDetector } from "./interaction_registry.js";
 
@@ -213,6 +245,9 @@ const LEAVE = "leave";
 const GRAB = "grab";
 // And the moment that hold ends, whatever it ended up meaning.
 const RELEASE = "release";
+// The moment that hold is not acquired, on something that would be carried and
+// says no.
+const REFUSE = "refuse";
 
 // What makes an element a place something can land, written by the detector itself.
 const REORDERABLE_ATTRIBUTE = "data-reorderable";
@@ -240,11 +275,20 @@ defineInteractionDetector({
     type === TOSS ||
     type === LEAVE ||
     type === GRAB ||
-    type === RELEASE,
+    type === RELEASE ||
+    type === REFUSE,
+  // The five outcomes can be turned down; the moments cannot — a moment is told,
+  // and there is nothing in it to refuse.
+  refusable: (type) =>
+    type === MOVE ||
+    type === REORDER ||
+    type === LAND ||
+    type === TOSS ||
+    type === LEAVE,
   // The press is the beginning of the gesture, not an answer: nothing may read
   // it until it is known whether the hand is dragging or just pressing.
   disputesPress: true,
-  setup: (element, trigger, { types, readConfig }) => {
+  setup: (element, trigger, { types, readConfig, isRefused }) => {
     const canMove = types.includes(MOVE);
     const canReorder = types.includes(REORDER);
     const canLand = types.includes(LAND);
@@ -255,7 +299,7 @@ defineInteractionDetector({
       // be told about either.
       if (import.meta.dev) {
         const moments = types.filter(
-          (type) => type === GRAB || type === RELEASE,
+          (type) => type === GRAB || type === RELEASE || type === REFUSE,
         );
         const them = moments.length === 1 ? "it" : "them";
         console.warn(
@@ -266,6 +310,7 @@ defineInteractionDetector({
     }
     const tellsWhenGrabbed = types.includes(GRAB);
     const tellsWhenReleased = types.includes(RELEASE);
+    const tellsWhenRefused = types.includes(REFUSE);
     // `startDragTo` arbitrates the same conflicts and says so too, and that voice
     // is not heard from here: @jsenv/dom publishes one build with `import.meta.dev`
     // false, so nothing of its dev code exists for whoever consumes navi. What a
@@ -322,10 +367,12 @@ defineInteractionDetector({
     // becomes a grab, and the listener that lets the grab take it back.
     const unmarkDragSource = markDragSource(element, axes);
 
-    // What a release can mean, which is not all of what was declared: "grab" and
-    // "release" are moments, not outcomes, and the gesture must not read them as
-    // ones.
-    const effects = types.filter((type) => type !== GRAB && type !== RELEASE);
+    // What a release can mean, which is not all of what was declared: "grab",
+    // "release" and "refuse" are moments, not outcomes, and the gesture must not
+    // read them as ones.
+    const effects = types.filter(
+      (type) => type !== GRAB && type !== RELEASE && type !== REFUSE,
+    );
 
     // Whether there is anywhere to land, asked at the first press rather than
     // here: the places are drawn by whatever renders them, which at setup may
@@ -333,6 +380,31 @@ defineInteractionDetector({
     let placesLookedFor = false;
 
     const onPointerDown = (pointerDownEvent) => {
+      // Asked at every press and never once: what an interaction does is the
+      // caller's latest render, and a thing is locked and unlocked while its
+      // listeners stay where they are. One outcome saying no is enough — the
+      // element is carried or it is not, and each of the five is an answer to
+      // that same carry.
+      if (effects.some(isRefused)) {
+        refuseDragTo(pointerDownEvent, {
+          draggedElement: element,
+          threshold: readConfig(THRESHOLD_ATTRIBUTE, undefined),
+          longPressDelay: readConfig(DELAY_ATTRIBUTE, undefined),
+          longPressSlop: readConfig(SLOP_ATTRIBUTE, undefined),
+          // The press is still the element's — it stays a drag source, so the
+          // surface under it does not pan — and the refusal comes where the grab
+          // would have: nothing to be told before that, since up to there the
+          // gesture is one that could still have been anything.
+          onRefuse: tellsWhenRefused
+            ? () => {
+                trigger(REFUSE, pointerDownEvent, {
+                  pointerType: pointerDownEvent.pointerType,
+                });
+              }
+            : undefined,
+        });
+        return;
+      }
       if (import.meta.dev && canLand && !placesLookedFor) {
         placesLookedFor = true;
         warnWhenNothingToLandOn(element, dropContainer, canLeave);

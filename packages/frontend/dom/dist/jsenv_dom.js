@@ -12695,6 +12695,76 @@ const startDragTo = (
 };
 
 /**
+ * A press that WOULD be a drag, and is not.
+ *
+ * Recognized exactly as `startDragTo` recognizes it: the press stays this
+ * element's, so a surface under it does not pan and nothing else answers it, and
+ * the intent is established by the same threshold — a mouse travelling, a finger
+ * holding still, the first pixel inside a `[data-drag-on-contact]`. What differs
+ * is what happens once it is established: nothing is grabbed, nothing translates,
+ * and `onRefuse` is told at the instant the grab would have been acquired.
+ *
+ * That instant is the whole point. An object that stays put under the hand and
+ * says nothing reads as a screen that is broken, and the hand pulls harder; the
+ * refusal has to be told where the grab would have been felt, which is the only
+ * moment the press has of its own.
+ *
+ * @param {PointerEvent} event The `pointerdown` that would have become a drag.
+ * @param {object} [options]
+ * @param {Element} [options.draggedElement=event.currentTarget]
+ * @param {(detail: {event: PointerEvent}) => void} [options.onRefuse]
+ *   The hand pulled and there is no drag. Told, not asked: what comes back is
+ *   not waited on. There is no `gestureInfo` to go with it — no gesture was ever
+ *   started — so `event` is the press it was refused from.
+ *
+ * Everything else is forwarded to `dragAfterIntent` (`threshold`, `longPress`,
+ * `longPressDelay`, `longPressSlop`).
+ */
+const refuseDragTo = (
+  event,
+  { draggedElement = event.currentTarget, onRefuse, ...options } = {},
+) => {
+  if (isPressIgnored(event.target, draggedElement)) {
+    return;
+  }
+  if (!isPrimaryButtonEvent(event)) {
+    return;
+  }
+  event.preventDefault();
+  dragAfterIntent(
+    event,
+    () => {
+      // Nothing is carried, and the pointer is taken all the same: taking it is
+      // how a gesture says the press is settled, and another wait counting on the
+      // same finger reads it (see press_held.js). A `longpress` declared beside
+      // the drag is answered by the grab when there is one; there must be no
+      // difference when there is none.
+      draggedElement.setPointerCapture(event.pointerId);
+      // And the click the browser fires afterwards belongs to what answered the
+      // press, a refusal included: something pulled and told to stay put must not
+      // also be clicked. Lifted at the release rather than with the click, which
+      // comes after it (see suppressClickAfterGesture).
+      const clickSuppressionIsOver = suppressClickAfterGesture();
+      const endRefusal = () => {
+        window.removeEventListener("pointerup", endRefusal, true);
+        window.removeEventListener("pointercancel", endRefusal, true);
+        if (draggedElement.hasPointerCapture(event.pointerId)) {
+          draggedElement.releasePointerCapture(event.pointerId);
+        }
+        clickSuppressionIsOver();
+      };
+      window.addEventListener("pointerup", endRefusal, true);
+      window.addEventListener("pointercancel", endRefusal, true);
+      onRefuse?.({ event });
+      // Nothing to hold: a falsy gesture is how dragAfterIntent is told there is
+      // none.
+      return null;
+    },
+    options,
+  );
+};
+
+/**
  * The element ITSELF is carried, and keeps the place the hand gave it — or is let
  * go of away from it, when it can `leave`.
  *
@@ -21070,4 +21140,4 @@ const useResizeStatus = (elementRef, { as = "number" } = {}) => {
   };
 };
 
-export { EASING, ELEMENT_SIZE_CHANGE, activeElementSignal, addActiveElementEffect, addAttributeEffect, allowWheelThrough, appendStyles, applyNewPosition, canScroll, captureScrollState, chainEvent, claimWheelGesture, clickIsSuppressed, closestOpenableAncestor, contrastColor, createBackgroundColorTransition, createBackgroundTransition, createBorderRadiusTransition, createBorderTransition, createDragGestureController, createDragToMoveGestureController, createEventGroupLogger, createGroupTransitionController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createValueEffect, createWidthTransition, cubicBezier, dispatchCustomEvent, dispatchInternalCustomEvent, dispatchPublicCustomEvent, dragAfterIntent, elementIsFocusable, elementIsVisibleForFocus, elementIsVisuallyVisible, findAfter, findAncestor, findBefore, findDescendant, findEvent, findFocusDelegateTarget, findFocusable, findSelfOrAncestorFixedPosition, formatEventSideEffect, getAncestorOpenType, getAvailableHeight, getAvailableWidth, getBackground, getBackgroundColor, getBorder, getBorderRadius, getBorderSizes, getContrastRatio, getDefaultStyles, getDragCoordinates, getDropTargetInfo, getElementSignature, getFirstVisuallyVisibleAncestor, getFocusVisibilityInfo, getHeight, getHeightWithoutTransition, getInnerHeight, getInnerWidth, getKeyboardEventDefaultAction, getLuminance, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getOpacity, getOpacityWithoutTransition, getPaddingSizes, getPositionedParent, getPositioningScrollOffset, getPreferedColorScheme, getScrollBox, getScrollContainer, getScrollContainerSet, getScrollIntoViewScopedOffsets, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getTranslateX, getTranslateXWithoutTransition, getTranslateY, getVirtualKeyboardOverlayHeight, getVisuallyVisibleInfo, getWidth, getWidthWithoutTransition, hasCSSSizeUnit, initFlexDetailsSet, initFocusGroup, initPositionSticky, installPanZoom, isAncestorOpen, isDisplayedDespiteClosedAncestor, isPressDisputedByDrag, isPrimaryButtonEvent, isSameColor, isScrollable, isTouchDrivenEvent, keepTouchRefusable, markDragSource, measureLongestVisualLineWidth, measureScrollbar, measureWidestChildRow, mergeOneStyle, mergeTwoStyles, normalizeKeyboardKey, normalizeStyle, normalizeStyles, observeAncestorOpenState, onAncestorReopen, parsePositionArea, parseStyle, performTabNavigation, pickPositionRelativeTo, prefersDarkColors, prefersLightColors, preventFocusNav, preventFocusNavViaKeyboard, preventIntermediateScrollbar, releaseWheelGesture, resolveCSSColor, resolveCSSSize, resolveColorLuminance, resolveOklchLightness, scrollIntoViewScoped, scrollIntoViewThroughScrollables, scrollIntoViewWithStickyAwareness, scrollRoomTowards, setAttribute, setAttributes, setPlacementViewportInsets, setStyles, setVirtualKeyboardOverlaysContent, snapToPixel, startDragTo, startDragToResizeGesture, startDragToTravel, stickyAsRelativeCoords, stringifyStyle, subscribeVirtualKeyboardGeometryChange, subscribeVisualViewportResizeSettled, subscribeWindowResizeSettled, suppressClickAfterGesture, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect, waitForPressHeld, watchWheelTravel, wheelGestureIsTakenFrom };
+export { EASING, ELEMENT_SIZE_CHANGE, activeElementSignal, addActiveElementEffect, addAttributeEffect, allowWheelThrough, appendStyles, applyNewPosition, canScroll, captureScrollState, chainEvent, claimWheelGesture, clickIsSuppressed, closestOpenableAncestor, contrastColor, createBackgroundColorTransition, createBackgroundTransition, createBorderRadiusTransition, createBorderTransition, createDragGestureController, createDragToMoveGestureController, createEventGroupLogger, createGroupTransitionController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createValueEffect, createWidthTransition, cubicBezier, dispatchCustomEvent, dispatchInternalCustomEvent, dispatchPublicCustomEvent, dragAfterIntent, elementIsFocusable, elementIsVisibleForFocus, elementIsVisuallyVisible, findAfter, findAncestor, findBefore, findDescendant, findEvent, findFocusDelegateTarget, findFocusable, findSelfOrAncestorFixedPosition, formatEventSideEffect, getAncestorOpenType, getAvailableHeight, getAvailableWidth, getBackground, getBackgroundColor, getBorder, getBorderRadius, getBorderSizes, getContrastRatio, getDefaultStyles, getDragCoordinates, getDropTargetInfo, getElementSignature, getFirstVisuallyVisibleAncestor, getFocusVisibilityInfo, getHeight, getHeightWithoutTransition, getInnerHeight, getInnerWidth, getKeyboardEventDefaultAction, getLuminance, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getOpacity, getOpacityWithoutTransition, getPaddingSizes, getPositionedParent, getPositioningScrollOffset, getPreferedColorScheme, getScrollBox, getScrollContainer, getScrollContainerSet, getScrollIntoViewScopedOffsets, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getTranslateX, getTranslateXWithoutTransition, getTranslateY, getVirtualKeyboardOverlayHeight, getVisuallyVisibleInfo, getWidth, getWidthWithoutTransition, hasCSSSizeUnit, initFlexDetailsSet, initFocusGroup, initPositionSticky, installPanZoom, isAncestorOpen, isDisplayedDespiteClosedAncestor, isPressDisputedByDrag, isPrimaryButtonEvent, isSameColor, isScrollable, isTouchDrivenEvent, keepTouchRefusable, markDragSource, measureLongestVisualLineWidth, measureScrollbar, measureWidestChildRow, mergeOneStyle, mergeTwoStyles, normalizeKeyboardKey, normalizeStyle, normalizeStyles, observeAncestorOpenState, onAncestorReopen, parsePositionArea, parseStyle, performTabNavigation, pickPositionRelativeTo, prefersDarkColors, prefersLightColors, preventFocusNav, preventFocusNavViaKeyboard, preventIntermediateScrollbar, refuseDragTo, releaseWheelGesture, resolveCSSColor, resolveCSSSize, resolveColorLuminance, resolveOklchLightness, scrollIntoViewScoped, scrollIntoViewThroughScrollables, scrollIntoViewWithStickyAwareness, scrollRoomTowards, setAttribute, setAttributes, setPlacementViewportInsets, setStyles, setVirtualKeyboardOverlaysContent, snapToPixel, startDragTo, startDragToResizeGesture, startDragToTravel, stickyAsRelativeCoords, stringifyStyle, subscribeVirtualKeyboardGeometryChange, subscribeVisualViewportResizeSettled, subscribeWindowResizeSettled, suppressClickAfterGesture, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect, waitForPressHeld, watchWheelTravel, wheelGestureIsTakenFrom };

@@ -36,6 +36,12 @@
  * and `land` cannot both be true of one release; the caller is the one who must
  * not ask for both.
  *
+ * A press that would be one of the five and is NOT has its own entry:
+ * `refuseDragTo` reads the same intent, keeps the press where it landed, and
+ * tells the caller at the instant the grab would have been acquired instead of
+ * starting anything — a locked object that must not follow the hand, and must
+ * say so.
+ *
  * `createDragToMoveGestureController` below is the layer under all of that — the
  * translation, the auto-scroll, the constraints — and stays usable on its own for
  * anything that is none of the five (a table column being dragged, a sticky
@@ -44,6 +50,7 @@
 
 import { getScrollBox, getScrollport } from "../../position/dom_coords.js";
 import { createStyleController } from "../../style/style_controller.js";
+import { suppressClickAfterGesture } from "../click_suppression.js";
 import { getScrollContainer } from "../scroll/scroll_container.js";
 import {
   dragAfterIntent,
@@ -870,6 +877,76 @@ export const startDragTo = (
     canLeave,
     ...options,
   });
+};
+
+/**
+ * A press that WOULD be a drag, and is not.
+ *
+ * Recognized exactly as `startDragTo` recognizes it: the press stays this
+ * element's, so a surface under it does not pan and nothing else answers it, and
+ * the intent is established by the same threshold — a mouse travelling, a finger
+ * holding still, the first pixel inside a `[data-drag-on-contact]`. What differs
+ * is what happens once it is established: nothing is grabbed, nothing translates,
+ * and `onRefuse` is told at the instant the grab would have been acquired.
+ *
+ * That instant is the whole point. An object that stays put under the hand and
+ * says nothing reads as a screen that is broken, and the hand pulls harder; the
+ * refusal has to be told where the grab would have been felt, which is the only
+ * moment the press has of its own.
+ *
+ * @param {PointerEvent} event The `pointerdown` that would have become a drag.
+ * @param {object} [options]
+ * @param {Element} [options.draggedElement=event.currentTarget]
+ * @param {(detail: {event: PointerEvent}) => void} [options.onRefuse]
+ *   The hand pulled and there is no drag. Told, not asked: what comes back is
+ *   not waited on. There is no `gestureInfo` to go with it — no gesture was ever
+ *   started — so `event` is the press it was refused from.
+ *
+ * Everything else is forwarded to `dragAfterIntent` (`threshold`, `longPress`,
+ * `longPressDelay`, `longPressSlop`).
+ */
+export const refuseDragTo = (
+  event,
+  { draggedElement = event.currentTarget, onRefuse, ...options } = {},
+) => {
+  if (isPressIgnored(event.target, draggedElement)) {
+    return;
+  }
+  if (!isPrimaryButtonEvent(event)) {
+    return;
+  }
+  event.preventDefault();
+  dragAfterIntent(
+    event,
+    () => {
+      // Nothing is carried, and the pointer is taken all the same: taking it is
+      // how a gesture says the press is settled, and another wait counting on the
+      // same finger reads it (see press_held.js). A `longpress` declared beside
+      // the drag is answered by the grab when there is one; there must be no
+      // difference when there is none.
+      draggedElement.setPointerCapture(event.pointerId);
+      // And the click the browser fires afterwards belongs to what answered the
+      // press, a refusal included: something pulled and told to stay put must not
+      // also be clicked. Lifted at the release rather than with the click, which
+      // comes after it (see suppressClickAfterGesture).
+      const clickSuppressionIsOver = suppressClickAfterGesture();
+      const endRefusal = () => {
+        window.removeEventListener("pointerup", endRefusal, true);
+        window.removeEventListener("pointercancel", endRefusal, true);
+        if (draggedElement.hasPointerCapture(event.pointerId)) {
+          draggedElement.releasePointerCapture(event.pointerId);
+        }
+        clickSuppressionIsOver();
+      };
+      window.addEventListener("pointerup", endRefusal, true);
+      window.addEventListener("pointercancel", endRefusal, true);
+      onRefuse?.({ event });
+      // Nothing to hold: a falsy gesture is how dragAfterIntent is told there is
+      // none.
+      return null;
+    },
+    options,
+  );
 };
 
 /**

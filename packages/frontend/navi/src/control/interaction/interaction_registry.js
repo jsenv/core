@@ -4,14 +4,22 @@
  * `action` stays what it always was — the work, wired to whatever asking for it
  * naturally means for that control (a click on a button, a change on a field).
  * `interactions` is the other half: the interactions that are NOT that natural
- * one, named, each said to do one of three things.
+ * one, named, each said to do one of four things.
  *
  *   interactions={{
  *     swipe_left: "request_action",       // ask for the action prop
  *     swipe_right: "request_ui_action",   // ask for a ui action
  *     longpress: (event) => openMenu(event),
+ *     move: "refuse",                     // it would move, and it does not
  *     "keyboard:ctrl+backspace": "request_action",
  *   }}
+ *
+ * The last one is the odd one: the three others say what the interaction DOES,
+ * and "refuse" says it does not happen — the element goes on owning the press it
+ * would have taken, so nothing else answers it, and whoever reads the interaction
+ * says a refusal in its place (see `isRefused` below, and "refuse" in
+ * interaction_drag.js). It is the answer to something that would be a bug read
+ * from outside: a thing that stays put under the hand, silently.
  *
  * An interaction that asks for the action does not say WHICH work: the action is
  * one, and it reads which interaction asked from the event it already receives.
@@ -99,9 +107,17 @@ const detectors = [];
  *   detector usually treats them differently — a row pulled out comes back either
  *   way, something thrown off the screen only comes back if the throw failed.
  *
- *   The third argument carries `{ types, readConfig }`: the claimed names actually
- *   declared, and a number read off the element or any ancestor carrying that
- *   attribute (so a whole list is tuned in one place).
+ *   The third argument carries `{ types, readConfig, isRefused }`: the claimed
+ *   names actually declared, a number read off the element or any ancestor
+ *   carrying that attribute (so a whole list is tuned in one place), and whether
+ *   an interaction is currently declared "refuse". That last one is asked at the
+ *   moment it matters and never at setup: what an interaction does is the
+ *   caller's latest render, and something is locked and unlocked while its
+ *   listeners stay where they are.
+ * @param {(type: string) => boolean} [definition.refusable] Whether that
+ *   interaction can be declared "refuse" — a detector that answers a refusal has
+ *   to say so, or "refuse" reads as an effect nothing runs and the dev warning
+ *   below says it.
  * @param {boolean} [definition.disputesPress] Whether this detector's interactions
  *   are still deciding what a press IS while the finger/button is down — the press
  *   belongs to the gesture until it resolves. Said here so that anything acting on
@@ -114,6 +130,9 @@ export const defineInteractionDetector = (definition) => {
 
 const REQUEST_ACTION = "request_action";
 const REQUEST_UI_ACTION = "request_ui_action";
+// Not an effect but the absence of one, answered by the detector that reads the
+// interaction rather than from here.
+const REFUSE = "refuse";
 
 /**
  * The interactions as declared, plus the ones they imply, minus the ones turned
@@ -155,7 +174,13 @@ export const resolveInteractions = (interactions) => {
   }
   if (import.meta.dev) {
     for (const type of Object.keys(resolved)) {
-      if (detectors.some((detector) => detector.claims(type))) {
+      const detector = detectors.find((candidate) => candidate.claims(type));
+      if (detector) {
+        if (resolved[type] === REFUSE && !detector.refusable?.(type)) {
+          console.warn(
+            `interactions: "${type}" is declared "refuse", and "${detector.name}" has no refusal to give — it reads the interaction and tells that it happened, which is all it can do. Give "${type}" something to do, or take it off.`,
+          );
+        }
         continue;
       }
       console.warn(
@@ -241,6 +266,13 @@ export const useInteractionsEffect = (ref, interactionsRef) => {
     const perform = (type, interactionEvent) => {
       const effect = interactionsNow()[type];
       if (!effect) {
+        return null;
+      }
+      if (effect === REFUSE) {
+        // Nothing to run: a refusal is answered where the interaction is READ —
+        // before it happens, which is the only place it can be — so a detector
+        // that asked (isRefused) never gets here, and one that did not is told by
+        // the dev warning in resolveInteractions.
         return null;
       }
       const controlHost = findNearestControlHost(element);
@@ -382,6 +414,7 @@ export const useInteractionsEffect = (ref, interactionsRef) => {
         types,
         readConfig: (attribute, defaultValue) =>
           readNumberFromDom(element, attribute, defaultValue),
+        isRefused: (type) => interactionsNow()[type] === REFUSE,
       });
       if (typeof cleanup === "function") {
         cleanups.push(cleanup);

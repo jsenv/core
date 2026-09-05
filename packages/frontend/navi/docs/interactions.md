@@ -48,28 +48,32 @@ like any other interaction, `interactions={{ click: onSelect }}`. The click the
 browser fires after a drag is already suppressed, so `click` sits next to `move`
 or `grab` without fighting them.
 
-### The three values
+### The four values
 
 | Value                 | Meaning                                              |
 | --------------------- | ---------------------------------------------------- |
 | `"request_action"`    | ask the nearest control for its `action` prop        |
 | `"request_ui_action"` | ask it for a ui action (what says "the user acted")  |
 | a function            | do this, with the interaction event as only argument |
+| `"refuse"`            | it does not happen, and the hand is told so          |
 
 A falsy value means "not this one", so an interaction can be declared under a
-condition: `{ swipe_right: canArchive && archive }`.
+condition: `{ swipe_right: canArchive && archive }`. `"refuse"` is the other way
+of saying no — the interaction stays declared, and what it would have done is
+turned down where it is read (see [`refuse`](#the-hand-pulls-and-nothing-follows-refuse),
+which the carrying interactions answer with).
 
 ### The interactions navi detects
 
-| Key                                                    | Read from                                      |
-| ------------------------------------------------------ | ---------------------------------------------- |
-| `mousedown` `mouseup` `click` `dblclick` `contextmenu` | the browser's own events                       |
-| `swipe_left` `swipe_right` `swipe_up` `swipe_down`     | a press that travels                           |
-| `longpress`                                            | a press held still                             |
-| `move` `reorder` `land` `toss` `leave`                 | the element carried, and what letting go means |
-| `grab` `release`                                       | the instants a drag takes hold, and lets go    |
-| `pan` `zoom`                                           | a surface under the hand, or under a wheel     |
-| `"keyboard:<shortcut>"`                                | keys, e.g. `"keyboard:ctrl+backspace"`         |
+| Key                                                    | Read from                                                   |
+| ------------------------------------------------------ | ----------------------------------------------------------- |
+| `mousedown` `mouseup` `click` `dblclick` `contextmenu` | the browser's own events                                    |
+| `swipe_left` `swipe_right` `swipe_up` `swipe_down`     | a press that travels                                        |
+| `longpress`                                            | a press held still                                          |
+| `move` `reorder` `land` `toss` `leave`                 | the element carried, and what letting go means              |
+| `grab` `release` `refuse`                              | the instants a drag takes hold, lets go, or does not happen |
+| `pan` `zoom`                                           | a surface under the hand, or under a wheel                  |
+| `"keyboard:<shortcut>"`                                | keys, e.g. `"keyboard:ctrl+backspace"`                      |
 
 A name nothing knows how to detect produces a dev warning naming the detectors
 that exist.
@@ -611,6 +615,50 @@ something is on its way.
 Like `grab`, it **reports, it does not ask**, and it is not an interaction on its
 own: a moment of a drag needs a drag to happen in, and a dev warning says so.
 
+### The hand pulls and nothing follows: `refuse`
+
+Something that can be carried is not always free to be: a court whose place on the
+plan is settled, a marker pinned by whoever owns it. Taking the interaction away —
+`move: false` — makes the element **deaf** rather than locked. The press is then
+nobody's, so whatever it stands on answers it (the surface pans under an object the
+hand was aiming at), and the pull is told nothing at all — and a thing that does not
+move and says nothing reads as a screen that is broken, so the hand insists.
+
+```jsx
+<Court
+  interactions={{
+    move: locked ? "refuse" : (event) => remember(event.detail),
+    refuse: (event) => {
+      shake();
+      if (event.detail.pointerType === "touch") {
+        navigator.vibrate?.(20);
+      }
+    },
+  }}
+/>
+```
+
+So the interaction stays declared and says `"refuse"` in place of what it does. The
+press remains the element's — it is still a drag source, so nothing under it
+answers — the threshold is the same one (a mouse travelling, a finger holding
+still, the first pixel inside a `data-drag-on-contact`), and at the instant the
+grab would have been acquired there is none: nothing translates, no copy is made,
+no release is answered. `refuse` is that instant, which is the only one the press
+has of its own and the one where feedback is expected.
+
+The press is settled there like any other gesture settles it: the pointer is taken,
+so a `longpress` declared beside the drag does not answer a hundred milliseconds
+later, and the click the release leaves behind is swallowed. What is locked behaves
+like what is not, up to the moment it says no.
+
+One outcome refusing refuses the whole gesture — the five answer one carry, and
+something that must not be carried has none of them. Like `grab` and `release`,
+`refuse` **reports, it does not ask**, and it is not an interaction on its own.
+Its detail is `{ pointerType }` and nothing more: there is no `gestureInfo`
+because there was no gesture, and what feedback wants to know is which hand asked
+— a vibration for a finger, nothing extra for a mouse whose cursor has already
+said it.
+
 ### Dressing the clone
 
 What the pointer carries is a copy, and a copy of a transparent element is
@@ -1096,12 +1144,12 @@ travels above it: `data-no-drag-travel` (see `docs/drag_to_travel.md`).
 
 ## Reference
 
-- `src/control/interaction/interaction_registry.js` — the prop, the three values,
+- `src/control/interaction/interaction_registry.js` — the prop, the four values,
   the registry.
 - `src/control/interaction/interaction_press.js` — swipes and holds, and what a
   swipe writes on the element.
 - `src/control/interaction/interaction_drag.js` — `move`, `reorder`, `land`,
-  `toss`, `leave` and the `grab`/`release` moments.
+  `toss`, `leave` and the `grab`/`release`/`refuse` moments.
 - `src/control/interaction/interaction_surface.js` — `pan` and `zoom`, on
   `installPanZoom` from `@jsenv/dom`.
 - `src/control/interaction/interaction_keyboard.js`,

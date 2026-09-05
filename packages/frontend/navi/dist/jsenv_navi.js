@@ -4,7 +4,7 @@
  */
 import { installImportMetaCssBuild, windowHeightSignal, windowWidthSignal, visualViewportHeightSignal, visualViewportWidthSignal, getAppHeight, getAppWidth, coarsePointerSignal, smallTouchScreenSignal } from "./jsenv_navi_side_effects.js";
 export { disableVirtualKeyboardOverlay } from "./jsenv_navi_side_effects.js";
-import { elementIsFocusable, createIterableWeakSet, dispatchInternalCustomEvent, dispatchCustomEvent, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, getElementSignature, createPubSub, findEvent, createValueEffect, findFocusDelegateTarget, findFocusable, scrollIntoViewThroughScrollables, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, keepTouchRefusable, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, markDragSource, startDragTo, installPanZoom, createEventGroupLogger, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, normalizeStyles, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, scrollRoomTowards, getScrollContainer, closestOpenableAncestor, isAncestorOpen, isDisplayedDespiteClosedAncestor, observeAncestorOpenState, getAncestorOpenType, findBefore, findAfter, resolveCSSSize, hasCSSSizeUnit, releaseWheelGesture, getScrollIntoViewScopedOffsets, wheelGestureIsTakenFrom, claimWheelGesture, scrollIntoViewScoped, initFocusGroup, isTouchDrivenEvent, stringifyStyle as stringifyStyle$1, resolveOklchLightness, contrastColor, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, getVirtualKeyboardOverlayHeight, onAncestorReopen, isPressDisputedByDrag, canScroll, measureWidestChildRow, performTabNavigation, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
+import { elementIsFocusable, createIterableWeakSet, dispatchInternalCustomEvent, dispatchCustomEvent, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, getElementSignature, createPubSub, findEvent, createValueEffect, findFocusDelegateTarget, findFocusable, scrollIntoViewThroughScrollables, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, keepTouchRefusable, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, markDragSource, refuseDragTo, startDragTo, installPanZoom, createEventGroupLogger, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, normalizeStyles, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, scrollRoomTowards, getScrollContainer, closestOpenableAncestor, isAncestorOpen, isDisplayedDespiteClosedAncestor, observeAncestorOpenState, getAncestorOpenType, findBefore, findAfter, resolveCSSSize, hasCSSSizeUnit, releaseWheelGesture, getScrollIntoViewScopedOffsets, wheelGestureIsTakenFrom, claimWheelGesture, scrollIntoViewScoped, initFocusGroup, isTouchDrivenEvent, stringifyStyle as stringifyStyle$1, resolveOklchLightness, contrastColor, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, getVirtualKeyboardOverlayHeight, onAncestorReopen, isPressDisputedByDrag, canScroll, measureWidestChildRow, performTabNavigation, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
 export { chainEvent, clickIsSuppressed, contrastColor, createDragGestureController, dragAfterIntent, findEvent, markDragSource, startDragTo } from "@jsenv/dom";
 import { signal, computed, effect, untracked, batch, useComputed, useSignal } from "@preact/signals";
 import { isValidElement, createContext, render, h, toChildArray, options, cloneElement, Fragment as Fragment$1 } from "preact";
@@ -9569,14 +9569,22 @@ const tryActionAfterInteractionAllowed = (
  * `action` stays what it always was — the work, wired to whatever asking for it
  * naturally means for that control (a click on a button, a change on a field).
  * `interactions` is the other half: the interactions that are NOT that natural
- * one, named, each said to do one of three things.
+ * one, named, each said to do one of four things.
  *
  *   interactions={{
  *     swipe_left: "request_action",       // ask for the action prop
  *     swipe_right: "request_ui_action",   // ask for a ui action
  *     longpress: (event) => openMenu(event),
+ *     move: "refuse",                     // it would move, and it does not
  *     "keyboard:ctrl+backspace": "request_action",
  *   }}
+ *
+ * The last one is the odd one: the three others say what the interaction DOES,
+ * and "refuse" says it does not happen — the element goes on owning the press it
+ * would have taken, so nothing else answers it, and whoever reads the interaction
+ * says a refusal in its place (see `isRefused` below, and "refuse" in
+ * interaction_drag.js). It is the answer to something that would be a bug read
+ * from outside: a thing that stays put under the hand, silently.
  *
  * An interaction that asks for the action does not say WHICH work: the action is
  * one, and it reads which interaction asked from the event it already receives.
@@ -9651,9 +9659,17 @@ const detectors = [];
  *   detector usually treats them differently — a row pulled out comes back either
  *   way, something thrown off the screen only comes back if the throw failed.
  *
- *   The third argument carries `{ types, readConfig }`: the claimed names actually
- *   declared, and a number read off the element or any ancestor carrying that
- *   attribute (so a whole list is tuned in one place).
+ *   The third argument carries `{ types, readConfig, isRefused }`: the claimed
+ *   names actually declared, a number read off the element or any ancestor
+ *   carrying that attribute (so a whole list is tuned in one place), and whether
+ *   an interaction is currently declared "refuse". That last one is asked at the
+ *   moment it matters and never at setup: what an interaction does is the
+ *   caller's latest render, and something is locked and unlocked while its
+ *   listeners stay where they are.
+ * @param {(type: string) => boolean} [definition.refusable] Whether that
+ *   interaction can be declared "refuse" — a detector that answers a refusal has
+ *   to say so, or "refuse" reads as an effect nothing runs and the dev warning
+ *   below says it.
  * @param {boolean} [definition.disputesPress] Whether this detector's interactions
  *   are still deciding what a press IS while the finger/button is down — the press
  *   belongs to the gesture until it resolves. Said here so that anything acting on
@@ -9666,6 +9682,9 @@ const defineInteractionDetector = (definition) => {
 
 const REQUEST_ACTION = "request_action";
 const REQUEST_UI_ACTION = "request_ui_action";
+// Not an effect but the absence of one, answered by the detector that reads the
+// interaction rather than from here.
+const REFUSE$1 = "refuse";
 
 /**
  * The interactions as declared, plus the ones they imply, minus the ones turned
@@ -9783,6 +9802,13 @@ const useInteractionsEffect = (ref, interactionsRef) => {
     const perform = (type, interactionEvent) => {
       const effect = interactionsNow()[type];
       if (!effect) {
+        return null;
+      }
+      if (effect === REFUSE$1) {
+        // Nothing to run: a refusal is answered where the interaction is READ —
+        // before it happens, which is the only place it can be — so a detector
+        // that asked (isRefused) never gets here, and one that did not is told by
+        // the dev warning in resolveInteractions.
         return null;
       }
       const controlHost = findNearestControlHost(element);
@@ -9914,6 +9940,7 @@ const useInteractionsEffect = (ref, interactionsRef) => {
         types,
         readConfig: (attribute, defaultValue) =>
           readNumberFromDom(element, attribute, defaultValue),
+        isRefused: (type) => interactionsNow()[type] === REFUSE$1,
       });
       if (typeof cleanup === "function") {
         cleanups.push(cleanup);
@@ -10525,6 +10552,38 @@ const swipeTypeOf = (axis, pulled) => {
  * Told, not asked, like `grab`, and no more an interaction of its own: a moment of
  * a drag needs a drag to happen in.
  *
+ * WHEN THE HAND PULLS AND NOTHING FOLLOWS: `refuse`.
+ *
+ *   interactions={{
+ *     move: locked ? "refuse" : remember,
+ *     refuse: () => shake(),
+ *   }}
+ *
+ * Something that can be carried is not always free to be: a court whose place is
+ * settled, a marker pinned by whoever owns the plan. Taking the interaction away
+ * — `move: false` — makes the element deaf rather than locked: the press is then
+ * nobody's, so whatever it stands on answers it (a surface pans under an object
+ * that was aimed at), and the hand pulling is told nothing at all. A thing that
+ * does not move and says nothing reads as a screen that is broken, and the hand
+ * insists.
+ *
+ * So the interaction stays declared and says "refuse" in place of what it does.
+ * The press remains the element's, the threshold is the same one — a mouse
+ * travelling, a finger holding still, the first pixel inside a
+ * `data-drag-on-contact` — and at the instant the grab would have been acquired
+ * there is none: nothing translates, no copy is made, no release is answered.
+ * `refuse` is that instant. The click the press leaves behind is swallowed as a
+ * real drag's is: it was answered, by the refusal.
+ *
+ * One outcome refusing refuses the whole gesture — the five answer one carry, and
+ * something that must not be carried has none of them.
+ *
+ * Told, not asked, like `grab` and `release`, and no more an interaction of its
+ * own. Its detail is `{ pointerType }`: there is no `gestureInfo` because there
+ * was no gesture, and what the feedback wants to know is which hand asked — a
+ * vibration for a finger, nothing more for a mouse whose cursor has already said
+ * it.
+ *
  * What the copy LOOKS like is the application's too. A copy of a transparent
  * element is invisible — a row usually gets its background from the list around it,
  * which the copy has left — so it is dressed through the attributes the gesture
@@ -10545,6 +10604,9 @@ const LEAVE = "leave";
 const GRAB = "grab";
 // And the moment that hold ends, whatever it ended up meaning.
 const RELEASE = "release";
+// The moment that hold is not acquired, on something that would be carried and
+// says no.
+const REFUSE = "refuse";
 
 // What makes an element a place something can land, written by the detector itself.
 const REORDERABLE_ATTRIBUTE = "data-reorderable";
@@ -10572,11 +10634,20 @@ defineInteractionDetector({
     type === TOSS ||
     type === LEAVE ||
     type === GRAB ||
-    type === RELEASE,
+    type === RELEASE ||
+    type === REFUSE,
+  // The five outcomes can be turned down; the moments cannot — a moment is told,
+  // and there is nothing in it to refuse.
+  refusable: (type) =>
+    type === MOVE ||
+    type === REORDER ||
+    type === LAND ||
+    type === TOSS ||
+    type === LEAVE,
   // The press is the beginning of the gesture, not an answer: nothing may read
   // it until it is known whether the hand is dragging or just pressing.
   disputesPress: true,
-  setup: (element, trigger, { types, readConfig }) => {
+  setup: (element, trigger, { types, readConfig, isRefused }) => {
     const canMove = types.includes(MOVE);
     const canReorder = types.includes(REORDER);
     const canLand = types.includes(LAND);
@@ -10587,6 +10658,7 @@ defineInteractionDetector({
     }
     const tellsWhenGrabbed = types.includes(GRAB);
     const tellsWhenReleased = types.includes(RELEASE);
+    const tellsWhenRefused = types.includes(REFUSE);
     // Read at setup rather than at the press: a container can say it, and it is
     // what the gesture is about rather than something it discovers.
     const axisHolder = element.closest(`[${AXIS_ATTRIBUTE}]`);
@@ -10616,12 +10688,39 @@ defineInteractionDetector({
     // becomes a grab, and the listener that lets the grab take it back.
     const unmarkDragSource = markDragSource(element, axes);
 
-    // What a release can mean, which is not all of what was declared: "grab" and
-    // "release" are moments, not outcomes, and the gesture must not read them as
-    // ones.
-    const effects = types.filter((type) => type !== GRAB && type !== RELEASE);
+    // What a release can mean, which is not all of what was declared: "grab",
+    // "release" and "refuse" are moments, not outcomes, and the gesture must not
+    // read them as ones.
+    const effects = types.filter(
+      (type) => type !== GRAB && type !== RELEASE && type !== REFUSE,
+    );
 
     const onPointerDown = (pointerDownEvent) => {
+      // Asked at every press and never once: what an interaction does is the
+      // caller's latest render, and a thing is locked and unlocked while its
+      // listeners stay where they are. One outcome saying no is enough — the
+      // element is carried or it is not, and each of the five is an answer to
+      // that same carry.
+      if (effects.some(isRefused)) {
+        refuseDragTo(pointerDownEvent, {
+          draggedElement: element,
+          threshold: readConfig(THRESHOLD_ATTRIBUTE$1, undefined),
+          longPressDelay: readConfig(DELAY_ATTRIBUTE, undefined),
+          longPressSlop: readConfig(SLOP_ATTRIBUTE, undefined),
+          // The press is still the element's — it stays a drag source, so the
+          // surface under it does not pan — and the refusal comes where the grab
+          // would have: nothing to be told before that, since up to there the
+          // gesture is one that could still have been anything.
+          onRefuse: tellsWhenRefused
+            ? () => {
+                trigger(REFUSE, pointerDownEvent, {
+                  pointerType: pointerDownEvent.pointerType,
+                });
+              }
+            : undefined,
+        });
+        return;
+      }
       // What this element says a release can mean. The gesture then runs only what
       // those need — no copy for a move, no drop hint for something that can only
       // be thrown away.
@@ -20048,7 +20147,7 @@ const PSEUDO_STATE_CHILD_PROP_SET = new Set(["tabIndex", "tabindex"]);
  *   preventInitialTransition?: boolean,
  *   separator?: import("ignore:preact").ComponentChildren | ((index: number) => import("ignore:preact").ComponentChildren),
  *   selfInteractions?: string,
- *   interactions?: { [type: string]: "request_action" | "request_ui_action" | ((event: Event) => void) | false | null | undefined },
+ *   interactions?: { [type: string]: "request_action" | "request_ui_action" | "refuse" | ((event: Event) => void) | false | null | undefined },
  *   children?: import("ignore:preact").ComponentChildren,
  *   [key: string]: any,
  * }>}
