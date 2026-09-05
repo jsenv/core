@@ -10503,6 +10503,28 @@ const swipeTypeOf = (axis, pulled) => {
  * A `longpress` needs nothing of this: it already happens at the moment the hold
  * is acquired rather than at the release (see interaction_press.js).
  *
+ * WHEN THE HOLD IS LET GO: `release`.
+ *
+ *   interactions={{
+ *     grab: () => setCarrying(kind),
+ *     land: (event) => add(kind, event.detail),
+ *     release: () => setCarrying(null),
+ *   }}
+ *
+ * The mirror of `grab`, and the only one always told. Each of the five above
+ * answers ONE meaning, so a release that means none of them — let go of over
+ * nothing, taken away by the system — reaches nobody, and whatever the grab set up
+ * stays set up with nothing to take it down: a bank counting the chip in the hand
+ * before it lands has no way to stop counting it when it lands nowhere.
+ *
+ * Its detail is `{ id, x, y, outcome }`. `outcome` is which of the five is about to
+ * answer, or null when the release means none of them — told BEFORE that answer
+ * runs, so what the grab put up can come down at the moment the hand lets go while
+ * still knowing whether something is on its way.
+ *
+ * Told, not asked, like `grab`, and no more an interaction of its own: a moment of
+ * a drag needs a drag to happen in.
+ *
  * What the copy LOOKS like is the application's too. A copy of a transparent
  * element is invisible — a row usually gets its background from the list around it,
  * which the copy has left — so it is dressed through the attributes the gesture
@@ -10521,6 +10543,8 @@ const TOSS = "toss";
 const LEAVE = "leave";
 // The moment the press stops being a press and becomes a hold on the object.
 const GRAB = "grab";
+// And the moment that hold ends, whatever it ended up meaning.
+const RELEASE = "release";
 
 // What makes an element a place something can land, written by the detector itself.
 const REORDERABLE_ATTRIBUTE = "data-reorderable";
@@ -10547,7 +10571,8 @@ defineInteractionDetector({
     type === LAND ||
     type === TOSS ||
     type === LEAVE ||
-    type === GRAB,
+    type === GRAB ||
+    type === RELEASE,
   // The press is the beginning of the gesture, not an answer: nothing may read
   // it until it is known whether the hand is dragging or just pressing.
   disputesPress: true,
@@ -10561,6 +10586,7 @@ defineInteractionDetector({
       return undefined;
     }
     const tellsWhenGrabbed = types.includes(GRAB);
+    const tellsWhenReleased = types.includes(RELEASE);
     // Read at setup rather than at the press: a container can say it, and it is
     // what the gesture is about rather than something it discovers.
     const axisHolder = element.closest(`[${AXIS_ATTRIBUTE}]`);
@@ -10590,9 +10616,10 @@ defineInteractionDetector({
     // becomes a grab, and the listener that lets the grab take it back.
     const unmarkDragSource = markDragSource(element, axes);
 
-    // What a release can mean, which is not all of what was declared: "grab" is a
-    // moment, not an outcome, and the gesture must not read it as one.
-    const effects = types.filter((type) => type !== GRAB);
+    // What a release can mean, which is not all of what was declared: "grab" and
+    // "release" are moments, not outcomes, and the gesture must not read them as
+    // ones.
+    const effects = types.filter((type) => type !== GRAB && type !== RELEASE);
 
     const onPointerDown = (pointerDownEvent) => {
       // What this element says a release can mean. The gesture then runs only what
@@ -10639,6 +10666,20 @@ defineInteractionDetector({
               trigger(GRAB, pointerDownEvent, {
                 pointerType: pointerDownEvent.pointerType,
                 gestureInfo,
+              });
+            }
+          : undefined,
+        // The other moment: the hold ends, whatever it ended up meaning — a
+        // landing, a throw, nothing at all, the gesture taken away mid-air. Told
+        // before the outcome below is answered, and nothing is done with what
+        // comes back either.
+        onRelease: tellsWhenReleased
+          ? ({ x, y, outcome }) => {
+              trigger(RELEASE, pointerDownEvent, {
+                id: element.id,
+                x,
+                y,
+                outcome,
               });
             }
           : undefined,

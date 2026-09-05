@@ -67,6 +67,16 @@
         text-transform: uppercase;
         letter-spacing: 0.04em;
       }
+      .bank_slot {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .bank_count {
+        color: #6b7482;
+        font-size: 11px;
+        font-variant-numeric: tabular-nums;
+      }
       .map {
         position: relative;
         width: 420px;
@@ -260,6 +270,16 @@
         // navi voit qu'il a été redessiné en répondant à "move" et lâche sa
         // propre translation, sinon le point irait deux fois plus loin.
         const [addressPoint, setAddressPoint] = useState(GEOCODED_POINT);
+        // Ce que la main emporte: compté avec ce qui est sur le plan dès que la
+        // copie décolle, et relâché quoi qu'elle devienne.
+        const [carriedKindId, setCarriedKindId] = useState(null);
+        const countOnPlan = (kind) => {
+          let count = items.filter((item) => item.kind === kind.id).length;
+          if (carriedKindId === kind.id) {
+            count++;
+          }
+          return count;
+        };
 
         const addShape = (kind, x, y) => {
           setItems((previous) => [
@@ -351,16 +371,22 @@
               <div className="bank">
                 <span className="bank_title">Banque</span>
                 {KINDS.map((kind) => (
-                  <Shape
-                    key={kind.id}
-                    kind={kind}
-                    interactions={{
-                      land: (event) => {
-                        const { x, y } = event.detail;
-                        addShape(kind, x, y);
-                      },
-                    }}
-                  />
+                  <div key={kind.id} className="bank_slot">
+                    <Shape
+                      kind={kind}
+                      interactions={{
+                        land: (event) => {
+                          const { x, y } = event.detail;
+                          addShape(kind, x, y);
+                        },
+                        grab: () => setCarriedKindId(kind.id),
+                        release: () => setCarriedKindId(null),
+                      }}
+                    />
+                    <span className="bank_count">
+                      {countOnPlan(kind)} sur le plan
+                    </span>
+                  </div>
                 ))}
               </div>
               <div ref={mapRef} className="map" id="plan_map" data-droppable>

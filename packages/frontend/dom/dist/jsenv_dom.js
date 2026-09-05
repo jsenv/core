@@ -12601,6 +12601,12 @@ const createDragToMoveGestureController = ({
  *   reject. Beside a copy, the copy fades where it was let go of and comes back
  *   if the promise rejects. Picked up and put straight back down is a cancel:
  *   it has to have gone somewhere to be away from anything.
+ * @param {(detail: {gestureInfo: object, x: number, y: number, outcome: "move"|"reorder"|"land"|"toss"|"leave"|null}) => void} [options.onRelease]
+ *   The hand let go — the mirror of `onDragStart`, and the one thing that is told
+ *   whatever the release meant, a cancelled gesture included. `outcome` is what
+ *   the release means, `null` when it means nothing; the answer to it runs after,
+ *   so what is set up at the grab can be taken down here without waiting for it.
+ *   Told, not asked: what comes back is not waited on.
  * @param {Element} [options.outsideOf] The box a `leave` is outside of, when
  *   nothing is a place. Left out, what can be seen of the scroll container.
  *   Judged on the carried box no longer overlapping it — not on the pointer,
@@ -12702,6 +12708,7 @@ const startDragToMoveElement = (
     canLeave,
     onMove,
     onLeave,
+    onRelease,
     outsideOf,
     // A thing that can be let go of outside has to be able to get there. Same
     // reason and same shape as the default of the copy path below.
@@ -12734,15 +12741,22 @@ const startDragToMoveElement = (
       dragGesture.addReleaseCallback(async (gestureInfo) => {
         const { xDelta, yDelta } = gestureInfo.layout;
         if (!xDelta && !yDelta) {
-          // Picked up and put back down: nothing moved, so nobody is told.
+          // Picked up and put back down: nothing moved, so no outcome is told.
+          onRelease?.({ gestureInfo, x: xDelta, y: yDelta, outcome: null });
           gestureInfo.cancelPosition();
           return;
         }
-        if (
+        const leaving =
           canLeave &&
           !gestureInfo.cancelled &&
-          isOutsideOf(gestureInfo, outsideOf)
-        ) {
+          isOutsideOf(gestureInfo, outsideOf);
+        onRelease?.({
+          gestureInfo,
+          x: xDelta,
+          y: yDelta,
+          outcome: leaving ? "leave" : "move",
+        });
+        if (leaving) {
           // Left where the hand let go of it while the answer is asked — a thing
           // that snaps home with the request in flight says the gesture was not
           // understood. The answer then says what becomes of that position: let
@@ -12909,6 +12923,7 @@ const startDragToCarryCopy = (
     onLand,
     onToss,
     onLeave,
+    onRelease,
     outsideOf,
     tossDistance,
     tossSpeed,
@@ -13167,6 +13182,16 @@ const startDragToCarryCopy = (
             canLeave,
             tossDistance,
             tossSpeed,
+          });
+          // The hand has let go, and what that means is already known — the
+          // answer to it has not run yet. Told, not asked: nothing here waits on
+          // what comes back, because the outcome below is what the copy waits on.
+          const { xDelta, yDelta } = gestureInfo.layout;
+          onRelease?.({
+            gestureInfo,
+            x: xDelta,
+            y: yDelta,
+            outcome: dropMeans === "cancel" ? null : dropMeans,
           });
 
           // Let go of and still on the screen: from here until it is taken away

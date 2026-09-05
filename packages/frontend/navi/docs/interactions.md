@@ -67,7 +67,7 @@ condition: `{ swipe_right: canArchive && archive }`.
 | `swipe_left` `swipe_right` `swipe_up` `swipe_down`     | a press that travels                           |
 | `longpress`                                            | a press held still                             |
 | `move` `reorder` `land` `toss` `leave`                 | the element carried, and what letting go means |
-| `grab`                                                 | the instant a drag takes hold of it            |
+| `grab` `release`                                       | the instants a drag takes hold, and lets go    |
 | `pan` `zoom`                                           | a surface under the hand, or under a wheel     |
 | `"keyboard:<shortcut>"`                                | keys, e.g. `"keyboard:ctrl+backspace"`         |
 
@@ -580,6 +580,37 @@ the `gestureInfo`.
 A `longpress` needs none of this: it already happens at the moment the hold is
 acquired, not at the release.
 
+### Saying the hold is let go: `release`
+
+The mirror of `grab`, and the only interaction of the family always told. Each of
+the five above answers ONE meaning, so a release that means none of them — let go
+of over nothing, taken away by the system — reaches nobody, and whatever `grab` set
+up stays set up with nothing to take it down.
+
+```jsx
+<Chip
+  interactions={{
+    grab: () => setCarrying(kind),
+    land: (event) => add(kind, event.detail),
+    release: () => setCarrying(null),
+  }}
+/>
+```
+
+A bank of chips one drags onto a plan is the case: the counter must count what is
+in the hand from the moment the copy takes off — « Terrain 4/21 » before it lands —
+and something has to say when the hand is empty again, whether the copy landed,
+flew off or came home.
+
+Its detail is `{ id, x, y, outcome }`. `outcome` is which of the five is about to
+answer — `"move"`, `"reorder"`, `"land"`, `"toss"`, `"leave"` — or `null` when the
+release means none of them. It is told **before** that answer runs, so what the grab
+put up comes down at the moment the hand lets go, while still knowing whether
+something is on its way.
+
+Like `grab`, it **reports, it does not ask**, and it is not an interaction on its
+own: a moment of a drag needs a drag to happen in, and a dev warning says so.
+
 ### Dressing the clone
 
 What the pointer carries is a copy, and a copy of a transparent element is
@@ -1070,7 +1101,7 @@ travels above it: `data-no-drag-travel` (see `docs/drag_to_travel.md`).
 - `src/control/interaction/interaction_press.js` — swipes and holds, and what a
   swipe writes on the element.
 - `src/control/interaction/interaction_drag.js` — `move`, `reorder`, `land`,
-  `toss`, `leave` and the `grab` moment.
+  `toss`, `leave` and the `grab`/`release` moments.
 - `src/control/interaction/interaction_surface.js` — `pan` and `zoom`, on
   `installPanZoom` from `@jsenv/dom`.
 - `src/control/interaction/interaction_keyboard.js`,
