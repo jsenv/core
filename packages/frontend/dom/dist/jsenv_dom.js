@@ -4425,10 +4425,26 @@ const clickIsSuppressed = () => suppressing;
  * its own elements — `-webkit-touch-callout: none` has to be true before the
  * finger lands, so it cannot be set from here.
  *
+ * THE REFUSAL LASTS THE PRESS, NOT THE WAIT. The system's delay is the longer of
+ * the two, so between the moment this wait gives up and the moment the finger
+ * leaves there is a stretch where the menu is still coming — and the press is
+ * abandoned far more often than it is held: the finger drifts, another gesture
+ * takes the pointer, the browser takes the touch. Given back there, the refusal
+ * is given back to a finger that is still down, and the menu it was there for is
+ * exactly what arrives. So the finger holds the refusal until it leaves, and the
+ * caller holds it for as long as what the press started is still going; the last
+ * of the two to let go is what ends it.
+ *
  * A mouse is a different matter and is left alone: its context menu comes from
  * the other button, not from this press, and refusing it would take the browser's
  * menu away from an element for no reason.
  */
+
+/* How long the refusal outlives a touch the browser has taken for itself: enough
+   to cover the menu that follows the taking (a tenth of a second, on both
+   systems), and short enough that the hand cannot have started something else in
+   it. */
+const MENU_GRACE_AFTER_CANCEL = 300;
 
 /**
  * Waits for a press to be held still, then tells the caller.
@@ -4448,8 +4464,9 @@ const clickIsSuppressed = () => suppressing;
  * @param {(pressEvent: PointerEvent, handle: {endPress: () => void}) => void} options.onPressHeld
  *   The wait completed. Whatever the press now means outlives this call — an
  *   object is being carried, a menu is open under the finger — so the caller
- *   owns the end of it and says when with `endPress`, which is what gives the
- *   context menu back.
+ *   owns the end of it and says when with `endPress`. That is the caller's half
+ *   of what gives the context menu back; the finger leaving is the other half,
+ *   and both have to have happened (see the top of this file).
  * @returns {{ cancel: () => void }}
  */
 const waitForPressHeld = (
@@ -4459,11 +4476,23 @@ const waitForPressHeld = (
   const { pointerId, clientX, clientY } = pressEvent;
 
   const pressCleanupCallbacks = [];
-  const endPress = () => {
+  // Who is still holding the refusal. The finger holds it because the finger is
+  // what the system's menu answers; the caller holds it from the moment the press
+  // is handed over until it says the press is over.
+  let fingerHoldsPress = pressEvent.pointerType === "touch";
+  let answerHoldsPress = false;
+  const endPressWhenNobodyHoldsIt = () => {
+    if (fingerHoldsPress || answerHoldsPress) {
+      return;
+    }
     for (const pressCleanupCallback of pressCleanupCallbacks) {
       pressCleanupCallback();
     }
     pressCleanupCallbacks.length = 0;
+  };
+  const endPress = () => {
+    answerHoldsPress = false;
+    endPressWhenNobodyHoldsIt();
   };
 
   /* A FINGER held down is the system's own context-menu gesture, and the menu it
@@ -4479,8 +4508,35 @@ const waitForPressHeld = (
       contextMenuEvent.preventDefault();
     };
     window.addEventListener("contextmenu", preventContextMenu, true);
+    /* The finger letting go, watched for the length of the press rather than for
+       the length of the wait: the wait can be over long before the hand is.
+       A pointerCANCEL is not the hand letting go, it is the browser saying it is
+       taking the touch for a gesture of its own — and on a press that stayed
+       still, that gesture IS the menu. Nothing then says when the finger leaves
+       (a cancelled touch gets no end of its own), so the refusal is held a moment
+       longer, which is the moment the menu comes in. */
+    let menuGraceTimeout;
+    const onPressPointerEnd = (pointerEndEvent) => {
+      if (pointerEndEvent.pointerId !== pointerId) {
+        return;
+      }
+      if (pointerEndEvent.type === "pointercancel") {
+        menuGraceTimeout = setTimeout(() => {
+          fingerHoldsPress = false;
+          endPressWhenNobodyHoldsIt();
+        }, MENU_GRACE_AFTER_CANCEL);
+        return;
+      }
+      fingerHoldsPress = false;
+      endPressWhenNobodyHoldsIt();
+    };
+    window.addEventListener("pointerup", onPressPointerEnd, true);
+    window.addEventListener("pointercancel", onPressPointerEnd, true);
     pressCleanupCallbacks.push(() => {
+      clearTimeout(menuGraceTimeout);
       window.removeEventListener("contextmenu", preventContextMenu, true);
+      window.removeEventListener("pointerup", onPressPointerEnd, true);
+      window.removeEventListener("pointercancel", onPressPointerEnd, true);
     });
   }
 
@@ -4494,12 +4550,18 @@ const waitForPressHeld = (
 
   const timeout = setTimeout(() => {
     endCountdown();
+    // Whatever the press now means outlives the wait, so it holds the refusal
+    // from here until the caller says it is over.
+    answerHoldsPress = true;
     onPressHeld(pressEvent, { endPress });
   }, delay);
   countdownCleanupCallbacks.push(() => {
     clearTimeout(timeout);
   });
 
+  // The wait is over and the press is not: the finger may still be down, and the
+  // menu it is about to be answered with is the one being refused — so endPress
+  // here says the answer lets go, and the refusal outlives it until the hand does.
   const cancelPress = (pointerEvent) => {
     endCountdown();
     endPress();
@@ -15203,7 +15265,8 @@ const installPanZoom = (
     }
     pointers.delete(event.pointerId);
     // What the held press means outlives the wait, so its end is ours to say —
-    // and saying it is what gives the context menu back (see press_held.js).
+    // and saying it here, where the finger is gone too, is what gives the
+    // context menu back (see press_held.js).
     pointer.holdWait?.cancel();
     if (pointers.size === 0) {
       end();

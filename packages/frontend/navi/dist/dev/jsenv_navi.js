@@ -60074,8 +60074,16 @@ const usePopoverProps = props => {
     // needed for that half). Deliberately does NOT go through
     // openController/requestClose — we're not being asked to close, only to
     // re-assert our own stacking position once the ancestor comes back.
+    // Scoped to this one opening — "while we ourselves stay open the whole
+    // time" above is the entire premise, so the observer must go with the
+    // close (addCleanup), not outlive it. Left registered past the close it
+    // keeps answering for an opening that is over: the next reopen of the
+    // ancestor re-shows a popover the user closed, and once that ancestor is
+    // one whose children unmount while it's closed (a <dialog> with
+    // mount="while-opened" content), showPopover() lands on a detached node
+    // and throws InvalidStateError from inside the MutationObserver callback.
     if (isTopLayer) {
-      onAncestorReopen(popoverEl, () => {
+      addCleanup(onAncestorReopen(popoverEl, () => {
         if (backdropEl?.matches(":popover-open")) {
           backdropEl.hidePopover();
         }
@@ -60084,7 +60092,7 @@ const usePopoverProps = props => {
           popoverEl.hidePopover();
         }
         popoverEl.showPopover();
-      });
+      }));
     }
     const rectEffect = visibleRectEffect(effectiveAnchor, ({
       visibilityRatio
@@ -69626,6 +69634,11 @@ const css$t = /* css */`@layer navi {
 
     & .navi_picker_box {
       min-height: 0;
+    }
+
+    & .navi_picker_value[data-picker-facade] {
+      align-items: var(--x-picker-align-y);
+      display: flex;
     }
   }
 

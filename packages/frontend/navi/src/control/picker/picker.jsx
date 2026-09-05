@@ -631,6 +631,19 @@ const css = /* css */ `
            field, so its height is the drawing's and nothing else. */
         min-height: 0;
       }
+      /* The drawing is held as a box, not written on a line. On a line it is
+         given the LINE's height — the page's leading, not the drawing's — its
+         own vertical padding is painted outside that line and adds nothing to
+         it, and it is sat on a baseline instead of filling what the picker
+         measured. An inline drawing (a <Badge>) is all three at once, and the
+         box the picker reports is then not the one on screen. Same correction
+         as the icon variant below, for the same reason. */
+      .navi_picker_value[data-picker-facade] {
+        display: flex;
+        /* The drawing is aligned the way the picker itself is — stretch by
+           default here, so a height given to the picker reaches the drawing. */
+        align-items: var(--x-picker-align-y);
+      }
     }
     /* button: drawn as a Button is, from the same tokens (see button_ui.jsx
        and the --navi-button-* vars) — its surface, its padding, a centered

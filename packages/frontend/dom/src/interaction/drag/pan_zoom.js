@@ -282,7 +282,8 @@ export const installPanZoom = (
     }
     pointers.delete(event.pointerId);
     // What the held press means outlives the wait, so its end is ours to say —
-    // and saying it is what gives the context menu back (see press_held.js).
+    // and saying it here, where the finger is gone too, is what gives the
+    // context menu back (see press_held.js).
     pointer.holdWait?.cancel();
     if (pointers.size === 0) {
       end();

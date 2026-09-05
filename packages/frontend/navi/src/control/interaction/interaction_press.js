@@ -47,7 +47,8 @@
  *
  * A hold does NOT take the context menu with it. Declaring one says what a held
  * FINGER does — a finger held down being the system's own context-menu gesture,
- * which is why that one is refused while the wait runs (see waitForPressHeld). A
+ * which is why that one is refused for the length of the press (see
+ * waitForPressHeld). A
  * right click is not that press: it comes from the other button and it is the
  * user asking for the browser's menu, so it keeps opening it. An element that
  * wants the right click to do what the hold does says so, with `contextmenu`
