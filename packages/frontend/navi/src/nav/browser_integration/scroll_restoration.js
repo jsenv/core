@@ -151,11 +151,26 @@ export const restoreScrollPosition = (url) => {
 // the one before it — and that borrowed offset is what is then remembered FOR
 // it, and handed back on the way forward.
 //
+// Arrived at, which a push does not always mean. A push that keeps the pathname
+// stacks an entry over the document the reader is scrolled in — a layer opened
+// over the screen, a param whose values are places one came from (see
+// navigation.md) — and the page under the new address is the one they never
+// left. The path names the page; the search says what is drawn on or over it.
+// So `from`, the url being left, tells an arrival from the same place said
+// differently, and only the first is moved.
+//
 // The document, because the document is the scrollport in the common case. An
 // app that scrolls an element of its own scrolls it itself.
-export const startAtTop = (url) => {
+export const startAtTop = (url, { from } = {}) => {
+  const urlObject = new URL(url, window.location.href);
   // A fragment names where to land, and the browser is the one that finds it.
-  if (new URL(url, window.location.href).hash) {
+  if (urlObject.hash) {
+    return;
+  }
+  if (
+    from !== undefined &&
+    new URL(from, window.location.href).pathname === urlObject.pathname
+  ) {
     return;
   }
   window.scrollTo({ top: 0, left: 0, behavior: "instant" });

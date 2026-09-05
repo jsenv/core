@@ -180,7 +180,10 @@ export const setupBrowserIntegrationViaHistory = ({
   };
 
   const applyRoutingTask = (url, options) => {
-    const isSameUrl = url === window.location.href;
+    // Read before the history is written: the url the reader is being taken
+    // away from, which is what decides where a push lands (see startAtTop).
+    const urlLeft = window.location.href;
+    const isSameUrl = url === urlLeft;
     const {
       reason,
       navigationType, // "load", "reload", "replace", "push", "traverse"
@@ -260,11 +263,12 @@ export const setupBrowserIntegrationViaHistory = ({
     //
     // A replace gets neither: it is the same place said differently — a param
     // settling, a state written — and moving the reader for it would throw
-    // them out of a page they never left. The one replace that IS an arrival
-    // is a row of tabs travelling, and the row says so for itself (see
+    // them out of a page they never left. A push that keeps the pathname is
+    // read the same way, by startAtTop itself. The one replace that IS an
+    // arrival is a row of tabs travelling, and the row says so for itself (see
     // route_travel.jsx).
     if (navigationType === "push") {
-      whenRenderingResumes(() => startAtTop(url));
+      whenRenderingResumes(() => startAtTop(url, { from: urlLeft }));
     } else if (navigationType === "traverse") {
       whenRenderingResumes(() => restoreScrollPosition(url));
     }

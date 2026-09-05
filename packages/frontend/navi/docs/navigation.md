@@ -527,10 +527,14 @@ the two, never both: see [route_transitions.md](./route_transitions.md).
 
 Four cases, and they are not a policy to configure but four different facts:
 
-- **Going somewhere new** (a `<Link>`, anything that pushes) lands at the top.
-  It is an arrival: the offset one had elsewhere means nothing here, and left
-  alone the new entry would be born holding the previous page's offset — which
-  the browser would then hand back as if it were this page's own.
+- **Going somewhere new** (a `<Link>`, anything that pushes to another path)
+  lands at the top. It is an arrival: the offset one had elsewhere means nothing
+  here, and left alone the new entry would be born holding the previous page's
+  offset — which the browser would then hand back as if it were this page's own.
+  A push that keeps the path is not one: it stacks an entry over the page the
+  reader is scrolled in — a [layer](#a-layer-over-the-screen-what-its-address-may-say)
+  opening, a [state whose values are places](#a-state-whose-values-are-places-history-push)
+  written — and moves nothing, like a replace.
 - **Going back or forward** (the browser's buttons, `navBack()`,
   `history.back()`) lands where that page was left. navi keeps the position and
   puts it back once the page is really rendered, which is what the browser

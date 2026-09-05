@@ -141,7 +141,10 @@ export const setupBrowserIntegrationViaNavigation = ({
   // Aborting: each run aborts the previous one, and the navigate event's own
   // signal (superseded navigation, stop button) aborts the current one.
   let abortController = null;
-  const runRouting = (url, { reason, navigationType, state, abortEvent }) => {
+  const runRouting = (
+    url,
+    { reason, navigationType, state, abortEvent, urlLeft },
+  ) => {
     const redirectionUrl = resolveRouteRedirection(url);
     if (redirectionUrl) {
       redirectAway(redirectionUrl);
@@ -205,7 +208,7 @@ export const setupBrowserIntegrationViaNavigation = ({
     // Same rule, same timing as via_history.js's own, and the same reading of
     // a replace: only the row that travels knows one of its own is an arrival.
     if (navigationType === "push") {
-      whenRenderingResumes(() => startAtTop(url));
+      whenRenderingResumes(() => startAtTop(url, { from: urlLeft }));
     } else if (navigationType === "traverse") {
       whenRenderingResumes(() => restoreScrollPosition(url));
     }
@@ -340,7 +343,10 @@ export const setupBrowserIntegrationViaNavigation = ({
         event.sourceElement || (event.info ? event.info.element : undefined),
       routeTransition: event.info ? event.info.routeTransition : undefined,
     });
-    const isSameUrl = url === window.location.href;
+    // The url the reader is being taken away from, read here because the
+    // commit — and with it the document url — happens before the handler runs.
+    const urlLeft = window.location.href;
+    const isSameUrl = url === urlLeft;
     event.intercept({
       // The browser would scroll at commit time — before the picture of the
       // page being left is taken. The shared scroll machinery does it at the
@@ -366,6 +372,7 @@ export const setupBrowserIntegrationViaNavigation = ({
             navigationType,
             state,
             abortEvent: event.signal,
+            urlLeft,
           });
           // The handler's promise IS the navigation for the browser (its
           // loading UI follows it) — but a routing that fails is displayed by
