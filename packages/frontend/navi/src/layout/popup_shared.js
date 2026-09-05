@@ -426,9 +426,18 @@ export const warnAboutUnreachableOutsideRegions = (popupEl) => {
  * answers it. The one popup where that cannot hold is the modal dialog, where
  * the browser has already made everything behind inert before this runs.
  *
+ * `pointerdown`, not `mousedown`, and this is what makes the reading work at
+ * all: a page with no wall over it is a page whose own elements arbitrate
+ * their presses, and cancelling a `pointerdown` — what a drag source and a
+ * control keeping the focus where it is both do — suppresses every
+ * compatibility mouse event that would have followed it. The press happens,
+ * reaches its target, and no `mousedown` is ever dispatched for it. Reading
+ * the pointer event is reading the press itself, whatever anything does with
+ * it afterwards, and it is the same event the drag and surface detectors
+ * read.
+ *
  * Capture phase, so a handler downstream that stops propagation cannot keep
- * the popup open — the press is still outside whatever that handler does with
- * it.
+ * the popup open either — the press is still outside whatever is made of it.
  *
  * Returns a cleanup that removes the listener.
  */
@@ -436,8 +445,8 @@ export const armOutsidePressClose = (
   popupEl,
   { openController, pointerInteractionOutsideEffect },
 ) => {
-  const onDocumentMouseDown = (mouseDownEvent) => {
-    if (mouseDownEvent.button !== 0) {
+  const onDocumentPointerDown = (pointerDownEvent) => {
+    if (pointerDownEvent.button !== 0) {
       return;
     }
     if (openedDuringThisPress(openController)) {
@@ -450,7 +459,7 @@ export const armOutsidePressClose = (
     // this popup whether it was pushed — a popup in front does not have to be
     // one this popup knows about. A popup nested inside this one falls to the
     // containment check below as the inside press it is.
-    const popupUnderPointer = mouseDownEvent.target.closest?.(
+    const popupUnderPointer = pointerDownEvent.target.closest?.(
       `[navi-control="dialog"], [navi-control="popover"]`,
     );
     if (
@@ -469,29 +478,29 @@ export const armOutsidePressClose = (
     // target, there being no `::backdrop` node to be one, so treating that as
     // contained would keep the rectangle from ever running.
     if (
-      mouseDownEvent.target !== popupEl &&
-      popupEl.contains(mouseDownEvent.target)
+      pointerDownEvent.target !== popupEl &&
+      popupEl.contains(pointerDownEvent.target)
     ) {
       return;
     }
     const rect = popupEl.getBoundingClientRect();
     const isOutside =
-      mouseDownEvent.clientX < rect.left ||
-      mouseDownEvent.clientX > rect.right ||
-      mouseDownEvent.clientY < rect.top ||
-      mouseDownEvent.clientY > rect.bottom;
+      pointerDownEvent.clientX < rect.left ||
+      pointerDownEvent.clientX > rect.right ||
+      pointerDownEvent.clientY < rect.top ||
+      pointerDownEvent.clientY > rect.bottom;
     if (!isOutside) {
       return;
     }
-    openController.requestClose(mouseDownEvent, {
+    openController.requestClose(pointerDownEvent, {
       isCancel: pointerInteractionOutsideEffect === "cancel",
     });
   };
-  document.addEventListener("mousedown", onDocumentMouseDown, {
+  document.addEventListener("pointerdown", onDocumentPointerDown, {
     capture: true,
   });
   return () => {
-    document.removeEventListener("mousedown", onDocumentMouseDown, {
+    document.removeEventListener("pointerdown", onDocumentPointerDown, {
       capture: true,
     });
   };

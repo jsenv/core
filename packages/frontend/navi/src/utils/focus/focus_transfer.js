@@ -126,8 +126,13 @@ export const markAutofocusRestoreOnClose = (
     return;
   }
   if (!isRestorableAutofocus(focused)) {
+    // pointerdown alongside mousedown: a press whose `pointerdown` was
+    // cancelled downstream produces no mouse event at all, and that is the
+    // press a popup with no backdrop is closed by (see armOutsidePressClose).
     const pointerEvent = closeEvent
-      ? findEvent(closeEvent, "mousedown") || findEvent(closeEvent, "click")
+      ? findEvent(closeEvent, "mousedown") ||
+        findEvent(closeEvent, "pointerdown") ||
+        findEvent(closeEvent, "click")
       : null;
     if (pointerEvent) {
       const pointerTarget = pointerEvent.target;

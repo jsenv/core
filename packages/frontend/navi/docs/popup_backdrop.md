@@ -48,6 +48,13 @@ The popup then hears an outside press from the document itself, and takes
 nothing from it: no `preventDefault`, no `stopPropagation`. It closes, and the
 same press is answered by whatever it landed on — one gesture, one press.
 
+What it listens to is `pointerdown`, the press itself rather than what the
+browser makes of it afterwards. A page that is still live is a page whose own
+elements arbitrate their presses, and a cancelled `pointerdown` — what a drag
+source and a control keeping the focus both do — suppresses every mouse event
+that would have followed. So the popup dismisses on the press, on a finger as
+on a mouse, whatever the element under it decides to do with that press.
+
 **It is not `backdropVariant="invisible"`.** A wall that is not painted is
 still a wall, and it still eats the press; the two props answer different
 questions. `"invisible"` is for a popup that must absorb — a menu whose

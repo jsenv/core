@@ -221,11 +221,19 @@ export const createOpenController = (
     focusedAtClose = document.activeElement;
 
     prevent_reopen: {
-      const mousedownEvent = findEvent(closeEvent, "mousedown");
-      if (mousedownEvent) {
+      // Either event means the same thing here — a press closed this popup and
+      // its click is still to come. Two of them because a press whose
+      // `pointerdown` was cancelled downstream (a drag source arbitrating it,
+      // a control keeping the focus) never produces a `mousedown` at all, and
+      // that is exactly the press a popup with no backdrop hears (see
+      // armOutsidePressClose).
+      const pressEvent =
+        findEvent(closeEvent, "mousedown") ||
+        findEvent(closeEvent, "pointerdown");
+      if (pressEvent) {
         debugInteraction(
           closeEvent,
-          `closed by mousedown -> ignore next click`,
+          `closed by ${pressEvent.type} -> ignore next click`,
         );
         armSuppressNextOpenRequest();
         break prevent_reopen;
@@ -412,6 +420,12 @@ export const createOpenController = (
               `closed by focusout -> let focus go away`,
             );
           } else {
+            // Only the mousedown, deliberately: a popup with no backdrop is
+            // closed by a `pointerdown` that belongs to the page (see
+            // armOutsidePressClose), and cancelling it would take away the
+            // very press it exists to let through — along with the click the
+            // page was going to answer. What that press lands on decides the
+            // focus then, as it would with no popup open at all.
             const mousedownEvent = findEvent(closeEvent, "mousedown");
             if (mousedownEvent) {
               debugInteraction(
