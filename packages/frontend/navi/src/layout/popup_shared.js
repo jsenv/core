@@ -314,3 +314,93 @@ export const warnPopupHasNoElementToOpen = (popupKind) => {
     `[navi] a "${popupKind}" was asked to open and has no element to open. What usually did it: content inside it suspended, and the <Loading> that caught the wait is above the popup rather than inside it — the popup was set aside with the rest of what that boundary holds, and this opening is lost (the next one works). Put a <Loading> inside the popup, or draw the wait in the component itself with useAsyncData(action, { loading: true }).`,
   );
 };
+
+/**
+ * A popup reads "outside" from its own border box: what a press lands on
+ * decides nothing on its own (a genuine backdrop press and a press on the
+ * popup's padding both report the popup element as their target, there being
+ * no real ::backdrop node to be one), so the rectangle is what tells them
+ * apart. That holds as long as the box and what the popup paints are the same
+ * thing — which stops being true for a popup with no surface of its own
+ * (`backgroundColor="transparent"`, no shadow, no padding): what the eye reads
+ * as backdrop is then inside the box, and a press there stays a press on the
+ * popup.
+ *
+ * `data-navi-popup-outside` is how a caller says which of its own boxes are
+ * not the surface. It is opt-in because navi cannot infer it — a background
+ * can come from anywhere — while the caller who made the popup see-through
+ * knows exactly which box is decoration and which is paper.
+ *
+ * The marker answers for the element it is on, never for its descendants: a
+ * box painted inside a marked one is still surface, so a row can be marked and
+ * its empty halves read as backdrop while presses on the controls it holds do
+ * not dismiss anything. A descendant with `pointer-events: none` never becomes
+ * a press target at all, so the marked box answers in its place — while the
+ * same declaration on the marked box itself takes it out of hit-testing and
+ * makes the marker unreachable (see warnAboutUnreachableOutsideRegions).
+ */
+const OUTSIDE_REGION_ATTRIBUTE = "data-navi-popup-outside";
+
+/**
+ * What a press landing on a region the caller declared as not-its-surface
+ * does: exactly what the same press on the backdrop would do.
+ *
+ * Lives on the popup's own content element rather than in the backdrop's
+ * handler, for both renderers: the backdrop is a sibling behind the popup
+ * (never an ancestor), so a press inside the popup's box never reaches it.
+ */
+export const handlePressOnOutsideRegion = (
+  mouseDownEvent,
+  { popupEl, openController, pointerInteractionOutsideEffect },
+) => {
+  if (mouseDownEvent.button !== 0) {
+    return;
+  }
+  const { target } = mouseDownEvent;
+  if (!target.hasAttribute(OUTSIDE_REGION_ATTRIBUTE)) {
+    return;
+  }
+  // A popup opens inside its opener's own subtree, so a press on a region
+  // belonging to a popup nested in this one bubbles through here too — and it
+  // is a press on what is in front, not on this popup's own decoration.
+  if (
+    target.closest(`[navi-control="dialog"], [navi-control="popover"]`) !==
+    popupEl
+  ) {
+    return;
+  }
+  if (pointerInteractionOutsideEffect === "capture") {
+    mouseDownEvent.preventDefault();
+    return;
+  }
+  if (
+    pointerInteractionOutsideEffect === "close" ||
+    pointerInteractionOutsideEffect === "cancel"
+  ) {
+    openController.requestClose(mouseDownEvent, {
+      isCancel: pointerInteractionOutsideEffect === "cancel",
+    });
+  }
+};
+
+/**
+ * `pointer-events: none` and `inert` are the two things reached for to say
+ * "this part of my box is not really there", and neither reaches the popup:
+ * inert speaks to the keyboard and to assistive technology, and
+ * pointer-events takes the box out of hit-testing so the press is answered by
+ * an ancestor that is still the popup's own surface. Writing them next to the
+ * marker is the natural mistake, and it makes the marker silently unreachable
+ * — so it is said out loud, once per open.
+ */
+export const warnAboutUnreachableOutsideRegions = (popupEl) => {
+  for (const regionEl of popupEl.querySelectorAll(
+    `[${OUTSIDE_REGION_ATTRIBUTE}]`,
+  )) {
+    if (getComputedStyle(regionEl).pointerEvents === "none") {
+      console.warn(
+        `[navi] ${OUTSIDE_REGION_ATTRIBUTE} on an element with "pointer-events: none" is never read: the press is answered by the nearest ancestor still in hit-testing, which is the popup itself. Drop pointer-events; the marker alone is what makes a press there count as outside.`,
+        regionEl,
+      );
+    }
+  }
+};

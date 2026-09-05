@@ -12224,6 +12224,11 @@ const DRAG_IGNORED_SELECTOR =
  *   Renders a visual line when the pointer deviates from the element due to constraints.
  * @param {boolean} [options.showDebugMarkers=false]
  *   Renders debug markers for constraint regions.
+ * @param {"translate"|"manual"} [options.dragPositionEffect="translate"]
+ *   Who puts the element where the hand is, while the hand is moving.
+ *   - `"translate"`: this controller does, with a transform (default).
+ *   - `"manual"`: nobody — the element stays where it was drawn, and whoever is
+ *     told the gesture draws it. For a thing whose position is state.
  * @param {"commit"|"cancel"|"cancel-animated"|"manual"} [options.releasePositionEffect="commit"]
  *   Controls what happens to the translated position on release.
  *   - `"commit"`: bakes the translate into inline styles so the element stays put (default).
@@ -12251,6 +12256,7 @@ const createDragToMoveGestureController = ({
   obstacleAttributeName = "data-drag-obstacle",
   showConstraintFeedbackLine = false,
   showDebugMarkers = false,
+  dragPositionEffect = "translate",
   releasePositionEffect = "commit",
   cancelAnimationDuration = 200,
   cancelAnimationEasing = "ease-out",
@@ -12495,7 +12501,12 @@ const createDragToMoveGestureController = ({
         }
       }
 
-      {
+      move: {
+        if (dragPositionEffect === "manual") {
+          // The element is drawn where it goes by whoever is being told the
+          // gesture; a translate on top of that would move it twice.
+          break move;
+        }
         const { scrollableLeft, scrollableTop } = layout;
         const [positionedLeft, positionedTop] = convertScrollablePosition(
           scrollableLeft,
@@ -12585,6 +12596,15 @@ const createDragToMoveGestureController = ({
  *   and so is asking for `reorder` and `land`.
  * @param {object} [options]
  * @param {Element} [options.draggedElement=event.currentTarget]
+ * @param {(detail: {gestureInfo: object, x: number, y: number}) => void} [options.onMoving]
+ *   It is BEING moved: told on every frame of the gesture, with where it is now
+ *   from the grab — the numbers `onMove` ends with, said all along. Declaring it
+ *   says the position is the caller's: nothing here translates the element, so a
+ *   thing drawn from state stays exactly where the caller draws it (a disc that
+ *   may never leave its course), and there is nothing to hand over at the
+ *   release. Told, not asked: what comes back is not waited on. Only on the move
+ *   path — a copy is what travels for `reorder`/`land`/`toss`, and the original
+ *   is not going anywhere to be told about.
  * @param {(detail: {gestureInfo: object, x: number, y: number}) => Promise|void} [options.onMove]
  *   It was put somewhere. It is left where the hand let go of it while this
  *   runs, and travels back if the promise rejects. Once it resolves the position
@@ -12676,8 +12696,11 @@ const startDragTo = (
   const canLand = effects.includes("land");
   const canLeave = effects.includes("leave");
   // A `leave` on its own carries a copy too: nothing keeps the element where it
-  // was put, so the original stays until the answer says it is gone.
-  if (canReorder || canToss || canLand || (canLeave && !canMove)) {
+  // was put, so the original stays until the answer says it is gone — unless
+  // `onMoving` says the caller is the one drawing it, which keeps it as surely as
+  // a `move` would.
+  const keepsTheElement = canMove || Boolean(options.onMoving);
+  if (canReorder || canToss || canLand || (canLeave && !keepsTheElement)) {
     return startDragToCarryCopy(event, {
       draggedElement,
       canReorder,
@@ -12776,6 +12799,7 @@ const startDragToMoveElement = (
   {
     draggedElement,
     canLeave,
+    onMoving,
     onMove,
     onLeave,
     onRelease,
@@ -12798,6 +12822,10 @@ const startDragToMoveElement = (
     event,
     () => {
       const gestureController = createDragToMoveGestureController({
+        // Told while it happens is told to somebody who draws it: the position
+        // is theirs from the first frame, so nothing here translates anything —
+        // and there is nothing to settle at the release either (see below).
+        dragPositionEffect: onMoving ? "manual" : "translate",
         releasePositionEffect: "manual",
         areaConstraint,
         ...options,
@@ -12807,6 +12835,16 @@ const startDragToMoveElement = (
       });
       if (!dragGesture) {
         return null;
+      }
+      if (onMoving) {
+        // Where it is now, from the grab — the same numbers `onMove` ends with,
+        // said every frame instead of once. A caller adding up steps of its own
+        // would drift, and would have nothing to re-read after a frame it
+        // missed.
+        dragGesture.addDragCallback((gestureInfo) => {
+          const { xDelta, yDelta } = gestureInfo.layout;
+          onMoving({ gestureInfo, x: xDelta, y: yDelta });
+        });
       }
       dragGesture.addReleaseCallback(async (gestureInfo) => {
         const { xDelta, yDelta } = gestureInfo.layout;
@@ -12824,7 +12862,9 @@ const startDragToMoveElement = (
           gestureInfo,
           x: xDelta,
           y: yDelta,
-          outcome: leaving ? "leave" : "move",
+          // Nothing answers a release that only ever said where the hand was
+          // going: `onMoving` alone has already told all of it.
+          outcome: leaving ? "leave" : onMove ? "move" : null,
         });
         if (leaving) {
           // Left where the hand let go of it while the answer is asked — a thing
@@ -12848,6 +12888,12 @@ const startDragToMoveElement = (
           await onMove?.({ gestureInfo, x: xDelta, y: yDelta });
         } catch {
           gestureInfo.cancelPositionAnimated();
+          return;
+        }
+        if (onMoving) {
+          // Nothing was translated, so there is nothing to keep or to take back:
+          // who owns the position was settled when the gesture was declared,
+          // rather than read off the element afterwards.
           return;
         }
         settleMovedElement(draggedElement, gestureInfo, layoutBeforeAnswer);

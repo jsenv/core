@@ -17,6 +17,69 @@ an outside click — because that click is the way out of the screen — may als
 need the page behind to stop competing for the eye. How much it withdraws says
 nothing about what the click does.
 
+## Where the outside begins
+
+A popup reads "outside" from its own border box. What the press landed on
+settles nothing by itself — a press on a real backdrop and a press on the
+popup's own padding both report the popup element as their target, there being
+no `::backdrop` node to be one — so the rectangle is what tells them apart.
+
+That works as long as the box and what the popup paints are the same thing. A
+popup with no surface of its own is the case where they are not:
+
+```jsx
+<Dialog
+  backgroundColor="transparent"
+  boxShadow="none"
+  border="none"
+  padding="0"
+/>
+```
+
+Here the sheet is whatever the children paint, and everything between them is
+backdrop to the eye and inside the box to the code. A press just above the box
+dismisses the popup; the same press two pixels lower, on the empty half of a
+row, is ignored — the rectangle says it landed on the popup.
+
+`data-navi-popup-outside` is how the caller says which of its own boxes are not
+the surface:
+
+```jsx
+<Box data-navi-popup-outside flex justifyContent="center">
+  <HourWheel />
+</Box>
+```
+
+A press on that row — left of the wheel, right of it, or anywhere in the height
+it reserves while the wheel is hidden — does exactly what the same press on the
+backdrop does, `pointerInteractionOutsideEffect` and all: `"cancel"`
+reverts, `"capture"` absorbs it, `"none"` (a `Popover`'s default, where no
+backdrop is rendered at all) leaves it without an answer.
+
+It is opt-in because navi cannot infer it: a background can come from anywhere,
+and the caller who chose the transparency is the one who knows which box is
+decoration and which is paper.
+
+**The marker answers for the element it is on, never for its descendants.** The
+wheel above is painted, so a press on it is a press on the popup — which is
+what lets one marker cover a whole row without swallowing the controls it
+holds. Mark the box whose own background is the see-through part; a nested box
+that is see-through too needs its own marker.
+
+### `pointer-events: none` and `inert` are not this
+
+Neither says "this is backdrop", and reaching for them here is the natural
+mistake:
+
+- `pointer-events: none` takes the box out of hit-testing, so the press is
+  answered by the nearest ancestor that is still in it — still a descendant of
+  the popup, still inside. Putting it on the marked box makes the marker
+  unreachable; navi warns about that in dev. Putting it on a decoration
+  _inside_ a marked box is the one useful case: the press falls to the marked
+  box, which is the answer wanted.
+- `inert` speaks to the keyboard and to assistive technology. It does nothing
+  at all for a press.
+
 ## Painting one popup: two props
 
 ```jsx

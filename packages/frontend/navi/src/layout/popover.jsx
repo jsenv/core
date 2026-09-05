@@ -80,11 +80,13 @@ import { freezeSize, unfreezeSize } from "./freeze_size.js";
 import {
   armPointerDownOutsideClose,
   clearTextSelectionInside,
+  handlePressOnOutsideRegion,
   keepFocusedElementVisible,
   mayHaveHiddenFocus,
   resolveAutoAnimationKind,
   resolveDirectionValue,
   suppressPointerEventsDuringTransition,
+  warnAboutUnreachableOutsideRegions,
   warnPopupHasNoElementToOpen,
 } from "./popup_shared.js";
 import { PopupClose } from "./popup_close.jsx";
@@ -452,7 +454,10 @@ const css = /* css */ `
  *   through. `"close"` closes the popover on an outside click. `"capture"`
  *   absorbs the click (dims the backdrop) without closing. Note this
  *   default differs from `Dialog`'s own (`"close"`) — a popover is
- *   typically a lightweight, non-modal affordance.
+ *   typically a lightweight, non-modal affordance. "Outside" is the popover's
+ *   own border box; a see-through popover whose box is bigger than what it
+ *   paints marks the difference with `data-navi-popup-outside` (see
+ *   docs/popup_backdrop.md).
  * @param {"auto"|"discrete"|"invisible"} [props.backdropVariant="auto"] - How
  *   visible the backdrop is, independently of what it does. `"auto"`: the
  *   paint `pointerInteractionOutsideEffect` implies (dimmed for
@@ -925,6 +930,9 @@ const usePopoverProps = (props) => {
         warnPopupHasNoElementToOpen("popover");
       }
       return undefined;
+    }
+    if (import.meta.dev) {
+      warnAboutUnreachableOutsideRegions(popoverEl);
     }
 
     // Set by useOpenControllerByProps for the very first open triggered by
@@ -1643,6 +1651,17 @@ const usePopoverProps = (props) => {
     "navi-out-of-flow": "",
     "baseClassName": "navi_popover",
     "pseudoClasses": POPOVER_PSEUDO_CLASSES,
+    // Where the outside begins when it is not the border box — see
+    // handlePressOnOutsideRegion. Placed after ...rest so a caller's own
+    // onMouseDown still runs.
+    "onMouseDown": (e) => {
+      rest.onMouseDown?.(e);
+      handlePressOnOutsideRegion(e, {
+        popupEl: ref.current,
+        openController,
+        pointerInteractionOutsideEffect,
+      });
+    },
     "onKeyDown": (e) => {
       onKeyDown?.(e);
       onKeyDownShortcuts(e);

@@ -190,7 +190,9 @@ consistency across the app, not from any single call site.
   `onOpen`/`onClose` writing a signal.
 - `docs/popup_backdrop.md` — what a popup lays between itself and the page
   behind: the two independent questions it answers (what an outside press does,
-  how far what is behind withdraws), the `backdropColor`/`backdropFilter` props
+  how far what is behind withdraws), where the outside begins for a popup
+  painting no surface of its own (`data-navi-popup-outside`), the
+  `backdropColor`/`backdropFilter` props
   for one popup and the `--navi-backdrop-*` colour+filter token pairs for the
   whole app, and why a blur is not a property of
   `pointerInteractionOutsideEffect="capture"` — a backdrop that closes can blur.

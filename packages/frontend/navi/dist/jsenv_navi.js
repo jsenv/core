@@ -10506,6 +10506,38 @@ const swipeTypeOf = (axis, pulled) => {
  * `view-transition-name` must be unique per document, so only the application can
  * name what moves.
  *
+ * WHILE IT IS BEING MOVED: `moving`.
+ *
+ *   interactions={{ moving: (event) => setHourFrom(event.detail) }}
+ *
+ * `move` says where the element ended up, once. That is the answer for something
+ * whose position is its own — a marker put down on a plan, remembered as it lies.
+ * It is not the answer for something whose position is STATE: a disc pushed along
+ * the course of the sun sets the hour, the shadows turn with it, and the disc
+ * itself may never leave its course by a pixel. What such a thing needs is the
+ * gesture told all along, and to be the one drawing.
+ *
+ * `moving` is that, and declaring it says both: the element is told where the hand
+ * has taken it on every frame, and NOTHING here moves it — no translate, nothing
+ * to hand back at the release. The caller draws, from the numbers it is given.
+ *
+ * Its detail is `{ x, y }`: where it is now, counted from the grab — the very
+ * numbers `move` ends with, said all along rather than once. Not steps since the
+ * last frame (which is what `pan` gives, having no grab to count from): a caller
+ * adding up steps drifts, and has nothing to re-read after a frame it missed.
+ *
+ * Nothing travels back either: a `move` or a `leave` beside it whose answer
+ * rejects normally sends the element home, and there is no home to send it to
+ * when navi never moved it — the state the frames wrote is the caller's to put
+ * back.
+ *
+ * Told, not asked, like `grab` and `release` — a draw that has to be awaited
+ * before the next frame is a draw one frame late. It differs from them in being a
+ * gesture of its own: `moving` alone is a complete declaration, and `move` beside
+ * it is only worth writing when the release settles something the frames did not.
+ * It is the element that is carried, so it goes with `move` and `leave` and not
+ * with the three that carry a copy.
+ *
  * WHEN THE PRESS BECOMES A HOLD: `grab`.
  *
  *   interactions={{ toss: remove, grab: () => navigator.vibrate?.(10) }}
@@ -10592,6 +10624,8 @@ const swipeTypeOf = (axis, pulled) => {
 
 
 const MOVE = "move";
+// The same carry, told while it happens instead of once it is over.
+const MOVING = "moving";
 const REORDER = "reorder";
 // "drop" is taken: it is the name of the platform's own drag-and-drop event, and
 // an interaction is dispatched as an event of its own name — so anything listening
@@ -10629,6 +10663,7 @@ defineInteractionDetector({
   name: "drag",
   claims: (type) =>
     type === MOVE ||
+    type === MOVING ||
     type === REORDER ||
     type === LAND ||
     type === TOSS ||
@@ -10640,6 +10675,7 @@ defineInteractionDetector({
   // and there is nothing in it to refuse.
   refusable: (type) =>
     type === MOVE ||
+    type === MOVING ||
     type === REORDER ||
     type === LAND ||
     type === TOSS ||
@@ -10649,11 +10685,19 @@ defineInteractionDetector({
   disputesPress: true,
   setup: (element, trigger, { types, readConfig, isRefused }) => {
     const canMove = types.includes(MOVE);
+    const canMoving = types.includes(MOVING);
     const canReorder = types.includes(REORDER);
     const canLand = types.includes(LAND);
     const canToss = types.includes(TOSS);
     const canLeave = types.includes(LEAVE);
-    if (!canMove && !canReorder && !canLand && !canToss && !canLeave) {
+    if (
+      !canMove &&
+      !canMoving &&
+      !canReorder &&
+      !canLand &&
+      !canToss &&
+      !canLeave
+    ) {
       return undefined;
     }
     const tellsWhenGrabbed = types.includes(GRAB);
@@ -10689,11 +10733,20 @@ defineInteractionDetector({
     const unmarkDragSource = markDragSource(element, axes);
 
     // What a release can mean, which is not all of what was declared: "grab",
-    // "release" and "refuse" are moments, not outcomes, and the gesture must not
-    // read them as ones.
+    // "release" and "refuse" are moments, not outcomes, and "moving" is the carry
+    // told while it happens rather than a meaning the release can have — the
+    // gesture must not read any of them as ones.
     const effects = types.filter(
-      (type) => type !== GRAB && type !== RELEASE && type !== REFUSE,
+      (type) =>
+        type === MOVE ||
+        type === REORDER ||
+        type === LAND ||
+        type === TOSS ||
+        type === LEAVE,
     );
+    // And what the element saying no is about: the carry, whether it is told at
+    // the release or all along.
+    const carries = canMoving ? [...effects, MOVING] : effects;
 
     const onPointerDown = (pointerDownEvent) => {
       // Asked at every press and never once: what an interaction does is the
@@ -10701,7 +10754,7 @@ defineInteractionDetector({
       // listeners stay where they are. One outcome saying no is enough — the
       // element is carried or it is not, and each of the five is an answer to
       // that same carry.
-      if (effects.some(isRefused)) {
+      if (carries.some(isRefused)) {
         refuseDragTo(pointerDownEvent, {
           draggedElement: element,
           threshold: readConfig(THRESHOLD_ATTRIBUTE$1, undefined),
@@ -10747,7 +10800,7 @@ defineInteractionDetector({
         areaConstraint:
           dropContainer || element.closest(`[data-drag-free]`) || canLeave
             ? "none"
-            : canMove
+            : canMove || canMoving
               ? "scrollport"
               : undefined,
         threshold: readConfig(THRESHOLD_ATTRIBUTE$1, undefined),
@@ -10802,6 +10855,13 @@ defineInteractionDetector({
         onLeave: ({ x, y }) =>
           trigger(LEAVE, pointerDownEvent, { id: element.id, x, y }),
         onMove: ({ x, y }) => trigger(MOVE, pointerDownEvent, { x, y }),
+        // Every frame, and nothing is waited on: the caller is drawing, and a
+        // draw that has to be awaited before the next frame is one frame late.
+        onMoving: canMoving
+          ? ({ x, y }) => {
+              trigger(MOVING, pointerDownEvent, { x, y });
+            }
+          : undefined,
       });
     };
     element.addEventListener("pointerdown", onPointerDown);
@@ -10825,17 +10885,15 @@ defineInteractionDetector({
  *   />
  *
  * Neither is an outcome: both are a stream, reported on every frame while the
- * hand is still moving, and navi otherwise names only what happens once (see
- * "A gesture whose product is a value" in docs/interactions.md). They are named
- * here because of what has to be settled BEFORE the press, which is what
- * `interactions` exists for: `touch-action` on the surface, said from a
- * stylesheet since a browser decides what a touch may do when it lands; the pan
- * stepping back for what is carried ACROSS the surface (a marker declaring
- * `move`, a handle) and for what answers the pointer on its own; the pinch not
- * beginning as a pan under its first finger; the wheel and the pinch writing
- * one `zoom`. A handle turned, a sun dragged around a plan have none of that to
- * arbitrate — the handle is the whole surface of the gesture — and stay
- * unnamed.
+ * hand is still moving. What earns them a name is not the number but what has to
+ * be settled BEFORE the press, which is what `interactions` exists for:
+ * `touch-action` on the surface, said from a stylesheet since a browser decides
+ * what a touch may do when it lands; the pan stepping back for what is carried
+ * ACROSS the surface (a marker declaring `move` or `moving`, a handle) and for
+ * what answers the pointer on its own; the pinch not beginning as a pan under
+ * its first finger; the wheel and the pinch writing one `zoom`. What is carried
+ * rather than looked around has the same arbitration settled for it by the drag
+ * detector, and is told the same way there (`moving`, in interaction_drag.js).
  *
  * `pan`'s detail is the movement since the previous `pan`, in px. `zoom`'s is
  * the factor (above 1 is in) and the point of the surface it is around,
@@ -44968,6 +45026,74 @@ const resolveAutoAnimationKind = (anchor, parsedPositionArea) => {
 };
 
 /**
+ * A popup reads "outside" from its own border box: what a press lands on
+ * decides nothing on its own (a genuine backdrop press and a press on the
+ * popup's padding both report the popup element as their target, there being
+ * no real ::backdrop node to be one), so the rectangle is what tells them
+ * apart. That holds as long as the box and what the popup paints are the same
+ * thing — which stops being true for a popup with no surface of its own
+ * (`backgroundColor="transparent"`, no shadow, no padding): what the eye reads
+ * as backdrop is then inside the box, and a press there stays a press on the
+ * popup.
+ *
+ * `data-navi-popup-outside` is how a caller says which of its own boxes are
+ * not the surface. It is opt-in because navi cannot infer it — a background
+ * can come from anywhere — while the caller who made the popup see-through
+ * knows exactly which box is decoration and which is paper.
+ *
+ * The marker answers for the element it is on, never for its descendants: a
+ * box painted inside a marked one is still surface, so a row can be marked and
+ * its empty halves read as backdrop while presses on the controls it holds do
+ * not dismiss anything. A descendant with `pointer-events: none` never becomes
+ * a press target at all, so the marked box answers in its place — while the
+ * same declaration on the marked box itself takes it out of hit-testing and
+ * makes the marker unreachable (see warnAboutUnreachableOutsideRegions).
+ */
+const OUTSIDE_REGION_ATTRIBUTE = "data-navi-popup-outside";
+
+/**
+ * What a press landing on a region the caller declared as not-its-surface
+ * does: exactly what the same press on the backdrop would do.
+ *
+ * Lives on the popup's own content element rather than in the backdrop's
+ * handler, for both renderers: the backdrop is a sibling behind the popup
+ * (never an ancestor), so a press inside the popup's box never reaches it.
+ */
+const handlePressOnOutsideRegion = (
+  mouseDownEvent,
+  { popupEl, openController, pointerInteractionOutsideEffect },
+) => {
+  if (mouseDownEvent.button !== 0) {
+    return;
+  }
+  const { target } = mouseDownEvent;
+  if (!target.hasAttribute(OUTSIDE_REGION_ATTRIBUTE)) {
+    return;
+  }
+  // A popup opens inside its opener's own subtree, so a press on a region
+  // belonging to a popup nested in this one bubbles through here too — and it
+  // is a press on what is in front, not on this popup's own decoration.
+  if (
+    target.closest(`[navi-control="dialog"], [navi-control="popover"]`) !==
+    popupEl
+  ) {
+    return;
+  }
+  if (pointerInteractionOutsideEffect === "capture") {
+    mouseDownEvent.preventDefault();
+    return;
+  }
+  if (
+    pointerInteractionOutsideEffect === "close" ||
+    pointerInteractionOutsideEffect === "cancel"
+  ) {
+    openController.requestClose(mouseDownEvent, {
+      isCancel: pointerInteractionOutsideEffect === "cancel",
+    });
+  }
+};
+
+/**
  * When a popup builds what it holds, and when it throws it away.
  *
  * A closed popup shows nothing, focuses nothing, and answers nothing: what it
@@ -56902,7 +57028,10 @@ const css$E = /* css */`
  *   - `"close"` closes the dialog on an outside click. `"capture"`/`"none"`
  *   both just absorb the click without closing (visually dimmed backdrop vs.
  *   not) — a dialog is always modal one way or another, so there's always
- *   at least a click-absorbing backdrop regardless of this prop.
+ *   at least a click-absorbing backdrop regardless of this prop. "Outside" is
+ *   the dialog's own border box; a see-through dialog whose box is bigger than
+ *   what it paints marks the difference with `data-navi-popup-outside` (see
+ *   docs/popup_backdrop.md).
  * @param {"auto"|"discrete"|"invisible"} [props.backdropVariant="auto"] - How
  *   visible the backdrop is, independently of what it does. `"auto"`: the
  *   paint `pointerInteractionOutsideEffect` implies (dimmed for
@@ -58051,6 +58180,18 @@ const useDialogProps = props => {
       rest.onPointerDown?.(e);
       onSwipePointerDown?.(e);
     },
+    // Where the outside begins when it is not the border box — see
+    // handlePressOnOutsideRegion. The document-level listener in openEffect
+    // above has already returned by then (the press is genuinely contained),
+    // so the two never both answer one press.
+    "onMouseDown": e => {
+      rest.onMouseDown?.(e);
+      handlePressOnOutsideRegion(e, {
+        popupEl: ref.current,
+        openController,
+        pointerInteractionOutsideEffect
+      });
+    },
     "onKeyDown": e => {
       onKeyDown?.(e);
       onKeyDownShortcuts(e);
@@ -58479,7 +58620,10 @@ const css$D = /* css */`
  *   through. `"close"` closes the popover on an outside click. `"capture"`
  *   absorbs the click (dims the backdrop) without closing. Note this
  *   default differs from `Dialog`'s own (`"close"`) — a popover is
- *   typically a lightweight, non-modal affordance.
+ *   typically a lightweight, non-modal affordance. "Outside" is the popover's
+ *   own border box; a see-through popover whose box is bigger than what it
+ *   paints marks the difference with `data-navi-popup-outside` (see
+ *   docs/popup_backdrop.md).
  * @param {"auto"|"discrete"|"invisible"} [props.backdropVariant="auto"] - How
  *   visible the backdrop is, independently of what it does. `"auto"`: the
  *   paint `pointerInteractionOutsideEffect` implies (dimmed for
@@ -59607,6 +59751,17 @@ const usePopoverProps = props => {
     "navi-out-of-flow": "",
     "baseClassName": "navi_popover",
     "pseudoClasses": POPOVER_PSEUDO_CLASSES,
+    // Where the outside begins when it is not the border box — see
+    // handlePressOnOutsideRegion. Placed after ...rest so a caller's own
+    // onMouseDown still runs.
+    "onMouseDown": e => {
+      rest.onMouseDown?.(e);
+      handlePressOnOutsideRegion(e, {
+        popupEl: ref.current,
+        openController,
+        pointerInteractionOutsideEffect
+      });
+    },
     "onKeyDown": e => {
       onKeyDown?.(e);
       onKeyDownShortcuts(e);

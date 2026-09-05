@@ -95,11 +95,13 @@ import { growPopupFromAnchor } from "./popup_grow.js";
 import {
   armPointerDownOutsideClose,
   clearTextSelectionInside,
+  handlePressOnOutsideRegion,
   keepFocusedElementVisible,
   mayHaveHiddenFocus,
   resolveAutoAnimationKind,
   resolveDirectionValue,
   suppressPointerEventsDuringTransition,
+  warnAboutUnreachableOutsideRegions,
   warnPopupHasNoElementToOpen,
 } from "./popup_shared.js";
 import { PopupClose } from "./popup_close.jsx";
@@ -639,7 +641,10 @@ const css = /* css */ `
  *   - `"close"` closes the dialog on an outside click. `"capture"`/`"none"`
  *   both just absorb the click without closing (visually dimmed backdrop vs.
  *   not) — a dialog is always modal one way or another, so there's always
- *   at least a click-absorbing backdrop regardless of this prop.
+ *   at least a click-absorbing backdrop regardless of this prop. "Outside" is
+ *   the dialog's own border box; a see-through dialog whose box is bigger than
+ *   what it paints marks the difference with `data-navi-popup-outside` (see
+ *   docs/popup_backdrop.md).
  * @param {"auto"|"discrete"|"invisible"} [props.backdropVariant="auto"] - How
  *   visible the backdrop is, independently of what it does. `"auto"`: the
  *   paint `pointerInteractionOutsideEffect` implies (dimmed for
@@ -1245,6 +1250,9 @@ const useDialogProps = (props) => {
       }
       return undefined;
     }
+    if (import.meta.dev) {
+      warnAboutUnreachableOutsideRegions(dialogEl);
+    }
 
     // Set by useOpenControllerByProps for the very first open triggered by
     // `open`/`defaultOpen` already being truthy at mount — see popover.jsx's
@@ -1846,6 +1854,18 @@ const useDialogProps = (props) => {
     "onPointerDown": (e) => {
       rest.onPointerDown?.(e);
       onSwipePointerDown?.(e);
+    },
+    // Where the outside begins when it is not the border box — see
+    // handlePressOnOutsideRegion. The document-level listener in openEffect
+    // above has already returned by then (the press is genuinely contained),
+    // so the two never both answer one press.
+    "onMouseDown": (e) => {
+      rest.onMouseDown?.(e);
+      handlePressOnOutsideRegion(e, {
+        popupEl: ref.current,
+        openController,
+        pointerInteractionOutsideEffect,
+      });
     },
     "onKeyDown": (e) => {
       onKeyDown?.(e);
