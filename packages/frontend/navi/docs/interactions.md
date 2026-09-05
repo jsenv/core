@@ -71,6 +71,7 @@ which the carrying interactions answer with).
 | `swipe_left` `swipe_right` `swipe_up` `swipe_down`     | a press that travels                                        |
 | `longpress`                                            | a press held still                                          |
 | `move` `reorder` `land` `toss` `leave`                 | the element carried, and what letting go means              |
+| `moving`                                               | the same carry, told on every frame                         |
 | `grab` `release` `refuse`                              | the instants a drag takes hold, lets go, or does not happen |
 | `pan` `zoom`                                           | a surface under the hand, or under a wheel                  |
 | `"keyboard:<shortcut>"`                                | keys, e.g. `"keyboard:ctrl+backspace"`                      |
@@ -208,6 +209,11 @@ that draws nothing (a token on a free canvas) leaves the position to the element
 where it is baked in. Nothing to declare either way — but a handler whose draw
 comes later than its answer has to return the promise of that draw.
 
+That is one answer, at the release, with the whole of the gesture in it: `move` is
+not told while the hand moves, and until the release navi carries the element with
+a translate of its own. A thing that has to change something WHILE it is dragged —
+or that must never be translated at all — declares `moving` instead (below).
+
 **A copy that can be thrown frees its own area.** What is dragged is otherwise kept
 inside its scroll area — right for a reorder, since a row belongs to its list, and
 fatal for a throw: the copy hits the edge of the list, no distance is ever covered,
@@ -268,6 +274,50 @@ name what moves.
 | `data-drag-on-contact`                                   | a finger may drag by travelling too    |
 | `data-toss-distance` `data-toss-speed`                   | how far and how fast counts as a throw |
 | `data-drop-container`                                    | where the places are looked for        |
+
+### While it is being moved: `moving`
+
+`move` says where the element ended up, once. That is the answer for something
+whose position is its own — a marker put down on a plan, remembered as it lies. It
+is not the answer for something whose position is **state**: a disc pushed along
+the course of the sun sets the hour, the shadows turn as it goes, and the disc
+itself may never leave its course by a pixel. Such a thing needs the gesture told
+all along, and needs to be the one drawing.
+
+```jsx
+<Box
+  data-drag-free
+  interactions={{
+    moving: (event) => setHourFrom(event.detail), // { x, y } from the grab
+  }}
+/>
+```
+
+Declaring it says both things at once: the element is told where the hand has
+taken it on every frame, and **navi moves nothing** — no translate while the
+gesture runs, nothing to hand back at the release, no reading the element
+afterwards to find out who owns its position. The caller draws, from the numbers
+it is given.
+
+Its detail is `{ x, y }`: where it is now, counted from the grab — the very
+numbers `move` ends with, said all along instead of once. Not steps since the last
+frame, which is what `pan` gives (a surface has no grab to count from): a caller
+adding up steps drifts, and has nothing to re-read after a frame it missed.
+
+Told, not asked, like `grab` and `release` — a draw that has to be awaited before
+the next frame is a draw one frame late. Where it differs from those two is that
+it is a gesture of its own: `moving` alone is a complete declaration, and it keeps
+everything the drag knows — the axes, the threshold, the hold a finger owes,
+`data-drag-free`, `grab`/`release`, `leave`, and `"refuse"` to lock it. Write
+`move` beside it only when the release settles something the frames did not.
+
+Nothing travels back, either: a `move` or a `leave` beside it whose answer rejects
+normally sends the element home, and there is no home to send it to when navi
+never moved it. The state the frames wrote is the caller's to put back.
+
+It carries the element itself, so it goes with `move` and `leave` and not with the
+three that carry a copy — for those, the original never goes anywhere, and there
+is nothing being moved to tell about (a dev warning says so).
 
 ### Let go of away from every place: `leave`
 
@@ -1059,20 +1109,23 @@ them is answered.
 ## A gesture whose product is a value
 
 `move`, `reorder`, `land`, `toss` and `leave` answer the same question — where did
-the element end up — because all five carry it. A rotation does not: what comes out of
-it is an angle, and the handle that produced it stays exactly where it is. Same for
-a scale, or a sun dragged around a plan to set the hour.
+the element end up — because all five carry it. A rotation does not: what comes out
+of it is an angle, and the handle that produced it stays exactly where it is. Same
+for a scale, or a sun dragged around a plan to set the hour.
 
-navi names none of those, and it is not an oversight: an interaction names an
-**outcome** — something that happened once, that can be told, refused, awaited.
-There is no outcome here, only a number read while the hand is still moving, and
-what to do with it (snap it to the neighbouring court, draw it, keep it in a
-signal) is knowledge navi does not have. `pan` and `zoom` above are the one
-exception, and not for the number: a surface has an arbitration to settle before
-the press — what it yields to, what a touch on it may do — and arbitration is
-what `interactions` is for. A handle has none; it is the whole surface of its own
-gesture. So for those navi hands over the machinery instead and leaves the paint
-alone:
+What navi names is never the value: it does not know that these pixels are an
+angle, that the angle snaps to the neighbouring court, or where the result is
+kept. What it names is the **arbitration** — a press that could have been a tap, a
+scroll, a page travelling, the surface underneath — and once that is settled it
+hands the numbers over. `moving` is that for something carried (the deltas from the
+grab, every frame, nothing translated), `pan` and `zoom` for a surface under the
+hand. A value gesture written on either of those two shapes is `interactions`
+work, and the machinery below is not needed for it.
+
+What is left to it is a gesture whose SHAPE is none of navi's: it does not begin on
+an element that could be carried, or on a surface — it begins wherever the
+application says, on its own rules. Then navi hands over the machinery instead and
+leaves the paint alone:
 
 ```js
 import { createDragGestureController, dragAfterIntent } from "@jsenv/navi";

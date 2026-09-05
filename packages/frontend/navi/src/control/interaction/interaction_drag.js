@@ -144,6 +144,38 @@
  * `view-transition-name` must be unique per document, so only the application can
  * name what moves.
  *
+ * WHILE IT IS BEING MOVED: `moving`.
+ *
+ *   interactions={{ moving: (event) => setHourFrom(event.detail) }}
+ *
+ * `move` says where the element ended up, once. That is the answer for something
+ * whose position is its own — a marker put down on a plan, remembered as it lies.
+ * It is not the answer for something whose position is STATE: a disc pushed along
+ * the course of the sun sets the hour, the shadows turn with it, and the disc
+ * itself may never leave its course by a pixel. What such a thing needs is the
+ * gesture told all along, and to be the one drawing.
+ *
+ * `moving` is that, and declaring it says both: the element is told where the hand
+ * has taken it on every frame, and NOTHING here moves it — no translate, nothing
+ * to hand back at the release. The caller draws, from the numbers it is given.
+ *
+ * Its detail is `{ x, y }`: where it is now, counted from the grab — the very
+ * numbers `move` ends with, said all along rather than once. Not steps since the
+ * last frame (which is what `pan` gives, having no grab to count from): a caller
+ * adding up steps drifts, and has nothing to re-read after a frame it missed.
+ *
+ * Nothing travels back either: a `move` or a `leave` beside it whose answer
+ * rejects normally sends the element home, and there is no home to send it to
+ * when navi never moved it — the state the frames wrote is the caller's to put
+ * back.
+ *
+ * Told, not asked, like `grab` and `release` — a draw that has to be awaited
+ * before the next frame is a draw one frame late. It differs from them in being a
+ * gesture of its own: `moving` alone is a complete declaration, and `move` beside
+ * it is only worth writing when the release settles something the frames did not.
+ * It is the element that is carried, so it goes with `move` and `leave` and not
+ * with the three that carry a copy.
+ *
  * WHEN THE PRESS BECOMES A HOLD: `grab`.
  *
  *   interactions={{ toss: remove, grab: () => navigator.vibrate?.(10) }}
@@ -233,6 +265,8 @@ import { markDragSource, refuseDragTo, startDragTo } from "@jsenv/dom";
 import { defineInteractionDetector } from "./interaction_registry.js";
 
 const MOVE = "move";
+// The same carry, told while it happens instead of once it is over.
+const MOVING = "moving";
 const REORDER = "reorder";
 // "drop" is taken: it is the name of the platform's own drag-and-drop event, and
 // an interaction is dispatched as an event of its own name — so anything listening
@@ -270,6 +304,7 @@ defineInteractionDetector({
   name: "drag",
   claims: (type) =>
     type === MOVE ||
+    type === MOVING ||
     type === REORDER ||
     type === LAND ||
     type === TOSS ||
@@ -281,6 +316,7 @@ defineInteractionDetector({
   // and there is nothing in it to refuse.
   refusable: (type) =>
     type === MOVE ||
+    type === MOVING ||
     type === REORDER ||
     type === LAND ||
     type === TOSS ||
@@ -290,11 +326,19 @@ defineInteractionDetector({
   disputesPress: true,
   setup: (element, trigger, { types, readConfig, isRefused }) => {
     const canMove = types.includes(MOVE);
+    const canMoving = types.includes(MOVING);
     const canReorder = types.includes(REORDER);
     const canLand = types.includes(LAND);
     const canToss = types.includes(TOSS);
     const canLeave = types.includes(LEAVE);
-    if (!canMove && !canReorder && !canLand && !canToss && !canLeave) {
+    if (
+      !canMove &&
+      !canMoving &&
+      !canReorder &&
+      !canLand &&
+      !canToss &&
+      !canLeave
+    ) {
       // Only moments: there is no gesture to be taken by, so there is no moment to
       // be told about either.
       if (import.meta.dev) {
@@ -303,7 +347,7 @@ defineInteractionDetector({
         );
         const them = moments.length === 1 ? "it" : "them";
         console.warn(
-          `interactions: "${moments.join(`", "`)}" ${moments.length === 1 ? "is a moment of a drag, so it needs" : "are moments of a drag, so they need"} a drag to happen in. Declare ${them} beside "${MOVE}", "${REORDER}", "${LAND}", "${TOSS}" or "${LEAVE}".`,
+          `interactions: "${moments.join(`", "`)}" ${moments.length === 1 ? "is a moment of a drag, so it needs" : "are moments of a drag, so they need"} a drag to happen in. Declare ${them} beside "${MOVE}", "${MOVING}", "${REORDER}", "${LAND}", "${TOSS}" or "${LEAVE}".`,
         );
       }
       return undefined;
@@ -325,6 +369,12 @@ defineInteractionDetector({
           : "";
       console.warn(
         `interactions: "${MOVE}" and "${other}" cannot both answer one release — "${MOVE}" leaves the element where the hand put it, "${other}" carries a copy and puts the original back. "${other}" wins here, so the element never travels.${instead}`,
+      );
+    }
+    if (import.meta.dev && canMoving && (canReorder || canLand || canToss)) {
+      const other = canLand ? LAND : canReorder ? REORDER : TOSS;
+      console.warn(
+        `interactions: "${MOVING}" tells the element ITSELF being carried, and "${other}" carries a copy while the original stays where it is — so there is nothing being moved to tell. "${other}" wins here.`,
       );
     }
     if (import.meta.dev && canReorder && canLand) {
@@ -368,11 +418,20 @@ defineInteractionDetector({
     const unmarkDragSource = markDragSource(element, axes);
 
     // What a release can mean, which is not all of what was declared: "grab",
-    // "release" and "refuse" are moments, not outcomes, and the gesture must not
-    // read them as ones.
+    // "release" and "refuse" are moments, not outcomes, and "moving" is the carry
+    // told while it happens rather than a meaning the release can have — the
+    // gesture must not read any of them as ones.
     const effects = types.filter(
-      (type) => type !== GRAB && type !== RELEASE && type !== REFUSE,
+      (type) =>
+        type === MOVE ||
+        type === REORDER ||
+        type === LAND ||
+        type === TOSS ||
+        type === LEAVE,
     );
+    // And what the element saying no is about: the carry, whether it is told at
+    // the release or all along.
+    const carries = canMoving ? [...effects, MOVING] : effects;
 
     // Whether there is anywhere to land, asked at the first press rather than
     // here: the places are drawn by whatever renders them, which at setup may
@@ -385,7 +444,7 @@ defineInteractionDetector({
       // listeners stay where they are. One outcome saying no is enough — the
       // element is carried or it is not, and each of the five is an answer to
       // that same carry.
-      if (effects.some(isRefused)) {
+      if (carries.some(isRefused)) {
         refuseDragTo(pointerDownEvent, {
           draggedElement: element,
           threshold: readConfig(THRESHOLD_ATTRIBUTE, undefined),
@@ -435,7 +494,7 @@ defineInteractionDetector({
         areaConstraint:
           dropContainer || element.closest(`[data-drag-free]`) || canLeave
             ? "none"
-            : canMove
+            : canMove || canMoving
               ? "scrollport"
               : undefined,
         threshold: readConfig(THRESHOLD_ATTRIBUTE, undefined),
@@ -490,6 +549,13 @@ defineInteractionDetector({
         onLeave: ({ x, y }) =>
           trigger(LEAVE, pointerDownEvent, { id: element.id, x, y }),
         onMove: ({ x, y }) => trigger(MOVE, pointerDownEvent, { x, y }),
+        // Every frame, and nothing is waited on: the caller is drawing, and a
+        // draw that has to be awaited before the next frame is one frame late.
+        onMoving: canMoving
+          ? ({ x, y }) => {
+              trigger(MOVING, pointerDownEvent, { x, y });
+            }
+          : undefined,
       });
     };
     element.addEventListener("pointerdown", onPointerDown);

@@ -9,17 +9,15 @@
  *   />
  *
  * Neither is an outcome: both are a stream, reported on every frame while the
- * hand is still moving, and navi otherwise names only what happens once (see
- * "A gesture whose product is a value" in docs/interactions.md). They are named
- * here because of what has to be settled BEFORE the press, which is what
- * `interactions` exists for: `touch-action` on the surface, said from a
- * stylesheet since a browser decides what a touch may do when it lands; the pan
- * stepping back for what is carried ACROSS the surface (a marker declaring
- * `move`, a handle) and for what answers the pointer on its own; the pinch not
- * beginning as a pan under its first finger; the wheel and the pinch writing
- * one `zoom`. A handle turned, a sun dragged around a plan have none of that to
- * arbitrate — the handle is the whole surface of the gesture — and stay
- * unnamed.
+ * hand is still moving. What earns them a name is not the number but what has to
+ * be settled BEFORE the press, which is what `interactions` exists for:
+ * `touch-action` on the surface, said from a stylesheet since a browser decides
+ * what a touch may do when it lands; the pan stepping back for what is carried
+ * ACROSS the surface (a marker declaring `move` or `moving`, a handle) and for
+ * what answers the pointer on its own; the pinch not beginning as a pan under
+ * its first finger; the wheel and the pinch writing one `zoom`. What is carried
+ * rather than looked around has the same arbitration settled for it by the drag
+ * detector, and is told the same way there (`moving`, in interaction_drag.js).
  *
  * `pan`'s detail is the movement since the previous `pan`, in px. `zoom`'s is
  * the factor (above 1 is in) and the point of the surface it is around,
