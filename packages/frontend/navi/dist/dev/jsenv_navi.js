@@ -73585,11 +73585,9 @@ const css$m = /* css */`.navi_wheel_container {
   --wheel-emphasis-size: round(1.5em, 1px);
   --wheel-item-width: 3.5ch;
   --wheel-visible-count: 3;
-  --wheel-color: light-dark(#111, #eee);
-  --wheel-neighbor-color: color-mix(in srgb,
-      var(--wheel-color) 45%,
-      transparent);
-  color: var(--wheel-color);
+  --wheel-color-resolved: var(--wheel-color, light-dark(#111, #eee));
+  --wheel-neighbor-color-resolved: var(--wheel-neighbor-color, color-mix(in srgb, var(--wheel-color-resolved) 45%, transparent));
+  color: var(--wheel-color-resolved);
   font-size: var(--navi-control-font-size);
   font-family: var(--navi-control-font-family, inherit);
   border: var(--navi-control-border-width) solid
@@ -73611,11 +73609,11 @@ const css$m = /* css */`.navi_wheel_container {
   }
 
   &[data-readonly] {
-    --wheel-color: light-dark(#666, #999);
+    --wheel-color-resolved: light-dark(#666, #999);
   }
 
   &[data-disabled] {
-    --wheel-color: light-dark(#00000052, #ffffff61);
+    --wheel-color-resolved: light-dark(#00000052, #ffffff61);
   }
 
   &[data-readonly], &[data-disabled] {
@@ -73643,14 +73641,14 @@ const css$m = /* css */`.navi_wheel_container {
 }
 
 .navi_wheel_layer[data-layer="base"] {
-  color: var(--wheel-neighbor-color);
+  color: var(--wheel-neighbor-color-resolved);
   -webkit-mask-image: var(--wheel-fade);
   mask-image: var(--wheel-fade);
   mask-repeat: no-repeat;
 }
 
 .navi_wheel_layer[data-layer="center"] {
-  color: var(--wheel-color);
+  color: var(--wheel-color-resolved);
   pointer-events: none;
   position: absolute;
   inset: 0;
@@ -75627,7 +75625,9 @@ const WheelGroupSeparator = ({
   return jsx(Box, {
     as: "span",
     ...rest,
-    className: "navi_wheel_group_separator",
+    // baseClassName, not className: the latter would land after the spread and
+    // drop whatever class the caller gave the separator.
+    baseClassName: "navi_wheel_group_separator",
     "aria-hidden": "true",
     children: children
   });

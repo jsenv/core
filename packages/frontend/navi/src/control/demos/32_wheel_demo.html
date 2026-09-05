@@ -1660,51 +1660,71 @@
                   <span className="col-label">+ --wheel-neighbor-color</span>
                 </div>
               </div>
-              <h4>On a dark surface</h4>
+              <h4>Set from an ancestor</h4>
+              <div className="states" style={{ "--wheel-color": "#d6336c" }}>
+                <div>
+                  <ColorWheel />
+                  <span className="col-label">--wheel-color on the row</span>
+                </div>
+                <div>
+                  <ColorWheel zoom />
+                  <span className="col-label">…and on this one</span>
+                </div>
+                <div>
+                  <ColorWheel style={{ "--wheel-color": "#1971c2" }} />
+                  <span className="col-label">
+                    …unless the wheel says otherwise
+                  </span>
+                </div>
+              </div>
+
+              <h4>On a dark surface, inside this light page</h4>
+              <div
+                className="states"
+                style={{ padding: 20, background: "#15181c", borderRadius: 8 }}
+              >
+                <div>
+                  <ColorWheel glass zoom />
+                  <span className="col-label" style={{ color: "#adb5bd" }}>
+                    nothing said
+                  </span>
+                </div>
+                <div style={{ colorScheme: "dark" }}>
+                  <ColorWheel glass zoom />
+                  <span className="col-label" style={{ color: "#adb5bd" }}>
+                    color-scheme: dark
+                  </span>
+                </div>
+                <div
+                  style={{ "colorScheme": "dark", "--wheel-color": "#63e6be" }}
+                >
+                  <ColorWheel glass zoom />
+                  <span className="col-label" style={{ color: "#adb5bd" }}>
+                    + --wheel-color
+                  </span>
+                </div>
+              </div>
+              <h4>Over a map or a photo</h4>
               <div
                 className="states"
                 style={{
-                  padding: 20,
-                  background: "#15181c",
-                  borderRadius: 8,
                   colorScheme: "dark",
+                  padding: 20,
+                  borderRadius: 8,
+                  background:
+                    "repeating-conic-gradient(#20343f 0 25%, #16242c 0 50%) 0 0 / 28px 28px",
                 }}
               >
                 <div>
-                  <ColorWheel
-                    style={{
-                      "--wheel-color": "#f1f3f5",
-                      "--navi-control-border-color": "#495057",
-                    }}
-                  />
+                  <ColorWheel border="none" />
                   <span className="col-label" style={{ color: "#adb5bd" }}>
-                    light on dark
+                    border="none"
                   </span>
                 </div>
                 <div>
-                  <ColorWheel
-                    zoom
-                    style={{
-                      "--wheel-color": "#63e6be",
-                      "--navi-control-border-color": "#2f6355",
-                    }}
-                  />
+                  <ColorWheel border="none" glass zoom />
                   <span className="col-label" style={{ color: "#adb5bd" }}>
-                    accent, zoom
-                  </span>
-                </div>
-                <div>
-                  <ColorWheel
-                    glass
-                    zoom
-                    style={{
-                      "--wheel-color": "#63e6be",
-                      "--wheel-neighbor-color": "#37796a",
-                      "--navi-control-border-color": "#2f6355",
-                    }}
-                  />
-                  <span className="col-label" style={{ color: "#adb5bd" }}>
-                    accent, glass + zoom
+                    glass + zoom
                   </span>
                 </div>
               </div>

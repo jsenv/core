@@ -2,7 +2,8 @@ import { isEditorKey, openPagePicker, isCommandKey, loadPages, asPageUrl } from 
 
 /*
  * cmd+K / ctrl+K on any dev-served page: the .html files the server serves, as a
- * tree one walks, filter as you type, Enter to go there.
+ * tree one walks, filter as you type, Enter to go there — cmd/ctrl+Enter to go
+ * there in another tab and stay here, the same thing cmd+click on a row does.
  *
  * The tree itself is not this file's: it is the page picker the dev server ships
  * for everyone who has to ask "which page?" (see protocol_file/client/page_picker.js
@@ -152,7 +153,7 @@ const openSwitcher = () => {
     // is told about is a shortcut nobody presses. Both names, not the one this
     // platform uses — the reader knows which of the two their keyboard has, and
     // it keeps what the panel says the same everywhere.
-    placeholder: "Go to page…  (cmd/ctrl+E to open in editor)",
+    placeholder: "Go to page…  (cmd/ctrl+Enter: new tab, cmd/ctrl+E: editor)",
     hereUrl: window.location.href,
     // Going there is something this browser can do, so a row is a link: its
     // menu, its middle click and its cmd+click all work.

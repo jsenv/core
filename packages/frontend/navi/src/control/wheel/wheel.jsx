@@ -97,17 +97,35 @@ const css = /* css */ `
        in the window. The neighbours are a washed-out version of it (blended
        toward transparent, then dimmed further by the fade), so tinting the
        wheel takes a single declaration and stays coherent. Override
-       --wheel-neighbor-color for a neighbour colour of its own. */
-    --wheel-color: light-dark(#111, #eee);
-    --wheel-neighbor-color: color-mix(
-      in srgb,
-      var(--wheel-color) 45%,
-      transparent
+       --wheel-neighbor-color for a neighbour colour of its own.
+
+       READ THROUGH A FALLBACK, never declared here: a custom property set on an
+       element always beats the one it inherits, whatever the specificity — so
+       declaring the default on the container would make --wheel-color settable
+       on the wheel and NOWHERE else, and a panel tinting the wheels it holds
+       would silently do nothing. The default lives in the var() fallback
+       instead; --wheel-*-resolved is what the rest of the file paints with, and
+       is also where the readonly/disabled states put their own ink.
+
+       Mixed toward TRANSPARENT rather than toward a surface colour: the wheel
+       does not know what is behind it — a map, a photo, a frosted popup — and
+       an opaque neighbour computed against a paper it isn't on is worse than
+       one that lets that paper through.
+
+       ON A DARK SURFACE INSIDE A LIGHT PAGE, say nothing here: light-dark()
+       resolves against the color-scheme of the element that uses it, so
+       color-scheme:dark on the panel turns the ink, the glass tint, the
+       frame and the control border together — and the rest of what the panel
+       holds with them. */
+    --wheel-color-resolved: var(--wheel-color, light-dark(#111, #eee));
+    --wheel-neighbor-color-resolved: var(
+      --wheel-neighbor-color,
+      color-mix(in srgb, var(--wheel-color-resolved) 45%, transparent)
     );
 
     position: relative; /* for the loading outline */
     display: inline-flex;
-    color: var(--wheel-color);
+    color: var(--wheel-color-resolved);
     font-size: var(--navi-control-font-size);
     font-family: var(--navi-control-font-family, inherit);
     /* Bordered like every other control: the box a user can interact with is
@@ -134,12 +152,16 @@ const css = /* css */ `
     }
 
     /* Readonly dims the whole wheel; disabled dims it further. Both go through
-       --wheel-color, so the neighbours follow along (they are mixed from it). */
+       the resolved ink, so they win over a caller's --wheel-color and the
+       neighbours follow along (they are mixed from it). */
     &[data-readonly] {
-      --wheel-color: light-dark(#666, #999);
+      --wheel-color-resolved: light-dark(#666, #999);
     }
     &[data-disabled] {
-      --wheel-color: light-dark(rgba(0, 0, 0, 0.32), rgba(255, 255, 255, 0.38));
+      --wheel-color-resolved: light-dark(
+        rgba(0, 0, 0, 0.32),
+        rgba(255, 255, 255, 0.38)
+      );
     }
     &[data-readonly],
     &[data-disabled] {
@@ -184,7 +206,7 @@ const css = /* css */ `
      per-row style could do, and it survives resting between two rows (where a
      fade alone leaves nothing emphasised at all). */
   .navi_wheel_layer[data-layer="base"] {
-    color: var(--wheel-neighbor-color);
+    color: var(--wheel-neighbor-color-resolved);
     /* In flow: this copy is what gives the viewport (and so the whole wheel,
        which is fit-content) its size — the center layer is an overlay on top of
        it and measures nothing.
@@ -202,7 +224,7 @@ const css = /* css */ `
   .navi_wheel_layer[data-layer="center"] {
     position: absolute;
     inset: 0;
-    color: var(--wheel-color);
+    color: var(--wheel-color-resolved);
     /* The base rows underneath take the clicks (this copy sits on top of them). */
     pointer-events: none;
   }
@@ -2348,7 +2370,9 @@ const WheelGroupSeparator = ({ children, ...rest }) => {
     <Box
       as="span"
       {...rest}
-      className="navi_wheel_group_separator"
+      // baseClassName, not className: the latter would land after the spread and
+      // drop whatever class the caller gave the separator.
+      baseClassName="navi_wheel_group_separator"
       aria-hidden="true"
     >
       {children}

@@ -20,7 +20,7 @@
   "devDependencies": {
     "@babel/plugin-transform-react-jsx": "8.0.1",
     "@jsenv/assert": "4.5.7",
-    "@jsenv/core": "41.5.11",
+    "@jsenv/core": "41.5.12",
     "@jsenv/plugin-preact": "1.9.8",
     "@jsenv/plugin-bundling": "2.10.26",
     "@jsenv/plugin-minification": "1.7.20",
