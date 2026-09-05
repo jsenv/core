@@ -10846,6 +10846,13 @@ defineInteractionDetector({
  * Declared alone, `zoom` leaves one pointer to whatever else reads it and takes
  * only two fingers and the wheel; `pan` alone leaves the wheel to the page.
  *
+ * `data-pan-after-hold` is for the surface that stands in something that
+ * scrolls — a plan shown as a thumbnail on a page: a finger there means to
+ * scroll nine times out of ten, and it keeps the page until it has said
+ * otherwise by standing still, the way a finger says it means to carry a drag
+ * source. Read off the element or any ancestor, since what it knows is about the
+ * place rather than about this box.
+ *
  * Nothing of the gesture is decided here — `installPanZoom` in @jsenv/dom owns
  * the pointers, the capture, the wheel burst and the click left behind. This
  * says which names the element answers with, and hands the numbers over.
@@ -10857,6 +10864,9 @@ const ZOOM = "zoom";
 // The same attribute a carried element reads: how far a pointer travels before
 // it is a gesture rather than a press.
 const THRESHOLD_ATTRIBUTE = "data-drag-threshold";
+// Whether a finger has to stand still before the surface is its own. What a
+// touch may do is settled when it lands, so this is read once, at setup.
+const AFTER_HOLD_ATTRIBUTE = "data-pan-after-hold";
 
 defineInteractionDetector({
   name: "surface",
@@ -10869,6 +10879,7 @@ defineInteractionDetector({
     const canZoom = types.includes(ZOOM);
     return installPanZoom(element, {
       threshold: readConfig(THRESHOLD_ATTRIBUTE, undefined),
+      afterHold: Boolean(element.closest(`[${AFTER_HOLD_ATTRIBUTE}]`)),
       onPan: canPan
         ? ({ event, x, y }) => trigger(PAN, event, { x, y })
         : undefined,

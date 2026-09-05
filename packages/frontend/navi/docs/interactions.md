@@ -1030,6 +1030,32 @@ the release leaves behind. A pointer pans only once it has travelled a few px
 Declared alone, `zoom` takes two fingers and the wheel and leaves one pointer to
 whatever else reads it; `pan` alone leaves the wheel to the page.
 
+### A surface that scrolls past: `data-pan-after-hold`
+
+A surface takes every touch that lands on it, which is right for a map filling
+the screen — there is no page left behind it to scroll. A plan shown as a
+thumbnail on a page is the other case: a finger there means to scroll nine times
+out of ten, and a surface answering all of them makes the page unreadable past
+it.
+
+```jsx
+<Box data-pan-after-hold interactions={{ pan, zoom }} />
+```
+
+The finger then says it means THIS surface the way it says it means to carry a
+drag source — by standing still. Until the hold the page keeps its scroll, and
+the pan starts where the finger already is. The pinch is not given away with it:
+two fingers on a surface that answers `zoom` are its own. A mouse is untouched —
+its wheel is what scrolls the page, so travel over the surface could never have
+meant anything else — and it is read off the element or any ancestor, the same
+place `data-drag-on-contact` is said.
+
+Opt-in, and for the same reason its opposite is (see `data-drag-on-contact`
+above): navi cannot see whether anything behind the surface scrolls. You know;
+say so. It spends the hold, though: a `longpress` declared beside a `pan` that
+waits asks one finger to answer two waits of the same length, and only one of
+them is answered.
+
 ## A gesture whose product is a value
 
 `move`, `reorder`, `land`, `toss` and `leave` answer the same question — where did

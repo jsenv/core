@@ -29,9 +29,23 @@
  * (see press_held.js), so none is taken before the travel. A second pointer
  * landing is intent enough on its own. The first pixels are not lost: the
  * surface catches up with the finger the moment the pan begins.
+ *
+ * A SURFACE STANDING IN SOMETHING THAT SCROLLS: `afterHold`.
+ *
+ * Travel is only unambiguous where there is no scroll to tell it apart from. A
+ * plan shown as a thumbnail in the middle of a page is the other case: a finger
+ * landing on it means to scroll the page nine times out of ten, and a surface
+ * taking every touch makes the page unreadable past it. `afterHold` gives that
+ * surface the drag sources' answer — a finger says it means THIS one by staying
+ * still — and leaves the touch to the page until the wait is over: the page
+ * keeps its scroll (see the stylesheet), the surface keeps the pinch, and the
+ * pan begins where the finger already is. A mouse is untouched by it: its wheel
+ * is what scrolls the page, so travel over the surface could never have meant
+ * anything else.
  */
 
 import { suppressClickAfterGesture } from "../click_suppression.js";
+import { waitForPressHeld } from "../press_held.js";
 import {
   claimWheelGesture,
   wheelGestureIsTakenFrom,
@@ -50,6 +64,18 @@ const css = /* css */ `
     touch-action: none;
     /* Nothing under a hand dragging a surface is text to select. */
     user-select: none;
+  }
+  [data-pan-zoom-surface="after-hold"] {
+    /* Until the hold is over the touch is the page's: this surface stands in
+       something that scrolls and does not know which way it goes, so both axes
+       are left to it. The pinch is not — two fingers on a surface that answers
+       zoom are its own gesture, whatever the page behind would have done with
+       them. Being an explicit value rather than auto is also what keeps a
+       touchmove refusable once the hold lands (see preventTouchScroll below). */
+    touch-action: pan-x pan-y;
+    /* iOS answers a long press with its callout and by selecting under the
+       finger, a tenth of a second after the wait below was answered. */
+    -webkit-touch-callout: none;
   }
 `;
 import.meta.css = css;
@@ -81,13 +107,16 @@ const YIELDED_SELECTOR = `${DRAG_EXCLUDED_SELECTOR},[data-drag-source],[data-dra
  *   surface, measured inside its border. Left out, a wheel over the surface is
  *   left to the page, and two fingers only pan.
  * @param {number} [options.threshold=5] How far a pointer travels before it pans.
+ * @param {boolean} [options.afterHold=false] Whether a FINGER must be held still
+ *   before it pans, the page keeping its scroll until then. For a surface
+ *   standing in something that scrolls; a mouse pans by travelling either way.
  * @returns {() => void} Takes it all back.
  */
 export const installPanZoom = (
   element,
-  { onPan, onZoom, threshold = 5 } = {},
+  { onPan, onZoom, threshold = 5, afterHold } = {},
 ) => {
-  element.setAttribute(SURFACE_ATTRIBUTE, "");
+  element.setAttribute(SURFACE_ATTRIBUTE, afterHold ? "after-hold" : "");
   // A travelling box above must not take the press this reads (see
   // drag_to_travel.js): the surface says so itself, being the one that knows.
   element.setAttribute("data-no-drag-travel", "");
@@ -157,6 +186,9 @@ export const installPanZoom = (
   };
 
   const end = () => {
+    for (const pointer of pointers.values()) {
+      pointer.holdWait?.cancel();
+    }
     window.removeEventListener("pointermove", onPointerMove, true);
     window.removeEventListener("pointerup", onPointerEnd, true);
     window.removeEventListener("pointercancel", onPointerEnd, true);
@@ -185,12 +217,17 @@ export const installPanZoom = (
       window.addEventListener("pointerup", onPointerEnd, true);
       window.addEventListener("pointercancel", onPointerEnd, true);
     }
-    pointers.set(event.pointerId, {
+    const pointer = {
       x: event.clientX,
       y: event.clientY,
       startX: event.clientX,
       startY: event.clientY,
-    });
+      // A finger this surface asked to stand still: whatever it does next, it
+      // does not pan by travelling — the travel it makes is the page scrolling.
+      waitsForHold: false,
+      holdWait: null,
+    };
+    pointers.set(event.pointerId, pointer);
     if (active) {
       element.setPointerCapture(event.pointerId);
       anchor = readHand();
@@ -198,6 +235,17 @@ export const installPanZoom = (
     }
     if (pointers.size >= 2) {
       activate("now");
+      return;
+    }
+    if (afterHold && event.pointerType === "touch") {
+      pointer.waitsForHold = true;
+      pointer.holdWait = waitForPressHeld(event, {
+        // Anchored where the finger IS: it has barely moved, so there is
+        // nothing to catch up with.
+        onPressHeld: () => {
+          activate("now");
+        },
+      });
     }
   };
 
@@ -209,6 +257,9 @@ export const installPanZoom = (
     pointer.x = event.clientX;
     pointer.y = event.clientY;
     if (!active) {
+      if (pointer.waitsForHold) {
+        return;
+      }
       const travelled = Math.hypot(
         pointer.x - pointer.startX,
         pointer.y - pointer.startY,
@@ -225,9 +276,14 @@ export const installPanZoom = (
   };
 
   const onPointerEnd = (event) => {
-    if (!pointers.delete(event.pointerId)) {
+    const pointer = pointers.get(event.pointerId);
+    if (!pointer) {
       return;
     }
+    pointers.delete(event.pointerId);
+    // What the held press means outlives the wait, so its end is ours to say —
+    // and saying it is what gives the context menu back (see press_held.js).
+    pointer.holdWait?.cancel();
     if (pointers.size === 0) {
       end();
       return;
@@ -243,6 +299,19 @@ export const installPanZoom = (
   const onLostPointerCapture = (event) => {
     if (active) {
       onPointerEnd(event);
+    }
+  };
+
+  // Whether a touchmove can be refused AT ALL is decided when the touch begins,
+  // from the non-passive listeners the browser knows about then — and here the
+  // gesture that would refuse it is not born until the hold is over. So the
+  // listener goes down with the surface and refuses nothing until the surface is
+  // the one moving: before that the page is scrolling, which is the whole point
+  // of the wait. Only in `afterHold`; a surface at `touch-action: none` has
+  // already been left nothing to refuse.
+  const preventTouchScroll = (touchMoveEvent) => {
+    if (active && touchMoveEvent.cancelable) {
+      touchMoveEvent.preventDefault();
     }
   };
 
@@ -275,6 +344,11 @@ export const installPanZoom = (
 
   element.addEventListener("pointerdown", onPointerDown);
   element.addEventListener("lostpointercapture", onLostPointerCapture);
+  if (afterHold) {
+    element.addEventListener("touchmove", preventTouchScroll, {
+      passive: false,
+    });
+  }
   if (onZoom) {
     element.addEventListener("wheel", onWheel, { passive: false });
   }
@@ -284,6 +358,7 @@ export const installPanZoom = (
     pointers.clear();
     element.removeEventListener("pointerdown", onPointerDown);
     element.removeEventListener("lostpointercapture", onLostPointerCapture);
+    element.removeEventListener("touchmove", preventTouchScroll);
     element.removeEventListener("wheel", onWheel);
     element.removeAttribute(SURFACE_ATTRIBUTE);
     element.removeAttribute("data-no-drag-travel");
