@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/eslint-config-relax",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "type": "module",
   "description": "A pleaseant ESLint configuration for any project",
   "repository": {
@@ -28,7 +28,7 @@
   "scripts": {},
   "dependencies": {
     "@babel/eslint-parser": "8.0.1",
-    "@jsenv/eslint-import-resolver": "8.4.6",
+    "@jsenv/eslint-import-resolver": "8.4.7",
     "@jsenv/eslint-plugin": "1.5.0",
     "@jsenv/urls": "2.9.12",
     "@preact/eslint-plugin-signals": "0.3.0",

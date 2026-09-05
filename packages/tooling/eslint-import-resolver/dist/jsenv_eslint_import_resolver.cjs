@@ -565,8 +565,643 @@ const UNIT_MS = {
   minute: 60_000,
   second: 1000,
 };
-const UNIT_KEYS = Object.keys(UNIT_MS);
-UNIT_KEYS[UNIT_KEYS.length - 1];
+const UNIT_KEYS$1 = Object.keys(UNIT_MS);
+UNIT_KEYS$1[UNIT_KEYS$1.length - 1];
+
+/**
+ * Interpolates a template string, replacing `[key]` placeholders with values.
+ *
+ * Usable on its own — no i18n instance required — whenever a sentence should
+ * stay readable as one string instead of being cut into JSX expressions or
+ * concatenations. `<Interpolate>` is the JSX form of this function, and
+ * `createI18n` runs every translation through it. See @jsenv/navi's
+ * `docs/i18n.md`.
+ *
+ * `[]` was chosen as the placeholder delimiter (rather than `{}` or `{{}}`)
+ * because it does not conflict with JSX syntax, JavaScript template literals,
+ * or common punctuation in translated strings.
+ *
+ * @param {string} template
+ *   e.g. `"Hello [name], you have [count] messages"`. A non-string is returned
+ *   untouched, as is any template when `replacements` is missing.
+ * @param {object} [replacements]
+ *   Values keyed by placeholder name. A key can be:
+ *   - a direct name — `[name]` ← `{ name: "Alice" }`
+ *   - a dot-path — `[item.label]` ← `{ item: { label: "Book" } }` (a literal
+ *     `"item.label"` key wins over the path)
+ *
+ *   A value that is a function is called at that point, so an expensive or
+ *   lazily-known replacement is only computed when the placeholder is actually
+ *   present in this language's template.
+ *
+ *   A placeholder with no matching value is left in the output as-is
+ *   (`"[name]"`), making the gap visible rather than silently empty.
+ * @param {object} [options]
+ * @param {boolean} [options.allowJsx=false]
+ *   Allow VNode replacements (what `<Interpolate>` passes). Without it, a VNode
+ *   value warns and is coerced to a string.
+ * @returns {string|import("preact").VNode}
+ *   A plain string when every replacement is a string, a Preact fragment when
+ *   at least one VNode was interpolated with `allowJsx`.
+ */
+const interpolateText = (
+  template,
+  replacements,
+  { allowJsx = false } = {},
+) => {
+  if (!replacements || typeof template !== "string") {
+    return template;
+  }
+  const parts = template.split(/(\[[^\]]+\])/);
+  const resolved = [];
+  for (const part of parts) {
+    const match = part.match(/^\[([^\]]+)\]$/);
+    if (!match) {
+      resolved.push(part);
+      continue;
+    }
+    const key = match[1];
+    let value = resolveValue(replacements, key, part);
+    if (typeof value === "function") {
+      value = value();
+    }
+    resolved.push(value);
+  }
+  {
+    return resolved.join("");
+  }
+};
+
+// Resolves a placeholder key against the replacements object.
+// 1. Direct lookup: replacements["item.name"]
+// 2. Dot-path lookup: replacements["item"]["name"]
+// 3. Fallback: the original placeholder string (e.g. "[item.name]")
+const resolveValue = (replacements, key, fallback) => {
+  if (key in replacements) {
+    return replacements[key];
+  }
+  const dotIndex = key.indexOf(".");
+  if (dotIndex !== -1) {
+    const head = key.slice(0, dotIndex);
+    const tail = key.slice(dotIndex + 1);
+    const parent = replacements[head];
+    if (parent && typeof parent === "object") {
+      const nested = parent[tail];
+      if (nested !== undefined) {
+        return nested;
+      }
+    }
+  }
+  return fallback;
+};
+
+/**
+ * The language every formatter/i18n call falls back to when it is given no
+ * `lang` — an injectable source, deliberately free of any import.
+ *
+ * This module is the seam that keeps text formatting importable outside the
+ * browser (a backend wording a date, say): by default the source is the
+ * runtime's own locale, exactly what Intl itself would pick. A frontend swaps
+ * the source for something live — @jsenv/navi points it at its
+ * `languagesSignal`, so the fallback follows the user's language preference,
+ * and because the source is read fresh on every call, reading it during a
+ * component render subscribes the component the same way reading the signal
+ * directly would.
+ */
+
+let systemLocale;
+let runtimeLangSource = () => {
+  systemLocale ??= new Intl.DateTimeFormat().resolvedOptions().locale;
+  return systemLocale;
+};
+
+const getRuntimeLang = () => runtimeLangSource();
+
+/**
+ * Creates a lightweight i18n instance: a central place where an app declares
+ * its texts once and reads them back translated into the active language.
+ *
+ * Worth using even in a single-language app — one registry beats strings
+ * scattered across components, and adding a second language later becomes a
+ * data change instead of a refactor. See @jsenv/navi's `docs/i18n.md` for how
+ * to choose between the two key styles below and how this relates to
+ * `humanizeI18n`, the registry the built-in texts live in.
+ *
+ * @param {object} [options]
+ * @param {string} [options.keyLang]
+ *   When set, each key also serves as its own translation for `keyLang`.
+ *   This allows writing keys directly in that language (typically the language
+ *   the app is written in) so only *other* languages need registering:
+ *
+ *   ```js
+ *   const i18n = createI18n({ keyLang: "en" });
+ *   i18n.add("Hello [name]!", { fr: "Bonjour [name] !" });
+ *   i18n("Hello [name]!", { name: "Alice" }, { lang: "en" }); // "Hello Alice!"
+ *   i18n("Hello [name]!", { name: "Alice" }, { lang: "fr" }); // "Bonjour Alice !"
+ *   ```
+ *
+ *   `keyLang` only applies to keys passed to `add()`/`addAll()`; a key never
+ *   registered stays opaque and comes back as-is.
+ *
+ *   Without `keyLang`, keys are opaque identifiers and every language
+ *   (including the one the app was written in) must be registered explicitly:
+ *
+ *   ```js
+ *   const i18n = createI18n();
+ *   i18n.add("greeting", { en: "Hello [name]!", fr: "Bonjour [name] !" });
+ *   i18n("greeting", { name: "Alice" }, { lang: "en" }); // "Hello Alice!"
+ *   ```
+ *
+ * @param {string} [options.fallbackLang]
+ *   Language consulted when the active language has no translation for a key
+ *   — per key, not per language: a partially translated language falls through
+ *   to `fallbackLang` only for the keys it is missing. Without it, a missing
+ *   translation returns the key itself.
+ *
+ * @param {string|string[]} [options.runtimeLang]
+ *   The active language (BCP 47 tag or ordered array of tags) — named
+ *   "runtime" rather than "system" because there is no actual access to the
+ *   OS/user's system language from a browser, only `navigator.languages` (or
+ *   an explicit override) at runtime. Defaults to the shared runtime language
+ *   source (see runtime_lang.js) — the runtime's own locale, or whatever a
+ *   frontend installed in its place — read fresh on every `format()`/`has()`
+ *   call (not frozen at creation time), so overriding the language app-wide
+ *   is picked up here too.
+ *   Passing an explicit `runtimeLang` opts out of that and stays fixed for
+ *   this instance's whole lifetime.
+ *
+ * ---
+ *
+ * ## Registration
+ *
+ * **`i18n.add(key, { lang: "translation" })`** — one key, multiple languages.
+ *
+ * **`i18n.addAll({ key: { lang: "translation" }, ... })`** — multiple keys at once.
+ *
+ * **`i18n.addLangKeys(lang, { key: "translation", ... })`** — full language pack
+ * (useful when loading a JSON translation file).
+ *
+ * All three accumulate: registering a key that already exists overwrites that
+ * one key and leaves the rest of the language untouched. This is what lets an
+ * app override a single built-in text without redeclaring the others.
+ *
+ * A regional variant (e.g. `"fr-CA"`) automatically inherits all keys from its
+ * parent (`"fr"`) that it does not explicitly override:
+ * ```js
+ * i18n.addLangKeys("fr", { hello: "Bonjour !" });
+ * i18n.addLangKeys("fr-CA", { hello: "Allo !" }); // other "fr" keys inherited
+ * ```
+ * Inheritance is resolved at registration time, so register the parent first.
+ *
+ * ---
+ *
+ * ## Reading
+ *
+ * **`i18n(key, values?, { lang? })`** — the translation for `key`, with
+ * `[placeholder]` occurrences replaced from `values` (see `interpolateText`).
+ * Returns `key` itself when nothing matches, so an untranslated string still
+ * renders something readable. `i18n.format` is an alias of this call.
+ *
+ * **`i18n.has(key, { lang? })`** — whether a translation genuinely exists,
+ * i.e. how to tell "no translation" apart from "translation equal to the key".
+ *
+ * @returns {Function & { add, addAll, addLangKeys, has, format, languageMap }}
+ */
+const createI18n = ({ keyLang, fallbackLang, runtimeLang } = {}) => {
+  const languageMap = new Map();
+  // Bumped by addLangKeys — the only thing besides the active lang itself
+  // that could change what getActiveLang()/getResolvedFallbackLang() below
+  // resolve to, so it's what invalidates their own small caches.
+  let languageMapVersion = 0;
+
+  // Without an explicit runtimeLang, the runtime language source is re-read
+  // fresh on every call rather than frozen here — freezing it would silently
+  // ignore an app-wide language change (see runtime_lang.js) for the rest of
+  // this instance's life.
+  const hasExplicitRuntimeLang = runtimeLang !== undefined;
+
+  // matchBestLang does real work (a Map lookup per candidate, a possible
+  // "fr-CA" → "fr" split-and-retry loop) — worth skipping on every single
+  // format()/has() call in the common case, since what it resolves to only
+  // ever changes when languageMap itself changes (addLangKeys) or, for the
+  // non-explicit case, when the runtime lang itself changes (see
+  // runtime_lang.js; an installed source is expected to keep its reference
+  // stable while nothing changed, and the default one caches its string) —
+  // comparing those two cheaply (===) is enough to know the cached result
+  // below is still valid.
+  let cachedActiveLang;
+  let cachedActiveLangRuntimeLang;
+  let cachedActiveLangVersion = -1;
+  const getActiveLang = () => {
+    const currentRuntimeLang = hasExplicitRuntimeLang
+      ? runtimeLang
+      : getRuntimeLang();
+    if (
+      cachedActiveLangVersion === languageMapVersion &&
+      cachedActiveLangRuntimeLang === currentRuntimeLang
+    ) {
+      return cachedActiveLang;
+    }
+    cachedActiveLang = matchBestLang(currentRuntimeLang, languageMap);
+    cachedActiveLangVersion = languageMapVersion;
+    cachedActiveLangRuntimeLang = currentRuntimeLang;
+    return cachedActiveLang;
+  };
+
+  // fallbackLang is a plain, never-reactive option set once at creation —
+  // its own resolution only ever needs recomputing when languageMap does.
+  let cachedResolvedFallbackLang;
+  let cachedResolvedFallbackLangVersion = -1;
+  const getResolvedFallbackLang = () => {
+    if (!fallbackLang) {
+      return null;
+    }
+    if (cachedResolvedFallbackLangVersion === languageMapVersion) {
+      return cachedResolvedFallbackLang;
+    }
+    cachedResolvedFallbackLang = matchBestLang(fallbackLang, languageMap);
+    cachedResolvedFallbackLangVersion = languageMapVersion;
+    return cachedResolvedFallbackLang;
+  };
+
+  const addLangKeys = (lang, translations) => {
+    // Accumulate: merge with any existing translations for this lang
+    const existing = languageMap.get(lang);
+    if (existing) {
+      translations = { ...existing, ...translations };
+    }
+    // A regional variant inherits all keys not explicitly overridden
+    // e.g. "fr-CA" inherits from "fr"
+    const dashIndex = lang.indexOf("-");
+    if (dashIndex !== -1) {
+      const parentLang = lang.slice(0, dashIndex);
+      const parentTranslations = languageMap.get(parentLang);
+      if (parentTranslations) {
+        translations = { ...parentTranslations, ...translations };
+      }
+    }
+    languageMap.set(lang, translations);
+    languageMapVersion++;
+  };
+
+  const add = (key, langTranslations) => {
+    if (keyLang && !(keyLang in langTranslations)) {
+      // Auto-register the key itself as the translation for keyLang
+      addLangKeys(keyLang, { [key]: key });
+    }
+    for (const [lang, value] of Object.entries(langTranslations)) {
+      addLangKeys(lang, { [key]: value });
+    }
+  };
+
+  const addAll = (keyMap) => {
+    for (const [key, langTranslations] of Object.entries(keyMap)) {
+      add(key, langTranslations);
+    }
+  };
+
+  const _getTemplate = (key, lang) => {
+    // matchBestLang, not matchLang directly: lang can be an ordered array of
+    // preferences, and matchLang alone assumes a plain string, throwing on
+    // .split() otherwise.
+    const resolvedLang = lang ? matchBestLang(lang, languageMap) : null;
+    if (resolvedLang) {
+      const translations = languageMap.get(resolvedLang);
+      const translated = translations[key];
+      if (translated !== undefined) {
+        return translated;
+      }
+    }
+    const resolvedFallbackLang = getResolvedFallbackLang();
+    if (resolvedFallbackLang) {
+      const fallbackTranslations = languageMap.get(resolvedFallbackLang);
+      const fallbackTranslated = fallbackTranslations[key];
+      if (fallbackTranslated !== undefined) {
+        return fallbackTranslated;
+      }
+    }
+    // No translation found — return key as-is (opaque fallback)
+    return key;
+  };
+
+  const format = (key, values, { lang = getActiveLang() } = {}) => {
+    const template = _getTemplate(key, lang);
+    return interpolateText(template, values);
+  };
+
+  const has = (key, { lang = getActiveLang() } = {}) => {
+    const resolvedLang = lang ? matchBestLang(lang, languageMap) : null;
+    if (resolvedLang) {
+      const translations = languageMap.get(resolvedLang);
+      if (translations && key in translations) {
+        return true;
+      }
+    }
+    const resolvedFallbackLang = getResolvedFallbackLang();
+    if (resolvedFallbackLang) {
+      const fallbackTranslations = languageMap.get(resolvedFallbackLang);
+      if (fallbackTranslations && key in fallbackTranslations) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  // The i18n instance is itself a callable function
+  const i18n = (key, values, opts) => format(key, values, opts);
+  i18n.add = add;
+  i18n.addAll = addAll;
+  i18n.addLangKeys = addLangKeys;
+  i18n.has = has;
+  i18n.format = format;
+  i18n.languageMap = languageMap;
+
+  return i18n;
+};
+
+// Walk "fr-CA-variant" → "fr-CA" → "fr" until a registered lang is found
+const matchLang = (lang, languageMap) => {
+  if (languageMap.has(lang)) {
+    return lang;
+  }
+  const parts = lang.split("-");
+  while (parts.length > 1) {
+    parts.pop();
+    const candidate = parts.join("-");
+    if (languageMap.has(candidate)) {
+      return candidate;
+    }
+  }
+  return null;
+};
+
+// lang can be a string or an ordered array of preference strings
+const matchBestLang = (lang, languageMap) => {
+  if (!lang) {
+    return null;
+  }
+  const candidates = Array.isArray(lang) ? lang : [lang];
+  for (const candidate of candidates) {
+    const match = matchLang(candidate, languageMap);
+    if (match) {
+      return match;
+    }
+  }
+  return null;
+};
+
+/**
+ * The shared registry holding the texts jsenv libraries display on their own:
+ * the words this package's formatters need — relative time wording, duration
+ * unit symbols, date field placeholders — and, when @jsenv/navi is installed,
+ * everything its components say (button labels, validation messages,
+ * empty-list messages…).
+ *
+ * One instance for all of them rather than one per package: a text belongs to
+ * whoever displays it, but an app overriding one wants a single handle to do
+ * it through. navi registers its own keys here and re-exports this very
+ * object as `naviI18n`, so a `time.*` key registered below is overridable
+ * from either name.
+ *
+ * Keys are opaque identifiers (`"time.ongoing"`), never the English sentence
+ * — the opposite of what an app is advised to do for its own texts; navi's
+ * `docs/i18n.md` explains why.
+ *
+ * @example
+ * import { humanizeI18n } from "@jsenv/humanize";
+ *
+ * // Override a built-in text:
+ * humanizeI18n.add("time.ongoing", { fr: "En cours…" });
+ *
+ * // Teach a language that is not shipped:
+ * humanizeI18n.addLangKeys("ja", { "time.midnight": "真夜中" });
+ */
+const humanizeI18n = createI18n();
+
+// What the time formatters in ../time/format_time.js write in words:
+// relative wording, the midnight word, the mark between the two bounds of a
+// span, and the compact duration unit symbols.
+humanizeI18n.addAll({
+  "time.less_than_minute": {
+    en: "in less than a minute",
+    fr: "dans moins d'une minute",
+    de: "in weniger als einer Minute",
+    es: "en menos de un minuto",
+    it: "in meno di un minuto",
+    pt: "em menos de um minuto",
+    nl: "over minder dan een minuut",
+  },
+  "time.ongoing": {
+    en: "Ongoing",
+    fr: "En cours",
+    de: "Laufend",
+    es: "En curso",
+    it: "In corso",
+    pt: "Em andamento",
+    nl: "Bezig",
+  },
+  // [day] and [time] are replaced at runtime with the localized day/time strings
+  "time.tomorrow_at": {
+    en: "[day] at [time]",
+    fr: "[day] à [time]",
+    de: "[day] um [time]",
+    es: "[day] a las [time]",
+    it: "[day] alle [time]",
+    pt: "[day] às [time]",
+    nl: "[day] om [time]",
+  },
+  // [duration] is replaced at runtime with the formatted duration string (e.g. "1h30", "45 min")
+  "time.in_duration": {
+    en: "in [duration]",
+    fr: "dans [duration]",
+    de: "in [duration]",
+    es: "en [duration]",
+    it: "tra [duration]",
+    pt: "em [duration]",
+    nl: "over [duration]",
+  },
+  // The word formatTimeOfDay splices in place of the "0 heure(s)" part of a
+  // spelled-out time of day — see its own comment for why hour 0 needs a word
+  // of its own, and how the swap keeps the rest of the sentence in this
+  // language's grammar. A language with no entry here keeps its literal
+  // "0 heure(s)" wording rather than this key.
+  "time.midnight": {
+    en: "midnight",
+    fr: "minuit",
+    de: "Mitternacht",
+    es: "medianoche",
+    it: "mezzanotte",
+    pt: "meia-noite",
+    nl: "middernacht",
+  },
+  // What formatTimeRange writes between the two bounds of a span — "8h–10h",
+  // "11 mai – 14 mai". An en dash, the mark for a span, not a hyphen.
+  "time.range_separator": {
+    en: "–",
+    fr: "–",
+    de: "–",
+    es: "–",
+    it: "–",
+    pt: "–",
+    nl: "–",
+  },
+  // Compact duration unit symbols used in "1h30", "45min", "2d", etc.
+  "time.duration.year_symbol": {
+    en: "y",
+    fr: "a",
+    de: "J",
+    es: "a",
+    it: "a",
+    pt: "a",
+    nl: "j",
+    ja: "年",
+    zh: "年",
+    ko: "년",
+  },
+  "time.duration.month_symbol": {
+    en: "mo",
+    fr: "mo",
+    de: "Mo",
+    es: "mo",
+    it: "mo",
+    pt: "mo",
+    nl: "mo",
+    ja: "月",
+    zh: "月",
+    ko: "월",
+  },
+  "time.duration.week_symbol": {
+    en: "w",
+    fr: "sem",
+    de: "W",
+    es: "sem",
+    it: "sett",
+    pt: "sem",
+    nl: "w",
+    ja: "週",
+    zh: "周",
+    ko: "주",
+  },
+  "time.duration.day_symbol": {
+    en: "d",
+    fr: "j",
+    de: "T",
+    es: "d",
+    it: "g",
+    pt: "d",
+    nl: "d",
+    ja: "日",
+    zh: "天",
+    ko: "일",
+  },
+  "time.duration.hour_symbol": {
+    en: "h",
+    fr: "h",
+    de: "h",
+    es: "h",
+    it: "h",
+    pt: "h",
+    nl: "u",
+    ja: "時間",
+    zh: "小时",
+    ko: "시간",
+  },
+  "time.duration.minute_symbol": {
+    en: "min",
+    fr: "min",
+    de: "min",
+    es: "min",
+    it: "min",
+    pt: "min",
+    nl: "min",
+    ja: "分",
+    zh: "分",
+    ko: "분",
+  },
+  "time.duration.second_symbol": {
+    en: "s",
+    fr: "s",
+    de: "s",
+    es: "s",
+    it: "s",
+    pt: "s",
+    nl: "s",
+    ja: "秒",
+    zh: "秒",
+    ko: "초",
+  },
+  "time.duration.millisecond_symbol": {
+    en: "ms",
+    fr: "ms",
+    de: "ms",
+    es: "ms",
+    it: "ms",
+    pt: "ms",
+    nl: "ms",
+    ja: "ms",
+    zh: "ms",
+    ko: "ms",
+  },
+});
+
+// Date/time placeholder tokens — shown when no value is selected
+// Override any key to adapt to your language conventions
+humanizeI18n.addAll({
+  "time.placeholder.day": {
+    fr: "jj",
+    en: "dd",
+    de: "TT",
+    es: "dd",
+    it: "gg",
+    pt: "dd",
+    nl: "dd",
+  },
+  "time.placeholder.month": {
+    fr: "mm",
+    en: "mm",
+    de: "MM",
+    es: "mm",
+    it: "mm",
+    pt: "mm",
+    nl: "mm",
+  },
+  "time.placeholder.year": {
+    fr: "aaaa",
+    en: "yyyy",
+    de: "JJJJ",
+    es: "aaaa",
+    it: "aaaa",
+    pt: "aaaa",
+    nl: "jjjj",
+  },
+  "time.placeholder.hour": {
+    fr: "hh",
+    en: "hh",
+    de: "hh",
+    es: "hh",
+    it: "hh",
+    pt: "hh",
+    nl: "uu",
+  },
+  "time.placeholder.minute": {
+    fr: "mm",
+    en: "mm",
+    de: "mm",
+    es: "mm",
+    it: "mm",
+    pt: "mm",
+    nl: "mm",
+  },
+  "time.placeholder.week": {
+    fr: "sem.",
+    en: "wk",
+    de: "KW",
+    es: "sem.",
+    it: "sett.",
+    pt: "sem.",
+    nl: "wk",
+  },
+});
 
 const formatDefault = (v) => v;
 
