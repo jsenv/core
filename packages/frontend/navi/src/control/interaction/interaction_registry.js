@@ -107,13 +107,16 @@ const detectors = [];
  *   detector usually treats them differently — a row pulled out comes back either
  *   way, something thrown off the screen only comes back if the throw failed.
  *
- *   The third argument carries `{ types, readConfig, isRefused }`: the claimed
- *   names actually declared, a number read off the element or any ancestor
- *   carrying that attribute (so a whole list is tuned in one place), and whether
- *   an interaction is currently declared "refuse". That last one is asked at the
- *   moment it matters and never at setup: what an interaction does is the
- *   caller's latest render, and something is locked and unlocked while its
- *   listeners stay where they are.
+ *   The third argument carries `{ types, readConfig, isRefused, isDeclared }`: the
+ *   claimed names actually declared, a number read off the element or any ancestor
+ *   carrying that attribute (so a whole list is tuned in one place), whether an
+ *   interaction is currently declared "refuse", and whether a name is declared at
+ *   all — including one this detector does not claim, which is how a word two
+ *   gestures share ("grab" and "release", told by a drag and by a surface) finds
+ *   out which of them it belongs to here. The last two are asked at the moment
+ *   they matter and never at setup: what an interaction does is the caller's
+ *   latest render, and something is locked and unlocked while its listeners stay
+ *   where they are.
  * @param {(type: string) => boolean} [definition.refusable] Whether that
  *   interaction can be declared "refuse" — a detector that answers a refusal has
  *   to say so, or "refuse" reads as an effect nothing runs and the dev warning
@@ -415,6 +418,7 @@ export const useInteractionsEffect = (ref, interactionsRef) => {
         readConfig: (attribute, defaultValue) =>
           readNumberFromDom(element, attribute, defaultValue),
         isRefused: (type) => interactionsNow()[type] === REFUSE,
+        isDeclared: (type) => Boolean(interactionsNow()[type]),
       });
       if (typeof cleanup === "function") {
         cleanups.push(cleanup);

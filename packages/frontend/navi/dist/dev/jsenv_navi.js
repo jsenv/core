@@ -9805,13 +9805,16 @@ const detectors = [];
  *   detector usually treats them differently — a row pulled out comes back either
  *   way, something thrown off the screen only comes back if the throw failed.
  *
- *   The third argument carries `{ types, readConfig, isRefused }`: the claimed
- *   names actually declared, a number read off the element or any ancestor
- *   carrying that attribute (so a whole list is tuned in one place), and whether
- *   an interaction is currently declared "refuse". That last one is asked at the
- *   moment it matters and never at setup: what an interaction does is the
- *   caller's latest render, and something is locked and unlocked while its
- *   listeners stay where they are.
+ *   The third argument carries `{ types, readConfig, isRefused, isDeclared }`: the
+ *   claimed names actually declared, a number read off the element or any ancestor
+ *   carrying that attribute (so a whole list is tuned in one place), whether an
+ *   interaction is currently declared "refuse", and whether a name is declared at
+ *   all — including one this detector does not claim, which is how a word two
+ *   gestures share ("grab" and "release", told by a drag and by a surface) finds
+ *   out which of them it belongs to here. The last two are asked at the moment
+ *   they matter and never at setup: what an interaction does is the caller's
+ *   latest render, and something is locked and unlocked while its listeners stay
+ *   where they are.
  * @param {(type: string) => boolean} [definition.refusable] Whether that
  *   interaction can be declared "refuse" — a detector that answers a refusal has
  *   to say so, or "refuse" reads as an effect nothing runs and the dev warning
@@ -10113,6 +10116,7 @@ const useInteractionsEffect = (ref, interactionsRef) => {
         readConfig: (attribute, defaultValue) =>
           readNumberFromDom(element, attribute, defaultValue),
         isRefused: (type) => interactionsNow()[type] === REFUSE$1,
+        isDeclared: (type) => Boolean(interactionsNow()[type]),
       });
       if (typeof cleanup === "function") {
         cleanups.push(cleanup);
@@ -10807,9 +10811,9 @@ const TOSS = "toss";
 // Let go of away from every place — not a throw, which is judged on its speed.
 const LEAVE = "leave";
 // The moment the press stops being a press and becomes a hold on the object.
-const GRAB = "grab";
+const GRAB$1 = "grab";
 // And the moment that hold ends, whatever it ended up meaning.
-const RELEASE = "release";
+const RELEASE$1 = "release";
 // The moment that hold is not acquired, on something that would be carried and
 // says no.
 const REFUSE = "refuse";
@@ -10840,8 +10844,8 @@ defineInteractionDetector({
     type === LAND ||
     type === TOSS ||
     type === LEAVE ||
-    type === GRAB ||
-    type === RELEASE ||
+    type === GRAB$1 ||
+    type === RELEASE$1 ||
     type === REFUSE,
   // The five outcomes can be turned down; the moments cannot — a moment is told,
   // and there is nothing in it to refuse.
@@ -10855,7 +10859,7 @@ defineInteractionDetector({
   // The press is the beginning of the gesture, not an answer: nothing may read
   // it until it is known whether the hand is dragging or just pressing.
   disputesPress: true,
-  setup: (element, trigger, { types, readConfig, isRefused }) => {
+  setup: (element, trigger, { types, readConfig, isRefused, isDeclared }) => {
     const canMove = types.includes(MOVE);
     const canMoving = types.includes(MOVING);
     const canReorder = types.includes(REORDER);
@@ -10871,10 +10875,15 @@ defineInteractionDetector({
       !canLeave
     ) {
       // Only moments: there is no gesture to be taken by, so there is no moment to
-      // be told about either.
-      {
+      // be told about either — unless a surface is declared here, whose grab and
+      // release are the same two words said of the other gesture that holds a
+      // hand (see interaction_surface.js). Then they are its, and this one has
+      // nothing to say about them. Their names are written out rather than
+      // imported: what detectors know of each other must not become what order
+      // they are registered in (see interactions.js).
+      if (!isDeclared("pan") && !isDeclared("zoom")) {
         const moments = types.filter(
-          (type) => type === GRAB || type === RELEASE || type === REFUSE,
+          (type) => type === GRAB$1 || type === RELEASE$1 || type === REFUSE,
         );
         const them = moments.length === 1 ? "it" : "them";
         console.warn(
@@ -10883,8 +10892,8 @@ defineInteractionDetector({
       }
       return undefined;
     }
-    const tellsWhenGrabbed = types.includes(GRAB);
-    const tellsWhenReleased = types.includes(RELEASE);
+    const tellsWhenGrabbed = types.includes(GRAB$1);
+    const tellsWhenReleased = types.includes(RELEASE$1);
     const tellsWhenRefused = types.includes(REFUSE);
     // `startDragTo` arbitrates the same conflicts and says so too, and that voice
     // is not heard from here: @jsenv/dom publishes one build with `import.meta.dev`
@@ -11040,7 +11049,7 @@ defineInteractionDetector({
         // comes back: this says something happened, it does not ask for work.
         onDragStart: tellsWhenGrabbed
           ? (gestureInfo) => {
-              trigger(GRAB, pointerDownEvent, {
+              trigger(GRAB$1, pointerDownEvent, {
                 pointerType: pointerDownEvent.pointerType,
                 gestureInfo,
               });
@@ -11052,7 +11061,7 @@ defineInteractionDetector({
         // comes back either.
         onRelease: tellsWhenReleased
           ? ({ x, y, outcome }) => {
-              trigger(RELEASE, pointerDownEvent, {
+              trigger(RELEASE$1, pointerDownEvent, {
                 id: element.id,
                 x,
                 y,
@@ -11171,6 +11180,19 @@ const warnWhenNothingToLandOn = (element, dropContainer, canLeave) => {
  * source. Read off the element or any ancestor, since what it knows is about the
  * place rather than about this box.
  *
+ * `grab` and `release` are the same two words a carried element says, said of the
+ * other thing that holds a hand: the surface has it, the surface has let go. They
+ * are the one moment of the gesture that is not a stream, and the one thing an
+ * application cannot see for itself — the capture taken at that instant is
+ * announced by the browser only before the NEXT pointer event, so a finger held
+ * still is announced nothing and a finger that moves is told while the surface is
+ * already moving under it. A visual needs neither: `[data-grabbed]` is on the
+ * element for as long as the hand is on it, and a stylesheet is enough. What the
+ * pair adds is what a stylesheet cannot do — a vibration on the touch that took
+ * it, a state kept elsewhere. Declared without `pan` or `zoom` they are not the
+ * surface's: they go back to being a drag's, which is what says so (see
+ * interaction_drag.js).
+ *
  * Nothing of the gesture is decided here — `installPanZoom` in @jsenv/dom owns
  * the pointers, the capture, the wheel burst and the click left behind. This
  * says which names the element answers with, and hands the numbers over.
@@ -11179,6 +11201,10 @@ const warnWhenNothingToLandOn = (element, dropContainer, canLeave) => {
 
 const PAN = "pan";
 const ZOOM = "zoom";
+// The moments, shared word for word with a drag: what holds the hand differs,
+// what is being told does not.
+const GRAB = "grab";
+const RELEASE = "release";
 // The same attribute a carried element reads: how far a pointer travels before
 // it is a gesture rather than a press.
 const THRESHOLD_ATTRIBUTE = "data-drag-threshold";
@@ -11188,13 +11214,23 @@ const AFTER_HOLD_ATTRIBUTE = "data-pan-after-hold";
 
 defineInteractionDetector({
   name: "surface",
-  claims: (type) => type === PAN || type === ZOOM,
+  claims: (type) =>
+    type === PAN || type === ZOOM || type === GRAB || type === RELEASE,
   // A press on the surface may be a tap, a hold or the beginning of a pan, and
   // nothing may read it as the first until the pointer has said which.
   disputesPress: true,
   setup: (element, trigger, { types, readConfig }) => {
     const canPan = types.includes(PAN);
     const canZoom = types.includes(ZOOM);
+    if (!canPan && !canZoom) {
+      // Only moments, and no surface for them to be moments OF: the two words
+      // are a drag's unless a surface is declared beside them, and the drag
+      // detector is the one that says so. Nothing is installed here — a surface
+      // that answers nothing would still take every touch that lands on it.
+      return undefined;
+    }
+    const tellsWhenGrabbed = types.includes(GRAB);
+    const tellsWhenReleased = types.includes(RELEASE);
     return installPanZoom(element, {
       threshold: readConfig(THRESHOLD_ATTRIBUTE, undefined),
       afterHold: Boolean(element.closest(`[${AFTER_HOLD_ATTRIBUTE}]`)),
@@ -11203,6 +11239,18 @@ defineInteractionDetector({
         : undefined,
       onZoom: canZoom
         ? ({ event, factor, x, y }) => trigger(ZOOM, event, { factor, x, y })
+        : undefined,
+      // Told, not asked: what comes back is not waited on, and preventing the
+      // event does not call the gesture off. `pointerType` because the hand that
+      // took the surface is usually answered in kind — a phone vibrates where a
+      // mouse has already seen the thing move.
+      onGrab: tellsWhenGrabbed
+        ? ({ event }) =>
+            trigger(GRAB, event, { pointerType: event?.pointerType })
+        : undefined,
+      onRelease: tellsWhenReleased
+        ? ({ event }) =>
+            trigger(RELEASE, event, { pointerType: event?.pointerType })
         : undefined,
     });
   },
@@ -44510,6 +44558,47 @@ const DetailsFieldContent = ({
   });
 };
 
+/*
+ * How many presses the page has seen, and which one a popup opened during.
+ *
+ * A popup dismisses itself on a `mousedown` outside, and the release of a TOUCH
+ * ends with mouse events too: a tap synthesizes `mousedown`, `mouseup` and
+ * `click` after `touchend`, at the place the finger left. For a popup opened by
+ * that same press — a menu under a held finger, which is what a long press is
+ * for — the backdrop did not exist when the finger landed and does exist when it
+ * leaves, so it is handed a press it never saw begin and reads it as somebody
+ * dismissing it. The popup closes on the release of the press that opened it.
+ *
+ * What tells them apart is not the device and not the clock: it is whether
+ * ANOTHER press has begun since the popup opened. So presses are counted — a
+ * pointerdown is a press — and a popup remembers the count it opened at. Equal
+ * counts mean no hand has been put down since, and the mouse events arriving are
+ * the tail of the press that opened it. A compatibility mouse event never brings
+ * a `pointerdown` of its own (the pointer events for that finger were fired when
+ * it landed), which is exactly what makes the count stand still through it.
+ *
+ * Read at module scope, in capture, so it is true before any handler asks.
+ */
+let pressCount = 0;
+document.addEventListener(
+  "pointerdown",
+  () => {
+    pressCount++;
+  },
+  { capture: true },
+);
+
+/**
+ * Whether the popup was opened by the press whose mouse events are landing now
+ * — the one thing that must not dismiss it (see above).
+ *
+ * Asked by every path that dismisses on an outside press: the backdrop of both
+ * renderers, the document-level listener a native dialog uses, and the outside
+ * regions a caller declares inside its own box.
+ */
+const openedDuringThisPress = (openController) =>
+  openController.pressCountAtOpen === pressCount;
+
 // How long a popup waits before handing the focus to a field, when giving it
 // is what raises the on-screen keyboard.
 //
@@ -44762,6 +44851,9 @@ const createOpenController = (
   };
   const controller = {
     opened: false,
+    // Which press the popup opened during, written at every open (see
+    // openedDuringThisPress). Never any press before there has been one.
+    pressCountAtOpen: null,
     openEffect: null,
     // Set by the controlled element (see popup_content_mount.js) when its
     // content is still waiting for a first open to be built. Called below,
@@ -44891,6 +44983,9 @@ const createOpenController = (
           // reads as closed, told it opened right after (see
           // popup_content_mount.js and use_displayed_layout_effect.js).
           controller.opened = true;
+          // Which press it opened during, so the release of that press is not
+          // read as somebody dismissing it (see openedDuringThisPress).
+          controller.pressCountAtOpen = pressCount;
           const openEffectReturnValue =
             controller.openEffect(requestOpenEvent) || null;
           openEffectCleanup = (closeEvent) => {
@@ -45658,6 +45753,11 @@ const handlePressOnOutsideRegion = (
   }
   const { target } = mouseDownEvent;
   if (!target.hasAttribute(OUTSIDE_REGION_ATTRIBUTE)) {
+    return;
+  }
+  if (openedDuringThisPress(openController)) {
+    // The release of the press that opened it is not somebody dismissing it
+    // (see openedDuringThisPress).
     return;
   }
   // A popup opens inside its opener's own subtree, so a press on a region
@@ -58673,6 +58773,11 @@ const useDialogProps = props => {
         // in front does not have to be one this dialog knows about. Excludes a
         // popup nested inside this one, which the containment check below
         // handles as the inside click it is.
+        if (openedDuringThisPress(openController)) {
+          // The release of the press that opened it is not somebody dismissing
+          // it (see openedDuringThisPress).
+          return;
+        }
         const popupUnderPointer = mouseDownEvent.target.closest?.(`[navi-control="dialog"], [navi-control="popover"]`);
         if (popupUnderPointer && popupUnderPointer !== dialogEl && !dialogEl.contains(popupUnderPointer)) {
           return;
@@ -58937,6 +59042,11 @@ const useDialogProps = props => {
   if (!isModal) {
     backdropProps.onMouseDown = mouseDownEvent => {
       if (mouseDownEvent.button !== 0) {
+        return;
+      }
+      // The release of the press that opened it is not somebody dismissing it
+      // (see openedDuringThisPress).
+      if (openedDuringThisPress(openController)) {
         return;
       }
       // See the custom renderer's own onDocumentMouseDown: a click inside
@@ -60416,6 +60526,11 @@ const usePopoverProps = props => {
     backdropFilter,
     "onMouseDown": mouseDownEvent => {
       if (mouseDownEvent.button !== 0) {
+        return;
+      }
+      // The release of the press that opened it is not somebody dismissing it
+      // (see openedDuringThisPress).
+      if (openedDuringThisPress(openController)) {
         return;
       }
       // Ignore clicks that land inside the popover's bounding rect

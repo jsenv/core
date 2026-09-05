@@ -35,6 +35,19 @@
  * source. Read off the element or any ancestor, since what it knows is about the
  * place rather than about this box.
  *
+ * `grab` and `release` are the same two words a carried element says, said of the
+ * other thing that holds a hand: the surface has it, the surface has let go. They
+ * are the one moment of the gesture that is not a stream, and the one thing an
+ * application cannot see for itself — the capture taken at that instant is
+ * announced by the browser only before the NEXT pointer event, so a finger held
+ * still is announced nothing and a finger that moves is told while the surface is
+ * already moving under it. A visual needs neither: `[data-grabbed]` is on the
+ * element for as long as the hand is on it, and a stylesheet is enough. What the
+ * pair adds is what a stylesheet cannot do — a vibration on the touch that took
+ * it, a state kept elsewhere. Declared without `pan` or `zoom` they are not the
+ * surface's: they go back to being a drag's, which is what says so (see
+ * interaction_drag.js).
+ *
  * Nothing of the gesture is decided here — `installPanZoom` in @jsenv/dom owns
  * the pointers, the capture, the wheel burst and the click left behind. This
  * says which names the element answers with, and hands the numbers over.
@@ -46,6 +59,10 @@ import { defineInteractionDetector } from "./interaction_registry.js";
 
 const PAN = "pan";
 const ZOOM = "zoom";
+// The moments, shared word for word with a drag: what holds the hand differs,
+// what is being told does not.
+const GRAB = "grab";
+const RELEASE = "release";
 // The same attribute a carried element reads: how far a pointer travels before
 // it is a gesture rather than a press.
 const THRESHOLD_ATTRIBUTE = "data-drag-threshold";
@@ -55,13 +72,23 @@ const AFTER_HOLD_ATTRIBUTE = "data-pan-after-hold";
 
 defineInteractionDetector({
   name: "surface",
-  claims: (type) => type === PAN || type === ZOOM,
+  claims: (type) =>
+    type === PAN || type === ZOOM || type === GRAB || type === RELEASE,
   // A press on the surface may be a tap, a hold or the beginning of a pan, and
   // nothing may read it as the first until the pointer has said which.
   disputesPress: true,
   setup: (element, trigger, { types, readConfig }) => {
     const canPan = types.includes(PAN);
     const canZoom = types.includes(ZOOM);
+    if (!canPan && !canZoom) {
+      // Only moments, and no surface for them to be moments OF: the two words
+      // are a drag's unless a surface is declared beside them, and the drag
+      // detector is the one that says so. Nothing is installed here — a surface
+      // that answers nothing would still take every touch that lands on it.
+      return undefined;
+    }
+    const tellsWhenGrabbed = types.includes(GRAB);
+    const tellsWhenReleased = types.includes(RELEASE);
     return installPanZoom(element, {
       threshold: readConfig(THRESHOLD_ATTRIBUTE, undefined),
       afterHold: Boolean(element.closest(`[${AFTER_HOLD_ATTRIBUTE}]`)),
@@ -70,6 +97,18 @@ defineInteractionDetector({
         : undefined,
       onZoom: canZoom
         ? ({ event, factor, x, y }) => trigger(ZOOM, event, { factor, x, y })
+        : undefined,
+      // Told, not asked: what comes back is not waited on, and preventing the
+      // event does not call the gesture off. `pointerType` because the hand that
+      // took the surface is usually answered in kind — a phone vibrates where a
+      // mouse has already seen the thing move.
+      onGrab: tellsWhenGrabbed
+        ? ({ event }) =>
+            trigger(GRAB, event, { pointerType: event?.pointerType })
+        : undefined,
+      onRelease: tellsWhenReleased
+        ? ({ event }) =>
+            trigger(RELEASE, event, { pointerType: event?.pointerType })
         : undefined,
     });
   },

@@ -30,6 +30,15 @@
  * landing is intent enough on its own. The first pixels are not lost: the
  * surface catches up with the finger the moment the pan begins.
  *
+ * WHEN IT HAS THE HAND is told, and it is the one thing nobody else can see. The
+ * capture taken at that instant is not that word: the browser announces one just
+ * before the NEXT pointer event, so a finger held still and then kept still is
+ * announced nothing at all, and a finger that moves hears it at the same moment
+ * the surface is already panning under it — the answer arrives with the movement
+ * it was supposed to precede. So `onGrab` says it where it happens, and
+ * `data-grabbed` says the same in the DOM, since what it is usually for is a
+ * contour and a veil.
+ *
  * A SURFACE STANDING IN SOMETHING THAT SCROLLS: `afterHold`.
  *
  * Travel is only unambiguous where there is no scroll to tell it apart from. A
@@ -54,6 +63,9 @@ import { isPrimaryButtonEvent } from "./drag_gesture.js";
 import { DRAG_EXCLUDED_SELECTOR } from "./drag_to_travel.js";
 
 const SURFACE_ATTRIBUTE = "data-pan-zoom-surface";
+// The same word a carried element says while the gesture has it (see drag_to.js):
+// a surface holding the hand is grabbed, and one thing held is like another.
+const GRABBED_ATTRIBUTE = "data-grabbed";
 
 const css = /* css */ `
   [data-pan-zoom-surface] {
@@ -106,6 +118,13 @@ const YIELDED_SELECTOR = `${DRAG_EXCLUDED_SELECTOR},[data-drag-source],[data-dra
  *   The zoom changed by `factor` (above 1 is in) around the point `x`/`y` of the
  *   surface, measured inside its border. Left out, a wheel over the surface is
  *   left to the page, and two fingers only pan.
+ * @param {(detail: {event: PointerEvent}) => void} [options.onGrab]
+ *   The surface has the hand: the travel proved it, the hold landed, or a second
+ *   pointer came down. Told once, before the first report, and `data-grabbed` is
+ *   on the element for as long as it lasts.
+ * @param {(detail: {event: PointerEvent|undefined}) => void} [options.onRelease]
+ *   The last pointer is gone — let go of, taken away, or the surface itself
+ *   taken down under the hand, which is the one case with no event to show.
  * @param {number} [options.threshold=5] How far a pointer travels before it pans.
  * @param {boolean} [options.afterHold=false] Whether a FINGER must be held still
  *   before it pans, the page keeping its scroll until then. For a surface
@@ -114,7 +133,7 @@ const YIELDED_SELECTOR = `${DRAG_EXCLUDED_SELECTOR},[data-drag-source],[data-dra
  */
 export const installPanZoom = (
   element,
-  { onPan, onZoom, threshold = 5, afterHold } = {},
+  { onPan, onZoom, onGrab, onRelease, threshold = 5, afterHold } = {},
 ) => {
   element.setAttribute(SURFACE_ATTRIBUTE, afterHold ? "after-hold" : "");
   // A travelling box above must not take the press this reads (see
@@ -159,7 +178,7 @@ export const installPanZoom = (
     return hand;
   };
 
-  const activate = (anchorWhere) => {
+  const activate = (anchorWhere, event) => {
     active = true;
     for (const pointerId of pointers.keys()) {
       element.setPointerCapture(pointerId);
@@ -167,6 +186,12 @@ export const installPanZoom = (
     anchor = readHand(anchorWhere);
     // The click the release leaves behind is not for what is under the hand.
     disarmClickSuppression = suppressClickAfterGesture();
+    // The surface has the hand, and this is the only place that knows (see the
+    // top of this file). Said in the DOM first, so a stylesheet alone can draw
+    // it, and before the first report, so what is drawn is drawn before the
+    // surface has moved under it.
+    element.setAttribute(GRABBED_ATTRIBUTE, "");
+    onGrab?.({ event });
   };
 
   const report = (event) => {
@@ -185,7 +210,7 @@ export const installPanZoom = (
     anchor = hand;
   };
 
-  const end = () => {
+  const end = (event) => {
     for (const pointer of pointers.values()) {
       pointer.holdWait?.cancel();
     }
@@ -197,6 +222,8 @@ export const installPanZoom = (
       anchor = null;
       disarmClickSuppression();
       disarmClickSuppression = null;
+      element.removeAttribute(GRABBED_ATTRIBUTE);
+      onRelease?.({ event });
     }
   };
 
@@ -234,7 +261,7 @@ export const installPanZoom = (
       return;
     }
     if (pointers.size >= 2) {
-      activate("now");
+      activate("now", event);
       return;
     }
     if (afterHold && event.pointerType === "touch") {
@@ -242,8 +269,8 @@ export const installPanZoom = (
       pointer.holdWait = waitForPressHeld(event, {
         // Anchored where the finger IS: it has barely moved, so there is
         // nothing to catch up with.
-        onPressHeld: () => {
-          activate("now");
+        onPressHeld: (pressEvent) => {
+          activate("now", pressEvent);
         },
       });
     }
@@ -270,7 +297,7 @@ export const installPanZoom = (
       // Anchored where the hand LANDED: the pixels that proved the intent are
       // replayed by the first report, so the surface catches up with the finger
       // rather than starting from under it.
-      activate("start");
+      activate("start", event);
     }
     report(event);
   };
@@ -286,7 +313,7 @@ export const installPanZoom = (
     // context menu back (see press_held.js).
     pointer.holdWait?.cancel();
     if (pointers.size === 0) {
-      end();
+      end(event);
       return;
     }
     if (active) {

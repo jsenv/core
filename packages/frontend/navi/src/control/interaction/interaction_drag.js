@@ -324,7 +324,7 @@ defineInteractionDetector({
   // The press is the beginning of the gesture, not an answer: nothing may read
   // it until it is known whether the hand is dragging or just pressing.
   disputesPress: true,
-  setup: (element, trigger, { types, readConfig, isRefused }) => {
+  setup: (element, trigger, { types, readConfig, isRefused, isDeclared }) => {
     const canMove = types.includes(MOVE);
     const canMoving = types.includes(MOVING);
     const canReorder = types.includes(REORDER);
@@ -340,8 +340,13 @@ defineInteractionDetector({
       !canLeave
     ) {
       // Only moments: there is no gesture to be taken by, so there is no moment to
-      // be told about either.
-      if (import.meta.dev) {
+      // be told about either — unless a surface is declared here, whose grab and
+      // release are the same two words said of the other gesture that holds a
+      // hand (see interaction_surface.js). Then they are its, and this one has
+      // nothing to say about them. Their names are written out rather than
+      // imported: what detectors know of each other must not become what order
+      // they are registered in (see interactions.js).
+      if (import.meta.dev && !isDeclared("pan") && !isDeclared("zoom")) {
         const moments = types.filter(
           (type) => type === GRAB || type === RELEASE || type === REFUSE,
         );

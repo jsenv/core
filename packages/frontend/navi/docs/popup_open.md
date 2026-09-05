@@ -6,6 +6,7 @@ What opens a `Dialog` or a `Popover`, and who owns the fact that it is open.
 - [A button opens it: the attributes](#a-button-opens-it-the-attributes)
 - [Something else opens it: `triggerNaviCommand`](#something-else-opens-it-triggernavicommand)
   - [The event is forwarded, not invented](#the-event-is-forwarded-not-invented)
+  - [Opening while the finger is still down](#opening-while-the-finger-is-still-down)
 - [Which element receives the command](#which-element-receives-the-command)
 - [The anchor](#the-anchor)
 - [Opening it ON something](#opening-it-on-something)
@@ -150,6 +151,30 @@ const expiredEvent = new CustomEvent("session_expired");
 chainEvent(expiredEvent, causeEvent); // when something did precede it
 triggerNaviCommand(dialogRef.current, "--navi-open", expiredEvent);
 ```
+
+### Opening while the finger is still down
+
+A menu opened by a `longpress` appears **during** the press that asked for it —
+that is what a long press is for, and it is the ordinary case here. The popup is
+told: it remembers which press it opened during, and the release of that press
+does not dismiss it, whatever the browser makes of it afterwards (a tap ends with
+a synthesized `mousedown`, `mouseup` and `click`, fired after `touchend` at the
+place the finger left — landing on a backdrop that did not exist when the finger
+came down). Nothing to do, and nothing to give up: the very next press outside
+closes the popup as usual.
+
+```jsx
+<Row
+  commandfor="row_menu"
+  interactions={{
+    longpress: (event) =>
+      triggerNaviCommand(event.target, "--navi-open", event),
+  }}
+/>
+```
+
+It is one more reason to forward the real event: what the popup reads to tell its
+own opening press from somebody else's comes from that gesture.
 
 ## Which element receives the command
 

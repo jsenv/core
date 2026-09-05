@@ -83,6 +83,7 @@ import { smallTouchScreenSignal } from "./responsive.js";
 import { createOnKeyDownForShortcuts } from "../keyboard/keyboard_shortcuts.js";
 import { useDebugFocus, useDebugPopup } from "../navi_debug.jsx";
 import {
+  openedDuringThisPress,
   useOpenController,
   useOpenPropsEffectOnOpenController,
 } from "./open_controller.js";
@@ -1619,6 +1620,11 @@ const useDialogProps = (props) => {
         // in front does not have to be one this dialog knows about. Excludes a
         // popup nested inside this one, which the containment check below
         // handles as the inside click it is.
+        if (openedDuringThisPress(openController)) {
+          // The release of the press that opened it is not somebody dismissing
+          // it (see openedDuringThisPress).
+          return;
+        }
         const popupUnderPointer = mouseDownEvent.target.closest?.(
           `[navi-control="dialog"], [navi-control="popover"]`,
         );
@@ -1903,6 +1909,11 @@ const useDialogProps = (props) => {
   if (!isModal) {
     backdropProps.onMouseDown = (mouseDownEvent) => {
       if (mouseDownEvent.button !== 0) {
+        return;
+      }
+      // The release of the press that opened it is not somebody dismissing it
+      // (see openedDuringThisPress).
+      if (openedDuringThisPress(openController)) {
         return;
       }
       // See the custom renderer's own onDocumentMouseDown: a click inside

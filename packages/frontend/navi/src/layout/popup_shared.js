@@ -11,6 +11,8 @@ import {
   scrollIntoViewScoped,
 } from "@jsenv/dom";
 
+import { openedDuringThisPress } from "./open_controller.js";
+
 /**
  * Whether a visibleRectEffect delivery is one that can have taken height away
  * from a popup, and so pushed whatever holds focus out of sight:
@@ -358,6 +360,11 @@ export const handlePressOnOutsideRegion = (
   }
   const { target } = mouseDownEvent;
   if (!target.hasAttribute(OUTSIDE_REGION_ATTRIBUTE)) {
+    return;
+  }
+  if (openedDuringThisPress(openController)) {
+    // The release of the press that opened it is not somebody dismissing it
+    // (see openedDuringThisPress).
     return;
   }
   // A popup opens inside its opener's own subtree, so a press on a region

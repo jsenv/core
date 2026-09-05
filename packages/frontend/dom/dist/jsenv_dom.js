@@ -4475,6 +4475,20 @@ const waitForPressHeld = (
 ) => {
   const { pointerId, clientX, clientY } = pressEvent;
 
+  /* The one capture that says nothing about the press. A pointer that cannot
+     hover is given a capture the moment it lands, by the browser and to the
+     element it landed on, without anybody asking — and it is announced like any
+     other, just before the first pointer event that follows. EVERY touch press
+     has it, so it cannot be read as this one having been settled: read that way,
+     the wait dies at the first pixel of a finger that was only resting on the
+     glass, which is what a finger does. That is the hold that fails one time in
+     two, on the pointer this whole module exists for.
+     Asked rather than assumed, and asked HERE: the press is the one moment where
+     a capture can only be the browser's, since nothing has taken one yet. */
+  const implicitCaptureHolder = pressEvent.target.hasPointerCapture?.(pointerId)
+    ? pressEvent.target
+    : null;
+
   const pressCleanupCallbacks = [];
   // Who is still holding the refusal. The finger holds it because the finger is
   // what the system's menu answers; the caller holds it from the moment the press
@@ -4596,6 +4610,12 @@ const waitForPressHeld = (
   // captures the pointer from inside onPressHeld) never reaches it.
   const onGotPointerCapture = (captureEvent) => {
     if (captureEvent.pointerId !== pointerId) {
+      return;
+    }
+    if (captureEvent.target === implicitCaptureHolder) {
+      // The capture the press was born with, not one somebody took (see above).
+      // A gesture taking that same element instead changes nothing for the
+      // browser, so it announces nothing, and there is nothing to miss here.
       return;
     }
     cancelPress(captureEvent);
@@ -15050,6 +15070,9 @@ const isPressDisputedByDrag = (element) => {
 installImportMetaCssBuild(import.meta);
 
 const SURFACE_ATTRIBUTE = "data-pan-zoom-surface";
+// The same word a carried element says while the gesture has it (see drag_to.js):
+// a surface holding the hand is grabbed, and one thing held is like another.
+const GRABBED_ATTRIBUTE = "data-grabbed";
 
 const css$1 = /* css */ `[data-pan-zoom-surface] {
   touch-action: none;
@@ -15089,6 +15112,13 @@ const YIELDED_SELECTOR = `${DRAG_EXCLUDED_SELECTOR},[data-drag-source],[data-dra
  *   The zoom changed by `factor` (above 1 is in) around the point `x`/`y` of the
  *   surface, measured inside its border. Left out, a wheel over the surface is
  *   left to the page, and two fingers only pan.
+ * @param {(detail: {event: PointerEvent}) => void} [options.onGrab]
+ *   The surface has the hand: the travel proved it, the hold landed, or a second
+ *   pointer came down. Told once, before the first report, and `data-grabbed` is
+ *   on the element for as long as it lasts.
+ * @param {(detail: {event: PointerEvent|undefined}) => void} [options.onRelease]
+ *   The last pointer is gone — let go of, taken away, or the surface itself
+ *   taken down under the hand, which is the one case with no event to show.
  * @param {number} [options.threshold=5] How far a pointer travels before it pans.
  * @param {boolean} [options.afterHold=false] Whether a FINGER must be held still
  *   before it pans, the page keeping its scroll until then. For a surface
@@ -15097,7 +15127,7 @@ const YIELDED_SELECTOR = `${DRAG_EXCLUDED_SELECTOR},[data-drag-source],[data-dra
  */
 const installPanZoom = (
   element,
-  { onPan, onZoom, threshold = 5, afterHold } = {},
+  { onPan, onZoom, onGrab, onRelease, threshold = 5, afterHold } = {},
 ) => {
   element.setAttribute(SURFACE_ATTRIBUTE, afterHold ? "after-hold" : "");
   // A travelling box above must not take the press this reads (see
@@ -15142,7 +15172,7 @@ const installPanZoom = (
     return hand;
   };
 
-  const activate = (anchorWhere) => {
+  const activate = (anchorWhere, event) => {
     active = true;
     for (const pointerId of pointers.keys()) {
       element.setPointerCapture(pointerId);
@@ -15150,6 +15180,12 @@ const installPanZoom = (
     anchor = readHand(anchorWhere);
     // The click the release leaves behind is not for what is under the hand.
     disarmClickSuppression = suppressClickAfterGesture();
+    // The surface has the hand, and this is the only place that knows (see the
+    // top of this file). Said in the DOM first, so a stylesheet alone can draw
+    // it, and before the first report, so what is drawn is drawn before the
+    // surface has moved under it.
+    element.setAttribute(GRABBED_ATTRIBUTE, "");
+    onGrab?.({ event });
   };
 
   const report = (event) => {
@@ -15168,7 +15204,7 @@ const installPanZoom = (
     anchor = hand;
   };
 
-  const end = () => {
+  const end = (event) => {
     for (const pointer of pointers.values()) {
       pointer.holdWait?.cancel();
     }
@@ -15180,6 +15216,8 @@ const installPanZoom = (
       anchor = null;
       disarmClickSuppression();
       disarmClickSuppression = null;
+      element.removeAttribute(GRABBED_ATTRIBUTE);
+      onRelease?.({ event });
     }
   };
 
@@ -15217,7 +15255,7 @@ const installPanZoom = (
       return;
     }
     if (pointers.size >= 2) {
-      activate("now");
+      activate("now", event);
       return;
     }
     if (afterHold && event.pointerType === "touch") {
@@ -15225,8 +15263,8 @@ const installPanZoom = (
       pointer.holdWait = waitForPressHeld(event, {
         // Anchored where the finger IS: it has barely moved, so there is
         // nothing to catch up with.
-        onPressHeld: () => {
-          activate("now");
+        onPressHeld: (pressEvent) => {
+          activate("now", pressEvent);
         },
       });
     }
@@ -15253,7 +15291,7 @@ const installPanZoom = (
       // Anchored where the hand LANDED: the pixels that proved the intent are
       // replayed by the first report, so the surface catches up with the finger
       // rather than starting from under it.
-      activate("start");
+      activate("start", event);
     }
     report(event);
   };
@@ -15269,7 +15307,7 @@ const installPanZoom = (
     // context menu back (see press_held.js).
     pointer.holdWait?.cancel();
     if (pointers.size === 0) {
-      end();
+      end(event);
       return;
     }
     if (active) {

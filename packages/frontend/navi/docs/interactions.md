@@ -625,6 +625,11 @@ pixels and the object has visibly moved, so the answer is already there.
 
 Nothing here is about vibration: a sound, a class, a measure are the same moment.
 
+If what the moment is for is **paint**, no listener is needed at all: navi puts
+`data-grabbed` on the element for as long as the gesture holds it, and a
+stylesheet draws from that. `grab` is for what a stylesheet cannot do — the
+vibration above, a state kept elsewhere, a counter.
+
 `grab` **reports, it does not ask**: what it returns is not waited on, and
 preventing its event does not call the gesture off. And it is not an interaction on
 its own — declared without one of the five above there is no gesture for it to be
@@ -1135,6 +1140,51 @@ say so. It spends the hold, though: a `longpress` declared beside a `pan` that
 waits asks one finger to answer two waits of the same length, and only one of
 them is answered.
 
+### When the surface has the hand: `grab`, `release`, `[data-grabbed]`
+
+A surface that is asked for — by a hold, or by the first few pixels of travel —
+has an instant where it becomes the hand's, and nothing on screen says it. The
+hand then moves too early and scrolls the page instead, or waits long past the
+moment out of doubt. So the surface says it, the same two words a carried element
+says (`grab`, `release`) and the same attribute:
+
+```jsx
+<Box
+  data-pan-after-hold
+  interactions={{
+    pan,
+    zoom,
+    grab: (event) => {
+      if (event.detail.pointerType === "touch") {
+        navigator.vibrate?.(10);
+      }
+    },
+    release: () => {},
+  }}
+/>
+```
+
+```css
+.plan[data-grabbed] {
+  border-color: var(--accent);
+}
+```
+
+`[data-grabbed]` is on the element for as long as the surface holds the hand, so
+a contour, a veil or a raised shadow needs no listener — which is what this is
+usually for. `grab` and `release` are for the rest: a vibration, a state kept
+elsewhere. Their detail is `{ pointerType }`; like a drag's, they **report and do
+not ask**, and declared without `pan` or `zoom` they are a drag's words again,
+which is what the dev warning says.
+
+**Do not read the capture instead.** `setPointerCapture` is what the gesture takes
+at that same instant, and it is the wrong signal twice over: the browser does not
+announce a capture when it is taken but just before the NEXT pointer event for
+that pointer, so a finger that holds still and then keeps still is announced
+nothing at all, and a finger that moves is told at the very moment the surface is
+already moving under it. With a mouse it lands mid-travel. `grab` is told where it
+happens, before the first `pan`.
+
 ## A gesture whose product is a value
 
 `move`, `reorder`, `land`, `toss` and `leave` answer the same question — where did
@@ -1258,8 +1308,8 @@ travels above it: `data-no-drag-travel` (see `docs/drag_to_travel.md`).
   swipe writes on the element.
 - `src/control/interaction/interaction_drag.js` — `move`, `reorder`, `land`,
   `toss`, `leave` and the `grab`/`release`/`refuse` moments.
-- `src/control/interaction/interaction_surface.js` — `pan` and `zoom`, on
-  `installPanZoom` from `@jsenv/dom`.
+- `src/control/interaction/interaction_surface.js` — `pan` and `zoom`, their
+  `grab`/`release` moments, on `installPanZoom` from `@jsenv/dom`.
 - `src/control/interaction/interaction_keyboard.js`,
   `interaction_native.js` — the other two detectors.
 - `@jsenv/dom` — `src/interaction/drag/drag_gesture.js` (the loop, its options and

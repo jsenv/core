@@ -354,6 +354,27 @@
         border-radius: 8px;
         overflow: hidden;
       }
+      /* The surface says it has the hand, and nothing else has to be listened
+         to for it (see "grab, release" in the docs). Drawn on the frame rather
+         than inside it, so what lights up is the thing that took the finger. */
+      .surface[data-grabbed] {
+        border-color: #2f5fa8;
+        box-shadow: 0 0 0 2px rgba(47, 95, 168, 0.25);
+      }
+      /* A page around a thumbnail: something for the finger to scroll when the
+         surface has not been asked for. */
+      .scroll_frame {
+        max-height: 200px;
+        padding: 10px 12px;
+        border: 1px solid #dde3ec;
+        border-radius: 8px;
+        overflow-y: auto;
+      }
+      .scroll_frame p {
+        margin: 8px 0;
+        color: #666;
+        font-size: 13px;
+      }
       .surface_layer {
         position: absolute;
         top: 0;
@@ -768,6 +789,7 @@
           <TossDemo />
           <MoveDemo />
           <SurfaceDemo />
+          <SurfaceAfterHoldDemo />
           <CustomDetectorDemo />
           <CombinationsDemo />
           <ConcreteCasesDemo />
@@ -1720,6 +1742,70 @@
                 {Math.round(view.y)}
               </span>
             </Box>
+          </div>
+        );
+      };
+
+      // A surface standing in something that scrolls: it is asked for by a held
+      // finger, and it says when it has been given.
+      const SurfaceAfterHoldDemo = () => {
+        const [entries, push, clear] = useCallLog();
+        const [view, setView] = useState({ x: 0, y: 0 });
+        return (
+          <div class="demo-section">
+            <Heading level={3} id="surface-after-hold">
+              data-pan-after-hold, and when the surface takes the hand
+            </Heading>
+            <p class="legend">
+              This one stands in something that scrolls, so a finger is left to
+              the page until it stands still — hold it, and the frame lights up
+              at that instant, from <code>[data-grabbed]</code> alone. Nothing
+              else says that moment: the capture the gesture takes is announced
+              by the browser only before the NEXT pointer event, so a finger
+              held still hears nothing and a finger that moves hears it while
+              the surface is already moving. <code>grab</code> and{" "}
+              <code>release</code> are the same moment for whoever needs more
+              than a stylesheet — a vibration, a state kept elsewhere. A mouse
+              is untouched: it pans by travelling.
+            </p>
+            <div class="scroll_frame">
+              <p>
+                Scroll me with a finger, over the plan as well as around it.
+              </p>
+              <Box
+                className="surface"
+                style={{
+                  "height": "140px",
+                  "--surface-x": `${view.x}px`,
+                  "--surface-y": `${view.y}px`,
+                }}
+                data-pan-after-hold
+                data-testid="surface_after_hold"
+                interactions={{
+                  pan: (event) => {
+                    const { x, y } = event.detail;
+                    setView((previous) => ({
+                      x: previous.x + x,
+                      y: previous.y + y,
+                    }));
+                  },
+                  grab: (event) => {
+                    push("grab", event.detail.pointerType, event);
+                    if (event.detail.pointerType === "touch") {
+                      navigator.vibrate?.(10);
+                    }
+                  },
+                  release: (event) => {
+                    push("release", event.detail.pointerType, event);
+                  },
+                }}
+              />
+              <p>
+                Until the hold lands the page keeps the touch; the pinch is the
+                surface's either way.
+              </p>
+            </div>
+            <CallLog entries={entries} onClear={clear} />
           </div>
         );
       };

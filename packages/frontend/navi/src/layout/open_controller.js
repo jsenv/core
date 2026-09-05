@@ -21,6 +21,47 @@ import {
 import { isEditableTarget } from "@jsenv/navi/src/box/pseudo_styles.js";
 import { useStableCallback } from "../utils/use_stable_callback.js";
 
+/*
+ * How many presses the page has seen, and which one a popup opened during.
+ *
+ * A popup dismisses itself on a `mousedown` outside, and the release of a TOUCH
+ * ends with mouse events too: a tap synthesizes `mousedown`, `mouseup` and
+ * `click` after `touchend`, at the place the finger left. For a popup opened by
+ * that same press — a menu under a held finger, which is what a long press is
+ * for — the backdrop did not exist when the finger landed and does exist when it
+ * leaves, so it is handed a press it never saw begin and reads it as somebody
+ * dismissing it. The popup closes on the release of the press that opened it.
+ *
+ * What tells them apart is not the device and not the clock: it is whether
+ * ANOTHER press has begun since the popup opened. So presses are counted — a
+ * pointerdown is a press — and a popup remembers the count it opened at. Equal
+ * counts mean no hand has been put down since, and the mouse events arriving are
+ * the tail of the press that opened it. A compatibility mouse event never brings
+ * a `pointerdown` of its own (the pointer events for that finger were fired when
+ * it landed), which is exactly what makes the count stand still through it.
+ *
+ * Read at module scope, in capture, so it is true before any handler asks.
+ */
+let pressCount = 0;
+document.addEventListener(
+  "pointerdown",
+  () => {
+    pressCount++;
+  },
+  { capture: true },
+);
+
+/**
+ * Whether the popup was opened by the press whose mouse events are landing now
+ * — the one thing that must not dismiss it (see above).
+ *
+ * Asked by every path that dismisses on an outside press: the backdrop of both
+ * renderers, the document-level listener a native dialog uses, and the outside
+ * regions a caller declares inside its own box.
+ */
+export const openedDuringThisPress = (openController) =>
+  openController.pressCountAtOpen === pressCount;
+
 // How long a popup waits before handing the focus to a field, when giving it
 // is what raises the on-screen keyboard.
 //
@@ -273,6 +314,9 @@ export const createOpenController = (
   };
   const controller = {
     opened: false,
+    // Which press the popup opened during, written at every open (see
+    // openedDuringThisPress). Never any press before there has been one.
+    pressCountAtOpen: null,
     openEffect: null,
     // Set by the controlled element (see popup_content_mount.js) when its
     // content is still waiting for a first open to be built. Called below,
@@ -402,6 +446,9 @@ export const createOpenController = (
           // reads as closed, told it opened right after (see
           // popup_content_mount.js and use_displayed_layout_effect.js).
           controller.opened = true;
+          // Which press it opened during, so the release of that press is not
+          // read as somebody dismissing it (see openedDuringThisPress).
+          controller.pressCountAtOpen = pressCount;
           const openEffectReturnValue =
             controller.openEffect(requestOpenEvent) || null;
           openEffectCleanup = (closeEvent) => {

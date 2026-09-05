@@ -70,6 +70,7 @@ import { resolveSpacingSize } from "../box/box_style_util.js";
 import { createOnKeyDownForShortcuts } from "../keyboard/keyboard_shortcuts.js";
 import { useDebugFocus, useDebugPopup } from "../navi_debug.jsx";
 import {
+  openedDuringThisPress,
   useOpenController,
   useOpenPropsEffectOnOpenController,
 } from "./open_controller.js";
@@ -1589,6 +1590,11 @@ const usePopoverProps = (props) => {
     backdropFilter,
     "onMouseDown": (mouseDownEvent) => {
       if (mouseDownEvent.button !== 0) {
+        return;
+      }
+      // The release of the press that opened it is not somebody dismissing it
+      // (see openedDuringThisPress).
+      if (openedDuringThisPress(openController)) {
         return;
       }
       // Ignore clicks that land inside the popover's bounding rect
