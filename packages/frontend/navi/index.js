@@ -150,6 +150,10 @@ export { detectHorizontalOverflow } from "./src/layout/detect_horizontal_overflo
 // target and dispatches exactly like the attribute path, so a popup driven this
 // way stays uncontrolled and keeps its own say over closing.
 export { triggerNaviCommand } from "./src/control/commands.js";
+// The JS counterpart of `--navi-update`: propose a value to a control from
+// somewhere that is not a button (`{ behavior: "smooth" }` for the control to
+// be seen moving to it). Goes through the same gate a command does.
+export { dispatchRequestSetUIState } from "./src/control/ui_state_dom.js";
 // A command must say what caused it, and what caused it is not always a DOM
 // event — a timer, an action settling, a signal changing. `chainEvent` hangs the
 // CustomEvent standing in for it off whatever preceded it, so the origin stays
@@ -299,7 +303,7 @@ export { Meter } from "./src/text/meter.jsx";
 export { naviI18n } from "./src/text/navi_i18n.js";
 export { Paragraph } from "./src/text/paragraph.jsx";
 export { Quantity } from "./src/text/quantity.jsx";
-export { Text } from "./src/text/text.jsx";
+export { markAsOutsideTextFlow, Text } from "./src/text/text.jsx";
 export { TextBox } from "./src/text/text_box.jsx";
 export { Time, TimeRange } from "./src/text/time.jsx";
 export { Title, useTitleLevel } from "./src/text/title.jsx";
@@ -367,7 +371,7 @@ export { moveFocusTo } from "./src/utils/focus/focus_transfer.js";
 export { startDragTo } from "@jsenv/dom";
 // For a drag whose product is a VALUE — an angle, a scale, an offset — rather
 // than an element that ends up somewhere. navi names the second kind and not the
-// first (see docs/interactions.md), so what it hands over here is the machinery:
+// first (see docs/drag_interactions.md), so what it hands over here is the machinery:
 // when a press becomes a drag, the loop that follows the pointer, and what an
 // element must say BEFORE the finger lands for its touch to be refusable at all.
 // Re-exported so that does not cost an app a direct dependency on @jsenv/dom.

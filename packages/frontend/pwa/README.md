@@ -175,7 +175,7 @@ The returned facade exposes:
   {
     error, // Error/ErrorEvent, null while all good
     readyState, // "" | "registering" | "installing" | "installed" | "activating" | "activated" | "redundant"
-    meta, // object returned by the service worker script to the "inspect" action
+    meta, // "inspect" meta of registration.active || waiting || installing
     update: {
       error,
       readyState, // same values plus "activation_pending"; "installed" means ready to activate
@@ -184,6 +184,13 @@ The returned facade exposes:
     },
   }
   ```
+
+  Both metas describe _workers_: `state.meta` is the worker the registration
+  points at (use `navigatorControllerSignal` for the one controlling the page),
+  and an `"installed"` update means different script bytes, not necessarily a
+  version the page is not already running. Before announcing a version number,
+  read the note under
+  [Service worker: updates](./docs/usage.md#service-worker-updates).
 
 - `stateSignal` — the signal holding `state`, for consumers composing it with
   other signals.

@@ -26,6 +26,13 @@ createServiceWorkerFacade({
 });
 ```
 
+`autoclaimOnFirstActivation` matters because **everything about updates assumes
+a controlled page**: a worker arriving on a registration that controls no
+client activates straight away, without ever waiting, so no update is announced
+— it just takes over. Until `navigator.serviceWorker.controller` is set the
+page sees no `"installed"` update, which is also why a test or a screenshot run
+must wait for that controller before expecting one.
+
 ## Service worker: reacting to state
 
 `swFacade.subscribe(callback)` runs the callback immediately and again on every
@@ -47,7 +54,7 @@ State shape:
 {
   error, // Error or ErrorEvent, null while all good
   readyState, // "" | "registering" | "installing" | "installed" | "activating" | "activated" | "redundant"
-  meta, // object returned by the service worker script to the "inspect" action ({} otherwise)
+  meta, // "inspect" meta of registration.active || waiting || installing ({} otherwise)
   update: {
     error,
     readyState, // "" | "installing" | "installed" | "activation_pending" | "activating" | "activated" | "redundant"
@@ -56,6 +63,13 @@ State shape:
   },
 }
 ```
+
+`state.meta` is the meta of the worker the _registration_ points at, which is
+not necessarily the worker controlling the page (an uncontrolled page still has
+a registration, and a page can outlive a controller change). For "the worker
+that actually serves this page", read `navigatorControllerSignal`; for "the
+version this page is running", see the note under
+[Service worker: updates](#service-worker-updates).
 
 ## Service worker: updates
 
@@ -86,6 +100,25 @@ swFacade.subscribe(() => {
 updateButton.onclick = async () => {
   await swFacade.activateUpdate(); // skipWaiting + claim
 };
+```
+
+**`update.readyState === "installed"` means different script _bytes_, not a
+different _payload_.** The page can already be running the build the waiting
+worker carries: a document fetched outside the active worker's cache comes from
+the latest deployment while that worker still caches the previous one, so the
+new worker installs and waits next to a page that is already up to date. A UI
+saying only "a new version is available" never notices; a UI printing version
+numbers prints the same number on both sides of its arrow.
+
+Neither `state.meta` nor `state.update.meta` can settle it: both describe
+_workers_, and no worker describes the document currently executing. So a
+version-aware UI must compare `state.update.meta` with what the running bundle
+knows about itself:
+
+```js
+// APP_VERSION is baked into the bundle at build time
+const version = swFacade.state.update.meta?.appVersion ?? null;
+const updateIsNew = version !== null && version !== APP_VERSION;
 ```
 
 The browser activates the update only once the current worker has finished

@@ -1,4 +1,8 @@
-import { dispatchCustomEvent, isPressDisputedByDrag } from "@jsenv/dom";
+import {
+  chainEvent,
+  dispatchCustomEvent,
+  isPressDisputedByDrag,
+} from "@jsenv/dom";
 import { createPortal } from "preact/compat";
 import { useContext, useId, useRef } from "preact/hooks";
 
@@ -26,10 +30,7 @@ import { commitUIStateAsAnswer, isUIStateHeld } from "../held_ui_state.js";
 import { dispatchRequestAction } from "../rules/control_action.js";
 import { createOpenToken } from "../rules/control_callout.js";
 import { dispatchRequestInteraction } from "../rules/control_interaction.js";
-import {
-  dispatchRequestSetUIState,
-  getUIStateFromElement,
-} from "../ui_state_dom.js";
+import { getUIStateFromElement } from "../ui_state_dom.js";
 
 const css = /* css */ `
   .navi_picker {
@@ -516,9 +517,21 @@ const PickerCustom = (props) => {
               closeEvent,
               `picker cancel, restoring value at open ${JSON.stringify(valueAtOpen)}`,
             );
-            dispatchRequestSetUIState(inputEl, valueAtOpen, {
-              event: closeEvent,
+            // Put back from the inside ("cancel_rollback" is an internal event
+            // type, see ui_state_controller.js): the answer was no, so nobody
+            // acted — the picker is returned to the state its owner still
+            // holds. Asked for the way a user would, the restore would read as
+            // a gesture and fire the picker's `command`, sending a `<Picker
+            // type="confirm" action command>` on the "then go there" half of a
+            // gesture whose first half never ran.
+            const rollbackEvent = new CustomEvent("cancel_rollback", {
+              detail: {},
             });
+            chainEvent(rollbackEvent, closeEvent);
+            inputEl.__uiStateController__.setUIState(
+              valueAtOpen,
+              rollbackEvent,
+            );
           } else if (!heldAtOpen) {
             // Confirmed a suggestion: nothing changed, so nothing has told the
             // control's own bound signal / uiAction that this is now the

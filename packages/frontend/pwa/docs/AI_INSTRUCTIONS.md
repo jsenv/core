@@ -32,6 +32,14 @@ reloadRequired }`) read from `swFacade.stateSignal`, and
   `"registering" → "installing" → "installed" → "activating" → "activated"`
   (or `"redundant"`); `state.update.readyState === "installed"` means an update
   is ready to be activated with `swFacade.activateUpdate()`.
+- **An installed update is not necessarily a new version**: `"installed"` means
+  the waiting worker's script bytes differ from the active one's. `state.meta`
+  and `state.update.meta` describe those two workers — never the document
+  currently executing, which may have been fetched outside any worker's cache.
+  A UI printing version numbers must compare `state.update.meta` against a
+  constant baked into the running bundle, and `navigatorControllerSignal` is
+  the export answering "which worker serves this page". Updates are also only
+  announced on a controlled page (see `autoclaimOnFirstActivation`).
 - **You register the service worker yourself**: call
   `navigator.serviceWorker.register(url)` and hand the promise to
   `swFacade.setRegistrationPromise(...)`. The facade never chooses the script

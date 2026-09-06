@@ -360,10 +360,13 @@ export const useUIStateController = (
               // changed and this is not a live user gesture — skip uiAction and command.
               return false;
             }
-            if (e.type === "state_prop_change") {
-              // state_prop_change with the same uiState means the state prop was updated
-              // to match what the user already has in the UI (e.g. action completed and
-              // synced state back). No real user gesture — skip uiAction and command.
+            if (isInternalEvent(e)) {
+              // navi writing to the control itself — a value handed down, a
+              // state prop syncing back what the UI already shows, a rollback
+              // putting back what was there. Nobody acted, and the value did
+              // not move either, so there is nothing left to report: skip
+              // uiAction and command, as the button/link and radio branches
+              // above already do.
               return false;
             }
             if (e.type === "change") {
@@ -502,12 +505,18 @@ export const useUIStateController = (
               // down to its children (child command would re-trigger the cascade).
               controller.onUIAction(e, { skipCommand: true });
             }
-            if (e.type === "facade_propagate_up") {
+            if (
+              e.type === "facade_propagate_up" ||
+              e.type === "cancel_rollback"
+            ) {
               // Exception: when the facade propagates a child state change up to the
               // real picker input, also notify the parent group (e.g. Form) so it
               // keeps its cached aggregated state in sync and fires its own uiAction.
               // This is consistent with how a direct Input inside a Form behaves:
               // the Form's uiAction fires on every value change.
+              // A cancel takes the same road back: the Form was told what the
+              // popup was picking, so it has to be told the picker went back to
+              // where it opened, or it sends a value the user said no to.
               s.parentUIStateController?.onChildUIAction(controller, e, {
                 stateChanged: true,
               });
@@ -2329,6 +2338,12 @@ const INTERNAL_EVENT_SET = new Set([
   // control is being put back on the state the caller still holds — so this
   // must not fire a uiAction, a command, or a report on the way.
   "clear_rollback",
+  // A picker's popup closed on a cancel (the no button, Escape, a click
+  // outside): what the picker held at open goes back. Nobody acted — no
+  // command — but the value really did move back, so uiAction and the parent
+  // notification below still happen, exactly as they did on the way in (see
+  // picker_custom.jsx's onClose).
+  "cancel_rollback",
 ]);
 const isInternalEvent = (e) => {
   return INTERNAL_EVENT_SET.has(e.type);

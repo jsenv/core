@@ -10,6 +10,11 @@
  * (state, claim, reload or hot replacement) is owned by that tracking;
  * activateUpdate() only asks the worker to skip waiting and awaits the
  * tracked outcome.
+ *
+ * state.meta and state.update.meta describe these two WORKERS; neither
+ * describes the document currently executing, which may have been fetched
+ * outside any worker's cache. An installed update therefore means "different
+ * script bytes", not "different payload" — see docs/usage.md.
  */
 
 import { signal } from "@preact/signals";
@@ -43,7 +48,9 @@ import { pwaLogger } from "./pwa_logger.js";
  *   worker registration; defaults to the whole origin.
  * @param {boolean} [options.autoclaimOnFirstActivation=false] When the very
  *   first service worker activates, ask it to claim the page immediately
- *   instead of waiting for the next navigation.
+ *   instead of waiting for the next navigation. Updates are only ever
+ *   announced on a controlled page: a worker arriving on a registration
+ *   controlling no client activates straight away, skipping "waiting".
  * @returns {Object} facade with:
  *   - `stateSignal`: signal holding the state object, see its shape below
  *   - `state`: the state object itself (`stateSignal.value`)
@@ -369,9 +376,11 @@ export const createServiceWorkerFacade = ({
           error: null,
         },
       });
-      let updateRegistration;
       try {
-        updateRegistration = await registration.update();
+        // registration.update() resolves with undefined per spec (browsers
+        // happen to resolve with the registration itself); the workers are
+        // read off the registration already in scope
+        await registration.update();
       } catch (e) {
         mutate({
           update: {
@@ -380,15 +389,19 @@ export const createServiceWorkerFacade = ({
         });
         return false;
       }
-      if (updateRegistration.waiting) {
+      // An update found by THIS check is on registration.installing: update()
+      // resolves as soon as the new script starts installing. The waiting
+      // branch below is for an update found by a previous check, installed and
+      // still waiting to activate.
+      if (registration.waiting) {
         pwaLogger.info(
           "registration.update() -> found on registration.waiting",
         );
-        trackUpdate(updateRegistration.waiting);
+        trackUpdate(registration.waiting);
         return true;
       }
       // when installing, no need to call trackUpdate, browser fires "updatefound"
-      if (updateRegistration.installing) {
+      if (registration.installing) {
         pwaLogger.info(
           "registration.update() -> found on registration.installing",
         );

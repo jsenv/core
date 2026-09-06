@@ -311,7 +311,7 @@ const createResource = (
    * @param {Object} params - Parameters to bind to all actions of this resource (required)
    * @param {Object} options - Additional options for the parameterized resource
    * @returns {Object} A new resource instance with parameter-bound actions and isolated lifecycle
-   * @see docs/resource_with_params.md for detailed documentation and examples
+   * @see docs/resource.md — what a scope isolates, and `dependencies`
    *
    * @example
    * const ROLE = resource("role", { GET: (params) => fetchRole(params) });
