@@ -549,7 +549,11 @@ const UsersListReactive = () => {
           (useArray — se met à jour automatiquement via signaux)
         </span>
       </h3>
-      {users.length === 0 ? (
+      {users === undefined ? (
+        <div style={{ fontSize: "0.85em", color: "#6c757d" }}>
+          Pas encore chargé
+        </div>
+      ) : users.length === 0 ? (
         <div style={{ fontSize: "0.85em", color: "#6c757d" }}>
           Aucun utilisateur dans le store
         </div>

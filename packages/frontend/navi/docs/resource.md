@@ -28,7 +28,10 @@ Each callback returns the data to upsert into the store:
 | GET_RANGE                | `{ items, start, count }` (below) |
 
 Actions are read in components through the action system (`useAsyncData`,
-`<Button action>`, …) — see [actions.md](./actions.md).
+`<Button action>`, …) — see [actions.md](./actions.md). An action's `data` is
+`undefined` until its callback has answered once, plural verbs included: a
+`GET_MANY` that has not run has no array, and `[]` is what an empty answer
+looks like ([data_states.md](./data_states.md#data-and-loading-are-independent)).
 
 - [`store.upsert()` is not how data enters the store](#storeupsert-is-not-how-data-enters-the-store)
 - [`GET_RANGE`: feeding a list that loads as it scrolls](#get_range-feeding-a-list-that-loads-as-it-scrolls)
@@ -163,9 +166,10 @@ update, and a mutation writes to the one it is not. The resource's own
 answers both questions.
 
 **Two `GET_MANY` on one resource do not compete.** Each bound instance keeps its
-own array of ids and resolves it against the shared store, so answering the
-search leaves the page's list as it was — clear the search box and every row it
-had is still there. ["A `*_MANY` callback replaces the collection
+own array of ids (none until it has answered) and resolves it against the
+shared store, so answering the search leaves the page's list as it was — clear
+the search box and every row it had is still there. ["A `*_MANY` callback
+replaces the collection
 wholesale"](#when-the-backend-answers-a-sub-route-with-the-whole-parent), below,
 is about the rows the store keeps for one owner — not about what some other
 action reading the same resource is showing.

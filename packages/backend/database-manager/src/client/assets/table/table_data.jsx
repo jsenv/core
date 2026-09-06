@@ -58,9 +58,10 @@ export const TableData = ({ table }) => {
   const [data, loading] = useAsyncData(TABLE_ROW_GET_MANY_ACTION, {
     loading: true,
   });
-  const initialLoad = data === undefined && loading;
-  let rows = data;
-  if (initialLoad) {
+  let rows;
+  if (data !== undefined) {
+    rows = data;
+  } else if (loading) {
     const { rowCount } = table.meta;
     rows = Array.from({ length: rowCount }, (_, i) => {
       const row = { id: i };
@@ -70,7 +71,7 @@ export const TableData = ({ table }) => {
       return row;
     });
   } else {
-    rows = data;
+    rows = [];
   }
 
   const tableRef = useRef(null);

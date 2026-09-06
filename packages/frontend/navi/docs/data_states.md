@@ -77,6 +77,13 @@ Two consequences worth stating out loud.
 `loading` as "there is nothing to display" blanks the screen on every refresh —
 for a checkbox ticked on one row of a list, the whole list goes.
 
+A list is no exception. A plural action — `GET_MANY`, a `.many()` or
+`.scopedMany()` read — has no data until its first answer: `undefined`, not
+`[]`. An empty array is an answer ("the collection is empty"), and the two are
+different facts drawn differently: a skeleton for the first, an empty state for
+the second. So a component reading a plural action must accept `undefined`
+before dereferencing (`items?.map`, `items ?? []`, or the branch above).
+
 **A skeleton is told whether it is loading; it does not deduce it.** The last
 row of the table is the one that gets forgotten, and it is reachable: a first
 load that failed — its message on screen or dismissed — and a route action whose

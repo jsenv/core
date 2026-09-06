@@ -73,6 +73,9 @@ const debug = (...args) => {
  * - GET_MANY / POST_MANY / … → an array of item objects
  * - GET_RANGE                 → `{ items, start, count }`, one slice of the collection
  *
+ * An action's `data` is `undefined` until its callback has answered once, plural verbs
+ * included; `[]` is what an empty answer looks like (see docs/data_states.md).
+ *
  * `GET_RANGE` is a reader rather than an action: it keeps no value and has nothing to
  * rerun, so a `<List.Items>` can feed on it slice by slice
  * (`itemsAction={USER.GET_RANGE.bindParams({ team })}`). A mutation listed in
@@ -733,7 +736,6 @@ const createResource = (
       return createAction(callback, {
         meta: { verb, isMany: true, paramScope },
         name: `${name}.${verb}[many]`,
-        dataDefault: [],
         resultToValue: (result, action) => {
           if (verb === "GET") {
             if (!isProps(result)) {
@@ -764,8 +766,12 @@ const createResource = (
           }
           return applyResultToValue(result);
         },
+        // Before the first answer there is no id array; the data is then
+        // undefined so a screen can tell "not asked yet" from "answered: none".
         valueToData: (childItemIdArray) =>
-          childStore.selectAll(childItemIdArray),
+          childItemIdArray === undefined
+            ? undefined
+            : childStore.selectAll(childItemIdArray),
         completeSideEffect: onActionComplete,
       });
     };
@@ -1119,17 +1125,16 @@ const createResource = (
         },
         valueToData: (value) => {
           if (!value) {
-            return isMany ? [] : undefined;
+            return undefined;
           }
+          // A value is produced by resultToValue above, which creates the
+          // owner's scope when it is missing, and scopes are never dropped.
           const [ownerId, idOrIdArray] = value;
-          const scope = scopeMap.get(ownerId);
-          if (!scope) {
-            return isMany ? [] : undefined;
-          }
+          const { childStore } = scopeMap.get(ownerId);
           if (isMany) {
-            return scope.childStore.selectAll(idOrIdArray);
+            return childStore.selectAll(idOrIdArray);
           }
-          return scope.childStore.select(idOrIdArray);
+          return childStore.select(idOrIdArray);
         },
         completeSideEffect: onActionComplete,
       });
@@ -1309,9 +1314,11 @@ const createRestActionFactoryForRoot = (
     return createAction(callback, {
       meta: { verb, isMany: true, paramScope },
       name: `${name}.${verb}_MANY`,
-      dataDefault: [],
       resultToValue: applyResultToValue,
-      valueToData: (idArray) => store.selectAll(idArray),
+      // Before the first answer there is no id array; the data is then
+      // undefined so a screen can tell "not asked yet" from "answered: none".
+      valueToData: (idArray) =>
+        idArray === undefined ? undefined : store.selectAll(idArray),
       completeSideEffect: (actionCompleted) => {
         onActionComplete(actionCompleted);
         if (

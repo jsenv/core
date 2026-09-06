@@ -56,6 +56,9 @@
 
       const App = () => {
         const { data: users } = useActionStatus(USER.GET_MANY);
+        if (users === undefined) {
+          return <p>Loading users…</p>;
+        }
 
         const [dam, seb, john] = users;
         const getDamAction = USER.GET.bindParams({

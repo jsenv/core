@@ -163,7 +163,7 @@
       });
 
       const App = () => {
-        const { data: serverUsers, pending: loadingUsers } = useActionStatus(
+        const { data: serverUsers, loading: loadingUsers } = useActionStatus(
           USER.GET_MANY_FILTERED,
         );
 
@@ -285,8 +285,10 @@
               <h3>
                 Filtered Users from Server {loadingUsers && "- Loading..."}
               </h3>
-              <p>Count: {serverUsers.length}</p>
-              {serverUsers.map((user) => {
+              <p>
+                Count: {serverUsers === undefined ? "?" : serverUsers.length}
+              </p>
+              {serverUsers?.map((user) => {
                 return (
                   <UserItem
                     key={user}

@@ -20,9 +20,10 @@ The short answer:
 ## `loading: true` returns the previous value
 
 During a re-run, `useAsyncData(action, { loading: true })` hands back the
-**previous** data with `loading` up — never `undefined` — so the emptiness test
-is `data === undefined`, and a list is never blanked for a checkbox ticked on
-one of its rows. Read `loading` as "what you are displaying is from before", not
+**previous** data with `loading` up — never `undefined`, which is the first
+load only, for a `GET_MANY` as for anything else — so the emptiness test is
+`data === undefined`, and a list is never blanked for a checkbox ticked on one
+of its rows. Read `loading` as "what you are displaying is from before", not
 "there is nothing to display". The four combinations of `data` and `loading`,
 and what each one draws, are in [data_states.md](./data_states.md).
 

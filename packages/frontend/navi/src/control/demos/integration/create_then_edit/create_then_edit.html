@@ -545,11 +545,11 @@
             <LoadFailed title="Parties" error={error} action={GAMES_OF_HOME} />
           );
         }
-        if (loading && !games) {
+        if (games === undefined) {
           return (
             <div className="page">
               <h2 className="page_title">Parties</h2>
-              <p className="game_card">Chargement…</p>
+              {loading && <p className="game_card">Chargement…</p>}
             </div>
           );
         }
