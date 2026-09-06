@@ -76,6 +76,20 @@ say so. It spends the hold, though: a `longpress` declared beside a `pan` that
 waits asks one finger to answer two waits of the same length, and only one of
 them is answered.
 
+The wait is then asked before every pan, which is right while each finger
+landing there is genuinely ambiguous. Once the user has settled into the plan it
+is not, and asking again is asking three times for one sentence:
+
+```jsx
+<Box data-pan-after-hold="kept" interactions={{ pan, zoom }} />
+```
+
+From the moment the surface is given the hand — the hold, a pinch, a mouse
+travelling — it pans on contact, the way the same plan does opened full screen.
+It asks again only after a press has landed away from it, which is the hand
+saying it has moved on; navi watches for that press itself, so nothing on your
+side listens to the window.
+
 ### A wheel that does not steal the page's scroll
 
 A wheel over a surface in a page means to scroll that page nine times out of ten

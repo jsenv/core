@@ -1751,6 +1751,7 @@
       const SurfaceAfterHoldDemo = () => {
         const [entries, push, clear] = useCallLog();
         const [view, setView] = useState({ x: 0, y: 0 });
+        const [keptView, setKeptView] = useState({ x: 0, y: 0 });
         return (
           <div class="demo-section">
             <Heading level={3} id="surface-after-hold">
@@ -1792,7 +1793,7 @@
                   grab: (event) => {
                     push("grab", event.detail.pointerType, event);
                     if (event.detail.pointerType === "touch") {
-                      navigator.vibrate?.(10);
+                      window.navigator.vibrate?.(10);
                     }
                   },
                   release: (event) => {
@@ -1802,8 +1803,31 @@
               />
               <p>
                 Until the hold lands the page keeps the touch; the pinch is the
-                surface's either way.
+                surface's either way. The one below is asked{" "}
+                <code>data-pan-after-hold="kept"</code>: hold it once and every
+                finger after that pans it on contact, until a press lands
+                somewhere else on the page.
               </p>
+              <Box
+                className="surface"
+                style={{
+                  "height": "140px",
+                  "--surface-x": `${keptView.x}px`,
+                  "--surface-y": `${keptView.y}px`,
+                }}
+                data-pan-after-hold="kept"
+                data-testid="surface_after_hold_kept"
+                interactions={{
+                  pan: (event) => {
+                    const { x, y } = event.detail;
+                    setKeptView((previous) => ({
+                      x: previous.x + x,
+                      y: previous.y + y,
+                    }));
+                  },
+                }}
+              />
+              <p>Then tap this text, and it asks to be held again.</p>
             </div>
             <CallLog entries={entries} onClear={clear} />
           </div>
@@ -2499,7 +2523,7 @@
                         // the place to the next of the squad who is not out yet.
                         click: () => court.takePlace(placeId),
                         land: court.land,
-                        grab: () => window.navigator.vibrate?.(10),
+                        grab: () => window.window.navigator.vibrate?.(10),
                       }}
                     />
                   );
@@ -2621,7 +2645,7 @@
                     data-droppable
                     interactions={{
                       land: court.land,
-                      grab: () => window.navigator.vibrate?.(10),
+                      grab: () => window.window.navigator.vibrate?.(10),
                     }}
                   />
                 );

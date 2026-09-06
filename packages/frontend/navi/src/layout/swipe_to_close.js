@@ -71,17 +71,23 @@ export const createSwipeToClose = (side, { grip } = {}) => {
       }
     }
 
-    // How far the panel has been pulled, written on it directly: the gesture
-    // reports a distance in screen coordinates, which is exactly what a
-    // translate takes. It goes through `transform` because the `translate`
-    // property carries where the panel *stands* (applyNewPosition in
-    // visible_rect.js, which owns it) — the pull composes under the placement
-    // instead of replacing it.
+    // How far the panel has been pulled, as the style showing it — written on
+    // the panel while the finger drives it, handed to the release travel as
+    // its two keyframes. The gesture reports a distance in screen coordinates,
+    // which is exactly what a translate takes; it goes through `transform`
+    // because the `translate` property carries where the panel *stands*
+    // (applyNewPosition in visible_rect.js, which owns it), so the pull
+    // composes under the placement instead of replacing it.
+    const styleAt = (distance) => ({
+      transform: translateOf(axis, distance),
+      clipPath: clipOf(axis, distance),
+    });
     const paint = (distance) => {
-      panelEl.style.transform = translateOf(axis, distance);
+      Object.assign(panelEl.style, styleAt(distance));
     };
     const restore = () => {
       panelEl.style.transform = "";
+      panelEl.style.clipPath = "";
       panelEl.style.transitionProperty = "";
       panelEl.style.userSelect = "";
     };
@@ -91,16 +97,10 @@ export const createSwipeToClose = (side, { grip } = {}) => {
     const travelTo = (from, to, onArrival) => {
       const covered = from > to ? from - to : to - from;
       paint(to);
-      const animation = panelEl.animate(
-        [
-          { transform: translateOf(axis, from) },
-          { transform: translateOf(axis, to) },
-        ],
-        {
-          duration: (covered / sizeOf(panelEl, axis)) * TRAVEL_DURATION,
-          easing: "ease-out",
-        },
-      );
+      const animation = panelEl.animate([styleAt(from), styleAt(to)], {
+        duration: (covered / sizeOf(panelEl, axis)) * TRAVEL_DURATION,
+        easing: "ease-out",
+      });
       animation.finished.then(onArrival, () => {});
     };
     const close = (event) => {
@@ -167,3 +167,20 @@ const translateOf = (axis, distance) =>
   axis === "x"
     ? `translate(${distance}px, 0px)`
     : `translate(0px, ${distance}px)`;
+// The same cut the entry/exit animation makes (popup_css.js), at a distance the
+// finger decides instead of a transition: each edge sits where the popup's own
+// room ran out (--container-position-room-*, written by applyNewPosition), and
+// the pull is added back so the cut stays on that line while the box travels
+// under it. Unset rooms — a popup that was never placed — read as 100vmax,
+// which cuts nothing.
+const roomOf = (edge) => `var(--container-position-room-${edge}, 100vmax)`;
+const clipOf = (axis, distance) => {
+  const alongX = axis === "x" ? distance : 0;
+  const alongY = axis === "y" ? distance : 0;
+  return `inset(
+    calc(-1 * ${roomOf("top")} - ${alongY}px)
+    calc(-1 * ${roomOf("right")} + ${alongX}px)
+    calc(-1 * ${roomOf("bottom")} + ${alongY}px)
+    calc(-1 * ${roomOf("left")} - ${alongX}px)
+  )`;
+};

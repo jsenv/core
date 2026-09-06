@@ -35,6 +35,13 @@
  * source. Read off the element or any ancestor, since what it knows is about the
  * place rather than about this box.
  *
+ * `data-pan-after-hold="kept"` asks for that wait once rather than before every
+ * pan: the surface given the hand keeps it — panning on contact, like the same
+ * plan opened full screen — and asks again after a press has landed away from
+ * it, which is the hand saying it has moved on. What answers "away" is the same
+ * thing that closes a popup, and the surface is the one that watches for it, so
+ * an application never keeps a `pointerdown` listener on the window to know.
+ *
  * The WHEEL is the same question asked of a mouse, and it is not asked of the
  * caller at all: a wheel event is read rather than settled beforehand, so
  * whether anything around the surface scrolls is simply looked up when it
@@ -79,9 +86,12 @@ const RELEASE = "release";
 // The same attribute a carried element reads: how far a pointer travels before
 // it is a gesture rather than a press.
 const THRESHOLD_ATTRIBUTE = "data-drag-threshold";
-// Whether a finger has to stand still before the surface is its own. What a
-// touch may do is settled when it lands, so this is read once, at setup.
+// Whether a finger has to stand still before the surface is its own, and — at
+// "kept" — whether that answer stands until the hand goes elsewhere. What a touch
+// may do is settled when it lands, so the surface holds the mode in the DOM and
+// changes it there itself; nothing here is re-read at the press.
 const AFTER_HOLD_ATTRIBUTE = "data-pan-after-hold";
+const AFTER_HOLD_KEPT = "kept";
 // Whether a BARE wheel is the surface's whatever scrolls around it. The wheel's
 // opposite of the attribute above: that one gives a gesture away, this one takes
 // one back.
@@ -155,7 +165,7 @@ defineInteractionDetector({
 
     const uninstall = installPanZoom(element, {
       threshold: readConfig(THRESHOLD_ATTRIBUTE, undefined),
-      afterHold: Boolean(element.closest(`[${AFTER_HOLD_ATTRIBUTE}]`)),
+      afterHold: readAfterHold(element),
       wheelZoom: element.closest(`[${ZOOM_ON_CONTACT_ATTRIBUTE}]`)
         ? "always"
         : "auto",
@@ -185,3 +195,20 @@ defineInteractionDetector({
     };
   },
 });
+
+const readAfterHold = (element) => {
+  const holder = element.closest(`[${AFTER_HOLD_ATTRIBUTE}]`);
+  if (!holder) {
+    return false;
+  }
+  const value = holder.getAttribute(AFTER_HOLD_ATTRIBUTE);
+  if (value === AFTER_HOLD_KEPT) {
+    return AFTER_HOLD_KEPT;
+  }
+  if (import.meta.dev && value !== "" && value !== "true") {
+    console.warn(
+      `interactions: ${AFTER_HOLD_ATTRIBUTE}="${value}" is not a value the surface knows. Leave it empty for a wait before every pan, or say "${AFTER_HOLD_KEPT}" for one asked only until the surface is given the hand.`,
+    );
+  }
+  return true;
+};

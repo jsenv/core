@@ -51,6 +51,13 @@
  * pan begins where the finger already is. A mouse travelling is untouched by it:
  * a button held down over a surface could never have meant a scroll.
  *
+ * `afterHold: "kept"` is that same wait, asked for once: the surface that has
+ * been given the hand keeps it — panning on contact, the way it always does
+ * under a mouse — until a pointer goes down away from it, which is the hand
+ * saying it has moved on. Nothing disputes the touch in between: the finger
+ * that stood still has already said it was not scrolling, and asking it to say
+ * so again before every pan is asking three times for one sentence.
+ *
  * ITS WHEEL IS THE OTHER HALF of the same question, and the answer is not the
  * same word. A wheel over a surface in a page means to scroll that page nine
  * times out of ten — it is what a wheel means everywhere else, and a surface
@@ -88,8 +95,10 @@ const css = /* css */ `
        from a stylesheet, on the surface, before any finger. Both gestures are
        what the surface answers with its own numbers. */
     touch-action: none;
-    /* Nothing under a hand dragging a surface is text to select. */
+    /* Nothing under a hand dragging a surface is text to select, and iOS answers
+       a finger standing still on it with its callout otherwise. */
     user-select: none;
+    -webkit-touch-callout: none;
   }
   [data-pan-zoom-surface="after-hold"] {
     /* Until the hold is over the touch is the page's: this surface stands in
@@ -99,9 +108,6 @@ const css = /* css */ `
        them. Being an explicit value rather than auto is also what keeps a
        touchmove refusable once the hold lands (see preventTouchScroll below). */
     touch-action: pan-x pan-y;
-    /* iOS answers a long press with its callout and by selecting under the
-       finger, a tenth of a second after the wait below was answered. */
-    -webkit-touch-callout: none;
   }
 `;
 import.meta.css = css;
@@ -203,9 +209,12 @@ export const findPanZoomSurface = (element) => {
  *   A bare wheel was left to what scrolls around the surface rather than zooming
  *   it: the zoom is one `ctrl`/`meta` away, and this is where that is said.
  * @param {number} [options.threshold=5] How far a pointer travels before it pans.
- * @param {boolean} [options.afterHold=false] Whether a FINGER must be held still
- *   before it pans, the page keeping its scroll until then. For a surface
+ * @param {boolean|"kept"} [options.afterHold=false] Whether a FINGER must be held
+ *   still before it pans, the page keeping its scroll until then. For a surface
  *   standing in something that scrolls; a mouse pans by travelling either way.
+ *   `"kept"` asks for the wait once: from the moment the surface has the hand it
+ *   pans on contact, and it asks again only after a pointer has gone down away
+ *   from it.
  * @param {"auto"|"always"} [options.wheelZoom="auto"] Whether a BARE wheel zooms.
  *   `"auto"` gives it to whatever scrolls around the surface when there is one,
  *   and zooms when there is none; `"always"` takes it back, for a surface that
@@ -225,7 +234,16 @@ export const installPanZoom = (
     wheelZoom = "auto",
   } = {},
 ) => {
-  element.setAttribute(SURFACE_ATTRIBUTE, afterHold ? "after-hold" : "");
+  // Whether a finger still owes the wait. Constant under a plain `afterHold`;
+  // under `"kept"` it is spent the first time the surface is given the hand and
+  // asked for again once the hand has gone elsewhere.
+  let holdIsOwed = Boolean(afterHold);
+  const reflectHoldOwed = () => {
+    // What a touch may do is settled before it lands, so the mode is in the DOM
+    // rather than read at pointerdown (see the stylesheet).
+    element.setAttribute(SURFACE_ATTRIBUTE, holdIsOwed ? "after-hold" : "");
+  };
+  reflectHoldOwed();
   // A travelling box above must not take the press this reads (see
   // drag_to_travel.js): the surface says so itself, being the one that knows.
   element.setAttribute("data-no-drag-travel", "");
@@ -268,8 +286,31 @@ export const installPanZoom = (
     return hand;
   };
 
+  // A press somewhere else, while the surface holds nothing: the hand has moved
+  // on, and the next finger landing here is disputed again. A press on the
+  // surface, or one made while it already has the hand (a second finger resting
+  // beside it), is not that.
+  const onPointerDownAway = (event) => {
+    if (pointers.size > 0 || element.contains(event.target)) {
+      return;
+    }
+    holdIsOwed = true;
+    reflectHoldOwed();
+    window.removeEventListener("pointerdown", onPointerDownAway, true);
+  };
+  const keepTheHand = () => {
+    holdIsOwed = false;
+    reflectHoldOwed();
+    window.addEventListener("pointerdown", onPointerDownAway, true);
+  };
+
   const activate = (anchorWhere, event) => {
     active = true;
+    if (afterHold === "kept" && holdIsOwed) {
+      // Asked for and given: whatever proved it — the hold, a second finger, a
+      // mouse travelling — the surface is the hand's from here.
+      keepTheHand();
+    }
     for (const pointerId of pointers.keys()) {
       element.setPointerCapture(pointerId);
     }
@@ -361,7 +402,7 @@ export const installPanZoom = (
       activate("now", event);
       return;
     }
-    if (afterHold && event.pointerType === "touch") {
+    if (holdIsOwed && event.pointerType === "touch") {
       pointer.waitsForHold = true;
       pointer.holdWait = waitForPressHeld(event, {
         // Anchored where the finger IS: it has barely moved, so there is
@@ -523,6 +564,7 @@ export const installPanZoom = (
     element.removeEventListener("lostpointercapture", onLostPointerCapture);
     element.removeEventListener("touchmove", preventTouchScroll);
     element.removeEventListener("wheel", onWheel);
+    window.removeEventListener("pointerdown", onPointerDownAway, true);
     element.removeAttribute(SURFACE_ATTRIBUTE);
     element.removeAttribute("data-no-drag-travel");
   };

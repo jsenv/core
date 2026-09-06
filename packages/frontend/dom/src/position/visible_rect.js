@@ -1163,7 +1163,7 @@ const toContainerAlignedPosition = (value) => {
  *   edges instead of the page viewport's, on both axes (the Y axis otherwise has no such
  *   clamp at all — see the clamp's own comment) — that part *is* gated on `hasValidAnchor`,
  *   unlike the coordinate-space conversion itself.
- * @returns {{ hasValidAnchor, shouldTransition, positionX, positionY, left, top, width, height, anchorLeft, anchorTop, anchorRight, anchorBottom, spaceLeft, spaceRight, spaceAbove, spaceBelow, containerWidthAvailable, containerHeightAvailable }}
+ * @returns {{ hasValidAnchor, shouldTransition, positionX, positionY, left, top, width, height, anchorLeft, anchorTop, anchorRight, anchorBottom, spaceLeft, spaceRight, spaceAbove, spaceBelow, containerWidthAvailable, containerHeightAvailable, roomLeft, roomTop, roomRight, roomBottom }}
  */
 export const pickPositionRelativeTo = (
   element,
@@ -1684,6 +1684,22 @@ export const pickPositionRelativeTo = (
   // so callers get the net usable space directly.
   const containerWidthAvailable = availableWidth - 2 * marginWithContainer;
   const containerHeightAvailable = availableHeight - 2 * marginWithContainer;
+  // How far past each of its own edges `element` may still paint before
+  // reaching the edge of the area it was placed in. What it puts outside that
+  // area — an entry animation travelling in from beyond it, a shadow — can be
+  // cut with these and nothing else: each floors at 0, so the cut lands on the
+  // element's own edge at the closest and never inside its box, which is what
+  // makes a value read one reposition late harmless rather than a bite taken
+  // out of it. Measured here, before the coordinate conversion below:
+  // elementPositionLeft/Top and availableLeft/Top share one space.
+  const roomLeft = floorAtZero(elementPositionLeft - availableLeft);
+  const roomTop = floorAtZero(elementPositionTop - availableTop);
+  const roomRight = floorAtZero(
+    availableRight - (elementPositionLeft + elementWidth),
+  );
+  const roomBottom = floorAtZero(
+    availableBottom - (elementPositionTop + elementHeight),
+  );
   // Docked to a container (no real anchor): the element is kept inside the
   // container's margin on BOTH sides — that is what the !hasValidAnchor clamp
   // above enforces — so what it has to work with is the container net of both.
@@ -1738,8 +1754,14 @@ export const pickPositionRelativeTo = (
     // the container itself, so they collapse to -marginWithContainer.
     containerWidthAvailable,
     containerHeightAvailable,
+    roomLeft,
+    roomTop,
+    roomRight,
+    roomBottom,
   };
 };
+
+const floorAtZero = (value) => (value < 0 ? 0 : value);
 
 // Per-element bookkeeping for the currently in-flight, self-driven position
 // transition, if any — see notifyPositionTransition's own doc for why this
@@ -1902,8 +1924,26 @@ export const applyNewPosition = (
     spaceBelow,
     containerWidthAvailable,
     containerHeightAvailable,
+    roomLeft,
+    roomTop,
+    roomRight,
+    roomBottom,
   },
 ) => {
+  // Published for whoever has to cut what the element paints outside the area
+  // it was placed in — see pickPositionRelativeTo for what the four numbers
+  // are, and popup_css.js (@jsenv/navi) for the entry animation that reads
+  // them.
+  element.style.setProperty("--container-position-room-top", `${roomTop}px`);
+  element.style.setProperty(
+    "--container-position-room-right",
+    `${roomRight}px`,
+  );
+  element.style.setProperty(
+    "--container-position-room-bottom",
+    `${roomBottom}px`,
+  );
+  element.style.setProperty("--container-position-room-left", `${roomLeft}px`);
   // A centered axis is published too, from the container's own extent: leaving
   // the property unset lets the consumer's size cap fall back to its viewport
   // default, which overflows any container smaller than the viewport (a

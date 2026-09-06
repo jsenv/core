@@ -48,7 +48,8 @@
  *
  * `animation="slide-from-*"` (anchorReference/point mode only): a real
  * translate-based entrance, 8 directions (cardinal + 4 diagonals), each
- * 100%-of-own-size. It travels through `transform`, not through the
+ * 100%-of-own-size, cut at the edges of the area the popup was placed in so
+ * that a travel starting outside that area is not watched crossing it. It travels through `transform`, not through the
  * `translate` property, which belongs to the popup's own placement
  * (applyNewPosition in visible_rect.js — see its doc for why the placement is
  * a transform at all, and why it has to be the outermost one: the individual
@@ -103,12 +104,18 @@ export const popupCss = /* css */ `
        (no shared transition-property to clobber, no propertyName to filter).
        What moves here is transform, which composes under it. */
     &[navi-animation] {
+      /* clip-path takes the translate's own duration: the slide family below
+         cuts its own travel with it, and the cut holds a viewport line still
+         only for as long as it advances at exactly the pace of the transform.
+         An animation kind that sets no clip-path has "none" on both sides of
+         the change, which costs nothing. */
       transition-property:
-        display, overlay, opacity, transform, scale, box-shadow;
+        display, overlay, opacity, transform, scale, box-shadow, clip-path;
       transition-duration:
         var(--popup-animation-duration), var(--popup-animation-duration),
         var(--popup-opacity-duration), var(--popup-translate-duration),
-        var(--popup-scale-duration), var(--popup-animation-duration);
+        var(--popup-scale-duration), var(--popup-animation-duration),
+        var(--popup-translate-duration);
       transition-timing-function: ease;
       transition-behavior: allow-discrete;
     }
@@ -185,16 +192,51 @@ export const popupCss = /* css */ `
     &[navi-animation="slide-from-bottom-left"],
     &[navi-animation="slide-from-bottom-right"] {
       opacity: 1;
+      /* The travel is cut at the edges of the area the popup was placed in:
+         what it crosses on its way in is outside that area, and outside it is
+         either the glass beside an app narrowed with --navi-app-max-width
+         (layout/safe_area.js) or whatever surrounds a container — neither the
+         popup's to paint, and a popup in the top layer answers to no overflow
+         of the document.
+         --container-position-room-* is how far past each of its own edges the
+         popup may still paint before reaching that area's edge
+         (applyNewPosition in @jsenv/dom), so the negated value puts the cut ON
+         that edge, and an unplaced popup reading 100vmax cuts nothing. The
+         popup itself is never cut: the rooms floor at 0. */
+      --x-popup-cut-top: calc(-1 * var(--container-position-room-top, 100vmax));
+      --x-popup-cut-right: calc(
+        -1 * var(--container-position-room-right, 100vmax)
+      );
+      --x-popup-cut-bottom: calc(
+        -1 * var(--container-position-room-bottom, 100vmax)
+      );
+      --x-popup-cut-left: calc(
+        -1 * var(--container-position-room-left, 100vmax)
+      );
+      --x-popup-travel-x: calc(var(--x-popup-slide-x, 0) * 100%);
+      --x-popup-travel-y: calc(var(--x-popup-slide-y, -1) * 100%);
+      clip-path: inset(
+        var(--x-popup-cut-top) var(--x-popup-cut-right)
+          var(--x-popup-cut-bottom) var(--x-popup-cut-left)
+      );
+
       transform: translate(0px, 0px);
 
       /* No fade: the travel is the whole effect. Fading it out on top would
          make the popup disappear before it has finished leaving, which reads as
          two things happening rather than one movement. */
       &[aria-expanded="false"] {
-        transform: translate(
-          calc(var(--x-popup-slide-x, 0) * 100%),
-          calc(var(--x-popup-slide-y, -1) * 100%)
+        /* The travel added back to the cut: written in the popup's own
+           coordinates, each edge then lands on the same viewport line at both
+           ends of the transition — and so at every instant in between, the two
+           interpolating over one duration and one easing. */
+        clip-path: inset(
+          calc(var(--x-popup-cut-top) - var(--x-popup-travel-y))
+            calc(var(--x-popup-cut-right) + var(--x-popup-travel-x))
+            calc(var(--x-popup-cut-bottom) + var(--x-popup-travel-y))
+            calc(var(--x-popup-cut-left) - var(--x-popup-travel-x))
         );
+        transform: translate(var(--x-popup-travel-x), var(--x-popup-travel-y));
       }
     }
   }
