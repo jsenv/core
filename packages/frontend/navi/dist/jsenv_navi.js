@@ -17187,6 +17187,19 @@ const useActionAsyncData = (action, {
       }
       setTick(n => n + 1);
     });
+    // The params say WHICH question this is, and this hook reads them: to know
+    // there is nothing to ask for, and to start the run it owns. A binding
+    // retargeting from no question to a question — a filter chosen, a first
+    // character typed — is announced by nothing above: a fresh target is IDLE
+    // holding no data, the very state the hook already sees.
+    let paramsNotificationIsInitial = true;
+    const unsubscribeFromParams = action.paramsSignal.subscribe(() => {
+      if (paramsNotificationIsInitial) {
+        paramsNotificationIsInitial = false;
+        return;
+      }
+      setTick(n => n + 1);
+    });
     // A debounced binding waits before it retargets, so nothing above changes
     // while the delay runs — but what is on screen is already out of date.
     let settlingNotificationIsInitial = true;
@@ -17200,6 +17213,7 @@ const useActionAsyncData = (action, {
     return () => {
       unsubscribeFromRunningState();
       unsubscribeFromData();
+      unsubscribeFromParams();
       unsubscribeFromParamsSettling();
     };
     // Bound to the action, not to the mount: params given as a plain object
@@ -56517,8 +56531,11 @@ const getAvailableWidth = (layer, element) => {
  * (a top-docked SidePanel: title and tabs at its top). So here the cut alone
  * does the reveal — the same curtain descending from the container's top
  * edge a full slide draws — while the box travels only `--popup-cover-travel`
- * (default 15%) of its own height: the head is on screen from the first
- * frame, settling its last few pixels into place. The exit is the same
+ * (default 24px): the head is on screen from the first frame, settling its
+ * last few pixels into place. A length, not a share of the panel: the travel
+ * is a settle, the curtain is what reveals, and a share would grow with a
+ * full-screen panel while its head does not — at 15% of 800px the head spent
+ * the first 40% of the entrance above the cut. The exit is the same
  * movement backwards and still reads as a slide, the head leading. One
  * direction only: a bottom sheet leads with its head by itself, and a
  * left/right panel keeps its head on the axis it does not travel.
@@ -56548,7 +56565,7 @@ const popupCss = /* css */ `
     .navi_dialog {
       --popup-animation-duration: 0.18s;
       --popup-scale-from: 0.9;
-      --popup-cover-travel: 15%;
+      --popup-cover-travel: 24px;
 
       --popup-opacity-duration: var(--popup-animation-duration);
       --popup-translate-duration: var(--popup-animation-duration);
@@ -56729,7 +56746,7 @@ const popupCss = /* css */ `
 
     /* cover — a top-docked popup unrolling from the top edge of its area (see
          this file's top comment): the cut does the reveal, the box travels
-         --popup-cover-travel of its own height. The far cut sits where the
+         --popup-cover-travel, a length. The far cut sits where the
          popup's shadow ends (--navi-popup-box-shadow reaches about 50px) or
          where the room does, whichever is nearer, so the reveal finishes on
          the box and its shadow at the pace of the box's own settle. On the
@@ -81950,6 +81967,7 @@ const ANIMATION_BY_SIDE = {
 };
 const css = /* css */`.navi_side_panel {
   --popup-border-radius: 0px;
+  --popup-animation-duration: .3s;
   width: var(--navi-side-panel-width, auto);
   height: var(--navi-side-panel-height, auto);
 
@@ -82114,10 +82132,12 @@ const css = /* css */`.navi_side_panel {
  * @param {boolean|"fading"} [props.animation] - Off by default (unlike
  *   `Dialog`/`Popover` themselves) — SidePanel is commonly toggled instead
  *   of opened/closed as a one-off, where a slide transition is more often
- *   undesired noise than not. `true` slides in from `side` (a top panel
- *   unrolls from its edge instead, head first — see `ANIMATION_BY_SIDE`);
- *   `"fading"` is the other common choice. Other values are forwarded as-is but not a
- *   documented/encouraged part of this component's own API.
+ *   undesired noise than not. `true` plays the entrance of `side`:
+ *   `cover-from-top` for a top panel (it unrolls from its edge, head first),
+ *   `slide-from-<side>` for the three others — see `ANIMATION_BY_SIDE` for
+ *   why the top differs. `"fading"` is the other common choice. Other values
+ *   are forwarded as-is but not a documented/encouraged part of this
+ *   component's own API.
  * @param {boolean} [props.closeOnClickOutside=false] - `false` (default):
  *   maps to `pointerInteractionOutsideEffect="none"` — in popover mode, no
  *   backdrop at all, outside clicks pass straight through; in dialog mode,

@@ -72,8 +72,11 @@
  * (a top-docked SidePanel: title and tabs at its top). So here the cut alone
  * does the reveal — the same curtain descending from the container's top
  * edge a full slide draws — while the box travels only `--popup-cover-travel`
- * (default 15%) of its own height: the head is on screen from the first
- * frame, settling its last few pixels into place. The exit is the same
+ * (default 24px): the head is on screen from the first frame, settling its
+ * last few pixels into place. A length, not a share of the panel: the travel
+ * is a settle, the curtain is what reveals, and a share would grow with a
+ * full-screen panel while its head does not — at 15% of 800px the head spent
+ * the first 40% of the entrance above the cut. The exit is the same
  * movement backwards and still reads as a slide, the head leading. One
  * direction only: a bottom sheet leads with its head by itself, and a
  * left/right panel keeps its head on the axis it does not travel.
@@ -103,7 +106,7 @@ export const popupCss = /* css */ `
     .navi_dialog {
       --popup-animation-duration: 0.18s;
       --popup-scale-from: 0.9;
-      --popup-cover-travel: 15%;
+      --popup-cover-travel: 24px;
 
       --popup-opacity-duration: var(--popup-animation-duration);
       --popup-translate-duration: var(--popup-animation-duration);
@@ -284,7 +287,7 @@ export const popupCss = /* css */ `
 
     /* cover — a top-docked popup unrolling from the top edge of its area (see
          this file's top comment): the cut does the reveal, the box travels
-         --popup-cover-travel of its own height. The far cut sits where the
+         --popup-cover-travel, a length. The far cut sits where the
          popup's shadow ends (--navi-popup-box-shadow reaches about 50px) or
          where the room does, whichever is nearer, so the reveal finishes on
          the box and its shadow at the pace of the box's own settle. On the

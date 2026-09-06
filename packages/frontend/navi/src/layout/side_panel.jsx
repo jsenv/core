@@ -37,6 +37,13 @@ const css = /* css */ `
     /* So by default they don't have border-radius */
     --popup-border-radius: 0px;
 
+    /* A panel's entrance crosses its whole size, docked to an edge of the
+       screen: the same magnitude of movement as a page arriving, so the same
+       clock as navi's route transitions (300ms), not the popover's 180ms,
+       which suits a menu and turns a surface crossing the screen into an
+       apparition. The \`animationDuration\` prop still wins. */
+    --popup-animation-duration: 0.3s;
+
     /* Content-sized by default (each custom property is unset unless the
        matching \`width\`/\`height\` prop is passed, and var() falls back to
        "auto") — forced otherwise. Both set unconditionally regardless of
@@ -249,10 +256,12 @@ const css = /* css */ `
  * @param {boolean|"fading"} [props.animation] - Off by default (unlike
  *   `Dialog`/`Popover` themselves) — SidePanel is commonly toggled instead
  *   of opened/closed as a one-off, where a slide transition is more often
- *   undesired noise than not. `true` slides in from `side` (a top panel
- *   unrolls from its edge instead, head first — see `ANIMATION_BY_SIDE`);
- *   `"fading"` is the other common choice. Other values are forwarded as-is but not a
- *   documented/encouraged part of this component's own API.
+ *   undesired noise than not. `true` plays the entrance of `side`:
+ *   `cover-from-top` for a top panel (it unrolls from its edge, head first),
+ *   `slide-from-<side>` for the three others — see `ANIMATION_BY_SIDE` for
+ *   why the top differs. `"fading"` is the other common choice. Other values
+ *   are forwarded as-is but not a documented/encouraged part of this
+ *   component's own API.
  * @param {boolean} [props.closeOnClickOutside=false] - `false` (default):
  *   maps to `pointerInteractionOutsideEffect="none"` — in popover mode, no
  *   backdrop at all, outside clicks pass straight through; in dialog mode,

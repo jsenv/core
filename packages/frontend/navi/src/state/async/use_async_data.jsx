@@ -224,6 +224,19 @@ const useActionAsyncData = (
       }
       setTick((n) => n + 1);
     });
+    // The params say WHICH question this is, and this hook reads them: to know
+    // there is nothing to ask for, and to start the run it owns. A binding
+    // retargeting from no question to a question — a filter chosen, a first
+    // character typed — is announced by nothing above: a fresh target is IDLE
+    // holding no data, the very state the hook already sees.
+    let paramsNotificationIsInitial = true;
+    const unsubscribeFromParams = action.paramsSignal.subscribe(() => {
+      if (paramsNotificationIsInitial) {
+        paramsNotificationIsInitial = false;
+        return;
+      }
+      setTick((n) => n + 1);
+    });
     // A debounced binding waits before it retargets, so nothing above changes
     // while the delay runs — but what is on screen is already out of date.
     let settlingNotificationIsInitial = true;
@@ -239,6 +252,7 @@ const useActionAsyncData = (
     return () => {
       unsubscribeFromRunningState();
       unsubscribeFromData();
+      unsubscribeFromParams();
       unsubscribeFromParamsSettling();
     };
     // Bound to the action, not to the mount: params given as a plain object
