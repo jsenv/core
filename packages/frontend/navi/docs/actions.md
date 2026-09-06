@@ -244,6 +244,17 @@ invisible at the call site and expensive on screen: the request then leaves with
 the gesture instead of with the screen, one waterfall behind everything else the
 address needed.
 
+**A route action is a read.** The parameter says whose data it is; it does not
+say who may ask for it. An address asks again on every arrival — a reload, a
+pasted link, a step back — which is exactly what a read is for and what a write
+cannot survive: `POST /users/:id/invitations` hung on `/users/:id` mints a token
+per reload, for ever, and nothing at the call site says so. So a run that writes
+belongs to the component that decided to write, whatever its parameter, and
+`{ run: true }` is what says it. That is the shape of a request prepared for a
+gesture — a token a share button must already hold when it is pressed, since the
+OS share sheet only opens inside the gesture and never after an `await`: it runs
+at mount because the press cannot wait for it, not because the address changed.
+
 `{ onLoad }` is what the screen does with the data **once, when it becomes
 known** — seed the fields someone is about to edit, focus something, remember
 where a list was:

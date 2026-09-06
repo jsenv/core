@@ -387,7 +387,20 @@ export const devServerPluginServeSourceFiles = ({
             );
             return response;
           };
+          // What the client holds for this url is what we last sent it: a
+          // request without "?hot" is a page loading this url into an empty
+          // module registry, so from here on the client runs this exact
+          // content. Remembering when that happened is what allows
+          // jsenv_plugin_hot_search_param to tell a modification the client
+          // has already received from one it must re-execute to see.
+          const rememberServedWithoutHot = () => {
+            if (request.searchParams.has("hot")) {
+              return;
+            }
+            urlInfo.servedWithoutHotTimestamp = Date.now();
+          };
           const respondWithNotModified = () => {
+            rememberServedWithoutHot();
             const headers = {
               "cache-control": `private,max-age=0,must-revalidate`,
             };
@@ -471,6 +484,9 @@ export const devServerPluginServeSourceFiles = ({
               !cacheIsDisabledInResponseHeader(urlInfoTargetedByCache)
             ) {
               return respondWithNotModified();
+            }
+            if (urlInfo.status === 200) {
+              rememberServedWithoutHot();
             }
             response = {
               url: reference.url,

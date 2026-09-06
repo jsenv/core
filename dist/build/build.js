@@ -2131,6 +2131,10 @@ const createUrlInfo = (url, context) => {
     modifiedTimestamp: 0,
     descendantModifiedTimestamp: 0,
     dereferencedTimestamp: 0,
+    // when a client last fetched this url outside a hot request; in other
+    // words the last time this url entered a fresh page (see
+    // jsenv_plugin_hot_search_param)
+    servedWithoutHotTimestamp: 0,
     originalContentEtag: null,
     contentEtag: null,
     isValid: () => false,
@@ -9445,6 +9449,7 @@ const jsenvPluginHotSearchParam = () => {
         modifiedTimestamp,
         descendantModifiedTimestamp,
         dereferencedTimestamp,
+        servedWithoutHotTimestamp,
       } = referencedUrlInfo;
       if (
         !modifiedTimestamp &&
@@ -9468,6 +9473,18 @@ const jsenvPluginHotSearchParam = () => {
         descendantModifiedTimestamp,
         dereferencedTimestamp,
       );
+      // These timestamps say "this url changed at some point", not "the client
+      // is running an outdated version of it": they are never cleared, so a
+      // file modified once keeps them for the rest of the dev server's life.
+      // A client that fetched this url after that modification (a page load:
+      // see rememberServedWithoutHot in the dev server) already runs the
+      // latest content. Sending it "?hot" then makes the browser evaluate a
+      // second, identical copy of a module it already has — a second module
+      // scope for a file that never changed, which breaks everything a module
+      // holds once (registries, contexts, singletons).
+      if (latestTimestamp <= servedWithoutHotTimestamp) {
+        return null;
+      }
       return {
         hot: latestTimestamp,
       };

@@ -87,7 +87,9 @@ import { usePromiseAsyncData } from "./use_promise_async_data.js";
  *   needs, whereas this one cannot start before the component that draws it
  *   exists — one render late, and behind whatever gesture mounted it. What is
  *   left for `run` is the parameter chosen inside the component and dying with
- *   it (see docs/actions.md and docs/popup_open.md).
+ *   it — and any run that WRITES, whatever its parameter: an address asks again
+ *   on every arrival, which is right for a read and wrong for a write (see
+ *   docs/actions.md and docs/popup_open.md).
  * @param {(data: any, context: {params: any}) => void} [options.onLoad] - what
  *   this screen does with the data ONCE, when it becomes known: seed the fields
  *   someone is about to edit, remember where a list was, focus something.

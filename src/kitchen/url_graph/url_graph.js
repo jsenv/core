@@ -183,6 +183,10 @@ const createUrlInfo = (url, context) => {
     modifiedTimestamp: 0,
     descendantModifiedTimestamp: 0,
     dereferencedTimestamp: 0,
+    // when a client last fetched this url outside a hot request; in other
+    // words the last time this url entered a fresh page (see
+    // jsenv_plugin_hot_search_param)
+    servedWithoutHotTimestamp: 0,
     originalContentEtag: null,
     contentEtag: null,
     isValid: () => false,
