@@ -1909,6 +1909,14 @@ function WheelUI(props) {
     if (trackedItemsRef.current.length === 0) {
       return;
     }
+    // Without a box (display: none, rows not laid out yet) every position below
+    // multiplies by an item size of 0: nothing can be placed. Leave
+    // centeredIndexRef null rather than claim a row is centered, so the render
+    // that brings the wheel back on screen doesn't read it as "already there".
+    if (getItemSize(viewportEl) === 0) {
+      centeredIndexRef.current = null;
+      return;
+    }
     let selectedIndex = getIndexForValue(currentValueRef.current);
     if (selectedIndex < 0) {
       selectedIndex = 0;
@@ -1959,7 +1967,7 @@ function WheelUI(props) {
     const requestedBehavior = pendingBehaviorRef.current;
     pendingBehaviorRef.current = null;
     const viewportEl = getViewport();
-    if (!viewportEl || viewportEl.offsetParent === null) {
+    if (!viewportEl) {
       return;
     }
     let behavior = "auto";

@@ -250,7 +250,9 @@ const css = /* css */ `
 
          Held by dropping the group's animation rather than by winning against
          it with !important. The browser puts the group where the ARRIVING box
-         stands, so it is moved from there back to the window's own corner. */
+         stands — on every frame, from the live element — so it is moved from
+         there back to the window's own corner by a corner read just as often
+         (see transition_window.js). */
       top: calc(
         var(--navi-transition-window-top) - var(
             --navi-transition-window-new-top

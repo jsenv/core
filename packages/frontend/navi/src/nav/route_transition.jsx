@@ -384,8 +384,10 @@ const css = /* css */ `
       /* Held still for the whole transition, at the rectangle that contains
          both states (see transition_window.js). Held by dropping the group's
          animation rather than by winning against it with !important. The
-         browser puts the group where the ARRIVING area stands, so it is moved
-         from there back to the window's own corner. */
+         browser puts the group where the ARRIVING area stands — on every
+         frame, from the live element — so it is moved from there back to the
+         window's own corner by a corner read just as often (see
+         transition_window.js). */
       top: calc(
         var(--navi-transition-window-top) - var(
             --navi-transition-window-new-top

@@ -27435,7 +27435,7 @@ installImportMetaCssBuild(import.meta);
 
 /**
  * The window two pages are seen through while one replaces the other, measured
- * once and published for the length of the movement.
+ * at the one moment both exist and published for the length of the movement.
  *
  * Both ways of moving from one route to another need the same numbers, so they
  * are written under the same names and read by the same CSS formulas —
@@ -27460,6 +27460,18 @@ installImportMetaCssBuild(import.meta);
  *   in the window — one page is scrolled and the other is not, one has a top
  *   bar over it and the other has the screen. Each picture is placed at its
  *   own corner inside the window.
+ * - **where the arriving state IS, frame after frame.** The browser places the
+ *   group from the live arriving element on every frame of the movement — that
+ *   is what makes a picture pair follow an element that moves — and the
+ *   formula that moves the group back to the window's corner cancels that
+ *   placement with this corner. Read once, the two stop cancelling the moment
+ *   anything scrolls the document under the movement (a slice landing and
+ *   putting a row back, a list placing its default row, a height growing under
+ *   a restored offset): the window drifts by as much, and both pictures with
+ *   it — the photograph of the page being left included. So this corner alone
+ *   is kept live, as often as the browser reads its side of it. It is also
+ *   the arriving picture's own corner, which then stays where the page really
+ *   is and lands with no jump when the pictures are dropped.
  * - **the band the state being left kept free**, next to the one the arriving
  *   state keeps free. A band is furniture — a fixed bar, a sticky row — and
  *   the pictures are cut at it so they are not watched painting over it. Read
@@ -27469,8 +27481,11 @@ installImportMetaCssBuild(import.meta);
  *   at the one moment the state being left still exists, the cut can be taken
  *   at what is furniture on BOTH sides (see the clip formulas).
  *
- * Only the measuring needs JS, and only for the one moment both states exist:
- * the page arriving is in the DOM and the transition has not started playing.
+ * Only the measuring needs JS, and apart from the arriving corner it happens
+ * at the one moment both states exist: the page arriving is in the DOM and the
+ * transition has not started playing. The window, the corner of the state
+ * being left and its band describe a state that no longer exists, and reading
+ * them again is what must never happen.
  * Everything DERIVED from these numbers — the band a fixed bar covers, how far
  * a page travels — is derived in CSS, so the application's own numbers (the
  * room its bars give back, see layout/safe_area.js; what covers the box from
@@ -27571,6 +27586,8 @@ const WINDOW_PROPERTIES = [
 // after another has replaced it must not wipe numbers the new one is standing
 // on.
 let windowOwner = null;
+// Stops re-reading the arriving state's corner, when a movement is on.
+let unfollowArrivingState = null;
 
 /**
  * The state being left, taken while rendering is held — the page arriving is
@@ -27616,6 +27633,7 @@ const holdTransitionWindow = (owner, element, stateBefore) => {
   style.setProperty(OLD_BAND_RIGHT_PROPERTY, `${oldBand.right}px`);
   style.setProperty(OLD_BAND_BOTTOM_PROPERTY, `${oldBand.bottom}px`);
   style.setProperty(OLD_BAND_LEFT_PROPERTY, `${oldBand.left}px`);
+  followArrivingState(element, rectAfter);
 };
 
 // The live layout takes the box back. A discontinuity by construction — the
@@ -27627,10 +27645,43 @@ const releaseTransitionWindow = (owner) => {
     return;
   }
   windowOwner = null;
+  if (unfollowArrivingState) {
+    unfollowArrivingState();
+  }
   const { style } = document.documentElement;
   for (const property of WINDOW_PROPERTIES) {
     style.removeProperty(property);
   }
+};
+
+// The arriving state's corner, re-read every frame — as often as the browser
+// refreshes the group's placement from the same element (see the top of the
+// file). Requested, never awaited: the first call runs inside the update
+// callback, where a frame cannot come. Written only when it moved: a custom
+// property set on the root recomputes the style of the whole document.
+const followArrivingState = (element, rectAtHold) => {
+  if (unfollowArrivingState) {
+    unfollowArrivingState();
+  }
+  const { style } = document.documentElement;
+  let top = rectAtHold.top;
+  let left = rectAtHold.left;
+  let frame = requestAnimationFrame(function read() {
+    const rect = element.getBoundingClientRect();
+    if (rect.top !== top) {
+      top = rect.top;
+      style.setProperty(WINDOW_NEW_TOP_PROPERTY, `${top}px`);
+    }
+    if (rect.left !== left) {
+      left = rect.left;
+      style.setProperty(WINDOW_NEW_LEFT_PROPERTY, `${left}px`);
+    }
+    frame = requestAnimationFrame(read);
+  });
+  unfollowArrivingState = () => {
+    unfollowArrivingState = null;
+    cancelAnimationFrame(frame);
+  };
 };
 
 // A band nothing can be wider than, published for an edge nothing is known
@@ -74880,6 +74931,14 @@ function WheelUI(props) {
     if (trackedItemsRef.current.length === 0) {
       return;
     }
+    // Without a box (display: none, rows not laid out yet) every position below
+    // multiplies by an item size of 0: nothing can be placed. Leave
+    // centeredIndexRef null rather than claim a row is centered, so the render
+    // that brings the wheel back on screen doesn't read it as "already there".
+    if (getItemSize(viewportEl) === 0) {
+      centeredIndexRef.current = null;
+      return;
+    }
     let selectedIndex = getIndexForValue(currentValueRef.current);
     if (selectedIndex < 0) {
       selectedIndex = 0;
@@ -74926,7 +74985,7 @@ function WheelUI(props) {
     const requestedBehavior = pendingBehaviorRef.current;
     pendingBehaviorRef.current = null;
     const viewportEl = getViewport();
-    if (!viewportEl || viewportEl.offsetParent === null) {
+    if (!viewportEl) {
       return;
     }
     let behavior = "auto";
