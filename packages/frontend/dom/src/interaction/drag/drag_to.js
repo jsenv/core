@@ -56,6 +56,7 @@ import {
   dragAfterIntent,
   keepTouchRefusable,
   markDragSource,
+  standDownFromPress,
 } from "./drag_after_intent.js";
 import { initDragConstraints } from "./drag_constraint.js";
 import { createDragElementPositioner } from "./drag_element_positioner.js";
@@ -67,7 +68,7 @@ import {
   getDropTargetInfo,
   rectangleAreIntersecting,
 } from "./drop_target_detection.js";
-import { standDownFromPanZoomSurface } from "./pan_zoom.js";
+import { findPanZoomSurface } from "./pan_zoom.js";
 import { applyStickyFrontiersToAutoScrollArea } from "./sticky_frontiers.js";
 
 const dragStyleController = createStyleController("drag_to_move");
@@ -921,16 +922,21 @@ export const startDragTo = (
  * says nothing reads as a screen that is broken, and the hand pulls harder; the
  * refusal has to be told where the grab would have been felt.
  *
- * WHO KEEPS THE PRESS: whoever else it was for. Nothing is carried here, so no
- * axis is walked and nothing is disputed — the press is kept only because, over
- * a list or a page, nobody else wanted it (and the click it leaves behind has to
- * be swallowed, something pulled and told to stay put must not also be clicked).
- * Over a surface that pans, somebody does: "I cannot be carried" and "I want to
- * look around" are two sentences, and the second is the one the hand says nine
- * times out of ten — a thing that cannot be taken hold of is exactly the one a
- * finger rests on without thinking. So the surface keeps the press, whole (see
- * standDownFromPanZoomSurface), and the refusal is only told: no pointer taken,
- * no click swallowed, nothing prevented.
+ * WHAT IT GIVES UP, ALWAYS: the axes. Nothing is carried, so nothing is walked,
+ * and everything that reads what a drag source walks to know what is left for
+ * itself steps over this one (see standDownFromPress) — a swipe that starts on a
+ * locked row is the swipe of the box it stands in, a drag that starts on a
+ * pinned object pans the surface under it. A locked thing must not be a hole in
+ * what holds it.
+ *
+ * WHAT IT KEEPS: the press, unless a surface that pans was after it. Over a list
+ * or a page nobody else was, so the press is settled here like any gesture
+ * settles one — the pointer is taken (a `longpress` on the same finger must not
+ * answer afterwards), and the click the release leaves behind is swallowed:
+ * something pulled and told to stay put must not also be clicked. A surface is
+ * the one thing that takes it whole and in every direction, so there it is the
+ * surface's and the refusal takes nothing at all: no pointer, no click, nothing
+ * prevented.
  *
  * @param {PointerEvent} event The `pointerdown` that would have become a drag.
  * @param {object} [options]
@@ -953,14 +959,21 @@ export const refuseDragTo = (
   if (!isPrimaryButtonEvent(event)) {
     return;
   }
-  const stoodDown = standDownFromPanZoomSurface(event, draggedElement);
-  if (!stoodDown) {
+  // Nothing will be carried, so no axis is walked: whatever reads a drag
+  // source's axes to know what is left for itself must find none here.
+  standDownFromPress(event, draggedElement);
+  // And over a surface that pans, the press was never this element's to keep:
+  // "this one cannot be carried" and "I want to look around" are two sentences,
+  // and the hand says the second nine times out of ten — a thing that cannot be
+  // taken hold of is exactly the one a finger rests on without thinking.
+  const surfaceKeepsThePress = Boolean(findPanZoomSurface(draggedElement));
+  if (!surfaceKeepsThePress) {
     event.preventDefault();
   }
   dragAfterIntent(
     event,
     () => {
-      if (stoodDown) {
+      if (surfaceKeepsThePress) {
         // The surface is holding the hand: taking the pointer or the click from
         // it would be taking the gesture it is answering. The word is all that
         // is owed.

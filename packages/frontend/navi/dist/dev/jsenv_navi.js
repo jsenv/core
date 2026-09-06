@@ -4,7 +4,7 @@
  */
 import { installImportMetaCssBuild, windowHeightSignal, windowWidthSignal, visualViewportHeightSignal, visualViewportWidthSignal, getAppHeight, getAppWidth, coarsePointerSignal, smallTouchScreenSignal } from "./jsenv_navi_side_effects.js";
 export { disableVirtualKeyboardOverlay } from "./jsenv_navi_side_effects.js";
-import { elementIsFocusable, createIterableWeakSet, dispatchInternalCustomEvent, dispatchCustomEvent, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, getElementSignature, createPubSub, findEvent, createValueEffect, findFocusDelegateTarget, findFocusable, scrollIntoViewThroughScrollables, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, keepTouchRefusable, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, markDragSource, refuseDragTo, startDragTo, installPanZoom, createEventGroupLogger, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, normalizeStyles, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, scrollRoomTowards, getScrollContainer, closestOpenableAncestor, isAncestorOpen, isDisplayedDespiteClosedAncestor, observeAncestorOpenState, getAncestorOpenType, findBefore, findAfter, resolveCSSSize, hasCSSSizeUnit, releaseWheelGesture, getScrollIntoViewScopedOffsets, wheelGestureIsTakenFrom, claimWheelGesture, scrollIntoViewScoped, initFocusGroup, isTouchDrivenEvent, stringifyStyle as stringifyStyle$1, resolveOklchLightness, contrastColor, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, getVirtualKeyboardOverlayHeight, onAncestorReopen, isPressDisputedByDrag, canScroll, measureWidestChildRow, performTabNavigation, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
+import { elementIsFocusable, createIterableWeakSet, dispatchInternalCustomEvent, dispatchCustomEvent, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, getElementSignature, createPubSub, findEvent, createValueEffect, findFocusDelegateTarget, findFocusable, scrollIntoViewThroughScrollables, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, keepTouchRefusable, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, markDragSource, refuseDragTo, startDragTo, installPanZoom, createEventGroupLogger, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, normalizeStyles, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, scrollRoomTowards, getScrollContainer, closestOpenableAncestor, isAncestorOpen, isDisplayedDespiteClosedAncestor, observeAncestorOpenState, getAncestorOpenType, findBefore, findAfter, resolveCSSSize, hasCSSSizeUnit, releaseWheelGesture, getScrollIntoViewScopedOffsets, wheelGestureIsTakenFrom, claimWheelGesture, scrollIntoViewScoped, initFocusGroup, isTouchDrivenEvent, isPressDrivenClick, stringifyStyle as stringifyStyle$1, resolveOklchLightness, contrastColor, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, getVirtualKeyboardOverlayHeight, onAncestorReopen, isPressDisputedByDrag, canScroll, measureWidestChildRow, performTabNavigation, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
 export { chainEvent, clickIsSuppressed, contrastColor, createDragGestureController, dragAfterIntent, findEvent, markDragSource, startDragTo } from "@jsenv/dom";
 import { signal, computed, effect, untracked, batch, useComputed, useSignal } from "@preact/signals";
 import { isValidElement, createContext, render, h, toChildArray, options, cloneElement, Fragment as Fragment$1 } from "preact";
@@ -562,6 +562,7 @@ effect(() => {
  *   - `"spin.*"`       — the ends of a steppable range
  *   - `"list.*"`       — empty/no-match/failed-rows messages
  *   - `"badge_list.*"` — the "+[count] more" overflow badge
+ *   - `"interaction.*"` — what a gesture says when it did nothing on purpose
  *   - `"constraint.*"` — every field validation message
  *   - `"network_policy.*"` — what an action settles with when the policy kept it from the network
  *
@@ -709,6 +710,16 @@ naviI18n.addAll({
   "badge_list.more": {
     en: "+[count] more",
     fr: "+[count] de plus",
+  },
+});
+
+// What a gesture says when it did nothing on purpose
+naviI18n.addAll({
+  // A bare wheel over a surface that could zoom, in a page that scrolls: the
+  // page got its scroll, and this says how to zoom anyway.
+  "interaction.zoom.needs_modifier": {
+    en: "[key] + scroll to zoom",
+    fr: "[key] + molette pour zoomer",
   },
 });
 
@@ -10776,12 +10787,24 @@ const swipeTypeOf = (axis, pulled) => {
  * insists.
  *
  * So the interaction stays declared and says "refuse" in place of what it does.
- * The press remains the element's, the threshold is the same one — a mouse
- * travelling, a finger holding still, the first pixel inside a
- * `data-drag-on-contact` — and at the instant the grab would have been acquired
- * there is none: nothing translates, no copy is made, no release is answered.
- * `refuse` is that instant. The click the press leaves behind is swallowed as a
- * real drag's is: it was answered, by the refusal.
+ * The threshold is the same one — a mouse travelling, a finger holding still, the
+ * first pixel inside a `data-drag-on-contact` — and at the instant the grab would
+ * have been acquired there is none: nothing translates, no copy is made, no
+ * release is answered. `refuse` is that instant.
+ *
+ * It walks no axis, so it takes none: a box that travels and a surface that pans
+ * both step over an element that is refusing, and a gesture starting on a locked
+ * object is theirs. "This one cannot be carried" and "I want to look around" are
+ * two sentences, and the second is the one the hand says nine times out of ten —
+ * a thing that cannot be taken hold of is exactly the one a finger rests on
+ * without thinking, and a plan with a dead zone the size of an object in the
+ * middle of it is wrong every time.
+ *
+ * The press itself stays the element's, and the click it leaves behind is
+ * swallowed as a real drag's is — it was answered, by the refusal. A surface
+ * declaring `pan`/`zoom` is the one thing that takes even that: it holds the hand
+ * in every direction, so it keeps the press whole and the refusal takes nothing
+ * at all, told while the surface pans under it.
  *
  * One outcome refusing refuses the whole gesture — the five answer one carry, and
  * something that must not be carried has none of them.
@@ -10990,10 +11013,11 @@ defineInteractionDetector({
           threshold: readConfig(THRESHOLD_ATTRIBUTE$1, undefined),
           longPressDelay: readConfig(DELAY_ATTRIBUTE, undefined),
           longPressSlop: readConfig(SLOP_ATTRIBUTE, undefined),
-          // The press is still the element's — it stays a drag source, so the
-          // surface under it does not pan — and the refusal comes where the grab
-          // would have: nothing to be told before that, since up to there the
-          // gesture is one that could still have been anything.
+          // The refusal comes where the grab would have: nothing to be told
+          // before that, since up to there the gesture is one that could still
+          // have been anything. Who keeps the press meanwhile is refuseDragTo's
+          // to say — a surface under the element pans from it, and nothing else
+          // wants it.
           onRefuse: tellsWhenRefused
             ? () => {
                 trigger(REFUSE, pointerDownEvent, {
@@ -11143,6 +11167,16 @@ const warnWhenNothingToLandOn = (element, dropContainer, canLeave) => {
   );
 };
 
+const detectMac = () => {
+  // Modern way using User-Agent Client Hints API
+  if (window.navigator.userAgentData) {
+    return window.navigator.userAgentData.platform === "macOS";
+  }
+  // Fallback to userAgent string parsing
+  return /Mac|iPhone|iPad|iPod/.test(window.navigator.userAgent);
+};
+const isMac = detectMac();
+
 /**
  * `pan`, `zoom` — a surface under the hand.
  *
@@ -11180,6 +11214,16 @@ const warnWhenNothingToLandOn = (element, dropContainer, canLeave) => {
  * source. Read off the element or any ancestor, since what it knows is about the
  * place rather than about this box.
  *
+ * The WHEEL is the same question asked of a mouse, and it is not asked of the
+ * caller at all: a wheel event is read rather than settled beforehand, so
+ * whether anything around the surface scrolls is simply looked up when it
+ * arrives (`installPanZoom`). A bare wheel zooms where nothing would have
+ * scrolled and goes to the page where something would, `ctrl`/`meta` zooms
+ * either way, and navi says which — a callout, in navi's own words, since a
+ * gesture that does nothing has to say why. `data-zoom-on-contact` takes the
+ * bare wheel back for a surface that owns it whatever stands around it, and is
+ * read the same way, off the element or any ancestor.
+ *
  * `grab` and `release` are the same two words a carried element says, said of the
  * other thing that holds a hand: the surface has it, the surface has let go. They
  * are the one moment of the gesture that is not a stream, and the one thing an
@@ -11211,6 +11255,12 @@ const THRESHOLD_ATTRIBUTE = "data-drag-threshold";
 // Whether a finger has to stand still before the surface is its own. What a
 // touch may do is settled when it lands, so this is read once, at setup.
 const AFTER_HOLD_ATTRIBUTE = "data-pan-after-hold";
+// Whether a BARE wheel is the surface's whatever scrolls around it. The wheel's
+// opposite of the attribute above: that one gives a gesture away, this one takes
+// one back.
+const ZOOM_ON_CONTACT_ATTRIBUTE = "data-zoom-on-contact";
+// How long the word stays up after the last wheel of the burst it explains.
+const WHEEL_HINT_DURATION = 2500;
 
 defineInteractionDetector({
   name: "surface",
@@ -11231,9 +11281,58 @@ defineInteractionDetector({
     }
     const tellsWhenGrabbed = types.includes(GRAB);
     const tellsWhenReleased = types.includes(RELEASE);
-    return installPanZoom(element, {
+    /*
+     * The wheel that went to the page instead of zooming: a gesture that does
+     * nothing where one expected something has to say why, and the key it is
+     * waiting for is the whole message. Said once per burst and taken back on
+     * its own, since nobody dismisses an answer to a wheel — and the burst has
+     * no end but a silence, so the wait is renewed by every event of it.
+     */
+    let hint = null;
+    let hintTimeout = null;
+    const closeHint = () => {
+      clearTimeout(hintTimeout);
+      hintTimeout = null;
+      const hintOpened = hint;
+      hint = null;
+      // `requestClose` and not `close`: the callout's own word for it, and the
+      // one that runs its teardown (see callout.js).
+      hintOpened?.requestClose(undefined, "wheel_gesture_over");
+    };
+    const sayTheWheelNeedsAKey = ({ event }) => {
+      clearTimeout(hintTimeout);
+      hintTimeout = setTimeout(closeHint, WHEEL_HINT_DURATION);
+      if (hint) {
+        return;
+      }
+      hint = openCallout(
+        naviI18n("interaction.zoom.needs_modifier", {
+          key: isMac ? "⌘" : "Ctrl",
+        }),
+        {
+          anchorElement: element,
+          status: "info",
+          openingEvent: event,
+          // Nothing about it is a conversation: it is not focused, it has no
+          // button to press, and what closes it is the hand going quiet.
+          skipFocus: true,
+          closeButton: false,
+          closeOnClickOutside: false,
+          closeOnFocusLeave: false,
+          onClose: () => {
+            hint = null;
+          },
+        },
+      );
+    };
+
+    const uninstall = installPanZoom(element, {
       threshold: readConfig(THRESHOLD_ATTRIBUTE, undefined),
       afterHold: Boolean(element.closest(`[${AFTER_HOLD_ATTRIBUTE}]`)),
+      wheelZoom: element.closest(`[${ZOOM_ON_CONTACT_ATTRIBUTE}]`)
+        ? "always"
+        : "auto",
+      onWheelLeftToPage: canZoom ? sayTheWheelNeedsAKey : undefined,
       onPan: canPan
         ? ({ event, x, y }) => trigger(PAN, event, { x, y })
         : undefined,
@@ -11253,6 +11352,10 @@ defineInteractionDetector({
             trigger(RELEASE, event, { pointerType: event?.pointerType })
         : undefined,
     });
+    return () => {
+      closeHint();
+      uninstall();
+    };
   },
 });
 
@@ -12710,16 +12813,6 @@ const useExecuteAction = (
 
   return executeAction;
 };
-
-const detectMac = () => {
-  // Modern way using User-Agent Client Hints API
-  if (window.navigator.userAgentData) {
-    return window.navigator.userAgentData.platform === "macOS";
-  }
-  // Fallback to userAgent string parsing
-  return /Mac|iPhone|iPad|iPod/.test(window.navigator.userAgent);
-};
-const isMac = detectMac();
 
 // Maps canonical browser key names to their user-friendly aliases.
 // Used for both event matching and ARIA normalization.
@@ -44683,17 +44776,17 @@ const createOpenController = (
   let focusedAtClose = null; // what held the focus when the close was decided, see performClose
 
   // Set true while we're waiting to see whether the click that follows a
-  // mousedown-close will land back on whatever would reopen us — see
+  // press-close will land back on whatever would reopen us — see
   // armSuppressNextOpenRequest below.
   let suppressNextOpenRequest = false;
   let disarmSuppressNextOpenRequest = null;
 
-  // When the popup closes because of a mousedown (e.g. clicking the
-  // backdrop), the browser still dispatches the matching "click" afterward.
-  // If that click lands back on the element that triggers open() (e.g. the
-  // picker button), it would immediately reopen the popup. We cannot
-  // preventDefault/stopPropagation the mousedown to stop that — the browser
-  // dispatches the click regardless.
+  // When the popup closes because of a press (clicking the backdrop, or a
+  // press outside a popup with no backdrop), the browser still dispatches the
+  // matching "click" afterward. If that click lands back on the element that
+  // triggers open() (e.g. the picker button), it would immediately reopen the
+  // popup. We cannot preventDefault/stopPropagation the press to stop that —
+  // the browser dispatches the click regardless.
   //
   // Instead: arm a capture-phase "click" listener on document. Capture fires
   // before the click reaches its target, so by the time any bubble-phase
@@ -44708,10 +44801,47 @@ const createOpenController = (
   // checkpoint runs between two listeners of the same trusted event dispatch,
   // so it would clear the flag before the bubble-phase handler this is meant
   // to block ever runs, which is precisely the case it exists for.
+  //
+  // And it lasts one press, which is what the next press lifts it for: a press
+  // only SOMETIMES ends in a click. One that became a gesture has its click
+  // suppressed on purpose (suppressClickAfterGesture in @jsenv/dom), and a
+  // refused drag ends the same way — so an arming that waits for a click alone
+  // waits forever, and the first real click after it, a new press seconds
+  // later on anything at all, is the one ignored. A click is always preceded
+  // by a press, so an arming that does not outlive one press can never reach
+  // the click of another: the same rule click_suppression.js lifts its own
+  // suppression by, and lifted here at the press rather than at its release
+  // for the same reason it gives — the click comes AFTER the pointerup that
+  // ends the press, so releasing there would let go one event too early.
+  //
+  // The arming press's own pointerdown is already dispatched by the time any
+  // of this runs (a popup with no backdrop closes during that pointerdown; a
+  // backdrop closes on the mousedown that follows it), so this listener only
+  // ever hears a genuinely new press.
   const armSuppressNextOpenRequest = () => {
     disarmSuppressNextOpenRequest?.();
     let safetyTimeout = null;
-    const onCaptureClick = () => {
+    const disarm = () => {
+      disarmSuppressNextOpenRequest = null;
+      clearTimeout(safetyTimeout);
+      document.removeEventListener("click", onCaptureClick, {
+        capture: true,
+      });
+      document.removeEventListener("click", onBubbleClick);
+      document.removeEventListener("pointerdown", onNextPress, {
+        capture: true,
+      });
+      suppressNextOpenRequest = false;
+    };
+    const onCaptureClick = (clickEvent) => {
+      if (!isPressDrivenClick(clickEvent)) {
+        // A click nothing pressed for — Tab to the trigger, then Enter — is not
+        // the one this press owes, and ignoring the open request behind it
+        // would cost a keyboard user their activation. Left armed: the press's
+        // own click may still be coming, and the next press lifts it either
+        // way.
+        return;
+      }
       document.removeEventListener("click", onCaptureClick, {
         capture: true,
       });
@@ -44722,18 +44852,14 @@ const createOpenController = (
       });
     };
     const onBubbleClick = () => {
-      document.removeEventListener("click", onBubbleClick);
-      clearTimeout(safetyTimeout);
-      suppressNextOpenRequest = false;
+      disarm();
     };
-    disarmSuppressNextOpenRequest = () => {
-      clearTimeout(safetyTimeout);
-      document.removeEventListener("click", onCaptureClick, {
-        capture: true,
-      });
-      document.removeEventListener("click", onBubbleClick);
+    const onNextPress = () => {
+      disarm();
     };
+    disarmSuppressNextOpenRequest = disarm;
     document.addEventListener("click", onCaptureClick, { capture: true });
+    document.addEventListener("pointerdown", onNextPress, { capture: true });
   };
 
   // The DOM change a popup asked to have photographed (see
@@ -45888,15 +46014,19 @@ const armOutsidePressClose = (
     // The press landed inside another popup: that is a press on what is in
     // front, not outside. Asking the target where it lives rather than asking
     // this popup whether it was pushed — a popup in front does not have to be
-    // one this popup knows about. A popup nested inside this one falls to the
-    // containment check below as the inside press it is.
+    // one this popup knows about. In front means neither inside nor around: a
+    // popup nested in this one falls to the containment check below as the
+    // inside press it is, and one this popup opened INSIDE (a bubble rendered
+    // in a sheet's content) is around it, so what that popup holds is outside
+    // this one exactly like the rest of the page.
     const popupUnderPointer = pointerDownEvent.target.closest?.(
       `[navi-control="dialog"], [navi-control="popover"]`,
     );
     if (
       popupUnderPointer &&
       popupUnderPointer !== popupEl &&
-      !popupEl.contains(popupUnderPointer)
+      !popupEl.contains(popupUnderPointer) &&
+      !popupUnderPointer.contains(popupEl)
     ) {
       return;
     }

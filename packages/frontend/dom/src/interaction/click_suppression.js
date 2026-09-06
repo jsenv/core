@@ -23,11 +23,21 @@
  * stands aside on its own.
  */
 
+import { isPressDrivenClick } from "../dom_events.js";
+
 let suppressing = false;
 let disarmAtNextPress = false;
 
 const suppressClick = (clickEvent) => {
   if (!suppressing) {
+    return;
+  }
+  if (!isPressDrivenClick(clickEvent)) {
+    // A click nothing pressed for — a keyboard activation, an `element.click()`
+    // — is not the one a gesture left behind, and swallowing it would take away
+    // an activation no hand ever gave. Left armed rather than lifted: the click
+    // this is waiting for may still be coming, and the next press lifts it
+    // either way.
     return;
   }
   suppressing = false;
@@ -64,8 +74,11 @@ export const suppressClickAfterGesture = () => {
 };
 
 /**
- * Whether the click being dispatched is one a gesture left behind — armed by
- * `suppressClickAfterGesture`, waiting to be swallowed by this module.
+ * Whether `clickEvent` is one a gesture left behind — armed by
+ * `suppressClickAfterGesture`, waiting to be swallowed by this module. The
+ * click itself is asked for, not just the arming: a keyboard activation
+ * arriving while a gesture's click is still awaited is nobody's leftover (see
+ * isPressDrivenClick).
  *
  * A last resort, not a convenience. The suppressor already swallows the click
  * before anyone else sees it; the one listener that legitimately needs to ask
@@ -76,4 +89,5 @@ export const suppressClickAfterGesture = () => {
  * dead code. Reach for it only when you are sure that is your situation and
  * no other ordering is available.
  */
-export const clickIsSuppressed = () => suppressing;
+export const clickIsSuppressed = (clickEvent) =>
+  suppressing && isPressDrivenClick(clickEvent);

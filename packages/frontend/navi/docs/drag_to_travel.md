@@ -237,6 +237,12 @@ pushed down to close it — nothing is left and the press is the piece's, whole.
 That is the right way round: the box above is a surface, and the thing in it is
 what the hand came for.
 
+Something that is NOT free to be carried takes nothing: `move: "refuse"` — a row
+pinned by whoever owns the list, a court whose place on a plan is settled — walks
+no axis, so a swipe that starts on it is the swipe of the box it stands in. It
+keeps the press itself, to say no where the grab would have been felt; a surface
+that pans is the one thing that takes even that (see `docs/interactions.md`).
+
 The exception is a **dedicated handle** (`data-drag-handle`), which has no axis:
 it is a place whose only purpose is to be taken hold of, from the first pixel,
 so it takes the press outright.

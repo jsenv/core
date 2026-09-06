@@ -243,16 +243,19 @@
  * have been acquired there is none: nothing translates, no copy is made, no
  * release is answered. `refuse` is that instant.
  *
- * The press itself goes to whoever else it was for. Over a list or a page that is
- * nobody, so it stays the element's and the click it leaves behind is swallowed
- * as a real drag's is — it was answered, by the refusal. Over a box declaring
- * `pan`/`zoom` it is the surface's, whole: "this one cannot be carried" and "I
- * want to look around" are two sentences, and the second is the one the hand says
- * nine times out of ten — a thing that cannot be taken hold of is exactly the one
- * a finger rests on without thinking, and a plan with a dead zone the size of an
- * object in the middle of it is wrong every time. The refusal is told all the
- * same, and takes nothing: the surface pans under the hand while the object says
- * no.
+ * It walks no axis, so it takes none: a box that travels and a surface that pans
+ * both step over an element that is refusing, and a gesture starting on a locked
+ * object is theirs. "This one cannot be carried" and "I want to look around" are
+ * two sentences, and the second is the one the hand says nine times out of ten —
+ * a thing that cannot be taken hold of is exactly the one a finger rests on
+ * without thinking, and a plan with a dead zone the size of an object in the
+ * middle of it is wrong every time.
+ *
+ * The press itself stays the element's, and the click it leaves behind is
+ * swallowed as a real drag's is — it was answered, by the refusal. A surface
+ * declaring `pan`/`zoom` is the one thing that takes even that: it holds the hand
+ * in every direction, so it keeps the press whole and the refusal takes nothing
+ * at all, told while the surface pans under it.
  *
  * One outcome refusing refuses the whole gesture — the five answer one carry, and
  * something that must not be carried has none of them.

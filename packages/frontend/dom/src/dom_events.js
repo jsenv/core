@@ -139,6 +139,25 @@ export const isTouchDrivenEvent = (event) => {
 };
 
 /**
+ * Whether `event` is a click a pointer press produced, as opposed to one
+ * dispatched with no press behind it: keyboard activation (Enter or Space on a
+ * button or a link), `element.click()`, a label forwarding to the control it
+ * labels.
+ *
+ * `detail` is the click count, and it is 0 for every click no press stands
+ * behind — the reading that tells the two apart, and why nothing here may
+ * overwrite it (see EVENT_TYPES_WITH_MEANINGFUL_DETAIL below). It survives a
+ * cancelled `pointerdown`: the compatibility mouse events go, the click and its
+ * count stay — which is what makes it readable for a press a drag source or a
+ * control arbitrated.
+ *
+ * Asked by whoever armed something on a press and is waiting for the click that
+ * press owes: a click nothing pressed for is not that one, and taking it would
+ * cost a keyboard user their activation.
+ */
+export const isPressDrivenClick = (event) => event.detail > 0;
+
+/**
  * Returns true if the event itself or any event in its chain matches the predicate.
  *
  * The full chain checked (oldest to newest) is:

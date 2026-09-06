@@ -212,6 +212,43 @@ export const markDragSource = (element, axes = "xy") => {
   };
 };
 
+// Which drag source, on this very press, said it walks no axis after all.
+const STOOD_DOWN = Symbol.for("jsenv_drag_source_stood_down");
+
+/**
+ * Says THIS press carries nothing, from an element that is a drag source
+ * otherwise.
+ *
+ * The mark above is written once and says what the element IS — something a drag
+ * can start from, along these axes. Whether it is free to be carried right now
+ * is another question, one render away from changing (a court locked on a plan,
+ * a row pinned by whoever owns the list), and the element is the only one who
+ * knows it, at the moment the press lands. So it is said on the press rather
+ * than in the DOM, and everything that reads a source's axes to know what is
+ * left for itself — a box that travels, a surface that pans — steps over the one
+ * that stood down: what walks no axis takes none.
+ *
+ * It is legible in time because a press reaches the element it landed on before
+ * whatever holds it, so the source has stood down while the event is still on
+ * its way up.
+ *
+ * @param {PointerEvent} pressEvent
+ * @param {Element} element The source itself.
+ */
+export const standDownFromPress = (pressEvent, element) => {
+  pressEvent[STOOD_DOWN] = element;
+};
+
+/**
+ * Which drag source stood down from this press, if any — see standDownFromPress.
+ *
+ * @param {PointerEvent} pressEvent
+ * @returns {Element|null}
+ */
+export const dragSourceThatStoodDown = (pressEvent) => {
+  return pressEvent[STOOD_DOWN] || null;
+};
+
 /**
  * Waits for the user to mean it, then starts a drag gesture.
  *

@@ -38,7 +38,10 @@
  */
 
 import { createDragGestureController } from "./drag_gesture.js";
-import { dragAfterIntent } from "./drag_after_intent.js";
+import {
+  dragAfterIntent,
+  dragSourceThatStoodDown,
+} from "./drag_after_intent.js";
 import {
   claimWheelGesture,
   releaseWheelGesture,
@@ -334,8 +337,12 @@ const isTopLayer = (element) => {
  * A box lifted into the top layer on the way up takes everything: a popover or a
  * modal dialog is written inside a slide and painted over the whole screen, so
  * the slides are nowhere near the finger and none of the axes are left.
+ *
+ * `stoodDown` is the one element on the way up whose axes are not read: a drag
+ * source that says this press carries nothing (see standDownFromPress in
+ * drag_after_intent.js).
  */
-const axesLeftBy = (axes, fromElement, stopElement, attribute) => {
+const axesLeftBy = (axes, fromElement, stopElement, attribute, stoodDown) => {
   if (!stopElement.contains(fromElement)) {
     // Not a press that came up through this box: a browser view transition
     // delivers one to the document root instead, and the caller hands it over
@@ -349,6 +356,14 @@ const axesLeftBy = (axes, fromElement, stopElement, attribute) => {
       // The gesture happened on a surface painted over this box, not in it:
       // there is nothing left of it here, whatever axes are still unclaimed.
       return "";
+    }
+    if (element === stoodDown) {
+      // It says which way it would be dragged and it is not being dragged from
+      // this press (standDownFromPress): a locked object walks no axis, so it
+      // takes none — a swipe that starts on it is the swipe of whatever it
+      // stands in.
+      element = element.parentElement;
+      continue;
     }
     const taken = element.getAttribute(attribute);
     if (taken) {
@@ -539,7 +554,13 @@ export const startDragToTravel = (
   );
   const axesLeft =
     axesLeftByTravels &&
-    axesLeftBy(axesLeftByTravels, target, element, DRAG_SOURCE_AXES_ATTRIBUTE);
+    axesLeftBy(
+      axesLeftByTravels,
+      target,
+      element,
+      DRAG_SOURCE_AXES_ATTRIBUTE,
+      dragSourceThatStoodDown(pointerDownEvent),
+    );
   if (!axesLeft) {
     return null;
   }

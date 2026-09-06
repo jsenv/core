@@ -9,6 +9,7 @@ export {
   dispatchPublicCustomEvent,
   findEvent,
   formatEventSideEffect,
+  isPressDrivenClick,
   isTouchDrivenEvent,
 } from "./src/dom_events.js";
 export { createIterableWeakSet } from "./src/iterable_weak_set.js";

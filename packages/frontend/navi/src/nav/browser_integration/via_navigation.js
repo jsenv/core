@@ -411,7 +411,7 @@ export const setupBrowserIntegrationViaNavigation = ({
       if (e.button !== 0 || e.metaKey || e.defaultPrevented) {
         return;
       }
-      if (clickIsSuppressed()) {
+      if (clickIsSuppressed(e)) {
         // The click that ends a gesture (click_suppression.js in @jsenv/dom).
         // Its suppressor also listens on window in capture, so whichever
         // module registered first runs first — asked explicitly, the order

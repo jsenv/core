@@ -2,6 +2,7 @@ import {
   chainEvent,
   findEvent,
   getKeyboardEventDefaultAction,
+  isPressDrivenClick,
   isTouchDrivenEvent,
 } from "@jsenv/dom";
 import { useLayoutEffect, useRef } from "preact/hooks";
@@ -179,7 +180,15 @@ export const createOpenController = (
       });
       suppressNextOpenRequest = false;
     };
-    const onCaptureClick = () => {
+    const onCaptureClick = (clickEvent) => {
+      if (!isPressDrivenClick(clickEvent)) {
+        // A click nothing pressed for — Tab to the trigger, then Enter — is not
+        // the one this press owes, and ignoring the open request behind it
+        // would cost a keyboard user their activation. Left armed: the press's
+        // own click may still be coming, and the next press lifts it either
+        // way.
+        return;
+      }
       document.removeEventListener("click", onCaptureClick, {
         capture: true,
       });

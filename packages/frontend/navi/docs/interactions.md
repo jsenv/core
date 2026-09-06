@@ -699,20 +699,22 @@ pixel inside a `data-drag-on-contact`), and at the instant the grab would have b
 acquired there is none: nothing translates, no copy is made, no release is
 answered. `refuse` is that instant, and the one where feedback is expected.
 
-**Who keeps the press meanwhile: the surface under it, when there is one.**
-Everywhere else — a list, a page, a row of slides — the press stays the element's
-and is settled there like any other gesture settles it — the pointer is taken, so a
-`longpress` declared beside the drag does not answer a hundred milliseconds later,
-and the click the release leaves behind is swallowed. What is locked behaves like
-what is not, up to the moment it says no.
+**It walks no axis, so it takes none.** Everything that reads what a drag source
+walks to know what is left for itself — a box that travels, a surface that pans —
+steps over an element that is refusing: a swipe starting on a locked row is the
+row of slides' swipe, a drag starting on a pinned court pans the plan. A thing
+that cannot be taken hold of is exactly the one a hand rests on without thinking,
+and a surface with a dead zone the size of an object in the middle of it is wrong
+every time. So `move: "refuse"` really is `move: false` plus a word to the hand.
 
-Over a box declaring `pan`/`zoom`, the surface was: it keeps the press whole and
-pans from it, and the refusal is told without taking anything — no pointer, no
-click, nothing prevented. "This one cannot be carried" and "I want to look around"
-are two sentences, and the hand says the second nine times out of ten: a locked
-object is the one a finger rests on without thinking, and a plan with a dead zone
-the size of an object in the middle of it is wrong every time. So over a surface,
-`move: "refuse"` really is `move: false` plus a word to the hand.
+**The press itself stays the element's**, and is settled there like any other
+gesture settles one: the pointer is taken, so a `longpress` declared beside the
+drag does not answer a hundred milliseconds later, and the click the release
+leaves behind is swallowed. What is locked behaves like what is not, up to the
+moment it says no. The exception is a box declaring `pan`/`zoom`, the one thing
+that takes a press whole and in every direction: there the surface keeps it, and
+the refusal is told without taking anything — no pointer, no click, nothing
+prevented.
 
 One outcome refusing refuses the whole gesture — the five answer one carry, and
 something that must not be carried has none of them. Like `grab` and `release`,

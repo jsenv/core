@@ -72,6 +72,7 @@ import {
   claimWheelGesture,
   wheelGestureIsTakenFrom,
 } from "../scroll/wheel_gesture.js";
+import { dragSourceThatStoodDown } from "./drag_after_intent.js";
 import { isPrimaryButtonEvent } from "./drag_gesture.js";
 import { DRAG_EXCLUDED_SELECTOR } from "./drag_to_travel.js";
 
@@ -167,31 +168,16 @@ const pageScrolls = (document) => {
 // or on plain content in it finds the surface first.
 const YIELDED_SELECTOR = `${DRAG_EXCLUDED_SELECTOR},[data-drag-source],[data-drag-ignore],[${SURFACE_ATTRIBUTE}]`;
 
-// Which element, on this very press, said it walks no axis after all.
-const STOOD_DOWN = Symbol.for("jsenv_drag_source_stood_down");
-
 /**
- * A drag source standing on a surface says THIS press is not its own after all:
- * nothing will be carried from it, so nothing is walked, and what the hand is on
- * is the surface. Read by the surface a hair later — a press reaches the element
- * it landed on before whatever holds it — which is why it is said on the event
- * rather than in the DOM: whether a source is free to be carried is a render
- * away from changing, and the mark that makes it a drag source was written long
- * before this finger.
+ * The surface this element stands on, if any: what a gesture that gives itself
+ * up asks, to know whether there is anyone to give it up TO (see refuseDragTo in
+ * drag_to.js).
  *
- * Returns whether there is a surface at all: a source that stands on none keeps
- * the press, there being nobody else to hand it to.
- *
- * @param {PointerEvent} event The `pointerdown` the source is standing down from.
- * @param {Element} element The source itself.
+ * @param {Element} element
+ * @returns {Element|null}
  */
-export const standDownFromPanZoomSurface = (event, element) => {
-  const surface = element.closest(`[${SURFACE_ATTRIBUTE}]`);
-  if (!surface) {
-    return false;
-  }
-  event[STOOD_DOWN] = element;
-  return true;
+export const findPanZoomSurface = (element) => {
+  return element.closest(`[${SURFACE_ATTRIBUTE}]`);
 };
 
 /**
@@ -337,11 +323,11 @@ export const installPanZoom = (
       return;
     }
     let yieldedTo = event.target.closest(YIELDED_SELECTOR);
-    if (yieldedTo && yieldedTo === event[STOOD_DOWN]) {
-      // It is a drag source and it is taking nothing from this press
-      // (standDownFromPanZoomSurface), so it is no reason to yield — and the
-      // walk goes on above it, where a field, a nested surface or something
-      // that IS being carried would still be.
+    if (yieldedTo && yieldedTo === dragSourceThatStoodDown(event)) {
+      // It is a drag source and it carries nothing from this press
+      // (standDownFromPress), so it is no reason to yield — and the walk goes on
+      // above it, where a field, a nested surface or something that IS being
+      // carried would still be.
       yieldedTo = yieldedTo.parentElement?.closest(YIELDED_SELECTOR) || null;
     }
     if (yieldedTo && yieldedTo !== element && element.contains(yieldedTo)) {
