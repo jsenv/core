@@ -146,11 +146,13 @@ export const BadgeUI = ({ children, className, ...props }) => {
       className={withPropsClassName("navi_badge", className)}
       bold
       maxLines={1}
-      // The text-box trim ends the content box at the baseline, and a clamped
-      // badge is clipped there: descenders of the last visible line would be
-      // cut. Halfway to the next line's cap top keeps them, still above any
-      // ink from the line the clamp hides.
-      overflowClipMargin="content-box calc((1lh - 1cap) / 2)"
+      // The text-box trim ends the line box at cap top/baseline, so the
+      // default margin (sized on the em box) leaves less room for ink than it
+      // means to: halfway to what the trim removed restores it. The clip stays
+      // anchored on the padding box, never the content box — the close button
+      // cancels the badge padding to reach the border box, and a content-box
+      // clip would cut its background and its hit area right there.
+      overflowClipMargin="padding-box calc((1lh - 1cap) / 2)"
       {...props}
       styleCSSVars={BadgeStyleCSSVars}
       spacing={<span></span>}
