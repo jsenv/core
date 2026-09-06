@@ -167,6 +167,33 @@ const pageScrolls = (document) => {
 // or on plain content in it finds the surface first.
 const YIELDED_SELECTOR = `${DRAG_EXCLUDED_SELECTOR},[data-drag-source],[data-drag-ignore],[${SURFACE_ATTRIBUTE}]`;
 
+// Which element, on this very press, said it walks no axis after all.
+const STOOD_DOWN = Symbol.for("jsenv_drag_source_stood_down");
+
+/**
+ * A drag source standing on a surface says THIS press is not its own after all:
+ * nothing will be carried from it, so nothing is walked, and what the hand is on
+ * is the surface. Read by the surface a hair later — a press reaches the element
+ * it landed on before whatever holds it — which is why it is said on the event
+ * rather than in the DOM: whether a source is free to be carried is a render
+ * away from changing, and the mark that makes it a drag source was written long
+ * before this finger.
+ *
+ * Returns whether there is a surface at all: a source that stands on none keeps
+ * the press, there being nobody else to hand it to.
+ *
+ * @param {PointerEvent} event The `pointerdown` the source is standing down from.
+ * @param {Element} element The source itself.
+ */
+export const standDownFromPanZoomSurface = (event, element) => {
+  const surface = element.closest(`[${SURFACE_ATTRIBUTE}]`);
+  if (!surface) {
+    return false;
+  }
+  event[STOOD_DOWN] = element;
+  return true;
+};
+
 /**
  * Makes an element a surface that pans under the hand and zooms between two
  * fingers or under a wheel.
@@ -309,7 +336,14 @@ export const installPanZoom = (
     if (!isPrimaryButtonEvent(event)) {
       return;
     }
-    const yieldedTo = event.target.closest(YIELDED_SELECTOR);
+    let yieldedTo = event.target.closest(YIELDED_SELECTOR);
+    if (yieldedTo && yieldedTo === event[STOOD_DOWN]) {
+      // It is a drag source and it is taking nothing from this press
+      // (standDownFromPanZoomSurface), so it is no reason to yield — and the
+      // walk goes on above it, where a field, a nested surface or something
+      // that IS being carried would still be.
+      yieldedTo = yieldedTo.parentElement?.closest(YIELDED_SELECTOR) || null;
+    }
     if (yieldedTo && yieldedTo !== element && element.contains(yieldedTo)) {
       return;
     }

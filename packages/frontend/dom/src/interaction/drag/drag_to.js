@@ -37,10 +37,10 @@
  * not ask for both.
  *
  * A press that would be one of the five and is NOT has its own entry:
- * `refuseDragTo` reads the same intent, keeps the press where it landed, and
- * tells the caller at the instant the grab would have been acquired instead of
- * starting anything — a locked object that must not follow the hand, and must
- * say so.
+ * `refuseDragTo` reads the same intent and tells the caller at the instant the
+ * grab would have been acquired instead of starting anything — a locked object
+ * that must not follow the hand, and must say so. It keeps the press where it
+ * landed, except over a surface that pans, which was after it.
  *
  * `createDragToMoveGestureController` below is the layer under all of that — the
  * translation, the auto-scroll, the constraints — and stays usable on its own for
@@ -67,6 +67,7 @@ import {
   getDropTargetInfo,
   rectangleAreIntersecting,
 } from "./drop_target_detection.js";
+import { standDownFromPanZoomSurface } from "./pan_zoom.js";
 import { applyStickyFrontiersToAutoScrollArea } from "./sticky_frontiers.js";
 
 const dragStyleController = createStyleController("drag_to_move");
@@ -910,17 +911,26 @@ export const startDragTo = (
 /**
  * A press that WOULD be a drag, and is not.
  *
- * Recognized exactly as `startDragTo` recognizes it: the press stays this
- * element's, so a surface under it does not pan and nothing else answers it, and
- * the intent is established by the same threshold — a mouse travelling, a finger
- * holding still, the first pixel inside a `[data-drag-on-contact]`. What differs
- * is what happens once it is established: nothing is grabbed, nothing translates,
- * and `onRefuse` is told at the instant the grab would have been acquired.
+ * Recognized exactly as `startDragTo` recognizes it: the intent is established by
+ * the same threshold — a mouse travelling, a finger holding still, the first
+ * pixel inside a `[data-drag-on-contact]`. What differs is what happens once it
+ * is established: nothing is grabbed, nothing translates, and `onRefuse` is told
+ * at the instant the grab would have been acquired.
  *
  * That instant is the whole point. An object that stays put under the hand and
  * says nothing reads as a screen that is broken, and the hand pulls harder; the
- * refusal has to be told where the grab would have been felt, which is the only
- * moment the press has of its own.
+ * refusal has to be told where the grab would have been felt.
+ *
+ * WHO KEEPS THE PRESS: whoever else it was for. Nothing is carried here, so no
+ * axis is walked and nothing is disputed — the press is kept only because, over
+ * a list or a page, nobody else wanted it (and the click it leaves behind has to
+ * be swallowed, something pulled and told to stay put must not also be clicked).
+ * Over a surface that pans, somebody does: "I cannot be carried" and "I want to
+ * look around" are two sentences, and the second is the one the hand says nine
+ * times out of ten — a thing that cannot be taken hold of is exactly the one a
+ * finger rests on without thinking. So the surface keeps the press, whole (see
+ * standDownFromPanZoomSurface), and the refusal is only told: no pointer taken,
+ * no click swallowed, nothing prevented.
  *
  * @param {PointerEvent} event The `pointerdown` that would have become a drag.
  * @param {object} [options]
@@ -943,10 +953,20 @@ export const refuseDragTo = (
   if (!isPrimaryButtonEvent(event)) {
     return;
   }
-  event.preventDefault();
+  const stoodDown = standDownFromPanZoomSurface(event, draggedElement);
+  if (!stoodDown) {
+    event.preventDefault();
+  }
   dragAfterIntent(
     event,
     () => {
+      if (stoodDown) {
+        // The surface is holding the hand: taking the pointer or the click from
+        // it would be taking the gesture it is answering. The word is all that
+        // is owed.
+        onRefuse?.({ event });
+        return null;
+      }
       // Nothing is carried, and the pointer is taken all the same: taking it is
       // how a gesture says the press is settled, and another wait counting on the
       // same finger reads it (see press_held.js). A `longpress` declared beside

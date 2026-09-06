@@ -122,17 +122,17 @@ export const createOpenController = (
   let focusedAtClose = null; // what held the focus when the close was decided, see performClose
 
   // Set true while we're waiting to see whether the click that follows a
-  // mousedown-close will land back on whatever would reopen us — see
+  // press-close will land back on whatever would reopen us — see
   // armSuppressNextOpenRequest below.
   let suppressNextOpenRequest = false;
   let disarmSuppressNextOpenRequest = null;
 
-  // When the popup closes because of a mousedown (e.g. clicking the
-  // backdrop), the browser still dispatches the matching "click" afterward.
-  // If that click lands back on the element that triggers open() (e.g. the
-  // picker button), it would immediately reopen the popup. We cannot
-  // preventDefault/stopPropagation the mousedown to stop that — the browser
-  // dispatches the click regardless.
+  // When the popup closes because of a press (clicking the backdrop, or a
+  // press outside a popup with no backdrop), the browser still dispatches the
+  // matching "click" afterward. If that click lands back on the element that
+  // triggers open() (e.g. the picker button), it would immediately reopen the
+  // popup. We cannot preventDefault/stopPropagation the press to stop that —
+  // the browser dispatches the click regardless.
   //
   // Instead: arm a capture-phase "click" listener on document. Capture fires
   // before the click reaches its target, so by the time any bubble-phase
@@ -147,9 +147,38 @@ export const createOpenController = (
   // checkpoint runs between two listeners of the same trusted event dispatch,
   // so it would clear the flag before the bubble-phase handler this is meant
   // to block ever runs, which is precisely the case it exists for.
+  //
+  // And it lasts one press, which is what the next press lifts it for: a press
+  // only SOMETIMES ends in a click. One that became a gesture has its click
+  // suppressed on purpose (suppressClickAfterGesture in @jsenv/dom), and a
+  // refused drag ends the same way — so an arming that waits for a click alone
+  // waits forever, and the first real click after it, a new press seconds
+  // later on anything at all, is the one ignored. A click is always preceded
+  // by a press, so an arming that does not outlive one press can never reach
+  // the click of another: the same rule click_suppression.js lifts its own
+  // suppression by, and lifted here at the press rather than at its release
+  // for the same reason it gives — the click comes AFTER the pointerup that
+  // ends the press, so releasing there would let go one event too early.
+  //
+  // The arming press's own pointerdown is already dispatched by the time any
+  // of this runs (a popup with no backdrop closes during that pointerdown; a
+  // backdrop closes on the mousedown that follows it), so this listener only
+  // ever hears a genuinely new press.
   const armSuppressNextOpenRequest = () => {
     disarmSuppressNextOpenRequest?.();
     let safetyTimeout = null;
+    const disarm = () => {
+      disarmSuppressNextOpenRequest = null;
+      clearTimeout(safetyTimeout);
+      document.removeEventListener("click", onCaptureClick, {
+        capture: true,
+      });
+      document.removeEventListener("click", onBubbleClick);
+      document.removeEventListener("pointerdown", onNextPress, {
+        capture: true,
+      });
+      suppressNextOpenRequest = false;
+    };
     const onCaptureClick = () => {
       document.removeEventListener("click", onCaptureClick, {
         capture: true,
@@ -161,18 +190,14 @@ export const createOpenController = (
       });
     };
     const onBubbleClick = () => {
-      document.removeEventListener("click", onBubbleClick);
-      clearTimeout(safetyTimeout);
-      suppressNextOpenRequest = false;
+      disarm();
     };
-    disarmSuppressNextOpenRequest = () => {
-      clearTimeout(safetyTimeout);
-      document.removeEventListener("click", onCaptureClick, {
-        capture: true,
-      });
-      document.removeEventListener("click", onBubbleClick);
+    const onNextPress = () => {
+      disarm();
     };
+    disarmSuppressNextOpenRequest = disarm;
     document.addEventListener("click", onCaptureClick, { capture: true });
+    document.addEventListener("pointerdown", onNextPress, { capture: true });
   };
 
   // The DOM change a popup asked to have photographed (see

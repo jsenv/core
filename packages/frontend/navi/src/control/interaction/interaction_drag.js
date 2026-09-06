@@ -238,12 +238,21 @@
  * insists.
  *
  * So the interaction stays declared and says "refuse" in place of what it does.
- * The press remains the element's, the threshold is the same one — a mouse
- * travelling, a finger holding still, the first pixel inside a
- * `data-drag-on-contact` — and at the instant the grab would have been acquired
- * there is none: nothing translates, no copy is made, no release is answered.
- * `refuse` is that instant. The click the press leaves behind is swallowed as a
- * real drag's is: it was answered, by the refusal.
+ * The threshold is the same one — a mouse travelling, a finger holding still, the
+ * first pixel inside a `data-drag-on-contact` — and at the instant the grab would
+ * have been acquired there is none: nothing translates, no copy is made, no
+ * release is answered. `refuse` is that instant.
+ *
+ * The press itself goes to whoever else it was for. Over a list or a page that is
+ * nobody, so it stays the element's and the click it leaves behind is swallowed
+ * as a real drag's is — it was answered, by the refusal. Over a box declaring
+ * `pan`/`zoom` it is the surface's, whole: "this one cannot be carried" and "I
+ * want to look around" are two sentences, and the second is the one the hand says
+ * nine times out of ten — a thing that cannot be taken hold of is exactly the one
+ * a finger rests on without thinking, and a plan with a dead zone the size of an
+ * object in the middle of it is wrong every time. The refusal is told all the
+ * same, and takes nothing: the surface pans under the hand while the object says
+ * no.
  *
  * One outcome refusing refuses the whole gesture — the five answer one carry, and
  * something that must not be carried has none of them.
@@ -455,10 +464,11 @@ defineInteractionDetector({
           threshold: readConfig(THRESHOLD_ATTRIBUTE, undefined),
           longPressDelay: readConfig(DELAY_ATTRIBUTE, undefined),
           longPressSlop: readConfig(SLOP_ATTRIBUTE, undefined),
-          // The press is still the element's — it stays a drag source, so the
-          // surface under it does not pan — and the refusal comes where the grab
-          // would have: nothing to be told before that, since up to there the
-          // gesture is one that could still have been anything.
+          // The refusal comes where the grab would have: nothing to be told
+          // before that, since up to there the gesture is one that could still
+          // have been anything. Who keeps the press meanwhile is refuseDragTo's
+          // to say — a surface under the element pans from it, and nothing else
+          // wants it.
           onRefuse: tellsWhenRefused
             ? () => {
                 trigger(REFUSE, pointerDownEvent, {
