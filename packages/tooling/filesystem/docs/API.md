@@ -81,6 +81,16 @@ const pathnames = ["a/b.js", "a.js"];
 pathnames.sort(comparePathnames);
 ```
 
+A leading number is read as a quantity by default (`"9_a"` then `"10_a"`). Pass
+`{ numeric: false }` to read it as part of the name (`"10_a"` right after
+`"1_a"`), which is the order the filesystem and file explorers give.
+
+```js
+pathnames.sort((left, right) =>
+  comparePathnames(left, right, { numeric: false }),
+);
+```
+
 # copyEntry
 
 _copyEntry_ is an async function creating a copy of the filesystem node at a given destination
