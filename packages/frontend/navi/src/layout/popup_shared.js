@@ -457,15 +457,19 @@ export const armOutsidePressClose = (
     // The press landed inside another popup: that is a press on what is in
     // front, not outside. Asking the target where it lives rather than asking
     // this popup whether it was pushed — a popup in front does not have to be
-    // one this popup knows about. A popup nested inside this one falls to the
-    // containment check below as the inside press it is.
+    // one this popup knows about. In front means neither inside nor around: a
+    // popup nested in this one falls to the containment check below as the
+    // inside press it is, and one this popup opened INSIDE (a bubble rendered
+    // in a sheet's content) is around it, so what that popup holds is outside
+    // this one exactly like the rest of the page.
     const popupUnderPointer = pointerDownEvent.target.closest?.(
       `[navi-control="dialog"], [navi-control="popover"]`,
     );
     if (
       popupUnderPointer &&
       popupUnderPointer !== popupEl &&
-      !popupEl.contains(popupUnderPointer)
+      !popupEl.contains(popupUnderPointer) &&
+      !popupUnderPointer.contains(popupEl)
     ) {
       return;
     }

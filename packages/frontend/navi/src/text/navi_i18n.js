@@ -28,6 +28,7 @@ import { humanizeI18n } from "@jsenv/humanize";
  *   - `"spin.*"`       — the ends of a steppable range
  *   - `"list.*"`       — empty/no-match/failed-rows messages
  *   - `"badge_list.*"` — the "+[count] more" overflow badge
+ *   - `"interaction.*"` — what a gesture says when it did nothing on purpose
  *   - `"constraint.*"` — every field validation message
  *   - `"network_policy.*"` — what an action settles with when the policy kept it from the network
  *
@@ -175,6 +176,16 @@ naviI18n.addAll({
   "badge_list.more": {
     en: "+[count] more",
     fr: "+[count] de plus",
+  },
+});
+
+// What a gesture says when it did nothing on purpose
+naviI18n.addAll({
+  // A bare wheel over a surface that could zoom, in a page that scrolls: the
+  // page got its scroll, and this says how to zoom anyway.
+  "interaction.zoom.needs_modifier": {
+    en: "[key] + scroll to zoom",
+    fr: "[key] + molette pour zoomer",
   },
 });
 

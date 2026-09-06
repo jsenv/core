@@ -39,7 +39,7 @@
  * `data-grabbed` says the same in the DOM, since what it is usually for is a
  * contour and a veil.
  *
- * A SURFACE STANDING IN SOMETHING THAT SCROLLS: `afterHold`.
+ * A SURFACE STANDING IN SOMETHING THAT SCROLLS: `afterHold`, and the wheel.
  *
  * Travel is only unambiguous where there is no scroll to tell it apart from. A
  * plan shown as a thumbnail in the middle of a page is the other case: a finger
@@ -48,13 +48,26 @@
  * surface the drag sources' answer — a finger says it means THIS one by staying
  * still — and leaves the touch to the page until the wait is over: the page
  * keeps its scroll (see the stylesheet), the surface keeps the pinch, and the
- * pan begins where the finger already is. A mouse is untouched by it: its wheel
- * is what scrolls the page, so travel over the surface could never have meant
- * anything else.
+ * pan begins where the finger already is. A mouse travelling is untouched by it:
+ * a button held down over a surface could never have meant a scroll.
+ *
+ * ITS WHEEL IS THE OTHER HALF of the same question, and the answer is not the
+ * same word. A wheel over a surface in a page means to scroll that page nine
+ * times out of ten — it is what a wheel means everywhere else, and a surface
+ * taking it makes the page unreadable past it exactly the way the finger did.
+ * But a wheel is not a touch: what a touch may do is settled before it lands, by
+ * `touch-action`, so nothing can be read to decide it — whereas a wheel event is
+ * READ, and by then what scrolls around the surface can simply be looked up. So
+ * this one is not asked of the caller: a bare wheel zooms where nothing around
+ * would have scrolled (a map filling the screen, a board in a modal), and asks
+ * for `ctrl`/`meta` where something would — which is also the trackpad pinch's
+ * own modifier, so the pinch keeps zooming untouched. `wheelZoom: "always"` is
+ * for the surface that wants it back.
  */
 
 import { suppressClickAfterGesture } from "../click_suppression.js";
 import { waitForPressHeld } from "../press_held.js";
+import { canScroll, getScrollingElement } from "../scroll/is_scrollable.js";
 import {
   claimWheelGesture,
   wheelGestureIsTakenFrom,
@@ -98,6 +111,54 @@ import.meta.css = css;
 const WHEEL_DISTANCE_PER_DOUBLING = 300;
 const WHEEL_LINE_HEIGHT = 16;
 const WHEEL_PAGE_HEIGHT = 400;
+// How long a silence ends a wheel burst, for the answer given to its first
+// event: the same delay wheel_gesture.js reads a gesture's end from.
+const WHEEL_BURST_END_DELAY = 150;
+
+/**
+ * Would a wheel over this surface have scrolled something if the surface did
+ * not answer it? Asked at the moment of the wheel rather than settled at setup:
+ * what scrolls around a box changes with the page, and unlike a touch — whose
+ * fate is sealed before it lands — a wheel event is there to be read.
+ *
+ * The walk stops at a modal: what is behind one is not what a wheel over it is
+ * for, whether or not the browser still lets it scroll.
+ */
+const wheelWouldScrollAround = (element) => {
+  let node = element.parentElement;
+  while (node) {
+    if (canScroll(node, "y") || canScroll(node, "x")) {
+      return true;
+    }
+    if (node.tagName === "DIALOG" && node.matches(":modal")) {
+      return false;
+    }
+    node = node.parentElement;
+  }
+  return pageScrolls(element.ownerDocument);
+};
+
+// The viewport is the scroll container nothing declares: `overflow` computes to
+// `visible` on the document element even while the page scrolls, so it is read
+// from the size it has to go through — and from what a page locks itself with
+// while something is open in front of it.
+const pageScrolls = (document) => {
+  const { documentElement, body, defaultView } = document;
+  if (!documentElement || !defaultView) {
+    return false;
+  }
+  for (const node of [documentElement, body]) {
+    if (!node) {
+      continue;
+    }
+    const { overflowY } = defaultView.getComputedStyle(node);
+    if (overflowY === "hidden" || overflowY === "clip") {
+      return false;
+    }
+  }
+  const scroller = getScrollingElement(document) || documentElement;
+  return scroller.scrollHeight - scroller.clientHeight > 1;
+};
 
 // What a press on the surface is NOT for it: what answers the pointer on its own
 // (a field, a handle, a popover…), what is carried across the surface (a drag
@@ -125,15 +186,31 @@ const YIELDED_SELECTOR = `${DRAG_EXCLUDED_SELECTOR},[data-drag-source],[data-dra
  * @param {(detail: {event: PointerEvent|undefined}) => void} [options.onRelease]
  *   The last pointer is gone — let go of, taken away, or the surface itself
  *   taken down under the hand, which is the one case with no event to show.
+ * @param {(detail: {event: WheelEvent}) => void} [options.onWheelLeftToPage]
+ *   A bare wheel was left to what scrolls around the surface rather than zooming
+ *   it: the zoom is one `ctrl`/`meta` away, and this is where that is said.
  * @param {number} [options.threshold=5] How far a pointer travels before it pans.
  * @param {boolean} [options.afterHold=false] Whether a FINGER must be held still
  *   before it pans, the page keeping its scroll until then. For a surface
  *   standing in something that scrolls; a mouse pans by travelling either way.
+ * @param {"auto"|"always"} [options.wheelZoom="auto"] Whether a BARE wheel zooms.
+ *   `"auto"` gives it to whatever scrolls around the surface when there is one,
+ *   and zooms when there is none; `"always"` takes it back, for a surface that
+ *   owns the wheel whatever stands around it. `ctrl`/`meta` zooms either way.
  * @returns {() => void} Takes it all back.
  */
 export const installPanZoom = (
   element,
-  { onPan, onZoom, onGrab, onRelease, threshold = 5, afterHold } = {},
+  {
+    onPan,
+    onZoom,
+    onGrab,
+    onRelease,
+    onWheelLeftToPage,
+    threshold = 5,
+    afterHold,
+    wheelZoom = "auto",
+  } = {},
 ) => {
   element.setAttribute(SURFACE_ATTRIBUTE, afterHold ? "after-hold" : "");
   // A travelling box above must not take the press this reads (see
@@ -343,11 +420,48 @@ export const installPanZoom = (
     }
   };
 
+  // What the first event of the burst going on settled: a key let go of (or
+  // pressed) halfway through must not hand a zoom to the page mid-gesture, and
+  // a burst has no end but a silence.
+  let wheelBurstAnswer = null;
+  let wheelBurstTimeout = null;
+  const rememberWheelBurst = (answer) => {
+    wheelBurstAnswer = answer;
+    clearTimeout(wheelBurstTimeout);
+    wheelBurstTimeout = setTimeout(() => {
+      wheelBurstAnswer = null;
+    }, WHEEL_BURST_END_DELAY);
+    return answer;
+  };
+
+  const readWheelAnswer = (event) => {
+    // The modifier a trackpad pinch already arrives with: the same gesture two
+    // fingers make on a phone, and never the page's.
+    if (event.ctrlKey || event.metaKey) {
+      return "zoom";
+    }
+    if (wheelZoom === "always") {
+      return "zoom";
+    }
+    return wheelWouldScrollAround(element) ? "page" : "zoom";
+  };
+
   const onWheel = (event) => {
     // A burst somebody above is already answering (a row of slides travelling
     // under the wheel) is theirs; one that began here is held for as long as it
     // lasts, so drifting over the edge does not hand its tail to the page.
     if (wheelGestureIsTakenFrom(element)) {
+      return;
+    }
+    // Renewed on every event of the burst: the silence after the last one is
+    // what ends it.
+    const answer = rememberWheelBurst(
+      wheelBurstAnswer || readWheelAnswer(event),
+    );
+    if (answer === "page") {
+      // Nothing is claimed and nothing is prevented: the scroll this wheel was
+      // for happens, and the word that would explain the zoom is said above.
+      onWheelLeftToPage?.({ event });
       return;
     }
     claimWheelGesture(element);
@@ -383,6 +497,7 @@ export const installPanZoom = (
 
   return () => {
     end();
+    clearTimeout(wheelBurstTimeout);
     pointers.clear();
     element.removeEventListener("pointerdown", onPointerDown);
     element.removeEventListener("lostpointercapture", onLostPointerCapture);

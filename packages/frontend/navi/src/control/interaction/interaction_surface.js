@@ -35,6 +35,16 @@
  * source. Read off the element or any ancestor, since what it knows is about the
  * place rather than about this box.
  *
+ * The WHEEL is the same question asked of a mouse, and it is not asked of the
+ * caller at all: a wheel event is read rather than settled beforehand, so
+ * whether anything around the surface scrolls is simply looked up when it
+ * arrives (`installPanZoom`). A bare wheel zooms where nothing would have
+ * scrolled and goes to the page where something would, `ctrl`/`meta` zooms
+ * either way, and navi says which — a callout, in navi's own words, since a
+ * gesture that does nothing has to say why. `data-zoom-on-contact` takes the
+ * bare wheel back for a surface that owns it whatever stands around it, and is
+ * read the same way, off the element or any ancestor.
+ *
  * `grab` and `release` are the same two words a carried element says, said of the
  * other thing that holds a hand: the surface has it, the surface has let go. They
  * are the one moment of the gesture that is not a stream, and the one thing an
@@ -55,6 +65,9 @@
 
 import { installPanZoom } from "@jsenv/dom";
 
+import { isMac } from "../../keyboard/os.js";
+import { naviI18n } from "../../text/navi_i18n.js";
+import { openCallout } from "../rules/callout/callout.js";
 import { defineInteractionDetector } from "./interaction_registry.js";
 
 const PAN = "pan";
@@ -69,6 +82,12 @@ const THRESHOLD_ATTRIBUTE = "data-drag-threshold";
 // Whether a finger has to stand still before the surface is its own. What a
 // touch may do is settled when it lands, so this is read once, at setup.
 const AFTER_HOLD_ATTRIBUTE = "data-pan-after-hold";
+// Whether a BARE wheel is the surface's whatever scrolls around it. The wheel's
+// opposite of the attribute above: that one gives a gesture away, this one takes
+// one back.
+const ZOOM_ON_CONTACT_ATTRIBUTE = "data-zoom-on-contact";
+// How long the word stays up after the last wheel of the burst it explains.
+const WHEEL_HINT_DURATION = 2500;
 
 defineInteractionDetector({
   name: "surface",
@@ -89,9 +108,58 @@ defineInteractionDetector({
     }
     const tellsWhenGrabbed = types.includes(GRAB);
     const tellsWhenReleased = types.includes(RELEASE);
-    return installPanZoom(element, {
+    /*
+     * The wheel that went to the page instead of zooming: a gesture that does
+     * nothing where one expected something has to say why, and the key it is
+     * waiting for is the whole message. Said once per burst and taken back on
+     * its own, since nobody dismisses an answer to a wheel — and the burst has
+     * no end but a silence, so the wait is renewed by every event of it.
+     */
+    let hint = null;
+    let hintTimeout = null;
+    const closeHint = () => {
+      clearTimeout(hintTimeout);
+      hintTimeout = null;
+      const hintOpened = hint;
+      hint = null;
+      // `requestClose` and not `close`: the callout's own word for it, and the
+      // one that runs its teardown (see callout.js).
+      hintOpened?.requestClose(undefined, "wheel_gesture_over");
+    };
+    const sayTheWheelNeedsAKey = ({ event }) => {
+      clearTimeout(hintTimeout);
+      hintTimeout = setTimeout(closeHint, WHEEL_HINT_DURATION);
+      if (hint) {
+        return;
+      }
+      hint = openCallout(
+        naviI18n("interaction.zoom.needs_modifier", {
+          key: isMac ? "⌘" : "Ctrl",
+        }),
+        {
+          anchorElement: element,
+          status: "info",
+          openingEvent: event,
+          // Nothing about it is a conversation: it is not focused, it has no
+          // button to press, and what closes it is the hand going quiet.
+          skipFocus: true,
+          closeButton: false,
+          closeOnClickOutside: false,
+          closeOnFocusLeave: false,
+          onClose: () => {
+            hint = null;
+          },
+        },
+      );
+    };
+
+    const uninstall = installPanZoom(element, {
       threshold: readConfig(THRESHOLD_ATTRIBUTE, undefined),
       afterHold: Boolean(element.closest(`[${AFTER_HOLD_ATTRIBUTE}]`)),
+      wheelZoom: element.closest(`[${ZOOM_ON_CONTACT_ATTRIBUTE}]`)
+        ? "always"
+        : "auto",
+      onWheelLeftToPage: canZoom ? sayTheWheelNeedsAKey : undefined,
       onPan: canPan
         ? ({ event, x, y }) => trigger(PAN, event, { x, y })
         : undefined,
@@ -111,5 +179,9 @@ defineInteractionDetector({
             trigger(RELEASE, event, { pointerType: event?.pointerType })
         : undefined,
     });
+    return () => {
+      closeHint();
+      uninstall();
+    };
   },
 });

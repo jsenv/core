@@ -122,6 +122,30 @@ what lets one marker cover a whole row without swallowing the controls it
 holds. Mark the box whose own background is the see-through part; a nested box
 that is see-through too needs its own marker.
 
+**Space beside something, not space between two things.** The row above is the
+whole of what it marks: what the wheel does not cover is plainly nothing, and a
+press there reads as a press on the page. The gap between two rows of a column
+does not read that way — it is a seam of one thing the eye holds together,
+nobody dismisses a sheet by aiming between two of its lines, and on a phone
+that gap is where a thumb lands on its way to the control below. So the marker
+goes on a box that IS free space — the height a slot reserves while its control
+is hidden, the margin beside a centred control — and never on the column that
+stacks the sheet's parts: a layout box is mostly its gaps, and marking one
+turns every gap into a dismissal.
+
+A box that only reserves space while something is away gives the marker back
+when that something returns:
+
+```jsx
+<Box data-navi-popup-outside={sunControls ? undefined : ""} height="3em">
+  {sunControls}
+</Box>
+```
+
+Navi does not warn about a marked container: the column whose gaps must not
+dismiss and the row whose sides must are the same box from the outside, and
+only the caller knows which one it wrote.
+
 ### `pointer-events: none` and `inert` are not this
 
 Neither says "this is backdrop", and reaching for them here is the natural

@@ -1129,16 +1129,60 @@ it.
 The finger then says it means THIS surface the way it says it means to carry a
 drag source — by standing still. Until the hold the page keeps its scroll, and
 the pan starts where the finger already is. The pinch is not given away with it:
-two fingers on a surface that answers `zoom` are its own. A mouse is untouched —
-its wheel is what scrolls the page, so travel over the surface could never have
-meant anything else — and it is read off the element or any ancestor, the same
-place `data-drag-on-contact` is said.
+two fingers on a surface that answers `zoom` are its own. A mouse travelling is
+untouched — a button held down over a surface could never have meant a scroll,
+and its wheel is settled on its own (see below) — and it is read off the element
+or any ancestor, the same place `data-drag-on-contact` is said.
 
 Opt-in, and for the same reason its opposite is (see `data-drag-on-contact`
 above): navi cannot see whether anything behind the surface scrolls. You know;
 say so. It spends the hold, though: a `longpress` declared beside a `pan` that
 waits asks one finger to answer two waits of the same length, and only one of
 them is answered.
+
+### A wheel that does not steal the page's scroll
+
+A wheel over a surface in a page means to scroll that page nine times out of ten
+— it is what a wheel means everywhere else on it, and a surface that answers all
+of them makes the page unreadable past it, the same way a finger taking every
+touch does.
+
+So a bare wheel zooms only where nothing around the surface would have scrolled:
+a map filling the screen, a board in a modal. Where something would — a plan
+shown in the middle of a page — the page keeps its scroll and the zoom is one
+key away:
+
+| wheel over the surface | in a page that scrolls | where nothing scrolls |
+| ---------------------- | ---------------------- | --------------------- |
+| bare                   | the page scrolls       | zooms                 |
+| `ctrl` / `meta` held   | zooms                  | zooms                 |
+| trackpad pinch         | zooms                  | zooms                 |
+
+Nothing is declared for this, unlike `data-pan-after-hold` right above — and the
+difference is worth knowing, because it is the same question asked twice. What a
+TOUCH may do is settled before it lands, from `touch-action`, so nothing can be
+read at that point and only the caller knows. A WHEEL is read: by the time the
+event is there, what scrolls around the surface can simply be looked up, so navi
+looks it up instead of asking. The walk stops at a modal, whose page behind is
+not what a wheel over it is for.
+
+A refused wheel is not a wheel that did nothing: navi says what it is waiting for
+(`⌘ + scroll to zoom`, `Ctrl` off a Mac) in a callout over the surface, which
+goes away with the gesture. It is navi's own text, `interaction.zoom.needs_modifier`
+— override it through `naviI18n` like any other (see `docs/i18n.md`).
+
+The trackpad pinch arrives as a wheel with `ctrl` held, which is why it goes on
+zooming everywhere: it is the desk's version of two fingers on a phone, and it
+was never the page's.
+
+```jsx
+<Box data-zoom-on-contact interactions={{ pan, zoom }} />
+```
+
+`data-zoom-on-contact` takes the bare wheel back, for a surface that owns it
+whatever stands around it — a map whose page happens to scroll a little, an
+editor where the wheel is a tool. Read off the element or any ancestor, the same
+place `data-pan-after-hold` is.
 
 ### When the surface has the hand: `grab`, `release`, `[data-grabbed]`
 
@@ -1309,7 +1353,10 @@ travels above it: `data-no-drag-travel` (see `docs/drag_to_travel.md`).
 - `src/control/interaction/interaction_drag.js` — `move`, `reorder`, `land`,
   `toss`, `leave` and the `grab`/`release`/`refuse` moments.
 - `src/control/interaction/interaction_surface.js` — `pan` and `zoom`, their
-  `grab`/`release` moments, on `installPanZoom` from `@jsenv/dom`.
+  `grab`/`release` moments, and the word said when a bare wheel went to the page,
+  on `installPanZoom` from `@jsenv/dom`.
+- `@jsenv/dom` — `src/interaction/drag/pan_zoom.js`: the pointers, the pinch, the
+  wheel and what it is given to.
 - `src/control/interaction/interaction_keyboard.js`,
   `interaction_native.js` — the other two detectors.
 - `@jsenv/dom` — `src/interaction/drag/drag_gesture.js` (the loop, its options and
