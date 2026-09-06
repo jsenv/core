@@ -707,16 +707,23 @@ const writeInSignal = (signal, value, { history }) => {
 // those writes: they are spelled into the url first (only the signal knows
 // how "closed" reads there), and that url is written onto the entry the back
 // lands on.
-const writeOpenedInSignal = (signal, opened, event) => {
-  if (signal.peek() === opened) {
+//
+// What "open" is worth in the signal is `true`, or the popup's `value`
+// when it has one: several popups then share one signal saying WHICH of them
+// is open (`?seat=<gameId>` over a list of cards), and closed is the signal
+// holding none of their values — `undefined`, which a state signal reads as
+// its default.
+const writeOpenedInSignal = (signal, opened, event, popupValue) => {
+  if (readOpened(signal.peek(), popupValue) === opened) {
     // The signal already says so, meaning this open/close IS what it asked
     // for: a back press that took the popup out of the url, the application
     // writing it. Nothing to write back — and nothing to go back to either,
     // since the navigation navBack would undo is the one that asked for this.
     return;
   }
+  const closedValue = popupValue === undefined ? false : undefined;
   if (opened) {
-    signal.value = true;
+    signal.value = popupValue === undefined ? true : popupValue;
     return;
   }
   if (
@@ -731,11 +738,17 @@ const writeOpenedInSignal = (signal, opened, event) => {
       navBack();
       return;
     }
-    writeInSignal(signal, false, { history: "replace" });
+    writeInSignal(signal, closedValue, { history: "replace" });
     navBack({ landOn: { url: window.location.href } });
     return;
   }
-  writeInSignal(signal, false, { history: "replace" });
+  writeInSignal(signal, closedValue, { history: "replace" });
+};
+const readOpened = (signalValue, popupValue) => {
+  if (popupValue === undefined) {
+    return signalValue;
+  }
+  return signalValue === popupValue;
 };
 
 /**
@@ -750,7 +763,7 @@ const writeOpenedInSignal = (signal, opened, event) => {
  * `expandable.jsx` (open in flow rather than on a layer, same decision).
  *
  * @param {{ open: (e: Event, detail?: object) => void, requestClose: (e: Event, detail?: object) => void, opened: boolean }} openController
- * @param {{ id?: string, open?: boolean|"interaction", defaultOpen?: boolean|"interaction", signal?: import("@preact/signals").Signal<boolean>, navState?: boolean|string|{id?: string, type?: "push"|"replace"} }} props
+ * @param {{ id?: string, open?: boolean|"interaction", defaultOpen?: boolean|"interaction", signal?: import("@preact/signals").Signal, value?: any, navState?: boolean|string|{id?: string, type?: "push"|"replace"} }} props
  * @param {string} [name] What the dev warnings call the thing being opened.
  */
 export const useOpenPropsEffectOnOpenController = (
@@ -758,7 +771,7 @@ export const useOpenPropsEffectOnOpenController = (
   props,
   name = "popup",
 ) => {
-  const { signal, defaultOpen, navState } = props;
+  const { signal, value, defaultOpen, navState } = props;
   const { id: navStateId, type: navStateType } = resolveNavStateProp(
     navState,
     props.id,
@@ -788,7 +801,7 @@ export const useOpenPropsEffectOnOpenController = (
   const open = navStateId
     ? Boolean(navStateValue)
     : signal
-      ? signal.value
+      ? readOpened(signal.value, value)
       : props.open;
   // Assigned on every render, like openEffect, so it always closes over the
   // latest prop: a popup that opens or closes on its own (Escape, backdrop, a
@@ -808,7 +821,7 @@ export const useOpenPropsEffectOnOpenController = (
             }
           }
           if (signal) {
-            writeOpenedInSignal(signal, opened, event);
+            writeOpenedInSignal(signal, opened, event, value);
           }
         }
       : null;
@@ -866,9 +879,16 @@ export const useOpenPropsEffectOnOpenController = (
     // then stays where it was, and whoever holds the open state is told so —
     // otherwise it would keep saying "closed" about a popup still open.
     // Written over rather than stacked on: a refusal corrects the state that
-    // asked, it is not a place one came from.
-    if (signal) {
-      writeInSignal(signal, openController.opened, { history: "replace" });
+    // asked, it is not a place one came from. Only on a refusal: an accepted
+    // request already reads in the signal, and with a `value` what the
+    // signal holds may be another popup's, which the write would erase.
+    if (signal && openController.opened !== open) {
+      const opened = openController.opened;
+      writeInSignal(
+        signal,
+        value === undefined ? opened : opened ? value : undefined,
+        { history: "replace" },
+      );
     }
     if (navStateId && openController.opened) {
       enterNavState();

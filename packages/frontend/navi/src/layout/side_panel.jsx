@@ -191,6 +191,9 @@ const css = /* css */ `
  *   own (Escape, swipe, a --navi-close command) — one binding to both drive
  *   the panel and know where it is. Forwarded as-is to `Popup`; excludes
  *   `open` (see `Dialog`/`Popover`'s own `signal`).
+ * @param {any} [props.value] - What `signal` holds while this panel is
+ *   open, for several panels sharing one signal that says which is open.
+ *   Forwarded as-is to `Popup` (see `Dialog`/`Popover`'s own `value`).
  * @param {boolean} [props.defaultOpen] - Uncontrolled, mount-only initial
  *   open state, forwarded as-is to `Popup`. Neither this nor `open` is
  *   required at all for a purely command-driven panel (an `id` plus a
@@ -278,6 +281,7 @@ const css = /* css */ `
 export const SidePanel = ({
   open,
   signal,
+  value,
   defaultOpen,
   onClose,
   children,
@@ -307,6 +311,7 @@ export const SidePanel = ({
       // this line ever put on it.
       {...(open === undefined ? null : { open })}
       signal={signal}
+      value={value}
       defaultOpen={defaultOpen}
       onClose={onClose}
       layer={layer}

@@ -286,7 +286,8 @@ const useExpandableContext = (partName) => {
  *   ui?: import("preact").ComponentChildren | ((state: { open: boolean }) => import("preact").ComponentChildren),
  *   open?: boolean,
  *   defaultOpen?: boolean,
- *   signal?: import("@preact/signals").Signal<boolean>,
+ *   signal?: import("@preact/signals").Signal,
+ *   value?: any,
  *   navState?: boolean | string | { id?: string, type?: "push" | "replace" },
  *   onClose?: (event: Event) => void,
  *   onToggle?: (event: Event) => void,
@@ -315,6 +316,10 @@ const useExpandableContext = (partName) => {
  * @param defaultOpen - Uncontrolled, mount-only initial state.
  * @param signal - Two-way binding: the expandable follows the signal and
  *   writes back into it whenever it toggles on its own. Excludes `open`.
+ * @param value - What `signal` holds while THIS expandable is open, for
+ *   several sharing one signal that says which is open (an accordion): open
+ *   while `signal.value` is this value, closed otherwise; opening writes it,
+ *   closing writes `undefined`. Without it the signal holds a boolean.
  * @param navState - Keeps the open state in the history entry, so a screen
  *   left and come back to finds its sections as they were: `true` uses the
  *   expandable's own `id`, a string names the key, `{ id, type }` chooses
@@ -375,6 +380,7 @@ export const Expandable = (props) => {
     open,
     defaultOpen,
     signal,
+    value,
     navState,
     onClose,
     action,

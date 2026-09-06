@@ -894,9 +894,12 @@ one tab further, and back to `/me?settings` returning to the first.
 
 Two params, because they answer two questions — is the layer there, and which of
 its pages is shown. One param whose value is "which page of the layer, or none"
-(`?settings=alerts`) is arguably the shape the address wants, and it is not
-expressible today: a popup says its open state as a boolean, so it would
-overwrite the tab on every open.
+(`?settings=alerts`) is arguably the shape the address wants, and a popup cannot
+hold it: it is open on exactly one value of its signal (`value`, see
+[popup_open.md](./popup_open.md#signal--the-app-holds-it-both-ways)), so a tab
+changing under it would read as the layer closing. `value` is for the other
+question — WHICH of several popups is open, one sheet per card under a single
+`?seat=<gameId>` — not for what varies inside one.
 
 ### What it costs
 

@@ -45591,16 +45591,23 @@ const writeInSignal = (signal, value, { history }) => {
 // those writes: they are spelled into the url first (only the signal knows
 // how "closed" reads there), and that url is written onto the entry the back
 // lands on.
-const writeOpenedInSignal = (signal, opened, event) => {
-  if (signal.peek() === opened) {
+//
+// What "open" is worth in the signal is `true`, or the popup's `value`
+// when it has one: several popups then share one signal saying WHICH of them
+// is open (`?seat=<gameId>` over a list of cards), and closed is the signal
+// holding none of their values — `undefined`, which a state signal reads as
+// its default.
+const writeOpenedInSignal = (signal, opened, event, popupValue) => {
+  if (readOpened(signal.peek(), popupValue) === opened) {
     // The signal already says so, meaning this open/close IS what it asked
     // for: a back press that took the popup out of the url, the application
     // writing it. Nothing to write back — and nothing to go back to either,
     // since the navigation navBack would undo is the one that asked for this.
     return;
   }
+  const closedValue = popupValue === undefined ? false : undefined;
   if (opened) {
-    signal.value = true;
+    signal.value = popupValue === undefined ? true : popupValue;
     return;
   }
   if (
@@ -45615,11 +45622,17 @@ const writeOpenedInSignal = (signal, opened, event) => {
       navBack();
       return;
     }
-    writeInSignal(signal, false, { history: "replace" });
+    writeInSignal(signal, closedValue, { history: "replace" });
     navBack({ landOn: { url: window.location.href } });
     return;
   }
-  writeInSignal(signal, false, { history: "replace" });
+  writeInSignal(signal, closedValue, { history: "replace" });
+};
+const readOpened = (signalValue, popupValue) => {
+  if (popupValue === undefined) {
+    return signalValue;
+  }
+  return signalValue === popupValue;
 };
 
 /**
@@ -45634,7 +45647,7 @@ const writeOpenedInSignal = (signal, opened, event) => {
  * `expandable.jsx` (open in flow rather than on a layer, same decision).
  *
  * @param {{ open: (e: Event, detail?: object) => void, requestClose: (e: Event, detail?: object) => void, opened: boolean }} openController
- * @param {{ id?: string, open?: boolean|"interaction", defaultOpen?: boolean|"interaction", signal?: import("@preact/signals").Signal<boolean>, navState?: boolean|string|{id?: string, type?: "push"|"replace"} }} props
+ * @param {{ id?: string, open?: boolean|"interaction", defaultOpen?: boolean|"interaction", signal?: import("@preact/signals").Signal, value?: any, navState?: boolean|string|{id?: string, type?: "push"|"replace"} }} props
  * @param {string} [name] What the dev warnings call the thing being opened.
  */
 const useOpenPropsEffectOnOpenController = (
@@ -45642,7 +45655,7 @@ const useOpenPropsEffectOnOpenController = (
   props,
   name = "popup",
 ) => {
-  const { signal, defaultOpen, navState } = props;
+  const { signal, value, defaultOpen, navState } = props;
   const { id: navStateId, type: navStateType } = resolveNavStateProp(
     navState,
     props.id,
@@ -45672,7 +45685,7 @@ const useOpenPropsEffectOnOpenController = (
   const open = navStateId
     ? Boolean(navStateValue)
     : signal
-      ? signal.value
+      ? readOpened(signal.value, value)
       : props.open;
   // Assigned on every render, like openEffect, so it always closes over the
   // latest prop: a popup that opens or closes on its own (Escape, backdrop, a
@@ -45692,7 +45705,7 @@ const useOpenPropsEffectOnOpenController = (
             }
           }
           if (signal) {
-            writeOpenedInSignal(signal, opened, event);
+            writeOpenedInSignal(signal, opened, event, value);
           }
         }
       : null;
@@ -45750,9 +45763,16 @@ const useOpenPropsEffectOnOpenController = (
     // then stays where it was, and whoever holds the open state is told so —
     // otherwise it would keep saying "closed" about a popup still open.
     // Written over rather than stacked on: a refusal corrects the state that
-    // asked, it is not a place one came from.
-    if (signal) {
-      writeInSignal(signal, openController.opened, { history: "replace" });
+    // asked, it is not a place one came from. Only on a refusal: an accepted
+    // request already reads in the signal, and with a `value` what the
+    // signal holds may be another popup's, which the write would erase.
+    if (signal && openController.opened !== open) {
+      const opened = openController.opened;
+      writeInSignal(
+        signal,
+        value === undefined ? opened : opened ? value : undefined,
+        { history: "replace" },
+      );
     }
     if (navStateId && openController.opened) {
       enterNavState();
@@ -46650,7 +46670,8 @@ const useExpandableContext = partName => {
  *   ui?: import("ignore:preact").ComponentChildren | ((state: { open: boolean }) => import("ignore:preact").ComponentChildren),
  *   open?: boolean,
  *   defaultOpen?: boolean,
- *   signal?: import("@preact/signals").Signal<boolean>,
+ *   signal?: import("@preact/signals").Signal,
+ *   value?: any,
  *   navState?: boolean | string | { id?: string, type?: "push" | "replace" },
  *   onClose?: (event: Event) => void,
  *   onToggle?: (event: Event) => void,
@@ -46679,6 +46700,10 @@ const useExpandableContext = partName => {
  * @param defaultOpen - Uncontrolled, mount-only initial state.
  * @param signal - Two-way binding: the expandable follows the signal and
  *   writes back into it whenever it toggles on its own. Excludes `open`.
+ * @param value - What `signal` holds while THIS expandable is open, for
+ *   several sharing one signal that says which is open (an accordion): open
+ *   while `signal.value` is this value, closed otherwise; opening writes it,
+ *   closing writes `undefined`. Without it the signal holds a boolean.
  * @param navState - Keeps the open state in the history entry, so a screen
  *   left and come back to finds its sections as they were: `true` uses the
  *   expandable's own `id`, a string names the key, `{ id, type }` chooses
@@ -46739,6 +46764,7 @@ const Expandable = props => {
     open,
     defaultOpen,
     signal,
+    value,
     navState,
     onClose,
     action,
@@ -58619,6 +58645,11 @@ const css$E = /* css */`
  *   Excludes `open`; `onOpen`/`onClose` still fire. A signal holding `true` at
  *   mount behaves like `defaultOpen`: the dialog was already open, no entrance
  *   plays.
+ * @param {any} [props.value] - What `signal` holds while THIS dialog is
+ *   open, for several of them sharing one signal that says which is open
+ *   (`?seat=<gameId>` over a list of cards): open while `signal.value` is this
+ *   value, closed otherwise; opening writes it, closing writes `undefined`
+ *   (a state signal's default). Without it the signal holds a boolean.
  * @param {boolean|"interaction"} [props.defaultOpen] - Uncontrolled, mount-only
  *   initial open state. `true` plays no entrance animation: the dialog was
  *   already open when the page appeared, and nothing was ever shown as "closed"
@@ -58715,6 +58746,7 @@ const UncontrolledDialog = props => {
     ...props,
     open: undefined,
     signal: undefined,
+    value: undefined,
     defaultOpen: undefined,
     navState: undefined,
     onClose: undefined,
@@ -60221,6 +60253,11 @@ const css$D = /* css */`
  *   put it. Excludes `open`; `onOpen`/`onClose` still fire. A signal holding
  *   `true` at mount behaves like `defaultOpen`: the popover was already open,
  *   no entrance plays.
+ * @param {any} [props.value] - What `signal` holds while THIS popover is
+ *   open, for several of them sharing one signal that says which is open
+ *   (`?seat=<gameId>` over a list of cards): open while `signal.value` is this
+ *   value, closed otherwise; opening writes it, closing writes `undefined`
+ *   (a state signal's default). Without it the signal holds a boolean.
  * @param {boolean|"interaction"} [props.defaultOpen] - Uncontrolled, mount-only
  *   initial open state. `true` plays no entrance animation: the popover was
  *   already open when the page appeared, and nothing was ever shown as "closed"
@@ -60315,6 +60352,7 @@ const UncontrolledPopover = props => {
     ...props,
     open: undefined,
     signal: undefined,
+    value: undefined,
     defaultOpen: undefined,
     navState: undefined,
     onClose: undefined,
@@ -83298,6 +83336,9 @@ const css = /* css */`.navi_side_panel {
  *   own (Escape, swipe, a --navi-close command) — one binding to both drive
  *   the panel and know where it is. Forwarded as-is to `Popup`; excludes
  *   `open` (see `Dialog`/`Popover`'s own `signal`).
+ * @param {any} [props.value] - What `signal` holds while this panel is
+ *   open, for several panels sharing one signal that says which is open.
+ *   Forwarded as-is to `Popup` (see `Dialog`/`Popover`'s own `value`).
  * @param {boolean} [props.defaultOpen] - Uncontrolled, mount-only initial
  *   open state, forwarded as-is to `Popup`. Neither this nor `open` is
  *   required at all for a purely command-driven panel (an `id` plus a
@@ -83385,6 +83426,7 @@ const css = /* css */`.navi_side_panel {
 const SidePanel = ({
   open,
   signal,
+  value,
   defaultOpen,
   onClose,
   children,
@@ -83414,6 +83456,7 @@ const SidePanel = ({
       open
     }),
     signal: signal,
+    value: value,
     defaultOpen: defaultOpen,
     onClose: onClose,
     layer: layer,

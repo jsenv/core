@@ -687,6 +687,21 @@ which is what every navi control does with its value (see
 on them (`SidePanel`) all take it. A signal already `true` at mount means the
 popup was already open when the page appeared: no entrance plays.
 
+`value` makes the signal say WHICH popup is open, for several sharing it —
+one sheet per card in a feed, with a single `?seat=<gameId>` for all of them:
+
+```jsx
+<Dialog signal={seatSheetSignal} value={game.id} />
+```
+
+The popup is open while the signal holds its value and closed otherwise;
+opening writes the value, closing writes `undefined`, which a state signal reads
+as its default and takes out of the url. Everything above still holds — the
+same writes, the same history rules — only what "open" is worth in the signal
+changes. A popup is open on exactly one value: what varies while it is open (a
+tab inside it) is a param of its own, see
+[navigation.md](./navigation.md#places-inside-the-layer).
+
 ### `navState` — the history entry holds it
 
 ```jsx
@@ -754,6 +769,31 @@ const GroupMembers = () => {
   const [members] = useAsyncData(GROUP_MEMBERS); // reads, never runs
   …
 };
+```
+
+The same shape when the popup is one of many — a sheet on every card, opened
+from wherever the card is read. Its open state then says which one, and the
+route action reads the id straight from it. Declared on the root route, since a
+card is not a page:
+
+```js
+const seatSheetSignal = stateSignal(undefined, {
+  id: "seat",
+  type: "string",
+  weak: true,
+});
+const ANY_PAGE = route("/", { searchParams: { seat: seatSheetSignal } });
+
+export const SEATABLE_USERS = routeAction(ANY_PAGE, USER.GET_MANY, () => {
+  const gameId = seatSheetSignal.value;
+  return gameId ? { game: gameId } : false;
+});
+```
+
+```jsx
+<Dialog signal={seatSheetSignal} value={game.id}>
+  <SeatableUsers />
+</Dialog>
 ```
 
 **A popup that waits holds its own `<Loading>`**, like every other part of a

@@ -764,6 +764,11 @@ const css = /* css */ `
  *   Excludes `open`; `onOpen`/`onClose` still fire. A signal holding `true` at
  *   mount behaves like `defaultOpen`: the dialog was already open, no entrance
  *   plays.
+ * @param {any} [props.value] - What `signal` holds while THIS dialog is
+ *   open, for several of them sharing one signal that says which is open
+ *   (`?seat=<gameId>` over a list of cards): open while `signal.value` is this
+ *   value, closed otherwise; opening writes it, closing writes `undefined`
+ *   (a state signal's default). Without it the signal holds a boolean.
  * @param {boolean|"interaction"} [props.defaultOpen] - Uncontrolled, mount-only
  *   initial open state. `true` plays no entrance animation: the dialog was
  *   already open when the page appeared, and nothing was ever shown as "closed"
@@ -860,6 +865,7 @@ const UncontrolledDialog = (props) => {
       {...props}
       open={undefined}
       signal={undefined}
+      value={undefined}
       defaultOpen={undefined}
       navState={undefined}
       onClose={undefined}
