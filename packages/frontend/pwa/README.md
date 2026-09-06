@@ -155,6 +155,8 @@ swFacade.subscribe(() => {
 });
 updateActivateButton.onclick = async () => {
   await swFacade.activateUpdate();
+  // the update controls the page; restarting is a separate, explicit step
+  await swFacade.reloadClients();
 };
 ```
 
@@ -205,7 +207,9 @@ The returned facade exposes:
   finished its in-flight events, which can take a while on a slow network:
   `state.update.readyState` reports the progress (`"activation_pending"`,
   `"activating"`, `"activated"`), so prefer drawing from it over keeping a
-  control busy on the promise.
+  control busy on the promise. The page is not reloaded.
+- `reloadClients()` — async, asks the service worker to tell every client tab
+  (this page included) to reload.
 - `sendMessage(message)` — async, posts a message to the service worker and
   resolves with its response (see [docs/usage.md](./docs/usage.md) for the
   service-worker-side snippet).
@@ -214,17 +218,21 @@ The returned facade exposes:
   resource in place during a service worker update instead of reloading the
   page.
 
-After an update activates and controls the page, all client tabs reload so no
-stale resource survives — unless every changed resource has a handler
-registered with `defineResourceUpdateHandler`.
+An activated update needs a restart — it deleted the previous cache, so a tab
+still running the old build loses the versioned files it may still ask for.
+That restart is `reloadClients()`, called by the app when it suits the person
+using it, and it reloads every tab at once. `state.update.reloadRequired` says
+whether one is owed: it is `false` when every changed resource had a handler
+registered with `defineResourceUpdateHandler` and was replaced in place.
 
 Messaging-based features ("inspect" meta, update diffing for
 `defineResourceUpdateHandler`) expect the service worker script to answer
 `{ action }` messages on a MessageChannel port —
 [@jsenv/service-worker](https://github.com/jsenv/core/tree/main/packages/frontend/service-worker)
 implements this protocol. With a plain service worker script everything still
-works but degrades: `meta` stays empty and every update requires a page
-reload.
+works but degrades: `meta` stays empty, no resource can be hot-replaced and
+nobody relays `reloadClients()` to the other tabs — such an app reloads itself
+with `window.location.reload()`.
 
 #### navigatorControllerSignal
 

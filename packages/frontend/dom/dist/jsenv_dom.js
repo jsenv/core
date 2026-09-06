@@ -13200,11 +13200,11 @@ const GRABBED_ATTRIBUTE = "data-grabbed";
 const css$2 = /* css */ `[data-pan-zoom-surface] {
   touch-action: none;
   user-select: none;
+  -webkit-touch-callout: none;
 }
 
 [data-pan-zoom-surface="after-hold"] {
   touch-action: pan-x pan-y;
-  -webkit-touch-callout: none;
 }
 `;
 import.meta.css = [css$2, "@jsenv/dom/src/interaction/drag/pan_zoom.js"];
@@ -13306,9 +13306,12 @@ const findPanZoomSurface = (element) => {
  *   A bare wheel was left to what scrolls around the surface rather than zooming
  *   it: the zoom is one `ctrl`/`meta` away, and this is where that is said.
  * @param {number} [options.threshold=5] How far a pointer travels before it pans.
- * @param {boolean} [options.afterHold=false] Whether a FINGER must be held still
- *   before it pans, the page keeping its scroll until then. For a surface
+ * @param {boolean|"kept"} [options.afterHold=false] Whether a FINGER must be held
+ *   still before it pans, the page keeping its scroll until then. For a surface
  *   standing in something that scrolls; a mouse pans by travelling either way.
+ *   `"kept"` asks for the wait once: from the moment the surface has the hand it
+ *   pans on contact, and it asks again only after a pointer has gone down away
+ *   from it.
  * @param {"auto"|"always"} [options.wheelZoom="auto"] Whether a BARE wheel zooms.
  *   `"auto"` gives it to whatever scrolls around the surface when there is one,
  *   and zooms when there is none; `"always"` takes it back, for a surface that
@@ -13328,7 +13331,16 @@ const installPanZoom = (
     wheelZoom = "auto",
   } = {},
 ) => {
-  element.setAttribute(SURFACE_ATTRIBUTE, afterHold ? "after-hold" : "");
+  // Whether a finger still owes the wait. Constant under a plain `afterHold`;
+  // under `"kept"` it is spent the first time the surface is given the hand and
+  // asked for again once the hand has gone elsewhere.
+  let holdIsOwed = Boolean(afterHold);
+  const reflectHoldOwed = () => {
+    // What a touch may do is settled before it lands, so the mode is in the DOM
+    // rather than read at pointerdown (see the stylesheet).
+    element.setAttribute(SURFACE_ATTRIBUTE, holdIsOwed ? "after-hold" : "");
+  };
+  reflectHoldOwed();
   // A travelling box above must not take the press this reads (see
   // drag_to_travel.js): the surface says so itself, being the one that knows.
   element.setAttribute("data-no-drag-travel", "");
@@ -13371,8 +13383,31 @@ const installPanZoom = (
     return hand;
   };
 
+  // A press somewhere else, while the surface holds nothing: the hand has moved
+  // on, and the next finger landing here is disputed again. A press on the
+  // surface, or one made while it already has the hand (a second finger resting
+  // beside it), is not that.
+  const onPointerDownAway = (event) => {
+    if (pointers.size > 0 || element.contains(event.target)) {
+      return;
+    }
+    holdIsOwed = true;
+    reflectHoldOwed();
+    window.removeEventListener("pointerdown", onPointerDownAway, true);
+  };
+  const keepTheHand = () => {
+    holdIsOwed = false;
+    reflectHoldOwed();
+    window.addEventListener("pointerdown", onPointerDownAway, true);
+  };
+
   const activate = (anchorWhere, event) => {
     active = true;
+    if (afterHold === "kept" && holdIsOwed) {
+      // Asked for and given: whatever proved it — the hold, a second finger, a
+      // mouse travelling — the surface is the hand's from here.
+      keepTheHand();
+    }
     for (const pointerId of pointers.keys()) {
       element.setPointerCapture(pointerId);
     }
@@ -13464,7 +13499,7 @@ const installPanZoom = (
       activate("now", event);
       return;
     }
-    if (afterHold && event.pointerType === "touch") {
+    if (holdIsOwed && event.pointerType === "touch") {
       pointer.waitsForHold = true;
       pointer.holdWait = waitForPressHeld(event, {
         // Anchored where the finger IS: it has barely moved, so there is
@@ -13626,6 +13661,7 @@ const installPanZoom = (
     element.removeEventListener("lostpointercapture", onLostPointerCapture);
     element.removeEventListener("touchmove", preventTouchScroll);
     element.removeEventListener("wheel", onWheel);
+    window.removeEventListener("pointerdown", onPointerDownAway, true);
     element.removeAttribute(SURFACE_ATTRIBUTE);
     element.removeAttribute("data-no-drag-travel");
   };
@@ -17460,7 +17496,7 @@ const toContainerAlignedPosition = (value) => {
  *   edges instead of the page viewport's, on both axes (the Y axis otherwise has no such
  *   clamp at all — see the clamp's own comment) — that part *is* gated on `hasValidAnchor`,
  *   unlike the coordinate-space conversion itself.
- * @returns {{ hasValidAnchor, shouldTransition, positionX, positionY, left, top, width, height, anchorLeft, anchorTop, anchorRight, anchorBottom, spaceLeft, spaceRight, spaceAbove, spaceBelow, containerWidthAvailable, containerHeightAvailable }}
+ * @returns {{ hasValidAnchor, shouldTransition, positionX, positionY, left, top, width, height, anchorLeft, anchorTop, anchorRight, anchorBottom, spaceLeft, spaceRight, spaceAbove, spaceBelow, containerWidthAvailable, containerHeightAvailable, roomLeft, roomTop, roomRight, roomBottom }}
  */
 const pickPositionRelativeTo = (
   element,
@@ -17981,6 +18017,22 @@ const pickPositionRelativeTo = (
   // so callers get the net usable space directly.
   const containerWidthAvailable = availableWidth - 2 * marginWithContainer;
   const containerHeightAvailable = availableHeight - 2 * marginWithContainer;
+  // How far past each of its own edges `element` may still paint before
+  // reaching the edge of the area it was placed in. What it puts outside that
+  // area — an entry animation travelling in from beyond it, a shadow — can be
+  // cut with these and nothing else: each floors at 0, so the cut lands on the
+  // element's own edge at the closest and never inside its box, which is what
+  // makes a value read one reposition late harmless rather than a bite taken
+  // out of it. Measured here, before the coordinate conversion below:
+  // elementPositionLeft/Top and availableLeft/Top share one space.
+  const roomLeft = floorAtZero(elementPositionLeft - availableLeft);
+  const roomTop = floorAtZero(elementPositionTop - availableTop);
+  const roomRight = floorAtZero(
+    availableRight - (elementPositionLeft + elementWidth),
+  );
+  const roomBottom = floorAtZero(
+    availableBottom - (elementPositionTop + elementHeight),
+  );
   // Docked to a container (no real anchor): the element is kept inside the
   // container's margin on BOTH sides — that is what the !hasValidAnchor clamp
   // above enforces — so what it has to work with is the container net of both.
@@ -18035,8 +18087,14 @@ const pickPositionRelativeTo = (
     // the container itself, so they collapse to -marginWithContainer.
     containerWidthAvailable,
     containerHeightAvailable,
+    roomLeft,
+    roomTop,
+    roomRight,
+    roomBottom,
   };
 };
+
+const floorAtZero = (value) => (value < 0 ? 0 : value);
 
 // Per-element bookkeeping for the currently in-flight, self-driven position
 // transition, if any — see notifyPositionTransition's own doc for why this
@@ -18199,8 +18257,26 @@ const applyNewPosition = (
     spaceBelow,
     containerWidthAvailable,
     containerHeightAvailable,
+    roomLeft,
+    roomTop,
+    roomRight,
+    roomBottom,
   },
 ) => {
+  // Published for whoever has to cut what the element paints outside the area
+  // it was placed in — see pickPositionRelativeTo for what the four numbers
+  // are, and popup_css.js (@jsenv/navi) for the entry animation that reads
+  // them.
+  element.style.setProperty("--container-position-room-top", `${roomTop}px`);
+  element.style.setProperty(
+    "--container-position-room-right",
+    `${roomRight}px`,
+  );
+  element.style.setProperty(
+    "--container-position-room-bottom",
+    `${roomBottom}px`,
+  );
+  element.style.setProperty("--container-position-room-left", `${roomLeft}px`);
   // A centered axis is published too, from the container's own extent: leaving
   // the property unset lets the consumer's size cap fall back to its viewport
   // default, which overflows any container smaller than the viewport (a

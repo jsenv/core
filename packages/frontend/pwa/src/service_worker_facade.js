@@ -7,9 +7,17 @@
  * browser's "updatefound", a registration found with a pending worker and
  * checkForUpdates() finding registration.waiting can all report the same
  * worker, and it must be watched once. Everything that happens to the update
- * (state, claim, reload or hot replacement) is owned by that tracking;
+ * (state, claim or hot replacement) is owned by that tracking;
  * activateUpdate() only asks the worker to skip waiting and awaits the
  * tracked outcome.
+ *
+ * Nothing here reloads a page on its own. An update that activates takes
+ * control, and the app says when the restart happens by calling
+ * reloadClients(); state.update.reloadRequired tells whether one is still
+ * owed. That moment is the only one where an app restarts under someone's
+ * fingers, and the document that would acknowledge it is the one being thrown
+ * away — so the choice belongs to the app, which is the only side knowing
+ * what is on screen.
  *
  * state.meta and state.update.meta describe these two WORKERS; neither
  * describes the document currently executing, which may have been fetched
@@ -40,8 +48,9 @@ import { pwaLogger } from "./pwa_logger.js";
  * with a MessageChannel port ("inspect", "skipWaiting", "claim",
  * "postReloadAfterUpdateToClients") — `@jsenv/service-worker` implements this
  * protocol. With a plain service worker script everything still works but
- * degrades: "inspect" times out after 1s so `state.meta` stays empty and every
- * update requires a page reload.
+ * degrades: "inspect" times out after 1s so `state.meta` stays empty, no
+ * resource can be hot-replaced and nobody relays `reloadClients()` to the
+ * other tabs — such an app reloads itself with `window.location.reload()`.
  *
  * @param {Object} [options]
  * @param {string} [options.scope] Registration scope used to find the service
@@ -67,7 +76,14 @@ import { pwaLogger } from "./pwa_logger.js";
  *     (a fetch it is still answering, for instance): the promise can stay
  *     pending for as long as that takes, `state.update.readyState` reports
  *     where it stands ("activation_pending" while the current worker holds
- *     the switch).
+ *     the switch). It stops there: the page keeps running, reloading is
+ *     `reloadClients()`.
+ *   - `reloadClients()`: async, asks the service worker to tell every client
+ *     tab — this page included — to reload. Call it once
+ *     `state.update.reloadRequired` says the update needs a restart, at the
+ *     moment that suits the app. Until then the page runs on the new worker
+ *     while the cache it was served from is gone, so anything fetched lazily
+ *     comes from the new build or the network.
  *   - `unregister()`: async, unregisters the service worker
  *   - `sendMessage(message)`: async, posts a message to the service worker and
  *     resolves with its response
@@ -184,11 +200,6 @@ export const createServiceWorkerFacade = ({
             if (serviceWorkerHotReplacer) {
               pwaLogger.info("hot replace service worker");
               serviceWorkerHotReplacer();
-            } else {
-              pwaLogger.info("post reload after update to clients");
-              postMessageToServiceWorker(toServiceWorker, {
-                action: "postReloadAfterUpdateToClients",
-              });
             }
           },
           redundant: () => {
@@ -428,6 +439,28 @@ export const createServiceWorkerFacade = ({
       const update = trackUpdate(serviceWorker);
       await update.activate();
     },
+    reloadClients: async () => {
+      if (!canUseServiceWorkers) {
+        pwaLogger.debug("service worker API not available -> reload this page");
+        reloadPage();
+        return;
+      }
+      const registration = await serviceWorkerAPI.getRegistration(scope);
+      const serviceWorker = registration
+        ? registration.active || registration.waiting || registration.installing
+        : null;
+      if (!serviceWorker) {
+        pwaLogger.debug("no service worker to relay -> reload this page");
+        reloadPage();
+        return;
+      }
+      pwaLogger.info("post reload after update to clients");
+      // this page is one of those clients: it reloads on the broadcast coming
+      // back, like the others, so there is a single path to the reload
+      await postMessageToServiceWorker(serviceWorker, {
+        action: "postReloadAfterUpdateToClients",
+      });
+    },
     sendMessage: async (message) => {
       if (!canUseServiceWorkers) {
         pwaLogger.debug("service worker API not available");
@@ -530,16 +563,17 @@ const ensureIsControllingNavigator = (serviceWorker) => {
   });
 };
 
+// https://github.com/GoogleChrome/workbox/issues/1120
+let reloading = false;
+const reloadPage = () => {
+  if (reloading) {
+    return;
+  }
+  reloading = true;
+  window.location.reload();
+};
+
 if (canUseServiceWorkers) {
-  // https://github.com/GoogleChrome/workbox/issues/1120
-  let reloading = false;
-  const reloadPage = () => {
-    if (reloading) {
-      return;
-    }
-    reloading = true;
-    window.location.reload();
-  };
   serviceWorkerAPI.addEventListener("message", (event) => {
     if (event.data === "reload_after_update") {
       pwaLogger.info(

@@ -50,10 +50,13 @@ reloadRequired }`) read from `swFacade.stateSignal`, and
   port. `@jsenv/service-worker` implements it. With a plain script everything
   degrades gracefully: meta stays `{}` and updates fall back to a full page
   reload.
-- **Pages reload after an update by design**: once an update activates and
-  controls the page, all client tabs reload so no stale resource survives —
-  unless every changed resource has a handler registered via
-  `swFacade.defineResourceUpdateHandler(url, handler)`.
+- **The app owns the reload**: `activateUpdate()` stops once the update
+  controls the page. `swFacade.reloadClients()` is the restart, and it reloads
+  every client tab at once (the activated worker deleted the previous cache,
+  so no tab may stay on the old build). `state.update.reloadRequired` says
+  whether one is owed — it is `false` when every changed resource had a
+  handler registered via `swFacade.defineResourceUpdateHandler(url, handler)`
+  and was replaced in place.
 - **`beforeinstallprompt` must be captured early by the page itself** (inline
   classic script storing the event on `window.beforeinstallpromptEvent`) —
   see the JSDoc on `addToHomescreen` for the exact snippet and why it must not

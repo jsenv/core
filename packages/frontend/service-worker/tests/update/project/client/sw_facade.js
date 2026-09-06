@@ -196,6 +196,7 @@ update: {
   updateByRestartButton.onclick = async () => {
     updateByRestartButton.disabled = true;
     await swFacade.activateUpdate();
+    await swFacade.reloadClients();
   };
   const updateNowButton = document.querySelector("#update_now_button");
   updateNowButton.onclick = async () => {

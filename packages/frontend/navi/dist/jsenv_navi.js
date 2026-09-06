@@ -5186,6 +5186,9 @@ const CONTROL_PROP_SET = new Set([
   "resetOnAbort",
   "resetOnError",
   "optimistic",
+  // The wait this control's action creates is its own: it renders busy and
+  // refuses a second press, and nothing above it is told (see BUSY_CONSTRAINT).
+  "actionStandalone",
 
   "charGuard",
   "maxLengthGuard",
@@ -7844,6 +7847,11 @@ const BUSY_CONSTRAINT = {
   transient: true,
   // Unlike readonly/disabled, a busy element DOES block its parent from
   // submitting — the element is mid-operation and cannot safely participate.
+  // Unless it says the wait is its own (`actionStandalone`): then the refusal
+  // stays on the element and every ancestor reads it as free — the group above
+  // (see getInteractionBlockingControls) and the popup around it (see
+  // findBusyElementInside in dialog.jsx and popover.jsx, which both filter on
+  // `ignoredByParents`).
   check: (field, { intent } = {}) => {
     const isBusy = isControlBusy(field);
     if (!isBusy) {
@@ -7863,7 +7871,11 @@ const BUSY_CONSTRAINT = {
     const message = isButton
       ? naviI18n("constraint.busy.button")
       : naviI18n("constraint.busy.default");
-    return { message, status: "info" };
+    return {
+      message,
+      status: "info",
+      ignoredByParents: Boolean(field.actionStandalone),
+    };
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("data-busy");
@@ -10949,6 +10961,13 @@ const isMac = detectMac();
  * source. Read off the element or any ancestor, since what it knows is about the
  * place rather than about this box.
  *
+ * `data-pan-after-hold="kept"` asks for that wait once rather than before every
+ * pan: the surface given the hand keeps it — panning on contact, like the same
+ * plan opened full screen — and asks again after a press has landed away from
+ * it, which is the hand saying it has moved on. What answers "away" is the same
+ * thing that closes a popup, and the surface is the one that watches for it, so
+ * an application never keeps a `pointerdown` listener on the window to know.
+ *
  * The WHEEL is the same question asked of a mouse, and it is not asked of the
  * caller at all: a wheel event is read rather than settled beforehand, so
  * whether anything around the surface scrolls is simply looked up when it
@@ -10987,9 +11006,12 @@ const RELEASE = "release";
 // The same attribute a carried element reads: how far a pointer travels before
 // it is a gesture rather than a press.
 const THRESHOLD_ATTRIBUTE = "data-drag-threshold";
-// Whether a finger has to stand still before the surface is its own. What a
-// touch may do is settled when it lands, so this is read once, at setup.
+// Whether a finger has to stand still before the surface is its own, and — at
+// "kept" — whether that answer stands until the hand goes elsewhere. What a touch
+// may do is settled when it lands, so the surface holds the mode in the DOM and
+// changes it there itself; nothing here is re-read at the press.
 const AFTER_HOLD_ATTRIBUTE = "data-pan-after-hold";
+const AFTER_HOLD_KEPT = "kept";
 // Whether a BARE wheel is the surface's whatever scrolls around it. The wheel's
 // opposite of the attribute above: that one gives a gesture away, this one takes
 // one back.
@@ -11063,7 +11085,7 @@ defineInteractionDetector({
 
     const uninstall = installPanZoom(element, {
       threshold: readConfig(THRESHOLD_ATTRIBUTE, undefined),
-      afterHold: Boolean(element.closest(`[${AFTER_HOLD_ATTRIBUTE}]`)),
+      afterHold: readAfterHold(element),
       wheelZoom: element.closest(`[${ZOOM_ON_CONTACT_ATTRIBUTE}]`)
         ? "always"
         : "auto",
@@ -11093,6 +11115,18 @@ defineInteractionDetector({
     };
   },
 });
+
+const readAfterHold = (element) => {
+  const holder = element.closest(`[${AFTER_HOLD_ATTRIBUTE}]`);
+  if (!holder) {
+    return false;
+  }
+  const value = holder.getAttribute(AFTER_HOLD_ATTRIBUTE);
+  if (value === AFTER_HOLD_KEPT) {
+    return AFTER_HOLD_KEPT;
+  }
+  return true;
+};
 
 // used by form elements such as <input>, <select>, <textarea> to have their own action bound to a single parameter
 // when inside a <form> the form params are updated when the form element single param is updated
@@ -36775,7 +36809,8 @@ const useInteractiveProps = (props, {
       required,
       readOnly,
       loading,
-      optimistic
+      optimistic,
+      actionStandalone
     } = props;
 
     // `whenSelfInteractionsBlocked="ignore"`: an affordance that writes nothing
@@ -36834,6 +36869,11 @@ const useInteractiveProps = (props, {
     // Read by BUSY_CONSTRAINT: an optimistic control stays interactive while
     // its bound action runs (a new toggle replaces the run instead of waiting).
     uiStateController.optimistic = Boolean(optimistic);
+    // Read by BUSY_CONSTRAINT: the wait belongs to this control alone. It is
+    // busy for itself — the render, the second press, the callout — and nothing
+    // above it is told, so a form still submits and a popup still closes over a
+    // run that was meant to be left going.
+    uiStateController.actionStandalone = Boolean(actionStandalone);
     // What the interaction rule last refused is only true while the control is
     // held; the state it was read from moves here (see refreshReport).
     useLayoutEffect(() => {
@@ -47300,6 +47340,7 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  *   selfInteractions?: string,
  *   whenSelfInteractionsBlocked?: "hide" | "refuse" | "ignore",
  *   replace?: boolean,
+ *   actionStandalone?: boolean,
  *   [key: string]: any,
  * }>}
  * @param {boolean} [replace] Go where the press leads — an `href`, a
@@ -47330,6 +47371,13 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  *   by whether it WRITES to the control it sits in: it goes (`"hide"`, the
  *   default), `"refuse"` keeps it and refuses with a callout, `"ignore"` lets
  *   it through untouched — for an affordance that never wrote to that control.
+ * @param {boolean} [actionStandalone] The wait this button's action creates is
+ *   its own: it renders busy, refuses a second press and raises the error
+ *   callout as always, and nothing above it is told — the form around it still
+ *   submits, the popup it sits in still closes. For a run started to be left
+ *   running, which the app watches from somewhere else; never for one holding
+ *   an answer the screen is the only place to read (see
+ *   docs/interactions.md#the-fourth-question-whose-wait-is-it).
  * @param {string} [contentDisplay] The display of the frame the button draws
  *   around its children. It follows the button's own by default — its display
  *   and, a display alone saying nothing about direction, the rest of its flow
@@ -56274,7 +56322,8 @@ const getAvailableWidth = (layer, element) => {
  *
  * `animation="slide-from-*"` (anchorReference/point mode only): a real
  * translate-based entrance, 8 directions (cardinal + 4 diagonals), each
- * 100%-of-own-size. It travels through `transform`, not through the
+ * 100%-of-own-size, cut at the edges of the area the popup was placed in so
+ * that a travel starting outside that area is not watched crossing it. It travels through `transform`, not through the
  * `translate` property, which belongs to the popup's own placement
  * (applyNewPosition in visible_rect.js — see its doc for why the placement is
  * a transform at all, and why it has to be the outermost one: the individual
@@ -56329,12 +56378,18 @@ const popupCss = /* css */ `
        (no shared transition-property to clobber, no propertyName to filter).
        What moves here is transform, which composes under it. */
     &[navi-animation] {
+      /* clip-path takes the translate's own duration: the slide family below
+         cuts its own travel with it, and the cut holds a viewport line still
+         only for as long as it advances at exactly the pace of the transform.
+         An animation kind that sets no clip-path has "none" on both sides of
+         the change, which costs nothing. */
       transition-property:
-        display, overlay, opacity, transform, scale, box-shadow;
+        display, overlay, opacity, transform, scale, box-shadow, clip-path;
       transition-duration:
         var(--popup-animation-duration), var(--popup-animation-duration),
         var(--popup-opacity-duration), var(--popup-translate-duration),
-        var(--popup-scale-duration), var(--popup-animation-duration);
+        var(--popup-scale-duration), var(--popup-animation-duration),
+        var(--popup-translate-duration);
       transition-timing-function: ease;
       transition-behavior: allow-discrete;
     }
@@ -56411,16 +56466,51 @@ const popupCss = /* css */ `
     &[navi-animation="slide-from-bottom-left"],
     &[navi-animation="slide-from-bottom-right"] {
       opacity: 1;
+      /* The travel is cut at the edges of the area the popup was placed in:
+         what it crosses on its way in is outside that area, and outside it is
+         either the glass beside an app narrowed with --navi-app-max-width
+         (layout/safe_area.js) or whatever surrounds a container — neither the
+         popup's to paint, and a popup in the top layer answers to no overflow
+         of the document.
+         --container-position-room-* is how far past each of its own edges the
+         popup may still paint before reaching that area's edge
+         (applyNewPosition in @jsenv/dom), so the negated value puts the cut ON
+         that edge, and an unplaced popup reading 100vmax cuts nothing. The
+         popup itself is never cut: the rooms floor at 0. */
+      --x-popup-cut-top: calc(-1 * var(--container-position-room-top, 100vmax));
+      --x-popup-cut-right: calc(
+        -1 * var(--container-position-room-right, 100vmax)
+      );
+      --x-popup-cut-bottom: calc(
+        -1 * var(--container-position-room-bottom, 100vmax)
+      );
+      --x-popup-cut-left: calc(
+        -1 * var(--container-position-room-left, 100vmax)
+      );
+      --x-popup-travel-x: calc(var(--x-popup-slide-x, 0) * 100%);
+      --x-popup-travel-y: calc(var(--x-popup-slide-y, -1) * 100%);
+      clip-path: inset(
+        var(--x-popup-cut-top) var(--x-popup-cut-right)
+          var(--x-popup-cut-bottom) var(--x-popup-cut-left)
+      );
+
       transform: translate(0px, 0px);
 
       /* No fade: the travel is the whole effect. Fading it out on top would
          make the popup disappear before it has finished leaving, which reads as
          two things happening rather than one movement. */
       &[aria-expanded="false"] {
-        transform: translate(
-          calc(var(--x-popup-slide-x, 0) * 100%),
-          calc(var(--x-popup-slide-y, -1) * 100%)
+        /* The travel added back to the cut: written in the popup's own
+           coordinates, each edge then lands on the same viewport line at both
+           ends of the transition — and so at every instant in between, the two
+           interpolating over one duration and one easing. */
+        clip-path: inset(
+          calc(var(--x-popup-cut-top) - var(--x-popup-travel-y))
+            calc(var(--x-popup-cut-right) + var(--x-popup-travel-x))
+            calc(var(--x-popup-cut-bottom) + var(--x-popup-travel-y))
+            calc(var(--x-popup-cut-left) - var(--x-popup-travel-x))
         );
+        transform: translate(var(--x-popup-travel-x), var(--x-popup-travel-y));
       }
     }
   }
@@ -56632,17 +56722,23 @@ const createSwipeToClose = (side, { grip } = {}) => {
       }
     }
 
-    // How far the panel has been pulled, written on it directly: the gesture
-    // reports a distance in screen coordinates, which is exactly what a
-    // translate takes. It goes through `transform` because the `translate`
-    // property carries where the panel *stands* (applyNewPosition in
-    // visible_rect.js, which owns it) — the pull composes under the placement
-    // instead of replacing it.
+    // How far the panel has been pulled, as the style showing it — written on
+    // the panel while the finger drives it, handed to the release travel as
+    // its two keyframes. The gesture reports a distance in screen coordinates,
+    // which is exactly what a translate takes; it goes through `transform`
+    // because the `translate` property carries where the panel *stands*
+    // (applyNewPosition in visible_rect.js, which owns it), so the pull
+    // composes under the placement instead of replacing it.
+    const styleAt = (distance) => ({
+      transform: translateOf(axis, distance),
+      clipPath: clipOf(axis, distance),
+    });
     const paint = (distance) => {
-      panelEl.style.transform = translateOf(axis, distance);
+      Object.assign(panelEl.style, styleAt(distance));
     };
     const restore = () => {
       panelEl.style.transform = "";
+      panelEl.style.clipPath = "";
       panelEl.style.transitionProperty = "";
       panelEl.style.userSelect = "";
     };
@@ -56652,16 +56748,10 @@ const createSwipeToClose = (side, { grip } = {}) => {
     const travelTo = (from, to, onArrival) => {
       const covered = from > to ? from - to : to - from;
       paint(to);
-      const animation = panelEl.animate(
-        [
-          { transform: translateOf(axis, from) },
-          { transform: translateOf(axis, to) },
-        ],
-        {
-          duration: (covered / sizeOf(panelEl, axis)) * TRAVEL_DURATION,
-          easing: "ease-out",
-        },
-      );
+      const animation = panelEl.animate([styleAt(from), styleAt(to)], {
+        duration: (covered / sizeOf(panelEl, axis)) * TRAVEL_DURATION,
+        easing: "ease-out",
+      });
       animation.finished.then(onArrival, () => {});
     };
     const close = (event) => {
@@ -56728,6 +56818,23 @@ const translateOf = (axis, distance) =>
   axis === "x"
     ? `translate(${distance}px, 0px)`
     : `translate(0px, ${distance}px)`;
+// The same cut the entry/exit animation makes (popup_css.js), at a distance the
+// finger decides instead of a transition: each edge sits where the popup's own
+// room ran out (--container-position-room-*, written by applyNewPosition), and
+// the pull is added back so the cut stays on that line while the box travels
+// under it. Unset rooms — a popup that was never placed — read as 100vmax,
+// which cuts nothing.
+const roomOf = (edge) => `var(--container-position-room-${edge}, 100vmax)`;
+const clipOf = (axis, distance) => {
+  const alongX = axis === "x" ? distance : 0;
+  const alongY = axis === "y" ? distance : 0;
+  return `inset(
+    calc(-1 * ${roomOf("top")} - ${alongY}px)
+    calc(-1 * ${roomOf("right")} + ${alongX}px)
+    calc(-1 * ${roomOf("bottom")} + ${alongY}px)
+    calc(-1 * ${roomOf("left")} - ${alongX}px)
+  )`;
+};
 
 /**
  * A popup that is the anchor, continued.
@@ -57759,10 +57866,19 @@ const DOCKED_SWIPE_GRIP = "[data-header],[data-swipe-grip]";
 // controls rather than reading an attribute off the dialog: a dialog carries no
 // state of its own (see this file's top comment), and `aria-busy` on the
 // controls is a render snapshot — BUSY_CONSTRAINT reads the live answer.
+// Same as Popover's own; kept in both rather than shared, since each file reads
+// on its own — what changes here changes there too.
 const findBusyElementInside$1 = dialogEl => {
   for (const element of dialogEl.querySelectorAll("[navi-control-host]")) {
     const controller = element.__uiStateController__;
-    if (controller && BUSY_CONSTRAINT.check(controller)) {
+    if (!controller) {
+      continue;
+    }
+    const busyInfo = BUSY_CONSTRAINT.check(controller);
+    // `ignoredByParents`: the control says the wait is its own
+    // (`actionStandalone`), so a popup is one more ancestor it does not hold —
+    // the same reading a group makes of it (see control_interaction.js).
+    if (busyInfo && !busyInfo.ignoredByParents) {
       return element;
     }
   }
@@ -59328,12 +59444,19 @@ const PopoverCustom = props => {
 // controls rather than reading an attribute off the popup: a popup carries no
 // state of its own (see this file's top comment), and `aria-busy` on the
 // controls is a render snapshot — BUSY_CONSTRAINT reads the live answer.
-// Same as Dialog's own; kept in both rather than shared, since it is three
-// lines and each file reads on its own.
+// Same as Dialog's own; kept in both rather than shared, since each file reads
+// on its own — what changes here changes there too.
 const findBusyElementInside = popupEl => {
   for (const element of popupEl.querySelectorAll("[navi-control-host]")) {
     const controller = element.__uiStateController__;
-    if (controller && BUSY_CONSTRAINT.check(controller)) {
+    if (!controller) {
+      continue;
+    }
+    const busyInfo = BUSY_CONSTRAINT.check(controller);
+    // `ignoredByParents`: the control says the wait is its own
+    // (`actionStandalone`), so a popup is one more ancestor it does not hold —
+    // the same reading a group makes of it (see control_interaction.js).
+    if (busyInfo && !busyInfo.ignoredByParents) {
       return element;
     }
   }

@@ -99,6 +99,7 @@ swFacade.subscribe(() => {
 });
 updateButton.onclick = async () => {
   await swFacade.activateUpdate(); // skipWaiting + claim
+  await swFacade.reloadClients(); // restart, when the app decides to
 };
 ```
 
@@ -129,10 +130,36 @@ progress from `update.readyState` (`"activation_pending"` while the current
 worker holds the switch, then `"activating"`, `"activated"`) rather than
 keeping a control busy on the promise; `update.error` holds the failure.
 
-Once the update controls the page, every client tab reloads so no stale
-resource stays alive. To update some resources in place instead of reloading
-(requires a service worker script implementing the jsenv protocol, e.g.
-`@jsenv/service-worker`, so resources can be diffed between versions):
+### Restarting is the app's call
+
+`activateUpdate()` stops at "the update controls the page"; nothing reloads
+until the app calls `swFacade.reloadClients()`, which asks the service worker
+to tell every client tab — this page included — to reload.
+
+The two steps are separate because the second one throws away the document
+that would say it worked. Activating and reloading in the same tick makes the
+popover the person was in disappear and the screen behind it redraw, with no
+acknowledgement anywhere; splitting them lets the same popover turn into its
+"it's installed, restart when you want" state and keeps the restart an
+explicit gesture. Doing both back to back is one line:
+
+```js
+await swFacade.activateUpdate();
+await swFacade.reloadClients();
+```
+
+Between the two the page runs on the new worker while the cache it was served
+from is gone, so a resource fetched lazily comes from the new build or the
+network. Keep the window short — it is meant for an acknowledgement and a
+button, not for staying there.
+
+`reloadClients()` goes through the service worker on purpose: a tab that never
+activated anything is running the old build against a cache that no longer
+exists, so every client reloads together.
+
+To update some resources in place instead of reloading (requires a service
+worker script implementing the jsenv protocol, e.g. `@jsenv/service-worker`,
+so resources can be diffed between versions):
 
 ```js
 swFacade.defineResourceUpdateHandler("/img/logo.png", {
@@ -144,8 +171,9 @@ swFacade.defineResourceUpdateHandler("/img/logo.png", {
 });
 ```
 
-The page reloads anyway if at least one changed resource has no handler
-(`state.update.reloadRequired` tells which case you are in).
+`state.update.reloadRequired` tells which case you are in: it is `false` when
+every changed resource was replaced in place, `true` when a restart is still
+owed.
 
 ## Service worker: communication
 
