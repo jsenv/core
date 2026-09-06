@@ -5034,7 +5034,7 @@ const findFocusable = (element, { exclude } = {}) => {
 // - `clip` is not one. It clips and stops there: it has no scroll box at all,
 //   and scrollTop/scrollLeft on it read back 0 whatever they are set to. That
 //   is the whole reason a layout reaches for it (see navi's
-//   docs/MOBILE_LAYOUT_PITFALLS.md), so it is never included, whatever the
+//   docs/mobile_layout_pitfalls.md), so it is never included, whatever the
 //   caller asks for.
 // `visible` is the other non-scrolling value, and the only one on which the
 // content still reaches the ancestors.

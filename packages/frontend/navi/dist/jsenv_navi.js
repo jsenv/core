@@ -14922,7 +14922,7 @@ const createResource = (
    * @param {Object} params - Parameters to bind to all actions of this resource (required)
    * @param {Object} options - Additional options for the parameterized resource
    * @returns {Object} A new resource instance with parameter-bound actions and isolated lifecycle
-   * @see docs/resource_with_params.md for detailed documentation and examples
+   * @see docs/resource.md — what a scope isolates, and `dependencies`
    *
    * @example
    * const ROLE = resource("role", { GET: (params) => fetchRole(params) });
@@ -33316,10 +33316,13 @@ const useUIStateController = (
               // changed and this is not a live user gesture — skip uiAction and command.
               return false;
             }
-            if (e.type === "state_prop_change") {
-              // state_prop_change with the same uiState means the state prop was updated
-              // to match what the user already has in the UI (e.g. action completed and
-              // synced state back). No real user gesture — skip uiAction and command.
+            if (isInternalEvent(e)) {
+              // navi writing to the control itself — a value handed down, a
+              // state prop syncing back what the UI already shows, a rollback
+              // putting back what was there. Nobody acted, and the value did
+              // not move either, so there is nothing left to report: skip
+              // uiAction and command, as the button/link and radio branches
+              // above already do.
               return false;
             }
             if (e.type === "change") {
@@ -33458,12 +33461,18 @@ const useUIStateController = (
               // down to its children (child command would re-trigger the cascade).
               controller.onUIAction(e, { skipCommand: true });
             }
-            if (e.type === "facade_propagate_up") {
+            if (
+              e.type === "facade_propagate_up" ||
+              e.type === "cancel_rollback"
+            ) {
               // Exception: when the facade propagates a child state change up to the
               // real picker input, also notify the parent group (e.g. Form) so it
               // keeps its cached aggregated state in sync and fires its own uiAction.
               // This is consistent with how a direct Input inside a Form behaves:
               // the Form's uiAction fires on every value change.
+              // A cancel takes the same road back: the Form was told what the
+              // popup was picking, so it has to be told the picker went back to
+              // where it opened, or it sends a value the user said no to.
               s.parentUIStateController?.onChildUIAction(controller, e, {
                 stateChanged: true,
               });
@@ -35249,6 +35258,12 @@ const INTERNAL_EVENT_SET = new Set([
   // control is being put back on the state the caller still holds — so this
   // must not fire a uiAction, a command, or a report on the way.
   "clear_rollback",
+  // A picker's popup closed on a cancel (the no button, Escape, a click
+  // outside): what the picker held at open goes back. Nobody acted — no
+  // command — but the value really did move back, so uiAction and the parent
+  // notification below still happen, exactly as they did on the way in (see
+  // picker_custom.jsx's onClose).
+  "cancel_rollback",
 ]);
 const isInternalEvent = (e) => {
   return INTERNAL_EVENT_SET.has(e.type);
@@ -43562,7 +43577,7 @@ const FixedBar = ({
  * A page that overflows horizontally is a bug wherever it happens, and on
  * Chrome Android it is a catastrophic one: the layout viewport inflates to the
  * content and `position: fixed` centering goes with it (see
- * docs/MOBILE_LAYOUT_PITFALLS.md). The remedy there is a wrapper in
+ * docs/mobile_layout_pitfalls.md). The remedy there is a wrapper in
  * `overflow-x: clip`, and it works — at the price of making the cause
  * invisible: nothing sticks out anymore, so nothing says a fixed width, a
  * `min-width` or an unbreakable string is still oversized. This puts the
@@ -60875,9 +60890,18 @@ const PickerCustom = props => {
             const pickerEl = ref.current;
             const inputEl = getPickerInput(pickerEl);
             debugPopup(closeEvent, `picker cancel, restoring value at open ${JSON.stringify(valueAtOpen)}`);
-            dispatchRequestSetUIState(inputEl, valueAtOpen, {
-              event: closeEvent
+            // Put back from the inside ("cancel_rollback" is an internal event
+            // type, see ui_state_controller.js): the answer was no, so nobody
+            // acted — the picker is returned to the state its owner still
+            // holds. Asked for the way a user would, the restore would read as
+            // a gesture and fire the picker's `command`, sending a `<Picker
+            // type="confirm" action command>` on the "then go there" half of a
+            // gesture whose first half never ran.
+            const rollbackEvent = new CustomEvent("cancel_rollback", {
+              detail: {}
             });
+            chainEvent(rollbackEvent, closeEvent);
+            inputEl.__uiStateController__.setUIState(valueAtOpen, rollbackEvent);
           } else if (!heldAtOpen) {
             // Confirmed a suggestion: nothing changed, so nothing has told the
             // control's own bound signal / uiAction that this is now the
@@ -66837,9 +66861,11 @@ const VISIBILITY_HIDDEN_STYLE = {
  *   onRequestStateChange?: (state: {busy: boolean, refreshing: boolean, range: {start: number, end: number}|null}) => void,
  * }>}
  * @param {(item: any, index: number, state: {refreshing: boolean}) => any} props.renderItem
- *   What one row is, given the item and where it sits. `state.refreshing` says
- *   the rows drawn are the ones from before while the run reads the collection
- *   again — the list carries `navi-refreshing` for the same reason.
+ *   What one row is, given the item and where it sits — its place in the list,
+ *   which is its rank in the collection plus whatever rows are declared before
+ *   the run. `state.refreshing` says the rows drawn are the ones from before
+ *   while the run reads the collection again — the list carries
+ *   `navi-refreshing` for the same reason.
  * @param {any[]} [props.items]
  *   The collection, when it is held in memory: all of it, in order. Nothing is
  *   ever asked for — `itemsAction`, `count`, `pageSize` and `memoryBudget` have
@@ -66877,17 +66903,19 @@ const VISIBILITY_HIDDEN_STYLE = {
  *   row empty (its room is still held, or the list would jump as it loads).
  * @param {(failure: {error: any, retry: () => void, start: number, end: number}) => any} [props.renderError]
  *   What to draw where rows were asked for and never came: given the `error`,
- *   a `retry` to call, and the `start`/`end` of the range that failed. Defaults
- *   to an inline message with a retry button, drawn on the row the user is
- *   looking at.
+ *   a `retry` to call, and the `start`/`end` of the range that failed — the
+ *   collection's own ranks, as `itemsAction` was asked for them. Defaults to an
+ *   inline message with a retry button, drawn on the row the user is looking
+ *   at.
  * @param {(state: {busy: boolean, refreshing: boolean, range: {start: number, end: number}|null}) => void} [props.onRequestStateChange]
  *   Called when the run starts or stops asking for rows — for the screen around
  *   the list to say that it is looking (the rows themselves have skeletons and
  *   `refreshing` already). `busy` covers every ask, first slice and holes
  *   opened by scrolling included; `refreshing` is the subset where rows already
- *   held are being read again; `range` is what is being asked for, `null` once
- *   nothing is. A range called off and asked again right away stays one `busy`,
- *   and a list unmounted while asking says `busy: false` on its way out.
+ *   held are being read again; `range` is what is being asked for, in the
+ *   collection's own ranks as `itemsAction` sees them, `null` once nothing is.
+ *   A range called off and asked again right away stays one `busy`, and a list
+ *   unmounted while asking says `busy: false` on its way out.
  */
 const ListItems = ({
   renderItem,
@@ -66929,10 +66957,19 @@ const ListItems = ({
   }
   const runStart = virtual.take(ownerId, store.rowCount, slotId);
   const runEnd = runStart + store.rowCount;
-  const getItemAt = index => store.getItem(index);
+  // The two ways to count the same row. The list numbers its rows from its own
+  // first one, whatever draws it; the store numbers the collection's, straight
+  // from the answer (a page lands at its own `start`). They are the same number
+  // only when the run is the whole list — one row declared before it and they
+  // are off by one for good. Everything below counts in rows, which is what
+  // frames the window and what the caller is shown; the store is spoken to in
+  // ranks, and this is where the two meet.
+  const rankOf = rowIndex => rowIndex - runStart;
+  const rowOf = rank => rank + runStart;
+  const getItemAt = rowIndex => store.getItem(rankOf(rowIndex));
   const windowFrom = renderWindow.start > runStart ? renderWindow.start : runStart;
   const windowTo = renderWindow.end < runEnd ? renderWindow.end : runEnd;
-  store.forget(windowFrom, windowTo);
+  store.forget(rankOf(windowFrom), rankOf(windowTo));
 
   // The row answers to its own id when the item carries one — that is what
   // addresses it from outside (--navi-select, --navi-scroll, startAt) — and
@@ -66944,9 +66981,10 @@ const ListItems = ({
   // rows it has drawn (they register themselves, see ListItemUI).
   virtual.setRowLocator(ownerId, id => {
     let found = null;
-    store.eachHeld((item, index) => {
-      if (found === null && idOf(item, index) === id) {
-        found = index;
+    store.eachHeld((item, rank) => {
+      const rowIndex = rowOf(rank);
+      if (found === null && idOf(item, rowIndex) === id) {
+        found = rowIndex;
       }
     });
     return found;
@@ -66985,8 +67023,8 @@ const ListItems = ({
     if (holeSize < rowsPerPage) {
       // Which way the page grows: away from the rows already held, which is
       // the way the user is going.
-      const heldBelow = store.holds(missingEnd + 1);
-      const heldAbove = store.holds(missingStart - 1);
+      const heldBelow = store.holds(rankOf(missingEnd + 1));
+      const heldAbove = store.holds(rankOf(missingStart - 1));
       if (heldBelow && !heldAbove) {
         askStart = missingEnd - rowsPerPage + 1;
       } else if (heldAbove && !heldBelow) {
@@ -67000,8 +67038,8 @@ const ListItems = ({
         askEnd = missingEnd + grow;
       }
     }
-    if (askStart < 0) {
-      askStart = 0;
+    if (askStart < runStart) {
+      askStart = runStart;
     }
     if (askEnd > runEnd - 1) {
       askEnd = runEnd - 1;
@@ -67012,10 +67050,13 @@ const ListItems = ({
   // index is not that — rows can be inserted while the list is being read.
   const itemBefore = getItemAt(askEnd + 1);
   const itemAfter = getItemAt(askStart - 1);
-  store.useRequestMissing(askStart, askEnd, {
+  // -1 is "nothing missing", not a row: it says there is nothing to ask for and
+  // must reach the store as it is.
+  const askRankOf = rowIndex => rowIndex === -1 ? -1 : rankOf(rowIndex);
+  store.useRequestMissing(askRankOf(askStart), askRankOf(askEnd), {
     before: itemBefore === undefined ? undefined : idOf(itemBefore, askEnd + 1),
     after: itemAfter === undefined ? undefined : idOf(itemAfter, askStart - 1)
-  }, windowFrom, windowTo);
+  }, rankOf(windowFrom), rankOf(windowTo), runStart);
 
   // Where the sentence goes when rows are missing: on the row the user is
   // looking at, clamped to the rows that are actually missing. Putting it at
@@ -67028,8 +67069,12 @@ const ListItems = ({
   // not jump. What it says is stuck to the top of the band: as long as any part
   // of the hole is on screen, the sentence is too, without a callout floating
   // away from what it is about.
-  const failureFrom = store.failure === null ? -1 : store.failure.start < 0 || store.failure.start < windowFrom ? windowFrom : store.failure.start;
-  const failureTo = store.failure === null ? -1 : store.failure.end < 0 || store.failure.end > windowTo - 1 ? windowTo - 1 : store.failure.end;
+  // The range that failed is the one that was asked for, so it is in ranks; the
+  // band is drawn among the rows. A negative start is not a rank but a count
+  // back from the end (the very first ask, before the count is known) — there
+  // is no row to convert it to, and the band falls back to the window.
+  const failureFrom = store.failure === null ? -1 : store.failure.start < 0 || rowOf(store.failure.start) < windowFrom ? windowFrom : rowOf(store.failure.start);
+  const failureTo = store.failure === null ? -1 : store.failure.end < 0 || rowOf(store.failure.end) > windowTo - 1 ? windowTo - 1 : rowOf(store.failure.end);
   const rows = [];
   // Rows that belong together, as the data says (a day of messages, a month of
   // games): consecutive rows sharing a group key are wrapped in one group, so
@@ -67427,7 +67472,11 @@ const useItemStore = ({
       }
     },
     holds: index => pages.byIndex.has(index),
-    useRequestMissing: (missingStart, missingEnd, cursor, windowFrom, windowTo) => {
+    useRequestMissing: (missingStart, missingEnd, cursor, windowFrom, windowTo, runStart) => {
+      // Everything here counts the collection's own ranks: the run converts
+      // what it hands over (see rankOf). The one thing read from the list
+      // itself is where it is being held, which is a list row.
+      const rankOfRow = rowIndex => rowIndex - runStart;
       // The very first ask has nothing to go on: the run does not even know
       // how many rows there are, so it asks for the rows the list would open
       // on — counting back from the end when that is where it opens, the way
@@ -67452,7 +67501,7 @@ const useItemStore = ({
         around = wanted.id;
         // Where it stood when it was written down is enough to frame the ask;
         // the answer says where it really landed.
-        const from = typeof wanted.index === "number" ? wanted.index - Math.floor(budget / 2) : 0;
+        const from = typeof wanted.index === "number" ? rankOfRow(wanted.index) - Math.floor(budget / 2) : 0;
         start = from < 0 ? 0 : from;
         end = start + budget - 1;
       } else if (revalidating) {
@@ -67482,12 +67531,12 @@ const useItemStore = ({
           // was written down — but the place it had is sent too, so a source
           // that paginates by index has something to work with, and the answer
           // says where it really landed (see the page's own `start`).
-          const from = typeof scrolled.index === "number" ? scrolled.index - Math.floor(budget / 2) : 0;
+          const from = typeof scrolled.index === "number" ? rankOfRow(scrolled.index) - Math.floor(budget / 2) : 0;
           start = from < 0 ? 0 : from;
           end = start + budget - 1;
           around = scrolled.id;
         } else {
-          const first = typeof scrolled === "number" ? scrolled - Math.floor(budget / 2) : 0;
+          const first = typeof scrolled === "number" ? rankOfRow(scrolled) - Math.floor(budget / 2) : 0;
           start = first < 0 ? 0 : first;
           end = start + budget - 1;
         }
@@ -73900,7 +73949,7 @@ const useWheelInteractions = ({
     // button right after a fling still fires its click. Only while a drag is
     // active, and on touchmove (not touchstart) — the drag IS the move, and
     // preventing touchstart has wider side effects. Requires a non-passive
-    // listener. See docs/MOBILE_TAP_SUPPRESSION_AFTER_DRAG.md.
+    // listener. See docs/mobile_tap_suppression_after_drag.md.
     const onTouchMove = e => {
       // cancelable=false when the touch landed while a scroll was already in
       // progress (e.g. the page still coasting from a fling): the browser owns
@@ -81991,5 +82040,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, CalloutStatusIcon, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, ControlSwap, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, Expandable, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, InfoSvg, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, OfflineError, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTransitionArea, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, SpinGroup, SplitButton, StarSvg, Step, StepList, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, TimeRange, TimeRangeSpin, TimeRangeWheel, TimeSpin, TimeWheel, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, canNavBackSignal, canNavForwardSignal, coarsePointerSignal, compareTwoJsValues, constraintFromValidityRule, createAction, createAvailableConstraint, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineRouteDefaultTransition, defineRouteTransition, detectHorizontalOverflow, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, errorIsDisplayed, filterTableSelection, getNowHours, getNowHoursRoundedToStep, isCellSelected, isColumnSelected, isOfflineError, isRowSelected, isScrolling, isToday, languagesSignal, localStorageSignal, markErrorAsDisplayedBy, moveArrayItemByIndex, moveFocusTo, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, scrollActivitySignal, setBaseUrl, setNetworkPolicy, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, smallTouchScreenSignal, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutElement, useCalloutRequestClose, useCanNavBack, useCanNavForward, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useNetworkPolicyReason, useOrderedColumns, usePopupMode, useRouteStatus, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideContainer, useSlideValue, useStateArray, useTitleLevel, useTransitionCover, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, CalloutStatusIcon, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, ControlSwap, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, Expandable, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, InfoSvg, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, OfflineError, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTransitionArea, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, SpinGroup, SplitButton, StarSvg, Step, StepList, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, TimeRange, TimeRangeSpin, TimeRangeWheel, TimeSpin, TimeWheel, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, canNavBackSignal, canNavForwardSignal, coarsePointerSignal, compareTwoJsValues, constraintFromValidityRule, createAction, createAvailableConstraint, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineRouteDefaultTransition, defineRouteTransition, detectHorizontalOverflow, dispatchRequestSetUIState, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, errorIsDisplayed, filterTableSelection, getNowHours, getNowHoursRoundedToStep, isCellSelected, isColumnSelected, isOfflineError, isRowSelected, isScrolling, isToday, languagesSignal, localStorageSignal, markAsOutsideTextFlow, markErrorAsDisplayedBy, moveArrayItemByIndex, moveFocusTo, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, scrollActivitySignal, setBaseUrl, setNetworkPolicy, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, smallTouchScreenSignal, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutElement, useCalloutRequestClose, useCanNavBack, useCanNavForward, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useNetworkPolicyReason, useOrderedColumns, usePopupMode, useRouteStatus, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideContainer, useSlideValue, useStateArray, useTitleLevel, useTransitionCover, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi.js.map
