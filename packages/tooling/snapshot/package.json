@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/snapshot",
-  "version": "2.19.14",
+  "version": "2.19.15",
   "type": "module",
   "description": "Snapshot testing",
   "repository": {
@@ -30,7 +30,7 @@
     "@jsenv/assert": "4.5.7",
     "@jsenv/ast": "6.10.3",
     "@jsenv/exception": "1.2.3",
-    "@jsenv/filesystem": "4.15.22",
+    "@jsenv/filesystem": "4.15.23",
     "@jsenv/humanize": "1.8.1",
     "@jsenv/terminal-recorder": "1.5.61",
     "@jsenv/url-meta": "8.5.8",

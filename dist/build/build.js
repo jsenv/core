@@ -7631,7 +7631,12 @@ const getDirectoryContentItems = ({
       fileUrls.push(fileUrlObject);
     }
   }
-  fileUrls.sort(compareFileUrls);
+  // Not the default numeric order: what is drawn here is a directory as a human
+  // reads it, so a leading number is part of the name ("10_a" right after
+  // "1_a") the way the filesystem and the editor next to this browser show it.
+  fileUrls.sort((leftUrl, rightUrl) =>
+    compareFileUrls(leftUrl, rightUrl, { numeric: false }),
+  );
 
   const items = [];
   for (const fileUrl of fileUrls) {

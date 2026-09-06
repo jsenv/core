@@ -6136,18 +6136,19 @@ const css$12 = /* css */ `
  *   callouts apart.
  * @param {Function} [options.onClose] - Callback when callout is closed
  * @param {boolean} [options.closeOnClickOutside] - Whether to close on outside clicks (defaults to true for "info" status)
- * @param {Event} [options.openingEvent] - The event being handled when the callout was asked
- *   for. While it is still dispatching, its `currentTarget` names the opener: the one part of
- *   the anchor that does not count as "outside", so the press reaches the handler owning the
- *   callout and `reopen` decides (toggle by default), instead of the callout being closed here
- *   and opened again within that same press.
+ * @param {Event} [options.openingEvent] - The gesture the callout belongs to. It names the
+ *   opener — `currentTarget` while the event is still dispatching, `target` once it is over,
+ *   so awaiting before opening changes nothing — and the opener is the one part of the anchor
+ *   that does not count as "outside": the press reaches the handler owning the callout and
+ *   `reopen` decides (toggle by default), instead of the callout being closed here and opened
+ *   again within that same press.
  *
- *   A callout opened later — after an await, from an effect — has no opener. The anchor keeps
- *   the exemption only if it is itself a control, which does have a handler that would re-open
- *   it; a container anchor (a card, a block of a settings page) has none, so all of it
- *   dismisses. The cost is the toggle: pressing what started the work closes the callout as an
- *   outside press, and the work opens a fresh one when it ends. Anchor to an always-mounted box
- *   around the opener instead of to the container to keep the toggle
+ *   Without it, or when the opener has left the anchor meanwhile (unmounted while the work
+ *   ran), nothing is exempt unless the anchor is itself a control, which does have a handler
+ *   that would re-open it. A container anchor then dismisses everywhere, at the cost of the
+ *   toggle: pressing what started the work closes the callout as an outside press, and the work
+ *   opens a fresh one when it ends. Anchor to an always-mounted box around the opener rather
+ *   than to the container to keep the toggle
  * @param {boolean} [options.icon=true] - Whether the status icon is shown beside the message.
  *   Never shown without a status either way (see the CSS).
  * @param {boolean} [options.closeButton=true] - Whether the cross is shown. Without it the callout
@@ -6540,12 +6541,15 @@ const openCallout = (
         // the viewport); everything would be inside it.
         return null;
       }
-      // `currentTarget` is set only while an event is dispatching, so reading
-      // it here tells a callout opened from a handler — one that has an owner
-      // about to decide on the next press — from one opened later, out of any
-      // gesture, which has none. Kept within the anchor: an opener elsewhere on
-      // the page is outside like anything else.
-      const openingTarget = openingEvent ? openingEvent.currentTarget : null;
+      // Where the event was being handled, else what it was aimed at: the
+      // second is what remains once dispatch is over, so a handler that awaits
+      // before opening still names its opener. `findControlRoot` climbs from
+      // there, because a native event aims deep inside the control the user
+      // actually pressed. Kept within the anchor: an opener elsewhere on the
+      // page is outside like anything else.
+      const openingTarget = openingEvent
+        ? openingEvent.currentTarget || openingEvent.target
+        : null;
       if (
         openingTarget &&
         openingTarget.nodeType === Node.ELEMENT_NODE &&
@@ -6554,11 +6558,12 @@ const openCallout = (
       ) {
         return findControlRoot(openingTarget) || openingTarget;
       }
-      // No handler was running: the anchor speaks for itself only if it is a
-      // control, which does have one. A container anchor (a card, a block of a
-      // settings page) has nothing that would re-open the callout, and
-      // exempting all of it would leave the one place the user is most likely
-      // to press — the thing the callout points at — unable to dismiss it.
+      // Nothing names an opener — no event, or one aimed at something that has
+      // since left the anchor. The anchor speaks for itself only if it is a
+      // control, which does have a handler. A container anchor (a card, a block
+      // of a settings page) has none, and exempting all of it would leave the
+      // one place the user is most likely to press — the thing the callout
+      // points at — unable to dismiss it.
       return isControl(anchorElement) ? anchorElement : null;
     })();
     const isInsideOpener = (target) => {
@@ -14768,6 +14773,9 @@ const debug$3 = (...args) => {
  * - GET_MANY / POST_MANY / … → an array of item objects
  * - GET_RANGE                 → `{ items, start, count }`, one slice of the collection
  *
+ * An action's `data` is `undefined` until its callback has answered once, plural verbs
+ * included; `[]` is what an empty answer looks like (see docs/data_states.md).
+ *
  * `GET_RANGE` is a reader rather than an action: it keeps no value and has nothing to
  * rerun, so a `<List.Items>` can feed on it slice by slice
  * (`itemsAction={USER.GET_RANGE.bindParams({ team })}`). A mutation listed in
@@ -15422,7 +15430,6 @@ const createResource = (
       return createAction(callback, {
         meta: { verb, isMany: true, paramScope },
         name: `${name}.${verb}[many]`,
-        dataDefault: [],
         resultToValue: (result, action) => {
           if (verb === "GET") {
             if (!isProps(result)) {
@@ -15453,8 +15460,12 @@ const createResource = (
           }
           return applyResultToValue(result);
         },
+        // Before the first answer there is no id array; the data is then
+        // undefined so a screen can tell "not asked yet" from "answered: none".
         valueToData: (childItemIdArray) =>
-          childStore.selectAll(childItemIdArray),
+          childItemIdArray === undefined
+            ? undefined
+            : childStore.selectAll(childItemIdArray),
         completeSideEffect: onActionComplete,
       });
     };
@@ -15808,17 +15819,16 @@ const createResource = (
         },
         valueToData: (value) => {
           if (!value) {
-            return isMany ? [] : undefined;
+            return undefined;
           }
+          // A value is produced by resultToValue above, which creates the
+          // owner's scope when it is missing, and scopes are never dropped.
           const [ownerId, idOrIdArray] = value;
-          const scope = scopeMap.get(ownerId);
-          if (!scope) {
-            return isMany ? [] : undefined;
-          }
+          const { childStore } = scopeMap.get(ownerId);
           if (isMany) {
-            return scope.childStore.selectAll(idOrIdArray);
+            return childStore.selectAll(idOrIdArray);
           }
-          return scope.childStore.select(idOrIdArray);
+          return childStore.select(idOrIdArray);
         },
         completeSideEffect: onActionComplete,
       });
@@ -15998,9 +16008,11 @@ const createRestActionFactoryForRoot = (
     return createAction(callback, {
       meta: { verb, isMany: true, paramScope },
       name: `${name}.${verb}_MANY`,
-      dataDefault: [],
       resultToValue: applyResultToValue,
-      valueToData: (idArray) => store.selectAll(idArray),
+      // Before the first answer there is no id array; the data is then
+      // undefined so a screen can tell "not asked yet" from "answered: none".
+      valueToData: (idArray) =>
+        idArray === undefined ? undefined : store.selectAll(idArray),
       completeSideEffect: (actionCompleted) => {
         onActionComplete(actionCompleted);
         if (
@@ -16792,6 +16804,12 @@ const stateSignal = (defaultValue, options = {}) => {
  * // 3. External update: file.name = "shared-doc.txt"
  * // 4. Next render: nameSignal.value = "shared-doc.txt" (model wins!)
  *
+ * The model winning costs something when the model is fed by what the control
+ * saves: the answer of a write changes the value, the control walks to it and
+ * tells its callback about that walk, and the callback saves again. With two
+ * writes in flight that circle never closes — see
+ * docs/state_binding.md#the-callback-also-fires-for-the-states-own-changes for
+ * the three ways out.
  */
 
 const useSignalSync = (value, initialValue = value) => {
@@ -44838,6 +44856,12 @@ const useOpenController = (openHandler) => {
       // played on an element already detached by the time the browser gets to
       // it (see controller.transitionChange).
       controllerRef.current.transitionChange = null;
+      // Leaving the tree is not being closed: whoever holds the open state
+      // (`signal`, `navState`) keeps saying open, so the same popup put back
+      // finds itself as it was. preact/compat's Suspense parks a suspended
+      // subtree by running every hook cleanup in it, so a `<Loading>` above
+      // the popup lands here for a wait it comes back from.
+      controllerRef.current.onOpenedChange = null;
       controllerRef.current.close();
     };
   }, []);
@@ -44862,22 +44886,33 @@ const useOpenController = (openHandler) => {
 // unrelated (sibling) popups both mounting open also get reordered
 // relative to each other, but there's no meaningful "correct" order between
 // those anyway.
+//
+// The microtask is also why the scheduling is undone by the effect that asked
+// for it: a `<Loading>` above the popup can park the whole subtree between the
+// two — preact/compat's Suspense runs every hook cleanup of the suspended
+// children and moves their dom into a detached <div> — and the flush would
+// then be opening a popup whose element has left the document.
 let pendingMountOpens = [];
 let mountOpenFlushScheduled = false;
 const scheduleMountOpen = (run) => {
   pendingMountOpens.push(run);
-  if (mountOpenFlushScheduled) {
-    return;
+  if (!mountOpenFlushScheduled) {
+    mountOpenFlushScheduled = true;
+    queueMicrotask(() => {
+      const entries = pendingMountOpens;
+      pendingMountOpens = [];
+      mountOpenFlushScheduled = false;
+      for (let i = entries.length - 1; i >= 0; i--) {
+        entries[i]();
+      }
+    });
   }
-  mountOpenFlushScheduled = true;
-  queueMicrotask(() => {
-    const entries = pendingMountOpens;
-    pendingMountOpens = [];
-    mountOpenFlushScheduled = false;
-    for (let i = entries.length - 1; i >= 0; i--) {
-      entries[i]();
+  return () => {
+    const index = pendingMountOpens.indexOf(run);
+    if (index > -1) {
+      pendingMountOpens.splice(index, 1);
     }
-  });
+  };
 };
 
 // Where the popup's open state is kept, when it is kept anywhere: `navState`
@@ -45058,23 +45093,23 @@ const useOpenPropsEffectOnOpenController = (
         // directly, so nested popups that both mount already-open end up
         // stacked ancestor-first instead of Preact's own child-first effect
         // order.
-        scheduleMountOpen(() =>
+        return scheduleMountOpen(() =>
           openController.open(new CustomEvent("open_by_prop", { detail: {} }), {
             silent: mountOpenReason !== "interaction",
           }),
         );
       }
-      return;
+      return undefined;
     }
 
     if (open === undefined) {
-      return;
+      return undefined;
     }
     // Skip when the controller is already in the desired state.
     // openController.opened tracks actual open/close (updated by onopen/onclose,
     // not by renders) so it is the authoritative check against feedback loops.
     if (open === openController.opened) {
-      return;
+      return undefined;
     }
     if (open) {
       openController.open(new CustomEvent("open_by_prop", { detail: {} }));
@@ -45095,6 +45130,7 @@ const useOpenPropsEffectOnOpenController = (
     if (navStateId && openController.opened) {
       enterNavState();
     }
+    return undefined;
   }, [open]);
 };
 
@@ -56401,7 +56437,8 @@ const getAvailableWidth = (layer, element) => {
  * so any consumer can override it per-instance from CSS (or via the
  * `animationDuration` prop, wired to --popup-animation-duration through
  * Box's styleCSSVars) without touching this file: `--popup-animation-duration`,
- * `--popup-scale-from`, `--popup-border-radius`. `slide-from-*`'s own
+ * `--popup-scale-from`, `--popup-cover-travel`, `--popup-border-radius`.
+ * `slide-from-*`'s own
  * 100%-of-own-size distance is hardcoded for now rather than exposed as a
  * variable — fine to revisit if a consumer ever needs to override it.
  *
@@ -56439,6 +56476,19 @@ const getAvailableWidth = (layer, element) => {
  * so it slides in instead. The word names *where it comes from*: placed
  * "top" (a point/corner), it slides in from the top.
  *
+ * `animation="cover-from-top"`: a slide reads through what it shows first,
+ * and a box travelling its own height from above shows its bottom first —
+ * the tail of whatever it holds, then, in the last frame, its head. That is
+ * the wrong way round for a panel whose head sits at the edge it comes from
+ * (a top-docked SidePanel: title and tabs at its top). So here the cut alone
+ * does the reveal — the same curtain descending from the container's top
+ * edge a full slide draws — while the box travels only `--popup-cover-travel`
+ * (default 15%) of its own height: the head is on screen from the first
+ * frame, settling its last few pixels into place. The exit is the same
+ * movement backwards and still reads as a slide, the head leading. One
+ * direction only: a bottom sheet leads with its head by itself, and a
+ * left/right panel keeps its head on the axis it does not travel.
+ *
  * `animation="expand-*"` (a real anchor only, explicit opt-in — "scaling"
  * reads better overall, see popover.jsx's top comment): grows out of the
  * anchor's own edge via `scale` + `transform-origin` instead of a translate, which
@@ -56464,6 +56514,7 @@ const popupCss = /* css */ `
     .navi_dialog {
       --popup-animation-duration: 0.18s;
       --popup-scale-from: 0.9;
+      --popup-cover-travel: 15%;
 
       --popup-opacity-duration: var(--popup-animation-duration);
       --popup-translate-duration: var(--popup-animation-duration);
@@ -56494,6 +56545,31 @@ const popupCss = /* css */ `
         var(--popup-translate-duration);
       transition-timing-function: ease;
       transition-behavior: allow-discrete;
+
+      /* Where the area the popup was placed in has its edges, in the popup's
+         own coordinates: --container-position-room-* is how far past each of
+         its own edges the popup may still paint before reaching that edge
+         (applyNewPosition in @jsenv/dom), so the negated value puts a cut ON
+         it. Read by the kinds below that cut their travel (slide, cover): each
+         takes the side(s) it needs. A popup that was never placed reads
+         100vmax and is not cut at all.
+         Outside that area is either the glass beside an app narrowed with
+         --navi-app-max-width (layout/safe_area.js) or whatever surrounds a
+         container — neither the popup's to paint, and a popup in the top layer
+         answers to no overflow of the document. The popup itself is never cut
+         either: the rooms floor at 0. */
+      --x-popup-cut-top-at-area: calc(
+        -1 * var(--container-position-room-top, 100vmax)
+      );
+      --x-popup-cut-right-at-area: calc(
+        -1 * var(--container-position-room-right, 100vmax)
+      );
+      --x-popup-cut-bottom-at-area: calc(
+        -1 * var(--container-position-room-bottom, 100vmax)
+      );
+      --x-popup-cut-left-at-area: calc(
+        -1 * var(--container-position-room-left, 100vmax)
+      );
     }
 
     /* box-shadow fades in/out alongside any animation kind, instead of
@@ -56588,30 +56664,8 @@ const popupCss = /* css */ `
     &[navi-animation="slide-from-bottom-left"],
     &[navi-animation="slide-from-bottom-right"] {
       opacity: 1;
-      /* Where the area the popup was placed in has its edges, in the popup's
-         own coordinates: --container-position-room-* is how far past each of
-         its own edges the popup may still paint before reaching that edge
-         (applyNewPosition in @jsenv/dom), so the negated value puts a cut ON
-         it. Only the side(s) the travel comes from take one (see the direction
-         rules above); the rest stay far outside the box, uncut. A popup that
-         was never placed reads 100vmax and is not cut at all.
-         Outside that area is either the glass beside an app narrowed with
-         --navi-app-max-width (layout/safe_area.js) or whatever surrounds a
-         container — neither the popup's to paint, and a popup in the top layer
-         answers to no overflow of the document. The popup itself is never cut
-         either: the rooms floor at 0. */
-      --x-popup-cut-top-at-area: calc(
-        -1 * var(--container-position-room-top, 100vmax)
-      );
-      --x-popup-cut-right-at-area: calc(
-        -1 * var(--container-position-room-right, 100vmax)
-      );
-      --x-popup-cut-bottom-at-area: calc(
-        -1 * var(--container-position-room-bottom, 100vmax)
-      );
-      --x-popup-cut-left-at-area: calc(
-        -1 * var(--container-position-room-left, 100vmax)
-      );
+      /* Only the side(s) the travel comes from take a cut (see the direction
+         rules above); the rest stay far outside the box, uncut. */
       --x-popup-travel-x: calc(var(--x-popup-slide-x, 0) * 100%);
       --x-popup-travel-y: calc(var(--x-popup-slide-y, -1) * 100%);
       clip-path: inset(
@@ -56636,6 +56690,40 @@ const popupCss = /* css */ `
             calc(var(--x-popup-cut-left, -100vmax) - var(--x-popup-travel-x))
         );
         transform: translate(var(--x-popup-travel-x), var(--x-popup-travel-y));
+      }
+    }
+
+    /* cover — a top-docked popup unrolling from the top edge of its area (see
+         this file's top comment): the cut does the reveal, the box travels
+         --popup-cover-travel of its own height. The far cut sits where the
+         popup's shadow ends (--navi-popup-box-shadow reaches about 50px) or
+         where the room does, whichever is nearer, so the reveal finishes on
+         the box and its shadow at the pace of the box's own settle. On the
+         box's own edge it would shave the shadow off for good; on a distant
+         container edge it would run far ahead of the box. */
+    &[navi-animation="cover-from-top"] {
+      opacity: 1;
+      --x-popup-cut-top: var(--x-popup-cut-top-at-area);
+      --x-popup-cut-bottom: max(var(--x-popup-cut-bottom-at-area), -60px);
+      --x-popup-travel-y: calc(-1 * var(--popup-cover-travel));
+      clip-path: inset(
+        var(--x-popup-cut-top) -100vmax var(--x-popup-cut-bottom) -100vmax
+      );
+
+      transform: translate(0px, 0px);
+
+      &[aria-expanded="false"] {
+        /* The near cut follows the travel, so it holds the area's top line at
+           every instant (the slide family's arithmetic); the far cut starts on
+           that same line and descends to its open place. What is on screen is
+           the descending curtain a full slide draws, holding the top of the
+           popup instead of its tail. */
+        clip-path: inset(
+          calc(var(--x-popup-cut-top) - var(--x-popup-travel-y)) -100vmax
+            calc(100% + var(--x-popup-travel-y) - var(--x-popup-cut-top))
+            -100vmax
+        );
+        transform: translate(0px, var(--x-popup-travel-y));
       }
     }
   }
@@ -56886,6 +56974,13 @@ const createSwipeToClose = (side, { grip } = {}) => {
         travelTo(sizeOf(panelEl, axis) * closeDirection, 0, restore);
         return;
       }
+      // The closed style is rendered once while transitions are still off.
+      // Where the release travel left the panel and where its closed style
+      // puts it are the same point only for a kind that travels the panel's
+      // full size (popup_css.js, slide-from-*); a cover kind rests a fraction
+      // in, and handing the styles back before this frame would transition
+      // the panel from one to the other in plain view.
+      panelEl.getBoundingClientRect();
       restore();
     };
 
@@ -57705,7 +57800,7 @@ const css$E = /* css */`
  *   scroll while open (its backdrop only covers the scrollport, so scrolling
  *   there would reveal uncovered content); this prop extends the lock to the
  *   whole page. Defaults to `true` for a dialog docked by `dockedOnSmallTouchScreen`.
- * @param {boolean|"auto"|"fading"|"scaling"|"sliding"|"growing"|`slide-from-${string}`} [props.animation]
+ * @param {boolean|"auto"|"fading"|"scaling"|"sliding"|"growing"|`slide-from-${string}`|"cover-from-top"} [props.animation]
  *   - `true`/`"auto"` resolves to `"scaling"` for a centered `positionArea`,
  *   or a concrete `"slide-from-*"` direction otherwise. Any other explicit
  *   value is used as-is. `"growing"` is the odd one out: every other kind
@@ -59303,7 +59398,7 @@ const css$D = /* css */`
  *   popover so the page/container behind it can't scroll while it's open.
  * @param {boolean} [props.focusCapture] - Traps Tab navigation inside the
  *   popover (see `focus_trap.js`).
- * @param {boolean|"auto"|"fading"|"scaling"|"sliding"|`slide-from-${string}`} [props.animation]
+ * @param {boolean|"auto"|"fading"|"scaling"|"sliding"|`slide-from-${string}`|"cover-from-top"} [props.animation]
  *   - `true`/`"auto"` resolves to a concrete `"slide-from-*"` direction
  *   based on `positionArea`. Any other explicit value is used as-is.
  * @param {string} [props.animationDuration] - Maps to
@@ -60636,7 +60731,7 @@ const css$C = /* css */`@layer navi {
  *   identically): the wash the backdrop paints over what is behind.
  * @param {string} [props.backdropFilter] - Forwarded as-is: what that wash
  *   does to the picture underneath, `"blur(4px)"` and the like.
- * @param {boolean|"auto"|"fading"|"scaling"|"sliding"|"expanding"|`slide-from-${string}`|`expand-${string}`} [props.animation]
+ * @param {boolean|"auto"|"fading"|"scaling"|"sliding"|"expanding"|`slide-from-${string}`|"cover-from-top"|`expand-${string}`} [props.animation]
  *   - Forwarded as-is.
  * @param {string} [props.animationDuration] - Forwarded as-is.
  * @param {string} [props.maxWidth] - Forwarded as-is to both; also read
@@ -68274,12 +68369,14 @@ const BadgeUI = ({
     className: withPropsClassName("navi_badge", className),
     bold: true,
     maxLines: 1
-    // The text-box trim ends the content box at the baseline, and a clamped
-    // badge is clipped there: descenders of the last visible line would be
-    // cut. Halfway to the next line's cap top keeps them, still above any
-    // ink from the line the clamp hides.
+    // The text-box trim ends the line box at cap top/baseline, so the
+    // default margin (sized on the em box) leaves less room for ink than it
+    // means to: halfway to what the trim removed restores it. The clip stays
+    // anchored on the padding box, never the content box — the close button
+    // cancels the badge padding to reach the border box, and a content-box
+    // clip would cut its background and its hit area right there.
     ,
-    overflowClipMargin: "content-box calc((1lh - 1cap) / 2)",
+    overflowClipMargin: "padding-box calc((1lh - 1cap) / 2)",
     ...props,
     styleCSSVars: BadgeStyleCSSVars,
     spacing: jsx("span", {}),
@@ -81808,6 +81905,12 @@ const ViewportLayout = props => {
 };
 
 installImportMetaCssBuild(import.meta);
+const ANIMATION_BY_SIDE = {
+  left: "slide-from-left",
+  right: "slide-from-right",
+  top: "cover-from-top",
+  bottom: "slide-from-bottom"
+};
 const css = /* css */`.navi_side_panel {
   --popup-border-radius: 0px;
   width: var(--navi-side-panel-width, auto);
@@ -81974,8 +82077,9 @@ const css = /* css */`.navi_side_panel {
  * @param {boolean|"fading"} [props.animation] - Off by default (unlike
  *   `Dialog`/`Popover` themselves) — SidePanel is commonly toggled instead
  *   of opened/closed as a one-off, where a slide transition is more often
- *   undesired noise than not. `true` slides in from `side`; `"fading"` is
- *   the other common choice. Other values are forwarded as-is but not a
+ *   undesired noise than not. `true` slides in from `side` (a top panel
+ *   unrolls from its edge instead, head first — see `ANIMATION_BY_SIDE`);
+ *   `"fading"` is the other common choice. Other values are forwarded as-is but not a
  *   documented/encouraged part of this component's own API.
  * @param {boolean} [props.closeOnClickOutside=false] - `false` (default):
  *   maps to `pointerInteractionOutsideEffect="none"` — in popover mode, no
@@ -82046,7 +82150,7 @@ const SidePanel = ({
     // Dialog's own default gap with the container.
     ,
     marginWithContainer: 0,
-    animation: animation === true ? `slide-from-${side}` : animation,
+    animation: animation === true ? ANIMATION_BY_SIDE[side] : animation,
     pointerInteractionOutsideEffect: closeOnClickOutside ? "close" : "none",
     focusCapture: closeOnClickOutside,
     minWidth: toCssLength(minWidth),
