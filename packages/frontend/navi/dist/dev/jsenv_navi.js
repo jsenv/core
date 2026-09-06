@@ -4520,6 +4520,9 @@ const isControlRoot = (el) => {
 const isControlHost = (el) => {
   return el.hasAttribute("navi-control-host");
 };
+const isControl = (el) => {
+  return isControlRoot(el) || isControlHost(el);
+};
 
 /**
  * Returns the nearest ancestor of `el` (exclusive of `el`'s own control) that
@@ -6236,7 +6239,10 @@ const css$12 = /* css */ `
  * Shows a callout attached to the specified element
  * @param {string} message - HTML content for the callout
  * @param {Object} options - Configuration options
- * @param {HTMLElement} [options.anchorElement] - Element the callout should follow. If not provided or too big, callout will be centered in viewport
+ * @param {HTMLElement} [options.anchorElement] - Element the callout points at and follows.
+ *   If not provided or too big, callout will be centered in viewport. It says where the
+ *   callout is drawn, not what dismisses it: see `openingEvent` for what a container anchor
+ *   costs
  * @param {string} [options.status=""] - Callout status: "info" | "warning" | "error" | "success"
  * @param {string} [options.testId] - `data-testid` on the callout element. The callout is
  *   drawn by navi, so nothing the caller renders can carry the name a test needs — same
@@ -6245,6 +6251,18 @@ const css$12 = /* css */ `
  *   callouts apart.
  * @param {Function} [options.onClose] - Callback when callout is closed
  * @param {boolean} [options.closeOnClickOutside] - Whether to close on outside clicks (defaults to true for "info" status)
+ * @param {Event} [options.openingEvent] - The event being handled when the callout was asked
+ *   for. While it is still dispatching, its `currentTarget` names the opener: the one part of
+ *   the anchor that does not count as "outside", so the press reaches the handler owning the
+ *   callout and `reopen` decides (toggle by default), instead of the callout being closed here
+ *   and opened again within that same press.
+ *
+ *   A callout opened later — after an await, from an effect — has no opener. The anchor keeps
+ *   the exemption only if it is itself a control, which does have a handler that would re-open
+ *   it; a container anchor (a card, a block of a settings page) has none, so all of it
+ *   dismisses. The cost is the toggle: pressing what started the work closes the callout as an
+ *   outside press, and the work opens a fresh one when it ends. Anchor to an always-mounted box
+ *   around the opener instead of to the container to keep the toggle
  * @param {boolean} [options.icon=true] - Whether the status icon is shown beside the message.
  *   Never shown without a status either way (see the CSS).
  * @param {boolean} [options.closeButton=true] - Whether the cross is shown. Without it the callout
@@ -6626,13 +6644,41 @@ const openCallout = (
   })();
 
   {
-    // document.body as anchor means "no anchor" (the callout is docked in the
-    // viewport); everything would be inside it.
-    const isInsideAnchor = (target) => {
+    // The exemption below belongs to the opener, not to the whole anchor: only
+    // something carrying a handler can decide, and what a callout is anchored
+    // to is not always what opened it.
+    const openerElement = (() => {
       if (!anchorElement || anchorElement === document.body) {
+        // document.body as anchor means "no anchor" (the callout is docked in
+        // the viewport); everything would be inside it.
+        return null;
+      }
+      // `currentTarget` is set only while an event is dispatching, so reading
+      // it here tells a callout opened from a handler — one that has an owner
+      // about to decide on the next press — from one opened later, out of any
+      // gesture, which has none. Kept within the anchor: an opener elsewhere on
+      // the page is outside like anything else.
+      const openingTarget = openingEvent ? openingEvent.currentTarget : null;
+      if (
+        openingTarget &&
+        openingTarget.nodeType === Node.ELEMENT_NODE &&
+        (anchorElement === openingTarget ||
+          anchorElement.contains(openingTarget))
+      ) {
+        return findControlRoot(openingTarget) || openingTarget;
+      }
+      // No handler was running: the anchor speaks for itself only if it is a
+      // control, which does have one. A container anchor (a card, a block of a
+      // settings page) has nothing that would re-open the callout, and
+      // exempting all of it would leave the one place the user is most likely
+      // to press — the thing the callout points at — unable to dismiss it.
+      return isControl(anchorElement) ? anchorElement : null;
+    })();
+    const isInsideOpener = (target) => {
+      if (!openerElement) {
         return false;
       }
-      return anchorElement === target || anchorElement.contains(target);
+      return openerElement === target || openerElement.contains(target);
     };
     const handleClickOutside = (event) => {
       if (event.button !== 0) {
@@ -6646,14 +6692,14 @@ const openCallout = (
       ) {
         return;
       }
-      if (isInsideAnchor(clickTarget)) {
-        // Pressing the anchor is not "outside": this listener is on document in
+      if (isInsideOpener(clickTarget)) {
+        // Pressing the opener is not "outside": this listener is on document in
         // the capture phase, so closing here would destroy the callout before
         // the event reaches the handler that owns it — and that handler,
         // opening a callout on the very anchor it was just removed from, would
         // create a second one within the same click. Left open, openCallout's
         // `reopen` decides (toggle by default).
-        debug(event, `click on anchor, let the anchor handler decide`);
+        debug(event, `click on opener, let its handler decide`);
         return;
       }
       requestClose(event, "click_outside");
@@ -6666,10 +6712,10 @@ const openCallout = (
       if (keyTarget === calloutElement || calloutElement.contains(keyTarget)) {
         return;
       }
-      if (isInsideAnchor(keyTarget)) {
-        // Space on the anchor produces a click afterwards — same reasoning as
+      if (isInsideOpener(keyTarget)) {
+        // Space on the opener produces a click afterwards — same reasoning as
         // handleClickOutside above.
-        debug(event, `space on anchor, let the anchor handler decide`);
+        debug(event, `space on opener, let its handler decide`);
         return;
       }
       requestClose(event, "space_outside");

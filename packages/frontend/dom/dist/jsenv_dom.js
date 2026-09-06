@@ -13077,14 +13077,18 @@ const watchWheelTravel = (element, { axes = "xy", onStep }) => {
     // gesture that is over.
     claimWheelGesture(element, { onEnd: forgetGesture });
     if (sign !== gesture.sign) {
-      // Turned around: what was adding up was going the other way.
+      // Turned around: what was adding up was going the other way, so the
+      // ledger starts over — and only the ledger. The burst has been answered
+      // (stepped) and its stream is as much momentum as an event ago (faded):
+      // a flipping sign is the one thing a dying tail and a hand share, and a
+      // tail rocking to zero read as a first event walks a slide per event. A
+      // screen the other way costs what any screen after the first does, and a
+      // counter-push over a tail is heard by the regrow rule below.
       gesture.sign = sign;
       gesture.pushed = 0;
       gesture.lastMagnitude = 0;
       gesture.fadeRun = 0;
       gesture.growRun = 0;
-      gesture.faded = false;
-      gesture.stepped = false;
     }
     if (!gesture.stepped) {
       // The first event of a gesture moves a screen, whatever it is worth —
