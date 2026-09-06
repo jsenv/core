@@ -12,6 +12,19 @@ Demos: [the movements](../src/nav/demos/route_transition/route_transition.html),
 [pages between fixed bars](../src/nav/demos/route_transition_fixed_bars/route_transition_fixed_bars.html),
 [with a RouteTravel inside](../src/nav/demos/route_transition/route_transition_with_travel.html)
 
+- [What a transition is for](#what-a-transition-is-for)
+- [A page opened from anywhere](#a-page-opened-from-anywhere)
+- [Choosing a movement](#choosing-a-movement)
+- [A default transition — when](#a-default-transition--when)
+- [When one navigation knows better](#when-one-navigation-knows-better)
+- [Pages between fixed bars: the transition area](#pages-between-fixed-bars-the-transition-area)
+- [Custom movements](#custom-movements)
+- [Two routes matching one url](#two-routes-matching-one-url)
+- [Route transitions and `RouteTravel` — one pair, one system](#route-transitions-and-routetravel--one-pair-one-system)
+- [A transition says nothing about data](#a-transition-says-nothing-about-data)
+- [Waiting for a navigation: the address is not the page](#waiting-for-a-navigation-the-address-is-not-the-page)
+- [The rest, briefly](#the-rest-briefly)
+
 ## What a transition is for
 
 A transition is not decoration: it states a **relation** between two pages, and

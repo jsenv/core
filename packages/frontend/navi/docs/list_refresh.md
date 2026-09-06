@@ -19,53 +19,23 @@ The short answer:
 
 ## `loading: true` returns the previous value
 
-`useAsyncData` returns `[data, loading, error]`. During a re-run, `data` is the
-**previous data**, not `undefined`:
-
-| Moment                | `data`      | `loading` |
-| --------------------- | ----------- | --------- |
-| never completed yet   | `undefined` | `true`    |
-| running after success | previous    | `true`    |
-| completed             | fresh       | `false`   |
-| failed after success  | previous    | `false`   |
-| failed, error closed  | `undefined` | `false`   |
-
-So the emptiness test is `data === undefined`, never `loading`:
-
-```js
-const [items, loading] = useAsyncData(ACTION, { loading: true });
-if (items === undefined) {
-  return <RadarListSkeleton loading={loading} />; // nothing to show yet
-}
-return <RadarList radars={items} busy={loading} />; // re-read: stay on screen
-```
-
-```js
-// ✗ blanks the page on every re-run, for a checkbox on one row
-if (loading) {
-  return null;
-}
-```
-
-Read `loading` as "what you are displaying is from before", not "there is
-nothing to display".
-
-The two answer different questions — _is there anything to show_ and _is
-anything on its way_ — so a screen reads both, and a skeleton is given `loading`
-rather than deducing it from emptiness. The four combinations, and what each one
-draws, are in [data_states.md](./data_states.md).
+During a re-run, `useAsyncData(action, { loading: true })` hands back the
+**previous** data with `loading` up — never `undefined` — so the emptiness test
+is `data === undefined`, and a list is never blanked for a checkbox ticked on
+one of its rows. Read `loading` as "what you are displaying is from before", not
+"there is nothing to display". The four combinations of `data` and `loading`,
+and what each one draws, are in [data_states.md](./data_states.md).
 
 `<List loading>` is the first-load answer, not the refresh one: it replaces the
 rows with skeletons. Pass it while stale rows exist and they disappear — same
 mistake as `loading ? null :`, one level down.
 
-The `failed after success` row is the same rule at the other end: a refresh that
-failed does not unmake the rows either. With `error: true` the failure comes
-back **beside** them, so the list stays and the failure is said over it — a
-strip above the rows, a retry, `dismissError()` to close the strip without
-asking anything again. Taking the rows away is `<ErrorBoundary>`'s job, and only
-when the screen genuinely cannot be drawn — see
-[data_states.md](./data_states.md).
+A refresh that failed does not unmake the rows either. With `error: true` the
+failure comes back **beside** them, so the list stays and the failure is said
+over it — a strip above the rows, a retry, `dismissError()` to close the strip
+without asking anything again. Taking the rows away is `<ErrorBoundary>`'s job,
+and only when the screen genuinely cannot be drawn — see
+[data_states.md](./data_states.md#an-error-is-a-message-on-the-screen-not-the-screen).
 
 ## What updates without a request
 
@@ -326,5 +296,5 @@ runs it again.
   does when it did not
 - [resource.md](./resource.md) — `resource()`, relations, callback return
   contracts
-- [resource_dependencies.md](./resource_dependencies.md) — invalidating a
-  resource from another one
+- [resource.md](./resource.md#dependencies-rerun-after-another-resource-writes)
+  — invalidating a resource from another one

@@ -769,7 +769,8 @@ What the popup gains is everything a page has:
   `<ErrorBoundary>`, `onLoad` for what is seeded once (see
   [actions.md](./actions.md#reading-an-action));
 - the action layer's rerun rules, its dependencies
-  ([resource_dependencies.md](./resource_dependencies.md)) and the
+  ([resource.md](./resource.md#dependencies-rerun-after-another-resource-writes))
+  and the
   aborted-not-reset treatment a route action gets when the screen is left
   ([offline.md](./offline.md));
 - a reload keeps the open state, so it keeps the request too;

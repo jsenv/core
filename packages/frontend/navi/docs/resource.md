@@ -30,6 +30,22 @@ Each callback returns the data to upsert into the store:
 Actions are read in components through the action system (`useAsyncData`,
 `<Button action>`, …) — see [actions.md](./actions.md).
 
+- [`store.upsert()` is not how data enters the store](#storeupsert-is-not-how-data-enters-the-store)
+- [`GET_RANGE`: feeding a list that loads as it scrolls](#get_range-feeding-a-list-that-loads-as-it-scrolls)
+- [Searching the same collection](#searching-the-same-collection)
+- [Relations: pick one of the four methods](#relations-pick-one-of-the-four-methods)
+- [Callback return contracts](#callback-return-contracts)
+  - [`.one(propertyName, childResource, { GET, PUT, DELETE })`](#onepropertyname-childresource--get-put-delete-)
+  - [`.many(propertyName, childResource, restCallbacks)`](#manypropertyname-childresource-restcallbacks)
+  - [`.scopedOne(propertyName, { idKey, GET, POST, PUT, PATCH, DELETE })`](#scopedonepropertyname--idkey-get-post-put-patch-delete-)
+  - [`.scopedMany(propertyName, { idKey, GET, GET_MANY, POST, PUT, PATCH, DELETE, … })`](#scopedmanypropertyname--idkey-get-get_many-post-put-patch-delete--)
+- [When the backend answers a sub-route with the whole parent](#when-the-backend-answers-a-sub-route-with-the-whole-parent)
+- [Relations and autorerun](#relations-and-autorerun)
+- [`withParams()`: a scope with reruns of its own](#withparams-a-scope-with-reruns-of-its-own)
+  - [`dependencies`: rerun after another resource writes](#dependencies-rerun-after-another-resource-writes)
+- [A function calling the verb, or the instance](#a-function-calling-the-verb-or-the-instance)
+- [See also](#see-also)
+
 ## `store.upsert()` is not how data enters the store
 
 navi writes the store. Declare the resource and its relations, return the shape
@@ -157,7 +173,7 @@ action reading the same resource is showing.
 It is `bindParams`, not `withParams`: a `withParams()` carves an autorerun scope
 (a POST at the root does not reach into it), and a word someone typed is not a
 scope — the search must refresh after a write like the list does
-([resource_with_params.md](./resource_with_params.md)).
+([`withParams()`](#withparams-a-scope-with-reruns-of-its-own)).
 
 The lifecycle a search wants comes with being an action: `loading` while the
 word is in flight, the run before it aborted through its `signal`, typing
@@ -389,7 +405,7 @@ rules, verified by `src/state/rest/tests/resource_graph_parent_rerun.test.js`:
 - `.scopedOne` mutations rerun nothing, ever — the result is the new value.
 - `.one` / `.many` children live in an independent store; mutating them never
   reruns the parent. Declare it explicitly with `dependencies` if you need it
-  (see [resource_dependencies.md](./resource_dependencies.md)).
+  (see [`dependencies`](#dependencies-rerun-after-another-resource-writes)).
 - Within a relationship resource, the usual defaults still apply: its own
   `GET_MANY` reruns after its own `POST`; its `GET` is reset (not rerun) by its
   `DELETE`. Override per relation with `rerunOn`/`dependencies`, which every
@@ -399,6 +415,69 @@ Splitting a sub-resource out of a parent `PATCH` therefore changes the refresh
 graph: what used to be refreshed by the parent's own response is now refreshed
 only by these rules. When a parent field genuinely depends on a child mutation,
 say so with `dependencies` rather than relying on a rerun that will not happen.
+
+## `withParams()`: a scope with reruns of its own
+
+A resource reruns its own reads after its own writes (`rerunOn`, see
+[list_refresh.md](./list_refresh.md#rerunon-verb-by-verb)), and it does so for
+every read of the resource: a `POST` reruns every `GET_MANY` that completed,
+whatever params each one was bound to. Right for one collection, wrong for a
+resource read under several fixed questions at once — the admins and the guests
+of one `USER`, each list on its own screen. A guest created should not send the
+admin list back to the network.
+
+`withParams()` carves that out. It binds params into every action of the
+resource and gives the result a rerun scope of its own:
+
+```js
+const ADMIN = USER.withParams({ role: "admin" });
+const GUEST = USER.withParams({ role: "guest" });
+
+await ADMIN.GET_MANY.run(); // GET_MANY({ role: "admin" })
+await GUEST.GET_MANY.run();
+await ADMIN.POST({ name: "Bob" }); // reruns ADMIN.GET_MANY, and nothing else
+```
+
+The isolation is complete, in both directions: a write on `ADMIN` reaches no
+read of `GUEST` and no read of `USER` itself, and a write on `USER` reaches no
+read of either scope (held by cases 5 and 6 of
+`src/state/rest/tests/resource_graph_lifecycle.test.js`). What the scopes still
+share is the **store**: an item updated through one is the same object in the
+others, so the fields of a row change everywhere without a request — only the
+membership of each list is a question its own scope answers.
+
+`withParams()` chains, merging the params —
+`USER.withParams({ role: "admin" }).withParams({ gender: "male" })` is
+`USER.withParams({ role: "admin", gender: "male" })`. Its second argument takes
+`rerunOn` and `dependencies` for that scope; left out, the scope inherits the
+resource's. Empty params throw: a scope has to be about something.
+
+It is not the tool for a param the user types. A search word bound with
+`withParams()` would keep its results from refreshing after a write on the
+resource; a word is a `bindParams` on the resource's own `GET_MANY`, which stays
+in the rerun graph ([Searching the same collection](#searching-the-same-collection)).
+`withParams()` is for a scope the code fixes once — a role, a status, a tenant.
+
+### `dependencies`: rerun after another resource writes
+
+A resource whose reads depend on what another resource holds — roles answered
+with their owners, where an owner is a database or a table — says so with
+`dependencies`, on the resource or on a scope of it:
+
+```js
+const ROLE_WITH_OWNERS = ROLE.withParams(
+  { owners: true },
+  { dependencies: [DATABASE, TABLE] },
+);
+```
+
+Any write on a listed resource (`POST`, `PUT`, `PATCH`, `DELETE`) reruns the
+completed `GET` and `GET_MANY` of the resource that declared it. A dependency is
+a facade: `DATABASE` and `DATABASE.withParams(…)` are two of them, and only
+writes on the one listed count. Nothing goes the other way, and nothing is
+inferred — the relationship methods have rules of their own
+([above](#relations-and-autorerun)), and a relation that really is a sub-route
+of the parent is modelled with them, never declared as a dependency.
 
 ## A function calling the verb, or the instance
 
@@ -453,10 +532,6 @@ an action is callable: `GAME.DELETE({ id })` is
 
 ## See also
 
-- [resource_with_params.md](./resource_with_params.md) — `withParams()` and
-  isolated lifecycles
-- [resource_dependencies.md](./resource_dependencies.md) — cross-resource
-  autorerun
 - [list_refresh.md](./list_refresh.md) — what re-runs after a write, and what
   stays on screen while it does
 - [actions.md](./actions.md) — action lifecycle, `bindParams`, `useAsyncData`

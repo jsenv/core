@@ -18,6 +18,7 @@ somewhere else in the app.
 - [Clearing, resetting, and what is shown meanwhile](#clearing-resetting-and-what-is-shown-meanwhile)
 - [`value` and `signal` exclude each other](#value-and-signal-exclude-each-other)
 - [A `stateSignal` brings more than a value](#a-statesignal-brings-more-than-a-value)
+- [A time of day: typed, or turned](#a-time-of-day-typed-or-turned)
 
 ## The three answers
 
@@ -381,11 +382,40 @@ default rather than to whatever it happened to hold at the last render.
 That is the only difference. A plain signal binds the same way in both
 directions; it just has nothing extra to say.
 
+## A time of day: typed, or turned
+
+A time of day, and a span between two of them, come as a pair of components,
+and the choice between them is about the GESTURE: `TimeSpin`/`TimeRangeSpin`
+are fields one types in, `TimeWheel`/`TimeRangeWheel` are wheels one turns.
+Both carry a single `"HH:MM"` (or `{ start, end }` for a span), so a form holds
+one field either way.
+
+Prefer the wheels whenever a half-written value would be nonsense: a time typed
+digit by digit goes through states that are not times ("1" on its way to "18"),
+each of them bounded and corrected under the fingers, while a wheel only ever
+shows values that exist. Two things only the wheels have:
+
+- the bounds of a span PUSH each other while they turn (`minDuration`) instead
+  of being refused at send;
+- `placeholder` is a position shown without being an answer — for a span that
+  is optional ("any time of day") on wheels that have no blank row to land on. A
+  clear, or a value written as `undefined`, puts such a pair back on its
+  placeholder and back to answering nothing, so a row's cross means what it says
+  (the rule of [clearing](#clearing-resetting-and-what-is-shown-meanwhile)).
+
+`hours` bounds what the wheels offer (`{ min: 7, max: 21 }`, or the list
+itself): rows nobody can land on are rows in the way.
+
+Reference: `src/control/picker/preset/spin_time.jsx`,
+`src/control/wheel/wheel_time.jsx`.
+
 ## See also
 
 - [state_binding.md](./state_binding.md) — the same rule beyond controls:
+
   a `SlideContainer`'s area, a popup being open, the position in the app — all
   bound rather than copied back by a callback
+
 - [form_changed.md](./form_changed.md) — what a form makes of each of these:
   which fields it counts as already answered, and when it sends nothing
 - [control_object.md](./control_object.md) — several controls reading as one

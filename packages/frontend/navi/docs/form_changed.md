@@ -12,7 +12,7 @@ filled a request later.
 - [What counts as already held](#what-counts-as-already-held)
 - [A screen filled after it opened: `pristineKey`](#a-screen-filled-after-it-opened-pristinekey)
 - [A submit that says it is waiting](#a-submit-that-says-it-is-waiting)
-- [A control that is not a field](#a-control-that-is-not-a-field)
+- [A control that answers for itself](#a-control-that-answers-for-itself)
 
 ## Sending nothing is the default
 

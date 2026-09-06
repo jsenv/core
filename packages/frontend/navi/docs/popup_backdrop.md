@@ -6,11 +6,11 @@ over.
 
 It answers three questions, and they are independent:
 
-0. **Is there anything between the popup and the page at all?** That is
+1. **Is there anything between the popup and the page at all?** That is
    `backdrop`.
-1. **What does a press outside do?** Close, cancel, be absorbed, pass through.
+2. **What does a press outside do?** Close, cancel, be absorbed, pass through.
    That is `pointerInteractionOutsideEffect`.
-2. **How far does what is behind withdraw?** Dimmed, blurred, barely marked,
+3. **How far does what is behind withdraw?** Dimmed, blurred, barely marked,
    not painted at all. That is the paint: `backdropVariant`, `backdropColor`,
    `backdropFilter`.
 

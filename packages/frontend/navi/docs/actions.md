@@ -20,6 +20,20 @@ the instance being run.
 `resource()` creates one action per REST callback rather than having you write
 them by hand — see [resource.md](./resource.md).
 
+- [Params: `bindParams`, and calling the action](#params-bindparams-and-calling-the-action)
+  - [A debounced signal asks where it settles, not where it passed](#a-debounced-signal-asks-where-it-settles-not-where-it-passed)
+  - [The in-between states of a gesture are real params](#the-in-between-states-of-a-gesture-are-real-params)
+- [Running: `run`, `rerun`, `prerun`, `reset`](#running-run-rerun-prerun-reset)
+  - [Aborting saves resources, it does not undo](#aborting-saves-resources-it-does-not-undo)
+- [Reading an action](#reading-an-action)
+- [The instance a control runs](#the-instance-a-control-runs)
+- [`action` or `uiAction`](#action-or-uiaction)
+- [A press that opens something and waits for the answer](#a-press-that-opens-something-and-waits-for-the-answer)
+  - [Deleting something, then leaving the page it was on](#deleting-something-then-leaving-the-page-it-was-on)
+- [`uiAction` mirrors the state, it does not report a gesture](#uiaction-mirrors-the-state-it-does-not-report-a-gesture)
+- [Reruns](#reruns)
+- [See also](#see-also)
+
 ## Params: `bindParams`, and calling the action
 
 `createAction` gives one action for the callback; the params make instances of
@@ -168,8 +182,8 @@ or `{ error: true }` to receive either as a value instead, the component staying
 mounted throughout and keeping the data it already had. What it then draws for
 each state — the four combinations of `data` and `loading`, why a skeleton is
 told whether it is loading — is [data_states.md](./data_states.md). Where a
-failure goes when no screen takes it — and why a run settles with its error
-rather than rejecting — is [error_handling.md](./error_handling.md). `useActionStatus(action)` gives the whole
+failure goes when no screen takes it, and who is allowed to swallow the
+rejection, is [error_handling.md](./error_handling.md). `useActionStatus(action)` gives the whole
 state at once — `{ idle, loading, completed, aborted, error, data, params }` —
 for a component that needs to look at it rather than render it. It reads that
 very instance: to know what moves when a control is handed the action, see
@@ -455,8 +469,9 @@ caused has none of them.
 Actions do not stay stale on their own: a resource's `POST` reruns the
 `GET_MANY` that lists it, a `DELETE` resets the `GET` that loaded the item, and
 `dependencies`/`rerunOn` declare the rest. What re-runs after a write, and what
-stays on screen while it does, is in [list_refresh.md](./list_refresh.md) and
-[resource_dependencies.md](./resource_dependencies.md).
+stays on screen while it does, is in [list_refresh.md](./list_refresh.md); a
+scope with reruns of its own, and a rerun after another resource writes, are
+[`withParams()`](./resource.md#withparams-a-scope-with-reruns-of-its-own).
 
 `rerunActions(actions)` / `updateActions(actions)` drive several at once (route
 changes do exactly that).
@@ -468,8 +483,6 @@ changes do exactly that).
   remembers
 - [resource.md](./resource.md) — actions created from REST callbacks, and the
   store behind them
-- [resource_with_params.md](./resource_with_params.md) — `withParams()` and
-  isolated rerun scopes
 - [list_refresh.md](./list_refresh.md) — what a write refreshes
 - [popup_open.md](./popup_open.md#closing-when-a-button-also-runs-an-action) —
   closing a popup from a button that also runs an action (closing from inside

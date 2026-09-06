@@ -13,6 +13,26 @@ animations skill
 ([.agents/skills/animations/SKILL.md](../../../../.agents/skills/animations/SKILL.md))
 and are referenced from here rather than restated.
 
+- [What the rules are](#what-the-rules-are)
+- [The axis is read once, and read with a bias](#the-axis-is-read-once-and-read-with-a-bias)
+- [Two inputs, one travel](#two-inputs-one-travel)
+- [Who owns a gesture](#who-owns-a-gesture)
+  - [Boxes inside boxes](#boxes-inside-boxes)
+  - [Something being carried inside a box](#something-being-carried-inside-a-box)
+  - [A popup pushed back the way it came](#a-popup-pushed-back-the-way-it-came)
+  - [A surface in the top layer](#a-surface-in-the-top-layer)
+  - [The browser also wants to answer the gesture](#the-browser-also-wants-to-answer-the-gesture)
+  - [What is contained, and what still leaks](#what-is-contained-and-what-still-leaks)
+  - [A hand reaching for something still moving is reaching for THAT thing](#a-hand-reaching-for-something-still-moving-is-reaching-for-that-thing)
+  - [A hand that does not stop at the end of a page is asking for the next one](#a-hand-that-does-not-stop-at-the-end-of-a-page-is-asking-for-the-next-one)
+  - [Two ways of holding a render still, and why only one is global](#two-ways-of-holding-a-render-still-and-why-only-one-is-global)
+  - [On a touchscreen, the browser takes the gesture unless it is refused](#on-a-touchscreen-the-browser-takes-the-gesture-unless-it-is-refused)
+  - [A navi component that reads the pointer marks ITSELF](#a-navi-component-that-reads-the-pointer-marks-itself)
+- [The two consumers that travel between screens](#the-two-consumers-that-travel-between-screens)
+  - [Asking for a page while one is on its way](#asking-for-a-page-while-one-is-on-its-way)
+  - [One gesture that bar cannot follow](#one-gesture-that-bar-cannot-follow)
+- [Verifying a gesture](#verifying-a-gesture)
+
 ## What the rules are
 
 - A press is not a gesture until it has wandered ~10px, and the axis it leans on
@@ -227,7 +247,8 @@ outside it.
 A drag reads the same press a travel does and holds the pointer from it, so the
 two share a finger exactly as two travelling boxes do: what is picked up says
 which axes it walks (`data-drag-source`, written from `data-drag-axis` by
-`interactions={{ move, reorder, land, toss, leave }}` — see `docs/interactions.md`), and
+`interactions={{ move, reorder, land, toss, leave }}` — see
+[drag_interactions.md](./drag_interactions.md)), and
 the box above keeps what is left. A list reordered along its own line inside a
 row of slides swiped sideways: both gestures live, and neither had to be told
 about the other.
@@ -241,7 +262,9 @@ Something that is NOT free to be carried takes nothing: `move: "refuse"` — a r
 pinned by whoever owns the list, a court whose place on a plan is settled — walks
 no axis, so a swipe that starts on it is the swipe of the box it stands in. It
 keeps the press itself, to say no where the grab would have been felt; a surface
-that pans is the one thing that takes even that (see `docs/interactions.md`).
+that pans is the one thing that takes even that (see
+[drag_interactions.md](./drag_interactions.md#the-hand-pulls-and-nothing-follows-refuse)
+and [pan_zoom.md](./pan_zoom.md)).
 
 The exception is a **dedicated handle** (`data-drag-handle`), which has no axis:
 it is a place whose only purpose is to be taken hold of, from the first pixel,

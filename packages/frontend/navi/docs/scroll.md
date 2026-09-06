@@ -52,9 +52,9 @@ Two consequences worth knowing before fighting them:
   leaves the footer right under it rather than pushed to the bottom of a box it
   does not fill. Adding `expandY` to "fix" that is undoing a deliberate default.
 - the separating line is a `border-bottom` on the header (`border-top` on the
-  footer). Don't add a border of your own — you get two lines. It used to be a
-  `box-shadow`, which is drawn outside the box and so lost to whatever was
-  painted after it: the body covered the very line meant to separate them.
+  footer), not a `box-shadow`: a shadow is drawn outside the box and lost to
+  whatever is painted after it, so the body would cover the very line meant to
+  separate them. Don't add a border of your own — you get two lines.
 - header and footer sit in the sticky band
   (`var(--navi-z-index-sticky)`), so everything the box contains passes under
   them — positioned or not. Write `style={{ "--box-header-z-index": "auto" }}`
@@ -76,48 +76,20 @@ Reference: `src/box/box.jsx` (the `[data-scrollable]` CSS),
 
 The default case: nothing to do, the document scrolls.
 
-The case that needs wiring is whatever covers the viewport — **fixed bars** (a
-top bar, a bottom nav, the normal shape of a mobile app), the device's own
-notch, a band an app reserves for itself. Each publishes what it takes, navi
-adds them up on `<html>`, and the content reads the sum:
-
-```
---navi-safe-area-inset-top / -right / -bottom / -left
-```
-
-`docs/safe_area.md` holds the concept: the two levels, how an app declares
-itself narrower than the window, and how something other than a bar joins the
-sum.
-
-Two distinct things must be given back to the content, and forgetting the
-second one is the classic bug:
-
-1. **padding**, or the last screenful of content stays under the bar,
-   unreachable;
-2. **`scroll-padding`**, or everything the browser scrolls _to_ (an anchor,
-   `scrollIntoView()`, a field taking focus, a restored scroll position) lands
-   _behind_ the bar. The padding does not help here: it moves the content, not
-   the place the browser brings its target to.
-
-`:root` gets the `scroll-padding` unconditionally. The padding goes on whatever
-scrolls — which element that is, is the app's business, so navi does not pick:
-
-```html
-<!-- on the container that scrolls under the bars -->
-<div id="main" data-navi-safe-area>…</div>
-```
-
-**Do not make that container scrollable by accident.** An `overflow-x: auto`
-forces the other axis to `auto` too: the container becomes a scrollport, and
-every `position: sticky` inside it sticks to _it_ instead of to the page. To
-merely clip, use `overflow-x: clip` — it clips without creating a scroll
-container.
+What needs wiring is whatever covers the viewport — fixed bars (a top bar, a
+bottom nav, the normal shape of a mobile app), the device's own notch, a band an
+app reserves for itself. Each publishes what it takes, navi adds them up on
+`<html>` as `--navi-safe-area-inset-*`, and the container that scrolls under
+them says so with `data-navi-safe-area`, which gives it back both the `padding`
+and the `scroll-padding` the bars took. The two levels of inset, what the marker
+does and why both paddings are needed are in
+[safe_area.md](./safe_area.md#something-that-scrolls-under-the-furniture); the
+one way to turn that container into a scroller by accident (an `overflow-x:
+auto` where a `clip` was meant) is in
+[mobile_layout_pitfalls.md](./mobile_layout_pitfalls.md).
 
 A `List` in this case takes `scroller="document"` (in dev it warns when it finds
 itself inside a scrollport anyway, and names the element).
-
-Reference: `src/layout/fixed_bar/fixed_bar_space.js`,
-`docs/MOBILE_LAYOUT_PITFALLS.md`.
 
 ## 2. A part of the document scrolls
 

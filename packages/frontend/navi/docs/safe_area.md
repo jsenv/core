@@ -57,11 +57,19 @@ Declared in `src/layout/safe_area.js`.
 
 ### An app that is narrower than the window
 
-One line, and nothing names a component:
+An app that never spans the whole window — a phone-shaped column centered in a
+wide one, bands on the sides — has one problem with popups: a dialog lives in
+the browser's top layer, so it is calibrated on the _viewport_, and would paint
+1500px of modal over a 600px app. The top bar and the bottom nav have the same
+problem and solve it by repeating the app width by hand; popups must not need
+that, because the app would then have to know which components exist.
+
+So the app states its own screen once, and never names a component:
 
 ```css
 :root {
   --navi-app-max-width: 600px;
+  /* --navi-app-max-height too, for an app that also caps its height */
 }
 ```
 
@@ -69,9 +77,55 @@ The bands fall out of it (centered), `--navi-app-width` follows, and `FixedBar`
 pins itself to the column's edges rather than the glass. An app wanting them
 uneven writes `--navi-app-inset-left` / `-right` directly instead.
 
-Do **not** get this by mounting empty `FixedBar area="left"/"right"`: they would
-reserve the room, but the app's rectangle would still be the whole window, so
-dialogs and popovers would keep sizing themselves against 1500px.
+In pixels: popup placement reads this value back from CSS to compute its own
+margins, and a custom property computes to a token stream rather than to a
+length, so `40rem` would arrive there as the string `"40rem"`. A non-px value
+still caps the popup's size (that part is pure CSS) but leaves the margins
+viewport-sized, and says so in the console.
+
+Every popup follows: `Dialog`, `Popover`, and everything built on them
+(`Picker`, `Select`…). It is a ceiling and nothing more — on a screen narrower
+than the app it never binds, and each popup still subtracts its own
+`marginWithContainer` from it, so the gap with the edges is kept either way.
+That gap is itself a share of the app's screen, not of the window (`"3appw"`,
+navi's own unit alongside `vvw`/`vvh`) — otherwise a 3% margin measured on a
+1500px window would eat 90px out of a 600px app.
+
+Two ways NOT to get this:
+
+- mounting empty `FixedBar area="left"/"right"`: they would reserve the room,
+  but the app's rectangle would still be the whole window, so dialogs and
+  popovers would keep sizing themselves against 1500px;
+- setting `--dialog-max-width` on `.navi_dialog` from the app. It is a
+  `--component-*` token, declared on the element (see
+  [css_architecture.md](./css_architecture.md#--navi--vs---component--where-the-override-has-to-go)),
+  so components that write it themselves outrank an app rule of lower
+  specificity — `.navi_picker[aria-haspopup="dialog"] .navi_dialog` does exactly
+  that, and the app's cap silently disappears for every picker. It is also the
+  knob a single popup uses to ask for a specific size, not a ceiling:
+  `--navi-app-max-width` feeds `--dialog-maxmax-width`, the hard ceiling _under_
+  that knob, so a popup that genuinely needs its own `maxWidth` can still say
+  so without escaping the app's screen.
+
+An app can also get all of it by rendering itself in an iframe of the target
+width: the viewport then genuinely _is_ the app's screen and no token is needed.
+`--navi-app-max-width` is the answer for an app that does not want to pay that
+price.
+
+#### Placement follows the same rectangle
+
+`--navi-app-max-width` moves where a popup is placed, not only how big it may
+get. Placement is computed against the visual viewport narrowed to the level-1
+bands: `getAppInsets` (`src/layout/responsive.js`) is the JS reading of them,
+navi hands them to `@jsenv/dom` once (`setPlacementViewportInsets`, wired in
+`navi_css_vars.js`), and `pickPositionRelativeTo` reads them on every
+placement. Invisible for anything centered on its cross axis — `center`,
+`bottom`, `top`, which is what a dialog does nearly always — but it is what puts
+anything anchored to an edge (a `positionArea` like `bottom-start`, a
+`SidePanel`) flush against the app column's edge rather than the window's.
+`FixedBar` reads the same description through CSS instead: it is pinned to
+`--navi-app-inset-*`, which says where the app's rectangle is in the window
+rather than how wide it may be.
 
 ### Something that scrolls under the furniture
 
@@ -93,7 +147,7 @@ gets the `scroll-padding` unconditionally, since the document is the scrollport
 in the common case.
 
 Beware of making that container scrollable by accident — see
-`MOBILE_LAYOUT_PITFALLS.md`.
+[mobile_layout_pitfalls.md](./mobile_layout_pitfalls.md).
 
 ### Reading it yourself
 
@@ -150,15 +204,3 @@ _sizes_ must fit what is actually visible.
 `src/layout/demos/fixed_bar/keyboard.html` puts all of these on screen at once
 and turns the bottom bar's number red when it goes under the keyboard. On a
 phone; a desktop has no keyboard to open.
-
-## Placement follows level 1
-
-Popup **placement** answers to the level-1 rectangle too: `getAppInsets`
-(`src/layout/responsive.js`) is the JS reading of the level-1 bands, and
-`pickPositionRelativeTo` (in `@jsenv/dom`) computes against the visual
-viewport narrowed by them (`setPlacementViewportInsets`, wired in
-`navi_css_vars.js`). Invisible for anything centered on its cross axis —
-which is what a dialog does nearly always — but it is what puts a
-`positionArea` like `bottom-start` or a `SidePanel` against the app column's
-edge rather than the window's. See "Placement follows the same rectangle" in
-`css_architecture.md`.

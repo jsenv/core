@@ -1,5 +1,20 @@
 # Navi CSS Architecture
 
+- [Overview](#overview)
+- [Where CSS lives: `import.meta.css`](#where-css-lives-importmetacss)
+  - [`${}` blinds the whole stylesheet](#-blinds-the-whole-stylesheet)
+  - [Beware when moving a shared sheet out](#beware-when-moving-a-shared-sheet-out)
+  - [Browser support: navi's css and your target](#browser-support-navis-css-and-your-target)
+- [Layer structure](#layer-structure)
+  - [Why defaults go inside `@layer navi`](#why-defaults-go-inside-layer-navi)
+  - [Why actual rules stay outside any layer](#why-actual-rules-stay-outside-any-layer)
+  - [The exception: a rule navi offers back](#the-exception-a-rule-navi-offers-back)
+- [Override surfaces](#override-surfaces)
+  - [1. Component props (preferred)](#1-component-props-preferred)
+  - [2. CSS variables (for global or theme-level changes)](#2-css-variables-for-global-or-theme-level-changes)
+  - [3. Direct rule override (avoid unless necessary)](#3-direct-rule-override-avoid-unless-necessary)
+- [Summary](#summary)
+
 ## Overview
 
 Navi components are styled through a combination of CSS custom properties (variables) and scoped CSS rules. The architecture is designed so that:
@@ -77,72 +92,31 @@ module scope on purpose.
 
 ### `${}` blinds the whole stylesheet
 
-A substitution the build cannot read makes the **entire** template opaque — not
-just the line it sits on — and everything below is lost for all of it:
+A substitution the build cannot read makes the **entire** template opaque, not
+just its line, and the stylesheet then ships verbatim: comments and whitespace
+included, nothing transpiled for the browsers the app targets (nesting,
+`light-dark()`, `color-mix()` reach them as written), a `url("./icon.svg")`
+neither copied nor hashed and resolved against the document — a silent 404 in
+production — nothing checked, nothing minified. And nothing is logged.
 
-- **comments ship to production**, with every space and newline
-- **nothing is transpiled**: no nesting lowering, no prefixing, no fallback for
-  the browsers the app targets
-- **`url("./icon.svg")` is never seen**: the file is not part of the build, not
-  copied, not hashed, and the url resolves against the document instead of the
-  module — it 404s in production
-- **nothing is checked**: an unclosed brace or an invalid value reaches the
-  browser instead of failing the build
-- **nothing is minified**
-
-So a `${}` is not a small convenience: it opts a component's whole stylesheet
-out of the build. The one shape that survives is a substitution standing exactly
-**where a css value stands** — inside a rule block, after the `:` of a
-declaration, not in a string, not in `url()`, not in a selector, a property name
-or an at-rule prelude:
-
-```js
-// read, transformed, and the expression put back
-import.meta.css = /* css */ `
-  .panel {
-    transition: translate ${SETTLE_DURATION_MS}ms ease-out;
-  }
-`;
-```
-
-Anything else ships verbatim, silently. Do not rely on the distinction: write css
-without substitutions.
-
-### Writing css without `${}`
-
-**A value the JS knows → a custom property.** The css stays static, and the value
-changes without building a new stylesheet:
-
-```js
-// avoid
-const setPanelWidth = (width) => {
-  import.meta.css = `.panel { width: ${width}; }`;
-};
-
-// prefer
-import.meta.css = /* css */ `
-  .panel {
-    width: var(--panel-width, 300px);
-  }
-`;
-const setPanelWidth = (element, width) => {
-  element.style.setProperty("--panel-width", width);
-};
-```
-
-**An attribute or class name held in a JS constant → write it out in the css.**
-This is the most common way navi's own stylesheets used to go blind: a constant
-exists because JS sets the attribute, and the css then reads it through a
-substitution. Keep the constant for the JS side and write the selector literally
-— it is one string, and it buys back the whole stylesheet:
+The one substitution the build reads stands exactly **where a css value
+stands** — inside a rule block, after the `:` of a declaration, not in a string,
+in `url()`, in a selector, a property name or an at-rule prelude. Everything
+else blinds the sheet. So write css without a `${}`: a value the JS knows is a
+custom property the css reads (`width: var(--panel-width, 300px)`, set from JS
+with `element.style.setProperty`); a selector or attribute name held in a JS
+constant is written out literally in the css, the constant staying on the JS
+side; a variant is a data attribute with both branches in the css; a repeated
+block is a selector list; a shared sheet is a module exposing an install
+function, as above.
 
 ```js
 const SWIPE_AXES_ATTRIBUTE = "data-swipe";
 
-// avoid
+// avoid — the attribute name comes from JS, the whole sheet is opaque
 import.meta.css = `[${SWIPE_AXES_ATTRIBUTE}="x"] { touch-action: pan-y; }`;
 
-// prefer
+// prefer — the css is static, JS keeps the constant for setAttribute
 import.meta.css = /* css */ `
   [data-swipe="x"] {
     touch-action: pan-y;
@@ -150,62 +124,6 @@ import.meta.css = /* css */ `
 `;
 element.setAttribute(SWIPE_AXES_ATTRIBUTE, "x");
 ```
-
-**A selector you did not want to repeat → nesting.** Reaching into JS for a name
-to avoid typing a selector twice trades a whole stylesheet for a little
-repetition; `&` removes the repetition without leaving css:
-
-```js
-// prefer
-import.meta.css = /* css */ `
-  .navi_button {
-    color: black;
-    &[data-loading] {
-      opacity: 0.5;
-    }
-  }
-`;
-```
-
-**A variant → a data attribute, both branches written out.** A condition in JS
-picking a declaration hides the css; a condition picking an attribute does not:
-
-```js
-// avoid
-import.meta.css = `.badge { color: ${tone === "danger" ? "red" : "blue"}; }`;
-
-// prefer
-import.meta.css = /* css */ `
-  .badge {
-    color: blue;
-    &[data-tone="danger"] {
-      color: red;
-    }
-  }
-`;
-```
-
-**A block of declarations repeated in several rules → a selector list.** A css
-fragment held in a JS constant and interpolated into three rules is three blind
-stylesheets; the same declarations under one selector list are css:
-
-```js
-// prefer
-import.meta.css = /* css */ `
-  :root,
-  .navi_popover,
-  .navi_dialog {
-    --navi-color-hint: color-mix(
-      in srgb,
-      currentColor var(--navi-color-hint-mix),
-      transparent
-    );
-  }
-`;
-```
-
-**A whole stylesheet shared between modules → a module exposing an install
-function**, as shown at the top of this section.
 
 ### Beware when moving a shared sheet out
 
@@ -518,67 +436,12 @@ and a paper could no longer say anything.
 
 #### An app narrower than the screen
 
-An app that never spans the whole window — a phone-shaped column centered in a
-wide one, bands on the sides — has one problem with popups: a dialog lives in
-the browser's top layer, so it is calibrated on the _viewport_, and would paint
-1500px of modal over a 600px app. The top bar and the bottom nav have the same
-problem and solve it by repeating the app width by hand; popups must not need
-that, because the app would then have to know which components exist.
-
-So the app states its own screen once, and never names a component:
-
-```css
-:root {
-  --navi-app-max-width: 600px;
-  /* --navi-app-max-height too, for an app that also caps its height */
-}
-```
-
-In pixels: popup placement reads this value back from CSS to compute its own
-margins, and a custom property computes to a token stream rather than to a
-length, so `40rem` would arrive there as the string `"40rem"`. A non-px value
-still caps the popup's size (that part is pure CSS) but leaves the margins
-viewport-sized, and says so in the console.
-
-Every popup follows: `Dialog`, `Popover`, and everything built on them
-(`Picker`, `Select`…). It is a ceiling and nothing more — on a screen narrower
-than the app it never binds, and each popup still subtracts its own
-`marginWithContainer` from it, so the gap with the edges is kept either way.
-That gap is itself a share of the app's screen, not of the window (`"3appw"`,
-navi's own unit alongside `vvw`/`vvh`) — otherwise a 3% margin measured on a
-1500px window would eat 90px out of a 600px app.
-
-Do **not** try to get this by setting `--dialog-max-width` on `.navi_dialog`
-from the app. Two reasons:
-
-- it is a `--component-*` token, declared on the element (see the table above),
-  so components that write it themselves outrank an app rule of lower
-  specificity — `.navi_picker[aria-haspopup="dialog"] .navi_dialog` does exactly
-  that, and the app's cap silently disappears for every picker;
-- it is the knob a single popup uses to ask for a specific size, not a ceiling.
-  `--navi-app-max-width` feeds `--dialog-maxmax-width`, the hard ceiling _under_
-  that knob, so a popup that genuinely needs its own `maxWidth` can still say so
-  without any of them escaping the app's screen.
-
-##### Placement follows the same rectangle
-
-`--navi-app-max-width` moves where a popup is placed, not only how big it may
-get. Placement is computed against the visual viewport narrowed to the app's
-own rectangle: navi hands the centered bands to `@jsenv/dom` once
-(`setPlacementViewportInsets`, wired in `navi_css_vars.js`), and
-`pickPositionRelativeTo` reads them on every placement. Invisible for anything
-centered on its cross axis — `center`, `bottom`, `top`, which is what a dialog
-does nearly always — but it is what puts anything anchored to an edge (a
-`positionArea` like `bottom-start`, a `SidePanel`) flush against the app
-column's edge rather than the window's. `FixedBar` reads the same description
-through CSS instead: it is pinned to `--navi-app-inset-*` (see
-`docs/safe_area.md`), which says where the app's rectangle is in the window
-rather than how wide it may be.
-
-Note that an app can also get all of it by rendering itself in an iframe of
-the target width: the viewport then genuinely _is_ the app's screen and no
-token is needed at all. `--navi-app-max-width` is the answer for an app that
-does not want to pay that price.
+A dialog lives in the browser's top layer and is calibrated on the viewport, so
+an app that is a column in a wide window states its own screen once, on `:root`,
+with `--navi-app-max-width` — and never caps popups through
+`--dialog-max-width`, a `--component-*` token the pickers already write
+themselves. The whole of it, placement included, is in
+[safe_area.md](./safe_area.md#an-app-that-is-narrower-than-the-window).
 
 ### 3. Direct rule override (avoid unless necessary)
 

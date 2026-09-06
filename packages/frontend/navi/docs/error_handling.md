@@ -104,31 +104,11 @@ Nobody clicked; the page simply cannot be drawn. It is the page, or a piece of
 it, that is replaced — by an ancestor, never by a prop on the page. That is what
 `useAsyncData`'s default means: **delegate**. The component says what it renders
 when it has data, and what it cannot render is somebody else's job, up the tree:
-
-```jsx
-<Route>
-  <ErrorBoundary
-    fallback={({ error, resetError }) => (
-      <ErrorScreen error={error} onRetry={resetError} />
-    )}
-  >
-    <Loading fallback={<GameSkeleton />}>
-      <Route route={GAME_ROUTE} element={GamePage} />
-      <Route route={GAMES_ROUTE} element={GamesPage} />
-    </Loading>
-  </ErrorBoundary>
-</Route>
-```
-
-Two things about that shape:
-
-- The boundary goes **outside** the `<Loading>`. A page suspends first and fails
-  second; a boundary placed under the `Suspense` it suspended in is part of the
-  tree being held.
-- It is written **between** a container `<Route>` and its branches, and the
-  container reads through it — the selected branch keeps whatever was written
-  around it. So a boundary can bracket a section of the pages instead of the
-  whole router, without the router having to know it exists.
+`<Loading>` for the wait, `<ErrorBoundary>` for the failure, both written
+between a container `<Route>` and its branches — the boundary OUTSIDE the
+`<Loading>`, since a page suspends first and fails second. The shape of that
+tree, and why a wrapper brackets a subset of the branches, is in
+[navigation.md](./navigation.md#loading-data).
 
 Inside the component when the error is part of what the screen draws rather than
 a screen of its own:

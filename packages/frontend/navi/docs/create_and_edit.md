@@ -176,14 +176,14 @@ const GameFormFields = ({
 Each screen hands it its own:
 
 ```jsx
-// créer: le brouillon, qui vit dans l'url
+// create: the draft, which lives in the url
 <GameFormFields
   nameSignal={draftNameSignal}
   levelSignal={draftLevelSignal}
   playersSignal={draftPlayersSignal}
 />;
 
-// modifier: ceux de cet écran-ci, remplis quand la partie arrive
+// edit: this screen's own, filled when the game arrives
 const nameSignal = useSignal(undefined);
 ```
 
@@ -199,7 +199,7 @@ The draft's other half is the end of its life:
 action={async (values) => {
   const game = await GAME.POST.bindParams(values).rerun();
   GAME_ROUTE.navTo({ gameId: game.id });
-  draftNameSignal.value = undefined; // il a servi
+  draftNameSignal.value = undefined; // it has served
   draftLevelSignal.value = undefined;
 }}
 ```
@@ -308,13 +308,13 @@ Two ways out, and only one of them keeps the feature:
 const PLACES_OF_SCREEN = routeAction(
   [NEW_GAME_ROUTE, EDIT_GAME_ROUTE],
   PLACE.GET_MANY,
-  // pas `() => true`: ce que l'écran tient déjà doit voyager avec la demande
+  // not `() => true`: what the screen already holds must travel with the request
   () => {
-    // en création: l'url, connue tout de suite
+    // creating: the url, known at once
     if (NEW_GAME_ROUTE.matchingSignal.value) {
       return { include: draftPlaceSignal.value };
     }
-    // en modification: elle arrive avec la ressource
+    // editing: it arrives with the resource
     const game = GAME_OF_ROUTE.dataSignal.value;
     return game ? { include: game.placeId } : null;
   },
@@ -388,9 +388,9 @@ two different places:
 Creating one game, measured on the demo:
 
 ```
-POST /games     la création
-GET  /games     la liste se relit
-GET  /games/2   la page de ce qui vient d'être créé
+POST /games     the creation
+GET  /games     the list re-reads itself
+GET  /games/2   the page of what was just created
 ```
 
 Each of the two GETs is a decision, and neither is an accident:

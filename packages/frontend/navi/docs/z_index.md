@@ -124,9 +124,6 @@ literal in the card, against its own neighbour, exactly as §1–3 above ask:
 <Stamp style={{ position: "absolute", bottom: "-12px", zIndex: 1 }} />
 ```
 
-There was no such value before: a label sat at 10 whether or not it was stuck,
-so nothing a card could write got past it.
-
 For what a literal cannot reach, each part has a pair of variables —
 `--list-header-z-index`, `--list-footer-z-index`, `--list-group-label-z-index`,
 each with a `-stuck` counterpart defaulting to the band — settable on `<List>`
