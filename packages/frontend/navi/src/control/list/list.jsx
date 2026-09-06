@@ -4145,9 +4145,11 @@ const VISIBILITY_HIDDEN_STYLE = { visibility: "hidden" };
  *   onRequestStateChange?: (state: {busy: boolean, refreshing: boolean, range: {start: number, end: number}|null}) => void,
  * }>}
  * @param {(item: any, index: number, state: {refreshing: boolean}) => any} props.renderItem
- *   What one row is, given the item and where it sits. `state.refreshing` says
- *   the rows drawn are the ones from before while the run reads the collection
- *   again — the list carries `navi-refreshing` for the same reason.
+ *   What one row is, given the item and where it sits — its place in the list,
+ *   which is its rank in the collection plus whatever rows are declared before
+ *   the run. `state.refreshing` says the rows drawn are the ones from before
+ *   while the run reads the collection again — the list carries
+ *   `navi-refreshing` for the same reason.
  * @param {any[]} [props.items]
  *   The collection, when it is held in memory: all of it, in order. Nothing is
  *   ever asked for — `itemsAction`, `count`, `pageSize` and `memoryBudget` have
@@ -4185,17 +4187,19 @@ const VISIBILITY_HIDDEN_STYLE = { visibility: "hidden" };
  *   row empty (its room is still held, or the list would jump as it loads).
  * @param {(failure: {error: any, retry: () => void, start: number, end: number}) => any} [props.renderError]
  *   What to draw where rows were asked for and never came: given the `error`,
- *   a `retry` to call, and the `start`/`end` of the range that failed. Defaults
- *   to an inline message with a retry button, drawn on the row the user is
- *   looking at.
+ *   a `retry` to call, and the `start`/`end` of the range that failed — the
+ *   collection's own ranks, as `itemsAction` was asked for them. Defaults to an
+ *   inline message with a retry button, drawn on the row the user is looking
+ *   at.
  * @param {(state: {busy: boolean, refreshing: boolean, range: {start: number, end: number}|null}) => void} [props.onRequestStateChange]
  *   Called when the run starts or stops asking for rows — for the screen around
  *   the list to say that it is looking (the rows themselves have skeletons and
  *   `refreshing` already). `busy` covers every ask, first slice and holes
  *   opened by scrolling included; `refreshing` is the subset where rows already
- *   held are being read again; `range` is what is being asked for, `null` once
- *   nothing is. A range called off and asked again right away stays one `busy`,
- *   and a list unmounted while asking says `busy: false` on its way out.
+ *   held are being read again; `range` is what is being asked for, in the
+ *   collection's own ranks as `itemsAction` sees them, `null` once nothing is.
+ *   A range called off and asked again right away stays one `busy`, and a list
+ *   unmounted while asking says `busy: false` on its way out.
  */
 export const ListItems = ({
   renderItem,
@@ -4239,11 +4243,20 @@ export const ListItems = ({
 
   const runStart = virtual.take(ownerId, store.rowCount, slotId);
   const runEnd = runStart + store.rowCount;
-  const getItemAt = (index) => store.getItem(index);
+  // The two ways to count the same row. The list numbers its rows from its own
+  // first one, whatever draws it; the store numbers the collection's, straight
+  // from the answer (a page lands at its own `start`). They are the same number
+  // only when the run is the whole list — one row declared before it and they
+  // are off by one for good. Everything below counts in rows, which is what
+  // frames the window and what the caller is shown; the store is spoken to in
+  // ranks, and this is where the two meet.
+  const rankOf = (rowIndex) => rowIndex - runStart;
+  const rowOf = (rank) => rank + runStart;
+  const getItemAt = (rowIndex) => store.getItem(rankOf(rowIndex));
   const windowFrom =
     renderWindow.start > runStart ? renderWindow.start : runStart;
   const windowTo = renderWindow.end < runEnd ? renderWindow.end : runEnd;
-  store.forget(windowFrom, windowTo);
+  store.forget(rankOf(windowFrom), rankOf(windowTo));
 
   // The row answers to its own id when the item carries one — that is what
   // addresses it from outside (--navi-select, --navi-scroll, startAt) — and
@@ -4256,9 +4269,10 @@ export const ListItems = ({
   // rows it has drawn (they register themselves, see ListItemUI).
   virtual.setRowLocator(ownerId, (id) => {
     let found = null;
-    store.eachHeld((item, index) => {
-      if (found === null && idOf(item, index) === id) {
-        found = index;
+    store.eachHeld((item, rank) => {
+      const rowIndex = rowOf(rank);
+      if (found === null && idOf(item, rowIndex) === id) {
+        found = rowIndex;
       }
     });
     return found;
@@ -4297,8 +4311,8 @@ export const ListItems = ({
     if (holeSize < rowsPerPage) {
       // Which way the page grows: away from the rows already held, which is
       // the way the user is going.
-      const heldBelow = store.holds(missingEnd + 1);
-      const heldAbove = store.holds(missingStart - 1);
+      const heldBelow = store.holds(rankOf(missingEnd + 1));
+      const heldAbove = store.holds(rankOf(missingStart - 1));
       if (heldBelow && !heldAbove) {
         askStart = missingEnd - rowsPerPage + 1;
       } else if (heldAbove && !heldBelow) {
@@ -4312,8 +4326,8 @@ export const ListItems = ({
         askEnd = missingEnd + grow;
       }
     }
-    if (askStart < 0) {
-      askStart = 0;
+    if (askStart < runStart) {
+      askStart = runStart;
     }
     if (askEnd > runEnd - 1) {
       askEnd = runEnd - 1;
@@ -4324,17 +4338,21 @@ export const ListItems = ({
   // index is not that — rows can be inserted while the list is being read.
   const itemBefore = getItemAt(askEnd + 1);
   const itemAfter = getItemAt(askStart - 1);
+  // -1 is "nothing missing", not a row: it says there is nothing to ask for and
+  // must reach the store as it is.
+  const askRankOf = (rowIndex) => (rowIndex === -1 ? -1 : rankOf(rowIndex));
   store.useRequestMissing(
-    askStart,
-    askEnd,
+    askRankOf(askStart),
+    askRankOf(askEnd),
     {
       before:
         itemBefore === undefined ? undefined : idOf(itemBefore, askEnd + 1),
       after:
         itemAfter === undefined ? undefined : idOf(itemAfter, askStart - 1),
     },
-    windowFrom,
-    windowTo,
+    rankOf(windowFrom),
+    rankOf(windowTo),
+    runStart,
   );
 
   // Where the sentence goes when rows are missing: on the row the user is
@@ -4348,18 +4366,22 @@ export const ListItems = ({
   // not jump. What it says is stuck to the top of the band: as long as any part
   // of the hole is on screen, the sentence is too, without a callout floating
   // away from what it is about.
+  // The range that failed is the one that was asked for, so it is in ranks; the
+  // band is drawn among the rows. A negative start is not a rank but a count
+  // back from the end (the very first ask, before the count is known) — there
+  // is no row to convert it to, and the band falls back to the window.
   const failureFrom =
     store.failure === null
       ? -1
-      : store.failure.start < 0 || store.failure.start < windowFrom
+      : store.failure.start < 0 || rowOf(store.failure.start) < windowFrom
         ? windowFrom
-        : store.failure.start;
+        : rowOf(store.failure.start);
   const failureTo =
     store.failure === null
       ? -1
-      : store.failure.end < 0 || store.failure.end > windowTo - 1
+      : store.failure.end < 0 || rowOf(store.failure.end) > windowTo - 1
         ? windowTo - 1
-        : store.failure.end;
+        : rowOf(store.failure.end);
   const rows = [];
   // Rows that belong together, as the data says (a day of messages, a month of
   // games): consecutive rows sharing a group key are wrapped in one group, so
@@ -4806,7 +4828,12 @@ const useItemStore = ({
       cursor,
       windowFrom,
       windowTo,
+      runStart,
     ) => {
+      // Everything here counts the collection's own ranks: the run converts
+      // what it hands over (see rankOf). The one thing read from the list
+      // itself is where it is being held, which is a list row.
+      const rankOfRow = (rowIndex) => rowIndex - runStart;
       // The very first ask has nothing to go on: the run does not even know
       // how many rows there are, so it asks for the rows the list would open
       // on — counting back from the end when that is where it opens, the way
@@ -4838,7 +4865,7 @@ const useItemStore = ({
         // the answer says where it really landed.
         const from =
           typeof wanted.index === "number"
-            ? wanted.index - Math.floor(budget / 2)
+            ? rankOfRow(wanted.index) - Math.floor(budget / 2)
             : 0;
         start = from < 0 ? 0 : from;
         end = start + budget - 1;
@@ -4871,7 +4898,7 @@ const useItemStore = ({
           // says where it really landed (see the page's own `start`).
           const from =
             typeof scrolled.index === "number"
-              ? scrolled.index - Math.floor(budget / 2)
+              ? rankOfRow(scrolled.index) - Math.floor(budget / 2)
               : 0;
           start = from < 0 ? 0 : from;
           end = start + budget - 1;
@@ -4879,7 +4906,7 @@ const useItemStore = ({
         } else {
           const first =
             typeof scrolled === "number"
-              ? scrolled - Math.floor(budget / 2)
+              ? rankOfRow(scrolled) - Math.floor(budget / 2)
               : 0;
           start = first < 0 ? 0 : first;
           end = start + budget - 1;
