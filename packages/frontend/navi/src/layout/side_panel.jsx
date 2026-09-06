@@ -18,6 +18,19 @@ import { withPropsClassName } from "../utils/with_props_class_name.js";
 import { Popup } from "./popup.jsx";
 import { createSwipeToClose, SWIPE_AXIS_BY_SIDE } from "./swipe_to_close.js";
 
+// What `animation={true}` plays, by the edge the panel is docked to. A top
+// panel keeps its head — the one part of it the eye knows — at the edge it
+// comes from, so a slide of its own height shows its tail first and its head
+// in the last frame; it unrolls instead (popup_css.js, `cover-from-top`). A
+// bottom panel leads with its head by itself, and a left/right one keeps it on
+// the axis it does not travel.
+const ANIMATION_BY_SIDE = {
+  left: "slide-from-left",
+  right: "slide-from-right",
+  top: "cover-from-top",
+  bottom: "slide-from-bottom",
+};
+
 const css = /* css */ `
   .navi_side_panel {
     /* Side panel create a barriere with the content that is full size */
@@ -236,8 +249,9 @@ const css = /* css */ `
  * @param {boolean|"fading"} [props.animation] - Off by default (unlike
  *   `Dialog`/`Popover` themselves) — SidePanel is commonly toggled instead
  *   of opened/closed as a one-off, where a slide transition is more often
- *   undesired noise than not. `true` slides in from `side`; `"fading"` is
- *   the other common choice. Other values are forwarded as-is but not a
+ *   undesired noise than not. `true` slides in from `side` (a top panel
+ *   unrolls from its edge instead, head first — see `ANIMATION_BY_SIDE`);
+ *   `"fading"` is the other common choice. Other values are forwarded as-is but not a
  *   documented/encouraged part of this component's own API.
  * @param {boolean} [props.closeOnClickOutside=false] - `false` (default):
  *   maps to `pointerInteractionOutsideEffect="none"` — in popover mode, no
@@ -307,7 +321,7 @@ export const SidePanel = ({
       // A side panel is flush against the edge it slides in from — none of
       // Dialog's own default gap with the container.
       marginWithContainer={0}
-      animation={animation === true ? `slide-from-${side}` : animation}
+      animation={animation === true ? ANIMATION_BY_SIDE[side] : animation}
       pointerInteractionOutsideEffect={closeOnClickOutside ? "close" : "none"}
       focusCapture={closeOnClickOutside}
       minWidth={toCssLength(minWidth)}

@@ -110,6 +110,13 @@ export const createSwipeToClose = (side, { grip } = {}) => {
         travelTo(sizeOf(panelEl, axis) * closeDirection, 0, restore);
         return;
       }
+      // The closed style is rendered once while transitions are still off.
+      // Where the release travel left the panel and where its closed style
+      // puts it are the same point only for a kind that travels the panel's
+      // full size (popup_css.js, slide-from-*); a cover kind rests a fraction
+      // in, and handing the styles back before this frame would transition
+      // the panel from one to the other in plain view.
+      panelEl.getBoundingClientRect();
       restore();
     };
 

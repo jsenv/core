@@ -494,7 +494,7 @@ const css = /* css */ `
  *   popover so the page/container behind it can't scroll while it's open.
  * @param {boolean} [props.focusCapture] - Traps Tab navigation inside the
  *   popover (see `focus_trap.js`).
- * @param {boolean|"auto"|"fading"|"scaling"|"sliding"|`slide-from-${string}`} [props.animation]
+ * @param {boolean|"auto"|"fading"|"scaling"|"sliding"|`slide-from-${string}`|"cover-from-top"} [props.animation]
  *   - `true`/`"auto"` resolves to a concrete `"slide-from-*"` direction
  *   based on `positionArea`. Any other explicit value is used as-is.
  * @param {string} [props.animationDuration] - Maps to

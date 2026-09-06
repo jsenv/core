@@ -132,7 +132,7 @@ const css = /* css */ `
  *   identically): the wash the backdrop paints over what is behind.
  * @param {string} [props.backdropFilter] - Forwarded as-is: what that wash
  *   does to the picture underneath, `"blur(4px)"` and the like.
- * @param {boolean|"auto"|"fading"|"scaling"|"sliding"|"expanding"|`slide-from-${string}`|`expand-${string}`} [props.animation]
+ * @param {boolean|"auto"|"fading"|"scaling"|"sliding"|"expanding"|`slide-from-${string}`|"cover-from-top"|`expand-${string}`} [props.animation]
  *   - Forwarded as-is.
  * @param {string} [props.animationDuration] - Forwarded as-is.
  * @param {string} [props.maxWidth] - Forwarded as-is to both; also read
