@@ -181,7 +181,9 @@ and that is deliberate: a door that carries no value of its own can still
 write into the form through what its popup does, and a read-only form must
 still shut it. An affordance that genuinely writes nowhere says that
 separately, with `whenSelfInteractionsBlocked="ignore"` — as it says whose
-press it is with `selfInteractions`. Three questions, three props (see
+press it is with `selfInteractions`, and a control whose action is meant to be
+left running says THAT separately too, with `actionStandalone`. One question
+each, one prop each (see
 [interactions.md](./interactions.md#the-third-question-whose-value-is-it)).
 
 Every control takes the prop, groups included — `<Form standalone>` is the

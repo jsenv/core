@@ -1593,7 +1593,14 @@ const useInteractiveProps = (
     const parentAction = useContext(ActionContext);
     const actionStatus = useActionStatus(boundAction);
     const networkPolicyReason = useNetworkPolicyReason();
-    const { disabled, required, readOnly, loading, optimistic } = props;
+    const {
+      disabled,
+      required,
+      readOnly,
+      loading,
+      optimistic,
+      actionStandalone,
+    } = props;
 
     // `whenSelfInteractionsBlocked="ignore"`: an affordance that writes nothing
     // to the control it sits in has no business inheriting that control's state
@@ -1676,6 +1683,11 @@ const useInteractiveProps = (
     // Read by BUSY_CONSTRAINT: an optimistic control stays interactive while
     // its bound action runs (a new toggle replaces the run instead of waiting).
     uiStateController.optimistic = Boolean(optimistic);
+    // Read by BUSY_CONSTRAINT: the wait belongs to this control alone. It is
+    // busy for itself — the render, the second press, the callout — and nothing
+    // above it is told, so a form still submits and a popup still closes over a
+    // run that was meant to be left going.
+    uiStateController.actionStandalone = Boolean(actionStandalone);
     // What the interaction rule last refused is only true while the control is
     // held; the state it was read from moves here (see refreshReport).
     useLayoutEffect(() => {

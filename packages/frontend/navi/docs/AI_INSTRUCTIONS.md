@@ -166,8 +166,9 @@ to start when unsure which export solves a problem.
 
 - `interactions.md` — a gesture is named, not read by hand: the `interactions`
   prop, swipes and holds, the gate, `selfInteractions` for an affordance inside
-  somebody else's box, registering a detector. Read before a `pointerdown`
-  listener of your own, and before stopping propagation to keep a popup shut.
+  somebody else's box, `actionStandalone` for a run nothing above waits on,
+  registering a detector. Read before a `pointerdown` listener of your own, and
+  before stopping propagation to keep a popup shut.
 - `drag_interactions.md` — an element carried: `move`, `reorder`, `land`,
   `toss`, `leave`, `moving`, the `grab`/`release`/`refuse` moments, dressing the
   clone, and the machinery for a gesture whose product is a value. Read before

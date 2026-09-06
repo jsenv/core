@@ -124,6 +124,7 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  *   selfInteractions?: string,
  *   whenSelfInteractionsBlocked?: "hide" | "refuse" | "ignore",
  *   replace?: boolean,
+ *   actionStandalone?: boolean,
  *   [key: string]: any,
  * }>}
  * @param {boolean} [replace] Go where the press leads — an `href`, a
@@ -154,6 +155,13 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  *   by whether it WRITES to the control it sits in: it goes (`"hide"`, the
  *   default), `"refuse"` keeps it and refuses with a callout, `"ignore"` lets
  *   it through untouched — for an affordance that never wrote to that control.
+ * @param {boolean} [actionStandalone] The wait this button's action creates is
+ *   its own: it renders busy, refuses a second press and raises the error
+ *   callout as always, and nothing above it is told — the form around it still
+ *   submits, the popup it sits in still closes. For a run started to be left
+ *   running, which the app watches from somewhere else; never for one holding
+ *   an answer the screen is the only place to read (see
+ *   docs/interactions.md#the-fourth-question-whose-wait-is-it).
  * @param {string} [contentDisplay] The display of the frame the button draws
  *   around its children. It follows the button's own by default — its display
  *   and, a display alone saying nothing about direction, the rest of its flow

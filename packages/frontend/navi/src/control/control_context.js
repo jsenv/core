@@ -117,6 +117,9 @@ export const CONTROL_PROP_SET = new Set([
   "resetOnAbort",
   "resetOnError",
   "optimistic",
+  // The wait this control's action creates is its own: it renders busy and
+  // refuses a second press, and nothing above it is told (see BUSY_CONSTRAINT).
+  "actionStandalone",
 
   "charGuard",
   "maxLengthGuard",

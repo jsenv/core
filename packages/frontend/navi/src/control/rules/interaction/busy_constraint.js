@@ -13,6 +13,11 @@ export const BUSY_CONSTRAINT = {
   transient: true,
   // Unlike readonly/disabled, a busy element DOES block its parent from
   // submitting — the element is mid-operation and cannot safely participate.
+  // Unless it says the wait is its own (`actionStandalone`): then the refusal
+  // stays on the element and every ancestor reads it as free — the group above
+  // (see getInteractionBlockingControls) and the popup around it (see
+  // findBusyElementInside in dialog.jsx and popover.jsx, which both filter on
+  // `ignoredByParents`).
   check: (field, { intent } = {}) => {
     const isBusy = isControlBusy(field);
     if (!isBusy) {
@@ -32,7 +37,11 @@ export const BUSY_CONSTRAINT = {
     const message = isButton
       ? naviI18n("constraint.busy.button")
       : naviI18n("constraint.busy.default");
-    return { message, status: "info" };
+    return {
+      message,
+      status: "info",
+      ignoredByParents: Boolean(field.actionStandalone),
+    };
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("data-busy");

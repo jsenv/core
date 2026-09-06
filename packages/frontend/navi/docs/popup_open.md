@@ -41,6 +41,23 @@ A form that is sending holds an answer that is neither committed nor given up.
 Escape, the backdrop, a close button — all of them ask, and the busy control
 answers, the same way it would answer anyone else.
 
+That is the right answer for a run bounded by a request that comes back. A run
+deliberately left going is the other case — activating a service worker update,
+which lands only once the browser switches over and can take as long as the
+page's own in-flight work takes. Nothing is held there: the app stays usable
+while it settles, and a panel that waits for it is a panel that may never close
+again. The control says so, and no popup around it is told:
+
+```jsx
+<Button action={() => activateUpdate()} actionStandalone>
+  Activate
+</Button>
+```
+
+It is still busy for itself — the spinner, the second press refused, the error
+callout — which is the whole point of keeping `action` (see
+[interactions.md](./interactions.md#the-fourth-question-whose-wait-is-it)).
+
 So the question is never "should this popup be controlled?" but "what triggers
 the opening?" — and, when the answer is the application rather than a gesture,
 where that state lives:
@@ -496,6 +513,10 @@ To close on the press instead — the answer taken as soon as it is given, the
 save running on its own behind a closed popup — close from somewhere the action
 does not hold up, e.g. an `onClick` of your own. Know what it costs: **a save
 that fails does so behind a closed popup**.
+
+Nobody wanting to close, but everybody wanting to be ABLE to, is a different
+need and has its own answer: `actionStandalone` (see the top of this page) frees
+the popup without closing it, and the error callout stays where the press was.
 
 ## Escape cancels, the other gestures keep
 

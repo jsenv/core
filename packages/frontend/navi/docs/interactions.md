@@ -12,6 +12,7 @@
   - [Why it is a list, and why it is required](#why-it-is-a-list-and-why-it-is-required)
   - [Where the zone blocks: does it write to the control it sits in?](#where-the-zone-blocks-does-it-write-to-the-control-it-sits-in)
   - [The third question: whose value is it?](#the-third-question-whose-value-is-it)
+  - [The fourth question: whose wait is it?](#the-fourth-question-whose-wait-is-it)
   - [On something you draw yourself](#on-something-you-draw-yourself)
   - [When the affordance should sit OUTSIDE instead](#when-the-affordance-should-sit-outside-instead)
   - [navi steps back; a plain `onClick` does not](#navi-steps-back-a-plain-onclick-does-not)
@@ -278,7 +279,7 @@ that gesture. Whose **value** an element carries is a separate question, and
 group around it, so what it holds never joins that value (see
 [form_changed.md](./form_changed.md#a-control-that-answers-for-itself)).
 
-The three come apart, which is why they are three props:
+They come apart, which is why they are separate props:
 
 | the element                                             | says                                                                        |
 | ------------------------------------------------------- | --------------------------------------------------------------------------- |
@@ -290,6 +291,39 @@ Reading `standalone` as "ignore everything around me" is the trap: `disabled`,
 `readOnly` and `loading` travel on their own contexts and go on reaching it,
 because "what do I hold" and "may anything be changed here" are not the same
 question.
+
+### The fourth question: whose wait is it?
+
+A running action says two things at once. To the control: I am mid-action —
+busy, a second press refused, the error callout if it fails. To everything
+around it: nothing here moves on — the form does not submit, and the popup does
+not close (see
+[popup_open.md](./popup_open.md#the-popup-owns-its-open-state)).
+
+The second half is a promise about an answer: a send holds something neither
+committed nor given up, so the screen showing it stays. It is exactly wrong for
+a run that was started to be LEFT running — activating a service worker update,
+which lands only once the browser switches over and can be held by the page's
+own in-flight work for minutes. Waiting is not the point; the app goes on being
+used and the feedback is somewhere else entirely. `actionStandalone` says the
+wait is the control's own:
+
+```jsx
+<Button action={() => activateUpdate()} actionStandalone>
+  Activate
+</Button>
+```
+
+Everything the control does for itself stays: it renders busy, it refuses a
+second press, and it raises the error callout — which is why it keeps `action`
+rather than re-implementing the three by hand. What changes is that no ancestor
+is told: the form around it submits, and the panel it sits in closes on Escape,
+on the backdrop and on its cross.
+
+The question that picks it is what closing over the run would lose. An answer
+being sent: everything — the popup is the only place its failure can be read,
+and `actionStandalone` there is how a save fails behind a closed popup. Something
+the app watches from somewhere else: nothing — it was never being watched here.
 
 ### On something you draw yourself
 

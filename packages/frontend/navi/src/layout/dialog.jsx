@@ -970,10 +970,19 @@ const DOCKED_SWIPE_GRIP = "[data-header],[data-swipe-grip]";
 // controls rather than reading an attribute off the dialog: a dialog carries no
 // state of its own (see this file's top comment), and `aria-busy` on the
 // controls is a render snapshot — BUSY_CONSTRAINT reads the live answer.
+// Same as Popover's own; kept in both rather than shared, since each file reads
+// on its own — what changes here changes there too.
 const findBusyElementInside = (dialogEl) => {
   for (const element of dialogEl.querySelectorAll("[navi-control-host]")) {
     const controller = element.__uiStateController__;
-    if (controller && BUSY_CONSTRAINT.check(controller)) {
+    if (!controller) {
+      continue;
+    }
+    const busyInfo = BUSY_CONSTRAINT.check(controller);
+    // `ignoredByParents`: the control says the wait is its own
+    // (`actionStandalone`), so a popup is one more ancestor it does not hold —
+    // the same reading a group makes of it (see control_interaction.js).
+    if (busyInfo && !busyInfo.ignoredByParents) {
       return element;
     }
   }
