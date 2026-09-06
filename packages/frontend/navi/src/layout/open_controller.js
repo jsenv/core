@@ -591,6 +591,12 @@ export const useOpenController = (openHandler) => {
       // played on an element already detached by the time the browser gets to
       // it (see controller.transitionChange).
       controllerRef.current.transitionChange = null;
+      // Leaving the tree is not being closed: whoever holds the open state
+      // (`signal`, `navState`) keeps saying open, so the same popup put back
+      // finds itself as it was. preact/compat's Suspense parks a suspended
+      // subtree by running every hook cleanup in it, so a `<Loading>` above
+      // the popup lands here for a wait it comes back from.
+      controllerRef.current.onOpenedChange = null;
       controllerRef.current.close();
     };
   }, []);
@@ -615,22 +621,33 @@ export const useOpenController = (openHandler) => {
 // unrelated (sibling) popups both mounting open also get reordered
 // relative to each other, but there's no meaningful "correct" order between
 // those anyway.
+//
+// The microtask is also why the scheduling is undone by the effect that asked
+// for it: a `<Loading>` above the popup can park the whole subtree between the
+// two — preact/compat's Suspense runs every hook cleanup of the suspended
+// children and moves their dom into a detached <div> — and the flush would
+// then be opening a popup whose element has left the document.
 let pendingMountOpens = [];
 let mountOpenFlushScheduled = false;
 const scheduleMountOpen = (run) => {
   pendingMountOpens.push(run);
-  if (mountOpenFlushScheduled) {
-    return;
+  if (!mountOpenFlushScheduled) {
+    mountOpenFlushScheduled = true;
+    queueMicrotask(() => {
+      const entries = pendingMountOpens;
+      pendingMountOpens = [];
+      mountOpenFlushScheduled = false;
+      for (let i = entries.length - 1; i >= 0; i--) {
+        entries[i]();
+      }
+    });
   }
-  mountOpenFlushScheduled = true;
-  queueMicrotask(() => {
-    const entries = pendingMountOpens;
-    pendingMountOpens = [];
-    mountOpenFlushScheduled = false;
-    for (let i = entries.length - 1; i >= 0; i--) {
-      entries[i]();
+  return () => {
+    const index = pendingMountOpens.indexOf(run);
+    if (index > -1) {
+      pendingMountOpens.splice(index, 1);
     }
-  });
+  };
 };
 
 // Where the popup's open state is kept, when it is kept anywhere: `navState`
@@ -828,23 +845,23 @@ export const useOpenPropsEffectOnOpenController = (
         // directly, so nested popups that both mount already-open end up
         // stacked ancestor-first instead of Preact's own child-first effect
         // order.
-        scheduleMountOpen(() =>
+        return scheduleMountOpen(() =>
           openController.open(new CustomEvent("open_by_prop", { detail: {} }), {
             silent: mountOpenReason !== "interaction",
           }),
         );
       }
-      return;
+      return undefined;
     }
 
     if (open === undefined) {
-      return;
+      return undefined;
     }
     // Skip when the controller is already in the desired state.
     // openController.opened tracks actual open/close (updated by onopen/onclose,
     // not by renders) so it is the authoritative check against feedback loops.
     if (open === openController.opened) {
-      return;
+      return undefined;
     }
     if (open) {
       openController.open(new CustomEvent("open_by_prop", { detail: {} }));
@@ -865,6 +882,7 @@ export const useOpenPropsEffectOnOpenController = (
     if (navStateId && openController.opened) {
       enterNavState();
     }
+    return undefined;
   }, [open]);
 };
 
