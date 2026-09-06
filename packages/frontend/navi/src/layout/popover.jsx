@@ -959,6 +959,7 @@ const usePopoverProps = (props) => {
   // slower, flash-prone `toggle` event instead of the fast, pre-paint
   // MutationObserver path.
 
+  openController.getElement = () => ref.current;
   openController.openEffect = (e) => {
     const popoverEl = ref.current;
     // backdropEl is null when pointerInteractionOutsideEffect is "none" —

@@ -1286,6 +1286,7 @@ const useDialogProps = (props) => {
   // *when* this runs. openEffect runs outside of render (triggered by
   // openController.open()), so it cannot call hooks — cleanup is a plain
   // pub/sub.
+  openController.getElement = () => ref.current;
   openController.openEffect = (e) => {
     const dialogEl = ref.current;
     const backdropEl = backdropRef.current;

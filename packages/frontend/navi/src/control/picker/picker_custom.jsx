@@ -1096,6 +1096,7 @@ const PickerCalloutPopup = ({
   }
   // Reassigned on every render, like Popover's own, so it closes over the
   // latest props.
+  openController.getElement = () => pickerRef.current;
   openController.openEffect = (openEvent) => {
     const pickerEl = pickerRef.current;
     const calloutManager =

@@ -92,6 +92,10 @@ const FOCUS_DELAY_ON_KEYBOARD_MS = 250;
  * controller (not exposed as a property) and invoked when the popup actually
  * closes, however that happens.
  *
+ * `controller.getElement` is assigned alongside it and answers with the
+ * element that effect acts on, so a mount-time open can tell whether there is
+ * anything in the document to open yet (see useOpenPropsEffectOnOpenController).
+ *
  * Dialog/Popover also call `openController.requestClose(e, { isCancel })` for
  * their own internal triggers (backdrop click, Escape).
  *
@@ -360,6 +364,10 @@ export const createOpenController = (
     // openedDuringThisPress). Never any press before there has been one.
     pressCountAtOpen: null,
     openEffect: null,
+    // The element openEffect acts on, asked for before the mount-time open is
+    // let through: it has to be in the document for showModal()/showPopover()
+    // to be legal at all (see useOpenPropsEffectOnOpenController).
+    getElement: null,
     // Set by the controlled element (see popup_content_mount.js) when its
     // content is still waiting for a first open to be built. Called below,
     // before openEffect, so the popup measures and positions the real thing.
@@ -622,32 +630,27 @@ export const useOpenController = (openHandler) => {
 // relative to each other, but there's no meaningful "correct" order between
 // those anyway.
 //
-// The microtask is also why the scheduling is undone by the effect that asked
-// for it: a `<Loading>` above the popup can park the whole subtree between the
-// two — preact/compat's Suspense runs every hook cleanup of the suspended
-// children and moves their dom into a detached <div> — and the flush would
-// then be opening a popup whose element has left the document.
-let pendingMountOpens = [];
+// The cancel this returns answers whether the open was still pending: a
+// `<Loading>` above the popup can park the whole subtree between the effect
+// and the flush (preact/compat's Suspense runs every hook cleanup of the
+// suspended children and moves their dom into a detached <div>), and the flush
+// would then be opening a popup whose element has left the document.
+let pendingMountOpens = new Set();
 let mountOpenFlushScheduled = false;
 const scheduleMountOpen = (run) => {
-  pendingMountOpens.push(run);
+  pendingMountOpens.add(run);
   if (!mountOpenFlushScheduled) {
     mountOpenFlushScheduled = true;
     queueMicrotask(() => {
-      const entries = pendingMountOpens;
-      pendingMountOpens = [];
+      const entries = [...pendingMountOpens];
+      pendingMountOpens = new Set();
       mountOpenFlushScheduled = false;
       for (let i = entries.length - 1; i >= 0; i--) {
         entries[i]();
       }
     });
   }
-  return () => {
-    const index = pendingMountOpens.indexOf(run);
-    if (index > -1) {
-      pendingMountOpens.splice(index, 1);
-    }
-  };
+  return () => pendingMountOpens.delete(run);
 };
 
 // Where the popup's open state is kept, when it is kept anywhere: `navState`
@@ -825,6 +828,9 @@ export const useOpenPropsEffectOnOpenController = (
   // subsequent `open` change is a real, later toggle and should animate
   // normally like any other interactive open/close.
   const isFirstRunRef = useRef(true);
+  // The mount-time open, from the first run below until the effect after it
+  // could schedule it.
+  const mountOpenOwedRef = useRef(null);
 
   useLayoutEffect(() => {
     const isFirstRun = isFirstRunRef.current;
@@ -841,15 +847,10 @@ export const useOpenPropsEffectOnOpenController = (
         // shown as "closed" for the user to see it transition away from, so the
         // entrance is skipped (`silent`, see popover.jsx's own openEffect).
         //
-        // Deferred + batched (see scheduleMountOpen above) rather than called
-        // directly, so nested popups that both mount already-open end up
-        // stacked ancestor-first instead of Preact's own child-first effect
-        // order.
-        return scheduleMountOpen(() =>
+        mountOpenOwedRef.current = () =>
           openController.open(new CustomEvent("open_by_prop", { detail: {} }), {
             silent: mountOpenReason !== "interaction",
-          }),
-        );
+          });
       }
       return undefined;
     }
@@ -884,6 +885,38 @@ export const useOpenPropsEffectOnOpenController = (
     }
     return undefined;
   }, [open]);
+
+  // Schedules the owed mount-time open — on every render, until it can. It has
+  // to wait for the element to be IN THE DOCUMENT, and a mount does not
+  // guarantee that: a `<Loading>` above the popup parks a suspended subtree by
+  // moving its dom into a detached <div> while keeping its components alive
+  // (preact/compat), and a render there re-creates the hooks, so the first run
+  // above happens against dom that is not in the page — where showModal() and
+  // showPopover() throw. The boundary settling re-renders the subtree with its
+  // dom back, and that render is the one that schedules.
+  //
+  // Deferred + batched (see scheduleMountOpen) rather than called directly,
+  // so nested popups that both mount already-open end up stacked
+  // ancestor-first instead of Preact's own child-first effect order. An open
+  // still pending when this cleans up goes back to being owed: the parking
+  // itself runs this cleanup, and the fresh run that follows re-asks.
+  useLayoutEffect(() => {
+    const mountOpen = mountOpenOwedRef.current;
+    if (!mountOpen) {
+      return undefined;
+    }
+    const element = openController.getElement?.();
+    if (element && !element.isConnected) {
+      return undefined;
+    }
+    mountOpenOwedRef.current = null;
+    const cancelMountOpen = scheduleMountOpen(mountOpen);
+    return () => {
+      if (cancelMountOpen()) {
+        mountOpenOwedRef.current = mountOpen;
+      }
+    };
+  });
 };
 
 export const useOpenControllerByProps = (props, name) => {

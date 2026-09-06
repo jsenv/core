@@ -530,6 +530,7 @@ export const Expandable = (props) => {
   // What opening LOOKS like here, and how to undo it — the one thing an
   // expandable owns that a popup does not (see open_controller.js). Reassigned
   // on every render so it always closes over the latest props.
+  openController.getElement = () => rootRef.current;
   openController.openEffect = (openEvent) => {
     const contentContainer = contentContainerRef.current;
     // `silent`: the expandable was already open when the page appeared
