@@ -90,6 +90,22 @@ It asks again only after a press has landed away from it, which is the hand
 saying it has moved on; navi watches for that press itself, so nothing on your
 side listens to the window.
 
+The paid wait is a state to draw — the map answers on contact now, and the user
+has to be told — so the surface says it: `[data-hand-kept]`, for as long as it
+holds the hand, a finger on it or not.
+
+```css
+.plan[data-hand-kept] {
+  box-shadow: 0 0 0 100vmax rgb(9 12 20 / 22%);
+}
+```
+
+Only a `"kept"` surface ever carries it: one that answers on contact was never
+given anything to keep. `[data-grabbed]` is the narrower word — a hand on it at
+this instant — and the two are drawn together or apart as you like
+(`[data-hand-kept]:not([data-grabbed])` is the surface waiting, held, for the
+next finger).
+
 ### A wheel that does not steal the page's scroll
 
 A wheel over a surface in a page means to scroll that page nine times out of ten
@@ -164,9 +180,10 @@ says (`grab`, `release`) and the same attribute:
 }
 ```
 
-`[data-grabbed]` is on the element for as long as the surface holds the hand, so
+`[data-grabbed]` is on the element for as long as a hand is on the surface, so
 a contour, a veil or a raised shadow needs no listener — which is what this is
-usually for. `grab` and `release` are for the rest: a vibration, a state kept
+usually for. (`[data-hand-kept]` is the other one, and it outlasts the finger:
+see [`data-pan-after-hold`](#a-surface-that-scrolls-past-data-pan-after-hold).) `grab` and `release` are for the rest: a vibration, a state kept
 elsewhere. Their detail is `{ pointerType }`; like a drag's, they **report and do
 not ask**, and declared without `pan` or `zoom` they are a drag's words again,
 which is what the dev warning says.

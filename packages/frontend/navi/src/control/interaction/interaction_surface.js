@@ -41,6 +41,10 @@
  * it, which is the hand saying it has moved on. What answers "away" is the same
  * thing that closes a popup, and the surface is the one that watches for it, so
  * an application never keeps a `pointerdown` listener on the window to know.
+ * `[data-hand-kept]` is on the element for as long as it holds the hand that
+ * way, so the paid wait can be drawn — a page darkened around a plan that
+ * answers on contact now. `[data-grabbed]` stays the narrower one: a hand on it
+ * at this instant.
  *
  * The WHEEL is the same question asked of a mouse, and it is not asked of the
  * caller at all: a wheel event is read rather than settled beforehand, so

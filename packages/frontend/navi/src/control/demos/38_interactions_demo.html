@@ -354,6 +354,13 @@
         border-radius: 8px;
         overflow: hidden;
       }
+      /* The wait was paid and the surface still holds the hand, finger or no
+         finger: the next one pans it on contact. Written before the rule below
+         so the hand actually on it wins. */
+      .surface[data-hand-kept] {
+        border-style: dashed;
+        border-color: #2f5fa8;
+      }
       /* The surface says it has the hand, and nothing else has to be listened
          to for it (see "grab, release" in the docs). Drawn on the frame rather
          than inside it, so what lights up is the thing that took the finger. */
@@ -1806,7 +1813,9 @@
                 surface's either way. The one below is asked{" "}
                 <code>data-pan-after-hold="kept"</code>: hold it once and every
                 finger after that pans it on contact, until a press lands
-                somewhere else on the page.
+                somewhere else on the page. Its dashed border is{" "}
+                <code>[data-hand-kept]</code>, which outlasts the finger the way{" "}
+                <code>[data-grabbed]</code> does not.
               </p>
               <Box
                 className="surface"
