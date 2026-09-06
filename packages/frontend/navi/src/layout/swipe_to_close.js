@@ -80,7 +80,7 @@ export const createSwipeToClose = (side, { grip } = {}) => {
     // composes under the placement instead of replacing it.
     const styleAt = (distance) => ({
       transform: translateOf(axis, distance),
-      clipPath: clipOf(axis, distance),
+      clipPath: clipOf(side, distance),
     });
     const paint = (distance) => {
       Object.assign(panelEl.style, styleAt(distance));
@@ -168,19 +168,25 @@ const translateOf = (axis, distance) =>
     ? `translate(${distance}px, 0px)`
     : `translate(0px, ${distance}px)`;
 // The same cut the entry/exit animation makes (popup_css.js), at a distance the
-// finger decides instead of a transition: each edge sits where the popup's own
-// room ran out (--container-position-room-*, written by applyNewPosition), and
-// the pull is added back so the cut stays on that line while the box travels
-// under it. Unset rooms — a popup that was never placed — read as 100vmax,
-// which cuts nothing.
-const roomOf = (edge) => `var(--container-position-room-${edge}, 100vmax)`;
-const clipOf = (axis, distance) => {
-  const alongX = axis === "x" ? distance : 0;
-  const alongY = axis === "y" ? distance : 0;
-  return `inset(
-    calc(-1 * ${roomOf("top")} - ${alongY}px)
-    calc(-1 * ${roomOf("right")} + ${alongX}px)
-    calc(-1 * ${roomOf("bottom")} + ${alongY}px)
-    calc(-1 * ${roomOf("left")} - ${alongX}px)
-  )`;
+// finger decides instead of a transition: the edge the popup is pushed back
+// through sits where its own room ran out (--container-position-room-*, written
+// by applyNewPosition), plus what has been pulled, so the cut holds that line
+// while the box travels under it. The three other sides are left far outside
+// the box — the pull never takes the popup past them, and cutting there would
+// only shave what it legitimately paints outside its own box. An unset room —
+// a popup that was never placed — reads 100vmax and cuts nothing.
+const UNCUT = "-100vmax";
+const clipOf = (side, distance) => {
+  const pulled = distance < 0 ? -distance : distance;
+  const cut = `calc(-1 * var(--container-position-room-${side}, 100vmax) + ${pulled}px)`;
+  if (side === "top") {
+    return `inset(${cut} ${UNCUT} ${UNCUT} ${UNCUT})`;
+  }
+  if (side === "right") {
+    return `inset(${UNCUT} ${cut} ${UNCUT} ${UNCUT})`;
+  }
+  if (side === "bottom") {
+    return `inset(${UNCUT} ${UNCUT} ${cut} ${UNCUT})`;
+  }
+  return `inset(${UNCUT} ${UNCUT} ${UNCUT} ${cut})`;
 };

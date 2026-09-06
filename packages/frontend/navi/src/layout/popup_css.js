@@ -48,8 +48,9 @@
  *
  * `animation="slide-from-*"` (anchorReference/point mode only): a real
  * translate-based entrance, 8 directions (cardinal + 4 diagonals), each
- * 100%-of-own-size, cut at the edges of the area the popup was placed in so
- * that a travel starting outside that area is not watched crossing it. It travels through `transform`, not through the
+ * 100%-of-own-size, cut on the side it comes from — at the edge of the area it
+ * was placed in, so the part of the travel that happens outside that area is
+ * not watched crossing it. It travels through `transform`, not through the
  * `translate` property, which belongs to the popup's own placement
  * (applyNewPosition in visible_rect.js — see its doc for why the placement is
  * a transform at all, and why it has to be the outermost one: the individual
@@ -150,38 +151,58 @@ export const popupCss = /* css */ `
 
     /* slide — anchorReference/point mode family: direction multipliers,
          one per concrete navi-animation value, 100%-of-own-size distance
-         (see this file's top comment). */
+         (see this file's top comment).
+         Each also names the side(s) it comes from, as a cut placed on the edge
+         of the area the popup was placed in — and ONLY those sides: a popup
+         travelling down crosses the top edge of that area and no other, so
+         cutting the three it never reaches would take away what it legitimately
+         paints outside its own box (its shadow, a popup opened from inside it)
+         for nothing. A drawer the width of the app is the case that shows it:
+         its room to the left and right is zero, and cutting there would shave
+         its sides flat. See the shared rule below for what the cut is. */
     &[navi-animation="slide-from-top"] {
       --x-popup-slide-x: 0;
       --x-popup-slide-y: -1;
+      --x-popup-cut-top: var(--x-popup-cut-top-at-area);
     }
     &[navi-animation="slide-from-bottom"] {
       --x-popup-slide-x: 0;
       --x-popup-slide-y: 1;
+      --x-popup-cut-bottom: var(--x-popup-cut-bottom-at-area);
     }
     &[navi-animation="slide-from-left"] {
       --x-popup-slide-x: -1;
       --x-popup-slide-y: 0;
+      --x-popup-cut-left: var(--x-popup-cut-left-at-area);
     }
     &[navi-animation="slide-from-right"] {
       --x-popup-slide-x: 1;
       --x-popup-slide-y: 0;
+      --x-popup-cut-right: var(--x-popup-cut-right-at-area);
     }
     &[navi-animation="slide-from-top-left"] {
       --x-popup-slide-x: -1;
       --x-popup-slide-y: -1;
+      --x-popup-cut-top: var(--x-popup-cut-top-at-area);
+      --x-popup-cut-left: var(--x-popup-cut-left-at-area);
     }
     &[navi-animation="slide-from-top-right"] {
       --x-popup-slide-x: 1;
       --x-popup-slide-y: -1;
+      --x-popup-cut-top: var(--x-popup-cut-top-at-area);
+      --x-popup-cut-right: var(--x-popup-cut-right-at-area);
     }
     &[navi-animation="slide-from-bottom-left"] {
       --x-popup-slide-x: -1;
       --x-popup-slide-y: 1;
+      --x-popup-cut-bottom: var(--x-popup-cut-bottom-at-area);
+      --x-popup-cut-left: var(--x-popup-cut-left-at-area);
     }
     &[navi-animation="slide-from-bottom-right"] {
       --x-popup-slide-x: 1;
       --x-popup-slide-y: 1;
+      --x-popup-cut-bottom: var(--x-popup-cut-bottom-at-area);
+      --x-popup-cut-right: var(--x-popup-cut-right-at-area);
     }
     &[navi-animation="slide-from-top"],
     &[navi-animation="slide-from-bottom"],
@@ -192,32 +213,35 @@ export const popupCss = /* css */ `
     &[navi-animation="slide-from-bottom-left"],
     &[navi-animation="slide-from-bottom-right"] {
       opacity: 1;
-      /* The travel is cut at the edges of the area the popup was placed in:
-         what it crosses on its way in is outside that area, and outside it is
-         either the glass beside an app narrowed with --navi-app-max-width
-         (layout/safe_area.js) or whatever surrounds a container — neither the
-         popup's to paint, and a popup in the top layer answers to no overflow
-         of the document.
-         --container-position-room-* is how far past each of its own edges the
-         popup may still paint before reaching that area's edge
-         (applyNewPosition in @jsenv/dom), so the negated value puts the cut ON
-         that edge, and an unplaced popup reading 100vmax cuts nothing. The
-         popup itself is never cut: the rooms floor at 0. */
-      --x-popup-cut-top: calc(-1 * var(--container-position-room-top, 100vmax));
-      --x-popup-cut-right: calc(
+      /* Where the area the popup was placed in has its edges, in the popup's
+         own coordinates: --container-position-room-* is how far past each of
+         its own edges the popup may still paint before reaching that edge
+         (applyNewPosition in @jsenv/dom), so the negated value puts a cut ON
+         it. Only the side(s) the travel comes from take one (see the direction
+         rules above); the rest stay far outside the box, uncut. A popup that
+         was never placed reads 100vmax and is not cut at all.
+         Outside that area is either the glass beside an app narrowed with
+         --navi-app-max-width (layout/safe_area.js) or whatever surrounds a
+         container — neither the popup's to paint, and a popup in the top layer
+         answers to no overflow of the document. The popup itself is never cut
+         either: the rooms floor at 0. */
+      --x-popup-cut-top-at-area: calc(
+        -1 * var(--container-position-room-top, 100vmax)
+      );
+      --x-popup-cut-right-at-area: calc(
         -1 * var(--container-position-room-right, 100vmax)
       );
-      --x-popup-cut-bottom: calc(
+      --x-popup-cut-bottom-at-area: calc(
         -1 * var(--container-position-room-bottom, 100vmax)
       );
-      --x-popup-cut-left: calc(
+      --x-popup-cut-left-at-area: calc(
         -1 * var(--container-position-room-left, 100vmax)
       );
       --x-popup-travel-x: calc(var(--x-popup-slide-x, 0) * 100%);
       --x-popup-travel-y: calc(var(--x-popup-slide-y, -1) * 100%);
       clip-path: inset(
-        var(--x-popup-cut-top) var(--x-popup-cut-right)
-          var(--x-popup-cut-bottom) var(--x-popup-cut-left)
+        var(--x-popup-cut-top, -100vmax) var(--x-popup-cut-right, -100vmax)
+          var(--x-popup-cut-bottom, -100vmax) var(--x-popup-cut-left, -100vmax)
       );
 
       transform: translate(0px, 0px);
@@ -231,10 +255,10 @@ export const popupCss = /* css */ `
            ends of the transition — and so at every instant in between, the two
            interpolating over one duration and one easing. */
         clip-path: inset(
-          calc(var(--x-popup-cut-top) - var(--x-popup-travel-y))
-            calc(var(--x-popup-cut-right) + var(--x-popup-travel-x))
-            calc(var(--x-popup-cut-bottom) + var(--x-popup-travel-y))
-            calc(var(--x-popup-cut-left) - var(--x-popup-travel-x))
+          calc(var(--x-popup-cut-top, -100vmax) - var(--x-popup-travel-y))
+            calc(var(--x-popup-cut-right, -100vmax) + var(--x-popup-travel-x))
+            calc(var(--x-popup-cut-bottom, -100vmax) + var(--x-popup-travel-y))
+            calc(var(--x-popup-cut-left, -100vmax) - var(--x-popup-travel-x))
         );
         transform: translate(var(--x-popup-travel-x), var(--x-popup-travel-y));
       }

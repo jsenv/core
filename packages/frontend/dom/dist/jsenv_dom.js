@@ -13196,6 +13196,10 @@ const SURFACE_ATTRIBUTE = "data-pan-zoom-surface";
 // The same word a carried element says while the gesture has it (see drag_to.js):
 // a surface holding the hand is grabbed, and one thing held is like another.
 const GRABBED_ATTRIBUTE = "data-grabbed";
+// The surface holds the hand, whether or not anything is touching it right now:
+// what `afterHold: "kept"` leaves behind between two gestures, and the state the
+// wait was paid for.
+const HAND_KEPT_ATTRIBUTE = "data-hand-kept";
 
 const css$2 = /* css */ `[data-pan-zoom-surface] {
   touch-action: none;
@@ -13311,7 +13315,8 @@ const findPanZoomSurface = (element) => {
  *   standing in something that scrolls; a mouse pans by travelling either way.
  *   `"kept"` asks for the wait once: from the moment the surface has the hand it
  *   pans on contact, and it asks again only after a pointer has gone down away
- *   from it.
+ *   from it. `data-hand-kept` is on the element for as long as it holds the hand
+ *   that way, a hand touching it or not.
  * @param {"auto"|"always"} [options.wheelZoom="auto"] Whether a BARE wheel zooms.
  *   `"auto"` gives it to whatever scrolls around the surface when there is one,
  *   and zooms when there is none; `"always"` takes it back, for a surface that
@@ -13339,6 +13344,15 @@ const installPanZoom = (
     // What a touch may do is settled before it lands, so the mode is in the DOM
     // rather than read at pointerdown (see the stylesheet).
     element.setAttribute(SURFACE_ATTRIBUTE, holdIsOwed ? "after-hold" : "");
+    if (afterHold !== "kept") {
+      // A surface that answers on contact was never given anything to keep.
+      return;
+    }
+    if (holdIsOwed) {
+      element.removeAttribute(HAND_KEPT_ATTRIBUTE);
+    } else {
+      element.setAttribute(HAND_KEPT_ATTRIBUTE, "");
+    }
   };
   reflectHoldOwed();
   // A travelling box above must not take the press this reads (see
@@ -13663,6 +13677,7 @@ const installPanZoom = (
     element.removeEventListener("wheel", onWheel);
     window.removeEventListener("pointerdown", onPointerDownAway, true);
     element.removeAttribute(SURFACE_ATTRIBUTE);
+    element.removeAttribute(HAND_KEPT_ATTRIBUTE);
     element.removeAttribute("data-no-drag-travel");
   };
 };

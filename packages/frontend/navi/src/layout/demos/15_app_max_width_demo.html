@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>App max width</title>
+    <style>
+      /* The whole point of this page: the app is a column, the window is
+         wider, and the two bands beside it are not the app's. Every popup on
+         the page answers to the column. */
+      :root {
+        --navi-app-max-width: 600px;
+      }
+
+      body {
+        margin: 0;
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+        background: repeating-linear-gradient(
+          -45deg,
+          #dfe3ea,
+          #dfe3ea 10px,
+          #e9edf3 10px,
+          #e9edf3 20px
+        );
+      }
+      .outside {
+        position: fixed;
+        top: 50%;
+        color: #7c8798;
+        font-size: 13px;
+        text-transform: uppercase;
+        white-space: nowrap;
+        letter-spacing: 0.08em;
+      }
+      .outside-left {
+        left: 0;
+        width: var(--navi-app-inset-left);
+        text-align: center;
+      }
+      .outside-right {
+        right: 0;
+        width: var(--navi-app-inset-right);
+        text-align: center;
+      }
+      .app {
+        box-sizing: border-box;
+        width: var(--navi-app-width);
+        min-height: 100vh;
+        margin: 0 auto;
+        padding: 20px;
+        background: #fff;
+      }
+      .demo-section {
+        margin-bottom: 32px;
+      }
+      .demo-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .panel-body {
+        padding: 24px;
+      }
+    </style>
+  </head>
+  <body>
+    <span class="outside outside-left">outside</span>
+    <span class="outside outside-right">outside</span>
+    <div id="root" class="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { Button, SidePanel } from "@jsenv/navi";
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import { DemoHeader } from "../../internal/demo_header.jsx";
+
+      const SPEEDS = ["0.18s", "1s", "3s"];
+
+      const PanelBody = ({ children }) => (
+        <div className="panel-body">
+          {children}
+          <Button command="--navi-close" marginTop="m">
+            Close
+          </Button>
+        </div>
+      );
+
+      const PanelDemo = ({ label, side, width, height, duration }) => {
+        const [open, setOpen] = useState(false);
+        return (
+          <>
+            <button onClick={() => setOpen(true)}>{label}</button>
+            <SidePanel
+              open={open}
+              onClose={() => setOpen(false)}
+              side={side}
+              width={width}
+              height={height}
+              animation
+              animationDuration={duration}
+              closeOnClickOutside
+            >
+              <PanelBody>
+                <p>
+                  side="{side}"{width ? `, width=${width}` : ""}
+                  {height ? `, height=${height}` : ""}
+                </p>
+              </PanelBody>
+            </SidePanel>
+          </>
+        );
+      };
+
+      const App = () => {
+        const [duration, setDuration] = useState(SPEEDS[1]);
+
+        return (
+          <>
+            <DemoHeader
+              title="App max width"
+              previous={{
+                href: "./14_popup_url_demo.html",
+                label: "Popups & url",
+              }}
+            />
+
+            <div className="demo-section">
+              <div className="demo-row">
+                {SPEEDS.map((speed) => (
+                  <button
+                    key={speed}
+                    aria-pressed={speed === duration}
+                    onClick={() => setDuration(speed)}
+                  >
+                    {speed}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="demo-section">
+              <h3>Narrower than the app</h3>
+              <div className="demo-row">
+                <PanelDemo
+                  label="From the right"
+                  side="right"
+                  width={260}
+                  duration={duration}
+                />
+                <PanelDemo
+                  label="From the left"
+                  side="left"
+                  width={260}
+                  duration={duration}
+                />
+              </div>
+            </div>
+
+            <div className="demo-section">
+              <h3>As wide as the app</h3>
+              <div className="demo-row">
+                <PanelDemo
+                  label="From the top"
+                  side="top"
+                  height={220}
+                  duration={duration}
+                />
+                <PanelDemo
+                  label="From the bottom"
+                  side="bottom"
+                  height={220}
+                  duration={duration}
+                />
+              </div>
+            </div>
+
+            <div className="demo-section">
+              <h3>Wider than the app</h3>
+              <div className="demo-row">
+                <PanelDemo
+                  label="From the right"
+                  side="right"
+                  width={900}
+                  duration={duration}
+                />
+                <PanelDemo
+                  label="From the top"
+                  side="top"
+                  height={900}
+                  duration={duration}
+                />
+              </div>
+            </div>
+          </>
+        );
+      };
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>
