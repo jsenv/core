@@ -11,7 +11,6 @@ import { useDebugInteraction } from "@jsenv/navi/src/navi_debug.jsx";
 import { canNavBackSignal } from "../nav/browser_integration/document_back_and_forward.js";
 import {
   navBack,
-  navTo,
   useNavState,
 } from "../nav/browser_integration/browser_integration.js";
 import { warnSignalCollision } from "../control/control_value.js";
@@ -733,16 +732,7 @@ const writeOpenedInSignal = (signal, opened, event) => {
       return;
     }
     writeInSignal(signal, false, { history: "replace" });
-    const urlToKeep = window.location.href;
-    navBack().then((landed) => {
-      if (!landed) {
-        return;
-      }
-      // Often nothing at all: with no other write made while the popup was
-      // open, the entry landed on already reads urlToKeep and navTo skips
-      // the navigation entirely.
-      navTo(urlToKeep, { replace: true });
-    });
+    navBack({ landOn: { url: window.location.href } });
     return;
   }
   writeInSignal(signal, false, { history: "replace" });

@@ -190,6 +190,12 @@ export const reload = browserIntegration.reload;
  *   Where to land when there is nothing of this document behind. It takes the
  *   place of the current entry rather than stacking on it. Without it, a
  *   navBack() with nowhere to go does nothing.
+ * @param {{ url: string, state?: object }} [options.landOn]
+ *   What the entry the back lands on reads once landed: its url, and its state
+ *   (`undefined` keeps the state it has). Written over that entry within the
+ *   back's own navigation, so the routes never see the entry as it was — the
+ *   way a screen closed over a url keeps what was written to the url while it
+ *   was open (see useNavState's leave()).
  * @returns {Promise<boolean>|undefined}
  *   When there is something to go back to: a promise resolved once the back
  *   has landed and been applied (`true` — the document url and state say
@@ -324,10 +330,13 @@ const useNavStateBasic = (
   // Both push-mode closes pop the pushed entry. A keep-close that merely
   // rewrote it in place would leave two entries describing the same closed
   // screen — same url, same state — and the next back press would appear to do
-  // nothing. So the keep path goes back like the cancel does, then writes what
-  // must be kept onto the entry the back lands on. Only with nothing of this
-  // document behind (the state was entered on a cold-loaded url, navBack has
-  // nowhere to go) does it rewrite in place.
+  // nothing. So the keep path goes back like the cancel does, with what must
+  // be kept written onto the entry the back lands on, in the same navigation:
+  // a route param written while the state was entered is in the url being
+  // kept, and a routing pass reading the entry behind as it was would take
+  // that param for gone. Only with nothing of this document behind (the state
+  // was entered on a cold-loaded url, navBack has nowhere to go) does it
+  // rewrite in place.
   const leave = ({ isBack } = {}) => {
     enteredRef.current = false;
     const currentStateCopy = browserIntegration.getDocumentState() || {};
@@ -339,13 +348,9 @@ const useNavStateBasic = (
         browserIntegration.navBack();
         return;
       }
-      const urlToKeep = window.location.href;
       delete currentStateCopy[id];
-      browserIntegration.navBack().then((landed) => {
-        if (!landed) {
-          return;
-        }
-        navTo(urlToKeep, { replace: true, state: currentStateCopy });
+      browserIntegration.navBack({
+        landOn: { url: window.location.href, state: currentStateCopy },
       });
       return;
     }

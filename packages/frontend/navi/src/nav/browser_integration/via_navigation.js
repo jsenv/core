@@ -358,10 +358,27 @@ export const setupBrowserIntegrationViaNavigation = ({
       handler: async () => {
         try {
           const state = event.destination.getState();
+          const landOn = landOnPending;
+          landOnPending = null;
+          if (landOn && navigationType === "traverse") {
+            // A back asked to land elsewhere than on the entry behind as it
+            // was (see navBack's `landOn`): the traversal is only the pop, and
+            // nothing is routed for it — the entry it landed on is taken over
+            // by a replace, the one navigation the routes read.
+            applyNavigationToNavDepth(navigationType, state);
+            navigation.navigate(landOn.url, {
+              history: "replace",
+              state: landOn.state,
+              info: { landOn: true },
+            });
+            return;
+          }
+          const isLanding = Boolean(event.info && event.info.landOn);
           // State-only change on the same url (useNavState): the state signals
           // move, the routes do not.
           if (
             isSameUrl &&
+            !isLanding &&
             (navigationType === "push" || navigationType === "replace")
           ) {
             runStateOnly(navigationType, state);
@@ -374,6 +391,10 @@ export const setupBrowserIntegrationViaNavigation = ({
             abortEvent: event.signal,
             urlLeft,
           });
+          if (isLanding) {
+            // The arrival is the back's, whatever the replace that wrote it.
+            whenRenderingResumes(() => restoreScrollPosition(url));
+          }
           // The handler's promise IS the navigation for the browser (its
           // loading UI follows it) — but a routing that fails is displayed by
           // the page, never thrown at the navigation: rejected here, the
@@ -459,12 +480,16 @@ export const setupBrowserIntegrationViaNavigation = ({
     });
   };
 
-  const navBack = ({ fallback } = {}) => {
+  // What the traversal a back asked for writes over the entry it lands on
+  // (see navBack's `landOn`), read by the navigate handler of that traversal.
+  let landOnPending = null;
+  const navBack = ({ fallback, landOn } = {}) => {
     // canGoBack says there is an entry behind; what an app's back arrow
     // promises is that the entry behind is one of ITS screens (see
     // document_back_and_forward.js). navigation.back() throws with nowhere to
     // go, so the two are asked together.
     if (canNavBackSignal.peek() && navigation.canGoBack) {
+      landOnPending = landOn || null;
       const { committed } = navigation.back();
       // Committed: the traverse's own navigate event has been answered, so
       // the document url and state already say where it landed. An aborted

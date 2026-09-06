@@ -187,9 +187,10 @@ export const setupBrowserIntegrationViaHistory = ({
     const {
       reason,
       navigationType, // "load", "reload", "replace", "push", "traverse"
-      state,
       redirected,
+      landOn,
     } = options;
+    let { state } = options;
 
     // Where the entry being reached stands in this document's own stack —
     // decided before the state that carries it is built (see
@@ -217,7 +218,22 @@ export const setupBrowserIntegrationViaHistory = ({
     } else {
       // traverse / reload: state comes from the history entry, no push/replace needed.
       markUrlAsVisited(url);
-      if (redirected) {
+      if (landOn) {
+        // The entry the back landed on, written over where it stands with
+        // what must outlive the popped one (see navBack's `landOn`) — before
+        // the routes read anything, so the only address they ever see is the
+        // one being kept.
+        state = resolveEffectiveDocumentState(landOn.state, {
+          navigationType: "replace",
+          currentState: state,
+          sharedState: {
+            jsenv_visited_urls: Array.from(visitedUrlSet),
+            [NAV_DEPTH_STATE_KEY]: getNavDepth(),
+          },
+        });
+        window.history.replaceState(state, null, url);
+        rememberEntryIsOfThisDocument();
+      } else if (redirected) {
         // The entry the browser is on names an address that only sends
         // elsewhere — a cold load on it, or a back into it. Written over where
         // it stands (the entry keeps its place in the stack, hence its state
@@ -381,6 +397,17 @@ export const setupBrowserIntegrationViaHistory = ({
   window.addEventListener("popstate", (popstateEvent) => {
     const url = window.location.href;
     const state = popstateEvent.state;
+    const landOn = landOnPending;
+    landOnPending = null;
+    if (landOn) {
+      handleRoutingTask(landOn.url, {
+        reason: `"popstate" event for ${url}, landing on ${landOn.url}`,
+        navigationType: "traverse",
+        state,
+        landOn,
+      });
+      return;
+    }
     handleRoutingTask(url, {
       reason: `"popstate" event for ${url}`,
       navigationType: "traverse",
@@ -422,7 +449,11 @@ export const setupBrowserIntegrationViaHistory = ({
     });
   };
 
-  const navBack = ({ fallback } = {}) => {
+  // What the next "popstate" writes over the entry it lands on, when a back
+  // asked for it (see navBack's `landOn`). Read by the popstate listener,
+  // which is the one place the landing is applied.
+  let landOnPending = null;
+  const navBack = ({ fallback, landOn } = {}) => {
     if (canNavBackSignal.peek()) {
       // Resolved once the back has landed: the "popstate" it is answered with
       // reaches the routing listener first (registered at setup, before this
@@ -433,6 +464,7 @@ export const setupBrowserIntegrationViaHistory = ({
           once: true,
         });
       });
+      landOnPending = landOn || null;
       window.history.back();
       return landedPromise;
     }
