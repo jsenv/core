@@ -26,8 +26,7 @@
  * so any consumer can override it per-instance from CSS (or via the
  * `animationDuration` prop, wired to --popup-animation-duration through
  * Box's styleCSSVars) without touching this file: `--popup-animation-duration`,
- * `--popup-scale-from`, `--popup-cover-travel`, `--popup-border-radius`.
- * `slide-from-*`'s own
+ * `--popup-scale-from`, `--popup-border-radius`. `slide-from-*`'s own
  * 100%-of-own-size distance is hardcoded for now rather than exposed as a
  * variable — fine to revisit if a consumer ever needs to override it.
  *
@@ -65,21 +64,23 @@
  * so it slides in instead. The word names *where it comes from*: placed
  * "top" (a point/corner), it slides in from the top.
  *
- * `animation="cover-from-top"`: a slide reads through what it shows first,
- * and a box travelling its own height from above shows its bottom first —
- * the tail of whatever it holds, then, in the last frame, its head. That is
- * the wrong way round for a panel whose head sits at the edge it comes from
- * (a top-docked SidePanel: title and tabs at its top). So here the cut alone
- * does the reveal — the same curtain descending from the container's top
- * edge a full slide draws — while the box travels only `--popup-cover-travel`
- * (default 24px): the head is on screen from the first frame, settling its
- * last few pixels into place. A length, not a share of the panel: the travel
- * is a settle, the curtain is what reveals, and a share would grow with a
- * full-screen panel while its head does not — at 15% of 800px the head spent
- * the first 40% of the entrance above the cut. The exit is the same
- * movement backwards and still reads as a slide, the head leading. One
- * direction only: a bottom sheet leads with its head by itself, and a
- * left/right panel keeps its head on the axis it does not travel.
+ * The cut is a `clip-path`, and a `clip-path` is painted by the main thread
+ * while the `transform` it has to keep pace with runs on the compositor. Two
+ * clocks: a busy frame — the one that mounts a full-screen panel's content is
+ * exactly that — lets the box travel while the cut stands still, and the
+ * popup is then revealed from the WRONG edge once the thread catches up
+ * (measured by wematch, 2026-09-06: no panel at all for 120ms, then a panel
+ * with its head missing, then the head arriving from below). So the cut is
+ * taken only where it hides something the screen would otherwise show — the
+ * band of glass beside an app narrowed with --navi-app-max-width — and is a
+ * constant everywhere else: at layer="top" the viewport's own edge cuts the
+ * travel on the compositor for free, and at layer="local" the clip wrapper
+ * (a static ancestor, overflow: hidden) does. Where a band exists the cut
+ * still animates and still can drift under load; the full answer there is a
+ * static frame clipped at the band with the travel on an inner element, which
+ * is a restructuring of the popup's box (the visual box, the shadow, the
+ * placement translate, the swipe all move to the inner element), not taken.
+ * See .agents/skills/animations/SKILL.md, "One clock per movement".
  *
  * `animation="expand-*"` (a real anchor only, explicit opt-in — "scaling"
  * reads better overall, see popover.jsx's top comment): grows out of the
@@ -106,7 +107,6 @@ export const popupCss = /* css */ `
     .navi_dialog {
       --popup-animation-duration: 0.18s;
       --popup-scale-from: 0.9;
-      --popup-cover-travel: 24px;
 
       --popup-opacity-duration: var(--popup-animation-duration);
       --popup-translate-duration: var(--popup-animation-duration);
@@ -123,11 +123,11 @@ export const popupCss = /* css */ `
        (no shared transition-property to clobber, no propertyName to filter).
        What moves here is transform, which composes under it. */
     &[navi-animation] {
-      /* clip-path takes the translate's own duration: the slide family below
-         cuts its own travel with it, and the cut holds a viewport line still
-         only for as long as it advances at exactly the pace of the transform.
-         An animation kind that sets no clip-path has "none" on both sides of
-         the change, which costs nothing. */
+      /* clip-path takes the translate's own duration, for the one cut that
+         still moves (a band of glass beside the app — see this file's top
+         comment for why every other cut is a constant). A constant cut, or a
+         kind that sets none, has the same value on both sides of the change,
+         which costs nothing. */
       transition-property:
         display, overlay, opacity, transform, scale, box-shadow, clip-path;
       transition-duration:
@@ -137,31 +137,46 @@ export const popupCss = /* css */ `
         var(--popup-translate-duration);
       transition-timing-function: ease;
       transition-behavior: allow-discrete;
+    }
 
-      /* Where the area the popup was placed in has its edges, in the popup's
-         own coordinates: --container-position-room-* is how far past each of
-         its own edges the popup may still paint before reaching that edge
-         (applyNewPosition in @jsenv/dom), so the negated value puts a cut ON
-         it. Read by the kinds below that cut their travel (slide, cover): each
-         takes the side(s) it needs. A popup that was never placed reads
-         100vmax and is not cut at all.
-         Outside that area is either the glass beside an app narrowed with
-         --navi-app-max-width (layout/safe_area.js) or whatever surrounds a
-         container — neither the popup's to paint, and a popup in the top layer
-         answers to no overflow of the document. The popup itself is never cut
-         either: the rooms floor at 0. */
-      --x-popup-cut-top-at-area: calc(
-        -1 * var(--container-position-room-top, 100vmax)
-      );
-      --x-popup-cut-right-at-area: calc(
-        -1 * var(--container-position-room-right, 100vmax)
-      );
-      --x-popup-cut-bottom-at-area: calc(
-        -1 * var(--container-position-room-bottom, 100vmax)
-      );
-      --x-popup-cut-left-at-area: calc(
-        -1 * var(--container-position-room-left, 100vmax)
-      );
+    /* Where a travel may be cut, per side, in the popup's own coordinates.
+       --container-position-room-* is how far past each of its own edges the
+       popup may still paint before reaching the edge of the area it was placed
+       in (applyNewPosition in @jsenv/dom), so the negated value puts a cut ON
+       that edge; the rooms floor at 0, so the popup itself is never cut. Read
+       by the slide family below and by swipe_to_close.js.
+
+       The cut is taken only where that edge is NOT the window's own: past the
+       area lies a band of glass (an app narrowed with --navi-app-max-width, a
+       keyboard — layout/safe_area.js), and the band is what the cut hides.
+       Where the band is 0 the window's edge already hides the travel, on the
+       compositor, and the cut is pushed 100vmax out instead: the min() term is
+       0 for a 0 band and 100vmax for any other, a step written without a
+       branch. See this file's top comment for why an animated cut has to be
+       that rare. */
+    --x-popup-cut-top-at-area: calc(
+      -1 * var(--container-position-room-top, 100vmax) - 100vmax +
+        min(100vmax, var(--navi-app-inset-top, 0px) * 1000000)
+    );
+    --x-popup-cut-right-at-area: calc(
+      -1 * var(--container-position-room-right, 100vmax) - 100vmax +
+        min(100vmax, var(--navi-app-inset-right, 0px) * 1000000)
+    );
+    --x-popup-cut-bottom-at-area: calc(
+      -1 * var(--container-position-room-bottom, 100vmax) - 100vmax +
+        min(100vmax, var(--navi-app-inset-bottom, 0px) * 1000000)
+    );
+    --x-popup-cut-left-at-area: calc(
+      -1 * var(--container-position-room-left, 100vmax) - 100vmax +
+        min(100vmax, var(--navi-app-inset-left, 0px) * 1000000)
+    );
+    /* A local popup is clipped by its clip wrapper (a static ancestor sized to
+       the container, overflow: hidden): nothing is left for a cut to hide. */
+    &[data-layer="local"] {
+      --x-popup-cut-top-at-area: -100vmax;
+      --x-popup-cut-right-at-area: -100vmax;
+      --x-popup-cut-bottom-at-area: -100vmax;
+      --x-popup-cut-left-at-area: -100vmax;
     }
 
     /* box-shadow fades in/out alongside any animation kind, instead of
@@ -285,39 +300,6 @@ export const popupCss = /* css */ `
       }
     }
 
-    /* cover — a top-docked popup unrolling from the top edge of its area (see
-         this file's top comment): the cut does the reveal, the box travels
-         --popup-cover-travel, a length. The far cut sits where the
-         popup's shadow ends (--navi-popup-box-shadow reaches about 50px) or
-         where the room does, whichever is nearer, so the reveal finishes on
-         the box and its shadow at the pace of the box's own settle. On the
-         box's own edge it would shave the shadow off for good; on a distant
-         container edge it would run far ahead of the box. */
-    &[navi-animation="cover-from-top"] {
-      opacity: 1;
-      --x-popup-cut-top: var(--x-popup-cut-top-at-area);
-      --x-popup-cut-bottom: max(var(--x-popup-cut-bottom-at-area), -60px);
-      --x-popup-travel-y: calc(-1 * var(--popup-cover-travel));
-      clip-path: inset(
-        var(--x-popup-cut-top) -100vmax var(--x-popup-cut-bottom) -100vmax
-      );
-
-      transform: translate(0px, 0px);
-
-      &[aria-expanded="false"] {
-        /* The near cut follows the travel, so it holds the area's top line at
-           every instant (the slide family's arithmetic); the far cut starts on
-           that same line and descends to its open place. What is on screen is
-           the descending curtain a full slide draws, holding the top of the
-           popup instead of its tail. */
-        clip-path: inset(
-          calc(var(--x-popup-cut-top) - var(--x-popup-travel-y)) -100vmax
-            calc(100% + var(--x-popup-travel-y) - var(--x-popup-cut-top))
-            -100vmax
-        );
-        transform: translate(0px, var(--x-popup-travel-y));
-      }
-    }
   }
 
   .navi_popover {

@@ -112,6 +112,38 @@ perceived speed stays constant instead of crawling over a short distance for a
 full duration. Scale only ever shortens — a longer-than-usual move is not made
 slower.
 
+## One clock per movement
+
+A movement whose look depends on two properties agreeing at every instant
+must have both on the same clock. `transform` and `opacity` are animated by
+the compositor; `clip-path`, `height`, `inset`, `background-position` and
+nearly everything else are painted by the main thread. Pair one of each and
+they agree only while the main thread keeps up — and the frame it does not
+keep up on is exactly the one that opens a full-screen panel, because that
+frame also mounts the panel's content. What the viewer then gets is not a
+stutter but a **different animation**: the composited half plays, the painted
+half stands still, and when the thread catches up it runs its remaining
+course over a box already at rest. A cut meant to hold a viewport line still
+while the box travels under it reveals the box from the wrong edge instead.
+
+So:
+
+- A geometry that needs two properties in lockstep is a bug waiting for a
+  busy frame. Redesign it so that only composited properties move: let the
+  window's own edge, or a static ancestor's `overflow`, do the cutting; put
+  the travel on an inner element and keep the cut on a box that does not
+  move; counter-translate an inner element rather than animating a clip.
+- Where a painted property must animate alongside a composited one, say so
+  in a comment, name the case that makes it necessary, and keep that case
+  rare — the drift is accepted there, not unknown.
+- `getComputedStyle`, hit-testing, `getBoundingClientRect`: all answer from
+  the main thread, where the two properties are ALWAYS in step. They cannot
+  see this bug (see "Verifying" below for what can).
+
+_Reference: the slide family's cut in `layout/popup_css.js`, taken only
+where a band of glass lies past the area's edge, and the top comment there
+for the restructuring that would remove the last animated cut._
+
 ## View transitions
 
 `document.startViewTransition` takes a callback that **makes the DOM change**,
@@ -478,3 +510,13 @@ re-rasterized screenshots BOTH describe the main thread, and both can describe
 a movement the screen never played (see "The main thread lies about a running
 transition"). For those, verify on a compositor capture: a CDP screencast, or
 an eye.
+
+A second family: two properties that must agree, one composited and one
+painted (see "One clock per movement"). Every number JS reads shows them in
+step; the bug only exists when the main thread is late. Make it late on
+purpose: in `page.evaluate`, trigger the movement and then spin the thread
+for 400ms without awaiting, and capture from node during the block — a frame
+taken while the thread is blocked can only be the compositor's. Compare with
+the same movement slowed to 2s, where the lag is a fraction of the animation
+instead of the whole of it: a bug that shows at 300ms and vanishes at 2s is
+this one.

@@ -110,13 +110,6 @@ export const createSwipeToClose = (side, { grip } = {}) => {
         travelTo(sizeOf(panelEl, axis) * closeDirection, 0, restore);
         return;
       }
-      // The closed style is rendered once while transitions are still off.
-      // Where the release travel left the panel and where its closed style
-      // puts it are the same point only for a kind that travels the panel's
-      // full size (popup_css.js, slide-from-*); a cover kind rests a fraction
-      // in, and handing the styles back before this frame would transition
-      // the panel from one to the other in plain view.
-      panelEl.getBoundingClientRect();
       restore();
     };
 
@@ -176,16 +169,19 @@ const translateOf = (axis, distance) =>
     : `translate(0px, ${distance}px)`;
 // The same cut the entry/exit animation makes (popup_css.js), at a distance the
 // finger decides instead of a transition: the edge the popup is pushed back
-// through sits where its own room ran out (--container-position-room-*, written
-// by applyNewPosition), plus what has been pulled, so the cut holds that line
+// through, as popup_css.js placed it (--x-popup-cut-*-at-area — on the area's
+// edge where a band of glass lies past it, 100vmax out where the window's own
+// edge does the cutting), plus what has been pulled, so the cut holds that line
 // while the box travels under it. The three other sides are left far outside
 // the box — the pull never takes the popup past them, and cutting there would
-// only shave what it legitimately paints outside its own box. An unset room —
-// a popup that was never placed — reads 100vmax and cuts nothing.
+// only shave what it legitimately paints outside its own box. Reading the
+// policy from popup_css.js rather than the rooms keeps the release travel
+// (a Web Animation on transform AND clip-path, two clocks) from animating a
+// cut the entrance would not.
 const UNCUT = "-100vmax";
 const clipOf = (side, distance) => {
   const pulled = distance < 0 ? -distance : distance;
-  const cut = `calc(-1 * var(--container-position-room-${side}, 100vmax) + ${pulled}px)`;
+  const cut = `calc(var(--x-popup-cut-${side}-at-area, ${UNCUT}) + ${pulled}px)`;
   if (side === "top") {
     return `inset(${cut} ${UNCUT} ${UNCUT} ${UNCUT})`;
   }
