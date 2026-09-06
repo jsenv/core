@@ -33,6 +33,12 @@ import { useRef } from "preact/hooks";
  * // 3. External update: file.name = "shared-doc.txt"
  * // 4. Next render: nameSignal.value = "shared-doc.txt" (model wins!)
  *
+ * The model winning costs something when the model is fed by what the control
+ * saves: the answer of a write changes the value, the control walks to it and
+ * tells its callback about that walk, and the callback saves again. With two
+ * writes in flight that circle never closes — see
+ * docs/state_binding.md#the-callback-also-fires-for-the-states-own-changes for
+ * the three ways out.
  */
 
 export const useSignalSync = (value, initialValue = value) => {

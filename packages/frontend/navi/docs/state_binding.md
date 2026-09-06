@@ -10,6 +10,7 @@ then on there are two owners for one truth.
 - [The callback that only remembers](#the-callback-that-only-remembers)
 - [Why it is not merely shorter](#why-it-is-not-merely-shorter)
 - [What is left for the callback](#what-is-left-for-the-callback)
+- [The callback also fires for the state's own changes](#the-callback-also-fires-for-the-states-own-changes)
 - [What binds itself](#what-binds-itself)
 - [A control that shows part of a bigger answer](#a-control-that-shows-part-of-a-bigger-answer)
 - [When there is no binding](#when-there-is-no-binding)
@@ -108,6 +109,70 @@ Binding the state does not remove the callback — it removes one job from it:
   [actions.md](./actions.md#action-or-uiaction)).
 - **`onClick`** is for imperative work with nothing to send, nothing to open and
   nothing to propose.
+
+## The callback also fires for the state's own changes
+
+A bound container walks to whatever its signal holds, and tells the callback
+about that walk — `cause: "state"`, `event: null`. It is the only piece that
+knows the change was not a press, and saying so is its job.
+
+The trap is on the other side. A callback that writes somewhere whose answer
+flows back INTO the signal — a server whose response is upserted into the store,
+a `useSignalSync` on the row that re-renders from it — makes every answer a
+change, and every change a write:
+
+```jsx
+// ✗ the answer of the write feeds the signal the write came from
+const styleSignal = useSignalSync(user.share_image_style);
+<SlideContainer
+  signal={styleSignal}
+  onCurrentChange={(style) => USER.ME.PUT({ share_image_style: style })}
+/>;
+```
+
+With one write at a time nothing shows: the answer carries the value the signal
+already holds, so the model does not change. It takes two writes in flight — two
+notches 200ms apart, a 300ms round trip:
+
+```
+t=0    notch → B   signal=B   PUT B ──────────────┐
+t=200  notch → A   signal=A   PUT A ────────────┐ │
+t=300  B answers, store=B, signal=B, the box     │ │
+       walks to B, onCurrentChange(B, "state"),  │ │
+       save(B) → PUT B ───────────────────────┐  │ │
+t=500  A answers … save(A) → PUT A            │  │ │
+t=600  B answers … save(B) → PUT B            │  │ │
+…
+```
+
+Nothing was reordered — it is enough that an answer lands after a newer write
+was sent. Every answer is then the answer to a request the user has already
+moved past, the container obeys the model, the callback saves what it was just
+told, and that write's answer starts the next turn.
+
+Decide what the signal IS:
+
+- **The signal is the choice, the server only confirms it.** Seed it once with
+  `useSignal(model)` and never sync it. A late answer changes the store, not the
+  picture. The cost: a write that fails is not undone on screen unless the
+  callback undoes it. Right for a setting saved on the gesture, with no "Save"
+  button.
+- **The model is the truth, the control only proposes.** Keep `useSignalSync`
+  and ignore `cause: "state"` in the callback — a change the state asked for is
+  not a choice to save. The cost: a late answer still pulls the picture back for
+  one round trip. Right when another client or a background refresh may change
+  the row while the control is on screen.
+- **Never two writes in flight for one field.** Debounce the write, or cancel
+  the one before it (`createRequestCanceller`), so no answer can be older than
+  the latest intent. Right when the write is the expensive part.
+
+Measured on the same screen, the same two notches, a 300ms round trip:
+
+| what the signal is                        | writes sent     | slide changes |
+| ----------------------------------------- | --------------- | ------------- |
+| `useSignalSync` + save every change       | 39, still going | 39            |
+| `useSignal`, seeded once                  | 2               | 2             |
+| `useSignalSync` + ignore `cause: "state"` | 2               | 4             |
 
 ## What binds itself
 

@@ -329,18 +329,19 @@ const css = /* css */ `
  *   callouts apart.
  * @param {Function} [options.onClose] - Callback when callout is closed
  * @param {boolean} [options.closeOnClickOutside] - Whether to close on outside clicks (defaults to true for "info" status)
- * @param {Event} [options.openingEvent] - The event being handled when the callout was asked
- *   for. While it is still dispatching, its `currentTarget` names the opener: the one part of
- *   the anchor that does not count as "outside", so the press reaches the handler owning the
- *   callout and `reopen` decides (toggle by default), instead of the callout being closed here
- *   and opened again within that same press.
+ * @param {Event} [options.openingEvent] - The gesture the callout belongs to. It names the
+ *   opener — `currentTarget` while the event is still dispatching, `target` once it is over,
+ *   so awaiting before opening changes nothing — and the opener is the one part of the anchor
+ *   that does not count as "outside": the press reaches the handler owning the callout and
+ *   `reopen` decides (toggle by default), instead of the callout being closed here and opened
+ *   again within that same press.
  *
- *   A callout opened later — after an await, from an effect — has no opener. The anchor keeps
- *   the exemption only if it is itself a control, which does have a handler that would re-open
- *   it; a container anchor (a card, a block of a settings page) has none, so all of it
- *   dismisses. The cost is the toggle: pressing what started the work closes the callout as an
- *   outside press, and the work opens a fresh one when it ends. Anchor to an always-mounted box
- *   around the opener instead of to the container to keep the toggle
+ *   Without it, or when the opener has left the anchor meanwhile (unmounted while the work
+ *   ran), nothing is exempt unless the anchor is itself a control, which does have a handler
+ *   that would re-open it. A container anchor then dismisses everywhere, at the cost of the
+ *   toggle: pressing what started the work closes the callout as an outside press, and the work
+ *   opens a fresh one when it ends. Anchor to an always-mounted box around the opener rather
+ *   than to the container to keep the toggle
  * @param {boolean} [options.icon=true] - Whether the status icon is shown beside the message.
  *   Never shown without a status either way (see the CSS).
  * @param {boolean} [options.closeButton=true] - Whether the cross is shown. Without it the callout
@@ -736,12 +737,15 @@ export const openCallout = (
         // the viewport); everything would be inside it.
         return null;
       }
-      // `currentTarget` is set only while an event is dispatching, so reading
-      // it here tells a callout opened from a handler — one that has an owner
-      // about to decide on the next press — from one opened later, out of any
-      // gesture, which has none. Kept within the anchor: an opener elsewhere on
-      // the page is outside like anything else.
-      const openingTarget = openingEvent ? openingEvent.currentTarget : null;
+      // Where the event was being handled, else what it was aimed at: the
+      // second is what remains once dispatch is over, so a handler that awaits
+      // before opening still names its opener. `findControlRoot` climbs from
+      // there, because a native event aims deep inside the control the user
+      // actually pressed. Kept within the anchor: an opener elsewhere on the
+      // page is outside like anything else.
+      const openingTarget = openingEvent
+        ? openingEvent.currentTarget || openingEvent.target
+        : null;
       if (
         openingTarget &&
         openingTarget.nodeType === Node.ELEMENT_NODE &&
@@ -750,11 +754,12 @@ export const openCallout = (
       ) {
         return findControlRoot(openingTarget) || openingTarget;
       }
-      // No handler was running: the anchor speaks for itself only if it is a
-      // control, which does have one. A container anchor (a card, a block of a
-      // settings page) has nothing that would re-open the callout, and
-      // exempting all of it would leave the one place the user is most likely
-      // to press — the thing the callout points at — unable to dismiss it.
+      // Nothing names an opener — no event, or one aimed at something that has
+      // since left the anchor. The anchor speaks for itself only if it is a
+      // control, which does have a handler. A container anchor (a card, a block
+      // of a settings page) has none, and exempting all of it would leave the
+      // one place the user is most likely to press — the thing the callout
+      // points at — unable to dismiss it.
       return isControl(anchorElement) ? anchorElement : null;
     })();
     const isInsideOpener = (target) => {
