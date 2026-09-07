@@ -73,7 +73,11 @@ export {
   Loading,
   useAsyncData,
 } from "./src/state/async/use_async_data.jsx";
-export { lazy } from "./src/state/async/lazy.jsx";
+export {
+  CodeLoadError,
+  isCodeLoadError,
+  lazy,
+} from "./src/state/async/lazy.jsx";
 // What an error boundary of your own must do to an error it displays — see
 // docs/error_handling.md, "writing your own boundary".
 export {

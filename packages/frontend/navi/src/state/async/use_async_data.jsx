@@ -22,6 +22,7 @@ import {
   IDLE,
   RUNNING,
 } from "../../action/action_run_states.js";
+import { createAction } from "../../action/actions.js";
 import { runUnwatched } from "../../action/run_unwatched.js";
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 import { documentUrlSignal } from "../../nav/browser_integration/document_url_signal.js";
@@ -73,7 +74,13 @@ import { usePromiseAsyncData } from "./use_promise_async_data.js";
  * anything is on its way: a skeleton reads both, or it claims a load nobody
  * started (see docs/list_refresh.md).
  *
- * @param {import("../../action/actions.js").Action} action
+ * @param {import("../../action/actions.js").Action | (() => Promise<any>) | Promise<any>} source -
+ *   an action, or the request this component owns written as a function:
+ *   made into an action once, on the first render, and kept for the life of
+ *   the instance — so it may be written inline — with what it resolves to as
+ *   the data and `run` implied. Code loaded on demand reads this way
+ *   (`() => import("./plan.jsx").then((m) => m.Plan)`, see
+ *   docs/dynamic_import.md), as does anything else asked for once per mount.
  * @param {{ loading?: true, error?: true, run?: true, onLoad?: (data: any, context: {params: any}) => void }} [options]
  * @param {true} [options.run] - The fallback for data nothing else can ask for:
  *   this component owns the request and starts it, from the render that reads
@@ -134,6 +141,17 @@ export const useAsyncData = (
   promiseOrAction,
   { loading = "delegate", error = "delegate", run, onLoad } = {},
 ) => {
+  // The request this component owns, as a function: one action per instance,
+  // made on the first render and kept — the function's identity changes on
+  // every render when it is written inline, the action's does not.
+  const ownActionRef = useRef(null);
+  if (typeof promiseOrAction === "function" && !promiseOrAction.isAction) {
+    if (!ownActionRef.current) {
+      ownActionRef.current = createAction(promiseOrAction);
+    }
+    promiseOrAction = ownActionRef.current;
+    run = true;
+  }
   const isAction = Boolean(promiseOrAction && promiseOrAction.isAction);
   if (loading === true) {
     loading = "use";

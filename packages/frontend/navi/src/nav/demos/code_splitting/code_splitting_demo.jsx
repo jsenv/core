@@ -10,6 +10,7 @@ import {
   Nav,
   Route,
   Text,
+  useAsyncData,
 } from "@jsenv/navi";
 
 import { DemoHeader } from "../../../internal/demo_header.jsx";
@@ -110,14 +111,60 @@ const Pages = () => {
 };
 
 const HomePage = () => (
-  <Box flex="y" spacing="s">
-    <Text>Accueil — dans le bundle principal.</Text>
-    <Text>
-      Partie — code préchargé au survol du lien, donnée à l'ouverture.
-    </Text>
-    <Text>
-      Statistiques — prefetch={"{false}"} : code chargé à l'ouverture.
-    </Text>
+  <Box flex="y" spacing="m">
+    <Box flex="y" spacing="s">
+      <Text>Accueil — dans le bundle principal.</Text>
+      <Text>
+        Partie — code préchargé au survol du lien, donnée à l'ouverture.
+      </Text>
+      <Text>
+        Statistiques — prefetch={"{false}"} : code chargé à l'ouverture.
+      </Text>
+    </Box>
+    <Box flex="y" spacing="s">
+      <Text bold>Plan du club — un composant chargé à la demande</Text>
+      <PlanSection />
+    </Box>
+  </Box>
+);
+// A component inside a page that stays draws its own wait and its own failure,
+// in its own frame: it knows what stands there.
+const PlanSection = () => {
+  const [Plan, loading, error] = useAsyncData(
+    () =>
+      backend
+        .call("import ./plan.jsx", () => import("./plan.jsx"))
+        .then((m) => m.Plan),
+    { loading: true, error: true },
+  );
+  return (
+    <PlanFrame>
+      {loading ? <Text>chargement…</Text> : null}
+      {error ? (
+        <>
+          <Text style={{ color: "red" }}>{error.message}</Text>
+          <Button action={() => error.action.rerun()}>Réessayer</Button>
+        </>
+      ) : null}
+      {Plan ? <Plan /> : null}
+    </PlanFrame>
+  );
+};
+// The frame belongs to the eager side: it is drawn before the plan's own code
+// exists.
+const PlanFrame = ({ children }) => (
+  <Box
+    flex="y"
+    spacing="s"
+    style={{
+      minHeight: "60px",
+      padding: "10px",
+      background: "#eef3ee",
+      border: "1px solid #b7c9b7",
+      borderRadius: "6px",
+    }}
+  >
+    {children}
   </Box>
 );
 const NotFoundPage = () => <Text>Page introuvable.</Text>;

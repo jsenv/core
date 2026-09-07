@@ -31,6 +31,7 @@ import { humanizeI18n } from "@jsenv/humanize";
  *   - `"interaction.*"` — what a gesture says when it did nothing on purpose
  *   - `"constraint.*"` — every field validation message
  *   - `"network_policy.*"` — what an action settles with when the policy kept it from the network
+ *   - `"lazy.*"` — what a run settles with when code loaded on demand did not come
  *
  * Unit names get two derived keys, both optional: `<unit>__plural` and
  * `<unit>__short`. `<Unit>`/`<Quantity>` fall back to the singular when the
@@ -283,6 +284,10 @@ naviI18n.addAll({
   "network_policy.offline": {
     fr: "Hors ligne : rien n'a été demandé.",
     en: "Offline: nothing was requested.",
+  },
+  "lazy.code_load_failed": {
+    fr: "Une partie de l'application n'a pas pu être chargée.",
+    en: "Part of the application could not be loaded.",
   },
   "constraint.busy.button": {
     fr: "Cette action est en cours...",

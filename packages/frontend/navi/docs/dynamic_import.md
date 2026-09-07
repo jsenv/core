@@ -48,7 +48,9 @@ by returning it from the loader — and two `lazy()` on the same module cost one
 fetch, the browser holds a module once:
 
 ```js
-const PlanThumbnail = lazy(() => import("./plan.jsx").then((m) => m.PlanThumbnail));
+const PlanThumbnail = lazy(() =>
+  import("./plan.jsx").then((m) => m.PlanThumbnail),
+);
 const PlanDialog = lazy(() => import("./plan.jsx").then((m) => m.PlanDialog));
 ```
 
@@ -124,6 +126,58 @@ consequences:
   in the build fixes. A rule that depends on it is a rule to make more
   specific.
 
+## When the code does not come
+
+Someone has the app open, a deploy moves the chunks, and the next `import()`
+is a 404; or the network is gone. The browser says both the same way — a
+`TypeError` with no status — and neither is a bug of the page: there is
+nothing in the app's code to point at. So the run settles with a
+`CodeLoadError` (`isCodeLoadError`, `specifier`, `cause`): a request that
+failed, never an exception to rethrow.
+
+**The component says it itself.** A component inside a page that stays knows
+where it is drawn and what stands there — a frame, a line, a button — where a
+boundary above only knows that something failed. It reads its code the way it
+reads its data: `useAsyncData` takes a function, the request this component
+owns, made into an action once on the first render and kept for the life of
+the instance, its answer as the data. Nothing here is about code — the import
+is one more thing a component asks for:
+
+```jsx
+const PlanSection = () => {
+  const [Plan, loading, error] = useAsyncData(
+    () => import("./plan.jsx").then((m) => m.Plan),
+    { loading: true, error: true },
+  );
+  return (
+    <PlanFrame>
+      {loading ? <Text>…</Text> : null}
+      {error ? (
+        <Button action={() => error.action.rerun()}>Réessayer</Button>
+      ) : null}
+      {Plan ? <Plan /> : null}
+    </PlanFrame>
+  );
+};
+```
+
+The page stays readable, the frame draws the wait and the failure, nothing is
+silent, and no boundary is involved. `lazy()` is for the identity a route or a
+link needs — one action for every instance, registered on a route, prefetched
+on intent; its action reads the same way, `useAsyncData(GamePage.action, { run:
+true, error: true })`, for a page that wants the failure drawn where it stands.
+
+**The net, for a component that wrote nothing.** Without `error` the failure
+is delegated to the nearest `<ErrorBoundary>`, and a boundary that shows only
+what came from the network and rethrows the rest as a bug adds one rule of
+the same kind — `isCodeLoadError` — rather than a boundary per chunk, which
+would also swallow a real bug of the subtree once loaded. There too, retry is
+`error.action.rerun()`.
+
+Either way, a retry failing the same way says the document is stale, and
+**reloading it** is what brings the new code. Navi does not do it on its own —
+a document reloading itself is a loop waiting to happen — the screen says it.
+
 ## Preact's `lazy()` is not this one
 
 `preact/compat` has a `lazy()` too. It suspends without saying anything to
@@ -142,5 +196,7 @@ configure.
 
 - `src/nav/demos/code_splitting/code_splitting_demo.html` — two pages fetched
   on demand next to a route action, one prefetched on hover and one opted out,
-  with the import drawn on the backend's frontier so both waits can be watched.
+  and a component inside a page that stays, drawing its own wait and failure;
+  every import is drawn on the backend's frontier so a wait or a failure can be
+  played by hand.
 - `src/state/async/lazy.jsx`, `src/nav/use_preload_on_intent.js`

@@ -117,8 +117,10 @@ to start when unsure which export solves a problem.
 - `dynamic_import.md` — a screen's code arrives like its data: `lazy()` makes
   the import an action, so `<Loading>`, `<ErrorBoundary>` and `rerun` cover it;
   links fetch code on intent, never data; a transition photographs the
-  fallback; a chunk's `import.meta.css`; why not preact's `lazy`. Read before
-  an `import()` in a component or a page, and before `prefetch={false}`.
+  fallback; a chunk's `import.meta.css`; a chunk that does not come is a
+  `CodeLoadError`, never a bug, and a component reads its own code with
+  `useAsyncData(() => import(…))` where it stands; why not preact's `lazy`. Read before an `import()` in a component or a
+  page, and before `prefetch={false}`.
 
 ### Controls and forms
 

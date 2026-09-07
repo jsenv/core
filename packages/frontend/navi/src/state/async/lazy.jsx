@@ -12,7 +12,31 @@
 import { h } from "preact";
 
 import { createAction } from "../../action/actions.js";
+import { naviI18n } from "../../text/navi_i18n.js";
 import { useAsyncData } from "./use_async_data.jsx";
+
+/**
+ * What a run settles with when the code did not come. Never a bug of the page:
+ * the network is gone, or the document is stale — a deploy moved the chunks
+ * and this document still asks for the old addresses. The browser says both
+ * with the same TypeError and no status, so the loader's failure is wrapped
+ * here into something an app can recognise without reading a message: one
+ * rule in its boundary ("show it, offer to retry") and, when a retry fails the
+ * same way, reloading the document is what brings the new code.
+ */
+export class CodeLoadError extends Error {
+  constructor(specifier, cause) {
+    super(naviI18n("lazy.code_load_failed"), { cause });
+    this.name = "CodeLoadError";
+    this.specifier = specifier;
+    // A flag beside the class: the error crosses layers that may copy it, and
+    // instanceof does not survive a copy.
+    this.codeLoad = true;
+  }
+}
+export const isCodeLoadError = (error) => {
+  return Boolean(error && error.codeLoad);
+};
 
 /**
  * @param {() => Promise<Function | object>} load - what fetches the code,
@@ -20,17 +44,26 @@ import { useAsyncData } from "./use_async_data.jsx";
  *   itself or to the module: its `default` export, or its only exported
  *   function.
  * @returns {Function & { preload: () => void, action: object }} the component,
- *   rendering the loaded one with its props. `preload()` starts the fetch ahead
- *   of the render — on a link hovered, on an idle moment; a prefetch that fails
- *   is forgotten, the visit asks again.
+ *   rendering the loaded one with its props, its wait and its failure
+ *   delegated to the boundaries above. `preload()` starts the fetch ahead of
+ *   the render — on a link hovered, on an idle moment; a prefetch that fails
+ *   is forgotten, the visit asks again. `action` is the import itself, for a
+ *   screen that draws the wait or the failure where it stands:
+ *   `useAsyncData(Page.action, { run: true, error: true })`.
  */
 export const lazy = (load) => {
+  const specifier = specifierFromLoader(load);
   const loadAction = createAction(
     async () => {
-      const loaded = await load();
+      let loaded;
+      try {
+        loaded = await load();
+      } catch (e) {
+        throw new CodeLoadError(specifier, e);
+      }
       return resolveComponent(loaded);
     },
-    { name: nameFromLoader(load) },
+    { name: specifier ? `import ${specifier}` : "lazy" },
   );
 
   const Lazy = (props) => {
@@ -77,8 +110,8 @@ const resolveComponent = (loaded) => {
 };
 
 // The specifier read off the loader's source, so the action (and the busy
-// signal, and the debug output) says which page is being fetched.
-const nameFromLoader = (load) => {
+// signal, the debug output, a CodeLoadError) says which page is being fetched.
+const specifierFromLoader = (load) => {
   const match = /import\(\s*["']([^"']+)["']/.exec(String(load));
-  return match ? `import ${match[1]}` : "lazy";
+  return match ? match[1] : undefined;
 };
