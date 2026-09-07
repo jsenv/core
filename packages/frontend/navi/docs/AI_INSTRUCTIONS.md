@@ -114,6 +114,10 @@ to start when unsure which export solves a problem.
   a boundary. Read before displaying an error by hand or writing a boundary.
 - `offline.md` — `setNetworkPolicy`: answer from the store, ask nothing, refuse
   writes politely. Read before caching responses in the app.
+- `dynamic_import.md` — a screen's code arrives like its data: `lazy()` makes
+  the import an action, so `<Loading>`, `<ErrorBoundary>` and `rerun` cover it;
+  `preload()` on intent; why not preact's `lazy`. Read before an `import()` in
+  a component or a page.
 
 ### Controls and forms
 

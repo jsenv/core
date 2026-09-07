@@ -2,7 +2,6 @@ import { isValidElement } from "preact";
 import { useErrorBoundary, useLayoutEffect } from "preact/hooks";
 
 import { markErrorAsDisplayedBy } from "./action_error_report.js";
-import { getActionPrivateProperties } from "./action_private_properties.js";
 import { useActionStatus } from "./use_action_status.js";
 
 const css = /* css */ `
@@ -84,17 +83,7 @@ export const ActionRenderer = ({ action, children, disabled }) => {
   if (aborted) {
     return renderAborted(action);
   }
-  let renderCompletedSafe;
-  if (renderCompleted) {
-    renderCompletedSafe = renderCompleted;
-  } else {
-    const { ui } = getActionPrivateProperties(action);
-    if (ui.renderCompleted) {
-      renderCompletedSafe = ui.renderCompleted;
-    } else {
-      renderCompletedSafe = renderCompletedDefault;
-    }
-  }
+  const renderCompletedSafe = renderCompleted || renderCompletedDefault;
   if (loading) {
     if (action.canDisplayOldData && data !== undefined) {
       return renderCompletedSafe(data, action);

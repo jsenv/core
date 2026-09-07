@@ -755,7 +755,6 @@ export const createAction = (callback, rootOptions = {}) => {
       data = dataDefault,
 
       completed = false,
-      renderLoadedAsync,
       sideEffect = () => {},
       meta = {},
 
@@ -1160,10 +1159,6 @@ export const createAction = (callback, rootOptions = {}) => {
     }
 
     private_properties: {
-      const ui = {
-        renderLoaded: null,
-        renderLoadedAsync,
-      };
       let sideEffectCleanup;
       let completeSideEffectCleanup;
 
@@ -1360,20 +1355,6 @@ export const createAction = (callback, rootOptions = {}) => {
           } else {
             runResult = callbackResult;
           }
-          if (ui.renderLoadedAsync && !ui.renderLoaded) {
-            const renderLoadedPromise = ui.renderLoadedAsync(...args).then(
-              (renderLoaded) => {
-                ui.renderLoaded = renderLoaded;
-              },
-              (e) => {
-                if (!rejected) {
-                  rejected = true;
-                  rejectedValue = e;
-                }
-              },
-            );
-            thenableArray.push(renderLoadedPromise);
-          }
           if (thenableArray.length === 0) {
             return onRunEnd();
           }
@@ -1427,7 +1408,6 @@ export const createAction = (callback, rootOptions = {}) => {
 
         performRun,
         performReset,
-        ui,
 
         nameSignal: actionNameSignal,
         callSourceSignal: actionCallSourceSignal,
@@ -1702,10 +1682,8 @@ const createActionProxyFromSignal = (
 
       performRun: proxyPrivateMethod("performRun"),
       performReset: proxyPrivateMethod("performReset"),
-      ui: currentActionPrivateProperties.ui,
     };
     onActionTargetChange(() => {
-      proxyPrivateProperties.ui = currentActionPrivateProperties.ui;
       proxyPrivateProperties.childActionWeakSet =
         currentActionPrivateProperties.childActionWeakSet;
     });
