@@ -1658,6 +1658,11 @@ const useDialogProps = (props) => {
         armOutsidePressClose(dialogEl, {
           openController,
           pointerInteractionOutsideEffect,
+          // A modal wall spends the press the page acts on (mousedown); a
+          // local dialog with no wall lets that same press through
+          // (pointerdown). See armOutsidePressClose for why the two differ on
+          // a touch screen.
+          pressEventType: isModal ? "mousedown" : "pointerdown",
         }),
       );
     }

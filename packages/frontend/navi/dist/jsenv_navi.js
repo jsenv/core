@@ -45653,15 +45653,27 @@ const handlePressOnOutsideRegion = (
  * answers it. The one popup where that cannot hold is the modal dialog, where
  * the browser has already made everything behind inert before this runs.
  *
- * `pointerdown`, not `mousedown`, and this is what makes the reading work at
- * all: a page with no wall over it is a page whose own elements arbitrate
- * their presses, and cancelling a `pointerdown` — what a drag source and a
- * control keeping the focus where it is both do — suppresses every
- * compatibility mouse event that would have followed it. The press happens,
- * reaches its target, and no `mousedown` is ever dispatched for it. Reading
- * the pointer event is reading the press itself, whatever anything does with
- * it afterwards, and it is the same event the drag and surface detectors
- * read.
+ * `pressEventType` says which event IS the press, and the two callers want
+ * opposite ones:
+ *
+ * - `"pointerdown"` for a popup with no wall: a page with no wall over it is
+ *   a page whose own elements arbitrate their presses, and cancelling a
+ *   `pointerdown` — what a drag source and a control keeping the focus where
+ *   it is both do — suppresses every compatibility mouse event that would have
+ *   followed it. The press happens, reaches its target, and no `mousedown` is
+ *   ever dispatched for it. Reading the pointer event is reading the press
+ *   itself, whatever anything does with it afterwards, and it is the same
+ *   event the drag and surface detectors read.
+ * - `"mousedown"` for the modal dialog, whose native `::backdrop` exists to
+ *   spend the press. The page's controls act on `mousedown`, and on a touch
+ *   screen that is not the same moment as `pointerdown`: the compatibility
+ *   mouse events are synthesized at `touchend` and hit-tested again then.
+ *   Closing on `pointerdown` takes the `::backdrop` away before that second
+ *   hit-test, so the `mousedown` lands on whatever the page holds under the
+ *   finger, and one tap both dismisses the dialog and presses the page. Read
+ *   on `mousedown`, the wall is still up when the press the page acts on is
+ *   aimed, and it catches it. Nothing behind a modal wall can cancel that
+ *   press, since nothing behind it hears the `pointerdown` at all.
  *
  * Capture phase, so a handler downstream that stops propagation cannot keep
  * the popup open either — the press is still outside whatever is made of it.
@@ -45670,7 +45682,11 @@ const handlePressOnOutsideRegion = (
  */
 const armOutsidePressClose = (
   popupEl,
-  { openController, pointerInteractionOutsideEffect },
+  {
+    openController,
+    pointerInteractionOutsideEffect,
+    pressEventType = "pointerdown",
+  },
 ) => {
   const onDocumentPointerDown = (pointerDownEvent) => {
     if (pointerDownEvent.button !== 0) {
@@ -45727,11 +45743,11 @@ const armOutsidePressClose = (
       isCancel: pointerInteractionOutsideEffect === "cancel",
     });
   };
-  document.addEventListener("pointerdown", onDocumentPointerDown, {
+  document.addEventListener(pressEventType, onDocumentPointerDown, {
     capture: true,
   });
   return () => {
-    document.removeEventListener("pointerdown", onDocumentPointerDown, {
+    document.removeEventListener(pressEventType, onDocumentPointerDown, {
       capture: true,
     });
   };
@@ -58815,7 +58831,12 @@ const useDialogProps = props => {
     if ((isModal || !backdrop) && (pointerInteractionOutsideEffect === "close" || pointerInteractionOutsideEffect === "cancel")) {
       addCleanup(armOutsidePressClose(dialogEl, {
         openController,
-        pointerInteractionOutsideEffect
+        pointerInteractionOutsideEffect,
+        // A modal wall spends the press the page acts on (mousedown); a
+        // local dialog with no wall lets that same press through
+        // (pointerdown). See armOutsidePressClose for why the two differ on
+        // a touch screen.
+        pressEventType: isModal ? "mousedown" : "pointerdown"
       }));
     }
     return closeEvent => {
