@@ -418,14 +418,25 @@ export const createDragToMoveGestureController = ({
     // (e.g. a drag clone passed by the caller) or the element itself.
     // Capture any pre-existing translate so we can accumulate on top of it
     // rather than resetting it to zero on the first drag event.
-    const transformAtGrab = dragStyleController.getUnderlyingValue(
-      elementImpacted,
-      "transform",
-    );
+    // Nothing is written on the element on "manual" (the caller draws it where
+    // it goes), so there is nothing to accumulate on and nothing to read.
+    const transformAtGrabOrNull =
+      dragPositionEffect === "manual"
+        ? null
+        : dragStyleController.getUnderlyingValue(elementImpacted, "transform");
+    // A transform that cannot be read as named parts (a complex 3D matrix)
+    // comes back undefined: the drag then starts from a zero baseline.
+    const transformAtGrab = transformAtGrabOrNull || {};
     const translateXAtGrab = transformAtGrab.translateX;
     const translateYAtGrab = transformAtGrab.translateY;
-    if (import.meta.dev) {
+    if (import.meta.dev && dragPositionEffect !== "manual") {
       warnAboutTransformsOutsideTransform(elementImpacted);
+      if (!transformAtGrabOrNull) {
+        console.warn(
+          `The element being dragged has a transform that cannot be read as named parts: "${getComputedStyle(elementImpacted).transform}". The drag writes its own transform on the element, so that one is dropped while the element is held. Put it on a child element to keep it.`,
+          elementImpacted,
+        );
+      }
     }
 
     const cancelPosition = () => {

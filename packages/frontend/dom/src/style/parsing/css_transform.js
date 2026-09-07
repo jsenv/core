@@ -23,6 +23,9 @@ export const parseCSSTransform = (transformString, normalize) => {
   }
 
   const transformObj = {};
+  // Set as soon as a part of the transform cannot be said with named keys
+  // (a complex 3D matrix, a function whose value we cannot normalize).
+  let somethingCouldNotBeRead = false;
 
   for (const { functionName, value, source } of readTransformFunctions(
     transformString,
@@ -33,20 +36,32 @@ export const parseCSSTransform = (transformString, normalize) => {
       if (matrixComponents) {
         // Only add non-default values to preserve original information
         Object.assign(transformObj, matrixComponents);
+      } else {
+        // If matrix can't be parsed to simple components, skip it (keep complex transforms as-is)
+        somethingCouldNotBeRead = true;
       }
-      // If matrix can't be parsed to simple components, skip it (keep complex transforms as-is)
       continue;
     }
 
     // Handle regular transform functions
     const normalizedValue = normalize(value.trim(), functionName, "js");
-    if (normalizedValue !== undefined) {
-      transformObj[functionName] = normalizedValue;
+    if (normalizedValue === undefined) {
+      somethingCouldNotBeRead = true;
+      continue;
     }
+    transformObj[functionName] = normalizedValue;
   }
 
-  // Return undefined if no properties were extracted (preserves original information)
-  return Object.keys(transformObj).length > 0 ? transformObj : undefined;
+  // Nothing was extracted: either the transform truly holds nothing worth naming
+  // (an identity matrix, what "translateX(0px)" computes to), which is an empty
+  // object, or it holds something we could not read, which is undefined —
+  // "there is a transform here, do not treat it as none". The two must not be
+  // confused: an empty object stringifies back to "none" and would wipe a
+  // transform we merely failed to understand.
+  if (Object.keys(transformObj).length === 0 && somethingCouldNotBeRead) {
+    return undefined;
+  }
+  return transformObj;
 };
 
 // Cuts "translateX(10px) translateY(env(safe-area-inset-top))" into its

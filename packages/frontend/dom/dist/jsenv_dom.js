@@ -2134,6 +2134,9 @@ const parseCSSTransform = (transformString, normalize) => {
   }
 
   const transformObj = {};
+  // Set as soon as a part of the transform cannot be said with named keys
+  // (a complex 3D matrix, a function whose value we cannot normalize).
+  let somethingCouldNotBeRead = false;
 
   for (const { functionName, value, source } of readTransformFunctions(
     transformString,
@@ -2144,20 +2147,32 @@ const parseCSSTransform = (transformString, normalize) => {
       if (matrixComponents) {
         // Only add non-default values to preserve original information
         Object.assign(transformObj, matrixComponents);
+      } else {
+        // If matrix can't be parsed to simple components, skip it (keep complex transforms as-is)
+        somethingCouldNotBeRead = true;
       }
-      // If matrix can't be parsed to simple components, skip it (keep complex transforms as-is)
       continue;
     }
 
     // Handle regular transform functions
     const normalizedValue = normalize(value.trim(), functionName, "js");
-    if (normalizedValue !== undefined) {
-      transformObj[functionName] = normalizedValue;
+    if (normalizedValue === undefined) {
+      somethingCouldNotBeRead = true;
+      continue;
     }
+    transformObj[functionName] = normalizedValue;
   }
 
-  // Return undefined if no properties were extracted (preserves original information)
-  return Object.keys(transformObj).length > 0 ? transformObj : undefined;
+  // Nothing was extracted: either the transform truly holds nothing worth naming
+  // (an identity matrix, what "translateX(0px)" computes to), which is an empty
+  // object, or it holds something we could not read, which is undefined —
+  // "there is a transform here, do not treat it as none". The two must not be
+  // confused: an empty object stringifies back to "none" and would wipe a
+  // transform we merely failed to understand.
+  if (Object.keys(transformObj).length === 0 && somethingCouldNotBeRead) {
+    return undefined;
+  }
+  return transformObj;
 };
 
 // Cuts "translateX(10px) translateY(env(safe-area-inset-top))" into its
@@ -2627,17 +2642,32 @@ const normalizeStyle = (
       return value;
     }
     const transformProperty = propertyName.slice(10); // Remove "transform." prefix
+    const getDefaultTransformPartValue = () => {
+      if (transformProperty.startsWith("scale")) {
+        return 1;
+      }
+      // translate, rotate, skew
+      return 0;
+    };
     // If value is a CSS transform string, parse it first to extract the specific property
     if (typeof value === "string") {
       if (value === "none") {
-        if (transformProperty.startsWith("scale")) {
-          return 1;
-        }
-        // translate, rotate, skew
-        return 0;
+        return getDefaultTransformPartValue();
       }
       const parsedTransform = parseCSSTransform(value, normalizeStyle);
-      return parsedTransform?.[transformProperty];
+      if (!parsedTransform) {
+        // The transform could not be read as named parts; we know nothing about
+        // this one, and saying 0 would be inventing a position.
+        return undefined;
+      }
+      const transformPartValue = parsedTransform[transformProperty];
+      if (transformPartValue === undefined) {
+        // The transform was read and does not translate/rotate/scale on this
+        // axis: that is the default value, not the absence of an answer.
+        // "rotate(45deg)" has a translateX, and it is 0.
+        return getDefaultTransformPartValue();
+      }
+      return transformPartValue;
     }
     // If value is a transform object, extract the property directly
     if (typeof value === "object" && value !== null) {
@@ -14077,10 +14107,15 @@ const createDragToMoveGestureController = ({
     // (e.g. a drag clone passed by the caller) or the element itself.
     // Capture any pre-existing translate so we can accumulate on top of it
     // rather than resetting it to zero on the first drag event.
-    const transformAtGrab = dragStyleController.getUnderlyingValue(
-      elementImpacted,
-      "transform",
-    );
+    // Nothing is written on the element on "manual" (the caller draws it where
+    // it goes), so there is nothing to accumulate on and nothing to read.
+    const transformAtGrabOrNull =
+      dragPositionEffect === "manual"
+        ? null
+        : dragStyleController.getUnderlyingValue(elementImpacted, "transform");
+    // A transform that cannot be read as named parts (a complex 3D matrix)
+    // comes back undefined: the drag then starts from a zero baseline.
+    const transformAtGrab = transformAtGrabOrNull || {};
     const translateXAtGrab = transformAtGrab.translateX;
     const translateYAtGrab = transformAtGrab.translateY;
 

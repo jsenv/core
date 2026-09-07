@@ -317,17 +317,32 @@ export const normalizeStyle = (
       return value;
     }
     const transformProperty = propertyName.slice(10); // Remove "transform." prefix
+    const getDefaultTransformPartValue = () => {
+      if (transformProperty.startsWith("scale")) {
+        return 1;
+      }
+      // translate, rotate, skew
+      return 0;
+    };
     // If value is a CSS transform string, parse it first to extract the specific property
     if (typeof value === "string") {
       if (value === "none") {
-        if (transformProperty.startsWith("scale")) {
-          return 1;
-        }
-        // translate, rotate, skew
-        return 0;
+        return getDefaultTransformPartValue();
       }
       const parsedTransform = parseCSSTransform(value, normalizeStyle);
-      return parsedTransform?.[transformProperty];
+      if (!parsedTransform) {
+        // The transform could not be read as named parts; we know nothing about
+        // this one, and saying 0 would be inventing a position.
+        return undefined;
+      }
+      const transformPartValue = parsedTransform[transformProperty];
+      if (transformPartValue === undefined) {
+        // The transform was read and does not translate/rotate/scale on this
+        // axis: that is the default value, not the absence of an answer.
+        // "rotate(45deg)" has a translateX, and it is 0.
+        return getDefaultTransformPartValue();
+      }
+      return transformPartValue;
     }
     // If value is a transform object, extract the property directly
     if (typeof value === "object" && value !== null) {
