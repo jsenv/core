@@ -116,8 +116,9 @@ to start when unsure which export solves a problem.
   writes politely. Read before caching responses in the app.
 - `dynamic_import.md` — a screen's code arrives like its data: `lazy()` makes
   the import an action, so `<Loading>`, `<ErrorBoundary>` and `rerun` cover it;
-  `preload()` on intent; why not preact's `lazy`. Read before an `import()` in
-  a component or a page.
+  links fetch code on intent, never data; a transition photographs the
+  fallback; a chunk's `import.meta.css`; why not preact's `lazy`. Read before
+  an `import()` in a component or a page, and before `prefetch={false}`.
 
 ### Controls and forms
 

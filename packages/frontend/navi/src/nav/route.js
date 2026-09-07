@@ -120,10 +120,25 @@ export const route = (
     matchesParams: undefined,
     navTo: undefined,
     redirectTo: undefined,
+    preload: undefined,
     subscribeStatus,
     toString: () => {
       return `route "${cleanPattern}"`;
     },
+  };
+  // What fetches the code of this route ahead of the render — the lazy
+  // elements the routers on screen have registered for it (see
+  // registerRoutePreload). Code only: the data is the route action's, asked
+  // for on arrival with the params the address holds, and a prefetch has no
+  // address yet.
+  route.preload = () => {
+    const preloadSet = routePreloadMap.get(route);
+    if (!preloadSet) {
+      return;
+    }
+    for (const preload of preloadSet) {
+      preload();
+    }
   };
   Object.preventExtensions(route);
 
@@ -630,6 +645,34 @@ const paramsTargetCanPlace = (redirectRoute, urlParams) => {
 };
 
 let setupRoutesCalled = false;
+let activeRouteSet = null;
+
+const routePreloadMap = new WeakMap();
+export const registerRoutePreload = (route, preload) => {
+  let preloadSet = routePreloadMap.get(route);
+  if (!preloadSet) {
+    preloadSet = new Set();
+    routePreloadMap.set(route, preloadSet);
+  }
+  preloadSet.add(preload);
+};
+/**
+ * Fetches the code of every route the url leads to, a section and the page
+ * inside it alike. What a link does when the pointer or the focus reaches it
+ * (see use_preload_on_intent.js), available to anything else that knows where
+ * it is about to go.
+ */
+export const preloadUrl = (url) => {
+  if (!activeRouteSet) {
+    return;
+  }
+  for (const route of activeRouteSet) {
+    const { routePattern } = getRoutePrivateProperties(route);
+    if (routePattern.applyOn(url)) {
+      route.preload();
+    }
+  }
+};
 let activeCleanup = null;
 export const setupRoutes = (routes) => {
   if (setupRoutesCalled) {
@@ -642,6 +685,7 @@ This prevents cross-test pollution and ensures clean state.`,
   setupRoutesCalled = true;
 
   const routeSet = new Set();
+  activeRouteSet = routeSet;
   let currentUrl = null;
   const getUrl = () => currentUrl;
   // PHASE 1: Setup patterns with unified objects (includes all relationships and signal connections)
@@ -934,6 +978,7 @@ This prevents cross-test pollution and ensures clean state.`,
     routeSet.clear();
     redirectingRouteSet = null;
     setupRoutesCalled = false;
+    activeRouteSet = null;
     activeCleanup = null;
   };
   activeCleanup = clearRoutes;

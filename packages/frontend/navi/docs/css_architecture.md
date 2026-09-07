@@ -135,6 +135,13 @@ before splitting. In navi, `popup_css.js` and `surface_text_css.js` overlap
 `.navi_dialog` and `.navi_popover` with dialog's and popover's own css, which is
 why they are still concatenated.
 
+### A sheet on the far side of a split
+
+A module reached by `import()` carries its stylesheet in its chunk, adopted
+when the chunk runs: a fallback rendered before it cannot use its classes, and
+between unlayered sheets the last adopted wins. What follows for a lazily
+loaded component is in [dynamic_import.md](./dynamic_import.md).
+
 ### Browser support: navi's css and your target
 
 **navi does not require recent browsers.** Its css is written with modern

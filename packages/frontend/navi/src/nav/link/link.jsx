@@ -19,6 +19,7 @@ import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
 import { Icon, markAsOutsideTextFlow, Text } from "../../text/text.jsx";
 import { useDocumentUrl } from "../browser_integration/document_url_signal.js";
 import { getHrefTargetInfo } from "../browser_integration/href_target_info.js";
+import { usePreloadOnIntent } from "../use_preload_on_intent.js";
 import { LINK_REPLACE_ATTRIBUTE } from "../browser_integration/link_replace.js";
 import { PRESSABLE_ATTRIBUTE } from "../transition_press.js";
 import { useIsVisited } from "../browser_integration/use_is_visited.js";
@@ -548,6 +549,10 @@ Object.assign(PSEUDO_CLASSES, {
  *   way there changes. What a row of tabs wants — the neighbour is a lateral
  *   move, not a step deeper, so the whole row weighs one entry and the back
  *   button leaves by where the reader came in.
+ * @param {boolean} [props.prefetch=true] Fetch the code of where this leads when the
+ *   pointer or the focus arrives, ahead of the press (see
+ *   docs/dynamic_import.md). Code only: the data stays the route action's.
+ *   `false` for a destination not worth fetching on a hover.
  * @param {string} [props.command] - What the press asks of a control around
  *   the link — `"--navi-close"` on a link that leaves the sheet it is in.
  *   Triggered on the press, before the navigation.
@@ -654,12 +659,14 @@ const LinkPlain = (props) => {
     routeTransition,
     pressableDuringRouteTransition,
     replace,
+    prefetch = true,
 
     children,
   } = props;
   if (anchor && !props.id) {
     props.id = href.slice(1);
   }
+  usePreloadOnIntent(props.ref, href, prefetch);
 
   const selectionContext = useContext(SelectionContext);
   const nav = useContext(NavContext);
@@ -844,6 +851,7 @@ const LinkPlain = (props) => {
       routeTransition={undefined}
       pressableDuringRouteTransition={undefined}
       replace={undefined}
+      prefetch={undefined}
       data-navi-route-transition-request={routeTransitionRequest}
       {...(pressableDuringRouteTransition
         ? { [PRESSABLE_ATTRIBUTE]: "" }

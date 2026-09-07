@@ -454,6 +454,15 @@ const LoadingFallback = ({ loadingRef, fallback }) => {
   useLayoutEffect(() => {
     publishRouteRender();
   });
+  // A suspension nobody here wrote — preact/compat's lazy(), a promise thrown
+  // by hand: the boundary holds the subtree and has nothing to say about it,
+  // so the fallback is not drawn. Said out loud in dev rather than found by
+  // reading this file; navi's own lazy() is an action and never lands here.
+  if (import.meta.dev && !action) {
+    console.warn(
+      `<Loading> caught a suspension it cannot attribute to an action, so its fallback is not drawn. For code loaded on demand use lazy() from @jsenv/navi (see docs/dynamic_import.md).`,
+    );
+  }
   if (loadingRef.current.reason !== "loading") {
     return null;
   }

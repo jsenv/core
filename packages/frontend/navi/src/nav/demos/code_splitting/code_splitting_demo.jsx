@@ -88,8 +88,7 @@ const Pages = () => {
           currentIndicator
           padding="s"
           route={STATS_ROUTE}
-          onPointerEnter={StatsPage.preload}
-          onFocusIn={StatsPage.preload}
+          prefetch={false}
         >
           Statistiques
         </Link>
@@ -113,8 +112,12 @@ const Pages = () => {
 const HomePage = () => (
   <Box flex="y" spacing="s">
     <Text>Accueil — dans le bundle principal.</Text>
-    <Text>Partie — code chargé à l'ouverture, avec sa donnée.</Text>
-    <Text>Statistiques — code chargé au survol du lien.</Text>
+    <Text>
+      Partie — code préchargé au survol du lien, donnée à l'ouverture.
+    </Text>
+    <Text>
+      Statistiques — prefetch={"{false}"} : code chargé à l'ouverture.
+    </Text>
   </Box>
 );
 const NotFoundPage = () => <Text>Page introuvable.</Text>;

@@ -45,9 +45,12 @@ export const lazy = (load) => {
   // until the retry runs.
   Lazy.preload = () => {
     const prerunResult = loadAction.prerun({ reason: "preload" });
-    prerunResult.catch(() => {
-      loadAction.reset({ reason: "preload failed" });
-    });
+    // A run already in flight or done answers with nothing to wait for.
+    if (prerunResult && typeof prerunResult.catch === "function") {
+      prerunResult.catch(() => {
+        loadAction.reset({ reason: "preload failed" });
+      });
+    }
   };
   return Lazy;
 };

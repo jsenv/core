@@ -1632,18 +1632,6 @@ const reportErrorIfNobodyDisplaysIt = (error, { action } = {}) => {
   });
 };
 
-const actionPrivatePropertiesWeakMap = new WeakMap();
-const getActionPrivateProperties = (action) => {
-  const actionPrivateProperties = actionPrivatePropertiesWeakMap.get(action);
-  if (!actionPrivateProperties) {
-    throw new Error(`Cannot find action private properties for "${action}"`);
-  }
-  return actionPrivateProperties;
-};
-const setActionPrivateProperties = (action, properties) => {
-  actionPrivatePropertiesWeakMap.set(action, properties);
-};
-
 const IDLE = { id: "idle" };
 const RUNNING = { id: "running" };
 const ABORTED = { id: "aborted" };
@@ -1791,19 +1779,7 @@ const ActionRenderer = ({
   if (aborted) {
     return renderAborted(action);
   }
-  let renderCompletedSafe;
-  if (renderCompleted) {
-    renderCompletedSafe = renderCompleted;
-  } else {
-    const {
-      ui
-    } = getActionPrivateProperties(action);
-    if (ui.renderCompleted) {
-      renderCompletedSafe = ui.renderCompleted;
-    } else {
-      renderCompletedSafe = renderCompletedDefault;
-    }
-  }
+  const renderCompletedSafe = renderCompleted || renderCompletedDefault;
   if (loading) {
     if (action.canDisplayOldData && data !== undefined) {
       return renderCompletedSafe(data, action);
@@ -2552,6 +2528,18 @@ const weakEffect = (values, callback) => {
   return dispose;
 };
 
+const actionPrivatePropertiesWeakMap = new WeakMap();
+const getActionPrivateProperties = (action) => {
+  const actionPrivateProperties = actionPrivatePropertiesWeakMap.get(action);
+  if (!actionPrivateProperties) {
+    throw new Error(`Cannot find action private properties for "${action}"`);
+  }
+  return actionPrivateProperties;
+};
+const setActionPrivateProperties = (action, properties) => {
+  actionPrivatePropertiesWeakMap.set(action, properties);
+};
+
 const SYMBOL_OBJECT_SIGNAL = Symbol.for("navi_object_signal");
 
 /*
@@ -3264,7 +3252,6 @@ const createAction = (callback, rootOptions = {}) => {
       data = dataDefault,
 
       completed = false,
-      renderLoadedAsync,
       sideEffect = () => {},
       meta = {},
 
@@ -3669,10 +3656,6 @@ const createAction = (callback, rootOptions = {}) => {
     }
 
     {
-      const ui = {
-        renderLoaded: null,
-        renderLoadedAsync,
-      };
       let sideEffectCleanup;
       let completeSideEffectCleanup;
 
@@ -3869,20 +3852,6 @@ const createAction = (callback, rootOptions = {}) => {
           } else {
             runResult = callbackResult;
           }
-          if (ui.renderLoadedAsync && !ui.renderLoaded) {
-            const renderLoadedPromise = ui.renderLoadedAsync(...args).then(
-              (renderLoaded) => {
-                ui.renderLoaded = renderLoaded;
-              },
-              (e) => {
-                if (!rejected) {
-                  rejected = true;
-                  rejectedValue = e;
-                }
-              },
-            );
-            thenableArray.push(renderLoadedPromise);
-          }
           if (thenableArray.length === 0) {
             return onRunEnd();
           }
@@ -3936,7 +3905,6 @@ const createAction = (callback, rootOptions = {}) => {
 
         performRun,
         performReset,
-        ui,
 
         nameSignal: actionNameSignal,
         callSourceSignal: actionCallSourceSignal,
@@ -4211,10 +4179,8 @@ const createActionProxyFromSignal = (
 
       performRun: proxyPrivateMethod("performRun"),
       performReset: proxyPrivateMethod("performReset"),
-      ui: currentActionPrivateProperties.ui,
     };
     onActionTargetChange(() => {
-      proxyPrivateProperties.ui = currentActionPrivateProperties.ui;
       proxyPrivateProperties.childActionWeakSet =
         currentActionPrivateProperties.childActionWeakSet;
     });
@@ -17690,6 +17656,13 @@ const LoadingFallback = ({
   useLayoutEffect(() => {
     publishRouteRender();
   });
+  // A suspension nobody here wrote — preact/compat's lazy(), a promise thrown
+  // by hand: the boundary holds the subtree and has nothing to say about it,
+  // so the fallback is not drawn. Said out loud in dev rather than found by
+  // reading this file; navi's own lazy() is an action and never lands here.
+  if (!action) {
+    console.warn(`<Loading> caught a suspension it cannot attribute to an action, so its fallback is not drawn. For code loaded on demand use lazy() from @jsenv/navi (see docs/dynamic_import.md).`);
+  }
   if (loadingRef.current.reason !== "loading") {
     return null;
   }
@@ -17804,6 +17777,86 @@ const ErrorBoundary = ({
     return fallback;
   }
   return children;
+};
+
+/**
+ * A component whose code is fetched on demand, the way its data is.
+ *
+ * The import is an action: it starts from the first render that needs it (or
+ * from `preload()`), waits in the nearest `<Loading>`, fails in the nearest
+ * `<ErrorBoundary>` with a `rerun` as the way back, and is counted by the
+ * document busy signal like any other run. A page under `<Route>` therefore
+ * fetches its code and its route action's data side by side, and shows one
+ * wait for the two. See docs/dynamic_import.md.
+ */
+
+
+/**
+ * @param {() => Promise<Function | object>} load - what fetches the code,
+ *   typically `() => import("./page.jsx")`. May resolve to the component
+ *   itself or to the module: its `default` export, or its only exported
+ *   function.
+ * @returns {Function & { preload: () => void, action: object }} the component,
+ *   rendering the loaded one with its props. `preload()` starts the fetch ahead
+ *   of the render — on a link hovered, on an idle moment; a prefetch that fails
+ *   is forgotten, the visit asks again.
+ */
+const lazy = load => {
+  const loadAction = createAction(async () => {
+    const loaded = await load();
+    return resolveComponent(loaded);
+  }, {
+    name: nameFromLoader(load)
+  });
+  const Lazy = props => {
+    const [Component] = useAsyncData(loadAction, {
+      run: true
+    });
+    return h(Component, props);
+  };
+  Lazy.displayName = `Lazy(${loadAction.name})`;
+  Lazy.action = loadAction;
+  // A prefetch is a prerun: nothing on screen asked for it. One that fails is
+  // forgotten rather than reported — the visit that needs the code asks again
+  // and shows its own failure; a boundary already showing this one keeps it
+  // until the retry runs.
+  Lazy.preload = () => {
+    const prerunResult = loadAction.prerun({
+      reason: "preload"
+    });
+    // A run already in flight or done answers with nothing to wait for.
+    if (prerunResult && typeof prerunResult.catch === "function") {
+      prerunResult.catch(() => {
+        loadAction.reset({
+          reason: "preload failed"
+        });
+      });
+    }
+  };
+  return Lazy;
+};
+const resolveComponent = loaded => {
+  if (typeof loaded === "function") {
+    return loaded;
+  }
+  if (loaded && typeof loaded === "object") {
+    if (typeof loaded.default === "function") {
+      return loaded.default;
+    }
+    const functionExportNames = Object.keys(loaded).filter(key => typeof loaded[key] === "function");
+    if (functionExportNames.length === 1) {
+      return loaded[functionExportNames[0]];
+    }
+    throw new Error(`lazy(): the module must export one component, found ${functionExportNames.length} (${functionExportNames.join(", ") || "none"}). Return the component from the loader to say which.`);
+  }
+  throw new Error(`lazy(): expected a component or a module, got ${loaded}`);
+};
+
+// The specifier read off the loader's source, so the action (and the busy
+// signal, and the debug output) says which page is being fetched.
+const nameFromLoader = load => {
+  const match = /import\(\s*["']([^"']+)["']/.exec(String(load));
+  return match ? `import ${match[1]}` : "lazy";
 };
 
 /**
@@ -25014,10 +25067,25 @@ const route = (
     matchesParams: undefined,
     navTo: undefined,
     redirectTo: undefined,
+    preload: undefined,
     subscribeStatus,
     toString: () => {
       return `route "${cleanPattern}"`;
     },
+  };
+  // What fetches the code of this route ahead of the render — the lazy
+  // elements the routers on screen have registered for it (see
+  // registerRoutePreload). Code only: the data is the route action's, asked
+  // for on arrival with the params the address holds, and a prefetch has no
+  // address yet.
+  route.preload = () => {
+    const preloadSet = routePreloadMap.get(route);
+    if (!preloadSet) {
+      return;
+    }
+    for (const preload of preloadSet) {
+      preload();
+    }
   };
   Object.preventExtensions(route);
 
@@ -25490,6 +25558,34 @@ const paramsTargetCanPlace = (redirectRoute, urlParams) => {
 };
 
 let setupRoutesCalled = false;
+let activeRouteSet = null;
+
+const routePreloadMap = new WeakMap();
+const registerRoutePreload = (route, preload) => {
+  let preloadSet = routePreloadMap.get(route);
+  if (!preloadSet) {
+    preloadSet = new Set();
+    routePreloadMap.set(route, preloadSet);
+  }
+  preloadSet.add(preload);
+};
+/**
+ * Fetches the code of every route the url leads to, a section and the page
+ * inside it alike. What a link does when the pointer or the focus reaches it
+ * (see use_preload_on_intent.js), available to anything else that knows where
+ * it is about to go.
+ */
+const preloadUrl = (url) => {
+  if (!activeRouteSet) {
+    return;
+  }
+  for (const route of activeRouteSet) {
+    const { routePattern } = getRoutePrivateProperties(route);
+    if (routePattern.applyOn(url)) {
+      route.preload();
+    }
+  }
+};
 const setupRoutes = (routes) => {
   if (setupRoutesCalled) {
     throw new Error(
@@ -25501,6 +25597,7 @@ This prevents cross-test pollution and ensures clean state.`,
   setupRoutesCalled = true;
 
   const routeSet = new Set();
+  activeRouteSet = routeSet;
   let currentUrl = null;
   const getUrl = () => currentUrl;
   // PHASE 1: Setup patterns with unified objects (includes all relationships and signal connections)
@@ -25793,6 +25890,7 @@ This prevents cross-test pollution and ensures clean state.`,
     routeSet.clear();
     redirectingRouteSet = null;
     setupRoutesCalled = false;
+    activeRouteSet = null;
   };
   return {
     updateRoutes,
@@ -27514,8 +27612,12 @@ const collectBranches = children => {
       children: nodeChildren,
       fallback,
       route,
-      routeParams
+      routeParams,
+      element
     } = child.props;
+    if (route) {
+      registerElementPreload(route, element);
+    }
     if (nodeChildren) {
       const {
         matchingBranch: matchingChild
@@ -27564,6 +27666,17 @@ const collectBranches = children => {
     fallbackBranch,
     activeBranch
   };
+};
+// A branch whose element fetches its code on demand (see lazy.jsx) tells its
+// route, so that intent on a link to that route — or `route.preload()` — can
+// fetch it ahead of the render. Read off the vnode the container walks, which
+// is why a router on screen is what knows: a section's sub-pages register when
+// the section renders its own router.
+const registerElementPreload = (route, element) => {
+  const type = element && element.type ? element.type : element;
+  if (type && typeof type.preload === "function") {
+    registerRoutePreload(route, type.preload);
+  }
 };
 const wrapBranch = (branch, wrapper) => {
   return {
@@ -41200,6 +41313,33 @@ const Icon = ({
 };
 
 /**
+ * The code of where a link leads, fetched when the pointer or the focus
+ * arrives on it: the moment the user signals a destination, before the press.
+ * Only code is fetched (see route.preload), so a link whose address is not the
+ * final one — an id still to be chosen — loses nothing by asking.
+ */
+const usePreloadOnIntent = (ref, href, prefetch = true) => {
+  useEffect(() => {
+    if (!prefetch || !href) {
+      return undefined;
+    }
+    const element = ref.current;
+    if (!element) {
+      return undefined;
+    }
+    const preload = () => {
+      preloadUrl(href);
+    };
+    element.addEventListener("pointerenter", preload);
+    element.addEventListener("focusin", preload);
+    return () => {
+      element.removeEventListener("pointerenter", preload);
+      element.removeEventListener("focusin", preload);
+    };
+  }, [ref, href, prefetch]);
+};
+
+/**
  * Hook that reactively checks if a URL is visited.
  * Re-renders when the visited URL set changes.
  *
@@ -41708,6 +41848,10 @@ Object.assign(PSEUDO_CLASSES, {
  *   way there changes. What a row of tabs wants — the neighbour is a lateral
  *   move, not a step deeper, so the whole row weighs one entry and the back
  *   button leaves by where the reader came in.
+ * @param {boolean} [props.prefetch=true] Fetch the code of where this leads when the
+ *   pointer or the focus arrives, ahead of the press (see
+ *   docs/dynamic_import.md). Code only: the data stays the route action's.
+ *   `false` for a destination not worth fetching on a hover.
  * @param {string} [props.command] - What the press asks of a control around
  *   the link — `"--navi-close"` on a link that leaves the sheet it is in.
  *   Triggered on the press, before the navigation.
@@ -41813,11 +41957,13 @@ const LinkPlain = props => {
     routeTransition,
     pressableDuringRouteTransition,
     replace,
+    prefetch = true,
     children
   } = props;
   if (anchor && !props.id) {
     props.id = href.slice(1);
   }
+  usePreloadOnIntent(props.ref, href, prefetch);
   const selectionContext = useContext(SelectionContext);
   const nav = useContext(NavContext);
   const visited = useIsVisited(href);
@@ -41985,6 +42131,7 @@ const LinkPlain = props => {
     routeTransition: undefined,
     pressableDuringRouteTransition: undefined,
     replace: undefined,
+    prefetch: undefined,
     "data-navi-route-transition-request": routeTransitionRequest,
     ...(pressableDuringRouteTransition ? {
       [PRESSABLE_ATTRIBUTE]: ""
@@ -47910,6 +48057,7 @@ const ButtonUI = props => {
     rel,
     replace,
     pressableDuringRouteTransition,
+    prefetch = true,
     // visual
     variant,
     pressEffect,
@@ -47968,6 +48116,7 @@ const ButtonUI = props => {
     [PRESSABLE_ATTRIBUTE]: ""
   } : null;
   const visualSelector = ".navi_button_content";
+  usePreloadOnIntent(ref, href, prefetch);
   useAccentColorAttributes(ref, null, {
     elementSelector: visualSelector
   });
@@ -47997,8 +48146,10 @@ const ButtonUI = props => {
     ...replaceRequest,
     pressableDuringRouteTransition: undefined,
     ...pressableRequest,
+    prefetch: undefined
     // Respond with the JS prop value directly so callers (e.g. resolveCommandValue)
     // get the original type instead of the DOM-coerced string (e.g. "[object Object]").
+    ,
     onnavi_get_value: e => {
       e.detail.respondWith(props.value);
     },
@@ -48227,6 +48378,10 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  *   `--navi-nav-to` command — by TAKING THE PLACE of the current history entry
  *   rather than stacking on it: what `<Link replace>` says, for a press drawn
  *   as a button.
+ * @param {boolean} [prefetch=true] Fetch the code of where this leads when the
+ *   pointer or the focus arrives, ahead of the press (see
+ *   docs/dynamic_import.md). Code only: the data stays the route action's.
+ *   `false` for a destination not worth fetching on a hover.
  * @param {boolean} [pressableDuringRouteTransition] Keep answering presses
  *   while a route transition plays: what a movement photographs goes deaf to
  *   the pointer for its whole length, and the door that opened the page — a
@@ -83743,5 +83898,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, CalloutStatusIcon, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, ControlSwap, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, Expandable, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, InfoSvg, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, OfflineError, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTransitionArea, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, SpinGroup, SplitButton, StarSvg, Step, StepList, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, TimeRange, TimeRangeSpin, TimeRangeWheel, TimeSpin, TimeWheel, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, canNavBackSignal, canNavForwardSignal, coarsePointerSignal, compareTwoJsValues, constraintFromValidityRule, createAction, createAvailableConstraint, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineRouteDefaultTransition, defineRouteTransition, detectHorizontalOverflow, dispatchRequestSetUIState, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, errorIsDisplayed, filterTableSelection, getNowHours, getNowHoursRoundedToStep, isCellSelected, isColumnSelected, isOfflineError, isRowSelected, isScrolling, isToday, languagesSignal, localStorageSignal, markAsOutsideTextFlow, markErrorAsDisplayedBy, moveArrayItemByIndex, moveFocusTo, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, scrollActivitySignal, setBaseUrl, setNetworkPolicy, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, smallTouchScreenSignal, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutElement, useCalloutRequestClose, useCanNavBack, useCanNavForward, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useNetworkPolicyReason, useOrderedColumns, usePopupMode, useRouteStatus, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideContainer, useSlideValue, useStateArray, useTitleLevel, useTransitionCover, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, CalloutStatusIcon, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, ControlSwap, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, Expandable, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, InfoSvg, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, OfflineError, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTransitionArea, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, SpinGroup, SplitButton, StarSvg, Step, StepList, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, TimeRange, TimeRangeSpin, TimeRangeWheel, TimeSpin, TimeWheel, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, canNavBackSignal, canNavForwardSignal, coarsePointerSignal, compareTwoJsValues, constraintFromValidityRule, createAction, createAvailableConstraint, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineRouteDefaultTransition, defineRouteTransition, detectHorizontalOverflow, dispatchRequestSetUIState, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, errorIsDisplayed, filterTableSelection, getNowHours, getNowHoursRoundedToStep, isCellSelected, isColumnSelected, isOfflineError, isRowSelected, isScrolling, isToday, languagesSignal, lazy, localStorageSignal, markAsOutsideTextFlow, markErrorAsDisplayedBy, moveArrayItemByIndex, moveFocusTo, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, preloadUrl, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, scrollActivitySignal, setBaseUrl, setNetworkPolicy, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, smallTouchScreenSignal, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutElement, useCalloutRequestClose, useCanNavBack, useCanNavForward, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useNetworkPolicyReason, useOrderedColumns, usePopupMode, useRouteStatus, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideContainer, useSlideValue, useStateArray, useTitleLevel, useTransitionCover, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi.js.map

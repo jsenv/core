@@ -4,6 +4,7 @@ import { Box, BoxForwardedPropsContext } from "../../box/box.jsx";
 import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
 import { useDocumentUrl } from "../../nav/browser_integration/document_url_signal.js";
 import { getHrefTargetInfo } from "../../nav/browser_integration/href_target_info.js";
+import { usePreloadOnIntent } from "../../nav/use_preload_on_intent.js";
 import { LINK_REPLACE_ATTRIBUTE } from "../../nav/browser_integration/link_replace.js";
 import { PRESSABLE_ATTRIBUTE } from "../../nav/transition_press.js";
 import { Text, markAsOutsideTextFlow } from "../../text/text.jsx";
@@ -497,6 +498,7 @@ export const ButtonUI = (props) => {
     rel,
     replace,
     pressableDuringRouteTransition,
+    prefetch = true,
 
     // visual
     variant,
@@ -559,6 +561,7 @@ export const ButtonUI = (props) => {
     : null;
 
   const visualSelector = ".navi_button_content";
+  usePreloadOnIntent(ref, href, prefetch);
   useAccentColorAttributes(ref, null, {
     elementSelector: visualSelector,
   });
@@ -589,6 +592,7 @@ export const ButtonUI = (props) => {
       {...replaceRequest}
       pressableDuringRouteTransition={undefined}
       {...pressableRequest}
+      prefetch={undefined}
       // Respond with the JS prop value directly so callers (e.g. resolveCommandValue)
       // get the original type instead of the DOM-coerced string (e.g. "[object Object]").
       onnavi_get_value={(e) => {

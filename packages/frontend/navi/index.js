@@ -117,7 +117,12 @@ export {
 } from "./src/nav/browser_integration/document_url_signal.js";
 export { useUrlSearchParam } from "./src/nav/browser_integration/use_url_search_param.js";
 export { Head } from "./src/nav/head.jsx";
-export { route, setupRoutes, useRouteStatus } from "./src/nav/route.js";
+export {
+  preloadUrl,
+  route,
+  setupRoutes,
+  useRouteStatus,
+} from "./src/nav/route.js";
 export { Route } from "./src/nav/route.jsx";
 export {
   RouteTransitionArea,

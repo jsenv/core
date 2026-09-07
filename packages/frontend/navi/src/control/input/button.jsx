@@ -131,6 +131,10 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  *   `--navi-nav-to` command — by TAKING THE PLACE of the current history entry
  *   rather than stacking on it: what `<Link replace>` says, for a press drawn
  *   as a button.
+ * @param {boolean} [prefetch=true] Fetch the code of where this leads when the
+ *   pointer or the focus arrives, ahead of the press (see
+ *   docs/dynamic_import.md). Code only: the data stays the route action's.
+ *   `false` for a destination not worth fetching on a hover.
  * @param {boolean} [pressableDuringRouteTransition] Keep answering presses
  *   while a route transition plays: what a movement photographs goes deaf to
  *   the pointer for its whole length, and the door that opened the page — a

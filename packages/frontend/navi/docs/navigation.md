@@ -385,7 +385,9 @@ no boundary takes: [error_handling.md](./error_handling.md).
 ## Links and tab rows
 
 `<Link route={…}>` builds its href from the route and knows on its own whether it
-is the current one — that is what draws the current-tab state. `<Nav>` says once,
+is the current one — that is what draws the current-tab state. It also fetches
+the code of where it leads when the pointer or the focus reaches it, for a page
+loaded on demand (see [dynamic_import.md](./dynamic_import.md)). `<Nav>` says once,
 for the whole row, where the bar that marks the current tab goes:
 
 ```jsx
