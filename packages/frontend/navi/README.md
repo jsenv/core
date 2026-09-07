@@ -14,6 +14,8 @@ How to declare routes, render them, and turn them into tabs — including `Route
 
 Actions are async operations with lifecycle management — pending, success, error. You can declare actions that run when navigating to a route, and any component can subscribe to them via `useAsyncData` to reflect what is happening: loading states, results, errors. No manual wiring.
 
+Code loaded on demand is the same thing: a page's `import()` is a route action, started with the page's data on the url change and prefetched when a link to it is hovered or focused; a component inside a page that stays reads its own with `useAsyncData(() => import(…))`. One wait, one failure, no lazy-shaped API. See [docs/dynamic_import.md](./docs/dynamic_import.md).
+
 ## REST state
 
 `resource()` turns a REST endpoint into a reactive store: one action per verb, a
