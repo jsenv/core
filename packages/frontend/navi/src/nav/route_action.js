@@ -72,22 +72,23 @@ export const routeAction = (
 
 // The instance the effect above runs on the match is the one bound to `true`
 // (the default params), so a prerun here is what the arrival promotes to a
-// run. A prefetch that fails is forgotten rather than reported: nothing on
-// screen asked for it, and the arrival asks again and shows its own failure.
+// run. A prefetch that fails is not reported: nothing on screen asked for it,
+// and the failure stays on the instance, where a run asks again — a FAILED
+// action is run, only RUNNING and COMPLETED are left alone — and the arrival
+// shows its own. It is left FAILED on purpose, not reset: the press that
+// brings the arrival also focuses the link, so a prerun can be in flight when
+// the arrival promotes it, and a reset landing after that would pull the
+// answer from under the page that is reading it.
 const prefetchParamless = (action) => {
   const instance = action.bindParams(true);
-  const forget = () => {
-    instance.reset({ reason: "prefetch failed" });
-  };
   let result;
   try {
     result = instance.prerun({ reason: "intent" });
   } catch {
-    forget();
     return;
   }
   if (result && typeof result.catch === "function") {
-    result.catch(forget);
+    result.catch(() => {});
   }
 };
 

@@ -7,6 +7,7 @@ import {
   Link,
   Loading,
   Nav,
+  reload,
   Route,
   Text,
   useAsyncData,
@@ -24,12 +25,32 @@ import {
   STATS_ROUTE,
 } from "./demo_backend.js";
 
+// A page draws its own wait and its own failure while its code comes: nothing
+// stands there yet, so there is nothing a suspension would have to keep.
 const GamePage = () => {
-  const [Page] = useAsyncData(GAME_PAGE_CODE);
+  const [Page, loading, error] = useAsyncData(GAME_PAGE_CODE, {
+    loading: true,
+    error: true,
+  });
+  if (loading) {
+    return <PageSkeleton />;
+  }
+  if (error) {
+    return <PageError error={error} />;
+  }
   return <Page />;
 };
 const StatsPage = () => {
-  const [Page] = useAsyncData(STATS_PAGE_CODE);
+  const [Page, loading, error] = useAsyncData(STATS_PAGE_CODE, {
+    loading: true,
+    error: true,
+  });
+  if (loading) {
+    return <PageSkeleton />;
+  }
+  if (error) {
+    return <PageError error={error} />;
+  }
   return <Page />;
 };
 
@@ -144,7 +165,7 @@ const PlanSection = () => {
       {error ? (
         <>
           <Text style={{ color: "red" }}>{error.message}</Text>
-          <Button action={() => error.action.rerun()}>Réessayer</Button>
+          <Button action={() => reload()}>Recharger</Button>
         </>
       ) : null}
       {Plan ? <Plan /> : null}
@@ -175,10 +196,12 @@ const PageSkeleton = () => (
     <Box style={{ width: "120px", height: "1lh", background: "#e5e5e5" }} />
   </Box>
 );
+// The document keeps a failed import as failed: asking again never fetches, so
+// the way out is a fresh document.
 const PageError = ({ error }) => (
   <Box flex="y" spacing="s">
     <Text style={{ color: "red" }}>{error.message}</Text>
-    <Button action={() => error.action.rerun()}>Réessayer</Button>
+    <Button action={() => reload()}>Recharger</Button>
   </Box>
 );
 

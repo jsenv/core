@@ -115,12 +115,13 @@ to start when unsure which export solves a problem.
 - `offline.md` — `setNetworkPolicy`: answer from the store, ask nothing, refuse
   writes politely. Read before caching responses in the app.
 - `dynamic_import.md` — a screen's code arrives like its data: a page's
-  import is a `routeAction`, a component reads its own with
-  `useAsyncData(() => import(…))`, so `<Loading>`, `<ErrorBoundary>` and
-  `rerun` cover it; links prerun on intent what asks nothing of the address; a
-  transition photographs the fallback; a chunk's `import.meta.css`; a chunk
-  that does not come is never a bug; why not preact's `lazy`. Read before an
-  `import()` in a component or a page, and before `prefetch={false}`.
+  import is a `routeAction` read with `loading: true` (a branch, not a
+  `<Loading>`), a component reads its own with `useAsyncData(() => import(…))`;
+  links prerun on intent what asks nothing of the address; a transition
+  photographs the pending screen; a chunk's `import.meta.css`; a chunk that
+  does not come is never a bug and never comes twice in one document — offer
+  `reload()`; why not preact's `lazy`. Read before an `import()` in a component
+  or a page, and before `prefetch={false}`.
 
 ### Controls and forms
 

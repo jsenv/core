@@ -14,7 +14,9 @@ a screen already reads its data with. Two shapes, decided by who asks.
 
 The address asks for the page's data through a route action; it asks for the
 page's code the same way, and the two are in flight together from the url
-change:
+change. The page component in the entry reads the code like data — with
+`loading: true` and `error: true`, drawing the page's own pending screen and
+its own unavailable screen where the page will stand:
 
 ```jsx
 const GAME_PAGE_ACTION = routeAction(GAME_ROUTE, GAME.GET, () => ({
@@ -25,33 +27,46 @@ const GAME_PAGE_CODE = routeAction(GAME_ROUTE, () =>
 );
 
 const GamePage = () => {
-  const [Page] = useAsyncData(GAME_PAGE_CODE);
+  const [Page, loading, error] = useAsyncData(GAME_PAGE_CODE, {
+    loading: true,
+    error: true,
+  });
+  if (loading) {
+    return <GameScreenPending />;
+  }
+  if (error) {
+    return <GameScreenUnavailable />;
+  }
   return <Page />;
 };
 
-<Route>
-  <ErrorBoundary fallback={PageError}>
-    <Loading fallback={<PageSkeleton />}>
-      <Route route={GAME_ROUTE} element={GamePage} />
-    </Loading>
-  </ErrorBoundary>
-</Route>;
+<Route route={GAME_ROUTE} element={GamePage} />;
 ```
 
-Everything the data layer decides then holds for the code, with nothing more
-to write:
+Why a branch rather than a `<Loading>` around it: suspending takes the
+subtree away and puts the boundary's fallback in its place, then mounts the
+page again — a cost worth paying when a page already on screen re-reads its
+data (see [data_states.md](./data_states.md)), and worth nothing here, where
+the page is not there yet and has nothing to keep. `loading: true` never
+suspends: one component, no wrapper, the pending screen is the page's own
+shape, and the failure sits beside it (what it offers: below, "When the code
+does not come"). What is delegated stays delegated — the page's data, read inside
+`game_page.jsx` with `useAsyncData(GAME_PAGE_ACTION)`, still waits in the
+`<Loading>` written between the routes, as [navigation.md](./navigation.md)
+says.
 
-- **One wait.** The page suspends into the nearest `<Loading>` on whichever of
-  the two arrives last; the boundary is told it is loading and draws its
-  fallback; the routing is busy until both are there.
-- **One failure.** A rejected import fails the run: the nearest
-  `<ErrorBoundary>` shows it, `error.action.rerun()` is the way back, going
-  somewhere else leaves it behind.
+Everything the data layer decides then holds for the code:
+
+- **One failure.** A rejected import fails the run like a failed read; drawn
+  by the branch above, or by the nearest `<ErrorBoundary>` when the page reads
+  its code without `error: true`.
 - **Fetched once.** A route action left behind is aborted, not reset, and a
   completed one is not run again: coming back to the page renders
   synchronously, only the data is asked for per params.
 - **Fetched ahead.** A route action that asks nothing of the address is prerun
   on intent (below).
+- **Counted.** The routing is busy until the code is there, like for the
+  data.
 
 The page module itself is ordinary — it reads its data with
 `useAsyncData(GAME_PAGE_ACTION)` like any page — and imports the routes module
@@ -75,19 +90,19 @@ const PlanSection = () => {
   return (
     <PlanFrame>
       {loading ? <Text>…</Text> : null}
-      {error ? (
-        <Button action={() => error.action.rerun()}>Réessayer</Button>
-      ) : null}
+      {error ? <Button action={() => reload()}>Recharger</Button> : null}
       {Plan ? <Plan /> : null}
     </PlanFrame>
   );
 };
 ```
 
-Delegating instead (`useAsyncData(fn)` alone, under a `<Loading>` around the
-frame) is the same hook with the same rule as for data: **the `<Loading>` goes
-where the fallback should land.** A boundary around the whole router takes the
-router away while a page loads — top bar, tabs and all.
+The same reasons as for a page hold: nothing stands there yet, so a
+suspension would only swap and remount for nothing. Delegating instead
+(`useAsyncData(fn)` alone, under a `<Loading>` around the frame) follows the
+rule for data: **the `<Loading>` goes where the fallback should land.** A
+boundary around the whole router takes the router away while a page loads —
+top bar, tabs and all.
 
 This shape starts at the render and is per instance: a component fetched this
 way in three places asks three times (the browser fetches the module once),
@@ -111,8 +126,9 @@ prefetched: a prefetch has no address, the id may still be chosen.
 `routeAction(route, action, undefined, { prefetch: false })` keeps a
 param-less read that is not worth a hover out of it.
 
-A prefetch that fails is forgotten, not reported: nothing on screen asked for
-it. The arrival asks again and shows its own failure.
+A prefetch that fails is not reported: nothing on screen asked for it. The
+failure stays on the action, where the arrival asks again — a failed action is
+run, only a running or completed one is left alone — and shows its own.
 
 The same from code: `route.preload()` for a route something is about to
 navigate to, `preloadUrl(url)` for an address. A press that computes its
@@ -120,9 +136,10 @@ destination has nothing to preload — the navigation itself asks.
 
 ## What a transition photographs
 
-A route element still waiting is announced as rendered by its boundary, so a
-route transition or a `RouteTravel` takes its picture of the **fallback**, code
-and data alike. Navi does not hold a navigation for a chunk: the honest answer
+A route element still waiting is what the container rendered — its pending
+screen, or the fallback of the boundary it suspended into — so a route
+transition or a `RouteTravel` takes its picture of **that**, code and data
+alike. Navi does not hold a navigation for a chunk: the honest answer
 to "a chunk is a hundred milliseconds" is the prefetch above — the code is
 there before the press — and a skeleton that is the page's own shape is what
 gets photographed when it is not.
@@ -154,15 +171,22 @@ is a 404; or the network is gone. The browser says both the same way — a
 `TypeError` with no status — and neither is a bug of the page: there is
 nothing in the app's code to point at.
 
-The component reading its own code says it where it stands, as above. For a
-page, the failure reaches the boundary like a failed read does; a boundary
-that shows only what came from the network and rethrows the rest as a bug
-recognises an import by its action — `error.action` is the route action the
-app declared for the code — rather than by the browser's message. Either way
-`error.action.rerun()` retries; a retry failing the same way says the document
-is stale, and **reloading it** is what brings the new code. Navi does not do
-it on its own — a document reloading itself is a loop waiting to happen — the
-screen says it.
+**Asking again never fetches.** The document remembers a module whose fetch
+failed as failed: a second `import()` of the same address is refused without a
+request, for the life of the document. So a retry on an import has nothing to
+do — `error.action.rerun()` fails again at once, on the same failure — and
+the one way out is a fresh document: **`reload()`**, which the screen offers
+in words the reader understands. Navi does not reload on its own: a document
+reloading itself is a loop waiting to happen. It is also why a prefetch that
+failed is not asked again on the arrival in any useful sense: the run is made,
+refused at once, and the screen says it.
+
+The page or the component reading its code says it where it stands, as
+above. A failure left to a boundary — a page reading its code without
+`error: true` — reaches it like a failed read does; a boundary that shows only
+what came from the network and rethrows the rest as a bug recognises an import
+by its action — `error.action` is the route action the app declared for the
+code — rather than by the browser's message.
 
 ## Preact's `lazy()` is not this
 
