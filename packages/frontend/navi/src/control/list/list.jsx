@@ -279,7 +279,10 @@ const css = /* css */ `
       overflow-y: visible;
     }
 
-    .navi_list_scroll_container {
+    /* Direct child throughout: this box is the list's own scroll box (see
+       ListContent), and a list holding another list would otherwise style the
+       inner list's one as if it were its own. */
+    > .navi_list_scroll_container {
       /* The ask stops here: this element is inside the list's frame, so a row
          or a control it holds is not at the surface's corner. */
       --x-corner-top-left-radius: initial;
@@ -312,7 +315,7 @@ const css = /* css */ `
       max-height: none;
       overflow: visible;
 
-      .navi_list_scroll_container {
+      > .navi_list_scroll_container {
         max-height: none;
         overflow: visible;
       }
@@ -325,7 +328,9 @@ const css = /* css */ `
        browser suppresses them all — see utils/scroll_activity.js for who
        writes navi-scrolling. The scroller itself keeps its own hit-testing, so
        the wheel and the scrollbar go on reaching it. */
-    &:not([navi-hover-while-scrolling]) .navi_list:is([navi-scrolling] *) {
+    &:not([navi-hover-while-scrolling])
+      > .navi_list_scroll_container
+      > .navi_list:is([navi-scrolling] *) {
       pointer-events: none;
     }
 
@@ -349,7 +354,7 @@ const css = /* css */ `
          over the internal scroll — flex:1 fills it, min-height:0 lets it shrink
          below its content so overflow:auto scrolls instead of the content
          pushing past the container (which overflow:hidden would just clip). */
-      .navi_list_scroll_container {
+      > .navi_list_scroll_container {
         min-height: 0;
         flex: 1;
       }
@@ -524,7 +529,10 @@ const css = /* css */ `
   .navi_list_container[data-horizontal] {
     --list-max-height: none;
 
-    .navi_list_virtual_filler {
+    /* The whole chain down to the track, because the axis is the axis of THIS
+       list: a vertical list nested in a row of a horizontal one fills along y
+       and must keep the default above. */
+    > .navi_list_scroll_container > .navi_list > .navi_list_virtual_filler {
       width: var(--size-to-fill, 0px);
       height: 100%;
     }
@@ -2630,7 +2638,9 @@ const getScrollerEl = (listContainerEl, scroller, horizontal) => {
     return el || document.scrollingElement;
   }
   if (scroller !== "parent") {
-    return listContainerEl.querySelector(`.navi_list_scroll_container`);
+    return listContainerEl.querySelector(
+      `:scope > .navi_list_scroll_container`,
+    );
   }
   const axis = horizontal ? "x" : "y";
   let element = listContainerEl;

@@ -64521,7 +64521,7 @@ const css$x = /* css */`@layer navi {
     overflow: clip visible;
   }
 
-  & .navi_list_scroll_container {
+  & > .navi_list_scroll_container {
     --x-corner-top-left-radius: initial;
     --x-corner-top-right-radius: initial;
     --x-corner-bottom-right-radius: initial;
@@ -64541,13 +64541,13 @@ const css$x = /* css */`@layer navi {
     max-height: none;
     overflow: visible;
 
-    & .navi_list_scroll_container {
+    & > .navi_list_scroll_container {
       max-height: none;
       overflow: visible;
     }
   }
 
-  &:not([navi-hover-while-scrolling]) .navi_list:is([navi-scrolling] *) {
+  &:not([navi-hover-while-scrolling]) > .navi_list_scroll_container > .navi_list:is([navi-scrolling] *) {
     pointer-events: none;
   }
 
@@ -64562,7 +64562,7 @@ const css$x = /* css */`@layer navi {
   &[data-expand-y] {
     --list-max-height: none;
 
-    & .navi_list_scroll_container {
+    & > .navi_list_scroll_container {
       flex: 1;
       min-height: 0;
     }
@@ -64677,7 +64677,7 @@ const css$x = /* css */`@layer navi {
 .navi_list_container[data-horizontal] {
   --list-max-height: none;
 
-  & .navi_list_virtual_filler {
+  & > .navi_list_scroll_container > .navi_list > .navi_list_virtual_filler {
     width: var(--size-to-fill, 0px);
     height: 100%;
   }
@@ -66557,7 +66557,7 @@ const getScrollerEl = (listContainerEl, scroller, horizontal) => {
     return el || document.scrollingElement;
   }
   if (scroller !== "parent") {
-    return listContainerEl.querySelector(`.navi_list_scroll_container`);
+    return listContainerEl.querySelector(`:scope > .navi_list_scroll_container`);
   }
   const axis = horizontal ? "x" : "y";
   let element = listContainerEl;
