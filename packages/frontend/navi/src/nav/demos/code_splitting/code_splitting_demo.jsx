@@ -4,7 +4,6 @@ import {
   Box,
   Button,
   ErrorBoundary,
-  lazy,
   Link,
   Loading,
   Nav,
@@ -18,19 +17,21 @@ import { DocumentToc } from "../../../internal/document_toc.jsx";
 import { FakeBackend } from "../../../internal/fake_backend.jsx";
 import {
   backend,
+  GAME_PAGE_CODE,
   GAME_ROUTE,
   HOME_ROUTE,
+  STATS_PAGE_CODE,
   STATS_ROUTE,
 } from "./demo_backend.js";
 
-// Each import goes through the backend so it can be watched on the frontier,
-// next to the data the same page asks for.
-const GamePage = lazy(() =>
-  backend.call("import ./game_page.jsx", () => import("./game_page.jsx")),
-);
-const StatsPage = lazy(() =>
-  backend.call("import ./stats_page.jsx", () => import("./stats_page.jsx")),
-);
+const GamePage = () => {
+  const [Page] = useAsyncData(GAME_PAGE_CODE);
+  return <Page />;
+};
+const StatsPage = () => {
+  const [Page] = useAsyncData(STATS_PAGE_CODE);
+  return <Page />;
+};
 
 const Heading = ({ level = 2, id, children }) => {
   const Tag = `h${level}`;

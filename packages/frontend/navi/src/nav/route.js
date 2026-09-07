@@ -126,11 +126,9 @@ export const route = (
       return `route "${cleanPattern}"`;
     },
   };
-  // What fetches the code of this route ahead of the render — the lazy
-  // elements the routers on screen have registered for it (see
-  // registerRoutePreload). Code only: the data is the route action's, asked
-  // for on arrival with the params the address holds, and a prefetch has no
-  // address yet.
+  // Asks ahead of the arrival for what this route's actions ask without the
+  // address — a page's code, a read without params (see routeAction). An
+  // action keyed by a param waits for the arrival: a prefetch has no address.
   route.preload = () => {
     const preloadSet = routePreloadMap.get(route);
     if (!preloadSet) {
@@ -657,10 +655,10 @@ export const registerRoutePreload = (route, preload) => {
   preloadSet.add(preload);
 };
 /**
- * Fetches the code of every route the url leads to, a section and the page
- * inside it alike. What a link does when the pointer or the focus reaches it
- * (see use_preload_on_intent.js), available to anything else that knows where
- * it is about to go.
+ * Preloads every route the url leads to, a section and the page inside it
+ * alike. What a link does when the pointer or the focus reaches it (see
+ * use_preload_on_intent.js), available to anything else that knows where it
+ * is about to go.
  */
 export const preloadUrl = (url) => {
   if (!activeRouteSet) {

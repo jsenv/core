@@ -551,8 +551,10 @@ Object.assign(PSEUDO_CLASSES, {
  *   button leaves by where the reader came in.
  * @param {boolean} [props.prefetch=true] Fetch the code of where this leads when the
  *   pointer or the focus arrives, ahead of the press (see
- *   docs/dynamic_import.md). Code only: the data stays the route action's.
- *   `false` for a destination not worth fetching on a hover.
+ *   docs/dynamic_import.md): the route actions that ask nothing of the
+ *   address — a page's code, a read without params — are prerun; one keyed by
+ *   a param waits for the arrival. `false` for a destination not worth
+ *   fetching on a hover.
  * @param {string} [props.command] - What the press asks of a control around
  *   the link — `"--navi-close"` on a link that leaves the sheet it is in.
  *   Triggered on the press, before the navigation.

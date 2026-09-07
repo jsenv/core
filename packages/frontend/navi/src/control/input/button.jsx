@@ -133,8 +133,10 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  *   as a button.
  * @param {boolean} [prefetch=true] Fetch the code of where this leads when the
  *   pointer or the focus arrives, ahead of the press (see
- *   docs/dynamic_import.md). Code only: the data stays the route action's.
- *   `false` for a destination not worth fetching on a hover.
+ *   docs/dynamic_import.md): the route actions that ask nothing of the
+ *   address — a page's code, a read without params — are prerun; one keyed by
+ *   a param waits for the arrival. `false` for a destination not worth
+ *   fetching on a hover.
  * @param {boolean} [pressableDuringRouteTransition] Keep answering presses
  *   while a route transition plays: what a movement photographs goes deaf to
  *   the pointer for its whole length, and the door that opened the page — a

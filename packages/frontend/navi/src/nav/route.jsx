@@ -67,7 +67,6 @@ import { cloneElement, h } from "preact";
 import { useLayoutEffect, useRef } from "preact/hooks";
 
 import { useUITransitionContentId } from "../transition/ui_transition.jsx";
-import { registerRoutePreload } from "./route.js";
 import { observeRouteRender, publishRouteRender } from "./route_render.js";
 
 export { observeRouteRender };
@@ -260,11 +259,7 @@ const collectBranches = (children) => {
       fallback,
       route,
       routeParams,
-      element,
     } = child.props;
-    if (route) {
-      registerElementPreload(route, element);
-    }
     if (nodeChildren) {
       const { matchingBranch: matchingChild } = collectBranches(nodeChildren);
       const branch = { type: "container", node: child };
@@ -301,17 +296,6 @@ const collectBranches = (children) => {
   visit(children);
   const activeBranch = matchingBranch || fallbackBranch || null;
   return { matchingBranch, fallbackBranch, activeBranch };
-};
-// A branch whose element fetches its code on demand (see lazy.jsx) tells its
-// route, so that intent on a link to that route — or `route.preload()` — can
-// fetch it ahead of the render. Read off the vnode the container walks, which
-// is why a router on screen is what knows: a section's sub-pages register when
-// the section renders its own router.
-const registerElementPreload = (route, element) => {
-  const type = element && element.type ? element.type : element;
-  if (type && typeof type.preload === "function") {
-    registerRoutePreload(route, type.preload);
-  }
 };
 const wrapBranch = (branch, wrapper) => {
   return {

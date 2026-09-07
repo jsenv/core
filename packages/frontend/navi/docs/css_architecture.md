@@ -139,8 +139,8 @@ why they are still concatenated.
 
 A module reached by `import()` carries its stylesheet in its chunk, adopted
 when the chunk runs: a fallback rendered before it cannot use its classes, and
-between unlayered sheets the last adopted wins. What follows for a lazily
-loaded component is in [dynamic_import.md](./dynamic_import.md).
+between unlayered sheets the last adopted wins. What follows for code loaded
+on demand is in [dynamic_import.md](./dynamic_import.md).
 
 ### Browser support: navi's css and your target
 

@@ -1,5 +1,7 @@
 import { Box, Link, Text, useAsyncData } from "@jsenv/navi";
 
+// The routes module imports this page dynamically: not a load-order cycle.
+// eslint-disable-next-line import-x/no-cycle
 import { GAME_PAGE_ACTION, GAME_ROUTE } from "./demo_backend.js";
 
 export const GamePage = () => {
