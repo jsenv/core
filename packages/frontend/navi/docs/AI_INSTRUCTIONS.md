@@ -116,7 +116,8 @@ to start when unsure which export solves a problem.
   writes politely. Read before caching responses in the app.
 - `dynamic_import.md` — a screen's code arrives like its data: a page's
   import is a `routeAction` read with `loading: true` (a branch, not a
-  `<Loading>`), a component reads its own with `useAsyncData(() => import(…))`;
+  `<Loading>`), a component's is started by what asks — `actionRunEffect` on a
+  state, `useAsyncData(() => import(…))` only as the fallback;
   links prerun on intent what asks nothing of the address; a transition
   photographs the pending screen; a chunk's `import.meta.css`; a chunk that
   does not come is never a bug and never comes twice in one document — offer

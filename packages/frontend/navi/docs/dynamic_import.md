@@ -7,8 +7,10 @@ the network is gone or a deploy happened in between — and nothing on screen
 should have to know whether what it waits for is bytes of data or bytes of
 code.
 
-So navi has nothing lazy-shaped: **the import is an action**, read by the hook
-a screen already reads its data with. Two shapes, decided by who asks.
+So navi has nothing lazy-shaped: **the import is an action**, started by what
+asks for it — the address through `routeAction`, a state through
+`actionRunEffect` — and read by the hook a screen already reads its data
+with. Running it from the hook itself is the fallback, as for data.
 
 ## A page: its code is a route action
 
@@ -72,43 +74,66 @@ The page module itself is ordinary — it reads its data with
 `useAsyncData(GAME_PAGE_ACTION)` like any page — and imports the routes module
 back for it; a dynamic import is not a load-order cycle.
 
-## A component inside a page that stays: it reads its own code
+## A component inside a page that stays: who asks for its code
 
 A plan drawn on demand inside a page that stays knows where it is drawn and
-what stands there — a frame, a line, a button. `useAsyncData` takes a
-function: the request this component owns, made into an action once on the
-first render and kept for the life of the instance, its answer as the data.
-The wait and the failure are then drawn where the frame is, and no boundary is
-involved:
+what stands there — a frame, a line, a button. The wait and the failure are
+drawn where the frame is, with `loading: true` and `error: true`, the same way
+as for a page. What differs is **who starts the import**, and the order of
+preference is the one `useAsyncData` states for data: **the run belongs to
+what asks, not to the render.**
 
-```jsx
-const PlanSection = () => {
-  const [Plan, loading, error] = useAsyncData(
-    () => import("./plan.jsx").then((m) => m.Plan),
-    { loading: true, error: true },
-  );
-  return (
-    <PlanFrame>
-      {loading ? <Text>…</Text> : null}
-      {error ? <Button action={() => reload()}>Recharger</Button> : null}
-      {Plan ? <Plan /> : null}
-    </PlanFrame>
-  );
-};
-```
+1. **The address asks** → `routeAction`, above. A section of a page that has
+   an address (`/places/:id/plan`) is a page.
+2. **A state asks** → `actionRunEffect`. A plan drawn once a mode is entered,
+   a tab chosen, a popup opened: the signal that says so is what starts the
+   import, declared once at module scope — one action for every instance,
+   started by the state change rather than by the render that follows it,
+   and holding its answer across mounts:
 
-The same reasons as for a page hold: nothing stands there yet, so a
-suspension would only swap and remount for nothing. Delegating instead
-(`useAsyncData(fn)` alone, under a `<Loading>` around the frame) follows the
-rule for data: **the `<Loading>` goes where the fallback should land.** A
-boundary around the whole router takes the router away while a page loads —
-top bar, tabs and all.
+   ```jsx
+   const PLAN_CODE = actionRunEffect(
+     () => import("./plan.jsx").then((m) => m.Plan),
+     () => planShownSignal.value,
+   );
 
-This shape starts at the render and is per instance: a component fetched this
-way in three places asks three times (the browser fetches the module once),
-and coming back to it suspends for the microtask the import takes to answer
-from the module map. A page wants the route action shape; a section inside a
-page rarely notices.
+   const PlanSection = () => {
+     const [Plan, loading, error] = useAsyncData(PLAN_CODE, {
+       loading: true,
+       error: true,
+     });
+     return (
+       <PlanFrame>
+         {loading ? <Text>…</Text> : null}
+         {error ? <Button action={() => reload()}>Recharger</Button> : null}
+         {Plan ? <Plan /> : null}
+       </PlanFrame>
+     );
+   };
+   ```
+
+3. **Nothing above the component asks** → `useAsyncData` with a function, the
+   fallback: the component's own existence is the only thing that asks, so the
+   request is its own, made into an action once on the first render and kept
+   for the life of the instance.
+
+   ```jsx
+   const [Plan, loading, error] = useAsyncData(
+     () => import("./plan.jsx").then((m) => m.Plan),
+     { loading: true, error: true },
+   );
+   ```
+
+   It starts one render late, and per instance: a component fetched this way
+   in three places asks three times (the browser fetches the module once), and
+   coming back to it suspends for the microtask the import takes to answer
+   from the module map. Reach for it when there is genuinely no state to read
+   the request off — not to save declaring one.
+
+Delegating instead (the hook without `loading: true`, under a `<Loading>`
+around the frame) follows the rule for data: **the `<Loading>` goes where the
+fallback should land.** A boundary around the whole router takes the router
+away while a page loads — top bar, tabs and all.
 
 Nothing has to be kept out of a subtree loaded this way: the suspension
 happens before the module's components exist, so nothing inside it is parked
