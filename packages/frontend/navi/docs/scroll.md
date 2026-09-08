@@ -150,6 +150,31 @@ picked up then. When it is still not the box you mean, say so explicitly with
   changes, even after the user scrolled.
 - **`onScrolledChange`** gives `{id, index, offset}` as the user scrolls.
 
+### A search moves the list, and gives it back
+
+A list that is being searched has to move: the rows the user is after have just
+been promoted to the top, and a view left where it was shows none of them. What
+makes that possible is `searchText` on the `List` — without it the list sees new
+children and nothing else.
+
+- **While the search is on**, the list scrolls back to its first row every time
+  the best matches change. "Best matches" is the top `renderBudget` rows, taken
+  by id and by `matchInfo.matchScore`, so a letter that promotes nobody new
+  leaves the list where the user put it.
+- **When the search is emptied**, the list returns to the offset it was at when
+  the search started, render window included. It goes back by offset, not by
+  row: the collection is the one from before again, in the order it was in.
+
+Both rest on each row knowing where it stands, which for rows declared one by
+one is the order they are written in — `useSearchText` hands the collection back
+reordered, the caller renders it in that order, and the places follow. Give every
+row a stable `key`: the places are read off the children as they are declared,
+and the key is what says a row moved rather than a row changed.
+
+One case is knowingly left out: a row selected during the search does not hold
+the view. Emptying the search takes the list back to where it was, which may be
+nowhere near the row just chosen.
+
 ### Sticky rows inside the list
 
 `<List.Item header>` / `<List.Item footer>` are sticky rows inside the list.

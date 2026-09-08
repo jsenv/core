@@ -198,8 +198,9 @@ to start when unsure which export solves a problem.
   (`--navi-app-max-width`), `data-navi-safe-area`, which viewport is which under
   a virtual keyboard. Read before hand-writing an offset to clear a `FixedBar`.
 - `scroll.md` — where scrolling happens: `header`/`body`/`footer`, `List`'s
-  `scroller`, a popup that scrolls, hover while scrolling. Read before writing
-  CSS to make something scroll.
+  `scroller`, where a list opens and what a search does to where it is, a popup
+  that scrolls, hover while scrolling. Read before writing CSS to make something
+  scroll.
 - `mobile_layout_pitfalls.md` — a horizontal overflow inflates the layout
   viewport on Chrome Android and miscenters every dialog; `overflow-x: clip`.
 - `z_index.md` — DOM order first; a `z-index` without `isolation: isolate`
