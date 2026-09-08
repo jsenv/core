@@ -712,6 +712,12 @@ const actionWeakMap = new WeakMap();
  *
  * @param {Function} callback
  * @param {object} [rootOptions]
+ * @param {(params: any, action: object) => any} [rootOptions.provisionalValue] -
+ *   a value the action holds while a run is in flight and it has none of its
+ *   own, so a screen already knowing the answer draws it as a refresh rather
+ *   than a first load (data_states.md). Called at the start of every run whose
+ *   value is undefined; the answer replaces it as usual, and `undefined` means
+ *   "nothing known". A resource `GET` uses it to draw the row its store holds.
  * @param {{ ms?: number, max?: number }} [rootOptions.keep] - how long an
  *   answer stays good once it has landed. Without it an answer lives exactly as
  *   long as something references it: the screen that asked goes away, and
@@ -751,6 +757,7 @@ export const createAction = (callback, rootOptions = {}) => {
       value,
       resultToValue,
       valueToData,
+      provisionalValue,
       dataDefault,
       data = dataDefault,
 
@@ -1209,6 +1216,12 @@ export const createAction = (callback, rootOptions = {}) => {
         actionAbortMap.set(action, abort);
 
         batch(() => {
+          if (provisionalValue && valueSignal.peek() === undefined) {
+            const provisional = provisionalValue(params, action);
+            if (provisional !== undefined) {
+              valueSignal.value = provisional;
+            }
+          }
           runningStateSignal.value = RUNNING;
           if (!isPrerun) {
             isPrerunSignal.value = false;

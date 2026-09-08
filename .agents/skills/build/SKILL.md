@@ -1,6 +1,6 @@
 ---
 name: build
-description: How the jsenv build decides what to transpile, what to keep and where files land — the browser target (shared with the dev server), tree-shaking and package.json sideEffects, per-stylesheet css transforms, chunk layout and isolation. Use when working on src/build, the bundling/transpilation/side-effect plugins or runtime-compat, and whenever a build produces something unexpected.
+description: How the jsenv build decides what to transpile, what to keep and where files land — the browser target (shared with the dev server), tree-shaking and package.json sideEffects, per-stylesheet css transforms, why the entry points of one build() are not independent, chunk layout and isolation. Use when working on src/build, the bundling/transpilation/side-effect plugins or runtime-compat, and whenever a build produces something unexpected.
 ---
 
 ## What we want
@@ -111,6 +111,41 @@ transformed, the sheet has to carry that something itself. Reference:
 `light-dark()` lowers to a pair of custom properties Lightning CSS only defines
 next to a `color-scheme` declaration, so the definitions are appended to any
 sheet that needs them.
+
+## The entry points of one build are not independent
+
+`entryPoints` is one unit of work, not a list of builds that happen to share a
+call. Several values are computed over the whole set and then handed to each
+entry point, so building a subset does not produce a subset of the same
+output — it produces **different** output, and reports success either way.
+
+- **The target of one entry point rewrites the others.**
+  `someEntryPointUseNode` is true as soon as one entry point targets node, and
+  it decides `base` (`"./"` against `"/"`) for every entry point of the build.
+  In `@jsenv/core`'s own build, `./src/main.js` is the only node entry point
+  and it is why the thirteen client ones ship relative urls; alone, any of them
+  would ship absolute ones.
+- **Build file names are allocated across the set.** `createBuildUrlsGenerator`
+  is called once per build and its `reserveName` holds one name set per output
+  directory, so the second entry point wanting `main.js` gets `main2.js`. Drop
+  one and the names of the others slide.
+- **What is written beside the files is merged over the set**: `buildManifest`,
+  `buildFileVersions`, and the `sideEffects` array written back into
+  `package.json`. A partial run writes a truncated version of each.
+- **The build directory is cleaned once**, from `buildDirectoryCleanPatterns`
+  (`{ "**/*": true }` by default), so a partial run also erases the output of
+  the entry points it did not build.
+
+Hence there is no "build only this entry point" option, and adding one would be
+a silent-corruption feature: a `dist/` that looks plausible and differs from
+what a full build produces — exactly the failure family this skill opens with.
+**The unit of a partial build is the package**, one complete `build()` call,
+which is what `npm run build @jsenv/navi` runs; inside a package, the entry
+points go together or not at all.
+
+Reference: `someEntryPointUseNode` and the cleaning in
+[build.js](../../../src/build/build.js), `reserveName` in
+[build_urls_generator.js](../../../src/build/build_urls_generator.js).
 
 ## Chunk layout
 

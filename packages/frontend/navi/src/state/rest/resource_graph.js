@@ -165,17 +165,15 @@ export const resource = (
       return item;
     },
   });
-  const createRestActionForRoot = createRestActionFactoryForRoot(name, {
-    idKey,
-    store,
-    declarationSite,
-  });
   // The row a GET designates, when the store already holds it — by its params:
   // the value under idKey may be the id or any unique key (a route opening a
   // user by id or by slug names both `id`), and a unique key may be given under
-  // its own name; or, when the params name no row (a GET without params, or
-  // whose params carry no key), the row the action last completed with.
-  // Answers a GET under a network policy (see applyNetworkPolicy).
+  // its own name. findItemByParams is what a GET draws while its request is in
+  // flight (the action's provisionalValue). findItemInStore adds, when the
+  // params name no row (a GET without params, or whose params carry no key),
+  // the row the action last completed with: that fallback answers a GET under
+  // a network policy (see applyNetworkPolicy) and only there — a GET of a row
+  // the store lacks must draw its skeleton, never the row read just before.
   const selectByAnyKey = (value) => {
     const item = store.select(value);
     if (item) {
@@ -227,6 +225,12 @@ export const resource = (
       return store.select(lastItemId) || null;
     });
   };
+  const createRestActionForRoot = createRestActionFactoryForRoot(name, {
+    idKey,
+    store,
+    findItemByParams,
+    declarationSite,
+  });
   return createResource(name, {
     idKey,
     uniqueKeys,
@@ -1224,6 +1228,7 @@ const createRestActionFactoryForRoot = (
   {
     idKey,
     store, // see array_signal_store.js
+    findItemByParams,
     declarationSite,
   },
 ) => {
@@ -1295,6 +1300,16 @@ const createRestActionFactoryForRoot = (
         return applyResultToValue(result);
       },
       valueToData: (itemId) => store.select(itemId),
+      // While the request is out, the row the store already holds for these
+      // params is drawn: the action starts on the "refresh over a known
+      // answer" line of data_states.md rather than the first-load one.
+      provisionalValue:
+        verb === "GET"
+          ? (params) => {
+              const item = untracked(() => findItemByParams(params));
+              return item ? item[idKey] : undefined;
+            }
+          : undefined,
       completeSideEffect: onActionComplete,
     });
   };

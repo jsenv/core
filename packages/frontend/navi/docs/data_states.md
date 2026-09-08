@@ -73,6 +73,13 @@ means something different:
 
 Two consequences worth stating out loud.
 
+**A first load is only a first load when nothing is known.** A resource `GET`
+whose params name a row the store already holds — read earlier by a `GET_MANY`,
+a relation, a list — starts on the second line, not the first: the row is drawn
+and the request goes out behind it. The response replaces it, and a failure
+lands beside it like any refresh failure. A `GET` of a row the store lacks
+still starts on the first line, so what is drawn is never a different row.
+
 **The emptiness test is `data === undefined`, never `loading`.** Reading
 `loading` as "there is nothing to display" blanks the screen on every refresh —
 for a checkbox ticked on one row of a list, the whole list goes.

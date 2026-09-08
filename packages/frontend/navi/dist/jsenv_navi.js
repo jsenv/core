@@ -3149,6 +3149,12 @@ const actionWeakMap = new WeakMap();
  *
  * @param {Function} callback
  * @param {object} [rootOptions]
+ * @param {(params: any, action: object) => any} [rootOptions.provisionalValue] -
+ *   a value the action holds while a run is in flight and it has none of its
+ *   own, so a screen already knowing the answer draws it as a refresh rather
+ *   than a first load (data_states.md). Called at the start of every run whose
+ *   value is undefined; the answer replaces it as usual, and `undefined` means
+ *   "nothing known". A resource `GET` uses it to draw the row its store holds.
  * @param {{ ms?: number, max?: number }} [rootOptions.keep] - how long an
  *   answer stays good once it has landed. Without it an answer lives exactly as
  *   long as something references it: the screen that asked goes away, and
@@ -3188,6 +3194,7 @@ const createAction = (callback, rootOptions = {}) => {
       value,
       resultToValue,
       valueToData,
+      provisionalValue,
       dataDefault,
       data = dataDefault,
 
@@ -3646,6 +3653,12 @@ const createAction = (callback, rootOptions = {}) => {
         actionAbortMap.set(action, abort);
 
         batch(() => {
+          if (provisionalValue && valueSignal.peek() === undefined) {
+            const provisional = provisionalValue(params, action);
+            if (provisional !== undefined) {
+              valueSignal.value = provisional;
+            }
+          }
           runningStateSignal.value = RUNNING;
           if (!isPrerun) {
             isPrerunSignal.value = false;
@@ -14859,17 +14872,15 @@ const resource = (
       return item;
     },
   });
-  const createRestActionForRoot = createRestActionFactoryForRoot(name, {
-    idKey,
-    store,
-    declarationSite,
-  });
   // The row a GET designates, when the store already holds it — by its params:
   // the value under idKey may be the id or any unique key (a route opening a
   // user by id or by slug names both `id`), and a unique key may be given under
-  // its own name; or, when the params name no row (a GET without params, or
-  // whose params carry no key), the row the action last completed with.
-  // Answers a GET under a network policy (see applyNetworkPolicy).
+  // its own name. findItemByParams is what a GET draws while its request is in
+  // flight (the action's provisionalValue). findItemInStore adds, when the
+  // params name no row (a GET without params, or whose params carry no key),
+  // the row the action last completed with: that fallback answers a GET under
+  // a network policy (see applyNetworkPolicy) and only there — a GET of a row
+  // the store lacks must draw its skeleton, never the row read just before.
   const selectByAnyKey = (value) => {
     const item = store.select(value);
     if (item) {
@@ -14921,6 +14932,12 @@ const resource = (
       return store.select(lastItemId) || null;
     });
   };
+  const createRestActionForRoot = createRestActionFactoryForRoot(name, {
+    idKey,
+    store,
+    findItemByParams,
+    declarationSite,
+  });
   return createResource(name, {
     idKey,
     uniqueKeys,
@@ -15912,6 +15929,7 @@ const createRestActionFactoryForRoot = (
   {
     idKey,
     store, // see array_signal_store.js
+    findItemByParams,
     declarationSite,
   },
 ) => {
@@ -15983,6 +16001,16 @@ const createRestActionFactoryForRoot = (
         return applyResultToValue(result);
       },
       valueToData: (itemId) => store.select(itemId),
+      // While the request is out, the row the store already holds for these
+      // params is drawn: the action starts on the "refresh over a known
+      // answer" line of data_states.md rather than the first-load one.
+      provisionalValue:
+        verb === "GET"
+          ? (params) => {
+              const item = untracked(() => findItemByParams(params));
+              return item ? item[idKey] : undefined;
+            }
+          : undefined,
       completeSideEffect: onActionComplete,
     });
   };
