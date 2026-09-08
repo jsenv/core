@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "41.5.18",
+  "version": "41.5.19",
   "type": "module",
   "description": "Tool to develop, test and build js projects",
   "repository": {
@@ -73,12 +73,12 @@
     "test:snapshot_clear": "npx @jsenv/filesystem clear **/tests/**/side_effects/"
   },
   "dependencies": {
-    "@jsenv/ast": "6.10.4",
-    "@jsenv/js-module-fallback": "1.6.8",
+    "@jsenv/ast": "6.10.5",
+    "@jsenv/js-module-fallback": "1.6.9",
     "@jsenv/plugin-bundling": "2.10.28",
-    "@jsenv/plugin-minification": "1.7.21",
-    "@jsenv/plugin-supervisor": "1.8.23",
-    "@jsenv/plugin-transpilation": "1.7.8",
+    "@jsenv/plugin-minification": "1.7.22",
+    "@jsenv/plugin-supervisor": "1.8.24",
+    "@jsenv/plugin-transpilation": "1.7.9",
     "@jsenv/server": "17.6.4",
     "@jsenv/sourcemap": "1.4.9",
     "react-table": "7.8.0"

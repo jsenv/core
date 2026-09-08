@@ -1,5 +1,5 @@
-import { parseHtml, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, stringifyHtmlAst, applyBabelPlugins, generateUrlForInlineContent, injectJsenvScript, parseJsWithAcorn, visitHtmlNodes, analyzeScriptNode, getHtmlNodeText, getHtmlNodeAttribute, getHtmlNodePosition, getUrlForContentInsideHtml, setHtmlNodeAttributes, setHtmlNodeText, parseCssUrls, getHtmlNodeAttributePosition, parseSrcSet, removeHtmlNodeText, parseJsUrls, getUrlForContentInsideJs, renderCssTemplateLiteral, visitJsAst, getImportMetaPropertyName, visitJsAstUntil, analyzeLinkNode, findHtmlNode, removeHtmlNode, insertHtmlNodeAfter } from "@jsenv/ast";
-import { lookupPackageDirectory, urlIsOrIsInsideOf, registerDirectoryLifecycle, urlToRelativeUrl, createDetailedMessage, stringifyUrlSite, generateContentFrame, validateResponseIntegrity, ensureWindowsDriveLetter, setUrlFilename, moveUrl, getCallerPosition, urlToBasename, urlToExtension, asSpecifierWithoutSearch, asUrlWithoutSearch, injectQueryParamsIntoSpecifier, bufferToEtag, isFileSystemPath, urlToPathname, setUrlBasename, urlToFileSystemPath, writeFileSync, createLogger, URL_META, applyNodeEsmResolution, normalizeUrl, ANSI, RUNTIME_COMPAT, CONTENT_TYPE, readPackageAtOrNull, urlToFilename, DATA_URL, errorToHTML, normalizeImportMap, composeTwoImportMaps, resolveImport, JS_QUOTES, readCustomConditionsFromProcessArgs, collectFiles, readEntryStatSync, applyFileSystemMagicResolution, getExtensionsToTry, ensurePathnameTrailingSlash, compareFileUrls, setUrlExtension, isSpecifierForNodeBuiltin, injectQueryParams, renderDetails, humanizeDuration, humanizeFileSize, renderTable, renderBigSection, distributePercentages, humanizeMemory, comparePathnames, UNICODE, escapeRegexpSpecialChars, injectQueryParamIntoSpecifierWithoutEncoding, renderUrlOrRelativeUrlFilename, assertAndNormalizeDirectoryUrl, Abort, raceProcessTeardownEvents, startMonitoringMemoryUsage, inferRuntimeCompatFromClosestPackage, browserDefaultRuntimeCompat, nodeDefaultRuntimeCompat, clearDirectorySync, createTaskLog, createLookupPackageDirectory, ensureEmptyDirectory, updateJsonFileSync, createDynamicLog } from "./jsenv_core_packages.js";
+import { parseHtml, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, stringifyHtmlAst, applyBabelPlugins, generateUrlForInlineContent, injectJsenvScript, parseJsWithAcorn, visitHtmlNodes, analyzeScriptNode, getHtmlNodeText, getHtmlNodeAttribute, getHtmlNodePosition, getUrlForContentInsideHtml, setHtmlNodeAttributes, setHtmlNodeText, parseCssUrls, getHtmlNodeAttributePosition, parseSrcSet, removeHtmlNodeText, parseJsUrls, hasCssOpaqueDirective, getUrlForContentInsideJs, renderCssTemplateLiteral, visitJsAst, getImportMetaPropertyName, visitJsAstUntil, analyzeLinkNode, findHtmlNode, removeHtmlNode, insertHtmlNodeAfter } from "@jsenv/ast";
+import { lookupPackageDirectory, urlIsOrIsInsideOf, registerDirectoryLifecycle, urlToRelativeUrl, createDetailedMessage, stringifyUrlSite, generateContentFrame, validateResponseIntegrity, ensureWindowsDriveLetter, setUrlFilename, moveUrl, getCallerPosition, urlToBasename, urlToExtension, asSpecifierWithoutSearch, asUrlWithoutSearch, injectQueryParamsIntoSpecifier, bufferToEtag, isFileSystemPath, urlToPathname, setUrlBasename, urlToFileSystemPath, writeFileSync, createLogger, URL_META, applyNodeEsmResolution, normalizeUrl, ANSI, RUNTIME_COMPAT, CONTENT_TYPE, readPackageAtOrNull, urlToFilename, DATA_URL, errorToHTML, normalizeImportMap, composeTwoImportMaps, resolveImport, UNICODE, JS_QUOTES, readCustomConditionsFromProcessArgs, collectFiles, readEntryStatSync, applyFileSystemMagicResolution, getExtensionsToTry, ensurePathnameTrailingSlash, compareFileUrls, setUrlExtension, isSpecifierForNodeBuiltin, injectQueryParams, renderDetails, humanizeDuration, humanizeFileSize, renderTable, renderBigSection, distributePercentages, humanizeMemory, comparePathnames, escapeRegexpSpecialChars, injectQueryParamIntoSpecifierWithoutEncoding, renderUrlOrRelativeUrlFilename, assertAndNormalizeDirectoryUrl, Abort, raceProcessTeardownEvents, startMonitoringMemoryUsage, inferRuntimeCompatFromClosestPackage, browserDefaultRuntimeCompat, nodeDefaultRuntimeCompat, clearDirectorySync, createTaskLog, createLookupPackageDirectory, ensureEmptyDirectory, updateJsonFileSync, createDynamicLog } from "./jsenv_core_packages.js";
 import { bundleJsModules, jsenvPluginBundling } from "@jsenv/plugin-bundling";
 import { jsenvPluginMinification } from "@jsenv/plugin-minification";
 import { jsenvPluginTranspilation, jsenvPluginJsModuleFallback } from "@jsenv/plugin-transpilation";
@@ -5810,7 +5810,20 @@ const parseAndTransformJsReferences = async (
           renderCssTemplateLiteral(inlineUrlInfo.content, substitutions)
         : JS_QUOTES.escapeSpecialChars(inlineUrlInfo.content, { quote });
       if (replacement === null) {
-        // a placeholder did not survive: the source stays as it was written
+        // a placeholder did not survive the css transformation: giving the
+        // expressions back would not give back what the source said
+        if (inlineReferenceInfo.alreadyBuilt) {
+          return;
+        }
+        warnCssShippedAsWritten(urlInfo, {
+          line: inlineReferenceInfo.line,
+          column: inlineReferenceInfo.column,
+          reason: `a "\${}" placeholder did not survive the css transformation`,
+          templateSource: urlInfo.content.slice(
+            inlineReferenceInfo.start,
+            inlineReferenceInfo.end,
+          ),
+        });
         return;
       }
       magicSource.replace({
@@ -5918,7 +5931,13 @@ const parseAndTransformJsReferences = async (
     isNodeJs,
   });
   for (const jsReferenceInfo of jsReferenceInfos) {
-    if (jsReferenceInfo.isInline) {
+    if (jsReferenceInfo.isOpaqueCss) {
+      if (!jsReferenceInfo.alreadyBuilt) {
+        // a dependency's built css is opaque in a source this build does not
+        // have; its own build is where that is told
+        warnCssShippedAsWritten(urlInfo, jsReferenceInfo);
+      }
+    } else if (jsReferenceInfo.isInline) {
       onInlineReference(jsReferenceInfo);
     } else {
       onExternalReference(jsReferenceInfo);
@@ -5931,6 +5950,38 @@ const parseAndTransformJsReferences = async (
     await sequentialAction();
   }
   return magicSource.toContentAndSourcemap();
+};
+
+// An import.meta.css the build cannot parse is shipped exactly as written:
+// comments, indentation, untranspiled properties and unresolved url() included,
+// in this build and in every build of every consumer of what it produces.
+// Nothing downstream can undo it, so the only place it can be told is here.
+const warnCssShippedAsWritten = (
+  urlInfo,
+  { line, column, reason, templateSource },
+) => {
+  if (!urlInfo.context.build) {
+    return;
+  }
+  if (hasCssOpaqueDirective(templateSource)) {
+    return;
+  }
+  urlInfo.context.logger.warn(
+    createDetailedMessage(
+      `${UNICODE.WARNING} import.meta.css shipped as written: not parsed, not transpiled, not minified`,
+      {
+        // line/column are read from the content as analyzed, which is not the
+        // file on disk once something transpiled it (jsx, babel helpers)
+        "css template":
+          urlInfo.content === urlInfo.originalContent
+            ? `${urlInfo.url}:${line}:${column}`
+            : urlInfo.url,
+        reason,
+        "suggestion": `only a "\${}" standing where a css value stands can be read; a custom property set from JS, a data attribute or a selector list covers nearly every other reason to interpolate`,
+        "to silence": `write "jsenv-css-opaque" in a css comment inside that template`,
+      },
+    ),
+  );
 };
 
 const jsenvPluginReferenceExpectedTypes = () => {
