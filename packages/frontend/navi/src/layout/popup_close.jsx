@@ -44,7 +44,7 @@ export const PopupClose = ({ label, iconSize, ...rest }) => {
       // and what is opened has to be closable. Whether closing is allowed at
       // this instant is the popup's own question, answered by the popup — a
       // dialog holds the close while an action inside it runs (see
-      // findBusyElementInside in dialog.jsx).
+      // popup_busy.js).
       whenSelfInteractionsBlocked="ignore"
       // The cross is drawn at the control size, which is a few millimetres
       // wide; the padding is what makes it a target a thumb can hit.

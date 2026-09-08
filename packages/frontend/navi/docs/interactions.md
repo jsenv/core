@@ -325,6 +325,13 @@ being sent: everything — the popup is the only place its failure can be read,
 and `actionStandalone` there is how a save fails behind a closed popup. Something
 the app watches from somewhere else: nothing — it was never being watched here.
 
+And when the answer being sent may never arrive at all — a request over a
+network that stopped answering — the hold outlives what it was protecting:
+nothing can close the popup, ever. `actionAbortable` keeps the hold and gives it
+a release, so closing calls the run off rather than being refused. What that
+costs, and where it may be said, is
+[popup_open.md](./popup_open.md#the-popup-owns-its-open-state).
+
 ### On something you draw yourself
 
 `selfInteractions` is a `Box` prop too, so an affordance does not have to become

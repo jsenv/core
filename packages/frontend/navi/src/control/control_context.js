@@ -120,6 +120,9 @@ export const CONTROL_PROP_SET = new Set([
   // The wait this control's action creates is its own: it renders busy and
   // refuses a second press, and nothing above it is told (see BUSY_CONSTRAINT).
   "actionStandalone",
+  // The wait this control's action creates may be called off by the person
+  // waiting: closing the popup it holds gives up on the run (see popup_busy.js).
+  "actionAbortable",
 
   "charGuard",
   "maxLengthGuard",

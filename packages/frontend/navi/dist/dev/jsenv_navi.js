@@ -5249,6 +5249,9 @@ const CONTROL_PROP_SET = new Set([
   // The wait this control's action creates is its own: it renders busy and
   // refuses a second press, and nothing above it is told (see BUSY_CONSTRAINT).
   "actionStandalone",
+  // The wait this control's action creates may be called off by the person
+  // waiting: closing the popup it holds gives up on the run (see popup_busy.js).
+  "actionAbortable",
 
   "charGuard",
   "maxLengthGuard",
@@ -8013,11 +8016,10 @@ const BUSY_CONSTRAINT = {
   // Unless it says the wait is its own (`actionStandalone`): then the refusal
   // stays on the element and every ancestor reads it as free — the group above
   // (see getInteractionBlockingControls) and the popup around it (see
-  // findBusyElementInside in dialog.jsx and popover.jsx, which both filter on
-  // `ignoredByParents`).
+  // popup_busy.js, which filters on `ignoredByParents`).
   check: (field, { intent } = {}) => {
-    const isBusy = isControlBusy(field);
-    if (!isBusy) {
+    const busySource = findBusySource(field);
+    if (!busySource) {
       return null;
     }
 
@@ -8038,10 +8040,30 @@ const BUSY_CONSTRAINT = {
       message,
       status: "info",
       ignoredByParents: Boolean(field.actionStandalone),
+      // Read off the control the run belongs to, not off this one: a field or a
+      // submit button inherits its form's wait, so it inherits with it whether
+      // the person waiting is allowed to call that wait off (see
+      // abortControlRun, and `actionAbortable` in control_hooks.jsx).
+      abortable: Boolean(busySource.action && busySource.field.actionAbortable),
     };
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("data-busy");
+
+/**
+ * Give up on the run that makes `field` busy — the person waiting deciding the
+ * answer is not coming. The work is not undone: aborting frees the client and
+ * nothing more, the server may already have done it (see docs/actions.md,
+ * "Aborting saves resources, it does not undo"). What ends is the wait, and
+ * with it every refusal held by it.
+ */
+const abortControlRun = (field, reason) => {
+  const busySource = findBusySource(field);
+  if (!busySource || !busySource.action) {
+    return false;
+  }
+  return busySource.action.abort(reason);
+};
 
 // Asked source by source rather than off the rendered `aria-busy`, which
 // conflates them and is a frame behind: that attribute is written during
@@ -8054,9 +8076,15 @@ CONSTRAINT_ATTRIBUTE_SET.add("data-busy");
 // control busy only because the group above is waiting has no state of its own
 // to read — the group's answer IS its answer, so it asks upward and inherits
 // the same live reading.
-const isControlBusy = (field) => {
+//
+// What comes back is the control the wait BELONGS to, and the running action
+// when there is one, because two questions are asked of it: whether this
+// control is busy at all, and what giving up on that wait would mean.
+const findBusySource = (field) => {
   if (field.loadingFromOwnProp) {
-    return true;
+    // A `loading` prop is a wait the app draws itself; there is no run behind
+    // it to call off.
+    return { field, action: null };
   }
   const { boundAction } = field;
   // An optimistic control stays interactive while its bound action runs:
@@ -8074,14 +8102,14 @@ const isControlBusy = (field) => {
     // cannot move mid-run, this very gate blocks it.
     const liveAction = boundAction.getCurrentAction?.() ?? boundAction;
     if (liveAction.runningStateSignal.value === RUNNING) {
-      return true;
+      return { field, action: liveAction };
     }
   }
   if (field.loadingFromAbove) {
     const parent = field.parentUIStateController;
-    return parent ? isControlBusy(parent) : false;
+    return parent ? findBusySource(parent) : null;
   }
-  return false;
+  return null;
 };
 
 const DISABLED_CONSTRAINT = {
@@ -23944,50 +23972,30 @@ const parsePattern = (
 };
 
 /**
- * Check if a literal segment can be treated as optional based on pattern hierarchy
+ * A literal segment the url stops short of is optional when an ancestor
+ * pattern has a path param AT THAT SAME POSITION whose default is this word:
+ * "/admin/settings/:tab" is the page "/admin" opens on when "/admin/:section"
+ * defaults to "settings". Only the connection occupying the segment's index
+ * may excuse it — a query param, or a param sitting elsewhere, says nothing
+ * about this position, so a state defaulting to "games" must not turn
+ * "/places/:slug/games" into a match for "/places/:slug".
  */
 const checkIfLiteralCanBeOptionalWithPatternObj = (
-  literalValue,
+  literalSegment,
   patternObj,
 ) => {
-  if (!patternObj) {
-    return false; // No pattern object available, cannot determine optionality
-  }
-
-  // Check current pattern's connections
-  for (const connection of patternObj.connections) {
-    if (connection.isDefaultValue(literalValue)) {
-      return true;
-    }
-  }
-
-  // Check parent pattern's connections
-  let currentParent = patternObj.parent;
-  while (currentParent) {
-    for (const connection of currentParent.connections) {
-      if (connection.isDefaultValue(literalValue)) {
+  let ancestor = patternObj ? patternObj.parent : null;
+  while (ancestor) {
+    const ancestorSegment = ancestor.pattern.segments[literalSegment.index];
+    if (ancestorSegment && ancestorSegment.type === "param") {
+      const connection = ancestor.pathConnectionMap.get(ancestorSegment.name);
+      if (connection && connection.isDefaultValue(literalSegment.value)) {
         return true;
       }
     }
-    currentParent = currentParent.parent;
+    ancestor = ancestor.parent;
   }
-
-  // Check children pattern's connections
-  const checkChildrenRecursively = (pattern) => {
-    for (const child of pattern.children || []) {
-      for (const connection of child.connections) {
-        if (connection.isDefaultValue(literalValue)) {
-          return true;
-        }
-      }
-      if (checkChildrenRecursively(child)) {
-        return true;
-      }
-    }
-    return false;
-  };
-
-  return checkChildrenRecursively(patternObj);
+  return false;
 };
 
 /**
@@ -24132,9 +24140,8 @@ const matchUrl = (
       // Check if URL has this segment
       if (urlSegmentIndex >= urlSegments.length) {
         // URL is too short for this literal segment
-        // Check if this literal segment can be treated as optional based on pattern hierarchy
         const canBeOptional = checkIfLiteralCanBeOptionalWithPatternObj(
-          patternSeg.value,
+          patternSeg,
           patternObj,
         );
         if (canBeOptional) {
@@ -37628,7 +37635,8 @@ const useInteractiveProps = (props, {
       readOnly,
       loading,
       optimistic,
-      actionStandalone
+      actionStandalone,
+      actionAbortable
     } = props;
 
     // `whenSelfInteractionsBlocked="ignore"`: an affordance that writes nothing
@@ -37692,6 +37700,12 @@ const useInteractiveProps = (props, {
     // above it is told, so a form still submits and a popup still closes over a
     // run that was meant to be left going.
     uiStateController.actionStandalone = Boolean(actionStandalone);
+    // Read by BUSY_CONSTRAINT: the wait holds what is around it as always, and
+    // the person waiting may end it — closing the popup this control holds
+    // calls the run off instead of being refused (see popup_busy.js). Read off
+    // the control the run belongs to, so a field or a submit inheriting a
+    // form's wait inherits this with it.
+    uiStateController.actionAbortable = Boolean(actionAbortable);
     // What the interaction rule last refused is only true while the control is
     // held; the state it was read from moves here (see refreshReport).
     useLayoutEffect(() => {
@@ -48352,6 +48366,7 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  *   whenSelfInteractionsBlocked?: "hide" | "refuse" | "ignore",
  *   replace?: boolean,
  *   actionStandalone?: boolean,
+ *   actionAbortable?: boolean,
  *   [key: string]: any,
  * }>}
  * @param {boolean} [replace] Go where the press leads — an `href`, a
@@ -48395,6 +48410,14 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  *   running, which the app watches from somewhere else; never for one holding
  *   an answer the screen is the only place to read (see
  *   docs/interactions.md#the-fourth-question-whose-wait-is-it).
+ * @param {boolean} [actionAbortable] The person waiting may give up on this
+ *   button's action: closing the popup the run holds calls it off and goes
+ *   through, instead of being refused. For a run whose answer may never come —
+ *   a request over a network that stops answering — where a popup with no way
+ *   out is worse than an answer lost. Aborting frees the client and nothing
+ *   more: the work may already have happened on the other side (see
+ *   docs/actions.md#aborting-saves-resources-it-does-not-undo), so say it only
+ *   where the screen can be re-opened on what is actually there.
  * @param {string} [contentDisplay] The display of the frame the button draws
  *   around its children. It follows the button's own by default — its display
  *   and, a display alone saying nothing about direction, the rest of its flow
@@ -57343,6 +57366,66 @@ const getAvailableWidth = (layer, element) => {
 };
 
 /**
+ * What a popup asks before it closes: is anything inside it mid-action, and may
+ * the person waiting call that wait off.
+ *
+ * A popup carries no state of its own — it is layout (see dialog.jsx's top
+ * comment) — so it walks the controls it contains and asks each one. Asked
+ * rather than read off `aria-busy`, which is a render snapshot: BUSY_CONSTRAINT
+ * answers live.
+ *
+ * `Dialog` and `Popover` both read this way and read it identically, so it
+ * lives here rather than in each of them: the answer decides whether a close
+ * request goes through, and the two must not drift on that.
+ */
+
+
+/**
+ * The controls keeping `popupEl` open: mid-action, and not saying the wait is
+ * their own. `ignoredByParents` is that saying (`actionStandalone`) — a popup
+ * is one more ancestor such a control does not hold, the same reading a group
+ * makes of it (see control_interaction.js).
+ */
+const findControlsHoldingPopup = (popupEl) => {
+  const controlsHolding = [];
+  for (const element of popupEl.querySelectorAll("[navi-control-host]")) {
+    const controller = element.__uiStateController__;
+    if (!controller) {
+      continue;
+    }
+    const busyInfo = BUSY_CONSTRAINT.check(controller);
+    if (busyInfo && !busyInfo.ignoredByParents) {
+      controlsHolding.push({
+        element,
+        controller,
+        abortable: busyInfo.abortable,
+      });
+    }
+  }
+  return controlsHolding;
+};
+
+/**
+ * Give up on every run holding the popup, so that closing may go through.
+ *
+ * All or nothing: calling off one run while another still keeps the popup shut
+ * would cost an answer and change nothing on screen. Several of these controls
+ * usually share one run — a form and the fields and submit inside it — and the
+ * ones asked after it has been called off simply find nothing to call off.
+ */
+const giveUpOnControlsHoldingPopup = (controlsHolding, reason) => {
+  for (const controlHolding of controlsHolding) {
+    if (!controlHolding.abortable) {
+      return false;
+    }
+  }
+  for (const controlHolding of controlsHolding) {
+    abortControlRun(controlHolding.controller, reason);
+  }
+  return true;
+};
+
+/**
  * Entry/exit animation CSS shared by Popover and Dialog.
  *
  * Relies on `transition-behavior: allow-discrete` so the browser keeps the
@@ -58131,7 +58214,7 @@ const PopupClose = ({
     // and what is opened has to be closable. Whether closing is allowed at
     // this instant is the popup's own question, answered by the popup — a
     // dialog holds the close while an action inside it runs (see
-    // findBusyElementInside in dialog.jsx).
+    // popup_busy.js).
     ,
     whenSelfInteractionsBlocked: "ignore"
     // The cross is drawn at the control size, which is a few millimetres
@@ -58880,14 +58963,21 @@ const UncontrolledDialog = props => {
         // dialog has no such state of its own to consult (it is layout — see
         // this file's top comment), so it asks what it contains, and lets that
         // control report why the way it would to anyone else.
-        const busyElement = findBusyElementInside$1(dialogEl);
-        if (busyElement) {
-          dispatchRequestInteraction(busyElement, {
-            event: requestCloseEvent,
-            name: "dialog request close"
-          });
-          requestCloseEvent.preventDefault();
+        const controlsHolding = findControlsHoldingPopup(dialogEl);
+        if (controlsHolding.length === 0) {
+          return;
         }
+        // Unless every one of those runs was declared givable-up
+        // (`actionAbortable`): the answer is not coming, closing is how the
+        // person waiting says so, and the runs are called off on the way out.
+        if (giveUpOnControlsHoldingPopup(controlsHolding, "the dialog holding the run was closed")) {
+          return;
+        }
+        dispatchRequestInteraction(controlsHolding[0].element, {
+          event: requestCloseEvent,
+          name: "dialog request close"
+        });
+        requestCloseEvent.preventDefault();
       },
       onClose: closeEvent => {
         props.onClose?.(closeEvent);
@@ -59007,29 +59097,6 @@ const DOCKED = {
 // no header and nothing marked is not pushed down at all; it is closed by its
 // own controls, by the backdrop and by Escape.
 const DOCKED_SWIPE_GRIP = "[data-header],[data-swipe-grip]";
-
-// The first control inside `dialogEl` that is mid-action, if any. Walks the
-// controls rather than reading an attribute off the dialog: a dialog carries no
-// state of its own (see this file's top comment), and `aria-busy` on the
-// controls is a render snapshot — BUSY_CONSTRAINT reads the live answer.
-// Same as Popover's own; kept in both rather than shared, since each file reads
-// on its own — what changes here changes there too.
-const findBusyElementInside$1 = dialogEl => {
-  for (const element of dialogEl.querySelectorAll("[navi-control-host]")) {
-    const controller = element.__uiStateController__;
-    if (!controller) {
-      continue;
-    }
-    const busyInfo = BUSY_CONSTRAINT.check(controller);
-    // `ignoredByParents`: the control says the wait is its own
-    // (`actionStandalone`), so a popup is one more ancestor it does not hold —
-    // the same reading a group makes of it (see control_interaction.js).
-    if (busyInfo && !busyInfo.ignoredByParents) {
-      return element;
-    }
-  }
-  return null;
-};
 const useDialogProps = props => {
   const backdropProps = {};
   const contentProps = {};
@@ -60491,14 +60558,21 @@ const UncontrolledPopover = props => {
     debugPopup(openEvent, `popover opened`);
     return {
       onRequestClose: requestCloseEvent => {
-        const busyElement = findBusyElementInside(popoverEl);
-        if (busyElement) {
-          dispatchRequestInteraction(busyElement, {
-            event: requestCloseEvent,
-            name: "popover request close"
-          });
-          requestCloseEvent.preventDefault();
+        const controlsHolding = findControlsHoldingPopup(popoverEl);
+        if (controlsHolding.length === 0) {
+          return;
         }
+        // Unless every one of those runs was declared givable-up
+        // (`actionAbortable`): the answer is not coming, closing is how the
+        // person waiting says so, and the runs are called off on the way out.
+        if (giveUpOnControlsHoldingPopup(controlsHolding, "the popover holding the run was closed")) {
+          return;
+        }
+        dispatchRequestInteraction(controlsHolding[0].element, {
+          event: requestCloseEvent,
+          name: "popover request close"
+        });
+        requestCloseEvent.preventDefault();
       },
       onClose: closeEvent => {
         props.onClose?.(closeEvent);
@@ -60607,28 +60681,6 @@ const PopoverCustom = props => {
  * contentProps]` — two plain prop objects ready to spread onto a
  * backdrop/content element each.
  */
-// The first control inside `popupEl` that is mid-action, if any. Walks the
-// controls rather than reading an attribute off the popup: a popup carries no
-// state of its own (see this file's top comment), and `aria-busy` on the
-// controls is a render snapshot — BUSY_CONSTRAINT reads the live answer.
-// Same as Dialog's own; kept in both rather than shared, since each file reads
-// on its own — what changes here changes there too.
-const findBusyElementInside = popupEl => {
-  for (const element of popupEl.querySelectorAll("[navi-control-host]")) {
-    const controller = element.__uiStateController__;
-    if (!controller) {
-      continue;
-    }
-    const busyInfo = BUSY_CONSTRAINT.check(controller);
-    // `ignoredByParents`: the control says the wait is its own
-    // (`actionStandalone`), so a popup is one more ancestor it does not hold —
-    // the same reading a group makes of it (see control_interaction.js).
-    if (busyInfo && !busyInfo.ignoredByParents) {
-      return element;
-    }
-  }
-  return null;
-};
 const usePopoverProps = props => {
   const backdropProps = {};
   const contentProps = {};

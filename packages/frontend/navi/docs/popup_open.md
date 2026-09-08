@@ -29,10 +29,10 @@ something a `useState` in the parent cannot give back: **a popup refuses to
 close while a control inside it is mid-action**.
 
 ```js
-// what both do on every close request
-const busyElement = findBusyElementInside(popupEl);
-if (busyElement) {
-  dispatchRequestInteraction(busyElement, { ... });
+// what both do on every close request (popup_busy.js)
+const controlsHolding = findControlsHoldingPopup(popupEl);
+if (controlsHolding.length) {
+  dispatchRequestInteraction(controlsHolding[0].element, { ... });
   requestCloseEvent.preventDefault();
 }
 ```
@@ -57,6 +57,33 @@ again. The control says so, and no popup around it is told:
 It is still busy for itself — the spinner, the second press refused, the error
 callout — which is the whole point of keeping `action` (see
 [interactions.md](./interactions.md#the-fourth-question-whose-wait-is-it)).
+
+Between the two sits a run that IS being waited on and may never end. A request
+over a network that stopped answering settles neither way, and the hold then
+lasts exactly as long as the run: the popup closes for nothing and nobody, and
+the page has to be reloaded. `actionAbortable` gives that hold a release — the
+person waiting decides the answer is not coming, and closing is how they say
+it:
+
+```jsx
+<Form action={saveScore} actionAbortable>
+```
+
+Every close request then goes through and calls the run off on the way out:
+Escape, the backdrop, the cross, the phone's back gesture. No gesture is singled
+out, because the cancel/keep distinction below is about the VALUE a popup holds,
+and there is nothing left to keep or put back once the answer is already on the
+wire — each of those gestures means "I want out of here", which is the only
+thing being answered.
+
+What it costs is written down: aborting frees the client and nothing more, so
+the write may have landed anyway (see
+[actions.md](./actions.md#aborting-saves-resources-it-does-not-undo)). Say it
+where the screen can be re-opened on what is actually there, never where the
+popup is the only place the outcome could be read. Everything inside the form
+inherits it along with the wait itself; a popup holding one run that may be
+given up on and one that may not still refuses, since calling off half of them
+would cost an answer and change nothing on screen.
 
 So the question is never "should this popup be controlled?" but "what triggers
 the opening?" — and, when the answer is the application rather than a gesture,

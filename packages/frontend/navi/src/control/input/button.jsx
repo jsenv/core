@@ -125,6 +125,7 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  *   whenSelfInteractionsBlocked?: "hide" | "refuse" | "ignore",
  *   replace?: boolean,
  *   actionStandalone?: boolean,
+ *   actionAbortable?: boolean,
  *   [key: string]: any,
  * }>}
  * @param {boolean} [replace] Go where the press leads — an `href`, a
@@ -168,6 +169,14 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  *   running, which the app watches from somewhere else; never for one holding
  *   an answer the screen is the only place to read (see
  *   docs/interactions.md#the-fourth-question-whose-wait-is-it).
+ * @param {boolean} [actionAbortable] The person waiting may give up on this
+ *   button's action: closing the popup the run holds calls it off and goes
+ *   through, instead of being refused. For a run whose answer may never come —
+ *   a request over a network that stops answering — where a popup with no way
+ *   out is worse than an answer lost. Aborting frees the client and nothing
+ *   more: the work may already have happened on the other side (see
+ *   docs/actions.md#aborting-saves-resources-it-does-not-undo), so say it only
+ *   where the screen can be re-opened on what is actually there.
  * @param {string} [contentDisplay] The display of the frame the button draws
  *   around its children. It follows the button's own by default — its display
  *   and, a display alone saying nothing about direction, the rest of its flow

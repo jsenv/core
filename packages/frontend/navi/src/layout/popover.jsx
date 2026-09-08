@@ -63,7 +63,10 @@ import { useEffect, useId, useRef } from "preact/hooks";
 
 import { onNaviCommand } from "../control/commands.js";
 import { dispatchRequestInteraction } from "../control/rules/control_interaction.js";
-import { BUSY_CONSTRAINT } from "../control/rules/interaction/busy_constraint.js";
+import {
+  findControlsHoldingPopup,
+  giveUpOnControlsHoldingPopup,
+} from "./popup_busy.js";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import { Box } from "../box/box.jsx";
 import { resolveSpacingSize } from "../box/box_style_util.js";
@@ -650,14 +653,26 @@ const UncontrolledPopover = (props) => {
 
     return {
       onRequestClose: (requestCloseEvent) => {
-        const busyElement = findBusyElementInside(popoverEl);
-        if (busyElement) {
-          dispatchRequestInteraction(busyElement, {
-            event: requestCloseEvent,
-            name: "popover request close",
-          });
-          requestCloseEvent.preventDefault();
+        const controlsHolding = findControlsHoldingPopup(popoverEl);
+        if (controlsHolding.length === 0) {
+          return;
         }
+        // Unless every one of those runs was declared givable-up
+        // (`actionAbortable`): the answer is not coming, closing is how the
+        // person waiting says so, and the runs are called off on the way out.
+        if (
+          giveUpOnControlsHoldingPopup(
+            controlsHolding,
+            "the popover holding the run was closed",
+          )
+        ) {
+          return;
+        }
+        dispatchRequestInteraction(controlsHolding[0].element, {
+          event: requestCloseEvent,
+          name: "popover request close",
+        });
+        requestCloseEvent.preventDefault();
       },
       onClose: (closeEvent) => {
         props.onClose?.(closeEvent);
@@ -769,29 +784,6 @@ const PopoverCustom = (props) => {
  * contentProps]` — two plain prop objects ready to spread onto a
  * backdrop/content element each.
  */
-// The first control inside `popupEl` that is mid-action, if any. Walks the
-// controls rather than reading an attribute off the popup: a popup carries no
-// state of its own (see this file's top comment), and `aria-busy` on the
-// controls is a render snapshot — BUSY_CONSTRAINT reads the live answer.
-// Same as Dialog's own; kept in both rather than shared, since each file reads
-// on its own — what changes here changes there too.
-const findBusyElementInside = (popupEl) => {
-  for (const element of popupEl.querySelectorAll("[navi-control-host]")) {
-    const controller = element.__uiStateController__;
-    if (!controller) {
-      continue;
-    }
-    const busyInfo = BUSY_CONSTRAINT.check(controller);
-    // `ignoredByParents`: the control says the wait is its own
-    // (`actionStandalone`), so a popup is one more ancestor it does not hold —
-    // the same reading a group makes of it (see control_interaction.js).
-    if (busyInfo && !busyInfo.ignoredByParents) {
-      return element;
-    }
-  }
-  return null;
-};
-
 const usePopoverProps = (props) => {
   const backdropProps = {};
   const contentProps = {};

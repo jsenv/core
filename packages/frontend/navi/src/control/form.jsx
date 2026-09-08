@@ -53,6 +53,15 @@ import { dispatchRequestResetUIState } from "./ui_state_dom.js";
  *   a single button that fires off a notification, an action whose duplicates
  *   are fine. See also `readOnlyWhileFormUnchanged` on `Button`, for a submit that
  *   should say it is waiting rather than accept a press that sends nothing.
+ * @param {boolean} [props.actionAbortable] - The person waiting may give up on
+ *   the send: closing the popup this form holds calls the run off and goes
+ *   through, instead of being refused. For a send whose answer may never come —
+ *   a request over a network that stops answering — where a sheet with no way
+ *   out is worse than an answer lost. Aborting frees the client and nothing
+ *   more: the write may already have landed on the other side (see
+ *   docs/actions.md#aborting-saves-resources-it-does-not-undo), so say it only
+ *   where the screen can be re-opened on what is actually there. Every control
+ *   inside the form inherits it along with the wait itself.
  * @param {any} [props.pristineKey] - What the form is measured against, taken
  *   again every time this changes. A form knows what it holds as soon as its
  *   fields have registered, which is the right moment for a form whose values

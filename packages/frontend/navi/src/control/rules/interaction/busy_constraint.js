@@ -16,11 +16,10 @@ export const BUSY_CONSTRAINT = {
   // Unless it says the wait is its own (`actionStandalone`): then the refusal
   // stays on the element and every ancestor reads it as free — the group above
   // (see getInteractionBlockingControls) and the popup around it (see
-  // findBusyElementInside in dialog.jsx and popover.jsx, which both filter on
-  // `ignoredByParents`).
+  // popup_busy.js, which filters on `ignoredByParents`).
   check: (field, { intent } = {}) => {
-    const isBusy = isControlBusy(field);
-    if (!isBusy) {
+    const busySource = findBusySource(field);
+    if (!busySource) {
       return null;
     }
 
@@ -41,10 +40,30 @@ export const BUSY_CONSTRAINT = {
       message,
       status: "info",
       ignoredByParents: Boolean(field.actionStandalone),
+      // Read off the control the run belongs to, not off this one: a field or a
+      // submit button inherits its form's wait, so it inherits with it whether
+      // the person waiting is allowed to call that wait off (see
+      // abortControlRun, and `actionAbortable` in control_hooks.jsx).
+      abortable: Boolean(busySource.action && busySource.field.actionAbortable),
     };
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("data-busy");
+
+/**
+ * Give up on the run that makes `field` busy — the person waiting deciding the
+ * answer is not coming. The work is not undone: aborting frees the client and
+ * nothing more, the server may already have done it (see docs/actions.md,
+ * "Aborting saves resources, it does not undo"). What ends is the wait, and
+ * with it every refusal held by it.
+ */
+export const abortControlRun = (field, reason) => {
+  const busySource = findBusySource(field);
+  if (!busySource || !busySource.action) {
+    return false;
+  }
+  return busySource.action.abort(reason);
+};
 
 // Asked source by source rather than off the rendered `aria-busy`, which
 // conflates them and is a frame behind: that attribute is written during
@@ -57,9 +76,15 @@ CONSTRAINT_ATTRIBUTE_SET.add("data-busy");
 // control busy only because the group above is waiting has no state of its own
 // to read — the group's answer IS its answer, so it asks upward and inherits
 // the same live reading.
-const isControlBusy = (field) => {
+//
+// What comes back is the control the wait BELONGS to, and the running action
+// when there is one, because two questions are asked of it: whether this
+// control is busy at all, and what giving up on that wait would mean.
+const findBusySource = (field) => {
   if (field.loadingFromOwnProp) {
-    return true;
+    // A `loading` prop is a wait the app draws itself; there is no run behind
+    // it to call off.
+    return { field, action: null };
   }
   const { boundAction } = field;
   // An optimistic control stays interactive while its bound action runs:
@@ -77,12 +102,12 @@ const isControlBusy = (field) => {
     // cannot move mid-run, this very gate blocks it.
     const liveAction = boundAction.getCurrentAction?.() ?? boundAction;
     if (liveAction.runningStateSignal.value === RUNNING) {
-      return true;
+      return { field, action: liveAction };
     }
   }
   if (field.loadingFromAbove) {
     const parent = field.parentUIStateController;
-    return parent ? isControlBusy(parent) : false;
+    return parent ? findBusySource(parent) : null;
   }
-  return false;
+  return null;
 };

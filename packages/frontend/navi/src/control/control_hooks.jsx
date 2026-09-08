@@ -1600,6 +1600,7 @@ const useInteractiveProps = (
       loading,
       optimistic,
       actionStandalone,
+      actionAbortable,
     } = props;
 
     // `whenSelfInteractionsBlocked="ignore"`: an affordance that writes nothing
@@ -1688,6 +1689,12 @@ const useInteractiveProps = (
     // above it is told, so a form still submits and a popup still closes over a
     // run that was meant to be left going.
     uiStateController.actionStandalone = Boolean(actionStandalone);
+    // Read by BUSY_CONSTRAINT: the wait holds what is around it as always, and
+    // the person waiting may end it — closing the popup this control holds
+    // calls the run off instead of being refused (see popup_busy.js). Read off
+    // the control the run belongs to, so a field or a submit inheriting a
+    // form's wait inherits this with it.
+    uiStateController.actionAbortable = Boolean(actionAbortable);
     // What the interaction rule last refused is only true while the control is
     // held; the state it was read from moves here (see refreshReport).
     useLayoutEffect(() => {

@@ -1297,50 +1297,30 @@ const parsePattern = (
 };
 
 /**
- * Check if a literal segment can be treated as optional based on pattern hierarchy
+ * A literal segment the url stops short of is optional when an ancestor
+ * pattern has a path param AT THAT SAME POSITION whose default is this word:
+ * "/admin/settings/:tab" is the page "/admin" opens on when "/admin/:section"
+ * defaults to "settings". Only the connection occupying the segment's index
+ * may excuse it — a query param, or a param sitting elsewhere, says nothing
+ * about this position, so a state defaulting to "games" must not turn
+ * "/places/:slug/games" into a match for "/places/:slug".
  */
 const checkIfLiteralCanBeOptionalWithPatternObj = (
-  literalValue,
+  literalSegment,
   patternObj,
 ) => {
-  if (!patternObj) {
-    return false; // No pattern object available, cannot determine optionality
-  }
-
-  // Check current pattern's connections
-  for (const connection of patternObj.connections) {
-    if (connection.isDefaultValue(literalValue)) {
-      return true;
-    }
-  }
-
-  // Check parent pattern's connections
-  let currentParent = patternObj.parent;
-  while (currentParent) {
-    for (const connection of currentParent.connections) {
-      if (connection.isDefaultValue(literalValue)) {
+  let ancestor = patternObj ? patternObj.parent : null;
+  while (ancestor) {
+    const ancestorSegment = ancestor.pattern.segments[literalSegment.index];
+    if (ancestorSegment && ancestorSegment.type === "param") {
+      const connection = ancestor.pathConnectionMap.get(ancestorSegment.name);
+      if (connection && connection.isDefaultValue(literalSegment.value)) {
         return true;
       }
     }
-    currentParent = currentParent.parent;
+    ancestor = ancestor.parent;
   }
-
-  // Check children pattern's connections
-  const checkChildrenRecursively = (pattern) => {
-    for (const child of pattern.children || []) {
-      for (const connection of child.connections) {
-        if (connection.isDefaultValue(literalValue)) {
-          return true;
-        }
-      }
-      if (checkChildrenRecursively(child)) {
-        return true;
-      }
-    }
-    return false;
-  };
-
-  return checkChildrenRecursively(patternObj);
+  return false;
 };
 
 /**
@@ -1485,9 +1465,8 @@ const matchUrl = (
       // Check if URL has this segment
       if (urlSegmentIndex >= urlSegments.length) {
         // URL is too short for this literal segment
-        // Check if this literal segment can be treated as optional based on pattern hierarchy
         const canBeOptional = checkIfLiteralCanBeOptionalWithPatternObj(
-          patternSeg.value,
+          patternSeg,
           patternObj,
         );
         if (canBeOptional) {

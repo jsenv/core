@@ -6,7 +6,8 @@
  * the form says it is finished (`--navi-close`, see resolveAfterSend in
  * commands.js) and the dialog closes; the dialog, before letting a close
  * through, asks what it contains whether anything is mid-action and refuses if
- * so (see findBusyElementInside below).
+ * so — unless the run says it may be given up on, in which case closing calls
+ * it off (see popup_busy.js).
  *
  * A dialog is centered in the viewport by default, with no anchor to grow
  * out of or slide in from — `animation={true}`/`"auto"` resolves through
@@ -75,7 +76,10 @@ import { useEffect, useRef } from "preact/hooks";
 
 import { onNaviCommand } from "../control/commands.js";
 import { dispatchRequestInteraction } from "../control/rules/control_interaction.js";
-import { BUSY_CONSTRAINT } from "../control/rules/interaction/busy_constraint.js";
+import {
+  findControlsHoldingPopup,
+  giveUpOnControlsHoldingPopup,
+} from "./popup_busy.js";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import { Box } from "../box/box.jsx";
 import { resolveSpacingSize } from "../box/box_style_util.js";
@@ -844,14 +848,26 @@ const UncontrolledDialog = (props) => {
         // dialog has no such state of its own to consult (it is layout — see
         // this file's top comment), so it asks what it contains, and lets that
         // control report why the way it would to anyone else.
-        const busyElement = findBusyElementInside(dialogEl);
-        if (busyElement) {
-          dispatchRequestInteraction(busyElement, {
-            event: requestCloseEvent,
-            name: "dialog request close",
-          });
-          requestCloseEvent.preventDefault();
+        const controlsHolding = findControlsHoldingPopup(dialogEl);
+        if (controlsHolding.length === 0) {
+          return;
         }
+        // Unless every one of those runs was declared givable-up
+        // (`actionAbortable`): the answer is not coming, closing is how the
+        // person waiting says so, and the runs are called off on the way out.
+        if (
+          giveUpOnControlsHoldingPopup(
+            controlsHolding,
+            "the dialog holding the run was closed",
+          )
+        ) {
+          return;
+        }
+        dispatchRequestInteraction(controlsHolding[0].element, {
+          event: requestCloseEvent,
+          name: "dialog request close",
+        });
+        requestCloseEvent.preventDefault();
       },
       onClose: (closeEvent) => {
         props.onClose?.(closeEvent);
@@ -971,29 +987,6 @@ const DOCKED = {
 // no header and nothing marked is not pushed down at all; it is closed by its
 // own controls, by the backdrop and by Escape.
 const DOCKED_SWIPE_GRIP = "[data-header],[data-swipe-grip]";
-
-// The first control inside `dialogEl` that is mid-action, if any. Walks the
-// controls rather than reading an attribute off the dialog: a dialog carries no
-// state of its own (see this file's top comment), and `aria-busy` on the
-// controls is a render snapshot — BUSY_CONSTRAINT reads the live answer.
-// Same as Popover's own; kept in both rather than shared, since each file reads
-// on its own — what changes here changes there too.
-const findBusyElementInside = (dialogEl) => {
-  for (const element of dialogEl.querySelectorAll("[navi-control-host]")) {
-    const controller = element.__uiStateController__;
-    if (!controller) {
-      continue;
-    }
-    const busyInfo = BUSY_CONSTRAINT.check(controller);
-    // `ignoredByParents`: the control says the wait is its own
-    // (`actionStandalone`), so a popup is one more ancestor it does not hold —
-    // the same reading a group makes of it (see control_interaction.js).
-    if (busyInfo && !busyInfo.ignoredByParents) {
-      return element;
-    }
-  }
-  return null;
-};
 
 const useDialogProps = (props) => {
   const backdropProps = {};
