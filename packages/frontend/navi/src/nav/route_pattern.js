@@ -17,6 +17,20 @@ const debug = (...args) => {
 // Base URL management
 let baseFileUrl;
 let baseUrl;
+/**
+ * Where this document's addresses start, for a document that is not at the
+ * root: a panel served from "/admin/admin.html" declares
+ * `setBaseUrl("/admin/admin.html")` and then writes its routes as "/places",
+ * "/places/:placeId". The url "/admin/places/42" matches, and `buildUrl` puts
+ * the prefix back.
+ *
+ * Call it in the routes module, above the `route()` calls it governs — they
+ * read the base url as they are created, so an entry point calling it after
+ * importing them is too late. The server must serve the document for every
+ * address below it (see docs/navigation.md).
+ *
+ * @param {string} value - the document's own url, absolute or relative.
+ */
 export const setBaseUrl = (value) => {
   baseFileUrl = new URL(
     value,

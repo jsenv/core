@@ -514,6 +514,11 @@ two affordances for the same delete that must both go busy at once. Nothing else
 in the stack answers that question: the store holds the data, not who is
 currently writing it.
 
+Either way, what to READ afterwards is the store, or the instance that ran — a
+verb keeps no state of its own, so `GAME_CANDIDATES.POST.dataSignal` is empty
+whichever form ran it (see
+[actions.md](./actions.md#the-answer-is-kept-on-the-instance-that-ran)).
+
 Where it does not pay, and most call sites are here: one affordance, in one
 place, that nobody else watches. A `bindParams({ id })` written per row builds an
 identity nothing reads, and a plain function says the gesture more directly.

@@ -7,6 +7,7 @@ import {
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { FormContext } from "../form_context.js";
 import { useSelfInteractionsHidden } from "../self_interactions.js";
+import { ButtonConfirmResolver } from "./button_confirm.jsx";
 import { ButtonRouteResolver } from "./button_route.jsx";
 import { ButtonUI } from "./button_ui.jsx";
 
@@ -177,6 +178,20 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  *   more: the work may already have happened on the other side (see
  *   docs/actions.md#aborting-saves-resources-it-does-not-undo), so say it only
  *   where the screen can be re-opened on what is actually there.
+ * @param {boolean|import("preact").ComponentChildren} [confirm] Ask before
+ *   doing it, in the place the button stands: the first press replaces the
+ *   button with this question and a "Confirmer"/"Annuler" pair, the second one
+ *   does what the button was for. `true` asks navi's default question. The
+ *   press stays under the finger and there is nothing to dismiss — "Annuler",
+ *   Escape, or the focus leaving puts the button back. Use `<Picker
+ *   type="confirm">` instead when the question is long enough to want a popup,
+ *   or when the row has no space for it.
+ * @param {import("preact").ComponentChildren} [confirmLabel] Label of the
+ *   second press.
+ * @param {import("preact").ComponentChildren} [cancelLabel] Label of the way
+ *   out of the question.
+ * @param {string} [confirmTestId] `data-testid` of the second press.
+ * @param {string} [cancelTestId] `data-testid` of the way out.
  * @param {string} [contentDisplay] The display of the frame the button draws
  *   around its children. It follows the button's own by default — its display
  *   and, a display alone saying nothing about direction, the rest of its flow
@@ -193,6 +208,7 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  */
 export const Button = createComponentResolver([
   ButtonFirstResolver,
+  ButtonConfirmResolver,
   ButtonRouteResolver,
   ButtonCommandPropResolver,
   ButtonUI,

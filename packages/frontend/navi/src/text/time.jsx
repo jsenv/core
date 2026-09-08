@@ -169,13 +169,7 @@ const TimeDate = ({
     );
   }
 
-  const date = toDate(children, (value) => {
-    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-      const d = new Date(`${value}T00:00:00`);
-      return isNaN(d.getTime()) ? null : d;
-    }
-    return null;
-  });
+  const date = toDate(children);
   if (!date) {
     return <TimeText {...props}>{String(children)}</TimeText>;
   }

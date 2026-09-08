@@ -37,9 +37,18 @@ duplicates are fine.
 The form has answered its question; `command` says what the screen does about
 it — dismiss the popup (`--navi-close`), move on the slide map
 (`--navi-left`…), go to a page (`--navi-nav-to:/games/42`), go back to the one
-the reader came from (`--navi-nav-back:/games`), stay put
-(`--navi-void`). Left out, the surface the form sits in decides: a popup closes,
-a slide goes on, a form on a page does nothing.
+the reader came from (`--navi-nav-back:/games`), empty itself and stay where it
+is (`--navi-reset`), stay put as it is (`--navi-void`). Left out, the surface the
+form sits in decides: a popup closes, a slide goes on, a form on a page does
+nothing.
+
+`--navi-reset` is the one to reach for when the form is a place one comes back
+to — an entry created, then the next one — since the fields go back to their
+`defaultValue` and the form is measured against that again:
+
+```jsx
+<Form action={createPlaceGroup} command="--navi-reset">
+```
 
 It runs **whether or not there was anything to send** — that is the other half
 of the rule above: the person is done either way, and a submit that ran no

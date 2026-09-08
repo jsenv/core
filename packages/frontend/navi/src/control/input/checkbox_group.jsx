@@ -20,6 +20,26 @@ const css = /* css */ `
 `;
 
 /**
+ * A set of checkboxes answering one question, holding the array of the values
+ * that are checked.
+ *
+ * It renders a `<fieldset>` and hands its `name` down, so the boxes inside are
+ * plain `<Input type="checkbox" value="…">` with nothing else to declare; each
+ * value that is checked appears in the array, in the order the boxes are
+ * written. What it holds is said the way every control says it — `value` /
+ * `defaultValue` (an array), or a bound `signal` — and inside a `<Form>` the
+ * group is one entry of the submitted params, an array.
+ *
+ * ```jsx
+ * <CheckboxGroup name="permissions" defaultValue={["places.moderate"]} action={save}>
+ *   <legend>Permissions</legend>
+ *   <Field as="label"><Input type="checkbox" value="places.moderate" /> Modérer les lieux</Field>
+ *   <Field as="label"><Input type="checkbox" value="games.list" /> Lister les parties</Field>
+ * </CheckboxGroup>
+ * ```
+ *
+ * See `<RadioGroup>` for the same shape holding a single value.
+ *
  * @type {import("preact").FunctionComponent<{
  *   maxLength?: number,
  *   maxLengthGuard?: number,

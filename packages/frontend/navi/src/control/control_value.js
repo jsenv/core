@@ -1,5 +1,6 @@
 import { dispatchCustomEvent } from "@jsenv/dom";
 
+import { isSignal } from "../utils/is_signal.js";
 import { getUIStateFromElement } from "./ui_state_dom.js";
 
 /**
@@ -228,5 +229,27 @@ export const warnSignalCollision = (props, controlType, stateProp) => {
         `"signal" is the source of truth; "${stateProp}" is ignored. ` +
         `Pass only "signal".`,
     );
+  }
+};
+
+/**
+ * A signal handed to a prop that holds a plain value is the `signal` binding
+ * written in the wrong place. Nothing throws: the signal object becomes the
+ * value, and a value that cannot be written to the DOM is replaced by a
+ * `window.__navi_js('…')` reference string — which is then what the field
+ * shows on screen (see toDomValue in controller_registry.js).
+ */
+export const warnSignalAsState = (props, controlType, stateProps) => {
+  if (!import.meta.dev) {
+    return;
+  }
+  for (const stateProp of stateProps) {
+    if (isSignal(props[stateProp])) {
+      console.warn(
+        `[navi] "${controlType}" got a signal as "${stateProp}". ` +
+          `A signal binds a control through "signal" — did you mean signal={...}? ` +
+          `As "${stateProp}" it is taken for the value itself.`,
+      );
+    }
   }
 };

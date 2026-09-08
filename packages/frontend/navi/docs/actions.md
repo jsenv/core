@@ -21,6 +21,7 @@ the instance being run.
 them by hand — see [resource.md](./resource.md).
 
 - [Params: `bindParams`, and calling the action](#params-bindparams-and-calling-the-action)
+  - [The answer is kept on the instance that ran](#the-answer-is-kept-on-the-instance-that-ran)
   - [A debounced signal asks where it settles, not where it passed](#a-debounced-signal-asks-where-it-settles-not-where-it-passed)
   - [The in-between states of a gesture are real params](#the-in-between-states-of-a-gesture-are-real-params)
 - [Running: `run`, `rerun`, `prerun`, `reset`](#running-run-rerun-prerun-reset)
@@ -115,6 +116,32 @@ is the shape to reach for whenever the screen owns its params signal.
 is drawing it. During the delay the instance is still the previous one, holding
 the previous answer — `loading` is what says a newer one is coming, don't
 compare params by hand to find out.
+
+### The answer is kept on the instance that ran
+
+An action's state — `dataSignal`, `errorSignal`, `loadingSignal` — belongs to
+the instance the params made, never to the action they were bound from. So the
+thing to read is whatever `bindParams` (or anything built on it) gave back:
+
+```js
+const COUNTS = routeAction(ANY_PAGE, ADMIN_COUNTS.GET, () => true);
+
+COUNTS.dataSignal.value; // the answer
+ADMIN_COUNTS.GET.dataSignal.value; // undefined, for ever
+```
+
+`routeAction` binds params — `() => true` is params too — so the answer lands on
+the child, and the verb it was declared from stays idle: nothing failed, nothing
+warns, the screen simply has no numbers in it. The same holds for the instance a
+control runs (see [below](#the-instance-a-control-runs)).
+
+A module-level signal derived from a verb — `computed(() => ME.GET.dataSignal.value)`
+— therefore only works for a verb something runs **directly**, with no params.
+Anything else derives from the instance:
+
+```js
+export const countsSignal = computed(() => COUNTS.dataSignal.value);
+```
 
 ### A debounced signal asks where it settles, not where it passed
 

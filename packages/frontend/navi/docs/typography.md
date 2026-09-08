@@ -26,6 +26,24 @@ there is never a `<div style>` wrapped around it just to place or color it.
 length); the spacing props take the spacing tokens of the same name. Two scales,
 same names — `size="l"` is a font size, `padding="l"` is a gap.
 
+`color` takes five keywords, and they are how a text says how loud it is:
+
+```jsx
+<Text color="primary">the ink of the paper, at full strength</Text>
+<Text color="secondary">supporting text, captions, less important labels</Text>
+<Text color="emphasis">reinforced, standing out from what surrounds it</Text>
+<Text color="discrete">there, not competing for attention</Text>
+<Text color="hint">barely there — watermarks, ghost placeholders</Text>
+```
+
+Four of the five are formulas on `currentColor`, so they follow whatever ink
+their container writes in — a dark card sets `color` and nothing else. Never
+write the `--navi-color-*` variable behind a keyword by hand: the keyword is the
+name, and an invented one (`var(--navi-text-color-discrete)`) resolves to
+nothing and silently inherits. What the ratios are, how a theme changes them and
+why a surface re-declares them:
+[css_architecture.md](./css_architecture.md#ink-ratio-paper-the-color-keywords).
+
 Live examples: `src/text/demos/*_demo.html` — one page per concern
 (`text_overflow_demo.html`, `text_spacing_demo.html`, `text_loading_demo.html`,
 `text_attach_last_child_demo.html`, `text_emoji_demo.html`, `icon_demo.html`).

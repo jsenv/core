@@ -422,6 +422,16 @@ const PSEUDO_STATE_CHILD_PROP_SET = new Set(["tabIndex", "tabindex"]);
  *   children?: import("preact").ComponentChildren,
  *   [key: string]: any,
  * }>}
+ * @param {string} [background] Any CSS background, plus two keywords for the
+ *   planes an app paints: `"surface"` is the paper content sits on,
+ *   `"chrome"` the frame around a screen — a top bar, a side menu, a toolbar.
+ *   Both follow the theme, so a bar stays a bar in dark mode
+ *   (`--navi-surface-color` / `--navi-chrome-color`). `backgroundColor` takes
+ *   the same two.
+ * @param {string} [color] Any CSS color, plus the five ink keywords —
+ *   `"primary"`, `"secondary"`, `"emphasis"`, `"discrete"`, `"hint"` — which
+ *   say how loud a text is rather than which color it is (see
+ *   docs/typography.md).
  * @param {object} [interactions] What this box answers, by interaction name
  *   (see docs/interactions.md). A plain box has no wiring of its own: it does
  *   nothing with `action` (that is a control's prop), so a click on it is

@@ -13,7 +13,10 @@ import {
   navBack,
   useNavState,
 } from "../nav/browser_integration/browser_integration.js";
-import { warnSignalCollision } from "../control/control_value.js";
+import {
+  warnSignalAsState,
+  warnSignalCollision,
+} from "../control/control_value.js";
 import {
   prepareFocusTransfer,
   markAutofocusRestoreOnClose,
@@ -772,6 +775,7 @@ export const useOpenPropsEffectOnOpenController = (
   name = "popup",
 ) => {
   const { signal, value, defaultOpen, navState } = props;
+  warnSignalAsState(props, name, ["open", "defaultOpen"]);
   const { id: navStateId, type: navStateType } = resolveNavStateProp(
     navState,
     props.id,

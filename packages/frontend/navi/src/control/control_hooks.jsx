@@ -83,7 +83,11 @@ import {
   unpublishControlStateToLabels,
 } from "./control_label_state.js";
 import { findControlProxyTarget } from "./control_proxy.js";
-import { readControlValue, warnSignalCollision } from "./control_value.js";
+import {
+  readControlValue,
+  warnSignalAsState,
+  warnSignalCollision,
+} from "./control_value.js";
 import {
   onUIStateControllerCreated,
   toDomValue,
@@ -1056,7 +1060,17 @@ export const isControlValueGivenByProps = (props) =>
   Object.hasOwn(props, "defaultValue") ||
   Object.hasOwn(props, "signal");
 
+const CONTROL_STATE_PROPS = [
+  "value",
+  "defaultValue",
+  "checked",
+  "defaultChecked",
+  "open",
+  "defaultOpen",
+];
+
 const createControlInfo = (props, { controlType }) => {
+  warnSignalAsState(props, controlType, CONTROL_STATE_PROPS);
   let statePropName;
   let defaultStatePropName;
   let stateInitial;

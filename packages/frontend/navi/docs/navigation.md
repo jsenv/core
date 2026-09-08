@@ -5,6 +5,7 @@ linking to them, and turning them into tabs.
 
 - [The rule that decides everything else: the position belongs in the URL](#the-rule-that-decides-everything-else-the-position-belongs-in-the-url)
 - [Declaring routes](#declaring-routes)
+  - [A document that is not at the root: `setBaseUrl`](#a-document-that-is-not-at-the-root-setbaseurl)
   - [A section is allowed to be a route of its own](#a-section-is-allowed-to-be-a-route-of-its-own)
   - [Which values a param accepts](#which-values-a-param-accepts)
   - [An address that only sends elsewhere](#an-address-that-only-sends-elsewhere)
@@ -73,6 +74,39 @@ application, and an import line says which places a component deals with.
 Routes are plain objects usable outside of any component — `route.buildUrl()`,
 `route.navTo()`, `route.redirectTo()`, `route.matching` — which is why they are
 declared apart from the JSX that renders them.
+
+### A document that is not at the root: `setBaseUrl`
+
+A second document in the same site — an admin panel at `/admin/admin.html`
+alongside the app at `/` — owns the addresses below its own directory, and its
+routes are written as if that directory were the root:
+
+```js
+// admin/routes.js
+import { route, setBaseUrl, setupRoutes } from "@jsenv/navi";
+
+setBaseUrl("/admin/admin.html");
+
+export const PLACES_ROUTE = route("/places");
+export const PLACE_ROUTE = route("/places/:placeId");
+
+setupRoutes([PLACES_ROUTE, PLACE_ROUTE]);
+```
+
+`/admin/places/42` matches `PLACE_ROUTE`, and `buildUrl` puts the prefix back —
+nothing else in the document ever spells `/admin` again, so the panel can be
+moved by changing this one line.
+
+Two things about it:
+
+- **it belongs in the routes module, above the `route()` calls it governs** —
+  those read the base url as they are created. In the entry point it would be
+  too late: the import of the routes module runs first, and an import sorter
+  would put it there anyway;
+- **the server has to answer the document for every address below it.** jsenv's
+  dev server already does: an address it finds no file for is answered with the
+  closest html file above it, `<dirname>.html` included, so `/admin/places/42`
+  is served `/admin/admin.html`. Any other host needs the same rule.
 
 ### A section is allowed to be a route of its own
 
@@ -295,6 +329,37 @@ Where several redirecting routes answer for one url, the more specific wins —
 router uses. Chains collapse into one navigation, and a cycle throws naming the
 addresses it goes through.
 
+#### When the destination depends on data
+
+`/admin` sends the reader to the first section their permissions allow: the
+target is not known until `GET /me` has answered. That is not a redirection at
+all — the door resolves an address from the url alone, and there is nothing to
+resolve yet.
+
+What it is, is a **landing that loads**, so it is declared the way every load is:
+a route action, and the redirection once the answer is there.
+
+```js
+export const ADMIN_ROUTE = route("/admin");
+
+routeAction(ADMIN_ROUTE, async () => {
+  const me = await ME.GET.run();
+  firstSectionAllowed(me).redirectTo();
+});
+```
+
+`redirectTo()` replaces the entry rather than stacking onto it, so the back
+button still leaves by where the reader came in — the one property of a
+redirection worth keeping here.
+
+What it costs, and there is no way around it: the address exists, and something
+is on screen while the request is out. That is honest — the reader IS waiting —
+so give `/admin` the screen a wait deserves (the section frame, a `<Loading>`)
+rather than a page rendering `null`. What must not happen is the rest of the
+list: the wait belongs to the route action, so no page below it runs, and the
+destination is decided in one place instead of in an effect that fires again on
+every render.
+
 ### Search params
 
 A param that qualifies a page rather than naming it — a zoom level, a sort, a
@@ -405,6 +470,22 @@ The bar travels from one tab to the next rather than blinking, because `<Nav>`
 gives it a `view-transition-name` of its own: the browser then moves it on the
 same clock as any transition playing — including a `RouteTravel` swipe, with no
 wiring between the two.
+
+An entry of the row usually stands for a whole section, not for the single page
+it opens: "Lieux" must stay lit while the reader is on `/places/42`. That is
+`currentAlso` — the routes, other than the link's own, that the entry also
+stands for:
+
+```jsx
+<Link route={PLACES_ROUTE} currentAlso={[PLACE_ROUTE]} variant="tab">
+  Lieux
+</Link>
+```
+
+`currentExcept` is the other side: a place under the section the entry does NOT
+stand for. Both amend what a link claims about itself and nothing else — which
+is why neither of them is an answer to a route that lies about where the reader
+is (see [what its address may say](#a-layer-over-the-screen-what-its-address-may-say)).
 
 A row of tabs is a lateral move: the neighbour is one finger away, and going
 there is not going one step deeper. `replace` says exactly that — the

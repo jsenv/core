@@ -1146,7 +1146,9 @@ const toLocalDayKey = (date) => {
  * Coerces what `<Time>` accepts as a value — a Date, a ms timestamp, a
  * parseable string — into a Date, or null when it cannot. `parseString`
  * lets a caller claim the string forms it recognizes ("HH:MM" for a
- * time-of-day, "YYYY-MM" for a month…) before the generic ones apply.
+ * time-of-day, "YYYY-MM" for a month…) before the generic ones apply; the
+ * strings it does not claim (it answers null) still go through them, so a
+ * caller shaping one form never has to re-implement ISO parsing.
  */
 export const toDate = (value, parseString) => {
   if (value instanceof Date) {
@@ -1157,7 +1159,10 @@ export const toDate = (value, parseString) => {
   }
   if (typeof value === "string") {
     if (parseString) {
-      return parseString(value);
+      const parsed = parseString(value);
+      if (parsed) {
+        return parsed;
+      }
     }
     // "YYYY-MM-DD" — use local midnight to avoid UTC shift
     if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {

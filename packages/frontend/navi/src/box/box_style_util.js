@@ -534,8 +534,12 @@ const VISUAL_PROPS = {
   outlineWidth: PASS_THROUGH,
   boxDecorationBreak: PASS_THROUGH,
   boxShadow: PASS_THROUGH,
-  background: PASS_THROUGH,
-  backgroundColor: PASS_THROUGH,
+  background: (value) => {
+    return { background: resolveSurfaceKeyword(value) };
+  },
+  backgroundColor: (value) => {
+    return { backgroundColor: resolveSurfaceKeyword(value) };
+  },
   backgroundImage: PASS_THROUGH,
   backgroundSize: PASS_THROUGH,
   border: PASS_THROUGH,
@@ -901,4 +905,16 @@ const COLOR_KEYWORD_MAP = {
 };
 const resolveColorKeyword = (value) => {
   return COLOR_KEYWORD_MAP[value] || value;
+};
+
+// The two planes an app paints: the paper its content sits on, and the frame
+// around it (see navi_css_vars.js). Named rather than derived at each call
+// site, so a top bar and a side menu are the same plane without agreeing on a
+// formula.
+const SURFACE_KEYWORD_MAP = {
+  surface: "var(--navi-surface-color)",
+  chrome: "var(--navi-chrome-color)",
+};
+const resolveSurfaceKeyword = (value) => {
+  return SURFACE_KEYWORD_MAP[value] || value;
 };

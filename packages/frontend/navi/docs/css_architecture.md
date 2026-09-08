@@ -365,6 +365,26 @@ Note that scoping to an ancestor is not enough: `.my-sidebar { --link-color-pres
 
 When a component default deserves to be themed globally, promote it: declare a `--navi-<component>-<thing>` in [navi_css_vars.js](../src/navi_css_vars.js) and make the component default read `var(--navi-…)`.
 
+#### Two planes: the paper and the frame
+
+An app draws on two planes, and navi names both so that nothing has to invent
+the second one:
+
+- **the paper**, `--navi-surface-color`, what content sits on — a control's
+  background, a card, a popup;
+- **the frame**, `--navi-chrome-color`, what surrounds a screen — a top bar, a
+  side menu, a toolbar.
+
+```jsx
+<Box background="chrome" />
+```
+
+The frame is derived from the paper (a step toward the dark on a light page,
+toward the light on a dark one) rather than written as a literal, which is the
+whole point: `#f6f7f9` on a bar is a bar that stops being one in dark mode, and
+a bar painted in the paper's own color on a page of that color is not a bar, it
+is a line. An app that wants another frame sets the one token on `:root`.
+
 #### A surface is a new paper: what reaches a popup from its opener
 
 A popup (`Dialog`, `Popover`, everything built on them) and a callout are

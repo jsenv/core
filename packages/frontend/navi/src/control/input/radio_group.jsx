@@ -17,6 +17,26 @@ const css = /* css */ `
   }
 `;
 
+/**
+ * A set of radios answering one question, holding the value of the one that is
+ * checked.
+ *
+ * It renders a `<fieldset>` and hands its `name` down, so the radios inside are
+ * plain `<Input type="radio" value="…">` with nothing else to declare — sharing
+ * a name is what makes them exclusive. What it holds is said the way every
+ * control says it — `value` / `defaultValue`, or a bound `signal` — and inside a
+ * `<Form>` the group is one entry of the submitted params.
+ *
+ * ```jsx
+ * <RadioGroup name="role" defaultValue="viewer" action={save}>
+ *   <legend>Rôle</legend>
+ *   <Field as="label"><Input type="radio" value="viewer" /> Lecteur</Field>
+ *   <Field as="label"><Input type="radio" value="admin" /> Administrateur</Field>
+ * </RadioGroup>
+ * ```
+ *
+ * See `<CheckboxGroup>` for the same shape holding an array.
+ */
 export const RadioGroup = (props) => {
   const refDefault = useRef(null);
   props.ref = props.ref || refDefault;

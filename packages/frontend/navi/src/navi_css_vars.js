@@ -201,6 +201,18 @@ const css = /* css */ `
       /* What is written on that paper. The browser's own text color rather
          than a literal, so it follows color-scheme the way the paper does. */
       --navi-surface-text-color: CanvasText;
+      /* The plane the app's own frame is painted on — a top bar, a side menu, a
+         toolbar: everything that surrounds a screen rather than being in it.
+         A step away from the paper, because a bar painted in the paper's own
+         color on a page of that color is not a bar, it is a line. Derived from
+         the paper rather than written as a literal so it follows the theme by
+         construction: a step toward the dark on a light page, toward the light
+         on a dark one. Reached as background="chrome" on a Box. */
+      --navi-chrome-color: color-mix(
+        in srgb,
+        var(--navi-surface-color) 94%,
+        var(--navi-color-dark)
+      );
       /* The line that separates two regions of one surface — a scrolling area's
          header from what scrolls under it, for instance. Not a border: the
          separation belongs to the layout, not to the box that draws it. */
