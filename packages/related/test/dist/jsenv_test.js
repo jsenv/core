@@ -2166,7 +2166,25 @@ const assertAndNormalizeFileUrl = (
   return value;
 };
 
-const comparePathnames = (leftPathame, rightPathname) => {
+/*
+ * Which of two pathnames comes first: directories before what is under them,
+ * deeper before shallower, then the names themselves.
+ *
+ * How a leading number reads is the caller's call, because the two readings are
+ * both right somewhere:
+ * - numeric (the default), where the number is a quantity: "9_x" then "10_x" —
+ *   what a generated list wants, so a story numbered by hand stays in the order
+ *   it happens;
+ * - { numeric: false }, where the number is part of the name: "10_x" right
+ *   after "1_x" — the order the filesystem itself gives, and the one every file
+ *   explorer above it shows, so a human reading a directory finds it in the
+ *   order their editor already shows.
+ */
+const comparePathnames = (
+  leftPathame,
+  rightPathname,
+  { numeric = true } = {},
+) => {
   const leftPartArray = leftPathame.split("/");
   const rightPartArray = rightPathname.split("/");
 
@@ -2202,7 +2220,7 @@ const comparePathnames = (leftPathame, rightPathname) => {
     i++;
     // local comparison comes first
     const comparison = leftPart.localeCompare(rightPart, undefined, {
-      numeric: true,
+      numeric,
       sensitivity: "base",
     });
     if (comparison !== 0) {

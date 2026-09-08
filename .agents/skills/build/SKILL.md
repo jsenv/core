@@ -129,6 +129,14 @@ output — it produces **different** output, and reports success either way.
   is called once per build and its `reserveName` holds one name set per output
   directory, so the second entry point wanting `main.js` gets `main2.js`. Drop
   one and the names of the others slide.
+- **A source file is shared only within one assets directory.** Two entry
+  points referencing the same `logo.svg` write one copy when their assets
+  directory is the same (`index.html` and `about.html` at the root), and one
+  copy each when it is not (`index.html` and `admin/admin.html`): a file lands
+  where the entry point referencing it lands, never inside a sibling's
+  directory. The key in `buildUrlMap` is the assets directory plus the source
+  url; bundler chunks are keyed by entry point instead, see the comment in
+  `generate`.
 - **What is written beside the files is merged over the set**: `buildManifest`,
   `buildFileVersions`, and the `sideEffects` array written back into
   `package.json`. A partial run writes a truncated version of each.

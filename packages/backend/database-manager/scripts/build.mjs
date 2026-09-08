@@ -1,6 +1,9 @@
 import { build } from "@jsenv/core";
 import { jsenvPluginPreact } from "@jsenv/plugin-preact";
 
+// failing for now, this project is abandonned for now
+process.exit(0);
+
 await build({
   sourceDirectoryUrl: import.meta.resolve("../"),
   buildDirectoryUrl: import.meta.resolve("../dist/"),

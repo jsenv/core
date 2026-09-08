@@ -1,11 +1,12 @@
 {
   "version": 3,
+  "names": [],
   "sources": [
     "../client/main.html@L10C5-L14C14.js"
   ],
-  "names": [],
-  "mappings": "AACM,MAAM,CAAC,aAAa,CAAA,CAAA,CAAG,GAAA,CAAI,OAAO,CAAE,OAAO,CAAA,CAAA,CAAA,CAAK;EAC9C,MAAM,CAAC,oBAAoB,CAAA,CAAA,CAAG,OAAO;AACvC,CAAC,CAAC",
   "sourcesContent": [
     "\n      window.resultPromise = new Promise((resolve) => {\n        window.resolveResultPromise = resolve;\n      });\n    "
-  ]
+  ],
+  "mappings": "AACM,MAAM,CAAC,aAAa,GAAG,IAAI,OAAO,CAAE,OAAO,IAAK;EAC9C,MAAM,CAAC,oBAAoB,GAAG,OAAO;AACvC,CAAC,CAAC",
+  "ignoreList": []
 }

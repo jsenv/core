@@ -3,9 +3,9 @@
   "sources": [
     "../../client/main.js"
   ],
-  "names": [],
-  "mappings": "AAAA,MAAM,CAAC,CAAC,CAAC,MAAM,CAAC,CAAC,CAAC,IAAI,CAAC,CAAA,WAAA,CAAW;;AAElC,OAAO,CAAC,GAAG,CAAC,MAAM,CAAC",
   "sourcesContent": [
     "import { answer } from \"./file.js\";\n\nconsole.log(answer);\n"
-  ]
+  ],
+  "names": [],
+  "mappings": "AAAA,MAAM,CAAC,CAAC,CAAC,MAAM,CAAC,CAAC,CAAC,IAAI,CAAC,aAAW;;AAElC,OAAO,CAAC,GAAG,CAAC,MAAM,CAAC"
 }

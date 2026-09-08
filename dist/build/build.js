@@ -12210,8 +12210,16 @@ const createBuildUrlsGenerator = ({
     // THAT bundle). They are told apart by the entry point they come from —
     // sharing the file would leave one entry importing exports the file on disk
     // does not have.
+    //
+    // A source file is shared between entry points only while they write it to
+    // the same assets directory. Two entry points with their own directory each
+    // get their own copy: the file lands where the entry point that references
+    // it lands, so removing one entry point's directory takes nothing away from
+    // another.
     const insideBuildDirectory = urlIsOrIsInsideOf(url, buildDirectoryUrl);
-    const key = insideBuildDirectory ? `${entryKey} ${url}` : url;
+    const key = insideBuildDirectory
+      ? `${entryKey} ${url}`
+      : `${assetsDirectory} ${url}`;
     const buildUrlFromMap = buildUrlMap.get(key);
     if (buildUrlFromMap) {
       return buildUrlFromMap;
@@ -12243,7 +12251,7 @@ const createBuildUrlsGenerator = ({
     }
     if (urlInfo.type === "entry_build") {
       const buildUrl = new URL(urlInfo.filenameHint, buildDirectoryUrl).href;
-      associateBuildUrl(url, buildUrl);
+      associateBuildUrl(key, buildUrl);
       return buildUrl;
     }
     if (
@@ -12261,7 +12269,7 @@ const createBuildUrlsGenerator = ({
       const urlObject = new URL(url);
       const { search } = urlObject;
       const buildUrl = `${buildDirectoryUrl}${directoryPath}${search}`;
-      associateBuildUrl(url, buildUrl);
+      associateBuildUrl(key, buildUrl);
       return buildUrl;
     }
 
@@ -12276,7 +12284,7 @@ const createBuildUrlsGenerator = ({
     let { search, hash } = urlObject;
     const name = reserveName(directoryPath, getUrlName(url, urlInfo));
     const buildUrl = `${buildDirectoryUrl}${directoryPath}${name}${search}${hash}`;
-    associateBuildUrl(url, buildUrl);
+    associateBuildUrl(key, buildUrl);
     return buildUrl;
   };
 

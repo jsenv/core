@@ -146,9 +146,7 @@
     "./src/kitchen/client/inline_content.js",
     "./dist/client/new_stylesheet/new_stylesheet.js",
     "./dist/client/inline_content/inline_content.js",
-    "./dist/client/directory_listing/jsenv_core_node_modules.js",
-    "./tests/dev_and_build/import_meta_css_static/build/js/main.js",
-    "./tests/dev_and_build/import_meta_css_static/build/js/constant.js"
+    "./dist/client/directory_listing/jsenv_core_node_modules.js"
   ],
   "allowScripts": {
     "unrs-resolver": true,

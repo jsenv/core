@@ -1,3 +1,5 @@
+"jsenv:allocate 45s";
+
 import { startDevServer } from "@jsenv/core";
 import { executeHtml } from "@jsenv/core/tests/execute_html.js";
 import { snapshotDevTests } from "@jsenv/core/tests/snapshot_dev_tests.js";

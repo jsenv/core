@@ -48,22 +48,28 @@ const installImportMetaCssBuild$1 = (importMeta) => {
   });
 };
 
-installImportMetaCssBuild$1(import.meta);const setBodyBackgroundColor = color => {
-  import.meta.css = [         `body {
+installImportMetaCssBuild$1(import.meta);
+
+const setBodyBackgroundColor = (color) => {
+  import.meta.css =           [`body {
   background-color: ${color};
 }
 `, "@jsenv/core/tests/dev_and_build/import_meta_css/client/a.js"];
 };
 
-installImportMetaCssBuild$1(import.meta);const setBodyColor = color => {
-  import.meta.css = [         `body {
+installImportMetaCssBuild$1(import.meta);
+
+const setBodyColor = (color) => {
+  import.meta.css =           [`body {
   color: ${color};
 }
 `, "@jsenv/core/tests/dev_and_build/import_meta_css/client/b.js"];
 };
 
-installImportMetaCssBuild$1(import.meta);const setBodyFontSize = size => {
-  import.meta.css = [         `body {
+installImportMetaCssBuild$1(import.meta);
+
+const setBodyFontSize = (size) => {
+  import.meta.css =           [`body {
   font-size: ${size};
 }
 `, "@jsenv/core/tests/dev_and_build/import_meta_css/client/c.js"];
@@ -75,16 +81,16 @@ installImportMetaCssBuild$1(import.meta);const setBodyFontSize = size => {
 
 setBodyFontSize("16px");
 
-installImportMetaCssBuild$1(import.meta);const installImportMetaCssBuild = importMeta => {
+const installImportMetaCssBuild = (importMeta) => {
   const IMPORT_META_CSS_BUILD = "jsenv_import_meta_css_build";
+
   if (importMeta.css === IMPORT_META_CSS_BUILD) {
     return;
   }
+
   const stylesheetMap = new Map();
   const adopt = (url, value) => {
-    const stylesheet = new CSSStyleSheet({
-      baseUrl: importMeta.url
-    });
+    const stylesheet = new CSSStyleSheet({ baseUrl: importMeta.url });
     stylesheet.replaceSync(value);
     stylesheetMap.set(url, stylesheet);
     document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet];
@@ -92,11 +98,14 @@ installImportMetaCssBuild$1(import.meta);const installImportMetaCssBuild = impor
   const update = (url, value) => {
     stylesheetMap.get(url).replaceSync(value);
   };
-  const remove = url => {
+  const remove = (url) => {
     const stylesheet = stylesheetMap.get(url);
-    document.adoptedStyleSheets = document.adoptedStyleSheets.filter(s => s !== stylesheet);
+    document.adoptedStyleSheets = document.adoptedStyleSheets.filter(
+      (s) => s !== stylesheet,
+    );
     stylesheetMap.delete(url);
   };
+
   const currentCssSourceMap = new Map();
   Object.defineProperty(importMeta, "css", {
     configurable: true,
@@ -118,11 +127,12 @@ installImportMetaCssBuild$1(import.meta);const installImportMetaCssBuild = impor
         update(url, value);
         currentCssSourceMap.set(url, value);
       }
-    }
+    },
   });
 };
 installImportMetaCssBuild(import.meta);
-const setBodyFontStyle = style => {
+
+const setBodyFontStyle = (style) => {
   import.meta.css = [`body {
   font-style: ${style};
 }

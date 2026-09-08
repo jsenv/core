@@ -377,7 +377,9 @@ const pathTo = (node, matches, trail = []) => {
  *   this browser can do. Left out, rows are plain rows — a picker that pilots
  *   another browser must not offer this one a way to follow.
  * - onPick(page): the row was taken (Enter, plain click). The picker has closed
- *   by then: what happens next is elsewhere, here or in another browser.
+ *   by then: what happens next is elsewhere, here or in another browser. Not
+ *   called for cmd/ctrl+Enter (nor cmd+click) on a row that has an href: the
+ *   browser opens it in another tab and the picker stays open.
  * - onEdit(page): an extra action on the selected row, bound to cmd/ctrl+E.
  * - onClose(): the picker is gone, whether taken, escaped or clicked away.
  */
@@ -463,11 +465,31 @@ export const openPagePicker = ({
     close();
     onPick?.(file);
   };
-  const activate = (row) => {
+  // cmd/ctrl+Enter is the keyboard saying what cmd+click says with the mouse:
+  // that row, but not here — it opens in another tab and the picker stays
+  // exactly as it is, for the next one. Only where the row is a real link: a
+  // picker that pilots another browser has no url this one can follow, and
+  // there Enter means the same with the key as without it.
+  const openInNewTab = (file) => {
+    const href = getHref ? getHref(file) : null;
+    if (!href) {
+      return false;
+    }
+    // noopener, so the new tab starts on its own rather than as this one's
+    // auxiliary: no handle back on this window, and — what matters here — no
+    // copy of this tab's sessionStorage, which says the switcher is open and
+    // would have it open again over there.
+    window.open(href, "_blank", "noopener");
+    return true;
+  };
+  const activate = (row, event) => {
     if (!row) {
       return;
     }
     if (row.type === "file") {
+      if (event && isCommandKey(event) && openInNewTab(row.file)) {
+        return;
+      }
       pick(row.file);
       return;
     }
@@ -599,6 +621,10 @@ export const openPagePicker = ({
     rowContent.className = "row";
     if (href) {
       rowContent.href = href;
+      // For the same reason cmd/ctrl+Enter opens with noopener: whatever way
+      // the browser is asked for another tab, that tab is another page and not
+      // a copy of this one's session.
+      rowContent.rel = "noopener";
     }
     const icon = document.createElement("span");
     icon.className = "kind_icon";
@@ -698,7 +724,7 @@ export const openPagePicker = ({
     }
     if (event.key === "Enter") {
       stop();
-      activate(rows[currentIndex]);
+      activate(rows[currentIndex], event);
       return;
     }
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {

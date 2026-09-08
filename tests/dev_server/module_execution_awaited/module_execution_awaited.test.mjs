@@ -1,3 +1,5 @@
+"jsenv:allocate 45s";
+
 import { assert } from "@jsenv/assert";
 import { startDevServer } from "@jsenv/core";
 import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js";

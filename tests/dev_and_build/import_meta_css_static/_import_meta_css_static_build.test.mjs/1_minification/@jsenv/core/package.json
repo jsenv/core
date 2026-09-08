@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "41.5.7",
+  "version": "41.5.15",
   "type": "module",
   "description": "Tool to develop, test and build js projects",
   "repository": {
@@ -44,7 +44,7 @@
   "scripts": {
     "build": "node --conditions=dev:jsenv ./scripts/build/build.mjs",
     "build:file_size": "node ./scripts/build/build_file_size.mjs --log",
-    "build:packages": "npm run build --workspaces --if-present --conditions=developement",
+    "build:packages": "npm run build -- ./packages/",
     "database:install": "npx @jsenv/database install",
     "database:manage": "node --conditions=dev:jsenv ./packages/backend/database/src/cli/manage.js",
     "database:setup": "npm run database:setup --workspaces --if-present --conditions=dev:jsenv",
@@ -73,14 +73,14 @@
     "test:snapshot_clear": "npx @jsenv/filesystem clear **/tests/**/side_effects/"
   },
   "dependencies": {
-    "@jsenv/ast": "6.10.1",
-    "@jsenv/js-module-fallback": "1.6.4",
-    "@jsenv/plugin-bundling": "2.10.22",
-    "@jsenv/plugin-minification": "1.7.17",
-    "@jsenv/plugin-supervisor": "1.8.19",
-    "@jsenv/plugin-transpilation": "1.7.4",
-    "@jsenv/server": "17.6.3",
-    "@jsenv/sourcemap": "1.4.5",
+    "@jsenv/ast": "6.10.3",
+    "@jsenv/js-module-fallback": "1.6.7",
+    "@jsenv/plugin-bundling": "2.10.27",
+    "@jsenv/plugin-minification": "1.7.20",
+    "@jsenv/plugin-supervisor": "1.8.22",
+    "@jsenv/plugin-transpilation": "1.7.7",
+    "@jsenv/server": "17.6.4",
+    "@jsenv/sourcemap": "1.4.8",
     "react-table": "7.8.0"
   },
   "devDependencies": {
