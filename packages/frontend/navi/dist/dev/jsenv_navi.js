@@ -82516,6 +82516,7 @@ const css$9 = /* css */`@layer navi;
  *   unitSize?: string,
  *   unitSizeRatio?: number,
  *   unitColor?: string,
+ *   unitSpacing?: string | number,
  *   label?: string,
  *   size?: string,
  *   lang?: string,
@@ -82526,6 +82527,13 @@ const css$9 = /* css */`@layer navi;
  *   bold?: boolean,
  *   [key: string]: any,
  * }>}
+ *
+ * @param {string|number} [unitSpacing]
+ *   Gap between the value and the unit when `unitPosition="right"`. Accepts a
+ *   size token (`"s"`, `"m"`, …), a CSS length string, a number (px) or
+ *   `"0"` to glue the unit to the value. Defaults to a regular space
+ *   character. Ignored when `unitPosition="bottom"`, where the unit sits on
+ *   its own line.
  */
 const Quantity = ({
   children,
@@ -82534,6 +82542,7 @@ const Quantity = ({
   unitSize = "smaller",
   unitSizeRatio,
   unitColor,
+  unitSpacing,
   label,
   size,
   lang,
@@ -82572,7 +82581,7 @@ const Quantity = ({
     }), jsxs(Text, {
       className: "navi_quantity_body",
       size: size,
-      spacing: unitBottom ? jsx("br", {}) : undefined,
+      spacing: unitBottom ? jsx("br", {}) : unitSpacing,
       children: [jsx("span", {
         className: "navi_quantity_value",
         children: loading ? jsx(Icon, {

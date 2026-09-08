@@ -49,7 +49,9 @@ import {
 } from "../scroll/wheel_gesture.js";
 
 // While a pointer is on something that travels: said on the document, because
-// what has to be told is the document.
+// what has to be told is the document. The selector below writes it out rather
+// than reading this constant: a substitution in a selector is one the build
+// cannot read, and it ships the whole stylesheet unparsed and uncompressed.
 const GESTURE_ATTRIBUTE = "data-drag-travel-gesture";
 
 // …and while one is actually travelling something, which is a later moment and
@@ -57,7 +59,7 @@ const GESTURE_ATTRIBUTE = "data-drag-travel-gesture";
 const WALKING_ATTRIBUTE = "data-drag-travel-walking";
 
 import.meta.css = /* css */ `
-  :root[${GESTURE_ATTRIBUTE}] {
+  :root[data-drag-travel-gesture] {
     /* The bounce the browser plays when a gesture reaches the end of a page —
        and the swipe that goes back in history with it. Both are the browser
        answering a gesture that is already answered, here, by what the finger is

@@ -45,6 +45,7 @@
             <TableOfContents />
             <IntroductionSection />
             <UnitPositionSection />
+            <UnitSpacingSection />
             <SizeSection />
             <LangSection />
             <IntlUnitSection />
@@ -60,11 +61,12 @@
           <Box row spacing="xs" marginTop="md">
             <Link href="#introduction">1. Introduction</Link>
             <Link href="#unit-position">2. Position de l'unité</Link>
-            <Link href="#size">3. Taille</Link>
-            <Link href="#lang">4. Langue (formatage des nombres)</Link>
-            <Link href="#intl-unit">5. Unités traduites (intl)</Link>
-            <Link href="#loading">6. État de chargement</Link>
-            <Link href="#readonly-disabled">7. readOnly et disabled</Link>
+            <Link href="#unit-spacing">3. Espacement de l'unité</Link>
+            <Link href="#size">4. Taille</Link>
+            <Link href="#lang">5. Langue (formatage des nombres)</Link>
+            <Link href="#intl-unit">6. Unités traduites (intl)</Link>
+            <Link href="#loading">7. État de chargement</Link>
+            <Link href="#readonly-disabled">8. readOnly et disabled</Link>
           </Box>
         </Box>
       );
@@ -155,6 +157,48 @@
                 unitPosition="bottom"
               >
                 {8100000}
+              </Quantity>
+            </Box>
+          </Box>
+        </Box>
+      );
+
+      const UnitSpacingSection = () => (
+        <Box as="section" marginBottom="xl">
+          <Title as="h2">
+            <Link anchor href="#unit-spacing" />
+            Espacement de l'unité
+          </Title>
+          <Paragraph>
+            <code>unitSpacing</code> règle l'écart entre la valeur et l'unité.
+          </Paragraph>
+
+          <Box row spacing="xl" alignY="end">
+            <Box row spacing="s">
+              <Caption>défaut</Caption>
+              <Quantity label="Poids" unit="kB" size="xxl">
+                {42}
+              </Quantity>
+            </Box>
+
+            <Box row spacing="s">
+              <Caption>unitSpacing="2px"</Caption>
+              <Quantity label="Poids" unit="kB" size="xxl" unitSpacing="2px">
+                {42}
+              </Quantity>
+            </Box>
+
+            <Box row spacing="s">
+              <Caption>unitSpacing="0"</Caption>
+              <Quantity label="Poids" unit="kB" size="xxl" unitSpacing="0">
+                {42}
+              </Quantity>
+            </Box>
+
+            <Box row spacing="s">
+              <Caption>unitSpacing="0.5em"</Caption>
+              <Quantity label="Poids" unit="kB" size="xxl" unitSpacing="0.5em">
+                {42}
               </Quantity>
             </Box>
           </Box>

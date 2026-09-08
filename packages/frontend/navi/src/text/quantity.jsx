@@ -67,6 +67,7 @@ const css = /* css */ `
  *   unitSize?: string,
  *   unitSizeRatio?: number,
  *   unitColor?: string,
+ *   unitSpacing?: string | number,
  *   label?: string,
  *   size?: string,
  *   lang?: string,
@@ -77,6 +78,13 @@ const css = /* css */ `
  *   bold?: boolean,
  *   [key: string]: any,
  * }>}
+ *
+ * @param {string|number} [unitSpacing]
+ *   Gap between the value and the unit when `unitPosition="right"`. Accepts a
+ *   size token (`"s"`, `"m"`, …), a CSS length string, a number (px) or
+ *   `"0"` to glue the unit to the value. Defaults to a regular space
+ *   character. Ignored when `unitPosition="bottom"`, where the unit sits on
+ *   its own line.
  */
 export const Quantity = ({
   children,
@@ -85,6 +93,7 @@ export const Quantity = ({
   unitSize = "smaller",
   unitSizeRatio,
   unitColor,
+  unitSpacing,
   label,
   size,
   lang,
@@ -130,7 +139,7 @@ export const Quantity = ({
       <Text
         className="navi_quantity_body"
         size={size}
-        spacing={unitBottom ? <br /> : undefined}
+        spacing={unitBottom ? <br /> : unitSpacing}
       >
         <span className="navi_quantity_value">
           {loading ? (
