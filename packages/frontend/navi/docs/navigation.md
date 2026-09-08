@@ -99,10 +99,12 @@ moved by changing this one line.
 
 Two things about it:
 
-- **it belongs in the routes module, above the `route()` calls it governs** —
-  those read the base url as they are created. In the entry point it would be
-  too late: the import of the routes module runs first, and an import sorter
-  would put it there anyway;
+- **it belongs in the routes module, above `setupRoutes()`** — the base url
+  is read whenever an address is matched or built, and the first match happens
+  right there, as the routes are set up against the current address. In the
+  entry point it would be too late: the import of the routes module runs
+  first, `setupRoutes()` with it, and an import sorter would put the call after
+  anyway;
 - **the server has to answer the document for every address below it.** jsenv's
   dev server already does: an address it finds no file for is answered with the
   closest html file above it, `<dirname>.html` included, so `/admin/places/42`
@@ -341,16 +343,34 @@ a route action, and the redirection once the answer is there.
 
 ```js
 export const ADMIN_ROUTE = route("/admin");
+const anySectionMatchingSignal = anyMatchingRouteSignal([
+  PLACES_ROUTE,
+  USERS_ROUTE,
+]);
 
-routeAction(ADMIN_ROUTE, async () => {
-  const me = await ME.GET.run();
-  firstSectionAllowed(me).redirectTo();
-});
+routeAction(
+  ADMIN_ROUTE,
+  async () => {
+    const me = await ME.GET.run();
+    firstSectionAllowed(me).redirectTo();
+  },
+  // only on the landing itself: "/admin" also matches every section below it
+  () => !anySectionMatchingSignal.value,
+);
 ```
 
 `redirectTo()` replaces the entry rather than stacking onto it, so the back
 button still leaves by where the reader came in — the one property of a
 redirection worth keeping here.
+
+The params are not optional here, for two reasons. A container address matches
+everything below it, so without the gate the landing would fire on every
+section and send the reader back to the first one. And a route action declared
+without params is fetched ahead of the arrival — a link to it preruns it when
+the pointer reaches the link (see [dynamic_import.md](./dynamic_import.md)),
+which for a read is a head start and for a navigation is the navigation
+happening on a hover. Params say the action asks something of the address, and
+that is what keeps it from being prerun.
 
 What it costs, and there is no way around it: the address exists, and something
 is on screen while the request is out. That is honest — the reader IS waiting —

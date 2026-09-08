@@ -13,8 +13,10 @@
  * The button confirming IS the button that was pressed, `action`, `command`,
  * `href` and all: the wait, the busy state and the error callout land where the
  * person pressed, exactly as they would have without the question. Only the
- * first press is intercepted, which is why this resolver sits ahead of the ones
- * reading those props.
+ * first press is intercepted. The resolver sits after the route and command
+ * ones on purpose: what they decide about the button as a whole — a submit
+ * held back while its form has nothing to send, the label a command gives by
+ * default — applies to the first press as much as to the second.
  */
 
 import { useId, useLayoutEffect, useRef, useState } from "preact/hooks";
@@ -71,6 +73,12 @@ const ButtonConfirm = ({
     setAsking(false);
   };
 
+  const { action, command, onActionEnd, onClick } = props;
+  // A submit button does not run anything itself: the form around it does,
+  // with the button as requester, and the outcome never comes back through the
+  // button's own action events. The question then waits on the form.
+  const waitsForForm = !action && command === "--navi-send";
+
   useLayoutEffect(() => {
     if (asking) {
       // The press was aimed at this button, and the button that answers now is
@@ -83,7 +91,33 @@ const ButtonConfirm = ({
       if (found) {
         moveFocusTo(found.target);
       }
-      return;
+      if (!waitsForForm) {
+        return undefined;
+      }
+      const buttonEl = props.ref.current;
+      const formEl = buttonEl.form || buttonEl.closest("form");
+      if (!formEl) {
+        return undefined;
+      }
+      // Same reading as watchActionCompletion (control_action.js): a send that
+      // failed leaves its message on the button that asked, so the question
+      // stays up with it; one that went through is answered.
+      const onFormActionStart = (actionStartEvent) => {
+        const { requester, addSideEffect } = actionStartEvent.detail;
+        if (requester && requester !== buttonEl) {
+          return;
+        }
+        addSideEffect(({ error, aborted }) => {
+          if (error || aborted) {
+            return;
+          }
+          cancel(true);
+        });
+      };
+      formEl.addEventListener("navi_action_start", onFormActionStart);
+      return () => {
+        formEl.removeEventListener("navi_action_start", onFormActionStart);
+      };
     }
     if (restoreFocusRef.current) {
       restoreFocusRef.current = false;
@@ -95,20 +129,19 @@ const ButtonConfirm = ({
         moveFocusTo(buttonEl);
       }
     }
+    return undefined;
   }, [asking]);
 
   if (!asking) {
     return (
       <Next
         {...props}
-        // The first press is the question, not the act — so nothing that acts
-        // is handed to the resolvers below. `type` with them: a submit button
-        // would be given `--navi-send` back.
-        type="button"
+        // The first press is the question, not the act: nothing that acts
+        // reaches the ui. What was decided about the button itself (readOnly,
+        // cta, the label) stays.
         action={undefined}
         command={undefined}
         href={undefined}
-        route={undefined}
         onClick={() => {
           setAsking(true);
         }}
@@ -116,7 +149,6 @@ const ButtonConfirm = ({
     );
   }
 
-  const { action, onActionEnd, onClick } = props;
   return (
     <span
       className="navi_button_confirm"
@@ -143,7 +175,7 @@ const ButtonConfirm = ({
         data-testid={confirmTestId || props["data-testid"]}
         onClick={(e) => {
           onClick?.(e);
-          if (!action) {
+          if (!action && !waitsForForm) {
             // A command runs on the press itself: there is nothing to wait for,
             // the question is answered as soon as it is pressed.
             cancel(true);

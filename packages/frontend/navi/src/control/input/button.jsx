@@ -183,7 +183,10 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  *   button with this question and a "Confirmer"/"Annuler" pair, the second one
  *   does what the button was for. `true` asks navi's default question. The
  *   press stays under the finger and there is nothing to dismiss — "Annuler",
- *   Escape, or the focus leaving puts the button back. Use `<Picker
+ *   Escape, or the focus leaving puts the button back. So does the act itself,
+ *   once it went through: an `action` that succeeded, a submit whose form has
+ *   sent, a command on the press that runs it — while a failure keeps the
+ *   question up, its message on the button that asked. Use `<Picker
  *   type="confirm">` instead when the question is long enough to want a popup,
  *   or when the row has no space for it.
  * @param {import("preact").ComponentChildren} [confirmLabel] Label of the
@@ -208,8 +211,8 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  */
 export const Button = createComponentResolver([
   ButtonFirstResolver,
-  ButtonConfirmResolver,
   ButtonRouteResolver,
   ButtonCommandPropResolver,
+  ButtonConfirmResolver,
   ButtonUI,
 ]);

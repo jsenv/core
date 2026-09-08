@@ -43,8 +43,10 @@ form sits in decides: a popup closes, a slide goes on, a form on a page does
 nothing.
 
 `--navi-reset` is the one to reach for when the form is a place one comes back
-to — an entry created, then the next one — since the fields go back to their
-`defaultValue` and the form is measured against that again:
+to — an entry created, then the next one: the fields go back to their
+`defaultValue`, ready for the next entry. (What the form is measured against
+stays what was just sent — see below — so the emptied form reads as changed,
+and the fields' own constraints are what keep an empty one from being sent.)
 
 ```jsx
 <Form action={createPlaceGroup} command="--navi-reset">

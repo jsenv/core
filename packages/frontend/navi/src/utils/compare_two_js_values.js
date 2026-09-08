@@ -108,6 +108,21 @@ export const compareTwoJsValues = (
     return result;
   };
   const compareComposite = (a, b) => {
+    // An object carrying its signal (a resource relation read through
+    // `.one()` or `.many()`) is that signal in the costume of its current
+    // value: it says "follow this", not "this". Two of them are the same
+    // thing when they follow the same signal, whatever they show right now —
+    // and neither is ever a plain value that happens to look alike. Without
+    // this a params object bound to the relation and one holding the row as
+    // data would pass for equal, and the binding would be handed back for the
+    // row (see bindParams' child cache in actions.js). Decided ahead of
+    // SYMBOL_IDENTITY: the costume is a copy of the row and carries its
+    // identity, which is exactly the sameness that must not count here.
+    const aObjectSignal = a[SYMBOL_OBJECT_SIGNAL];
+    const bObjectSignal = b[SYMBOL_OBJECT_SIGNAL];
+    if (aObjectSignal || bObjectSignal) {
+      return aObjectSignal === bObjectSignal;
+    }
     const aIsArray = Array.isArray(a);
     const bIsArray = Array.isArray(b);
     if (aIsArray !== bIsArray) {
@@ -155,21 +170,6 @@ export const compareTwoJsValues = (
       return true;
     }
     // compare objects
-    // An object carrying its signal (a resource relation read through
-    // `.one()`, a store array) is that signal in the costume of its current
-    // value: it says "follow this", not "this". Two of them are the same
-    // thing when they follow the same signal, whatever they show right now —
-    // and neither is ever a plain value that happens to look alike. Without
-    // this a params object bound to the relation and one holding the row as
-    // data would pass for equal, and the binding would be handed back for the
-    // row (see bindParams' child cache in actions.js). Decided ahead of
-    // SYMBOL_IDENTITY: the costume is a copy of the row and carries its
-    // identity, which is exactly the sameness that must not count here.
-    const aObjectSignal = a[SYMBOL_OBJECT_SIGNAL];
-    const bObjectSignal = b[SYMBOL_OBJECT_SIGNAL];
-    if (aObjectSignal || bObjectSignal) {
-      return aObjectSignal === bObjectSignal;
-    }
     const aIdentity = a[SYMBOL_IDENTITY];
     const bIdentity = b[SYMBOL_IDENTITY];
     if (

@@ -1952,6 +1952,8 @@ const stringifyForDisplay = (
   return String(value);
 };
 
+const SYMBOL_OBJECT_SIGNAL = Symbol.for("navi_object_signal");
+
 /*
  * Deep structural equality for arbitrary JS values — what `===` can't do but this
  * codebase constantly needs: memoization cache keys ({ id: 1 } equal to { id: 1 }),
@@ -2060,6 +2062,21 @@ const compareTwoJsValues = (
     return result;
   };
   const compareComposite = (a, b) => {
+    // An object carrying its signal (a resource relation read through
+    // `.one()` or `.many()`) is that signal in the costume of its current
+    // value: it says "follow this", not "this". Two of them are the same
+    // thing when they follow the same signal, whatever they show right now —
+    // and neither is ever a plain value that happens to look alike. Without
+    // this a params object bound to the relation and one holding the row as
+    // data would pass for equal, and the binding would be handed back for the
+    // row (see bindParams' child cache in actions.js). Decided ahead of
+    // SYMBOL_IDENTITY: the costume is a copy of the row and carries its
+    // identity, which is exactly the sameness that must not count here.
+    const aObjectSignal = a[SYMBOL_OBJECT_SIGNAL];
+    const bObjectSignal = b[SYMBOL_OBJECT_SIGNAL];
+    if (aObjectSignal || bObjectSignal) {
+      return aObjectSignal === bObjectSignal;
+    }
     const aIsArray = Array.isArray(a);
     const bIsArray = Array.isArray(b);
     if (aIsArray !== bIsArray) {
@@ -2539,8 +2556,6 @@ const getActionPrivateProperties = (action) => {
 const setActionPrivateProperties = (action, properties) => {
   actionPrivatePropertiesWeakMap.set(action, properties);
 };
-
-const SYMBOL_OBJECT_SIGNAL = Symbol.for("navi_object_signal");
 
 /*
  * Actions: async callbacks wrapped in reactive state.
@@ -4122,22 +4137,16 @@ const createActionProxyFromSignal = (
     dataSignal: proxySignal("dataSignal", "data"),
   });
   Object.preventExtensions(actionProxy);
-  // Watch for changes in the original paramsSignal and update ours
-  // (original signal wins over any replaceParams calls)
-  weakEffect(
-    [paramsSignal, proxyParamsSignal],
-    (paramsSignalRef, proxyParamsSignalRef) => {
-      const newParams = paramsSignalRef.value;
-      proxyParamsSignalRef.value = newParams;
-    },
-  );
-  weakEffect([action], () => {
-    // eslint-disable-next-line no-unused-expressions
-    proxyParamsSignal.value;
-    _updateTarget({
-      changeCause: "params_signal_change",
-    });
-  });
+
+  // What the proxy shows of the action it stands for is wired BEFORE the
+  // effects below, because those resolve the first target as they are created:
+  // a subscriber registered after them misses that first change and reads the
+  // placeholders assigned above until a SECOND one happens. A proxy answering
+  // `params: undefined` is then taken for a proxy holding no params, and
+  // whoever asks it to run on truthy params does nothing (actionRunEffect's
+  // onChange). The caller's own callbacks (onChange, runOnce, rerunOnChange)
+  // stay below on purpose: they are told about changes, not about the proxy
+  // coming into existence.
   onActionTargetChange((actionTarget) => {
     const currentAction = actionTarget || action;
     nameSignal.value = `[Proxy] ${currentAction.name}`;
@@ -4172,7 +4181,22 @@ const createActionProxyFromSignal = (
     });
     setActionPrivateProperties(actionProxy, proxyPrivateProperties);
   }
-
+  // Watch for changes in the original paramsSignal and update ours
+  // (original signal wins over any replaceParams calls)
+  weakEffect(
+    [paramsSignal, proxyParamsSignal],
+    (paramsSignalRef, proxyParamsSignalRef) => {
+      const newParams = paramsSignalRef.value;
+      proxyParamsSignalRef.value = newParams;
+    },
+  );
+  weakEffect([action], () => {
+    // eslint-disable-next-line no-unused-expressions
+    proxyParamsSignal.value;
+    _updateTarget({
+      changeCause: "params_signal_change",
+    });
+  });
   actionProxy.replaceParams = (newParams) => {
     if (currentAction === action) {
       const currentParams = proxyParamsSignal.value;
@@ -22474,10 +22498,11 @@ let baseUrl;
  * "/places/:placeId". The url "/admin/places/42" matches, and `buildUrl` puts
  * the prefix back.
  *
- * Call it in the routes module, above the `route()` calls it governs — they
- * read the base url as they are created, so an entry point calling it after
- * importing them is too late. The server must serve the document for every
- * address below it (see docs/navigation.md).
+ * Call it in the routes module, above `setupRoutes()`: the base url is read
+ * whenever an address is matched or built, and the first match happens as the
+ * routes are set up — an entry point calling it after importing them is too
+ * late. The server must serve the document for every address below it (see
+ * docs/navigation.md).
  *
  * @param {string} value - the document's own url, absolute or relative.
  */
@@ -47729,6 +47754,16 @@ const ButtonConfirm = ({
     restoreFocusRef.current = restoreFocus;
     setAsking(false);
   };
+  const {
+    action,
+    command,
+    onActionEnd,
+    onClick
+  } = props;
+  // A submit button does not run anything itself: the form around it does,
+  // with the button as requester, and the outcome never comes back through the
+  // button's own action events. The question then waits on the form.
+  const waitsForForm = !action && command === "--navi-send";
   useLayoutEffect(() => {
     if (asking) {
       // The press was aimed at this button, and the button that answers now is
@@ -47741,7 +47776,39 @@ const ButtonConfirm = ({
       if (found) {
         moveFocusTo(found.target);
       }
-      return;
+      if (!waitsForForm) {
+        return undefined;
+      }
+      const buttonEl = props.ref.current;
+      const formEl = buttonEl.form || buttonEl.closest("form");
+      if (!formEl) {
+        return undefined;
+      }
+      // Same reading as watchActionCompletion (control_action.js): a send that
+      // failed leaves its message on the button that asked, so the question
+      // stays up with it; one that went through is answered.
+      const onFormActionStart = actionStartEvent => {
+        const {
+          requester,
+          addSideEffect
+        } = actionStartEvent.detail;
+        if (requester && requester !== buttonEl) {
+          return;
+        }
+        addSideEffect(({
+          error,
+          aborted
+        }) => {
+          if (error || aborted) {
+            return;
+          }
+          cancel(true);
+        });
+      };
+      formEl.addEventListener("navi_action_start", onFormActionStart);
+      return () => {
+        formEl.removeEventListener("navi_action_start", onFormActionStart);
+      };
     }
     if (restoreFocusRef.current) {
       restoreFocusRef.current = false;
@@ -47753,28 +47820,22 @@ const ButtonConfirm = ({
         moveFocusTo(buttonEl);
       }
     }
+    return undefined;
   }, [asking]);
   if (!asking) {
     return jsx(Next, {
       ...props,
-      // The first press is the question, not the act — so nothing that acts
-      // is handed to the resolvers below. `type` with them: a submit button
-      // would be given `--navi-send` back.
-      type: "button",
+      // The first press is the question, not the act: nothing that acts
+      // reaches the ui. What was decided about the button itself (readOnly,
+      // cta, the label) stays.
       action: undefined,
       command: undefined,
       href: undefined,
-      route: undefined,
       onClick: () => {
         setAsking(true);
       }
     });
   }
-  const {
-    action,
-    onActionEnd,
-    onClick
-  } = props;
   return jsxs("span", {
     className: "navi_button_confirm",
     ref: askingRef,
@@ -47800,7 +47861,7 @@ const ButtonConfirm = ({
       "data-testid": confirmTestId || props["data-testid"],
       onClick: e => {
         onClick?.(e);
-        if (!action) {
+        if (!action && !waitsForForm) {
           // A command runs on the press itself: there is nothing to wait for,
           // the question is answered as soon as it is pressed.
           cancel(true);
@@ -48032,7 +48093,10 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  *   button with this question and a "Confirmer"/"Annuler" pair, the second one
  *   does what the button was for. `true` asks navi's default question. The
  *   press stays under the finger and there is nothing to dismiss — "Annuler",
- *   Escape, or the focus leaving puts the button back. Use `<Picker
+ *   Escape, or the focus leaving puts the button back. So does the act itself,
+ *   once it went through: an `action` that succeeded, a submit whose form has
+ *   sent, a command on the press that runs it — while a failure keeps the
+ *   question up, its message on the button that asked. Use `<Picker
  *   type="confirm">` instead when the question is long enough to want a popup,
  *   or when the row has no space for it.
  * @param {import("ignore:preact").ComponentChildren} [confirmLabel] Label of the
@@ -48055,7 +48119,7 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  *   (it wears it itself) and loses the shrink under the finger, which has
  *   nothing left to scale but the interactive area itself.
  */
-const Button = createComponentResolver([ButtonFirstResolver, ButtonConfirmResolver, ButtonRouteResolver, ButtonCommandPropResolver, ButtonUI]);
+const Button = createComponentResolver([ButtonFirstResolver, ButtonRouteResolver, ButtonCommandPropResolver, ButtonConfirmResolver, ButtonUI]);
 
 installImportMetaCssBuild(import.meta);
 const css$O = /* css */`.navi_control_swap {

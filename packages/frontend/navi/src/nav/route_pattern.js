@@ -24,10 +24,11 @@ let baseUrl;
  * "/places/:placeId". The url "/admin/places/42" matches, and `buildUrl` puts
  * the prefix back.
  *
- * Call it in the routes module, above the `route()` calls it governs — they
- * read the base url as they are created, so an entry point calling it after
- * importing them is too late. The server must serve the document for every
- * address below it (see docs/navigation.md).
+ * Call it in the routes module, above `setupRoutes()`: the base url is read
+ * whenever an address is matched or built, and the first match happens as the
+ * routes are set up — an entry point calling it after importing them is too
+ * late. The server must serve the document for every address below it (see
+ * docs/navigation.md).
  *
  * @param {string} value - the document's own url, absolute or relative.
  */
