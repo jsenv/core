@@ -897,8 +897,8 @@ export const createBuildSpecifierManager = ({
     },
 
     prepareResyncResourceHints: ({ registerHtmlRefine }) => {
-      const hintToInjectMap = new Map();
       registerHtmlRefine((htmlAst, { registerHtmlMutation, htmlUrlInfo }) => {
+        const hintToInjectMap = new Map();
         visitHtmlNodes(htmlAst, {
           link: (node) => {
             if (getHtmlNodeAttribute(node, "jsenv-ignore") !== undefined) {

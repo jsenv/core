@@ -1,6 +1,6 @@
 ---
 name: build
-description: How the jsenv build decides what to transpile, what to keep and where files land — the browser target (shared with the dev server), tree-shaking and package.json sideEffects, per-stylesheet css transforms, why the entry points of one build() are not independent, chunk layout and isolation. Use when working on src/build, the bundling/transpilation/side-effect plugins or runtime-compat, and whenever a build produces something unexpected.
+description: How the jsenv build decides what to transpile, what to keep and where files land — the browser target (shared with the dev server), tree-shaking and package.json sideEffects, per-stylesheet css transforms, why the entry points of one build() are not independent, chunk layout and isolation, resource hints. Use when working on src/build, the bundling/transpilation/side-effect plugins or runtime-compat, and whenever a build produces something unexpected.
 ---
 
 ## What we want
@@ -184,3 +184,40 @@ separates two _different_ modules whose basename collides) and in
 (`determineDirectoryPath` — the ancestor chain read from every reference, not
 just the first, so a shared chunk does not move the day another group asks for
 it first).
+
+## Resource hints are completed, never invented
+
+Bundling splits an entry point into files the source never had, the
+`<package>_node_modules.js` chunk first of all, and a module script runs only
+once its whole static graph is fetched. So every default build of a module
+entry point ships a serial waterfall: the entry is downloaded, then its import
+of the chunk is discovered, then the chunk is downloaded. A `modulepreload` on
+the chunk removes the second wait, and the build knows exactly which chunks
+need one.
+
+It still does not write them on its own. **The hint the author writes on the
+entry point is the switch**: the build updates it to the built file and adds a
+twin for each generated chunk the entry point imports statically, nothing
+more. What we want from this:
+
+- **Discovery.** A hint in the source html tells whoever reads the page what
+  is preloaded and that preloading is a thing they control. A link that only
+  exists in `dist/` is invisible until someone diffs a build.
+- **Control.** A hint that appeared on its own has no off switch short of an
+  option nobody knows to look for. One the author wrote is removed by deleting
+  a line, and the generated twins go with it.
+- **One rule for every hint.** `preload`, `modulepreload`, `prefetch` all
+  behave the same way: written by hand, kept in sync by the build. An
+  automatic `modulepreload` would be the one hint with different rules.
+
+Automatic injection was implemented and reverted (2026-09): it is the right
+performance default and the wrong ownership. Do not reintroduce it; the
+answer to "users do not know" is the user documentation
+([c_build.md §2.7](../../../docs/users/c_build/c_build.md#27-resource-hints)),
+which is where that gap actually was. Dynamic-import chunks get no twin
+either way: the browser does not wait for them.
+
+Reference: `prepareResyncResourceHints` in
+[build_specifier_manager.js](../../../src/build/build_specifier_manager.js),
+the `generatedToShareCode` flag set in
+[bundle_js_modules.js](../../../packages/internal/plugin-bundling/src/js_module/bundle_js_modules.js).

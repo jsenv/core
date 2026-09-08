@@ -2849,6 +2849,9 @@ ${lines.join("\n")}`,
   const willPrerunSet = new Set();
   const willRunSet = new Set();
   const willPromoteSet = new Set(); // prerun -> run requested
+  // Asked for, already under way: the request adds no work, and answers with
+  // the run that is already carrying it (see join_active_runs below).
+  const willJoinSet = new Set();
   const staysRunningSet = new Set();
   const staysAbortedSet = new Set();
   const staysFailedSet = new Set();
@@ -2900,8 +2903,11 @@ ${lines.join("\n")}`,
           } else {
             willRunSet.add(action);
           }
+        } else {
+          // The request performs nothing, and still has to be answered: what
+          // the caller asked for is the answer, not the running.
+          willJoinSet.add(action);
         }
-        // Otherwise, ignore the request (action stays as-is)
       } else if (isPrerun) {
         willPrerunSet.add(action);
       } else {
@@ -2928,6 +2934,7 @@ ${lines.join("\n")}`,
         // Special case: action was prerun but not yet requested to run
         // Just promote it to "run requested" without rerunning
         willPromoteSet.add(actionToRun);
+        willJoinSet.add(actionToRun);
         continue;
       }
       handleActionRequest(actionToRun, "run");
@@ -3072,6 +3079,27 @@ ${lines.join("\n")}`);
     // Execute promotions (prerun -> run requested)
     for (const actionToPromote of willPromoteSet) {
       actionToPromote.isPrerunSignal.value = false;
+    }
+  }
+
+  // A run asked for an action that is already running, or that already holds
+  // the answer, performs nothing — and answers all the same, with the run
+  // that IS carrying it. `await action.run()` then means the same thing to
+  // every caller: the second one waits for the first one's request and reads
+  // the same data, instead of being handed `undefined` before the network has
+  // said anything. See the run() JSDoc.
+  {
+    for (const actionToJoin of willJoinSet) {
+      const runningPromise = actionPromiseMap.get(actionToJoin);
+      if (runningPromise) {
+        hasAsync = true;
+        resultArray.push({ type: "async", promise: runningPromise });
+      } else {
+        resultArray.push({
+          type: "sync",
+          result: actionToJoin.dataSignal.peek(),
+        });
+      }
     }
   }
   if (DEBUG$2) {
@@ -3228,10 +3256,15 @@ const createAction = (callback, rootOptions = {}) => {
       return dispatchSingleAction(action, "prerun", options);
     };
     /**
-     * Requests the action's data. An action that is already RUNNING or
-     * COMPLETED already has it, so the request is a no-op there: use `rerun()`
-     * to force a fresh run ("refresh", "check now", any explicit user intent to
-     * go back to the network).
+     * Requests the action's data, and resolves with it.
+     *
+     * An action that is already RUNNING or COMPLETED already has it, so the
+     * request starts nothing — it JOINS: the caller waits for the run that is
+     * already carrying the question and reads the same answer. Which is what
+     * makes `await action.run()` say one thing to every caller, whether it is
+     * the one that asked first or the one that arrived while the request was
+     * out. Use `rerun()` to force a fresh run ("refresh", "check now", any
+     * explicit user intent to go back to the network).
      */
     const run = (options) => {
       action.debug(`${action}.run(${stringifyForDisplay(options)})`);

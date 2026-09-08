@@ -646,38 +646,28 @@ If the `runtimeCompat` doesn't support importmap, jsenv converts js modules to t
 
 ## 2.7 Resource hints
 
-During the build process, any resource hints (like `<link rel="preload">`) in the source files are updated to reflect the built files. If necessary, the build will also inject or remove resource hints.
+During the build, resource hints (`<link rel="modulepreload">`, `<link rel="preload">` and friends) written in the source files are updated to designate the built files. The build also injects hints for the files it generates, and removes hints that no longer designate anything.
 
 ### 2.7.1 Resource hint injection
 
-For example, if your project contains preload links for `boot.js` and `app.js`:
+Bundling creates files the source never had: the chunk holding the code shared with dynamic imports, the `<package>_node_modules.js` chunk holding the dependencies (see [2.3 Bundling](#23-bundling)). A module script runs only once its whole static graph is fetched, and the browser discovers that graph one level at a time: the entry point is downloaded, then its `import` of the generated chunk is found, then the chunk is downloaded. Two transfers in series, and nothing runs before both are done.
 
-```
-project/
- src/
-   boot.js
-   app.js
-   index.html
-   ...many js files...
-```
+**Write a `modulepreload` for every module entry point.** It costs one line and removes the second wait: the browser fetches the generated chunk together with the entry point instead of after it. On a mobile connection that is a full round trip before the first line of your app runs.
 
 ```html
-<link rel="preload" href="./boot.js" as="script" crossorigin="" />
-<link rel="preload" href="./app.js" as="script" crossorigin="" />
+<link rel="modulepreload" href="./main.js" />
+<script type="module" src="./main.js"></script>
 ```
 
-The build might introduce new preloads to improve code reuse:
+The build updates the hint to the built file and, for each generated chunk the entry point imports statically, adds a twin hint right after it, with the same `rel`, `as`, `type` and `crossorigin`:
 
 ```html
-<link rel="preload" href="/js/boot.js?v=12345678" as="script" crossorigin="" />
-<link
-  rel="preload"
-  href="/js/generated.js?v=12367845"
-  as="script"
-  crossorigin=""
-/>
-<link rel="preload" href="/js/app.js?v=87654321" as="script" crossorigin="" />
+<link rel="modulepreload" href="/js/main.js?v=ff6c0e32" />
+<link rel="modulepreload" href="/frontend_node_modules.js?v=71d13c5d" />
+<script type="module" src="/js/main.js?v=ff6c0e32"></script>
 ```
+
+The hint you write is the switch: the build never invents one, so a page without a hint is left as is, and removing yours removes the generated ones with it. That keeps what is preloaded visible in your source and under your control. `modulepreload` is the `rel` for a `<script type="module">` entry point; `rel="preload" as="script"` is for classic scripts. Chunks reached only by a dynamic import get no hint: the browser does not wait for them, and it may never need them.
 
 ### 2.7.2 Resource hint removal
 
