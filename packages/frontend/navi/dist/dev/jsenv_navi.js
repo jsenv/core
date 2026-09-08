@@ -65660,52 +65660,59 @@ const ListContent = ({
   children
 }) => {
   const listProps = useContext(BoxForwardedPropsContext);
-  return jsx(Box, {
-    className: "navi_list_scroll_container",
-    overflow: overflow,
-    overflowX: overflowX,
-    overflowY: overflowY,
-    ...scrollBoxPaddingProps,
-    children: jsx(UnorderedList, {
-      role: role,
-      fallback: fallback,
-      fallbackShown: fallbackShown,
-      searchFallback: searchFallback,
-      searchFallbackShown: searchFallbackShown,
-      loadingPlaceholderShown: loadingPlaceholderShown,
-      error: error,
-      searchNoMatchMode: searchNoMatchMode,
-      separator: separator,
-      itemTransition: itemTransition,
-      expandX: expandX
-      // Deliberately not expandY here (unlike expandX above): the outer
-      // .navi_list_container already gets its own expandY treatment (see
-      // ListUI's own Box above) to fill whatever space its *own* parent
-      // gives it (e.g. a flex-column ancestor's flex-grow) — the <ul>
-      // itself must stay auto-height regardless, or it gets capped to
-      // match .navi_list_scroll_container's own (possibly much smaller)
-      // flex-resolved height instead of its real content height. That
-      // breaks two things at once: virtual scroll's own filler sizing
-      // (nothing to overflow into the scroll container in the first
-      // place) and any sticky List.Item header/footer inside it (their
-      // sticky "containing block" — the <ul>'s own box — would be
-      // artificially small, so they run out of room to stay stuck well
-      // before the user has actually scrolled through all the content).
-      ,
-      horizontal: horizontal,
-      spacing: spacing,
-      columns: columns,
-      itemColumns: itemColumns,
-      ...listProps,
-      tracker: tracker,
-      renderWindow: renderWindow,
-      virtual: virtual,
-      children: jsx(PendingScrollRefContext.Provider, {
-        value: pendingScrollRef,
-        children: children
+  return (
+    // Every provider the list puts around its items stands OUTSIDE the <ul>:
+    // the walk that gives the rows their places (see ListDeclaredChildren) is
+    // over the <ul>'s children, and one component between it and the caller's
+    // rows is one child — all the rows would then stand in a single slot, and
+    // reordering them would move nothing.
+    jsx(PendingScrollRefContext.Provider, {
+      value: pendingScrollRef,
+      children: jsx(Box, {
+        className: "navi_list_scroll_container",
+        overflow: overflow,
+        overflowX: overflowX,
+        overflowY: overflowY,
+        ...scrollBoxPaddingProps,
+        children: jsx(UnorderedList, {
+          role: role,
+          fallback: fallback,
+          fallbackShown: fallbackShown,
+          searchFallback: searchFallback,
+          searchFallbackShown: searchFallbackShown,
+          loadingPlaceholderShown: loadingPlaceholderShown,
+          error: error,
+          searchNoMatchMode: searchNoMatchMode,
+          separator: separator,
+          itemTransition: itemTransition,
+          expandX: expandX
+          // Deliberately not expandY here (unlike expandX above): the outer
+          // .navi_list_container already gets its own expandY treatment (see
+          // ListUI's own Box above) to fill whatever space its *own* parent
+          // gives it (e.g. a flex-column ancestor's flex-grow) — the <ul>
+          // itself must stay auto-height regardless, or it gets capped to
+          // match .navi_list_scroll_container's own (possibly much smaller)
+          // flex-resolved height instead of its real content height. That
+          // breaks two things at once: virtual scroll's own filler sizing
+          // (nothing to overflow into the scroll container in the first
+          // place) and any sticky List.Item header/footer inside it (their
+          // sticky "containing block" — the <ul>'s own box — would be
+          // artificially small, so they run out of room to stay stuck well
+          // before the user has actually scrolled through all the content).
+          ,
+          horizontal: horizontal,
+          spacing: spacing,
+          columns: columns,
+          itemColumns: itemColumns,
+          ...listProps,
+          tracker: tracker,
+          renderWindow: renderWindow,
+          virtual: virtual,
+          children: children
+        })
       })
     })
-  });
+  );
 };
 // Where the items sit is a question about the track (the <ul>), not about the
 // frame around it: the frame's only child is the scroll box, which fills it and
@@ -65910,17 +65917,14 @@ const useListScrollSync = ({
         item
       });
     };
-    const {
-      start,
-      end
-    } = renderWindowRef.current;
-    const isInWindow = index >= start && index < end;
-    if (isInWindow) {
-      const itemEl = findRowElement(getListEl(), item.id);
-      if (itemEl) {
-        scrollItemIntoView(itemEl);
-        return;
-      }
+
+    // Whether the row is drawn is asked of the dom, not of the render window:
+    // the window says what a run draws, and a list whose rows are declared one
+    // by one has them all in the dom whatever the window says.
+    const itemEl = findRowElement(getListEl(), item.id);
+    if (itemEl) {
+      scrollItemIntoView(itemEl);
+      return;
     }
     // Not in DOM — shift the render window. The item will read
     // pendingScrollRef on mount and scroll into view.
@@ -66042,9 +66046,8 @@ const useListScrollSync = ({
   }, []);
   // Watch scores of the top renderBudget items.
   // When scores change during an active search, scroll to top to reveal the most relevant items.
-  // When search becomes empty, restore the scroll position from before the search started.
-  // We save the first-visible item ID so restoration is item-precise
-  // and survives render-window shifts or item reordering.
+  // When search becomes empty, put the list back at the offset (and the render
+  // window) it was at when the search started — see docs/scroll.md.
 
   // NOTE POUR LE JOUR OU ON A LE MULTISELECT:
   // Lorsqu'on selectionne quelque chose pendant une recherche, alors ensuite meme si on clear

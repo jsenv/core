@@ -72,7 +72,8 @@ const sw = self.__sw__;
    * "activate" and answers the `{ action }` message protocol.
    *
    * Requests for urls absent from `resources`, and non GET/HEAD requests, are
-   * left to the browser: this is a precache, not a runtime cache.
+   * left to the browser: this is a precache, not a runtime cache. The one
+   * exception is `navigationFallback`, for the addresses of a single page app.
    *
    * @param {Object} [options]
    * @param {string} [options.name="jsenv"] Prefix of the caches created by this
@@ -108,6 +109,19 @@ const sw = self.__sw__;
    *   itself: the browser must refetch it to detect an update. That object
    *   lists the entry html (`/main.html`), not `/`: keep `"/": {}` when the
    *   page is reached at the origin root.
+   * @param {Function|null} [options.navigationFallback=null] Called with
+   *   `{ url, request }` (`url` is a `URL`) for each navigation to an address
+   *   absent from `resources`. Returns the url whose cached response answers
+   *   it — one of the `resources` keys, typically `"/"`, resolved against the
+   *   worker url like them — or a falsy value to let it reach the network.
+   *   This is how a single page app with path routes (`/me/games`,
+   *   `/games/123`) opens from its own build, offline included, instead of
+   *   asking the server for an html only it knows how to map to the entry:
+   *   `({ url }) => (/\.[^/]+$/.test(url.pathname) ? null : "/")` answers
+   *   every address except a file (`/games/123/share.png`). Left at `null`,
+   *   those navigations reach the network as any unlisted request does, with
+   *   a consequence for update UIs: the document then runs the latest
+   *   deployment while the active worker still caches the previous one.
    * @param {Object<string, Function>} [options.actions={}] Extra handlers
    *   callable from the page via @jsenv/pwa `sendMessage({ action, payload })`,
    *   see `registerActions`. The built-in names ("inspect", "skipWaiting",
@@ -130,6 +144,7 @@ const sw = self.__sw__;
     resources = {
       "/": {},
     },
+    navigationFallback = null,
     actions = {},
     install = () => {},
     activate = () => {},
@@ -157,6 +172,14 @@ const sw = self.__sw__;
 
     const logger = createLogger({ logLevel, logBackgroundColor, logColor });
     resources = resolveResources(resources);
+    if (
+      navigationFallback !== null &&
+      typeof navigationFallback !== "function"
+    ) {
+      throw new TypeError(
+        `navigationFallback should be a function, got ${navigationFallback}`,
+      );
+    }
     const cacheName = createCacheName(name, { version, resources });
     const label = cacheName;
 
@@ -296,25 +319,55 @@ ${failureListing.join("\n")}`,
         if (request.method !== "GET" && request.method !== "HEAD") {
           return;
         }
-        let requestWasCachedOnInstall = false;
-        if (resources[request.url]) {
-          requestWasCachedOnInstall = true;
-        } else {
-          for (const url of Object.keys(resources)) {
-            if (resources[url].versionedUrl === request.url) {
-              requestWasCachedOnInstall = true;
-              break;
-            }
-          }
-        }
-        if (!requestWasCachedOnInstall) {
-          // not returning a response -> browser handles the request as usual
+        // respondWith must be called synchronously inside the "fetch" listener
+        if (isCachedOnInstall(request.url)) {
+          fetchEvent.respondWith(handleFetchEvent(fetchEvent, request));
           return;
         }
-        // respondWith must be called synchronously inside the "fetch" listener
-        fetchEvent.respondWith(handleFetchEvent(fetchEvent));
+        if (navigationFallback && request.mode === "navigate") {
+          const fallbackUrl = getNavigationFallbackUrl(request);
+          if (fallbackUrl) {
+            fetchEvent.respondWith(handleFetchEvent(fetchEvent, fallbackUrl));
+            return;
+          }
+        }
+        // not returning a response -> browser handles the request as usual
       });
-      const handleFetchEvent = async (fetchEvent) => {
+      const isCachedOnInstall = (url) => {
+        if (resources[url]) {
+          return true;
+        }
+        for (const resourceUrl of Object.keys(resources)) {
+          if (resources[resourceUrl].versionedUrl === url) {
+            return true;
+          }
+        }
+        return false;
+      };
+      const getNavigationFallbackUrl = (request) => {
+        const url = new URL(request.url);
+        const fallback = navigationFallback({ url, request });
+        if (!fallback) {
+          return null;
+        }
+        if (typeof fallback !== "string") {
+          logger.warn(
+            `navigationFallback should return a url or a falsy value, got ${fallback} -> delegate to navigator`,
+          );
+          return null;
+        }
+        const fallbackUrl = asAbsoluteUrl(fallback);
+        if (!resources[fallbackUrl]) {
+          logger.warn(
+            `navigationFallback returned "${fallback}" which is not one of the resources -> delegate to navigator`,
+          );
+          return null;
+        }
+        return fallbackUrl;
+      };
+      // cacheKey is the request itself, or the url returned by
+      // navigationFallback for a navigation to an app route
+      const handleFetchEvent = async (fetchEvent, cacheKey) => {
         const request = fetchEvent.request;
         const relativeUrl = asRelativeUrl(request.url);
         logger.debug(`fetch "${relativeUrl}" (${label})`);
@@ -338,9 +391,15 @@ ${failureListing.join("\n")}`,
           logger.debug(`open ${cacheName} cache`);
           const cache = await self.caches.open(cacheName);
           logger.debug(`search response matching this request in cache`);
-          const responseFromCache = await cache.match(request);
+          const responseFromCache = await cache.match(cacheKey);
           if (responseFromCache) {
-            logger.info(`${relativeUrl} -> use cache`);
+            if (cacheKey === request) {
+              logger.info(`${relativeUrl} -> use cache`);
+            } else {
+              logger.info(
+                `${relativeUrl} -> use cache of ${asRelativeUrl(cacheKey)}`,
+              );
+            }
             return responseFromCache;
           }
           logger.info(`${relativeUrl} -> delegate to navigator`);

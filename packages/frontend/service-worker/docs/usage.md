@@ -37,6 +37,31 @@ handled by the browser as usual.
 `"/": {}` is listed by hand because the build lists the entry as
 `/main.html`, while a page reached at the origin root is a request for `/`.
 
+### Single page app with path routes
+
+When the server answers the entry html for every address of the app
+(`/me/games`, `/games/123`), tell the worker to do the same from its cache:
+
+```js
+self.__sw__.init({
+  name: "my-app",
+  resources: {
+    "/": {},
+    ...(self.resourcesFromJsenvBuild || {}),
+  },
+  navigationFallback: ({ url }) => (/\.[^/]+$/.test(url.pathname) ? null : "/"),
+});
+```
+
+The function is called for every navigation to an address absent from
+`resources`, with `url` (a `URL`) and `request`. It returns the `resources`
+key whose cached response answers it, or a falsy value to let the request
+reach the network — here, any address whose last path segment has an
+extension (`/games/123/share.png` is a real file, not a route). The app then
+opens offline on any of its routes, and after a deployment a reopened route
+runs the build the active worker caches rather than the one the server just
+started to send.
+
 ## Registering from the page
 
 Plain registration works:

@@ -54,8 +54,8 @@ small and its JSDoc is right there. Each source of knowledge has one job:
     `importScripts` (the browser throws); this package targets classic
     workers.
 - **`init` options** (all optional): `name`, `version`, `meta`, `logLevel`,
-  `logBackgroundColor`, `logColor`, `resources`, `actions`, `install`,
-  `activate` — see the JSDoc. Anything else (cache expiration, per-resource
+  `logBackgroundColor`, `logColor`, `resources`, `navigationFallback`,
+  `actions`, `install`, `activate` — see the JSDoc. Anything else (cache expiration, per-resource
   fetch strategies, runtime caching of unlisted urls, precache priorities) is
   NOT supported; don't invent options.
 - **`resources` is a precache list, nothing more.** Keys are urls (relative
@@ -66,6 +66,20 @@ small and its JSDoc is right there. Each source of knowledge has one job:
   served from the worker's cache). A request for anything not listed — and
   any non GET/HEAD request — is left to the browser as if there were no
   worker.
+- **A path-routed single page app needs `navigationFallback`.** `resources`
+  is built from the _files_ of the build, and such an app has one html file
+  for many addresses: `/`, `/me/games` and `/games/123` are all served by the
+  entry html, and only the server knows that. Without the option the worker
+  answers `/` from cache and lets every other address reach the network, so
+  the app does not open offline on its routes and, after every deployment,
+  the document runs the latest build while the active worker still caches
+  the previous one (the "same number on both sides of the arrow" case in
+  `@jsenv/pwa`'s docs). `navigationFallback({ url, request })` is called for
+  every navigation to an unlisted address and returns the `resources` key
+  whose cached response answers it (`"/"`), or a falsy value to let it reach
+  the network — a last path segment with an extension, say:
+  `/games/123/share.png` is a real file, not a route. There is no default
+  rule: the function decides everything.
 - **Never list the worker script itself** in `resources`: the browser must
   refetch it to detect an update. jsenv's build leaves it out of
   `self.resourcesFromJsenvBuild` and never versions its url.
@@ -120,6 +134,9 @@ small and its JSDoc is right there. Each source of knowledge has one job:
   `self.resourcesFromJsenvBuild`.
 - Add runtime caching by listening to `fetch` beside `init`: the worker
   answers only for listed urls by design; anything else is the browser's.
+  Same for a second `fetch` listener answering app routes with the cached
+  html: that is `navigationFallback`, and a hand-written one must mirror the
+  precached urls and guess the cache name to stay out of the worker's way.
 - Rely on `addCacheKey` to make a url part of the app's offline set: it fills
   the current worker's cache only; the next worker version starts again from
   `resources`.

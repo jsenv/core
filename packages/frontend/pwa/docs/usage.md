@@ -111,6 +111,12 @@ new worker installs and waits next to a page that is already up to date. A UI
 saying only "a new version is available" never notices; a UI printing version
 numbers prints the same number on both sides of its arrow.
 
+With a path-routed single page app this is not an accident to handle but what
+happens after every deployment: a reopened route (`/me/games`) is not a
+precached url, so the document comes from the network until the worker is told
+to answer app routes from its cache — `navigationFallback` in
+`@jsenv/service-worker`.
+
 Neither `state.meta` nor `state.update.meta` can settle it: both describe
 _workers_, and no worker describes the document currently executing. So a
 version-aware UI must compare `state.update.meta` with what the running bundle

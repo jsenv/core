@@ -76,6 +76,12 @@ self.__sw__.init({
     "/assets/main.js": { version: "a7b3c9d" },
   },
 
+  // Single page app with path routes: called for any navigation to an
+  // address absent from resources, returns the url (one of resources) whose
+  // cached response answers it, or a falsy value to let it reach the network
+  navigationFallback: ({ url, request }) =>
+    /\.[^/]+$/.test(url.pathname) ? null : "/",
+
   // Bump when the new worker script must NOT be hot-updated by @jsenv/pwa
   // (forces a full reload after update)
   version: "1",
@@ -96,7 +102,8 @@ self.__sw__.init({
 ```
 
 Requests for urls not listed in `resources` are untouched: the browser handles
-them as usual.
+them as usual — unless `navigationFallback` is set, for the addresses of a
+single page app (see [docs/usage.md](./docs/usage.md#single-page-app-with-path-routes)).
 
 ## Integration with jsenv build
 
