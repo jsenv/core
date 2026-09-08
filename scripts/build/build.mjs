@@ -1,101 +1,140 @@
-import { build } from "@jsenv/core/src/build/build.js";
-import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs";
-import { jsenvPluginPreact } from "@jsenv/plugin-preact";
+/*
+ * Build files
+ * Usage:
+ * npm run build              | Build only @jsenv/core
+ * npm run build @jsenv/navi  | Build only @jsenv/navi
+ * npm run build ./packages/  | Build every package inside ./packages/
+ * npm run build packages     | Same as above
+ * npm run build .            | Build everything (@jsenv/core + every package)
+ */
 
-const clientRuntimeCompat = {
-  chrome: "89",
+import { spawnSync } from "node:child_process";
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+
+const rootDirectoryUrl = new URL("../../", import.meta.url);
+
+const CORE_BUILD = {
+  name: "@jsenv/core",
+  url: rootDirectoryUrl,
+  build: async () => {
+    await import("./build_core.mjs");
+  },
 };
 
-await build({
-  sourceDirectoryUrl: import.meta.resolve("../../"),
-  buildDirectoryUrl: import.meta.resolve("../../dist/"),
-  outDirectoryUrl: import.meta.resolve("./.jsenv/"), // for debug
-  entryPoints: {
-    "./src/main.js": {
-      buildRelativeUrl: "./jsenv_core.js",
-      runtimeCompat: { node: "20.0" },
-      scenarioPlaceholders: false,
-      plugins: [
-        jsenvPluginCommonJs({
-          include: {
-            "file:///**/node_modules/ws/": true,
-            "file:///**/node_modules/@babel/parser/": true,
-            "file:///**/node_modules/postcss/": true,
-            "file:///**/node_modules/rollup/dist/native.js": true,
-            "file:///**/node_modules/browserslist/": true,
-          },
-        }),
-      ],
-      packageConditions: {
-        development: {
-          "@jsenv/server/": false,
+const readWorkspaceBuildArray = () => {
+  const rootPackage = JSON.parse(
+    readFileSync(new URL("./package.json", rootDirectoryUrl), "utf8"),
+  );
+  const workspaceBuildMap = new Map();
+  for (const pattern of rootPackage.workspaces) {
+    if (!pattern.endsWith("/*")) {
+      throw new Error(`unsupported workspace pattern "${pattern}"`);
+    }
+    const parentDirectoryUrl = new URL(pattern.slice(0, -1), rootDirectoryUrl);
+    let entryArray;
+    try {
+      entryArray = readdirSync(parentDirectoryUrl, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+    for (const entry of entryArray) {
+      if (!entry.isDirectory() || entry.name[0] === ".") {
+        continue;
+      }
+      const packageDirectoryUrl = new URL(`${entry.name}/`, parentDirectoryUrl);
+      if (workspaceBuildMap.has(packageDirectoryUrl.href)) {
+        continue;
+      }
+      let packageObject;
+      try {
+        packageObject = JSON.parse(
+          readFileSync(new URL("./package.json", packageDirectoryUrl), "utf8"),
+        );
+      } catch {
+        continue;
+      }
+      workspaceBuildMap.set(packageDirectoryUrl.href, {
+        name: packageObject.name,
+        url: packageDirectoryUrl,
+        buildable: Boolean(packageObject.scripts?.build),
+        build: async () => {
+          const { status } = spawnSync(
+            "npm",
+            ["run", "build", "--if-present"],
+            {
+              cwd: fileURLToPath(packageDirectoryUrl),
+              stdio: "inherit",
+              shell: process.platform === "win32",
+            },
+          );
+          if (status !== 0) {
+            throw new Error(
+              `build failed for ${packageObject.name} (exit code ${status})`,
+            );
+          }
         },
-      },
-      packageDependencies: {
-        "@jsenv/plugin-transpilation": "ignore",
-      },
-      directoryReferenceEffect: {
-        // @jsenv/core root dir
-        [import.meta.resolve("../../")]: "resolve",
-        "file://**/babel_helpers/": "copy",
-        "**/*": "error",
-      },
-    },
-    "./src/kitchen/client/inline_content.js": {
-      buildRelativeUrl: "./client/inline_content/inline_content.js",
-      runtimeCompat: clientRuntimeCompat,
-    },
-    "./src/plugins/autoreload/client/autoreload.js": {
-      buildRelativeUrl: "./client/autoreload/autoreload.js",
-      runtimeCompat: clientRuntimeCompat,
-    },
-    "./src/plugins/html_syntax_error_fallback/client/html_syntax_error.html": {
-      buildRelativeUrl: "./client/html_syntax_error/html_syntax_error.html",
-      runtimeCompat: clientRuntimeCompat,
-    },
-    "./src/plugins/drop_to_open/client/drop_to_open.js": {
-      buildRelativeUrl: "./client/drop_to_open/drop_to_open.js",
-      runtimeCompat: clientRuntimeCompat,
-    },
-    "./src/plugins/import_meta_css/client/import_meta_css_dev.js": {
-      buildRelativeUrl: "./client/import_meta_css/import_meta_css_dev.js",
-      runtimeCompat: clientRuntimeCompat,
-    },
-    "./src/plugins/import_meta_css/client/import_meta_css_build.js": {
-      buildRelativeUrl: "./client/import_meta_css/import_meta_css_build.js",
-      runtimeCompat: clientRuntimeCompat,
-    },
-    "./src/plugins/import_meta_hot/client/import_meta_hot.js": {
-      buildRelativeUrl: "./client/import_meta_hot/import_meta_hot.js",
-      runtimeCompat: clientRuntimeCompat,
-    },
-    "./src/plugins/protocol_file/client/directory_listing.html": {
-      buildRelativeUrl: "./client/directory_listing/directory_listing.html",
-      runtimeCompat: clientRuntimeCompat,
-      plugins: [jsenvPluginPreact({})],
-    },
-    "./src/plugins/ribbon/client/ribbon.js": {
-      buildRelativeUrl: "./client/ribbon/ribbon.js",
-      runtimeCompat: clientRuntimeCompat,
-    },
-    "./src/plugins/server_events/client/server_events_client.js": {
-      buildRelativeUrl: "./client/server_events/server_events_client.js",
-      runtimeCompat: clientRuntimeCompat,
-    },
-    "./packages/internal/plugin-transpilation/src/babel/new_stylesheet/client/new_stylesheet.js":
-      {
-        buildRelativeUrl: "./client/new_stylesheet/new_stylesheet.js",
-        runtimeCompat: clientRuntimeCompat,
-      },
-    "./packages/internal/plugin-transpilation/src/babel/regenerator_runtime/client/regenerator_runtime.js":
-      {
-        buildRelativeUrl: "./client/regenerator_runtime/regenerator_runtime.js",
-        runtimeCompat: clientRuntimeCompat,
-      },
-    "./packages/frontend/custom-elements-redefine/src/main.js": {
-      buildRelativeUrl:
-        "./client/custom_elements_redefine/custom_elements_redefine.js",
-      runtimeCompat: clientRuntimeCompat,
-    },
-  },
-});
+      });
+    }
+  }
+  return Array.from(workspaceBuildMap.values());
+};
+
+const selectBuildArray = (arg) => {
+  if (arg === undefined || arg === "@jsenv/core") {
+    return [CORE_BUILD];
+  }
+  const workspaceBuildArray = readWorkspaceBuildArray();
+  const workspaceBuildNamed = workspaceBuildArray.find(
+    (workspaceBuild) => workspaceBuild.name === arg,
+  );
+  if (workspaceBuildNamed) {
+    if (!workspaceBuildNamed.buildable) {
+      throw new Error(`"${arg}" has no build script`);
+    }
+    return [workspaceBuildNamed];
+  }
+  if (arg[0] === "@") {
+    throw new Error(`"${arg}" is not a package of this monorepo`);
+  }
+  let directoryUrl = new URL(arg, rootDirectoryUrl);
+  if (!directoryUrl.href.endsWith("/")) {
+    directoryUrl = new URL(`${directoryUrl.href}/`);
+  }
+  try {
+    if (!statSync(directoryUrl).isDirectory()) {
+      throw new Error();
+    }
+  } catch {
+    throw new Error(`"${arg}" is not a directory nor a package name`);
+  }
+  const buildArray = [];
+  if (rootDirectoryUrl.href.startsWith(directoryUrl.href)) {
+    buildArray.push(CORE_BUILD);
+  }
+  for (const workspaceBuild of workspaceBuildArray) {
+    if (!workspaceBuild.buildable) {
+      continue;
+    }
+    if (!workspaceBuild.url.href.startsWith(directoryUrl.href)) {
+      continue;
+    }
+    buildArray.push(workspaceBuild);
+  }
+  if (buildArray.length === 0) {
+    throw new Error(`no package to build inside "${arg}"`);
+  }
+  return buildArray;
+};
+
+const buildArray = selectBuildArray(process.argv[2]);
+let index = 0;
+for (const buildToRun of buildArray) {
+  index++;
+  if (buildArray.length > 1) {
+    console.log(
+      `\n--- building ${buildToRun.name} (${index}/${buildArray.length}) ---\n`,
+    );
+  }
+  await buildToRun.build();
+}

@@ -50,8 +50,8 @@ If the set is broader than expected (a `@jsenv/core` or `@jsenv/server` bump dra
 **Default (recommended): affected packages only** — much faster. For a change scoped to e.g. `@jsenv/navi`:
 
 ```sh
-npm run build -w @jsenv/navi  # build just that package's dist
-npm test @jsenv/navi          # test just that package
+npm run build @jsenv/navi  # build just that package's dist
+npm test @jsenv/navi       # test just that package
 ```
 
 **Full run — only for big changes or anything touching `@jsenv/core`:**
@@ -59,7 +59,7 @@ npm test @jsenv/navi          # test just that package
 ```sh
 npm run build            # builds @jsenv/core dist
 npm test                 # full suite
-npm run build:packages   # builds every workspace package's dist
+npm run build packages   # builds every workspace package's dist
 npm run test:packages    # tests across ./packages/
 ```
 
@@ -94,12 +94,12 @@ Consequence in practice:
 
 ## Quick reference
 
-| Command                                                  | What it does                                                                     |
-| -------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| `npm run monorepo:sync_versions`                         | Propagate bumped versions into pinned deps + cascade-bump dependents             |
-| `npm run build`                                          | Build `@jsenv/core` `dist/`                                                      |
-| `npm test`                                               | Full test suite                                                                  |
-| `npm run build:packages`                                 | Build every workspace package's `dist/`                                          |
-| `npm run test:packages`                                  | Test across `./packages/`                                                        |
-| `npm run build -w <pkg>` / `npm test -- ./packages/.../` | Affected-only build/test (the fast path)                                         |
-| `npm run monorepo:publish`                               | Publish every package whose version is ahead of npm (local, uses `secrets.json`) |
+| Command                                            | What it does                                                                     |
+| -------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `npm run monorepo:sync_versions`                   | Propagate bumped versions into pinned deps + cascade-bump dependents             |
+| `npm run build`                                    | Build `@jsenv/core` `dist/`                                                      |
+| `npm test`                                         | Full test suite                                                                  |
+| `npm run build packages`                           | Build every workspace package's `dist/`                                          |
+| `npm run test:packages`                            | Test across `./packages/`                                                        |
+| `npm run build <pkg\|dir>` / `npm test <pkg\|dir>` | Affected-only build/test (the fast path)                                         |
+| `npm run monorepo:publish`                         | Publish every package whose version is ahead of npm (local, uses `secrets.json`) |
