@@ -54,6 +54,7 @@ import {
 let calloutCount = 0;
 
 const css = /* css */ `
+  /* jsenv-css-opaque: same as dialog.jsx, cascade order. */
   @layer navi {
     .navi_callout {
       /* A callout is parented to what it explains, so it inherits from it — and

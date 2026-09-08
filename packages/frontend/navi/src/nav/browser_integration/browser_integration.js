@@ -11,7 +11,10 @@ import {
   workingWhile,
 } from "./document_loading_signal.js";
 import { canNavBackSignal } from "./document_back_and_forward.js";
-import { documentStateSignal } from "./document_state_signal.js";
+import {
+  documentStateSignal,
+  isLikelyPreactGeneratedId,
+} from "./document_state_signal.js";
 import { documentUrlSignal } from "./document_url_signal.js";
 import { setupBrowserIntegrationViaHistory } from "./via_history.js";
 import { setupBrowserIntegrationViaNavigation } from "./via_navigation.js";
@@ -247,18 +250,6 @@ if (import.meta.hot) {
   });
 }
 
-// Preact's own useId() (see preact/hooks) returns "P<mask0>-<mask1>", where
-// the mask is derived from render order within the nearest root/async
-// boundary — stable across re-renders of the *same* mount, but not across a
-// reload (render order can differ) or even across two mounts on the same
-// page (two components hitting useId() in the same relative order get the
-// same string). Storing one of these under type: "push" bakes it into a
-// history entry: reload the page and the entry's key may now belong to a
-// completely different component (or none), silently auto-opening whatever
-// happens to render at that same position instead.
-const PREACT_GENERATED_ID_REGEX = /^P\d+-\d+/;
-const isLikelyPreactGeneratedId = (id) => PREACT_GENERATED_ID_REGEX.test(id);
-
 const NO_OP = () => {};
 const NO_ID_GIVEN = [undefined, NO_OP, NO_OP];
 const useNavStateBasic = (
@@ -290,6 +281,10 @@ const useNavStateBasic = (
   }
 
   let effectiveType = type;
+  // A push bakes the key into a history entry of its own, and an id naming a
+  // render position (see isLikelyPreactGeneratedId) can be claimed by two
+  // mounts of this same page. A replace keeps the key on the entry the document
+  // is already on, where the id at least names one render.
   if (type === "push" && isLikelyPreactGeneratedId(id)) {
     if (import.meta.dev) {
       console.warn(

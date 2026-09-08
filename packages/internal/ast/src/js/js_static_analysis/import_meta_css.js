@@ -12,7 +12,7 @@ export const isImportMetaCssAssignment = (node) => {
 
 export const analyzeImportMetaCssAssignment = (
   node,
-  { js, ast, ancestors, onInlineContent },
+  { js, ast, ancestors, onInlineContent, onOpaqueContent },
 ) => {
   // "import.meta.css = [css, url]": the array form a pre-built file ships
   // (see jsenv:import_meta_css); the css is the first element.
@@ -21,6 +21,9 @@ export const analyzeImportMetaCssAssignment = (
   if (!assignedNode) {
     return;
   }
+  // a pre-built package ships "[css, url]": its css was written in a source
+  // this build does not have, so this build is not where it can be fixed
+  const alreadyBuilt = node.right.type === "ArrayExpression";
   // "const css = `...`; import.meta.css = css;" — the css is where the constant
   // is declared, and that is where it is read and rewritten.
   const nodeHoldingContent =
@@ -58,7 +61,16 @@ export const analyzeImportMetaCssAssignment = (
     nodeHoldingContent,
     js,
   );
-  if (!substitutionInfo) {
+  if (substitutionInfo.opaque) {
+    onOpaqueContent({
+      ...position,
+      ...substitutionInfo.opaque,
+      alreadyBuilt,
+      templateSource: js.slice(
+        nodeHoldingContent.start,
+        nodeHoldingContent.end,
+      ),
+    });
     return;
   }
   onInlineContent({
@@ -69,6 +81,7 @@ export const analyzeImportMetaCssAssignment = (
     quote: "`",
     content: substitutionInfo.content,
     substitutions: substitutionInfo.substitutions,
+    alreadyBuilt,
     astInfo: { node: nodeHoldingContent },
   });
 };

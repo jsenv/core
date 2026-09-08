@@ -97,7 +97,9 @@ just its line, and the stylesheet then ships verbatim: comments and whitespace
 included, nothing transpiled for the browsers the app targets (nesting,
 `light-dark()`, `color-mix()` reach them as written), a `url("./icon.svg")`
 neither copied nor hashed and resolved against the document — a silent 404 in
-production — nothing checked, nothing minified. And nothing is logged.
+production — nothing checked, nothing minified. The build warns about it; a css comment
+containing `jsenv-css-opaque` inside the template silences that one template when there
+is no way around it.
 
 The one substitution the build reads stands exactly **where a css value
 stands** — inside a rule block, after the `:` of a declaration, not in a string,

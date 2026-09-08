@@ -19,6 +19,7 @@ import {
   NAV_DEPTH_STATE_KEY,
 } from "./document_back_and_forward.js";
 import {
+  dropGeneratedIdKeys,
   resolveEffectiveDocumentState,
   updateDocumentState,
 } from "./document_state_signal.js";
@@ -484,7 +485,14 @@ export const setupBrowserIntegrationViaHistory = ({
 
   const init = () => {
     const url = window.location.href;
-    const state = history.state;
+    const stateOnEntry = window.history.state;
+    const state = dropGeneratedIdKeys(stateOnEntry);
+    if (state !== stateOnEntry) {
+      // The entry itself has to lose them too, not just the document state:
+      // getDocumentState() reads the entry back, and every state write copies
+      // what it finds there onto the next one.
+      window.history.replaceState(state, null, url);
+    }
     handleRoutingTask(url, {
       reason: "routing initialization",
       navigationType: "load",

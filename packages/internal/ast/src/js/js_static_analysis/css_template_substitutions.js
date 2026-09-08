@@ -10,11 +10,21 @@
 
 const PLACEHOLDER = (index) => `var(--jsenv-css-substitution-${index})`;
 
+// A css comment an author writes in a template that cannot be made readable,
+// to say so and stop being told. Kept as plain css: it costs nothing when the
+// template does become readable, the css pipeline strips it like any comment.
+const OPAQUE_DIRECTIVE = "jsenv-css-opaque";
+
+export const hasCssOpaqueDirective = (templateSource) => {
+  return templateSource.includes(OPAQUE_DIRECTIVE);
+};
+
 /**
  * @param {Object} templateLiteralNode a TemplateLiteral acorn node
  * @param {string} js the source the node comes from
- * @returns {{ content: string, substitutions: Array<{placeholder: string, expression: string}> }|null}
- *          null when at least one expression is not in a css value position
+ * @returns {{ content: string, substitutions: Array<{placeholder: string, expression: string}> }
+ *          | { opaque: { reason: string } }}
+ *          "opaque" when the css cannot be read: the template is left alone
  */
 export const buildCssTemplateSubstitutions = (templateLiteralNode, js) => {
   const { quasis, expressions } = templateLiteralNode;
@@ -22,8 +32,12 @@ export const buildCssTemplateSubstitutions = (templateLiteralNode, js) => {
   for (const quasi of quasis) {
     const { cooked } = quasi.value;
     if (cooked === undefined) {
-      // an escape sequence acorn could not cook: what the css is cannot be told
-      return null;
+      return {
+        opaque: {
+          reason:
+            "an escape sequence cannot be cooked into the css it stands for",
+        },
+      };
     }
     parts.push(cooked);
   }
@@ -39,9 +53,14 @@ export const buildCssTemplateSubstitutions = (templateLiteralNode, js) => {
     });
     content += placeholder + parts[i + 1];
   }
-  for (const position of positions) {
-    if (!isCssValuePosition(content, position)) {
-      return null;
+  for (let i = 0; i < positions.length; i++) {
+    const nonValuePosition = readNonValuePosition(content, positions[i]);
+    if (nonValuePosition) {
+      return {
+        opaque: {
+          reason: `"\${${substitutions[i].expression}}" stands in ${nonValuePosition}`,
+        },
+      };
     }
   }
   return { content, substitutions };
@@ -49,7 +68,8 @@ export const buildCssTemplateSubstitutions = (templateLiteralNode, js) => {
 
 // Reads the css from its start up to "position", keeping just enough state to
 // tell what the placeholder sitting there would be part of.
-const isCssValuePosition = (css, position) => {
+// Returns what it is part of when that is not a value, null when it is one.
+const readNonValuePosition = (css, position) => {
   let braceDepth = 0;
   let stringQuote = null;
   let inComment = false;
@@ -130,29 +150,32 @@ const isCssValuePosition = (css, position) => {
     }
     i++;
   }
-  if (inComment || stringQuote) {
-    return false;
+  if (inComment) {
+    return "a comment";
+  }
+  if (stringQuote) {
+    return "a string";
   }
   if (braceDepth === 0) {
-    // outside any rule: a selector, or an at-rule prelude
-    return false;
+    return "a selector, or an at-rule prelude";
   }
   if (!colonSeen) {
-    // a property name, or a nested selector
-    return false;
+    return "a property name, or a nested selector";
   }
   if (css.slice(statementStart, position).trimStart().startsWith("@")) {
-    // an at-rule prelude nested in a rule, "@media (min-width: ...)"
-    return false;
+    return "a nested at-rule prelude";
   }
   if (functionStack[functionStack.length - 1] === "url") {
     // url() takes an url, and an url built at runtime is not one the build
     // can follow to a file
-    return false;
+    return "url()";
   }
   // A ":" also opens a pseudo class, so what looks like a value here can still
   // be the end of a nested selector; that is settled by what closes it.
-  return closedByDeclarationEnd(css, position);
+  if (!closedByDeclarationEnd(css, position)) {
+    return "a nested selector";
+  }
+  return null;
 };
 
 const readFunctionNameBefore = (css, parenthesisIndex) => {

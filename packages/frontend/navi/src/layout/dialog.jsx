@@ -121,6 +121,8 @@ import { PopupClose } from "./popup_close.jsx";
 let openLocalDialogCount = 0;
 
 const css = /* css */ `
+  /* jsenv-css-opaque: popupCss overlaps these rules, own sheet = cascade
+     order depending on which popup renders first. */
   @layer navi {
     .navi_dialog {
       /* Min gap between the dialog and the edges of its container. Written

@@ -78,6 +78,13 @@ export const parseJsUrls = ({
       ...inlineContentInfo,
     });
   };
+  // css the build cannot read: no url info comes out of it, only a way to tell
+  const onOpaqueContent = (opaqueContentInfo) => {
+    jsUrls.push({
+      isOpaqueCss: true,
+      ...opaqueContentInfo,
+    });
+  };
 
   const getCommentBeforeClosingParenthesis = (
     // either new InlineContent() or JSON.parse() for instance
@@ -141,6 +148,7 @@ export const parseJsUrls = ({
           ast,
           ancestors,
           onInlineContent,
+          onOpaqueContent,
         });
       }
     },

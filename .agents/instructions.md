@@ -303,10 +303,13 @@ after the `:` of a declaration, and not inside a string, inside `url()`, in an a
 prelude, in a selector or in a property name — and the placeholder must come out of the
 css transformation exactly once (a prefixed duplicate makes it twice).
 
-When any of it fails the template ships verbatim, with every consequence listed above, and
-**nothing is logged**. So this is a safety net for value substitutions, not a licence to
-interpolate: a custom property is still the better answer, it keeps the css static _and_
-lets the value change without rebuilding a stylesheet.
+When any of it fails the template ships verbatim, with every consequence listed above. The
+build warns (`import.meta.css shipped as written`, naming the file and the `${}` that
+cannot be read); when there is genuinely no way around it, a css comment containing
+`jsenv-css-opaque` inside the template silences that one template — write it short, an
+opaque template ships its comments too. So this is a safety net for value substitutions,
+not a licence to interpolate: a custom property is still the better answer, it keeps the
+css static _and_ lets the value change without rebuilding a stylesheet.
 
 ## @jsenv/navi Specifics
 

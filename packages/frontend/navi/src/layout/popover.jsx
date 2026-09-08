@@ -104,6 +104,8 @@ import { PopupClose } from "./popup_close.jsx";
 let openLocalPopoverCount = 0;
 
 const css = /* css */ `
+  /* jsenv-css-opaque: popupCss overlaps these rules, own sheet = cascade
+     order depending on which popup renders first. */
   @layer navi {
     .navi_popover {
       /* soft: user-configurable preferred max-height. Kept as a *default*
