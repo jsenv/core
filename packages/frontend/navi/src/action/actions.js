@@ -1685,22 +1685,16 @@ const createActionProxyFromSignal = (
     dataSignal: proxySignal("dataSignal", "data"),
   });
   Object.preventExtensions(actionProxy);
-  // Watch for changes in the original paramsSignal and update ours
-  // (original signal wins over any replaceParams calls)
-  weakEffect(
-    [paramsSignal, proxyParamsSignal],
-    (paramsSignalRef, proxyParamsSignalRef) => {
-      const newParams = paramsSignalRef.value;
-      proxyParamsSignalRef.value = newParams;
-    },
-  );
-  weakEffect([action], () => {
-    // eslint-disable-next-line no-unused-expressions
-    proxyParamsSignal.value;
-    _updateTarget({
-      changeCause: "params_signal_change",
-    });
-  });
+
+  // What the proxy shows of the action it stands for is wired BEFORE the
+  // effects below, because those resolve the first target as they are created:
+  // a subscriber registered after them misses that first change and reads the
+  // placeholders assigned above until a SECOND one happens. A proxy answering
+  // `params: undefined` is then taken for a proxy holding no params, and
+  // whoever asks it to run on truthy params does nothing (actionRunEffect's
+  // onChange). The caller's own callbacks (onChange, runOnce, rerunOnChange)
+  // stay below on purpose: they are told about changes, not about the proxy
+  // coming into existence.
   onActionTargetChange((actionTarget) => {
     const currentAction = actionTarget || action;
     nameSignal.value = `[Proxy] ${currentAction.name}`;
@@ -1735,7 +1729,22 @@ const createActionProxyFromSignal = (
     });
     setActionPrivateProperties(actionProxy, proxyPrivateProperties);
   }
-
+  // Watch for changes in the original paramsSignal and update ours
+  // (original signal wins over any replaceParams calls)
+  weakEffect(
+    [paramsSignal, proxyParamsSignal],
+    (paramsSignalRef, proxyParamsSignalRef) => {
+      const newParams = paramsSignalRef.value;
+      proxyParamsSignalRef.value = newParams;
+    },
+  );
+  weakEffect([action], () => {
+    // eslint-disable-next-line no-unused-expressions
+    proxyParamsSignal.value;
+    _updateTarget({
+      changeCause: "params_signal_change",
+    });
+  });
   actionProxy.replaceParams = (newParams) => {
     if (currentAction === action) {
       const currentParams = proxyParamsSignal.value;
