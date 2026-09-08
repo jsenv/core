@@ -63429,158 +63429,163 @@ const ListSelectable = props => {
     }
     setCurrentId(initialEl.id);
   }, []);
-  const listVnode = jsx(Next, {
-    "navi-selectable": "",
-    ...listControlRootProps,
-    ...listControlProps,
-    // "loading" is a control prop, so useControlgroupProps consumes it (into
-    // aria-busy / the :-navi-loading pseudo state) and it does not survive
-    // into the props below. ListUI needs it too — it is what makes the list
-    // render skeleton rows instead of its (not yet known) items.
-    loading: props.loading,
-    name: undefined,
-    value: undefined,
-    defaultValue: undefined,
-    selectable: undefined,
-    multiple: undefined,
-    deselectable: undefined,
-    focusGroupDirection: undefined,
-    focusGroupWrap: undefined
-    // Track focus inside the list: whichever item gets focus becomes current.
-    ,
-    onFocusIn: e => {
-      const realInput = e.target.closest("[navi-selectable-real-input]");
-      if (!realInput) {
-        return;
-      }
-      const itemEl = realInput.closest("[navi-list-item-real]");
-      if (itemEl && itemEl.id) {
-        setCurrentId(itemEl.id, e);
-      }
-    },
-    onnavi_request_select: e => {
-      const {
-        id
-      } = e.detail;
-      if (id === undefined) {
-        return;
-      }
-      const inputId = `${id}_input`;
-      const childController = uiGroupStateController.findChildById(inputId);
-      if (!childController) {
-        return;
-      }
-      const list = ref.current;
-      dispatchRequestInteraction(list, {
-        event: e,
-        name: "select",
-        prevented: () => e.preventDefault(),
-        // tell the requester that we don't want to select this item
-        // Asked of the item too, not only of the list: an item can be the one
-        // refusing (the list already holds all it accepts, see maxLength), and
-        // it is the one that then says why.
-        allowed: () => {
-          dispatchRequestInteraction(childController.ref.current, {
-            event: e,
-            name: "select",
-            prevented: () => e.preventDefault(),
-            allowed: () => childController.setUIState(childController.value, e)
-          });
+
+  // The group's contexts stand around the whole list, never between the <ul>
+  // and the rows: the walk that gives the rows their places is over the <ul>'s
+  // children, and a component sitting there is one child — every row would then
+  // stand in a single slot, and reordering them (a search) would move nothing.
+  const listVnode = jsx(ControlgroupChildrenWrapper, {
+    ...childrenWrapperProps,
+    children: jsx(Next, {
+      "navi-selectable": "",
+      ...listControlRootProps,
+      ...listControlProps,
+      // "loading" is a control prop, so useControlgroupProps consumes it (into
+      // aria-busy / the :-navi-loading pseudo state) and it does not survive
+      // into the props below. ListUI needs it too — it is what makes the list
+      // render skeleton rows instead of its (not yet known) items.
+      loading: props.loading,
+      name: undefined,
+      value: undefined,
+      defaultValue: undefined,
+      selectable: undefined,
+      multiple: undefined,
+      deselectable: undefined,
+      focusGroupDirection: undefined,
+      focusGroupWrap: undefined
+      // Track focus inside the list: whichever item gets focus becomes current.
+      ,
+      onFocusIn: e => {
+        const realInput = e.target.closest("[navi-selectable-real-input]");
+        if (!realInput) {
+          return;
         }
-      });
-    },
-    onnavi_request_unselect: e => {
-      const {
-        id
-      } = e.detail;
-      if (id === undefined) {
-        return;
-      }
-      const inputId = `${id}_input`;
-      const childController = uiGroupStateController.findChildById(inputId);
-      if (!childController) {
-        return;
-      }
-      const list = ref.current;
-      dispatchRequestInteraction(list, {
-        event: e,
-        name: "unselect",
-        prevented: () => e.preventDefault(),
-        // tell the requester that we don't want to unselect this item
-        allowed: () => childController.setUIState(undefined, e)
-      });
-    }
-    // "previous"/"next", not "up"/"down": a list is a line of items whichever
-    // way it is laid out, and a horizontal one walks sideways. The keys that
-    // drive it (arrows, Home/End) map onto that here, and so do the commands
-    // (--navi-previous / --navi-next / --navi-first / --navi-last).
-    ,
-    onnavi_request_nav: e => {
-      const {
-        goal
-      } = e.detail;
-      const navigableEls = getNavigableElements();
-      if (navigableEls.length === 0) {
-        return;
-      }
-      const currentId = currentIdRef.current;
-      let currentIndex = -1;
-      if (currentId) {
-        currentIndex = navigableEls.findIndex(el => el.id === currentId);
-      }
-      let targetEl;
-      if (goal === "first") {
-        targetEl = navigableEls[0];
-      } else if (goal === "last") {
-        targetEl = navigableEls[navigableEls.length - 1];
-      } else if (goal === "next") {
-        if (currentIndex === -1) {
-          targetEl = navigableEls[0];
-        } else if (currentIndex < navigableEls.length - 1) {
-          targetEl = navigableEls[currentIndex + 1];
-        } else {
-          targetEl = navigableEls[navigableEls.length - 1];
+        const itemEl = realInput.closest("[navi-list-item-real]");
+        if (itemEl && itemEl.id) {
+          setCurrentId(itemEl.id, e);
         }
-      } else if (goal === "previous") {
-        if (currentIndex === -1) {
-          targetEl = navigableEls[0];
-        } else if (currentIndex > 0) {
-          targetEl = navigableEls[currentIndex - 1];
-        } else {
-          targetEl = navigableEls[0];
+      },
+      onnavi_request_select: e => {
+        const {
+          id
+        } = e.detail;
+        if (id === undefined) {
+          return;
         }
-      }
-      if (!targetEl) {
-        return;
-      }
-      setCurrentId(targetEl.id, e);
-      dispatchCustomEvent(ref.current, "navi_request_scroll", {
-        event: e,
-        id: targetEl.id
-      });
-    },
-    onnavi_request_activate: e => {
-      const currentId = currentIdRef.current;
-      if (!currentId) {
-        return;
-      }
-      if (multiple || deselectable) {
-        const inputId = `${currentId}_input`;
+        const inputId = `${id}_input`;
         const childController = uiGroupStateController.findChildById(inputId);
-        const isSelected = childController && childController.uiState;
-        dispatchCustomEvent(ref.current, isSelected ? "navi_request_unselect" : "navi_request_select", {
+        if (!childController) {
+          return;
+        }
+        const list = ref.current;
+        dispatchRequestInteraction(list, {
+          event: e,
+          name: "select",
+          prevented: () => e.preventDefault(),
+          // tell the requester that we don't want to select this item
+          // Asked of the item too, not only of the list: an item can be the one
+          // refusing (the list already holds all it accepts, see maxLength), and
+          // it is the one that then says why.
+          allowed: () => {
+            dispatchRequestInteraction(childController.ref.current, {
+              event: e,
+              name: "select",
+              prevented: () => e.preventDefault(),
+              allowed: () => childController.setUIState(childController.value, e)
+            });
+          }
+        });
+      },
+      onnavi_request_unselect: e => {
+        const {
+          id
+        } = e.detail;
+        if (id === undefined) {
+          return;
+        }
+        const inputId = `${id}_input`;
+        const childController = uiGroupStateController.findChildById(inputId);
+        if (!childController) {
+          return;
+        }
+        const list = ref.current;
+        dispatchRequestInteraction(list, {
+          event: e,
+          name: "unselect",
+          prevented: () => e.preventDefault(),
+          // tell the requester that we don't want to unselect this item
+          allowed: () => childController.setUIState(undefined, e)
+        });
+      }
+      // "previous"/"next", not "up"/"down": a list is a line of items whichever
+      // way it is laid out, and a horizontal one walks sideways. The keys that
+      // drive it (arrows, Home/End) map onto that here, and so do the commands
+      // (--navi-previous / --navi-next / --navi-first / --navi-last).
+      ,
+      onnavi_request_nav: e => {
+        const {
+          goal
+        } = e.detail;
+        const navigableEls = getNavigableElements();
+        if (navigableEls.length === 0) {
+          return;
+        }
+        const currentId = currentIdRef.current;
+        let currentIndex = -1;
+        if (currentId) {
+          currentIndex = navigableEls.findIndex(el => el.id === currentId);
+        }
+        let targetEl;
+        if (goal === "first") {
+          targetEl = navigableEls[0];
+        } else if (goal === "last") {
+          targetEl = navigableEls[navigableEls.length - 1];
+        } else if (goal === "next") {
+          if (currentIndex === -1) {
+            targetEl = navigableEls[0];
+          } else if (currentIndex < navigableEls.length - 1) {
+            targetEl = navigableEls[currentIndex + 1];
+          } else {
+            targetEl = navigableEls[navigableEls.length - 1];
+          }
+        } else if (goal === "previous") {
+          if (currentIndex === -1) {
+            targetEl = navigableEls[0];
+          } else if (currentIndex > 0) {
+            targetEl = navigableEls[currentIndex - 1];
+          } else {
+            targetEl = navigableEls[0];
+          }
+        }
+        if (!targetEl) {
+          return;
+        }
+        setCurrentId(targetEl.id, e);
+        dispatchCustomEvent(ref.current, "navi_request_scroll", {
+          event: e,
+          id: targetEl.id
+        });
+      },
+      onnavi_request_activate: e => {
+        const currentId = currentIdRef.current;
+        if (!currentId) {
+          return;
+        }
+        if (multiple || deselectable) {
+          const inputId = `${currentId}_input`;
+          const childController = uiGroupStateController.findChildById(inputId);
+          const isSelected = childController && childController.uiState;
+          dispatchCustomEvent(ref.current, isSelected ? "navi_request_unselect" : "navi_request_select", {
+            event: e,
+            id: currentId
+          });
+          return;
+        }
+        dispatchCustomEvent(ref.current, "navi_request_select", {
           event: e,
           id: currentId
         });
-        return;
-      }
-      dispatchCustomEvent(ref.current, "navi_request_select", {
-        event: e,
-        id: currentId
-      });
-    },
-    children: jsx(ControlgroupChildrenWrapper, {
-      ...childrenWrapperProps,
+      },
       children: props.children
     })
   });
@@ -65207,6 +65212,10 @@ const useListScrollSync = ({
       const block = blockRequested || (event.type === "navi_displayed" ? "center" : "nearest");
       const scrollToItemCall = `${getElementSignature(itemEl)}.scrollIntoView({ block: "${block}", container: "nearest" })`;
       debugScroll(`${trigger} -> ${scrollToItemCall}`);
+      // The list is going somewhere on purpose, so there is no view to hold
+      // still any more: an anchor captured before this drop it, or it would
+      // put the list back where it was the moment the rows move under it.
+      anchorRef.current = null;
       scrollIntoViewScoped(itemEl, {
         container: getScroller(),
         block
@@ -67255,6 +67264,28 @@ const createListVirtual = () => {
     } else {
       ownerIdsBySlot.set(slotId, [ownerId]);
     }
+    warnIfEveryRowInOneSlot(slotId);
+  };
+  // Rows that all stand in the same slot keep the order they first mounted in:
+  // the walk is over the children the list is given, and a component holding
+  // them is one child however many rows it renders. Everything about a place
+  // then stops following what the caller writes — a search reordering the rows
+  // moves nothing. Said once, and only for the shape that can be nothing else:
+  // the list's whole content is one child, and several rows came out of it.
+  let everyRowInOneSlotWarned = false;
+  const warnIfEveryRowInOneSlot = slotId => {
+    if (everyRowInOneSlotWarned) {
+      return;
+    }
+    const rootSlotIds = slotIdsByParent.get(null);
+    if (!rootSlotIds || rootSlotIds.length !== 1 || rootSlotIds[0] !== slotId) {
+      return;
+    }
+    if (ownerIdsBySlot.get(slotId).length < 2) {
+      return;
+    }
+    everyRowInOneSlotWarned = true;
+    console.warn(`List: every row stands in the same slot, so they keep the order they first rendered in — reordering them (a search, a sort) will not move them. The list's rows must be its own children: give it the rows (or a <List.Items>), not a component rendering them.`);
   };
   const removeFromSlot = (slotId, ownerId) => {
     const ownerIds = ownerIdsBySlot.get(slotId);

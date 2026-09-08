@@ -167,9 +167,15 @@ children and nothing else.
 
 Both rest on each row knowing where it stands, which for rows declared one by
 one is the order they are written in — `useSearchText` hands the collection back
-reordered, the caller renders it in that order, and the places follow. Give every
-row a stable `key`: the places are read off the children as they are declared,
-and the key is what says a row moved rather than a row changed.
+reordered, the caller renders it in that order, and the places follow. Two things
+are needed for that, and the list warns in dev when the second is missing:
+
+- **a stable `key` on every row**, which is what says a row moved rather than a
+  row changed;
+- **the rows as the list's own children**. The places are read off the children
+  the list is given, so a component of yours rendering the rows is one child
+  however many rows come out of it — they all take the same place and keep the
+  order they first mounted in. Hand the list the rows, or a `<List.Items>`.
 
 One case is knowingly left out: a row selected during the search does not hold
 the view. Emptying the search takes the list back to where it was, which may be

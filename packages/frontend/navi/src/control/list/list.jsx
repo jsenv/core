@@ -1706,6 +1706,10 @@ const useListScrollSync = ({
         (event.type === "navi_displayed" ? "center" : "nearest");
       const scrollToItemCall = `${getElementSignature(itemEl)}.scrollIntoView({ block: "${block}", container: "nearest" })`;
       debugScroll(`${trigger} -> ${scrollToItemCall}`);
+      // The list is going somewhere on purpose, so there is no view to hold
+      // still any more: an anchor captured before this drop it, or it would
+      // put the list back where it was the moment the rows move under it.
+      anchorRef.current = null;
       scrollIntoViewScoped(itemEl, {
         container: getScroller(),
         block,
@@ -3869,6 +3873,30 @@ const createListVirtual = () => {
     } else {
       ownerIdsBySlot.set(slotId, [ownerId]);
     }
+    warnIfEveryRowInOneSlot(slotId);
+  };
+  // Rows that all stand in the same slot keep the order they first mounted in:
+  // the walk is over the children the list is given, and a component holding
+  // them is one child however many rows it renders. Everything about a place
+  // then stops following what the caller writes — a search reordering the rows
+  // moves nothing. Said once, and only for the shape that can be nothing else:
+  // the list's whole content is one child, and several rows came out of it.
+  let everyRowInOneSlotWarned = false;
+  const warnIfEveryRowInOneSlot = (slotId) => {
+    if (everyRowInOneSlotWarned) {
+      return;
+    }
+    const rootSlotIds = slotIdsByParent.get(null);
+    if (!rootSlotIds || rootSlotIds.length !== 1 || rootSlotIds[0] !== slotId) {
+      return;
+    }
+    if (ownerIdsBySlot.get(slotId).length < 2) {
+      return;
+    }
+    everyRowInOneSlotWarned = true;
+    console.warn(
+      `List: every row stands in the same slot, so they keep the order they first rendered in — reordering them (a search, a sort) will not move them. The list's rows must be its own children: give it the rows (or a <List.Items>), not a component rendering them.`,
+    );
   };
   const removeFromSlot = (slotId, ownerId) => {
     const ownerIds = ownerIdsBySlot.get(slotId);
