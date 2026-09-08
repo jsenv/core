@@ -19,9 +19,9 @@
     "/src/"
   ],
   "dependencies": {
-    "@jsenv/ast": "6.10.3",
-    "@jsenv/filesystem": "4.15.23",
-    "@jsenv/urls": "2.9.12",
+    "@jsenv/ast": "6.10.4",
+    "@jsenv/filesystem": "4.15.24",
+    "@jsenv/urls": "2.9.13",
     "anchor-markdown-header": "0.8.4",
     "marked": "18.0.9"
   },

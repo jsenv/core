@@ -29,9 +29,9 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@jsenv/database": "0.0.19",
+    "@jsenv/database": "0.0.20",
     "@jsenv/server": "17.6.4",
-    "@jsenv/urls": "2.9.12",
+    "@jsenv/urls": "2.9.13",
     "@tanstack/table-core": "8.21.3",
     "jsonwebtoken": "9.0.3",
     "postgres": "3.4.9"

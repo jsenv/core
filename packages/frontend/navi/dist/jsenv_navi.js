@@ -80,7 +80,7 @@ installImportMetaCssBuild(import.meta);
  * any of these, and a number is the last resort, not the first tool.
  */
 
-const css$16 = /* css */ `@layer navi {
+const css$17 = /* css */ `@layer navi {
   :root {
     --navi-z-index-control-hovered: 1;
     --navi-z-index-control-focused: 2;
@@ -92,7 +92,7 @@ const css$16 = /* css */ `@layer navi {
   }
 }
 `;
-import.meta.css = [css$16, "@jsenv/navi/src/navi_z_indexes.js"];
+import.meta.css = [css$17, "@jsenv/navi/src/navi_z_indexes.js"];
 
 const addIntoArray = (array, ...valuesToAdd) => {
   if (valuesToAdd.length === 1) {
@@ -328,7 +328,7 @@ installImportMetaCssBuild(import.meta);
 
 const URL_TARGET_ATTRIBUTE = "data-url-target";
 
-const css$15 = /* css */ `@layer navi {
+const css$16 = /* css */ `@layer navi {
   [data-url-target] {
     animation: navi_url_target var(--navi-url-target-duration, 2s)
         ease-out;
@@ -346,7 +346,7 @@ const css$15 = /* css */ `@layer navi {
   }
 }
 `;
-import.meta.css = [css$15, "@jsenv/navi/src/nav/url_target/url_target.js"];
+import.meta.css = [css$16, "@jsenv/navi/src/nav/url_target/url_target.js"];
 
 let urlTargetOptions = {
   block: "start",
@@ -1683,7 +1683,7 @@ const useActionStatus = (action) => {
 };
 
 installImportMetaCssBuild(import.meta);
-const css$14 = /* css */`.action_error {
+const css$15 = /* css */`.action_error {
   background: #fdd;
   border: 1px solid red;
   margin-top: 0;
@@ -1707,7 +1707,7 @@ const ActionRenderer = ({
   children,
   disabled
 }) => {
-  import.meta.css = [css$14, "@jsenv/navi/src/action/action_renderer.jsx"];
+  import.meta.css = [css$15, "@jsenv/navi/src/action/action_renderer.jsx"];
   if (action === undefined) {
     throw new Error("ActionRenderer requires an action to render, but none was provided.");
   }
@@ -5749,7 +5749,7 @@ installImportMetaCssBuild(import.meta);
  * (see calloutTemplate in callout.js).
  */
 
-const css$13 = /* css */`.navi_callout_status_icon {
+const css$14 = /* css */`.navi_callout_status_icon {
   --x-callout-status-icon-color: var(--navi-callout-neutral-color);
   box-sizing: border-box;
   aspect-ratio: 1;
@@ -5820,7 +5820,7 @@ const CalloutStatusIcon = ({
   status = "info",
   shape = "square"
 }) => {
-  import.meta.css = [css$13, "@jsenv/navi/src/control/rules/callout/callout_status_icon.jsx"];
+  import.meta.css = [css$14, "@jsenv/navi/src/control/rules/callout/callout_status_icon.jsx"];
   return jsx("span", {
     className: "navi_callout_status_icon",
     "data-status": status === "none" ? undefined : status,
@@ -5842,7 +5842,7 @@ installImportMetaCssBuild(import.meta);
 // Unique for the page's lifetime: a caller may write the id in a commandfor.
 let calloutCount = 0;
 
-const css$12 = /* css */ `
+const css$13 = /* css */ `
   @layer navi {
     .navi_callout {
       /* A callout is parented to what it explains, so it inherits from it — and
@@ -6190,7 +6190,7 @@ const openCallout = (
     debug = () => {},
   } = {},
 ) => {
-  import.meta.css = [css$12, "@jsenv/navi/src/control/rules/callout/callout.js"];
+  import.meta.css = [css$13, "@jsenv/navi/src/control/rules/callout/callout.js"];
   if (debug === true) {
     debug = (e, ...args) => console.debug(`"${e.type}" -> `, ...args);
   }
@@ -18238,8 +18238,12 @@ const VISUAL_PROPS = {
   outlineWidth: PASS_THROUGH,
   boxDecorationBreak: PASS_THROUGH,
   boxShadow: PASS_THROUGH,
-  background: PASS_THROUGH,
-  backgroundColor: PASS_THROUGH,
+  background: (value) => {
+    return { background: resolveSurfaceKeyword(value) };
+  },
+  backgroundColor: (value) => {
+    return { backgroundColor: resolveSurfaceKeyword(value) };
+  },
   backgroundImage: PASS_THROUGH,
   backgroundSize: PASS_THROUGH,
   border: PASS_THROUGH,
@@ -18602,6 +18606,18 @@ const COLOR_KEYWORD_MAP = {
 };
 const resolveColorKeyword = (value) => {
   return COLOR_KEYWORD_MAP[value] || value;
+};
+
+// The two planes an app paints: the paper its content sits on, and the frame
+// around it (see navi_css_vars.js). Named rather than derived at each call
+// site, so a top bar and a side menu are the same plane without agreeing on a
+// formula.
+const SURFACE_KEYWORD_MAP = {
+  surface: "var(--navi-surface-color)",
+  chrome: "var(--navi-chrome-color)",
+};
+const resolveSurfaceKeyword = (value) => {
+  return SURFACE_KEYWORD_MAP[value] || value;
 };
 
 const DEFAULT_DISPLAY_BY_TAG_NAME = {
@@ -20505,6 +20521,16 @@ const PSEUDO_STATE_CHILD_PROP_SET = new Set(["tabIndex", "tabindex"]);
  *   children?: import("ignore:preact").ComponentChildren,
  *   [key: string]: any,
  * }>}
+ * @param {string} [background] Any CSS background, plus two keywords for the
+ *   planes an app paints: `"surface"` is the paper content sits on,
+ *   `"chrome"` the frame around a screen — a top bar, a side menu, a toolbar.
+ *   Both follow the theme, so a bar stays a bar in dark mode
+ *   (`--navi-surface-color` / `--navi-chrome-color`). `backgroundColor` takes
+ *   the same two.
+ * @param {string} [color] Any CSS color, plus the five ink keywords —
+ *   `"primary"`, `"secondary"`, `"emphasis"`, `"discrete"`, `"hint"` — which
+ *   say how loud a text is rather than which color it is (see
+ *   docs/typography.md).
  * @param {object} [interactions] What this box answers, by interaction name
  *   (see docs/interactions.md). A plain box has no wiring of its own: it does
  *   nothing with `action` (that is a control's prop), so a click on it is
@@ -22408,6 +22434,20 @@ const debug$2 = (...args) => {
 // Base URL management
 let baseFileUrl;
 let baseUrl;
+/**
+ * Where this document's addresses start, for a document that is not at the
+ * root: a panel served from "/admin/admin.html" declares
+ * `setBaseUrl("/admin/admin.html")` and then writes its routes as "/places",
+ * "/places/:placeId". The url "/admin/places/42" matches, and `buildUrl` puts
+ * the prefix back.
+ *
+ * Call it in the routes module, above the `route()` calls it governs — they
+ * read the base url as they are created, so an entry point calling it after
+ * importing them is too late. The server must serve the document for every
+ * address below it (see docs/navigation.md).
+ *
+ * @param {string} value - the document's own url, absolute or relative.
+ */
 const setBaseUrl = (value) => {
   baseFileUrl = new URL(
     value,
@@ -28120,7 +28160,7 @@ const ROUTE_TRAVEL_ATTRIBUTE = "data-navi-route-travel";
 // the root pictures must NOT move (they carry the whole viewport, blank bands
 // included).
 
-const css$11 = /* css */`:root[data-navi-route-transition] [data-navi-route-transition-area] {
+const css$12 = /* css */`:root[data-navi-route-transition] [data-navi-route-transition-area] {
   view-transition-name: navi-route-transition;
 }
 
@@ -28441,7 +28481,7 @@ const RouteTransitionArea = ({
   children,
   ...rest
 }) => {
-  import.meta.css = [css$11, "@jsenv/navi/src/nav/route_transition.jsx"];
+  import.meta.css = [css$12, "@jsenv/navi/src/nav/route_transition.jsx"];
   installTransitionWindowCss();
   const props = {
     ...rest,
@@ -28511,7 +28551,7 @@ const RouteTransitionArea = ({
  * @returns {() => void} remove this relation.
  */
 const defineRouteTransition = (from, to, transition) => {
-  import.meta.css = [css$11, "@jsenv/navi/src/nav/route_transition.jsx"];
+  import.meta.css = [css$12, "@jsenv/navi/src/nav/route_transition.jsx"];
   installTransitionWindowCss();
   if (!to) {
     throw new TypeError(`defineRouteTransition needs a destination: "to" is ${to}. The page reached from anywhere is written defineRouteTransition(null, THAT_PAGE, ...) — there is no relation the other way round, a page LEFT for anywhere being the back half of that one.`);
@@ -28552,7 +28592,7 @@ const defineRouteTransition = (from, to, transition) => {
  * @returns {() => void} remove this default.
  */
 const defineRouteDefaultTransition = transition => {
-  import.meta.css = [css$11, "@jsenv/navi/src/nav/route_transition.jsx"];
+  import.meta.css = [css$12, "@jsenv/navi/src/nav/route_transition.jsx"];
   installTransitionWindowCss();
   const value = normalizeTransition(transition);
   defaultTransition = value;
@@ -29374,7 +29414,7 @@ const DRAGGED_ATTRIBUTE = "data-navi-route-travel-dragged";
 const TURNED_ATTRIBUTE = "data-navi-route-travel-turned";
 // The name the box wears while it travels, and only then (see nameForTravel).
 const TRAVEL_NAME = "navi-route-travel";
-const css$10 = /* css */`.navi_route_travel {
+const css$11 = /* css */`.navi_route_travel {
   position: relative;
 
   &[data-travel-by-drag="x"] {
@@ -29663,7 +29703,7 @@ const RouteTravel = ({
   children,
   ...rest
 }) => {
-  import.meta.css = [css$10, "@jsenv/navi/src/nav/route_travel.jsx"];
+  import.meta.css = [css$11, "@jsenv/navi/src/nav/route_travel.jsx"];
   installTransitionWindowCss();
   const elementRef = useRef();
   const gestureRef = useRef(null);
@@ -39227,7 +39267,7 @@ const setupNetworkMonitoring = () => {
 setupNetworkMonitoring();
 
 installImportMetaCssBuild(import.meta);
-const css$$ = /* css */`.navi_loading_indicator_fluid_container {
+const css$10 = /* css */`.navi_loading_indicator_fluid_container {
   border-radius: inherit;
   opacity: 1;
   width: 100%;
@@ -39258,7 +39298,7 @@ const LoadingIndicatorFluid = ({
   visuallyHidden,
   ...rest
 }) => {
-  import.meta.css = [css$$, "@jsenv/navi/src/graphic/loading/loading_indicator_fluid.jsx"];
+  import.meta.css = [css$10, "@jsenv/navi/src/graphic/loading/loading_indicator_fluid.jsx"];
   const ref = useRef(null);
   // The container dimensions can be deduced from the ref itself as the indicator is absolute inset 0
   const [containerWidth, setContainerWidth] = useState(0);
@@ -39464,7 +39504,7 @@ const LoadingRectangleSvg = ({
 };
 
 installImportMetaCssBuild(import.meta);
-const css$_ = /* css */`.navi_loading_outline_wrapper {
+const css$$ = /* css */`.navi_loading_outline_wrapper {
   top: max(var(--loading-outline-min-inset, -100vh),
       var(--loading-rectangle-top, 0px));
   right: max(var(--loading-outline-min-inset, -100vh),
@@ -39485,7 +39525,7 @@ const css$_ = /* css */`.navi_loading_outline_wrapper {
 }
 `;
 const LoadingOutline = props => {
-  import.meta.css = [css$_, "@jsenv/navi/src/graphic/loading/loading_outline.jsx"];
+  import.meta.css = [css$$, "@jsenv/navi/src/graphic/loading/loading_outline.jsx"];
   if (props.containerRef) {
     const container = props.containerRef.current;
     if (!container) {
@@ -39620,7 +39660,7 @@ const LoadingOutlineWithPortal = props => {
 };
 
 installImportMetaCssBuild(import.meta);
-const css$Z = /* css */`.navi_text_anchor {
+const css$_ = /* css */`.navi_text_anchor {
   vertical-align: baseline;
   user-select: none;
   overflow: hidden;
@@ -39658,7 +39698,7 @@ const TextAnchor = ({
   textSize,
   lineLayout
 }) => {
-  import.meta.css = [css$Z, "@jsenv/navi/src/text/text_anchor.jsx"];
+  import.meta.css = [css$_, "@jsenv/navi/src/text/text_anchor.jsx"];
   const anchorRef = useRef();
 
   // Plain useLayoutEffect would also fire while an ancestor dialog/popover
@@ -39886,7 +39926,7 @@ const selectByTextStrings = (element, range, startText, endText) => {
 };
 
 installImportMetaCssBuild(import.meta);
-const css$Y = /* css */`@layer navi {
+const css$Z = /* css */`@layer navi {
   .navi_text {
     &[data-skeleton] {
       border-radius: .2em;
@@ -40455,7 +40495,7 @@ const TextShrinkWrap = props => {
   });
 };
 const TextUI = props => {
-  import.meta.css = [css$Y, "@jsenv/navi/src/text/text.jsx"];
+  import.meta.css = [css$Z, "@jsenv/navi/src/text/text.jsx"];
   let {
     ref,
     spacing,
@@ -40679,7 +40719,7 @@ const Icon = ({
   fillLine,
   ...props
 }) => {
-  import.meta.css = [css$Y, "@jsenv/navi/src/text/text.jsx"];
+  import.meta.css = [css$Z, "@jsenv/navi/src/text/text.jsx"];
   const innerChildren = href ? jsx("svg", {
     width: "100%",
     height: "100%",
@@ -40869,7 +40909,7 @@ const useDimColorWhen = (elementRef, shouldDim) => {
 };
 
 installImportMetaCssBuild(import.meta);
-const css$X = /* css */`@layer navi {
+const css$Y = /* css */`@layer navi {
   .navi_link {
     --link-border-radius: unset;
     --link-outline-color: var(--navi-focus-outline-color);
@@ -41327,7 +41367,7 @@ Object.assign(PSEUDO_CLASSES, {
  * @param {boolean} [props.readOnly]
  */
 const Link = props => {
-  import.meta.css = [css$X, "@jsenv/navi/src/nav/link/link.jsx"];
+  import.meta.css = [css$Y, "@jsenv/navi/src/nav/link/link.jsx"];
   if (props.route) {
     return jsx(LinkWithRoute, {
       ...props
@@ -41886,7 +41926,7 @@ const rememberProgressAnimation = (navElement, travel) => {
   travel.progressAnimation = animation;
   travel.progressFrom = animation ? parseFloat(animation.effect.getKeyframes()[0]["--slide-travel-progress"]) || 0 : 0;
 };
-const css$W = /* css */`@layer navi {
+const css$X = /* css */`@layer navi {
   .navi_nav {
     --nav-border: none;
     --nav-padding: 0px;
@@ -42150,7 +42190,7 @@ const Nav = ({
   slideContainer,
   ...props
 }) => {
-  import.meta.css = [css$W, "@jsenv/navi/src/nav/link/nav.jsx"];
+  import.meta.css = [css$X, "@jsenv/navi/src/nav/link/nav.jsx"];
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
   const navRef = props.ref;
@@ -43026,7 +43066,7 @@ const buildBinderCenterlinePathBelow = ({
 };
 
 installImportMetaCssBuild(import.meta);
-const css$V = /* css */`@layer navi {
+const css$W = /* css */`@layer navi {
   .navi_binder {
     --binder-border-width: var(--navi-control-border-width);
     --binder-border-radius: var(--navi-control-border-radius);
@@ -43311,7 +43351,7 @@ const Binder = ({
   pagePadding,
   ...props
 }) => {
-  import.meta.css = [css$V, "@jsenv/navi/src/nav/binder/binder.jsx"];
+  import.meta.css = [css$W, "@jsenv/navi/src/nav/binder/binder.jsx"];
   const items = toChildArray(children).map((child, index) => {
     const {
       value: itemValue,
@@ -43758,7 +43798,7 @@ const writeSpace = (area) => {
 };
 
 installImportMetaCssBuild(import.meta);
-const css$U = /* css */`@layer navi {
+const css$V = /* css */`@layer navi {
   :root {
     --navi-fixed-bar-width: 56px;
     --navi-fixed-bar-height: 56px;
@@ -43878,7 +43918,7 @@ const FixedBar = ({
   border = true,
   ...props
 }) => {
-  import.meta.css = [css$U, "@jsenv/navi/src/layout/fixed_bar/fixed_bar.jsx"];
+  import.meta.css = [css$V, "@jsenv/navi/src/layout/fixed_bar/fixed_bar.jsx"];
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
   // Said with the width the border rule reads rather than with an attribute of
@@ -43972,7 +44012,7 @@ const FixedBar = ({
 // Subpixel layout rounds rectangles up on boxes that fit exactly.
 const OVERFLOW_TOLERANCE = 1;
 
-const css$T = /* css */ `
+const css$U = /* css */ `
   [data-navi-overflow-x] {
     outline: 2px dashed #e74c3c;
     outline-offset: -2px;
@@ -43996,7 +44036,7 @@ const detectHorizontalOverflow = ({
   let styleEl = null;
   if (highlight) {
     styleEl = document.createElement("style");
-    styleEl.textContent = css$T;
+    styleEl.textContent = css$U;
     document.head.appendChild(styleEl);
   }
 
@@ -44152,7 +44192,7 @@ const useFocusGroup = (
 
 installImportMetaCssBuild(import.meta);
 const rightArrowPath = "M680-480L360-160l-80-80 240-240-240-240 80-80 320 320z";
-const css$S = /* css */`.navi_summary_marker {
+const css$T = /* css */`.navi_summary_marker {
   flex-shrink: 0;
   width: 1em;
   height: 1em;
@@ -44244,7 +44284,7 @@ const SummaryMarker = ({
   loading,
   openDirection = "down"
 }) => {
-  import.meta.css = [css$S, "@jsenv/navi/src/control/details/summary_marker.jsx"];
+  import.meta.css = [css$T, "@jsenv/navi/src/control/details/summary_marker.jsx"];
   const showLoading = useDebounceTrue(loading, 300);
   return jsx("span", {
     className: "navi_summary_marker",
@@ -44290,7 +44330,7 @@ const SummaryMarker = ({
 };
 
 installImportMetaCssBuild(import.meta);
-const css$R = /* css */`.navi_details {
+const css$S = /* css */`.navi_details {
   z-index: 1;
   flex-direction: column;
   flex-shrink: 0;
@@ -44335,7 +44375,7 @@ const Details = props => {
   return details;
 };
 const DetailsField = props => {
-  import.meta.css = [css$R, "@jsenv/navi/src/control/details/details.jsx"];
+  import.meta.css = [css$S, "@jsenv/navi/src/control/details/details.jsx"];
   const {
     ref,
     persists,
@@ -46080,7 +46120,7 @@ const usePopupContentMount = (
 };
 
 installImportMetaCssBuild(import.meta);
-const css$Q = /* css */`.navi_expandable {
+const css$R = /* css */`.navi_expandable {
   flex-direction: column;
   flex-shrink: 0;
   display: flex;
@@ -46310,7 +46350,7 @@ const useExpandableContext = partName => {
  *   builds the content ahead of the click.
  */
 const Expandable = props => {
-  import.meta.css = [css$Q, "@jsenv/navi/src/control/expandable/expandable.jsx"];
+  import.meta.css = [css$R, "@jsenv/navi/src/control/expandable/expandable.jsx"];
   /* The open props are read from `props` by the open controller below; they
      are named here only to keep them out of `rest`, and so out of the DOM. */
   /* eslint-disable no-unused-vars */
@@ -46997,46 +47037,6 @@ const shallowDiffers = (a, b) => {
   return false;
 };
 
-const ButtonRouteResolver = props => {
-  const Next = useNextResolver();
-  if (props.route) {
-    return jsx(ButtonWithRoute, {
-      ...props
-    });
-  }
-  return jsx(Next, {
-    ...props
-  });
-};
-const ButtonWithRoute = props => {
-  const Next = useNextResolver();
-  const {
-    route,
-    routeParams,
-    children,
-    pseudoState,
-    ...rest
-  } = props;
-  const url = route.buildUrl(routeParams);
-  const {
-    matching
-  } = useRouteStatus(route);
-  const paramsAreMatching = route.matchesParams(routeParams);
-  const linkMatching = matching && paramsAreMatching;
-
-  // Merged into whatever the caller already holds: a button can be forced into
-  // a state for a demo and still learn its own current-ness from its route.
-  return jsx(Next, {
-    href: url,
-    pseudoState: {
-      ...pseudoState,
-      ":-navi-href-current": linkMatching
-    },
-    ...rest,
-    children: children || route.buildRelativeUrl(routeParams)
-  });
-};
-
 const LIGHT_ACCENT_ATTRIBUTE = "data-accent-light";
 const VERY_LIGHT_ACCENT_ATTRIBUTE = "data-accent-very-light";
 const DARK_CONTRAST_ATTRIBUTE = "data-accent-needs-dark-fg";
@@ -47137,7 +47137,7 @@ const useAccentColorAttributes = (
 };
 
 installImportMetaCssBuild(import.meta);
-const css$P = /* css */`@layer navi {
+const css$Q = /* css */`@layer navi {
   .navi_button {
     --button-border-radius: var(--navi-control-border-radius);
     --button-border-width: var(--navi-control-border-width);
@@ -47438,7 +47438,7 @@ a.navi_button {
 }
 `;
 const ButtonUI = props => {
-  import.meta.css = [css$P, "@jsenv/navi/src/control/input/button_ui.jsx"];
+  import.meta.css = [css$Q, "@jsenv/navi/src/control/input/button_ui.jsx"];
   const {
     ref,
     // href/link
@@ -47653,6 +47653,186 @@ const ButtonShadow = () => {
 };
 markAsOutsideTextFlow(ButtonShadow);
 
+installImportMetaCssBuild(import.meta);
+const css$P = /* css */`.navi_button_confirm {
+  align-items: center;
+  gap: var(--navi-s);
+  flex-wrap: wrap;
+  display: inline-flex;
+}
+`;
+const ButtonConfirmResolver = props => {
+  const Next = useNextResolver();
+  if (!props.confirm) {
+    return jsx(Next, {
+      ...props
+    });
+  }
+  return jsx(ButtonConfirm, {
+    ...props,
+    Next: Next
+  });
+};
+const ButtonConfirm = ({
+  Next,
+  confirm,
+  confirmLabel = naviI18n("button.confirm"),
+  cancelLabel = naviI18n("button.cancel"),
+  confirmTestId,
+  cancelTestId,
+  ...props
+}) => {
+  import.meta.css = [css$P, "@jsenv/navi/src/control/input/button_confirm.jsx"];
+  const [asking, setAsking] = useState(false);
+  const askingRef = useRef(null);
+  const cancelRef = useRef(null);
+  // Whether going back to the resting label owes the focus a place to land: a
+  // press on "Annuler" or an Escape does, a focus that already left does not —
+  // it is elsewhere by then, and pulling it back would take it from whatever
+  // the person moved to.
+  const restoreFocusRef = useRef(false);
+  const questionId = `${useId()}_question`;
+  const cancel = restoreFocus => {
+    restoreFocusRef.current = restoreFocus;
+    setAsking(false);
+  };
+  useLayoutEffect(() => {
+    if (asking) {
+      // The press was aimed at this button, and the button that answers now is
+      // where it should land: navi's own ladder inside the question, which
+      // finds "Confirmer" (first in the row) unless the caller marked
+      // something else.
+      const found = findFocusTarget(askingRef.current, {
+        restoreMayClaim: true
+      });
+      if (found) {
+        moveFocusTo(found.target);
+      }
+      return;
+    }
+    if (restoreFocusRef.current) {
+      restoreFocusRef.current = false;
+      // The answer may have taken the button with it — a row deleting itself
+      // is the whole point of asking — and there is then nothing to give the
+      // focus back to.
+      const buttonEl = props.ref.current;
+      if (buttonEl) {
+        moveFocusTo(buttonEl);
+      }
+    }
+  }, [asking]);
+  if (!asking) {
+    return jsx(Next, {
+      ...props,
+      // The first press is the question, not the act — so nothing that acts
+      // is handed to the resolvers below. `type` with them: a submit button
+      // would be given `--navi-send` back.
+      type: "button",
+      action: undefined,
+      command: undefined,
+      href: undefined,
+      route: undefined,
+      onClick: () => {
+        setAsking(true);
+      }
+    });
+  }
+  const {
+    action,
+    onActionEnd,
+    onClick
+  } = props;
+  return jsxs("span", {
+    className: "navi_button_confirm",
+    ref: askingRef,
+    onKeyDown: e => {
+      if (e.key === "Escape") {
+        cancel(true);
+      }
+    },
+    onFocusOut: e => {
+      if (!askingRef.current.contains(e.relatedTarget)) {
+        cancel(false);
+      }
+    },
+    children: [jsx("span", {
+      id: questionId,
+      children: confirm === true ? naviI18n("confirm.message") : confirm
+    }), jsx(Next, {
+      ...props,
+      "aria-describedby": questionId
+      // The button confirming is the button that was pressed: it keeps the
+      // caller's own testid unless the question names one of its own.
+      ,
+      "data-testid": confirmTestId || props["data-testid"],
+      onClick: e => {
+        onClick?.(e);
+        if (!action) {
+          // A command runs on the press itself: there is nothing to wait for,
+          // the question is answered as soon as it is pressed.
+          cancel(true);
+        }
+      }
+      // A run that failed keeps the question up, with its callout on the
+      // button that raised it: the retry is then one press away.
+      ,
+      onActionEnd: (data, e) => {
+        onActionEnd?.(data, e);
+        cancel(true);
+      },
+      children: confirmLabel
+    }), jsx(ButtonUI, {
+      ref: cancelRef,
+      type: "button",
+      "data-testid": cancelTestId,
+      onClick: () => {
+        cancel(true);
+      },
+      children: cancelLabel
+    })]
+  });
+};
+
+const ButtonRouteResolver = props => {
+  const Next = useNextResolver();
+  if (props.route) {
+    return jsx(ButtonWithRoute, {
+      ...props
+    });
+  }
+  return jsx(Next, {
+    ...props
+  });
+};
+const ButtonWithRoute = props => {
+  const Next = useNextResolver();
+  const {
+    route,
+    routeParams,
+    children,
+    pseudoState,
+    ...rest
+  } = props;
+  const url = route.buildUrl(routeParams);
+  const {
+    matching
+  } = useRouteStatus(route);
+  const paramsAreMatching = route.matchesParams(routeParams);
+  const linkMatching = matching && paramsAreMatching;
+
+  // Merged into whatever the caller already holds: a button can be forced into
+  // a state for a demo and still learn its own current-ness from its route.
+  return jsx(Next, {
+    href: url,
+    pseudoState: {
+      ...pseudoState,
+      ":-navi-href-current": linkMatching
+    },
+    ...rest,
+    children: children || route.buildRelativeUrl(routeParams)
+  });
+};
+
 const ButtonFirstResolver = props => {
   const Next = useNextResolver();
   const defaultRef = useRef(null);
@@ -47814,6 +47994,20 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  *   more: the work may already have happened on the other side (see
  *   docs/actions.md#aborting-saves-resources-it-does-not-undo), so say it only
  *   where the screen can be re-opened on what is actually there.
+ * @param {boolean|import("ignore:preact").ComponentChildren} [confirm] Ask before
+ *   doing it, in the place the button stands: the first press replaces the
+ *   button with this question and a "Confirmer"/"Annuler" pair, the second one
+ *   does what the button was for. `true` asks navi's default question. The
+ *   press stays under the finger and there is nothing to dismiss — "Annuler",
+ *   Escape, or the focus leaving puts the button back. Use `<Picker
+ *   type="confirm">` instead when the question is long enough to want a popup,
+ *   or when the row has no space for it.
+ * @param {import("ignore:preact").ComponentChildren} [confirmLabel] Label of the
+ *   second press.
+ * @param {import("ignore:preact").ComponentChildren} [cancelLabel] Label of the way
+ *   out of the question.
+ * @param {string} [confirmTestId] `data-testid` of the second press.
+ * @param {string} [cancelTestId] `data-testid` of the way out.
  * @param {string} [contentDisplay] The display of the frame the button draws
  *   around its children. It follows the button's own by default — its display
  *   and, a display alone saying nothing about direction, the rest of its flow
@@ -47828,7 +48022,7 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  *   (it wears it itself) and loses the shrink under the finger, which has
  *   nothing left to scale but the interactive area itself.
  */
-const Button = createComponentResolver([ButtonFirstResolver, ButtonRouteResolver, ButtonCommandPropResolver, ButtonUI]);
+const Button = createComponentResolver([ButtonFirstResolver, ButtonConfirmResolver, ButtonRouteResolver, ButtonCommandPropResolver, ButtonUI]);
 
 installImportMetaCssBuild(import.meta);
 const css$O = /* css */`.navi_control_swap {
@@ -55820,13 +56014,7 @@ const TimeDate = ({
       })
     });
   }
-  const date = toDate(children, value => {
-    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-      const d = new Date(`${value}T00:00:00`);
-      return isNaN(d.getTime()) ? null : d;
-    }
-    return null;
-  });
+  const date = toDate(children);
   if (!date) {
     return jsx(TimeText, {
       ...props,
@@ -72269,6 +72457,26 @@ const css$r = /* css */`.navi_checkbox_group {
 `;
 
 /**
+ * A set of checkboxes answering one question, holding the array of the values
+ * that are checked.
+ *
+ * It renders a `<fieldset>` and hands its `name` down, so the boxes inside are
+ * plain `<Input type="checkbox" value="…">` with nothing else to declare; each
+ * value that is checked appears in the array, in the order the boxes are
+ * written. What it holds is said the way every control says it — `value` /
+ * `defaultValue` (an array), or a bound `signal` — and inside a `<Form>` the
+ * group is one entry of the submitted params, an array.
+ *
+ * ```jsx
+ * <CheckboxGroup name="permissions" defaultValue={["places.moderate"]} action={save}>
+ *   <legend>Permissions</legend>
+ *   <Field as="label"><Input type="checkbox" value="places.moderate" /> Modérer les lieux</Field>
+ *   <Field as="label"><Input type="checkbox" value="games.list" /> Lister les parties</Field>
+ * </CheckboxGroup>
+ * ```
+ *
+ * See `<RadioGroup>` for the same shape holding a single value.
+ *
  * @type {import("ignore:preact").FunctionComponent<{
  *   maxLength?: number,
  *   maxLengthGuard?: number,
@@ -72990,6 +73198,27 @@ const css$p = /* css */`.navi_radio_group {
   }
 }
 `;
+
+/**
+ * A set of radios answering one question, holding the value of the one that is
+ * checked.
+ *
+ * It renders a `<fieldset>` and hands its `name` down, so the radios inside are
+ * plain `<Input type="radio" value="…">` with nothing else to declare — sharing
+ * a name is what makes them exclusive. What it holds is said the way every
+ * control says it — `value` / `defaultValue`, or a bound `signal` — and inside a
+ * `<Form>` the group is one entry of the submitted params.
+ *
+ * ```jsx
+ * <RadioGroup name="role" defaultValue="viewer" action={save}>
+ *   <legend>Rôle</legend>
+ *   <Field as="label"><Input type="radio" value="viewer" /> Lecteur</Field>
+ *   <Field as="label"><Input type="radio" value="admin" /> Administrateur</Field>
+ * </RadioGroup>
+ * ```
+ *
+ * See `<CheckboxGroup>` for the same shape holding an array.
+ */
 const RadioGroup = props => {
   const refDefault = useRef(null);
   props.ref = props.ref || refDefault;

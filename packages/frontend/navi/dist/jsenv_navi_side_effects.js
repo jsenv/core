@@ -443,6 +443,9 @@ const css = /* css */ `@layer navi {
     --navi-accent-color: #031e3c;
     --navi-surface-color: light-dark(#fff, #1c1c1e);
     --navi-surface-text-color: CanvasText;
+    --navi-chrome-color: color-mix(in srgb,
+        var(--navi-surface-color) 94%,
+        var(--navi-color-dark));
     --navi-separator-color-default: #d1d9e0;
     --navi-color-white: white;
     --navi-color-dark: #373c45;
