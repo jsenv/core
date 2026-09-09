@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/navi",
-  "version": "0.29.237",
+  "version": "0.29.238",
   "type": "module",
   "description": "Library of components including navigation to create frontend applications",
   "repository": {
@@ -47,7 +47,7 @@
     "@jsenv/terminal-table": "../../tooling/terminal-table",
     "@jsenv/urls": "../../tooling/urls",
     "@preact/signals": "2.11.2",
-    "playwright": "1.62.1",
+    "playwright": "1.63.0",
     "preact": "11.0.0-rc.2"
   },
   "publishConfig": {

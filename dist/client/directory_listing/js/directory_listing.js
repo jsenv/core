@@ -1,4 +1,4 @@
-import { K, u, N, $ } from "../jsenv_core_node_modules.js";
+import { tn, u, H, A } from "../jsenv_core_node_modules.js";
 
 const directoryIconUrl = new URL("../other/dir.png", import.meta.url).href;
 const fileIconUrl = new URL("../other/file.png", import.meta.url).href;
@@ -30,12 +30,12 @@ const updateDirectoryContentItems = value => {
   }
 };
 const DirectoryListing = () => {
-  const directoryItems = N(callback => {
+  const directoryItems = H(callback => {
     directoryItemsChangeCallbackSet.add(callback);
   }, () => {
     return directoryContentItems;
   });
-  return u($, {
+  return u(A, {
     children: [enoentDetails ? u(ErrorMessage, {}) : null, u(Breadcrumb, {
       items: breadcrumb
     }), u(DirectoryContent, {
@@ -53,7 +53,7 @@ const ErrorMessage = () => {
   let errorSuggestion;
   let spaExplanation = null;
   if (spaFallbackFilePaths) {
-    spaExplanation = u($, {
+    spaExplanation = u(A, {
       children: [u("strong", {
         children: "SPA mode:"
       }), " a url without extension is a route, served with the closest html file. None of these exists:", u("ul", {
@@ -67,7 +67,7 @@ const ErrorMessage = () => {
       })]
     });
   }
-  errorText = u($, {
+  errorText = u(A, {
     children: [u("strong", {
       children: "File not found:"
     }), "\xA0", u(Overflow, {
@@ -82,7 +82,7 @@ const ErrorMessage = () => {
       }), " ", "does not exist on the server."]
     })]
   });
-  errorSuggestion = u($, {
+  errorSuggestion = u(A, {
     children: [u("span", {
       className: "icon",
       children: "🔍"
@@ -136,7 +136,7 @@ const Breadcrumb = ({
         isServerRootDirectory
       } = navItem;
       const isDirectory = new URL(url).pathname.endsWith("/");
-      return u($, {
+      return u(A, {
         children: [u(BreadcrumbItem, {
           url: urlRelativeToServer,
           isCurrent: isCurrent,
@@ -231,7 +231,7 @@ const DirectoryContentItem = ({
         className: "directory_content_item_text",
         children: [u(Overflow, {
           children: children
-        }), isDirectory ? u($, {
+        }), isDirectory ? u(A, {
           children: [u("span", {
             style: "flex:1"
           }), u("span", {
@@ -296,4 +296,4 @@ if (autoreload) {
     }
   };
 }
-K(u(DirectoryListing, {}), document.querySelector("#root"));
+tn(u(DirectoryListing, {}), document.querySelector("#root"));
