@@ -1581,6 +1581,7 @@ const PickerFirstResolver = (props) => {
  *   mode?: "popover" | "dialog" | "callout",
  *   openOn?: "press" | "longpress" | "contextmenu" | string | string[],
  *   animation?: boolean | "auto" | "fading" | "scaling" | "sliding" | "growing" | `slide-from-${string}`,
+ *   grow?: "box" | "scene",
  *   animationDuration?: string,
  *   calloutStatus?: "info" | "warning" | "error" | "success" | "none",
  *   calloutIcon?: boolean,
@@ -1871,7 +1872,9 @@ const PickerFirstResolver = (props) => {
  *   the user validated: that is `action`. `closeEvent.detail.isCancel` tells a
  *   cancel (Escape, the back gesture) from a close that keeps. Fires after the
  *   picker's value has settled — committed, or restored on a cancel — so the
- *   value read in here is the one the picker ends up holding.
+ *   value read in here is the one the picker ends up holding, and before the
+ *   popup leaves the history entry it pushed, so a route param cleared in here
+ *   is part of the url a close that keeps carries back.
  * @param {number|string} [rightSlotIconSize="inherit"] How big what sits in the
  *   right slot is drawn — the chevron, a `rightSlotIcon`, or the clear button's
  *   cross. "inherit" takes the picker's own font size.
@@ -1918,6 +1921,10 @@ const PickerFirstResolver = (props) => {
  *   the anchor, so nothing has to be named for it — `dialogSizeFromAnchor`
  *   for a card that must keep its width on the way, left out for a drawing
  *   that opens precisely to get bigger.
+ * @param {"box"|"scene"} [grow="box"] Dialog's own, under `animation="growing"`:
+ *   `"box"` for a card that extends (its top stays, the box uncovers the rest),
+ *   `"scene"` for a thumbnail and the bigger view it is cut from (each picture
+ *   covers the box, cropped around its centre).
  * @param {string} [animationDuration] The popup's own (`--popup-animation-duration`).
  * @param {boolean} [dialogSizeFromAnchor] Dialog mode: the dialog is as wide
  *   as the trigger — its box as a floor (Dialog's own `sizeFromAnchor`) and

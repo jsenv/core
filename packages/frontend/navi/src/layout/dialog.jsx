@@ -619,6 +619,73 @@ const css = /* css */ `
     &::view-transition-new(navi-popup-grow) {
       animation-duration: var(--navi-popup-grow-duration, 0.25s);
     }
+
+    /* Each picture is drawn as wide as the box and as tall as it is, so a box
+       that grows in height alone (a card keeping its width) would show the
+       whole taller picture from the first frame, and the movement would read
+       as a fade. Clipped to the box, the picture is uncovered as the box
+       grows and covered back as it shrinks — behind the corners the box
+       has in the page, published by popup_grow.js. */
+    &::view-transition-image-pair(navi-popup-grow) {
+      border-radius: var(--navi-popup-grow-border-radius, 0);
+      overflow: clip;
+    }
+
+    /* One scene through two frames (Dialog's grow="scene"): each picture
+       covers the box, cropped around its centre, so what both frames show
+       lands on itself. */
+    &[data-navi-popup-grow-kind="scene"] {
+      &::view-transition-old(navi-popup-grow),
+      &::view-transition-new(navi-popup-grow) {
+        height: 100%;
+        object-fit: cover;
+      }
+    }
+
+    /* The anchor lives in the page, under the fixed bars; the popup lives in
+       the top layer, over them. The pictures are painted above everything,
+       bars included, so near the anchor's end of the movement the whole tree
+       is clipped to the room between the bars — a thumbnail half under the
+       top bar leaves from under it and comes back under it — and freed near
+       the popup's end, where a tall dialog may stand over them. Clipped for
+       the 65% of the time nearest the anchor: with the group's own ease that
+       leaves the last 35% of the time to cover more than half of the trip,
+       so the picture is out of the bars before the clip closes on it. */
+    &::view-transition {
+      animation: navi-popup-grow-clip var(--navi-popup-grow-duration, 0.25s)
+        ease both;
+    }
+    &[data-navi-popup-grow="closing"]::view-transition {
+      animation-direction: reverse;
+    }
+  }
+  /* The bars sit at the app's own inset (fixed_bar.jsx), so the room they
+     take starts there; both tokens are 0px where nothing takes any. */
+  @keyframes navi-popup-grow-clip {
+    0%,
+    65% {
+      clip-path: inset(
+        calc(
+            var(--navi-app-inset-top, 0px) +
+              var(--navi-fixed-bar-space-top, 0px)
+          )
+          calc(
+            var(--navi-app-inset-right, 0px) +
+              var(--navi-fixed-bar-space-right, 0px)
+          )
+          calc(
+            var(--navi-app-inset-bottom, 0px) +
+              var(--navi-fixed-bar-space-bottom, 0px)
+          )
+          calc(
+            var(--navi-app-inset-left, 0px) +
+              var(--navi-fixed-bar-space-left, 0px)
+          )
+      );
+    }
+    100% {
+      clip-path: inset(0);
+    }
   }
 
   ${surfaceTextCss}
@@ -755,6 +822,15 @@ const css = /* css */ `
  *   prop) and grows into whatever inside the dialog carries `data-grow`, the
  *   dialog itself when nothing does. `"auto"` never picks it: only the caller
  *   knows the two boxes are one object. See `popup_grow.js`.
+ * @param {"box"|"scene"} [props.grow="box"] - Under `animation="growing"`,
+ *   what the anchor and what it grows into are to each other, which decides
+ *   how their pictures sit in the box moving between them. `"box"`: one
+ *   object at two sizes — a card gaining fields. Each picture is drawn at the
+ *   box's width from its top edge, and a box growing in height uncovers more
+ *   of it: the header stays where it is, the rest extends. `"scene"`: one
+ *   scene through two frames — a thumbnail and the map it is cut from. Each
+ *   picture covers the box, cropped around its centre and never distorted, so
+ *   what both frames show lands on itself.
  * @param {string} [props.animationDuration] - Maps to
  *   `--popup-animation-duration`.
  * @param {Element|{current: Element}|string} [props.anchor] - Never used for
@@ -1102,6 +1178,7 @@ const useDialogProps = (props) => {
     // once, held at that size while open. See this prop's own JSDoc above.
     sizing = "auto",
     animation,
+    grow = "box",
     // Inert unless sizeFromAnchor below (see this file's top comment) —
     // Dialog's own positioning is never relative to it.
     anchor,
@@ -1334,7 +1411,10 @@ const useDialogProps = (props) => {
           applyChange();
           return;
         }
-        growPopupFromAnchor(dialogEl, anchorElement, applyChange, { opened });
+        growPopupFromAnchor(dialogEl, anchorElement, applyChange, {
+          opened,
+          grow,
+        });
       }
     : null;
 

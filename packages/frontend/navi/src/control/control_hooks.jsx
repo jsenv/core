@@ -1579,6 +1579,15 @@ const useInteractiveProps = (
   const debugInteraction = useDebugInteraction();
   const debugFocus = useDebugFocus();
 
+  // The very instance a run of this control is using, held in a SIGNAL because
+  // the busy state below follows it: it is captured at navi_action_start and
+  // released when the run settles (see onnavi_action_start).
+  const runningActionSignalRef = useRef(null);
+  if (runningActionSignalRef.current === null) {
+    runningActionSignalRef.current = signal(null);
+  }
+  uiStateController.runningActionSignal = runningActionSignalRef.current;
+
   autofocus: {
     const { autoFocus, autoFocusVisible, autoFocusSelect } = props;
     const autoFocusProps = useAutoFocus(ref, autoFocus, {
@@ -1615,7 +1624,15 @@ const useInteractiveProps = (
     );
     const parallelGuard = useContext(ParallelGuardContext);
     const parentAction = useContext(ActionContext);
-    const actionStatus = useActionStatus(boundAction);
+    // The instance the run in flight is using when there is one, and only
+    // then boundAction: boundAction can be a proxy following the UI state
+    // signal, and that state moves while a run is out — a popup content
+    // unmounting takes the group's value with it. The proxy would resolve to
+    // the instance for the new value, which is idle, and the control would
+    // stop waiting on a run that is still going. What it waits on is the run
+    // it started, from navi_action_start to its settlement.
+    const runningAction = uiStateController.runningActionSignal.value;
+    const actionStatus = useActionStatus(runningAction || boundAction);
     const networkPolicyReason = useNetworkPolicyReason();
     const {
       disabled,
@@ -2015,9 +2032,9 @@ const useInteractiveProps = (
           // state has already moved to the new value by now — the proxy would
           // resolve to the instance for that new value, which is not the one
           // running.
-          uiStateController.runningAction?.abort(
-            `superseded by a newer request on this control`,
-          );
+          uiStateController.runningActionSignal
+            .peek()
+            ?.abort(`superseded by a newer request on this control`);
           return;
         }
         debugAction(e, `executing action ${e.detail.action.callSource}`);
@@ -2039,7 +2056,7 @@ const useInteractiveProps = (
         // this run (see the optimistic queue above), the state — and the
         // proxy's resolution — will have moved on.
         const runAction = e.detail.action;
-        uiStateController.runningAction =
+        uiStateController.runningActionSignal.value =
           runAction.getCurrentAction?.() ?? runAction;
         // Fires when the run's underlying work has settled — even for an
         // aborted run, whose promise is awaited to completion (see
@@ -2047,7 +2064,7 @@ const useInteractiveProps = (
         // done with it" means, and therefore when the queued request may go.
         e.detail.addSideEffect((outcome) => {
           uiStateController.actionInFlight = false;
-          uiStateController.runningAction = null;
+          uiStateController.runningActionSignal.value = null;
           uiStateController.parallelGuard?.release(uiStateController);
           const queuedEvent = uiStateController.queuedActionAllowedEvent;
           if (!queuedEvent) {

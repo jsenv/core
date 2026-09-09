@@ -592,17 +592,24 @@ const PickerCustom = (props) => {
               commitUIStateAsAnswer(controller, closeEvent);
             }
           }
-          leaveExpanded({ isBack: closeEvent.detail.isCancel });
-          // Reset so the next opening re-evaluates screen size
-          resetMode();
           const confirmEvent = confirmEventRef.current;
           confirmEventRef.current = null;
           if (confirmEvent && !closeEvent.detail.isCancel) {
             onConfirm?.(confirmEvent);
           }
-          // Last, after the value bookkeeping above: whoever listens reads the
-          // picker's value as it ends up — committed, or restored on a cancel.
+          // After the value bookkeeping above — whoever listens reads the
+          // picker's value as it ends up, committed or restored on a cancel —
+          // and before leaveExpanded below, which is where the caller's
+          // reaction runs for a Dialog too. A close that keeps goes back onto
+          // the entry the popup was opened from while KEEPING the url as it
+          // stands at that moment (see useNavState's leave()), so what onClose
+          // spells into the address — a route param naming what was being
+          // edited, cleared now that nothing is — has to be written before,
+          // or the landing puts it back.
           onClose?.(closeEvent);
+          leaveExpanded({ isBack: closeEvent.detail.isCancel });
+          // Reset so the next opening re-evaluates screen size
+          resetMode();
         },
       };
     });
@@ -1007,6 +1014,7 @@ const PickerContentInsidePopup = (props) => {
     // its own width once lifted. Dialog's own `sizeFromAnchor`.
     dialogSizeFromAnchor,
     animation,
+    grow,
     animationDuration,
     // mode="callout": what the callout says about what it holds, and paints
     // in its border and icon — "none" for a plain tooltip (see the callout
@@ -1106,6 +1114,7 @@ const PickerContentInsidePopup = (props) => {
             isPopover ? undefined : dockedOnSmallTouchScreen
           }
           sizeFromAnchor={isPopover ? undefined : dialogSizeFromAnchor}
+          grow={isPopover ? undefined : grow}
         >
           {/* Let the popup content branch on the mode via usePopupMode(). */}
           <PopupModeContext.Provider value={mode}>

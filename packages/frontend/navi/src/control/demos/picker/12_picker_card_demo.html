@@ -30,6 +30,12 @@
         border-bottom: 2px solid #eee;
         scroll-margin-top: 12px;
       }
+      .demo-section h3 {
+        margin: 20px 0 10px;
+        color: #444;
+        font-size: 0.95rem;
+        scroll-margin-top: 12px;
+      }
       .demo-section p {
         margin: 0 0 16px;
         color: #555;
@@ -181,6 +187,7 @@
           <StatesDemo />
           <OpenOnDemo />
           <DoorDemo />
+          <GrowDemo />
         </Box>
       );
 
@@ -305,6 +312,152 @@
             >
               <Box data-grow>{scene}</Box>
             </Picker>
+            <SlowToggle slow={slow} setSlow={setSlow} />
+          </Section>
+        );
+      };
+
+      // ── grow ──────────────────────────────────────────────────────────────
+
+      // The same drawing at two framings: the whole scene is 1:1, the page
+      // shows its middle band, 4:3 — a sun at the top and a bench at the
+      // bottom fall outside the band, so where each picture sits is visible.
+      const sceneOf = (viewBox) => (
+        <svg
+          class="demo-scene"
+          viewBox={viewBox}
+          role="img"
+          aria-label="Terrain vu du ciel"
+        >
+          <rect width="200" height="200" fill="#dbe9f6" />
+          <circle cx="170" cy="22" r="11" fill="#ffca28" />
+          <rect x="40" y="60" width="120" height="80" fill="#3f7fbf" />
+          <line
+            x1="100"
+            y1="60"
+            x2="100"
+            y2="140"
+            stroke="white"
+            stroke-width="2"
+          />
+          <rect x="70" y="172" width="60" height="10" fill="#8d6e63" />
+        </svg>
+      );
+      const wholeScene = sceneOf("0 0 200 200");
+      const framedScene = sceneOf("0 25 200 150");
+
+      const FramedScenePicker = ({ grow, animationDuration }) => (
+        <Picker
+          picksNothing
+          variant="bare"
+          mode="dialog"
+          ui={<Box width="200">{framedScene}</Box>}
+          aria-label="Voir toute la scène"
+          animation="growing"
+          grow={grow}
+          animationDuration={animationDuration}
+          dialogExpandX
+          dialogMaxWidth="min(360px, 92vw)"
+          popupBackgroundColor="transparent"
+          popupBoxShadow="none"
+          mount="from-first-open"
+        >
+          <Box data-grow>{wholeScene}</Box>
+        </Picker>
+      );
+
+      // The same card at two lengths: the page shows its first lines, the
+      // sheet all of them, at the same width.
+      const PlainCard = ({ children, ...props }) => (
+        <Box
+          flex="y"
+          spacing="s"
+          padding="m"
+          color="white"
+          backgroundColor="#2f6fb5"
+          borderRadius="12"
+          width="300"
+          {...props}
+        >
+          <Text bold>{GAME.name}</Text>
+          <Text size="s">{GAME.court}</Text>
+          <Text size="s">{GAME.place}</Text>
+          {children}
+        </Box>
+      );
+
+      const ExtendingCardPicker = ({ grow, animationDuration }) => (
+        <Picker
+          picksNothing
+          variant="bare"
+          mode="dialog"
+          borderRadius="12"
+          ui={<PlainCard />}
+          aria-label="Voir toute la fiche"
+          animation="growing"
+          grow={grow}
+          animationDuration={animationDuration}
+          dialogSizeFromAnchor
+          dialogExpandX
+          popupBackgroundColor="transparent"
+          popupBoxShadow="none"
+          mount="from-first-open"
+        >
+          <PlainCard data-grow>
+            <Text size="s">Samedi 14 mars, 10h00 – 11h30</Text>
+            <Text size="s">Aurore, Malo, Inès, Théo</Text>
+            <Text size="s">Balles fournies, 8 € par joueur</Text>
+            <Text size="s">Vestiaires et douches sur place</Text>
+          </PlainCard>
+        </Picker>
+      );
+
+      const GrowDemo = () => {
+        const [slow, setSlow] = useStoredBoolean(
+          "picker_card_demo_grow_slow",
+          true,
+        );
+        const animationDuration = slow ? "1s" : undefined;
+        return (
+          <Section id="grow" title="grow">
+            <p>
+              Une carte qui s'allonge garde son en-tête ; une scène recadrée
+              garde son centre.
+            </p>
+            <Heading level={3} id="grow-card">
+              Une carte qui s'allonge
+            </Heading>
+            <div class="demo-row">
+              <Case caption='grow="box" (défaut)'>
+                <ExtendingCardPicker
+                  grow="box"
+                  animationDuration={animationDuration}
+                />
+              </Case>
+              <Case caption='grow="scene"'>
+                <ExtendingCardPicker
+                  grow="scene"
+                  animationDuration={animationDuration}
+                />
+              </Case>
+            </div>
+            <Heading level={3} id="grow-scene">
+              Une scène vue par deux cadres
+            </Heading>
+            <div class="demo-row">
+              <Case caption='grow="box" (défaut)'>
+                <FramedScenePicker
+                  grow="box"
+                  animationDuration={animationDuration}
+                />
+              </Case>
+              <Case caption='grow="scene"'>
+                <FramedScenePicker
+                  grow="scene"
+                  animationDuration={animationDuration}
+                />
+              </Case>
+            </div>
             <SlowToggle slow={slow} setSlow={setSlow} />
           </Section>
         );

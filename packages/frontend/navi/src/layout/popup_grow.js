@@ -37,14 +37,22 @@ import { ensureDocumentStartViewTransition } from "../transition/start_view_tran
 // before the next one takes it (see releaseGrowInProgress).
 const NAME = "navi-popup-grow";
 const NAME_PROPERTY = "view-transition-name";
-// Worn by the root for the length of the movement — what the CSS keys the
-// page's own opt-out on, and the movement's only trace in the document.
+// Worn by the root for the length of the movement, saying which way it goes
+// ("opening" | "closing") — what the CSS keys the page's own opt-out and the
+// clip near the anchor's end on, and the movement's only trace in the document.
 const ROOT_ATTRIBUTE = "data-navi-popup-grow";
+// What the two boxes are to each other (Dialog's `grow`: "box" | "scene"),
+// worn by the root too — it decides how each picture sits in the moving box.
+const KIND_ATTRIBUTE = "data-navi-popup-grow-kind";
 // Inside the popup, the one node that IS the anchor once it has grown.
 const TARGET_SELECTOR = "[data-grow]";
 // The popup's own animation duration, published on the root because the
 // ::view-transition tree hangs off it and inherits from nowhere else.
 const DURATION_PROPERTY = "--navi-popup-grow-duration";
+// The corners of the box being left, published the same way: the pictures are
+// clipped to the moving box (dialog.jsx), and a card with rounded corners must
+// not travel with square ones.
+const BORDER_RADIUS_PROPERTY = "--navi-popup-grow-border-radius";
 
 let releaseGrowInProgress = null;
 
@@ -55,13 +63,13 @@ let releaseGrowInProgress = null;
  * `opened` says which way: the box being left is the anchor when the popup is
  * opening and the popup when it is closing, and the arriving one is only known
  * once the change has been made (the content a popup grows into is built by
- * that very change).
+ * that very change). `grow` is Dialog's own prop of that name.
  */
 export const growPopupFromAnchor = (
   popupEl,
   anchorElement,
   applyChange,
-  { opened },
+  { opened, grow },
 ) => {
   const startViewTransition = ensureDocumentStartViewTransition();
   // A movement still wearing the name would make the name two elements wide,
@@ -72,7 +80,8 @@ export const growPopupFromAnchor = (
   const elementLeaving = opened ? anchorElement : resolveGrowTarget(popupEl);
   const giveBackNameLeaving = wearGrowName(elementLeaving);
   const root = document.documentElement;
-  root.setAttribute(ROOT_ATTRIBUTE, "");
+  root.setAttribute(ROOT_ATTRIBUTE, opened ? "opening" : "closing");
+  root.setAttribute(KIND_ATTRIBUTE, grow);
   const duration = getComputedStyle(popupEl)
     .getPropertyValue("--popup-animation-duration")
     .trim();
@@ -81,6 +90,10 @@ export const growPopupFromAnchor = (
     // which computes to 0s — a movement nobody sees rather than one at the
     // browser's own pace.
     root.style.setProperty(DURATION_PROPERTY, duration);
+  }
+  const borderRadius = getComputedStyle(elementLeaving).borderRadius;
+  if (borderRadius) {
+    root.style.setProperty(BORDER_RADIUS_PROPERTY, borderRadius);
   }
 
   let giveBackNameArriving = null;
@@ -92,7 +105,9 @@ export const growPopupFromAnchor = (
     giveBackNameLeaving();
     giveBackNameArriving?.();
     root.removeAttribute(ROOT_ATTRIBUTE);
+    root.removeAttribute(KIND_ATTRIBUTE);
     root.style.removeProperty(DURATION_PROPERTY);
+    root.style.removeProperty(BORDER_RADIUS_PROPERTY);
   };
   releaseGrowInProgress = release;
 
