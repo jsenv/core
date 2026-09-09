@@ -412,6 +412,56 @@
         </Picker>
       );
 
+      // The same content, centred, in a box that is a little bigger once
+      // promoted — wider, or taller — and nothing else.
+      const CenteredCard = ({ width, height, ...props }) => (
+        <Box
+          flex="y"
+          spacing="s"
+          padding="m"
+          alignX="center"
+          alignY="center"
+          color="white"
+          backgroundColor="#2f6fb5"
+          borderRadius="12"
+          width={width}
+          height={height}
+          {...props}
+        >
+          <Text bold>{GAME.name}</Text>
+          <Text size="s">{GAME.court}</Text>
+          <Text size="s">{GAME.place}</Text>
+        </Box>
+      );
+
+      const SameContentPicker = ({
+        grow,
+        animationDuration,
+        pageSize,
+        sheetSize,
+      }) => (
+        <Picker
+          picksNothing
+          variant="bare"
+          mode="dialog"
+          borderRadius="12"
+          ui={<CenteredCard {...pageSize} />}
+          aria-label="Mettre la fiche en avant"
+          animation="growing"
+          grow={grow}
+          animationDuration={animationDuration}
+          popupBackgroundColor="transparent"
+          popupBoxShadow="none"
+          mount="from-first-open"
+        >
+          <CenteredCard data-grow {...sheetSize} />
+        </Picker>
+      );
+
+      const IN_PAGE_SIZE = { width: 300, height: 120 };
+      const WIDER_SIZE = { width: 340, height: 120 };
+      const TALLER_SIZE = { width: 300, height: 160 };
+
       const GrowDemo = () => {
         const [slow, setSlow] = useStoredBoolean(
           "picker_card_demo_grow_slow",
@@ -455,6 +505,45 @@
                 <FramedScenePicker
                   grow="scene"
                   animationDuration={animationDuration}
+                />
+              </Case>
+            </div>
+            <Heading level={3} id="grow-same-content">
+              Le même contenu, à peine plus grand
+            </Heading>
+            <div class="demo-row">
+              <Case caption='plus large, grow="box" (défaut)'>
+                <SameContentPicker
+                  grow="box"
+                  animationDuration={animationDuration}
+                  pageSize={IN_PAGE_SIZE}
+                  sheetSize={WIDER_SIZE}
+                />
+              </Case>
+              <Case caption='plus large, grow="scene"'>
+                <SameContentPicker
+                  grow="scene"
+                  animationDuration={animationDuration}
+                  pageSize={IN_PAGE_SIZE}
+                  sheetSize={WIDER_SIZE}
+                />
+              </Case>
+            </div>
+            <div class="demo-row">
+              <Case caption='plus haut, grow="box" (défaut)'>
+                <SameContentPicker
+                  grow="box"
+                  animationDuration={animationDuration}
+                  pageSize={IN_PAGE_SIZE}
+                  sheetSize={TALLER_SIZE}
+                />
+              </Case>
+              <Case caption='plus haut, grow="scene"'>
+                <SameContentPicker
+                  grow="scene"
+                  animationDuration={animationDuration}
+                  pageSize={IN_PAGE_SIZE}
+                  sheetSize={TALLER_SIZE}
                 />
               </Case>
             </div>

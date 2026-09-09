@@ -38366,6 +38366,15 @@ const useInteractiveProps = (props, {
   const debugAction = useDebugAction();
   const debugInteraction = useDebugInteraction();
   const debugFocus = useDebugFocus();
+
+  // The very instance a run of this control is using, held in a SIGNAL because
+  // the busy state below follows it: it is captured at navi_action_start and
+  // released when the run settles (see onnavi_action_start).
+  const runningActionSignalRef = useRef(null);
+  if (runningActionSignalRef.current === null) {
+    runningActionSignalRef.current = signal(null);
+  }
+  uiStateController.runningActionSignal = runningActionSignalRef.current;
   {
     const {
       autoFocus,
@@ -38404,7 +38413,15 @@ const useInteractiveProps = (props, {
     const isActionRequesterComputed = useMemo(() => parentActionRequesterSignal ? computed(() => parentActionRequesterSignal.value === ref.current) : null, [parentActionRequesterSignal]);
     const parallelGuard = useContext(ParallelGuardContext);
     const parentAction = useContext(ActionContext);
-    const actionStatus = useActionStatus(boundAction);
+    // The instance the run in flight is using when there is one, and only
+    // then boundAction: boundAction can be a proxy following the UI state
+    // signal, and that state moves while a run is out — a popup content
+    // unmounting takes the group's value with it. The proxy would resolve to
+    // the instance for the new value, which is idle, and the control would
+    // stop waiting on a run that is still going. What it waits on is the run
+    // it started, from navi_action_start to its settlement.
+    const runningAction = uiStateController.runningActionSignal.value;
+    const actionStatus = useActionStatus(runningAction || boundAction);
     const networkPolicyReason = useNetworkPolicyReason();
     const {
       disabled,
@@ -38765,7 +38782,7 @@ const useInteractiveProps = (props, {
           // state has already moved to the new value by now — the proxy would
           // resolve to the instance for that new value, which is not the one
           // running.
-          uiStateController.runningAction?.abort(`superseded by a newer request on this control`);
+          uiStateController.runningActionSignal.peek()?.abort(`superseded by a newer request on this control`);
           return;
         }
         debugAction(e, `executing action ${e.detail.action.callSource}`);
@@ -38787,14 +38804,14 @@ const useInteractiveProps = (props, {
         // this run (see the optimistic queue above), the state — and the
         // proxy's resolution — will have moved on.
         const runAction = e.detail.action;
-        uiStateController.runningAction = runAction.getCurrentAction?.() ?? runAction;
+        uiStateController.runningActionSignal.value = runAction.getCurrentAction?.() ?? runAction;
         // Fires when the run's underlying work has settled — even for an
         // aborted run, whose promise is awaited to completion (see
         // performRun in actions.js) — which is exactly what "the server is
         // done with it" means, and therefore when the queued request may go.
         e.detail.addSideEffect(outcome => {
           uiStateController.actionInFlight = false;
-          uiStateController.runningAction = null;
+          uiStateController.runningActionSignal.value = null;
           uiStateController.parallelGuard?.release(uiStateController);
           const queuedEvent = uiStateController.queuedActionAllowedEvent;
           if (!queuedEvent) {
@@ -59115,14 +59132,22 @@ const clipOf = (side, distance) => {
 // before the next one takes it (see releaseGrowInProgress).
 const NAME = "navi-popup-grow";
 const NAME_PROPERTY = "view-transition-name";
-// Worn by the root for the length of the movement — what the CSS keys the
-// page's own opt-out on, and the movement's only trace in the document.
+// Worn by the root for the length of the movement, saying which way it goes
+// ("opening" | "closing") — what the CSS keys the page's own opt-out and the
+// clip near the anchor's end on, and the movement's only trace in the document.
 const ROOT_ATTRIBUTE = "data-navi-popup-grow";
+// What the two boxes are to each other (Dialog's `grow`: "box" | "scene"),
+// worn by the root too — it decides how each picture sits in the moving box.
+const KIND_ATTRIBUTE = "data-navi-popup-grow-kind";
 // Inside the popup, the one node that IS the anchor once it has grown.
 const TARGET_SELECTOR = "[data-grow]";
 // The popup's own animation duration, published on the root because the
 // ::view-transition tree hangs off it and inherits from nowhere else.
 const DURATION_PROPERTY = "--navi-popup-grow-duration";
+// The corners of the box being left, published the same way: the pictures are
+// clipped to the moving box (dialog.jsx), and a card with rounded corners must
+// not travel with square ones.
+const BORDER_RADIUS_PROPERTY = "--navi-popup-grow-border-radius";
 
 let releaseGrowInProgress = null;
 
@@ -59133,13 +59158,13 @@ let releaseGrowInProgress = null;
  * `opened` says which way: the box being left is the anchor when the popup is
  * opening and the popup when it is closing, and the arriving one is only known
  * once the change has been made (the content a popup grows into is built by
- * that very change).
+ * that very change). `grow` is Dialog's own prop of that name.
  */
 const growPopupFromAnchor = (
   popupEl,
   anchorElement,
   applyChange,
-  { opened },
+  { opened, grow },
 ) => {
   const startViewTransition = ensureDocumentStartViewTransition();
   // A movement still wearing the name would make the name two elements wide,
@@ -59150,7 +59175,8 @@ const growPopupFromAnchor = (
   const elementLeaving = opened ? anchorElement : resolveGrowTarget(popupEl);
   const giveBackNameLeaving = wearGrowName(elementLeaving);
   const root = document.documentElement;
-  root.setAttribute(ROOT_ATTRIBUTE, "");
+  root.setAttribute(ROOT_ATTRIBUTE, opened ? "opening" : "closing");
+  root.setAttribute(KIND_ATTRIBUTE, grow);
   const duration = getComputedStyle(popupEl)
     .getPropertyValue("--popup-animation-duration")
     .trim();
@@ -59159,6 +59185,10 @@ const growPopupFromAnchor = (
     // which computes to 0s — a movement nobody sees rather than one at the
     // browser's own pace.
     root.style.setProperty(DURATION_PROPERTY, duration);
+  }
+  const borderRadius = getComputedStyle(elementLeaving).borderRadius;
+  if (borderRadius) {
+    root.style.setProperty(BORDER_RADIUS_PROPERTY, borderRadius);
   }
 
   let giveBackNameArriving = null;
@@ -59170,7 +59200,9 @@ const growPopupFromAnchor = (
     giveBackNameLeaving();
     giveBackNameArriving?.();
     root.removeAttribute(ROOT_ATTRIBUTE);
+    root.removeAttribute(KIND_ATTRIBUTE);
     root.style.removeProperty(DURATION_PROPERTY);
+    root.style.removeProperty(BORDER_RADIUS_PROPERTY);
   };
   releaseGrowInProgress = release;
 
@@ -59734,6 +59766,73 @@ const css$E = /* css */`
     &::view-transition-new(navi-popup-grow) {
       animation-duration: var(--navi-popup-grow-duration, 0.25s);
     }
+
+    /* Each picture is drawn as wide as the box and as tall as it is, so a box
+       that grows in height alone (a card keeping its width) would show the
+       whole taller picture from the first frame, and the movement would read
+       as a fade. Clipped to the box, the picture is uncovered as the box
+       grows and covered back as it shrinks — behind the corners the box
+       has in the page, published by popup_grow.js. */
+    &::view-transition-image-pair(navi-popup-grow) {
+      border-radius: var(--navi-popup-grow-border-radius, 0);
+      overflow: clip;
+    }
+
+    /* One scene through two frames (Dialog's grow="scene"): each picture
+       covers the box, cropped around its centre, so what both frames show
+       lands on itself. */
+    &[data-navi-popup-grow-kind="scene"] {
+      &::view-transition-old(navi-popup-grow),
+      &::view-transition-new(navi-popup-grow) {
+        height: 100%;
+        object-fit: cover;
+      }
+    }
+
+    /* The anchor lives in the page, under the fixed bars; the popup lives in
+       the top layer, over them. The pictures are painted above everything,
+       bars included, so near the anchor's end of the movement the whole tree
+       is clipped to the room between the bars — a thumbnail half under the
+       top bar leaves from under it and comes back under it — and freed near
+       the popup's end, where a tall dialog may stand over them. Clipped for
+       the 65% of the time nearest the anchor: with the group's own ease that
+       leaves the last 35% of the time to cover more than half of the trip,
+       so the picture is out of the bars before the clip closes on it. */
+    &::view-transition {
+      animation: navi-popup-grow-clip var(--navi-popup-grow-duration, 0.25s)
+        ease both;
+    }
+    &[data-navi-popup-grow="closing"]::view-transition {
+      animation-direction: reverse;
+    }
+  }
+  /* The bars sit at the app's own inset (fixed_bar.jsx), so the room they
+     take starts there; both tokens are 0px where nothing takes any. */
+  @keyframes navi-popup-grow-clip {
+    0%,
+    65% {
+      clip-path: inset(
+        calc(
+            var(--navi-app-inset-top, 0px) +
+              var(--navi-fixed-bar-space-top, 0px)
+          )
+          calc(
+            var(--navi-app-inset-right, 0px) +
+              var(--navi-fixed-bar-space-right, 0px)
+          )
+          calc(
+            var(--navi-app-inset-bottom, 0px) +
+              var(--navi-fixed-bar-space-bottom, 0px)
+          )
+          calc(
+            var(--navi-app-inset-left, 0px) +
+              var(--navi-fixed-bar-space-left, 0px)
+          )
+      );
+    }
+    100% {
+      clip-path: inset(0);
+    }
   }
 
   ${surfaceTextCss}
@@ -59870,6 +59969,15 @@ const css$E = /* css */`
  *   prop) and grows into whatever inside the dialog carries `data-grow`, the
  *   dialog itself when nothing does. `"auto"` never picks it: only the caller
  *   knows the two boxes are one object. See `popup_grow.js`.
+ * @param {"box"|"scene"} [props.grow="box"] - Under `animation="growing"`,
+ *   what the anchor and what it grows into are to each other, which decides
+ *   how their pictures sit in the box moving between them. `"box"`: one
+ *   object at two sizes — a card gaining fields. Each picture is drawn at the
+ *   box's width from its top edge, and a box growing in height uncovers more
+ *   of it: the header stays where it is, the rest extends. `"scene"`: one
+ *   scene through two frames — a thumbnail and the map it is cut from. Each
+ *   picture covers the box, cropped around its centre and never distorted, so
+ *   what both frames show lands on itself.
  * @param {string} [props.animationDuration] - Maps to
  *   `--popup-animation-duration`.
  * @param {Element|{current: Element}|string} [props.anchor] - Never used for
@@ -60212,6 +60320,7 @@ const useDialogProps = props => {
     // once, held at that size while open. See this prop's own JSDoc above.
     sizing = "auto",
     animation,
+    grow = "box",
     // Inert unless sizeFromAnchor below (see this file's top comment) —
     // Dialog's own positioning is never relative to it.
     anchor,
@@ -60438,7 +60547,8 @@ const useDialogProps = props => {
       return;
     }
     growPopupFromAnchor(dialogEl, anchorElement, applyChange, {
-      opened
+      opened,
+      grow
     });
   } : null;
 
@@ -62777,6 +62887,7 @@ const css$C = /* css */`@layer navi {
  *   popup meant to dock on a phone must not declare itself compact — see
  *   `maxWidth` below.
  * @param {boolean} [props.sizeFromAnchor] - **Dialog-only**, same guard.
+ * @param {"box"|"scene"} [props.grow] - **Dialog-only**, same guard.
  * @param {string} [props.positionArea] - Forwarded as-is — `Dialog` and
  *   `Popover` have different own defaults (`"center"` vs. `"bottom"`),
  *   deliberately not homogenized here (each reads best for its own typical
@@ -62883,6 +62994,7 @@ const Popup = props => {
     // in the dialog branch, so they never reach the popover element.
     dockedOnSmallTouchScreen,
     sizeFromAnchor,
+    grow,
     ...rest
   } = props;
   const [mode] = useResolvedPopupMode(modeProp, maxWidth, {
@@ -62901,6 +63013,7 @@ const Popup = props => {
       ...rest,
       dockedOnSmallTouchScreen: dockedOnSmallTouchScreen,
       sizeFromAnchor: sizeFromAnchor,
+      grow: grow,
       maxWidth: maxWidth,
       pointerInteractionOutsideEffect: pointerInteractionOutsideEffect,
       backdrop: backdrop,
@@ -63360,19 +63473,26 @@ const PickerCustom = props => {
               commitUIStateAsAnswer(controller, closeEvent);
             }
           }
-          leaveExpanded({
-            isBack: closeEvent.detail.isCancel
-          });
-          // Reset so the next opening re-evaluates screen size
-          resetMode();
           const confirmEvent = confirmEventRef.current;
           confirmEventRef.current = null;
           if (confirmEvent && !closeEvent.detail.isCancel) {
             onConfirm?.(confirmEvent);
           }
-          // Last, after the value bookkeeping above: whoever listens reads the
-          // picker's value as it ends up — committed, or restored on a cancel.
+          // After the value bookkeeping above — whoever listens reads the
+          // picker's value as it ends up, committed or restored on a cancel —
+          // and before leaveExpanded below, which is where the caller's
+          // reaction runs for a Dialog too. A close that keeps goes back onto
+          // the entry the popup was opened from while KEEPING the url as it
+          // stands at that moment (see useNavState's leave()), so what onClose
+          // spells into the address — a route param naming what was being
+          // edited, cleared now that nothing is — has to be written before,
+          // or the landing puts it back.
           onClose?.(closeEvent);
+          leaveExpanded({
+            isBack: closeEvent.detail.isCancel
+          });
+          // Reset so the next opening re-evaluates screen size
+          resetMode();
         }
       };
     });
@@ -63766,6 +63886,7 @@ const PickerContentInsidePopup = props => {
     // its own width once lifted. Dialog's own `sizeFromAnchor`.
     dialogSizeFromAnchor,
     animation,
+    grow,
     animationDuration,
     // mode="callout": what the callout says about what it holds, and paints
     // in its border and icon — "none" for a plain tooltip (see the callout
@@ -63844,6 +63965,7 @@ const PickerContentInsidePopup = props => {
       expandY: isPopover ? undefined : dialogExpandY,
       dockedOnSmallTouchScreen: isPopover ? undefined : dockedOnSmallTouchScreen,
       sizeFromAnchor: isPopover ? undefined : dialogSizeFromAnchor,
+      grow: isPopover ? undefined : grow,
       children: jsx(PopupModeContext.Provider, {
         value: mode,
         children: children
@@ -72845,6 +72967,7 @@ const PickerFirstResolver = props => {
  *   mode?: "popover" | "dialog" | "callout",
  *   openOn?: "press" | "longpress" | "contextmenu" | string | string[],
  *   animation?: boolean | "auto" | "fading" | "scaling" | "sliding" | "growing" | `slide-from-${string}`,
+ *   grow?: "box" | "scene",
  *   animationDuration?: string,
  *   calloutStatus?: "info" | "warning" | "error" | "success" | "none",
  *   calloutIcon?: boolean,
@@ -73135,7 +73258,9 @@ const PickerFirstResolver = props => {
  *   the user validated: that is `action`. `closeEvent.detail.isCancel` tells a
  *   cancel (Escape, the back gesture) from a close that keeps. Fires after the
  *   picker's value has settled — committed, or restored on a cancel — so the
- *   value read in here is the one the picker ends up holding.
+ *   value read in here is the one the picker ends up holding, and before the
+ *   popup leaves the history entry it pushed, so a route param cleared in here
+ *   is part of the url a close that keeps carries back.
  * @param {number|string} [rightSlotIconSize="inherit"] How big what sits in the
  *   right slot is drawn — the chevron, a `rightSlotIcon`, or the clear button's
  *   cross. "inherit" takes the picker's own font size.
@@ -73182,6 +73307,10 @@ const PickerFirstResolver = props => {
  *   the anchor, so nothing has to be named for it — `dialogSizeFromAnchor`
  *   for a card that must keep its width on the way, left out for a drawing
  *   that opens precisely to get bigger.
+ * @param {"box"|"scene"} [grow="box"] Dialog's own, under `animation="growing"`:
+ *   `"box"` for a card that extends (its top stays, the box uncovers the rest),
+ *   `"scene"` for a thumbnail and the bigger view it is cut from (each picture
+ *   covers the box, cropped around its centre).
  * @param {string} [animationDuration] The popup's own (`--popup-animation-duration`).
  * @param {boolean} [dialogSizeFromAnchor] Dialog mode: the dialog is as wide
  *   as the trigger — its box as a floor (Dialog's own `sizeFromAnchor`) and
