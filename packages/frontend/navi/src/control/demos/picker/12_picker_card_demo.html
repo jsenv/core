@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Picker card demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 40px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      #container {
+        max-width: 700px;
+        margin: 0 auto;
+      }
+      .demo-section {
+        margin-bottom: 24px;
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      .demo-section h2 {
+        margin: 0 0 16px;
+        padding-bottom: 10px;
+        color: #333;
+        font-size: 1.1rem;
+        border-bottom: 2px solid #eee;
+        scroll-margin-top: 12px;
+      }
+      .demo-section p {
+        margin: 0 0 16px;
+        color: #555;
+        font-size: 0.9rem;
+        line-height: 1.5;
+      }
+      .demo-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 24px;
+      }
+      .demo-case {
+        display: flex;
+        margin-bottom: 16px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+      }
+      .demo-caption {
+        color: #666;
+        font-size: 0.8rem;
+      }
+      .demo-caption code {
+        font-size: 0.8rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useSignal } from "@preact/signals";
+      import {
+        Box,
+        Button,
+        ControlGroup,
+        Input,
+        Link,
+        Picker,
+        Text,
+      } from "@jsenv/navi";
+      import { DemoHeader } from "@jsenv/navi/src/internal/demo_header.jsx";
+      import { DocumentToc } from "@jsenv/navi/src/internal/document_toc.jsx";
+      import { FakeBackend } from "@jsenv/navi/src/internal/fake_backend.jsx";
+
+      const Heading = ({ level = 2, id, children }) => {
+        const Tag = `h${level}`;
+        return (
+          <Tag id={id}>
+            <Link anchor revealOnInteraction href={`#${id}`}>
+              #
+            </Link>
+            {children}
+          </Tag>
+        );
+      };
+
+      const Section = ({ id, title, children }) => (
+        <div class="demo-section">
+          <Heading id={id}>{title}</Heading>
+          {children}
+        </div>
+      );
+
+      const Case = ({ caption, children }) => (
+        <div class="demo-case">
+          <span class="demo-caption">{caption}</span>
+          {children}
+        </div>
+      );
+
+      const MATCH = { name: "Aurore / Malo", score: "6-4 3-6" };
+
+      const App = () => (
+        <Box flex="y" spacing="l">
+          <DemoHeader
+            title="Picker card"
+            previous={{
+              href: "./11_picker_callout_demo.html",
+              label: "Callout",
+            }}
+          />
+          <div class="demo-section">
+            <h2>Sommaire</h2>
+            <DocumentToc />
+          </div>
+          <NominalDemo />
+          <StatesDemo />
+          <ResetOnErrorDemo />
+          <OpenOnDemo />
+          <GrowingDemo />
+        </Box>
+      );
+
+      // ── Cas nominal ───────────────────────────────────────────────────────
+
+      const NominalDemo = () => (
+        <Section id="nominal" title="Cas nominal">
+          <p>
+            La carte est le picker : la feuille s'ouvre dessus, et c'est elle
+            qui attend la réponse.
+          </p>
+          <FakeBackend value={MATCH}>
+            {({ value, action }) => (
+              <MatchPicker match={value} action={(next) => action(next)} />
+            )}
+          </FakeBackend>
+        </Section>
+      );
+
+      // ── États ─────────────────────────────────────────────────────────────
+
+      const StatesDemo = () => (
+        <Section id="states" title="États">
+          <div class="demo-row">
+            <Case caption="default">
+              <LocalMatchPicker />
+            </Case>
+            <Case caption="readOnly">
+              <LocalMatchPicker readOnly />
+            </Case>
+            <Case caption="disabled">
+              <LocalMatchPicker disabled />
+            </Case>
+            <Case caption="loading">
+              <LocalMatchPicker loading />
+            </Case>
+            <Case caption="focus visible">
+              <LocalMatchPicker pseudoState={{ ":focus-visible": true }} />
+            </Case>
+          </div>
+        </Section>
+      );
+
+      // ── resetOnError ──────────────────────────────────────────────────────
+
+      const ResetOnErrorDemo = () => (
+        <Section id="reset-on-error" title="resetOnError">
+          <p>Ce que la feuille montre quand on la rouvre après un refus.</p>
+          <div class="demo-row">
+            <Case caption="default">
+              <FakeBackend value={MATCH}>
+                {({ value, action }) => (
+                  <MatchPicker match={value} action={(next) => action(next)} />
+                )}
+              </FakeBackend>
+            </Case>
+            <Case caption="resetOnError={false}">
+              <FakeBackend value={MATCH}>
+                {({ value, action }) => (
+                  <MatchPicker
+                    match={value}
+                    action={(next) => action(next)}
+                    resetOnError={false}
+                  />
+                )}
+              </FakeBackend>
+            </Case>
+          </div>
+        </Section>
+      );
+
+      // ── openOn ────────────────────────────────────────────────────────────
+
+      const OpenOnDemo = () => (
+        <Section id="open-on" title="openOn">
+          <div class="demo-row">
+            <Case caption="default (press)">
+              <LocalMatchPicker />
+            </Case>
+            <Case caption='openOn="longpress"'>
+              <LocalMatchPicker openOn="longpress" />
+            </Case>
+            <Case caption='openOn={["longpress", "contextmenu"]}'>
+              <LocalMatchPicker openOn={["longpress", "contextmenu"]} />
+            </Case>
+          </div>
+        </Section>
+      );
+
+      // ── animation="growing" ───────────────────────────────────────────────
+
+      const GrowingDemo = () => (
+        <Section id="growing" title='animation="growing"'>
+          <p>La carte quitte sa place pour venir au milieu, et y retourne.</p>
+          <div class="demo-row">
+            <Case caption="press">
+              <LocalLiftedMatchPicker />
+            </Case>
+            <Case caption='+ openOn="longpress"'>
+              <LocalLiftedMatchPicker openOn="longpress" />
+            </Case>
+          </div>
+        </Section>
+      );
+
+      // ── The card, and the picker it is ────────────────────────────────────
+
+      // The card as the page draws it — and as the sheet draws it again, so
+      // what opens is what was there.
+      const MatchCard = ({ match, editable, ...props }) => (
+        <Box
+          flex="y"
+          spacing="xs"
+          padding="m"
+          backgroundColor="white"
+          border="1px solid #b0bec5"
+          borderRadius="12"
+          {...props}
+        >
+          {editable ? (
+            <>
+              <Input name="name" placeholder="Paire" autoFocus />
+              <Input name="score" placeholder="6-4 3-6" />
+            </>
+          ) : (
+            <>
+              <Text bold>{match.name || "—"}</Text>
+              <Text size="s" color="#546e7a">
+                {match.score || "—"}
+              </Text>
+            </>
+          )}
+        </Box>
+      );
+
+      const MatchPicker = ({ match, action, ...props }) => (
+        <Picker
+          variant="bare"
+          type="object"
+          mode="dialog"
+          ui={<MatchCard match={match} width="260" />}
+          value={match}
+          action={action}
+          {...props}
+        >
+          <ControlGroup flex="y" spacing="m" padding="m" alignX="stretch">
+            <MatchCard match={match} editable />
+            <Box flex spacing="s" alignX="end">
+              <Button command="--navi-cancel" variant="discrete">
+                Annuler
+              </Button>
+              <Button command="--navi-send">Enregistrer</Button>
+            </Box>
+          </ControlGroup>
+        </Picker>
+      );
+
+      const LocalMatchPicker = (props) => {
+        const matchSignal = useSignal(MATCH);
+        return (
+          <MatchPicker
+            match={matchSignal.value}
+            action={(next) => {
+              matchSignal.value = next;
+            }}
+            {...props}
+          />
+        );
+      };
+
+      // The sheet is not a sheet: the card makes the paper, and the popup only
+      // carries it above the rest.
+      const LocalLiftedMatchPicker = (props) => {
+        const matchSignal = useSignal(MATCH);
+        const match = matchSignal.value;
+        return (
+          <Picker
+            variant="bare"
+            type="object"
+            mode="dialog"
+            ui={<MatchCard match={match} width="260" />}
+            value={match}
+            action={(next) => {
+              matchSignal.value = next;
+            }}
+            animation="growing"
+            dialogSizeFromAnchor
+            dialogMaxWidth="var(--anchor-width)"
+            dialogExpandX
+            popupBackgroundColor="transparent"
+            popupBoxShadow="none"
+            backdropColor="rgb(6 10 20 / 88%)"
+            backdropFilter="blur(4px)"
+            scrollCapture
+            {...props}
+          >
+            <ControlGroup flex="y" spacing="m" alignX="stretch">
+              <MatchCard match={match} editable data-grow />
+              <Box flex spacing="s">
+                <Button
+                  command="--navi-cancel"
+                  variant="discrete"
+                  color="rgb(255 255 255 / 80%)"
+                  expandX
+                  alignX="center"
+                >
+                  Annuler
+                </Button>
+                <Button command="--navi-send" expandX alignX="center">
+                  Enregistrer
+                </Button>
+              </Box>
+            </ControlGroup>
+          </Picker>
+        );
+      };
+
+      render(<App />, document.getElementById("container"));
+    </script>
+  </body>
+</html>

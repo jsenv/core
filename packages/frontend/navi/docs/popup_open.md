@@ -403,6 +403,57 @@ dialog hides: a popup written once, far from every press that opens it, has to
 be told what it is about and has to answer somebody — and neither question
 exists once the popup is written where it is used.
 
+### The trigger wears the wait
+
+The picker's `action` runs on the trigger, not in the popup: it is dispatched
+on the close that keeps, and the popup goes while it runs. So what is still on
+screen answers for the write — `aria-busy` and the loading outline on the
+trigger while the request is out, the error callout on it if the server
+refuses, and the value rolled back to the last accepted one (`resetOnError`,
+on by default for a picker: nobody is left mid-edit behind a closed popup). A
+card that IS the trigger (`variant="bare"`, the card as `ui`) therefore waits
+as a card and is refused as a card, wherever in the tree the sheet was written.
+
+```jsx
+<Picker
+  variant="bare"
+  type="object"
+  mode="dialog"
+  ui={<MatchCard match={match} />}
+  value={match}
+  action={(next) => MATCH.PATCH({ id: match.id, ...next })}
+  // the draft is what the person typed, and the sheet is the only place it
+  // can be found again: keep it when the server says no
+  resetOnError={false}
+>
+  <ControlGroup>
+    <MatchCard match={match} editable />
+    <Button command="--navi-cancel">Cancel</Button>
+    <Button command="--navi-send">Save</Button>
+  </ControlGroup>
+</Picker>
+```
+
+What the picker measures as "changed since open" is what its mirrored group
+holds. A piece of the answer living outside the controls — a seating
+rearranged by drag, kept in component state — has to be held by a control in
+the group too (a named control bound to that state), or a close over it reads
+as nothing changed and nothing runs.
+
+Two props finish the construct. `openOn="longpress"` (or
+`["longpress", "contextmenu"]`) makes the hold what opens it, so a tap on the
+card stays a tap — what a card in a list needs. `animation="growing"` with
+`dialogSizeFromAnchor`, `dialogMaxWidth="var(--anchor-width)"`,
+`popupBackgroundColor="transparent"` and `popupBoxShadow="none"` lifts the
+card out of its place and puts it back (`data-grow` on the card inside the
+sheet; see Dialog's own `animation`). `12_picker_card_demo.html` shows all of
+it, against a backend that answers when told to.
+
+This is not `optimistic`. `optimistic` on a control is "draw no wait at all";
+here the wait is drawn, on the trigger, and the popup was never what held it.
+An optimistic picker is for a write not worth showing — the card then reads
+the store and says nothing until the answer lands.
+
 ### A trigger that is only an icon
 
 `variant="icon"` draws no value, and therefore no slot beside one either: the
@@ -536,8 +587,12 @@ to be hand-written to work around it: `command` next to `action` is that
 workaround, done at the one moment where the action has settled and the button
 is no longer busy.
 
-To close on the press instead — the answer taken as soon as it is given, the
-save running on its own behind a closed popup — say so on the control:
+When what opened the popup is still on screen and should answer for the write
+— its wait, its refusal — the popup was a picker's all along: see [the trigger
+wears the wait](#the-trigger-wears-the-wait). What follows is for the other
+case, a popup nobody stands in for. To close on the press — the answer taken as
+soon as it is given, the save running on its own behind a closed popup — say so
+on the control:
 
 ```jsx
 <Form command="--navi-close" action={saveScore} optimistic resetOnError>

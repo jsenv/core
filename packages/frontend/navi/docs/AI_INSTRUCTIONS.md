@@ -157,7 +157,8 @@ to start when unsure which export solves a problem.
 
 - `popup_open.md` — a popup owns its open state; `command` + `commandfor`;
   `triggerNaviCommand` as the last resort, with the event forwarded and never
-  invented; opening ON something; a press that opens and acts is a `Picker`;
+  invented; opening ON something; a press that opens and acts is a `Picker`,
+  and its trigger wears the wait and the error (a card that lifts, `openOn`);
   Escape cancels; the close cross; a popup that loads data. Read before passing
   `open`, calling `triggerNaviCommand`, or writing a close button.
 - `popup_backdrop.md` — three independent questions: a wall or not

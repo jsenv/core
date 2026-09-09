@@ -67,6 +67,11 @@ const css = /* css */ `
         );
         --popover-outline-width: var(--picker-outline-width);
         --popover-outline-color: var(--picker-outline-color);
+        /* Explicit fallback, same reason as the surface above. */
+        --popover-box-shadow: var(
+          --picker-popup-box-shadow,
+          var(--navi-popup-box-shadow)
+        );
         /* No fallback on purpose: when the picker's own popoverMaxHeight prop
            is unset this declaration is invalid at computed-value time, which
            leaves --popover-max-height unset and lets the popover fall back to
@@ -141,6 +146,10 @@ const css = /* css */ `
         );
         --dialog-outline-width: var(--picker-outline-width);
         --dialog-outline-color: var(--picker-outline-color);
+        --dialog-box-shadow: var(
+          --picker-popup-box-shadow,
+          var(--navi-popup-box-shadow)
+        );
 
         /* No fallback on purpose (same as --popover-max-height above): unset
            picker props leave these declarations invalid at computed-value
@@ -151,10 +160,11 @@ const css = /* css */ `
         --dialog-max-height: var(--picker-dialog-max-height);
 
         /* Nothing bridges the trigger's width in here: a dialog does not
-           follow its anchor's box (dialog.jsx, sizeFromAnchor) — it is not
-           visually attached to the trigger, so it is sized by its content,
-           and dialogMinWidth/dialogMinHeight are how a caller says otherwise.
-           Only the cursor reset below is picker-specific here. */
+           follow its anchor's box by itself (dialog.jsx, sizeFromAnchor) — it
+           is not visually attached to the trigger, so it is sized by its
+           content; dialogMinWidth/dialogMinHeight are how a caller says
+           otherwise, and dialogSizeFromAnchor how they ask for the trigger's
+           own box. Only the cursor reset below is picker-specific here. */
         cursor: default; /* Reset pointer cursor within the select */
 
         /* Dialog already applies display: flex to [open] itself, but
@@ -349,6 +359,9 @@ const PickerCustom = (props) => {
     // no onOpen/onClose of its own.
     onOpen,
     onClose,
+    // What opens the popup — the press, or an interaction navi detects
+    // ("longpress", "contextmenu"…, or a list of them). See the JSDoc.
+    openOn = "press",
   } = props;
   // Resolve the id the same way useControlProps does (own id > Field's id > generated id)
   // before computing popupId below, so two Pickers without an explicit id never collide.
@@ -385,6 +398,7 @@ const PickerCustom = (props) => {
   delete pickerProps.onConfirm;
   delete pickerProps.onOpen;
   delete pickerProps.onClose;
+  delete pickerProps.openOn;
   // Read below for the popup alone; on the trigger it would land on the DOM as
   // an unknown attribute holding a ref object.
   delete pickerProps.anchor;
@@ -812,9 +826,27 @@ const PickerCustom = (props) => {
       // could then never form. So the picker steps back and opens on the click,
       // which the browser only delivers if the press stayed a press (a gesture
       // swallows the click it leaves behind).
-      const interactionsDispute = interactionsDisputeThePress(
-        props.interactions,
-      );
+      // Opening on something else than the press: the hold, the right click.
+      // Declared on the picker itself, as the caller would declare their own,
+      // so it is read and arbitrated like any other gesture — a swipe on the
+      // same card takes the press a hold would have taken — and gated like one:
+      // a read-only picker refuses it where the finger is. The press is then
+      // nobody's: a tap on the card opens nothing (see the two reactions
+      // below), and the keyboard keeps its own ways in (the shortcuts above).
+      const openOnList = Array.isArray(openOn) ? openOn : [openOn];
+      const opensOnPress = openOnList.includes("press");
+      let interactions = props.interactions;
+      if (!opensOnPress) {
+        interactions = { ...interactions };
+        for (const type of openOnList) {
+          interactions[type] = (e) => {
+            requestOpen(e);
+          };
+        }
+        pickerProps.interactions = interactions;
+        pickerProps["data-open-on"] = openOnList.join(" ");
+      }
+      const interactionsDispute = interactionsDisputeThePress(interactions);
 
       Object.assign(pickerProps, {
         eventReactionDefinitions: {
@@ -839,7 +871,11 @@ const PickerCustom = (props) => {
             // because that is where such a box says what it travels by — and
             // asked at every press, since what the picker sits in is not the
             // picker's to know at mount.
-            if (interactionsDispute || isPressDisputedByDrag(e.target)) {
+            if (
+              !opensOnPress ||
+              interactionsDispute ||
+              isPressDisputedByDrag(e.target)
+            ) {
               return null;
             }
             return {
@@ -857,6 +893,11 @@ const PickerCustom = (props) => {
           },
           click: (e) => {
             if (isWithinPickerContent(e.target)) {
+              return null;
+            }
+            if (!opensOnPress) {
+              // Neither the tap, nor the click a hold leaves behind: the press
+              // is not what opens this picker.
               return null;
             }
             // When a label is clicked it transfers focus to the select
@@ -942,6 +983,10 @@ const PickerContentInsidePopup = (props) => {
     // itself, and this one does not. Popover ignores it, same as Dialog ignores
     // marginWithAnchor.
     dockedOnSmallTouchScreen,
+    // Same again: the dialog takes the trigger's box as a floor (and, with
+    // dialogMaxWidth="var(--anchor-width)", as a ceiling) — what keeps a card
+    // its own width once lifted. Dialog's own `sizeFromAnchor`.
+    dialogSizeFromAnchor,
     animation,
     // mode="callout": what the callout says about what it holds, and paints
     // in its border and icon — "none" for a plain tooltip (see the callout
@@ -1036,6 +1081,7 @@ const PickerContentInsidePopup = (props) => {
           dockedOnSmallTouchScreen={
             isPopover ? undefined : dockedOnSmallTouchScreen
           }
+          sizeFromAnchor={isPopover ? undefined : dialogSizeFromAnchor}
         >
           {/* Let the popup content branch on the mode via usePopupMode(). */}
           <PopupModeContext.Provider value={mode}>
