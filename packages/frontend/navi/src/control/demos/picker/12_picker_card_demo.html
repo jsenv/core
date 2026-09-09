@@ -412,6 +412,17 @@
         </Box>
       );
 
+      // The score as the card shows it: what the score picker HOLDS — the one
+      // just typed while the write is out, the backend's again if it refuses.
+      const ScoreInPage = () => {
+        const { value } = usePickerState();
+        return (
+          <Text bold size="xl">
+            {value?.score || "—"}
+          </Text>
+        );
+      };
+
       // The score, in the middle of the card: a picker of its own, opened on
       // its click, whose sheet lifts the WHOLE card (`anchor`) — and which
       // answers for itself (`standalone`) rather than for the card around it.
@@ -422,11 +433,7 @@
           standalone
           value={{ score: game.score }}
           action={action}
-          ui={
-            <Text bold size="xl">
-              {game.score || "—"}
-            </Text>
-          }
+          ui={<ScoreInPage />}
           aria-label="Saisir le score"
           anchor={anchor}
           animationDuration={animationDuration}
