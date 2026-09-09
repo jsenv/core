@@ -988,6 +988,7 @@ const PickerContentInsidePopup = (props) => {
     // its own width once lifted. Dialog's own `sizeFromAnchor`.
     dialogSizeFromAnchor,
     animation,
+    animationDuration,
     // mode="callout": what the callout says about what it holds, and paints
     // in its border and icon — "none" for a plain tooltip (see the callout
     // defaults in PickerCustomResolver). And whether it wears a cross: without
@@ -1054,6 +1055,7 @@ const PickerContentInsidePopup = (props) => {
           mode={mode}
           layer={popupLayer}
           animation={animation}
+          animationDuration={animationDuration}
           positionArea={
             isPopover
               ? (positionArea ??

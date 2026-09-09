@@ -62349,6 +62349,7 @@ const css$B = /* css */`.navi_picker {
       --popover-background-color: var(--picker-popup-background-color, var(--navi-popup-background-color));
       --popover-outline-width: var(--picker-outline-width);
       --popover-outline-color: var(--picker-outline-color);
+      --popover-box-shadow: var(--picker-popup-box-shadow, var(--navi-popup-box-shadow));
       --popover-max-height: var(--picker-popover-max-height);
       min-width: var(--picker-popover-min-width, var(--anchor-width, 0px));
       cursor: default;
@@ -62385,6 +62386,7 @@ const css$B = /* css */`.navi_picker {
       --dialog-background-color: var(--picker-popup-background-color, var(--navi-popup-background-color));
       --dialog-outline-width: var(--picker-outline-width);
       --dialog-outline-color: var(--picker-outline-color);
+      --dialog-box-shadow: var(--picker-popup-box-shadow, var(--navi-popup-box-shadow));
       --dialog-min-width: var(--picker-dialog-min-width);
       --dialog-min-height: var(--picker-dialog-min-height);
       --dialog-max-width: var(--picker-dialog-max-width);
@@ -62569,7 +62571,10 @@ const PickerCustom = props => {
     // hands the popup that controller, and a controlled Dialog/Popover reads
     // no onOpen/onClose of its own.
     onOpen,
-    onClose
+    onClose,
+    // What opens the popup — the press, or an interaction navi detects
+    // ("longpress", "contextmenu"…, or a list of them). See the JSDoc.
+    openOn = "press"
   } = props;
   // Resolve the id the same way useControlProps does (own id > Field's id > generated id)
   // before computing popupId below, so two Pickers without an explicit id never collide.
@@ -62605,6 +62610,7 @@ const PickerCustom = props => {
   delete pickerProps.onConfirm;
   delete pickerProps.onOpen;
   delete pickerProps.onClose;
+  delete pickerProps.openOn;
   // Read below for the popup alone; on the trigger it would land on the DOM as
   // an unknown attribute holding a ref object.
   delete pickerProps.anchor;
@@ -63002,7 +63008,29 @@ const PickerCustom = props => {
       // could then never form. So the picker steps back and opens on the click,
       // which the browser only delivers if the press stayed a press (a gesture
       // swallows the click it leaves behind).
-      const interactionsDispute = interactionsDisputeThePress(props.interactions);
+      // Opening on something else than the press: the hold, the right click.
+      // Declared on the picker itself, as the caller would declare their own,
+      // so it is read and arbitrated like any other gesture — a swipe on the
+      // same card takes the press a hold would have taken — and gated like one:
+      // a read-only picker refuses it where the finger is. The press is then
+      // nobody's: a tap on the card opens nothing (see the two reactions
+      // below), and the keyboard keeps its own ways in (the shortcuts above).
+      const openOnList = Array.isArray(openOn) ? openOn : [openOn];
+      const opensOnPress = openOnList.includes("press");
+      let interactions = props.interactions;
+      if (!opensOnPress) {
+        interactions = {
+          ...interactions
+        };
+        for (const type of openOnList) {
+          interactions[type] = e => {
+            requestOpen(e);
+          };
+        }
+        pickerProps.interactions = interactions;
+        pickerProps["data-open-on"] = openOnList.join(" ");
+      }
+      const interactionsDispute = interactionsDisputeThePress(interactions);
       Object.assign(pickerProps, {
         eventReactionDefinitions: {
           mouseDown: e => {
@@ -63028,7 +63056,7 @@ const PickerCustom = props => {
             // because that is where such a box says what it travels by — and
             // asked at every press, since what the picker sits in is not the
             // picker's to know at mount.
-            if (interactionsDispute || isPressDisputedByDrag(e.target)) {
+            if (!opensOnPress || interactionsDispute || isPressDisputedByDrag(e.target)) {
               return null;
             }
             return {
@@ -63043,6 +63071,11 @@ const PickerCustom = props => {
           },
           click: e => {
             if (isWithinPickerContent(e.target)) {
+              return null;
+            }
+            if (!opensOnPress) {
+              // Neither the tap, nor the click a hold leaves behind: the press
+              // is not what opens this picker.
               return null;
             }
             // When a label is clicked it transfers focus to the select
@@ -63125,7 +63158,12 @@ const PickerContentInsidePopup = props => {
     // itself, and this one does not. Popover ignores it, same as Dialog ignores
     // marginWithAnchor.
     dockedOnSmallTouchScreen,
+    // Same again: the dialog takes the trigger's box as a floor (and, with
+    // dialogMaxWidth="var(--anchor-width)", as a ceiling) — what keeps a card
+    // its own width once lifted. Dialog's own `sizeFromAnchor`.
+    dialogSizeFromAnchor,
     animation,
+    animationDuration,
     // mode="callout": what the callout says about what it holds, and paints
     // in its border and icon — "none" for a plain tooltip (see the callout
     // defaults in PickerCustomResolver). And whether it wears a cross: without
@@ -63186,6 +63224,7 @@ const PickerContentInsidePopup = props => {
       mode: mode,
       layer: popupLayer,
       animation: animation,
+      animationDuration: animationDuration,
       positionArea: isPopover ? positionArea ?? (popoverMode === "nearby" ? "bottom-start" : "inset(top-left)") : positionArea,
       marginWithAnchor: isPopover ? popoverSpacing : undefined,
       marginWithContainer: marginWithContainer === undefined && isPopover ? popoverSpacing : marginWithContainer,
@@ -63200,6 +63239,7 @@ const PickerContentInsidePopup = props => {
       expandX: isPopover ? undefined : dialogExpandX,
       expandY: isPopover ? undefined : dialogExpandY,
       dockedOnSmallTouchScreen: isPopover ? undefined : dockedOnSmallTouchScreen,
+      sizeFromAnchor: isPopover ? undefined : dialogSizeFromAnchor,
       children: jsx(PopupModeContext.Provider, {
         value: mode,
         children: children
@@ -71217,6 +71257,11 @@ const css$t = /* css */`@layer navi {
     }
   }
 
+  &[data-open-on~="longpress"] {
+    -webkit-touch-callout: none;
+    user-select: none;
+  }
+
   &[navi-ui-custom] {
     & .navi_picker_input {
       top: calc(-1 * (var(--picker-border-width) + var(--x-picker-press-padding-top)));
@@ -72045,6 +72090,7 @@ const PickerStyleCSSVars = {
   "dialogMaxHeight": ["--picker-dialog-max-height", "maxHeight"],
   "popupBackgroundColor": "--picker-popup-background-color",
   "popupBorderRadius": ["--picker-popup-border-radius", "borderRadius"],
+  "popupBoxShadow": ["--picker-popup-box-shadow", "boxShadow"],
   "dialogBorderWidth": ["--picker-dialog-border-width", "borderWidth"],
   "slotSpacing": ["--picker-slot-spacing", "margin"],
   "pressPadding": ["--picker-press-padding", "padding"],
@@ -72142,6 +72188,9 @@ const PickerFirstResolver = props => {
  *   action?: (value: any, event: Event) => void,
  *   children?: import("ignore:preact").ComponentChildren,
  *   mode?: "popover" | "dialog" | "callout",
+ *   openOn?: "press" | "longpress" | "contextmenu" | string | string[],
+ *   animation?: boolean | "auto" | "fading" | "scaling" | "sliding" | "growing" | `slide-from-${string}`,
+ *   animationDuration?: string,
  *   calloutStatus?: "info" | "warning" | "error" | "success" | "none",
  *   calloutIcon?: boolean,
  *   calloutCloseButton?: boolean,
@@ -72172,6 +72221,7 @@ const PickerFirstResolver = props => {
  *   dialogMaxHeight?: number | string,
  *   popupBackgroundColor?: string,
  *   popupBorderRadius?: number | string,
+ *   popupBoxShadow?: string,
  *   dialogBorderWidth?: number | string,
  *   clearable?: boolean,
  *   picksNothing?: boolean,
@@ -72184,6 +72234,7 @@ const PickerFirstResolver = props => {
  *   dialogExpand?: boolean,
  *   dialogExpandX?: boolean,
  *   dialogExpandY?: boolean,
+ *   dialogSizeFromAnchor?: boolean,
  *   marginWithContainer?: number | string,
  *   anchor?: import("ignore:preact").RefObject<HTMLElement> | HTMLElement,
  *   escapeEffect?: "cancel" | "close",
@@ -72201,6 +72252,23 @@ const PickerFirstResolver = props => {
  *   variant that paints the trigger transparent leaves the popup a real sheet.
  * @param {number|string} [popupBorderRadius] The popup's corners. Left out they
  *   echo the trigger's `borderRadius`.
+ * @param {string} [popupBoxShadow] The popup's shadow, popover or dialog. Left
+ *   out it is the one every navi popup casts. `"none"` for a popup that is
+ *   not a sheet — a card lifted out of a page draws its own edges, and the
+ *   popup only carries it (see `dialogSizeFromAnchor`).
+ * @param {"press"|"longpress"|"contextmenu"|string|string[]} [openOn="press"]
+ *   What opens the popup. The press, by default — the way a native select
+ *   opens. Any other name is an interaction navi detects (see
+ *   docs/interactions.md: `"longpress"`, `"contextmenu"`, `"dblclick"`…), or
+ *   a list of them — `["longpress", "contextmenu"]` is the hold on a phone and
+ *   the right click at a desk. The picker declares it on itself, so it is
+ *   arbitrated like any other gesture: a swipe on the same card takes the
+ *   press a hold would have taken. A tap then opens nothing — the press stays
+ *   free for what the `ui` holds, which is what lets a whole card be a picker
+ *   without every touch on it opening the sheet — and the keyboard keeps its
+ *   ways in (Enter, Space, the arrows). Being a gesture, the open goes through
+ *   the interaction gate as one: a `readOnly` picker refuses it and says so
+ *   where the finger is, whatever `openWhileReadOnly` says.
  * @param {import("ignore:preact").ComponentChildren | "default"} [ui] What the
  *   trigger draws in place of the value's default rendering (a date, a list
  *   joined by commas…) — and then all it draws: `placeholder` is not shown
@@ -72312,7 +72380,14 @@ const PickerFirstResolver = props => {
  * @param {boolean} [picksNothing] The popup asks something rather than holding
  *   an answer, so the trigger draws a label and never a value: no chevron, no
  *   clear cross, in any variant. `type="confirm"` says it for itself; say it
- *   for a popup of your own that is a menu of actions rather than a choice.
+ *   for a popup of your own that is a menu of actions rather than a choice —
+ *   or a DOOR: a drawing that grows to be looked at (a weather scene, a plan),
+ *   with no `action` at all. The picker is then a trigger and a popup, and
+ *   nothing more: its close does nothing, and what it keeps from being a
+ *   control is what a door still needs — the role of a button, the keyboard
+ *   opening it, the anchor being itself, and one popup per instance without
+ *   an id to wire. See "The trigger wears the wait" in docs/popup_open.md for
+ *   when that beats a `Button` opening a shared `Dialog`.
  * @param {string|import("ignore:preact").ComponentChildren} [clearConfirm] The
  *   question asked before the clear cross clears anything — the `message` of
  *   the `<Picker type="confirm">` the cross then is, plain text or JSX. Asked
@@ -72419,6 +72494,21 @@ const PickerFirstResolver = props => {
  *   a dialog docked by `dockedOnSmallTouchScreen` withdraws it and stays
  *   container-wide, so both can be stated at once.
  * @param {number|string} [dialogMaxHeight] Same, on the height.
+ * @param {boolean|"auto"|"fading"|"scaling"|"sliding"|"growing"|`slide-from-${string}`} [animation]
+ *   The popup's own (see Popover/Dialog). `"growing"` is the one a picker
+ *   whose `ui` is a whole piece of the page wants: the popup is the browser
+ *   morphing the trigger's box into what carries `data-grow` inside the popup
+ *   (the popup itself when nothing does), and back on close. The trigger IS
+ *   the anchor, so nothing has to be named for it — see `dialogSizeFromAnchor`
+ *   for a card that must keep its width on the way, and leave it out for a
+ *   drawing that opens precisely to get bigger.
+ * @param {string} [animationDuration] The popup's own (`--popup-animation-duration`).
+ * @param {boolean} [dialogSizeFromAnchor] Dialog mode: the dialog takes the
+ *   trigger's box as a floor (`--anchor-width`/`--anchor-height`, Dialog's
+ *   own `sizeFromAnchor`) — and, with `dialogMaxWidth="var(--anchor-width)"`,
+ *   as a ceiling too. That pair is what keeps a card its own width once
+ *   lifted out of the page (`animation="growing"`, with `data-grow` on the
+ *   card inside the popup): it moves, and nothing else about it changes.
  * @param {"cancel"|"close"} [escapeEffect="cancel"] What Escape does to an open
  *   picker. "cancel" puts back the value the picker had at open, and a dialog
  *   picker also goes back in history — so anything written to the url while it

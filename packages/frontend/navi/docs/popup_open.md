@@ -454,6 +454,32 @@ here the wait is drawn, on the trigger, and the popup was never what held it.
 An optimistic picker is for a write not worth showing — the card then reads
 the store and says nothing until the answer lands.
 
+The same shape with nothing to write is a **door**: a drawing that grows to be
+looked at — a weather scene, a plan — and comes back. `picksNothing`, no
+`action`, no `dialogSizeFromAnchor` (it opens precisely to get bigger):
+
+```jsx
+<Picker
+  picksNothing
+  variant="bare"
+  mode="dialog"
+  ui={scene}
+  aria-label="Zoom"
+  animation="growing"
+  popupBackgroundColor="transparent"
+  popupBoxShadow="none"
+>
+  <Box data-grow>{scene}</Box>
+</Picker>
+```
+
+A `Button` opening a `Dialog` with an `anchor` does the same and is not wrong;
+what the picker removes is the id plumbing (the trigger is the anchor, the
+popup is its own), and what it keeps is the day the drawing becomes editable —
+it is already the thing that wears the wait. The button + shared dialog stays
+the answer for [the two cases where a popup must be
+shared](#when-a-shared-popup-is-still-the-right-answer).
+
 ### A trigger that is only an icon
 
 `variant="icon"` draws no value, and therefore no slot beside one either: the

@@ -1551,6 +1551,8 @@ const PickerFirstResolver = (props) => {
  *   children?: import("preact").ComponentChildren,
  *   mode?: "popover" | "dialog" | "callout",
  *   openOn?: "press" | "longpress" | "contextmenu" | string | string[],
+ *   animation?: boolean | "auto" | "fading" | "scaling" | "sliding" | "growing" | `slide-from-${string}`,
+ *   animationDuration?: string,
  *   calloutStatus?: "info" | "warning" | "error" | "success" | "none",
  *   calloutIcon?: boolean,
  *   calloutCloseButton?: boolean,
@@ -1740,7 +1742,14 @@ const PickerFirstResolver = (props) => {
  * @param {boolean} [picksNothing] The popup asks something rather than holding
  *   an answer, so the trigger draws a label and never a value: no chevron, no
  *   clear cross, in any variant. `type="confirm"` says it for itself; say it
- *   for a popup of your own that is a menu of actions rather than a choice.
+ *   for a popup of your own that is a menu of actions rather than a choice —
+ *   or a DOOR: a drawing that grows to be looked at (a weather scene, a plan),
+ *   with no `action` at all. The picker is then a trigger and a popup, and
+ *   nothing more: its close does nothing, and what it keeps from being a
+ *   control is what a door still needs — the role of a button, the keyboard
+ *   opening it, the anchor being itself, and one popup per instance without
+ *   an id to wire. See "The trigger wears the wait" in docs/popup_open.md for
+ *   when that beats a `Button` opening a shared `Dialog`.
  * @param {string|import("preact").ComponentChildren} [clearConfirm] The
  *   question asked before the clear cross clears anything — the `message` of
  *   the `<Picker type="confirm">` the cross then is, plain text or JSX. Asked
@@ -1847,6 +1856,15 @@ const PickerFirstResolver = (props) => {
  *   a dialog docked by `dockedOnSmallTouchScreen` withdraws it and stays
  *   container-wide, so both can be stated at once.
  * @param {number|string} [dialogMaxHeight] Same, on the height.
+ * @param {boolean|"auto"|"fading"|"scaling"|"sliding"|"growing"|`slide-from-${string}`} [animation]
+ *   The popup's own (see Popover/Dialog). `"growing"` is the one a picker
+ *   whose `ui` is a whole piece of the page wants: the popup is the browser
+ *   morphing the trigger's box into what carries `data-grow` inside the popup
+ *   (the popup itself when nothing does), and back on close. The trigger IS
+ *   the anchor, so nothing has to be named for it — see `dialogSizeFromAnchor`
+ *   for a card that must keep its width on the way, and leave it out for a
+ *   drawing that opens precisely to get bigger.
+ * @param {string} [animationDuration] The popup's own (`--popup-animation-duration`).
  * @param {boolean} [dialogSizeFromAnchor] Dialog mode: the dialog takes the
  *   trigger's box as a floor (`--anchor-width`/`--anchor-height`, Dialog's
  *   own `sizeFromAnchor`) — and, with `dialogMaxWidth="var(--anchor-width)"`,
