@@ -1723,7 +1723,10 @@ const PickerFirstResolver = (props) => {
  *   refuse the open as well, for a popup with nothing to read: a form of
  *   controls to fill in, a menu of gestures. Opening then only shows what is
  *   refused, so the picker says why on the trigger instead — where the
- *   interaction happened.
+ *   interaction happened. A busy picker follows the same rule: it still
+ *   opens to be read while its action runs, and with `false` the press is
+ *   refused with the wait as its reason — what a card that is syncing wants
+ *   for the sheet that would write it again.
  * @param {boolean|string} [error] Something went wrong around this picker (its
  *   content failed to load, its value could not be resolved…). Shown as a
  *   callout on the trigger, open or closed — the caller has nothing to place.

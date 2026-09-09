@@ -10338,6 +10338,8 @@ defineInteractionDetector({
       }
       let swipe = null;
       let press = null;
+      // Set below, with the hold; a no-op until then so the swipe can call it.
+      let forgetInnerLongPress = () => {};
 
       if (axes) {
         swipe = startSwipe(pointerDownEvent, {
@@ -10357,14 +10359,35 @@ defineInteractionDetector({
           onSwipeStart: () => {
             press?.cancel();
             press = null;
+            forgetInnerLongPress();
           },
         });
       }
       if (hasLongPress) {
+        // A hold declared INSIDE this element, on this same press: the nearer
+        // one answers, the way a click is the innermost target's, and this
+        // wait is given up — two sheets opening from one hold is nobody's
+        // intention. Delays being equal, the inner timer was set first (the
+        // press reached it first) and fires first; the inner hold arrives here
+        // as its own event, bubbling, before this timer runs.
+        const onInnerLongPress = (longPressEvent) => {
+          if (longPressEvent.target === element || !press) {
+            return;
+          }
+          press.cancel();
+          press = null;
+          forgetInnerLongPress();
+        };
+        forgetInnerLongPress = () => {
+          element.removeEventListener("longpress", onInnerLongPress);
+        };
+        element.addEventListener("longpress", onInnerLongPress);
         press = waitForPressHeld(pointerDownEvent, {
           delay: readConfig(LONGPRESS_DELAY_ATTRIBUTE, LONGPRESS_DELAY_DEFAULT),
           slop: readConfig(LONGPRESS_SLOP_ATTRIBUTE, LONGPRESS_SLOP_DEFAULT),
+          onPressCancel: forgetInnerLongPress,
           onPressHeld: (pressEvent, { endPress }) => {
+            forgetInnerLongPress();
             // The hold won the arbitration: the swipe never got the distance it
             // needed, and must not get it from whatever the finger does next.
             swipe?.stop();
@@ -34095,6 +34118,12 @@ const useUIStateController = (
         },
         resetUIState: (e) => {
           controller.setUIState(controller.state, e);
+          // What the control holds moved back, and a bound signal mirrors what
+          // it holds (see PROPAGATE_DOWN_EVENT_SET). Left on the value the
+          // reset just undid — written there by the control itself at the
+          // pick — the signal would hand it straight back on the next render,
+          // and the refused value would win over the rollback.
+          writeBoundSignal(controller.state);
         },
         // Read by the callout manager when it has nowhere else to point.
         getCalloutAnchorElement: (event) =>
@@ -34198,9 +34227,27 @@ const useUIStateController = (
         controller.hasStateProp = true;
         const currentState = controller.state;
         if (!compareTwoJsValues(state, currentState)) {
-          controller.state = state;
-          if (!optimisticWorkInFlight) {
-            controller.setUIState(state, new CustomEvent("state_prop_change"));
+          // A bound signal controls the state the way a `value` prop does —
+          // and, unlike a `value`, it is written by the control itself at
+          // every ui action. Read back here on a control that runs an action,
+          // a signal matching the ui state is that echo (see the signal branch
+          // below for the same rule on an uncontrolled control): `state` is
+          // the rollback target, and taking the echo would make resetOnError
+          // put back the very value the action is about to send, or has just
+          // been refused. The action settles it — success acknowledges,
+          // failure resets to what is kept here.
+          const signalEchoesOwnWrite =
+            Boolean(controlInfo.signal) &&
+            Boolean(props.action) &&
+            compareTwoJsValues(state, controller.uiState);
+          if (!signalEchoesOwnWrite) {
+            controller.state = state;
+            if (!optimisticWorkInFlight) {
+              controller.setUIState(
+                state,
+                new CustomEvent("state_prop_change"),
+              );
+            }
           }
         }
       } else {
@@ -44883,9 +44930,15 @@ const createOpenController = (
     change();
   };
   const runChange = (change, { opened, event }) => {
+    const applyChange = () => {
+      // Recorded with the change itself: what the DOM shows is what a render
+      // landing between the ask and the picture must draw (see `openedInDom`).
+      controller.openedInDom = opened;
+      change();
+    };
     const { transitionChange } = controller;
     if (!transitionChange) {
-      change();
+      applyChange();
       return;
     }
     // What the controller answers about itself does not wait for the picture:
@@ -44894,10 +44947,10 @@ const createOpenController = (
     // caller's own signal), and a request arriving before the change lands
     // runs it first rather than reading a DOM that disagrees.
     controller.opened = opened;
-    changeAwaitingTransition = change;
+    changeAwaitingTransition = applyChange;
     transitionChange(
       () => {
-        if (changeAwaitingTransition === change) {
+        if (changeAwaitingTransition === applyChange) {
           flushChangeAwaitingTransition();
         }
       },
@@ -45015,6 +45068,13 @@ const createOpenController = (
   };
   const controller = {
     opened: false,
+    // What the DOM currently shows, as opposed to what the controller has
+    // decided: the two differ for the frame a change spends waiting for the
+    // browser to photograph the state being left (see runChange). A render
+    // landing in that frame — a picker re-rendering because its action just
+    // started — must draw THIS, or it paints the closed state before the
+    // picture is taken and the movement has nothing to leave from.
+    openedInDom: false,
     // Which press the popup opened during, written at every open (see
     // openedDuringThisPress). Never any press before there has been one.
     pressCountAtOpen: null,
@@ -59516,14 +59576,14 @@ const useDialogProps = props => {
     // and matching what a descendant relying on
     // use_displayed_layout_effect.js's own aria-expanded-presence check
     // needs — see popover.jsx's own identical prop for the full reasoning.
-    "aria-expanded": openController.opened ? "true" : "false",
+    "aria-expanded": openController.openedInDom ? "true" : "false",
     // Present from this very first render (recomputed fresh on every one
     // from openController.opened, not a frozen mount-time constant) so
     // there's no gap for the browser to ever paint this plain-div backdrop
     // visible before anything has actually opened it — see popover.jsx's
     // own identical prop for the full reasoning, and this file's own CSS
     // for the rule it drives.
-    "navi-hidden": openController.opened ? undefined : "",
+    "navi-hidden": openController.openedInDom ? undefined : "",
     "styleCSSVars": DIALOG_STYLE_CSS_VARS,
     "animationDuration": rest.animationDuration,
     "data-pointer-interaction-outside": pointerInteractionOutsideEffect,
@@ -59535,7 +59595,7 @@ const useDialogProps = props => {
     tabIndex,
     // See backdropProps' own identical prop above for the full reasoning
     // (kept once, not repeated here).
-    "aria-expanded": openController.opened ? "true" : "false",
+    "aria-expanded": openController.openedInDom ? "true" : "false",
     // Present from the very first render (recomputed fresh from
     // openController.opened every time, not a frozen mount-time constant —
     // see popover.jsx's own identical prop for the full reasoning) so a
@@ -59543,7 +59603,7 @@ const useDialogProps = props => {
     // can't silently defeat showModal()/close()'s native open/close — see
     // this file's own CSS rule for dialogEl and the open/close steps below
     // for how it's toggled.
-    "navi-hidden": openController.opened ? undefined : "",
+    "navi-hidden": openController.openedInDom ? undefined : "",
     // Unlike Popover (which genuinely can't resolve "auto" until it
     // measures against a real anchor), resolvedAnimation is already fully
     // known synchronously here — a dialog never needs to flip anything
@@ -61160,12 +61220,12 @@ const usePopoverProps = props => {
     // commit (a plain prop is, no effect needed) — see
     // use_displayed_layout_effect.js's own comments for why a descendant
     // relying on aria-expanded's mere presence needs that.
-    "aria-expanded": openController.opened ? "true" : "false",
+    "aria-expanded": openController.openedInDom ? "true" : "false",
     // Read fresh on every render (not frozen at mount), so it stays
     // correct even across a re-render that happens to occur while open —
     // see contentProps' own identical prop just below for the full
     // reasoning (kept once, not repeated here).
-    "navi-hidden": openController.opened ? undefined : "",
+    "navi-hidden": openController.openedInDom ? undefined : "",
     "styleCSSVars": POPUP_STYLE_CSS_VARS,
     "animationDuration": rest.animationDuration,
     "data-pointer-interaction-outside": pointerInteractionOutsideEffect,
@@ -61214,7 +61274,7 @@ const usePopoverProps = props => {
     "navi-animation": isAutoAnimation ? undefined : animation,
     // See backdropProps' own identical prop above for the full reasoning
     // (kept once, not repeated here).
-    "aria-expanded": openController.opened ? "true" : "false",
+    "aria-expanded": openController.openedInDom ? "true" : "false",
     // Only load-bearing for the custom renderer (a plain div has no native
     // starting-hidden default) — present from this very first render so
     // there's no gap for the browser to ever paint it visible before
@@ -61224,7 +61284,7 @@ const usePopoverProps = props => {
     // the last render, so as long as this always reflects the *current*
     // truth, it never fights the imperative
     // removeAttribute/setAttribute openEffect/close do directly.
-    "navi-hidden": openController.opened ? undefined : "",
+    "navi-hidden": openController.openedInDom ? undefined : "",
     "styleCSSVars": POPUP_STYLE_CSS_VARS,
     ...rest,
     ...autoFocusProps,
@@ -61627,6 +61687,10 @@ const css$B = /* css */`.navi_picker {
           overflow: auto;
         }
       }
+    }
+
+    &[data-dialog-size-from-anchor] .navi_dialog {
+      --dialog-max-width: var(--picker-dialog-max-width, var(--anchor-width));
     }
   }
 
@@ -62276,7 +62340,7 @@ const PickerCustom = props => {
             // because that is where such a box says what it travels by — and
             // asked at every press, since what the picker sits in is not the
             // picker's to know at mount.
-            if (!opensOnPress || interactionsDispute || isPressDisputedByDrag(e.target)) {
+            if (!opensOnPress || interactionsDispute || isPressDisputedByDrag(e.target) || isPressDisputedByHold(ref.current)) {
               return null;
             }
             return {
@@ -62326,6 +62390,13 @@ const PickerCustom = props => {
     mode: mode
   });
 };
+
+// A hold declared on something AROUND the picker (a card opened by
+// `openOn="longpress"`, holding this one in its drawing): the finger going
+// down may be the start of that hold, so this picker opens on the click — which
+// the hold, if it completes, swallows — rather than on the press. The picker's
+// own hold (its `openOn`) is not "around" it, and has already stepped back.
+const isPressDisputedByHold = pickerEl => Boolean(pickerEl?.parentElement?.closest(`[${LONGPRESS_ATTRIBUTE}]`));
 const getPickerInput = pickerEl => {
   return pickerEl.querySelector(".navi_picker_input");
 };
@@ -62399,6 +62470,7 @@ const PickerContentInsidePopup = props => {
   return jsx(Next, {
     "aria-haspopup": isPopover ? "listbox" : "dialog",
     "navi-popover-mode": isPopover ? popoverMode : undefined,
+    "data-dialog-size-from-anchor": !isPopover && dialogSizeFromAnchor ? "" : undefined,
     ...rest,
     // On popupProps already (see the picker's popup assembly); they mean
     // nothing to the picker element.
@@ -62738,6 +62810,34 @@ const asPickerOwnUI = PickerUI => {
 };
 const pickerUIIsNaviOwn = ui => {
   return Boolean(ui) && typeof ui === "object" && Boolean(ui.type?.isPickerOwnUI);
+};
+
+/**
+ * What the picker holds, read from inside its `ui` — for a drawing given as
+ * an element (`ui={<MyCard game={game} />}`), which the picker cannot hand
+ * props to. `value` is the state the picker holds right now: the answer the
+ * popup just closed on, before the server has said anything, and put back if
+ * the action fails. `loading` is the run in flight; `interactive` is false
+ * while the picker is disabled, read-only or busy.
+ *
+ * @returns {{ value: any, loading: boolean, interactive: boolean } | null}
+ *   null outside a picker.
+ */
+const usePickerState = () => {
+  const context = useContext(PickerContext);
+  if (!context) {
+    return null;
+  }
+  const {
+    value,
+    loading,
+    interactive
+  } = context;
+  return {
+    value,
+    loading,
+    interactive
+  };
 };
 
 const PickerNaviMinute = props => {
@@ -70424,6 +70524,16 @@ const css$t = /* css */`@layer navi {
     user-select: none;
   }
 
+  &[data-open-on] {
+    & > .navi_picker_box > .navi_picker_input {
+      pointer-events: none;
+    }
+
+    & > .navi_picker_box > .navi_picker_value {
+      pointer-events: auto;
+    }
+  }
+
   &[navi-ui-custom] {
     & .navi_picker_input {
       top: calc(-1 * (var(--picker-border-width) + var(--x-picker-press-padding-top)));
@@ -70749,12 +70859,15 @@ const PickerButton = props => {
   // What the picker knows about itself, for the pieces it does not place: the
   // drawings of its value (Picker.UI.*), and the affordances a caller may put
   // in their own `ui` (Picker.Clear) as much as the ones it puts in its slot.
+  // `ui={MyCard}`: a component the picker renders itself, told what it holds.
+  const UIComponent = typeof ui === "function" ? ui : null;
   const pickerContext = {
     value,
     placeholder,
     maxLines,
     id: inputProps.id,
     interactive,
+    loading,
     clearConfirm
   };
   return (
@@ -70945,7 +71058,17 @@ const PickerButton = props => {
                     size: rightSlotIconSize,
                     lineOverflow: "allow",
                     children: rightSlotIcon === undefined ? jsx(ChevronDownSvg$1, {}) : rightSlotIcon
-                  }) : jsx(PickerDefaultUI, {}) : ui
+                  }) : jsx(PickerDefaultUI, {}) : UIComponent ?
+                  // Told what the picker HOLDS — the value it just closed
+                  // on, before the server has said anything — so a façade
+                  // shows the answer at once, and the wait with it. The
+                  // same state usePickerState() hands an element (see the
+                  // `ui` doc).
+                  jsx(UIComponent, {
+                    value: value,
+                    loading: loading,
+                    interactive: interactive
+                  }) : ui
                 })
               })
             }), hasRightSlot ? jsx("span", {
@@ -83259,5 +83382,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, CalloutStatusIcon, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, ControlSwap, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, Expandable, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, InfoSvg, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, OfflineError, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTransitionArea, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, SpinGroup, SplitButton, StarSvg, Step, StepList, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, TimeRange, TimeRangeSpin, TimeRangeWheel, TimeSpin, TimeWheel, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, canNavBackSignal, canNavForwardSignal, coarsePointerSignal, compareTwoJsValues, constraintFromValidityRule, createAction, createAvailableConstraint, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineRouteDefaultTransition, defineRouteTransition, detectHorizontalOverflow, dispatchRequestSetUIState, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, errorIsDisplayed, filterTableSelection, getNowHours, getNowHoursRoundedToStep, isCellSelected, isColumnSelected, isOfflineError, isRowSelected, isScrolling, isToday, languagesSignal, localStorageSignal, markAsOutsideTextFlow, markErrorAsDisplayedBy, moveArrayItemByIndex, moveFocusTo, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, preloadUrl, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, scrollActivitySignal, setBaseUrl, setNetworkPolicy, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, smallTouchScreenSignal, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutElement, useCalloutRequestClose, useCanNavBack, useCanNavForward, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useNetworkPolicyReason, useOrderedColumns, usePopupMode, useRouteStatus, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideContainer, useSlideValue, useStateArray, useTitleLevel, useTransitionCover, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, CalloutStatusIcon, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, ControlSwap, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, Expandable, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, InfoSvg, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, OfflineError, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTransitionArea, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, SpinGroup, SplitButton, StarSvg, Step, StepList, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, TimeRange, TimeRangeSpin, TimeRangeWheel, TimeSpin, TimeWheel, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, canNavBackSignal, canNavForwardSignal, coarsePointerSignal, compareTwoJsValues, constraintFromValidityRule, createAction, createAvailableConstraint, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineRouteDefaultTransition, defineRouteTransition, detectHorizontalOverflow, dispatchRequestSetUIState, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, errorIsDisplayed, filterTableSelection, getNowHours, getNowHoursRoundedToStep, isCellSelected, isColumnSelected, isOfflineError, isRowSelected, isScrolling, isToday, languagesSignal, localStorageSignal, markAsOutsideTextFlow, markErrorAsDisplayedBy, moveArrayItemByIndex, moveFocusTo, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, preloadUrl, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, scrollActivitySignal, setBaseUrl, setNetworkPolicy, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, smallTouchScreenSignal, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutElement, useCalloutRequestClose, useCanNavBack, useCanNavForward, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useNetworkPolicyReason, useOrderedColumns, usePickerState, usePopupMode, useRouteStatus, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideContainer, useSlideValue, useStateArray, useTitleLevel, useTransitionCover, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi.js.map

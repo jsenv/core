@@ -409,6 +409,10 @@
           action={action}
           ui={<ScoreInPage />}
           aria-label="Saisir le score"
+          // A sheet to fill in, nothing to read: busy (and read-only) refuse
+          // the press with the reason, rather than opening a sheet whose
+          // fields would refuse in turn.
+          openWhileReadOnly={false}
           anchor={anchor}
           animationDuration={animationDuration}
           {...LIFTED_SHEET_PROPS}

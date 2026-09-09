@@ -458,7 +458,9 @@ the card as its `anchor` so it lifts the whole card, and says `standalone` so
 its value stays its own. One card, one wait: each picker wears the other's
 run through `loading` (from its `onActionStart`/`onActionEnd`), so while
 either write is out the hold and the click are both refused, with the busy
-reason where the finger is. A hold declared inside the card answers before the
+reason where the finger is — the click only once the score picker says
+`openWhileReadOnly={false}`: a busy picker otherwise still opens, to be read,
+and a sheet of fields to fill in is not that. A hold declared inside the card answers before the
 card's own: the nearer hold takes the press. `animation="growing"` with
 `dialogSizeFromAnchor` (as wide as the card, floor and ceiling),
 `popupBackgroundColor="transparent"` and `popupBoxShadow="none"` lifts the

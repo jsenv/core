@@ -7309,11 +7309,14 @@ const TIMING_NOOP = () => {
  *   - `GET /@jsenv/server/*`, serving this package's own client files;
  *   - `/.internal/alive.websocket` and `/.internal/alive.eventsource`, which a client
  *     subscribes to in order to reload when the server restarts.
- * @param {boolean|Object} [params.serverTiming=false] - `true` or `{ minDuration }` to send
- *   `server-timing` response headers: the time to start responding, the routing of each
- *   plugin, what routes measure with `helpers.timing` and the `timing` a response hands
- *   back. `minDuration` (ms) drops the entries that took less: 0 keeps everything (what a
- *   test wants), a human reading devtools usually wants the sub-millisecond noise gone.
+ * @param {boolean|Function|Object} [params.serverTiming=false] - `true`, `(request) =>
+ *   boolean` or `{ enabled, minDuration }` to send `server-timing` response headers: the
+ *   time to start responding, the routing of each plugin, what routes measure with
+ *   `helpers.timing` and the `timing` a response hands back. `enabled` can be a function
+ *   too: it is asked once per request, so a server can measure for a client it recognizes
+ *   (a header, a cookie, an origin) and stay silent for everyone else. `minDuration` (ms)
+ *   drops the entries that took less: 0 keeps everything (what a test wants), a human
+ *   reading devtools usually wants the sub-millisecond noise gone.
  * @param {number} [params.requestWaitingMs=0] - Call `requestWaitingCallback` when a request
  *   still has no response after that many ms (0 disables).
  * @param {Function} [params.requestWaitingCallback] - `({ request, requestWaitingMs })`, logs a warning by default.
@@ -7670,13 +7673,16 @@ const startServer = async ({
     sendResponseOperation.addAbortSignal(receiveRequestOperation.signal);
     return [receiveRequestOperation, sendResponseOperation];
   };
-  const serverTimingMinDuration =
-    serverTiming && typeof serverTiming === "object"
-      ? serverTiming.minDuration || 0
-      : 0;
+  const { serverTimingEnabled, serverTimingMinDuration } =
+    resolveServerTiming(serverTiming);
   const getResponseProperties = async (request) => {
+    // Asked once per request, on what the client sent: an api can then measure
+    // for everyone and disclose to a token, a cookie, an origin — instead of
+    // choosing between measuring nothing and telling every client what it does
+    // internally.
+    const timingEnabled = serverTimingEnabled(request);
     const timings = {};
-    const timing = serverTiming
+    const timing = timingEnabled
       ? (name) => {
           const start = performance.now();
           timings[name] = null;
@@ -7711,7 +7717,7 @@ const startServer = async ({
 
     let headersToInject;
     const finalizeResponseProperties = (responseProperties) => {
-      if (serverTiming) {
+      if (timingEnabled) {
         startRespondingTiming.end();
         // A response can hand back measures of its own (a `timing` property —
         // durations keyed by description, null for a plain marker): they join
@@ -8233,6 +8239,36 @@ const PROCESS_TEARDOWN_EVENTS_MAP = {
   exit: STOP_REASON_PROCESS_EXIT,
 };
 
+const SERVER_TIMING_DISABLED = () => false;
+const SERVER_TIMING_ENABLED = () => true;
+
+const resolveServerTiming = (serverTiming) => {
+  if (typeof serverTiming === "function") {
+    return {
+      serverTimingEnabled: serverTiming,
+      serverTimingMinDuration: 0,
+    };
+  }
+  if (serverTiming && typeof serverTiming === "object") {
+    const { enabled = true, minDuration = 0 } = serverTiming;
+    return {
+      serverTimingEnabled:
+        typeof enabled === "function"
+          ? enabled
+          : enabled
+            ? SERVER_TIMING_ENABLED
+            : SERVER_TIMING_DISABLED,
+      serverTimingMinDuration: minDuration,
+    };
+  }
+  return {
+    serverTimingEnabled: serverTiming
+      ? SERVER_TIMING_ENABLED
+      : SERVER_TIMING_DISABLED,
+    serverTimingMinDuration: 0,
+  };
+};
+
 const internalErrorHtmlFileUrl = import.meta.resolve("./client/error_handler/500.html");
 let internalErrorHtmlTemplate;
 const readInternalErrorHtmlTemplate = () => {
@@ -8421,6 +8457,9 @@ class ProgressiveResponse {
  * so here we just need to add the CORS headers to the response
  */
 
+const TIMING_ALLOW_ORIGIN_DISABLED = () => false;
+const TIMING_ALLOW_ORIGIN_ENABLED = () => true;
+
 const jsenvAccessControlAllowedHeaders = ["x-requested-with"];
 
 const jsenvAccessControlAllowedMethods = [
@@ -8453,8 +8492,10 @@ const jsenvAccessControlAllowedMethods = [
  * @param {boolean} [params.accessControlAllowCredentials=false] - Send
  *   `access-control-allow-credentials: true`.
  * @param {number} [params.accessControlMaxAge=600] - Seconds a browser may cache the preflight.
- * @param {boolean} [params.timingAllowOrigin=false] - Send `timing-allow-origin` so the
- *   allowed origin can read resource timing.
+ * @param {boolean|Function} [params.timingAllowOrigin=false] - Send `timing-allow-origin`
+ *   so the allowed origin can read resource timing (the `server-timing` header included).
+ *   A `(request) => boolean` is asked once per request, so it can be the very test that
+ *   decides `startServer({ serverTiming })`.
  * @returns {Object|Array} The plugin, or `[]` when CORS stays disabled.
  */
 const serverPluginCORS = ({
@@ -8482,6 +8523,12 @@ const serverPluginCORS = ({
   const allowedOriginChecker = createAllowedOriginChecker(
     accessControlAllowedOrigins,
   );
+  const timingAllowOriginEnabled =
+    typeof timingAllowOrigin === "function"
+      ? timingAllowOrigin
+      : timingAllowOrigin
+        ? TIMING_ALLOW_ORIGIN_ENABLED
+        : TIMING_ALLOW_ORIGIN_DISABLED;
 
   return {
     name: "jsenv:cors",
@@ -8496,7 +8543,7 @@ const serverPluginCORS = ({
         accessControlAllowRequestHeaders,
         accessControlAllowCredentials,
         accessControlMaxAge,
-        timingAllowOrigin,
+        timingAllowOriginEnabled,
       });
       return {
         headers: accessControlHeaders,
@@ -8550,7 +8597,7 @@ const originPatternToRegExp = (originPattern) => {
 // https://www.w3.org/TR/cors/
 // https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
 const generateAccessControlHeaders = ({
-  request: { headers },
+  request,
   allowedOriginChecker,
   accessControlAllowRequestOrigin,
   accessControlAllowedMethods,
@@ -8561,8 +8608,9 @@ const generateAccessControlHeaders = ({
   // by default OPTIONS request can be cache for a long time, it's not going to change soon ?
   // we could put a lot here, see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Max-Age
   accessControlMaxAge = 600,
-  timingAllowOrigin,
+  timingAllowOriginEnabled,
 } = {}) => {
+  const { headers } = request;
   const vary = [];
 
   // Access-Control-Allow-Origin must be a single value (not a list).
@@ -8626,7 +8674,9 @@ const generateAccessControlHeaders = ({
       ? { "access-control-allow-credentials": true }
       : {}),
     "access-control-max-age": accessControlMaxAge,
-    ...(timingAllowOrigin ? { "timing-allow-origin": allowOrigin } : {}),
+    ...(timingAllowOriginEnabled(request)
+      ? { "timing-allow-origin": allowOrigin }
+      : {}),
     ...(vary.length ? { vary: vary.join(", ") } : {}),
   };
 };
