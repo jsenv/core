@@ -692,6 +692,17 @@ registerNaviCommand("--navi-send", (source, event, { requester }) => {
         return sent;
       }
       if (isRunning) {
+        // An optimistic control takes its send as done on its own word: what
+        // follows it runs at once and the run goes on detached — still
+        // watched, still able to fail, its error callout then drawn on what
+        // surrounds the closed surface it was typed in (see openCallout's
+        // anchor resolution in callout.js).
+        const sendController = (findControlHost(target) || target)
+          .__uiStateController__;
+        if (sendController?.optimistic) {
+          runAfterSend();
+          return sent;
+        }
         // The send is committing but has not finished: leaving now would take
         // the form off the screen mid-submission (a popup closing over its own
         // running action, a slide moving on before it is answered). What

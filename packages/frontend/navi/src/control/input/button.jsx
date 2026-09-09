@@ -127,6 +127,7 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  *   replace?: boolean,
  *   actionStandalone?: boolean,
  *   actionAbortable?: boolean,
+ *   optimistic?: boolean,
  *   [key: string]: any,
  * }>}
  * @param {boolean} [replace] Go where the press leads — an `href`, a
@@ -170,6 +171,12 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  *   running, which the app watches from somewhere else; never for one holding
  *   an answer the screen is the only place to read (see
  *   docs/interactions.md#the-fourth-question-whose-wait-is-it).
+ * @param {boolean} [optimistic] The action is taken as done on the button's own
+ *   word: no busy state, a second press queues behind the run, and its
+ *   `command` runs at once — the popup it sits in closes over the run, which
+ *   goes on behind. A failure then has no popup to be read in: `resetOnError`
+ *   puts the button back and the error callout is drawn on what surrounds the
+ *   closed popup (see docs/popup_open.md#the-popup-owns-its-open-state).
  * @param {boolean} [actionAbortable] The person waiting may give up on this
  *   button's action: closing the popup the run holds calls it off and goes
  *   through, instead of being refused. For a run whose answer may never come —

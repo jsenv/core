@@ -537,9 +537,21 @@ workaround, done at the one moment where the action has settled and the button
 is no longer busy.
 
 To close on the press instead — the answer taken as soon as it is given, the
-save running on its own behind a closed popup — close from somewhere the action
-does not hold up, e.g. an `onClick` of your own. Know what it costs: **a save
-that fails does so behind a closed popup**.
+save running on its own behind a closed popup — say so on the control:
+
+```jsx
+<Form command="--navi-close" action={saveScore} optimistic resetOnError>
+```
+
+`optimistic` is the control taking its action as done on its own word, and
+what it holds goes with it: the popup closes at once, the slide moves on, and
+the run continues detached — still watched, still able to fail. Know what it
+costs: **a save that fails does so behind a closed popup**. `resetOnError` puts
+the control back, and the error callout, with no sheet left to point at, is
+drawn on what surrounds the closed popup — the card it opened from, typically,
+which keeps the refusal next to what it is about. What the page shows meanwhile — a card reading
+the store — is the app's to draw and to take back. For a write not worth being
+waited for; never for one whose refusal changes what the person does next.
 
 Nobody wanting to close, but everybody wanting to be ABLE to, is a different
 need and has its own answer: `actionStandalone` (see the top of this page) frees

@@ -463,6 +463,16 @@ export const useControlProps = (
           if (!deferredCommand) {
             return;
           }
+          if (uiStateController.optimistic) {
+            // An optimistic button takes its action as done on its own word:
+            // the command runs at once and the run goes on detached, the same
+            // release the form counterpart gives the send (see --navi-send in
+            // commands.js). Only a refused press has nothing to follow.
+            if (completion.result !== false) {
+              deferredCommand();
+            }
+            return;
+          }
           runWhenActionSucceeded(completion, deferredCommand);
         };
 

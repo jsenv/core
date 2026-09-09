@@ -62,6 +62,13 @@ import { dispatchRequestResetUIState } from "./ui_state_dom.js";
  *   docs/actions.md#aborting-saves-resources-it-does-not-undo), so say it only
  *   where the screen can be re-opened on what is actually there. Every control
  *   inside the form inherits it along with the wait itself.
+ * @param {boolean} [props.optimistic] - The send is taken as done on the form's
+ *   own word: no busy state, and what follows it (`command="--navi-close"`, a
+ *   slide moving on) runs at once, the run going on behind. A failure then has
+ *   no sheet to be read in: `resetOnError` puts the form back and the error
+ *   callout is drawn on what surrounds the closed sheet. For a write not worth being
+ *   waited for — a score, a note — never for one whose refusal changes what the
+ *   person does next (see docs/popup_open.md#the-popup-owns-its-open-state).
  * @param {any} [props.pristineKey] - What the form is measured against, taken
  *   again every time this changes. A form knows what it holds as soon as its
  *   fields have registered, which is the right moment for a form whose values
