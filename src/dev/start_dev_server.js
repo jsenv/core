@@ -60,6 +60,7 @@ const EXECUTED_BY_TEST_PLAN = process.argv.includes("--jsenv-test");
  * @param {boolean} [params.supervisor=true] - Script supervisor (better error reporting).
  * @param {boolean} [params.modulepreload=false] - Send `Link: <url>; rel=modulepreload` response headers listing the static import graph of a page (as far as the graph knows it). Off by default, to enable once the server runs on http/2 or http/3: over http/1.1 the preloads take the 6 connections per origin ahead of the render-blocking scripts, and pages get slower (the why, with measures, in jsenv_plugin_modulepreload.js).
  * @param {boolean|object} [params.directoryListing=true] - Directory listing pages.
+ * @param {object} [params.patches] - Text patches applied to files as they are served, as `{ file: [{ from, to }] }`. A key is a url pattern relative to sourceDirectoryUrl (`"./main.js"`) or a path inside a package (`"preact/dist/preact.mjs"`, found in node_modules the way node does). Each `from` must occur exactly once in the file, otherwise the file fails to load and says which patch did not apply.
  * @param {object} [params.injections] - Values to inject into files, as `{ urlPattern: getInjections }`. Keys are url patterns relative to sourceDirectoryUrl (`"./index.html"`, `"**\/*.js"`), values are functions receiving `urlInfo` and returning (or resolving to) an object of placeholders to replace, named `__LIKE_THIS__` by convention. In JS the value is injected as a JS literal (a string brings its own quotes), everywhere else as-is so it can be concatenated: `href="__BACKEND_URL__/users/me"`. An html url pattern also covers what is inlined in that html, so `<script>window.backendUrl = __BACKEND_URL__;</script>` shares the value with every js file of the page. See `INJECTIONS.optional` and `INJECTIONS.global`.
  * @param {object} [params.runtimeCompat] - Target runtimes; warns when dev code wouldn't survive the build.
  * @param {string} [params.sourcemaps="inline"] - Sourcemap mode.
@@ -121,6 +122,7 @@ export const startDevServer = async ({
   magicExtensions,
   magicDirectoryIndex,
   directoryListing,
+  patches,
   injections,
   transpilation,
   cacheControl = true,
@@ -289,6 +291,7 @@ export const startDevServer = async ({
       magicDirectoryIndex,
       directoryListing,
       supervisor,
+      patches,
       injections,
       transpilation,
       spa,

@@ -53,22 +53,27 @@ This page outlines the key features provided by Jsenv, including Node ESM resolu
     </a>
   </li>
   <li>
-    <a href="#5-inlining">
+    <a href="#5-patches">
+      Patches
+    </a>
+  </li>
+  <li>
+    <a href="#6-inlining">
       Inlining
     </a>
   </li>
   <li>
-    <a href="#6-importing-umd">
+    <a href="#7-importing-umd">
       Importing UMD
     </a>
   </li>
   <li>
-    <a href="#7-importing-commonjs">
+    <a href="#8-importing-commonjs">
       Importing CommonJs
     </a>
   </li>
   <li>
-    <a href="#8-loading-js-module-with">
+    <a href="#9-loading-js-module-with">
       Loading js module with 
     </a>
   </li>
@@ -309,7 +314,33 @@ export const getInjections = () => {
 };
 ```
 
-# 5. Inlining
+# 5. Patches
+
+Jsenv can patch the text of a file as it is served and built, a dependency for instance, while waiting for a fix to be released. The patch stays in the project's configuration, readable and reviewed, and nothing in `node_modules` is modified.
+
+```js
+import { startDevServer } from "@jsenv/core";
+
+await startDevServer({
+  sourceDirectoryUrl: import.meta.resolve("../src/"),
+  patches: {
+    "preact/dist/preact.mjs": [
+      {
+        from: "t&&n.type&&!t.parentNode&&(t=O(n)),",
+        to: "t&&n.type&&!t.parentNode&&(t=O(n)),t&&t.parentNode!==r&&(t=w),",
+      },
+    ],
+  },
+});
+```
+
+The same `patches` parameter exists on `build`, so a patch declared once in a shared module applies to both.
+
+A key is either a url pattern relative to `sourceDirectoryUrl` (`"./main.js"`, `"**/*.css"`), or a path inside a package (`"preact/dist/preact.mjs"`), found in `node_modules` by walking up from `sourceDirectoryUrl` the way node does, so it holds wherever the package manager put the package.
+
+Each `from` must be found exactly once in the file. Otherwise the file fails to load during dev, and the build fails, with a message naming the file and the text that was not found: when the dependency is updated and the patched code moves or the fix lands, the patch is looked at rather than silently dropped.
+
+# 6. Inlining
 
 Inlining allows embedding code from separate files directly into HTML or other files.
 
@@ -338,7 +369,7 @@ This inlines `demo.js` into the HTML:
 </script>
 ```
 
-# 6. Importing UMD
+# 7. Importing UMD
 
 UMD (Universal Module Definition) modules can be imported directly. For packages like `jquery`:
 
@@ -360,7 +391,7 @@ import "hls.js?as_js_module";
 window.Hls;
 ```
 
-# 7. Importing CommonJs
+# 8. Importing CommonJs
 
 CommonJS modules are not natively supported in browsers.
 
@@ -379,7 +410,7 @@ Uncaught ReferenceError: module is not defined
 
 **Solution**: Use `jsenvPluginCommonJs` documented in [G) Plugins#commonjs](../g_plugins/g_plugins.md#commonjs).
 
-# 8. Loading js module with `<script>`
+# 9. Loading js module with `<script>`
 
 To load a JavaScript module with a classic `<script>` tag while retaining module features use `jsenvPluginAsJsClassic`.
 

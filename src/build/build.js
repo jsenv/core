@@ -149,6 +149,17 @@ import { jsenvPluginMappings } from "./jsenv_plugin_mappings.js";
  *          }
  *
  *        See startDevServer "ribbon" param for the full list of options.
+ * @param {object} [entryPoint.patches]
+ *        Text patches applied to files as they are built, as { file: [{ from, to }] }.
+ *        A key is a url pattern relative to sourceDirectoryUrl ("./main.js") or a path
+ *        inside a package ("preact/dist/preact.mjs", found in node_modules the way node does):
+ *
+ *          patches: {
+ *            "preact/dist/preact.mjs": [{ from: "a&&b", to: "a&&b&&c" }],
+ *          }
+ *
+ *        Each `from` must occur exactly once in the file, otherwise the build fails
+ *        and says which patch did not apply.
  * @param {object} [entryPoint.injections]
  *        Values to inject into files, as { urlPattern: getInjections }.
  *        Keys are url patterns relative to sourceDirectoryUrl ("./index.html", "**\/*.js"),
@@ -1016,6 +1027,7 @@ const entryPointDefaultParams = {
   directoryReferenceEffect: undefined,
   scenarioPlaceholders: undefined,
   ribbon: false,
+  patches: undefined,
   injections: undefined,
   transpilation: {},
   preserveComments: undefined,
@@ -1072,6 +1084,7 @@ const prepareEntryPointBuild = async (
     directoryReferenceEffect,
     scenarioPlaceholders,
     ribbon,
+    patches,
     injections,
     transpilation,
     preserveComments,
@@ -1240,6 +1253,7 @@ const prepareEntryPointBuild = async (
       magicExtensions,
       magicDirectoryIndex,
       directoryReferenceEffect,
+      patches,
       injections,
       transpilation: {
         babelHelpersAsImport: !explicitJsModuleConversion,
