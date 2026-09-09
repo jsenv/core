@@ -216,7 +216,7 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  *   (it wears it itself) and loses the shrink under the finger, which has
  *   nothing left to scale but the interactive area itself.
  */
-export const Button = createComponentResolver([
+export const Button = /*#__PURE__*/ createComponentResolver([
   ButtonFirstResolver,
   ButtonRouteResolver,
   ButtonCommandPropResolver,

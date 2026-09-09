@@ -1216,212 +1216,6 @@ const ListFirstResolver = (props) => {
   );
 };
 
-/**
- * List — generic virtualized scroll container.
- * Items must use <List.Item> to participate in tracking.
- *
- * @type {import("preact").FunctionComponent<{
- *   selectable?: boolean,
- *   multiple?: boolean,
- *   deselectable?: boolean,
- *   maxLength?: number,
- *   maxLengthGuard?: number,
- *   parallelGuard?: number,
- *   standalone?: boolean,
- *   action?: (value: any) => void,
- *   uiAction?: (value: any) => void,
- *   popover?: boolean,
- *   role?: string,
- *   renderBudget?: number | string,
- *   renderBudgetSkipCheck?: boolean,
- *   virtualItemSize?: number,
- *   onListVisibleItemsChange?: (visibleItems: any[]) => void,
- *   scrolled?: "start" | "end" | number | {id: string, offset?: number},
- *   defaultScrolled?: "start" | "end" | number | {id: string, offset?: number},
- *   onScrolledChange?: (scrolled: {id: string, index: number, offset: number}) => void,
- *   scroller?: "self" | "parent" | "document" | Element | {current: Element},
- *   hoverWhileScrolling?: boolean,
- *   fallback?: import("preact").ComponentChildren,
- *   searchFallback?: import("preact").ComponentChildren,
- *   searchText?: string,
- *   searchNoMatchMode?: "remove" | "invisible_and_inert" | "muted",
- *   loading?: boolean,
- *   loadingFallback?: "skeleton" | "loader" | import("preact").ComponentChildren,
- *   loadingSkeletonCount?: number,
- *   renderSkeleton?: false | ((index: number) => import("preact").ComponentChildren),
- *   error?: boolean | import("preact").ComponentChildren,
- *   separator?: boolean | import("preact").ComponentChildren,
- *   itemTransition?: boolean,
- *   lockSize?: boolean,
- *   horizontal?: boolean,
- *   spacing?: string,
- *   columns?: string,
- *   itemColumns?: string,
- *   alignX?: string,
- *   alignY?: string,
- *   flexWrap?: boolean,
- *   expandX?: boolean,
- *   expandY?: boolean,
- *   expand?: boolean,
- *   children?: import("preact").ComponentChildren,
- *   [key: string]: any,
- * }>}
- * @param {string} [props.columns]
- *   The list's own columns: a `grid-template-columns` value the ITEMS are laid
- *   into — a sheet of icons (`repeat(auto-fill, minmax(2.5rem, 1fr))`), a row of
- *   choices (`repeat(3, minmax(0, 1fr))`). Each item takes one cell, and an item
- *   meant to take a whole line says so for itself
- *   (`style={{ gridColumn: "1 / -1" }}`). Several items to a line is a shape the
- *   list cannot virtualize — its render window and the room it holds for the
- *   rows it does not draw both count one item per line — so it is for a set of
- *   items the caller renders whole, not for a `<List.Items>` collection.
- * @param {string} [props.itemColumns]
- *   The columns inside an ITEM: a `grid-template-columns` value each item fills
- *   with its own children, a table whose cells line up down the list. Every item
- *   becomes a subgrid row spanning all the columns, so a column is as wide as
- *   the widest cell in it among the rows actually in the DOM — real column
- *   sizing that stays right as the window moves. Rows of a table, then, where
- *   `columns` above is a grid of items; the two cannot both be set.
- * @param {string} [props.alignX]
- *   Where the items sit across the track — `alignX="center"` centres a
- *   horizontal list's row of items inside a list wider than they are. Together
- *   with `alignY`, `align` and `flexWrap`, this reaches the `<ul>` holding the
- *   items rather than the frame drawn around it: the frame's only child is the
- *   scroll box, which fills it and has nothing to arrange.
- * @param {boolean} [props.flexWrap]
- *   Lets a horizontal list's items fall to the next line instead of running
- *   past the edge — a row of choices under a `maxWidth`, say. Same caveat as
- *   `columns` above: a line holding several items is not virtualizable.
- * @param {string} [props.overflow]
- *   `"visible"` lets the items paint outside the list — a check in a row's
- *   corner, a badge crossing the edge. A list clips by default, which is what
- *   its rounded corners and its scroll box need, and the two cannot both be
- *   true: asking for visible gives up the clipping, corners included.
- * @param {boolean} [props.itemTransition]
- *   Names each row, so a change the application wraps in
- *   `document.startViewTransition` is seen row by row — rows moving to their new
- *   place, an arriving row appearing where it lands — instead of the list
- *   cross-fading as a block. The rows are drawn inside the list's own picture,
- *   so one coming from outside the visible part of the list is cut at the list's
- *   edge like any other overflow. Requires nested view transition groups
- *   (Chrome/Edge 140+): elsewhere the rows are left unnamed and the change
- *   simply happens — but the browser still names the document root, so the page
- *   cross-fades as a whole unless the application says otherwise, which is its
- *   call and not the list's:
- *   ```css
- *   @supports not (view-transition-group: contain) {
- *     :root { view-transition-name: none; }
- *   }
- *   ```
- * @param {false|((index: number) => any)} [props.renderSkeleton]
- *   What a row on its way looks like — a row of the shape the real ones will
- *   have, so nothing moves when they arrive. Used for the rows a `<List.Items>`
- *   stands for and does not hold yet, and for the placeholder rows drawn while
- *   the whole list is `loading`. Defaults to a bare `<List.Item skeleton>`.
- * @param {"skeleton"|"loader"|import("preact").ComponentChildren} [props.loadingFallback="skeleton"]
- *   What to display in place of the items while `loading` — that is, while
- *   there is nothing to show at all: `"skeleton"` renders
- *   `loadingSkeletonCount` placeholder rows (look:
- *   `renderSkeleton`), `"loader"` a single centered spinner, and
- *   anything else is rendered as-is in a row of its own. A falsy value
- *   displays nothing. A list that knows how many rows it will have has no use
- *   for this — see `<List.Items count>`, whose not-yet-loaded rows are drawn
- *   as skeletons in place, one per row, virtualized like the rest.
- * @param {number} [props.loadingSkeletonCount=3]
- *   How many placeholder rows `loadingFallback="skeleton"` draws. `0` says the
- *   list is already known to be empty: the empty `fallback` shows right away
- *   rather than an empty frame, so nothing moves when the response arrives.
- * @param {"start"|"end"|number|{id: string, offset?: number}} [props.defaultScrolled="start"]
- *   Where the list opens, after which the user owns the scroll. `"end"` is a
- *   thread read backwards — the last rows are the ones to show, and the ones
- *   asked for first. A number opens on that row of the collection. `{id,
- *   offset}` — what `onScrolledChange` hands out — opens on a NAMED row,
- *   `offset` pixels below where the row would land on its own: the row is asked
- *   for by name (see the range's own `around`), then put back by MEASURING it,
- *   so it lands where it was even if rows were inserted before it, and whatever
- *   the screen it was saved on. `offset: 0` is where a `scrollIntoView()` puts
- *   it — in front of the fixed bar the scroller gives room for, below the
- *   sticky header and the group label the row lives under — so nothing of that
- *   room has to be restated as a number by whoever asks.
- * @param {"start"|"end"|number|{id: string, offset?: number}} [props.scrolled]
- *   The same, but held: the list goes back there every time this changes, even
- *   after the user has scrolled — the caller owns where the list is (see
- *   `defaultScrolled` for the uncontrolled form, and `open`/`defaultOpen`
- *   elsewhere in navi for the same pair). When the named row turns out not to
- *   exist — a message deleted since — the list opens at `defaultScrolled`
- *   instead.
- *
- *   In every form the list holds itself there while it is still finding out
- *   how many rows there are and how tall one is, and lets go the moment the
- *   user reaches for the list.
- * @param {(scrolled: {id: string, index: number, offset: number}) => void} [props.onScrolledChange]
- *   Where the list is, as the user scrolls: the row at the top of the view and
- *   how far below the place a row lands on its own (see `defaultScrolled`) it
- *   starts. Keep it to come back to it
- *   later through `scrolled`/`defaultScrolled` — an index would not do, since
- *   rows get inserted while a list is being read.
- * @param {"self"|"parent"|"document"|Element|{current: Element}} [props.scroller="self"]
- *   Which box scrolls. `"self"` gives the list a scroll box of its own;
- *   `"parent"` makes it virtualize against the scrollable ancestor it lives in
- *   (the page, a panel) — no scroll box nested inside another one, no height
- *   to compute.
- *
- *   `"parent"` finds that ancestor by measuring: the nearest one whose content
- *   actually overflows it, the page if none does. Declaring `overflow` is not
- *   enough to be picked (a box with `overflow-x: auto` that grows with its
- *   content computes `overflow-y: auto` without ever scrolling), and the
- *   answer is taken again as the geometry moves, so an ancestor that starts to
- *   scroll once it fills up is picked up then. When that is still not the box
- *   you mean, say so: `"document"`, or the element itself (a ref works) —
- *   nothing is guessed then.
- * @param {boolean} [props.hoverWhileScrolling=false]
- *   Whether the rows still answer the pointer while the scroller they live in
- *   is moving. They do not by default: a scroll slides the rows under a
- *   motionless pointer, so the browser reports a hover on each of them, and
- *   the user asked to scroll, not to hover. The cost of taking them at face
- *   value is paid by whatever hover triggers — a highlight elsewhere in the
- *   tree, a prefetch, a map — at the worst moment, mid-scroll.
- *
- *   Pass `true` for a list whose rows must stay live under the pointer while
- *   it scrolls. The trade of the default is the mirror one: right after a
- *   scroll, the row under the pointer lights up only once the pointer moves.
- * @param {boolean} [props.deselectable]
- *   A single-select list allowed to hold nothing: the selected row, pressed
- *   again, lets go. Without it the list is a radio group — a choice, once
- *   made, moves to another row but never goes away. A `multiple` list toggles
- *   its rows already.
- * @param {number} [props.maxLength]
- *   How many items a `selectable multiple` list accepts — the same word, and
- *   the same behaviour, as `maxLength` on a text field: a rule the list is
- *   judged against, not a wall. A longer selection is allowed to exist and is
- *   reported as invalid, which is what lets a value coming from elsewhere (an
- *   API, a URL) be shown and then corrected.
- * @param {number} [props.maxLengthGuard]
- *   The same limit, enforced as the selection is made: while the list holds as
- *   many items as it accepts, the ones not selected go read-only — still
- *   pointable, focusable and pressable, answering `"[max] max."` instead of
- *   taking — and `uiAction` is not called. The selected ones stay takeable
- *   back, so a selection that arrived too long can always be brought back
- *   under the limit. Implies `maxLength` for validity.
- * @param {number} [props.parallelGuard=4]
- *   How many runs the rows may have in flight at once, for a list whose rows
- *   carry their own `action` (a button per row). While that many are out, every
- *   row that is not running goes read-only and says how many it is waiting on;
- *   the next press is possible again as soon as one comes back. `Infinity`
- *   lifts it. Counts runs, not values — `maxLengthGuard` above is the one that
- *   says how many things the selection may hold.
- * @param {boolean} [props.standalone]
- *   This list answers for itself: it does not register with the control group
- *   or picker around it, so its selection stays out of that value and nothing
- *   coming down — a distributed value, a reset — reaches it. What a popup whose
- *   one answer is spread over several lists says, so that none of them is taken
- *   for the answer itself.
- */
-export const List = createComponentResolver([
-  ListFirstResolver,
-  ListSelectableResolver,
-  ListUI,
-]);
 const ListContent = ({
   role,
   fallback,
@@ -3754,7 +3548,7 @@ const LIST_ITEM_STYLE_CSS_VARS = {
  *   search-driven scroll-to-top-match behavior. `matchRanges` are [start, end]
  *   ranges highlighted via the CSS Highlight API.
  */
-export const ListItem = createComponentResolver(
+export const ListItem = /*#__PURE__*/ createComponentResolver(
   [
     ListItemFirstResolver,
     ListItemRowResolver,
@@ -3769,7 +3563,6 @@ export const ListItem = createComponentResolver(
   // to change.
   { pure: true },
 );
-List.Item = ListItem;
 
 // Everything the list knows about the collection while its children are being
 // rendered: how many rows it has in total, which of them are actually held, and
@@ -4579,7 +4372,6 @@ export const ListItems = ({
   }
   return rows;
 };
-List.Items = ListItems;
 
 // What is drawn where rows were asked for and never came: the sentence and the
 // way out, in the row itself — the rest of the list is fine, so replacing all
@@ -5251,3 +5043,221 @@ const resolveSeparatorVnode = (separator, gapIndex) => {
   }
   return separator;
 };
+
+const ListResolved = /*#__PURE__*/ createComponentResolver([
+  ListFirstResolver,
+  ListSelectableResolver,
+  ListUI,
+]);
+
+// Declared last because Item and Items are consts defined above, and they are
+// folded into the declaration rather than written onto List afterwards
+// (`List.Item = ListItem`): List is what createComponentResolver returns, an
+// object a bundler cannot see through, so a property assigned to it later is a
+// side effect it has to keep — and with it List, its rows and everything they
+// import, in a bundle that never renders a list. See Picker for the same shape.
+/**
+ * List — generic virtualized scroll container.
+ * Items must use <List.Item> to participate in tracking.
+ *
+ * @type {import("preact").FunctionComponent<{
+ *   selectable?: boolean,
+ *   multiple?: boolean,
+ *   deselectable?: boolean,
+ *   maxLength?: number,
+ *   maxLengthGuard?: number,
+ *   parallelGuard?: number,
+ *   standalone?: boolean,
+ *   action?: (value: any) => void,
+ *   uiAction?: (value: any) => void,
+ *   popover?: boolean,
+ *   role?: string,
+ *   renderBudget?: number | string,
+ *   renderBudgetSkipCheck?: boolean,
+ *   virtualItemSize?: number,
+ *   onListVisibleItemsChange?: (visibleItems: any[]) => void,
+ *   scrolled?: "start" | "end" | number | {id: string, offset?: number},
+ *   defaultScrolled?: "start" | "end" | number | {id: string, offset?: number},
+ *   onScrolledChange?: (scrolled: {id: string, index: number, offset: number}) => void,
+ *   scroller?: "self" | "parent" | "document" | Element | {current: Element},
+ *   hoverWhileScrolling?: boolean,
+ *   fallback?: import("preact").ComponentChildren,
+ *   searchFallback?: import("preact").ComponentChildren,
+ *   searchText?: string,
+ *   searchNoMatchMode?: "remove" | "invisible_and_inert" | "muted",
+ *   loading?: boolean,
+ *   loadingFallback?: "skeleton" | "loader" | import("preact").ComponentChildren,
+ *   loadingSkeletonCount?: number,
+ *   renderSkeleton?: false | ((index: number) => import("preact").ComponentChildren),
+ *   error?: boolean | import("preact").ComponentChildren,
+ *   separator?: boolean | import("preact").ComponentChildren,
+ *   itemTransition?: boolean,
+ *   lockSize?: boolean,
+ *   horizontal?: boolean,
+ *   spacing?: string,
+ *   columns?: string,
+ *   itemColumns?: string,
+ *   alignX?: string,
+ *   alignY?: string,
+ *   flexWrap?: boolean,
+ *   expandX?: boolean,
+ *   expandY?: boolean,
+ *   expand?: boolean,
+ *   children?: import("preact").ComponentChildren,
+ *   [key: string]: any,
+ * }>}
+ * @param {string} [props.columns]
+ *   The list's own columns: a `grid-template-columns` value the ITEMS are laid
+ *   into — a sheet of icons (`repeat(auto-fill, minmax(2.5rem, 1fr))`), a row of
+ *   choices (`repeat(3, minmax(0, 1fr))`). Each item takes one cell, and an item
+ *   meant to take a whole line says so for itself
+ *   (`style={{ gridColumn: "1 / -1" }}`). Several items to a line is a shape the
+ *   list cannot virtualize — its render window and the room it holds for the
+ *   rows it does not draw both count one item per line — so it is for a set of
+ *   items the caller renders whole, not for a `<List.Items>` collection.
+ * @param {string} [props.itemColumns]
+ *   The columns inside an ITEM: a `grid-template-columns` value each item fills
+ *   with its own children, a table whose cells line up down the list. Every item
+ *   becomes a subgrid row spanning all the columns, so a column is as wide as
+ *   the widest cell in it among the rows actually in the DOM — real column
+ *   sizing that stays right as the window moves. Rows of a table, then, where
+ *   `columns` above is a grid of items; the two cannot both be set.
+ * @param {string} [props.alignX]
+ *   Where the items sit across the track — `alignX="center"` centres a
+ *   horizontal list's row of items inside a list wider than they are. Together
+ *   with `alignY`, `align` and `flexWrap`, this reaches the `<ul>` holding the
+ *   items rather than the frame drawn around it: the frame's only child is the
+ *   scroll box, which fills it and has nothing to arrange.
+ * @param {boolean} [props.flexWrap]
+ *   Lets a horizontal list's items fall to the next line instead of running
+ *   past the edge — a row of choices under a `maxWidth`, say. Same caveat as
+ *   `columns` above: a line holding several items is not virtualizable.
+ * @param {string} [props.overflow]
+ *   `"visible"` lets the items paint outside the list — a check in a row's
+ *   corner, a badge crossing the edge. A list clips by default, which is what
+ *   its rounded corners and its scroll box need, and the two cannot both be
+ *   true: asking for visible gives up the clipping, corners included.
+ * @param {boolean} [props.itemTransition]
+ *   Names each row, so a change the application wraps in
+ *   `document.startViewTransition` is seen row by row — rows moving to their new
+ *   place, an arriving row appearing where it lands — instead of the list
+ *   cross-fading as a block. The rows are drawn inside the list's own picture,
+ *   so one coming from outside the visible part of the list is cut at the list's
+ *   edge like any other overflow. Requires nested view transition groups
+ *   (Chrome/Edge 140+): elsewhere the rows are left unnamed and the change
+ *   simply happens — but the browser still names the document root, so the page
+ *   cross-fades as a whole unless the application says otherwise, which is its
+ *   call and not the list's:
+ *   ```css
+ *   @supports not (view-transition-group: contain) {
+ *     :root { view-transition-name: none; }
+ *   }
+ *   ```
+ * @param {false|((index: number) => any)} [props.renderSkeleton]
+ *   What a row on its way looks like — a row of the shape the real ones will
+ *   have, so nothing moves when they arrive. Used for the rows a `<List.Items>`
+ *   stands for and does not hold yet, and for the placeholder rows drawn while
+ *   the whole list is `loading`. Defaults to a bare `<List.Item skeleton>`.
+ * @param {"skeleton"|"loader"|import("preact").ComponentChildren} [props.loadingFallback="skeleton"]
+ *   What to display in place of the items while `loading` — that is, while
+ *   there is nothing to show at all: `"skeleton"` renders
+ *   `loadingSkeletonCount` placeholder rows (look:
+ *   `renderSkeleton`), `"loader"` a single centered spinner, and
+ *   anything else is rendered as-is in a row of its own. A falsy value
+ *   displays nothing. A list that knows how many rows it will have has no use
+ *   for this — see `<List.Items count>`, whose not-yet-loaded rows are drawn
+ *   as skeletons in place, one per row, virtualized like the rest.
+ * @param {number} [props.loadingSkeletonCount=3]
+ *   How many placeholder rows `loadingFallback="skeleton"` draws. `0` says the
+ *   list is already known to be empty: the empty `fallback` shows right away
+ *   rather than an empty frame, so nothing moves when the response arrives.
+ * @param {"start"|"end"|number|{id: string, offset?: number}} [props.defaultScrolled="start"]
+ *   Where the list opens, after which the user owns the scroll. `"end"` is a
+ *   thread read backwards — the last rows are the ones to show, and the ones
+ *   asked for first. A number opens on that row of the collection. `{id,
+ *   offset}` — what `onScrolledChange` hands out — opens on a NAMED row,
+ *   `offset` pixels below where the row would land on its own: the row is asked
+ *   for by name (see the range's own `around`), then put back by MEASURING it,
+ *   so it lands where it was even if rows were inserted before it, and whatever
+ *   the screen it was saved on. `offset: 0` is where a `scrollIntoView()` puts
+ *   it — in front of the fixed bar the scroller gives room for, below the
+ *   sticky header and the group label the row lives under — so nothing of that
+ *   room has to be restated as a number by whoever asks.
+ * @param {"start"|"end"|number|{id: string, offset?: number}} [props.scrolled]
+ *   The same, but held: the list goes back there every time this changes, even
+ *   after the user has scrolled — the caller owns where the list is (see
+ *   `defaultScrolled` for the uncontrolled form, and `open`/`defaultOpen`
+ *   elsewhere in navi for the same pair). When the named row turns out not to
+ *   exist — a message deleted since — the list opens at `defaultScrolled`
+ *   instead.
+ *
+ *   In every form the list holds itself there while it is still finding out
+ *   how many rows there are and how tall one is, and lets go the moment the
+ *   user reaches for the list.
+ * @param {(scrolled: {id: string, index: number, offset: number}) => void} [props.onScrolledChange]
+ *   Where the list is, as the user scrolls: the row at the top of the view and
+ *   how far below the place a row lands on its own (see `defaultScrolled`) it
+ *   starts. Keep it to come back to it
+ *   later through `scrolled`/`defaultScrolled` — an index would not do, since
+ *   rows get inserted while a list is being read.
+ * @param {"self"|"parent"|"document"|Element|{current: Element}} [props.scroller="self"]
+ *   Which box scrolls. `"self"` gives the list a scroll box of its own;
+ *   `"parent"` makes it virtualize against the scrollable ancestor it lives in
+ *   (the page, a panel) — no scroll box nested inside another one, no height
+ *   to compute.
+ *
+ *   `"parent"` finds that ancestor by measuring: the nearest one whose content
+ *   actually overflows it, the page if none does. Declaring `overflow` is not
+ *   enough to be picked (a box with `overflow-x: auto` that grows with its
+ *   content computes `overflow-y: auto` without ever scrolling), and the
+ *   answer is taken again as the geometry moves, so an ancestor that starts to
+ *   scroll once it fills up is picked up then. When that is still not the box
+ *   you mean, say so: `"document"`, or the element itself (a ref works) —
+ *   nothing is guessed then.
+ * @param {boolean} [props.hoverWhileScrolling=false]
+ *   Whether the rows still answer the pointer while the scroller they live in
+ *   is moving. They do not by default: a scroll slides the rows under a
+ *   motionless pointer, so the browser reports a hover on each of them, and
+ *   the user asked to scroll, not to hover. The cost of taking them at face
+ *   value is paid by whatever hover triggers — a highlight elsewhere in the
+ *   tree, a prefetch, a map — at the worst moment, mid-scroll.
+ *
+ *   Pass `true` for a list whose rows must stay live under the pointer while
+ *   it scrolls. The trade of the default is the mirror one: right after a
+ *   scroll, the row under the pointer lights up only once the pointer moves.
+ * @param {boolean} [props.deselectable]
+ *   A single-select list allowed to hold nothing: the selected row, pressed
+ *   again, lets go. Without it the list is a radio group — a choice, once
+ *   made, moves to another row but never goes away. A `multiple` list toggles
+ *   its rows already.
+ * @param {number} [props.maxLength]
+ *   How many items a `selectable multiple` list accepts — the same word, and
+ *   the same behaviour, as `maxLength` on a text field: a rule the list is
+ *   judged against, not a wall. A longer selection is allowed to exist and is
+ *   reported as invalid, which is what lets a value coming from elsewhere (an
+ *   API, a URL) be shown and then corrected.
+ * @param {number} [props.maxLengthGuard]
+ *   The same limit, enforced as the selection is made: while the list holds as
+ *   many items as it accepts, the ones not selected go read-only — still
+ *   pointable, focusable and pressable, answering `"[max] max."` instead of
+ *   taking — and `uiAction` is not called. The selected ones stay takeable
+ *   back, so a selection that arrived too long can always be brought back
+ *   under the limit. Implies `maxLength` for validity.
+ * @param {number} [props.parallelGuard=4]
+ *   How many runs the rows may have in flight at once, for a list whose rows
+ *   carry their own `action` (a button per row). While that many are out, every
+ *   row that is not running goes read-only and says how many it is waiting on;
+ *   the next press is possible again as soon as one comes back. `Infinity`
+ *   lifts it. Counts runs, not values — `maxLengthGuard` above is the one that
+ *   says how many things the selection may hold.
+ * @param {boolean} [props.standalone]
+ *   This list answers for itself: it does not register with the control group
+ *   or picker around it, so its selection stays out of that value and nothing
+ *   coming down — a distributed value, a reset — reaches it. What a popup whose
+ *   one answer is spread over several lists says, so that none of them is taken
+ *   for the answer itself.
+ */
+export const List = /*#__PURE__*/ Object.assign(ListResolved, {
+  Item: ListItem,
+  Items: ListItems,
+});

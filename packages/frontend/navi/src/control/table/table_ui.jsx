@@ -15,7 +15,7 @@ const css = /* css */ `
   }
 `;
 
-export const TableUI = forwardRef((props, ref) => {
+export const TableUI = /*#__PURE__*/ forwardRef((props, ref) => {
   import.meta.css = css;
   const { tableRef, tableId, children } = props;
 

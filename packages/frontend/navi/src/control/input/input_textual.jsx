@@ -327,7 +327,7 @@ const InputTextualFirstResolver = (props) => {
 
   return <Next {...props} />;
 };
-export const InputTextual = createComponentResolver([
+export const InputTextual = /*#__PURE__*/ createComponentResolver([
   InputTextualAsTextResolver,
   InputTextualFirstResolver,
   InputWithListResolver,

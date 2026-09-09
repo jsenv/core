@@ -178,19 +178,21 @@ export const useTableDragContextValue = ({
   }, [grabTarget, canChangeColumnOrder]);
 };
 
-export const TableDragCloneContainer = forwardRef((props, ref) => {
-  import.meta.css = css;
-  const { tableId } = props;
+export const TableDragCloneContainer = /*#__PURE__*/ forwardRef(
+  (props, ref) => {
+    import.meta.css = css;
+    const { tableId } = props;
 
-  return (
-    <div
-      ref={ref}
-      className="navi_table_drag_clone_container"
-      data-overlay-for={tableId}
-    ></div>
-  );
-});
-export const TableColumnDropPreview = forwardRef((props, ref) => {
+    return (
+      <div
+        ref={ref}
+        className="navi_table_drag_clone_container"
+        data-overlay-for={tableId}
+      ></div>
+    );
+  },
+);
+export const TableColumnDropPreview = /*#__PURE__*/ forwardRef((props, ref) => {
   return (
     <div ref={ref} className="navi_table_column_drop_preview">
       <div className="arrow_positioner" data-top="">

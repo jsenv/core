@@ -1992,7 +1992,7 @@ const warnOnUnknownPickerType = (props) => {
   );
 };
 
-export const Picker = createComponentResolver([
+const PickerResolved = /*#__PURE__*/ createComponentResolver([
   PickerFirstResolver,
   PickerPresetResolver,
   PickerConfirmResolver,
@@ -2001,25 +2001,34 @@ export const Picker = createComponentResolver([
   PickerButton,
 ]);
 
-Picker.Chip = PickerChip;
-Picker.Clear = PickerClear;
+const PickerUI = /*#__PURE__*/ Object.assign(PickerDefaultUI, {
+  Date: PickerDateUI,
+  Time: PickerTimeUI,
+  Duration: PickerDurationUI,
+  Week: PickerWeekUI,
+  Datetime: PickerDatetimeUI,
+  File: PickerFileUI,
+  Color: PickerColorUI,
+  Object: PickerObjectUI,
+  Multiple: PickerArrayUI,
 
-Picker.UI = PickerDefaultUI;
+  PencilSvg,
+  ChevronDownSvg,
+  ClockSvg,
+  DurationSvg,
+  CalendarSvg,
+  FileSvg,
+  ColorSvg,
+});
 
-Picker.UI.Date = PickerDateUI;
-Picker.UI.Time = PickerTimeUI;
-Picker.UI.Duration = PickerDurationUI;
-Picker.UI.Week = PickerWeekUI;
-Picker.UI.Datetime = PickerDatetimeUI;
-Picker.UI.File = PickerFileUI;
-Picker.UI.Color = PickerColorUI;
-Picker.UI.Object = PickerObjectUI;
-Picker.UI.Multiple = PickerArrayUI;
-
-Picker.UI.PencilSvg = PencilSvg;
-Picker.UI.ChevronDownSvg = ChevronDownSvg;
-Picker.UI.ClockSvg = ClockSvg;
-Picker.UI.DurationSvg = DurationSvg;
-Picker.UI.CalendarSvg = CalendarSvg;
-Picker.UI.FileSvg = FileSvg;
-Picker.UI.ColorSvg = ColorSvg;
+// Assembled in pure expressions rather than written onto Picker afterwards
+// (`Picker.Chip = PickerChip`): what createComponentResolver returns is an object
+// a bundler cannot see through, so a property assigned to it later is a side
+// effect it has to keep — and with it Picker, every UI and everything they
+// import, in a bundle that never renders a picker. The annotations say these
+// calls only create and return; an unused Picker then disappears whole.
+export const Picker = /*#__PURE__*/ Object.assign(PickerResolved, {
+  Chip: PickerChip,
+  Clear: PickerClear,
+  UI: PickerUI,
+});

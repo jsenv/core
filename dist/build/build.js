@@ -10128,17 +10128,16 @@ const jsenvPluginAutoreloadOnServerRestart = () => {
   };
 };
 
-/**
- * Lorsqu'on bundle un package ayant pas le field sideEffects
- * alors on fini potentiellement par dire
- * sideEffect: false
- * sur le package racine alors qu'on en sait rien
- * on pourrait mettre un package.json dans dist dans ce cas
- * qui ne déclare pas le field side effect afin
- * d'override le package.json du project qui lui dit qu'il ny en a pas
+/*
+ * Tells the bundler which modules may be dropped when nothing imports a value
+ * from them, from the "sideEffects" field of the package.json closest to each
+ * file — a dependency's own declaration for its files, the project's for its
+ * own. A package that declares nothing keeps every module (the bundler's own
+ * default), so an undeclared root only loses precision, never code.
  *
- * On part du principe pour le moment que c'est la respo du package racine de déclarer cela
- *
+ * Whether the project's package.json is written back with the side-effect
+ * files this build produced is decided in build.js, and only for a project that
+ * already declares the field; it is not this plugin's concern.
  */
 
 
@@ -10146,15 +10145,6 @@ const jsenvPluginPackageSideEffects = ({ packageDirectory }) => {
   if (!packageDirectory.url) {
     return [];
   }
-  const packageJson = packageDirectory.read(packageDirectory.url);
-  if (!packageJson) {
-    return [];
-  }
-  const { sideEffects } = packageJson;
-  if (sideEffects !== false && !Array.isArray(sideEffects)) {
-    return [];
-  }
-
   const packageSideEffectsCacheMap = new Map();
   const readSideEffectInfoFromClosestPackage = (urlInfo) => {
     const closestPackageDirectoryUrl = urlInfo.packageDirectoryUrl;
