@@ -1,0 +1,7 @@
+{
+  "name": "whatever",
+  "private": true,
+  "dependencies": {
+    "dep": "^1.0.0"
+  }
+}

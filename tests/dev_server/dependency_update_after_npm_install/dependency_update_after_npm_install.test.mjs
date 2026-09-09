@@ -1,11 +1,13 @@
 /*
  * Ensures that when "npm install" brings a new version of a dependency while
- * the dev server is running, reloading the browser uses that new version.
- *
- * node_modules is not watched, so nothing reloads the browser on its own; it is
- * the request following the reload that must see the new package version and
- * serve the files behind it, instead of the ones cached under the previous
+ * the dev server is running, the browser comes back on its own with that new
+ * version: the request following the reload must see the new package version
+ * and serve the files behind it, instead of the ones cached under the previous
  * version.
+ *
+ * package.json declares "*" for both packages, so what tells the dev server
+ * about the install is the served version moving, not a declared version
+ * being satisfied.
  *
  * Both ways of importing the package are covered because they are cached
  * differently: "main.html" imports it from an external js module, "inline.html"
@@ -17,11 +19,11 @@
  * browser cache for the other.
  */
 
-import { assert } from "@jsenv/assert";
 import { replaceFileStructureSync } from "@jsenv/filesystem";
 import { chromium } from "playwright";
 
 import { startDevServer } from "@jsenv/core";
+import { waitForAnswer } from "@jsenv/core/tests/dev_server/wait_for_answer.js";
 import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js";
 
 const debug = false; // true to have browser UI + keep it open after test
@@ -53,44 +55,20 @@ const devServer = await startDevServer({
 const browser = await chromium.launch({ headless: !debug });
 try {
   const page = await launchBrowserPage(browser);
-  const getResult = () => {
-    return page.evaluate(
-      /* eslint-disable no-undef */
-      () => window.resultPromise,
-      /* eslint-enable no-undef */
-    );
-  };
 
   external_js_module: {
     await page.goto(`${devServer.origin}/main.html`);
-    {
-      const actual = await getResult();
-      const expect = 42;
-      assert({ actual, expect });
-    }
+    await waitForAnswer(page, 42);
     npmInstall("foo_1.0.1");
-    await page.reload();
-    {
-      const actual = await getResult();
-      const expect = 43;
-      assert({ actual, expect });
-    }
+    // no reload is performed by the test: the page must come back on its own
+    await waitForAnswer(page, 43);
   }
 
   inline_js_module: {
     await page.goto(`${devServer.origin}/inline.html`);
-    {
-      const actual = await getResult();
-      const expect = 42;
-      assert({ actual, expect });
-    }
+    await waitForAnswer(page, 42);
     npmInstall("bar_1.0.1");
-    await page.reload();
-    {
-      const actual = await getResult();
-      const expect = 43;
-      assert({ actual, expect });
-    }
+    await waitForAnswer(page, 43);
   }
 } finally {
   if (!debug) {

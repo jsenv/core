@@ -8,16 +8,11 @@
 
   <body>
     <div id="app"></div>
-    <script>
-      window.resultPromise = new Promise((resolve) => {
-        window.resolveResultPromise = resolve;
-      });
-    </script>
     <script type="module">
       import { answer } from "bar";
 
       document.querySelector("#app").innerHTML = answer;
-      window.resolveResultPromise(answer);
+      window.answer = answer;
     </script>
   </body>
 </html>

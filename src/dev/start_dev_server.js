@@ -229,6 +229,7 @@ export const startDevServer = async ({
   };
   const dependencyProblemEventEmitter = createEventEmitter();
   const dependencyWatcher = watchDependencies(packageDirectory, {
+    getKitchens: () => kitchenCache.values(),
     onChange: (problems) => {
       dependencyProblemEventEmitter.emit(problems);
     },
@@ -250,9 +251,28 @@ export const startDevServer = async ({
         logger.info(message);
       }
     },
-    onInstalled: ({ packageName, declaredVersion, severity }) => {
-      logger.info(`"${packageName}@${declaredVersion}" is now installed`);
+    onInstalled: ({
+      packageName,
+      installedVersion,
+      servedVersion,
+      declaredVersion,
+      severity,
+    }) => {
+      if (servedVersion) {
+        logger.info(
+          `"${packageName}@${installedVersion}" is now installed, the page runs ${servedVersion}`,
+        );
+      } else {
+        logger.info(`"${packageName}@${declaredVersion}" is now installed`);
+      }
       if (severity !== "warning") {
+        return;
+      }
+      if (servedVersion) {
+        reloadRequestEventEmitter.emit({
+          cause: `${packageName} ${servedVersion} -> ${installedVersion} installed`,
+          reason: `a dependency the page runs changed version in node_modules`,
+        });
         return;
       }
       reloadRequestEventEmitter.emit({

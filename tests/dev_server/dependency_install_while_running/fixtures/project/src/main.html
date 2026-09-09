@@ -1,0 +1,39 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 32px;
+        color: #222;
+        font-family: system-ui, sans-serif;
+      }
+      h1 {
+        color: #666;
+        font-weight: normal;
+        font-size: 20px;
+      }
+      dl {
+        display: grid;
+        grid-template-columns: max-content auto;
+        gap: 12px 24px;
+        font-size: 22px;
+      }
+      dt {
+        color: #666;
+      }
+      dd {
+        margin: 0;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+
+  <body>
+    <h1>A page importing "dep" from node_modules</h1>
+    <dl id="app"></dl>
+    <script type="module" src="main.js"></script>
+  </body>
+</html>
