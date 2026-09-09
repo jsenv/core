@@ -34,6 +34,12 @@ export const getUrlForContentInsideHtml = (node, htmlUrlInfo, reference) => {
       return inlineContentUrl;
     }
   }
+  // a node injected by jsenv has no place in the original html, so its position
+  // is read in the generated one: a coordinate space the page own nodes are not
+  // numbered in. Both spaces would mint the same url for different content.
+  if (getHtmlNodeAttribute(node, "jsenv-injected-by")) {
+    basename = "injected";
+  }
   const { line, column, lineEnd, columnEnd } = getHtmlNodePosition(node, {
     preferOriginal: true,
   });

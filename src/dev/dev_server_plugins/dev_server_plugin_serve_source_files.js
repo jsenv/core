@@ -274,8 +274,20 @@ export const devServerPluginServeSourceFiles = ({
                 rootDirectoryUrl: sourceDirectoryUrl,
               })
             : sourceDirectoryUrl;
+          // What the graph knows this resource as: the specifier a reference
+          // decodes to never carries "?hot" (the client adds it to re-import,
+          // see jsenv_plugin_hot_search_param), so the request is compared
+          // without it — or nothing inline ever matches its own re-import,
+          // and a file that a re-cook could create is created twice.
+          const requestResourceWithoutHot = WEB_URL_CONVERTER.asWebUrl(
+            requestedUrl,
+            {
+              origin: request.origin,
+              rootDirectoryUrl: sourceDirectoryUrl,
+            },
+          ).slice(request.origin.length);
           let reference = kitchen.graph.inferReference(
-            request.resource,
+            requestResourceWithoutHot,
             parentUrl,
           );
           if (!reference) {
@@ -318,7 +330,7 @@ export const devServerPluginServeSourceFiles = ({
                 });
               }
               reference = kitchen.graph.inferReference(
-                request.resource,
+                requestResourceWithoutHot,
                 inlineParentUrl,
               );
               if (!reference) {

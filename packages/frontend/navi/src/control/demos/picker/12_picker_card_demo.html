@@ -124,6 +124,20 @@
         court: "Terrain 2",
         place: "Padel Club Marseille",
         score: "6-4 3-6",
+        canceled: false,
+      };
+
+      // What a sheet answers, applied to the game: its fields — and the
+      // gesture a named button put in the answer (`op`), which is not a
+      // field but travels with them (see the edit sheet's "Annuler la
+      // partie").
+      const applyAnswer = (game, answer) => {
+        const { op, ...fields } = answer;
+        return {
+          ...game,
+          ...fields,
+          canceled: op === "cancel" ? true : game.canceled,
+        };
       };
 
       const useStoredBoolean = (key, defaultValue) => {
@@ -187,7 +201,7 @@
               {({ value, action }) => (
                 <GamePicker
                   game={value}
-                  action={(next) => action({ ...value, ...next })}
+                  action={(next) => action(applyAnswer(value, next))}
                   animationDuration={slow ? "0.6s" : undefined}
                 />
               )}
@@ -313,7 +327,14 @@
           style={loading ? { opacity: 0.6 } : undefined}
           {...props}
         >
-          <Text bold>{game.name}</Text>
+          <Box flex spacing="s" alignY="center">
+            <Text bold>{game.name}</Text>
+            {game.canceled && (
+              <Text size="xs" bold color="#ffd54f">
+                ANNULÉE
+              </Text>
+            )}
+          </Box>
           {mode === "edit" ? (
             <Input
               name="court"
@@ -363,20 +384,23 @@
         mount: "from-first-open",
       };
 
-      const SheetButtons = ({ send }) => (
-        <Box flex spacing="s">
-          <Button
-            command="--navi-cancel"
-            variant="discrete"
-            color="rgb(255 255 255 / 80%)"
-            expandX
-            alignX="center"
-          >
-            Annuler
-          </Button>
-          <Button command="--navi-send" expandX alignX="center">
-            {send}
-          </Button>
+      const SheetButtons = ({ send, children }) => (
+        <Box flex="y" spacing="s">
+          <Box flex spacing="s">
+            <Button
+              command="--navi-cancel"
+              variant="discrete"
+              color="rgb(255 255 255 / 80%)"
+              expandX
+              alignX="center"
+            >
+              Annuler
+            </Button>
+            <Button command="--navi-send" expandX alignX="center">
+              {send}
+            </Button>
+          </Box>
+          {children}
         </Box>
       );
 
@@ -433,7 +457,7 @@
         const { value, loading } = usePickerState();
         return (
           <GameCard
-            game={{ ...game, ...value }}
+            game={applyAnswer(game, value)}
             loading={loading}
             width="300"
             scoreSlot={scoreSlot}
@@ -510,7 +534,21 @@
           >
             <ControlGroup flex="y" spacing="m" alignX="stretch">
               <GameCard game={game} mode="edit" data-grow />
-              <SheetButtons send="Enregistrer" />
+              <SheetButtons send="Enregistrer">
+                {/* Not a field, still an answer of this sheet: the button's
+                    name and value travel with the fields, the sheet leaves,
+                    and the card wears the wait like any other write. */}
+                <Button
+                  name="op"
+                  value="cancel"
+                  command="--navi-send"
+                  variant="discrete"
+                  color="#ffab91"
+                  alignX="center"
+                >
+                  Annuler la partie
+                </Button>
+              </SheetButtons>
             </ControlGroup>
           </Picker>
         );
@@ -523,7 +561,7 @@
           <GamePicker
             game={game}
             action={(next) => {
-              gameSignal.value = { ...game, ...next };
+              gameSignal.value = applyAnswer(game, next);
             }}
             {...props}
           />

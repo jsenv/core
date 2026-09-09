@@ -4,11 +4,33 @@
 run({ minification: false, preserveComments: false })
 ```
 
-# 1/2 write 6 files into "../../../"
+# 1/3 console.warn
+
+![img](console.warn.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+⚠ import.meta.css shipped as written: not parsed, not transpiled, not minified
+--- css template ---
+base/client/main.js:26:30
+--- reason ---
+"${selector}" stands in a selector, or an at-rule prelude
+--- suggestion ---
+only a "${}" standing where a css value stands can be read; a custom property set from JS, a data attribute or a selector list covers nearly every other reason to interpolate
+--- to silence ---
+write "jsenv-css-opaque" in a css comment inside that template
+```
+
+</details>
+
+
+# 2/3 write 6 files into "../../../"
 
 see [./@jsenv/core/](./@jsenv/core/)
 
-# 2/2 resolve
+# 3/3 resolve
 
 ```js
 undefined

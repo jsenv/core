@@ -76,6 +76,7 @@ export {
   suppressClickAfterGesture,
 } from "./src/interaction/click_suppression.js";
 export { waitForPressHeld } from "./src/interaction/press_held.js";
+export { waitForTap } from "./src/interaction/press_tap.js";
 // interaction/focus
 export {
   activeElementSignal,

@@ -73,12 +73,12 @@
     "test:snapshot_clear": "npx @jsenv/filesystem clear **/tests/**/side_effects/"
   },
   "dependencies": {
-    "@jsenv/ast": "6.10.5",
-    "@jsenv/js-module-fallback": "1.6.9",
+    "@jsenv/ast": "6.10.6",
+    "@jsenv/js-module-fallback": "1.6.10",
     "@jsenv/plugin-bundling": "2.10.28",
-    "@jsenv/plugin-minification": "1.7.22",
-    "@jsenv/plugin-supervisor": "1.8.24",
-    "@jsenv/plugin-transpilation": "1.7.9",
+    "@jsenv/plugin-minification": "1.7.23",
+    "@jsenv/plugin-supervisor": "1.8.25",
+    "@jsenv/plugin-transpilation": "1.7.10",
     "@jsenv/server": "17.6.6",
     "@jsenv/sourcemap": "1.4.9",
     "react-table": "7.8.0"

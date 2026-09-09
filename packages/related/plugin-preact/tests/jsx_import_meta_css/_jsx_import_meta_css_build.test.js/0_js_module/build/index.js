@@ -1,4 +1,4 @@
-import { u } from "/jsenv_plugin_preact_node_modules.js?v=14ab0ba6";
+import { u } from "/jsenv_plugin_preact_node_modules.js?v=38bcaec7";
 
 const installImportMetaCssBuild = (importMeta) => {
   const IMPORT_META_CSS_BUILD = "jsenv_import_meta_css_build";
@@ -12,7 +12,7 @@ const installImportMetaCssBuild = (importMeta) => {
     const stylesheet = new CSSStyleSheet({ baseUrl: importMeta.url });
     stylesheet.replaceSync(value);
     stylesheetMap.set(url, stylesheet);
-    document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet];
+    document.adoptedStyleSheets.push(stylesheet);
   };
   const update = (url, value) => {
     stylesheetMap.get(url).replaceSync(value);
@@ -50,7 +50,8 @@ const installImportMetaCssBuild = (importMeta) => {
   });
 };
 
-installImportMetaCssBuild(import.meta);import.meta.css = [         `body {
+installImportMetaCssBuild(import.meta);
+import.meta.css =          [`body {
   background-color: red;
 }
 `, "@jsenv/plugin-preact/tests/jsx_import_meta_css/client/foo.jsx"];

@@ -7,6 +7,8 @@
 - [Which interaction asked](#which-interaction-asked)
 - [Reaching the control](#reaching-the-control)
 - [What a swipe draws, and what it leaves to you](#what-a-swipe-draws-and-what-it-leaves-to-you)
+- [Twice, whichever hand it is](#twice-whichever-hand-it-is)
+  - [The click on the way there](#the-click-on-the-way-there)
 - [Carrying something, or a surface under the hand](#carrying-something-or-a-surface-under-the-hand)
 - [An affordance inside somebody else's box: `selfInteractions`](#an-affordance-inside-somebody-elses-box-selfinteractions)
   - [Why it is a list, and why it is required](#why-it-is-a-list-and-why-it-is-required)
@@ -87,22 +89,32 @@ which the carrying interactions answer with).
 
 ### The interactions navi detects
 
-| Key                                                    | Read from                                                   |
-| ------------------------------------------------------ | ----------------------------------------------------------- |
-| `mousedown` `mouseup` `click` `dblclick` `contextmenu` | the browser's own events                                    |
-| `swipe_left` `swipe_right` `swipe_up` `swipe_down`     | a press that travels                                        |
-| `longpress`                                            | a press held still                                          |
-| `move` `reorder` `land` `toss` `leave`                 | the element carried, and what letting go means              |
-| `moving`                                               | the same carry, told on every frame                         |
-| `grab` `release` `refuse`                              | the instants a drag takes hold, lets go, or does not happen |
-| `pan` `zoom`                                           | a surface under the hand, or under a wheel                  |
-| `"keyboard:<shortcut>"`                                | keys, e.g. `"keyboard:ctrl+backspace"`                      |
+| Key                                                | Read from                                                   |
+| -------------------------------------------------- | ----------------------------------------------------------- |
+| `mousedown` `mouseup` `click` `contextmenu`        | the browser's own events                                    |
+| `swipe_left` `swipe_right` `swipe_up` `swipe_down` | a press that travels                                        |
+| `longpress`                                        | a press held still                                          |
+| `double_click` `single_click`                      | two presses in a row, or one that stayed alone              |
+| `move` `reorder` `land` `toss` `leave`             | the element carried, and what letting go means              |
+| `moving`                                           | the same carry, told on every frame                         |
+| `grab` `release` `refuse`                          | the instants a drag takes hold, lets go, or does not happen |
+| `pan` `zoom`                                       | a surface under the hand, or under a wheel                  |
+| `"keyboard:<shortcut>"`                            | keys, e.g. `"keyboard:ctrl+backspace"`                      |
 
 Two holds on one press — a `longpress` declared on something inside an
 element that declares one too — are answered by the nearer one, the way a
 click is the innermost target's: the inner hold fires, the outer wait is given
 up. Delays being equal; an outer hold made shorter than the inner one fires
 first.
+
+There is no `dblclick` in that table, on purpose: the browser fires it for a
+mouse and never for a finger, so an element declaring it would answer half the
+hands that reach it. `double_click` is the same gesture counted from the
+pointer — see [Twice, whichever hand it is](#twice-whichever-hand-it-is). navi says so in dev, once per element, the first time it happens: the
+outer hold is a declaration that can never fire, and a picker opened by
+`openOn="longpress"` around a card that already holds one is exactly where it
+happens. One hold has one meaning — two things on one card want two gestures
+(a hold and a click), not two holds.
 
 A name nothing knows how to detect produces a dev warning naming the detectors
 that exist. The carrying family and the two surface streams each have a file of
@@ -195,6 +207,67 @@ While the answer takes time, the element **stays where the gesture left it**, an
 comes back once it settles — a failure leaves the row in place so it can be tried
 again. What a success does to the element is yours (a list that redemands its
 rows, a row that leaves): navi does not make it disappear.
+
+## Twice, whichever hand it is
+
+At the finger there is no `dblclick`. There is not even a second `click`: two
+taps in the same place are a gesture the browser keeps for itself (its own
+zoom), so it withholds them — measured on a phone, two taps 120 ms apart give
+two `pointerup`, ONE `click` and no `dblclick` at all. Anything that wants to
+mean "twice" therefore has to count presses, which is what `double_click` is:
+
+```jsx
+<Box interactions={{ pan, zoom, double_click: (event) => open(event) }} />
+```
+
+One name for the mouse and for the finger — a tap is a click, and the same
+gesture opens the plan at a desk and on a phone.
+
+The rhythm is one window, opened by the FIRST press: the second has to land
+inside it, and near enough to it.
+
+| Attribute                 | Default | Meaning                                     |
+| ------------------------- | ------- | ------------------------------------------- |
+| `data-double-click-delay` | `400`   | ms the window stays open                    |
+| `data-double-click-slop`  | `30`    | px the second press may land from the first |
+
+The two numbers are read against the rest of the family rather than picked. 400
+sits under the hold's 450: a pause longer than the wait navi calls "held" is
+longer than one gesture — which also means a press slow enough to be a hold
+cannot start a double click, and a hold answered on the second press takes that
+press back. 30 px is a fingertip and not a pixel, because between the two the
+finger leaves the glass and lands again where it means to; the 8 px of
+`data-longpress-slop` answer a different question (has this finger stood
+still?).
+
+### The click on the way there
+
+By default both happen, the way they do in a browser: the first press is a
+`click`, and the second is answered by the `double_click` alone — the click it
+would have left behind is swallowed, the way every gesture swallows the one it
+leaves.
+
+`single_click` is for the case where even the first one is too much: two
+answers that exclude each other — a plan that opens on the double must not do
+whatever a lone tap does on the way there. It is the same window read the other
+way, the tap that STAYED alone, said once the window has closed on it:
+
+```jsx
+<Box
+  interactions={{
+    single_click: (event) => select(event),
+    double_click: (event) => open(event),
+  }}
+/>
+```
+
+It costs that wait, which is why it is a name a caller picks rather than
+something a declared `double_click` imposes on `click`. And it hands the
+element's click over: the click each tap leaves behind is swallowed, so a
+control that wants its action on a lone click asks for it there —
+`single_click: "request_action"`, not `action` reached by a click that no longer
+arrives. A keyboard activation is not held: nothing can double it, so it is said
+at once.
 
 ## Carrying something, or a surface under the hand
 
@@ -414,6 +487,10 @@ tuned in one place and a stylesheet can read the same value.
 | `data-longpress-delay` | `450`   | ms the press must be held                 |
 | `data-longpress-slop`  | `8`     | px the pointer may drift during the wait  |
 
+Plus the two the double click is counted with, `data-double-click-delay` and
+`data-double-click-slop` (see [Twice, whichever hand it
+is](#twice-whichever-hand-it-is)).
+
 A threshold is a **fraction and never a distance**: the same gesture must mean
 the same thing on a phone and on a wide screen. Speed answers on its own on top
 of it — a brief flick counts whatever the distance covered.
@@ -522,17 +599,18 @@ container above it does not take the gesture:
   finger, which is the native gesture. To place it at the press point rather than
   on the element:
   `triggerNaviCommand(target, "--navi-open", interactionEvent, { anchor })`.
-- **A swipe has no keyboard equivalent.** There is nothing to press that means
-  "swipe right", so a swipe is only reachable if something else on the element
-  offers the same thing — a `"keyboard:<shortcut>"`, a `contextmenu`, or the
-  control's own action.
+- **A swipe has no keyboard equivalent, and neither has a double click.** There
+  is nothing to press that means "swipe right", and no key that means "twice",
+  so either is only reachable if something else on the element offers the same
+  thing — a `"keyboard:<shortcut>"`, a `contextmenu`, or the control's own
+  action.
 
 ## Reference
 
 - `src/control/interaction/interaction_registry.js` — the prop, the four values,
   the registry.
-- `src/control/interaction/interaction_press.js` — swipes and holds, and what a
-  swipe writes on the element.
+- `src/control/interaction/interaction_press.js` — swipes, holds and the two
+  taps, and what a swipe writes on the element.
 - `src/control/interaction/interaction_keyboard.js`,
   `interaction_native.js` — the other two detectors.
 - `src/control/demos/38_interactions_demo.html` — every case above, plus a

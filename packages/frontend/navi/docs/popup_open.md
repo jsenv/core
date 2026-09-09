@@ -468,6 +468,23 @@ card out of its place and puts it back (`data-grow` on the card inside the
 sheet; see Dialog's own `animation`). `12_picker_card_demo.html` shows all of
 it, against a backend that answers when told to.
 
+A gesture inside the sheet that is not a field — cancel the game, delete it —
+is still an answer the sheet gives. A named button says which:
+
+```jsx
+<Button name="op" value="cancel" command="--navi-send">
+  Cancel the game
+</Button>
+```
+
+Its name and value travel with the fields (the group takes the sender's
+value, see `wantRequesterButtonState`), the sheet leaves on the send, and the
+picker's `action` receives `{ …fields, op: "cancel" }` — so this write is
+worn by the trigger exactly like the others, callout included, and a drawing
+reading `usePickerState()` can already show the "cancelled" stamp while the
+request is out. No button inside the popup needs an action of its own: a run
+started in there would belong to a control the close takes away.
+
 This is not `optimistic`. `optimistic` on a control is "draw no wait at all";
 here the wait is drawn, on the trigger, and the popup was never what held it.
 An optimistic picker is for a write not worth showing — the card then reads

@@ -17,7 +17,7 @@ System.register([__v__("/jsenv_core_packages.js")], function (_export, _context)
           });
           stylesheet.replaceSync(value);
           stylesheetMap.set(url, stylesheet);
-          document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet];
+          document.adoptedStyleSheets.push(stylesheet);
         };
         const update = (url, value) => {
           stylesheetMap.get(url).replaceSync(value);

@@ -272,6 +272,17 @@ export const useUIStateController = (
                 `merging button state into parent control group:`,
                 mergedState,
               );
+              // The sender's value is part of the answer, and whoever mirrors
+              // this group — a picker, through its façade — reads the group's
+              // state, not its children's: told the way a mount sync is
+              // (silently, nobody has answered yet), so the send that follows
+              // finds the value there. Not through the group's own onChange:
+              // that re-aggregates from the children, and a button is not one.
+              parentController.parentUIStateController?.onChildUIAction?.(
+                parentController,
+                e,
+                { stateChanged: true, silent: true },
+              );
             }
           }
           // Trigger uiAction/command side effects without changing UI state.
@@ -1937,6 +1948,10 @@ export const useUIGroupStateController = (
       const { controller } = s;
       const prevDefaultValue = controller.defaultValue;
       controller.props = props;
+      // Published like a leaf's (see the leaf update above): a child's named
+      // button reaches the group's owner through it (see the button branch of
+      // onUIAction).
+      controller.parentUIStateController = parentUIStateController;
       controller.ref = ref;
       controller.id = id;
       controller.name = name;

@@ -1,11 +1,11 @@
 /**
- * What a press can turn out to be: a swipe, or a hold.
+ * What a press can turn out to be: a swipe, a hold, or one of two taps.
  *
- * One detector for both, because they dispute the SAME press and something has to
- * arbitrate them in one place — read apart, a hold that drifts three pixels both
- * opens the menu and starts putting the row away. A finger lands; it leaves
- * sideways (a swipe), it stays still (a hold), it lifts at once (a click, which is
- * not this detector's business).
+ * One detector for all of them, because they dispute the SAME press and something
+ * has to arbitrate them in one place — read apart, a hold that drifts three pixels
+ * both opens the menu and starts putting the row away. A finger lands; it leaves
+ * sideways (a swipe), it stays still (a hold), it lifts at once and comes back (a
+ * double click), it lifts at once and stays away (a single click).
  *
  * Naming the interactions in `interactions` rather than letting one callback read
  * the pointer is what lets this know, BEFORE the first pixel, which of them the
@@ -65,13 +65,45 @@
  * and owns its own dismissal, so the `pointerup` that ends the press is not read as
  * an interaction outside it (the browser's light dismiss, which would close it on
  * that very event, only applies to `popover="auto"`).
+ *
+ * A DOUBLE CLICK IS COUNTED FROM THE POINTER, which is the whole reason it is here
+ * rather than in interaction_native.js beside the browser's own events. At the
+ * finger there is no `dblclick`, and there is no second `click` either: two taps
+ * in the same place are a gesture the browser keeps for itself (its own zoom), so
+ * it withholds them. Counting presses is the only reading that means the same
+ * thing under a finger and under a mouse — one name, `double_click`, for what a
+ * hand does twice, whichever hand it is.
+ *
+ * The rhythm is ONE window, opened by the first press and lasting
+ * `data-double-click-delay`: the second press has to land inside it, and within
+ * `data-double-click-slop` of the first. So a press slow enough to be a hold
+ * cannot start a double click, and a hold answered on the second press takes it
+ * back — the two dispute that press and the hold, being the later answer, is the
+ * one that has to say so.
+ *
+ * `single_click` is the same window read the other way: the tap that STAYED alone,
+ * said once the window has closed on it. It is what an element declares when its
+ * two answers are exclusive — a plan opening on the double must not also do
+ * whatever a lone tap does on the way there — and it costs that wait, which is why
+ * it is a name a caller picks rather than something a declared `double_click`
+ * imposes on `click`. Declaring it hands the element's click over: the click each
+ * tap leaves behind is swallowed, and `single_click` is what says it happened, so
+ * a control wanting its action on a lone click asks for it there
+ * (`single_click: "request_action"`). A click no press made — a keyboard
+ * activation — is not held: nothing can double it.
+ *
+ * Neither has a keyboard equivalent, since there is no key meaning "twice". An
+ * element only reachable that way needs something else offering the same thing: a
+ * `"keyboard:…"` shortcut, a `contextmenu`, the control's own action.
  */
 
 import {
+  isPressDrivenClick,
   keepTouchRefusable,
   startDragToTravel,
   suppressClickAfterGesture,
   waitForPressHeld,
+  waitForTap,
 } from "@jsenv/dom";
 
 import { defineInteractionDetector } from "./interaction_registry.js";
@@ -103,6 +135,15 @@ const SWIPE_THRESHOLD_DEFAULT = 0.33;
 const LONGPRESS_DELAY_DEFAULT = 450;
 // Past this the finger is going somewhere: it swipes, it does not hold.
 const LONGPRESS_SLOP_DEFAULT = 8;
+// The window a double click is counted in, opened by the FIRST press. Under the
+// hold's delay on purpose: a pause longer than the wait navi calls "held" is
+// longer than one gesture.
+const DOUBLE_CLICK_DELAY_DEFAULT = 400;
+// How far apart the two presses may be, and how far either of them may travel
+// before it is a gesture rather than a tap. A fingertip and not a pixel: between
+// the two the finger leaves the glass and lands again where it means to, which is
+// a wider question than the hold's slop above (has this finger stood still?).
+const DOUBLE_CLICK_SLOP_DEFAULT = 30;
 // How long the element takes to reach where the gesture leaves it, or to come
 // back. Written into the CSS below from here: the state is cleaned up when the
 // movement is over, so a duration living only in the stylesheet would be a timing
@@ -114,11 +155,19 @@ const SETTLE_DURATION_MS = 200;
 const SWIPE_THRESHOLD_ATTRIBUTE = "data-swipe-threshold";
 const LONGPRESS_DELAY_ATTRIBUTE = "data-longpress-delay";
 const LONGPRESS_SLOP_ATTRIBUTE = "data-longpress-slop";
+const DOUBLE_CLICK_DELAY_ATTRIBUTE = "data-double-click-delay";
+const DOUBLE_CLICK_SLOP_ATTRIBUTE = "data-double-click-slop";
 
-// Which axes this element takes a swipe on, and that it takes a hold: said in the
-// DOM at render time, for the CSS below and for the boxes above to read.
+// Which axes this element takes a swipe on, and that it takes a hold or counts
+// taps: said in the DOM at render time, for the CSS below and for the boxes above
+// to read.
 const SWIPE_AXES_ATTRIBUTE = "data-swipe";
 export const LONGPRESS_ATTRIBUTE = "data-longpress";
+const DOUBLE_CLICK_ATTRIBUTE = "data-double-click";
+
+const LONGPRESS = "longpress";
+const DOUBLE_CLICK = "double_click";
+const SINGLE_CLICK = "single_click";
 
 import.meta.css = /* css */ `
   /* Declared, so the browser sees a NUMBER it can interpolate and calculate with:
@@ -151,6 +200,15 @@ import.meta.css = /* css */ `
     touch-action: none;
   }
 
+  /* Two taps in the same place are the browser's own zoom gesture, and a browser
+     holding one back holds the click back with it. Taking that gesture is also
+     what removes the delay a click is kept for while the browser waits to see a
+     second tap. At zero specificity, so anything else saying what a touch may do
+     here wins: the swipe above, a pan-zoom surface in its own stylesheet. */
+  :where([data-double-click]) {
+    touch-action: manipulation;
+  }
+
   /* iOS shows its callout (Copy / Look Up) and selects the word under the finger on
      a press held still, and does not always route that through an event that can be
      refused. Same reason as the drag sources in @jsenv/dom: it has to be true
@@ -159,16 +217,18 @@ import.meta.css = /* css */ `
     -webkit-touch-callout: none;
   }
 
-  /* And nothing under either gesture is text to select. Both answer the press
-     themselves — one what a finger held still means, the other what a finger
-     leaving sideways means — while the browser answers that same press with a
-     selection of its own: the word under the thumb, blue, with handles, still
-     there once the press is over. The callout above is the iOS half of it; this is
-     what the other engines make of the same press, said to a mouse too, which
-     cannot finish a selection begun where the press is a swipe.
+  /* And nothing under any of these gestures is text to select. Each answers the
+     press itself — what a finger held still means, what a finger leaving sideways
+     means, what a hand doing it twice means — while the browser answers that same
+     press with a selection of its own: the word under the thumb, blue, with
+     handles, still there once the press is over, and under a mouse the word a
+     double click lands on. The callout above is the iOS half of it; this is what
+     the other engines make of the same press, said to a mouse too, which cannot
+     finish a selection begun where the press is a gesture.
      Prefixed too: Safari only took the property unprefixed at 17. */
   [data-longpress],
-  [data-swipe] {
+  [data-swipe],
+  [data-double-click] {
     user-select: none;
     -webkit-user-select: none;
   }
@@ -179,11 +239,11 @@ import.meta.css = /* css */ `
      sources in @jsenv/dom (see DRAG_IGNORED_SELECTOR in drag_to.js).
      Given as text and not as auto: auto computes to none under a parent that is
      none, so it would give back nothing. */
-  :is([data-longpress], [data-swipe])
+  :is([data-longpress], [data-swipe], [data-double-click])
     :is([data-drag-ignore], [popover], dialog),
-  :is([data-longpress], [data-swipe])
+  :is([data-longpress], [data-swipe], [data-double-click])
     :is(input:not([data-press-only]), textarea),
-  :is([data-longpress], [data-swipe])
+  :is([data-longpress], [data-swipe], [data-double-click])
     :is([contenteditable=""], [contenteditable="true"]) {
     user-select: text;
     -webkit-user-select: text;
@@ -208,9 +268,13 @@ import.meta.css = /* css */ `
 
 defineInteractionDetector({
   name: "press",
-  claims: (type) => type in AXIS_BY_SWIPE_TYPE || type === "longpress",
-  // A swipe and a hold are both "what this press turns out to be": until it
-  // turns out, the press is theirs.
+  claims: (type) =>
+    type in AXIS_BY_SWIPE_TYPE ||
+    type === LONGPRESS ||
+    type === DOUBLE_CLICK ||
+    type === SINGLE_CLICK,
+  // Every one of them is "what this press turns out to be": until it turns out,
+  // the press is theirs.
   disputesPress: true,
   setup: (element, trigger, { types, readConfig }) => {
     let axes = "";
@@ -220,7 +284,15 @@ defineInteractionDetector({
         axes += axis;
       }
     }
-    const hasLongPress = types.includes("longpress");
+    const hasLongPress = types.includes(LONGPRESS);
+    const hasDoubleClick = types.includes(DOUBLE_CLICK);
+    const hasSingleClick = types.includes(SINGLE_CLICK);
+    const countsTaps = hasDoubleClick || hasSingleClick;
+    if (import.meta.dev && hasSingleClick && !hasDoubleClick) {
+      console.warn(
+        `interactions: "${SINGLE_CLICK}" waits for a "${DOUBLE_CLICK}" that is not declared here, so all it does is answer a click late. Declare "${DOUBLE_CLICK}" beside it, or use "click".`,
+      );
+    }
 
     const undo = [];
     const mark = (attribute, value) => {
@@ -273,6 +345,79 @@ defineInteractionDetector({
     if (hasLongPress) {
       mark(LONGPRESS_ATTRIBUTE, "");
     }
+    if (countsTaps) {
+      mark(DOUBLE_CLICK_ATTRIBUTE, "");
+    }
+
+    // The tap a next press may pair with, and the window it is waited for in. It
+    // outlives the press that made it — which is what a double click IS — so it
+    // lives here rather than in the pointerdown below.
+    let firstTap = null;
+    let tapWindowTimeout = null;
+    let tapWait = null;
+    const forgetTaps = () => {
+      clearTimeout(tapWindowTimeout);
+      tapWindowTimeout = null;
+      firstTap = null;
+      tapWait?.cancel();
+      tapWait = null;
+    };
+    undo.push(forgetTaps);
+    // The window closes on a tap nothing came back for. Counted from the press
+    // that opened it rather than from the tap that ends it, so what the caller
+    // tunes is one rhythm and not a press plus a pause — a press slow enough to be
+    // a hold therefore closes its own window on the spot, and cannot start a
+    // double click.
+    const openTapWindow = (pressEvent, tapEvent, delay) => {
+      firstTap = {
+        at: pressEvent.timeStamp,
+        x: tapEvent.clientX,
+        y: tapEvent.clientY,
+        pointerType: tapEvent.pointerType,
+      };
+      if (hasSingleClick) {
+        // The element's click is navi's from here: it is held for the length of
+        // the window and `single_click` is what says it happened (see the top of
+        // this file).
+        const clickSuppressionIsOver = suppressClickAfterGesture();
+        clickSuppressionIsOver();
+      }
+      clearTimeout(tapWindowTimeout);
+      tapWindowTimeout = setTimeout(
+        () => {
+          tapWindowTimeout = null;
+          firstTap = null;
+          if (hasSingleClick) {
+            trigger(SINGLE_CLICK, tapEvent, {
+              pointerType: tapEvent.pointerType,
+            });
+          }
+        },
+        delay - (tapEvent.timeStamp - pressEvent.timeStamp),
+      );
+    };
+
+    if (hasSingleClick) {
+      // A click no press made — a keyboard activation, an `element.click()`. The
+      // window exists to find out whether a second press is coming, and there is
+      // no press here, so it is not held: said at once, the way the browser's own
+      // click would have been.
+      const onClick = (clickEvent) => {
+        if (isPressDrivenClick(clickEvent)) {
+          // A press's own click, swallowed by the suppression armed at its tap:
+          // it never reaches here, and if it does (the suppression having already
+          // been spent) the tap has said it or is about to.
+          return;
+        }
+        trigger(SINGLE_CLICK, clickEvent, {
+          pointerType: clickEvent.pointerType,
+        });
+      };
+      element.addEventListener("click", onClick);
+      undo.push(() => {
+        element.removeEventListener("click", onClick);
+      });
+    }
 
     const onPointerDown = (pointerDownEvent) => {
       if (pointerDownEvent.button !== 0) {
@@ -282,6 +427,50 @@ defineInteractionDetector({
       let press = null;
       // Set below, with the hold; a no-op until then so the swipe can call it.
       let forgetInnerLongPress = () => {};
+
+      if (countsTaps) {
+        const delay = readConfig(
+          DOUBLE_CLICK_DELAY_ATTRIBUTE,
+          DOUBLE_CLICK_DELAY_DEFAULT,
+        );
+        const slop = readConfig(
+          DOUBLE_CLICK_SLOP_ATTRIBUTE,
+          DOUBLE_CLICK_SLOP_DEFAULT,
+        );
+        // Whether this press is the second of a pair is settled HERE, when it
+        // lands, and not when it is let go of: the window is about where the
+        // hand went and how soon, and a second press held a little longer than
+        // the window would otherwise be answered as a lone click while it is
+        // still down.
+        const completesTheFirstTap =
+          firstTap && continuesTap(firstTap, pointerDownEvent, delay, slop);
+        if (completesTheFirstTap) {
+          clearTimeout(tapWindowTimeout);
+          tapWindowTimeout = null;
+        } else {
+          forgetTaps();
+        }
+        tapWait = waitForTap(pointerDownEvent, {
+          slop,
+          onTap: (tapEvent) => {
+            tapWait = null;
+            if (completesTheFirstTap) {
+              firstTap = null;
+              // The click this second press leaves behind was already answered,
+              // by the gesture the two of them made. Armed and released at once:
+              // the release does not lift the suppression, it says the gesture is
+              // over (see suppressClickAfterGesture).
+              const clickSuppressionIsOver = suppressClickAfterGesture();
+              clickSuppressionIsOver();
+              trigger(DOUBLE_CLICK, tapEvent, {
+                pointerType: tapEvent.pointerType,
+              });
+              return;
+            }
+            openTapWindow(pointerDownEvent, tapEvent, delay);
+          },
+        });
+      }
 
       if (axes) {
         swipe = startSwipe(pointerDownEvent, {
@@ -302,6 +491,9 @@ defineInteractionDetector({
             press?.cancel();
             press = null;
             forgetInnerLongPress();
+            // …and it is not a tap either, nor the second of a pair: the press
+            // has left, and what it left is a swipe.
+            forgetTaps();
           },
         });
       }
@@ -319,6 +511,7 @@ defineInteractionDetector({
           press.cancel();
           press = null;
           forgetInnerLongPress();
+          warnOnceAboutHoldTakenByInner(element, longPressEvent.target);
         };
         forgetInnerLongPress = () => {
           element.removeEventListener("longpress", onInnerLongPress);
@@ -331,9 +524,12 @@ defineInteractionDetector({
           onPressHeld: (pressEvent, { endPress }) => {
             forgetInnerLongPress();
             // The hold won the arbitration: the swipe never got the distance it
-            // needed, and must not get it from whatever the finger does next.
+            // needed, and must not get it from whatever the finger does next. The
+            // double click loses the same way — a press held this long is the
+            // hold's whether it is the first of a pair or the second.
             swipe?.stop();
             swipe = null;
+            forgetTaps();
             const clickSuppressionIsOver = suppressClickAfterGesture();
             const onPointerEnd = () => {
               window.removeEventListener("pointerup", onPointerEnd, true);
@@ -362,6 +558,24 @@ defineInteractionDetector({
     };
   },
 });
+
+// Said once per element, in dev: the hold declared here can never fire while
+// the one inside it is declared, and nothing else would tell — the outer one
+// simply never happens. Two holds on the same pixels are usually one hold too
+// many (see interactions.md); the fix is on the caller's side, so it has to be
+// named there.
+const holdTakenWarnedSet = new WeakSet();
+const warnOnceAboutHoldTakenByInner = (element, innerElement) => {
+  if (!import.meta.dev || holdTakenWarnedSet.has(element)) {
+    return;
+  }
+  holdTakenWarnedSet.add(element);
+  console.warn(
+    `interactions: the "longpress" declared on this element was taken by the "longpress" declared inside it — the nearer hold wins, and this one never fires while the inner one is declared. One hold, one meaning: give the two things two gestures (a hold and a click, say), or declare the hold on one element only.`,
+    element,
+    innerElement,
+  );
+};
 
 const startSwipe = (
   pointerDownEvent,
@@ -461,6 +675,21 @@ const startSwipe = (
     // a swipe, so nothing was painted by it.
     onGiveUp: () => {},
   });
+};
+
+// Whether a press landing now completes the tap before it: the same hand, soon
+// enough, and near enough. Axis by axis rather than as a distance, the way every
+// other slop in this family is read.
+const continuesTap = (tap, pointerDownEvent, delay, slop) => {
+  if (pointerDownEvent.pointerType !== tap.pointerType) {
+    return false;
+  }
+  if (pointerDownEvent.timeStamp - tap.at >= delay) {
+    return false;
+  }
+  const xApart = Math.abs(pointerDownEvent.clientX - tap.x);
+  const yApart = Math.abs(pointerDownEvent.clientY - tap.y);
+  return xApart < slop && yApart < slop;
 };
 
 const swipeTypeOf = (axis, pulled) => {

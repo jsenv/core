@@ -5,6 +5,11 @@
  * happened. Registered through the same door an application uses (see
  * interaction_registry.js) — navi has no private one.
  *
+ * `dblclick` is not among them, and deliberately: the browser only fires it for a
+ * mouse, so an element declaring it would answer half the hands that reach it.
+ * What a hand does twice is `double_click`, counted from the pointer in
+ * interaction_press.js.
+ *
  * `contextmenu` is the only one that takes something away: the browser's own menu
  * would cover the answer to the request it is. It takes it away AFTER, though —
  * a native interaction IS its own event, the very one the gate reads, and a gate
@@ -19,7 +24,6 @@ const NATIVE_TYPE_SET = new Set([
   "mousedown",
   "mouseup",
   "click",
-  "dblclick",
   "contextmenu",
 ]);
 

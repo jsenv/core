@@ -4,9 +4,9 @@
 run({ browserLauncher: chromium })
 ```
 
-# 1/3 write 5 files into "./.jsenv/chrome@151.0.0/"
+# 1/3 write 5 files into "./.jsenv/chrome@153.0.0/"
 
-see [./.jsenv/chrome@151.0.0/](./.jsenv/chrome@151.0.0/)
+see [./.jsenv/chrome@153.0.0/](./.jsenv/chrome@153.0.0/)
 
 # 2/3 logs
 
@@ -91,7 +91,7 @@ chromium console.error > Failed to load resource: the server responded with a st
           "name": "FETCH_URL_CONTENT_ERROR",
           "message": 'Failed to fetch url content\nbase/client/intermediate.js:2:7\n1 | // eslint-disable-next-line import-x/no-unresolved\n2 | import "./not_found.js";\n          ^\nno entry on filesystem\n--- plugin name ---\n"jsenv:file_url_fetching"',
           "reason": "no entry on filesystem",
-          "stack": 'FETCH_URL_CONTENT_ERROR: Failed to fetch url content\nbase/client/intermediate.js:2:7\n1 | // eslint-disable-next-line import-x/no-unresolved\n2 | import "./not_found.js";\n          ^\nno entry on filesystem\n--- plugin name ---\n"jsenv:file_url_fetching"\n    at createFailedToFetchUrlContentError (@jsenv/core/src/kitchen/errors.js:98:24)\n    at createFetchUrlContentError (@jsenv/core/src/kitchen/errors.js:140:14)\n    at Object.fetchUrlContent (@jsenv/core/src/kitchen/kitchen.js:585:13)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async timePhase (@jsenv/core/src/kitchen/kitchen.js:659:13)\n    at async @jsenv/core/src/kitchen/kitchen.js:664:11\n    at async Object.startCollecting (@jsenv/core/src/kitchen/url_graph/references.js:29:7)\n    at async @jsenv/core/src/kitchen/kitchen.js:653:9\n    at async Object.cook (@jsenv/core/src/kitchen/kitchen.js:828:7)\n    at async Object.fetch (@jsenv/core/src/dev/dev_server_plugins/dev_server_plugin_serve_source_files.js:467:15)',
+          "stack": 'FETCH_URL_CONTENT_ERROR: Failed to fetch url content\nbase/client/intermediate.js:2:7\n1 | // eslint-disable-next-line import-x/no-unresolved\n2 | import "./not_found.js";\n          ^\nno entry on filesystem\n--- plugin name ---\n"jsenv:file_url_fetching"\n    at createFailedToFetchUrlContentError (@jsenv/core/src/kitchen/errors.js:98:24)\n    at createFetchUrlContentError (@jsenv/core/src/kitchen/errors.js:140:14)\n    at Object.fetchUrlContent (@jsenv/core/src/kitchen/kitchen.js:585:13)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async timePhase (@jsenv/core/src/kitchen/kitchen.js:659:13)\n    at async @jsenv/core/src/kitchen/kitchen.js:664:11\n    at async Object.startCollecting (@jsenv/core/src/kitchen/url_graph/references.js:29:7)\n    at async @jsenv/core/src/kitchen/kitchen.js:653:9\n    at async Object.cook (@jsenv/core/src/kitchen/kitchen.js:828:7)\n    at async Object.fetch (@jsenv/core/src/dev/dev_server_plugins/dev_server_plugin_serve_source_files.js:479:15)',
           "trace": {
             "url": "base/client/intermediate.js",
             "line": 2,

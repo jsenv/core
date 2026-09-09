@@ -43,8 +43,8 @@ when it lands; the pan stepping back for what is carried across the surface (a
 for); the pinch not beginning as a pan under its first finger; the wheel and the
 pinch writing one `zoom`; the capture, the pointer the browser drops, the click
 the release leaves behind. A pointer pans only once it has travelled a few px
-(`data-drag-threshold`), so a tap stays a tap and a `longpress` declared beside
-`pan` still gets its hold.
+(`data-drag-threshold`), so a tap stays a tap: a `longpress` declared beside
+`pan` still gets its hold, and a `double_click` still gets its two presses.
 
 Declared alone, `zoom` takes two fingers and the wheel and leaves one pointer to
 whatever else reads it; `pan` alone leaves the wheel to the page.

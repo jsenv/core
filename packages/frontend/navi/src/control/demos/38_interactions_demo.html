@@ -791,6 +791,7 @@
           <StatesDemo />
           <SwipeDemo />
           <LongPressDemo />
+          <DoubleClickDemo />
           <KeyboardDemo />
           <ReorderDemo />
           <TossDemo />
@@ -831,7 +832,7 @@
                       }
                       interactions={{
                         click: () => setSelected(file),
-                        dblclick: () => setOpened(file),
+                        double_click: () => setOpened(file),
                       }}
                     >
                       <Box flex="x" spacing="xs" alignY="center">
@@ -1216,6 +1217,103 @@
                   interactions={{ longpress: log("slop 60") }}
                 >
                   Hold while moving
+                </Button>
+              </Variant>
+            </Box>
+
+            <CallLog entries={entries} onClear={clear} />
+          </div>
+        );
+      };
+
+      // ── Double click ───────────────────────────────────────────────────────
+
+      const DoubleClickDemo = () => {
+        const [entries, push, clear] = useCallLog();
+        const log = (name) => (event) => push(name, undefined, event);
+        return (
+          <div class="demo-section">
+            <Heading id="double-click">Double click</Heading>
+            <p class="legend">
+              Twice in the same place, with a finger as with a mouse.
+            </p>
+            <Box flex="x" spacing="xl" alignY="start">
+              <Variant caption="{ double_click }">
+                <Button interactions={{ double_click: log("double_click") }}>
+                  Twice
+                </Button>
+              </Variant>
+              <Variant caption="{ click, double_click }">
+                <Button
+                  interactions={{
+                    click: log("click"),
+                    double_click: log("double_click"),
+                  }}
+                >
+                  Twice
+                </Button>
+              </Variant>
+              <Variant caption="{ single_click, double_click }">
+                <Button
+                  interactions={{
+                    single_click: log("single_click"),
+                    double_click: log("double_click"),
+                  }}
+                >
+                  Twice
+                </Button>
+              </Variant>
+            </Box>
+
+            <Heading level={3} id="double-click-configuration">
+              Configuration
+            </Heading>
+
+            <Heading level={4} id="double-click-delay">
+              data-double-click-delay
+            </Heading>
+            <p class="legend">
+              The window, opened by the first press. Press twice, slowly.
+            </p>
+            <Box flex="x" spacing="xl" alignY="start">
+              <Variant caption="400 ms (default)">
+                <Button interactions={{ double_click: log("400") }}>
+                  Twice
+                </Button>
+              </Variant>
+              <Variant caption='data-double-click-delay="1500"'>
+                <Button
+                  data-double-click-delay="1500"
+                  interactions={{ double_click: log("1500") }}
+                >
+                  Twice
+                </Button>
+              </Variant>
+            </Box>
+
+            <Heading level={4} id="double-click-slop">
+              data-double-click-slop
+            </Heading>
+            <p class="legend">
+              How far the second press may land from the first. Press twice a
+              centimetre apart.
+            </p>
+            <Box flex="x" spacing="xl" alignY="start">
+              <Variant caption="30 px (default)">
+                <Button
+                  width="200px"
+                  interactions={{ double_click: log("30") }}
+                >
+                  Twice, apart
+                </Button>
+              </Variant>
+              <Variant caption='data-double-click-slop="200"'>
+                <Button
+                  width="200px"
+                  data-double-click-slop="200"
+                  interactions={{ double_click: log("200") }}
+                >
+                  Twice, apart
                 </Button>
               </Variant>
             </Box>
@@ -1908,6 +2006,23 @@
                   longpress: log("longpress"),
                 }}
               />
+            </Box>
+
+            <Heading level={3} id="double-click-and-longpress">
+              Double click and held press
+            </Heading>
+            <p class="legend">Press twice, holding the second one down.</p>
+            <Box flex="x" spacing="xl" alignY="start">
+              <Variant caption="{ double_click, longpress }">
+                <Button
+                  interactions={{
+                    double_click: log("double_click"),
+                    longpress: log("longpress"),
+                  }}
+                >
+                  Twice, the second held
+                </Button>
+              </Variant>
             </Box>
             <CallLog entries={entries} onClear={clear} />
 

@@ -1650,7 +1650,7 @@ const PickerFirstResolver = (props) => {
  * @param {"press"|"longpress"|"contextmenu"|string|string[]} [openOn="press"]
  *   What opens the popup. The press, by default — the way a native select
  *   opens. Any other name is an interaction navi detects (see
- *   docs/interactions.md: `"longpress"`, `"contextmenu"`, `"dblclick"`…), or
+ *   docs/interactions.md: `"longpress"`, `"contextmenu"`, `"double_click"`…), or
  *   a list of them — `["longpress", "contextmenu"]` is the hold on a phone and
  *   the right click at a desk. The picker declares it on itself, so it is
  *   arbitrated like any other gesture: a swipe on the same card takes the

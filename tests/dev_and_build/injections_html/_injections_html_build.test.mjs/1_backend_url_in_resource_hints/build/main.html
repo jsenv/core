@@ -5,15 +5,13 @@
     <meta charset="utf-8">
     <link rel="preload" as="fetch" crossorigin="use-credentials" href="https://api.example.com/users/me">
     <link rel="preconnect" href="https://api.example.com">
+    <!-- jsenv scripts -->
+    <script>
+      Object.assign(globalThis, {
+        "appVersion": "1.2.3"
+      });</script>
+    <!-- /jsenv scripts -->
   </head>
-  <body>
-    <jsenv-scripts>
-      <script>
-        Object.assign(globalThis, {
-          "appVersion": "1.2.3"
-        });</script>
-    </jsenv-scripts>
-  
 
-  </body>
+  <body></body>
 </html>

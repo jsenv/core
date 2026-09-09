@@ -4,7 +4,7 @@ events_manager: {
     const callbacksMap = new Map();
     let cleanup;
     const addCallbacks = (namedCallbacks) => {
-      let callbacksMapSize = callbacksMap.size;
+      const sizeBeforeAdd = callbacksMap.size;
       Object.keys(namedCallbacks).forEach((eventName) => {
         const callback = namedCallbacks[eventName];
         const existingCallbacks = callbacksMap.get(eventName);
@@ -17,7 +17,10 @@ events_manager: {
         }
         callbacks.push(callback);
       });
-      if (effect && callbacksMapSize === 0 && callbacksMapSize.size > 0) {
+      // the effect owns whatever the callbacks need to exist (the connection),
+      // so it runs on the edge into "someone is listening" and its cleanup runs
+      // on the edge back out of it
+      if (sizeBeforeAdd === 0 && callbacksMap.size > 0) {
         cleanup = effect();
       }
 
@@ -25,7 +28,7 @@ events_manager: {
       return () => {
         if (removed) return;
         removed = true;
-        callbacksMapSize = callbacksMap.size;
+        const sizeBeforeRemove = callbacksMap.size;
         Object.keys(namedCallbacks).forEach((eventName) => {
           const callback = namedCallbacks[eventName];
           const callbacks = callbacksMap.get(eventName);
@@ -40,12 +43,7 @@ events_manager: {
           }
         });
         namedCallbacks = null; // allow garbage collect
-        if (
-          cleanup &&
-          typeof cleanup === "function" &&
-          callbacksMapSize > 0 &&
-          callbacksMapSize.size === 0
-        ) {
+        if (cleanup && sizeBeforeRemove > 0 && callbacksMap.size === 0) {
           cleanup();
           cleanup = null;
         }
@@ -86,9 +84,14 @@ connection_manager: {
     CLOSED: "closed",
   };
 
+  // The peer is a dev server being restarted, not a flaky network: there is no
+  // attempt count or time budget past which giving up would be correct. Attempts
+  // space out to retryAfterMax and never stop, and the moments where the server
+  // is most likely to be back already (tab visible, window focused, network
+  // back) skip the wait instead of leaving a detached page on screen.
   createConnectionManager = (
     attemptConnection,
-    { logs, retry, retryAfter, retryMaxAttempt, retryAllocatedMs },
+    { logs, retry, retryAfter, retryAfterMax },
   ) => {
     const readyState = {
       value: READY_STATES.CLOSED,
@@ -103,6 +106,7 @@ connection_manager: {
     };
 
     let _disconnect = () => {};
+    let _retryNow = () => {};
     const connect = () => {
       if (
         readyState.value === READY_STATES.CONNECTING ||
@@ -111,35 +115,17 @@ connection_manager: {
         return;
       }
 
-      let retryCount = 0;
-      let msSpent = 0;
+      let retryDelay = retryAfter;
+      let retryTimeout = null;
       const attempt = () => {
+        retryTimeout = null;
         readyState.goTo(READY_STATES.CONNECTING);
-        let timeout;
         const cancelAttempt = attemptConnection({
           onClosed: () => {
             if (!retry) {
               readyState.goTo(READY_STATES.CLOSED);
               if (logs) {
                 console.info(`[jsenv] failed to connect to server`);
-              }
-              return;
-            }
-            if (retryCount > retryMaxAttempt) {
-              readyState.goTo(READY_STATES.CLOSED);
-              if (logs) {
-                console.info(
-                  `[jsenv] could not connect to server after ${retryMaxAttempt} attempt`,
-                );
-              }
-              return;
-            }
-            if (retryAllocatedMs && msSpent > retryAllocatedMs) {
-              readyState.goTo(READY_STATES.CLOSED);
-              if (logs) {
-                console.info(
-                  `[jsenv] could not connect to server in less than ${retryAllocatedMs}ms`,
-                );
               }
               return;
             }
@@ -153,13 +139,13 @@ connection_manager: {
                 );
               }
             }
-            retryCount++;
-            timeout = setTimeout(() => {
-              msSpent += retryAfter;
-              attempt();
-            }, retryAfter);
+            retryTimeout = setTimeout(attempt, retryDelay);
+            const nextRetryDelay = retryDelay * 2;
+            retryDelay =
+              nextRetryDelay > retryAfterMax ? retryAfterMax : nextRetryDelay;
           },
           onOpen: () => {
+            retryDelay = retryAfter;
             readyState.goTo(READY_STATES.OPEN);
             if (logs) {
               // console.info(`[jsenv] connected to server`);
@@ -168,9 +154,18 @@ connection_manager: {
         });
         _disconnect = () => {
           cancelAttempt();
-          clearTimeout(timeout);
+          clearTimeout(retryTimeout);
+          retryTimeout = null;
           readyState.goTo(READY_STATES.CLOSED);
         };
+      };
+      _retryNow = () => {
+        if (retryTimeout === null) {
+          return;
+        }
+        clearTimeout(retryTimeout);
+        retryDelay = retryAfter;
+        attempt();
       };
       attempt();
     };
@@ -198,6 +193,9 @@ connection_manager: {
         _disconnect();
       }
     });
+    const removeServerMightBeBackListeners = listenServerMightBeBack(() => {
+      _retryNow();
+    });
 
     return {
       readyState,
@@ -205,8 +203,28 @@ connection_manager: {
       disconnect,
       destroy: () => {
         removePageUnloadListener();
+        removeServerMightBeBackListeners();
         disconnect();
       },
+    };
+  };
+
+  const listenServerMightBeBack = (callback) => {
+    const removeOnlineListener = listenEvent(window, "online", callback);
+    const removeFocusListener = listenEvent(window, "focus", callback);
+    const removeVisibilityChangeListener = listenEvent(
+      document,
+      "visibilitychange",
+      () => {
+        if (document.visibilityState === "visible") {
+          callback();
+        }
+      },
+    );
+    return () => {
+      removeOnlineListener();
+      removeFocusListener();
+      removeVisibilityChangeListener();
     };
   };
 
@@ -275,8 +293,7 @@ connection_using_websocket: {
       useEventsToManageConnection = true,
       retry = false,
       retryAfter = 1000,
-      retryMaxAttempt = Infinity,
-      retryAllocatedMs = Infinity,
+      retryAfterMax = 5000,
     } = {},
   ) => {
     const connectionManager = createConnectionManager(
@@ -319,7 +336,7 @@ connection_using_websocket: {
           }
         };
       },
-      { logs, retry, retryAfter, retryMaxAttempt, retryAllocatedMs },
+      { logs, retry, retryAfter, retryAfterMax },
     );
     const eventsManager = createEventsManager({
       effect: () => {
@@ -443,7 +460,6 @@ const serverEventsInterface = {
     const websocketConnection = createWebSocketConnection(websocketUrl, {
       logs,
       retry: true,
-      retryAllocatedMs: 10_000,
     });
 
     const { readyState, connect, disconnect, listenEvents } =

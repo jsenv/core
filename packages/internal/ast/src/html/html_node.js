@@ -54,7 +54,6 @@ export const injectJsenvScript = (
   htmlAst,
   { type, src, content, initCall, pluginName = "jsenv", ...attributes },
 ) => {
-  const jsenvScriptsNode = getJsenvScriptsNode(htmlAst);
   if (type === "module") {
     if (src) {
       if (initCall) {
@@ -67,7 +66,7 @@ export const injectJsenvScript = (
     
 ${stringifyCall(initCall)};`,
         });
-        insertHtmlNodeInside(inlineScriptNode, jsenvScriptsNode);
+        injectScriptNode(htmlAst, inlineScriptNode);
         return;
       }
       const remoteScriptNode = createHtmlNode({
@@ -77,7 +76,7 @@ ${stringifyCall(initCall)};`,
         "jsenv-injected-by": pluginName,
         ...attributes,
       });
-      insertHtmlNodeInside(remoteScriptNode, jsenvScriptsNode);
+      injectScriptNode(htmlAst, remoteScriptNode);
       return;
     }
     const inlineScriptNode = createHtmlNode({
@@ -87,7 +86,7 @@ ${stringifyCall(initCall)};`,
       "children": content,
       ...attributes,
     });
-    insertHtmlNodeInside(inlineScriptNode, jsenvScriptsNode);
+    injectScriptNode(htmlAst, inlineScriptNode);
     return;
   }
   if (src) {
@@ -97,7 +96,7 @@ ${stringifyCall(initCall)};`,
       "jsenv-injected-by": pluginName,
       ...attributes,
     });
-    insertHtmlNodeInside(remoteScriptNode, jsenvScriptsNode);
+    injectScriptNode(htmlAst, remoteScriptNode);
     if (initCall) {
       const inlineScriptNode = createHtmlNode({
         "tagName": "script",
@@ -105,7 +104,7 @@ ${stringifyCall(initCall)};`,
         "children": `${stringifyCall(initCall)};`,
         ...attributes,
       });
-      insertHtmlNodeInside(inlineScriptNode, jsenvScriptsNode);
+      injectScriptNode(htmlAst, inlineScriptNode);
     }
     return;
   }
@@ -115,54 +114,69 @@ ${stringifyCall(initCall)};`,
     "children": content,
     ...attributes,
   });
-  insertHtmlNodeInside(inlineScriptNode, jsenvScriptsNode);
+  injectScriptNode(htmlAst, inlineScriptNode);
 };
 
-const getJsenvScriptsNode = (htmlAst) => {
-  // get or insert <jsenv-scripts>
-  let jsenvScripts = findHtmlNode(
+// Scripts injected by jsenv are kept together between two marker comments, so
+// the served html shows at a glance what the page wrote and what jsenv added.
+// Comments are used rather than a wrapper element because the group lives in
+// <head>, where an unknown tag would end <head> and reparent everything below
+// it into <body>.
+const JSENV_SCRIPTS_START = " jsenv scripts ";
+const JSENV_SCRIPTS_END = " /jsenv scripts ";
+
+const injectScriptNode = (htmlAst, scriptNode) => {
+  const endComment = findHtmlNode(
     htmlAst,
-    (node) => node.nodeName === "jsenv-scripts",
+    (node) => node.nodeName === "#comment" && node.data === JSENV_SCRIPTS_END,
   );
-  if (jsenvScripts) {
-    return jsenvScripts;
+  if (endComment) {
+    insertHtmlNodeBefore(scriptNode, endComment);
+    return;
   }
-  jsenvScripts = createHtmlNode({
-    tagName: "jsenv-scripts",
-  });
+  insertFirstScriptNode(htmlAst, scriptNode);
+  insertHtmlNodeBefore(createHtmlComment(JSENV_SCRIPTS_START), scriptNode);
+  insertHtmlNodeAfter(createHtmlComment(JSENV_SCRIPTS_END), scriptNode);
+};
+
+// the group opens in <head> after any <link>, <meta> and <script
+// type="importmap">, and before the first script the page wrote itself
+const insertFirstScriptNode = (htmlAst, scriptNode) => {
   const headNode = findChild(htmlAst, (node) => node.nodeName === "html")
     .childNodes[0];
   let after = headNode.childNodes[0];
   for (const child of headNode.childNodes) {
-    if (child.nodeName === "link") {
+    if (child.nodeName === "link" || child.nodeName === "meta") {
       after = child;
       continue;
     }
     if (child.nodeName === "script") {
+      if (getHtmlNodeAttribute(child, "jsenv-injected-by")) {
+        after = child;
+        continue;
+      }
       const { type } = analyzeScriptNode(child);
-      if (type === "js_classic") {
-        insertHtmlNodeBefore(jsenvScripts, child);
-        return jsenvScripts;
-      }
       if (type === "importmap") {
-        insertHtmlNodeAfter(jsenvScripts, child);
-        return jsenvScripts;
+        after = child;
+        continue;
       }
-      if (type === "js_module") {
-        insertHtmlNodeBefore(jsenvScripts, child);
-        return jsenvScripts;
-      }
-    }
-    if (child.nodeName === "meta") {
-      after = child;
+      insertHtmlNodeBefore(scriptNode, child);
+      return;
     }
   }
   if (after) {
-    insertHtmlNodeAfter(jsenvScripts, after);
-    return jsenvScripts;
+    insertHtmlNodeAfter(scriptNode, after);
+    return;
   }
-  injectHtmlNode(htmlAst, jsenvScripts);
-  return jsenvScripts;
+  injectHtmlNode(
+    htmlAst,
+    scriptNode,
+    getHtmlNodeAttribute(scriptNode, "jsenv-injected-by"),
+  );
+};
+
+const createHtmlComment = (data) => {
+  return parseFragment(`<!--${data}-->`).childNodes[0];
 };
 const stringifyCall = (initCall, { pretty = true } = {}) => {
   if (!Object.hasOwn(initCall, "params")) {

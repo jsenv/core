@@ -3,7 +3,7 @@ System.register([__v__("/js/preact.nomodule.mjs")], function (_export, _context)
 
   var r, t, e, o, f, a, c;
   function n(r) {
-    if (0 === r.length || !1 === e.test(r)) return r;
+    if (!r.length || !e.test(r)) return r;
     for (var t = 0, n = 0, o = "", f = ""; n < r.length; n++) {
       switch (r.charCodeAt(n)) {
         case 34:
@@ -18,9 +18,9 @@ System.register([__v__("/js/preact.nomodule.mjs")], function (_export, _context)
         default:
           continue;
       }
-      n !== t && (o += r.slice(t, n)), o += f, t = n + 1;
+      n != t && (o += r.slice(t, n)), o += f, t = n + 1;
     }
-    return n !== t && (o += r.slice(t, n)), o;
+    return n != t && (o += r.slice(t, n)), o;
   }
   function u(t, e, n, f, u, i) {
     e || (e = {});
@@ -41,11 +41,9 @@ System.register([__v__("/js/preact.nomodule.mjs")], function (_export, _context)
       constructor: void 0,
       __v: --o,
       __i: -1,
-      __u: 0,
-      __source: u,
-      __self: i
+      __u: 0
     };
-    return r.vnode && r.vnode(p), p;
+    return (u || i) && (p.__source = u, p.__self = i), r.vnode && r.vnode(p), p;
   }
   function i(r) {
     var e = u(t, {
@@ -60,9 +58,9 @@ System.register([__v__("/js/preact.nomodule.mjs")], function (_export, _context)
       if ("string" == typeof o) return o;
     }
     if (e = function (r) {
-      return null !== r && "object" == typeof r && "function" == typeof r.valueOf ? r.valueOf() : r;
-    }(e), "ref" === t || "key" === t) return "";
-    if ("style" === t && "object" == typeof e) {
+      return null != r && "object" == typeof r && "function" == typeof r.valueOf ? r.valueOf() : r;
+    }(e), "ref" == t || "key" == t) return "";
+    if ("style" == t && "object" == typeof e) {
       var f = "";
       for (var u in e) {
         var i = e[u];
