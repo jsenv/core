@@ -418,6 +418,16 @@ const css = /* css */ `
       --backdrop-background: transparent;
       --backdrop-filter: none;
     }
+    /* A wall-less top-layer dialog reaches the top layer through the Popover
+       API, and the browser generates a ::backdrop for a popover exactly as it
+       does for a modal. Nothing is meant to be between this dialog and the
+       page, so that pseudo-element paints nothing — last, after the variant
+       rules it must win over: they answer how a wall is painted, this one
+       says there is no wall to paint. */
+    &[data-backdrop="none"] {
+      --backdrop-background: transparent;
+      --backdrop-filter: none;
+    }
     &::backdrop {
       background: var(--backdrop-background);
       backdrop-filter: var(--backdrop-filter);
@@ -1843,11 +1853,18 @@ const useDialogProps = (props) => {
     // (and harmless for a local dialog, whose real backdrop element gets it
     // via backdropProps).
     "data-backdrop-variant": backdropVariant,
+    // That this dialog has no wall, said in the DOM: the browser generates a
+    // ::backdrop for the popover a wall-less top-layer dialog is shown as,
+    // and the CSS above keys off this to leave it unpainted. Also the only
+    // way anything outside can read the absence — a test measuring pixels is
+    // the alternative.
+    "data-backdrop": backdrop ? undefined : "none",
     // Read by the native ::backdrop, which inherits them from here (see this
     // file's CSS) — a local dialog's own backdrop element gets them via
-    // backdropProps above.
-    backdropColor,
-    backdropFilter,
+    // backdropProps above. Dropped without a wall: they say how one is
+    // painted, and inline they would beat the rule that says there is none.
+    "backdropColor": backdrop ? backdropColor : undefined,
+    "backdropFilter": backdrop ? backdropFilter : undefined,
     "styleCSSVars": DIALOG_STYLE_CSS_VARS,
     ...rest,
     ...autoFocusProps,
