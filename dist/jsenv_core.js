@@ -4,7 +4,7 @@ import "@jsenv/sourcemap";
 const injectionSymbol = Symbol.for("jsenv_injection");
 const INJECTIONS = {
   /**
-   * Inject `Object.assign(window, { [key]: value })` at the top of the file
+   * Inject `Object.assign(globalThis, { [key]: value })` at the top of the file
    * (into a script for html, into the module itself for js) instead of
    * replacing a placeholder: the value is read at runtime as a global.
    */

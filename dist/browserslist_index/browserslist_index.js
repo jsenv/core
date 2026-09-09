@@ -2875,6 +2875,14 @@ var require$$1 = [
   },
   {
     name: "nodejs",
+    version: "24.21.0",
+    date: "2026-09-07",
+    lts: "Krypton",
+    security: false,
+    v8: "13.6.233.17"
+  },
+  {
+    name: "nodejs",
     version: "25.0.0",
     date: "2025-10-15",
     lts: false,
@@ -3410,8 +3418,11 @@ function requireVersions () {
 		"43.3": "150",
 		"43.4": "150",
 		"43.5": "150",
+		"43.6": "150",
 		"44.0": "152",
 		"44.1": "152",
+		"44.2": "152",
+		"44.3": "152",
 		"45.0": "155"
 	};
 	return versions;

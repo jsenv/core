@@ -2460,7 +2460,7 @@ ${urlInfo.url}`,
 const injectionSymbol = Symbol.for("jsenv_injection");
 const INJECTIONS = {
   /**
-   * Inject `Object.assign(window, { [key]: value })` at the top of the file
+   * Inject `Object.assign(globalThis, { [key]: value })` at the top of the file
    * (into a script for html, into the module itself for js) instead of
    * replacing a placeholder: the value is read at runtime as a global.
    */
@@ -2611,7 +2611,7 @@ const injectGlobals = (content, globals, urlInfo) => {
     return globalInjectorOnHtml(content, globals, urlInfo);
   }
   if (urlInfo.type === "js_classic" || urlInfo.type === "js_module") {
-    return globalsInjectorOnJs(content, globals, urlInfo);
+    return globalsInjectorOnJs(content, globals);
   }
   throw new Error(
     createDetailedMessage(`cannot inject globals into "${urlInfo.type}"`, {
@@ -2631,9 +2631,7 @@ const globalInjectorOnHtml = (content, globals, urlInfo) => {
     url: urlInfo.url,
     storeOriginalPositions: false,
   });
-  const clientCode = generateClientCodeForGlobals(globals, {
-    isWebWorker: false,
-  });
+  const clientCode = generateClientCodeForGlobals(globals);
   injectJsenvScript(htmlAst, {
     content: clientCode,
     pluginName: "jsenv:inject_globals",
@@ -2642,24 +2640,17 @@ const globalInjectorOnHtml = (content, globals, urlInfo) => {
     content: stringifyHtmlAst(htmlAst),
   };
 };
-const globalsInjectorOnJs = (content, globals, urlInfo) => {
-  const clientCode = generateClientCodeForGlobals(globals, {
-    isWebWorker:
-      urlInfo.subtype === "worker" ||
-      urlInfo.subtype === "service_worker" ||
-      urlInfo.subtype === "shared_worker",
-  });
+const globalsInjectorOnJs = (content, globals) => {
+  const clientCode = generateClientCodeForGlobals(globals);
   const magicSource = createMagicSource(content);
   magicSource.prepend(clientCode);
   return magicSource.toContentAndSourcemap();
 };
-const generateClientCodeForGlobals = (globals, { isWebWorker = false }) => {
-  const globalName = isWebWorker ? "self" : "window";
-  return `Object.assign(${globalName}, ${JSON.stringify(
-    globals,
-    null,
-    "  ",
-  )});`;
+// "globalThis" is the global object in a window, a worker and a service worker alike;
+// naming one of "window"/"self" would require knowing the file's subtype, which is not
+// known yet when the browser fetches a service worker on its own (update check).
+const generateClientCodeForGlobals = (globals) => {
+  return `Object.assign(globalThis, ${JSON.stringify(globals, null, "  ")});`;
 };
 
 const defineGettersOnPropertiesDerivedFromOriginalContent = (
@@ -10858,28 +10849,33 @@ const logsDefault = {
 // we nevery minify those because they are already very small
 // and would hurt the readability of something that can be critical to debug
 const injectGlobalMappings = async (urlInfo, mappings) => {
-  if (urlInfo.type === "html") {
-    // const minification = Boolean(
-    //   urlInfo.context.getPluginMeta("willMinifyJsClassic"),
-    // );
-    const content = generateClientCodeForMappings(mappings, {
-      globalName: "window",
-      minification: false,
-    });
-    await prependContent(urlInfo, { type: "js_classic", content });
+  if (
+    urlInfo.type !== "html" &&
+    urlInfo.type !== "js_classic" &&
+    urlInfo.type !== "js_module"
+  ) {
     return;
   }
-  if (urlInfo.type === "js_classic" || urlInfo.type === "js_module") {
-    // const minification = Boolean(
-    //   urlInfo.context.getPluginMeta("willMinifyJsClassic"),
-    // );
-    const content = generateClientCodeForMappings(mappings, {
-      globalName: isWebWorkerUrlInfo(urlInfo) ? "self" : "window",
-      minification: false,
-    });
-    await prependContent(urlInfo, { type: "js_classic", content });
-    return;
+  // const minification = Boolean(
+  //   urlInfo.context.getPluginMeta("willMinifyJsClassic"),
+  // );
+  const content = generateClientCodeForMappings(mappings, {
+    globalName: getGlobalName(urlInfo),
+    minification: false,
+  });
+  await prependContent(urlInfo, { type: "js_classic", content });
+};
+
+// "globalThis" names the global object in a window and in a worker alike;
+// the window/self split is only for runtimes predating it.
+const getGlobalName = (urlInfo) => {
+  if (urlInfo.context.isSupportedOnCurrentClients("global_this")) {
+    return "globalThis";
   }
+  if (isWebWorkerUrlInfo(urlInfo)) {
+    return "self";
+  }
+  return "window";
 };
 
 const generateClientCodeForMappings = (
@@ -12801,7 +12797,7 @@ const jsenvPluginMappings = (mappings) => {
  *        `<script>window.backendUrl = __BACKEND_URL__;</script>` gets the JS literal,
  *        which is how a value is shared with every js file of the page.
  *        Use INJECTIONS.optional(value) for a placeholder that may be absent from the file
- *        and INJECTIONS.global(value) to inject `Object.assign(window, { ... })` instead of
+ *        and INJECTIONS.global(value) to inject `Object.assign(globalThis, { ... })` instead of
  *        replacing a placeholder.
  *
  * @return {Promise<Object>} buildReturnValue
