@@ -18,28 +18,33 @@ import { prependContent } from "../kitchen/prepend_content.js";
 // we nevery minify those because they are already very small
 // and would hurt the readability of something that can be critical to debug
 export const injectGlobalMappings = async (urlInfo, mappings) => {
-  if (urlInfo.type === "html") {
-    // const minification = Boolean(
-    //   urlInfo.context.getPluginMeta("willMinifyJsClassic"),
-    // );
-    const content = generateClientCodeForMappings(mappings, {
-      globalName: "window",
-      minification: false,
-    });
-    await prependContent(urlInfo, { type: "js_classic", content });
+  if (
+    urlInfo.type !== "html" &&
+    urlInfo.type !== "js_classic" &&
+    urlInfo.type !== "js_module"
+  ) {
     return;
   }
-  if (urlInfo.type === "js_classic" || urlInfo.type === "js_module") {
-    // const minification = Boolean(
-    //   urlInfo.context.getPluginMeta("willMinifyJsClassic"),
-    // );
-    const content = generateClientCodeForMappings(mappings, {
-      globalName: isWebWorkerUrlInfo(urlInfo) ? "self" : "window",
-      minification: false,
-    });
-    await prependContent(urlInfo, { type: "js_classic", content });
-    return;
+  // const minification = Boolean(
+  //   urlInfo.context.getPluginMeta("willMinifyJsClassic"),
+  // );
+  const content = generateClientCodeForMappings(mappings, {
+    globalName: getGlobalName(urlInfo),
+    minification: false,
+  });
+  await prependContent(urlInfo, { type: "js_classic", content });
+};
+
+// "globalThis" names the global object in a window and in a worker alike;
+// the window/self split is only for runtimes predating it.
+const getGlobalName = (urlInfo) => {
+  if (urlInfo.context.isSupportedOnCurrentClients("global_this")) {
+    return "globalThis";
   }
+  if (isWebWorkerUrlInfo(urlInfo)) {
+    return "self";
+  }
+  return "window";
 };
 
 const generateClientCodeForMappings = (

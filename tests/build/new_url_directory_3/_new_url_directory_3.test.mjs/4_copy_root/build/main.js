@@ -3,7 +3,7 @@
   var __versionMappings__ = {
     "/": "/?v=2f2c8578"
   };
-  window.__v__ = function (specifier) {
+  globalThis.__v__ = function (specifier) {
     return __versionMappings__[specifier] || specifier;
   };
 })();

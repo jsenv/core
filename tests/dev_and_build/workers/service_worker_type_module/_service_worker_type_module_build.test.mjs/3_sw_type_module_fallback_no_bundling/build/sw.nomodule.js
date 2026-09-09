@@ -22,7 +22,7 @@ self.resourcesFromJsenvBuild = {
     "/js/a.nomodule.js": "/js/a.nomodule.js?v=8dd53fd5",
     "/js/b.nomodule.js": "/js/b.nomodule.js?v=4d5b0641"
   };
-  self.__v__ = function (specifier) {
+  globalThis.__v__ = function (specifier) {
     return __versionMappings__[specifier] || specifier
   };
 })();

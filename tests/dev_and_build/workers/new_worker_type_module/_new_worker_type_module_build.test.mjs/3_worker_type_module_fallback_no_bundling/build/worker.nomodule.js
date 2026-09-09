@@ -2,7 +2,7 @@
   var __versionMappings__ = {
     "/js/ping.nomodule.js": "/js/ping.nomodule.js?v=6be73f0a"
   };
-  self.__v__ = function (specifier) {
+  globalThis.__v__ = function (specifier) {
     return __versionMappings__[specifier] || specifier
   };
 })();

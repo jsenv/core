@@ -3,7 +3,7 @@
   var __versionMappings__ = {
     "/src/sub/": "/src/sub/?v=empty"
   };
-  window.__v__ = function (specifier) {
+  globalThis.__v__ = function (specifier) {
     return __versionMappings__[specifier] || specifier;
   };
 })();
