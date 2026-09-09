@@ -45,3 +45,26 @@ The header holds:
 Entries are named `a`, `b`, `c`… because devtools sort them alphabetically; the `desc` carries the name.
 
 `serverTiming: { minDuration: 0.5 }` drops the entries that took less than that many milliseconds: a request crosses every route, and a wall of sub-millisecond `routing` entries buries the measures worth reading. `time to start responding` and the markers always stay.
+
+## Measuring without telling everyone
+
+The header describes what the server does internally; an api usually wants it for itself, a bench or a probe, and for nobody else. Give a function instead of `true` and it is asked once per request, on what the client sent:
+
+```js
+const PERF_TIMING_TOKEN = process.env.PERF_TIMING_TOKEN;
+const isPerfTimingClient = (request) =>
+  request.headers["x-perf-timing"] === PERF_TIMING_TOKEN;
+
+await startServer({
+  serverTiming: isPerfTimingClient,
+  plugins: [
+    serverPluginCORS({
+      accessControlAllowedOrigins: ["https://app.example.com"],
+      // without it a page cannot read the timings of a cross-origin response
+      timingAllowOrigin: isPerfTimingClient,
+    }),
+  ],
+});
+```
+
+`{ enabled: isPerfTimingClient, minDuration: 1 }` says the same thing with a `minDuration`. When the predicate says no nothing is measured for that request and no header is composed; routes still call `helpers.timing(name)` unconditionally, it costs them nothing.

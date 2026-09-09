@@ -3,6 +3,9 @@
  * so here we just need to add the CORS headers to the response
  */
 
+const TIMING_ALLOW_ORIGIN_DISABLED = () => false;
+const TIMING_ALLOW_ORIGIN_ENABLED = () => true;
+
 export const jsenvAccessControlAllowedHeaders = ["x-requested-with"];
 
 export const jsenvAccessControlAllowedMethods = [
@@ -35,8 +38,10 @@ export const jsenvAccessControlAllowedMethods = [
  * @param {boolean} [params.accessControlAllowCredentials=false] - Send
  *   `access-control-allow-credentials: true`.
  * @param {number} [params.accessControlMaxAge=600] - Seconds a browser may cache the preflight.
- * @param {boolean} [params.timingAllowOrigin=false] - Send `timing-allow-origin` so the
- *   allowed origin can read resource timing.
+ * @param {boolean|Function} [params.timingAllowOrigin=false] - Send `timing-allow-origin`
+ *   so the allowed origin can read resource timing (the `server-timing` header included).
+ *   A `(request) => boolean` is asked once per request, so it can be the very test that
+ *   decides `startServer({ serverTiming })`.
  * @returns {Object|Array} The plugin, or `[]` when CORS stays disabled.
  */
 export const serverPluginCORS = ({
@@ -64,6 +69,12 @@ export const serverPluginCORS = ({
   const allowedOriginChecker = createAllowedOriginChecker(
     accessControlAllowedOrigins,
   );
+  const timingAllowOriginEnabled =
+    typeof timingAllowOrigin === "function"
+      ? timingAllowOrigin
+      : timingAllowOrigin
+        ? TIMING_ALLOW_ORIGIN_ENABLED
+        : TIMING_ALLOW_ORIGIN_DISABLED;
 
   return {
     name: "jsenv:cors",
@@ -78,7 +89,7 @@ export const serverPluginCORS = ({
         accessControlAllowRequestHeaders,
         accessControlAllowCredentials,
         accessControlMaxAge,
-        timingAllowOrigin,
+        timingAllowOriginEnabled,
       });
       return {
         headers: accessControlHeaders,
@@ -132,7 +143,7 @@ const originPatternToRegExp = (originPattern) => {
 // https://www.w3.org/TR/cors/
 // https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
 const generateAccessControlHeaders = ({
-  request: { headers },
+  request,
   allowedOriginChecker,
   accessControlAllowRequestOrigin,
   accessControlAllowedMethods,
@@ -143,8 +154,9 @@ const generateAccessControlHeaders = ({
   // by default OPTIONS request can be cache for a long time, it's not going to change soon ?
   // we could put a lot here, see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Max-Age
   accessControlMaxAge = 600,
-  timingAllowOrigin,
+  timingAllowOriginEnabled,
 } = {}) => {
+  const { headers } = request;
   const vary = [];
 
   // Access-Control-Allow-Origin must be a single value (not a list).
@@ -208,7 +220,9 @@ const generateAccessControlHeaders = ({
       ? { "access-control-allow-credentials": true }
       : {}),
     "access-control-max-age": accessControlMaxAge,
-    ...(timingAllowOrigin ? { "timing-allow-origin": allowOrigin } : {}),
+    ...(timingAllowOriginEnabled(request)
+      ? { "timing-allow-origin": allowOrigin }
+      : {}),
     ...(vary.length ? { vary: vary.join(", ") } : {}),
   };
 };
