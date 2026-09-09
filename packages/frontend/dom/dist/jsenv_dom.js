@@ -4705,6 +4705,105 @@ const waitForPressHeld = (
   };
 };
 
+/**
+ * A press that turns out to be a tap: let go of before it went anywhere.
+ *
+ * The counterpart of the hold next door (press_held.js). That one is a press
+ * saying something by NOT moving for long enough; this one is a press saying
+ * something by being BRIEF — and it is the same ambiguity read from the other
+ * end, so a caller that reads both gets one press told apart once.
+ *
+ * Its reason to exist is what a tap is NOT: a `click` is the browser's answer to
+ * the same question and it cannot be counted, because a browser withholds the
+ * clicks of a gesture it is keeping for itself — two taps in a row on a page
+ * that can be double-tap-zoomed produce two `pointerup` and a single `click`.
+ * Anything counting presses (a double click that has to mean the same thing
+ * under a finger and under a mouse) therefore has to read the pointer, and this
+ * is that read: one press in, "it stayed a tap" out.
+ *
+ * What disqualifies a press is exactly what says it became a gesture: it
+ * travelled (past `slop`), or the browser took the touch for itself
+ * (`pointercancel` — a scroll starting under the finger, the system's own
+ * double-tap zoom). How LONG it lasted is not asked here: a press held still is
+ * a tap for as long as the hand wants, and whether a slow one still counts
+ * towards whatever is being counted belongs to the counter, which is the only
+ * one that knows what rhythm it is looking for.
+ */
+
+// How far the pointer may travel and still be a tap. Wider than a hold's slop
+// because it is a different question: a hold asks whether a finger is standing
+// still, a tap only asks whether the press went somewhere — and between two of
+// them the finger LEAVES the glass, so what a counter compares is fingertips
+// apart rather than pixels apart.
+const TAP_SLOP_DEFAULT = 30;
+
+/**
+ * Watches one press and says whether it stayed a tap.
+ *
+ * @param {PointerEvent} pressEvent The `pointerdown` that may be a tap.
+ * @param {object} options
+ * @param {number} [options.slop=30] How far (px) the pointer may travel before
+ *   the press is a gesture rather than a tap.
+ * @param {(tapEvent: PointerEvent) => void} options.onTap The press was let go
+ *   of, having gone nowhere.
+ * @returns {{ cancel: () => void }} Somebody else settled what the press is.
+ */
+const waitForTap = (pressEvent, { slop = TAP_SLOP_DEFAULT, onTap }) => {
+  const { pointerId, clientX, clientY } = pressEvent;
+
+  const cleanupCallbacks = [];
+  const stopWatching = () => {
+    for (const cleanupCallback of cleanupCallbacks) {
+      cleanupCallback();
+    }
+    cleanupCallbacks.length = 0;
+  };
+
+  const onPointerMove = (pointerMoveEvent) => {
+    if (pointerMoveEvent.pointerId !== pointerId) {
+      return;
+    }
+    const xTravel = Math.abs(pointerMoveEvent.clientX - clientX);
+    const yTravel = Math.abs(pointerMoveEvent.clientY - clientY);
+    if (xTravel < slop && yTravel < slop) {
+      return;
+    }
+    // The press is going somewhere: it is scrolling, swiping, panning, carrying
+    // something. Whatever it is, it is not a tap.
+    stopWatching();
+  };
+  const onPointerUp = (pointerUpEvent) => {
+    if (pointerUpEvent.pointerId !== pointerId) {
+      return;
+    }
+    stopWatching();
+    onTap(pointerUpEvent);
+  };
+  // Not the hand letting go: the browser saying it is taking the touch for a
+  // gesture of its own, which is the one press that ends without ever having
+  // been anybody else's.
+  const onPointerCancel = (pointerCancelEvent) => {
+    if (pointerCancelEvent.pointerId !== pointerId) {
+      return;
+    }
+    stopWatching();
+  };
+  // On window rather than on the element: the pointer can leave it, and the
+  // element itself can be taken out of the document while the press is watched.
+  window.addEventListener("pointermove", onPointerMove);
+  window.addEventListener("pointerup", onPointerUp);
+  window.addEventListener("pointercancel", onPointerCancel);
+  cleanupCallbacks.push(() => {
+    window.removeEventListener("pointermove", onPointerMove);
+    window.removeEventListener("pointerup", onPointerUp);
+    window.removeEventListener("pointercancel", onPointerCancel);
+  });
+
+  return {
+    cancel: stopWatching,
+  };
+};
+
 const activeElementSignal = signal(
   typeof document === "object" ? document.activeElement : undefined,
 );
@@ -8502,7 +8601,7 @@ const installImportMetaCssBuild = (importMeta) => {
     const stylesheet = new CSSStyleSheet({ baseUrl: importMeta.url });
     stylesheet.replaceSync(value);
     stylesheetMap.set(url, stylesheet);
-    document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet];
+    document.adoptedStyleSheets.push(stylesheet);
   };
   const update = (url, value) => {
     stylesheetMap.get(url).replaceSync(value);
@@ -12068,113 +12167,44 @@ const findTableCellCol = (cellElement) => {
 installImportMetaCssBuild(import.meta);
 
 // While a pointer is on something that travels: said on the document, because
-// what has to be told is the document.
+// what has to be told is the document. The selector below writes it out rather
+// than reading this constant: a substitution in a selector is one the build
+// cannot read, and it ships the whole stylesheet unparsed and uncompressed.
 const GESTURE_ATTRIBUTE = "data-drag-travel-gesture";
 
 // …and while one is actually travelling something, which is a later moment and
 // takes more away (see the CSS).
 const WALKING_ATTRIBUTE = "data-drag-travel-walking";
 
-import.meta.css = /* css */ [`
-  :root[${GESTURE_ATTRIBUTE}] {
-    /* The bounce the browser plays when a gesture reaches the end of a page —
-       and the swipe that goes back in history with it. Both are the browser
-       answering a gesture that is already answered, here, by what the finger is
-       dragging: the page rocks under a travel that is doing its own moving, and
-       one gesture is seen twice. From the press, because the browser starts
-       answering from the press — waiting for the first pixel that travels would
-       let it happen once, every time. Only while a finger is down, so a page
-       that bounces the rest of the time goes on bouncing. */
-    overscroll-behavior: none;
-  }
-  /* …and nothing inside a travelling box hands its leftovers to what is above
-     it: a list that reaches its end passes what is left of the gesture up the
-     chain, and the page moves behind a travel that is being dragged.
+import.meta.css = /* css */ [`:root[data-drag-travel-gesture] {
+  overscroll-behavior: none;
+}
 
-     Written ONCE AND FOR ALL rather than while a finger is down, unlike
-     everything else here: a browser decides what a gesture may do when the
-     gesture BEGINS — at the touchstart, at the first wheel event — and a
-     property written after that decision arrives too late for the gesture it
-     was meant for. That is what "most of the time it does not move, sometimes
-     it does" is made of.
+[data-drag-travel*="x"] {
+  overscroll-behavior-x: contain !important;
+}
 
-     On the axis the box travels on, and that one only: the other axis is the
-     content's own scrolling and is left alone. Containing does not stop it from
-     scrolling anyway — it stops it from spilling over.
+[data-drag-travel*="y"] {
+  overscroll-behavior-y: contain !important;
+}
 
-     !important because this is not a preference: a box that travels cannot let
-     the page travel with it, and the rule has to win over whatever an
-     application says about its own scrollers.
+[data-drag-travel*="x"] :is(textarea, select[multiple], select[size]) {
+  overscroll-behavior-x: contain !important;
+}
 
-     Said on the box, where it is a statement about the box and not about what
-     it happens to hold — and read only where a browser asks the box at all:
-     one that CLIPS is asked (it is a scroll container, which is what "asked"
-     means to a browser), one that does not is walked past. A box that travels
-     usually clips, because moving something in and out of a box is what
-     clipping is for. One that does not still travels — what an inner scroller
-     has left over reaches the page there, and the rule below says why that is
-     the lesser of the two prices. An application that knows which of ITS
-     elements scroll can contain those itself, on the element every engine
-     reads; nothing in here can know that from a stylesheet. */
-  [data-drag-travel*="x"] {
+[data-drag-travel*="y"] :is(textarea, select[multiple], select[size]) {
+  overscroll-behavior-y: contain !important;
+}
+
+@supports not (-webkit-app-region: none) {
+  [data-drag-travel*="x"] * {
     overscroll-behavior-x: contain !important;
   }
-  [data-drag-travel*="y"] {
+
+  [data-drag-travel*="y"] * {
     overscroll-behavior-y: contain !important;
   }
-  /* The scrollers a browser makes on its own, wherever they are inside the box:
-     a textarea and a list of options scroll their own content by nature, and
-     nobody had to say so for them — no stylesheet declared them, so nothing
-     else here can find them, and they would hand what is left of a gesture to
-     the page like any undeclared scroller does.
-
-     Named rather than found, because being native is exactly what makes them
-     nameable. An input is NOT in the list: it is the one form control that has
-     nothing to scroll on the axis anything travels on, and containing it is how
-     a row-wide invisible checkbox becomes a hole under the wheel.
-
-     A textarea with nothing in it, or a list of options short enough to fit, is
-     contained too — a browser cannot be asked "only if it scrolls". On Blink
-     that costs a wheel over an empty textarea, which then moves nothing rather
-     than the list around it; elsewhere the engine already only asks what
-     scrolls. Worth the page not moving behind a travel. */
-  [data-drag-travel*="x"] :is(textarea, select[multiple], select[size]) {
-    overscroll-behavior-x: contain !important;
-  }
-  [data-drag-travel*="y"] :is(textarea, select[multiple], select[size]) {
-    overscroll-behavior-y: contain !important;
-  }
-  /* The same thing said again to everything inside — and only where saying it
-     is what works.
-
-     Two readings of "contain" are out there, and the rule above lands in only
-     one of them. Blink walks EVERY scroll container between the pointer and the
-     page and asks each one whether the gesture may go past it, whether or not
-     it had anything to scroll: the box above is asked, and containing it is the
-     whole answer. Gecko and WebKit ask only the ones that actually scroll: the
-     box is skipped (it travels, it does not scroll), and what is left of a
-     list's gesture reaches the page unless the LIST itself was told — which is
-     what this does, to everything, because which descendant scrolls is not
-     something a stylesheet can know.
-
-     Not said to Blink, where it is not needed and does harm: an element that
-     clips is a scroll container to a browser (a line of text with an ellipsis,
-     a rounded card, an invisible checkbox covering a row), and Blink asking one
-     of those with nothing to scroll gets "no further" for an answer — the wheel
-     stops there and the list right above it never moves. A dead zone under the
-     pointer, wherever something inside the box happens to clip.
-
-     Blink is told apart by a property only it has, rather than by reading a user
-     agent: the split above is between engines, and -webkit-app-region is one of
-     the few things that names one. */
-  @supports not (-webkit-app-region: none) {
-    [data-drag-travel*="x"] * {
-      overscroll-behavior-x: contain !important;
-    }
-    [data-drag-travel*="y"] * {
-      overscroll-behavior-y: contain !important;
-    }
-  }
+}
 `, "@jsenv/dom/src/interaction/drag/drag_to_travel.js"];
 
 // How far a pointer goes before it is a travel rather than a click: below this
@@ -21710,4 +21740,4 @@ const useResizeStatus = (elementRef, { as = "number" } = {}) => {
   };
 };
 
-export { EASING, ELEMENT_SIZE_CHANGE, activeElementSignal, addActiveElementEffect, addAttributeEffect, allowWheelThrough, appendStyles, applyNewPosition, canScroll, captureScrollState, chainEvent, claimWheelGesture, clickIsSuppressed, closestOpenableAncestor, contrastColor, createBackgroundColorTransition, createBackgroundTransition, createBorderRadiusTransition, createBorderTransition, createDragGestureController, createDragToMoveGestureController, createEventGroupLogger, createGroupTransitionController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createValueEffect, createWidthTransition, cubicBezier, dispatchCustomEvent, dispatchInternalCustomEvent, dispatchPublicCustomEvent, dragAfterIntent, elementIsFocusable, elementIsVisibleForFocus, elementIsVisuallyVisible, findAfter, findAncestor, findBefore, findDescendant, findEvent, findFocusDelegateTarget, findFocusable, findSelfOrAncestorFixedPosition, formatEventSideEffect, getAncestorOpenType, getAvailableHeight, getAvailableWidth, getBackground, getBackgroundColor, getBorder, getBorderRadius, getBorderSizes, getContrastRatio, getDefaultStyles, getDragCoordinates, getDropTargetInfo, getElementSignature, getFirstVisuallyVisibleAncestor, getFocusVisibilityInfo, getHeight, getHeightWithoutTransition, getInnerHeight, getInnerWidth, getKeyboardEventDefaultAction, getLuminance, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getOpacity, getOpacityWithoutTransition, getPaddingSizes, getPositionedParent, getPositioningScrollOffset, getPreferedColorScheme, getScrollBox, getScrollContainer, getScrollContainerSet, getScrollIntoViewScopedOffsets, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getTranslateX, getTranslateXWithoutTransition, getTranslateY, getVirtualKeyboardOverlayHeight, getVisuallyVisibleInfo, getWidth, getWidthWithoutTransition, hasCSSSizeUnit, initFlexDetailsSet, initFocusGroup, initPositionSticky, installPanZoom, isAncestorOpen, isDisplayedDespiteClosedAncestor, isPressDisputedByDrag, isPressDrivenClick, isPrimaryButtonEvent, isSameColor, isScrollable, isTouchDrivenEvent, keepTouchRefusable, markDragSource, measureLongestVisualLineWidth, measureScrollbar, measureWidestChildRow, mergeOneStyle, mergeTwoStyles, normalizeKeyboardKey, normalizeStyle, normalizeStyles, observeAncestorOpenState, onAncestorReopen, parsePositionArea, parseStyle, performTabNavigation, pickPositionRelativeTo, prefersDarkColors, prefersLightColors, preventFocusNav, preventFocusNavViaKeyboard, preventIntermediateScrollbar, refuseDragTo, releaseWheelGesture, resolveCSSColor, resolveCSSSize, resolveColorLuminance, resolveOklchLightness, scrollIntoViewScoped, scrollIntoViewThroughScrollables, scrollIntoViewWithStickyAwareness, scrollRoomTowards, setAttribute, setAttributes, setPlacementViewportInsets, setStyles, setVirtualKeyboardOverlaysContent, snapToPixel, startDragTo, startDragToResizeGesture, startDragToTravel, stickyAsRelativeCoords, stringifyStyle, subscribeVirtualKeyboardGeometryChange, subscribeVisualViewportResizeSettled, subscribeWindowResizeSettled, suppressClickAfterGesture, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect, waitForPressHeld, watchWheelTravel, wheelGestureIsTakenFrom };
+export { EASING, ELEMENT_SIZE_CHANGE, activeElementSignal, addActiveElementEffect, addAttributeEffect, allowWheelThrough, appendStyles, applyNewPosition, canScroll, captureScrollState, chainEvent, claimWheelGesture, clickIsSuppressed, closestOpenableAncestor, contrastColor, createBackgroundColorTransition, createBackgroundTransition, createBorderRadiusTransition, createBorderTransition, createDragGestureController, createDragToMoveGestureController, createEventGroupLogger, createGroupTransitionController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createValueEffect, createWidthTransition, cubicBezier, dispatchCustomEvent, dispatchInternalCustomEvent, dispatchPublicCustomEvent, dragAfterIntent, elementIsFocusable, elementIsVisibleForFocus, elementIsVisuallyVisible, findAfter, findAncestor, findBefore, findDescendant, findEvent, findFocusDelegateTarget, findFocusable, findSelfOrAncestorFixedPosition, formatEventSideEffect, getAncestorOpenType, getAvailableHeight, getAvailableWidth, getBackground, getBackgroundColor, getBorder, getBorderRadius, getBorderSizes, getContrastRatio, getDefaultStyles, getDragCoordinates, getDropTargetInfo, getElementSignature, getFirstVisuallyVisibleAncestor, getFocusVisibilityInfo, getHeight, getHeightWithoutTransition, getInnerHeight, getInnerWidth, getKeyboardEventDefaultAction, getLuminance, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getOpacity, getOpacityWithoutTransition, getPaddingSizes, getPositionedParent, getPositioningScrollOffset, getPreferedColorScheme, getScrollBox, getScrollContainer, getScrollContainerSet, getScrollIntoViewScopedOffsets, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getTranslateX, getTranslateXWithoutTransition, getTranslateY, getVirtualKeyboardOverlayHeight, getVisuallyVisibleInfo, getWidth, getWidthWithoutTransition, hasCSSSizeUnit, initFlexDetailsSet, initFocusGroup, initPositionSticky, installPanZoom, isAncestorOpen, isDisplayedDespiteClosedAncestor, isPressDisputedByDrag, isPressDrivenClick, isPrimaryButtonEvent, isSameColor, isScrollable, isTouchDrivenEvent, keepTouchRefusable, markDragSource, measureLongestVisualLineWidth, measureScrollbar, measureWidestChildRow, mergeOneStyle, mergeTwoStyles, normalizeKeyboardKey, normalizeStyle, normalizeStyles, observeAncestorOpenState, onAncestorReopen, parsePositionArea, parseStyle, performTabNavigation, pickPositionRelativeTo, prefersDarkColors, prefersLightColors, preventFocusNav, preventFocusNavViaKeyboard, preventIntermediateScrollbar, refuseDragTo, releaseWheelGesture, resolveCSSColor, resolveCSSSize, resolveColorLuminance, resolveOklchLightness, scrollIntoViewScoped, scrollIntoViewThroughScrollables, scrollIntoViewWithStickyAwareness, scrollRoomTowards, setAttribute, setAttributes, setPlacementViewportInsets, setStyles, setVirtualKeyboardOverlaysContent, snapToPixel, startDragTo, startDragToResizeGesture, startDragToTravel, stickyAsRelativeCoords, stringifyStyle, subscribeVirtualKeyboardGeometryChange, subscribeVisualViewportResizeSettled, subscribeWindowResizeSettled, suppressClickAfterGesture, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect, waitForPressHeld, waitForTap, watchWheelTravel, wheelGestureIsTakenFrom };
