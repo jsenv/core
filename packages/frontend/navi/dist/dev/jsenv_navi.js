@@ -20677,16 +20677,16 @@ const useComposeElementRef = (syncElement, externalRef) => {
   const cleanupRef = useRef(null);
   const elRef = useRef(null);
   const prevSyncElementRef = useRef(undefined);
-  const stableRef = useRef(null);
+  const holderRef = useRef(null);
   const externalRefRef = useRef(externalRef);
   const syncElementRef = useRef(syncElement);
   syncElementRef.current = syncElement;
-  // Detect external ref identity change between renders. The refCallback is
-  // stable across renders, so when the parent passes a new ref object (or
-  // switches from null to a ref), Preact does NOT re-fire the callback while
-  // the DOM element is unchanged. We must manually clear the old ref and
-  // populate the new one with the current element to avoid leaving the new
-  // ref's `.current` stuck at `null`.
+  // Detect external ref identity change between renders. The refCallback keeps
+  // its identity once it holds the element, so when the parent passes a new
+  // ref object (or switches from null to a ref), Preact does NOT re-fire the
+  // callback while the DOM element is unchanged. We must manually clear the
+  // old ref and populate the new one with the current element to avoid
+  // leaving the new ref's `.current` stuck at `null`.
   const prevExternalRefRef = useRef(externalRef);
   if (prevExternalRefRef.current !== externalRef) {
     const previous = prevExternalRefRef.current;
@@ -20704,12 +20704,12 @@ const useComposeElementRef = (syncElement, externalRef) => {
   }
   externalRefRef.current = externalRef;
 
-  if (!stableRef.current) {
-    // Created once, like the ref callback that calls it, and reading the sync
-    // function through a ref for that reason: the element can be replaced long
-    // after the first render — a tag that changes, a box hidden then shown —
-    // and what the new element gets must be the current render's sync, not
-    // the one the first render closed over.
+  if (!holderRef.current) {
+    // Created once, and reading the sync function through a ref for that
+    // reason: the element can be replaced long after the first render — a tag
+    // that changes, a box hidden then shown — and what the new element gets
+    // must be the current render's sync, not the one the first render closed
+    // over.
     const runSync = (el) => {
       if (cleanupRef.current) {
         cleanupRef.current();
@@ -20722,6 +20722,18 @@ const useComposeElementRef = (syncElement, externalRef) => {
         cleanupRef.current = cleanup;
       }
     };
+    holderRef.current = { runSync, refCallback: null };
+  }
+  const { runSync } = holderRef.current;
+
+  // A new callback on every render until Preact has handed it the element,
+  // the same one afterwards. Preact re-applies a ref only when its identity
+  // changes, and a diff that throws with no error boundary above skips
+  // commitRoot: its refs are dropped while its DOM stays and is adopted as
+  // mounted by the next render. A callback that never fired would then never
+  // fire, and a Box would stay raw HTML for the life of the document. Free on
+  // a healthy mount, where the first callback is the only one ever created.
+  if (!elRef.current) {
     const refCallback = (el) => {
       elRef.current = el;
       // Keep .current in sync immediately so useEffect callbacks that read
@@ -20745,9 +20757,9 @@ const useComposeElementRef = (syncElement, externalRef) => {
         prevSyncElementRef.current = undefined;
       }
     };
-    stableRef.current = { refCallback, runSync };
+    holderRef.current.refCallback = refCallback;
   }
-  const { refCallback, runSync } = stableRef.current;
+  const { refCallback } = holderRef.current;
 
   // If element already mounted, re-sync when syncElement reference changed.
   if (elRef.current && syncElement !== prevSyncElementRef.current) {
@@ -32258,6 +32270,17 @@ registerNaviCommand("--navi-send", (source, event, { requester }) => {
         return sent;
       }
       if (isRunning) {
+        // An optimistic control takes its send as done on its own word: what
+        // follows it runs at once and the run goes on detached — still
+        // watched, still able to fail, its error callout then drawn on what
+        // surrounds the closed surface it was typed in (see openCallout's
+        // anchor resolution in callout.js).
+        const sendController = (findControlHost(target) || target)
+          .__uiStateController__;
+        if (sendController?.optimistic) {
+          runAfterSend();
+          return sent;
+        }
         // The send is committing but has not finished: leaving now would take
         // the form off the screen mid-submission (a popup closing over its own
         // running action, a slide moving on before it is answered). What
@@ -36847,6 +36870,16 @@ const useControlProps = (props, {
             requester: control
           }));
           if (!deferredCommand) {
+            return;
+          }
+          if (uiStateController.optimistic) {
+            // An optimistic button takes its action as done on its own word:
+            // the command runs at once and the run goes on detached, the same
+            // release the form counterpart gives the send (see --navi-send in
+            // commands.js). Only a refused press has nothing to follow.
+            if (completion.result !== false) {
+              deferredCommand();
+            }
             return;
           }
           runWhenActionSucceeded(completion, deferredCommand);
@@ -48795,6 +48828,7 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  *   replace?: boolean,
  *   actionStandalone?: boolean,
  *   actionAbortable?: boolean,
+ *   optimistic?: boolean,
  *   [key: string]: any,
  * }>}
  * @param {boolean} [replace] Go where the press leads — an `href`, a
@@ -48838,6 +48872,12 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  *   running, which the app watches from somewhere else; never for one holding
  *   an answer the screen is the only place to read (see
  *   docs/interactions.md#the-fourth-question-whose-wait-is-it).
+ * @param {boolean} [optimistic] The action is taken as done on the button's own
+ *   word: no busy state, a second press queues behind the run, and its
+ *   `command` runs at once — the popup it sits in closes over the run, which
+ *   goes on behind. A failure then has no popup to be read in: `resetOnError`
+ *   puts the button back and the error callout is drawn on what surrounds the
+ *   closed popup (see docs/popup_open.md#the-popup-owns-its-open-state).
  * @param {boolean} [actionAbortable] The person waiting may give up on this
  *   button's action: closing the popup the run holds calls it off and goes
  *   through, instead of being refused. For a run whose answer may never come —

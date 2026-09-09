@@ -13,7 +13,7 @@ const installImportMetaCssBuild = (importMeta) => {
     const stylesheet = new CSSStyleSheet({ baseUrl: importMeta.url });
     stylesheet.replaceSync(value);
     stylesheetMap.set(url, stylesheet);
-    document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet];
+    document.adoptedStyleSheets.push(stylesheet);
   };
   const update = (url, value) => {
     stylesheetMap.get(url).replaceSync(value);
