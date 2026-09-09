@@ -16,9 +16,14 @@
  * <Route element={AuthLayout}>
  *   <Route route={PROFILE_ROUTE} element={ProfilePage} />
  *   <Route route={SETTINGS_ROUTE} element={SettingsPage} />
- *   <Route fallback element={AuthNotFoundPage} />
  * </Route>
  * ```
+ *
+ * Such a container holds no fallback, and cannot: what makes this one the right
+ * layout is a child matching, and having no prefix is the very reason it was
+ * reached for — so there is no address that belongs to it and to none of its
+ * children. An address nothing claims is the router's to answer; write the
+ * fallback there.
  *
  * ## Self-contained section pattern
  * Use this when routes share a common URL prefix (e.g. `/dashboard/`).
@@ -67,6 +72,7 @@ import { cloneElement, h } from "preact";
 import { useLayoutEffect, useRef } from "preact/hooks";
 
 import { useUITransitionContentId } from "../transition/ui_transition.jsx";
+import { unwireRouteFallback, wireRouteFallback } from "./route_fallback.js";
 import { observeRouteRender, publishRouteRender } from "./route_render.js";
 
 export { observeRouteRender };
@@ -111,7 +117,10 @@ const debug = (...args) => {
  * @param {object} props
  * @param {object} [props.route] - the route this branch is for, from `route()`
  * @param {object} [props.routeParams] - selects a branch on a param of that route
- * @param {boolean} [props.fallback] - the branch taken when no sibling matches
+ * @param {boolean|object} [props.fallback] - the branch taken when no sibling
+ *   matches. `routeFallback()` gives that page a name, which is what lets a
+ *   movement be written about it and its `matchingSignal` be read from outside
+ *   the tree (see route_fallback.js).
  * @param {Function|import("preact").VNode} [props.element] - what the branch renders
  * @param {object} [props.elementProps] - props given to `element`
  *
@@ -178,9 +187,10 @@ export const collectRoutePages = (children) => {
 // RouteContainer: traverses children statically per render, finds the active branch,
 // and renders only that branch — or the fallback if nothing matches.
 // No contexts, no state of its own: it reads the route signals directly, and
-// its one effect only tells the outside what it has just done.
+// its effects only tell the outside what it has just done.
 const RouteContainer = ({ id, element, elementProps, children }) => {
-  const { activeBranch } = collectBranches(children);
+  const { activeBranch, fallbackBranch, pages } = collectBranches(children);
+  const fallbackPage = fallbackBranch ? fallbackBranch.page : null;
 
   // Told to hold still: what is on screen stays on screen. Kept as the very
   // vnode that was rendered last time, which is how Preact is told there is
@@ -192,11 +202,25 @@ const RouteContainer = ({ id, element, elementProps, children }) => {
   }
   const branch = shownBranchRef.current || activeBranch;
 
-  // The one effect here, and it says the only thing this component knows that
-  // nobody outside can find out: the branch it chose is now in the DOM.
+  // The two things this component knows that nobody outside can find out: the
+  // pages a named fallback is the absence of — the children it was written
+  // with — and that the branch it chose is in the DOM.
   useLayoutEffect(() => {
+    if (fallbackPage) {
+      wireRouteFallback(fallbackPage, pages);
+    }
     publishRouteRender();
   });
+  // Being wired means the container holding it is on screen: a router taken out
+  // of the document leaves no fallback behind still claiming an address.
+  useLayoutEffect(() => {
+    if (!fallbackPage) {
+      return undefined;
+    }
+    return () => {
+      unwireRouteFallback(fallbackPage);
+    };
+  }, [fallbackPage]);
 
   debug(`[container "${id}"] RENDER, active=${branch ? branch.type : "none"}`);
 
@@ -212,10 +236,16 @@ const RouteContainer = ({ id, element, elementProps, children }) => {
 // Walk JSX children vnodes (without rendering) to build a branch list and
 // find the active one in the same pass. Anything that is not a <Route> is read
 // through and kept around the branch it holds (see below).
-// Returns { matchingBranch, fallbackBranch, activeBranch }.
+// Returns { matchingBranch, fallbackBranch, activeBranch, pages }.
 const collectBranches = (children) => {
   let matchingBranch = null;
   let fallbackBranch = null;
+  // Every page a branch can be on, at any depth: what a named fallback is the
+  // ABSENCE of (see route_fallback.js). A container with a guard route counts
+  // as a page of its own AND contributes the pages inside it — either its guard
+  // matching or a leaf matching under it is enough to select it, and the
+  // fallback then stands down.
+  const pages = [];
 
   const visit = (child) => {
     if (!child || child === true || child === false) {
@@ -244,8 +274,14 @@ const collectBranches = (children) => {
           `A <Route> child must be a <Route>, or hold some: ${String(child.type?.name ?? child.type)} holds nothing.`,
         );
       }
-      const { matchingBranch: matchingInside, fallbackBranch: fallbackInside } =
-        collectBranches(wrapperChildren);
+      const {
+        matchingBranch: matchingInside,
+        fallbackBranch: fallbackInside,
+        pages: pagesInside,
+      } = collectBranches(wrapperChildren);
+      for (const pageInside of pagesInside) {
+        pages.push(pageInside);
+      }
       if (matchingInside && !matchingBranch) {
         matchingBranch = wrapBranch(matchingInside, child);
       }
@@ -261,7 +297,31 @@ const collectBranches = (children) => {
       routeParams,
     } = child.props;
     if (nodeChildren) {
-      const { matchingBranch: matchingChild } = collectBranches(nodeChildren);
+      const {
+        matchingBranch: matchingChild,
+        fallbackBranch: fallbackChild,
+        pages: pagesChild,
+      } = collectBranches(nodeChildren);
+      if (fallbackChild && !route) {
+        // A fallback is the branch taken for an address none of its siblings
+        // claim — so something has to make that address BELONG to this
+        // container, and only a route of its own does. Without one the
+        // container is selected by a child matching, which is the one case
+        // where its fallback is not wanted: the branch could never render, and
+        // an unmatched address is the router's to answer, not a layout's.
+        throw new Error(
+          `${describeContainer(child)} has no route of its own, so its fallback could never render: it is selected by one of its children matching, and an address none of them claim belongs to the router around it. Give it a route to be the fallback of (<Route route={SECTION}>), or write the fallback in that router.`,
+        );
+      }
+      if (route) {
+        // Params are left out on purpose: a guard selects its container on
+        // matching alone (see guardMatching below), so the fallback stands
+        // down for the whole route, not for one of its cases.
+        pages.push({ route, params: undefined });
+      }
+      for (const pageChild of pagesChild) {
+        pages.push(pageChild);
+      }
       const branch = { type: "container", node: child };
       const guardMatching = route ? route.matchingSignal.value : false;
       if (!matchingBranch) {
@@ -276,10 +336,15 @@ const collectBranches = (children) => {
       }
     } else if (fallback) {
       if (!fallbackBranch) {
-        fallbackBranch = { type: "fallback", node: child };
+        fallbackBranch = {
+          type: "fallback",
+          node: child,
+          page: fallback.isRouteFallback ? fallback : null,
+        };
       }
     } else {
       const branch = { type: "leaf", node: child };
+      pages.push({ route, params: routeParams });
       // every signal is read even once a match is found: reading is what
       // subscribes the container to it, and a branch that is skipped today is
       // the one that must wake the container up tomorrow
@@ -295,7 +360,12 @@ const collectBranches = (children) => {
 
   visit(children);
   const activeBranch = matchingBranch || fallbackBranch || null;
-  return { matchingBranch, fallbackBranch, activeBranch };
+  return { matchingBranch, fallbackBranch, activeBranch, pages };
+};
+const describeContainer = ({ props }) => {
+  const { element } = props;
+  const name = typeof element === "function" ? element.name : null;
+  return name ? `<Route element={${name}}>` : `<Route>`;
 };
 const wrapBranch = (branch, wrapper) => {
   return {

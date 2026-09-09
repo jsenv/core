@@ -123,6 +123,7 @@ export {
   useRouteStatus,
 } from "./src/nav/route.js";
 export { Route } from "./src/nav/route.jsx";
+export { routeFallback } from "./src/nav/route_fallback.js";
 export {
   RouteTransitionArea,
   defineRouteDefaultTransition,

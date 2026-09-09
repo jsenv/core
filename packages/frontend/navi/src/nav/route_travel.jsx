@@ -74,6 +74,7 @@ import {
   freezeRouteRender,
   observeRouteRender,
 } from "./route.jsx";
+import { pageIsCurrent } from "./route_page.js";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import {
   ensureDocumentStartViewTransition,
@@ -1545,25 +1546,6 @@ const samePage = (a, b) => {
 const pageIndexOf = (pages, page) =>
   pages.findIndex((candidate) => samePage(candidate, page));
 
-// Whether this page is the one on screen. `matchesParams` reads paramsSignal,
-// so a caller reading this during a render is subscribed to the param changes
-// that walk from one tab to the next — matchingSignal alone never moves there,
-// and a row whose tabs are params of one route would never re-render.
-//
-// The params are read only for a route that matches, and that is not a signal
-// left unread: a reader wakes on anything it read last time, so what matters is
-// that everything able to make this answer change is among them.
-// matchingSignal is read whatever happens, and it is a NECESSARY condition —
-// while it is false no param of that route can put this page on screen, and the
-// day one could, matchingSignal itself has to turn true to say so, which is the
-// read that brings the params back in. (Asking anyway would be worse than
-// useless: the params of a route that does not match are not params.)
-const pageIsCurrent = ({ route, params }) => {
-  if (!route.matchingSignal.value) {
-    return false;
-  }
-  return params ? route.matchesParams(params) : true;
-};
 // The FIRST page that answers, as with the branches of a <Route>: several
 // routes match at once — a literal one and the parameterized one it is a case of
 // ("/games/new" is also a "/games/:gameId"), a section and the page inside it —

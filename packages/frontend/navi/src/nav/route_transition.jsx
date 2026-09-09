@@ -95,6 +95,7 @@ import {
 import { documentUrlSignal } from "./browser_integration/document_url_signal.js";
 import { Box } from "../box/box.jsx";
 import { observeRouteRender } from "./route.jsx";
+import { pageIsCurrent } from "./route_page.js";
 import {
   holdRenderingForRouting,
   releaseRoutingRenderingHold,
@@ -1513,13 +1514,18 @@ const armRouteRenderWait = () => {
 
 const waitMs = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// A page written as the route itself, and the page written nowhere: `from`
-// may be left out, which is a relation about arriving at `to` from anywhere.
+// A page written as the route itself, the page named by the absence of every
+// route around it (see route_fallback.js), and the page written nowhere:
+// `from` may be left out, which is a relation about arriving at `to` from
+// anywhere.
 const normalizePage = (page) => {
   if (!page) {
     return null;
   }
-  return page.isRoute ? { route: page, params: undefined } : page;
+  if (page.isRoute || page.isRouteFallback) {
+    return { route: page, params: undefined };
+  }
+  return page;
 };
 
 // Two pages are the same page when they select the same thing, not when they
@@ -1536,16 +1542,6 @@ const samePage = (a, b) => {
 const pageIndexOf = (pages, page) =>
   pages.findIndex((candidate) => samePage(candidate, page));
 
-// Whether this page is the one on screen — same reading as route_travel.jsx's
-// own: matchingSignal is the necessary condition and is read whatever happens,
-// params only for a route that matches (the params of a route that does not
-// match are not params).
-const pageIsCurrent = ({ route, params }) => {
-  if (!route.matchingSignal.value) {
-    return false;
-  }
-  return params ? route.matchesParams(params) : true;
-};
 // The FIRST page that answers, and every page read all the same: a page that
 // is not the current one today is the one that must wake the reader tomorrow.
 //
