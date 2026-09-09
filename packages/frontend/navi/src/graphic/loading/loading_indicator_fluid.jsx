@@ -42,46 +42,36 @@ export const LoadingIndicatorFluid = ({
   const [containerHeight, setContainerHeight] = useState(0);
   const [containerRadius, setContainerRadius] = useState(0);
 
+  // Sized by the observer alone, first frame included: an element gets an
+  // observation for the size it has when first observed, delivered after the
+  // frame's own layout and before its paint. Measuring here instead would
+  // force a layout in the middle of the commit, on a tree the commit is still
+  // writing to, and the frame would lay it out again. Inside the callback style
+  // and layout are clean, so the radius read there is a lookup, not a recalc.
   useLayoutEffect(() => {
     const indicatorEl = ref.current;
     if (!indicatorEl) {
       return null;
     }
-    const { width, height } = indicatorEl.getBoundingClientRect();
-    setContainerWidth(width);
-    setContainerHeight(height);
-    if (radius === undefined || radius === "inherit") {
-      const parentEl = indicatorEl.parentElement;
-      // Prefer the inline style (always available, even before layout is computed).
-      // Fall back to computed longhands — getComputedStyle shorthand may return ""
-      // if the browser hasn't resolved the layout yet.
-      const radius =
-        parentEl.style.borderRadius ||
-        parentEl.style.borderTopLeftRadius ||
-        getComputedStyle(parentEl).borderTopLeftRadius ||
-        "0px";
-      setContainerRadius(radius);
-    }
-
-    let animationFrameId = null;
-    // Create a resize observer to detect changes in the container's dimensions
-    const resizeObserver = new ResizeObserver((entries) => {
-      // Use requestAnimationFrame to debounce updates
-      if (animationFrameId) {
-        cancelAnimationFrame(animationFrameId);
+    const resizeObserver = new ResizeObserver(([containerEntry]) => {
+      const { width, height } = containerEntry.contentRect;
+      setContainerWidth(width);
+      setContainerHeight(height);
+      if (radius === undefined || radius === "inherit") {
+        const parentEl = indicatorEl.parentElement;
+        // The inline style says the radius as the caller wrote it; the
+        // computed longhand otherwise, the shorthand computing to "" when the
+        // four corners differ.
+        setContainerRadius(
+          parentEl.style.borderRadius ||
+            parentEl.style.borderTopLeftRadius ||
+            getComputedStyle(parentEl).borderTopLeftRadius ||
+            "0px",
+        );
       }
-      animationFrameId = requestAnimationFrame(() => {
-        const [containerEntry] = entries;
-        const { width, height } = containerEntry.contentRect;
-        setContainerWidth(width);
-        setContainerHeight(height);
-      });
     });
     resizeObserver.observe(indicatorEl);
     return () => {
-      if (animationFrameId) {
-        cancelAnimationFrame(animationFrameId);
-      }
       resizeObserver.disconnect();
     };
   }, []);

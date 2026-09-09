@@ -82,7 +82,10 @@ import {
 } from "./popup_busy.js";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import { Box } from "../box/box.jsx";
-import { resolveSpacingSize } from "../box/box_style_util.js";
+import {
+  isZeroSpacingSize,
+  resolveSpacingSize,
+} from "../box/box_style_util.js";
 import { smallTouchScreenSignal } from "./responsive.js";
 import { createOnKeyDownForShortcuts } from "../keyboard/keyboard_shortcuts.js";
 import { useDebugFocus, useDebugPopup } from "../navi_debug.jsx";
@@ -1184,7 +1187,7 @@ const useDialogProps = (props) => {
   // the container's corner when both of its edges are — which only happens
   // with no margin, hence the gate.
   const flushEdges = { top: false, right: false, bottom: false, left: false };
-  if (resolveSpacingSize(marginWithContainer) === 0) {
+  if (isZeroSpacingSize(marginWithContainer)) {
     const { y, x } = parsedPositionArea;
     flushEdges.top = expandY || y === "top" || y === "inset-top";
     flushEdges.bottom = expandY || y === "bottom" || y === "inset-bottom";

@@ -14,7 +14,7 @@ export const installImportMetaCssDev = (importMeta) => {
   const adopt = (value) => {
     stylesheet = new CSSStyleSheet({ baseUrl: importMeta.url });
     stylesheet.replaceSync(addUrlInfo(value));
-    document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet];
+    document.adoptedStyleSheets.push(stylesheet);
   };
   const update = (value) => {
     stylesheet.replaceSync(addUrlInfo(value));

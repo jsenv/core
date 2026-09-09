@@ -313,6 +313,16 @@ css static _and_ lets the value change without rebuilding a stylesheet.
 
 ## @jsenv/navi Specifics
 
+### Reports from wematch
+
+Most navi feedback ("Retour pour navi", bug reports quoting an `@jsenv/navi`
+version) comes from wematch, the app built on it. Its frontend source is at
+`/Users/dmail/Documents/dev/pommy/wematch/packages/frontend/src` on this machine
+(`main.jsx` is the shell: bars, slots, routes, boundaries; `routes.js` the
+routes and route actions). Open the app's actual code there before reasoning
+about a report from its description alone — a report describes what its author
+believes the shape is, and the shell decides which boundary a wait reaches.
+
 ### Gestures
 
 What a pointer dragging a screen, a wheel pushing it, or a swipe on a row IS —

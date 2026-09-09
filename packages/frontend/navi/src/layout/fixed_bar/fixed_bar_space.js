@@ -6,6 +6,13 @@
  * Measured rather than declared: a bar's size comes from a prop, a theme
  * variable, its own content or the device's notch, and only the used value
  * knows all four.
+ *
+ * Written once per task, after every bar has measured. The variable resizes
+ * an ancestor of the bars — the scroll container takes its padding from it —
+ * so a write landing between two measurements turns the second one into a
+ * style recalc and a layout of the whole page. Sizes are queued, and the queue
+ * lands in a microtask: still before the browser paints, so the content is
+ * never seen under a bar, and after every read of the commit that queued them.
  */
 
 // Several bars can share an edge — during a page transition the outgoing and
@@ -19,10 +26,14 @@ const sizeMapByArea = new Map();
 // size again — the ones for the smaller bars, and the second half of a page
 // transition.
 const writtenValueByArea = new Map();
+// Sizes said and not yet written. One queue for both callers below: a bar
+// saying its size twice before the write keeps the last word, whoever said it.
+const pendingSizeMapByArea = new Map();
+let flushMicrotaskQueued = false;
+let flushFrame = null;
 
-// A size that must land before the next paint: a render changed the bar, so
-// the room it takes is given back in that same commit and the content is never
-// painted under it.
+// A size a render produced: a prop, the children or a theme variable changed
+// the bar, and the room it takes is given back before that commit is painted.
 /**
  * @param {"top"|"bottom"|"left"|"right"} area
  * @param {Element} barElement - Which bar this size belongs to.
@@ -30,41 +41,47 @@ const writtenValueByArea = new Map();
  *   content.
  */
 export const setFixedBarSpace = (area, barElement, size) => {
-  dropPendingSize(area, barElement);
-  storeSize(area, barElement, size);
-  writeSpace(area);
+  queueSize(area, barElement, size);
+  if (flushMicrotaskQueued) {
+    return;
+  }
+  flushMicrotaskQueued = true;
+  queueMicrotask(() => {
+    flushMicrotaskQueued = false;
+    flushPendingSizes();
+  });
 };
 
-// A size nothing asked for, coming from a ResizeObserver. Writing the variable
-// resizes an ANCESTOR of the bars — the scroll container takes its padding
-// from it — and mutating layout from inside a resize callback is what makes
-// the browser report "ResizeObserver loop completed with undelivered
-// notifications". So the write waits for the frame that resize produced.
-// Queued here rather than deferred by each bar on its own, so the bars sharing
-// an edge resolve to a single write instead of one per bar.
+// A size nothing asked for, coming from a ResizeObserver. Mutating layout from
+// inside a resize callback is what makes the browser report "ResizeObserver
+// loop completed with undelivered notifications", so this write waits for the
+// frame that resize produced.
 /**
  * @param {"top"|"bottom"|"left"|"right"} area
  * @param {Element} barElement - Which bar this size belongs to.
  * @param {number} size - In px.
  */
 export const requestFixedBarSpace = (area, barElement, size) => {
+  queueSize(area, barElement, size);
+  if (flushFrame !== null) {
+    return;
+  }
+  flushFrame = requestAnimationFrame(() => {
+    flushFrame = null;
+    flushPendingSizes();
+  });
+};
+
+const queueSize = (area, barElement, size) => {
   let pendingSizeMap = pendingSizeMapByArea.get(area);
   if (!pendingSizeMap) {
     pendingSizeMap = new Map();
     pendingSizeMapByArea.set(area, pendingSizeMap);
   }
   pendingSizeMap.set(barElement, size);
-  if (flushFrame !== null) {
-    return;
-  }
-  flushFrame = requestAnimationFrame(flushPendingSizes);
 };
 
-const pendingSizeMapByArea = new Map();
-let flushFrame = null;
-
 const flushPendingSizes = () => {
-  flushFrame = null;
   for (const [area, pendingSizeMap] of pendingSizeMapByArea) {
     for (const [barElement, size] of pendingSizeMap) {
       storeSize(area, barElement, size);
@@ -72,20 +89,6 @@ const flushPendingSizes = () => {
     writeSpace(area);
   }
   pendingSizeMapByArea.clear();
-};
-
-// What the bar itself just said wins over what its observer had queued about
-// it: a bar unmounting gives its room back, and a size queued for it before
-// that must not put it back.
-const dropPendingSize = (area, barElement) => {
-  const pendingSizeMap = pendingSizeMapByArea.get(area);
-  if (!pendingSizeMap) {
-    return;
-  }
-  pendingSizeMap.delete(barElement);
-  if (pendingSizeMap.size === 0) {
-    pendingSizeMapByArea.delete(area);
-  }
 };
 
 const storeSize = (area, barElement, size) => {

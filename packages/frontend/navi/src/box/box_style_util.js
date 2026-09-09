@@ -892,6 +892,20 @@ export const resolveSpacingSize = (size, element, property = "padding") => {
   }
   return normalizeStyle(SIZE_MAP[size] || size, property, "js", element);
 };
+// Whether a spacing is nothing at all, answered without resolving it. A
+// viewport or container length resolves through a computed-style read, and
+// asked during a render that read forces the browser to compute the style of
+// a tree still being built, stylesheets still being adopted. Zero is a fact
+// about the number written, whatever the unit; a scale keyword is never zero.
+export const isZeroSpacingSize = (size) => {
+  if (typeof size === "number") {
+    return size === 0;
+  }
+  if (typeof size !== "string") {
+    return false;
+  }
+  return parseFloat(size) === 0;
+};
 export const resolveTypoSize = (size, element, property = "fontSize") => {
   return normalizeStyle(TYPO_SIZE_MAP[size] || size, property, "js", element);
 };
