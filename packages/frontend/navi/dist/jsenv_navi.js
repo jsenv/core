@@ -4,7 +4,7 @@
  */
 import { installImportMetaCssBuild, windowHeightSignal, windowWidthSignal, visualViewportHeightSignal, visualViewportWidthSignal, getAppHeight, getAppWidth, coarsePointerSignal, smallTouchScreenSignal } from "./jsenv_navi_side_effects.js";
 export { disableVirtualKeyboardOverlay } from "./jsenv_navi_side_effects.js";
-import { elementIsFocusable, createIterableWeakSet, dispatchInternalCustomEvent, dispatchCustomEvent, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, getElementSignature, createPubSub, findEvent, createValueEffect, findFocusDelegateTarget, findFocusable, scrollIntoViewThroughScrollables, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, keepTouchRefusable, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, markDragSource, refuseDragTo, startDragTo, installPanZoom, createEventGroupLogger, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, normalizeStyles, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, scrollRoomTowards, getScrollContainer, closestOpenableAncestor, isAncestorOpen, isDisplayedDespiteClosedAncestor, observeAncestorOpenState, getAncestorOpenType, findBefore, findAfter, resolveCSSSize, hasCSSSizeUnit, releaseWheelGesture, getScrollIntoViewScopedOffsets, wheelGestureIsTakenFrom, claimWheelGesture, scrollIntoViewScoped, initFocusGroup, isTouchDrivenEvent, isPressDrivenClick, stringifyStyle as stringifyStyle$1, resolveOklchLightness, contrastColor, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, getVirtualKeyboardOverlayHeight, onAncestorReopen, isPressDisputedByDrag, canScroll, measureWidestChildRow, performTabNavigation, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
+import { elementIsFocusable, createIterableWeakSet, dispatchInternalCustomEvent, dispatchCustomEvent, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, getElementSignature, createPubSub, findEvent, createValueEffect, findFocusDelegateTarget, findFocusable, scrollIntoViewThroughScrollables, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, keepTouchRefusable, isPressDrivenClick, waitForTap, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, markDragSource, refuseDragTo, startDragTo, installPanZoom, createEventGroupLogger, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, normalizeStyles, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, scrollRoomTowards, getScrollContainer, closestOpenableAncestor, isAncestorOpen, isDisplayedDespiteClosedAncestor, observeAncestorOpenState, getAncestorOpenType, findBefore, findAfter, resolveCSSSize, hasCSSSizeUnit, releaseWheelGesture, getScrollIntoViewScopedOffsets, wheelGestureIsTakenFrom, claimWheelGesture, scrollIntoViewScoped, initFocusGroup, isTouchDrivenEvent, stringifyStyle as stringifyStyle$1, resolveOklchLightness, contrastColor, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, getVirtualKeyboardOverlayHeight, onAncestorReopen, isPressDisputedByDrag, canScroll, measureWidestChildRow, performTabNavigation, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
 export { chainEvent, clickIsSuppressed, contrastColor, createDragGestureController, dragAfterIntent, findEvent, markDragSource, startDragTo } from "@jsenv/dom";
 import { signal, computed, effect, untracked, batch, useComputed, useSignal } from "@preact/signals";
 import { isValidElement, createContext, render, h, toChildArray, options, cloneElement, Fragment as Fragment$1 } from "preact";
@@ -10127,6 +10127,11 @@ const readNumberFromDom = (element, attribute, defaultValue) => {
  * happened. Registered through the same door an application uses (see
  * interaction_registry.js) — navi has no private one.
  *
+ * `dblclick` is not among them, and deliberately: the browser only fires it for a
+ * mouse, so an element declaring it would answer half the hands that reach it.
+ * What a hand does twice is `double_click`, counted from the pointer in
+ * interaction_press.js.
+ *
  * `contextmenu` is the only one that takes something away: the browser's own menu
  * would cover the answer to the request it is. It takes it away AFTER, though —
  * a native interaction IS its own event, the very one the gate reads, and a gate
@@ -10140,7 +10145,6 @@ const NATIVE_TYPE_SET = new Set([
   "mousedown",
   "mouseup",
   "click",
-  "dblclick",
   "contextmenu",
 ]);
 
@@ -10198,6 +10202,15 @@ const SWIPE_THRESHOLD_DEFAULT = 0.33;
 const LONGPRESS_DELAY_DEFAULT = 450;
 // Past this the finger is going somewhere: it swipes, it does not hold.
 const LONGPRESS_SLOP_DEFAULT = 8;
+// The window a double click is counted in, opened by the FIRST press. Under the
+// hold's delay on purpose: a pause longer than the wait navi calls "held" is
+// longer than one gesture.
+const DOUBLE_CLICK_DELAY_DEFAULT = 400;
+// How far apart the two presses may be, and how far either of them may travel
+// before it is a gesture rather than a tap. A fingertip and not a pixel: between
+// the two the finger leaves the glass and lands again where it means to, which is
+// a wider question than the hold's slop above (has this finger stood still?).
+const DOUBLE_CLICK_SLOP_DEFAULT = 30;
 // How long the element takes to reach where the gesture leaves it, or to come
 // back. Written into the CSS below from here: the state is cleaned up when the
 // movement is over, so a duration living only in the stylesheet would be a timing
@@ -10209,11 +10222,19 @@ const SETTLE_DURATION_MS = 200;
 const SWIPE_THRESHOLD_ATTRIBUTE = "data-swipe-threshold";
 const LONGPRESS_DELAY_ATTRIBUTE = "data-longpress-delay";
 const LONGPRESS_SLOP_ATTRIBUTE = "data-longpress-slop";
+const DOUBLE_CLICK_DELAY_ATTRIBUTE = "data-double-click-delay";
+const DOUBLE_CLICK_SLOP_ATTRIBUTE = "data-double-click-slop";
 
-// Which axes this element takes a swipe on, and that it takes a hold: said in the
-// DOM at render time, for the CSS below and for the boxes above to read.
+// Which axes this element takes a swipe on, and that it takes a hold or counts
+// taps: said in the DOM at render time, for the CSS below and for the boxes above
+// to read.
 const SWIPE_AXES_ATTRIBUTE = "data-swipe";
 const LONGPRESS_ATTRIBUTE = "data-longpress";
+const DOUBLE_CLICK_ATTRIBUTE = "data-double-click";
+
+const LONGPRESS = "longpress";
+const DOUBLE_CLICK = "double_click";
+const SINGLE_CLICK = "single_click";
 
 import.meta.css = /* css */ [`@property --swipe-progress {
   syntax: "<number>";
@@ -10239,15 +10260,19 @@ import.meta.css = /* css */ [`@property --swipe-progress {
   touch-action: none;
 }
 
+:where([data-double-click]) {
+  touch-action: manipulation;
+}
+
 [data-longpress] {
   -webkit-touch-callout: none;
 }
 
-[data-longpress], [data-swipe] {
+[data-longpress], [data-swipe], [data-double-click] {
   user-select: none;
 }
 
-:is([data-longpress], [data-swipe]) :is([data-drag-ignore], [popover], dialog), :is([data-longpress], [data-swipe]) :is(input:not([data-press-only]), textarea), :is([data-longpress], [data-swipe]) :is([contenteditable=""], [contenteditable="true"]) {
+:is([data-longpress], [data-swipe], [data-double-click]) :is([data-drag-ignore], [popover], dialog), :is([data-longpress], [data-swipe], [data-double-click]) :is(input:not([data-press-only]), textarea), :is([data-longpress], [data-swipe], [data-double-click]) :is([contenteditable=""], [contenteditable="true"]) {
   user-select: text;
 }
 
@@ -10266,9 +10291,13 @@ import.meta.css = /* css */ [`@property --swipe-progress {
 
 defineInteractionDetector({
   name: "press",
-  claims: (type) => type in AXIS_BY_SWIPE_TYPE || type === "longpress",
-  // A swipe and a hold are both "what this press turns out to be": until it
-  // turns out, the press is theirs.
+  claims: (type) =>
+    type in AXIS_BY_SWIPE_TYPE ||
+    type === LONGPRESS ||
+    type === DOUBLE_CLICK ||
+    type === SINGLE_CLICK,
+  // Every one of them is "what this press turns out to be": until it turns out,
+  // the press is theirs.
   disputesPress: true,
   setup: (element, trigger, { types, readConfig }) => {
     let axes = "";
@@ -10278,7 +10307,10 @@ defineInteractionDetector({
         axes += axis;
       }
     }
-    const hasLongPress = types.includes("longpress");
+    const hasLongPress = types.includes(LONGPRESS);
+    const hasDoubleClick = types.includes(DOUBLE_CLICK);
+    const hasSingleClick = types.includes(SINGLE_CLICK);
+    const countsTaps = hasDoubleClick || hasSingleClick;
 
     const undo = [];
     const mark = (attribute, value) => {
@@ -10331,6 +10363,79 @@ defineInteractionDetector({
     if (hasLongPress) {
       mark(LONGPRESS_ATTRIBUTE, "");
     }
+    if (countsTaps) {
+      mark(DOUBLE_CLICK_ATTRIBUTE, "");
+    }
+
+    // The tap a next press may pair with, and the window it is waited for in. It
+    // outlives the press that made it — which is what a double click IS — so it
+    // lives here rather than in the pointerdown below.
+    let firstTap = null;
+    let tapWindowTimeout = null;
+    let tapWait = null;
+    const forgetTaps = () => {
+      clearTimeout(tapWindowTimeout);
+      tapWindowTimeout = null;
+      firstTap = null;
+      tapWait?.cancel();
+      tapWait = null;
+    };
+    undo.push(forgetTaps);
+    // The window closes on a tap nothing came back for. Counted from the press
+    // that opened it rather than from the tap that ends it, so what the caller
+    // tunes is one rhythm and not a press plus a pause — a press slow enough to be
+    // a hold therefore closes its own window on the spot, and cannot start a
+    // double click.
+    const openTapWindow = (pressEvent, tapEvent, delay) => {
+      firstTap = {
+        at: pressEvent.timeStamp,
+        x: tapEvent.clientX,
+        y: tapEvent.clientY,
+        pointerType: tapEvent.pointerType,
+      };
+      if (hasSingleClick) {
+        // The element's click is navi's from here: it is held for the length of
+        // the window and `single_click` is what says it happened (see the top of
+        // this file).
+        const clickSuppressionIsOver = suppressClickAfterGesture();
+        clickSuppressionIsOver();
+      }
+      clearTimeout(tapWindowTimeout);
+      tapWindowTimeout = setTimeout(
+        () => {
+          tapWindowTimeout = null;
+          firstTap = null;
+          if (hasSingleClick) {
+            trigger(SINGLE_CLICK, tapEvent, {
+              pointerType: tapEvent.pointerType,
+            });
+          }
+        },
+        delay - (tapEvent.timeStamp - pressEvent.timeStamp),
+      );
+    };
+
+    if (hasSingleClick) {
+      // A click no press made — a keyboard activation, an `element.click()`. The
+      // window exists to find out whether a second press is coming, and there is
+      // no press here, so it is not held: said at once, the way the browser's own
+      // click would have been.
+      const onClick = (clickEvent) => {
+        if (isPressDrivenClick(clickEvent)) {
+          // A press's own click, swallowed by the suppression armed at its tap:
+          // it never reaches here, and if it does (the suppression having already
+          // been spent) the tap has said it or is about to.
+          return;
+        }
+        trigger(SINGLE_CLICK, clickEvent, {
+          pointerType: clickEvent.pointerType,
+        });
+      };
+      element.addEventListener("click", onClick);
+      undo.push(() => {
+        element.removeEventListener("click", onClick);
+      });
+    }
 
     const onPointerDown = (pointerDownEvent) => {
       if (pointerDownEvent.button !== 0) {
@@ -10340,6 +10445,50 @@ defineInteractionDetector({
       let press = null;
       // Set below, with the hold; a no-op until then so the swipe can call it.
       let forgetInnerLongPress = () => {};
+
+      if (countsTaps) {
+        const delay = readConfig(
+          DOUBLE_CLICK_DELAY_ATTRIBUTE,
+          DOUBLE_CLICK_DELAY_DEFAULT,
+        );
+        const slop = readConfig(
+          DOUBLE_CLICK_SLOP_ATTRIBUTE,
+          DOUBLE_CLICK_SLOP_DEFAULT,
+        );
+        // Whether this press is the second of a pair is settled HERE, when it
+        // lands, and not when it is let go of: the window is about where the
+        // hand went and how soon, and a second press held a little longer than
+        // the window would otherwise be answered as a lone click while it is
+        // still down.
+        const completesTheFirstTap =
+          firstTap && continuesTap(firstTap, pointerDownEvent, delay, slop);
+        if (completesTheFirstTap) {
+          clearTimeout(tapWindowTimeout);
+          tapWindowTimeout = null;
+        } else {
+          forgetTaps();
+        }
+        tapWait = waitForTap(pointerDownEvent, {
+          slop,
+          onTap: (tapEvent) => {
+            tapWait = null;
+            if (completesTheFirstTap) {
+              firstTap = null;
+              // The click this second press leaves behind was already answered,
+              // by the gesture the two of them made. Armed and released at once:
+              // the release does not lift the suppression, it says the gesture is
+              // over (see suppressClickAfterGesture).
+              const clickSuppressionIsOver = suppressClickAfterGesture();
+              clickSuppressionIsOver();
+              trigger(DOUBLE_CLICK, tapEvent, {
+                pointerType: tapEvent.pointerType,
+              });
+              return;
+            }
+            openTapWindow(pointerDownEvent, tapEvent, delay);
+          },
+        });
+      }
 
       if (axes) {
         swipe = startSwipe(pointerDownEvent, {
@@ -10360,6 +10509,9 @@ defineInteractionDetector({
             press?.cancel();
             press = null;
             forgetInnerLongPress();
+            // …and it is not a tap either, nor the second of a pair: the press
+            // has left, and what it left is a swipe.
+            forgetTaps();
           },
         });
       }
@@ -10377,6 +10529,7 @@ defineInteractionDetector({
           press.cancel();
           press = null;
           forgetInnerLongPress();
+          warnOnceAboutHoldTakenByInner(element, longPressEvent.target);
         };
         forgetInnerLongPress = () => {
           element.removeEventListener("longpress", onInnerLongPress);
@@ -10389,9 +10542,12 @@ defineInteractionDetector({
           onPressHeld: (pressEvent, { endPress }) => {
             forgetInnerLongPress();
             // The hold won the arbitration: the swipe never got the distance it
-            // needed, and must not get it from whatever the finger does next.
+            // needed, and must not get it from whatever the finger does next. The
+            // double click loses the same way — a press held this long is the
+            // hold's whether it is the first of a pair or the second.
             swipe?.stop();
             swipe = null;
+            forgetTaps();
             const clickSuppressionIsOver = suppressClickAfterGesture();
             const onPointerEnd = () => {
               window.removeEventListener("pointerup", onPointerEnd, true);
@@ -10420,6 +10576,11 @@ defineInteractionDetector({
     };
   },
 });
+const warnOnceAboutHoldTakenByInner = (element, innerElement) => {
+  {
+    return;
+  }
+};
 
 const startSwipe = (
   pointerDownEvent,
@@ -10519,6 +10680,21 @@ const startSwipe = (
     // a swipe, so nothing was painted by it.
     onGiveUp: () => {},
   });
+};
+
+// Whether a press landing now completes the tap before it: the same hand, soon
+// enough, and near enough. Axis by axis rather than as a distance, the way every
+// other slop in this family is read.
+const continuesTap = (tap, pointerDownEvent, delay, slop) => {
+  if (pointerDownEvent.pointerType !== tap.pointerType) {
+    return false;
+  }
+  if (pointerDownEvent.timeStamp - tap.at >= delay) {
+    return false;
+  }
+  const xApart = Math.abs(pointerDownEvent.clientX - tap.x);
+  const yApart = Math.abs(pointerDownEvent.clientY - tap.y);
+  return xApart < slop && yApart < slop;
 };
 
 const swipeTypeOf = (axis, pulled) => {
@@ -26216,6 +26392,31 @@ const getHrefTargetInfo = (href) => {
 };
 
 /*
+ * An app can ship more than one document — an admin panel, a status page, an
+ * entry point of its own — and a link to one of them is not a route, it is a
+ * page load. The address does not say which of the two it is, and guessing
+ * would be worse than not knowing: "no route matches, so it must be another
+ * document" turns a typo'd in-app url into a silent reload of the app instead
+ * of its own not-found screen. So the link says it.
+ *
+ * `<Link document>` / `<Button document>` is that, and the point of saying it
+ * on a link rather than navigating from an action is everything a link is: an
+ * address in the status bar, a middle click, "open in new tab", something for
+ * assistive technology to read. Only the interception steps aside; the element
+ * stays a real link and the browser loads the page.
+ *
+ * It travels as an attribute for the same reason `replace` does (see
+ * link_replace.js): whoever answers the press sees the element, not the
+ * component that rendered it.
+ */
+
+const LINK_DOCUMENT_ATTRIBUTE = "data-navi-document";
+
+const linkAsksForDocument = (linkElement) => {
+  return linkElement.hasAttribute(LINK_DOCUMENT_ATTRIBUTE);
+};
+
+/*
  * A press aims at a place; it does not always go one step deeper. A row of tabs
  * is a lateral move — the neighbour is one finger away — so the whole row should
  * weigh one history entry: the arrow at the top and the phone's back button then
@@ -26546,6 +26747,12 @@ const setupBrowserIntegrationViaHistory = ({
         // change reaches whoever is waiting on the designated element.
         rearmUrlTarget();
       }
+      return;
+    }
+    if (linkAsksForDocument(linkElement)) {
+      // The link says its address is another document of this origin (see
+      // link_document.js). Routing to it would land on the fallback route
+      // instead of loading the page.
       return;
     }
     // Nothing here declared a route, so there is nothing to route to: the
@@ -27098,6 +27305,160 @@ const Head = ({
 };
 
 /**
+ * A page is `{ route, params }`, never the route alone: a section of a page is
+ * as often a PARAM as it is a route of its own, and three branches of the same
+ * route told apart by their params are three pages one walks between.
+ * `params` is undefined for a page that is a route on its own.
+ *
+ * Whether such a page is the one on screen is asked from three places — the
+ * row a <RouteTravel> walks, the relations a movement is written between, and
+ * the fallback naming the pages it is the absence of — and they must all get
+ * the same answer, which is why the reading lives here rather than next to any
+ * one of them.
+ */
+
+// `matchesParams` reads paramsSignal, so a caller reading this during a render
+// is subscribed to the param changes that walk from one tab to the next —
+// matchingSignal alone never moves there, and a row whose tabs are params of
+// one route would never re-render.
+//
+// The params are read only for a route that matches, and that is not a signal
+// left unread: a reader wakes on anything it read last time, so what matters is
+// that everything able to make this answer change is among them.
+// matchingSignal is read whatever happens, and it is a NECESSARY condition —
+// while it is false no param of that route can put this page on screen, and the
+// day one could, matchingSignal itself has to turn true to say so, which is the
+// read that brings the params back in. (Asking anyway would be worse than
+// useless: the params of a route that does not match are not params.)
+const pageIsCurrent = ({ route, params }) => {
+  if (!route.matchingSignal.value) {
+    return false;
+  }
+  return params ? route.matchesParams(params) : true;
+};
+
+/**
+ * The page a <Route> container shows when none of its branches matched, given
+ * a name.
+ *
+ * Every other branch of a container is a route, and a route is a thing one can
+ * talk ABOUT from outside the tree: write a movement between two of them (see
+ * route_transition.jsx), put one in a row (see route_travel.jsx), read whether
+ * it is on screen. The fallback branch is the one page defined by an ABSENCE —
+ * "an address none of these claim" — so it has no url pattern to be declared
+ * from, and until it is named, nothing can be said about it.
+ *
+ *   const NOT_FOUND_PAGE = routeFallback();
+ *   <Route fallback={NOT_FOUND_PAGE} element={NotFoundPage} />
+ *   defineRouteTransition(null, NOT_FOUND_PAGE, "slide-x");
+ *
+ * The absence is of a PARTICULAR set of claims — the branches of the container
+ * holding it — and that set is not knowable from the routes of the application:
+ * a route matching every address is a normal thing to declare (a carrier for
+ * search params and route actions the whole app shares), and it would answer
+ * "something matched" everywhere. So the container fills it in from the
+ * children it was written with (see collectBranches in route.jsx), and a
+ * fallback no container holds claims nothing.
+ *
+ * That leaves what a container cannot see: the address its own subtree lives
+ * under. A section owning its sub-router renders it several components below
+ * the leaf that matched the section's prefix, and "none of these five matched"
+ * is then true on every screen of the application. Such a fallback names the
+ * route it is under, and answers only there:
+ *
+ *   const DASHBOARD_NOT_FOUND_PAGE = routeFallback(DASHBOARD_SECTION_ROUTE);
+ */
+
+
+const routeFallbackPrivatePropertiesMap = new WeakMap();
+
+/**
+ * Names the fallback branch of a <Route> container, so relations can be
+ * written about the page it shows and its `matchingSignal` read from anywhere.
+ *
+ * @param {object} [scopeRoute] - the route this container's subtree lives
+ *   under, when the container is not the application's own router. Without it
+ *   the fallback answers wherever its container is on screen.
+ * @returns {object} pass it as `<Route fallback={...}>`.
+ */
+const routeFallback = (scopeRoute) => {
+  const pagesSignal = signal(null);
+  const nothingMatches = () => {
+    const pages = pagesSignal.value;
+    if (!pages) {
+      return false;
+    }
+    for (const page of pages) {
+      if (pageIsCurrent(page)) {
+        return false;
+      }
+    }
+    return true;
+  };
+  const routeFallback = {
+    isRouteFallback: true,
+    scopeRoute,
+    matchingSignal: scopeRoute
+      ? computed(() => {
+          if (!scopeRoute.matchingSignal.value) {
+            return false;
+          }
+          return nothingMatches();
+        })
+      : computed(nothingMatches),
+    toString: () => {
+      if (scopeRoute) {
+        return `route fallback under ${scopeRoute}`;
+      }
+      return `route fallback`;
+    },
+  };
+  Object.preventExtensions(routeFallback);
+  routeFallbackPrivatePropertiesMap.set(routeFallback, { pagesSignal });
+  return routeFallback;
+};
+
+/**
+ * The pages the fallback is the absence of, handed over by the container
+ * holding it. Read as a signal rather than at render: a movement is decided
+ * while rendering is held, before the container has had a chance to choose a
+ * branch (see rendering_hold.js), so "we are on the fallback" has to be
+ * answerable from the route signals alone.
+ */
+const wireRouteFallback = (routeFallback, pages) => {
+  const { pagesSignal } = routeFallbackPrivatePropertiesMap.get(routeFallback);
+  const pagesCurrent = pagesSignal.peek();
+  if (pagesCurrent && samePages(pagesCurrent, pages)) {
+    return;
+  }
+  pagesSignal.value = pages;
+};
+
+const unwireRouteFallback = (routeFallback) => {
+  const { pagesSignal } = routeFallbackPrivatePropertiesMap.get(routeFallback);
+  pagesSignal.value = null;
+};
+
+const samePages = (pages, otherPages) => {
+  if (pages.length !== otherPages.length) {
+    return false;
+  }
+  let i = 0;
+  while (i < pages.length) {
+    const page = pages[i];
+    const otherPage = otherPages[i];
+    if (page.route !== otherPage.route) {
+      return false;
+    }
+    if (!compareTwoJsValues(page.params, otherPage.params)) {
+      return false;
+    }
+    i++;
+  }
+  return true;
+};
+
+/**
  * Route is the single primitive for URL-based rendering.
  *
  * ## Layout pattern
@@ -27115,9 +27476,14 @@ const Head = ({
  * <Route element={AuthLayout}>
  *   <Route route={PROFILE_ROUTE} element={ProfilePage} />
  *   <Route route={SETTINGS_ROUTE} element={SettingsPage} />
- *   <Route fallback element={AuthNotFoundPage} />
  * </Route>
  * ```
+ *
+ * Such a container holds no fallback, and cannot: what makes this one the right
+ * layout is a child matching, and having no prefix is the very reason it was
+ * reached for — so there is no address that belongs to it and to none of its
+ * children. An address nothing claims is the router's to answer; write the
+ * fallback there.
  *
  * ## Self-contained section pattern
  * Use this when routes share a common URL prefix (e.g. `/dashboard/`).
@@ -27199,7 +27565,10 @@ const debug$1 = (...args) => {
  * @param {object} props
  * @param {object} [props.route] - the route this branch is for, from `route()`
  * @param {object} [props.routeParams] - selects a branch on a param of that route
- * @param {boolean} [props.fallback] - the branch taken when no sibling matches
+ * @param {boolean|object} [props.fallback] - the branch taken when no sibling
+ *   matches. `routeFallback()` gives that page a name, which is what lets a
+ *   movement be written about it and its `matchingSignal` be read from outside
+ *   the tree (see route_fallback.js).
  * @param {Function|import("ignore:preact").VNode} [props.element] - what the branch renders
  * @param {object} [props.elementProps] - props given to `element`
  *
@@ -27277,7 +27646,7 @@ const collectRoutePages = children => {
 // RouteContainer: traverses children statically per render, finds the active branch,
 // and renders only that branch — or the fallback if nothing matches.
 // No contexts, no state of its own: it reads the route signals directly, and
-// its one effect only tells the outside what it has just done.
+// its effects only tell the outside what it has just done.
 const RouteContainer = ({
   id,
   element,
@@ -27285,8 +27654,11 @@ const RouteContainer = ({
   children
 }) => {
   const {
-    activeBranch
+    activeBranch,
+    fallbackBranch,
+    pages
   } = collectBranches(children);
+  const fallbackPage = fallbackBranch ? fallbackBranch.page : null;
 
   // Told to hold still: what is on screen stays on screen. Kept as the very
   // vnode that was rendered last time, which is how Preact is told there is
@@ -27298,11 +27670,25 @@ const RouteContainer = ({
   }
   const branch = shownBranchRef.current || activeBranch;
 
-  // The one effect here, and it says the only thing this component knows that
-  // nobody outside can find out: the branch it chose is now in the DOM.
+  // The two things this component knows that nobody outside can find out: the
+  // pages a named fallback is the absence of — the children it was written
+  // with — and that the branch it chose is in the DOM.
   useLayoutEffect(() => {
+    if (fallbackPage) {
+      wireRouteFallback(fallbackPage, pages);
+    }
     publishRouteRender();
   });
+  // Being wired means the container holding it is on screen: a router taken out
+  // of the document leaves no fallback behind still claiming an address.
+  useLayoutEffect(() => {
+    if (!fallbackPage) {
+      return undefined;
+    }
+    return () => {
+      unwireRouteFallback(fallbackPage);
+    };
+  }, [fallbackPage]);
   debug$1(`[container "${id}"] RENDER, active=${branch ? branch.type : "none"}`);
   const content = branch ? branch.node : null;
   if (!content) {
@@ -27316,10 +27702,16 @@ const RouteContainer = ({
 // Walk JSX children vnodes (without rendering) to build a branch list and
 // find the active one in the same pass. Anything that is not a <Route> is read
 // through and kept around the branch it holds (see below).
-// Returns { matchingBranch, fallbackBranch, activeBranch }.
+// Returns { matchingBranch, fallbackBranch, activeBranch, pages }.
 const collectBranches = children => {
   let matchingBranch = null;
   let fallbackBranch = null;
+  // Every page a branch can be on, at any depth: what a named fallback is the
+  // ABSENCE of (see route_fallback.js). A container with a guard route counts
+  // as a page of its own AND contributes the pages inside it — either its guard
+  // matching or a leaf matching under it is enough to select it, and the
+  // fallback then stands down.
+  const pages = [];
   const visit = child => {
     if (!child || child === true || child === false) {
       return;
@@ -27347,8 +27739,12 @@ const collectBranches = children => {
       }
       const {
         matchingBranch: matchingInside,
-        fallbackBranch: fallbackInside
+        fallbackBranch: fallbackInside,
+        pages: pagesInside
       } = collectBranches(wrapperChildren);
+      for (const pageInside of pagesInside) {
+        pages.push(pageInside);
+      }
       if (matchingInside && !matchingBranch) {
         matchingBranch = wrapBranch(matchingInside, child);
       }
@@ -27365,8 +27761,31 @@ const collectBranches = children => {
     } = child.props;
     if (nodeChildren) {
       const {
-        matchingBranch: matchingChild
+        matchingBranch: matchingChild,
+        fallbackBranch: fallbackChild,
+        pages: pagesChild
       } = collectBranches(nodeChildren);
+      if (fallbackChild && !route) {
+        // A fallback is the branch taken for an address none of its siblings
+        // claim — so something has to make that address BELONG to this
+        // container, and only a route of its own does. Without one the
+        // container is selected by a child matching, which is the one case
+        // where its fallback is not wanted: the branch could never render, and
+        // an unmatched address is the router's to answer, not a layout's.
+        throw new Error(`${describeContainer(child)} has no route of its own, so its fallback could never render: it is selected by one of its children matching, and an address none of them claim belongs to the router around it. Give it a route to be the fallback of (<Route route={SECTION}>), or write the fallback in that router.`);
+      }
+      if (route) {
+        // Params are left out on purpose: a guard selects its container on
+        // matching alone (see guardMatching below), so the fallback stands
+        // down for the whole route, not for one of its cases.
+        pages.push({
+          route,
+          params: undefined
+        });
+      }
+      for (const pageChild of pagesChild) {
+        pages.push(pageChild);
+      }
       const branch = {
         type: "container",
         node: child
@@ -27386,7 +27805,8 @@ const collectBranches = children => {
       if (!fallbackBranch) {
         fallbackBranch = {
           type: "fallback",
-          node: child
+          node: child,
+          page: fallback.isRouteFallback ? fallback : null
         };
       }
     } else {
@@ -27394,6 +27814,10 @@ const collectBranches = children => {
         type: "leaf",
         node: child
       };
+      pages.push({
+        route,
+        params: routeParams
+      });
       // every signal is read even once a match is found: reading is what
       // subscribes the container to it, and a branch that is skipped today is
       // the one that must wake the container up tomorrow
@@ -27409,8 +27833,18 @@ const collectBranches = children => {
   return {
     matchingBranch,
     fallbackBranch,
-    activeBranch
+    activeBranch,
+    pages
   };
+};
+const describeContainer = ({
+  props
+}) => {
+  const {
+    element
+  } = props;
+  const name = typeof element === "function" ? element.name : null;
+  return name ? `<Route element={${name}}>` : `<Route>`;
 };
 const wrapBranch = (branch, wrapper) => {
   return {
@@ -29211,7 +29645,7 @@ const beginTransition = ({
         // on, those would freeze the page until the browser gives up. The wait
         // is raced with a short timer instead.
         await Promise.race([renderWait.rendered, waitMs(50)]);
-      } else if (pageIsCurrent$1(page)) {
+      } else if (pageIsCurrent(page)) {
         await renderWait.rendered;
       }
     } finally {
@@ -29426,16 +29860,21 @@ const armRouteRenderWait$1 = () => {
 };
 const waitMs = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-// A page written as the route itself, and the page written nowhere: `from`
-// may be left out, which is a relation about arriving at `to` from anywhere.
+// A page written as the route itself, the page named by the absence of every
+// route around it (see route_fallback.js), and the page written nowhere:
+// `from` may be left out, which is a relation about arriving at `to` from
+// anywhere.
 const normalizePage$1 = page => {
   if (!page) {
     return null;
   }
-  return page.isRoute ? {
-    route: page,
-    params: undefined
-  } : page;
+  if (page.isRoute || page.isRouteFallback) {
+    return {
+      route: page,
+      params: undefined
+    };
+  }
+  return page;
 };
 
 // Two pages are the same page when they select the same thing, not when they
@@ -29451,19 +29890,6 @@ const samePage$1 = (a, b) => {
 };
 const pageIndexOf$1 = (pages, page) => pages.findIndex(candidate => samePage$1(candidate, page));
 
-// Whether this page is the one on screen — same reading as route_travel.jsx's
-// own: matchingSignal is the necessary condition and is read whatever happens,
-// params only for a route that matches (the params of a route that does not
-// match are not params).
-const pageIsCurrent$1 = ({
-  route,
-  params
-}) => {
-  if (!route.matchingSignal.value) {
-    return false;
-  }
-  return params ? route.matchesParams(params) : true;
-};
 // The FIRST page that answers, and every page read all the same: a page that
 // is not the current one today is the one that must wake the reader tomorrow.
 //
@@ -29476,7 +29902,7 @@ const pageIsCurrent$1 = ({
 const currentPageIndex$1 = pages => {
   let currentIndex = -1;
   for (let i = 0; i < pages.length; i++) {
-    const isCurrent = pageIsCurrent$1(pages[i]);
+    const isCurrent = pageIsCurrent(pages[i]);
     if (!isCurrent) {
       continue;
     }
@@ -30829,28 +31255,6 @@ const samePage = (a, b) => {
 };
 const pageIndexOf = (pages, page) => pages.findIndex(candidate => samePage(candidate, page));
 
-// Whether this page is the one on screen. `matchesParams` reads paramsSignal,
-// so a caller reading this during a render is subscribed to the param changes
-// that walk from one tab to the next — matchingSignal alone never moves there,
-// and a row whose tabs are params of one route would never re-render.
-//
-// The params are read only for a route that matches, and that is not a signal
-// left unread: a reader wakes on anything it read last time, so what matters is
-// that everything able to make this answer change is among them.
-// matchingSignal is read whatever happens, and it is a NECESSARY condition —
-// while it is false no param of that route can put this page on screen, and the
-// day one could, matchingSignal itself has to turn true to say so, which is the
-// read that brings the params back in. (Asking anyway would be worse than
-// useless: the params of a route that does not match are not params.)
-const pageIsCurrent = ({
-  route,
-  params
-}) => {
-  if (!route.matchingSignal.value) {
-    return false;
-  }
-  return params ? route.matchesParams(params) : true;
-};
 // The FIRST page that answers, as with the branches of a <Route>: several
 // routes match at once — a literal one and the parameterized one it is a case of
 // ("/games/new" is also a "/games/:gameId"), a section and the page inside it —
@@ -33750,6 +34154,17 @@ const useUIStateController = (
                 `merging button state into parent control group:`,
                 mergedState,
               );
+              // The sender's value is part of the answer, and whoever mirrors
+              // this group — a picker, through its façade — reads the group's
+              // state, not its children's: told the way a mount sync is
+              // (silently, nobody has answered yet), so the send that follows
+              // finds the value there. Not through the group's own onChange:
+              // that re-aggregates from the children, and a button is not one.
+              parentController.parentUIStateController?.onChildUIAction?.(
+                parentController,
+                e,
+                { stateChanged: true, silent: true },
+              );
             }
           }
           // Trigger uiAction/command side effects without changing UI state.
@@ -35407,6 +35822,10 @@ const useUIGroupStateController = (
       const { controller } = s;
       const prevDefaultValue = controller.defaultValue;
       controller.props = props;
+      // Published like a leaf's (see the leaf update above): a child's named
+      // button reaches the group's owner through it (see the button branch of
+      // onUIAction).
+      controller.parentUIStateController = parentUIStateController;
       controller.ref = ref;
       controller.id = id;
       controller.name = name;
@@ -41524,6 +41943,17 @@ Object.assign(PSEUDO_CLASSES, {
  *   way there changes. What a row of tabs wants — the neighbour is a lateral
  *   move, not a step deeper, so the whole row weighs one entry and the back
  *   button leaves by where the reader came in.
+ * @param {boolean} [props.document] - The address is ANOTHER DOCUMENT of this
+ *   origin — an admin panel, a status page, anything built as its own entry
+ *   point — so the press is left to the browser and loads that page. Without
+ *   it navi routes every same-origin address it can intercept, and one no
+ *   route matches lands on the app's not-found screen. Said rather than
+ *   guessed: "no route matches" is also what a typo in an in-app url looks
+ *   like, and that one must show the not-found screen instead of silently
+ *   reloading the app. The element stays a real link — an address in the
+ *   status bar, a middle click, "open in new tab" — which is what navigating
+ *   from an `action` costs; `target="_blank"` is a different thing, a new tab.
+ *   Nothing is prefetched on the way there: the routes do not lead there.
  * @param {boolean} [props.prefetch=true] Fetch the code of where this leads when the
  *   pointer or the focus arrives, ahead of the press (see
  *   docs/dynamic_import.md): the route actions that ask nothing of the
@@ -41626,13 +42056,17 @@ const LinkPlain = props => {
     routeTransition,
     pressableDuringRouteTransition,
     replace,
+    document: isDocument,
     prefetch = true,
     children
   } = props;
   if (anchor && !props.id) {
     props.id = href.slice(1);
   }
-  usePreloadOnIntent(props.ref, href, prefetch);
+  // A document link leads out of the routes, so there is nothing there to
+  // prefetch — and the address would otherwise be preloaded against the very
+  // routes it is escaping.
+  usePreloadOnIntent(props.ref, href, isDocument ? false : prefetch);
   const selectionContext = useContext(SelectionContext);
   const nav = useContext(NavContext);
   const visited = useIsVisited(href);
@@ -41747,6 +42181,12 @@ const LinkPlain = props => {
   const replaceRequest = replace ? {
     [LINK_REPLACE_ATTRIBUTE]: ""
   } : null;
+
+  // That this address is another document is the link's to say, worn where the
+  // interception looks for it (see link_document.js).
+  const documentRequest = isDocument ? {
+    [LINK_DOCUMENT_ATTRIBUTE]: ""
+  } : null;
   const innerChildren = children || (hrefFallback ? href : children);
   const startIconEl = startIcon;
   const endIconEl = innerEndIcon;
@@ -41800,12 +42240,14 @@ const LinkPlain = props => {
     routeTransition: undefined,
     pressableDuringRouteTransition: undefined,
     replace: undefined,
+    document: undefined,
     prefetch: undefined,
     "data-navi-route-transition-request": routeTransitionRequest,
     ...(pressableDuringRouteTransition ? {
       [PRESSABLE_ATTRIBUTE]: ""
     } : null),
     ...replaceRequest,
+    ...documentRequest,
     // The control's own handlers first — the interaction gate, the caller's
     // onClick/onKeyDown, the command and the action — then what only a link
     // does. Written over the spread above, so they have to be called here.
@@ -47643,6 +48085,7 @@ const ButtonUI = props => {
     target,
     rel,
     replace,
+    document: isDocument,
     pressableDuringRouteTransition,
     prefetch = true,
     // visual
@@ -47697,13 +48140,21 @@ const ButtonUI = props => {
     [LINK_REPLACE_ATTRIBUTE]: ""
   } : null;
 
+  // And this one says the address is another document of this origin, so the
+  // press is the browser's (see link_document.js).
+  const documentRequest = isDocument ? {
+    [LINK_DOCUMENT_ATTRIBUTE]: ""
+  } : null;
+
   // Worn as an attribute too, and read at the document by whoever catches the
   // press a movement would have swallowed (see transition_press.js).
   const pressableRequest = pressableDuringRouteTransition ? {
     [PRESSABLE_ATTRIBUTE]: ""
   } : null;
   const visualSelector = ".navi_button_content";
-  usePreloadOnIntent(ref, href, prefetch);
+  // Nothing to prefetch on the way to another document: the routes do not
+  // lead there.
+  usePreloadOnIntent(ref, href, isDocument ? false : prefetch);
   useAccentColorAttributes(ref, null, {
     elementSelector: visualSelector
   });
@@ -47731,6 +48182,8 @@ const ButtonUI = props => {
     rel: innerRel,
     replace: undefined,
     ...replaceRequest,
+    document: undefined,
+    ...documentRequest,
     pressableDuringRouteTransition: undefined,
     ...pressableRequest,
     prefetch: undefined
@@ -48174,6 +48627,7 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  *   selfInteractions?: string,
  *   whenSelfInteractionsBlocked?: "hide" | "refuse" | "ignore",
  *   replace?: boolean,
+ *   document?: boolean,
  *   actionStandalone?: boolean,
  *   actionAbortable?: boolean,
  *   optimistic?: boolean,
@@ -48183,6 +48637,13 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  *   `--navi-nav-to` command — by TAKING THE PLACE of the current history entry
  *   rather than stacking on it: what `<Link replace>` says, for a press drawn
  *   as a button.
+ * @param {boolean} [document] The `href` is ANOTHER DOCUMENT of this origin —
+ *   an admin panel, a status page, anything built as its own entry point — so
+ *   the press is left to the browser and loads that page, instead of being
+ *   routed to the app's not-found screen. What `<Link document>` says, for a
+ *   press drawn as a button; and the reason to say it rather than navigate
+ *   from an `action` is that the button stays a real link (an address, a
+ *   middle click, "open in new tab"). Nothing is prefetched on the way there.
  * @param {boolean} [prefetch=true] Fetch the code of where this leads when the
  *   pointer or the focus arrives, ahead of the press (see
  *   docs/dynamic_import.md): the route actions that ask nothing of the
@@ -58121,10 +58582,10 @@ const css$E = /* css */`
       var(--dialog-maxmax-height)
     );
 
-    /* Base default: also the custom renderer's own permanent value — its
+    /* Base default: also a local dialog's own permanent value — its
        containing block is genuinely its nearest positioned ancestor,
        regardless of positionArea. See the [data-layer="top"] rule below for
-       why the via-attribute renderer overrides this. Position is always
+       why a top-layer one overrides this. Position is always
        JS-driven (pickPositionRelativeTo, see useDialogProps below) — no CSS
        alignment/inset math here at all. */
     position: absolute;
@@ -58207,13 +58668,8 @@ const css$E = /* css */`
         var(--container-position-remaining-width, var(--dialog-maxmax-width)),
         var(--dialog-maxmax-width)
       );
-      /* The sheet rests on the screen's bottom edge, which on a phone is the
-         home indicator and, since iOS 26, Safari's own floating bar — a band
-         the browser does not paint fixed content into. The surface still
-         reaches the edge (the sheet comes out from behind the bar); what it
-         holds stops above it. */
-      padding-bottom: env(safe-area-inset-bottom, 0px);
     }
+
     /* The clamped max, not --dialog-maxmax-*: that one is the viewport minus
        the spacing, which is only the real ceiling for layer="top". A local
        dialog is confined to its positioned ancestor, whose size reaches here
@@ -58241,6 +58697,35 @@ const css$E = /* css */`
       border-bottom-left-radius: 0;
     }
 
+    /* An edge the dialog sits flush against is an edge of the screen, and the
+       device keeps a band there it paints nothing into: the notch, the home
+       indicator, Safari's own floating bar since iOS 26. The surface still
+       reaches the edge — a sheet comes out from behind the bar rather than
+       stopping short of it — and what it holds stops at the band.
+
+       env(), not --navi-safe-area-inset-*: that one is the app's own free
+       region and counts its fixed bars, which this dialog is in front of. The
+       device's inset is the only thing left to keep.
+
+       layer="top" only. A local dialog is flush with the box it was declared
+       in, and whether that box reaches the screen's edge is something only the
+       app knows — it gives that band back on its own container (see
+       safe_area.js's [data-navi-safe-area]). */
+    &[data-layer="top"] {
+      &[data-flush-top] {
+        padding-top: env(safe-area-inset-top, 0px);
+      }
+      &[data-flush-right] {
+        padding-right: env(safe-area-inset-right, 0px);
+      }
+      &[data-flush-bottom] {
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+      }
+      &[data-flush-left] {
+        padding-left: env(safe-area-inset-left, 0px);
+      }
+    }
+
     /* The placement is a translate, so the translate property is spoken for
        here (see applyNewPosition in visible_rect.js, which owns it and animates
        it itself through the Web Animations API rather than through this file's
@@ -58253,8 +58738,8 @@ const css$E = /* css */`
       --backdrop-filter: var(--navi-backdrop-capture-backdrop-filter);
     }
     /* backdropVariant, after the rules it overrides: same specificity, so
-       order is what decides. showModal() still makes the page inert either
-       way — only the paint goes away. */
+       order is what decides. The wall is still there either way — only the
+       paint goes away. */
     &[data-backdrop-variant="discrete"] {
       --backdrop-background: var(--navi-backdrop-discrete-background);
       --backdrop-filter: var(--navi-backdrop-discrete-backdrop-filter);
@@ -58318,7 +58803,10 @@ const css$E = /* css */`
       --navi-focus-outline-style: none;
     }
 
-    &[open] {
+    /* :popover-open too — a top-layer dialog with no wall is shown with
+       showPopover(), which never sets the [open] attribute. */
+    &[open],
+    &:popover-open {
       display: flex;
     }
 
@@ -58355,14 +58843,12 @@ const css$E = /* css */`
     }
   }
 
-  /* Custom renderer only — .show()'d dialogs get no ::backdrop, so this is
+  /* layer="local" only — a .show()'d dialog gets no ::backdrop, so its wall is
      a real sibling element instead, same idea/CSS shape as Popover's own
-     .navi_popover_backdrop (see popover.jsx's top comment for the design
-     this mirrors). Always rendered (never skipped like Popover's own
-     "none" case): a dialog is always modal, so there's always at least a
-     click-absorbing backdrop, matching what showModal() already gives the
-     via-attribute renderer for free regardless of
-     pointerInteractionOutsideEffect. */
+     .navi_popover_backdrop (see popover.jsx's top comment for the design this
+     mirrors). Rendered whenever backdrop={true}, whatever
+     pointerInteractionOutsideEffect says: a wall that closes nothing still
+     absorbs the press, matching what showModal() gives a modal for free. */
   .navi_dialog_backdrop {
     --popup-animation-duration: 0.18s;
 
@@ -58377,7 +58863,7 @@ const css$E = /* css */`
        in openEffect) gets pointer-events: none mid-transition. */
     pointer-events: auto;
 
-    /* Painted through the same two variables as the via-attribute renderer's
+    /* Painted through the same two variables as a modal's own
        ::backdrop (see them for what each rule is for) — here they resolve on
        the element that paints, which is also the element the
        backdropColor/backdropFilter props are set on. Declared unconditionally
@@ -58469,12 +58955,15 @@ const css$E = /* css */`
  * grammar, anchor's sizing-only role, backdrop mechanics).
  *
  * @param {object} props
- * @param {"top"|"local"} [props.layer="top"] - `"top"`: `showModal()`'d
- *   into the browser's own top layer (native focus trap, `Escape`-to-cancel,
- *   hardware back-button dismissal, rest-of-document made inert). `"local"`:
- *   shown via the non-modal `.show()` instead, staying in normal document
+ * @param {"top"|"local"} [props.layer="top"] - What the dialog is placed
+ *   against. `"top"`: the browser's own top layer, placed against the screen,
+ *   never clipped by anything the app declared. `"local"`: normal document
  *   flow inside its own positioned ancestor — confined to (and clipped by)
- *   that container instead of the whole viewport.
+ *   that container instead of the whole viewport. Whether the top-layer one
+ *   is modal is `backdrop`'s answer, not this one's: with a backdrop it is
+ *   `showModal()`'d (native focus trap, `Escape`-to-cancel, hardware
+ *   back-button dismissal, rest-of-document made inert), without one it is
+ *   shown through the Popover API and the page behind stays live.
  * @param {boolean} [props.dockedOnSmallTouchScreen] - Turns the dialog into a
  *   bottom sheet (docked flush to the bottom edge, full width) on a small touch
  *   screen, and leaves it alone otherwise. For a dialog meant to be interacted
@@ -58537,9 +59026,12 @@ const css$E = /* css */`
  *   outside press does or how the backdrop is painted. `false` leaves the page
  *   reachable: a press outside closes the dialog (per
  *   `pointerInteractionOutsideEffect`) *and* is answered by whatever it landed
- *   on, in the same gesture. **`layer="local"` only** — `showModal()` makes
- *   everything behind genuinely inert, so a top-layer dialog has no way to let
- *   a press through and warns instead. See docs/popup_backdrop.md.
+ *   on, in the same gesture; focus is free to leave too, the page behind being
+ *   meant to be reached. Works in either layer — a top-layer dialog with no
+ *   wall is shown through the Popover API rather than `showModal()`, which is
+ *   what a sheet docked to the screen's bottom edge over a still-readable map
+ *   needs. What it gives up is what only a modal gets natively: the hardware
+ *   back button no longer dismisses it. See docs/popup_backdrop.md.
  * @param {"close"|"cancel"|"capture"|"none"} [props.pointerInteractionOutsideEffect="close"]
  *   - `"close"` closes the dialog on an outside click. `"capture"`/`"none"`
  *   both just absorb the click without closing (visually dimmed backdrop vs.
@@ -58799,7 +59291,7 @@ const UncontrolledDialog = props => {
 // Picks which rendering strategy actually mounts, from `layer` alone — see
 // this file's top comment. Done after the controlled/uncontrolled split
 // above, so an openController is always already resolved by the time
-// DialogAsModal/DialogLocal (and the useDialogProps hook they share) ever
+// DialogInTopLayer/DialogLocal (and the useDialogProps hook they share) ever
 // run.
 const ControlledDialog = props => {
   if (props.layer === "local") {
@@ -58807,11 +59299,11 @@ const ControlledDialog = props => {
       ...props
     });
   }
-  return jsx(DialogAsModal, {
+  return jsx(DialogInTopLayer, {
     ...props
   });
 };
-const DialogAsModal = props => {
+const DialogInTopLayer = props => {
   const [backdropProps, contentProps] = useDialogProps(props);
   return jsxs(Fragment, {
     children: [backdropProps && jsx(Box, {
@@ -58843,12 +59335,14 @@ const DialogLocal = props => {
 /**
  * Everything both rendering strategies share once an `openController` is
  * already resolved: focus/debug/id plumbing, the open-commit sequence, the
- * close handler — inlined in `openEffect`, branching on `isModal` at each
+ * close handler — inlined in `openEffect`, branching on how the dialog is
+ * shown at each
  * point the two renderers genuinely differ (same pattern as popover.jsx's
  * own usePopoverProps — see its top comment for why this stays inline
  * rather than split into two functions). Returns `[backdropProps,
- * contentProps]` — `backdropProps` is `null` for the via-attribute renderer
- * (its own backdrop is native, not a real element).
+ * contentProps]` — `backdropProps` is `null` unless there is a wall of our
+ * own to render: a modal's is the native `::backdrop`, and `backdrop={false}`
+ * has none at all.
  */
 // What a dialog turns into on a small touch screen. "bottom" is not a taste:
 // it puts the dialog in the zone a phone is actually operated from — where the
@@ -58880,10 +59374,10 @@ const useDialogProps = props => {
   props.ref = props.ref || defaultRef;
   const {
     openController,
-    // "top" (default) → real <dialog>, showModal(), the browser's own top
-    // layer. "local" → also a real <dialog>, but shown via the non-modal
-    // .show() instead, staying in normal document flow, position: absolute
-    // relative to its own positioned ancestor. See this file's top comment.
+    // "top" (default) → the browser's own top layer, placed against the
+    // screen. "local" → normal document flow, position: absolute relative to
+    // its own positioned ancestor. Which show call each takes also depends on
+    // `backdrop` — see this file's top comment.
     layer = "top",
     dockedOnSmallTouchScreen,
     // Same grammar as Popover's own positionArea — see this file's top
@@ -58897,17 +59391,16 @@ const useDialogProps = props => {
     expandX: expandXProp,
     expandY: expandYProp,
     // "close" (default) closes on an outside click. "capture"/"none" both
-    // just absorb it without closing — for the via-attribute renderer,
-    // showModal() already makes the rest of the page inert, so there's
-    // nothing for a click to reach either way; for the custom renderer,
-    // there's no native inert-ing, so the real backdrop below is what
-    // actually makes "capture"/"none" behave the same way here too.
+    // just absorb it without closing — for a modal, showModal() already makes
+    // the rest of the page inert, so there's nothing for a click to reach
+    // either way; otherwise there's no native inert-ing, so the real backdrop
+    // below is what makes "capture"/"none" behave the same way here too.
     pointerInteractionOutsideEffect = "close",
     // Whether there is a wall between the dialog and the page at all, asked
     // before what a press on it does (pointerInteractionOutsideEffect) and
-    // before how it is painted (backdropVariant below). layer="top" cannot
-    // honour false: showModal() makes the page inert before anything here
-    // runs.
+    // before how it is painted (backdropVariant below). It also picks the show
+    // call for layer="top": a wall is what showModal() is for, and without one
+    // the dialog goes to the same top layer through the Popover API instead.
     backdrop = true,
     // How loudly the backdrop says it is there — independent of what it
     // *does* (that's pointerInteractionOutsideEffect above). "invisible" is a
@@ -58964,10 +59457,11 @@ const useDialogProps = props => {
     anchor
   });
   const children = contentMounted ? childrenProp : null;
-  const isModal = layer === "top";
-  if (isModal && !backdrop) {
-    console.warn(`Dialog: backdrop={false} needs layer="local". A layer="top" dialog is shown with showModal(), which makes everything behind it inert before any of this runs — there is no press left to let through.`);
-  }
+  // Where it is placed, and whether there is a wall — the two questions that
+  // pick the show call (see this file's top comment).
+  const isTopLayer = layer === "top";
+  const isModal = isTopLayer && backdrop;
+  const isTopLayerPopover = isTopLayer && !backdrop;
   if (!backdrop && pointerInteractionOutsideEffect === "capture") {
     console.warn(`Dialog: pointerInteractionOutsideEffect="capture" needs a backdrop. Absorbing a press is what a wall does, and backdrop={false} takes it away.`);
   }
@@ -58988,7 +59482,7 @@ const useDialogProps = props => {
   // container being that screen (the viewport, unless the app declared a
   // narrower one) — and the positioned ancestor for a local one, where
   // reading 3% of the screen gives an absurd gap inside a small box.
-  isModal ? "3appw" : "3cqw");
+  isTopLayer ? "3appw" : "3cqw");
   // "expand || expandX", the shorthand semantics Popup used to apply before
   // handing them over — the docked default only applies when neither was said
   const expandXUnset = expand === undefined && expandXProp === undefined;
@@ -59177,14 +59671,14 @@ const useDialogProps = props => {
     // from dialogEl.parentElement, which for DialogLocal is the
     // .navi_dialog_clip_wrapper (itself position: absolute) rather than the
     // real, meaningful ancestor beyond it.
-    const positionedAncestor = isModal ? document.documentElement : getPositionedParent(dialogEl.parentElement /* dialogEl is inside the clip_wrapper */);
+    const positionedAncestor = isTopLayer ? document.documentElement : getPositionedParent(dialogEl.parentElement /* dialogEl is inside the clip_wrapper */);
     const [cleanup, addCleanup] = createPubSub(true);
     const anchorElement = resolveAnchorElement(e);
     // Kept for the closing, which has no opening event to read it back from:
     // the box the dialog shrinks back into is the one it came out of.
     anchorElementRef.current = anchorElement;
     debugPopup(`"${e.type}" on ${getElementSignature(e.target)} -> openDialog`);
-    if (!isModal) {
+    if (!isTopLayer) {
       // see openLocalDialogCount's own comment
       dialogEl.style.setProperty("--dialog-stack-order", openLocalDialogCount++);
     }
@@ -59227,10 +59721,12 @@ const useDialogProps = props => {
     }
     if (isModal) {
       dialogEl.showModal();
+    } else if (isTopLayerPopover) {
+      dialogEl.showPopover();
     } else {
       dialogEl.show();
     }
-    // Regardless of isModal — see the backdrop's own [navi-hidden] CSS rule
+    // Whichever show call ran — see the backdrop's own [navi-hidden] CSS rule
     // and popover.jsx's identical reasoning: showModal()/show() alone only
     // wins over a stray, still-present [navi-hidden] { display: none }
     // default when nothing else authored also sets display on dialogEl —
@@ -59238,24 +59734,23 @@ const useDialogProps = props => {
     // property (e.g. Popup's own flex prop) defeats the UA stylesheet's own
     // dialog:not([open]) default the same way it can for Popover.
     dialogEl.removeAttribute("navi-hidden");
-    if (isModal) ; else {
+    if (isModal) ; else if (backdrop) {
       addCleanup(trapFocusInside(dialogEl, {
         debug: debugFocus,
         boundaryElement: positionedAncestor,
-        // A dialog is always modal (see this file's top comment) — a
-        // mousedown on some other focusable element inside the same
-        // container (but outside the dialog) must not steal focus away
-        // from it either, not just a Tab press.
+        // The wall stops the keyboard too — a mousedown on some other
+        // focusable element behind it must not steal the focus away either,
+        // not just a Tab press.
         pointerTrap: true
       }));
     }
     if (scrollCapture) {
-      // A modal dialog always has its own ::backdrop; the custom renderer has
-      // the backdrop element when it renders one.
+      // A modal dialog always has its own ::backdrop; a local one has the
+      // backdrop element when it renders one.
       addCleanup(trapScrollInside(dialogEl, {
         backdrop: isModal || backdropEl
       }));
-    } else if (!isModal) {
+    } else if (!isTopLayer) {
       // A local dialog is confined to its positioned ancestor, and so is its
       // backdrop (inset: 0 covers the scrollport, not the scrolled content):
       // letting that ancestor scroll would slide the dialog away and reveal
@@ -59272,7 +59767,7 @@ const useDialogProps = props => {
     // Positioning: dialogEl is already shown (display: flex, per this
     // file's own [open] CSS) by this point, so its own dimensions are real
     // — pickPositionRelativeTo's own no-anchor/docked mode (no `anchor`
-    // argument at all) docks it against the viewport (layer="top"/isModal)
+    // argument at all) docks it against the viewport (layer="top")
     // or its own positioned ancestor (layer="local", the same
     // positionedAncestor computed above), same mechanism as Popover's own
     // custom renderer. applyDialogPosition sets --container-position-remaining-height/-width
@@ -59304,7 +59799,7 @@ const useDialogProps = props => {
     // box is what the caps must read, and nothing in CSS tracks it.
     const applyDialogPosition = position => {
       applyNewPosition(dialogEl, position);
-      if (isModal) {
+      if (isTopLayer) {
         dialogEl.style.removeProperty("--container-position-remaining-height");
         dialogEl.style.removeProperty("--container-position-remaining-width");
       }
@@ -59403,7 +59898,7 @@ const useDialogProps = props => {
 
     // Reposition on the same triggers Popover's own visibleRectEffect
     // already reacts to generically — window resize/scroll/visual-viewport
-    // changes for layer="top"/isModal (positionedAncestor is already
+    // changes for layer="top" (positionedAncestor is already
     // document.documentElement there, see its own computation above;
     // visibleRectEffect already debounces visualViewport resize by 100ms
     // to avoid the mobile tap-to-tap-input keyboard flicker, so no
@@ -59501,15 +59996,19 @@ const useDialogProps = props => {
       debugPopup(`"${closeEvent.type}" on ${getElementSignature(closeEvent.target)} -> closeDialog`);
       clearTextSelectionInside(dialogEl);
       dialogEl.setAttribute("aria-expanded", "false");
-      if (!isModal) {
+      if (!isTopLayer) {
         openLocalDialogCount = Math.max(0, openLocalDialogCount - 1);
         dialogEl.style.removeProperty("--dialog-stack-order");
       }
       // See openEffect's own identical comment for why this is needed
-      // regardless of isModal, not just when a stray authored display
+      // whichever show call ran, not just when a stray authored display
       // property is actually present — harmless the rest of the time.
       dialogEl.setAttribute("navi-hidden", "");
-      dialogEl.close();
+      if (isTopLayerPopover) {
+        dialogEl.hidePopover();
+      } else {
+        dialogEl.close();
+      }
       // Held at the size it has right now, for the whole way out. cleanup()
       // below already stops the JS repositioning, but the size is CSS-driven
       // (--x-dialog-max-height, and `height` outright under expandY) and
@@ -59536,9 +60035,8 @@ const useDialogProps = props => {
   };
   const onKeyDownShortcuts = createOnKeyDownForShortcuts({
     escape: e => {
-      // Only the custom renderer needs this — a modal <dialog> already
-      // fires "cancel" (handled via onCancel below) on Escape natively; a
-      // non-modal .show()'d one doesn't.
+      // Only a modal <dialog> fires "cancel" on Escape natively (handled via
+      // onCancel below); neither a .show()n nor a showPopover()n one does.
       if (isModal || !openController.opened) {
         return null;
       }
@@ -59557,10 +60055,10 @@ const useDialogProps = props => {
   // most fields are shared: renderer-specific bits (the outside-click
   // handler below, in particular) are just assigned onto whichever of the
   // two actually owns that concern for a given renderer, instead of one
-  // object's own field branching internally on isModal. backdropProps only
-  // gets returned (see the bottom of this function) when !isModal — the
-  // via-attribute renderer's own backdrop is native (::backdrop), not a
-  // real element we render ourselves.
+  // object's own field branching internally. backdropProps only gets returned
+  // (see the bottom of this function) for the one dialog whose wall is a real
+  // element of ours: a modal's is native (::backdrop), and backdrop={false}
+  // has none at all.
   Object.assign(backdropProps, {
     "ref": backdropRef,
     // Out of flow like the popup it belongs to — see the content element's own
@@ -59610,21 +60108,21 @@ const useDialogProps = props => {
     // after measuring (see this file's top comment) — so there's no reason
     // to withhold the attribute for the auto case the way Popover has to.
     "navi-animation": resolvedAnimation,
-    // Only meaningful for the via-attribute renderer's own native
-    // ::backdrop (see this file's CSS for the "capture" glass effect) — a
+    // Only meaningful for a modal's own native ::backdrop (see this file's
+    // CSS for the "capture" glass effect) — a
     // pseudo-element can't carry its own attributes, so this has to live on
     // the originating .navi_dialog element instead, same reasoning as
-    // navi-animation above. Harmless for the custom renderer too (its own
-    // real backdrop element already gets the same attribute via
-    // backdropProps above, which is what its own CSS actually keys off).
+    // navi-animation above. Harmless for a local dialog too (its own real
+    // backdrop element already gets the same attribute via backdropProps
+    // above, which is what its own CSS actually keys off).
     "data-pointer-interaction-outside": pointerInteractionOutsideEffect,
-    // Only load-bearing for the via-attribute renderer's own native
-    // ::backdrop, same "a pseudo-element can't carry attributes" reasoning
-    // as the prop just above (and harmless for the custom renderer, whose
-    // real backdrop element gets it via backdropProps).
+    // Only load-bearing for a modal's own native ::backdrop, same "a
+    // pseudo-element can't carry attributes" reasoning as the prop just above
+    // (and harmless for a local dialog, whose real backdrop element gets it
+    // via backdropProps).
     "data-backdrop-variant": backdropVariant,
     // Read by the native ::backdrop, which inherits them from here (see this
-    // file's CSS) — the custom renderer's own backdrop element gets them via
+    // file's CSS) — a local dialog's own backdrop element gets them via
     // backdropProps above.
     backdropColor,
     backdropFilter,
@@ -59653,6 +60151,12 @@ const useDialogProps = props => {
     // absolutely placed by its own code — so it says so once, here (group.jsx
     // reads this attribute to tell a member from anything else on its line).
     "navi-out-of-flow": "",
+    // The top layer without a wall: showPopover() is what puts it there, and
+    // it only accepts an element that declares itself a popover. "manual" so
+    // the browser's own light dismiss stays out of it — what an outside press
+    // does is pointerInteractionOutsideEffect's answer, given by the
+    // document-level listener in openEffect above.
+    "popover": isTopLayerPopover ? "manual" : undefined,
     "baseClassName": "navi_dialog",
     "pseudoClasses": DIALOG_PSEUDO_CLASSES,
     // Distinguishes the two renderers for the CSS above (position: fixed
@@ -59702,8 +60206,8 @@ const useDialogProps = props => {
     },
     "onCancel": e => {
       // The dialog's own "cancel" (Escape on a modal showModal() dialog —
-      // the custom renderer's Escape handling lives in onKeyDownShortcuts
-      // above) fires on the dialog element itself. But a child
+      // the Escape handling for the other two shows lives in
+      // onKeyDownShortcuts above) fires on the dialog element itself. But a child
       // <input type="file"> also fires a BUBBLING "cancel" when the user
       // dismisses the file chooser (per the HTML spec), and it lands here
       // too; only the dialog's own cancel means "close".
@@ -59717,12 +60221,12 @@ const useDialogProps = props => {
     children
   });
 
-  // Outside-click handling for layer="local" only — the via-attribute
-  // renderer's own is a plain document-level listener instead, set up in
-  // openEffect above (see this file's top comment for why: neither a real
-  // backdrop element nor dialogEl's own mousedown reliably fires for a
-  // native ::backdrop click).
-  if (!isModal && backdrop) {
+  // Outside-click handling for the wall we render ourselves. A modal's is a
+  // plain document-level listener instead, set up in openEffect above (see
+  // this file's top comment for why: neither a real backdrop element nor
+  // dialogEl's own mousedown reliably fires for a native ::backdrop click),
+  // and so is a wall-less dialog's.
+  if (!isTopLayer && backdrop) {
     backdropProps.onMouseDown = mouseDownEvent => {
       if (mouseDownEvent.button !== 0) {
         return;
@@ -59732,7 +60236,7 @@ const useDialogProps = props => {
       if (openedDuringThisPress(openController)) {
         return;
       }
-      // See the custom renderer's own onDocumentMouseDown: a click inside
+      // See the document-level listener in openEffect above: a click inside
       // another popup is a click on what is in front, not an outside click.
       const dialogEl = ref.current;
       const popupUnderPointer = mouseDownEvent.target.closest?.(`[navi-control="dialog"], [navi-control="popover"]`);
@@ -59749,7 +60253,7 @@ const useDialogProps = props => {
       // the same behavior for Dialog.
     };
   }
-  return [isModal || !backdrop ? null : backdropProps, contentProps];
+  return [!isTopLayer && backdrop ? backdropProps : null, contentProps];
 };
 const DIALOG_PSEUDO_CLASSES = [":hover", ":active", ":focus", ":focus-visible", ":focus-within"];
 
@@ -61468,22 +61972,18 @@ const css$C = /* css */`@layer navi {
  *   — without this, the exact same `<Popup>` usage would behave
  *   differently (close-on-outside-click or not) purely based on which mode
  *   the screen-size check happens to pick, which defeats the point of
- *   having one shared API in the first place. Note this can only ever go so
- *   far: in dialog mode, `"none"`/`"capture"` still absorb every outside
- *   click (no visual effect vs. dimmed) rather than truly letting it
- *   through, since a `<dialog>` is always modal one way or another (see
- *   `dialog.jsx`'s own doc) — a popover's fully passive, click-through
- *   backdrop has no dialog-mode equivalent. Whatever content `Popup` opens
- *   is unavoidably *more* intrusive once it switches to dialog mode than
- *   the exact same usage would be as a popover — worth keeping in mind for
- *   anything that relies on `Popup` and can end up on a small screen.
+ *   having one shared API in the first place. Note this only says what a
+ *   press outside *does*; whether it reaches the page at all is `backdrop`
+ *   below, and `"none"`/`"capture"` describe a wall either way — the popup
+ *   absorbs the press without closing, dimmed or not.
  * @param {boolean} [props.backdrop] - Whether anything is laid between the
  *   popup and the page at all: `false` lets a press outside both dismiss the
- *   popup and reach whatever it landed on, in one gesture. Reaches the popover
- *   only — a `Dialog` is `showModal()`'d in the `layer="top"` it defaults to,
- *   and the page behind is then genuinely inert — so it is dropped rather than
- *   forwarded when the mode resolution picks a top-layer dialog, the same
- *   "only so far" as `pointerInteractionOutsideEffect` above.
+ *   popup and reach whatever it landed on, in one gesture. Forwarded as-is and
+ *   honoured in either mode — a wall-less `Dialog` is shown through the
+ *   Popover API rather than `showModal()` — so which mode the screen-size
+ *   resolution picks says nothing about whether the page behind stays live.
+ *   It is also what makes a sheet docked to the bottom of a phone's screen
+ *   (`dockedOnSmallTouchScreen`) non-modal.
  * @param {"auto"|"discrete"|"invisible"} [props.backdropVariant] - Forwarded
  *   as-is to whichever component renders (both understand it identically):
  *   how visible the backdrop is, independently of what an outside click
@@ -61554,9 +62054,6 @@ const Popup = props => {
     // exact same <Popup> usage behaves identically regardless of which
     // mode the automatic screen-size resolution happens to pick.
     pointerInteractionOutsideEffect = "close",
-    // Read here rather than left in ...rest so the dialog branch can drop it:
-    // a top-layer dialog is modal and has no press left to let through, and
-    // warns when asked (see Dialog's own backdrop prop).
     backdrop,
     // Popover-only (see this component's own doc) — destructured out so
     // they're never part of ...rest, and therefore never forwarded to
@@ -61591,7 +62088,7 @@ const Popup = props => {
       sizeFromAnchor: sizeFromAnchor,
       maxWidth: maxWidth,
       pointerInteractionOutsideEffect: pointerInteractionOutsideEffect,
-      backdrop: rest.layer === "local" ? backdrop : undefined,
+      backdrop: backdrop,
       className: withPropsClassName("navi_popup", className),
       expand: expand,
       expandX: expandX,
@@ -83058,11 +83555,11 @@ const css = /* css */`.navi_side_panel {
  * @param {boolean} [props.closeOnClickOutside=false] - `false` (default):
  *   maps to `pointerInteractionOutsideEffect="none"` — in popover mode, no
  *   backdrop at all, outside clicks pass straight through; in dialog mode,
- *   the outside click is still absorbed (a `<dialog>` always blocks
- *   interaction with the rest of the page one way or another — see
- *   `dialog.jsx`'s own doc) but with no dimming effect. `true`: closes the
- *   panel on an outside click instead, and also enables trapping Tab
- *   navigation inside the panel (`focusCapture`) — closing on outside
+ *   the outside click is absorbed by the panel's own wall but changes
+ *   nothing. Pass `backdrop={false}` (forwarded to `Popup`) for a panel with
+ *   no wall in either mode, whose outside presses reach the page. `true`:
+ *   closes the panel on an outside click instead, and also enables trapping
+ *   Tab navigation inside the panel (`focusCapture`) — closing on outside
  *   interaction only makes sense paired with not letting focus silently
  *   leave the panel first.
  * @param {boolean} [props.swipeToClose=true] - Pushing the panel back
@@ -83072,12 +83569,11 @@ const css = /* css */`.navi_side_panel {
  *   deliberately. See `swipe_to_close.js` for when the gesture is claimed.
  * @param {"dialog"|"popover"} [props.mode] - Forwarded to `Popup` — forces
  *   one underlying renderer instead of its automatic screen-size
- *   resolution. Note that if `Popup` ends up in dialog mode (small screen,
- *   or forced here), the panel becomes modal regardless of
- *   `closeOnClickOutside`/`pointerInteractionOutsideEffect`: a `<dialog>`
- *   always blocks interaction with the rest of the page one way or another
- *   (see `dialog.jsx`'s own doc) — there is no dialog-mode equivalent of a
- *   popover's fully passive, click-through backdrop.
+ *   resolution. Note that if `Popup` ends up in dialog mode (small screen, or
+ *   forced here), the panel is modal unless it says `backdrop={false}`:
+ *   `closeOnClickOutside`/`pointerInteractionOutsideEffect` only say what a
+ *   press on the wall does, not whether there is one (see `dialog.jsx`'s own
+ *   doc).
  * @param {import("ignore:preact").ComponentChildren} props.children - No built-in
  *   close button — add one wherever it makes sense for the layout (e.g. a
  *   plain `<Button command="--navi-close">`), use `SidePanel.Head`'s own
@@ -83382,5 +83878,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, CalloutStatusIcon, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, ControlSwap, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, Expandable, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, InfoSvg, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, OfflineError, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTransitionArea, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, SpinGroup, SplitButton, StarSvg, Step, StepList, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, TimeRange, TimeRangeSpin, TimeRangeWheel, TimeSpin, TimeWheel, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, canNavBackSignal, canNavForwardSignal, coarsePointerSignal, compareTwoJsValues, constraintFromValidityRule, createAction, createAvailableConstraint, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineRouteDefaultTransition, defineRouteTransition, detectHorizontalOverflow, dispatchRequestSetUIState, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, errorIsDisplayed, filterTableSelection, getNowHours, getNowHoursRoundedToStep, isCellSelected, isColumnSelected, isOfflineError, isRowSelected, isScrolling, isToday, languagesSignal, localStorageSignal, markAsOutsideTextFlow, markErrorAsDisplayedBy, moveArrayItemByIndex, moveFocusTo, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, preloadUrl, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, scrollActivitySignal, setBaseUrl, setNetworkPolicy, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, smallTouchScreenSignal, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutElement, useCalloutRequestClose, useCanNavBack, useCanNavForward, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useNetworkPolicyReason, useOrderedColumns, usePickerState, usePopupMode, useRouteStatus, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideContainer, useSlideValue, useStateArray, useTitleLevel, useTransitionCover, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, CalloutStatusIcon, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, ControlSwap, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, Expandable, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, InfoSvg, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, OfflineError, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTransitionArea, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, SpinGroup, SplitButton, StarSvg, Step, StepList, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, TimeRange, TimeRangeSpin, TimeRangeWheel, TimeSpin, TimeWheel, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, canNavBackSignal, canNavForwardSignal, coarsePointerSignal, compareTwoJsValues, constraintFromValidityRule, createAction, createAvailableConstraint, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineRouteDefaultTransition, defineRouteTransition, detectHorizontalOverflow, dispatchRequestSetUIState, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, errorIsDisplayed, filterTableSelection, getNowHours, getNowHoursRoundedToStep, isCellSelected, isColumnSelected, isOfflineError, isRowSelected, isScrolling, isToday, languagesSignal, localStorageSignal, markAsOutsideTextFlow, markErrorAsDisplayedBy, moveArrayItemByIndex, moveFocusTo, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, preloadUrl, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, routeFallback, scrollActivitySignal, setBaseUrl, setNetworkPolicy, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, smallTouchScreenSignal, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutElement, useCalloutRequestClose, useCanNavBack, useCanNavForward, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useNetworkPolicyReason, useOrderedColumns, usePickerState, usePopupMode, useRouteStatus, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideContainer, useSlideValue, useStateArray, useTitleLevel, useTransitionCover, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi.js.map
