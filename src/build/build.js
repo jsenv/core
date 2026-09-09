@@ -177,7 +177,7 @@ import { jsenvPluginMappings } from "./jsenv_plugin_mappings.js";
  *        `<script>window.backendUrl = __BACKEND_URL__;</script>` gets the JS literal,
  *        which is how a value is shared with every js file of the page.
  *        Use INJECTIONS.optional(value) for a placeholder that may be absent from the file
- *        and INJECTIONS.global(value) to inject `Object.assign(window, { ... })` instead of
+ *        and INJECTIONS.global(value) to inject `Object.assign(globalThis, { ... })` instead of
  *        replacing a placeholder.
  *
  * @return {Promise<Object>} buildReturnValue
