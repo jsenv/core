@@ -5900,6 +5900,7 @@ installImportMetaCssBuild(import.meta);
 let calloutCount = 0;
 
 const css$13 = /* css */ `
+  /* jsenv-css-opaque: same as dialog.jsx, cascade order. */
   @layer navi {
     .navi_callout {
       /* A callout is parented to what it explains, so it inherits from it — and
@@ -25746,6 +25747,47 @@ const resolveEffectiveDocumentState = (
   return { ...state, ...sharedState };
 };
 
+// Preact's own useId() (see preact/hooks) returns "P<mask0>-<mask1>", where the
+// mask is derived from render order within the nearest root/async boundary:
+// stable across re-renders of the same mount, but not across two mounts on the
+// same page, and not across two documents.
+const PREACT_GENERATED_ID_REGEX = /^P\d+-\d+/;
+const isLikelyPreactGeneratedId = (id) => {
+  return PREACT_GENERATED_ID_REGEX.test(id);
+};
+
+/**
+ * A history entry outlives the document that wrote it: `history.state` comes
+ * back as it was left on a reload, and on a back/forward into a document that
+ * has been unloaded since.
+ *
+ * A key named by a generated id names a position in the render order of the
+ * document that wrote it, and nothing else. Read back in another document the
+ * same key names whatever now renders at that position — so an open popup left
+ * behind by the previous document opens a component nobody ever touched (see
+ * `useNavState`, whose key presence IS the open state). Only a caller-given id
+ * means the same thing on both sides of a load.
+ *
+ * Returns the state untouched when it holds no such key, so the caller can tell
+ * whether the entry needs rewriting.
+ */
+const dropGeneratedIdKeys = (state) => {
+  if (!state) {
+    return state;
+  }
+  let stateWithoutGeneratedIdKeys = state;
+  for (const key of Object.keys(state)) {
+    if (!isLikelyPreactGeneratedId(key)) {
+      continue;
+    }
+    if (stateWithoutGeneratedIdKeys === state) {
+      stateWithoutGeneratedIdKeys = { ...state };
+    }
+    delete stateWithoutGeneratedIdKeys[key];
+  }
+  return stateWithoutGeneratedIdKeys;
+};
+
 /**
  * The document's rendering, held for the one frame a view transition needs.
  *
@@ -26602,7 +26644,14 @@ const setupBrowserIntegrationViaHistory = ({
 
   const init = () => {
     const url = window.location.href;
-    const state = history.state;
+    const stateOnEntry = window.history.state;
+    const state = dropGeneratedIdKeys(stateOnEntry);
+    if (state !== stateOnEntry) {
+      // The entry itself has to lose them too, not just the document state:
+      // getDocumentState() reads the entry back, and every state write copies
+      // what it finds there onto the next one.
+      window.history.replaceState(state, null, url);
+    }
     handleRoutingTask(url, {
       reason: "routing initialization",
       navigationType: "load",
@@ -26804,18 +26853,6 @@ const isVisited = browserIntegration.isVisited;
 const visitedUrlsSignal = browserIntegration.visitedUrlsSignal;
 browserIntegration.handleActionTask;
 
-// Preact's own useId() (see preact/hooks) returns "P<mask0>-<mask1>", where
-// the mask is derived from render order within the nearest root/async
-// boundary — stable across re-renders of the *same* mount, but not across a
-// reload (render order can differ) or even across two mounts on the same
-// page (two components hitting useId() in the same relative order get the
-// same string). Storing one of these under type: "push" bakes it into a
-// history entry: reload the page and the entry's key may now belong to a
-// completely different component (or none), silently auto-opening whatever
-// happens to render at that same position instead.
-const PREACT_GENERATED_ID_REGEX = /^P\d+-\d+/;
-const isLikelyPreactGeneratedId = (id) => PREACT_GENERATED_ID_REGEX.test(id);
-
 const NO_OP = () => {};
 const NO_ID_GIVEN = [undefined, NO_OP, NO_OP];
 const useNavStateBasic = (
@@ -26847,6 +26884,10 @@ const useNavStateBasic = (
   }
 
   let effectiveType = type;
+  // A push bakes the key into a history entry of its own, and an id naming a
+  // render position (see isLikelyPreactGeneratedId) can be claimed by two
+  // mounts of this same page. A replace keeps the key on the entry the document
+  // is already on, where the id at least names one render.
   if (type === "push" && isLikelyPreactGeneratedId(id)) {
     effectiveType = "replace";
   }
@@ -57862,6 +57903,8 @@ const PopupClose = ({
 installImportMetaCssBuild(import.meta);
 let openLocalDialogCount = 0;
 const css$E = /* css */`
+  /* jsenv-css-opaque: popupCss overlaps these rules, own sheet = cascade
+     order depending on which popup renders first. */
   @layer navi {
     .navi_dialog {
       /* Min gap between the dialog and the edges of its container. Written
@@ -59626,6 +59669,8 @@ Dialog.Close = PopupClose;
 installImportMetaCssBuild(import.meta);
 let openLocalPopoverCount = 0;
 const css$D = /* css */`
+  /* jsenv-css-opaque: popupCss overlaps these rules, own sheet = cascade
+     order depending on which popup renders first. */
   @layer navi {
     .navi_popover {
       /* soft: user-configurable preferred max-height. Kept as a *default*
