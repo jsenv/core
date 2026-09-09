@@ -409,8 +409,9 @@ The picker's `action` runs on the trigger, not in the popup: it is dispatched
 on the close that keeps, and the popup goes while it runs. So what is still on
 screen answers for the write — `aria-busy` and the loading outline on the
 trigger while the request is out, the error callout on it if the server
-refuses, and the value rolled back to the last accepted one (`resetOnError`,
-on by default for a picker: nobody is left mid-edit behind a closed popup). A
+refuses, and the value rolled back to the last accepted one — on by default
+for a picker, and what one wants: nobody is left mid-edit behind a closed
+popup, and the card goes on saying what the server knows. A
 card that IS the trigger (`variant="bare"`, the card as `ui`) therefore waits
 as a card and is refused as a card, wherever in the tree the sheet was written.
 
@@ -422,9 +423,6 @@ as a card and is refused as a card, wherever in the tree the sheet was written.
   ui={<MatchCard match={match} />}
   value={match}
   action={(next) => MATCH.PATCH({ id: match.id, ...next })}
-  // the draft is what the person typed, and the sheet is the only place it
-  // can be found again: keep it when the server says no
-  resetOnError={false}
 >
   <ControlGroup>
     <MatchCard match={match} editable />
@@ -457,7 +455,10 @@ back, a link in it navigates, a button in it presses, a picker in it opens on
 its own click, with nothing to declare. Two pickers on one card is the score
 sheet inside the edit card (`12_picker_card_demo.html`): the inner one names
 the card as its `anchor` so it lifts the whole card, and says `standalone` so
-its value stays its own. A hold declared inside the card answers before the
+its value stays its own. One card, one wait: each picker wears the other's
+run through `loading` (from its `onActionStart`/`onActionEnd`), so while
+either write is out the hold and the click are both refused, with the busy
+reason where the finger is. A hold declared inside the card answers before the
 card's own: the nearer hold takes the press. `animation="growing"` with
 `dialogSizeFromAnchor` (as wide as the card, floor and ceiling),
 `popupBackgroundColor="transparent"` and `popupBoxShadow="none"` lifts the

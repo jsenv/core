@@ -1748,14 +1748,14 @@ const useDialogProps = (props) => {
     // and matching what a descendant relying on
     // use_displayed_layout_effect.js's own aria-expanded-presence check
     // needs — see popover.jsx's own identical prop for the full reasoning.
-    "aria-expanded": openController.opened ? "true" : "false",
+    "aria-expanded": openController.openedInDom ? "true" : "false",
     // Present from this very first render (recomputed fresh on every one
     // from openController.opened, not a frozen mount-time constant) so
     // there's no gap for the browser to ever paint this plain-div backdrop
     // visible before anything has actually opened it — see popover.jsx's
     // own identical prop for the full reasoning, and this file's own CSS
     // for the rule it drives.
-    "navi-hidden": openController.opened ? undefined : "",
+    "navi-hidden": openController.openedInDom ? undefined : "",
     "styleCSSVars": DIALOG_STYLE_CSS_VARS,
     "animationDuration": rest.animationDuration,
     "data-pointer-interaction-outside": pointerInteractionOutsideEffect,
@@ -1767,7 +1767,7 @@ const useDialogProps = (props) => {
     tabIndex,
     // See backdropProps' own identical prop above for the full reasoning
     // (kept once, not repeated here).
-    "aria-expanded": openController.opened ? "true" : "false",
+    "aria-expanded": openController.openedInDom ? "true" : "false",
     // Present from the very first render (recomputed fresh from
     // openController.opened every time, not a frozen mount-time constant —
     // see popover.jsx's own identical prop for the full reasoning) so a
@@ -1775,7 +1775,7 @@ const useDialogProps = (props) => {
     // can't silently defeat showModal()/close()'s native open/close — see
     // this file's own CSS rule for dialogEl and the open/close steps below
     // for how it's toggled.
-    "navi-hidden": openController.opened ? undefined : "",
+    "navi-hidden": openController.openedInDom ? undefined : "",
     // Unlike Popover (which genuinely can't resolve "auto" until it
     // measures against a real anchor), resolvedAnimation is already fully
     // known synchronously here — a dialog never needs to flip anything

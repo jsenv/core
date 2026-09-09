@@ -1622,12 +1622,12 @@ const usePopoverProps = (props) => {
     // commit (a plain prop is, no effect needed) — see
     // use_displayed_layout_effect.js's own comments for why a descendant
     // relying on aria-expanded's mere presence needs that.
-    "aria-expanded": openController.opened ? "true" : "false",
+    "aria-expanded": openController.openedInDom ? "true" : "false",
     // Read fresh on every render (not frozen at mount), so it stays
     // correct even across a re-render that happens to occur while open —
     // see contentProps' own identical prop just below for the full
     // reasoning (kept once, not repeated here).
-    "navi-hidden": openController.opened ? undefined : "",
+    "navi-hidden": openController.openedInDom ? undefined : "",
     "styleCSSVars": POPUP_STYLE_CSS_VARS,
     "animationDuration": rest.animationDuration,
     "data-pointer-interaction-outside": pointerInteractionOutsideEffect,
@@ -1683,7 +1683,7 @@ const usePopoverProps = (props) => {
     "navi-animation": isAutoAnimation ? undefined : animation,
     // See backdropProps' own identical prop above for the full reasoning
     // (kept once, not repeated here).
-    "aria-expanded": openController.opened ? "true" : "false",
+    "aria-expanded": openController.openedInDom ? "true" : "false",
     // Only load-bearing for the custom renderer (a plain div has no native
     // starting-hidden default) — present from this very first render so
     // there's no gap for the browser to ever paint it visible before
@@ -1693,7 +1693,7 @@ const usePopoverProps = (props) => {
     // the last render, so as long as this always reflects the *current*
     // truth, it never fights the imperative
     // removeAttribute/setAttribute openEffect/close do directly.
-    "navi-hidden": openController.opened ? undefined : "",
+    "navi-hidden": openController.openedInDom ? undefined : "",
     "styleCSSVars": POPUP_STYLE_CSS_VARS,
     ...rest,
     ...autoFocusProps,

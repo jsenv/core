@@ -165,7 +165,6 @@
           </div>
           <NominalDemo />
           <StatesDemo />
-          <ResetOnErrorDemo />
           <OpenOnDemo />
           <DoorDemo />
         </Box>
@@ -217,37 +216,6 @@
             </Case>
             <Case caption="focus visible">
               <LocalGamePicker pseudoState={{ ":focus-visible": true }} />
-            </Case>
-          </div>
-        </Section>
-      );
-
-      // ── resetOnError ──────────────────────────────────────────────────────
-
-      const ResetOnErrorDemo = () => (
-        <Section id="reset-on-error" title="resetOnError">
-          <p>Ce que la carte montre après un refus.</p>
-          <div class="demo-row">
-            <Case caption="default">
-              <FakeBackend value={GAME}>
-                {({ value, action }) => (
-                  <GamePicker
-                    game={value}
-                    action={(next) => action({ ...value, ...next })}
-                  />
-                )}
-              </FakeBackend>
-            </Case>
-            <Case caption="resetOnError={false}">
-              <FakeBackend value={GAME}>
-                {({ value, action }) => (
-                  <GamePicker
-                    game={value}
-                    action={(next) => action({ ...value, ...next })}
-                    resetOnError={false}
-                  />
-                )}
-              </FakeBackend>
             </Case>
           </div>
         </Section>
@@ -426,7 +394,13 @@
       // The score, in the middle of the card: a picker of its own, opened on
       // its click, whose sheet lifts the WHOLE card (`anchor`) — and which
       // answers for itself (`standalone`) rather than for the card around it.
-      const ScorePicker = ({ game, action, anchor, animationDuration }) => (
+      const ScorePicker = ({
+        game,
+        action,
+        anchor,
+        animationDuration,
+        ...props
+      }) => (
         <Picker
           variant="bare"
           type="object"
@@ -438,6 +412,7 @@
           anchor={anchor}
           animationDuration={animationDuration}
           {...LIFTED_SHEET_PROPS}
+          {...props}
         >
           <ControlGroup flex="y" spacing="m" alignX="stretch">
             <GameCard game={game} mode="score" data-grow />
@@ -462,6 +437,27 @@
         );
       };
 
+      // One card, two writes, one wait: while either is out the whole card is
+      // busy — each picker wears the other's run through `loading`, so the
+      // hold and the click on the score are both refused, with the reason.
+      const useRunning = () => {
+        const runningSignal = useSignal(false);
+        const settle = () => {
+          runningSignal.value = false;
+        };
+        return [
+          runningSignal.value,
+          {
+            onActionStart: () => {
+              runningSignal.value = true;
+            },
+            onActionEnd: settle,
+            onActionError: settle,
+            onActionAborted: settle,
+          },
+        ];
+      };
+
       const GamePicker = ({
         game,
         action,
@@ -470,6 +466,8 @@
         ...props
       }) => {
         const cardRef = useRef(null);
+        const [editRunning, editRunHandlers] = useRunning();
+        const [scoreRunning, scoreRunHandlers] = useRunning();
         return (
           <Picker
             ref={cardRef}
@@ -492,6 +490,8 @@
                       action={action}
                       anchor={cardRef}
                       animationDuration={animationDuration}
+                      loading={editRunning}
+                      {...scoreRunHandlers}
                     />
                   ) : undefined
                 }
@@ -499,6 +499,8 @@
             }
             aria-label="Modifier le terrain et le lieu"
             animationDuration={animationDuration}
+            loading={scoreRunning}
+            {...editRunHandlers}
             {...LIFTED_SHEET_PROPS}
             {...props}
           >

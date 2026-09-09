@@ -230,9 +230,15 @@ export const createOpenController = (
     change();
   };
   const runChange = (change, { opened, event }) => {
+    const applyChange = () => {
+      // Recorded with the change itself: what the DOM shows is what a render
+      // landing between the ask and the picture must draw (see `openedInDom`).
+      controller.openedInDom = opened;
+      change();
+    };
     const { transitionChange } = controller;
     if (!transitionChange) {
-      change();
+      applyChange();
       return;
     }
     // What the controller answers about itself does not wait for the picture:
@@ -241,10 +247,10 @@ export const createOpenController = (
     // caller's own signal), and a request arriving before the change lands
     // runs it first rather than reading a DOM that disagrees.
     controller.opened = opened;
-    changeAwaitingTransition = change;
+    changeAwaitingTransition = applyChange;
     transitionChange(
       () => {
-        if (changeAwaitingTransition === change) {
+        if (changeAwaitingTransition === applyChange) {
           flushChangeAwaitingTransition();
         }
       },
@@ -362,6 +368,13 @@ export const createOpenController = (
   };
   const controller = {
     opened: false,
+    // What the DOM currently shows, as opposed to what the controller has
+    // decided: the two differ for the frame a change spends waiting for the
+    // browser to photograph the state being left (see runChange). A render
+    // landing in that frame — a picker re-rendering because its action just
+    // started — must draw THIS, or it paints the closed state before the
+    // picture is taken and the movement has nothing to leave from.
+    openedInDom: false,
     // Which press the popup opened during, written at every open (see
     // openedDuringThisPress). Never any press before there has been one.
     pressCountAtOpen: null,
