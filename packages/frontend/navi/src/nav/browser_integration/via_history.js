@@ -25,6 +25,7 @@ import {
 } from "./document_state_signal.js";
 import { updateDocumentUrl } from "./document_url_signal.js";
 import { getHrefTargetInfo } from "./href_target_info.js";
+import { linkAsksForDocument } from "./link_document.js";
 import { linkAsksForReplace } from "./link_replace.js";
 
 export const setupBrowserIntegrationViaHistory = ({
@@ -338,6 +339,12 @@ export const setupBrowserIntegrationViaHistory = ({
         // change reaches whoever is waiting on the designated element.
         rearmUrlTarget();
       }
+      return;
+    }
+    if (linkAsksForDocument(linkElement)) {
+      // The link says its address is another document of this origin (see
+      // link_document.js). Routing to it would land on the fallback route
+      // instead of loading the page.
       return;
     }
     // Nothing here declared a route, so there is nothing to route to: the

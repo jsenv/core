@@ -20,6 +20,7 @@ import { Icon, markAsOutsideTextFlow, Text } from "../../text/text.jsx";
 import { useDocumentUrl } from "../browser_integration/document_url_signal.js";
 import { getHrefTargetInfo } from "../browser_integration/href_target_info.js";
 import { usePreloadOnIntent } from "../use_preload_on_intent.js";
+import { LINK_DOCUMENT_ATTRIBUTE } from "../browser_integration/link_document.js";
 import { LINK_REPLACE_ATTRIBUTE } from "../browser_integration/link_replace.js";
 import { PRESSABLE_ATTRIBUTE } from "../transition_press.js";
 import { useIsVisited } from "../browser_integration/use_is_visited.js";
@@ -549,6 +550,17 @@ Object.assign(PSEUDO_CLASSES, {
  *   way there changes. What a row of tabs wants — the neighbour is a lateral
  *   move, not a step deeper, so the whole row weighs one entry and the back
  *   button leaves by where the reader came in.
+ * @param {boolean} [props.document] - The address is ANOTHER DOCUMENT of this
+ *   origin — an admin panel, a status page, anything built as its own entry
+ *   point — so the press is left to the browser and loads that page. Without
+ *   it navi routes every same-origin address it can intercept, and one no
+ *   route matches lands on the app's not-found screen. Said rather than
+ *   guessed: "no route matches" is also what a typo in an in-app url looks
+ *   like, and that one must show the not-found screen instead of silently
+ *   reloading the app. The element stays a real link — an address in the
+ *   status bar, a middle click, "open in new tab" — which is what navigating
+ *   from an `action` costs; `target="_blank"` is a different thing, a new tab.
+ *   Nothing is prefetched on the way there: the routes do not lead there.
  * @param {boolean} [props.prefetch=true] Fetch the code of where this leads when the
  *   pointer or the focus arrives, ahead of the press (see
  *   docs/dynamic_import.md): the route actions that ask nothing of the
@@ -661,6 +673,7 @@ const LinkPlain = (props) => {
     routeTransition,
     pressableDuringRouteTransition,
     replace,
+    document: isDocument,
     prefetch = true,
 
     children,
@@ -668,7 +681,10 @@ const LinkPlain = (props) => {
   if (anchor && !props.id) {
     props.id = href.slice(1);
   }
-  usePreloadOnIntent(props.ref, href, prefetch);
+  // A document link leads out of the routes, so there is nothing there to
+  // prefetch — and the address would otherwise be preloaded against the very
+  // routes it is escaping.
+  usePreloadOnIntent(props.ref, href, isDocument ? false : prefetch);
 
   const selectionContext = useContext(SelectionContext);
   const nav = useContext(NavContext);
@@ -792,6 +808,10 @@ const LinkPlain = (props) => {
   // link_replace.js, which owns the name and does the reading).
   const replaceRequest = replace ? { [LINK_REPLACE_ATTRIBUTE]: "" } : null;
 
+  // That this address is another document is the link's to say, worn where the
+  // interception looks for it (see link_document.js).
+  const documentRequest = isDocument ? { [LINK_DOCUMENT_ATTRIBUTE]: "" } : null;
+
   const innerChildren = children || (hrefFallback ? href : children);
   const startIconEl = startIcon;
   const endIconEl = innerEndIcon;
@@ -853,12 +873,14 @@ const LinkPlain = (props) => {
       routeTransition={undefined}
       pressableDuringRouteTransition={undefined}
       replace={undefined}
+      document={undefined}
       prefetch={undefined}
       data-navi-route-transition-request={routeTransitionRequest}
       {...(pressableDuringRouteTransition
         ? { [PRESSABLE_ATTRIBUTE]: "" }
         : null)}
       {...replaceRequest}
+      {...documentRequest}
       // The control's own handlers first — the interaction gate, the caller's
       // onClick/onKeyDown, the command and the action — then what only a link
       // does. Written over the spread above, so they have to be called here.

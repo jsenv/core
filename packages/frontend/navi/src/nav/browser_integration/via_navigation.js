@@ -13,8 +13,9 @@
  * - ONE interception point. Every navigation — a link, the back button, a
  *   programmatic navigate — arrives as a `navigate` event, so there is no
  *   click listener guessing which presses are navigations: the browser says
- *   so. What must not be taken over (a fragment, a download, a form, a page
- *   with no routes, jsenv's own full reload) is declined there, explicitly.
+ *   so. What must not be taken over (a fragment, a download, a form, a link to
+ *   another document, a page with no routes, jsenv's own full reload) is
+ *   declined there, explicitly.
  * - The stack is readable. The push-elision that via_history.js does by
  *   peeking at `navigation.entries()` is native ground here: a push whose
  *   destination is the entry next door becomes `traverseTo()` before anything
@@ -53,6 +54,7 @@ import {
 } from "./document_state_signal.js";
 import { updateDocumentUrl } from "./document_url_signal.js";
 import { getHrefTargetInfo } from "./href_target_info.js";
+import { linkAsksForDocument } from "./link_document.js";
 import { linkAsksForReplace } from "./link_replace.js";
 import {
   installScrollRestoration,
@@ -259,6 +261,12 @@ export const setupBrowserIntegrationViaNavigation = ({
       !isReloadFromNavigationAPI
     ) {
       // window.location.reload(): the full document reload it asks for.
+      return;
+    }
+    if (event.sourceElement && linkAsksForDocument(event.sourceElement)) {
+      // The pressed link says its address is another document of this origin
+      // (see link_document.js). Declined so the browser loads the page;
+      // intercepting would land on the fallback route instead.
       return;
     }
     if (!isRouting()) {

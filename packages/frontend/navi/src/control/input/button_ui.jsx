@@ -5,6 +5,7 @@ import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
 import { useDocumentUrl } from "../../nav/browser_integration/document_url_signal.js";
 import { getHrefTargetInfo } from "../../nav/browser_integration/href_target_info.js";
 import { usePreloadOnIntent } from "../../nav/use_preload_on_intent.js";
+import { LINK_DOCUMENT_ATTRIBUTE } from "../../nav/browser_integration/link_document.js";
 import { LINK_REPLACE_ATTRIBUTE } from "../../nav/browser_integration/link_replace.js";
 import { PRESSABLE_ATTRIBUTE } from "../../nav/transition_press.js";
 import { Text, markAsOutsideTextFlow } from "../../text/text.jsx";
@@ -497,6 +498,7 @@ export const ButtonUI = (props) => {
     target,
     rel,
     replace,
+    document: isDocument,
     pressableDuringRouteTransition,
     prefetch = true,
 
@@ -554,6 +556,10 @@ export const ButtonUI = (props) => {
   // anchor by the click handler, off the source by --navi-nav-to.
   const replaceRequest = replace ? { [LINK_REPLACE_ATTRIBUTE]: "" } : null;
 
+  // And this one says the address is another document of this origin, so the
+  // press is the browser's (see link_document.js).
+  const documentRequest = isDocument ? { [LINK_DOCUMENT_ATTRIBUTE]: "" } : null;
+
   // Worn as an attribute too, and read at the document by whoever catches the
   // press a movement would have swallowed (see transition_press.js).
   const pressableRequest = pressableDuringRouteTransition
@@ -561,7 +567,9 @@ export const ButtonUI = (props) => {
     : null;
 
   const visualSelector = ".navi_button_content";
-  usePreloadOnIntent(ref, href, prefetch);
+  // Nothing to prefetch on the way to another document: the routes do not
+  // lead there.
+  usePreloadOnIntent(ref, href, isDocument ? false : prefetch);
   useAccentColorAttributes(ref, null, {
     elementSelector: visualSelector,
   });
@@ -590,6 +598,8 @@ export const ButtonUI = (props) => {
       rel={innerRel}
       replace={undefined}
       {...replaceRequest}
+      document={undefined}
+      {...documentRequest}
       pressableDuringRouteTransition={undefined}
       {...pressableRequest}
       prefetch={undefined}

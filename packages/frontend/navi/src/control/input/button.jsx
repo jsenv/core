@@ -125,6 +125,7 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  *   selfInteractions?: string,
  *   whenSelfInteractionsBlocked?: "hide" | "refuse" | "ignore",
  *   replace?: boolean,
+ *   document?: boolean,
  *   actionStandalone?: boolean,
  *   actionAbortable?: boolean,
  *   optimistic?: boolean,
@@ -134,6 +135,13 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  *   `--navi-nav-to` command — by TAKING THE PLACE of the current history entry
  *   rather than stacking on it: what `<Link replace>` says, for a press drawn
  *   as a button.
+ * @param {boolean} [document] The `href` is ANOTHER DOCUMENT of this origin —
+ *   an admin panel, a status page, anything built as its own entry point — so
+ *   the press is left to the browser and loads that page, instead of being
+ *   routed to the app's not-found screen. What `<Link document>` says, for a
+ *   press drawn as a button; and the reason to say it rather than navigate
+ *   from an `action` is that the button stays a real link (an address, a
+ *   middle click, "open in new tab"). Nothing is prefetched on the way there.
  * @param {boolean} [prefetch=true] Fetch the code of where this leads when the
  *   pointer or the focus arrives, ahead of the press (see
  *   docs/dynamic_import.md): the route actions that ask nothing of the
