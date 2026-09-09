@@ -56,8 +56,8 @@
     "@jsenv/utils": "../../tooling/utils",
     "eventsource": "5.1.1",
     "formidable": "3.5.4",
-    "playwright": "1.62.1",
-    "undici": "8.10.0",
+    "playwright": "1.63.0",
+    "undici": "8.10.2",
     "ws": "8.21.3"
   },
   "publishConfig": {

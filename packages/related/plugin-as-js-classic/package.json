@@ -29,7 +29,7 @@
     "@jsenv/plugin-as-js-classic": "./",
     "@jsenv/plugin-preact": "../plugin-preact",
     "@jsenv/snapshot": "../../tooling/snapshot",
-    "playwright": "1.62.1"
+    "playwright": "1.63.0"
   },
   "publishConfig": {
     "access": "public"

@@ -20,10 +20,10 @@
     "@jsenv/plugin-bundling": "2.10.28",
     "@jsenv/plugin-minification": "1.7.22",
     "@jsenv/test": "3.7.47",
-    "eslint": "10.9.1",
-    "open": "11.0.1",
-    "@playwright/browser-chromium": "1.62.1",
+    "eslint": "10.10.0",
+    "open": "11.0.2",
+    "@playwright/browser-chromium": "1.63.0",
     "prettier": "3.9.6",
-    "playwright": "1.62.1"
+    "playwright": "1.63.0"
   }
 }

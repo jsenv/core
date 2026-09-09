@@ -36,7 +36,7 @@
     "@jsenv/plugin-toolbar": "./",
     "@jsenv/utils": "../../tooling/utils",
     "@preact/signals": "2.11.2",
-    "playwright": "1.62.1"
+    "playwright": "1.63.0"
   },
   "publishConfig": {
     "access": "public"
