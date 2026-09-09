@@ -1,4 +1,5 @@
 import { createContext } from "preact";
+import { useContext } from "preact/hooks";
 
 export const PickerContext = createContext();
 
@@ -18,4 +19,24 @@ export const pickerUIIsNaviOwn = (ui) => {
   return (
     Boolean(ui) && typeof ui === "object" && Boolean(ui.type?.isPickerOwnUI)
   );
+};
+
+/**
+ * What the picker holds, read from inside its `ui` — for a drawing given as
+ * an element (`ui={<MyCard game={game} />}`), which the picker cannot hand
+ * props to. `value` is the state the picker holds right now: the answer the
+ * popup just closed on, before the server has said anything, and put back if
+ * the action fails. `loading` is the run in flight; `interactive` is false
+ * while the picker is disabled, read-only or busy.
+ *
+ * @returns {{ value: any, loading: boolean, interactive: boolean } | null}
+ *   null outside a picker.
+ */
+export const usePickerState = () => {
+  const context = useContext(PickerContext);
+  if (!context) {
+    return null;
+  }
+  const { value, loading, interactive } = context;
+  return { value, loading, interactive };
 };

@@ -434,6 +434,16 @@ as a card and is refused as a card, wherever in the tree the sheet was written.
 </Picker>
 ```
 
+The card shows the answer the moment the sheet leaves when its `ui` is drawn
+from what the picker holds rather than from what the caller knows — the same
+state navi's own default `ui` reads, rolled back by `resetOnError`, so nothing
+about the pending value is the caller's to keep or to put back. Two ways to
+read it: `ui={MatchCard}` hands the component `value`, `loading` and
+`interactive` as props; `ui={<MatchCard match={match} />}` keeps the caller's
+own props and reads the same three with `usePickerState()` inside. The
+`loading` is the wait: navi's loading outline is a two-pixel run around the
+box, which a card-sized trigger draws its own waiting state for.
+
 What the picker measures as "changed since open" is what its mirrored group
 holds. A piece of the answer living outside the controls — a seating
 rearranged by drag, kept in component state — has to be held by a control in
@@ -442,8 +452,14 @@ as nothing changed and nothing runs.
 
 Two props finish the construct. `openOn="longpress"` (or
 `["longpress", "contextmenu"]`) makes the hold what opens it, so a tap on the
-card stays a tap — what a card in a list needs. `animation="growing"` with
-`dialogSizeFromAnchor`, `dialogMaxWidth="var(--anchor-width)"`,
+card stays a tap — what a card in a list needs: the drawing gets its pointer
+back, a link in it navigates, a button in it presses, a picker in it opens on
+its own click, with nothing to declare. Two pickers on one card is the score
+sheet inside the edit card (`12_picker_card_demo.html`): the inner one names
+the card as its `anchor` so it lifts the whole card, and says `standalone` so
+its value stays its own. A hold declared inside the card answers before the
+card's own: the nearer hold takes the press. `animation="growing"` with
+`dialogSizeFromAnchor` (as wide as the card, floor and ceiling),
 `popupBackgroundColor="transparent"` and `popupBoxShadow="none"` lifts the
 card out of its place and puts it back (`data-grow` on the card inside the
 sheet; see Dialog's own `animation`). `12_picker_card_demo.html` shows all of

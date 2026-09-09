@@ -98,6 +98,12 @@ which the carrying interactions answer with).
 | `pan` `zoom`                                           | a surface under the hand, or under a wheel                  |
 | `"keyboard:<shortcut>"`                                | keys, e.g. `"keyboard:ctrl+backspace"`                      |
 
+Two holds on one press — a `longpress` declared on something inside an
+element that declares one too — are answered by the nearer one, the way a
+click is the innermost target's: the inner hold fires, the outer wait is given
+up. Delays being equal; an outer hold made shorter than the inner one fires
+first.
+
 A name nothing knows how to detect produces a dev warning naming the detectors
 that exist. The carrying family and the two surface streams each have a file of
 their own — [drag_interactions.md](./drag_interactions.md) and

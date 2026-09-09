@@ -78,7 +78,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useSignal } from "@preact/signals";
-      import { useEffect, useState } from "preact/hooks";
+      import { useEffect, useRef, useState } from "preact/hooks";
       import {
         Box,
         Button,
@@ -87,6 +87,7 @@
         Link,
         Picker,
         Text,
+        usePickerState,
       } from "@jsenv/navi";
       import { DemoHeader } from "@jsenv/navi/src/internal/demo_header.jsx";
       import { DocumentToc } from "@jsenv/navi/src/internal/document_toc.jsx";
@@ -118,7 +119,12 @@
         </div>
       );
 
-      const MATCH = { name: "Aurore / Malo", score: "6-4 3-6" };
+      const GAME = {
+        name: "Aurore / Malo",
+        court: "Terrain 2",
+        place: "Padel Club Marseille",
+        score: "6-4 3-6",
+      };
 
       const useStoredBoolean = (key, defaultValue) => {
         const [value, setValue] = useState(() => {
@@ -130,6 +136,19 @@
         }, [key, value]);
         return [value, setValue];
       };
+
+      const SlowToggle = ({ slow, setSlow }) => (
+        <div class="demo-animate-controls">
+          <label class="demo-animate-toggle">
+            <input
+              type="checkbox"
+              checked={slow}
+              onChange={(e) => setSlow(e.target.checked)}
+            />
+            Slow
+          </label>
+        </div>
+      );
 
       const App = () => (
         <Box flex="y" spacing="l">
@@ -148,26 +167,36 @@
           <StatesDemo />
           <ResetOnErrorDemo />
           <OpenOnDemo />
-          <GrowingDemo />
           <DoorDemo />
         </Box>
       );
 
       // ── Cas nominal ───────────────────────────────────────────────────────
 
-      const NominalDemo = () => (
-        <Section id="nominal" title="Cas nominal">
-          <p>
-            La carte est le picker : la feuille s'ouvre dessus, et c'est elle
-            qui attend la réponse.
-          </p>
-          <FakeBackend value={MATCH}>
-            {({ value, action }) => (
-              <MatchPicker match={value} action={(next) => action(next)} />
-            )}
-          </FakeBackend>
-        </Section>
-      );
+      const NominalDemo = () => {
+        const [slow, setSlow] = useStoredBoolean(
+          "picker_card_demo_nominal_slow",
+          true,
+        );
+        return (
+          <Section id="nominal" title="Cas nominal">
+            <p>
+              Tenue, la carte s'ouvre sur son terrain et son lieu ; son score,
+              au milieu, s'ouvre au clic.
+            </p>
+            <FakeBackend value={GAME}>
+              {({ value, action }) => (
+                <GamePicker
+                  game={value}
+                  action={(next) => action({ ...value, ...next })}
+                  animationDuration={slow ? "0.6s" : undefined}
+                />
+              )}
+            </FakeBackend>
+            <SlowToggle slow={slow} setSlow={setSlow} />
+          </Section>
+        );
+      };
 
       // ── États ─────────────────────────────────────────────────────────────
 
@@ -175,19 +204,19 @@
         <Section id="states" title="États">
           <div class="demo-row">
             <Case caption="default">
-              <LocalMatchPicker />
+              <LocalGamePicker />
             </Case>
             <Case caption="readOnly">
-              <LocalMatchPicker readOnly />
+              <LocalGamePicker readOnly />
             </Case>
             <Case caption="disabled">
-              <LocalMatchPicker disabled />
+              <LocalGamePicker disabled />
             </Case>
             <Case caption="loading">
-              <LocalMatchPicker loading />
+              <LocalGamePicker loading />
             </Case>
             <Case caption="focus visible">
-              <LocalMatchPicker pseudoState={{ ":focus-visible": true }} />
+              <LocalGamePicker pseudoState={{ ":focus-visible": true }} />
             </Case>
           </div>
         </Section>
@@ -197,21 +226,24 @@
 
       const ResetOnErrorDemo = () => (
         <Section id="reset-on-error" title="resetOnError">
-          <p>Ce que la feuille montre quand on la rouvre après un refus.</p>
+          <p>Ce que la carte montre après un refus.</p>
           <div class="demo-row">
             <Case caption="default">
-              <FakeBackend value={MATCH}>
+              <FakeBackend value={GAME}>
                 {({ value, action }) => (
-                  <MatchPicker match={value} action={(next) => action(next)} />
+                  <GamePicker
+                    game={value}
+                    action={(next) => action({ ...value, ...next })}
+                  />
                 )}
               </FakeBackend>
             </Case>
             <Case caption="resetOnError={false}">
-              <FakeBackend value={MATCH}>
+              <FakeBackend value={GAME}>
                 {({ value, action }) => (
-                  <MatchPicker
-                    match={value}
-                    action={(next) => action(next)}
+                  <GamePicker
+                    game={value}
+                    action={(next) => action({ ...value, ...next })}
                     resetOnError={false}
                   />
                 )}
@@ -227,53 +259,20 @@
         <Section id="open-on" title="openOn">
           <div class="demo-row">
             <Case caption="default (press)">
-              <LocalMatchPicker />
+              <LocalGamePicker openOn="press" scorePicker={false} />
             </Case>
             <Case caption='openOn="longpress"'>
-              <LocalMatchPicker openOn="longpress" />
+              <LocalGamePicker openOn="longpress" scorePicker={false} />
             </Case>
             <Case caption='openOn={["longpress", "contextmenu"]}'>
-              <LocalMatchPicker openOn={["longpress", "contextmenu"]} />
+              <LocalGamePicker
+                openOn={["longpress", "contextmenu"]}
+                scorePicker={false}
+              />
             </Case>
           </div>
         </Section>
       );
-
-      // ── animation="growing" ───────────────────────────────────────────────
-
-      const GrowingDemo = () => {
-        const [slow, setSlow] = useStoredBoolean(
-          "picker_card_demo_growing_slow",
-          true,
-        );
-        const animationDuration = slow ? "0.6s" : undefined;
-        return (
-          <Section id="growing" title='animation="growing"'>
-            <p>La carte quitte sa place pour venir au milieu, et y retourne.</p>
-            <div class="demo-row">
-              <Case caption="press">
-                <LocalLiftedMatchPicker animationDuration={animationDuration} />
-              </Case>
-              <Case caption='+ openOn="longpress"'>
-                <LocalLiftedMatchPicker
-                  openOn="longpress"
-                  animationDuration={animationDuration}
-                />
-              </Case>
-            </div>
-            <div class="demo-animate-controls">
-              <label class="demo-animate-toggle">
-                <input
-                  type="checkbox"
-                  checked={slow}
-                  onChange={(e) => setSlow(e.target.checked)}
-                />
-                Slow
-              </label>
-            </div>
-          </Section>
-        );
-      };
 
       // ── Une porte ─────────────────────────────────────────────────────────
 
@@ -324,129 +323,197 @@
             >
               <Box data-grow>{scene}</Box>
             </Picker>
-            <div class="demo-animate-controls">
-              <label class="demo-animate-toggle">
-                <input
-                  type="checkbox"
-                  checked={slow}
-                  onChange={(e) => setSlow(e.target.checked)}
-                />
-                Slow
-              </label>
-            </div>
+            <SlowToggle slow={slow} setSlow={setSlow} />
           </Section>
         );
       };
 
-      // ── The card, and the picker it is ────────────────────────────────────
+      // ── The card, and the two pickers it is ───────────────────────────────
 
-      // The card as the page draws it — and as the sheet draws it again, so
-      // what opens is what was there.
-      const MatchCard = ({ match, editable, ...props }) => (
+      // The card, one drawing for its three states — as it sits in the page,
+      // as the edit sheet (court and place become fields), as the score sheet
+      // (the score does) — so the box the browser morphs is the same box each
+      // way, and each sheet edits its own lines and nothing else.
+      const GameCard = ({ game, mode, loading, scoreSlot, ...props }) => (
         <Box
           flex="y"
-          spacing="xs"
+          spacing="s"
           padding="m"
-          backgroundColor="white"
-          border="1px solid #b0bec5"
+          color="white"
+          backgroundColor="#2f6fb5"
           borderRadius="12"
+          style={loading ? { opacity: 0.6 } : undefined}
           {...props}
         >
-          {editable ? (
-            <>
-              <Input name="name" placeholder="Paire" autoFocus />
-              <Input name="score" placeholder="6-4 3-6" />
-            </>
+          <Text bold>{game.name}</Text>
+          {mode === "edit" ? (
+            <Input
+              name="court"
+              placeholder="Terrain"
+              color="#1a1a1a"
+              autoFocus
+            />
           ) : (
-            <>
-              <Text bold>{match.name || "—"}</Text>
-              <Text size="s" color="#546e7a">
-                {match.score || "—"}
-              </Text>
-            </>
+            <Text size="s">{game.court || "—"}</Text>
           )}
+          {mode === "edit" ? (
+            <Input name="place" placeholder="Lieu" color="#1a1a1a" />
+          ) : (
+            <Text size="s">{game.place || "—"}</Text>
+          )}
+          <Box flex alignX="center" paddingY="s">
+            {mode === "score" ? (
+              <Input
+                name="score"
+                placeholder="6-4 3-6"
+                color="#1a1a1a"
+                autoFocus
+              />
+            ) : (
+              (scoreSlot ?? (
+                <Text bold size="xl">
+                  {game.score || "—"}
+                </Text>
+              ))
+            )}
+          </Box>
         </Box>
       );
 
-      const MatchPicker = ({ match, action, ...props }) => (
+      // The sheet is not a sheet: the card makes the paper, and the popup only
+      // carries it above the rest — the same way for both sheets.
+      const LIFTED_SHEET_PROPS = {
+        mode: "dialog",
+        animation: "growing",
+        dialogSizeFromAnchor: true,
+        dialogExpandX: true,
+        popupBackgroundColor: "transparent",
+        popupBoxShadow: "none",
+        backdropColor: "rgb(6 10 20 / 88%)",
+        backdropFilter: "blur(4px)",
+        scrollCapture: true,
+        mount: "from-first-open",
+      };
+
+      const SheetButtons = ({ send }) => (
+        <Box flex spacing="s">
+          <Button
+            command="--navi-cancel"
+            variant="discrete"
+            color="rgb(255 255 255 / 80%)"
+            expandX
+            alignX="center"
+          >
+            Annuler
+          </Button>
+          <Button command="--navi-send" expandX alignX="center">
+            {send}
+          </Button>
+        </Box>
+      );
+
+      // The score, in the middle of the card: a picker of its own, opened on
+      // its click, whose sheet lifts the WHOLE card (`anchor`) — and which
+      // answers for itself (`standalone`) rather than for the card around it.
+      const ScorePicker = ({ game, action, anchor, animationDuration }) => (
         <Picker
           variant="bare"
           type="object"
-          mode="dialog"
-          ui={<MatchCard match={match} width="260" />}
-          value={match}
+          standalone
+          value={{ score: game.score }}
           action={action}
-          {...props}
+          ui={
+            <Text bold size="xl">
+              {game.score || "—"}
+            </Text>
+          }
+          aria-label="Saisir le score"
+          anchor={anchor}
+          animationDuration={animationDuration}
+          {...LIFTED_SHEET_PROPS}
         >
-          <ControlGroup flex="y" spacing="m" padding="m" alignX="stretch">
-            <MatchCard match={match} editable />
-            <Box flex spacing="s" alignX="end">
-              <Button command="--navi-cancel" variant="discrete">
-                Annuler
-              </Button>
-              <Button command="--navi-send">Enregistrer</Button>
-            </Box>
+          <ControlGroup flex="y" spacing="m" alignX="stretch">
+            <GameCard game={game} mode="score" data-grow />
+            <SheetButtons send="Enregistrer le score" />
           </ControlGroup>
         </Picker>
       );
 
-      const LocalMatchPicker = (props) => {
-        const matchSignal = useSignal(MATCH);
+      // The card as the page shows it, drawn from what the picker HOLDS
+      // (usePickerState): the name typed in the sheet is on the card the
+      // moment the sheet leaves, and back to the backend's if the backend
+      // refuses — and the card dims while the write is out.
+      const GameCardInPage = ({ game, scoreSlot }) => {
+        const { value, loading } = usePickerState();
         return (
-          <MatchPicker
-            match={matchSignal.value}
-            action={(next) => {
-              matchSignal.value = next;
-            }}
-            {...props}
+          <GameCard
+            game={{ ...game, ...value }}
+            loading={loading}
+            width="300"
+            scoreSlot={scoreSlot}
           />
         );
       };
 
-      // The sheet is not a sheet: the card makes the paper, and the popup only
-      // carries it above the rest.
-      const LocalLiftedMatchPicker = (props) => {
-        const matchSignal = useSignal(MATCH);
-        const match = matchSignal.value;
+      const GamePicker = ({
+        game,
+        action,
+        animationDuration,
+        scorePicker = true,
+        ...props
+      }) => {
+        const cardRef = useRef(null);
         return (
           <Picker
+            ref={cardRef}
             variant="bare"
             type="object"
-            mode="dialog"
-            ui={<MatchCard match={match} width="260" />}
-            value={match}
-            action={(next) => {
-              matchSignal.value = next;
-            }}
-            animation="growing"
-            dialogSizeFromAnchor
-            dialogMaxWidth="var(--anchor-width)"
-            dialogExpandX
-            popupBackgroundColor="transparent"
-            popupBoxShadow="none"
-            backdropColor="rgb(6 10 20 / 88%)"
-            backdropFilter="blur(4px)"
-            scrollCapture
+            value={{ court: game.court, place: game.place }}
+            action={action}
+            openOn={["longpress", "contextmenu"]}
+            // The card's own corners: the focus ring and the loading outline
+            // are drawn on the picker's box, which is the card's, so its radius
+            // has to be the card's too.
+            borderRadius="12"
+            ui={
+              <GameCardInPage
+                game={game}
+                scoreSlot={
+                  scorePicker ? (
+                    <ScorePicker
+                      game={game}
+                      action={action}
+                      anchor={cardRef}
+                      animationDuration={animationDuration}
+                    />
+                  ) : undefined
+                }
+              />
+            }
+            aria-label="Modifier le terrain et le lieu"
+            animationDuration={animationDuration}
+            {...LIFTED_SHEET_PROPS}
             {...props}
           >
             <ControlGroup flex="y" spacing="m" alignX="stretch">
-              <MatchCard match={match} editable data-grow />
-              <Box flex spacing="s">
-                <Button
-                  command="--navi-cancel"
-                  variant="discrete"
-                  color="rgb(255 255 255 / 80%)"
-                  expandX
-                  alignX="center"
-                >
-                  Annuler
-                </Button>
-                <Button command="--navi-send" expandX alignX="center">
-                  Enregistrer
-                </Button>
-              </Box>
+              <GameCard game={game} mode="edit" data-grow />
+              <SheetButtons send="Enregistrer" />
             </ControlGroup>
           </Picker>
+        );
+      };
+
+      const LocalGamePicker = (props) => {
+        const gameSignal = useSignal(GAME);
+        const game = gameSignal.value;
+        return (
+          <GamePicker
+            game={game}
+            action={(next) => {
+              gameSignal.value = { ...game, ...next };
+            }}
+            {...props}
+          />
         );
       };
 

@@ -436,6 +436,21 @@ const css = /* css */ `
       -webkit-touch-callout: none;
       user-select: none;
     }
+    /* A picker that does not open on the press has no reason to take the
+       press: the invisible input steps aside and the drawing gets its pointer
+       back — a link in it navigates, a button in it presses, with nothing to
+       declare. The hold is read on the root, which the press still reaches
+       by bubbling. */
+    &[data-open-on] {
+      /* Direct children only: a picker sitting in this drawing keeps its own
+         input pressable, whatever this one opens on. */
+      > .navi_picker_box > .navi_picker_input {
+        pointer-events: none;
+      }
+      > .navi_picker_box > .navi_picker_value {
+        pointer-events: auto;
+      }
+    }
 
     &[navi-ui-custom] {
       .navi_picker_input {
@@ -906,12 +921,15 @@ const PickerButton = (props) => {
   // What the picker knows about itself, for the pieces it does not place: the
   // drawings of its value (Picker.UI.*), and the affordances a caller may put
   // in their own `ui` (Picker.Clear) as much as the ones it puts in its slot.
+  // `ui={MyCard}`: a component the picker renders itself, told what it holds.
+  const UIComponent = typeof ui === "function" ? ui : null;
   const pickerContext = {
     value,
     placeholder,
     maxLines,
     id: inputProps.id,
     interactive,
+    loading,
     clearConfirm,
   };
 
@@ -1123,6 +1141,17 @@ const PickerButton = (props) => {
                       ) : (
                         <PickerDefaultUI />
                       )
+                    ) : UIComponent ? (
+                      // Told what the picker HOLDS — the value it just closed
+                      // on, before the server has said anything — so a façade
+                      // shows the answer at once, and the wait with it. The
+                      // same state usePickerState() hands an element (see the
+                      // `ui` doc).
+                      <UIComponent
+                        value={value}
+                        loading={loading}
+                        interactive={interactive}
+                      />
                     ) : (
                       ui
                     )}
@@ -1537,7 +1566,7 @@ const PickerFirstResolver = (props) => {
  *   defaultValue?: any,
  *   name?: string,
  *   placeholder?: import("preact").ComponentChildren,
- *   ui?: import("preact").ComponentChildren | "default",
+ *   ui?: import("preact").ComponentChildren | "default" | import("preact").ComponentType<{ value: any, loading: boolean, interactive: boolean }>,
  *   required?: boolean,
  *   min?: Date | string | number,
  *   max?: Date | string | number,
@@ -1626,12 +1655,17 @@ const PickerFirstResolver = (props) => {
  *   the right click at a desk. The picker declares it on itself, so it is
  *   arbitrated like any other gesture: a swipe on the same card takes the
  *   press a hold would have taken. A tap then opens nothing — the press stays
- *   free for what the `ui` holds, which is what lets a whole card be a picker
- *   without every touch on it opening the sheet — and the keyboard keeps its
- *   ways in (Enter, Space, the arrows). Being a gesture, the open goes through
+ *   free for what the `ui` holds: a link in the card navigates, a button in it
+ *   presses, a picker in it opens on its own click, with nothing to declare
+ *   (`selfInteractions` is for a drawing that DOES open on the press). That
+ *   is what lets a whole card be a picker without every touch on it opening
+ *   the sheet — and the keyboard keeps its ways in (Enter, Space, the
+ *   arrows). A hold declared INSIDE the card (`interactions={{ longpress }}`
+ *   on something it holds) answers before this one: the nearer hold takes the
+ *   press, the way a click is the innermost target's. Being a gesture, the open goes through
  *   the interaction gate as one: a `readOnly` picker refuses it and says so
  *   where the finger is, whatever `openWhileReadOnly` says.
- * @param {import("preact").ComponentChildren | "default"} [ui] What the
+ * @param {import("preact").ComponentChildren | "default" | import("preact").ComponentType} [ui] What the
  *   trigger draws in place of the value's default rendering (a date, a list
  *   joined by commas…) — and then all it draws: `placeholder` is not shown
  *   next to it, and an empty value is not greyed as a placeholder either: what
@@ -1660,6 +1694,20 @@ const PickerFirstResolver = (props) => {
  *   beside it, out of the flow so the rest keeps its width — is drawn and
  *   opens nothing; `pressPadding` is how far the press area follows it out
  *   there.
+ *
+ *   A drawing that follows what the picker HOLDS — the value the popup just
+ *   closed on, before the server has answered, the same state navi's own
+ *   default `ui` reads, rolled back if the action fails (`resetOnError`) —
+ *   reads it one of two ways. As a component, `ui={MyCard}`: the picker
+ *   renders it and hands it `value`, `loading` and `interactive` as props.
+ *   As an element, `ui={<MyCard game={game} />}`, with `usePickerState()`
+ *   inside it returning the same three — for a drawing that needs props of
+ *   its own as well. Either way a card shows the score the moment the sheet
+ *   leaves and takes it back on a refusal, with nothing held by the caller.
+ *   `loading` is the wait it wears meanwhile: navi draws its loading outline
+ *   on every trigger, but on a card-sized `variant="bare"` a two-pixel run
+ *   around the box says nothing — a big surface draws its own waiting state
+ *   from that flag, or from `[data-loading]` on the picker root in css.
  * @param {boolean} [readOnly] Nothing in this picker can be changed — and it
  *   still opens, so what is in the popup can be read: everything in there is
  *   held read-only in turn, each control greying out and saying why on its own.
@@ -1770,7 +1818,10 @@ const PickerFirstResolver = (props) => {
  *   placed anywhere else. No right slot comes with it: a cross belongs inside
  *   that drawing, at the place and the size the drawing decides, so it is
  *   `<Picker.Clear />` the `ui` holds rather than `clearable` the picker
- *   takes. `"headless"` draws nothing either, and is not the `ui`'s box but
+ *   takes. What navi still draws on that box — the focus ring, the loading
+ *   outline — follows the picker's `borderRadius`, which stays the control's
+ *   unless told: a drawing with corners of its own states them on the picker
+ *   as well. `"headless"` draws nothing either, and is not the `ui`'s box but
  *   its parent's: it stretches to whatever positioned element holds it, for a
  *   picker put inside the thing that opens it (a button, a row) so that the
  *   popup hangs off that whole element. A picker opened from something it does
@@ -1861,16 +1912,18 @@ const PickerFirstResolver = (props) => {
  *   whose `ui` is a whole piece of the page wants: the popup is the browser
  *   morphing the trigger's box into what carries `data-grow` inside the popup
  *   (the popup itself when nothing does), and back on close. The trigger IS
- *   the anchor, so nothing has to be named for it — see `dialogSizeFromAnchor`
- *   for a card that must keep its width on the way, and leave it out for a
- *   drawing that opens precisely to get bigger.
+ *   the anchor, so nothing has to be named for it — `dialogSizeFromAnchor`
+ *   for a card that must keep its width on the way, left out for a drawing
+ *   that opens precisely to get bigger.
  * @param {string} [animationDuration] The popup's own (`--popup-animation-duration`).
- * @param {boolean} [dialogSizeFromAnchor] Dialog mode: the dialog takes the
- *   trigger's box as a floor (`--anchor-width`/`--anchor-height`, Dialog's
- *   own `sizeFromAnchor`) — and, with `dialogMaxWidth="var(--anchor-width)"`,
- *   as a ceiling too. That pair is what keeps a card its own width once
- *   lifted out of the page (`animation="growing"`, with `data-grow` on the
- *   card inside the popup): it moves, and nothing else about it changes.
+ * @param {boolean} [dialogSizeFromAnchor] Dialog mode: the dialog is as wide
+ *   as the trigger — its box as a floor (Dialog's own `sizeFromAnchor`) and
+ *   as a ceiling, unless a `dialogMaxWidth` says otherwise. What keeps a card
+ *   its own width once lifted out of the page (`animation="growing"`, with
+ *   `data-grow` on the card inside the popup): it moves, and nothing else
+ *   about it changes. The ceiling is set here rather than through
+ *   `dialogMaxWidth="var(--anchor-width)"` because that variable lives on the
+ *   dialog element, and a prop on the picker is resolved on the picker.
  * @param {"cancel"|"close"} [escapeEffect="cancel"] What Escape does to an open
  *   picker. "cancel" puts back the value the picker had at open, and a dialog
  *   picker also goes back in history — so anything written to the url while it

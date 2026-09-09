@@ -23,6 +23,7 @@ import { MOUNT_DEFAULT } from "@jsenv/navi/src/layout/popup_content_mount.js";
 import { Popup } from "@jsenv/navi/src/layout/popup.jsx";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { interactionsDisputeThePress } from "../interaction/interactions.js";
+import { LONGPRESS_ATTRIBUTE } from "../interaction/interaction_press.js";
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 import { ControlIdContext } from "../control_context.js";
 import { isControlValueGivenByProps } from "../control_hooks.jsx";
@@ -187,6 +188,15 @@ const css = /* css */ `
             overflow: auto;
           }
         }
+      }
+
+      /* As wide as the trigger: Dialog's sizeFromAnchor is a floor, and the
+         ceiling is set here — on the dialog, where --anchor-width is set —
+         because a dialogMaxWidth="var(--anchor-width)" written on the picker
+         would be resolved on the picker, where nothing of that name exists.
+         A dialogMaxWidth of the caller's still wins. */
+      &[data-dialog-size-from-anchor] .navi_dialog {
+        --dialog-max-width: var(--picker-dialog-max-width, var(--anchor-width));
       }
     }
 
@@ -874,7 +884,8 @@ const PickerCustom = (props) => {
             if (
               !opensOnPress ||
               interactionsDispute ||
-              isPressDisputedByDrag(e.target)
+              isPressDisputedByDrag(e.target) ||
+              isPressDisputedByHold(ref.current)
             ) {
               return null;
             }
@@ -929,6 +940,14 @@ const PickerCustom = (props) => {
 
   return <PickerContentInsidePopup {...pickerProps} mode={mode} />;
 };
+
+// A hold declared on something AROUND the picker (a card opened by
+// `openOn="longpress"`, holding this one in its drawing): the finger going
+// down may be the start of that hold, so this picker opens on the click — which
+// the hold, if it completes, swallows — rather than on the press. The picker's
+// own hold (its `openOn`) is not "around" it, and has already stepped back.
+const isPressDisputedByHold = (pickerEl) =>
+  Boolean(pickerEl?.parentElement?.closest(`[${LONGPRESS_ATTRIBUTE}]`));
 
 export const getPickerInput = (pickerEl) => {
   return pickerEl.querySelector(".navi_picker_input");
@@ -1006,6 +1025,9 @@ const PickerContentInsidePopup = (props) => {
     <Next
       aria-haspopup={isPopover ? "listbox" : "dialog"}
       navi-popover-mode={isPopover ? popoverMode : undefined}
+      data-dialog-size-from-anchor={
+        !isPopover && dialogSizeFromAnchor ? "" : undefined
+      }
       {...rest}
       // On popupProps already (see the picker's popup assembly); they mean
       // nothing to the picker element.

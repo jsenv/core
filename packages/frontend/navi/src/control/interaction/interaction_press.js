@@ -118,7 +118,7 @@ const LONGPRESS_SLOP_ATTRIBUTE = "data-longpress-slop";
 // Which axes this element takes a swipe on, and that it takes a hold: said in the
 // DOM at render time, for the CSS below and for the boxes above to read.
 const SWIPE_AXES_ATTRIBUTE = "data-swipe";
-const LONGPRESS_ATTRIBUTE = "data-longpress";
+export const LONGPRESS_ATTRIBUTE = "data-longpress";
 
 import.meta.css = /* css */ `
   /* Declared, so the browser sees a NUMBER it can interpolate and calculate with:
@@ -280,6 +280,8 @@ defineInteractionDetector({
       }
       let swipe = null;
       let press = null;
+      // Set below, with the hold; a no-op until then so the swipe can call it.
+      let forgetInnerLongPress = () => {};
 
       if (axes) {
         swipe = startSwipe(pointerDownEvent, {
@@ -299,14 +301,35 @@ defineInteractionDetector({
           onSwipeStart: () => {
             press?.cancel();
             press = null;
+            forgetInnerLongPress();
           },
         });
       }
       if (hasLongPress) {
+        // A hold declared INSIDE this element, on this same press: the nearer
+        // one answers, the way a click is the innermost target's, and this
+        // wait is given up — two sheets opening from one hold is nobody's
+        // intention. Delays being equal, the inner timer was set first (the
+        // press reached it first) and fires first; the inner hold arrives here
+        // as its own event, bubbling, before this timer runs.
+        const onInnerLongPress = (longPressEvent) => {
+          if (longPressEvent.target === element || !press) {
+            return;
+          }
+          press.cancel();
+          press = null;
+          forgetInnerLongPress();
+        };
+        forgetInnerLongPress = () => {
+          element.removeEventListener("longpress", onInnerLongPress);
+        };
+        element.addEventListener("longpress", onInnerLongPress);
         press = waitForPressHeld(pointerDownEvent, {
           delay: readConfig(LONGPRESS_DELAY_ATTRIBUTE, LONGPRESS_DELAY_DEFAULT),
           slop: readConfig(LONGPRESS_SLOP_ATTRIBUTE, LONGPRESS_SLOP_DEFAULT),
+          onPressCancel: forgetInnerLongPress,
           onPressHeld: (pressEvent, { endPress }) => {
+            forgetInnerLongPress();
             // The hold won the arbitration: the swipe never got the distance it
             // needed, and must not get it from whatever the finger does next.
             swipe?.stop();

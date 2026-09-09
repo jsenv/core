@@ -220,6 +220,7 @@ export { RadioGroup } from "./src/control/input/radio_group.jsx";
 export { Select } from "./src/control/input/select.jsx";
 export { SplitButton } from "./src/control/input/split_button.jsx";
 export { Picker } from "./src/control/picker/picker.jsx";
+export { usePickerState } from "./src/control/picker/picker_context.jsx";
 export {
   getNowHours,
   getNowHoursRoundedToStep,

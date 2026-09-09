@@ -641,6 +641,12 @@ export const useUIStateController = (
         },
         resetUIState: (e) => {
           controller.setUIState(controller.state, e);
+          // What the control holds moved back, and a bound signal mirrors what
+          // it holds (see PROPAGATE_DOWN_EVENT_SET). Left on the value the
+          // reset just undid — written there by the control itself at the
+          // pick — the signal would hand it straight back on the next render,
+          // and the refused value would win over the rollback.
+          writeBoundSignal(controller.state);
         },
         // Read by the callout manager when it has nowhere else to point.
         getCalloutAnchorElement: (event) =>
@@ -744,9 +750,27 @@ export const useUIStateController = (
         controller.hasStateProp = true;
         const currentState = controller.state;
         if (!compareTwoJsValues(state, currentState)) {
-          controller.state = state;
-          if (!optimisticWorkInFlight) {
-            controller.setUIState(state, new CustomEvent("state_prop_change"));
+          // A bound signal controls the state the way a `value` prop does —
+          // and, unlike a `value`, it is written by the control itself at
+          // every ui action. Read back here on a control that runs an action,
+          // a signal matching the ui state is that echo (see the signal branch
+          // below for the same rule on an uncontrolled control): `state` is
+          // the rollback target, and taking the echo would make resetOnError
+          // put back the very value the action is about to send, or has just
+          // been refused. The action settles it — success acknowledges,
+          // failure resets to what is kept here.
+          const signalEchoesOwnWrite =
+            Boolean(controlInfo.signal) &&
+            Boolean(props.action) &&
+            compareTwoJsValues(state, controller.uiState);
+          if (!signalEchoesOwnWrite) {
+            controller.state = state;
+            if (!optimisticWorkInFlight) {
+              controller.setUIState(
+                state,
+                new CustomEvent("state_prop_change"),
+              );
+            }
           }
         }
       } else {
