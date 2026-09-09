@@ -253,11 +253,11 @@ const css = /* css */ `
  * @param {boolean} [props.closeOnClickOutside=false] - `false` (default):
  *   maps to `pointerInteractionOutsideEffect="none"` — in popover mode, no
  *   backdrop at all, outside clicks pass straight through; in dialog mode,
- *   the outside click is still absorbed (a `<dialog>` always blocks
- *   interaction with the rest of the page one way or another — see
- *   `dialog.jsx`'s own doc) but with no dimming effect. `true`: closes the
- *   panel on an outside click instead, and also enables trapping Tab
- *   navigation inside the panel (`focusCapture`) — closing on outside
+ *   the outside click is absorbed by the panel's own wall but changes
+ *   nothing. Pass `backdrop={false}` (forwarded to `Popup`) for a panel with
+ *   no wall in either mode, whose outside presses reach the page. `true`:
+ *   closes the panel on an outside click instead, and also enables trapping
+ *   Tab navigation inside the panel (`focusCapture`) — closing on outside
  *   interaction only makes sense paired with not letting focus silently
  *   leave the panel first.
  * @param {boolean} [props.swipeToClose=true] - Pushing the panel back
@@ -267,12 +267,11 @@ const css = /* css */ `
  *   deliberately. See `swipe_to_close.js` for when the gesture is claimed.
  * @param {"dialog"|"popover"} [props.mode] - Forwarded to `Popup` — forces
  *   one underlying renderer instead of its automatic screen-size
- *   resolution. Note that if `Popup` ends up in dialog mode (small screen,
- *   or forced here), the panel becomes modal regardless of
- *   `closeOnClickOutside`/`pointerInteractionOutsideEffect`: a `<dialog>`
- *   always blocks interaction with the rest of the page one way or another
- *   (see `dialog.jsx`'s own doc) — there is no dialog-mode equivalent of a
- *   popover's fully passive, click-through backdrop.
+ *   resolution. Note that if `Popup` ends up in dialog mode (small screen, or
+ *   forced here), the panel is modal unless it says `backdrop={false}`:
+ *   `closeOnClickOutside`/`pointerInteractionOutsideEffect` only say what a
+ *   press on the wall does, not whether there is one (see `dialog.jsx`'s own
+ *   doc).
  * @param {import("preact").ComponentChildren} props.children - No built-in
  *   close button — add one wherever it makes sense for the layout (e.g. a
  *   plain `<Button command="--navi-close">`), use `SidePanel.Head`'s own

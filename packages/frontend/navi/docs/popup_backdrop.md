@@ -61,13 +61,34 @@ questions. `"invisible"` is for a popup that must absorb — a menu whose
 dismissing click must not also press what is under it — without dimming the
 page for it. `backdrop={false}` is for a popup that must not absorb at all.
 
-**Only a non-modal popup can honour it.** `Popover` always can, either layer. A
-`Dialog` can only in `layer="local"`: the default `layer="top"` is shown with
-`showModal()`, which makes everything behind genuinely inert before any of
-navi's code runs — there is no press left to let through, and asking for one
-warns. `Popup` follows from that: it forwards `backdrop` to its popover and
-drops it for a top-layer dialog, so the same usage that gives one press on a
-desktop costs two once the small-screen resolution picks dialog mode.
+**It is what decides whether a popup is modal.** `Popover` is never modal,
+either layer. A `Dialog` is modal exactly when it has a wall: with one, a
+top-layer dialog is `showModal()`'d and the browser makes everything behind
+genuinely inert; without one it goes to the same top layer through the Popover
+API (`popover="manual"`), placed against the screen just the same, over a page
+that stays live. `Popup` forwards `backdrop` in both modes, so which of popover
+or dialog the small-screen resolution picks says nothing about whether one
+press or two are needed.
+
+That is what a bottom sheet on a phone is made of. `dockedOnSmallTouchScreen`
+docks the dialog against its container, and `layer` is what that container is —
+`"top"` for the screen, `"local"` for the box the popup was declared in. A
+sheet flush with the bottom of the screen over a map still being read object by
+object is `layer="top"` for the shape and `backdrop={false}` for the map:
+
+```jsx
+<Popup dockedOnSmallTouchScreen layer="top" backdrop={false}>
+```
+
+Going `layer="local"` to keep the map live instead confines the sheet to the
+box it was declared in — full width and flush against _that_, which on a
+partial container reads as a sheet that failed rather than as a sheet.
+
+What a wall-less dialog gives up is the one thing only a modal gets natively:
+the hardware/gesture back button no longer dismisses it (same accepted
+limitation as `layer="local"`, see [`dialog_shape.md`](./dialog_shape.md)).
+Focus is not trapped either, deliberately — a page meant to be reachable is
+meant to be reachable with the keyboard too.
 
 `pointerInteractionOutsideEffect="capture"` and `backdrop={false}` contradict
 each other — absorbing is what a wall does — and navi warns rather than

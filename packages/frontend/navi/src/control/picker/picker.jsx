@@ -1954,8 +1954,10 @@ const PickerFirstResolver = (props) => {
  *   and the page at all. `false` lets a press outside both close the popup and
  *   reach whatever it landed on, in one gesture — for a picker opened over a
  *   page that stays as pressable as it looks (a plan, a map, a canvas), where a
- *   wall would spend the first press on dismissing. Only the popover mode can
- *   honour it: a dialog is modal and the page behind it is inert.
+ *   wall would spend the first press on dismissing. Honoured in both modes: a
+ *   dialog with no wall is shown through the Popover API rather than
+ *   `showModal()`, so a picker docked as a bottom sheet on a phone still
+ *   leaves the plan behind it live.
  * @param {"auto"|"discrete"|"invisible"} [backdropVariant="auto"] How visible the
  *   popup's backdrop is, independently of what a click outside does: `"auto"`
  *   is the paint `pointerInteractionOutsideEffect` implies, `"discrete"` a

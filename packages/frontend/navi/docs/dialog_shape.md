@@ -77,6 +77,14 @@ adjusted without giving up the rest:
 | `expandX`             | `true`     | container-wide, same reason                           |
 | `scrollCapture`       | `true`     | a drag past the sheet's edge must not reach the page  |
 
+A `layer="top"` dialog flush with an edge of the screen — a docked sheet on the
+bottom, anything with `marginWithContainer={0}` — keeps the band the device
+reserves there (`env(safe-area-inset-*)`: the notch, the home indicator,
+Safari's floating bar). The surface still reaches the edge; what it holds stops
+at the band. Only the device's own inset: the dialog is in front of the app's
+fixed bars, so `--navi-safe-area-inset-*`, which counts them too (see
+[`safe_area.md`](./safe_area.md)), is not what it reads.
+
 Plus a swipe-down-to-close, held by the sheet's `header` (a `Box` with the
 `header` prop) and by anything carrying `data-swipe-grip` — never by the whole
 sheet, so a board something is dragged across keeps its own gestures. See
@@ -181,10 +189,17 @@ Two things make it safe to reach for:
 
 ## A `layer="local"` dialog answers to its container
 
-`layer="top"` (the default) is a real `<dialog>` in the browser's top layer:
-native focus trap, `Escape`, hardware back-button dismissal, the rest of the
-document made inert. `layer="local"` stays in normal document flow, confined to
-and clipped by its own positioned ancestor.
+`layer="top"` (the default) is a real `<dialog>` in the browser's top layer,
+placed against the screen and clipped by nothing — modal, with everything
+behind made inert, unless `backdrop={false}` says otherwise (see
+[`popup_backdrop.md`](./popup_backdrop.md)). `layer="local"` stays in normal
+document flow, confined to and clipped by its own positioned ancestor.
+
+For a **docked** dialog that is the choice of which edge the sheet rests on:
+`layer` names the container, and docking makes the sheet flush and full width
+against it. A sheet meant for the bottom of the screen is `layer="top"`, even
+when the page behind it must stay live — that is `backdrop={false}`, not
+`layer="local"`.
 
 For the shape, that swaps what every bound is measured against: the container
 becomes that ancestor's box, read through
@@ -194,10 +209,10 @@ is open — its backdrop covers the scrollport, not the scrolled content, so
 scrolling would slide the dialog away and reveal what the backdrop does not
 cover. `scrollCapture` is what extends that lock to the whole page.
 
-One accepted limitation, not an oversight: a local dialog **cannot** be
-dismissed by the hardware/gesture back button. No web API hooks into that
-outside the browser's own modal-dismissal stack, which only a genuine
-`showModal()` element joins.
+One accepted limitation, not an oversight: a dialog that is not modal —
+`layer="local"`, or `backdrop={false}` — **cannot** be dismissed by the
+hardware/gesture back button. No web API hooks into that outside the browser's
+own modal-dismissal stack, which only a genuine `showModal()` element joins.
 
 ## Reaching all of this through a `Picker` or a `SplitButton`
 

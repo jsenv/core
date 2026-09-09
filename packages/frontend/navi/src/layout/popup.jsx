@@ -106,22 +106,18 @@ const css = /* css */ `
  *   — without this, the exact same `<Popup>` usage would behave
  *   differently (close-on-outside-click or not) purely based on which mode
  *   the screen-size check happens to pick, which defeats the point of
- *   having one shared API in the first place. Note this can only ever go so
- *   far: in dialog mode, `"none"`/`"capture"` still absorb every outside
- *   click (no visual effect vs. dimmed) rather than truly letting it
- *   through, since a `<dialog>` is always modal one way or another (see
- *   `dialog.jsx`'s own doc) — a popover's fully passive, click-through
- *   backdrop has no dialog-mode equivalent. Whatever content `Popup` opens
- *   is unavoidably *more* intrusive once it switches to dialog mode than
- *   the exact same usage would be as a popover — worth keeping in mind for
- *   anything that relies on `Popup` and can end up on a small screen.
+ *   having one shared API in the first place. Note this only says what a
+ *   press outside *does*; whether it reaches the page at all is `backdrop`
+ *   below, and `"none"`/`"capture"` describe a wall either way — the popup
+ *   absorbs the press without closing, dimmed or not.
  * @param {boolean} [props.backdrop] - Whether anything is laid between the
  *   popup and the page at all: `false` lets a press outside both dismiss the
- *   popup and reach whatever it landed on, in one gesture. Reaches the popover
- *   only — a `Dialog` is `showModal()`'d in the `layer="top"` it defaults to,
- *   and the page behind is then genuinely inert — so it is dropped rather than
- *   forwarded when the mode resolution picks a top-layer dialog, the same
- *   "only so far" as `pointerInteractionOutsideEffect` above.
+ *   popup and reach whatever it landed on, in one gesture. Forwarded as-is and
+ *   honoured in either mode — a wall-less `Dialog` is shown through the
+ *   Popover API rather than `showModal()` — so which mode the screen-size
+ *   resolution picks says nothing about whether the page behind stays live.
+ *   It is also what makes a sheet docked to the bottom of a phone's screen
+ *   (`dockedOnSmallTouchScreen`) non-modal.
  * @param {"auto"|"discrete"|"invisible"} [props.backdropVariant] - Forwarded
  *   as-is to whichever component renders (both understand it identically):
  *   how visible the backdrop is, independently of what an outside click
@@ -192,9 +188,6 @@ export const Popup = (props) => {
     // exact same <Popup> usage behaves identically regardless of which
     // mode the automatic screen-size resolution happens to pick.
     pointerInteractionOutsideEffect = "close",
-    // Read here rather than left in ...rest so the dialog branch can drop it:
-    // a top-layer dialog is modal and has no press left to let through, and
-    // warns when asked (see Dialog's own backdrop prop).
     backdrop,
     // Popover-only (see this component's own doc) — destructured out so
     // they're never part of ...rest, and therefore never forwarded to
@@ -233,7 +226,7 @@ export const Popup = (props) => {
         sizeFromAnchor={sizeFromAnchor}
         maxWidth={maxWidth}
         pointerInteractionOutsideEffect={pointerInteractionOutsideEffect}
-        backdrop={rest.layer === "local" ? backdrop : undefined}
+        backdrop={backdrop}
         className={withPropsClassName("navi_popup", className)}
         expand={expand}
         expandX={expandX}

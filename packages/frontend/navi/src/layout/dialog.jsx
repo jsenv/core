@@ -25,25 +25,43 @@
  * other, and back on close (popup_grow.js). Either way Dialog's own
  * positioning is never relative to the anchor, unlike Popover.
  *
- * Two rendering strategies, picked via `layer`: `DialogAsModal` (a real
- * `<dialog>`, `showModal()`, top layer — native focus trap,
- * `Escape`-to-cancel, hardware/gesture back-button dismissal, all for free)
- * and `DialogLocal` (also a real `<dialog>`, shown via the non-modal
- * `.show()` instead so it stays in normal document flow — `position:
- * absolute` relative to its own positioned ancestor, clipped by it, same
- * motivation as Popover's own `PopoverCustom`).
+ * Always a real `<dialog>`; three ways of showing it, and two independent
+ * questions pick between them. `layer` says what the dialog is placed
+ * against — the screen, or the box it was declared in. `backdrop` says
+ * whether there is a wall between it and the page:
  *
- * `.show()` gives up everything `showModal()` gets for free, which
- * `DialogLocal` reimplements itself: a focus trap (scoped to its own
- * positioned ancestor, not `document`) and `Escape`-to-close (`.show()`
- * dialogs don't fire "cancel" on Escape the way a modal one does).
+ * - `layer="top"` with a backdrop → `showModal()`, the browser's own top
+ *   layer, everything behind genuinely inert.
+ * - `layer="top"` without one → the Popover API (`popover="manual"` +
+ *   `showPopover()`), same top layer and same placement against the screen,
+ *   page still live behind it. This is what a bottom sheet resting on the
+ *   screen's edge over a map still being read object by object needs: the
+ *   screen as its container, and no wall.
+ *
+ * - `layer="local"` → the non-modal `.show()`, staying in normal document
+ *   flow, `position: absolute` relative to its own positioned ancestor and
+ *   clipped by it, same motivation as Popover's own `PopoverCustom`.
+ *
+ * The first two are one component (`DialogInTopLayer`) — same DOM, same
+ * placement, only the show call differs; the third is `DialogLocal`, which
+ * wraps its dialog in a `.navi_dialog_clip_wrapper` to absorb the overflow
+ * growth of a translate/scale entrance before it reaches the real container.
+ *
+ * Only `showModal()` brings a focus trap and `Escape`-to-cancel for free;
+ * the other two reimplement what they need. `Escape` is handled from the
+ * keyboard shortcuts (a `.show()`n or `showPopover()`n dialog fires no
+ * "cancel"). The focus trap follows the wall rather than the show call: a
+ * backdrop stops the keyboard too, so a dialog with one traps focus (scoped
+ * to its own positioned ancestor for `layer="local"`, natively for a modal),
+ * and a dialog without one lets focus leave — the page behind is meant to be
+ * reached, keyboard included.
  * **Deliberately NOT reimplemented: hardware/gesture back-button
  * dismissal** — no public web API hooks into that outside the browser's own
  * native modal-dismissal stack, which only a genuine `showModal()` element
- * participates in. An accepted, intentional limitation of `layer="local"`,
- * not an oversight.
+ * participates in. An accepted, intentional limitation of everything that is
+ * not a modal, not an oversight.
  *
- * `DialogAsModal`'s own backdrop is the native `::backdrop` pseudo-element,
+ * A modal's own backdrop is the native `::backdrop` pseudo-element,
  * not a real rendered element — simpler than the alternative turned out to
  * be: a `showModal()`-shown `<dialog>` makes the rest of the document
  * genuinely non-interactive while open, so a real backdrop `<div
@@ -52,11 +70,6 @@
  * `document`-level `mousedown` listener, coordinate-based against
  * `dialogEl`'s own rect rather than target-based (a backdrop click doesn't
  * reliably fire `dialogEl`'s own `mousedown` either).
- *
- * `DialogLocal` wraps its dialog element in a `.navi_dialog_clip_wrapper`
- * (mirrors Popover's own `.navi_popover_clip_wrapper`) purely to absorb
- * overflow growth from a translate/scale entrance transition before it
- * reaches the real container.
  */
 
 import {
@@ -237,10 +250,10 @@ const css = /* css */ `
       var(--dialog-maxmax-height)
     );
 
-    /* Base default: also the custom renderer's own permanent value — its
+    /* Base default: also a local dialog's own permanent value — its
        containing block is genuinely its nearest positioned ancestor,
        regardless of positionArea. See the [data-layer="top"] rule below for
-       why the via-attribute renderer overrides this. Position is always
+       why a top-layer one overrides this. Position is always
        JS-driven (pickPositionRelativeTo, see useDialogProps below) — no CSS
        alignment/inset math here at all. */
     position: absolute;
@@ -323,13 +336,8 @@ const css = /* css */ `
         var(--container-position-remaining-width, var(--dialog-maxmax-width)),
         var(--dialog-maxmax-width)
       );
-      /* The sheet rests on the screen's bottom edge, which on a phone is the
-         home indicator and, since iOS 26, Safari's own floating bar — a band
-         the browser does not paint fixed content into. The surface still
-         reaches the edge (the sheet comes out from behind the bar); what it
-         holds stops above it. */
-      padding-bottom: env(safe-area-inset-bottom, 0px);
     }
+
     /* The clamped max, not --dialog-maxmax-*: that one is the viewport minus
        the spacing, which is only the real ceiling for layer="top". A local
        dialog is confined to its positioned ancestor, whose size reaches here
@@ -357,6 +365,35 @@ const css = /* css */ `
       border-bottom-left-radius: 0;
     }
 
+    /* An edge the dialog sits flush against is an edge of the screen, and the
+       device keeps a band there it paints nothing into: the notch, the home
+       indicator, Safari's own floating bar since iOS 26. The surface still
+       reaches the edge — a sheet comes out from behind the bar rather than
+       stopping short of it — and what it holds stops at the band.
+
+       env(), not --navi-safe-area-inset-*: that one is the app's own free
+       region and counts its fixed bars, which this dialog is in front of. The
+       device's inset is the only thing left to keep.
+
+       layer="top" only. A local dialog is flush with the box it was declared
+       in, and whether that box reaches the screen's edge is something only the
+       app knows — it gives that band back on its own container (see
+       safe_area.js's [data-navi-safe-area]). */
+    &[data-layer="top"] {
+      &[data-flush-top] {
+        padding-top: env(safe-area-inset-top, 0px);
+      }
+      &[data-flush-right] {
+        padding-right: env(safe-area-inset-right, 0px);
+      }
+      &[data-flush-bottom] {
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+      }
+      &[data-flush-left] {
+        padding-left: env(safe-area-inset-left, 0px);
+      }
+    }
+
     /* The placement is a translate, so the translate property is spoken for
        here (see applyNewPosition in visible_rect.js, which owns it and animates
        it itself through the Web Animations API rather than through this file's
@@ -369,8 +406,8 @@ const css = /* css */ `
       --backdrop-filter: var(--navi-backdrop-capture-backdrop-filter);
     }
     /* backdropVariant, after the rules it overrides: same specificity, so
-       order is what decides. showModal() still makes the page inert either
-       way — only the paint goes away. */
+       order is what decides. The wall is still there either way — only the
+       paint goes away. */
     &[data-backdrop-variant="discrete"] {
       --backdrop-background: var(--navi-backdrop-discrete-background);
       --backdrop-filter: var(--navi-backdrop-discrete-backdrop-filter);
@@ -434,7 +471,10 @@ const css = /* css */ `
       --navi-focus-outline-style: none;
     }
 
-    &[open] {
+    /* :popover-open too — a top-layer dialog with no wall is shown with
+       showPopover(), which never sets the [open] attribute. */
+    &[open],
+    &:popover-open {
       display: flex;
     }
 
@@ -471,14 +511,12 @@ const css = /* css */ `
     }
   }
 
-  /* Custom renderer only — .show()'d dialogs get no ::backdrop, so this is
+  /* layer="local" only — a .show()'d dialog gets no ::backdrop, so its wall is
      a real sibling element instead, same idea/CSS shape as Popover's own
-     .navi_popover_backdrop (see popover.jsx's top comment for the design
-     this mirrors). Always rendered (never skipped like Popover's own
-     "none" case): a dialog is always modal, so there's always at least a
-     click-absorbing backdrop, matching what showModal() already gives the
-     via-attribute renderer for free regardless of
-     pointerInteractionOutsideEffect. */
+     .navi_popover_backdrop (see popover.jsx's top comment for the design this
+     mirrors). Rendered whenever backdrop={true}, whatever
+     pointerInteractionOutsideEffect says: a wall that closes nothing still
+     absorbs the press, matching what showModal() gives a modal for free. */
   .navi_dialog_backdrop {
     --popup-animation-duration: 0.18s;
 
@@ -493,7 +531,7 @@ const css = /* css */ `
        in openEffect) gets pointer-events: none mid-transition. */
     pointer-events: auto;
 
-    /* Painted through the same two variables as the via-attribute renderer's
+    /* Painted through the same two variables as a modal's own
        ::backdrop (see them for what each rule is for) — here they resolve on
        the element that paints, which is also the element the
        backdropColor/backdropFilter props are set on. Declared unconditionally
@@ -585,12 +623,15 @@ const css = /* css */ `
  * grammar, anchor's sizing-only role, backdrop mechanics).
  *
  * @param {object} props
- * @param {"top"|"local"} [props.layer="top"] - `"top"`: `showModal()`'d
- *   into the browser's own top layer (native focus trap, `Escape`-to-cancel,
- *   hardware back-button dismissal, rest-of-document made inert). `"local"`:
- *   shown via the non-modal `.show()` instead, staying in normal document
+ * @param {"top"|"local"} [props.layer="top"] - What the dialog is placed
+ *   against. `"top"`: the browser's own top layer, placed against the screen,
+ *   never clipped by anything the app declared. `"local"`: normal document
  *   flow inside its own positioned ancestor — confined to (and clipped by)
- *   that container instead of the whole viewport.
+ *   that container instead of the whole viewport. Whether the top-layer one
+ *   is modal is `backdrop`'s answer, not this one's: with a backdrop it is
+ *   `showModal()`'d (native focus trap, `Escape`-to-cancel, hardware
+ *   back-button dismissal, rest-of-document made inert), without one it is
+ *   shown through the Popover API and the page behind stays live.
  * @param {boolean} [props.dockedOnSmallTouchScreen] - Turns the dialog into a
  *   bottom sheet (docked flush to the bottom edge, full width) on a small touch
  *   screen, and leaves it alone otherwise. For a dialog meant to be interacted
@@ -653,9 +694,12 @@ const css = /* css */ `
  *   outside press does or how the backdrop is painted. `false` leaves the page
  *   reachable: a press outside closes the dialog (per
  *   `pointerInteractionOutsideEffect`) *and* is answered by whatever it landed
- *   on, in the same gesture. **`layer="local"` only** — `showModal()` makes
- *   everything behind genuinely inert, so a top-layer dialog has no way to let
- *   a press through and warns instead. See docs/popup_backdrop.md.
+ *   on, in the same gesture; focus is free to leave too, the page behind being
+ *   meant to be reached. Works in either layer — a top-layer dialog with no
+ *   wall is shown through the Popover API rather than `showModal()`, which is
+ *   what a sheet docked to the screen's bottom edge over a still-readable map
+ *   needs. What it gives up is what only a modal gets natively: the hardware
+ *   back button no longer dismisses it. See docs/popup_backdrop.md.
  * @param {"close"|"cancel"|"capture"|"none"} [props.pointerInteractionOutsideEffect="close"]
  *   - `"close"` closes the dialog on an outside click. `"capture"`/`"none"`
  *   both just absorb the click without closing (visually dimmed backdrop vs.
@@ -921,16 +965,16 @@ const UncontrolledDialog = (props) => {
 // Picks which rendering strategy actually mounts, from `layer` alone — see
 // this file's top comment. Done after the controlled/uncontrolled split
 // above, so an openController is always already resolved by the time
-// DialogAsModal/DialogLocal (and the useDialogProps hook they share) ever
+// DialogInTopLayer/DialogLocal (and the useDialogProps hook they share) ever
 // run.
 const ControlledDialog = (props) => {
   if (props.layer === "local") {
     return <DialogLocal {...props} />;
   }
-  return <DialogAsModal {...props} />;
+  return <DialogInTopLayer {...props} />;
 };
 
-const DialogAsModal = (props) => {
+const DialogInTopLayer = (props) => {
   const [backdropProps, contentProps] = useDialogProps(props);
   return (
     <>
@@ -962,12 +1006,14 @@ const DialogLocal = (props) => {
 /**
  * Everything both rendering strategies share once an `openController` is
  * already resolved: focus/debug/id plumbing, the open-commit sequence, the
- * close handler — inlined in `openEffect`, branching on `isModal` at each
+ * close handler — inlined in `openEffect`, branching on how the dialog is
+ * shown at each
  * point the two renderers genuinely differ (same pattern as popover.jsx's
  * own usePopoverProps — see its top comment for why this stays inline
  * rather than split into two functions). Returns `[backdropProps,
- * contentProps]` — `backdropProps` is `null` for the via-attribute renderer
- * (its own backdrop is native, not a real element).
+ * contentProps]` — `backdropProps` is `null` unless there is a wall of our
+ * own to render: a modal's is the native `::backdrop`, and `backdrop={false}`
+ * has none at all.
  */
 // What a dialog turns into on a small touch screen. "bottom" is not a taste:
 // it puts the dialog in the zone a phone is actually operated from — where the
@@ -1000,10 +1046,10 @@ const useDialogProps = (props) => {
   props.ref = props.ref || defaultRef;
   const {
     openController,
-    // "top" (default) → real <dialog>, showModal(), the browser's own top
-    // layer. "local" → also a real <dialog>, but shown via the non-modal
-    // .show() instead, staying in normal document flow, position: absolute
-    // relative to its own positioned ancestor. See this file's top comment.
+    // "top" (default) → the browser's own top layer, placed against the
+    // screen. "local" → normal document flow, position: absolute relative to
+    // its own positioned ancestor. Which show call each takes also depends on
+    // `backdrop` — see this file's top comment.
     layer = "top",
     dockedOnSmallTouchScreen,
 
@@ -1018,17 +1064,16 @@ const useDialogProps = (props) => {
     expandX: expandXProp,
     expandY: expandYProp,
     // "close" (default) closes on an outside click. "capture"/"none" both
-    // just absorb it without closing — for the via-attribute renderer,
-    // showModal() already makes the rest of the page inert, so there's
-    // nothing for a click to reach either way; for the custom renderer,
-    // there's no native inert-ing, so the real backdrop below is what
-    // actually makes "capture"/"none" behave the same way here too.
+    // just absorb it without closing — for a modal, showModal() already makes
+    // the rest of the page inert, so there's nothing for a click to reach
+    // either way; otherwise there's no native inert-ing, so the real backdrop
+    // below is what makes "capture"/"none" behave the same way here too.
     pointerInteractionOutsideEffect = "close",
     // Whether there is a wall between the dialog and the page at all, asked
     // before what a press on it does (pointerInteractionOutsideEffect) and
-    // before how it is painted (backdropVariant below). layer="top" cannot
-    // honour false: showModal() makes the page inert before anything here
-    // runs.
+    // before how it is painted (backdropVariant below). It also picks the show
+    // call for layer="top": a wall is what showModal() is for, and without one
+    // the dialog goes to the same top layer through the Popover API instead.
     backdrop = true,
     // How loudly the backdrop says it is there — independent of what it
     // *does* (that's pointerInteractionOutsideEffect above). "invisible" is a
@@ -1085,12 +1130,11 @@ const useDialogProps = (props) => {
     anchor,
   });
   const children = contentMounted ? childrenProp : null;
-  const isModal = layer === "top";
-  if (isModal && !backdrop) {
-    console.warn(
-      `Dialog: backdrop={false} needs layer="local". A layer="top" dialog is shown with showModal(), which makes everything behind it inert before any of this runs — there is no press left to let through.`,
-    );
-  }
+  // Where it is placed, and whether there is a wall — the two questions that
+  // pick the show call (see this file's top comment).
+  const isTopLayer = layer === "top";
+  const isModal = isTopLayer && backdrop;
+  const isTopLayerPopover = isTopLayer && !backdrop;
   if (!backdrop && pointerInteractionOutsideEffect === "capture") {
     console.warn(
       `Dialog: pointerInteractionOutsideEffect="capture" needs a backdrop. Absorbing a press is what a wall does, and backdrop={false} takes it away.`,
@@ -1118,7 +1162,7 @@ const useDialogProps = (props) => {
         // container being that screen (the viewport, unless the app declared a
         // narrower one) — and the positioned ancestor for a local one, where
         // reading 3% of the screen gives an absurd gap inside a small box.
-        isModal
+        isTopLayer
         ? "3appw"
         : "3cqw");
   // "expand || expandX", the shorthand semantics Popup used to apply before
@@ -1315,7 +1359,7 @@ const useDialogProps = (props) => {
     // from dialogEl.parentElement, which for DialogLocal is the
     // .navi_dialog_clip_wrapper (itself position: absolute) rather than the
     // real, meaningful ancestor beyond it.
-    const positionedAncestor = isModal
+    const positionedAncestor = isTopLayer
       ? document.documentElement
       : getPositionedParent(
           dialogEl.parentElement /* dialogEl is inside the clip_wrapper */,
@@ -1327,7 +1371,7 @@ const useDialogProps = (props) => {
     // the box the dialog shrinks back into is the one it came out of.
     anchorElementRef.current = anchorElement;
     debugPopup(`"${e.type}" on ${getElementSignature(e.target)} -> openDialog`);
-    if (!isModal) {
+    if (!isTopLayer) {
       // see openLocalDialogCount's own comment
       dialogEl.style.setProperty(
         "--dialog-stack-order",
@@ -1372,10 +1416,12 @@ const useDialogProps = (props) => {
 
     if (isModal) {
       dialogEl.showModal();
+    } else if (isTopLayerPopover) {
+      dialogEl.showPopover();
     } else {
       dialogEl.show();
     }
-    // Regardless of isModal — see the backdrop's own [navi-hidden] CSS rule
+    // Whichever show call ran — see the backdrop's own [navi-hidden] CSS rule
     // and popover.jsx's identical reasoning: showModal()/show() alone only
     // wins over a stray, still-present [navi-hidden] { display: none }
     // default when nothing else authored also sets display on dialogEl —
@@ -1386,28 +1432,27 @@ const useDialogProps = (props) => {
     if (isModal) {
       // Native focus trap — the browser's own top-layer modal already
       // confines Tab/Shift+Tab, nothing to reimplement here.
-    } else {
+    } else if (backdrop) {
       addCleanup(
         trapFocusInside(dialogEl, {
           debug: debugFocus,
           boundaryElement: positionedAncestor,
-          // A dialog is always modal (see this file's top comment) — a
-          // mousedown on some other focusable element inside the same
-          // container (but outside the dialog) must not steal focus away
-          // from it either, not just a Tab press.
+          // The wall stops the keyboard too — a mousedown on some other
+          // focusable element behind it must not steal the focus away either,
+          // not just a Tab press.
           pointerTrap: true,
         }),
       );
     }
     if (scrollCapture) {
-      // A modal dialog always has its own ::backdrop; the custom renderer has
-      // the backdrop element when it renders one.
+      // A modal dialog always has its own ::backdrop; a local one has the
+      // backdrop element when it renders one.
       addCleanup(
         trapScrollInside(dialogEl, {
           backdrop: isModal || backdropEl,
         }),
       );
-    } else if (!isModal) {
+    } else if (!isTopLayer) {
       // A local dialog is confined to its positioned ancestor, and so is its
       // backdrop (inset: 0 covers the scrollport, not the scrolled content):
       // letting that ancestor scroll would slide the dialog away and reveal
@@ -1424,7 +1469,7 @@ const useDialogProps = (props) => {
     // Positioning: dialogEl is already shown (display: flex, per this
     // file's own [open] CSS) by this point, so its own dimensions are real
     // — pickPositionRelativeTo's own no-anchor/docked mode (no `anchor`
-    // argument at all) docks it against the viewport (layer="top"/isModal)
+    // argument at all) docks it against the viewport (layer="top")
     // or its own positioned ancestor (layer="local", the same
     // positionedAncestor computed above), same mechanism as Popover's own
     // custom renderer. applyDialogPosition sets --container-position-remaining-height/-width
@@ -1456,7 +1501,7 @@ const useDialogProps = (props) => {
     // box is what the caps must read, and nothing in CSS tracks it.
     const applyDialogPosition = (position) => {
       applyNewPosition(dialogEl, position);
-      if (isModal) {
+      if (isTopLayer) {
         dialogEl.style.removeProperty("--container-position-remaining-height");
         dialogEl.style.removeProperty("--container-position-remaining-width");
       }
@@ -1562,7 +1607,7 @@ const useDialogProps = (props) => {
 
     // Reposition on the same triggers Popover's own visibleRectEffect
     // already reacts to generically — window resize/scroll/visual-viewport
-    // changes for layer="top"/isModal (positionedAncestor is already
+    // changes for layer="top" (positionedAncestor is already
     // document.documentElement there, see its own computation above;
     // visibleRectEffect already debounces visualViewport resize by 100ms
     // to avoid the mobile tap-to-tap-input keyboard flicker, so no
@@ -1671,15 +1716,19 @@ const useDialogProps = (props) => {
       );
       clearTextSelectionInside(dialogEl);
       dialogEl.setAttribute("aria-expanded", "false");
-      if (!isModal) {
+      if (!isTopLayer) {
         openLocalDialogCount = Math.max(0, openLocalDialogCount - 1);
         dialogEl.style.removeProperty("--dialog-stack-order");
       }
       // See openEffect's own identical comment for why this is needed
-      // regardless of isModal, not just when a stray authored display
+      // whichever show call ran, not just when a stray authored display
       // property is actually present — harmless the rest of the time.
       dialogEl.setAttribute("navi-hidden", "");
-      dialogEl.close();
+      if (isTopLayerPopover) {
+        dialogEl.hidePopover();
+      } else {
+        dialogEl.close();
+      }
       // Held at the size it has right now, for the whole way out. cleanup()
       // below already stops the JS repositioning, but the size is CSS-driven
       // (--x-dialog-max-height, and `height` outright under expandY) and
@@ -1710,9 +1759,8 @@ const useDialogProps = (props) => {
 
   const onKeyDownShortcuts = createOnKeyDownForShortcuts({
     escape: (e) => {
-      // Only the custom renderer needs this — a modal <dialog> already
-      // fires "cancel" (handled via onCancel below) on Escape natively; a
-      // non-modal .show()'d one doesn't.
+      // Only a modal <dialog> fires "cancel" on Escape natively (handled via
+      // onCancel below); neither a .show()n nor a showPopover()n one does.
       if (isModal || !openController.opened) {
         return null;
       }
@@ -1729,10 +1777,10 @@ const useDialogProps = (props) => {
   // most fields are shared: renderer-specific bits (the outside-click
   // handler below, in particular) are just assigned onto whichever of the
   // two actually owns that concern for a given renderer, instead of one
-  // object's own field branching internally on isModal. backdropProps only
-  // gets returned (see the bottom of this function) when !isModal — the
-  // via-attribute renderer's own backdrop is native (::backdrop), not a
-  // real element we render ourselves.
+  // object's own field branching internally. backdropProps only gets returned
+  // (see the bottom of this function) for the one dialog whose wall is a real
+  // element of ours: a modal's is native (::backdrop), and backdrop={false}
+  // has none at all.
   Object.assign(backdropProps, {
     "ref": backdropRef,
     // Out of flow like the popup it belongs to — see the content element's own
@@ -1782,21 +1830,21 @@ const useDialogProps = (props) => {
     // after measuring (see this file's top comment) — so there's no reason
     // to withhold the attribute for the auto case the way Popover has to.
     "navi-animation": resolvedAnimation,
-    // Only meaningful for the via-attribute renderer's own native
-    // ::backdrop (see this file's CSS for the "capture" glass effect) — a
+    // Only meaningful for a modal's own native ::backdrop (see this file's
+    // CSS for the "capture" glass effect) — a
     // pseudo-element can't carry its own attributes, so this has to live on
     // the originating .navi_dialog element instead, same reasoning as
-    // navi-animation above. Harmless for the custom renderer too (its own
-    // real backdrop element already gets the same attribute via
-    // backdropProps above, which is what its own CSS actually keys off).
+    // navi-animation above. Harmless for a local dialog too (its own real
+    // backdrop element already gets the same attribute via backdropProps
+    // above, which is what its own CSS actually keys off).
     "data-pointer-interaction-outside": pointerInteractionOutsideEffect,
-    // Only load-bearing for the via-attribute renderer's own native
-    // ::backdrop, same "a pseudo-element can't carry attributes" reasoning
-    // as the prop just above (and harmless for the custom renderer, whose
-    // real backdrop element gets it via backdropProps).
+    // Only load-bearing for a modal's own native ::backdrop, same "a
+    // pseudo-element can't carry attributes" reasoning as the prop just above
+    // (and harmless for a local dialog, whose real backdrop element gets it
+    // via backdropProps).
     "data-backdrop-variant": backdropVariant,
     // Read by the native ::backdrop, which inherits them from here (see this
-    // file's CSS) — the custom renderer's own backdrop element gets them via
+    // file's CSS) — a local dialog's own backdrop element gets them via
     // backdropProps above.
     backdropColor,
     backdropFilter,
@@ -1825,6 +1873,12 @@ const useDialogProps = (props) => {
     // absolutely placed by its own code — so it says so once, here (group.jsx
     // reads this attribute to tell a member from anything else on its line).
     "navi-out-of-flow": "",
+    // The top layer without a wall: showPopover() is what puts it there, and
+    // it only accepts an element that declares itself a popover. "manual" so
+    // the browser's own light dismiss stays out of it — what an outside press
+    // does is pointerInteractionOutsideEffect's answer, given by the
+    // document-level listener in openEffect above.
+    "popover": isTopLayerPopover ? "manual" : undefined,
     "baseClassName": "navi_dialog",
     "pseudoClasses": DIALOG_PSEUDO_CLASSES,
     // Distinguishes the two renderers for the CSS above (position: fixed
@@ -1878,8 +1932,8 @@ const useDialogProps = (props) => {
     },
     "onCancel": (e) => {
       // The dialog's own "cancel" (Escape on a modal showModal() dialog —
-      // the custom renderer's Escape handling lives in onKeyDownShortcuts
-      // above) fires on the dialog element itself. But a child
+      // the Escape handling for the other two shows lives in
+      // onKeyDownShortcuts above) fires on the dialog element itself. But a child
       // <input type="file"> also fires a BUBBLING "cancel" when the user
       // dismisses the file chooser (per the HTML spec), and it lands here
       // too; only the dialog's own cancel means "close".
@@ -1891,12 +1945,12 @@ const useDialogProps = (props) => {
     children,
   });
 
-  // Outside-click handling for layer="local" only — the via-attribute
-  // renderer's own is a plain document-level listener instead, set up in
-  // openEffect above (see this file's top comment for why: neither a real
-  // backdrop element nor dialogEl's own mousedown reliably fires for a
-  // native ::backdrop click).
-  if (!isModal && backdrop) {
+  // Outside-click handling for the wall we render ourselves. A modal's is a
+  // plain document-level listener instead, set up in openEffect above (see
+  // this file's top comment for why: neither a real backdrop element nor
+  // dialogEl's own mousedown reliably fires for a native ::backdrop click),
+  // and so is a wall-less dialog's.
+  if (!isTopLayer && backdrop) {
     backdropProps.onMouseDown = (mouseDownEvent) => {
       if (mouseDownEvent.button !== 0) {
         return;
@@ -1906,7 +1960,7 @@ const useDialogProps = (props) => {
       if (openedDuringThisPress(openController)) {
         return;
       }
-      // See the custom renderer's own onDocumentMouseDown: a click inside
+      // See the document-level listener in openEffect above: a click inside
       // another popup is a click on what is in front, not an outside click.
       const dialogEl = ref.current;
       const popupUnderPointer = mouseDownEvent.target.closest?.(
@@ -1933,7 +1987,7 @@ const useDialogProps = (props) => {
     };
   }
 
-  return [isModal || !backdrop ? null : backdropProps, contentProps];
+  return [!isTopLayer && backdrop ? backdropProps : null, contentProps];
 };
 
 const DIALOG_PSEUDO_CLASSES = [
