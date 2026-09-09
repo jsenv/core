@@ -13,6 +13,8 @@
   - [1. Component props (preferred)](#1-component-props-preferred)
   - [2. CSS variables (for global or theme-level changes)](#2-css-variables-for-global-or-theme-level-changes)
   - [3. Direct rule override (avoid unless necessary)](#3-direct-rule-override-avoid-unless-necessary)
+- [Counting children: what navi puts in your tree](#counting-children-what-navi-puts-in-your-tree)
+  - [Say which children the rule means](#say-which-children-the-rule-means)
 - [Summary](#summary)
 
 ## Overview
@@ -478,15 +480,85 @@ Overriding the actual CSS rules (not the variables) is intentionally hard — th
 
 ---
 
+## Counting children: what navi puts in your tree
+
+Some of what navi shows is rendered inside the tree you wrote. A popup renders
+in its opener's own subtree, so a `Dialog` or `Popover` written next to the
+button that opens it is a sibling of that button. A callout — the speech bubble
+a control pops to explain itself — is mounted on what it explains, or beside it
+when that element cannot hold it (a `<button>`, an `<input>`, anything inside a
+`<label>`). This is deliberate: they inherit your fonts, your colors, your
+custom properties, and they leave with the screen that opened them.
+
+None of them draws in the flow. They are `position: fixed`/`absolute`, most of
+them in the top layer: no grid track, no flex item, no line box, no gap. They
+move nothing.
+
+**But they are element children, and structural selectors count element
+children.** `:last-child`, `:first-child`, `:nth-child`, `:nth-last-child`,
+`:only-child`, `:empty`, `> * + *` look at the element tree — never at
+`display`, `position`, or the top layer, and CSS offers no exception for
+out-of-flow elements. So a rule of yours that depends on the number or the
+order of children stops matching for exactly as long as a popup or a callout is
+open:
+
+```css
+/* three cells in a two-column grid, the odd last one spanning both */
+.grid > .cell:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+```
+
+Press the third cell, its callout opens, and the cell is no longer the last
+child: it loses the span and halves. Close the callout and it comes back. The
+grid reserved nothing — the rule simply stopped matching. What makes this one
+nasty is that it is invisible from the app: the CSS is right, the JSX is right,
+and the trap only springs on an interaction, after the layout was reviewed.
+
+### Say which children the rule means
+
+A counting pseudo-class takes what to count: `:nth-child(An+B of S)` and
+`:nth-last-child(An+B of S)` walk only the children matching `S`, so name your
+own — either by what they are, or by what navi's out-of-flow elements all carry
+(`navi-out-of-flow`, the same marker navi's own `Group` reads):
+
+```css
+.grid > .cell:nth-last-child(1 of .cell):nth-child(odd of .cell) {
+  grid-column: 1 / -1;
+}
+```
+
+`:last-child` and `:first-child` take no such argument — spell them
+`:nth-last-child(1 of S)` and `:nth-child(1 of S)` when you need one. A sibling
+combinator is the other shape, and there the marker goes between the compounds:
+
+```css
+.stack > *:not([navi-out-of-flow]) + *:not([navi-out-of-flow]) {
+  margin-block-start: 8px;
+}
+```
+
+The third way is to stop asking a structural question at all: put a class on the
+cell you mean and style that. It is the most robust of the three — it survives
+anything else landing in that container later.
+
+In dev, navi warns when opening a callout moves the element it is anchored on,
+or that element's container: a callout has no layout box, so anything moving
+means a rule like the one above just changed subject. The warning names both
+elements and the boxes before and after.
+
+---
+
 ## Summary
 
-| What you want to change                                      | How to do it                                                                                                                   |
-| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
-| One component instance                                       | Component prop or `style` attribute                                                                                            |
-| All instances of a component                                 | `--component-*` in unlayered app CSS, on a selector matching the component                                                     |
-| A global design token                                        | `--navi-*` on `:root`                                                                                                          |
-| The share of ink in `secondary`/`emphasis`/`discrete`/`hint` | `--navi-color-*-mix` on `:root` — never on a container                                                                         |
-| A container's own paper (a dark card)                        | `color` on the container, plus a `--navi-color-*` keyword pinned if its formula reads wrong there; both stop at the next popup |
-| How wide popups may ever get                                 | `--navi-app-max-width` on `:root`                                                                                              |
-| A structural layout rule                                     | Expose a new CSS variable (contribute)                                                                                         |
-| What a variant decided                                       | A prop — a variant only ever moves defaults, so props keep winning                                                             |
+| What you want to change                                       | How to do it                                                                                                                   |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| One component instance                                        | Component prop or `style` attribute                                                                                            |
+| All instances of a component                                  | `--component-*` in unlayered app CSS, on a selector matching the component                                                     |
+| A global design token                                         | `--navi-*` on `:root`                                                                                                          |
+| The share of ink in `secondary`/`emphasis`/`discrete`/`hint`  | `--navi-color-*-mix` on `:root` — never on a container                                                                         |
+| A container's own paper (a dark card)                         | `color` on the container, plus a `--navi-color-*` keyword pinned if its formula reads wrong there; both stop at the next popup |
+| How wide popups may ever get                                  | `--navi-app-max-width` on `:root`                                                                                              |
+| A structural layout rule                                      | Expose a new CSS variable (contribute)                                                                                         |
+| A rule counting children of a container holding navi controls | `:nth-child(… of S)`, `:not([navi-out-of-flow])`, or a class — a popup or a callout is a child too                             |
+| What a variant decided                                        | A prop — a variant only ever moves defaults, so props keep winning                                                             |

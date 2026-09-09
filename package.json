@@ -123,7 +123,7 @@
     "globals": "17.11.0",
     "open": "11.0.1",
     "playwright": "1.62.1",
-    "preact": "11.0.0-beta.2",
+    "preact": "11.0.0-rc.2",
     "prettier": "3.9.6",
     "prettier-plugin-css-order": "git+https://github.com/dmail-fork/prettier-plugin-css-order.git",
     "prettier-plugin-embed": "0.5.1",

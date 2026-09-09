@@ -1009,7 +1009,17 @@ export const openCallout = (
       `append callout into ${getElementSignature(calloutContainer)}`,
     );
   }
+  let checkCalloutInsertionImpact;
+  if (import.meta.dev) {
+    checkCalloutInsertionImpact = startCalloutInsertionImpactCheck(
+      calloutContainer,
+      anchorElement,
+    );
+  }
   calloutContainer.appendChild(calloutElement);
+  if (checkCalloutInsertionImpact) {
+    checkCalloutInsertionImpact();
+  }
   calloutElement.showPopover();
   addTeardown(() => {
     calloutElement.remove();
@@ -1580,6 +1590,54 @@ const canContainCallout = (element) => {
     return false;
   }
   return true;
+};
+
+// A callout is a popover with no layout box of its own, so putting it in the
+// tree must move nothing. Anything that does move means an app rule counting
+// element children — :last-child, :nth-child, :only-child, :empty, > * + * —
+// took the callout for one of them and changed subject. Invisible from the
+// app, where the rule and the markup both read fine.
+// Two boxes rather than every child of the container: a callout on a list row
+// would otherwise measure the whole list on each press.
+const startCalloutInsertionImpactCheck = (calloutContainer, anchorElement) => {
+  if (!anchorElement) {
+    return null;
+  }
+  const anchorBoxBefore = anchorElement.getBoundingClientRect();
+  const containerBoxBefore = calloutContainer.getBoundingClientRect();
+  return () => {
+    const anchorBoxAfter = anchorElement.getBoundingClientRect();
+    const containerBoxAfter = calloutContainer.getBoundingClientRect();
+    let what;
+    let boxBefore;
+    let boxAfter;
+    if (!isSameBox(anchorBoxBefore, anchorBoxAfter)) {
+      what = "moved it";
+      boxBefore = anchorBoxBefore;
+      boxAfter = anchorBoxAfter;
+    } else if (!isSameBox(containerBoxBefore, containerBoxAfter)) {
+      what = `moved ${getElementSignature(calloutContainer)} around it`;
+      boxBefore = containerBoxBefore;
+      boxAfter = containerBoxAfter;
+    } else {
+      return;
+    }
+    console.warn(
+      `opening a callout on ${getElementSignature(anchorElement)} ${what}: ${formatBox(boxBefore)} -> ${formatBox(boxAfter)}.
+A callout draws nothing in the flow, but while it is open it is an element child of ${getElementSignature(calloutContainer)}: a rule counting children there (:last-child, :nth-child, :only-child, :empty, > * + *) counts it too and matches something else than what it aims at.
+Say which children the rule counts: :nth-last-child(1 of S) / :nth-child(An+B of S), where S names yours (a class, or :not([navi-out-of-flow]) — the marker navi's out-of-flow elements carry). A sibling rule takes the marker between its compounds: > *:not([navi-out-of-flow]) + *:not([navi-out-of-flow]).
+See @jsenv/navi docs/css_architecture.md.`,
+    );
+  };
+};
+const isSameBox = (a, b) => {
+  return (
+    a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height
+  );
+};
+const formatBox = ({ x, y, width, height }) => {
+  const round = (value) => Math.round(value * 100) / 100;
+  return `${round(width)}x${round(height)} at ${round(x)},${round(y)}`;
 };
 
 const escapeHtml = (string) => {

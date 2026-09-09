@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/navi",
-  "version": "0.29.236",
+  "version": "0.29.237",
   "type": "module",
   "description": "Library of components including navigation to create frontend applications",
   "repository": {
@@ -31,7 +31,7 @@
   },
   "peerDependencies": {
     "@preact/signals": "^2.11.2",
-    "preact": "^11.0.0-beta.2"
+    "preact": "^11.0.0-rc.2"
   },
   "dependencies": {
     "@jsenv/dom": "0.17.61",
@@ -48,7 +48,7 @@
     "@jsenv/urls": "../../tooling/urls",
     "@preact/signals": "2.11.2",
     "playwright": "1.62.1",
-    "preact": "11.0.0-beta.2"
+    "preact": "11.0.0-rc.2"
   },
   "publishConfig": {
     "access": "public"

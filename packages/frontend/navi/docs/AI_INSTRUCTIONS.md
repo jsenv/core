@@ -191,9 +191,11 @@ to start when unsure which export solves a problem.
 
 - `css_architecture.md` — navi wins by default, defaults sit in `@layer navi`,
   props first; `--navi-*` versus `--component-*`; what a popup inherits from its
-  opener; `import.meta.css` and what a `${}` costs; browsers are the consuming
-  app's target. Read before overriding a component style, and before any
-  `import.meta.css`.
+  opener; a popup and a callout are element children your `:last-child` counts;
+  `import.meta.css` and what a `${}` costs; browsers are the consuming app's
+  target. Read before overriding a component style, before any
+  `import.meta.css`, and before a structural selector (`:last-child`,
+  `:nth-child`, `:empty`) on a container holding navi components.
 - `safe_area.md` — the two inset families, an app narrower than the window
   (`--navi-app-max-width`), `data-navi-safe-area`, which viewport is which under
   a virtual keyboard. Read before hand-writing an offset to clear a `FixedBar`.

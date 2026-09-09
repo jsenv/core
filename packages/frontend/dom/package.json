@@ -37,7 +37,7 @@
   },
   "peerDependencies": {
     "@preact/signals": "^2.11.2",
-    "preact": "^11.0.0-beta.2"
+    "preact": "^11.0.0-rc.2"
   },
   "dependencies": {},
   "devDependencies": {
@@ -45,7 +45,7 @@
     "@jsenv/navi": "../navi",
     "@jsenv/snapshot": "../../tooling/snapshot",
     "@preact/signals": "2.11.2",
-    "preact": "11.0.0-beta.2"
+    "preact": "11.0.0-rc.2"
   },
   "publishConfig": {
     "access": "public"
