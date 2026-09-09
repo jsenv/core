@@ -275,9 +275,19 @@
           ${css}
         </style>
         <dialog>
-          <p>Connection with server is lost</p>
-          <button autofocus name="reconnect">Retry</button>
+          <p>Connection with server is lost, waiting for it to come back...</p>
+          <button autofocus name="retry">Retry now</button>
         </dialog>`;
+      
+      // The peer is a dev server being restarted, not a flaky network: it can be down
+      // for the length of an "npm install" and there is no attempt count past which
+      // giving up would be correct. Attempts space out to RETRY_AFTER_MAX_MS and never
+      // stop; the dialog is a status the page can leave and come back to, so closing
+      // it keeps the loop running and the page still reloads once the server answers.
+      const RETRY_AFTER_MS = 500;
+      const RETRY_AFTER_MAX_MS = 5000;
+      // Most restarts complete before this, so a quick one goes unnoticed.
+      const DIALOG_AFTER_MS = 3000;
       
       class JsenvAutoreloadOnServerRestart extends HTMLElement {
         constructor({ url } = {}) {
@@ -286,59 +296,83 @@
           root.innerHTML = html;
       
           const dialog = root.querySelector("dialog");
-          const reconnectButton = dialog.querySelector('button[name="reconnect"]');
+          const retryButton = dialog.querySelector('button[name="retry"]');
       
-          (async () => {
-            const connect = () => {
-              const websocket = new WebSocket(url);
-              const connectedPromise = new Promise((resolve) => {
-                websocket.onerror = () => {
-                  resolve(null);
-                };
-                websocket.onopen = () => {
-                  resolve(websocket);
-                };
-              });
-              return connectedPromise;
-            };
+          const connect = () => {
+            const websocket = new WebSocket(url);
+            return new Promise((resolve) => {
+              websocket.onerror = () => {
+                resolve(null);
+              };
+              websocket.onopen = () => {
+                resolve(websocket);
+              };
+            });
+          };
       
-            const initialWebSocket = await connect();
-            if (!initialWebSocket) {
+          let retryAfter = RETRY_AFTER_MS;
+          let retryTimeout = null;
+          let dialogTimeout = null;
+      
+          const tryToReconnect = async () => {
+            retryTimeout = null;
+            retryButton.disabled = true;
+            const websocket = await connect();
+            if (websocket) {
+              clearTimeout(dialogTimeout);
+              console.info("reconnected to server, reloading the page...");
+              window.location.reload(true);
               return;
             }
-            initialWebSocket.onclose = async () => {
-              console.info("connection to server lost, trying to reconnect");
-              const retry = async () => {
-                let attemptCount = 0;
-                let timeToWait = 100;
-                const tryToReconnect = async () => {
-                  const newWebsocket = await connect();
-                  if (newWebsocket) {
-                    dialog.close();
-                    console.info("reconnected to server, reloading the page...");
-                    window.location.reload(true);
-                    return;
-                  }
-                  attemptCount++;
-                  if (attemptCount === 10) {
-                    dialog.showModal();
-                    reconnectButton.onclick = async () => {
-                      reconnectButton.disabled = true;
-                      const previousContext = reconnectButton.textContent;
-                      reconnectButton.textContent = "Retrying...";
-                      await retry();
-                      reconnectButton.textContent = previousContext;
-                      reconnectButton.disabled = false;
-                    };
-                    return;
-                  }
-                  timeToWait += 100;
-                  await new Promise((resolve) => setTimeout(resolve, timeToWait));
-                  await tryToReconnect();
-                };
-                await tryToReconnect();
-              };
-              retry();
+            retryButton.disabled = false;
+            retryTimeout = setTimeout(tryToReconnect, retryAfter);
+            const nextRetryAfter = retryAfter * 2;
+            retryAfter =
+              nextRetryAfter > RETRY_AFTER_MAX_MS
+                ? RETRY_AFTER_MAX_MS
+                : nextRetryAfter;
+          };
+      
+          const retryNow = () => {
+            if (retryTimeout === null) {
+              return;
+            }
+            clearTimeout(retryTimeout);
+            retryAfter = RETRY_AFTER_MS;
+            tryToReconnect();
+          };
+      
+          const waitForServerToComeBack = () => {
+            console.info("connection to server lost, trying to reconnect");
+            dialogTimeout = setTimeout(() => {
+              dialogTimeout = null;
+              dialog.showModal();
+            }, DIALOG_AFTER_MS);
+            tryToReconnect();
+          };
+      
+          retryButton.onclick = () => {
+            retryNow();
+          };
+          // A tab coming back to the foreground, or the network coming back, are the
+          // moments the server is most likely to be up already; waiting out the
+          // backoff then shows a detached page for no reason.
+          window.addEventListener("online", retryNow);
+          window.addEventListener("focus", retryNow);
+          document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "visible") {
+              retryNow();
+            }
+          });
+      
+          (async () => {
+            const initialWebSocket = await connect();
+            if (!initialWebSocket) {
+              waitForServerToComeBack();
+              return;
+            }
+            initialWebSocket.onclose = () => {
+              waitForServerToComeBack();
             };
           })();
         }
