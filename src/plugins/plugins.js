@@ -11,7 +11,6 @@ import { jsenvPluginProtocolFile } from "./protocol_file/jsenv_plugin_protocol_f
 import { jsenvPluginProtocolHttp } from "./protocol_http/jsenv_plugin_protocol_http.js";
 import { jsenvPluginDirectoryReferenceEffect } from "./directory_reference_effect/jsenv_plugin_directory_reference_effect.js";
 import { jsenvPluginInjections } from "./injections/jsenv_plugin_injections.js";
-import { jsenvPluginPatches } from "./patches/jsenv_plugin_patches.js";
 import { jsenvPluginInlining } from "./inlining/jsenv_plugin_inlining.js";
 import { jsenvPluginCommonJsGlobals } from "./commonjs_globals/jsenv_plugin_commonjs_globals.js";
 import { jsenvPluginImportMetaScenarios } from "./import_meta_scenarios/jsenv_plugin_import_meta_scenarios.js";
@@ -52,7 +51,6 @@ export const getCorePlugins = ({
   directoryListing = true,
   directoryReferenceEffect,
   supervisor,
-  patches,
   injections,
   transpilation = true,
   inlining = true,
@@ -94,9 +92,6 @@ export const getCorePlugins = ({
     ...(packageBundle
       ? [jsenvPluginWorkspaceBundle({ packageDirectory })]
       : []),
-    // before everything else: what the other plugins read must be the
-    // patched file
-    ...jsenvPluginPatches(patches),
     // before reference analysis: an url written by an injection must hold its
     // final value when references are analyzed
     jsenvPluginInjections(injections),

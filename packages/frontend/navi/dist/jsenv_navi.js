@@ -12,7 +12,7 @@ import { useErrorBoundary, useLayoutEffect, useContext, useCallback, useRef, use
 import { humanizeI18n, prefixFirstAndIndentRemainingLines, setRuntimeLangSource, formatDuration, formatMonth, formatDay, resolveTimeRangePrecision, formatDatePlaceholder, toDate, getRelativeDay, formatDayRelative, formatMonthPlaceholder, formatWeekPlaceholder, formatDatetimePlaceholder, formatDatetime, toTimeOfDay, formatTimeOfDay, formatTime, formatMinuteDuration, formatSecondDuration, formatHourDuration, formatTimeRelative, formatNumber, interpolateText, installInterpolateJsx } from "@jsenv/humanize";
 export { createI18n, formatDatetime, formatDay, formatDayRelative, formatDuration, formatHourDuration, formatMinuteDuration, formatMonth, formatNumber, formatSecondDuration, formatTime, formatTimeOfDay, formatTimeRange, formatTimeRelative, interpolateText } from "@jsenv/humanize";
 import { jsxs, jsx, Fragment } from "preact/jsx-runtime";
-import { durationContainsNaN, compareTwoDurations, durationToSeconds, DISPLAYABLE_RULE, MAX_LINE_BREAKS_RULE, NO_EMOJI_RULE, SINGLE_SPACE_RULE, createValidity, resolveCharClass, getCharClassMessageKey, compileCharClassAnchored, compileCharClass, CHAR_CLASS_PRESETS, parseDuration, durationToISOString } from "@jsenv/validity";
+import { TYPE_RULE, durationContainsNaN, compareTwoDurations, durationToSeconds, DISPLAYABLE_RULE, MAX_LINE_BREAKS_RULE, NO_EMOJI_RULE, SINGLE_SPACE_RULE, createValidity, resolveCharClass, getCharClassMessageKey, compileCharClassAnchored, compileCharClass, CHAR_CLASS_PRESETS, parseDuration, durationToISOString } from "@jsenv/validity";
 export { compareTwoDurations, durationContainsNaN, durationToHours, durationToISOString, durationToMinutes, durationToNumber, durationToSeconds, durationToString, parseDuration } from "@jsenv/validity";
 import { Suspense, createPortal, forwardRef } from "preact/compat";
 
@@ -8212,6 +8212,75 @@ const languagesSignal = computed(() => {
 setRuntimeLangSource(() => languagesSignal.value);
 
 /**
+ * Where navi meets @jsenv/validity.
+ *
+ * validity names a refusal with a key and its parameters rather than a
+ * sentence, so that a field and a server can refuse in the same words in the
+ * language of the person reading. navi is one of those two callers: it says the
+ * sentence, in the browser, through `naviI18n`. The keys line up on purpose —
+ * validity's `"single_space.start"` is navi's `"constraint.single_space.start"`
+ * — so overriding a message is looking up one key, not going through a
+ * translation table.
+ *
+ * The other direction is `constraintFromValidityRule`: a rule an app wrote for
+ * its server, worn by a control as a constraint.
+ */
+
+
+/**
+ * Turns a @jsenv/validity rule into a constraint a control can wear, so an app
+ * rule written once — in the package its server reads too — is checked on both
+ * sides instead of being written twice.
+ *
+ * @param {object} rule
+ *   `{ name, applyOn(ruleValue, value, ruleConfig) }`, the same object passed
+ *   to `createValidity({ rules })`.
+ * @param {object} [ruleConfig]
+ *   What parameterizes the rule, under its own name — `{ maxWords: 40 }` for a
+ *   rule named `maxWords`. Pass `formatMessage` here to say the refusal through
+ *   the app's own i18n; without it the key is looked up in `naviI18n` under
+ *   `constraint.<key>`, and a rule answering with a finished sentence is shown
+ *   as-is.
+ *
+ * Call it once, at module level: a constraint rebuilt on every render is a new
+ * object on every check.
+ */
+const constraintFromValidityRule = (rule, ruleConfig = {}) => {
+  const { formatMessage, ...ruleParams } = ruleConfig;
+  return {
+    name: rule.name,
+    check: (field) => {
+      const result = rule.applyOn(
+        ruleParams[rule.name],
+        field.uiState,
+        ruleParams,
+      );
+      if (!result) {
+        return null;
+      }
+      if (typeof result === "string") {
+        return result;
+      }
+      if (formatMessage) {
+        return formatMessage(result.key, result.params);
+      }
+      return naviI18nFromValidityMessage(result);
+    },
+  };
+};
+
+const naviI18nFromValidityMessage = ({ key, params }) => {
+  if (params && typeof params.max === "number") {
+    // Lets a template pluralize on the bound it names: "[max] retour[s]".
+    return naviI18n(`constraint.${key}`, {
+      ...params,
+      s: params.max > 1 ? "s" : "",
+    });
+  }
+  return naviI18n(`constraint.${key}`, params);
+};
+
+/**
  * https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Constraint_validation
  */
 
@@ -8360,9 +8429,8 @@ const PATTERN_CONSTRAINT = {
 };
 CONSTRAINT_ATTRIBUTE_SET.add("pattern");
 
-// https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/email#validation
-const emailregex =
-  /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+// What an address is, is @jsenv/validity's `type: "email"`: a server checking
+// the value again refuses it for the same reason and in the same words.
 const TYPE_EMAIL_CONSTRAINT = {
   name: "type_email",
   messageAttribute: "data-type-message",
@@ -8376,14 +8444,11 @@ const TYPE_EMAIL_CONSTRAINT = {
     if (!valueAsString) {
       return null;
     }
-    if (emailregex.test(valueAsString)) {
+    const result = TYPE_RULE.applyOn("email", valueAsString);
+    if (!result) {
       return null;
     }
-
-    if (!valueAsString.includes("@")) {
-      return naviI18n("constraint.type.email.at", { value: valueAsString });
-    }
-    return naviI18n("constraint.type.email.invalid");
+    return naviI18nFromValidityMessage(result);
   },
 };
 
@@ -11540,75 +11605,6 @@ const useBoundAction = (action, actionParamsSignal) => {
 
 const isFunctionButNotAnActionFunction = (action) => {
   return typeof action === "function" && !action.isAction;
-};
-
-/**
- * Where navi meets @jsenv/validity.
- *
- * validity names a refusal with a key and its parameters rather than a
- * sentence, so that a field and a server can refuse in the same words in the
- * language of the person reading. navi is one of those two callers: it says the
- * sentence, in the browser, through `naviI18n`. The keys line up on purpose —
- * validity's `"single_space.start"` is navi's `"constraint.single_space.start"`
- * — so overriding a message is looking up one key, not going through a
- * translation table.
- *
- * The other direction is `constraintFromValidityRule`: a rule an app wrote for
- * its server, worn by a control as a constraint.
- */
-
-
-/**
- * Turns a @jsenv/validity rule into a constraint a control can wear, so an app
- * rule written once — in the package its server reads too — is checked on both
- * sides instead of being written twice.
- *
- * @param {object} rule
- *   `{ name, applyOn(ruleValue, value, ruleConfig) }`, the same object passed
- *   to `createValidity({ rules })`.
- * @param {object} [ruleConfig]
- *   What parameterizes the rule, under its own name — `{ maxWords: 40 }` for a
- *   rule named `maxWords`. Pass `formatMessage` here to say the refusal through
- *   the app's own i18n; without it the key is looked up in `naviI18n` under
- *   `constraint.<key>`, and a rule answering with a finished sentence is shown
- *   as-is.
- *
- * Call it once, at module level: a constraint rebuilt on every render is a new
- * object on every check.
- */
-const constraintFromValidityRule = (rule, ruleConfig = {}) => {
-  const { formatMessage, ...ruleParams } = ruleConfig;
-  return {
-    name: rule.name,
-    check: (field) => {
-      const result = rule.applyOn(
-        ruleParams[rule.name],
-        field.uiState,
-        ruleParams,
-      );
-      if (!result) {
-        return null;
-      }
-      if (typeof result === "string") {
-        return result;
-      }
-      if (formatMessage) {
-        return formatMessage(result.key, result.params);
-      }
-      return naviI18nFromValidityMessage(result);
-    },
-  };
-};
-
-const naviI18nFromValidityMessage = ({ key, params }) => {
-  if (params && typeof params.max === "number") {
-    // Lets a template pluralize on the bound it names: "[max] retour[s]".
-    return naviI18n(`constraint.${key}`, {
-      ...params,
-      s: params.max > 1 ? "s" : "",
-    });
-  }
-  return naviI18n(`constraint.${key}`, params);
 };
 
 /**
@@ -48125,10 +48121,11 @@ const ButtonUI = props => {
     cta,
     spacing,
     contentDisplay,
-    // Whether the button draws the loading outline itself. A button that is
-    // one half of a bigger control says no: what is busy is the control, and
-    // the outline belongs around the whole of it (see split_button.jsx).
-    loadingOutline = true
+    // Who draws the loading outline. Left unsaid, the button does; "custom"
+    // says someone else does — a button that is one half of a bigger control:
+    // what is busy is the control, and the outline belongs around the whole
+    // of it (see split_button.jsx).
+    loadingOutline
   } = props;
   const [buttonControlRootProps, buttonControlHostProps, controlChildrenWrapperProps] = useControlProps(props, {
     controlType: "button"
@@ -48254,7 +48251,7 @@ const ButtonUI = props => {
     visualSelector: visualSelector,
     hasChildUsingForwardedProps: true,
     children: [jsx(LoadingOutline, {
-      loading: loadingOutline && loading,
+      loading: loadingOutline === "custom" ? false : loading,
       inset: -1,
       color: "var(--button-loader-color)"
     }), jsx(ControlChildrenWrapper, {
@@ -60436,6 +60433,9 @@ const DIALOG_STYLE_CSS_VARS = {
   animationDuration: "--popup-animation-duration",
   backdropColor: "--backdrop-background",
   backdropFilter: "--backdrop-filter",
+  backgroundColor: "--dialog-background-color",
+  boxShadow: "--dialog-box-shadow",
+  borderWidth: "--dialog-border-width",
   borderRadius: "--dialog-border-radius",
   minWidth: "--dialog-min-width",
   maxWidth: "--dialog-max-width",
@@ -62023,10 +62023,17 @@ const POPOVER_PSEUDO_CLASSES = [":hover", ":active", ":focus", ":focus-visible",
 // Lets consumers pass animationDuration="0.5s"/borderRadius="8px" as regular
 // props; Box maps them to the CSS vars for us (see box.jsx's styleCSSVars
 // handling).
+// The paint props go through the popover's own vars rather than the properties
+// themselves, so the stylesheet keeps the last word on them (the same reason
+// dialog.jsx gives for borderRadius).
 const POPUP_STYLE_CSS_VARS = {
   animationDuration: "--popup-animation-duration",
   backdropColor: "--backdrop-background",
   backdropFilter: "--backdrop-filter",
+  backgroundColor: "--popover-background-color",
+  boxShadow: "--popover-box-shadow",
+  borderWidth: "--popover-border-width",
+  borderRadius: "--popover-border-radius",
   minWidth: "--popover-min-width",
   maxWidth: "--popover-max-width",
   minHeight: "--popover-min-height",
@@ -62289,82 +62296,55 @@ const Popup = props => {
 Popup.Close = PopupClose;
 
 installImportMetaCssBuild(import.meta);
-const css$B = /* css */`.navi_picker {
-  &[aria-haspopup="listbox"] {
-    & .navi_popover {
-      --popover-border-radius: var(--picker-popup-border-radius, var(--picker-border-radius));
-      --popover-border-width: var(--picker-border-width);
-      --popover-border-color: var(--x-picker-border-color);
-      --popover-background-color: var(--picker-popup-background-color, var(--navi-popup-background-color));
-      --popover-outline-width: var(--picker-outline-width);
-      --popover-outline-color: var(--picker-outline-color);
-      --popover-box-shadow: var(--picker-popup-box-shadow, var(--navi-popup-box-shadow));
-      --popover-max-height: var(--picker-popover-max-height);
-      min-width: var(--picker-popover-min-width, var(--anchor-width, 0px));
-      cursor: default;
+const css$B = /* css */`.navi_popover[data-picker-popup] {
+  --popover-border-radius: var(--picker-border-radius);
+  --popover-border-width: var(--picker-border-width);
+  --popover-border-color: var(--x-picker-border-color);
+  --popover-outline-width: var(--picker-outline-width);
+  --popover-outline-color: var(--picker-outline-color);
+  cursor: default;
 
-      & .navi_list_container {
-        --list-border-radius: max(0px,
-            var(--popover-border-radius) - var(--popover-border-width));
-        overscroll-behavior: none;
-        width: 100%;
-
-        &:not([data-overflow-visible]) {
-          overflow: auto;
-        }
-      }
-    }
-
-    &[aria-expanded="true"] {
-      &[navi-popover-mode="overlay"] {
-        border-color: #0000;
-      }
-
-      & .navi_popover {
-        flex-direction: column;
-        display: flex;
-      }
-    }
+  &:not([navi-hidden]) {
+    flex-direction: column;
+    display: flex;
   }
 
-  &[aria-haspopup="dialog"] {
-    & .navi_dialog {
-      --dialog-border-radius: var(--picker-popup-border-radius, var(--picker-border-radius));
-      --dialog-border-width: var(--picker-dialog-border-width, 0px);
-      --dialog-border-color: var(--x-picker-border-color);
-      --dialog-background-color: var(--picker-popup-background-color, var(--navi-popup-background-color));
-      --dialog-outline-width: var(--picker-outline-width);
-      --dialog-outline-color: var(--picker-outline-color);
-      --dialog-box-shadow: var(--picker-popup-box-shadow, var(--navi-popup-box-shadow));
-      --dialog-min-width: var(--picker-dialog-min-width);
-      --dialog-min-height: var(--picker-dialog-min-height);
-      --dialog-max-width: var(--picker-dialog-max-width);
-      --dialog-max-height: var(--picker-dialog-max-height);
-      cursor: default;
+  & .navi_list_container {
+    --list-border-radius: max(0px,
+        var(--popover-border-radius) - var(--popover-border-width));
+    overscroll-behavior: none;
+    width: 100%;
 
-      &[open] {
-        flex-direction: column;
-      }
-
-      & .navi_list_container {
-        --list-border-radius: max(0px,
-            var(--dialog-border-radius) - var(--dialog-border-width));
-        overscroll-behavior: none;
-        width: 100%;
-
-        &:not([data-overflow-visible]) {
-          overflow: auto;
-        }
-      }
-    }
-
-    &[data-dialog-size-from-anchor] .navi_dialog {
-      --dialog-max-width: var(--picker-dialog-max-width, var(--anchor-width));
+    &:not([data-overflow-visible]) {
+      overflow: auto;
     }
   }
+}
 
-  &[data-popup-width-fit-content] {
-    --picker-popover-min-width: 0px;
+.navi_picker[aria-haspopup="listbox"][aria-expanded="true"][navi-popover-mode="overlay"] {
+  border-color: #0000;
+}
+
+.navi_dialog[data-picker-popup] {
+  --dialog-border-radius: var(--picker-border-radius);
+  --dialog-border-color: var(--x-picker-border-color);
+  --dialog-outline-width: var(--picker-outline-width);
+  --dialog-outline-color: var(--picker-outline-color);
+  cursor: default;
+
+  &[open] {
+    flex-direction: column;
+  }
+
+  & .navi_list_container {
+    --list-border-radius: max(0px,
+        var(--dialog-border-radius) - var(--dialog-border-width));
+    overscroll-behavior: none;
+    width: 100%;
+
+    &:not([data-overflow-visible]) {
+      overflow: auto;
+    }
   }
 }
 `;
@@ -63129,6 +63109,22 @@ const PickerContentInsidePopup = props => {
     // dialogMaxWidth="var(--anchor-width)", as a ceiling) — what keeps a card
     // its own width once lifted. Dialog's own `sizeFromAnchor`.
     dialogSizeFromAnchor,
+    // The caller's word on the popup's own box. Written on the popup element,
+    // where Popover/Dialog map them to their own vars, rather than as vars on
+    // the picker: a var on the picker inherits into everything the popup
+    // holds, and the pickers in there would read it as their own.
+    popupBackgroundColor,
+    popupBorderRadius,
+    popupBoxShadow,
+    popoverMaxHeight,
+    dialogBorderWidth,
+    dialogMinWidth,
+    dialogMinHeight,
+    dialogMaxWidth,
+    dialogMaxHeight,
+    // The popover is at least as wide as the trigger. True when the CONTENT
+    // should size it (a Wheel) instead of being stretched to the trigger.
+    popupWidthFitContent,
     animation,
     grow,
     animationDuration,
@@ -63147,7 +63143,6 @@ const PickerContentInsidePopup = props => {
   return jsx(Next, {
     "aria-haspopup": isPopover ? "listbox" : "dialog",
     "navi-popover-mode": isPopover ? popoverMode : undefined,
-    "data-dialog-size-from-anchor": !isPopover && dialogSizeFromAnchor ? "" : undefined,
     ...rest,
     // On popupProps already (see the picker's popup assembly); they mean
     // nothing to the picker element.
@@ -63189,7 +63184,23 @@ const PickerContentInsidePopup = props => {
       })
     }) : jsx(Popup, {
       ...popupProps,
-      "data-testid": popupTestId,
+      "data-testid": popupTestId
+      // What the CSS above keys on: this picker's own popup, and no other
+      // popup below the picker.
+      ,
+      "data-picker-popup": "",
+      backgroundColor: popupBackgroundColor,
+      borderRadius: popupBorderRadius,
+      boxShadow: popupBoxShadow,
+      borderWidth: isPopover ? undefined : dialogBorderWidth,
+      minWidth: isPopover ? popupWidthFitContent ? undefined : "var(--anchor-width, 0px)" : dialogMinWidth,
+      minHeight: isPopover ? undefined : dialogMinHeight
+      // As wide as the trigger under dialogSizeFromAnchor: Dialog's own
+      // sizeFromAnchor is a floor, this is the ceiling. A dialogMaxWidth of
+      // the caller's still wins.
+      ,
+      maxWidth: isPopover ? undefined : dialogMaxWidth === undefined && dialogSizeFromAnchor ? "var(--anchor-width)" : dialogMaxWidth,
+      maxHeight: isPopover ? popoverMaxHeight : dialogMaxHeight,
       mode: mode,
       layer: popupLayer,
       animation: animation,
@@ -71229,6 +71240,26 @@ const css$t = /* css */`@layer navi {
     }
   }
 
+  & [data-picker-content] {
+    --picker-padding: initial;
+    --picker-padding-x: initial;
+    --picker-padding-y: initial;
+    --picker-padding-top: initial;
+    --picker-padding-right: initial;
+    --picker-padding-bottom: initial;
+    --picker-padding-left: initial;
+    --picker-press-padding: initial;
+    --picker-press-padding-x: initial;
+    --picker-press-padding-y: initial;
+    --picker-press-padding-top: initial;
+    --picker-press-padding-right: initial;
+    --picker-press-padding-bottom: initial;
+    --picker-press-padding-left: initial;
+    --picker-slot-spacing: initial;
+    --picker-align-x: initial;
+    --picker-align-y: initial;
+  }
+
   & .navi_picker_content {
     --x-corner-top-left-radius: initial;
     --x-corner-top-right-radius: initial;
@@ -71430,11 +71461,6 @@ const PickerButton = props => {
     placeholder,
     ui,
     maxLines: maxLinesProp = 1,
-    // By default the popover is at least as wide as the trigger (min-width:
-    // --anchor-width). Set true when the CONTENT should dictate the popover width
-    // (e.g. a Wheel) instead of being stretched to the trigger — see
-    // picker_custom.jsx.
-    popupWidthFitContent,
     // Adds a clear button to the right slot, the same one type="search" puts at
     // the end of an input: a picker holds a value the user chose, and unsetting
     // it should not require reopening the popup to hunt for a "none" entry.
@@ -71459,7 +71485,13 @@ const PickerButton = props => {
     // (see PickerInput below).
     role,
     readOnly,
-    error
+    error,
+    // Who draws the loading outline. Left unsaid, the picker does, around its
+    // own box; "custom" says someone else does — a bigger surface this box is
+    // a piece of, waiting as a whole (see the `loadingOutline` doc).
+    loadingOutline,
+    // Where the outline runs, in px from the picker's box: negative is outside.
+    loadingOutlineInset = -2
   } = props;
   // A word in a sentence is never truncated — and the clamp's overflow: hidden
   // would cut its dotted underline, which sits on the edge of the line box
@@ -71578,7 +71610,6 @@ const PickerButton = props => {
         "navi-single-line": isSingleLine ? "" : undefined,
         "navi-ui-custom": ui === "default" ? undefined : "",
         "data-readonly-opens": readOnlyOpens ? "" : undefined,
-        "data-popup-width-fit-content": popupWidthFitContent ? "" : undefined,
         ...pickerRemainingProps,
         basePseudoState: basePseudoState,
         styleCSSVars: PickerStyleCSSVars,
@@ -71593,9 +71624,10 @@ const PickerButton = props => {
         openWhileReadOnly: undefined,
         ui: undefined,
         maxLines: undefined,
-        popupWidthFitContent: undefined,
         error: undefined,
-        dayLabel: undefined
+        dayLabel: undefined,
+        loadingOutline: undefined,
+        loadingOutlineInset: undefined
         // This wrapper will receive keyboard event bubbling from the picker popup content
         // we re-dispatch on the input (to get escape to close for instance)
         ,
@@ -71626,9 +71658,9 @@ const PickerButton = props => {
           children: jsxs(PickerContext.Provider, {
             value: pickerContext,
             children: [variant === "headless" ? null : jsx(LoadingOutline, {
-              loading: loading,
+              loading: loadingOutline === "custom" ? false : loading,
               color: "var(--picker-loader-color)",
-              inset: -2
+              inset: loadingOutlineInset
             }), jsx(PickerInput, {
               role: hostRole,
               "aria-labelledby": hostLabelId,
@@ -71862,7 +71894,7 @@ const PickerClear = ({
     // removed is the whole field's, and the picker already draws the wait
     // around all of it. Two outlines for one wait is one too many.
     ,
-    loadingOutline: false
+    loadingOutline: "custom"
     // preventDefault, not just tabIndex="-1": a mousedown focuses its target
     // before any click happens, and this button should never hold focus at
     // all — the field keeps it.
@@ -72025,21 +72057,16 @@ const PICKER_BUTTON_PSEUDO_CLASSES = [":hover", ":focus", ":focus-visible", ":fo
 const PickerInputPseudoClasses = [":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading", ":-navi-has-value", ":-navi-expanded"];
 
 // A pair is [the css variable, the style whose values the prop is written in]:
-// popupBorderRadius takes what borderRadius takes, dialogMinWidth what minWidth
-// takes — see box.jsx's readCSSVarEntry.
+// slotSpacing takes what margin takes, pressPadding what padding takes — see
+// box.jsx's readCSSVarEntry.
+// What the props say about the picker's own box only. The popup props
+// (popupBackgroundColor, dialogMaxWidth…) are handed to the popup element by
+// picker_custom.jsx: a variable on the root inherits into everything the popup
+// holds, and the pickers in there would read it as their own.
 const PickerStyleCSSVars = {
   "outlineWidth": "--picker-outline-width",
   "borderWidth": "--picker-border-width",
   "borderRadius": "--picker-border-radius",
-  "popoverMaxHeight": ["--picker-popover-max-height", "maxHeight"],
-  "dialogMinWidth": ["--picker-dialog-min-width", "minWidth"],
-  "dialogMinHeight": ["--picker-dialog-min-height", "minHeight"],
-  "dialogMaxWidth": ["--picker-dialog-max-width", "maxWidth"],
-  "dialogMaxHeight": ["--picker-dialog-max-height", "maxHeight"],
-  "popupBackgroundColor": "--picker-popup-background-color",
-  "popupBorderRadius": ["--picker-popup-border-radius", "borderRadius"],
-  "popupBoxShadow": ["--picker-popup-box-shadow", "boxShadow"],
-  "dialogBorderWidth": ["--picker-dialog-border-width", "borderWidth"],
   "slotSpacing": ["--picker-slot-spacing", "margin"],
   "pressPadding": ["--picker-press-padding", "padding"],
   "pressPaddingX": ["--picker-press-padding-x", "padding"],
@@ -74604,7 +74631,7 @@ const SplitButton = props => {
     readOnly,
     disabled,
     // The outline belongs around the pair, drawn below.
-    loadingOutline: false
+    loadingOutline: "custom"
   };
   return jsxs(Box, {
     ref: rootRef,

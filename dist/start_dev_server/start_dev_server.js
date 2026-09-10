@@ -1,12 +1,12 @@
 import { WebSocketResponse, pickContentType, ServerEvents, serverPluginErrorHandler, fetchDirectory, composeTwoResponses, serverPluginCORS, jsenvAccessControlAllowedHeaders, startServer } from "@jsenv/server";
 import { existsSync, statSync, readFileSync, realpathSync, readdirSync, lstatSync } from "node:fs";
 import { pathToFileURL } from "node:url";
-import { urlToRelativeUrl, registerFileLifecycle, lookupPackageDirectory, readPackageAtOrNull, generateContentFrame, errorToHTML, DATA_URL, CONTENT_TYPE, normalizeImportMap, composeTwoImportMaps, resolveImport, createDetailedMessage, UNICODE, JS_QUOTES, urlToExtension, urlToBasename, applyNodeEsmResolution, URL_META, readCustomConditionsFromProcessArgs, urlIsOrIsInsideOf, collectFiles, registerDirectoryLifecycle, readEntryStatSync, applyFileSystemMagicResolution, getExtensionsToTry, urlToFilename, asUrlWithoutSearch, ensurePathnameTrailingSlash, compareFileUrls, setUrlExtension, stringifyUrlSite, injectQueryParamsIntoSpecifier, isSpecifierForNodeBuiltin, injectQueryParams, urlToFileSystemPath, writeFileSync, moveUrl, ensureWindowsDriveLetter, validateResponseIntegrity, setUrlFilename, getCallerPosition, asSpecifierWithoutSearch, bufferToEtag, isFileSystemPath, urlToPathname, setUrlBasename, createLogger, normalizeUrl, ANSI, RUNTIME_COMPAT, formatError, assertAndNormalizeDirectoryUrl, browserDefaultRuntimeCompat, inferRuntimeCompatFromClosestPackage, createTaskLog } from "./jsenv_core_packages.js";
+import { urlToRelativeUrl, registerFileLifecycle, lookupPackageDirectory, readPackageAtOrNull, generateContentFrame, errorToHTML, URL_META, asUrlWithoutSearch, DATA_URL, CONTENT_TYPE, normalizeImportMap, composeTwoImportMaps, resolveImport, createDetailedMessage, UNICODE, JS_QUOTES, urlToExtension, urlToBasename, applyNodeEsmResolution, readCustomConditionsFromProcessArgs, urlIsOrIsInsideOf, collectFiles, registerDirectoryLifecycle, readEntryStatSync, applyFileSystemMagicResolution, getExtensionsToTry, urlToFilename, ensurePathnameTrailingSlash, compareFileUrls, setUrlExtension, stringifyUrlSite, injectQueryParamsIntoSpecifier, isSpecifierForNodeBuiltin, injectQueryParams, urlToFileSystemPath, writeFileSync, moveUrl, ensureWindowsDriveLetter, validateResponseIntegrity, setUrlFilename, getCallerPosition, asSpecifierWithoutSearch, bufferToEtag, isFileSystemPath, urlToPathname, setUrlBasename, createLogger, normalizeUrl, ANSI, RUNTIME_COMPAT, formatError, assertAndNormalizeDirectoryUrl, browserDefaultRuntimeCompat, inferRuntimeCompatFromClosestPackage, createTaskLog } from "./jsenv_core_packages.js";
 import { createPluginsController } from "@jsenv/server/src/plugins_controller.js";
 import { parseHtml, injectJsenvScript, stringifyHtmlAst, parseCssUrls, getHtmlNodeAttribute, getHtmlNodePosition, getHtmlNodeAttributePosition, setHtmlNodeAttributes, parseSrcSet, getUrlForContentInsideHtml, removeHtmlNodeText, setHtmlNodeText, getHtmlNodeText, analyzeScriptNode, visitHtmlNodes, parseJsUrls, hasCssOpaqueDirective, getUrlForContentInsideJs, renderCssTemplateLiteral, applyBabelPlugins, visitJsAst, getImportMetaPropertyName, visitJsAstUntil, analyzeLinkNode, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, generateUrlForInlineContent, parseJsWithAcorn } from "@jsenv/ast";
+import { createMagicSource, composeTwoSourcemaps, generateSourcemapFileUrl, generateSourcemapDataUrl, SOURCEMAP, applyContentEditsOnSourcemap, composeSourcemaps } from "@jsenv/sourcemap";
 import { jsenvPluginSupervisor } from "@jsenv/plugin-supervisor";
 import { jsenvPluginTranspilation } from "@jsenv/plugin-transpilation";
-import { createMagicSource, composeTwoSourcemaps, generateSourcemapFileUrl, generateSourcemapDataUrl, SOURCEMAP, applyContentEditsOnSourcemap, composeSourcemaps } from "@jsenv/sourcemap";
 import { bundleJsModules } from "@jsenv/plugin-bundling";
 import { randomUUID } from "node:crypto";
 import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/plugins/filesystem/filesystem_error_to_response.js";
@@ -1572,6 +1572,140 @@ const jsenvPluginPageSwitcher = () => {
       },
     },
   };
+};
+
+/*
+ * Text patches applied to files as they are served and built, keyed by file:
+ *
+ *   patches: {
+ *     "preact/dist/preact.mjs": [{ from: "a&&b", to: "a&&b&&c" }],
+ *   }
+ *
+ * A key is a url pattern relative to the root directory ("./main.js",
+ * "**\/*.css"), or a path inside a package ("preact/dist/preact.mjs") found by
+ * walking up from the root directory into node_modules, the way node does,
+ * so the key holds wherever the package manager hoists the package.
+ *
+ * Every `from` must occur exactly once in the file, otherwise the file fails
+ * to cook and says which patch did not apply: a dependency update that moved
+ * the patched code must be looked at, never silently unpatched.
+ */
+
+
+const jsenvPluginPatches = (rawPatches) => {
+  if (!rawPatches || Object.keys(rawPatches).length === 0) {
+    return [];
+  }
+  let findPatches;
+  const patchesPlugin = {
+    name: "jsenv:patches",
+    appliesDuring: "*",
+    init: (context) => {
+      const { rootDirectoryUrl } = context;
+      const patchesByPattern = {};
+      for (const key of Object.keys(rawPatches)) {
+        const patches = rawPatches[key];
+        assertPatches(patches, key);
+        patchesByPattern[resolvePatchKey(key, rootDirectoryUrl)] = patches;
+      }
+      const associations = URL_META.resolveAssociations(
+        { patches: patchesByPattern },
+        rootDirectoryUrl,
+      );
+      findPatches = (url) => {
+        const { patches } = URL_META.applyAssociations({
+          url: asUrlWithoutSearch(url),
+          associations,
+        });
+        return patches;
+      };
+    },
+    transformUrlContent: (urlInfo) => {
+      const patches = findPatches(urlInfo.url);
+      if (!patches) {
+        return null;
+      }
+      const { content } = urlInfo;
+      const magicSource = createMagicSource(content);
+      for (const { from, to } of patches) {
+        const start = content.indexOf(from);
+        const occurrenceCount =
+          start === -1 ? 0 : content.indexOf(from, start + 1) === -1 ? 1 : 2;
+        if (occurrenceCount !== 1) {
+          const fileRelativeUrl = urlToRelativeUrl(
+            urlInfo.url,
+            urlInfo.context.rootDirectoryUrl,
+          );
+          throw new Error(
+            `patch cannot apply on "${fileRelativeUrl}": ${JSON.stringify(from)} found ${occurrenceCount === 0 ? "nowhere" : "more than once"} in the file. The file may have changed since the patch was written.`,
+          );
+        }
+        magicSource.replace({
+          start,
+          end: start + from.length,
+          replacement: to,
+        });
+      }
+      return magicSource.toContentAndSourcemap();
+    },
+  };
+  return [patchesPlugin];
+};
+
+const assertPatches = (patches, key) => {
+  if (!Array.isArray(patches)) {
+    throw new TypeError(
+      `patches["${key}"] must be an array of { from, to }, got ${patches}`,
+    );
+  }
+  for (const patch of patches) {
+    if (
+      !patch ||
+      typeof patch.from !== "string" ||
+      patch.from === "" ||
+      typeof patch.to !== "string"
+    ) {
+      throw new TypeError(
+        `patches["${key}"] entries must be { from: string, to: string } with a non-empty "from"`,
+      );
+    }
+  }
+};
+
+// "./x", "../x", "/x", "file:///x" and "**/x" are url patterns; anything
+// else names a path inside a package, looked up in node_modules
+const resolvePatchKey = (key, rootDirectoryUrl) => {
+  if (
+    key.startsWith("./") ||
+    key.startsWith("../") ||
+    key.startsWith("/") ||
+    key.startsWith("file:") ||
+    key.startsWith("*")
+  ) {
+    return key;
+  }
+  const segments = key.split("/");
+  const packageName = key.startsWith("@")
+    ? `${segments[0]}/${segments[1]}`
+    : segments[0];
+  const pathInsidePackage = key.slice(packageName.length);
+  let directoryUrl = new URL(rootDirectoryUrl);
+  while (true) {
+    const packageDirectoryUrl = new URL(
+      `./node_modules/${packageName}/`,
+      directoryUrl,
+    );
+    if (existsSync(packageDirectoryUrl)) {
+      return String(new URL(`.${pathInsidePackage}`, packageDirectoryUrl));
+    }
+    const parentDirectoryUrl = new URL("../", directoryUrl);
+    if (parentDirectoryUrl.href === directoryUrl.href) {
+      throw new Error(
+        `patches["${key}"]: package "${packageName}" not found in any node_modules above ${rootDirectoryUrl}`,
+      );
+    }
+    directoryUrl = parentDirectoryUrl;
+  }
 };
 
 /*
@@ -5762,140 +5896,6 @@ const asInheritedInjections = (injections) => {
   return inheritedInjections;
 };
 
-/*
- * Text patches applied to files as they are served and built, keyed by file:
- *
- *   patches: {
- *     "preact/dist/preact.mjs": [{ from: "a&&b", to: "a&&b&&c" }],
- *   }
- *
- * A key is a url pattern relative to the root directory ("./main.js",
- * "**\/*.css"), or a path inside a package ("preact/dist/preact.mjs") found by
- * walking up from the root directory into node_modules, the way node does,
- * so the key holds wherever the package manager hoists the package.
- *
- * Every `from` must occur exactly once in the file, otherwise the file fails
- * to cook and says which patch did not apply: a dependency update that moved
- * the patched code must be looked at, never silently unpatched.
- */
-
-
-const jsenvPluginPatches = (rawPatches) => {
-  if (!rawPatches || Object.keys(rawPatches).length === 0) {
-    return [];
-  }
-  let findPatches;
-  const patchesPlugin = {
-    name: "jsenv:patches",
-    appliesDuring: "*",
-    init: (context) => {
-      const { rootDirectoryUrl } = context;
-      const patchesByPattern = {};
-      for (const key of Object.keys(rawPatches)) {
-        const patches = rawPatches[key];
-        assertPatches(patches, key);
-        patchesByPattern[resolvePatchKey(key, rootDirectoryUrl)] = patches;
-      }
-      const associations = URL_META.resolveAssociations(
-        { patches: patchesByPattern },
-        rootDirectoryUrl,
-      );
-      findPatches = (url) => {
-        const { patches } = URL_META.applyAssociations({
-          url: asUrlWithoutSearch(url),
-          associations,
-        });
-        return patches;
-      };
-    },
-    transformUrlContent: (urlInfo) => {
-      const patches = findPatches(urlInfo.url);
-      if (!patches) {
-        return null;
-      }
-      const { content } = urlInfo;
-      const magicSource = createMagicSource(content);
-      for (const { from, to } of patches) {
-        const start = content.indexOf(from);
-        const occurrenceCount =
-          start === -1 ? 0 : content.indexOf(from, start + 1) === -1 ? 1 : 2;
-        if (occurrenceCount !== 1) {
-          const fileRelativeUrl = urlToRelativeUrl(
-            urlInfo.url,
-            urlInfo.context.rootDirectoryUrl,
-          );
-          throw new Error(
-            `patch cannot apply on "${fileRelativeUrl}": ${JSON.stringify(from)} found ${occurrenceCount === 0 ? "nowhere" : "more than once"} in the file. The file may have changed since the patch was written.`,
-          );
-        }
-        magicSource.replace({
-          start,
-          end: start + from.length,
-          replacement: to,
-        });
-      }
-      return magicSource.toContentAndSourcemap();
-    },
-  };
-  return [patchesPlugin];
-};
-
-const assertPatches = (patches, key) => {
-  if (!Array.isArray(patches)) {
-    throw new TypeError(
-      `patches["${key}"] must be an array of { from, to }, got ${patches}`,
-    );
-  }
-  for (const patch of patches) {
-    if (
-      !patch ||
-      typeof patch.from !== "string" ||
-      patch.from === "" ||
-      typeof patch.to !== "string"
-    ) {
-      throw new TypeError(
-        `patches["${key}"] entries must be { from: string, to: string } with a non-empty "from"`,
-      );
-    }
-  }
-};
-
-// "./x", "../x", "/x", "file:///x" and "**/x" are url patterns; anything
-// else names a path inside a package, looked up in node_modules
-const resolvePatchKey = (key, rootDirectoryUrl) => {
-  if (
-    key.startsWith("./") ||
-    key.startsWith("../") ||
-    key.startsWith("/") ||
-    key.startsWith("file:") ||
-    key.startsWith("*")
-  ) {
-    return key;
-  }
-  const segments = key.split("/");
-  const packageName = key.startsWith("@")
-    ? `${segments[0]}/${segments[1]}`
-    : segments[0];
-  const pathInsidePackage = key.slice(packageName.length);
-  let directoryUrl = new URL(rootDirectoryUrl);
-  while (true) {
-    const packageDirectoryUrl = new URL(
-      `./node_modules/${packageName}/`,
-      directoryUrl,
-    );
-    if (existsSync(packageDirectoryUrl)) {
-      return String(new URL(`.${pathInsidePackage}`, packageDirectoryUrl));
-    }
-    const parentDirectoryUrl = new URL("../", directoryUrl);
-    if (parentDirectoryUrl.href === directoryUrl.href) {
-      throw new Error(
-        `patches["${key}"]: package "${packageName}" not found in any node_modules above ${rootDirectoryUrl}`,
-      );
-    }
-    directoryUrl = parentDirectoryUrl;
-  }
-};
-
 const jsenvPluginInliningAsDataUrl = () => {
   return {
     name: "jsenv:inlining_as_data_url",
@@ -8335,7 +8335,6 @@ const getCorePlugins = ({
   directoryListing = true,
   directoryReferenceEffect,
   supervisor,
-  patches,
   injections,
   transpilation = true,
   inlining = true,
@@ -8377,9 +8376,6 @@ const getCorePlugins = ({
     ...(packageBundle
       ? [jsenvPluginWorkspaceBundle({ packageDirectory })]
       : []),
-    // before everything else: what the other plugins read must be the
-    // patched file
-    ...jsenvPluginPatches(patches),
     // before reference analysis: an url written by an injection must hold its
     // final value when references are analyzed
     jsenvPluginInjections(injections),
@@ -12751,6 +12747,11 @@ const startDevServer = async ({
   serverStopCallbackSet.add(dependencyWatcher.stop);
 
   const devServerJsenvPluginStore = await createJsenvPluginStore([
+    // First, ahead of the plugins given by the caller: what every other plugin
+    // reads must be the patched file, and a caller's plugin may rewrite a file
+    // (plugin-preact reprints one it instruments) before a patch written
+    // against its text on disk gets to see it.
+    ...jsenvPluginPatches(patches),
     jsenvPluginServerEvents({ clientAutoreload }),
     // The client-monitoring dashboard is a dev-time convenience; a test-plan run
     // doesn't use it and shouldn't pay for the reporter being injected into
@@ -12778,7 +12779,6 @@ const startDevServer = async ({
       magicDirectoryIndex,
       directoryListing,
       supervisor,
-      patches,
       injections,
       transpilation,
       spa,

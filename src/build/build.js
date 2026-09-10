@@ -67,6 +67,7 @@ import {
   createJsenvPluginStore,
 } from "../plugins/jsenv_plugins_controller.js";
 import { isBareSpecifier } from "../helpers/bare_specifier.js";
+import { jsenvPluginPatches } from "../plugins/patches/jsenv_plugin_patches.js";
 import { getCorePlugins } from "../plugins/plugins.js";
 import { jsenvPluginReferenceAnalysis } from "../plugins/reference_analysis/jsenv_plugin_reference_analysis.js";
 import { renderBuildDoneLog } from "./build_content_report.js";
@@ -1219,6 +1220,9 @@ const prepareEntryPointBuild = async (
 
   let _getOtherEntryBuildInfo;
   const rawJsenvPluginStore = await createJsenvPluginStore([
+    // First, ahead of the plugins given by the caller: what every other plugin
+    // reads must be the patched file (see start_dev_server.js).
+    ...jsenvPluginPatches(patches),
     ...(mappings ? [jsenvPluginMappings(mappings)] : []),
     {
       name: "jsenv:other_entry_point_build_during_craft",
@@ -1253,7 +1257,6 @@ const prepareEntryPointBuild = async (
       magicExtensions,
       magicDirectoryIndex,
       directoryReferenceEffect,
-      patches,
       injections,
       transpilation: {
         babelHelpersAsImport: !explicitJsModuleConversion,

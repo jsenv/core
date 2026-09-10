@@ -27,6 +27,7 @@ import { createPackageDirectory } from "../kitchen/package_directory.js";
 import { createJsenvPluginStore } from "../plugins/jsenv_plugins_controller.js";
 import { jsenvPluginClientMonitoring } from "../plugins/client_monitoring/jsenv_plugin_client_monitoring.js";
 import { jsenvPluginPageSwitcher } from "../plugins/page_switcher/jsenv_plugin_page_switcher.js";
+import { jsenvPluginPatches } from "../plugins/patches/jsenv_plugin_patches.js";
 import { getCorePlugins } from "../plugins/plugins.js";
 import { jsenvPluginServerEvents } from "../plugins/server_events/jsenv_plugin_server_events.js";
 import { devServerPluginChromeDevToolsJson } from "./dev_server_plugins/dev_server_plugin_chrome_devtools_json.js";
@@ -284,6 +285,11 @@ export const startDevServer = async ({
   serverStopCallbackSet.add(dependencyWatcher.stop);
 
   const devServerJsenvPluginStore = await createJsenvPluginStore([
+    // First, ahead of the plugins given by the caller: what every other plugin
+    // reads must be the patched file, and a caller's plugin may rewrite a file
+    // (plugin-preact reprints one it instruments) before a patch written
+    // against its text on disk gets to see it.
+    ...jsenvPluginPatches(patches),
     jsenvPluginServerEvents({ clientAutoreload }),
     // The client-monitoring dashboard is a dev-time convenience; a test-plan run
     // doesn't use it and shouldn't pay for the reporter being injected into
@@ -311,7 +317,6 @@ export const startDevServer = async ({
       magicDirectoryIndex,
       directoryListing,
       supervisor,
-      patches,
       injections,
       transpilation,
       spa,
