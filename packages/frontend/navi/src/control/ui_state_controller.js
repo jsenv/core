@@ -2107,6 +2107,13 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
     // ── init: runs once on mount ───────────────────────────────────────────
     (s) => {
       const canRegisterAsFacadeChild = (childController) => {
+        if (s.props.picksNothing) {
+          // The popup is a question, not a choice: a control in it (the "I
+          // understand" checkbox gating a confirm) holds its own value, and
+          // that value is not the picker's. Adopted, it would reach the
+          // picker's action as its params, over whatever the caller bound.
+          return false;
+        }
         if (childController.controlType === "button") {
           return false;
         }
