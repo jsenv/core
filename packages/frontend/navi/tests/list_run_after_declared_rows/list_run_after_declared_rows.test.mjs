@@ -1,3 +1,5 @@
+"jsenv:allocate 45s";
+
 /*
  * A `<List.Items>` run reads its collection at the COLLECTION's ranks, not at
  * the list's row numbers.

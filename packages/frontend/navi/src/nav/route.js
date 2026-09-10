@@ -922,6 +922,22 @@ This prevents cross-test pollution and ensures clean state.`,
             // URL is the source of truth for explicit parameters
             const value = paramSignal.peek();
             if (urlParamValue === undefined) {
+              // An address silent about a persisted search param leaves it
+              // alone: the state already holds what is stored (it starts from
+              // storage and every write goes back to it), and a reset here
+              // would empty the storage as well. Reading the storage back is
+              // not an option either: the write that removes the param from
+              // the address is the one emptying its storage, and this sync can
+              // run before that removal has happened.
+              // A path segment or a pushed param names a place, and an address
+              // without it is the place without it: those follow the address.
+              if (
+                connection.persists &&
+                connection.paramType === "query" &&
+                connection.history !== "push"
+              ) {
+                continue;
+              }
               // No URL parameter - reset signal to its current default value
               // (handles both static fallback and dynamic default cases)
               const defaultValue = connection.getDefaultValue();
