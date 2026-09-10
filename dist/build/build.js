@@ -13852,6 +13852,29 @@ const prepareEntryPointBuild = async (
         if (!otherEntryBuildInfo) {
           return null;
         }
+        if (urlInfo.subtypeHint === "service_worker") {
+          // A registered service worker is already an entry of the build
+          // registering it: that build owns its bundle and the resources list
+          // it precaches. A second owner from "entryPoints" would receive
+          // neither, so the configuration is refused.
+          const workerRelativeUrl = urlToRelativeUrl(
+            urlInfo.url,
+            sourceDirectoryUrl,
+          );
+          const registeringRelativeUrl = urlToRelativeUrl(
+            urlInfo.firstReference.ownerUrlInfo.url,
+            sourceDirectoryUrl,
+          );
+          throw new Error(
+            createDetailedMessage(
+              `"${workerRelativeUrl}" is registered as a service worker and declared in "entryPoints"`,
+              {
+                "registered by": registeringRelativeUrl,
+                "suggestion": `remove "./${workerRelativeUrl}" from "entryPoints": a registered service worker is built as its own entry by the build registering it, and its "injections" go under "${sourceRelativeUrl}" keyed by "./${workerRelativeUrl}"`,
+              },
+            ),
+          );
+        }
         urlInfo.otherEntryBuildInfo = otherEntryBuildInfo;
         return {
           type: "entry_build", // this ensure the rest of jsenv do not try to scan or modify the content
