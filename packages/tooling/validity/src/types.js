@@ -1,3 +1,4 @@
+import { EMAIL_LOCAL_PART_CHARS } from "./char_class.js";
 import {
   durationToISOString,
   durationToSeconds,
@@ -6,6 +7,13 @@ import {
 import { message } from "./message.js";
 
 export const CANNOT_CONVERT = {};
+
+// https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/email#validation
+// One "@" and a domain made of labels: the platform's reading of an address,
+// which stops short of requiring a dot ("user@localhost" is an address).
+const EMAIL_REGEX = new RegExp(
+  `^[${EMAIL_LOCAL_PART_CHARS}-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$`,
+);
 
 const validateNumber = (value) => {
   if (typeof value !== "number") {
@@ -639,15 +647,20 @@ export const TYPES = {
       if (typeof value !== "string") {
         return message("type.string");
       }
-      const emailregex =
-        /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
-      if (!value.includes("@")) {
-        return message("type.email");
+      if (EMAIL_REGEX.test(value)) {
+        return null;
       }
-      if (!emailregex.test(value)) {
-        return message("type.email");
+      const refusal = value.includes("@")
+        ? message("type.email.invalid")
+        : message("type.email.at", { value });
+      // A pasted address brings the spaces around it along; the address
+      // itself is the suggestion. Case is left as typed: the type accepts
+      // either, and which spellings name one mailbox is the caller's call.
+      const trimmed = value.trim();
+      if (trimmed !== value && EMAIL_REGEX.test(trimmed)) {
+        return { ...refusal, autoFix: () => trimmed };
       }
-      return null;
+      return refusal;
     },
   },
   "url": {

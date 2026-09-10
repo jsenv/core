@@ -17,6 +17,12 @@
 const EMOJI_CHARS = "\\p{Emoji_Presentation}\\p{Regional_Indicator}\\uFE0F";
 export const EMOJI_CHAR_CLASS = `[${EMOJI_CHARS}]`;
 
+// The characters an address may hold before its "@" (RFC 5322 atext, the set
+// <input type="email"> accepts), hyphen excluded so a class can end with it.
+// `types.js` builds the email grammar from the same string, so a guard built
+// on the preset never refuses at the keystroke what the type accepts on arrival.
+export const EMAIL_LOCAL_PART_CHARS = "a-zA-Z0-9.!#$%&'*+/=?^_`{|}~";
+
 /** Named character classes, usable wherever a `charClass` is expected. */
 export const CHAR_CLASS_PRESETS = {
   numeric: "[0-9]", // digits only
@@ -25,7 +31,7 @@ export const CHAR_CLASS_PRESETS = {
   decimal: "[-0-9.,]", // digits, minus, dot, comma
   uppercase: "[A-Z]", // uppercase letters only
   tel: "[-0-9+() ]", // phone: digits, +, -, parens, space
-  email: "[a-zA-Z0-9._%+@-]", // email characters
+  email: `[${EMAIL_LOCAL_PART_CHARS}@-]`, // what an address is made of
   card: "[0-9 ]", // credit card: digits and spaces
   hex: "[0-9A-Fa-f]", // hexadecimal digits
   pin: "[0-9]", // numeric PIN

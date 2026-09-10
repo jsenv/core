@@ -10,10 +10,19 @@ const cell = (value) => ({ value, border: BORDER });
 await snapshotTests(import.meta.url, ({ test }) => {
   test("email type validation", () => {
     const [validity, applyOn] = createValidity({
-  "type": "email"
-});
+      type: "email",
+    });
 
-    const cases = ["user@example.com","test@domain.org","invalid-email","@domain.com","user@",undefined];
+    const cases = [
+      "user@example.com",
+      "test@domain.org",
+      "o'brien@example.com",
+      "invalid-email",
+      "@domain.com",
+      "user@",
+      " user@example.com ",
+      undefined,
+    ];
     const rows = cases.map((value) => {
       applyOn(value);
       return [

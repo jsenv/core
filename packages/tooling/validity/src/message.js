@@ -35,7 +35,8 @@ export const MESSAGE_TEMPLATES = {
   "type.percentage": "must be a number between 0 and 100",
   "type.percentage.range": "must be between 0 and 100",
   "type.time.format": "must be in HH:MM or HH:MM:SS format",
-  "type.email": "must be a valid email address",
+  "type.email.at": 'must include "@" (it is missing in "[value]")',
+  "type.email.invalid": "must be a valid email address",
   "type.url": "must be a valid URL",
   "type.color": "must be a valid color (hex, rgb, rgba, or named color)",
 

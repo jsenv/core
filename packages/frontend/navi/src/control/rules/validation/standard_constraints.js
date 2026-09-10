@@ -7,11 +7,13 @@ import {
   compareTwoDurations,
   durationContainsNaN,
   durationToSeconds,
+  TYPE_RULE,
 } from "@jsenv/validity";
 
 import { languagesSignal } from "@jsenv/navi/src/text/lang_signal.js";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
+import { naviI18nFromValidityMessage } from "../validity_bridge.js";
 
 export const REQUIRED_CONSTRAINT = {
   name: "required",
@@ -157,9 +159,8 @@ export const PATTERN_CONSTRAINT = {
 };
 CONSTRAINT_ATTRIBUTE_SET.add("pattern");
 
-// https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/email#validation
-const emailregex =
-  /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+// What an address is, is @jsenv/validity's `type: "email"`: a server checking
+// the value again refuses it for the same reason and in the same words.
 export const TYPE_EMAIL_CONSTRAINT = {
   name: "type_email",
   messageAttribute: "data-type-message",
@@ -173,14 +174,11 @@ export const TYPE_EMAIL_CONSTRAINT = {
     if (!valueAsString) {
       return null;
     }
-    if (emailregex.test(valueAsString)) {
+    const result = TYPE_RULE.applyOn("email", valueAsString);
+    if (!result) {
       return null;
     }
-
-    if (!valueAsString.includes("@")) {
-      return naviI18n("constraint.type.email.at", { value: valueAsString });
-    }
-    return naviI18n("constraint.type.email.invalid");
+    return naviI18nFromValidityMessage(result);
   },
 };
 

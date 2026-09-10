@@ -1,5 +1,6 @@
 export {
   CHAR_CLASS_PRESETS,
+  EMAIL_LOCAL_PART_CHARS,
   EMOJI_CHAR_CLASS,
   compileCharClass,
   compileCharClassAnchored,
@@ -18,6 +19,7 @@ export {
   parseDuration,
 } from "./src/duration.js";
 export { formatMessageInEnglish, MESSAGE_TEMPLATES } from "./src/message.js";
+export { TYPE_RULE } from "./src/rules.js";
 export {
   CHAR_CLASS_RULE,
   DISPLAYABLE_RULE,
