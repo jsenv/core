@@ -64,9 +64,11 @@ const PickerText = (props) => {
 };
 
 // The popup holds a group of named controls — a `<ControlGroup>`, or a `<Form>`
-// when that group is a question with a send of its own — and this picker's
-// value is the object that group aggregates. The popup itself holds nothing: it
-// is a surface (see dialog.jsx), so there is nothing to tell it about the shape.
+// when that group is a question with a send of its own and the picker is not
+// itself inside a form (a form in a form answers for itself, see form.jsx) —
+// and this picker's value is the object that group aggregates. The popup itself
+// holds nothing: it is a surface (see dialog.jsx), so there is nothing to tell
+// it about the shape.
 const PickerObject = (props) => {
   const Next = useNextResolver();
 

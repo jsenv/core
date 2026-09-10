@@ -54315,8 +54315,8 @@ const Form = props => {
   // second's opening tag, so the inner fields would silently belong to the
   // outer form. Rather than forbidding the shape (a form inside a picker inside
   // a form is a legitimate thing to want), a form that finds itself inside one
-  // is a different component: same group, no <form> element and none of the
-  // browser machinery that comes with it.
+  // is a different component: a group of its own, no <form> element and none of
+  // the browser machinery that comes with it (see FormNested).
   const isNested = Boolean(useContext(FormContext));
   return isNested ? jsx(FormNested, {
     ...props
@@ -54446,13 +54446,26 @@ const FormControl = props => {
 // event to intercept and no requestSubmit() to go through, so it is driven the
 // way every other group is — a command, or an action requested on it. method
 // belongs to the browser's own submission, so it means nothing here either.
+//
+// And it owns what it holds: `standalone`, unconditionally. A <Form> is a
+// question with a send of its own, so its fields answer to it and to nothing
+// above it — they are not in the outer form's value, not in its "changed", and
+// not in the constraints it checks before sending. That last one is what a
+// caller feels: a required field in a popup nobody opened would otherwise
+// refuse the outer submit, pointing at something the screen is not even
+// showing. A cluster of fields that IS part of the value around it is a
+// <ControlGroup>, which is the shape without the send (see
+// docs/control_object.md).
 const FormNested = props => {
   const {
     formRootProps,
     formProps,
     onnavi_action_end,
     inside
-  } = useFormGroup(props);
+  } = useFormGroup({
+    ...props,
+    standalone: true
+  });
   return jsx(Box, {
     ...formRootProps,
     ...formProps,
@@ -71611,9 +71624,11 @@ const PickerText = props => {
 };
 
 // The popup holds a group of named controls — a `<ControlGroup>`, or a `<Form>`
-// when that group is a question with a send of its own — and this picker's
-// value is the object that group aggregates. The popup itself holds nothing: it
-// is a surface (see dialog.jsx), so there is nothing to tell it about the shape.
+// when that group is a question with a send of its own and the picker is not
+// itself inside a form (a form in a form answers for itself, see form.jsx) —
+// and this picker's value is the object that group aggregates. The popup itself
+// holds nothing: it is a surface (see dialog.jsx), so there is nothing to tell
+// it about the shape.
 const PickerObject = props => {
   const Next = useNextResolver();
   return jsx(Next, {

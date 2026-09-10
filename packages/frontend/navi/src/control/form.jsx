@@ -35,12 +35,14 @@ import { dispatchRequestResetUIState } from "./ui_state_dom.js";
 /**
  * @param {object} props
  * @param {boolean} [props.standalone] - Its value is its own: the form does not
- *   register with the control group around it (a Picker, another form…), so
+ *   register with the control group around it (a Picker, a ControlGroup), so
  *   what is typed in it never becomes part of that group's value, and nothing
  *   that group does — distributing a value, resetting, cascading validation —
  *   reaches it. For a form that lives INSIDE something else while answering a
  *   different question — "create the thing I am about to pick" inside a picker,
- *   say. Every control takes the same prop, for the same reason.
+ *   say. Every control takes the same prop, for the same reason. A form inside
+ *   another form is that by construction and does not need the prop: the group
+ *   it would register into is a form, which never owns another form's fields.
  * @param {boolean} [props.canSendWhileUnchanged] - Send even when nothing changed. By
  *   default a form only acts on an answer that is actually new: submitting a
  *   form nobody touched — one just rendered, one whose fields still hold their
@@ -105,8 +107,8 @@ export const Form = (props) => {
   // second's opening tag, so the inner fields would silently belong to the
   // outer form. Rather than forbidding the shape (a form inside a picker inside
   // a form is a legitimate thing to want), a form that finds itself inside one
-  // is a different component: same group, no <form> element and none of the
-  // browser machinery that comes with it.
+  // is a different component: a group of its own, no <form> element and none of
+  // the browser machinery that comes with it (see FormNested).
   const isNested = Boolean(useContext(FormContext));
   return isNested ? <FormNested {...props} /> : <FormControl {...props} />;
 };
@@ -238,9 +240,21 @@ const FormControl = (props) => {
 // event to intercept and no requestSubmit() to go through, so it is driven the
 // way every other group is — a command, or an action requested on it. method
 // belongs to the browser's own submission, so it means nothing here either.
+//
+// And it owns what it holds: `standalone`, unconditionally. A <Form> is a
+// question with a send of its own, so its fields answer to it and to nothing
+// above it — they are not in the outer form's value, not in its "changed", and
+// not in the constraints it checks before sending. That last one is what a
+// caller feels: a required field in a popup nobody opened would otherwise
+// refuse the outer submit, pointing at something the screen is not even
+// showing. A cluster of fields that IS part of the value around it is a
+// <ControlGroup>, which is the shape without the send (see
+// docs/control_object.md).
 const FormNested = (props) => {
-  const { formRootProps, formProps, onnavi_action_end, inside } =
-    useFormGroup(props);
+  const { formRootProps, formProps, onnavi_action_end, inside } = useFormGroup({
+    ...props,
+    standalone: true,
+  });
 
   return (
     <Box

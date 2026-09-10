@@ -54,14 +54,21 @@ So the choice is not about the value, it is about whether this cluster is a
 - something the user sends → `Form`.
 
 A `<Form>` inside a `<Form>` is legal — the inner one becomes a group without
-the `<form>` element — but it carries all of the above with it: its own
-reference, its own "nothing changed", its own submit story. Grouping three
-fields into a sub-object should cost none of that.
+the `<form>` element — and it is a **second question**, not a sub-object of the
+first: what it holds is its own, and the form around it never sees it. Not in
+the value it sends, not in its "nothing changed", and not in the constraints it
+checks before sending — a required field in a popup nobody opened cannot refuse
+the outer submit and point at something the screen is not showing.
+
+So the inner form carries all of the above with it: its own reference, its own
+"nothing changed", its own submit story. Grouping three fields into a sub-object
+should cost none of that — that is a `ControlGroup`.
 
 ## Naming, and what a nameless group does
 
-A group's `name` is the key its value lands under, in the group above it. This
-is true of a `ControlGroup` and of a nested `Form` alike.
+A group's `name` is the key its value lands under, in the group above it — a
+`ControlGroup`, or a `Form` inside something that is not a form (a picker, say).
+A form inside a form lands nowhere: it answers for itself, named or not.
 
 Left nameless, a group is a **grouping**: it exists to hold its children
 together (shared navigation, a visual cluster) without claiming a key, and what
@@ -109,7 +116,9 @@ Two things to get right:
   only one read back. Two controls side by side in a popup is the shape to
   avoid — the second is neither filled nor collected, and navi says so in dev.
   Wrap them in one `ControlGroup` (or one `Form`, when the popup has a send of
-  its own).
+  its own — but only while the picker itself is not inside a form, since a form
+  inside a form answers for itself and the picker would be left with nothing to
+  fill).
 - **The value travels by name.** What the picker was given goes down into the
   group, which hands each named child its own key; a nameless grouping inside
   receives the whole object and picks out what it names. Give a picker of this
