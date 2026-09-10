@@ -36632,6 +36632,13 @@ const useUIFacadeStateController = (props, realUIStateController) => {
     // ── init: runs once on mount ───────────────────────────────────────────
     (s) => {
       const canRegisterAsFacadeChild = (childController) => {
+        if (s.props.picksNothing) {
+          // The popup is a question, not a choice: a control in it (the "I
+          // understand" checkbox gating a confirm) holds its own value, and
+          // that value is not the picker's. Adopted, it would reach the
+          // picker's action as its params, over whatever the caller bound.
+          return false;
+        }
         if (childController.controlType === "button") {
           return false;
         }
@@ -73347,7 +73354,9 @@ const PickerFirstResolver = props => {
  *   on it.
  * @param {boolean} [picksNothing] The popup asks something rather than holding
  *   an answer, so the trigger draws a label and never a value: no chevron, no
- *   clear cross, in any variant. `type="confirm"` says it for itself; say it
+ *   clear cross, in any variant — and the controls in the popup are their own
+ *   (a checkbox gating the yes), never the picker's value, so a bound `action`
+ *   keeps the params it was bound with. `type="confirm"` says it for itself; say it
  *   for a popup of your own that is a menu of actions rather than a choice —
  *   or a DOOR: a drawing that grows to be looked at (a weather scene, a plan),
  *   with no `action` at all. The picker is then a trigger and a popup, and

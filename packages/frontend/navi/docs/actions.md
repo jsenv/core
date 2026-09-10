@@ -325,10 +325,17 @@ Which instance that is depends on whether the control carries a value:
   what it runs **is** the instance it was handed. `useActionStatus` on that
   instance sees the click, the run, the data.
 - a control that **carries a value** — an input, a form — runs the child
-  instance bound to that value. Those params are not the caller's, so neither
-  is the status: the instance the caller holds stays idle while the control's
-  run moves. Read the effect where it lands (the store, for a resource verb),
-  or listen to the run itself, below.
+  instance bound to that value: the value merged over the params the caller
+  bound, and a value that is not an object **replaces them outright**. A
+  checkbox handed `ACTION.bindParams({ id })` runs `ACTION(true)`, and `id`
+  is gone — the call fails wherever it needed it, far from the binding that
+  lost it. Bind params to a control that holds a value only when the value
+  completes them (a form's object over a bound `{ id }`); when it would
+  replace them, pass a function and keep the params in its closure:
+  `action={() => ACTION({ id, sure: true })}`. Those params are not the
+  caller's, so neither is the status: the instance the caller holds stays idle
+  while the control's run moves. Read the effect where it lands (the store,
+  for a resource verb), or listen to the run itself, below.
 
 Every control with an `action` reports the run it performs, whichever instance
 that is:

@@ -57,7 +57,11 @@ consequence: the component stays, so it is still there to offer the way out.
 
 A component that delegates nothing needs no `<Loading>` above it. One that
 delegates its wait does, since that is where the suspension lands, and navi says
-so rather than leaving the subtree blank.
+so rather than leaving the subtree blank. Inside a popup that boundary is the
+popup's own — `{ loading: true }`, or a `<Loading>` inside the popup — never
+the one above the page: a suspension landing there takes the popup away with
+the page it copies, and the popup does not open at all (see
+[popup_open.md](./popup_open.md#a-popup-that-loads-data)).
 
 ## `data` and `loading` are independent
 
