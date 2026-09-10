@@ -2837,7 +2837,17 @@ const updateActions = ({
    * - willRunSet: actions that will be run
    * - willPromoteSet: prerun actions that become run-requested
    * - stays*Set: actions that remain in their current state
+   *
+   * A proxy in any of the sets stands for the action it currently targets,
+   * exactly as proxy.run()/rerun()/reset() do: what enters activationWeakSet
+   * is always the target. A proxy kept in there would retarget on its own —
+   * to a never-run child once its params go falsy — and getActivationInfo
+   * would then meet an IDLE member on every later update of the document.
    */
+  prerunSet = resolveActionProxies(prerunSet);
+  runSet = resolveActionProxies(runSet);
+  rerunSet = resolveActionProxies(rerunSet);
+  resetSet = resolveActionProxies(resetSet);
 
   const { runningSet, settledSet } = getActivationInfo();
 
@@ -3160,6 +3170,14 @@ ${lines.join("\n")}`);
     allResult,
     runningActionSet,
   };
+};
+
+const resolveActionProxies = (actionSet) => {
+  const resolvedSet = new Set();
+  for (const action of actionSet) {
+    resolvedSet.add(action.isProxy ? action.getCurrentAction() : action);
+  }
+  return resolvedSet;
 };
 
 const NO_PARAMS = { __no_params__: true };
