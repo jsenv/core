@@ -678,6 +678,9 @@
           // fields would refuse in turn.
           openWhileReadOnly={false}
           anchor={anchor}
+          // One wait for the card, one outline: the picker around the card
+          // draws it, this one only wears the busy.
+          loadingOutline="custom"
           animationDuration={animationDuration}
           {...LIFTED_SHEET_PROPS}
           {...props}
@@ -748,6 +751,9 @@
             // are drawn on the picker's box, which is the card's, so its radius
             // has to be the card's too.
             borderRadius="12"
+            // Clear of the card's frame: on its border the run reads as the
+            // border blinking.
+            loadingOutlineInset={-4}
             ui={
               <GameCardInPage
                 game={game}

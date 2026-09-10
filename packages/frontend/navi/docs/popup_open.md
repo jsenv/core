@@ -440,7 +440,9 @@ read it: `ui={MatchCard}` hands the component `value`, `loading` and
 `interactive` as props; `ui={<MatchCard match={match} />}` keeps the caller's
 own props and reads the same three with `usePickerState()` inside. The
 `loading` is the wait: navi's loading outline is a two-pixel run around the
-box, which a card-sized trigger draws its own waiting state for.
+box, which a card-sized trigger moves clear of its frame with
+`loadingOutlineInset`, or draws its own waiting state for, with
+`loadingOutline="custom"` so the two do not add up.
 
 What the picker measures as "changed since open" is what its mirrored group
 holds. A piece of the answer living outside the controls — a seating
@@ -460,7 +462,9 @@ run through `loading` (from its `onActionStart`/`onActionEnd`), so while
 either write is out the hold and the click are both refused, with the busy
 reason where the finger is — the click only once the score picker says
 `openWhileReadOnly={false}`: a busy picker otherwise still opens, to be read,
-and a sheet of fields to fill in is not that. A hold declared inside the card answers before the
+and a sheet of fields to fill in is not that. One wait, one outline as well:
+the inner picker says `loadingOutline="custom"`, and the card's is drawn by
+the picker whose box the card is. A hold declared inside the card answers before the
 card's own: the nearer hold takes the press. `animation="growing"` with
 `dialogSizeFromAnchor` (as wide as the card, floor and ceiling),
 `popupBackgroundColor="transparent"` and `popupBoxShadow="none"` lifts the

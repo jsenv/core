@@ -234,5 +234,5 @@ do nothing to the menu is worth checking against that list first (see
 
 Reference: `src/layout/dialog.jsx` (the stylesheet at the top of the file holds
 the cap arithmetic), `src/layout/responsive.js` (`smallTouchScreenSignal`),
-`src/control/picker/picker_custom.jsx` (how `--picker-dialog-*` bridges to
-`--dialog-*`), and `src/layout/demos/1_dialog_demo.html`.
+`src/control/picker/picker_custom.jsx` (how the picker hands `dialogMin*`/
+`dialogMax*` to the dialog element), and `src/layout/demos/1_dialog_demo.html`.

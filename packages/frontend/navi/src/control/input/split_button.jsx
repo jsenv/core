@@ -15,7 +15,7 @@
  *
  * The busy state is worn by the control, not by the half that happens to be
  * running: one loading outline around both, which is why each half is told
- * `loadingOutline={false}`.
+ * `loadingOutline="custom"`.
  */
 
 import { useId, useRef, useState } from "preact/hooks";
@@ -247,7 +247,7 @@ export const SplitButton = (props) => {
     readOnly,
     disabled,
     // The outline belongs around the pair, drawn below.
-    loadingOutline: false,
+    loadingOutline: "custom",
   };
 
   return (

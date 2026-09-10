@@ -34,177 +34,103 @@ import { dispatchRequestInteraction } from "../rules/control_interaction.js";
 import { getUIStateFromElement } from "../ui_state_dom.js";
 
 const css = /* css */ `
-  .navi_picker {
-    /* Sizing ceilings (maxmax), background, box-shadow, outline, padding,
-       overflow... are already handled correctly by Popup/Popover/Dialog
-       themselves — nothing to redefine here. Only the picker's own look
-       (border color/radius/width, background) needs bridging into the vars
-       Popover/Dialog actually consume, plus a couple of genuinely
-       picker-specific bits below (anchor-width min-width, the nested list). */
+  /* Popover and Dialog size, pad and scroll themselves. What is written here
+     is the little the trigger says about the popup it opens — its corners,
+     its edge and its focus ring echo the field's — plus what is specific to a
+     picker's popup: the cursor, the stacking, the list that scrolls inside.
 
-    /* popover */
-    &[aria-haspopup="listbox"] {
-      .navi_popover {
-        --popover-border-radius: var(
-          --picker-popup-border-radius,
-          var(--picker-border-radius)
-        );
-        --popover-border-width: var(--picker-border-width);
-        --popover-border-color: var(--x-picker-border-color);
-        /* The sheet is the popup's own, never the trigger's paint: a variant
-           that takes the box away from the trigger (icon, discrete, headless
-           all paint it transparent) must not take the sheet with it. The trim
-           above still echoes the field — a transparent edge still leaves a
-           readable surface; the surface does not.
+     Keyed on the attribute the picker writes on its own popup, never on
+     descent from the picker: the popup's content is a page of its own, and
+     it holds other pickers and dialogs of other kinds (a SidePanel is a
+     .navi_dialog). A rule reaching every popup below the picker would paint
+     them all with what this picker says about ITS popup. For the same reason
+     the caller's popup props (popupBackgroundColor, dialogMaxWidth…) are not
+     vars on the picker at all — a var on the picker inherits into everything
+     the popup holds, and the pickers in there would read it as their own —
+     but props on the popup element, see PickerContentInsidePopup. */
 
-           With an explicit fallback, unlike --popover-max-height below: the
-           popover paints background-color from this var with no fallback of
-           its own, so a declaration invalid at computed-value time would not
-           step aside for the @layer default — it makes the var guaranteed-
-           invalid, and the sheet goes transparent. */
-        --popover-background-color: var(
-          --picker-popup-background-color,
-          var(--navi-popup-background-color)
-        );
-        --popover-outline-width: var(--picker-outline-width);
-        --popover-outline-color: var(--picker-outline-color);
-        /* Explicit fallback, same reason as the surface above. */
-        --popover-box-shadow: var(
-          --picker-popup-box-shadow,
-          var(--navi-popup-box-shadow)
-        );
-        /* No fallback on purpose: when the picker's own popoverMaxHeight prop
-           is unset this declaration is invalid at computed-value time, which
-           leaves --popover-max-height unset and lets the popover fall back to
-           --popover-max-height-default. */
-        --popover-max-height: var(--picker-popover-max-height);
+  /* popover */
+  .navi_popover[data-picker-popup] {
+    --popover-border-radius: var(--picker-border-radius);
+    --popover-border-width: var(--picker-border-width);
+    --popover-border-color: var(--x-picker-border-color);
+    --popover-outline-width: var(--picker-outline-width);
+    --popover-outline-color: var(--picker-outline-color);
+    cursor: default; /* Reset pointer cursor within the select */
 
-        /* At least as wide as the trigger — unless popupWidthFitContent, then
-           let the content (e.g. a Wheel) size the popover (see picker.jsx). */
-        min-width: var(--picker-popover-min-width, var(--anchor-width, 0px));
-        cursor: default; /* Reset pointer cursor within the select */
-
-        /* The list scrolls inside the popover */
-        .navi_list_container {
-          width: 100%;
-          /* The list's radius var, not border-radius itself: the longhands it
-             feeds are what read the --x-corner-*-radius claims coming from
-             outside (a header/footer covering a corner, a flush body — see
-             box.jsx). Writing the shorthand here would flatten those four
-             longhands back to one curve and square nothing. */
-          --list-border-radius: max(
-            0px,
-            var(--popover-border-radius) - var(--popover-border-width)
-          );
-          overscroll-behavior: none;
-
-          /* Skipped when the list asks for overflow="visible": that ask is
-             about escaping every box the list sits in, and this selector is
-             specific enough to win over the list's own rules and silently put
-             the scroll back. */
-          &:not([data-overflow-visible]) {
-            overflow: auto;
-          }
-        }
-      }
-
-      &[aria-expanded="true"] {
-        &[navi-popover-mode="overlay"] {
-          /* When sizes uses float AND the border uses border-radius it's possible it's possible to see some pixels
-          of the underlying select borders. We hide them to ensure this cannot happen.  */
-          border-color: transparent;
-        }
-
-        /* Popover itself has no opinion on its content's own layout (plain
-           div, block by default) — the picker's content needs to stack
-           vertically. */
-        .navi_popover {
-          display: flex;
-          flex-direction: column;
-        }
-      }
+    /* Popover itself has no opinion on its content's own layout (plain div,
+       block by default) — the picker's content needs to stack vertically.
+       Only while shown: an authored display on a closed popover would defeat
+       the browser's own display: none (see [navi-hidden] in popover.jsx). */
+    &:not([navi-hidden]) {
+      display: flex;
+      flex-direction: column;
     }
 
-    /* dialog */
-    &[aria-haspopup="dialog"] {
-      .navi_dialog {
-        --dialog-border-radius: var(
-          --picker-popup-border-radius,
-          var(--picker-border-radius)
-        );
-        /* Explicit fallback, for the same reason as --popover-background-color
-           above: the dialog paints border-width from this var with no fallback
-           of its own, so an unset dialogBorderWidth would leave the var
-           guaranteed-invalid and border-width at its initial "medium" (3px).
-           0px is the dialog's own default. */
-        --dialog-border-width: var(--picker-dialog-border-width, 0px);
-        --dialog-border-color: var(--x-picker-border-color);
-        /* The picker's own surface is not this one — see the popover branch,
-           including why the fallback is spelled out. */
-        --dialog-background-color: var(
-          --picker-popup-background-color,
-          var(--navi-popup-background-color)
-        );
-        --dialog-outline-width: var(--picker-outline-width);
-        --dialog-outline-color: var(--picker-outline-color);
-        --dialog-box-shadow: var(
-          --picker-popup-box-shadow,
-          var(--navi-popup-box-shadow)
-        );
+    /* The list scrolls inside the popover */
+    .navi_list_container {
+      width: 100%;
+      /* The list's radius var, not border-radius itself: the longhands it
+         feeds are what read the --x-corner-*-radius claims coming from
+         outside (a header/footer covering a corner, a flush body — see
+         box.jsx). Writing the shorthand here would flatten those four
+         longhands back to one curve and square nothing. */
+      --list-border-radius: max(
+        0px,
+        var(--popover-border-radius) - var(--popover-border-width)
+      );
+      overscroll-behavior: none;
 
-        /* No fallback on purpose (same as --popover-max-height above): unset
-           picker props leave these declarations invalid at computed-value
-           time, so the dialog keeps its own floors/ceilings. */
-        --dialog-min-width: var(--picker-dialog-min-width);
-        --dialog-min-height: var(--picker-dialog-min-height);
-        --dialog-max-width: var(--picker-dialog-max-width);
-        --dialog-max-height: var(--picker-dialog-max-height);
-
-        /* Nothing bridges the trigger's width in here: a dialog does not
-           follow its anchor's box by itself (dialog.jsx, sizeFromAnchor) — it
-           is not visually attached to the trigger, so it is sized by its
-           content; dialogMinWidth/dialogMinHeight are how a caller says
-           otherwise, and dialogSizeFromAnchor how they ask for the trigger's
-           own box. Only the cursor reset below is picker-specific here. */
-        cursor: default; /* Reset pointer cursor within the select */
-
-        /* Dialog already applies display: flex to [open] itself, but
-           defaults to row — the picker's content needs to stack vertically. */
-        &[open] {
-          flex-direction: column;
-        }
-
-        /* The list scrolls inside the dialog — same as the popover branch
-           above, including why this is the var and not the shorthand. */
-        .navi_list_container {
-          width: 100%;
-          --list-border-radius: max(
-            0px,
-            var(--dialog-border-radius) - var(--dialog-border-width)
-          );
-          overscroll-behavior: none;
-
-          &:not([data-overflow-visible]) {
-            overflow: auto;
-          }
-        }
-      }
-
-      /* As wide as the trigger: Dialog's sizeFromAnchor is a floor, and the
-         ceiling is set here — on the dialog, where --anchor-width is set —
-         because a dialogMaxWidth="var(--anchor-width)" written on the picker
-         would be resolved on the picker, where nothing of that name exists.
-         A dialogMaxWidth of the caller's still wins. */
-      &[data-dialog-size-from-anchor] .navi_dialog {
-        --dialog-max-width: var(--picker-dialog-max-width, var(--anchor-width));
+      /* Skipped when the list asks for overflow="visible": that ask is
+         about escaping every box the list sits in, and this selector is
+         specific enough to win over the list's own rules and silently put
+         the scroll back. */
+      &:not([data-overflow-visible]) {
+        overflow: auto;
       }
     }
+  }
 
-    /* popupWidthFitContent (picker.jsx): drop the trigger-width floor so the
-       popup shrinks to its content. Popover-only — the dialog has no such
-       floor to drop (see the dialog block above). */
-    &[data-popup-width-fit-content] {
-      --picker-popover-min-width: 0px;
+  .navi_picker[aria-haspopup="listbox"][aria-expanded="true"][navi-popover-mode="overlay"] {
+    /* When sizes uses float AND the border uses border-radius it's possible it's possible to see some pixels
+    of the underlying select borders. We hide them to ensure this cannot happen.  */
+    border-color: transparent;
+  }
+
+  /* dialog */
+  .navi_dialog[data-picker-popup] {
+    --dialog-border-radius: var(--picker-border-radius);
+    --dialog-border-color: var(--x-picker-border-color);
+    --dialog-outline-width: var(--picker-outline-width);
+    --dialog-outline-color: var(--picker-outline-color);
+
+    /* Nothing bridges the trigger's width in here: a dialog does not follow
+       its anchor's box by itself (dialog.jsx, sizeFromAnchor) — it is not
+       visually attached to the trigger, so it is sized by its content;
+       dialogMinWidth/dialogMinHeight are how a caller says otherwise, and
+       dialogSizeFromAnchor how they ask for the trigger's own box. Only the
+       cursor reset below is picker-specific here. */
+    cursor: default; /* Reset pointer cursor within the select */
+
+    /* Dialog already applies display: flex to [open] itself, but
+       defaults to row — the picker's content needs to stack vertically. */
+    &[open] {
+      flex-direction: column;
+    }
+
+    /* The list scrolls inside the dialog — same as the popover branch
+       above, including why this is the var and not the shorthand. */
+    .navi_list_container {
+      width: 100%;
+      --list-border-radius: max(
+        0px,
+        var(--dialog-border-radius) - var(--dialog-border-width)
+      );
+      overscroll-behavior: none;
+
+      &:not([data-overflow-visible]) {
+        overflow: auto;
+      }
     }
   }
 `;
@@ -1013,6 +939,22 @@ const PickerContentInsidePopup = (props) => {
     // dialogMaxWidth="var(--anchor-width)", as a ceiling) — what keeps a card
     // its own width once lifted. Dialog's own `sizeFromAnchor`.
     dialogSizeFromAnchor,
+    // The caller's word on the popup's own box. Written on the popup element,
+    // where Popover/Dialog map them to their own vars, rather than as vars on
+    // the picker: a var on the picker inherits into everything the popup
+    // holds, and the pickers in there would read it as their own.
+    popupBackgroundColor,
+    popupBorderRadius,
+    popupBoxShadow,
+    popoverMaxHeight,
+    dialogBorderWidth,
+    dialogMinWidth,
+    dialogMinHeight,
+    dialogMaxWidth,
+    dialogMaxHeight,
+    // The popover is at least as wide as the trigger. True when the CONTENT
+    // should size it (a Wheel) instead of being stretched to the trigger.
+    popupWidthFitContent,
     animation,
     grow,
     animationDuration,
@@ -1033,9 +975,6 @@ const PickerContentInsidePopup = (props) => {
     <Next
       aria-haspopup={isPopover ? "listbox" : "dialog"}
       navi-popover-mode={isPopover ? popoverMode : undefined}
-      data-dialog-size-from-anchor={
-        !isPopover && dialogSizeFromAnchor ? "" : undefined
-      }
       {...rest}
       // On popupProps already (see the picker's popup assembly); they mean
       // nothing to the picker element.
@@ -1082,6 +1021,32 @@ const PickerContentInsidePopup = (props) => {
         <Popup
           {...popupProps}
           data-testid={popupTestId}
+          // What the CSS above keys on: this picker's own popup, and no other
+          // popup below the picker.
+          data-picker-popup=""
+          backgroundColor={popupBackgroundColor}
+          borderRadius={popupBorderRadius}
+          boxShadow={popupBoxShadow}
+          borderWidth={isPopover ? undefined : dialogBorderWidth}
+          minWidth={
+            isPopover
+              ? popupWidthFitContent
+                ? undefined
+                : "var(--anchor-width, 0px)"
+              : dialogMinWidth
+          }
+          minHeight={isPopover ? undefined : dialogMinHeight}
+          // As wide as the trigger under dialogSizeFromAnchor: Dialog's own
+          // sizeFromAnchor is a floor, this is the ceiling. A dialogMaxWidth of
+          // the caller's still wins.
+          maxWidth={
+            isPopover
+              ? undefined
+              : dialogMaxWidth === undefined && dialogSizeFromAnchor
+                ? "var(--anchor-width)"
+                : dialogMaxWidth
+          }
+          maxHeight={isPopover ? popoverMaxHeight : dialogMaxHeight}
           mode={mode}
           layer={popupLayer}
           animation={animation}

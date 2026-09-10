@@ -1766,10 +1766,17 @@ const POPOVER_PSEUDO_CLASSES = [
 // Lets consumers pass animationDuration="0.5s"/borderRadius="8px" as regular
 // props; Box maps them to the CSS vars for us (see box.jsx's styleCSSVars
 // handling).
+// The paint props go through the popover's own vars rather than the properties
+// themselves, so the stylesheet keeps the last word on them (the same reason
+// dialog.jsx gives for borderRadius).
 const POPUP_STYLE_CSS_VARS = {
   animationDuration: "--popup-animation-duration",
   backdropColor: "--backdrop-background",
   backdropFilter: "--backdrop-filter",
+  backgroundColor: "--popover-background-color",
+  boxShadow: "--popover-box-shadow",
+  borderWidth: "--popover-border-width",
+  borderRadius: "--popover-border-radius",
   minWidth: "--popover-min-width",
   maxWidth: "--popover-max-width",
   minHeight: "--popover-min-height",
