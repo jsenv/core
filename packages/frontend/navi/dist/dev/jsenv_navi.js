@@ -10452,6 +10452,42 @@ const readNumberFromDom = (element, attribute, defaultValue) => {
 };
 
 /**
+ * Where a press really landed, for an element reading a gesture out of it.
+ *
+ * A popup is painted OVER the page and stays a DOM descendant of whatever it
+ * was written in — a dialog inside the card that opens it, a callout beside the
+ * button it belongs to. Its pointer events therefore bubble through boxes it
+ * covers, and a box reading a gesture off one of them answers for something
+ * nobody aimed at it: a finger held in a sheet opening the card underneath the
+ * sheet, a card the sheet is drawn from and that the finger cannot even reach.
+ *
+ * The same list, read for the same reason, as the drag sources in @jsenv/dom
+ * (see DRAG_IGNORED_SELECTOR in drag_to.js) and as the selection rule in
+ * interaction_press.js: a layer over the element (`[popover]`, `dialog`), and
+ * something saying its press is its own business (`data-drag-ignore`, which is
+ * what a popup outside the top layer says for itself).
+ */
+
+const LAYER_OVER_SELECTOR = "[data-drag-ignore],[popover],dialog";
+
+/**
+ * The nearest word wins: a layer INSIDE the element takes the press away from
+ * it, one AROUND it does not — an element that IS the dialog, or that sits in
+ * one, goes on answering its own presses.
+ *
+ * @param {EventTarget} target Where the event says the press landed.
+ * @param {Element} element The element reading a gesture out of that press.
+ * @returns {boolean}
+ */
+const isPressOnLayerOver = (target, element) => {
+  if (!target || typeof target.closest !== "function") {
+    return false;
+  }
+  const layer = target.closest(LAYER_OVER_SELECTOR);
+  return Boolean(layer) && !layer.contains(element);
+};
+
+/**
  * The interactions the browser already has an event for.
  *
  * Nothing to detect: the name IS the event type, so this listens and says it
@@ -10469,6 +10505,11 @@ const readNumberFromDom = (element, attribute, defaultValue) => {
  * refuses what is already `defaultPrevented`. Cancelling first would therefore
  * make the interaction refuse itself, and no right click could ever get through.
  * So: ask, and only cover the browser's menu once something answered.
+ *
+ * They are read off the element and not off whatever bubbles to it: a popup is
+ * a DOM descendant of what it was opened from, so a right click in a sheet
+ * reaches the card the sheet was drawn from, and answering it there answers a
+ * request nobody made (see isPressOnLayerOver).
  */
 
 
@@ -10485,6 +10526,9 @@ defineInteractionDetector({
   setup: (element, trigger, { types }) => {
     const listeners = types.map((type) => {
       const listener = (nativeEvent) => {
+        if (isPressOnLayerOver(nativeEvent.target, element)) {
+          return;
+        }
         const performed = trigger(type, nativeEvent);
         if (type === "contextmenu" && performed) {
           // Something answered the request, so the browser's own menu would only
@@ -10775,6 +10819,11 @@ defineInteractionDetector({
 
     const onPointerDown = (pointerDownEvent) => {
       if (pointerDownEvent.button !== 0) {
+        return;
+      }
+      // A press aimed at a layer over this element, merely bubbling through it
+      // — the same layers the stylesheet above hands the selection back to.
+      if (isPressOnLayerOver(pointerDownEvent.target, element)) {
         return;
       }
       let swipe = null;

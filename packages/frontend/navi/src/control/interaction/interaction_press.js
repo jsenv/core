@@ -59,6 +59,11 @@
  * under the thumb and leaves it selected once its menu is gone. What never
  * answered the press keeps its text — a field, a popover, a dialog (see the
  * stylesheet below).
+
+ * And what never answered the press does not give up the GESTURE either. A
+ * popup is painted above the page while staying a DOM descendant of what it was
+ * opened from, so its presses bubble through boxes they were never aimed at:
+ * none of the three gestures is read from one (see isPressOnLayerOver).
  *
  * A hold CAN open a popup while the finger is still down — a menu appearing under
  * a waiting finger, which is the native gesture. navi's Popover is `popover="manual"`
@@ -107,6 +112,7 @@ import {
 } from "@jsenv/dom";
 
 import { defineInteractionDetector } from "./interaction_registry.js";
+import { isPressOnLayerOver } from "./press_target.js";
 
 // The axis each swipe names, which is the whole reason they are named rather than
 // counted: an element that takes a horizontal swipe has to say so in the DOM
@@ -421,6 +427,11 @@ defineInteractionDetector({
 
     const onPointerDown = (pointerDownEvent) => {
       if (pointerDownEvent.button !== 0) {
+        return;
+      }
+      // A press aimed at a layer over this element, merely bubbling through it
+      // — the same layers the stylesheet above hands the selection back to.
+      if (isPressOnLayerOver(pointerDownEvent.target, element)) {
         return;
       }
       let swipe = null;

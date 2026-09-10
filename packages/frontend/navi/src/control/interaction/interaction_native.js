@@ -16,9 +16,15 @@
  * refuses what is already `defaultPrevented`. Cancelling first would therefore
  * make the interaction refuse itself, and no right click could ever get through.
  * So: ask, and only cover the browser's menu once something answered.
+ *
+ * They are read off the element and not off whatever bubbles to it: a popup is
+ * a DOM descendant of what it was opened from, so a right click in a sheet
+ * reaches the card the sheet was drawn from, and answering it there answers a
+ * request nobody made (see isPressOnLayerOver).
  */
 
 import { defineInteractionDetector } from "./interaction_registry.js";
+import { isPressOnLayerOver } from "./press_target.js";
 
 const NATIVE_TYPE_SET = new Set([
   "mousedown",
@@ -33,6 +39,9 @@ defineInteractionDetector({
   setup: (element, trigger, { types }) => {
     const listeners = types.map((type) => {
       const listener = (nativeEvent) => {
+        if (isPressOnLayerOver(nativeEvent.target, element)) {
+          return;
+        }
         const performed = trigger(type, nativeEvent);
         if (type === "contextmenu" && performed) {
           // Something answered the request, so the browser's own menu would only
