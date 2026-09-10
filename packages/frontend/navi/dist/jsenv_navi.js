@@ -40688,8 +40688,6 @@ time.navi_text {
 }
 
 .navi_text {
-  position: relative;
-
   &[data-capitalize] {
     &:first-letter, & .navi_text_sizer_placeholder:first-letter, & .navi_text_sizer_overlay:first-letter {
       text-transform: uppercase;
@@ -40723,6 +40721,7 @@ time.navi_text {
   &[data-skeleton] {
     visibility: hidden;
     max-width: 100%;
+    position: relative;
 
     & .navi_text_skeleton_children_placeholder {
       width: 100%;
@@ -40805,6 +40804,7 @@ time.navi_text {
 
 .navi_text[data-contains-absolute-child] {
   display: inline-block;
+  position: relative;
 }
 
 .navi_text[data-bold] {
@@ -41799,8 +41799,6 @@ const css$Y = /* css */`@layer navi {
   }
 
   &[aria-selected] {
-    position: relative;
-
     & input[type="checkbox"] {
       opacity: 0;
       position: absolute;
@@ -41814,7 +41812,16 @@ const css$Y = /* css */`@layer navi {
 
   &[data-focus], &[data-focus-visible] {
     z-index: 1;
-    position: relative;
+  }
+
+  &[data-stretch] {
+    position: static;
+
+    &:after {
+      content: "";
+      position: absolute;
+      inset: 0;
+    }
   }
 
   &[data-readonly] > * {
@@ -42041,6 +42048,15 @@ Object.assign(PSEUDO_CLASSES, {
  * @param {boolean} [props.revealOnInteraction] - Hide the link until its
  *   container is hovered/focused (`data-reveal-on-interaction`), floating it
  *   out of flow — the "#" anchor-on-hover pattern (e.g. inside a `Title`).
+ * @param {boolean} [props.stretch] - The press area is the nearest positioned
+ *   ancestor, not the link's own box (`data-stretch`): a row that leads
+ *   somewhere as a whole while only its name is the link — a button next to the
+ *   name cannot live inside an `<a>`. The ancestor to cover says so itself
+ *   (`<List.Item relative>`, `<Box relative>`), and nothing in between may be
+ *   positioned; navi's `Text` is not. A control in the row that keeps its own
+ *   press sits above the area when it is positioned and comes after the link
+ *   (navi's `Button` is positioned); one written before the link is raised
+ *   with a `z-index`. The link is never positioned itself, in any state.
  * @param {boolean} [props.hrefFallback] - Use `href` as the visible text when
  *   no children are given; defaults to `true` unless `anchor`.
  * @param {string|{type?: string, duration?: number|string, direction?: "forward"|"back"}} [props.routeTransition] -
@@ -42176,6 +42192,7 @@ const LinkPlain = props => {
     startIcon,
     endIcon,
     revealOnInteraction = false,
+    stretch,
     hrefFallback = !anchor,
     routeTransition,
     pressableDuringRouteTransition,
@@ -42349,6 +42366,7 @@ const LinkPlain = props => {
     anchor: undefined,
     slide: undefined,
     revealOnInteraction: undefined,
+    stretch: undefined,
     variant: undefined,
     current: undefined,
     currentExcept: undefined,
@@ -42439,6 +42457,7 @@ const LinkPlain = props => {
     "data-anchor": anchor ? "" : undefined,
     "data-interactive": onClick || props.command || props.action ? "" : undefined,
     "data-reveal-on-interaction": revealOnInteraction ? "" : undefined,
+    "data-stretch": stretch ? "" : undefined,
     baseClassName: "navi_link",
     styleCSSVars: LinkStyleCSSVars,
     pseudoClasses: LinkPseudoClasses,
@@ -58721,6 +58740,18 @@ const css$E = /* css */`
     --x-corner-bottom-right-radius: initial;
     --x-corner-bottom-left-radius: initial;
 
+    /* Sizing is per dialog: the anchor box (sizeFromAnchor) and the
+       minWidth/maxWidth/minHeight/maxHeight props are written inline on THIS
+       element, and an inline declaration wins over these resets. Without
+       them, a dialog nested in another dialog would inherit its parent's
+       inline values and open at the parent's size. */
+    --anchor-width: initial;
+    --anchor-height: initial;
+    --dialog-min-width: initial;
+    --dialog-max-width: initial;
+    --dialog-min-height: initial;
+    --dialog-max-height: initial;
+
     /* Computed once, reused by both max-width itself and min-width's own
        clamp below (see its comment for why) — avoids repeating the same
        min(..., ...) expression twice. */
@@ -60620,6 +60651,21 @@ const css$D = /* css */`
     --x-corner-top-right-radius: initial;
     --x-corner-bottom-right-radius: initial;
     --x-corner-bottom-left-radius: initial;
+
+    /* Sizing is per popover: the anchor box and the
+       minWidth/maxWidth/minHeight/maxHeight props are written inline on THIS
+       element, and an inline declaration wins over these resets. Without
+       them, a popover nested in another popup (or opened without an anchor
+       inside one sized from its own) would inherit the outer inline values
+       and open at the outer size. */
+    --anchor-width: initial;
+    --anchor-height: initial;
+    --anchor-inner-width: initial;
+    --anchor-inner-height: initial;
+    --popover-min-width: initial;
+    --popover-max-width: initial;
+    --popover-min-height: initial;
+    --popover-max-height: initial;
 
     --x-popover-max-width: min(
       var(--popover-max-width, var(--popover-maxmax-width)),

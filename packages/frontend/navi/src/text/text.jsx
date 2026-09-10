@@ -46,8 +46,6 @@ const css = /* css */ `
   }
 
   .navi_text {
-    position: relative;
-
     /* There is a chrome specific bug that prevents text-transform: capitalize to be applied in nested DOM structure */
     /* The CSS below ensure capitalize is propagated to the bold clones */
     &[data-capitalize] {
@@ -97,6 +95,10 @@ const css = /* css */ `
     }
 
     &[data-skeleton] {
+      /* Positioned for the overlay it draws, and only then: a text positioned
+         for nothing is the containing block of whatever a caller stretches
+         from inside it (a stretched Link). */
+      position: relative;
       max-width: 100%;
       /* Children stay in the DOM to preserve natural layout dimensions,
          but are hidden so only the skeleton is visible. */
@@ -215,6 +217,7 @@ const css = /* css */ `
     opacity: 0;
   }
   .navi_text[data-contains-absolute-child] {
+    position: relative;
     display: inline-block;
   }
   .navi_text[data-bold] {

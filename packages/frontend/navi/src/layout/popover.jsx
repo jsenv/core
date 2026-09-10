@@ -167,6 +167,21 @@ const css = /* css */ `
     --x-corner-bottom-right-radius: initial;
     --x-corner-bottom-left-radius: initial;
 
+    /* Sizing is per popover: the anchor box and the
+       minWidth/maxWidth/minHeight/maxHeight props are written inline on THIS
+       element, and an inline declaration wins over these resets. Without
+       them, a popover nested in another popup (or opened without an anchor
+       inside one sized from its own) would inherit the outer inline values
+       and open at the outer size. */
+    --anchor-width: initial;
+    --anchor-height: initial;
+    --anchor-inner-width: initial;
+    --anchor-inner-height: initial;
+    --popover-min-width: initial;
+    --popover-max-width: initial;
+    --popover-min-height: initial;
+    --popover-max-height: initial;
+
     --x-popover-max-width: min(
       var(--popover-max-width, var(--popover-maxmax-width)),
       var(--container-position-remaining-width, var(--popover-maxmax-width)),

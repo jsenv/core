@@ -236,6 +236,18 @@ const css = /* css */ `
     --x-corner-bottom-right-radius: initial;
     --x-corner-bottom-left-radius: initial;
 
+    /* Sizing is per dialog: the anchor box (sizeFromAnchor) and the
+       minWidth/maxWidth/minHeight/maxHeight props are written inline on THIS
+       element, and an inline declaration wins over these resets. Without
+       them, a dialog nested in another dialog would inherit its parent's
+       inline values and open at the parent's size. */
+    --anchor-width: initial;
+    --anchor-height: initial;
+    --dialog-min-width: initial;
+    --dialog-max-width: initial;
+    --dialog-min-height: initial;
+    --dialog-max-height: initial;
+
     /* Computed once, reused by both max-width itself and min-width's own
        clamp below (see its comment for why) — avoids repeating the same
        min(..., ...) expression twice. */

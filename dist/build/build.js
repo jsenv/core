@@ -11555,6 +11555,11 @@ const createBuildSpecifierManager = ({
               // when versioning is dynamic no need to take into account
               continue;
             }
+            if (referenceVersioningInfo.type === "not_versioned") {
+              // the specifier is emitted bare (entry point, webmanifest, ...):
+              // the referencing file's bytes cannot change with that file's content
+              continue;
+            }
             placeholderInfluencingVersionSet.add(containedPlaceholder);
             const referencedUrlInfo = reference.urlInfo;
             visitContainedPlaceholders(referencedUrlInfo);

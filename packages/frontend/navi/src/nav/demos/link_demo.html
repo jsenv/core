@@ -89,7 +89,17 @@
     <div id="app"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { Text, Link, Icon, Box, Title, Caption } from "@jsenv/navi";
+      import { useState } from "preact/hooks";
+      import {
+        Text,
+        Link,
+        Icon,
+        Box,
+        Title,
+        Caption,
+        List,
+        Button,
+      } from "@jsenv/navi";
 
       const Demo = () => {
         return (
@@ -286,6 +296,7 @@
             <CustomColorStatesDemo />
             <InteractiveStatesDemo />
             <AnchorFeatureDemo />
+            <StretchDemo />
           </div>
         );
       };
@@ -582,6 +593,67 @@
                 </Title>
               </Box>
             </Box>
+          </Box>
+        );
+      };
+
+      const PLAYERS = [
+        { id: "ana", name: "Ana Ribeiro", subtitle: "7 games together" },
+        { id: "bo", name: "Bo Lindqvist", subtitle: "2 games together" },
+        { id: "chi", name: "Chi Nguyen", subtitle: "never played together" },
+      ];
+      const StretchDemo = () => {
+        const [opened, setOpened] = useState(null);
+        const rows = (stretch) =>
+          PLAYERS.map((player) => (
+            <List.Item
+              key={player.id}
+              id={`${stretch ? "stretch" : "plain"}_${player.id}`}
+              relative
+              flex
+              alignY="center"
+              spacing="s"
+              paddingX="m"
+              paddingY="s"
+            >
+              <Box flex="y" spacing="0" expandX minWidth="0">
+                <Text maxLines={1}>
+                  <Link
+                    href="#stretch"
+                    stretch={stretch}
+                    color="inherit"
+                    underline={false}
+                    preventDefault
+                    onClick={() => setOpened(player.name)}
+                  >
+                    {player.name}
+                  </Link>
+                </Text>
+                <Text size="xs" color="secondary">
+                  {player.subtitle}
+                </Text>
+              </Box>
+              <Button action={() => setOpened(`invite ${player.name}`)}>
+                Invite
+              </Button>
+            </List.Item>
+          ));
+        return (
+          <Box as="section" marginBottom="xl" id="stretch">
+            <Title as="h2">Stretched link</Title>
+            <Box row spacing="lg">
+              <Box column expandX>
+                <Caption>default</Caption>
+                <List separator>{rows(false)}</List>
+              </Box>
+              <Box column expandX>
+                <Caption>stretch</Caption>
+                <List separator>{rows(true)}</List>
+              </Box>
+            </Box>
+            <Text marginTop="md">
+              {opened ? `opened: ${opened}` : "\u00a0"}
+            </Text>
           </Box>
         );
       };

@@ -116,6 +116,8 @@ const css = /* css */ `
       var(--link-padding-x, var(--link-padding, 0px))
     );
 
+    /* The one place the link's position is said: a state rule below must not
+       repeat it (see [data-stretch]). */
     position: relative;
     aspect-ratio: inherit;
     padding-top: var(--x-link-padding-top);
@@ -250,8 +252,6 @@ const css = /* css */ `
     }
     /* Selected */
     &[aria-selected] {
-      position: relative;
-
       input[type="checkbox"] {
         position: absolute;
         opacity: 0;
@@ -264,8 +264,21 @@ const css = /* css */ `
     /* Focus */
     &[data-focus],
     &[data-focus-visible] {
-      position: relative;
       z-index: 1; /* Ensure focus outline is above other elements */
+    }
+    /* Stretched: the hit area is a pseudo-element covering the nearest
+       positioned ancestor, so the link itself is static — in every state. A
+       state rule positioning the link would shrink the hit area back to the
+       label for the length of a press: pointerdown on the row, pointerup on
+       the label's box, and nothing navigates. */
+    &[data-stretch] {
+      position: static;
+
+      &::after {
+        position: absolute;
+        inset: 0;
+        content: "";
+      }
     }
     /* Readonly */
     &[data-readonly] > * {
@@ -524,6 +537,15 @@ Object.assign(PSEUDO_CLASSES, {
  * @param {boolean} [props.revealOnInteraction] - Hide the link until its
  *   container is hovered/focused (`data-reveal-on-interaction`), floating it
  *   out of flow — the "#" anchor-on-hover pattern (e.g. inside a `Title`).
+ * @param {boolean} [props.stretch] - The press area is the nearest positioned
+ *   ancestor, not the link's own box (`data-stretch`): a row that leads
+ *   somewhere as a whole while only its name is the link — a button next to the
+ *   name cannot live inside an `<a>`. The ancestor to cover says so itself
+ *   (`<List.Item relative>`, `<Box relative>`), and nothing in between may be
+ *   positioned; navi's `Text` is not. A control in the row that keeps its own
+ *   press sits above the area when it is positioned and comes after the link
+ *   (navi's `Button` is positioned); one written before the link is raised
+ *   with a `z-index`. The link is never positioned itself, in any state.
  * @param {boolean} [props.hrefFallback] - Use `href` as the visible text when
  *   no children are given; defaults to `true` unless `anchor`.
  * @param {string|{type?: string, duration?: number|string, direction?: "forward"|"back"}} [props.routeTransition] -
@@ -669,6 +691,7 @@ const LinkPlain = (props) => {
     startIcon,
     endIcon,
     revealOnInteraction = false,
+    stretch,
     hrefFallback = !anchor,
     routeTransition,
     pressableDuringRouteTransition,
@@ -858,6 +881,7 @@ const LinkPlain = (props) => {
       anchor={undefined}
       slide={undefined}
       revealOnInteraction={undefined}
+      stretch={undefined}
       variant={undefined}
       current={undefined}
       currentExcept={undefined}
@@ -949,6 +973,7 @@ const LinkPlain = (props) => {
         onClick || props.command || props.action ? "" : undefined
       }
       data-reveal-on-interaction={revealOnInteraction ? "" : undefined}
+      data-stretch={stretch ? "" : undefined}
       baseClassName="navi_link"
       styleCSSVars={LinkStyleCSSVars}
       pseudoClasses={LinkPseudoClasses}
