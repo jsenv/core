@@ -401,6 +401,15 @@ const css = /* css */ `
        to filter). An entrance animation moves the dialog through scale and
        transform instead, which compose under it: see popup_css.js. */
 
+    /* animation="growing" brings its own wall: the popup is the anchor
+       continued, not a surface shown over a page that goes on being read (see
+       navi_css_vars.js for the paint). Before the rules below, so everything
+       said out loud — an outside press that captures, a backdropVariant, the
+       two paint props — still wins over what the animation assumes. */
+    &[data-growing] {
+      --backdrop-background: var(--navi-backdrop-grow-background);
+      --backdrop-filter: var(--navi-backdrop-grow-backdrop-filter);
+    }
     &[data-pointer-interaction-outside="capture"] {
       --backdrop-background: var(--navi-backdrop-capture-background);
       --backdrop-filter: var(--navi-backdrop-capture-backdrop-filter);
@@ -570,6 +579,15 @@ const css = /* css */ `
     &[data-pointer-interaction-outside="cancel"] {
       --backdrop-background: var(--navi-backdrop-close-background);
       --backdrop-filter: var(--navi-backdrop-close-backdrop-filter);
+    }
+    /* animation="growing" brings its own wall: the popup is the anchor
+       continued, not a surface shown over a page that goes on being read (see
+       navi_css_vars.js for the paint). Before the rules below, so everything
+       said out loud — an outside press that captures, a backdropVariant, the
+       two paint props — still wins over what the animation assumes. */
+    &[data-growing] {
+      --backdrop-background: var(--navi-backdrop-grow-background);
+      --backdrop-filter: var(--navi-backdrop-grow-backdrop-filter);
     }
     &[data-pointer-interaction-outside="capture"] {
       --backdrop-background: var(--navi-backdrop-capture-background);
@@ -788,7 +806,8 @@ const css = /* css */ `
  * @param {"auto"|"discrete"|"invisible"} [props.backdropVariant="auto"] - How
  *   visible the backdrop is, independently of what it does. `"auto"`: the
  *   paint `pointerInteractionOutsideEffect` implies (dimmed for
- *   `"close"`/`"cancel"`, blurred glass for `"capture"`). `"discrete"`: a
+ *   `"close"`/`"cancel"`, blurred glass for `"capture"`), or the opaque wall
+ *   `animation="growing"` asks for. `"discrete"`: a
  *   barely-there dim. `"invisible"`: fully transparent — a wall that is not
  *   seen, still catching every press. This only changes how much the dialog
  *   insists visually, never what an outside click does; whether there is a
@@ -821,7 +840,11 @@ const css = /* css */ `
  *   over it. It needs an anchor (whatever opened the dialog, or the `anchor`
  *   prop) and grows into whatever inside the dialog carries `data-grow`, the
  *   dialog itself when nothing does. `"auto"` never picks it: only the caller
- *   knows the two boxes are one object. See `popup_grow.js`.
+ *   knows the two boxes are one object. It also brings its own backdrop —
+ *   opaque and blurred (`--navi-backdrop-grow-*`), the page it came out of
+ *   being what the movement leaves rather than a context to keep readable;
+ *   `backdropVariant="discrete"` asks for the light wash back. See
+ *   `popup_grow.js`.
  * @param {"box"|"scene"} [props.grow="box"] - Under `animation="growing"`,
  *   what the anchor and what it grows into are to each other, which decides
  *   how their pictures sit in the box moving between them. `"box"`: one
@@ -1898,6 +1921,7 @@ const useDialogProps = (props) => {
     "animationDuration": rest.animationDuration,
     "data-pointer-interaction-outside": pointerInteractionOutsideEffect,
     "data-backdrop-variant": backdropVariant,
+    "data-growing": growing ? "" : undefined,
     backdropColor,
     backdropFilter,
   });
@@ -1933,6 +1957,11 @@ const useDialogProps = (props) => {
     // (and harmless for a local dialog, whose real backdrop element gets it
     // via backdropProps).
     "data-backdrop-variant": backdropVariant,
+    // That this popup is the anchor continued rather than a surface shown
+    // over the page, which is what its backdrop is painted from (see this
+    // file's CSS). It cannot be read off navi-animation: growing arms no CSS
+    // animation of its own, so that attribute is deliberately absent here.
+    "data-growing": growing ? "" : undefined,
     // That this dialog has no wall, said in the DOM: the browser generates a
     // ::backdrop for the popover a wall-less top-layer dialog is shown as,
     // and the CSS above keys off this to leave it unpainted. Also the only

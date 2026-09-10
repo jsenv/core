@@ -208,11 +208,34 @@ kind of backdrop has a colour **and** a filter, and they travel together:
 | the default (`pointerInteractionOutsideEffect` close/cancel) | `--navi-backdrop-close-background`, `--navi-backdrop-close-backdrop-filter`       |
 | `pointerInteractionOutsideEffect="capture"`                  | `--navi-backdrop-capture-background`, `--navi-backdrop-capture-backdrop-filter`   |
 | `backdropVariant="discrete"`                                 | `--navi-backdrop-discrete-background`, `--navi-backdrop-discrete-backdrop-filter` |
+| `animation="growing"`                                        | `--navi-backdrop-grow-background`, `--navi-backdrop-grow-backdrop-filter`         |
 
-Only `capture` blurs out of the box: the rest of the page is genuinely
-unreachable then, so it reads as clearly secondary. Nothing else about `capture`
-makes the blur its own — set the `close` filter token and every popup that
-closes on an outside click blurs too.
+Only `capture` blurs out of the box among the three above: the rest of the page
+is genuinely unreachable then, so it reads as clearly secondary. Nothing else
+about `capture` makes the blur its own — set the `close` filter token and every
+popup that closes on an outside click blurs too.
+
+## The one animation that decides its own backdrop
+
+Every kind above is keyed on what the popup _does_. `animation="growing"` is
+keyed on what the popup _is_: not a surface shown over the page, but the box
+the anchor became. That changes the answer to "how far does what is behind
+withdraw?", so it brings its own pair — opaque, blurred — rather than the 8%
+wash a popup shown over a page still being read wants.
+
+Three things follow from the morph and all three point the same way. What grows
+is looked at — a card, a plan, a picture is grown because it could not be read
+small, and anything still legible behind competes with it. Such a popup often
+paints no surface of its own (the thing that grew already has its frame, so
+`backgroundColor="transparent"`), which makes the backdrop the background of
+the popup's own content rather than something merely behind it. And the
+movement itself is the browser interpolating a picture of the document: a crisp
+page behind a box that is still travelling reads as two things moving at once.
+
+It is a default, not a rule. `backdropColor`/`backdropFilter` win over it as
+they win over everything, `backdropVariant` overrides it, and
+`backdropVariant="discrete"` is how a growing popup asks for the light wash
+back.
 
 `backdropVariant` is the shorthand for the other direction: `"discrete"` for a
 barely-there dim, `"invisible"` for no paint at all. It never changes what the

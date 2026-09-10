@@ -174,6 +174,15 @@ const css = /* css */ `
          pulls visual focus onto the popover's own content. */
       --navi-backdrop-capture-background: rgb(255 255 255 / 0.08);
       --navi-backdrop-capture-backdrop-filter: blur(30px) saturate(180%);
+      /* animation="growing": the popup is what the anchor became, so the page
+         it came out of is not a context to keep readable — it is the thing the
+         movement leaves. A card, a plan, a picture grown to be looked at wants
+         nothing legible competing with it, and a document still crisp behind a
+         box that is still travelling reads as two movements at once. Dark in
+         both schemes on purpose: what withdraws here is the page itself, the
+         way it does around a photo, not a surface tinted to match a theme. */
+      --navi-backdrop-grow-background: rgb(6 10 20 / 88%);
+      --navi-backdrop-grow-backdrop-filter: blur(4px);
 
       /* Link colors. They live here rather than only on .navi_link because a
          var declared on the element itself always beats the same var inherited

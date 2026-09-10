@@ -1920,7 +1920,9 @@ const PickerFirstResolver = (props) => {
  *   (the popup itself when nothing does), and back on close. The trigger IS
  *   the anchor, so nothing has to be named for it — `dialogSizeFromAnchor`
  *   for a card that must keep its width on the way, left out for a drawing
- *   that opens precisely to get bigger.
+ *   that opens precisely to get bigger. It brings an opaque, blurred backdrop
+ *   with it (`--navi-backdrop-grow-*`); `backdropVariant="discrete"` asks for
+ *   the light wash back.
  * @param {"box"|"scene"} [grow="box"] Dialog's own, under `animation="growing"`:
  *   `"box"` for a card that extends (its top stays, the box uncovers the rest),
  *   `"scene"` for a thumbnail and the bigger view it is cut from (each picture
