@@ -435,6 +435,8 @@ const css = /* css */ `@layer navi {
     --navi-backdrop-discrete-backdrop-filter: none;
     --navi-backdrop-capture-background: #ffffff14;
     --navi-backdrop-capture-backdrop-filter: blur(30px) saturate(180%);
+    --navi-backdrop-grow-background: #060a14e0;
+    --navi-backdrop-grow-backdrop-filter: blur(4px);
     --navi-link-color: #00e;
     --navi-link-color-pressed: red;
     --navi-link-current-indicator-color: #cd3425;

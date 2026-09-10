@@ -17,6 +17,11 @@ const radioControllersByName = new Map();
 // The controller id is used as key — if the controller has no id, the value is not registered.
 const naviJsRegistry = new Map();
 
+// Controllers already reported for sharing their id with another one. An id is
+// stated on every render of its control, so without this the warning below
+// would repeat for as long as both controls are on screen.
+const controllersWarned = new WeakSet();
+
 export const getUIStateControllerById = (id) => controllersById.get(id);
 export const getRadioSiblings = (radioUIStateController) => {
   const siblings = radioControllersByName.get(radioUIStateController.name);
@@ -54,10 +59,15 @@ export const onUIStateControllerCreated = (uiStateController) => {
   if (id) {
     if (import.meta.dev) {
       const existing = controllersById.get(id);
-      if (existing && existing !== uiStateController) {
+      if (
+        existing &&
+        existing !== uiStateController &&
+        !controllersWarned.has(uiStateController)
+      ) {
+        controllersWarned.add(uiStateController);
         console.warn(
           `[navi] Two controls share the same id "${id}" ("${existing.controlType}" and "${controlType}"). ` +
-            `Lookups by id resolve to an arbitrary one of them, and when either unmounts it deletes the registry entry, leaving the surviving control unreachable (undefined uiState, dead picker buttons). ` +
+            `The id resolves to whichever of them rendered last, so the other one is unreachable through it (undefined uiState, dead picker buttons). ` +
             `Common causes: several controls inside a single <Field> (the Field provides one id via context and every control consumes it — put each control in its own <Field>, or give one an explicit id), ` +
             `or the same content mounted twice (e.g. two popups sharing an id prefix while both hold their content).`,
         );
@@ -90,8 +100,15 @@ export const onUIStateControllerCreated = (uiStateController) => {
 export const onUIStateControllerDestroyed = (uiStateController) => {
   const { id, name, controlType } = uiStateController;
   if (id) {
-    controllersById.delete(id);
-    naviJsRegistry.delete(id);
+    // Only the controller the id currently points at may take the entry away:
+    // when two controls share an id, the one leaving would otherwise unregister
+    // the one staying (see the warning in onUIStateControllerCreated), and the
+    // same holds while a control is being replaced by its successor, which
+    // registers during its render, before this cleanup runs.
+    if (controllersById.get(id) === uiStateController) {
+      controllersById.delete(id);
+      naviJsRegistry.delete(id);
+    }
   }
   const proxyFor = uiStateController.props["navi-control-proxy-for"];
   if (proxyFor) {

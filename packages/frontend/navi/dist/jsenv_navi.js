@@ -4910,8 +4910,15 @@ const onUIStateControllerCreated = (uiStateController) => {
 const onUIStateControllerDestroyed = (uiStateController) => {
   const { id, name, controlType } = uiStateController;
   if (id) {
-    controllersById.delete(id);
-    naviJsRegistry.delete(id);
+    // Only the controller the id currently points at may take the entry away:
+    // when two controls share an id, the one leaving would otherwise unregister
+    // the one staying (see the warning in onUIStateControllerCreated), and the
+    // same holds while a control is being replaced by its successor, which
+    // registers during its render, before this cleanup runs.
+    if (controllersById.get(id) === uiStateController) {
+      controllersById.delete(id);
+      naviJsRegistry.delete(id);
+    }
   }
   const proxyFor = uiStateController.props["navi-control-proxy-for"];
   if (proxyFor) {
@@ -34723,17 +34730,21 @@ const useUIStateController = (
     if (el) {
       el.__uiStateController__ = controller;
     }
-    // Re-register so the radio registry stays in sync when props.ref changes
-    // identity (e.g. across a Suspense boundary). The render-phase call in
-    // control_hooks.jsx handles the initial mount; this call handles re-runs.
-    onUIStateControllerCreated(controller);
     return () => {
       if (el && el.__uiStateController__ === controller) {
         delete el.__uiStateController__;
       }
-      onUIStateControllerDestroyed(controller);
     };
   }, [controllerRef]);
+  // The registry entry lives as long as the component does. Registration is
+  // done by the render (see useInteractiveProps); this cleanup is the only
+  // thing that takes the entry away, so it must not follow the ref: a ref
+  // identity change would run it right after the render that registered.
+  useLayoutEffect(() => {
+    return () => {
+      onUIStateControllerDestroyed(controller);
+    };
+  }, []);
 
   const { parentUIStateController: parentController } = scope;
   useLayoutEffect(() => {
@@ -38254,11 +38265,13 @@ const useInteractiveProps = (props, {
   // an action's own completion side effect — has to read the signal to get an
   // answer that is not one frame late (see BUSY_CONSTRAINT).
   uiStateController.boundAction = boundAction;
+  // "This id is that controller", stated on every render: a Suspense boundary
+  // parking a subtree runs every hook cleanup below it — the unregistration
+  // included — while the controllers themselves survive, and readers look a
+  // controller up by id while rendering, before any effect can run again.
+  // Placed after controlHostProps is set, which the constraints read.
+  onUIStateControllerCreated(uiStateController);
   if (firstRender) {
-    // Deferred from the factory so these run after controlHostProps is set.
-    // Constraints like READONLY_CONSTRAINT and findControlProxyTargetController
-    // read controlHostProps — calling these earlier would throw or produce wrong results.
-    onUIStateControllerCreated(uiStateController);
     uiStateController.rules.validation.checkValidity();
   }
   return [controlRootProps, controlHostProps];
@@ -58765,6 +58778,15 @@ const css$E = /* css */`
        to filter). An entrance animation moves the dialog through scale and
        transform instead, which compose under it: see popup_css.js. */
 
+    /* animation="growing" brings its own wall: the popup is the anchor
+       continued, not a surface shown over a page that goes on being read (see
+       navi_css_vars.js for the paint). Before the rules below, so everything
+       said out loud — an outside press that captures, a backdropVariant, the
+       two paint props — still wins over what the animation assumes. */
+    &[data-growing] {
+      --backdrop-background: var(--navi-backdrop-grow-background);
+      --backdrop-filter: var(--navi-backdrop-grow-backdrop-filter);
+    }
     &[data-pointer-interaction-outside="capture"] {
       --backdrop-background: var(--navi-backdrop-capture-background);
       --backdrop-filter: var(--navi-backdrop-capture-backdrop-filter);
@@ -58934,6 +58956,15 @@ const css$E = /* css */`
     &[data-pointer-interaction-outside="cancel"] {
       --backdrop-background: var(--navi-backdrop-close-background);
       --backdrop-filter: var(--navi-backdrop-close-backdrop-filter);
+    }
+    /* animation="growing" brings its own wall: the popup is the anchor
+       continued, not a surface shown over a page that goes on being read (see
+       navi_css_vars.js for the paint). Before the rules below, so everything
+       said out loud — an outside press that captures, a backdropVariant, the
+       two paint props — still wins over what the animation assumes. */
+    &[data-growing] {
+      --backdrop-background: var(--navi-backdrop-grow-background);
+      --backdrop-filter: var(--navi-backdrop-grow-backdrop-filter);
     }
     &[data-pointer-interaction-outside="capture"] {
       --backdrop-background: var(--navi-backdrop-capture-background);
@@ -59152,7 +59183,8 @@ const css$E = /* css */`
  * @param {"auto"|"discrete"|"invisible"} [props.backdropVariant="auto"] - How
  *   visible the backdrop is, independently of what it does. `"auto"`: the
  *   paint `pointerInteractionOutsideEffect` implies (dimmed for
- *   `"close"`/`"cancel"`, blurred glass for `"capture"`). `"discrete"`: a
+ *   `"close"`/`"cancel"`, blurred glass for `"capture"`), or the opaque wall
+ *   `animation="growing"` asks for. `"discrete"`: a
  *   barely-there dim. `"invisible"`: fully transparent — a wall that is not
  *   seen, still catching every press. This only changes how much the dialog
  *   insists visually, never what an outside click does; whether there is a
@@ -59185,7 +59217,11 @@ const css$E = /* css */`
  *   over it. It needs an anchor (whatever opened the dialog, or the `anchor`
  *   prop) and grows into whatever inside the dialog carries `data-grow`, the
  *   dialog itself when nothing does. `"auto"` never picks it: only the caller
- *   knows the two boxes are one object. See `popup_grow.js`.
+ *   knows the two boxes are one object. It also brings its own backdrop —
+ *   opaque and blurred (`--navi-backdrop-grow-*`), the page it came out of
+ *   being what the movement leaves rather than a context to keep readable;
+ *   `backdropVariant="discrete"` asks for the light wash back. See
+ *   `popup_grow.js`.
  * @param {"box"|"scene"} [props.grow="box"] - Under `animation="growing"`,
  *   what the anchor and what it grows into are to each other, which decides
  *   how their pictures sit in the box moving between them. `"box"`: one
@@ -60206,6 +60242,7 @@ const useDialogProps = props => {
     "animationDuration": rest.animationDuration,
     "data-pointer-interaction-outside": pointerInteractionOutsideEffect,
     "data-backdrop-variant": backdropVariant,
+    "data-growing": growing ? "" : undefined,
     backdropColor,
     backdropFilter
   });
@@ -60241,6 +60278,11 @@ const useDialogProps = props => {
     // (and harmless for a local dialog, whose real backdrop element gets it
     // via backdropProps).
     "data-backdrop-variant": backdropVariant,
+    // That this popup is the anchor continued rather than a surface shown
+    // over the page, which is what its backdrop is painted from (see this
+    // file's CSS). It cannot be read off navi-animation: growing arms no CSS
+    // animation of its own, so that attribute is deliberately absent here.
+    "data-growing": growing ? "" : undefined,
     // That this dialog has no wall, said in the DOM: the browser generates a
     // ::backdrop for the popover a wall-less top-layer dialog is shown as,
     // and the CSS above keys off this to leave it unpainted. Also the only

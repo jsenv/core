@@ -23,7 +23,6 @@ import {
   findProxyControllers,
   getRadioSiblings,
   getUIStateControllerById,
-  onUIStateControllerCreated,
   onUIStateControllerDestroyed,
 } from "./controller_registry.js";
 import { FormContext } from "./form_context.js";
@@ -842,17 +841,21 @@ export const useUIStateController = (
     if (el) {
       el.__uiStateController__ = controller;
     }
-    // Re-register so the radio registry stays in sync when props.ref changes
-    // identity (e.g. across a Suspense boundary). The render-phase call in
-    // control_hooks.jsx handles the initial mount; this call handles re-runs.
-    onUIStateControllerCreated(controller);
     return () => {
       if (el && el.__uiStateController__ === controller) {
         delete el.__uiStateController__;
       }
-      onUIStateControllerDestroyed(controller);
     };
   }, [controllerRef]);
+  // The registry entry lives as long as the component does. Registration is
+  // done by the render (see useInteractiveProps); this cleanup is the only
+  // thing that takes the entry away, so it must not follow the ref: a ref
+  // identity change would run it right after the render that registered.
+  useLayoutEffect(() => {
+    return () => {
+      onUIStateControllerDestroyed(controller);
+    };
+  }, []);
 
   const { parentUIStateController: parentController } = scope;
   useLayoutEffect(() => {

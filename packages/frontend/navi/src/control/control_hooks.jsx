@@ -2172,11 +2172,13 @@ const useInteractiveProps = (
   // an action's own completion side effect — has to read the signal to get an
   // answer that is not one frame late (see BUSY_CONSTRAINT).
   uiStateController.boundAction = boundAction;
+  // "This id is that controller", stated on every render: a Suspense boundary
+  // parking a subtree runs every hook cleanup below it — the unregistration
+  // included — while the controllers themselves survive, and readers look a
+  // controller up by id while rendering, before any effect can run again.
+  // Placed after controlHostProps is set, which the constraints read.
+  onUIStateControllerCreated(uiStateController);
   if (firstRender) {
-    // Deferred from the factory so these run after controlHostProps is set.
-    // Constraints like READONLY_CONSTRAINT and findControlProxyTargetController
-    // read controlHostProps — calling these earlier would throw or produce wrong results.
-    onUIStateControllerCreated(uiStateController);
     uiStateController.rules.validation.checkValidity();
   }
 
