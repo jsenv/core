@@ -9,7 +9,10 @@ import {
 } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
-import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
+import {
+  renderResolver,
+  useNextResolver,
+} from "@jsenv/navi/src/resolver/resolver.jsx";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { useFocusGroup } from "@jsenv/navi/src/utils/focus/use_focus_group.js";
 import { ControlIdContext, ReadOnlyContext } from "../control_context.js";
@@ -231,7 +234,7 @@ export const ListSelectableResolver = (props) => {
   const Next = useNextResolver();
 
   if (props.selectable) {
-    return <ListSelectable {...props} />;
+    return renderResolver(ListSelectable, props);
   }
   return (
     <ListSelectableContext.Provider value={false}>
@@ -533,7 +536,7 @@ export const ListItemSelectableResolver = (props) => {
       ? false
       : listSelectable);
   if (selectable) {
-    return <ListItemSelectable {...props} selectable />;
+    return renderResolver(ListItemSelectable, { ...props, selectable: true });
   }
   return <Next {...props} />;
 };

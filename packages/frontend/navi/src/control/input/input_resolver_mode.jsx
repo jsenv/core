@@ -1,14 +1,17 @@
 import { dispatchPublicCustomEvent } from "@jsenv/dom";
 import { dispatchRequestInteraction } from "@jsenv/navi/src/control/rules/control_interaction.js";
 import { dispatchRequestSetUIState } from "@jsenv/navi/src/control/ui_state_dom.js";
-import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
+import {
+  renderResolver,
+  useNextResolver,
+} from "@jsenv/navi/src/resolver/resolver.jsx";
 import { useRef } from "preact/hooks";
 
 export const InputModeResolver = (props) => {
   const Next = useNextResolver();
 
   if (props.inputMode === "numeric" || props.inputMode === "decimal") {
-    return <InputModeNumericOrDecimal {...props} />;
+    return renderResolver(InputModeNumericOrDecimal, props);
   }
   return <Next {...props} />;
 };

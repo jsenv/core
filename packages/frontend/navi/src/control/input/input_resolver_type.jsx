@@ -4,7 +4,10 @@ import { CloseSvg } from "@jsenv/navi/src/graphic/icons/close_svg.jsx";
 import { EmailSvg } from "@jsenv/navi/src/graphic/icons/email_svg.jsx";
 import { PhoneSvg } from "@jsenv/navi/src/graphic/icons/phone_svg.jsx";
 import { SearchSvg } from "@jsenv/navi/src/graphic/icons/search_svg.jsx";
-import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
+import {
+  renderResolver,
+  useNextResolver,
+} from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Icon } from "@jsenv/navi/src/text/text.jsx";
 import { Button } from "./button.jsx";
 import { InputIconSlot, InputRightSlot } from "./input_components.jsx";
@@ -17,25 +20,25 @@ export const InputTypeResolver = (props) => {
   // very same "icon while empty, clear button once filled" affordance without
   // pretending to be a search box.
   if (props.clearable && props.type !== "search") {
-    return <InputClearable {...props} />;
+    return renderResolver(InputClearable, props);
   }
   if (props.type === "search") {
-    return <InputSearch {...props} />;
+    return renderResolver(InputSearch, props);
   }
   if (props.type === "email") {
-    return <InputEmail {...props} />;
+    return renderResolver(InputEmail, props);
   }
   if (props.type === "tel") {
-    return <InputTel {...props} />;
+    return renderResolver(InputTel, props);
   }
   if (props.type === "number") {
-    return <InputNumber {...props} />;
+    return renderResolver(InputNumber, props);
   }
   if (props.type === "color") {
-    return <InputColor {...props} />;
+    return renderResolver(InputColor, props);
   }
   if (props.type === "datetime-local") {
-    return <InputDatetimeLocal {...props} />;
+    return renderResolver(InputDatetimeLocal, props);
   }
   return <Next {...props} />;
 };

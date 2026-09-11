@@ -1,13 +1,8 @@
-import { createContext } from "preact";
-import { useContext } from "preact/hooks";
-
-const NextResolverContext = createContext(null);
-
-export const useNextResolver = () => useContext(NextResolverContext);
+import { createElement } from "preact";
 
 /**
  * Creates a renderComponent function that passes props through a chain of resolvers.
- * Each resolver is a Preact component rendered in sequence (hooks are allowed).
+ * Each resolver is a component function rendered in sequence (hooks are allowed).
  * To pass through to the next resolver, call useNextResolver() and render the
  * returned Next component with the desired props.
  * To terminate the chain early (e.g. render a specialized component), render
@@ -21,13 +16,23 @@ export const useNextResolver = () => useContext(NextResolverContext);
  *   // Then inside a component render:
  *   renderButton(props)
  *
- * Each position of the chain has a runner of its own, defined once: it renders
- * its resolver under a NextResolverContext holding the runner after it. A
- * resolver that re-renders on its own and renders <Next> therefore resumes at
- * its own position without any bookkeeping — the Next it was given is the one
- * made for it. A chain rendered by the hundred (a list's rows) pays two
- * components per position, the runner and the resolver, so nothing here is a
- * component that merely forwards.
+ * A chain step is one component: a runner, defined once per position, whose
+ * render CALLS its resolver's body rather than rendering it as a child. The
+ * body runs synchronously inside the runner's render — its hooks are the
+ * runner's, at the same tree position on every render — and for exactly that
+ * long, `useNextResolver()` answers with the runner after this one (null for
+ * the last). Nothing is handed down through a context: a chain rendered by the
+ * hundred (a list's rows) pays one component per step, not a provider and a
+ * wrapper around each.
+ *
+ * A resolver that renders ANOTHER resolver — a type resolver picking the
+ * component for `type="date"` — cannot render it as a JSX child: that child
+ * would render later, outside any body, with no Next to read. It renders it
+ * with `renderResolver(Resolver, props)`, which captures the Next of the body
+ * it is called from and hands it to a runner made for that resolver — the
+ * child continues the chain where its parent stood. Called anywhere else, or
+ * a `useNextResolver()` reached outside a body, throws: the chain has no
+ * silent answer to give there.
  */
 export const createComponentResolver = (resolvers, { pure } = {}) => {
   const runners = [];
@@ -35,12 +40,15 @@ export const createComponentResolver = (resolvers, { pure } = {}) => {
   for (let index = 0; index < resolvers.length; index++) {
     const Resolver = resolvers[index];
     const isLast = index === lastIndex;
-    const Runner = (props) => (
-      <NextResolverContext.Provider value={isLast ? null : runners[index + 1]}>
-        <Resolver {...props} />
-      </NextResolverContext.Provider>
-    );
-    Runner.displayName = `${Resolver.displayName || Resolver.name}Runner`;
+    function Runner(props) {
+      return runResolverBody(
+        this,
+        Resolver,
+        props,
+        isLast ? null : runners[index + 1],
+      );
+    }
+    Runner.displayName = Resolver.displayName || Resolver.name;
     runners.push(Runner);
   }
   const FirstRunner = runners[0];
@@ -70,6 +78,54 @@ export const createComponentResolver = (resolvers, { pure } = {}) => {
   }
   return PureRenderComponent;
 };
+
+export const useNextResolver = () => {
+  if (currentNext === OUTSIDE_RESOLVER_BODY) {
+    throw new Error(
+      "useNextResolver() called outside a resolver body: a resolver rendered by another resolver is rendered with renderResolver(Resolver, props), not as a JSX child.",
+    );
+  }
+  return currentNext;
+};
+
+export const renderResolver = (Resolver, props) => {
+  if (currentNext === OUTSIDE_RESOLVER_BODY) {
+    throw new Error(
+      `renderResolver(${Resolver.displayName || Resolver.name}) called outside a resolver body: only a resolver can render another one.`,
+    );
+  }
+  let SubRunner = subRunnerByResolver.get(Resolver);
+  if (!SubRunner) {
+    SubRunner = function (props) {
+      const { [NEXT_PROP]: next, ...ownProps } = props;
+      return runResolverBody(this, Resolver, ownProps, next);
+    };
+    SubRunner.displayName = Resolver.displayName || Resolver.name;
+    subRunnerByResolver.set(Resolver, SubRunner);
+  }
+  return createElement(SubRunner, { ...props, [NEXT_PROP]: currentNext });
+};
+
+// What useNextResolver() answers: the runner after the one whose body is
+// running, null for the last — and, outside any body, a value that is neither.
+const OUTSIDE_RESOLVER_BODY = Symbol("outside_resolver_body");
+let currentNext = OUTSIDE_RESOLVER_BODY;
+const runResolverBody = (instance, Resolver, props, next) => {
+  const nextBefore = currentNext;
+  currentNext = next;
+  try {
+    return Resolver.call(instance, props);
+  } finally {
+    currentNext = nextBefore;
+  }
+};
+
+// One runner per resolver rendered through renderResolver, made on first use:
+// the same component type on every render, so a resolver picked again is
+// updated in place and another one picked is a remount, like any child.
+const subRunnerByResolver = new WeakMap();
+// Rides on the props of a sub-runner, stripped before the body sees them.
+const NEXT_PROP = "navi-resolver-next";
 
 function pureShouldComponentUpdate(nextProps) {
   return shallowDiffers(this.props, nextProps);

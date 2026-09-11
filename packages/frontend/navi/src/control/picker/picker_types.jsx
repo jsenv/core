@@ -1,7 +1,10 @@
 import { useContext } from "preact/hooks";
 
 import { CloseSvg } from "@jsenv/navi/src/graphic/icons/close_svg.jsx";
-import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
+import {
+  renderResolver,
+  useNextResolver,
+} from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Badge } from "@jsenv/navi/src/text/badge.jsx";
 import { BadgeList } from "@jsenv/navi/src/text/badge_list.jsx";
 import { Color } from "@jsenv/navi/src/text/color.jsx";
@@ -22,37 +25,37 @@ export const PickerTypeResolver = (props) => {
   const Next = useNextResolver();
 
   if (props.type === "color") {
-    return <PickerColor {...props} />;
+    return renderResolver(PickerColor, props);
   }
   if (props.type === "datetime") {
-    return <PickerDatetime {...props} />;
+    return renderResolver(PickerDatetime, props);
   }
   if (props.type === "date") {
-    return <PickerDate {...props} />;
+    return renderResolver(PickerDate, props);
   }
   if (props.type === "month") {
-    return <PickerMonth {...props} />;
+    return renderResolver(PickerMonth, props);
   }
   if (props.type === "week") {
-    return <PickerWeek {...props} />;
+    return renderResolver(PickerWeek, props);
   }
   if (props.type === "time") {
-    return <PickerTime {...props} />;
+    return renderResolver(PickerTime, props);
   }
   if (props.type === "duration") {
-    return <PickerDuration {...props} />;
+    return renderResolver(PickerDuration, props);
   }
   if (props.type === "file") {
-    return <PickerFile {...props} />;
+    return renderResolver(PickerFile, props);
   }
   if (props.type === "text") {
-    return <PickerText {...props} />;
+    return renderResolver(PickerText, props);
   }
   if (props.type === "array") {
-    return <PickerArray {...props} />;
+    return renderResolver(PickerArray, props);
   }
   if (props.type === "object") {
-    return <PickerObject {...props} />;
+    return renderResolver(PickerObject, props);
   }
   return <Next {...props} />;
 };

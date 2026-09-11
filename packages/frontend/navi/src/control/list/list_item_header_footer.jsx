@@ -1,13 +1,16 @@
-import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
+import {
+  renderResolver,
+  useNextResolver,
+} from "@jsenv/navi/src/resolver/resolver.jsx";
 import { useDisplayedLayoutEffect } from "@jsenv/navi/src/utils/use_displayed_layout_effect.js";
 
 export const ListItemHeaderOrFooterResolver = (props) => {
   const Next = useNextResolver();
   if (props.header) {
-    return <ListItemHeader {...props} />;
+    return renderResolver(ListItemHeader, props);
   }
   if (props.footer) {
-    return <ListItemFooter {...props} />;
+    return renderResolver(ListItemFooter, props);
   }
   return <Next {...props} />;
 };

@@ -1,10 +1,13 @@
 import { assertRoute, useRouteStatus } from "@jsenv/navi/src/nav/route.js";
-import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
+import {
+  renderResolver,
+  useNextResolver,
+} from "@jsenv/navi/src/resolver/resolver.jsx";
 
 export const ButtonRouteResolver = (props) => {
   const Next = useNextResolver();
   if (props.route) {
-    return <ButtonWithRoute {...props} />;
+    return renderResolver(ButtonWithRoute, props);
   }
   return <Next {...props} />;
 };

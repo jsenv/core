@@ -2,13 +2,13 @@ import { dispatchCustomEvent } from "@jsenv/dom";
 import { useLayoutEffect, useState } from "preact/hooks";
 
 import { createOnKeyDownForShortcuts } from "@jsenv/navi/src/keyboard/keyboard_shortcuts.js";
-import { useNextResolver } from "../../resolver/resolver.jsx";
+import { renderResolver, useNextResolver } from "../../resolver/resolver.jsx";
 
 export const InputWithListResolver = (props) => {
   const Next = useNextResolver();
 
   if (props["navi-list"]) {
-    return <InputWithList {...props} />;
+    return renderResolver(InputWithList, props);
   }
   return <Next {...props} />;
 };

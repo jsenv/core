@@ -23,7 +23,10 @@ import {
   usePopupContentMount,
 } from "@jsenv/navi/src/layout/popup_content_mount.js";
 import { Popup } from "@jsenv/navi/src/layout/popup.jsx";
-import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
+import {
+  renderResolver,
+  useNextResolver,
+} from "@jsenv/navi/src/resolver/resolver.jsx";
 import { interactionsDisputeThePress } from "../interaction/interactions.js";
 import { LONGPRESS_ATTRIBUTE } from "../interaction/interaction_press.js";
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
@@ -147,7 +150,7 @@ export const PickerCustomResolver = (props) => {
   import.meta.css = css;
 
   if (props.children === undefined) {
-    return <PickerNative {...props} />;
+    return renderResolver(PickerNative, props);
   }
   if (props.mode === "callout") {
     // A tooltip is an icon one presses, unless told otherwise. Own-property
@@ -211,9 +214,9 @@ export const PickerCustomResolver = (props) => {
     // how a field says its value is a JS one, kept beside the DOM (see
     // controller_registry.js) — the same thing type="array"/"object" already
     // say for their shapes.
-    return <PickerCustom {...props} type="navi_js" />;
+    return renderResolver(PickerCustom, { ...props, type: "navi_js" });
   }
-  return <PickerCustom {...props} />;
+  return renderResolver(PickerCustom, props);
 };
 
 const PickerNative = (props) => {
@@ -886,7 +889,10 @@ const PickerCustom = (props) => {
     }
   }
 
-  return <PickerContentInsidePopup {...pickerProps} mode={mode} />;
+  return renderResolver(PickerContentInsidePopup, {
+    ...pickerProps,
+    mode,
+  });
 };
 
 // A hold declared on something AROUND the picker (a card opened by
