@@ -164,6 +164,15 @@ export const setupBrowserIntegrationViaHistory = ({
         return undefined;
       }
     }
+    // A push or a replace onto the address already displayed changes the
+    // entry's state and nothing the routes read (applyRoutingTask returns
+    // before matching): announced to nobody. The announcements are for whoever
+    // needs the page as it stands before a change — a hold on the rendering, a
+    // picture for a transition — and there is no change to picture here; a hold
+    // taken for it would only delay what the state write re-renders.
+    if (isStateOnlyNavigation(url, options)) {
+      return runUnwatched(() => applyRoutingTask(url, options));
+    }
     // Before anything is written: the visited set, the URL and every route are
     // about to change, and this is the last moment the page still stands as it
     // was. And after, whichever way the change went out — so that whoever took
@@ -185,7 +194,6 @@ export const setupBrowserIntegrationViaHistory = ({
     // Read before the history is written: the url the reader is being taken
     // away from, which is what decides where a push lands (see startAtTop).
     const urlLeft = window.location.href;
-    const isSameUrl = url === urlLeft;
     const {
       reason,
       navigationType, // "load", "reload", "replace", "push", "traverse"
@@ -249,13 +257,8 @@ export const setupBrowserIntegrationViaHistory = ({
 
     // Skip route matching for state-only changes: push/replace to the same URL
     // (e.g. useNavState updating document state without changing the route).
-    // Do NOT apply for "traverse" — window.location.href is already updated by
-    // the browser before the popstate handler runs, so isSameUrl is always true
-    // for back/forward navigation regardless of whether the URL actually changed.
-    if (
-      isSameUrl &&
-      (navigationType === "push" || navigationType === "replace")
-    ) {
+    // Decided against the url left, read above before the history was written.
+    if (isStateOnlyNavigation(url, options, urlLeft)) {
       return undefined;
     }
 
@@ -520,3 +523,15 @@ export const setupBrowserIntegrationViaHistory = ({
     visitedUrlsSignal,
   };
 };
+
+// Read before the history is written, in both places that ask: a push or a
+// replace onto the url already displayed. Never a traverse — the browser has
+// already moved window.location.href when a popstate is handled, so the
+// comparison would say "same" about every back and forward.
+const isStateOnlyNavigation = (
+  url,
+  { navigationType },
+  urlLeft = window.location.href,
+) =>
+  url === urlLeft &&
+  (navigationType === "push" || navigationType === "replace");

@@ -1307,7 +1307,12 @@ const useDialogProps = (props) => {
   // closure is what lets a change while open take effect on the spot (see the
   // reposition effect below) rather than only on the next opening.
   const positionPropsRef = useRef(null);
-  positionPropsRef.current = { positionArea, marginWithContainer };
+  positionPropsRef.current = {
+    positionArea,
+    marginWithContainer,
+    expandX,
+    expandY,
+  };
   const repositionRef = useRef(null);
   // The element this dialog came out of, held from the opening to the closing.
   const anchorElementRef = useRef(null);
@@ -1633,7 +1638,8 @@ const useDialogProps = (props) => {
     };
 
     const positionDialog = (triggerEvent) => {
-      const { positionArea, marginWithContainer } = positionPropsRef.current;
+      const { positionArea, marginWithContainer, expandX, expandY } =
+        positionPropsRef.current;
       // The dialog's PARENT, not the dialog: a modal one is promoted to the
       // top layer and would answer "the viewport" about itself, when what a
       // "3cqw" margin means here is a share of the box it was declared in.
@@ -1659,11 +1665,18 @@ const useDialogProps = (props) => {
         "--x-dialog-container-spacing",
         `${marginWithContainerInPixels}px`,
       );
+      // Stretched on both axes, the dialog's box is the container's net of the
+      // gap — the same thing its CSS width/height say (see [data-expand-x],
+      // [data-expand-y]) — so the placement derives it instead of measuring
+      // it: a measurement here lays out the dialog's whole content, rows and
+      // all, for a number already known.
+      const fill = expandX && expandY;
       const pickOptions = {
         positionArea,
         container: positionedAncestor,
         marginWithContainer: marginWithContainerInPixels,
         event: triggerEvent,
+        fill,
       };
       let position = pickPositionRelativeTo(dialogEl, null, pickOptions);
       applyDialogPosition(position);
@@ -1678,9 +1691,12 @@ const useDialogProps = (props) => {
       // frame too high/low before the ResizeObserver watching this same
       // element (rectEffect.observeSize below) ever gets a chance to
       // correct it — that one only reacts on the *next* animation frame.
+      // A box derived from the container was never measured, and the caps
+      // cannot change it: no second pass.
       if (
-        dialogEl.offsetWidth !== position.width ||
-        dialogEl.offsetHeight !== position.height
+        !fill &&
+        (dialogEl.offsetWidth !== position.width ||
+          dialogEl.offsetHeight !== position.height)
       ) {
         position = pickPositionRelativeTo(dialogEl, null, pickOptions);
         applyDialogPosition(position);

@@ -338,24 +338,38 @@ export const setupBrowserIntegrationViaNavigation = ({
       }
     }
 
-    // Before the commit writes anything: the last moment the page still
-    // stands as it was, which is what the rendering hold (and the picture of
-    // a transition) needs.
-    publishBeforeRouting({
-      url,
-      navigationType,
-      // The two things a navigation carries that the url does not: who started
-      // it, and what it asks of a route transition (see route_transition.jsx).
-      // Both are the same facts via_history.js announces; here the browser
-      // hands them over — sourceElement for a press, info for a navTo() call.
-      element:
-        event.sourceElement || (event.info ? event.info.element : undefined),
-      routeTransition: event.info ? event.info.routeTransition : undefined,
-    });
     // The url the reader is being taken away from, read here because the
     // commit — and with it the document url — happens before the handler runs.
     const urlLeft = window.location.href;
     const isSameUrl = url === urlLeft;
+    const isLanding = Boolean(event.info && event.info.landOn);
+    // A push or a replace onto the address already displayed (useNavState)
+    // changes the entry's state and nothing the routes read: the state signals
+    // move, the routes do not, and nobody is told — the announcements are for
+    // whoever needs the page as it stands before a change (a hold on the
+    // rendering, a picture for a transition), and there is no change to
+    // picture here.
+    const isStateOnly =
+      isSameUrl &&
+      !isLanding &&
+      (navigationType === "push" || navigationType === "replace");
+    if (!isStateOnly) {
+      // Before the commit writes anything: the last moment the page still
+      // stands as it was, which is what the rendering hold (and the picture of
+      // a transition) needs.
+      publishBeforeRouting({
+        url,
+        navigationType,
+        // The two things a navigation carries that the url does not: who
+        // started it, and what it asks of a route transition (see
+        // route_transition.jsx). Both are the same facts via_history.js
+        // announces; here the browser hands them over — sourceElement for a
+        // press, info for a navTo() call.
+        element:
+          event.sourceElement || (event.info ? event.info.element : undefined),
+        routeTransition: event.info ? event.info.routeTransition : undefined,
+      });
+    }
     event.intercept({
       // The browser would scroll at commit time — before the picture of the
       // page being left is taken. The shared scroll machinery does it at the
@@ -382,14 +396,7 @@ export const setupBrowserIntegrationViaNavigation = ({
             });
             return;
           }
-          const isLanding = Boolean(event.info && event.info.landOn);
-          // State-only change on the same url (useNavState): the state signals
-          // move, the routes do not.
-          if (
-            isSameUrl &&
-            !isLanding &&
-            (navigationType === "push" || navigationType === "replace")
-          ) {
+          if (isStateOnly) {
             runStateOnly(navigationType, state);
             return;
           }
@@ -411,7 +418,9 @@ export const setupBrowserIntegrationViaNavigation = ({
           // what went wrong.
           await Promise.resolve(allResult).catch(() => {});
         } finally {
-          publishAfterRouting({ url, navigationType });
+          if (!isStateOnly) {
+            publishAfterRouting({ url, navigationType });
+          }
         }
       },
     });

@@ -7,6 +7,8 @@ import {
 } from "@jsenv/dom";
 import { useLayoutEffect, useRef } from "preact/hooks";
 
+import { isMountingContentForOpen } from "../layout/popup_content_mount.js";
+
 /**
  * A variant of useLayoutEffect that accounts for ancestor <dialog>/<details>
  * or popover visibility.
@@ -80,7 +82,14 @@ export const useDisplayedLayoutEffect = (ref, callback, deps) => {
       return;
     }
     if (!isAncestorOpen(ancestor)) {
-      if (!isDisplayedDespiteClosedAncestor(el)) {
+      if (
+        // The popup building its content for its own opening: nothing in it
+        // is on screen, and the open about to follow reveals all of it. Known
+        // without asking the layout, which a synchronous mount would have to
+        // bring up to date once per element asking.
+        isMountingContentForOpen(ancestor) ||
+        !isDisplayedDespiteClosedAncestor(el, ancestor)
+      ) {
         // Ancestor is closed and took this element off screen with it — skip
         // now; the observeAncestorOpenState call below will fire once it
         // opens.

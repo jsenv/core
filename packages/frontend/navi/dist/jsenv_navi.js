@@ -4,7 +4,7 @@
  */
 import { installImportMetaCssBuild, windowHeightSignal, windowWidthSignal, visualViewportHeightSignal, visualViewportWidthSignal, getAppHeight, getAppWidth, coarsePointerSignal, smallTouchScreenSignal } from "./jsenv_navi_side_effects.js";
 export { disableVirtualKeyboardOverlay } from "./jsenv_navi_side_effects.js";
-import { elementIsFocusable, createIterableWeakSet, dispatchInternalCustomEvent, dispatchCustomEvent, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, getElementSignature, createPubSub, findEvent, createValueEffect, findFocusDelegateTarget, findFocusable, scrollIntoViewThroughScrollables, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, keepTouchRefusable, isPressDrivenClick, waitForTap, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, markDragSource, refuseDragTo, startDragTo, installPanZoom, createEventGroupLogger, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, normalizeStyles, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, scrollRoomTowards, getScrollContainer, closestOpenableAncestor, isAncestorOpen, isDisplayedDespiteClosedAncestor, observeAncestorOpenState, getAncestorOpenType, findBefore, findAfter, resolveCSSSize, hasCSSSizeUnit, releaseWheelGesture, getScrollIntoViewScopedOffsets, wheelGestureIsTakenFrom, claimWheelGesture, scrollIntoViewScoped, initFocusGroup, isTouchDrivenEvent, stringifyStyle as stringifyStyle$1, resolveOklchLightness, contrastColor, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, getVirtualKeyboardOverlayHeight, onAncestorReopen, isPressDisputedByDrag, canScroll, measureWidestChildRow, performTabNavigation, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
+import { elementIsFocusable, createIterableWeakSet, dispatchInternalCustomEvent, dispatchCustomEvent, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, getElementSignature, createPubSub, findEvent, createValueEffect, findFocusDelegateTarget, findFocusable, scrollIntoViewThroughScrollables, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, keepTouchRefusable, isPressDrivenClick, waitForTap, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, markDragSource, refuseDragTo, startDragTo, installPanZoom, createEventGroupLogger, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, normalizeStyles, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, scrollRoomTowards, getScrollContainer, isTouchDrivenEvent, scrollIntoViewScoped, closestOpenableAncestor, isAncestorOpen, isDisplayedDespiteClosedAncestor, observeAncestorOpenState, getAncestorOpenType, findBefore, findAfter, resolveCSSSize, hasCSSSizeUnit, releaseWheelGesture, getScrollIntoViewScopedOffsets, wheelGestureIsTakenFrom, claimWheelGesture, initFocusGroup, stringifyStyle as stringifyStyle$1, resolveOklchLightness, contrastColor, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, getVirtualKeyboardOverlayHeight, onAncestorReopen, isPressDisputedByDrag, canScroll, measureWidestChildRow, performTabNavigation, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
 export { chainEvent, clickIsSuppressed, contrastColor, createDragGestureController, dragAfterIntent, findEvent, markDragSource, startDragTo } from "@jsenv/dom";
 import { signal, computed, effect, untracked, batch, useComputed, useSignal } from "@preact/signals";
 import { isValidElement, createContext, render, h, toChildArray, options, cloneElement, Fragment as Fragment$1 } from "preact";
@@ -26658,6 +26658,15 @@ const setupBrowserIntegrationViaHistory = ({
         return undefined;
       }
     }
+    // A push or a replace onto the address already displayed changes the
+    // entry's state and nothing the routes read (applyRoutingTask returns
+    // before matching): announced to nobody. The announcements are for whoever
+    // needs the page as it stands before a change — a hold on the rendering, a
+    // picture for a transition — and there is no change to picture here; a hold
+    // taken for it would only delay what the state write re-renders.
+    if (isStateOnlyNavigation(url, options)) {
+      return runUnwatched(() => applyRoutingTask(url, options));
+    }
     // Before anything is written: the visited set, the URL and every route are
     // about to change, and this is the last moment the page still stands as it
     // was. And after, whichever way the change went out — so that whoever took
@@ -26679,7 +26688,6 @@ const setupBrowserIntegrationViaHistory = ({
     // Read before the history is written: the url the reader is being taken
     // away from, which is what decides where a push lands (see startAtTop).
     const urlLeft = window.location.href;
-    const isSameUrl = url === urlLeft;
     const {
       reason,
       navigationType, // "load", "reload", "replace", "push", "traverse"
@@ -26743,13 +26751,8 @@ const setupBrowserIntegrationViaHistory = ({
 
     // Skip route matching for state-only changes: push/replace to the same URL
     // (e.g. useNavState updating document state without changing the route).
-    // Do NOT apply for "traverse" — window.location.href is already updated by
-    // the browser before the popstate handler runs, so isSameUrl is always true
-    // for back/forward navigation regardless of whether the URL actually changed.
-    if (
-      isSameUrl &&
-      (navigationType === "push" || navigationType === "replace")
-    ) {
+    // Decided against the url left, read above before the history was written.
+    if (isStateOnlyNavigation(url, options, urlLeft)) {
       return undefined;
     }
 
@@ -27014,6 +27017,18 @@ const setupBrowserIntegrationViaHistory = ({
     visitedUrlsSignal,
   };
 };
+
+// Read before the history is written, in both places that ask: a push or a
+// replace onto the url already displayed. Never a traverse — the browser has
+// already moved window.location.href when a popstate is handled, so the
+// comparison would say "same" about every back and forward.
+const isStateOnlyNavigation = (
+  url,
+  { navigationType },
+  urlLeft = window.location.href,
+) =>
+  url === urlLeft &&
+  (navigationType === "push" || navigationType === "replace");
 
 let updateRoutes;
 
@@ -32721,126 +32736,31 @@ registerNaviCommand("--navi-unselect", (source, event) => {
 });
 
 /**
- * A variant of useLayoutEffect that accounts for ancestor <dialog>/<details>
- * or popover visibility.
+ * Runs `fn` and commits whatever it re-renders before returning, instead of
+ * letting Preact batch it into the next microtask. Layout effects of what gets
+ * mounted run inside the call too, exactly as they would on any other commit.
  *
- * Motivation: some effects (auto-scroll, measurement, focus) only make sense
- * when the element is actually presented on screen. A plain useLayoutEffect
- * fires on mount even when the component is inside a closed <dialog>, a
- * collapsed <details>, or a hidden popover, where scroll and layout operations
- * are no-ops.
+ * For the caller that has to read the DOM it just asked for — measuring an
+ * element whose content it mounts in the same breath — and cannot wait a tick
+ * to do it, because what comes after is a browser event still in flight
+ * (preventDefault, focus placement) that no longer accepts being answered late.
  *
- * Behavior:
- *   - No <dialog>/<details>/[popover] ancestor → runs like a normal
- *     useLayoutEffect with the provided deps.
- *   - Inside a closed/hidden ancestor → skips the initial run; instead runs
- *     the callback once the ancestor opens — see @jsenv/dom's own
- *     observeAncestorOpenState for exactly how that's detected, and why it
- *     matters that it happens before the browser paints.
- *   - Inside an open ancestor → runs on mount AND every subsequent open.
- *   - Inside the always-on-screen part of a *closed* one — a picker's façade,
- *     an expandable's header, a <summary>: those elements are displayed the
- *     whole time their ancestor reads as closed (aria-expanded on a trigger
- *     describes the popup it controls, not its own contents). They run on
- *     mount like anything else on screen, and the ancestor opening later
- *     reveals nothing about them, so it does not re-run them either. See
- *     isDisplayedDespiteClosedAncestor in @jsenv/dom.
- *
- * The callback's second argument is always a `navi_displayed` CustomEvent,
- * with `detail: { ancestor, ancestorType, becauseAncestorOpened }`:
- *   - No <dialog>/<details>/[popover]/[aria-expanded] ancestor at all →
- *     `{ ancestor: document, ancestorType: "document" }`.
- *   - Otherwise → `{ ancestor: <the matched element>, ancestorType: "dialog"
- *     | "popover" | "details" | "aria-expanded" }`.
- * `becauseAncestorOpened` distinguishes the two ways of coming on screen:
- *   - true — the element was already mounted and the ancestor just opened,
- *     revealing it along with everything else it holds. The opening has an
- *     owner (the ancestor's own transferFocus/openEffect), and what it reveals
- *     should defer to it — see use_auto_focus.js.
- *   - false — the element was mounted just now, into a surface already on
- *     screen (or into the plain document). Nothing else owns this appearance:
- *     what the element says about itself (an autofocus, a measurement) is the
- *     only word there is.
- *
- * Usage:
- *   useDisplayedLayoutEffect(ref, () => {
- *     scrollToSelected();
- *   }, []);
+ * `options.debounceRendering` is Preact's own hook for deciding *when* the
+ * render queue drains; swapping it for "right now" for the duration of the call
+ * is exactly how preact/compat implements React's flushSync. Reserve it for the
+ * case above: rendering synchronously in the middle of an event gives up the
+ * batching that makes several state changes one commit.
  */
-const useDisplayedLayoutEffect = (ref, callback, deps) => {
-  if (typeof callback !== "function") {
-    throw new TypeError("useDisplayedLayoutEffect: callback is not a function");
+const flushSyncRendering = (fn) => {
+  const debounceRenderingPrevious = options.debounceRendering;
+  options.debounceRendering = (drainRenderQueue) => {
+    drainRenderQueue();
+  };
+  try {
+    fn();
+  } finally {
+    options.debounceRendering = debounceRenderingPrevious;
   }
-
-  // Keep a stable ref so the open listener always calls the latest callback
-  // without needing to be re-registered when deps change.
-  const callbackRef = useRef(callback);
-  callbackRef.current = callback;
-
-  // Set by the mount effect below for an element that lives in its openable
-  // ancestor's façade rather than in what that ancestor opens.
-  const displayedWhileAncestorClosedRef = useRef(false);
-
-  // Run on mount (or when deps change) — but only if the element is visible.
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) {
-      return;
-    }
-    const ancestor = closestOpenableAncestor(el);
-    if (!ancestor) {
-      callbackRef.current(el, createDisplayedEvent(document, false));
-      return;
-    }
-    if (!isAncestorOpen(ancestor)) {
-      if (!isDisplayedDespiteClosedAncestor(el)) {
-        // Ancestor is closed and took this element off screen with it — skip
-        // now; the observeAncestorOpenState call below will fire once it
-        // opens.
-        return;
-      }
-      // Closed, yet on screen: the ancestor is the trigger of what is
-      // closed, not the thing itself, and this element belongs to the façade
-      // it keeps showing.
-      displayedWhileAncestorClosedRef.current = true;
-    }
-    callbackRef.current(el, createDisplayedEvent(ancestor, false));
-  }, deps);
-
-  // Re-run every time the ancestor opens.
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) {
-      return undefined;
-    }
-    const ancestor = closestOpenableAncestor(el);
-    if (!ancestor) {
-      return undefined;
-    }
-    return observeAncestorOpenState(ancestor, ({ isOpen }) => {
-      if (!isOpen) {
-        return;
-      }
-      if (displayedWhileAncestorClosedRef.current) {
-        // Façade content: on screen the whole time, so this opening reveals
-        // nothing here — and `becauseAncestorOpened: true` about it would be
-        // false in a way consumers act on (see use_auto_focus.js).
-        return;
-      }
-      const lastEl = ref.current;
-      callbackRef.current(lastEl, createDisplayedEvent(ancestor, true));
-    });
-  }, []);
-};
-
-const createDisplayedEvent = (ancestor, becauseAncestorOpened) => {
-  return new CustomEvent("navi_displayed", {
-    detail: {
-      ancestor,
-      ancestorType: getAncestorOpenType(ancestor),
-      becauseAncestorOpened,
-    },
-  });
 };
 
 /**
@@ -33365,6 +33285,1718 @@ const getFocusedBeforeTransfer = (e) => {
     }
   }
   return document.activeElement;
+};
+
+/*
+ * How many presses the page has seen, and which one a popup opened during.
+ *
+ * A popup dismisses itself on a `mousedown` outside, and the release of a TOUCH
+ * ends with mouse events too: a tap synthesizes `mousedown`, `mouseup` and
+ * `click` after `touchend`, at the place the finger left. For a popup opened by
+ * that same press — a menu under a held finger, which is what a long press is
+ * for — the backdrop did not exist when the finger landed and does exist when it
+ * leaves, so it is handed a press it never saw begin and reads it as somebody
+ * dismissing it. The popup closes on the release of the press that opened it.
+ *
+ * What tells them apart is not the device and not the clock: it is whether
+ * ANOTHER press has begun since the popup opened. So presses are counted — a
+ * pointerdown is a press — and a popup remembers the count it opened at. Equal
+ * counts mean no hand has been put down since, and the mouse events arriving are
+ * the tail of the press that opened it. A compatibility mouse event never brings
+ * a `pointerdown` of its own (the pointer events for that finger were fired when
+ * it landed), which is exactly what makes the count stand still through it.
+ *
+ * Read at module scope, in capture, so it is true before any handler asks.
+ */
+let pressCount = 0;
+document.addEventListener(
+  "pointerdown",
+  () => {
+    pressCount++;
+  },
+  { capture: true },
+);
+
+/**
+ * Whether the popup was opened by the press whose mouse events are landing now
+ * — the one thing that must not dismiss it (see above).
+ *
+ * Asked by every path that dismisses on an outside press: the backdrop of both
+ * renderers, the document-level listener a native dialog uses, and the outside
+ * regions a caller declares inside its own box.
+ */
+const openedDuringThisPress = (openController) =>
+  openController.pressCountAtOpen === pressCount;
+
+// How long a popup waits before handing the focus to a field, when giving it
+// is what raises the on-screen keyboard.
+//
+// The focus is normally given as early as possible. But a popup places itself
+// against the viewport, and on a phone the keyboard takes a third of that
+// viewport away the moment a field receives focus — so the two landing in the
+// same tick means the popup is still arriving when the room under it changes,
+// and it re-places itself mid-entrance. Waiting lets it settle first, and the
+// keyboard then shrinks a box that has stopped moving.
+//
+// Long enough to outlast an entrance transition rather than merely reaching
+// the next frame: what has to be over is the popup MOVING, not one paint of
+// it.
+const FOCUS_DELAY_ON_KEYBOARD_MS = 250;
+
+/**
+ * Owns open/close decision-making for a popup (Dialog or Popover): guards
+ * against duplicate requests and notifies the popup owner's own reactions.
+ *
+ * `controller.openEffect` is implemented by the controlled element (Dialog or
+ * Popover), reassigned on every render so it always closes over the latest
+ * props (scrollCapture, anchor, etc.). It performs whatever DOM side effects
+ * are needed to make the element actually open (`showModal()`/`showPopover()`,
+ * focus transfer, positioning, traps...) and returns its cleanup —
+ * the matching side effects to sync back to closed (`close()`/
+ * `hidePopover()`, releasing traps...). That cleanup is kept private to the
+ * controller (not exposed as a property) and invoked when the popup actually
+ * closes, however that happens.
+ *
+ * `controller.getElement` is assigned alongside it and answers with the
+ * element that effect acts on, so a mount-time open can tell whether there is
+ * anything in the document to open yet (see useOpenPropsEffectOnOpenController).
+ *
+ * Dialog/Popover also call `openController.requestClose(e, { isCancel })` for
+ * their own internal triggers (backdrop click, Escape).
+ *
+ * `openHandler` is the popup owner's own business logic, passed once to
+ * `createOpenController`. Its return value is `{ onRequestClose, onClose }`,
+ * in the spirit of CloseWatcher
+ * (https://developer.mozilla.org/en-US/docs/Web/API/CloseWatcher) but with
+ * clearer naming than its cancel/close pair:
+ * - `onRequestClose(e)`: about to close — call `e.preventDefault()` to stay
+ *   open. Validation lives here.
+ * - `onClose(e)`: actually closing, not preventable — final reactions live here.
+ *
+ * The controller exposes matching action methods:
+ * - `open()`: requests opening — calls the caller's `onOpen` (see below), then
+ *   `mountContent`/`openEffect`, then `openHandler`.
+ * - `requestClose()`: requests closing — calls `onRequestClose` then `onClose`,
+ *   stopping after the first if denied. The popup may choose to stay open,
+ *   which is what a `false` return says (`true`: closed, or closed already).
+ * - `close()`: closes for real — calls only `onClose`, skipping
+ *   `onRequestClose` entirely. Used when there really is no choice (e.g. the
+ *   popup unmounting).
+ */
+const createOpenController = (
+  openHandler,
+  { debugInteraction } = {},
+) => {
+  let closeHandlers = null; // { onRequestClose, onClose } returned by openHandler
+  let openEffectCleanup = null; // function returned by openEffect, undoes its DOM side effects
+  let focusedAtClose = null; // what held the focus when the close was decided, see performClose
+
+  // Set true while we're waiting to see whether the click that follows a
+  // press-close will land back on whatever would reopen us — see
+  // armSuppressNextOpenRequest below.
+  let suppressNextOpenRequest = false;
+  let disarmSuppressNextOpenRequest = null;
+
+  // When the popup closes because of a press (clicking the backdrop, or a
+  // press outside a popup with no backdrop), the browser still dispatches the
+  // matching "click" afterward. If that click lands back on the element that
+  // triggers open() (e.g. the picker button), it would immediately reopen the
+  // popup. We cannot preventDefault/stopPropagation the press to stop that —
+  // the browser dispatches the click regardless.
+  //
+  // Instead: arm a capture-phase "click" listener on document. Capture fires
+  // before the click reaches its target, so by the time any bubble-phase
+  // click handler (e.g. the trigger button's onClick, which calls
+  // controller.open()) runs, `suppressNextOpenRequest` is already true and
+  // open() ignores the request — no need to know *which* element triggers
+  // it. A bubble-phase listener (runs after everything else, once the click
+  // reaches document) clears the flag if nothing consumed it, meaning this
+  // click never resulted in an open() call. A timeout is a last-resort safety
+  // net in case the click never reaches document at all (e.g. some ancestor
+  // called stopPropagation()) — a *task*, never a microtask: a microtask
+  // checkpoint runs between two listeners of the same trusted event dispatch,
+  // so it would clear the flag before the bubble-phase handler this is meant
+  // to block ever runs, which is precisely the case it exists for.
+  //
+  // And it lasts one press, which is what the next press lifts it for: a press
+  // only SOMETIMES ends in a click. One that became a gesture has its click
+  // suppressed on purpose (suppressClickAfterGesture in @jsenv/dom), and a
+  // refused drag ends the same way — so an arming that waits for a click alone
+  // waits forever, and the first real click after it, a new press seconds
+  // later on anything at all, is the one ignored. A click is always preceded
+  // by a press, so an arming that does not outlive one press can never reach
+  // the click of another: the same rule click_suppression.js lifts its own
+  // suppression by, and lifted here at the press rather than at its release
+  // for the same reason it gives — the click comes AFTER the pointerup that
+  // ends the press, so releasing there would let go one event too early.
+  //
+  // The arming press's own pointerdown is already dispatched by the time any
+  // of this runs (a popup with no backdrop closes during that pointerdown; a
+  // backdrop closes on the mousedown that follows it), so this listener only
+  // ever hears a genuinely new press.
+  const armSuppressNextOpenRequest = () => {
+    disarmSuppressNextOpenRequest?.();
+    let safetyTimeout = null;
+    const disarm = () => {
+      disarmSuppressNextOpenRequest = null;
+      clearTimeout(safetyTimeout);
+      document.removeEventListener("click", onCaptureClick, {
+        capture: true,
+      });
+      document.removeEventListener("click", onBubbleClick);
+      document.removeEventListener("pointerdown", onNextPress, {
+        capture: true,
+      });
+      suppressNextOpenRequest = false;
+    };
+    const onCaptureClick = (clickEvent) => {
+      if (!isPressDrivenClick(clickEvent)) {
+        // A click nothing pressed for — Tab to the trigger, then Enter — is not
+        // the one this press owes, and ignoring the open request behind it
+        // would cost a keyboard user their activation. Left armed: the press's
+        // own click may still be coming, and the next press lifts it either
+        // way.
+        return;
+      }
+      document.removeEventListener("click", onCaptureClick, {
+        capture: true,
+      });
+      suppressNextOpenRequest = true;
+      document.addEventListener("click", onBubbleClick);
+      safetyTimeout = setTimeout(() => {
+        suppressNextOpenRequest = false;
+      });
+    };
+    const onBubbleClick = () => {
+      disarm();
+    };
+    const onNextPress = () => {
+      disarm();
+    };
+    disarmSuppressNextOpenRequest = disarm;
+    document.addEventListener("click", onCaptureClick, { capture: true });
+    document.addEventListener("pointerdown", onNextPress, { capture: true });
+  };
+
+  // The DOM change a popup asked to have photographed (see
+  // controller.transitionChange), waiting for the browser to take the picture
+  // of the state being left. Anything the controller is asked to do meanwhile
+  // happens after it: the change is run on the spot, and the transition holding
+  // it finds nothing left to do.
+  let changeAwaitingTransition = null;
+  const flushChangeAwaitingTransition = () => {
+    const change = changeAwaitingTransition;
+    if (!change) {
+      return;
+    }
+    changeAwaitingTransition = null;
+    change();
+  };
+  const runChange = (change, { opened, event }) => {
+    const applyChange = () => {
+      // Recorded with the change itself: what the DOM shows is what a render
+      // landing between the ask and the picture must draw (see `openedInDom`).
+      controller.openedInDom = opened;
+      change();
+    };
+    const { transitionChange } = controller;
+    if (!transitionChange) {
+      applyChange();
+      return;
+    }
+    // What the controller answers about itself does not wait for the picture:
+    // whoever just asked reads `opened` on the spot (see
+    // useOpenPropsEffectOnOpenController, which writes it back into the
+    // caller's own signal), and a request arriving before the change lands
+    // runs it first rather than reading a DOM that disagrees.
+    controller.opened = opened;
+    changeAwaitingTransition = applyChange;
+    transitionChange(
+      () => {
+        if (changeAwaitingTransition === applyChange) {
+          flushChangeAwaitingTransition();
+        }
+      },
+      { opened, event },
+    );
+  };
+
+  const performClose = (closeEvent) => {
+    controller.opened = false;
+    // Read before any close effect touches the DOM: closing a native <dialog>
+    // hands the focus back to whatever held it at showModal() time, so by the
+    // time the close cleanup runs, the popup's content has already lost the
+    // focus and could not be remembered for the next open.
+    focusedAtClose = document.activeElement;
+
+    prevent_reopen: {
+      // Either event means the same thing here — a press closed this popup and
+      // its click is still to come. Two of them because a press whose
+      // `pointerdown` was cancelled downstream (a drag source arbitrating it,
+      // a control keeping the focus) never produces a `mousedown` at all, and
+      // that is exactly the press a popup with no backdrop hears (see
+      // armOutsidePressClose).
+      const pressEvent =
+        findEvent(closeEvent, "mousedown") ||
+        findEvent(closeEvent, "pointerdown");
+      if (pressEvent) {
+        debugInteraction(
+          closeEvent,
+          `closed by ${pressEvent.type} -> ignore next click`,
+        );
+        armSuppressNextOpenRequest();
+        break prevent_reopen;
+      }
+
+      // The keyboard counterpart of the mousedown case above: a key press that
+      // closes the popup and then goes on to activate the trigger, reopening it
+      // on the spot. Space and Enter both get there, but not the same way and
+      // not always — preventing the key unconditionally would eat presses that
+      // were never going to activate anything (a space typed in a field, an
+      // Enter the popup's own handler already consumed), so each is verified
+      // before being prevented.
+
+      // Space: pressed on the trigger itself, which still has focus (closing
+      // does not move it away from an element outside the popup). The browser
+      // turns that press into a click on keyup, and that click lands back on
+      // the trigger. Asked of the browser's own default action rather than
+      // guessed from the tag name: a space that scrolls, or types into a field
+      // inside the popup, has no activation to prevent and preventing it would
+      // swallow the scroll / the character.
+      const spaceKeyEvent = findEvent(
+        closeEvent,
+        (e) => e.type === "keydown" && e.key === " ",
+      );
+      if (
+        spaceKeyEvent &&
+        getKeyboardEventDefaultAction(spaceKeyEvent) === "activate"
+      ) {
+        debugInteraction(
+          closeEvent,
+          `closed by space on <${spaceKeyEvent.target.tagName.toLowerCase()}> -> prevent the click it would produce (space.preventDefault())`,
+        );
+        // The browser won't dispatch the click, and our "space_to_open" sees
+        // defaultPrevented too so it won't try to open the picker either.
+        spaceKeyEvent.preventDefault();
+        break prevent_reopen;
+      }
+
+      // Enter: pressed inside the popup (its own submit button, or implicit
+      // submission from a field it contains). The popup closes synchronously
+      // and focus is restored to the trigger, so the activation the browser
+      // still owes this press is delivered to the trigger instead.
+      //
+      // Verified on two counts: the press still owes an activation (the
+      // browser's default action for it is one — "activate" on a submit button,
+      // "form_submit" on a field — and nothing has consumed it yet), and it came
+      // from inside the popup. An Enter from outside is not this case at all.
+      const enterKeyEvent = findEvent(
+        closeEvent,
+        (e) => e.type === "keydown" && e.key === "Enter",
+      );
+      if (
+        enterKeyEvent &&
+        !enterKeyEvent.defaultPrevented &&
+        ENTER_ACTIVATING_DEFAULT_ACTION_SET.has(
+          getKeyboardEventDefaultAction(enterKeyEvent),
+        ) &&
+        isInsideOpenPopup(enterKeyEvent.target)
+      ) {
+        debugInteraction(
+          closeEvent,
+          `closed by enter from inside the popup -> prevent the activation it would deliver to the trigger (enter.preventDefault())`,
+        );
+        enterKeyEvent.preventDefault();
+        break prevent_reopen;
+      }
+    }
+
+    runChange(
+      () => {
+        // Sync the DOM closed first (releasing the focus trap) — only then run
+        // the owner's own reaction (onClose may restore focus to an element
+        // outside the popup, which the focus trap would otherwise fight while
+        // still active).
+        openEffectCleanup?.(closeEvent);
+        openEffectCleanup = null;
+        closeHandlers?.onClose?.(closeEvent);
+        closeHandlers = null;
+        // Last: the close effects above are what starts the exit transition the
+        // content must outlive (see popup_content_mount.js).
+        controller.unmountContent?.();
+        controller.onOpenedChange?.(false, closeEvent);
+      },
+      { opened: false, event: closeEvent },
+    );
+  };
+  const controller = {
+    opened: false,
+    // What the DOM currently shows, as opposed to what the controller has
+    // decided: the two differ for the frame a change spends waiting for the
+    // browser to photograph the state being left (see runChange). A render
+    // landing in that frame — a picker re-rendering because its action just
+    // started — must draw THIS, or it paints the closed state before the
+    // picture is taken and the movement has nothing to leave from.
+    openedInDom: false,
+    // Which press the popup opened during, written at every open (see
+    // openedDuringThisPress). Never any press before there has been one.
+    pressCountAtOpen: null,
+    openEffect: null,
+    // The element openEffect acts on, asked for before the mount-time open is
+    // let through: it has to be in the document for showModal()/showPopover()
+    // to be legal at all (see useOpenPropsEffectOnOpenController).
+    getElement: null,
+    // Set by the controlled element (see popup_content_mount.js) when its
+    // content is still waiting for a first open to be built. Called below,
+    // before openEffect, so the popup measures and positions the real thing.
+    mountContent: null,
+    // The caller's own `onOpen`, set by Dialog/Popover from their props on
+    // every render (like openEffect). Called BEFORE mountContent, so whatever
+    // it decides — which record this dialog is opening on — is already true by
+    // the time the content is built, positioned and shown. That order is the
+    // whole point: learning it afterwards means the content mounted on the
+    // previous subject first.
+    onOpen: null,
+    // The counterpart, set only when the popup was told to throw its content
+    // away on close (`mount="while-opened"`). Called from performClose above.
+    unmountContent: null,
+    // Set by the controlled element when the DOM change that opens or closes
+    // it has to be photographed by the browser on both sides — a document view
+    // transition, whose update callback is the only place that change can
+    // happen (Dialog's animation="growing", see popup_grow.js). Called with
+    // the change and where it leads; running it is its job, and it may run it
+    // a frame later than it was asked for. That delay is the reason a popup
+    // cannot do this from the outside: `--navi-open` runs when navi runs it,
+    // and a close arrives once the DOM already holds it.
+    transitionChange: null,
+    // Told whenever `opened` actually changes, whatever asked for it — an
+    // interaction, a command, a prop — with the event that asked. What lets a
+    // `signal` prop reflect the popup's real state, and a `navState` prop write
+    // it into the history entry (see useOpenPropsEffectOnOpenController);
+    // called once the open/close has fully happened rather than mid-sequence.
+    onOpenedChange: null,
+    open: (e, detail) => {
+      flushChangeAwaitingTransition();
+      if (controller.opened || !controller.openEffect) {
+        return;
+      }
+      if (suppressNextOpenRequest) {
+        suppressNextOpenRequest = false;
+        return;
+      }
+      const requestOpenEvent = new CustomEvent("navi_request_open", {
+        detail: { event: e, ...detail },
+        cancelable: true,
+      });
+      chainEvent(requestOpenEvent, e);
+      // we prepare focus transfer before actually opening the popover/dialog
+      // because opnening dialog makes browser try to transfer focus (which ends up in document.body for instance)
+      const focusTransfer = prepareFocusTransfer(
+        requestOpenEvent,
+        debugInteraction,
+      );
+      controller.transferFocusOnOpen = (el) => {
+        // requestOpenEvent, not the raw `e` — getFocusedBeforeTransfer needs
+        // e.detail.eventChain (built by chainEvent above) to recover the
+        // element a mousedown/click landed on. `e` itself is usually the raw
+        // native event: its own `.detail` is a number (click count) on a
+        // MouseEvent, so `e.detail.eventChain` is always undefined and the
+        // mousedown/click branches below never matched — silently falling
+        // back to `document.activeElement`, which is often `document.body`
+        // once mousedown.preventDefault() has kept focus from landing
+        // anywhere yet.
+
+        // Two conditions, and both are about THIS opening rather than about
+        // the device:
+        // - the interaction: only a finger raises a virtual keyboard, and a
+        //   hybrid tablet answers "coarse" to every device-level signal
+        //   whichever of its two inputs was just used — the open event still
+        //   remembers which one it was. An opening with no pointer in it at
+        //   all (a keyboard shortcut, defaultOpen, an app calling open()) is
+        //   not one either.
+        // - the target: focusing a button raises nothing, so there is nothing
+        //   to wait for and the focus stays immediate. Only a field the
+        //   keyboard comes up for is worth delaying — which is why the
+        //   decision is taken on the resolved target, inside transferFocus.
+        const openedByTouch = Boolean(
+          findEvent(requestOpenEvent, isTouchDrivenEvent),
+        );
+        const cancelPendingFocus = focusTransfer.transferFocus(e, el, {
+          getDelay: (target) =>
+            openedByTouch && isEditableTarget(target)
+              ? FOCUS_DELAY_ON_KEYBOARD_MS
+              : 0,
+        });
+        return (closeEvent) => {
+          // Closed before the delay was up: the focus was never given, so it
+          // must not be given now — to a field inside a popup on its way out,
+          // raising the keyboard as it goes.
+          cancelPendingFocus?.();
+          markAutofocusRestoreOnClose(el, closeEvent, focusedAtClose);
+          const focusoutEvent = findEvent(closeEvent, "focusout");
+          if (focusoutEvent) {
+            debugInteraction(
+              closeEvent,
+              `closed by focusout -> let focus go away`,
+            );
+          } else {
+            // Only the mousedown, deliberately: a popup with no backdrop is
+            // closed by a `pointerdown` that belongs to the page (see
+            // armOutsidePressClose), and cancelling it would take away the
+            // very press it exists to let through — along with the click the
+            // page was going to answer. What that press lands on decides the
+            // focus then, as it would with no popup open at all.
+            const mousedownEvent = findEvent(closeEvent, "mousedown");
+            if (mousedownEvent) {
+              debugInteraction(
+                closeEvent,
+                "closed by mousedown -> prevent browser focus (mousedown.preventDefault())",
+              );
+              mousedownEvent.preventDefault();
+            }
+            focusTransfer.restoreFocus();
+          }
+        };
+      };
+      runChange(
+        () => {
+          // Before mountContent, which builds the content, and before
+          // openEffect, which shows it: what the popup opens ON has to be
+          // known before either (see `onOpen` above).
+          controller.onOpen?.(requestOpenEvent);
+          // After prepareFocusTransfer, which has to record what held the
+          // focus before anything inside the popup can claim it, and before
+          // openEffect, which measures the popup to place it.
+          controller.mountContent?.();
+          // Only now — after the content has been built, before openEffect
+          // shows it. Dialog/Popover recompute aria-expanded and navi-hidden
+          // from this flag on every render, and mountContent above renders
+          // synchronously: flipping it any earlier commits an already-open DOM
+          // (aria-expanded "true", navi-hidden gone) before openEffect has run
+          // a single statement, so the "closed" frame it pins to transition
+          // from is in fact the open one and the entrance animation has
+          // nothing to play. It also gives the content it just built the
+          // opening it is documented to observe — mounted while the popup
+          // reads as closed, told it opened right after (see
+          // popup_content_mount.js and use_displayed_layout_effect.js).
+          controller.opened = true;
+          // Which press it opened during, so the release of that press is not
+          // read as somebody dismissing it (see openedDuringThisPress).
+          controller.pressCountAtOpen = pressCount;
+          const openEffectReturnValue =
+            controller.openEffect(requestOpenEvent) || null;
+          openEffectCleanup = (closeEvent) => {
+            openEffectReturnValue?.(closeEvent);
+          };
+          closeHandlers = openHandler(requestOpenEvent) || null;
+          controller.onOpenedChange?.(true, requestOpenEvent);
+        },
+        { opened: true, event: requestOpenEvent },
+      );
+    },
+    requestClose: (
+      e = new CustomEvent("programmatic", { detail: {} }),
+      detail,
+    ) => {
+      flushChangeAwaitingTransition();
+      if (!controller.opened) {
+        return true;
+      }
+      const requestCloseEvent = new CustomEvent("navi_request_close", {
+        detail: { event: e, ...detail },
+        cancelable: true,
+      });
+      chainEvent(requestCloseEvent, e);
+      closeHandlers?.onRequestClose?.(requestCloseEvent);
+      if (requestCloseEvent.defaultPrevented) {
+        // The native <dialog> "cancel" event (Escape key) closes the dialog
+        // by default; prevent that default so denial actually keeps it open.
+        const nativeCancelEvent = findEvent(requestCloseEvent, "cancel");
+        if (nativeCancelEvent) {
+          nativeCancelEvent.preventDefault();
+        }
+        return false;
+      }
+      performClose(requestCloseEvent);
+      return true;
+    },
+    close: (e = new CustomEvent("programmatic", { detail: {} }), detail) => {
+      flushChangeAwaitingTransition();
+      if (!controller.opened) {
+        return;
+      }
+      const closeEvent = new CustomEvent("navi_close", {
+        detail: { event: e, ...detail },
+      });
+      chainEvent(closeEvent, e);
+      // Skips onRequestClose entirely — there is no choice here.
+      performClose(closeEvent);
+    },
+  };
+  return controller;
+};
+
+// Inside a popup that is open right now — the popup being closed, in practice,
+// since that is the one the key press was delivered to.
+const isInsideOpenPopup = (element) => {
+  if (!element || element.nodeType !== 1) {
+    return false;
+  }
+  return Boolean(element.closest("dialog[open], [popover]:popover-open"));
+};
+
+// What Enter is about to do when it is about to activate something: press the
+// focused control, or submit the form around it. Anything else it can do
+// (typing a newline, nothing at all) leaves no activation behind to land on the
+// trigger once focus is restored.
+const ENTER_ACTIVATING_DEFAULT_ACTION_SET = new Set([
+  "activate",
+  "form_submit",
+]);
+
+// Created once per popup instance: openHandler is wrapped in a stable callback
+// so the controller identity never changes across renders, even though
+// Dialog/Popover read fresh closures (scrollTrap, etc.) via
+// openController.openEffect on every render.
+const useOpenController = (openHandler) => {
+  const debugInteraction = useDebugInteraction();
+  const stableOpenHandler = useStableCallback(openHandler);
+  const controllerRef = useRef(null);
+  if (!controllerRef.current) {
+    controllerRef.current = createOpenController(stableOpenHandler, {
+      debugInteraction,
+    });
+  }
+  // Unmount safety net: if Dialog/Popover unmounts while still open (parent
+  // removes it from the tree without going through requestClose()), there is
+  // no choice to leave open — close it for real.
+  useLayoutEffect(() => {
+    return () => {
+      // Nothing to photograph on the way out: the popup is leaving the
+      // document, so a movement between its box and anything else would be
+      // played on an element already detached by the time the browser gets to
+      // it (see controller.transitionChange).
+      controllerRef.current.transitionChange = null;
+      // Leaving the tree is not being closed: whoever holds the open state
+      // (`signal`, `navState`) keeps saying open, so the same popup put back
+      // finds itself as it was. preact/compat's Suspense parks a suspended
+      // subtree by running every hook cleanup in it, so a `<Loading>` above
+      // the popup lands here for a wait it comes back from.
+      controllerRef.current.onOpenedChange = null;
+      controllerRef.current.close();
+    };
+  }, []);
+  return controllerRef.current;
+};
+
+// Nested popups that both mount already-open (`open`/`defaultOpen`) would
+// otherwise stack in the wrong order: Preact fires layout effects
+// child-first on mount, so a nested popup's own mount-open would call
+// showPopover() before its ancestor's — and the top layer stacks *later*
+// showPopover() calls above *earlier* ones (see popover.jsx's own openEffect
+// comment) — leaving the ancestor on top instead of the nested popup, the
+// opposite of what opening them one at a time (ancestor first, by real user
+// interaction) would produce. Batching every mount-time silent open queued
+// during the same commit's layout-effect phase into one microtask flush,
+// then simply running them in *reverse* of their registration order fixes
+// this — no need to compare DOM positions: since effects already fire
+// child-first, tree-wide, for *any* ancestor/descendant pair the descendant
+// is always queued before the ancestor, regardless of what else is in the
+// tree, so reversing the whole batch always puts every ancestor before its
+// own descendants. Works for any nesting depth for the same reason. Two
+// unrelated (sibling) popups both mounting open also get reordered
+// relative to each other, but there's no meaningful "correct" order between
+// those anyway.
+//
+// The cancel this returns answers whether the open was still pending: a
+// `<Loading>` above the popup can park the whole subtree between the effect
+// and the flush (preact/compat's Suspense runs every hook cleanup of the
+// suspended children and moves their dom into a detached <div>), and the flush
+// would then be opening a popup whose element has left the document.
+let pendingMountOpens = new Set();
+let mountOpenFlushScheduled = false;
+const scheduleMountOpen = (run) => {
+  pendingMountOpens.add(run);
+  if (!mountOpenFlushScheduled) {
+    mountOpenFlushScheduled = true;
+    queueMicrotask(() => {
+      const entries = [...pendingMountOpens];
+      pendingMountOpens = new Set();
+      mountOpenFlushScheduled = false;
+      for (let i = entries.length - 1; i >= 0; i--) {
+        entries[i]();
+      }
+    });
+  }
+  return () => pendingMountOpens.delete(run);
+};
+
+// Where the popup's open state is kept, when it is kept anywhere: `navState`
+// resolved to the `{ id, type }` useNavState wants.
+//
+// `true` takes the popup's own id — a popup a `--navi-open` command can name is
+// a popup that already has a stable one, and that id is what identifies its
+// open state too.
+const NO_NAV_STATE = { id: undefined, type: "replace" };
+const resolveNavStateProp = (navState, popupId, name) => {
+  if (!navState) {
+    return NO_NAV_STATE;
+  }
+  if (navState === true) {
+    return { id: popupId, type: "replace" };
+  }
+  if (typeof navState === "string") {
+    return { id: navState, type: "replace" };
+  }
+  return { id: navState.id || popupId, type: navState.type || "replace" };
+};
+
+// What a write of the open state is worth in the history, when the signal
+// holding it is bound to a url (a route's `searchParams`, see route.js). A
+// plain signal has no `set` and takes the value as it always did.
+const writeInSignal = (signal, value, { history }) => {
+  if (signal.set) {
+    signal.set(value, { history });
+    return;
+  }
+  signal.value = value;
+};
+
+// The popup says where it is, into a `signal` the caller holds — and when that
+// signal lives in a url, saying so is a navigation. It is worth exactly what
+// the same move is worth when the open state lives in the history entry
+// instead (see useNavState's own leave()):
+// - the opening is worth what the state declares (`history: "push"` for a
+//   popup one can back out of, the default replacement for one that merely
+//   qualifies the screen one is on);
+// - the closing is never an entry of its own, and never leaves the pushed
+//   entry standing either. Stacking one would leave the entry that carries
+//   the popup BEHIND the reader (their next back press walks straight back
+//   into the popup they just closed); keeping the pushed entry would leave
+//   two entries describing the same closed screen (their next back press
+//   appears to do nothing).
+// A cancel (Escape, the backdrop, --navi-cancel) goes back to before the
+// opening, so everything else written to the url while the popup was open
+// goes back with it. A close that is not a cancel goes back too, but keeps
+// those writes: they are spelled into the url first (only the signal knows
+// how "closed" reads there), and that url is written onto the entry the back
+// lands on.
+//
+// What "open" is worth in the signal is `true`, or the popup's `value`
+// when it has one: several popups then share one signal saying WHICH of them
+// is open (`?seat=<gameId>` over a list of cards), and closed is the signal
+// holding none of their values — `undefined`, which a state signal reads as
+// its default.
+const writeOpenedInSignal = (signal, opened, event, popupValue) => {
+  if (readOpened(signal.peek(), popupValue) === opened) {
+    // The signal already says so, meaning this open/close IS what it asked
+    // for: a back press that took the popup out of the url, the application
+    // writing it. Nothing to write back — and nothing to go back to either,
+    // since the navigation navBack would undo is the one that asked for this.
+    return;
+  }
+  const closedValue = popupValue === undefined ? false : undefined;
+  if (opened) {
+    signal.value = popupValue === undefined ? true : popupValue;
+    return;
+  }
+  if (
+    signal.options?.getHistory?.() === "push" &&
+    // Nothing of this document behind: the popup was opened by the url itself
+    // (a shared link, a bookmark). navBack would do nothing at all there, so
+    // the entry is rewritten in place — the address must not keep saying open
+    // about a popup that just closed.
+    canNavBackSignal.peek()
+  ) {
+    if (event?.detail?.isCancel) {
+      navBack();
+      return;
+    }
+    writeInSignal(signal, closedValue, { history: "replace" });
+    navBack({ landOn: { url: window.location.href } });
+    return;
+  }
+  writeInSignal(signal, closedValue, { history: "replace" });
+};
+const readOpened = (signalValue, popupValue) => {
+  if (popupValue === undefined) {
+    return signalValue;
+  }
+  return signalValue === popupValue;
+};
+
+/**
+ * Keeps an open controller in sync with where the caller says the popup should
+ * be: an `open`/`defaultOpen` pair, a `signal`, or a `navState` — the open
+ * state written into the history entry, so a screen left and come back to finds
+ * its popup as it was.
+ *
+ * Shared between `useOpenControllerByProps` below (Dialog/Popover driving their
+ * own controller), `picker_custom.jsx` (which owns its controller but wants
+ * the same skip-if-already-matching / open-or-requestClose control flow) and
+ * `expandable.jsx` (open in flow rather than on a layer, same decision).
+ *
+ * @param {{ open: (e: Event, detail?: object) => void, requestClose: (e: Event, detail?: object) => void, opened: boolean }} openController
+ * @param {{ id?: string, open?: boolean|"interaction", defaultOpen?: boolean|"interaction", signal?: import("@preact/signals").Signal, value?: any, navState?: boolean|string|{id?: string, type?: "push"|"replace"} }} props
+ * @param {string} [name] What the dev warnings call the thing being opened.
+ */
+const useOpenPropsEffectOnOpenController = (
+  openController,
+  props,
+  name = "popup",
+) => {
+  const { signal, value, defaultOpen, navState } = props;
+  const { id: navStateId, type: navStateType } = resolveNavStateProp(
+    navState,
+    props.id);
+  // Called unconditionally (it answers with no-ops for an absent id), like
+  // every other hook here.
+  const [navStateValue, enterNavState, leaveNavState] = useNavState(
+    navStateId,
+    { type: navStateType },
+  );
+  // What the caller holds, however they hold it: the history entry when there
+  // is a `navState`, an `open` they re-render themselves, or a `signal` this
+  // hook also writes (see onOpenedChange below). Reading .value during render
+  // is what subscribes the popup to a signal; reading the document state is
+  // what subscribes it to the history entry, back button included.
+  const open = navStateId
+    ? Boolean(navStateValue)
+    : signal
+      ? readOpened(signal.value, value)
+      : props.open;
+  // Assigned on every render, like openEffect, so it always closes over the
+  // latest prop: a popup that opens or closes on its own (Escape, backdrop, a
+  // --navi-close command) writes what happened where the caller keeps it, so
+  // whoever holds it always reads where the popup is.
+  openController.onOpenedChange =
+    navStateId || signal
+      ? (opened, event) => {
+          if (navStateId) {
+            if (opened) {
+              enterNavState();
+            } else {
+              // Under type "push" a cancel discards everything written while
+              // the popup was open — it goes back with the entry; a confirmed
+              // close keeps those writes (see useNavState's own leave()).
+              leaveNavState({ isBack: Boolean(event?.detail?.isCancel) });
+            }
+          }
+          if (signal) {
+            writeOpenedInSignal(signal, opened, event, value);
+          }
+        }
+      : null;
+  // Tracks whether the effect below has ever run before — only the very
+  // first run gets the "mount already open" treatment (`open` truthy from
+  // the start, or the uncontrolled, mount-only `defaultOpen`); every
+  // subsequent `open` change is a real, later toggle and should animate
+  // normally like any other interactive open/close.
+  const isFirstRunRef = useRef(true);
+  // The mount-time open, from the first run below until the effect after it
+  // could schedule it.
+  const mountOpenOwedRef = useRef(null);
+
+  useLayoutEffect(() => {
+    const isFirstRun = isFirstRunRef.current;
+    isFirstRunRef.current = false;
+
+    if (isFirstRun) {
+      const mountOpenReason = open || defaultOpen;
+      if (mountOpenReason) {
+        // Whether this popup being open is something that just happened, or
+        // something that was already true when the page appeared. "interaction"
+        // says the mount IS the opening — the popup exists because the user
+        // just asked for it — so the entrance plays like any other open. Any
+        // other truthy value means it was simply already open: nothing was ever
+        // shown as "closed" for the user to see it transition away from, so the
+        // entrance is skipped (`silent`, see popover.jsx's own openEffect).
+        //
+        mountOpenOwedRef.current = () =>
+          openController.open(new CustomEvent("open_by_prop", { detail: {} }), {
+            silent: mountOpenReason !== "interaction",
+          });
+      }
+      return undefined;
+    }
+
+    if (open === undefined) {
+      return undefined;
+    }
+    // Skip when the controller is already in the desired state.
+    // openController.opened tracks actual open/close (updated by onopen/onclose,
+    // not by renders) so it is the authoritative check against feedback loops.
+    if (open === openController.opened) {
+      return undefined;
+    }
+    if (open) {
+      openController.open(new CustomEvent("open_by_prop", { detail: {} }));
+    } else {
+      openController.requestClose(
+        new CustomEvent("close_by_prop", { detail: {} }),
+        { isCancel: true },
+      );
+    }
+    // The request can be refused (a busy form denying the close): the popup
+    // then stays where it was, and whoever holds the open state is told so —
+    // otherwise it would keep saying "closed" about a popup still open.
+    // Written over rather than stacked on: a refusal corrects the state that
+    // asked, it is not a place one came from. Only on a refusal: an accepted
+    // request already reads in the signal, and with a `value` what the
+    // signal holds may be another popup's, which the write would erase.
+    if (signal && openController.opened !== open) {
+      const opened = openController.opened;
+      writeInSignal(
+        signal,
+        value === undefined ? opened : opened ? value : undefined,
+        { history: "replace" },
+      );
+    }
+    if (navStateId && openController.opened) {
+      enterNavState();
+    }
+    return undefined;
+  }, [open]);
+
+  // Schedules the owed mount-time open — on every render, until it can. It has
+  // to wait for the element to be IN THE DOCUMENT, and a mount does not
+  // guarantee that: a `<Loading>` above the popup parks a suspended subtree by
+  // moving its dom into a detached <div> while keeping its components alive
+  // (preact/compat), and a render there re-creates the hooks, so the first run
+  // above happens against dom that is not in the page — where showModal() and
+  // showPopover() throw. The boundary settling re-renders the subtree with its
+  // dom back, and that render is the one that schedules.
+  //
+  // Deferred + batched (see scheduleMountOpen) rather than called directly,
+  // so nested popups that both mount already-open end up stacked
+  // ancestor-first instead of Preact's own child-first effect order. An open
+  // still pending when this cleans up goes back to being owed: the parking
+  // itself runs this cleanup, and the fresh run that follows re-asks.
+  useLayoutEffect(() => {
+    const mountOpen = mountOpenOwedRef.current;
+    if (!mountOpen) {
+      return undefined;
+    }
+    const element = openController.getElement?.();
+    if (element && !element.isConnected) {
+      return undefined;
+    }
+    mountOpenOwedRef.current = null;
+    const cancelMountOpen = scheduleMountOpen(mountOpen);
+    return () => {
+      if (cancelMountOpen()) {
+        mountOpenOwedRef.current = mountOpen;
+      }
+    };
+  });
+};
+
+const useOpenControllerByProps = (props, name) => {
+  const { onClose } = props;
+  // Lets an uncontrolled consumer (no openController of its own) still react
+  // to a self-initiated close (Escape, backdrop click, its own close button)
+  // without having to own a controller just to observe it — onClose is
+  // called on every real close, matching createOpenController's own
+  // { onRequestClose, onClose } contract (never denies the close itself).
+  const openController = useOpenController(() =>
+    onClose ? { onClose } : undefined,
+  );
+  useOpenPropsEffectOnOpenController(openController, props, name);
+  return openController;
+};
+
+/**
+ * Small, renderer-agnostic helpers shared by Popover and Dialog's own custom
+ * (non-top-layer) renderers — operate on a plain DOM element, no knowledge
+ * of which of the two owns it.
+ */
+
+
+/**
+ * Whether a visibleRectEffect delivery is one that can have taken height away
+ * from a popup, and so pushed whatever holds focus out of sight:
+ * - "resize": the window/visual viewport settled — which is also how the
+ *   on-screen keyboard arrives, overlay or not (window_size.js);
+ * - ELEMENT_SIZE_CHANGE: the popup's own box measured different;
+ * - "focusin": the focus-settled re-measure, for the room that changes with
+ *   nothing announcing it (subscribeFocusSettled in window_size.js).
+ *
+ * Everything else is a scroll of one kind or another, where nothing got
+ * smaller and scrolling the focused element back would fight the very gesture
+ * that fired it.
+ */
+const mayHaveHiddenFocus = (event) => {
+  const type = event?.type;
+  return (
+    type === "resize" || type === ELEMENT_SIZE_CHANGE || type === "focusin"
+  );
+};
+
+const scrollportHeightMap = new WeakMap();
+/**
+ * Scrolls whatever holds focus inside `popupEl` back into view, if the popup
+ * getting shorter has pushed it out.
+ *
+ * The case this exists for: a field low in the scrolling body of a popup that
+ * also has a footer (box.jsx — with a body, the body is the only thing that
+ * scrolls and the footer is a sibling sitting right under it). Focusing the
+ * field makes the browser scroll it into view, which it does against the
+ * popup's height AT THAT MOMENT; the on-screen keyboard then opens and takes
+ * that height away. The body shrinks, its scrollTop does not move, so the
+ * content slides down relative to the shorter scrollport and the field ends up
+ * past its bottom edge — visually, swallowed by the footer. The browser does
+ * not redo a scroll-into-view it already answered, so this does.
+ *
+ * Only what the shrink itself hid, though: with the keyboard up the user reads
+ * the rest of the popup by scrolling the field away — to reach the submit under
+ * it, typically — and the room keeps changing while they do (a keyboard settling
+ * in two steps, a suggestion strip, a browser bar). Answering each of those by
+ * scrolling the field back takes the popup away from wherever they had just
+ * scrolled it, over and over: what they were reading cannot be reached at all
+ * without blurring the field first, and the popup reads as unscrollable. So the
+ * field is brought back only when it was in view before the room shrank, which
+ * one remembered number answers: a resize moves neither scrollTop nor the
+ * element's offset inside the scrolled content, so measuring against the height
+ * the scrollport HAD is measuring the state before the change.
+ *
+ * Scoped to the field's own scroll container (never the page): a popup traps
+ * scrolling precisely so the document underneath cannot move, and a plain
+ * scrollIntoView walks past a container whose scrollbar isn't visible — see
+ * scrollIntoViewScoped's own doc.
+ *
+ * "nearest": the smallest scroll that makes it visible, and none at all when it
+ * already is. Where it lands is the container's own business — a navi scroller
+ * keeps a band free at its edges so a field never comes back glued to one (see
+ * scroll-padding in box.jsx).
+ */
+const keepFocusedElementVisible = (popupEl) => {
+  const { activeElement } = document;
+  if (!activeElement || activeElement === popupEl) {
+    return;
+  }
+  if (!popupEl.contains(activeElement)) {
+    return;
+  }
+  const scrollContainer = getScrollContainer(activeElement);
+  if (!scrollContainer || !popupEl.contains(scrollContainer)) {
+    // What scrolls the field is outside the popup, which means the page: a
+    // popup holds it still on purpose (trapScrollInside), so there is nothing
+    // here to scroll back.
+    return;
+  }
+  const scrollportHeight = scrollContainer.clientHeight;
+  const scrollportHeightBefore = scrollportHeightMap.get(scrollContainer);
+  scrollportHeightMap.set(scrollContainer, scrollportHeight);
+  if (scrollportHeightBefore !== undefined) {
+    if (scrollportHeight >= scrollportHeightBefore) {
+      // Nothing was taken away, so nothing was hidden by this.
+      return;
+    }
+    if (
+      !isVisibleInScrollport(
+        activeElement,
+        scrollContainer,
+        scrollportHeightBefore,
+      )
+    ) {
+      return;
+    }
+  }
+  scrollIntoViewScoped(activeElement, {
+    container: scrollContainer,
+    block: "nearest",
+  });
+};
+
+// Whether any part of `el` was showing in `container` back when its scrollport
+// was `scrollportHeight` tall. Both boxes are read now: the container may have
+// moved as well as shrunk (a centered dialog re-centers itself), and the
+// difference between the two tops is what that move leaves alone.
+const isVisibleInScrollport = (el, container, scrollportHeight) => {
+  const elRect = el.getBoundingClientRect();
+  const containerRect = container.getBoundingClientRect();
+  const elTop = elRect.top - containerRect.top + container.scrollTop;
+  const elBottom = elTop + elRect.height;
+  const scrollportTop = container.scrollTop;
+  const scrollportBottom = scrollportTop + scrollportHeight;
+  return elBottom > scrollportTop && elTop < scrollportBottom;
+};
+
+/**
+ * Calls `onSettled` once `el`'s current CSS transition is over — via
+ * `transitionend`, with a safety `setTimeout` fallback matching the longest
+ * `transition-duration`, in case nothing actually transitions or an event is
+ * missed.
+ *
+ * Returns a "cancel" function, so a caller whose instance has been superseded
+ * (a fresh open/close about to set its own state) can keep this stale one from
+ * firing later. Cancelling only stops `onSettled`: undoing whatever the caller
+ * did up front is that fresh call's business, not this one's.
+ */
+const whenTransitionSettles = (el, onSettled) => {
+  let settled = false;
+  const onTransitionEnd = (transitionEvent) => {
+    if (transitionEvent.target === el) {
+      finish();
+    }
+  };
+  const stopWatching = () => {
+    settled = true;
+    el.removeEventListener("transitionend", onTransitionEnd);
+    clearTimeout(safetyTimeoutId);
+  };
+  const finish = () => {
+    if (settled) {
+      return;
+    }
+    stopWatching();
+    onSettled();
+  };
+  el.addEventListener("transitionend", onTransitionEnd);
+  const durationsInSeconds = getComputedStyle(el)
+    .transitionDuration.split(",")
+    .map((value) => parseFloat(value) || 0);
+  const longestDurationMs = Math.max(0, ...durationsInSeconds) * 1000;
+  const safetyTimeoutId = setTimeout(finish, longestDurationMs + 50);
+  return () => {
+    if (settled) {
+      return;
+    }
+    stopWatching();
+  };
+};
+
+/**
+ * Drops the document's text selection when it lives inside `el`, leaving a
+ * selection made elsewhere on the page alone.
+ *
+ * A popup being closed takes its content with it, and a selection is a claim
+ * on content the user can still act on: kept, it would outlive the surface it
+ * was made on — painted on the box for the length of its exit transition, with
+ * the handles and the copy toolbar a phone draws from the live selection
+ * hanging over something that is going away — and reappear with the box on
+ * the next opening. Dropping the selection is the only way to remove that
+ * chrome: a `user-select: none` on the closing box hides the highlight in some
+ * browsers only, and the handles are the browser's own, drawn from the
+ * selection object rather than from any style.
+ */
+const clearTextSelectionInside = (el) => {
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) {
+    return;
+  }
+  const range = selection.getRangeAt(0);
+  if (!el.contains(range.commonAncestorContainer)) {
+    return;
+  }
+  selection.removeAllRanges();
+};
+
+/**
+ * Disables pointer-events on `el` until its current CSS transition settles —
+ * avoids the cursor changing/something becoming clickable while the popup is
+ * still visually moving into or out of place.
+ *
+ * Returns whenTransitionSettles' own "cancel" function: it doesn't restore
+ * pointer-events, since a fresh call for the next open/close is about to set
+ * its own state.
+ */
+const suppressPointerEventsDuringTransition = (el) => {
+  el.style.pointerEvents = "none";
+  return whenTransitionSettles(el, () => {
+    el.style.pointerEvents = "";
+  });
+};
+
+/**
+ * Hides the backdrop, deferring until the browser's matching "click" fires
+ * when `closeEvent` was triggered by a mousedown (see popover.jsx's top
+ * comment for why) — same capture-phase-on-document pattern as
+ * armSuppressNextOpenRequest in open_controller.js, which a plain timeout
+ * can't safely replace: mouseup (and the click that follows it) can land an
+ * arbitrarily long time after mousedown (the user is still holding the
+ * button down), so a short timeout can fire first and hide the backdrop
+ * before its own click ever arrives. A capture-phase listener on document
+ * fires for every click regardless of what any bubble-phase handler does
+ * downstream, so no fallback timer is needed.
+ *
+ * `hide` is the caller's own way to actually hide the backdrop
+ * (`hidePopover()` for a top-layer backdrop, a plain `style.display = "none"`
+ * for a plain div) — this helper only owns the mousedown/click timing.
+ *
+ * Returns a disarm function (or undefined if hidden immediately), so a
+ * fresh open can cancel a pending hide it's about to make redundant.
+ */
+const armPointerDownOutsideClose = (closeEvent, hide) => {
+  const mousedownEvent = findEvent(closeEvent, "mousedown");
+  if (!mousedownEvent) {
+    hide();
+    return undefined;
+  }
+  const onClick = () => {
+    document.removeEventListener("click", onClick, { capture: true });
+    hide();
+  };
+  document.addEventListener("click", onClick, { capture: true });
+  return () => {
+    document.removeEventListener("click", onClick, { capture: true });
+  };
+};
+
+/**
+ * Maps a positionArea y/x pair to a concrete `navi-animation` value (a
+ * `prefix` plus a direction word), or `null` if both axes overlap the anchor
+ * (no direction at all — that's `resolvedAnimationKind === "scaling"`
+ * territory instead, see resolveAutoAnimationKind below).
+ *
+ * `prefix: "slide-from"` (used with no real anchor — Dialog always, Popover
+ * when docked) keeps the word as the compass direction the popup comes
+ * from: placed "top" (a point/corner), it slides in from the top.
+ * `prefix: "expand"` (a real anchor, Popover-only) uses the motion/growth
+ * direction instead, the opposite compass point: placed "top" of the
+ * anchor, it moves/grows up, away from the anchor (which sits below it).
+ *
+ * "inset-*"/"center" contribute no direction on their axis either way.
+ */
+const resolveDirectionValue = (y, x, { prefix }) => {
+  const yWord =
+    y === "top"
+      ? prefix === "expand"
+        ? "up"
+        : "top"
+      : y === "bottom"
+        ? prefix === "expand"
+          ? "down"
+          : "bottom"
+        : null;
+  const xWord = x === "left" ? "left" : x === "right" ? "right" : null;
+  if (!yWord && !xWord) {
+    return null;
+  }
+  return yWord && xWord
+    ? `${prefix}-${yWord}-${xWord}`
+    : `${prefix}-${yWord || xWord}`;
+};
+
+/**
+ * Shared `animation="auto"`/`true` resolution: "scaling" reads best overall
+ * — picked for any real anchor, or for a point/corner placed dead-center
+ * (both positionArea axes overlapping — there's no sensible direction to
+ * slide from in that case). "sliding" otherwise. `anchor` is `undefined`
+ * for any no-anchor/docked case (Dialog always, Popover's own custom
+ * renderer when there's no real anchor), so this collapses to "scaling"
+ * there only for the dead-center case, "sliding" otherwise. The two
+ * "overlapping" booleans below describe the *positionArea* itself (a bare
+ * word vs. "inset-"/"center"), not anything about the anchor — they'd
+ * mean exactly the same thing even with no anchor at all, since it's the
+ * position strategy, not the anchor, that decides whether there's a
+ * direction to slide from.
+ */
+const resolveAutoAnimationKind = (anchor, parsedPositionArea) => {
+  const yIsOverlapping =
+    parsedPositionArea.y !== "top" && parsedPositionArea.y !== "bottom";
+  const xIsOverlapping =
+    parsedPositionArea.x !== "left" && parsedPositionArea.x !== "right";
+  return anchor || (yIsOverlapping && xIsOverlapping) ? "scaling" : "sliding";
+};
+
+/**
+ * A popup reads "outside" from its own border box: what a press lands on
+ * decides nothing on its own (a genuine backdrop press and a press on the
+ * popup's padding both report the popup element as their target, there being
+ * no real ::backdrop node to be one), so the rectangle is what tells them
+ * apart. That holds as long as the box and what the popup paints are the same
+ * thing — which stops being true for a popup with no surface of its own
+ * (`backgroundColor="transparent"`, no shadow, no padding): what the eye reads
+ * as backdrop is then inside the box, and a press there stays a press on the
+ * popup.
+ *
+ * `data-navi-popup-outside` is how a caller says which of its own boxes are
+ * not the surface. It is opt-in because navi cannot infer it — a background
+ * can come from anywhere — while the caller who made the popup see-through
+ * knows exactly which box is decoration and which is paper.
+ *
+ * The marker answers for the element it is on, never for its descendants: a
+ * box painted inside a marked one is still surface, so a row can be marked and
+ * its empty halves read as backdrop while presses on the controls it holds do
+ * not dismiss anything. A descendant with `pointer-events: none` never becomes
+ * a press target at all, so the marked box answers in its place — while the
+ * same declaration on the marked box itself takes it out of hit-testing and
+ * makes the marker unreachable (see warnAboutUnreachableOutsideRegions).
+ */
+const OUTSIDE_REGION_ATTRIBUTE = "data-navi-popup-outside";
+
+/**
+ * What a press landing on a region the caller declared as not-its-surface
+ * does: exactly what the same press on the backdrop would do.
+ *
+ * Lives on the popup's own content element rather than in the backdrop's
+ * handler, for both renderers: the backdrop is a sibling behind the popup
+ * (never an ancestor), so a press inside the popup's box never reaches it.
+ */
+const handlePressOnOutsideRegion = (
+  mouseDownEvent,
+  { popupEl, openController, pointerInteractionOutsideEffect },
+) => {
+  if (mouseDownEvent.button !== 0) {
+    return;
+  }
+  const { target } = mouseDownEvent;
+  if (!target.hasAttribute(OUTSIDE_REGION_ATTRIBUTE)) {
+    return;
+  }
+  if (openedDuringThisPress(openController)) {
+    // The release of the press that opened it is not somebody dismissing it
+    // (see openedDuringThisPress).
+    return;
+  }
+  // A popup opens inside its opener's own subtree, so a press on a region
+  // belonging to a popup nested in this one bubbles through here too — and it
+  // is a press on what is in front, not on this popup's own decoration.
+  if (
+    target.closest(`[navi-control="dialog"], [navi-control="popover"]`) !==
+    popupEl
+  ) {
+    return;
+  }
+  if (pointerInteractionOutsideEffect === "capture") {
+    mouseDownEvent.preventDefault();
+    return;
+  }
+  if (
+    pointerInteractionOutsideEffect === "close" ||
+    pointerInteractionOutsideEffect === "cancel"
+  ) {
+    openController.requestClose(mouseDownEvent, {
+      isCancel: pointerInteractionOutsideEffect === "cancel",
+    });
+  }
+};
+
+/**
+ * Hears an outside press from the document itself, for a popup with no
+ * backdrop of its own to catch one: a modal `<dialog>` (whose native
+ * `::backdrop` dispatches nothing a handler can be put on) and any popup the
+ * caller asked to leave the page reachable (`backdrop={false}`).
+ *
+ * The press is read and never taken: no `preventDefault`, no
+ * `stopPropagation`, and the listener is on `document` rather than on
+ * anything covering the page — so what the press landed on hears it too, in
+ * the same gesture, and the popup only takes note. That is the whole point of
+ * a popup with no wall: a press outside is a press on the page, and the page
+ * answers it. The one popup where that cannot hold is the modal dialog, where
+ * the browser has already made everything behind inert before this runs.
+ *
+ * `pressEventType` says which event IS the press, and the two callers want
+ * opposite ones:
+ *
+ * - `"pointerdown"` for a popup with no wall: a page with no wall over it is
+ *   a page whose own elements arbitrate their presses, and cancelling a
+ *   `pointerdown` — what a drag source and a control keeping the focus where
+ *   it is both do — suppresses every compatibility mouse event that would have
+ *   followed it. The press happens, reaches its target, and no `mousedown` is
+ *   ever dispatched for it. Reading the pointer event is reading the press
+ *   itself, whatever anything does with it afterwards, and it is the same
+ *   event the drag and surface detectors read.
+ * - `"mousedown"` for the modal dialog, whose native `::backdrop` exists to
+ *   spend the press. The page's controls act on `mousedown`, and on a touch
+ *   screen that is not the same moment as `pointerdown`: the compatibility
+ *   mouse events are synthesized at `touchend` and hit-tested again then.
+ *   Closing on `pointerdown` takes the `::backdrop` away before that second
+ *   hit-test, so the `mousedown` lands on whatever the page holds under the
+ *   finger, and one tap both dismisses the dialog and presses the page. Read
+ *   on `mousedown`, the wall is still up when the press the page acts on is
+ *   aimed, and it catches it. Nothing behind a modal wall can cancel that
+ *   press, since nothing behind it hears the `pointerdown` at all.
+ *
+ * Capture phase, so a handler downstream that stops propagation cannot keep
+ * the popup open either — the press is still outside whatever is made of it.
+ *
+ * Returns a cleanup that removes the listener.
+ */
+const armOutsidePressClose = (
+  popupEl,
+  {
+    openController,
+    pointerInteractionOutsideEffect,
+    pressEventType = "pointerdown",
+  },
+) => {
+  const onDocumentPointerDown = (pointerDownEvent) => {
+    if (pointerDownEvent.button !== 0) {
+      return;
+    }
+    if (openedDuringThisPress(openController)) {
+      // The release of the press that opened it is not somebody dismissing it
+      // (see openedDuringThisPress).
+      return;
+    }
+    // The press landed inside another popup: that is a press on what is in
+    // front, not outside. Asking the target where it lives rather than asking
+    // this popup whether it was pushed — a popup in front does not have to be
+    // one this popup knows about. In front means neither inside nor around: a
+    // popup nested in this one falls to the containment check below as the
+    // inside press it is, and one this popup opened INSIDE (a bubble rendered
+    // in a sheet's content) is around it, so what that popup holds is outside
+    // this one exactly like the rest of the page.
+    const popupUnderPointer = pointerDownEvent.target.closest?.(
+      `[navi-control="dialog"], [navi-control="popover"]`,
+    );
+    if (
+      popupUnderPointer &&
+      popupUnderPointer !== popupEl &&
+      !popupEl.contains(popupUnderPointer) &&
+      !popupUnderPointer.contains(popupEl)
+    ) {
+      return;
+    }
+    // Real DOM containment wins over the rectangle below — an element
+    // genuinely inside the popup (`overflow: visible`, a negative margin, an
+    // absolutely-positioned child) can be painted outside its border box, and
+    // a press there is not outside just because its coordinates are. The
+    // popup element itself is excluded (contains() answers true for it): a
+    // press on a modal dialog's native backdrop reports the dialog as its
+    // target, there being no `::backdrop` node to be one, so treating that as
+    // contained would keep the rectangle from ever running.
+    if (
+      pointerDownEvent.target !== popupEl &&
+      popupEl.contains(pointerDownEvent.target)
+    ) {
+      return;
+    }
+    const rect = popupEl.getBoundingClientRect();
+    const isOutside =
+      pointerDownEvent.clientX < rect.left ||
+      pointerDownEvent.clientX > rect.right ||
+      pointerDownEvent.clientY < rect.top ||
+      pointerDownEvent.clientY > rect.bottom;
+    if (!isOutside) {
+      return;
+    }
+    openController.requestClose(pointerDownEvent, {
+      isCancel: pointerInteractionOutsideEffect === "cancel",
+    });
+  };
+  document.addEventListener(pressEventType, onDocumentPointerDown, {
+    capture: true,
+  });
+  return () => {
+    document.removeEventListener(pressEventType, onDocumentPointerDown, {
+      capture: true,
+    });
+  };
+};
+
+/**
+ * When a popup builds what it holds, and when it throws it away.
+ *
+ * A closed popup shows nothing, focuses nothing, and answers nothing: what it
+ * holds is out of reach until it opens. Building that content at mount time
+ * means a page carrying a handful of closed popups pays, on the very render
+ * that decides how fast it appears, for content nobody has asked for — and
+ * pays again on every subsequent measurement, since each of those nodes makes
+ * the document the rest of the page queries bigger.
+ *
+ * So the content is built when the popup first opens, and stays built from
+ * then on: closing is not throwing away, and a reopened popup finds its scroll
+ * position, its half-typed form and its list state where it left them.
+ *
+ * It is built synchronously, from inside `openController.open()` and before
+ * `openEffect` runs (see open_controller.js), so the popup still measures real
+ * content when it positions and animates itself, and so anything inside it
+ * still observes the opening the way it always did — mounted while the popup
+ * reads as closed, told it opened right after (see
+ * use_displayed_layout_effect.js).
+ *
+ * The `mount` prop moves that line. "closed" is two states, not one — never
+ * opened yet, and closed again after an opening — and the four values answer
+ * both at once:
+ *
+ * | mount             | before the first open       | after a close |
+ * | ----------------- | --------------------------- | ------------- |
+ * | "always"          | mounted                     | mounted       |
+ * | "idle"            | mounted once the page idles | mounted       |
+ * | "from-first-open" | not mounted                 | mounted       |
+ * | "while-opened"    | not mounted                 | not mounted   |
+ *
+ * "always" is for content something else depends on before any opening: a
+ * value the popup's owner reads off its own children, fields a form around it
+ * collects on submit, a size measured from outside.
+ *
+ * "idle" is "always" minus the cost on the critical render: the page appears
+ * without the content, and the browser builds it in an idle moment after
+ * load — so by the time anyone clicks, it is usually already there.
+ *
+ * "while-opened" is the opposite end: content that must be rebuilt from
+ * scratch every time, because what it shows is read once at build time and can
+ * change while the popup is closed — an uncontrolled field seeded from a
+ * `defaultValue`, a form whose fresh state is its initial state.
+ *
+ * On top of whichever value is picked, intent on the anchor warms the content:
+ * a pointer entering the popup's anchor, or focus landing in it, builds the
+ * content ahead of the click that will open it. Deferring the build to the
+ * opening puts its whole cost in the frame right after the click — the frame
+ * where a delay is felt hardest — while the ~100-300ms between hovering a
+ * trigger and pressing it are free. The warming render is asynchronous
+ * (batched, not flushed): nothing here needs the content in the DOM before
+ * the click, only before the open that follows it.
+ *
+ * "while-opened" content is never warmed. That mode promises two things
+ * warming would break: the content is built at open time (so a `defaultValue`
+ * read at build time is fresh, not seeded at pointer-enter time), and it is
+ * only ever mounted between an open and a close — unmounting happens on close,
+ * so a warmed popup that never opens would keep its content in the document
+ * indefinitely. Callers lean on that guarantee (e.g. several pickers sharing
+ * one set of content ids because only one content exists at a time).
+ */
+
+
+const MOUNT_DEFAULT = "from-first-open";
+
+// The popups whose content is being built by their own opening, for the length
+// of that build. What mounts inside one is not on screen (the popup is still
+// closed) and will be revealed by the open that follows — an answer
+// use_displayed_layout_effect.js reads from here rather than from the layout.
+const popupsMountingContentForOpen = new Set();
+const isMountingContentForOpen = (popupElement) =>
+  popupsMountingContentForOpen.has(popupElement);
+
+// requestIdleCallback is missing from Safari; a timeout is close enough there.
+const requestIdle = (callback) =>
+  typeof requestIdleCallback === "function"
+    ? requestIdleCallback(callback)
+    : setTimeout(callback, 300);
+const cancelIdle = (id) =>
+  typeof cancelIdleCallback === "function"
+    ? cancelIdleCallback(id)
+    : clearTimeout(id);
+
+const usePopupContentMount = (
+  openController,
+  ref,
+  { mount = MOUNT_DEFAULT, anchor },
+) => {
+  const mountedAlways = mount === "always";
+  const [contentMounted, setContentMounted] = useState(
+    () => mountedAlways || openController.opened,
+  );
+  openController.mountContent = contentMounted
+    ? null
+    : () => {
+        const popupElement = ref?.current;
+        if (popupElement) {
+          popupsMountingContentForOpen.add(popupElement);
+        }
+        try {
+          flushSyncRendering(() => {
+            setContentMounted(true);
+          });
+        } finally {
+          if (popupElement) {
+            popupsMountingContentForOpen.delete(popupElement);
+          }
+        }
+      };
+  openController.unmountContent =
+    mount === "while-opened"
+      ? () => {
+          const element = ref?.current;
+          if (!element) {
+            setContentMounted(false);
+            return;
+          }
+          // The popup is still on screen while it plays its exit transition;
+          // emptying it right away would show that transition running on a
+          // blank surface.
+          whenTransitionSettles(element, () => {
+            if (openController.opened) {
+              // reopened while it was leaving — the content it holds is the
+              // one that open just asked for
+              return;
+            }
+            setContentMounted(false);
+          });
+        }
+      : null;
+  useLayoutEffect(() => {
+    if (mountedAlways) {
+      setContentMounted(true);
+    }
+  }, [mountedAlways]);
+  useEffect(() => {
+    if (mount !== "idle" || contentMounted) {
+      return undefined;
+    }
+    const idleId = requestIdle(() => {
+      setContentMounted(true);
+    });
+    return () => {
+      cancelIdle(idleId);
+    };
+  }, [mount, contentMounted]);
+  // Warm on intent (see the top comment; "while-opened" is excluded there).
+  // The anchor accepts the same shapes Popover resolves at open time — a
+  // string id, a ref, an element — but is resolved here at effect time: an id
+  // that matches nothing yet simply doesn't warm, the open still mounts the
+  // content like it always does.
+  useEffect(() => {
+    if (contentMounted || !anchor || mount === "while-opened") {
+      return undefined;
+    }
+    const anchorElement =
+      typeof anchor === "string"
+        ? document.getElementById(anchor)
+        : // A ref is unwrapped even when it holds nothing: an expandable with
+          // no UI part hands an empty ref over, and the ref object itself is
+          // truthy — it would reach addEventListener below and throw.
+          "current" in anchor
+          ? anchor.current
+          : anchor;
+    if (!anchorElement) {
+      return undefined;
+    }
+    const warm = () => {
+      setContentMounted(true);
+    };
+    anchorElement.addEventListener("pointerenter", warm);
+    anchorElement.addEventListener("focusin", warm);
+    return () => {
+      anchorElement.removeEventListener("pointerenter", warm);
+      anchorElement.removeEventListener("focusin", warm);
+    };
+  }, [contentMounted, anchor, mount]);
+
+  return contentMounted;
+};
+
+/**
+ * A variant of useLayoutEffect that accounts for ancestor <dialog>/<details>
+ * or popover visibility.
+ *
+ * Motivation: some effects (auto-scroll, measurement, focus) only make sense
+ * when the element is actually presented on screen. A plain useLayoutEffect
+ * fires on mount even when the component is inside a closed <dialog>, a
+ * collapsed <details>, or a hidden popover, where scroll and layout operations
+ * are no-ops.
+ *
+ * Behavior:
+ *   - No <dialog>/<details>/[popover] ancestor → runs like a normal
+ *     useLayoutEffect with the provided deps.
+ *   - Inside a closed/hidden ancestor → skips the initial run; instead runs
+ *     the callback once the ancestor opens — see @jsenv/dom's own
+ *     observeAncestorOpenState for exactly how that's detected, and why it
+ *     matters that it happens before the browser paints.
+ *   - Inside an open ancestor → runs on mount AND every subsequent open.
+ *   - Inside the always-on-screen part of a *closed* one — a picker's façade,
+ *     an expandable's header, a <summary>: those elements are displayed the
+ *     whole time their ancestor reads as closed (aria-expanded on a trigger
+ *     describes the popup it controls, not its own contents). They run on
+ *     mount like anything else on screen, and the ancestor opening later
+ *     reveals nothing about them, so it does not re-run them either. See
+ *     isDisplayedDespiteClosedAncestor in @jsenv/dom.
+ *
+ * The callback's second argument is always a `navi_displayed` CustomEvent,
+ * with `detail: { ancestor, ancestorType, becauseAncestorOpened }`:
+ *   - No <dialog>/<details>/[popover]/[aria-expanded] ancestor at all →
+ *     `{ ancestor: document, ancestorType: "document" }`.
+ *   - Otherwise → `{ ancestor: <the matched element>, ancestorType: "dialog"
+ *     | "popover" | "details" | "aria-expanded" }`.
+ * `becauseAncestorOpened` distinguishes the two ways of coming on screen:
+ *   - true — the element was already mounted and the ancestor just opened,
+ *     revealing it along with everything else it holds. The opening has an
+ *     owner (the ancestor's own transferFocus/openEffect), and what it reveals
+ *     should defer to it — see use_auto_focus.js.
+ *   - false — the element was mounted just now, into a surface already on
+ *     screen (or into the plain document). Nothing else owns this appearance:
+ *     what the element says about itself (an autofocus, a measurement) is the
+ *     only word there is.
+ *
+ * Usage:
+ *   useDisplayedLayoutEffect(ref, () => {
+ *     scrollToSelected();
+ *   }, []);
+ */
+const useDisplayedLayoutEffect = (ref, callback, deps) => {
+  if (typeof callback !== "function") {
+    throw new TypeError("useDisplayedLayoutEffect: callback is not a function");
+  }
+
+  // Keep a stable ref so the open listener always calls the latest callback
+  // without needing to be re-registered when deps change.
+  const callbackRef = useRef(callback);
+  callbackRef.current = callback;
+
+  // Set by the mount effect below for an element that lives in its openable
+  // ancestor's façade rather than in what that ancestor opens.
+  const displayedWhileAncestorClosedRef = useRef(false);
+
+  // Run on mount (or when deps change) — but only if the element is visible.
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) {
+      return;
+    }
+    const ancestor = closestOpenableAncestor(el);
+    if (!ancestor) {
+      callbackRef.current(el, createDisplayedEvent(document, false));
+      return;
+    }
+    if (!isAncestorOpen(ancestor)) {
+      if (
+        // The popup building its content for its own opening: nothing in it
+        // is on screen, and the open about to follow reveals all of it. Known
+        // without asking the layout, which a synchronous mount would have to
+        // bring up to date once per element asking.
+        isMountingContentForOpen(ancestor) ||
+        !isDisplayedDespiteClosedAncestor(el, ancestor)
+      ) {
+        // Ancestor is closed and took this element off screen with it — skip
+        // now; the observeAncestorOpenState call below will fire once it
+        // opens.
+        return;
+      }
+      // Closed, yet on screen: the ancestor is the trigger of what is
+      // closed, not the thing itself, and this element belongs to the façade
+      // it keeps showing.
+      displayedWhileAncestorClosedRef.current = true;
+    }
+    callbackRef.current(el, createDisplayedEvent(ancestor, false));
+  }, deps);
+
+  // Re-run every time the ancestor opens.
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) {
+      return undefined;
+    }
+    const ancestor = closestOpenableAncestor(el);
+    if (!ancestor) {
+      return undefined;
+    }
+    return observeAncestorOpenState(ancestor, ({ isOpen }) => {
+      if (!isOpen) {
+        return;
+      }
+      if (displayedWhileAncestorClosedRef.current) {
+        // Façade content: on screen the whole time, so this opening reveals
+        // nothing here — and `becauseAncestorOpened: true` about it would be
+        // false in a way consumers act on (see use_auto_focus.js).
+        return;
+      }
+      const lastEl = ref.current;
+      callbackRef.current(lastEl, createDisplayedEvent(ancestor, true));
+    });
+  }, []);
+};
+
+const createDisplayedEvent = (ancestor, becauseAncestorOpened) => {
+  return new CustomEvent("navi_displayed", {
+    detail: {
+      ancestor,
+      ancestorType: getAncestorOpenType(ancestor),
+      becauseAncestorOpened,
+    },
+  });
 };
 
 // see also https://github.com/preactjs/preact/issues/1255
@@ -45307,1598 +46939,6 @@ const DetailsFieldContent = ({
     action: action,
     children: children
   });
-};
-
-/*
- * How many presses the page has seen, and which one a popup opened during.
- *
- * A popup dismisses itself on a `mousedown` outside, and the release of a TOUCH
- * ends with mouse events too: a tap synthesizes `mousedown`, `mouseup` and
- * `click` after `touchend`, at the place the finger left. For a popup opened by
- * that same press — a menu under a held finger, which is what a long press is
- * for — the backdrop did not exist when the finger landed and does exist when it
- * leaves, so it is handed a press it never saw begin and reads it as somebody
- * dismissing it. The popup closes on the release of the press that opened it.
- *
- * What tells them apart is not the device and not the clock: it is whether
- * ANOTHER press has begun since the popup opened. So presses are counted — a
- * pointerdown is a press — and a popup remembers the count it opened at. Equal
- * counts mean no hand has been put down since, and the mouse events arriving are
- * the tail of the press that opened it. A compatibility mouse event never brings
- * a `pointerdown` of its own (the pointer events for that finger were fired when
- * it landed), which is exactly what makes the count stand still through it.
- *
- * Read at module scope, in capture, so it is true before any handler asks.
- */
-let pressCount = 0;
-document.addEventListener(
-  "pointerdown",
-  () => {
-    pressCount++;
-  },
-  { capture: true },
-);
-
-/**
- * Whether the popup was opened by the press whose mouse events are landing now
- * — the one thing that must not dismiss it (see above).
- *
- * Asked by every path that dismisses on an outside press: the backdrop of both
- * renderers, the document-level listener a native dialog uses, and the outside
- * regions a caller declares inside its own box.
- */
-const openedDuringThisPress = (openController) =>
-  openController.pressCountAtOpen === pressCount;
-
-// How long a popup waits before handing the focus to a field, when giving it
-// is what raises the on-screen keyboard.
-//
-// The focus is normally given as early as possible. But a popup places itself
-// against the viewport, and on a phone the keyboard takes a third of that
-// viewport away the moment a field receives focus — so the two landing in the
-// same tick means the popup is still arriving when the room under it changes,
-// and it re-places itself mid-entrance. Waiting lets it settle first, and the
-// keyboard then shrinks a box that has stopped moving.
-//
-// Long enough to outlast an entrance transition rather than merely reaching
-// the next frame: what has to be over is the popup MOVING, not one paint of
-// it.
-const FOCUS_DELAY_ON_KEYBOARD_MS = 250;
-
-/**
- * Owns open/close decision-making for a popup (Dialog or Popover): guards
- * against duplicate requests and notifies the popup owner's own reactions.
- *
- * `controller.openEffect` is implemented by the controlled element (Dialog or
- * Popover), reassigned on every render so it always closes over the latest
- * props (scrollCapture, anchor, etc.). It performs whatever DOM side effects
- * are needed to make the element actually open (`showModal()`/`showPopover()`,
- * focus transfer, positioning, traps...) and returns its cleanup —
- * the matching side effects to sync back to closed (`close()`/
- * `hidePopover()`, releasing traps...). That cleanup is kept private to the
- * controller (not exposed as a property) and invoked when the popup actually
- * closes, however that happens.
- *
- * `controller.getElement` is assigned alongside it and answers with the
- * element that effect acts on, so a mount-time open can tell whether there is
- * anything in the document to open yet (see useOpenPropsEffectOnOpenController).
- *
- * Dialog/Popover also call `openController.requestClose(e, { isCancel })` for
- * their own internal triggers (backdrop click, Escape).
- *
- * `openHandler` is the popup owner's own business logic, passed once to
- * `createOpenController`. Its return value is `{ onRequestClose, onClose }`,
- * in the spirit of CloseWatcher
- * (https://developer.mozilla.org/en-US/docs/Web/API/CloseWatcher) but with
- * clearer naming than its cancel/close pair:
- * - `onRequestClose(e)`: about to close — call `e.preventDefault()` to stay
- *   open. Validation lives here.
- * - `onClose(e)`: actually closing, not preventable — final reactions live here.
- *
- * The controller exposes matching action methods:
- * - `open()`: requests opening — calls the caller's `onOpen` (see below), then
- *   `mountContent`/`openEffect`, then `openHandler`.
- * - `requestClose()`: requests closing — calls `onRequestClose` then `onClose`,
- *   stopping after the first if denied. The popup may choose to stay open,
- *   which is what a `false` return says (`true`: closed, or closed already).
- * - `close()`: closes for real — calls only `onClose`, skipping
- *   `onRequestClose` entirely. Used when there really is no choice (e.g. the
- *   popup unmounting).
- */
-const createOpenController = (
-  openHandler,
-  { debugInteraction } = {},
-) => {
-  let closeHandlers = null; // { onRequestClose, onClose } returned by openHandler
-  let openEffectCleanup = null; // function returned by openEffect, undoes its DOM side effects
-  let focusedAtClose = null; // what held the focus when the close was decided, see performClose
-
-  // Set true while we're waiting to see whether the click that follows a
-  // press-close will land back on whatever would reopen us — see
-  // armSuppressNextOpenRequest below.
-  let suppressNextOpenRequest = false;
-  let disarmSuppressNextOpenRequest = null;
-
-  // When the popup closes because of a press (clicking the backdrop, or a
-  // press outside a popup with no backdrop), the browser still dispatches the
-  // matching "click" afterward. If that click lands back on the element that
-  // triggers open() (e.g. the picker button), it would immediately reopen the
-  // popup. We cannot preventDefault/stopPropagation the press to stop that —
-  // the browser dispatches the click regardless.
-  //
-  // Instead: arm a capture-phase "click" listener on document. Capture fires
-  // before the click reaches its target, so by the time any bubble-phase
-  // click handler (e.g. the trigger button's onClick, which calls
-  // controller.open()) runs, `suppressNextOpenRequest` is already true and
-  // open() ignores the request — no need to know *which* element triggers
-  // it. A bubble-phase listener (runs after everything else, once the click
-  // reaches document) clears the flag if nothing consumed it, meaning this
-  // click never resulted in an open() call. A timeout is a last-resort safety
-  // net in case the click never reaches document at all (e.g. some ancestor
-  // called stopPropagation()) — a *task*, never a microtask: a microtask
-  // checkpoint runs between two listeners of the same trusted event dispatch,
-  // so it would clear the flag before the bubble-phase handler this is meant
-  // to block ever runs, which is precisely the case it exists for.
-  //
-  // And it lasts one press, which is what the next press lifts it for: a press
-  // only SOMETIMES ends in a click. One that became a gesture has its click
-  // suppressed on purpose (suppressClickAfterGesture in @jsenv/dom), and a
-  // refused drag ends the same way — so an arming that waits for a click alone
-  // waits forever, and the first real click after it, a new press seconds
-  // later on anything at all, is the one ignored. A click is always preceded
-  // by a press, so an arming that does not outlive one press can never reach
-  // the click of another: the same rule click_suppression.js lifts its own
-  // suppression by, and lifted here at the press rather than at its release
-  // for the same reason it gives — the click comes AFTER the pointerup that
-  // ends the press, so releasing there would let go one event too early.
-  //
-  // The arming press's own pointerdown is already dispatched by the time any
-  // of this runs (a popup with no backdrop closes during that pointerdown; a
-  // backdrop closes on the mousedown that follows it), so this listener only
-  // ever hears a genuinely new press.
-  const armSuppressNextOpenRequest = () => {
-    disarmSuppressNextOpenRequest?.();
-    let safetyTimeout = null;
-    const disarm = () => {
-      disarmSuppressNextOpenRequest = null;
-      clearTimeout(safetyTimeout);
-      document.removeEventListener("click", onCaptureClick, {
-        capture: true,
-      });
-      document.removeEventListener("click", onBubbleClick);
-      document.removeEventListener("pointerdown", onNextPress, {
-        capture: true,
-      });
-      suppressNextOpenRequest = false;
-    };
-    const onCaptureClick = (clickEvent) => {
-      if (!isPressDrivenClick(clickEvent)) {
-        // A click nothing pressed for — Tab to the trigger, then Enter — is not
-        // the one this press owes, and ignoring the open request behind it
-        // would cost a keyboard user their activation. Left armed: the press's
-        // own click may still be coming, and the next press lifts it either
-        // way.
-        return;
-      }
-      document.removeEventListener("click", onCaptureClick, {
-        capture: true,
-      });
-      suppressNextOpenRequest = true;
-      document.addEventListener("click", onBubbleClick);
-      safetyTimeout = setTimeout(() => {
-        suppressNextOpenRequest = false;
-      });
-    };
-    const onBubbleClick = () => {
-      disarm();
-    };
-    const onNextPress = () => {
-      disarm();
-    };
-    disarmSuppressNextOpenRequest = disarm;
-    document.addEventListener("click", onCaptureClick, { capture: true });
-    document.addEventListener("pointerdown", onNextPress, { capture: true });
-  };
-
-  // The DOM change a popup asked to have photographed (see
-  // controller.transitionChange), waiting for the browser to take the picture
-  // of the state being left. Anything the controller is asked to do meanwhile
-  // happens after it: the change is run on the spot, and the transition holding
-  // it finds nothing left to do.
-  let changeAwaitingTransition = null;
-  const flushChangeAwaitingTransition = () => {
-    const change = changeAwaitingTransition;
-    if (!change) {
-      return;
-    }
-    changeAwaitingTransition = null;
-    change();
-  };
-  const runChange = (change, { opened, event }) => {
-    const applyChange = () => {
-      // Recorded with the change itself: what the DOM shows is what a render
-      // landing between the ask and the picture must draw (see `openedInDom`).
-      controller.openedInDom = opened;
-      change();
-    };
-    const { transitionChange } = controller;
-    if (!transitionChange) {
-      applyChange();
-      return;
-    }
-    // What the controller answers about itself does not wait for the picture:
-    // whoever just asked reads `opened` on the spot (see
-    // useOpenPropsEffectOnOpenController, which writes it back into the
-    // caller's own signal), and a request arriving before the change lands
-    // runs it first rather than reading a DOM that disagrees.
-    controller.opened = opened;
-    changeAwaitingTransition = applyChange;
-    transitionChange(
-      () => {
-        if (changeAwaitingTransition === applyChange) {
-          flushChangeAwaitingTransition();
-        }
-      },
-      { opened, event },
-    );
-  };
-
-  const performClose = (closeEvent) => {
-    controller.opened = false;
-    // Read before any close effect touches the DOM: closing a native <dialog>
-    // hands the focus back to whatever held it at showModal() time, so by the
-    // time the close cleanup runs, the popup's content has already lost the
-    // focus and could not be remembered for the next open.
-    focusedAtClose = document.activeElement;
-
-    prevent_reopen: {
-      // Either event means the same thing here — a press closed this popup and
-      // its click is still to come. Two of them because a press whose
-      // `pointerdown` was cancelled downstream (a drag source arbitrating it,
-      // a control keeping the focus) never produces a `mousedown` at all, and
-      // that is exactly the press a popup with no backdrop hears (see
-      // armOutsidePressClose).
-      const pressEvent =
-        findEvent(closeEvent, "mousedown") ||
-        findEvent(closeEvent, "pointerdown");
-      if (pressEvent) {
-        debugInteraction(
-          closeEvent,
-          `closed by ${pressEvent.type} -> ignore next click`,
-        );
-        armSuppressNextOpenRequest();
-        break prevent_reopen;
-      }
-
-      // The keyboard counterpart of the mousedown case above: a key press that
-      // closes the popup and then goes on to activate the trigger, reopening it
-      // on the spot. Space and Enter both get there, but not the same way and
-      // not always — preventing the key unconditionally would eat presses that
-      // were never going to activate anything (a space typed in a field, an
-      // Enter the popup's own handler already consumed), so each is verified
-      // before being prevented.
-
-      // Space: pressed on the trigger itself, which still has focus (closing
-      // does not move it away from an element outside the popup). The browser
-      // turns that press into a click on keyup, and that click lands back on
-      // the trigger. Asked of the browser's own default action rather than
-      // guessed from the tag name: a space that scrolls, or types into a field
-      // inside the popup, has no activation to prevent and preventing it would
-      // swallow the scroll / the character.
-      const spaceKeyEvent = findEvent(
-        closeEvent,
-        (e) => e.type === "keydown" && e.key === " ",
-      );
-      if (
-        spaceKeyEvent &&
-        getKeyboardEventDefaultAction(spaceKeyEvent) === "activate"
-      ) {
-        debugInteraction(
-          closeEvent,
-          `closed by space on <${spaceKeyEvent.target.tagName.toLowerCase()}> -> prevent the click it would produce (space.preventDefault())`,
-        );
-        // The browser won't dispatch the click, and our "space_to_open" sees
-        // defaultPrevented too so it won't try to open the picker either.
-        spaceKeyEvent.preventDefault();
-        break prevent_reopen;
-      }
-
-      // Enter: pressed inside the popup (its own submit button, or implicit
-      // submission from a field it contains). The popup closes synchronously
-      // and focus is restored to the trigger, so the activation the browser
-      // still owes this press is delivered to the trigger instead.
-      //
-      // Verified on two counts: the press still owes an activation (the
-      // browser's default action for it is one — "activate" on a submit button,
-      // "form_submit" on a field — and nothing has consumed it yet), and it came
-      // from inside the popup. An Enter from outside is not this case at all.
-      const enterKeyEvent = findEvent(
-        closeEvent,
-        (e) => e.type === "keydown" && e.key === "Enter",
-      );
-      if (
-        enterKeyEvent &&
-        !enterKeyEvent.defaultPrevented &&
-        ENTER_ACTIVATING_DEFAULT_ACTION_SET.has(
-          getKeyboardEventDefaultAction(enterKeyEvent),
-        ) &&
-        isInsideOpenPopup(enterKeyEvent.target)
-      ) {
-        debugInteraction(
-          closeEvent,
-          `closed by enter from inside the popup -> prevent the activation it would deliver to the trigger (enter.preventDefault())`,
-        );
-        enterKeyEvent.preventDefault();
-        break prevent_reopen;
-      }
-    }
-
-    runChange(
-      () => {
-        // Sync the DOM closed first (releasing the focus trap) — only then run
-        // the owner's own reaction (onClose may restore focus to an element
-        // outside the popup, which the focus trap would otherwise fight while
-        // still active).
-        openEffectCleanup?.(closeEvent);
-        openEffectCleanup = null;
-        closeHandlers?.onClose?.(closeEvent);
-        closeHandlers = null;
-        // Last: the close effects above are what starts the exit transition the
-        // content must outlive (see popup_content_mount.js).
-        controller.unmountContent?.();
-        controller.onOpenedChange?.(false, closeEvent);
-      },
-      { opened: false, event: closeEvent },
-    );
-  };
-  const controller = {
-    opened: false,
-    // What the DOM currently shows, as opposed to what the controller has
-    // decided: the two differ for the frame a change spends waiting for the
-    // browser to photograph the state being left (see runChange). A render
-    // landing in that frame — a picker re-rendering because its action just
-    // started — must draw THIS, or it paints the closed state before the
-    // picture is taken and the movement has nothing to leave from.
-    openedInDom: false,
-    // Which press the popup opened during, written at every open (see
-    // openedDuringThisPress). Never any press before there has been one.
-    pressCountAtOpen: null,
-    openEffect: null,
-    // The element openEffect acts on, asked for before the mount-time open is
-    // let through: it has to be in the document for showModal()/showPopover()
-    // to be legal at all (see useOpenPropsEffectOnOpenController).
-    getElement: null,
-    // Set by the controlled element (see popup_content_mount.js) when its
-    // content is still waiting for a first open to be built. Called below,
-    // before openEffect, so the popup measures and positions the real thing.
-    mountContent: null,
-    // The caller's own `onOpen`, set by Dialog/Popover from their props on
-    // every render (like openEffect). Called BEFORE mountContent, so whatever
-    // it decides — which record this dialog is opening on — is already true by
-    // the time the content is built, positioned and shown. That order is the
-    // whole point: learning it afterwards means the content mounted on the
-    // previous subject first.
-    onOpen: null,
-    // The counterpart, set only when the popup was told to throw its content
-    // away on close (`mount="while-opened"`). Called from performClose above.
-    unmountContent: null,
-    // Set by the controlled element when the DOM change that opens or closes
-    // it has to be photographed by the browser on both sides — a document view
-    // transition, whose update callback is the only place that change can
-    // happen (Dialog's animation="growing", see popup_grow.js). Called with
-    // the change and where it leads; running it is its job, and it may run it
-    // a frame later than it was asked for. That delay is the reason a popup
-    // cannot do this from the outside: `--navi-open` runs when navi runs it,
-    // and a close arrives once the DOM already holds it.
-    transitionChange: null,
-    // Told whenever `opened` actually changes, whatever asked for it — an
-    // interaction, a command, a prop — with the event that asked. What lets a
-    // `signal` prop reflect the popup's real state, and a `navState` prop write
-    // it into the history entry (see useOpenPropsEffectOnOpenController);
-    // called once the open/close has fully happened rather than mid-sequence.
-    onOpenedChange: null,
-    open: (e, detail) => {
-      flushChangeAwaitingTransition();
-      if (controller.opened || !controller.openEffect) {
-        return;
-      }
-      if (suppressNextOpenRequest) {
-        suppressNextOpenRequest = false;
-        return;
-      }
-      const requestOpenEvent = new CustomEvent("navi_request_open", {
-        detail: { event: e, ...detail },
-        cancelable: true,
-      });
-      chainEvent(requestOpenEvent, e);
-      // we prepare focus transfer before actually opening the popover/dialog
-      // because opnening dialog makes browser try to transfer focus (which ends up in document.body for instance)
-      const focusTransfer = prepareFocusTransfer(
-        requestOpenEvent,
-        debugInteraction,
-      );
-      controller.transferFocusOnOpen = (el) => {
-        // requestOpenEvent, not the raw `e` — getFocusedBeforeTransfer needs
-        // e.detail.eventChain (built by chainEvent above) to recover the
-        // element a mousedown/click landed on. `e` itself is usually the raw
-        // native event: its own `.detail` is a number (click count) on a
-        // MouseEvent, so `e.detail.eventChain` is always undefined and the
-        // mousedown/click branches below never matched — silently falling
-        // back to `document.activeElement`, which is often `document.body`
-        // once mousedown.preventDefault() has kept focus from landing
-        // anywhere yet.
-
-        // Two conditions, and both are about THIS opening rather than about
-        // the device:
-        // - the interaction: only a finger raises a virtual keyboard, and a
-        //   hybrid tablet answers "coarse" to every device-level signal
-        //   whichever of its two inputs was just used — the open event still
-        //   remembers which one it was. An opening with no pointer in it at
-        //   all (a keyboard shortcut, defaultOpen, an app calling open()) is
-        //   not one either.
-        // - the target: focusing a button raises nothing, so there is nothing
-        //   to wait for and the focus stays immediate. Only a field the
-        //   keyboard comes up for is worth delaying — which is why the
-        //   decision is taken on the resolved target, inside transferFocus.
-        const openedByTouch = Boolean(
-          findEvent(requestOpenEvent, isTouchDrivenEvent),
-        );
-        const cancelPendingFocus = focusTransfer.transferFocus(e, el, {
-          getDelay: (target) =>
-            openedByTouch && isEditableTarget(target)
-              ? FOCUS_DELAY_ON_KEYBOARD_MS
-              : 0,
-        });
-        return (closeEvent) => {
-          // Closed before the delay was up: the focus was never given, so it
-          // must not be given now — to a field inside a popup on its way out,
-          // raising the keyboard as it goes.
-          cancelPendingFocus?.();
-          markAutofocusRestoreOnClose(el, closeEvent, focusedAtClose);
-          const focusoutEvent = findEvent(closeEvent, "focusout");
-          if (focusoutEvent) {
-            debugInteraction(
-              closeEvent,
-              `closed by focusout -> let focus go away`,
-            );
-          } else {
-            // Only the mousedown, deliberately: a popup with no backdrop is
-            // closed by a `pointerdown` that belongs to the page (see
-            // armOutsidePressClose), and cancelling it would take away the
-            // very press it exists to let through — along with the click the
-            // page was going to answer. What that press lands on decides the
-            // focus then, as it would with no popup open at all.
-            const mousedownEvent = findEvent(closeEvent, "mousedown");
-            if (mousedownEvent) {
-              debugInteraction(
-                closeEvent,
-                "closed by mousedown -> prevent browser focus (mousedown.preventDefault())",
-              );
-              mousedownEvent.preventDefault();
-            }
-            focusTransfer.restoreFocus();
-          }
-        };
-      };
-      runChange(
-        () => {
-          // Before mountContent, which builds the content, and before
-          // openEffect, which shows it: what the popup opens ON has to be
-          // known before either (see `onOpen` above).
-          controller.onOpen?.(requestOpenEvent);
-          // After prepareFocusTransfer, which has to record what held the
-          // focus before anything inside the popup can claim it, and before
-          // openEffect, which measures the popup to place it.
-          controller.mountContent?.();
-          // Only now — after the content has been built, before openEffect
-          // shows it. Dialog/Popover recompute aria-expanded and navi-hidden
-          // from this flag on every render, and mountContent above renders
-          // synchronously: flipping it any earlier commits an already-open DOM
-          // (aria-expanded "true", navi-hidden gone) before openEffect has run
-          // a single statement, so the "closed" frame it pins to transition
-          // from is in fact the open one and the entrance animation has
-          // nothing to play. It also gives the content it just built the
-          // opening it is documented to observe — mounted while the popup
-          // reads as closed, told it opened right after (see
-          // popup_content_mount.js and use_displayed_layout_effect.js).
-          controller.opened = true;
-          // Which press it opened during, so the release of that press is not
-          // read as somebody dismissing it (see openedDuringThisPress).
-          controller.pressCountAtOpen = pressCount;
-          const openEffectReturnValue =
-            controller.openEffect(requestOpenEvent) || null;
-          openEffectCleanup = (closeEvent) => {
-            openEffectReturnValue?.(closeEvent);
-          };
-          closeHandlers = openHandler(requestOpenEvent) || null;
-          controller.onOpenedChange?.(true, requestOpenEvent);
-        },
-        { opened: true, event: requestOpenEvent },
-      );
-    },
-    requestClose: (
-      e = new CustomEvent("programmatic", { detail: {} }),
-      detail,
-    ) => {
-      flushChangeAwaitingTransition();
-      if (!controller.opened) {
-        return true;
-      }
-      const requestCloseEvent = new CustomEvent("navi_request_close", {
-        detail: { event: e, ...detail },
-        cancelable: true,
-      });
-      chainEvent(requestCloseEvent, e);
-      closeHandlers?.onRequestClose?.(requestCloseEvent);
-      if (requestCloseEvent.defaultPrevented) {
-        // The native <dialog> "cancel" event (Escape key) closes the dialog
-        // by default; prevent that default so denial actually keeps it open.
-        const nativeCancelEvent = findEvent(requestCloseEvent, "cancel");
-        if (nativeCancelEvent) {
-          nativeCancelEvent.preventDefault();
-        }
-        return false;
-      }
-      performClose(requestCloseEvent);
-      return true;
-    },
-    close: (e = new CustomEvent("programmatic", { detail: {} }), detail) => {
-      flushChangeAwaitingTransition();
-      if (!controller.opened) {
-        return;
-      }
-      const closeEvent = new CustomEvent("navi_close", {
-        detail: { event: e, ...detail },
-      });
-      chainEvent(closeEvent, e);
-      // Skips onRequestClose entirely — there is no choice here.
-      performClose(closeEvent);
-    },
-  };
-  return controller;
-};
-
-// Inside a popup that is open right now — the popup being closed, in practice,
-// since that is the one the key press was delivered to.
-const isInsideOpenPopup = (element) => {
-  if (!element || element.nodeType !== 1) {
-    return false;
-  }
-  return Boolean(element.closest("dialog[open], [popover]:popover-open"));
-};
-
-// What Enter is about to do when it is about to activate something: press the
-// focused control, or submit the form around it. Anything else it can do
-// (typing a newline, nothing at all) leaves no activation behind to land on the
-// trigger once focus is restored.
-const ENTER_ACTIVATING_DEFAULT_ACTION_SET = new Set([
-  "activate",
-  "form_submit",
-]);
-
-// Created once per popup instance: openHandler is wrapped in a stable callback
-// so the controller identity never changes across renders, even though
-// Dialog/Popover read fresh closures (scrollTrap, etc.) via
-// openController.openEffect on every render.
-const useOpenController = (openHandler) => {
-  const debugInteraction = useDebugInteraction();
-  const stableOpenHandler = useStableCallback(openHandler);
-  const controllerRef = useRef(null);
-  if (!controllerRef.current) {
-    controllerRef.current = createOpenController(stableOpenHandler, {
-      debugInteraction,
-    });
-  }
-  // Unmount safety net: if Dialog/Popover unmounts while still open (parent
-  // removes it from the tree without going through requestClose()), there is
-  // no choice to leave open — close it for real.
-  useLayoutEffect(() => {
-    return () => {
-      // Nothing to photograph on the way out: the popup is leaving the
-      // document, so a movement between its box and anything else would be
-      // played on an element already detached by the time the browser gets to
-      // it (see controller.transitionChange).
-      controllerRef.current.transitionChange = null;
-      // Leaving the tree is not being closed: whoever holds the open state
-      // (`signal`, `navState`) keeps saying open, so the same popup put back
-      // finds itself as it was. preact/compat's Suspense parks a suspended
-      // subtree by running every hook cleanup in it, so a `<Loading>` above
-      // the popup lands here for a wait it comes back from.
-      controllerRef.current.onOpenedChange = null;
-      controllerRef.current.close();
-    };
-  }, []);
-  return controllerRef.current;
-};
-
-// Nested popups that both mount already-open (`open`/`defaultOpen`) would
-// otherwise stack in the wrong order: Preact fires layout effects
-// child-first on mount, so a nested popup's own mount-open would call
-// showPopover() before its ancestor's — and the top layer stacks *later*
-// showPopover() calls above *earlier* ones (see popover.jsx's own openEffect
-// comment) — leaving the ancestor on top instead of the nested popup, the
-// opposite of what opening them one at a time (ancestor first, by real user
-// interaction) would produce. Batching every mount-time silent open queued
-// during the same commit's layout-effect phase into one microtask flush,
-// then simply running them in *reverse* of their registration order fixes
-// this — no need to compare DOM positions: since effects already fire
-// child-first, tree-wide, for *any* ancestor/descendant pair the descendant
-// is always queued before the ancestor, regardless of what else is in the
-// tree, so reversing the whole batch always puts every ancestor before its
-// own descendants. Works for any nesting depth for the same reason. Two
-// unrelated (sibling) popups both mounting open also get reordered
-// relative to each other, but there's no meaningful "correct" order between
-// those anyway.
-//
-// The cancel this returns answers whether the open was still pending: a
-// `<Loading>` above the popup can park the whole subtree between the effect
-// and the flush (preact/compat's Suspense runs every hook cleanup of the
-// suspended children and moves their dom into a detached <div>), and the flush
-// would then be opening a popup whose element has left the document.
-let pendingMountOpens = new Set();
-let mountOpenFlushScheduled = false;
-const scheduleMountOpen = (run) => {
-  pendingMountOpens.add(run);
-  if (!mountOpenFlushScheduled) {
-    mountOpenFlushScheduled = true;
-    queueMicrotask(() => {
-      const entries = [...pendingMountOpens];
-      pendingMountOpens = new Set();
-      mountOpenFlushScheduled = false;
-      for (let i = entries.length - 1; i >= 0; i--) {
-        entries[i]();
-      }
-    });
-  }
-  return () => pendingMountOpens.delete(run);
-};
-
-// Where the popup's open state is kept, when it is kept anywhere: `navState`
-// resolved to the `{ id, type }` useNavState wants.
-//
-// `true` takes the popup's own id — a popup a `--navi-open` command can name is
-// a popup that already has a stable one, and that id is what identifies its
-// open state too.
-const NO_NAV_STATE = { id: undefined, type: "replace" };
-const resolveNavStateProp = (navState, popupId, name) => {
-  if (!navState) {
-    return NO_NAV_STATE;
-  }
-  if (navState === true) {
-    return { id: popupId, type: "replace" };
-  }
-  if (typeof navState === "string") {
-    return { id: navState, type: "replace" };
-  }
-  return { id: navState.id || popupId, type: navState.type || "replace" };
-};
-
-// What a write of the open state is worth in the history, when the signal
-// holding it is bound to a url (a route's `searchParams`, see route.js). A
-// plain signal has no `set` and takes the value as it always did.
-const writeInSignal = (signal, value, { history }) => {
-  if (signal.set) {
-    signal.set(value, { history });
-    return;
-  }
-  signal.value = value;
-};
-
-// The popup says where it is, into a `signal` the caller holds — and when that
-// signal lives in a url, saying so is a navigation. It is worth exactly what
-// the same move is worth when the open state lives in the history entry
-// instead (see useNavState's own leave()):
-// - the opening is worth what the state declares (`history: "push"` for a
-//   popup one can back out of, the default replacement for one that merely
-//   qualifies the screen one is on);
-// - the closing is never an entry of its own, and never leaves the pushed
-//   entry standing either. Stacking one would leave the entry that carries
-//   the popup BEHIND the reader (their next back press walks straight back
-//   into the popup they just closed); keeping the pushed entry would leave
-//   two entries describing the same closed screen (their next back press
-//   appears to do nothing).
-// A cancel (Escape, the backdrop, --navi-cancel) goes back to before the
-// opening, so everything else written to the url while the popup was open
-// goes back with it. A close that is not a cancel goes back too, but keeps
-// those writes: they are spelled into the url first (only the signal knows
-// how "closed" reads there), and that url is written onto the entry the back
-// lands on.
-//
-// What "open" is worth in the signal is `true`, or the popup's `value`
-// when it has one: several popups then share one signal saying WHICH of them
-// is open (`?seat=<gameId>` over a list of cards), and closed is the signal
-// holding none of their values — `undefined`, which a state signal reads as
-// its default.
-const writeOpenedInSignal = (signal, opened, event, popupValue) => {
-  if (readOpened(signal.peek(), popupValue) === opened) {
-    // The signal already says so, meaning this open/close IS what it asked
-    // for: a back press that took the popup out of the url, the application
-    // writing it. Nothing to write back — and nothing to go back to either,
-    // since the navigation navBack would undo is the one that asked for this.
-    return;
-  }
-  const closedValue = popupValue === undefined ? false : undefined;
-  if (opened) {
-    signal.value = popupValue === undefined ? true : popupValue;
-    return;
-  }
-  if (
-    signal.options?.getHistory?.() === "push" &&
-    // Nothing of this document behind: the popup was opened by the url itself
-    // (a shared link, a bookmark). navBack would do nothing at all there, so
-    // the entry is rewritten in place — the address must not keep saying open
-    // about a popup that just closed.
-    canNavBackSignal.peek()
-  ) {
-    if (event?.detail?.isCancel) {
-      navBack();
-      return;
-    }
-    writeInSignal(signal, closedValue, { history: "replace" });
-    navBack({ landOn: { url: window.location.href } });
-    return;
-  }
-  writeInSignal(signal, closedValue, { history: "replace" });
-};
-const readOpened = (signalValue, popupValue) => {
-  if (popupValue === undefined) {
-    return signalValue;
-  }
-  return signalValue === popupValue;
-};
-
-/**
- * Keeps an open controller in sync with where the caller says the popup should
- * be: an `open`/`defaultOpen` pair, a `signal`, or a `navState` — the open
- * state written into the history entry, so a screen left and come back to finds
- * its popup as it was.
- *
- * Shared between `useOpenControllerByProps` below (Dialog/Popover driving their
- * own controller), `picker_custom.jsx` (which owns its controller but wants
- * the same skip-if-already-matching / open-or-requestClose control flow) and
- * `expandable.jsx` (open in flow rather than on a layer, same decision).
- *
- * @param {{ open: (e: Event, detail?: object) => void, requestClose: (e: Event, detail?: object) => void, opened: boolean }} openController
- * @param {{ id?: string, open?: boolean|"interaction", defaultOpen?: boolean|"interaction", signal?: import("@preact/signals").Signal, value?: any, navState?: boolean|string|{id?: string, type?: "push"|"replace"} }} props
- * @param {string} [name] What the dev warnings call the thing being opened.
- */
-const useOpenPropsEffectOnOpenController = (
-  openController,
-  props,
-  name = "popup",
-) => {
-  const { signal, value, defaultOpen, navState } = props;
-  const { id: navStateId, type: navStateType } = resolveNavStateProp(
-    navState,
-    props.id);
-  // Called unconditionally (it answers with no-ops for an absent id), like
-  // every other hook here.
-  const [navStateValue, enterNavState, leaveNavState] = useNavState(
-    navStateId,
-    { type: navStateType },
-  );
-  // What the caller holds, however they hold it: the history entry when there
-  // is a `navState`, an `open` they re-render themselves, or a `signal` this
-  // hook also writes (see onOpenedChange below). Reading .value during render
-  // is what subscribes the popup to a signal; reading the document state is
-  // what subscribes it to the history entry, back button included.
-  const open = navStateId
-    ? Boolean(navStateValue)
-    : signal
-      ? readOpened(signal.value, value)
-      : props.open;
-  // Assigned on every render, like openEffect, so it always closes over the
-  // latest prop: a popup that opens or closes on its own (Escape, backdrop, a
-  // --navi-close command) writes what happened where the caller keeps it, so
-  // whoever holds it always reads where the popup is.
-  openController.onOpenedChange =
-    navStateId || signal
-      ? (opened, event) => {
-          if (navStateId) {
-            if (opened) {
-              enterNavState();
-            } else {
-              // Under type "push" a cancel discards everything written while
-              // the popup was open — it goes back with the entry; a confirmed
-              // close keeps those writes (see useNavState's own leave()).
-              leaveNavState({ isBack: Boolean(event?.detail?.isCancel) });
-            }
-          }
-          if (signal) {
-            writeOpenedInSignal(signal, opened, event, value);
-          }
-        }
-      : null;
-  // Tracks whether the effect below has ever run before — only the very
-  // first run gets the "mount already open" treatment (`open` truthy from
-  // the start, or the uncontrolled, mount-only `defaultOpen`); every
-  // subsequent `open` change is a real, later toggle and should animate
-  // normally like any other interactive open/close.
-  const isFirstRunRef = useRef(true);
-  // The mount-time open, from the first run below until the effect after it
-  // could schedule it.
-  const mountOpenOwedRef = useRef(null);
-
-  useLayoutEffect(() => {
-    const isFirstRun = isFirstRunRef.current;
-    isFirstRunRef.current = false;
-
-    if (isFirstRun) {
-      const mountOpenReason = open || defaultOpen;
-      if (mountOpenReason) {
-        // Whether this popup being open is something that just happened, or
-        // something that was already true when the page appeared. "interaction"
-        // says the mount IS the opening — the popup exists because the user
-        // just asked for it — so the entrance plays like any other open. Any
-        // other truthy value means it was simply already open: nothing was ever
-        // shown as "closed" for the user to see it transition away from, so the
-        // entrance is skipped (`silent`, see popover.jsx's own openEffect).
-        //
-        mountOpenOwedRef.current = () =>
-          openController.open(new CustomEvent("open_by_prop", { detail: {} }), {
-            silent: mountOpenReason !== "interaction",
-          });
-      }
-      return undefined;
-    }
-
-    if (open === undefined) {
-      return undefined;
-    }
-    // Skip when the controller is already in the desired state.
-    // openController.opened tracks actual open/close (updated by onopen/onclose,
-    // not by renders) so it is the authoritative check against feedback loops.
-    if (open === openController.opened) {
-      return undefined;
-    }
-    if (open) {
-      openController.open(new CustomEvent("open_by_prop", { detail: {} }));
-    } else {
-      openController.requestClose(
-        new CustomEvent("close_by_prop", { detail: {} }),
-        { isCancel: true },
-      );
-    }
-    // The request can be refused (a busy form denying the close): the popup
-    // then stays where it was, and whoever holds the open state is told so —
-    // otherwise it would keep saying "closed" about a popup still open.
-    // Written over rather than stacked on: a refusal corrects the state that
-    // asked, it is not a place one came from. Only on a refusal: an accepted
-    // request already reads in the signal, and with a `value` what the
-    // signal holds may be another popup's, which the write would erase.
-    if (signal && openController.opened !== open) {
-      const opened = openController.opened;
-      writeInSignal(
-        signal,
-        value === undefined ? opened : opened ? value : undefined,
-        { history: "replace" },
-      );
-    }
-    if (navStateId && openController.opened) {
-      enterNavState();
-    }
-    return undefined;
-  }, [open]);
-
-  // Schedules the owed mount-time open — on every render, until it can. It has
-  // to wait for the element to be IN THE DOCUMENT, and a mount does not
-  // guarantee that: a `<Loading>` above the popup parks a suspended subtree by
-  // moving its dom into a detached <div> while keeping its components alive
-  // (preact/compat), and a render there re-creates the hooks, so the first run
-  // above happens against dom that is not in the page — where showModal() and
-  // showPopover() throw. The boundary settling re-renders the subtree with its
-  // dom back, and that render is the one that schedules.
-  //
-  // Deferred + batched (see scheduleMountOpen) rather than called directly,
-  // so nested popups that both mount already-open end up stacked
-  // ancestor-first instead of Preact's own child-first effect order. An open
-  // still pending when this cleans up goes back to being owed: the parking
-  // itself runs this cleanup, and the fresh run that follows re-asks.
-  useLayoutEffect(() => {
-    const mountOpen = mountOpenOwedRef.current;
-    if (!mountOpen) {
-      return undefined;
-    }
-    const element = openController.getElement?.();
-    if (element && !element.isConnected) {
-      return undefined;
-    }
-    mountOpenOwedRef.current = null;
-    const cancelMountOpen = scheduleMountOpen(mountOpen);
-    return () => {
-      if (cancelMountOpen()) {
-        mountOpenOwedRef.current = mountOpen;
-      }
-    };
-  });
-};
-
-const useOpenControllerByProps = (props, name) => {
-  const { onClose } = props;
-  // Lets an uncontrolled consumer (no openController of its own) still react
-  // to a self-initiated close (Escape, backdrop click, its own close button)
-  // without having to own a controller just to observe it — onClose is
-  // called on every real close, matching createOpenController's own
-  // { onRequestClose, onClose } contract (never denies the close itself).
-  const openController = useOpenController(() =>
-    onClose ? { onClose } : undefined,
-  );
-  useOpenPropsEffectOnOpenController(openController, props, name);
-  return openController;
-};
-
-/**
- * Runs `fn` and commits whatever it re-renders before returning, instead of
- * letting Preact batch it into the next microtask. Layout effects of what gets
- * mounted run inside the call too, exactly as they would on any other commit.
- *
- * For the caller that has to read the DOM it just asked for — measuring an
- * element whose content it mounts in the same breath — and cannot wait a tick
- * to do it, because what comes after is a browser event still in flight
- * (preventDefault, focus placement) that no longer accepts being answered late.
- *
- * `options.debounceRendering` is Preact's own hook for deciding *when* the
- * render queue drains; swapping it for "right now" for the duration of the call
- * is exactly how preact/compat implements React's flushSync. Reserve it for the
- * case above: rendering synchronously in the middle of an event gives up the
- * batching that makes several state changes one commit.
- */
-const flushSyncRendering = (fn) => {
-  const debounceRenderingPrevious = options.debounceRendering;
-  options.debounceRendering = (drainRenderQueue) => {
-    drainRenderQueue();
-  };
-  try {
-    fn();
-  } finally {
-    options.debounceRendering = debounceRenderingPrevious;
-  }
-};
-
-/**
- * Small, renderer-agnostic helpers shared by Popover and Dialog's own custom
- * (non-top-layer) renderers — operate on a plain DOM element, no knowledge
- * of which of the two owns it.
- */
-
-
-/**
- * Whether a visibleRectEffect delivery is one that can have taken height away
- * from a popup, and so pushed whatever holds focus out of sight:
- * - "resize": the window/visual viewport settled — which is also how the
- *   on-screen keyboard arrives, overlay or not (window_size.js);
- * - ELEMENT_SIZE_CHANGE: the popup's own box measured different;
- * - "focusin": the focus-settled re-measure, for the room that changes with
- *   nothing announcing it (subscribeFocusSettled in window_size.js).
- *
- * Everything else is a scroll of one kind or another, where nothing got
- * smaller and scrolling the focused element back would fight the very gesture
- * that fired it.
- */
-const mayHaveHiddenFocus = (event) => {
-  const type = event?.type;
-  return (
-    type === "resize" || type === ELEMENT_SIZE_CHANGE || type === "focusin"
-  );
-};
-
-const scrollportHeightMap = new WeakMap();
-/**
- * Scrolls whatever holds focus inside `popupEl` back into view, if the popup
- * getting shorter has pushed it out.
- *
- * The case this exists for: a field low in the scrolling body of a popup that
- * also has a footer (box.jsx — with a body, the body is the only thing that
- * scrolls and the footer is a sibling sitting right under it). Focusing the
- * field makes the browser scroll it into view, which it does against the
- * popup's height AT THAT MOMENT; the on-screen keyboard then opens and takes
- * that height away. The body shrinks, its scrollTop does not move, so the
- * content slides down relative to the shorter scrollport and the field ends up
- * past its bottom edge — visually, swallowed by the footer. The browser does
- * not redo a scroll-into-view it already answered, so this does.
- *
- * Only what the shrink itself hid, though: with the keyboard up the user reads
- * the rest of the popup by scrolling the field away — to reach the submit under
- * it, typically — and the room keeps changing while they do (a keyboard settling
- * in two steps, a suggestion strip, a browser bar). Answering each of those by
- * scrolling the field back takes the popup away from wherever they had just
- * scrolled it, over and over: what they were reading cannot be reached at all
- * without blurring the field first, and the popup reads as unscrollable. So the
- * field is brought back only when it was in view before the room shrank, which
- * one remembered number answers: a resize moves neither scrollTop nor the
- * element's offset inside the scrolled content, so measuring against the height
- * the scrollport HAD is measuring the state before the change.
- *
- * Scoped to the field's own scroll container (never the page): a popup traps
- * scrolling precisely so the document underneath cannot move, and a plain
- * scrollIntoView walks past a container whose scrollbar isn't visible — see
- * scrollIntoViewScoped's own doc.
- *
- * "nearest": the smallest scroll that makes it visible, and none at all when it
- * already is. Where it lands is the container's own business — a navi scroller
- * keeps a band free at its edges so a field never comes back glued to one (see
- * scroll-padding in box.jsx).
- */
-const keepFocusedElementVisible = (popupEl) => {
-  const { activeElement } = document;
-  if (!activeElement || activeElement === popupEl) {
-    return;
-  }
-  if (!popupEl.contains(activeElement)) {
-    return;
-  }
-  const scrollContainer = getScrollContainer(activeElement);
-  if (!scrollContainer || !popupEl.contains(scrollContainer)) {
-    // What scrolls the field is outside the popup, which means the page: a
-    // popup holds it still on purpose (trapScrollInside), so there is nothing
-    // here to scroll back.
-    return;
-  }
-  const scrollportHeight = scrollContainer.clientHeight;
-  const scrollportHeightBefore = scrollportHeightMap.get(scrollContainer);
-  scrollportHeightMap.set(scrollContainer, scrollportHeight);
-  if (scrollportHeightBefore !== undefined) {
-    if (scrollportHeight >= scrollportHeightBefore) {
-      // Nothing was taken away, so nothing was hidden by this.
-      return;
-    }
-    if (
-      !isVisibleInScrollport(
-        activeElement,
-        scrollContainer,
-        scrollportHeightBefore,
-      )
-    ) {
-      return;
-    }
-  }
-  scrollIntoViewScoped(activeElement, {
-    container: scrollContainer,
-    block: "nearest",
-  });
-};
-
-// Whether any part of `el` was showing in `container` back when its scrollport
-// was `scrollportHeight` tall. Both boxes are read now: the container may have
-// moved as well as shrunk (a centered dialog re-centers itself), and the
-// difference between the two tops is what that move leaves alone.
-const isVisibleInScrollport = (el, container, scrollportHeight) => {
-  const elRect = el.getBoundingClientRect();
-  const containerRect = container.getBoundingClientRect();
-  const elTop = elRect.top - containerRect.top + container.scrollTop;
-  const elBottom = elTop + elRect.height;
-  const scrollportTop = container.scrollTop;
-  const scrollportBottom = scrollportTop + scrollportHeight;
-  return elBottom > scrollportTop && elTop < scrollportBottom;
-};
-
-/**
- * Calls `onSettled` once `el`'s current CSS transition is over — via
- * `transitionend`, with a safety `setTimeout` fallback matching the longest
- * `transition-duration`, in case nothing actually transitions or an event is
- * missed.
- *
- * Returns a "cancel" function, so a caller whose instance has been superseded
- * (a fresh open/close about to set its own state) can keep this stale one from
- * firing later. Cancelling only stops `onSettled`: undoing whatever the caller
- * did up front is that fresh call's business, not this one's.
- */
-const whenTransitionSettles = (el, onSettled) => {
-  let settled = false;
-  const onTransitionEnd = (transitionEvent) => {
-    if (transitionEvent.target === el) {
-      finish();
-    }
-  };
-  const stopWatching = () => {
-    settled = true;
-    el.removeEventListener("transitionend", onTransitionEnd);
-    clearTimeout(safetyTimeoutId);
-  };
-  const finish = () => {
-    if (settled) {
-      return;
-    }
-    stopWatching();
-    onSettled();
-  };
-  el.addEventListener("transitionend", onTransitionEnd);
-  const durationsInSeconds = getComputedStyle(el)
-    .transitionDuration.split(",")
-    .map((value) => parseFloat(value) || 0);
-  const longestDurationMs = Math.max(0, ...durationsInSeconds) * 1000;
-  const safetyTimeoutId = setTimeout(finish, longestDurationMs + 50);
-  return () => {
-    if (settled) {
-      return;
-    }
-    stopWatching();
-  };
-};
-
-/**
- * Drops the document's text selection when it lives inside `el`, leaving a
- * selection made elsewhere on the page alone.
- *
- * A popup being closed takes its content with it, and a selection is a claim
- * on content the user can still act on: kept, it would outlive the surface it
- * was made on — painted on the box for the length of its exit transition, with
- * the handles and the copy toolbar a phone draws from the live selection
- * hanging over something that is going away — and reappear with the box on
- * the next opening. Dropping the selection is the only way to remove that
- * chrome: a `user-select: none` on the closing box hides the highlight in some
- * browsers only, and the handles are the browser's own, drawn from the
- * selection object rather than from any style.
- */
-const clearTextSelectionInside = (el) => {
-  const selection = window.getSelection();
-  if (!selection || selection.rangeCount === 0) {
-    return;
-  }
-  const range = selection.getRangeAt(0);
-  if (!el.contains(range.commonAncestorContainer)) {
-    return;
-  }
-  selection.removeAllRanges();
-};
-
-/**
- * Disables pointer-events on `el` until its current CSS transition settles —
- * avoids the cursor changing/something becoming clickable while the popup is
- * still visually moving into or out of place.
- *
- * Returns whenTransitionSettles' own "cancel" function: it doesn't restore
- * pointer-events, since a fresh call for the next open/close is about to set
- * its own state.
- */
-const suppressPointerEventsDuringTransition = (el) => {
-  el.style.pointerEvents = "none";
-  return whenTransitionSettles(el, () => {
-    el.style.pointerEvents = "";
-  });
-};
-
-/**
- * Hides the backdrop, deferring until the browser's matching "click" fires
- * when `closeEvent` was triggered by a mousedown (see popover.jsx's top
- * comment for why) — same capture-phase-on-document pattern as
- * armSuppressNextOpenRequest in open_controller.js, which a plain timeout
- * can't safely replace: mouseup (and the click that follows it) can land an
- * arbitrarily long time after mousedown (the user is still holding the
- * button down), so a short timeout can fire first and hide the backdrop
- * before its own click ever arrives. A capture-phase listener on document
- * fires for every click regardless of what any bubble-phase handler does
- * downstream, so no fallback timer is needed.
- *
- * `hide` is the caller's own way to actually hide the backdrop
- * (`hidePopover()` for a top-layer backdrop, a plain `style.display = "none"`
- * for a plain div) — this helper only owns the mousedown/click timing.
- *
- * Returns a disarm function (or undefined if hidden immediately), so a
- * fresh open can cancel a pending hide it's about to make redundant.
- */
-const armPointerDownOutsideClose = (closeEvent, hide) => {
-  const mousedownEvent = findEvent(closeEvent, "mousedown");
-  if (!mousedownEvent) {
-    hide();
-    return undefined;
-  }
-  const onClick = () => {
-    document.removeEventListener("click", onClick, { capture: true });
-    hide();
-  };
-  document.addEventListener("click", onClick, { capture: true });
-  return () => {
-    document.removeEventListener("click", onClick, { capture: true });
-  };
-};
-
-/**
- * Maps a positionArea y/x pair to a concrete `navi-animation` value (a
- * `prefix` plus a direction word), or `null` if both axes overlap the anchor
- * (no direction at all — that's `resolvedAnimationKind === "scaling"`
- * territory instead, see resolveAutoAnimationKind below).
- *
- * `prefix: "slide-from"` (used with no real anchor — Dialog always, Popover
- * when docked) keeps the word as the compass direction the popup comes
- * from: placed "top" (a point/corner), it slides in from the top.
- * `prefix: "expand"` (a real anchor, Popover-only) uses the motion/growth
- * direction instead, the opposite compass point: placed "top" of the
- * anchor, it moves/grows up, away from the anchor (which sits below it).
- *
- * "inset-*"/"center" contribute no direction on their axis either way.
- */
-const resolveDirectionValue = (y, x, { prefix }) => {
-  const yWord =
-    y === "top"
-      ? prefix === "expand"
-        ? "up"
-        : "top"
-      : y === "bottom"
-        ? prefix === "expand"
-          ? "down"
-          : "bottom"
-        : null;
-  const xWord = x === "left" ? "left" : x === "right" ? "right" : null;
-  if (!yWord && !xWord) {
-    return null;
-  }
-  return yWord && xWord
-    ? `${prefix}-${yWord}-${xWord}`
-    : `${prefix}-${yWord || xWord}`;
-};
-
-/**
- * Shared `animation="auto"`/`true` resolution: "scaling" reads best overall
- * — picked for any real anchor, or for a point/corner placed dead-center
- * (both positionArea axes overlapping — there's no sensible direction to
- * slide from in that case). "sliding" otherwise. `anchor` is `undefined`
- * for any no-anchor/docked case (Dialog always, Popover's own custom
- * renderer when there's no real anchor), so this collapses to "scaling"
- * there only for the dead-center case, "sliding" otherwise. The two
- * "overlapping" booleans below describe the *positionArea* itself (a bare
- * word vs. "inset-"/"center"), not anything about the anchor — they'd
- * mean exactly the same thing even with no anchor at all, since it's the
- * position strategy, not the anchor, that decides whether there's a
- * direction to slide from.
- */
-const resolveAutoAnimationKind = (anchor, parsedPositionArea) => {
-  const yIsOverlapping =
-    parsedPositionArea.y !== "top" && parsedPositionArea.y !== "bottom";
-  const xIsOverlapping =
-    parsedPositionArea.x !== "left" && parsedPositionArea.x !== "right";
-  return anchor || (yIsOverlapping && xIsOverlapping) ? "scaling" : "sliding";
-};
-
-/**
- * A popup reads "outside" from its own border box: what a press lands on
- * decides nothing on its own (a genuine backdrop press and a press on the
- * popup's padding both report the popup element as their target, there being
- * no real ::backdrop node to be one), so the rectangle is what tells them
- * apart. That holds as long as the box and what the popup paints are the same
- * thing — which stops being true for a popup with no surface of its own
- * (`backgroundColor="transparent"`, no shadow, no padding): what the eye reads
- * as backdrop is then inside the box, and a press there stays a press on the
- * popup.
- *
- * `data-navi-popup-outside` is how a caller says which of its own boxes are
- * not the surface. It is opt-in because navi cannot infer it — a background
- * can come from anywhere — while the caller who made the popup see-through
- * knows exactly which box is decoration and which is paper.
- *
- * The marker answers for the element it is on, never for its descendants: a
- * box painted inside a marked one is still surface, so a row can be marked and
- * its empty halves read as backdrop while presses on the controls it holds do
- * not dismiss anything. A descendant with `pointer-events: none` never becomes
- * a press target at all, so the marked box answers in its place — while the
- * same declaration on the marked box itself takes it out of hit-testing and
- * makes the marker unreachable (see warnAboutUnreachableOutsideRegions).
- */
-const OUTSIDE_REGION_ATTRIBUTE = "data-navi-popup-outside";
-
-/**
- * What a press landing on a region the caller declared as not-its-surface
- * does: exactly what the same press on the backdrop would do.
- *
- * Lives on the popup's own content element rather than in the backdrop's
- * handler, for both renderers: the backdrop is a sibling behind the popup
- * (never an ancestor), so a press inside the popup's box never reaches it.
- */
-const handlePressOnOutsideRegion = (
-  mouseDownEvent,
-  { popupEl, openController, pointerInteractionOutsideEffect },
-) => {
-  if (mouseDownEvent.button !== 0) {
-    return;
-  }
-  const { target } = mouseDownEvent;
-  if (!target.hasAttribute(OUTSIDE_REGION_ATTRIBUTE)) {
-    return;
-  }
-  if (openedDuringThisPress(openController)) {
-    // The release of the press that opened it is not somebody dismissing it
-    // (see openedDuringThisPress).
-    return;
-  }
-  // A popup opens inside its opener's own subtree, so a press on a region
-  // belonging to a popup nested in this one bubbles through here too — and it
-  // is a press on what is in front, not on this popup's own decoration.
-  if (
-    target.closest(`[navi-control="dialog"], [navi-control="popover"]`) !==
-    popupEl
-  ) {
-    return;
-  }
-  if (pointerInteractionOutsideEffect === "capture") {
-    mouseDownEvent.preventDefault();
-    return;
-  }
-  if (
-    pointerInteractionOutsideEffect === "close" ||
-    pointerInteractionOutsideEffect === "cancel"
-  ) {
-    openController.requestClose(mouseDownEvent, {
-      isCancel: pointerInteractionOutsideEffect === "cancel",
-    });
-  }
-};
-
-/**
- * Hears an outside press from the document itself, for a popup with no
- * backdrop of its own to catch one: a modal `<dialog>` (whose native
- * `::backdrop` dispatches nothing a handler can be put on) and any popup the
- * caller asked to leave the page reachable (`backdrop={false}`).
- *
- * The press is read and never taken: no `preventDefault`, no
- * `stopPropagation`, and the listener is on `document` rather than on
- * anything covering the page — so what the press landed on hears it too, in
- * the same gesture, and the popup only takes note. That is the whole point of
- * a popup with no wall: a press outside is a press on the page, and the page
- * answers it. The one popup where that cannot hold is the modal dialog, where
- * the browser has already made everything behind inert before this runs.
- *
- * `pressEventType` says which event IS the press, and the two callers want
- * opposite ones:
- *
- * - `"pointerdown"` for a popup with no wall: a page with no wall over it is
- *   a page whose own elements arbitrate their presses, and cancelling a
- *   `pointerdown` — what a drag source and a control keeping the focus where
- *   it is both do — suppresses every compatibility mouse event that would have
- *   followed it. The press happens, reaches its target, and no `mousedown` is
- *   ever dispatched for it. Reading the pointer event is reading the press
- *   itself, whatever anything does with it afterwards, and it is the same
- *   event the drag and surface detectors read.
- * - `"mousedown"` for the modal dialog, whose native `::backdrop` exists to
- *   spend the press. The page's controls act on `mousedown`, and on a touch
- *   screen that is not the same moment as `pointerdown`: the compatibility
- *   mouse events are synthesized at `touchend` and hit-tested again then.
- *   Closing on `pointerdown` takes the `::backdrop` away before that second
- *   hit-test, so the `mousedown` lands on whatever the page holds under the
- *   finger, and one tap both dismisses the dialog and presses the page. Read
- *   on `mousedown`, the wall is still up when the press the page acts on is
- *   aimed, and it catches it. Nothing behind a modal wall can cancel that
- *   press, since nothing behind it hears the `pointerdown` at all.
- *
- * Capture phase, so a handler downstream that stops propagation cannot keep
- * the popup open either — the press is still outside whatever is made of it.
- *
- * Returns a cleanup that removes the listener.
- */
-const armOutsidePressClose = (
-  popupEl,
-  {
-    openController,
-    pointerInteractionOutsideEffect,
-    pressEventType = "pointerdown",
-  },
-) => {
-  const onDocumentPointerDown = (pointerDownEvent) => {
-    if (pointerDownEvent.button !== 0) {
-      return;
-    }
-    if (openedDuringThisPress(openController)) {
-      // The release of the press that opened it is not somebody dismissing it
-      // (see openedDuringThisPress).
-      return;
-    }
-    // The press landed inside another popup: that is a press on what is in
-    // front, not outside. Asking the target where it lives rather than asking
-    // this popup whether it was pushed — a popup in front does not have to be
-    // one this popup knows about. In front means neither inside nor around: a
-    // popup nested in this one falls to the containment check below as the
-    // inside press it is, and one this popup opened INSIDE (a bubble rendered
-    // in a sheet's content) is around it, so what that popup holds is outside
-    // this one exactly like the rest of the page.
-    const popupUnderPointer = pointerDownEvent.target.closest?.(
-      `[navi-control="dialog"], [navi-control="popover"]`,
-    );
-    if (
-      popupUnderPointer &&
-      popupUnderPointer !== popupEl &&
-      !popupEl.contains(popupUnderPointer) &&
-      !popupUnderPointer.contains(popupEl)
-    ) {
-      return;
-    }
-    // Real DOM containment wins over the rectangle below — an element
-    // genuinely inside the popup (`overflow: visible`, a negative margin, an
-    // absolutely-positioned child) can be painted outside its border box, and
-    // a press there is not outside just because its coordinates are. The
-    // popup element itself is excluded (contains() answers true for it): a
-    // press on a modal dialog's native backdrop reports the dialog as its
-    // target, there being no `::backdrop` node to be one, so treating that as
-    // contained would keep the rectangle from ever running.
-    if (
-      pointerDownEvent.target !== popupEl &&
-      popupEl.contains(pointerDownEvent.target)
-    ) {
-      return;
-    }
-    const rect = popupEl.getBoundingClientRect();
-    const isOutside =
-      pointerDownEvent.clientX < rect.left ||
-      pointerDownEvent.clientX > rect.right ||
-      pointerDownEvent.clientY < rect.top ||
-      pointerDownEvent.clientY > rect.bottom;
-    if (!isOutside) {
-      return;
-    }
-    openController.requestClose(pointerDownEvent, {
-      isCancel: pointerInteractionOutsideEffect === "cancel",
-    });
-  };
-  document.addEventListener(pressEventType, onDocumentPointerDown, {
-    capture: true,
-  });
-  return () => {
-    document.removeEventListener(pressEventType, onDocumentPointerDown, {
-      capture: true,
-    });
-  };
-};
-
-/**
- * When a popup builds what it holds, and when it throws it away.
- *
- * A closed popup shows nothing, focuses nothing, and answers nothing: what it
- * holds is out of reach until it opens. Building that content at mount time
- * means a page carrying a handful of closed popups pays, on the very render
- * that decides how fast it appears, for content nobody has asked for — and
- * pays again on every subsequent measurement, since each of those nodes makes
- * the document the rest of the page queries bigger.
- *
- * So the content is built when the popup first opens, and stays built from
- * then on: closing is not throwing away, and a reopened popup finds its scroll
- * position, its half-typed form and its list state where it left them.
- *
- * It is built synchronously, from inside `openController.open()` and before
- * `openEffect` runs (see open_controller.js), so the popup still measures real
- * content when it positions and animates itself, and so anything inside it
- * still observes the opening the way it always did — mounted while the popup
- * reads as closed, told it opened right after (see
- * use_displayed_layout_effect.js).
- *
- * The `mount` prop moves that line. "closed" is two states, not one — never
- * opened yet, and closed again after an opening — and the four values answer
- * both at once:
- *
- * | mount             | before the first open       | after a close |
- * | ----------------- | --------------------------- | ------------- |
- * | "always"          | mounted                     | mounted       |
- * | "idle"            | mounted once the page idles | mounted       |
- * | "from-first-open" | not mounted                 | mounted       |
- * | "while-opened"    | not mounted                 | not mounted   |
- *
- * "always" is for content something else depends on before any opening: a
- * value the popup's owner reads off its own children, fields a form around it
- * collects on submit, a size measured from outside.
- *
- * "idle" is "always" minus the cost on the critical render: the page appears
- * without the content, and the browser builds it in an idle moment after
- * load — so by the time anyone clicks, it is usually already there.
- *
- * "while-opened" is the opposite end: content that must be rebuilt from
- * scratch every time, because what it shows is read once at build time and can
- * change while the popup is closed — an uncontrolled field seeded from a
- * `defaultValue`, a form whose fresh state is its initial state.
- *
- * On top of whichever value is picked, intent on the anchor warms the content:
- * a pointer entering the popup's anchor, or focus landing in it, builds the
- * content ahead of the click that will open it. Deferring the build to the
- * opening puts its whole cost in the frame right after the click — the frame
- * where a delay is felt hardest — while the ~100-300ms between hovering a
- * trigger and pressing it are free. The warming render is asynchronous
- * (batched, not flushed): nothing here needs the content in the DOM before
- * the click, only before the open that follows it.
- *
- * "while-opened" content is never warmed. That mode promises two things
- * warming would break: the content is built at open time (so a `defaultValue`
- * read at build time is fresh, not seeded at pointer-enter time), and it is
- * only ever mounted between an open and a close — unmounting happens on close,
- * so a warmed popup that never opens would keep its content in the document
- * indefinitely. Callers lean on that guarantee (e.g. several pickers sharing
- * one set of content ids because only one content exists at a time).
- */
-
-
-const MOUNT_DEFAULT = "from-first-open";
-
-// requestIdleCallback is missing from Safari; a timeout is close enough there.
-const requestIdle = (callback) =>
-  typeof requestIdleCallback === "function"
-    ? requestIdleCallback(callback)
-    : setTimeout(callback, 300);
-const cancelIdle = (id) =>
-  typeof cancelIdleCallback === "function"
-    ? cancelIdleCallback(id)
-    : clearTimeout(id);
-
-const usePopupContentMount = (
-  openController,
-  ref,
-  { mount = MOUNT_DEFAULT, anchor },
-) => {
-  const mountedAlways = mount === "always";
-  const [contentMounted, setContentMounted] = useState(
-    () => mountedAlways || openController.opened,
-  );
-  openController.mountContent = contentMounted
-    ? null
-    : () => {
-        flushSyncRendering(() => {
-          setContentMounted(true);
-        });
-      };
-  openController.unmountContent =
-    mount === "while-opened"
-      ? () => {
-          const element = ref?.current;
-          if (!element) {
-            setContentMounted(false);
-            return;
-          }
-          // The popup is still on screen while it plays its exit transition;
-          // emptying it right away would show that transition running on a
-          // blank surface.
-          whenTransitionSettles(element, () => {
-            if (openController.opened) {
-              // reopened while it was leaving — the content it holds is the
-              // one that open just asked for
-              return;
-            }
-            setContentMounted(false);
-          });
-        }
-      : null;
-  useLayoutEffect(() => {
-    if (mountedAlways) {
-      setContentMounted(true);
-    }
-  }, [mountedAlways]);
-  useEffect(() => {
-    if (mount !== "idle" || contentMounted) {
-      return undefined;
-    }
-    const idleId = requestIdle(() => {
-      setContentMounted(true);
-    });
-    return () => {
-      cancelIdle(idleId);
-    };
-  }, [mount, contentMounted]);
-  // Warm on intent (see the top comment; "while-opened" is excluded there).
-  // The anchor accepts the same shapes Popover resolves at open time — a
-  // string id, a ref, an element — but is resolved here at effect time: an id
-  // that matches nothing yet simply doesn't warm, the open still mounts the
-  // content like it always does.
-  useEffect(() => {
-    if (contentMounted || !anchor || mount === "while-opened") {
-      return undefined;
-    }
-    const anchorElement =
-      typeof anchor === "string"
-        ? document.getElementById(anchor)
-        : // A ref is unwrapped even when it holds nothing: an expandable with
-          // no UI part hands an empty ref over, and the ref object itself is
-          // truthy — it would reach addEventListener below and throw.
-          "current" in anchor
-          ? anchor.current
-          : anchor;
-    if (!anchorElement) {
-      return undefined;
-    }
-    const warm = () => {
-      setContentMounted(true);
-    };
-    anchorElement.addEventListener("pointerenter", warm);
-    anchorElement.addEventListener("focusin", warm);
-    return () => {
-      anchorElement.removeEventListener("pointerenter", warm);
-      anchorElement.removeEventListener("focusin", warm);
-    };
-  }, [contentMounted, anchor, mount]);
-
-  return contentMounted;
 };
 
 installImportMetaCssBuild(import.meta);
@@ -59796,7 +59836,9 @@ const useDialogProps = props => {
   const positionPropsRef = useRef(null);
   positionPropsRef.current = {
     positionArea,
-    marginWithContainer
+    marginWithContainer,
+    expandX,
+    expandY
   };
   const repositionRef = useRef(null);
   // The element this dialog came out of, held from the opening to the closing.
@@ -60102,7 +60144,9 @@ const useDialogProps = props => {
     const positionDialog = triggerEvent => {
       const {
         positionArea,
-        marginWithContainer
+        marginWithContainer,
+        expandX,
+        expandY
       } = positionPropsRef.current;
       // The dialog's PARENT, not the dialog: a modal one is promoted to the
       // top layer and would answer "the viewport" about itself, when what a
@@ -60121,11 +60165,18 @@ const useDialogProps = props => {
       // distance from the edges. Written resolved (not as the raw prop) so a
       // spacing token stays valid inside the caps' own calc().
       dialogEl.style.setProperty("--x-dialog-container-spacing", `${marginWithContainerInPixels}px`);
+      // Stretched on both axes, the dialog's box is the container's net of the
+      // gap — the same thing its CSS width/height say (see [data-expand-x],
+      // [data-expand-y]) — so the placement derives it instead of measuring
+      // it: a measurement here lays out the dialog's whole content, rows and
+      // all, for a number already known.
+      const fill = expandX && expandY;
       const pickOptions = {
         positionArea,
         container: positionedAncestor,
         marginWithContainer: marginWithContainerInPixels,
-        event: triggerEvent
+        event: triggerEvent,
+        fill
       };
       let position = pickPositionRelativeTo(dialogEl, null, pickOptions);
       applyDialogPosition(position);
@@ -60140,7 +60191,9 @@ const useDialogProps = props => {
       // frame too high/low before the ResizeObserver watching this same
       // element (rectEffect.observeSize below) ever gets a chance to
       // correct it — that one only reacts on the *next* animation frame.
-      if (dialogEl.offsetWidth !== position.width || dialogEl.offsetHeight !== position.height) {
+      // A box derived from the container was never measured, and the caps
+      // cannot change it: no second pass.
+      if (!fill && (dialogEl.offsetWidth !== position.width || dialogEl.offsetHeight !== position.height)) {
         position = pickPositionRelativeTo(dialogEl, null, pickOptions);
         applyDialogPosition(position);
       }

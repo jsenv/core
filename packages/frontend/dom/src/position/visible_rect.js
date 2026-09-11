@@ -724,7 +724,8 @@ export const visibleRectEffect = (
         // which is the opposite answer — so a surface closing later goes on
         // counting, unasked.
         const elementIsInAncestorFacade =
-          !openableAncestorIsOpen && isDisplayedDespiteClosedAncestor(element);
+          !openableAncestorIsOpen &&
+          isDisplayedDespiteClosedAncestor(element, openableAncestor);
         if (!openableAncestorIsOpen && !elementIsInAncestorFacade) {
           ancestorClosedCount++;
           pauseResizeWatching();
@@ -1138,6 +1139,11 @@ const toContainerAlignedPosition = (value) => {
  *   many px of that same edge — avoids the (wider) element overflowing past it. 0 disables
  *   the snap entirely.
  * @param {number} [options.minLeft=0] - Minimum left coordinate (document-relative).
+ * @param {boolean} [options.fill=false] - `element` is known to take the whole available
+ *   area net of `marginWithContainer`, on both axes (a dialog stretched to its container
+ *   by CSS). Its box is then derived from the container rather than measured: reading
+ *   offsetWidth/offsetHeight forces a layout of everything the element holds, for a number
+ *   the caller already knows. Only meaningful without an `anchor`.
  * @param {HTMLElement|null} [options.container] - The container `element` is genuinely
  *   `position: absolute` relative to (its own containing block) — decoupled from whether
  *   there's a real `anchor`, since `element` can be container-relative either way (e.g. the
@@ -1178,6 +1184,7 @@ export const pickPositionRelativeTo = (
     marginWithAnchor = 0,
     alignToAnchorBox = "border-box",
     marginWithContainer = 0,
+    fill = false,
     container,
   } = {},
 ) => {
@@ -1324,8 +1331,12 @@ export const pickPositionRelativeTo = (
   // instant (a popover using animation="scaling"/"expand-*") — so
   // getBoundingClientRect() answers where it is painted, at its *shrunk*
   // mid-animation size, instead of the box being measured here.
-  const elementWidth = element.offsetWidth;
-  const elementHeight = element.offsetHeight;
+  const elementWidth = fill
+    ? availableWidth - 2 * marginWithContainer
+    : element.offsetWidth;
+  const elementHeight = fill
+    ? availableHeight - 2 * marginWithContainer
+    : element.offsetHeight;
   const anchorWidth = anchorRight - anchorLeft;
   const anchorHeight = anchorBottom - anchorTop;
 

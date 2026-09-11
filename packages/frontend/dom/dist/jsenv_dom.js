@@ -15790,9 +15790,9 @@ const isAncestorOpen = (ancestor) => {
 };
 
 /**
- * Whether `element` is on screen even though the openable ancestor it was
- * resolved against is closed. Ask it only about an ancestor `isAncestorOpen`
- * already said is closed.
+ * Whether `element` is on screen even though `ancestor`, the openable ancestor
+ * it was resolved against, is closed. Ask it only about an ancestor
+ * `isAncestorOpen` already said is closed.
  *
  * `[aria-expanded]` in OPENABLE_SELECTOR covers two opposite kinds of element:
  * the surface being opened (a <dialog>, a [popover], and the plain <div> navi's
@@ -15802,11 +15802,19 @@ const isAncestorOpen = (ancestor) => {
  * aria-expanded describes the popup it controls rather than its own contents:
  * its façade stays on screen the entire time aria-expanded is "false".
  *
- * Markup tells the two apart badly, so ask the layout instead. A closed surface
- * is display:none, natively for [popover]/<dialog> and through the library's
- * own closed-state CSS ([navi-hidden], :not([popover])) for the custom
- * renderers — so nothing inside one answers true here, while everything a
- * trigger keeps on screen does.
+ * A <dialog> or a [popover] is only ever a surface, and the UA hides a closed
+ * one outright (display: none), so nothing inside has a box: answered from the
+ * markup, without touching the layout. Anything else — a <details> whose
+ * <summary> stays on screen, a bare [aria-expanded] — is asked of the layout
+ * instead: a closed custom surface is display:none through the library's own
+ * closed-state CSS ([navi-hidden], :not([popover])), so nothing inside one
+ * answers true here, while everything a trigger keeps on screen does.
+ *
+ * The layout question is a forced style recalculation. Asked once per element
+ * from a mount that also writes styles between the questions, each one costs a
+ * recalculation of everything dirtied since the last, so a caller that knows
+ * the answer another way (a surface it is itself building the content of, see
+ * @jsenv/navi's use_displayed_layout_effect.js) should not reach this.
  *
  * Ask it about an ancestor that is closed AND settled — on mount, or when
  * setting up a long-lived observer. A surface animating its way out still has a
@@ -15814,7 +15822,10 @@ const isAncestorOpen = (ancestor) => {
  * display/overlay), so asked at the instant one closes this says "on screen"
  * about something on its way off it.
  */
-const isDisplayedDespiteClosedAncestor = (element) => {
+const isDisplayedDespiteClosedAncestor = (element, ancestor) => {
+  if (ancestor.tagName === "DIALOG" || ancestor.hasAttribute("popover")) {
+    return false;
+  }
   if (typeof element.checkVisibility !== "function") {
     // Nothing to tell the two apart with: leave the caller treating the closed
     // ancestor as hiding this element.
@@ -17141,7 +17152,8 @@ const visibleRectEffect = (
         // which is the opposite answer — so a surface closing later goes on
         // counting, unasked.
         const elementIsInAncestorFacade =
-          !openableAncestorIsOpen && isDisplayedDespiteClosedAncestor(element);
+          !openableAncestorIsOpen &&
+          isDisplayedDespiteClosedAncestor(element, openableAncestor);
         if (!openableAncestorIsOpen && !elementIsInAncestorFacade) {
           ancestorClosedCount++;
           pauseResizeWatching();
@@ -17555,6 +17567,11 @@ const toContainerAlignedPosition = (value) => {
  *   many px of that same edge — avoids the (wider) element overflowing past it. 0 disables
  *   the snap entirely.
  * @param {number} [options.minLeft=0] - Minimum left coordinate (document-relative).
+ * @param {boolean} [options.fill=false] - `element` is known to take the whole available
+ *   area net of `marginWithContainer`, on both axes (a dialog stretched to its container
+ *   by CSS). Its box is then derived from the container rather than measured: reading
+ *   offsetWidth/offsetHeight forces a layout of everything the element holds, for a number
+ *   the caller already knows. Only meaningful without an `anchor`.
  * @param {HTMLElement|null} [options.container] - The container `element` is genuinely
  *   `position: absolute` relative to (its own containing block) — decoupled from whether
  *   there's a real `anchor`, since `element` can be container-relative either way (e.g. the
@@ -17595,6 +17612,7 @@ const pickPositionRelativeTo = (
     marginWithAnchor = 0,
     alignToAnchorBox = "border-box",
     marginWithContainer = 0,
+    fill = false,
     container,
   } = {},
 ) => {
@@ -17741,8 +17759,12 @@ const pickPositionRelativeTo = (
   // instant (a popover using animation="scaling"/"expand-*") — so
   // getBoundingClientRect() answers where it is painted, at its *shrunk*
   // mid-animation size, instead of the box being measured here.
-  const elementWidth = element.offsetWidth;
-  const elementHeight = element.offsetHeight;
+  const elementWidth = fill
+    ? availableWidth - 2 * marginWithContainer
+    : element.offsetWidth;
+  const elementHeight = fill
+    ? availableHeight - 2 * marginWithContainer
+    : element.offsetHeight;
   const anchorWidth = anchorRight - anchorLeft;
   const anchorHeight = anchorBottom - anchorTop;
 

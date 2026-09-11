@@ -68,6 +68,14 @@ import { whenTransitionSettles } from "./popup_shared.js";
 
 export const MOUNT_DEFAULT = "from-first-open";
 
+// The popups whose content is being built by their own opening, for the length
+// of that build. What mounts inside one is not on screen (the popup is still
+// closed) and will be revealed by the open that follows — an answer
+// use_displayed_layout_effect.js reads from here rather than from the layout.
+const popupsMountingContentForOpen = new Set();
+export const isMountingContentForOpen = (popupElement) =>
+  popupsMountingContentForOpen.has(popupElement);
+
 // requestIdleCallback is missing from Safari; a timeout is close enough there.
 const requestIdle = (callback) =>
   typeof requestIdleCallback === "function"
@@ -90,9 +98,19 @@ export const usePopupContentMount = (
   openController.mountContent = contentMounted
     ? null
     : () => {
-        flushSyncRendering(() => {
-          setContentMounted(true);
-        });
+        const popupElement = ref?.current;
+        if (popupElement) {
+          popupsMountingContentForOpen.add(popupElement);
+        }
+        try {
+          flushSyncRendering(() => {
+            setContentMounted(true);
+          });
+        } finally {
+          if (popupElement) {
+            popupsMountingContentForOpen.delete(popupElement);
+          }
+        }
       };
   openController.unmountContent =
     mount === "while-opened"
