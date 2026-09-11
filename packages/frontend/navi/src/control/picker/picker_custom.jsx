@@ -1192,6 +1192,11 @@ const PickerCalloutPopup = ({
       onnavi_request_confirm?.(e);
     };
     calloutElement.addEventListener("navi_request_confirm", forwardConfirm);
+    // Said once the content is in the shown callout: what the content defers
+    // until it is displayed (useDisplayedLayoutEffect, watching this attribute)
+    // then measures it where it is drawn. Same call stack as the open, like
+    // Popover's own — see observeAncestorOpenState in @jsenv/dom.
+    dock.setAttribute("aria-expanded", "true");
     return (closeEvent) => {
       calloutElement.removeEventListener(
         "navi_request_confirm",
@@ -1199,17 +1204,25 @@ const PickerCalloutPopup = ({
       );
       calloutManager.removeOpenToken(PICKER_CALLOUT_CONTENT_TOKEN, closeEvent);
       dock.appendChild(host);
+      dock.setAttribute("aria-expanded", "false");
     };
   };
 
   return (
     // What the picker addresses (aria-controls, the request events it
     // forwards); the callout itself lives where the callout manager puts it.
+    // aria-expanded here, on the dock rather than on the content element: the
+    // openable ancestor the content finds at mount (the only time it looks),
+    // and one that is no ancestor of the content once the callout holds it —
+    // so a --navi-close said in there still resolves to the callout element,
+    // the closest [aria-expanded] from the button. The open effect keeps it
+    // current; preact leaves it alone, the prop never changes.
     <Box
       as="span"
       ref={ref}
       id={id}
       className="navi_picker_callout_dock"
+      aria-expanded="false"
       style={{ display: "contents" }}
       onnavi_request_open={onnavi_request_open}
       onnavi_request_close={onnavi_request_close}
