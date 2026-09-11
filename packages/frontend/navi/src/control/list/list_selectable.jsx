@@ -247,47 +247,6 @@ const ListSelectable = (props) => {
   props.name = props.name || `listbox_${defaultName}`;
   const { ref, multiple, deselectable, focusGroupDirection, focusGroupWrap } =
     props;
-  // `kept` is what the list holds as it is asked, which is not the same as what
-  // its rows say: a list draws the rows it needs and no more, so the selected
-  // one may be scrolled out of the window or filtered out of the view, and a
-  // row that is not there cannot say it is not selected. Reading it off the
-  // group rather than remembering it here is what makes a value put ON the list
-  // (a `value` prop, a signal, a reopened popup) replace the whole selection —
-  // a private memory of its own would go on holding the rows it could not see
-  // being unselected.
-  //
-  // `fallbackState` is the empty of the shape the list declared below
-  // (`stateType`): `[]` for a multiple list, nothing for a single one. Taking
-  // it is what lets an emptied list say "empty" — `undefined` is the word for
-  // "unset", and a bound stateSignal reads that as "nothing decided here, go
-  // back to the default" (see docs/control_value.md), which is how a list
-  // emptied down to its last row puts that row back on reload.
-  const aggregateChildStates = (children, fallbackState, kept) => {
-    if (multiple) {
-      const drawnValues = new Set(children.map((child) => child.props.value));
-      const stillSelected = Array.isArray(kept)
-        ? kept.filter((value) => !drawnValues.has(value))
-        : [];
-      for (const child of children) {
-        if (child.uiState !== undefined) {
-          stillSelected.push(child.uiState);
-        }
-      }
-      return stillSelected.length === 0 ? fallbackState : stillSelected;
-    }
-    for (const child of children) {
-      if (child.uiState !== undefined) {
-        return child.uiState;
-      }
-    }
-    // No drawn row claims it. If the row that held it IS drawn, it was really
-    // deselected; if it is not, the list keeps what it holds.
-    const keptIsDrawn = children.some((child) => child.props.value === kept);
-    if (keptIsDrawn) {
-      return undefined;
-    }
-    return kept;
-  };
   const [listControlRootProps, listControlProps, childrenWrapperProps] =
     useControlgroupProps(
       {
@@ -302,9 +261,15 @@ const ListSelectable = (props) => {
         ...props,
       },
       {
+        // A list draws the rows it needs and no more, so a selected row may be
+        // scrolled out of the window or filtered out of the view: the default
+        // aggregate of these two groups keeps a value whose row is not drawn
+        // (see GROUP_DEFAULTS in ui_state_controller.js). `stateType` is what
+        // an emptied multiple list says — `[]`, not `undefined`, which a bound
+        // stateSignal reads as "nothing decided here, go back to the default"
+        // (see docs/control_value.md).
         stateType: multiple ? "array" : "",
         controlType: multiple ? "checkbox_group" : "radio_group",
-        aggregateChildStates,
       },
     );
   const uiGroupStateController = getUIStateControllerById(listControlProps.id);

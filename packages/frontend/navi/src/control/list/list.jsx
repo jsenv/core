@@ -996,6 +996,7 @@ const ListUI = (props) => {
     ref,
     tracker,
     renderBudget,
+    renderBudgetSteady: renderBudgetAfterPaint,
     virtualItemSize,
     virtual,
     scrolled,
@@ -1371,6 +1372,7 @@ const useListScrollSync = ({
   ref,
   tracker,
   renderBudget,
+  renderBudgetSteady,
   virtualItemSize,
   virtual,
   scrolled,
@@ -2165,31 +2167,33 @@ const useListScrollSync = ({
     }
   });
 
-  // Scroll listener — slides the window as the user scrolls.
-  useLayoutEffect(() => {
-    const listContainerEl = ref.current;
-    if (!listContainerEl) {
-      return undefined;
+  // The window the visible band asks for, decided from geometry: the band's
+  // two edges in row units, from where the scroller's viewport cuts the list
+  // and the row size. What has to be drawn is everything between the edges,
+  // plus what the scroll is about to bring — so the window is judged on the
+  // rows it keeps AHEAD of the band, in the direction the user goes, and moves
+  // once those fall under half a screen. Re-framed, it puts three quarters of
+  // its spare rows ahead and one quarter behind: a window centred on the band
+  // is due to move again as soon as the band has crossed the few rows it kept
+  // ahead, and each move is rows drawn while the user waits for them.
+  // Without a row size there is no geometry to reason on; the row under a
+  // probe stands in for the band, framed the old way.
+  const scrollDirectionRef = useRef(1);
+  const windowSlidRef = useRef(false);
+  const budgetWarnedRef = useRef(false);
+  const evaluateWindow = (reason) => {
+    const total = virtual.totalSignal.peek();
+    if (total <= renderBudget) {
+      return;
     }
     const scrollerEl = getScroller();
     const listEl = getListEl();
-    const onScroll = () => {
-      updateCurrentScroll();
-      // Where the user is now is where things must be held from now on.
-      anchorRef.current = null;
-      if (scrolledByListRef.current) {
-        // The window stays where it is — the position it would be re-derived
-        // from was chosen to keep the rows still — but where the list is has
-        // genuinely changed, and whoever keeps that position must hear it.
-        scrolledByListRef.current = false;
-        reportPosition();
-        return;
-      }
-      reportPosition();
-      const total = virtual.totalSignal.peek();
-      if (total <= renderBudget) {
-        return;
-      }
+    if (!scrollerEl || !listEl) {
+      return;
+    }
+    const { start, end } = renderWindowRef.current;
+    const virtualItemSize = virtualItemSizeSignal.peek();
+    if (virtualItemSize === 0) {
       const scrollInfo = getScrollInfo({
         scrollValues: {
           left: scrollerEl.scrollLeft,
@@ -2205,12 +2209,7 @@ const useListScrollSync = ({
       if (!scrollInfo) {
         return;
       }
-      const { index, reason } = scrollInfo;
-      // Recentering on every row crossed would rebuild the whole window a few
-      // times a second, and a window rebuilt is every row of it rendered
-      // again. It only moves once what is on screen comes near one of its
-      // edges — until then, it already holds what has to be drawn.
-      const { start, end } = renderWindowRef.current;
+      const { index } = scrollInfo;
       const margin = Math.floor(renderBudget / 4);
       const farFromStart = index - start >= margin || start === 0;
       const farFromEnd = end - index > margin || end === total;
@@ -2218,12 +2217,134 @@ const useListScrollSync = ({
         return;
       }
       const half = Math.floor(renderBudget / 2);
-      let newStart = Math.max(0, index - half);
-      let newEnd = Math.min(total, newStart + renderBudget);
-      if (newEnd === total) {
-        newStart = Math.max(0, total - renderBudget);
+      let newStart = index - half < 0 ? 0 : index - half;
+      let newEnd = newStart + renderBudget;
+      if (newEnd > total) {
+        newEnd = total;
+        newStart = total - renderBudget < 0 ? 0 : total - renderBudget;
       }
-      updateRenderWindow(newStart, newEnd, reason);
+      windowSlidRef.current = true;
+      updateRenderWindow(newStart, newEnd, `${reason}: ${scrollInfo.reason}`);
+      return;
+    }
+    const viewportRect = getScrollerViewportRect(scrollerEl);
+    const listRect = listEl.getBoundingClientRect();
+    const viewportFrom = horizontal ? viewportRect.left : viewportRect.top;
+    const viewportTo = horizontal ? viewportRect.right : viewportRect.bottom;
+    const listFrom = horizontal ? listRect.left : listRect.top;
+    let bandStart = Math.floor((viewportFrom - listFrom) / virtualItemSize);
+    // Exclusive, like the window's end.
+    let bandEnd = Math.ceil((viewportTo - listFrom) / virtualItemSize);
+    if (bandStart < 0) {
+      bandStart = 0;
+    }
+    if (bandEnd > total) {
+      bandEnd = total;
+    }
+    if (bandEnd <= bandStart) {
+      return;
+    }
+    const visibleCount = bandEnd - bandStart;
+    const spare = renderBudget - visibleCount;
+    if (
+      import.meta.dev &&
+      !budgetWarnedRef.current &&
+      renderBudget === renderBudgetSteady &&
+      spare < 2
+    ) {
+      budgetWarnedRef.current = true;
+      console.warn(
+        `List: renderBudget=${renderBudget} draws ${renderBudget} rows and this scroller shows ${visibleCount} at once: rows will go blank as it scrolls. Give it room for a screen ahead — ${visibleCount * 2} or more.`,
+      );
+    }
+    const behind = spare > 0 ? Math.floor(spare / 4) : 0;
+    const ahead = spare > 0 ? spare - behind : 0;
+    const halfScreen = Math.ceil(visibleCount / 2);
+    const aheadNeeded =
+      halfScreen < ahead / 2 ? halfScreen : Math.floor(ahead / 2);
+    const behindNeeded =
+      halfScreen < behind / 2 ? halfScreen : Math.floor(behind / 2);
+    const forward = scrollDirectionRef.current > 0;
+    const rowsAheadOfBand = forward ? end - bandEnd : bandStart - start;
+    const rowsBehindBand = forward ? bandStart - start : end - bandEnd;
+    const atEdgeAhead = forward ? end === total : start === 0;
+    const atEdgeBehind = forward ? start === 0 : end === total;
+    const coversBand = start <= bandStart && end >= bandEnd;
+    const coversAhead = atEdgeAhead || rowsAheadOfBand >= aheadNeeded;
+    const coversBehind = atEdgeBehind || rowsBehindBand >= behindNeeded;
+    if (coversBand && coversAhead && coversBehind) {
+      return;
+    }
+    let newStart = forward
+      ? bandStart - behind
+      : bandEnd + behind - renderBudget;
+    if (newStart < 0) {
+      newStart = 0;
+    }
+    let newEnd = newStart + renderBudget;
+    if (newEnd > total) {
+      newEnd = total;
+      newStart = total - renderBudget < 0 ? 0 : total - renderBudget;
+    }
+    windowSlidRef.current = true;
+    updateRenderWindow(
+      newStart,
+      newEnd,
+      `${reason}: rows ${bandStart}-${bandEnd} on screen, going ${forward ? "forward" : "backward"}`,
+    );
+  };
+  // A slide is judged again once its rows are laid out: the scroll had moved
+  // on while the rows were being drawn, or the anchoring of this very commit
+  // moved it, and a window that stops short of the screen's edge with no
+  // scroll event to come would stay short for good. On the next frame, after
+  // the layout this commit's anchoring settles on.
+  useLayoutEffect(() => {
+    if (!windowSlidRef.current) {
+      return undefined;
+    }
+    windowSlidRef.current = false;
+    const frameId = requestAnimationFrame(() => {
+      evaluateWindow("after slide");
+    });
+    return () => {
+      cancelAnimationFrame(frameId);
+    };
+  }, [renderWindow]);
+
+  // Scroll listener — slides the window as the user scrolls.
+  useLayoutEffect(() => {
+    const listContainerEl = ref.current;
+    if (!listContainerEl) {
+      return undefined;
+    }
+    const scrollerEl = getScroller();
+    const onScroll = () => {
+      // Which way the user is going, read before the position is stored: what
+      // the window keeps ahead is ahead of this.
+      const previousScroll = currentScrollRef.current;
+      if (previousScroll) {
+        const delta = horizontal
+          ? scrollerEl.scrollLeft - previousScroll.left
+          : scrollerEl.scrollTop - previousScroll.top;
+        if (delta > 0) {
+          scrollDirectionRef.current = 1;
+        } else if (delta < 0) {
+          scrollDirectionRef.current = -1;
+        }
+      }
+      updateCurrentScroll();
+      // Where the user is now is where things must be held from now on.
+      anchorRef.current = null;
+      if (scrolledByListRef.current) {
+        // The window stays where it is — the position it would be re-derived
+        // from was chosen to keep the rows still — but where the list is has
+        // genuinely changed, and whoever keeps that position must hear it.
+        scrolledByListRef.current = false;
+        reportPosition();
+        return;
+      }
+      reportPosition();
+      evaluateWindow("scroll");
     };
     // A page-level scroller does not emit "scroll" on the element itself
     // (document.scrollingElement); the document does.
@@ -5367,8 +5488,11 @@ const ListResolved = /*#__PURE__*/ createComponentResolver([
  *   window, which slides as the user scrolls while fillers hold the room of
  *   the rows outside it. Rows declared one by one as `<List.Item>` children
  *   are all drawn, whatever this says — a list with more than a few dozen rows
- *   gives them to a run (see docs/scroll.md, "Many rows"). Below 30 the list
- *   warns: a window shorter than a tall screen shows blank fillers.
+ *   gives them to a run (see docs/scroll.md, "Many rows"). The window keeps
+ *   most of its spare rows ahead of the scroll, and moves once those fall
+ *   under half a screen; it has to be larger than what the scroller shows at
+ *   once, with room for that lookahead — the list warns below 30, and when a
+ *   budget leaves fewer than two rows beyond the screen.
  *
  *   `{ initial, after }` for a list drawn in the click that opens it (a popup):
  *   `initial` rows in the commit the browser paints first — about what a phone

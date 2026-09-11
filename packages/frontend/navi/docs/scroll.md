@@ -346,10 +346,12 @@ sheet, a handful of tabs. A collection whose size the caller does not decide
 The run draws only the rows inside the **render window** — `renderBudget` of
 them, 100 by default — and holds the room of the others with fillers, so the
 scrollbar says how long the collection is and the DOM says how many rows fit a
-screen and some. The window slides as the user scrolls, and moves only when
-what is on screen nears one of its edges: a row crossed is not a window
-rebuilt. Below 30 the list warns, because a window shorter than a tall screen
-shows blank fillers under the last row.
+screen and some. The window slides as the user scrolls: it keeps three
+quarters of its spare rows ahead of the direction the user goes, and moves
+once those fall under half a screen — a row crossed is not a window rebuilt,
+and a row reached is never a blank one. So the budget has to exceed what the
+scroller shows at once, with room for that lookahead: the list warns below
+30, and when a budget leaves fewer than two rows beyond the screen.
 
 ### The first paint of a list that opens in a click
 

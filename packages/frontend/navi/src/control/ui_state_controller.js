@@ -977,6 +977,46 @@ const acknowledgeOwnAction = (controller) => {
   controller.acknowledgeUIState();
 };
 
+// What a group of checkboxes or radios is worth is a claim about values, and
+// a value whose box is not there cannot be contradicted by that box: a row
+// scrolled out of a virtualized list, a filtered-out option, a whole page being
+// parked while a route action reruns — its children leave one at a time, and
+// each partial reading would otherwise be taken for the answer and written
+// into whatever the group is bound to (an array signal emptied down to `[]`
+// by its own unmount). `kept` is what the group holds as it is asked; a value
+// in it stays until a DRAWN child carrying that value says otherwise.
+//
+// Read off the group rather than remembered here on purpose: a value put ON
+// the group (a `value` prop, a signal, a reopened popup) replaces the whole
+// selection, and a private memory would go on holding the rows it could not
+// see being unselected.
+const keptAndCheckedChildUIStates = (children, fallbackState, kept) => {
+  const drawnValues = new Set(children.map((child) => child.props.value));
+  const values = Array.isArray(kept)
+    ? kept.filter((value) => !drawnValues.has(value))
+    : [];
+  for (const child of children) {
+    if (child.uiState !== undefined) {
+      values.push(child.uiState);
+    }
+  }
+  return values.length === 0 ? undefined : values;
+};
+const keptOrFirstDefinedChildUIState = (children, fallbackState, kept) => {
+  for (const child of children) {
+    if (child.uiState !== undefined) {
+      return child.uiState;
+    }
+  }
+  // No drawn child claims it. If the child that held it IS drawn, it was really
+  // deselected; if it is not, the group keeps what it holds.
+  const keptIsDrawn = children.some((child) => child.props.value === kept);
+  if (keptIsDrawn) {
+    return undefined;
+  }
+  return kept;
+};
+
 // Default aggregate/distribute implementations keyed by controlType or stateType.
 // Looked up in useUIGroupStateController to fill in omitted aggregateChildStates /
 // distributeChildUIState. If neither a default nor an explicit impl is found for a
@@ -985,7 +1025,7 @@ const GROUP_DEFAULTS = {
   radio_group: {
     childControlFilter: (child) =>
       child.controlType === "input" && child.controlHostProps?.type === "radio",
-    aggregateChildStates: firstDefinedChildUIState,
+    aggregateChildStates: keptOrFirstDefinedChildUIState,
     distributeChildUIState: (newUIState, childUIStateController) => {
       const childSelected = childUIStateController.props.value === newUIState;
       if (childSelected) {
@@ -998,16 +1038,7 @@ const GROUP_DEFAULTS = {
     childControlFilter: (child) =>
       child.controlType === "input" &&
       child.controlHostProps?.type === "checkbox",
-    aggregateChildStates: (children) => {
-      const values = [];
-      for (const child of children) {
-        const childUIState = child.uiState;
-        if (childUIState !== undefined) {
-          values.push(childUIState);
-        }
-      }
-      return values.length === 0 ? undefined : values;
-    },
+    aggregateChildStates: keptAndCheckedChildUIStates,
     distributeChildUIState: (newUIState, childUIStateController) => {
       const childSelected =
         Array.isArray(newUIState) &&

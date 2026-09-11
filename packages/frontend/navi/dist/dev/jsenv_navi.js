@@ -34689,19 +34689,27 @@ const writeInSignal = (signal, value, { history }) => {
 // is open (`?seat=<gameId>` over a list of cards), and closed is the signal
 // holding none of their values — `undefined`, which a state signal reads as
 // its default.
+//
+// A popup without a `value` reads anything the signal holds — save `false`,
+// `null` and `undefined` — as open: a single sheet bound to `?open=<id>` is
+// open on whichever id the address names, and the id is the popup's content
+// to read, not its to write. Opening writes `true` only into a signal that
+// reads closed; closing writes `false` where the signal held `true`, so a
+// boolean signal keeps its boolean, and `undefined` for anything else.
 const writeOpenedInSignal = (signal, opened, event, popupValue) => {
-  if (readOpened(signal.peek(), popupValue) === opened) {
+  const signalValue = signal.peek();
+  if (readOpened(signalValue, popupValue) === opened) {
     // The signal already says so, meaning this open/close IS what it asked
     // for: a back press that took the popup out of the url, the application
     // writing it. Nothing to write back — and nothing to go back to either,
     // since the navigation navBack would undo is the one that asked for this.
     return;
   }
-  const closedValue = popupValue === undefined ? false : undefined;
   if (opened) {
     signal.value = popupValue === undefined ? true : popupValue;
     return;
   }
+  const closedValue = readClosedValue(signalValue);
   if (
     signal.options?.getHistory?.() === "push" &&
     // Nothing of this document behind: the popup was opened by the url itself
@@ -34722,9 +34730,14 @@ const writeOpenedInSignal = (signal, opened, event, popupValue) => {
 };
 const readOpened = (signalValue, popupValue) => {
   if (popupValue === undefined) {
-    return signalValue;
+    return (
+      signalValue !== undefined && signalValue !== null && signalValue !== false
+    );
   }
   return signalValue === popupValue;
+};
+const readClosedValue = (openSignalValue) => {
+  return openSignalValue === true ? false : undefined;
 };
 
 /**
@@ -34780,6 +34793,13 @@ const useOpenPropsEffectOnOpenController = (
     : signal
       ? readOpened(signal.value, value)
       : props.open;
+  // What the signal holds while it reads open — `true`, the popup's `value`,
+  // or the id a single sheet is open on. Put back when a close is refused,
+  // since by then the signal has been written closed.
+  const openSignalValueRef = useRef(undefined);
+  if (signal && open) {
+    openSignalValueRef.current = signal.value;
+  }
   // Assigned on every render, like openEffect, so it always closes over the
   // latest prop: a popup that opens or closes on its own (Escape, backdrop, a
   // --navi-close command) writes what happened where the caller keeps it, so
@@ -34860,10 +34880,11 @@ const useOpenPropsEffectOnOpenController = (
     // request already reads in the signal, and with a `value` what the
     // signal holds may be another popup's, which the write would erase.
     if (signal && openController.opened !== open) {
-      const opened = openController.opened;
       writeInSignal(
         signal,
-        value === undefined ? opened : opened ? value : undefined,
+        openController.opened
+          ? openSignalValueRef.current
+          : readClosedValue(signal.peek()),
         { history: "replace" },
       );
     }
@@ -37410,6 +37431,46 @@ const acknowledgeOwnAction = (controller) => {
   controller.acknowledgeUIState();
 };
 
+// What a group of checkboxes or radios is worth is a claim about values, and
+// a value whose box is not there cannot be contradicted by that box: a row
+// scrolled out of a virtualized list, a filtered-out option, a whole page being
+// parked while a route action reruns — its children leave one at a time, and
+// each partial reading would otherwise be taken for the answer and written
+// into whatever the group is bound to (an array signal emptied down to `[]`
+// by its own unmount). `kept` is what the group holds as it is asked; a value
+// in it stays until a DRAWN child carrying that value says otherwise.
+//
+// Read off the group rather than remembered here on purpose: a value put ON
+// the group (a `value` prop, a signal, a reopened popup) replaces the whole
+// selection, and a private memory would go on holding the rows it could not
+// see being unselected.
+const keptAndCheckedChildUIStates = (children, fallbackState, kept) => {
+  const drawnValues = new Set(children.map((child) => child.props.value));
+  const values = Array.isArray(kept)
+    ? kept.filter((value) => !drawnValues.has(value))
+    : [];
+  for (const child of children) {
+    if (child.uiState !== undefined) {
+      values.push(child.uiState);
+    }
+  }
+  return values.length === 0 ? undefined : values;
+};
+const keptOrFirstDefinedChildUIState = (children, fallbackState, kept) => {
+  for (const child of children) {
+    if (child.uiState !== undefined) {
+      return child.uiState;
+    }
+  }
+  // No drawn child claims it. If the child that held it IS drawn, it was really
+  // deselected; if it is not, the group keeps what it holds.
+  const keptIsDrawn = children.some((child) => child.props.value === kept);
+  if (keptIsDrawn) {
+    return undefined;
+  }
+  return kept;
+};
+
 // Default aggregate/distribute implementations keyed by controlType or stateType.
 // Looked up in useUIGroupStateController to fill in omitted aggregateChildStates /
 // distributeChildUIState. If neither a default nor an explicit impl is found for a
@@ -37418,7 +37479,7 @@ const GROUP_DEFAULTS = {
   radio_group: {
     childControlFilter: (child) =>
       child.controlType === "input" && child.controlHostProps?.type === "radio",
-    aggregateChildStates: firstDefinedChildUIState,
+    aggregateChildStates: keptOrFirstDefinedChildUIState,
     distributeChildUIState: (newUIState, childUIStateController) => {
       const childSelected = childUIStateController.props.value === newUIState;
       if (childSelected) {
@@ -37431,16 +37492,7 @@ const GROUP_DEFAULTS = {
     childControlFilter: (child) =>
       child.controlType === "input" &&
       child.controlHostProps?.type === "checkbox",
-    aggregateChildStates: (children) => {
-      const values = [];
-      for (const child of children) {
-        const childUIState = child.uiState;
-        if (childUIState !== undefined) {
-          values.push(childUIState);
-        }
-      }
-      return values.length === 0 ? undefined : values;
-    },
+    aggregateChildStates: keptAndCheckedChildUIStates,
     distributeChildUIState: (newUIState, childUIStateController) => {
       const childSelected =
         Array.isArray(newUIState) &&
@@ -60553,14 +60605,15 @@ const css$E = /* css */`
  *   the focus only leaves it for something that asked by name (`autoFocus` on
  *   that element, which outranks whatever the dialog says).
  * @param {boolean} [props.open] - Controlled open state.
- * @param {import("@preact/signals").Signal<boolean>} [props.signal] - The open
+ * @param {import("@preact/signals").Signal<any>} [props.signal] - The open
  *   state said the way every navi control says it: the dialog opens and closes
  *   to match the signal, and writes into it whenever it opens or closes on its
  *   own (Escape, backdrop, a --navi-close command) — one binding to both drive
  *   the dialog and know where it is, and the state stays where the app put it.
  *   Excludes `open`; `onOpen`/`onClose` still fire. A signal holding `true` at
  *   mount behaves like `defaultOpen`: the dialog was already open, no entrance
- *   plays.
+ *   plays. A signal holding an id (one dialog showing whichever card
+ *   the address names) reads as open, and the dialog leaves the id alone.
  * @param {any} [props.value] - What `signal` holds while THIS dialog is
  *   open, for several of them sharing one signal that says which is open
  *   (`?seat=<gameId>` over a list of cards): open while `signal.value` is this
@@ -62214,14 +62267,15 @@ const css$D = /* css */`
  *   the focus only leaves it for something that asked by name (`autoFocus` on
  *   that element, which outranks whatever the popover says).
  * @param {boolean} [props.open] - Controlled open state.
- * @param {import("@preact/signals").Signal<boolean>} [props.signal] - The open
+ * @param {import("@preact/signals").Signal<any>} [props.signal] - The open
  *   state said the way every navi control says it: the popover opens and closes
  *   to match the signal, and writes into it whenever it opens or closes on its
  *   own (Escape, light dismiss, a --navi-close command) — one binding to both
  *   drive the popover and know where it is, and the state stays where the app
  *   put it. Excludes `open`; `onOpen`/`onClose` still fire. A signal holding
  *   `true` at mount behaves like `defaultOpen`: the popover was already open,
- *   no entrance plays.
+ *   no entrance plays. A signal holding an id (one popover showing whichever card
+ *   the address names) reads as open, and the popover leaves the id alone.
  * @param {any} [props.value] - What `signal` holds while THIS popover is
  *   open, for several of them sharing one signal that says which is open
  *   (`?seat=<gameId>` over a list of cards): open while `signal.value` is this
@@ -65892,45 +65946,6 @@ const ListSelectable = props => {
     focusGroupDirection,
     focusGroupWrap
   } = props;
-  // `kept` is what the list holds as it is asked, which is not the same as what
-  // its rows say: a list draws the rows it needs and no more, so the selected
-  // one may be scrolled out of the window or filtered out of the view, and a
-  // row that is not there cannot say it is not selected. Reading it off the
-  // group rather than remembering it here is what makes a value put ON the list
-  // (a `value` prop, a signal, a reopened popup) replace the whole selection —
-  // a private memory of its own would go on holding the rows it could not see
-  // being unselected.
-  //
-  // `fallbackState` is the empty of the shape the list declared below
-  // (`stateType`): `[]` for a multiple list, nothing for a single one. Taking
-  // it is what lets an emptied list say "empty" — `undefined` is the word for
-  // "unset", and a bound stateSignal reads that as "nothing decided here, go
-  // back to the default" (see docs/control_value.md), which is how a list
-  // emptied down to its last row puts that row back on reload.
-  const aggregateChildStates = (children, fallbackState, kept) => {
-    if (multiple) {
-      const drawnValues = new Set(children.map(child => child.props.value));
-      const stillSelected = Array.isArray(kept) ? kept.filter(value => !drawnValues.has(value)) : [];
-      for (const child of children) {
-        if (child.uiState !== undefined) {
-          stillSelected.push(child.uiState);
-        }
-      }
-      return stillSelected.length === 0 ? fallbackState : stillSelected;
-    }
-    for (const child of children) {
-      if (child.uiState !== undefined) {
-        return child.uiState;
-      }
-    }
-    // No drawn row claims it. If the row that held it IS drawn, it was really
-    // deselected; if it is not, the list keeps what it holds.
-    const keptIsDrawn = children.some(child => child.props.value === kept);
-    if (keptIsDrawn) {
-      return undefined;
-    }
-    return kept;
-  };
   const [listControlRootProps, listControlProps, childrenWrapperProps] = useControlgroupProps({
     // The defaults of the group this IS (see CheckboxGroup / RadioGroup):
     // what a selectable list shows is a claim about what was accepted, so
@@ -65942,9 +65957,15 @@ const ListSelectable = props => {
     resetOnError: true,
     ...props
   }, {
+    // A list draws the rows it needs and no more, so a selected row may be
+    // scrolled out of the window or filtered out of the view: the default
+    // aggregate of these two groups keeps a value whose row is not drawn
+    // (see GROUP_DEFAULTS in ui_state_controller.js). `stateType` is what
+    // an emptied multiple list says — `[]`, not `undefined`, which a bound
+    // stateSignal reads as "nothing decided here, go back to the default"
+    // (see docs/control_value.md).
     stateType: multiple ? "array" : "",
-    controlType: multiple ? "checkbox_group" : "radio_group",
-    aggregateChildStates
+    controlType: multiple ? "checkbox_group" : "radio_group"
   });
   const uiGroupStateController = getUIStateControllerById(listControlProps.id);
   useFocusGroup(ref, {
@@ -67146,6 +67167,7 @@ const ListUI = props => {
     ref,
     tracker,
     renderBudget,
+    renderBudgetSteady: renderBudgetAfterPaint,
     virtualItemSize,
     virtual,
     scrolled,
@@ -67473,6 +67495,7 @@ const useListScrollSync = ({
   ref,
   tracker,
   renderBudget,
+  renderBudgetSteady,
   virtualItemSize,
   virtual,
   scrolled,
@@ -68226,31 +68249,36 @@ const useListScrollSync = ({
     }
   });
 
-  // Scroll listener — slides the window as the user scrolls.
-  useLayoutEffect(() => {
-    const listContainerEl = ref.current;
-    if (!listContainerEl) {
-      return undefined;
+  // The window the visible band asks for, decided from geometry: the band's
+  // two edges in row units, from where the scroller's viewport cuts the list
+  // and the row size. What has to be drawn is everything between the edges,
+  // plus what the scroll is about to bring — so the window is judged on the
+  // rows it keeps AHEAD of the band, in the direction the user goes, and moves
+  // once those fall under half a screen. Re-framed, it puts three quarters of
+  // its spare rows ahead and one quarter behind: a window centred on the band
+  // is due to move again as soon as the band has crossed the few rows it kept
+  // ahead, and each move is rows drawn while the user waits for them.
+  // Without a row size there is no geometry to reason on; the row under a
+  // probe stands in for the band, framed the old way.
+  const scrollDirectionRef = useRef(1);
+  const windowSlidRef = useRef(false);
+  const budgetWarnedRef = useRef(false);
+  const evaluateWindow = reason => {
+    const total = virtual.totalSignal.peek();
+    if (total <= renderBudget) {
+      return;
     }
     const scrollerEl = getScroller();
     const listEl = getListEl();
-    const onScroll = () => {
-      updateCurrentScroll();
-      // Where the user is now is where things must be held from now on.
-      anchorRef.current = null;
-      if (scrolledByListRef.current) {
-        // The window stays where it is — the position it would be re-derived
-        // from was chosen to keep the rows still — but where the list is has
-        // genuinely changed, and whoever keeps that position must hear it.
-        scrolledByListRef.current = false;
-        reportPosition();
-        return;
-      }
-      reportPosition();
-      const total = virtual.totalSignal.peek();
-      if (total <= renderBudget) {
-        return;
-      }
+    if (!scrollerEl || !listEl) {
+      return;
+    }
+    const {
+      start,
+      end
+    } = renderWindowRef.current;
+    const virtualItemSize = virtualItemSizeSignal.peek();
+    if (virtualItemSize === 0) {
       const scrollInfo = getScrollInfo({
         scrollValues: {
           left: scrollerEl.scrollLeft,
@@ -68267,17 +68295,8 @@ const useListScrollSync = ({
         return;
       }
       const {
-        index,
-        reason
+        index
       } = scrollInfo;
-      // Recentering on every row crossed would rebuild the whole window a few
-      // times a second, and a window rebuilt is every row of it rendered
-      // again. It only moves once what is on screen comes near one of its
-      // edges — until then, it already holds what has to be drawn.
-      const {
-        start,
-        end
-      } = renderWindowRef.current;
       const margin = Math.floor(renderBudget / 4);
       const farFromStart = index - start >= margin || start === 0;
       const farFromEnd = end - index > margin || end === total;
@@ -68285,12 +68304,117 @@ const useListScrollSync = ({
         return;
       }
       const half = Math.floor(renderBudget / 2);
-      let newStart = Math.max(0, index - half);
-      let newEnd = Math.min(total, newStart + renderBudget);
-      if (newEnd === total) {
-        newStart = Math.max(0, total - renderBudget);
+      let newStart = index - half < 0 ? 0 : index - half;
+      let newEnd = newStart + renderBudget;
+      if (newEnd > total) {
+        newEnd = total;
+        newStart = total - renderBudget < 0 ? 0 : total - renderBudget;
       }
-      updateRenderWindow(newStart, newEnd, reason);
+      windowSlidRef.current = true;
+      updateRenderWindow(newStart, newEnd, `${reason}: ${scrollInfo.reason}`);
+      return;
+    }
+    const viewportRect = getScrollerViewportRect(scrollerEl);
+    const listRect = listEl.getBoundingClientRect();
+    const viewportFrom = horizontal ? viewportRect.left : viewportRect.top;
+    const viewportTo = horizontal ? viewportRect.right : viewportRect.bottom;
+    const listFrom = horizontal ? listRect.left : listRect.top;
+    let bandStart = Math.floor((viewportFrom - listFrom) / virtualItemSize);
+    // Exclusive, like the window's end.
+    let bandEnd = Math.ceil((viewportTo - listFrom) / virtualItemSize);
+    if (bandStart < 0) {
+      bandStart = 0;
+    }
+    if (bandEnd > total) {
+      bandEnd = total;
+    }
+    if (bandEnd <= bandStart) {
+      return;
+    }
+    const visibleCount = bandEnd - bandStart;
+    const spare = renderBudget - visibleCount;
+    if (!budgetWarnedRef.current && renderBudget === renderBudgetSteady && spare < 2) {
+      budgetWarnedRef.current = true;
+      console.warn(`List: renderBudget=${renderBudget} draws ${renderBudget} rows and this scroller shows ${visibleCount} at once: rows will go blank as it scrolls. Give it room for a screen ahead — ${visibleCount * 2} or more.`);
+    }
+    const behind = spare > 0 ? Math.floor(spare / 4) : 0;
+    const ahead = spare > 0 ? spare - behind : 0;
+    const halfScreen = Math.ceil(visibleCount / 2);
+    const aheadNeeded = halfScreen < ahead / 2 ? halfScreen : Math.floor(ahead / 2);
+    const behindNeeded = halfScreen < behind / 2 ? halfScreen : Math.floor(behind / 2);
+    const forward = scrollDirectionRef.current > 0;
+    const rowsAheadOfBand = forward ? end - bandEnd : bandStart - start;
+    const rowsBehindBand = forward ? bandStart - start : end - bandEnd;
+    const atEdgeAhead = forward ? end === total : start === 0;
+    const atEdgeBehind = forward ? start === 0 : end === total;
+    const coversBand = start <= bandStart && end >= bandEnd;
+    const coversAhead = atEdgeAhead || rowsAheadOfBand >= aheadNeeded;
+    const coversBehind = atEdgeBehind || rowsBehindBand >= behindNeeded;
+    if (coversBand && coversAhead && coversBehind) {
+      return;
+    }
+    let newStart = forward ? bandStart - behind : bandEnd + behind - renderBudget;
+    if (newStart < 0) {
+      newStart = 0;
+    }
+    let newEnd = newStart + renderBudget;
+    if (newEnd > total) {
+      newEnd = total;
+      newStart = total - renderBudget < 0 ? 0 : total - renderBudget;
+    }
+    windowSlidRef.current = true;
+    updateRenderWindow(newStart, newEnd, `${reason}: rows ${bandStart}-${bandEnd} on screen, going ${forward ? "forward" : "backward"}`);
+  };
+  // A slide is judged again once its rows are laid out: the scroll had moved
+  // on while the rows were being drawn, or the anchoring of this very commit
+  // moved it, and a window that stops short of the screen's edge with no
+  // scroll event to come would stay short for good. On the next frame, after
+  // the layout this commit's anchoring settles on.
+  useLayoutEffect(() => {
+    if (!windowSlidRef.current) {
+      return undefined;
+    }
+    windowSlidRef.current = false;
+    const frameId = requestAnimationFrame(() => {
+      evaluateWindow("after slide");
+    });
+    return () => {
+      cancelAnimationFrame(frameId);
+    };
+  }, [renderWindow]);
+
+  // Scroll listener — slides the window as the user scrolls.
+  useLayoutEffect(() => {
+    const listContainerEl = ref.current;
+    if (!listContainerEl) {
+      return undefined;
+    }
+    const scrollerEl = getScroller();
+    const onScroll = () => {
+      // Which way the user is going, read before the position is stored: what
+      // the window keeps ahead is ahead of this.
+      const previousScroll = currentScrollRef.current;
+      if (previousScroll) {
+        const delta = horizontal ? scrollerEl.scrollLeft - previousScroll.left : scrollerEl.scrollTop - previousScroll.top;
+        if (delta > 0) {
+          scrollDirectionRef.current = 1;
+        } else if (delta < 0) {
+          scrollDirectionRef.current = -1;
+        }
+      }
+      updateCurrentScroll();
+      // Where the user is now is where things must be held from now on.
+      anchorRef.current = null;
+      if (scrolledByListRef.current) {
+        // The window stays where it is — the position it would be re-derived
+        // from was chosen to keep the rows still — but where the list is has
+        // genuinely changed, and whoever keeps that position must hear it.
+        scrolledByListRef.current = false;
+        reportPosition();
+        return;
+      }
+      reportPosition();
+      evaluateWindow("scroll");
     };
     // A page-level scroller does not emit "scroll" on the element itself
     // (document.scrollingElement); the document does.
@@ -71282,8 +71406,11 @@ const ListResolved = /*#__PURE__*/createComponentResolver([ListFirstResolver, Li
  *   window, which slides as the user scrolls while fillers hold the room of
  *   the rows outside it. Rows declared one by one as `<List.Item>` children
  *   are all drawn, whatever this says — a list with more than a few dozen rows
- *   gives them to a run (see docs/scroll.md, "Many rows"). Below 30 the list
- *   warns: a window shorter than a tall screen shows blank fillers.
+ *   gives them to a run (see docs/scroll.md, "Many rows"). The window keeps
+ *   most of its spare rows ahead of the scroll, and moves once those fall
+ *   under half a screen; it has to be larger than what the scroller shows at
+ *   once, with room for that lookahead — the list warns below 30, and when a
+ *   budget leaves fewer than two rows beyond the screen.
  *
  *   `{ initial, after }` for a list drawn in the click that opens it (a popup):
  *   `initial` rows in the commit the browser paints first — about what a phone
@@ -85896,7 +86023,7 @@ const css = /* css */`.navi_side_panel {
  * @param {object} props
  * @param {boolean} [props.open] - Controlled open state, forwarded as-is to
  *   `Popup`'s own `open`.
- * @param {import("@preact/signals").Signal<boolean>} [props.signal] - The open
+ * @param {import("@preact/signals").Signal<any>} [props.signal] - The open
  *   state said the way every navi control says it: the panel opens and closes
  *   to match the signal, and writes into it whenever it opens or closes on its
  *   own (Escape, swipe, a --navi-close command) — one binding to both drive
