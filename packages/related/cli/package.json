@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/cli",
-  "version": "0.3.196",
+  "version": "0.3.197",
   "type": "module",
   "description": "Command Line Interface for jsenv",
   "repository": {

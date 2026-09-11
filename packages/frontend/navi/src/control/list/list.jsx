@@ -1447,22 +1447,36 @@ const useListScrollSync = ({
   });
   const renderWindowRef = useRef(null);
   renderWindowRef.current = renderWindow;
-  // A budget that changes (the first paint's giving way to the scrolling one)
-  // re-frames the window where it stands, in this very render — the way
-  // holdWindow below moves it: nothing else would, the scroll listener only
-  // moves a window the user is about to leave.
-  const renderBudgetRef = useRef(renderBudget);
-  if (renderBudgetRef.current !== renderBudget) {
-    renderBudgetRef.current = renderBudget;
-    const { start } = renderWindowRef.current;
+  // The window is as wide as the budget says, whatever the state holds: a
+  // budget that changes (the first paint's giving way to the scrolling one)
+  // re-frames the window where it stands, in the render itself, the way
+  // holdWindow below moves it — nothing else would, the scroll listener only
+  // moves a window the user is about to leave. Derived on every render and
+  // not written once: the state keeps the width it had, and the next render
+  // copies it back into the ref above. The same object is handed out for as
+  // long as the numbers hold, so the rows are not told about a window that
+  // did not move.
+  const framedWindowRef = useRef(null);
+  {
+    const { start, end } = renderWindowRef.current;
     const total = virtual.totalSignal.peek();
-    let newStart = start;
-    let newEnd = start + renderBudget;
-    if (total > 0 && newEnd > total) {
-      newEnd = total;
-      newStart = total - renderBudget < 0 ? 0 : total - renderBudget;
+    let framedStart = start;
+    let framedEnd = start + renderBudget;
+    if (total > 0 && framedEnd > total) {
+      framedEnd = total;
+      framedStart = total - renderBudget < 0 ? 0 : total - renderBudget;
     }
-    renderWindowRef.current = { start: newStart, end: newEnd };
+    if (framedStart !== start || framedEnd !== end) {
+      const framed = framedWindowRef.current;
+      if (framed && framed.start === framedStart && framed.end === framedEnd) {
+        renderWindowRef.current = framed;
+      } else {
+        framedWindowRef.current = renderWindowRef.current = {
+          start: framedStart,
+          end: framedEnd,
+        };
+      }
+    }
   }
   const updateRenderWindow = (newStart, newEnd, reason) => {
     const { start, end } = renderWindowRef.current;

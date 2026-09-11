@@ -63300,20 +63300,33 @@ const PickerCalloutPopup = ({
       onnavi_request_confirm?.(e);
     };
     calloutElement.addEventListener("navi_request_confirm", forwardConfirm);
+    // Said once the content is in the shown callout: what the content defers
+    // until it is displayed (useDisplayedLayoutEffect, watching this attribute)
+    // then measures it where it is drawn. Same call stack as the open, like
+    // Popover's own — see observeAncestorOpenState in @jsenv/dom.
+    dock.setAttribute("aria-expanded", "true");
     return closeEvent => {
       calloutElement.removeEventListener("navi_request_confirm", forwardConfirm);
       calloutManager.removeOpenToken(PICKER_CALLOUT_CONTENT_TOKEN, closeEvent);
       dock.appendChild(host);
+      dock.setAttribute("aria-expanded", "false");
     };
   };
   return (
     // What the picker addresses (aria-controls, the request events it
     // forwards); the callout itself lives where the callout manager puts it.
+    // aria-expanded here, on the dock rather than on the content element: the
+    // openable ancestor the content finds at mount (the only time it looks),
+    // and one that is no ancestor of the content once the callout holds it —
+    // so a --navi-close said in there still resolves to the callout element,
+    // the closest [aria-expanded] from the button. The open effect keeps it
+    // current; preact leaves it alone, the prop never changes.
     jsx(Box, {
       as: "span",
       ref: ref,
       id: id,
       className: "navi_picker_callout_dock",
+      "aria-expanded": "false",
       style: {
         display: "contents"
       },
@@ -66178,27 +66191,39 @@ const useListScrollSync = ({
   });
   const renderWindowRef = useRef(null);
   renderWindowRef.current = renderWindow;
-  // A budget that changes (the first paint's giving way to the scrolling one)
-  // re-frames the window where it stands, in this very render — the way
-  // holdWindow below moves it: nothing else would, the scroll listener only
-  // moves a window the user is about to leave.
-  const renderBudgetRef = useRef(renderBudget);
-  if (renderBudgetRef.current !== renderBudget) {
-    renderBudgetRef.current = renderBudget;
+  // The window is as wide as the budget says, whatever the state holds: a
+  // budget that changes (the first paint's giving way to the scrolling one)
+  // re-frames the window where it stands, in the render itself, the way
+  // holdWindow below moves it — nothing else would, the scroll listener only
+  // moves a window the user is about to leave. Derived on every render and
+  // not written once: the state keeps the width it had, and the next render
+  // copies it back into the ref above. The same object is handed out for as
+  // long as the numbers hold, so the rows are not told about a window that
+  // did not move.
+  const framedWindowRef = useRef(null);
+  {
     const {
-      start
+      start,
+      end
     } = renderWindowRef.current;
     const total = virtual.totalSignal.peek();
-    let newStart = start;
-    let newEnd = start + renderBudget;
-    if (total > 0 && newEnd > total) {
-      newEnd = total;
-      newStart = total - renderBudget < 0 ? 0 : total - renderBudget;
+    let framedStart = start;
+    let framedEnd = start + renderBudget;
+    if (total > 0 && framedEnd > total) {
+      framedEnd = total;
+      framedStart = total - renderBudget < 0 ? 0 : total - renderBudget;
     }
-    renderWindowRef.current = {
-      start: newStart,
-      end: newEnd
-    };
+    if (framedStart !== start || framedEnd !== end) {
+      const framed = framedWindowRef.current;
+      if (framed && framed.start === framedStart && framed.end === framedEnd) {
+        renderWindowRef.current = framed;
+      } else {
+        framedWindowRef.current = renderWindowRef.current = {
+          start: framedStart,
+          end: framedEnd
+        };
+      }
+    }
   }
   const updateRenderWindow = (newStart, newEnd, reason) => {
     const {
