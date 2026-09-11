@@ -729,19 +729,27 @@ const writeInSignal = (signal, value, { history }) => {
 // is open (`?seat=<gameId>` over a list of cards), and closed is the signal
 // holding none of their values — `undefined`, which a state signal reads as
 // its default.
+//
+// A popup without a `value` reads anything the signal holds — save `false`,
+// `null` and `undefined` — as open: a single sheet bound to `?open=<id>` is
+// open on whichever id the address names, and the id is the popup's content
+// to read, not its to write. Opening writes `true` only into a signal that
+// reads closed; closing writes `false` where the signal held `true`, so a
+// boolean signal keeps its boolean, and `undefined` for anything else.
 const writeOpenedInSignal = (signal, opened, event, popupValue) => {
-  if (readOpened(signal.peek(), popupValue) === opened) {
+  const signalValue = signal.peek();
+  if (readOpened(signalValue, popupValue) === opened) {
     // The signal already says so, meaning this open/close IS what it asked
     // for: a back press that took the popup out of the url, the application
     // writing it. Nothing to write back — and nothing to go back to either,
     // since the navigation navBack would undo is the one that asked for this.
     return;
   }
-  const closedValue = popupValue === undefined ? false : undefined;
   if (opened) {
     signal.value = popupValue === undefined ? true : popupValue;
     return;
   }
+  const closedValue = readClosedValue(signalValue);
   if (
     signal.options?.getHistory?.() === "push" &&
     // Nothing of this document behind: the popup was opened by the url itself
@@ -762,9 +770,14 @@ const writeOpenedInSignal = (signal, opened, event, popupValue) => {
 };
 const readOpened = (signalValue, popupValue) => {
   if (popupValue === undefined) {
-    return signalValue;
+    return (
+      signalValue !== undefined && signalValue !== null && signalValue !== false
+    );
   }
   return signalValue === popupValue;
+};
+const readClosedValue = (openSignalValue) => {
+  return openSignalValue === true ? false : undefined;
 };
 
 /**
@@ -820,6 +833,13 @@ export const useOpenPropsEffectOnOpenController = (
     : signal
       ? readOpened(signal.value, value)
       : props.open;
+  // What the signal holds while it reads open — `true`, the popup's `value`,
+  // or the id a single sheet is open on. Put back when a close is refused,
+  // since by then the signal has been written closed.
+  const openSignalValueRef = useRef(undefined);
+  if (signal && open) {
+    openSignalValueRef.current = signal.value;
+  }
   // Assigned on every render, like openEffect, so it always closes over the
   // latest prop: a popup that opens or closes on its own (Escape, backdrop, a
   // --navi-close command) writes what happened where the caller keeps it, so
@@ -900,10 +920,11 @@ export const useOpenPropsEffectOnOpenController = (
     // request already reads in the signal, and with a `value` what the
     // signal holds may be another popup's, which the write would erase.
     if (signal && openController.opened !== open) {
-      const opened = openController.opened;
       writeInSignal(
         signal,
-        value === undefined ? opened : opened ? value : undefined,
+        openController.opened
+          ? openSignalValueRef.current
+          : readClosedValue(signal.peek()),
         { history: "replace" },
       );
     }

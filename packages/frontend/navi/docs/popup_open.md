@@ -862,6 +862,19 @@ changes. A popup is open on exactly one value: what varies while it is open (a
 tab inside it) is a param of its own, see
 [navigation.md](./navigation.md#places-inside-the-layer).
 
+The other way round — ONE sheet showing whichever card the address names — is
+the same signal with no `value`: a popup without one reads anything the signal
+holds as open, except `false`, `null` and `undefined`. The panel's content reads
+the id from the signal, a card's press writes it, and the popup never writes
+over it: opening writes `true` only into a signal that reads closed, closing
+writes `undefined` (or `false`, where the signal held `true`).
+
+```jsx
+<SidePanel signal={errorOpenSignal} side="right">
+  <ErrorPanel /> {/* reads errorOpenSignal.value to know which card */}
+</SidePanel>
+```
+
 ### `navState` — the history entry holds it
 
 ```jsx

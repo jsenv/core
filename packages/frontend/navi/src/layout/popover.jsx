@@ -584,14 +584,15 @@ const css = /* css */ `
  *   the focus only leaves it for something that asked by name (`autoFocus` on
  *   that element, which outranks whatever the popover says).
  * @param {boolean} [props.open] - Controlled open state.
- * @param {import("@preact/signals").Signal<boolean>} [props.signal] - The open
+ * @param {import("@preact/signals").Signal<any>} [props.signal] - The open
  *   state said the way every navi control says it: the popover opens and closes
  *   to match the signal, and writes into it whenever it opens or closes on its
  *   own (Escape, light dismiss, a --navi-close command) — one binding to both
  *   drive the popover and know where it is, and the state stays where the app
  *   put it. Excludes `open`; `onOpen`/`onClose` still fire. A signal holding
  *   `true` at mount behaves like `defaultOpen`: the popover was already open,
- *   no entrance plays.
+ *   no entrance plays. A signal holding an id (one popover showing whichever card
+ *   the address names) reads as open, and the popover leaves the id alone.
  * @param {any} [props.value] - What `signal` holds while THIS popover is
  *   open, for several of them sharing one signal that says which is open
  *   (`?seat=<gameId>` over a list of cards): open while `signal.value` is this

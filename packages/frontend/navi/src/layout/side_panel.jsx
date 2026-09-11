@@ -185,7 +185,7 @@ const css = /* css */ `
  * @param {object} props
  * @param {boolean} [props.open] - Controlled open state, forwarded as-is to
  *   `Popup`'s own `open`.
- * @param {import("@preact/signals").Signal<boolean>} [props.signal] - The open
+ * @param {import("@preact/signals").Signal<any>} [props.signal] - The open
  *   state said the way every navi control says it: the panel opens and closes
  *   to match the signal, and writes into it whenever it opens or closes on its
  *   own (Escape, swipe, a --navi-close command) — one binding to both drive

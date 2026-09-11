@@ -930,14 +930,15 @@ const css = /* css */ `
  *   the focus only leaves it for something that asked by name (`autoFocus` on
  *   that element, which outranks whatever the dialog says).
  * @param {boolean} [props.open] - Controlled open state.
- * @param {import("@preact/signals").Signal<boolean>} [props.signal] - The open
+ * @param {import("@preact/signals").Signal<any>} [props.signal] - The open
  *   state said the way every navi control says it: the dialog opens and closes
  *   to match the signal, and writes into it whenever it opens or closes on its
  *   own (Escape, backdrop, a --navi-close command) — one binding to both drive
  *   the dialog and know where it is, and the state stays where the app put it.
  *   Excludes `open`; `onOpen`/`onClose` still fire. A signal holding `true` at
  *   mount behaves like `defaultOpen`: the dialog was already open, no entrance
- *   plays.
+ *   plays. A signal holding an id (one dialog showing whichever card
+ *   the address names) reads as open, and the dialog leaves the id alone.
  * @param {any} [props.value] - What `signal` holds while THIS dialog is
  *   open, for several of them sharing one signal that says which is open
  *   (`?seat=<gameId>` over a list of cards): open while `signal.value` is this
