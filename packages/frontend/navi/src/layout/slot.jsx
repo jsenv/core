@@ -1,5 +1,5 @@
 import { signal } from "@preact/signals";
-import { useLayoutEffect } from "preact/hooks";
+import { useLayoutEffect, useRef } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
 
@@ -10,9 +10,12 @@ import { Box } from "../box/box.jsx";
  * renders nothing (no extra DOM node at its own call site), it just writes
  * its props into a shared signal that `Slot` reads reactively.
  *
- * Holds at most one filler at a time — there is no stacking/queueing.
- * Mounting a second `SlotFill` (from this same `createSlot()` call)
- * overwrites whatever the previous one set.
+ * Holds at most one filler at a time — there is no stacking/queueing. The
+ * filler is the last `SlotFill` (from this same `createSlot()` call) to
+ * render, and only that one empties the slot by unmounting: two fillers
+ * crossing — the next card's fill mounted by the render that unmounts the
+ * previous card's — run the newcomer's render before the leaver's cleanup,
+ * and the leaver finds the slot belongs to someone else.
  *
  * `Slot` keeps `SlotRenderer` mounted permanently — even while unfilled it
  * still renders it, with no props and `isFilled={false}` — instead of
@@ -39,6 +42,7 @@ import { Box } from "../box/box.jsx";
  */
 export const createSlot = (SlotRenderer = Box) => {
   const slotPropsSignal = signal();
+  let filler = null;
 
   const Slot = () => {
     const props = slotPropsSignal.value;
@@ -46,9 +50,15 @@ export const createSlot = (SlotRenderer = Box) => {
   };
 
   const SlotFill = (props) => {
+    const fillerRef = useRef();
+    filler = fillerRef;
     slotPropsSignal.value = props;
     useLayoutEffect(() => {
       return () => {
+        if (filler !== fillerRef) {
+          return;
+        }
+        filler = null;
         slotPropsSignal.value = null;
       };
     }, []);

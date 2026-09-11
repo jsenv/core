@@ -167,6 +167,37 @@ Navi does not warn about a marked container: the column whose gaps must not
 dismiss and the row whose sides must are the same box from the outside, and
 only the caller knows which one it wrote.
 
+### A box of the page that is not outside
+
+`data-navi-popup-inside` is the other direction: a box of the page the caller
+says belongs to a popup, so that a press on it is not outside that popup even
+though it lies beyond the border box. A board with one panel for all its cards
+is the case: pressing another card is what changes what the panel shows, and a
+panel that closes on that press then reopens on the click that follows is a
+panel meant to stay open, blinking.
+
+```jsx
+<SidePanel id="error_panel" closeOnClickOutside backdrop={false} open={isFilled}>
+  …
+</SidePanel>
+
+<Box data-navi-popup-inside="error_panel" interactions={{ click: openCard }}>
+  …
+</Box>
+```
+
+The value names the popup by `id`, the way `commandfor` does, and the exemption
+is that popup's alone: a menu open beside the board still closes when a card is
+pressed. Several popups are named with a space between the ids.
+
+Unlike the outside marker, this one answers for its whole subtree: the outside
+marker carves free space out of a surface whose controls stay surface, this one
+adds a whole thing to the popup's ground — the card, its count, its buttons —
+and nothing in it is a dismissal.
+
+It reads a press the page hears, so it belongs with a popup that has no wall
+(`backdrop={false}`, or a popover): behind a wall, no card is pressable.
+
 ### `pointer-events: none` and `inert` are not this
 
 Neither says "this is backdrop", and reaching for them here is the natural

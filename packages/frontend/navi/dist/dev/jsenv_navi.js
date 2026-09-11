@@ -7,7 +7,7 @@ export { disableVirtualKeyboardOverlay } from "./jsenv_navi_side_effects.js";
 import { elementIsFocusable, createIterableWeakSet, dispatchInternalCustomEvent, dispatchCustomEvent, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, getElementSignature, createPubSub, findEvent, createValueEffect, findFocusDelegateTarget, findFocusable, scrollIntoViewThroughScrollables, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, keepTouchRefusable, isPressDrivenClick, waitForTap, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, dragSourceThatStoodDown, markDragSource, refuseDragTo, startDragTo, installPanZoom, createEventGroupLogger, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, normalizeStyles, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, scrollRoomTowards, getScrollContainer, isTouchDrivenEvent, scrollIntoViewScoped, closestOpenableAncestor, isAncestorOpen, isDisplayedDespiteClosedAncestor, observeAncestorOpenState, getAncestorOpenType, findBefore, findAfter, resolveCSSSize, hasCSSSizeUnit, releaseWheelGesture, getScrollIntoViewScopedOffsets, wheelGestureIsTakenFrom, claimWheelGesture, initFocusGroup, stringifyStyle as stringifyStyle$1, resolveOklchLightness, contrastColor, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, getVirtualKeyboardOverlayHeight, onAncestorReopen, isPressDisputedByDrag, canScroll, measureWidestChildRow, performTabNavigation, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
 export { chainEvent, clickIsSuppressed, contrastColor, createDragGestureController, dragAfterIntent, findEvent, markDragSource, startDragTo } from "@jsenv/dom";
 import { signal, computed, effect, untracked, batch, useComputed, useSignal } from "@preact/signals";
-import { isValidElement, createContext, render, h, toChildArray, options, cloneElement, Fragment as Fragment$1 } from "preact";
+import { isValidElement, createContext, render, h, toChildArray, options, cloneElement, createElement, Fragment as Fragment$1 } from "preact";
 import { useErrorBoundary, useLayoutEffect, useContext, useCallback, useRef, useState, useEffect, useMemo, useId } from "preact/hooks";
 import { humanizeI18n, prefixFirstAndIndentRemainingLines, setRuntimeLangSource, formatDuration, formatMonth, formatDay, resolveTimeRangePrecision, formatDatePlaceholder, toDate, getRelativeDay, formatDayRelative, formatMonthPlaceholder, formatWeekPlaceholder, formatDatetimePlaceholder, formatDatetime, toTimeOfDay, formatTimeOfDay, formatTime, formatMinuteDuration, formatSecondDuration, formatHourDuration, formatTimeRelative, formatNumber, interpolateText, installInterpolateJsx } from "@jsenv/humanize";
 export { createI18n, formatDatetime, formatDay, formatDayRelative, formatDuration, formatHourDuration, formatMinuteDuration, formatMonth, formatNumber, formatSecondDuration, formatTime, formatTimeOfDay, formatTimeRange, formatTimeRelative, interpolateText } from "@jsenv/humanize";
@@ -32476,8 +32476,26 @@ const resolveExplicitTarget = (element) => {
   }
   return undefined;
 };
+// The control around the source that a command can be about: one holding a
+// value of its own. A popup is a control root too (it answers interactions,
+// carries a callout), but it has no host of its own — asked for one, it
+// answers with the first control INSIDE it, which for a field sending
+// --navi-update from a picker's popup is that very field: the command then
+// sets the field to what it already holds, which fires the command again,
+// without end. Such a surface is walked past, up to the picker or the form.
 const resolveFirstParentControl = (el) => {
-  return getParentControl(el);
+  let parentControl = getParentControl(el);
+  while (parentControl && !ownsControlHost(parentControl)) {
+    parentControl = getParentControl(parentControl);
+  }
+  return parentControl;
+};
+const ownsControlHost = (controlRoot) => {
+  const controlHost = findControlHost(controlRoot);
+  return (
+    Boolean(controlHost) &&
+    controlHost.closest("[navi-control]") === controlRoot
+  );
 };
 const resolveFirstChildControl = (el) => {
   let startEl;
@@ -35279,6 +35297,21 @@ const warnPopupHasNoElementToOpen = (popupKind) => {
 const OUTSIDE_REGION_ATTRIBUTE = "data-navi-popup-outside";
 
 /**
+ * `data-navi-popup-inside` is the other direction: a box of the PAGE the
+ * caller says belongs to a popup, so a press on it is not outside that popup
+ * even though it lies beyond the border box — a card whose press is what
+ * fills the one panel of a board. Its value names the popup by `id`, the way
+ * `commandfor` does (several ids, space separated), because the exemption is
+ * one popup's: a menu open beside the board still closes on the same press.
+ *
+ * Unlike the outside marker it answers for its whole subtree: the outside
+ * marker carves free space out of a surface whose controls stay surface, this
+ * one adds a whole thing — the card, its count, its buttons — to the popup's
+ * own ground, and nothing in it is a dismissal.
+ */
+const INSIDE_ATTRIBUTE = "data-navi-popup-inside";
+
+/**
  * What a press landing on a region the caller declared as not-its-surface
  * does: exactly what the same press on the backdrop would do.
  *
@@ -35421,6 +35454,14 @@ const armOutsidePressClose = (
       popupUnderPointer !== popupEl &&
       !popupEl.contains(popupUnderPointer) &&
       !popupUnderPointer.contains(popupEl)
+    ) {
+      return;
+    }
+    if (
+      popupEl.id &&
+      pointerDownEvent.target.closest?.(
+        `[${INSIDE_ATTRIBUTE}~="${CSS.escape(popupEl.id)}"]`,
+      )
     ) {
       return;
     }
@@ -48844,33 +48885,6 @@ const createToggleEvent = open => {
   return toggleEvent;
 };
 
-const NextResolverContext = createContext(null);
-const useNextResolver = () => useContext(NextResolverContext);
-
-/**
- * Creates a renderComponent function that passes props through a chain of resolvers.
- * Each resolver is a Preact component rendered in sequence (hooks are allowed).
- * To pass through to the next resolver, call useNextResolver() and render the
- * returned Next component with the desired props.
- * To terminate the chain early (e.g. render a specialized component), render
- * directly without calling Next.
- *
- * The last entry in the array is the final/target component — it receives null
- * from useNextResolver() indicating it is terminal.
- *
- * Usage:
- *   const renderButton = createComponentResolver([ResolverA, ResolverB, ButtonTarget]);
- *   // Then inside a component render:
- *   renderButton(props)
- *
- * Each position of the chain has a runner of its own, defined once: it renders
- * its resolver under a NextResolverContext holding the runner after it. A
- * resolver that re-renders on its own and renders <Next> therefore resumes at
- * its own position without any bookkeeping — the Next it was given is the one
- * made for it. A chain rendered by the hundred (a list's rows) pays two
- * components per position, the runner and the resolver, so nothing here is a
- * component that merely forwards.
- */
 const createComponentResolver = (resolvers, {
   pure
 } = {}) => {
@@ -48879,13 +48893,10 @@ const createComponentResolver = (resolvers, {
   for (let index = 0; index < resolvers.length; index++) {
     const Resolver = resolvers[index];
     const isLast = index === lastIndex;
-    const Runner = props => jsx(NextResolverContext.Provider, {
-      value: isLast ? null : runners[index + 1],
-      children: jsx(Resolver, {
-        ...props
-      })
-    });
-    Runner.displayName = `${Resolver.displayName || Resolver.name}Runner`;
+    function Runner(props) {
+      return runResolverBody(this, Resolver, props, isLast ? null : runners[index + 1]);
+    }
+    Runner.displayName = Resolver.displayName || Resolver.name;
     runners.push(Runner);
   }
   const FirstRunner = runners[0];
@@ -48916,6 +48927,54 @@ const createComponentResolver = (resolvers, {
   }
   return PureRenderComponent;
 };
+const useNextResolver = () => {
+  if (currentNext === OUTSIDE_RESOLVER_BODY) {
+    throw new Error("useNextResolver() called outside a resolver body: a resolver rendered by another resolver is rendered with renderResolver(Resolver, props), not as a JSX child.");
+  }
+  return currentNext;
+};
+const renderResolver = (Resolver, props) => {
+  if (currentNext === OUTSIDE_RESOLVER_BODY) {
+    throw new Error(`renderResolver(${Resolver.displayName || Resolver.name}) called outside a resolver body: only a resolver can render another one.`);
+  }
+  let SubRunner = subRunnerByResolver.get(Resolver);
+  if (!SubRunner) {
+    SubRunner = function (props) {
+      const {
+        [NEXT_PROP]: next,
+        ...ownProps
+      } = props;
+      return runResolverBody(this, Resolver, ownProps, next);
+    };
+    SubRunner.displayName = Resolver.displayName || Resolver.name;
+    subRunnerByResolver.set(Resolver, SubRunner);
+  }
+  return createElement(SubRunner, {
+    ...props,
+    [NEXT_PROP]: currentNext
+  });
+};
+
+// What useNextResolver() answers: the runner after the one whose body is
+// running, null for the last — and, outside any body, a value that is neither.
+const OUTSIDE_RESOLVER_BODY = Symbol("outside_resolver_body");
+let currentNext = OUTSIDE_RESOLVER_BODY;
+const runResolverBody = (instance, Resolver, props, next) => {
+  const nextBefore = currentNext;
+  currentNext = next;
+  try {
+    return Resolver.call(instance, props);
+  } finally {
+    currentNext = nextBefore;
+  }
+};
+
+// One runner per resolver rendered through renderResolver, made on first use:
+// the same component type on every render, so a resolver picked again is
+// updated in place and another one picked is a remount, like any child.
+const subRunnerByResolver = new WeakMap();
+// Rides on the props of a sub-runner, stripped before the body sees them.
+const NEXT_PROP = "navi-resolver-next";
 function pureShouldComponentUpdate(nextProps) {
   return shallowDiffers(this.props, nextProps);
 }
@@ -49741,9 +49800,7 @@ const ButtonConfirm = ({
 const ButtonRouteResolver = props => {
   const Next = useNextResolver();
   if (props.route) {
-    return jsx(ButtonWithRoute, {
-      ...props
-    });
+    return renderResolver(ButtonWithRoute, props);
   }
   return jsx(Next, {
     ...props
@@ -52347,9 +52404,7 @@ const installInputCss = () => {
 const InputModeResolver = props => {
   const Next = useNextResolver();
   if (props.inputMode === "numeric" || props.inputMode === "decimal") {
-    return jsx(InputModeNumericOrDecimal, {
-      ...props
-    });
+    return renderResolver(InputModeNumericOrDecimal, props);
   }
   return jsx(Next, {
     ...props
@@ -52577,39 +52632,25 @@ const InputTypeResolver = props => {
   // very same "icon while empty, clear button once filled" affordance without
   // pretending to be a search box.
   if (props.clearable && props.type !== "search") {
-    return jsx(InputClearable, {
-      ...props
-    });
+    return renderResolver(InputClearable, props);
   }
   if (props.type === "search") {
-    return jsx(InputSearch, {
-      ...props
-    });
+    return renderResolver(InputSearch, props);
   }
   if (props.type === "email") {
-    return jsx(InputEmail, {
-      ...props
-    });
+    return renderResolver(InputEmail, props);
   }
   if (props.type === "tel") {
-    return jsx(InputTel, {
-      ...props
-    });
+    return renderResolver(InputTel, props);
   }
   if (props.type === "number") {
-    return jsx(InputNumber, {
-      ...props
-    });
+    return renderResolver(InputNumber, props);
   }
   if (props.type === "color") {
-    return jsx(InputColor, {
-      ...props
-    });
+    return renderResolver(InputColor, props);
   }
   if (props.type === "datetime-local") {
-    return jsx(InputDatetimeLocal, {
-      ...props
-    });
+    return renderResolver(InputDatetimeLocal, props);
   }
   return jsx(Next, {
     ...props
@@ -52722,9 +52763,7 @@ const InputDatetimeLocal = props => {
 const InputWithListResolver = props => {
   const Next = useNextResolver();
   if (props["navi-list"]) {
-    return jsx(InputWithList, {
-      ...props
-    });
+    return renderResolver(InputWithList, props);
   }
   return jsx(Next, {
     ...props
@@ -52831,9 +52870,7 @@ const ChevronDownSvg$1 = () => {
 const InputWithSuggestionsResolver = props => {
   const Next = useNextResolver();
   if (props["navi-suggestions"]) {
-    return jsx(InputTextualWithSuggestions, {
-      ...props
-    });
+    return renderResolver(InputTextualWithSuggestions, props);
   }
   return jsx(Next, {
     ...props
@@ -63717,9 +63754,7 @@ const css$B = /* css */`.navi_picker_callout_dock > [data-picker-content] {
 const PickerCustomResolver = props => {
   import.meta.css = [css$B, "@jsenv/navi/src/control/picker/picker_custom.jsx"];
   if (props.children === undefined) {
-    return jsx(PickerNative, {
-      ...props
-    });
+    return renderResolver(PickerNative, props);
   }
   if (props.mode === "callout") {
     // A tooltip is an icon one presses, unless told otherwise. Own-property
@@ -63781,14 +63816,12 @@ const PickerCustomResolver = props => {
     // how a field says its value is a JS one, kept beside the DOM (see
     // controller_registry.js) — the same thing type="array"/"object" already
     // say for their shapes.
-    return jsx(PickerCustom, {
+    return renderResolver(PickerCustom, {
       ...props,
       type: "navi_js"
     });
   }
-  return jsx(PickerCustom, {
-    ...props
-  });
+  return renderResolver(PickerCustom, props);
 };
 const PickerNative = props => {
   const Next = useNextResolver();
@@ -64414,9 +64447,9 @@ const PickerCustom = props => {
       });
     }
   }
-  return jsx(PickerContentInsidePopup, {
+  return renderResolver(PickerContentInsidePopup, {
     ...pickerProps,
-    mode: mode
+    mode
   });
 };
 
@@ -65683,14 +65716,10 @@ const createItemTracker = (onChange) => {
 const ListItemHeaderOrFooterResolver = props => {
   const Next = useNextResolver();
   if (props.header) {
-    return jsx(ListItemHeader, {
-      ...props
-    });
+    return renderResolver(ListItemHeader, props);
   }
   if (props.footer) {
-    return jsx(ListItemFooter, {
-      ...props
-    });
+    return renderResolver(ListItemFooter, props);
   }
   return jsx(Next, {
     ...props
@@ -65922,9 +65951,7 @@ const ListSelectableContext = createContext(false);
 const ListSelectableResolver = props => {
   const Next = useNextResolver();
   if (props.selectable) {
-    return jsx(ListSelectable, {
-      ...props
-    });
+    return renderResolver(ListSelectable, props);
   }
   return jsx(ListSelectableContext.Provider, {
     value: false,
@@ -66224,7 +66251,7 @@ const ListItemSelectableResolver = props => {
   const isHeaderOrFooter = Boolean(props.header || props.footer);
   const selectable = props.selectable ?? (isHeaderOrFooter || props.role === "presentation" ? false : listSelectable);
   if (selectable) {
-    return jsx(ListItemSelectable, {
+    return renderResolver(ListItemSelectable, {
       ...props,
       selectable: true
     });
@@ -71532,14 +71559,10 @@ const generateTimeSlots = (min, max, stepSeconds) => {
 const PickerPresetResolver = props => {
   const Next = useNextResolver();
   if (props.type === "navi_time") {
-    return jsx(PickerNaviTime, {
-      ...props
-    });
+    return renderResolver(PickerNaviTime, props);
   }
   if (props.type === "navi_minute") {
-    return jsx(PickerNaviMinute, {
-      ...props
-    });
+    return renderResolver(PickerNaviMinute, props);
   }
   return jsx(Next, {
     ...props
@@ -72337,59 +72360,37 @@ const PencilSvg = () => {
 const PickerTypeResolver = props => {
   const Next = useNextResolver();
   if (props.type === "color") {
-    return jsx(PickerColor, {
-      ...props
-    });
+    return renderResolver(PickerColor, props);
   }
   if (props.type === "datetime") {
-    return jsx(PickerDatetime, {
-      ...props
-    });
+    return renderResolver(PickerDatetime, props);
   }
   if (props.type === "date") {
-    return jsx(PickerDate, {
-      ...props
-    });
+    return renderResolver(PickerDate, props);
   }
   if (props.type === "month") {
-    return jsx(PickerMonth, {
-      ...props
-    });
+    return renderResolver(PickerMonth, props);
   }
   if (props.type === "week") {
-    return jsx(PickerWeek, {
-      ...props
-    });
+    return renderResolver(PickerWeek, props);
   }
   if (props.type === "time") {
-    return jsx(PickerTime, {
-      ...props
-    });
+    return renderResolver(PickerTime, props);
   }
   if (props.type === "duration") {
-    return jsx(PickerDuration, {
-      ...props
-    });
+    return renderResolver(PickerDuration, props);
   }
   if (props.type === "file") {
-    return jsx(PickerFile, {
-      ...props
-    });
+    return renderResolver(PickerFile, props);
   }
   if (props.type === "text") {
-    return jsx(PickerText, {
-      ...props
-    });
+    return renderResolver(PickerText, props);
   }
   if (props.type === "array") {
-    return jsx(PickerArray, {
-      ...props
-    });
+    return renderResolver(PickerArray, props);
   }
   if (props.type === "object") {
-    return jsx(PickerObject, {
-      ...props
-    });
+    return renderResolver(PickerObject, props);
   }
   return jsx(Next, {
     ...props
@@ -86097,7 +86098,9 @@ const css = /* css */`.navi_side_panel {
  *   closes the panel on an outside click instead, and also enables trapping
  *   Tab navigation inside the panel (`focusCapture`) — closing on outside
  *   interaction only makes sense paired with not letting focus silently
- *   leave the panel first.
+ *   leave the panel first. A box of the page whose press must not close the
+ *   panel (a card that fills it) names the panel:
+ *   `data-navi-popup-inside={id}` — see docs/popup_backdrop.md.
  * @param {boolean} [props.swipeToClose=true] - Pushing the panel back
  *   towards the edge it is docked to closes it: the panel follows the
  *   pointer and finishes leaving (or comes back to rest) when it is
@@ -86232,6 +86235,7 @@ SidePanel.Foot = SidePanelFoot;
 
 const createSlot = (SlotRenderer = Box) => {
   const slotPropsSignal = signal();
+  let filler = null;
   const Slot = () => {
     const props = slotPropsSignal.value;
     return jsx(SlotRenderer, {
@@ -86240,9 +86244,15 @@ const createSlot = (SlotRenderer = Box) => {
     });
   };
   const SlotFill = props => {
+    const fillerRef = useRef();
+    filler = fillerRef;
     slotPropsSignal.value = props;
     useLayoutEffect(() => {
       return () => {
+        if (filler !== fillerRef) {
+          return;
+        }
+        filler = null;
         slotPropsSignal.value = null;
       };
     }, []);

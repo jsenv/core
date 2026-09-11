@@ -259,7 +259,9 @@ const css = /* css */ `
  *   closes the panel on an outside click instead, and also enables trapping
  *   Tab navigation inside the panel (`focusCapture`) — closing on outside
  *   interaction only makes sense paired with not letting focus silently
- *   leave the panel first.
+ *   leave the panel first. A box of the page whose press must not close the
+ *   panel (a card that fills it) names the panel:
+ *   `data-navi-popup-inside={id}` — see docs/popup_backdrop.md.
  * @param {boolean} [props.swipeToClose=true] - Pushing the panel back
  *   towards the edge it is docked to closes it: the panel follows the
  *   pointer and finishes leaving (or comes back to rest) when it is

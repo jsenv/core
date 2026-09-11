@@ -159,11 +159,13 @@ to start when unsure which export solves a problem.
   `triggerNaviCommand` as the last resort, with the event forwarded and never
   invented; opening ON something; a press that opens and acts is a `Picker`,
   and its trigger wears the wait and the error (a card that lifts, `openOn`);
-  Escape cancels; the close cross; a popup that loads data. Read before passing
-  `open`, calling `triggerNaviCommand`, or writing a close button.
+  Escape cancels; the close cross; one panel fed by a slot (`createSlot`,
+  `open={isFilled}`); a popup that loads data. Read before passing `open`,
+  calling `triggerNaviCommand`, or writing a close button.
 - `popup_backdrop.md` — three independent questions: a wall or not
   (`backdrop={false}`), what an outside press does, how far the page withdraws;
-  `data-navi-popup-outside`. Read before writing CSS for a backdrop.
+  `data-navi-popup-outside`, and `data-navi-popup-inside` for a box of the
+  page whose press is not a dismissal. Read before writing CSS for a backdrop.
 - `dialog_shape.md` — bounds rather than a width, the container ceiling, the
   centered box versus the bottom sheet, `marginWithContainer`. Read before
   deriving `smallTouchScreenSignal` in an app or writing CSS to make a dialog

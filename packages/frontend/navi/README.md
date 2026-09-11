@@ -29,6 +29,8 @@ between related actions. Parent/child relations are first-class — `.one`,
 
 **`Box`** is the main layout primitive. It wraps CSS Flexbox with a friendlier API: `flex` for horizontal layout, `flex="y"` for vertical (no more guessing what `flex-direction: column` does visually). Supports `grid`, `inline`, alignment via `alignX`/`alignY`, and spacing props.
 
+**`createSlot`** renders content declared in one place at another: a toolbar, a status, or one `SidePanel` for a whole board that stays open as long as something fills it (`open={isFilled}`, see [docs/popup_open.md](./docs/popup_open.md)).
+
 **`Text`** and related components (`Title`, `Paragraph`, `Code`, `Caption`) handle typography consistently across the app — including the parts of a line that are not text: icons, counts, truncation (`maxLines`), skeletons, and where a line may break. See [docs/typography.md](./docs/typography.md).
 
 ## Texts & i18n

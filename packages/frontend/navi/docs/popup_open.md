@@ -912,6 +912,38 @@ afterwards. `defaultOpen="interaction"` means the mount _is_ the opening (the
 entrance animation plays); any other truthy value means it was already open when
 the page appeared (no entrance).
 
+### One panel, fed by a slot
+
+A board with a detail pane wants one panel that stays open as long as something
+asks to be shown in it, and whose content changes from one card to the next
+without the panel closing and reopening. That is `open` driven by a slot:
+`createSlot(Renderer)` keeps the renderer mounted whether or not anything fills
+it, and hands it `isFilled`.
+
+```jsx
+const Panel = ({ isFilled, children }) => (
+  <SidePanel
+    open={isFilled}
+    onClose={() => {
+      openCardIdSignal.value = null;
+    }}
+  >
+    {children}
+  </SidePanel>
+);
+const [PanelSlot, PanelSlotFill] = createSlot(Panel);
+```
+
+`<PanelSlot />` sits once at the board level; the open card renders a
+`<PanelSlotFill>` holding what the panel shows. The slot holds one filler, the
+last to render: switching cards mounts the next fill in the render that unmounts
+the previous one, and the leaver, unmounting after, leaves the slot to the
+newcomer. `onClose` is the panel's own way out — the close cross, Escape, an
+outside press — and clears the state that renders the fill; the panel follows.
+A press on another card is not an outside press once the card names the panel
+with `data-navi-popup-inside` (see [popup_backdrop.md](./popup_backdrop.md)).
+The full example is `src/layout/demos/7_slot_demo.html`, "two side panels".
+
 ## A popup that loads data
 
 Being open is where the user is, and what a popup draws belongs to the screen

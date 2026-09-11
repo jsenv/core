@@ -206,8 +206,26 @@ const resolveExplicitTarget = (element) => {
   }
   return undefined;
 };
+// The control around the source that a command can be about: one holding a
+// value of its own. A popup is a control root too (it answers interactions,
+// carries a callout), but it has no host of its own — asked for one, it
+// answers with the first control INSIDE it, which for a field sending
+// --navi-update from a picker's popup is that very field: the command then
+// sets the field to what it already holds, which fires the command again,
+// without end. Such a surface is walked past, up to the picker or the form.
 const resolveFirstParentControl = (el) => {
-  return getParentControl(el);
+  let parentControl = getParentControl(el);
+  while (parentControl && !ownsControlHost(parentControl)) {
+    parentControl = getParentControl(parentControl);
+  }
+  return parentControl;
+};
+const ownsControlHost = (controlRoot) => {
+  const controlHost = findControlHost(controlRoot);
+  return (
+    Boolean(controlHost) &&
+    controlHost.closest("[navi-control]") === controlRoot
+  );
 };
 const resolveFirstChildControl = (el) => {
   let startEl;

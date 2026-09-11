@@ -344,6 +344,21 @@ export const warnPopupHasNoElementToOpen = (popupKind) => {
 const OUTSIDE_REGION_ATTRIBUTE = "data-navi-popup-outside";
 
 /**
+ * `data-navi-popup-inside` is the other direction: a box of the PAGE the
+ * caller says belongs to a popup, so a press on it is not outside that popup
+ * even though it lies beyond the border box — a card whose press is what
+ * fills the one panel of a board. Its value names the popup by `id`, the way
+ * `commandfor` does (several ids, space separated), because the exemption is
+ * one popup's: a menu open beside the board still closes on the same press.
+ *
+ * Unlike the outside marker it answers for its whole subtree: the outside
+ * marker carves free space out of a surface whose controls stay surface, this
+ * one adds a whole thing — the card, its count, its buttons — to the popup's
+ * own ground, and nothing in it is a dismissal.
+ */
+const INSIDE_ATTRIBUTE = "data-navi-popup-inside";
+
+/**
  * What a press landing on a region the caller declared as not-its-surface
  * does: exactly what the same press on the backdrop would do.
  *
@@ -486,6 +501,14 @@ export const armOutsidePressClose = (
       popupUnderPointer !== popupEl &&
       !popupEl.contains(popupUnderPointer) &&
       !popupUnderPointer.contains(popupEl)
+    ) {
+      return;
+    }
+    if (
+      popupEl.id &&
+      pointerDownEvent.target.closest?.(
+        `[${INSIDE_ATTRIBUTE}~="${CSS.escape(popupEl.id)}"]`,
+      )
     ) {
       return;
     }
