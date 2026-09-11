@@ -1385,7 +1385,7 @@ const useListScrollSync = ({
     ref,
     virtualItemSize,
     horizontal,
-    { virtual, renderBudget },
+    { virtual, renderBudget, scrolledWanted: scrolled ?? defaultScrolled },
   );
   const getScroller = () => getScrollerEl(ref.current, scroller, horizontal);
   const getListEl = () => ref.current.querySelector(".navi_list");
@@ -2844,7 +2844,7 @@ const useVirtualItemSizeSignal = (
   ref,
   virtualItemSizeProp = 0,
   horizontal,
-  { virtual, renderBudget },
+  { virtual, renderBudget, scrolledWanted },
 ) => {
   const virtualSizeSignalRef = useRef(null);
   if (!virtualSizeSignalRef.current) {
@@ -2913,6 +2913,16 @@ const useVirtualItemSizeSignal = (
   }
   useLayoutEffect(() => {
     if (virtualSizeSignal.peek() !== 0) {
+      return undefined;
+    }
+    // Measured only for what reads the size: the fillers of rows held off
+    // screen, and a list held somewhere (placeWhereHeld) before it knows where
+    // that is. A list drawing every row it has, opening at its start, would
+    // pay a layout in every commit for a number nobody reads.
+    const sizeRead =
+      virtual.totalSignal.peek() > renderBudget ||
+      (scrolledWanted !== undefined && scrolledWanted !== "start");
+    if (!sizeRead) {
       return undefined;
     }
     const listEl = ref.current?.querySelector(".navi_list");

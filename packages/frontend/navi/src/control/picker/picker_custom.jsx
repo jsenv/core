@@ -18,7 +18,10 @@ import {
   PopupModeContext,
   useResolvedPopupMode,
 } from "@jsenv/navi/src/layout/popup_mode.jsx";
-import { MOUNT_DEFAULT } from "@jsenv/navi/src/layout/popup_content_mount.js";
+import {
+  MOUNT_DEFAULT,
+  usePopupContentMount,
+} from "@jsenv/navi/src/layout/popup_content_mount.js";
 import { Popup } from "@jsenv/navi/src/layout/popup.jsx";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { interactionsDisputeThePress } from "../interaction/interactions.js";
@@ -176,6 +179,13 @@ export const PickerCustomResolver = (props) => {
     }
     if (props.calloutIcon === undefined) {
       props.calloutIcon = props.variant !== "text";
+    }
+    // A door's content is never where its value comes from (see `standalone`
+    // above), so nothing needs it before the first open: built then, like a
+    // popup's. A name in a list wrapped in a tooltip is otherwise a card in
+    // the DOM per name, and each one asks the layout whether it is on screen.
+    if (props.mount === undefined) {
+      props.mount = MOUNT_DEFAULT;
     }
     if (props.rightSlotIcon === undefined) {
       props.rightSlotIcon = (
@@ -1118,13 +1128,15 @@ const PICKER_CALLOUT_CONTENT_TOKEN = createOpenToken();
  * The content is rendered into an element this component owns, handed to the
  * callout as its message (a Node, appended as-is) and taken back when the
  * callout closes. Between two opens it is docked, hidden, in the span below:
- * in the document the whole time, the way a popup's `mount="always"` keeps its
- * content — so what it holds survives a close, and what it measures of itself
- * at mount (a computed color, a light-dark() pair) resolves against a real
- * ancestry. An element with no document has no computed style, and a badge
- * reading its own background there would see nothing at all. The element
- * carries data-picker-content: the callout is appended inside the picker root,
- * and a press in there must read as inside the popup, not on the trigger.
+ * in the document the whole time once built, so what it holds survives a
+ * close, and what it measures of itself at mount (a computed color, a
+ * light-dark() pair) resolves against a real ancestry. An element with no
+ * document has no computed style, and a badge reading its own background
+ * there would see nothing at all. When it is built is the popup's own `mount`
+ * rule (see popup_content_mount.js) — the first open, for a callout. The
+ * element carries data-picker-content: the callout is appended inside the
+ * picker root, and a press in there must read as inside the popup, not on the
+ * trigger.
  */
 const PickerCalloutPopup = ({
   ref,
@@ -1139,9 +1151,18 @@ const PickerCalloutPopup = ({
   onnavi_request_open,
   onnavi_request_close,
   onnavi_request_confirm,
-  children,
+  mount,
+  children: childrenProp,
 }) => {
   const hostRef = useRef(null);
+  // The dock is what the content finds as its openable ancestor (the
+  // aria-expanded below), which is what the mount marks as being built for
+  // its own opening.
+  const contentMounted = usePopupContentMount(openController, ref, {
+    mount,
+    anchor,
+  });
+  const children = contentMounted ? childrenProp : null;
   // Reassigned on every render, like Popover's own, so it closes over the
   // latest props.
   openController.getElement = () => pickerRef.current;

@@ -1,4 +1,4 @@
-import { useMemo } from "preact/hooks";
+import { useCallback, useMemo } from "preact/hooks";
 import { applySearch } from "./apply_search.js";
 
 /**
@@ -42,9 +42,13 @@ export const useSearchText = (searchText, items, matchFn = applySearch) => {
     return { orderedItems, matchInfoMap };
   }, [items, searchText, matchFn]);
 
-  const getItemMatchInfo = (item) => {
-    return matchInfoMap.get(item);
-  };
+  // The same function for as long as the map is the same: a `renderItem`
+  // reading it is stable only if this is, and a run keeps the rows it drew
+  // only for a stable `renderItem` (see List.Items).
+  const getItemMatchInfo = useCallback(
+    (item) => matchInfoMap.get(item),
+    [matchInfoMap],
+  );
 
   return [orderedItems, getItemMatchInfo];
 };
