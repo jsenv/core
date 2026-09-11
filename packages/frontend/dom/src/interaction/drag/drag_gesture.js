@@ -92,7 +92,7 @@ const captureHolderByPointerId = new Map();
  *   back the gesture — `gestureInfo` (its `layout` with `xDelta`/`yDelta`, its velocity, the way
  *   it is going), `drag`, `release`, and `addDragCallback`/`addReleaseCallback` for whoever joins
  *   after it started. `grabViaPointer` gives back `null` when the press is not one it can read: a
- *   secondary button, a text node.
+ *   secondary button, a text node, an element that has left the document since the press.
  */
 export const createDragGestureController = (options = {}) => {
   const {
@@ -733,6 +733,19 @@ export const createDragGestureController = (options = {}) => {
 
   const grabViaPointer = (grabEvent, options) => {
     if (grabEvent.type === "pointerdown") {
+      // The element the pointer is held on is chosen at the press, and the
+      // press is not always the moment the gesture starts: a drag that waits
+      // for a distance or a hold starts later, and what the page did in
+      // between — the answer to a hold, a render — can have taken that element
+      // out of the document. The browser refuses a capture there, and a
+      // capture whose element leaves the document mid-gesture is the gesture
+      // ending (see onCaptureLost): gone before the grab is the same end, come
+      // earlier. Said before anything is installed, so there is nothing to
+      // take back down.
+      const captureTarget = options?.pointerCaptureElement || grabEvent.target;
+      if (!captureTarget.isConnected) {
+        return null;
+      }
       return initDragByPointer(
         grabEvent,
         options,

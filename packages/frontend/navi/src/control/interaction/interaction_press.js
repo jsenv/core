@@ -103,6 +103,7 @@
  */
 
 import {
+  dragSourceThatStoodDown,
   isPressDrivenClick,
   keepTouchRefusable,
   startDragToTravel,
@@ -508,7 +509,17 @@ defineInteractionDetector({
           },
         });
       }
-      if (hasLongPress) {
+      // A press on something INSIDE this element that is picked up and
+      // carried is that thing's, the same nearer word as the inner hold below:
+      // a finger held still on a piece is the piece's own hold when it drags
+      // by holding, and when it drags by distance it has decided nothing yet
+      // at the delay — a hold answered there is a hold on a piece, and a carry
+      // out of the same press the moment the hand moves. A surface that pans
+      // steps back from the same source at the press (see pan_zoom.js).
+      if (
+        hasLongPress &&
+        !isPressOnDragSourceInside(pointerDownEvent, element)
+      ) {
         // A hold declared INSIDE this element, on this same press: the nearer
         // one answers, the way a click is the innermost target's, and this
         // wait is given up — two sheets opening from one hold is nobody's
@@ -686,6 +697,23 @@ const startSwipe = (
     // a swipe, so nothing was painted by it.
     onGiveUp: () => {},
   });
+};
+
+// Whether the press landed on a drag source strictly inside the element — the
+// element itself being one is the other arrangement, where the grab answers
+// the hold (see refuseDragTo in @jsenv/dom). A source that stood down from this
+// press carries nothing, so it is no reason to hold back, and the walk goes on
+// above it the way a surface's does.
+const isPressOnDragSourceInside = (pointerDownEvent, element) => {
+  const target = pointerDownEvent.target;
+  if (!target || typeof target.closest !== "function") {
+    return false;
+  }
+  let source = target.closest("[data-drag-source]");
+  if (source && source === dragSourceThatStoodDown(pointerDownEvent)) {
+    source = source.parentElement?.closest("[data-drag-source]") || null;
+  }
+  return Boolean(source) && source !== element && element.contains(source);
 };
 
 // Whether a press landing now completes the tap before it: the same hand, soon

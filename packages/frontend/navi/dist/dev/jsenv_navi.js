@@ -4,7 +4,7 @@
  */
 import { installImportMetaCssBuild, windowHeightSignal, windowWidthSignal, visualViewportHeightSignal, visualViewportWidthSignal, getAppHeight, getAppWidth, coarsePointerSignal, smallTouchScreenSignal } from "./jsenv_navi_side_effects.js";
 export { disableVirtualKeyboardOverlay } from "./jsenv_navi_side_effects.js";
-import { elementIsFocusable, createIterableWeakSet, dispatchInternalCustomEvent, dispatchCustomEvent, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, getElementSignature, createPubSub, findEvent, createValueEffect, findFocusDelegateTarget, findFocusable, scrollIntoViewThroughScrollables, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, keepTouchRefusable, isPressDrivenClick, waitForTap, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, markDragSource, refuseDragTo, startDragTo, installPanZoom, createEventGroupLogger, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, normalizeStyles, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, scrollRoomTowards, getScrollContainer, isTouchDrivenEvent, scrollIntoViewScoped, closestOpenableAncestor, isAncestorOpen, isDisplayedDespiteClosedAncestor, observeAncestorOpenState, getAncestorOpenType, findBefore, findAfter, resolveCSSSize, hasCSSSizeUnit, releaseWheelGesture, getScrollIntoViewScopedOffsets, wheelGestureIsTakenFrom, claimWheelGesture, initFocusGroup, stringifyStyle as stringifyStyle$1, resolveOklchLightness, contrastColor, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, getVirtualKeyboardOverlayHeight, onAncestorReopen, isPressDisputedByDrag, canScroll, measureWidestChildRow, performTabNavigation, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
+import { elementIsFocusable, createIterableWeakSet, dispatchInternalCustomEvent, dispatchCustomEvent, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, getElementSignature, createPubSub, findEvent, createValueEffect, findFocusDelegateTarget, findFocusable, scrollIntoViewThroughScrollables, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, keepTouchRefusable, isPressDrivenClick, waitForTap, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, dragSourceThatStoodDown, markDragSource, refuseDragTo, startDragTo, installPanZoom, createEventGroupLogger, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, normalizeStyles, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, scrollRoomTowards, getScrollContainer, isTouchDrivenEvent, scrollIntoViewScoped, closestOpenableAncestor, isAncestorOpen, isDisplayedDespiteClosedAncestor, observeAncestorOpenState, getAncestorOpenType, findBefore, findAfter, resolveCSSSize, hasCSSSizeUnit, releaseWheelGesture, getScrollIntoViewScopedOffsets, wheelGestureIsTakenFrom, claimWheelGesture, initFocusGroup, stringifyStyle as stringifyStyle$1, resolveOklchLightness, contrastColor, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, getVirtualKeyboardOverlayHeight, onAncestorReopen, isPressDisputedByDrag, canScroll, measureWidestChildRow, performTabNavigation, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
 export { chainEvent, clickIsSuppressed, contrastColor, createDragGestureController, dragAfterIntent, findEvent, markDragSource, startDragTo } from "@jsenv/dom";
 import { signal, computed, effect, untracked, batch, useComputed, useSignal } from "@preact/signals";
 import { isValidElement, createContext, render, h, toChildArray, options, cloneElement, Fragment as Fragment$1 } from "preact";
@@ -10911,7 +10911,17 @@ defineInteractionDetector({
           },
         });
       }
-      if (hasLongPress) {
+      // A press on something INSIDE this element that is picked up and
+      // carried is that thing's, the same nearer word as the inner hold below:
+      // a finger held still on a piece is the piece's own hold when it drags
+      // by holding, and when it drags by distance it has decided nothing yet
+      // at the delay — a hold answered there is a hold on a piece, and a carry
+      // out of the same press the moment the hand moves. A surface that pans
+      // steps back from the same source at the press (see pan_zoom.js).
+      if (
+        hasLongPress &&
+        !isPressOnDragSourceInside(pointerDownEvent, element)
+      ) {
         // A hold declared INSIDE this element, on this same press: the nearer
         // one answers, the way a click is the innermost target's, and this
         // wait is given up — two sheets opening from one hold is nobody's
@@ -11089,6 +11099,23 @@ const startSwipe = (
     // a swipe, so nothing was painted by it.
     onGiveUp: () => {},
   });
+};
+
+// Whether the press landed on a drag source strictly inside the element — the
+// element itself being one is the other arrangement, where the grab answers
+// the hold (see refuseDragTo in @jsenv/dom). A source that stood down from this
+// press carries nothing, so it is no reason to hold back, and the walk goes on
+// above it the way a surface's does.
+const isPressOnDragSourceInside = (pointerDownEvent, element) => {
+  const target = pointerDownEvent.target;
+  if (!target || typeof target.closest !== "function") {
+    return false;
+  }
+  let source = target.closest("[data-drag-source]");
+  if (source && source === dragSourceThatStoodDown(pointerDownEvent)) {
+    source = source.parentElement?.closest("[data-drag-source]") || null;
+  }
+  return Boolean(source) && source !== element && element.contains(source);
 };
 
 // Whether a press landing now completes the tap before it: the same hand, soon
@@ -27799,14 +27826,35 @@ Consider using unique IDs for each component instance.`,
 
 const NO_OP = () => {};
 const NO_ID_GIVEN = [undefined, NO_OP, NO_OP];
+// What the computed below answers for a key the document state does not hold:
+// key presence is the flag, and the value under a present key may be anything,
+// undefined included.
+const KEY_NOT_IN_STATE = Symbol("key_not_in_state");
 const useNavStateBasic = (
   id,
   { debug, type = "replace", onLeave, defaultValue } = {},
 ) => {
   // Hooks must be called unconditionally — before the !id early return.
-  const state = documentStateSignal.value;
-  // Key presence is the flag — the value may be anything, including undefined.
-  const keyInState = Boolean(id && state && Object.hasOwn(state, id));
+  //
+  // Subscribed to this one key, through a computed, rather than to the state
+  // as a whole: every popup with a nav state reads here, and a document state
+  // is written whenever any of them opens — a list of forty names each with a
+  // tooltip would re-render forty pickers, chains included, for the sheet
+  // around them opening. The computed only wakes this component when what
+  // sits under its own key changes.
+  const keyValueComputed = useMemo(
+    () =>
+      computed(() => {
+        const state = documentStateSignal.value;
+        if (id && state && Object.hasOwn(state, id)) {
+          return state[id];
+        }
+        return KEY_NOT_IN_STATE;
+      }),
+    [id],
+  );
+  const keyValue = keyValueComputed.value;
+  const keyInState = keyValue !== KEY_NOT_IN_STATE;
   const onLeaveRef = useRef(onLeave);
   onLeaveRef.current = onLeave;
   const prevKeyInStateRef = useRef(keyInState);
@@ -27841,7 +27889,7 @@ const useNavStateBasic = (
     effectiveType = "replace";
   }
 
-  const currentValue = keyInState ? state[id] : defaultValue;
+  const currentValue = keyInState ? keyValue : defaultValue;
 
   if (debug) {
     console.debug(`useNavState(${id}) current value is ${currentValue}`);
@@ -35465,6 +35513,18 @@ const MOUNT_DEFAULT = "from-first-open";
 const popupsMountingContentForOpen = new Set();
 const isMountingContentForOpen = (popupElement) =>
   popupsMountingContentForOpen.has(popupElement);
+// The popup being built that holds `element` somewhere below it, or null. For
+// an element whose own openable ancestor is something else (a closed trigger
+// inside the popup): what the layout would say about it is what it says about
+// the whole popup — nothing is on screen there yet.
+const findPopupMountingContentAround = (element) => {
+  for (const popupElement of popupsMountingContentForOpen) {
+    if (popupElement !== element && popupElement.contains(element)) {
+      return popupElement;
+    }
+  }
+  return null;
+};
 
 // requestIdleCallback is missing from Safari; a timeout is close enough there.
 const requestIdle = (callback) =>
@@ -35634,6 +35694,9 @@ const useDisplayedLayoutEffect = (ref, callback, deps) => {
   // Set by the mount effect below for an element that lives in its openable
   // ancestor's façade rather than in what that ancestor opens.
   const displayedWhileAncestorClosedRef = useRef(false);
+  // The popup whose opening will answer what the mount could not — see the
+  // mount effect below.
+  const decisionDeferredToRef = useRef(null);
 
   // Run on mount (or when deps change) — but only if the element is visible.
   useLayoutEffect(() => {
@@ -35647,14 +35710,26 @@ const useDisplayedLayoutEffect = (ref, callback, deps) => {
       return;
     }
     if (!isAncestorOpen(ancestor)) {
-      if (
+      if (isMountingContentForOpen(ancestor)) {
         // The popup building its content for its own opening: nothing in it
         // is on screen, and the open about to follow reveals all of it. Known
         // without asking the layout, which a synchronous mount would have to
-        // bring up to date once per element asking.
-        isMountingContentForOpen(ancestor) ||
-        !isDisplayedDespiteClosedAncestor(el, ancestor)
-      ) {
+        // bring up to date once per element asking; the observer below fires
+        // once it opens.
+        return;
+      }
+      const popupMounting = findPopupMountingContentAround(el);
+      if (popupMounting) {
+        // Under a closed trigger — a picker's façade, an expandable's header —
+        // inside a popup being built. Whether this element is on screen once
+        // that popup is open is exactly what the layout cannot say while the
+        // popup, and everything in it, is display:none: it would answer "hidden"
+        // for a façade that the opening is about to show. Asked again when the
+        // popup opens (see the observer effect below).
+        decisionDeferredToRef.current = popupMounting;
+        return;
+      }
+      if (!isDisplayedDespiteClosedAncestor(el, ancestor)) {
         // Ancestor is closed and took this element off screen with it — skip
         // now; the observeAncestorOpenState call below will fire once it
         // opens.
@@ -35678,19 +35753,63 @@ const useDisplayedLayoutEffect = (ref, callback, deps) => {
     if (!ancestor) {
       return undefined;
     }
-    return observeAncestorOpenState(ancestor, ({ isOpen }) => {
-      if (!isOpen) {
-        return;
-      }
-      if (displayedWhileAncestorClosedRef.current) {
-        // Façade content: on screen the whole time, so this opening reveals
-        // nothing here — and `becauseAncestorOpened: true` about it would be
-        // false in a way consumers act on (see use_auto_focus.js).
-        return;
-      }
-      const lastEl = ref.current;
-      callbackRef.current(lastEl, createDisplayedEvent(ancestor, true));
-    });
+    const stopObservingAncestor = observeAncestorOpenState(
+      ancestor,
+      ({ isOpen }) => {
+        if (!isOpen) {
+          return;
+        }
+        if (displayedWhileAncestorClosedRef.current) {
+          // Façade content: on screen the whole time, so this opening reveals
+          // nothing here — and `becauseAncestorOpened: true` about it would be
+          // false in a way consumers act on (see use_auto_focus.js).
+          return;
+        }
+        const lastEl = ref.current;
+        callbackRef.current(lastEl, createDisplayedEvent(ancestor, true));
+      },
+    );
+    const popupMounting = decisionDeferredToRef.current;
+    if (!popupMounting) {
+      return stopObservingAncestor;
+    }
+    // The mount deferred its decision to this popup's opening (see above):
+    // once it is open, the layout answers for what the closed ancestor keeps
+    // on screen. A façade element is then displayed, by that opening — which
+    // owns it, the way it owns everything the popup reveals. An element the
+    // closed ancestor genuinely hides stays with the observer above.
+    const stopObservingPopup = observeAncestorOpenState(
+      popupMounting,
+      ({ isOpen }) => {
+        if (!isOpen) {
+          return;
+        }
+        stopObservingPopup();
+        decisionDeferredToRef.current = null;
+        const lastEl = ref.current;
+        if (!lastEl) {
+          return;
+        }
+        if (isAncestorOpen(ancestor)) {
+          callbackRef.current(
+            lastEl,
+            createDisplayedEvent(popupMounting, true),
+          );
+          return;
+        }
+        if (isDisplayedDespiteClosedAncestor(lastEl, ancestor)) {
+          displayedWhileAncestorClosedRef.current = true;
+          callbackRef.current(
+            lastEl,
+            createDisplayedEvent(popupMounting, true),
+          );
+        }
+      },
+    );
+    return () => {
+      stopObservingAncestor();
+      stopObservingPopup();
+    };
   }, []);
 };
 
@@ -70059,6 +70178,7 @@ const ListItems = ({
   const virtual = useContext(ListVirtualContext);
   const slotId = useContext(ListSlotContext);
   const renderWindow = useContext(RenderWindowContext);
+  const separator = useContext(SeparatorContext);
   // The vnode drawn for a row, kept by item: a run rendering again (its window
   // moving, its first paint's budget giving way to the full one) hands preact
   // the same vnode for a row that has not changed, and preact leaves that
@@ -70067,14 +70187,14 @@ const ListItems = ({
   // row at the same index, in the same refreshing state: everything the
   // function is given.
   const rowVnodesRef = useRef(null);
-  if (!rowVnodesRef.current || rowVnodesRef.current.renderItem !== renderItem) {
+  if (!rowVnodesRef.current || rowVnodesRef.current.renderItem !== renderItem || rowVnodesRef.current.separator !== separator) {
     rowVnodesRef.current = {
       renderItem,
+      separator,
       byItem: new Map()
     };
   }
   const rowVnodesByItem = rowVnodesRef.current.byItem;
-  const separator = useContext(SeparatorContext);
   const store = useItemStore({
     items,
     count,
@@ -70304,17 +70424,33 @@ const ListItems = ({
     const item = getItemAt(rowIndex);
     const key = item === undefined ? `${ownerId}_skeleton_${rowIndex}` : idOf(item, rowIndex);
     let rowVnode;
+    let rowContextValue;
+    let rowKept = null;
     if (item !== undefined) {
       const rowVnodeKept = rowVnodesByItem.get(item);
       if (rowVnodeKept && rowVnodeKept.rowIndex === rowIndex && rowVnodeKept.refreshing === renderItemState.refreshing) {
         rowVnode = rowVnodeKept.vnode;
+        rowContextValue = rowVnodeKept.rowContextValue;
+        rowKept = rowVnodeKept;
       } else {
         rowVnode = renderItem(item, rowIndex, renderItemState);
-        rowVnodesByItem.set(item, {
+        // Kept with the vnode, for the same reason: a context value that is a
+        // fresh object on every render forces every consumer of it to render,
+        // which is the row's own chain — the vnode handed back unchanged would
+        // then buy nothing.
+        rowContextValue = {
+          id: key,
+          index: rowIndex,
+          item
+        };
+        rowKept = {
           vnode: rowVnode,
+          rowContextValue,
           rowIndex,
-          refreshing: renderItemState.refreshing
-        });
+          refreshing: renderItemState.refreshing,
+          separatorVnode: null
+        };
+        rowVnodesByItem.set(item, rowKept);
       }
     } else if (renderRowSkeleton === false) {
       // The row must still take its room: without it the rows below would
@@ -70338,20 +70474,25 @@ const ListItems = ({
       // as a hairline under the label.
       const drawSeparator = separator && rowIndex > 0 && !opensGroup(groupKeyOf(item, rowIndex));
       if (drawSeparator) {
-        pushRow(cloneElement(resolveSeparatorVnode(separator, rowIndex - 1), {
-          key: `${key}_separator`
-        }), item, rowIndex);
+        // Kept with the row too: a separator built again is a separator
+        // rendered again.
+        let separatorVnode = rowKept ? rowKept.separatorVnode : null;
+        if (!separatorVnode) {
+          separatorVnode = cloneElement(resolveSeparatorVnode(separator, rowIndex - 1), {
+            key: `${key}_separator`
+          });
+          if (rowKept) {
+            rowKept.separatorVnode = separatorVnode;
+          }
+        }
+        pushRow(separatorVnode, item, rowIndex);
       }
       pushRow(jsx(ListRowContext.Provider, {
         value: item === undefined ? {
           id: key,
           index: rowIndex,
           ...getSkeletonRow()
-        } : {
-          id: key,
-          index: rowIndex,
-          item
-        },
+        } : rowContextValue,
         children: rowVnode
       }, key), item, rowIndex);
     }

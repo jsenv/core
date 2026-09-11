@@ -132,6 +132,7 @@ export { allowWheelThrough } from "./src/interaction/scroll/wheel_through.js";
 // interaction/drag
 export {
   dragAfterIntent,
+  dragSourceThatStoodDown,
   keepTouchRefusable,
   markDragSource,
 } from "./src/interaction/drag/drag_after_intent.js";

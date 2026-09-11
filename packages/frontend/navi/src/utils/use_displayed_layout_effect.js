@@ -7,7 +7,10 @@ import {
 } from "@jsenv/dom";
 import { useLayoutEffect, useRef } from "preact/hooks";
 
-import { isMountingContentForOpen } from "../layout/popup_content_mount.js";
+import {
+  findPopupMountingContentAround,
+  isMountingContentForOpen,
+} from "../layout/popup_content_mount.js";
 
 /**
  * A variant of useLayoutEffect that accounts for ancestor <dialog>/<details>
@@ -69,6 +72,9 @@ export const useDisplayedLayoutEffect = (ref, callback, deps) => {
   // Set by the mount effect below for an element that lives in its openable
   // ancestor's façade rather than in what that ancestor opens.
   const displayedWhileAncestorClosedRef = useRef(false);
+  // The popup whose opening will answer what the mount could not — see the
+  // mount effect below.
+  const decisionDeferredToRef = useRef(null);
 
   // Run on mount (or when deps change) — but only if the element is visible.
   useLayoutEffect(() => {
@@ -82,14 +88,26 @@ export const useDisplayedLayoutEffect = (ref, callback, deps) => {
       return;
     }
     if (!isAncestorOpen(ancestor)) {
-      if (
+      if (isMountingContentForOpen(ancestor)) {
         // The popup building its content for its own opening: nothing in it
         // is on screen, and the open about to follow reveals all of it. Known
         // without asking the layout, which a synchronous mount would have to
-        // bring up to date once per element asking.
-        isMountingContentForOpen(ancestor) ||
-        !isDisplayedDespiteClosedAncestor(el, ancestor)
-      ) {
+        // bring up to date once per element asking; the observer below fires
+        // once it opens.
+        return;
+      }
+      const popupMounting = findPopupMountingContentAround(el);
+      if (popupMounting) {
+        // Under a closed trigger — a picker's façade, an expandable's header —
+        // inside a popup being built. Whether this element is on screen once
+        // that popup is open is exactly what the layout cannot say while the
+        // popup, and everything in it, is display:none: it would answer "hidden"
+        // for a façade that the opening is about to show. Asked again when the
+        // popup opens (see the observer effect below).
+        decisionDeferredToRef.current = popupMounting;
+        return;
+      }
+      if (!isDisplayedDespiteClosedAncestor(el, ancestor)) {
         // Ancestor is closed and took this element off screen with it — skip
         // now; the observeAncestorOpenState call below will fire once it
         // opens.
@@ -113,19 +131,63 @@ export const useDisplayedLayoutEffect = (ref, callback, deps) => {
     if (!ancestor) {
       return undefined;
     }
-    return observeAncestorOpenState(ancestor, ({ isOpen }) => {
-      if (!isOpen) {
-        return;
-      }
-      if (displayedWhileAncestorClosedRef.current) {
-        // Façade content: on screen the whole time, so this opening reveals
-        // nothing here — and `becauseAncestorOpened: true` about it would be
-        // false in a way consumers act on (see use_auto_focus.js).
-        return;
-      }
-      const lastEl = ref.current;
-      callbackRef.current(lastEl, createDisplayedEvent(ancestor, true));
-    });
+    const stopObservingAncestor = observeAncestorOpenState(
+      ancestor,
+      ({ isOpen }) => {
+        if (!isOpen) {
+          return;
+        }
+        if (displayedWhileAncestorClosedRef.current) {
+          // Façade content: on screen the whole time, so this opening reveals
+          // nothing here — and `becauseAncestorOpened: true` about it would be
+          // false in a way consumers act on (see use_auto_focus.js).
+          return;
+        }
+        const lastEl = ref.current;
+        callbackRef.current(lastEl, createDisplayedEvent(ancestor, true));
+      },
+    );
+    const popupMounting = decisionDeferredToRef.current;
+    if (!popupMounting) {
+      return stopObservingAncestor;
+    }
+    // The mount deferred its decision to this popup's opening (see above):
+    // once it is open, the layout answers for what the closed ancestor keeps
+    // on screen. A façade element is then displayed, by that opening — which
+    // owns it, the way it owns everything the popup reveals. An element the
+    // closed ancestor genuinely hides stays with the observer above.
+    const stopObservingPopup = observeAncestorOpenState(
+      popupMounting,
+      ({ isOpen }) => {
+        if (!isOpen) {
+          return;
+        }
+        stopObservingPopup();
+        decisionDeferredToRef.current = null;
+        const lastEl = ref.current;
+        if (!lastEl) {
+          return;
+        }
+        if (isAncestorOpen(ancestor)) {
+          callbackRef.current(
+            lastEl,
+            createDisplayedEvent(popupMounting, true),
+          );
+          return;
+        }
+        if (isDisplayedDespiteClosedAncestor(lastEl, ancestor)) {
+          displayedWhileAncestorClosedRef.current = true;
+          callbackRef.current(
+            lastEl,
+            createDisplayedEvent(popupMounting, true),
+          );
+        }
+      },
+    );
+    return () => {
+      stopObservingAncestor();
+      stopObservingPopup();
+    };
   }, []);
 };
 

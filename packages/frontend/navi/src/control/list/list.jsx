@@ -4159,6 +4159,7 @@ export const ListItems = ({
   const virtual = useContext(ListVirtualContext);
   const slotId = useContext(ListSlotContext);
   const renderWindow = useContext(RenderWindowContext);
+  const separator = useContext(SeparatorContext);
   // The vnode drawn for a row, kept by item: a run rendering again (its window
   // moving, its first paint's budget giving way to the full one) hands preact
   // the same vnode for a row that has not changed, and preact leaves that
@@ -4167,11 +4168,14 @@ export const ListItems = ({
   // row at the same index, in the same refreshing state: everything the
   // function is given.
   const rowVnodesRef = useRef(null);
-  if (!rowVnodesRef.current || rowVnodesRef.current.renderItem !== renderItem) {
-    rowVnodesRef.current = { renderItem, byItem: new Map() };
+  if (
+    !rowVnodesRef.current ||
+    rowVnodesRef.current.renderItem !== renderItem ||
+    rowVnodesRef.current.separator !== separator
+  ) {
+    rowVnodesRef.current = { renderItem, separator, byItem: new Map() };
   }
   const rowVnodesByItem = rowVnodesRef.current.byItem;
-  const separator = useContext(SeparatorContext);
   const store = useItemStore({
     items,
     count,
@@ -4441,6 +4445,8 @@ export const ListItems = ({
         ? `${ownerId}_skeleton_${rowIndex}`
         : idOf(item, rowIndex);
     let rowVnode;
+    let rowContextValue;
+    let rowKept = null;
     if (item !== undefined) {
       const rowVnodeKept = rowVnodesByItem.get(item);
       if (
@@ -4449,13 +4455,23 @@ export const ListItems = ({
         rowVnodeKept.refreshing === renderItemState.refreshing
       ) {
         rowVnode = rowVnodeKept.vnode;
+        rowContextValue = rowVnodeKept.rowContextValue;
+        rowKept = rowVnodeKept;
       } else {
         rowVnode = renderItem(item, rowIndex, renderItemState);
-        rowVnodesByItem.set(item, {
+        // Kept with the vnode, for the same reason: a context value that is a
+        // fresh object on every render forces every consumer of it to render,
+        // which is the row's own chain — the vnode handed back unchanged would
+        // then buy nothing.
+        rowContextValue = { id: key, index: rowIndex, item };
+        rowKept = {
           vnode: rowVnode,
+          rowContextValue,
           rowIndex,
           refreshing: renderItemState.refreshing,
-        });
+          separatorVnode: null,
+        };
+        rowVnodesByItem.set(item, rowKept);
       }
     } else if (renderRowSkeleton === false) {
       // The row must still take its room: without it the rows below would
@@ -4475,13 +4491,19 @@ export const ListItems = ({
       const drawSeparator =
         separator && rowIndex > 0 && !opensGroup(groupKeyOf(item, rowIndex));
       if (drawSeparator) {
-        pushRow(
-          cloneElement(resolveSeparatorVnode(separator, rowIndex - 1), {
-            key: `${key}_separator`,
-          }),
-          item,
-          rowIndex,
-        );
+        // Kept with the row too: a separator built again is a separator
+        // rendered again.
+        let separatorVnode = rowKept ? rowKept.separatorVnode : null;
+        if (!separatorVnode) {
+          separatorVnode = cloneElement(
+            resolveSeparatorVnode(separator, rowIndex - 1),
+            { key: `${key}_separator` },
+          );
+          if (rowKept) {
+            rowKept.separatorVnode = separatorVnode;
+          }
+        }
+        pushRow(separatorVnode, item, rowIndex);
       }
       pushRow(
         <ListRowContext.Provider
@@ -4489,7 +4511,7 @@ export const ListItems = ({
           value={
             item === undefined
               ? { id: key, index: rowIndex, ...getSkeletonRow() }
-              : { id: key, index: rowIndex, item }
+              : rowContextValue
           }
         >
           {rowVnode}

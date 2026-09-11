@@ -75,6 +75,18 @@ export const MOUNT_DEFAULT = "from-first-open";
 const popupsMountingContentForOpen = new Set();
 export const isMountingContentForOpen = (popupElement) =>
   popupsMountingContentForOpen.has(popupElement);
+// The popup being built that holds `element` somewhere below it, or null. For
+// an element whose own openable ancestor is something else (a closed trigger
+// inside the popup): what the layout would say about it is what it says about
+// the whole popup — nothing is on screen there yet.
+export const findPopupMountingContentAround = (element) => {
+  for (const popupElement of popupsMountingContentForOpen) {
+    if (popupElement !== element && popupElement.contains(element)) {
+      return popupElement;
+    }
+  }
+  return null;
+};
 
 // requestIdleCallback is missing from Safari; a timeout is close enough there.
 const requestIdle = (callback) =>

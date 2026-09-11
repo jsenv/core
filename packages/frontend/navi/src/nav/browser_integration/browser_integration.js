@@ -1,4 +1,5 @@
-import { useEffect, useRef } from "preact/hooks";
+import { computed } from "@preact/signals";
+import { useEffect, useMemo, useRef } from "preact/hooks";
 
 import { installReportDeadlineExtension } from "../../action/action_error_report.js";
 import { updateActions } from "../../action/actions.js";
@@ -252,14 +253,35 @@ if (import.meta.hot) {
 
 const NO_OP = () => {};
 const NO_ID_GIVEN = [undefined, NO_OP, NO_OP];
+// What the computed below answers for a key the document state does not hold:
+// key presence is the flag, and the value under a present key may be anything,
+// undefined included.
+const KEY_NOT_IN_STATE = Symbol("key_not_in_state");
 const useNavStateBasic = (
   id,
   { debug, type = "replace", onLeave, defaultValue } = {},
 ) => {
   // Hooks must be called unconditionally — before the !id early return.
-  const state = documentStateSignal.value;
-  // Key presence is the flag — the value may be anything, including undefined.
-  const keyInState = Boolean(id && state && Object.hasOwn(state, id));
+  //
+  // Subscribed to this one key, through a computed, rather than to the state
+  // as a whole: every popup with a nav state reads here, and a document state
+  // is written whenever any of them opens — a list of forty names each with a
+  // tooltip would re-render forty pickers, chains included, for the sheet
+  // around them opening. The computed only wakes this component when what
+  // sits under its own key changes.
+  const keyValueComputed = useMemo(
+    () =>
+      computed(() => {
+        const state = documentStateSignal.value;
+        if (id && state && Object.hasOwn(state, id)) {
+          return state[id];
+        }
+        return KEY_NOT_IN_STATE;
+      }),
+    [id],
+  );
+  const keyValue = keyValueComputed.value;
+  const keyInState = keyValue !== KEY_NOT_IN_STATE;
   const onLeaveRef = useRef(onLeave);
   onLeaveRef.current = onLeave;
   const prevKeyInStateRef = useRef(keyInState);
@@ -294,7 +316,7 @@ const useNavStateBasic = (
     effectiveType = "replace";
   }
 
-  const currentValue = keyInState ? state[id] : defaultValue;
+  const currentValue = keyInState ? keyValue : defaultValue;
 
   if (debug) {
     console.debug(`useNavState(${id}) current value is ${currentValue}`);

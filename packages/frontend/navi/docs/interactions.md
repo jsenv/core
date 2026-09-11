@@ -105,7 +105,10 @@ Two holds on one press — a `longpress` declared on something inside an
 element that declares one too — are answered by the nearer one, the way a
 click is the innermost target's: the inner hold fires, the outer wait is given
 up. Delays being equal; an outer hold made shorter than the inner one fires
-first.
+first. A press that lands on something carried inside the element (`move`,
+`moving`, `reorder`…) is that thing's the same way: the outer hold does not
+wait on it, whether the source drags by holding or by distance — except a
+source that says `"refuse"` for this press, which carries nothing.
 
 There is no `dblclick` in that table, on purpose: the browser fires it for a
 mouse and never for a finger, so an element declaring it would answer half the
