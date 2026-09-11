@@ -60017,24 +60017,18 @@ const useDialogProps = props => {
     // comment): this opening has its own content to be measured against, and
     // measuring it inside last time's box would answer with last time's size.
     unfreezeSize(dialogEl);
-    positionDialog();
-    if (sizing === "frozen") {
-      // After positionDialog: the caps it writes
-      // (--container-position-remaining-*) are part of what decides the size
-      // being taken, so measuring before it would freeze a box the dialog
-      // never actually had.
-      freezeSize(dialogEl);
-    }
 
-    // Reposition on the same triggers Popover's own visibleRectEffect
-    // already reacts to generically — window resize/scroll/visual-viewport
-    // changes for layer="top" (positionedAncestor is already
+    // Placed by the effect's own first check, synchronously, on the opening
+    // event — and repositioned on the same triggers Popover's own
+    // visibleRectEffect reacts to generically: window resize/scroll/
+    // visual-viewport changes for layer="top" (positionedAncestor is already
     // document.documentElement there, see its own computation above;
-    // visibleRectEffect already debounces visualViewport resize by 100ms
-    // to avoid the mobile tap-to-tap-input keyboard flicker, so no
-    // separate mechanism is needed here for that), or the positioned
-    // ancestor's own resize for layer="local" — see this file's top
-    // comment.
+    // visibleRectEffect already debounces visualViewport resize by 100ms to
+    // avoid the mobile tap-to-tap-input keyboard flicker, so no separate
+    // mechanism is needed here for that), or the positioned ancestor's own
+    // resize for layer="local" — see this file's top comment. One placement
+    // for the opening: a positionDialog() of our own before the effect would
+    // be a second pick, and a second layout between two reads of the viewport.
     const rectEffect = visibleRectEffect(positionedAncestor, (visibleRect, {
       event
     }) => {
@@ -60049,6 +60043,13 @@ const useDialogProps = props => {
       event: e,
       skipElementResize: true
     });
+    if (sizing === "frozen") {
+      // After the placement: the caps it writes
+      // (--container-position-remaining-*) are part of what decides the size
+      // being taken, so measuring before it would freeze a box the dialog
+      // never actually had.
+      freezeSize(dialogEl);
+    }
     rectEffect.observeSize(dialogEl);
     // Exposed for the placement-props effect below, which needs to re-place an
     // already-open dialog.
@@ -62379,6 +62380,13 @@ const PickerCustomResolver = props => {
     if (props.calloutIcon === undefined) {
       props.calloutIcon = props.variant !== "text";
     }
+    // A door's content is never where its value comes from (see `standalone`
+    // above), so nothing needs it before the first open: built then, like a
+    // popup's. A name in a list wrapped in a tooltip is otherwise a card in
+    // the DOM per name, and each one asks the layout whether it is on screen.
+    if (props.mount === undefined) {
+      props.mount = MOUNT_DEFAULT;
+    }
     if (props.rightSlotIcon === undefined) {
       props.rightSlotIcon = jsx(CalloutStatusIcon, {
         status: props.calloutStatus,
@@ -63230,13 +63238,15 @@ const PICKER_CALLOUT_CONTENT_TOKEN = createOpenToken();
  * The content is rendered into an element this component owns, handed to the
  * callout as its message (a Node, appended as-is) and taken back when the
  * callout closes. Between two opens it is docked, hidden, in the span below:
- * in the document the whole time, the way a popup's `mount="always"` keeps its
- * content — so what it holds survives a close, and what it measures of itself
- * at mount (a computed color, a light-dark() pair) resolves against a real
- * ancestry. An element with no document has no computed style, and a badge
- * reading its own background there would see nothing at all. The element
- * carries data-picker-content: the callout is appended inside the picker root,
- * and a press in there must read as inside the popup, not on the trigger.
+ * in the document the whole time once built, so what it holds survives a
+ * close, and what it measures of itself at mount (a computed color, a
+ * light-dark() pair) resolves against a real ancestry. An element with no
+ * document has no computed style, and a badge reading its own background
+ * there would see nothing at all. When it is built is the popup's own `mount`
+ * rule (see popup_content_mount.js) — the first open, for a callout. The
+ * element carries data-picker-content: the callout is appended inside the
+ * picker root, and a press in there must read as inside the popup, not on the
+ * trigger.
  */
 const PickerCalloutPopup = ({
   ref,
@@ -63251,9 +63261,18 @@ const PickerCalloutPopup = ({
   onnavi_request_open,
   onnavi_request_close,
   onnavi_request_confirm,
-  children
+  mount,
+  children: childrenProp
 }) => {
   const hostRef = useRef(null);
+  // The dock is what the content finds as its openable ancestor (the
+  // aria-expanded below), which is what the mount marks as being built for
+  // its own opening.
+  const contentMounted = usePopupContentMount(openController, ref, {
+    mount,
+    anchor
+  });
+  const children = contentMounted ? childrenProp : null;
   // Reassigned on every render, like Popover's own, so it closes over the
   // latest props.
   openController.getElement = () => pickerRef.current;
@@ -66134,7 +66153,8 @@ const useListScrollSync = ({
   const debugScroll = useDebugScroll();
   const virtualItemSizeSignal = useVirtualItemSizeSignal(ref, virtualItemSize, horizontal, {
     virtual,
-    renderBudget
+    renderBudget,
+    scrolledWanted: scrolled ?? defaultScrolled
   });
   const getScroller = () => getScrollerEl(ref.current, scroller, horizontal);
   const getListEl = () => ref.current.querySelector(".navi_list");
@@ -67488,7 +67508,8 @@ const measureItemSize = (listEl, horizontal) => {
 };
 const useVirtualItemSizeSignal = (ref, virtualItemSizeProp = 0, horizontal, {
   virtual,
-  renderBudget
+  renderBudget,
+  scrolledWanted
 }) => {
   const virtualSizeSignalRef = useRef(null);
   if (!virtualSizeSignalRef.current) {
@@ -67556,6 +67577,14 @@ const useVirtualItemSizeSignal = (ref, virtualItemSizeProp = 0, horizontal, {
   }
   useLayoutEffect(() => {
     if (virtualSizeSignal.peek() !== 0) {
+      return undefined;
+    }
+    // Measured only for what reads the size: the fillers of rows held off
+    // screen, and a list held somewhere (placeWhereHeld) before it knows where
+    // that is. A list drawing every row it has, opening at its start, would
+    // pay a layout in every commit for a number nobody reads.
+    const sizeRead = virtual.totalSignal.peek() > renderBudget || scrolledWanted !== undefined && scrolledWanted !== "start";
+    if (!sizeRead) {
       return undefined;
     }
     const listEl = ref.current?.querySelector(".navi_list");
@@ -75264,9 +75293,13 @@ const useSearchText = (searchText, items, matchFn = applySearch) => {
     return { orderedItems, matchInfoMap };
   }, [items, searchText, matchFn]);
 
-  const getItemMatchInfo = (item) => {
-    return matchInfoMap.get(item);
-  };
+  // The same function for as long as the map is the same: a `renderItem`
+  // reading it is stable only if this is, and a run keeps the rows it drew
+  // only for a stable `renderItem` (see List.Items).
+  const getItemMatchInfo = useCallback(
+    (item) => matchInfoMap.get(item),
+    [matchInfoMap],
+  );
 
   return [orderedItems, getItemMatchInfo];
 };
