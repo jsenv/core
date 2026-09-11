@@ -63,6 +63,8 @@ import { claimUnplacedAutofocus } from "./focus_transfer.js";
  * @returns {Function} triggerAutofocus — can be called manually with a synthetic
  *   event to re-run the focus logic outside of the layout-effect lifecycle.
  */
+const NO_ELEMENT_REF = { current: null };
+
 export const useAutoFocus = (
   focusableElementRef,
   autoFocus,
@@ -196,8 +198,15 @@ export const useAutoFocus = (
     };
   };
 
+  // Nothing to place when the control asks for no focus ("restore" is given
+  // focus by a transfer, never by this effect): the displayed-effect is then
+  // handed no element at all, so it never asks the layout whether one is on
+  // screen — a question every control in a list would otherwise ask at
+  // mount, for an answer this hook would not use. Read at mount, like the
+  // deps below say.
+  const claimsFocus = Boolean(autoFocus) && autoFocus !== "restore";
   useDisplayedLayoutEffect(
-    focusableElementRef,
+    claimsFocus ? focusableElementRef : NO_ELEMENT_REF,
     (el, e) => {
       return triggerAutofocus(e);
     },
