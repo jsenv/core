@@ -12,6 +12,7 @@ it was read at: see
 - [1. The document scrolls](#1-the-document-scrolls)
 - [2. A part of the document scrolls](#2-a-part-of-the-document-scrolls)
 - [3. A popup scrolls](#3-a-popup-scrolls)
+- [Many rows: `List.Items` and the render window](#many-rows-listitems-and-the-render-window)
 - [Hover while scrolling](#hover-while-scrolling)
 - [The list border](#the-list-border)
 
@@ -313,6 +314,95 @@ changes screen mid-reading.
 Reference: `src/layout/dialog.jsx`, `src/layout/popover.jsx`,
 `src/layout/slide_container.jsx`, and the "One slide much taller than the
 others" case in `src/layout/demos/8_slide_container_demo.html`.
+
+## Many rows: `List.Items` and the render window
+
+What a list costs must not follow the size of its collection. A row is a
+`<List.Item>` with a checkbox, a text and a button or two — around 150 to 250
+components once every resolver, box and context provider is counted — and the
+browser paints nothing until the render that draws them has ended. Forty rows
+given to a list that opens in a click are forty rows drawn before anything is
+seen, and a hundred are a hundred: with the CPU throttled to a phone's, the
+click that opens a sheet of 40 users took 536 ms, and 952 ms for 100 (wematch,
+September 2026). A screen shows fourteen of them.
+
+So the rule: **rows as `<List.Item>` children are all drawn**, and that is the
+right shape only for a list the caller knows to be short — a menu, a settings
+sheet, a handful of tabs. A collection whose size the caller does not decide
+(users, messages, search results, anything read from a resource) goes to a run:
+
+```jsx
+// in memory: the whole collection, in order; the list draws a window of it
+<List renderBudget={{ initial: 17, after: 30 }} virtualItemSize={45}>
+  <List.Items items={users} renderItem={renderUser} />
+</List>
+
+// read a slice at a time: the run asks its source for what it is about to draw
+<List>
+  <List.Items itemsAction={USER.GET_RANGE.bindParams({ q })} renderItem={renderUser} />
+</List>
+```
+
+The run draws only the rows inside the **render window** — `renderBudget` of
+them, 100 by default — and holds the room of the others with fillers, so the
+scrollbar says how long the collection is and the DOM says how many rows fit a
+screen and some. The window slides as the user scrolls, and moves only when
+what is on screen nears one of its edges: a row crossed is not a window
+rebuilt. Below 30 the list warns, because a window shorter than a tall screen
+shows blank fillers under the last row.
+
+### The first paint of a list that opens in a click
+
+A popup's content is built in the click that opens it (see `popup_open.md`),
+and rows below the fold cost the same there as rows on screen. `renderBudget`
+takes `{ initial, after }` for exactly this: `initial` rows in the commit the
+browser paints first — what a phone screen shows, plus a few — and `after` from
+the paint on. The switch waits for the paint itself, not for an effect: preact
+runs a component's pending effects early when that component renders again,
+and something always re-renders before a popup has painted. Do not rebuild
+this by hand with a `useEffect` that widens a slice — that is the thing it
+replaces, and it fails for that reason. The runs ask their source for `after`
+rows from the start, so the smaller first window costs no second request.
+
+### Doing it well
+
+- **A stable `id` on every item.** The run keys its rows on `item.id` — it is
+  what addresses a row from outside (`--navi-select`, `scrolled={{ id }}`), and
+  what tells a row that moved from a row that changed.
+- **A stable `renderItem`.** The run keeps the vnode it drew for an item and
+  hands preact the same one on its next render — the window sliding, the
+  first paint's budget giving way — so an unchanged row is not walked again.
+  It can only do that for the same function as last time: `renderItem` written
+  inline in a component that re-renders is a new function each time, and every
+  row is redrawn with it. Define it outside the component, or `useCallback` it,
+  and let it read the item and the index it is given rather than closing over
+  state.
+- **`renderItem` returns a `<List.Item>` carrying its own props** —
+  `selectable`, `value`, `selected`, the buttons in it — there is no second
+  place describing the row.
+- **`virtualItemSize` when the rows are uniform.** Without it the list measures
+  a row: once at mount, again when the popup around it opens (a row inside a
+  closed dialog measures 0), and after each commit while rows are held off
+  screen. Given, nothing is measured, and the fillers are right from the first
+  commit.
+- **A `key` on the run when the collection changes** as a whole (`itemsAction`
+  with another scope): another collection is another run. With `items`,
+  another array is already another collection.
+- **`scroller="parent"` inside a popup body**, as everywhere else in this file.
+- **Groups come from the data**: `groupBy` on the run, `renderGroupLabel` for
+  the label — the only way a list discovering its rows page by page has
+  sections.
+
+A run whose rows all fit the window is just rows: nothing is virtualized, no
+row is ever a skeleton with `items`, and it costs what the same rows would as
+children. There is no reason to hold back from it for a list that might grow.
+
+Reference: `src/control/list/list.jsx` (JSDoc on `List` — `renderBudget`,
+`virtualItemSize` — and on `List.Items`),
+`src/control/demos/17_virtual_scroll_and_filter_demo.html` (a run in memory,
+searched), `src/control/demos/integration/1_list_loaded_by_scroll_demo.html`
+(a run reading a slice at a time). What a run reads back after a write is in
+[list_refresh.md](./list_refresh.md).
 
 ## Hover while scrolling
 

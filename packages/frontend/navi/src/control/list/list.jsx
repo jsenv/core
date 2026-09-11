@@ -980,7 +980,10 @@ const ListUI = (props) => {
       onListVisibleItemsChange?.(tracker.visibleItemsSignal.peek());
     },
   });
-  virtual.renderBudget = renderBudget;
+  // What the runs ask for and stand for: the steady budget, whatever the
+  // window of the first paint draws — a run asking for the rows of the first
+  // picture and then for the rest is two round trips for one opening.
+  virtual.renderBudget = renderBudgetAfterPaint;
   virtual.scrolled = scrolled ?? defaultScrolled;
 
   const {
@@ -5313,6 +5316,25 @@ const ListResolved = /*#__PURE__*/ createComponentResolver([
  *   starts. Keep it to come back to it
  *   later through `scrolled`/`defaultScrolled` — an index would not do, since
  *   rows get inserted while a list is being read.
+ * @param {number|{initial: number, after: number}} [props.renderBudget=100]
+ *   How many rows of a `<List.Items>` run are in the DOM at once: the render
+ *   window, which slides as the user scrolls while fillers hold the room of
+ *   the rows outside it. Rows declared one by one as `<List.Item>` children
+ *   are all drawn, whatever this says — a list with more than a few dozen rows
+ *   gives them to a run (see docs/scroll.md, "Many rows"). Below 30 the list
+ *   warns: a window shorter than a tall screen shows blank fillers.
+ *
+ *   `{ initial, after }` for a list drawn in the click that opens it (a popup):
+ *   `initial` rows in the commit the browser paints first — about what a phone
+ *   screen shows — and `after` from the paint on, where the floor of 30
+ *   applies. The runs ask their source for `after` rows from the start, so the
+ *   first picture costs no second request.
+ * @param {number} [props.virtualItemSize]
+ *   The size of one row along the scroll axis, in px, when every row has the
+ *   same: what the fillers are sized with and what a scroll position is
+ *   estimated from. Left out, the list measures its rows — once when it
+ *   mounts, again when a popup around it opens, and after each commit while
+ *   rows are held off screen. Given, it never measures.
  * @param {"self"|"parent"|"document"|Element|{current: Element}} [props.scroller="self"]
  *   Which box scrolls. `"self"` gives the list a scroll box of its own;
  *   `"parent"` makes it virtualize against the scrollable ancestor it lives in

@@ -3,7 +3,6 @@ import {
   dispatchCustomEvent,
   isPressDisputedByDrag,
 } from "@jsenv/dom";
-import { createPortal } from "preact/compat";
 import { useContext, useId, useRef } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
@@ -48,6 +47,12 @@ const css = /* css */ `
      vars on the picker at all — a var on the picker inherits into everything
      the popup holds, and the pickers in there would read it as their own —
      but props on the popup element, see PickerContentInsidePopup. */
+
+  /* callout: the content is docked in the picker between two opens (see
+     PickerCalloutPopup), where it is not shown. */
+  .navi_picker_callout_dock > [data-picker-content] {
+    display: none;
+  }
 
   /* popover */
   .navi_popover[data-picker-popup] {
@@ -1110,10 +1115,14 @@ const PICKER_CALLOUT_CONTENT_TOKEN = createOpenToken();
  * closes the controller for real — the popup is already gone, there is no
  * choice left to offer `requestClose`.
  *
- * The content is rendered through a portal into an element this component
- * owns, handed to the callout as its message (a Node, appended as-is). It is
- * rendered whether the callout is open or not, so what the content holds
- * survives a close, the way a popup's `mount="always"` keeps it. The element
+ * The content is rendered into an element this component owns, handed to the
+ * callout as its message (a Node, appended as-is) and taken back when the
+ * callout closes. Between two opens it is docked, hidden, in the span below:
+ * in the document the whole time, the way a popup's `mount="always"` keeps its
+ * content — so what it holds survives a close, and what it measures of itself
+ * at mount (a computed color, a light-dark() pair) resolves against a real
+ * ancestry. An element with no document has no computed style, and a badge
+ * reading its own background there would see nothing at all. The element
  * carries data-picker-content: the callout is appended inside the picker root,
  * and a press in there must read as inside the popup, not on the trigger.
  */
@@ -1133,16 +1142,15 @@ const PickerCalloutPopup = ({
   children,
 }) => {
   const hostRef = useRef(null);
-  if (!hostRef.current) {
-    const host = document.createElement("div");
-    host.setAttribute("data-picker-content", "");
-    hostRef.current = host;
-  }
   // Reassigned on every render, like Popover's own, so it closes over the
   // latest props.
   openController.getElement = () => pickerRef.current;
   openController.openEffect = (openEvent) => {
     const pickerEl = pickerRef.current;
+    const host = hostRef.current;
+    // Where the content sits while the callout is closed (the span below);
+    // the callout takes the element out of it and the cleanup puts it back.
+    const dock = host.parentNode;
     const calloutManager =
       getPickerInput(pickerEl).__uiStateController__.rules.callout;
     // Only an anchor the caller named: left unsaid, the manager anchors on the
@@ -1155,7 +1163,7 @@ const PickerCalloutPopup = ({
           ? anchor.current
           : anchor;
     calloutManager.addOpenToken(PICKER_CALLOUT_CONTENT_TOKEN, {
-      message: hostRef.current,
+      message: host,
       // The popup a `popupTestId` names is this callout: it is the surface the
       // picker opens, drawn by navi, so it is the one thing the caller cannot
       // name from its own children.
@@ -1190,6 +1198,7 @@ const PickerCalloutPopup = ({
         forwardConfirm,
       );
       calloutManager.removeOpenToken(PICKER_CALLOUT_CONTENT_TOKEN, closeEvent);
+      dock.appendChild(host);
     };
   };
 
@@ -1200,12 +1209,18 @@ const PickerCalloutPopup = ({
       as="span"
       ref={ref}
       id={id}
+      className="navi_picker_callout_dock"
       style={{ display: "contents" }}
       onnavi_request_open={onnavi_request_open}
       onnavi_request_close={onnavi_request_close}
       onnavi_request_confirm={onnavi_request_confirm}
     >
-      {createPortal(children, hostRef.current)}
+      {/* A child of the span in the tree, and moved out of it by hand while
+          the callout shows it: preact places a matched child again only when
+          its siblings reorder, and this one has none. */}
+      <div ref={hostRef} data-picker-content="">
+        {children}
+      </div>
     </Box>
   );
 };

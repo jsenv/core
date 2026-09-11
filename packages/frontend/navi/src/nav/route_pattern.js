@@ -7,7 +7,9 @@ import { globalSignalRegistry } from "../state/state_signal.js";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 
 const DEBUG =
-  typeof process === "object" ? process.env.DEBUG === "true" : false;
+  import.meta.dev &&
+  typeof process === "object" &&
+  process.env.DEBUG === "true";
 const debug = (...args) => {
   if (DEBUG) {
     console.debug(...args);

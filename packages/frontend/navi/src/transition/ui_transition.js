@@ -213,17 +213,19 @@ export const createUITransitionController = (
     pauseBreakpoints = [],
   } = {},
 ) => {
-  const debugConfig = {
-    detection: root.hasAttribute("data-debug-detection"),
-    size: root.hasAttribute("data-debug-size"),
-  };
-  const hasDebugLogs = debugConfig.size;
+  const hasDebugDetection =
+    import.meta.dev && root.hasAttribute("data-debug-detection");
+  const hasDebugLogs = import.meta.dev && root.hasAttribute("data-debug-size");
   const debugDetection = (message) => {
-    if (!debugConfig.detection) return;
+    if (!hasDebugDetection) {
+      return;
+    }
     console.debug(`[detection]`, message);
   };
   const debugSize = (message) => {
-    if (!debugConfig.size) return;
+    if (!hasDebugLogs) {
+      return;
+    }
     console.debug(`[size]`, message);
   };
 

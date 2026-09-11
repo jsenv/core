@@ -202,8 +202,10 @@ to start when unsure which export solves a problem.
   a virtual keyboard. Read before hand-writing an offset to clear a `FixedBar`.
 - `scroll.md` — where scrolling happens: `header`/`body`/`footer`, `List`'s
   `scroller`, where a list opens and what a search does to where it is, a popup
-  that scrolls, hover while scrolling. Read before writing CSS to make something
-  scroll.
+  that scrolls, hover while scrolling; many rows: `<List.Items>` and the render
+  window (`renderBudget`, its `{ initial, after }` form for a list opening in
+  a click, `virtualItemSize`). Read before writing CSS to make something
+  scroll, and before rendering a collection as `<List.Item>` children.
 - `mobile_layout_pitfalls.md` — a horizontal overflow inflates the layout
   viewport on Chrome Android and miscenters every dialog; `overflow-x: clip`.
 - `z_index.md` — DOM order first; a `z-index` without `isolation: isolate`

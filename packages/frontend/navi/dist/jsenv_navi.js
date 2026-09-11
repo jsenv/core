@@ -4,12 +4,12 @@
  */
 import { installImportMetaCssBuild, windowHeightSignal, windowWidthSignal, visualViewportHeightSignal, visualViewportWidthSignal, getAppHeight, getAppWidth, coarsePointerSignal, smallTouchScreenSignal } from "./jsenv_navi_side_effects.js";
 export { disableVirtualKeyboardOverlay } from "./jsenv_navi_side_effects.js";
-import { elementIsFocusable, createIterableWeakSet, dispatchInternalCustomEvent, dispatchCustomEvent, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, getElementSignature, createPubSub, findEvent, createValueEffect, findFocusDelegateTarget, findFocusable, scrollIntoViewThroughScrollables, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, keepTouchRefusable, isPressDrivenClick, waitForTap, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, markDragSource, refuseDragTo, startDragTo, installPanZoom, createEventGroupLogger, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, normalizeStyles, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, scrollRoomTowards, getScrollContainer, isTouchDrivenEvent, scrollIntoViewScoped, closestOpenableAncestor, isAncestorOpen, isDisplayedDespiteClosedAncestor, observeAncestorOpenState, getAncestorOpenType, findBefore, findAfter, resolveCSSSize, hasCSSSizeUnit, releaseWheelGesture, getScrollIntoViewScopedOffsets, wheelGestureIsTakenFrom, claimWheelGesture, initFocusGroup, stringifyStyle as stringifyStyle$1, resolveOklchLightness, contrastColor, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, getVirtualKeyboardOverlayHeight, onAncestorReopen, isPressDisputedByDrag, canScroll, measureWidestChildRow, performTabNavigation, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
+import { elementIsFocusable, createIterableWeakSet, dispatchInternalCustomEvent, dispatchCustomEvent, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, getElementSignature, createPubSub, findEvent, createValueEffect, findFocusDelegateTarget, findFocusable, scrollIntoViewThroughScrollables, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, keepTouchRefusable, isPressDrivenClick, waitForTap, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, markDragSource, refuseDragTo, startDragTo, installPanZoom, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, normalizeStyles, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, scrollRoomTowards, getScrollContainer, isTouchDrivenEvent, scrollIntoViewScoped, closestOpenableAncestor, isAncestorOpen, isDisplayedDespiteClosedAncestor, observeAncestorOpenState, getAncestorOpenType, findBefore, findAfter, resolveCSSSize, hasCSSSizeUnit, releaseWheelGesture, getScrollIntoViewScopedOffsets, wheelGestureIsTakenFrom, claimWheelGesture, initFocusGroup, stringifyStyle as stringifyStyle$1, resolveOklchLightness, contrastColor, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, onAncestorReopen, isPressDisputedByDrag, canScroll, measureWidestChildRow, performTabNavigation, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
 export { chainEvent, clickIsSuppressed, contrastColor, createDragGestureController, dragAfterIntent, findEvent, markDragSource, startDragTo } from "@jsenv/dom";
 import { signal, computed, effect, untracked, batch, useComputed, useSignal } from "@preact/signals";
 import { isValidElement, createContext, render, h, toChildArray, options, cloneElement, Fragment as Fragment$1 } from "preact";
 import { useErrorBoundary, useLayoutEffect, useContext, useCallback, useRef, useState, useEffect, useMemo, useId } from "preact/hooks";
-import { humanizeI18n, prefixFirstAndIndentRemainingLines, setRuntimeLangSource, formatDuration, formatMonth, formatDay, resolveTimeRangePrecision, formatDatePlaceholder, toDate, getRelativeDay, formatDayRelative, formatMonthPlaceholder, formatWeekPlaceholder, formatDatetimePlaceholder, formatDatetime, toTimeOfDay, formatTimeOfDay, formatTime, formatMinuteDuration, formatSecondDuration, formatHourDuration, formatTimeRelative, formatNumber, interpolateText, installInterpolateJsx } from "@jsenv/humanize";
+import { humanizeI18n, setRuntimeLangSource, formatDuration, formatMonth, formatDay, resolveTimeRangePrecision, formatDatePlaceholder, toDate, getRelativeDay, formatDayRelative, formatMonthPlaceholder, formatWeekPlaceholder, formatDatetimePlaceholder, formatDatetime, toTimeOfDay, formatTimeOfDay, formatTime, formatMinuteDuration, formatSecondDuration, formatHourDuration, formatTimeRelative, formatNumber, interpolateText, installInterpolateJsx } from "@jsenv/humanize";
 export { createI18n, formatDatetime, formatDay, formatDayRelative, formatDuration, formatHourDuration, formatMinuteDuration, formatMonth, formatNumber, formatSecondDuration, formatTime, formatTimeOfDay, formatTimeRange, formatTimeRelative, interpolateText } from "@jsenv/humanize";
 import { jsxs, jsx, Fragment } from "preact/jsx-runtime";
 import { TYPE_RULE, durationContainsNaN, compareTwoDurations, durationToSeconds, DISPLAYABLE_RULE, MAX_LINE_BREAKS_RULE, NO_EMOJI_RULE, SINGLE_SPACE_RULE, createValidity, resolveCharClass, getCharClassMessageKey, compileCharClassAnchored, compileCharClass, CHAR_CLASS_PRESETS, parseDuration, durationToISOString } from "@jsenv/validity";
@@ -191,9 +191,7 @@ const executeWithCleanup = (fn, cleanup) => {
   }
 };
 
-let DEBUG$3 = false;
 const enableDebugOnDocumentLoading = () => {
-  DEBUG$3 = true;
 };
 
 const windowIsLoadingSignal = signal(true);
@@ -213,20 +211,9 @@ const [
   removeFromDocumentLoadingRouteArraySignal,
 ] = arraySignal([]);
 const routingWhile = (fn, routeNames = []) => {
-  if (DEBUG$3 && routeNames.length > 0) {
-    console.debug(`routingWhile: Adding routes to loading state:`, routeNames);
-  }
   addToDocumentLoadingRouteArraySignal(...routeNames);
   return executeWithCleanup(fn, () => {
     removeFromDocumentLoadingRouteArraySignal(...routeNames);
-    if (DEBUG$3 && routeNames.length > 0) {
-      console.debug(
-        `routingWhile: Removed routes from loading state:`,
-        routeNames,
-        "state after removing:",
-        documentLoadingRouteArraySignal.peek(),
-      );
-    }
   });
 };
 
@@ -236,23 +223,9 @@ const [
   removeFromDocumentLoadingActionArraySignal,
 ] = arraySignal([]);
 const workingWhile = (fn, actionNames = []) => {
-  if (DEBUG$3 && actionNames.length > 0) {
-    console.debug(
-      `workingWhile: Adding actions to loading state:`,
-      actionNames,
-    );
-  }
   addToDocumentLoadingActionArraySignal(...actionNames);
   return executeWithCleanup(fn, () => {
     removeFromDocumentLoadingActionArraySignal(...actionNames);
-    if (DEBUG$3 && actionNames.length > 0) {
-      console.debug(
-        `routingWhile: Removed action from loading state:`,
-        actionNames,
-        "start after removing:",
-        documentLoadingActionArraySignal.peek(),
-      );
-    }
   });
 };
 
@@ -2612,10 +2585,7 @@ const setActionPrivateProperties = (action, properties) => {
 // Params waiting to settle exist only under a debounced binding; every other
 // action answers "no" so nobody has to check whether it can be asked.
 const NOT_SETTLING_SIGNAL = signal(false);
-
-let DEBUG$2 = false;
 const enableDebugActions = () => {
-  DEBUG$2 = true;
 };
 
 let dispatchActions = (params) => {
@@ -2759,17 +2729,6 @@ const createKeptAnswerRegistry = ({ ms, max }) => {
   };
 };
 
-const formatActionSet = (actionSet, prefix = "") => {
-  let message = prefix;
-  for (const action of actionSet) {
-    message += "\n";
-    message += prefixFirstAndIndentRemainingLines(String(action), {
-      prefix: "  -",
-    });
-  }
-  return message;
-};
-
 const actionAbortMap = new Map();
 const actionPromiseMap = new Map();
 const activationWeakSet = createIterableWeakSet("activation");
@@ -2850,24 +2809,6 @@ const updateActions = ({
   resetSet = resolveActionProxies(resetSet);
 
   const { runningSet, settledSet } = getActivationInfo();
-
-  if (DEBUG$2) {
-    let argSource = `reason: ${JSON.stringify(reason)}`;
-    if (isReplace) {
-      argSource += `, isReplace: true`;
-    }
-    console.group(`updateActions({ ${argSource} })`);
-    const lines = [
-      ...(prerunSet.size ? [formatActionSet(prerunSet, "- prerun:")] : []),
-      ...(runSet.size ? [formatActionSet(runSet, "- run:")] : []),
-      ...(rerunSet.size ? [formatActionSet(rerunSet, "- rerun:")] : []),
-      ...(resetSet.size ? [formatActionSet(resetSet, "- reset:")] : []),
-    ];
-    console.debug(
-      `requested operations:
-${lines.join("\n")}`,
-    );
-  }
 
   // Internal sets that track what operations will actually be performed
   const willResetSet = new Set();
@@ -2995,34 +2936,6 @@ ${lines.join("\n")}`,
       }
     }
   }
-  if (DEBUG$2) {
-    const lines = [
-      ...(willResetSet.size
-        ? [formatActionSet(willResetSet, "- will reset:")]
-        : []),
-      ...(willPrerunSet.size
-        ? [formatActionSet(willPrerunSet, "- will prerun:")]
-        : []),
-      ...(willPromoteSet.size
-        ? [formatActionSet(willPromoteSet, "- will promote:")]
-        : []),
-      ...(willRunSet.size ? [formatActionSet(willRunSet, "- will run:")] : []),
-      ...(staysRunningSet.size
-        ? [formatActionSet(staysRunningSet, "- stays running:")]
-        : []),
-      ...(staysAbortedSet.size
-        ? [formatActionSet(staysAbortedSet, "- stays aborted:")]
-        : []),
-      ...(staysFailedSet.size
-        ? [formatActionSet(staysFailedSet, "- stays failed:")]
-        : []),
-      ...(staysCompletedSet.size
-        ? [formatActionSet(staysCompletedSet, "- stays completed:")]
-        : []),
-    ];
-    console.debug(`operations that will be performed:
-${lines.join("\n")}`);
-  }
 
   // Step 4: Execute resets
   {
@@ -3126,9 +3039,6 @@ ${lines.join("\n")}`);
         });
       }
     }
-  }
-  if (DEBUG$2) {
-    console.groupEnd();
   }
 
   // Calculate requestedResult based on the execution results
@@ -3625,10 +3535,9 @@ const createAction = (callback, rootOptions = {}) => {
       toString: () => actionCallSourceSignal.peek(),
       meta,
       debug: (...args) => {
-        if (!meta.debug && !DEBUG$2) {
+        {
           return;
         }
-        console.debug(...args);
       },
 
       paramsSignal,
@@ -3696,9 +3605,6 @@ const createAction = (callback, rootOptions = {}) => {
           actionAbortMap.delete(action);
           if (isPrerun && (globalAbortSignal.aborted || abortSignal.aborted)) {
             prerunProtectionRegistry.unprotect(action);
-          }
-          if (DEBUG$2) {
-            console.log(`"${action}" aborted (reason: ${abortReason})`);
           }
         };
 
@@ -3791,9 +3697,6 @@ const createAction = (callback, rootOptions = {}) => {
           if (keptAnswerRegistry) {
             keptAnswerRegistry.keep(action);
           }
-          if (DEBUG$2) {
-            console.log(`"${action}": completed`);
-          }
           const data = dataSignal.peek();
           return data;
         };
@@ -3817,9 +3720,6 @@ const createAction = (callback, rootOptions = {}) => {
             }
             onAbort?.(error, { event, action, args });
             return error;
-          }
-          if (DEBUG$2) {
-            console.log(`"${action}": failed (error: ${error})`);
           }
           error.action = action;
           batch(() => {
@@ -3887,9 +3787,6 @@ const createAction = (callback, rootOptions = {}) => {
 
       const performReset = ({ reason, willRunOrPrerun }) => {
         abort(reason);
-        if (DEBUG$2) {
-          console.log(`"${action}": resetting (reason: ${reason})`);
-        }
 
         prerunProtectionRegistry.unprotect(action);
         if (keptAnswerRegistry) {
@@ -9457,14 +9354,13 @@ const onRequestInteraction = (
   } = requestInteractionCustomEvent.detail;
 
   const onPrevented = (reason) => {
-    debugInteraction(event, `"${name}" prevented (${reason})`);
     requestInteractionCustomEvent.preventDefault();
     prevented?.();
     always?.();
   };
 
   if (event.defaultPrevented) {
-    onPrevented("event.defaultPrevented");
+    onPrevented();
     return false;
   }
 
@@ -9487,10 +9383,6 @@ const onRequestInteraction = (
   // Unless that element is the one asking: what it took the press to decide is
   // arriving here, and it is this control's to answer.
   if (isAimedAtSelfInteractionsBelow(event, controlHost, requester)) {
-    debugInteraction(
-      event,
-      `"${name}" is for a self-interactions element below`,
-    );
     requestInteractionCustomEvent.preventDefault();
     return false;
   }
@@ -9505,7 +9397,7 @@ const onRequestInteraction = (
         const failedInfo =
           ci.interactionFailedConstraintInfo ??
           ci.failingManagedInteraction?.interactionFailedConstraintInfo;
-        const reason = failedInfo
+        failedInfo
           ? `failing interaction constraint "${failedInfo.name}"`
           : "not interactable";
         // A refusal is explained to whoever asked, and an automatic follow-up
@@ -9518,13 +9410,11 @@ const onRequestInteraction = (
         if (!automatic) {
           ci.reportInteractivity({ event });
         }
-        onPrevented(reason);
+        onPrevented();
         return false;
       }
     }
   }
-
-  debugInteraction(event, `"${name}" allowed`);
   allowed?.();
   always?.();
   // The click served this control; it must not serve a second time whatever
@@ -12554,68 +12444,46 @@ const useResetErrorBoundary = () => {
   return resetErrorBoundary;
 };
 
-const DebugCommandContext = createContext(false);
-const DebugInteractionContext = createContext(false);
-const DebugFocusContext = createContext(false);
-const DebugScrollContext = createContext(false);
-const DebugPopupContext = createContext(false);
-const DebugActionContext = createContext(false);
-const DebugUIStateContext = createContext(false);
+/*
+ * Everything dev-only in this module hangs off one `import.meta.dev` test at
+ * the binding level (`import.meta.dev ? naviDebug.x : noop`), not inside the
+ * function bodies. Rollup follows a binding to the function it names, but
+ * not an early `return noop` inside a body: the first shape lets it drop every
+ * `debugX("…")` call site of the production build, the second keeps them all.
+ */
+
 const debugNoop = () => {};
-const eventGroupLogger = createEventGroupLogger();
-const debugCommandDefault = eventGroupLogger.createCategory("[command]", "#8e44ad");
-const debugInteractionDefault = eventGroupLogger.createCategory("[interaction]", "#2980b9");
-const debugActionDefault = eventGroupLogger.createCategory("[action]", "#e67e22");
-const debugPopupDefault = eventGroupLogger.createCategory("[popup]", "#27ae60");
-const debugUIStateDefault = eventGroupLogger.createCategory("[uistate]", "#7f8c8d");
-const debugFocusDefault = eventGroupLogger.createCategory("[focus]", "#2980b9");
-const debugScrollDefault = eventGroupLogger.createCategory("[scroll]", "#2980b9");
+const useDebugNoop = () => debugNoop;
+const NaviDebugNoop = ({
+  children
+}) => children;
 
 // The hooks below expose one concern's logger to components inside <NaviDebug>.
 // Each returns the logger function enabled for that concern, or a no-op when the
 // concern is off — so call sites can `const debug = useDebugX()` unconditionally.
 // The logger is called as `debug(message, …)` or, to group a side effect under
 // the native event that caused it, `debug(event, message, …)`.
+// In production every hook is the no-op returner and the bundler drops the
+// call sites along with their messages.
 
 /** Logger for navi command dispatch (`--navi-*`), or a no-op when disabled. */
-const useDebugCommand = () => {
-  const debug = useContext(DebugCommandContext);
-  return debug || debugNoop;
-};
+const useDebugCommand = useDebugNoop;
 /** Logger for gated interactions (click/scroll/select/…), or a no-op. */
-const useDebugInteraction = () => {
-  const debug = useContext(DebugInteractionContext);
-  return debug || debugNoop;
-};
+const useDebugInteraction = useDebugNoop;
 /** Logger for focus moves and focus-visible decisions, or a no-op. */
-const useDebugFocus = () => {
-  const debug = useContext(DebugFocusContext);
-  return debug || debugNoop;
-};
+const useDebugFocus = useDebugNoop;
 /**
  * Logger for virtual scroll / wheel motion (drag, momentum, glide) and for what
  * a virtualized list does about it — the render window moving, and the rows the
  * run asks for or decides not to ask for. Or a no-op.
  */
-const useDebugScroll = () => {
-  const debug = useContext(DebugScrollContext);
-  return debug || debugNoop;
-};
+const useDebugScroll = useDebugNoop;
 /** Logger for popover/dialog open/close/positioning, or a no-op. */
-const useDebugPopup = () => {
-  const debug = useContext(DebugPopupContext);
-  return debug || debugNoop;
-};
+const useDebugPopup = useDebugNoop;
 /** Logger for the action lifecycle (request → run → end), or a no-op. */
-const useDebugAction = () => {
-  const debug = useContext(DebugActionContext);
-  return debug || debugNoop;
-};
+const useDebugAction = useDebugNoop;
 /** Logger for UI-state transitions, validation and synthetic events, or a no-op. */
-const useDebugUIState = () => {
-  const debug = useContext(DebugUIStateContext);
-  return debug || debugNoop;
-};
+const useDebugUIState = useDebugNoop;
 
 /**
  * Turns on navi's color-coded console logging for everything rendered inside it.
@@ -12633,6 +12501,8 @@ const useDebugUIState = () => {
  * turns everything on. Passing `debugInteraction` also enables `debugFocus`,
  * `debugScroll` and `debugPopup` unless those are set explicitly, since they
  * describe the same interaction.
+ *
+ * Dev-only: the production build of navi renders the children and logs nothing.
  *
  * @param {object} props
  * @param {boolean|Function} [props.debugAll] - Default for every concern below.
@@ -12659,61 +12529,7 @@ const useDebugUIState = () => {
  *   <Wheel>…</Wheel>
  * </NaviDebug>
  */
-const NaviDebug = ({
-  debugAll,
-  debugCommand = debugAll,
-  debugInteraction = debugAll,
-  debugFocus = debugAll,
-  debugScroll = debugAll,
-  debugPopup = debugAll,
-  debugAction = debugAll,
-  debugUIState = debugAll,
-  children
-}) => {
-  if (debugCommand === true) {
-    debugCommand = debugCommandDefault;
-  }
-  if (debugInteraction === true) {
-    debugInteraction = debugInteractionDefault;
-  }
-  if (debugFocus === true || debugInteraction && debugFocus === undefined) {
-    debugFocus = debugFocusDefault;
-  }
-  if (debugScroll === true || debugInteraction && debugScroll === undefined) {
-    debugScroll = debugScrollDefault;
-  }
-  if (debugPopup === true || debugInteraction && debugPopup === undefined) {
-    debugPopup = debugPopupDefault;
-  }
-  if (debugAction === true) {
-    debugAction = debugActionDefault;
-  }
-  if (debugUIState === true) {
-    debugUIState = debugUIStateDefault;
-  }
-  return jsx(DebugCommandContext.Provider, {
-    value: debugCommand,
-    children: jsx(DebugInteractionContext.Provider, {
-      value: debugInteraction,
-      children: jsx(DebugFocusContext.Provider, {
-        value: debugFocus,
-        children: jsx(DebugScrollContext.Provider, {
-          value: debugScroll,
-          children: jsx(DebugPopupContext.Provider, {
-            value: debugPopup,
-            children: jsx(DebugActionContext.Provider, {
-              value: debugAction,
-              children: jsx(DebugUIStateContext.Provider, {
-                value: debugUIState,
-                children: children
-              })
-            })
-          })
-        })
-      })
-    })
-  });
-};
+const NaviDebug = NaviDebugNoop;
 
 const actionErrorWeakMap = new WeakMap();
 const NAVI_ACTION_ERROR_CONSTRAINT = {
@@ -12755,7 +12571,6 @@ const useExecuteAction = (
     errorMapping,
   } = {},
 ) => {
-  const debugAction = useDebugAction();
 
   // see https://medium.com/trabe/catching-asynchronous-errors-in-react-using-error-boundaries-5e8a5fd7b971
   // and https://codepen.io/dmail/pen/XJJqeGp?editors=0010
@@ -12854,7 +12669,6 @@ const useExecuteAction = (
         event: actionEvent,
         method,
       };
-      debugAction(event, "executing action, requested by", requester);
 
       if (resetErrorBoundary) {
         resetErrorBoundary();
@@ -21917,18 +21731,10 @@ const createUITransitionController = (
     pauseBreakpoints = [],
   } = {},
 ) => {
-  const debugConfig = {
-    detection: root.hasAttribute("data-debug-detection"),
-    size: root.hasAttribute("data-debug-size"),
-  };
-  const hasDebugLogs = debugConfig.size;
-  const debugDetection = (message) => {
-    if (!debugConfig.detection) return;
-    console.debug(`[detection]`, message);
-  };
   const debugSize = (message) => {
-    if (!debugConfig.size) return;
-    console.debug(`[size]`, message);
+    {
+      return;
+    }
   };
 
   const activeGroup = root.querySelector(".ui_transition_active_group");
@@ -22134,8 +21940,6 @@ const createUITransitionController = (
   };
 
   updateAlignment();
-
-  let transitionType = "none";
   const groupTransitionOptions = {
     // debugBreakpoints: [0.25],
     pauseBreakpoints,
@@ -22171,9 +21975,6 @@ const createUITransitionController = (
       const fromHeight = previousTargetSlotConfiguration.height || 0;
       const toWidth = targetSlotConfiguration.width || 0;
       const toHeight = targetSlotConfiguration.height || 0;
-      debugSize(
-        `transition from [${fromWidth}x${fromHeight}] to [${toWidth}x${toHeight}]`,
-      );
       const restoreOverflow = preventIntermediateScrollbar(root, {
         fromWidth,
         fromHeight,
@@ -22192,7 +21993,6 @@ const createUITransitionController = (
           }
         },
         onRestore: () => {
-          debugSize(`Restored overflow after transition`);
         },
       });
 
@@ -22238,9 +22038,6 @@ const createUITransitionController = (
         elementToClipHeight,
         toHeight,
         alignY,
-      );
-      debugSize(
-        `Positions in container: from [${fromLeft},${fromTop}] ${fromWidth}x${fromHeight} to [${targetLeft},${targetTop}] ${toWidth}x${toHeight}`,
       );
       // Get border-radius values
       const fromBorderRadius =
@@ -22350,9 +22147,6 @@ const createUITransitionController = (
       onFinish: () => {
         moveConfigurationIntoSlot(UNSET, previousTargetSlot);
         moveConfigurationIntoSlot(UNSET, previousOutgoingSlot);
-        if (hasDebugLogs) {
-          console.groupEnd();
-        }
       },
     });
     transition.play();
@@ -22371,10 +22165,6 @@ const createUITransitionController = (
     const transition = transitionController.update(transitions, {
       onFinish: () => {
         moveConfigurationIntoSlot(UNSET, outgoingSlot);
-
-        if (hasDebugLogs) {
-          console.groupEnd();
-        }
       },
     });
     transition.play();
@@ -22393,9 +22183,6 @@ const createUITransitionController = (
       onFinish: () => {
         moveConfigurationIntoSlot(UNSET, previousTargetSlot);
         moveConfigurationIntoSlot(UNSET, previousOutgoingSlot);
-        if (hasDebugLogs) {
-          console.groupEnd();
-        }
       },
     });
     transition.play();
@@ -22437,26 +22224,11 @@ const createUITransitionController = (
     }
     const fromConfiguration = targetSlotConfiguration;
     const toConfiguration = detectConfiguration(targetSlot);
-    if (hasDebugLogs) {
-      console.group(`targetSlotEffect()`);
-      console.debug(`reasons:`);
-      console.debug(`- ${reasons.join("\n- ")}`);
-    }
     if (isSameConfiguration(fromConfiguration, toConfiguration)) {
-      debugDetection(
-        `already in desired state (${toConfiguration}) -> early return`,
-      );
-      if (hasDebugLogs) {
-        console.groupEnd();
-      }
       return;
     }
-    const fromConfigType = fromConfiguration.type;
-    const toConfigType = toConfiguration.type;
-    transitionType = `${fromConfigType}_to_${toConfigType}`;
-    debugDetection(
-      `Prepare "${transitionType}" transition (${fromConfiguration} -> ${toConfiguration})`,
-    );
+    fromConfiguration.type;
+    toConfiguration.type;
     // content_to_empty / content_phase_to_empty
     if (toConfiguration.isEmpty) {
       applyToEmptyTransition();
@@ -22529,7 +22301,7 @@ const createUITransitionController = (
       if (reasonParts.length === 0) {
         return;
       }
-      targetSlotEffect(reasonParts);
+      targetSlotEffect();
     });
     mutationObserver.observe(targetSlot, {
       childList: true,
@@ -22775,13 +22547,7 @@ const useUITransitionContentId = value => {
  * Replaces URLPattern with a simpler, more predictable approach
  */
 
-
-const DEBUG$1 =
-  typeof process === "object" ? process.env.DEBUG === "true" : false;
 const debug$2 = (...args) => {
-  if (DEBUG$1) {
-    console.debug(...args);
-  }
 };
 
 // Base URL management
@@ -22891,9 +22657,6 @@ const createRoutePattern = (
     queryConnectionMap,
     paramConstraintMap,
   });
-
-  debug$2(`[CustomPattern] Created pattern:`, parsedPattern);
-  debug$2(`[CustomPattern] Signal connections:`, connections);
   debug$2(`[CustomPattern] Path connections:`, pathConnectionMap.size);
   debug$2(`[CustomPattern] Query connections:`, queryConnectionMap.size);
 
@@ -22914,11 +22677,6 @@ const createRoutePattern = (
       exact,
       patternObj: patternObject,
     });
-
-    debug$2(
-      `[CustomPattern] Matching "${url}" against "${cleanPattern}":`,
-      result,
-    );
 
     return result;
   };
@@ -24507,10 +24265,7 @@ const buildHierarchicalQueryParams = (
       currentParent = currentParent.parent;
     }
   }
-
-  debug$2(`Building params for ${originalPattern}`);
   debug$2(`parsedPattern:`, parsedPattern.original);
-  debug$2(`params:`, params);
   debug$2(
     `ancestorPatterns:`,
     ancestorPatterns.map((p) => p.urlPatternRaw),
@@ -24947,7 +24702,6 @@ const setupRoutePatterns = (routePatterns) => {
   for (const routePattern of routePatternSet) {
     calculatePatternDepth(routePattern);
   }
-  debug$2("Pattern registry updated");
 };
 // Store the most specific parent (closest parent in hierarchy)
 const getPathSegmentCount = (pattern) => {
@@ -25184,9 +24938,30 @@ const route = (
   });
   // methods
   registerSetup(({ routeSet, getUrl }) => {
+    // One computed per set of params. Building a url reads the route family's
+    // signals (see readSignalForUrlBuild) and verifies the candidate against
+    // every pattern of the family; a list of a hundred links to one route
+    // would do that a hundred times on each of its renders. A computed does it
+    // once, again only when a signal it read changes — and a component reading
+    // it subscribes to exactly those, which is what reading the signals during
+    // render gave it.
+    const relativeUrlByParamsKey = new Map();
     route.buildRelativeUrl = (params) => {
-      // buildMostPreciseUrl now handles parameter resolution internally
-      return routePattern.buildMostPreciseUrl(params);
+      const paramsKey = getParamsCacheKey(params);
+      if (paramsKey === null) {
+        return routePattern.buildMostPreciseUrl(params);
+      }
+      let relativeUrlComputed = relativeUrlByParamsKey.get(paramsKey);
+      if (!relativeUrlComputed) {
+        if (relativeUrlByParamsKey.size >= PARAMS_CACHE_MAX) {
+          relativeUrlByParamsKey.clear();
+        }
+        relativeUrlComputed = computed(() =>
+          routePattern.buildMostPreciseUrl(params),
+        );
+        relativeUrlByParamsKey.set(paramsKey, relativeUrlComputed);
+      }
+      return relativeUrlComputed.value;
     };
     route.buildUrl = (params) => {
       const routeRelativeUrl = route.buildRelativeUrl(params);
@@ -25948,6 +25723,36 @@ const setRouteIntegration = (integrationInterface) => {
 let onAllRouteReady = () => {};
 const setOnAllRouteReady = (callback) => {
   onAllRouteReady = callback;
+};
+
+// Params are cached by content, and only params whose content a string can
+// stand for: anything else (an object, a function) builds without the cache.
+// A key set to undefined is content too — it says "without this one", which
+// a params object not naming it does not say (see buildIntendedState).
+const PARAMS_CACHE_MAX = 1000;
+const getParamsCacheKey = (params) => {
+  if (params === undefined || params === null) {
+    return "";
+  }
+  if (typeof params !== "object") {
+    return null;
+  }
+  const keys = Object.keys(params).sort();
+  let key = "";
+  for (const name of keys) {
+    const value = params[name];
+    const type = typeof value;
+    if (
+      value !== null &&
+      type !== "string" &&
+      type !== "number" &&
+      type !== "boolean"
+    ) {
+      return null;
+    }
+    key += `${name}=${type}:${value}\n`;
+  }
+  return key;
 };
 
 /**
@@ -35130,9 +34935,7 @@ const useAutoFocus = (
       return () => {};
     }
     const focusDebugCall = `${getElementSignature(focusableElement)}.focus({ preventScroll: ${preventScroll} })`;
-    if (ancestorType === "document") {
-      debugFocus(e, `[autofocus] document -> ${focusDebugCall}`);
-    } else {
+    if (ancestorType === "document") ; else {
       debugFocus(
         e,
         `[autofocus] "${ancestorType}" opened ${getElementSignature(ancestor)} -> ${focusDebugCall}`,
@@ -35868,10 +35671,6 @@ const useUIStateController = (
                 [buttonName]: controller.uiState,
               };
               parentController.syncInternalState(mergedState);
-              debugUIState(
-                `merging button state into parent control group:`,
-                mergedState,
-              );
               // The sender's value is part of the answer, and whoever mirrors
               // this group — a picker, through its façade — reads the group's
               // state, not its children's: told the way a mount sync is
@@ -35890,7 +35689,6 @@ const useUIStateController = (
           writeBoundSignal(currentUIState);
           s.uiActionInternal?.(currentUIState, e);
           if (s.uiAction) {
-            debugUIState(`calling uiAction for ${controlType}`, currentUIState);
             s.uiAction(currentUIState, e);
           }
           if (skipCommand) ; else {
@@ -35898,9 +35696,6 @@ const useUIStateController = (
             if (command) {
               const element = controller.ref.current;
               if (element) {
-                debugUIState(
-                  `triggering command "${command}" for "${controlType}"`,
-                );
                 // What the press means may not be due yet: a button with an
                 // action of its own runs the work first and lets its command
                 // follow only once that work succeeded (see control_hooks).
@@ -36185,10 +35980,6 @@ const useUIStateController = (
             if (!existingInputEvent) {
               if (el.tagName === "INPUT") {
                 if (el.type === "radio" || el.type === "checkbox") {
-                  debugUIState(
-                    e,
-                    "dispatching synthetic input event without data for checkbox/radio",
-                  );
                   dispatchSyntheticInput(
                     el,
                     new Event("input", { bubbles: true }),
@@ -36196,10 +35987,6 @@ const useUIStateController = (
                   );
                   syntheticInputFired = true;
                 } else {
-                  debugUIState(
-                    e,
-                    `dispatching synthetic input event with data "${newUIState}" for input`,
-                  );
                   dispatchSyntheticInput(
                     el,
                     new InputEvent("input", {
@@ -36213,10 +36000,6 @@ const useUIStateController = (
                   syntheticInputFired = true;
                 }
               } else if (el.tagName === "SELECT") {
-                debugUIState(
-                  e,
-                  `dispatching synthetic input event for select "${newUIState}"`,
-                );
                 // A plain Event, not an InputEvent: that is what the browser
                 // itself fires on a select, and input_effect reads the value off
                 // the element anyway.
@@ -36273,12 +36056,10 @@ const useUIStateController = (
           controller.state = controller.uiState;
         },
         onActionEnd: (e) => {
-          debugUIState(`"${controlType}" actionEnd called`);
           acknowledgeOwnAction(controller);
           controller.rules.validation.syncValidity(e);
         },
         onActionError: (e) => {
-          debugUIState(`"${controlType}" actionError called`);
           controller.rules.validation.syncValidity(e, { report: true });
         },
         subscribe: subscribeUIState,
@@ -36917,9 +36698,6 @@ const useUIGroupStateController = (
   const scope = useRenderScope(
     // ── init: runs once on mount ───────────────────────────────────────────
     (s) => {
-      debugUIGroup(
-        `Creating "${controlType}" ui state controller (monitoring some descendants ui state(s))"`,
-      );
       const [publishUIState, subscribeUIState] = createPubSub();
       const uiStateSignal = signal(stateInitial);
 
@@ -37424,9 +37202,6 @@ const useUIGroupStateController = (
             childUIStateController,
           );
           if (index === -1) {
-            debugUIGroup(
-              `${controlType}.unregisterChild("${childControlType}") -> not found`,
-            );
             return;
           }
           childUIStateControllerArray.splice(index, 1);
@@ -38182,7 +37957,6 @@ const useControlProps = (props, {
   uiActionInternal
 }) => {
   const debugUIState = useDebugUIState();
-  const debugAction = useDebugAction();
 
   // This control answers for itself: whatever group it sits in expects nothing
   // from it and gives it nothing back. See useUIStateController, which is where
@@ -38805,7 +38579,6 @@ const useControlProps = (props, {
         const lastActionValue = lastActionValueRef.current;
         const valueSameAsLastAction = lastActionValue !== NO_ACTION_YET && compareTwoJsValues(currentValue, lastActionValue);
         if (valueSameAsLastAction) {
-          debugAction(e, `skipping action: value same as last action`);
           return false;
         }
       }
@@ -38860,7 +38633,6 @@ const useControlProps = (props, {
         intent,
         bypassInteractivity,
         prevented: () => {
-          debugInteraction(e, `interaction not allowed`);
           if (e.type === "keydown") {
             e.preventDefault();
           }
@@ -39842,7 +39614,6 @@ const useInteractiveProps = (props, {
         // awaited before the queued request runs. See the abort section in
         // docs/actions.md.
         if (optimistic && uiStateController.actionInFlight) {
-          debugAction(e, `queueing action (one already in flight)`);
           uiStateController.queuedActionAllowedEvent = e;
           // The instance captured at navi_action_start, NOT boundAction:
           // boundAction is a proxy following the UI state signal, and the UI
@@ -39925,7 +39696,6 @@ const useInteractiveProps = (props, {
         const {
           error
         } = e.detail;
-        debugAction(e, `action error`, error);
         if (resetOnError) {
           dispatchRequestResetUIState(e.currentTarget, e);
         }
@@ -42015,6 +41785,73 @@ const LoadingOutlineWithPortal = props => {
   });
 };
 
+/**
+ * Reads of the layout gathered across effects, so that the browser brings its
+ * styles and layout up to date once for all of them rather than once per
+ * element.
+ *
+ * A layout effect that reads (a computed style, a rect) and then writes (an
+ * attribute, a style) is fine on its own. A hundred of them in one commit are
+ * not: every write dirties the tree, and the next element's read forces the
+ * browser to recompute it — a style recalculation per element, each one over
+ * everything dirtied since the last. Most of a long mount's time goes there,
+ * not in the effects themselves.
+ *
+ * So an effect hands its read over instead of running it. Reads run together
+ * in a microtask — still before the paint, so nothing shows uncorrected — and
+ * each returns the write that depends on it, run after every read of the
+ * round. A write that needs to read again returns that read: it joins the next
+ * round, reads first, writes after, and so on until nothing is left.
+ *
+ * The cancel returned is for an element unmounted before its round: a write
+ * on a node that is gone is at best wasted.
+ *
+ * @param {() => (undefined | (() => undefined | Function))} read
+ * @returns {() => void} cancel
+ */
+const scheduleLayoutRead = (read) => {
+  const entry = { read, cancelled: false };
+  round.push(entry);
+  if (!flushScheduled) {
+    flushScheduled = true;
+    queueMicrotask(flush);
+  }
+  return () => {
+    entry.cancelled = true;
+  };
+};
+
+let round = [];
+let flushScheduled = false;
+
+const flush = () => {
+  flushScheduled = false;
+  while (round.length > 0) {
+    const entries = round;
+    round = [];
+    const writes = [];
+    for (const entry of entries) {
+      if (entry.cancelled) {
+        continue;
+      }
+      const write = entry.read();
+      if (typeof write === "function") {
+        writes.push({ entry, write });
+      }
+    }
+    for (const { entry, write } of writes) {
+      if (entry.cancelled) {
+        continue;
+      }
+      const readAgain = write();
+      if (typeof readAgain === "function") {
+        entry.read = readAgain;
+        round.push(entry);
+      }
+    }
+  }
+};
+
 installImportMetaCssBuild(import.meta);
 const css$_ = /* css */`.navi_text_anchor {
   vertical-align: baseline;
@@ -42056,6 +41893,16 @@ const TextAnchor = ({
 }) => {
   import.meta.css = [css$_, "@jsenv/navi/src/text/text_anchor.jsx"];
   const anchorRef = useRef();
+  // The correction reads the layout, with the other reads of the commit (see
+  // layout_batch.js) — an anchor per icon, each measured between two writes,
+  // is a style recalculation per icon. Cancelled by a newer correction or by
+  // the unmount: a write on a node that is gone is wasted.
+  const cancelReadRef = useRef(null);
+  useLayoutEffect(() => {
+    return () => {
+      cancelReadRef.current?.();
+    };
+  }, []);
 
   // Plain useLayoutEffect would also fire while an ancestor dialog/popover
   // (e.g. a closed SidePanel) is still display:none — every rect involved
@@ -42084,23 +41931,36 @@ const TextAnchor = ({
     if (!anchorEl || !childEl) {
       return;
     }
-    // Only correct when the anchor lives in an inline formatting context.
-    // If the parent is a flex/grid container, inline layout rules don't apply
-    // and our font-metrics model is invalid.
-    const parentDisplay = getComputedStyle(anchorEl.parentElement).display;
-    if (parentDisplay !== "inline" && parentDisplay !== "inline-block" && parentDisplay !== "block") {
-      // we must hide the anchor otherwise it would affect layout without providing any benefit (would trigger flex gap for instance)
-      anchorEl.setAttribute("hidden", "");
-      setTopOffset(childEl, 0);
-      return;
-    }
-    anchorEl.removeAttribute("hidden");
-    const topOffset = computeTopOffset({
-      anchorEl,
-      childEl,
-      textAnchor
+    cancelReadRef.current?.();
+    cancelReadRef.current = scheduleLayoutRead(() => {
+      // Only correct when the anchor lives in an inline formatting context.
+      // If the parent is a flex/grid container, inline layout rules don't
+      // apply and our font-metrics model is invalid.
+      const parentDisplay = getComputedStyle(anchorEl.parentElement).display;
+      if (parentDisplay !== "inline" && parentDisplay !== "inline-block" && parentDisplay !== "block") {
+        return () => {
+          // we must hide the anchor otherwise it would affect layout without
+          // providing any benefit (would trigger flex gap for instance)
+          anchorEl.setAttribute("hidden", "");
+          setTopOffset(childEl, 0);
+        };
+      }
+      return () => {
+        // The anchor has to be in the flow to be measured: shown here, read
+        // in the next round, with the other anchors shown by this one.
+        anchorEl.removeAttribute("hidden");
+        return () => {
+          const topOffset = computeTopOffset({
+            anchorEl,
+            childEl,
+            textAnchor
+          });
+          return () => {
+            setTopOffset(childEl, topOffset);
+          };
+        };
+      };
     });
-    setTopOffset(childEl, topOffset);
   }, [textAnchor, textKey, textSize, lineLayout?.size, lineLayout?.verticalAlign]);
   return jsxs(Fragment, {
     children: [children, jsx("span", {
@@ -47771,53 +47631,35 @@ const useNextResolver = () => useContext(NextResolverContext);
  *   // Then inside a component render:
  *   renderButton(props)
  *
- * NextResolverContext exposes a stable Next component so resolvers can continue
- * the chain via useNextResolver().
- * ResolverIndexContext tracks which resolver is next so that when a resolver
- * re-renders and calls Next, the chain resumes from the correct position.
+ * Each position of the chain has a runner of its own, defined once: it renders
+ * its resolver under a NextResolverContext holding the runner after it. A
+ * resolver that re-renders on its own and renders <Next> therefore resumes at
+ * its own position without any bookkeeping — the Next it was given is the one
+ * made for it. A chain rendered by the hundred (a list's rows) pays two
+ * components per position, the runner and the resolver, so nothing here is a
+ * component that merely forwards.
  */
 const createComponentResolver = (resolvers, {
   pure
 } = {}) => {
-  const ResolverIndexContext = createContext(0);
-  const ChainRunner = props => {
-    const index = useContext(ResolverIndexContext);
-    if (index >= resolvers.length) {
-      return null;
-    }
+  const runners = [];
+  const lastIndex = resolvers.length - 1;
+  for (let index = 0; index < resolvers.length; index++) {
     const Resolver = resolvers[index];
-    const isLast = index === resolvers.length - 1;
-    return jsx(ResolverIndexContext.Provider, {
-      value: index + 1,
-      children: isLast ? jsx(NextResolverContext.Provider, {
-        value: null,
-        children: jsx(Resolver, {
-          ...props
-        })
-      }) : jsx(Resolver, {
+    const isLast = index === lastIndex;
+    const Runner = props => jsx(NextResolverContext.Provider, {
+      value: isLast ? null : runners[index + 1],
+      children: jsx(Resolver, {
         ...props
       })
     });
-  };
-
-  // Stable component defined once per createComponentResolver call.
-  // Renders ChainRunner directly — no new providers — so ResolverIndexContext
-  // is inherited from the parent tree. When a resolver calls <Next>, the chain
-  // resumes from index+1 (already set by the Provider wrapping that resolver).
-  const NextComponent = props => jsx(ChainRunner, {
+    Runner.displayName = `${Resolver.displayName || Resolver.name}Runner`;
+    runners.push(Runner);
+  }
+  const FirstRunner = runners[0];
+  const renderComponent = props => jsx(FirstRunner, {
     ...props
   });
-  const renderComponent = props => {
-    return jsx(NextResolverContext.Provider, {
-      value: NextComponent,
-      children: jsx(ResolverIndexContext.Provider, {
-        value: 0,
-        children: jsx(ChainRunner, {
-          ...props
-        })
-      })
-    });
-  };
   if (!pure) {
     return renderComponent;
   }
@@ -47913,36 +47755,36 @@ const useAccentColorAttributes = (
         return undefined;
       }
     }
+    // Read with the other layout reads of the commit (see layout_batch.js): a
+    // computed color per control, each read between two writes, is a style
+    // recalculation per control.
+    let cancelRead = null;
     const updateAttributes = () => {
-      const computedStyle = getComputedStyle(elementToCheck);
-      const color = computedStyle[colorProperty];
-      if (!color) {
-        el.removeAttribute(LIGHT_ACCENT_ATTRIBUTE);
-        el.removeAttribute(VERY_LIGHT_ACCENT_ATTRIBUTE);
-        el.removeAttribute(DARK_CONTRAST_ATTRIBUTE);
-        return;
-      }
-      const luminance = resolveOklchLightness(color, el);
-      if (luminance !== null && luminance > LIGHT_LUMINANCE_THRESHOLD) {
-        el.setAttribute(LIGHT_ACCENT_ATTRIBUTE, "");
-      } else {
-        el.removeAttribute(LIGHT_ACCENT_ATTRIBUTE);
-      }
-      if (luminance !== null && luminance > VERY_LIGHT_LUMINANCE_THRESHOLD) {
-        el.setAttribute(VERY_LIGHT_ACCENT_ATTRIBUTE, "");
-      } else {
-        el.removeAttribute(VERY_LIGHT_ACCENT_ATTRIBUTE);
-      }
-      const bestContrast = contrastColor(
-        color,
-        el,
-        DARK_CONTRAST_LIGHTNESS_THRESHOLD,
-      );
-      if (bestContrast === "black") {
-        el.setAttribute(DARK_CONTRAST_ATTRIBUTE, "");
-      } else {
-        el.removeAttribute(DARK_CONTRAST_ATTRIBUTE);
-      }
+      cancelRead?.();
+      cancelRead = scheduleLayoutRead(() => {
+        const computedStyle = getComputedStyle(elementToCheck);
+        const color = computedStyle[colorProperty];
+        if (!color) {
+          return () => {
+            el.removeAttribute(LIGHT_ACCENT_ATTRIBUTE);
+            el.removeAttribute(VERY_LIGHT_ACCENT_ATTRIBUTE);
+            el.removeAttribute(DARK_CONTRAST_ATTRIBUTE);
+          };
+        }
+        const luminance = resolveOklchLightness(color, el);
+        const light =
+          luminance !== null && luminance > LIGHT_LUMINANCE_THRESHOLD;
+        const veryLight =
+          luminance !== null && luminance > VERY_LIGHT_LUMINANCE_THRESHOLD;
+        const needsDarkForeground =
+          contrastColor(color, el, DARK_CONTRAST_LIGHTNESS_THRESHOLD) ===
+          "black";
+        return () => {
+          el.toggleAttribute(LIGHT_ACCENT_ATTRIBUTE, light);
+          el.toggleAttribute(VERY_LIGHT_ACCENT_ATTRIBUTE, veryLight);
+          el.toggleAttribute(DARK_CONTRAST_ATTRIBUTE, needsDarkForeground);
+        };
+      });
     };
     updateAttributes();
     const unsubscribeFromPseudoState = subscribeToPseudoState(
@@ -47950,6 +47792,7 @@ const useAccentColorAttributes = (
       updateAttributes,
     );
     return () => {
+      cancelRead?.();
       unsubscribeFromPseudoState();
       el.removeAttribute(LIGHT_ACCENT_ATTRIBUTE);
       el.removeAttribute(VERY_LIGHT_ACCENT_ATTRIBUTE);
@@ -57468,26 +57311,11 @@ const useInputGroup = (ref) => {
         const inputs = getInputs();
         const idx = inputs.indexOf(active);
         if (idx === -1) {
-          debugFocus(
-            e,
-            "InputGroup ArrowRight on non group input → do nothing",
-          );
           return;
         }
         if (idx === inputs.length - 1) {
-          debugFocus(
-            e,
-            "InputGroup ArrowRight at end of last input → do nothing",
-          );
           return;
         }
-
-        debugFocus(
-          e,
-          "InputGroup ArrowRight at end of input[%d] → focus input[%d]",
-          idx,
-          idx + 1,
-        );
         e.preventDefault();
         focusInput(inputs[idx + 1]);
         return;
@@ -57506,12 +57334,6 @@ const useInputGroup = (ref) => {
       if (idx === 0) {
         return;
       }
-      debugFocus(
-        e,
-        "InputGroup ArrowLeft at start of input[%d] → focus input[%d]",
-        idx,
-        idx - 1,
-      );
       e.preventDefault();
       focusInput(inputs[idx - 1]);
     };
@@ -57534,12 +57356,6 @@ const useInputGroup = (ref) => {
         return;
       }
       const nextInput = inputs[idx + 1];
-      debugFocus(
-        e,
-        "InputGroup navi_input_full on input -> move to next input",
-        input,
-        nextInput,
-      );
       e.preventDefault();
       focusInput(nextInput);
     };
@@ -59549,14 +59365,12 @@ const Dialog = props => {
 // by --navi-toggle/--navi-open/--navi-close commands, the `open` prop, or
 // `defaultOpen`) rather than owned by a parent component.
 const UncontrolledDialog = props => {
-  const debugPopup = useDebugPopup();
   // Resolved here rather than left to useDialogProps: the open handler below
   // needs the dialog element to look at what it contains.
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
   const openController = useOpenController(openEvent => {
     const dialogEl = props.ref.current;
-    debugPopup(openEvent, `dialog opened`);
     return {
       onRequestClose: requestCloseEvent => {
         // Whatever is inside must not be interrupted mid-action: a form that is
@@ -60196,38 +60010,6 @@ const useDialogProps = props => {
       if (!fill && (dialogEl.offsetWidth !== position.width || dialogEl.offsetHeight !== position.height)) {
         position = pickPositionRelativeTo(dialogEl, null, pickOptions);
         applyDialogPosition(position);
-      }
-      // A descendant's own visibleRectEffect (visible_rect.js — e.g. a
-      // Callout anchored to something inside this Dialog) knowing to
-      // recheck its own position whenever this dialog itself moves is
-      // handled generically by applyNewPosition itself (dispatches
-      // navi_position_change on every call) — nothing to do here.
-      logPlacement(triggerEvent, position);
-    };
-    // The whole picture in one line: where the dialog ended up, and what it
-    // believed about the room when it decided. Both are needed together — a box
-    // that looks wrong on screen while these numbers are right means something
-    // covers the screen that no API describes (a phone's autofill/suggestion
-    // strip), and the absence of a line after the keyboard arrives means the
-    // placement was never asked to run again.
-    const logPlacement = (triggerEvent, position) => {
-      // The decided target, never the current rect: the placement animates, so
-      // a box read right after applying one is somewhere between the two and
-      // reads like a decision nobody took.
-      const {
-        visualViewport
-      } = window;
-      // Reads nothing that brings the layout up to date — no getComputedStyle,
-      // no window.innerWidth/innerHeight. That is the very thing this line is
-      // here to observe (see getVisibleViewportRect in @jsenv/dom): a log that
-      // forced it would hand the NEXT placement a fresh viewport and hide the
-      // bug it was printed to show. Everything below is either already computed
-      // (the pick's own numbers, "room" being the room it had) or free to read.
-      const message = `placed on "${triggerEvent ? triggerEvent.type : "open"}": ${Math.round(position.width)}x${Math.round(position.height)} at ${Math.round(position.top)}->${Math.round(position.top + position.height)} | room ${Math.round(position.containerHeightAvailable)} | viewport ${Math.round(visualViewport.width)}x${Math.round(visualViewport.height)} +${Math.round(visualViewport.offsetLeft)},${Math.round(visualViewport.offsetTop)} | keyboard ${getVirtualKeyboardOverlayHeight()}`;
-      if (triggerEvent) {
-        debugPopup(triggerEvent, message);
-      } else {
-        debugPopup(message);
       }
     };
     // Cleared here rather than on close, where the box is deliberately left
@@ -61197,7 +60979,6 @@ const Popover = props => {
 // by --navi-toggle/--navi-open/--navi-close commands, or by the `open` prop)
 // rather than owned by a parent component.
 const UncontrolledPopover = props => {
-  const debugPopup = useDebugPopup();
   // Resolved here rather than in usePopoverProps: the open handler below needs
   // the popover element to read what it holds.
   const defaultRef = useRef();
@@ -61207,7 +60988,6 @@ const UncontrolledPopover = props => {
   // about closing is that what it contains must not be interrupted mid-action.
   const openController = useOpenController(openEvent => {
     const popoverEl = props.ref.current;
-    debugPopup(openEvent, `popover opened`);
     return {
       onRequestClose: requestCloseEvent => {
         const controlsHolding = findControlsHoldingPopup(popoverEl);
@@ -61996,7 +61776,6 @@ const usePopoverProps = props => {
     // The close callback openEffect returns — also inlined for the same
     // reason: only ever built here.
     return closeEvent => {
-      debugPopup(closeEvent, `closePopover()`);
       clearTextSelectionInside(popoverEl);
       popoverEl.setAttribute("aria-expanded", "false");
       // Set regardless of isTopLayer — see the open side's own identical
@@ -62789,7 +62568,6 @@ const PickerCustom = props => {
   }
   // aria-expanded + open close + interactions to open close
   {
-    const debugFocus = useDebugFocus();
     const debugPopup = useDebugPopup();
     // In "dialog" mode with a stable, caller-provided id, enterExpanded()
     // pushes a history entry so the back button closes it. Every other case
@@ -62824,7 +62602,6 @@ const PickerCustom = props => {
       // ("yes, 2h15") — the same rule Form applies to an untouched field (see
       // isUIStateHeld). Read at open, before anything inside can change it.
       const heldAtOpen = isUIStateHeld(getPickerInput(ref.current)?.__uiStateController__);
-      debugPopup(openEvent, `picker opened, store value at open`, valueAtOpen, heldAtOpen ? `(held)` : `(a suggestion, not an answer yet)`);
       onOpen?.(openEvent);
       return {
         onRequestClose: requestCloseEvent => {
@@ -62892,18 +62669,7 @@ const PickerCustom = props => {
             const inputEl = getPickerInput(ref.current);
             const valueAtClose = getUIStateFromElement(inputEl);
             const controller = inputEl?.__uiStateController__;
-            if (controller?.controlHostProps.readOnly) {
-              // Opened only to be read: what it shows stays the suggestion it
-              // was. A look is not an answer, and the signal behind it is not
-              // written by one.
-              debugPopup(closeEvent, `picker is read-only -> nothing to commit`);
-            } else if (valueAtOpen === undefined && compareTwoJsValues(valueAtClose, valueAtOpen)) {
-              // Same third case onRequestClose steps around: nothing held,
-              // nothing shown, nothing picked. There is no suggestion here to
-              // turn into an answer.
-              debugPopup(closeEvent, `picker showed nothing -> nothing to commit`);
-            } else {
-              debugPopup(closeEvent, `picker defined a suggestion -> commit it`);
+            if (controller?.controlHostProps.readOnly) ; else if (valueAtOpen === undefined && compareTwoJsValues(valueAtClose, valueAtOpen)) ; else {
               commitUIStateAsAnswer(controller, closeEvent);
             }
           }
@@ -63213,7 +62979,6 @@ const PickerCustom = props => {
               name: "mousedown to open picker",
               intent: "read",
               allowed: () => {
-                debugFocus(e, `prevent browser giving focus to button (mousedown.preventDefault())`);
                 requestOpen(e);
                 e.preventDefault(); // prevent browser trying to give focus to the select (popover will take focus)
               }
@@ -63854,6 +63619,43 @@ document.addEventListener(
   },
   { capture: true, passive: true },
 );
+
+/**
+ * Calls back once the browser has painted what is committed now.
+ *
+ * The callbacks of the next frame run before that frame paints, so the call is
+ * made from a task queued from inside one — the same way preact schedules
+ * useEffect. Unlike an effect, nothing runs this early: preact flushes a
+ * component's pending effects as soon as that component renders again, and a
+ * re-render before the paint is exactly what a caller waiting for the paint
+ * has to survive. A frame not coming at all (a background tab) still answers,
+ * late, through the timeout.
+ *
+ * @returns {() => void} cancel
+ */
+const FRAME_TIMEOUT_MS = 100;
+
+const afterPaint = (callback) => {
+  let called = false;
+  let timeoutId;
+  let frameId;
+  const onFrame = () => {
+    if (called) {
+      return;
+    }
+    called = true;
+    clearTimeout(timeoutId);
+    cancelAnimationFrame(frameId);
+    timeoutId = setTimeout(callback, 0);
+  };
+  timeoutId = setTimeout(onFrame, FRAME_TIMEOUT_MS);
+  frameId = requestAnimationFrame(onFrame);
+  return () => {
+    called = true;
+    clearTimeout(timeoutId);
+    cancelAnimationFrame(frameId);
+  };
+};
 
 const LoadingDotsSvg = () => {
   return jsxs("svg", {
@@ -65814,6 +65616,32 @@ const css$x = /* css */`@layer navi {
    middle of the padding. On the scroll box the scrollbar stays against the
    border and the padding is what separates the rows from it. */
 const LIST_PADDING_PROP_SET = new Set(["padding", "paddingX", "paddingY", "paddingTop", "paddingRight", "paddingBottom", "paddingLeft"]);
+
+// Accepts a string too (renderBudget="50" from an HTML attribute): the
+// arithmetic on the budget (renderBudget / 2, start + renderBudget) would
+// silently misbehave on a raw string ("+" concatenates).
+const toRenderBudgetNumber = value => {
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : RENDER_BUDGET_DEFAULT;
+  }
+  if (typeof value === "number") {
+    return value;
+  }
+  return RENDER_BUDGET_DEFAULT;
+};
+const resolveRenderBudget = renderBudget => {
+  if (renderBudget && typeof renderBudget === "object") {
+    return {
+      initial: renderBudget.initial === undefined ? undefined : toRenderBudgetNumber(renderBudget.initial),
+      after: toRenderBudgetNumber(renderBudget.after)
+    };
+  }
+  return {
+    initial: undefined,
+    after: toRenderBudgetNumber(renderBudget)
+  };
+};
 const ListUI = props => {
   import.meta.css = [css$x, "@jsenv/navi/src/control/list/list.jsx"];
   const {
@@ -65862,17 +65690,33 @@ const ListUI = props => {
       delete rest[name];
     }
   }
-  // Accept a string (e.g. from an HTML attribute: renderBudget="50") the
-  // same way a bare number would work — arithmetic below (renderBudget / 2,
-  // start + renderBudget, etc.) would silently misbehave on a raw string
-  // ("+" concatenates instead of adding).
-  let renderBudget = renderBudgetProp;
-  if (typeof renderBudget === "string") {
-    const parsed = Number(renderBudget);
-    renderBudget = Number.isFinite(parsed) ? parsed : RENDER_BUDGET_DEFAULT;
-  }
+  // `renderBudget` is a number, or `{ initial, after }`: the window of the
+  // first commit, until the browser has painted it, and the window from then
+  // on. A list opening inside a popup draws in the click that opens it, and
+  // the browser paints nothing before that render ends: rows below the fold
+  // cost the same as rows on screen there, and are drawn to be seen one frame
+  // later just as well. `after` takes over after the paint (see afterPaint for
+  // why not an effect), and the floor of 30 is its: it protects the scrolling
+  // window, not a picture nobody has seen yet.
+  const {
+    initial: initialRenderBudget,
+    after: renderBudgetAfterPaint
+  } = resolveRenderBudget(renderBudgetProp);
+  let renderBudget = renderBudgetAfterPaint;
   if (renderBudget < 30 && !renderBudgetSkipCheck) {
     console.warn(`List: renderBudget=${renderBudget} is too low. A renderBudget below 30 is not supported: on large screens or when the list grows, items outside the window would appear as blank space instead of rendered content. Use a value of at least 30, or omit the prop to use the default (${RENDER_BUDGET_DEFAULT}).`);
+  }
+  const [firstPaintPending, setFirstPaintPending] = useState(initialRenderBudget !== undefined);
+  useLayoutEffect(() => {
+    if (!firstPaintPending) {
+      return undefined;
+    }
+    return afterPaint(() => {
+      setFirstPaintPending(false);
+    });
+  }, []);
+  if (firstPaintPending) {
+    renderBudget = initialRenderBudget;
   }
 
   // lockSize: capture the container's dimensions on first render so filtering
@@ -66259,7 +66103,10 @@ const useListScrollSync = ({
   horizontal
 }) => {
   const debugScroll = useDebugScroll();
-  const virtualItemSizeSignal = useVirtualItemSizeSignal(ref, virtualItemSize, horizontal);
+  const virtualItemSizeSignal = useVirtualItemSizeSignal(ref, virtualItemSize, horizontal, {
+    virtual,
+    renderBudget
+  });
   const getScroller = () => getScrollerEl(ref.current, scroller, horizontal);
   const getListEl = () => ref.current.querySelector(".navi_list");
   // Which box scrolls is measured (see getScrollerEl), so the answer holds
@@ -66315,6 +66162,28 @@ const useListScrollSync = ({
   });
   const renderWindowRef = useRef(null);
   renderWindowRef.current = renderWindow;
+  // A budget that changes (the first paint's giving way to the scrolling one)
+  // re-frames the window where it stands, in this very render — the way
+  // holdWindow below moves it: nothing else would, the scroll listener only
+  // moves a window the user is about to leave.
+  const renderBudgetRef = useRef(renderBudget);
+  if (renderBudgetRef.current !== renderBudget) {
+    renderBudgetRef.current = renderBudget;
+    const {
+      start
+    } = renderWindowRef.current;
+    const total = virtual.totalSignal.peek();
+    let newStart = start;
+    let newEnd = start + renderBudget;
+    if (total > 0 && newEnd > total) {
+      newEnd = total;
+      newStart = total - renderBudget < 0 ? 0 : total - renderBudget;
+    }
+    renderWindowRef.current = {
+      start: newStart,
+      end: newEnd
+    };
+  }
   const updateRenderWindow = (newStart, newEnd, reason) => {
     const {
       start,
@@ -66324,7 +66193,6 @@ const useListScrollSync = ({
       return;
     }
     captureAnchor();
-    debugScroll(`updateRenderWindow(${newStart}, ${newEnd}, "${reason}")`);
     const renderWindow = {
       start: newStart,
       end: newEnd
@@ -66417,12 +66285,11 @@ const useListScrollSync = ({
       return;
     }
     const scrollItemIntoView = itemEl => {
-      const trigger = `"${event.type}" on ${getElementSignature(event.target)} (${reason})`;
+      `"${event.type}" on ${getElementSignature(event.target)} (${reason})`;
       // When we display the list we prefer to have selected item at the center
       // otherwise, usually when focused by arrow nav, we want to keep it into view close to the nearest edge
       const block = blockRequested || (event.type === "navi_displayed" ? "center" : "nearest");
-      const scrollToItemCall = `${getElementSignature(itemEl)}.scrollIntoView({ block: "${block}", container: "nearest" })`;
-      debugScroll(`${trigger} -> ${scrollToItemCall}`);
+      `${getElementSignature(itemEl)}.scrollIntoView({ block: "${block}", container: "nearest" })`;
       // The list is going somewhere on purpose, so there is no view to hold
       // still any more: an anchor captured before this drop it, or it would
       // put the list back where it was the moment the rows move under it.
@@ -66458,7 +66325,7 @@ const useListScrollSync = ({
     const half = Math.floor(renderBudget / 2);
     const newStart = Math.max(0, index - half);
     const newEnd = newStart + renderBudget;
-    updateRenderWindow(newStart, newEnd, `item to scroll (at ${index}) is out of render window`);
+    updateRenderWindow(newStart, newEnd);
   };
 
   // Where the list must be: what the caller holds it at (`scrolled`), or where
@@ -66590,8 +66457,7 @@ const useListScrollSync = ({
         return undefined;
       }
       savedScrollRef.current = null;
-      debugScroll("Restoring scroll to", savedScroll);
-      updateRenderWindow(savedScroll.renderWindow.start, savedScroll.renderWindow.end, "restore scroll window");
+      updateRenderWindow(savedScroll.renderWindow.start, savedScroll.renderWindow.end);
       // Tracked in a ref rather than cancelled via this effect's own cleanup:
       // updateRenderWindow above triggers a re-render, which re-runs this
       // effect (it has no dependency array — it needs to reactively poll
@@ -66933,7 +66799,7 @@ const useListScrollSync = ({
       }
       const endWanted = startWanted + windowSize;
       if (startWanted !== start || endWanted !== end) {
-        updateRenderWindow(startWanted, endWanted, `${indexShift} row(s) inserted before the anchored row`);
+        updateRenderWindow(startWanted, endWanted);
         return;
       }
     }
@@ -67028,7 +66894,7 @@ const useListScrollSync = ({
       if (newEnd === total) {
         newStart = Math.max(0, total - renderBudget);
       }
-      updateRenderWindow(newStart, newEnd, reason);
+      updateRenderWindow(newStart, newEnd);
     };
     // A page-level scroller does not emit "scroll" on the element itself
     // (document.scrollingElement); the document does.
@@ -67579,7 +67445,10 @@ const measureItemSize = (listEl, horizontal) => {
     fromSkeletons
   };
 };
-const useVirtualItemSizeSignal = (ref, virtualItemSizeProp = 0, horizontal) => {
+const useVirtualItemSizeSignal = (ref, virtualItemSizeProp = 0, horizontal, {
+  virtual,
+  renderBudget
+}) => {
   const virtualSizeSignalRef = useRef(null);
   if (!virtualSizeSignalRef.current) {
     virtualSizeSignalRef.current = signal(virtualItemSizeProp);
@@ -67632,8 +67501,12 @@ const useVirtualItemSizeSignal = (ref, virtualItemSizeProp = 0, horizontal) => {
   // as the rows it was measured on. Written from a layout effect it would
   // resize them one commit later — after the scroll anchoring of that commit
   // had already run, which is exactly the jump anchoring exists to prevent.
+  // And only while some rows are held off screen: the fillers are what the
+  // size is for, and a list drawing every row it has would pay a layout on
+  // each of its renders for a number nothing reads.
   const sizeAlreadyKnown = virtualSizeSignal.peek() !== 0;
-  if (!virtualItemSizeProp && sizeAlreadyKnown && ref.current) {
+  const rowsHeldOffScreen = virtual.totalSignal.peek() > renderBudget;
+  if (!virtualItemSizeProp && sizeAlreadyKnown && rowsHeldOffScreen && ref.current) {
     const listEl = ref.current.querySelector(".navi_list");
     const measure = listEl ? measureItemSize(listEl, horizontal) : null;
     if (measure) {
@@ -67798,12 +67671,15 @@ const Fallback = ({
     children: fallback
   });
 };
+// Reads the row size itself: it is what the size is for, and a run holding
+// every row it draws must not be redrawn — every row of it — because the size
+// settled after the first commit.
 const VirtualFiller = ({
   edge,
-  itemCount,
-  virtualItemSize
+  itemCount
 }) => {
-  const sizeToFill = itemCount * virtualItemSize;
+  const virtual = useContext(ListVirtualContext);
+  const sizeToFill = itemCount * virtual.virtualItemSizeSignal.value;
   if (!sizeToFill) {
     return null;
   }
@@ -68857,6 +68733,21 @@ const ListItems = ({
   const virtual = useContext(ListVirtualContext);
   const slotId = useContext(ListSlotContext);
   const renderWindow = useContext(RenderWindowContext);
+  // The vnode drawn for a row, kept by item: a run rendering again (its window
+  // moving, its first paint's budget giving way to the full one) hands preact
+  // the same vnode for a row that has not changed, and preact leaves that
+  // row's whole subtree alone. Only for a `renderItem` that is the same
+  // function as last time — a new one may close over new state — and for a
+  // row at the same index, in the same refreshing state: everything the
+  // function is given.
+  const rowVnodesRef = useRef(null);
+  if (!rowVnodesRef.current || rowVnodesRef.current.renderItem !== renderItem) {
+    rowVnodesRef.current = {
+      renderItem,
+      byItem: new Map()
+    };
+  }
+  const rowVnodesByItem = rowVnodesRef.current.byItem;
   const separator = useContext(SeparatorContext);
   const store = useItemStore({
     items,
@@ -68867,16 +68758,26 @@ const ListItems = ({
   });
   const renderRowSkeleton = renderSkeleton === undefined ? virtual.renderSkeleton : renderSkeleton;
   // A row on its way takes the room the list reserves for it: anything else
-  // and the rows drawn stop short of where the scroll says they are.
-  const virtualItemSize = virtual.virtualItemSizeSignal.value;
-  const skeletonRow = {};
-  if (virtualItemSize) {
-    if (virtual.horizontal) {
-      skeletonRow.rowMinWidth = `${virtualItemSize}px`;
-    } else {
-      skeletonRow.rowMinHeight = `${virtualItemSize}px`;
+  // and the rows drawn stop short of where the scroll says they are. Read
+  // where a row is actually missing, and not before: the size settles after
+  // the first commit, and a run holding every row it draws would otherwise be
+  // redrawn whole by a number it has no use for.
+  let skeletonRow = null;
+  const getSkeletonRow = () => {
+    if (skeletonRow) {
+      return skeletonRow;
     }
-  }
+    skeletonRow = {};
+    const virtualItemSize = virtual.virtualItemSizeSignal.value;
+    if (virtualItemSize) {
+      if (virtual.horizontal) {
+        skeletonRow.rowMinWidth = `${virtualItemSize}px`;
+      } else {
+        skeletonRow.rowMinHeight = `${virtualItemSize}px`;
+      }
+    }
+    return skeletonRow;
+  };
   const runStart = virtual.take(ownerId, store.rowCount, slotId);
   const runEnd = runStart + store.rowCount;
   // The two ways to count the same row. The list numbers its rows from its own
@@ -69045,8 +68946,7 @@ const ListItems = ({
   if (windowFrom > runStart) {
     rows.push(jsx(VirtualFiller, {
       edge: "before",
-      itemCount: windowFrom - runStart,
-      virtualItemSize: virtualItemSize
+      itemCount: windowFrom - runStart
     }, "navi-list-filler-before"));
   }
   const renderItemState = {
@@ -69060,7 +68960,7 @@ const ListItems = ({
       rows.push(jsx("li", {
         className: "navi_list_failed_rows",
         style: {
-          "--size-to-fill": `${failedRowCount * virtualItemSize}px`
+          "--size-to-fill": `${failedRowCount * virtual.virtualItemSizeSignal.value}px`
         },
         children: renderError ? renderError({
           error: store.failure.error,
@@ -69079,7 +68979,17 @@ const ListItems = ({
     const key = item === undefined ? `${ownerId}_skeleton_${rowIndex}` : idOf(item, rowIndex);
     let rowVnode;
     if (item !== undefined) {
-      rowVnode = renderItem(item, rowIndex, renderItemState);
+      const rowVnodeKept = rowVnodesByItem.get(item);
+      if (rowVnodeKept && rowVnodeKept.rowIndex === rowIndex && rowVnodeKept.refreshing === renderItemState.refreshing) {
+        rowVnode = rowVnodeKept.vnode;
+      } else {
+        rowVnode = renderItem(item, rowIndex, renderItemState);
+        rowVnodesByItem.set(item, {
+          vnode: rowVnode,
+          rowIndex,
+          refreshing: renderItemState.refreshing
+        });
+      }
     } else if (renderRowSkeleton === false) {
       // The row must still take its room: without it the rows below would
       // climb up and slide back down as the answer arrives.
@@ -69110,7 +69020,7 @@ const ListItems = ({
         value: item === undefined ? {
           id: key,
           index: rowIndex,
-          ...skeletonRow
+          ...getSkeletonRow()
         } : {
           id: key,
           index: rowIndex,
@@ -69125,8 +69035,7 @@ const ListItems = ({
   if (runEnd > windowTo) {
     rows.push(jsx(VirtualFiller, {
       edge: "after",
-      itemCount: runEnd - windowTo,
-      virtualItemSize: virtualItemSize
+      itemCount: runEnd - windowTo
     }, "navi-list-filler-after"));
   }
   return rows;
@@ -71261,6 +71170,7 @@ const css$t = /* css */`@layer navi {
     --picker-icon-color-disabled: var(--picker-icon-color-readonly);
     --picker-align-x-default: flex-start;
     --picker-align-y-default: center;
+    --picker-text-align-default: initial;
   }
 }
 
@@ -71399,7 +71309,7 @@ const css$t = /* css */`@layer navi {
   }
 
   &[navi-single-line] {
-    & .navi_picker_right_slot {
+    & > .navi_picker_box > .navi_picker_right_slot {
       align-self: var(--x-picker-align-y);
     }
   }
@@ -71436,7 +71346,7 @@ const css$t = /* css */`@layer navi {
   }
 
   &[navi-ui-custom] {
-    & .navi_picker_input {
+    & > .navi_picker_box > .navi_picker_input {
       top: calc(-1 * (var(--picker-border-width) + var(--x-picker-press-padding-top)));
       right: calc(-1 *
             (var(--picker-border-width) + var(--x-picker-press-padding-right)));
@@ -71499,10 +71409,10 @@ const css$t = /* css */`@layer navi {
     --x-picker-cursor: pointer;
   }
 
-  &[data-focus-within]:has(.navi_picker_input[data-focus-visible]), &[data-focus-visible] {
+  &[data-focus-within]:has( > .navi_picker_box > .navi_picker_input[data-focus-visible]), &[data-focus-visible] {
     --x-picker-border-color: transparent;
 
-    & .navi_picker_box {
+    & > .navi_picker_box {
       outline-style: solid;
     }
   }
@@ -71560,7 +71470,7 @@ const css$t = /* css */`@layer navi {
     --picker-background-color-disabled: var(--picker-background-color);
     --picker-icon-color: currentColor;
 
-    & .navi_picker_box {
+    & > .navi_picker_box {
       z-index: -1;
       position: absolute;
       inset: 0;
@@ -71585,11 +71495,11 @@ const css$t = /* css */`@layer navi {
     font-family: inherit;
     line-height: inherit;
 
-    & .navi_picker_box {
+    & > .navi_picker_box {
       min-height: 0;
     }
 
-    & .navi_picker_value[data-picker-facade] {
+    & > .navi_picker_box > .navi_picker_value[data-picker-facade] {
       align-items: var(--x-picker-align-y);
       display: flex;
     }
@@ -71640,11 +71550,11 @@ const css$t = /* css */`@layer navi {
     --picker-padding-y-default: 0;
     --picker-align-x-default: center;
 
-    & .navi_picker_box {
+    & > .navi_picker_box {
       min-height: 0;
     }
 
-    & .navi_picker_value {
+    & > .navi_picker_box > .navi_picker_value {
       flex-grow: 0;
       align-items: center;
       display: inline-flex;
@@ -76103,8 +76013,7 @@ const useWheelInteractions = ({
         // A real drag begins: stop the glide and re-anchor to here so the wheel
         // doesn't jump (startPos = the just-frozen position, startClient = now).
         drag.moved = true;
-        const caught = cancelAnim();
-        debug(e, caught ? "catch: grabbed a moving wheel" : "drag: start");
+        cancelAnim();
         drag.startPos = posRef.current;
         drag.startClient = client;
       }
@@ -76749,11 +76658,6 @@ function WheelUI(props) {
   // on the press settles the DOM up front, before the tap completes.
   const commitIfAnimating = () => {
     const animating = momentumRef.current !== null || glideRef.current !== null;
-    // Logs on every press outside the wheel — tells us whether a tap on a dialog
-    // button lands while the wheel is still coasting (animating=true) or after it
-    // already settled (animating=false), which decides where the dropped click
-    // comes from.
-    debugScroll(`external press while wheel animating=${animating}`);
     if (!animating) {
       return;
     }
@@ -76815,7 +76719,6 @@ function WheelUI(props) {
       glideFromOutsideRef.current = fromOutside;
     }
     if (glideRef.current === null) {
-      debugScroll("glide: start");
       glideRef.current = requestAnimationFrame(() => glideStep(vp, performance.now()));
     }
     // else: the loop is already running and will chase the updated target — no
@@ -76830,7 +76733,6 @@ function WheelUI(props) {
   const settle = (vp, velocity) => {
     cancelAnim();
     glideFromOutsideRef.current = false;
-    debugScroll(`settle: momentum start (v=${velocity}px/ms)`);
     // A drag fling: allow the full swipe velocity (see WHEEL_FLING_MAX_VELOCITY)
     // so a hard swipe carries across the list instead of being clipped to a few
     // rows. The mouse wheel never reaches here (it uses wheelSettle/glide).

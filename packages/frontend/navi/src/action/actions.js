@@ -386,7 +386,7 @@ export const updateActions = ({
     }
   }
 
-  if (DEBUG) {
+  if (import.meta.dev && DEBUG) {
     let argSource = `reason: ${JSON.stringify(reason)}`;
     if (isReplace) {
       argSource += `, isReplace: true`;
@@ -536,7 +536,7 @@ ${lines.join("\n")}`,
       }
     }
   }
-  if (DEBUG) {
+  if (import.meta.dev && DEBUG) {
     const lines = [
       ...(willResetSet.size
         ? [formatActionSet(willResetSet, "- will reset:")]
@@ -668,7 +668,7 @@ ${lines.join("\n")}`);
       }
     }
   }
-  if (DEBUG) {
+  if (import.meta.dev && DEBUG) {
     console.groupEnd();
   }
 
@@ -1166,7 +1166,7 @@ export const createAction = (callback, rootOptions = {}) => {
       toString: () => actionCallSourceSignal.peek(),
       meta,
       debug: (...args) => {
-        if (!meta.debug && !DEBUG) {
+        if (!import.meta.dev || (!meta.debug && !DEBUG)) {
           return;
         }
         console.debug(...args);
@@ -1238,7 +1238,7 @@ export const createAction = (callback, rootOptions = {}) => {
           if (isPrerun && (globalAbortSignal.aborted || abortSignal.aborted)) {
             prerunProtectionRegistry.unprotect(action);
           }
-          if (DEBUG) {
+          if (import.meta.dev && DEBUG) {
             console.log(`"${action}" aborted (reason: ${abortReason})`);
           }
         };
@@ -1332,7 +1332,7 @@ export const createAction = (callback, rootOptions = {}) => {
           if (keptAnswerRegistry) {
             keptAnswerRegistry.keep(action);
           }
-          if (DEBUG) {
+          if (import.meta.dev && DEBUG) {
             console.log(`"${action}": completed`);
           }
           const data = dataSignal.peek();
@@ -1359,7 +1359,7 @@ export const createAction = (callback, rootOptions = {}) => {
             onAbort?.(error, { event, action, args });
             return error;
           }
-          if (DEBUG) {
+          if (import.meta.dev && DEBUG) {
             console.log(`"${action}": failed (error: ${error})`);
           }
           error.action = action;
@@ -1428,7 +1428,7 @@ export const createAction = (callback, rootOptions = {}) => {
 
       const performReset = ({ reason, willRunOrPrerun }) => {
         abort(reason);
-        if (DEBUG) {
+        if (import.meta.dev && DEBUG) {
           console.log(`"${action}": resetting (reason: ${reason})`);
         }
 

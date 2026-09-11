@@ -3678,7 +3678,7 @@ const createAction = (callback, rootOptions = {}) => {
       toString: () => actionCallSourceSignal.peek(),
       meta,
       debug: (...args) => {
-        if (!meta.debug && !DEBUG$2) {
+        if ((!meta.debug && !DEBUG$2)) {
           return;
         }
         console.debug(...args);
@@ -12922,68 +12922,153 @@ const useResetErrorBoundary = () => {
   return resetErrorBoundary;
 };
 
-const DebugCommandContext = createContext(false);
-const DebugInteractionContext = createContext(false);
-const DebugFocusContext = createContext(false);
-const DebugScrollContext = createContext(false);
-const DebugPopupContext = createContext(false);
-const DebugActionContext = createContext(false);
-const DebugUIStateContext = createContext(false);
+/*
+ * Everything dev-only in this module hangs off one `import.meta.dev` test at
+ * the binding level (`import.meta.dev ? naviDebug.x : noop`), not inside the
+ * function bodies. Rollup follows a binding to the function it names, but
+ * not an early `return noop` inside a body: the first shape lets it drop every
+ * `debugX("…")` call site of the production build, the second keeps them all.
+ */
+
 const debugNoop = () => {};
-const eventGroupLogger = createEventGroupLogger();
-const debugCommandDefault = eventGroupLogger.createCategory("[command]", "#8e44ad");
-const debugInteractionDefault = eventGroupLogger.createCategory("[interaction]", "#2980b9");
-const debugActionDefault = eventGroupLogger.createCategory("[action]", "#e67e22");
-const debugPopupDefault = eventGroupLogger.createCategory("[popup]", "#27ae60");
-const debugUIStateDefault = eventGroupLogger.createCategory("[uistate]", "#7f8c8d");
-const debugFocusDefault = eventGroupLogger.createCategory("[focus]", "#2980b9");
-const debugScrollDefault = eventGroupLogger.createCategory("[scroll]", "#2980b9");
+const createNaviDebug = () => {
+  const DebugCommandContext = createContext(false);
+  const DebugInteractionContext = createContext(false);
+  const DebugFocusContext = createContext(false);
+  const DebugScrollContext = createContext(false);
+  const DebugPopupContext = createContext(false);
+  const DebugActionContext = createContext(false);
+  const DebugUIStateContext = createContext(false);
+  const eventGroupLogger = createEventGroupLogger();
+  const debugCommandDefault = eventGroupLogger.createCategory("[command]", "#8e44ad");
+  const debugInteractionDefault = eventGroupLogger.createCategory("[interaction]", "#2980b9");
+  const debugActionDefault = eventGroupLogger.createCategory("[action]", "#e67e22");
+  const debugPopupDefault = eventGroupLogger.createCategory("[popup]", "#27ae60");
+  const debugUIStateDefault = eventGroupLogger.createCategory("[uistate]", "#7f8c8d");
+  const debugFocusDefault = eventGroupLogger.createCategory("[focus]", "#2980b9");
+  const debugScrollDefault = eventGroupLogger.createCategory("[scroll]", "#2980b9");
+  const useDebugCommand = () => {
+    const debug = useContext(DebugCommandContext);
+    return debug || debugNoop;
+  };
+  const useDebugInteraction = () => {
+    const debug = useContext(DebugInteractionContext);
+    return debug || debugNoop;
+  };
+  const useDebugFocus = () => {
+    const debug = useContext(DebugFocusContext);
+    return debug || debugNoop;
+  };
+  const useDebugScroll = () => {
+    const debug = useContext(DebugScrollContext);
+    return debug || debugNoop;
+  };
+  const useDebugPopup = () => {
+    const debug = useContext(DebugPopupContext);
+    return debug || debugNoop;
+  };
+  const useDebugAction = () => {
+    const debug = useContext(DebugActionContext);
+    return debug || debugNoop;
+  };
+  const useDebugUIState = () => {
+    const debug = useContext(DebugUIStateContext);
+    return debug || debugNoop;
+  };
+  const NaviDebug = ({
+    debugAll,
+    debugCommand = debugAll,
+    debugInteraction = debugAll,
+    debugFocus = debugAll,
+    debugScroll = debugAll,
+    debugPopup = debugAll,
+    debugAction = debugAll,
+    debugUIState = debugAll,
+    children
+  }) => {
+    if (debugCommand === true) {
+      debugCommand = debugCommandDefault;
+    }
+    if (debugInteraction === true) {
+      debugInteraction = debugInteractionDefault;
+    }
+    if (debugFocus === true || debugInteraction && debugFocus === undefined) {
+      debugFocus = debugFocusDefault;
+    }
+    if (debugScroll === true || debugInteraction && debugScroll === undefined) {
+      debugScroll = debugScrollDefault;
+    }
+    if (debugPopup === true || debugInteraction && debugPopup === undefined) {
+      debugPopup = debugPopupDefault;
+    }
+    if (debugAction === true) {
+      debugAction = debugActionDefault;
+    }
+    if (debugUIState === true) {
+      debugUIState = debugUIStateDefault;
+    }
+    return jsx(DebugCommandContext.Provider, {
+      value: debugCommand,
+      children: jsx(DebugInteractionContext.Provider, {
+        value: debugInteraction,
+        children: jsx(DebugFocusContext.Provider, {
+          value: debugFocus,
+          children: jsx(DebugScrollContext.Provider, {
+            value: debugScroll,
+            children: jsx(DebugPopupContext.Provider, {
+              value: debugPopup,
+              children: jsx(DebugActionContext.Provider, {
+                value: debugAction,
+                children: jsx(DebugUIStateContext.Provider, {
+                  value: debugUIState,
+                  children: children
+                })
+              })
+            })
+          })
+        })
+      })
+    });
+  };
+  return {
+    useDebugCommand,
+    useDebugInteraction,
+    useDebugFocus,
+    useDebugScroll,
+    useDebugPopup,
+    useDebugAction,
+    useDebugUIState,
+    NaviDebug
+  };
+};
+const naviDebug = createNaviDebug() ;
 
 // The hooks below expose one concern's logger to components inside <NaviDebug>.
 // Each returns the logger function enabled for that concern, or a no-op when the
 // concern is off — so call sites can `const debug = useDebugX()` unconditionally.
 // The logger is called as `debug(message, …)` or, to group a side effect under
 // the native event that caused it, `debug(event, message, …)`.
+// In production every hook is the no-op returner and the bundler drops the
+// call sites along with their messages.
 
 /** Logger for navi command dispatch (`--navi-*`), or a no-op when disabled. */
-const useDebugCommand = () => {
-  const debug = useContext(DebugCommandContext);
-  return debug || debugNoop;
-};
+const useDebugCommand = naviDebug.useDebugCommand ;
 /** Logger for gated interactions (click/scroll/select/…), or a no-op. */
-const useDebugInteraction = () => {
-  const debug = useContext(DebugInteractionContext);
-  return debug || debugNoop;
-};
+const useDebugInteraction = naviDebug.useDebugInteraction ;
 /** Logger for focus moves and focus-visible decisions, or a no-op. */
-const useDebugFocus = () => {
-  const debug = useContext(DebugFocusContext);
-  return debug || debugNoop;
-};
+const useDebugFocus = naviDebug.useDebugFocus ;
 /**
  * Logger for virtual scroll / wheel motion (drag, momentum, glide) and for what
  * a virtualized list does about it — the render window moving, and the rows the
  * run asks for or decides not to ask for. Or a no-op.
  */
-const useDebugScroll = () => {
-  const debug = useContext(DebugScrollContext);
-  return debug || debugNoop;
-};
+const useDebugScroll = naviDebug.useDebugScroll ;
 /** Logger for popover/dialog open/close/positioning, or a no-op. */
-const useDebugPopup = () => {
-  const debug = useContext(DebugPopupContext);
-  return debug || debugNoop;
-};
+const useDebugPopup = naviDebug.useDebugPopup ;
 /** Logger for the action lifecycle (request → run → end), or a no-op. */
-const useDebugAction = () => {
-  const debug = useContext(DebugActionContext);
-  return debug || debugNoop;
-};
+const useDebugAction = naviDebug.useDebugAction ;
 /** Logger for UI-state transitions, validation and synthetic events, or a no-op. */
-const useDebugUIState = () => {
-  const debug = useContext(DebugUIStateContext);
-  return debug || debugNoop;
-};
+const useDebugUIState = naviDebug.useDebugUIState ;
 
 /**
  * Turns on navi's color-coded console logging for everything rendered inside it.
@@ -13001,6 +13086,8 @@ const useDebugUIState = () => {
  * turns everything on. Passing `debugInteraction` also enables `debugFocus`,
  * `debugScroll` and `debugPopup` unless those are set explicitly, since they
  * describe the same interaction.
+ *
+ * Dev-only: the production build of navi renders the children and logs nothing.
  *
  * @param {object} props
  * @param {boolean|Function} [props.debugAll] - Default for every concern below.
@@ -13027,61 +13114,12 @@ const useDebugUIState = () => {
  *   <Wheel>…</Wheel>
  * </NaviDebug>
  */
-const NaviDebug = ({
-  debugAll,
-  debugCommand = debugAll,
-  debugInteraction = debugAll,
-  debugFocus = debugAll,
-  debugScroll = debugAll,
-  debugPopup = debugAll,
-  debugAction = debugAll,
-  debugUIState = debugAll,
-  children
-}) => {
-  if (debugCommand === true) {
-    debugCommand = debugCommandDefault;
-  }
-  if (debugInteraction === true) {
-    debugInteraction = debugInteractionDefault;
-  }
-  if (debugFocus === true || debugInteraction && debugFocus === undefined) {
-    debugFocus = debugFocusDefault;
-  }
-  if (debugScroll === true || debugInteraction && debugScroll === undefined) {
-    debugScroll = debugScrollDefault;
-  }
-  if (debugPopup === true || debugInteraction && debugPopup === undefined) {
-    debugPopup = debugPopupDefault;
-  }
-  if (debugAction === true) {
-    debugAction = debugActionDefault;
-  }
-  if (debugUIState === true) {
-    debugUIState = debugUIStateDefault;
-  }
-  return jsx(DebugCommandContext.Provider, {
-    value: debugCommand,
-    children: jsx(DebugInteractionContext.Provider, {
-      value: debugInteraction,
-      children: jsx(DebugFocusContext.Provider, {
-        value: debugFocus,
-        children: jsx(DebugScrollContext.Provider, {
-          value: debugScroll,
-          children: jsx(DebugPopupContext.Provider, {
-            value: debugPopup,
-            children: jsx(DebugActionContext.Provider, {
-              value: debugAction,
-              children: jsx(DebugUIStateContext.Provider, {
-                value: debugUIState,
-                children: children
-              })
-            })
-          })
-        })
-      })
-    })
-  });
-};
+const NaviDebug = naviDebug.NaviDebug ;
+
+// For a caller whose message costs something to build (a line of numbers
+// formatted on every placement): nothing to build for a logger that logs nothing.
+// Always true in production, so the bundler drops the building too.
+const isDebugNoop = debug => debug === debugNoop ;
 
 const actionErrorWeakMap = new WeakMap();
 const NAVI_ACTION_ERROR_CONSTRAINT = {
@@ -22328,17 +22366,19 @@ const createUITransitionController = (
     pauseBreakpoints = [],
   } = {},
 ) => {
-  const debugConfig = {
-    detection: root.hasAttribute("data-debug-detection"),
-    size: root.hasAttribute("data-debug-size"),
-  };
-  const hasDebugLogs = debugConfig.size;
+  const hasDebugDetection =
+    root.hasAttribute("data-debug-detection");
+  const hasDebugLogs = root.hasAttribute("data-debug-size");
   const debugDetection = (message) => {
-    if (!debugConfig.detection) return;
+    if (!hasDebugDetection) {
+      return;
+    }
     console.debug(`[detection]`, message);
   };
   const debugSize = (message) => {
-    if (!debugConfig.size) return;
+    if (!hasDebugLogs) {
+      return;
+    }
     console.debug(`[size]`, message);
   };
 
@@ -23188,7 +23228,8 @@ const useUITransitionContentId = value => {
 
 
 const DEBUG$1 =
-  typeof process === "object" ? process.env.DEBUG === "true" : false;
+  typeof process === "object" &&
+  process.env.DEBUG === "true";
 const debug$2 = (...args) => {
   if (DEBUG$1) {
     console.debug(...args);
@@ -25615,9 +25656,30 @@ const route = (
   });
   // methods
   registerSetup(({ routeSet, getUrl }) => {
+    // One computed per set of params. Building a url reads the route family's
+    // signals (see readSignalForUrlBuild) and verifies the candidate against
+    // every pattern of the family; a list of a hundred links to one route
+    // would do that a hundred times on each of its renders. A computed does it
+    // once, again only when a signal it read changes — and a component reading
+    // it subscribes to exactly those, which is what reading the signals during
+    // render gave it.
+    const relativeUrlByParamsKey = new Map();
     route.buildRelativeUrl = (params) => {
-      // buildMostPreciseUrl now handles parameter resolution internally
-      return routePattern.buildMostPreciseUrl(params);
+      const paramsKey = getParamsCacheKey(params);
+      if (paramsKey === null) {
+        return routePattern.buildMostPreciseUrl(params);
+      }
+      let relativeUrlComputed = relativeUrlByParamsKey.get(paramsKey);
+      if (!relativeUrlComputed) {
+        if (relativeUrlByParamsKey.size >= PARAMS_CACHE_MAX) {
+          relativeUrlByParamsKey.clear();
+        }
+        relativeUrlComputed = computed(() =>
+          routePattern.buildMostPreciseUrl(params),
+        );
+        relativeUrlByParamsKey.set(paramsKey, relativeUrlComputed);
+      }
+      return relativeUrlComputed.value;
     };
     route.buildUrl = (params) => {
       const routeRelativeUrl = route.buildRelativeUrl(params);
@@ -26411,6 +26473,36 @@ const setRouteIntegration = (integrationInterface) => {
 let onAllRouteReady = () => {};
 const setOnAllRouteReady = (callback) => {
   onAllRouteReady = callback;
+};
+
+// Params are cached by content, and only params whose content a string can
+// stand for: anything else (an object, a function) builds without the cache.
+// A key set to undefined is content too — it says "without this one", which
+// a params object not naming it does not say (see buildIntendedState).
+const PARAMS_CACHE_MAX = 1000;
+const getParamsCacheKey = (params) => {
+  if (params === undefined || params === null) {
+    return "";
+  }
+  if (typeof params !== "object") {
+    return null;
+  }
+  const keys = Object.keys(params).sort();
+  let key = "";
+  for (const name of keys) {
+    const value = params[name];
+    const type = typeof value;
+    if (
+      value !== null &&
+      type !== "string" &&
+      type !== "number" &&
+      type !== "boolean"
+    ) {
+      return null;
+    }
+    key += `${name}=${type}:${value}\n`;
+  }
+  return key;
 };
 
 /**
@@ -42736,6 +42828,73 @@ const LoadingOutlineWithPortal = props => {
   });
 };
 
+/**
+ * Reads of the layout gathered across effects, so that the browser brings its
+ * styles and layout up to date once for all of them rather than once per
+ * element.
+ *
+ * A layout effect that reads (a computed style, a rect) and then writes (an
+ * attribute, a style) is fine on its own. A hundred of them in one commit are
+ * not: every write dirties the tree, and the next element's read forces the
+ * browser to recompute it — a style recalculation per element, each one over
+ * everything dirtied since the last. Most of a long mount's time goes there,
+ * not in the effects themselves.
+ *
+ * So an effect hands its read over instead of running it. Reads run together
+ * in a microtask — still before the paint, so nothing shows uncorrected — and
+ * each returns the write that depends on it, run after every read of the
+ * round. A write that needs to read again returns that read: it joins the next
+ * round, reads first, writes after, and so on until nothing is left.
+ *
+ * The cancel returned is for an element unmounted before its round: a write
+ * on a node that is gone is at best wasted.
+ *
+ * @param {() => (undefined | (() => undefined | Function))} read
+ * @returns {() => void} cancel
+ */
+const scheduleLayoutRead = (read) => {
+  const entry = { read, cancelled: false };
+  round.push(entry);
+  if (!flushScheduled) {
+    flushScheduled = true;
+    queueMicrotask(flush);
+  }
+  return () => {
+    entry.cancelled = true;
+  };
+};
+
+let round = [];
+let flushScheduled = false;
+
+const flush = () => {
+  flushScheduled = false;
+  while (round.length > 0) {
+    const entries = round;
+    round = [];
+    const writes = [];
+    for (const entry of entries) {
+      if (entry.cancelled) {
+        continue;
+      }
+      const write = entry.read();
+      if (typeof write === "function") {
+        writes.push({ entry, write });
+      }
+    }
+    for (const { entry, write } of writes) {
+      if (entry.cancelled) {
+        continue;
+      }
+      const readAgain = write();
+      if (typeof readAgain === "function") {
+        entry.read = readAgain;
+        round.push(entry);
+      }
+    }
+  }
+};
+
 installImportMetaCssBuild(import.meta);
 const css$_ = /* css */`.navi_text_anchor {
   vertical-align: baseline;
@@ -42777,6 +42936,16 @@ const TextAnchor = ({
 }) => {
   import.meta.css = [css$_, "@jsenv/navi/src/text/text_anchor.jsx"];
   const anchorRef = useRef();
+  // The correction reads the layout, with the other reads of the commit (see
+  // layout_batch.js) — an anchor per icon, each measured between two writes,
+  // is a style recalculation per icon. Cancelled by a newer correction or by
+  // the unmount: a write on a node that is gone is wasted.
+  const cancelReadRef = useRef(null);
+  useLayoutEffect(() => {
+    return () => {
+      cancelReadRef.current?.();
+    };
+  }, []);
 
   // Plain useLayoutEffect would also fire while an ancestor dialog/popover
   // (e.g. a closed SidePanel) is still display:none — every rect involved
@@ -42805,23 +42974,36 @@ const TextAnchor = ({
     if (!anchorEl || !childEl) {
       return;
     }
-    // Only correct when the anchor lives in an inline formatting context.
-    // If the parent is a flex/grid container, inline layout rules don't apply
-    // and our font-metrics model is invalid.
-    const parentDisplay = getComputedStyle(anchorEl.parentElement).display;
-    if (parentDisplay !== "inline" && parentDisplay !== "inline-block" && parentDisplay !== "block") {
-      // we must hide the anchor otherwise it would affect layout without providing any benefit (would trigger flex gap for instance)
-      anchorEl.setAttribute("hidden", "");
-      setTopOffset(childEl, 0);
-      return;
-    }
-    anchorEl.removeAttribute("hidden");
-    const topOffset = computeTopOffset({
-      anchorEl,
-      childEl,
-      textAnchor
+    cancelReadRef.current?.();
+    cancelReadRef.current = scheduleLayoutRead(() => {
+      // Only correct when the anchor lives in an inline formatting context.
+      // If the parent is a flex/grid container, inline layout rules don't
+      // apply and our font-metrics model is invalid.
+      const parentDisplay = getComputedStyle(anchorEl.parentElement).display;
+      if (parentDisplay !== "inline" && parentDisplay !== "inline-block" && parentDisplay !== "block") {
+        return () => {
+          // we must hide the anchor otherwise it would affect layout without
+          // providing any benefit (would trigger flex gap for instance)
+          anchorEl.setAttribute("hidden", "");
+          setTopOffset(childEl, 0);
+        };
+      }
+      return () => {
+        // The anchor has to be in the flow to be measured: shown here, read
+        // in the next round, with the other anchors shown by this one.
+        anchorEl.removeAttribute("hidden");
+        return () => {
+          const topOffset = computeTopOffset({
+            anchorEl,
+            childEl,
+            textAnchor
+          });
+          return () => {
+            setTopOffset(childEl, topOffset);
+          };
+        };
+      };
     });
-    setTopOffset(childEl, topOffset);
   }, [textAnchor, textKey, textSize, lineLayout?.size, lineLayout?.verticalAlign]);
   return jsxs(Fragment, {
     children: [children, jsx("span", {
@@ -48501,53 +48683,35 @@ const useNextResolver = () => useContext(NextResolverContext);
  *   // Then inside a component render:
  *   renderButton(props)
  *
- * NextResolverContext exposes a stable Next component so resolvers can continue
- * the chain via useNextResolver().
- * ResolverIndexContext tracks which resolver is next so that when a resolver
- * re-renders and calls Next, the chain resumes from the correct position.
+ * Each position of the chain has a runner of its own, defined once: it renders
+ * its resolver under a NextResolverContext holding the runner after it. A
+ * resolver that re-renders on its own and renders <Next> therefore resumes at
+ * its own position without any bookkeeping — the Next it was given is the one
+ * made for it. A chain rendered by the hundred (a list's rows) pays two
+ * components per position, the runner and the resolver, so nothing here is a
+ * component that merely forwards.
  */
 const createComponentResolver = (resolvers, {
   pure
 } = {}) => {
-  const ResolverIndexContext = createContext(0);
-  const ChainRunner = props => {
-    const index = useContext(ResolverIndexContext);
-    if (index >= resolvers.length) {
-      return null;
-    }
+  const runners = [];
+  const lastIndex = resolvers.length - 1;
+  for (let index = 0; index < resolvers.length; index++) {
     const Resolver = resolvers[index];
-    const isLast = index === resolvers.length - 1;
-    return jsx(ResolverIndexContext.Provider, {
-      value: index + 1,
-      children: isLast ? jsx(NextResolverContext.Provider, {
-        value: null,
-        children: jsx(Resolver, {
-          ...props
-        })
-      }) : jsx(Resolver, {
+    const isLast = index === lastIndex;
+    const Runner = props => jsx(NextResolverContext.Provider, {
+      value: isLast ? null : runners[index + 1],
+      children: jsx(Resolver, {
         ...props
       })
     });
-  };
-
-  // Stable component defined once per createComponentResolver call.
-  // Renders ChainRunner directly — no new providers — so ResolverIndexContext
-  // is inherited from the parent tree. When a resolver calls <Next>, the chain
-  // resumes from index+1 (already set by the Provider wrapping that resolver).
-  const NextComponent = props => jsx(ChainRunner, {
+    Runner.displayName = `${Resolver.displayName || Resolver.name}Runner`;
+    runners.push(Runner);
+  }
+  const FirstRunner = runners[0];
+  const renderComponent = props => jsx(FirstRunner, {
     ...props
   });
-  const renderComponent = props => {
-    return jsx(NextResolverContext.Provider, {
-      value: NextComponent,
-      children: jsx(ResolverIndexContext.Provider, {
-        value: 0,
-        children: jsx(ChainRunner, {
-          ...props
-        })
-      })
-    });
-  };
   if (!pure) {
     return renderComponent;
   }
@@ -48643,36 +48807,36 @@ const useAccentColorAttributes = (
         return undefined;
       }
     }
+    // Read with the other layout reads of the commit (see layout_batch.js): a
+    // computed color per control, each read between two writes, is a style
+    // recalculation per control.
+    let cancelRead = null;
     const updateAttributes = () => {
-      const computedStyle = getComputedStyle(elementToCheck);
-      const color = computedStyle[colorProperty];
-      if (!color) {
-        el.removeAttribute(LIGHT_ACCENT_ATTRIBUTE);
-        el.removeAttribute(VERY_LIGHT_ACCENT_ATTRIBUTE);
-        el.removeAttribute(DARK_CONTRAST_ATTRIBUTE);
-        return;
-      }
-      const luminance = resolveOklchLightness(color, el);
-      if (luminance !== null && luminance > LIGHT_LUMINANCE_THRESHOLD) {
-        el.setAttribute(LIGHT_ACCENT_ATTRIBUTE, "");
-      } else {
-        el.removeAttribute(LIGHT_ACCENT_ATTRIBUTE);
-      }
-      if (luminance !== null && luminance > VERY_LIGHT_LUMINANCE_THRESHOLD) {
-        el.setAttribute(VERY_LIGHT_ACCENT_ATTRIBUTE, "");
-      } else {
-        el.removeAttribute(VERY_LIGHT_ACCENT_ATTRIBUTE);
-      }
-      const bestContrast = contrastColor(
-        color,
-        el,
-        DARK_CONTRAST_LIGHTNESS_THRESHOLD,
-      );
-      if (bestContrast === "black") {
-        el.setAttribute(DARK_CONTRAST_ATTRIBUTE, "");
-      } else {
-        el.removeAttribute(DARK_CONTRAST_ATTRIBUTE);
-      }
+      cancelRead?.();
+      cancelRead = scheduleLayoutRead(() => {
+        const computedStyle = getComputedStyle(elementToCheck);
+        const color = computedStyle[colorProperty];
+        if (!color) {
+          return () => {
+            el.removeAttribute(LIGHT_ACCENT_ATTRIBUTE);
+            el.removeAttribute(VERY_LIGHT_ACCENT_ATTRIBUTE);
+            el.removeAttribute(DARK_CONTRAST_ATTRIBUTE);
+          };
+        }
+        const luminance = resolveOklchLightness(color, el);
+        const light =
+          luminance !== null && luminance > LIGHT_LUMINANCE_THRESHOLD;
+        const veryLight =
+          luminance !== null && luminance > VERY_LIGHT_LUMINANCE_THRESHOLD;
+        const needsDarkForeground =
+          contrastColor(color, el, DARK_CONTRAST_LIGHTNESS_THRESHOLD) ===
+          "black";
+        return () => {
+          el.toggleAttribute(LIGHT_ACCENT_ATTRIBUTE, light);
+          el.toggleAttribute(VERY_LIGHT_ACCENT_ATTRIBUTE, veryLight);
+          el.toggleAttribute(DARK_CONTRAST_ATTRIBUTE, needsDarkForeground);
+        };
+      });
     };
     updateAttributes();
     const unsubscribeFromPseudoState = subscribeToPseudoState(
@@ -48680,6 +48844,7 @@ const useAccentColorAttributes = (
       updateAttributes,
     );
     return () => {
+      cancelRead?.();
       unsubscribeFromPseudoState();
       el.removeAttribute(LIGHT_ACCENT_ATTRIBUTE);
       el.removeAttribute(VERY_LIGHT_ACCENT_ATTRIBUTE);
@@ -61006,6 +61171,9 @@ const useDialogProps = props => {
     // strip), and the absence of a line after the keyboard arrives means the
     // placement was never asked to run again.
     const logPlacement = (triggerEvent, position) => {
+      if (isDebugNoop(debugPopup)) {
+        return;
+      }
       // The decided target, never the current rect: the placement animates, so
       // a box read right after applying one is somewhere between the two and
       // reads like a decision nobody took.
@@ -64656,6 +64824,43 @@ document.addEventListener(
   { capture: true, passive: true },
 );
 
+/**
+ * Calls back once the browser has painted what is committed now.
+ *
+ * The callbacks of the next frame run before that frame paints, so the call is
+ * made from a task queued from inside one — the same way preact schedules
+ * useEffect. Unlike an effect, nothing runs this early: preact flushes a
+ * component's pending effects as soon as that component renders again, and a
+ * re-render before the paint is exactly what a caller waiting for the paint
+ * has to survive. A frame not coming at all (a background tab) still answers,
+ * late, through the timeout.
+ *
+ * @returns {() => void} cancel
+ */
+const FRAME_TIMEOUT_MS = 100;
+
+const afterPaint = (callback) => {
+  let called = false;
+  let timeoutId;
+  let frameId;
+  const onFrame = () => {
+    if (called) {
+      return;
+    }
+    called = true;
+    clearTimeout(timeoutId);
+    cancelAnimationFrame(frameId);
+    timeoutId = setTimeout(callback, 0);
+  };
+  timeoutId = setTimeout(onFrame, FRAME_TIMEOUT_MS);
+  frameId = requestAnimationFrame(onFrame);
+  return () => {
+    called = true;
+    clearTimeout(timeoutId);
+    cancelAnimationFrame(frameId);
+  };
+};
+
 const LoadingDotsSvg = () => {
   return jsxs("svg", {
     viewBox: "0 0 200 200",
@@ -66615,6 +66820,32 @@ const css$x = /* css */`@layer navi {
    middle of the padding. On the scroll box the scrollbar stays against the
    border and the padding is what separates the rows from it. */
 const LIST_PADDING_PROP_SET = new Set(["padding", "paddingX", "paddingY", "paddingTop", "paddingRight", "paddingBottom", "paddingLeft"]);
+
+// Accepts a string too (renderBudget="50" from an HTML attribute): the
+// arithmetic on the budget (renderBudget / 2, start + renderBudget) would
+// silently misbehave on a raw string ("+" concatenates).
+const toRenderBudgetNumber = value => {
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : RENDER_BUDGET_DEFAULT;
+  }
+  if (typeof value === "number") {
+    return value;
+  }
+  return RENDER_BUDGET_DEFAULT;
+};
+const resolveRenderBudget = renderBudget => {
+  if (renderBudget && typeof renderBudget === "object") {
+    return {
+      initial: renderBudget.initial === undefined ? undefined : toRenderBudgetNumber(renderBudget.initial),
+      after: toRenderBudgetNumber(renderBudget.after)
+    };
+  }
+  return {
+    initial: undefined,
+    after: toRenderBudgetNumber(renderBudget)
+  };
+};
 const ListUI = props => {
   import.meta.css = [css$x, "@jsenv/navi/src/control/list/list.jsx"];
   const {
@@ -66663,17 +66894,33 @@ const ListUI = props => {
       delete rest[name];
     }
   }
-  // Accept a string (e.g. from an HTML attribute: renderBudget="50") the
-  // same way a bare number would work — arithmetic below (renderBudget / 2,
-  // start + renderBudget, etc.) would silently misbehave on a raw string
-  // ("+" concatenates instead of adding).
-  let renderBudget = renderBudgetProp;
-  if (typeof renderBudget === "string") {
-    const parsed = Number(renderBudget);
-    renderBudget = Number.isFinite(parsed) ? parsed : RENDER_BUDGET_DEFAULT;
-  }
+  // `renderBudget` is a number, or `{ initial, after }`: the window of the
+  // first commit, until the browser has painted it, and the window from then
+  // on. A list opening inside a popup draws in the click that opens it, and
+  // the browser paints nothing before that render ends: rows below the fold
+  // cost the same as rows on screen there, and are drawn to be seen one frame
+  // later just as well. `after` takes over after the paint (see afterPaint for
+  // why not an effect), and the floor of 30 is its: it protects the scrolling
+  // window, not a picture nobody has seen yet.
+  const {
+    initial: initialRenderBudget,
+    after: renderBudgetAfterPaint
+  } = resolveRenderBudget(renderBudgetProp);
+  let renderBudget = renderBudgetAfterPaint;
   if (renderBudget < 30 && !renderBudgetSkipCheck) {
     console.warn(`List: renderBudget=${renderBudget} is too low. A renderBudget below 30 is not supported: on large screens or when the list grows, items outside the window would appear as blank space instead of rendered content. Use a value of at least 30, or omit the prop to use the default (${RENDER_BUDGET_DEFAULT}).`);
+  }
+  const [firstPaintPending, setFirstPaintPending] = useState(initialRenderBudget !== undefined);
+  useLayoutEffect(() => {
+    if (!firstPaintPending) {
+      return undefined;
+    }
+    return afterPaint(() => {
+      setFirstPaintPending(false);
+    });
+  }, []);
+  if (firstPaintPending) {
+    renderBudget = initialRenderBudget;
   }
 
   // lockSize: capture the container's dimensions on first render so filtering
@@ -67060,7 +67307,10 @@ const useListScrollSync = ({
   horizontal
 }) => {
   const debugScroll = useDebugScroll();
-  const virtualItemSizeSignal = useVirtualItemSizeSignal(ref, virtualItemSize, horizontal);
+  const virtualItemSizeSignal = useVirtualItemSizeSignal(ref, virtualItemSize, horizontal, {
+    virtual,
+    renderBudget
+  });
   const getScroller = () => getScrollerEl(ref.current, scroller, horizontal);
   const getListEl = () => ref.current.querySelector(".navi_list");
   // Which box scrolls is measured (see getScrollerEl), so the answer holds
@@ -67116,6 +67366,28 @@ const useListScrollSync = ({
   });
   const renderWindowRef = useRef(null);
   renderWindowRef.current = renderWindow;
+  // A budget that changes (the first paint's giving way to the scrolling one)
+  // re-frames the window where it stands, in this very render — the way
+  // holdWindow below moves it: nothing else would, the scroll listener only
+  // moves a window the user is about to leave.
+  const renderBudgetRef = useRef(renderBudget);
+  if (renderBudgetRef.current !== renderBudget) {
+    renderBudgetRef.current = renderBudget;
+    const {
+      start
+    } = renderWindowRef.current;
+    const total = virtual.totalSignal.peek();
+    let newStart = start;
+    let newEnd = start + renderBudget;
+    if (total > 0 && newEnd > total) {
+      newEnd = total;
+      newStart = total - renderBudget < 0 ? 0 : total - renderBudget;
+    }
+    renderWindowRef.current = {
+      start: newStart,
+      end: newEnd
+    };
+  }
   const updateRenderWindow = (newStart, newEnd, reason) => {
     const {
       start,
@@ -68429,7 +68701,10 @@ const measureItemSize = (listEl, horizontal) => {
     fromSkeletons
   };
 };
-const useVirtualItemSizeSignal = (ref, virtualItemSizeProp = 0, horizontal) => {
+const useVirtualItemSizeSignal = (ref, virtualItemSizeProp = 0, horizontal, {
+  virtual,
+  renderBudget
+}) => {
   const virtualSizeSignalRef = useRef(null);
   if (!virtualSizeSignalRef.current) {
     virtualSizeSignalRef.current = signal(virtualItemSizeProp);
@@ -68482,8 +68757,12 @@ const useVirtualItemSizeSignal = (ref, virtualItemSizeProp = 0, horizontal) => {
   // as the rows it was measured on. Written from a layout effect it would
   // resize them one commit later — after the scroll anchoring of that commit
   // had already run, which is exactly the jump anchoring exists to prevent.
+  // And only while some rows are held off screen: the fillers are what the
+  // size is for, and a list drawing every row it has would pay a layout on
+  // each of its renders for a number nothing reads.
   const sizeAlreadyKnown = virtualSizeSignal.peek() !== 0;
-  if (!virtualItemSizeProp && sizeAlreadyKnown && ref.current) {
+  const rowsHeldOffScreen = virtual.totalSignal.peek() > renderBudget;
+  if (!virtualItemSizeProp && sizeAlreadyKnown && rowsHeldOffScreen && ref.current) {
     const listEl = ref.current.querySelector(".navi_list");
     const measure = listEl ? measureItemSize(listEl, horizontal) : null;
     if (measure) {
@@ -68648,12 +68927,15 @@ const Fallback = ({
     children: fallback
   });
 };
+// Reads the row size itself: it is what the size is for, and a run holding
+// every row it draws must not be redrawn — every row of it — because the size
+// settled after the first commit.
 const VirtualFiller = ({
   edge,
-  itemCount,
-  virtualItemSize
+  itemCount
 }) => {
-  const sizeToFill = itemCount * virtualItemSize;
+  const virtual = useContext(ListVirtualContext);
+  const sizeToFill = itemCount * virtual.virtualItemSizeSignal.value;
   if (!sizeToFill) {
     return null;
   }
@@ -69707,6 +69989,21 @@ const ListItems = ({
   const virtual = useContext(ListVirtualContext);
   const slotId = useContext(ListSlotContext);
   const renderWindow = useContext(RenderWindowContext);
+  // The vnode drawn for a row, kept by item: a run rendering again (its window
+  // moving, its first paint's budget giving way to the full one) hands preact
+  // the same vnode for a row that has not changed, and preact leaves that
+  // row's whole subtree alone. Only for a `renderItem` that is the same
+  // function as last time — a new one may close over new state — and for a
+  // row at the same index, in the same refreshing state: everything the
+  // function is given.
+  const rowVnodesRef = useRef(null);
+  if (!rowVnodesRef.current || rowVnodesRef.current.renderItem !== renderItem) {
+    rowVnodesRef.current = {
+      renderItem,
+      byItem: new Map()
+    };
+  }
+  const rowVnodesByItem = rowVnodesRef.current.byItem;
   const separator = useContext(SeparatorContext);
   const store = useItemStore({
     items,
@@ -69717,16 +70014,26 @@ const ListItems = ({
   });
   const renderRowSkeleton = renderSkeleton === undefined ? virtual.renderSkeleton : renderSkeleton;
   // A row on its way takes the room the list reserves for it: anything else
-  // and the rows drawn stop short of where the scroll says they are.
-  const virtualItemSize = virtual.virtualItemSizeSignal.value;
-  const skeletonRow = {};
-  if (virtualItemSize) {
-    if (virtual.horizontal) {
-      skeletonRow.rowMinWidth = `${virtualItemSize}px`;
-    } else {
-      skeletonRow.rowMinHeight = `${virtualItemSize}px`;
+  // and the rows drawn stop short of where the scroll says they are. Read
+  // where a row is actually missing, and not before: the size settles after
+  // the first commit, and a run holding every row it draws would otherwise be
+  // redrawn whole by a number it has no use for.
+  let skeletonRow = null;
+  const getSkeletonRow = () => {
+    if (skeletonRow) {
+      return skeletonRow;
     }
-  }
+    skeletonRow = {};
+    const virtualItemSize = virtual.virtualItemSizeSignal.value;
+    if (virtualItemSize) {
+      if (virtual.horizontal) {
+        skeletonRow.rowMinWidth = `${virtualItemSize}px`;
+      } else {
+        skeletonRow.rowMinHeight = `${virtualItemSize}px`;
+      }
+    }
+    return skeletonRow;
+  };
   const runStart = virtual.take(ownerId, store.rowCount, slotId);
   const runEnd = runStart + store.rowCount;
   // The two ways to count the same row. The list numbers its rows from its own
@@ -69895,8 +70202,7 @@ const ListItems = ({
   if (windowFrom > runStart) {
     rows.push(jsx(VirtualFiller, {
       edge: "before",
-      itemCount: windowFrom - runStart,
-      virtualItemSize: virtualItemSize
+      itemCount: windowFrom - runStart
     }, "navi-list-filler-before"));
   }
   const renderItemState = {
@@ -69910,7 +70216,7 @@ const ListItems = ({
       rows.push(jsx("li", {
         className: "navi_list_failed_rows",
         style: {
-          "--size-to-fill": `${failedRowCount * virtualItemSize}px`
+          "--size-to-fill": `${failedRowCount * virtual.virtualItemSizeSignal.value}px`
         },
         children: renderError ? renderError({
           error: store.failure.error,
@@ -69929,7 +70235,17 @@ const ListItems = ({
     const key = item === undefined ? `${ownerId}_skeleton_${rowIndex}` : idOf(item, rowIndex);
     let rowVnode;
     if (item !== undefined) {
-      rowVnode = renderItem(item, rowIndex, renderItemState);
+      const rowVnodeKept = rowVnodesByItem.get(item);
+      if (rowVnodeKept && rowVnodeKept.rowIndex === rowIndex && rowVnodeKept.refreshing === renderItemState.refreshing) {
+        rowVnode = rowVnodeKept.vnode;
+      } else {
+        rowVnode = renderItem(item, rowIndex, renderItemState);
+        rowVnodesByItem.set(item, {
+          vnode: rowVnode,
+          rowIndex,
+          refreshing: renderItemState.refreshing
+        });
+      }
     } else if (renderRowSkeleton === false) {
       // The row must still take its room: without it the rows below would
       // climb up and slide back down as the answer arrives.
@@ -69960,7 +70276,7 @@ const ListItems = ({
         value: item === undefined ? {
           id: key,
           index: rowIndex,
-          ...skeletonRow
+          ...getSkeletonRow()
         } : {
           id: key,
           index: rowIndex,
@@ -69975,8 +70291,7 @@ const ListItems = ({
   if (runEnd > windowTo) {
     rows.push(jsx(VirtualFiller, {
       edge: "after",
-      itemCount: runEnd - windowTo,
-      virtualItemSize: virtualItemSize
+      itemCount: runEnd - windowTo
     }, "navi-list-filler-after"));
   }
   return rows;
@@ -72120,6 +72435,7 @@ const css$t = /* css */`@layer navi {
     --picker-icon-color-disabled: var(--picker-icon-color-readonly);
     --picker-align-x-default: flex-start;
     --picker-align-y-default: center;
+    --picker-text-align-default: initial;
   }
 }
 
@@ -72258,7 +72574,7 @@ const css$t = /* css */`@layer navi {
   }
 
   &[navi-single-line] {
-    & .navi_picker_right_slot {
+    & > .navi_picker_box > .navi_picker_right_slot {
       align-self: var(--x-picker-align-y);
     }
   }
@@ -72295,7 +72611,7 @@ const css$t = /* css */`@layer navi {
   }
 
   &[navi-ui-custom] {
-    & .navi_picker_input {
+    & > .navi_picker_box > .navi_picker_input {
       top: calc(-1 * (var(--picker-border-width) + var(--x-picker-press-padding-top)));
       right: calc(-1 *
             (var(--picker-border-width) + var(--x-picker-press-padding-right)));
@@ -72358,10 +72674,10 @@ const css$t = /* css */`@layer navi {
     --x-picker-cursor: pointer;
   }
 
-  &[data-focus-within]:has(.navi_picker_input[data-focus-visible]), &[data-focus-visible] {
+  &[data-focus-within]:has( > .navi_picker_box > .navi_picker_input[data-focus-visible]), &[data-focus-visible] {
     --x-picker-border-color: transparent;
 
-    & .navi_picker_box {
+    & > .navi_picker_box {
       outline-style: solid;
     }
   }
@@ -72419,7 +72735,7 @@ const css$t = /* css */`@layer navi {
     --picker-background-color-disabled: var(--picker-background-color);
     --picker-icon-color: currentColor;
 
-    & .navi_picker_box {
+    & > .navi_picker_box {
       z-index: -1;
       position: absolute;
       inset: 0;
@@ -72444,11 +72760,11 @@ const css$t = /* css */`@layer navi {
     font-family: inherit;
     line-height: inherit;
 
-    & .navi_picker_box {
+    & > .navi_picker_box {
       min-height: 0;
     }
 
-    & .navi_picker_value[data-picker-facade] {
+    & > .navi_picker_box > .navi_picker_value[data-picker-facade] {
       align-items: var(--x-picker-align-y);
       display: flex;
     }
@@ -72499,11 +72815,11 @@ const css$t = /* css */`@layer navi {
     --picker-padding-y-default: 0;
     --picker-align-x-default: center;
 
-    & .navi_picker_box {
+    & > .navi_picker_box {
       min-height: 0;
     }
 
-    & .navi_picker_value {
+    & > .navi_picker_box > .navi_picker_value {
       flex-grow: 0;
       align-items: center;
       display: inline-flex;

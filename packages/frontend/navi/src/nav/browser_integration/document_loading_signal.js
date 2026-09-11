@@ -26,13 +26,13 @@ const [
 ] = arraySignal([]);
 export { documentLoadingRouteArraySignal };
 export const routingWhile = (fn, routeNames = []) => {
-  if (DEBUG && routeNames.length > 0) {
+  if (import.meta.dev && DEBUG && routeNames.length > 0) {
     console.debug(`routingWhile: Adding routes to loading state:`, routeNames);
   }
   addToDocumentLoadingRouteArraySignal(...routeNames);
   return executeWithCleanup(fn, () => {
     removeFromDocumentLoadingRouteArraySignal(...routeNames);
-    if (DEBUG && routeNames.length > 0) {
+    if (import.meta.dev && DEBUG && routeNames.length > 0) {
       console.debug(
         `routingWhile: Removed routes from loading state:`,
         routeNames,
@@ -50,7 +50,7 @@ const [
 ] = arraySignal([]);
 export { documentLoadingActionArraySignal };
 export const workingWhile = (fn, actionNames = []) => {
-  if (DEBUG && actionNames.length > 0) {
+  if (import.meta.dev && DEBUG && actionNames.length > 0) {
     console.debug(
       `workingWhile: Adding actions to loading state:`,
       actionNames,
@@ -59,7 +59,7 @@ export const workingWhile = (fn, actionNames = []) => {
   addToDocumentLoadingActionArraySignal(...actionNames);
   return executeWithCleanup(fn, () => {
     removeFromDocumentLoadingActionArraySignal(...actionNames);
-    if (DEBUG && actionNames.length > 0) {
+    if (import.meta.dev && DEBUG && actionNames.length > 0) {
       console.debug(
         `routingWhile: Removed action from loading state:`,
         actionNames,

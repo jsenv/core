@@ -21,49 +21,30 @@ export const useNextResolver = () => useContext(NextResolverContext);
  *   // Then inside a component render:
  *   renderButton(props)
  *
- * NextResolverContext exposes a stable Next component so resolvers can continue
- * the chain via useNextResolver().
- * ResolverIndexContext tracks which resolver is next so that when a resolver
- * re-renders and calls Next, the chain resumes from the correct position.
+ * Each position of the chain has a runner of its own, defined once: it renders
+ * its resolver under a NextResolverContext holding the runner after it. A
+ * resolver that re-renders on its own and renders <Next> therefore resumes at
+ * its own position without any bookkeeping — the Next it was given is the one
+ * made for it. A chain rendered by the hundred (a list's rows) pays two
+ * components per position, the runner and the resolver, so nothing here is a
+ * component that merely forwards.
  */
 export const createComponentResolver = (resolvers, { pure } = {}) => {
-  const ResolverIndexContext = createContext(0);
-
-  const ChainRunner = (props) => {
-    const index = useContext(ResolverIndexContext);
-    if (index >= resolvers.length) {
-      return null;
-    }
+  const runners = [];
+  const lastIndex = resolvers.length - 1;
+  for (let index = 0; index < resolvers.length; index++) {
     const Resolver = resolvers[index];
-    const isLast = index === resolvers.length - 1;
-    return (
-      <ResolverIndexContext.Provider value={index + 1}>
-        {isLast ? (
-          <NextResolverContext.Provider value={null}>
-            <Resolver {...props} />
-          </NextResolverContext.Provider>
-        ) : (
-          <Resolver {...props} />
-        )}
-      </ResolverIndexContext.Provider>
-    );
-  };
-
-  // Stable component defined once per createComponentResolver call.
-  // Renders ChainRunner directly — no new providers — so ResolverIndexContext
-  // is inherited from the parent tree. When a resolver calls <Next>, the chain
-  // resumes from index+1 (already set by the Provider wrapping that resolver).
-  const NextComponent = (props) => <ChainRunner {...props} />;
-
-  const renderComponent = (props) => {
-    return (
-      <NextResolverContext.Provider value={NextComponent}>
-        <ResolverIndexContext.Provider value={0}>
-          <ChainRunner {...props} />
-        </ResolverIndexContext.Provider>
+    const isLast = index === lastIndex;
+    const Runner = (props) => (
+      <NextResolverContext.Provider value={isLast ? null : runners[index + 1]}>
+        <Resolver {...props} />
       </NextResolverContext.Provider>
     );
-  };
+    Runner.displayName = `${Resolver.displayName || Resolver.name}Runner`;
+    runners.push(Runner);
+  }
+  const FirstRunner = runners[0];
+  const renderComponent = (props) => <FirstRunner {...props} />;
 
   if (!pure) {
     return renderComponent;
