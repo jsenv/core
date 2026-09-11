@@ -217,9 +217,30 @@ export const route = (
   });
   // methods
   registerSetup(({ routeSet, getUrl }) => {
+    // One computed per set of params. Building a url reads the route family's
+    // signals (see readSignalForUrlBuild) and verifies the candidate against
+    // every pattern of the family; a list of a hundred links to one route
+    // would do that a hundred times on each of its renders. A computed does it
+    // once, again only when a signal it read changes — and a component reading
+    // it subscribes to exactly those, which is what reading the signals during
+    // render gave it.
+    const relativeUrlByParamsKey = new Map();
     route.buildRelativeUrl = (params) => {
-      // buildMostPreciseUrl now handles parameter resolution internally
-      return routePattern.buildMostPreciseUrl(params);
+      const paramsKey = getParamsCacheKey(params);
+      if (paramsKey === null) {
+        return routePattern.buildMostPreciseUrl(params);
+      }
+      let relativeUrlComputed = relativeUrlByParamsKey.get(paramsKey);
+      if (!relativeUrlComputed) {
+        if (relativeUrlByParamsKey.size >= PARAMS_CACHE_MAX) {
+          relativeUrlByParamsKey.clear();
+        }
+        relativeUrlComputed = computed(() =>
+          routePattern.buildMostPreciseUrl(params),
+        );
+        relativeUrlByParamsKey.set(paramsKey, relativeUrlComputed);
+      }
+      return relativeUrlComputed.value;
     };
     route.buildUrl = (params) => {
       const routeRelativeUrl = route.buildRelativeUrl(params);
@@ -1052,3 +1073,33 @@ if (import.meta.hot) {
     }
   });
 }
+
+// Params are cached by content, and only params whose content a string can
+// stand for: anything else (an object, a function) builds without the cache.
+// A key set to undefined is content too — it says "without this one", which
+// a params object not naming it does not say (see buildIntendedState).
+const PARAMS_CACHE_MAX = 1000;
+const getParamsCacheKey = (params) => {
+  if (params === undefined || params === null) {
+    return "";
+  }
+  if (typeof params !== "object") {
+    return null;
+  }
+  const keys = Object.keys(params).sort();
+  let key = "";
+  for (const name of keys) {
+    const value = params[name];
+    const type = typeof value;
+    if (
+      value !== null &&
+      type !== "string" &&
+      type !== "number" &&
+      type !== "boolean"
+    ) {
+      return null;
+    }
+    key += `${name}=${type}:${value}\n`;
+  }
+  return key;
+};

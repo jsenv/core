@@ -11,6 +11,9 @@ const DebugActionContext = createContext(false);
 const DebugUIStateContext = createContext(false);
 
 const debugNoop = () => {};
+// For a caller whose message costs something to build (a line of numbers
+// formatted on every placement): nothing to build for a logger that logs nothing.
+export const isDebugNoop = (debug) => debug === debugNoop;
 const eventGroupLogger = createEventGroupLogger();
 const debugCommandDefault = eventGroupLogger.createCategory(
   "[command]",

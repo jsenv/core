@@ -18,6 +18,7 @@ import {
 // Imported for its side effect: it is what writes navi-scrolling on whatever
 // scrolls, which the CSS below reads.
 import "../../utils/scroll_activity.js";
+import { afterPaint } from "../../utils/after_paint.js";
 
 import {
   createComponentResolver,
@@ -828,6 +829,32 @@ const LIST_PADDING_PROP_SET = new Set([
   "paddingLeft",
 ]);
 
+// Accepts a string too (renderBudget="50" from an HTML attribute): the
+// arithmetic on the budget (renderBudget / 2, start + renderBudget) would
+// silently misbehave on a raw string ("+" concatenates).
+const toRenderBudgetNumber = (value) => {
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : RENDER_BUDGET_DEFAULT;
+  }
+  if (typeof value === "number") {
+    return value;
+  }
+  return RENDER_BUDGET_DEFAULT;
+};
+const resolveRenderBudget = (renderBudget) => {
+  if (renderBudget && typeof renderBudget === "object") {
+    return {
+      initial:
+        renderBudget.initial === undefined
+          ? undefined
+          : toRenderBudgetNumber(renderBudget.initial),
+      after: toRenderBudgetNumber(renderBudget.after),
+    };
+  }
+  return { initial: undefined, after: toRenderBudgetNumber(renderBudget) };
+};
+
 const ListUI = (props) => {
   import.meta.css = css;
   const {
@@ -876,19 +903,35 @@ const ListUI = (props) => {
       delete rest[name];
     }
   }
-  // Accept a string (e.g. from an HTML attribute: renderBudget="50") the
-  // same way a bare number would work — arithmetic below (renderBudget / 2,
-  // start + renderBudget, etc.) would silently misbehave on a raw string
-  // ("+" concatenates instead of adding).
-  let renderBudget = renderBudgetProp;
-  if (typeof renderBudget === "string") {
-    const parsed = Number(renderBudget);
-    renderBudget = Number.isFinite(parsed) ? parsed : RENDER_BUDGET_DEFAULT;
-  }
+  // `renderBudget` is a number, or `{ initial, after }`: the window of the
+  // first commit, until the browser has painted it, and the window from then
+  // on. A list opening inside a popup draws in the click that opens it, and
+  // the browser paints nothing before that render ends: rows below the fold
+  // cost the same as rows on screen there, and are drawn to be seen one frame
+  // later just as well. `after` takes over after the paint (see afterPaint for
+  // why not an effect), and the floor of 30 is its: it protects the scrolling
+  // window, not a picture nobody has seen yet.
+  const { initial: initialRenderBudget, after: renderBudgetAfterPaint } =
+    resolveRenderBudget(renderBudgetProp);
+  let renderBudget = renderBudgetAfterPaint;
   if (renderBudget < 30 && !renderBudgetSkipCheck) {
     console.warn(
       `List: renderBudget=${renderBudget} is too low. A renderBudget below 30 is not supported: on large screens or when the list grows, items outside the window would appear as blank space instead of rendered content. Use a value of at least 30, or omit the prop to use the default (${RENDER_BUDGET_DEFAULT}).`,
     );
+  }
+  const [firstPaintPending, setFirstPaintPending] = useState(
+    initialRenderBudget !== undefined,
+  );
+  useLayoutEffect(() => {
+    if (!firstPaintPending) {
+      return undefined;
+    }
+    return afterPaint(() => {
+      setFirstPaintPending(false);
+    });
+  }, []);
+  if (firstPaintPending) {
+    renderBudget = initialRenderBudget;
   }
 
   // lockSize: capture the container's dimensions on first render so filtering
@@ -1339,6 +1382,7 @@ const useListScrollSync = ({
     ref,
     virtualItemSize,
     horizontal,
+    { virtual, renderBudget },
   );
   const getScroller = () => getScrollerEl(ref.current, scroller, horizontal);
   const getListEl = () => ref.current.querySelector(".navi_list");
@@ -1400,6 +1444,23 @@ const useListScrollSync = ({
   });
   const renderWindowRef = useRef(null);
   renderWindowRef.current = renderWindow;
+  // A budget that changes (the first paint's giving way to the scrolling one)
+  // re-frames the window where it stands, in this very render — the way
+  // holdWindow below moves it: nothing else would, the scroll listener only
+  // moves a window the user is about to leave.
+  const renderBudgetRef = useRef(renderBudget);
+  if (renderBudgetRef.current !== renderBudget) {
+    renderBudgetRef.current = renderBudget;
+    const { start } = renderWindowRef.current;
+    const total = virtual.totalSignal.peek();
+    let newStart = start;
+    let newEnd = start + renderBudget;
+    if (total > 0 && newEnd > total) {
+      newEnd = total;
+      newStart = total - renderBudget < 0 ? 0 : total - renderBudget;
+    }
+    renderWindowRef.current = { start: newStart, end: newEnd };
+  }
   const updateRenderWindow = (newStart, newEnd, reason) => {
     const { start, end } = renderWindowRef.current;
     if (newStart === start && newEnd === end) {
@@ -2762,7 +2823,12 @@ const measureItemSize = (listEl, horizontal) => {
   };
 };
 
-const useVirtualItemSizeSignal = (ref, virtualItemSizeProp = 0, horizontal) => {
+const useVirtualItemSizeSignal = (
+  ref,
+  virtualItemSizeProp = 0,
+  horizontal,
+  { virtual, renderBudget },
+) => {
   const virtualSizeSignalRef = useRef(null);
   if (!virtualSizeSignalRef.current) {
     virtualSizeSignalRef.current = signal(virtualItemSizeProp);
@@ -2811,8 +2877,17 @@ const useVirtualItemSizeSignal = (ref, virtualItemSizeProp = 0, horizontal) => {
   // as the rows it was measured on. Written from a layout effect it would
   // resize them one commit later — after the scroll anchoring of that commit
   // had already run, which is exactly the jump anchoring exists to prevent.
+  // And only while some rows are held off screen: the fillers are what the
+  // size is for, and a list drawing every row it has would pay a layout on
+  // each of its renders for a number nothing reads.
   const sizeAlreadyKnown = virtualSizeSignal.peek() !== 0;
-  if (!virtualItemSizeProp && sizeAlreadyKnown && ref.current) {
+  const rowsHeldOffScreen = virtual.totalSignal.peek() > renderBudget;
+  if (
+    !virtualItemSizeProp &&
+    sizeAlreadyKnown &&
+    rowsHeldOffScreen &&
+    ref.current
+  ) {
     const listEl = ref.current.querySelector(".navi_list");
     const measure = listEl ? measureItemSize(listEl, horizontal) : null;
     if (measure) {
@@ -2979,8 +3054,12 @@ const Fallback = ({ fallback }) => {
     </ListItem>
   );
 };
-const VirtualFiller = ({ edge, itemCount, virtualItemSize }) => {
-  const sizeToFill = itemCount * virtualItemSize;
+// Reads the row size itself: it is what the size is for, and a run holding
+// every row it draws must not be redrawn — every row of it — because the size
+// settled after the first commit.
+const VirtualFiller = ({ edge, itemCount }) => {
+  const virtual = useContext(ListVirtualContext);
+  const sizeToFill = itemCount * virtual.virtualItemSizeSignal.value;
   if (!sizeToFill) {
     return null;
   }
@@ -4053,6 +4132,18 @@ export const ListItems = ({
   const virtual = useContext(ListVirtualContext);
   const slotId = useContext(ListSlotContext);
   const renderWindow = useContext(RenderWindowContext);
+  // The vnode drawn for a row, kept by item: a run rendering again (its window
+  // moving, its first paint's budget giving way to the full one) hands preact
+  // the same vnode for a row that has not changed, and preact leaves that
+  // row's whole subtree alone. Only for a `renderItem` that is the same
+  // function as last time — a new one may close over new state — and for a
+  // row at the same index, in the same refreshing state: everything the
+  // function is given.
+  const rowVnodesRef = useRef(null);
+  if (!rowVnodesRef.current || rowVnodesRef.current.renderItem !== renderItem) {
+    rowVnodesRef.current = { renderItem, byItem: new Map() };
+  }
+  const rowVnodesByItem = rowVnodesRef.current.byItem;
   const separator = useContext(SeparatorContext);
   const store = useItemStore({
     items,
@@ -4064,16 +4155,26 @@ export const ListItems = ({
   const renderRowSkeleton =
     renderSkeleton === undefined ? virtual.renderSkeleton : renderSkeleton;
   // A row on its way takes the room the list reserves for it: anything else
-  // and the rows drawn stop short of where the scroll says they are.
-  const virtualItemSize = virtual.virtualItemSizeSignal.value;
-  const skeletonRow = {};
-  if (virtualItemSize) {
-    if (virtual.horizontal) {
-      skeletonRow.rowMinWidth = `${virtualItemSize}px`;
-    } else {
-      skeletonRow.rowMinHeight = `${virtualItemSize}px`;
+  // and the rows drawn stop short of where the scroll says they are. Read
+  // where a row is actually missing, and not before: the size settles after
+  // the first commit, and a run holding every row it draws would otherwise be
+  // redrawn whole by a number it has no use for.
+  let skeletonRow = null;
+  const getSkeletonRow = () => {
+    if (skeletonRow) {
+      return skeletonRow;
     }
-  }
+    skeletonRow = {};
+    const virtualItemSize = virtual.virtualItemSizeSignal.value;
+    if (virtualItemSize) {
+      if (virtual.horizontal) {
+        skeletonRow.rowMinWidth = `${virtualItemSize}px`;
+      } else {
+        skeletonRow.rowMinHeight = `${virtualItemSize}px`;
+      }
+    }
+    return skeletonRow;
+  };
 
   const runStart = virtual.take(ownerId, store.rowCount, slotId);
   const runEnd = runStart + store.rowCount;
@@ -4275,7 +4376,6 @@ export const ListItems = ({
         key="navi-list-filler-before"
         edge="before"
         itemCount={windowFrom - runStart}
-        virtualItemSize={virtualItemSize}
       />,
     );
   }
@@ -4290,7 +4390,7 @@ export const ListItems = ({
           key={`${ownerId}_failure_${failureFrom}`}
           className="navi_list_failed_rows"
           style={{
-            "--size-to-fill": `${failedRowCount * virtualItemSize}px`,
+            "--size-to-fill": `${failedRowCount * virtual.virtualItemSizeSignal.value}px`,
           }}
         >
           {renderError ? (
@@ -4315,7 +4415,21 @@ export const ListItems = ({
         : idOf(item, rowIndex);
     let rowVnode;
     if (item !== undefined) {
-      rowVnode = renderItem(item, rowIndex, renderItemState);
+      const rowVnodeKept = rowVnodesByItem.get(item);
+      if (
+        rowVnodeKept &&
+        rowVnodeKept.rowIndex === rowIndex &&
+        rowVnodeKept.refreshing === renderItemState.refreshing
+      ) {
+        rowVnode = rowVnodeKept.vnode;
+      } else {
+        rowVnode = renderItem(item, rowIndex, renderItemState);
+        rowVnodesByItem.set(item, {
+          vnode: rowVnode,
+          rowIndex,
+          refreshing: renderItemState.refreshing,
+        });
+      }
     } else if (renderRowSkeleton === false) {
       // The row must still take its room: without it the rows below would
       // climb up and slide back down as the answer arrives.
@@ -4347,7 +4461,7 @@ export const ListItems = ({
           key={key}
           value={
             item === undefined
-              ? { id: key, index: rowIndex, ...skeletonRow }
+              ? { id: key, index: rowIndex, ...getSkeletonRow() }
               : { id: key, index: rowIndex, item }
           }
         >
@@ -4366,7 +4480,6 @@ export const ListItems = ({
         key="navi-list-filler-after"
         edge="after"
         itemCount={runEnd - windowTo}
-        virtualItemSize={virtualItemSize}
       />,
     );
   }

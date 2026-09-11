@@ -121,6 +121,10 @@ const css = /* css */ `
          slots themselves. */
       --picker-align-x-default: flex-start;
       --picker-align-y-default: center;
+      /* Unset by default: the text follows the column (see .navi_picker_value).
+         Declared on every root all the same, so a picker in a popup does not
+         inherit it from the variant around it. */
+      --picker-text-align-default: initial;
     }
   }
 
@@ -407,8 +411,11 @@ const css = /* css */ `
         }
       }
     }
+    /* Every rule below that reads a state or a variant of this root reaches
+       its own box only (direct children): the popup content is a descendant
+       of the root, and a picker in there draws its own state, not this one's. */
     &[navi-single-line] {
-      .navi_picker_right_slot {
+      > .navi_picker_box > .navi_picker_right_slot {
         align-self: var(--x-picker-align-y);
       }
     }
@@ -453,7 +460,7 @@ const css = /* css */ `
     }
 
     &[navi-ui-custom] {
-      .navi_picker_input {
+      > .navi_picker_box > .navi_picker_input {
         position: absolute;
         /* This input IS the press area: what the picker draws is transparent to
            the pointer, and a press anywhere over this box is what opens the
@@ -563,11 +570,13 @@ const css = /* css */ `
     /* Focus. The second selector is the state held by hand (pseudoState on
        the picker lands on this root, which is never focused for real): a demo
        showing the ring without a Tab press. */
-    &[data-focus-within]:has(.navi_picker_input[data-focus-visible]),
+    &[data-focus-within]:has(
+        > .navi_picker_box > .navi_picker_input[data-focus-visible]
+      ),
     &[data-focus-visible] {
       --x-picker-border-color: transparent;
 
-      .navi_picker_box {
+      > .navi_picker_box {
         outline-style: solid;
       }
     }
@@ -642,7 +651,7 @@ const css = /* css */ `
       --picker-background-color-disabled: var(--picker-background-color);
       --picker-icon-color: currentColor;
 
-      .navi_picker_box {
+      > .navi_picker_box {
         position: absolute;
         inset: 0;
         z-index: -1;
@@ -679,7 +688,7 @@ const css = /* css */ `
       font-family: inherit;
       line-height: inherit;
 
-      .navi_picker_box {
+      > .navi_picker_box {
         /* A field is at least one line tall whatever it holds; this is not a
            field, so its height is the drawing's and nothing else. */
         min-height: 0;
@@ -691,7 +700,7 @@ const css = /* css */ `
          measured. An inline drawing (a <Badge>) is all three at once, and the
          box the picker reports is then not the one on screen. Same correction
          as the icon variant below, for the same reason. */
-      .navi_picker_value[data-picker-facade] {
+      > .navi_picker_box > .navi_picker_value[data-picker-facade] {
         display: flex;
         /* The drawing is aligned the way the picker itself is — stretch by
            default here, so a height given to the picker reaches the drawing. */
@@ -774,7 +783,7 @@ const css = /* css */ `
          the icon belongs in its middle. A default, so alignX still wins. */
       --picker-align-x-default: center;
 
-      .navi_picker_box {
+      > .navi_picker_box {
         /* A field is at least one line tall whatever it holds; an icon is as
            tall as it is drawn. */
         min-height: 0;
@@ -791,7 +800,7 @@ const css = /* css */ `
          TextAnchor is told there is no surrounding text to align to, so it
          stops correcting for one. This is what makes an icon trigger measure
          its drawing, the way .navi_button_content does under [data-icon]. */
-      .navi_picker_value {
+      > .navi_picker_box > .navi_picker_value {
         display: inline-flex;
         flex-grow: 0;
         align-items: center;

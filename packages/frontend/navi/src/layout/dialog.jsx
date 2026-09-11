@@ -101,7 +101,7 @@ import {
 } from "../box/box_style_util.js";
 import { smallTouchScreenSignal } from "./responsive.js";
 import { createOnKeyDownForShortcuts } from "../keyboard/keyboard_shortcuts.js";
-import { useDebugFocus, useDebugPopup } from "../navi_debug.jsx";
+import { isDebugNoop, useDebugFocus, useDebugPopup } from "../navi_debug.jsx";
 import {
   openedDuringThisPress,
   useOpenController,
@@ -1715,6 +1715,9 @@ const useDialogProps = (props) => {
     // strip), and the absence of a line after the keyboard arrives means the
     // placement was never asked to run again.
     const logPlacement = (triggerEvent, position) => {
+      if (isDebugNoop(debugPopup)) {
+        return;
+      }
       // The decided target, never the current rect: the placement animates, so
       // a box read right after applying one is somewhere between the two and
       // reads like a decision nobody took.

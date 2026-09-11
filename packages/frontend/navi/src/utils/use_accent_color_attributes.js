@@ -2,6 +2,7 @@ import { useLayoutEffect } from "preact/hooks";
 
 import { contrastColor, resolveOklchLightness } from "@jsenv/dom";
 import { subscribeToPseudoState } from "../box/pseudo_styles.js";
+import { scheduleLayoutRead } from "./layout_batch.js";
 
 const LIGHT_ACCENT_ATTRIBUTE = "data-accent-light";
 const VERY_LIGHT_ACCENT_ATTRIBUTE = "data-accent-very-light";
@@ -57,36 +58,36 @@ export const useAccentColorAttributes = (
         return undefined;
       }
     }
+    // Read with the other layout reads of the commit (see layout_batch.js): a
+    // computed color per control, each read between two writes, is a style
+    // recalculation per control.
+    let cancelRead = null;
     const updateAttributes = () => {
-      const computedStyle = getComputedStyle(elementToCheck);
-      const color = computedStyle[colorProperty];
-      if (!color) {
-        el.removeAttribute(LIGHT_ACCENT_ATTRIBUTE);
-        el.removeAttribute(VERY_LIGHT_ACCENT_ATTRIBUTE);
-        el.removeAttribute(DARK_CONTRAST_ATTRIBUTE);
-        return;
-      }
-      const luminance = resolveOklchLightness(color, el);
-      if (luminance !== null && luminance > LIGHT_LUMINANCE_THRESHOLD) {
-        el.setAttribute(LIGHT_ACCENT_ATTRIBUTE, "");
-      } else {
-        el.removeAttribute(LIGHT_ACCENT_ATTRIBUTE);
-      }
-      if (luminance !== null && luminance > VERY_LIGHT_LUMINANCE_THRESHOLD) {
-        el.setAttribute(VERY_LIGHT_ACCENT_ATTRIBUTE, "");
-      } else {
-        el.removeAttribute(VERY_LIGHT_ACCENT_ATTRIBUTE);
-      }
-      const bestContrast = contrastColor(
-        color,
-        el,
-        DARK_CONTRAST_LIGHTNESS_THRESHOLD,
-      );
-      if (bestContrast === "black") {
-        el.setAttribute(DARK_CONTRAST_ATTRIBUTE, "");
-      } else {
-        el.removeAttribute(DARK_CONTRAST_ATTRIBUTE);
-      }
+      cancelRead?.();
+      cancelRead = scheduleLayoutRead(() => {
+        const computedStyle = getComputedStyle(elementToCheck);
+        const color = computedStyle[colorProperty];
+        if (!color) {
+          return () => {
+            el.removeAttribute(LIGHT_ACCENT_ATTRIBUTE);
+            el.removeAttribute(VERY_LIGHT_ACCENT_ATTRIBUTE);
+            el.removeAttribute(DARK_CONTRAST_ATTRIBUTE);
+          };
+        }
+        const luminance = resolveOklchLightness(color, el);
+        const light =
+          luminance !== null && luminance > LIGHT_LUMINANCE_THRESHOLD;
+        const veryLight =
+          luminance !== null && luminance > VERY_LIGHT_LUMINANCE_THRESHOLD;
+        const needsDarkForeground =
+          contrastColor(color, el, DARK_CONTRAST_LIGHTNESS_THRESHOLD) ===
+          "black";
+        return () => {
+          el.toggleAttribute(LIGHT_ACCENT_ATTRIBUTE, light);
+          el.toggleAttribute(VERY_LIGHT_ACCENT_ATTRIBUTE, veryLight);
+          el.toggleAttribute(DARK_CONTRAST_ATTRIBUTE, needsDarkForeground);
+        };
+      });
     };
     updateAttributes();
     const unsubscribeFromPseudoState = subscribeToPseudoState(
@@ -94,6 +95,7 @@ export const useAccentColorAttributes = (
       updateAttributes,
     );
     return () => {
+      cancelRead?.();
       unsubscribeFromPseudoState();
       el.removeAttribute(LIGHT_ACCENT_ATTRIBUTE);
       el.removeAttribute(VERY_LIGHT_ACCENT_ATTRIBUTE);

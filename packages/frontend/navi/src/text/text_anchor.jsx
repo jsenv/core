@@ -23,8 +23,9 @@
 //
 // `topOffset = desiredChildTopY - childNaturalTop` is applied as `position:relative; top:`.
 
-import { useRef } from "preact/hooks";
+import { useLayoutEffect, useRef } from "preact/hooks";
 
+import { scheduleLayoutRead } from "../utils/layout_batch.js";
 import { useDisplayedLayoutEffect } from "../utils/use_displayed_layout_effect.js";
 
 const css = /* css */ `
@@ -69,6 +70,16 @@ export const TextAnchor = ({
   import.meta.css = css;
 
   const anchorRef = useRef();
+  // The correction reads the layout, with the other reads of the commit (see
+  // layout_batch.js) — an anchor per icon, each measured between two writes,
+  // is a style recalculation per icon. Cancelled by a newer correction or by
+  // the unmount: a write on a node that is gone is wasted.
+  const cancelReadRef = useRef(null);
+  useLayoutEffect(() => {
+    return () => {
+      cancelReadRef.current?.();
+    };
+  }, []);
 
   // Plain useLayoutEffect would also fire while an ancestor dialog/popover
   // (e.g. a closed SidePanel) is still display:none — every rect involved
@@ -99,27 +110,40 @@ export const TextAnchor = ({
       if (!anchorEl || !childEl) {
         return;
       }
-      // Only correct when the anchor lives in an inline formatting context.
-      // If the parent is a flex/grid container, inline layout rules don't apply
-      // and our font-metrics model is invalid.
-      const parentDisplay = getComputedStyle(anchorEl.parentElement).display;
-      if (
-        parentDisplay !== "inline" &&
-        parentDisplay !== "inline-block" &&
-        parentDisplay !== "block"
-      ) {
-        // we must hide the anchor otherwise it would affect layout without providing any benefit (would trigger flex gap for instance)
-        anchorEl.setAttribute("hidden", "");
-        setTopOffset(childEl, 0);
-        return;
-      }
-      anchorEl.removeAttribute("hidden");
-      const topOffset = computeTopOffset({
-        anchorEl,
-        childEl,
-        textAnchor,
+      cancelReadRef.current?.();
+      cancelReadRef.current = scheduleLayoutRead(() => {
+        // Only correct when the anchor lives in an inline formatting context.
+        // If the parent is a flex/grid container, inline layout rules don't
+        // apply and our font-metrics model is invalid.
+        const parentDisplay = getComputedStyle(anchorEl.parentElement).display;
+        if (
+          parentDisplay !== "inline" &&
+          parentDisplay !== "inline-block" &&
+          parentDisplay !== "block"
+        ) {
+          return () => {
+            // we must hide the anchor otherwise it would affect layout without
+            // providing any benefit (would trigger flex gap for instance)
+            anchorEl.setAttribute("hidden", "");
+            setTopOffset(childEl, 0);
+          };
+        }
+        return () => {
+          // The anchor has to be in the flow to be measured: shown here, read
+          // in the next round, with the other anchors shown by this one.
+          anchorEl.removeAttribute("hidden");
+          return () => {
+            const topOffset = computeTopOffset({
+              anchorEl,
+              childEl,
+              textAnchor,
+            });
+            return () => {
+              setTopOffset(childEl, topOffset);
+            };
+          };
+        };
       });
-      setTopOffset(childEl, topOffset);
     },
     [
       textAnchor,
