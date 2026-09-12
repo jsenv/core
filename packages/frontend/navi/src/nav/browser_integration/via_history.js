@@ -92,20 +92,28 @@ export const setupBrowserIntegrationViaHistory = ({
   // traversal to another document is a full page load, which no press on a
   // link asked for — the entries that are ours are recorded as they are
   // created, starting with the one this document was loaded into.
+  //
+  // The presence of window.navigation says nothing about the entry: the spec
+  // makes currentEntry null in a document that is not fully active, and iOS
+  // Safari answers null in a document that plainly is (a booted app, minutes
+  // into a session). Nothing can be done about it; an entry that cannot be
+  // read is treated as a browser without the API, which only costs the
+  // adjacency.
   const sameDocumentEntryKeys = new Set();
   const rememberEntryIsOfThisDocument = () => {
-    if (window.navigation) {
-      sameDocumentEntryKeys.add(window.navigation.currentEntry.key);
+    const currentEntry = window.navigation?.currentEntry;
+    if (currentEntry) {
+      sameDocumentEntryKeys.add(currentEntry.key);
     }
   };
   rememberEntryIsOfThisDocument();
   const adjacentEntryDelta = (url) => {
-    const { navigation } = window;
-    if (!navigation) {
+    const currentEntry = window.navigation?.currentEntry;
+    if (!currentEntry) {
       return 0;
     }
-    const entries = navigation.entries();
-    const index = navigation.currentEntry.index;
+    const entries = window.navigation.entries();
+    const index = currentEntry.index;
     // Behind first: when the same page stands on both sides (A, B, A and one
     // is on B), a link to it reads as going back.
     for (const delta of [-1, 1]) {

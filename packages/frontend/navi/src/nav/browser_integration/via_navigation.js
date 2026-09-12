@@ -48,6 +48,7 @@ import {
   NAV_DEPTH_STATE_KEY,
 } from "./document_back_and_forward.js";
 import {
+  documentStateSignal,
   dropGeneratedIdKeys,
   resolveEffectiveDocumentState,
   updateDocumentState,
@@ -85,8 +86,29 @@ export const setupBrowserIntegrationViaNavigation = ({
   };
   setActionDispatcher(dispatchActions);
 
+  // `navigation.currentEntry` is null in a document that is not fully active,
+  // and iOS Safari answers null in a document that plainly is (a booted app,
+  // minutes into a session — seen through via_history.js, which reads the same
+  // getter). Nothing can be done about it, so every read and write of the
+  // entry goes through here and has an answer without one: the state is what
+  // this document last read from or wrote onto its entry (documentStateSignal
+  // is updated with every write below), a write lands on the document alone,
+  // and the adjacency has no stack to read.
+  const readEntryState = () => {
+    const { currentEntry } = navigation;
+    if (currentEntry) {
+      return currentEntry.getState();
+    }
+    return documentStateSignal.peek();
+  };
+  const writeEntryState = (state) => {
+    // updateCurrentEntry throws an InvalidStateError without a current entry.
+    if (navigation.currentEntry) {
+      navigation.updateCurrentEntry({ state });
+    }
+  };
   const getDocumentState = () => {
-    const state = navigation.currentEntry.getState();
+    const state = readEntryState();
     return state ? { ...state } : null;
   };
 
@@ -111,15 +133,27 @@ export const setupBrowserIntegrationViaNavigation = ({
   // alive belongs to it — a traversal to a cross-document entry unloads us
   // before any event fires. Traversing to one of these stays in the page;
   // traversing to any other is a full load no link asked for.
-  const sameDocumentEntryKeys = new Set([navigation.currentEntry.key]);
+  const sameDocumentEntryKeys = new Set();
+  const rememberEntryIsOfThisDocument = () => {
+    const { currentEntry } = navigation;
+    if (currentEntry) {
+      sameDocumentEntryKeys.add(currentEntry.key);
+    }
+  };
+  rememberEntryIsOfThisDocument();
   navigation.addEventListener("currententrychange", () => {
-    sameDocumentEntryKeys.add(navigation.currentEntry.key);
-    updateDocumentUrl(navigation.currentEntry.url);
+    rememberEntryIsOfThisDocument();
+    // The change has committed: the document url is the entry's url.
+    updateDocumentUrl(window.location.href);
   });
 
   const adjacentEntryKey = (url) => {
+    const { currentEntry } = navigation;
+    if (!currentEntry) {
+      return null;
+    }
     const entries = navigation.entries();
-    const index = navigation.currentEntry.index;
+    const index = currentEntry.index;
     // Behind first: when the same page stands on both sides, a link to it
     // reads as going back.
     for (const delta of [-1, 1]) {
@@ -170,7 +204,7 @@ export const setupBrowserIntegrationViaNavigation = ({
           [NAV_DEPTH_STATE_KEY]: getNavDepth(),
         },
       });
-      navigation.updateCurrentEntry({ state: effectiveState });
+      writeEntryState(effectiveState);
       updateDocumentUrl(url);
       updateDocumentState(effectiveState);
     } else {
@@ -436,7 +470,7 @@ export const setupBrowserIntegrationViaNavigation = ({
         [NAV_DEPTH_STATE_KEY]: getNavDepth(),
       },
     });
-    navigation.updateCurrentEntry({ state: effectiveState });
+    writeEntryState(effectiveState);
     updateDocumentState(effectiveState);
   };
 
@@ -542,7 +576,7 @@ export const setupBrowserIntegrationViaNavigation = ({
       // The entry itself has to lose them too, not just the document state:
       // getDocumentState() reads the entry back, and every state write copies
       // what it finds there onto the next one.
-      navigation.updateCurrentEntry({ state });
+      writeEntryState(state);
     }
     runRouting(url, {
       reason: "routing initialization",

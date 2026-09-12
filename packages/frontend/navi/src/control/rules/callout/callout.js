@@ -1317,6 +1317,16 @@ const positionCallout = (
           }
           return;
         }
+        if (!calloutElement.isConnected) {
+          // The callout is drawn inside the anchor's subtree (calloutContainer),
+          // so it leaves the document with it — a Suspense boundary parking
+          // the screen while an action re-runs keeps the subtree mounted, refs
+          // intact, but detached. showPopover() throws on a detached element,
+          // and leaving the document already took it out of the top layer, so
+          // there is nothing to hide either: same as ancestorClosed, wait for
+          // the next check, which shows it again once the subtree is back.
+          return;
+        }
         if (!calloutElement.matches(":popover-open")) {
           if (debug) {
             debug(event, "showing callout because anchor is visible again");
