@@ -30351,6 +30351,17 @@ const RouteTravel = ({
       ended: false
     };
     travelRef.current = travel;
+    // A press landing on a playing travel lands on the document root: the box
+    // is captured by the transition and cannot be pointed at, so neither its
+    // touch-action nor its own touchmove listener is on the touch's path. Left
+    // there, the browser takes the finger's first vertical pixels for a scroll
+    // and cancels the pointer under a travel that was just caught. Refusable
+    // from the root for the length of the travel, the gesture that catches it
+    // refuses every touchmove of that press (it is started from the grab), and
+    // the finger's only answer is the travel it landed on.
+    document.documentElement.addEventListener("touchmove", keepTouchRefusable, {
+      passive: false
+    });
     // Whether the document's offset is this row's business at all (see
     // pagesScrollTheDocument), asked once and before anything is swapped.
     travel.scrollsDocument = pagesScrollTheDocument(elementRef.current);
@@ -30724,6 +30735,9 @@ const RouteTravel = ({
     travel.ended = true;
     travel.dropHold?.();
     travel.dropHold = null;
+    if (travelRef.current === travel) {
+      document.documentElement.removeEventListener("touchmove", keepTouchRefusable);
+    }
     // The offset on the scrollport belongs to a page again — the one that
     // arrived, or the one put back. A travel that never got as far as saying
     // which still has to give the recording back; the gesture's own
@@ -71924,6 +71938,7 @@ const css$t = /* css */`@layer navi {
     --picker-padding-y-default: 0;
     --picker-border-width: 0px;
     --picker-border-color: transparent;
+    --picker-outline-width: 0px;
     --picker-border-color-hover: var(--picker-border-color);
     --picker-border-color-readonly: var(--picker-border-color);
     --picker-border-color-disabled: var(--picker-border-color);

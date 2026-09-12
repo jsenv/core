@@ -470,7 +470,17 @@ Two things a travel in hand must never lose:
   cancelled; a `lostpointercapture` before either means someone else asked for
   the pointer (or the element it was held on left the document). What was being
   carried goes back rather than landing wherever the hand happened to be, and a
-  travel comes home rather than committing;
+  travel comes home rather than committing. Home is where the travel was going
+  BEFORE the press: one this gesture began goes back, one it caught in flight
+  carries on to the end that was decided before the finger landed — the
+  gesture said nothing, and nothing is what it changes. On a touchscreen this
+  is the common case, not a corner: a finger reaching for a travel lands on the
+  document root (the box is captured, unpointable), where neither the box's
+  `touch-action` nor its touchmove listener is on the touch's path — so while
+  a travel plays, `RouteTravel` keeps the touch refusable from the root, and
+  the gesture that catches it (started from the grab) refuses every touchmove
+  of that press. A scroll begun over a page still sliding is that page's, not
+  the document's;
 - **a gesture must hear its own end wherever it is delivered.** A pointer can be
   cancelled somewhere the box is not on the path (the document root, during a
   transition): missed, the gesture never ends, and whatever it was holding stays

@@ -12530,6 +12530,7 @@ const travelsAfter = ({
   size,
   velocity,
   towardsSomething,
+  cancelled,
   commitRatio,
 }) => {
   if (!towardsSomething) {
@@ -12539,9 +12540,16 @@ const travelsAfter = ({
   // carries on. Answered on the distance alone, a travel a hand merely touched
   // is undone BY the touch — it was stopped where it stood, and where it stood
   // is not far enough to count as an intention. Nobody asked it to stop; it was
-  // asked to wait.
-  if (slack && Math.abs(pulled - slack) < DRAG_START_THRESHOLD) {
+  // asked to wait. A gesture TAKEN AWAY said nothing either (the browser
+  // scrolling something else, a call coming in): its end was decided before
+  // the press, and it is that end it goes on to.
+  if (slack && (cancelled || Math.abs(pulled - slack) < DRAG_START_THRESHOLD)) {
     return true;
+  }
+  // Taken away from a travel this gesture began: things go back rather than
+  // landing wherever the hand happened to be.
+  if (cancelled) {
+    return false;
   }
   const sign = pulled > 0 ? 1 : -1;
   // A hand that is still moving says where it is going, and it says it about
@@ -12930,9 +12938,6 @@ const startDragToTravel = (
       const towardsSomething = pulled > 0 ? travel.travelBack : travel.travelOn;
       const velocity =
         axis === "x" ? gestureInfo.velocityX : gestureInfo.velocityY;
-      // A gesture taken away rather than let go of (the browser scrolling
-      // something else, a call coming in, another gesture taking the pointer)
-      // said nothing: things go back.
       const releaseEvent = gestureInfo.releaseEvent || gestureInfo.dragEvent;
       const { cancelled } = gestureInfo;
       onEnd({
@@ -12940,16 +12945,15 @@ const startDragToTravel = (
         pulled,
         size,
         sign: pulled > 0 ? 1 : -1,
-        travels:
-          !cancelled &&
-          travelsAfter({
-            pulled,
-            slack,
-            size,
-            velocity,
-            towardsSomething,
-            commitRatio,
-          }),
+        travels: travelsAfter({
+          pulled,
+          slack,
+          size,
+          velocity,
+          towardsSomething,
+          cancelled,
+          commitRatio,
+        }),
         cancelled,
         event: releaseEvent,
       });

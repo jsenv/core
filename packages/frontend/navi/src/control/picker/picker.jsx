@@ -642,6 +642,12 @@ const css = /* css */ `
       --picker-padding-y-default: 0;
       --picker-border-width: 0px; /* must carry a unit (px) — used in calc() to offset the custom input overlay */
       --picker-border-color: transparent;
+      /* No focus ring either: the input behind is focused for the platform's
+         sake (a tap opens iOS's picker by focusing it, see showNativePicker
+         in picker_custom.jsx), and being editable it would ring on any focus
+         (rule 1 in pseudo_styles.js). What shows the focus of a headless
+         picker is whatever stands in front of it. */
+      --picker-outline-width: 0px;
       --picker-border-color-hover: var(--picker-border-color);
       --picker-border-color-readonly: var(--picker-border-color);
       --picker-border-color-disabled: var(--picker-border-color);
