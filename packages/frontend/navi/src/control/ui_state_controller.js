@@ -256,7 +256,7 @@ export const useUIStateController = (
         // reach until that popup opens. Letting it block interaction would make
         // a picker whose content is loading impossible to open at all.
         getInteractionBlockingControls: () => [],
-        onUIAction: (e, { skipCommand } = {}) => {
+        onUIAction: (e, { skipCommand, skipBoundSignal } = {}) => {
           if (controlType === "button" && controller.controlHostProps.name) {
             const buttonName = controller.controlHostProps.name;
             const parentController = controller.parentUIStateController;
@@ -286,7 +286,9 @@ export const useUIStateController = (
           }
           // Trigger uiAction/command side effects without changing UI state.
           const currentUIState = controller.uiState;
-          writeBoundSignal(currentUIState);
+          if (!skipBoundSignal) {
+            writeBoundSignal(currentUIState);
+          }
           s.uiActionInternal?.(currentUIState, e);
           if (s.uiAction) {
             debugUIState(`calling uiAction for ${controlType}`, currentUIState);
@@ -513,7 +515,15 @@ export const useUIStateController = (
               // sync, but do NOT fire the command and do NOT notify the parent —
               // both would cause an infinite loop when a parent cascades state
               // down to its children (child command would re-trigger the cascade).
-              controller.onUIAction(e, { skipCommand: true });
+              // A control following what it was given (state_prop_change) does
+              // not write its bound signal either: the signal is what it
+              // follows. The one write that would change it is an emptied
+              // signal refilled with the suggestion the control fell back on —
+              // a state the app just took back, put back by the control.
+              controller.onUIAction(e, {
+                skipCommand: true,
+                skipBoundSignal: e.type === "state_prop_change",
+              });
             }
             if (
               e.type === "facade_propagate_up" ||

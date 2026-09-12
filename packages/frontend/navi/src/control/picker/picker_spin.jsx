@@ -60,10 +60,7 @@ import {
 import { Input } from "../input/input.jsx";
 import { useInputGroup } from "../input/use_input_group.js";
 import { openCallout } from "../rules/callout/callout.js";
-import {
-  dispatchRequestResetUIState,
-  dispatchRequestSetUIState,
-} from "../ui_state_dom.js";
+import { dispatchRequestSetUIState } from "../ui_state_dom.js";
 import { Picker } from "./picker.jsx";
 
 const css = /* css */ `
@@ -610,8 +607,11 @@ export const Spin = ({
   // elsewhere on the page — and the control follows it. A control seeded from a
   // signal only writes back into it (see resolveInputProps), which is enough
   // for a field one only ever types into and not for a value that is also moved
-  // from outside. Undefined is not a value: the signal has nothing to say, so
-  // the control goes back to what it started on.
+  // from outside. A signal holding nothing is left alone: the control goes back
+  // to the suggestion it started on by itself (see resolveValueState), and
+  // asking it to reset would be an act of its own, written into the signal —
+  // the signal could then never hold nothing while a spin is bound to it, and a
+  // day the app took back would come back as today.
   const signalValue = signalProp ? signalProp.value : undefined;
   // The value as of the render this effect belongs to, and not one the closure
   // captured a while ago: a step writes the signal, the signal brings us back
@@ -625,7 +625,6 @@ export const Spin = ({
       return;
     }
     if (signalValue === undefined) {
-      dispatchRequestResetUIState(controlEl);
       return;
     }
     if (signalValue !== valueRef.current) {
