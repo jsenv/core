@@ -948,10 +948,16 @@ export const createRoutePattern = (
   // search params are updated. When buildMostPreciseUrl performs an ancestor
   // optimisation (e.g. "/map/isochrone/compare" → "/map/isochrone") it is trusted
   // as-is because the built pathname will differ from the route's own base pathname.
-  // Weak params are never inherited from their signal, but a url that already
-  // carries one keeps it: staying on the same screen while another param
-  // changes must not end the visit this param qualifies.
-  const carryOverWeakParams = (currentUrl, params) => {
+  // A weak param is never inherited from its signal by a url built for a link
+  // (see readSignalForUrlBuild). A url amended in place is another matter: the
+  // route is matching, so the signal IS this visit's state, kept in step with
+  // the address by every routing pass — and what it holds is carried over, so
+  // that changing another param does not end the visit this one qualifies.
+  // Read from the signal, not from the url being amended: several signals
+  // written in one batch flush one url write at a time, and the routing pass
+  // of the first would take the others for gone — and reset them — if the url
+  // it wrote did not already carry what they hold.
+  const carryOverWeakParams = (params) => {
     let paramsWithWeak = params;
     for (const connection of connections) {
       const { paramName } = connection;
@@ -959,17 +965,13 @@ export const createRoutePattern = (
         continue;
       }
       const currentValue = connection.signal.peek();
-      if (currentValue === undefined) {
-        continue;
-      }
-      const currentParams = applyOn(currentUrl);
-      if (!currentParams || currentParams[paramName] === undefined) {
+      if (connection.isDefaultValue(currentValue)) {
         continue;
       }
       if (paramsWithWeak === params) {
         paramsWithWeak = { ...params };
       }
-      paramsWithWeak[paramName] = currentParams[paramName];
+      paramsWithWeak[paramName] = currentValue;
     }
     return paramsWithWeak;
   };
@@ -1005,7 +1007,7 @@ export const createRoutePattern = (
   };
 
   const buildUrlPreservingPath = (currentUrl, params = {}) => {
-    params = carryOverWeakParams(currentUrl, params);
+    params = carryOverWeakParams(params);
     if (currentUrl) {
       params = carryOverPathParams(currentUrl, params);
     }

@@ -23526,10 +23526,16 @@ const createRoutePattern = (
   // search params are updated. When buildMostPreciseUrl performs an ancestor
   // optimisation (e.g. "/map/isochrone/compare" → "/map/isochrone") it is trusted
   // as-is because the built pathname will differ from the route's own base pathname.
-  // Weak params are never inherited from their signal, but a url that already
-  // carries one keeps it: staying on the same screen while another param
-  // changes must not end the visit this param qualifies.
-  const carryOverWeakParams = (currentUrl, params) => {
+  // A weak param is never inherited from its signal by a url built for a link
+  // (see readSignalForUrlBuild). A url amended in place is another matter: the
+  // route is matching, so the signal IS this visit's state, kept in step with
+  // the address by every routing pass — and what it holds is carried over, so
+  // that changing another param does not end the visit this one qualifies.
+  // Read from the signal, not from the url being amended: several signals
+  // written in one batch flush one url write at a time, and the routing pass
+  // of the first would take the others for gone — and reset them — if the url
+  // it wrote did not already carry what they hold.
+  const carryOverWeakParams = (params) => {
     let paramsWithWeak = params;
     for (const connection of connections) {
       const { paramName } = connection;
@@ -23537,17 +23543,13 @@ const createRoutePattern = (
         continue;
       }
       const currentValue = connection.signal.peek();
-      if (currentValue === undefined) {
-        continue;
-      }
-      const currentParams = applyOn(currentUrl);
-      if (!currentParams || currentParams[paramName] === undefined) {
+      if (connection.isDefaultValue(currentValue)) {
         continue;
       }
       if (paramsWithWeak === params) {
         paramsWithWeak = { ...params };
       }
-      paramsWithWeak[paramName] = currentParams[paramName];
+      paramsWithWeak[paramName] = currentValue;
     }
     return paramsWithWeak;
   };
@@ -23583,7 +23585,7 @@ const createRoutePattern = (
   };
 
   const buildUrlPreservingPath = (currentUrl, params = {}) => {
-    params = carryOverWeakParams(currentUrl, params);
+    params = carryOverWeakParams(params);
     if (currentUrl) {
       params = carryOverPathParams(currentUrl, params);
     }
@@ -35898,7 +35900,7 @@ const useUIStateController = (
         // reach until that popup opens. Letting it block interaction would make
         // a picker whose content is loading impossible to open at all.
         getInteractionBlockingControls: () => [],
-        onUIAction: (e, { skipCommand } = {}) => {
+        onUIAction: (e, { skipCommand, skipBoundSignal } = {}) => {
           if (controlType === "button" && controller.controlHostProps.name) {
             const buttonName = controller.controlHostProps.name;
             const parentController = controller.parentUIStateController;
@@ -35924,7 +35926,9 @@ const useUIStateController = (
           }
           // Trigger uiAction/command side effects without changing UI state.
           const currentUIState = controller.uiState;
-          writeBoundSignal(currentUIState);
+          if (!skipBoundSignal) {
+            writeBoundSignal(currentUIState);
+          }
           s.uiActionInternal?.(currentUIState, e);
           if (s.uiAction) {
             s.uiAction(currentUIState, e);
@@ -36146,7 +36150,15 @@ const useUIStateController = (
               // sync, but do NOT fire the command and do NOT notify the parent —
               // both would cause an infinite loop when a parent cascades state
               // down to its children (child command would re-trigger the cascade).
-              controller.onUIAction(e, { skipCommand: true });
+              // A control following what it was given (state_prop_change) does
+              // not write its bound signal either: the signal is what it
+              // follows. The one write that would change it is an emptied
+              // signal refilled with the suggestion the control fell back on —
+              // a state the app just took back, put back by the control.
+              controller.onUIAction(e, {
+                skipCommand: true,
+                skipBoundSignal: e.type === "state_prop_change",
+              });
             }
             if (
               e.type === "facade_propagate_up" ||
@@ -73078,8 +73090,11 @@ const Spin = ({
   // elsewhere on the page — and the control follows it. A control seeded from a
   // signal only writes back into it (see resolveInputProps), which is enough
   // for a field one only ever types into and not for a value that is also moved
-  // from outside. Undefined is not a value: the signal has nothing to say, so
-  // the control goes back to what it started on.
+  // from outside. A signal holding nothing is left alone: the control goes back
+  // to the suggestion it started on by itself (see resolveValueState), and
+  // asking it to reset would be an act of its own, written into the signal —
+  // the signal could then never hold nothing while a spin is bound to it, and a
+  // day the app took back would come back as today.
   const signalValue = signalProp ? signalProp.value : undefined;
   // The value as of the render this effect belongs to, and not one the closure
   // captured a while ago: a step writes the signal, the signal brings us back
@@ -73093,7 +73108,6 @@ const Spin = ({
       return;
     }
     if (signalValue === undefined) {
-      dispatchRequestResetUIState(controlEl);
       return;
     }
     if (signalValue !== valueRef.current) {
