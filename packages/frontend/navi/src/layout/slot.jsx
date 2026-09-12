@@ -12,19 +12,30 @@ import { Box } from "../box/box.jsx";
  *
  * Holds at most one filler at a time — there is no stacking/queueing. The
  * filler is the last `SlotFill` (from this same `createSlot()` call) to
- * render, and only that one empties the slot by unmounting: two fillers
- * crossing — the next card's fill mounted by the render that unmounts the
- * previous card's — run the newcomer's render before the leaver's cleanup,
- * and the leaver finds the slot belongs to someone else.
+ * render; a `SlotFill` unmounting empties the slot only while it is still
+ * that one.
+ *
+ * **One `SlotFill`, rendered where the choice is made.** `isFilled` follows
+ * the fills as they mount and unmount, in the order the tree walks them. A
+ * slot fed from several places — a `SlotFill` in each card of a board, each
+ * card deciding on its own whether it is the open one — reads as empty
+ * between the leaver and the newcomer whenever they render separately, and
+ * anything acting on `isFilled` acts on that empty frame (a `SidePanel` with
+ * `open={isFilled}` closes for good: its `onClose` clears the state the
+ * newcomer was waiting for). The slot cannot tell that gap from a real
+ * emptying, and does not try to: render one `SlotFill` at the level that
+ * holds the choice, with the chosen content as its children, and bind a
+ * state that must not blink (a panel's `open`) to the app's own signal
+ * rather than to `isFilled` — see docs/popup_open.md, "One panel, fed by a
+ * slot".
  *
  * `Slot` keeps `SlotRenderer` mounted permanently — even while unfilled it
  * still renders it, with no props and `isFilled={false}` — instead of
- * unmounting it. This lets `SlotRenderer` be a persistent wrapper that
- * reacts to `isFilled` itself (e.g. a `SidePanel` deriving its `open`
- * prop from it, so open/close actually animate instead of the panel being
+ * unmounting it. This lets `SlotRenderer` be a persistent wrapper (a
+ * `SidePanel` that opens and closes with an animation instead of being
  * mounted/unmounted alongside the filler — see 7_slot_demo.html's "two side
- * panels" section). A `SlotRenderer` that wants the old
- * render-nothing-when-unfilled behavior can opt back in with its own
+ * panels" section). A `SlotRenderer` that wants the
+ * render-nothing-when-unfilled behavior can opt in with its own
  * `if (!isFilled) return null;` (the default `Box` renderer doesn't do
  * this — an unfilled default slot just renders an empty `<Box/>`).
  *
@@ -55,6 +66,9 @@ export const createSlot = (SlotRenderer = Box) => {
     slotPropsSignal.value = props;
     useLayoutEffect(() => {
       return () => {
+        // Within one diff preact mounts the newcomer before unmounting the
+        // leaver, so the leaver may no longer be the filler by the time it
+        // is cleaned up.
         if (filler !== fillerRef) {
           return;
         }

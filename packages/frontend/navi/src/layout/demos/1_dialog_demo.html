@@ -1309,22 +1309,12 @@
         <section class="demo-section">
           <Heading id="adaptive">dockedOnSmallTouchScreen</Heading>
           <p>
-            <code>dockedOnSmallTouchScreen</code> turns the dialog into a bottom
-            sheet (docked flush to the bottom edge, full width) on a small touch
-            screen, and leaves it alone otherwise — on a phone the keyboard owns
-            the bottom of the screen and a centered box ends up both cramped and
-            out of thumb reach, while under a mouse the centered box is already
-            the right shape. Both halves of the name matter:{" "}
-            <code>(pointer: coarse)</code> plus a window small enough to reach
-            the bottom edge of. Touch alone would dock a tablet or a kiosk panel
-            a whole screen away from where the finger just tapped; size alone
-            would dock a narrow desktop window, which is still a mouse.
-            Re-resolved live: toggle device emulation in the devtools with the
-            dialog open to watch it switch. It only supplies defaults for{" "}
-            <code>positionArea</code>, <code>marginWithContainer</code> and{" "}
-            <code>expandX</code>, so any of the three can still be pinned — the
-            second button keeps the full width but forces the centered
-            placement.
+            A sheet flush against one edge on a small touch screen (device
+            emulation in the devtools, re-resolved live), the centered box
+            everywhere else. The top edge unless told <code>"bottom"</code>: on
+            a phone the keyboard rises from the bottom edge, so a sheet one
+            types into rests on the top one and a sheet one only reads and taps
+            may take the bottom one, where the thumbs are.
           </p>
           <div class="demo-row">
             <div>
@@ -1333,12 +1323,25 @@
               </Button>
               <Dialog id="adaptive_dialog" dockedOnSmallTouchScreen animation>
                 <Box padding="m" flex="y" spacing="s">
-                  <strong>Adaptive</strong>
-                  <span>
-                    Centered with a mouse or on a big touch screen, bottom sheet
-                    on a phone.
-                  </span>
+                  <strong>Sign in by email</strong>
+                  <Input type="email" placeholder="you@example.com" />
                   <Button command="--navi-close">Close</Button>
+                </Box>
+              </Dialog>
+            </div>
+            <div>
+              <Button command="--navi-open" commandFor="adaptive_bottom_dialog">
+                dockedOnSmallTouchScreen="bottom"
+              </Button>
+              <Dialog
+                id="adaptive_bottom_dialog"
+                dockedOnSmallTouchScreen="bottom"
+                animation
+              >
+                <Box padding="m" flex="y" spacing="s">
+                  <strong>Leave the game?</strong>
+                  <Button command="--navi-close">Leave</Button>
+                  <Button command="--navi-close">Stay</Button>
                 </Box>
               </Dialog>
             </div>
@@ -1439,7 +1442,11 @@
             <Button command="--navi-open" commandFor="sheet_grip_dialog">
               header
             </Button>
-            <Dialog id="sheet_grip_dialog" dockedOnSmallTouchScreen animation>
+            <Dialog
+              id="sheet_grip_dialog"
+              dockedOnSmallTouchScreen="bottom"
+              animation
+            >
               <Box
                 header
                 padding="s"
@@ -1471,7 +1478,11 @@
             <Button command="--navi-open" commandFor="sheet_bare_dialog">
               no header
             </Button>
-            <Dialog id="sheet_bare_dialog" dockedOnSmallTouchScreen animation>
+            <Dialog
+              id="sheet_bare_dialog"
+              dockedOnSmallTouchScreen="bottom"
+              animation
+            >
               <Box padding="m" flex="y" spacing="s">
                 <SheetBoard>
                   <SheetToken id="sheet_bare_token" />
@@ -1483,7 +1494,11 @@
             <Button command="--navi-open" commandFor="sheet_marked_dialog">
               data-swipe-grip
             </Button>
-            <Dialog id="sheet_marked_dialog" dockedOnSmallTouchScreen animation>
+            <Dialog
+              id="sheet_marked_dialog"
+              dockedOnSmallTouchScreen="bottom"
+              animation
+            >
               <div class="demo-sheet-grip" data-swipe-grip>
                 push me down
               </div>
@@ -1507,7 +1522,11 @@
             <Button command="--navi-open" commandFor="sheet_nested_dialog">
               wrapped header
             </Button>
-            <Dialog id="sheet_nested_dialog" dockedOnSmallTouchScreen animation>
+            <Dialog
+              id="sheet_nested_dialog"
+              dockedOnSmallTouchScreen="bottom"
+              animation
+            >
               <Box flex="y">
                 <Box header padding="s" className="demo-overflow-part">
                   header
@@ -1537,7 +1556,7 @@
             </Button>
             <Dialog
               id="sheet_undeclared_dialog"
-              dockedOnSmallTouchScreen
+              dockedOnSmallTouchScreen="bottom"
               animation
             >
               <Box header padding="s" flex="x" spacing="s" alignY="center">

@@ -916,30 +916,65 @@ the page appeared (no entrance).
 
 A board with a detail pane wants one panel that stays open as long as something
 asks to be shown in it, and whose content changes from one card to the next
-without the panel closing and reopening. That is `open` driven by a slot:
-`createSlot(Renderer)` keeps the renderer mounted whether or not anything fills
-it, and hands it `isFilled`.
+without the panel closing and reopening. That is a slot: `createSlot(Renderer)`
+keeps the renderer mounted whether or not anything fills it, and the panel is
+the renderer.
 
 ```jsx
-const Panel = ({ isFilled, children }) => (
-  <SidePanel
-    open={isFilled}
-    onClose={() => {
-      openCardIdSignal.value = null;
-    }}
-  >
+const Panel = ({ children }) => (
+  <SidePanel id="error_panel" signal={openCardIdSignal} closeOnClickOutside>
     {children}
   </SidePanel>
 );
 const [PanelSlot, PanelSlotFill] = createSlot(Panel);
 ```
 
-`<PanelSlot />` sits once at the board level; the open card renders a
-`<PanelSlotFill>` holding what the panel shows. The slot holds one filler, the
-last to render: switching cards mounts the next fill in the render that unmounts
-the previous one, and the leaver, unmounting after, leaves the slot to the
-newcomer. `onClose` is the panel's own way out — the close cross, Escape, an
-outside press — and clears the state that renders the fill; the panel follows.
+`<PanelSlot />` sits once at the board level, and so does the one
+`<PanelSlotFill>`, rendered by the board with the named card's content as its
+children:
+
+```jsx
+const openCardId = openCardIdSignal.value;
+return (
+  <Box>
+    {cards.map((card) => (
+      <Card key={card.id} card={card} />
+    ))}
+    {openCardId && (
+      <PanelSlotFill>
+        <CardDetail key={openCardId} id={openCardId} />
+      </PanelSlotFill>
+    )}
+    <PanelSlot />
+  </Box>
+);
+```
+
+Two rules hold this shape together, and each guards against a trap the other
+shape falls into.
+
+**One `SlotFill`, rendered where the choice is made.** The tempting shape is a
+`SlotFill` inside each card, rendered by the card that is open. It works until
+two cards cross: each card reads the signal on its own, so switching from A to
+B is two separate renders, A's fill unmounting in one and B's mounting in the
+other. Between the two the slot is empty, and its renderer is rendered on that
+empty frame — whichever of A or B the tree walks first, the gap exists in one
+of the two directions. The slot cannot tell that gap from a real emptying, and
+does not try to: a fix there would have to guess the scheduler. Rendered once,
+by the component that holds the choice, the fill never leaves; only its
+children change, and there is no gap to fall into.
+
+**The panel is bound to the screen's state, not to `isFilled`.** `isFilled` is
+a fact about the render — whether a fill is mounted right now — and the signal
+is a fact about the screen — which card the address names. `open={isFilled}`
+turns any empty frame into a close, and its `onClose` then clears the very
+state the next fill was waiting for. Bound to the signal, the panel is open
+exactly while a card is named, its own ways out (the close cross, Escape, an
+outside press) clear the signal themselves, and the fill only has to say what
+the panel shows. `isFilled` stays the right `open` for a renderer that has no
+such state — a toolbar or a status shown while anything fills it — fed by the
+one fill above.
+
 A press on another card is not an outside press once the card names the panel
 with `data-navi-popup-inside` (see [popup_backdrop.md](./popup_backdrop.md)).
 The full example is `src/layout/demos/7_slot_demo.html`, "two side panels".

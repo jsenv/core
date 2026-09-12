@@ -70,14 +70,16 @@ that stays live. `Popup` forwards `backdrop` in both modes, so which of popover
 or dialog the small-screen resolution picks says nothing about whether one
 press or two are needed.
 
-That is what a bottom sheet on a phone is made of. `dockedOnSmallTouchScreen`
-docks the dialog against its container, and `layer` is what that container is —
-`"top"` for the screen, `"local"` for the box the popup was declared in. A
-sheet flush with the bottom of the screen over a map still being read object by
-object is `layer="top"` for the shape and `backdrop={false}` for the map:
+That is what a sheet on a phone is made of. `dockedOnSmallTouchScreen` docks
+the dialog against an edge of its container (the top one, or `"bottom"` for a
+sheet one only reads and taps — see [`dialog_shape.md`](./dialog_shape.md)),
+and `layer` is what that container is — `"top"` for the screen, `"local"` for
+the box the popup was declared in. A sheet flush with the bottom of the screen
+over a map still being read object by object is `layer="top"` for the shape and
+`backdrop={false}` for the map:
 
 ```jsx
-<Popup dockedOnSmallTouchScreen layer="top" backdrop={false}>
+<Popup dockedOnSmallTouchScreen="bottom" layer="top" backdrop={false}>
 ```
 
 Going `layer="local"` to keep the map live instead confines the sheet to the
@@ -177,7 +179,7 @@ panel that closes on that press then reopens on the click that follows is a
 panel meant to stay open, blinking.
 
 ```jsx
-<SidePanel id="error_panel" closeOnClickOutside backdrop={false} open={isFilled}>
+<SidePanel id="error_panel" signal={openCardIdSignal} closeOnClickOutside>
   …
 </SidePanel>
 

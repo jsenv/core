@@ -88,8 +88,8 @@ const css = /* css */ `
  * @param {string} [props.positionAreaFixed] - **Popover-only**, same guard.
  * @param {string} [props.positionAreaWhenAnchorIsInvalid] - **Popover-only**,
  *   same guard.
- * @param {boolean} [props.dockedOnSmallTouchScreen] - **Dialog-only** (a
- *   popover is never a bottom sheet), destructured out for the same reason
+ * @param {boolean|"top"|"bottom"} [props.dockedOnSmallTouchScreen] -
+ *   **Dialog-only** (a popover is never a sheet), destructured out for the same reason
  *   turned around: it must not land on the popover element as a stray DOM
  *   attribute when the screen-size resolution picks `mode="popover"`. Where
  *   that resolution lands is what decides whether it applies at all, so a
@@ -117,7 +117,7 @@ const css = /* css */ `
  *   honoured in either mode — a wall-less `Dialog` is shown through the
  *   Popover API rather than `showModal()` — so which mode the screen-size
  *   resolution picks says nothing about whether the page behind stays live.
- *   It is also what makes a sheet docked to the bottom of a phone's screen
+ *   It is also what makes a sheet docked to an edge of a phone's screen
  *   (`dockedOnSmallTouchScreen`) non-modal.
  * @param {"auto"|"discrete"|"invisible"} [props.backdropVariant] - Forwarded
  *   as-is to whichever component renders (both understand it identically):

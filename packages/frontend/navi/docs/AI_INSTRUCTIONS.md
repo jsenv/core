@@ -159,8 +159,9 @@ to start when unsure which export solves a problem.
   `triggerNaviCommand` as the last resort, with the event forwarded and never
   invented; opening ON something; a press that opens and acts is a `Picker`,
   and its trigger wears the wait and the error (a card that lifts, `openOn`);
-  Escape cancels; the close cross; one panel fed by a slot (`createSlot`,
-  `open={isFilled}`); a popup that loads data. Read before passing `open`,
+  Escape cancels; the close cross; one panel fed by a slot (`createSlot`: one
+  `SlotFill` where the choice is made, `open` bound to the screen's signal, never
+  to `isFilled`); a popup that loads data. Read before passing `open`,
   calling `triggerNaviCommand`, or writing a close button.
 - `popup_backdrop.md` — three independent questions: a wall or not
   (`backdrop={false}`), what an outside press does, how far the page withdraws;

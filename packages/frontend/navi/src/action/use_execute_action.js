@@ -1,4 +1,5 @@
 import {
+  createInternalCustomEvent,
   createPubSub,
   dispatchInternalCustomEvent,
   getElementSignature,
@@ -70,6 +71,12 @@ export const useExecuteAction = (
     // whose command sent — is stored as the callout display target, so the
     // message appears on whoever asked rather than on the whole control.
     const element = elementRef.current;
+    if (!element) {
+      // The control left the page while its run was out (its own answer can
+      // unmount it, see the outcome events below): there is no box to hang
+      // the refusal on. onActionError is still told, by the run's side effect.
+      return;
+    }
     let target = requester;
     // A requester that is no longer on the page is not a place to show
     // anything: the clear cross leaves with the value it optimistically
@@ -173,12 +180,20 @@ export const useExecuteAction = (
       // Either three callbacks, one per outcome, or a single one for "however
       // this ends" — it receives `{ aborted, reason }`, `{ error }` or
       // `{ data }`, so a caller that only needs to know the action settled
-      // (and whether it worked) does not have to register three.
+      // (and whether it worked) does not have to register three. Each also
+      // receives the outcome event (navi_action_abort/error/end) as its
+      // second argument.
       const addSideEffect = (sideEffect) => {
         if (typeof sideEffect === "function") {
-          addAbortCallback((reason) => sideEffect({ aborted: true, reason }));
-          addErrorCallback((error) => sideEffect({ error }));
-          addCompleteCallback((data) => sideEffect({ data }));
+          addAbortCallback((reason, outcomeEvent) =>
+            sideEffect({ aborted: true, reason }, outcomeEvent),
+          );
+          addErrorCallback((error, outcomeEvent) =>
+            sideEffect({ error }, outcomeEvent),
+          );
+          addCompleteCallback((data, outcomeEvent) =>
+            sideEffect({ data }, outcomeEvent),
+          );
           return;
         }
         const { abort, error, complete } = sideEffect;
@@ -186,56 +201,6 @@ export const useExecuteAction = (
         addErrorCallback(error);
         addCompleteCallback(complete);
       };
-      addSideEffect({
-        abort: (reason) => {
-          const element = elementRef.current;
-          if (
-            // at this stage the action side effect might have removed the <element> from the DOM
-            // (in theory no because action side effect are batched to happen after)
-            // but other side effects might do this
-            element
-          ) {
-            dispatchInternalCustomEvent(element, "navi_action_abort", {
-              ...sharedActionEventDetail,
-              reason,
-            });
-          }
-        },
-        error: (error) => {
-          if (errorEffect === "show_validation_message") {
-            addErrorMessage(error, { requester });
-          } else if (errorEffect === "throw") {
-            setError(error);
-          }
-
-          const element = elementRef.current;
-          if (
-            // at this stage the action side effect might have removed the <element> from the DOM
-            // (in theory no because action side effect are batched to happen after)
-            // but other side effects might do this
-            element
-          ) {
-            dispatchInternalCustomEvent(element, "navi_action_error", {
-              ...sharedActionEventDetail,
-              error,
-            });
-          }
-        },
-        complete: (data) => {
-          const element = elementRef.current;
-          if (
-            // at this stage the action side effect might have removed the <element> from the DOM
-            // (in theory no because action side effect are batched to happen after)
-            // but other side effects might do this
-            element
-          ) {
-            dispatchInternalCustomEvent(element, "navi_action_end", {
-              ...sharedActionEventDetail,
-              data,
-            });
-          }
-        },
-      });
 
       const actionStartEventDetail = {
         ...sharedActionEventDetail,
@@ -247,13 +212,50 @@ export const useExecuteAction = (
         actionStartEventDetail,
       );
 
+      // The outcome is told twice: to the element, when there still is one,
+      // and to the side effects registered at navi_action_start, always. A
+      // run can outlive its control — the run's own answer, written to a
+      // store the parent reads to decide what it draws, unmounts the control
+      // one microtask before the run settles — and the element is then no
+      // place to dispatch to: Preact drops a detached element's listeners.
+      // The side effects are the run's, not the element's, so the event
+      // reaches them either way.
+      const tellOutcome = (outcomeEventName, outcomeEventDetail, trigger) => {
+        const outcomeEvent = createInternalCustomEvent(outcomeEventName, {
+          ...sharedActionEventDetail,
+          ...outcomeEventDetail,
+        });
+        const element = elementRef.current;
+        if (element) {
+          element.dispatchEvent(outcomeEvent);
+        }
+        trigger(outcomeEvent);
+      };
+
       const runAction = () => {
         return action[method]({
           event: actionEvent,
           reason: `"${event.type}" event on ${getElementSignature(event.target)}`,
-          onAbort: triggerAbort,
-          onError: triggerError,
-          onComplete: triggerComplete,
+          onAbort: (reason) => {
+            tellOutcome("navi_action_abort", { reason }, (outcomeEvent) => {
+              triggerAbort(reason, outcomeEvent);
+            });
+          },
+          onError: (error) => {
+            if (errorEffect === "show_validation_message") {
+              addErrorMessage(error, { requester });
+            } else if (errorEffect === "throw") {
+              setError(error);
+            }
+            tellOutcome("navi_action_error", { error }, (outcomeEvent) => {
+              triggerError(error, outcomeEvent);
+            });
+          },
+          onComplete: (data) => {
+            tellOutcome("navi_action_end", { data }, (outcomeEvent) => {
+              triggerComplete(data, outcomeEvent);
+            });
+          },
         });
       };
 

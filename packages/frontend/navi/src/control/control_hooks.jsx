@@ -2062,10 +2062,24 @@ const useInteractiveProps = (
         // aborted run, whose promise is awaited to completion (see
         // performRun in actions.js) — which is exactly what "the server is
         // done with it" means, and therefore when the queued request may go.
-        e.detail.addSideEffect((outcome) => {
+        e.detail.addSideEffect((outcome, outcomeEvent) => {
           uiStateController.actionInFlight = false;
           uiStateController.runningActionSignal.value = null;
           uiStateController.parallelGuard?.release(uiStateController);
+          // The outcome callbacks are told from here, the run's side effect,
+          // and not from the onnavi_action_* handlers below: the run can
+          // outlive this control (its own answer, written to a store the
+          // parent reads, unmounts it one microtask before it settles), and
+          // whoever wears the run — a parent's `loading` following these,
+          // see 12_picker_card_demo.html — must hear it end all the same.
+          // The handlers below keep what needs the element.
+          if (outcome.aborted) {
+            onActionAborted?.(outcomeEvent);
+          } else if ("error" in outcome) {
+            onActionError?.(outcome.error, outcomeEvent);
+          } else {
+            onActionEnd?.(outcome.data, outcomeEvent);
+          }
           const queuedEvent = uiStateController.queuedActionAllowedEvent;
           if (!queuedEvent) {
             syncOptimisticAttribute(false);
@@ -2107,7 +2121,6 @@ const useInteractiveProps = (
         if (resetOnAbort && !superseded) {
           dispatchRequestResetUIState(e.currentTarget, e);
         }
-        onActionAborted?.(e);
       },
       onnavi_action_error: (e) => {
         const { error } = e.detail;
@@ -2115,13 +2128,11 @@ const useInteractiveProps = (
         if (resetOnError) {
           dispatchRequestResetUIState(e.currentTarget, e);
         }
-        onActionError?.(error, e);
         uiStateController.onActionError(e);
       },
       onnavi_action_end: (e) => {
         const { data } = e.detail;
         debugAction(e, `action end with data: ${JSON.stringify(data)}`);
-        onActionEnd?.(data, e);
         controlRootProps.onnavi_action_end?.(e);
         uiStateController.onActionEnd(e);
 

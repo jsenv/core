@@ -19,11 +19,13 @@
 import { getElementSignature } from "./element_signature.js";
 
 /**
- * Dispatches an internal event on `el`.
+ * Creates an internal event without dispatching it, for a caller that hands
+ * the event to more than the element — an outcome told to the element that
+ * asked for it when it is still there, and to the closures waiting on it
+ * either way.
  * Does not bubble — stays within the local subtree.
  */
-export const dispatchInternalCustomEvent = (
-  el,
+export const createInternalCustomEvent = (
   customEventName,
   customEventDetail,
 ) => {
@@ -32,6 +34,22 @@ export const dispatchInternalCustomEvent = (
     cancelable: true,
   });
   chainEvent(customEvent, customEventDetail?.event);
+  return customEvent;
+};
+
+/**
+ * Dispatches an internal event on `el`.
+ * Does not bubble — stays within the local subtree.
+ */
+export const dispatchInternalCustomEvent = (
+  el,
+  customEventName,
+  customEventDetail,
+) => {
+  const customEvent = createInternalCustomEvent(
+    customEventName,
+    customEventDetail,
+  );
   return el.dispatchEvent(customEvent);
 };
 

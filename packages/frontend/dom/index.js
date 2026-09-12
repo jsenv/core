@@ -4,6 +4,7 @@ export { getElementSignature } from "./src/element_signature.js";
 export {
   chainEvent,
   createEventGroupLogger,
+  createInternalCustomEvent,
   dispatchCustomEvent,
   dispatchInternalCustomEvent,
   dispatchPublicCustomEvent,

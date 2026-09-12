@@ -89,7 +89,7 @@ const css = /* css */ `
  *   dialogExpand?: boolean,
  *   dialogExpandX?: boolean,
  *   dialogExpandY?: boolean,
- *   dockedOnSmallTouchScreen?: boolean,
+ *   dockedOnSmallTouchScreen?: boolean | "top" | "bottom",
  *   marginWithContainer?: number | string,
  *   backdrop?: boolean,
  *   backdropVariant?: "auto" | "discrete" | "invisible",

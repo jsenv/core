@@ -4,7 +4,7 @@
  */
 import { installImportMetaCssBuild, windowHeightSignal, windowWidthSignal, visualViewportHeightSignal, visualViewportWidthSignal, getAppHeight, getAppWidth, coarsePointerSignal, smallTouchScreenSignal } from "./jsenv_navi_side_effects.js";
 export { disableVirtualKeyboardOverlay } from "./jsenv_navi_side_effects.js";
-import { elementIsFocusable, createIterableWeakSet, dispatchInternalCustomEvent, dispatchCustomEvent, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, getElementSignature, createPubSub, findEvent, createValueEffect, findFocusDelegateTarget, findFocusable, scrollIntoViewThroughScrollables, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, keepTouchRefusable, isPressDrivenClick, waitForTap, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, dragSourceThatStoodDown, markDragSource, refuseDragTo, startDragTo, installPanZoom, createEventGroupLogger, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, normalizeStyles, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, scrollRoomTowards, getScrollContainer, isTouchDrivenEvent, scrollIntoViewScoped, closestOpenableAncestor, isAncestorOpen, isDisplayedDespiteClosedAncestor, observeAncestorOpenState, getAncestorOpenType, findBefore, findAfter, resolveCSSSize, hasCSSSizeUnit, releaseWheelGesture, getScrollIntoViewScopedOffsets, wheelGestureIsTakenFrom, claimWheelGesture, initFocusGroup, stringifyStyle as stringifyStyle$1, resolveOklchLightness, contrastColor, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, getVirtualKeyboardOverlayHeight, onAncestorReopen, isPressDisputedByDrag, canScroll, measureWidestChildRow, performTabNavigation, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
+import { elementIsFocusable, createIterableWeakSet, dispatchInternalCustomEvent, dispatchCustomEvent, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, getElementSignature, createPubSub, findEvent, createValueEffect, findFocusDelegateTarget, findFocusable, scrollIntoViewThroughScrollables, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, keepTouchRefusable, isPressDrivenClick, waitForTap, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, dragSourceThatStoodDown, markDragSource, refuseDragTo, startDragTo, installPanZoom, createEventGroupLogger, createInternalCustomEvent, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, normalizeStyles, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, scrollRoomTowards, getScrollContainer, isTouchDrivenEvent, scrollIntoViewScoped, closestOpenableAncestor, isAncestorOpen, isDisplayedDespiteClosedAncestor, observeAncestorOpenState, getAncestorOpenType, findBefore, findAfter, resolveCSSSize, hasCSSSizeUnit, releaseWheelGesture, getScrollIntoViewScopedOffsets, wheelGestureIsTakenFrom, claimWheelGesture, initFocusGroup, stringifyStyle as stringifyStyle$1, resolveOklchLightness, contrastColor, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, getVirtualKeyboardOverlayHeight, onAncestorReopen, isPressDisputedByDrag, canScroll, measureWidestChildRow, performTabNavigation, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
 export { chainEvent, clickIsSuppressed, contrastColor, createDragGestureController, dragAfterIntent, findEvent, markDragSource, startDragTo } from "@jsenv/dom";
 import { signal, computed, effect, untracked, batch, useComputed, useSignal } from "@preact/signals";
 import { isValidElement, createContext, render, h, toChildArray, options, cloneElement, createElement, Fragment as Fragment$1 } from "preact";
@@ -13207,6 +13207,12 @@ const useExecuteAction = (
     // whose command sent — is stored as the callout display target, so the
     // message appears on whoever asked rather than on the whole control.
     const element = elementRef.current;
+    if (!element) {
+      // The control left the page while its run was out (its own answer can
+      // unmount it, see the outcome events below): there is no box to hang
+      // the refusal on. onActionError is still told, by the run's side effect.
+      return;
+    }
     let target = requester;
     // A requester that is no longer on the page is not a place to show
     // anything: the clear cross leaves with the value it optimistically
@@ -13310,12 +13316,20 @@ const useExecuteAction = (
       // Either three callbacks, one per outcome, or a single one for "however
       // this ends" — it receives `{ aborted, reason }`, `{ error }` or
       // `{ data }`, so a caller that only needs to know the action settled
-      // (and whether it worked) does not have to register three.
+      // (and whether it worked) does not have to register three. Each also
+      // receives the outcome event (navi_action_abort/error/end) as its
+      // second argument.
       const addSideEffect = (sideEffect) => {
         if (typeof sideEffect === "function") {
-          addAbortCallback((reason) => sideEffect({ aborted: true, reason }));
-          addErrorCallback((error) => sideEffect({ error }));
-          addCompleteCallback((data) => sideEffect({ data }));
+          addAbortCallback((reason, outcomeEvent) =>
+            sideEffect({ aborted: true, reason }, outcomeEvent),
+          );
+          addErrorCallback((error, outcomeEvent) =>
+            sideEffect({ error }, outcomeEvent),
+          );
+          addCompleteCallback((data, outcomeEvent) =>
+            sideEffect({ data }, outcomeEvent),
+          );
           return;
         }
         const { abort, error, complete } = sideEffect;
@@ -13323,56 +13337,6 @@ const useExecuteAction = (
         addErrorCallback(error);
         addCompleteCallback(complete);
       };
-      addSideEffect({
-        abort: (reason) => {
-          const element = elementRef.current;
-          if (
-            // at this stage the action side effect might have removed the <element> from the DOM
-            // (in theory no because action side effect are batched to happen after)
-            // but other side effects might do this
-            element
-          ) {
-            dispatchInternalCustomEvent(element, "navi_action_abort", {
-              ...sharedActionEventDetail,
-              reason,
-            });
-          }
-        },
-        error: (error) => {
-          if (errorEffect === "show_validation_message") {
-            addErrorMessage(error, { requester });
-          } else if (errorEffect === "throw") {
-            setError(error);
-          }
-
-          const element = elementRef.current;
-          if (
-            // at this stage the action side effect might have removed the <element> from the DOM
-            // (in theory no because action side effect are batched to happen after)
-            // but other side effects might do this
-            element
-          ) {
-            dispatchInternalCustomEvent(element, "navi_action_error", {
-              ...sharedActionEventDetail,
-              error,
-            });
-          }
-        },
-        complete: (data) => {
-          const element = elementRef.current;
-          if (
-            // at this stage the action side effect might have removed the <element> from the DOM
-            // (in theory no because action side effect are batched to happen after)
-            // but other side effects might do this
-            element
-          ) {
-            dispatchInternalCustomEvent(element, "navi_action_end", {
-              ...sharedActionEventDetail,
-              data,
-            });
-          }
-        },
-      });
 
       const actionStartEventDetail = {
         ...sharedActionEventDetail,
@@ -13384,13 +13348,50 @@ const useExecuteAction = (
         actionStartEventDetail,
       );
 
+      // The outcome is told twice: to the element, when there still is one,
+      // and to the side effects registered at navi_action_start, always. A
+      // run can outlive its control — the run's own answer, written to a
+      // store the parent reads to decide what it draws, unmounts the control
+      // one microtask before the run settles — and the element is then no
+      // place to dispatch to: Preact drops a detached element's listeners.
+      // The side effects are the run's, not the element's, so the event
+      // reaches them either way.
+      const tellOutcome = (outcomeEventName, outcomeEventDetail, trigger) => {
+        const outcomeEvent = createInternalCustomEvent(outcomeEventName, {
+          ...sharedActionEventDetail,
+          ...outcomeEventDetail,
+        });
+        const element = elementRef.current;
+        if (element) {
+          element.dispatchEvent(outcomeEvent);
+        }
+        trigger(outcomeEvent);
+      };
+
       const runAction = () => {
         return action[method]({
           event: actionEvent,
           reason: `"${event.type}" event on ${getElementSignature(event.target)}`,
-          onAbort: triggerAbort,
-          onError: triggerError,
-          onComplete: triggerComplete,
+          onAbort: (reason) => {
+            tellOutcome("navi_action_abort", { reason }, (outcomeEvent) => {
+              triggerAbort(reason, outcomeEvent);
+            });
+          },
+          onError: (error) => {
+            if (errorEffect === "show_validation_message") {
+              addErrorMessage(error, { requester });
+            } else if (errorEffect === "throw") {
+              setError(error);
+            }
+            tellOutcome("navi_action_error", { error }, (outcomeEvent) => {
+              triggerError(error, outcomeEvent);
+            });
+          },
+          onComplete: (data) => {
+            tellOutcome("navi_action_end", { data }, (outcomeEvent) => {
+              triggerComplete(data, outcomeEvent);
+            });
+          },
         });
       };
 
@@ -40910,10 +40911,24 @@ const useInteractiveProps = (props, {
         // aborted run, whose promise is awaited to completion (see
         // performRun in actions.js) — which is exactly what "the server is
         // done with it" means, and therefore when the queued request may go.
-        e.detail.addSideEffect(outcome => {
+        e.detail.addSideEffect((outcome, outcomeEvent) => {
           uiStateController.actionInFlight = false;
           uiStateController.runningActionSignal.value = null;
           uiStateController.parallelGuard?.release(uiStateController);
+          // The outcome callbacks are told from here, the run's side effect,
+          // and not from the onnavi_action_* handlers below: the run can
+          // outlive this control (its own answer, written to a store the
+          // parent reads, unmounts it one microtask before it settles), and
+          // whoever wears the run — a parent's `loading` following these,
+          // see 12_picker_card_demo.html — must hear it end all the same.
+          // The handlers below keep what needs the element.
+          if (outcome.aborted) {
+            onActionAborted?.(outcomeEvent);
+          } else if ("error" in outcome) {
+            onActionError?.(outcome.error, outcomeEvent);
+          } else {
+            onActionEnd?.(outcome.data, outcomeEvent);
+          }
           const queuedEvent = uiStateController.queuedActionAllowedEvent;
           if (!queuedEvent) {
             syncOptimisticAttribute(false);
@@ -40953,7 +40968,6 @@ const useInteractiveProps = (props, {
         if (resetOnAbort && !superseded) {
           dispatchRequestResetUIState(e.currentTarget, e);
         }
-        onActionAborted?.(e);
       },
       onnavi_action_error: e => {
         const {
@@ -40963,7 +40977,6 @@ const useInteractiveProps = (props, {
         if (resetOnError) {
           dispatchRequestResetUIState(e.currentTarget, e);
         }
-        onActionError?.(error, e);
         uiStateController.onActionError(e);
       },
       onnavi_action_end: e => {
@@ -40971,7 +40984,6 @@ const useInteractiveProps = (props, {
           data
         } = e.detail;
         debugAction(e, `action end with data: ${JSON.stringify(data)}`);
-        onActionEnd?.(data, e);
         controlRootProps.onnavi_action_end?.(e);
         uiStateController.onActionEnd(e);
 
@@ -60451,34 +60463,44 @@ const css$E = /* css */`
  *   `showModal()`'d (native focus trap, `Escape`-to-cancel, hardware
  *   back-button dismissal, rest-of-document made inert), without one it is
  *   shown through the Popover API and the page behind stays live.
- * @param {boolean} [props.dockedOnSmallTouchScreen] - Turns the dialog into a
- *   bottom sheet (docked flush to the bottom edge, full width) on a small touch
- *   screen, and leaves it alone otherwise. For a dialog meant to be interacted
- *   with rather than merely read: on a phone the keyboard owns the bottom of
- *   the screen and a centered box ends up both cramped and out of thumb reach,
- *   while under a mouse the centered box is already the right shape. Both
- *   halves of the name matter (`smallTouchScreenSignal`): touch alone would
- *   dock a big touch screen — a tablet, a kiosk panel — a whole screen away
- *   from where the finger just tapped, and size alone would dock a narrow
- *   desktop window, which is still a mouse. It supplies defaults for
- *   `positionArea`, `marginWithContainer`, `expandX` and `scrollCapture`, so
- *   any of them can still be pinned explicitly — including `expandX={false}`,
+ * @param {boolean|"top"|"bottom"} [props.dockedOnSmallTouchScreen] - Turns
+ *   the dialog into a sheet (docked flush to one edge, full width) on a small
+ *   touch screen, and leaves it alone otherwise: under a mouse the centered box
+ *   is already the right shape, while on a phone a centered box ends up cramped
+ *   between the keyboard and the top of the screen. The value says which edge
+ *   the sheet rests on. `true` (or `"top"`) rests it on the top edge, out of
+ *   the virtual keyboard's way: a field tapped in the sheet raises the keyboard
+ *   below it, and the question and the field stay where the finger found them.
+ *   `"bottom"` rests it on the bottom edge, where the thumbs are — for a sheet
+ *   that is read and tapped (a list, a couple of buttons, a confirmation) and
+ *   holds nothing that raises a keyboard; one that does is reflowed into the
+ *   strip left above the keyboard at every keystroke. The edge is said here
+ *   rather than through `positionArea`, which places both shapes:
+ *   `positionArea="bottom"` would also pin the centered box to the bottom of a
+ *   desktop window. Both halves of the name matter (`smallTouchScreenSignal`):
+ *   touch alone would dock a big touch screen — a tablet, a kiosk panel — a
+ *   whole screen away from where the finger just tapped, and size alone would
+ *   dock a narrow desktop window, which is still a mouse. It supplies defaults
+ *   for `positionArea`, `marginWithContainer`, `expandX` and `scrollCapture`,
+ *   so any of them can still be pinned explicitly — including `expandX={false}`,
  *   which opts the docked dialog out of the full-width stretch and leaves it a
- *   floating box at the bottom. It also withdraws `maxWidth` while docked: a
+ *   floating box against its edge. It also withdraws `maxWidth` while docked: a
  *   sheet is container-wide by definition, and a `maxWidth` is an answer about
  *   the *centered* shape, so the two can be stated together (`maxWidth="16rem"
  *   dockedOnSmallTouchScreen`) and each applies where it means something.
  *   `minWidth` needs no such rule — its floor is below the full width — and
  *   `maxHeight`/`minHeight` keep applying, a sheet being content-tall.
- *   Ignored entirely when `expandY`
- *   (or `expand`) is set: a dialog already filling the height is on the bottom
- *   edge docking would bring it to, so docking could only take away the shape
- *   the caller asked for. Re-resolves live as the pointer
- *   type or the window size changes. A sheet resting on the bottom edge is also
- *   pushed back down to close it, held by its header (a `Box` with the `header`
- *   prop) and by anything else carrying `data-swipe-grip`. The rest of the sheet
- *   is left to what it holds, so a board something is dragged across keeps its
- *   own gestures. See `swipe_to_close.js`.
+ *   Ignored entirely when `expandY` (or `expand`) is set: a dialog already
+ *   filling the height touches both edges, so docking could only take away the
+ *   shape the caller asked for. Re-resolves live as the pointer type or the
+ *   window size changes. A sheet is also pushed back through the edge it rests
+ *   on to close it (down for a bottom sheet, up for a top one), held by its
+ *   header (a `Box` with the `header` prop) and by anything else carrying
+ *   `data-swipe-grip`. The rest of the sheet is left to what it holds, so a
+ *   board something is dragged across keeps its own gestures. See
+ *   `swipe_to_close.js`. In dev, a `"bottom"` sheet found holding a field that
+ *   raises the keyboard is warned about at open, on any screen — the mistake
+ *   itself only shows on a phone.
  * @param {string} [props.positionArea="center"] - Where to dock the dialog
  *   within its container (the viewport for `layer="top"`, the positioned
  *   ancestor for `layer="local"`) — Dialog is never anchored to a real
@@ -60846,28 +60868,28 @@ const DialogLocal = props => {
  * own to render: a modal's is the native `::backdrop`, and `backdrop={false}`
  * has none at all.
  */
-// What a dialog turns into on a small touch screen. "bottom" is not a taste:
-// it puts the dialog in the zone a phone is actually operated from — where the
-// thumbs rest and where the virtual keyboard comes up — instead of the middle
-// of the screen, which is the farthest point from both.
+// What a dialog turns into on a small touch screen: a sheet flush against one
+// edge of the screen. Which edge is the caller's word (the prop's value, see
+// its JSDoc), the top one unless told "bottom": the cheap mistake must be the
+// default one — a sheet docked top by mistake is a little farther from the
+// thumb, a sheet docked bottom by mistake fights the virtual keyboard, which
+// rises from that very edge, on every keystroke.
 // Only defaults: an explicitly passed prop still wins, so the docked shape can
 // be adjusted one axis at a time instead of being all-or-nothing.
 const DOCKED = {
-  positionArea: "bottom",
   marginWithContainer: 0,
   expandX: true,
-  // A sheet resting on the bottom edge is dragged with a thumb, and a drag that
-  // runs past its own edge must not land on the page behind it: the same
-  // reasoning as "bottom" above, applied to the gesture instead of the shape.
+  // A sheet is dragged with a thumb, and a drag that runs past its own edge
+  // must not land on the page behind it.
   scrollCapture: true
 };
 
-// Where a bottom sheet is held to push it back down: the strip a Box declares
-// with `header`, plus anything the application marked as one more. Everything
-// else in the sheet is content the finger came to operate — a board a piece is
-// dragged across, a list, a map — and a press there belongs to it. A sheet with
-// no header and nothing marked is not pushed down at all; it is closed by its
-// own controls, by the backdrop and by Escape.
+// Where a sheet is held to push it back through its edge: the strip a Box
+// declares with `header`, plus anything the application marked as one more.
+// Everything else in the sheet is content the finger came to operate — a board
+// a piece is dragged across, a list, a map — and a press there belongs to it. A
+// sheet with no header and nothing marked is not pushed back at all; it is
+// closed by its own controls, by the backdrop and by Escape.
 const DOCKED_SWIPE_GRIP = "[data-header],[data-swipe-grip]";
 const useDialogProps = props => {
   const backdropProps = {};
@@ -60973,12 +60995,15 @@ const useDialogProps = props => {
   // Only a small touch screen changes anything: on a mouse — and on a touch
   // screen too big to reach the bottom edge of — a dialog already wants to be
   // the centered box it is by default, so there is nothing to resolve.
-  // expandY cancels the docking outright: docking exists to bring the dialog
-  // down to the edge the thumb is on, and a dialog already filling the height
-  // is on that edge — all docking could still do is take away the shape the
-  // caller asked for (and arm a swipe-down on something that never rose).
+  // expandY cancels the docking outright: a dialog already filling the height
+  // touches both edges — all docking could still do is take away the shape
+  // the caller asked for (and arm a swipe on something that never rose).
   const isDocked = dockedOnSmallTouchScreen && smallTouchScreenSignal.value && !expandY;
-  const positionArea = positionAreaProp ?? (isDocked ? DOCKED.positionArea : "center");
+  const dockedEdge = dockedOnSmallTouchScreen === "bottom" ? "bottom" : "top";
+  const positionArea = positionAreaProp ?? (isDocked ? dockedEdge : "center");
+  // Read off the shape a phone would give, not the one this screen gives: the
+  // author of a bottom sheet tests on a desktop, where the mistake is silent.
+  const sheetRestsOnBottom = Boolean(dockedOnSmallTouchScreen) && !expandY && restsOnBottom(positionAreaProp ?? dockedEdge);
   const marginWithContainer = marginWithContainerProp ?? (isDocked ? DOCKED.marginWithContainer :
   // A share of whatever holds the dialog: the app's own screen for a
   // top-layer one — where appw is exactly "3% of the container", the
@@ -61040,12 +61065,12 @@ const useDialogProps = props => {
     y: "center",
     x: "center"
   };
-  // Pushing the sheet back down closes it — a bottom sheet is reached with a
-  // thumb, and the thumb is already on the edge it would push. Only a sheet
-  // actually resting on the bottom edge: anywhere else the gesture would send
-  // the dialog somewhere it never came from.
-  const swipeToCloseDown = isDocked && parsedPositionArea.y === "bottom";
-  const onSwipePointerDown = swipeToCloseDown ? createSwipeToClose("bottom", {
+  // Pushing the sheet back through the edge it rests on closes it — the way
+  // it came in, and the way the thumb on that edge already pushes. Only a sheet
+  // actually resting on an edge: anywhere else the gesture would send the
+  // dialog somewhere it never came from.
+  const swipeToCloseSide = isDocked && (parsedPositionArea.y === "top" || parsedPositionArea.y === "bottom") ? parsedPositionArea.y : null;
+  const onSwipePointerDown = swipeToCloseSide ? createSwipeToClose(swipeToCloseSide, {
     grip: DOCKED_SWIPE_GRIP
   }) : null;
   // A corner sitting exactly on the container's own corner must not be
@@ -61173,6 +61198,9 @@ const useDialogProps = props => {
     }
     {
       warnAboutUnreachableOutsideRegions(dialogEl);
+      if (sheetRestsOnBottom) {
+        warnBottomSheetHoldingKeyboardControl(dialogEl);
+      }
     }
 
     // Set by useOpenControllerByProps for the very first open triggered by
@@ -61721,12 +61749,12 @@ const useDialogProps = props => {
     "data-flush-right": flushEdges.right ? "" : undefined,
     "data-flush-bottom": flushEdges.bottom ? "" : undefined,
     "data-flush-left": flushEdges.left ? "" : undefined,
-    "data-swipe-to-close": swipeToCloseDown ? "" : undefined,
+    "data-swipe-to-close": swipeToCloseSide ?? undefined,
     // The axis the sheet travels on when it is pushed back, said to the shared
     // gesture layer: it is what a box travelling inside the sheet reads to know
     // this axis is already walked (see @jsenv/dom's drag_to_travel).
-    "data-drag-travel": swipeToCloseDown ? SWIPE_AXIS_BY_SIDE.bottom : undefined,
-    "data-travel-by-drag": swipeToCloseDown ? SWIPE_AXIS_BY_SIDE.bottom : undefined,
+    "data-drag-travel": swipeToCloseSide ? SWIPE_AXIS_BY_SIDE[swipeToCloseSide] : undefined,
+    "data-travel-by-drag": swipeToCloseSide ? SWIPE_AXIS_BY_SIDE[swipeToCloseSide] : undefined,
     "onPointerDown": e => {
       rest.onPointerDown?.(e);
       onSwipePointerDown?.(e);
@@ -61797,6 +61825,33 @@ const useDialogProps = props => {
     };
   }
   return [!isTopLayer && backdrop ? backdropProps : null, contentProps];
+};
+const restsOnBottom = positionArea => {
+  const parsed = parsePositionArea(positionArea);
+  return Boolean(parsed) && parsed.y === "bottom";
+};
+
+// What raises a virtual keyboard when tapped: a text-like input, a textarea,
+// anything editable. Not a `select` — it opens a menu, which takes no screen
+// from the sheet — and not a read-only field.
+const KEYBOARD_RAISING_CONTROL_SELECTOR = `
+  input:not([type]):not([readonly]),
+  input[type="text"]:not([readonly]),
+  input[type="search"]:not([readonly]),
+  input[type="email"]:not([readonly]),
+  input[type="url"]:not([readonly]),
+  input[type="tel"]:not([readonly]),
+  input[type="password"]:not([readonly]),
+  input[type="number"]:not([readonly]),
+  textarea:not([readonly]),
+  [contenteditable]:not([contenteditable="false"])
+`;
+const warnBottomSheetHoldingKeyboardControl = dialogEl => {
+  const controlEl = dialogEl.querySelector(KEYBOARD_RAISING_CONTROL_SELECTOR);
+  if (!controlEl) {
+    return;
+  }
+  console.warn(`[navi] a Dialog docked to the bottom edge (dockedOnSmallTouchScreen="bottom") holds a field that raises the virtual keyboard. On a phone the keyboard rises from the edge the sheet rests on and reflows the sheet into the strip left above it, at every keystroke. A sheet one types into rests on the top edge: dockedOnSmallTouchScreen without a value. "bottom" is for a sheet one reads and taps.`, controlEl);
 };
 const DIALOG_PSEUDO_CLASSES = [":hover", ":active", ":focus", ":focus-visible", ":focus-within"];
 
@@ -63529,8 +63584,8 @@ const css$C = /* css */`@layer navi {
  * @param {string} [props.positionAreaFixed] - **Popover-only**, same guard.
  * @param {string} [props.positionAreaWhenAnchorIsInvalid] - **Popover-only**,
  *   same guard.
- * @param {boolean} [props.dockedOnSmallTouchScreen] - **Dialog-only** (a
- *   popover is never a bottom sheet), destructured out for the same reason
+ * @param {boolean|"top"|"bottom"} [props.dockedOnSmallTouchScreen] -
+ *   **Dialog-only** (a popover is never a sheet), destructured out for the same reason
  *   turned around: it must not land on the popover element as a stray DOM
  *   attribute when the screen-size resolution picks `mode="popover"`. Where
  *   that resolution lands is what decides whether it applies at all, so a
@@ -63558,7 +63613,7 @@ const css$C = /* css */`@layer navi {
  *   honoured in either mode — a wall-less `Dialog` is shown through the
  *   Popover API rather than `showModal()` — so which mode the screen-size
  *   resolution picks says nothing about whether the page behind stays live.
- *   It is also what makes a sheet docked to the bottom of a phone's screen
+ *   It is also what makes a sheet docked to an edge of a phone's screen
  *   (`dockedOnSmallTouchScreen`) non-modal.
  * @param {"auto"|"discrete"|"invisible"} [props.backdropVariant] - Forwarded
  *   as-is to whichever component renders (both understand it identically):
@@ -76813,7 +76868,7 @@ const css$n = /* css */`.navi_split_button {
  *   dialogExpand?: boolean,
  *   dialogExpandX?: boolean,
  *   dialogExpandY?: boolean,
- *   dockedOnSmallTouchScreen?: boolean,
+ *   dockedOnSmallTouchScreen?: boolean | "top" | "bottom",
  *   marginWithContainer?: number | string,
  *   backdrop?: boolean,
  *   backdropVariant?: "auto" | "discrete" | "invisible",
@@ -86249,6 +86304,9 @@ const createSlot = (SlotRenderer = Box) => {
     slotPropsSignal.value = props;
     useLayoutEffect(() => {
       return () => {
+        // Within one diff preact mounts the newcomer before unmounting the
+        // leaver, so the leaver may no longer be the filler by the time it
+        // is cleaned up.
         if (filler !== fillerRef) {
           return;
         }

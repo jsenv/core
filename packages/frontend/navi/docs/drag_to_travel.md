@@ -272,15 +272,15 @@ so it takes the press outright.
 
 ### A popup pushed back the way it came
 
-A `Dialog` docked to the bottom edge (`dockedOnSmallTouchScreen`) and a
-`SidePanel` close by being pushed back the way they came in — a third consumer
+A `Dialog` docked to an edge (`dockedOnSmallTouchScreen`) and a `SidePanel`
+close by being pushed back the way they came in — a third consumer
 of this same travel, `swipe_to_close.js`. A popup that names a **grip** reads the
 press only there: for a `Dialog` that is its header, plus anything carrying
 `data-swipe-grip`. Everything else it holds is content the finger came to operate
 — a board a piece is dragged across, a map, a list — and a press there never
 reaches the travel at all, whatever it is made of.
 
-So a sheet with no header and nothing marked is not pushed down; it closes by
+So a sheet with no header and nothing marked is not pushed back; it closes by
 its own controls, the backdrop and Escape. A `SidePanel` names no grip and is
 pushed from its whole surface, which suits a panel made of nothing else.
 

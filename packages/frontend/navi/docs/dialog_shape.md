@@ -57,8 +57,28 @@ Two consequences worth knowing before writing CSS of your own:
 ## One dialog, two shapes
 
 `dockedOnSmallTouchScreen` is the whole small-screen story in one prop: on a
-small touch screen the dialog stops being a centered box and becomes a bottom
-sheet; everywhere else nothing changes.
+small touch screen the dialog stops being a centered box and becomes a sheet
+flush against one edge of the screen; everywhere else nothing changes.
+
+The value says which edge. `true` rests the sheet on the **top** edge, out of
+the virtual keyboard's way: a field tapped in the sheet raises the keyboard
+below it, and the question and the field stay where the finger found them.
+`"bottom"` rests it on the bottom edge, where the thumbs are — for a sheet one
+reads and taps (a list, a couple of buttons, a confirmation) and that holds
+nothing raising a keyboard. A bottom sheet one types into is reflowed into the
+strip left above the keyboard at every keystroke, and the mistake is silent on
+the desktop the author tests on — which is why the safe edge is the default
+and the thumb-first one is the opt-in, and why a `"bottom"` sheet found holding
+a field is warned about in dev, on any screen.
+
+```jsx
+<Dialog dockedOnSmallTouchScreen />          // top: the keyboard cannot reach it
+<Dialog dockedOnSmallTouchScreen="bottom" /> // no field in here, thumbs first
+```
+
+The edge is the prop's own value rather than `positionArea` because
+`positionArea` places _both_ shapes: `positionArea="bottom"` also pins the
+centered box to the bottom of a desktop window.
 
 Both halves of the name matter. Touch alone would dock a tablet or a kiosk
 panel — a whole screen away from where the finger just tapped. Size alone would
@@ -70,38 +90,38 @@ re-resolves the dialog.
 What docking supplies — defaults only, so any single axis of the sheet can be
 adjusted without giving up the rest:
 
-| supplied              | value      | why                                                   |
-| --------------------- | ---------- | ----------------------------------------------------- |
-| `positionArea`        | `"bottom"` | where the thumbs rest and where the keyboard comes up |
-| `marginWithContainer` | `0`        | a sheet is flush, or it is not a sheet                |
-| `expandX`             | `true`     | container-wide, same reason                           |
-| `scrollCapture`       | `true`     | a drag past the sheet's edge must not reach the page  |
+| supplied              | value    | why                                                  |
+| --------------------- | -------- | ---------------------------------------------------- |
+| `positionArea`        | the edge | `"top"` unless the prop says `"bottom"`, see above   |
+| `marginWithContainer` | `0`      | a sheet is flush, or it is not a sheet               |
+| `expandX`             | `true`   | container-wide, same reason                          |
+| `scrollCapture`       | `true`   | a drag past the sheet's edge must not reach the page |
 
-A `layer="top"` dialog flush with an edge of the screen — a docked sheet on the
-bottom, anything with `marginWithContainer={0}` — keeps the band the device
+A `layer="top"` dialog flush with an edge of the screen — a docked sheet,
+anything with `marginWithContainer={0}` — keeps the band the device
 reserves there (`env(safe-area-inset-*)`: the notch, the home indicator,
 Safari's floating bar). The surface still reaches the edge; what it holds stops
 at the band. Only the device's own inset: the dialog is in front of the app's
 fixed bars, so `--navi-safe-area-inset-*`, which counts them too (see
 [`safe_area.md`](./safe_area.md)), is not what it reads.
 
-Plus a swipe-down-to-close, held by the sheet's `header` (a `Box` with the
+Plus a swipe-to-close through the edge the sheet rests on (down for a bottom
+sheet, up for a top one), held by the sheet's `header` (a `Box` with the
 `header` prop) and by anything carrying `data-swipe-grip` — never by the whole
 sheet, so a board something is dragged across keeps its own gestures. See
 [`drag_to_travel.md`](./drag_to_travel.md).
 
 **`expandY` (or `expand`) cancels docking outright.** A dialog already filling
-the height is on the bottom edge docking would bring it to; all docking could
-still do is take away the shape the caller asked for, and arm a swipe-down on
-something that never rose.
+the height touches both edges; all docking could still do is take away the
+shape the caller asked for, and arm a swipe on something that never rose.
 
 ## Saying the two shapes at once
 
 The sentence an app almost always wants is two sentences:
 
 > Keep this dialog between 12 and 16rem so it does not sprawl on a wide window
-> and does not collapse to its shortest line. **And when it is a bottom sheet,
-> forget all that: a sheet is flush and full width.**
+> and does not collapse to its shortest line. **And when it is a sheet, forget
+> all that: a sheet is flush and full width.**
 
 Both halves are written together, and each applies where it means something:
 
@@ -134,7 +154,7 @@ than capping the sheet with it. The container ceiling still holds, as always.
 > dialog that also sets `expandY` never docks, so the cap must never be
 > withdrawn there, and the line above withdraws it anyway. Beyond being wrong,
 > it duplicates a condition navi owns at every call site (it drifts the day
-> "docked" gains a rule), and it reads as a bug: it says nothing about bottom
+> "docked" gains a rule), and it reads as a bug: it says nothing about docked
 > sheets to the next person. State both bounds plainly and let the dialog
 > resolve its own shape.
 
@@ -148,7 +168,7 @@ Since docking _supplies_ `expandX`, passing it explicitly takes the caller out
 of that default:
 
 ```jsx
-// The sheet stops being flush: a floating box at the bottom of the screen.
+// The sheet stops being flush: a floating box against its edge of the screen.
 <Dialog dockedOnSmallTouchScreen expandX={false} />
 ```
 

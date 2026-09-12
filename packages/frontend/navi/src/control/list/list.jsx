@@ -175,7 +175,7 @@ const css = /* css */ `
 
   /* Same reasoning, for the corners: a dialog squares off whatever corner
      lands on its container's own (see the data-flush-* rules in dialog.jsx —
-     a bottom sheet from dockedOnSmallTouchScreen squares its two bottom ones). A list
+     a sheet from dockedOnSmallTouchScreen squares the two on its edge). A list
      drawn right against that corner has to square the same one, otherwise its
      own radius carves a notch out of the popup's square corner. Direct child
      only: any deeper and the list is presumably inset from the popup's edge,
