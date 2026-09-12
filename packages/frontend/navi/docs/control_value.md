@@ -177,21 +177,27 @@ That is what the `:smooth` argument asks for:
 </Button>
 ```
 
-- **The value is set immediately, whatever moves on screen.** Whoever reads
-  the control right after the press (a form, `--navi-send`, a signal) gets the
-  new value; only the drawing takes its time. A control never lies about its
-  state to look like it is still travelling.
-- **The control decides how it moves.** The argument says nothing about
-  pixels or duration: a wheel scrolls to the row the way it glides after an
-  arrow key, the short way round when it loops; a slider would slide its
-  thumb; a control with nothing to move sets its value and that is all. A
-  control that does not know the argument is not broken — it answers like a
-  plain `--navi-update`.
+- **The control decides how it moves, and when the value lands.** The
+  argument says nothing about pixels or duration, and the two controls that
+  know it answer it differently because their movement is a different thing. A
+  wheel is a value one lands ON: it takes the value at once — whoever reads the
+  control right after the press (a form, `--navi-send`, a signal) gets it — and
+  scrolls to the row the way it glides after an arrow key, the short way round
+  when it loops. A spin is a value one GOES TO: it plays the travel a chevron
+  would play, one travel whatever the distance, and the value lands with the
+  slides, 250 ms later (`duration`). A slider would slide its thumb; a control
+  with nothing to move sets its value and that is all. A control that does not
+  know the argument is not broken — it answers like a plain `--navi-update`.
+- **A spin says no the way its chevron does.** A value past `min`/`max` — or
+  one whose first step would be — is not travelled to at all: the same message
+  the chevron that way gives, said on the spin, and the value is left alone.
 - **A gesture on the control itself is never fought.** A wheel being dragged
   or flung keeps reporting its own rows; the requested value is where it goes
-  once the finger's movement is over. And a value the control did not choose
-  is not a choice: arriving on it fires no settle, no `action` — those belong
-  to the user's own inputs.
+  once the finger's movement is over. A value a wheel merely caught up with is
+  not a choice either: arriving on it fires no settle, no `action` — those
+  belong to the user's own inputs. A spin is the other way round, and for the
+  same reason: the travel IS the answer being given, so landing tells
+  `uiAction` about it, with the press that asked for it.
 - **`prefers-reduced-motion` keeps the instant swap.** The option describes
   how the change is shown, and whoever asked to see less motion is answered
   first.
@@ -200,8 +206,8 @@ The same request is available from JS, for what is not a button —
 `dispatchRequestSetUIState(el, value, { behavior: "smooth" })` — and it
 survives a group: sent to a `TimeRangeWheel`, it reaches each of its wheels.
 
-_Reference: the wheel (`wheel.jsx`, `pendingBehaviorRef`) is the control
-honouring it today._
+_Reference: the wheel (`wheel.jsx`, `pendingBehaviorRef`) and the spin
+(`picker_spin.jsx`, `travelsPending`) are the controls honouring it._
 
 ## `signal` + `defaultValue`: the answer and where it starts
 

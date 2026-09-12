@@ -28,8 +28,15 @@
  * instead of moving it into a slide that is about to leave.
  */
 
+import { dispatchCustomEvent } from "@jsenv/dom";
 import { createContext } from "preact";
-import { useContext, useId, useLayoutEffect, useRef } from "preact/hooks";
+import {
+  useContext,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
 import {
@@ -477,6 +484,10 @@ const css = /* css */ `
   }
 `;
 
+// No travel waiting to be played. One array rather than a new one per render,
+// so "nothing pending" compares equal to itself.
+const TRAVELS_NONE = [];
+
 /**
  * @type {import("preact").FunctionComponent<{
  *   value?: any,
@@ -746,6 +757,151 @@ export const Spin = ({
   const startAllowed = startIsNext ? nextAllowed : previousAllowed;
   const endAllowed = startIsNext ? previousAllowed : nextAllowed;
 
+  // A value asked to be SEEN arriving (`--navi-update:smooth`): the spin plays
+  // the travel a chevron would play and lets the value land with the slides, so
+  // a shortcut under it reads as "go to that day" rather than "be that day".
+  // Whatever the distance it is ONE travel — a spin is not a wheel, and three
+  // weeks are read as "it moved forward" rather than as twenty-one slides — so
+  // the slide arriving is the one that shows the value being travelled to.
+  //
+  // Queued rather than held one at a time: two shortcuts pressed in a row are
+  // two travels, each landing on its own value, and the one being played is
+  // always the head. And started from a layout effect rather than from the
+  // request itself, so the arriving slide is written before the container
+  // places it — started there, the first frame would show the neighbouring
+  // value and swap to the target mid-flight.
+  const [travelsPending, setTravelsPendingState] = useState(TRAVELS_NONE);
+  const travelsPendingRef = useRef(TRAVELS_NONE);
+  const travelPending = travelsPending[0];
+  const setTravelsPending = (travels) => {
+    travelsPendingRef.current = travels.length ? travels : TRAVELS_NONE;
+    setTravelsPendingState(travelsPendingRef.current);
+  };
+  const onRequestSetUIStateRef = useRef();
+  onRequestSetUIStateRef.current = (e) => {
+    if (editable) {
+      // Nothing travels around a field: the value is typed into the middle.
+      return;
+    }
+    const { behavior, value: valueRequested } = e.detail;
+    if (behavior !== "smooth") {
+      return;
+    }
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      // Whoever asked to see less motion is answered first: the value is swapped
+      // in place, which is what `--navi-update` alone does.
+      return;
+    }
+    if (
+      valueRequested === undefined ||
+      valueRequested === null ||
+      valueRequested === ""
+    ) {
+      // Nowhere to travel to — the erase a calendar offers, say.
+      return;
+    }
+    const travelsQueued = travelsPendingRef.current;
+    // Where the spin stands when this travel starts: behind the ones already
+    // queued, rather than where the eye is now.
+    const valueFrom = travelsQueued.length
+      ? travelsQueued[travelsQueued.length - 1].value
+      : valueShown;
+    const direction = compareValues(valueRequested, valueFrom);
+    if (direction === 0) {
+      return;
+    }
+    const goingNext = direction > 0;
+    // Out of reach, in both the ways a value can be: past the end of what one
+    // may reach, or one step past it — the first step of the travel is the very
+    // one the chevron that way is refused.
+    const outOfReach = goingNext
+      ? hasMax &&
+        (compareValues(valueRequested, max) > 0 ||
+          compareValues(valueAtStep(valueFrom, step), max) > 0)
+      : hasMin &&
+        (compareValues(valueRequested, min) < 0 ||
+          compareValues(valueAtStep(valueFrom, -step), min) < 0);
+    if (outOfReach) {
+      // The same refusal a chevron gives, in the same words — said at the value
+      // rather than at the chevron that way, because the press was not on a
+      // chevron: what was asked about is the value, and that is where the
+      // answer belongs.
+      e.preventDefault();
+      e.stopPropagation();
+      openCallout(
+        naviI18n(goingNext ? "spin.nothing_after" : "spin.nothing_before"),
+        {
+          anchorElement: middleRef.current,
+          status: "info",
+          openingEvent: e.detail.event ?? e,
+        },
+      );
+      return;
+    }
+    // Taken here and answered when the slides land (see onLoop): the control
+    // must not be given the value on the way past, or there would be nothing
+    // left to arrive.
+    e.stopPropagation();
+    // A direction on the map, the way a chevron says it (see wayOut): the
+    // slides are laid out from start to end, so which value sits where is what
+    // decides the way, not which value is bigger.
+    const atStart = goingNext ? startIsNext : !startIsNext;
+    const towardsEnd = atStart ? -1 : 1;
+    setTravelsPending([
+      ...travelsQueued,
+      {
+        value: valueRequested,
+        area: atStart ? "start" : "end",
+        dx: vertical ? 0 : towardsEnd,
+        dy: vertical ? towardsEnd : 0,
+        event: e.detail.event ?? e,
+      },
+    ]);
+  };
+  useLayoutEffect(() => {
+    const middleEl = middleRef.current;
+    const onRequestSetUIState = (e) => {
+      onRequestSetUIStateRef.current(e);
+    };
+    // On the way DOWN, and on the box holding the control rather than on the
+    // control: the request is dispatched AT the control host, where the
+    // controller is already listening, and the spin has to be able to take it
+    // before the value is set.
+    middleEl.addEventListener("navi_set_ui_state", onRequestSetUIState, true);
+    return () => {
+      middleEl.removeEventListener(
+        "navi_set_ui_state",
+        onRequestSetUIState,
+        true,
+      );
+    };
+  }, []);
+  useLayoutEffect(() => {
+    if (!travelPending) {
+      return;
+    }
+    // What `--navi-left` and friends ask the container for (see
+    // registerSlideCommand): asked directly because the container already
+    // carries a `commandfor` of its own — pressing the middle opens the picker
+    // — so a command triggered from it would be about the picker.
+    dispatchCustomEvent(
+      document.getElementById(containerId),
+      "navi_slide_move",
+      {
+        event: travelPending.event,
+        dx: travelPending.dx,
+        dy: travelPending.dy,
+      },
+    );
+  }, [travelPending]);
+  // What the slide the travel is heading for shows: the value being travelled
+  // TO, not the neighbour that place holds at rest — one travel covers the
+  // whole distance, so the far value is what arrives.
+  const valueDrawnAtStart =
+    travelPending?.area === "start" ? travelPending.value : valueAtStart;
+  const valueDrawnAtEnd =
+    travelPending?.area === "end" ? travelPending.value : valueAtEnd;
+
   const wayOut = (atStart) => {
     const isNext = atStart ? startIsNext : !startIsNext;
     return (
@@ -893,6 +1049,20 @@ export const Spin = ({
               // the value moves one step here, in onLoop, as it lands.
               loop
               onLoop={({ dx, dy, event }) => {
+                // A travel asked for by a VALUE (`--navi-update:smooth`):
+                // that value is what lands, whatever the distance it covered,
+                // and the press that asked for it is what says so to uiAction.
+                // Recognized by that press: a chevron travel hurrying this one
+                // along lands first and is a step of its own.
+                const travelLanding = travelsPendingRef.current[0];
+                if (
+                  travelLanding &&
+                  event?.detail?.event === travelLanding.event
+                ) {
+                  setTravelsPending(travelsPendingRef.current.slice(1));
+                  setValue(travelLanding.value, travelLanding.event);
+                  return;
+                }
                 // One step, whichever axis it came from: the map is a line, so
                 // only one of the two is ever anything but zero. Towards the
                 // end of the line is a step forward, unless the line was laid
@@ -929,7 +1099,7 @@ export const Spin = ({
               {/* Three places, not three values: "start" is the one above (or
                   to the left), whichever value the spin puts there. */}
               <Slide area="start" flex align="center">
-                {renderValue(valueAtStart, { maxLines })}
+                {renderValue(valueDrawnAtStart, { maxLines })}
               </Slide>
               <Slide
                 area="current"
@@ -944,7 +1114,7 @@ export const Spin = ({
                 {renderValue(valueShown, { maxLines })}
               </Slide>
               <Slide area="end" flex align="center">
-                {renderValue(valueAtEnd, { maxLines })}
+                {renderValue(valueDrawnAtEnd, { maxLines })}
               </Slide>
             </SlideContainer>
           </>

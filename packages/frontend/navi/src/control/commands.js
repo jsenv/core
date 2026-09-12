@@ -395,9 +395,10 @@ registerNaviCommand("--navi-void", (source) => {
 });
 
 // "--navi-update:smooth" asks the control to be SEEN moving to the value — a
-// wheel scrolls to it rather than swapping its digits — so a shortcut under
-// two wheels shows which one it changed, and by how much. The value itself is
-// set at once either way; only the drawing is concerned.
+// wheel scrolls to it rather than swapping its digits, a spin plays the travel
+// its chevron would play — so a shortcut under a control shows which value it
+// changed, and by how much. What that movement is, and whether the value
+// travels with it, belongs to the control: see control_value.md.
 registerNaviCommand("--navi-update", (source, event, { argument }) => {
   const target =
     resolveExplicitTarget(source) || resolveFirstParentControl(source);
