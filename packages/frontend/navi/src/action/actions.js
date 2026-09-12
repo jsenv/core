@@ -723,6 +723,15 @@ const resolveActionProxies = (actionSet) => {
 
 const NO_PARAMS = { __no_params__: true };
 const mergeActionParams = (currentParams, newParams) => {
+  if (newParams === null) {
+    // `null` is a question that cannot be asked: a callback destructuring its
+    // params throws on it. It is what a computed says when it has not got
+    // enough to ask with, and "nothing to ask" is said with `undefined`
+    // everywhere below (and by the run guards reading paramsSignal), so it
+    // becomes that here, at the one door params coming from a binding go
+    // through.
+    newParams = undefined;
+  }
   // The order of these two checks is load-bearing. Checking `undefined` first
   // looks symmetric — "no new params, keep whatever is there, NO_PARAMS
   // included" — and breaks routing: merge(NO_PARAMS, undefined) must yield
@@ -980,7 +989,10 @@ export const createAction = (callback, rootOptions = {}) => {
      *
      * @param {any} newParamsOrSignal - params, or a signal holding them (the
      *   result then retargets itself as the signal changes), or an object whose
-     *   values may be signals.
+     *   values may be signals. A signal with nothing to ask yet — a question
+     *   computed from a form still missing a field — holds `undefined` or
+     *   `null`: the instance then has no params, which is what
+     *   `useAsyncData(action, { run: true })` reads to start nothing.
      * @param {object} [options]
      * @param {number} [options.debounce] - milliseconds the params must stay
      *   stable before the instance follows them. What it buys is a screen that

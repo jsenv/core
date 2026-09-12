@@ -217,11 +217,7 @@ export const setupBrowserIntegrationViaHistory = ({
           [NAV_DEPTH_STATE_KEY]: getNavDepth(),
         },
       });
-      if (navigationType === "push") {
-        window.history.pushState(effectiveState, null, url);
-      } else {
-        window.history.replaceState(effectiveState, null, url);
-      }
+      writeHistoryEntry(navigationType, effectiveState, url);
       rememberEntryIsOfThisDocument();
       updateDocumentUrl(url);
       updateDocumentState(effectiveState);
@@ -241,14 +237,14 @@ export const setupBrowserIntegrationViaHistory = ({
             [NAV_DEPTH_STATE_KEY]: getNavDepth(),
           },
         });
-        window.history.replaceState(state, null, url);
+        writeHistoryEntry("replace", state, url);
         rememberEntryIsOfThisDocument();
       } else if (redirected) {
         // The entry the browser is on names an address that only sends
         // elsewhere — a cold load on it, or a back into it. Written over where
         // it stands (the entry keeps its place in the stack, hence its state
         // and the depth in it): pressing back must not walk into it again.
-        window.history.replaceState(state, null, url);
+        writeHistoryEntry("replace", state, url);
         rememberEntryIsOfThisDocument();
       }
       updateDocumentUrl(url);
@@ -501,7 +497,7 @@ export const setupBrowserIntegrationViaHistory = ({
       // The entry itself has to lose them too, not just the document state:
       // getDocumentState() reads the entry back, and every state write copies
       // what it finds there onto the next one.
-      window.history.replaceState(state, null, url);
+      writeHistoryEntry("replace", state, url);
     }
     handleRoutingTask(url, {
       reason: "routing initialization",
@@ -528,6 +524,58 @@ export const setupBrowserIntegrationViaHistory = ({
 // replace onto the url already displayed. Never a traverse — the browser has
 // already moved window.location.href when a popstate is handled, so the
 // comparison would say "same" about every back and forward.
+// Browsers refuse an address written too often: WebKit throws a SecurityError
+// past 100 writes per 10 seconds, Chromium and Firefox drop the write. A state
+// bound to the url and written per frame gets there in under two seconds, and
+// a developer working in Chromium never sees it. Every write goes through here
+// so the rate is measured against the strictest budget before any browser
+// refuses, and so a refusal names its cause rather than `replaceState`.
+const HISTORY_WRITE_BUDGET = 100;
+const HISTORY_WRITE_WINDOW_MS = 10_000;
+const ADDRESS_WRITE_ADVICE = `An address is not a recording of a gesture: a value dragged per frame belongs to the gesture, and the state bound to the url is written once, on release.`;
+const writeHistoryEntry = (navigationType, state, url) => {
+  noteHistoryWrite(url);
+  try {
+    if (navigationType === "push") {
+      window.history.pushState(state, null, url);
+    } else {
+      window.history.replaceState(state, null, url);
+    }
+  } catch (e) {
+    if (e.name !== "SecurityError") {
+      throw e;
+    }
+    throw new Error(
+      `The browser refused to write the address ${url}: ${e.message}. ${ADDRESS_WRITE_ADVICE}`,
+      { cause: e },
+    );
+  }
+};
+const noteHistoryWrite = import.meta.dev
+  ? (() => {
+      const writeTimes = [];
+      let warned = false;
+      return (url) => {
+        if (warned) {
+          return;
+        }
+        const now = performance.now();
+        writeTimes.push(now);
+        while (writeTimes[0] < now - HISTORY_WRITE_WINDOW_MS) {
+          writeTimes.shift();
+        }
+        if (writeTimes.length < HISTORY_WRITE_BUDGET) {
+          return;
+        }
+        warned = true;
+        const seconds = ((now - writeTimes[0]) / 1000).toFixed(1);
+        console.warn(
+          `[navi] the address was written ${HISTORY_WRITE_BUDGET} times in ${seconds}s (last: ${url}). Safari refuses more than ${HISTORY_WRITE_BUDGET} writes per ${HISTORY_WRITE_WINDOW_MS / 1000}s with a SecurityError, and the state then runs ahead of the address. ${ADDRESS_WRITE_ADVICE}`,
+        );
+      };
+    })()
+  : () => {};
+
 const isStateOnlyNavigation = (
   url,
   { navigationType },

@@ -76,6 +76,11 @@ if (import.meta.hot) {
  *   as the user moved. `"push"` is for a state whose values ARE places one came
  *   from (the photo one is looking at in a gallery). Whatever is said here, one
  *   write can say otherwise: `signal.set(value, { history })`.
+ *   Either way every write reaches the address, synchronously, and browsers
+ *   refuse an address written too often (Safari: 100 writes per 10 s, then a
+ *   SecurityError). A value one DRAGS is written at 60 Hz: keep it in the
+ *   gesture while the finger is down and write the state once, on release —
+ *   an address is not a recording of a gesture.
  * @param {boolean} [options.debug=false] - Enable debug logging for this signal's operations
  * @returns {import("@preact/signals").Signal} A signal that can be synchronized with a source signal and/or persisted in localStorage. The signal includes a `validity` property for validation state.
  *
