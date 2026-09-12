@@ -1574,7 +1574,15 @@ const startDragToCarryCopy = (
               // copy at scale 1 as the "new" state.
               clone.removeAttribute("navi-drag-clone");
             };
-            await answer(syncCloneWithDropTarget);
+            try {
+              await answer(syncCloneWithDropTarget);
+            } catch {
+              // Coming down on a place can be a QUESTION, and the answer may be
+              // no. Refused, the thing is still where it was and the screen has
+              // to say so: the copy takes the same journey home a refused throw
+              // takes — from wherever it got to, which is where it visibly is.
+              await settleCloneBack(cloneWrapper, draggedElement);
+            }
           };
 
           if (dropMeans === "toss") {

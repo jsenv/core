@@ -11288,9 +11288,11 @@ const swipeTypeOf = (axis, pulled) => {
  * copy is captured where it lands rather than where it was let go of.
  *
  * And the promise matters in both cases: the gesture holds its copy until the
- * answer settles. Returning the transition is what makes a landing continuous; a
- * `toss` that rejects brings the copy back, because the thing still exists and the
- * screen has to say so.
+ * answer settles. Returning the transition is what makes a landing continuous;
+ * rejecting brings the copy back over the original, because the thing still
+ * exists and the screen has to say so. That holds for every outcome that carries
+ * a copy — `land` and `reorder` as much as `toss` and `leave` — so a place can be
+ * asked about rather than taken: refuse, and the board is as it was.
  *
  * Starting a document transition is the application's call and not navi's: a
  * `view-transition-name` must be unique per document, so only the application can
