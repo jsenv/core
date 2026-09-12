@@ -1,7 +1,9 @@
 import {
   chainEvent,
   dispatchCustomEvent,
+  findEvent,
   isPressDisputedByDrag,
+  isTouchDrivenEvent,
 } from "@jsenv/dom";
 import { useContext, useId, useRef } from "preact/hooks";
 
@@ -30,6 +32,7 @@ import {
 import { interactionsDisputeThePress } from "../interaction/interactions.js";
 import { LONGPRESS_ATTRIBUTE } from "../interaction/interaction_press.js";
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
+import { moveFocusTo } from "../../utils/focus/focus_transfer.js";
 import { ControlIdContext } from "../control_context.js";
 import { isControlValueGivenByProps } from "../control_hooks.jsx";
 import { commitUIStateAsAnswer, isUIStateHeld } from "../held_ui_state.js";
@@ -255,11 +258,7 @@ const PickerNative = (props) => {
             e.preventDefault();
           },
           allowed: () => {
-            try {
-              pickerInput.showPicker();
-            } catch {
-              pickerInput.click();
-            }
+            showNativePicker(pickerInput, e);
           },
         });
       }}
@@ -277,11 +276,7 @@ const PickerNative = (props) => {
                 // nothing to do, color picker whole surface is opening the picker
               } else {
                 // other picker might not open the picker when clicking the input surface (only the calendar picker for instance would open)
-                try {
-                  pickerInput.showPicker();
-                } catch {
-                  pickerInput.click();
-                }
+                showNativePicker(pickerInput, e);
               }
             },
           };
@@ -1263,4 +1258,28 @@ const PickerCalloutPopup = ({
       </div>
     </Box>
   );
+};
+
+// Under a finger the input is focused before the browser's picker is asked
+// for: iOS presents a date/time input's picker as that input's own inputView,
+// so what the tap focuses is what opens. showPicker() presents nothing there
+// and throws nothing either, so the catch below cannot be what learns about
+// it — and a synthetic click() does not focus a date input there.
+// A departure from the coarse-pointer policy (see focus_transfer.js), argued
+// here: the press asked for this input's picker, and the types whose focus
+// would raise the on-screen keyboard instead are held readOnly already (see
+// NON_MOBILE_KEYBOARD_TYPES in picker.jsx). No ring: nobody is about to type.
+// Not with a mouse, where showPicker() presents the picker on its own: the
+// keyboard stays where it was — a spin's middle, the button that sent the
+// command — so one keeps going with the keys once the calendar closes, rather
+// than on an input drawn behind (see the headless variant in picker.jsx).
+const showNativePicker = (pickerInput, event) => {
+  if (findEvent(event, isTouchDrivenEvent)) {
+    moveFocusTo(pickerInput, { focusVisible: false });
+  }
+  try {
+    pickerInput.showPicker();
+  } catch {
+    pickerInput.click();
+  }
 };

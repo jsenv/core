@@ -131,11 +131,14 @@ export const chainEvent = (customEvent, parentEvent) => {
  * which one WAS used — a tap brings the on-screen keyboard up, the trackpad
  * next to it does not.
  *
- * Three readings, because no single one covers every path from a finger to an
+ * Four readings, because no single one covers every path from a finger to an
  * event:
  * - a touch* event says it outright;
  * - `pointerType` says it on a PointerEvent, which "click" also is in some
  *   engines and not in others — hence not the only reading;
+ * - the click WebKit dispatches for a tap is a PointerEvent whose `pointerType`
+ *   says "mouse" while its `pointerId` is the finger's: the press last seen
+ *   down with that id answers for it (see lastPress below);
  * - `sourceCapabilities.firesTouchEvents` is what is left for the compatibility
  *   mouse events a tap synthesizes, where nothing else remembers the finger.
  *   Absent outside Chromium, where it costs nothing: the readings above have
@@ -151,10 +154,30 @@ export const isTouchDrivenEvent = (event) => {
   // "" on a pointer event the engine could not attribute — not an answer, so
   // it falls through to the last reading rather than being read as "not touch".
   if (event.pointerType) {
-    return event.pointerType === "touch";
+    if (event.pointerType === "touch") {
+      return true;
+    }
+    if (lastPress && event.pointerId === lastPress.pointerId) {
+      return lastPress.pointerType === "touch";
+    }
+    return false;
   }
   return event.sourceCapabilities?.firesTouchEvents === true;
 };
+// The press behind the next click: a click follows the pointerup of its own
+// press, and no other press comes between the two. Recorded on window in
+// capture so that nothing lower can hide a press from it.
+let lastPress = null;
+window.addEventListener(
+  "pointerdown",
+  (pointerdownEvent) => {
+    lastPress = {
+      pointerId: pointerdownEvent.pointerId,
+      pointerType: pointerdownEvent.pointerType,
+    };
+  },
+  { capture: true, passive: true },
+);
 
 /**
  * Whether `event` is a click a pointer press produced, as opposed to one

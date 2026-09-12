@@ -32749,9 +32749,10 @@ registerNaviCommand("--navi-void", (source) => {
 });
 
 // "--navi-update:smooth" asks the control to be SEEN moving to the value — a
-// wheel scrolls to it rather than swapping its digits — so a shortcut under
-// two wheels shows which one it changed, and by how much. The value itself is
-// set at once either way; only the drawing is concerned.
+// wheel scrolls to it rather than swapping its digits, a spin plays the travel
+// its chevron would play — so a shortcut under a control shows which value it
+// changed, and by how much. What that movement is, and whether the value
+// travels with it, belongs to the control: see control_value.md.
 registerNaviCommand("--navi-update", (source, event, { argument }) => {
   const target =
     resolveExplicitTarget(source) || resolveFirstParentControl(source);
@@ -64008,11 +64009,7 @@ const PickerNative = props => {
           e.preventDefault();
         },
         allowed: () => {
-          try {
-            pickerInput.showPicker();
-          } catch {
-            pickerInput.click();
-          }
+          showNativePicker(pickerInput, e);
         }
       });
     },
@@ -64028,11 +64025,7 @@ const PickerNative = props => {
             const pickerInput = getPickerInput(pickerEl);
             if (pickerInput.type === "color") ; else {
               // other picker might not open the picker when clicking the input surface (only the calendar picker for instance would open)
-              try {
-                pickerInput.showPicker();
-              } catch {
-                pickerInput.click();
-              }
+              showNativePicker(pickerInput, e);
             }
           }
         };
@@ -64929,6 +64922,32 @@ const PickerCalloutPopup = ({
       })
     })
   );
+};
+
+// Under a finger the input is focused before the browser's picker is asked
+// for: iOS presents a date/time input's picker as that input's own inputView,
+// so what the tap focuses is what opens. showPicker() presents nothing there
+// and throws nothing either, so the catch below cannot be what learns about
+// it — and a synthetic click() does not focus a date input there.
+// A departure from the coarse-pointer policy (see focus_transfer.js), argued
+// here: the press asked for this input's picker, and the types whose focus
+// would raise the on-screen keyboard instead are held readOnly already (see
+// NON_MOBILE_KEYBOARD_TYPES in picker.jsx). No ring: nobody is about to type.
+// Not with a mouse, where showPicker() presents the picker on its own: the
+// keyboard stays where it was — a spin's middle, the button that sent the
+// command — so one keeps going with the keys once the calendar closes, rather
+// than on an input drawn behind (see the headless variant in picker.jsx).
+const showNativePicker = (pickerInput, event) => {
+  if (findEvent(event, isTouchDrivenEvent)) {
+    moveFocusTo(pickerInput, {
+      focusVisible: false
+    });
+  }
+  try {
+    pickerInput.showPicker();
+  } catch {
+    pickerInput.click();
+  }
 };
 
 installImportMetaCssBuild(import.meta);
@@ -74873,6 +74892,10 @@ const css$s = /* css */`@layer navi {
 }
 `;
 
+// No travel waiting to be played. One array rather than a new one per render,
+// so "nothing pending" compares equal to itself.
+const TRAVELS_NONE = [];
+
 /**
  * @type {import("ignore:preact").FunctionComponent<{
  *   value?: any,
@@ -75131,6 +75154,126 @@ const Spin = ({
   const valueAtEnd = startIsNext ? valuePrevious : valueNext;
   const startAllowed = startIsNext ? nextAllowed : previousAllowed;
   const endAllowed = startIsNext ? previousAllowed : nextAllowed;
+
+  // A value asked to be SEEN arriving (`--navi-update:smooth`): the spin plays
+  // the travel a chevron would play and lets the value land with the slides, so
+  // a shortcut under it reads as "go to that day" rather than "be that day".
+  // Whatever the distance it is ONE travel — a spin is not a wheel, and three
+  // weeks are read as "it moved forward" rather than as twenty-one slides — so
+  // the slide arriving is the one that shows the value being travelled to.
+  //
+  // Queued rather than held one at a time: two shortcuts pressed in a row are
+  // two travels, each landing on its own value, and the one being played is
+  // always the head. And started from a layout effect rather than from the
+  // request itself, so the arriving slide is written before the container
+  // places it — started there, the first frame would show the neighbouring
+  // value and swap to the target mid-flight.
+  const [travelsPending, setTravelsPendingState] = useState(TRAVELS_NONE);
+  const travelsPendingRef = useRef(TRAVELS_NONE);
+  const travelPending = travelsPending[0];
+  const setTravelsPending = travels => {
+    travelsPendingRef.current = travels.length ? travels : TRAVELS_NONE;
+    setTravelsPendingState(travelsPendingRef.current);
+  };
+  const onRequestSetUIStateRef = useRef();
+  onRequestSetUIStateRef.current = e => {
+    if (editable) {
+      // Nothing travels around a field: the value is typed into the middle.
+      return;
+    }
+    const {
+      behavior,
+      value: valueRequested
+    } = e.detail;
+    if (behavior !== "smooth") {
+      return;
+    }
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      // Whoever asked to see less motion is answered first: the value is swapped
+      // in place, which is what `--navi-update` alone does.
+      return;
+    }
+    if (valueRequested === undefined || valueRequested === null || valueRequested === "") {
+      // Nowhere to travel to — the erase a calendar offers, say.
+      return;
+    }
+    const travelsQueued = travelsPendingRef.current;
+    // Where the spin stands when this travel starts: behind the ones already
+    // queued, rather than where the eye is now.
+    const valueFrom = travelsQueued.length ? travelsQueued[travelsQueued.length - 1].value : valueShown;
+    const direction = compareValues(valueRequested, valueFrom);
+    if (direction === 0) {
+      return;
+    }
+    const goingNext = direction > 0;
+    // Out of reach, in both the ways a value can be: past the end of what one
+    // may reach, or one step past it — the first step of the travel is the very
+    // one the chevron that way is refused.
+    const outOfReach = goingNext ? hasMax && (compareValues(valueRequested, max) > 0 || compareValues(valueAtStep(valueFrom, step), max) > 0) : hasMin && (compareValues(valueRequested, min) < 0 || compareValues(valueAtStep(valueFrom, -step), min) < 0);
+    if (outOfReach) {
+      // The same refusal a chevron gives, in the same words — said at the value
+      // rather than at the chevron that way, because the press was not on a
+      // chevron: what was asked about is the value, and that is where the
+      // answer belongs.
+      e.preventDefault();
+      e.stopPropagation();
+      openCallout(naviI18n(goingNext ? "spin.nothing_after" : "spin.nothing_before"), {
+        anchorElement: middleRef.current,
+        status: "info",
+        openingEvent: e.detail.event ?? e
+      });
+      return;
+    }
+    // Taken here and answered when the slides land (see onLoop): the control
+    // must not be given the value on the way past, or there would be nothing
+    // left to arrive.
+    e.stopPropagation();
+    // A direction on the map, the way a chevron says it (see wayOut): the
+    // slides are laid out from start to end, so which value sits where is what
+    // decides the way, not which value is bigger.
+    const atStart = goingNext ? startIsNext : !startIsNext;
+    const towardsEnd = atStart ? -1 : 1;
+    setTravelsPending([...travelsQueued, {
+      value: valueRequested,
+      area: atStart ? "start" : "end",
+      dx: vertical ? 0 : towardsEnd,
+      dy: vertical ? towardsEnd : 0,
+      event: e.detail.event ?? e
+    }]);
+  };
+  useLayoutEffect(() => {
+    const middleEl = middleRef.current;
+    const onRequestSetUIState = e => {
+      onRequestSetUIStateRef.current(e);
+    };
+    // On the way DOWN, and on the box holding the control rather than on the
+    // control: the request is dispatched AT the control host, where the
+    // controller is already listening, and the spin has to be able to take it
+    // before the value is set.
+    middleEl.addEventListener("navi_set_ui_state", onRequestSetUIState, true);
+    return () => {
+      middleEl.removeEventListener("navi_set_ui_state", onRequestSetUIState, true);
+    };
+  }, []);
+  useLayoutEffect(() => {
+    if (!travelPending) {
+      return;
+    }
+    // What `--navi-left` and friends ask the container for (see
+    // registerSlideCommand): asked directly because the container already
+    // carries a `commandfor` of its own — pressing the middle opens the picker
+    // — so a command triggered from it would be about the picker.
+    dispatchCustomEvent(document.getElementById(containerId), "navi_slide_move", {
+      event: travelPending.event,
+      dx: travelPending.dx,
+      dy: travelPending.dy
+    });
+  }, [travelPending]);
+  // What the slide the travel is heading for shows: the value being travelled
+  // TO, not the neighbour that place holds at rest — one travel covers the
+  // whole distance, so the far value is what arrives.
+  const valueDrawnAtStart = travelPending?.area === "start" ? travelPending.value : valueAtStart;
+  const valueDrawnAtEnd = travelPending?.area === "end" ? travelPending.value : valueAtEnd;
   const wayOut = atStart => {
     const isNext = atStart ? startIsNext : !startIsNext;
     return jsx(WayOut, {
@@ -75244,6 +75387,17 @@ const Spin = ({
             dy,
             event
           }) => {
+            // A travel asked for by a VALUE (`--navi-update:smooth`):
+            // that value is what lands, whatever the distance it covered,
+            // and the press that asked for it is what says so to uiAction.
+            // Recognized by that press: a chevron travel hurrying this one
+            // along lands first and is a step of its own.
+            const travelLanding = travelsPendingRef.current[0];
+            if (travelLanding && event?.detail?.event === travelLanding.event) {
+              setTravelsPending(travelsPendingRef.current.slice(1));
+              setValue(travelLanding.value, travelLanding.event);
+              return;
+            }
             // One step, whichever axis it came from: the map is a line, so
             // only one of the two is ever anything but zero. Towards the
             // end of the line is a step forward, unless the line was laid
@@ -75276,7 +75430,7 @@ const Spin = ({
             area: "start",
             flex: true,
             align: "center",
-            children: renderValue(valueAtStart, {
+            children: renderValue(valueDrawnAtStart, {
               maxLines
             })
           }), jsx(Slide, {
@@ -75296,7 +75450,7 @@ const Spin = ({
             area: "end",
             flex: true,
             align: "center",
-            children: renderValue(valueAtEnd, {
+            children: renderValue(valueDrawnAtEnd, {
               maxLines
             })
           })]
