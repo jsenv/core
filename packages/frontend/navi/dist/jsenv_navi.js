@@ -3092,6 +3092,15 @@ const resolveActionProxies = (actionSet) => {
 
 const NO_PARAMS = { __no_params__: true };
 const mergeActionParams = (currentParams, newParams) => {
+  if (newParams === null) {
+    // `null` is a question that cannot be asked: a callback destructuring its
+    // params throws on it. It is what a computed says when it has not got
+    // enough to ask with, and "nothing to ask" is said with `undefined`
+    // everywhere below (and by the run guards reading paramsSignal), so it
+    // becomes that here, at the one door params coming from a binding go
+    // through.
+    newParams = undefined;
+  }
   // The order of these two checks is load-bearing. Checking `undefined` first
   // looks symmetric — "no new params, keep whatever is there, NO_PARAMS
   // included" — and breaks routing: merge(NO_PARAMS, undefined) must yield
@@ -3349,7 +3358,10 @@ const createAction = (callback, rootOptions = {}) => {
      *
      * @param {any} newParamsOrSignal - params, or a signal holding them (the
      *   result then retargets itself as the signal changes), or an object whose
-     *   values may be signals.
+     *   values may be signals. A signal with nothing to ask yet — a question
+     *   computed from a form still missing a field — holds `undefined` or
+     *   `null`: the instance then has no params, which is what
+     *   `useAsyncData(action, { run: true })` reads to start nothing.
      * @param {object} [options]
      * @param {number} [options.debounce] - milliseconds the params must stay
      *   stable before the instance follows them. What it buys is a screen that
@@ -16509,6 +16521,11 @@ const generateSignalId = () => {
  *   as the user moved. `"push"` is for a state whose values ARE places one came
  *   from (the photo one is looking at in a gallery). Whatever is said here, one
  *   write can say otherwise: `signal.set(value, { history })`.
+ *   Either way every write reaches the address, synchronously, and browsers
+ *   refuse an address written too often (Safari: 100 writes per 10 s, then a
+ *   SecurityError). A value one DRAGS is written at 60 Hz: keep it in the
+ *   gesture while the finger is down and write the state once, on release —
+ *   an address is not a recording of a gesture.
  * @param {boolean} [options.debug=false] - Enable debug logging for this signal's operations
  * @returns {import("@preact/signals").Signal} A signal that can be synchronized with a source signal and/or persisted in localStorage. The signal includes a `validity` property for validation state.
  *
@@ -26544,11 +26561,7 @@ const setupBrowserIntegrationViaHistory = ({
           [NAV_DEPTH_STATE_KEY]: getNavDepth(),
         },
       });
-      if (navigationType === "push") {
-        window.history.pushState(effectiveState, null, url);
-      } else {
-        window.history.replaceState(effectiveState, null, url);
-      }
+      writeHistoryEntry(navigationType, effectiveState, url);
       rememberEntryIsOfThisDocument();
       updateDocumentUrl(url);
       updateDocumentState(effectiveState);
@@ -26568,14 +26581,14 @@ const setupBrowserIntegrationViaHistory = ({
             [NAV_DEPTH_STATE_KEY]: getNavDepth(),
           },
         });
-        window.history.replaceState(state, null, url);
+        writeHistoryEntry("replace", state, url);
         rememberEntryIsOfThisDocument();
       } else if (redirected) {
         // The entry the browser is on names an address that only sends
         // elsewhere — a cold load on it, or a back into it. Written over where
         // it stands (the entry keeps its place in the stack, hence its state
         // and the depth in it): pressing back must not walk into it again.
-        window.history.replaceState(state, null, url);
+        writeHistoryEntry("replace", state, url);
         rememberEntryIsOfThisDocument();
       }
       updateDocumentUrl(url);
@@ -26828,7 +26841,7 @@ const setupBrowserIntegrationViaHistory = ({
       // The entry itself has to lose them too, not just the document state:
       // getDocumentState() reads the entry back, and every state write copies
       // what it finds there onto the next one.
-      window.history.replaceState(state, null, url);
+      writeHistoryEntry("replace", state, url);
     }
     handleRoutingTask(url, {
       reason: "routing initialization",
@@ -26850,11 +26863,25 @@ const setupBrowserIntegrationViaHistory = ({
     visitedUrlsSignal,
   };
 };
+const ADDRESS_WRITE_ADVICE = `An address is not a recording of a gesture: a value dragged per frame belongs to the gesture, and the state bound to the url is written once, on release.`;
+const writeHistoryEntry = (navigationType, state, url) => {
+  try {
+    if (navigationType === "push") {
+      window.history.pushState(state, null, url);
+    } else {
+      window.history.replaceState(state, null, url);
+    }
+  } catch (e) {
+    if (e.name !== "SecurityError") {
+      throw e;
+    }
+    throw new Error(
+      `The browser refused to write the address ${url}: ${e.message}. ${ADDRESS_WRITE_ADVICE}`,
+      { cause: e },
+    );
+  }
+};
 
-// Read before the history is written, in both places that ask: a push or a
-// replace onto the url already displayed. Never a traverse — the browser has
-// already moved window.location.href when a popstate is handled, so the
-// comparison would say "same" about every back and forward.
 const isStateOnlyNavigation = (
   url,
   { navigationType },
