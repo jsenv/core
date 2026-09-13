@@ -18,6 +18,7 @@ import { listen, stopListening } from "./internal/listen.js";
 import { listenEvent } from "./internal/listen_event.js";
 import { listenRequest } from "./internal/listen_request.js";
 import { listenServerConnectionError } from "./internal/listen_server_connection_error.js";
+import { readRequestTarget } from "./internal/request_target.js";
 import { composeTwoResponses } from "./internal/response_composition.js";
 import { createSecureServer } from "./internal/secure_server.js";
 import { resolveServerOrigins } from "./internal/server_origins.js";
@@ -792,7 +793,14 @@ export const startServer = async ({
 
   request: {
     const requestEventHandler = async (nodeRequest, nodeResponse) => {
-      const requestHost = nodeRequest.authority || nodeRequest.headers.host;
+      const requestTarget = readRequestTarget(nodeRequest.url);
+      if (!requestTarget) {
+        nodeResponse.writeHead(400, "Request url is not supported");
+        nodeResponse.end();
+        return;
+      }
+      const requestHost =
+        requestTarget.host || nodeRequest.authority || nodeRequest.headers.host;
       if (!isHostAllowed(requestHost)) {
         logger.warn(
           `${nodeRequest.method} ${nodeRequest.url} refused: host "${requestHost}" is not allowed (see the allowedHosts option)`,
@@ -803,16 +811,8 @@ export const startServer = async ({
       }
       if (redirectHttpToHttps && !nodeRequest.connection.encrypted) {
         nodeResponse.writeHead(301, {
-          location: `${serverOrigin}${nodeRequest.url}`,
+          location: `${serverOrigin}${requestTarget.resource}`,
         });
-        nodeResponse.end();
-        return;
-      }
-      try {
-        // eslint-disable-next-line no-new
-        new URL(nodeRequest.url, "http://example.com");
-      } catch {
-        nodeResponse.writeHead(400, "Request url is not supported");
         nodeResponse.end();
         return;
       }
@@ -897,7 +897,13 @@ export const startServer = async ({
     };
     // https://github.com/websockets/ws/blob/b92745a9d6760e6b4b2394bfac78cbcd258a8c8d/lib/websocket-server.js#L491
     const upgradeEventHandler = async (nodeRequest, socket, head) => {
-      const requestHost = nodeRequest.headers.host;
+      const requestTarget = readRequestTarget(nodeRequest.url);
+      if (!requestTarget) {
+        socket.write(`HTTP/1.1 400 Request url is not supported\r\n\r\n`);
+        socket.destroy();
+        return;
+      }
+      const requestHost = requestTarget.host || nodeRequest.headers.host;
       if (!isHostAllowed(requestHost)) {
         logger.warn(
           `${nodeRequest.method} ${nodeRequest.url} refused: host "${requestHost}" is not allowed (see the allowedHosts option)`,

@@ -26,8 +26,8 @@ return {
 
 ```js
 {
-  "patch_status": 405,
-  "patch_allow": "GET",
+  "patch_status": 404,
+  "patch_allow": null,
   "post_status": 404
 }
 ```

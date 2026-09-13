@@ -23,8 +23,17 @@ export const createResourcePattern = (pattern) => {
   }
 
   const patternEndsWithSlash = pathnamePatternString.endsWith("/");
+  // a pattern constraining nothing: every resource matches it, so whoever uses
+  // it cannot name the resource that matched
+  const matchesEveryResource =
+    !searchPattern &&
+    !hashPattern &&
+    (pathnamePatternString === "*" ||
+      pathnamePatternString === "/" ||
+      pathnamePatternString === "/*");
 
   return {
+    matchesEveryResource,
     match: (resource) => {
       const [pathname, search, hash] = resourceToParts(resource);
       let decodedPathname = decodeURIComponent(pathname);

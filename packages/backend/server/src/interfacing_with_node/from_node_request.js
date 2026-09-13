@@ -20,6 +20,10 @@ import {
 } from "../internal/colorize_response_status.js";
 import { headersFromObject } from "../internal/headers_from_object.js";
 import { parseSingleHeaderWithAttributes } from "../internal/multiple_header.js";
+import {
+  readRequestTarget,
+  resourceToUrlObject,
+} from "../internal/request_target.js";
 import { observableFromNodeStream } from "./observable_from_node_stream.js";
 
 export const fromNodeRequest = (
@@ -66,8 +70,13 @@ export const fromNodeRequest = (
   nodeRequest.pause();
   const body = observableFromNodeStream(nodeRequest);
 
+  // an absolute-form target names the origin the request is for; the host
+  // header is ignored in that case (RFC 9112 section 3.3)
+  const requestTarget = readRequestTarget(nodeRequest.url);
   let requestOrigin;
-  if (nodeRequest.upgrade) {
+  if (requestTarget.origin) {
+    requestOrigin = requestTarget.origin;
+  } else if (nodeRequest.upgrade) {
     requestOrigin = serverOrigin;
   } else if (nodeRequest.authority) {
     requestOrigin = nodeRequest.connection.encrypted
@@ -200,7 +209,7 @@ export const fromNodeRequest = (
     http2: Boolean(nodeRequest.stream),
     origin: requestOrigin,
     ...getPropertiesFromResource({
-      resource: nodeRequest.url,
+      resource: requestTarget.resource,
       baseUrl: requestOrigin,
     }),
     method: nodeRequest.method,
@@ -440,13 +449,12 @@ export const applyRedirectionToRequest = (
   };
 };
 const getPropertiesFromResource = ({ resource, baseUrl }) => {
-  const urlObject = new URL(resource, baseUrl);
-  let pathname = urlObject.pathname;
+  const urlObject = resourceToUrlObject(resource, baseUrl);
 
   return {
     url: String(urlObject),
     searchParams: urlObject.searchParams,
-    pathname,
+    pathname: urlObject.pathname,
     resource,
   };
 };

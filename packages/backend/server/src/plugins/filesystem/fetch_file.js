@@ -112,8 +112,11 @@ export const fetchFileSystem = async (
   if (request.params && "0" in request.params) {
     resource = request.params["0"];
   } else {
-    resource = request.resource.slice(1);
+    resource = request.resource;
   }
+  // the resource is resolved against the served directory, so it must stay a
+  // relative reference: a leading slash would resolve to the filesystem root
+  resource = resource.replace(/^\/+/, "");
   const filesystemUrl = new URL(resource, directoryUrlString);
   const urlString = asUrlString(filesystemUrl);
   if (!urlIsOrIsInsideOf(urlString, directoryUrlString)) {
