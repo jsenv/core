@@ -30,8 +30,8 @@ export { useActionStatus } from "./src/action/use_action_status.js";
 // Whether a request may go out at all — one declaration the resource actions
 // and the controls bound to them read (see docs/network_policy.md).
 export {
-  isOfflineError,
-  OfflineError,
+  isNetworkPolicyError,
+  NetworkPolicyError,
   setNetworkPolicy,
   useNetworkPolicyReason,
 } from "./src/action/network_policy.js";

@@ -282,9 +282,11 @@ naviI18n.addAll({
     fr: "Ça ne peut pas partir.",
     en: "This cannot be sent.",
   },
-  "network_policy.offline": {
-    fr: "Hors ligne : rien n'a été demandé.",
-    en: "Offline: nothing was requested.",
+  // What a request the policy held settles with. Which policy held it is the
+  // reason, carried by the error; the sentence must fit both.
+  "network_policy.held": {
+    fr: "Rien n'a été demandé.",
+    en: "Nothing was requested.",
   },
   "constraint.busy.button": {
     fr: "Cette action est en cours...",

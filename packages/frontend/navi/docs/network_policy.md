@@ -87,12 +87,14 @@ was asked:
   screen draws the composition it left and asks again for the window it draws;
   under the policy that ask fails, and a failed revalidation keeps the rows it
   had. Only a window never loaded shows the failure.
-- **Everything else settles with an `OfflineError`.** A read with nothing in
-  the store, a relationship `GET` (it has no row of its own to answer with), a
+- **Everything else settles with a `NetworkPolicyError`.** A read with nothing
+  in the store, a relationship `GET` (it has no row of its own to answer with), a
   write that got through anyway: the action ends `FAILED` with an error whose
-  `reason` is the policy's value. `isOfflineError(error)` tells it apart from a
-  request that left and never came back — that one is the app's `fetch`
-  rejecting, and the app names it.
+  `reason` is the policy's value. `isNetworkPolicyError(error)` tells it apart
+  from a request that left and never came back — that one is the app's `fetch`
+  rejecting, and the app names it. The class says the request never left, and
+  nothing more: which policy held it, and whether there was a network at all, is
+  the reason.
 
   It is an error only in the way it travels. Nothing treats it as a bug: navi
   never reports it as unhandled, and the window `error` event a boundary's
@@ -175,9 +177,9 @@ one says why is something navi has nothing to decide it with.
   />;
   ```
 
-- **What a screen says on an `OfflineError`** — "no network" is a fact about
-  the device, "offline mode" a decision; `error.reason` is there so the screen
-  says the right one.
+- **What a screen says on a `NetworkPolicyError`** — "no network" is a fact
+  about the device, "offline mode" a decision, "we are only looking" neither;
+  `error.reason` is there so the screen says the right one.
 - **Persisting the store to disk**, so that a reload offline reopens a full
   app rather than an empty one.
 - **A queue of writes to replay** once the network is back. Deliberately not

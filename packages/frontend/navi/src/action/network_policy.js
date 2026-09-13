@@ -10,13 +10,13 @@ import { isSignal } from "../utils/is_signal.js";
  * Under a policy (a truthy reason):
  * - a control bound to a write — or inside a form bound to one — is read-only
  *   and says why (control_hooks.jsx, readonly_constraint.js), and a write that
- *   runs anyway settles with an OfflineError carrying the reason;
+ *   runs anyway settles with a NetworkPolicyError carrying the reason;
  * - reads are answered from the store, or still go out — `reads`. Answered
  *   from the store, a resource GET completes with the row its store holds for
  *   it, named by its params or the one it last completed with
  *   (resource_graph.js, applyNetworkPolicy); a completed read asked to rerun
  *   stays completed (actions.js, handleActionRequest); a read with nothing to
- *   answer with settles with an OfflineError.
+ *   answer with settles with a NetworkPolicyError.
  *
  * Holding writes is what every policy does; where reads are answered from is
  * what tells two policies apart. No network holds both ends. "Viewing the app
@@ -53,9 +53,9 @@ const networkPolicySignal = signal({
  * @param {import("@preact/signals").Signal | Function | any} source - where the
  *   reason is read from: a signal (followed live), a function (called on each
  *   read), or a plain value. A falsy reason means "go to the network"; any
- *   truthy value means "hold the writes", and is handed to the `OfflineError` an
- *   action settles with (`error.reason`) so a screen can say which kind of
- *   offline it is.
+ *   truthy value means "hold the writes", and is handed to the
+ *   `NetworkPolicyError` an action settles with (`error.reason`) so a screen can
+ *   say which kind of policy is holding.
  * @param {Object} [options]
  * @param {"store" | "network" | ((reason: any) => "store" | "network")} [options.reads="store"]
  *   where a read is answered from while the policy holds. `"store"` is no
@@ -82,7 +82,7 @@ export const setNetworkPolicy = (
   source,
   { reads = "store", readOnlyMessage } = {},
 ) => {
-  silenceOfflineErrors();
+  silenceNetworkPolicyErrors();
   networkPolicySignal.value = { source, reads, readOnlyMessage };
 };
 
@@ -139,37 +139,39 @@ export const getNetworkPolicyReadOnlyMessage = () => {
 
 /**
  * The error of a request that never left: the policy said not to.
- * `reason` is the policy's value at that moment.
+ * `reason` is the policy's value at that moment, and the only thing that says
+ * which kind of policy held it — no network, or writes held while the reads go
+ * out. The class names the mechanism, never the reason.
  */
-export class OfflineError extends Error {
-  constructor(reason, message = naviI18n("network_policy.offline")) {
+export class NetworkPolicyError extends Error {
+  constructor(reason, message = naviI18n("network_policy.held")) {
     super(message);
-    this.name = "OfflineError";
+    this.name = "NetworkPolicyError";
     this.reason = reason;
     // A flag beside the class: the error crosses layers that may copy it, and
     // instanceof does not survive a copy.
-    this.offline = true;
+    this.networkPolicy = true;
   }
 }
 
-export const isOfflineError = (error) => {
-  return Boolean(error && error.offline);
+export const isNetworkPolicyError = (error) => {
+  return Boolean(error && error.networkPolicy);
 };
 
 /**
- * An offline error is not one, and nobody is to be told about it as if it were.
+ * The policy's own error is not a failure, and nobody is to be told about it as
+ * if it were.
  *
- * It says "run with what you have, ask nothing" — a state the app itself
- * declared, about a request that never left. There is no bug to point at, no
- * stack worth reading, and a screen is already saying it in words the person
- * understands.
+ * It says "the app declared that this does not leave" — about a request that
+ * never left. There is no bug to point at, no stack worth reading, and a screen
+ * is already saying it in words the person understands.
  *
  * navi's own report leaves it alone (action_error_report.js). What is left is
  * the screen displaying it: it does so by throwing the error to a boundary, and
  * `preact/debug` re-emits on `window` every error a boundary caught — on
  * purpose, for React devtools compatibility. Uncancelled, that lands as an
- * uncaught error in the console, over a page calmly explaining there is no
- * network. Cancelling the event is what says it is handled: the browser drops
+ * uncaught error in the console, over a page calmly explaining why nothing was
+ * asked. Cancelling the event is what says it is handled: the browser drops
  * the console line, and the jsenv supervisor skips prevented events too.
  *
  * Both shapes a failure travels in are covered, since which one it is depends
@@ -180,19 +182,19 @@ export const isOfflineError = (error) => {
  * boundary caught, and every other rejection let go, stays exactly as loud as
  * it is.
  */
-let offlineErrorSilenced = false;
-const silenceOfflineErrors = () => {
-  if (offlineErrorSilenced || typeof window === "undefined") {
+let networkPolicyErrorSilenced = false;
+const silenceNetworkPolicyErrors = () => {
+  if (networkPolicyErrorSilenced || typeof window === "undefined") {
     return;
   }
-  offlineErrorSilenced = true;
+  networkPolicyErrorSilenced = true;
   window.addEventListener("error", (errorEvent) => {
-    if (isOfflineError(errorEvent.error)) {
+    if (isNetworkPolicyError(errorEvent.error)) {
       errorEvent.preventDefault();
     }
   });
   window.addEventListener("unhandledrejection", (rejectionEvent) => {
-    if (isOfflineError(rejectionEvent.reason)) {
+    if (isNetworkPolicyError(rejectionEvent.reason)) {
       rejectionEvent.preventDefault();
     }
   });

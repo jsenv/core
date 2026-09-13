@@ -257,9 +257,9 @@ screen is the failure the render was stopped at, which is the same story. A
 failure arriving _later_, after the page was replaced by what displays the first
 one, is not covered: nothing tells it apart from an action nobody reads.
 
-One error is never reported whoever looks at it: an **`OfflineError`**. The app
-declared the state that produced it and the request never left, so there is no
-bug to point at — it is data a screen shows. navi also cancels the window
+One error is never reported whoever looks at it: a **`NetworkPolicyError`**.
+The app declared the state that produced it and the request never left, so there
+is no bug to point at — it is data a screen shows. navi also cancels the window
 `error` event that displaying it produces in dev, which keeps the browser
 console and the jsenv overlay out of it
 ([network_policy.md](./network_policy.md)).
@@ -298,8 +298,8 @@ easy to miss when writing another one:
 
 The one reason to write your own: **filtering what you take.** navi's takes
 everything its subtree throws. An app that wants its own bugs to stay visible
-displays only what is data to it — an error carrying an HTTP status, its own
-`OfflineError` — and re-throws the rest **unmarked**, so the overlay still does
+displays only what is data to it — an error carrying an HTTP status, a
+`NetworkPolicyError` — and re-throws the rest **unmarked**, so the overlay still does
 its job. `markErrorAsDisplayedBy` and `errorIsDisplayed` are exported for that:
 
 ```jsx

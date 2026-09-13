@@ -2,7 +2,7 @@ import { computed, effect, signal, untracked } from "@preact/signals";
 
 import { createAction } from "../../action/actions.js";
 import {
-  OfflineError,
+  NetworkPolicyError,
   peekNetworkPolicy,
 } from "../../action/network_policy.js";
 import { SYMBOL_OBJECT_SIGNAL } from "../../action/symbol_object_signal.js";
@@ -1355,8 +1355,8 @@ const createRestActionFactoryForRoot = (
 };
 
 // Under a network policy a write callback is never called (see
-// network_policy.js): there is nothing to answer it with, so it settles with an
-// OfflineError carrying the policy's reason. A read is called or not depending
+// network_policy.js): there is nothing to answer it with, so it settles with a
+// NetworkPolicyError carrying the policy's reason. A read is called or not depending
 // on where the policy answers reads from. Answered from the store, a GET of a
 // root resource completes with the row the store holds for it (see
 // findItemInStore) — handing the item back is an upsert without effect, so the
@@ -1383,7 +1383,7 @@ const applyNetworkPolicy = (
         }
       }
     }
-    throw new OfflineError(policy.reason);
+    throw new NetworkPolicyError(policy.reason);
   };
 };
 
