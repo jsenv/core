@@ -1,3 +1,5 @@
+"jsenv:allocate 45s";
+
 import { startDevServer } from "@jsenv/core";
 import { writeFileSync } from "@jsenv/filesystem";
 import { assert } from "@jsenv/assert";
