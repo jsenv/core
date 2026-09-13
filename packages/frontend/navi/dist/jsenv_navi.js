@@ -58641,8 +58641,10 @@ const clipOf = (side, distance) => {
  * then only the open itself — showing, building, placing — and not, on top of
  * it, a picture of the page before and a picture of the popup after, with
  * nothing painted in between: the backdrop, which is all the user needs to
- * know the tap landed, reaches the screen with the open, and the box grows
- * out of the anchor from there.
+ * know the tap landed, reaches the screen with the open — at half strength,
+ * the anchor under it still being the thing about to be lifted (see the
+ * [data-growing] backdrop rules in dialog.jsx) — and the box grows out of the
+ * anchor from there.
  *
  * One name serves the whole movement, because only one of the two boxes is on
  * screen at a time: it names the anchor while the popup is closed, and the
@@ -59169,6 +59171,27 @@ const css$E = /* css */`
         opacity: 0;
       }
     }
+    /* The wall of a growing dialog is on screen a frame before the movement
+       (popup_grow.js opens the dialog on the spot and holds it unpainted), and
+       on that frame the anchor is still an element of the page, underneath
+       it. At full strength, an opaque blurred wall takes away the very thing
+       the movement is about to lift. So it arrives over the movement's own
+       duration, from half strength: the page has visibly receded — the tap is
+       answered — and the anchor is still there to be picked up. Half rather
+       than nothing, because that frame is the only one painted before the
+       pictures are taken, and it lasts as long as what the dialog builds. */
+    &[data-growing] {
+      &::backdrop {
+        opacity: 1;
+        transition-property: opacity;
+        transition-duration: var(--navi-popup-grow-duration, 0.25s);
+        transition-timing-function: ease;
+
+        @starting-style {
+          opacity: 0.5;
+        }
+      }
+    }
 
     &[data-focus-visible],
     /* …or something filling it holds the keyboard and offers its ring to
@@ -59320,6 +59343,22 @@ const css$E = /* css */`
 
       &[aria-expanded="false"] {
         opacity: 0;
+      }
+    }
+    /* Same arrival as the modal's ::backdrop (see it for why half). Keyed on
+       the aria-expanded flip rather than @starting-style: this element is
+       displayed with its transitions off (see openEffect). The transition is
+       declared on the open state only, so the close is instant, as it is for
+       the dialog itself under this animation. */
+    &[data-growing] {
+      &[aria-expanded="false"] {
+        opacity: 0.5;
+      }
+      &[aria-expanded="true"] {
+        opacity: 1;
+        transition-property: opacity;
+        transition-duration: var(--navi-popup-grow-duration, 0.25s);
+        transition-timing-function: ease;
       }
     }
   }

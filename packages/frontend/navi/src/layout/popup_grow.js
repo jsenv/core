@@ -23,8 +23,10 @@
  * then only the open itself — showing, building, placing — and not, on top of
  * it, a picture of the page before and a picture of the popup after, with
  * nothing painted in between: the backdrop, which is all the user needs to
- * know the tap landed, reaches the screen with the open, and the box grows
- * out of the anchor from there.
+ * know the tap landed, reaches the screen with the open — at half strength,
+ * the anchor under it still being the thing about to be lifted (see the
+ * [data-growing] backdrop rules in dialog.jsx) — and the box grows out of the
+ * anchor from there.
  *
  * One name serves the whole movement, because only one of the two boxes is on
  * screen at a time: it names the anchor while the popup is closed, and the
