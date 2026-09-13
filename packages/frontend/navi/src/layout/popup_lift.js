@@ -49,7 +49,7 @@
  * the root's picture (see the CSS in dialog.jsx). The fixed bars are part of
  * that picture, under the wall like the rest of the page. The popup is placed
  * between the bars, and its picture keeps to the room between them on the
- * way as well: the moving box is clipped to that room (clipToRoomBetweenBars),
+ * way as well: the moving box is clipped to that room (animateMovingBox),
  * so a card half under the bottom bar leaves from under it and comes back
  * under it.
  */
@@ -90,22 +90,29 @@ const DURATION_PROPERTY = "--navi-popup-lift-duration";
 // The fixed bars (fixed_bar.jsx): the popup is placed in the room between
 // them, and the moving picture is clipped to that room on the way.
 const FIXED_BAR_SELECTOR = ".navi_fixed_bar";
-// The corners and the paint of the lifted node, published the same way. The
-// pictures are clipped to the moving box (dialog.jsx), and a card with rounded
-// corners must not travel with square ones; the box wears the card's own
-// background, so where it has grown past the picture it carries it is the card
-// that has grown, not a picture fading into a bigger one. Read off the lifted
-// node rather than the anchor: the anchor is often a bare trigger around the
-// card, painting nothing of its own, while the lifted node IS the card.
-const BORDER_RADIUS_PROPERTY = "--navi-popup-lift-border-radius";
+// The paint of the lifted node, published the same way: the box wears the
+// card's own background, so where it has grown past the picture it carries it
+// is the card that has grown, not a picture fading into a bigger one. Read off
+// the lifted node rather than the anchor: the anchor is often a bare trigger
+// around the card, painting nothing of its own, while the lifted node IS the
+// card — and a card does not change colour on the way.
 const BACKGROUND_COLOR_PROPERTY = "--navi-popup-lift-background-color";
 const BACKGROUND_IMAGE_PROPERTY = "--navi-popup-lift-background-image";
+// The corners of the box the movement starts from, published the same way —
+// and, unlike the paint, not kept for the length of the movement: a corner is
+// written per box, on purpose, the same card at two sizes not wanting the same
+// round (a 6px corner stops showing on a big card). The moving box leaves with
+// the corners of the box it leaves and arrives with those of the box it
+// arrives on, the two authored values interpolated on the group's own clock
+// (see animateMovingBox).
+const BORDER_RADIUS_PROPERTY = "--navi-popup-lift-border-radius";
 
 let releaseLiftInProgress = null;
-// The clip of the movement in progress (clipToRoomBetweenBars): cancelled
-// with the movement, so a finished one cannot go on applying its last inset
-// to the next movement's picture.
-let clipInProgress = null;
+// What the moving box is told frame by frame on top of the browser's own morph
+// (animateMovingBox: its corners, its clip to the room between the bars),
+// cancelled with the movement so a finished one cannot go on applying its
+// last values to the next movement's picture.
+let boxAnimationInProgress = null;
 // The page held still for the length of the movement. Its picture is frozen
 // anyway, and the browser keeps following the live anchor: a scroll would
 // carry the arriving box along under a page that does not move, and past the
@@ -151,6 +158,8 @@ export const liftPopupFromAnchor = (
   if (!opened) {
     publishBoxPaint(elementLeaving);
   }
+  const cornersLeaving = readCorners(elementLeaving);
+  root.style.setProperty(BORDER_RADIUS_PROPERTY, cornersLeaving);
 
   let giveBackNameArriving = null;
   let stopWaitingForTarget = null;
@@ -160,8 +169,8 @@ export const liftPopupFromAnchor = (
     }
     releaseLiftInProgress = null;
     stopWaitingForTarget?.();
-    clipInProgress?.cancel();
-    clipInProgress = null;
+    boxAnimationInProgress?.cancel();
+    boxAnimationInProgress = null;
     releaseScrollHold?.();
     releaseScrollHold = null;
     // Given up on, or replaced, while still waiting to be lifted: shown where
@@ -184,6 +193,7 @@ export const liftPopupFromAnchor = (
     const room = measureRoomBetweenBars();
     const boxLeaving = room ? elementLeaving.getBoundingClientRect() : null;
     let boxArriving = null;
+    let cornersArriving = null;
     const viewTransition = startViewTransition(() => {
       // The name is the arriving box's from here on: worn by both, it is worn
       // by neither. Written rather than removed, so a name the element also
@@ -193,18 +203,24 @@ export const liftPopupFromAnchor = (
       const elementArriving = resolveElementArriving();
       if (elementArriving) {
         giveBackNameArriving = wearLiftName(elementArriving);
+        cornersArriving = readCorners(elementArriving);
         if (room) {
           boxArriving = elementArriving.getBoundingClientRect();
         }
       }
     });
-    if (room) {
-      viewTransition.ready.then(() => {
-        if (boxArriving) {
-          clipToRoomBetweenBars(room, boxLeaving, boxArriving);
-        }
-      }, ignore);
-    }
+    viewTransition.ready.then(() => {
+      if (cornersArriving === null) {
+        return;
+      }
+      animateMovingBox({
+        cornersFrom: cornersLeaving,
+        cornersTo: cornersArriving,
+        room,
+        boxFrom: boxLeaving,
+        boxTo: boxArriving,
+      });
+    }, ignore);
     viewTransition.finished.then(release, release);
   };
 
@@ -250,15 +266,28 @@ export const liftPopupFromAnchor = (
 };
 
 const publishBoxPaint = (liftedElement) => {
-  const { borderRadius, backgroundColor, backgroundImage } = getComputedStyle(
+  const { backgroundColor, backgroundImage } = getComputedStyle(
     findPaintedBox(liftedElement),
   );
   const root = document.documentElement;
-  if (borderRadius) {
-    root.style.setProperty(BORDER_RADIUS_PROPERTY, borderRadius);
-  }
   root.style.setProperty(BACKGROUND_COLOR_PROPERTY, backgroundColor);
   root.style.setProperty(BACKGROUND_IMAGE_PROPERTY, backgroundImage);
+};
+
+// The corners of a box: the first round found going down through children
+// that are the same box, the outermost one being what clips the others; a
+// bare trigger around a card carries its corners on itself or on the card,
+// and either is found. Square when none does.
+const readCorners = (element) => {
+  let current = element;
+  while (current) {
+    const { borderRadius } = getComputedStyle(current);
+    if (borderRadius && !/^(?:0px\s*)+$/.test(borderRadius)) {
+      return borderRadius;
+    }
+    current = sameBoxChild(current);
+  }
+  return "0px";
 };
 
 // The lifted node is often a wrapper painting nothing, around the card that
@@ -367,15 +396,17 @@ const measureRoomBetweenBars = () => {
   return room;
 };
 
-// Clips the moving picture to the room between the bars, for the length of
-// the movement. The clip is written in the moving box's own coordinates, and
-// the box goes from one rectangle to the other along the browser's own
-// easing: each inset is an affine function of that progress, so two keyframes
-// with the group's timing follow the box exactly, and a negative inset — the
-// box clear of that bar — clips nothing. The easing is the one on the
-// group's keyframes: a CSS animation carries it there, and the animation's
-// own timing reads linear.
-const clipToRoomBetweenBars = (room, boxFrom, boxTo) => {
+// What the moving picture is told on top of the browser's own morph, from one
+// end of the movement to the other, on the group's own clock: its corners,
+// from those of the box it leaves to those of the box it arrives on; and, when
+// there are fixed bars, its clip to the room between them. The clip is written
+// in the moving box's own coordinates, and the box goes from one rectangle to
+// the other along the browser's own easing: each inset is an affine function
+// of that progress, so two keyframes with the group's timing follow the box
+// exactly, and a negative inset — the box clear of that bar — clips nothing.
+// The easing is the one on the group's keyframes: a CSS animation carries it
+// there, and the animation's own timing reads linear.
+const animateMovingBox = ({ cornersFrom, cornersTo, room, boxFrom, boxTo }) => {
   const groupAnimation = document
     .getAnimations()
     .find(
@@ -388,18 +419,18 @@ const clipToRoomBetweenBars = (room, boxFrom, boxTo) => {
   const { duration } = groupAnimation.effect.getTiming();
   const [firstKeyframe] = groupAnimation.effect.getKeyframes();
   const easing = firstKeyframe?.easing || "ease";
-  clipInProgress?.cancel();
-  clipInProgress = document.documentElement.animate(
-    [
-      { clipPath: insetToRoom(room, boxFrom), easing },
-      { clipPath: insetToRoom(room, boxTo) },
-    ],
-    {
-      duration,
-      fill: "both",
-      pseudoElement: `::view-transition-image-pair(${NAME})`,
-    },
-  );
+  const from = { borderRadius: cornersFrom, easing };
+  const to = { borderRadius: cornersTo };
+  if (room && boxFrom && boxTo) {
+    from.clipPath = insetToRoom(room, boxFrom);
+    to.clipPath = insetToRoom(room, boxTo);
+  }
+  boxAnimationInProgress?.cancel();
+  boxAnimationInProgress = document.documentElement.animate([from, to], {
+    duration,
+    fill: "both",
+    pseudoElement: `::view-transition-image-pair(${NAME})`,
+  });
 };
 
 const insetToRoom = (room, box) =>

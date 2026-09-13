@@ -711,8 +711,11 @@ const css = /* css */ `
        then swapping.
 
        The box paints what the lifted card paints behind its content
-       (published by popup_lift.js, with its corners): where it has grown past
-       the picture it carries, it is the card that has grown. */
+       (published by popup_lift.js): where it has grown past the picture it
+       carries, it is the card that has grown. Its corners are those of the
+       box it leaves, and travel to those of the box it arrives on — a corner
+       is written per box, the same card at two sizes not wanting the same
+       round (see animateMovingBox in popup_lift.js). */
     &::view-transition-image-pair(navi-popup-lift) {
       background-image: var(--navi-popup-lift-background-image, none);
       background-color: var(--navi-popup-lift-background-color, transparent);

@@ -98,15 +98,23 @@ Two traps, both about the thumbnail:
 
 ## The lifted node paints itself
 
-The moving box wears the lifted node's background and corners for the length
-of the movement, so where the box has grown past the picture it carries, it is
-the card that has grown. That paint is read off `data-lift` — and, when that
-node paints nothing, off the first descendant that has its box and paints.
+The moving box wears the lifted node's background for the length of the
+movement, so where the box has grown past the picture it carries, it is the
+card that has grown. That paint is read off `data-lift` — and, when that node
+paints nothing, off the first descendant that has its box and paints.
 
 So a transparent wrapper around the card is fine, and a card whose colour
 lives on a nested element of a different size is not: publish the colour on
 the box that is the card. A gradient or an image travels as well
 (`background-image`), a shadow does not.
+
+Corners are not paint: they are written per box, on purpose — the same card at
+two sizes does not want the same round, a 6px corner stops showing on a big
+card. The moving box leaves with the corners of the box it leaves and arrives
+with those of the box it arrives on, the two authored values interpolated on
+the movement's own clock. Each end's corners are the first round found going
+down through the nodes that are that box, so a bare trigger carrying its
+corners itself, or on the card inside it, reads the same.
 
 ## Same width, or a wider box
 
