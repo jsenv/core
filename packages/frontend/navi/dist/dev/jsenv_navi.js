@@ -59910,11 +59910,12 @@ const clipOf = (side, distance) => {
  * screen at a time: it names the anchor while the popup is closed, and the
  * lifted node while it is open.
  *
- * The page around stays out of the picture (`view-transition-name: none` on
- * the root, in dialog.jsx): a captured element is not painted where it stands
- * and cannot be pointed at either, so photographing the whole document would
- * leave the page frozen and unpressable for the length of every opening — and
- * of every closing, which is the moment the user is coming back to it.
+ * The page around is photographed too, the browser's default, kept on
+ * purpose: the wall and what the popup holds around the lifted node live in
+ * the top layer, which the browser paints during a transition only as part of
+ * the root's picture (see the CSS in dialog.jsx). The fixed bars are named for
+ * the length of the movement as well, so the lifted box can pass under them
+ * near the anchor and over them near the popup.
  */
 
 
@@ -59947,10 +59948,23 @@ const TARGET_WAIT_MS = 1000;
 // The popup's own animation duration, published on the root because the
 // ::view-transition tree hangs off it and inherits from nowhere else.
 const DURATION_PROPERTY = "--navi-popup-lift-duration";
-// The corners of the box being left, published the same way: the pictures are
-// clipped to the moving box (dialog.jsx), and a card with rounded corners must
-// not travel with square ones.
+// The fixed bars (fixed_bar.jsx), named for the length of the movement so
+// each is a picture of its own the lifted box passes under, then over
+// (dialog.jsx). Numbered, so two bars never share a name — a name worn twice
+// aborts the transition — and capped at what the CSS names.
+const FIXED_BAR_SELECTOR = ".navi_fixed_bar";
+const FIXED_BAR_NAME_PREFIX = "navi-fixed-bar-";
+const FIXED_BAR_NAME_COUNT = 4;
+// The corners and the paint of the lifted node, published the same way. The
+// pictures are clipped to the moving box (dialog.jsx), and a card with rounded
+// corners must not travel with square ones; the box wears the card's own
+// background, so where it has grown past the picture it carries it is the card
+// that has grown, not a picture fading into a bigger one. Read off the lifted
+// node rather than the anchor: the anchor is often a bare trigger around the
+// card, painting nothing of its own, while the lifted node IS the card.
 const BORDER_RADIUS_PROPERTY = "--navi-popup-lift-border-radius";
+const BACKGROUND_COLOR_PROPERTY = "--navi-popup-lift-background-color";
+const BACKGROUND_IMAGE_PROPERTY = "--navi-popup-lift-background-image";
 
 let releaseLiftInProgress = null;
 
@@ -59975,25 +59989,27 @@ const liftPopupFromAnchor = (
   releaseLiftInProgress?.();
 
   const elementLeaving = opened ? anchorElement : resolveLiftTarget(popupEl);
+  // Read before the first write: the read brings the style up to date, and a
+  // write before it would make it bring it up to date once more.
+  const duration = getComputedStyle(popupEl)
+    .getPropertyValue("--popup-animation-duration")
+    .trim();
   const giveBackNameLeaving = wearLiftName(elementLeaving);
   const root = document.documentElement;
   root.setAttribute(ROOT_ATTRIBUTE, opened ? "opening" : "closing");
   root.setAttribute(KIND_ATTRIBUTE, lift);
-  const duration = getComputedStyle(popupEl)
-    .getPropertyValue("--popup-animation-duration")
-    .trim();
   if (duration) {
     // Empty would substitute into `animation-duration:` as nothing at all,
     // which computes to 0s — a movement nobody sees rather than one at the
     // browser's own pace.
     root.style.setProperty(DURATION_PROPERTY, duration);
   }
-  const borderRadius = getComputedStyle(elementLeaving).borderRadius;
-  if (borderRadius) {
-    root.style.setProperty(BORDER_RADIUS_PROPERTY, borderRadius);
+  if (!opened) {
+    publishBoxPaint(elementLeaving);
   }
 
   let giveBackNameArriving = null;
+  let giveBackBarNames = null;
   let stopWaitingForTarget = null;
   const release = () => {
     if (releaseLiftInProgress !== release) {
@@ -60006,14 +60022,18 @@ const liftPopupFromAnchor = (
     popupEl.removeAttribute(ARRIVING_ATTRIBUTE);
     giveBackNameLeaving();
     giveBackNameArriving?.();
+    giveBackBarNames?.();
     root.removeAttribute(ROOT_ATTRIBUTE);
     root.removeAttribute(KIND_ATTRIBUTE);
     root.style.removeProperty(DURATION_PROPERTY);
     root.style.removeProperty(BORDER_RADIUS_PROPERTY);
+    root.style.removeProperty(BACKGROUND_COLOR_PROPERTY);
+    root.style.removeProperty(BACKGROUND_IMAGE_PROPERTY);
   };
   releaseLiftInProgress = release;
 
   const startMovement = (change, resolveElementArriving) => {
+    giveBackBarNames = wearFixedBarNames();
     const viewTransition = startViewTransition(() => {
       // The name is the arriving box's from here on: worn by both, it is worn
       // by neither. Written rather than removed, so a name the element also
@@ -60046,6 +60066,7 @@ const liftPopupFromAnchor = (
     popupEl.removeAttribute(ARRIVING_ATTRIBUTE);
   };
   const liftTarget = (target) => {
+    publishBoxPaint(target);
     startMovement(reveal, () => target);
   };
   const targetNow = findLiftTarget(popupEl);
@@ -60066,6 +60087,54 @@ const liftPopupFromAnchor = (
     }
     release();
   });
+};
+
+const publishBoxPaint = (liftedElement) => {
+  const { borderRadius, backgroundColor, backgroundImage } = getComputedStyle(
+    findPaintedBox(liftedElement),
+  );
+  const root = document.documentElement;
+  if (borderRadius) {
+    root.style.setProperty(BORDER_RADIUS_PROPERTY, borderRadius);
+  }
+  root.style.setProperty(BACKGROUND_COLOR_PROPERTY, backgroundColor);
+  root.style.setProperty(BACKGROUND_IMAGE_PROPERTY, backgroundImage);
+};
+
+// The lifted node is often a wrapper painting nothing, around the card that
+// paints: what the moving box has to wear is the card's paint, found by going
+// down through children that are the same box, until one paints.
+const findPaintedBox = (element) => {
+  let current = element;
+  while (current) {
+    const { backgroundColor, backgroundImage } = getComputedStyle(current);
+    if (backgroundImage !== "none" || !isTransparent(backgroundColor)) {
+      return current;
+    }
+    const child = sameBoxChild(current);
+    if (!child) {
+      return element;
+    }
+    current = child;
+  }
+  return element;
+};
+
+const isTransparent = (color) =>
+  color === "transparent" || /^rgba\(\d+, \d+, \d+, 0\)$/.test(color);
+
+const sameBoxChild = (element) => {
+  const { width, height } = element.getBoundingClientRect();
+  for (const child of element.children) {
+    const childRect = child.getBoundingClientRect();
+    if (
+      Math.abs(childRect.width - width) < 1 &&
+      Math.abs(childRect.height - height) < 1
+    ) {
+      return child;
+    }
+  }
+  return null;
 };
 
 const findLiftTarget = (popupEl) => {
@@ -60111,11 +60180,31 @@ const whenLiftTargetAppears = (popupEl, callback) => {
   return stop;
 };
 
+const wearFixedBarNames = () => {
+  const giveBacks = [];
+  const bars = document.querySelectorAll(FIXED_BAR_SELECTOR);
+  let index = 0;
+  for (const bar of bars) {
+    if (index === FIXED_BAR_NAME_COUNT) {
+      break;
+    }
+    giveBacks.push(wearName(bar, `${FIXED_BAR_NAME_PREFIX}${index}`));
+    index++;
+  }
+  return () => {
+    for (const giveBack of giveBacks) {
+      giveBack();
+    }
+  };
+};
+
 // Wears the movement's name, and gives back whatever the element had written
 // inline of its own once the movement is over.
-const wearLiftName = (element) => {
+const wearLiftName = (element) => wearName(element, NAME);
+
+const wearName = (element, name) => {
   const nameBefore = element.style.getPropertyValue(NAME_PROPERTY);
-  element.style.setProperty(NAME_PROPERTY, NAME);
+  element.style.setProperty(NAME_PROPERTY, name);
   return () => {
     if (nameBefore) {
       element.style.setProperty(NAME_PROPERTY, nameBefore);
@@ -60699,17 +60788,16 @@ const css$E = /* css */`
   }
 
   /* While a dialog is lifting out of the element that opened it
-     (popup_lift.js). The page around is deliberately NOT taken as a picture,
-     against the browser's own default: a captured element is not painted where
-     it stands and cannot be pointed at either, so photographing the document
-     would leave the whole page frozen and unpressable for the length of every
-     opening — and of every closing, which is the moment the user is coming
-     back to it. Nothing shows through where the movement is: the two boxes it
-     plays between are captured, and their pictures cover the rectangle between
-     them at every moment. */
+     (popup_lift.js). The page around IS taken as a picture, the browser's own
+     default, and on purpose: the wall and what the dialog holds around the
+     lifted node live in the top layer, and the browser paints the top layer
+     during a transition only as part of the root's picture — with the root
+     opted out (view-transition-name: none), wall and dialog go unpainted for
+     the length of the movement, and the picture of the lifted node comes out
+     empty (Chrome 153, reproduced in a bare page). The price is a page frozen
+     and unpressable while the movement plays: under a modal wall at the
+     opening, and for a quarter of a second at the closing. */
   :root[data-navi-popup-lift] {
-    view-transition-name: none;
-
     /* The popup's own pace, published on the root by popup_lift.js because the
        ::view-transition tree hangs off it and inherits from nowhere else. */
     &::view-transition-group(navi-popup-lift),
@@ -60718,71 +60806,119 @@ const css$E = /* css */`
       animation-duration: var(--navi-popup-lift-duration, 0.25s);
     }
 
-    /* Each picture is drawn as wide as the box and as tall as it is, so a box
-       that grows in height alone (a card keeping its width) would show the
-       whole taller picture from the first frame, and the movement would read
-       as a fade. Clipped to the box, the picture is uncovered as the box
-       grows and covered back as it shrinks — behind the corners the box
-       has in the page, published by popup_lift.js. */
+    /* Each picture is drawn at its own size, from the box's top-left corner,
+       and clipped to the box: the box is what changes size, the content it
+       carries does not — a card growing wider does not zoom its own text, it
+       gains room, and the picture of what it becomes is uncovered as the box
+       grows and covered back as it shrinks. Drawn as wide as the box instead
+       (the browser's default), the picture being left would be scaled with
+       the box, and a change of width would read as the same card zooming
+       then swapping.
+
+       The box paints what the lifted card paints behind its content
+       (published by popup_lift.js, with its corners): where it has grown past
+       the picture it carries, it is the card that has grown. */
     &::view-transition-image-pair(navi-popup-lift) {
+      background-image: var(--navi-popup-lift-background-image, none);
+      background-color: var(--navi-popup-lift-background-color, transparent);
       border-radius: var(--navi-popup-lift-border-radius, 0);
       overflow: clip;
     }
+    &::view-transition-old(navi-popup-lift),
+    &::view-transition-new(navi-popup-lift) {
+      block-size: auto;
+      inline-size: auto;
+    }
 
-    /* One scene through two frames (Dialog's lift="scene"): each picture
-       covers the box, cropped around its centre, so what both frames show
-       lands on itself. */
+    /* The card leaves as itself and arrives as what it became: the picture
+       being left stays whole for most of the way, the arriving one only shows
+       near the end. The browser's own cross-fade over the whole movement is
+       what makes a change of size read as a fade. Blended normally rather than
+       added (the browser's plus-lighter is for two pictures summing to one over
+       nothing): over the box's own paint, added pictures would burn. */
+    &::view-transition-old(navi-popup-lift) {
+      mix-blend-mode: normal;
+      animation-name: navi-popup-lift-leave;
+    }
+    &::view-transition-new(navi-popup-lift) {
+      mix-blend-mode: normal;
+      animation-name: navi-popup-lift-arrive;
+    }
+
+    /* One scene through two frames (Dialog's lift="scene"): the thumbnail is a
+       band cut from the middle of the scene, as wide as it. Here the content
+       DOES scale with the box — a drawing enlarged is the same drawing bigger
+       — so both pictures are drawn at the box's width and centred in it, and
+       the band lands on the middle of the whole scene at every width the box
+       passes through. Not covered: a cover scales each picture to its own
+       box, and the band, covered into the whole scene's square, arrives three
+       times too big and off to one side. */
     &[data-navi-popup-lift-kind="scene"] {
       &::view-transition-old(navi-popup-lift),
       &::view-transition-new(navi-popup-lift) {
-        height: 100%;
-        object-fit: cover;
+        inset-block: 0;
+        inline-size: 100%;
+        margin-block: auto;
       }
     }
 
     /* The anchor lives in the page, under the fixed bars; the popup lives in
-       the top layer, over them. The pictures are painted above everything,
-       bars included, so near the anchor's end of the movement the whole tree
-       is clipped to the room between the bars — a thumbnail half under the
-       top bar leaves from under it and comes back under it — and freed near
-       the popup's end, where a tall dialog may stand over them. Clipped for
-       the 65% of the time nearest the anchor: with the group's own ease that
-       leaves the last 35% of the time to cover more than half of the trip,
-       so the picture is out of the bars before the clip closes on it. */
-    &::view-transition {
-      animation: navi-popup-lift-clip var(--navi-popup-lift-duration, 0.25s)
-        ease both;
+       the top layer, over them. For the length of a movement the bars wear a
+       name of their own (popup_lift.js), so each is a picture the lifted box
+       can pass under or over: over it near the anchor's end — a thumbnail
+       half under the top bar leaves from under it and comes back under it —
+       and under it near the popup's end, where a tall dialog may stand over
+       them. Over for the 65% of the time nearest the anchor: with the group's
+       own ease that leaves the last 35% of the time to cover more than half of
+       the trip, so the picture is out of the bars before it passes over. A
+       bar does not move, so replacing the browser's own animation on its
+       group costs nothing. */
+    &::view-transition-group(navi-popup-lift) {
+      z-index: 1;
     }
-    &[data-navi-popup-lift="closing"]::view-transition {
-      animation-direction: reverse;
+    &::view-transition-group(navi-fixed-bar-0),
+    &::view-transition-group(navi-fixed-bar-1),
+    &::view-transition-group(navi-fixed-bar-2),
+    &::view-transition-group(navi-fixed-bar-3) {
+      animation: navi-popup-lift-bar var(--navi-popup-lift-duration, 0.25s) both;
+    }
+    &[data-navi-popup-lift="closing"] {
+      &::view-transition-group(navi-fixed-bar-0),
+      &::view-transition-group(navi-fixed-bar-1),
+      &::view-transition-group(navi-fixed-bar-2),
+      &::view-transition-group(navi-fixed-bar-3) {
+        animation-direction: reverse;
+      }
     }
   }
-  /* The bars sit at the app's own inset (fixed_bar.jsx), so the room they
-     take starts there; both tokens are 0px where nothing takes any. */
-  @keyframes navi-popup-lift-clip {
+  @keyframes navi-popup-lift-leave {
+    0%,
+    55% {
+      opacity: 1;
+    }
+    85%,
+    100% {
+      opacity: 0;
+    }
+  }
+  @keyframes navi-popup-lift-arrive {
+    0%,
+    45% {
+      opacity: 0;
+    }
+    85%,
+    100% {
+      opacity: 1;
+    }
+  }
+  @keyframes navi-popup-lift-bar {
     0%,
     65% {
-      clip-path: inset(
-        calc(
-            var(--navi-app-inset-top, 0px) +
-              var(--navi-fixed-bar-space-top, 0px)
-          )
-          calc(
-            var(--navi-app-inset-right, 0px) +
-              var(--navi-fixed-bar-space-right, 0px)
-          )
-          calc(
-            var(--navi-app-inset-bottom, 0px) +
-              var(--navi-fixed-bar-space-bottom, 0px)
-          )
-          calc(
-            var(--navi-app-inset-left, 0px) +
-              var(--navi-fixed-bar-space-left, 0px)
-          )
-      );
+      z-index: 2;
     }
+    65.01%,
     100% {
-      clip-path: inset(0);
+      z-index: 0;
     }
   }
 
@@ -60941,12 +61077,14 @@ const css$E = /* css */`
  * @param {"box"|"scene"} [props.lift="box"] - Under `animation="lifting"`,
  *   what the anchor and what it becomes are to each other, which decides
  *   how their pictures sit in the box moving between them. `"box"`: one
- *   object at two sizes — a card gaining fields. Each picture is drawn at the
- *   box's width from its top edge, and a box growing in height uncovers more
- *   of it: the header stays where it is, the rest extends. `"scene"`: one
- *   scene through two frames — a thumbnail and the map it is cut from. Each
- *   picture covers the box, cropped around its centre and never distorted, so
- *   what both frames show lands on itself.
+ *   object at two sizes — a card gaining fields. Each picture is drawn at its
+ *   own size from the box's top-left corner, and the box growing uncovers
+ *   more of it: the header stays where it is, the content keeps its scale,
+ *   the box gains room. `"scene"`: one
+ *   scene through two frames — a thumbnail that is a band cut from the middle
+ *   of the map, as wide as it. Each picture is drawn at the box's width and
+ *   centred in it, so the band lands on the middle of the whole at every
+ *   width the box passes through.
  * @param {string} [props.animationDuration] - Maps to
  *   `--popup-animation-duration`.
  * @param {Element|{current: Element}|string} [props.anchor] - Never used for
@@ -61849,11 +61987,17 @@ const useDialogProps = props => {
     // positionDialog already goes through it above; nothing to wire up
     // here.
 
+    const hasCssTransitionAnimation = Boolean(resolvedAnimation);
     // Final commit — see popover.jsx's own openEffect for the full
     // reasoning behind the `silent` ordering swap (forced reflow between
     // the flip and re-enabling transitions is what actually matters, not
-    // just the JS statement order).
-    dialogEl.getBoundingClientRect();
+    // just the JS statement order). The reflow pins the closed frame a CSS
+    // transition starts from; with no transition to arm there is no frame
+    // to pin, and the layout it would force (the placement just written) is
+    // one the browser does once, at the next frame.
+    if (hasCssTransitionAnimation) {
+      dialogEl.getBoundingClientRect();
+    }
     if (silent) {
       dialogEl.setAttribute("aria-expanded", "true");
       backdropEl?.setAttribute("aria-expanded", "true");
@@ -61870,7 +62014,6 @@ const useDialogProps = props => {
         backdropEl.style.transitionProperty = "";
       }
     }
-    const hasCssTransitionAnimation = Boolean(resolvedAnimation);
     const cancelOpenInteractionSuppression = !silent && hasCssTransitionAnimation ? suppressPointerEventsDuringTransition(dialogEl) : null;
     // Handing the focus to a field is what raises the on-screen keyboard, and
     // the keyboard takes away the very room this dialog was just placed
@@ -62135,6 +62278,13 @@ const useDialogProps = props => {
       openController.requestClose(e, {
         isCancel: true
       });
+      // The close is navi's, not the browser's: the exit above calls close()
+      // itself, on the spot or inside the transition photographing it
+      // (animation="lifting"). Left to its default, "cancel" closes the
+      // dialog at once, before the picture of the state being left is taken,
+      // and the movement then has nothing to start from. A denied close has
+      // prevented it already (see requestClose).
+      e.preventDefault();
     },
     children
   });
@@ -74721,8 +74871,8 @@ const PickerFirstResolver = props => {
  *   the light wash back.
  * @param {"box"|"scene"} [lift="box"] Dialog's own, under `animation="lifting"`:
  *   `"box"` for a card that extends (its top stays, the box uncovers the rest),
- *   `"scene"` for a thumbnail and the bigger view it is cut from (each picture
- *   covers the box, cropped around its centre).
+ *   `"scene"` for a thumbnail that is a band cut from the middle of the bigger
+ *   view, as wide as it (each picture at the box's width, centred in it).
  * @param {string} [animationDuration] The popup's own (`--popup-animation-duration`).
  * @param {boolean} [dialogSizeFromAnchor] Dialog mode: the dialog is as wide
  *   as the trigger — its box as a floor (Dialog's own `sizeFromAnchor`) and

@@ -10,6 +10,7 @@ they are met once.
 - [Nested groups, and the fallback fade](#nested-groups-and-the-fallback-fade)
 - [Rendering is suspended for the whole callback](#rendering-is-suspended-for-the-whole-callback)
 - [`finished` rejects when another transition replaces it](#finished-rejects-when-another-transition-replaces-it)
+- [The top layer is painted through the root's picture](#the-top-layer-is-painted-through-the-roots-picture)
 
 ## A name is unique per document
 
@@ -72,3 +73,15 @@ is the shape that ends a transition whichever way it went.
   and what the main thread cannot read of it
 - [drag_interactions.md](./drag_interactions.md#naming-what-travels) — naming
   what moves when something is dropped on a place
+
+## The top layer is painted through the root's picture
+
+A modal `<dialog>`, its `::backdrop`, a popover: the browser paints the top
+layer during a transition only as part of the root's picture. With `:root {
+view-transition-name: none }`, the wall and the dialog go unpainted for the
+length of the movement, and a named element inside the dialog is photographed
+empty (Chrome 153, reproduced in a bare page; in a long page it showed only
+past a few thousand pixels of scroll, which is how it hid). A transition that
+opens or closes a top-layer surface keeps the root's default name and pays the
+frozen page — under a modal wall that costs nothing. navi's own lift
+(`popup_lift.md`) does exactly that.

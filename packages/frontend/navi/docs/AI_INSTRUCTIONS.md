@@ -169,6 +169,13 @@ to start when unsure which export solves a problem.
   (`backdrop={false}`), what an outside press does, how far the page withdraws;
   `data-navi-popup-outside`, and `data-navi-popup-inside` for a box of the
   page whose press is not a dismissal. Read before writing CSS for a backdrop.
+- `popup_lift.md` — `animation="lifting"`: the pressed card brought to the
+  front. `data-lift` names what is lifted and is rendered at once; the
+  trigger's box is the card's box; `lift="box"` for a card, `"scene"` for a
+  drawing framed the same way; what an opening costs and where the time goes;
+  the wall at half strength on the frame before the movement. Read before
+  giving a `Dialog` or a `Picker` `animation="lifting"`, or before measuring
+  why one opens slowly.
 - `dialog_shape.md` — bounds rather than a width, the container ceiling, the
   centered box versus the bottom sheet, `marginWithContainer`. Read before
   deriving `smallTouchScreenSignal` in an app or writing CSS to make a dialog

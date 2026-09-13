@@ -469,8 +469,9 @@ card's own: the nearer hold takes the press. `animation="lifting"` with
 `dialogSizeFromAnchor` (as wide as the card, floor and ceiling),
 `popupBackgroundColor="transparent"` and `popupBoxShadow="none"` lifts the
 card out of its place and puts it back (`data-lift` on the card inside the
-sheet; see Dialog's own `animation`). `12_picker_card_demo.html` shows all of
-it, against a backend that answers when told to.
+sheet) — what to respect for that movement to be right and quick is
+`popup_lift.md`. `12_picker_card_demo.html` shows all of it, against a
+backend that answers when told to.
 
 A gesture inside the sheet that is not a field — cancel the game, delete it —
 is still an answer the sheet gives. A named button says which:
