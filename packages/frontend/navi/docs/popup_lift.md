@@ -185,6 +185,12 @@ leaves; `backdropVariant="discrete"` asks for the light wash back. See
   Naming the bars to draw them over the box was tried and taken out: a bar
   photographed on its own has no wall over it, and compositing the wall onto
   its picture by hand never quite matched the wall itself.
+- **The page is held still for the movement.** Its picture is frozen for
+  the length of the transition, while the browser keeps following the live
+  anchor: a scroll would carry the arriving box along under a page that does
+  not move, and past the clip to the room between the bars. Scroll gestures
+  on the background are cancelled until the movement is over, the way
+  `scrollCapture` cancels them while a dialog is open.
 - **The closing is photographed whole**, the picture of the popup taken before
   the close takes it off screen. Escape, the wall, `--navi-close`, `navBack`
   all go through it; the native `cancel` of a `<dialog>` is prevented so the

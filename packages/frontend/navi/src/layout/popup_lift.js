@@ -54,6 +54,8 @@
  * under it.
  */
 
+import { trapScrollInside } from "@jsenv/dom";
+
 import { ensureDocumentStartViewTransition } from "../transition/start_view_transition_polyfill.js";
 
 // The name the two boxes take turns wearing. A single literal one is enough,
@@ -104,6 +106,11 @@ let releaseLiftInProgress = null;
 // with the movement, so a finished one cannot go on applying its last inset
 // to the next movement's picture.
 let clipInProgress = null;
+// The page held still for the length of the movement. Its picture is frozen
+// anyway, and the browser keeps following the live anchor: a scroll would
+// carry the arriving box along under a page that does not move, and past the
+// clip to the room between the bars, computed where the boxes stood.
+let releaseScrollHold = null;
 
 /**
  * Runs `applyChange` — the DOM change that opens or closes `popupEl` — inside
@@ -155,6 +162,8 @@ export const liftPopupFromAnchor = (
     stopWaitingForTarget?.();
     clipInProgress?.cancel();
     clipInProgress = null;
+    releaseScrollHold?.();
+    releaseScrollHold = null;
     // Given up on, or replaced, while still waiting to be lifted: shown where
     // it stands rather than left unpainted.
     popupEl.removeAttribute(ARRIVING_ATTRIBUTE);
@@ -170,6 +179,8 @@ export const liftPopupFromAnchor = (
   releaseLiftInProgress = release;
 
   const startMovement = (change, resolveElementArriving) => {
+    releaseScrollHold?.();
+    releaseScrollHold = trapScrollInside(popupEl, { backdrop: true });
     const room = measureRoomBetweenBars();
     const boxLeaving = room ? elementLeaving.getBoundingClientRect() : null;
     let boxArriving = null;
