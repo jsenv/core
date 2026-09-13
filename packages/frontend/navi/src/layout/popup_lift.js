@@ -46,9 +46,12 @@
  * The page around is photographed too, the browser's default, kept on
  * purpose: the wall and what the popup holds around the lifted node live in
  * the top layer, which the browser paints during a transition only as part of
- * the root's picture (see the CSS in dialog.jsx). The fixed bars are named for
- * the length of the movement as well, so the lifted box can pass under them
- * near the anchor and over them near the popup.
+ * the root's picture (see the CSS in dialog.jsx). The fixed bars are part of
+ * that picture, under the wall like the rest of the page. The popup is placed
+ * between the bars, and its picture keeps to the room between them on the
+ * way as well: the moving box is clipped to that room (clipToRoomBetweenBars),
+ * so a card half under the bottom bar leaves from under it and comes back
+ * under it.
  */
 
 import { ensureDocumentStartViewTransition } from "../transition/start_view_transition_polyfill.js";
@@ -82,13 +85,9 @@ const TARGET_WAIT_MS = 1000;
 // The popup's own animation duration, published on the root because the
 // ::view-transition tree hangs off it and inherits from nowhere else.
 const DURATION_PROPERTY = "--navi-popup-lift-duration";
-// The fixed bars (fixed_bar.jsx), named for the length of the movement so
-// each is a picture of its own the lifted box passes under, then over
-// (dialog.jsx). Numbered, so two bars never share a name — a name worn twice
-// aborts the transition — and capped at what the CSS names.
+// The fixed bars (fixed_bar.jsx): the popup is placed in the room between
+// them, and the moving picture is clipped to that room on the way.
 const FIXED_BAR_SELECTOR = ".navi_fixed_bar";
-const FIXED_BAR_NAME_PREFIX = "navi-fixed-bar-";
-const FIXED_BAR_NAME_COUNT = 4;
 // The corners and the paint of the lifted node, published the same way. The
 // pictures are clipped to the moving box (dialog.jsx), and a card with rounded
 // corners must not travel with square ones; the box wears the card's own
@@ -101,6 +100,10 @@ const BACKGROUND_COLOR_PROPERTY = "--navi-popup-lift-background-color";
 const BACKGROUND_IMAGE_PROPERTY = "--navi-popup-lift-background-image";
 
 let releaseLiftInProgress = null;
+// The clip of the movement in progress (clipToRoomBetweenBars): cancelled
+// with the movement, so a finished one cannot go on applying its last inset
+// to the next movement's picture.
+let clipInProgress = null;
 
 /**
  * Runs `applyChange` — the DOM change that opens or closes `popupEl` — inside
@@ -143,7 +146,6 @@ export const liftPopupFromAnchor = (
   }
 
   let giveBackNameArriving = null;
-  let giveBackBarNames = null;
   let stopWaitingForTarget = null;
   const release = () => {
     if (releaseLiftInProgress !== release) {
@@ -151,12 +153,13 @@ export const liftPopupFromAnchor = (
     }
     releaseLiftInProgress = null;
     stopWaitingForTarget?.();
+    clipInProgress?.cancel();
+    clipInProgress = null;
     // Given up on, or replaced, while still waiting to be lifted: shown where
     // it stands rather than left unpainted.
     popupEl.removeAttribute(ARRIVING_ATTRIBUTE);
     giveBackNameLeaving();
     giveBackNameArriving?.();
-    giveBackBarNames?.();
     root.removeAttribute(ROOT_ATTRIBUTE);
     root.removeAttribute(KIND_ATTRIBUTE);
     root.style.removeProperty(DURATION_PROPERTY);
@@ -167,7 +170,9 @@ export const liftPopupFromAnchor = (
   releaseLiftInProgress = release;
 
   const startMovement = (change, resolveElementArriving) => {
-    giveBackBarNames = wearFixedBarNames();
+    const room = measureRoomBetweenBars();
+    const boxLeaving = room ? elementLeaving.getBoundingClientRect() : null;
+    let boxArriving = null;
     const viewTransition = startViewTransition(() => {
       // The name is the arriving box's from here on: worn by both, it is worn
       // by neither. Written rather than removed, so a name the element also
@@ -177,8 +182,18 @@ export const liftPopupFromAnchor = (
       const elementArriving = resolveElementArriving();
       if (elementArriving) {
         giveBackNameArriving = wearLiftName(elementArriving);
+        if (room) {
+          boxArriving = elementArriving.getBoundingClientRect();
+        }
       }
     });
+    if (room) {
+      viewTransition.ready.then(() => {
+        if (boxArriving) {
+          clipToRoomBetweenBars(room, boxLeaving, boxArriving);
+        }
+      }, ignore);
+    }
     viewTransition.finished.then(release, release);
   };
 
@@ -314,31 +329,76 @@ const whenLiftTargetAppears = (popupEl, callback) => {
   return stop;
 };
 
-const wearFixedBarNames = () => {
-  const giveBacks = [];
+const ignore = () => {};
+
+// The room the fixed bars leave, in viewport coordinates; null without bars.
+// A side with no bar is open to infinity, so the clip below never bites there.
+const measureRoomBetweenBars = () => {
   const bars = document.querySelectorAll(FIXED_BAR_SELECTOR);
-  let index = 0;
-  for (const bar of bars) {
-    if (index === FIXED_BAR_NAME_COUNT) {
-      break;
-    }
-    giveBacks.push(wearName(bar, `${FIXED_BAR_NAME_PREFIX}${index}`));
-    index++;
+  if (bars.length === 0) {
+    return null;
   }
-  return () => {
-    for (const giveBack of giveBacks) {
-      giveBack();
+  const far = 1e6;
+  const room = { top: -far, right: far, bottom: far, left: -far };
+  for (const bar of bars) {
+    const rect = bar.getBoundingClientRect();
+    const area = bar.getAttribute("data-area");
+    if (area === "top" && rect.bottom > room.top) {
+      room.top = rect.bottom;
+    } else if (area === "bottom" && rect.top < room.bottom) {
+      room.bottom = rect.top;
+    } else if (area === "left" && rect.right > room.left) {
+      room.left = rect.right;
+    } else if (area === "right" && rect.left < room.right) {
+      room.right = rect.left;
     }
-  };
+  }
+  return room;
 };
+
+// Clips the moving picture to the room between the bars, for the length of
+// the movement. The clip is written in the moving box's own coordinates, and
+// the box goes from one rectangle to the other along the browser's own
+// easing: each inset is an affine function of that progress, so two keyframes
+// with the group's timing follow the box exactly, and a negative inset — the
+// box clear of that bar — clips nothing. The easing is the one on the
+// group's keyframes: a CSS animation carries it there, and the animation's
+// own timing reads linear.
+const clipToRoomBetweenBars = (room, boxFrom, boxTo) => {
+  const groupAnimation = document
+    .getAnimations()
+    .find(
+      (animation) =>
+        animation.effect?.pseudoElement === `::view-transition-group(${NAME})`,
+    );
+  if (!groupAnimation) {
+    return;
+  }
+  const { duration } = groupAnimation.effect.getTiming();
+  const [firstKeyframe] = groupAnimation.effect.getKeyframes();
+  const easing = firstKeyframe?.easing || "ease";
+  clipInProgress?.cancel();
+  clipInProgress = document.documentElement.animate(
+    [
+      { clipPath: insetToRoom(room, boxFrom), easing },
+      { clipPath: insetToRoom(room, boxTo) },
+    ],
+    {
+      duration,
+      fill: "both",
+      pseudoElement: `::view-transition-image-pair(${NAME})`,
+    },
+  );
+};
+
+const insetToRoom = (room, box) =>
+  `inset(${room.top - box.top}px ${box.right - room.right}px ${box.bottom - room.bottom}px ${room.left - box.left}px)`;
 
 // Wears the movement's name, and gives back whatever the element had written
 // inline of its own once the movement is over.
-const wearLiftName = (element) => wearName(element, NAME);
-
-const wearName = (element, name) => {
+const wearLiftName = (element) => {
   const nameBefore = element.style.getPropertyValue(NAME_PROPERTY);
-  element.style.setProperty(NAME_PROPERTY, name);
+  element.style.setProperty(NAME_PROPERTY, NAME);
   return () => {
     if (nameBefore) {
       element.style.setProperty(NAME_PROPERTY, nameBefore);

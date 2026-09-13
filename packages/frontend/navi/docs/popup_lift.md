@@ -178,10 +178,13 @@ leaves; `backdropVariant="discrete"` asks for the light wash back. See
   bare page; in an app it showed only past a few thousand pixels of scroll).
   The price is a page frozen and unpressable while the movement plays: under a
   modal wall at the opening, and a quarter of a second at the closing.
-- **Fixed bars are named for the movement** (`navi-fixed-bar-0..3`), so the
-  lifted box passes under them near the trigger — a thumbnail half under the
-  top bar leaves from under it — and over them near the popup, where a tall
-  dialog stands over the bars.
+- **Fixed bars stay in the page's picture**, under the wall like everything
+  else. The popup is placed in the room between them, and its picture keeps
+  to that room on the way as well: the moving box is clipped to it, so a card
+  half under the bottom bar leaves from under it and comes back under it.
+  Naming the bars to draw them over the box was tried and taken out: a bar
+  photographed on its own has no wall over it, and compositing the wall onto
+  its picture by hand never quite matched the wall itself.
 - **The closing is photographed whole**, the picture of the popup taken before
   the close takes it off screen. Escape, the wall, `--navi-close`, `navBack`
   all go through it; the native `cancel` of a `<dialog>` is prevented so the

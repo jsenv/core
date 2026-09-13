@@ -690,7 +690,14 @@ const css = /* css */ `
        ::view-transition tree hangs off it and inherits from nowhere else. */
     &::view-transition-group(navi-popup-lift),
     &::view-transition-old(navi-popup-lift),
-    &::view-transition-new(navi-popup-lift) {
+    &::view-transition-new(navi-popup-lift),
+    /* The page's own picture too: it carries the wall's arrival and what the
+       dialog holds around the lifted node, and one movement has one clock —
+       left to the browser's default, the wall would be up in a quarter of a
+       second under a card still travelling. */
+    &::view-transition-group(root),
+    &::view-transition-old(root),
+    &::view-transition-new(root) {
       animation-duration: var(--navi-popup-lift-duration, 0.25s);
     }
 
@@ -749,35 +756,6 @@ const css = /* css */ `
         margin-block: auto;
       }
     }
-
-    /* The anchor lives in the page, under the fixed bars; the popup lives in
-       the top layer, over them. For the length of a movement the bars wear a
-       name of their own (popup_lift.js), so each is a picture the lifted box
-       can pass under or over: over it near the anchor's end — a thumbnail
-       half under the top bar leaves from under it and comes back under it —
-       and under it near the popup's end, where a tall dialog may stand over
-       them. Over for the 65% of the time nearest the anchor: with the group's
-       own ease that leaves the last 35% of the time to cover more than half of
-       the trip, so the picture is out of the bars before it passes over. A
-       bar does not move, so replacing the browser's own animation on its
-       group costs nothing. */
-    &::view-transition-group(navi-popup-lift) {
-      z-index: 1;
-    }
-    &::view-transition-group(navi-fixed-bar-0),
-    &::view-transition-group(navi-fixed-bar-1),
-    &::view-transition-group(navi-fixed-bar-2),
-    &::view-transition-group(navi-fixed-bar-3) {
-      animation: navi-popup-lift-bar var(--navi-popup-lift-duration, 0.25s) both;
-    }
-    &[data-navi-popup-lift="closing"] {
-      &::view-transition-group(navi-fixed-bar-0),
-      &::view-transition-group(navi-fixed-bar-1),
-      &::view-transition-group(navi-fixed-bar-2),
-      &::view-transition-group(navi-fixed-bar-3) {
-        animation-direction: reverse;
-      }
-    }
   }
   @keyframes navi-popup-lift-leave {
     0%,
@@ -797,16 +775,6 @@ const css = /* css */ `
     85%,
     100% {
       opacity: 1;
-    }
-  }
-  @keyframes navi-popup-lift-bar {
-    0%,
-    65% {
-      z-index: 2;
-    }
-    65.01%,
-    100% {
-      z-index: 0;
     }
   }
 

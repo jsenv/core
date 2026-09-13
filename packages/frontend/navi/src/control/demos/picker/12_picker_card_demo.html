@@ -90,6 +90,7 @@
         Button,
         ControlGroup,
         DaySpin,
+        FixedBar,
         Input,
         Link,
         Picker,
@@ -869,6 +870,7 @@
           variant="bare"
           mode="dialog"
           padding="0"
+          borderRadius="m"
           ui={
             <Box width="170" height="110" style={{ overflow: "hidden" }}>
               {/* The middle band of a 170px-wide, 170px-tall scene: what a
@@ -1023,9 +1025,30 @@
           "picker_card_demo_bench_same_width",
           true,
         );
+        const [fixedBars, setFixedBars] = useStoredBoolean(
+          "picker_card_demo_bench_fixed_bars",
+          false,
+        );
         const animationDuration = slow ? "1s" : undefined;
         return (
           <Section id="lift-bench" title="Au poids d'une vraie carte">
+            {fixedBars ? (
+              <>
+                <FixedBar area="top" height={48}>
+                  <Box flex alignX="center" alignY="center" expandX>
+                    <Text size="16">Partie de padel</Text>
+                  </Box>
+                </FixedBar>
+                <FixedBar area="bottom" height={54}>
+                  <Box flex alignX="center" alignY="center" expandX spacing="l">
+                    <Text size="s">Mes parties</Text>
+                    <Text size="s">Alertes</Text>
+                    <Text size="s">Joueurs</Text>
+                    <Text size="s">Moi</Text>
+                  </Box>
+                </FixedBar>
+              </>
+            ) : null}
             <Heading level={3} id="lift-bench-card">
               La carte qui devient éditable
             </Heading>
@@ -1065,6 +1088,14 @@
                 />
                 même largeur soulevée (dialogMaxWidth="var(--anchor-width)",
                 sinon 364px)
+              </label>
+              <label class="demo-animate-toggle">
+                <input
+                  type="checkbox"
+                  checked={fixedBars}
+                  onChange={(e) => setFixedBars(e.target.checked)}
+                />
+                barres fixes en haut et en bas
               </label>
             </div>
             <Heading level={3} id="lift-bench-scene">
