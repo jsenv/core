@@ -96,7 +96,7 @@ const css = /* css */ `
  *   popup meant to dock on a phone must not declare itself compact — see
  *   `maxWidth` below.
  * @param {boolean} [props.sizeFromAnchor] - **Dialog-only**, same guard.
- * @param {"box"|"scene"} [props.grow] - **Dialog-only**, same guard.
+ * @param {"box"|"scene"} [props.lift] - **Dialog-only**, same guard.
  * @param {string} [props.positionArea] - Forwarded as-is — `Dialog` and
  *   `Popover` have different own defaults (`"center"` vs. `"bottom"`),
  *   deliberately not homogenized here (each reads best for its own typical
@@ -203,7 +203,7 @@ export const Popup = (props) => {
     // in the dialog branch, so they never reach the popover element.
     dockedOnSmallTouchScreen,
     sizeFromAnchor,
-    grow,
+    lift,
     ...rest
   } = props;
 
@@ -226,7 +226,7 @@ export const Popup = (props) => {
         {...rest}
         dockedOnSmallTouchScreen={dockedOnSmallTouchScreen}
         sizeFromAnchor={sizeFromAnchor}
-        grow={grow}
+        lift={lift}
         maxWidth={maxWidth}
         pointerInteractionOutsideEffect={pointerInteractionOutsideEffect}
         backdrop={backdrop}

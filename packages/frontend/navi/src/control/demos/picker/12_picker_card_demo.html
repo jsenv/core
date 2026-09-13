@@ -187,7 +187,7 @@
           <StatesDemo />
           <OpenOnDemo />
           <DoorDemo />
-          <GrowDemo />
+          <LiftDemo />
         </Box>
       );
 
@@ -302,7 +302,7 @@
               mode="dialog"
               ui={<Box width="160">{scene}</Box>}
               aria-label="Agrandir le dessin"
-              animation="growing"
+              animation="lifting"
               animationDuration={slow ? "0.6s" : undefined}
               dialogExpandX
               dialogMaxWidth="min(560px, 92vw)"
@@ -310,14 +310,14 @@
               popupBoxShadow="none"
               mount="from-first-open"
             >
-              <Box data-grow>{scene}</Box>
+              <Box data-lift>{scene}</Box>
             </Picker>
             <SlowToggle slow={slow} setSlow={setSlow} />
           </Section>
         );
       };
 
-      // ── grow ──────────────────────────────────────────────────────────────
+      // ── lift ──────────────────────────────────────────────────────────────
 
       // The same drawing at two framings: the whole scene is 1:1, the page
       // shows its middle band, 4:3 — a sun at the top and a bench at the
@@ -346,15 +346,15 @@
       const wholeScene = sceneOf("0 0 200 200");
       const framedScene = sceneOf("0 25 200 150");
 
-      const FramedScenePicker = ({ grow, animationDuration }) => (
+      const FramedScenePicker = ({ lift, animationDuration }) => (
         <Picker
           picksNothing
           variant="bare"
           mode="dialog"
           ui={<Box width="200">{framedScene}</Box>}
           aria-label="Voir toute la scène"
-          animation="growing"
-          grow={grow}
+          animation="lifting"
+          lift={lift}
           animationDuration={animationDuration}
           dialogExpandX
           dialogMaxWidth="min(360px, 92vw)"
@@ -362,7 +362,7 @@
           popupBoxShadow="none"
           mount="from-first-open"
         >
-          <Box data-grow>{wholeScene}</Box>
+          <Box data-lift>{wholeScene}</Box>
         </Picker>
       );
 
@@ -386,7 +386,7 @@
         </Box>
       );
 
-      const ExtendingCardPicker = ({ grow, animationDuration }) => (
+      const ExtendingCardPicker = ({ lift, animationDuration }) => (
         <Picker
           picksNothing
           variant="bare"
@@ -394,8 +394,8 @@
           borderRadius="12"
           ui={<PlainCard />}
           aria-label="Voir toute la fiche"
-          animation="growing"
-          grow={grow}
+          animation="lifting"
+          lift={lift}
           animationDuration={animationDuration}
           dialogSizeFromAnchor
           dialogExpandX
@@ -403,7 +403,7 @@
           popupBoxShadow="none"
           mount="from-first-open"
         >
-          <PlainCard data-grow>
+          <PlainCard data-lift>
             <Text size="s">Samedi 14 mars, 10h00 – 11h30</Text>
             <Text size="s">Aurore, Malo, Inès, Théo</Text>
             <Text size="s">Balles fournies, 8 € par joueur</Text>
@@ -435,7 +435,7 @@
       );
 
       const SameContentPicker = ({
-        grow,
+        lift,
         animationDuration,
         pageSize,
         sheetSize,
@@ -447,14 +447,14 @@
           borderRadius="12"
           ui={<CenteredCard {...pageSize} />}
           aria-label="Mettre la fiche en avant"
-          animation="growing"
-          grow={grow}
+          animation="lifting"
+          lift={lift}
           animationDuration={animationDuration}
           popupBackgroundColor="transparent"
           popupBoxShadow="none"
           mount="from-first-open"
         >
-          <CenteredCard data-grow {...sheetSize} />
+          <CenteredCard data-lift {...sheetSize} />
         </Picker>
       );
 
@@ -462,67 +462,67 @@
       const WIDER_SIZE = { width: 340, height: 120 };
       const TALLER_SIZE = { width: 300, height: 160 };
 
-      const GrowDemo = () => {
+      const LiftDemo = () => {
         const [slow, setSlow] = useStoredBoolean(
-          "picker_card_demo_grow_slow",
+          "picker_card_demo_lift_slow",
           true,
         );
         const animationDuration = slow ? "1s" : undefined;
         return (
-          <Section id="grow" title="grow">
+          <Section id="lift" title="lift">
             <p>
               Une carte qui s'allonge garde son en-tête ; une scène recadrée
               garde son centre.
             </p>
-            <Heading level={3} id="grow-card">
+            <Heading level={3} id="lift-card">
               Une carte qui s'allonge
             </Heading>
             <div class="demo-row">
-              <Case caption='grow="box" (défaut)'>
+              <Case caption='lift="box" (défaut)'>
                 <ExtendingCardPicker
-                  grow="box"
+                  lift="box"
                   animationDuration={animationDuration}
                 />
               </Case>
-              <Case caption='grow="scene"'>
+              <Case caption='lift="scene"'>
                 <ExtendingCardPicker
-                  grow="scene"
+                  lift="scene"
                   animationDuration={animationDuration}
                 />
               </Case>
             </div>
-            <Heading level={3} id="grow-scene">
+            <Heading level={3} id="lift-scene">
               Une scène vue par deux cadres
             </Heading>
             <div class="demo-row">
-              <Case caption='grow="box" (défaut)'>
+              <Case caption='lift="box" (défaut)'>
                 <FramedScenePicker
-                  grow="box"
+                  lift="box"
                   animationDuration={animationDuration}
                 />
               </Case>
-              <Case caption='grow="scene"'>
+              <Case caption='lift="scene"'>
                 <FramedScenePicker
-                  grow="scene"
+                  lift="scene"
                   animationDuration={animationDuration}
                 />
               </Case>
             </div>
-            <Heading level={3} id="grow-same-content">
+            <Heading level={3} id="lift-same-content">
               Le même contenu, à peine plus grand
             </Heading>
             <div class="demo-row">
-              <Case caption='plus large, grow="box" (défaut)'>
+              <Case caption='plus large, lift="box" (défaut)'>
                 <SameContentPicker
-                  grow="box"
+                  lift="box"
                   animationDuration={animationDuration}
                   pageSize={IN_PAGE_SIZE}
                   sheetSize={WIDER_SIZE}
                 />
               </Case>
-              <Case caption='plus large, grow="scene"'>
+              <Case caption='plus large, lift="scene"'>
                 <SameContentPicker
-                  grow="scene"
+                  lift="scene"
                   animationDuration={animationDuration}
                   pageSize={IN_PAGE_SIZE}
                   sheetSize={WIDER_SIZE}
@@ -530,17 +530,17 @@
               </Case>
             </div>
             <div class="demo-row">
-              <Case caption='plus haut, grow="box" (défaut)'>
+              <Case caption='plus haut, lift="box" (défaut)'>
                 <SameContentPicker
-                  grow="box"
+                  lift="box"
                   animationDuration={animationDuration}
                   pageSize={IN_PAGE_SIZE}
                   sheetSize={TALLER_SIZE}
                 />
               </Case>
-              <Case caption='plus haut, grow="scene"'>
+              <Case caption='plus haut, lift="scene"'>
                 <SameContentPicker
-                  grow="scene"
+                  lift="scene"
                   animationDuration={animationDuration}
                   pageSize={IN_PAGE_SIZE}
                   sheetSize={TALLER_SIZE}
@@ -615,7 +615,7 @@
       // carries it above the rest — the same way for both sheets.
       const LIFTED_SHEET_PROPS = {
         mode: "dialog",
-        animation: "growing",
+        animation: "lifting",
         dialogSizeFromAnchor: true,
         dialogExpandX: true,
         popupBackgroundColor: "transparent",
@@ -686,7 +686,7 @@
           {...props}
         >
           <ControlGroup flex="y" spacing="m" alignX="stretch">
-            <GameCard game={game} mode="score" data-grow />
+            <GameCard game={game} mode="score" data-lift />
             <SheetButtons send="Enregistrer le score" />
           </ControlGroup>
         </Picker>
@@ -779,7 +779,7 @@
             {...props}
           >
             <ControlGroup flex="y" spacing="m" alignX="stretch">
-              <GameCard game={game} mode="edit" data-grow />
+              <GameCard game={game} mode="edit" data-lift />
               <SheetButtons send="Enregistrer">
                 {/* Not a field, still an answer of this sheet: the button's
                     name and value travel with the fields, the sheet leaves,

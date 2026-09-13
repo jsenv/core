@@ -1620,8 +1620,8 @@ const PickerFirstResolver = (props) => {
  *   children?: import("preact").ComponentChildren,
  *   mode?: "popover" | "dialog" | "callout",
  *   openOn?: "press" | "longpress" | "contextmenu" | string | string[],
- *   animation?: boolean | "auto" | "fading" | "scaling" | "sliding" | "growing" | `slide-from-${string}`,
- *   grow?: "box" | "scene",
+ *   animation?: boolean | "auto" | "fading" | "scaling" | "sliding" | "lifting" | `slide-from-${string}`,
+ *   lift?: "box" | "scene",
  *   animationDuration?: string,
  *   calloutStatus?: "info" | "warning" | "error" | "success" | "none",
  *   calloutIcon?: boolean,
@@ -1975,17 +1975,17 @@ const PickerFirstResolver = (props) => {
  *   a dialog docked by `dockedOnSmallTouchScreen` withdraws it and stays
  *   container-wide, so both can be stated at once.
  * @param {number|string} [dialogMaxHeight] Same, on the height.
- * @param {boolean|"auto"|"fading"|"scaling"|"sliding"|"growing"|`slide-from-${string}`} [animation]
- *   The popup's own (see Popover/Dialog). `"growing"` is the one a picker
+ * @param {boolean|"auto"|"fading"|"scaling"|"sliding"|"lifting"|`slide-from-${string}`} [animation]
+ *   The popup's own (see Popover/Dialog). `"lifting"` is the one a picker
  *   whose `ui` is a whole piece of the page wants: the popup is the browser
- *   morphing the trigger's box into what carries `data-grow` inside the popup
- *   (the popup itself when nothing does), and back on close. The trigger IS
+ *   morphing the trigger's box into what carries `data-lift` inside the popup
+ *   (the popup itself when it carries it), and back on close. The trigger IS
  *   the anchor, so nothing has to be named for it — `dialogSizeFromAnchor`
  *   for a card that must keep its width on the way, left out for a drawing
  *   that opens precisely to get bigger. It brings an opaque, blurred backdrop
- *   with it (`--navi-backdrop-grow-*`); `backdropVariant="discrete"` asks for
+ *   with it (`--navi-backdrop-lift-*`); `backdropVariant="discrete"` asks for
  *   the light wash back.
- * @param {"box"|"scene"} [grow="box"] Dialog's own, under `animation="growing"`:
+ * @param {"box"|"scene"} [lift="box"] Dialog's own, under `animation="lifting"`:
  *   `"box"` for a card that extends (its top stays, the box uncovers the rest),
  *   `"scene"` for a thumbnail and the bigger view it is cut from (each picture
  *   covers the box, cropped around its centre).
@@ -1993,8 +1993,8 @@ const PickerFirstResolver = (props) => {
  * @param {boolean} [dialogSizeFromAnchor] Dialog mode: the dialog is as wide
  *   as the trigger — its box as a floor (Dialog's own `sizeFromAnchor`) and
  *   as a ceiling, unless a `dialogMaxWidth` says otherwise. What keeps a card
- *   its own width once lifted out of the page (`animation="growing"`, with
- *   `data-grow` on the card inside the popup): it moves, and nothing else
+ *   its own width once lifted out of the page (`animation="lifting"`, with
+ *   `data-lift` on the card inside the popup): it moves, and nothing else
  *   about it changes. `dialogMaxWidth="var(--anchor-width)"` says the same
  *   ceiling by hand: the popup props are written on the dialog element, where
  *   that variable lives.

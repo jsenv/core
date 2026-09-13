@@ -365,7 +365,7 @@
         border: 1px solid #cfe0f5;
       }
 
-      .demo_grow_card {
+      .demo_lift_card {
         width: 200px;
         padding: 10px 12px;
         color: inherit;
@@ -374,11 +374,11 @@
         border: 1px solid #cfe0f5;
         border-radius: 10px;
       }
-      .demo_grow_card_open {
+      .demo_lift_card_open {
         width: 320px;
         padding: 20px;
       }
-      .demo_grow_sheet {
+      .demo_lift_sheet {
         --dialog-background-color: transparent;
         --dialog-box-shadow: none;
         align-items: center;
@@ -449,7 +449,6 @@
         "fading",
         "scaling",
         "sliding",
-        "growing",
       ];
 
       const useAnimateControls = (storageKey) => {
@@ -517,27 +516,28 @@
         );
       };
 
-      const GROW_MATCHES = [
+      const LIFT_MATCHES = [
         { id: "match_a", label: "Aurore / Malo", score: "6-4 3-6" },
         { id: "match_b", label: "Nadia / Théo", score: "7-5 6-2" },
       ];
 
-      const GrowWholeDialog = ({ match, animationDuration }) => {
+      const LiftWholeDialog = ({ match, animationDuration }) => {
         const dialogId = useId();
         return (
           <>
             <Button
               command="--navi-open"
               commandFor={dialogId}
-              className="demo_grow_card"
+              className="demo_lift_card"
             >
               {match.label}
             </Button>
             <Dialog
               id={dialogId}
-              animation="growing"
+              animation="lifting"
               animationDuration={animationDuration}
-              className="demo_grow_card demo_grow_card_open"
+              className="demo_lift_card demo_lift_card_open"
+              data-lift
             >
               <Text bold>{match.label}</Text>
               <p>{match.score}</p>
@@ -547,24 +547,24 @@
         );
       };
 
-      const GrowCardInDialog = ({ match, animationDuration }) => {
+      const LiftCardInDialog = ({ match, animationDuration }) => {
         const dialogId = useId();
         return (
           <>
             <Button
               command="--navi-open"
               commandFor={dialogId}
-              className="demo_grow_card"
+              className="demo_lift_card"
             >
               {match.label}
             </Button>
             <Dialog
               id={dialogId}
-              animation="growing"
+              animation="lifting"
               animationDuration={animationDuration}
-              className="demo_grow_sheet"
+              className="demo_lift_sheet"
             >
-              <div data-grow className="demo_grow_card demo_grow_card_open">
+              <div data-lift className="demo_lift_card demo_lift_card_open">
                 <Text bold>{match.label}</Text>
                 <p>{match.score}</p>
               </div>
@@ -579,37 +579,37 @@
         );
       };
 
-      const GrowingSection = () => {
+      const LiftingSection = () => {
         const [slow, setSlow] = useStoredBoolean(
-          "dialog_demo_growing_slow",
+          "dialog_demo_lifting_slow",
           true,
         );
         const animationDuration = slow ? "0.6s" : undefined;
         return (
           <section class="demo-section">
-            <Heading id="growing">animation="growing"</Heading>
+            <Heading id="lifting">animation="lifting"</Heading>
             <p>
               The dialog comes out of the box that opened it, and goes back into
               it.
             </p>
-            <Heading level={3} id="growing-whole">
+            <Heading level={3} id="lifting-whole">
               The dialog is the card
             </Heading>
             <div class="demo-row">
-              {GROW_MATCHES.map((match) => (
-                <GrowWholeDialog
+              {LIFT_MATCHES.map((match) => (
+                <LiftWholeDialog
                   key={match.id}
                   match={match}
                   animationDuration={animationDuration}
                 />
               ))}
             </div>
-            <Heading level={3} id="growing-part">
-              data-grow
+            <Heading level={3} id="lifting-part">
+              data-lift
             </Heading>
             <div class="demo-row">
-              {GROW_MATCHES.map((match) => (
-                <GrowCardInDialog
+              {LIFT_MATCHES.map((match) => (
+                <LiftCardInDialog
                   key={match.id}
                   match={match}
                   animationDuration={animationDuration}
@@ -2247,7 +2247,7 @@
           <ControlledByButtonSection />
           <ContentSizeSection />
           <PositionSection />
-          <GrowingSection />
+          <LiftingSection />
           <PointerInteractionOutsideSection />
           <BackdropSection />
           <OpenFromStartSection />

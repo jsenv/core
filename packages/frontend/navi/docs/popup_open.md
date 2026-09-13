@@ -465,10 +465,10 @@ reason where the finger is — the click only once the score picker says
 and a sheet of fields to fill in is not that. One wait, one outline as well:
 the inner picker says `loadingOutline="custom"`, and the card's is drawn by
 the picker whose box the card is. A hold declared inside the card answers before the
-card's own: the nearer hold takes the press. `animation="growing"` with
+card's own: the nearer hold takes the press. `animation="lifting"` with
 `dialogSizeFromAnchor` (as wide as the card, floor and ceiling),
 `popupBackgroundColor="transparent"` and `popupBoxShadow="none"` lifts the
-card out of its place and puts it back (`data-grow` on the card inside the
+card out of its place and puts it back (`data-lift` on the card inside the
 sheet; see Dialog's own `animation`). `12_picker_card_demo.html` shows all of
 it, against a backend that answers when told to.
 
@@ -505,11 +505,11 @@ looked at — a weather scene, a plan — and comes back. `picksNothing`, no
   mode="dialog"
   ui={scene}
   aria-label="Zoom"
-  animation="growing"
+  animation="lifting"
   popupBackgroundColor="transparent"
   popupBoxShadow="none"
 >
-  <Box data-grow>{scene}</Box>
+  <Box data-lift>{scene}</Box>
 </Picker>
 ```
 

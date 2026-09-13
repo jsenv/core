@@ -33603,7 +33603,7 @@ const createOpenController = (
     // Set by the controlled element when the DOM change that opens or closes
     // it has to be photographed by the browser on both sides — a document view
     // transition, whose update callback is the only place that change can
-    // happen (Dialog's animation="growing", see popup_grow.js). Called with
+    // happen (Dialog's animation="lifting", see popup_lift.js). Called with
     // the change and where it leads; running it is its job, and it may run it
     // a frame later than it was asked for. That delay is the reason a popup
     // cannot do this from the outside: `--navi-open` runs when navi runs it,
@@ -58617,14 +58617,15 @@ const clipOf = (side, distance) => {
 };
 
 /**
- * A popup that is the anchor, continued.
+ * A popup that is the anchor, brought to the front.
  *
  * Opening a surface out of the element that asked for it is not the surface
- * appearing while that element stays put: it is one box becoming another. The
- * browser draws exactly that on its own — the same `view-transition-name` on
- * the anchor before the change and on the popup after it, and it morphs the
- * first box into the second — so all this file does is hand that name over at
- * the two instants it can be handed over, and give it back afterwards.
+ * appearing while that element stays put: it is that element leaving its place
+ * in the page to stand in front of it — one box becoming another. The browser
+ * draws exactly that on its own — the same `view-transition-name` on the anchor
+ * before the change and on the popup after it, and it morphs the first box
+ * into the second — so all this file does is hand that name over at the two
+ * instants it can be handed over, and give it back afterwards.
  *
  * The pictures are taken around a DOM change, which is why the movement cannot
  * be written from outside: what a caller can reach — a command, `onClose` — is
@@ -58643,15 +58644,22 @@ const clipOf = (side, distance) => {
  * nothing painted in between: the backdrop, which is all the user needs to
  * know the tap landed, reaches the screen with the open — at half strength,
  * the anchor under it still being the thing about to be lifted (see the
- * [data-growing] backdrop rules in dialog.jsx) — and the box grows out of the
+ * [data-lifting] backdrop rules in dialog.jsx) — and the box lifts out of the
  * anchor from there.
+ *
+ * What is lifted is named: `data-lift` on the one node that IS the anchor
+ * once in front — inside the popup, or the popup itself when the popup is
+ * that node whole. It is often not there when the opening asks for it: code
+ * that arrives with the address, a row fetched for the popup, both land a
+ * task or a round trip later. A movement started before it exists would carry
+ * the anchor into an empty box — the card dissolving into nothing, and the
+ * content appearing later where the box landed. So the opening waits for it
+ * (TARGET_WAIT_MS), on the half-strength frame where the anchor is still
+ * readable, and lifts the moment it is there.
  *
  * One name serves the whole movement, because only one of the two boxes is on
  * screen at a time: it names the anchor while the popup is closed, and the
- * popup while it is open. What continues the anchor INSIDE the popup is
- * whatever carries `data-grow`, and the popup itself when nothing does — a
- * dialog holding the grown card plus buttons around it grows the card, a
- * dialog that IS the grown thing grows whole.
+ * lifted node while it is open.
  *
  * The page around stays out of the picture (`view-transition-name: none` on
  * the root, in dialog.jsx): a captured element is not painted where it stands
@@ -58663,59 +58671,65 @@ const clipOf = (side, distance) => {
 
 // The name the two boxes take turns wearing. A single literal one is enough,
 // and unique by construction: a document has one view transition, so it has at
-// most one popup growing, and the movement being replaced gives the name back
-// before the next one takes it (see releaseGrowInProgress).
-const NAME = "navi-popup-grow";
+// most one popup lifting, and the movement being replaced gives the name back
+// before the next one takes it (see releaseLiftInProgress).
+const NAME = "navi-popup-lift";
 const NAME_PROPERTY = "view-transition-name";
 // Worn by the root for the length of the movement, saying which way it goes
 // ("opening" | "closing") — what the CSS keys the page's own opt-out and the
 // clip near the anchor's end on, and the movement's only trace in the document.
-const ROOT_ATTRIBUTE = "data-navi-popup-grow";
-// What the two boxes are to each other (Dialog's `grow`: "box" | "scene"),
+const ROOT_ATTRIBUTE = "data-navi-popup-lift";
+// What the two boxes are to each other (Dialog's `lift`: "box" | "scene"),
 // worn by the root too — it decides how each picture sits in the moving box.
-const KIND_ATTRIBUTE = "data-navi-popup-grow-kind";
-// Inside the popup, the one node that IS the anchor once it has grown.
-const TARGET_SELECTOR = "[data-grow]";
+const KIND_ATTRIBUTE = "data-navi-popup-lift-kind";
+// The one node that IS the anchor once in front: the popup itself, or a node
+// inside it.
+const TARGET_SELECTOR = "[data-lift]";
 // Worn by the popup from its opening to the reveal, keeping it unpainted
 // (dialog.jsx) while its backdrop is already on screen: the popup is brought
 // in by the movement, not by the open.
-const ARRIVING_ATTRIBUTE = "data-navi-popup-grow-arriving";
+const ARRIVING_ATTRIBUTE = "data-navi-popup-lift-arriving";
+// How long an opening waits for something to lift. What arrives with an
+// opening — code fetched for the address, a row fetched for the popup — is a
+// matter of a few hundred milliseconds; past this the popup is shown where it
+// stands, without a movement, so a target that never comes cannot keep it
+// unpainted.
+const TARGET_WAIT_MS = 1000;
 // The popup's own animation duration, published on the root because the
 // ::view-transition tree hangs off it and inherits from nowhere else.
-const DURATION_PROPERTY = "--navi-popup-grow-duration";
+const DURATION_PROPERTY = "--navi-popup-lift-duration";
 // The corners of the box being left, published the same way: the pictures are
 // clipped to the moving box (dialog.jsx), and a card with rounded corners must
 // not travel with square ones.
-const BORDER_RADIUS_PROPERTY = "--navi-popup-grow-border-radius";
+const BORDER_RADIUS_PROPERTY = "--navi-popup-lift-border-radius";
 
-let releaseGrowInProgress = null;
+let releaseLiftInProgress = null;
 
 /**
  * Runs `applyChange` — the DOM change that opens or closes `popupEl` — inside
- * a view transition morphing the anchor's box into the popup's, or back.
+ * a view transition morphing the anchor's box into the lifted node's, or back.
  *
  * `opened` says which way: the box being left is the anchor when the popup is
- * opening and the popup when it is closing, and the arriving one is only known
- * once the change has been made (the content a popup grows into is built by
- * that very change). `grow` is Dialog's own prop of that name.
+ * opening and the lifted node when it is closing. `lift` is Dialog's own prop
+ * of that name.
  */
-const growPopupFromAnchor = (
+const liftPopupFromAnchor = (
   popupEl,
   anchorElement,
   applyChange,
-  { opened, grow },
+  { opened, lift },
 ) => {
   const startViewTransition = ensureDocumentStartViewTransition();
   // A movement still wearing the name would make the name two elements wide,
   // and a name belonging to two elements aborts the transition for the whole
   // document.
-  releaseGrowInProgress?.();
+  releaseLiftInProgress?.();
 
-  const elementLeaving = opened ? anchorElement : resolveGrowTarget(popupEl);
-  const giveBackNameLeaving = wearGrowName(elementLeaving);
+  const elementLeaving = opened ? anchorElement : resolveLiftTarget(popupEl);
+  const giveBackNameLeaving = wearLiftName(elementLeaving);
   const root = document.documentElement;
   root.setAttribute(ROOT_ATTRIBUTE, opened ? "opening" : "closing");
-  root.setAttribute(KIND_ATTRIBUTE, grow);
+  root.setAttribute(KIND_ATTRIBUTE, lift);
   const duration = getComputedStyle(popupEl)
     .getPropertyValue("--popup-animation-duration")
     .trim();
@@ -58731,11 +58745,16 @@ const growPopupFromAnchor = (
   }
 
   let giveBackNameArriving = null;
+  let stopWaitingForTarget = null;
   const release = () => {
-    if (releaseGrowInProgress !== release) {
+    if (releaseLiftInProgress !== release) {
       return;
     }
-    releaseGrowInProgress = null;
+    releaseLiftInProgress = null;
+    stopWaitingForTarget?.();
+    // Given up on, or replaced, while still waiting to be lifted: shown where
+    // it stands rather than left unpainted.
+    popupEl.removeAttribute(ARRIVING_ATTRIBUTE);
     giveBackNameLeaving();
     giveBackNameArriving?.();
     root.removeAttribute(ROOT_ATTRIBUTE);
@@ -58743,50 +58762,104 @@ const growPopupFromAnchor = (
     root.style.removeProperty(DURATION_PROPERTY);
     root.style.removeProperty(BORDER_RADIUS_PROPERTY);
   };
-  releaseGrowInProgress = release;
+  releaseLiftInProgress = release;
 
-  if (opened) {
-    // Opened on the spot (see this file's top comment): the next frame shows
-    // the backdrop, and the movement has only the reveal to photograph.
-    popupEl.setAttribute(ARRIVING_ATTRIBUTE, "");
-    applyChange();
+  const startMovement = (change, resolveElementArriving) => {
+    const viewTransition = startViewTransition(() => {
+      // The name is the arriving box's from here on: worn by both, it is worn
+      // by neither. Written rather than removed, so a name the element also
+      // has from a stylesheet cannot resurface for the length of the movement.
+      elementLeaving.style.setProperty(NAME_PROPERTY, "none");
+      change();
+      const elementArriving = resolveElementArriving();
+      if (elementArriving) {
+        giveBackNameArriving = wearLiftName(elementArriving);
+      }
+    });
+    viewTransition.finished.then(release, release);
+  };
+
+  if (!opened) {
+    startMovement(applyChange, () =>
+      // Gone from the document while the popup was open (the row it stood in
+      // was removed): nothing to arrive at, and the browser plays the popup's
+      // picture out on its own.
+      anchorElement.isConnected ? anchorElement : null,
+    );
+    return;
   }
-  const viewTransition = startViewTransition(() => {
-    // The name is the arriving box's from here on: worn by both, it is worn by
-    // neither. Written rather than removed, so a name the element also has
-    // from a stylesheet cannot resurface for the length of the movement.
-    elementLeaving.style.setProperty(NAME_PROPERTY, "none");
-    if (opened) {
-      popupEl.removeAttribute(ARRIVING_ATTRIBUTE);
-    } else {
-      applyChange();
+
+  // Opened on the spot (see this file's top comment): the next frame shows
+  // the backdrop, and the movement has only the reveal to photograph.
+  popupEl.setAttribute(ARRIVING_ATTRIBUTE, "");
+  applyChange();
+  const reveal = () => {
+    popupEl.removeAttribute(ARRIVING_ATTRIBUTE);
+  };
+  const liftTarget = (target) => {
+    startMovement(reveal, () => target);
+  };
+  const targetNow = findLiftTarget(popupEl);
+  if (targetNow) {
+    liftTarget(targetNow);
+    return;
+  }
+  stopWaitingForTarget = whenLiftTargetAppears(popupEl, (target) => {
+    stopWaitingForTarget = null;
+    if (target) {
+      liftTarget(target);
+      return;
     }
-    const elementArriving = opened
-      ? resolveGrowTarget(popupEl)
-      : // Gone from the document while the popup was open (the row it stood
-        // in was removed): nothing to arrive at, and the browser plays the
-        // popup's picture out on its own.
-        anchorElement.isConnected
-        ? anchorElement
-        : null;
-    if (elementArriving) {
-      giveBackNameArriving = wearGrowName(elementArriving);
-    }
+    release();
   });
-  viewTransition.finished.then(release, release);
 };
 
-const resolveGrowTarget = (popupEl) => {
-  const declaredTarget = popupEl.querySelector(TARGET_SELECTOR);
-  if (declaredTarget) {
-    return declaredTarget;
+const findLiftTarget = (popupEl) => {
+  if (popupEl.matches(TARGET_SELECTOR)) {
+    return popupEl;
   }
-  return popupEl;
+  return popupEl.querySelector(TARGET_SELECTOR);
+};
+
+// The node leaving on a close. What was lifted is normally still there (a
+// popup throwing its content away does so once its exit has played, see
+// popup_content_mount.js); the popup stands in when it is not.
+const resolveLiftTarget = (popupEl) => {
+  return findLiftTarget(popupEl) || popupEl;
+};
+
+// Calls `callback` with the lift target once one is in the popup, or with
+// null once TARGET_WAIT_MS have passed without one. Returns how to stop
+// waiting.
+const whenLiftTargetAppears = (popupEl, callback) => {
+  const observer = new MutationObserver(() => {
+    const target = findLiftTarget(popupEl);
+    if (!target) {
+      return;
+    }
+    stop();
+    callback(target);
+  });
+  observer.observe(popupEl, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ["data-lift"],
+  });
+  const timeout = setTimeout(() => {
+    stop();
+    callback(null);
+  }, TARGET_WAIT_MS);
+  const stop = () => {
+    observer.disconnect();
+    clearTimeout(timeout);
+  };
+  return stop;
 };
 
 // Wears the movement's name, and gives back whatever the element had written
 // inline of its own once the movement is over.
-const wearGrowName = (element) => {
+const wearLiftName = (element) => {
   const nameBefore = element.style.getPropertyValue(NAME_PROPERTY);
   element.style.setProperty(NAME_PROPERTY, NAME);
   return () => {
@@ -59109,14 +59182,14 @@ const css$E = /* css */`
        to filter). An entrance animation moves the dialog through scale and
        transform instead, which compose under it: see popup_css.js. */
 
-    /* animation="growing" brings its own wall: the popup is the anchor
+    /* animation="lifting" brings its own wall: the popup is the anchor
        continued, not a surface shown over a page that goes on being read (see
        navi_css_vars.js for the paint). Before the rules below, so everything
        said out loud — an outside press that captures, a backdropVariant, the
        two paint props — still wins over what the animation assumes. */
-    &[data-growing] {
-      --backdrop-background: var(--navi-backdrop-grow-background);
-      --backdrop-filter: var(--navi-backdrop-grow-backdrop-filter);
+    &[data-lifting] {
+      --backdrop-background: var(--navi-backdrop-lift-background);
+      --backdrop-filter: var(--navi-backdrop-lift-backdrop-filter);
     }
     &[data-pointer-interaction-outside="capture"] {
       --backdrop-background: var(--navi-backdrop-capture-background);
@@ -59171,8 +59244,8 @@ const css$E = /* css */`
         opacity: 0;
       }
     }
-    /* The wall of a growing dialog is on screen a frame before the movement
-       (popup_grow.js opens the dialog on the spot and holds it unpainted), and
+    /* The wall of a lifting dialog is on screen a frame before the movement
+       (popup_lift.js opens the dialog on the spot and holds it unpainted), and
        on that frame the anchor is still an element of the page, underneath
        it. At full strength, an opaque blurred wall takes away the very thing
        the movement is about to lift. So it arrives over the movement's own
@@ -59180,11 +59253,11 @@ const css$E = /* css */`
        answered — and the anchor is still there to be picked up. Half rather
        than nothing, because that frame is the only one painted before the
        pictures are taken, and it lasts as long as what the dialog builds. */
-    &[data-growing] {
+    &[data-lifting] {
       &::backdrop {
         opacity: 1;
         transition-property: opacity;
-        transition-duration: var(--navi-popup-grow-duration, 0.25s);
+        transition-duration: var(--navi-popup-lift-duration, 0.25s);
         transition-timing-function: ease;
 
         @starting-style {
@@ -59309,14 +59382,14 @@ const css$E = /* css */`
       --backdrop-background: var(--navi-backdrop-close-background);
       --backdrop-filter: var(--navi-backdrop-close-backdrop-filter);
     }
-    /* animation="growing" brings its own wall: the popup is the anchor
+    /* animation="lifting" brings its own wall: the popup is the anchor
        continued, not a surface shown over a page that goes on being read (see
        navi_css_vars.js for the paint). Before the rules below, so everything
        said out loud — an outside press that captures, a backdropVariant, the
        two paint props — still wins over what the animation assumes. */
-    &[data-growing] {
-      --backdrop-background: var(--navi-backdrop-grow-background);
-      --backdrop-filter: var(--navi-backdrop-grow-backdrop-filter);
+    &[data-lifting] {
+      --backdrop-background: var(--navi-backdrop-lift-background);
+      --backdrop-filter: var(--navi-backdrop-lift-backdrop-filter);
     }
     &[data-pointer-interaction-outside="capture"] {
       --backdrop-background: var(--navi-backdrop-capture-background);
@@ -59350,29 +59423,29 @@ const css$E = /* css */`
        displayed with its transitions off (see openEffect). The transition is
        declared on the open state only, so the close is instant, as it is for
        the dialog itself under this animation. */
-    &[data-growing] {
+    &[data-lifting] {
       &[aria-expanded="false"] {
         opacity: 0.5;
       }
       &[aria-expanded="true"] {
         opacity: 1;
         transition-property: opacity;
-        transition-duration: var(--navi-popup-grow-duration, 0.25s);
+        transition-duration: var(--navi-popup-lift-duration, 0.25s);
         transition-timing-function: ease;
       }
     }
   }
 
-  /* Opened ahead of its movement (popup_grow.js): the backdrop is on screen,
+  /* Opened ahead of its movement (popup_lift.js): the backdrop is on screen,
      and the dialog waits, unpainted, for the picture of the page being left —
      the movement is what brings it in. Its ::backdrop is a box of its own in
      the top layer, so the opacity leaves it alone. */
-  .navi_dialog[data-navi-popup-grow-arriving] {
+  .navi_dialog[data-navi-popup-lift-arriving] {
     opacity: 0;
   }
 
-  /* While a dialog is growing out of the element that opened it
-     (popup_grow.js). The page around is deliberately NOT taken as a picture,
+  /* While a dialog is lifting out of the element that opened it
+     (popup_lift.js). The page around is deliberately NOT taken as a picture,
      against the browser's own default: a captured element is not painted where
      it stands and cannot be pointed at either, so photographing the document
      would leave the whole page frozen and unpressable for the length of every
@@ -59380,15 +59453,15 @@ const css$E = /* css */`
      back to it. Nothing shows through where the movement is: the two boxes it
      plays between are captured, and their pictures cover the rectangle between
      them at every moment. */
-  :root[data-navi-popup-grow] {
+  :root[data-navi-popup-lift] {
     view-transition-name: none;
 
-    /* The popup's own pace, published on the root by popup_grow.js because the
+    /* The popup's own pace, published on the root by popup_lift.js because the
        ::view-transition tree hangs off it and inherits from nowhere else. */
-    &::view-transition-group(navi-popup-grow),
-    &::view-transition-old(navi-popup-grow),
-    &::view-transition-new(navi-popup-grow) {
-      animation-duration: var(--navi-popup-grow-duration, 0.25s);
+    &::view-transition-group(navi-popup-lift),
+    &::view-transition-old(navi-popup-lift),
+    &::view-transition-new(navi-popup-lift) {
+      animation-duration: var(--navi-popup-lift-duration, 0.25s);
     }
 
     /* Each picture is drawn as wide as the box and as tall as it is, so a box
@@ -59396,18 +59469,18 @@ const css$E = /* css */`
        whole taller picture from the first frame, and the movement would read
        as a fade. Clipped to the box, the picture is uncovered as the box
        grows and covered back as it shrinks — behind the corners the box
-       has in the page, published by popup_grow.js. */
-    &::view-transition-image-pair(navi-popup-grow) {
-      border-radius: var(--navi-popup-grow-border-radius, 0);
+       has in the page, published by popup_lift.js. */
+    &::view-transition-image-pair(navi-popup-lift) {
+      border-radius: var(--navi-popup-lift-border-radius, 0);
       overflow: clip;
     }
 
-    /* One scene through two frames (Dialog's grow="scene"): each picture
+    /* One scene through two frames (Dialog's lift="scene"): each picture
        covers the box, cropped around its centre, so what both frames show
        lands on itself. */
-    &[data-navi-popup-grow-kind="scene"] {
-      &::view-transition-old(navi-popup-grow),
-      &::view-transition-new(navi-popup-grow) {
+    &[data-navi-popup-lift-kind="scene"] {
+      &::view-transition-old(navi-popup-lift),
+      &::view-transition-new(navi-popup-lift) {
         height: 100%;
         object-fit: cover;
       }
@@ -59423,16 +59496,16 @@ const css$E = /* css */`
        leaves the last 35% of the time to cover more than half of the trip,
        so the picture is out of the bars before the clip closes on it. */
     &::view-transition {
-      animation: navi-popup-grow-clip var(--navi-popup-grow-duration, 0.25s)
+      animation: navi-popup-lift-clip var(--navi-popup-lift-duration, 0.25s)
         ease both;
     }
-    &[data-navi-popup-grow="closing"]::view-transition {
+    &[data-navi-popup-lift="closing"]::view-transition {
       animation-direction: reverse;
     }
   }
   /* The bars sit at the app's own inset (fixed_bar.jsx), so the room they
      take starts there; both tokens are 0px where nothing takes any. */
-  @keyframes navi-popup-grow-clip {
+  @keyframes navi-popup-lift-clip {
     0%,
     65% {
       clip-path: inset(
@@ -59570,7 +59643,7 @@ const css$E = /* css */`
  *   visible the backdrop is, independently of what it does. `"auto"`: the
  *   paint `pointerInteractionOutsideEffect` implies (dimmed for
  *   `"close"`/`"cancel"`, blurred glass for `"capture"`), or the opaque wall
- *   `animation="growing"` asks for. `"discrete"`: a
+ *   `animation="lifting"` asks for. `"discrete"`: a
  *   barely-there dim. `"invisible"`: fully transparent — a wall that is not
  *   seen, still catching every press. This only changes how much the dialog
  *   insists visually, never what an outside click does; whether there is a
@@ -59592,24 +59665,27 @@ const css$E = /* css */`
  *   scroll while open (its backdrop only covers the scrollport, so scrolling
  *   there would reveal uncovered content); this prop extends the lock to the
  *   whole page. Defaults to `true` for a dialog docked by `dockedOnSmallTouchScreen`.
- * @param {boolean|"auto"|"fading"|"scaling"|"sliding"|"growing"|`slide-from-${string}`} [props.animation]
+ * @param {boolean|"auto"|"fading"|"scaling"|"sliding"|"lifting"|`slide-from-${string}`} [props.animation]
  *   - `true`/`"auto"` resolves to `"scaling"` for a centered `positionArea`,
  *   or a concrete `"slide-from-*"` direction otherwise. Any other explicit
- *   value is used as-is. `"growing"` is the odd one out: every other kind
+ *   value is used as-is. `"lifting"` is the odd one out: every other kind
  *   moves the dialog on its own box (it scales from its own centre, slides in
  *   from its own edge), while this one is the browser morphing the ANCHOR's
  *   box into the dialog's, and the dialog's back into the anchor's on close —
  *   for a dialog that is what the anchor became rather than a surface shown
  *   over it. It needs an anchor (whatever opened the dialog, or the `anchor`
- *   prop) and grows into whatever inside the dialog carries `data-grow`, the
- *   dialog itself when nothing does. `"auto"` never picks it: only the caller
- *   knows the two boxes are one object. It also brings its own backdrop —
- *   opaque and blurred (`--navi-backdrop-grow-*`), the page it came out of
+ *   prop) and lifts what carries `data-lift`: a node inside the dialog, or
+ *   the dialog itself when it is that node whole. The opening waits for that
+ *   node to exist (content fetched for the address arrives after the tap) and
+ *   past a second shows the dialog without a movement — see popup_lift.js.
+ *   `"auto"` never picks it: only the caller knows the two boxes are one
+ *   object. It also brings its own backdrop —
+ *   opaque and blurred (`--navi-backdrop-lift-*`), the page it came out of
  *   being what the movement leaves rather than a context to keep readable;
  *   `backdropVariant="discrete"` asks for the light wash back. See
- *   `popup_grow.js`.
- * @param {"box"|"scene"} [props.grow="box"] - Under `animation="growing"`,
- *   what the anchor and what it grows into are to each other, which decides
+ *   `popup_lift.js`.
+ * @param {"box"|"scene"} [props.lift="box"] - Under `animation="lifting"`,
+ *   what the anchor and what it becomes are to each other, which decides
  *   how their pictures sit in the box moving between them. `"box"`: one
  *   object at two sizes — a card gaining fields. Each picture is drawn at the
  *   box's width from its top edge, and a box growing in height uncovers more
@@ -59621,7 +59697,7 @@ const css$E = /* css */`
  *   `--popup-animation-duration`.
  * @param {Element|{current: Element}|string} [props.anchor] - Never used for
  *   positioning (see this file's top comment), and ignored entirely unless
- *   `sizeFromAnchor` or `animation="growing"` asks for it — the first sizes
+ *   `sizeFromAnchor` or `animation="lifting"` asks for it — the first sizes
  *   the dialog via the `--anchor-width`/`--anchor-height` CSS vars, the second
  *   makes the dialog come out of the anchor's own box. Used when the open
  *   itself names none — an anchor carried by the opening event
@@ -59639,7 +59715,7 @@ const css$E = /* css */`
  *   Whether the opening event is read at all: `"override"` (default) applies
  *   the order above, `"ignore"` leaves the `anchor` prop alone with it. Same
  *   prop as Popover's, applied to the only things an anchor can do here:
- *   sizing under `sizeFromAnchor`, and `animation="growing"`.
+ *   sizing under `sizeFromAnchor`, and `animation="lifting"`.
  * @param {string} [props.minWidth] - Maps to `--dialog-min-width`; clamped
  *   so it can never push the dialog past `--dialog-maxmax-width` (the
  *   viewport/container-spacing ceiling) regardless of how large a value is
@@ -59958,7 +60034,7 @@ const useDialogProps = props => {
     // once, held at that size while open. See this prop's own JSDoc above.
     sizing = "auto",
     animation,
-    grow = "box",
+    lift = "box",
     // Inert unless sizeFromAnchor below (see this file's top comment) —
     // Dialog's own positioning is never relative to it.
     anchor,
@@ -60108,13 +60184,13 @@ const useDialogProps = props => {
   }
   const isAutoAnimation = animation === true || animation === "auto";
   // The dialog and the anchor are one box, and what plays between them is the
-  // browser's own morph (popup_grow.js) — nothing this dialog does to its own
+  // browser's own morph (popup_lift.js) — nothing this dialog does to its own
   // box. So it arms no CSS transition of its own, which is not merely useless
   // here but wrong: the shared [navi-animation] rule transitions `display`
   // with allow-discrete, and a dialog kept rendered for the length of its exit
   // is exactly what the picture taken of the state it closes into must not
   // show.
-  const growing = animation === "growing";
+  const lifting = animation === "lifting";
   // Dialog never has a real anchor to POSITION against (see this file's top
   // comment), so this is always the "no anchor" path — the same one Popover's
   // own custom renderer falls into when it has no real anchor either.
@@ -60122,7 +60198,7 @@ const useDialogProps = props => {
   // Not gated on isAutoAnimation — an explicit animation="sliding" needs a
   // concrete direction just as much as an auto-resolved one does (same as
   // Popover's own "sliding"/"expanding" resolution step in openEffect).
-  let resolvedAnimation = growing ? undefined : resolvedAnimationKind;
+  let resolvedAnimation = lifting ? undefined : resolvedAnimationKind;
   if (resolvedAnimationKind === "sliding") {
     resolvedAnimation = resolveDirectionValue(parsedPositionArea.y, parsedPositionArea.x, {
       prefix: "slide-from"
@@ -60164,9 +60240,9 @@ const useDialogProps = props => {
   // The dialog and the anchor are the same box at two sizes, so the opening
   // and the closing are one becoming the other. The browser draws that itself
   // provided the change happens between its two pictures, which is what
-  // handing it to the controller buys (see popup_grow.js and
+  // handing it to the controller buys (see popup_lift.js and
   // open_controller.js's own transitionChange).
-  openController.transitionChange = growing ? (applyChange, {
+  openController.transitionChange = lifting ? (applyChange, {
     opened,
     event
   }) => {
@@ -60183,9 +60259,9 @@ const useDialogProps = props => {
       applyChange();
       return;
     }
-    growPopupFromAnchor(dialogEl, anchorElement, applyChange, {
+    liftPopupFromAnchor(dialogEl, anchorElement, applyChange, {
       opened,
-      grow
+      lift
     });
   } : null;
 
@@ -60609,7 +60685,7 @@ const useDialogProps = props => {
     "animationDuration": rest.animationDuration,
     "data-pointer-interaction-outside": pointerInteractionOutsideEffect,
     "data-backdrop-variant": backdropVariant,
-    "data-growing": growing ? "" : undefined,
+    "data-lifting": lifting ? "" : undefined,
     backdropColor,
     backdropFilter
   });
@@ -60647,9 +60723,9 @@ const useDialogProps = props => {
     "data-backdrop-variant": backdropVariant,
     // That this popup is the anchor continued rather than a surface shown
     // over the page, which is what its backdrop is painted from (see this
-    // file's CSS). It cannot be read off navi-animation: growing arms no CSS
+    // file's CSS). It cannot be read off navi-animation: lifting arms no CSS
     // animation of its own, so that attribute is deliberately absent here.
-    "data-growing": growing ? "" : undefined,
+    "data-lifting": lifting ? "" : undefined,
     // That this dialog has no wall, said in the DOM: the browser generates a
     // ::backdrop for the popover a wall-less top-layer dialog is shown as,
     // and the CSS above keys off this to leave it unpainted. Also the only
@@ -62521,7 +62597,7 @@ const css$C = /* css */`@layer navi {
  *   popup meant to dock on a phone must not declare itself compact — see
  *   `maxWidth` below.
  * @param {boolean} [props.sizeFromAnchor] - **Dialog-only**, same guard.
- * @param {"box"|"scene"} [props.grow] - **Dialog-only**, same guard.
+ * @param {"box"|"scene"} [props.lift] - **Dialog-only**, same guard.
  * @param {string} [props.positionArea] - Forwarded as-is — `Dialog` and
  *   `Popover` have different own defaults (`"center"` vs. `"bottom"`),
  *   deliberately not homogenized here (each reads best for its own typical
@@ -62628,7 +62704,7 @@ const Popup = props => {
     // in the dialog branch, so they never reach the popover element.
     dockedOnSmallTouchScreen,
     sizeFromAnchor,
-    grow,
+    lift,
     ...rest
   } = props;
   const [mode] = useResolvedPopupMode(modeProp, maxWidth, {
@@ -62647,7 +62723,7 @@ const Popup = props => {
       ...rest,
       dockedOnSmallTouchScreen: dockedOnSmallTouchScreen,
       sizeFromAnchor: sizeFromAnchor,
-      grow: grow,
+      lift: lift,
       maxWidth: maxWidth,
       pointerInteractionOutsideEffect: pointerInteractionOutsideEffect,
       backdrop: backdrop,
@@ -63494,7 +63570,7 @@ const PickerContentInsidePopup = props => {
     // should size it (a Wheel) instead of being stretched to the trigger.
     popupWidthFitContent,
     animation,
-    grow,
+    lift,
     animationDuration,
     // mode="callout": what the callout says about what it holds, and paints
     // in its border and icon — "none" for a plain tooltip (see the callout
@@ -63588,7 +63664,7 @@ const PickerContentInsidePopup = props => {
       expandY: isPopover ? undefined : dialogExpandY,
       dockedOnSmallTouchScreen: isPopover ? undefined : dockedOnSmallTouchScreen,
       sizeFromAnchor: isPopover ? undefined : dialogSizeFromAnchor,
-      grow: isPopover ? undefined : grow,
+      lift: isPopover ? undefined : lift,
       children: jsx(PopupModeContext.Provider, {
         value: mode,
         children: children

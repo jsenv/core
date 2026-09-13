@@ -400,7 +400,7 @@ export const createOpenController = (
     // Set by the controlled element when the DOM change that opens or closes
     // it has to be photographed by the browser on both sides — a document view
     // transition, whose update callback is the only place that change can
-    // happen (Dialog's animation="growing", see popup_grow.js). Called with
+    // happen (Dialog's animation="lifting", see popup_lift.js). Called with
     // the change and where it leads; running it is its job, and it may run it
     // a frame later than it was asked for. That delay is the reason a popup
     // cannot do this from the outside: `--navi-open` runs when navi runs it,

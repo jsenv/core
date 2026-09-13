@@ -972,7 +972,7 @@ const PickerContentInsidePopup = (props) => {
     // should size it (a Wheel) instead of being stretched to the trigger.
     popupWidthFitContent,
     animation,
-    grow,
+    lift,
     animationDuration,
     // mode="callout": what the callout says about what it holds, and paints
     // in its border and icon — "none" for a plain tooltip (see the callout
@@ -1095,7 +1095,7 @@ const PickerContentInsidePopup = (props) => {
             isPopover ? undefined : dockedOnSmallTouchScreen
           }
           sizeFromAnchor={isPopover ? undefined : dialogSizeFromAnchor}
-          grow={isPopover ? undefined : grow}
+          lift={isPopover ? undefined : lift}
         >
           {/* Let the popup content branch on the mode via usePopupMode(). */}
           <PopupModeContext.Provider value={mode}>
