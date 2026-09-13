@@ -1,10 +1,24 @@
-# An app that works offline
+# What may go out — the network policy
+
+One declaration says whether a request may leave, and the action layer reads it
+everywhere it matters. Two things follow from it:
+
+- **writes are held.** A control bound to a `POST`, `PUT`, `PATCH` or `DELETE`
+  action — or sitting in a form bound to one — is read-only and says why,
+  before the press.
+- **reads are answered from the store.** A resource `GET` completes with the row
+  it already holds and asks nothing.
+
+The second one is the only choice in the whole thing: `reads`. An app with no
+network wants both, and that is the default. An app holding writes for a reason
+of its own — a tab reading every screen as somebody else, where fresh answers
+are the entire point — wants only the first, and says `reads: "network"`.
+
+## What navi keeps without being asked
 
 What an app wants when the network is gone is one sentence: **answer from what
 you already hold, ask nothing, and refuse writes politely.** Nothing in it is
 about one app; navi does it once, and an app only has to say _when_.
-
-## What navi keeps without being asked
 
 Leaving a page erases nothing. Four facts of the action layer add up to a
 cache the app never has to write:
@@ -48,8 +62,9 @@ it once, at startup; there is nothing else to wire.
 
 ## What the policy changes
 
-Under a truthy reason, no resource callback is called. What happens instead
-depends on what was asked:
+Under a truthy reason, no write callback is called, and no read callback either
+while reads are answered from the store. What happens instead depends on what
+was asked:
 
 - **A `GET` answers from the store.** If the row it designates is there, the
   action completes with it and nothing is asked. The row is the one its params
@@ -93,6 +108,57 @@ depends on what was asked:
 Which actions the policy sees: those declaring a verb (`meta.verb`) — every
 action a `resource()` makes. A plain `createAction` may not touch the network
 at all, so it is left alone; give it `meta: { verb: "GET" }` to opt in.
+
+## Holding writes while reads go out
+
+`reads: "network"` keeps the first half of the policy and drops the second: the
+writes are held, and every read leaves as it normally would — nothing is
+answered from the store, nothing is held back on rerun.
+
+```js
+setNetworkPolicy(viewAsReasonSignal, {
+  reads: "network",
+  readOnlyMessage: () => "We are only looking.",
+});
+```
+
+The mode that wants this is one where the reads are the point. "View the site as
+someone": an admin opens the app in a tab that reads everything as another
+account, to see the screen that person sees. Every read must go out — a fresh
+answer, computed for somebody else — and every write must be held, because the
+server refuses them and because a write must never quietly land on the admin's
+own account.
+
+What this buys over a guard in the app's own request layer is **when** the
+refusal happens. A guard one layer below sees a request that was already built:
+the press was accepted, the sheet opened, the form submitted, and only then does
+it fail. navi knows which controls are bound to a write before any of that, so
+the button says why instead of being pressed, and the dialog it would have
+opened never opens. A button that always fails teaches people not to press
+buttons.
+
+## Two reasons at once
+
+There is one policy, and an app that has two reasons at the same time — no
+network **and** viewing as someone — composes them into one:
+
+```js
+const networkPolicyReasonSignal = computed(
+  () => offlineReasonSignal.value ?? (viewAsSignal.value ? "view-as" : null),
+);
+setNetworkPolicy(networkPolicyReasonSignal, {
+  // Offline is the stricter of the two: nothing leaves, so the reads are
+  // answered from the store even in a tab that is viewing as someone.
+  reads: (reason) => (reason === "view-as" ? "network" : "store"),
+  readOnlyMessage: (reason) =>
+    reason === "view-as" ? "We are only looking." : offlineMessage(reason),
+});
+```
+
+`reads` is read from the reason for exactly this: one declaration, and the
+reason decides which kind of policy is holding. The `??` above is the
+precedence, and it is the app's to write — when both hold the same write, which
+one says why is something navi has nothing to decide it with.
 
 ## What stays the app's
 

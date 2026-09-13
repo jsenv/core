@@ -112,8 +112,10 @@ to start when unsure which export solves a problem.
 - `error_handling.md` — two kinds of error kept apart; where each is shown;
   what a failing run rejects with; the `__handled_by__` mark; the two rules of
   a boundary. Read before displaying an error by hand or writing a boundary.
-- `offline.md` — `setNetworkPolicy`: answer from the store, ask nothing, refuse
-  writes politely. Read before caching responses in the app.
+- `network_policy.md` — `setNetworkPolicy`: hold the writes, and answer the
+  reads from the store (`reads: "store"`, no network) or let them go out
+  (`reads: "network"`). Read before caching responses in the app, and before
+  guarding writes in the app's own request layer.
 - `dynamic_import.md` — a screen's code arrives like its data: a page's
   import is a `routeAction` read with `loading: true` (a branch, not a
   `<Loading>`), a component's is started by what asks — `actionRunEffect` on a

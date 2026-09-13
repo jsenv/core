@@ -8,13 +8,27 @@ import { isSignal } from "../utils/is_signal.js";
  * read by the action layer rather than by every callback.
  *
  * Under a policy (a truthy reason):
- * - a resource GET answers with the row its store holds for it — named by its
- *   params, or the one it last completed with — and asks nothing
- *   (resource_graph.js, applyNetworkPolicy); a completed read
- *   asked to rerun stays completed (actions.js, handleActionRequest);
- *   anything else settles with an OfflineError carrying the reason;
  * - a control bound to a write — or inside a form bound to one — is read-only
- *   and says why (control_hooks.jsx, readonly_constraint.js).
+ *   and says why (control_hooks.jsx, readonly_constraint.js), and a write that
+ *   runs anyway settles with an OfflineError carrying the reason;
+ * - reads are answered from the store, or still go out — `reads`. Answered
+ *   from the store, a resource GET completes with the row its store holds for
+ *   it, named by its params or the one it last completed with
+ *   (resource_graph.js, applyNetworkPolicy); a completed read asked to rerun
+ *   stays completed (actions.js, handleActionRequest); a read with nothing to
+ *   answer with settles with an OfflineError.
+ *
+ * Holding writes is what every policy does; where reads are answered from is
+ * what tells two policies apart. No network holds both ends. "Viewing the app
+ * as someone else" — an admin reading every screen as another account — holds
+ * only the writes: every read must go out, that is the entire mode.
+ *
+ * One policy at a time, and `reads` may be read from the reason rather than
+ * fixed, because an app that has two of these at once (no network AND viewing
+ * as someone) composes them into one reason itself. Stacking policies would
+ * hand navi a decision it has nothing to decide it with: when two of them hold
+ * the same write, which one says why. The app knows; navi would guess from
+ * declaration order.
  *
  * The reason is a value rather than a boolean because "no network" and
  * "offline mode" are not said the same way to the user: the error and the
@@ -30,6 +44,7 @@ const WRITE_VERB_SET = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 const networkPolicySignal = signal({
   source: null,
   readOnlyMessage: undefined,
+  reads: "store",
 });
 
 /**
@@ -38,13 +53,21 @@ const networkPolicySignal = signal({
  * @param {import("@preact/signals").Signal | Function | any} source - where the
  *   reason is read from: a signal (followed live), a function (called on each
  *   read), or a plain value. A falsy reason means "go to the network"; any
- *   truthy value means "do not", and is handed to the `OfflineError` an action
- *   settles with (`error.reason`) so a screen can say which kind of offline it is.
+ *   truthy value means "hold the writes", and is handed to the `OfflineError` an
+ *   action settles with (`error.reason`) so a screen can say which kind of
+ *   offline it is.
  * @param {Object} [options]
+ * @param {"store" | "network" | ((reason: any) => "store" | "network")} [options.reads="store"]
+ *   where a read is answered from while the policy holds. `"store"` is no
+ *   network: a resource GET answers with the row the store holds and a completed
+ *   read asked to rerun stays completed. `"network"` holds the writes only and
+ *   lets every read go out — for a mode whose whole point is fresh answers.
+ *   A function is called with the reason, for an app whose single reason covers
+ *   both kinds.
  * @param {string | ((reason: any) => string)} [options.readOnlyMessage] - what a
  *   control held back by the policy answers when pressed; defaults to navi's
  *   `constraint.readonly.network_policy` text.
- * @see docs/offline.md
+ * @see docs/network_policy.md
  *
  * @example
  * const offlineReasonSignal = computed(() =>
@@ -55,9 +78,12 @@ const networkPolicySignal = signal({
  *     reason === "device" ? "No network: this cannot be sent." : "Offline mode: this cannot be sent.",
  * });
  */
-export const setNetworkPolicy = (source, { readOnlyMessage } = {}) => {
+export const setNetworkPolicy = (
+  source,
+  { reads = "store", readOnlyMessage } = {},
+) => {
   silenceOfflineErrors();
-  networkPolicySignal.value = { source, readOnlyMessage };
+  networkPolicySignal.value = { source, reads, readOnlyMessage };
 };
 
 /**
@@ -68,13 +94,32 @@ export const useNetworkPolicyReason = () => {
   return readReason(networkPolicySignal.value.source);
 };
 
-// For the action layer: the same answer without subscribing whoever asks.
-export const peekNetworkPolicyReason = () => {
-  return untracked(() => readReason(networkPolicySignal.peek().source));
+/**
+ * For the action layer: what the policy holds right now, without subscribing
+ * whoever asks. `null` when requests may go out.
+ *
+ * @returns {{ reason: any, readsFromStore: boolean } | null}
+ */
+export const peekNetworkPolicy = () => {
+  const { reads } = networkPolicySignal.peek();
+  const reason = peekReason();
+  if (reason === null) {
+    return null;
+  }
+  return {
+    reason,
+    readsFromStore: readReads(reads, reason) === "store",
+  };
 };
 
 export const isRerunHeldByNetworkPolicy = (action) => {
-  return action.meta.verb === "GET" && peekNetworkPolicyReason() !== null;
+  if (action.meta.verb !== "GET") {
+    return false;
+  }
+  const policy = peekNetworkPolicy();
+  // A read that still goes out has nothing to hold back: what the rerun is
+  // for is the answer the network gives.
+  return policy !== null && policy.readsFromStore;
 };
 
 export const isWriteAction = (action) => {
@@ -84,7 +129,7 @@ export const isWriteAction = (action) => {
 export const getNetworkPolicyReadOnlyMessage = () => {
   const { readOnlyMessage } = networkPolicySignal.peek();
   if (typeof readOnlyMessage === "function") {
-    return readOnlyMessage(peekNetworkPolicyReason());
+    return readOnlyMessage(peekReason());
   }
   if (readOnlyMessage) {
     return readOnlyMessage;
@@ -153,6 +198,10 @@ const silenceOfflineErrors = () => {
   });
 };
 
+const peekReason = () => {
+  return untracked(() => readReason(networkPolicySignal.peek().source));
+};
+
 const readReason = (source) => {
   if (!source) {
     return null;
@@ -166,4 +215,18 @@ const readReason = (source) => {
     reason = source;
   }
   return reason || null;
+};
+
+// "store" or "network", from the declaration or from the reason.
+const readReads = (reads, reason) => {
+  const value = typeof reads === "function" ? reads(reason) : reads;
+  if (value === "network") {
+    return "network";
+  }
+  if (import.meta.dev && value !== "store") {
+    console.warn(
+      `setNetworkPolicy: "reads" must be "store" or "network", received "${value}". Reads are answered from the store.`,
+    );
+  }
+  return "store";
 };

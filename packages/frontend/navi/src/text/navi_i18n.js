@@ -276,9 +276,11 @@ naviI18n.addAll({
     fr: "[max] action[s] déjà en cours, attendez qu'une se termine.",
     en: "[max] action[s] already in progress, wait for one to finish.",
   },
+  // The network policy holds every write; WHY it does is the reason, which is
+  // the app's — hence no "offline" here, the app's `readOnlyMessage` names it.
   "constraint.readonly.network_policy": {
-    fr: "Hors ligne : ça ne peut pas partir.",
-    en: "Offline: this cannot be sent.",
+    fr: "Ça ne peut pas partir.",
+    en: "This cannot be sent.",
   },
   "network_policy.offline": {
     fr: "Hors ligne : rien n'a été demandé.",

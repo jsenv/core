@@ -261,7 +261,8 @@ One error is never reported whoever looks at it: an **`OfflineError`**. The app
 declared the state that produced it and the request never left, so there is no
 bug to point at — it is data a screen shows. navi also cancels the window
 `error` event that displaying it produces in dev, which keeps the browser
-console and the jsenv overlay out of it ([offline.md](./offline.md)).
+console and the jsenv overlay out of it
+([network_policy.md](./network_policy.md)).
 
 So what reaches the report is an error **nothing looked at** — an action nobody
 reads, a prerun for a page never opened. And _when_ it is reported follows from

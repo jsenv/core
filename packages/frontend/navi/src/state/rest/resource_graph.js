@@ -3,7 +3,7 @@ import { computed, effect, signal, untracked } from "@preact/signals";
 import { createAction } from "../../action/actions.js";
 import {
   OfflineError,
-  peekNetworkPolicyReason,
+  peekNetworkPolicy,
 } from "../../action/network_policy.js";
 import { SYMBOL_OBJECT_SIGNAL } from "../../action/symbol_object_signal.js";
 import { SYMBOL_IDENTITY } from "../../utils/compare_two_js_values.js";
@@ -1354,29 +1354,36 @@ const createRestActionFactoryForRoot = (
   return createActionForRoot;
 };
 
-// Under a network policy no callback is called (see network_policy.js). A GET
-// of a root resource answers with the row the store holds for it (see
+// Under a network policy a write callback is never called (see
+// network_policy.js): there is nothing to answer it with, so it settles with an
+// OfflineError carrying the policy's reason. A read is called or not depending
+// on where the policy answers reads from. Answered from the store, a GET of a
+// root resource completes with the row the store holds for it (see
 // findItemInStore) — handing the item back is an upsert without effect, so the
-// action completes with what it had and nothing is asked. A relationship GET
-// has no row of its own to answer with, and a write has nothing to answer:
-// both settle with an OfflineError carrying the policy's reason. A completed
-// GET asked to rerun never gets here (actions.js holds it).
+// action completes with what it had and nothing is asked; a relationship GET
+// has no row of its own to answer with and settles with the same error. A
+// completed GET asked to rerun never gets here (actions.js holds it).
 const applyNetworkPolicy = (
   restCallback,
   { verb, isMany, findItemInStore },
 ) => {
   return (params, context) => {
-    const reason = peekNetworkPolicyReason();
-    if (reason === null) {
+    const policy = peekNetworkPolicy();
+    if (policy === null) {
       return restCallback(params, context);
     }
-    if (verb === "GET" && !isMany && findItemInStore) {
-      const item = findItemInStore(params, context.action);
-      if (item) {
-        return item;
+    if (verb === "GET") {
+      if (!policy.readsFromStore) {
+        return restCallback(params, context);
+      }
+      if (!isMany && findItemInStore) {
+        const item = findItemInStore(params, context.action);
+        if (item) {
+          return item;
+        }
       }
     }
-    throw new OfflineError(reason);
+    throw new OfflineError(policy.reason);
   };
 };
 

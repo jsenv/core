@@ -1073,7 +1073,7 @@ What the popup gains is everything a page has:
   ([resource.md](./resource.md#dependencies-rerun-after-another-resource-writes))
   and the
   aborted-not-reset treatment a route action gets when the screen is left
-  ([offline.md](./offline.md));
+  ([network_policy.md](./network_policy.md));
 - a reload keeps the open state, so it keeps the request too;
 - and the routes keep saying what an address needs, which is why they declare
   it.
