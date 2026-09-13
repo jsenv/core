@@ -37,6 +37,21 @@
  *   is kept live, as often as the browser reads its side of it. It is also
  *   the arriving picture's own corner, which then stays where the page really
  *   is and lands with no jump when the pictures are dropped.
+ * - **what moves the BOX, as opposed to what moves a page in it.** Two things
+ *   move the box in the window and they mean opposite things. The scroller
+ *   the pages scroll in — the document, for a row of tabs that is the screen;
+ *   a frame with an overflow, for a row inside a card or a panel — moving is
+ *   a page being scrolled: the arriving one follows it and the picture of the
+ *   one leaving stays where that page stood. Everything ABOVE that scroller
+ *   moving — the document under a card, a panel around a box — carries the
+ *   box whole, with both pictures in it: nothing inside the box changed. So
+ *   the window and the corner of the state being left are shifted by exactly
+ *   that outer offset, at the hold (the two states may have been measured
+ *   under different offsets, a navigation scrolls the document) and on every
+ *   frame after (a wheel over a travel scrolls the document, the box being
+ *   unpointable). Left at their window coordinates, the pictures stand where
+ *   the box WAS: a white band opens at its top and they hang out of its
+ *   bottom, over whatever is drawn there.
  * - **the band the state being left kept free**, next to the one the arriving
  *   state keeps free. A band is furniture — a fixed bar, a sticky row — and
  *   the pictures are cut at it so they are not watched painting over it. Read
@@ -46,11 +61,12 @@
  *   at the one moment the state being left still exists, the cut can be taken
  *   at what is furniture on BOTH sides (see the clip formulas).
  *
- * Only the measuring needs JS, and apart from the arriving corner it happens
- * at the one moment both states exist: the page arriving is in the DOM and the
- * transition has not started playing. The window, the corner of the state
- * being left and its band describe a state that no longer exists, and reading
- * them again is what must never happen.
+ * Only the measuring needs JS, and apart from the arriving corner and the
+ * outer offset it happens at the one moment both states exist: the page
+ * arriving is in the DOM and the transition has not started playing. The
+ * window, the corner of the state being left and its band describe a state
+ * that no longer exists, and measuring them again is what must never happen
+ * — they are only ever carried along with the box.
  * Everything DERIVED from these numbers — the band a fixed bar covers, how far
  * a page travels — is derived in CSS, so the application's own numbers (the
  * room its bars give back, see layout/safe_area.js; what covers the box from
@@ -78,6 +94,8 @@
  * Registered as lengths for the same reason the safe area is (safe_area.js):
  * the band has to be readable in pixels at the moment a page leaves.
  */
+import { getScrollContainer } from "@jsenv/dom";
+
 const TRANSITION_WINDOW_CSS = /* css */ `
   @property --navi-transition-cover-top {
     syntax: "<length>";
@@ -162,14 +180,23 @@ export const measureTransitionWindowState = (element) => {
   return {
     rect: element.getBoundingClientRect(),
     band: readBand(),
+    outerScroll: readOuterScroll(element),
   };
 };
 
 export const holdTransitionWindow = (owner, element, stateBefore) => {
-  const rectBefore = stateBefore.rect;
   const bandBefore = stateBefore.band;
   const rectAfter = element.getBoundingClientRect();
   const bandAfter = readBand();
+  const outerScroll = readOuterScroll(element);
+  // The state being left, at where its box stands under the offset the box
+  // is measured under NOW: what scrolled outside the box between the two
+  // measures moved the box, not a page in it (see the top of the file).
+  const rectBefore = shiftRect(
+    stateBefore.rect,
+    stateBefore.outerScroll.top - outerScroll.top,
+    stateBefore.outerScroll.left - outerScroll.left,
+  );
   // The rectangle that contains both states. It cannot be measured from one
   // side alone: a page arriving shorter than the one it replaces would cut the
   // one leaving, a page arriving taller would be cut itself, and either one
@@ -196,7 +223,13 @@ export const holdTransitionWindow = (owner, element, stateBefore) => {
   style.setProperty(OLD_BAND_RIGHT_PROPERTY, `${oldBand.right}px`);
   style.setProperty(OLD_BAND_BOTTOM_PROPERTY, `${oldBand.bottom}px`);
   style.setProperty(OLD_BAND_LEFT_PROPERTY, `${oldBand.left}px`);
-  followArrivingState(element, rectAfter);
+  followArrivingState(element, rectAfter, {
+    outerScroll,
+    windowTop: top,
+    windowLeft: left,
+    oldTop: rectBefore.top,
+    oldLeft: rectBefore.left,
+  });
 };
 
 // The live layout takes the box back. A discontinuity by construction — the
@@ -219,16 +252,20 @@ export const releaseTransitionWindow = (owner) => {
 
 // The arriving state's corner, re-read every frame — as often as the browser
 // refreshes the group's placement from the same element (see the top of the
-// file). Requested, never awaited: the first call runs inside the update
-// callback, where a frame cannot come. Written only when it moved: a custom
-// property set on the root recomputes the style of the whole document.
-const followArrivingState = (element, rectAtHold) => {
+// file) — and with it the offset outside the box, which carries the window
+// and the corner of the state being left along. Requested, never awaited: the
+// first call runs inside the update callback, where a frame cannot come.
+// Written only when it moved: a custom property set on the root recomputes
+// the style of the whole document.
+const followArrivingState = (element, rectAtHold, heldAt) => {
   if (unfollowArrivingState) {
     unfollowArrivingState();
   }
   const { style } = document.documentElement;
   let top = rectAtHold.top;
   let left = rectAtHold.left;
+  let outerTop = heldAt.outerScroll.top;
+  let outerLeft = heldAt.outerScroll.left;
   let frame = requestAnimationFrame(function read() {
     const rect = element.getBoundingClientRect();
     if (rect.top !== top) {
@@ -239,12 +276,77 @@ const followArrivingState = (element, rectAtHold) => {
       left = rect.left;
       style.setProperty(WINDOW_NEW_LEFT_PROPERTY, `${left}px`);
     }
+    const outerScroll = readOuterScroll(element);
+    if (outerScroll.top !== outerTop) {
+      outerTop = outerScroll.top;
+      const shift = heldAt.outerScroll.top - outerTop;
+      style.setProperty(WINDOW_TOP_PROPERTY, `${heldAt.windowTop + shift}px`);
+      style.setProperty(WINDOW_OLD_TOP_PROPERTY, `${heldAt.oldTop + shift}px`);
+    }
+    if (outerScroll.left !== outerLeft) {
+      outerLeft = outerScroll.left;
+      const shift = heldAt.outerScroll.left - outerLeft;
+      style.setProperty(WINDOW_LEFT_PROPERTY, `${heldAt.windowLeft + shift}px`);
+      style.setProperty(
+        WINDOW_OLD_LEFT_PROPERTY,
+        `${heldAt.oldLeft + shift}px`,
+      );
+    }
     frame = requestAnimationFrame(read);
   });
   unfollowArrivingState = () => {
     unfollowArrivingState = null;
     cancelAnimationFrame(frame);
   };
+};
+
+const shiftRect = (rect, byTop, byLeft) => {
+  return {
+    top: rect.top + byTop,
+    bottom: rect.bottom + byTop,
+    left: rect.left + byLeft,
+    right: rect.right + byLeft,
+  };
+};
+
+// What has scrolled OUTSIDE the box: the offsets of every scroller above the
+// one the pages scroll in, the viewport's included. That nearest scroller is
+// the pages' own — an offset there is a page scrolled, and it is not counted;
+// a hidden overflow counts as one so that the box asked about is the same the
+// travel asks about (see pagesScrollTheDocument in route_travel.jsx). What is
+// pinned to the viewport (fixed, in the top layer) is not carried by the
+// document's offset, and the walk stops under it.
+const readOuterScroll = (element) => {
+  let top = 0;
+  let left = 0;
+  let node = getScrollContainer(element, { includeHidden: true });
+  while (node && !isDocumentScroller(node) && !isPinnedToViewport(node)) {
+    const above = getScrollContainer(node, { includeHidden: true });
+    if (!above) {
+      break;
+    }
+    if (isDocumentScroller(above)) {
+      top += window.scrollY;
+      left += window.scrollX;
+      break;
+    }
+    top += above.scrollTop;
+    left += above.scrollLeft;
+    node = above;
+  }
+  return { top, left };
+};
+
+const isDocumentScroller = (node) => {
+  return node === document.documentElement || node === document.body;
+};
+
+const isPinnedToViewport = (node) => {
+  return (
+    node.hasAttribute("popover") ||
+    (node.tagName === "DIALOG" && node.matches(":modal")) ||
+    getComputedStyle(node).position === "fixed"
+  );
 };
 
 // A band nothing can be wider than, published for an edge nothing is known

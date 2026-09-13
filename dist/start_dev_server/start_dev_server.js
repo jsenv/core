@@ -12484,8 +12484,16 @@ const cacheIsDisabledInResponseHeader = (urlInfo) => {
 };
 
 // "dir/page.html@L10C7-L14C16.js" -> "dir/page.html" (search kept: it is the
-// parent's). Null for anything else — the inline url grammar is the one
+// parent's, copied onto the inline url by generateUrlForInlineContent). Null
+// for anything else — the inline url grammar is the one
 // generateUrlForInlineContent writes (@jsenv/ast).
+// "v" and "hot" are the exception: the dev server puts them on the url it
+// hands the browser and strips them back off when the request comes in (see
+// jsenv:version_search_param and jsenv:hot_search_param), so no url in the
+// graph ever carries them — while the inline url in the request does. An html
+// served from a fixed address inside node_modules (our own /.internal pages)
+// shows it: the page has no "v", its inline scripts get one, and looking for a
+// "page.html?v=…" parent finds nothing — the inline script then 404s.
 const getInlineContentParentUrl = (url) => {
   const urlObject = new URL(url);
   const match = /^(.+)@[^@/]*?L\d+C\d+(?:-L\d+C\d+)?\.[a-z0-9]+$/.exec(
@@ -12495,7 +12503,12 @@ const getInlineContentParentUrl = (url) => {
     return null;
   }
   urlObject.pathname = match[1];
-  return urlObject.href;
+  urlObject.searchParams.delete("v");
+  urlObject.searchParams.delete("hot");
+  // normalizeUrl: searchParams.delete re-serializes the whole query and would
+  // turn a valueless param ("?enabled") into "?enabled=", which no graph url
+  // is spelled with.
+  return normalizeUrl(urlObject.href);
 };
 
 const EXECUTED_BY_TEST_PLAN = process.argv.includes("--jsenv-test");
