@@ -175,6 +175,14 @@ so it can only be called by whoever owns the change:
   nothing of its own, and its two pictures cover its rectangle between them at
   every moment of the travel. _Reference: the `TRAVEL_ATTRIBUTE` CSS in
   route_travel.jsx._
+  - **Unless the top layer is part of the movement.** A modal dialog, its
+    `::backdrop`, a popover: the browser paints the top layer during a
+    transition only as part of the root's picture. With the root opted out,
+    the wall and the dialog go unpainted for the length of the movement, and
+    a named element inside the dialog is photographed empty (Chrome 153,
+    reproduced in a bare page). A movement that opens or closes a top-layer
+    surface keeps the root's default name and pays the frozen page — under a
+    modal wall it costs nothing. _Reference: `popup_lift.js`._
 
 Facts worth knowing before reaching for one:
 

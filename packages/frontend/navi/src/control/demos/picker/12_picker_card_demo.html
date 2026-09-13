@@ -498,7 +498,7 @@
               Une scène vue par deux cadres
             </Heading>
             <div class="demo-row">
-              <Case caption='lift="box" (défaut)'>
+              <Case caption='lift="box" (défaut) — le cadre d’une carte, pas d’une scène'>
                 <FramedScenePicker
                   lift="box"
                   animationDuration={animationDuration}
@@ -809,20 +809,27 @@
 
       // Case A: the game card. What the sheet holds around the lifted card is
       // wematch's: a badge row above, three tiles and the buttons below.
-      const RichCardPicker = ({ samePicture, rebuild, animationDuration }) => (
+      // The picker's box IS the card's: the anchor a lift starts from is the
+      // trigger, and a trigger wider than the card it shows would start the
+      // movement from a box the card does not fill.
+      const RichCardPicker = ({
+        samePicture,
+        sameWidth,
+        rebuild,
+        animationDuration,
+      }) => (
         <Picker
           variant="bare"
-          expandX
           type="object"
           mode="dialog"
           borderRadius="12"
-          ui={<RichCard game={RICH_GAME} mode="page" />}
+          ui={<RichCard game={RICH_GAME} mode="page" width="300" />}
           aria-label="Modifier la partie"
           action={() => {}}
           animation="lifting"
           animationDuration={animationDuration}
           dialogSizeFromAnchor
-          dialogMaxWidth="var(--anchor-width)"
+          dialogMaxWidth={sameWidth ? "var(--anchor-width)" : "364px"}
           dialogExpandX
           popupBackgroundColor="transparent"
           popupBoxShadow="none"
@@ -851,8 +858,8 @@
       );
 
       // Case B: the weather drawing. One vnode on both sides; the thumbnail
-      // is a band cut out of it, so the two frames do not share an aspect
-      // ratio.
+      // is a band cut out of its middle, so the two frames do not share an
+      // aspect ratio.
       const weatherScene = sceneOf("0 0 200 200");
 
       const WeatherScenePicker = ({ animationDuration }) => (
@@ -864,7 +871,10 @@
           padding="0"
           ui={
             <Box width="170" height="110" style={{ overflow: "hidden" }}>
-              {weatherScene}
+              {/* The middle band of a 170px-wide, 170px-tall scene: what a
+                  thumbnail cut from the scene shows, at the scene's own
+                  scale. */}
+              <Box style={{ marginTop: "-30px" }}>{weatherScene}</Box>
             </Box>
           }
           aria-label="Voir la météo"
@@ -928,21 +938,27 @@
           );
       const ms = (value) => (value === null ? "—" : `${Math.round(value)} ms`);
 
-      const LiftBench = ({ children }) => {
+      const LiftBench = ({ name, children }) => {
         const rootRef = useRef(null);
         const [report, setReport] = useState(null);
-        const onPointerDown = (e) => {
+        const onPointerDown = () => {
           const dialog = rootRef.current.querySelector("dialog");
           if (!dialog || dialog.open) {
             return;
           }
-          const start = e.timeStamp;
+          const start = performance.now();
+          performance.mark("lift_bench_tap");
           let openedAt = null;
-          const frame = (now) => {
+          // performance.now() and not the frame's own timestamp: under load
+          // that timestamp can predate the work the frame is painting.
+          const frame = () => {
+            const now = performance.now();
             if (openedAt === null && dialog.open) {
               openedAt = now;
+              performance.mark("lift_bench_opened");
             }
             if (openedAt !== null && isViewTransitionRunning()) {
+              performance.mark("lift_bench_moving");
               setReport({
                 opened: openedAt - start,
                 moving: now - start,
@@ -971,6 +987,8 @@
             ref={rootRef}
             flex="y"
             spacing="s"
+            alignX="start"
+            data-lift-bench={name}
             onPointerDownCapture={onPointerDown}
           >
             {children}
@@ -1001,6 +1019,10 @@
           "picker_card_demo_bench_rebuild",
           true,
         );
+        const [sameWidth, setSameWidth] = useStoredBoolean(
+          "picker_card_demo_bench_same_width",
+          true,
+        );
         const animationDuration = slow ? "1s" : undefined;
         return (
           <Section id="lift-bench" title="Au poids d'une vraie carte">
@@ -1008,10 +1030,11 @@
               La carte qui devient éditable
             </Heading>
             <Box width="364">
-              <LiftBench>
+              <LiftBench name="card">
                 <RichCardPicker
-                  key={`${samePicture}_${rebuild}`}
+                  key={`${samePicture}_${rebuild}_${sameWidth}`}
                   samePicture={samePicture}
+                  sameWidth={sameWidth}
                   rebuild={rebuild}
                   animationDuration={animationDuration}
                 />
@@ -1034,11 +1057,20 @@
                 />
                 reconstruire à chaque ouverture (mount="while-opened")
               </label>
+              <label class="demo-animate-toggle">
+                <input
+                  type="checkbox"
+                  checked={sameWidth}
+                  onChange={(e) => setSameWidth(e.target.checked)}
+                />
+                même largeur soulevée (dialogMaxWidth="var(--anchor-width)",
+                sinon 364px)
+              </label>
             </div>
             <Heading level={3} id="lift-bench-scene">
               Le dessin météo
             </Heading>
-            <LiftBench>
+            <LiftBench name="scene">
               <WeatherScenePicker animationDuration={animationDuration} />
             </LiftBench>
             <SlowToggle slow={slow} setSlow={setSlow} />
