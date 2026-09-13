@@ -15870,11 +15870,14 @@ const isAncestorOpen = (ancestor) => {
  *
  * A <dialog> or a [popover] is only ever a surface, and the UA hides a closed
  * one outright (display: none), so nothing inside has a box: answered from the
- * markup, without touching the layout. Anything else — a <details> whose
- * <summary> stays on screen, a bare [aria-expanded] — is asked of the layout
- * instead: a closed custom surface is display:none through the library's own
- * closed-state CSS ([navi-hidden], :not([popover])), so nothing inside one
- * answers true here, while everything a trigger keeps on screen does.
+ * markup, without touching the layout. A trigger says what it is too: its
+ * `aria-controls` names the element its aria-expanded speaks for, so its own
+ * subtree is on screen whether or not that element is — answered from the
+ * markup as well. Anything else — a <details> whose <summary> stays on screen,
+ * a bare [aria-expanded] — is asked of the layout instead: a closed custom
+ * surface is display:none through the library's own closed-state CSS
+ * ([navi-hidden], :not([popover])), so nothing inside one answers true here,
+ * while everything a trigger keeps on screen does.
  *
  * The layout question is a forced style recalculation. Asked once per element
  * from a mount that also writes styles between the questions, each one costs a
@@ -15891,6 +15894,9 @@ const isAncestorOpen = (ancestor) => {
 const isDisplayedDespiteClosedAncestor = (element, ancestor) => {
   if (ancestor.tagName === "DIALOG" || ancestor.hasAttribute("popover")) {
     return false;
+  }
+  if (ancestor.hasAttribute("aria-controls")) {
+    return true;
   }
   if (typeof element.checkVisibility !== "function") {
     // Nothing to tell the two apart with: leave the caller treating the closed

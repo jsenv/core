@@ -48335,9 +48335,11 @@ a.navi_button {
     --button-background-color-readonly: var(--button-background-color);
     --button-background-color-disabled: var(--button-background-color);
 
-    &[data-pressed] {
-      & .navi_button_content {
-        transform: none;
+    @media (hover: hover) {
+      &[data-pressed] {
+        & .navi_button_content {
+          transform: none;
+        }
       }
     }
   }
@@ -58631,6 +58633,17 @@ const clipOf = (side, distance) => {
  * controller, which is what `transitionChange` (open_controller.js) exists to
  * let a popup wrap.
  *
+ * The two changes are not photographed the same way. Closing is photographed
+ * whole: the picture of the popup has to be taken before the close takes it
+ * off screen. Opening is done on the spot, with the popup held unpainted
+ * (ARRIVING_ATTRIBUTE, opacity 0 in dialog.jsx), and what the transition
+ * photographs is the reveal alone. Between a tap and the first frame there is
+ * then only the open itself — showing, building, placing — and not, on top of
+ * it, a picture of the page before and a picture of the popup after, with
+ * nothing painted in between: the backdrop, which is all the user needs to
+ * know the tap landed, reaches the screen with the open, and the box grows
+ * out of the anchor from there.
+ *
  * One name serves the whole movement, because only one of the two boxes is on
  * screen at a time: it names the anchor while the popup is closed, and the
  * popup while it is open. What continues the anchor INSIDE the popup is
@@ -58661,6 +58674,10 @@ const ROOT_ATTRIBUTE = "data-navi-popup-grow";
 const KIND_ATTRIBUTE = "data-navi-popup-grow-kind";
 // Inside the popup, the one node that IS the anchor once it has grown.
 const TARGET_SELECTOR = "[data-grow]";
+// Worn by the popup from its opening to the reveal, keeping it unpainted
+// (dialog.jsx) while its backdrop is already on screen: the popup is brought
+// in by the movement, not by the open.
+const ARRIVING_ATTRIBUTE = "data-navi-popup-grow-arriving";
 // The popup's own animation duration, published on the root because the
 // ::view-transition tree hangs off it and inherits from nowhere else.
 const DURATION_PROPERTY = "--navi-popup-grow-duration";
@@ -58726,12 +58743,22 @@ const growPopupFromAnchor = (
   };
   releaseGrowInProgress = release;
 
+  if (opened) {
+    // Opened on the spot (see this file's top comment): the next frame shows
+    // the backdrop, and the movement has only the reveal to photograph.
+    popupEl.setAttribute(ARRIVING_ATTRIBUTE, "");
+    applyChange();
+  }
   const viewTransition = startViewTransition(() => {
     // The name is the arriving box's from here on: worn by both, it is worn by
     // neither. Written rather than removed, so a name the element also has
     // from a stylesheet cannot resurface for the length of the movement.
     elementLeaving.style.setProperty(NAME_PROPERTY, "none");
-    applyChange();
+    if (opened) {
+      popupEl.removeAttribute(ARRIVING_ATTRIBUTE);
+    } else {
+      applyChange();
+    }
     const elementArriving = opened
       ? resolveGrowTarget(popupEl)
       : // Gone from the document while the popup was open (the row it stood
@@ -59295,6 +59322,14 @@ const css$E = /* css */`
         opacity: 0;
       }
     }
+  }
+
+  /* Opened ahead of its movement (popup_grow.js): the backdrop is on screen,
+     and the dialog waits, unpainted, for the picture of the page being left —
+     the movement is what brings it in. Its ::backdrop is a box of its own in
+     the top layer, so the opacity leaves it alone. */
+  .navi_dialog[data-navi-popup-grow-arriving] {
+    opacity: 0;
   }
 
   /* While a dialog is growing out of the element that opened it

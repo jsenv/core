@@ -630,6 +630,14 @@ const css = /* css */ `
     }
   }
 
+  /* Opened ahead of its movement (popup_grow.js): the backdrop is on screen,
+     and the dialog waits, unpainted, for the picture of the page being left —
+     the movement is what brings it in. Its ::backdrop is a box of its own in
+     the top layer, so the opacity leaves it alone. */
+  .navi_dialog[data-navi-popup-grow-arriving] {
+    opacity: 0;
+  }
+
   /* While a dialog is growing out of the element that opened it
      (popup_grow.js). The page around is deliberately NOT taken as a picture,
      against the browser's own default: a captured element is not painted where

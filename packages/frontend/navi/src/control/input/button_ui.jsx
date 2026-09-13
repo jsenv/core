@@ -334,9 +334,12 @@ const css = /* css */ `
        would repaint a box the variant just took away. */
 
     /* discrete: background on hover, and nothing else — no box at rest, and no
-       shrink when pressed. What is drawn IS the content (a chevron, a number,
-       a word), and shrinking it under the finger reads as the content itself
-       flinching rather than as a button being pressed. */
+       shrink when pressed where a pointer can hover. What is drawn IS the
+       content (a chevron, a number, a word), and shrinking it under a cursor
+       reads as the content itself flinching rather than as a button being
+       pressed; the wash on hover is what answers the press there. A touch
+       screen has no hover, so the shrink stays: it is the only answer a
+       finger gets. */
     &[data-variant="discrete"] {
       --button-border-width: 0;
       --button-border-color: transparent;
@@ -357,9 +360,11 @@ const css = /* css */ `
       --button-background-color-readonly: var(--button-background-color);
       --button-background-color-disabled: var(--button-background-color);
 
-      &[data-pressed] {
-        .navi_button_content {
-          transform: none;
+      @media (hover: hover) {
+        &[data-pressed] {
+          .navi_button_content {
+            transform: none;
+          }
         }
       }
     }
