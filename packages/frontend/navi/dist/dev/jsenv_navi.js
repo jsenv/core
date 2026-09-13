@@ -810,13 +810,17 @@ naviI18n.addAll({
     fr: "[max] action[s] déjà en cours, attendez qu'une se termine.",
     en: "[max] action[s] already in progress, wait for one to finish.",
   },
+  // The network policy holds every write; WHY it does is the reason, which is
+  // the app's — hence no "offline" here, the app's `readOnlyMessage` names it.
   "constraint.readonly.network_policy": {
-    fr: "Hors ligne : ça ne peut pas partir.",
-    en: "Offline: this cannot be sent.",
+    fr: "Ça ne peut pas partir.",
+    en: "This cannot be sent.",
   },
-  "network_policy.offline": {
-    fr: "Hors ligne : rien n'a été demandé.",
-    en: "Offline: nothing was requested.",
+  // What a request the policy held settles with. Which policy held it is the
+  // reason, carried by the error; the sentence must fit both.
+  "network_policy.held": {
+    fr: "Rien n'a été demandé.",
+    en: "Nothing was requested.",
   },
   "constraint.busy.button": {
     fr: "Cette action est en cours...",
@@ -1303,13 +1307,27 @@ const getSignalType = (value) => {
  * read by the action layer rather than by every callback.
  *
  * Under a policy (a truthy reason):
- * - a resource GET answers with the row its store holds for it — named by its
- *   params, or the one it last completed with — and asks nothing
- *   (resource_graph.js, applyNetworkPolicy); a completed read
- *   asked to rerun stays completed (actions.js, handleActionRequest);
- *   anything else settles with an OfflineError carrying the reason;
  * - a control bound to a write — or inside a form bound to one — is read-only
- *   and says why (control_hooks.jsx, readonly_constraint.js).
+ *   and says why (control_hooks.jsx, readonly_constraint.js), and a write that
+ *   runs anyway settles with a NetworkPolicyError carrying the reason;
+ * - reads are answered from the store, or still go out — `reads`. Answered
+ *   from the store, a resource GET completes with the row its store holds for
+ *   it, named by its params or the one it last completed with
+ *   (resource_graph.js, applyNetworkPolicy); a completed read asked to rerun
+ *   stays completed (actions.js, handleActionRequest); a read with nothing to
+ *   answer with settles with a NetworkPolicyError.
+ *
+ * Holding writes is what every policy does; where reads are answered from is
+ * what tells two policies apart. No network holds both ends. "Viewing the app
+ * as someone else" — an admin reading every screen as another account — holds
+ * only the writes: every read must go out, that is the entire mode.
+ *
+ * One policy at a time, and `reads` may be read from the reason rather than
+ * fixed, because an app that has two of these at once (no network AND viewing
+ * as someone) composes them into one reason itself. Stacking policies would
+ * hand navi a decision it has nothing to decide it with: when two of them hold
+ * the same write, which one says why. The app knows; navi would guess from
+ * declaration order.
  *
  * The reason is a value rather than a boolean because "no network" and
  * "offline mode" are not said the same way to the user: the error and the
@@ -1325,6 +1343,7 @@ const WRITE_VERB_SET = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 const networkPolicySignal = signal({
   source: null,
   readOnlyMessage: undefined,
+  reads: "store",
 });
 
 /**
@@ -1333,13 +1352,21 @@ const networkPolicySignal = signal({
  * @param {import("@preact/signals").Signal | Function | any} source - where the
  *   reason is read from: a signal (followed live), a function (called on each
  *   read), or a plain value. A falsy reason means "go to the network"; any
- *   truthy value means "do not", and is handed to the `OfflineError` an action
- *   settles with (`error.reason`) so a screen can say which kind of offline it is.
+ *   truthy value means "hold the writes", and is handed to the
+ *   `NetworkPolicyError` an action settles with (`error.reason`) so a screen can
+ *   say which kind of policy is holding.
  * @param {Object} [options]
+ * @param {"store" | "network" | ((reason: any) => "store" | "network")} [options.reads="store"]
+ *   where a read is answered from while the policy holds. `"store"` is no
+ *   network: a resource GET answers with the row the store holds and a completed
+ *   read asked to rerun stays completed. `"network"` holds the writes only and
+ *   lets every read go out — for a mode whose whole point is fresh answers.
+ *   A function is called with the reason, for an app whose single reason covers
+ *   both kinds.
  * @param {string | ((reason: any) => string)} [options.readOnlyMessage] - what a
  *   control held back by the policy answers when pressed; defaults to navi's
  *   `constraint.readonly.network_policy` text.
- * @see docs/offline.md
+ * @see docs/network_policy.md
  *
  * @example
  * const offlineReasonSignal = computed(() =>
@@ -1350,9 +1377,12 @@ const networkPolicySignal = signal({
  *     reason === "device" ? "No network: this cannot be sent." : "Offline mode: this cannot be sent.",
  * });
  */
-const setNetworkPolicy = (source, { readOnlyMessage } = {}) => {
-  silenceOfflineErrors();
-  networkPolicySignal.value = { source, readOnlyMessage };
+const setNetworkPolicy = (
+  source,
+  { reads = "store", readOnlyMessage } = {},
+) => {
+  silenceNetworkPolicyErrors();
+  networkPolicySignal.value = { source, reads, readOnlyMessage };
 };
 
 /**
@@ -1363,13 +1393,32 @@ const useNetworkPolicyReason = () => {
   return readReason(networkPolicySignal.value.source);
 };
 
-// For the action layer: the same answer without subscribing whoever asks.
-const peekNetworkPolicyReason = () => {
-  return untracked(() => readReason(networkPolicySignal.peek().source));
+/**
+ * For the action layer: what the policy holds right now, without subscribing
+ * whoever asks. `null` when requests may go out.
+ *
+ * @returns {{ reason: any, readsFromStore: boolean } | null}
+ */
+const peekNetworkPolicy = () => {
+  const { reads } = networkPolicySignal.peek();
+  const reason = peekReason();
+  if (reason === null) {
+    return null;
+  }
+  return {
+    reason,
+    readsFromStore: readReads(reads, reason) === "store",
+  };
 };
 
 const isRerunHeldByNetworkPolicy = (action) => {
-  return action.meta.verb === "GET" && peekNetworkPolicyReason() !== null;
+  if (action.meta.verb !== "GET") {
+    return false;
+  }
+  const policy = peekNetworkPolicy();
+  // A read that still goes out has nothing to hold back: what the rerun is
+  // for is the answer the network gives.
+  return policy !== null && policy.readsFromStore;
 };
 
 const isWriteAction = (action) => {
@@ -1379,7 +1428,7 @@ const isWriteAction = (action) => {
 const getNetworkPolicyReadOnlyMessage = () => {
   const { readOnlyMessage } = networkPolicySignal.peek();
   if (typeof readOnlyMessage === "function") {
-    return readOnlyMessage(peekNetworkPolicyReason());
+    return readOnlyMessage(peekReason());
   }
   if (readOnlyMessage) {
     return readOnlyMessage;
@@ -1389,37 +1438,39 @@ const getNetworkPolicyReadOnlyMessage = () => {
 
 /**
  * The error of a request that never left: the policy said not to.
- * `reason` is the policy's value at that moment.
+ * `reason` is the policy's value at that moment, and the only thing that says
+ * which kind of policy held it — no network, or writes held while the reads go
+ * out. The class names the mechanism, never the reason.
  */
-class OfflineError extends Error {
-  constructor(reason, message = naviI18n("network_policy.offline")) {
+class NetworkPolicyError extends Error {
+  constructor(reason, message = naviI18n("network_policy.held")) {
     super(message);
-    this.name = "OfflineError";
+    this.name = "NetworkPolicyError";
     this.reason = reason;
     // A flag beside the class: the error crosses layers that may copy it, and
     // instanceof does not survive a copy.
-    this.offline = true;
+    this.networkPolicy = true;
   }
 }
 
-const isOfflineError = (error) => {
-  return Boolean(error && error.offline);
+const isNetworkPolicyError = (error) => {
+  return Boolean(error && error.networkPolicy);
 };
 
 /**
- * An offline error is not one, and nobody is to be told about it as if it were.
+ * The policy's own error is not a failure, and nobody is to be told about it as
+ * if it were.
  *
- * It says "run with what you have, ask nothing" — a state the app itself
- * declared, about a request that never left. There is no bug to point at, no
- * stack worth reading, and a screen is already saying it in words the person
- * understands.
+ * It says "the app declared that this does not leave" — about a request that
+ * never left. There is no bug to point at, no stack worth reading, and a screen
+ * is already saying it in words the person understands.
  *
  * navi's own report leaves it alone (action_error_report.js). What is left is
  * the screen displaying it: it does so by throwing the error to a boundary, and
  * `preact/debug` re-emits on `window` every error a boundary caught — on
  * purpose, for React devtools compatibility. Uncancelled, that lands as an
- * uncaught error in the console, over a page calmly explaining there is no
- * network. Cancelling the event is what says it is handled: the browser drops
+ * uncaught error in the console, over a page calmly explaining why nothing was
+ * asked. Cancelling the event is what says it is handled: the browser drops
  * the console line, and the jsenv supervisor skips prevented events too.
  *
  * Both shapes a failure travels in are covered, since which one it is depends
@@ -1430,22 +1481,26 @@ const isOfflineError = (error) => {
  * boundary caught, and every other rejection let go, stays exactly as loud as
  * it is.
  */
-let offlineErrorSilenced = false;
-const silenceOfflineErrors = () => {
-  if (offlineErrorSilenced || typeof window === "undefined") {
+let networkPolicyErrorSilenced = false;
+const silenceNetworkPolicyErrors = () => {
+  if (networkPolicyErrorSilenced || typeof window === "undefined") {
     return;
   }
-  offlineErrorSilenced = true;
+  networkPolicyErrorSilenced = true;
   window.addEventListener("error", (errorEvent) => {
-    if (isOfflineError(errorEvent.error)) {
+    if (isNetworkPolicyError(errorEvent.error)) {
       errorEvent.preventDefault();
     }
   });
   window.addEventListener("unhandledrejection", (rejectionEvent) => {
-    if (isOfflineError(rejectionEvent.reason)) {
+    if (isNetworkPolicyError(rejectionEvent.reason)) {
       rejectionEvent.preventDefault();
     }
   });
+};
+
+const peekReason = () => {
+  return untracked(() => readReason(networkPolicySignal.peek().source));
 };
 
 const readReason = (source) => {
@@ -1461,6 +1516,20 @@ const readReason = (source) => {
     reason = source;
   }
   return reason || null;
+};
+
+// "store" or "network", from the declaration or from the reason.
+const readReads = (reads, reason) => {
+  const value = typeof reads === "function" ? reads(reason) : reads;
+  if (value === "network") {
+    return "network";
+  }
+  if (value !== "store") {
+    console.warn(
+      `setNetworkPolicy: "reads" must be "store" or "network", received "${value}". Reads are answered from the store.`,
+    );
+  }
+  return "store";
 };
 
 /**
@@ -1573,17 +1642,18 @@ const markErrorAsStoppingRender = (error) => {
 };
 
 /**
- * An offline error is never reported: the app declared the state that produced
- * it, the request never left, and there is nothing for a developer to fix. It
- * is data a screen shows, and it stays data whether or not one does (see
- * network_policy.js, which also keeps it out of the browser console).
+ * An error the network policy produced is never reported: the app declared the
+ * state that produced it, the request never left, and there is nothing for a
+ * developer to fix. It is data a screen shows, and it stays data whether or not
+ * one does (see network_policy.js, which also keeps it out of the browser
+ * console).
  */
 const errorIsAccountedFor = (error) => {
   return (
     errorIsDisplayed(error) ||
     errorTakenByRenderSet.has(error) ||
     errorNoRenderCouldReachSet.has(error) ||
-    isOfflineError(error)
+    isNetworkPolicyError(error)
   );
 };
 
@@ -16840,29 +16910,36 @@ const createRestActionFactoryForRoot = (
   return createActionForRoot;
 };
 
-// Under a network policy no callback is called (see network_policy.js). A GET
-// of a root resource answers with the row the store holds for it (see
+// Under a network policy a write callback is never called (see
+// network_policy.js): there is nothing to answer it with, so it settles with a
+// NetworkPolicyError carrying the policy's reason. A read is called or not depending
+// on where the policy answers reads from. Answered from the store, a GET of a
+// root resource completes with the row the store holds for it (see
 // findItemInStore) — handing the item back is an upsert without effect, so the
-// action completes with what it had and nothing is asked. A relationship GET
-// has no row of its own to answer with, and a write has nothing to answer:
-// both settle with an OfflineError carrying the policy's reason. A completed
-// GET asked to rerun never gets here (actions.js holds it).
+// action completes with what it had and nothing is asked; a relationship GET
+// has no row of its own to answer with and settles with the same error. A
+// completed GET asked to rerun never gets here (actions.js holds it).
 const applyNetworkPolicy = (
   restCallback,
   { verb, isMany, findItemInStore },
 ) => {
   return (params, context) => {
-    const reason = peekNetworkPolicyReason();
-    if (reason === null) {
+    const policy = peekNetworkPolicy();
+    if (policy === null) {
       return restCallback(params, context);
     }
-    if (verb === "GET" && !isMany && findItemInStore) {
-      const item = findItemInStore(params, context.action);
-      if (item) {
-        return item;
+    if (verb === "GET") {
+      if (!policy.readsFromStore) {
+        return restCallback(params, context);
+      }
+      if (!isMany && findItemInStore) {
+        const item = findItemInStore(params, context.action);
+        if (item) {
+          return item;
+        }
       }
     }
-    throw new OfflineError(reason);
+    throw new NetworkPolicyError(policy.reason);
   };
 };
 
@@ -86908,5 +86985,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, CalloutStatusIcon, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, ControlSwap, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, Expandable, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, InfoSvg, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, OfflineError, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTransitionArea, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, SpinGroup, SplitButton, StarSvg, Step, StepList, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, TimeRange, TimeRangeSpin, TimeRangeWheel, TimeSpin, TimeWheel, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, canNavBackSignal, canNavForwardSignal, coarsePointerSignal, compareTwoJsValues, constraintFromValidityRule, createAction, createAvailableConstraint, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineRouteDefaultTransition, defineRouteTransition, detectHorizontalOverflow, dispatchRequestSetUIState, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, errorIsDisplayed, filterTableSelection, getNowHours, getNowHoursRoundedToStep, isCellSelected, isColumnSelected, isOfflineError, isRowSelected, isScrolling, isToday, languagesSignal, localStorageSignal, markAsOutsideTextFlow, markErrorAsDisplayedBy, moveArrayItemByIndex, moveFocusTo, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, preloadUrl, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, routeFallback, scrollActivitySignal, setBaseUrl, setNetworkPolicy, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, smallTouchScreenSignal, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutElement, useCalloutRequestClose, useCanNavBack, useCanNavForward, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useNetworkPolicyReason, useOrderedColumns, usePickerState, usePopupMode, useRouteStatus, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideContainer, useSlideValue, useStateArray, useTitleLevel, useTransitionCover, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, CalloutStatusIcon, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, ControlSwap, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, Expandable, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, InfoSvg, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NetworkPolicyError, NumberSpin, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RouteTransitionArea, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, SpinGroup, SplitButton, StarSvg, Step, StepList, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, TimeRange, TimeRangeSpin, TimeRangeWheel, TimeSpin, TimeWheel, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, canNavBackSignal, canNavForwardSignal, coarsePointerSignal, compareTwoJsValues, constraintFromValidityRule, createAction, createAvailableConstraint, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineRouteDefaultTransition, defineRouteTransition, detectHorizontalOverflow, dispatchRequestSetUIState, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, errorIsDisplayed, filterTableSelection, getNowHours, getNowHoursRoundedToStep, isCellSelected, isColumnSelected, isNetworkPolicyError, isRowSelected, isScrolling, isToday, languagesSignal, localStorageSignal, markAsOutsideTextFlow, markErrorAsDisplayedBy, moveArrayItemByIndex, moveFocusTo, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, preloadUrl, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, routeFallback, scrollActivitySignal, setBaseUrl, setNetworkPolicy, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, smallTouchScreenSignal, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutElement, useCalloutRequestClose, useCanNavBack, useCanNavForward, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useNetworkPolicyReason, useOrderedColumns, usePickerState, usePopupMode, useRouteStatus, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideContainer, useSlideValue, useStateArray, useTitleLevel, useTransitionCover, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi.js.map
