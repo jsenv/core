@@ -72254,6 +72254,10 @@ const css$t = /* css */`@layer navi {
     }
   }
 
+  &[data-open-on]:not([data-open-on~="single_click"]) {
+    --x-picker-cursor: auto;
+  }
+
   &[data-open-on~="longpress"] {
     -webkit-touch-callout: none;
     user-select: none;
@@ -72329,7 +72333,7 @@ const css$t = /* css */`@layer navi {
     --x-picker-cursor: default;
   }
 
-  &[data-readonly-opens] {
+  &[data-readonly-opens]:not([data-open-on]) {
     --x-picker-cursor: pointer;
   }
 

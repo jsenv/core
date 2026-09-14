@@ -435,6 +435,17 @@ const css = /* css */ `
       }
     }
 
+    /* The hand is the press's promise: a click here opens this. A picker
+       opening on something else — a hold, a right click, nothing at all — has
+       no such promise to make, and cursor is inherited: under variant="bare"
+       the hand would reach every pixel of a drawing the caller made, where a
+       click answers only where they put a link or a button. data-open-on is
+       written only when the press does not open the picker; a single_click
+       still is a click, so it keeps the hand. */
+    &[data-open-on]:not([data-open-on~="single_click"]) {
+      --x-picker-cursor: auto;
+    }
+
     /* A hold is the whole gesture: nothing under the finger is there to be
        selected, and the system's callout would answer the very press being
        waited on. Written here, before the finger lands, which is the only
@@ -561,10 +572,11 @@ const css = /* css */ `
       --x-picker-icon-color: var(--picker-icon-color-readonly);
       --x-picker-cursor: default;
     }
-    /* Read-only and still opening, so it still says so under the pointer.
-       Before the disabled block below on purpose: a disabled picker opens
-       nothing, read-only or not. */
-    &[data-readonly-opens] {
+    /* Read-only and still opening, so it still says so under the pointer —
+       as long as the pointer is what opens it (see the data-open-on rule
+       above). Before the disabled block below on purpose: a disabled picker
+       opens nothing, read-only or not. */
+    &[data-readonly-opens]:not([data-open-on]) {
       --x-picker-cursor: pointer;
     }
     /* Focus. The second selector is the state held by hand (pseudoState on
@@ -1700,10 +1712,12 @@ const PickerFirstResolver = (props) => {
  *   press a hold would have taken. A tap then opens nothing — the press stays
  *   free for what the `ui` holds: a link in the card navigates, a button in it
  *   presses, a picker in it opens on its own click, with nothing to declare
- *   (`selfInteractions` is for a drawing that DOES open on the press). That
- *   is what lets a whole card be a picker without every touch on it opening
- *   the sheet — and the keyboard keeps its ways in (Enter, Space, the
- *   arrows). A hold declared INSIDE the card (`interactions={{ longpress }}`
+ *   (`selfInteractions` is for a drawing that DOES open on the press). The
+ *   trigger says so under the mouse too: it drops the hand cursor, which is
+ *   the press's promise, and every pixel of the drawing keeps the cursor it
+ *   would have on its own. That is what lets a whole card be a picker without
+ *   every touch on it opening the sheet — and the keyboard keeps its ways in
+ *   (Enter, Space, the arrows). A hold declared INSIDE the card (`interactions={{ longpress }}`
  *   on something it holds) answers before this one: the nearer hold takes the
  *   press, the way a click is the innermost target's. Being a gesture, the open goes through
  *   the interaction gate as one: a `readOnly` picker refuses it and says so

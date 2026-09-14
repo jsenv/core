@@ -73603,6 +73603,10 @@ const css$t = /* css */`@layer navi {
     }
   }
 
+  &[data-open-on]:not([data-open-on~="single_click"]) {
+    --x-picker-cursor: auto;
+  }
+
   &[data-open-on~="longpress"] {
     -webkit-touch-callout: none;
     user-select: none;
@@ -73678,7 +73682,7 @@ const css$t = /* css */`@layer navi {
     --x-picker-cursor: default;
   }
 
-  &[data-readonly-opens] {
+  &[data-readonly-opens]:not([data-open-on]) {
     --x-picker-cursor: pointer;
   }
 
@@ -74655,10 +74659,12 @@ const PickerFirstResolver = props => {
  *   press a hold would have taken. A tap then opens nothing — the press stays
  *   free for what the `ui` holds: a link in the card navigates, a button in it
  *   presses, a picker in it opens on its own click, with nothing to declare
- *   (`selfInteractions` is for a drawing that DOES open on the press). That
- *   is what lets a whole card be a picker without every touch on it opening
- *   the sheet — and the keyboard keeps its ways in (Enter, Space, the
- *   arrows). A hold declared INSIDE the card (`interactions={{ longpress }}`
+ *   (`selfInteractions` is for a drawing that DOES open on the press). The
+ *   trigger says so under the mouse too: it drops the hand cursor, which is
+ *   the press's promise, and every pixel of the drawing keeps the cursor it
+ *   would have on its own. That is what lets a whole card be a picker without
+ *   every touch on it opening the sheet — and the keyboard keeps its ways in
+ *   (Enter, Space, the arrows). A hold declared INSIDE the card (`interactions={{ longpress }}`
  *   on something it holds) answers before this one: the nearer hold takes the
  *   press, the way a click is the innermost target's. Being a gesture, the open goes through
  *   the interaction gate as one: a `readOnly` picker refuses it and says so
