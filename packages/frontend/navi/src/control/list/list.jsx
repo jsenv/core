@@ -93,10 +93,11 @@ const ItemTransitionContext = createContext(false);
 // that must reserve room for what is not rendered.
 const ListVirtualContext = createContext(null);
 // Set around each row a run of items renders (see ListItems): which row of the
-// collection it is, and where it stands among the rows the list holds. Carried
-// by context rather than injected into whatever vnode renderItem returned, so
-// that returning a component of one's own — instead of a bare <List.Item> —
-// works the same way.
+// collection it is, where it stands among the rows the list holds, and the
+// run's own account of which rows mount (see createRunRows) — what the row
+// draws its separator from. Carried by context rather than injected into
+// whatever vnode renderItem returned, so that returning a component of one's
+// own — instead of a bare <List.Item> — works the same way.
 const ListRowContext = createContext(null);
 // The slot a child of the list stands in, by id (see ListDeclaredChildren). A
 // row takes its place in the collection by slot: the place is then the list's
@@ -3363,16 +3364,15 @@ const ListItemRowResolver = (props) => {
   if (!row) {
     return <Next {...props} />;
   }
-  // eslint-disable-next-line no-unused-vars
-  const { id, index, item, rowMinHeight, rowMinWidth, ...rowProps } = row;
   return (
     <Next
-      {...rowProps}
       {...props}
       id={props.id || row.id}
       index={row.index}
-      minHeight={props.minHeight === undefined ? rowMinHeight : props.minHeight}
-      minWidth={props.minWidth === undefined ? rowMinWidth : props.minWidth}
+      minHeight={
+        props.minHeight === undefined ? row.rowMinHeight : props.minHeight
+      }
+      minWidth={props.minWidth === undefined ? row.rowMinWidth : props.minWidth}
     />
   );
 };
@@ -3441,8 +3441,8 @@ const ListItemUI = (props) => {
   const virtual = useContext(ListVirtualContext);
   const searchNoMatchMode = useContext(SearchNoMatchModeContext);
   // The run this row belongs to, when it comes from one (see ListItems): it
-  // registered the row, decided it is inside the render window, and placed its
-  // separator. All that is left here is to draw it.
+  // registered the row and decided it is inside the render window. Whether
+  // the row mounts is decided here, and told back to the run.
   const row = useContext(ListRowContext);
   const slotId = useContext(ListSlotContext);
   // There is no standalone match/matchScore/highlight prop — participation
@@ -3474,16 +3474,24 @@ const ListItemUI = (props) => {
   // name of this very component (idDefault, not the row's id): two components
   // may stand for the same row for a moment, one leaving as the other arrives,
   // and the one leaving must give back its own place, not the newcomer's.
-  if (!row) {
+  if (row) {
     if (props.filtered) {
-      virtual.drop(idDefault);
+      row.run.unmount(idDefault);
     } else {
-      props.index = virtual.take(idDefault, 1, slotId);
+      row.run.mount(idDefault, props.index, row.groupKey);
     }
+  } else if (props.filtered) {
+    virtual.drop(idDefault);
+  } else {
+    props.index = virtual.take(idDefault, 1, slotId);
   }
   useLayoutEffect(() => {
     return () => {
-      virtual.drop(idDefault);
+      if (row) {
+        row.run.unmount(idDefault);
+      } else {
+        virtual.drop(idDefault);
+      }
     };
   }, []);
   // Every row that is drawn registers itself, whether it was declared one by
@@ -3500,44 +3508,44 @@ const ListItemUI = (props) => {
   if (props.filtered) {
     return null;
   }
-  // html-hidden items: excluded from virtual scroll accounting but always in DOM
-  if (props.hidden) {
-    // Its separator stays too, and stays invisible with it: the point of
-    // keeping a row that matches nothing is that nothing moves, and a divider
-    // that leaves takes its own height away.
-    if (!separator || props.index === 0) {
-      return <ListItemReal {...props} />;
-    }
-    return (
-      <>
-        {cloneElement(resolveSeparatorVnode(separator, props.index - 1), {
-          style: VISIBILITY_HIDDEN_STYLE,
-        })}
-        <ListItemReal {...props} />
-      </>
-    );
-  }
-  if (row) {
-    return <ListItemReal {...props} />;
-  }
-  const index = props.index;
   const listItemVnode = <ListItemReal {...props} />;
-  // "Am I the first visible item?" is answered by the place the list handed
-  // out (virtual.take above), not by the tracker's visibleIndex: during a
-  // reorder render pass (items resorted by search score) the other items still
-  // carry stale keyToExplicitOrder values, the binary search reads them, no
-  // item comes out at 0 and a spurious separator appears at the top. Inside a
-  // group, each group has its own tracker and its items do not reorder, so
-  // groupVisibleIndex is reliable.
-  const isFirstInList =
-    groupVisibleIndex === null ? index === 0 : groupVisibleIndex === 0;
-  if (!separator || isFirstInList) {
+  if (!separator) {
     return listItemVnode;
   }
-  // separatorIndex is only used as the function-form argument (gap index)
-  const separatorIndex = groupVisibleIndex === null ? index : groupVisibleIndex;
-
-  const separatorVnode = resolveSeparatorVnode(separator, separatorIndex - 1);
+  // The separator a row wears is the one at the gap above it, so the first row
+  // that mounts wears none. "Am I first?" is answered by whoever handed out
+  // the place — the run for its rows, the list's virtual for a declared one
+  // (virtual.take above) — not by the tracker's visibleIndex: during a reorder
+  // render pass (items resorted by search score) the other items still carry
+  // stale keyToExplicitOrder values, the binary search reads them, no item
+  // comes out at 0 and a spurious separator appears at the top. Inside a
+  // declared group, each group has its own tracker and its items do not
+  // reorder, so groupVisibleIndex is reliable there.
+  let isFirst;
+  if (row) {
+    isFirst = row.run.isFirst(props.index, row.groupKey);
+  } else if (groupVisibleIndex === null || props.hidden) {
+    isFirst = props.index === 0;
+  } else {
+    isFirst = groupVisibleIndex === 0;
+  }
+  if (isFirst) {
+    return listItemVnode;
+  }
+  // The gap index, only used as the function-form argument.
+  const gapIndex =
+    row || groupVisibleIndex === null || props.hidden
+      ? props.index - 1
+      : groupVisibleIndex - 1;
+  let separatorVnode = resolveSeparatorVnode(separator, gapIndex);
+  if (props.hidden) {
+    // A row kept in the DOM but hidden keeps its separator, hidden with it:
+    // the point of keeping a row that matches nothing is that nothing moves,
+    // and a divider that leaves takes its own height away.
+    separatorVnode = cloneElement(separatorVnode, {
+      style: VISIBILITY_HIDDEN_STYLE,
+    });
+  }
   return (
     <>
       {separatorVnode}
@@ -4189,6 +4197,100 @@ const sameSlotIds = (left, right) => {
   return true;
 };
 
+// Which of a run's rows mount, and which of them comes first. A run draws
+// every row of its window, and only the row itself knows, once it renders,
+// that it renders nothing (filtered out by a search, see ListItemUI). The
+// separator a row wears is the one at the gap above it, so the first row that
+// mounts wears none — and "first" is read off the rows that mount, not off
+// the collection. Rows say so as they render, in order, and the answer is a
+// signal: a row rendered from a kept vnode is rendered again when the row
+// before it leaves or comes back. Grouped rows are counted per group, the gap
+// above a group's first row being the group wrapper's own.
+const createRunRows = () => {
+  // rowId → { index, groupKey }
+  const rowById = new Map();
+  // groupKey (undefined outside groups) → the index of the group's first
+  // mounted row, -1 when none.
+  const firstSignalByGroup = new Map();
+  // Where the window starts: a run cut by the window has rows above its first
+  // drawn one, and so does a run standing after declared rows.
+  const windowFromSignal = signal(0);
+  // Groups whose first row left: recounted on the next ask, or at the end of
+  // the frame, whichever comes first.
+  const staleGroupKeys = new Set();
+
+  const firstSignalOf = (groupKey) => {
+    let firstSignal = firstSignalByGroup.get(groupKey);
+    if (!firstSignal) {
+      firstSignal = signal(-1);
+      firstSignalByGroup.set(groupKey, firstSignal);
+    }
+    return firstSignal;
+  };
+  const refresh = (groupKey) => {
+    staleGroupKeys.delete(groupKey);
+    let first = -1;
+    for (const row of rowById.values()) {
+      if (row.groupKey === groupKey && (first === -1 || row.index < first)) {
+        first = row.index;
+      }
+    }
+    firstSignalOf(groupKey).value = first;
+  };
+  const leave = (row) => {
+    if (firstSignalOf(row.groupKey).peek() !== row.index) {
+      return;
+    }
+    staleGroupKeys.add(row.groupKey);
+    queueMicrotask(() => {
+      if (staleGroupKeys.has(row.groupKey)) {
+        refresh(row.groupKey);
+      }
+    });
+  };
+
+  return {
+    setWindowFrom: (windowFrom) => {
+      windowFromSignal.value = windowFrom;
+    },
+    mount: (rowId, index, groupKey) => {
+      const row = rowById.get(rowId);
+      if (row) {
+        if (row.index === index && row.groupKey === groupKey) {
+          return;
+        }
+        leave(row);
+        row.index = index;
+        row.groupKey = groupKey;
+      } else {
+        rowById.set(rowId, { index, groupKey });
+      }
+      const firstSignal = firstSignalOf(groupKey);
+      const first = firstSignal.peek();
+      if (first === -1 || index < first) {
+        firstSignal.value = index;
+      }
+    },
+    unmount: (rowId) => {
+      const row = rowById.get(rowId);
+      if (!row) {
+        return;
+      }
+      rowById.delete(rowId);
+      leave(row);
+    },
+    isFirst: (index, groupKey) => {
+      if (staleGroupKeys.has(groupKey)) {
+        refresh(groupKey);
+      }
+      if (firstSignalOf(groupKey).value !== index) {
+        return false;
+      }
+      return groupKey !== undefined || windowFromSignal.value === 0;
+    },
+  };
+};
+
 // The walk that gives the list's children their places: a slot for each of
 // them, declared to the list's virtual all at once before any child renders,
 // and handed to the child through a provider of its own — which is what lets
@@ -4382,6 +4484,11 @@ export const ListItems = ({
   const slotId = useContext(ListSlotContext);
   const renderWindow = useContext(RenderWindowContext);
   const separator = useContext(SeparatorContext);
+  const runRowsRef = useRef(null);
+  if (!runRowsRef.current) {
+    runRowsRef.current = createRunRows();
+  }
+  const runRows = runRowsRef.current;
   // The vnode drawn for a row, kept by item: a run rendering again (its window
   // moving, its first paint's budget giving way to the full one) hands preact
   // the same vnode for a row that has not changed, and preact leaves that
@@ -4390,12 +4497,8 @@ export const ListItems = ({
   // row at the same index, in the same refreshing state: everything the
   // function is given.
   const rowVnodesRef = useRef(null);
-  if (
-    !rowVnodesRef.current ||
-    rowVnodesRef.current.renderItem !== renderItem ||
-    rowVnodesRef.current.separator !== separator
-  ) {
-    rowVnodesRef.current = { renderItem, separator, byItem: new Map() };
+  if (!rowVnodesRef.current || rowVnodesRef.current.renderItem !== renderItem) {
+    rowVnodesRef.current = { renderItem, byItem: new Map() };
   }
   const rowVnodesByItem = rowVnodesRef.current.byItem;
   const store = useItemStore({
@@ -4445,6 +4548,7 @@ export const ListItems = ({
     renderWindow.start > runStart ? renderWindow.start : runStart;
   const windowTo = renderWindow.end < runEnd ? renderWindow.end : runEnd;
   store.forget(rankOf(windowFrom), rankOf(windowTo));
+  runRows.setWindowFrom(windowFrom);
 
   // The row answers to its own id when the item carries one — that is what
   // addresses it from outside (--navi-select, --navi-scroll, startAt) — and
@@ -4592,15 +4696,10 @@ export const ListItems = ({
     );
     group = null;
   };
-  // Which group a row belongs to, or undefined when it belongs to none. Asked
-  // before the row is pushed as well as while pushing it: a row opening a
-  // group is the one row that must not wear a separator (see below).
+  // Which group a row belongs to, or undefined when it belongs to none.
   const groupKeyOf = (item, rowIndex) =>
     groupBy && item !== undefined ? groupBy(item, rowIndex) : undefined;
-  const opensGroup = (groupKey) =>
-    groupKey !== undefined && (!group || group.key !== groupKey);
-  const pushRow = (rowNode, item, rowIndex) => {
-    const groupKey = groupKeyOf(item, rowIndex);
+  const pushRow = (rowNode, item, rowIndex, groupKey) => {
     if (groupKey === undefined) {
       closeGroup();
       rows.push(rowNode);
@@ -4666,80 +4765,78 @@ export const ListItems = ({
       item === undefined
         ? `${ownerId}_skeleton_${rowIndex}`
         : idOf(item, rowIndex);
+    const groupKey = groupKeyOf(item, rowIndex);
+    if (item === undefined) {
+      // A row on its way never reaches ListItemUI (see ListItemSkeletonResolver):
+      // it is stood among the rows that mount, and given its separator, here.
+      let rowVnode;
+      if (renderRowSkeleton === false) {
+        // The row must still take its room: without it the rows below would
+        // climb up and slide back down as the answer arrives.
+        rowVnode = <ListItem skeleton style={VISIBILITY_HIDDEN_STYLE} />;
+      } else if (renderRowSkeleton) {
+        rowVnode = renderRowSkeleton(rowIndex);
+      } else {
+        rowVnode = <ListItem skeleton />;
+      }
+      if (rowVnode) {
+        pushRow(
+          <ListRunSkeletonRow
+            key={key}
+            run={runRows}
+            row={{ id: key, index: rowIndex, ...getSkeletonRow() }}
+            groupKey={groupKey}
+            separator={separator}
+          >
+            {rowVnode}
+          </ListRunSkeletonRow>,
+          item,
+          rowIndex,
+          groupKey,
+        );
+      }
+      rowIndex++;
+      continue;
+    }
     let rowVnode;
     let rowContextValue;
-    let rowKept = null;
-    if (item !== undefined) {
-      const rowVnodeKept = rowVnodesByItem.get(item);
-      if (
-        rowVnodeKept &&
-        rowVnodeKept.rowIndex === rowIndex &&
-        rowVnodeKept.refreshing === renderItemState.refreshing
-      ) {
-        rowVnode = rowVnodeKept.vnode;
-        rowContextValue = rowVnodeKept.rowContextValue;
-        rowKept = rowVnodeKept;
-      } else {
-        rowVnode = renderItem(item, rowIndex, renderItemState);
-        // Kept with the vnode, for the same reason: a context value that is a
-        // fresh object on every render forces every consumer of it to render,
-        // which is the row's own chain — the vnode handed back unchanged would
-        // then buy nothing.
-        rowContextValue = { id: key, index: rowIndex, item };
-        rowKept = {
-          vnode: rowVnode,
-          rowContextValue,
-          rowIndex,
-          refreshing: renderItemState.refreshing,
-          separatorVnode: null,
-        };
-        rowVnodesByItem.set(item, rowKept);
-      }
-    } else if (renderRowSkeleton === false) {
-      // The row must still take its room: without it the rows below would
-      // climb up and slide back down as the answer arrives.
-      rowVnode = <ListItem skeleton style={VISIBILITY_HIDDEN_STYLE} />;
-    } else if (renderRowSkeleton) {
-      rowVnode = renderRowSkeleton(rowIndex);
+    const rowVnodeKept = rowVnodesByItem.get(item);
+    if (
+      rowVnodeKept &&
+      rowVnodeKept.rowIndex === rowIndex &&
+      rowVnodeKept.refreshing === renderItemState.refreshing &&
+      rowVnodeKept.rowContextValue.groupKey === groupKey
+    ) {
+      rowVnode = rowVnodeKept.vnode;
+      rowContextValue = rowVnodeKept.rowContextValue;
     } else {
-      rowVnode = <ListItem skeleton />;
+      rowVnode = renderItem(item, rowIndex, renderItemState);
+      // Kept with the vnode, for the same reason: a context value that is a
+      // fresh object on every render forces every consumer of it to render,
+      // which is the row's own chain — the vnode handed back unchanged would
+      // then buy nothing.
+      rowContextValue = {
+        id: key,
+        index: rowIndex,
+        item,
+        run: runRows,
+        groupKey,
+      };
+      rowVnodesByItem.set(item, {
+        vnode: rowVnode,
+        rowContextValue,
+        rowIndex,
+        refreshing: renderItemState.refreshing,
+      });
     }
     if (rowVnode) {
-      // The first row of a group wears no separator: the gap it sits at is the
-      // one between two groups, and that gap is the group wrapper's own — it
-      // is a row of the list like any other and draws its separator itself
-      // (see ListItemUI). Drawn here it would land inside the group instead,
-      // as a hairline under the label.
-      const drawSeparator =
-        separator && rowIndex > 0 && !opensGroup(groupKeyOf(item, rowIndex));
-      if (drawSeparator) {
-        // Kept with the row too: a separator built again is a separator
-        // rendered again.
-        let separatorVnode = rowKept ? rowKept.separatorVnode : null;
-        if (!separatorVnode) {
-          separatorVnode = cloneElement(
-            resolveSeparatorVnode(separator, rowIndex - 1),
-            { key: `${key}_separator` },
-          );
-          if (rowKept) {
-            rowKept.separatorVnode = separatorVnode;
-          }
-        }
-        pushRow(separatorVnode, item, rowIndex);
-      }
       pushRow(
-        <ListRowContext.Provider
-          key={key}
-          value={
-            item === undefined
-              ? { id: key, index: rowIndex, ...getSkeletonRow() }
-              : rowContextValue
-          }
-        >
+        <ListRowContext.Provider key={key} value={rowContextValue}>
           {rowVnode}
         </ListRowContext.Provider>,
         item,
         rowIndex,
+        groupKey,
       );
     }
     rowIndex++;
@@ -4755,6 +4852,31 @@ export const ListItems = ({
     );
   }
   return rows;
+};
+
+// A run's row that has not arrived, standing where the real one will: it
+// mounts like any row (see createRunRows) and wears the separator of the gap
+// above it, the way a real row does in ListItemUI.
+const ListRunSkeletonRow = ({ run, row, groupKey, separator, children }) => {
+  const rowId = useId();
+  run.mount(rowId, row.index, groupKey);
+  useLayoutEffect(() => {
+    return () => {
+      run.unmount(rowId);
+    };
+  }, []);
+  const rowVnode = (
+    <ListRowContext.Provider value={row}>{children}</ListRowContext.Provider>
+  );
+  if (!separator || run.isFirst(row.index, groupKey)) {
+    return rowVnode;
+  }
+  return (
+    <>
+      {resolveSeparatorVnode(separator, row.index - 1)}
+      {rowVnode}
+    </>
+  );
 };
 
 // What is drawn where rows were asked for and never came: the sentence and the
