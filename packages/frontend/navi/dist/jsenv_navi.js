@@ -66566,7 +66566,7 @@ const css$x = /* css */`@layer navi {
 }
 
 .navi_list_failed_rows {
-  height: var(--size-to-fill, 0px);
+  min-height: var(--size-to-fill, 0px);
   flex-shrink: 0;
   list-style: none;
   display: block;

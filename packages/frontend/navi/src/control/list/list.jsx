@@ -637,13 +637,17 @@ const css = /* css */ `
   .navi_list_loading_fallback {
     display: flex;
   }
-  /* The room of rows that were asked for and never came (see List.Items). It
-     keeps their height — the scrollbar has no reason to move because a fetch
-     failed — and what it says is stuck to the top of it, so it is on screen for
-     as long as the hole is. */
+  /* The room of rows that were asked for and never came (see List.Items), with
+     what it says stuck to the top of it, so it is on screen for as long as the
+     hole is. That room is a floor and not a height: it holds the scrollbar
+     still when those rows have ranks of their own, and it is nothing at all for
+     a run that never received anything — the windowful it stands for is a
+     placeholder, not a place, and the sentence is then the only thing with a
+     size. A sentence taller than the hole grows the band rather than spilling
+     over the rows below it. */
   .navi_list_failed_rows {
     display: block;
-    height: var(--size-to-fill, 0px);
+    min-height: var(--size-to-fill, 0px);
     flex-shrink: 0;
     list-style: none;
 
