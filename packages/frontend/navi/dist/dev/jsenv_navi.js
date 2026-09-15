@@ -50776,9 +50776,15 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  *   drawn — must still close it. What `<Link pressableDuringRouteTransition>`
  *   says, for the other half of a toggle. Only for a control that does not
  *   travel with the pages.
- * @param {Function} [action] On a button with an `href` or a `route`, the
- *   same order as a Link's: it runs on the press, before the navigation, and
- *   the navigation does not wait for it (see Link's `action`).
+ * @param {Function} [action] What the press runs: a button holds no value, so
+ *   every press is one call. The button is busy while it runs, refuses a second
+ *   press and draws the error on itself. On a button with an `href` or a
+ *   `route`, the same order as a Link's: it runs on the press, before the
+ *   navigation, and the navigation does not wait for it (see Link's `action`).
+ * @param {Function} [uiAction] The same press, for what cannot fail and takes
+ *   no time — moving something else on screen, writing a local signal: a plain
+ *   callback, no busy state, nothing drawn if it throws (see
+ *   docs/actions.md#action-or-uiaction).
  * @param {string} [selfInteractions] The interactions this button takes for
  *   itself inside a zone that belongs to another control — a chip's cross on a
  *   picker's façade, an eye on a pressable row, a badge against the edge of a

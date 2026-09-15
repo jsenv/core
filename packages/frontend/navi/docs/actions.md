@@ -357,8 +357,10 @@ displayed (see [error_handling.md](./error_handling.md)); an abort to
 
 ## `action` or `uiAction`
 
-Both fire when a control's value changes, and they are not two ways of writing
-the same thing:
+Both fire when a control's value changes — and on a control that holds no
+value, a `<Button>` or a `<Link>`, the press itself is that occasion: each of
+them runs once per press, with no value to wait for. They are not two ways of
+writing the same thing:
 
 |                   | `uiAction(value, event)`                   | `action`                                                                   |
 | ----------------- | ------------------------------------------ | -------------------------------------------------------------------------- |
@@ -479,8 +481,10 @@ apply there. Everywhere else it does.
 
 ## `uiAction` mirrors the state, it does not report a gesture
 
-`uiAction` fires whenever the control's state changes, whoever changed it. The
-user typing is one cause among several: a `value` prop coming back down after a
+`uiAction` fires whenever the control's state changes, whoever changed it — a
+button and a link being the exception their shape makes plain: they hold no
+state to mirror, so each press is exactly one call. Everywhere else the user
+typing is one cause among several: a `value` prop coming back down after a
 render, a popup control propagating its choice up to the picker holding it, a
 group cascading a value into its children — all of them reach `uiAction` too, so
 that a signal or a local variable listening to it never drifts out of sync.
