@@ -63,9 +63,10 @@ The command is what marks the row, and it runs **only if the action succeeded**
 [actions.md](./actions.md)). So a refused invitation leaves the row unmarked
 without anything to undo.
 
-`selectableArea="manual"` is what makes the button the interaction surface: the
-row stops claiming presses that land anywhere in it, so the only way in is the
-button.
+`selectableArea="manual"` is about the row's own surface, not about the button:
+a control inside a row answers its own press whichever area the row claims.
+What it removes is the row selecting under a press that lands beside the button
+— here what marks the row is the command, once the invitation went through.
 
 ## Who draws the wait, and who answers a press
 

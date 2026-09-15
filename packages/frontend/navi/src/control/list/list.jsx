@@ -1408,6 +1408,14 @@ const useListScrollSync = ({
   };
   useLayoutEffect(resolveScroller);
   useStickyScrollportWarning(ref, scroller);
+  useStuckWindowWarning({
+    ref,
+    scrollerElResolved,
+    renderBudget,
+    totalSignal: virtual.totalSignal,
+    virtualItemSizeSignal,
+    horizontal,
+  });
   useStuckStickyParts(ref, getScroller, scrollerElResolved, horizontal);
 
   // The row the scroll holds onto across a change of geometry, and where it
@@ -2378,6 +2386,63 @@ const getScrollerViewportRect = (scrollerEl) => {
   }
   return scrollerEl.getBoundingClientRect();
 };
+// A window that cannot move is the one failure of a virtualized list that
+// looks like nothing: the rows outside it are fillers holding their room, so
+// the list simply ends on blank space, at exactly the height of the rows never
+// drawn. It happens when the box the window follows (see getScrollerEl) scrolls
+// nothing — a list given no height of its own inside an ancestor that clips
+// instead of scrolling — and there is no event missing to notice it by.
+const useStuckWindowWarning = ({
+  ref,
+  scrollerElResolved,
+  renderBudget,
+  totalSignal,
+  virtualItemSizeSignal,
+  horizontal,
+}) => {
+  const doneRef = useRef(false);
+  // Read where they stand at each commit, not subscribed to: this reports a
+  // geometry, and the commit is when there is a new one to look at.
+  useLayoutEffect(() => {
+    if (!import.meta.dev || doneRef.current || !scrollerElResolved) {
+      return;
+    }
+    const total = totalSignal.peek();
+    if (total <= renderBudget || !virtualItemSizeSignal.peek()) {
+      // Nothing is held outside the window yet, or the room it takes is not
+      // measured: there is no blank tail to report.
+      return;
+    }
+    const viewportRect = getScrollerViewportRect(scrollerElResolved);
+    const viewportSize = horizontal ? viewportRect.width : viewportRect.height;
+    if (!viewportSize) {
+      // Not on screen — a list inside a closed popup, a parked subtree.
+      return;
+    }
+    if (canScrollerScroll(scrollerElResolved, horizontal ? "x" : "y")) {
+      return;
+    }
+    doneRef.current = true;
+    console.warn(
+      `<List> draws ${renderBudget} of ${total} rows and holds the room of the others, and the box its render window follows, ${getElementSignature(
+        scrollerElResolved,
+      )}, scrolls nothing: the window never moves and those rows stay blank. Give the list a bounded height so its own scroll box scrolls, or name the box that scrolls it with scroller="parent" / "document" / {element}.`,
+      { list: ref.current, scroller: scrollerElResolved },
+    );
+  });
+};
+// canScroll reads the declared overflow, which the root element answers
+// "visible" to however much the page scrolls.
+const canScrollerScroll = (scrollerEl, axis) => {
+  if (scrollerEl !== document.scrollingElement) {
+    return canScroll(scrollerEl, axis);
+  }
+  const scrollSize =
+    axis === "x" ? scrollerEl.scrollWidth : scrollerEl.scrollHeight;
+  const clientSize =
+    axis === "x" ? scrollerEl.clientWidth : scrollerEl.clientHeight;
+  return scrollSize - clientSize > 1;
+};
 // What a sticky part of the list sticks to is the nearest scroll container in
 // the DOM; `scroller` has no say in it. A list told the page scrolls it can
 // therefore have its group labels and its header stuck to a wrapper that never
@@ -2623,8 +2688,11 @@ const getOverflowVisibleAttribute = (overflow, overflowX, overflowY) => {
   return undefined;
 };
 
-// scroller="parent": the list virtualizes against the scroll box it lives in
-// instead of one of its own. Which box that is can only be measured, and a
+// Which box the render window follows, and which box a scroll position is read
+// from and written to. The list's own scroll box by default — but "self" is a
+// promise about geometry, not a fact: a box given no height of its own is
+// exactly as tall as its rows and scrolls nothing, so what shows the list is
+// then the scroll box around it. Which box that is can only be measured, and a
 // measurement holds for the geometry it was taken on — see resolveScroller in
 // useListScrollSync, which takes it again whenever the geometry moves.
 const getScrollerEl = (listContainerEl, scroller, horizontal) => {
@@ -2637,12 +2705,31 @@ const getScrollerEl = (listContainerEl, scroller, horizontal) => {
     const el = scroller.nodeType === 1 ? scroller : scroller.current;
     return el || document.scrollingElement;
   }
+  const axis = horizontal ? "x" : "y";
   if (scroller !== "parent") {
-    return listContainerEl.querySelector(
+    const ownScrollBoxEl = listContainerEl.querySelector(
       `:scope > .navi_list_scroll_container`,
     );
+    if (!ownScrollBoxEl || canScroll(ownScrollBoxEl, axis)) {
+      return ownScrollBoxEl;
+    }
+    const outerScrollerEl = getOuterScrollerEl(listContainerEl, axis);
+    if (overflowsScroller(ownScrollBoxEl, outerScrollerEl, horizontal)) {
+      // The list stands taller than the box showing it: the rows past that
+      // box's edge are reachable only by scrolling IT, and a window following
+      // a box that never moves would leave them as fillers — a list ending on
+      // blank space, at exactly the height of the rows never drawn.
+      return outerScrollerEl;
+    }
+    // The whole list is in view. Its own box scrolling nothing is then the
+    // truth of it, and where the list is remains a question about that box.
+    return ownScrollBoxEl;
   }
-  const axis = horizontal ? "x" : "y";
+  return getOuterScrollerEl(listContainerEl, axis);
+};
+// The scroll box the list is inside of, measured: the nearest ancestor whose
+// content actually overflows it.
+const getOuterScrollerEl = (listContainerEl, axis) => {
   let element = listContainerEl;
   let nearestScrollContainer = null;
   while (true) {
@@ -2668,6 +2755,16 @@ const getScrollerEl = (listContainerEl, scroller, horizontal) => {
   // the page instead would drag the whole document to the end of a list that
   // is not even scrollable.
   return nearestScrollContainer || document.scrollingElement;
+};
+// Whether the list stands past the edges of the box showing it — on that box's
+// viewport, not its box: a page-level scroller is as tall as the document.
+const overflowsScroller = (listScrollBoxEl, scrollerEl, horizontal) => {
+  const viewportRect = getScrollerViewportRect(scrollerEl);
+  const listRect = listScrollBoxEl.getBoundingClientRect();
+  // A pixel of slack, like canScroll: a box whose content fits rounds up.
+  return horizontal
+    ? listRect.width - viewportRect.width > 1
+    : listRect.height - viewportRect.height > 1;
 };
 // A row must be worth looking at once put back where it was. The offset comes
 // from wherever the position was taken — another screen, another window size,
@@ -3733,8 +3830,12 @@ const LIST_ITEM_STYLE_CSS_VARS = {
  *   Controlled "pointed" state (the :-navi-pointed pseudo state): the row a
  *   connected control designates without selecting it.
  * @param {"all"|"manual"} [props.selectableArea="all"]
- *   "all" makes the whole row the click target for selection; "manual" leaves
- *   that to the row's own content (its <SelectableInput />).
+ *   Where a press selects the row. "all" is the whole row: its content is
+ *   see-through to the pointer, so a press on a word, on the padding, or
+ *   between two cells selects — everywhere except on what answers a press for
+ *   itself (a link, a button, a control, a popup opened from the row), which
+ *   keeps its own press. "manual" gives the press back to the content
+ *   entirely: only the <SelectableInput /> the row draws selects.
  * @param {boolean} [props.skeleton]
  *   Render a non-interactive placeholder row (a shimmering bar) instead of a
  *   real item. This is what a `renderSkeleton` returns for a row on its way;
@@ -5506,10 +5607,18 @@ const ListResolved = /*#__PURE__*/ createComponentResolver([
  *   mounts, again when a popup around it opens, and after each commit while
  *   rows are held off screen. Given, it never measures.
  * @param {"self"|"parent"|"document"|Element|{current: Element}} [props.scroller="self"]
- *   Which box scrolls. `"self"` gives the list a scroll box of its own;
- *   `"parent"` makes it virtualize against the scrollable ancestor it lives in
- *   (the page, a panel) — no scroll box nested inside another one, no height
- *   to compute.
+ *   Which box scrolls — and with it, which box the render window follows and
+ *   which box a scroll position is read from (`onScrolledChange`). `"self"`
+ *   gives the list a scroll box of its own; `"parent"` makes it virtualize
+ *   against the scrollable ancestor it lives in (the page, a panel) — no scroll
+ *   box nested inside another one, no height to compute.
+ *
+ *   `"self"` asks for a height to scroll in: a `maxHeight`, an `expandY` in a
+ *   bounded parent. Given none, the list is exactly as tall as its rows and its
+ *   box scrolls nothing — what shows the list is then the box around it, and
+ *   that is what the window follows (the measured walk below), rather than a
+ *   window standing still over a list ending on blank space. In dev the list
+ *   warns when nothing scrolls it at all.
  *
  *   `"parent"` finds that ancestor by measuring: the nearest one whose content
  *   actually overflows it, the page if none does. Declaring `overflow` is not

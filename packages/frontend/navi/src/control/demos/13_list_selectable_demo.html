@@ -97,6 +97,7 @@
         Form,
         Button,
         BadgeCount,
+        Link,
         useSearchText,
         Input,
         stateSignal,
@@ -149,6 +150,7 @@
                 <SwitchDemo />
                 <ButtonSurfaceDemo />
                 <BgColorDemo />
+                <RowContentDemo />
                 <ManualAreaDemo />
                 <LegendDemo />
                 <HorizontalDemo />
@@ -201,6 +203,9 @@
                   </li>
                   <li>
                     <a href="#bg-color">Background color indicator</a>
+                  </li>
+                  <li>
+                    <a href="#row-content">Links and buttons in a row</a>
                   </li>
                   <li>
                     <a href="#manual-area">Manual selectable area</a>
@@ -1809,6 +1814,62 @@
         );
       };
 
+      // ── Links and buttons in a row ─────────────────────────────────────────────
+
+      const DOCS = [
+        { id: "contract", name: "Contrat", href: "#row-content" },
+        { id: "invoice", name: "Facture", href: "#row-content" },
+        { id: "receipt", name: "Reçu", href: "#row-content" },
+      ];
+
+      const RowContentDemo = () => {
+        const [selected, setSelected] = useState(["invoice"]);
+        const [log, pushLog] = useCallLog();
+        return (
+          <div id="row-content" className="demo-section">
+            <h2>Links and buttons in a row</h2>
+            <List
+              selectable
+              multiple
+              itemColumns="1fr auto auto"
+              action={(v) => {
+                setSelected(v);
+                pushLog("selection", v.join(", ") || "(none)");
+              }}
+            >
+              {DOCS.map((doc, i) => (
+                <List.Item
+                  key={doc.id}
+                  selectable
+                  index={i}
+                  id={`row_content_${doc.id}`}
+                  value={doc.id}
+                  selected={selected.includes(doc.id)}
+                  paddingX="s"
+                  paddingY="xs"
+                >
+                  <span>{doc.name}</span>
+                  <Link
+                    href={doc.href}
+                    onClick={() => pushLog("link", doc.name)}
+                  >
+                    Ouvrir
+                  </Link>
+                  <Button
+                    paddingX="s"
+                    paddingY="xs"
+                    action={() => pushLog("button", doc.name)}
+                  >
+                    Renommer
+                  </Button>
+                </List.Item>
+              ))}
+            </List>
+            <CallLog entries={log} />
+          </div>
+        );
+      };
+
       // ── Manual selectable area ─────────────────────────────────────────────────
 
       const FRUIT_BADGES = {
@@ -1951,12 +2012,11 @@
           <div id="manual-area" className="demo-section">
             <h2>Manual selectable area</h2>
             <p>
-              With <code>selectableArea="manual"</code> the row renders as a{" "}
-              <code>{"<div>"}</code> instead of a <code>{"<label>"}</code>. You
-              can then wrap <code>Selectable.Input</code> + text in your own{" "}
-              <code>{"<label>"}</code> to define exactly which area is clickable
-              (dotted border below), while placing independent actions on the
-              right without affecting selection.
+              With <code>selectableArea="manual"</code> nothing in the row
+              selects but what the row draws for it: here a{" "}
+              <code>{"<label>"}</code> around <code>Selectable.Input</code> +
+              text (dotted border below), leaving the rest of the row to the
+              actions on the right.
             </p>
             <div className="two-col">
               <div>

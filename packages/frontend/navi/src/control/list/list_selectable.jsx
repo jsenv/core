@@ -116,15 +116,51 @@ const css = /* css */ `
     }
     &[navi-selectable-area-all] {
       --x-list-item-cursor: pointer;
+      /* The real input lies UNDER the content (z-index: -1, from the hidden
+         appearance) so that nothing in the row has to be lifted above it to
+         stay pressable — a press the content does not take falls through to
+         it. A stacking context is what keeps that -1 between the row's own
+         background and its content instead of sending the input behind the
+         background, where no press would ever reach it. */
+      isolation: isolate;
+      /* The row's content is see-through to the pointer: a press on a word, on
+         the padding, on the gap between two cells all reach the real input
+         lying under it, and that is what makes the whole row the selection.
+         What answers a press for itself is excepted further down. */
       pointer-events: none;
 
       [navi-selectable-real-input] {
-        z-index: 0;
         outline: none;
         opacity: 0;
+        /* clip-path clips the hit area too, and this input's hit area is the
+           whole row. */
         clip-path: none;
         cursor: var(--x-list-item-cursor);
         pointer-events: auto;
+      }
+
+      /* What says on its own what a press on it does keeps that press: a link
+         goes where it points, a button does what it says, a control takes its
+         own value. The row's selection is what is left — everywhere the row
+         draws nothing to press. Said of what an element IS rather than of
+         navi's own components: a row is markup like any other, and an <a href>
+         in it is a link whoever wrote it.
+         The proxy drawn as the row's mark (the visible checkbox) stays out: it
+         is a picture OF the selection, not a second way to ask for it, and
+         being out of the pointer's reach is how the ROW is found as the place
+         a refusal about the selection is said (see findControlProxy). */
+      &:not([data-disabled]) {
+        a[href],
+        button,
+        select,
+        textarea,
+        input:not([navi-selectable-real-input], [navi-control-proxy-for]),
+        [navi-control]:not(
+          [navi-control-proxy-for],
+          :has([navi-control-proxy-for])
+        ) {
+          pointer-events: auto;
+        }
       }
 
       /* A popup opened from the row is not part of the row: it is shown over

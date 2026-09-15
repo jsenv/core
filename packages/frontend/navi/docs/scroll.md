@@ -117,6 +117,13 @@ want:
 > it is `scroller="parent"`. `"self"` is for the list that IS the scrolling
 > area.
 
+`"self"` is also the value that needs something from the call site: a height to
+scroll in (`maxHeight`, or `expandY` inside a bounded parent). A list given none
+is exactly as tall as its rows, so its own box scrolls nothing — and what the
+list's render window follows is that box (see "Many rows" below). The list then
+follows whatever box does show it, measured as for `"parent"`, and dev warns
+when nothing scrolls it at all.
+
 With `"self"` the list nests a scroll box inside the surrounding one and sizes
 itself independently of it — its `maxHeight` then decides how tall that inner
 box is allowed to get, and a virtualized run holds the room of the rows it
@@ -352,6 +359,24 @@ once those fall under half a screen — a row crossed is not a window rebuilt,
 and a row reached is never a blank one. So the budget has to exceed what the
 scroller shows at once, with room for that lookahead: the list warns below
 30, and when a budget leaves fewer than two rows beyond the screen.
+
+### The window follows one box, and `scroller` names it
+
+That box is the list's own with the default `scroller="self"`, the ancestor or
+the page with `"parent"`/`"document"` (see
+[2. A part of the document scrolls](#2-a-part-of-the-document-scrolls)). So
+`scroller` is not only where the scrollbar appears: it is what decides whether
+the window moves at all. A box with nothing to scroll reports nothing, the
+window stays where it was drawn, and the rows it does not cover stay as
+fillers — the list shows its first `renderBudget` rows and then blank space,
+down to where it ends.
+
+A list told `"self"` with no height to scroll in is exactly such a box: as tall
+as its rows, scrolling nothing. The window then follows the box that does show
+the list, measured the way `"parent"` is, and dev warns when nothing around it
+scrolls either. Both are recoveries, not the shape to aim for — say which box
+scrolls: a `maxHeight` on a list that IS the scrolling area,
+`scroller="parent"` in a dialog body or a panel, `"document"` on a page.
 
 ### The first paint of a list that opens in a click
 
