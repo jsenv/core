@@ -67202,6 +67202,7 @@ const useListScrollSync = ({
   };
   useLayoutEffect(resolveScroller);
   useStickyScrollportWarning();
+  useDuplicateHeaderWarning();
   useStuckWindowWarning({
     ref,
     scrollerElResolved,
@@ -68160,6 +68161,21 @@ const useStuckWindowWarning = ({
 // that guarantee without making a scroll container.
 const STICKY_LIST_PART_SELECTOR = `.navi_list_item_header, .navi_list_item_footer, .navi_list_item_group_label`;
 const useStickyScrollportWarning = (ref, scroller) => {
+  useRef(false);
+  useLayoutEffect(() => {
+    {
+      return;
+    }
+  });
+};
+// A list has one header: the row that caps it — the column row of a table —
+// and the box the list measures to keep the others from scrolling under it. A
+// second one takes that same place, so both sit at the capped edge before
+// every row and the rows declared between them read as belonging to the last:
+// a title meant to open a run of rows ends up titling nothing. That title is a
+// group label, which is why this points at List.Group rather than at the
+// stacking.
+const useDuplicateHeaderWarning = ref => {
   useRef(false);
   useLayoutEffect(() => {
     {
@@ -70523,7 +70539,7 @@ const useItemStore = ({
 };
 
 /**
- * ListGroup — a labeled group of list items.
+ * List.Group — a labeled group of list items.
  *
  * Renders a <li role="presentation"> wrapper containing a label span
  * (accessible via aria-labelledby) and a <ul role="group"> for the items.
@@ -70859,7 +70875,8 @@ const ListResolved = /*#__PURE__*/createComponentResolver([ListFirstResolver, Li
  */
 const List = /*#__PURE__*/Object.assign(ListResolved, {
   Item: ListItem,
-  Items: ListItems
+  Items: ListItems,
+  Group: ListItemGroup
 });
 
 const PickerNaviTime = props => {

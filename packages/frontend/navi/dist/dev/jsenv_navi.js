@@ -68486,6 +68486,7 @@ const useListScrollSync = ({
   };
   useLayoutEffect(resolveScroller);
   useStickyScrollportWarning(ref, scroller);
+  useDuplicateHeaderWarning(ref);
   useStuckWindowWarning({
     ref,
     scrollerElResolved,
@@ -69505,6 +69506,34 @@ const useStickyScrollportWarning = (ref, scroller) => {
       list: listContainerEl,
       scrollport: scrollportEl,
       sticky: stickyEl
+    });
+  });
+};
+// A list has one header: the row that caps it — the column row of a table —
+// and the box the list measures to keep the others from scrolling under it. A
+// second one takes that same place, so both sit at the capped edge before
+// every row and the rows declared between them read as belonging to the last:
+// a title meant to open a run of rows ends up titling nothing. That title is a
+// group label, which is why this points at List.Group rather than at the
+// stacking.
+const useDuplicateHeaderWarning = ref => {
+  const doneRef = useRef(false);
+  useLayoutEffect(() => {
+    if (doneRef.current) {
+      return;
+    }
+    const listContainerEl = ref.current;
+    if (!listContainerEl) {
+      return;
+    }
+    const headerEls = listContainerEl.querySelectorAll(".navi_list_item_header");
+    if (headerEls.length < 2) {
+      return;
+    }
+    doneRef.current = true;
+    console.warn(`<List> has ${headerEls.length} rows carrying "header", and a list has one: they all stick to the edge it caps, before every row, and the rows declared between them read as belonging to the last one. A title standing over a run of rows is a group: <List.Group label="...">{rows}</List.Group>.`, {
+      list: listContainerEl,
+      headers: [...headerEls]
     });
   });
 };
@@ -71902,7 +71931,7 @@ const useItemStore = ({
 };
 
 /**
- * ListGroup — a labeled group of list items.
+ * List.Group — a labeled group of list items.
  *
  * Renders a <li role="presentation"> wrapper containing a label span
  * (accessible via aria-labelledby) and a <ul role="group"> for the items.
@@ -72238,7 +72267,8 @@ const ListResolved = /*#__PURE__*/createComponentResolver([ListFirstResolver, Li
  */
 const List = /*#__PURE__*/Object.assign(ListResolved, {
   Item: ListItem,
-  Items: ListItems
+  Items: ListItems,
+  Group: ListItemGroup
 });
 
 const PickerNaviTime = props => {
