@@ -11,9 +11,11 @@ const VALIDITY_TYPE_TO_INPUT_TYPE = {
   percentage: "navi_percentage",
 };
 
-// Conceptual number types: define defaults and map to native type="number".
-// The `data-navi-input-type` attribute is set so constraint messages can use
-// domain-specific wording instead of the generic "Ce nombre doit être...".
+// Conceptual navi types: defaults, plus the host type they resolve to.
+// `navi-input-type` keeps the type the caller asked for once the host has
+// become something plainer — it is what says the value is a number (see
+// isNumberInput), and what lets constraint messages use domain-specific
+// wording instead of the generic "Ce nombre doit être...".
 const NAVI_TYPE_DEFAULTS = {
   navi_time: {
     "type": "time",
@@ -30,11 +32,36 @@ const NAVI_TYPE_DEFAULTS = {
     "step": 1,
   },
   navi_number: {
-    type: "text",
-    autoCorrect: "off",
-    spellcheck: false,
-    autoComplete: "off",
+    "type": "text",
+    "navi-input-type": "number",
+    "autoCorrect": "off",
+    "spellcheck": false,
+    "autoComplete": "off",
   },
+};
+
+// The navi input types whose value IS a number.
+const NUMBER_NAVI_INPUT_TYPE_SET = new Set([
+  "number",
+  "percentage",
+  "hour",
+  "minute",
+  "second",
+]);
+
+/**
+ * Whether the control holds a number — asked of what the control IS, never of
+ * `inputMode`. In HTML `inputmode` picks the on-screen keyboard and says
+ * nothing about the value: a licence number, a postal code or a card number
+ * with a check letter all want the digit keypad while staying strings. What a
+ * number field is spelled `type="number"`, or a navi type that resolves to a
+ * text host and leaves `navi-input-type` behind to say what it was.
+ */
+export const isNumberInput = (type, naviInputType) => {
+  if (type === "number") {
+    return true;
+  }
+  return NUMBER_NAVI_INPUT_TYPE_SET.has(naviInputType);
 };
 
 /**

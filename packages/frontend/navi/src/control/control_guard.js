@@ -35,19 +35,29 @@ import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { naviI18nFromValidityMessage } from "./rules/validity_bridge.js";
 import { createOpenToken } from "./rules/control_callout.js";
 
-export const isTypingIntent = (e) =>
-  getKeyboardEventDefaultAction(e) === "type";
+const isTypingIntent = (e) => getKeyboardEventDefaultAction(e) === "type";
+
+// The character a key puts into the field, or null when it puts none there.
+// A typing intent covers Backspace and Delete too: they change the text without
+// bringing a character in, and both guards answer for the character coming in.
+// Counted in code points: an astral character is one character typed, not two.
+const getCharBeingInserted = (e) => {
+  const key = e.key;
+  if (key === "Enter") {
+    // Reaching here means a field that takes a newline (a textarea): the line
+    // break lands in the value like any other character.
+    return "\n";
+  }
+  if ([...key].length !== 1) {
+    return null;
+  }
+  return key;
+};
 
 const s = (n) => (n > 1 ? "s" : "");
 
-// Keydown: block only single printable characters that don't match the class.
-// Multi-character key names (Delete, ArrowLeft…) are always allowed.
+// Keydown: block a character that doesn't match the class.
 const getInvalidCharMessage = (char, { charClass, messageKey }) => {
-  // Counted in code points: an astral character is one character typed, not two.
-  const codePointCount = [...char].length;
-  if (codePointCount !== 1) {
-    return null;
-  }
   if (compileCharClass(charClass).test(char)) return null;
   return naviI18nFromValidityMessage({ key: messageKey });
 };
@@ -128,10 +138,20 @@ export const createControlGuard = (controller) => {
   /**
    * Called on every keydown. Returns true when the key should be blocked
    * (caller must call e.preventDefault()).
-   * Non-typing keys (Delete, Arrow…) are always allowed.
+   * Keys that write nothing into the field (Arrow…) and keys that only remove
+   * text (Backspace, Delete) are always allowed.
    */
   const checkKeydown = (e, el) => {
     if (!isTypingIntent(e)) {
+      return false;
+    }
+    const char = getCharBeingInserted(e);
+    if (char === null) {
+      // Backspace/Delete: the value gets shorter and no character lands in it.
+      // Neither the character class nor the length limit has anything to say
+      // about a key that only removes — and refusing one would leave a full
+      // field with no way to be shortened.
+      clear(e);
       return false;
     }
     const { charGuard, maxLengthGuard } = controller.props;
@@ -139,7 +159,7 @@ export const createControlGuard = (controller) => {
     if (charGuard) {
       const charClass = resolveCharClass(charGuard);
       const messageKey = getCharClassMessageKey(charGuard);
-      const charMsg = getInvalidCharMessage(e.key, { charClass, messageKey });
+      const charMsg = getInvalidCharMessage(char, { charClass, messageKey });
       if (charMsg) {
         show(charMsg, e);
         return true;

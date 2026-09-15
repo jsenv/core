@@ -47,7 +47,7 @@ whose message was dismissed. Every one of those comes back as a value.
 That is not a detail of the wait — it is what keeps the component alive.
 Suspending does not draw a spinner over a subtree: it takes the subtree away and
 puts the boundary's fallback in its place, and everything under it is remounted
-when it comes back. A dialog open inside it closes, a scroll position is lost,
+when it comes back. A dialog open inside it leaves with it and is reopened when it returns, a scroll position is lost,
 half-typed text is gone, and the retry button the component was offering
 disappears along with the component. A component that said it draws its own
 states is never taken away from the person looking at it.

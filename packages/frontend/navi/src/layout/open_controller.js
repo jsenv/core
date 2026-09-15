@@ -868,13 +868,24 @@ export const useOpenPropsEffectOnOpenController = (
   // subsequent `open` change is a real, later toggle and should animate
   // normally like any other interactive open/close.
   const isFirstRunRef = useRef(true);
-  // The mount-time open, from the first run below until the effect after it
-  // could schedule it.
+  // What `open` was on the previous run of the effect below. preact re-runs
+  // an effect for a change of its deps — or for none at all, when a
+  // `<Loading>` above the popup parked the subtree: preact/compat's Suspense
+  // runs every hook cleanup in it and clears the deps of every effect, so the
+  // next render of the parked component runs them all again. A run where
+  // `open` did not change is that second kind, never a toggle.
+  const lastRunOpenRef = useRef(undefined);
+  // An open the popup is owed but cannot be given yet: the mount-time one,
+  // from the first run below until the effect after it could schedule it, and
+  // the one put back after a park (see above), which the same effect serves
+  // once the element is in the document again.
   const mountOpenOwedRef = useRef(null);
 
   useLayoutEffect(() => {
     const isFirstRun = isFirstRunRef.current;
     isFirstRunRef.current = false;
+    const openChanged = open !== lastRunOpenRef.current;
+    lastRunOpenRef.current = open;
 
     if (isFirstRun) {
       const mountOpenReason = open || defaultOpen;
@@ -905,6 +916,22 @@ export const useOpenPropsEffectOnOpenController = (
       return undefined;
     }
     if (open) {
+      if (!openChanged) {
+        // The subtree was parked while the popup was open: the controller
+        // closed when the element left the document (see useOpenController's
+        // safety net), and whoever holds the open state still says open. Not
+        // a toggle — an open owed until the dom is back in the page, where
+        // the effect below serves it. Silent, like a mount-time open: the
+        // popup was already shown, there is no closed state to enter from.
+        // Returned here rather than falling through: the signal write below
+        // would read the deferred open as a refused one and write the popup
+        // closed.
+        mountOpenOwedRef.current = () =>
+          openController.open(new CustomEvent("open_by_prop", { detail: {} }), {
+            silent: true,
+          });
+        return undefined;
+      }
       openController.open(new CustomEvent("open_by_prop", { detail: {} }));
     } else {
       openController.requestClose(
@@ -934,14 +961,14 @@ export const useOpenPropsEffectOnOpenController = (
     return undefined;
   }, [open]);
 
-  // Schedules the owed mount-time open — on every render, until it can. It has
-  // to wait for the element to be IN THE DOCUMENT, and a mount does not
-  // guarantee that: a `<Loading>` above the popup parks a suspended subtree by
-  // moving its dom into a detached <div> while keeping its components alive
-  // (preact/compat), and a render there re-creates the hooks, so the first run
-  // above happens against dom that is not in the page — where showModal() and
-  // showPopover() throw. The boundary settling re-renders the subtree with its
-  // dom back, and that render is the one that schedules.
+  // Schedules the owed open — on every render, until it can. It has to wait
+  // for the element to be IN THE DOCUMENT, and a render does not guarantee
+  // that: a `<Loading>` above the popup parks a suspended subtree by moving
+  // its dom into a detached <div> while keeping its components alive
+  // (preact/compat), so a run of the effect above can happen against dom that
+  // is not in the page — where showModal() and showPopover() throw. The
+  // boundary settling re-renders the subtree with its dom back, and that
+  // render is the one that schedules.
   //
   // Deferred + batched (see scheduleMountOpen) rather than called directly,
   // so nested popups that both mount already-open end up stacked

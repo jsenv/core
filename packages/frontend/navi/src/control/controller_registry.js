@@ -30,12 +30,12 @@ export const getRadioSiblings = (radioUIStateController) => {
 
 export const toDomValue = (
   jsValue,
-  { controlType, id, type, inputMode, pad },
+  { controlType, id, type, naviInputType, pad },
 ) => {
   const domValue = asControlHostValue(jsValue, {
     controlType,
     type,
-    inputMode,
+    naviInputType,
     pad,
   });
   if (isSerializableAsDomValue(domValue)) {

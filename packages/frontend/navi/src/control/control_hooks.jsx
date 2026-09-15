@@ -217,7 +217,7 @@ export const useControlProps = (
       controlType,
       id: props.id,
       type: props.type,
-      inputMode: props.inputMode,
+      naviInputType: props["navi-input-type"],
       // How the value is WRITTEN where it is held one way and shown another —
       // a number on two digits ("07" for 7). See asControlHostValue.
       pad: props["navi-value-pad"],

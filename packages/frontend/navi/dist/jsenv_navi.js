@@ -12,7 +12,7 @@ import { useErrorBoundary, useLayoutEffect, useContext, useCallback, useRef, use
 import { humanizeI18n, setRuntimeLangSource, formatDuration, formatMonth, formatDay, resolveTimeRangePrecision, formatDatePlaceholder, toDate, getRelativeDay, formatDayRelative, formatMonthPlaceholder, formatWeekPlaceholder, formatDatetimePlaceholder, formatDatetime, toTimeOfDay, formatTimeOfDay, formatTime, formatMinuteDuration, formatSecondDuration, formatHourDuration, formatTimeRelative, formatNumber, interpolateText, installInterpolateJsx } from "@jsenv/humanize";
 export { createI18n, formatDatetime, formatDay, formatDayRelative, formatDuration, formatHourDuration, formatMinuteDuration, formatMonth, formatNumber, formatSecondDuration, formatTime, formatTimeOfDay, formatTimeRange, formatTimeRelative, interpolateText } from "@jsenv/humanize";
 import { jsxs, jsx, Fragment } from "preact/jsx-runtime";
-import { TYPE_RULE, durationContainsNaN, compareTwoDurations, durationToSeconds, DISPLAYABLE_RULE, MAX_LINE_BREAKS_RULE, NO_EMOJI_RULE, SINGLE_SPACE_RULE, createValidity, resolveCharClass, getCharClassMessageKey, compileCharClassAnchored, compileCharClass, CHAR_CLASS_PRESETS, parseDuration, durationToISOString } from "@jsenv/validity";
+import { CHAR_CLASS_PRESETS, TYPE_RULE, durationContainsNaN, compareTwoDurations, durationToSeconds, DISPLAYABLE_RULE, MAX_LINE_BREAKS_RULE, NO_EMOJI_RULE, SINGLE_SPACE_RULE, createValidity, resolveCharClass, getCharClassMessageKey, compileCharClassAnchored, compileCharClass, parseDuration, durationToISOString } from "@jsenv/validity";
 export { compareTwoDurations, durationContainsNaN, durationToHours, durationToISOString, durationToMinutes, durationToNumber, durationToSeconds, durationToString, parseDuration } from "@jsenv/validity";
 import { Suspense, createPortal, forwardRef } from "preact/compat";
 
@@ -4578,6 +4578,552 @@ const findControlRoot = (el) => {
   return null;
 };
 
+/**
+ * Parses a time string into seconds.
+ * Accepts:
+ *   - number: returned as-is (already in seconds)
+ *   - "HH:MM" string: converted to seconds (e.g. "00:30" → 1800, "01:00" → 3600)
+ *   - undefined/null: returned as-is
+ */
+const timeStringToSeconds = (timeString) => {
+  if (typeof timeString !== "string") {
+    return timeString;
+  }
+  const colonIndex = timeString.indexOf(":");
+  if (colonIndex === -1) {
+    return Number(timeString);
+  }
+  const hours = parseInt(timeString.slice(0, colonIndex), 10);
+  const minutes = parseInt(timeString.slice(colonIndex + 1), 10);
+  return (hours * 60 + minutes) * 60;
+};
+
+const isToday = (value) => {
+  if (!value) {
+    return false;
+  }
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  if (typeof value === "string") {
+    return value === todayStr;
+  }
+  if (typeof value === "number") {
+    const d = new Date(value);
+    const s = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    return s === todayStr;
+  }
+  if (value instanceof Date) {
+    const s = `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
+    return s === todayStr;
+  }
+  return false;
+};
+
+/**
+ * Returns the current time as "HH:MM", with an optional minute offset.
+ *
+ * @param {number} [offsetMinutes=0] - Minutes to add (negative = subtract).
+ *   E.g. getNowHours(-5) returns "now minus 5 minutes".
+ *
+ * @example
+ * getNowHours()       // "14:30"
+ * getNowHours(-5)     // "14:25"
+ */
+const getNowHours = (offsetMinutes = 0) => {
+  const now = new Date();
+  const totalMinutes = now.getHours() * 60 + now.getMinutes() + offsetMinutes;
+  const clamped =
+    totalMinutes < 0
+      ? 0
+      : totalMinutes > 23 * 60 + 59
+        ? 23 * 60 + 59
+        : totalMinutes;
+  const h = Math.floor(clamped / 60);
+  const m = clamped % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+};
+
+/**
+ * Returns the current time rounded up to the nearest step boundary,
+ * with an optional minute offset applied first.
+ *
+ * This is useful to compute a step-aligned `min` for a time picker:
+ * passing it ensures the first available slot is always on a step boundary.
+ *
+ * @param {number} stepMinutes - Step size in minutes (e.g. 30).
+ * @param {number} [offsetMinutes=0] - Minutes to add before rounding (negative = subtract).
+ *
+ * @example
+ * // At 9:32, step 30, offset -5 → raw = 9:27 → ceil to 30 → "09:30"
+ * // At 9:38, step 30, offset -5 → raw = 9:33 → ceil to 30 → "10:00"
+ * getNowHoursRoundedToStep(30, -5)
+ */
+const getNowHoursRoundedToStep = (stepMinutes, offsetMinutes = 0) => {
+  const now = new Date();
+  const totalMinutes = now.getHours() * 60 + now.getMinutes() + offsetMinutes;
+  const aligned = Math.ceil(totalMinutes / stepMinutes) * stepMinutes;
+  const clamped =
+    aligned < 0 ? 0 : aligned > 23 * 60 + 59 ? 23 * 60 + 59 : aligned;
+  const h = Math.floor(clamped / 60);
+  const m = clamped % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+};
+
+/**
+ * "HH:MM" and its two numbers, in both directions — what any control made of an
+ * hour beside a minute (fields, wheels) aggregates to and is placed from. Held
+ * as numbers, written on two digits: how they are shown is each control's own
+ * business.
+ */
+const parseTimeParts = (time) => {
+  if (typeof time !== "string") {
+    return null;
+  }
+  const match = /^(\d{1,2}):(\d{1,2})/.exec(time);
+  if (!match) {
+    return null;
+  }
+  return { hour: Number(match[1]), minute: Number(match[2]) };
+};
+
+// Half a time is not a time: a control holding one of the two and nothing in
+// the other has no value at all, and a form has nothing to send about it.
+const formatTimeParts = (hour, minute) => {
+  if (
+    hour === "" ||
+    hour === undefined ||
+    minute === "" ||
+    minute === undefined
+  ) {
+    return undefined;
+  }
+  return `${padTwo$1(hour)}:${padTwo$1(minute)}`;
+};
+
+const minutesFromTime$1 = (time) => {
+  const parts = parseTimeParts(time);
+  if (!parts) {
+    return null;
+  }
+  return parts.hour * 60 + parts.minute;
+};
+
+const timeFromMinutes = (minutes) => {
+  const inDay =
+    ((minutes % MINUTES_PER_DAY) + MINUTES_PER_DAY) % MINUTES_PER_DAY;
+  return `${padTwo$1(Math.floor(inDay / 60))}:${padTwo$1(inDay % 60)}`;
+};
+
+const MINUTES_PER_DAY = 24 * 60;
+
+const padTwo$1 = (value) => String(value).padStart(2, "0");
+
+// Maps validity type names → navi input type names.
+// Numeric signal types must not fall through to the native type="number"
+// (which adds spinner buttons and has poor UX) — they map to navi_number instead.
+const VALIDITY_TYPE_TO_INPUT_TYPE = {
+  boolean: "checkbox",
+  number: "navi_number",
+  integer: "navi_number",
+  percentage: "navi_percentage",
+};
+
+// Conceptual navi types: defaults, plus the host type they resolve to.
+// `navi-input-type` keeps the type the caller asked for once the host has
+// become something plainer — it is what says the value is a number (see
+// isNumberInput), and what lets constraint messages use domain-specific
+// wording instead of the generic "Ce nombre doit être...".
+const NAVI_TYPE_DEFAULTS = {
+  navi_time: {
+    "type": "time",
+    "navi-input-type": "time",
+    "min": 0,
+    "max": 24 * 3600 - 1,
+    "step": 1,
+  },
+  navi_percentage: {
+    "type": "navi_number",
+    "navi-input-type": "percentage",
+    "min": 0,
+    "max": 100,
+    "step": 1,
+  },
+  navi_number: {
+    "type": "text",
+    "navi-input-type": "number",
+    "autoCorrect": "off",
+    "spellcheck": false,
+    "autoComplete": "off",
+  },
+};
+
+// The navi input types whose value IS a number.
+const NUMBER_NAVI_INPUT_TYPE_SET = new Set([
+  "number",
+  "percentage",
+  "hour",
+  "minute",
+  "second",
+]);
+
+/**
+ * Whether the control holds a number — asked of what the control IS, never of
+ * `inputMode`. In HTML `inputmode` picks the on-screen keyboard and says
+ * nothing about the value: a licence number, a postal code or a card number
+ * with a check letter all want the digit keypad while staying strings. What a
+ * number field is spelled `type="number"`, or a navi type that resolves to a
+ * text host and leaves `navi-input-type` behind to say what it was.
+ */
+const isNumberInput = (type, naviInputType) => {
+  if (type === "number") {
+    return true;
+  }
+  return NUMBER_NAVI_INPUT_TYPE_SET.has(naviInputType);
+};
+
+/**
+ * resolveInputProps — normalizes input-related props that are shared across
+ * `<Picker>`, `<Input>` (textual) and `<Range>`. Mutates the props object in place.
+ *
+ * Normalization is applied recursively: a navi type may resolve to another navi
+ * type (e.g. `navi_percentage` → `navi_number` → `text`), and each step applies its
+ * own formatters and defaults before moving to the next.
+ *
+ * Steps applied for each type:
+ * 1. Record the original navi type in `props["navi-input-type"]` (first call only).
+ * 2. Apply defaults for the current type (min, max, step, and any other props),
+ *    only when the prop is not already set.
+ * 3. Apply min/max formatters (e.g. HH:MM string → number for duration types,
+ *    Date → formatted string for date/time types).
+ * 4. Apply step formatter (same conversion rules).
+ * 5. Remap `props.type` to the target type defined by the current type's defaults,
+ *    then recurse.
+ *
+ * Supported navi types and their targets:
+ * - `navi_percentage` → `navi_number`  (0–100, step 1)
+ * - `navi_number`     → `text`         (inputMode="numeric", no spin buttons implied)
+ * - `navi_time`       → `time`         (step in seconds)
+ *
+ * Standard HTML input types with formatters:
+ * - `date`, `month`, `week`, `time`, `datetime-local`, `datetime`:
+ *   min/max accept `Date` instances or timestamps and are converted to the
+ *   string format expected by the native input.
+ * - `time`, `datetime-local`, `datetime`:
+ *   step accepts `"HH:MM"` and is converted to seconds.
+ */
+/**
+ * A bound signal that carries a default of its own says the same thing on every
+ * control: the control starts there and stays uncontrolled, which is what makes
+ * a form read the value shown as a SUGGESTION rather than as something it
+ * already holds. Uncontrolled here is about what the control HOLDS, not about
+ * whether it follows the signal — the binding stays two-way either way (see
+ * stateFromSignal in control_hooks.jsx). Written once and used by everything
+ * that takes a `signal`, so one signal cannot mean two different things
+ * depending on which control it was handed to.
+ */
+const seedDefaultValueFromSignal = (props) => {
+  const signalOptions = props.signal?.options;
+  if (!signalOptions) {
+    return;
+  }
+  if (Object.hasOwn(props, "defaultValue")) {
+    // explicit defaultValue prop prevails
+    return;
+  }
+  // Snapshot the signal's current default so that resetUIState restores to the
+  // original default — not the value the signal had at the time of the last
+  // re-render.
+  const defaultValue = signalOptions.getDefaultValue(false);
+  if (defaultValue !== undefined) {
+    props.defaultValue = defaultValue;
+  }
+};
+
+const resolveInputProps = (props, { controlType = "input" } = {}) => {
+  // `signal` carries a bound state signal. It is left on `props` on purpose:
+  // `createControlInfo` (control_hooks.jsx) reads it to seed the state and to
+  // follow it, and `onUIAction` (ui_state_controller.js) writes user
+  // interactions back into it. Here we only derive input defaults (type/min/max,
+  // defaultValue/defaultChecked) from the signal's `options`, so the control
+  // ends up uncontrolled-with-default while still bound to the signal.
+  const signal = props.signal;
+  if (signal) {
+    const signalOptions = signal.options;
+    if (signalOptions) {
+      for (const key of ["min", "max", "step"]) {
+        if (props[key] === undefined && signalOptions[key] !== undefined) {
+          props[key] = signalOptions[key];
+        }
+      }
+      if (props.type === undefined && signalOptions.type !== undefined) {
+        const typeFromSignal =
+          VALIDITY_TYPE_TO_INPUT_TYPE[signalOptions.type] ?? signalOptions.type;
+        // What a signal says is what its value IS; what a control's `type` says
+        // is what the control is. They usually agree — a date-typed signal wants
+        // a date field — but a boolean one maps to a checkbox, and a picker made
+        // into a checkbox is not a picker with a different look: it is another
+        // control, with no popup to open. A picker asked to hold a yes/no keeps
+        // its two rows and stays itself.
+        const wouldChangeWhatTheControlIs =
+          controlType === "picker" &&
+          (typeFromSignal === "checkbox" || typeFromSignal === "radio");
+        if (!wouldChangeWhatTheControlIs) {
+          props.type = typeFromSignal;
+        }
+      }
+    }
+
+    const isCheckable = props.type === "checkbox" || props.type === "radio";
+    if (isCheckable) {
+      if (Object.hasOwn(props, "defaultChecked")) ; else {
+        // If no explicit defaultChecked, derive it from the signal's default
+        // value so that resetUIState restores to the original default.
+        // Only a stateSignal carries a default of its own; a plain signal has
+        // no `options` at all, and asking it for one used to throw on mount —
+        // the same optional read every other branch here already does.
+        const defaultVal = signalOptions?.getDefaultValue(false);
+        if (defaultVal === undefined) ; else if (props.type === "radio") {
+          if (defaultVal === true) {
+            props.defaultChecked = true;
+          } else if (
+            Object.hasOwn(props, "value") &&
+            defaultVal === props.value
+          ) {
+            props.defaultChecked = true;
+          }
+        } else if (typeof defaultVal === "boolean") {
+          // Standalone checkbox bound to a boolean signal.
+          props.defaultChecked = defaultVal;
+        } else {
+          // Checkbox is a group member: defaultVal is the array of
+          // selected item values.
+          const checkboxValue = props.value;
+          props.defaultChecked =
+            Array.isArray(defaultVal) && defaultVal.includes(checkboxValue);
+        }
+      }
+      return;
+    }
+
+    seedDefaultValueFromSignal(props);
+  }
+
+  const currentType = props.type;
+  // Apply min/max/step formatters before anything else — this must run even for
+  // standard HTML types (date, time, etc.) that have no NAVI_TYPE_DEFAULTS entry.
+  const currentTypeMinMaxFormatter = MIN_MAX_FORMATTER_BY_TYPE[currentType];
+  const currentTypeStepFormatter = STEP_FORMATTER_BY_TYPE[currentType];
+  if (currentTypeMinMaxFormatter) {
+    props.min = currentTypeMinMaxFormatter(props.min);
+    props.max = currentTypeMinMaxFormatter(props.max);
+  }
+  if (currentTypeStepFormatter) {
+    props.step = currentTypeStepFormatter(props.step);
+  }
+
+  // For navi_number: choose inputMode based on whether step/min/max suggest decimals.
+  // inputMode="numeric" (integer keyboard) vs "decimal" (keyboard with decimal separator).
+  if (currentType === "navi_number") {
+    if (props.inputMode === undefined) {
+      props.inputMode =
+        hasDecimalPlaces(props.step) ||
+        hasDecimalPlaces(props.min) ||
+        hasDecimalPlaces(props.max)
+          ? "decimal"
+          : "numeric";
+    }
+  }
+
+  const { charGuard } = props;
+  if (charGuard) {
+    if (charGuard === true || charGuard === "auto") {
+      // Auto-resolve charGuard from context.
+      let charGuardResolved;
+      const inputMode = props.inputMode;
+      if (inputMode === "numeric") {
+        charGuardResolved = "numeric";
+      } else if (inputMode === "decimal") {
+        charGuardResolved = "decimal";
+      } else if (currentType === "tel") {
+        charGuardResolved = "tel";
+      } else if (currentType === "email") {
+        charGuardResolved = "email";
+      }
+      if (charGuardResolved !== undefined) {
+        props.charGuard = charGuardResolved;
+      }
+    }
+    // charGuard is now resolved: derive inputMode from it if not already set.
+    if (props.inputMode === undefined && props.charGuard) {
+      const autoMode = INPUT_MODE_FROM_CHAR_GUARD[props.charGuard];
+      if (autoMode) {
+        props.inputMode = autoMode;
+      }
+    }
+    // Build pattern from the resolved charGuard (preset name → class, or raw class passthrough).
+    if (props.pattern === undefined && props.charGuard) {
+      const charClass = CHAR_CLASS_PRESETS[props.charGuard] ?? props.charGuard;
+      props.pattern = `${charClass}*`;
+    }
+  }
+
+  // Compute maxLength from max when inputMode is numeric/decimal.
+  // Done here (after inputMode is set) so controller.props has the resolved value.
+  if (props.maxLength === undefined) {
+    if (props.inputMode === "numeric") {
+      const { min, max } = props;
+      if (max === undefined) ; else {
+        const canBeNegative = min === undefined ? max < 0 : min < 0;
+        const signCharCount = canBeNegative ? 1 : 0;
+        const integerDigitCount = String(Math.floor(Math.abs(max))).length;
+        props.maxLength = signCharCount + integerDigitCount;
+      }
+    } else if (props.inputMode === "decimal") {
+      const { min, max, step } = props;
+      if (max === undefined) ; else if (step === undefined) ; else {
+        const canBeNegative = min === undefined ? max < 0 : min < 0;
+        const signCharCount = canBeNegative ? 1 : 0;
+        const integerDigitCount = String(Math.floor(Math.abs(max))).length;
+        const stepStr = String(step);
+        const dotIndex = stepStr.indexOf(".");
+        // integer step + decimal inputMode is an unusual combo, but we stay consistent:
+        // no decimal part in maxLength since valid values are whole numbers anyway
+        const isIntegerStep = dotIndex === -1;
+        const decimalSignCharCount = isIntegerStep ? 0 : 1;
+        const decimalDigitCount = isIntegerStep
+          ? 0
+          : stepStr.length - dotIndex - 1;
+        props.maxLength =
+          signCharCount +
+          integerDigitCount +
+          decimalSignCharCount +
+          decimalDigitCount;
+      }
+    }
+  }
+
+  // Resolve maxLengthGuard boolean/auto → the computed maxLength number.
+  if (props.maxLengthGuard === true || props.maxLengthGuard === "auto") {
+    props.maxLengthGuard =
+      typeof props.maxLength === "number" ? props.maxLength : undefined;
+  }
+
+  const currentTypeDefaults = NAVI_TYPE_DEFAULTS[currentType];
+  if (!currentTypeDefaults) {
+    return;
+  }
+
+  for (const key of Object.keys(currentTypeDefaults)) {
+    if (props[key] === undefined) {
+      props[key] = currentTypeDefaults[key];
+    }
+  }
+  const targetType = currentTypeDefaults.type;
+  props.type = targetType;
+  resolveInputProps(props);
+};
+
+// Presets that imply a specific mobile keyboard inputMode.
+const INPUT_MODE_FROM_CHAR_GUARD = {
+  numeric: "numeric",
+  pin: "numeric",
+  card: "numeric",
+  tel: "tel",
+  decimal: "decimal",
+};
+
+const normalizeToDate = (value) => {
+  if (value === undefined || value === null) {
+    return null;
+  }
+  if (typeof value === "number") {
+    return new Date(value);
+  }
+  if (value instanceof Date) {
+    return value;
+  }
+  return null;
+};
+
+const toInputDate = (value) => {
+  const date = normalizeToDate(value);
+  if (!date) {
+    return value;
+  }
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+};
+const toInputMonth = (value) => {
+  const date = normalizeToDate(value);
+  if (!date) {
+    return value;
+  }
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  return `${yyyy}-${mm}`;
+};
+const toInputWeek = (value) => {
+  const date = normalizeToDate(value);
+  if (!date) {
+    return value;
+  }
+  // ISO week number
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
+  const yearStart = new Date(d.getFullYear(), 0, 4);
+  const week =
+    Math.round(
+      ((d - yearStart) / 86400000 - 3 + ((yearStart.getDay() + 6) % 7)) / 7,
+    ) + 1;
+  return `${d.getFullYear()}-W${String(week).padStart(2, "0")}`;
+};
+const toInputTime = (value) => {
+  const date = normalizeToDate(value);
+  if (!date) {
+    return value;
+  }
+  const hh = String(date.getHours()).padStart(2, "0");
+  const mm = String(date.getMinutes()).padStart(2, "0");
+  return `${hh}:${mm}`;
+};
+const toInputDatetime = (value) => {
+  const date = normalizeToDate(value);
+  if (!date) {
+    return value;
+  }
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  const hh = String(date.getHours()).padStart(2, "0");
+  const min = String(date.getMinutes()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+};
+
+const MIN_MAX_FORMATTER_BY_TYPE = {
+  "date": toInputDate,
+  "month": toInputMonth,
+  "week": toInputWeek,
+  "time": toInputTime,
+  "datetime-local": toInputDatetime,
+  "datetime": toInputDatetime,
+};
+const STEP_FORMATTER_BY_TYPE = {
+  "time": timeStringToSeconds,
+  "datetime-local": timeStringToSeconds,
+  "datetime": timeStringToSeconds,
+};
+
+const hasDecimalPlaces = (value) => {
+  if (value === undefined || value === null) {
+    return false;
+  }
+  const num = Number(value);
+  return !isNaN(num) && !Number.isInteger(num);
+};
+
 const dispatchRequestSetUIState = (element, value, detail) => {
   const controlHost = findControlHost(element) || element;
   return dispatchInternalCustomEvent(controlHost, "navi_set_ui_state", {
@@ -4636,7 +5182,7 @@ const getUIStateFromElement = (el, { own } = {}) => {
  */
 const asControlHostValue = (
   jsValue,
-  { controlType, type, inputMode, pad },
+  { controlType, type, naviInputType, pad },
 ) => {
   if (controlType === "select") {
     // A select holds one of its options, always a string; holding nothing is
@@ -4647,12 +5193,7 @@ const asControlHostValue = (
     if (type === "datetime-local") {
       return asDatetimeLocalString(jsValue);
     }
-    if (
-      type === "number" ||
-      type === "range" ||
-      inputMode === "numeric" ||
-      inputMode === "decimal"
-    ) {
+    if (type === "range" || isNumberInput(type, naviInputType)) {
       return asNumberString(jsValue, pad);
     }
     if (type === "color") {
@@ -4737,10 +5278,8 @@ const readControlValue = (controlHost) => {
     const type = controlHost.getAttribute("type");
 
     if (
-      type === "number" ||
       type === "range" ||
-      controlHost.inputMode === "numeric" ||
-      controlHost.inputMode === "decimal"
+      isNumberInput(type, controlHost.getAttribute("navi-input-type"))
     ) {
       return readNumberFromInput(controlHost);
     }
@@ -4848,12 +5387,12 @@ const getRadioSiblings = (radioUIStateController) => {
 
 const toDomValue = (
   jsValue,
-  { controlType, id, type, inputMode, pad },
+  { controlType, id, type, naviInputType, pad },
 ) => {
   const domValue = asControlHostValue(jsValue, {
     controlType,
     type,
-    inputMode,
+    naviInputType,
     pad,
   });
   if (isSerializableAsDomValue(domValue)) {
@@ -8376,12 +8915,7 @@ const REQUIRED_CONSTRAINT = {
     if (type === "time") {
       return naviI18n("constraint.required.time");
     }
-    const inputMode = field.controlHostProps.inputMode;
-    if (
-      type === "number" ||
-      inputMode === "numeric" ||
-      inputMode === "decimal"
-    ) {
+    if (isNumberInput(type, field.controlHostProps["navi-input-type"])) {
       return naviI18n("constraint.required.number");
     }
     if (type === "datetime-local") {
@@ -8610,10 +9144,8 @@ const TYPE_NUMBER_CONSTRAINT = {
       return null;
     }
     const type = field.controlHostProps.type;
-    const inputMode = field.controlHostProps.inputMode;
-    const isNumber =
-      type === "number" || inputMode === "numeric" || inputMode === "decimal";
-    if (!isNumber) {
+    const naviType = field.controlHostProps["navi-input-type"];
+    if (!isNumberInput(type, naviType)) {
       return null;
     }
     const valueAsString =
@@ -8626,7 +9158,6 @@ const TYPE_NUMBER_CONSTRAINT = {
       return null;
     }
 
-    const naviType = field.controlHostProps["navi-input-type"];
     if (naviType === "hour") {
       return naviI18n(`constraint.type.hour.default`);
     }
@@ -8682,15 +9213,13 @@ const MIN_CONSTRAINT = {
       return null;
     }
     const type = field.controlHostProps.type;
-    const inputMode = field.controlHostProps.inputMode;
+    const naviInputType = field.controlHostProps["navi-input-type"];
     const valueAsString =
       field.uiState === undefined ? "" : String(field.uiState);
     if (!valueAsString) {
       return null;
     }
-    const isNumber =
-      type === "number" || inputMode === "numeric" || inputMode === "decimal";
-    if (isNumber) {
+    if (isNumberInput(type, naviInputType)) {
       const minNumber = parseFloat(minString);
       if (isNaN(minNumber)) {
         return null;
@@ -8700,7 +9229,6 @@ const MIN_CONSTRAINT = {
         return null;
       }
       if (numericValue < minNumber) {
-        const naviInputType = field.controlHostProps["navi-input-type"];
         if (naviInputType === "hour") {
           return naviI18n(`constraint.min.hour.default`, {
             min: minString,
@@ -8785,15 +9313,13 @@ const MAX_CONSTRAINT = {
       return null;
     }
     const type = field.controlHostProps.type;
-    const inputMode = field.controlHostProps.inputMode;
+    const naviInputType = field.controlHostProps["navi-input-type"];
     const valueAsString =
       field.uiState === undefined ? "" : String(field.uiState);
     if (!valueAsString) {
       return null;
     }
-    const isNumber =
-      type === "number" || inputMode === "numeric" || inputMode === "decimal";
-    if (isNumber) {
+    if (isNumberInput(type, naviInputType)) {
       const maxNumber = parseFloat(maxString);
       if (isNaN(maxNumber)) {
         return null;
@@ -8806,7 +9332,6 @@ const MAX_CONSTRAINT = {
         return null;
       }
 
-      const naviInputType = field.controlHostProps["navi-input-type"];
       if (naviInputType === "hour") {
         return naviI18n(`constraint.max.hour.default`, {
           max: maxString,
@@ -8913,10 +9438,9 @@ const STEP_CONSTRAINT = {
       return null;
     }
     const type = field.controlHostProps.type;
-    const inputMode = field.controlHostProps.inputMode;
-    const isNumericText =
-      type === "text" && (inputMode === "numeric" || inputMode === "decimal");
-    if (!isNumericText && !STEP_SUPPORTED_TYPE_SET.has(type)) {
+    const naviInputType = field.controlHostProps["navi-input-type"];
+    const isNumber = isNumberInput(type, naviInputType);
+    if (!isNumber && !STEP_SUPPORTED_TYPE_SET.has(type)) {
       return null;
     }
     const stepRaw = field.controlHostProps.step;
@@ -8930,7 +9454,6 @@ const STEP_CONSTRAINT = {
       return null;
     }
     const minString = field.controlHostProps.min;
-    const isNumber = type === "number" || isNumericText;
     if (isNumber) {
       const step = parseFloat(stepString);
       const base = minString ? parseFloat(minString) : 0;
@@ -8949,7 +9472,6 @@ const STEP_CONSTRAINT = {
       const after = before + step;
       const decimals = (stepString.split(".")[1] || "").length;
       const context = (() => {
-        const naviInputType = field.controlHostProps["navi-input-type"];
         if (naviInputType === "hour") {
           return `hour`;
         }
@@ -12097,8 +12619,8 @@ const TIME_RANGE_CONSTRAINT = {
       console.warn(`Time after constraint: no control with id "${after}"`);
       return null;
     }
-    const timeBefore = minutesFromTime$1(otherController.uiState);
-    const timeAfter = minutesFromTime$1(field.uiState);
+    const timeBefore = minutesFromTime(otherController.uiState);
+    const timeAfter = minutesFromTime(field.uiState);
     if (timeBefore === null || timeAfter === null) {
       return null;
     }
@@ -12123,7 +12645,7 @@ CONSTRAINT_ATTRIBUTE_SET.add("data-time-min-duration");
 
 // "HH:MM" as a number of minutes, which is what two times are compared and
 // subtracted as. Anything else is a time nobody has finished writing.
-const minutesFromTime$1 = (time) => {
+const minutesFromTime = (time) => {
   if (typeof time !== "string") {
     return null;
   }
@@ -34126,13 +34648,24 @@ const useOpenPropsEffectOnOpenController = (
   // subsequent `open` change is a real, later toggle and should animate
   // normally like any other interactive open/close.
   const isFirstRunRef = useRef(true);
-  // The mount-time open, from the first run below until the effect after it
-  // could schedule it.
+  // What `open` was on the previous run of the effect below. preact re-runs
+  // an effect for a change of its deps — or for none at all, when a
+  // `<Loading>` above the popup parked the subtree: preact/compat's Suspense
+  // runs every hook cleanup in it and clears the deps of every effect, so the
+  // next render of the parked component runs them all again. A run where
+  // `open` did not change is that second kind, never a toggle.
+  const lastRunOpenRef = useRef(undefined);
+  // An open the popup is owed but cannot be given yet: the mount-time one,
+  // from the first run below until the effect after it could schedule it, and
+  // the one put back after a park (see above), which the same effect serves
+  // once the element is in the document again.
   const mountOpenOwedRef = useRef(null);
 
   useLayoutEffect(() => {
     const isFirstRun = isFirstRunRef.current;
     isFirstRunRef.current = false;
+    const openChanged = open !== lastRunOpenRef.current;
+    lastRunOpenRef.current = open;
 
     if (isFirstRun) {
       const mountOpenReason = open || defaultOpen;
@@ -34163,6 +34696,22 @@ const useOpenPropsEffectOnOpenController = (
       return undefined;
     }
     if (open) {
+      if (!openChanged) {
+        // The subtree was parked while the popup was open: the controller
+        // closed when the element left the document (see useOpenController's
+        // safety net), and whoever holds the open state still says open. Not
+        // a toggle — an open owed until the dom is back in the page, where
+        // the effect below serves it. Silent, like a mount-time open: the
+        // popup was already shown, there is no closed state to enter from.
+        // Returned here rather than falling through: the signal write below
+        // would read the deferred open as a refused one and write the popup
+        // closed.
+        mountOpenOwedRef.current = () =>
+          openController.open(new CustomEvent("open_by_prop", { detail: {} }), {
+            silent: true,
+          });
+        return undefined;
+      }
       openController.open(new CustomEvent("open_by_prop", { detail: {} }));
     } else {
       openController.requestClose(
@@ -34192,14 +34741,14 @@ const useOpenPropsEffectOnOpenController = (
     return undefined;
   }, [open]);
 
-  // Schedules the owed mount-time open — on every render, until it can. It has
-  // to wait for the element to be IN THE DOCUMENT, and a mount does not
-  // guarantee that: a `<Loading>` above the popup parks a suspended subtree by
-  // moving its dom into a detached <div> while keeping its components alive
-  // (preact/compat), and a render there re-creates the hooks, so the first run
-  // above happens against dom that is not in the page — where showModal() and
-  // showPopover() throw. The boundary settling re-renders the subtree with its
-  // dom back, and that render is the one that schedules.
+  // Schedules the owed open — on every render, until it can. It has to wait
+  // for the element to be IN THE DOCUMENT, and a render does not guarantee
+  // that: a `<Loading>` above the popup parks a suspended subtree by moving
+  // its dom into a detached <div> while keeping its components alive
+  // (preact/compat), so a run of the effect above can happen against dom that
+  // is not in the page — where showModal() and showPopover() throw. The
+  // boundary settling re-renders the subtree with its dom back, and that
+  // render is the one that schedules.
   //
   // Deferred + batched (see scheduleMountOpen) rather than called directly,
   // so nested popups that both mount already-open end up stacked
@@ -35538,19 +36087,29 @@ const FormContext = createContext();
  */
 
 
-const isTypingIntent = (e) =>
-  getKeyboardEventDefaultAction(e) === "type";
+const isTypingIntent = (e) => getKeyboardEventDefaultAction(e) === "type";
+
+// The character a key puts into the field, or null when it puts none there.
+// A typing intent covers Backspace and Delete too: they change the text without
+// bringing a character in, and both guards answer for the character coming in.
+// Counted in code points: an astral character is one character typed, not two.
+const getCharBeingInserted = (e) => {
+  const key = e.key;
+  if (key === "Enter") {
+    // Reaching here means a field that takes a newline (a textarea): the line
+    // break lands in the value like any other character.
+    return "\n";
+  }
+  if ([...key].length !== 1) {
+    return null;
+  }
+  return key;
+};
 
 const s = (n) => (n > 1 ? "s" : "");
 
-// Keydown: block only single printable characters that don't match the class.
-// Multi-character key names (Delete, ArrowLeft…) are always allowed.
+// Keydown: block a character that doesn't match the class.
 const getInvalidCharMessage = (char, { charClass, messageKey }) => {
-  // Counted in code points: an astral character is one character typed, not two.
-  const codePointCount = [...char].length;
-  if (codePointCount !== 1) {
-    return null;
-  }
   if (compileCharClass(charClass).test(char)) return null;
   return naviI18nFromValidityMessage({ key: messageKey });
 };
@@ -35631,10 +36190,20 @@ const createControlGuard = (controller) => {
   /**
    * Called on every keydown. Returns true when the key should be blocked
    * (caller must call e.preventDefault()).
-   * Non-typing keys (Delete, Arrow…) are always allowed.
+   * Keys that write nothing into the field (Arrow…) and keys that only remove
+   * text (Backspace, Delete) are always allowed.
    */
   const checkKeydown = (e, el) => {
     if (!isTypingIntent(e)) {
+      return false;
+    }
+    const char = getCharBeingInserted(e);
+    if (char === null) {
+      // Backspace/Delete: the value gets shorter and no character lands in it.
+      // Neither the character class nor the length limit has anything to say
+      // about a key that only removes — and refusing one would leave a full
+      // field with no way to be shortened.
+      clear(e);
       return false;
     }
     const { charGuard, maxLengthGuard } = controller.props;
@@ -35642,7 +36211,7 @@ const createControlGuard = (controller) => {
     if (charGuard) {
       const charClass = resolveCharClass(charGuard);
       const messageKey = getCharClassMessageKey(charGuard);
-      const charMsg = getInvalidCharMessage(e.key, { charClass, messageKey });
+      const charMsg = getInvalidCharMessage(char, { charClass, messageKey });
       if (charMsg) {
         show(charMsg, e);
         return true;
@@ -38359,7 +38928,7 @@ const useControlProps = (props, {
       controlType,
       id: props.id,
       type: props.type,
-      inputMode: props.inputMode,
+      naviInputType: props["navi-input-type"],
       // How the value is WRITTEN where it is held one way and shown another —
       // a number on two digits ("07" for 7). See asControlHostValue.
       pad: props["navi-value-pad"]
@@ -52594,525 +53163,6 @@ const InputStyleCSSVars = {
 };
 const InputPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading", ":-navi-has-value"];
 const InputPseudoElements = ["::-navi-loader"];
-
-/**
- * Parses a time string into seconds.
- * Accepts:
- *   - number: returned as-is (already in seconds)
- *   - "HH:MM" string: converted to seconds (e.g. "00:30" → 1800, "01:00" → 3600)
- *   - undefined/null: returned as-is
- */
-const timeStringToSeconds = (timeString) => {
-  if (typeof timeString !== "string") {
-    return timeString;
-  }
-  const colonIndex = timeString.indexOf(":");
-  if (colonIndex === -1) {
-    return Number(timeString);
-  }
-  const hours = parseInt(timeString.slice(0, colonIndex), 10);
-  const minutes = parseInt(timeString.slice(colonIndex + 1), 10);
-  return (hours * 60 + minutes) * 60;
-};
-
-const isToday = (value) => {
-  if (!value) {
-    return false;
-  }
-  const now = new Date();
-  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-  if (typeof value === "string") {
-    return value === todayStr;
-  }
-  if (typeof value === "number") {
-    const d = new Date(value);
-    const s = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    return s === todayStr;
-  }
-  if (value instanceof Date) {
-    const s = `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
-    return s === todayStr;
-  }
-  return false;
-};
-
-/**
- * Returns the current time as "HH:MM", with an optional minute offset.
- *
- * @param {number} [offsetMinutes=0] - Minutes to add (negative = subtract).
- *   E.g. getNowHours(-5) returns "now minus 5 minutes".
- *
- * @example
- * getNowHours()       // "14:30"
- * getNowHours(-5)     // "14:25"
- */
-const getNowHours = (offsetMinutes = 0) => {
-  const now = new Date();
-  const totalMinutes = now.getHours() * 60 + now.getMinutes() + offsetMinutes;
-  const clamped =
-    totalMinutes < 0
-      ? 0
-      : totalMinutes > 23 * 60 + 59
-        ? 23 * 60 + 59
-        : totalMinutes;
-  const h = Math.floor(clamped / 60);
-  const m = clamped % 60;
-  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-};
-
-/**
- * Returns the current time rounded up to the nearest step boundary,
- * with an optional minute offset applied first.
- *
- * This is useful to compute a step-aligned `min` for a time picker:
- * passing it ensures the first available slot is always on a step boundary.
- *
- * @param {number} stepMinutes - Step size in minutes (e.g. 30).
- * @param {number} [offsetMinutes=0] - Minutes to add before rounding (negative = subtract).
- *
- * @example
- * // At 9:32, step 30, offset -5 → raw = 9:27 → ceil to 30 → "09:30"
- * // At 9:38, step 30, offset -5 → raw = 9:33 → ceil to 30 → "10:00"
- * getNowHoursRoundedToStep(30, -5)
- */
-const getNowHoursRoundedToStep = (stepMinutes, offsetMinutes = 0) => {
-  const now = new Date();
-  const totalMinutes = now.getHours() * 60 + now.getMinutes() + offsetMinutes;
-  const aligned = Math.ceil(totalMinutes / stepMinutes) * stepMinutes;
-  const clamped =
-    aligned < 0 ? 0 : aligned > 23 * 60 + 59 ? 23 * 60 + 59 : aligned;
-  const h = Math.floor(clamped / 60);
-  const m = clamped % 60;
-  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-};
-
-/**
- * "HH:MM" and its two numbers, in both directions — what any control made of an
- * hour beside a minute (fields, wheels) aggregates to and is placed from. Held
- * as numbers, written on two digits: how they are shown is each control's own
- * business.
- */
-const parseTimeParts = (time) => {
-  if (typeof time !== "string") {
-    return null;
-  }
-  const match = /^(\d{1,2}):(\d{1,2})/.exec(time);
-  if (!match) {
-    return null;
-  }
-  return { hour: Number(match[1]), minute: Number(match[2]) };
-};
-
-// Half a time is not a time: a control holding one of the two and nothing in
-// the other has no value at all, and a form has nothing to send about it.
-const formatTimeParts = (hour, minute) => {
-  if (
-    hour === "" ||
-    hour === undefined ||
-    minute === "" ||
-    minute === undefined
-  ) {
-    return undefined;
-  }
-  return `${padTwo$1(hour)}:${padTwo$1(minute)}`;
-};
-
-const minutesFromTime = (time) => {
-  const parts = parseTimeParts(time);
-  if (!parts) {
-    return null;
-  }
-  return parts.hour * 60 + parts.minute;
-};
-
-const timeFromMinutes = (minutes) => {
-  const inDay =
-    ((minutes % MINUTES_PER_DAY) + MINUTES_PER_DAY) % MINUTES_PER_DAY;
-  return `${padTwo$1(Math.floor(inDay / 60))}:${padTwo$1(inDay % 60)}`;
-};
-
-const MINUTES_PER_DAY = 24 * 60;
-
-const padTwo$1 = (value) => String(value).padStart(2, "0");
-
-// Maps validity type names → navi input type names.
-// Numeric signal types must not fall through to the native type="number"
-// (which adds spinner buttons and has poor UX) — they map to navi_number instead.
-const VALIDITY_TYPE_TO_INPUT_TYPE = {
-  boolean: "checkbox",
-  number: "navi_number",
-  integer: "navi_number",
-  percentage: "navi_percentage",
-};
-
-// Conceptual number types: define defaults and map to native type="number".
-// The `data-navi-input-type` attribute is set so constraint messages can use
-// domain-specific wording instead of the generic "Ce nombre doit être...".
-const NAVI_TYPE_DEFAULTS = {
-  navi_time: {
-    "type": "time",
-    "navi-input-type": "time",
-    "min": 0,
-    "max": 24 * 3600 - 1,
-    "step": 1,
-  },
-  navi_percentage: {
-    "type": "navi_number",
-    "navi-input-type": "percentage",
-    "min": 0,
-    "max": 100,
-    "step": 1,
-  },
-  navi_number: {
-    type: "text",
-    autoCorrect: "off",
-    spellcheck: false,
-    autoComplete: "off",
-  },
-};
-
-/**
- * resolveInputProps — normalizes input-related props that are shared across
- * `<Picker>`, `<Input>` (textual) and `<Range>`. Mutates the props object in place.
- *
- * Normalization is applied recursively: a navi type may resolve to another navi
- * type (e.g. `navi_percentage` → `navi_number` → `text`), and each step applies its
- * own formatters and defaults before moving to the next.
- *
- * Steps applied for each type:
- * 1. Record the original navi type in `props["navi-input-type"]` (first call only).
- * 2. Apply defaults for the current type (min, max, step, and any other props),
- *    only when the prop is not already set.
- * 3. Apply min/max formatters (e.g. HH:MM string → number for duration types,
- *    Date → formatted string for date/time types).
- * 4. Apply step formatter (same conversion rules).
- * 5. Remap `props.type` to the target type defined by the current type's defaults,
- *    then recurse.
- *
- * Supported navi types and their targets:
- * - `navi_percentage` → `navi_number`  (0–100, step 1)
- * - `navi_number`     → `text`         (inputMode="numeric", no spin buttons implied)
- * - `navi_time`       → `time`         (step in seconds)
- *
- * Standard HTML input types with formatters:
- * - `date`, `month`, `week`, `time`, `datetime-local`, `datetime`:
- *   min/max accept `Date` instances or timestamps and are converted to the
- *   string format expected by the native input.
- * - `time`, `datetime-local`, `datetime`:
- *   step accepts `"HH:MM"` and is converted to seconds.
- */
-/**
- * A bound signal that carries a default of its own says the same thing on every
- * control: the control starts there and stays uncontrolled, which is what makes
- * a form read the value shown as a SUGGESTION rather than as something it
- * already holds. Uncontrolled here is about what the control HOLDS, not about
- * whether it follows the signal — the binding stays two-way either way (see
- * stateFromSignal in control_hooks.jsx). Written once and used by everything
- * that takes a `signal`, so one signal cannot mean two different things
- * depending on which control it was handed to.
- */
-const seedDefaultValueFromSignal = (props) => {
-  const signalOptions = props.signal?.options;
-  if (!signalOptions) {
-    return;
-  }
-  if (Object.hasOwn(props, "defaultValue")) {
-    // explicit defaultValue prop prevails
-    return;
-  }
-  // Snapshot the signal's current default so that resetUIState restores to the
-  // original default — not the value the signal had at the time of the last
-  // re-render.
-  const defaultValue = signalOptions.getDefaultValue(false);
-  if (defaultValue !== undefined) {
-    props.defaultValue = defaultValue;
-  }
-};
-
-const resolveInputProps = (props, { controlType = "input" } = {}) => {
-  // `signal` carries a bound state signal. It is left on `props` on purpose:
-  // `createControlInfo` (control_hooks.jsx) reads it to seed the state and to
-  // follow it, and `onUIAction` (ui_state_controller.js) writes user
-  // interactions back into it. Here we only derive input defaults (type/min/max,
-  // defaultValue/defaultChecked) from the signal's `options`, so the control
-  // ends up uncontrolled-with-default while still bound to the signal.
-  const signal = props.signal;
-  if (signal) {
-    const signalOptions = signal.options;
-    if (signalOptions) {
-      for (const key of ["min", "max", "step"]) {
-        if (props[key] === undefined && signalOptions[key] !== undefined) {
-          props[key] = signalOptions[key];
-        }
-      }
-      if (props.type === undefined && signalOptions.type !== undefined) {
-        const typeFromSignal =
-          VALIDITY_TYPE_TO_INPUT_TYPE[signalOptions.type] ?? signalOptions.type;
-        // What a signal says is what its value IS; what a control's `type` says
-        // is what the control is. They usually agree — a date-typed signal wants
-        // a date field — but a boolean one maps to a checkbox, and a picker made
-        // into a checkbox is not a picker with a different look: it is another
-        // control, with no popup to open. A picker asked to hold a yes/no keeps
-        // its two rows and stays itself.
-        const wouldChangeWhatTheControlIs =
-          controlType === "picker" &&
-          (typeFromSignal === "checkbox" || typeFromSignal === "radio");
-        if (!wouldChangeWhatTheControlIs) {
-          props.type = typeFromSignal;
-        }
-      }
-    }
-
-    const isCheckable = props.type === "checkbox" || props.type === "radio";
-    if (isCheckable) {
-      if (Object.hasOwn(props, "defaultChecked")) ; else {
-        // If no explicit defaultChecked, derive it from the signal's default
-        // value so that resetUIState restores to the original default.
-        // Only a stateSignal carries a default of its own; a plain signal has
-        // no `options` at all, and asking it for one used to throw on mount —
-        // the same optional read every other branch here already does.
-        const defaultVal = signalOptions?.getDefaultValue(false);
-        if (defaultVal === undefined) ; else if (props.type === "radio") {
-          if (defaultVal === true) {
-            props.defaultChecked = true;
-          } else if (
-            Object.hasOwn(props, "value") &&
-            defaultVal === props.value
-          ) {
-            props.defaultChecked = true;
-          }
-        } else if (typeof defaultVal === "boolean") {
-          // Standalone checkbox bound to a boolean signal.
-          props.defaultChecked = defaultVal;
-        } else {
-          // Checkbox is a group member: defaultVal is the array of
-          // selected item values.
-          const checkboxValue = props.value;
-          props.defaultChecked =
-            Array.isArray(defaultVal) && defaultVal.includes(checkboxValue);
-        }
-      }
-      return;
-    }
-
-    seedDefaultValueFromSignal(props);
-  }
-
-  const currentType = props.type;
-  // Apply min/max/step formatters before anything else — this must run even for
-  // standard HTML types (date, time, etc.) that have no NAVI_TYPE_DEFAULTS entry.
-  const currentTypeMinMaxFormatter = MIN_MAX_FORMATTER_BY_TYPE[currentType];
-  const currentTypeStepFormatter = STEP_FORMATTER_BY_TYPE[currentType];
-  if (currentTypeMinMaxFormatter) {
-    props.min = currentTypeMinMaxFormatter(props.min);
-    props.max = currentTypeMinMaxFormatter(props.max);
-  }
-  if (currentTypeStepFormatter) {
-    props.step = currentTypeStepFormatter(props.step);
-  }
-
-  // For navi_number: choose inputMode based on whether step/min/max suggest decimals.
-  // inputMode="numeric" (integer keyboard) vs "decimal" (keyboard with decimal separator).
-  if (currentType === "navi_number") {
-    if (props.inputMode === undefined) {
-      props.inputMode =
-        hasDecimalPlaces(props.step) ||
-        hasDecimalPlaces(props.min) ||
-        hasDecimalPlaces(props.max)
-          ? "decimal"
-          : "numeric";
-    }
-  }
-
-  const { charGuard } = props;
-  if (charGuard) {
-    if (charGuard === true || charGuard === "auto") {
-      // Auto-resolve charGuard from context.
-      let charGuardResolved;
-      const inputMode = props.inputMode;
-      if (inputMode === "numeric") {
-        charGuardResolved = "numeric";
-      } else if (inputMode === "decimal") {
-        charGuardResolved = "decimal";
-      } else if (currentType === "tel") {
-        charGuardResolved = "tel";
-      } else if (currentType === "email") {
-        charGuardResolved = "email";
-      }
-      if (charGuardResolved !== undefined) {
-        props.charGuard = charGuardResolved;
-      }
-    }
-    // charGuard is now resolved: derive inputMode from it if not already set.
-    if (props.inputMode === undefined && props.charGuard) {
-      const autoMode = INPUT_MODE_FROM_CHAR_GUARD[props.charGuard];
-      if (autoMode) {
-        props.inputMode = autoMode;
-      }
-    }
-    // Build pattern from the resolved charGuard (preset name → class, or raw class passthrough).
-    if (props.pattern === undefined && props.charGuard) {
-      const charClass = CHAR_CLASS_PRESETS[props.charGuard] ?? props.charGuard;
-      props.pattern = `${charClass}*`;
-    }
-  }
-
-  // Compute maxLength from max when inputMode is numeric/decimal.
-  // Done here (after inputMode is set) so controller.props has the resolved value.
-  if (props.maxLength === undefined) {
-    if (props.inputMode === "numeric") {
-      const { min, max } = props;
-      if (max === undefined) ; else {
-        const canBeNegative = min === undefined ? max < 0 : min < 0;
-        const signCharCount = canBeNegative ? 1 : 0;
-        const integerDigitCount = String(Math.floor(Math.abs(max))).length;
-        props.maxLength = signCharCount + integerDigitCount;
-      }
-    } else if (props.inputMode === "decimal") {
-      const { min, max, step } = props;
-      if (max === undefined) ; else if (step === undefined) ; else {
-        const canBeNegative = min === undefined ? max < 0 : min < 0;
-        const signCharCount = canBeNegative ? 1 : 0;
-        const integerDigitCount = String(Math.floor(Math.abs(max))).length;
-        const stepStr = String(step);
-        const dotIndex = stepStr.indexOf(".");
-        // integer step + decimal inputMode is an unusual combo, but we stay consistent:
-        // no decimal part in maxLength since valid values are whole numbers anyway
-        const isIntegerStep = dotIndex === -1;
-        const decimalSignCharCount = isIntegerStep ? 0 : 1;
-        const decimalDigitCount = isIntegerStep
-          ? 0
-          : stepStr.length - dotIndex - 1;
-        props.maxLength =
-          signCharCount +
-          integerDigitCount +
-          decimalSignCharCount +
-          decimalDigitCount;
-      }
-    }
-  }
-
-  // Resolve maxLengthGuard boolean/auto → the computed maxLength number.
-  if (props.maxLengthGuard === true || props.maxLengthGuard === "auto") {
-    props.maxLengthGuard =
-      typeof props.maxLength === "number" ? props.maxLength : undefined;
-  }
-
-  const currentTypeDefaults = NAVI_TYPE_DEFAULTS[currentType];
-  if (!currentTypeDefaults) {
-    return;
-  }
-
-  for (const key of Object.keys(currentTypeDefaults)) {
-    if (props[key] === undefined) {
-      props[key] = currentTypeDefaults[key];
-    }
-  }
-  const targetType = currentTypeDefaults.type;
-  props.type = targetType;
-  resolveInputProps(props);
-};
-
-// Presets that imply a specific mobile keyboard inputMode.
-const INPUT_MODE_FROM_CHAR_GUARD = {
-  numeric: "numeric",
-  pin: "numeric",
-  card: "numeric",
-  tel: "tel",
-  decimal: "decimal",
-};
-
-const normalizeToDate = (value) => {
-  if (value === undefined || value === null) {
-    return null;
-  }
-  if (typeof value === "number") {
-    return new Date(value);
-  }
-  if (value instanceof Date) {
-    return value;
-  }
-  return null;
-};
-
-const toInputDate = (value) => {
-  const date = normalizeToDate(value);
-  if (!date) {
-    return value;
-  }
-  const yyyy = date.getFullYear();
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  const dd = String(date.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
-};
-const toInputMonth = (value) => {
-  const date = normalizeToDate(value);
-  if (!date) {
-    return value;
-  }
-  const yyyy = date.getFullYear();
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  return `${yyyy}-${mm}`;
-};
-const toInputWeek = (value) => {
-  const date = normalizeToDate(value);
-  if (!date) {
-    return value;
-  }
-  // ISO week number
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
-  const yearStart = new Date(d.getFullYear(), 0, 4);
-  const week =
-    Math.round(
-      ((d - yearStart) / 86400000 - 3 + ((yearStart.getDay() + 6) % 7)) / 7,
-    ) + 1;
-  return `${d.getFullYear()}-W${String(week).padStart(2, "0")}`;
-};
-const toInputTime = (value) => {
-  const date = normalizeToDate(value);
-  if (!date) {
-    return value;
-  }
-  const hh = String(date.getHours()).padStart(2, "0");
-  const mm = String(date.getMinutes()).padStart(2, "0");
-  return `${hh}:${mm}`;
-};
-const toInputDatetime = (value) => {
-  const date = normalizeToDate(value);
-  if (!date) {
-    return value;
-  }
-  const yyyy = date.getFullYear();
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  const dd = String(date.getDate()).padStart(2, "0");
-  const hh = String(date.getHours()).padStart(2, "0");
-  const min = String(date.getMinutes()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
-};
-
-const MIN_MAX_FORMATTER_BY_TYPE = {
-  "date": toInputDate,
-  "month": toInputMonth,
-  "week": toInputWeek,
-  "time": toInputTime,
-  "datetime-local": toInputDatetime,
-  "datetime": toInputDatetime,
-};
-const STEP_FORMATTER_BY_TYPE = {
-  "time": timeStringToSeconds,
-  "datetime-local": timeStringToSeconds,
-  "datetime": timeStringToSeconds,
-};
-
-const hasDecimalPlaces = (value) => {
-  if (value === undefined || value === null) {
-    return false;
-  }
-  const num = Number(value);
-  return !isNaN(num) && !Number.isInteger(num);
-};
 
 const Input = props => {
   resolveInputProps(props);
@@ -78720,7 +78770,7 @@ const TimeRangeWheel = ({
   // the moment this must run is precisely the moment the pair is INVALID —
   // an action-gated push would be refused by the very thing it fixes.
   const keepBoundsApart = (movedSide, movedTime, e) => {
-    const movedMinutes = minutesFromTime(movedTime);
+    const movedMinutes = minutesFromTime$1(movedTime);
     if (movedMinutes === null) {
       return;
     }
@@ -78728,7 +78778,7 @@ const TimeRangeWheel = ({
     if (!otherEl) {
       return;
     }
-    const otherMinutes = minutesFromTime(getUIStateFromElement(otherEl));
+    const otherMinutes = minutesFromTime$1(getUIStateFromElement(otherEl));
     if (otherMinutes === null) {
       return;
     }

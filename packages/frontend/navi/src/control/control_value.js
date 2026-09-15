@@ -1,6 +1,7 @@
 import { dispatchCustomEvent } from "@jsenv/dom";
 
 import { isSignal } from "../utils/is_signal.js";
+import { isNumberInput } from "./input/resolve_input_props.js";
 import { getUIStateFromElement } from "./ui_state_dom.js";
 
 /**
@@ -22,7 +23,7 @@ import { getUIStateFromElement } from "./ui_state_dom.js";
  */
 export const asControlHostValue = (
   jsValue,
-  { controlType, type, inputMode, pad },
+  { controlType, type, naviInputType, pad },
 ) => {
   if (controlType === "select") {
     // A select holds one of its options, always a string; holding nothing is
@@ -33,12 +34,7 @@ export const asControlHostValue = (
     if (type === "datetime-local") {
       return asDatetimeLocalString(jsValue);
     }
-    if (
-      type === "number" ||
-      type === "range" ||
-      inputMode === "numeric" ||
-      inputMode === "decimal"
-    ) {
+    if (type === "range" || isNumberInput(type, naviInputType)) {
       return asNumberString(jsValue, pad);
     }
     if (type === "color") {
@@ -123,10 +119,8 @@ export const readControlValue = (controlHost) => {
     const type = controlHost.getAttribute("type");
 
     if (
-      type === "number" ||
       type === "range" ||
-      controlHost.inputMode === "numeric" ||
-      controlHost.inputMode === "decimal"
+      isNumberInput(type, controlHost.getAttribute("navi-input-type"))
     ) {
       return readNumberFromInput(controlHost);
     }

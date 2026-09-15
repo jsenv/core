@@ -12,6 +12,7 @@ import {
 
 import { languagesSignal } from "@jsenv/navi/src/text/lang_signal.js";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
+import { isNumberInput } from "@jsenv/navi/src/control/input/resolve_input_props.js";
 import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
 import { naviI18nFromValidityMessage } from "../validity_bridge.js";
 
@@ -103,12 +104,7 @@ export const REQUIRED_CONSTRAINT = {
     if (type === "time") {
       return naviI18n("constraint.required.time");
     }
-    const inputMode = field.controlHostProps.inputMode;
-    if (
-      type === "number" ||
-      inputMode === "numeric" ||
-      inputMode === "decimal"
-    ) {
+    if (isNumberInput(type, field.controlHostProps["navi-input-type"])) {
       return naviI18n("constraint.required.number");
     }
     if (type === "datetime-local") {
@@ -337,10 +333,8 @@ export const TYPE_NUMBER_CONSTRAINT = {
       return null;
     }
     const type = field.controlHostProps.type;
-    const inputMode = field.controlHostProps.inputMode;
-    const isNumber =
-      type === "number" || inputMode === "numeric" || inputMode === "decimal";
-    if (!isNumber) {
+    const naviType = field.controlHostProps["navi-input-type"];
+    if (!isNumberInput(type, naviType)) {
       return null;
     }
     const valueAsString =
@@ -353,7 +347,6 @@ export const TYPE_NUMBER_CONSTRAINT = {
       return null;
     }
 
-    const naviType = field.controlHostProps["navi-input-type"];
     if (naviType === "hour") {
       return naviI18n(`constraint.type.hour.default`);
     }
@@ -409,15 +402,13 @@ export const MIN_CONSTRAINT = {
       return null;
     }
     const type = field.controlHostProps.type;
-    const inputMode = field.controlHostProps.inputMode;
+    const naviInputType = field.controlHostProps["navi-input-type"];
     const valueAsString =
       field.uiState === undefined ? "" : String(field.uiState);
     if (!valueAsString) {
       return null;
     }
-    const isNumber =
-      type === "number" || inputMode === "numeric" || inputMode === "decimal";
-    if (isNumber) {
+    if (isNumberInput(type, naviInputType)) {
       const minNumber = parseFloat(minString);
       if (isNaN(minNumber)) {
         return null;
@@ -427,7 +418,6 @@ export const MIN_CONSTRAINT = {
         return null;
       }
       if (numericValue < minNumber) {
-        const naviInputType = field.controlHostProps["navi-input-type"];
         if (naviInputType === "hour") {
           return naviI18n(`constraint.min.hour.default`, {
             min: minString,
@@ -512,15 +502,13 @@ export const MAX_CONSTRAINT = {
       return null;
     }
     const type = field.controlHostProps.type;
-    const inputMode = field.controlHostProps.inputMode;
+    const naviInputType = field.controlHostProps["navi-input-type"];
     const valueAsString =
       field.uiState === undefined ? "" : String(field.uiState);
     if (!valueAsString) {
       return null;
     }
-    const isNumber =
-      type === "number" || inputMode === "numeric" || inputMode === "decimal";
-    if (isNumber) {
+    if (isNumberInput(type, naviInputType)) {
       const maxNumber = parseFloat(maxString);
       if (isNaN(maxNumber)) {
         return null;
@@ -533,7 +521,6 @@ export const MAX_CONSTRAINT = {
         return null;
       }
 
-      const naviInputType = field.controlHostProps["navi-input-type"];
       if (naviInputType === "hour") {
         return naviI18n(`constraint.max.hour.default`, {
           max: maxString,
@@ -640,10 +627,9 @@ export const STEP_CONSTRAINT = {
       return null;
     }
     const type = field.controlHostProps.type;
-    const inputMode = field.controlHostProps.inputMode;
-    const isNumericText =
-      type === "text" && (inputMode === "numeric" || inputMode === "decimal");
-    if (!isNumericText && !STEP_SUPPORTED_TYPE_SET.has(type)) {
+    const naviInputType = field.controlHostProps["navi-input-type"];
+    const isNumber = isNumberInput(type, naviInputType);
+    if (!isNumber && !STEP_SUPPORTED_TYPE_SET.has(type)) {
       return null;
     }
     const stepRaw = field.controlHostProps.step;
@@ -657,7 +643,6 @@ export const STEP_CONSTRAINT = {
       return null;
     }
     const minString = field.controlHostProps.min;
-    const isNumber = type === "number" || isNumericText;
     if (isNumber) {
       const step = parseFloat(stepString);
       const base = minString ? parseFloat(minString) : 0;
@@ -676,7 +661,6 @@ export const STEP_CONSTRAINT = {
       const after = before + step;
       const decimals = (stepString.split(".")[1] || "").length;
       const context = (() => {
-        const naviInputType = field.controlHostProps["navi-input-type"];
         if (naviInputType === "hour") {
           return `hour`;
         }
