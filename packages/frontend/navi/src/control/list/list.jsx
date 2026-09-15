@@ -34,12 +34,12 @@ import { Separator } from "../../layout/separator.jsx";
 import { useDebugScroll } from "../../navi_debug.jsx";
 import { naviI18n } from "../../text/navi_i18n.js";
 import { Text } from "../../text/text.jsx";
-import { useItemTracker } from "../../utils/item_tracker/use_item_tracker.js";
 import { withPropsClassName } from "../../utils/with_props_class_name.js";
 import { useDisplayedLayoutEffect } from "../../utils/use_displayed_layout_effect.js";
 import { getUIStateControllerById } from "../controller_registry.js";
 import { ParallelGuardContext, useParallelGuard } from "../parallel_guard.js";
 import { ListItemHeaderOrFooterResolver } from "./list_item_header_footer.jsx";
+import { createListRows } from "./list_rows.js";
 import { listItemBlockedMessage } from "./list_item_blocked_message.js";
 import {
   ListItemSelectableResolver,
@@ -47,8 +47,13 @@ import {
 } from "./list_selectable.jsx";
 import { useSearchHighlight } from "./search_highlight.js";
 
-const ListItemTrackerContext = createContext(null);
-const GroupItemTrackerContext = createContext(null);
+// Everything the list knows about its rows — see list_rows.js. Filled in by
+// the children as they render, read by everything that must reserve room for
+// what is not rendered, count what is, or know what stands above it.
+const ListRowsContext = createContext(null);
+// The group a row is declared in, by id (see ListItemGroup): what its count
+// and its separator are scoped to.
+const ListGroupContext = createContext(undefined);
 const PendingScrollRefContext = createContext(null);
 // Controls how List.Item behaves when match=false (set via List searchNoMatchMode prop):
 //   "remove"              — remove from DOM (default)
@@ -87,21 +92,15 @@ const SeparatorContext = createContext(null);
 // Set by <List itemTransition>: each row then gets a view-transition-name of
 // its own, so a change wrapped in a view transition animates row by row.
 const ItemTransitionContext = createContext(false);
-// What the list knows about the collection as a whole: how many rows it has,
-// which of them it actually holds, and where each child's rows start. Filled in
-// by the children as they render (see createListVirtual), read by everything
-// that must reserve room for what is not rendered.
-const ListVirtualContext = createContext(null);
 // Set around each row a run of items renders (see ListItems): which row of the
-// collection it is, where it stands among the rows the list holds, and the
-// run's own account of which rows mount (see createRunRows) — what the row
-// draws its separator from. Carried by context rather than injected into
-// whatever vnode renderItem returned, so that returning a component of one's
-// own — instead of a bare <List.Item> — works the same way.
+// collection it is, where it stands among the rows the list holds, and which
+// run it belongs to. Carried by context rather than injected into whatever
+// vnode renderItem returned, so that returning a component of one's own —
+// instead of a bare <List.Item> — works the same way.
 const ListRowContext = createContext(null);
 // The slot a child of the list stands in, by id (see ListDeclaredChildren). A
 // row takes its place in the collection by slot: the place is then the list's
-// to move, and the row's to follow — see createListVirtual.
+// to move, and the row's to follow — see list_rows.js.
 const ListSlotContext = createContext(null);
 
 const css = /* css */ `
@@ -894,7 +893,7 @@ const ListUI = (props) => {
     overflow,
     overflowX,
     overflowY,
-    virtual,
+    listRows,
     ...rest
   } = props;
   const scrollBoxPaddingProps = {};
@@ -976,16 +975,19 @@ const ListUI = (props) => {
     [lockSize],
   );
 
-  const tracker = useItemTracker({
-    onChange: () => {
-      onListVisibleItemsChange?.(tracker.visibleItemsSignal.peek());
-    },
+  listRows.onChange = () => {
+    onListVisibleItemsChange?.(listRows.visibleItemsSignal.peek());
+  };
+  // Code in a layout effect of the list reads the rows as they stand after
+  // the commit; the rows settle on a microtask, which preact does not wait for.
+  useLayoutEffect(() => {
+    listRows.flushSync();
   });
   // What the runs ask for and stand for: the steady budget, whatever the
   // window of the first paint draws — a run asking for the rows of the first
   // picture and then for the rest is two round trips for one opening.
-  virtual.renderBudget = renderBudgetAfterPaint;
-  virtual.scrolled = scrolled ?? defaultScrolled;
+  listRows.renderBudget = renderBudgetAfterPaint;
+  listRows.scrolled = scrolled ?? defaultScrolled;
 
   const {
     virtualItemSizeSignal,
@@ -995,11 +997,10 @@ const ListUI = (props) => {
     captureAnchor,
   } = useListScrollSync({
     ref,
-    tracker,
+    listRows,
     renderBudget,
     renderBudgetSteady: renderBudgetAfterPaint,
     virtualItemSize,
-    virtual,
     scrolled,
     defaultScrolled,
     onScrolledChange,
@@ -1018,7 +1019,7 @@ const ListUI = (props) => {
     if (props.renderBudget === undefined || renderBudgetWarnedRef.current) {
       return;
     }
-    if (virtual.hasRuns() || tracker.itemsSignal.peek().length === 0) {
+    if (listRows.hasRuns() || listRows.itemsSignal.peek().length === 0) {
       return;
     }
     renderBudgetWarnedRef.current = true;
@@ -1027,37 +1028,37 @@ const ListUI = (props) => {
     );
   });
 
-  virtual.captureAnchor = captureAnchor;
-  virtual.virtualItemSizeSignal = virtualItemSizeSignal;
-  virtual.horizontal = Boolean(horizontal);
-  virtual.renderSkeleton = renderSkeleton;
+  listRows.captureAnchor = captureAnchor;
+  listRows.virtualItemSizeSignal = virtualItemSizeSignal;
+  listRows.horizontal = Boolean(horizontal);
+  listRows.renderSkeleton = renderSkeleton;
 
   // A row is addressed by id from outside (--navi-scroll, --navi-select): the
-  // ones drawn have registered themselves with the tracker, and the ones a run
+  // ones drawn have said so (see list_rows.js), and the ones a run
   // holds without drawing are known only to that run (see List.Items' row
   // locator). Both answer here, so a row is reachable whether or not the
   // window happens to frame it.
   const getItemById = (itemId) => {
-    const itemDrawn = tracker.itemsSignal
+    const itemDrawn = listRows.itemsSignal
       .peek()
       .find((item) => item.id === itemId);
     if (itemDrawn) {
       return itemDrawn;
     }
-    const rowIndex = virtual.locateRow(itemId);
+    const rowIndex = listRows.locateRow(itemId);
     if (rowIndex === null) {
       return undefined;
     }
     return { id: itemId, index: rowIndex };
   };
 
-  const noMatchCount = tracker.noMatchCountSignal.value;
+  const noMatchCount = listRows.noMatchCountSignal.value;
   // What the list stands for, which is not always what it holds: a run saying
   // it covers 60 rows is not an empty list while it waits for the first of
   // them (see List.Items).
   // eslint-disable-next-line no-unused-expressions
-  virtual.pagesSignal.value;
-  const itemCount = tracker.countSignal.value || virtual.totalSignal.value;
+  listRows.pagesSignal.value;
+  const itemCount = listRows.countSignal.value || listRows.totalSignal.value;
   const allNoMatch = noMatchCount > 0 && noMatchCount === itemCount;
   const searching = Boolean(searchText);
   const fallbackDisabled = fallback !== undefined && !fallback;
@@ -1184,7 +1185,7 @@ const ListUI = (props) => {
       expand={expand}
       navi-nothing-to-display={nothingToDisplay ? "" : undefined}
       navi-loading={loading ? "" : undefined}
-      navi-refreshing={virtual.refreshingSignal.value ? "" : undefined}
+      navi-refreshing={listRows.refreshingSignal.value ? "" : undefined}
       navi-error={error ? "" : undefined}
       styleCSSVars={LIST_STYLE_CSS_VARS}
       pseudoClasses={LIST_PSEUDO_CLASSES}
@@ -1222,9 +1223,8 @@ const ListUI = (props) => {
         spacing={spacing}
         columns={columns}
         itemColumns={itemColumns}
-        tracker={tracker}
+        listRows={listRows}
         renderWindow={renderWindow}
-        virtual={virtual}
         pendingScrollRef={pendingScrollRef}
         overflow={overflow}
         overflowX={overflowX}
@@ -1248,11 +1248,11 @@ const ListFirstResolver = (props) => {
   props.ref = props.ref || refDefault;
   const idDefault = useId();
   props.id = props.id || idDefault;
-  const virtualRef = useRef(null);
-  if (!virtualRef.current) {
-    virtualRef.current = createListVirtual();
+  const listRowsRef = useRef(null);
+  if (!listRowsRef.current) {
+    listRowsRef.current = createListRows();
   }
-  props.virtual = virtualRef.current;
+  props.listRows = listRowsRef.current;
   const parallelGuard = useParallelGuard(
     props.parallelGuard ?? PARALLEL_GUARD_DEFAULT,
   );
@@ -1280,9 +1280,8 @@ const ListContent = ({
   spacing,
   columns,
   itemColumns,
-  tracker,
+  listRows,
   renderWindow,
-  virtual,
   pendingScrollRef,
   overflow,
   overflowX,
@@ -1335,9 +1334,8 @@ const ListContent = ({
           columns={columns}
           itemColumns={itemColumns}
           {...listProps}
-          tracker={tracker}
+          listRows={listRows}
           renderWindow={renderWindow}
-          virtual={virtual}
         >
           {children}
         </UnorderedList>
@@ -1371,11 +1369,10 @@ const LIST_PSEUDO_CLASSES = [
 ];
 const useListScrollSync = ({
   ref,
-  tracker,
+  listRows,
   renderBudget,
   renderBudgetSteady,
   virtualItemSize,
-  virtual,
   scrolled,
   defaultScrolled,
   onScrolledChange,
@@ -1388,7 +1385,7 @@ const useListScrollSync = ({
     ref,
     virtualItemSize,
     horizontal,
-    { virtual, renderBudget, scrolledWanted: scrolled ?? defaultScrolled },
+    { listRows, renderBudget, scrolledWanted: scrolled ?? defaultScrolled },
   );
   const getScroller = () => getScrollerEl(ref.current, scroller, horizontal);
   const getListEl = () => ref.current.querySelector(".navi_list");
@@ -1413,7 +1410,7 @@ const useListScrollSync = ({
     ref,
     scrollerElResolved,
     renderBudget,
-    totalSignal: virtual.totalSignal,
+    totalSignal: listRows.totalSignal,
     virtualItemSizeSignal,
     horizontal,
   });
@@ -1442,7 +1439,7 @@ const useListScrollSync = ({
     anchorRef.current = captureScrollAnchor({
       scrollerEl: getScroller(),
       listEl: getListEl(),
-      items: tracker.visibleItemsSignal.peek(),
+      items: listRows.visibleItemsSignal.peek(),
       horizontal,
     });
   };
@@ -1470,7 +1467,7 @@ const useListScrollSync = ({
   const framedWindowRef = useRef(null);
   {
     const { start, end } = renderWindowRef.current;
-    const total = virtual.totalSignal.peek();
+    const total = listRows.totalSignal.peek();
     let framedStart = start;
     let framedEnd = start + renderBudget;
     if (total > 0 && framedEnd > total) {
@@ -1508,20 +1505,20 @@ const useListScrollSync = ({
   // jumped.
   const holdWindow = () => {
     if (startPlaceRef.current.userTookOver) {
-      virtual.holdPending = false;
+      listRows.holdPending = false;
       return;
     }
     // Held somewhere it has not reached yet: what the window frames right now
     // is not what it will frame, so nothing should be fetched for it.
-    virtual.holdPending =
+    listRows.holdPending =
       scrolledWanted !== "start" && scrolledWanted !== undefined;
-    const total = virtual.totalSignal.peek();
+    const total = listRows.totalSignal.peek();
     if (total <= renderBudget) {
       // The whole collection is what the list draws: wherever in it the list is
       // held, the window is already its place. Nowhere to move to means nothing
       // to wait for — a hold left standing here is a list that never asks for
       // anything again.
-      virtual.holdPending = false;
+      listRows.holdPending = false;
       return;
     }
     const half = Math.floor(renderBudget / 2);
@@ -1531,7 +1528,7 @@ const useListScrollSync = ({
     } else if (typeof scrolledWanted === "number") {
       wantedStart = scrolledWanted - half;
     } else if (scrolledWanted && scrolledWanted.id !== undefined) {
-      const rowIndex = virtual.locateRow(scrolledWanted.id);
+      const rowIndex = listRows.locateRow(scrolledWanted.id);
       if (rowIndex !== null) {
         wantedStart = rowIndex - half;
       } else if (typeof scrolledWanted.index === "number") {
@@ -1555,14 +1552,14 @@ const useListScrollSync = ({
     }
     const { start, end } = renderWindowRef.current;
     if (wantedStart === start && end - start === renderBudget) {
-      virtual.holdPending = false;
+      listRows.holdPending = false;
       return;
     }
     renderWindowRef.current = {
       start: wantedStart,
       end: wantedStart + renderBudget,
     };
-    virtual.holdPending = false;
+    listRows.holdPending = false;
   };
 
   const pendingScrollRef = useRef();
@@ -1570,7 +1567,7 @@ const useListScrollSync = ({
     if (!item) {
       return;
     }
-    const items = tracker.itemsSignal.peek();
+    const items = listRows.itemsSignal.peek();
     const itemCount = items.length;
     if (itemCount === 0) {
       return;
@@ -1712,7 +1709,7 @@ const useListScrollSync = ({
         return;
       }
       hasBeenDisplayedRef.current = true;
-      const items = tracker.itemsSignal.peek();
+      const items = listRows.itemsSignal.peek();
       const firstSelected = items.find((i) => {
         if (i.selected) {
           return true;
@@ -1799,7 +1796,7 @@ const useListScrollSync = ({
           scrollValues: savedScroll,
           scrollerEl: listScrollContainerEl,
           listEl: getListEl(),
-          tracker,
+          listRows,
           virtualItemSizeSignal,
           renderWindowRef,
           horizontal,
@@ -1816,7 +1813,7 @@ const useListScrollSync = ({
       });
       return undefined;
     }
-    const visibleItems = tracker.visibleItemsSignal.peek();
+    const visibleItems = listRows.visibleItemsSignal.peek();
     const topItems = visibleItems.slice(0, renderBudget);
     const topMatchScoresKey = topItems
       .map((i) => `${i.id}:${i.matchInfo?.matchScore ?? ""}`)
@@ -1864,7 +1861,7 @@ const useListScrollSync = ({
       return;
     }
     if (
-      virtual.totalSignal.peek() === 0 ||
+      listRows.totalSignal.peek() === 0 ||
       virtualItemSizeSignal.peek() === 0
     ) {
       return;
@@ -1878,13 +1875,13 @@ const useListScrollSync = ({
       // Only whoever holds the rows can say where that one sits: the list
       // itself knows the rows it has drawn, and this one is precisely the one
       // it has not drawn yet.
-      const rowIndex = virtual.locateRow(scrolledWanted.id);
+      const rowIndex = listRows.locateRow(scrolledWanted.id);
       if (rowIndex === null) {
         // Not there yet. Where it stood is enough to be roughly right in the
         // meantime — the scrollbar lands near its final place instead of at the
         // top, and the exact position is taken once the row itself can be
         // measured.
-        if (virtual.pagesSignal.peek() === 0) {
+        if (listRows.pagesSignal.peek() === 0) {
           if (typeof scrolledWanted.index === "number") {
             const rowPosition =
               scrolledWanted.index * virtualItemSizeSignal.peek();
@@ -2011,7 +2008,7 @@ const useListScrollSync = ({
     const position = captureScrollAnchor({
       scrollerEl: getScroller(),
       listEl: getListEl(),
-      items: tracker.visibleItemsSignal.peek(),
+      items: listRows.visibleItemsSignal.peek(),
       horizontal,
     });
     if (!position) {
@@ -2108,7 +2105,7 @@ const useListScrollSync = ({
       anchorRef.current = null;
       return;
     }
-    const items = tracker.visibleItemsSignal.peek();
+    const items = listRows.visibleItemsSignal.peek();
     const itemNow = items.find((i) => i.id === anchor.id);
     if (!itemNow) {
       anchorRef.current = null;
@@ -2127,7 +2124,7 @@ const useListScrollSync = ({
       const windowSize = end - start;
       const startShifted = start + indexShift;
       let startWanted = startShifted < 0 ? 0 : startShifted;
-      const total = virtual.totalSignal.peek();
+      const total = listRows.totalSignal.peek();
       // Same normalization as the scroll listener: a window running past the
       // last row slides back instead of framing fewer rows than its budget
       // allows — every row that fits in it must stay rendered.
@@ -2191,7 +2188,7 @@ const useListScrollSync = ({
   const windowSlidRef = useRef(false);
   const budgetWarnedRef = useRef(false);
   const evaluateWindow = (reason) => {
-    const total = virtual.totalSignal.peek();
+    const total = listRows.totalSignal.peek();
     if (total <= renderBudget) {
       return;
     }
@@ -2210,7 +2207,7 @@ const useListScrollSync = ({
         },
         scrollerEl,
         listEl,
-        tracker,
+        listRows,
         virtualItemSizeSignal,
         renderWindowRef,
         horizontal,
@@ -2924,12 +2921,12 @@ const getScrollInfo = ({
   scrollValues,
   scrollerEl,
   listEl,
-  tracker,
+  listRows,
   virtualItemSizeSignal,
   renderWindowRef,
   horizontal,
 }) => {
-  const items = tracker.itemsSignal.peek();
+  const items = listRows.itemsSignal.peek();
   const viewportRect = getScrollerViewportRect(scrollerEl);
   const listRect = listEl.getBoundingClientRect();
   let hitEl = null;
@@ -3063,7 +3060,7 @@ const useVirtualItemSizeSignal = (
   ref,
   virtualItemSizeProp = 0,
   horizontal,
-  { virtual, renderBudget, scrolledWanted },
+  { listRows, renderBudget, scrolledWanted },
 ) => {
   const virtualSizeSignalRef = useRef(null);
   if (!virtualSizeSignalRef.current) {
@@ -3117,7 +3114,7 @@ const useVirtualItemSizeSignal = (
   // size is for, and a list drawing every row it has would pay a layout on
   // each of its renders for a number nothing reads.
   const sizeAlreadyKnown = virtualSizeSignal.peek() !== 0;
-  const rowsHeldOffScreen = virtual.totalSignal.peek() > renderBudget;
+  const rowsHeldOffScreen = listRows.totalSignal.peek() > renderBudget;
   if (
     !virtualItemSizeProp &&
     sizeAlreadyKnown &&
@@ -3139,7 +3136,7 @@ const useVirtualItemSizeSignal = (
     // that is. A list drawing every row it has, opening at its start, would
     // pay a layout in every commit for a number nobody reads.
     const sizeRead =
-      virtual.totalSignal.peek() > renderBudget ||
+      listRows.totalSignal.peek() > renderBudget ||
       (scrolledWanted !== undefined && scrolledWanted !== "start");
     if (!sizeRead) {
       return undefined;
@@ -3194,9 +3191,8 @@ const useVirtualItemSizeSignal = (
 // item after each commit and writes to the signal, causing only the fillers to
 // re-render.
 const UnorderedList = ({
-  tracker,
+  listRows,
   renderWindow,
-  virtual,
   fallback,
   fallbackShown,
   searchFallback,
@@ -3247,17 +3243,15 @@ const UnorderedList = ({
         <RenderWindowContext.Provider value={renderWindow}>
           <SeparatorContext.Provider value={separator ?? null}>
             <ItemTransitionContext.Provider value={Boolean(itemTransition)}>
-              <ListItemTrackerContext.Provider value={tracker}>
-                <ListVirtualContext.Provider value={virtual}>
-                  <ListRowContext.Provider value={null}>
-                    <ListItemColumnsContext.Provider
-                      value={columns ? null : itemColumns || null}
-                    >
-                      <ListDeclaredChildren>{children}</ListDeclaredChildren>
-                    </ListItemColumnsContext.Provider>
-                  </ListRowContext.Provider>
-                </ListVirtualContext.Provider>
-              </ListItemTrackerContext.Provider>
+              <ListRowsContext.Provider value={listRows}>
+                <ListRowContext.Provider value={null}>
+                  <ListItemColumnsContext.Provider
+                    value={columns ? null : itemColumns || null}
+                  >
+                    <ListDeclaredChildren>{children}</ListDeclaredChildren>
+                  </ListItemColumnsContext.Provider>
+                </ListRowContext.Provider>
+              </ListRowsContext.Provider>
             </ItemTransitionContext.Provider>
           </SeparatorContext.Provider>
         </RenderWindowContext.Provider>
@@ -3304,8 +3298,8 @@ const Fallback = ({ fallback }) => {
 // every row it draws must not be redrawn — every row of it — because the size
 // settled after the first commit.
 const VirtualFiller = ({ edge, itemCount }) => {
-  const virtual = useContext(ListVirtualContext);
-  const sizeToFill = itemCount * virtual.virtualItemSizeSignal.value;
+  const listRows = useContext(ListRowsContext);
+  const sizeToFill = itemCount * listRows.virtualItemSizeSignal.value;
   if (!sizeToFill) {
     return null;
   }
@@ -3437,12 +3431,11 @@ const ListItemUI = (props) => {
   }
   const idDefault = useId();
   props.id = props.id || idDefault;
-  const tracker = useContext(ListItemTrackerContext);
-  const virtual = useContext(ListVirtualContext);
+  const listRows = useContext(ListRowsContext);
+  const groupId = useContext(ListGroupContext);
   const searchNoMatchMode = useContext(SearchNoMatchModeContext);
   // The run this row belongs to, when it comes from one (see ListItems): it
-  // registered the row and decided it is inside the render window. Whether
-  // the row mounts is decided here, and told back to the run.
+  // gave the row its place and decided it is inside the render window.
   const row = useContext(ListRowContext);
   const slotId = useContext(ListSlotContext);
   // There is no standalone match/matchScore/highlight prop — participation
@@ -3450,7 +3443,7 @@ const ListItemUI = (props) => {
   // (e.g. useSearchText's getItemMatchInfo(item): { match, matchScore,
   // matchRanges }), so there is exactly one way to wire it up.
   const matchInfo = props.matchInfo;
-  // Expose match on the tracked item: the tracker counts non-matching items via
+  // Expose match on the row: the list counts non-matching rows via
   // `item.match === false` (drives noMatchCount → allNoMatch → the searchFallback
   // / hide-when-empty behavior). Without this a matchInfo-based search would
   // filter items out but never register them as "no match".
@@ -3474,70 +3467,40 @@ const ListItemUI = (props) => {
   // name of this very component (idDefault, not the row's id): two components
   // may stand for the same row for a moment, one leaving as the other arrives,
   // and the one leaving must give back its own place, not the newcomer's.
-  if (row) {
+  if (!row) {
     if (props.filtered) {
-      row.run.unmount(idDefault);
+      listRows.drop(idDefault);
     } else {
-      row.run.mount(idDefault, props.index, row.groupKey);
+      props.index = listRows.take(idDefault, 1, slotId);
     }
-  } else if (props.filtered) {
-    virtual.drop(idDefault);
-  } else {
-    props.index = virtual.take(idDefault, 1, slotId);
   }
+  // Every row that renders says so, whether it was declared one by one or
+  // drawn by a run: what it is (its value, whether it is selected) and whether
+  // it mounts at all are written where it renders, in one place.
+  listRows.draw(idDefault, {
+    ownerId: row ? row.ownerId : idDefault,
+    place: props.index,
+    groupId,
+    data: props,
+  });
   useLayoutEffect(() => {
     return () => {
-      if (row) {
-        row.run.unmount(idDefault);
-      } else {
-        virtual.drop(idDefault);
-      }
+      listRows.erase(idDefault);
     };
   }, []);
-  // Every row that is drawn registers itself, whether it was declared one by
-  // one or drawn by a run: what it says about itself (its value, whether it is
-  // selected) is written where it is drawn, in one place.
-  const item = props;
-  tracker.useTrackItem(item);
-  const groupTracker = useContext(GroupItemTrackerContext);
-  const groupVisibleIndex = groupTracker
-    ? groupTracker.useTrackItem(item)
-    : null;
   const separator = useContext(SeparatorContext);
 
   if (props.filtered) {
     return null;
   }
   const listItemVnode = <ListItemReal {...props} />;
-  if (!separator) {
-    return listItemVnode;
-  }
-  // The separator a row wears is the one at the gap above it, so the first row
-  // that mounts wears none. "Am I first?" is answered by whoever handed out
-  // the place — the run for its rows, the list's virtual for a declared one
-  // (virtual.take above) — not by the tracker's visibleIndex: during a reorder
-  // render pass (items resorted by search score) the other items still carry
-  // stale keyToExplicitOrder values, the binary search reads them, no item
-  // comes out at 0 and a spurious separator appears at the top. Inside a
-  // declared group, each group has its own tracker and its items do not
-  // reorder, so groupVisibleIndex is reliable there.
-  let isFirst;
-  if (row) {
-    isFirst = row.run.isFirst(props.index, row.groupKey);
-  } else if (groupVisibleIndex === null || props.hidden) {
-    isFirst = props.index === 0;
-  } else {
-    isFirst = groupVisibleIndex === 0;
-  }
-  if (isFirst) {
+  // The separator a row wears is the one at the gap above it: none when
+  // nothing of the list stands above it (see list_rows.js).
+  if (!separator || listRows.isFirst(idDefault)) {
     return listItemVnode;
   }
   // The gap index, only used as the function-form argument.
-  const gapIndex =
-    row || groupVisibleIndex === null || props.hidden
-      ? props.index - 1
-      : groupVisibleIndex - 1;
-  let separatorVnode = resolveSeparatorVnode(separator, gapIndex);
+  let separatorVnode = resolveSeparatorVnode(separator, props.index - 1);
   if (props.hidden) {
     // A row kept in the DOM but hidden keeps its separator, hidden with it:
     // the point of keeping a row that matches nothing is that nothing moves,
@@ -3900,399 +3863,8 @@ export const ListItem = /*#__PURE__*/ createComponentResolver(
   { pure: true },
 );
 
-// Everything the list knows about the collection while its children are being
-// rendered: how many rows it has in total, which of them are actually held, and
-// where each child's rows start.
-//
-// A child knows how many rows it stands for but not what was declared before
-// it, and it cannot deduce that from when it renders: a render is free to skip
-// it. A child that draws from signals and whose props are all referentially
-// === the previous ones does not render again (@preact/signals installs a
-// shouldComponentUpdate that says so), which is what any child nobody rebuilt
-// this frame is — and children numbered as they render would then slide up
-// into the place of the one that was skipped.
-//
-// So the places are read off the walk instead of off the renders: the list
-// names a slot for each of its children and declares them here, in order,
-// before any of them renders (see ListDeclaredChildren). A child then takes
-// its place BY SLOT, and the place is a signal: it moves when what stands
-// before it changes — a row filtered out, a run taking in rows, a slot added
-// or moved — and the child follows, rendered again for it whether or not
-// anything else would have rendered it.
-const createListVirtual = () => {
-  const totalSignal = signal(0);
-  // Bumped whenever a run takes in rows. The list itself has to hear about it:
-  // rows arriving outside the render window change nothing it can see (nothing
-  // registers, nothing is drawn), and yet they are what it may have been
-  // waiting for — the row it was told to open on, for one.
-  const pagesSignal = signal(0);
-  // How many runs are re-reading rows they already show. The list wears it as
-  // an attribute: what is drawn is from before, and the app may want to say so
-  // without taking anything away.
-  const refreshingSignal = signal(0);
-  // The slots each walk declared, in order, by the slot the walk stands in
-  // (null for the list's own children). Together they are a tree: a group's
-  // rows live inside the group's slot.
-  const slotIdsByParent = new Map();
-  // Who took a place — a row, or a run of rows — and how many rows of the
-  // collection it stands for. The place itself is a signal, see take.
-  const ownerById = new Map();
-  // The owners standing in each slot, in the order they took their place.
-  // One, as a rule; a child that renders several rows keeps them in the order
-  // they first rendered, which is all it can be told.
-  const ownerIdsBySlot = new Map();
-  const locatorByOwner = new Map();
-  // The slots as the tree reads, first to last, and where each stands in it.
-  // Rebuilt once a walk has changed the tree, read to place the owners.
-  const slotWalk = [];
-  const rankBySlot = new Map();
-  let rowTotal = 0;
-  // Owners have left and the others have not been moved up yet. Done on the
-  // next ask rather than on the spot: rows leave many at a time (a search, a
-  // list unmounting), and moving the others up once is enough.
-  let placesStale = false;
-  // Where the last slot holding an owner stands: an owner arriving at or after
-  // it is placed at the end without going over the others — a whole first
-  // render, rows arriving in order, costs each row nothing but itself.
-  let rankOwnedLast = -1;
-
-  const rebuildWalk = () => {
-    slotWalk.length = 0;
-    rankBySlot.clear();
-    const visit = (parentSlotId) => {
-      const slotIds = slotIdsByParent.get(parentSlotId);
-      if (!slotIds) {
-        return;
-      }
-      for (const slotId of slotIds) {
-        rankBySlot.set(slotId, slotWalk.length);
-        slotWalk.push(slotId);
-        visit(slotId);
-      }
-    };
-    visit(null);
-  };
-  // Every place, in one go: a place is the sum of what stands before it, so
-  // there is nothing to hand out one at a time. Writing a place that did not
-  // change wakes nobody — a signal ignores a value equal to its own.
-  const refreshPlaces = () => {
-    placesStale = false;
-    let index = 0;
-    let rank = 0;
-    rankOwnedLast = -1;
-    while (rank < slotWalk.length) {
-      const ownerIds = ownerIdsBySlot.get(slotWalk[rank]);
-      if (ownerIds) {
-        for (const ownerId of ownerIds) {
-          const owner = ownerById.get(ownerId);
-          owner.placeSignal.value = index;
-          index += owner.rowCount;
-        }
-        rankOwnedLast = rank;
-      }
-      rank++;
-    }
-    rowTotal = index;
-    totalSignal.value = index;
-  };
-  const addToSlot = (slotId, ownerId) => {
-    const ownerIds = ownerIdsBySlot.get(slotId);
-    if (ownerIds) {
-      ownerIds.push(ownerId);
-    } else {
-      ownerIdsBySlot.set(slotId, [ownerId]);
-    }
-    warnIfEveryRowInOneSlot(slotId);
-  };
-  // Rows that all stand in the same slot keep the order they first mounted in:
-  // the walk is over the children the list is given, and a component holding
-  // them is one child however many rows it renders. Everything about a place
-  // then stops following what the caller writes — a search reordering the rows
-  // moves nothing. Said once, and only for the shape that can be nothing else:
-  // the list's whole content is one child, and several rows came out of it.
-  let everyRowInOneSlotWarned = false;
-  const warnIfEveryRowInOneSlot = (slotId) => {
-    if (everyRowInOneSlotWarned) {
-      return;
-    }
-    const rootSlotIds = slotIdsByParent.get(null);
-    if (!rootSlotIds || rootSlotIds.length !== 1 || rootSlotIds[0] !== slotId) {
-      return;
-    }
-    if (ownerIdsBySlot.get(slotId).length < 2) {
-      return;
-    }
-    everyRowInOneSlotWarned = true;
-    console.warn(
-      `List: every row stands in the same slot, so they keep the order they first rendered in — reordering them (a search, a sort) will not move them. The list's rows must be its own children: give it the rows (or a <List.Items>), not a component rendering them.`,
-    );
-  };
-  const removeFromSlot = (slotId, ownerId) => {
-    const ownerIds = ownerIdsBySlot.get(slotId);
-    if (!ownerIds) {
-      return;
-    }
-    const index = ownerIds.indexOf(ownerId);
-    if (index !== -1) {
-      ownerIds.splice(index, 1);
-    }
-    if (ownerIds.length === 0) {
-      ownerIdsBySlot.delete(slotId);
-    }
-  };
-  // A slot the walk no longer names: whatever stood in it is gone, and so is
-  // whatever a walk inside it had declared.
-  const dropSlot = (slotId) => {
-    const ownerIds = ownerIdsBySlot.get(slotId);
-    if (ownerIds) {
-      for (const ownerId of ownerIds) {
-        ownerById.delete(ownerId);
-      }
-      ownerIdsBySlot.delete(slotId);
-    }
-    const childSlotIds = slotIdsByParent.get(slotId);
-    if (childSlotIds) {
-      slotIdsByParent.delete(slotId);
-      for (const childSlotId of childSlotIds) {
-        dropSlot(childSlotId);
-      }
-    }
-  };
-
-  const virtual = {
-    totalSignal,
-    pagesSignal,
-    refreshingSignal,
-    // What a run needs to know about the list it lives in: how many rows the
-    // list is willing to draw at once, which end it opens on, and how much
-    // room one row is given — a row whose content has not arrived must take
-    // exactly that, or the rows drawn would not reach where the list says they
-    // are.
-    renderBudget: 0,
-    scrolled: "start",
-    // The list is on its way somewhere: what the window frames is not what it
-    // is about to frame, so a run must not fetch for it (see holdWindow).
-    holdPending: false,
-    // Called by a run just before rows land in it: what is on screen must not
-    // move because something arrived above it. Set by the list itself.
-    captureAnchor: () => {},
-    horizontal: false,
-    virtualItemSizeSignal: null,
-    renderSkeleton: undefined,
-    // The children a walk stands over, in order — said in one call, before any
-    // of them renders, so that what a child asks next is answered against the
-    // whole picture and not against the children that happened to render
-    // first. Said again on every render of the walk, and heard only when
-    // something moved.
-    declareSlots: (parentSlotId, slotIds) => {
-      const slotIdsPrevious = slotIdsByParent.get(parentSlotId);
-      if (slotIdsPrevious && sameSlotIds(slotIdsPrevious, slotIds)) {
-        return;
-      }
-      if (slotIdsPrevious) {
-        const slotIdSet = new Set(slotIds);
-        for (const slotId of slotIdsPrevious) {
-          if (!slotIdSet.has(slotId)) {
-            dropSlot(slotId);
-          }
-        }
-      }
-      slotIdsByParent.set(parentSlotId, slotIds);
-      rebuildWalk();
-      refreshPlaces();
-    },
-    // Whether something has taken this slot for its own: what it renders
-    // inside is then its to place (a run draws its groups with their rows
-    // already placed), and no walk inside it has anything to declare.
-    slotHasOwner: (slotId) => ownerIdsBySlot.has(slotId),
-    // Whether any run of rows lives in this list: what makes a render window
-    // mean anything (see List's renderBudget).
-    hasRuns: () => locatorByOwner.size > 0,
-    setRowLocator: (ownerId, locate) => {
-      locatorByOwner.set(ownerId, locate);
-    },
-    dropRowLocator: (ownerId) => {
-      locatorByOwner.delete(ownerId);
-    },
-    // Where the row named by that id sits, asked of whoever holds it.
-    locateRow: (id) => {
-      for (const locate of locatorByOwner.values()) {
-        const index = locate(id);
-        if (index !== null) {
-          return index;
-        }
-      }
-      return null;
-    },
-    // The place the owner's rows start at — read from a signal, so that the
-    // owner is rendered again when it moves (see createListVirtual). Asked on
-    // every render, and answered without a second look for as long as the
-    // owner stands in the same slot for the same number of rows.
-    take: (ownerId, rowCount, slotId) => {
-      let owner = ownerById.get(ownerId);
-      if (owner) {
-        if (owner.slotId !== slotId || owner.rowCount !== rowCount) {
-          removeFromSlot(owner.slotId, ownerId);
-          addToSlot(slotId, ownerId);
-          owner.slotId = slotId;
-          owner.rowCount = rowCount;
-          placesStale = true;
-        }
-        if (placesStale) {
-          refreshPlaces();
-        }
-        return owner.placeSignal.value;
-      }
-      if (placesStale) {
-        refreshPlaces();
-      }
-      const rank = rankBySlot.get(slotId);
-      addToSlot(slotId, ownerId);
-      if (rank !== undefined && rank >= rankOwnedLast) {
-        owner = { slotId, rowCount, placeSignal: signal(rowTotal) };
-        ownerById.set(ownerId, owner);
-        rowTotal += rowCount;
-        rankOwnedLast = rank;
-        totalSignal.value = rowTotal;
-        return owner.placeSignal.value;
-      }
-      owner = { slotId, rowCount, placeSignal: signal(0) };
-      ownerById.set(ownerId, owner);
-      refreshPlaces();
-      return owner.placeSignal.value;
-    },
-    // The owner stands for no row of the collection: it was filtered out by a
-    // search, or it is gone.
-    drop: (ownerId) => {
-      const owner = ownerById.get(ownerId);
-      if (!owner) {
-        return;
-      }
-      ownerById.delete(ownerId);
-      removeFromSlot(owner.slotId, ownerId);
-      if (placesStale) {
-        return;
-      }
-      placesStale = true;
-      queueMicrotask(() => {
-        if (placesStale) {
-          refreshPlaces();
-        }
-      });
-    },
-  };
-  return virtual;
-};
-const sameSlotIds = (left, right) => {
-  if (left.length !== right.length) {
-    return false;
-  }
-  let index = 0;
-  while (index < left.length) {
-    if (left[index] !== right[index]) {
-      return false;
-    }
-    index++;
-  }
-  return true;
-};
-
-// Which of a run's rows mount, and which of them comes first. A run draws
-// every row of its window, and only the row itself knows, once it renders,
-// that it renders nothing (filtered out by a search, see ListItemUI). The
-// separator a row wears is the one at the gap above it, so the first row that
-// mounts wears none — and "first" is read off the rows that mount, not off
-// the collection. Rows say so as they render, in order, and the answer is a
-// signal: a row rendered from a kept vnode is rendered again when the row
-// before it leaves or comes back. Grouped rows are counted per group, the gap
-// above a group's first row being the group wrapper's own.
-const createRunRows = () => {
-  // rowId → { index, groupKey }
-  const rowById = new Map();
-  // groupKey (undefined outside groups) → the index of the group's first
-  // mounted row, -1 when none.
-  const firstSignalByGroup = new Map();
-  // Where the window starts: a run cut by the window has rows above its first
-  // drawn one, and so does a run standing after declared rows.
-  const windowFromSignal = signal(0);
-  // Groups whose first row left: recounted on the next ask, or at the end of
-  // the frame, whichever comes first.
-  const staleGroupKeys = new Set();
-
-  const firstSignalOf = (groupKey) => {
-    let firstSignal = firstSignalByGroup.get(groupKey);
-    if (!firstSignal) {
-      firstSignal = signal(-1);
-      firstSignalByGroup.set(groupKey, firstSignal);
-    }
-    return firstSignal;
-  };
-  const refresh = (groupKey) => {
-    staleGroupKeys.delete(groupKey);
-    let first = -1;
-    for (const row of rowById.values()) {
-      if (row.groupKey === groupKey && (first === -1 || row.index < first)) {
-        first = row.index;
-      }
-    }
-    firstSignalOf(groupKey).value = first;
-  };
-  const leave = (row) => {
-    if (firstSignalOf(row.groupKey).peek() !== row.index) {
-      return;
-    }
-    staleGroupKeys.add(row.groupKey);
-    queueMicrotask(() => {
-      if (staleGroupKeys.has(row.groupKey)) {
-        refresh(row.groupKey);
-      }
-    });
-  };
-
-  return {
-    setWindowFrom: (windowFrom) => {
-      windowFromSignal.value = windowFrom;
-    },
-    mount: (rowId, index, groupKey) => {
-      const row = rowById.get(rowId);
-      if (row) {
-        if (row.index === index && row.groupKey === groupKey) {
-          return;
-        }
-        leave(row);
-        row.index = index;
-        row.groupKey = groupKey;
-      } else {
-        rowById.set(rowId, { index, groupKey });
-      }
-      const firstSignal = firstSignalOf(groupKey);
-      const first = firstSignal.peek();
-      if (first === -1 || index < first) {
-        firstSignal.value = index;
-      }
-    },
-    unmount: (rowId) => {
-      const row = rowById.get(rowId);
-      if (!row) {
-        return;
-      }
-      rowById.delete(rowId);
-      leave(row);
-    },
-    isFirst: (index, groupKey) => {
-      if (staleGroupKeys.has(groupKey)) {
-        refresh(groupKey);
-      }
-      if (firstSignalOf(groupKey).value !== index) {
-        return false;
-      }
-      return groupKey !== undefined || windowFromSignal.value === 0;
-    },
-  };
-};
-
 // The walk that gives the list's children their places: a slot for each of
-// them, declared to the list's virtual all at once before any child renders,
+// them, declared to the list's rows all at once before any child renders,
 // and handed to the child through a provider of its own — which is what lets
 // the row reach it however deep the caller buried it in components of theirs.
 //
@@ -4302,9 +3874,9 @@ const createRunRows = () => {
 // however many rows the array holds. A child preact would not render (null,
 // a boolean) has no slot: it is not there.
 const ListDeclaredChildren = ({ children }) => {
-  const virtual = useContext(ListVirtualContext);
+  const listRows = useContext(ListRowsContext);
   const parentSlotId = useContext(ListSlotContext);
-  if (parentSlotId !== null && virtual.slotHasOwner(parentSlotId)) {
+  if (parentSlotId !== null && listRows.slotHasOwner(parentSlotId)) {
     return children;
   }
   const slotIds = [];
@@ -4315,7 +3887,7 @@ const ListDeclaredChildren = ({ children }) => {
     slotIds,
     declared,
   );
-  virtual.declareSlots(parentSlotId, slotIds);
+  listRows.declareSlots(parentSlotId, slotIds);
   return <>{declared}</>;
 };
 const declareChildren = (children, prefix, slotIds, declared) => {
@@ -4480,15 +4052,10 @@ export const ListItems = ({
   onRequestStateChange,
 }) => {
   const ownerId = useId();
-  const virtual = useContext(ListVirtualContext);
+  const listRows = useContext(ListRowsContext);
   const slotId = useContext(ListSlotContext);
   const renderWindow = useContext(RenderWindowContext);
   const separator = useContext(SeparatorContext);
-  const runRowsRef = useRef(null);
-  if (!runRowsRef.current) {
-    runRowsRef.current = createRunRows();
-  }
-  const runRows = runRowsRef.current;
   // The vnode drawn for a row, kept by item: a run rendering again (its window
   // moving, its first paint's budget giving way to the full one) hands preact
   // the same vnode for a row that has not changed, and preact leaves that
@@ -4509,7 +4076,7 @@ export const ListItems = ({
     onRequestStateChange,
   });
   const renderRowSkeleton =
-    renderSkeleton === undefined ? virtual.renderSkeleton : renderSkeleton;
+    renderSkeleton === undefined ? listRows.renderSkeleton : renderSkeleton;
   // A row on its way takes the room the list reserves for it: anything else
   // and the rows drawn stop short of where the scroll says they are. Read
   // where a row is actually missing, and not before: the size settles after
@@ -4521,9 +4088,9 @@ export const ListItems = ({
       return skeletonRow;
     }
     skeletonRow = {};
-    const virtualItemSize = virtual.virtualItemSizeSignal.value;
+    const virtualItemSize = listRows.virtualItemSizeSignal.value;
     if (virtualItemSize) {
-      if (virtual.horizontal) {
+      if (listRows.horizontal) {
         skeletonRow.rowMinWidth = `${virtualItemSize}px`;
       } else {
         skeletonRow.rowMinHeight = `${virtualItemSize}px`;
@@ -4532,7 +4099,7 @@ export const ListItems = ({
     return skeletonRow;
   };
 
-  const runStart = virtual.take(ownerId, store.rowCount, slotId);
+  const runStart = listRows.take(ownerId, store.rowCount, slotId);
   const runEnd = runStart + store.rowCount;
   // The two ways to count the same row. The list numbers its rows from its own
   // first one, whatever draws it; the store numbers the collection's, straight
@@ -4548,7 +4115,7 @@ export const ListItems = ({
     renderWindow.start > runStart ? renderWindow.start : runStart;
   const windowTo = renderWindow.end < runEnd ? renderWindow.end : runEnd;
   store.forget(rankOf(windowFrom), rankOf(windowTo));
-  runRows.setWindowFrom(windowFrom);
+  listRows.declareWindow(ownerId, windowFrom, windowTo);
 
   // The row answers to its own id when the item carries one — that is what
   // addresses it from outside (--navi-select, --navi-scroll, startAt) — and
@@ -4559,7 +4126,7 @@ export const ListItems = ({
   // Where a row named from outside actually sits. Only the run can answer:
   // rows it holds but does not draw are nowhere else — a list only knows the
   // rows it has drawn (they register themselves, see ListItemUI).
-  virtual.setRowLocator(ownerId, (id) => {
+  listRows.setRowLocator(ownerId, (id) => {
     let found = null;
     store.eachHeld((item, rank) => {
       const rowIndex = rowOf(rank);
@@ -4571,8 +4138,8 @@ export const ListItems = ({
   });
   useLayoutEffect(() => {
     return () => {
-      virtual.dropRowLocator(ownerId);
-      virtual.drop(ownerId);
+      listRows.dropRowLocator(ownerId);
+      listRows.drop(ownerId);
     };
   }, []);
 
@@ -4598,7 +4165,7 @@ export const ListItems = ({
   let askStart = missingStart;
   let askEnd = missingEnd;
   if (missingStart !== -1) {
-    const rowsPerPage = pageSize || virtual.renderBudget;
+    const rowsPerPage = pageSize || listRows.renderBudget;
     const holeSize = missingEnd - missingStart + 1;
     if (holeSize < rowsPerPage) {
       // Which way the page grows: away from the rows already held, which is
@@ -4742,7 +4309,7 @@ export const ListItems = ({
           key={`${ownerId}_failure_${failureFrom}`}
           className="navi_list_failed_rows"
           style={{
-            "--size-to-fill": `${failedRowCount * virtual.virtualItemSizeSignal.value}px`,
+            "--size-to-fill": `${failedRowCount * listRows.virtualItemSizeSignal.value}px`,
           }}
         >
           {renderError ? (
@@ -4783,9 +4350,7 @@ export const ListItems = ({
         pushRow(
           <ListRunSkeletonRow
             key={key}
-            run={runRows}
-            row={{ id: key, index: rowIndex, ...getSkeletonRow() }}
-            groupKey={groupKey}
+            row={{ id: key, index: rowIndex, ownerId, ...getSkeletonRow() }}
             separator={separator}
           >
             {rowVnode}
@@ -4804,8 +4369,7 @@ export const ListItems = ({
     if (
       rowVnodeKept &&
       rowVnodeKept.rowIndex === rowIndex &&
-      rowVnodeKept.refreshing === renderItemState.refreshing &&
-      rowVnodeKept.rowContextValue.groupKey === groupKey
+      rowVnodeKept.refreshing === renderItemState.refreshing
     ) {
       rowVnode = rowVnodeKept.vnode;
       rowContextValue = rowVnodeKept.rowContextValue;
@@ -4815,13 +4379,7 @@ export const ListItems = ({
       // fresh object on every render forces every consumer of it to render,
       // which is the row's own chain — the vnode handed back unchanged would
       // then buy nothing.
-      rowContextValue = {
-        id: key,
-        index: rowIndex,
-        item,
-        run: runRows,
-        groupKey,
-      };
+      rowContextValue = { id: key, index: rowIndex, item, ownerId };
       rowVnodesByItem.set(item, {
         vnode: rowVnode,
         rowContextValue,
@@ -4854,21 +4412,30 @@ export const ListItems = ({
   return rows;
 };
 
-// A run's row that has not arrived, standing where the real one will: it
-// mounts like any row (see createRunRows) and wears the separator of the gap
-// above it, the way a real row does in ListItemUI.
-const ListRunSkeletonRow = ({ run, row, groupKey, separator, children }) => {
+// A run's row that has not arrived, standing where the real one will. It never
+// reaches ListItemUI (see ListItemSkeletonResolver), so it is drawn among the
+// rows here, and wears the separator of the gap above it the way a real row
+// does there.
+const SKELETON_ROW_DATA = { skeleton: true };
+const ListRunSkeletonRow = ({ row, separator, children }) => {
+  const listRows = useContext(ListRowsContext);
+  const groupId = useContext(ListGroupContext);
   const rowId = useId();
-  run.mount(rowId, row.index, groupKey);
+  listRows.draw(rowId, {
+    ownerId: row.ownerId,
+    place: row.index,
+    groupId,
+    data: SKELETON_ROW_DATA,
+  });
   useLayoutEffect(() => {
     return () => {
-      run.unmount(rowId);
+      listRows.erase(rowId);
     };
   }, []);
   const rowVnode = (
     <ListRowContext.Provider value={row}>{children}</ListRowContext.Provider>
   );
-  if (!separator || run.isFirst(row.index, groupKey)) {
+  if (!separator || listRows.isFirst(rowId)) {
     return rowVnode;
   }
   return (
@@ -5042,7 +4609,7 @@ const useItemStore = ({
   // range askable again (see the request memory just above).
   const [failure, setFailure] = useState(null);
 
-  const virtual = useContext(ListVirtualContext);
+  const listRows = useContext(ListRowsContext);
   // The rows are there, which is what the list waits for to place itself on the
   // row it is held at (see placeWhereHeld). Said from an effect: a signal read
   // during this very render must not be written during it.
@@ -5051,12 +4618,12 @@ const useItemStore = ({
       return;
     }
     itemsHeldRef.current = true;
-    virtual.pagesSignal.value = virtual.pagesSignal.peek() + 1;
+    listRows.pagesSignal.value = listRows.pagesSignal.peek() + 1;
   });
   // Before the first answer a run does not know how many rows it stands for.
   // It stands for a windowful of them: a list that is about to be filled looks
   // like rows on their way, not like an empty list.
-  const rowCount = pages.count ?? count ?? virtual.renderBudget;
+  const rowCount = pages.count ?? count ?? listRows.renderBudget;
   // A run that never received anything has nothing to keep on screen: asking
   // again is its first ask, not a refresh.
   if (staleRef.current && pages.count === undefined) {
@@ -5066,9 +4633,9 @@ const useItemStore = ({
     if (!refreshing) {
       return null;
     }
-    virtual.refreshingSignal.value = virtual.refreshingSignal.peek() + 1;
+    listRows.refreshingSignal.value = listRows.refreshingSignal.peek() + 1;
     return () => {
-      virtual.refreshingSignal.value = virtual.refreshingSignal.peek() - 1;
+      listRows.refreshingSignal.value = listRows.refreshingSignal.peek() - 1;
     };
   }, [refreshing]);
 
@@ -5177,7 +4744,7 @@ const useItemStore = ({
       // how many rows there are, so it asks for the rows the list would open
       // on — counting back from the end when that is where it opens, the way
       // an HTTP range does.
-      const budget = virtual.renderBudget;
+      const budget = listRows.renderBudget;
       let start = missingStart;
       let end = missingEnd;
       let around;
@@ -5188,16 +4755,16 @@ const useItemStore = ({
       // The list is held on a row nothing on screen leads to: the rows it holds
       // do not contain it, so no window it could draw will ever bring it. Only
       // asking for it by name does.
-      const wanted = virtual.scrolled;
+      const wanted = listRows.scrolled;
       const askingAroundWantedRow =
         revalidating &&
         // Only while the hold stands: once the user has taken the list over,
         // the reading position is where they are, not where it opened.
-        virtual.holdPending &&
+        listRows.holdPending &&
         wanted &&
         typeof wanted === "object" &&
         wanted.id !== undefined &&
-        virtual.locateRow(wanted.id) === null;
+        listRows.locateRow(wanted.id) === null;
       if (askingAroundWantedRow) {
         around = wanted.id;
         // Where it stood when it was written down is enough to frame the ask;
@@ -5223,7 +4790,7 @@ const useItemStore = ({
           around = firstHeld.id;
         }
       } else if (pages.count === undefined) {
-        const scrolled = virtual.scrolled;
+        const scrolled = listRows.scrolled;
         if (scrolled === "end") {
           // Counting back from the end, the way an HTTP range does: a list
           // opening on its last rows asks for them before it knows how many
@@ -5262,7 +4829,7 @@ const useItemStore = ({
         const debugAsk = (outcome) => {
           debugScroll(
             `ask ${start}-${end}: ${outcome}`,
-            `(revalidating=${revalidating} holdPending=${virtual.holdPending} count=${pages.count})`,
+            `(revalidating=${revalidating} holdPending=${listRows.holdPending} count=${pages.count})`,
           );
         };
         if (start === -1) {
@@ -5272,7 +4839,7 @@ const useItemStore = ({
           return;
         }
         if (
-          virtual.holdPending &&
+          listRows.holdPending &&
           pages.count !== undefined &&
           !askingAroundWantedRow
         ) {
@@ -5375,7 +4942,7 @@ const useItemStore = ({
             : (page.count ?? pageStart + pageItems.length);
           // Before the rows land: what is on screen has to stay where it is,
           // and the DOM still shows the state to hold onto.
-          virtual.captureAnchor();
+          listRows.captureAnchor();
           if (revalidating) {
             // The rows held stood for a composition that has moved on; the
             // ones outside the window are forgotten and asked for again if the
@@ -5397,7 +4964,7 @@ const useItemStore = ({
               replace: revalidating,
             });
           }
-          virtual.pagesSignal.value = virtual.pagesSignal.peek() + 1;
+          listRows.pagesSignal.value = listRows.pagesSignal.peek() + 1;
           setPageVersion((version) => version + 1);
         };
         const failed = (error) => {
@@ -5463,10 +5030,16 @@ export const ListItemGroup = ({
   ...rest
 }) => {
   const groupId = useId();
-  const groupTracker = useItemTracker();
+  const listRows = useContext(ListRowsContext);
+  const group = listRows.group(groupId);
+  useLayoutEffect(() => {
+    return () => {
+      listRows.dropGroup(groupId);
+    };
+  }, []);
   const searchNoMatchMode = useContext(SearchNoMatchModeContext);
-  const groupItemCount = groupTracker.countSignal.value;
-  const groupNoMatchCount = groupTracker.noMatchCountSignal.value;
+  const groupItemCount = group.countSignal.value;
+  const groupNoMatchCount = group.noMatchCountSignal.value;
   // Every row of this group failed the search: the label has nothing left to
   // title. "remove" empties the group on its own (and hiddenWhileEmpty takes it
   // out of the flow), "muted" keeps the rows readable so the label stays useful
@@ -5529,9 +5102,9 @@ export const ListItemGroup = ({
         role="group"
         aria-labelledby={groupId}
       >
-        <GroupItemTrackerContext.Provider value={groupTracker}>
+        <ListGroupContext.Provider value={groupId}>
           <ListDeclaredChildren>{children}</ListDeclaredChildren>
-        </GroupItemTrackerContext.Provider>
+        </ListGroupContext.Provider>
       </ul>
     </ListItem>
   );
