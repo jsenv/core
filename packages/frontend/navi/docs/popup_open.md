@@ -585,15 +585,19 @@ frame it would cover it, and every press on the empty plan would open it.
 
 ### When a shared popup is still the right answer
 
-Two cases, and only two:
+Three cases, and only three:
 
 - **the press can come from anywhere** — a keyboard shortcut, a menu, a button,
   all opening the same thing. Written per press it would exist several times
   over, each with its own open state;
 - **the popup has to outlive its trigger** — a row that leaves while its dialog
-  is open (a list refreshing under it) takes a popup written inside it with it.
+  is open (a list refreshing under it) takes a popup written inside it with it;
+- **the popup is about more than what was pressed** — a viewer one walks
+  through, where the press only says which item it opens on. Written per item,
+  each popup would have to hold the whole row to be walkable. See
+  [popup_lift.md](./popup_lift.md#a-row-of-cards-one-popup-that-walks).
 
-Neither is "one popup per row of a list", which is what a picker is for.
+None of them is "one popup per row of a list", which is what a picker is for.
 
 Do not mix the two. A `<Form>` at the root of a picker's popup IS the mirrored
 control, so its value is the picker's value: handing the picker something else

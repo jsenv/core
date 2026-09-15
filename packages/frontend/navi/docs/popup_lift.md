@@ -18,6 +18,7 @@ and everything below follows from that one fact.
 - [Two kinds: a card, or a scene](#two-kinds-a-card-or-a-scene)
 - [The lifted node paints itself](#the-lifted-node-paints-itself)
 - [Same width, or a wider box](#same-width-or-a-wider-box)
+- [A row of cards: one popup that walks](#a-row-of-cards-one-popup-that-walks)
 - [What it costs, and where the time goes](#what-it-costs-and-where-the-time-goes)
 - [The wall, and the frame before the movement](#the-wall-and-the-frame-before-the-movement)
 - [What the browser does around it](#what-the-browser-does-around-it)
@@ -128,6 +129,113 @@ gaining room on the right, then the wider layout arrives.
 Both read well; what does not is a box that is neither: a card whose width the
 sheet changes by a few pixels for no reason the eye can name. Decide.
 
+## A row of cards: one popup that walks
+
+A row of small drawings — trophies on a profile, photos, badges — where
+pressing one brings it to the front, big, and from there the next one is
+reached without going back to the row. The popup is then about the whole row,
+and the press only says where it opens: one `Dialog` for the row, lifting,
+holding a `SlideContainer` the walk moves through.
+
+```jsx
+const currentKeySignal = useSignal(undefined);
+
+<Button
+  command="--navi-open"
+  commandFor={ZOOM_ID}
+  value={cup.key}
+  variant="bare"
+>
+  <Trophy medal={cup.medal} />
+</Button>
+
+<Dialog
+  id={ZOOM_ID}
+  animation="lifting"
+  mount="while-opened"
+  onOpen={(e) => {
+    currentKeySignal.value = e.detail.value;
+  }}
+  expand
+  data-slide-container-follows={SLIDES_ID}
+>
+  <SlideContainer id={SLIDES_ID} signal={currentKeySignal} expandY>
+    {cups.map((cup) => (
+      <Slide key={cup.key} area={cup.key}>
+        <Box data-lift={cup.key === currentKeySignal.value ? "" : undefined}>
+          <Trophy medal={cup.medal} size="min(46vw, 180px)" />
+        </Box>
+        <Circumstances cup={cup} />
+      </Slide>
+    ))}
+  </SlideContainer>
+  <SlideContainer.Left commandFor={SLIDES_ID} />
+  <SlideContainer.Right commandFor={SLIDES_ID} />
+</Dialog>
+```
+
+**One popup, because the popup is about the row.** A picker per drawing is the
+first thing one writes, and it is a dead end: each popup would have to hold the
+whole row to be walkable, so a row of N costs N×N slides, and a walk opened on
+the second drawing ends in a popup whose trigger is somewhere else. That is a
+reason of its own to share a popup, beside the two in
+[popup_open.md](./popup_open.md#when-a-shared-popup-is-still-the-right-answer):
+what the popup shows is more than what was pressed.
+
+**Which drawing it opens on is the command's `value`.** The press says it the
+way it says it everywhere ([opening it ON
+something](./popup_open.md#opening-it-on-something)), and `onOpen` writes it
+into the container's own signal — the press seeds the walk rather than keeping
+a second copy of it, and from then on the chevrons, the arrows and a thumb
+write the same signal (see [state_binding.md](./state_binding.md)).
+
+**`data-lift` moves with the walk, and has to be right on the first frame.**
+There is one lifted node per document, and here it is the current slide's
+drawing — a condition on the signal, not a mark written once on the popup. The
+lift takes the first `data-lift` it finds on the frame the popup opens:
+`mount="while-opened"` is what makes that frame the right one, since the
+content is built after `onOpen`, on the drawing the open named. Content kept
+across openings still carries the mark of the drawing the walk was left on, and
+the lift takes that one. The bill for rebuilding is the row's, not one
+card's — every slide is built on every opening (see
+[costs](#what-it-costs-and-where-the-time-goes)).
+
+**The trigger's box is what travels, so the button is the drawing and nothing
+else.** That is [the trigger's box is the card's
+box](#the-triggers-box-is-the-cards-box) read backwards: everything inside the
+button is stretched into the popup's box on the way. A tile is usually more
+than its drawing — a count floating in a corner, a level written
+underneath — and those belong outside the button, positioned against the tile
+or placed under it. Layout, not a prop.
+
+**The anchor comes with the press.** A button opening a popup names itself as
+the anchor ([the anchor](./popup_open.md#the-anchor), third rule), so the lift
+starts on the drawing that was pressed, with no `anchor` prop and no
+`triggerNaviCommand`. Writing an `anchor` prop is how to lose that: the prop is
+what answers when no press does, and it wins over the press.
+
+**The arrows reach the walk from anywhere on the surface.** Only slides go in a
+`SlideContainer`, so the chevrons pinned to the edges of a full-screen surface
+are outside it, and the keyboard, once it lands on one of them, walks nothing.
+`data-slide-container-follows={SLIDES_ID}` on the `Dialog` — the outermost
+element, which is what holds the keyboard when nothing in it does — makes the
+whole surface a follower.
+
+**It comes back into the box it came out of.** The closing lifts the current
+slide's node into the anchor of the opening, which is the drawing that was
+pressed: closing where one opened plays the opening backwards, closing three
+drawings further shrinks what is in front into a tile that is not its own. The
+anchor is read when the popup opens and kept for the close; nothing re-aims
+it. A row meant to be walked far therefore wants navi to gain a way to say
+where the closing goes — a finding to report rather than something to work
+around in the app.
+
+**A press on the surface that dismisses is `data-navi-popup-outside`.** Marking
+the see-through box as backdrop (see
+[popup_backdrop.md](./popup_backdrop.md)) is read on the press itself. A close
+written by hand on a click has to tell a click from the end of a swipe — and
+that guard is the sign the marker was missed.
+
 ## What it costs, and where the time goes
 
 Measured at CPU ×6 on the demo bench (`12_picker_card_demo.html#lift-bench`),
@@ -147,7 +255,9 @@ hot spot, plus `showModal()` and one layout. So the lever is the content:
 
 - **Build less, or earlier.** A sheet that is the same across openings keeps
   `mount="from-first-open"`. A sheet that must be rebuilt (`while-opened`)
-  pays its build on every tap; keep it as light as the page allows.
+  pays its build on every tap; keep it as light as the page allows. A popup
+  whose lifted node changes from one opening to the next has no choice — see
+  [a row of cards](#a-row-of-cards-one-popup-that-walks).
 - **Do not rebuild by accident.** A sheet whose code or data is tied to the
   address (`?edit=<id>` driving a route action) is thrown away when the
   address clears and rebuilt through a `null` render on the next opening —
