@@ -956,6 +956,15 @@ const css = /* css */ `
  *   whatever triggered the open (`e.detail.source`). A string is resolved via
  *   `document.getElementById` when the dialog opens — see popover.jsx's own
  *   `anchor` doc for why (mainly `defaultOpen`).
+ * @param {Element|{current: Element}|string} [props.liftAnchor] - Under
+ *   `animation="lifting"`, where the closing brings the box back to, when that
+ *   is no longer where it came from: a popup one walks through (a row of cards
+ *   shown one at a time) has something else in front by the time it closes,
+ *   and the box would otherwise fly back to the card the press opened on. Same
+ *   grammar as `anchor` (element, ref or id), resolved at the close, so
+ *   whatever names the card currently in front — an id built from the signal
+ *   the walk is bound to, a ref moved with it — is read then and not at the
+ *   opening. Left out, the box comes back to the anchor it came out of.
  * @param {boolean} [props.sizeFromAnchor=false] - Whether the dialog takes the
  *   anchor's width/height as a min-width/min-height floor
  *   (`--anchor-width`/`--anchor-height`). Off by default: unlike a popover,
@@ -1296,6 +1305,10 @@ const useDialogProps = (props) => {
     // Inert unless sizeFromAnchor below (see this file's top comment) —
     // Dialog's own positioning is never relative to it.
     anchor,
+    // Where a lift comes back to, when that is no longer the box it came out
+    // of. Read at the close, not kept from the opening — see
+    // resolveLiftAnchorElement.
+    liftAnchor,
     // Opt-in: --anchor-width/--anchor-height are only set when this is true.
     // See this prop's own JSDoc above for why a dialog does not follow its
     // trigger's box by default.
@@ -1513,6 +1526,27 @@ const useDialogProps = (props) => {
     return undefined;
   };
 
+  // A popup one walks through puts something else in front than what was
+  // pressed — a row of cards shown one at a time, the walk carrying on from
+  // the card the press opened on — and the box then has to come back to what
+  // is in front NOW, which only the caller knows. Resolved at the close for
+  // that reason: the element it names changes while the popup is open, so
+  // anything read at the opening would be the walk's starting point again.
+  const resolveLiftAnchorElement = () => {
+    if (typeof liftAnchor === "string") {
+      const liftAnchorElementById = document.getElementById(liftAnchor);
+      if (!liftAnchorElementById) {
+        console.warn(
+          `Dialog: liftAnchor="${liftAnchor}" did not match any element`,
+        );
+      }
+      return liftAnchorElementById;
+    }
+    // A ref is unwrapped even when it holds nothing, the same way `anchor` is:
+    // the ref object itself has no box to come back to.
+    return "current" in liftAnchor ? liftAnchor.current : liftAnchor;
+  };
+
   // The dialog and the anchor are the same box at two sizes, so the opening
   // and the closing are one becoming the other. The browser draws that itself
   // provided the change happens between its two pictures, which is what
@@ -1528,13 +1562,23 @@ const useDialogProps = (props) => {
           applyChange();
           return;
         }
-        const anchorElement = opened
-          ? resolveAnchorElement(event)
-          : anchorElementRef.current;
+        let anchorElement;
+        if (opened) {
+          anchorElement = resolveAnchorElement(event);
+        } else if (liftAnchor) {
+          anchorElement = resolveLiftAnchorElement();
+        } else {
+          anchorElement = anchorElementRef.current;
+        }
         if (!anchorElement) {
           if (import.meta.dev && opened) {
             console.warn(
               `[navi] Dialog has animation="lifting" and no anchor to lift out of, so it simply appears. The anchor is whatever opened it — a <Button command="--navi-open">, the "source" given to triggerNaviCommand — or the "anchor" prop.`,
+            );
+          }
+          if (import.meta.dev && !opened && liftAnchor) {
+            console.warn(
+              `[navi] Dialog has animation="lifting" and a "liftAnchor" naming nothing on screen, so it simply closes. The element it names is where the box comes back to, and it has to be in the document at the close.`,
             );
           }
           applyChange();

@@ -173,7 +173,8 @@ to start when unsure which export solves a problem.
   front. `data-lift` names what is lifted and is rendered at once; the
   trigger's box is the card's box; `lift="box"` for a card, `"scene"` for a
   drawing framed the same way; one popup for a whole row, walked from the front
-  through a `SlideContainer`; what an opening costs and where the time goes;
+  through a `SlideContainer`, `liftAnchor` naming where the closing comes back
+  to; what an opening costs and where the time goes;
   the wall at half strength on the frame before the movement. Read before
   giving a `Dialog` or a `Picker` `animation="lifting"`, or before measuring
   why one opens slowly.

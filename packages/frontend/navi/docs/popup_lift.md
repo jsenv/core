@@ -39,6 +39,10 @@ lifts the card; a dialog that is the card wears `data-lift` itself.
 </Picker>
 ```
 
+That names one end. The other is the anchor — the box the opening came out of,
+and the box the closing goes back into unless `liftAnchor` names another (see
+[a row of cards](#a-row-of-cards-one-popup-that-walks)).
+
 The opening waits for it. What a popup holds often arrives after the tap —
 code fetched for the address, a row fetched for the popup — and a movement
 started before the lifted node exists would carry the card into an empty box.
@@ -141,6 +145,7 @@ holding a `SlideContainer` the walk moves through.
 const currentKeySignal = useSignal(undefined);
 
 <Button
+  id={`cup_tile_${cup.key}`}
   command="--navi-open"
   commandFor={ZOOM_ID}
   value={cup.key}
@@ -156,6 +161,7 @@ const currentKeySignal = useSignal(undefined);
   onOpen={(e) => {
     currentKeySignal.value = e.detail.value;
   }}
+  liftAnchor={`cup_tile_${currentKeySignal.value}`}
   expand
   data-slide-container-follows={SLIDES_ID}
 >
@@ -196,8 +202,10 @@ lift takes the first `data-lift` it finds on the frame the popup opens:
 `mount="while-opened"` is what makes that frame the right one, since the
 content is built after `onOpen`, on the drawing the open named. Content kept
 across openings still carries the mark of the drawing the walk was left on, and
-the lift takes that one. The bill for rebuilding is the row's, not one
-card's — every slide is built on every opening (see
+the lift takes that one. The closing reads it the same way, and a mark left on
+a slide the walk moved off is a picture taken where that slide stands — off
+screen — so the box flies in from outside the surface. The bill for rebuilding
+is the row's, not one card's — every slide is built on every opening (see
 [costs](#what-it-costs-and-where-the-time-goes)).
 
 **The trigger's box is what travels, so the button is the drawing and nothing
@@ -221,14 +229,15 @@ are outside it, and the keyboard, once it lands on one of them, walks nothing.
 element, which is what holds the keyboard when nothing in it does — makes the
 whole surface a follower.
 
-**It comes back into the box it came out of.** The closing lifts the current
-slide's node into the anchor of the opening, which is the drawing that was
-pressed: closing where one opened plays the opening backwards, closing three
-drawings further shrinks what is in front into a tile that is not its own. The
-anchor is read when the popup opens and kept for the close; nothing re-aims
-it. A row meant to be walked far therefore wants navi to gain a way to say
-where the closing goes — a finding to report rather than something to work
-around in the app.
+**Where it comes back to is named too.** The opening's anchor is the drawing
+that was pressed, and a walk that moved on has something else in front by the
+time it closes: left alone, the silver cup flies home into the gold cup's
+tile. `liftAnchor` says the other end — same grammar as `anchor` (element, ref
+or id), read at the close rather than kept from the opening, so what names the
+tile currently in front is read then. An id built from the signal the walk is
+bound to is the shortest way to say it, the row's tiles carrying the matching
+ids. Left out, the box comes back where it came from, which is right exactly
+as long as nothing walked.
 
 **A press on the surface that dismisses is `data-navi-popup-outside`.** Marking
 the see-through box as backdrop (see
