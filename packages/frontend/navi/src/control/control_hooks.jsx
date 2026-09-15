@@ -303,6 +303,26 @@ export const useControlProps = (
       naviProxyTarget.focus({ focusVisible: false });
       return true;
     };
+    // A checkable drawn for another checkable (navi-control-proxy-for) holds
+    // nothing of its own: what it paints comes from the control it stands for
+    // (see proxy_mirror_state) and the press goes back the same way — dealt to
+    // the real control, which is where the refusal, the action and the group
+    // above it all answer, once. A button proxy is not in this case: its
+    // command says what its press does.
+    const transferPressToTarget = (clickEvent) => {
+      if (!isCheckable) {
+        return false;
+      }
+      const proxyTarget = findControlProxyTarget(clickEvent.currentTarget);
+      if (!proxyTarget) {
+        return false;
+      }
+      // Undoes the browser's toggle on the proxy: a tick it keeps on its own
+      // is a selection nobody made.
+      clickEvent.preventDefault();
+      proxyTarget.click();
+      return true;
+    };
     const syncUIStateWithDOM = (e) => {
       const controlEl = e.currentTarget || uiStateController.ref.current;
       const value = readControlValue(controlEl);
@@ -931,7 +951,11 @@ export const useControlProps = (
       transferFocusToTarget(e);
     };
     const onClick = (e) => {
-      applyEventReaction("click", e, gateCallerHandler(props.onClick, e));
+      if (transferPressToTarget(e)) {
+        props.onClick?.(e);
+      } else {
+        applyEventReaction("click", e, gateCallerHandler(props.onClick, e));
+      }
       transferFocusToTarget(e);
     };
     const onKeyDown = (e) => {

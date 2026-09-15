@@ -19,9 +19,10 @@
  * </div>
  * ```
  *
- * When the proxy is interacted with, navi events are forwarded to the real
- * control so validation, state management, and form submission all work
- * through the real input.
+ * A press on a checkable proxy is dealt to the real control, and so is the
+ * focus: state management, validation and form submission then all happen
+ * where the value lives. A proxy that says what its press does — a button
+ * carrying `command="--navi-check"` — answers the press itself instead.
  *
  * Note: an alternative design would be to require users to always instantiate
  * the input explicitly — e.g. `<Selectable.Input headless />` when they don't
