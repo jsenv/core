@@ -1638,6 +1638,7 @@ const PickerFirstResolver = (props) => {
  *   calloutStatus?: "info" | "warning" | "error" | "success" | "none",
  *   calloutIcon?: boolean,
  *   calloutCloseButton?: boolean,
+ *   calloutCloseByScroll?: boolean | number,
  *   popoverMode?: "nearby" | "overlay",
  *   positionArea?: string,
  *   popupWidthFitContent?: boolean,
@@ -1815,6 +1816,10 @@ const PickerFirstResolver = (props) => {
  *   outside, and a `--navi-close` from what it holds — for a tooltip that is
  *   read rather than dismissed. Off by nobody's default: a text trigger
  *   keeps the cross unless told not to.
+ * @param {boolean|number} [calloutCloseByScroll=false] `mode="callout"`: close
+ *   the callout once the page has scrolled under it — `true` for a short
+ *   distance, a number for that many pixels. For a tooltip read in place,
+ *   which scrolling away is done with.
  * @param {"nearby"|"overlay"} [popoverMode="nearby"] "overlay" lays the popover
  *   over the trigger, "nearby" leaves a small gap below it.
  * @param {string} [positionArea] Where the popup goes — relative to the trigger

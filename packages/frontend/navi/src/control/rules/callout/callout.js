@@ -24,6 +24,7 @@ import {
   getElementSignature,
   getFirstVisuallyVisibleAncestor,
   getPaddingSizes,
+  getScrollContainerSet,
   getVisuallyVisibleInfo,
   measureLongestVisualLineWidth,
   pickPositionRelativeTo,
@@ -52,6 +53,11 @@ import {
 
 // Unique for the page's lifetime: a caller may write the id in a commandfor.
 let calloutCount = 0;
+
+// How far `closeByScroll: true` lets the page move under the callout before
+// dismissing it: small enough that any deliberate scroll gesture reaches it,
+// large enough to survive the pixel or two a trackpad rests on.
+const CLOSE_BY_SCROLL_DISTANCE = 10;
 
 const css = /* css */ `
   /* jsenv-css-opaque: same as dialog.jsx, cascade order. */
@@ -330,6 +336,12 @@ const css = /* css */ `
  *   callouts apart.
  * @param {Function} [options.onClose] - Callback when callout is closed
  * @param {boolean} [options.closeOnClickOutside] - Whether to close on outside clicks (defaults to true for "info" status)
+ * @param {boolean|number} [options.closeByScroll=false] - Dismiss the callout once the page has
+ *   scrolled under it. `true` uses a short distance, a number sets it in pixels
+ *   (`closeByScroll: 100` waits for 100px). Measured from where the scroll containers stood when
+ *   the callout opened, so scrolling back cancels nothing but a round trip shorter than the
+ *   distance leaves it open. Unlike an outside click it also dismisses an "error" callout: the
+ *   caller asked for it explicitly.
  * @param {Event} [options.openingEvent] - The gesture the callout belongs to. It names the
  *   opener — `currentTarget` while the event is still dispatching, `target` once it is over,
  *   so awaiting before opening changes nothing — and the opener is the one part of the anchor
@@ -393,6 +405,7 @@ export const openCallout = (
     onClose,
     closeOnClickOutside = status === "info",
     closeOnFocusLeave = closeOnClickOutside,
+    closeByScroll = false,
     openingEvent,
     reopen = "toggle",
     showErrorStack,
@@ -1106,6 +1119,55 @@ export const openCallout = (
     anchorElement.callout = callout;
     addTeardown(() => {
       delete anchorElement.callout;
+    });
+  }
+
+  close_by_scroll: {
+    if (!closeByScroll) {
+      break close_by_scroll;
+    }
+    const distanceToClose =
+      closeByScroll === true ? CLOSE_BY_SCROLL_DISTANCE : closeByScroll;
+    // Read here rather than at the top of openCallout: the open scrolls the
+    // anchor into view itself, and that scroll is the callout arriving, not the
+    // user leaving it behind.
+    const scrollPositionAtOpenMap = new Map();
+    for (const scrollContainer of getScrollContainerSet(
+      anchorElement || document.body,
+    )) {
+      scrollPositionAtOpenMap.set(scrollContainer, {
+        left: scrollContainer.scrollLeft,
+        top: scrollContainer.scrollTop,
+      });
+    }
+    const onScroll = (event) => {
+      for (const [
+        scrollContainer,
+        scrollPositionAtOpen,
+      ] of scrollPositionAtOpenMap) {
+        const xDistance = Math.abs(
+          scrollContainer.scrollLeft - scrollPositionAtOpen.left,
+        );
+        const yDistance = Math.abs(
+          scrollContainer.scrollTop - scrollPositionAtOpen.top,
+        );
+        const distance = Math.hypot(xDistance, yDistance);
+        if (distance < distanceToClose) {
+          continue;
+        }
+        debug(
+          event,
+          `callout close (scrolled ${Math.round(distance)}px, ${distanceToClose}px is enough)`,
+        );
+        requestClose(event, "scroll");
+        return;
+      }
+    };
+    // A scroll event does not bubble, so one listener hears every container
+    // only from the capture phase.
+    document.addEventListener("scroll", onScroll, true);
+    addTeardown(() => {
+      document.removeEventListener("scroll", onScroll, true);
     });
   }
 

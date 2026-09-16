@@ -982,6 +982,7 @@ const PickerContentInsidePopup = (props) => {
     calloutStatus,
     calloutIcon,
     calloutCloseButton,
+    calloutCloseByScroll,
     ...rest
   } = props;
   const isPopover = mode === "popover";
@@ -1028,6 +1029,7 @@ const PickerContentInsidePopup = (props) => {
           status={calloutStatus}
           icon={calloutIcon}
           closeButton={calloutCloseButton}
+          closeByScroll={calloutCloseByScroll}
         >
           <PopupModeContext.Provider value={mode}>
             {children}
@@ -1149,6 +1151,7 @@ const PickerCalloutPopup = ({
   status,
   icon,
   closeButton,
+  closeByScroll,
   onnavi_request_open,
   onnavi_request_close,
   onnavi_request_confirm,
@@ -1194,6 +1197,7 @@ const PickerCalloutPopup = ({
       status: status === "none" ? undefined : status,
       icon,
       closeButton,
+      closeByScroll,
       anchorElement,
       // The request, chained to the press that made it: the callout reads the
       // mousedown off it to wait for the release before listening for a click

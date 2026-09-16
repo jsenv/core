@@ -4,7 +4,7 @@
  */
 import { installImportMetaCssBuild, windowHeightSignal, windowWidthSignal, visualViewportHeightSignal, visualViewportWidthSignal, getAppHeight, getAppWidth, coarsePointerSignal, smallTouchScreenSignal } from "./jsenv_navi_side_effects.js";
 export { disableVirtualKeyboardOverlay } from "./jsenv_navi_side_effects.js";
-import { elementIsFocusable, createIterableWeakSet, dispatchInternalCustomEvent, dispatchCustomEvent, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, getElementSignature, createPubSub, findEvent, createValueEffect, findFocusDelegateTarget, findFocusable, scrollIntoViewThroughScrollables, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, keepTouchRefusable, isPressDrivenClick, waitForTap, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, dragSourceThatStoodDown, markDragSource, refuseDragTo, startDragTo, installPanZoom, createInternalCustomEvent, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, normalizeStyles, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, getScrollContainer, watchWheelTravel, scrollRoomTowards, isTouchDrivenEvent, scrollIntoViewScoped, closestOpenableAncestor, isAncestorOpen, isDisplayedDespiteClosedAncestor, observeAncestorOpenState, getAncestorOpenType, findBefore, findAfter, resolveCSSSize, hasCSSSizeUnit, releaseWheelGesture, getScrollIntoViewScopedOffsets, wheelGestureIsTakenFrom, claimWheelGesture, initFocusGroup, stringifyStyle as stringifyStyle$1, resolveOklchLightness, contrastColor, trapScrollInside, parsePositionArea, snapToPixel, trapFocusInside, onAncestorReopen, isPressDisputedByDrag, canScroll, measureWidestChildRow, performTabNavigation, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
+import { elementIsFocusable, createIterableWeakSet, dispatchInternalCustomEvent, dispatchCustomEvent, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, getElementSignature, createPubSub, findEvent, createValueEffect, findFocusDelegateTarget, findFocusable, scrollIntoViewThroughScrollables, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, getScrollContainerSet, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, keepTouchRefusable, isPressDrivenClick, waitForTap, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, dragSourceThatStoodDown, markDragSource, refuseDragTo, startDragTo, installPanZoom, createInternalCustomEvent, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, normalizeStyles, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, getScrollContainer, watchWheelTravel, scrollRoomTowards, isTouchDrivenEvent, scrollIntoViewScoped, closestOpenableAncestor, isAncestorOpen, isDisplayedDespiteClosedAncestor, observeAncestorOpenState, getAncestorOpenType, findBefore, findAfter, resolveCSSSize, hasCSSSizeUnit, releaseWheelGesture, getScrollIntoViewScopedOffsets, wheelGestureIsTakenFrom, claimWheelGesture, initFocusGroup, stringifyStyle as stringifyStyle$1, resolveOklchLightness, contrastColor, trapScrollInside, parsePositionArea, snapToPixel, trapFocusInside, onAncestorReopen, isPressDisputedByDrag, canScroll, measureWidestChildRow, performTabNavigation, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
 export { chainEvent, clickIsSuppressed, contrastColor, createDragGestureController, dragAfterIntent, findEvent, markDragSource, startDragTo } from "@jsenv/dom";
 import { signal, computed, effect, untracked, batch, useComputed, useSignal } from "@preact/signals";
 import { isValidElement, createContext, render, h, toChildArray, options, cloneElement, createElement, Fragment as Fragment$1 } from "preact";
@@ -6438,6 +6438,11 @@ installImportMetaCssBuild(import.meta);
 // Unique for the page's lifetime: a caller may write the id in a commandfor.
 let calloutCount = 0;
 
+// How far `closeByScroll: true` lets the page move under the callout before
+// dismissing it: small enough that any deliberate scroll gesture reaches it,
+// large enough to survive the pixel or two a trackpad rests on.
+const CLOSE_BY_SCROLL_DISTANCE = 10;
+
 const css$13 = /* css */ `
   /* jsenv-css-opaque: same as dialog.jsx, cascade order. */
   @layer navi {
@@ -6715,6 +6720,12 @@ const css$13 = /* css */ `
  *   callouts apart.
  * @param {Function} [options.onClose] - Callback when callout is closed
  * @param {boolean} [options.closeOnClickOutside] - Whether to close on outside clicks (defaults to true for "info" status)
+ * @param {boolean|number} [options.closeByScroll=false] - Dismiss the callout once the page has
+ *   scrolled under it. `true` uses a short distance, a number sets it in pixels
+ *   (`closeByScroll: 100` waits for 100px). Measured from where the scroll containers stood when
+ *   the callout opened, so scrolling back cancels nothing but a round trip shorter than the
+ *   distance leaves it open. Unlike an outside click it also dismisses an "error" callout: the
+ *   caller asked for it explicitly.
  * @param {Event} [options.openingEvent] - The gesture the callout belongs to. It names the
  *   opener — `currentTarget` while the event is still dispatching, `target` once it is over,
  *   so awaiting before opening changes nothing — and the opener is the one part of the anchor
@@ -6778,6 +6789,7 @@ const openCallout = (
     onClose,
     closeOnClickOutside = status === "info",
     closeOnFocusLeave = closeOnClickOutside,
+    closeByScroll = false,
     openingEvent,
     reopen = "toggle",
     showErrorStack,
@@ -7472,6 +7484,55 @@ const openCallout = (
     anchorElement.callout = callout;
     addTeardown(() => {
       delete anchorElement.callout;
+    });
+  }
+
+  close_by_scroll: {
+    if (!closeByScroll) {
+      break close_by_scroll;
+    }
+    const distanceToClose =
+      closeByScroll === true ? CLOSE_BY_SCROLL_DISTANCE : closeByScroll;
+    // Read here rather than at the top of openCallout: the open scrolls the
+    // anchor into view itself, and that scroll is the callout arriving, not the
+    // user leaving it behind.
+    const scrollPositionAtOpenMap = new Map();
+    for (const scrollContainer of getScrollContainerSet(
+      anchorElement || document.body,
+    )) {
+      scrollPositionAtOpenMap.set(scrollContainer, {
+        left: scrollContainer.scrollLeft,
+        top: scrollContainer.scrollTop,
+      });
+    }
+    const onScroll = (event) => {
+      for (const [
+        scrollContainer,
+        scrollPositionAtOpen,
+      ] of scrollPositionAtOpenMap) {
+        const xDistance = Math.abs(
+          scrollContainer.scrollLeft - scrollPositionAtOpen.left,
+        );
+        const yDistance = Math.abs(
+          scrollContainer.scrollTop - scrollPositionAtOpen.top,
+        );
+        const distance = Math.hypot(xDistance, yDistance);
+        if (distance < distanceToClose) {
+          continue;
+        }
+        debug(
+          event,
+          `callout close (scrolled ${Math.round(distance)}px, ${distanceToClose}px is enough)`,
+        );
+        requestClose(event, "scroll");
+        return;
+      }
+    };
+    // A scroll event does not bubble, so one listener hears every container
+    // only from the capture phase.
+    document.addEventListener("scroll", onScroll, true);
+    addTeardown(() => {
+      document.removeEventListener("scroll", onScroll, true);
     });
   }
 
@@ -8256,7 +8317,7 @@ const generateSvgWithoutArrow = (width, height) => {
  *
  * Usage:
  *   const myToken = createOpenToken();
- *   calloutManager.addOpenToken(myToken, { message, status, testId, anchorElement, event, skipFocus, onClose });
+ *   calloutManager.addOpenToken(myToken, { message, status, testId, closeByScroll, anchorElement, event, skipFocus, onClose });
  *   calloutManager.removeOpenToken(myToken, event);
  *   calloutManager.requestCloseCallout(event, debugReason); // force-close all
  *   calloutManager.callout  // current open callout or null
@@ -8313,6 +8374,7 @@ const createCalloutManager = (
       icon: tokenData.icon,
       closeButton: tokenData.closeButton,
       closeOnClickOutside: tokenData.status !== "error",
+      closeByScroll: tokenData.closeByScroll,
       anchorElement,
       openingEvent: event,
       skipFocus: tokenData.skipFocus,
@@ -8428,6 +8490,7 @@ const createCalloutManager = (
       testId,
       icon,
       closeButton,
+      closeByScroll,
       anchorElement,
       event,
       skipFocus,
@@ -8444,6 +8507,7 @@ const createCalloutManager = (
       testId,
       icon,
       closeButton,
+      closeByScroll,
       skipFocus,
       onClose,
       // Resolved as the token is added, and kept with it: a token shown later
@@ -64019,6 +64083,7 @@ const PickerContentInsidePopup = props => {
     calloutStatus,
     calloutIcon,
     calloutCloseButton,
+    calloutCloseByScroll,
     ...rest
   } = props;
   const isPopover = mode === "popover";
@@ -64061,6 +64126,7 @@ const PickerContentInsidePopup = props => {
       status: calloutStatus,
       icon: calloutIcon,
       closeButton: calloutCloseButton,
+      closeByScroll: calloutCloseByScroll,
       children: jsx(PopupModeContext.Provider, {
         value: mode,
         children: children
@@ -64154,6 +64220,7 @@ const PickerCalloutPopup = ({
   status,
   icon,
   closeButton,
+  closeByScroll,
   onnavi_request_open,
   onnavi_request_close,
   onnavi_request_confirm,
@@ -64193,6 +64260,7 @@ const PickerCalloutPopup = ({
       status: status === "none" ? undefined : status,
       icon,
       closeButton,
+      closeByScroll,
       anchorElement,
       // The request, chained to the press that made it: the callout reads the
       // mousedown off it to wait for the release before listening for a click
