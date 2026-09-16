@@ -226,6 +226,15 @@
                   minDuration={30}
                 />
               </Variant>
+              <Variant caption="minuteStep={60} minDuration={60} hours={{ min: 5, max: 24 }}">
+                <TimeRangeWheel
+                  defaultValue={{ start: "21:00", end: "24:00" }}
+                  minuteStep={60}
+                  minDuration={60}
+                  hours={{ min: 5, max: 24 }}
+                  loop={false}
+                />
+              </Variant>
               <Variant caption="minDuration={0}">
                 <TimeRangeWheel
                   defaultValue={{ start: "09:00", end: "10:00" }}

@@ -128,12 +128,10 @@ export const minutesFromTime = (time) => {
   return parts.hour * 60 + parts.minute;
 };
 
+// Not folded back into the day: 1440 is "24:00", the end of the day a span can
+// run into.
 export const timeFromMinutes = (minutes) => {
-  const inDay =
-    ((minutes % MINUTES_PER_DAY) + MINUTES_PER_DAY) % MINUTES_PER_DAY;
-  return `${padTwo(Math.floor(inDay / 60))}:${padTwo(inDay % 60)}`;
+  return `${padTwo(Math.floor(minutes / 60))}:${padTwo(minutes % 60)}`;
 };
-
-const MINUTES_PER_DAY = 24 * 60;
 
 const padTwo = (value) => String(value).padStart(2, "0");

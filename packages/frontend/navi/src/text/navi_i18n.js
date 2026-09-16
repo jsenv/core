@@ -129,6 +129,11 @@ naviI18n.addAll({
     en: ":",
     fr: "h",
   },
+  // A time of whole hours has nothing to stand between: what follows the hour.
+  "time.hour_suffix": {
+    en: "",
+    fr: "h",
+  },
   "time.hour_label": {
     en: "Hours",
     fr: "Heures",

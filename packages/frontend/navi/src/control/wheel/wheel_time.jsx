@@ -5,7 +5,9 @@
  * by digit puts a field through ("1" on its way to "18").
  *
  * `TimeWheel` is a `WheelGroup` of two `Wheel`s and carries a single "HH:MM",
- * like `TimeSpin` — the two are interchangeable in a form. `TimeRangeWheel` is
+ * like `TimeSpin` — the two are interchangeable in a form. A time of whole
+ * hours (`minuteStep={60}`) is one wheel and still an "HH:MM": the step is the
+ * precision, so there is no second prop to contradict it. `TimeRangeWheel` is
  * two of those and carries `{ start, end }`, with the rule such a pair always
  * has: the end comes after the start. Here that rule is lived rather than
  * checked — a bound settling pushes the other out of its way, so what the
@@ -58,8 +60,10 @@ const css = /* css */ `
 `;
 
 const HOUR_COUNT = 24;
+const END_OF_DAY_HOUR = 24;
 const MINUTES_PER_HOUR = 60;
 const LAST_MINUTE_OF_DAY = 23 * 60 + 59;
+const END_OF_DAY = END_OF_DAY_HOUR * MINUTES_PER_HOUR;
 
 /**
  * @type {import("preact").FunctionComponent<{
@@ -79,16 +83,21 @@ const LAST_MINUTE_OF_DAY = 23 * 60 + 59;
  * }>}
  * @param {string} [value] The time shown, as "HH:MM".
  * @param {number} [minuteStep=1] How many minutes apart the values on the
- *   minute wheel are — 15 for quarters of an hour.
+ *   minute wheel are — 15 for quarters of an hour. At 60 the time is a whole
+ *   hour: there is no minute wheel at all, the value stays "HH:MM" ("08:00"),
+ *   and a value arriving with minutes is shown on its hour.
  * @param {{min?: number, max?: number}|number[]} [hours] Which hours the wheel
  *   offers: `{ min: 7, max: 21 }` for a day that starts and ends somewhere, or
- *   the list itself. All 24 by default. Rows nobody will ever land on are rows
- *   in the way.
+ *   the list itself. 0 to 23 by default. Rows nobody will ever land on are rows
+ *   in the way. 24 is the end of the day ("24:00", midnight at the end of a
+ *   span) and has no minutes: turned onto it, the minute wheel goes back to 0.
  * @param {boolean} [loop=true] The wheels go round: 23h then 0h, 59 minutes
  *   then 0. What a clock does. Say `loop={false}` for two ends one cannot turn
  *   past.
  * @param {import("preact").ComponentChildren} [separator] What is written
- *   between the hours and the minutes. "h" in French, ":" elsewhere.
+ *   between the hours and the minutes. "h" in French, ":" elsewhere. In a time
+ *   of whole hours it follows each hour on its row instead ("8h"), and nothing
+ *   is written by default outside French.
  * @param {string} [placeholder] What the wheels show while the time holds
  *   nothing, as "HH:MM". Wheels have no blank row to land on, so their
  *   placeholder is a position rather than a grey word — shown, but not an
@@ -103,13 +112,22 @@ export const TimeWheel = ({
   hours,
   loop = true,
   placeholder,
-  separator = naviI18n("time.hour_separator"),
+  separator,
   hourLabel = naviI18n("time.hour_label"),
   minuteLabel = naviI18n("time.minute_label"),
   size,
   wheelProps,
+  onnavi_wheel_settle,
   ...rest
 }) => {
+  const wholeHours = minuteStep >= MINUTES_PER_HOUR;
+  if (separator === undefined) {
+    separator = naviI18n(
+      wholeHours ? "time.hour_suffix" : "time.hour_separator",
+    );
+  }
+  const hourWheelRef = useRef(null);
+  const minuteWheelRef = useRef(null);
   const minutes = useMemo(() => {
     const minuteList = [];
     let minute = 0;
@@ -127,17 +145,44 @@ export const TimeWheel = ({
     placeholder,
     rest,
     aggregateTime,
-    distributeTime,
+    (groupState, child) => distributeTime(groupState, child, minuteStep),
   );
   const placeholderParts = parseTimeParts(placeholder);
+
+  // The end of the day has no minutes. The time already reads "24:00" whatever
+  // the minute wheel shows (see aggregateTime); on settle the wheel is brought
+  // back to 0 so what is drawn is what is held.
+  const endOfDayHasNoMinutes = (e) => {
+    const hourEl = hourWheelRef.current;
+    const minuteEl = minuteWheelRef.current;
+    if (!hourEl || !minuteEl) {
+      return;
+    }
+    if (getUIStateFromElement(hourEl) !== END_OF_DAY_HOUR) {
+      return;
+    }
+    if (getUIStateFromElement(minuteEl) === 0) {
+      return;
+    }
+    dispatchRequestSetUIState(minuteEl, 0, { event: e });
+  };
 
   return (
     <WheelGroup
       aggregateChildStates={aggregateChildStates}
       distributeChildUIState={distributeChildUIState}
+      onnavi_wheel_settle={(e) => {
+        if (!wholeHours) {
+          endOfDayHasNoMinutes(e);
+        }
+        if (onnavi_wheel_settle) {
+          onnavi_wheel_settle(e);
+        }
+      }}
       {...rest}
     >
       <Wheel
+        ref={hourWheelRef}
         name="hour"
         type="integer"
         bounded={!loop}
@@ -148,28 +193,46 @@ export const TimeWheel = ({
       >
         {hourList.map((hour) => (
           <Wheel.Item key={hour} value={hour} paddingX="s">
-            {padTwo(hour)}
+            {/* A whole hour carries its unit on its own row, where it reads
+                "8h" — a separator standing after the wheel would read "8 h". */}
+            {wholeHours ? (
+              <>
+                {hour}
+                {separator}
+              </>
+            ) : (
+              padTwo(hour)
+            )}
           </Wheel.Item>
         ))}
       </Wheel>
-      {/* The separator is written as big as the times it stands between: one
-          time, one size. */}
-      <WheelGroup.Separator size={size}>{separator}</WheelGroup.Separator>
-      <Wheel
-        name="minute"
-        type="integer"
-        bounded={!loop}
-        size={size}
-        aria-label={minuteLabel}
-        defaultValue={placeholderParts ? placeholderParts.minute : undefined}
-        {...wheelProps}
-      >
-        {minutes.map((minute) => (
-          <Wheel.Item key={minute} value={minute} paddingX="s">
-            {padTwo(minute)}
-          </Wheel.Item>
-        ))}
-      </Wheel>
+      {wholeHours ? null : (
+        <>
+          {/* The separator is written as big as the times it stands between:
+              one time, one size. */}
+          <WheelGroup.Separator size={size}>{separator}</WheelGroup.Separator>
+          <Wheel
+            ref={minuteWheelRef}
+            name="minute"
+            type="integer"
+            bounded={!loop}
+            size={size}
+            aria-label={minuteLabel}
+            defaultValue={
+              placeholderParts
+                ? floorToStep(placeholderParts.minute, minuteStep)
+                : undefined
+            }
+            {...wheelProps}
+          >
+            {minutes.map((minute) => (
+              <Wheel.Item key={minute} value={minute} paddingX="s">
+                {padTwo(minute)}
+              </Wheel.Item>
+            ))}
+          </Wheel>
+        </>
+      )}
     </WheelGroup>
   );
 };
@@ -203,11 +266,12 @@ export const TimeWheel = ({
  *   prepositions belong there; the group is still a row, and takes `flexWrap`
  *   for screens too narrow to hold both columns.
  * @param {number} [minuteStep=1] How many minutes apart the values on both
- *   minute wheels are.
+ *   minute wheels are. 60 for a span of whole hours ("de 8h à 12h").
  * @param {{min?: number, max?: number}|number[]} [hours] Which hours both
- *   wheels offer — see `TimeWheel`.
+ *   wheels offer — see `TimeWheel`. A 24 is offered to the end alone: a span
+ *   can run until midnight ("24:00"), it cannot start there.
  * @param {number} [minDuration=0] How long the span must last at least, in
- *   minutes. Zero by default: a span of no length is a span all the same, only
+ *   minutes, rounded up to the step — the wheels have nothing in between. Zero by default: a span of no length is a span all the same, only
  *   one that goes backwards is not. It is what the bounds keep between them as
  *   they turn — turn the start into the end and the end moves along, keeping
  *   that much room.
@@ -240,6 +304,20 @@ export const TimeRangeWheel = ({
   const startId = useId();
   const startRef = useRef(null);
   const endRef = useRef(null);
+  const endHourList = useMemo(
+    () => resolveHourList(hours),
+    [hours ? hours.min : undefined, hours ? hours.max : undefined, hours],
+  );
+  const startHourList = useMemo(
+    () => endHourList.filter((hour) => hour !== END_OF_DAY_HOUR),
+    [endHourList],
+  );
+  const step = minuteStep >= MINUTES_PER_HOUR ? MINUTES_PER_HOUR : minuteStep;
+  const minGap = ceilToStep(minDuration, step);
+  // The latest the end can be pushed to: the last time its wheels can show.
+  const lastEnd = endHourList.includes(END_OF_DAY_HOUR)
+    ? END_OF_DAY
+    : floorToStep(LAST_MINUTE_OF_DAY, step);
   // One turn settles the whole span: a start somebody chose makes the end an
   // answer too, left where the placeholder put it.
   const { answeredRef, aggregateChildStates, distributeChildUIState } =
@@ -271,21 +349,19 @@ export const TimeRangeWheel = ({
       movedSide === "start"
         ? otherMinutes - movedMinutes
         : movedMinutes - otherMinutes;
-    if (duration >= minDuration) {
+    if (duration >= minGap) {
       return;
     }
     let pushedMinutes =
-      movedSide === "start"
-        ? movedMinutes + minDuration
-        : movedMinutes - minDuration;
+      movedSide === "start" ? movedMinutes + minGap : movedMinutes - minGap;
     // The day has ends the wheels do not: pushed past midnight, the other bound
     // would come back round on the wrong side of the one that pushed it. It
     // stops at the edge instead, and the span that no longer fits is what the
     // send-time constraint is there to say (see time_range_constraint.js).
     if (pushedMinutes < 0) {
       pushedMinutes = 0;
-    } else if (pushedMinutes > LAST_MINUTE_OF_DAY) {
-      pushedMinutes = LAST_MINUTE_OF_DAY;
+    } else if (pushedMinutes > lastEnd) {
+      pushedMinutes = lastEnd;
     }
     dispatchRequestSetUIState(otherEl, timeFromMinutes(pushedMinutes), {
       event: e,
@@ -318,7 +394,7 @@ export const TimeRangeWheel = ({
             ref={startRef}
             name="start"
             minuteStep={minuteStep}
-            hours={hours}
+            hours={startHourList}
             loop={loop}
             size={size}
             placeholder={placeholder ? placeholder.start : undefined}
@@ -350,7 +426,7 @@ export const TimeRangeWheel = ({
             ref={endRef}
             name="end"
             minuteStep={minuteStep}
-            hours={hours}
+            hours={endHourList}
             loop={loop}
             size={size}
             placeholder={placeholder ? placeholder.end : undefined}
@@ -361,7 +437,7 @@ export const TimeRangeWheel = ({
             // the two: said on the LATER of the two, so the answer is given where
             // the time one would have to move is (see time_range_constraint.js).
             data-time-after={startId}
-            data-time-min-duration={minDuration}
+            data-time-min-duration={minGap}
             {...timeProps}
             {...endTimeProps}
           />
@@ -533,10 +609,11 @@ const distributeSpan = (groupState, childUIStateController) => {
   return groupState[childUIStateController.name];
 };
 
-// The two wheels as one value, "HH:MM".
+// The wheels as one value, "HH:MM". A time of whole hours has no minute wheel
+// and is on the hour; so is the end of the day, whatever the minute wheel says.
 const aggregateTime = (childUIStateControllers) => {
   let hour = "";
-  let minute = "";
+  let minute = 0;
   for (const child of childUIStateControllers) {
     if (child.name === "hour") {
       hour = child.uiState ?? "";
@@ -545,15 +622,25 @@ const aggregateTime = (childUIStateControllers) => {
       minute = child.uiState ?? "";
     }
   }
+  if (hour === END_OF_DAY_HOUR) {
+    return formatTimeParts(hour, 0);
+  }
   return formatTimeParts(hour, minute);
 };
 
 // The way back: what the group is set to (a value given to it, a form being
-// reset, the other bound pushing it) lands on the wheel it belongs to.
-const distributeTime = (groupState, childUIStateController) => {
+// reset, the other bound pushing it) lands on the wheel it belongs to. Minutes
+// the wheel does not offer land on the one before.
+const distributeTime = (groupState, childUIStateController, minuteStep) => {
   const parts = parseTimeParts(groupState);
   if (!parts) {
     return undefined;
   }
+  if (childUIStateController.name === "minute") {
+    return floorToStep(parts.minute, minuteStep);
+  }
   return parts[childUIStateController.name];
 };
+
+const floorToStep = (minutes, step) => Math.floor(minutes / step) * step;
+const ceilToStep = (minutes, step) => Math.ceil(minutes / step) * step;
