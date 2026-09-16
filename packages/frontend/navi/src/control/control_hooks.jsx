@@ -1056,6 +1056,24 @@ export const useControlProps = (
         syncDomState(readControlValue(el), e);
       };
     }
+    // Leaving the field is one of the two moments a value is committed — the
+    // other being an action about to read it (see applyAutoFix). A constraint
+    // allowed to correct the value puts it right here, so what the field
+    // shows, what the counter counts and what a submit would send are one
+    // thing well before the submit.
+    if (controlType === "input") {
+      const onBlurFromProps = controlHostProps.onBlur;
+      controlHostProps.onBlur = (e) => {
+        onBlurFromProps?.(e);
+        const validation = uiStateController.rules.validation;
+        if (validation.applyAutoFix(e)) {
+          // The value moved without anyone typing: what the constraints had to
+          // say about the old one is out of date, and so is what the controls
+          // above read from this one.
+          validation.syncValidity(e);
+        }
+      };
+    }
   }
 
   const uiState = uiStateController.uiStateSignal.peek();

@@ -527,7 +527,8 @@ export const useUIStateController = (
             }
             if (
               e.type === "facade_propagate_up" ||
-              e.type === "cancel_rollback"
+              e.type === "cancel_rollback" ||
+              e.type === "auto_fix"
             ) {
               // Exception: when the facade propagates a child state change up to the
               // real picker input, also notify the parent group (e.g. Form) so it
@@ -537,6 +538,9 @@ export const useUIStateController = (
               // A cancel takes the same road back: the Form was told what the
               // popup was picking, so it has to be told the picker went back to
               // where it opened, or it sends a value the user said no to.
+              // A correction is the same story once more: the Form sends what
+              // its fields add up to, and a field that just put its own value
+              // right has to be counted for the corrected one.
               s.parentUIStateController?.onChildUIAction(controller, e, {
                 stateChanged: true,
               });
@@ -2434,6 +2438,11 @@ const INTERNAL_EVENT_SET = new Set([
   // notification below still happen, exactly as they did on the way in (see
   // picker_custom.jsx's onClose).
   "cancel_rollback",
+  // A constraint allowed to correct the value put it right as the value was
+  // committed (see applyAutoFix). Nobody pressed anything, so no command and
+  // no action of the control's own — but what it holds really did move, so
+  // uiAction, the bound signal and the parent notification below all happen.
+  "auto_fix",
 ]);
 const isInternalEvent = (e) => {
   return INTERNAL_EVENT_SET.has(e.type);

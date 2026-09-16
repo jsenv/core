@@ -314,6 +314,29 @@
               />
             )}
           </RuleCase>
+          <RuleCase caption="autoFix : quitter le champ corrige la valeur">
+            {(ref) => (
+              <Input
+                ref={ref}
+                name="space_auto_fix"
+                width="320px"
+                defaultValue="Camille  Dupont "
+                singleSpace="autoFix"
+              />
+            )}
+          </RuleCase>
+          <RuleCase caption="autoFix sur un commentaire">
+            {(ref) => (
+              <Textarea
+                ref={ref}
+                name="comment_auto_fix"
+                width="320px"
+                defaultValue="Super soirée ! "
+                singleSpace="autoFix"
+                maxLength={200}
+              />
+            )}
+          </RuleCase>
         </div>
       );
 

@@ -202,14 +202,13 @@ export const tryActionAfterInteractionAllowed = (
 
   // Resolve proxy so navi_action_* fires on the real control element.
   let elementForAction = controlHost;
-  let uiState;
+  let activeController = controller;
   if (controller) {
     const proxyTargetController = findControlProxyTargetController(controller);
     if (proxyTargetController) {
       elementForAction = proxyTargetController.ref.current;
+      activeController = proxyTargetController;
     }
-    const activeController = proxyTargetController ?? controller;
-    uiState = activeController?.uiState;
   }
 
   // Validity gate: re-check (handles autoResetOnAction side effects), then read
@@ -235,6 +234,11 @@ export const tryActionAfterInteractionAllowed = (
       return false;
     }
   }
+
+  // Read after the gate, never before: a constraint allowed to correct the
+  // value rewrites it in there (see applyAutoFix), and what goes out has to be
+  // what the control ends up holding.
+  const uiState = activeController?.uiState;
 
   if (action === "auto" || action?.isAction) {
     // A control that commits gets the last word on whether this particular

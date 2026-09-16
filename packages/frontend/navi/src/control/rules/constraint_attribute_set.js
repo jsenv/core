@@ -46,3 +46,11 @@ export const constraintAttributeFromProp = (key) => {
  */
 export const isConstraintAttributeOn = (value) =>
   value !== undefined && value !== null && value !== false;
+
+/**
+ * Whether a constraint attribute asks for the value to be CORRECTED rather
+ * than refused: `singleSpace="autoFix"`. Only constraints whose rule knows a
+ * correction offer it, and only the fields that write it get one — a
+ * `maxLength` silently truncating what someone wrote would be a bad default.
+ */
+export const isConstraintAttributeAutoFix = (value) => value === "autoFix";

@@ -636,6 +636,11 @@ naviI18n.addAll({
     en: ":",
     fr: "h",
   },
+  // A time of whole hours has nothing to stand between: what follows the hour.
+  "time.hour_suffix": {
+    en: "",
+    fr: "h",
+  },
   "time.hour_label": {
     en: "Hours",
     fr: "Heures",
@@ -4708,13 +4713,11 @@ const minutesFromTime$1 = (time) => {
   return parts.hour * 60 + parts.minute;
 };
 
+// Not folded back into the day: 1440 is "24:00", the end of the day a span can
+// run into.
 const timeFromMinutes = (minutes) => {
-  const inDay =
-    ((minutes % MINUTES_PER_DAY) + MINUTES_PER_DAY) % MINUTES_PER_DAY;
-  return `${padTwo$1(Math.floor(inDay / 60))}:${padTwo$1(inDay % 60)}`;
+  return `${padTwo$1(Math.floor(minutes / 60))}:${padTwo$1(minutes % 60)}`;
 };
-
-const MINUTES_PER_DAY = 24 * 60;
 
 const padTwo$1 = (value) => String(value).padStart(2, "0");
 
@@ -5550,6 +5553,14 @@ const constraintAttributeFromProp = (key) => {
  */
 const isConstraintAttributeOn = (value) =>
   value !== undefined && value !== null && value !== false;
+
+/**
+ * Whether a constraint attribute asks for the value to be CORRECTED rather
+ * than refused: `singleSpace="autoFix"`. Only constraints whose rule knows a
+ * correction offer it, and only the fields that write it get one — a
+ * `maxLength` silently truncating what someone wrote would be a bad default.
+ */
+const isConstraintAttributeAutoFix = (value) => value === "autoFix";
 
 const CONSTRAINT_NAME_TO_PROP = {
   disabled: "disabledMessage",
@@ -10298,14 +10309,13 @@ const tryActionAfterInteractionAllowed = (
 
   // Resolve proxy so navi_action_* fires on the real control element.
   let elementForAction = controlHost;
-  let uiState;
+  let activeController = controller;
   if (controller) {
     const proxyTargetController = findControlProxyTargetController(controller);
     if (proxyTargetController) {
       elementForAction = proxyTargetController.ref.current;
+      activeController = proxyTargetController;
     }
-    const activeController = proxyTargetController ?? controller;
-    uiState = activeController?.uiState;
   }
 
   // Validity gate: re-check (handles autoResetOnAction side effects), then read
@@ -10331,6 +10341,11 @@ const tryActionAfterInteractionAllowed = (
       return false;
     }
   }
+
+  // Read after the gate, never before: a constraint allowed to correct the
+  // value rewrites it in there (see applyAutoFix), and what goes out has to be
+  // what the control ends up holding.
+  const uiState = activeController?.uiState;
 
   if (action === "auto" || action?.isAction) {
     // A control that commits gets the last word on whether this particular
@@ -12642,8 +12657,21 @@ CONSTRAINT_ATTRIBUTE_SET.add("data-same-as");
  * `data-single-space` — no leading or trailing space, never two in a row.
  * The rule itself is @jsenv/validity's SINGLE_SPACE_RULE, so a server checking
  * the value again refuses it for the same reason and in the same words.
+ *
+ * `data-single-space="autoFix"` corrects the value instead of refusing it. A
+ * text field ends with a space more often than anyone means it to — a word
+ * then a pause, a mobile keyboard after a suggestion, a paste — and the person
+ * is then asked to find and delete a character they cannot see. The correction
+ * is the rule's own, so the value a server re-checks with `singleSpace: true`
+ * is one it accepts.
  */
 
+
+const applyRule = (field) => {
+  const valueAsString =
+    field.uiState === undefined ? "" : String(field.uiState);
+  return SINGLE_SPACE_RULE.applyOn(true, valueAsString);
+};
 
 const SINGLE_SPACE_CONSTRAINT = {
   name: "single_space",
@@ -12653,13 +12681,28 @@ const SINGLE_SPACE_CONSTRAINT = {
     if (!isConstraintAttributeOn(singleSpace)) {
       return null;
     }
-    const valueAsString =
-      field.uiState === undefined ? "" : String(field.uiState);
-    const result = SINGLE_SPACE_RULE.applyOn(true, valueAsString);
+    if (isConstraintAttributeAutoFix(singleSpace)) {
+      // The correction the rule knows always lands on a value the rule
+      // accepts, and it runs on every commit — so there is nothing left for
+      // the person to do about this, and nothing to say to them.
+      return null;
+    }
+    const result = applyRule(field);
     if (!result) {
       return null;
     }
     return naviI18nFromValidityMessage(result);
+  },
+  autoFix: (field) => {
+    const singleSpace = field.controlHostProps["data-single-space"];
+    if (!isConstraintAttributeAutoFix(singleSpace)) {
+      return null;
+    }
+    const result = applyRule(field);
+    if (!result) {
+      return null;
+    }
+    return result.autoFix();
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("data-single-space");
@@ -12852,6 +12895,74 @@ const createControlValidation = (
   const getConstraintValidityState = () => constraintValidityState;
   controlValidity.getConstraintValidityState = getConstraintValidityState;
 
+  const getConstraintSet = () => {
+    const constraintSet = new Set([
+      ...DEFAULT_CONSTRAINT_SET,
+      ...dynamicConstraintSet,
+    ]);
+    // An app constraint declared at the call site: `constraints={[MY_CONSTRAINT]}`.
+    // Read from the raw props on every check so a constraint whose parameters
+    // are closed over is re-created freely, and last so the constraints navi
+    // ships are the ones reported first (see pickConstraintFailureInfo).
+    const constraintsFromProps = controller.props.constraints;
+    if (constraintsFromProps) {
+      for (const constraintFromProps of constraintsFromProps) {
+        constraintSet.add(normalizeConstraint(constraintFromProps));
+      }
+    }
+    return constraintSet;
+  };
+
+  /**
+   * Lets the constraints allowed to correct the value do so, and puts what
+   * they return in the control — ui state, bound signal, the field itself.
+   *
+   * Called at the moments a value is COMMITTED: the field is left, an action
+   * is about to read it. Never while it is being typed into, where removing
+   * the trailing space would eat the one the person is about to follow with a
+   * word.
+   *
+   * Returns whether the value moved, so a caller outside the validity pass can
+   * re-read what the control is now worth.
+   */
+  const applyAutoFix = (event) => {
+    const proxyTargetController = findControlProxyTargetController(controller);
+    if (proxyTargetController) {
+      return proxyTargetController.rules.validation.applyAutoFix(event);
+    }
+    // A value nobody can edit is not navi's to rewrite: it is the app's, and
+    // correcting it would change what gets sent behind the app's back.
+    const controlHostProps = controller.controlHostProps;
+    if (
+      controlHostProps.disabled ||
+      controlHostProps.readOnly ||
+      controlHostProps["aria-readonly"] === "true"
+    ) {
+      return false;
+    }
+    let fixed = false;
+    for (const constraint of getConstraintSet()) {
+      if (!constraint.autoFix) {
+        continue;
+      }
+      const fixedValue = constraint.autoFix(controller);
+      if (fixedValue === null || fixedValue === undefined) {
+        continue;
+      }
+      if (compareTwoJsValues(fixedValue, controller.uiState)) {
+        continue;
+      }
+      const autoFixEvent = new CustomEvent("auto_fix", {
+        detail: { constraint: constraint.name },
+      });
+      chainEvent(autoFixEvent, event);
+      controller.setUIState(fixedValue, autoFixEvent);
+      fixed = true;
+    }
+    return fixed;
+  };
+  controlValidity.applyAutoFix = applyAutoFix;
+
   const checkValidity = ({
     event,
     requester = controller.ref.current,
@@ -12892,21 +13003,15 @@ const createControlValidation = (
       }
     }
 
-    let newConstraintValidityState = { valid: true };
-    const constraintSet = new Set([
-      ...DEFAULT_CONSTRAINT_SET,
-      ...dynamicConstraintSet,
-    ]);
-    // An app constraint declared at the call site: `constraints={[MY_CONSTRAINT]}`.
-    // Read from the raw props on every check so a constraint whose parameters
-    // are closed over is re-created freely, and last so the constraints navi
-    // ships are the ones reported first (see pickConstraintFailureInfo).
-    const constraintsFromProps = controller.props.constraints;
-    if (constraintsFromProps) {
-      for (const constraintFromProps of constraintsFromProps) {
-        constraintSet.add(normalizeConstraint(constraintFromProps));
-      }
+    if (fromRequestAction) {
+      // The value is about to be read and sent: whoever may correct it gets
+      // the last word before the constraints judge it, so a field is never
+      // refused for something navi knows how to put right.
+      applyAutoFix(event);
     }
+
+    let newConstraintValidityState = { valid: true };
+    const constraintSet = getConstraintSet();
     const elementSig = getElementSignature(controller.ref.current);
     // Not logged: every control checks its constraints on every interaction and
     // almost always passes, so this line alone was most of the debug output —
@@ -36907,7 +37012,8 @@ const useUIStateController = (
             }
             if (
               e.type === "facade_propagate_up" ||
-              e.type === "cancel_rollback"
+              e.type === "cancel_rollback" ||
+              e.type === "auto_fix"
             ) {
               // Exception: when the facade propagates a child state change up to the
               // real picker input, also notify the parent group (e.g. Form) so it
@@ -36917,6 +37023,9 @@ const useUIStateController = (
               // A cancel takes the same road back: the Form was told what the
               // popup was picking, so it has to be told the picker went back to
               // where it opened, or it sends a value the user said no to.
+              // A correction is the same story once more: the Form sends what
+              // its fields add up to, and a field that just put its own value
+              // right has to be counted for the corrected one.
               s.parentUIStateController?.onChildUIAction(controller, e, {
                 stateChanged: true,
               });
@@ -38758,6 +38867,11 @@ const INTERNAL_EVENT_SET = new Set([
   // notification below still happen, exactly as they did on the way in (see
   // picker_custom.jsx's onClose).
   "cancel_rollback",
+  // A constraint allowed to correct the value put it right as the value was
+  // committed (see applyAutoFix). Nobody pressed anything, so no command and
+  // no action of the control's own — but what it holds really did move, so
+  // uiAction, the bound signal and the parent notification below all happen.
+  "auto_fix",
 ]);
 const isInternalEvent = (e) => {
   return INTERNAL_EVENT_SET.has(e.type);
@@ -39779,6 +39893,24 @@ const useControlProps = (props, {
         // control has had time to settle on.
         const el = e.currentTarget;
         syncDomState(readControlValue(el), e);
+      };
+    }
+    // Leaving the field is one of the two moments a value is committed — the
+    // other being an action about to read it (see applyAutoFix). A constraint
+    // allowed to correct the value puts it right here, so what the field
+    // shows, what the counter counts and what a submit would send are one
+    // thing well before the submit.
+    if (controlType === "input") {
+      const onBlurFromProps = controlHostProps.onBlur;
+      controlHostProps.onBlur = e => {
+        onBlurFromProps?.(e);
+        const validation = uiStateController.rules.validation;
+        if (validation.applyAutoFix(e)) {
+          // The value moved without anyone typing: what the constraints had to
+          // say about the old one is out of date, and so is what the controls
+          // above read from this one.
+          validation.syncValidity(e);
+        }
       };
     }
   }
@@ -79071,8 +79203,10 @@ const css$l = /* css */`.navi_time_range_label {
 }
 `;
 const HOUR_COUNT = 24;
+const END_OF_DAY_HOUR = 24;
 const MINUTES_PER_HOUR = 60;
 const LAST_MINUTE_OF_DAY = 23 * 60 + 59;
+const END_OF_DAY = END_OF_DAY_HOUR * MINUTES_PER_HOUR;
 
 /**
  * @type {import("ignore:preact").FunctionComponent<{
@@ -79092,16 +79226,21 @@ const LAST_MINUTE_OF_DAY = 23 * 60 + 59;
  * }>}
  * @param {string} [value] The time shown, as "HH:MM".
  * @param {number} [minuteStep=1] How many minutes apart the values on the
- *   minute wheel are — 15 for quarters of an hour.
+ *   minute wheel are — 15 for quarters of an hour. At 60 the time is a whole
+ *   hour: there is no minute wheel at all, the value stays "HH:MM" ("08:00"),
+ *   and a value arriving with minutes is shown on its hour.
  * @param {{min?: number, max?: number}|number[]} [hours] Which hours the wheel
  *   offers: `{ min: 7, max: 21 }` for a day that starts and ends somewhere, or
- *   the list itself. All 24 by default. Rows nobody will ever land on are rows
- *   in the way.
+ *   the list itself. 0 to 23 by default. Rows nobody will ever land on are rows
+ *   in the way. 24 is the end of the day ("24:00", midnight at the end of a
+ *   span) and has no minutes: turned onto it, the minute wheel goes back to 0.
  * @param {boolean} [loop=true] The wheels go round: 23h then 0h, 59 minutes
  *   then 0. What a clock does. Say `loop={false}` for two ends one cannot turn
  *   past.
  * @param {import("ignore:preact").ComponentChildren} [separator] What is written
- *   between the hours and the minutes. "h" in French, ":" elsewhere.
+ *   between the hours and the minutes. "h" in French, ":" elsewhere. In a time
+ *   of whole hours it follows each hour on its row instead ("8h"), and nothing
+ *   is written by default outside French.
  * @param {string} [placeholder] What the wheels show while the time holds
  *   nothing, as "HH:MM". Wheels have no blank row to land on, so their
  *   placeholder is a position rather than a grey word — shown, but not an
@@ -79116,13 +79255,20 @@ const TimeWheel = ({
   hours,
   loop = true,
   placeholder,
-  separator = naviI18n("time.hour_separator"),
+  separator,
   hourLabel = naviI18n("time.hour_label"),
   minuteLabel = naviI18n("time.minute_label"),
   size,
   wheelProps,
+  onnavi_wheel_settle,
   ...rest
 }) => {
+  const wholeHours = minuteStep >= MINUTES_PER_HOUR;
+  if (separator === undefined) {
+    separator = naviI18n(wholeHours ? "time.hour_suffix" : "time.hour_separator");
+  }
+  const hourWheelRef = useRef(null);
+  const minuteWheelRef = useRef(null);
   const minutes = useMemo(() => {
     const minuteList = [];
     let minute = 0;
@@ -79136,13 +79282,42 @@ const TimeWheel = ({
   const {
     aggregateChildStates,
     distributeChildUIState
-  } = useAnswered(placeholder, rest, aggregateTime, distributeTime);
+  } = useAnswered(placeholder, rest, aggregateTime, (groupState, child) => distributeTime(groupState, child, minuteStep));
   const placeholderParts = parseTimeParts(placeholder);
+
+  // The end of the day has no minutes. The time already reads "24:00" whatever
+  // the minute wheel shows (see aggregateTime); on settle the wheel is brought
+  // back to 0 so what is drawn is what is held.
+  const endOfDayHasNoMinutes = e => {
+    const hourEl = hourWheelRef.current;
+    const minuteEl = minuteWheelRef.current;
+    if (!hourEl || !minuteEl) {
+      return;
+    }
+    if (getUIStateFromElement(hourEl) !== END_OF_DAY_HOUR) {
+      return;
+    }
+    if (getUIStateFromElement(minuteEl) === 0) {
+      return;
+    }
+    dispatchRequestSetUIState(minuteEl, 0, {
+      event: e
+    });
+  };
   return jsxs(WheelGroup, {
     aggregateChildStates: aggregateChildStates,
     distributeChildUIState: distributeChildUIState,
+    onnavi_wheel_settle: e => {
+      if (!wholeHours) {
+        endOfDayHasNoMinutes(e);
+      }
+      if (onnavi_wheel_settle) {
+        onnavi_wheel_settle(e);
+      }
+    },
     ...rest,
     children: [jsx(Wheel, {
+      ref: hourWheelRef,
       name: "hour",
       type: "integer",
       bounded: !loop,
@@ -79153,24 +79328,29 @@ const TimeWheel = ({
       children: hourList.map(hour => jsx(Wheel.Item, {
         value: hour,
         paddingX: "s",
-        children: padTwo(hour)
+        children: wholeHours ? jsxs(Fragment, {
+          children: [hour, separator]
+        }) : padTwo(hour)
       }, hour))
-    }), jsx(WheelGroup.Separator, {
-      size: size,
-      children: separator
-    }), jsx(Wheel, {
-      name: "minute",
-      type: "integer",
-      bounded: !loop,
-      size: size,
-      "aria-label": minuteLabel,
-      defaultValue: placeholderParts ? placeholderParts.minute : undefined,
-      ...wheelProps,
-      children: minutes.map(minute => jsx(Wheel.Item, {
-        value: minute,
-        paddingX: "s",
-        children: padTwo(minute)
-      }, minute))
+    }), wholeHours ? null : jsxs(Fragment, {
+      children: [jsx(WheelGroup.Separator, {
+        size: size,
+        children: separator
+      }), jsx(Wheel, {
+        ref: minuteWheelRef,
+        name: "minute",
+        type: "integer",
+        bounded: !loop,
+        size: size,
+        "aria-label": minuteLabel,
+        defaultValue: placeholderParts ? floorToStep(placeholderParts.minute, minuteStep) : undefined,
+        ...wheelProps,
+        children: minutes.map(minute => jsx(Wheel.Item, {
+          value: minute,
+          paddingX: "s",
+          children: padTwo(minute)
+        }, minute))
+      })]
     })]
   });
 };
@@ -79204,11 +79384,12 @@ const TimeWheel = ({
  *   prepositions belong there; the group is still a row, and takes `flexWrap`
  *   for screens too narrow to hold both columns.
  * @param {number} [minuteStep=1] How many minutes apart the values on both
- *   minute wheels are.
+ *   minute wheels are. 60 for a span of whole hours ("de 8h à 12h").
  * @param {{min?: number, max?: number}|number[]} [hours] Which hours both
- *   wheels offer — see `TimeWheel`.
+ *   wheels offer — see `TimeWheel`. A 24 is offered to the end alone: a span
+ *   can run until midnight ("24:00"), it cannot start there.
  * @param {number} [minDuration=0] How long the span must last at least, in
- *   minutes. Zero by default: a span of no length is a span all the same, only
+ *   minutes, rounded up to the step — the wheels have nothing in between. Zero by default: a span of no length is a span all the same, only
  *   one that goes backwards is not. It is what the bounds keep between them as
  *   they turn — turn the start into the end and the end moves along, keeping
  *   that much room.
@@ -79241,6 +79422,12 @@ const TimeRangeWheel = ({
   const startId = useId();
   const startRef = useRef(null);
   const endRef = useRef(null);
+  const endHourList = useMemo(() => resolveHourList(hours), [hours ? hours.min : undefined, hours ? hours.max : undefined, hours]);
+  const startHourList = useMemo(() => endHourList.filter(hour => hour !== END_OF_DAY_HOUR), [endHourList]);
+  const step = minuteStep >= MINUTES_PER_HOUR ? MINUTES_PER_HOUR : minuteStep;
+  const minGap = ceilToStep(minDuration, step);
+  // The latest the end can be pushed to: the last time its wheels can show.
+  const lastEnd = endHourList.includes(END_OF_DAY_HOUR) ? END_OF_DAY : floorToStep(LAST_MINUTE_OF_DAY, step);
   // One turn settles the whole span: a start somebody chose makes the end an
   // answer too, left where the placeholder put it.
   const {
@@ -79272,18 +79459,18 @@ const TimeRangeWheel = ({
       return;
     }
     const duration = movedSide === "start" ? otherMinutes - movedMinutes : movedMinutes - otherMinutes;
-    if (duration >= minDuration) {
+    if (duration >= minGap) {
       return;
     }
-    let pushedMinutes = movedSide === "start" ? movedMinutes + minDuration : movedMinutes - minDuration;
+    let pushedMinutes = movedSide === "start" ? movedMinutes + minGap : movedMinutes - minGap;
     // The day has ends the wheels do not: pushed past midnight, the other bound
     // would come back round on the wrong side of the one that pushed it. It
     // stops at the edge instead, and the span that no longer fits is what the
     // send-time constraint is there to say (see time_range_constraint.js).
     if (pushedMinutes < 0) {
       pushedMinutes = 0;
-    } else if (pushedMinutes > LAST_MINUTE_OF_DAY) {
-      pushedMinutes = LAST_MINUTE_OF_DAY;
+    } else if (pushedMinutes > lastEnd) {
+      pushedMinutes = lastEnd;
     }
     dispatchRequestSetUIState(otherEl, timeFromMinutes(pushedMinutes), {
       event: e
@@ -79311,7 +79498,7 @@ const TimeRangeWheel = ({
           ref: startRef,
           name: "start",
           minuteStep: minuteStep,
-          hours: hours,
+          hours: startHourList,
           loop: loop,
           size: size,
           placeholder: placeholder ? placeholder.start : undefined
@@ -79336,7 +79523,7 @@ const TimeRangeWheel = ({
           ref: endRef,
           name: "end",
           minuteStep: minuteStep,
-          hours: hours,
+          hours: endHourList,
           loop: loop,
           size: size,
           placeholder: placeholder ? placeholder.end : undefined,
@@ -79348,7 +79535,7 @@ const TimeRangeWheel = ({
           // the time one would have to move is (see time_range_constraint.js).
           ,
           "data-time-after": startId,
-          "data-time-min-duration": minDuration,
+          "data-time-min-duration": minGap,
           ...timeProps,
           ...endTimeProps
         })
@@ -79510,10 +79697,11 @@ const distributeSpan = (groupState, childUIStateController) => {
   return groupState[childUIStateController.name];
 };
 
-// The two wheels as one value, "HH:MM".
+// The wheels as one value, "HH:MM". A time of whole hours has no minute wheel
+// and is on the hour; so is the end of the day, whatever the minute wheel says.
 const aggregateTime = childUIStateControllers => {
   let hour = "";
-  let minute = "";
+  let minute = 0;
   for (const child of childUIStateControllers) {
     if (child.name === "hour") {
       hour = child.uiState ?? "";
@@ -79522,18 +79710,27 @@ const aggregateTime = childUIStateControllers => {
       minute = child.uiState ?? "";
     }
   }
+  if (hour === END_OF_DAY_HOUR) {
+    return formatTimeParts(hour, 0);
+  }
   return formatTimeParts(hour, minute);
 };
 
 // The way back: what the group is set to (a value given to it, a form being
-// reset, the other bound pushing it) lands on the wheel it belongs to.
-const distributeTime = (groupState, childUIStateController) => {
+// reset, the other bound pushing it) lands on the wheel it belongs to. Minutes
+// the wheel does not offer land on the one before.
+const distributeTime = (groupState, childUIStateController, minuteStep) => {
   const parts = parseTimeParts(groupState);
   if (!parts) {
     return undefined;
   }
+  if (childUIStateController.name === "minute") {
+    return floorToStep(parts.minute, minuteStep);
+  }
   return parts[childUIStateController.name];
 };
+const floorToStep = (minutes, step) => Math.floor(minutes / step) * step;
+const ceilToStep = (minutes, step) => Math.ceil(minutes / step) * step;
 
 const TableSelectionContext = createContext();
 const useTableSelectionContextValue = (

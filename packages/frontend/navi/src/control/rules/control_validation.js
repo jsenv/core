@@ -53,7 +53,11 @@
  * We keep this behavior on purpose but in practice you always want to go through the form validation process
  */
 
-import { dispatchPublicCustomEvent, getElementSignature } from "@jsenv/dom";
+import {
+  chainEvent,
+  dispatchPublicCustomEvent,
+  getElementSignature,
+} from "@jsenv/dom";
 
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 import { findControlProxyTargetController } from "../controller_registry.js";
@@ -176,6 +180,74 @@ export const createControlValidation = (
   const getConstraintValidityState = () => constraintValidityState;
   controlValidity.getConstraintValidityState = getConstraintValidityState;
 
+  const getConstraintSet = () => {
+    const constraintSet = new Set([
+      ...DEFAULT_CONSTRAINT_SET,
+      ...dynamicConstraintSet,
+    ]);
+    // An app constraint declared at the call site: `constraints={[MY_CONSTRAINT]}`.
+    // Read from the raw props on every check so a constraint whose parameters
+    // are closed over is re-created freely, and last so the constraints navi
+    // ships are the ones reported first (see pickConstraintFailureInfo).
+    const constraintsFromProps = controller.props.constraints;
+    if (constraintsFromProps) {
+      for (const constraintFromProps of constraintsFromProps) {
+        constraintSet.add(normalizeConstraint(constraintFromProps));
+      }
+    }
+    return constraintSet;
+  };
+
+  /**
+   * Lets the constraints allowed to correct the value do so, and puts what
+   * they return in the control — ui state, bound signal, the field itself.
+   *
+   * Called at the moments a value is COMMITTED: the field is left, an action
+   * is about to read it. Never while it is being typed into, where removing
+   * the trailing space would eat the one the person is about to follow with a
+   * word.
+   *
+   * Returns whether the value moved, so a caller outside the validity pass can
+   * re-read what the control is now worth.
+   */
+  const applyAutoFix = (event) => {
+    const proxyTargetController = findControlProxyTargetController(controller);
+    if (proxyTargetController) {
+      return proxyTargetController.rules.validation.applyAutoFix(event);
+    }
+    // A value nobody can edit is not navi's to rewrite: it is the app's, and
+    // correcting it would change what gets sent behind the app's back.
+    const controlHostProps = controller.controlHostProps;
+    if (
+      controlHostProps.disabled ||
+      controlHostProps.readOnly ||
+      controlHostProps["aria-readonly"] === "true"
+    ) {
+      return false;
+    }
+    let fixed = false;
+    for (const constraint of getConstraintSet()) {
+      if (!constraint.autoFix) {
+        continue;
+      }
+      const fixedValue = constraint.autoFix(controller);
+      if (fixedValue === null || fixedValue === undefined) {
+        continue;
+      }
+      if (compareTwoJsValues(fixedValue, controller.uiState)) {
+        continue;
+      }
+      const autoFixEvent = new CustomEvent("auto_fix", {
+        detail: { constraint: constraint.name },
+      });
+      chainEvent(autoFixEvent, event);
+      controller.setUIState(fixedValue, autoFixEvent);
+      fixed = true;
+    }
+    return fixed;
+  };
+  controlValidity.applyAutoFix = applyAutoFix;
+
   const checkValidity = ({
     event,
     requester = controller.ref.current,
@@ -216,21 +288,15 @@ export const createControlValidation = (
       }
     }
 
-    let newConstraintValidityState = { valid: true };
-    const constraintSet = new Set([
-      ...DEFAULT_CONSTRAINT_SET,
-      ...dynamicConstraintSet,
-    ]);
-    // An app constraint declared at the call site: `constraints={[MY_CONSTRAINT]}`.
-    // Read from the raw props on every check so a constraint whose parameters
-    // are closed over is re-created freely, and last so the constraints navi
-    // ships are the ones reported first (see pickConstraintFailureInfo).
-    const constraintsFromProps = controller.props.constraints;
-    if (constraintsFromProps) {
-      for (const constraintFromProps of constraintsFromProps) {
-        constraintSet.add(normalizeConstraint(constraintFromProps));
-      }
+    if (fromRequestAction) {
+      // The value is about to be read and sent: whoever may correct it gets
+      // the last word before the constraints judge it, so a field is never
+      // refused for something navi knows how to put right.
+      applyAutoFix(event);
     }
+
+    let newConstraintValidityState = { valid: true };
+    const constraintSet = getConstraintSet();
     const elementSig = getElementSignature(controller.ref.current);
     // Not logged: every control checks its constraints on every interaction and
     // almost always passes, so this line alone was most of the debug output —
