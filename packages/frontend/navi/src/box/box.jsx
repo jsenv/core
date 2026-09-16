@@ -679,12 +679,16 @@ const computeBox = (props, parentBoxFlow) => {
       block = true;
     }
   }
+  // An inline box ignores width/height, so a sized one becomes a flex row the
+  // caller never asked for; textAlign reads that (see box_style_util.js).
+  let flexFromSize = false;
   if (
     inline &&
     (rest.width !== undefined || rest.height !== undefined) &&
     flex === undefined
   ) {
     flex = "x";
+    flexFromSize = true;
   }
   let boxFlow;
   if (inline) {
@@ -789,6 +793,7 @@ const computeBox = (props, parentBoxFlow) => {
     const styleContext = {
       parentBoxFlow,
       boxFlow,
+      flexFromSize,
       styleCSSVars,
       pseudoState: innerPseudoState,
       pseudoClasses,

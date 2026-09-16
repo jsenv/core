@@ -19680,7 +19680,22 @@ const TYPO_PROPS = {
     }
     return lineClampStyles(value);
   },
-  textAlign: PASS_THROUGH,
+  /* A sized inline Box (a Text with a width) is a flex row the caller did not
+     ask for, where the text runs are one anonymous item sized to their content:
+     text-align alone moves nothing, the item is placed by justify-content. A
+     flex row asked for keeps the two apart (Picker: textAlign is the text in
+     the value slot, justify-content the slots). alignX, when given, wins. */
+  textAlign: (value, { flexFromSize, remainingProps }) => {
+    if (
+      flexFromSize &&
+      value !== "justify" &&
+      remainingProps.alignX === undefined &&
+      remainingProps.align === undefined
+    ) {
+      return { textAlign: value, justifyContent: value };
+    }
+    return { textAlign: value };
+  },
   textBox: PASS_THROUGH,
   textBoxTrim: PASS_THROUGH,
   textBoxEdge: PASS_THROUGH,
@@ -22294,8 +22309,12 @@ const computeBox = (props, parentBoxFlow) => {
       block = true;
     }
   }
+  // An inline box ignores width/height, so a sized one becomes a flex row the
+  // caller never asked for; textAlign reads that (see box_style_util.js).
+  let flexFromSize = false;
   if (inline && (rest.width !== undefined || rest.height !== undefined) && flex === undefined) {
     flex = "x";
+    flexFromSize = true;
   }
   let boxFlow;
   if (inline) {
@@ -22389,6 +22408,7 @@ const computeBox = (props, parentBoxFlow) => {
     const styleContext = {
       parentBoxFlow,
       boxFlow,
+      flexFromSize,
       styleCSSVars,
       pseudoState: innerPseudoState,
       pseudoClasses,
