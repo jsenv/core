@@ -398,6 +398,13 @@ const css = /* css */ `
        them to win. Only the paint changes: the element is still rendered
        and still pointer-events: auto, so an outside click keeps doing
        exactly what pointerInteractionOutsideEffect says. */
+    /* "lift": the wall a lifted popup brings (see navi_css_vars.js), asked
+       for on its own — a popover whose own content is what must be looked at
+       wants the page gone behind it, without moving out of anything. */
+    &[data-backdrop-variant="lift"] {
+      --backdrop-background: var(--navi-backdrop-lift-background);
+      --backdrop-filter: var(--navi-backdrop-lift-backdrop-filter);
+    }
     &[data-backdrop-variant="discrete"] {
       --backdrop-background: var(--navi-backdrop-discrete-background);
       --backdrop-filter: var(--navi-backdrop-discrete-backdrop-filter);
@@ -489,12 +496,15 @@ const css = /* css */ `
  *   own border box; a see-through popover whose box is bigger than what it
  *   paints marks the difference with `data-navi-popup-outside` (see
  *   docs/popup_backdrop.md).
- * @param {"auto"|"discrete"|"invisible"} [props.backdropVariant="auto"] - How
- *   visible the backdrop is, independently of what it does. `"auto"`: the
- *   paint `pointerInteractionOutsideEffect` implies (dimmed for
- *   `"close"`/`"cancel"`, blurred glass for `"capture"`). `"discrete"`: a
- *   barely-there dim. `"invisible"`: fully transparent — a wall that is not
- *   seen, still rendered and still catching every outside click. This only
+ * @param {"auto"|"lift"|"discrete"|"invisible"} [props.backdropVariant="auto"]
+ *   - How visible the backdrop is, independently of what it does. `"auto"`:
+ *   the paint `pointerInteractionOutsideEffect` implies (dimmed for
+ *   `"close"`/`"cancel"`, blurred glass for `"capture"`). `"lift"`: the
+ *   opaque, blurred wall (`--navi-backdrop-lift-*`) a lifted popup brings,
+ *   for content that is the thing to look at rather than a surface shown over
+ *   a page still being read. `"discrete"`: a barely-there dim. `"invisible"`:
+ *   fully transparent — a wall that is not seen, still rendered and still
+ *   catching every outside click. This only
  *   changes how much the popover insists on being the thing you deal with;
  *   whether there is a wall to paint at all is `backdrop` above. Ignored when
  *   there is none (`pointerInteractionOutsideEffect="none"`, or
@@ -837,9 +847,10 @@ const usePopoverProps = (props) => {
     backdrop = true,
     // How loudly the backdrop says it is there — independent of what it
     // *does* (that's pointerInteractionOutsideEffect above). "auto" keeps
-    // the paint the effect implies; "discrete"/"invisible" tone it down or
-    // stop drawing it, without giving up the outside click — a wall that is
-    // not seen is still a wall (that is `backdrop` above).
+    // the paint the effect implies; "lift" asks for the opaque wall, and
+    // "discrete"/"invisible" tone it down or stop drawing it — none of them
+    // gives up the outside click, a wall that is not seen is still a wall
+    // (that is `backdrop` above).
     backdropVariant = "auto",
     // The paint itself, when the tokens behind backdropVariant are not what
     // this one popover wants. Named/forwarded rather than left in ...rest:

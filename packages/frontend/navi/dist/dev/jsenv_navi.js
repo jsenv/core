@@ -60720,8 +60720,15 @@ const css$E = /* css */`
       --backdrop-filter: var(--navi-backdrop-capture-backdrop-filter);
     }
     /* backdropVariant, after the rules it overrides: same specificity, so
-       order is what decides. The wall is still there either way — only the
-       paint goes away. */
+       order is what decides. The wall is still there whichever one is asked
+       for — only its paint changes. */
+    /* "lift": the wall a lifted popup brings, asked for on its own. A popup
+       whose content is what must be looked at wants the page gone behind it
+       whether or not it got there by moving. */
+    &[data-backdrop-variant="lift"] {
+      --backdrop-background: var(--navi-backdrop-lift-background);
+      --backdrop-filter: var(--navi-backdrop-lift-backdrop-filter);
+    }
     &[data-backdrop-variant="discrete"] {
       --backdrop-background: var(--navi-backdrop-discrete-background);
       --backdrop-filter: var(--navi-backdrop-discrete-backdrop-filter);
@@ -60918,6 +60925,10 @@ const css$E = /* css */`
     &[data-pointer-interaction-outside="capture"] {
       --backdrop-background: var(--navi-backdrop-capture-background);
       --backdrop-filter: var(--navi-backdrop-capture-backdrop-filter);
+    }
+    &[data-backdrop-variant="lift"] {
+      --backdrop-background: var(--navi-backdrop-lift-background);
+      --backdrop-filter: var(--navi-backdrop-lift-backdrop-filter);
     }
     &[data-backdrop-variant="discrete"] {
       --backdrop-background: var(--navi-backdrop-discrete-background);
@@ -61181,15 +61192,18 @@ const css$E = /* css */`
  *   "Outside" is the dialog's own border box; a see-through dialog whose box is
  *   bigger than what it paints marks the difference with
  *   `data-navi-popup-outside` (see docs/popup_backdrop.md).
- * @param {"auto"|"discrete"|"invisible"} [props.backdropVariant="auto"] - How
- *   visible the backdrop is, independently of what it does. `"auto"`: the
- *   paint `pointerInteractionOutsideEffect` implies (dimmed for
+ * @param {"auto"|"lift"|"discrete"|"invisible"} [props.backdropVariant="auto"]
+ *   - How visible the backdrop is, independently of what it does. `"auto"`:
+ *   the paint `pointerInteractionOutsideEffect` implies (dimmed for
  *   `"close"`/`"cancel"`, blurred glass for `"capture"`), or the opaque wall
- *   `animation="lifting"` asks for. `"discrete"`: a
- *   barely-there dim. `"invisible"`: fully transparent — a wall that is not
- *   seen, still catching every press. This only changes how much the dialog
- *   insists visually, never what an outside click does; whether there is a
- *   wall to paint at all is `backdrop` above.
+ *   `animation="lifting"` asks for. `"lift"`: that same opaque, blurred wall
+ *   (`--navi-backdrop-lift-*`) asked for on its own, for a dialog whose
+ *   content is the thing to look at — a picture, a plan, a card opened full
+ *   — without the morph. `"discrete"`: a barely-there dim. `"invisible"`:
+ *   fully transparent — a wall that is not seen, still catching every press.
+ *   This only changes how much the dialog insists visually, never what an
+ *   outside click does; whether there is a wall to paint at all is `backdrop`
+ *   above.
  * @param {string} [props.backdropColor] - The wash painted over what is
  *   behind, for this popup alone: any CSS color (`"rgb(6 10 20 / 88%)"`).
  *   Wins over `backdropVariant` and over the theme tokens
@@ -61573,9 +61587,10 @@ const useDialogProps = props => {
     // the dialog goes to the same top layer through the Popover API instead.
     backdrop = true,
     // How loudly the backdrop says it is there — independent of what it
-    // *does* (that's pointerInteractionOutsideEffect above). "invisible" is a
-    // wall that is not seen, not the absence of one: it only stops the dim
-    // from being drawn.
+    // *does* (that's pointerInteractionOutsideEffect above). "lift" is the
+    // opaque wall at one end, "invisible" a wall that is not seen at the
+    // other — not the absence of one, it only stops the dim from being
+    // drawn.
     backdropVariant = "auto",
     // The paint itself, when the tokens behind backdropVariant are not what
     // this one dialog wants. Named/forwarded rather than left in ...rest:
@@ -62864,6 +62879,13 @@ const css$D = /* css */`
        them to win. Only the paint changes: the element is still rendered
        and still pointer-events: auto, so an outside click keeps doing
        exactly what pointerInteractionOutsideEffect says. */
+    /* "lift": the wall a lifted popup brings (see navi_css_vars.js), asked
+       for on its own — a popover whose own content is what must be looked at
+       wants the page gone behind it, without moving out of anything. */
+    &[data-backdrop-variant="lift"] {
+      --backdrop-background: var(--navi-backdrop-lift-background);
+      --backdrop-filter: var(--navi-backdrop-lift-backdrop-filter);
+    }
     &[data-backdrop-variant="discrete"] {
       --backdrop-background: var(--navi-backdrop-discrete-background);
       --backdrop-filter: var(--navi-backdrop-discrete-backdrop-filter);
@@ -62955,12 +62977,15 @@ const css$D = /* css */`
  *   own border box; a see-through popover whose box is bigger than what it
  *   paints marks the difference with `data-navi-popup-outside` (see
  *   docs/popup_backdrop.md).
- * @param {"auto"|"discrete"|"invisible"} [props.backdropVariant="auto"] - How
- *   visible the backdrop is, independently of what it does. `"auto"`: the
- *   paint `pointerInteractionOutsideEffect` implies (dimmed for
- *   `"close"`/`"cancel"`, blurred glass for `"capture"`). `"discrete"`: a
- *   barely-there dim. `"invisible"`: fully transparent — a wall that is not
- *   seen, still rendered and still catching every outside click. This only
+ * @param {"auto"|"lift"|"discrete"|"invisible"} [props.backdropVariant="auto"]
+ *   - How visible the backdrop is, independently of what it does. `"auto"`:
+ *   the paint `pointerInteractionOutsideEffect` implies (dimmed for
+ *   `"close"`/`"cancel"`, blurred glass for `"capture"`). `"lift"`: the
+ *   opaque, blurred wall (`--navi-backdrop-lift-*`) a lifted popup brings,
+ *   for content that is the thing to look at rather than a surface shown over
+ *   a page still being read. `"discrete"`: a barely-there dim. `"invisible"`:
+ *   fully transparent — a wall that is not seen, still rendered and still
+ *   catching every outside click. This only
  *   changes how much the popover insists on being the thing you deal with;
  *   whether there is a wall to paint at all is `backdrop` above. Ignored when
  *   there is none (`pointerInteractionOutsideEffect="none"`, or
@@ -63297,9 +63322,10 @@ const usePopoverProps = props => {
     backdrop = true,
     // How loudly the backdrop says it is there — independent of what it
     // *does* (that's pointerInteractionOutsideEffect above). "auto" keeps
-    // the paint the effect implies; "discrete"/"invisible" tone it down or
-    // stop drawing it, without giving up the outside click — a wall that is
-    // not seen is still a wall (that is `backdrop` above).
+    // the paint the effect implies; "lift" asks for the opaque wall, and
+    // "discrete"/"invisible" tone it down or stop drawing it — none of them
+    // gives up the outside click, a wall that is not seen is still a wall
+    // (that is `backdrop` above).
     backdropVariant = "auto",
     // The paint itself, when the tokens behind backdropVariant are not what
     // this one popover wants. Named/forwarded rather than left in ...rest:
@@ -64306,7 +64332,7 @@ const css$C = /* css */`@layer navi {
  *   resolution picks says nothing about whether the page behind stays live.
  *   It is also what makes a sheet docked to an edge of a phone's screen
  *   (`dockedOnSmallTouchScreen`) non-modal.
- * @param {"auto"|"discrete"|"invisible"} [props.backdropVariant] - Forwarded
+ * @param {"auto"|"lift"|"discrete"|"invisible"} [props.backdropVariant] - Forwarded
  *   as-is to whichever component renders (both understand it identically):
  *   how visible the backdrop is, independently of what an outside click
  *   does — a wall that is not seen is still a wall (that is `backdrop`
@@ -74799,7 +74825,7 @@ const PickerFirstResolver = props => {
  *   escapeEffect?: "cancel" | "close",
  *   pointerInteractionOutsideEffect?: "close" | "cancel" | "capture",
  *   backdrop?: boolean,
- *   backdropVariant?: "auto" | "discrete" | "invisible",
+ *   backdropVariant?: "auto" | "lift" | "discrete" | "invisible",
  *   backdropColor?: string,
  *   backdropFilter?: string,
  *   ref?: import("ignore:preact").RefObject<HTMLElement>,
@@ -75156,12 +75182,14 @@ const PickerFirstResolver = props => {
  *   dialog with no wall is shown through the Popover API rather than
  *   `showModal()`, so a picker docked as a bottom sheet on a phone still
  *   leaves the plan behind it live.
- * @param {"auto"|"discrete"|"invisible"} [backdropVariant="auto"] How visible the
- *   popup's backdrop is, independently of what a click outside does: `"auto"`
- *   is the paint `pointerInteractionOutsideEffect` implies, `"discrete"` a
- *   barely-there dim, `"invisible"` fully transparent — a wall that is not seen
- *   is still a wall, which is what `backdrop` above answers. For a picker that
- *   closes on an outside click without wanting to dim the page for it.
+ * @param {"auto"|"lift"|"discrete"|"invisible"} [backdropVariant="auto"] How
+ *   visible the popup's backdrop is, independently of what a click outside
+ *   does: `"auto"` is the paint `pointerInteractionOutsideEffect` implies,
+ *   `"lift"` the opaque blurred wall `animation="lifting"` brings, asked for
+ *   without the movement, `"discrete"` a barely-there dim, `"invisible"` fully
+ *   transparent — a wall that is not seen is still a wall, which is what
+ *   `backdrop` above answers. For a picker that closes on an outside click
+ *   without wanting to dim the page for it.
  * @param {string} [backdropColor] The wash the popup paints over what is
  *   behind, for this picker alone. See Dialog's own doc.
  * @param {string} [backdropFilter] What that wash does to the picture
@@ -77767,7 +77795,7 @@ const css$n = /* css */`.navi_split_button {
  *   dockedOnSmallTouchScreen?: boolean | "top" | "bottom",
  *   marginWithContainer?: number | string,
  *   backdrop?: boolean,
- *   backdropVariant?: "auto" | "discrete" | "invisible",
+ *   backdropVariant?: "auto" | "lift" | "discrete" | "invisible",
  *   backdropColor?: string,
  *   backdropFilter?: string,
  *   pointerInteractionOutsideEffect?: "close" | "cancel" | "capture",

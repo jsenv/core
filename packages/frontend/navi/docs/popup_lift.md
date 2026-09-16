@@ -293,7 +293,8 @@ the movement is about to lift.
 
 `animation="lifting"` brings its own wall — opaque and blurred
 (`--navi-backdrop-lift-*`), the page it came out of being what the movement
-leaves; `backdropVariant="discrete"` asks for the light wash back. See
+leaves; `backdropVariant="discrete"` asks for the light wash back, and
+`backdropVariant="lift"` asks for that wall on a popup that does not move. See
 `popup_backdrop.md`.
 
 ## What the browser does around it

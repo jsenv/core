@@ -241,7 +241,7 @@ kind of backdrop has a colour **and** a filter, and they travel together:
 | the default (`pointerInteractionOutsideEffect` close/cancel) | `--navi-backdrop-close-background`, `--navi-backdrop-close-backdrop-filter`       |
 | `pointerInteractionOutsideEffect="capture"`                  | `--navi-backdrop-capture-background`, `--navi-backdrop-capture-backdrop-filter`   |
 | `backdropVariant="discrete"`                                 | `--navi-backdrop-discrete-background`, `--navi-backdrop-discrete-backdrop-filter` |
-| `animation="lifting"`                                        | `--navi-backdrop-lift-background`, `--navi-backdrop-lift-backdrop-filter`         |
+| `animation="lifting"`, `backdropVariant="lift"`              | `--navi-backdrop-lift-background`, `--navi-backdrop-lift-backdrop-filter`         |
 
 Only `capture` blurs out of the box among the three above: the rest of the page
 is genuinely unreachable then, so it reads as clearly secondary. Nothing else
@@ -271,9 +271,16 @@ they win over everything, `backdropVariant` overrides it, and
 `backdropVariant="discrete"` is how a lifting popup asks for the light wash
 back.
 
-`backdropVariant` is the shorthand for the other direction: `"discrete"` for a
-barely-there dim, `"invisible"` for no paint at all. It never changes what the
-outside click does — the wall is still there and still catches it. Whether
+`backdropVariant="lift"` is the same thing said the other way round: that wall,
+on a popup that does not morph. What made it the right answer above is the
+lifted thing being what the eye is on, and a popup can be that without having
+travelled — a picture opened full, a plan, a card that paints its own surface
+(`backgroundColor="transparent"`) so the wall is its background. The movement
+is one reason to want it, not the only one.
+
+`backdropVariant` covers the other direction too: `"discrete"` for a
+barely-there dim, `"invisible"` for no paint at all. None of them changes what
+the outside click does — the wall is still there and still catches it. Whether
 there is a wall to paint is `backdrop`, above.
 
 `"invisible"` is the one kind with no filter token: it paints nothing, and a

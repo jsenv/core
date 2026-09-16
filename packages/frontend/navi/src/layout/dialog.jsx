@@ -427,8 +427,15 @@ const css = /* css */ `
       --backdrop-filter: var(--navi-backdrop-capture-backdrop-filter);
     }
     /* backdropVariant, after the rules it overrides: same specificity, so
-       order is what decides. The wall is still there either way — only the
-       paint goes away. */
+       order is what decides. The wall is still there whichever one is asked
+       for — only its paint changes. */
+    /* "lift": the wall a lifted popup brings, asked for on its own. A popup
+       whose content is what must be looked at wants the page gone behind it
+       whether or not it got there by moving. */
+    &[data-backdrop-variant="lift"] {
+      --backdrop-background: var(--navi-backdrop-lift-background);
+      --backdrop-filter: var(--navi-backdrop-lift-backdrop-filter);
+    }
     &[data-backdrop-variant="discrete"] {
       --backdrop-background: var(--navi-backdrop-discrete-background);
       --backdrop-filter: var(--navi-backdrop-discrete-backdrop-filter);
@@ -625,6 +632,10 @@ const css = /* css */ `
     &[data-pointer-interaction-outside="capture"] {
       --backdrop-background: var(--navi-backdrop-capture-background);
       --backdrop-filter: var(--navi-backdrop-capture-backdrop-filter);
+    }
+    &[data-backdrop-variant="lift"] {
+      --backdrop-background: var(--navi-backdrop-lift-background);
+      --backdrop-filter: var(--navi-backdrop-lift-backdrop-filter);
     }
     &[data-backdrop-variant="discrete"] {
       --backdrop-background: var(--navi-backdrop-discrete-background);
@@ -888,15 +899,18 @@ const css = /* css */ `
  *   "Outside" is the dialog's own border box; a see-through dialog whose box is
  *   bigger than what it paints marks the difference with
  *   `data-navi-popup-outside` (see docs/popup_backdrop.md).
- * @param {"auto"|"discrete"|"invisible"} [props.backdropVariant="auto"] - How
- *   visible the backdrop is, independently of what it does. `"auto"`: the
- *   paint `pointerInteractionOutsideEffect` implies (dimmed for
+ * @param {"auto"|"lift"|"discrete"|"invisible"} [props.backdropVariant="auto"]
+ *   - How visible the backdrop is, independently of what it does. `"auto"`:
+ *   the paint `pointerInteractionOutsideEffect` implies (dimmed for
  *   `"close"`/`"cancel"`, blurred glass for `"capture"`), or the opaque wall
- *   `animation="lifting"` asks for. `"discrete"`: a
- *   barely-there dim. `"invisible"`: fully transparent — a wall that is not
- *   seen, still catching every press. This only changes how much the dialog
- *   insists visually, never what an outside click does; whether there is a
- *   wall to paint at all is `backdrop` above.
+ *   `animation="lifting"` asks for. `"lift"`: that same opaque, blurred wall
+ *   (`--navi-backdrop-lift-*`) asked for on its own, for a dialog whose
+ *   content is the thing to look at — a picture, a plan, a card opened full
+ *   — without the morph. `"discrete"`: a barely-there dim. `"invisible"`:
+ *   fully transparent — a wall that is not seen, still catching every press.
+ *   This only changes how much the dialog insists visually, never what an
+ *   outside click does; whether there is a wall to paint at all is `backdrop`
+ *   above.
  * @param {string} [props.backdropColor] - The wash painted over what is
  *   behind, for this popup alone: any CSS color (`"rgb(6 10 20 / 88%)"`).
  *   Wins over `backdropVariant` and over the theme tokens
@@ -1285,9 +1299,10 @@ const useDialogProps = (props) => {
     // the dialog goes to the same top layer through the Popover API instead.
     backdrop = true,
     // How loudly the backdrop says it is there — independent of what it
-    // *does* (that's pointerInteractionOutsideEffect above). "invisible" is a
-    // wall that is not seen, not the absence of one: it only stops the dim
-    // from being drawn.
+    // *does* (that's pointerInteractionOutsideEffect above). "lift" is the
+    // opaque wall at one end, "invisible" a wall that is not seen at the
+    // other — not the absence of one, it only stops the dim from being
+    // drawn.
     backdropVariant = "auto",
     // The paint itself, when the tokens behind backdropVariant are not what
     // this one dialog wants. Named/forwarded rather than left in ...rest:

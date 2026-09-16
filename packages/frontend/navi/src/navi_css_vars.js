@@ -174,7 +174,8 @@ const css = /* css */ `
          pulls visual focus onto the popover's own content. */
       --navi-backdrop-capture-background: rgb(255 255 255 / 0.08);
       --navi-backdrop-capture-backdrop-filter: blur(30px) saturate(180%);
-      /* animation="lifting": the popup is what the anchor became, so the page
+      /* animation="lifting", and backdropVariant="lift" asking for the same
+         wall without the movement: the popup is what the anchor became, so the page
          it came out of is not a context to keep readable — it is the thing the
          movement leaves. A card, a plan, a picture lifted to be looked at wants
          nothing legible competing with it, and a document still crisp behind a

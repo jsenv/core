@@ -1094,14 +1094,21 @@
             </div>
             <Heading id="backdrop-variant">backdropVariant</Heading>
             <p>
-              Same <code>pointerInteractionOutsideEffect="close"</code> in all
-              three — clicking outside closes every one of them. Only how much
-              the backdrop insists changes.
+              Same <code>pointerInteractionOutsideEffect="close"</code>
+              everywhere — clicking outside closes every one of them. Only how
+              much the backdrop insists changes.
             </p>
             <div class="demo-row">
               <PointerInteractionOutsideDemo
                 label="auto (default)"
                 pointerInteractionOutsideEffect="close"
+                animation={animation}
+                animationDuration={animationDuration}
+              />
+              <PointerInteractionOutsideDemo
+                label="lift"
+                pointerInteractionOutsideEffect="close"
+                backdropVariant="lift"
                 animation={animation}
                 animationDuration={animationDuration}
               />

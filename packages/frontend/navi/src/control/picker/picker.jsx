@@ -1686,7 +1686,7 @@ const PickerFirstResolver = (props) => {
  *   escapeEffect?: "cancel" | "close",
  *   pointerInteractionOutsideEffect?: "close" | "cancel" | "capture",
  *   backdrop?: boolean,
- *   backdropVariant?: "auto" | "discrete" | "invisible",
+ *   backdropVariant?: "auto" | "lift" | "discrete" | "invisible",
  *   backdropColor?: string,
  *   backdropFilter?: string,
  *   ref?: import("preact").RefObject<HTMLElement>,
@@ -2043,12 +2043,14 @@ const PickerFirstResolver = (props) => {
  *   dialog with no wall is shown through the Popover API rather than
  *   `showModal()`, so a picker docked as a bottom sheet on a phone still
  *   leaves the plan behind it live.
- * @param {"auto"|"discrete"|"invisible"} [backdropVariant="auto"] How visible the
- *   popup's backdrop is, independently of what a click outside does: `"auto"`
- *   is the paint `pointerInteractionOutsideEffect` implies, `"discrete"` a
- *   barely-there dim, `"invisible"` fully transparent — a wall that is not seen
- *   is still a wall, which is what `backdrop` above answers. For a picker that
- *   closes on an outside click without wanting to dim the page for it.
+ * @param {"auto"|"lift"|"discrete"|"invisible"} [backdropVariant="auto"] How
+ *   visible the popup's backdrop is, independently of what a click outside
+ *   does: `"auto"` is the paint `pointerInteractionOutsideEffect` implies,
+ *   `"lift"` the opaque blurred wall `animation="lifting"` brings, asked for
+ *   without the movement, `"discrete"` a barely-there dim, `"invisible"` fully
+ *   transparent — a wall that is not seen is still a wall, which is what
+ *   `backdrop` above answers. For a picker that closes on an outside click
+ *   without wanting to dim the page for it.
  * @param {string} [backdropColor] The wash the popup paints over what is
  *   behind, for this picker alone. See Dialog's own doc.
  * @param {string} [backdropFilter] What that wash does to the picture

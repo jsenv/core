@@ -119,7 +119,7 @@ const css = /* css */ `
  *   resolution picks says nothing about whether the page behind stays live.
  *   It is also what makes a sheet docked to an edge of a phone's screen
  *   (`dockedOnSmallTouchScreen`) non-modal.
- * @param {"auto"|"discrete"|"invisible"} [props.backdropVariant] - Forwarded
+ * @param {"auto"|"lift"|"discrete"|"invisible"} [props.backdropVariant] - Forwarded
  *   as-is to whichever component renders (both understand it identically):
  *   how visible the backdrop is, independently of what an outside click
  *   does — a wall that is not seen is still a wall (that is `backdrop`

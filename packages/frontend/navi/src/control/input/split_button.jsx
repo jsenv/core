@@ -92,7 +92,7 @@ const css = /* css */ `
  *   dockedOnSmallTouchScreen?: boolean | "top" | "bottom",
  *   marginWithContainer?: number | string,
  *   backdrop?: boolean,
- *   backdropVariant?: "auto" | "discrete" | "invisible",
+ *   backdropVariant?: "auto" | "lift" | "discrete" | "invisible",
  *   backdropColor?: string,
  *   backdropFilter?: string,
  *   pointerInteractionOutsideEffect?: "close" | "cancel" | "capture",
