@@ -331,6 +331,31 @@ Where several redirecting routes answer for one url, the more specific wins —
 router uses. Chains collapse into one navigation, and a cycle throws naming the
 addresses it goes through.
 
+#### A search param only the link carries: `dropSearchParams`
+
+A share link can carry a param that is not for the app at all: `?v=k3f9x2`, a
+fingerprint of what the link preview shows, there because WhatsApp caches one
+preview per address. Once the link is opened it has done its job, and left in
+the bar it gets copied and shared again, stale. The route that owns the address
+declares it:
+
+```js
+export const GAME_ROUTE = route(`/games/:gameId=${gameIdSignal}`, {
+  searchParams: { weather: weatherSignal },
+  dropSearchParams: ["v"],
+});
+```
+
+`/games/W-ABC234PQ?weather&v=k3f9x2` becomes `/games/W-ABC234PQ?weather` at the
+door, exactly like a redirection: no history entry, no route action, no signal
+written. The other params stay as they were written. Like a redirection, it
+applies to the route's own address only.
+
+A redirecting route on `/games/:gameId` cannot do this. A search param never
+makes a pattern fail to match, so that route also matches the address without
+`v`. It then redirects the address to itself, which does nothing, and it
+reports `matching` next to `GAME_ROUTE` on every game page.
+
 #### When the destination depends on data
 
 `/admin` sends the reader to the first section their permissions allow: the

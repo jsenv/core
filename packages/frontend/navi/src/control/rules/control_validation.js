@@ -56,6 +56,7 @@
 import {
   chainEvent,
   dispatchPublicCustomEvent,
+  findEvent,
   getElementSignature,
 } from "@jsenv/dom";
 
@@ -288,10 +289,12 @@ export const createControlValidation = (
       }
     }
 
-    if (fromRequestAction) {
-      // The value is about to be read and sent: whoever may correct it gets
-      // the last word before the constraints judge it, so a field is never
-      // refused for something navi knows how to put right.
+    // The value is about to be read and sent: whoever may correct it gets the
+    // last word before the constraints judge it, so a field is never refused
+    // for something navi knows how to put right. Unless the request comes from
+    // typing — an action run as you type (a search, debounced or not) is not
+    // a commit, and correcting there would eat the space before the next word.
+    if (fromRequestAction && !findEvent(event, "input")) {
       applyAutoFix(event);
     }
 

@@ -13003,10 +13003,12 @@ const createControlValidation = (
       }
     }
 
-    if (fromRequestAction) {
-      // The value is about to be read and sent: whoever may correct it gets
-      // the last word before the constraints judge it, so a field is never
-      // refused for something navi knows how to put right.
+    // The value is about to be read and sent: whoever may correct it gets the
+    // last word before the constraints judge it, so a field is never refused
+    // for something navi knows how to put right. Unless the request comes from
+    // typing — an action run as you type (a search, debounced or not) is not
+    // a commit, and correcting there would eat the space before the next word.
+    if (fromRequestAction && !findEvent(event, "input")) {
       applyAutoFix(event);
     }
 
@@ -25659,10 +25661,27 @@ let isUpdatingRoutesFromUrl = false;
  *   route("/legacy/:id", { redirectRoute: GAME_PAGE, redirectRouteParams: ({ id }) => ({ gameId: id }) });
  *   route("/:gameId/invite", { redirectRoute: HOME_PAGE, redirectRouteParams: null });
  *   ```
+ * @param {string[]} [options.dropSearchParams]
+ *   Search params this route's address never keeps: read by whoever fetched
+ *   the address (a link preview crawler, a cache), never by the app. When this
+ *   route's own address arrives carrying one, the navigation goes to the same
+ *   address without it, at the door, like a redirection: no history entry, no
+ *   route action, no signal written. Every other search param stays as written.
+ *
+ *   ```js
+ *   // ?v= makes WhatsApp fetch a new preview, the address bar never shows it
+ *   route(`/games/:gameId=${gamePageIdSignal}`, { dropSearchParams: ["v"] });
+ *   ```
  */
 const route = (
   pattern,
-  { searchParams, params, redirectRoute, redirectRouteParams } = {},
+  {
+    searchParams,
+    params,
+    redirectRoute,
+    redirectRouteParams,
+    dropSearchParams,
+  } = {},
 ) => {
   const routePattern = createRoutePattern(pattern, { searchParams, params });
   const { cleanPattern } = routePattern;
@@ -25722,6 +25741,7 @@ const route = (
       routePattern,
       redirectRoute,
       redirectRouteParams,
+      dropSearchParams,
       setup: null,
       updateStatus: null,
       cleanup: null,
@@ -26081,6 +26101,7 @@ const route = (
 const [publishRouteMutations, observeRouteMutations] = createPubSub();
 
 let redirectingRouteSet = null;
+let droppingRouteSet = null;
 /**
  * Where does this url really lead?
  *
@@ -26097,14 +26118,21 @@ let redirectingRouteSet = null;
  * @returns {string|null} The url to go to instead, or null.
  */
 const resolveRouteRedirection = (url) => {
-  if (!redirectingRouteSet || redirectingRouteSet.size === 0) {
+  if (
+    !redirectingRouteSet ||
+    (redirectingRouteSet.size === 0 && droppingRouteSet.size === 0)
+  ) {
     return null;
   }
   let urlToResolve = url;
   let redirectionUrl = null;
   const urlChain = [url];
   while (true) {
-    const nextUrl = resolveRedirectionOnce(urlToResolve);
+    // A redirection first: the address it lands on may carry a param its own
+    // route drops, and the next turn removes it there.
+    const nextUrl =
+      resolveRedirectionOnce(urlToResolve) ||
+      dropSearchParamsOnce(urlToResolve);
     if (!nextUrl || nextUrl === urlToResolve) {
       break;
     }
@@ -26144,6 +26172,35 @@ const resolveRedirectionOnce = (url) => {
     return null;
   }
   return buildRedirectionUrl(redirectingRoute, redirectingRouteParams);
+};
+// The query is edited as written rather than rebuilt through URLSearchParams,
+// which would rewrite every param kept ("?weather" into "?weather=", commas
+// encoded — see extractSearchParams).
+const dropSearchParamsOnce = (url) => {
+  const urlObject = new URL(url);
+  if (!urlObject.search) {
+    return null;
+  }
+  for (const route of droppingRouteSet) {
+    const { routePattern, dropSearchParams } = getRoutePrivateProperties(route);
+    // exact, for the same reason as a redirection: the addresses below a
+    // trailing slash belong to the routes declared for them
+    if (!routePattern.applyOn(url, { exact: true })) {
+      continue;
+    }
+    const pairs = urlObject.search.slice(1).split("&");
+    const pairsKept = pairs.filter((pair) => {
+      const eqIndex = pair.indexOf("=");
+      const key = eqIndex > -1 ? pair.slice(0, eqIndex) : pair;
+      return !dropSearchParams.includes(decodeURIComponent(key));
+    });
+    if (pairsKept.length === pairs.length) {
+      continue;
+    }
+    urlObject.search = pairsKept.length ? `?${pairsKept.join("&")}` : "";
+    return urlObject.href;
+  }
+  return null;
 };
 const buildRedirectionUrl = (route, urlParams) => {
   const { redirectRoute, redirectRouteParams } =
@@ -26248,8 +26305,13 @@ This prevents cross-test pollution and ensures clean state.`,
   // Checked here rather than at declaration: a route may redirect to one
   // declared after it, and reading the target then would forbid that order.
   redirectingRouteSet = new Set();
+  droppingRouteSet = new Set();
   for (const route of routeSet) {
-    const { redirectRoute } = getRoutePrivateProperties(route);
+    const { redirectRoute, dropSearchParams } =
+      getRoutePrivateProperties(route);
+    if (dropSearchParams && dropSearchParams.length) {
+      droppingRouteSet.add(route);
+    }
     if (!redirectRoute) {
       continue;
     }
@@ -26535,6 +26597,7 @@ This prevents cross-test pollution and ensures clean state.`,
     }
     routeSet.clear();
     redirectingRouteSet = null;
+    droppingRouteSet = null;
     setupRoutesCalled = false;
     activeRouteSet = null;
   };
@@ -39748,7 +39811,9 @@ const useControlProps = (props, {
         requester: control
       });
       if (dispatched) {
-        lastActionValueRef.current = currentValue;
+        // Read again: the gate may have corrected the value (see applyAutoFix),
+        // and what the next request is compared with is what went out.
+        lastActionValueRef.current = readControlValue(control);
       }
       return dispatched;
     };

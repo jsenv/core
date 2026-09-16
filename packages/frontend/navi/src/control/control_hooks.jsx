@@ -880,7 +880,9 @@ export const useControlProps = (
         requester: control,
       });
       if (dispatched) {
-        lastActionValueRef.current = currentValue;
+        // Read again: the gate may have corrected the value (see applyAutoFix),
+        // and what the next request is compared with is what went out.
+        lastActionValueRef.current = readControlValue(control);
       }
       return dispatched;
     };
