@@ -66525,6 +66525,7 @@ const css$x = /* css */`@layer navi {
 
   &[data-scroller="document"] {
     --x-list-group-label-top: var(--navi-safe-area-inset-top);
+    --x-list-group-label-left: var(--navi-safe-area-inset-left);
   }
 
   &[data-expand-x] {
@@ -66790,12 +66791,26 @@ const css$x = /* css */`@layer navi {
 
     & .navi_list_item {
       scroll-margin-top: calc(var(--x-list-scroll-spacing-top) + var(--list-group-label-height, 0px));
-      scroll-margin-left: calc(var(--x-list-scroll-spacing-left) + var(--list-group-label-width, 0px));
     }
   }
 
   &[data-hidden-while-empty]:not(:has([navi-list-item-real])) {
     display: none;
+  }
+}
+
+.navi_list_container[data-horizontal] > .navi_list_scroll_container > .navi_list > .navi_list_item_group {
+  min-width: auto;
+  max-width: none;
+
+  & > .navi_list_item_group_label {
+    top: auto;
+    left: var(--list-group-label-left, var(--x-list-group-label-left, 0px));
+  }
+
+  & > .navi_list_item_group_list {
+    flex-direction: row;
+    width: auto;
   }
 }
 
@@ -68348,18 +68363,13 @@ const useDuplicateHeaderWarning = ref => {
 // fraction short of it, and without this slack it reads as being at rest: a
 // bug that shows up on one machine and not the next.
 const STUCK_SLACK = 1;
-// Which edge a part sticks to. The header and the footer stick along whichever
-// axis the list scrolls — their rules declare both insets (top/left, and
-// bottom/right) so the same markup works either way; a group label always caps
-// its group from the top.
+// Which edge a part sticks to: the edge the list scrolls FROM for the header
+// and a group label, the one it scrolls toward for the footer.
 const getStickyEdge = (partEl, horizontal) => {
   if (partEl.classList.contains("navi_list_item_footer")) {
     return horizontal ? "right" : "bottom";
   }
-  if (partEl.classList.contains("navi_list_item_header")) {
-    return horizontal ? "left" : "top";
-  }
-  return "top";
+  return horizontal ? "left" : "top";
 };
 // A sticky inset is measured from the scrollport — the padding box of the
 // scroller, or the viewport when the page scrolls. getScrollerViewportRect
@@ -70718,9 +70728,10 @@ const ListItemGroup = ({
     if (!groupEl) {
       return;
     }
-    const rect = labelEl.getBoundingClientRect();
-    groupEl.style.setProperty("--list-group-label-height", `${rect.height}px`);
-    groupEl.style.setProperty("--list-group-label-width", `${rect.width}px`);
+    const {
+      height
+    } = labelEl.getBoundingClientRect();
+    groupEl.style.setProperty("--list-group-label-height", `${height}px`);
   }, []);
   const {
     className: labelClassName,

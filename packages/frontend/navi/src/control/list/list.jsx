@@ -342,6 +342,7 @@ const css = /* css */ `
        it is 0px when nothing covers the top. */
     &[data-scroller="document"] {
       --x-list-group-label-top: var(--navi-safe-area-inset-top);
+      --x-list-group-label-left: var(--navi-safe-area-inset-left);
     }
 
     &[data-expand-x] {
@@ -706,7 +707,9 @@ const css = /* css */ `
     background-color: var(--list-item-background-color-highlight);
   }
 
-  /* Hide groups that have no rendered items. */
+  /* A group is a band across the list, with its label capping it at the edge
+     the list scrolls from. Written here along y, for the vertical list; the
+     rule after this one reads the same structure along x. */
   .navi_list_item_group {
     min-width: 100%;
 
@@ -753,14 +756,40 @@ const css = /* css */ `
         scroll-margin-top: calc(
           var(--x-list-scroll-spacing-top) + var(--list-group-label-height, 0px)
         );
-        scroll-margin-left: calc(
-          var(--x-list-scroll-spacing-left) + var(--list-group-label-width, 0px)
-        );
       }
     }
 
+    /* Hide groups that have no rendered items. */
     &[data-hidden-while-empty]:not(:has([navi-list-item-real])) {
       display: none;
+    }
+  }
+
+  /* The same group, in a list whose rows run along x: the groups stand side by
+     side, each one its label over its own run of rows, and the label rides the
+     left edge for as long as its group is on screen.
+
+     The whole chain down to the group, because the axis is the axis of THIS
+     list: a vertical list nested in a row of a horizontal one keeps the rules
+     above. */
+  .navi_list_container[data-horizontal]
+    > .navi_list_scroll_container
+    > .navi_list
+    > .navi_list_item_group {
+    /* A row is never wider than the list it is in (see .navi_list_item), but a
+       group is a run of them: what it takes along x is what its rows add up
+       to, and the list scrolls to the rest. */
+    min-width: auto;
+    max-width: none;
+
+    > .navi_list_item_group_label {
+      top: auto;
+      left: var(--list-group-label-left, var(--x-list-group-label-left, 0px));
+    }
+
+    > .navi_list_item_group_list {
+      width: auto;
+      flex-direction: row;
     }
   }
 
@@ -2539,18 +2568,13 @@ const useDuplicateHeaderWarning = (ref) => {
 // fraction short of it, and without this slack it reads as being at rest: a
 // bug that shows up on one machine and not the next.
 const STUCK_SLACK = 1;
-// Which edge a part sticks to. The header and the footer stick along whichever
-// axis the list scrolls — their rules declare both insets (top/left, and
-// bottom/right) so the same markup works either way; a group label always caps
-// its group from the top.
+// Which edge a part sticks to: the edge the list scrolls FROM for the header
+// and a group label, the one it scrolls toward for the footer.
 const getStickyEdge = (partEl, horizontal) => {
   if (partEl.classList.contains("navi_list_item_footer")) {
     return horizontal ? "right" : "bottom";
   }
-  if (partEl.classList.contains("navi_list_item_header")) {
-    return horizontal ? "left" : "top";
-  }
-  return "top";
+  return horizontal ? "left" : "top";
 };
 // A sticky inset is measured from the scrollport — the padding box of the
 // scroller, or the viewport when the page scrolls. getScrollerViewportRect
@@ -5092,12 +5116,8 @@ export const ListItemGroup = ({
       if (!groupEl) {
         return;
       }
-      const rect = labelEl.getBoundingClientRect();
-      groupEl.style.setProperty(
-        "--list-group-label-height",
-        `${rect.height}px`,
-      );
-      groupEl.style.setProperty("--list-group-label-width", `${rect.width}px`);
+      const { height } = labelEl.getBoundingClientRect();
+      groupEl.style.setProperty("--list-group-label-height", `${height}px`);
     },
     [],
   );
