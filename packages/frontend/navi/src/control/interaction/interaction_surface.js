@@ -158,7 +158,7 @@ defineInteractionDetector({
           // button to press, and what closes it is the hand going quiet.
           skipFocus: true,
           closeButton: false,
-          closeOnClickOutside: false,
+          closeByPressOutside: false,
           closeOnFocusLeave: false,
           onClose: () => {
             hint = null;

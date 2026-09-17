@@ -70,7 +70,7 @@ export const createCalloutManager = (
       testId: tokenData.testId,
       icon: tokenData.icon,
       closeButton: tokenData.closeButton,
-      closeOnClickOutside: tokenData.status !== "error",
+      closeByPressOutside: tokenData.status !== "error",
       closeByScroll: tokenData.closeByScroll,
       anchorElement,
       openingEvent: event,

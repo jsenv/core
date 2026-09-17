@@ -335,7 +335,7 @@ const css = /* css */ `
  *   for free (`status`/`alert`); reach for this when the role is not enough to tell two
  *   callouts apart.
  * @param {Function} [options.onClose] - Callback when callout is closed
- * @param {boolean} [options.closeOnClickOutside] - Whether to close on outside clicks (defaults to true for "info" status)
+ * @param {boolean} [options.closeByPressOutside] - Whether a press outside closes the callout (defaults to true for "info" status)
  * @param {boolean|number} [options.closeByScroll=false] - Dismiss the callout once the page has
  *   scrolled under it. `true` uses a short distance, a number sets it in pixels
  *   (`closeByScroll: 100` waits for 100px). Measured from where the scroll containers stood when
@@ -403,15 +403,15 @@ export const openCallout = (
     status = "",
     testId,
     onClose,
-    closeOnClickOutside = status === "info",
-    closeOnFocusLeave = closeOnClickOutside,
+    closeByPressOutside = status === "info",
+    closeOnFocusLeave = closeByPressOutside,
     closeByScroll = false,
+    closeButton = true,
     openingEvent,
     reopen = "toggle",
     showErrorStack,
     skipFocus = false,
     icon = true,
-    closeButton = true,
     debug = () => {},
   } = {},
 ) => {
@@ -499,7 +499,7 @@ export const openCallout = (
     const clickOrSpaceOutside =
       reason === "click_outside" || reason === "space_outside";
     if (clickOrSpaceOutside) {
-      if (!closeOnClickOutside) {
+      if (!closeByPressOutside) {
         return;
       }
       if (callout.status === "error") {
@@ -632,9 +632,9 @@ export const openCallout = (
       updateStatus(options.status);
     }
 
-    if (Object.hasOwn(options, "closeOnClickOutside")) {
-      closeOnClickOutside = options.closeOnClickOutside;
-      if (closeOnClickOutside) {
+    if (Object.hasOwn(options, "closeByPressOutside")) {
+      closeByPressOutside = options.closeByPressOutside;
+      if (closeByPressOutside) {
         closeOnFocusLeave = true;
       }
     }
@@ -838,7 +838,7 @@ export const openCallout = (
     const openingDownEvent =
       findEvent(openingEvent, "mousedown") ||
       findEvent(openingEvent, "pointerdown");
-    if (closeOnClickOutside && openingEvent && openingDownEvent) {
+    if (closeByPressOutside && openingEvent && openingDownEvent) {
       const upType =
         openingDownEvent.type === "pointerdown" ? "pointerup" : "mouseup";
       debug(
