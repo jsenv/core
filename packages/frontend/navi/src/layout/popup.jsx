@@ -101,15 +101,15 @@ const css = /* css */ `
  *   `Popover` have different own defaults (`"center"` vs. `"bottom"`),
  *   deliberately not homogenized here (each reads best for its own typical
  *   use case).
- * @param {"close"|"cancel"|"capture"|"none"} [props.pointerInteractionOutsideEffect="close"]
+ * @param {"close"|"cancel"|"capture"|"ignore"} [props.pressOutside="close"]
  *   - Forwarded to whichever component renders, defaulted here to `"close"`
- *   specifically to override `Popover`'s own different default (`"none"`)
+ *   specifically to override `Popover`'s own different default (`"ignore"`)
  *   — without this, the exact same `<Popup>` usage would behave
- *   differently (close-on-outside-click or not) purely based on which mode
+ *   differently (close on an outside press or not) purely based on which mode
  *   the screen-size check happens to pick, which defeats the point of
  *   having one shared API in the first place. Note this only says what a
  *   press outside *does*; whether it reaches the page at all is `backdrop`
- *   below, and `"none"`/`"capture"` describe a wall either way — the popup
+ *   below, and `"ignore"`/`"capture"` describe a wall either way — the popup
  *   absorbs the press without closing, dimmed or not.
  * @param {boolean} [props.backdrop] - Whether anything is laid between the
  *   popup and the page at all: `false` lets a press outside both dismiss the
@@ -123,7 +123,7 @@ const css = /* css */ `
  *   as-is to whichever component renders (both understand it identically):
  *   how visible the backdrop is, independently of what an outside click
  *   does — a wall that is not seen is still a wall (that is `backdrop`
- *   above). Unlike `pointerInteractionOutsideEffect`, this one needs no
+ *   above). Unlike `pressOutside`, this one needs no
  *   default here — `"auto"` already means the same thing on both sides.
  * @param {string} [props.backdropColor] - Forwarded as-is (both understand it
  *   identically): the wash the backdrop paints over what is behind.
@@ -185,10 +185,10 @@ export const Popup = (props) => {
     className,
     children,
     // Both default here (not left to each component's own, *different*
-    // default — Dialog's own is "close", Popover's own is "none") so the
+    // default — Dialog's own is "close", Popover's own is "ignore") so the
     // exact same <Popup> usage behaves identically regardless of which
     // mode the automatic screen-size resolution happens to pick.
-    pointerInteractionOutsideEffect = "close",
+    pressOutside = "close",
     backdrop,
     // Popover-only (see this component's own doc) — destructured out so
     // they're never part of ...rest, and therefore never forwarded to
@@ -228,7 +228,7 @@ export const Popup = (props) => {
         sizeFromAnchor={sizeFromAnchor}
         lift={lift}
         maxWidth={maxWidth}
-        pointerInteractionOutsideEffect={pointerInteractionOutsideEffect}
+        pressOutside={pressOutside}
         backdrop={backdrop}
         className={withPropsClassName("navi_popup", className)}
         expand={expand}
@@ -244,7 +244,7 @@ export const Popup = (props) => {
     <Popover
       {...rest}
       maxWidth={maxWidth}
-      pointerInteractionOutsideEffect={pointerInteractionOutsideEffect}
+      pressOutside={pressOutside}
       backdrop={backdrop}
       marginWithAnchor={marginWithAnchor}
       focusCapture={focusCapture}

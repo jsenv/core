@@ -9,7 +9,7 @@ It answers three questions, and they are independent:
 1. **Is there anything between the popup and the page at all?** That is
    `backdrop`.
 2. **What does a press outside do?** Close, cancel, be absorbed, pass through.
-   That is `pointerInteractionOutsideEffect`.
+   That is `pressOutside`.
 3. **How far does what is behind withdraw?** Dimmed, blurred, barely marked,
    not painted at all. That is the paint: `backdropVariant`, `backdropColor`,
    `backdropFilter`.
@@ -41,7 +41,7 @@ that gave no sign it would.
 `backdrop={false}` is how that popup says there is no wall:
 
 ```jsx
-<Popover pointerInteractionOutsideEffect="close" backdrop={false}>
+<Popover pressOutside="close" backdrop={false}>
 ```
 
 The popup then hears an outside press from the document itself, and takes
@@ -92,9 +92,9 @@ limitation as `layer="local"`, see [`dialog_shape.md`](./dialog_shape.md)).
 Focus is not trapped either, deliberately — a page meant to be reachable is
 meant to be reachable with the keyboard too.
 
-`pointerInteractionOutsideEffect="capture"` and `backdrop={false}` contradict
+`pressOutside="capture"` and `backdrop={false}` contradict
 each other — absorbing is what a wall does — and navi warns rather than
-silently behaving like `"none"`.
+silently behaving like `"ignore"`.
 
 ## Where the outside begins
 
@@ -131,8 +131,8 @@ the surface:
 
 A press on that row — left of the wheel, right of it, or anywhere in the height
 it reserves while the wheel is hidden — does exactly what the same press on the
-backdrop does, `pointerInteractionOutsideEffect` and all: `"cancel"`
-reverts, `"capture"` absorbs it, `"none"` (a `Popover`'s default, where no
+backdrop does, `pressOutside` and all: `"cancel"`
+reverts, `"capture"` absorbs it, `"ignore"` (a `Popover`'s default, where no
 backdrop is rendered at all) leaves it without an answer.
 
 It is opt-in because navi cannot infer it: a background can come from anywhere,
@@ -179,7 +179,7 @@ panel that closes on that press then reopens on the click that follows is a
 panel meant to stay open, blinking.
 
 ```jsx
-<SidePanel id="error_panel" signal={openCardIdSignal} closeOnClickOutside>
+<SidePanel id="error_panel" signal={openCardIdSignal} closeByPressOutside>
   …
 </SidePanel>
 
@@ -236,12 +236,12 @@ Both are forwarded by `Popup`, `SidePanel`, `Picker` and `SplitButton`, next to
 When the choice is the app's rather than one popup's, it goes on `:root`. Each
 kind of backdrop has a colour **and** a filter, and they travel together:
 
-| kind                                                         | tokens                                                                            |
-| ------------------------------------------------------------ | --------------------------------------------------------------------------------- |
-| the default (`pointerInteractionOutsideEffect` close/cancel) | `--navi-backdrop-close-background`, `--navi-backdrop-close-backdrop-filter`       |
-| `pointerInteractionOutsideEffect="capture"`                  | `--navi-backdrop-capture-background`, `--navi-backdrop-capture-backdrop-filter`   |
-| `backdropVariant="discrete"`                                 | `--navi-backdrop-discrete-background`, `--navi-backdrop-discrete-backdrop-filter` |
-| `animation="lifting"`, `backdropVariant="lift"`              | `--navi-backdrop-lift-background`, `--navi-backdrop-lift-backdrop-filter`         |
+| kind                                            | tokens                                                                            |
+| ----------------------------------------------- | --------------------------------------------------------------------------------- |
+| the default (`pressOutside` close/cancel)       | `--navi-backdrop-close-background`, `--navi-backdrop-close-backdrop-filter`       |
+| `pressOutside="capture"`                        | `--navi-backdrop-capture-background`, `--navi-backdrop-capture-backdrop-filter`   |
+| `backdropVariant="discrete"`                    | `--navi-backdrop-discrete-background`, `--navi-backdrop-discrete-backdrop-filter` |
+| `animation="lifting"`, `backdropVariant="lift"` | `--navi-backdrop-lift-background`, `--navi-backdrop-lift-backdrop-filter`         |
 
 Only `capture` blurs out of the box among the three above: the rest of the page
 is genuinely unreachable then, so it reads as clearly secondary. Nothing else
@@ -313,10 +313,10 @@ one it is, so the same two lines hold under both renderers.
 
 Painting is resolved through two variables the popup and its backdrop carry,
 `--backdrop-background` and `--backdrop-filter`. Navi's own rules — the ones
-keyed on `pointerInteractionOutsideEffect` and on `backdropVariant` — write them
+keyed on `pressOutside` and on `backdropVariant` — write them
 as defaults; the props write them inline on the same element, which beats every
 rule. So `backdropColor` wins over `backdropVariant="invisible"`, and a variant
 is only ever what the caller did not say.
 
-A `Popover` with `pointerInteractionOutsideEffect="none"` renders no backdrop at
+A `Popover` with `pressOutside="ignore"` renders no backdrop at
 all: there is nothing to paint, and both props are ignored.

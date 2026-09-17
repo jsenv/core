@@ -878,7 +878,7 @@
                 mode="popover"
                 positionArea={positionArea}
                 popupWidthFitContent
-                pointerInteractionOutsideEffect="none"
+                pressOutside="ignore"
               >
                 <ShortPickerContent />
               </Picker>
@@ -1678,7 +1678,7 @@
                 }
                 // Demo affordance only: keeps the popup open while you press the
                 // buttons above ("none" = no backdrop, outside clicks pass through).
-                pointerInteractionOutsideEffect="none"
+                pressOutside="ignore"
               >
                 <ArticleList
                   articles={phase === "loaded" ? ARTICLES : []}
@@ -1724,7 +1724,7 @@
                     ? "Could not load the selected article."
                     : undefined
                 }
-                pointerInteractionOutsideEffect="none"
+                pressOutside="ignore"
                 uiAction={(value) => {
                   setArticleId(value);
                 }}

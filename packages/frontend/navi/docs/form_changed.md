@@ -42,6 +42,33 @@ is (`--navi-reset`), stay put as it is (`--navi-void`). Left out, the surface th
 form sits in decides: a popup closes, a slide goes on, a form on a page does
 nothing.
 
+### A popup that stays open
+
+A side panel, a dialog or a popover closes once a form inside it is sent. When
+the popup is a place one keeps working in — a panel where a push is sent, two
+fields are fixed, an account is linked — the form says it stays:
+
+```jsx
+<SidePanel signal={openUserSignal} value={user.id}>
+  <Form action={sendPush} command="--navi-void">
+    …
+  </Form>
+</SidePanel>
+```
+
+The form says it, not the popup. A popup does not know which of its forms is
+its answer: the same panel can hold a form you edit in over and over and a
+"delete" whose send has to close it. A popup that stays open whatever is sent
+inside it would make every form in it that should close say so again, which
+is the same repetition in the other direction. Nor does a `SidePanel` get a
+different default from a `Dialog`: the same content in either one should
+behave the same, and on a small screen a `SidePanel` often _is_ a dialog.
+
+When the popup's open state is a url param (`signal` bound to a route's search
+param), closing it takes the param out of the url. A form that forgot
+`--navi-void` then looks like a screen that reloaded: the panel is gone, and so
+is what a reload would have brought back.
+
 `--navi-reset` is the one to reach for when the form is a place one comes back
 to — an entry created, then the next one: the fields go back to their
 `defaultValue`, ready for the next entry. (What the form is measured against

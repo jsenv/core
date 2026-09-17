@@ -1685,7 +1685,7 @@ const PickerFirstResolver = (props) => {
  *   marginWithContainer?: number | string,
  *   anchor?: import("preact").RefObject<HTMLElement> | HTMLElement,
  *   escapeEffect?: "cancel" | "close",
- *   pointerInteractionOutsideEffect?: "close" | "cancel" | "capture",
+ *   pressOutside?: "close" | "cancel" | "capture",
  *   backdrop?: boolean,
  *   backdropVariant?: "auto" | "lift" | "discrete" | "invisible",
  *   backdropColor?: string,
@@ -2035,8 +2035,8 @@ const PickerFirstResolver = (props) => {
  *   part of that group's value and nothing that group does — distributing,
  *   resetting, validating — reaches it. For a door that only opens something,
  *   and for a picker that commits on its own inside a form.
- * @param {"close"|"cancel"|"capture"} [pointerInteractionOutsideEffect="close"]
- *   What a click outside the popup does: close and keep ("close"), close and
+ * @param {"close"|"cancel"|"capture"} [pressOutside="close"]
+ *   What a press outside the popup does: close and keep ("close"), close and
  *   put back the value at open ("cancel"), or nothing at all ("capture"). The
  *   default is what gives a popup with no confirm button its way out that
  *   keeps — see the same section.
@@ -2050,7 +2050,7 @@ const PickerFirstResolver = (props) => {
  *   leaves the plan behind it live.
  * @param {"auto"|"lift"|"discrete"|"invisible"} [backdropVariant="auto"] How
  *   visible the popup's backdrop is, independently of what a click outside
- *   does: `"auto"` is the paint `pointerInteractionOutsideEffect` implies,
+ *   does: `"auto"` is the paint `pressOutside` implies,
  *   `"lift"` the opaque blurred wall `animation="lifting"` brings, asked for
  *   without the movement, `"discrete"` a barely-there dim, `"invisible"` fully
  *   transparent — a wall that is not seen is still a wall, which is what

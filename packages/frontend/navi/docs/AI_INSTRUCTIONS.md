@@ -142,7 +142,8 @@ to start when unsure which export solves a problem.
 - `control_group.md` — `<Group>`: several controls reading as one framed
   object. Read before negative margins or `border-radius: 0` by hand.
 - `form_changed.md` — a form sends nothing when nothing changed; what "changed"
-  is measured against; `pristineKey`; `standalone`. Read before
+  is measured against; `pristineKey`; `standalone`; what follows a send, and
+  `command="--navi-void"` for a form that keeps its popup open. Read before
   `canSendWhileUnchanged`, and before a control inside a group whose value it
   has no business joining.
 - `field_validation.md` — what only a browser can answer versus "is this value

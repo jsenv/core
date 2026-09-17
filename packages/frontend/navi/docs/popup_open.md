@@ -688,12 +688,12 @@ the popup without closing it, and the error callout stays where the press was.
 The gestures that close a popup do not all mean the same thing, and that is on
 purpose:
 
-| gesture                        | what it means | who decides                                         |
-| ------------------------------ | ------------- | --------------------------------------------------- |
-| Escape                         | cancel        | `escapeEffect="cancel"` (default)                   |
-| a click outside                | close, keep   | `pointerInteractionOutsideEffect="close"` (default) |
-| a close cross (`--navi-close`) | close, keep   | [the cross](#the-close-cross)                       |
-| `--navi-cancel` on a button    | cancel        | the button                                          |
+| gesture                        | what it means | who decides                       |
+| ------------------------------ | ------------- | --------------------------------- |
+| Escape                         | cancel        | `escapeEffect="cancel"` (default) |
+| a press outside                | close, keep   | `pressOutside="close"` (default)  |
+| a close cross (`--navi-close`) | close, keep   | [the cross](#the-close-cross)     |
+| `--navi-cancel` on a button    | cancel        | the button                        |
 
 Escape says "forget it". It is the one gesture that has meant that everywhere,
 for as long as there have been dialogs, and navi keeps it that way. **A popup
@@ -927,7 +927,7 @@ the renderer.
 
 ```jsx
 const Panel = ({ children }) => (
-  <SidePanel id="error_panel" signal={openCardIdSignal} closeOnClickOutside>
+  <SidePanel id="error_panel" signal={openCardIdSignal} closeByPressOutside>
     {children}
   </SidePanel>
 );

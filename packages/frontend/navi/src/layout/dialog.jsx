@@ -422,7 +422,7 @@ const css = /* css */ `
       --backdrop-background: var(--navi-backdrop-lift-background);
       --backdrop-filter: var(--navi-backdrop-lift-backdrop-filter);
     }
-    &[data-pointer-interaction-outside="capture"] {
+    &[data-press-outside="capture"] {
       --backdrop-background: var(--navi-backdrop-capture-background);
       --backdrop-filter: var(--navi-backdrop-capture-backdrop-filter);
     }
@@ -574,7 +574,7 @@ const css = /* css */ `
      a real sibling element instead, same idea/CSS shape as Popover's own
      .navi_popover_backdrop (see popover.jsx's top comment for the design this
      mirrors). Rendered whenever backdrop={true}, whatever
-     pointerInteractionOutsideEffect says: a wall that closes nothing still
+     pressOutside says: a wall that closes nothing still
      absorbs the press, matching what showModal() gives a modal for free. */
   .navi_dialog_backdrop {
     --popup-animation-duration: 0.18s;
@@ -614,9 +614,9 @@ const css = /* css */ `
       display: none;
     }
 
-    /* Makes pointerInteractionOutsideEffect have a visible impact on backdrop */
-    &[data-pointer-interaction-outside="close"],
-    &[data-pointer-interaction-outside="cancel"] {
+    /* Makes pressOutside have a visible impact on backdrop */
+    &[data-press-outside="close"],
+    &[data-press-outside="cancel"] {
       --backdrop-background: var(--navi-backdrop-close-background);
       --backdrop-filter: var(--navi-backdrop-close-backdrop-filter);
     }
@@ -629,7 +629,7 @@ const css = /* css */ `
       --backdrop-background: var(--navi-backdrop-lift-background);
       --backdrop-filter: var(--navi-backdrop-lift-backdrop-filter);
     }
-    &[data-pointer-interaction-outside="capture"] {
+    &[data-press-outside="capture"] {
       --backdrop-background: var(--navi-backdrop-capture-background);
       --backdrop-filter: var(--navi-backdrop-capture-backdrop-filter);
     }
@@ -884,24 +884,24 @@ const css = /* css */ `
  *   the dialog and the page at all — asked before any question of what an
  *   outside press does or how the backdrop is painted. `false` leaves the page
  *   reachable: a press outside closes the dialog (per
- *   `pointerInteractionOutsideEffect`) *and* is answered by whatever it landed
+ *   `pressOutside`) *and* is answered by whatever it landed
  *   on, in the same gesture; focus is free to leave too, the page behind being
  *   meant to be reached. Works in either layer — a top-layer dialog with no
  *   wall is shown through the Popover API rather than `showModal()`, which is
  *   what a sheet docked to the screen's bottom edge over a still-readable map
  *   needs. What it gives up is what only a modal gets natively: the hardware
  *   back button no longer dismisses it. See docs/popup_backdrop.md.
- * @param {"close"|"cancel"|"capture"|"none"} [props.pointerInteractionOutsideEffect="close"]
- *   - `"close"` closes the dialog on an outside click. `"capture"`/`"none"`
- *   both just absorb the click without closing (visually dimmed backdrop vs.
+ * @param {"close"|"cancel"|"capture"|"ignore"} [props.pressOutside="close"]
+ *   - `"close"` closes the dialog on an outside press. `"capture"`/`"ignore"`
+ *   both just absorb the press without closing (visually dimmed backdrop vs.
  *   not) — a dialog with a backdrop is modal one way or another, so there's
- *   always at least a click-absorbing backdrop regardless of this prop.
+ *   always at least a press-absorbing backdrop regardless of this prop.
  *   "Outside" is the dialog's own border box; a see-through dialog whose box is
  *   bigger than what it paints marks the difference with
  *   `data-navi-popup-outside` (see docs/popup_backdrop.md).
  * @param {"auto"|"lift"|"discrete"|"invisible"} [props.backdropVariant="auto"]
  *   - How visible the backdrop is, independently of what it does. `"auto"`:
- *   the paint `pointerInteractionOutsideEffect` implies (dimmed for
+ *   the paint `pressOutside` implies (dimmed for
  *   `"close"`/`"cancel"`, blurred glass for `"capture"`), or the opaque wall
  *   `animation="lifting"` asks for. `"lift"`: that same opaque, blurred wall
  *   (`--navi-backdrop-lift-*`) asked for on its own, for a dialog whose
@@ -1286,20 +1286,20 @@ const useDialogProps = (props) => {
     expand,
     expandX: expandXProp,
     expandY: expandYProp,
-    // "close" (default) closes on an outside click. "capture"/"none" both
+    // "close" (default) closes on an outside press. "capture"/"ignore" both
     // just absorb it without closing — for a modal, showModal() already makes
     // the rest of the page inert, so there's nothing for a click to reach
     // either way; otherwise there's no native inert-ing, so the real backdrop
-    // below is what makes "capture"/"none" behave the same way here too.
-    pointerInteractionOutsideEffect = "close",
+    // below is what makes "capture"/"ignore" behave the same way here too.
+    pressOutside = "close",
     // Whether there is a wall between the dialog and the page at all, asked
-    // before what a press on it does (pointerInteractionOutsideEffect) and
+    // before what a press on it does (pressOutside) and
     // before how it is painted (backdropVariant below). It also picks the show
     // call for layer="top": a wall is what showModal() is for, and without one
     // the dialog goes to the same top layer through the Popover API instead.
     backdrop = true,
     // How loudly the backdrop says it is there — independent of what it
-    // *does* (that's pointerInteractionOutsideEffect above). "lift" is the
+    // *does* (that's pressOutside above). "lift" is the
     // opaque wall at one end, "invisible" a wall that is not seen at the
     // other — not the absence of one, it only stops the dim from being
     // drawn.
@@ -1364,9 +1364,9 @@ const useDialogProps = (props) => {
   const isTopLayer = layer === "top";
   const isModal = isTopLayer && backdrop;
   const isTopLayerPopover = isTopLayer && !backdrop;
-  if (!backdrop && pointerInteractionOutsideEffect === "capture") {
+  if (!backdrop && pressOutside === "capture") {
     console.warn(
-      `Dialog: pointerInteractionOutsideEffect="capture" needs a backdrop. Absorbing a press is what a wall does, and backdrop={false} takes it away.`,
+      `Dialog: pressOutside="capture" needs a backdrop. Absorbing a press is what a wall does, and backdrop={false} takes it away.`,
     );
   }
   const ref = props.ref;
@@ -1995,13 +1995,12 @@ const useDialogProps = (props) => {
     // mid-transition.
     if (
       (isModal || !backdrop) &&
-      (pointerInteractionOutsideEffect === "close" ||
-        pointerInteractionOutsideEffect === "cancel")
+      (pressOutside === "close" || pressOutside === "cancel")
     ) {
       addCleanup(
         armOutsidePressClose(dialogEl, {
           openController,
-          pointerInteractionOutsideEffect,
+          pressOutside,
           // A modal wall spends the press the page acts on (mousedown); a
           // local dialog with no wall lets that same press through
           // (pointerdown). See armOutsidePressClose for why the two differ on
@@ -2107,7 +2106,7 @@ const useDialogProps = (props) => {
     "navi-hidden": openController.openedInDom ? undefined : "",
     "styleCSSVars": DIALOG_STYLE_CSS_VARS,
     "animationDuration": rest.animationDuration,
-    "data-pointer-interaction-outside": pointerInteractionOutsideEffect,
+    "data-press-outside": pressOutside,
     "data-backdrop-variant": backdropVariant,
     "data-lifting": lifting ? "" : undefined,
     backdropColor,
@@ -2139,7 +2138,7 @@ const useDialogProps = (props) => {
     // navi-animation above. Harmless for a local dialog too (its own real
     // backdrop element already gets the same attribute via backdropProps
     // above, which is what its own CSS actually keys off).
-    "data-pointer-interaction-outside": pointerInteractionOutsideEffect,
+    "data-press-outside": pressOutside,
     // Only load-bearing for a modal's own native ::backdrop, same "a
     // pseudo-element can't carry attributes" reasoning as the prop just above
     // (and harmless for a local dialog, whose real backdrop element gets it
@@ -2190,7 +2189,7 @@ const useDialogProps = (props) => {
     // The top layer without a wall: showPopover() is what puts it there, and
     // it only accepts an element that declares itself a popover. "manual" so
     // the browser's own light dismiss stays out of it — what an outside press
-    // does is pointerInteractionOutsideEffect's answer, given by the
+    // does is pressOutside's answer, given by the
     // document-level listener in openEffect above.
     "popover": isTopLayerPopover ? "manual" : undefined,
     "baseClassName": "navi_dialog",
@@ -2237,7 +2236,7 @@ const useDialogProps = (props) => {
       handlePressOnOutsideRegion(e, {
         popupEl: ref.current,
         openController,
-        pointerInteractionOutsideEffect,
+        pressOutside,
       });
     },
     "onKeyDown": (e) => {
@@ -2294,15 +2293,12 @@ const useDialogProps = (props) => {
       ) {
         return;
       }
-      if (
-        pointerInteractionOutsideEffect === "close" ||
-        pointerInteractionOutsideEffect === "cancel"
-      ) {
+      if (pressOutside === "close" || pressOutside === "cancel") {
         openController.requestClose(mouseDownEvent, {
-          isCancel: pointerInteractionOutsideEffect === "cancel",
+          isCancel: pressOutside === "cancel",
         });
       }
-      // "capture"/"none" both just absorb the click without closing — see
+      // "capture"/"ignore" both just absorb the press without closing — see
       // this hook's own destructuring comment for why the two collapse to
       // the same behavior for Dialog.
     };

@@ -630,17 +630,15 @@
         );
       };
 
-      const PointerInteractionOutsideSection = () => {
+      const PressOutsideSection = () => {
         const { animation, animationDuration, controlsProps } =
-          useAnimateControls("dialog_demo_pointer_interaction_outside");
+          useAnimateControls("dialog_demo_press_outside");
         return (
           <section class="demo-section">
-            <Heading id="pointer-interaction-outside">
-              pointerInteractionOutsideEffect
-            </Heading>
+            <Heading id="press-outside">pressOutside</Heading>
             <p>
               <code>"close"</code> (default) closes on an outside click.{" "}
-              <code>"capture"</code>/<code>"none"</code> both just absorb it —
+              <code>"capture"</code>/<code>"ignore"</code> both just absorb it —
               <code>showModal()</code> already makes the rest of the page inert,
               so there's nothing for the click to reach either way (see
               dialog.jsx's own top comment).
@@ -650,13 +648,13 @@
                 label="close (default)"
                 animation={animation}
                 animationDuration={animationDuration}
-                pointerInteractionOutsideEffect="close"
+                pressOutside="close"
               />
               <TriggeredDialog
                 label="capture"
                 animation={animation}
                 animationDuration={animationDuration}
-                pointerInteractionOutsideEffect="capture"
+                pressOutside="capture"
               />
             </div>
             <AnimateControls {...controlsProps} />
@@ -1761,7 +1759,7 @@
               id="required_dialog"
               // the submit button is where committing happens, so leaving by
               // clicking outside means giving up
-              pointerInteractionOutsideEffect="cancel"
+              pressOutside="cancel"
             >
               <Form
                 body
@@ -1789,11 +1787,7 @@
       // A form that takes time to send holds the dialog around it: every way
       // out (Cancel, Escape, the backdrop) answers with the busy callout until
       // the send settles, and the dialog closes on its own once it succeeds.
-      const AsyncActionDialog = ({
-        id,
-        perform,
-        pointerInteractionOutsideEffect,
-      }) => {
+      const AsyncActionDialog = ({ id, perform, pressOutside }) => {
         const [entries, push, clear] = useCallLog();
         const [committed, setCommitted] = useState({ name: "" });
         return (
@@ -1806,10 +1800,7 @@
                 committed: <code>{JSON.stringify(committed)}</code>
               </span>
             </div>
-            <Dialog
-              id={id}
-              pointerInteractionOutsideEffect={pointerInteractionOutsideEffect}
-            >
+            <Dialog id={id} pressOutside={pressOutside}>
               <Form
                 body
                 padding="m"
@@ -1860,7 +1851,7 @@
           </Heading>
           <AsyncActionDialog
             id="async_action_cancel_dialog"
-            pointerInteractionOutsideEffect="cancel"
+            pressOutside="cancel"
             perform={() => delay(2000)}
           />
 
@@ -2249,7 +2240,7 @@
           <ContentSizeSection />
           <PositionSection />
           <LiftingSection />
-          <PointerInteractionOutsideSection />
+          <PressOutsideSection />
           <BackdropSection />
           <OpenFromStartSection />
           <AdaptiveSection />

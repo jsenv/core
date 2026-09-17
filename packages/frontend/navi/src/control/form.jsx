@@ -91,7 +91,8 @@ import { dispatchRequestResetUIState } from "./ui_state_dom.js";
  *   `"--navi-close"` dismisses the popup the form is in,
  *   `"--navi-left"`/`"--navi-right"`/`"--navi-up"`/`"--navi-down"` move on the
  *   slide map it is in, `"--navi-nav-to:/the/url"` takes the user to a page,
- *   `"--navi-void"` stays put.
+ *   `"--navi-void"` stays put — the one for a form inside a popup that must
+ *   stay open once it is sent (a side panel one keeps editing in).
  *   Any navi command, really: it is triggered from the form, so it finds its
  *   target the way that command always does.
  *

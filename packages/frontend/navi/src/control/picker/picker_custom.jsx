@@ -936,7 +936,7 @@ const PickerContentInsidePopup = (props) => {
     // Clicking outside the popup closes it and COMMITS by default (fires the
     // action if the value changed) — Escape still cancels. Pass "cancel" to make
     // clicking outside revert instead, or "capture" to keep it open.
-    pointerInteractionOutsideEffect = "close",
+    pressOutside = "close",
     // Named/forwarded rather than left in ...rest: rest goes to the picker
     // element itself, not the popup, and these belong to the popup.
     backdrop,
@@ -1082,9 +1082,7 @@ const PickerContentInsidePopup = (props) => {
               : marginWithContainer
           }
           scrollCapture={scrollCapture}
-          pointerInteractionOutsideEffect={
-            pointerLock ? "capture" : pointerInteractionOutsideEffect
-          }
+          pressOutside={pointerLock ? "capture" : pressOutside}
           backdrop={backdrop}
           backdropVariant={backdropVariant}
           backdropColor={backdropColor}

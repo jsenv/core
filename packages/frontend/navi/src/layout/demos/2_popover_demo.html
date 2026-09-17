@@ -523,7 +523,7 @@
           <AnchorAreaSection />
           <AnchorSpacingSection />
           <MarginWithContainerSection />
-          <PointerInteractionOutsideSection />
+          <PressOutsideSection />
           <CustomizationSection />
           <OpenAtStartSection />
           <AnchorTooBigSection />
@@ -605,7 +605,7 @@
                 committed: <code>{JSON.stringify(committed)}</code>
               </span>
             </div>
-            <Popover id="pop_required" pointerInteractionOutsideEffect="cancel">
+            <Popover id="pop_required" pressOutside="cancel">
               <Form
                 body
                 padding="m"
@@ -695,9 +695,9 @@
             </Heading>
             <p>
               A popover ignores outside clicks by default (
-              <code>pointerInteractionOutsideEffect="none"</code>, unlike
-              Dialog), so the two ways out are <kbd>Escape</kbd>, which cancels,
-              and a button that closes it, which commits.
+              <code>pressOutside="ignore"</code>, unlike Dialog), so the two
+              ways out are <kbd>Escape</kbd>, which cancels, and a button that
+              closes it, which commits.
             </p>
             <div class="demo-row">
               <Button command="--navi-toggle" commandFor="pop_actions">
@@ -731,7 +731,7 @@
             <CallLog entries={entries} onClear={clear} />
 
             <Heading level={3} id="actions-close-outside">
-              pointerInteractionOutsideEffect="close"
+              pressOutside="close"
             </Heading>
             <p>
               Clicking outside now closes the popover, and closing commits — the
@@ -745,10 +745,7 @@
                 committed: <code>{JSON.stringify(confirmed)}</code>
               </span>
             </div>
-            <Popover
-              id="pop_actions_close"
-              pointerInteractionOutsideEffect="close"
-            >
+            <Popover id="pop_actions_close" pressOutside="close">
               <Form
                 flex="y"
                 spacing="m"
@@ -813,7 +810,7 @@
               id={popoverId}
               borderRadius="8px"
               className="demo_popover_flex_box"
-              pointerInteractionOutsideEffect="close"
+              pressOutside="close"
             >
               <p style={{ marginTop: 0, fontWeight: "bold" }}>{label}</p>
               {content}
@@ -944,7 +941,7 @@
                 label="Button commanding popover"
                 animation={animation}
                 animationDuration={animationDuration}
-                pointerInteractionOutsideEffect="close"
+                pressOutside="close"
               />
             </div>
             <AnimateControls {...controlsProps} />
@@ -957,7 +954,7 @@
             <div class="demo-row">
               <AnchorlessPopover
                 label='anchorCustomEventDetail="ignore"'
-                pointerInteractionOutsideEffect="close"
+                pressOutside="close"
               />
             </div>
           </section>
@@ -1065,63 +1062,61 @@
         </section>
       );
 
-      const PointerInteractionOutsideSection = () => {
+      const PressOutsideSection = () => {
         const { animation, animationDuration, controlsProps } =
-          useAnimateControls("popover_demo_pointer_interaction_outside");
+          useAnimateControls("popover_demo_press_outside");
         return (
           <section class="demo-section">
-            <Heading id="pointer-interaction-outside">
-              pointerInteractionOutsideEffect
-            </Heading>
+            <Heading id="press-outside">pressOutside</Heading>
             <div class="demo-row">
-              <PointerInteractionOutsideDemo
+              <PressOutsideDemo
                 label="none (default)"
                 animation={animation}
                 animationDuration={animationDuration}
               />
-              <PointerInteractionOutsideDemo
+              <PressOutsideDemo
                 label="close"
-                pointerInteractionOutsideEffect="close"
+                pressOutside="close"
                 animation={animation}
                 animationDuration={animationDuration}
               />
-              <PointerInteractionOutsideDemo
+              <PressOutsideDemo
                 label="capture"
-                pointerInteractionOutsideEffect="capture"
+                pressOutside="capture"
                 animation={animation}
                 animationDuration={animationDuration}
               />
             </div>
             <Heading id="backdrop-variant">backdropVariant</Heading>
             <p>
-              Same <code>pointerInteractionOutsideEffect="close"</code>
+              Same <code>pressOutside="close"</code>
               everywhere — clicking outside closes every one of them. Only how
               much the backdrop insists changes.
             </p>
             <div class="demo-row">
-              <PointerInteractionOutsideDemo
+              <PressOutsideDemo
                 label="auto (default)"
-                pointerInteractionOutsideEffect="close"
+                pressOutside="close"
                 animation={animation}
                 animationDuration={animationDuration}
               />
-              <PointerInteractionOutsideDemo
+              <PressOutsideDemo
                 label="lift"
-                pointerInteractionOutsideEffect="close"
+                pressOutside="close"
                 backdropVariant="lift"
                 animation={animation}
                 animationDuration={animationDuration}
               />
-              <PointerInteractionOutsideDemo
+              <PressOutsideDemo
                 label="discrete"
-                pointerInteractionOutsideEffect="close"
+                pressOutside="close"
                 backdropVariant="discrete"
                 animation={animation}
                 animationDuration={animationDuration}
               />
-              <PointerInteractionOutsideDemo
+              <PressOutsideDemo
                 label="invisible"
-                pointerInteractionOutsideEffect="close"
+                pressOutside="close"
                 backdropVariant="invisible"
                 animation={animation}
                 animationDuration={animationDuration}
@@ -1131,30 +1126,30 @@
               backdropColor / backdropFilter
             </Heading>
             <div class="demo-row">
-              <PointerInteractionOutsideDemo
+              <PressOutsideDemo
                 label="auto (default)"
-                pointerInteractionOutsideEffect="close"
+                pressOutside="close"
                 animation={animation}
                 animationDuration={animationDuration}
               />
-              <PointerInteractionOutsideDemo
+              <PressOutsideDemo
                 label='backdropColor="rgb(6 10 20 / 55%)"'
-                pointerInteractionOutsideEffect="close"
+                pressOutside="close"
                 backdropColor="rgb(6 10 20 / 55%)"
                 animation={animation}
                 animationDuration={animationDuration}
               />
-              <PointerInteractionOutsideDemo
+              <PressOutsideDemo
                 label='+ backdropFilter="blur(4px)"'
-                pointerInteractionOutsideEffect="close"
+                pressOutside="close"
                 backdropColor="rgb(6 10 20 / 55%)"
                 backdropFilter="blur(4px)"
                 animation={animation}
                 animationDuration={animationDuration}
               />
-              <PointerInteractionOutsideDemo
+              <PressOutsideDemo
                 label='backdropFilter="blur(4px)"'
-                pointerInteractionOutsideEffect="close"
+                pressOutside="close"
                 backdropFilter="blur(4px)"
                 animation={animation}
                 animationDuration={animationDuration}
@@ -1349,11 +1344,11 @@
 
       // The same button doubles as the popover's own anchor and as "the rest
       // of the page" to click on once it's open — no separate elements
-      // needed to see what pointerInteractionOutsideEffect actually does.
+      // needed to see what pressOutside actually does.
       // The backdrop's opacity (see the CSS at the top) makes "close"/
       // "capture" visually distinct from "none" (fully transparent) without
       // needing more prose.
-      const PointerInteractionOutsideDemo = ({ label, ...props }) => {
+      const PressOutsideDemo = ({ label, ...props }) => {
         const popoverId = useId();
 
         return (
@@ -1528,7 +1523,7 @@
                   layer="local"
                   positionArea={token}
                   className="demo_popover_box"
-                  pointerInteractionOutsideEffect="close"
+                  pressOutside="close"
                   anchorCustomEventDetail="ignore"
                 >
                   <p style={{ marginTop: 0 }}>{token}</p>
@@ -1744,16 +1739,13 @@
               id={parentId}
               // defaultOpen
               anchor={sectionAnchorId}
-              pointerInteractionOutsideEffect="close"
+              pressOutside="close"
               positionArea="bottom"
               borderRadius="8px"
               padding="m"
             >
               <p style={{ marginTop: 0, fontWeight: "bold" }}>Parent popover</p>
-              <p>
-                Clicking outside this one closes it
-                (pointerInteractionOutsideEffect="close").
-              </p>
+              <p>Clicking outside this one closes it (pressOutside="close").</p>
               <Button
                 command="--navi-toggle"
                 commandFor={childId}

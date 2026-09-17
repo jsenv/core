@@ -95,7 +95,7 @@ const css = /* css */ `
  *   backdropVariant?: "auto" | "lift" | "discrete" | "invisible",
  *   backdropColor?: string,
  *   backdropFilter?: string,
- *   pointerInteractionOutsideEffect?: "close" | "cancel" | "capture",
+ *   pressOutside?: "close" | "cancel" | "capture",
  *   escapeEffect?: "cancel" | "close",
  *   popupLayer?: "top" | "local",
  *   popupTestId?: string,
@@ -142,7 +142,7 @@ const css = /* css */ `
  * `marginWithContainer`, `popoverMode`, `popoverSpacing`, `popupLayer`,
  * `popupTestId`, `popupWidthFitContent`, `popoverMaxHeight`, `backdrop`,
  * `backdropVariant`, `backdropColor`, `backdropFilter`,
- * `pointerInteractionOutsideEffect`, `escapeEffect`, `closeOnFocusOut`,
+ * `pressOutside`, `escapeEffect`, `closeOnFocusOut`,
  * `scrollCapture`, `focusCapture`, `popupBackgroundColor`,
  * `popupBorderRadius`, `animation`. See picker.jsx for what each one says.
  * Anything else lands on the split button's own box.
@@ -400,7 +400,7 @@ const POPUP_PROP_SET = new Set([
   "backdropVariant",
   "backdropColor",
   "backdropFilter",
-  "pointerInteractionOutsideEffect",
+  "pressOutside",
   "escapeEffect",
   "closeOnFocusOut",
   "scrollCapture",

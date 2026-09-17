@@ -368,7 +368,7 @@ const INSIDE_ATTRIBUTE = "data-navi-popup-inside";
  */
 export const handlePressOnOutsideRegion = (
   mouseDownEvent,
-  { popupEl, openController, pointerInteractionOutsideEffect },
+  { popupEl, openController, pressOutside },
 ) => {
   if (mouseDownEvent.button !== 0) {
     return;
@@ -391,16 +391,13 @@ export const handlePressOnOutsideRegion = (
   ) {
     return;
   }
-  if (pointerInteractionOutsideEffect === "capture") {
+  if (pressOutside === "capture") {
     mouseDownEvent.preventDefault();
     return;
   }
-  if (
-    pointerInteractionOutsideEffect === "close" ||
-    pointerInteractionOutsideEffect === "cancel"
-  ) {
+  if (pressOutside === "close" || pressOutside === "cancel") {
     openController.requestClose(mouseDownEvent, {
-      isCancel: pointerInteractionOutsideEffect === "cancel",
+      isCancel: pressOutside === "cancel",
     });
   }
 };
@@ -470,11 +467,7 @@ export const warnAboutUnreachableOutsideRegions = (popupEl) => {
  */
 export const armOutsidePressClose = (
   popupEl,
-  {
-    openController,
-    pointerInteractionOutsideEffect,
-    pressEventType = "pointerdown",
-  },
+  { openController, pressOutside, pressEventType = "pointerdown" },
 ) => {
   const onDocumentPointerDown = (pointerDownEvent) => {
     if (pointerDownEvent.button !== 0) {
@@ -536,7 +529,7 @@ export const armOutsidePressClose = (
       return;
     }
     openController.requestClose(pointerDownEvent, {
-      isCancel: pointerInteractionOutsideEffect === "cancel",
+      isCancel: pressOutside === "cancel",
     });
   };
   document.addEventListener(pressEventType, onDocumentPointerDown, {

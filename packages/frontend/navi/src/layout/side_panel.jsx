@@ -250,19 +250,19 @@ const css = /* css */ `
  *   (`slide-from-<side>`); `"fading"` is the other common choice. Other
  *   values are forwarded as-is but not a documented/encouraged part of this
  *   component's own API.
- * @param {boolean} [props.closeOnClickOutside=false] - `false` (default):
- *   maps to `pointerInteractionOutsideEffect="none"` — in popover mode, no
+ * @param {boolean} [props.closeByPressOutside=false] - `false` (default):
+ *   maps to `pressOutside="ignore"` — in popover mode, no
  *   backdrop at all, outside clicks pass straight through; in dialog mode,
  *   the outside click is absorbed by the panel's own wall but changes
  *   nothing. Pass `backdrop={false}` (forwarded to `Popup`) for a panel with
  *   no wall in either mode, whose outside presses reach the page. `true`:
- *   closes the panel on an outside click instead, and also enables trapping
+ *   closes the panel on an outside press instead, and also enables trapping
  *   Tab navigation inside the panel (`focusCapture`) — closing on outside
  *   interaction only makes sense paired with not letting focus silently
  *   leave the panel first. A box of the page whose press must not close the
  *   panel (a card that fills it) names the panel:
  *   `data-navi-popup-inside={id}` — see docs/popup_backdrop.md.
- * @param {boolean} [props.swipeToClose=true] - Pushing the panel back
+ * @param {boolean} [props.closeByDrag=true] - Pushing the panel back
  *   towards the edge it is docked to closes it: the panel follows the
  *   pointer and finishes leaving (or comes back to rest) when it is
  *   released. Set to `false` for a panel that must only ever be dismissed
@@ -271,13 +271,16 @@ const css = /* css */ `
  *   one underlying renderer instead of its automatic screen-size
  *   resolution. Note that if `Popup` ends up in dialog mode (small screen, or
  *   forced here), the panel is modal unless it says `backdrop={false}`:
- *   `closeOnClickOutside`/`pointerInteractionOutsideEffect` only say what a
+ *   `closeByPressOutside`/`pressOutside` only say what a
  *   press on the wall does, not whether there is one (see `dialog.jsx`'s own
  *   doc).
  * @param {import("preact").ComponentChildren} props.children - No built-in
  *   close button — add one wherever it makes sense for the layout (e.g. a
  *   plain `<Button command="--navi-close">`), use `SidePanel.Head`'s own
- *   `closeButton` prop, or rely on `closeOnClickOutside`/Escape instead.
+ *   `closeButton` prop, or rely on `closeByPressOutside`/Escape instead.
+ *   A form sent inside the panel closes it, as in any popup: a panel one
+ *   keeps editing in says `command="--navi-void"` on that form (see
+ *   docs/form_changed.md).
  */
 export const SidePanel = ({
   open,
@@ -292,8 +295,8 @@ export const SidePanel = ({
   minWidth,
   minHeight,
   animation,
-  closeOnClickOutside = false,
-  swipeToClose = true,
+  closeByPressOutside = false,
+  closeByDrag = true,
   mode,
   layer = "top",
   className,
@@ -301,7 +304,7 @@ export const SidePanel = ({
 }) => {
   import.meta.css = css;
 
-  const onSwipePointerDown = swipeToClose ? createSwipeToClose(side) : null;
+  const onSwipePointerDown = closeByDrag ? createSwipeToClose(side) : null;
 
   return (
     <Popup
@@ -322,24 +325,24 @@ export const SidePanel = ({
       // Dialog's own default gap with the container.
       marginWithContainer={0}
       animation={animation === true ? `slide-from-${side}` : animation}
-      pointerInteractionOutsideEffect={closeOnClickOutside ? "close" : "none"}
-      focusCapture={closeOnClickOutside}
+      pressOutside={closeByPressOutside ? "close" : "ignore"}
+      focusCapture={closeByPressOutside}
       minWidth={toCssLength(minWidth)}
       minHeight={toCssLength(minHeight)}
       className={withPropsClassName("navi_side_panel", className)}
       navi-side={side}
-      data-swipe-to-close={swipeToClose ? "" : undefined}
+      data-swipe-to-close={closeByDrag ? "" : undefined}
       // The axis the panel travels on when it is pushed back, said to the
       // shared gesture layer: it keeps the panel's scrolling from spilling onto
       // the page, and it is what a box travelling inside the panel reads to
       // know this axis is already walked (see @jsenv/dom's drag_to_travel).
-      data-drag-travel={swipeToClose ? SWIPE_AXIS_BY_SIDE[side] : undefined}
-      data-travel-by-drag={swipeToClose ? SWIPE_AXIS_BY_SIDE[side] : undefined}
+      data-drag-travel={closeByDrag ? SWIPE_AXIS_BY_SIDE[side] : undefined}
+      data-travel-by-drag={closeByDrag ? SWIPE_AXIS_BY_SIDE[side] : undefined}
       // A touch this panel may take has to be refusable before the finger
       // lands, or the browser can cancel the close gesture mid-swipe by
       // scrolling the panel's content — see keepTouchRefusable for why a JSX
       // prop is enough (an element-level touchmove listener is non-passive).
-      onTouchMove={swipeToClose ? keepTouchRefusable : undefined}
+      onTouchMove={closeByDrag ? keepTouchRefusable : undefined}
       {...rest}
       onPointerDown={(pointerDownEvent) => {
         rest.onPointerDown?.(pointerDownEvent);

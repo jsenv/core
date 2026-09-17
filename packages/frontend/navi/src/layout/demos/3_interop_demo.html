@@ -484,7 +484,7 @@
               id={popoverId}
               positionArea="right"
               borderRadius="8px"
-              pointerInteractionOutsideEffect="none"
+              pressOutside="ignore"
               className="interop-popover-big"
             >
               <p style={{ marginTop: 0, fontWeight: "bold" }}>
@@ -536,13 +536,12 @@
             </li>
           </ul>
           <p class="demo-important-note">
-            <code>pointerInteractionOutsideEffect="none"</code> on the popover
-            here on purpose — the dialog is already modal (
-            <code>showModal()</code>), so an outside click never reaches
-            anything behind it anyway; closing the popover on outside click
-            would also make it impossible to click something in the dialog
-            further away from the anchor while the popover is open, which
-            defeats the point of this test.
+            <code>pressOutside="ignore"</code> on the popover here on purpose —
+            the dialog is already modal (<code>showModal()</code>), so an
+            outside click never reaches anything behind it anyway; closing the
+            popover on outside click would also make it impossible to click
+            something in the dialog further away from the anchor while the
+            popover is open, which defeats the point of this test.
           </p>
           <PageFiller label="scroll ↓ — page filler before the trigger" />
           <DialogWithPopoverDemo />

@@ -204,7 +204,7 @@
               id={panelId}
               layer="local"
               width={width}
-              closeOnClickOutside
+              closeByPressOutside
               animation={animation}
             >
               <PanelContent />
@@ -258,7 +258,7 @@
               id={panelId}
               layer="local"
               width={220}
-              closeOnClickOutside
+              closeByPressOutside
               animation={animation}
             >
               <HeadFootContent />
@@ -290,7 +290,7 @@
               id={panelId}
               animation
               width={300}
-              closeOnClickOutside
+              closeByPressOutside
               {...panelProps}
             >
               <PanelContent />
@@ -318,7 +318,7 @@
               mode={mode}
               animation
               width={300}
-              closeOnClickOutside
+              closeByPressOutside
             >
               <PanelContent />
             </SidePanel>
@@ -441,10 +441,10 @@
             </div>
 
             <div id="click-outside" class="demo-section">
-              <h3>Close on click outside</h3>
+              <h3>Close by press outside</h3>
               <p>
-                <code>closeOnClickOutside</code> closes the panel on an outside
-                click instead of just absorbing it. Every demo below this point
+                <code>closeByPressOutside</code> closes the panel on an outside
+                press instead of just absorbing it. Every demo below this point
                 enables it too.
               </p>
               <button onClick={() => setIsOpenClickOutside(true)}>
@@ -453,7 +453,7 @@
               <SidePanel
                 open={isOpenClickOutside}
                 onClose={() => setIsOpenClickOutside(false)}
-                closeOnClickOutside
+                closeByPressOutside
                 width={300}
                 animation={animationEnabled}
               >
@@ -533,7 +533,7 @@
                   <SidePanel
                     open={isOpenWide}
                     onClose={() => setIsOpenWide(false)}
-                    closeOnClickOutside
+                    closeByPressOutside
                     width="var(--demo-width)"
                     style={{ background: "red" }}
                     animation={animationEnabled}
@@ -548,7 +548,7 @@
                   <SidePanel
                     open={isOpenNarrow}
                     onClose={() => setIsOpenNarrow(false)}
-                    closeOnClickOutside
+                    closeByPressOutside
                     width={180}
                     animation={animationEnabled}
                   >
@@ -566,7 +566,7 @@
               <SidePanel
                 open={isOpenTall}
                 onClose={() => setIsOpenTall(false)}
-                closeOnClickOutside
+                closeByPressOutside
                 width={300}
                 animation={animationEnabled}
               >
@@ -594,7 +594,7 @@
                   <SidePanel
                     open={isOpen}
                     onClose={() => setIsOpen(false)}
-                    closeOnClickOutside
+                    closeByPressOutside
                     width={300}
                     animation={animationEnabled}
                   >
@@ -606,7 +606,7 @@
                   renderContent={() => (
                     <SidePanel
                       defaultOpen
-                      closeOnClickOutside
+                      closeByPressOutside
                       width={300}
                       animation={animationEnabled}
                     >
@@ -661,7 +661,7 @@
                     open={isOpenLeft}
                     onClose={() => setIsOpenLeft(false)}
                     side="left"
-                    closeOnClickOutside
+                    closeByPressOutside
                     width={300}
                     animation={animationEnabled}
                   >
@@ -676,7 +676,7 @@
                     open={isOpenTop}
                     onClose={() => setIsOpenTop(false)}
                     side="top"
-                    closeOnClickOutside
+                    closeByPressOutside
                     height={220}
                     animation={animationEnabled}
                   >
@@ -691,7 +691,7 @@
                     open={isOpenBottom}
                     onClose={() => setIsOpenBottom(false)}
                     side="bottom"
-                    closeOnClickOutside
+                    closeByPressOutside
                     height={220}
                     animation={animationEnabled}
                   >
@@ -716,7 +716,7 @@
                   <SidePanel
                     open={isOpenHeadFoot}
                     onClose={() => setIsOpenHeadFoot(false)}
-                    closeOnClickOutside
+                    closeByPressOutside
                     width={280}
                     animation={animationEnabled}
                   >
