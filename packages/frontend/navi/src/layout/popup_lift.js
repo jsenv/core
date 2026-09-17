@@ -242,6 +242,9 @@ export const liftPopupFromAnchor = (
     popupEl.removeAttribute(ARRIVING_ATTRIBUTE);
   };
   const liftTarget = (target) => {
+    if (import.meta.dev && lift === "box") {
+      warnDrawingLiftedAsBox(target);
+    }
     publishBoxPaint(target);
     startMovement(reveal, () => target);
   };
@@ -263,6 +266,24 @@ export const liftPopupFromAnchor = (
     }
     release();
   });
+};
+
+// A drawing under lift="box" is drawn at its own size in a box that is not:
+// the big picture cropped to a corner of the shrinking box, the small one
+// riding a corner of the growing box, then a swap. Nothing about it errors,
+// and at normal speed it only reads as a jolt, so it is named here.
+const DRAWING_SELECTOR = "svg, img, picture, canvas, video";
+const warnDrawingLiftedAsBox = (liftedElement) => {
+  let current = liftedElement;
+  while (current) {
+    if (current.matches(DRAWING_SELECTOR)) {
+      console.warn(
+        `[navi] animation="lifting" with lift="box" lifts a <${current.localName}>: its pictures keep their own size while the box moving between them changes size, so the drawing is cropped then swapped rather than scaled. For a drawing, a photo or a video, use lift="scene".`,
+      );
+      return;
+    }
+    current = sameBoxChild(current);
+  }
 };
 
 const publishBoxPaint = (liftedElement) => {

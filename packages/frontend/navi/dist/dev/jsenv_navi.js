@@ -6975,7 +6975,7 @@ const css$13 = /* css */ `
  *   for free (`status`/`alert`); reach for this when the role is not enough to tell two
  *   callouts apart.
  * @param {Function} [options.onClose] - Callback when callout is closed
- * @param {boolean} [options.closeOnClickOutside] - Whether to close on outside clicks (defaults to true for "info" status)
+ * @param {boolean} [options.closeByPressOutside] - Whether a press outside closes the callout (defaults to true for "info" status)
  * @param {boolean|number} [options.closeByScroll=false] - Dismiss the callout once the page has
  *   scrolled under it. `true` uses a short distance, a number sets it in pixels
  *   (`closeByScroll: 100` waits for 100px). Measured from where the scroll containers stood when
@@ -7043,15 +7043,15 @@ const openCallout = (
     status = "",
     testId,
     onClose,
-    closeOnClickOutside = status === "info",
-    closeOnFocusLeave = closeOnClickOutside,
+    closeByPressOutside = status === "info",
+    closeOnFocusLeave = closeByPressOutside,
     closeByScroll = false,
+    closeButton = true,
     openingEvent,
     reopen = "toggle",
     showErrorStack,
     skipFocus = false,
     icon = true,
-    closeButton = true,
     debug = () => {},
   } = {},
 ) => {
@@ -7139,7 +7139,7 @@ const openCallout = (
     const clickOrSpaceOutside =
       reason === "click_outside" || reason === "space_outside";
     if (clickOrSpaceOutside) {
-      if (!closeOnClickOutside) {
+      if (!closeByPressOutside) {
         return;
       }
       if (callout.status === "error") {
@@ -7267,9 +7267,9 @@ const openCallout = (
       updateStatus(options.status);
     }
 
-    if (Object.hasOwn(options, "closeOnClickOutside")) {
-      closeOnClickOutside = options.closeOnClickOutside;
-      if (closeOnClickOutside) {
+    if (Object.hasOwn(options, "closeByPressOutside")) {
+      closeByPressOutside = options.closeByPressOutside;
+      if (closeByPressOutside) {
         closeOnFocusLeave = true;
       }
     }
@@ -7473,7 +7473,7 @@ const openCallout = (
     const openingDownEvent =
       findEvent(openingEvent, "mousedown") ||
       findEvent(openingEvent, "pointerdown");
-    if (closeOnClickOutside && openingEvent && openingDownEvent) {
+    if (closeByPressOutside && openingEvent && openingDownEvent) {
       const upType =
         openingDownEvent.type === "pointerdown" ? "pointerup" : "mouseup";
       debug(
@@ -8718,7 +8718,7 @@ const createCalloutManager = (
       testId: tokenData.testId,
       icon: tokenData.icon,
       closeButton: tokenData.closeButton,
-      closeOnClickOutside: tokenData.status !== "error",
+      closeByPressOutside: tokenData.status !== "error",
       closeByScroll: tokenData.closeByScroll,
       anchorElement,
       openingEvent: event,
@@ -12618,7 +12618,7 @@ defineInteractionDetector({
           // button to press, and what closes it is the hand going quiet.
           skipFocus: true,
           closeButton: false,
-          closeOnClickOutside: false,
+          closeByPressOutside: false,
           closeOnFocusLeave: false,
           onClose: () => {
             hint = null;
@@ -60461,6 +60461,9 @@ const liftPopupFromAnchor = (
     popupEl.removeAttribute(ARRIVING_ATTRIBUTE);
   };
   const liftTarget = (target) => {
+    if (lift === "box") {
+      warnDrawingLiftedAsBox(target);
+    }
     publishBoxPaint(target);
     startMovement(reveal, () => target);
   };
@@ -60482,6 +60485,24 @@ const liftPopupFromAnchor = (
     }
     release();
   });
+};
+
+// A drawing under lift="box" is drawn at its own size in a box that is not:
+// the big picture cropped to a corner of the shrinking box, the small one
+// riding a corner of the growing box, then a swap. Nothing about it errors,
+// and at normal speed it only reads as a jolt, so it is named here.
+const DRAWING_SELECTOR = "svg, img, picture, canvas, video";
+const warnDrawingLiftedAsBox = (liftedElement) => {
+  let current = liftedElement;
+  while (current) {
+    if (current.matches(DRAWING_SELECTOR)) {
+      console.warn(
+        `[navi] animation="lifting" with lift="box" lifts a <${current.localName}>: its pictures keep their own size while the box moving between them changes size, so the drawing is cropped then swapped rather than scaled. For a drawing, a photo or a video, use lift="scene".`,
+      );
+      return;
+    }
+    current = sameBoxChild(current);
+  }
 };
 
 const publishBoxPaint = (liftedElement) => {

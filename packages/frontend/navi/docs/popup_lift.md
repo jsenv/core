@@ -93,6 +93,8 @@ Two traps, both about the thumbnail:
 - **A scene under `lift="box"`** keeps the thumbnail at its own size in the
   corner of a growing, empty box, then swaps. Choose the kind by what grows:
   text and controls keep their scale (`box`), a drawing does not (`scene`).
+  Dev warns when the lifted node is, box for box, an `<svg>`, `<img>`,
+  `<picture>`, `<canvas>` or `<video>` under `box`.
 - **A thumbnail that is not the scene framed.** `scene` assumes the thumbnail
   is either the whole drawing smaller, or a band cut from its middle as wide as
   it. A thumbnail letterboxed inside a box of another aspect ratio (an SVG
@@ -157,6 +159,7 @@ const currentKeySignal = useSignal(undefined);
 <Dialog
   id={ZOOM_ID}
   animation="lifting"
+  lift="scene"
   mount="while-opened"
   onOpen={(e) => {
     currentKeySignal.value = e.detail.value;
