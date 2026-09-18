@@ -66,6 +66,8 @@ import { Text } from "./text.jsx";
  *   - `"duration"` → duration string/object/number (seconds); `format="iso"` → ISO 8601
  *   - `"relative"` → "dans 1 heure 30" / "En cours" / "il y a 2 heures"
  *                    Handles past, present, and future.
+ *                    `format="short"` → "dans 1 h et 30 min"; `format="narrow"`
+ *                    → "+3 h"; `format="compact"` → "dans 1h30".
  *                    `eventDuration` defaults to 0 (instantaneous: no "En cours" window).
  *
  * @param {number} [eventDuration=0]
@@ -76,10 +78,17 @@ import { Text } from "./text.jsx";
  *   Only applies to the past state of `type="relative"`.
  * @param {"long"|"short"|"narrow"|"compact"|"numeric"|"timestring"|"iso"|{ weekday?: "long"|"short"|"narrow"|false, day?: boolean, month?: "long"|"short"|"narrow"|"numeric"|false }} [format="long"]
  *   Controls the verbosity of the output. Defaults to `"long"` for all types.
+ *   `"long"`, `"short"`, `"narrow"` and `"compact"` are verbosities every `type`
+ *   writes. The three under them name a shape only some types have; a `type`
+ *   without that shape writes its `"long"` form and names the dropped word in
+ *   the console.
  *   - `"short"`      → Intl short (e.g. "2 h et 15 min", short month for dates/datetimes, no weekday for datetime)
  *   - `"narrow"`     → Intl narrow (e.g. "2h 15min", numeric month for datetime)
- *   - `"compact"`    → custom compact notation (e.g. "2h15", no minute symbol when hours present)
- *   - `"numeric"`    → numeric date, only for `type="date"` (e.g. "11/09/2026")
+ *   - `"compact"`    → custom compact notation (e.g. "2h15", no minute symbol
+ *                      when hours present). A date has nothing tighter than its
+ *                      digits, so `type="date"`/`"month"`/`"datetime"` write the
+ *                      all-digit spelling ("17/09/2026", "17/09 14:30")
+ *   - `"numeric"`    → numeric date, for `type="date"` and `type="month"` (e.g. "11/09/2026", "09/2026")
  *   - `"timestring"` → clock display for `type="time"`, `type="minute"`, `type="hour"`, and `type="second"` (e.g. "14:30", "01:30" for 90s)
  *   - `"iso"`        → ISO 8601 string, only for `type="duration"` (e.g. "PT2H15M")
  *   - an object      → `type="date"` only, one verbosity per part

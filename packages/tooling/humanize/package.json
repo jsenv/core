@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/humanize",
-  "version": "1.8.3",
+  "version": "1.8.4",
   "type": "module",
   "description": "Generate messages meant to read by humans",
   "repository": {
@@ -44,7 +44,7 @@
     "@jsenv/terminal-table": "../terminal-table",
     "@jsenv/terminal-text-size": "../terminal-text-size",
     "is-unicode-supported": "2.1.0",
-    "supports-color": "10.2.2"
+    "supports-color": "11.0.0"
   },
   "publishConfig": {
     "access": "public"
