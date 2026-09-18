@@ -7,74 +7,96 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     />
-    <title>Slide container — pleine page (repro)</title>
+    <title>Slide container — feuille soulevée (repro)</title>
     <style>
       /*
-        Trois slides l'une au-dessus de l'autre, chacune de la taille de
-        l'écran, sur un téléphone: le doigt fait voyager d'une slide à l'autre.
-        Page faite pour reproduire un voyage qui saccade au lieu de glisser.
+        Le montage de la plaque du classement de wematch (profile_ranking.jsx),
+        réduit à sa structure: une plaque sur une page de profil, qui se
+        SOULÈVE en une feuille pleine hauteur (Picker mode="dialog",
+        animation="lifting"). La feuille tient deux étages en colonne, la règle
+        au-dessus, la plaque en dessous, et une porte fixée au bord haut.
 
-        Rien ne défile hors du conteneur: le document est verrouillé à la
-        hauteur de l'écran, comme une app plein écran, pour que le seul
-        défilement en jeu soit celui du doigt sur les slides.
+        Page faite pour reproduire, au doigt, un voyage vers l'étage du haut
+        qui saccade au lieu de glisser.
       */
       * {
         box-sizing: border-box;
       }
-      html,
       body {
-        height: 100%;
         margin: 0;
-        color: white;
+        padding: 16px;
+        padding-top: calc(16px + env(safe-area-inset-top, 0px));
+        color: #111;
         font-family:
           system-ui,
           -apple-system,
           sans-serif;
-        background: #111;
-        overflow: hidden;
-        overscroll-behavior: none;
+        background: #f3f4f6;
       }
-      #root {
-        height: 100dvh;
+      .profile {
+        display: flex;
+        max-width: 480px;
+        margin: 0 auto;
+        flex-direction: column;
+        gap: 16px;
+      }
+      .profile_card {
+        padding: 16px;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
       }
       .hud {
-        position: fixed;
-        top: env(safe-area-inset-top, 0);
-        right: 0;
-        left: 0;
-        z-index: 1;
         display: flex;
-        padding: 6px 10px;
+        flex-wrap: wrap;
         align-items: center;
         gap: 12px;
-        color: white;
         font-size: 12px;
         font-family: ui-monospace, monospace;
-        background: rgba(0, 0, 0, 0.55);
-        pointer-events: none;
       }
-      .hud label,
-      .hud select,
-      .hud button {
-        pointer-events: auto;
+      /* La plaque peint son propre fond: c'est lui que la boîte en mouvement
+         porte pendant le soulèvement. */
+      .plate {
+        color: white;
+        background-color: #0c172c;
+        border-radius: 8px;
       }
-      .slide_face {
+      .plate_face {
         display: flex;
+        min-height: 120px;
+        padding: 16px;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 12px;
+        gap: 4px;
       }
-      .slide_face .number {
+      .plate_tier {
         font-weight: 700;
-        font-size: 96px;
-        line-height: 1;
+        font-size: 24px;
       }
-      .filler {
-        width: min(80vw, 360px);
-        padding: 10px 14px;
-        background: rgba(255, 255, 255, 0.12);
+      .plate_points {
+        color: rgba(255, 255, 255, 0.7);
+      }
+      .detail_line {
+        display: flex;
+        padding: 6px 0;
+        justify-content: space-between;
+        border-top: 1px solid rgba(255, 255, 255, 0.14);
+      }
+      .aside {
+        color: #111;
+        background: white;
         border-radius: 8px;
+      }
+      .aside p {
+        margin: 0 0 12px;
+      }
+      .note {
+        display: flex;
+        padding: 4px 8px;
+        justify-content: space-between;
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 13px;
       }
     </style>
   </head>
@@ -84,20 +106,24 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useEffect, useState } from "preact/hooks";
-      import { signal } from "@preact/signals";
-      import { Box, Slide, SlideContainer, Text } from "@jsenv/navi";
+      import { useSignal } from "@preact/signals";
+      import {
+        Box,
+        Button,
+        Picker,
+        Slide,
+        SlideContainer,
+        Text,
+      } from "@jsenv/navi";
 
       window.__jsenv_perf_critical__?.();
 
-      const SLIDES = [
-        { area: "one", color: "#1a237e" },
-        { area: "two", color: "#00695c" },
-        { area: "three", color: "#8e24aa" },
-      ];
-      const currentSignal = signal("one");
+      const PLATE_SLIDES_ID = "plate_slides";
+      const HOW_VIEW = "how";
+      const RANK_VIEW = "rank";
 
-      // Temps de frame pendant le voyage: une saccade se lit ici comme des
-      // frames bien au-delà de 16ms.
+      // Temps de frame: une saccade se lit ici comme des frames bien au-delà
+      // de 16ms.
       const FrameTimes = () => {
         const [worst, setWorst] = useState(0);
         const [long, setLong] = useState(0);
@@ -123,7 +149,7 @@
         }, []);
         return (
           <span>
-            &gt;50ms: {long} (pire {worst}ms){" "}
+            frames &gt;50ms: {long} (pire {worst}ms){" "}
             <button
               type="button"
               onClick={() => {
@@ -137,90 +163,273 @@
         );
       };
 
-      const Hud = ({ tall, setTall, duration, setDuration }) => (
-        <div class="hud">
-          <span>slide: {currentSignal.value}</span>
-          <label>
-            <input
-              type="checkbox"
-              checked={tall}
-              onChange={(e) => setTall(e.target.checked)}
-            />{" "}
-            contenu plus haut que l'écran
-          </label>
-          <select
-            value={duration}
-            onChange={(e) => setDuration(e.target.value)}
-          >
-            {["300ms", "700ms", "2s"].map((value) => (
-              <option key={value} value={value}>
-                {value}
-              </option>
-            ))}
-          </select>
-          <FrameTimes />
+      // Ce que navi a lu du doigt, dans la console: les pressions et leur
+      // cible, la slide courante quand elle change, et le geste en cours.
+      const GestureLog = () => {
+        useEffect(() => {
+          const t0 = performance.now();
+          const log = (text) => {
+            const stamp = Math.round(performance.now() - t0);
+            console.debug(`gesture ${stamp}ms ${text}`);
+          };
+          const html = document.documentElement;
+          const onPointer = (e) => {
+            const target = e.target;
+            const name =
+              target.id ||
+              (typeof target.className === "string" &&
+                target.className.split(" ")[0]) ||
+              target.tagName;
+            log(
+              `${e.type} ${e.pointerType} y=${Math.round(e.clientY)} on ${name}`,
+            );
+          };
+          const pointerTypes = [
+            "pointerdown",
+            "pointerup",
+            "pointercancel",
+            "lostpointercapture",
+          ];
+          for (const type of pointerTypes) {
+            window.addEventListener(type, onPointer, true);
+          }
+          const box = document.getElementById(PLATE_SLIDES_ID);
+          const track = box.firstElementChild;
+          const slideObserver = new MutationObserver(() => {
+            const current = box.querySelector("[data-current]");
+            log(
+              `current -> ${current ? current.id : "?"} (track at ${getComputedStyle(track).translate})`,
+            );
+          });
+          slideObserver.observe(box, {
+            attributes: true,
+            subtree: true,
+            attributeFilter: ["data-current"],
+          });
+          const htmlObserver = new MutationObserver(() => {
+            log(
+              `walking=${html.getAttribute("data-drag-walking")} gesture=${html.hasAttribute("data-drag-gesture")}`,
+            );
+          });
+          htmlObserver.observe(html, {
+            attributes: true,
+            attributeFilter: ["data-drag-walking", "data-drag-gesture"],
+          });
+          log(`ready, current is ${box.querySelector("[data-current]")?.id}`);
+          return () => {
+            for (const type of pointerTypes) {
+              window.removeEventListener(type, onPointer, true);
+            }
+            slideObserver.disconnect();
+            htmlObserver.disconnect();
+          };
+        }, []);
+        return null;
+      };
+
+      const PlateFace = ({ lifted }) => (
+        <div class="plate_face">
+          <div class="plate_tier">Bronze I</div>
+          <div class="plate_points">1 200 points</div>
+          {lifted && <Text size="xs">rang fédéral 15 000</Text>}
         </div>
       );
 
-      const Filler = ({ count }) =>
-        Array.from({ length: count }, (_, i) => (
-          <div key={i} class="filler">
-            ligne {i + 1}
-          </div>
-        ));
+      const RankingDetail = ({ lines }) => (
+        <Box flex="y" padding="m" paddingTop="0">
+          {Array.from({ length: lines }, (_, i) => (
+            <div key={i} class="detail_line">
+              <span>match {i + 1}</span>
+              <span>+{80 - i * 3}</span>
+            </div>
+          ))}
+        </Box>
+      );
+
+      const RankingExplanation = ({ paragraphs }) => (
+        <div class="aside">
+          <Box padding="m">
+            {Array.from({ length: paragraphs }, (_, i) => (
+              <p key={i}>
+                Paragraphe {i + 1}. Les points viennent des dix meilleurs
+                résultats de la saison: chaque match gagné rapporte selon le
+                niveau de l'adversaire, et un match perdu ne retire rien.
+              </p>
+            ))}
+          </Box>
+        </div>
+      );
+
+      const ChevronSvg = ({ up }) => (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          width="16"
+          height="16"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          style={up ? { transform: "rotate(180deg)" } : undefined}
+        >
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      );
+
+      // La porte, au bord haut de la feuille, hors du conteneur de diapos:
+      // depuis la plaque elle monte vers la règle, depuis la règle elle
+      // rebrousse.
+      const PlateWay = ({ view }) => {
+        const goesUp = view.value === RANK_VIEW;
+        return (
+          <Box flex alignX="center" data-navi-popup-outside="">
+            <Button
+              variant="bare"
+              backgroundColor="transparent"
+              border="none"
+              color="rgba(255,255,255,0.9)"
+              underline={false}
+              command={goesUp ? "--navi-up" : "--navi-down"}
+              commandFor={PLATE_SLIDES_ID}
+            >
+              <Box flex alignY="center" spacing="s">
+                <Box aria-hidden="true" flex alignY="center">
+                  <ChevronSvg up={goesUp} />
+                </Box>
+                <Text size="s">
+                  {goesUp
+                    ? "Voir comment fonctionnent les points"
+                    : "Revenir à mon classement"}
+                </Text>
+                <Box aria-hidden="true" flex alignY="center">
+                  <ChevronSvg up={goesUp} />
+                </Box>
+              </Box>
+            </Button>
+          </Box>
+        );
+      };
+
+      const RankPlate = ({ detailLines, paragraphs }) => {
+        const view = useSignal(RANK_VIEW);
+        return (
+          <Box flex="y" expandX expandY position="relative">
+            <Picker
+              mode="dialog"
+              animation="lifting"
+              dialogSizeFromAnchor
+              dialogMaxWidth="var(--anchor-width)"
+              popupBackgroundColor="transparent"
+              popupBoxShadow="none"
+              popupBorderRadius="0"
+              dialogExpandY
+              variant="bare"
+              expandX
+              expandY
+              className="plate"
+              rightSlot={null}
+              aria-label="Voir mon classement en détail"
+              ui={<PlateFace />}
+            >
+              <Box flex="y" expandX height="100%" data-navi-popup-outside="">
+                <GestureLog />
+                <PlateWay view={view} />
+                <SlideContainer
+                  id={PLATE_SLIDES_ID}
+                  layout="column"
+                  signal={view}
+                  onCurrentChange={(area) => {
+                    view.value = area;
+                  }}
+                  travelByKeyboard={false}
+                  travelByScroll="y"
+                  borderRadius="0"
+                  expandY
+                >
+                  <Slide id={HOW_VIEW} flex="y" expandY alignY="stretch">
+                    <Box
+                      flex="y"
+                      expandY
+                      overflow="auto"
+                      data-navi-popup-outside=""
+                    >
+                      <Box flex="y" spacing="m" padding="m" shrink={false}>
+                        <RankingExplanation paragraphs={paragraphs} />
+                      </Box>
+                    </Box>
+                  </Slide>
+                  <Slide id={RANK_VIEW} flex="y" expandY alignY="stretch">
+                    <Box
+                      flex="y"
+                      expandY
+                      overflow="auto"
+                      data-navi-popup-outside=""
+                    >
+                      <Box
+                        flex="y"
+                        spacing="m"
+                        marginY="auto"
+                        shrink={false}
+                        data-navi-popup-outside=""
+                      >
+                        <Box data-lift className="plate" flex="y" spacing="m">
+                          <PlateFace lifted />
+                          <RankingDetail lines={detailLines} />
+                        </Box>
+                        <Box flex="y" paddingX="xs" data-navi-popup-outside="">
+                          <div class="note">
+                            <span>Meilleur rang we-match</span>
+                            <span>12</span>
+                          </div>
+                          <div class="note">
+                            <span>Meilleur rang fédéral</span>
+                            <span>14 200</span>
+                          </div>
+                        </Box>
+                      </Box>
+                    </Box>
+                  </Slide>
+                </SlideContainer>
+              </Box>
+            </Picker>
+          </Box>
+        );
+      };
 
       const App = () => {
         const [tall, setTall] = useState(false);
-        const [duration, setDuration] = useState("300ms");
         return (
-          <>
-            <Hud
-              tall={tall}
-              setTall={setTall}
-              duration={duration}
-              setDuration={setDuration}
-            />
-            <SlideContainer
-              id="full_page_slides"
-              layout="column"
-              signal={currentSignal}
-              travelByScroll="y"
-              duration={duration}
-              borderRadius="0"
-              expandY
-              height="100%"
-            >
-              {SLIDES.map(({ area, color }) => (
-                <Slide
-                  key={area}
-                  id={`slide_${area}`}
-                  area={area}
-                  flex="y"
-                  expandY
-                  alignY="stretch"
-                  style={{ background: color }}
-                >
-                  {/* Même montage que la feuille wematch: une boîte qui
-                      défile, et dedans une carte flottant au milieu
-                      (marginY auto), calée en haut dès qu'elle déborde. */}
-                  <Box flex="y" expandY overflow="auto">
-                    <Box
-                      flex="y"
-                      spacing="s"
-                      marginY="auto"
-                      shrink={false}
-                      className="slide_face"
-                      paddingY="xl"
-                    >
-                      <div class="number">{area}</div>
-                      <Text>glisser vers le haut / le bas</Text>
-                      <Filler count={tall ? 24 : 2} />
-                    </Box>
-                  </Box>
-                </Slide>
-              ))}
-            </SlideContainer>
-          </>
+          <div class="profile">
+            <div class="hud">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={tall}
+                  onChange={(e) => setTall(e.target.checked)}
+                />{" "}
+                étages plus hauts que la feuille
+              </label>
+              <FrameTimes />
+            </div>
+            <div class="profile_card">
+              <Text size="l">Damien</Text>
+              <Text size="s" color="#666">
+                Padel · Toulouse
+              </Text>
+            </div>
+            <div class="profile_card">
+              <RankPlate
+                detailLines={tall ? 30 : 6}
+                paragraphs={tall ? 12 : 3}
+              />
+            </div>
+            <div class="profile_card">
+              <Text size="s" color="#666">
+                le reste du profil
+              </Text>
+            </div>
+          </div>
         );
       };
 

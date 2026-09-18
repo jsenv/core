@@ -55432,6 +55432,10 @@ const SlideContainer = ({
   // one being travelled TO while the track moves. What the next travel departs
   // from, because it is what one is looking at.
   const drawnAreaRef = useRef(undefined);
+  // The movement the track is playing, while it plays: the slide it is leaving
+  // and the slide it is going to. A hand landing on the box takes it over from
+  // its origin (see onStart in createTravelHandlers).
+  const movingRef = useRef(null);
   // Which way the travel about to be drawn goes, when whatever asked for it
   // knows: a window stepping off its last slide comes back on its first, and
   // only the press says that is a step forward — the map, read between those
@@ -55693,6 +55697,7 @@ const SlideContainer = ({
     }
     stageRef.current = null;
     trackAnimationRef.current = null;
+    movingRef.current = null;
     // At rest the picture IS the current slide, whatever the last gesture wrote
     // there: an indicator has nothing left to lean towards.
     paintTravelProgress(0);
@@ -55887,7 +55892,7 @@ const SlideContainer = ({
     // there, and when it is over this is what holds. Except under a hand-off
     // still waiting for its travel: the track stays where the finger left it,
     // until the render that moves it or the frame after which the gesture gives
-    // up on it (see returnToRest in onEnd).
+    // up on it (see settleTowards in onEnd).
     if (!travelFromRef.current) {
       track.style.setProperty("--slide-container-offset", offset);
     }
@@ -55922,6 +55927,10 @@ const SlideContainer = ({
         duration: durationMs * travelRatio,
         easing
       });
+      movingRef.current = {
+        from: drawnArea,
+        to: currentArea
+      };
       // The trait travels with the slides: from where the gesture left it when
       // there was one, from a whole box away when the travel was asked for.
       const progressFrom = travelProgressFromRef.current ?? (travelStep ? travelStep.x || travelStep.y : 0);
@@ -56707,7 +56716,7 @@ const SlideContainer = ({
   // The two slides the gesture can bring in, placed one box either side of the
   // one being dragged — the same stage a travel builds, except that both ends
   // are set up at once because the finger has not said yet which way it goes.
-  const stageDrag = drag => {
+  const stageDrag = (drag, currentArea) => {
     const {
       slideElements,
       placeOf
@@ -56735,7 +56744,7 @@ const SlideContainer = ({
     }
     stageRef.current = {
       placeByArea,
-      area: drag.area
+      area: currentArea
     };
     for (const slideElement of slideElements) {
       const area = readArea(slideElement);
@@ -56751,33 +56760,63 @@ const SlideContainer = ({
     }
   };
 
-  // Let go of without enough of a gesture to travel: the slide comes back to
-  // where it was, over the distance it was pulled — so a slide barely moved
-  // snaps back and one dragged most of the way there takes its time.
-  const returnToRest = drag => {
+  // Let go of, and the slides go where the gesture leaves them: back on the
+  // slide being dragged when nothing travels, on to the slide arriving when a
+  // travel caught in flight is let carry on. Over the distance left to cover,
+  // so a slide barely moved snaps back and one dragged most of the way there
+  // takes its time.
+  const settleTowards = (drag, area) => {
     const track = trackRef.current;
     if (!track) {
       return;
     }
-    const restOffset = `${drag.baseOffset.x}px ${drag.baseOffset.y}px`;
+    const stage = stageRef.current;
+    const {
+      placeOf
+    } = readMap();
+    const place = stage?.placeByArea.get(area) || placeOf.get(area) || {
+      x: 0,
+      y: 0
+    };
+    const restPx = {
+      x: -place.x * drag.box.width,
+      y: -place.y * drag.box.height
+    };
+    const nowPx = {
+      x: drag.baseOffset.x + drag.pull.x,
+      y: drag.baseOffset.y + drag.pull.y
+    };
+    const restOffset = `${restPx.x}px ${restPx.y}px`;
     const durationMs = durationToMs(duration);
-    const pulled = Math.abs(drag.pull[drag.axis]);
     const size = drag.axis === "x" ? drag.box.width : drag.box.height;
+    const left = Math.abs(restPx[drag.axis] - nowPx[drag.axis]);
     trackAnimationRef.current?.cancel();
     trackAnimationRef.current = null;
     track.style.setProperty("--slide-container-offset", restOffset);
-    if (!durationMs || !pulled) {
+    if (!durationMs || !left) {
       paintTravelProgress(0);
       settleTravel();
       return;
     }
-    animateTravelProgress(drag.progress, durationMs * (pulled / size), "ease-out", drag.areaPulled);
+    // Which other slide the picture leans on while it arrives: the one being
+    // pulled in when it comes back on the dragged slide, the dragged slide
+    // itself when it goes on to the one arriving — and the trait is then a
+    // box short of that one, which is what it has to close.
+    const arrivesOnBase = area === drag.area;
+    const sign = drag.pull[drag.axis] > 0 ? 1 : -1;
+    const progressFrom = arrivesOnBase ? drag.progress : drag.progress - sign;
+    const otherArea = arrivesOnBase ? drag.areaPulled : drag.area;
+    movingRef.current = {
+      from: otherArea,
+      to: area
+    };
+    animateTravelProgress(progressFrom, durationMs * (left / size), "ease-out", otherArea);
     const animation = track.animate([{
-      translate: drag.offset
+      translate: `${nowPx.x}px ${nowPx.y}px`
     }, {
       translate: restOffset
     }], {
-      duration: durationMs * (pulled / size),
+      duration: durationMs * (left / size),
       easing: "ease-out"
     });
     trackAnimationRef.current = animation;
@@ -56808,11 +56847,14 @@ const SlideContainer = ({
     // value underneath it, which is the far end of the travel — the very jump
     // this is about.
     trackElement.style.setProperty("--slide-container-offset", offsetOnScreen);
+    const moving = movingRef.current || {};
     return {
       trackElement,
       onScreenPx,
       offsetOnScreen,
-      offsetTarget: offsetRef.current
+      offsetTarget: offsetRef.current,
+      from: moving.from,
+      to: moving.to
     };
   };
   // Which way a caught travel was going: a hand reaching for something moving
@@ -56859,8 +56901,6 @@ const SlideContainer = ({
         sign,
         target
       }) => {
-        let areaBack = axis === "x" ? areaTowards(-1, 0) : areaTowards(0, -1);
-        let areaOn = axis === "x" ? areaTowards(1, 0) : areaTowards(0, 1);
         // Everything positional is read HERE rather than when the pointer
         // landed: the travel that was playing then may have arrived since, and
         // it is what the slides are doing at the moment the gesture takes them
@@ -56871,39 +56911,66 @@ const SlideContainer = ({
           placeOf
         } = readMap();
         const currentElement = slideElements.find(slideElement => slideElement.hasAttribute("data-current")) || slideElements[0];
-        // The hold goToArea reads at the release, read again HERE, off the same
-        // slide and the same attribute: a slide that will refuse the arrival
-        // must not offer the journey. A locked direction simply has nowhere to
-        // go for the length of this gesture — the one case the gesture already
-        // knows, being the last slide of a walk. The hand then gets the wall it
-        // can lean on and never walk through (see drag_to_travel), the slide
-        // behind it stays offstage instead of being read on the way, and the
-        // release has nothing left to refuse.
-        // Nothing here about `released` (--navi-done): that is one particular
-        // departure letting go, decided as it happens, and a gesture armed
-        // before it has no such thing to read — the attribute as rendered is
-        // what the hand is answered from.
-        if (currentElement?.hasAttribute("data-prevent-nav-previous")) {
-          areaBack = undefined;
-        }
-        if (currentElement?.hasAttribute("data-prevent-nav-next")) {
-          areaOn = undefined;
-        }
         const box = track.getBoundingClientRect();
-        if (!areaBack && !areaOn || !currentElement || !box.width || !box.height ||
-        // Something else with a better claim on the gesture: a scroller
-        // between the finger and the slide, with room left that way.
-        scrollRoomTowards(target, currentElement, axis, sign)) {
+        if (!currentElement || !box.width || !box.height) {
           return false;
         }
-        const area = readArea(currentElement);
-        // Where the slide being dragged stands: where the stage put it while a
-        // travel is playing, its place on the map otherwise.
+        const currentArea = readArea(currentElement);
         const stage = stageRef.current;
-        const basePlace = stage?.placeByArea.get(area) || placeOf.get(area) || {
+        // Where a slide stands: where the stage put it while a travel is
+        // playing, its place on the map otherwise.
+        const placeOfArea = someArea => stage?.placeByArea.get(someArea) || placeOf.get(someArea) || {
           x: 0,
           y: 0
         };
+        // A travel caught in flight is measured from the slide it SET OFF from,
+        // with the slide it was going to as the one thing the hand can bring
+        // in — the way drag_to_travel reads a `slack`: how far the box already
+        // sits from its resting place, towards what is being pulled in. That is
+        // what makes its answer "carry on" mean arriving. Based on the slide
+        // arriving instead, the slack would point back at the origin, and a
+        // hand that merely touched the box would send it all the way back.
+        // A movement with no origin of its own (the track re-placed without a
+        // travel) is dragged from the slide shown, like any slide at rest.
+        const origin = caughtTravel && caughtTravel.from !== caughtTravel.to ? caughtTravel.from : null;
+        let area;
+        let areaBack;
+        let areaOn;
+        if (origin) {
+          area = origin;
+          const towardsEnd = axis === "x" ? placeOfArea(currentArea).x > placeOfArea(origin).x : placeOfArea(currentArea).y > placeOfArea(origin).y;
+          areaBack = towardsEnd ? undefined : currentArea;
+          areaOn = towardsEnd ? currentArea : undefined;
+        } else {
+          area = currentArea;
+          areaBack = axis === "x" ? areaTowards(-1, 0) : areaTowards(0, -1);
+          areaOn = axis === "x" ? areaTowards(1, 0) : areaTowards(0, 1);
+          // The hold goToArea reads at the release, read again HERE, off the
+          // same slide and the same attribute: a slide that will refuse the
+          // arrival must not offer the journey. A locked direction simply has
+          // nowhere to go for the length of this gesture — the one case the
+          // gesture already knows, being the last slide of a walk. The hand
+          // then gets the wall it can lean on and never walk through (see
+          // drag_to_travel), the slide behind it stays offstage instead of
+          // being read on the way, and the release has nothing left to refuse.
+          // Nothing here about `released` (--navi-done): that is one particular
+          // departure letting go, decided as it happens, and a gesture armed
+          // before it has no such thing to read — the attribute as rendered is
+          // what the hand is answered from.
+          if (currentElement.hasAttribute("data-prevent-nav-previous")) {
+            areaBack = undefined;
+          }
+          if (currentElement.hasAttribute("data-prevent-nav-next")) {
+            areaOn = undefined;
+          }
+          if (!areaBack && !areaOn ||
+          // Something else with a better claim on the gesture: a scroller
+          // between the finger and the slide, with room left that way.
+          scrollRoomTowards(target, currentElement, axis, sign)) {
+            return false;
+          }
+        }
+        const basePlace = placeOfArea(area);
         const baseOffset = {
           x: -basePlace.x * box.width,
           y: -basePlace.y * box.height
@@ -56934,7 +57001,8 @@ const SlideContainer = ({
           [axis]: slack
         };
         drag.progress = slack / size;
-        stageDrag(drag);
+        drag.areaPulled = slack > 0 ? areaBack : slack < 0 ? areaOn : null;
+        stageDrag(drag, currentArea);
         // From here the box is busy, whichever input asked: a wheel gesture and
         // a press must not both be moving the same track.
         dragRef.current = drag;
@@ -56965,24 +57033,50 @@ const SlideContainer = ({
         event
       }) => {
         dragRef.current = null;
-        if (!travels) {
-          returnToRest(drag);
+        // Where the gesture leaves the slides: on the one it was pulling in
+        // when it says so, back on the one it was dragging otherwise.
+        const destination = travels ? sign > 0 ? drag.areaBack : drag.areaOn : drag.area;
+        const {
+          slideElements,
+          placeOf
+        } = readMap();
+        const currentElement = slideElements.find(slideElement => slideElement.hasAttribute("data-current")) || slideElements[0];
+        const currentArea = currentElement && readArea(currentElement);
+        if (!destination || destination === currentArea) {
+          // Nothing to ask of the state: the slide it names is already the one
+          // shown — a drag let go of short of a travel, a travel caught in
+          // flight and let carry on. The track goes there on its own.
+          settleTowards(drag, destination || drag.area);
           return;
         }
         // Where the slide is being left, for the travel to depart from instead
         // of from the map.
         travelFromRef.current = drag.offset;
         // …and where the indicator is being left, said about the slide that is
-        // ARRIVING: the picture is `sign` of a box short of it, and that is
-        // what the travel about to be drawn has to close.
-        travelProgressFromRef.current = drag.progress - sign;
-        const moved = axis === "x" ? move(-sign, 0, event) : move(0, -sign, event);
+        // ARRIVING: a box short of the slide being pulled in, right where the
+        // finger left it when going back to the slide being dragged.
+        travelProgressFromRef.current = travels ? drag.progress - sign : drag.progress;
+        // Which way the travel goes, read off where the two slides stand
+        // rather than off the pull: a travel caught in flight and put back
+        // goes the way it came, whatever the finger did meanwhile.
+        const stage = stageRef.current;
+        const placeOfArea = someArea => stage?.placeByArea.get(someArea) || placeOf.get(someArea) || {
+          x: 0,
+          y: 0
+        };
+        const towards = Math.sign(placeOfArea(destination)[axis] - placeOfArea(currentArea)[axis]);
+        const moved = goToArea(destination, {
+          forward: towards > 0,
+          event,
+          dx: axis === "x" ? towards : 0,
+          dy: axis === "y" ? towards : 0
+        });
         if (!moved) {
           // Nowhere to go after all — a slide holding on to the user
           // (preventNav), or a caller that refused the change.
           travelFromRef.current = null;
           travelProgressFromRef.current = null;
-          returnToRest(drag);
+          settleTowards(drag, currentArea);
           return;
         }
         // A container whose `current` is held outside and was not moved: no
@@ -56993,7 +57087,7 @@ const SlideContainer = ({
           if (travelFromRef.current) {
             travelFromRef.current = null;
             travelProgressFromRef.current = null;
-            returnToRest(drag);
+            settleTowards(drag, currentArea);
           }
         });
       },
@@ -57008,9 +57102,15 @@ const SlideContainer = ({
           trackElement: trackCaught,
           offsetOnScreen,
           offsetTarget,
-          onScreenPx: caughtOnScreenPx
+          onScreenPx: caughtOnScreenPx,
+          from,
+          to
         } = caughtTravel;
         caughtTravel = null;
+        movingRef.current = {
+          from,
+          to
+        };
         if (offsetOnScreen === offsetTarget) {
           settleTravel();
           return;
