@@ -234,9 +234,10 @@ export const interactionsDisputeThePress = (interactions) => {
  *
  * The control is not passed in: it is found from the element, which is what lets
  * `interactions` live on a Box rather than on the control itself. A Box that IS a
- * control (a Button) is its own; a Box around one or inside one reaches it; a Box
- * with no control anywhere near it can still answer with a callback of the
- * caller's, and only "request_action" has nothing to ask.
+ * control (a Button) is its own; a Box inside one, or wrapping exactly one,
+ * reaches it; a Box with no control anywhere near it — or laying out several,
+ * which belongs to none of them — still answers with a callback of the caller's,
+ * and only "request_action" has nothing to ask.
  *
  * Set up once per element rather than on every render, which is what lets a
  * detector be a plain `setup`/teardown pair. So the interactions themselves are
@@ -284,7 +285,7 @@ export const useInteractionsEffect = (ref, interactionsRef) => {
         if (!controlHost) {
           if (import.meta.dev) {
             console.warn(
-              `interactions: "${type}" asks for an action, but there is no control around it to ask. Put the interaction on a control (or on a box that holds one), or give it a callback.`,
+              `interactions: "${type}" asks for an action, but there is no control around it to ask. Put the interaction on a control (or on a box that wraps exactly one), or give it a callback.`,
             );
           }
           return null;

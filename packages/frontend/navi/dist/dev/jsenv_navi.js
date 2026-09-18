@@ -4635,9 +4635,12 @@ const findControlHost = (el) => {
  * `findControlHost` above answers for a control's own DOM (itself, or the native
  * element it wraps). This one is for something that is not part of a control but
  * has to reach one — an interaction declared on a box (see
- * interaction/interactions.js), which may be the control, may hold it, or may sit
- * inside it. Nearest wins in that order, and the answer is null when there is no
- * control anywhere: not every box lives in one.
+ * interaction/interactions.js), which may be the control, may sit inside it, or
+ * may be a wrapper around exactly one. Nearest wins in that order, and the answer
+ * is null when there is no control the box belongs to: not every box lives in
+ * one, and a box laying out several controls (a row of badges, a toolbar) is
+ * held by none of them — its interactions are its own, and a press on its empty
+ * part is not a press on the first control it happens to contain.
  */
 const findNearestControlHost = (el) => {
   // Itself, then upwards — the box is inside a button, or is one.
@@ -4645,8 +4648,22 @@ const findNearestControlHost = (el) => {
   if (selfOrAncestor) {
     return selfOrAncestor;
   }
-  // …then downwards: the box holds the control rather than being held by it.
-  return el.querySelector("[navi-control-host]");
+  // …then downwards, only when the box wraps a single control. Counted by
+  // control, not by host: a picker holds the hosts of its popup content, and a
+  // box around that one picker is still around one control.
+  let single = null;
+  for (const host of el.querySelectorAll("[navi-control-host]")) {
+    const controlRoot = host.closest("[navi-control]") || host;
+    const controlAbove = controlRoot.parentElement.closest("[navi-control]");
+    if (controlAbove && el.contains(controlAbove)) {
+      continue;
+    }
+    if (single && single !== controlRoot) {
+      return null;
+    }
+    single = controlRoot;
+  }
+  return single ? findControlHost(single) : null;
 };
 const isControlRoot = (el) => {
   return el.hasAttribute("navi-control");
@@ -10957,9 +10974,10 @@ const interactionsDisputeThePress = (interactions) => {
  *
  * The control is not passed in: it is found from the element, which is what lets
  * `interactions` live on a Box rather than on the control itself. A Box that IS a
- * control (a Button) is its own; a Box around one or inside one reaches it; a Box
- * with no control anywhere near it can still answer with a callback of the
- * caller's, and only "request_action" has nothing to ask.
+ * control (a Button) is its own; a Box inside one, or wrapping exactly one,
+ * reaches it; a Box with no control anywhere near it — or laying out several,
+ * which belongs to none of them — still answers with a callback of the caller's,
+ * and only "request_action" has nothing to ask.
  *
  * Set up once per element rather than on every render, which is what lets a
  * detector be a plain `setup`/teardown pair. So the interactions themselves are
@@ -11007,7 +11025,7 @@ const useInteractionsEffect = (ref, interactionsRef) => {
         if (!controlHost) {
           {
             console.warn(
-              `interactions: "${type}" asks for an action, but there is no control around it to ask. Put the interaction on a control (or on a box that holds one), or give it a callback.`,
+              `interactions: "${type}" asks for an action, but there is no control around it to ask. Put the interaction on a control (or on a box that wraps exactly one), or give it a callback.`,
             );
           }
           return null;

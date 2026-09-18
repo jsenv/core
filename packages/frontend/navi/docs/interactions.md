@@ -154,11 +154,17 @@ of — which is how a menu is opened at the point the press happened.
 ## Reaching the control
 
 Everything goes through the interaction gate of the **nearest control** — itself,
-an ancestor, or a descendant, in that order. So a disabled, read-only or busy
-control answers a swipe the way it answers a click: it says why, where the
+an ancestor, or the one control it wraps, in that order. So a disabled, read-only
+or busy control answers a swipe the way it answers a click: it says why, where the
 interaction happened, and nothing runs. A `Box` with no control anywhere near it
 still answers a callback; only `"request_action"` has nothing to ask, and says so
 in dev.
+
+A `Box` that lays out **several** controls — a row of badges, a toolbar — belongs
+to none of them: its interactions are its own, answered with no gate, exactly as
+a `Box` with no control near it. A click on its empty part is the box's, and a
+click on one of the controls reaches the box too, the way any click bubbles;
+the callback reads `event.target` when it has to tell them apart.
 
 The one thing the gate weighs besides the control's state is what the
 interaction would do to it. Everything writes unless it says otherwise; an
