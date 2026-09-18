@@ -6,6 +6,7 @@ import { executeWithCleanup } from "../../utils/execute_with_cleanup.js";
 import { whenRenderingResumes } from "../rendering_hold.js";
 import { resolveRouteRedirection } from "../route.js";
 import {
+  forgetScrollersOnArrival,
   installScrollRestoration,
   restoreScrollPosition,
   startAtTop,
@@ -266,6 +267,13 @@ export const setupBrowserIntegrationViaHistory = ({
       return undefined;
     }
 
+    // The page's own scrollers are told of an arrival before the routing
+    // renders anything: a list arriving decides where it opens in its first
+    // render (see scroll_restoration.js). The document itself is moved once
+    // the page is there, below.
+    if (navigationType === "push") {
+      forgetScrollersOnArrival(url, { from: urlLeft });
+    }
     if (abortController) {
       abortController.abort(`navigating to ${url}`);
     }

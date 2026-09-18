@@ -25,6 +25,12 @@ import {
   useNextResolver,
 } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Box, BoxForwardedPropsContext } from "../../box/box.jsx";
+import { isLikelyPreactGeneratedId } from "../../nav/browser_integration/document_state_signal.js";
+import {
+  forgetScrollerUnlessPageLeft,
+  recallScrollerPosition,
+  rememberScrollerPosition,
+} from "../../nav/browser_integration/scroll_restoration.js";
 import { LoadingIndicator } from "../../graphic/loading/loading_indicator.jsx";
 import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
 import { openCallout } from "../rules/callout/callout.js";
@@ -907,10 +913,11 @@ const ListUI = (props) => {
     onListVisibleItemsChange,
     virtualItemSize,
     scrolled,
-    defaultScrolled = "start",
+    defaultScrolled: defaultScrolledProp = "start",
     onScrolledChange,
     scroller = "self",
     hoverWhileScrolling = false,
+    scrollResetOnNavigation = false,
     lockSize,
     columns,
     itemColumns,
@@ -929,6 +936,21 @@ const ListUI = (props) => {
     listRows,
     ...rest
   } = props;
+  // Remembered by name, and a name made up at render (see ListFirstResolver)
+  // names no list a later mount would recognize.
+  const rememberScroll =
+    !scrollResetOnNavigation && !isLikelyPreactGeneratedId(rest.id);
+  // Where the list was when its screen was left, when this is the way back
+  // (see scroll_restoration.js). Read once: `defaultScrolled` is held by
+  // reference, and a place read again each render would be a list moved each
+  // render. A list held by its caller (`scrolled`) is where the caller says.
+  const [scrolledRemembered] = useState(() => {
+    if (!rememberScroll || (scrolled !== undefined && scrolled !== null)) {
+      return undefined;
+    }
+    return recallScrollerPosition(rest.id);
+  });
+  const defaultScrolled = scrolledRemembered || defaultScrolledProp;
   const scrollBoxPaddingProps = {};
   for (const name of LIST_PADDING_PROP_SET) {
     if (name in rest) {
@@ -1037,6 +1059,8 @@ const ListUI = (props) => {
     scrolled,
     defaultScrolled,
     onScrolledChange,
+    rememberScroll,
+    listId: rest.id,
     scroller,
     searchText,
     horizontal,
@@ -1074,7 +1098,7 @@ const ListUI = (props) => {
   const getItemById = (itemId) => {
     const itemDrawn = listRows.itemsSignal
       .peek()
-      .find((item) => item.id === itemId);
+      .find((item) => item.itemId === itemId);
     if (itemDrawn) {
       return itemDrawn;
     }
@@ -1082,7 +1106,7 @@ const ListUI = (props) => {
     if (rowIndex === null) {
       return undefined;
     }
-    return { id: itemId, index: rowIndex };
+    return { id: itemId, itemId, index: rowIndex };
   };
 
   const noMatchCount = listRows.noMatchCountSignal.value;
@@ -1409,6 +1433,8 @@ const useListScrollSync = ({
   scrolled,
   defaultScrolled,
   onScrolledChange,
+  rememberScroll,
+  listId,
   scroller,
   searchText,
   horizontal,
@@ -1615,18 +1641,21 @@ const useListScrollSync = ({
       const trigger = `"${event.type}" on ${getElementSignature(event.target)} (${reason})`;
       // When we display the list we prefer to have selected item at the center
       // otherwise, usually when focused by arrow nav, we want to keep it into view close to the nearest edge
-      const block =
+      const align =
         blockRequested ||
         (event.type === "navi_displayed" ? "center" : "nearest");
-      const scrollToItemCall = `${getElementSignature(itemEl)}.scrollIntoView({ block: "${block}", container: "nearest" })`;
+      const scrollToItemCall = `${getElementSignature(itemEl)}.scrollIntoView({ block: "${align}", inline: "${align}", container: "nearest" })`;
       debugScroll(`${trigger} -> ${scrollToItemCall}`);
       // The list is going somewhere on purpose, so there is no view to hold
       // still any more: an anchor captured before this drop it, or it would
       // put the list back where it was the moment the rows move under it.
       anchorRef.current = null;
+      // One alignment, said on both axes: the axis the list scrolls on is the
+      // one that reads it, and the other has nothing to move.
       scrollIntoViewScoped(itemEl, {
         container: getScroller(),
-        block,
+        block: align,
+        inline: align,
       });
       const listEl = getListEl();
       dispatchPublicCustomEvent(listEl, "navi_scroll", {
@@ -1638,7 +1667,7 @@ const useListScrollSync = ({
     // Whether the row is drawn is asked of the dom, not of the render window:
     // the window says what a run draws, and a list whose rows are declared one
     // by one has them all in the dom whatever the window says.
-    const itemEl = findRowElement(getListEl(), item.id);
+    const itemEl = findRowElement(getListEl(), item.itemId);
     if (itemEl) {
       scrollItemIntoView(itemEl);
       return;
@@ -1646,7 +1675,7 @@ const useListScrollSync = ({
     // Not in DOM — shift the render window. The item will read
     // pendingScrollRef on mount and scroll into view.
     pendingScrollRef.current = {
-      id: item.id,
+      id: item.itemId,
       resolve: (itemEl) => {
         pendingScrollRef.current = null;
         scrollItemIntoView(itemEl);
@@ -2032,6 +2061,8 @@ const useListScrollSync = ({
   // one was looking at is then somewhere else.
   const onScrolledChangeRef = useRef(null);
   onScrolledChangeRef.current = onScrolledChange;
+  const rememberScrollRef = useRef(false);
+  rememberScrollRef.current = rememberScroll;
   // Where the list was at the last thing that moved it. Kept whether anyone
   // asked for it or not: it is what a resize needs to put things back.
   const positionRef = useRef(null);
@@ -2049,17 +2080,33 @@ const useListScrollSync = ({
       return;
     }
     positionRef.current = position;
-    if (!onScrolledChangeRef.current) {
+    const remember = rememberScrollRef.current;
+    const onScrolledChange = onScrolledChangeRef.current;
+    if (!remember && !onScrolledChange) {
       return;
     }
     const rowEl = findRowElement(getListEl(), position.id);
-    onScrolledChangeRef.current({
+    const scrolledNow = {
       id: position.id,
       index: position.index,
       offset:
         position.offset - getRowScrollInset(getScroller(), rowEl, horizontal),
-    });
+    };
+    if (remember) {
+      rememberScrollerPosition(listId, scrolledNow);
+    }
+    if (onScrolledChange) {
+      onScrolledChange(scrolledNow);
+    }
   };
+  // Leaving: with its page, or alone (see forgetScrollerUnlessPageLeft).
+  useLayoutEffect(() => {
+    return () => {
+      if (rememberScrollRef.current) {
+        forgetScrollerUnlessPageLeft(listId);
+      }
+    };
+  }, []);
 
   // A list that gets narrower rewraps every row it holds, so everything below
   // moves and the reader loses their place — the very thing scrolling a long
@@ -2140,7 +2187,7 @@ const useListScrollSync = ({
       return;
     }
     const items = listRows.visibleItemsSignal.peek();
-    const itemNow = items.find((i) => i.id === anchor.id);
+    const itemNow = items.find((i) => i.itemId === anchor.id);
     if (!itemNow) {
       anchorRef.current = null;
       return;
@@ -2881,48 +2928,49 @@ const resolveScrollInset = (value, viewportSize) => {
   return number;
 };
 
-// The row with that id, IN THIS LIST. Not document.getElementById: an id is
-// only ever unique within a list — two lists on the same page can be showing
-// the same collection — and a list acting on a row that belongs to another one
-// is a spectacular kind of wrong (it scrolls to hold still something it is not
-// even showing).
+// The row of that name, IN THIS LIST — by the name the list knows it under
+// (see ListItemUI), not the element's id. Not document.getElementById either:
+// a name is only ever unique within a list — two lists on the same page can be
+// showing the same collection — and a list acting on a row that belongs to
+// another one is a spectacular kind of wrong (it scrolls to hold still
+// something it is not even showing).
 const findRowElement = (listEl, id) => {
-  return listEl.querySelector(`[id="${CSS.escape(id)}"]`);
+  return listEl.querySelector(`[navi-list-item-real="${CSS.escape(id)}"]`);
 };
+const getRowName = (rowEl) => rowEl.getAttribute("navi-list-item-real");
 
 // The row the user is looking at, and where it sits: what must not move when
-// the list is rebuilt around it.
+// the list is rebuilt around it. Read off the rows' own boxes, not by
+// hit-testing the screen: a scrolling list takes its rows out of hit-testing
+// (see the navi-scrolling rule in the css above), and the scroll event is
+// precisely when this is asked.
 const captureScrollAnchor = ({ scrollerEl, listEl, items, horizontal }) => {
   if (!scrollerEl || !listEl) {
     return null;
   }
   const viewportRect = getScrollerViewportRect(scrollerEl);
   const listRect = listEl.getBoundingClientRect();
-  const scanRange = getListVisibleScanRange(viewportRect, listRect, horizontal);
-  if (!scanRange) {
+  const range = getListVisibleRange(viewportRect, listRect, horizontal);
+  if (!range) {
     return null;
   }
+  const viewportFrom = horizontal ? viewportRect.left : viewportRect.top;
+  const { rowEls, index } = findRowsFrom(listEl, range.from, horizontal);
   let fallbackAnchor = null;
-  for (let pos = scanRange.from + 1; pos < scanRange.to; pos += 8) {
-    const x = horizontal ? pos : scanRange.crossPos;
-    const y = horizontal ? scanRange.crossPos : pos;
-    const el = document.elementFromPoint(x, y);
-    if (!el || !listEl.contains(el)) {
-      continue;
+  for (let i = index; i < rowEls.length; i++) {
+    const rowEl = rowEls[i];
+    const rowRect = rowEl.getBoundingClientRect();
+    const rowStart = horizontal ? rowRect.left : rowRect.top;
+    if (rowStart >= range.to) {
+      break;
     }
-    const itemEl = el.closest(REAL_LIST_ITEM_SELECTOR);
-    if (!itemEl) {
-      continue;
-    }
-    const item = items.find((i) => i.id === itemEl.id);
+    const rowName = getRowName(rowEl);
+    const item = items.find((i) => i.itemId === rowName);
     if (!item) {
       continue;
     }
-    const itemRect = itemEl.getBoundingClientRect();
-    const offset = horizontal
-      ? itemRect.left - viewportRect.left
-      : itemRect.top - viewportRect.top;
-    const anchor = { id: item.id, index: item.index, offset };
+    const offset = rowStart - viewportFrom;
+    const anchor = { id: item.itemId, index: item.index, offset };
     if (offset >= 0) {
       return anchor;
     }
@@ -2939,42 +2987,55 @@ const captureScrollAnchor = ({ scrollerEl, listEl, items, horizontal }) => {
 // The part of the list that is on screen, along the scrolling axis. Both edges
 // matter: the scroller may be larger than the list (scroller="parent") as well
 // as smaller (the list scrolls inside its own box).
-const getListVisibleScanRange = (viewportRect, listRect, horizontal) => {
-  // The screen has a say too: what is asked here is answered by
-  // elementFromPoint, which only knows about points that are actually on it. A
-  // list whose scroll box hangs below the fold of the page would otherwise be
-  // probed where nothing can be hit — and would silently stop keeping its rows
-  // still, which is exactly when it matters.
-  const screenTo = horizontal
-    ? document.documentElement.clientWidth
-    : document.documentElement.clientHeight;
+const getListVisibleRange = (viewportRect, listRect, horizontal) => {
   const viewportFrom = horizontal ? viewportRect.left : viewportRect.top;
   const viewportTo = horizontal ? viewportRect.right : viewportRect.bottom;
   const listFrom = horizontal ? listRect.left : listRect.top;
   const listTo = horizontal ? listRect.right : listRect.bottom;
-  let from = listFrom > viewportFrom ? listFrom : viewportFrom;
-  let to = listTo < viewportTo ? listTo : viewportTo;
-  if (from < 0) {
-    from = 0;
-  }
-  if (to > screenTo) {
-    to = screenTo;
-  }
+  const from = listFrom > viewportFrom ? listFrom : viewportFrom;
+  const to = listTo < viewportTo ? listTo : viewportTo;
   if (to - from < 2) {
     return null;
   }
-  // Where to put the probe on the other axis: inside the list, inside the
-  // viewport.
-  const crossFrom = horizontal ? listRect.top : listRect.left;
-  const crossViewportFrom = horizontal ? viewportRect.top : viewportRect.left;
-  const crossPos =
-    (crossFrom > crossViewportFrom ? crossFrom : crossViewportFrom) + 1;
-  return { from, to, crossPos };
+  return { from, to };
+};
+// The real rows of the list, and the first of them reaching past `from` along
+// the scroll axis. A binary search over their boxes: the rows stand in
+// document order along that axis, so their far edges only grow.
+const findRowsFrom = (listEl, from, horizontal) => {
+  const rowEls = listEl.querySelectorAll(REAL_LIST_ITEM_SELECTOR);
+  let low = 0;
+  let high = rowEls.length;
+  while (low < high) {
+    const mid = (low + high) >> 1;
+    const rect = rowEls[mid].getBoundingClientRect();
+    const end = horizontal ? rect.right : rect.bottom;
+    if (end > from) {
+      high = mid;
+    } else {
+      low = mid + 1;
+    }
+  }
+  return { rowEls, index: low };
+};
+// Whether a filler (the room held for rows outside the window) is what stands
+// at that position along the scroll axis.
+const isFillerAt = (listEl, position, horizontal) => {
+  for (const fillerEl of listEl.querySelectorAll("[navi-virtual-filler]")) {
+    const rect = fillerEl.getBoundingClientRect();
+    const from = horizontal ? rect.left : rect.top;
+    const to = horizontal ? rect.right : rect.bottom;
+    if (position >= from && position < to) {
+      return true;
+    }
+  }
+  return false;
 };
 
-// Which row of the collection sits at the current scroll position. Uses DOM
-// hit-testing when a real row is there to be hit, and the row size when what is
-// on screen is only reserved room.
+// Which row of the collection sits at the current scroll position. Read off
+// the rows' boxes when a real row is there (see captureScrollAnchor for why
+// not hit-testing), and from the row size when what is on screen is only
+// reserved room.
 // Returns { index, item, reason } or null if nothing can be determined.
 const getScrollInfo = ({
   scrollValues,
@@ -2988,34 +3049,28 @@ const getScrollInfo = ({
   const items = listRows.itemsSignal.peek();
   const viewportRect = getScrollerViewportRect(scrollerEl);
   const listRect = listEl.getBoundingClientRect();
-  let hitEl = null;
-  let hitFiller = null;
-  const scanRange = getListVisibleScanRange(viewportRect, listRect, horizontal);
-  if (!scanRange) {
+  const range = getListVisibleRange(viewportRect, listRect, horizontal);
+  if (!range) {
     return null;
   }
-  // Start scanning from the center of the visible part of the list along the
-  // main axis. The render window places half its budget before and half after
-  // the hit index. Anchoring to the center maximises how many rendered items
-  // fall within the visible area.
-  const scanStart = (scanRange.from + scanRange.to) / 2;
-  const scanEnd = scanRange.to;
-  for (let pos = scanStart; pos < scanEnd; pos += 4) {
-    const x = horizontal ? pos : scanRange.crossPos;
-    const y = horizontal ? scanRange.crossPos : pos;
-    const el = document.elementFromPoint(x, y);
-    if (!el || !listEl.contains(el)) {
-      continue;
-    }
-    const realItem = el.closest(REAL_LIST_ITEM_SELECTOR);
-    if (realItem) {
-      hitEl = realItem;
-      break;
-    }
-    const filler = el.closest("[navi-virtual-filler]");
-    if (filler) {
-      hitFiller = filler;
-      break;
+  // Read from the center of the visible part of the list along the main axis.
+  // The render window places half its budget before and half after the hit
+  // index. Anchoring to the center maximises how many rendered items fall
+  // within the visible area.
+  const scanStart = (range.from + range.to) / 2;
+  let hitEl = null;
+  const hitFiller = isFillerAt(listEl, scanStart, horizontal);
+  if (!hitFiller) {
+    // The first real row from the center down, the way a probe walking down
+    // from it would meet one — past a separator or a group label in between.
+    const { rowEls, index } = findRowsFrom(listEl, scanStart, horizontal);
+    const rowEl = rowEls[index];
+    if (rowEl) {
+      const rowRect = rowEl.getBoundingClientRect();
+      const rowStart = horizontal ? rowRect.left : rowRect.top;
+      if (rowStart < range.to) {
+        hitEl = rowEl;
+      }
     }
   }
   // Shared by the "hit a filler" and "hit nothing at all" cases below: both
@@ -3049,8 +3104,8 @@ const getScrollInfo = ({
     return estimateFromScrollPos("hit filler");
   }
   if (hitEl) {
-    const hitId = hitEl.id;
-    const item = items.find((i) => i.id === hitId);
+    const hitName = getRowName(hitEl);
+    const item = items.find((i) => i.itemId === hitName);
     if (!item) {
       return null;
     }
@@ -3060,13 +3115,11 @@ const getScrollInfo = ({
       reason: `hit item at ${item.index} (${item.value})`,
     };
   }
-  // Neither a real item nor a filler was hit within listEl — e.g. part of
-  // the scan range fell outside the page's actually reachable viewport
-  // (docked devtools shrinks it, for one). Keeping the stale renderWindow
-  // here means the DOM never gets asked to catch up with a scrollTop that may
-  // have jumped far away — the user ends up staring at filler space. Same
-  // estimate as the hitFiller case is a safe fallback: it only needs the
-  // scroll position, not a successful hit-test.
+  // No real row stands between the center and the end of what is visible.
+  // Keeping the stale renderWindow here means the DOM never gets asked to
+  // catch up with a scrollTop that may have jumped far away — the user ends
+  // up staring at blank space. Same estimate as the hitFiller case is a safe
+  // fallback: it only needs the scroll position.
   const estimated = estimateFromScrollPos("no hit");
   if (estimated) {
     return estimated;
@@ -3497,6 +3550,12 @@ const ListItemUI = (props) => {
   // gave the row its place and decided it is inside the render window.
   const row = useContext(ListRowContext);
   const slotId = useContext(ListSlotContext);
+  // What the row is called in the list — the run's name for a row it draws,
+  // whatever `id` the caller put on the element (a run row may need a DOM id of
+  // its own, to keep clear of another element's). A position names a row by
+  // this (see captureScrollAnchor), and a row asked for by name is found by
+  // this (locateRow, findRowElement); the DOM id is the caller's.
+  props.itemId = row ? row.id : props.id;
   // There is no standalone match/matchScore/highlight prop — participation
   // in a matching system (search, filter…) only goes through `matchInfo`
   // (e.g. useSearchText's getItemMatchInfo(item): { match, matchScore,
@@ -3579,6 +3638,7 @@ const ListItemReal = (props) => {
   const {
     ref,
     id,
+    itemId,
     hidden,
     muted,
     loading,
@@ -3598,7 +3658,7 @@ const ListItemReal = (props) => {
   // see the state change, which only the caller can arrange).
   const pendingScrollRef = useContext(PendingScrollRefContext);
   const pendingScroll = pendingScrollRef.current;
-  const needScrollOnMount = pendingScroll && pendingScroll.id === id;
+  const needScrollOnMount = pendingScroll && pendingScroll.id === itemId;
   useLayoutEffect(() => {
     if (!needScrollOnMount) {
       return;
@@ -3704,7 +3764,7 @@ const ListItemReal = (props) => {
       baseClassName="navi_list_item"
       styleCSSVars={LIST_ITEM_STYLE_CSS_VARS}
       id={id}
-      navi-list-item-real=""
+      navi-list-item-real={itemId}
       {...rest}
       {...itemColumnsOverrideProps}
       index={undefined}
@@ -5215,6 +5275,7 @@ const ListResolved = /*#__PURE__*/ createComponentResolver([
  *   onScrolledChange?: (scrolled: {id: string, index: number, offset: number}) => void,
  *   scroller?: "self" | "parent" | "document" | Element | {current: Element},
  *   hoverWhileScrolling?: boolean,
+ *   scrollResetOnNavigation?: boolean,
  *   fallback?: import("preact").ComponentChildren,
  *   searchFallback?: import("preact").ComponentChildren,
  *   searchText?: string,
@@ -5306,7 +5367,8 @@ const ListResolved = /*#__PURE__*/ createComponentResolver([
  *   list is already known to be empty: the empty `fallback` shows right away
  *   rather than an empty frame, so nothing moves when the response arrives.
  * @param {"start"|"end"|number|{id: string, offset?: number}} [props.defaultScrolled="start"]
- *   Where the list opens, after which the user owns the scroll. `"end"` is a
+ *   Where the list opens, after which the user owns the scroll — unless it is
+ *   being come back to (see `scrollResetOnNavigation`). `"end"` is a
  *   thread read backwards — the last rows are the ones to show, and the ones
  *   asked for first. A number opens on that row of the collection. `{id,
  *   offset}` — what `onScrolledChange` hands out — opens on a NAMED row,
@@ -5389,6 +5451,15 @@ const ListResolved = /*#__PURE__*/ createComponentResolver([
  *   Pass `true` for a list whose rows must stay live under the pointer while
  *   it scrolls. The trade of the default is the mirror one: right after a
  *   scroll, the row under the pointer lights up only once the pointer moves.
+ * @param {boolean} [props.scrollResetOnNavigation=false]
+ *   A list that opens the same way every time. Without it the list comes back
+ *   where it was when its screen is left and come back to — the way the page
+ *   does, and for a list that scrolls itself the page's own restoration cannot
+ *   see. The position is kept under the list's `id` and the page's url, for
+ *   the session (a reload comes back too); a list without an `id` of its own
+ *   has nothing to be remembered by. A fresh arrival at the page opens at
+ *   `defaultScrolled` either way, and so does a list the caller holds through
+ *   `scrolled`.
  * @param {boolean} [props.deselectable]
  *   A single-select list allowed to hold nothing: the selected row, pressed
  *   again, lets go. Without it the list is a radio group — a choice, once

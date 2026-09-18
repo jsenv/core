@@ -157,6 +157,12 @@ picked up then. When it is still not the box you mean, say so explicitly with
   `open`/`defaultOpen` elsewhere in navi. The list goes back there every time it
   changes, even after the user scrolled.
 - **`onScrolledChange`** gives `{id, index, offset}` as the user scrolls.
+- A list with an `id` **comes back where it was** when its screen is left and
+  come back to, the way the page does: the position is kept under the list's
+  `id` and the page's url, for the session, and put back by name the way
+  `defaultScrolled={{id, offset}}` is. A fresh arrival at the page still opens
+  at `defaultScrolled`. **`scrollResetOnNavigation`** opts out: the list then
+  opens the same way every time.
 
 ### A search moves the list, and gives it back
 

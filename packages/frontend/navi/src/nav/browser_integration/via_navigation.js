@@ -58,6 +58,7 @@ import { getHrefTargetInfo } from "./href_target_info.js";
 import { linkAsksForDocument } from "./link_document.js";
 import { linkAsksForReplace } from "./link_replace.js";
 import {
+  forgetScrollersOnArrival,
   installScrollRestoration,
   restoreScrollPosition,
   startAtTop,
@@ -213,6 +214,13 @@ export const setupBrowserIntegrationViaNavigation = ({
       updateDocumentState(state);
     }
 
+    // The page's own scrollers are told of an arrival before the routing
+    // renders anything: a list arriving decides where it opens in its first
+    // render (see scroll_restoration.js). The document itself is moved once
+    // the page is there, below.
+    if (navigationType === "push") {
+      forgetScrollersOnArrival(url, { from: urlLeft });
+    }
     if (abortController) {
       abortController.abort(`navigating to ${url}`);
     }

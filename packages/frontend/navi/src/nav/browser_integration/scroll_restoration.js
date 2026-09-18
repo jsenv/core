@@ -20,6 +20,18 @@
  * to a reader. Kept in the session too, so a reload lands where the browser
  * would have landed — the flag above is a promise to do the whole job.
  *
+ * The document is not the only scrollport of a page. A list scrolling itself
+ * (a `<List expandY>` under a search field that stays put) is left and come
+ * back to the same way, and the browser never knew it was a scrollport at
+ * all: those say where they are by name (rememberScrollerPosition), under the
+ * same URL and for the same session, and ask it back when they mount again
+ * (recallScrollerPosition). What a push means for them is what it means for
+ * the document — an arrival opens at the top (see startAtTop): the page
+ * arrived at has its named positions dropped before its lists render, so a
+ * list recalls only on the way back. A scroller that goes while its page
+ * stays — a popup closing over the same address — has nothing to come back
+ * to, and says so as it leaves (forgetScrollerUnlessPageLeft).
+ *
  * What is NOT covered, and cannot be from here: a page whose height depends on
  * something still loading. Its content is not there at the moment it is put
  * back, so a position beyond what has arrived is clamped as before. Only the
@@ -38,7 +50,23 @@ import { observeRouteRender } from "../route_render.js";
 const STORAGE_KEY = "navi_scroll_positions";
 
 const positionByUrl = new Map();
-const readStoredPositions = () => {
+// url -> (scroller name -> position). The position is whatever the scroller
+// handed in: what it can put itself back on, in its own terms.
+const scrollerPositionsByUrl = new Map();
+// The url each named scroller last spoke under: what tells a scroller leaving
+// a page that stays from one leaving with its page.
+const urlByScrollerName = new Map();
+
+// Read once, the first time anyone needs the positions: the document's
+// restoration is installed by the routing, and a list remembering itself may
+// mount in an app that never routes.
+let storeLoaded = false;
+const loadStore = () => {
+  if (storeLoaded) {
+    return;
+  }
+  storeLoaded = true;
+  window.addEventListener("pagehide", storePositions);
   let stored;
   try {
     stored = window.sessionStorage.getItem(STORAGE_KEY);
@@ -51,18 +79,31 @@ const readStoredPositions = () => {
     return;
   }
   try {
-    for (const [url, position] of Object.entries(JSON.parse(stored))) {
+    const { document: documentPositions, scrollers } = JSON.parse(stored);
+    for (const [url, position] of Object.entries(documentPositions || {})) {
       positionByUrl.set(url, position);
+    }
+    for (const [url, positionByName] of Object.entries(scrollers || {})) {
+      scrollerPositionsByUrl.set(url, new Map(Object.entries(positionByName)));
     }
   } catch {
     // Something else wrote there, or it was truncated.
   }
 };
 const storePositions = () => {
+  const scrollers = {};
+  for (const [url, positionByName] of scrollerPositionsByUrl) {
+    if (positionByName.size > 0) {
+      scrollers[url] = Object.fromEntries(positionByName);
+    }
+  }
   try {
     window.sessionStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify(Object.fromEntries(positionByUrl)),
+      JSON.stringify({
+        document: Object.fromEntries(positionByUrl),
+        scrollers,
+      }),
     );
   } catch {
     // Full, or refused: the session is the only thing lost.
@@ -102,7 +143,7 @@ export const installScrollRestoration = () => {
     return;
   }
   window.history.scrollRestoration = "manual";
-  readStoredPositions();
+  loadStore();
   // Read as it happens rather than when leaving: a traverse changes the url
   // before anything here is told, so a position read then would be read for
   // the wrong page.
@@ -119,7 +160,6 @@ export const installScrollRestoration = () => {
     },
     { passive: true },
   );
-  window.addEventListener("pagehide", storePositions);
   // What a reload asks for, now that the browser has been told not to do it.
   // Once, and at the first render of a route: the position is only meaningful
   // once there is a page under it.
@@ -162,18 +202,35 @@ export const restoreScrollPosition = (url) => {
 // The document, because the document is the scrollport in the common case. An
 // app that scrolls an element of its own scrolls it itself.
 export const startAtTop = (url, { from } = {}) => {
+  if (!isArrival(url, { from })) {
+    return;
+  }
+  window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+};
+const isArrival = (url, { from }) => {
   const urlObject = new URL(url, window.location.href);
   // A fragment names where to land, and the browser is the one that finds it.
   if (urlObject.hash) {
-    return;
+    return false;
   }
   if (
     from !== undefined &&
     new URL(from, window.location.href).pathname === urlObject.pathname
   ) {
+    return false;
+  }
+  return true;
+};
+
+// The same arrival, for the page's own scrollers. The document is scrolled to
+// its top once the page is there; a list opens where it decides to in its
+// first render, so what it must not find is dropped before the routing
+// renders anything.
+export const forgetScrollersOnArrival = (url, { from } = {}) => {
+  if (!isArrival(url, { from })) {
     return;
   }
-  window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  scrollerPositionsByUrl.delete(new URL(url, window.location.href).href);
 };
 
 // An arrival at a page whose scrollport is already showing another one: the
@@ -190,4 +247,47 @@ export const arriveAtScrollPosition = (url) => {
 
 const scrollTo = ({ x, y }) => {
   window.scrollTo({ top: y, left: x, behavior: "instant" });
+};
+
+export const rememberScrollerPosition = (name, position) => {
+  loadStore();
+  const url = window.location.href;
+  let positionByName = scrollerPositionsByUrl.get(url);
+  if (!positionByName) {
+    positionByName = new Map();
+    scrollerPositionsByUrl.set(url, positionByName);
+  }
+  positionByName.set(name, position);
+  urlByScrollerName.set(name, url);
+};
+
+export const recallScrollerPosition = (name) => {
+  loadStore();
+  const positionByName = scrollerPositionsByUrl.get(window.location.href);
+  if (!positionByName) {
+    return undefined;
+  }
+  return positionByName.get(name);
+};
+
+// Said by a scroller as it unmounts. Its page is being left when the url is
+// already another one — the history is written before the page it names is
+// taken down — and then its position is kept for the way back. The url still
+// being the one it spoke under means the page stays and the scroller alone
+// goes (a popup closing, a section folding): there is no coming back to a
+// place that was not left, and a position kept would greet the next mount
+// under this address as a return.
+export const forgetScrollerUnlessPageLeft = (name) => {
+  const url = urlByScrollerName.get(name);
+  if (url === undefined) {
+    return;
+  }
+  urlByScrollerName.delete(name);
+  if (url !== window.location.href) {
+    return;
+  }
+  const positionByName = scrollerPositionsByUrl.get(url);
+  if (positionByName) {
+    positionByName.delete(name);
+  }
 };
