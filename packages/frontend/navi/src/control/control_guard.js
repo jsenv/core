@@ -34,6 +34,7 @@ import {
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { naviI18nFromValidityMessage } from "./rules/validity_bridge.js";
 import { createOpenToken } from "./rules/control_callout.js";
+import { uiStateAsText } from "./rules/ui_state_as_text.js";
 
 const isTypingIntent = (e) => getKeyboardEventDefaultAction(e) === "type";
 
@@ -91,9 +92,9 @@ const getInvalidCharsMessage = (
   uiState,
   { charClass, messageKey, uiStateNow },
 ) => {
-  const str = uiState === undefined ? "" : String(uiState);
+  const str = uiStateAsText(uiState);
   if (compileCharClassAnchored(charClass).test(str)) return null;
-  const strNow = uiStateNow === undefined ? "" : String(uiStateNow);
+  const strNow = uiStateAsText(uiStateNow);
   if (
     countCharsOutsideClass(str, charClass) <=
     countCharsOutsideClass(strNow, charClass)
@@ -106,9 +107,9 @@ const getInvalidCharsMessage = (
 // Paste / set: truncate what the gesture adds beyond the limit.
 const getLengthOverflowResult = (uiState, { maxLength, uiStateNow }) => {
   if (maxLength === undefined) return null;
-  const str = uiState === undefined ? "" : String(uiState);
+  const str = uiStateAsText(uiState);
   if (str.length <= maxLength) return null;
-  const strNow = uiStateNow === undefined ? "" : String(uiStateNow);
+  const strNow = uiStateAsText(uiStateNow);
   if (str.length <= strNow.length) return null;
   return {
     fixedValue: str.slice(0, maxLength),

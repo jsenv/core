@@ -15,6 +15,7 @@ import {
   isConstraintAttributeOn,
 } from "../constraint_attribute_set.js";
 import { naviI18nFromValidityMessage } from "../validity_bridge.js";
+import { uiStateAsText } from "../ui_state_as_text.js";
 
 export const NO_EMOJI_CONSTRAINT = {
   name: "no_emoji",
@@ -24,8 +25,7 @@ export const NO_EMOJI_CONSTRAINT = {
     if (!isConstraintAttributeOn(noEmoji)) {
       return null;
     }
-    const valueAsString =
-      field.uiState === undefined ? "" : String(field.uiState);
+    const valueAsString = uiStateAsText(field.uiState);
     const result = NO_EMOJI_RULE.applyOn(true, valueAsString);
     if (!result) {
       return null;

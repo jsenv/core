@@ -1,5 +1,6 @@
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
+import { uiStateAsText } from "../ui_state_as_text.js";
 
 export const SAME_AS_CONSTRAINT = {
   name: "same_as",
@@ -22,8 +23,7 @@ export const SAME_AS_CONSTRAINT = {
       // Reference field is empty — nothing to compare against yet.
       return null;
     }
-    const valueAsString =
-      field.uiState === undefined ? "" : String(field.uiState);
+    const valueAsString = uiStateAsText(field.uiState);
     if (valueAsString === otherFieldValue) {
       return null;
     }

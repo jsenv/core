@@ -8914,6 +8914,17 @@ const naviI18nFromValidityMessage = ({ key, params }) => {
   return naviI18n(`constraint.${key}`, params);
 };
 
+// The characters a ui state holds, for the rules that read a value as text
+// (length, pattern, number, email…). `undefined` and `null` both hold none:
+// `String(null)` would hand those rules the four letters "null" — a number
+// field cleared with `value={null}` then reported "must be a number".
+const uiStateAsText = (uiState) => {
+  if (uiState === undefined || uiState === null) {
+    return "";
+  }
+  return String(uiState);
+};
+
 /**
  * https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Constraint_validation
  */
@@ -8980,8 +8991,7 @@ const REQUIRED_CONSTRAINT = {
       return naviI18n("constraint.required.checkbox");
     }
 
-    const valueAsString =
-      field.uiState === undefined ? "" : String(field.uiState);
+    const valueAsString = uiStateAsText(field.uiState);
     if (valueAsString) {
       return null;
     }
@@ -9032,8 +9042,7 @@ const PATTERN_CONSTRAINT = {
     if (!pattern) {
       return null;
     }
-    const valueAsString =
-      field.uiState === undefined ? "" : String(field.uiState);
+    const valueAsString = uiStateAsText(field.uiState);
     if (!valueAsString) {
       return null;
     }
@@ -9068,8 +9077,7 @@ const TYPE_EMAIL_CONSTRAINT = {
     if (type !== "email") {
       return null;
     }
-    const valueAsString =
-      field.uiState === undefined ? "" : String(field.uiState);
+    const valueAsString = uiStateAsText(field.uiState);
     if (!valueAsString) {
       return null;
     }
@@ -9102,8 +9110,7 @@ const MIN_LENGTH_CONSTRAINT = {
     if (minLength === undefined) {
       return null;
     }
-    const valueAsString =
-      field.uiState === undefined ? "" : String(field.uiState);
+    const valueAsString = uiStateAsText(field.uiState);
     if (!valueAsString && !field.controlHostProps.required) {
       return null;
     }
@@ -9198,8 +9205,7 @@ const MAX_LENGTH_CONSTRAINT = {
     if (maxLength === undefined) {
       return null;
     }
-    const valueAsString =
-      field.uiState === undefined ? "" : String(field.uiState);
+    const valueAsString = uiStateAsText(field.uiState);
     if (!valueAsString) {
       return null;
     }
@@ -9240,8 +9246,7 @@ const TYPE_NUMBER_CONSTRAINT = {
     if (!isNumberInput(type, naviType)) {
       return null;
     }
-    const valueAsString =
-      field.uiState === undefined ? "" : String(field.uiState);
+    const valueAsString = uiStateAsText(field.uiState);
     if (!valueAsString) {
       return null;
     }
@@ -9306,8 +9311,7 @@ const MIN_CONSTRAINT = {
     }
     const type = field.controlHostProps.type;
     const naviInputType = field.controlHostProps["navi-input-type"];
-    const valueAsString =
-      field.uiState === undefined ? "" : String(field.uiState);
+    const valueAsString = uiStateAsText(field.uiState);
     if (!valueAsString) {
       return null;
     }
@@ -9406,8 +9410,7 @@ const MAX_CONSTRAINT = {
     }
     const type = field.controlHostProps.type;
     const naviInputType = field.controlHostProps["navi-input-type"];
-    const valueAsString =
-      field.uiState === undefined ? "" : String(field.uiState);
+    const valueAsString = uiStateAsText(field.uiState);
     if (!valueAsString) {
       return null;
     }
@@ -9540,8 +9543,7 @@ const STEP_CONSTRAINT = {
       return null;
     }
     const stepString = String(stepRaw);
-    const valueAsString =
-      field.uiState === undefined ? "" : String(field.uiState);
+    const valueAsString = uiStateAsText(field.uiState);
     if (!valueAsString) {
       return null;
     }
@@ -12341,8 +12343,7 @@ const DISPLAYABLE_CONSTRAINT = {
     if (!isConstraintAttributeOn(displayable)) {
       return null;
     }
-    const valueAsString =
-      field.uiState === undefined ? "" : String(field.uiState);
+    const valueAsString = uiStateAsText(field.uiState);
     const maxStackedMarksAttribute =
       field.controlHostProps["data-max-stacked-marks"];
     const result = DISPLAYABLE_RULE.applyOn(true, valueAsString, {
@@ -12383,8 +12384,7 @@ const MAX_LINE_BREAKS_CONSTRAINT = {
     if (isNaN(maxLineBreaks)) {
       return null;
     }
-    const valueAsString =
-      field.uiState === undefined ? "" : String(field.uiState);
+    const valueAsString = uiStateAsText(field.uiState);
     const result = MAX_LINE_BREAKS_RULE.applyOn(maxLineBreaks, valueAsString);
     if (!result) {
       return null;
@@ -12413,8 +12413,7 @@ const NO_EMOJI_CONSTRAINT = {
     if (!isConstraintAttributeOn(noEmoji)) {
       return null;
     }
-    const valueAsString =
-      field.uiState === undefined ? "" : String(field.uiState);
+    const valueAsString = uiStateAsText(field.uiState);
     const result = NO_EMOJI_RULE.applyOn(true, valueAsString);
     if (!result) {
       return null;
@@ -12428,8 +12427,7 @@ const MIN_LOWER_LETTER_CONSTRAINT = {
   name: "min_lower_letter",
   messageAttribute: "data-min-lower-letter-message",
   check: (field) => {
-    const valueAsString =
-      field.uiState === undefined ? "" : String(field.uiState);
+    const valueAsString = uiStateAsText(field.uiState);
     const required = field.controlHostProps.required;
     if (!valueAsString && !required) {
       return "";
@@ -12474,8 +12472,7 @@ const MIN_UPPER_LETTER_CONSTRAINT = {
   name: "min_upper_letter",
   messageAttribute: "data-min-upper-letter-message",
   check: (field) => {
-    const valueAsString =
-      field.uiState === undefined ? "" : String(field.uiState);
+    const valueAsString = uiStateAsText(field.uiState);
     const required = field.controlHostProps.required;
     if (!valueAsString && !required) {
       return null;
@@ -12511,8 +12508,7 @@ const MIN_DIGIT_CONSTRAINT = {
   name: "min_digit",
   messageAttribute: "data-min-digit-message",
   check: (field) => {
-    const valueAsString =
-      field.uiState === undefined ? "" : String(field.uiState);
+    const valueAsString = uiStateAsText(field.uiState);
     const required = field.controlHostProps.required;
     if (!valueAsString && !required) {
       return null;
@@ -12548,8 +12544,7 @@ const MIN_SPECIAL_CHAR_CONSTRAINT = {
   name: "min_special_char",
   messageAttribute: "data-min-special-char-message",
   check: (field) => {
-    const valueAsString =
-      field.uiState === undefined ? "" : String(field.uiState);
+    const valueAsString = uiStateAsText(field.uiState);
     const required = field.controlHostProps.required;
     if (!valueAsString && !required) {
       return null;
@@ -12666,8 +12661,7 @@ const SAME_AS_CONSTRAINT = {
       // Reference field is empty — nothing to compare against yet.
       return null;
     }
-    const valueAsString =
-      field.uiState === undefined ? "" : String(field.uiState);
+    const valueAsString = uiStateAsText(field.uiState);
     if (valueAsString === otherFieldValue) {
       return null;
     }
@@ -12708,8 +12702,7 @@ CONSTRAINT_ATTRIBUTE_SET.add("data-same-as");
 
 
 const applyRule = (field) => {
-  const valueAsString =
-    field.uiState === undefined ? "" : String(field.uiState);
+  const valueAsString = uiStateAsText(field.uiState);
   return SINGLE_SPACE_RULE.applyOn(true, valueAsString);
 };
 
@@ -36535,9 +36528,9 @@ const getInvalidCharsMessage = (
   uiState,
   { charClass, messageKey, uiStateNow },
 ) => {
-  const str = uiState === undefined ? "" : String(uiState);
+  const str = uiStateAsText(uiState);
   if (compileCharClassAnchored(charClass).test(str)) return null;
-  const strNow = uiStateNow === undefined ? "" : String(uiStateNow);
+  const strNow = uiStateAsText(uiStateNow);
   if (
     countCharsOutsideClass(str, charClass) <=
     countCharsOutsideClass(strNow, charClass)
@@ -36550,9 +36543,9 @@ const getInvalidCharsMessage = (
 // Paste / set: truncate what the gesture adds beyond the limit.
 const getLengthOverflowResult = (uiState, { maxLength, uiStateNow }) => {
   if (maxLength === undefined) return null;
-  const str = uiState === undefined ? "" : String(uiState);
+  const str = uiStateAsText(uiState);
   if (str.length <= maxLength) return null;
-  const strNow = uiStateNow === undefined ? "" : String(uiStateNow);
+  const strNow = uiStateAsText(uiStateNow);
   if (str.length <= strNow.length) return null;
   return {
     fixedValue: str.slice(0, maxLength),
@@ -63942,6 +63935,12 @@ const PickerCustom = props => {
     // accepted one and the error callout says why — the same default
     // PickerNative takes.
     pickerProps.resetOnError = true;
+  }
+  if (pickerProps.resetOnAbort === undefined) {
+    // Same reasoning for an action the app abandons (an AbortError, e.g. a
+    // verification step the user dismissed): the popup is already closed, so
+    // the abandoned value rolls back instead of staying selected in the list.
+    pickerProps.resetOnAbort = true;
   }
   // ref
   const popupRef = useRef(null);

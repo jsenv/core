@@ -14,6 +14,7 @@ import {
   isConstraintAttributeOn,
 } from "../constraint_attribute_set.js";
 import { naviI18nFromValidityMessage } from "../validity_bridge.js";
+import { uiStateAsText } from "../ui_state_as_text.js";
 
 export const MAX_LINE_BREAKS_CONSTRAINT = {
   name: "max_line_breaks",
@@ -28,8 +29,7 @@ export const MAX_LINE_BREAKS_CONSTRAINT = {
     if (isNaN(maxLineBreaks)) {
       return null;
     }
-    const valueAsString =
-      field.uiState === undefined ? "" : String(field.uiState);
+    const valueAsString = uiStateAsText(field.uiState);
     const result = MAX_LINE_BREAKS_RULE.applyOn(maxLineBreaks, valueAsString);
     if (!result) {
       return null;

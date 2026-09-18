@@ -15,6 +15,7 @@ import {
   isConstraintAttributeOn,
 } from "../constraint_attribute_set.js";
 import { naviI18nFromValidityMessage } from "../validity_bridge.js";
+import { uiStateAsText } from "../ui_state_as_text.js";
 
 export const DISPLAYABLE_CONSTRAINT = {
   name: "displayable",
@@ -24,8 +25,7 @@ export const DISPLAYABLE_CONSTRAINT = {
     if (!isConstraintAttributeOn(displayable)) {
       return null;
     }
-    const valueAsString =
-      field.uiState === undefined ? "" : String(field.uiState);
+    const valueAsString = uiStateAsText(field.uiState);
     const maxStackedMarksAttribute =
       field.controlHostProps["data-max-stacked-marks"];
     const result = DISPLAYABLE_RULE.applyOn(true, valueAsString, {

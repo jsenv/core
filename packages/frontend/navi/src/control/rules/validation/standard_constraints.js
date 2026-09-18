@@ -15,6 +15,7 @@ import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { isNumberInput } from "@jsenv/navi/src/control/input/resolve_input_props.js";
 import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
 import { naviI18nFromValidityMessage } from "../validity_bridge.js";
+import { uiStateAsText } from "../ui_state_as_text.js";
 
 export const REQUIRED_CONSTRAINT = {
   name: "required",
@@ -77,8 +78,7 @@ export const REQUIRED_CONSTRAINT = {
       return naviI18n("constraint.required.checkbox");
     }
 
-    const valueAsString =
-      field.uiState === undefined ? "" : String(field.uiState);
+    const valueAsString = uiStateAsText(field.uiState);
     if (valueAsString) {
       return null;
     }
@@ -129,8 +129,7 @@ export const PATTERN_CONSTRAINT = {
     if (!pattern) {
       return null;
     }
-    const valueAsString =
-      field.uiState === undefined ? "" : String(field.uiState);
+    const valueAsString = uiStateAsText(field.uiState);
     if (!valueAsString) {
       return null;
     }
@@ -165,8 +164,7 @@ export const TYPE_EMAIL_CONSTRAINT = {
     if (type !== "email") {
       return null;
     }
-    const valueAsString =
-      field.uiState === undefined ? "" : String(field.uiState);
+    const valueAsString = uiStateAsText(field.uiState);
     if (!valueAsString) {
       return null;
     }
@@ -199,8 +197,7 @@ export const MIN_LENGTH_CONSTRAINT = {
     if (minLength === undefined) {
       return null;
     }
-    const valueAsString =
-      field.uiState === undefined ? "" : String(field.uiState);
+    const valueAsString = uiStateAsText(field.uiState);
     if (!valueAsString && !field.controlHostProps.required) {
       return null;
     }
@@ -295,8 +292,7 @@ export const MAX_LENGTH_CONSTRAINT = {
     if (maxLength === undefined) {
       return null;
     }
-    const valueAsString =
-      field.uiState === undefined ? "" : String(field.uiState);
+    const valueAsString = uiStateAsText(field.uiState);
     if (!valueAsString) {
       return null;
     }
@@ -337,8 +333,7 @@ export const TYPE_NUMBER_CONSTRAINT = {
     if (!isNumberInput(type, naviType)) {
       return null;
     }
-    const valueAsString =
-      field.uiState === undefined ? "" : String(field.uiState);
+    const valueAsString = uiStateAsText(field.uiState);
     if (!valueAsString) {
       return null;
     }
@@ -403,8 +398,7 @@ export const MIN_CONSTRAINT = {
     }
     const type = field.controlHostProps.type;
     const naviInputType = field.controlHostProps["navi-input-type"];
-    const valueAsString =
-      field.uiState === undefined ? "" : String(field.uiState);
+    const valueAsString = uiStateAsText(field.uiState);
     if (!valueAsString) {
       return null;
     }
@@ -503,8 +497,7 @@ export const MAX_CONSTRAINT = {
     }
     const type = field.controlHostProps.type;
     const naviInputType = field.controlHostProps["navi-input-type"];
-    const valueAsString =
-      field.uiState === undefined ? "" : String(field.uiState);
+    const valueAsString = uiStateAsText(field.uiState);
     if (!valueAsString) {
       return null;
     }
@@ -637,8 +630,7 @@ export const STEP_CONSTRAINT = {
       return null;
     }
     const stepString = String(stepRaw);
-    const valueAsString =
-      field.uiState === undefined ? "" : String(field.uiState);
+    const valueAsString = uiStateAsText(field.uiState);
     if (!valueAsString) {
       return null;
     }

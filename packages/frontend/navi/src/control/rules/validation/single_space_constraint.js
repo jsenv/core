@@ -19,10 +19,10 @@ import {
   isConstraintAttributeOn,
 } from "../constraint_attribute_set.js";
 import { naviI18nFromValidityMessage } from "../validity_bridge.js";
+import { uiStateAsText } from "../ui_state_as_text.js";
 
 const applyRule = (field) => {
-  const valueAsString =
-    field.uiState === undefined ? "" : String(field.uiState);
+  const valueAsString = uiStateAsText(field.uiState);
   return SINGLE_SPACE_RULE.applyOn(true, valueAsString);
 };
 

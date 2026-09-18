@@ -1,12 +1,12 @@
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
+import { uiStateAsText } from "../ui_state_as_text.js";
 
 export const MIN_LOWER_LETTER_CONSTRAINT = {
   name: "min_lower_letter",
   messageAttribute: "data-min-lower-letter-message",
   check: (field) => {
-    const valueAsString =
-      field.uiState === undefined ? "" : String(field.uiState);
+    const valueAsString = uiStateAsText(field.uiState);
     const required = field.controlHostProps.required;
     if (!valueAsString && !required) {
       return "";
@@ -51,8 +51,7 @@ export const MIN_UPPER_LETTER_CONSTRAINT = {
   name: "min_upper_letter",
   messageAttribute: "data-min-upper-letter-message",
   check: (field) => {
-    const valueAsString =
-      field.uiState === undefined ? "" : String(field.uiState);
+    const valueAsString = uiStateAsText(field.uiState);
     const required = field.controlHostProps.required;
     if (!valueAsString && !required) {
       return null;
@@ -88,8 +87,7 @@ export const MIN_DIGIT_CONSTRAINT = {
   name: "min_digit",
   messageAttribute: "data-min-digit-message",
   check: (field) => {
-    const valueAsString =
-      field.uiState === undefined ? "" : String(field.uiState);
+    const valueAsString = uiStateAsText(field.uiState);
     const required = field.controlHostProps.required;
     if (!valueAsString && !required) {
       return null;
@@ -125,8 +123,7 @@ export const MIN_SPECIAL_CHAR_CONSTRAINT = {
   name: "min_special_char",
   messageAttribute: "data-min-special-char-message",
   check: (field) => {
-    const valueAsString =
-      field.uiState === undefined ? "" : String(field.uiState);
+    const valueAsString = uiStateAsText(field.uiState);
     const required = field.controlHostProps.required;
     if (!valueAsString && !required) {
       return null;
