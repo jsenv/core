@@ -363,6 +363,12 @@ const PickerCustom = (props) => {
     // PickerNative takes.
     pickerProps.resetOnError = true;
   }
+  if (pickerProps.resetOnAbort === undefined) {
+    // Same reasoning for an action the app abandons (an AbortError, e.g. a
+    // verification step the user dismissed): the popup is already closed, so
+    // the abandoned value rolls back instead of staying selected in the list.
+    pickerProps.resetOnAbort = true;
+  }
   // ref
   const popupRef = useRef(null);
   popupProps.ref = popupRef;

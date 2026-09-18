@@ -434,7 +434,8 @@ as a card and is refused as a card, wherever in the tree the sheet was written.
 
 The card shows the answer the moment the sheet leaves when its `ui` is drawn
 from what the picker holds rather than from what the caller knows — the same
-state navi's own default `ui` reads, rolled back by `resetOnError`, so nothing
+state navi's own default `ui` reads, rolled back by `resetOnError` (and
+`resetOnAbort`), so nothing
 about the pending value is the caller's to keep or to put back. Two ways to
 read it: `ui={MatchCard}` hands the component `value`, `loading` and
 `interactive` as props; `ui={<MatchCard match={match} />}` keeps the caller's
