@@ -75,6 +75,9 @@ import {
   elementIsFocusable,
   findAfter,
   getKeyboardEventDefaultAction,
+  getScrollContainerSet,
+  isScrollable,
+  scrollIntoViewScoped,
   stringifyStyle,
 } from "@jsenv/dom";
 import { createContext } from "preact";
@@ -258,7 +261,13 @@ const css = /* css */ `
     }
     &:not([aria-expanded="true"])[data-settled]
       > .navi_expandable_content_container {
-      clip-path: inset(0 0 0 0);
+      /* overflow: clip and not a clip-path: a clip-path hides the pixels but
+         leaves the content in the scrollable overflow, and the nearest
+         scroller keeps a blank tail under the collapsed box, the height of
+         its content. Clipped overflow is not scrollable — and clip, unlike
+         hidden, makes no scroll container. */
+      clip-path: none;
+      overflow: clip;
     }
     &[data-content-scrolls]
       > .navi_expandable_content_container
@@ -297,6 +306,7 @@ const useExpandableContext = (partName) => {
  *   layout?: "row" | "column",
  *   openDirection?: "down" | "up" | "right" | "left",
  *   autoFocus?: boolean,
+ *   keepInView?: boolean,
  *   maxContentHeight?: string | number,
  *   mount?: "always" | "idle" | "from-first-open" | "while-opened",
  *   arrowKeyShortcuts?: boolean,
@@ -354,6 +364,15 @@ const useExpandableContext = (partName) => {
  *   came from. An expandable that mounts already open never takes it. Whatever
  *   the setting, closing while the focus sits inside the content hands it back
  *   to the UI part (it would otherwise be lost to the closed, inert content).
+ * @param keepInView - Off by default. `true` scrolls the nearest scroller
+ *   that can scroll so the content revealed past its edge is on screen: an
+ *   expandable opening at the bottom of a list otherwise grows below the
+ *   fold, and the user sees the row grow but not what it grew with. Measured
+ *   on the open layout and done once per opening, alongside the reveal
+ *   (smoothly when `animation` plays, at once otherwise). An expandable
+ *   taller than the scroller keeps its UI part on screen and the content
+ *   follows as far as it fits. Only the nearest scroller moves — a popup or
+ *   a page around it stays where it is.
  * @param maxContentHeight - Caps the content height; taller content scrolls
  *   inside the expandable instead of growing it.
  * @param mount - When the content is built and thrown away, a popup's own
@@ -389,6 +408,7 @@ export const Expandable = (props) => {
     layout,
     openDirection,
     autoFocus,
+    keepInView = false,
     maxContentHeight,
     mount = MOUNT_DEFAULT,
     arrowKeyShortcuts = true,
@@ -406,6 +426,15 @@ export const Expandable = (props) => {
   const contentId = useId();
   const isColumn = layout === "column";
   const closedContentSized = isColumn && mount === "always";
+  // Only the two directions the layout has room for: a column layout reveals
+  // sideways, a stacked one vertically.
+  const revealDirection = isColumn
+    ? openDirection === "left"
+      ? "left"
+      : "right"
+    : openDirection === "up"
+      ? "up"
+      : "down";
 
   const hasAction = Boolean(action);
   const effectiveAction = useAction(action);
@@ -500,6 +529,20 @@ export const Expandable = (props) => {
     } else {
       contentElement.style.height = `${finalRect.height}px`;
     }
+    if (keepInView) {
+      // Here and not once the reveal settles: the layout is the open one at
+      // this point, so where the content ends is known before the movement
+      // starts, and the scroll can travel along with it. The frozen content
+      // overflowing the collapsed track is still scrollable overflow (the
+      // one-sided clip-path, see the CSS), so the scroller can reach that
+      // position from the first frame.
+      scrollExpandableIntoView(rootRef.current, {
+        revealDirection,
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "instant"
+          : "smooth",
+      });
+    }
     // Put the tracks back where the last paint left them and let the
     // transition play from there. In fr — px does not interpolate with fr.
     const startFrOf = (startSize, finalSize) =>
@@ -569,6 +612,8 @@ export const Expandable = (props) => {
     if (revealing) {
       armReveal(startRect);
       watchSettle();
+    } else if (keepInView && !silent && contentContainer) {
+      scrollExpandableIntoView(rootRef.current, { revealDirection });
     }
     if (!silent) {
       rootRef.current.dispatchEvent(createToggleEvent(true));
@@ -755,15 +800,6 @@ export const Expandable = (props) => {
     }
   };
 
-  // Only the two directions the layout has room for: a column layout reveals
-  // sideways, a stacked one vertically.
-  const revealDirection = isColumn
-    ? openDirection === "left"
-      ? "left"
-      : "right"
-    : openDirection === "up"
-      ? "up"
-      : "down";
   // While open the marker points at the content, while closed always right.
   // In a column layout it points back toward the UI part whichever side the
   // content took, "right" being the closed direction already.
@@ -987,6 +1023,41 @@ const UI_INTERACTIVE_SELECTOR = [
   "audio[controls]",
   "video[controls]",
 ].join(", ");
+
+// Scrolls the nearest scroller that can scroll so the whole expandable — UI
+// part and revealed content — is in view. Measured on the layout as it stands,
+// so the caller calls it while the open layout is the one laid out (see
+// openEffect). A root taller than the view is aligned on its UI side instead:
+// what the user pressed stays on screen, and the content follows as far as it
+// fits. One scroller only — a popup or a page around it is left where it is.
+const scrollExpandableIntoView = (rootEl, { revealDirection, behavior }) => {
+  let scrollerEl = null;
+  for (const scrollContainer of getScrollContainerSet(rootEl)) {
+    if (isScrollable(scrollContainer)) {
+      scrollerEl = scrollContainer;
+      break;
+    }
+  }
+  if (!scrollerEl) {
+    return;
+  }
+  const rootRect = rootEl.getBoundingClientRect();
+  let block = "nearest";
+  let inline = "nearest";
+  if (revealDirection === "down" || revealDirection === "up") {
+    if (rootRect.height > scrollerEl.clientHeight) {
+      block = revealDirection === "down" ? "start" : "end";
+    }
+  } else if (rootRect.width > scrollerEl.clientWidth) {
+    inline = revealDirection === "right" ? "start" : "end";
+  }
+  scrollIntoViewScoped(rootEl, {
+    container: scrollerEl,
+    block,
+    inline,
+    behavior,
+  });
+};
 
 const createToggleEvent = (open) => {
   const newState = open ? "open" : "closed";

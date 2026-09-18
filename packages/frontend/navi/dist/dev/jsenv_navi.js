@@ -4,7 +4,7 @@
  */
 import { installImportMetaCssBuild, windowHeightSignal, windowWidthSignal, visualViewportHeightSignal, visualViewportWidthSignal, getAppHeight, getAppWidth, coarsePointerSignal, smallTouchScreenSignal } from "./jsenv_navi_side_effects.js";
 export { disableVirtualKeyboardOverlay } from "./jsenv_navi_side_effects.js";
-import { elementIsFocusable, createIterableWeakSet, dispatchInternalCustomEvent, dispatchCustomEvent, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, getElementSignature, createPubSub, findEvent, createValueEffect, findFocusDelegateTarget, findFocusable, scrollIntoViewThroughScrollables, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, getScrollContainerSet, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, keepTouchRefusable, isPressDrivenClick, waitForTap, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, dragSourceThatStoodDown, markDragSource, refuseDragTo, startDragTo, installPanZoom, createEventGroupLogger, createInternalCustomEvent, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, normalizeStyles, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, getScrollContainer, watchWheelTravel, scrollRoomTowards, isTouchDrivenEvent, scrollIntoViewScoped, closestOpenableAncestor, isAncestorOpen, isDisplayedDespiteClosedAncestor, observeAncestorOpenState, getAncestorOpenType, findBefore, findAfter, resolveCSSSize, hasCSSSizeUnit, releaseWheelGesture, getScrollIntoViewScopedOffsets, wheelGestureIsTakenFrom, claimWheelGesture, initFocusGroup, stringifyStyle as stringifyStyle$1, resolveOklchLightness, contrastColor, trapScrollInside, parsePositionArea, snapToPixel, trapFocusInside, getVirtualKeyboardOverlayHeight, onAncestorReopen, isPressDisputedByDrag, canScroll, measureWidestChildRow, performTabNavigation, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
+import { elementIsFocusable, createIterableWeakSet, dispatchInternalCustomEvent, dispatchCustomEvent, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, getElementSignature, createPubSub, findEvent, createValueEffect, findFocusDelegateTarget, findFocusable, scrollIntoViewThroughScrollables, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, getScrollContainerSet, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, keepTouchRefusable, isPressDrivenClick, waitForTap, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, dragSourceThatStoodDown, markDragSource, refuseDragTo, startDragTo, installPanZoom, createEventGroupLogger, createInternalCustomEvent, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, normalizeStyles, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, getScrollContainer, watchWheelTravel, scrollRoomTowards, isTouchDrivenEvent, scrollIntoViewScoped, closestOpenableAncestor, isAncestorOpen, isDisplayedDespiteClosedAncestor, observeAncestorOpenState, getAncestorOpenType, findBefore, findAfter, resolveCSSSize, hasCSSSizeUnit, releaseWheelGesture, getScrollIntoViewScopedOffsets, wheelGestureIsTakenFrom, claimWheelGesture, initFocusGroup, stringifyStyle as stringifyStyle$1, isScrollable, resolveOklchLightness, contrastColor, trapScrollInside, parsePositionArea, snapToPixel, trapFocusInside, getVirtualKeyboardOverlayHeight, onAncestorReopen, isPressDisputedByDrag, canScroll, measureWidestChildRow, performTabNavigation, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
 export { chainEvent, clickIsSuppressed, contrastColor, createDragGestureController, dragAfterIntent, findEvent, markDragSource, startDragTo } from "@jsenv/dom";
 import { signal, computed, effect, untracked, batch, useComputed, useSignal } from "@preact/signals";
 import { isValidElement, createContext, render, h, toChildArray, options, cloneElement, createElement, Fragment as Fragment$1 } from "preact";
@@ -49292,7 +49292,8 @@ const css$R = /* css */`.navi_expandable {
   }
 
   &:not([aria-expanded="true"])[data-settled] > .navi_expandable_content_container {
-    clip-path: inset(0);
+    clip-path: none;
+    overflow: clip;
   }
 
   &[data-content-scrolls] > .navi_expandable_content_container > .navi_expandable_content_sizer > .navi_expandable_content {
@@ -49326,6 +49327,7 @@ const useExpandableContext = partName => {
  *   layout?: "row" | "column",
  *   openDirection?: "down" | "up" | "right" | "left",
  *   autoFocus?: boolean,
+ *   keepInView?: boolean,
  *   maxContentHeight?: string | number,
  *   mount?: "always" | "idle" | "from-first-open" | "while-opened",
  *   arrowKeyShortcuts?: boolean,
@@ -49383,6 +49385,15 @@ const useExpandableContext = partName => {
  *   came from. An expandable that mounts already open never takes it. Whatever
  *   the setting, closing while the focus sits inside the content hands it back
  *   to the UI part (it would otherwise be lost to the closed, inert content).
+ * @param keepInView - Off by default. `true` scrolls the nearest scroller
+ *   that can scroll so the content revealed past its edge is on screen: an
+ *   expandable opening at the bottom of a list otherwise grows below the
+ *   fold, and the user sees the row grow but not what it grew with. Measured
+ *   on the open layout and done once per opening, alongside the reveal
+ *   (smoothly when `animation` plays, at once otherwise). An expandable
+ *   taller than the scroller keeps its UI part on screen and the content
+ *   follows as far as it fits. Only the nearest scroller moves — a popup or
+ *   a page around it stays where it is.
  * @param maxContentHeight - Caps the content height; taller content scrolls
  *   inside the expandable instead of growing it.
  * @param mount - When the content is built and thrown away, a popup's own
@@ -49418,6 +49429,7 @@ const Expandable = props => {
     layout,
     openDirection,
     autoFocus,
+    keepInView = false,
     maxContentHeight,
     mount = MOUNT_DEFAULT,
     arrowKeyShortcuts = true,
@@ -49435,6 +49447,9 @@ const Expandable = props => {
   const contentId = useId();
   const isColumn = layout === "column";
   const closedContentSized = isColumn && mount === "always";
+  // Only the two directions the layout has room for: a column layout reveals
+  // sideways, a stacked one vertically.
+  const revealDirection = isColumn ? openDirection === "left" ? "left" : "right" : openDirection === "up" ? "up" : "down";
   const hasAction = Boolean(action);
   const effectiveAction = useAction(action);
   const {
@@ -49527,6 +49542,18 @@ const Expandable = props => {
     } else {
       contentElement.style.height = `${finalRect.height}px`;
     }
+    if (keepInView) {
+      // Here and not once the reveal settles: the layout is the open one at
+      // this point, so where the content ends is known before the movement
+      // starts, and the scroll can travel along with it. The frozen content
+      // overflowing the collapsed track is still scrollable overflow (the
+      // one-sided clip-path, see the CSS), so the scroller can reach that
+      // position from the first frame.
+      scrollExpandableIntoView(rootRef.current, {
+        revealDirection,
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth"
+      });
+    }
     // Put the tracks back where the last paint left them and let the
     // transition play from there. In fr — px does not interpolate with fr.
     const startFrOf = (startSize, finalSize) => finalSize > 0 ? startSize / finalSize : 0;
@@ -49581,6 +49608,10 @@ const Expandable = props => {
     if (revealing) {
       armReveal(startRect);
       watchSettle();
+    } else if (keepInView && !silent && contentContainer) {
+      scrollExpandableIntoView(rootRef.current, {
+        revealDirection
+      });
     }
     if (!silent) {
       rootRef.current.dispatchEvent(createToggleEvent(true));
@@ -49761,9 +49792,6 @@ const Expandable = props => {
     }
   };
 
-  // Only the two directions the layout has room for: a column layout reveals
-  // sideways, a stacked one vertically.
-  const revealDirection = isColumn ? openDirection === "left" ? "left" : "right" : openDirection === "up" ? "up" : "down";
   // While open the marker points at the content, while closed always right.
   // In a column layout it points back toward the UI part whichever side the
   // content took, "right" being the closed direction already.
@@ -49964,6 +49992,44 @@ Expandable.Content = ExpandableContent;
 // control, not at the row. The UI part itself matches [role='button'] and is
 // the one exception, excluded at the call site.
 const UI_INTERACTIVE_SELECTOR = ["a[href]", "button", "input", "select", "textarea", "label", "[role='button']", "[contenteditable='']", "[contenteditable='true']", "audio[controls]", "video[controls]"].join(", ");
+
+// Scrolls the nearest scroller that can scroll so the whole expandable — UI
+// part and revealed content — is in view. Measured on the layout as it stands,
+// so the caller calls it while the open layout is the one laid out (see
+// openEffect). A root taller than the view is aligned on its UI side instead:
+// what the user pressed stays on screen, and the content follows as far as it
+// fits. One scroller only — a popup or a page around it is left where it is.
+const scrollExpandableIntoView = (rootEl, {
+  revealDirection,
+  behavior
+}) => {
+  let scrollerEl = null;
+  for (const scrollContainer of getScrollContainerSet(rootEl)) {
+    if (isScrollable(scrollContainer)) {
+      scrollerEl = scrollContainer;
+      break;
+    }
+  }
+  if (!scrollerEl) {
+    return;
+  }
+  const rootRect = rootEl.getBoundingClientRect();
+  let block = "nearest";
+  let inline = "nearest";
+  if (revealDirection === "down" || revealDirection === "up") {
+    if (rootRect.height > scrollerEl.clientHeight) {
+      block = revealDirection === "down" ? "start" : "end";
+    }
+  } else if (rootRect.width > scrollerEl.clientWidth) {
+    inline = revealDirection === "right" ? "start" : "end";
+  }
+  scrollIntoViewScoped(rootEl, {
+    container: scrollerEl,
+    block,
+    inline,
+    behavior
+  });
+};
 const createToggleEvent = open => {
   const newState = open ? "open" : "closed";
   const oldState = open ? "closed" : "open";
