@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <title>Slide container — pleine page (repro)</title>
+    <style>
+      /*
+        Trois slides l'une au-dessus de l'autre, chacune de la taille de
+        l'écran, sur un téléphone: le doigt fait voyager d'une slide à l'autre.
+        Page faite pour reproduire un voyage qui saccade au lieu de glisser.
+
+        Rien ne défile hors du conteneur: le document est verrouillé à la
+        hauteur de l'écran, comme une app plein écran, pour que le seul
+        défilement en jeu soit celui du doigt sur les slides.
+      */
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        color: white;
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+        background: #111;
+        overflow: hidden;
+        overscroll-behavior: none;
+      }
+      #root {
+        height: 100dvh;
+      }
+      .hud {
+        position: fixed;
+        top: env(safe-area-inset-top, 0);
+        right: 0;
+        left: 0;
+        z-index: 1;
+        display: flex;
+        padding: 6px 10px;
+        align-items: center;
+        gap: 12px;
+        color: white;
+        font-size: 12px;
+        font-family: ui-monospace, monospace;
+        background: rgba(0, 0, 0, 0.55);
+        pointer-events: none;
+      }
+      .hud label,
+      .hud select,
+      .hud button {
+        pointer-events: auto;
+      }
+      .slide_face {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+      }
+      .slide_face .number {
+        font-weight: 700;
+        font-size: 96px;
+        line-height: 1;
+      }
+      .filler {
+        width: min(80vw, 360px);
+        padding: 10px 14px;
+        background: rgba(255, 255, 255, 0.12);
+        border-radius: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useEffect, useState } from "preact/hooks";
+      import { signal } from "@preact/signals";
+      import { Box, Slide, SlideContainer, Text } from "@jsenv/navi";
+
+      window.__jsenv_perf_critical__?.();
+
+      const SLIDES = [
+        { area: "one", color: "#1a237e" },
+        { area: "two", color: "#00695c" },
+        { area: "three", color: "#8e24aa" },
+      ];
+      const currentSignal = signal("one");
+
+      // Temps de frame pendant le voyage: une saccade se lit ici comme des
+      // frames bien au-delà de 16ms.
+      const FrameTimes = () => {
+        const [worst, setWorst] = useState(0);
+        const [long, setLong] = useState(0);
+        useEffect(() => {
+          let previous = performance.now();
+          let running = true;
+          const tick = (now) => {
+            if (!running) {
+              return;
+            }
+            const elapsed = now - previous;
+            previous = now;
+            if (elapsed > 50) {
+              setWorst((w) => (elapsed > w ? Math.round(elapsed) : w));
+              setLong((l) => l + 1);
+            }
+            requestAnimationFrame(tick);
+          };
+          requestAnimationFrame(tick);
+          return () => {
+            running = false;
+          };
+        }, []);
+        return (
+          <span>
+            &gt;50ms: {long} (pire {worst}ms){" "}
+            <button
+              type="button"
+              onClick={() => {
+                setWorst(0);
+                setLong(0);
+              }}
+            >
+              reset
+            </button>
+          </span>
+        );
+      };
+
+      const Hud = ({ tall, setTall, duration, setDuration }) => (
+        <div class="hud">
+          <span>slide: {currentSignal.value}</span>
+          <label>
+            <input
+              type="checkbox"
+              checked={tall}
+              onChange={(e) => setTall(e.target.checked)}
+            />{" "}
+            contenu plus haut que l'écran
+          </label>
+          <select
+            value={duration}
+            onChange={(e) => setDuration(e.target.value)}
+          >
+            {["300ms", "700ms", "2s"].map((value) => (
+              <option key={value} value={value}>
+                {value}
+              </option>
+            ))}
+          </select>
+          <FrameTimes />
+        </div>
+      );
+
+      const Filler = ({ count }) =>
+        Array.from({ length: count }, (_, i) => (
+          <div key={i} class="filler">
+            ligne {i + 1}
+          </div>
+        ));
+
+      const App = () => {
+        const [tall, setTall] = useState(false);
+        const [duration, setDuration] = useState("300ms");
+        return (
+          <>
+            <Hud
+              tall={tall}
+              setTall={setTall}
+              duration={duration}
+              setDuration={setDuration}
+            />
+            <SlideContainer
+              id="full_page_slides"
+              layout="column"
+              signal={currentSignal}
+              travelByScroll="y"
+              duration={duration}
+              borderRadius="0"
+              expandY
+              height="100%"
+            >
+              {SLIDES.map(({ area, color }) => (
+                <Slide
+                  key={area}
+                  id={`slide_${area}`}
+                  area={area}
+                  flex="y"
+                  expandY
+                  alignY="stretch"
+                  style={{ background: color }}
+                >
+                  {/* Même montage que la feuille wematch: une boîte qui
+                      défile, et dedans une carte flottant au milieu
+                      (marginY auto), calée en haut dès qu'elle déborde. */}
+                  <Box flex="y" expandY overflow="auto">
+                    <Box
+                      flex="y"
+                      spacing="s"
+                      marginY="auto"
+                      shrink={false}
+                      className="slide_face"
+                      paddingY="xl"
+                    >
+                      <div class="number">{area}</div>
+                      <Text>glisser vers le haut / le bas</Text>
+                      <Filler count={tall ? 24 : 2} />
+                    </Box>
+                  </Box>
+                </Slide>
+              ))}
+            </SlideContainer>
+          </>
+        );
+      };
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>
