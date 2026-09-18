@@ -10288,7 +10288,21 @@ const createControlInteraction = (
       failingManagedInteraction.reportInteractivity({ event });
       return;
     }
-    reportedConstraint = interactionFailedConstraintInfo.constraint;
+    const constraint = interactionFailedConstraintInfo.constraint;
+    if (reportedConstraint === constraint) {
+      // Pressed again while it still says why it refuses: that press is "got
+      // it", not a question — the explanation goes rather than being repeated
+      // (the press lands on the callout's own anchor, so it is no press outside
+      // and nothing else would take it down).
+      debugInteraction(
+        event,
+        `reportInteractivity (${interactionFailedConstraintInfo.name}) pressed again, dismiss`,
+      );
+      callout.removeOpenToken(INTERACTION_TOKEN, event);
+      reportedConstraint = null;
+      return;
+    }
+    reportedConstraint = constraint;
     debugInteraction(
       event,
       `reportInteractivity (${interactionFailedConstraintInfo.name})`,
@@ -10305,6 +10319,14 @@ const createControlInteraction = (
       anchorElement: interactionFailedConstraintInfo.target,
       event,
       skipFocus: true,
+      // A refusal explains the press that just happened: once the page moves
+      // on, so does the explanation.
+      closeByScroll: true,
+      // Dismissed (press outside, scroll): nothing is on screen anymore, and
+      // the next press is a question again.
+      onClose: () => {
+        reportedConstraint = null;
+      },
     });
   };
 
