@@ -1985,17 +1985,50 @@ const formatCompactNumber = (value, lang) => {
   return Number.isFinite(n) ? memoIntl("NumberFormat", lang).format(n) : value;
 };
 
+// One verbosity vocabulary is shared by everything here, but a word only means
+// something where the shape it names exists: a clock has no ISO spelling, a
+// duration no numeric one, a relative sentence neither. Handed to Intl, a word
+// it does not know answers `Value X out of range for Intl.Y options property
+// style` — which names neither the caller, nor the option the caller wrote, nor
+// the value's own vocabulary, and is thrown mid-render, where it blanks the
+// subtree being drawn. So every formatter says which words it reads, maps the
+// ones that have a reading of their own, and writes its default wording for the
+// rest after naming what it dropped.
+const formatsWarned = new Set();
+const resolveFormat = (format, { fnName, reads, as }) => {
+  if (reads.includes(format)) {
+    return format;
+  }
+  if (as && Object.hasOwn(as, format)) {
+    return as[format];
+  }
+  // Warn once per (formatter, value): these run in render loops, and a bad
+  // format is a property of the call site, not of the frame.
+  const warnKey = `${fnName}|${String(format)}`;
+  if (!formatsWarned.has(warnKey)) {
+    formatsWarned.add(warnKey);
+    const accepted = [...reads, ...(as ? Object.keys(as) : [])]
+      .map((word) => `"${word}"`)
+      .join(", ");
+    console.warn(
+      `${fnName}: format "${String(format)}" says nothing here — expected ${accepted}; writing the "long" form`,
+    );
+  }
+  return "long";
+};
+
 /**
  * Formats a date as a human-readable day string.
  *
  * @param {Date} date
- * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"numeric"|{ weekday?: "long"|"short"|"narrow"|false, day?: boolean, month?: "long"|"short"|"narrow"|"numeric"|false }, year?: boolean|"auto", now?: Date, timeZone?: string }} [options]
+ * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"numeric"|"compact"|{ weekday?: "long"|"short"|"narrow"|false, day?: boolean, month?: "long"|"short"|"narrow"|"numeric"|false }, year?: boolean|"auto", now?: Date, timeZone?: string }} [options]
  *   A string spells the weekday and the month the same way. An object spells
  *   them apart, each key defaulting to `"long"`: a narrow card usually wants
  *   the weekday whole (it is the reading anchor) and the month abbreviated (it
  *   is where the characters are — "septembre" is 9 of them, "sept." reads the
  *   same). `"numeric"` stays a string-only spelling: it drops the weekday and
- *   writes the whole date in digits.
+ *   writes the whole date in digits, and `"compact"` is a name for it — a date
+ *   has nothing tighter ("narrow" is the single-letter weekday, "J 17 S").
  *
  *   In the object form, `false` drops a part: `{ day: false, month: false }`
  *   writes the weekday alone ("mardi"), `{ month: false }` the weekday and
@@ -2034,6 +2067,16 @@ const formatDay = (
     timeZone,
   } = {},
 ) => {
+  // The object form spells each part on its own; only a word is resolved.
+  if (typeof format === "string") {
+    format = resolveFormat(format, {
+      fnName: "formatDay",
+      reads: ["long", "short", "narrow", "numeric"],
+      // A date has no notation tighter than its digits: "narrow" is the
+      // single-letter weekday ("J 17 S"), which is not read, it is deciphered.
+      as: { compact: "numeric" },
+    });
+  }
   if (format === "numeric") {
     const yearWritten =
       year === "auto"
@@ -2224,20 +2267,31 @@ const formatMonth = (
   { lang = getRuntimeLang(), format = "long", timeZone } = {},
 ) => {
   return memoIntl("DateTimeFormat", lang, {
-    month: format, // "long", "short", or "narrow"
+    month: resolveFormat(format, {
+      fnName: "formatMonth",
+      reads: ["long", "short", "narrow", "numeric"],
+      as: { compact: "numeric" },
+    }),
     year: "numeric",
     timeZone,
   }).format(date);
 };
 
 /**
- * Formats a date as "lun. 11 mai, 14:30" (long), "11 mai, 14:30" (short), "11/05, 14:30" (narrow).
+ * Formats a date as "lun. 11 mai, 14:30" (long), "11 mai, 14:30" (short),
+ * "11/05, 14:30" (narrow, which `"compact"` is a name for).
  * `timeZone` words the instant in that IANA zone instead of the runtime's own.
  */
 const formatDatetime = (
   date,
   { lang = getRuntimeLang(), format = "long", timeZone } = {},
 ) => {
+  format = resolveFormat(format, {
+    fnName: "formatDatetime",
+    reads: ["long", "short", "narrow"],
+    // The narrow datetime is already all digits ("17/09 14:30").
+    as: { compact: "narrow" },
+  });
   if (format === "long") {
     return memoIntl("DateTimeFormat", lang, {
       weekday: "short",
@@ -2329,6 +2383,10 @@ const formatTimeOfDay = (
   // An "HH:MM" string is a wall-clock reading, not an instant — re-reading
   // it in another zone would shift what the caller already spelled out.
   const zone = typeof value === "string" ? undefined : timeZone;
+  format = resolveFormat(format, {
+    fnName: "formatTimeOfDay",
+    reads: ["long", "short", "narrow", "compact", "timestring"],
+  });
   if (format === "timestring") {
     return formatTime(date, { lang, timeZone: zone });
   }
@@ -2533,6 +2591,10 @@ const formatMinuteDuration = (
     forceUnit = false,
   } = {},
 ) => {
+  format = resolveFormat(format, {
+    fnName: "formatMinuteDuration",
+    reads: ["long", "short", "narrow", "compact"],
+  });
   if (minutes < 0) {
     // the d/h/m split below only holds for a positive value; formatting the
     // magnitude and putting the sign back is the only reading that works
@@ -2624,13 +2686,21 @@ const formatSingleUnit = (value, unit, { lang, format }) => {
  * formatHourDuration(36, { lang: "fr", forceUnit: true })      // "36 heures"
  */
 const formatHourDuration = (hours, options = {}) => {
-  const { lang = getRuntimeLang(), format = "long", forceUnit } = options;
+  const { lang = getRuntimeLang(), forceUnit } = options;
+  const format = resolveFormat(options.format ?? "long", {
+    fnName: "formatHourDuration",
+    reads: ["long", "short", "narrow", "compact"],
+  });
   if (hours === 0 || (forceUnit && Number.isInteger(hours))) {
     return formatSingleUnit(hours, "hour", { lang, format });
   }
   // a fractional value has no single-unit spelling, it needs its minutes
   const totalMinutes = Math.round(hours * 60);
-  return formatMinuteDuration(totalMinutes, { ...options, forceUnit: false });
+  return formatMinuteDuration(totalMinutes, {
+    ...options,
+    format,
+    forceUnit: false,
+  });
 };
 
 /**
@@ -2654,6 +2724,10 @@ const formatSecondDuration = (
   seconds,
   { lang = getRuntimeLang(), format = "long", forceUnit = false } = {},
 ) => {
+  format = resolveFormat(format, {
+    fnName: "formatSecondDuration",
+    reads: ["long", "short", "narrow", "compact"],
+  });
   if (seconds < 0) {
     // the d/h/m/s split below only holds for a positive value; formatting the
     // magnitude and putting the sign back is the only reading that works
@@ -2719,6 +2793,10 @@ const formatDuration = (
   duration,
   { lang = getRuntimeLang(), format = "long" } = {},
 ) => {
+  format = resolveFormat(format, {
+    fnName: "formatDuration",
+    reads: ["long", "short", "narrow", "compact"],
+  });
   if (typeof duration === "string") {
     duration = parseDuration(duration) ?? {};
   } else if (typeof duration === "number") {
@@ -2864,6 +2942,20 @@ const smallestUnitOf = (duration) => {
   return null;
 };
 
+// A relative time is a sentence around a number ("dans 3 heures"), and only
+// Intl words it — in three styles. "compact" is our own notation, so the
+// sentence takes the narrowest wording Intl has and the duration inside it
+// stays compact (see formatFuture).
+const resolveRelativeFormat = (format) => {
+  return resolveFormat(format, {
+    fnName: "formatTimeRelative",
+    reads: ["long", "short", "narrow", "compact"],
+  });
+};
+const toRelativeTimeStyle = (relativeFormat) => {
+  return relativeFormat === "compact" ? "narrow" : relativeFormat;
+};
+
 /**
  * Formats a date relative to now: "il y a 3 jours", "dans 2 heures", etc.
  */
@@ -2873,7 +2965,7 @@ const formatTimeAgo = (
 ) => {
   const rtf = memoIntl("RelativeTimeFormat", lang, {
     numeric: "auto",
-    style: format,
+    style: toRelativeTimeStyle(resolveRelativeFormat(format)),
   });
   const nowMs = now instanceof Date ? now.getTime() : now;
   const diff = date.getTime() - nowMs;
@@ -2927,7 +3019,12 @@ const formatTimeAgo = (
  *
  * @param {Date|number} start      Start of the event (Date or ms timestamp)
  * @param {number}      durationMs Duration in milliseconds (0 = instant event)
- * @param {{ lang?: string, now?: Date|number, bare?: boolean, format?: "long"|"short"|"narrow" }} options
+ * @param {{ lang?: string, now?: Date|number, bare?: boolean, format?: "long"|"short"|"narrow"|"compact" }} options
+ *   `format` is the verbosity of the wording: `"long"` ("dans 3 heures"),
+ *   `"short"` ("dans 3 h"), `"narrow"` ("+3 h") and `"compact"`, which words
+ *   the sentence like `"narrow"` and tightens the duration inside it ("dans
+ *   1h30"). The verbosities naming another shape entirely — `"numeric"`,
+ *   `"timestring"`, `"iso"` — say nothing here and format as `"long"`.
  *
  * @example
  * // 90 min from now
@@ -2961,9 +3058,10 @@ const formatTimeRelative = (
 };
 
 const formatFuture = (date, diff, { lang, now, format = "long" }) => {
+  const relativeFormat = resolveRelativeFormat(format);
   const rtf = memoIntl("RelativeTimeFormat", lang, {
     numeric: "auto",
-    style: format,
+    style: toRelativeTimeStyle(relativeFormat),
   });
   const nowDate = now instanceof Date ? now : new Date(now);
 
@@ -2986,7 +3084,7 @@ const formatFuture = (date, diff, { lang, now, format = "long" }) => {
     }
     const duration = formatMinuteDuration(hours * 60 + minutes, {
       lang,
-      format,
+      format: relativeFormat,
     });
     const template = humanizeI18n("time.in_duration", undefined, { lang });
     if (template !== "time.in_duration") {

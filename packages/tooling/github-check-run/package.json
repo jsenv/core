@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/github-check-run",
-  "version": "0.3.15",
+  "version": "0.3.16",
   "type": "module",
   "description": "Interact with GitHub check rest API",
   "repository": {
@@ -27,7 +27,7 @@
     "/src/"
   ],
   "dependencies": {
-    "@jsenv/humanize": "1.8.3"
+    "@jsenv/humanize": "1.8.4"
   },
   "publishConfig": {
     "access": "public"

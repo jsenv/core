@@ -7152,14 +7152,7 @@ const getScrollContainer = (arg, { includeHidden } = {}) => {
     }
     return null;
   }
-  if (element.hasAttribute("popover")) {
-    return getScrollingElement(element.ownerDocument);
-  }
-  if (element.tagName === "DIALOG" && element.matches(":modal")) {
-    return getScrollingElement(element.ownerDocument);
-  }
-  const position = getStyle(element, "position");
-  if (position === "fixed") {
+  if (isScrollBoundary(element)) {
     return getScrollingElement(element.ownerDocument);
   }
   return (
@@ -7190,12 +7183,33 @@ const findScrollContainer = (element, { includeHidden } = {}) => {
     if (parent === document) {
       return null;
     }
+    if (isScrollBoundary(parent)) {
+      return null;
+    }
     if (isScrollable(parent, { includeHidden })) {
       return parent;
     }
     parent = parent.parentNode;
   }
   return null;
+};
+
+// A popover, a modal dialog or a fixed box is not scrolled by the boxes around
+// it: the page is its scroll container, and the parent walk of any element
+// inside it stops there too. A scrolling box between that boundary and the
+// outer ancestors would otherwise be found, although nothing it scrolls moves
+// the element.
+const isScrollBoundary = (node) => {
+  if (node.nodeType !== 1) {
+    return false;
+  }
+  if (node.hasAttribute("popover")) {
+    return true;
+  }
+  if (node.tagName === "DIALOG" && node.matches(":modal")) {
+    return true;
+  }
+  return getStyle(node, "position") === "fixed";
 };
 
 const getSelfAndAncestorScrolls = (element, startOnParent) => {

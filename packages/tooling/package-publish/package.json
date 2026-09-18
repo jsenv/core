@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/package-publish",
-  "version": "1.11.56",
+  "version": "1.11.57",
   "type": "module",
   "description": "Publish package to one or many registry.",
   "repository": {
@@ -23,8 +23,8 @@
     "/src/"
   ],
   "dependencies": {
-    "@jsenv/filesystem": "4.15.25",
-    "@jsenv/humanize": "1.8.3",
+    "@jsenv/filesystem": "4.15.26",
+    "@jsenv/humanize": "1.8.4",
     "semver": "7.8.5"
   },
   "devDependencies": {
