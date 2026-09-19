@@ -31,12 +31,10 @@
  *
  *   defineRouteTransition(null, SETTINGS_PAGE, "cover-top");
  *
- * Arriving there plays forward from wherever, leaving plays back to wherever,
- * and that is what lets the back button close it the way it opened — a
- * traversal carries no request, and nothing has to remember per history entry
- * what the press that created it had asked for. It is tried after every
- * written pair, and it is not defineRouteDefaultTransition: a default is about
- * every navigation nothing was said about, this is about ONE destination.
+ * Arriving there plays forward from wherever, leaving plays back to wherever.
+ * It is tried after every written pair, and it is not
+ * defineRouteDefaultTransition: a default is about every navigation nothing
+ * was said about, this is about ONE destination.
  *
  * The relation says WHEN something plays and which way; the transition says
  * WHAT plays — a movement navi ships, or a name the application defines in its
@@ -54,6 +52,16 @@
  * "back" }` keeps the pair's movement and turns it round (see
  * readNavigationRequest). A pair no relation was ever written for animates the
  * same way, for the one press that asks.
+ *
+ * A history traversal is none of these: it RETRACES a crossing, and the
+ * relations are not consulted for it. The entry a push creates remembers the
+ * crossing that created it — what played, which way, from where — and a back
+ * onto the page it came from plays that crossing reversed, a forward onto it
+ * plays it again as it was (see readTraversalReplay). So the way back does not
+ * depend on how the table orders the two pages, and what a link asked for
+ * covers its own way back too. The relations answer only a traversal that
+ * retraces no recorded crossing: several steps at once, or an entry another
+ * document wrote.
  *
  * There is no box in the tree: by default what animates is the document itself
  * (its `root` view transition group), which is right for pages that ARE the
@@ -92,6 +100,9 @@ import {
   observeAfterRouting,
   observeBeforeRouting,
 } from "./browser_integration/before_routing.js";
+import { navTo } from "./browser_integration/browser_integration.js";
+import { NAV_DEPTH_STATE_KEY } from "./browser_integration/document_back_and_forward.js";
+import { documentStateSignal } from "./browser_integration/document_state_signal.js";
 import { documentUrlSignal } from "./browser_integration/document_url_signal.js";
 import { Box } from "../box/box.jsx";
 import { observeRouteRender } from "./route.jsx";
@@ -149,6 +160,9 @@ const TRANSITION_TARGET_ATTRIBUTE = "data-navi-route-transition-target";
 // link being pressed (see <Link routeTransition>), or handed to navTo(). It answers
 // for that navigation and for no other — the next one is back to the relations.
 const TRANSITION_REQUEST_ATTRIBUTE = "data-navi-route-transition-request";
+// What a history entry remembers of the crossing that created it, in the
+// entry's own state: `{ from, type, direction, duration }` (see recordCrossing).
+const CROSSING_STATE_KEY = "jsenv_route_transition";
 const AREA_NAME = "navi-route-transition";
 // The pictures carrying the movement, among everything else it takes along —
 // the pages', or the document's own when the pages ARE the document (see
@@ -922,6 +936,89 @@ const normalizeRequest = (transition) => {
   };
 };
 
+/**
+ * What a TRAVERSAL asks for: the crossing it retraces.
+ *
+ * The entry a push creates remembers the crossing that created it (see
+ * recordCrossing). A back onto the page that crossing came from undoes it —
+ * the same movement, the other way — and a forward onto an entry whose
+ * crossing came from the page being left plays it again as it was. Both
+ * entries are read because each side is the only one that knows its case: the
+ * entry being LEFT says how it was reached (a back), the entry being REACHED
+ * says how it was reached (a forward).
+ *
+ * Both can be true at once — A, B, A again: leaving the second A for B is the
+ * way back of A → B and the way in of B → A. The entries' depths in the stack
+ * tell them apart; without a depth on both, a back is assumed, the traversal
+ * by far the most often made.
+ *
+ * Answers in the shape of readNavigationRequest, with every field said, so
+ * that the relations have nothing left to answer for.
+ */
+const readTraversalReplay = ({ url, state }, { fromUrl, fromState }) => {
+  const to = absoluteUrl(url);
+  const from = absoluteUrl(fromUrl);
+  if (!to || !from) {
+    return null;
+  }
+  const crossingIn = crossingRecordedOn(state);
+  const crossingOut = crossingRecordedOn(fromState);
+  const isForward = crossingIn !== null && crossingIn.from === from;
+  const isBack = crossingOut !== null && crossingOut.from === to;
+  if (isForward && isBack) {
+    const depthIn = navDepthOf(state);
+    const depthOut = navDepthOf(fromState);
+    if (depthIn !== undefined && depthOut !== undefined && depthIn > depthOut) {
+      return replayOf(crossingIn);
+    }
+    return replayOf(reverseCrossing(crossingOut));
+  }
+  if (isForward) {
+    return replayOf(crossingIn);
+  }
+  if (isBack) {
+    return replayOf(reverseCrossing(crossingOut));
+  }
+  return null;
+};
+
+const crossingRecordedOn = (state) => {
+  if (!state) {
+    return null;
+  }
+  const crossing = state[CROSSING_STATE_KEY];
+  if (!crossing || typeof crossing.from !== "string") {
+    return null;
+  }
+  return crossing;
+};
+
+const navDepthOf = (state) => {
+  if (state && typeof state[NAV_DEPTH_STATE_KEY] === "number") {
+    return state[NAV_DEPTH_STATE_KEY];
+  }
+  return undefined;
+};
+
+const reverseCrossing = (crossing) => {
+  return { ...crossing, direction: reverseDirection(crossing.direction) };
+};
+
+// A direction that is neither ("" — a default has none) stays what it is.
+const reverseDirection = (direction) => {
+  if (direction === "forward") {
+    return "back";
+  }
+  if (direction === "back") {
+    return "forward";
+  }
+  return direction;
+};
+
+const replayOf = ({ type, direction, duration }) => {
+  return { type, typeSaid: true, duration, direction };
+};
+
 // The request first, field by field, then what was defined for this pair (or
 // for everything). Written as one function because both ends of the file
 // resolve the same way: the one that knows the pair, and the one that only
@@ -1006,6 +1103,7 @@ const rebuildWatcher = () => {
       // nothing — or this one navigation asked for nothing — where the reverse
       // of the other way, or the default, would have played.
       navigationAnimated = true;
+      navigationDecision = { type: "none" };
       return;
     }
     beginTransition({
@@ -1013,13 +1111,14 @@ const rebuildWatcher = () => {
       url: navigationUrl,
       fromUrl: navigationFromUrl,
       // Which way it plays: what the navigation itself said first — the link
-      // being pressed is where the way the app is being walked is known — then
-      // the relation, and forward for a navigation that asked for a movement
-      // between two pages no relation orders.
+      // being pressed is where the way the app is being walked is known, and
+      // a traversal says the way it retraces — then the relation, and forward
+      // for a navigation that asked for a movement between two pages no
+      // relation orders.
       direction:
-        (navigationRequest && navigationRequest.direction) ||
-        (found && found.direction) ||
-        "forward",
+        navigationRequest && navigationRequest.direction !== undefined
+          ? navigationRequest.direction
+          : (found && found.direction) || "forward",
       type,
       duration,
     });
@@ -1046,6 +1145,13 @@ let navigationUrl = null;
 // the address has already moved and location would answer with the destination.
 let navigationFromUrl = null;
 let navigationAnimated = false;
+// "push", "replace", "traverse", … — a push is the one navigation that creates
+// the entry a crossing is recorded on.
+let navigationType = null;
+// What was decided for the navigation now landing — a movement, or "none" —
+// which is what its entry remembers (see recordCrossing). Null while nothing
+// has been decided, and for a navigation nothing was said about.
+let navigationDecision = null;
 
 // The two ends of every navigation, watched from here on. The picture of the
 // page being left has to be honest, so rendering is held from before the
@@ -1055,9 +1161,21 @@ let navigationAnimated = false;
 // one moment the DEFAULT can decide: every relation has had its say by then.
 observeBeforeRouting((details) => {
   navigationAnimated = false;
-  navigationRequest = readNavigationRequest(details);
+  navigationDecision = null;
+  navigationType = details.navigationType;
   navigationUrl = details.url;
   navigationFromUrl = documentUrlSignal.peek();
+  // A traversal has no element and no call to ask anything: what it asks is
+  // the crossing it retraces — reversed for a back, as it was for a forward.
+  // Read before the document state moves, so the state peeked is the entry
+  // being left.
+  navigationRequest =
+    navigationType === "traverse"
+      ? readTraversalReplay(details, {
+          fromUrl: navigationFromUrl,
+          fromState: documentStateSignal.peek(),
+        })
+      : readNavigationRequest(details);
   if (relations.length === 0 && !defaultTransition && !navigationRequest) {
     return;
   }
@@ -1074,14 +1192,18 @@ observeAfterRouting(() => {
   const request = navigationRequest;
   const url = navigationUrl;
   const fromUrl = navigationFromUrl;
+  const type = navigationType;
   // Read here and dropped here: a request answers for the navigation it was
   // made on, and the next one is back to the relations.
   navigationRequest = null;
   navigationUrl = null;
   navigationFromUrl = null;
+  navigationType = null;
   if (!navigationAnimated && (request || defaultTransition)) {
     const { type, duration } = resolveTransition(request, defaultTransition);
-    if (type !== "none") {
+    if (type === "none") {
+      navigationDecision = { type: "none" };
+    } else {
       beginTransition({
         page: null,
         url,
@@ -1094,15 +1216,60 @@ observeAfterRouting(() => {
         // otherwise — and a movement of navi's is written on the direction,
         // so left empty it would play nothing at all.
         direction:
-          (request && request.direction) ||
-          (request && request.typeSaid ? "forward" : ""),
+          request && request.direction !== undefined
+            ? request.direction
+            : request && request.typeSaid
+              ? "forward"
+              : "",
         type,
         duration,
       });
     }
   }
+  if (type === "push") {
+    recordCrossing({ url, fromUrl, decision: navigationDecision });
+  }
+  navigationDecision = null;
   releaseRoutingRenderingHold();
 });
+
+// The entry a push created remembers what was decided on the way in, so that
+// the traversals leaving it or landing on it retrace it (see
+// readTraversalReplay). Written once the navigation has landed — the decision
+// needs the pages to be current, which is after the entry was created — as a
+// state-only replace: it announces nothing and routes nothing. Nothing is
+// written when nothing was decided: the silence between two unrelated pages is
+// not a crossing to remember. A replace keeps its entry's state, so an entry
+// reached by one keeps the crossing that led to where it stands.
+const recordCrossing = ({ url, fromUrl, decision }) => {
+  if (!decision) {
+    return;
+  }
+  const to = absoluteUrl(url);
+  const from = absoluteUrl(fromUrl);
+  if (!to || !from) {
+    return;
+  }
+  if (documentUrlSignal.peek() !== to) {
+    // Superseded before it landed: the entry now current is another one's.
+    return;
+  }
+  const crossing = { from };
+  if (decision.type !== undefined) {
+    crossing.type = decision.type;
+  }
+  if (decision.direction !== undefined) {
+    crossing.direction = decision.direction;
+  }
+  if (decision.duration !== undefined) {
+    crossing.duration = decision.duration;
+  }
+  const state = documentStateSignal.peek();
+  navTo(to, {
+    replace: true,
+    state: { ...(state || {}), [CROSSING_STATE_KEY]: crossing },
+  });
+};
 
 // The exact way travelled first, over the whole registry, then the reverses,
 // and last the pages written from anywhere.
@@ -1170,12 +1337,15 @@ const beginTransition = ({ page, url, fromUrl, direction, type, duration }) => {
     );
     return;
   }
+  navigationDecision = { type, direction, duration };
   // The two ends of the crossing, kept for the length of the movement: they are
   // what lets the navigation after this one be recognised as its way back (see
-  // turnRunningTransitionRound).
+  // turnRunningTransitionRound) — and what it decided, which that way back
+  // then undoes.
   const transition = {
     fromUrl: absoluteUrl(fromUrl),
     url: absoluteUrl(url),
+    decision: navigationDecision,
     walkHome: null,
     releaseReverting: null,
   };
@@ -1372,6 +1542,7 @@ const turnRunningTransitionRound = (fromUrl, url) => {
   }
   const animations = viewTransitionAnimations();
   if (isWayInAgain) {
+    navigationDecision = running.decision;
     // The token is dropped first: the walk it stands for is the one that must
     // not arrive anywhere anymore, and its promise is still pending.
     running.walkHome = null;
@@ -1389,6 +1560,9 @@ const turnRunningTransitionRound = (fromUrl, url) => {
     // played, and nothing was on screen to teleport.
     return false;
   }
+  // What this navigation plays, for the entry it may create: the movement on
+  // screen, the other way.
+  navigationDecision = reverseCrossing(running.decision);
   // Which walk home this is, so the one that arrives is the one still wanted: a
   // walk turned round mid-way leaves a promise nobody cancelled, and it settles
   // when the pictures reach the far end.
@@ -1595,7 +1769,7 @@ const warnAboutBothWaysWritten = ({ from, to, type, duration }) => {
   const added = `${describePage(from)} → ${describePage(to)}`;
   warnOnce(
     `both-ways-written:${written}|${added}`,
-    `${written} and ${added} are both written with the same movement, so BOTH crossings play forward and this pair can never say "back" — the back button included. A relation written for the exact way travelled wins over being the reverse of another (see findRelation), which is what makes reciprocity the default: write the way back only to give it a DIFFERENT movement, or "none" to silence it. A single crossing that walks the map backwards says so on itself instead: <Link routeTransition={{ direction: "forward" }}>, or navTo(url, { routeTransition: { direction: "forward" } }).`,
+    `${written} and ${added} are both written with the same movement, so BOTH crossings play forward when a link walks them, and only a history traversal retracing one of them turns it round. A relation written for the exact way travelled wins over being the reverse of another (see findRelation), which is what makes reciprocity the default: write the way back only to give it a DIFFERENT movement, or "none" to silence it. A single crossing that walks the map backwards says so on itself instead: <Link routeTransition={{ direction: "forward" }}>, or navTo(url, { routeTransition: { direction: "forward" } }).`,
   );
 };
 

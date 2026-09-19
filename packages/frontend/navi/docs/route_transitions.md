@@ -17,6 +17,7 @@ Demos: [the movements](../src/nav/demos/route_transition/route_transition.html),
 - [Choosing a movement](#choosing-a-movement)
 - [A default transition — when](#a-default-transition--when)
 - [When one navigation knows better](#when-one-navigation-knows-better)
+- [A traversal retraces its crossing](#a-traversal-retraces-its-crossing)
 - [Pages between fixed bars: the transition area](#pages-between-fixed-bars-the-transition-area)
 - [Custom movements](#custom-movements)
 - [Two routes matching one url](#two-routes-matching-one-url)
@@ -62,13 +63,10 @@ Leave the `from` out:
 defineRouteTransition(null, SETTINGS_PAGE, "cover-top");
 ```
 
-Arriving there plays forward from wherever, leaving plays back to wherever. The
-back half is what this exists for: closing such a page is almost always a back —
-the close button running `--navi-nav-back`, the browser's back button, a swipe —
-and a traversal carries no link and therefore no request, so `routeTransition` on
-the way in has no counterpart on the way out. Written on the destination, the way
-out is found the same way the way in was, with nothing to remember per history
-entry.
+Arriving there plays forward from wherever, leaving plays back to wherever. A
+back out of it retraces the crossing that opened it (see
+[A traversal retraces its crossing](#a-traversal-retraces-its-crossing)); a link
+out of it, to wherever, finds the relation the same way the way in did.
 
 It is tried last, after every written pair, so a pair naming the same destination
 still owns its crossing — the map, where it was drawn, is more precise than "from
@@ -118,8 +116,8 @@ Two recommendations that matter more than the individual choices:
   should answer a real asymmetry in the app, not a styling whim. Write the way
   back only to say something DIFFERENT — another movement, or `"none"`. Written
   with the same one, both crossings find their own relation and both play
-  forward, and the pair can never say "back" again, the back button included;
-  navi warns when it sees that pair defined.
+  forward when a link walks them — only a traversal retracing one of them still
+  turns it round; navi warns when it sees that pair defined.
 
 ## A default transition — when
 
@@ -150,9 +148,10 @@ in both directions, with one direction common and one rare:
   structural descent; a card that leads up to the player it describes goes back
   out.
 
-Written for the common direction, the rare one plays backwards. And `"none"`
-cannot fix it: navi does not tell a link from the back button, so silencing the
-bad direction silences the good one too.
+Written for the common direction, a link walking the rare one plays it
+backwards. (A history traversal is not concerned: it retraces the crossing it
+undoes, see below.) And `"none"` written for the rare way would only trade a
+wrong movement for a cut.
 
 So the navigation itself may ask, and what it asks holds for **that navigation
 and no other**:
@@ -189,8 +188,9 @@ the routes say, and a link that asks for a movement gets it, forward unless it
 says otherwise. That is the whole shape of the control:
 `defineRouteTransition` is what the app's map says and applies by default; a
 link, or a programmatic `navTo`, overrides it for the length of one navigation.
-Navigate again by any other means and the relation is back in charge — nothing
-is remembered.
+Navigate again by any other means and the relation is back in charge — with one
+exception, which is what makes a request complete: a history traversal undoing
+that navigation plays what it asked for, reversed (next section).
 
 The link wears what it asks as an attribute, so a plain `<a>` says it too (a
 type name, or the object as JSON):
@@ -203,10 +203,34 @@ type name, or the object as JSON):
 
 **Not yet: a movement chosen by HOW one navigated.** Playing one movement for
 the back button and another for a link would be written on the same request —
-`{ back: "slide-x", forward: "slide-y" }` — but the History API does not say
-which way a traversal went, and navi runs on it today (see
-`browser_integration/via_history.js`). The Navigation API does; the notation is
-kept in mind for the day navi navigates through it.
+`{ back: "slide-x", forward: "slide-y" }`. The notation is kept in mind for the
+day it is asked for.
+
+## A traversal retraces its crossing
+
+The back button, `navBack()`, `history.back()`, the browser's "next": a
+traversal is not a walk on the map, it undoes one (or redoes one), so the
+relations are not consulted for it. The entry a push creates remembers the
+crossing that created it — what played, which way, from which url — in its
+own state. A back onto the page that crossing came from plays it reversed; a
+forward onto an entry whose crossing came from the page being left plays it
+again as it was. The relations answer only a traversal that retraces no
+remembered crossing: several entries at once, or an entry another document
+wrote.
+
+What this settles:
+
+- a page reached from anywhere whose links walk the map the other way (the
+  author of a place's sheet, from the place): the link says
+  `routeTransition={{ direction: "forward" }}`, and the back undoes exactly
+  that — there is no reverse pair to write, and none that would collide with
+  the other pages reaching the place;
+- a `routeTransition` request covers its own way back;
+- the "two ways of a pair" trade-off above is about links only.
+
+A link to the page one just came from is a traversal too where the browser
+exposes its stack (navi turns such a push into a back, see
+`browser_integration/via_history.js`), so it retraces as the button does.
 
 ## Pages between fixed bars: the transition area
 

@@ -410,6 +410,9 @@ export const setupBrowserIntegrationViaNavigation = ({
         element:
           event.sourceElement || (event.info ? event.info.element : undefined),
         routeTransition: event.info ? event.info.routeTransition : undefined,
+        // What the entry being reached holds — for a traversal, the crossing
+        // that created it (see route_transition.jsx's readTraversalReplay).
+        state: event.destination.getState(),
       });
     }
     event.intercept({
