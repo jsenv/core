@@ -126,8 +126,20 @@ const TRANSITION_WALL_CSS = /* css */ `
     &[data-navi-transition-wall="rest"] {
       position: fixed;
       inset: 0;
+      clip-path: var(--wall-holes);
       transition: opacity var(--navi-route-transition-duration, 300ms) ease;
     }
+  }
+
+  /* The last frame: the pictures are dropped and the live document paints
+     again, with the stand-ins of the state arriving in it, so the holes are
+     that state's rectangles — the ones a hole was cut for during the
+     movement are where a picture stood at every moment, which is less. Said
+     by the pseudo-class rather than by the finished callback, which runs a
+     frame later; a browser without it shows that frame with the movement's
+     holes. */
+  :root:not(:active-view-transition) [data-navi-transition-wall="rest"] {
+    clip-path: var(--wall-holes-arriving, var(--wall-holes));
   }
 
   /* The real wall is off for exactly as long as the stand-ins are up, so no
@@ -176,6 +188,10 @@ let wallElements = [];
 // the opacity they are heading to once it plays.
 let restWallElements = [];
 let restWallOpacity = "0";
+// Where each picture stood in the state being left, by element: a hole in
+// the rest walls is cut only where a picture stands at EVERY moment of the
+// movement, which takes both states' rectangles.
+let leavingRects = new Map();
 
 /**
  * Name what stands around the area, before the picture of the state being left
@@ -190,8 +206,12 @@ export const nameTransitionFurniture = (owner, areaElement) => {
   nameFurnitureAround(areaElement);
   const sources = paintTransitionWalls(areaElement);
   // The state being left has walls: what no picture covers starts dimmed.
+  // The frame the first picture is taken on shows the live document, so the
+  // holes are this state's rectangles, stand-ins inside.
   removeRestWalls();
-  paintRestWalls(areaElement, sources, "1");
+  leavingRects = measurePictureRects(areaElement);
+  paintRestWalls(sources, "1");
+  cutRestWalls([...leavingRects.values()]);
 };
 
 /**
@@ -218,10 +238,38 @@ export const holdTransitionFurniture = (owner, areaElement) => {
   // have), from the state arriving otherwise (they come up from nothing).
   restWallOpacity = sources.length > 0 ? "1" : "0";
   if (restWallElements.length === 0) {
-    paintRestWalls(areaElement, sources, "0");
-  } else {
-    cutRestWalls(areaElement);
+    paintRestWalls(sources, "0");
   }
+  // For the length of the movement a picture is only ever where the two
+  // states' rectangles meet: the pages' pictures slide, and a taller page
+  // arriving does not make the one leaving any taller. A picture only one
+  // state has travels away from where it stood, so it gets no hole at all.
+  const arrivingRects = measurePictureRects(areaElement);
+  const holes = [];
+  for (const [target, arrivingRect] of arrivingRects) {
+    const leavingRect = leavingRects.get(target);
+    if (!leavingRect) {
+      continue;
+    }
+    const left =
+      leavingRect.left > arrivingRect.left
+        ? leavingRect.left
+        : arrivingRect.left;
+    const top =
+      leavingRect.top > arrivingRect.top ? leavingRect.top : arrivingRect.top;
+    const right =
+      leavingRect.right < arrivingRect.right
+        ? leavingRect.right
+        : arrivingRect.right;
+    const bottom =
+      leavingRect.bottom < arrivingRect.bottom
+        ? leavingRect.bottom
+        : arrivingRect.bottom;
+    if (right > left && bottom > top) {
+      holes.push({ left, top, right, bottom });
+    }
+  }
+  cutRestWalls(holes, [...arrivingRects.values()]);
   const cssText = `${travelRule("old", namesLeaving, "--navi-route-transition-leave")}${travelRule("new", namesArriving, "--navi-route-transition-enter")}`;
   if (!cssText) {
     return;
@@ -384,11 +432,11 @@ const createWall = (source) => {
 };
 
 // One per open wall, over the window, at the opacity of the state they are
-// painted from; a hole where each picture stands, since the picture has a
-// stand-in of its own and shows the live document through nowhere — and on
-// the frame the first picture is taken on, before any picture is up, a hole
-// is what keeps the two from being painted on top of each other.
-const paintRestWalls = (areaElement, sources, opacity) => {
+// painted from. A hole is cut where a picture stands, since the picture has
+// a stand-in of its own and shows the live document through nowhere — and on
+// the frames the live document IS shown, the first and the last, a hole is
+// what keeps the two from being painted on top of each other.
+const paintRestWalls = (sources, opacity) => {
   for (const source of sources) {
     const restWall = createWall(source);
     restWall.setAttribute(WALL_ATTRIBUTE, "rest");
@@ -396,25 +444,37 @@ const paintRestWalls = (areaElement, sources, opacity) => {
     document.body.appendChild(restWall);
     restWallElements.push(restWall);
   }
-  cutRestWalls(areaElement);
 };
 
-// The holes, cut again at the hold: the state arriving may have brought a
-// bar, or taken one away and let the pages grow into its band.
-const cutRestWalls = (areaElement) => {
-  if (restWallElements.length === 0) {
-    return;
-  }
-  // One evenodd polygon: the window, then each hole entered from and left by
-  // the window's origin, so the bridges between them have no area.
-  let polygon = "0 0, 100% 0, 100% 100%, 0 100%, 0 0";
+const measurePictureRects = (areaElement) => {
+  const rects = new Map();
   for (const target of pictureTargets(areaElement)) {
-    const { left, top, right, bottom } = target.getBoundingClientRect();
+    rects.set(target, target.getBoundingClientRect());
+  }
+  return rects;
+};
+
+// The holes for the movement, and the ones for its last frame (see the CSS).
+const cutRestWalls = (holes, holesArriving = null) => {
+  for (const restWall of restWallElements) {
+    restWall.style.setProperty("--wall-holes", holesPolygon(holes));
+    if (holesArriving) {
+      restWall.style.setProperty(
+        "--wall-holes-arriving",
+        holesPolygon(holesArriving),
+      );
+    }
+  }
+};
+
+// One evenodd polygon: the window, then each hole entered from and left by
+// the window's origin, so the bridges between them have no area.
+const holesPolygon = (holes) => {
+  let polygon = "0 0, 100% 0, 100% 100%, 0 100%, 0 0";
+  for (const { left, top, right, bottom } of holes) {
     polygon += `, ${left}px ${top}px, ${right}px ${top}px, ${right}px ${bottom}px, ${left}px ${bottom}px, ${left}px ${top}px, 0 0`;
   }
-  for (const restWall of restWallElements) {
-    restWall.style.clipPath = `polygon(evenodd, ${polygon})`;
-  }
+  return `polygon(evenodd, ${polygon})`;
 };
 
 const removeRestWalls = () => {
@@ -423,4 +483,5 @@ const removeRestWalls = () => {
   }
   restWallElements = [];
   restWallOpacity = "0";
+  leavingRects = new Map();
 };
