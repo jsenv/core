@@ -82,6 +82,12 @@ const css = /* css */ `
          appear in no scale at all. */
       --navi-z-index-popup: 1000;
       --navi-z-index-callout: var(--navi-z-index-popup);
+
+      /* What stands for the browser's top layer inside a picture of the page:
+         the wall of a modal dialog, painted into the page for the length of a
+         route transition (nav/transition_furniture.js). The top layer is
+         above every decade there is, so is this. */
+      --navi-z-index-top-layer: 10000;
     }
   }
 `;

@@ -128,6 +128,7 @@ import {
 import {
   FURNITURE_NAME_PREFIX,
   holdTransitionFurniture,
+  installTransitionFurnitureCss,
   nameTransitionFurniture,
   releaseTransitionFurniture,
 } from "./transition_furniture.js";
@@ -751,6 +752,7 @@ const css = /* css */ `
 export const RouteTransitionArea = ({ children, ...rest }) => {
   import.meta.css = css;
   installTransitionWindowCss();
+  installTransitionFurnitureCss();
   const props = { ...rest, [TRANSITION_AREA_ATTRIBUTE]: "" };
   return <Box {...props}>{children}</Box>;
 };

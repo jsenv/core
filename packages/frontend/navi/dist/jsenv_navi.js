@@ -89,6 +89,7 @@ const css$17 = /* css */ `@layer navi {
     --navi-z-index-bar: 100;
     --navi-z-index-popup: 1000;
     --navi-z-index-callout: var(--navi-z-index-popup);
+    --navi-z-index-top-layer: 10000;
   }
 }
 `;
@@ -29022,6 +29023,8 @@ const onDocumentClick = (clickEvent) => {
   }
 };
 
+installImportMetaCssBuild(import.meta);
+
 /**
  * The furniture around the pages — the fixed bars, and the popups standing
  * over them in the top layer — photographed with them for the length of a
@@ -29069,6 +29072,23 @@ const onDocumentClick = (clickEvent) => {
  * that has nothing to do with it. Being unable to answer a press is the price
  * of being photographed, and a route transition is where it costs nothing:
  * both pages are pictures for those few hundred milliseconds anyway.
+ *
+ * The WALL of a modal dialog goes the other way round: it cannot be
+ * photographed at all. It is the browser's own ::backdrop — a pseudo-element,
+ * which wears no name — and the top layer it is painted in is drawn during a
+ * transition only as part of the root's picture, which is opted out while an
+ * area is marked (route_transition.jsx). Captured on its own, the dialog's
+ * box travels; its wall is painted nowhere for the length of the movement,
+ * and the page under it leaves undimmed. So the wall is painted INTO the
+ * page's picture instead: a stand-in laid over the area before each of the
+ * two pictures is taken, painting what the ::backdrop paints, and removed
+ * with the movement. Carried by the page's picture, it leaves with the page
+ * being left and arrives with the page arriving, cut at the page's edge — and
+ * under the dialog's own picture, which stands over the pages (the z-order in
+ * route_transition.jsx). A bar the two states share is outside both pictures
+ * and goes undimmed for those few hundred milliseconds: it is the frame, not
+ * part of the page. A dialog with layer="local" paints a real element for its
+ * wall, inside the page, and needs none of this.
  */
 
 // The browser's top layer: painted above everything the document paints, so
@@ -29086,6 +29106,32 @@ const FURNITURE_SELECTOR = `.navi_fixed_bar, .navi_popover:is(${TOP_LAYER_SELECT
 const TRANSITION_ATTRIBUTE$1 = "data-navi-route-transition";
 const NAME_PROPERTY$1 = "view-transition-name";
 const FURNITURE_NAME_PREFIX = "navi-transition-furniture-";
+// The dialogs whose wall is the browser's ::backdrop: shown with showModal().
+// A top-layer dialog without a wall is shown as a popover and has nothing to
+// stand in for.
+const MODAL_DIALOG_SELECTOR = ".navi_dialog:modal";
+const WALL_ATTRIBUTE = "data-navi-transition-wall";
+// What the ::backdrop paints, resolved on the dialog (layout/dialog.jsx): the
+// same two properties, copied onto the wall.
+const WALL_PROPERTIES = ["--backdrop-background", "--backdrop-filter"];
+
+const TRANSITION_WALL_CSS = /* css */ `[data-navi-transition-wall] {
+  z-index: var(--navi-z-index-top-layer);
+  background: var(--backdrop-background);
+  backdrop-filter: var(--backdrop-filter);
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+`;
+
+// Called from the render of whatever holds the pages, never at module scope:
+// a page that never travels between routes must not carry this sheet, and a
+// build that sees no caller drops the css with the function.
+const installTransitionFurnitureCss = () => {
+  import.meta.css = [TRANSITION_WALL_CSS, "@jsenv/navi/src/nav/transition_furniture.js"];
+};
 
 const nameByElement = new WeakMap();
 let nameCount = 0;
@@ -29098,6 +29144,9 @@ let namedElements = new Set();
 // The rule giving the one-sided bars their movement, written for one movement
 // and taken down with it.
 let travelStyleElement = null;
+// The walls standing in for the ::backdrop of the modal dialogs open in the
+// area, painted for one picture and taken down before the next.
+let wallElements = [];
 
 /**
  * Name what stands around the area, before the picture of the state being left
@@ -29110,6 +29159,7 @@ const nameTransitionFurniture = (owner, areaElement) => {
     namedElements = new Set();
   }
   nameFurnitureAround(areaElement);
+  paintTransitionWalls(areaElement);
 };
 
 /**
@@ -29130,6 +29180,7 @@ const holdTransitionFurniture = (owner, areaElement) => {
     }
   }
   const namesArriving = nameFurnitureAround(areaElement);
+  paintTransitionWalls(areaElement);
   const cssText = `${travelRule("old", namesLeaving, "--navi-route-transition-leave")}${travelRule("new", namesArriving, "--navi-route-transition-enter")}`;
   if (!cssText) {
     return;
@@ -29212,6 +29263,40 @@ const releaseTransitionFurniture = (owner) => {
     travelStyleElement.remove();
     travelStyleElement = null;
   }
+  removeTransitionWalls();
+};
+
+// One wall per modal dialog open in the area, in document order: the
+// ::backdrops stack in the top layer, and what dims the page is all of them.
+const paintTransitionWalls = (areaElement) => {
+  removeTransitionWalls();
+  for (const dialog of areaElement.querySelectorAll(MODAL_DIALOG_SELECTOR)) {
+    const dialogStyle = getComputedStyle(dialog);
+    const wall = document.createElement("div");
+    wall.setAttribute(WALL_ATTRIBUTE, "");
+    for (const property of WALL_PROPERTIES) {
+      wall.style.setProperty(property, dialogStyle.getPropertyValue(property));
+    }
+    areaElement.appendChild(wall);
+    // The area is not necessarily a containing block, and made one for the
+    // movement it would move whatever the page positioned against an ancestor
+    // of the area: the wall is placed from wherever its containing block
+    // turns out to be, by the offset between that box and the area's.
+    const areaRect = areaElement.getBoundingClientRect();
+    const wallRect = wall.getBoundingClientRect();
+    wall.style.left = `${areaRect.left - wallRect.left}px`;
+    wall.style.top = `${areaRect.top - wallRect.top}px`;
+    wall.style.width = `${areaRect.width}px`;
+    wall.style.height = `${areaRect.height}px`;
+    wallElements.push(wall);
+  }
+};
+
+const removeTransitionWalls = () => {
+  for (const wall of wallElements) {
+    wall.remove();
+  }
+  wallElements = [];
 };
 
 installImportMetaCssBuild(import.meta);
@@ -30063,6 +30148,7 @@ const RouteTransitionArea = ({
 }) => {
   import.meta.css = [css$12, "@jsenv/navi/src/nav/route_transition.jsx"];
   installTransitionWindowCss();
+  installTransitionFurnitureCss();
   const props = {
     ...rest,
     [TRANSITION_AREA_ATTRIBUTE]: ""
