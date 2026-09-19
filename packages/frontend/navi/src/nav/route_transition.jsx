@@ -53,15 +53,20 @@
  * readNavigationRequest). A pair no relation was ever written for animates the
  * same way, for the one press that asks.
  *
- * A history traversal is none of these: it RETRACES a crossing, and the
- * relations are not consulted for it. The entry a push creates remembers the
- * crossing that created it — what played, which way, from where — and a back
- * onto the page it came from plays that crossing reversed, a forward onto it
- * plays it again as it was (see readTraversalReplay). So the way back does not
- * depend on how the table orders the two pages, and what a link asked for
- * covers its own way back too. The relations answer only a traversal that
- * retraces no recorded crossing: several steps at once, or an entry another
- * document wrote.
+ * A history traversal is none of these: it RETRACES a crossing. The entry a
+ * push creates remembers the crossing that created it — what played, which
+ * way, from where — and a back onto the page it came from plays that crossing
+ * reversed, a forward onto it plays it again as it was (see
+ * readTraversalReplay). That outranks everything the registry DEDUCES — the
+ * reverse of a pair, a page written from anywhere, the default — so the way
+ * back no longer depends on how the table orders the two pages, and what a
+ * link asked for covers its own way back too. It does not outrank a relation
+ * WRITTEN for the exact way travelled: that line is the author's one tool for
+ * breaking reciprocity, and the back button is the way back it has to reach —
+ * `defineRouteTransition(B, A, "none")` silences every return from B to A,
+ * the button included. The relations alone answer a traversal that retraces
+ * no recorded crossing: several steps at once, or an entry another document
+ * wrote.
  *
  * There is no box in the tree: by default what animates is the document itself
  * (its `root` view transition group), which is right for pages that ARE the
@@ -953,7 +958,9 @@ const normalizeRequest = (transition) => {
  * by far the most often made.
  *
  * Answers in the shape of readNavigationRequest, with every field said, so
- * that the relations have nothing left to answer for.
+ * that the relations have nothing left to answer for — and marked as a replay,
+ * because one relation still outranks it: the one written for the exact way
+ * travelled (see the watcher's onMove).
  */
 const readTraversalReplay = ({ url, state }, { fromUrl, fromState }) => {
   const to = absoluteUrl(url);
@@ -1016,7 +1023,7 @@ const reverseDirection = (direction) => {
 };
 
 const replayOf = ({ type, direction, duration }) => {
-  return { type, typeSaid: true, duration, direction };
+  return { type, typeSaid: true, duration, direction, replay: true };
 };
 
 // The request first, field by field, then what was defined for this pair (or
@@ -1088,14 +1095,24 @@ const rebuildWatcher = () => {
     const fromPage = fromIndex === -1 ? null : pages[fromIndex];
     const toPage = index === -1 ? null : pages[index];
     const found = findRelation(fromPage, toPage);
-    if (!found && !navigationRequest) {
+    // A traversal retraces its crossing over everything deduced here — the
+    // reverse of a pair, a page from anywhere — and not over a relation
+    // written for this exact way: that line is the author's one tool for
+    // breaking reciprocity, and the back button is the way back it has to
+    // reach. A request made by a link or a navTo() is never dropped: it is
+    // about this one crossing, and a written relation is about every one.
+    const request =
+      navigationRequest && navigationRequest.replay && found && found.written
+        ? null
+        : navigationRequest;
+    if (!found && !request) {
       // No relation says anything about these two and this navigation asked
       // for nothing: they are side by side, and silence is the fact — not a
       // missing case.
       return;
     }
     const { type, duration } = resolveTransition(
-      navigationRequest,
+      request,
       found ? found.relation : null,
     );
     if (type === "none") {
@@ -1116,8 +1133,8 @@ const rebuildWatcher = () => {
       // for a navigation that asked for a movement between two pages no
       // relation orders.
       direction:
-        navigationRequest && navigationRequest.direction !== undefined
-          ? navigationRequest.direction
+        request && request.direction !== undefined
+          ? request.direction
           : (found && found.direction) || "forward",
       type,
       duration,
@@ -1283,13 +1300,18 @@ const recordCrossing = ({ url, fromUrl, decision }) => {
 // same destination still owns its crossing — the map, where it was drawn, is
 // more precise than "from wherever". Arriving is read before leaving: between
 // two such pages, the one being opened says what plays.
+//
+// Only the first answer is `written`: a sentence the author wrote about this
+// exact way. Every other answer is deduced from a sentence about something
+// else, and a traversal retracing its own crossing knows better than a
+// deduction (see readTraversalReplay).
 const findRelation = (fromPage, toPage) => {
   for (const relation of relations) {
     if (!relation.from) {
       continue;
     }
     if (samePage(relation.from, fromPage) && samePage(relation.to, toPage)) {
-      return { direction: "forward", relation };
+      return { direction: "forward", relation, written: true };
     }
   }
   for (const relation of relations) {
@@ -1769,7 +1791,7 @@ const warnAboutBothWaysWritten = ({ from, to, type, duration }) => {
   const added = `${describePage(from)} → ${describePage(to)}`;
   warnOnce(
     `both-ways-written:${written}|${added}`,
-    `${written} and ${added} are both written with the same movement, so BOTH crossings play forward when a link walks them, and only a history traversal retracing one of them turns it round. A relation written for the exact way travelled wins over being the reverse of another (see findRelation), which is what makes reciprocity the default: write the way back only to give it a DIFFERENT movement, or "none" to silence it. A single crossing that walks the map backwards says so on itself instead: <Link routeTransition={{ direction: "forward" }}>, or navTo(url, { routeTransition: { direction: "forward" } }).`,
+    `${written} and ${added} are both written with the same movement, so BOTH crossings play forward and this pair can never say "back" — the back button included. A relation written for the exact way travelled wins over being the reverse of another, and over the crossing a history traversal retraces (see findRelation), which is what makes reciprocity the default: write the way back only to give it a DIFFERENT movement, or "none" to silence it. A single crossing that walks the map backwards says so on itself instead: <Link routeTransition={{ direction: "forward" }}>, or navTo(url, { routeTransition: { direction: "forward" } }).`,
   );
 };
 

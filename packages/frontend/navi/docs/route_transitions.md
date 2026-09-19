@@ -116,8 +116,8 @@ Two recommendations that matter more than the individual choices:
   should answer a real asymmetry in the app, not a styling whim. Write the way
   back only to say something DIFFERENT — another movement, or `"none"`. Written
   with the same one, both crossings find their own relation and both play
-  forward when a link walks them — only a traversal retracing one of them still
-  turns it round; navi warns when it sees that pair defined.
+  forward, and the pair can never say "back" again, the back button included;
+  navi warns when it sees that pair defined.
 
 ## A default transition — when
 
@@ -148,10 +148,10 @@ in both directions, with one direction common and one rare:
   structural descent; a card that leads up to the player it describes goes back
   out.
 
-Written for the common direction, a link walking the rare one plays it
-backwards. (A history traversal is not concerned: it retraces the crossing it
-undoes, see below.) And `"none"` written for the rare way would only trade a
-wrong movement for a cut.
+Written for the common direction, the rare one plays backwards. And `"none"`
+cannot fix it: a relation written for a way holds for every crossing of it,
+the back button's included (see below), so silencing the bad direction
+silences the good one too.
 
 So the navigation itself may ask, and what it asks holds for **that navigation
 and no other**:
@@ -209,14 +209,32 @@ day it is asked for.
 ## A traversal retraces its crossing
 
 The back button, `navBack()`, `history.back()`, the browser's "next": a
-traversal is not a walk on the map, it undoes one (or redoes one), so the
-relations are not consulted for it. The entry a push creates remembers the
-crossing that created it — what played, which way, from which url — in its
-own state. A back onto the page that crossing came from plays it reversed; a
-forward onto an entry whose crossing came from the page being left plays it
-again as it was. The relations answer only a traversal that retraces no
-remembered crossing: several entries at once, or an entry another document
-wrote.
+traversal is not a walk on the map, it undoes one (or redoes one). The entry a
+push creates remembers the crossing that created it — what played, which way,
+from which url — in its own state. A back onto the page that crossing came
+from plays it reversed; a forward onto an entry whose crossing came from the
+page being left plays it again as it was.
+
+That replay outranks everything the relations **deduce**, and nothing the
+author **wrote** for that exact way:
+
+| back from B to A                                | plays                         |
+| ----------------------------------------------- | ----------------------------- |
+| nothing written for `B → A`                     | the way in, reversed          |
+| `B → A` written from anywhere (`null → …`)      | the way in, reversed          |
+| `B → A` covered by a default transition         | the way in, reversed          |
+| the way in asked for by a link (`direction: …`) | what the link asked, reversed |
+| `defineRouteTransition(B, A, "none")`           | nothing                       |
+| `defineRouteTransition(B, A, "flip")`           | flip, forward                 |
+
+The line is drawn there because the two halves answer two different needs.
+Reciprocity is the default, and the one tool for breaking it is writing the
+way back by hand — so that tool must reach the back button, which is the way
+back most often taken: a `"none"` written for `B → A` silences every return
+from B to A, whatever pressed it. Everything else `findRelation` answers is a
+deduction from a sentence about something else (the reverse of a pair, a
+destination reached from anywhere), and a traversal that knows the crossing it
+undoes knows better than a deduction.
 
 What this settles:
 
@@ -225,12 +243,16 @@ What this settles:
   `routeTransition={{ direction: "forward" }}`, and the back undoes exactly
   that — there is no reverse pair to write, and none that would collide with
   the other pages reaching the place;
-- a `routeTransition` request covers its own way back;
-- the "two ways of a pair" trade-off above is about links only.
+- a `routeTransition` request covers its own way back: a request is about one
+  crossing, so nothing written for the pair outranks its replay;
+- the "two ways of a pair" trade-off above is about pairs written in one
+  direction: the reverse is deduced, and the traversal wins over it.
 
-A link to the page one just came from is a traversal too where the browser
-exposes its stack (navi turns such a push into a back, see
-`browser_integration/via_history.js`), so it retraces as the button does.
+The relations alone answer a traversal that retraces no remembered crossing:
+several entries at once, or an entry another document wrote. And a link to the
+page one just came from is a traversal too where the browser exposes its stack
+(navi turns such a push into a back, see `browser_integration/via_history.js`),
+so it retraces as the button does — under the same rule.
 
 ## Pages between fixed bars: the transition area
 
