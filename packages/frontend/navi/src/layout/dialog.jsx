@@ -22,7 +22,8 @@
  * box reaches the `--anchor-width`/`--anchor-height` CSS vars and becomes a
  * min-width/min-height floor. With `animation="lifting"`, the anchor's box is
  * where the dialog comes from: the two are photographed and morphed into each
- * other, and back on close (popup_lift.js). Either way Dialog's own
+ * other, and back on close (popup_lift.js); with
+ * `animation={{ open, close: "lifting" }}` only the close does it. Either way Dialog's own
  * positioning is never relative to the anchor, unlike Popover.
  *
  * Always a real `<dialog>`; three ways of showing it, and two independent
@@ -686,6 +687,18 @@ const css = /* css */ `
     opacity: 0;
   }
 
+  /* A closing lift is the dialog leaving as a picture: whatever exit its
+     opening animation arms (animation={{ open, close: "lifting" }}, see
+     popup_css.js) would
+     keep it rendered into the picture of the state it closes into. */
+  :root[data-navi-popup-lift="closing"] {
+    .navi_dialog,
+    .navi_dialog::backdrop,
+    .navi_dialog_backdrop {
+      transition: none;
+    }
+  }
+
   /* While a dialog is lifting out of the element that opened it
      (popup_lift.js). The page around IS taken as a picture, the browser's own
      default, and on purpose: the wall and what the dialog holds around the
@@ -928,7 +941,7 @@ const css = /* css */ `
  *   scroll while open (its backdrop only covers the scrollport, so scrolling
  *   there would reveal uncovered content); this prop extends the lock to the
  *   whole page. Defaults to `true` for a dialog docked by `dockedOnSmallTouchScreen`.
- * @param {boolean|"auto"|"fading"|"scaling"|"sliding"|"lifting"|`slide-from-${string}`} [props.animation]
+ * @param {boolean|"auto"|"fading"|"scaling"|"sliding"|"lifting"|`slide-from-${string}`|{open: boolean|"auto"|"fading"|"scaling"|"sliding"|`slide-from-${string}`, close: "lifting"}} [props.animation]
  *   - `true`/`"auto"` resolves to `"scaling"` for a centered `positionArea`,
  *   or a concrete `"slide-from-*"` direction otherwise. Any other explicit
  *   value is used as-is. `"lifting"` is the odd one out: every other kind
@@ -947,6 +960,15 @@ const css = /* css */ `
  *   being what the movement leaves rather than a context to keep readable;
  *   `backdropVariant="discrete"` asks for the light wash back. See
  *   `popup_lift.js`.
+ *   - `{ open, close: "lifting" }`: the close alone lifts. The dialog opens
+ *   with `open` (any value above but `"lifting"`), and its `data-lift` node
+ *   travels into `liftAnchor` on close — for a dialog that did not come out
+ *   of what it lands in (a banner opens a full-screen reveal, closing it puts
+ *   the crest in its place on the plate that replaces the banner). The box it
+ *   lands in may be rendered by the close itself: `liftAnchor` is read once
+ *   `onClose` has run, and waited for a moment when it is not there yet.
+ *   `"lifting"` is the only `close` that differs from the opening: every
+ *   other kind closes by playing its opening backwards.
  * @param {"box"|"scene"} [props.lift="box"] - Under `animation="lifting"`,
  *   what the anchor and what it becomes are to each other, which decides
  *   how their pictures sit in the box moving between them. `"box"`: one
@@ -971,14 +993,15 @@ const css = /* css */ `
  *   `document.getElementById` when the dialog opens — see popover.jsx's own
  *   `anchor` doc for why (mainly `defaultOpen`).
  * @param {Element|{current: Element}|string} [props.liftAnchor] - Under
- *   `animation="lifting"`, where the closing brings the box back to, when that
- *   is no longer where it came from: a popup one walks through (a row of cards
- *   shown one at a time) has something else in front by the time it closes,
- *   and the box would otherwise fly back to the card the press opened on. Same
- *   grammar as `anchor` (element, ref or id), resolved at the close, so
- *   whatever names the card currently in front — an id built from the signal
- *   the walk is bound to, a ref moved with it — is read then and not at the
- *   opening. Left out, the box comes back to the anchor it came out of.
+ *   `animation="lifting"` or `animation={{ open, close: "lifting" }}`, where the closing
+ *   brings the box back to, when that is not where it came from: a popup one
+ *   walks through (a row of cards shown one at a time) has something else in
+ *   front by the time it closes, and the box would otherwise fly back to the
+ *   card the press opened on. Same grammar as `anchor` (element, ref or id),
+ *   resolved once the close is made — after `onClose` — so whatever names the
+ *   card currently in front, or the box the close itself renders, is read
+ *   then and not at the opening. Left out, the box comes back to the anchor
+ *   it came out of.
  * @param {boolean} [props.sizeFromAnchor=false] - Whether the dialog takes the
  *   anchor's width/height as a min-width/min-height floor
  *   (`--anchor-width`/`--anchor-height`). Off by default: unlike a popover,
@@ -1483,7 +1506,21 @@ const useDialogProps = (props) => {
     flushEdges.right = expandX || x === "right" || x === "inset-right";
   }
 
-  const isAutoAnimation = animation === true || animation === "auto";
+  // `{ open, close }` says each way on its own; a single value says both.
+  const { open: openAnimation, close: closeAnimation = openAnimation } =
+    animation !== null && typeof animation === "object"
+      ? animation
+      : { open: animation };
+  if (
+    import.meta.dev &&
+    closeAnimation !== openAnimation &&
+    closeAnimation !== "lifting"
+  ) {
+    console.warn(
+      `[navi] Dialog animation={{ close: ${JSON.stringify(closeAnimation)} }}: "lifting" is the only close that differs from the opening; every other kind closes by playing the opening backwards.`,
+    );
+  }
+  const isAutoAnimation = openAnimation === true || openAnimation === "auto";
   // The dialog and the anchor are one box, and what plays between them is the
   // browser's own morph (popup_lift.js) — nothing this dialog does to its own
   // box. So it arms no CSS transition of its own, which is not merely useless
@@ -1491,13 +1528,14 @@ const useDialogProps = (props) => {
   // with allow-discrete, and a dialog kept rendered for the length of its exit
   // is exactly what the picture taken of the state it closes into must not
   // show.
-  const lifting = animation === "lifting";
+  const lifting = openAnimation === "lifting";
+  const liftsOnClose = closeAnimation === "lifting";
   // Dialog never has a real anchor to POSITION against (see this file's top
   // comment), so this is always the "no anchor" path — the same one Popover's
   // own custom renderer falls into when it has no real anchor either.
   const resolvedAnimationKind = isAutoAnimation
     ? resolveAutoAnimationKind(undefined, parsedPositionArea)
-    : animation;
+    : openAnimation;
   // Not gated on isAutoAnimation — an explicit animation="sliding" needs a
   // concrete direction just as much as an auto-resolved one does (same as
   // Popover's own "sliding"/"expanding" resolution step in openEffect).
@@ -1547,15 +1585,11 @@ const useDialogProps = (props) => {
   // is in front NOW, which only the caller knows. Resolved at the close for
   // that reason: the element it names changes while the popup is open, so
   // anything read at the opening would be the walk's starting point again.
+  // Silent when it names nothing: the close may be what renders it, and
+  // popup_lift.js asks again until it is there (and warns past that).
   const resolveLiftAnchorElement = () => {
     if (typeof liftAnchor === "string") {
-      const liftAnchorElementById = document.getElementById(liftAnchor);
-      if (!liftAnchorElementById) {
-        console.warn(
-          `Dialog: liftAnchor="${liftAnchor}" did not match any element`,
-        );
-      }
-      return liftAnchorElementById;
+      return document.getElementById(liftAnchor);
     }
     // A ref is unwrapped even when it holds nothing, the same way `anchor` is:
     // the ref object itself has no box to come back to.
@@ -1567,39 +1601,40 @@ const useDialogProps = (props) => {
   // provided the change happens between its two pictures, which is what
   // handing it to the controller buys (see popup_lift.js and
   // open_controller.js's own transitionChange).
-  openController.transitionChange = lifting
+  openController.transitionChange = liftsOnClose
     ? (applyChange, { opened, event }) => {
         const dialogEl = ref.current;
         // A mount-time opening was never seen closed (see openEffect's own
         // `silent`): there is no box it comes from, because nothing was shown
         // before it.
-        if (!dialogEl || (opened && event.detail.silent)) {
+        if (!dialogEl || (opened && (!lifting || event.detail.silent))) {
           applyChange();
           return;
         }
-        let anchorElement;
-        if (opened) {
-          anchorElement = resolveAnchorElement(event);
-        } else if (liftAnchor) {
-          anchorElement = resolveLiftAnchorElement();
-        } else {
-          anchorElement = anchorElementRef.current;
+        if (!opened) {
+          // Read once the close is made (popup_lift.js): the box it lands in
+          // may be one the close itself renders.
+          liftPopupFromAnchor(
+            dialogEl,
+            liftAnchor
+              ? resolveLiftAnchorElement
+              : () => anchorElementRef.current,
+            applyChange,
+            { opened, lift, waitForAnchor: Boolean(liftAnchor) },
+          );
+          return;
         }
+        const anchorElement = resolveAnchorElement(event);
         if (!anchorElement) {
-          if (import.meta.dev && opened) {
+          if (import.meta.dev) {
             console.warn(
               `[navi] Dialog has animation="lifting" and no anchor to lift out of, so it simply appears. The anchor is whatever opened it — a <Button command="--navi-open">, the "source" given to triggerNaviCommand — or the "anchor" prop.`,
             );
           }
-          if (import.meta.dev && !opened && liftAnchor) {
-            console.warn(
-              `[navi] Dialog has animation="lifting" and a "liftAnchor" naming nothing on screen, so it simply closes. The element it names is where the box comes back to, and it has to be in the document at the close.`,
-            );
-          }
           applyChange();
           return;
         }
-        liftPopupFromAnchor(dialogEl, anchorElement, applyChange, {
+        liftPopupFromAnchor(dialogEl, () => anchorElement, applyChange, {
           opened,
           lift,
         });

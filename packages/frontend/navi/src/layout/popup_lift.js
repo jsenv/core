@@ -39,6 +39,13 @@
  * (TARGET_WAIT_MS), on the half-strength frame where the anchor is still
  * readable, and lifts the moment it is there.
  *
+ * A closing may land where no opening took off: a dialog opened the plain way
+ * (`animation={{ open, close: "lifting" }}` in dialog.jsx), closing into a box the close
+ * itself brings — the state `onClose` writes renders the place the lifted node
+ * belongs to. So the box a closing comes back to is read once the change is
+ * made, inside the transition, and when the caller named it (`liftAnchor`) it
+ * is waited for (LANDING_WAIT_MS): the new picture is taken once it is there.
+ *
  * One name serves the whole movement, because only one of the two boxes is on
  * screen at a time: it names the anchor while the popup is closed, and the
  * lifted node while it is open.
@@ -84,6 +91,12 @@ const ARRIVING_ATTRIBUTE = "data-navi-popup-lift-arriving";
 // stands, without a movement, so a target that never comes cannot keep it
 // unpainted.
 const TARGET_WAIT_MS = 1000;
+// How long a closing waits for the box it comes back to, when that box is
+// brought by the close (see this file's top comment). The page is frozen on
+// the picture of the open popup meanwhile, so the wait is short: what it
+// covers is a render, not a fetch. Past it the popup's picture plays out on
+// its own.
+const LANDING_WAIT_MS = 300;
 // The popup's own animation duration, published on the root because the
 // ::view-transition tree hangs off it and inherits from nowhere else.
 const DURATION_PROPERTY = "--navi-popup-lift-duration";
@@ -124,14 +137,16 @@ let releaseScrollHold = null;
  * a view transition morphing the anchor's box into the lifted node's, or back.
  *
  * `opened` says which way: the box being left is the anchor when the popup is
- * opening and the lifted node when it is closing. `lift` is Dialog's own prop
- * of that name.
+ * opening and the lifted node when it is closing. `resolveAnchor` is read on
+ * the spot for an opening, and once the change is made for a closing;
+ * `waitForAnchor` has a closing wait for it when it is not there yet. `lift`
+ * is Dialog's own prop of that name.
  */
 export const liftPopupFromAnchor = (
   popupEl,
-  anchorElement,
+  resolveAnchor,
   applyChange,
-  { opened, lift },
+  { opened, lift, waitForAnchor },
 ) => {
   const startViewTransition = ensureDocumentStartViewTransition();
   // A movement still wearing the name would make the name two elements wide,
@@ -139,7 +154,7 @@ export const liftPopupFromAnchor = (
   // document.
   releaseLiftInProgress?.();
 
-  const elementLeaving = opened ? anchorElement : resolveLiftTarget(popupEl);
+  const elementLeaving = opened ? resolveAnchor() : resolveLiftTarget(popupEl);
   // Read before the first write: the read brings the style up to date, and a
   // write before it would make it bring it up to date once more.
   const duration = getComputedStyle(popupEl)
@@ -163,12 +178,14 @@ export const liftPopupFromAnchor = (
 
   let giveBackNameArriving = null;
   let stopWaitingForTarget = null;
+  let stopWaitingForAnchor = null;
   const release = () => {
     if (releaseLiftInProgress !== release) {
       return;
     }
     releaseLiftInProgress = null;
     stopWaitingForTarget?.();
+    stopWaitingForAnchor?.();
     boxAnimationInProgress?.cancel();
     boxAnimationInProgress = null;
     releaseScrollHold?.();
@@ -194,13 +211,18 @@ export const liftPopupFromAnchor = (
     const boxLeaving = room ? elementLeaving.getBoundingClientRect() : null;
     let boxArriving = null;
     let cornersArriving = null;
-    const viewTransition = startViewTransition(() => {
+    const viewTransition = startViewTransition(async () => {
       // The name is the arriving box's from here on: worn by both, it is worn
       // by neither. Written rather than removed, so a name the element also
       // has from a stylesheet cannot resurface for the length of the movement.
       elementLeaving.style.setProperty(NAME_PROPERTY, "none");
       change();
-      const elementArriving = resolveElementArriving();
+      const elementArriving = await resolveElementArriving();
+      // Replaced while waiting for its landing: the movement replacing it
+      // holds the name now.
+      if (releaseLiftInProgress !== release) {
+        return;
+      }
       if (elementArriving) {
         giveBackNameArriving = wearLiftName(elementArriving);
         cornersArriving = readCorners(elementArriving);
@@ -225,12 +247,34 @@ export const liftPopupFromAnchor = (
   };
 
   if (!opened) {
-    startMovement(applyChange, () =>
+    startMovement(applyChange, () => {
+      const anchorElement = resolveAnchor();
+      if (anchorElement?.isConnected) {
+        return anchorElement;
+      }
       // Gone from the document while the popup was open (the row it stood in
       // was removed): nothing to arrive at, and the browser plays the popup's
       // picture out on its own.
-      anchorElement.isConnected ? anchorElement : null,
-    );
+      if (!waitForAnchor) {
+        return null;
+      }
+      return new Promise((resolve) => {
+        stopWaitingForAnchor = whenAnchorAppears(resolveAnchor, (element) => {
+          stopWaitingForAnchor = null;
+          // Not when stopped by a movement replacing this one.
+          if (
+            import.meta.dev &&
+            !element &&
+            releaseLiftInProgress === release
+          ) {
+            console.warn(
+              `[navi] Dialog's "liftAnchor" named nothing on screen within ${LANDING_WAIT_MS}ms of the close, so the dialog closes without landing. The element it names is where the box comes back to: in the document at the close, or rendered by what the close changes (onClose).`,
+            );
+          }
+          resolve(element);
+        });
+      });
+    });
     return;
   }
 
@@ -388,6 +432,40 @@ const whenLiftTargetAppears = (popupEl, callback) => {
     clearTimeout(timeout);
   };
   return stop;
+};
+
+// Calls `callback` with the anchor once `resolveAnchor` finds it in the
+// document, or with null past LANDING_WAIT_MS — or when stopped, since the
+// transition's update is waiting on it. Returns how to stop.
+const whenAnchorAppears = (resolveAnchor, callback) => {
+  const observer = new MutationObserver(() => {
+    const anchorElement = resolveAnchor();
+    if (anchorElement?.isConnected) {
+      stop(anchorElement);
+    }
+  });
+  observer.observe(document.documentElement, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ["id"],
+  });
+  const timeout = setTimeout(() => {
+    stop(null);
+  }, LANDING_WAIT_MS);
+  let stopped = false;
+  const stop = (anchorElement = null) => {
+    if (stopped) {
+      return;
+    }
+    stopped = true;
+    observer.disconnect();
+    clearTimeout(timeout);
+    callback(anchorElement);
+  };
+  return () => {
+    stop(null);
+  };
 };
 
 const ignore = () => {};

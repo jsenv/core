@@ -1632,8 +1632,9 @@ const PickerFirstResolver = (props) => {
  *   children?: import("preact").ComponentChildren,
  *   mode?: "popover" | "dialog" | "callout",
  *   openOn?: "press" | "longpress" | "contextmenu" | string | string[],
- *   animation?: boolean | "auto" | "fading" | "scaling" | "sliding" | "lifting" | `slide-from-${string}`,
+ *   animation?: boolean | "auto" | "fading" | "scaling" | "sliding" | "lifting" | `slide-from-${string}` | { open: boolean | "auto" | "fading" | "scaling" | "sliding" | `slide-from-${string}`, close: "lifting" },
  *   lift?: "box" | "scene",
+ *   liftAnchor?: Element | { current: Element } | string,
  *   animationDuration?: string,
  *   calloutStatus?: "info" | "warning" | "error" | "success" | "none",
  *   calloutIcon?: boolean,
@@ -2004,6 +2005,11 @@ const PickerFirstResolver = (props) => {
  *   that opens precisely to get bigger. It brings an opaque, blurred backdrop
  *   with it (`--navi-backdrop-lift-*`); `backdropVariant="discrete"` asks for
  *   the light wash back.
+ * @param {Element|{current: Element}|string} [liftAnchor] Dialog mode,
+ *   Dialog's own: where a lifting close lands when that is not the trigger
+ *   (`animation="lifting"`, or `animation={{ open, close: "lifting" }}` for a
+ *   popup that opens the plain way and only lands on close),
+ *   read once the close is made (after `onClose`).
  * @param {"box"|"scene"} [lift="box"] Dialog's own, under `animation="lifting"`:
  *   `"box"` for a card that extends (its top stays, the box uncovers the rest),
  *   `"scene"` for a thumbnail that is a band cut from the middle of the bigger

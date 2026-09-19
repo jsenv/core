@@ -175,7 +175,9 @@ to start when unsure which export solves a problem.
   trigger's box is the card's box; `lift="box"` for a card, `"scene"` for a
   drawing framed the same way; one popup for a whole row, walked from the front
   through a `SlideContainer`, `liftAnchor` naming where the closing comes back
-  to; what an opening costs and where the time goes;
+  to; `animation={{ open, close: "lifting" }}` for a popup that did not come out of what it
+  lands in, the landing rendered by `onClose`; what an opening costs and where
+  the time goes;
   the wall at half strength on the frame before the movement. Read before
   giving a `Dialog` or a `Picker` `animation="lifting"`, or before measuring
   why one opens slowly.

@@ -5,7 +5,9 @@ for one situation: the thing the user pressed is the thing the popup shows,
 brought to the front to be looked at or written in. A card in a feed becomes
 its edit sheet; a drawing in a corner becomes the drawing full width. The page
 recedes behind a wall, the box leaves its place, travels and grows, and comes
-back into its place on close.
+back into its place on close — or, with `animation={{ open: "scaling", close: "lifting" }}`, only
+lands somewhere on close (see [lifting on the way back
+only](#lifting-on-the-way-back-only)).
 
 It is not a way to open a dialog with a nicer entrance. A dialog that shows
 something else than what was pressed — a menu, a confirmation, a form the
@@ -19,6 +21,7 @@ and everything below follows from that one fact.
 - [The lifted node paints itself](#the-lifted-node-paints-itself)
 - [Same width, or a wider box](#same-width-or-a-wider-box)
 - [A row of cards: one popup that walks](#a-row-of-cards-one-popup-that-walks)
+- [Lifting on the way back only](#lifting-on-the-way-back-only)
 - [What it costs, and where the time goes](#what-it-costs-and-where-the-time-goes)
 - [The wall, and the frame before the movement](#the-wall-and-the-frame-before-the-movement)
 - [What the browser does around it](#what-the-browser-does-around-it)
@@ -247,6 +250,74 @@ the see-through box as backdrop (see
 [popup_backdrop.md](./popup_backdrop.md)) is read on the press itself. A close
 written by hand on a click has to tell a click from the end of a swipe — and
 that guard is the sign the marker was missed.
+
+## Lifting on the way back only
+
+Sometimes the opening is not a lift and the closing is. A banner says "your
+level is computed"; pressing it opens a full-screen reveal, the crest big in a
+halo; collecting it sends the crest down into its place on the rank plate,
+which replaces the banner at that moment. The banner is not the reveal, so
+nothing morphs on the way in. But on the way out one box does travel into
+another, and that other box did not exist when the reveal opened.
+
+```jsx
+<Dialog
+  animation={{ open: "scaling", close: "lifting" }}
+  liftAnchor="profile_level_crest"
+  onClose={(e) => {
+    if (e.detail.requester?.id === "level_collect") {
+      levelRevealedSignal.value = true; // renders the plate, and its crest
+    }
+  }}
+>
+  <span data-lift>
+    <RankCrest size="220px" />
+  </span>
+  <Button id="level_collect" command="--navi-close" variant="bare">
+    Collect
+  </Button>
+</Dialog>
+```
+
+**The opening is whatever `open` says** (`"auto"` included). Only the close lifts, so none of
+what a lifting opening brings is there: no wait for `data-lift`, no opaque
+wall. `data-lift` is read at the close alone.
+
+**The box it lands in can be rendered by the close.** `liftAnchor` is read
+once the close has been made, `onClose` included, inside the transition. A
+state written in `onClose` has rendered by the time the landing is looked up,
+so the landing box can come from that state. This is also the one place where
+that state can be written: before the close, the reveal would disappear from
+the picture being left; after it, the picture of the arrival is already taken.
+Do not write it by hand around the dialog either. Unmounting the dialog with
+the component that holds it takes it off screen without a close, and the lift
+never happens.
+
+**It is waited for, briefly.** When `liftAnchor` names nothing yet, navi waits
+for it to appear, up to 300 ms, before it takes the new picture. The screen is
+frozen on the reveal meanwhile, so this covers a render and not a fetch: the
+landing must be drawable from what the page already holds. Past the wait, the
+dialog closes without landing (its picture fades out) and dev warns.
+
+**Tell the collecting close from the others.** Escape, the back button and a
+press on the wall also close the dialog, and they usually mean "not now" rather
+than "collect". `onClose` receives who asked (`e.detail.requester`, the button
+of a `--navi-close`). Only the close that collects writes the state, and the
+others close the dialog without writing it, back into the element it opened from.
+
+**The dialog may go away with the state.** A reveal shown in place of the
+plate usually lives in the same branch as the banner and is unmounted by the
+state it writes. That is fine: the picture of the reveal was taken before the
+close.
+
+**The landing box is the crest's box**, for the same reason the trigger's box
+is the card's box (see [above](#the-triggers-box-is-the-cards-box)): the id
+goes on the element that is exactly the small crest, not on the plate around
+it.
+
+**The opening's own exit does not play.** While a closing lift runs, the
+dialog's transitions are off. `scaling`'s exit would keep the dialog painted
+into the picture of the state it closes into.
 
 ## What it costs, and where the time goes
 

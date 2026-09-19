@@ -979,6 +979,7 @@ const PickerContentInsidePopup = (props) => {
     popupWidthFitContent,
     animation,
     lift,
+    liftAnchor,
     animationDuration,
     // mode="callout": what the callout says about what it holds, and paints
     // in its border and icon — "none" for a plain tooltip (see the callout
@@ -1102,6 +1103,7 @@ const PickerContentInsidePopup = (props) => {
           }
           sizeFromAnchor={isPopover ? undefined : dialogSizeFromAnchor}
           lift={isPopover ? undefined : lift}
+          liftAnchor={isPopover ? undefined : liftAnchor}
         >
           {/* Let the popup content branch on the mode via usePopupMode(). */}
           <PopupModeContext.Provider value={mode}>
