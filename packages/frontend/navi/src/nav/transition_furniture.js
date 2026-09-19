@@ -46,22 +46,23 @@
  * of being photographed, and a route transition is where it costs nothing:
  * both pages are pictures for those few hundred milliseconds anyway.
  *
- * The WALL of a modal dialog goes the other way round: it cannot be
- * photographed at all. It is the browser's own ::backdrop — a pseudo-element,
- * which wears no name — and the top layer it is painted in is drawn during a
- * transition only as part of the root's picture, which is opted out while an
- * area is marked (route_transition.jsx). Captured on its own, the dialog's
- * box travels; its wall is painted nowhere for the length of the movement,
- * and the page under it leaves undimmed. So the wall is painted INTO the
- * page's picture instead: a stand-in laid over the area before each of the
- * two pictures is taken, painting what the ::backdrop paints, and removed
+ * The WALL of a popup goes the other way round: it is not photographed at
+ * all. The top layer is drawn during a transition only as part of the root's
+ * picture, which is opted out while an area is marked (route_transition.jsx),
+ * and a modal dialog's wall is its ::backdrop — a pseudo-element, which wears
+ * no name; a popover's is a real element, but named it would be a picture the
+ * size of the screen, sliding across the page arriving. Captured on its own,
+ * the popup's box travels; its wall is painted nowhere for the length of the
+ * movement, and the page under it leaves undimmed. So the wall is painted
+ * INTO the page's picture instead: a stand-in laid over the area before each
+ * of the two pictures is taken, painting what the wall paints, and removed
  * with the movement. Carried by the page's picture, it leaves with the page
  * being left and arrives with the page arriving, cut at the page's edge — and
- * under the dialog's own picture, which stands over the pages (the z-order in
+ * under the popup's own picture, which stands over the pages (the z-order in
  * route_transition.jsx). A bar the two states share is outside both pictures
  * and goes undimmed for those few hundred milliseconds: it is the frame, not
- * part of the page. A dialog with layer="local" paints a real element for its
- * wall, inside the page, and needs none of this.
+ * part of the page. A popup with layer="local" paints its wall inside the
+ * page and needs none of this.
  */
 
 // The browser's top layer: painted above everything the document paints, so
@@ -79,13 +80,17 @@ const FURNITURE_SELECTOR = `.navi_fixed_bar, .navi_popover:is(${TOP_LAYER_SELECT
 const TRANSITION_ATTRIBUTE = "data-navi-route-transition";
 const NAME_PROPERTY = "view-transition-name";
 export const FURNITURE_NAME_PREFIX = "navi-transition-furniture-";
-// The dialogs whose wall is the browser's ::backdrop: shown with showModal().
-// A top-layer dialog without a wall is shown as a popover and has nothing to
-// stand in for.
-const MODAL_DIALOG_SELECTOR = ".navi_dialog:modal";
+// The walls painted in the top layer: a modal dialog's, which is its
+// ::backdrop, and a popover's, which is a real element shown as a popover
+// beside it (layout/popover.jsx) — unnamed, so covered by the pictures for
+// the length of the movement all the same. A top-layer dialog without a wall
+// is shown as a popover and has nothing to stand in for.
+const TOP_LAYER_WALL_SELECTOR =
+  ".navi_dialog:modal, .navi_popover_backdrop:popover-open";
 const WALL_ATTRIBUTE = "data-navi-transition-wall";
-// What the ::backdrop paints, resolved on the dialog (layout/dialog.jsx): the
-// same two properties, copied onto the wall.
+// What the wall paints, resolved on the matched element in both cases (the
+// dialog for its ::backdrop, the popover's wall for itself): the same two
+// properties, copied onto the stand-in.
 const WALL_PROPERTIES = ["--backdrop-background", "--backdrop-filter"];
 
 const TRANSITION_WALL_CSS = /* css */ `
@@ -245,16 +250,16 @@ export const releaseTransitionFurniture = (owner) => {
   removeTransitionWalls();
 };
 
-// One wall per modal dialog open in the area, in document order: the
-// ::backdrops stack in the top layer, and what dims the page is all of them.
+// One stand-in per wall open in the area, in document order: the walls stack
+// in the top layer, and what dims the page is all of them.
 const paintTransitionWalls = (areaElement) => {
   removeTransitionWalls();
-  for (const dialog of areaElement.querySelectorAll(MODAL_DIALOG_SELECTOR)) {
-    const dialogStyle = getComputedStyle(dialog);
+  for (const source of areaElement.querySelectorAll(TOP_LAYER_WALL_SELECTOR)) {
+    const sourceStyle = getComputedStyle(source);
     const wall = document.createElement("div");
     wall.setAttribute(WALL_ATTRIBUTE, "");
     for (const property of WALL_PROPERTIES) {
-      wall.style.setProperty(property, dialogStyle.getPropertyValue(property));
+      wall.style.setProperty(property, sourceStyle.getPropertyValue(property));
     }
     areaElement.appendChild(wall);
     // The area is not necessarily a containing block, and made one for the
