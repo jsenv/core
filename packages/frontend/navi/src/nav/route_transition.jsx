@@ -131,6 +131,7 @@ import {
   installTransitionFurnitureCss,
   nameTransitionFurniture,
   releaseTransitionFurniture,
+  startTransitionFurniture,
 } from "./transition_furniture.js";
 import {
   holdTransitionWindow,
@@ -1443,6 +1444,7 @@ const beginTransition = ({ page, url, fromUrl, direction, type, duration }) => {
   // the only place the silent misconfigurations show. They are all about the
   // same thing — a movement playing on pictures that are not the pages.
   const viewTransitionReady = () => {
+    startTransitionFurniture(transition);
     const capturedNames = capturedViewTransitionNames();
     if (areaElements.length > 0) {
       if (!capturedNames.has(AREA_NAME)) {

@@ -64,8 +64,13 @@
  * outside the area. A bar the two states share is one group with two
  * pictures — dimmed on the side that has a wall — and its cross-fade is the
  * wall fading out as the page leaves, or in as it arrives; a bar only one
- * state has carries the wall with it. A popup with layer="local" paints its
- * wall inside the page and needs none of this.
+ * state has carries the wall with it. What no picture covers — the glass
+ * beside a narrowed app, the window below a page shorter than it — shows the
+ * live document through, and only the live document can paint a wall there:
+ * one fixed stand-in over the window, under the pictures, with a hole cut
+ * where each picture stands, its opacity taken from the state being left to
+ * the state arriving on the movement's own clock. A popup with layer="local"
+ * paints its wall inside the page and needs none of this.
  */
 
 // The browser's top layer: painted above everything the document paints, so
@@ -113,17 +118,36 @@ const TRANSITION_WALL_CSS = /* css */ `
     background: var(--backdrop-background);
     backdrop-filter: var(--backdrop-filter);
     pointer-events: none;
+
+    /* Over the whole window, for what no picture covers; the holes are cut
+       by paintRestWalls. Live DOM rather than a picture, so it fades by
+       itself, on the pictures' clock and curve (the bars' own cross-fade is
+       the browser's ease). */
+    &[data-navi-transition-wall="rest"] {
+      position: fixed;
+      inset: 0;
+      transition: opacity var(--navi-route-transition-duration, 300ms) ease;
+    }
   }
 
-  /* Painted only while the pictures are, so the document is never shown
-     with the real wall AND its stand-in: the elements are removed once the
-     transition has finished, a frame after the pictures are dropped and the
-     top layer paints again. Says "while a transition is active" rather than
-     "while navi's attribute is on the root", which comes down in that same
-     late callback. A browser without the pseudo-class drops this rule and
-     shows that one frame. */
-  :root:not(:active-view-transition) [data-navi-transition-wall] {
-    display: none;
+  /* The real wall is off for exactly as long as the stand-ins are up, so no
+     frame ever shows both or neither. The frame the first picture is taken on
+     is rendered and shown, with the top layer painted as usual: the real wall
+     over the stand-in there is one frame twice as dark, read as a flash under
+     the press. And the last frame goes the other way: the pictures are
+     dropped, the top layer paints again, and the stand-ins are still there
+     until the finished callback removes them, along with the attribute —
+     one DOM write, one frame, and that frame is painted by the stand-ins
+     alone, which paint what the wall paints. A wall's background is not one
+     of its transitioned properties, so it goes and comes back at once.
+     Scoped to navi's attribute: a view transition of the application's own
+     keeps its walls. */
+  :root[data-navi-route-transition] {
+    .navi_dialog::backdrop,
+    .navi_popover_backdrop {
+      background: transparent;
+      backdrop-filter: none;
+    }
   }
 `;
 
@@ -148,6 +172,10 @@ let travelStyleElement = null;
 // The stand-ins for the walls open in the top layer, painted for one picture
 // and taken down before the next.
 let wallElements = [];
+// The stand-ins for what no picture covers, kept for the whole movement, and
+// the opacity they are heading to once it plays.
+let restWallElements = [];
+let restWallOpacity = "0";
 
 /**
  * Name what stands around the area, before the picture of the state being left
@@ -160,7 +188,10 @@ export const nameTransitionFurniture = (owner, areaElement) => {
     namedElements = new Set();
   }
   nameFurnitureAround(areaElement);
-  paintTransitionWalls(areaElement);
+  const sources = paintTransitionWalls(areaElement);
+  // The state being left has walls: what no picture covers starts dimmed.
+  removeRestWalls();
+  paintRestWalls(areaElement, sources, "1");
 };
 
 /**
@@ -181,7 +212,16 @@ export const holdTransitionFurniture = (owner, areaElement) => {
     }
   }
   const namesArriving = nameFurnitureAround(areaElement);
-  paintTransitionWalls(areaElement);
+  const sources = paintTransitionWalls(areaElement);
+  // The state arriving has walls: what no picture covers ends dimmed. Painted
+  // from the state being left when that one had walls (they stay up if both
+  // have), from the state arriving otherwise (they come up from nothing).
+  restWallOpacity = sources.length > 0 ? "1" : "0";
+  if (restWallElements.length === 0) {
+    paintRestWalls(areaElement, sources, "0");
+  } else {
+    cutRestWalls(areaElement);
+  }
   const cssText = `${travelRule("old", namesLeaving, "--navi-route-transition-leave")}${travelRule("new", namesArriving, "--navi-route-transition-enter")}`;
   if (!cssText) {
     return;
@@ -251,6 +291,19 @@ const travelRule = (side, names, movementProperty) => {
   return `${selector}{animation-name:${animationName};animation-timing-function:ease;animation-fill-mode:both}`;
 };
 
+/**
+ * The pictures are up and about to move: what no picture covers heads to the
+ * state arriving, on the same clock.
+ */
+export const startTransitionFurniture = (owner) => {
+  if (owner !== furnitureOwner) {
+    return;
+  }
+  for (const restWall of restWallElements) {
+    restWall.style.opacity = restWallOpacity;
+  }
+};
+
 export const releaseTransitionFurniture = (owner) => {
   if (owner !== furnitureOwner) {
     return;
@@ -265,6 +318,7 @@ export const releaseTransitionFurniture = (owner) => {
     travelStyleElement = null;
   }
   removeTransitionWalls();
+  removeRestWalls();
 };
 
 // One stand-in per open wall in every picture, walls in document order: they
@@ -277,25 +331,11 @@ const paintTransitionWalls = (areaElement) => {
   removeTransitionWalls();
   const sources = document.querySelectorAll(TOP_LAYER_WALL_SELECTOR);
   if (sources.length === 0) {
-    return;
+    return sources;
   }
-  const targets = [areaElement];
-  for (const bar of document.querySelectorAll(FIXED_BAR_SELECTOR)) {
-    if (!areaElement.contains(bar)) {
-      targets.push(bar);
-    }
-  }
-  for (const target of targets) {
+  for (const target of pictureTargets(areaElement)) {
     for (const source of sources) {
-      const sourceStyle = getComputedStyle(source);
-      const wall = document.createElement("div");
-      wall.setAttribute(WALL_ATTRIBUTE, "");
-      for (const property of WALL_PROPERTIES) {
-        wall.style.setProperty(
-          property,
-          sourceStyle.getPropertyValue(property),
-        );
-      }
+      const wall = createWall(source);
       target.appendChild(wall);
       // The target is not necessarily a containing block (the area is a plain
       // box), and made one for the movement it would move whatever the page
@@ -311,6 +351,7 @@ const paintTransitionWalls = (areaElement) => {
       wallElements.push(wall);
     }
   }
+  return sources;
 };
 
 const removeTransitionWalls = () => {
@@ -318,4 +359,68 @@ const removeTransitionWalls = () => {
     wall.remove();
   }
   wallElements = [];
+};
+
+// What is photographed on its own and gets a stand-in in its picture: the
+// pages, and every bar outside them.
+const pictureTargets = (areaElement) => {
+  const targets = [areaElement];
+  for (const bar of document.querySelectorAll(FIXED_BAR_SELECTOR)) {
+    if (!areaElement.contains(bar)) {
+      targets.push(bar);
+    }
+  }
+  return targets;
+};
+
+const createWall = (source) => {
+  const sourceStyle = getComputedStyle(source);
+  const wall = document.createElement("div");
+  wall.setAttribute(WALL_ATTRIBUTE, "");
+  for (const property of WALL_PROPERTIES) {
+    wall.style.setProperty(property, sourceStyle.getPropertyValue(property));
+  }
+  return wall;
+};
+
+// One per open wall, over the window, at the opacity of the state they are
+// painted from; a hole where each picture stands, since the picture has a
+// stand-in of its own and shows the live document through nowhere — and on
+// the frame the first picture is taken on, before any picture is up, a hole
+// is what keeps the two from being painted on top of each other.
+const paintRestWalls = (areaElement, sources, opacity) => {
+  for (const source of sources) {
+    const restWall = createWall(source);
+    restWall.setAttribute(WALL_ATTRIBUTE, "rest");
+    restWall.style.opacity = opacity;
+    document.body.appendChild(restWall);
+    restWallElements.push(restWall);
+  }
+  cutRestWalls(areaElement);
+};
+
+// The holes, cut again at the hold: the state arriving may have brought a
+// bar, or taken one away and let the pages grow into its band.
+const cutRestWalls = (areaElement) => {
+  if (restWallElements.length === 0) {
+    return;
+  }
+  // One evenodd polygon: the window, then each hole entered from and left by
+  // the window's origin, so the bridges between them have no area.
+  let polygon = "0 0, 100% 0, 100% 100%, 0 100%, 0 0";
+  for (const target of pictureTargets(areaElement)) {
+    const { left, top, right, bottom } = target.getBoundingClientRect();
+    polygon += `, ${left}px ${top}px, ${right}px ${top}px, ${right}px ${bottom}px, ${left}px ${bottom}px, ${left}px ${top}px, 0 0`;
+  }
+  for (const restWall of restWallElements) {
+    restWall.style.clipPath = `polygon(evenodd, ${polygon})`;
+  }
+};
+
+const removeRestWalls = () => {
+  for (const restWall of restWallElements) {
+    restWall.remove();
+  }
+  restWallElements = [];
+  restWallOpacity = "0";
 };
