@@ -31,6 +31,19 @@
       .dialog_box {
         padding: 20px;
       }
+      /* Dépasse de la barre vers le haut, comme un bouton d'action posé sur
+         une barre d'onglets. */
+      .bar_plus {
+        display: grid;
+        width: 44px;
+        height: 44px;
+        margin-top: -36px;
+        place-items: center;
+        color: white;
+        font-size: 1.5rem;
+        background: #1f2a44;
+        border-radius: 50%;
+      }
       .bar_content {
         display: flex;
         width: 100%;
@@ -139,6 +152,9 @@
               <Link variant="tab" route={A_ROUTE} padding="m">
                 A
               </Link>
+              <span className="bar_plus" aria-hidden="true">
+                +
+              </span>
               <Link variant="tab" route={B_ROUTE} padding="m">
                 B
               </Link>

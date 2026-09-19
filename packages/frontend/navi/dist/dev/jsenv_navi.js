@@ -30305,12 +30305,12 @@ const paintTransitionWalls = (areaElement) => {
       // positioned against an ancestor of it: the wall is placed from
       // wherever its containing block turns out to be, by the offset between
       // that box and the target's.
-      const targetRect = target.getBoundingClientRect();
+      const targetRect = pictureRect(target);
       const wallRect = wall.getBoundingClientRect();
       wall.style.left = `${targetRect.left - wallRect.left}px`;
       wall.style.top = `${targetRect.top - wallRect.top}px`;
-      wall.style.width = `${targetRect.width}px`;
-      wall.style.height = `${targetRect.height}px`;
+      wall.style.width = `${targetRect.right - targetRect.left}px`;
+      wall.style.height = `${targetRect.bottom - targetRect.top}px`;
       wallElements.push(wall);
     }
   }
@@ -30364,9 +30364,43 @@ const paintRestWalls = (sources, opacity) => {
 const measurePictureRects = (areaElement) => {
   const rects = new Map();
   for (const target of pictureTargets(areaElement)) {
-    rects.set(target, target.getBoundingClientRect());
+    rects.set(target, pictureRect(target));
   }
   return rects;
+};
+
+// What the picture holds, which is what the wall covers at rest: a bar's
+// picture carries what its content paints outside its box (a button standing
+// up out of a tab bar), so its rectangle is taken with its descendants'. The
+// pages' is their own box — the movement cuts them at it anyway.
+const pictureRect = (target) => {
+  const rect = target.getBoundingClientRect();
+  let { left, top, right, bottom } = rect;
+  if (!target.matches(FIXED_BAR_SELECTOR$1)) {
+    return { left, top, right, bottom };
+  }
+  for (const descendant of target.querySelectorAll("*")) {
+    if (descendant.hasAttribute(WALL_ATTRIBUTE)) {
+      continue;
+    }
+    const descendantRect = descendant.getBoundingClientRect();
+    if (descendantRect.width === 0 || descendantRect.height === 0) {
+      continue;
+    }
+    if (descendantRect.left < left) {
+      left = descendantRect.left;
+    }
+    if (descendantRect.top < top) {
+      top = descendantRect.top;
+    }
+    if (descendantRect.right > right) {
+      right = descendantRect.right;
+    }
+    if (descendantRect.bottom > bottom) {
+      bottom = descendantRect.bottom;
+    }
+  }
+  return { left, top, right, bottom };
 };
 
 // The holes for the movement, and the ones for its last frame (see the CSS).
@@ -30383,13 +30417,81 @@ const cutRestWalls = (holes, holesArriving = null) => {
 };
 
 // One evenodd polygon: the window, then each hole entered from and left by
-// the window's origin, so the bridges between them have no area.
+// the window's origin, so the bridges between them have no area. The holes
+// must not overlap — evenodd fills where two of them do — and they do
+// overlap as measured: the pages run under the bars by design, so a bar's
+// rectangle lies inside the area's. Each is cut down to what the ones before
+// it left.
 const holesPolygon = (holes) => {
   let polygon = "0 0, 100% 0, 100% 100%, 0 100%, 0 0";
-  for (const { left, top, right, bottom } of holes) {
+  for (const { left, top, right, bottom } of disjointRects(holes)) {
     polygon += `, ${left}px ${top}px, ${right}px ${top}px, ${right}px ${bottom}px, ${left}px ${bottom}px, ${left}px ${top}px, 0 0`;
   }
   return `polygon(evenodd, ${polygon})`;
+};
+
+const disjointRects = (rects) => {
+  const result = [];
+  for (const rect of rects) {
+    let pieces = [rect];
+    for (const placed of result) {
+      const remaining = [];
+      for (const piece of pieces) {
+        remaining.push(...subtractRect(piece, placed));
+      }
+      pieces = remaining;
+    }
+    result.push(...pieces);
+  }
+  return result;
+};
+
+// What is left of `rect` outside `hole`: up to four rectangles around it.
+const subtractRect = (rect, hole) => {
+  if (
+    hole.left >= rect.right ||
+    hole.right <= rect.left ||
+    hole.top >= rect.bottom ||
+    hole.bottom <= rect.top
+  ) {
+    return [rect];
+  }
+  const pieces = [];
+  const innerTop = hole.top > rect.top ? hole.top : rect.top;
+  const innerBottom = hole.bottom < rect.bottom ? hole.bottom : rect.bottom;
+  if (hole.top > rect.top) {
+    pieces.push({
+      left: rect.left,
+      top: rect.top,
+      right: rect.right,
+      bottom: hole.top,
+    });
+  }
+  if (hole.bottom < rect.bottom) {
+    pieces.push({
+      left: rect.left,
+      top: hole.bottom,
+      right: rect.right,
+      bottom: rect.bottom,
+    });
+  }
+  if (hole.left > rect.left) {
+    pieces.push({
+      left: rect.left,
+      top: innerTop,
+      right: hole.left,
+      bottom: innerBottom,
+    });
+  }
+  if (hole.right < rect.right) {
+    pieces.push({
+      left: hole.right,
+      top: innerTop,
+      right: rect.right,
+      bottom: innerBottom,
+    });
+  }
+  return pieces;
 };
 
 const removeRestWalls = () => {
