@@ -11,6 +11,7 @@ they are met once.
 - [Rendering is suspended for the whole callback](#rendering-is-suspended-for-the-whole-callback)
 - [`finished` rejects when another transition replaces it](#finished-rejects-when-another-transition-replaces-it)
 - [The top layer is painted through the root's picture](#the-top-layer-is-painted-through-the-roots-picture)
+- [Two frames show the live document](#two-frames-show-the-live-document)
 
 ## A name is unique per document
 
@@ -85,3 +86,45 @@ past a few thousand pixels of scroll, which is how it hid). A transition that
 opens or closes a top-layer surface keeps the root's default name and pays the
 frozen page — under a modal wall that costs nothing. navi's own lift
 (`popup_lift.md`) does exactly that.
+
+When the root cannot be kept — a route transition splits the bars from the
+pages, which only works with the root opted out — the top layer has to be
+**stood in for**. A dialog's box is an element, so it can be named and
+photographed on its own. Its wall cannot: `::backdrop` wears no name. What
+works is painting what the wall paints into the pictures themselves: a plain
+element appended inside each photographed box (the pages, each bar) before
+each capture, and one `position: fixed` element in the live document for what
+no picture covers, with a hole cut where each picture stands. The live one is
+not a picture, so nothing cross-fades it: it is animated on the movement's own
+clock. Where a picture stands changes over the movement — the frame the first
+picture is taken on shows the leaving state, the last frame the arriving one,
+and in between only the intersection of the two states' rectangles is under a
+picture at every moment — so the holes are cut three times. Reference:
+`paintTransitionWalls` and `paintRestWalls` in `nav/transition_furniture.js`;
+the measured story is in [route_transitions.md](./route_transitions.md#pages-between-fixed-bars-the-transition-area).
+
+## Two frames show the live document
+
+A view transition is not pictures from the call to `finished`. **The frame the
+first picture is taken on is rendered and shown**, with the top layer painted
+as usual, and `:active-view-transition` already matches on it (it matches from
+the `startViewTransition` call). **The frame after the pictures are dropped is
+shown too**, before the `finished` callbacks run — they are a frame late.
+Whatever is switched on for the movement is therefore on screen one frame
+before the pictures and one frame after; anything it stands in for must be
+switched off for exactly the same span, or that frame shows both (measured: a
+wall twice as dark under the press, read as a flash).
+
+Two consequences for the switch itself:
+
+- **Switch both on the same DOM write**, at the same moment: an attribute set
+  before the call and removed in `finished`. The late frame then shows the
+  stand-in alone, which is what the real thing looked like — one frame nobody
+  can see.
+- **`:active-view-transition` is the only same-frame signal at the end**: it
+  stops matching in the rendering step that drops the pictures, before that
+  frame is painted. It is what to use when the last frame must differ from the
+  movement (see the holes above). It is NOT what to gate a stand-in's
+  `display` on: hidden before the call, a stand-in measures as a zero rect and
+  lands in the wrong place; and on the capture frame it is displayed while the
+  real thing is still there.

@@ -182,7 +182,13 @@ so it can only be called by whoever owns the change:
     a named element inside the dialog is photographed empty (Chrome 153,
     reproduced in a bare page). A movement that opens or closes a top-layer
     surface keeps the root's default name and pays the frozen page — under a
-    modal wall it costs nothing. _Reference: `popup_lift.js`._
+    modal wall it costs nothing. _Reference: `popup_lift.js`._ A movement that
+    NEEDS the root out (pages split from their bars) stands the top layer in
+    instead: what a wall paints, painted into each picture and into one live
+    element for what no picture covers, with the real wall switched off for
+    exactly the same span. _Reference: `transition_furniture.js`, and the two
+    frames every stand-in must reckon with in
+    [view_transitions.md](../../../packages/frontend/navi/docs/view_transitions.md#two-frames-show-the-live-document)._
 
 Facts worth knowing before reaching for one:
 
@@ -468,6 +474,13 @@ Ways to lose an afternoon on this, all seen:
   transition is about to start — for navi, `holdViewTransition` in
   `start_view_transition_polyfill.js`, which every transition it starts goes
   through.
+- **The pictures are not on screen from the call to `finished`.** The frame the
+  first picture is taken on is rendered and shown, and so is the frame after
+  the pictures drop, before `finished` runs. Anything switched on for the
+  movement is seen on both, next to whatever it stands in for unless that is
+  switched off by the same DOM write. Doubt a flash under the press before
+  doubting the movement; a CDP screencast shows it, a paused animation never
+  does. _Reference: the "rest" wall in `transition_furniture.js`._
 - **A press during a transition does not reach a captured element** — captured
   means not painted where it stands, so nothing hit-tests to it (see "Keep the
   page out of it" above, which is half of the answer). The other half is the

@@ -316,6 +316,21 @@ is the opposite case — a finger is on the box — and leaves the bars live.
 A bar the application names itself keeps its name and its own movement: navi
 names only what is unnamed.
 
+A **modal `Dialog` open on a page** is furniture of the same kind: its box is
+photographed on its own and travels with its page, or holds where it stands if
+both states have it. Its **wall** cannot be photographed (see
+[view_transitions.md](./view_transitions.md#the-top-layer-is-painted-through-the-roots-picture)),
+and dropping it for the movement makes the whole window blink under the press.
+So the wall is painted where it would be seen: into the pages' picture, into
+each bar's picture, and, for what no picture covers (the glass beside a
+narrowed app, the window below a short page), as a live element under the
+pictures that fades on the movement's clock. The outcome is derived from the
+pair of states like everything else here — a page leaving from under a wall
+leaves dimmed and the bars fade their dim with it; a page arriving under one
+arrives dimmed and the bars dim with it; a wall both states have holds. The real
+wall is switched off for exactly the length of the movement, so no frame shows
+two walls. Demo: [a dialog leaving with its page](../src/nav/demos/route_transition_dialog/route_transition_dialog.html).
+
 It is a `Box`, so the layout the pages need is written on it directly (`flex`,
 `className`, `style`, …). An app that already has an element holding its pages
 can mark that one with `data-navi-route-transition-area` rather than nesting
