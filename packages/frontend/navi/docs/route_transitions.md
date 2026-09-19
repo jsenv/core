@@ -307,7 +307,11 @@ about the bar:
   that takes the whole screen (a full-screen wizard whose banner is its own
   header) is this case, on the way in and on the way back.
 
-The pages are ordered above the bars for that reason. The price of being
+The pages are ordered above a bar only one state has for that reason, and
+below a bar both states have: the frame stands over the pages as it does at
+rest, so what a bar paints outside its box — a button standing up out of a tab
+bar, a shadow on the page — is seen for the length of the movement instead of
+being cut at the bar's edge. The price of being
 photographed is that a bar cannot answer the pointer for those few hundred
 milliseconds, which is what a route transition wants anyway: both pages are
 pictures too, and a press landing on either would be an accident. `RouteTravel`

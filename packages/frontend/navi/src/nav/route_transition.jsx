@@ -339,18 +339,25 @@ const css = /* css */ `
           ) - var(--navi-route-transition-clip-bottom)
       );
 
-      /* The pages travel OVER the furniture. Everything else captured while an
-         area is marked wears a name of navi's own for the length of the
-         movement (transition_furniture.js): a bar the two states share is one
-         group the browser holds where it stands, and a bar only one of them
-         has stands there too, with no counterpart to move to. Both belong
-         under the pages — that is what lets a page come over a bar that is
-         going away, and a page leaving uncover the bar arriving behind it.
+      /* The pages travel OVER a bar only one state has. Everything captured
+         while an area is marked wears a name of navi's own for the length of
+         the movement (transition_furniture.js), and a bar with no counterpart
+         stands where it was photographed: under the pages, which is what lets
+         a page come over a bar that is going away, and a page leaving uncover
+         the bar arriving behind it.
 
-         An open popup is the one piece that goes the other way: it stands in
-         the top layer, over everything the document paints, so its picture
-         stands over the pages rather than under them — a page sliding under a
-         dialog, not over it (the class comes from layout/popup_css.js).
+         A bar the two states SHARE is the frame, and stands over the pages as
+         it does at rest: the pages are cut at its band anyway (the clip
+         formulas above), so the order only decides what is seen of the bar
+         OUTSIDE its box — a button standing up out of a tab bar, a shadow
+         cast on the page — and under the pages that would be cut for the
+         length of the movement. Which bars are shared is a fact about the
+         pair of states, known at the hold: transition_furniture.js writes the
+         class on them then.
+
+         An open popup stands in the top layer, over everything the document
+         paints, so its picture stands over all of them — a page sliding under
+         a dialog, not over it (the class comes from layout/popup_css.js).
 
          Ordered here rather than left to the DOM, which decides it otherwise:
          where an application puts its bars relative to the area is its own
@@ -362,8 +369,11 @@ const css = /* css */ `
       &::view-transition-group(navi-route-transition) {
         z-index: 1;
       }
-      &::view-transition-group(.navi_popup) {
+      &::view-transition-group(.navi_furniture_shared) {
         z-index: 2;
+      }
+      &::view-transition-group(.navi_popup) {
+        z-index: 3;
       }
 
       /* And on the transition's own clock, whatever was captured. How long the

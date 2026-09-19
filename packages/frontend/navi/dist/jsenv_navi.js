@@ -29123,6 +29123,11 @@ const FURNITURE_NAME_PREFIX = "navi-transition-furniture-";
 const TOP_LAYER_WALL_SELECTOR =
   ".navi_dialog:modal, .navi_popover_backdrop:popover-open";
 const WALL_ATTRIBUTE = "data-navi-transition-wall";
+// Worn by a bar both states have, from the hold on: its two pictures are one
+// group, and the group is ordered over the pages (route_transition.jsx). Only
+// a bar — a popup's class is written by layout/popup_css.js, and a second rule
+// on the same property would replace it.
+const SHARED_ATTRIBUTE = "data-navi-transition-furniture-shared";
 // What the wall paints, resolved on the matched element in both cases (the
 // dialog for its ::backdrop, the popover's wall for itself): the same two
 // properties, copied onto the stand-in.
@@ -29131,7 +29136,11 @@ const WALL_PROPERTIES = ["--backdrop-background", "--backdrop-filter"];
 // The pictures the wall is painted into: the pages', and every bar's own.
 const FIXED_BAR_SELECTOR$1 = ".navi_fixed_bar";
 
-const TRANSITION_WALL_CSS = /* css */ `[data-navi-transition-wall] {
+const TRANSITION_FURNITURE_CSS = /* css */ `.navi_fixed_bar[data-navi-transition-furniture-shared] {
+  view-transition-class: navi_furniture_shared;
+}
+
+[data-navi-transition-wall] {
   z-index: var(--navi-z-index-top-layer);
   background: var(--backdrop-background);
   backdrop-filter: var(--backdrop-filter);
@@ -29164,7 +29173,7 @@ const TRANSITION_WALL_CSS = /* css */ `[data-navi-transition-wall] {
 // a page that never travels between routes must not carry this sheet, and a
 // build that sees no caller drops the css with the function.
 const installTransitionFurnitureCss = () => {
-  import.meta.css = [TRANSITION_WALL_CSS, "@jsenv/navi/src/nav/transition_furniture.js"];
+  import.meta.css = [TRANSITION_FURNITURE_CSS, "@jsenv/navi/src/nav/transition_furniture.js"];
 };
 
 const nameByElement = new WeakMap();
@@ -29226,6 +29235,8 @@ const holdTransitionFurniture = (owner, areaElement) => {
   for (const element of namedElements) {
     if (!element.isConnected) {
       namesLeaving.push(nameByElement.get(element));
+    } else if (element.matches(FIXED_BAR_SELECTOR$1)) {
+      element.setAttribute(SHARED_ATTRIBUTE, "");
     }
   }
   const namesArriving = nameFurnitureAround(areaElement);
@@ -29356,6 +29367,7 @@ const releaseTransitionFurniture = (owner) => {
   furnitureOwner = null;
   for (const element of namedElements) {
     element.style.removeProperty(NAME_PROPERTY$1);
+    element.removeAttribute(SHARED_ATTRIBUTE);
   }
   namedElements = new Set();
   if (travelStyleElement) {
@@ -30058,8 +30070,12 @@ const css$12 = /* css */`:root[data-navi-route-transition] [data-navi-route-tran
       z-index: 1;
     }
 
-    &::view-transition-group(.navi_popup) {
+    &::view-transition-group(.navi_furniture_shared) {
       z-index: 2;
+    }
+
+    &::view-transition-group(.navi_popup) {
+      z-index: 3;
     }
 
     &::view-transition-group(*), &::view-transition-old(*), &::view-transition-new(*) {

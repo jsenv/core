@@ -96,6 +96,11 @@ export const FURNITURE_NAME_PREFIX = "navi-transition-furniture-";
 const TOP_LAYER_WALL_SELECTOR =
   ".navi_dialog:modal, .navi_popover_backdrop:popover-open";
 const WALL_ATTRIBUTE = "data-navi-transition-wall";
+// Worn by a bar both states have, from the hold on: its two pictures are one
+// group, and the group is ordered over the pages (route_transition.jsx). Only
+// a bar — a popup's class is written by layout/popup_css.js, and a second rule
+// on the same property would replace it.
+const SHARED_ATTRIBUTE = "data-navi-transition-furniture-shared";
 // What the wall paints, resolved on the matched element in both cases (the
 // dialog for its ::backdrop, the popover's wall for itself): the same two
 // properties, copied onto the stand-in.
@@ -104,7 +109,13 @@ const WALL_PROPERTIES = ["--backdrop-background", "--backdrop-filter"];
 // The pictures the wall is painted into: the pages', and every bar's own.
 const FIXED_BAR_SELECTOR = ".navi_fixed_bar";
 
-const TRANSITION_WALL_CSS = /* css */ `
+const TRANSITION_FURNITURE_CSS = /* css */ `
+  /* Read by the browser at the second capture, which is where the group's
+     class comes from when both states have the element. */
+  .navi_fixed_bar[data-navi-transition-furniture-shared] {
+    view-transition-class: navi_furniture_shared;
+  }
+
   /* Laid over its target's rectangle from wherever its containing block turns
      out to be (see paintTransitionWalls), and above everything the target can
      paint: it stands for the top layer. Deaf to the pointer for the same
@@ -167,7 +178,7 @@ const TRANSITION_WALL_CSS = /* css */ `
 // a page that never travels between routes must not carry this sheet, and a
 // build that sees no caller drops the css with the function.
 export const installTransitionFurnitureCss = () => {
-  import.meta.css = TRANSITION_WALL_CSS;
+  import.meta.css = TRANSITION_FURNITURE_CSS;
 };
 
 const nameByElement = new WeakMap();
@@ -229,6 +240,8 @@ export const holdTransitionFurniture = (owner, areaElement) => {
   for (const element of namedElements) {
     if (!element.isConnected) {
       namesLeaving.push(nameByElement.get(element));
+    } else if (element.matches(FIXED_BAR_SELECTOR)) {
+      element.setAttribute(SHARED_ATTRIBUTE, "");
     }
   }
   const namesArriving = nameFurnitureAround(areaElement);
@@ -359,6 +372,7 @@ export const releaseTransitionFurniture = (owner) => {
   furnitureOwner = null;
   for (const element of namedElements) {
     element.style.removeProperty(NAME_PROPERTY);
+    element.removeAttribute(SHARED_ATTRIBUTE);
   }
   namedElements = new Set();
   if (travelStyleElement) {
