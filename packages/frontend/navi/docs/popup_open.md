@@ -875,6 +875,14 @@ the id from the signal, a card's press writes it, and the popup never writes
 over it: opening writes `true` only into a signal that reads closed, closing
 writes `undefined` (or `false`, where the signal held `true`).
 
+When the popup is opened ON a card (`<Button command="--navi-open" value={id}>`),
+`onOpen` is where the id is written: it runs before the popup writes its own
+open, and a signal that already reads open is left as it is — the address holds
+the card, never `true`. With the route's search-param `stateSignal` as the walk
+signal, that is how [a row of
+cards](./popup_lift.md#a-row-of-cards-one-popup-that-walks) survives leaving
+the page: the address names the card, and the sheet reopens on it.
+
 ```jsx
 <SidePanel signal={errorOpenSignal} side="right">
   <ErrorPanel /> {/* reads errorOpenSignal.value to know which card */}
@@ -892,8 +900,13 @@ finds the popup as it was, and so does a reload. `true` stores it under the
 popup's own `id`; a string names the key instead. `{ type: "push" }` makes the
 opening an entry of its own — the back button then closes the popup rather than
 leaving the screen, and the cancel takes back with it whatever was written to
-the url while it was open. A `Picker` needs none of this: its popup's open state
-is nav state by construction.
+the url while it was open. A `Picker` given an `id` needs none of this: its
+popup's open state is nav state by construction, under that id, and in dialog
+mode the opening is an entry of its own. Without an `id` the key is a generated
+one, which names one mount: the page left with the picker open and come back to
+is a new mount with a new id, and the state stays in the entry with nothing to
+read it — navi warns when a mount finds such a key. A picker whose popup leads
+somewhere, a link inside it, has an `id`.
 
 The two meet when the signal IS a route's: a search-param `stateSignal` given to
 `signal` puts the open state in the address itself, where a link can point at

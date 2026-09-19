@@ -316,8 +316,8 @@ const PickerCustom = (props) => {
   // before computing popupId below, so two Pickers without an explicit id never collide.
   // Captured before the fallback chain below overwrites props.id — needed to
   // know whether the id actually came from the caller (stable) or from
-  // useId()/ControlIdContext (not guaranteed stable across a reload), see
-  // pickerNavType below.
+  // useId()/ControlIdContext (a generated id names one mount: a reload, or a
+  // return to this page, generates another), see pickerNavType below.
   const hasExplicitId = Boolean(props.id);
   const idDefault = useId();
   const controlId = useContext(ControlIdContext);
@@ -395,10 +395,12 @@ const PickerCustom = (props) => {
     // pushes a history entry so the back button closes it. Every other case
     // (popover mode, or a dialog whose id was auto-generated via useId()/
     // ControlIdContext) replaces the current history state instead — a
-    // generated id isn't stable across a reload, so pushing it would either
-    // silently drop the entry or, worse, collide with a different
-    // component's own generated id (see useNavState's own fallback for the
-    // same concern, applied here proactively for the id we control).
+    // generated id names one mount, so pushing it would either leave an entry
+    // nothing reads or, worse, collide with a different component's own
+    // generated id (see useNavState's own fallback for the same concern,
+    // applied here proactively for the id we control). What a generated id
+    // costs either way: the state is written, and the mount coming back to
+    // the page (or a reload) finds it under a key it does not have.
     const pickerNavType =
       mode === "dialog" && hasExplicitId ? "push" : "replace";
     const [expanded, enterExpanded, leaveExpanded] = useNavState(popupId, {

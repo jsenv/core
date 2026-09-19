@@ -28872,6 +28872,8 @@ const visitedUrlsSignal = browserIntegration.visitedUrlsSignal;
 browserIntegration.handleActionTask;
 
 const idUsageMap = new Map();
+// Keys found in the entry with nobody to claim them, already reported.
+const orphanKeysReported = new Set();
 const useNavStateWithWarnings = (id, options) => {
   const idRef = useRef(undefined);
   if (idRef.current !== id) {
@@ -28895,12 +28897,46 @@ Consider using unique IDs for each component instance.`,
   }
 
   useEffect(() => {
+    // Registered here as well as in the render above: preact/compat's
+    // Suspense parks a subtree by running every hook cleanup in it, and the
+    // render resuming it carries the same id.
+    if (!idUsageMap.has(id)) {
+      idUsageMap.set(id, {
+        stackTrace: new Error().stack,
+      });
+    }
+    warnAboutOrphanGeneratedKeys();
     return () => {
       idUsageMap.delete(id);
     };
   }, [id]);
 
   return useNavStateBasic(id, options);
+};
+
+// A generated id (preact's useId()) names one mount. State written under one
+// outlives that mount in the history entry — a page left with a popup open —
+// and the mount coming back to the entry generates another id: the state is
+// there, and nothing reads it. Reported when a component mounting on the entry
+// finds such a key, the moment someone expected the state back.
+const warnAboutOrphanGeneratedKeys = () => {
+  const state = browserIntegration.getDocumentState();
+  if (!state) {
+    return;
+  }
+  for (const key of Object.keys(state)) {
+    if (
+      !isLikelyPreactGeneratedId(key) ||
+      idUsageMap.has(key) ||
+      orphanKeysReported.has(key)
+    ) {
+      continue;
+    }
+    orphanKeysReported.add(key);
+    console.warn(
+      `useNavState: this history entry holds "${key}", written by a component whose id was generated (preact's useId()) and that is not mounted anymore — a Picker without an id, a popup with navState and no id. A generated id names one mount, so nothing will read that state again: a popup open when this screen was left comes back closed. Give the component a stable id if it was meant to be found as it was.`,
+    );
+  }
 };
 
 const NO_OP = () => {};
@@ -65393,8 +65429,8 @@ const PickerCustom = props => {
   // before computing popupId below, so two Pickers without an explicit id never collide.
   // Captured before the fallback chain below overwrites props.id — needed to
   // know whether the id actually came from the caller (stable) or from
-  // useId()/ControlIdContext (not guaranteed stable across a reload), see
-  // pickerNavType below.
+  // useId()/ControlIdContext (a generated id names one mount: a reload, or a
+  // return to this page, generates another), see pickerNavType below.
   const hasExplicitId = Boolean(props.id);
   const idDefault = useId();
   const controlId = useContext(ControlIdContext);
@@ -65471,10 +65507,12 @@ const PickerCustom = props => {
     // pushes a history entry so the back button closes it. Every other case
     // (popover mode, or a dialog whose id was auto-generated via useId()/
     // ControlIdContext) replaces the current history state instead — a
-    // generated id isn't stable across a reload, so pushing it would either
-    // silently drop the entry or, worse, collide with a different
-    // component's own generated id (see useNavState's own fallback for the
-    // same concern, applied here proactively for the id we control).
+    // generated id names one mount, so pushing it would either leave an entry
+    // nothing reads or, worse, collide with a different component's own
+    // generated id (see useNavState's own fallback for the same concern,
+    // applied here proactively for the id we control). What a generated id
+    // costs either way: the state is written, and the mount coming back to
+    // the page (or a reload) finds it under a key it does not have.
     const pickerNavType = mode === "dialog" && hasExplicitId ? "push" : "replace";
     const [expanded, enterExpanded, leaveExpanded] = useNavState(popupId, {
       type: pickerNavType,
@@ -75743,6 +75781,12 @@ const PickerFirstResolver = props => {
  *   content failed to load, its value could not be resolved…). Shown as a
  *   callout on the trigger, open or closed — the caller has nothing to place.
  *   Dismissing it discards that error; a new `error` value raises another one.
+ * @param {string} [id] What the popup's open state is kept under in the
+ *   history entry: a screen left and come back to finds the picker open, and
+ *   in dialog mode the opening is an entry of its own, closed by the back
+ *   button before the screen is left. Left out, the key is a generated id,
+ *   which names one mount: the state survives neither leaving the screen nor a
+ *   reload. A picker whose popup leads somewhere (a link inside it) has one.
  * @param {"popover"|"dialog"|"callout"} [mode] Which popup the children open
  *   in. Left out, a popover on a large screen and a dialog on a narrow one.
  *   `"callout"` shows them in the picker's own callout — the speech bubble its

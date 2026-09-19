@@ -1793,6 +1793,12 @@ const PickerFirstResolver = (props) => {
  *   content failed to load, its value could not be resolved…). Shown as a
  *   callout on the trigger, open or closed — the caller has nothing to place.
  *   Dismissing it discards that error; a new `error` value raises another one.
+ * @param {string} [id] What the popup's open state is kept under in the
+ *   history entry: a screen left and come back to finds the picker open, and
+ *   in dialog mode the opening is an entry of its own, closed by the back
+ *   button before the screen is left. Left out, the key is a generated id,
+ *   which names one mount: the state survives neither leaving the screen nor a
+ *   reload. A picker whose popup leads somewhere (a link inside it) has one.
  * @param {"popover"|"dialog"|"callout"} [mode] Which popup the children open
  *   in. Left out, a popover on a large screen and a dialog on a narrow one.
  *   `"callout"` shows them in the picker's own callout — the speech bubble its

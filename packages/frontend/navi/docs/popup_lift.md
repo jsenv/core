@@ -245,6 +245,15 @@ bound to is the shortest way to say it, the row's tiles carrying the matching
 ids. Left out, the box comes back where it came from, which is right exactly
 as long as nothing walked.
 
+When the walk signal is the address's — the popup's `signal`, so the sheet
+comes back open on the same card after leaving the page (see
+[popup_open.md](./popup_open.md#signal--the-app-holds-it-both-ways)) — a close
+that comes through the address, the back button, empties it before the popup
+knows it is closing, and a name built from it at that render says nothing:
+the box flies home into the first tile. Name the tile from the last key the
+walk held — a ref written while the signal holds one — not from the signal
+itself.
+
 **A press on the surface that dismisses is `data-navi-popup-outside`.** Marking
 the see-through box as backdrop (see
 [popup_backdrop.md](./popup_backdrop.md)) is read on the press itself. A close

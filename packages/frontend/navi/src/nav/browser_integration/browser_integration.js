@@ -214,6 +214,8 @@ export const visitedUrlsSignal = browserIntegration.visitedUrlsSignal;
 export const handleActionTask = browserIntegration.handleActionTask;
 
 const idUsageMap = new Map();
+// Keys found in the entry with nobody to claim them, already reported.
+const orphanKeysReported = new Set();
 const useNavStateWithWarnings = (id, options) => {
   const idRef = useRef(undefined);
   if (idRef.current !== id) {
@@ -237,6 +239,15 @@ Consider using unique IDs for each component instance.`,
   }
 
   useEffect(() => {
+    // Registered here as well as in the render above: preact/compat's
+    // Suspense parks a subtree by running every hook cleanup in it, and the
+    // render resuming it carries the same id.
+    if (!idUsageMap.has(id)) {
+      idUsageMap.set(id, {
+        stackTrace: new Error().stack,
+      });
+    }
+    warnAboutOrphanGeneratedKeys();
     return () => {
       idUsageMap.delete(id);
     };
@@ -245,9 +256,35 @@ Consider using unique IDs for each component instance.`,
   return useNavStateBasic(id, options);
 };
 
+// A generated id (preact's useId()) names one mount. State written under one
+// outlives that mount in the history entry — a page left with a popup open —
+// and the mount coming back to the entry generates another id: the state is
+// there, and nothing reads it. Reported when a component mounting on the entry
+// finds such a key, the moment someone expected the state back.
+const warnAboutOrphanGeneratedKeys = () => {
+  const state = browserIntegration.getDocumentState();
+  if (!state) {
+    return;
+  }
+  for (const key of Object.keys(state)) {
+    if (
+      !isLikelyPreactGeneratedId(key) ||
+      idUsageMap.has(key) ||
+      orphanKeysReported.has(key)
+    ) {
+      continue;
+    }
+    orphanKeysReported.add(key);
+    console.warn(
+      `useNavState: this history entry holds "${key}", written by a component whose id was generated (preact's useId()) and that is not mounted anymore — a Picker without an id, a popup with navState and no id. A generated id names one mount, so nothing will read that state again: a popup open when this screen was left comes back closed. Give the component a stable id if it was meant to be found as it was.`,
+    );
+  }
+};
+
 if (import.meta.hot) {
   import.meta.hot.dispose(() => {
     idUsageMap.clear();
+    orphanKeysReported.clear();
   });
 }
 
@@ -419,5 +456,6 @@ export const useNavState = import.meta.dev
 if (import.meta.hot) {
   import.meta.hot.dispose(() => {
     idUsageMap.clear();
+    orphanKeysReported.clear();
   });
 }
