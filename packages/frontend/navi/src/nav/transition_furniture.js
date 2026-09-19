@@ -59,10 +59,13 @@
  * with the movement. Carried by the page's picture, it leaves with the page
  * being left and arrives with the page arriving, cut at the page's edge — and
  * under the popup's own picture, which stands over the pages (the z-order in
- * route_transition.jsx). A bar the two states share is outside both pictures
- * and goes undimmed for those few hundred milliseconds: it is the frame, not
- * part of the page. A popup with layer="local" paints its wall inside the
- * page and needs none of this.
+ * route_transition.jsx). The bars are under the wall as much as the page is,
+ * and each is a picture of its own: the same stand-in is laid over every bar
+ * outside the area. A bar the two states share is one group with two
+ * pictures — dimmed on the side that has a wall — and its cross-fade is the
+ * wall fading out as the page leaves, or in as it arrives; a bar only one
+ * state has carries the wall with it. A popup with layer="local" paints its
+ * wall inside the page and needs none of this.
  */
 
 // The browser's top layer: painted above everything the document paints, so
@@ -93,9 +96,12 @@ const WALL_ATTRIBUTE = "data-navi-transition-wall";
 // properties, copied onto the stand-in.
 const WALL_PROPERTIES = ["--backdrop-background", "--backdrop-filter"];
 
+// The pictures the wall is painted into: the pages', and every bar's own.
+const FIXED_BAR_SELECTOR = ".navi_fixed_bar";
+
 const TRANSITION_WALL_CSS = /* css */ `
-  /* Laid over the area's rectangle from wherever its containing block turns
-     out to be (see paintTransitionWalls), and above everything the page can
+  /* Laid over its target's rectangle from wherever its containing block turns
+     out to be (see paintTransitionWalls), and above everything the target can
      paint: it stands for the top layer. Deaf to the pointer for the same
      reason the pictures are — the movement holds every press anyway
      (transition_press.js). */
@@ -107,6 +113,17 @@ const TRANSITION_WALL_CSS = /* css */ `
     background: var(--backdrop-background);
     backdrop-filter: var(--backdrop-filter);
     pointer-events: none;
+  }
+
+  /* Painted only while the pictures are, so the document is never shown
+     with the real wall AND its stand-in: the elements are removed once the
+     transition has finished, a frame after the pictures are dropped and the
+     top layer paints again. Says "while a transition is active" rather than
+     "while navi's attribute is on the root", which comes down in that same
+     late callback. A browser without the pseudo-class drops this rule and
+     shows that one frame. */
+  :root:not(:active-view-transition) [data-navi-transition-wall] {
+    display: none;
   }
 `;
 
@@ -128,8 +145,8 @@ let namedElements = new Set();
 // The rule giving the one-sided bars their movement, written for one movement
 // and taken down with it.
 let travelStyleElement = null;
-// The walls standing in for the ::backdrop of the modal dialogs open in the
-// area, painted for one picture and taken down before the next.
+// The stand-ins for the walls open in the top layer, painted for one picture
+// and taken down before the next.
 let wallElements = [];
 
 /**
@@ -250,29 +267,49 @@ export const releaseTransitionFurniture = (owner) => {
   removeTransitionWalls();
 };
 
-// One stand-in per wall open in the area, in document order: the walls stack
-// in the top layer, and what dims the page is all of them.
+// One stand-in per open wall in every picture, walls in document order: they
+// stack in the top layer, and what dims the document is all of them. A wall
+// open anywhere covers everything the document paints, so the sources are
+// looked for in the whole document — a dialog opened from a bar dims the
+// pages too. A bar inside the area is part of the pages' picture, and the
+// area's stand-in answers for it.
 const paintTransitionWalls = (areaElement) => {
   removeTransitionWalls();
-  for (const source of areaElement.querySelectorAll(TOP_LAYER_WALL_SELECTOR)) {
-    const sourceStyle = getComputedStyle(source);
-    const wall = document.createElement("div");
-    wall.setAttribute(WALL_ATTRIBUTE, "");
-    for (const property of WALL_PROPERTIES) {
-      wall.style.setProperty(property, sourceStyle.getPropertyValue(property));
+  const sources = document.querySelectorAll(TOP_LAYER_WALL_SELECTOR);
+  if (sources.length === 0) {
+    return;
+  }
+  const targets = [areaElement];
+  for (const bar of document.querySelectorAll(FIXED_BAR_SELECTOR)) {
+    if (!areaElement.contains(bar)) {
+      targets.push(bar);
     }
-    areaElement.appendChild(wall);
-    // The area is not necessarily a containing block, and made one for the
-    // movement it would move whatever the page positioned against an ancestor
-    // of the area: the wall is placed from wherever its containing block
-    // turns out to be, by the offset between that box and the area's.
-    const areaRect = areaElement.getBoundingClientRect();
-    const wallRect = wall.getBoundingClientRect();
-    wall.style.left = `${areaRect.left - wallRect.left}px`;
-    wall.style.top = `${areaRect.top - wallRect.top}px`;
-    wall.style.width = `${areaRect.width}px`;
-    wall.style.height = `${areaRect.height}px`;
-    wallElements.push(wall);
+  }
+  for (const target of targets) {
+    for (const source of sources) {
+      const sourceStyle = getComputedStyle(source);
+      const wall = document.createElement("div");
+      wall.setAttribute(WALL_ATTRIBUTE, "");
+      for (const property of WALL_PROPERTIES) {
+        wall.style.setProperty(
+          property,
+          sourceStyle.getPropertyValue(property),
+        );
+      }
+      target.appendChild(wall);
+      // The target is not necessarily a containing block (the area is a plain
+      // box), and made one for the movement it would move whatever the page
+      // positioned against an ancestor of it: the wall is placed from
+      // wherever its containing block turns out to be, by the offset between
+      // that box and the target's.
+      const targetRect = target.getBoundingClientRect();
+      const wallRect = wall.getBoundingClientRect();
+      wall.style.left = `${targetRect.left - wallRect.left}px`;
+      wall.style.top = `${targetRect.top - wallRect.top}px`;
+      wall.style.width = `${targetRect.width}px`;
+      wall.style.height = `${targetRect.height}px`;
+      wallElements.push(wall);
+    }
   }
 };
 
