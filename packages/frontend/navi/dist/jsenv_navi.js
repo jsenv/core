@@ -73229,6 +73229,7 @@ const css$t = /* css */`@layer navi {
         var(--picker-icon-color) 45%,
         transparent);
     --picker-icon-color-disabled: var(--picker-icon-color-readonly);
+    --picker-icon-color-hover: var(--picker-icon-color);
     --picker-align-x-default: flex-start;
     --picker-align-y-default: center;
     --picker-text-align-default: initial;
@@ -73246,6 +73247,7 @@ const css$t = /* css */`@layer navi {
   --x-picker-press-padding-right: var(--picker-press-padding-right, var(--picker-press-padding-x, var(--picker-press-padding, 0px)));
   --x-picker-press-padding-bottom: var(--picker-press-padding-bottom, var(--picker-press-padding-y, var(--picker-press-padding, 0px)));
   --x-picker-press-padding-left: var(--picker-press-padding-left, var(--picker-press-padding-x, var(--picker-press-padding, 0px)));
+  --x-picker-chevron-reach: 0px;
   --x-picker-color: var(--picker-color);
   --x-picker-icon-color: var(--picker-icon-color);
   --x-picker-align-x: var(--picker-align-x, var(--picker-align-x-default));
@@ -73414,7 +73416,10 @@ const css$t = /* css */`@layer navi {
     & > .navi_picker_box > .navi_picker_input {
       top: calc(-1 * (var(--picker-border-width) + var(--x-picker-press-padding-top)));
       right: calc(-1 *
-            (var(--picker-border-width) + var(--x-picker-press-padding-right)));
+            (
+              var(--picker-border-width) + var(--x-picker-press-padding-right) +
+                var(--x-picker-chevron-reach)
+            ));
       bottom: calc(-1 *
             (var(--picker-border-width) + var(--x-picker-press-padding-bottom)));
       left: calc(-1 * (var(--picker-border-width) + var(--x-picker-press-padding-left)));
@@ -73460,6 +73465,7 @@ const css$t = /* css */`@layer navi {
   &[data-hover] {
     --x-picker-background-color: var(--picker-background-color-hover);
     --x-picker-border-color: var(--picker-border-color-hover);
+    --x-picker-icon-color: var(--picker-icon-color-hover);
   }
 
   &[data-readonly] {
@@ -73569,6 +73575,30 @@ const css$t = /* css */`@layer navi {
       align-items: var(--x-picker-align-y);
       display: flex;
     }
+
+    & > .navi_picker_box > .navi_picker_right_slot {
+      margin-right: 0;
+      margin-left: var(--picker-slot-spacing, var(--navi-xxs));
+      align-self: center;
+    }
+
+    &[data-chevron="start"] > .navi_picker_box > .navi_picker_right_slot {
+      margin-right: var(--picker-slot-spacing, var(--navi-xxs));
+      order: -1;
+      margin-left: 0;
+    }
+
+    &[data-chevron="hang-end"] > .navi_picker_box {
+      --x-picker-chevron-reach: calc(var(--x-picker-chevron-size) +
+            var(--picker-slot-spacing, var(--navi-xxs)));
+
+      & > .navi_picker_right_slot {
+        position: absolute;
+        top: 50%;
+        left: 100%;
+        transform: translateY(-50%);
+      }
+    }
   }
 
   &[data-variant="button"] {
@@ -73646,6 +73676,9 @@ const PickerButton = props => {
     // an <Icon>, which is aria-hidden, and a focusable node under aria-hidden is
     // invisible to assistive tech while still being reachable by tab.
     rightSlot,
+    // A bare picker's chevron, and where it goes so the drawing keeps its box
+    // (see the `chevron` doc). Left out, a bare picker draws no slot at all.
+    chevron,
     placeholder,
     ui,
     maxLines: maxLinesProp = 1,
@@ -73706,11 +73739,20 @@ const PickerButton = props => {
   // icon, a headless one draws nothing, a button says what it opens with its
   // label, a word in a sentence has no room for furniture. Nor a picker
   // rendering the browser's own control ("default").
-  // Nor a bare one: the picker is that drawing's box to the pixel, so anything
-  // navi adds beside it either grows the box or covers what the caller drew.
-  // The pieces are the caller's to place there instead — a <Picker.Clear /> in
-  // their own layout (see warnOnClearableWithoutSlot).
-  const hasRightSlot = !picksNothing && rightSlot !== null && !isIcon && variant !== "headless" && variant !== "button" && variant !== "text" && variant !== "bare" && ui !== "default";
+  // Nor a bare one, unless `chevron` says where: the picker is that drawing's
+  // box to the pixel, so anything navi adds beside it either grows the box or
+  // covers what the caller drew. The pieces are the caller's to place there
+  // instead — a <Picker.Clear /> in their own layout (see
+  // warnOnClearableWithoutSlot) — or the slot goes where the drawing is not:
+  // after it, before it, or out of the flow altogether.
+  const isBare = variant === "bare";
+  const bareChevron = isBare && chevron !== undefined ? chevron : undefined;
+  const hasRightSlot = !picksNothing && rightSlot !== null && !isIcon && variant !== "headless" && variant !== "button" && variant !== "text" && (!isBare || bareChevron !== undefined) && ui !== "default";
+  // How far the press must follow a hanging chevron: its size, as a length the
+  // input's inset can add up. "inherit" is 1em of the picker's own font, which
+  // the input shares (font: inherit), so the em the icon is drawn in and the
+  // em the reach is measured in are the same.
+  const hangingChevronSize = bareChevron === "hang-end" && hasRightSlot ? rightSlotIconSize === "inherit" ? "1em" : stringifyStyleValue(rightSlotIconSize, "fontSize") : undefined;
   const inputRef = useRef(null);
   const [pickerRemainingProps, inputProps, facadeChildrenProps] = useControlFacadeProps({
     ...props,
@@ -73794,6 +73836,7 @@ const PickerButton = props => {
         pseudoClasses: PICKER_BUTTON_PSEUDO_CLASSES,
         "data-variant": variant,
         "data-icon": isIcon ? "" : undefined,
+        "data-chevron": hasRightSlot ? bareChevron : undefined,
         "navi-picker": "",
         "navi-single-line": isSingleLine ? "" : undefined,
         "navi-ui-custom": ui === "default" ? undefined : "",
@@ -73807,6 +73850,7 @@ const PickerButton = props => {
         rightSlotIcon: undefined,
         rightSlotIconSize: undefined,
         rightSlot: undefined,
+        chevron: undefined,
         clearConfirm: undefined,
         picksNothing: undefined,
         openWhileReadOnly: undefined,
@@ -73843,6 +73887,9 @@ const PickerButton = props => {
         },
         children: [jsx("span", {
           className: "navi_picker_box",
+          style: hangingChevronSize === undefined ? undefined : {
+            "--x-picker-chevron-size": hangingChevronSize
+          },
           children: jsxs(PickerContext.Provider, {
             value: pickerContext,
             children: [variant === "headless" ? null : jsx(LoadingOutline, {

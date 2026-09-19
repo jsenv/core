@@ -2,6 +2,7 @@ import { performTabNavigation } from "@jsenv/dom";
 import { useContext, useEffect, useRef } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
+import { stringifyStyleValue } from "@jsenv/navi/src/box/box_style_util.js";
 import { ChevronDownSvg } from "@jsenv/navi/src/graphic/icons/chevron_updown_svg.jsx";
 import { CloseSvg } from "@jsenv/navi/src/graphic/icons/close_svg.jsx";
 import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.jsx";
@@ -115,6 +116,7 @@ const css = /* css */ `
         transparent
       );
       --picker-icon-color-disabled: var(--picker-icon-color-readonly);
+      --picker-icon-color-hover: var(--picker-icon-color);
       /* Where the slots sit INSIDE the box, visible only once the box is bigger
          than what it holds (a width/height the caller gave it). Distinct from
          textAlign, which places the text inside the value slot; this places the
@@ -181,6 +183,10 @@ const css = /* css */ `
       --picker-press-padding-left,
       var(--picker-press-padding-x, var(--picker-press-padding, 0px))
     );
+    /* What the picker itself hangs past its box on the right — the chevron of
+       a bare picker with chevron="hang-end" — and the press follows out there
+       on its own, on top of whatever pressPaddingRight asks for. */
+    --x-picker-chevron-reach: 0px;
     --x-picker-color: var(--picker-color);
     --x-picker-icon-color: var(--picker-icon-color);
     --x-picker-align-x: var(--picker-align-x, var(--picker-align-x-default));
@@ -482,7 +488,10 @@ const css = /* css */ `
         );
         right: calc(
           -1 *
-            (var(--picker-border-width) + var(--x-picker-press-padding-right))
+            (
+              var(--picker-border-width) + var(--x-picker-press-padding-right) +
+                var(--x-picker-chevron-reach)
+            )
         );
         bottom: calc(
           -1 *
@@ -563,6 +572,7 @@ const css = /* css */ `
     &[data-hover] {
       --x-picker-background-color: var(--picker-background-color-hover);
       --x-picker-border-color: var(--picker-border-color-hover);
+      --x-picker-icon-color: var(--picker-icon-color-hover);
     }
     /* Readonly */
     &[data-readonly] {
@@ -724,6 +734,42 @@ const css = /* css */ `
            default here, so a height given to the picker reaches the drawing. */
         align-items: var(--x-picker-align-y);
       }
+      /* The slot a bare picker gets back with the chevron prop. It sits against the
+         DRAWING, not against a frame: there is no padding for its gap to be
+         half of, so the gap is slotSpacing outright, xxs by default, and it is
+         on the drawing's side. Centered on the drawing rather than set on its
+         first line: the drawing can be two lines tall, and the chevron says
+         "this opens" about all of it. */
+      > .navi_picker_box > .navi_picker_right_slot {
+        margin-right: 0;
+        margin-left: var(--picker-slot-spacing, var(--navi-xxs));
+        align-self: center;
+      }
+      &[data-chevron="start"] > .navi_picker_box > .navi_picker_right_slot {
+        margin-right: var(--picker-slot-spacing, var(--navi-xxs));
+        margin-left: 0;
+        order: -1;
+      }
+      /* Out of the flow, in the margin beside the box: the box stays the
+         drawing's, and what the drawing measures is what it measures when
+         nothing opens. left: 100% rather than right: 0, so the chevron follows
+         the box's edge outward and never covers what the drawing wrote there.
+         The press reaches it through --x-picker-chevron-reach (see the root),
+         the chevron's own size plus its gap — the size is written on the box
+         by the picker, from rightSlotIconSize. */
+      &[data-chevron="hang-end"] > .navi_picker_box {
+        --x-picker-chevron-reach: calc(
+          var(--x-picker-chevron-size) +
+            var(--picker-slot-spacing, var(--navi-xxs))
+        );
+
+        > .navi_picker_right_slot {
+          position: absolute;
+          top: 50%;
+          left: 100%;
+          transform: translateY(-50%);
+        }
+      }
     }
     /* button: drawn as a Button is, from the same tokens (see button_ui.jsx
        and the --navi-button-* vars) — its surface, its padding, a centered
@@ -847,6 +893,9 @@ const PickerButton = (props) => {
     // an <Icon>, which is aria-hidden, and a focusable node under aria-hidden is
     // invisible to assistive tech while still being reachable by tab.
     rightSlot,
+    // A bare picker's chevron, and where it goes so the drawing keeps its box
+    // (see the `chevron` doc). Left out, a bare picker draws no slot at all.
+    chevron,
     placeholder,
     ui,
     maxLines: maxLinesProp = 1,
@@ -908,10 +957,15 @@ const PickerButton = (props) => {
   // icon, a headless one draws nothing, a button says what it opens with its
   // label, a word in a sentence has no room for furniture. Nor a picker
   // rendering the browser's own control ("default").
-  // Nor a bare one: the picker is that drawing's box to the pixel, so anything
-  // navi adds beside it either grows the box or covers what the caller drew.
-  // The pieces are the caller's to place there instead — a <Picker.Clear /> in
-  // their own layout (see warnOnClearableWithoutSlot).
+  // Nor a bare one, unless `chevron` says where: the picker is that drawing's
+  // box to the pixel, so anything navi adds beside it either grows the box or
+  // covers what the caller drew. The pieces are the caller's to place there
+  // instead — a <Picker.Clear /> in their own layout (see
+  // warnOnClearableWithoutSlot) — or the slot goes where the drawing is not:
+  // after it, before it, or out of the flow altogether.
+  const isBare = variant === "bare";
+  const bareChevron = isBare && chevron !== undefined ? chevron : undefined;
+  warnOnChevronOffBare(props, isBare);
   const hasRightSlot =
     !picksNothing &&
     rightSlot !== null &&
@@ -919,9 +973,19 @@ const PickerButton = (props) => {
     variant !== "headless" &&
     variant !== "button" &&
     variant !== "text" &&
-    variant !== "bare" &&
+    (!isBare || bareChevron !== undefined) &&
     ui !== "default";
   warnOnClearableWithoutSlot(props, hasRightSlot);
+  // How far the press must follow a hanging chevron: its size, as a length the
+  // input's inset can add up. "inherit" is 1em of the picker's own font, which
+  // the input shares (font: inherit), so the em the icon is drawn in and the
+  // em the reach is measured in are the same.
+  const hangingChevronSize =
+    bareChevron === "hang-end" && hasRightSlot
+      ? rightSlotIconSize === "inherit"
+        ? "1em"
+        : stringifyStyleValue(rightSlotIconSize, "fontSize")
+      : undefined;
   const inputRef = useRef(null);
   const [pickerRemainingProps, inputProps, facadeChildrenProps] =
     useControlFacadeProps(
@@ -1013,6 +1077,7 @@ const PickerButton = (props) => {
         pseudoClasses={PICKER_BUTTON_PSEUDO_CLASSES}
         data-variant={variant}
         data-icon={isIcon ? "" : undefined}
+        data-chevron={hasRightSlot ? bareChevron : undefined}
         navi-picker=""
         navi-single-line={isSingleLine ? "" : undefined}
         navi-ui-custom={ui === "default" ? undefined : ""}
@@ -1026,6 +1091,7 @@ const PickerButton = (props) => {
         rightSlotIcon={undefined}
         rightSlotIconSize={undefined}
         rightSlot={undefined}
+        chevron={undefined}
         clearConfirm={undefined}
         picksNothing={undefined}
         openWhileReadOnly={undefined}
@@ -1058,7 +1124,14 @@ const PickerButton = (props) => {
           requestPickerListEntry(ref.current, inputRef.current, e, "unselect");
         }}
       >
-        <span className="navi_picker_box">
+        <span
+          className="navi_picker_box"
+          style={
+            hangingChevronSize === undefined
+              ? undefined
+              : { "--x-picker-chevron-size": hangingChevronSize }
+          }
+        >
           <PickerContext.Provider value={pickerContext}>
             {variant === "headless" ? null : (
               <LoadingOutline
@@ -1652,6 +1725,7 @@ const PickerFirstResolver = (props) => {
  *   rightSlotIcon?: import("preact").ComponentChildren,
  *   rightSlotIconSize?: number | string,
  *   rightSlot?: import("preact").ComponentChildren,
+ *   chevron?: "end" | "start" | "hang-end",
  *   clearConfirm?: string | import("preact").ComponentChildren,
  *   message?: import("preact").ComponentChildren,
  *   confirmLabel?: import("preact").ComponentChildren,
@@ -1752,7 +1826,7 @@ const PickerFirstResolver = (props) => {
  *   a drawing that paints outside it on purpose — an affordance in the margin
  *   beside it, out of the flow so the rest keeps its width — is drawn and
  *   opens nothing; `pressPadding` is how far the press area follows it out
- *   there.
+ *   there. The chevron itself is the `chevron` prop's to draw and place.
  *
  *   A drawing that follows what the picker HOLDS — the value the popup just
  *   closed on, before the server has answered, the same state navi's own
@@ -1856,7 +1930,23 @@ const PickerFirstResolver = (props) => {
 
  *   `variant="bare"` has no slot either, for the same reason turned around: the
  *   picker is the drawing's box to the pixel, so nothing may be added beside it
- *   — the drawing holds what it needs (`<Picker.Clear />`) and places it.
+ *   — the drawing holds what it needs (`<Picker.Clear />`) and places it. Its
+ *   `chevron` prop is the exception: the slot, put where the drawing is not.
+ * @param {"end"|"start"|"hang-end"} [chevron] `variant="bare"` only: the
+ *   picker draws no chevron beside the drawing, so nothing says it opens; this
+ *   draws one — the icon the right slot would hold, `rightSlotIcon` or the
+ *   chevron, at `rightSlotIconSize`, `slotSpacing` away from the drawing (xxs
+ *   by default), taking the clear cross's place under `clearable` like any
+ *   slot — and says where, so the drawing keeps the box it has when nothing
+ *   opens. Which side depends on where the drawing is anchored in its line.
+ *   `"end"`: after it, in the flow — a label with room after it. `"start"`:
+ *   before it — a label pushed against the right edge, which the chevron
+ *   would otherwise push left by its width. `"hang-end"`: after it and OUT of
+ *   the flow, in the margin beside the box — a drawing filling its whole
+ *   line; the press follows it out there by its size plus its gap, on top of
+ *   any `pressPaddingRight`. The chevron is drawn in `--picker-icon-color`
+ *   (`currentColor` here) and `--picker-icon-color-hover`; a dimmed one is
+ *   `--picker-icon-color: color-mix(in srgb, currentColor 55%, transparent)`.
  * @param {import("preact").ComponentChildren} [rightSlot] Same place, rendered
  *   as-is: no `<Icon>` around it, nothing `aria-hidden`. This is where an
  *   interactive right slot goes. `null` takes the slot away entirely — the
@@ -2185,6 +2275,22 @@ const warnOnClearableWithoutSlot = (props, hasRightSlot) => {
     `[navi] <Picker ${cause} clearable> — that leaves no right slot, so no cross is drawn. ` +
       `Draw it where it belongs instead: <Picker ${cause} ui={<YourDrawing>… <Picker.Clear /></YourDrawing>}>. ` +
       `It is the same cross, and it takes itself away when there is nothing left to clear.`,
+  );
+};
+
+let chevronOffBareWarned = false;
+const warnOnChevronOffBare = (props, isBare) => {
+  if (!import.meta.dev) {
+    return;
+  }
+  const { chevron, variant } = props;
+  if (chevron === undefined || isBare || chevronOffBareWarned) {
+    return;
+  }
+  chevronOffBareWarned = true;
+  console.warn(
+    `[navi] <Picker variant="${variant}" chevron="${chevron}"> — \`chevron\` places the chevron of a bare picker, whose drawing has no slot beside it. ` +
+      `This variant draws its chevron in its right slot already (rightSlotIcon, rightSlot to change it); \`chevron\` is ignored.`,
   );
 };
 

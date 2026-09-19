@@ -189,6 +189,7 @@
           <NominalDemo />
           <StatesDemo />
           <OpenOnDemo />
+          <ChevronDemo />
           <DoorDemo />
           <LiftDemo />
           <BenchDemo />
@@ -320,6 +321,87 @@
           </Section>
         );
       };
+
+      // ── chevron ───────────────────────────────────────────────────────────
+
+      // A line of a card, bare: the picker measures the drawing and nothing
+      // else. What the sheet holds is beside the point here.
+      const LinePicker = ({ children, ...rest }) => (
+        <Picker
+          variant="bare"
+          ui={<Text size="s">{children}</Text>}
+          rightSlotIconSize="0.75em"
+          {...rest}
+        >
+          <Box padding="m">
+            <Text>Feuille</Text>
+          </Box>
+        </Picker>
+      );
+
+      // The card the line sits in: a padding on the right is the margin a
+      // hanging chevron goes into.
+      const CardLine = ({ children }) => (
+        <Box
+          width="260"
+          paddingY="s"
+          paddingX="m"
+          border="1px solid #ccc"
+          borderRadius="s"
+        >
+          {children}
+        </Box>
+      );
+
+      const ChevronDemo = () => (
+        <Section id="chevron" title="chevron">
+          <div class="demo-row">
+            <Case caption='variant="bare" (default)'>
+              <CardLine>
+                <LinePicker aria-label="Lieu">Padel Club Marseille</LinePicker>
+              </CardLine>
+            </Case>
+            <Case caption='chevron="end"'>
+              <CardLine>
+                <LinePicker chevron="end" aria-label="Lieu">
+                  Padel Club Marseille
+                </LinePicker>
+              </CardLine>
+            </Case>
+            <Case caption='chevron="start" — anchored at the end of its line'>
+              <CardLine>
+                <Box flex alignX="end">
+                  <LinePicker chevron="start" aria-label="Niveau">
+                    Niveau 4
+                  </LinePicker>
+                </Box>
+              </CardLine>
+            </Case>
+            <Case caption='chevron="hang-end" — the whole line'>
+              <CardLine>
+                <LinePicker chevron="hang-end" expandX aria-label="Date">
+                  Vendredi 4 septembre · 19h00 – 20h30
+                </LinePicker>
+              </CardLine>
+            </Case>
+            <Case caption="--picker-icon-color: dimmed, plain on hover">
+              <CardLine>
+                <LinePicker
+                  chevron="end"
+                  aria-label="Lieu"
+                  style={{
+                    "--picker-icon-color":
+                      "color-mix(in srgb, currentColor 55%, transparent)",
+                    "--picker-icon-color-hover": "currentColor",
+                  }}
+                >
+                  Padel Club Marseille
+                </LinePicker>
+              </CardLine>
+            </Case>
+          </div>
+        </Section>
+      );
 
       // ── lift ──────────────────────────────────────────────────────────────
 
