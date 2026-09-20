@@ -1496,8 +1496,20 @@ const useListScrollSync = ({
       // The list is holding itself somewhere; that is what owns the scroll.
       return;
     }
+    const scrollerEl = getScroller();
+    if (
+      scrollerEl &&
+      (horizontal ? scrollerEl.scrollLeft : scrollerEl.scrollTop) === 0
+    ) {
+      // A scroller at its start has nothing above the view to keep still, and
+      // rows landing above the first one are what a list read from its start
+      // (a journal newest first, a feed) is there to show: holding the row on
+      // top would scroll past them. The browser's own scroll anchoring makes
+      // the same exception at offset 0.
+      return;
+    }
     anchorRef.current = captureScrollAnchor({
-      scrollerEl: getScroller(),
+      scrollerEl,
       listEl: getListEl(),
       items: listRows.visibleItemsSignal.peek(),
       horizontal,

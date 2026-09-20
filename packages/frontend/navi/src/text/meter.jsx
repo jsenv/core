@@ -60,7 +60,17 @@ const css = /* css */ `
         border-style: solid;
         border-color: transparent;
         border-radius: inherit;
-        clip-path: inset(0 calc((1 - var(--x-fill-ratio, 0)) * 100%) 0 0);
+        /* The ratio spans the content box: the fill paints inside its own
+           transparent border, so measuring from the border box would eat
+           --border-width out of an already tiny fill. */
+        clip-path: inset(
+          0
+            calc(
+              100% - var(--border-width) - var(--x-fill-ratio, 0) *
+                (100% - var(--border-width) * 2)
+            )
+            0 0
+        );
       }
 
       .navi_meter_caption {
@@ -105,7 +115,10 @@ const css = /* css */ `
     }
     &[data-fill-round] {
       .navi_meter_fill {
-        width: calc(var(--x-fill-ratio) * 100%);
+        width: calc(
+          var(--x-fill-ratio) * (100% - var(--border-width) * 2) +
+            var(--border-width) * 2
+        );
         clip-path: unset;
       }
     }
