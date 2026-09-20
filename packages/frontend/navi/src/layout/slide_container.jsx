@@ -158,7 +158,13 @@ const css = /* css */ `
        rounded popup, and a slide (with its header) has to follow that curve —
        nothing between them may flatten it on the way. */
     border-radius: inherit;
-    overflow: hidden;
+    /* clip, not hidden: hidden makes this box a scroll container, and the
+       slides off stage (translated by a box) are exactly the overflow one can
+       be scrolled to. Any scroll-into-view asked of the browser from outside
+       navi — find-in-page, an automation tool, a bare focus() — then spends
+       scroll on it, and nothing gives it back: the slides stand between two
+       places. clip cuts and stops there, scrollTop stays 0 whatever is asked. */
+    overflow: clip;
 
     /* The browser's own ring, suppressed in favour of the one below: this box
        is focusable (see its tabIndex) and would otherwise get the UA outline
@@ -226,7 +232,7 @@ const css = /* css */ `
         grid-area: 1 / 1;
         /* Square, deliberately: two rounded slides passing each other leave a
            pinched gap between their curves where the page shows through. The
-           corners belong to the container, which clips them (overflow: hidden
+           corners belong to the container, which clips them (overflow: clip
            above) — so what one sees is rounded at rest and butt-jointed in
            motion, with nothing between two slides at any point of the travel. */
         border-radius: 0;

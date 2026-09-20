@@ -56679,7 +56679,7 @@ const css$F = /* css */`@property --slide-travel-progress {
   min-height: 0;
   display: grid;
   position: relative;
-  overflow: hidden;
+  overflow: clip;
 
   &:focus {
     outline: none;
