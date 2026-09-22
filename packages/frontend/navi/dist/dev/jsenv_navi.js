@@ -45318,6 +45318,10 @@ time.navi_text {
     border-radius: inherit;
   }
 
+  &[data-text-clamp] {
+    min-width: 0;
+  }
+
   &[data-text-overflow] {
     text-overflow: ellipsis;
     overflow-wrap: normal;
@@ -45691,6 +45695,10 @@ const shouldInjectSpacingBetween = (left, right) => {
  *   n lines. This is the only prop to use for that — `Box`'s `lineClamp` /
  *   `overflowEllipsis` are raw CSS mappings meant for elements that are not a
  *   `Text`, and `lineClamp={1}` is never the single-line truncation you want.
+ *   Either value states the `white-space` it needs — one line does not wrap,
+ *   n lines may — so it holds inside a single-line ancestor too (a `Picker`'s
+ *   value, a `Time`); an explicit `noWrap`/`pre`/`preLine` on this `Text`
+ *   still wins.
  *   Truncation only happens if the element may become narrower than its
  *   content: `maxLines` sets `min-width: 0` here, but each `Box` between this
  *   one and the element that carries the width must set it too.
@@ -45753,6 +45761,25 @@ const shouldInjectSpacingBetween = (left, right) => {
  *   internally for overlays such as the skeleton container.
  */
 const Text = props => {
+  if (props.maxLines > 1) {
+    props = {
+      ...props,
+      "data-text-clamp": ""
+    };
+    if (!saysWhiteSpace(props)) {
+      // n lines means "you may wrap". white-space is inherited, so left unsaid
+      // a single-line ancestor (a Picker's value, a Time) leaves the clamp one
+      // line to cut, and the text runs past its box. Same tag rule as
+      // TextOverflow: a paragraph keeps its line breaks.
+      props = props.as === "p" ? {
+        ...props,
+        preLine: true
+      } : {
+        ...props,
+        noWrap: false
+      };
+    }
+  }
   if (props.loading || props.skeleton) {
     return jsx(TextSkeleton, {
       ...props
@@ -45963,6 +45990,14 @@ const TextOverflow = ({
     capitalize: capitalize,
     children: children
   });
+};
+const saysWhiteSpace = ({
+  noWrap,
+  pre,
+  preWrap,
+  preLine
+}) => {
+  return noWrap !== undefined || pre !== undefined || preWrap !== undefined || preLine !== undefined;
 };
 const TextWithSelectRange = ({
   ref,
@@ -60001,9 +60036,11 @@ const TimeRelative = ({
   });
 };
 const TimeText = props => {
+  // A date stays on one line, unless the caller grants it several.
+  const noWrap = props.maxLines > 1 ? undefined : true;
   return jsx(Text, {
     as: "time",
-    noWrap: true,
+    noWrap: noWrap,
     ...props
   });
 };
@@ -76389,6 +76426,12 @@ const PickerFirstResolver = props => {
  *   press, the way a click is the innermost target's. Being a gesture, the open goes through
  *   the interaction gate as one: a `readOnly` picker refuses it and says so
  *   where the finger is, whatever `openWhileReadOnly` says.
+ * @param {number} [maxLines=1] How many lines the value may take before it is
+ *   cut with an ellipsis — `Text`'s `maxLines`, put on the value box, and
+ *   granted to a `BadgeList` in the `ui`, which caps its rows to it (see
+ *   max_lines_context.js). `variant="text"` and `variant="bare"` are not
+ *   clamped: their drawing is the caller's own, a `Text` in the `ui` cuts
+ *   itself with its own `maxLines`. See docs/typography.md.
  * @param {import("ignore:preact").ComponentChildren | "default" | import("ignore:preact").ComponentType} [ui] What the
  *   trigger draws in place of the value's default rendering (a date, a list
  *   joined by commas…) — and then all it draws: `placeholder` is not shown
@@ -78160,13 +78203,7 @@ const renderDayDefault = (day, {
   type: "date",
   format: format,
   dayLabel: true,
-  lang: lang
-  // A Time keeps its date on one line by default; here a day too long for
-  // the box is meant to wrap, so that is undone — except for maxLines={1},
-  // which IS one line and cuts it itself (see Text's own TextOverflow):
-  // saying "you may wrap" there would undo the truncation instead.
-  ,
-  noWrap: maxLines === 1 || maxLines === "1" ? undefined : false,
+  lang: lang,
   maxLines: maxLines,
   children: day
 });

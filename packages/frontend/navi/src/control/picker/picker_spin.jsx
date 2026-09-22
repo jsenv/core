@@ -1552,18 +1552,7 @@ export const DaySpin = ({
 // "samedi 8 août (demain)" says both where one is and how far that is, and only
 // the second is read at a glance.
 const renderDayDefault = (day, { lang, format, maxLines } = {}) => (
-  <Time
-    type="date"
-    format={format}
-    dayLabel
-    lang={lang}
-    // A Time keeps its date on one line by default; here a day too long for
-    // the box is meant to wrap, so that is undone — except for maxLines={1},
-    // which IS one line and cuts it itself (see Text's own TextOverflow):
-    // saying "you may wrap" there would undo the truncation instead.
-    noWrap={maxLines === 1 || maxLines === "1" ? undefined : false}
-    maxLines={maxLines}
-  >
+  <Time type="date" format={format} dayLabel lang={lang} maxLines={maxLines}>
     {day}
   </Time>
 );

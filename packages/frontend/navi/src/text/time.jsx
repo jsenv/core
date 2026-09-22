@@ -514,7 +514,9 @@ const TimeRelative = ({
 };
 
 const TimeText = (props) => {
-  return <Text as="time" noWrap {...props} />;
+  // A date stays on one line, unless the caller grants it several.
+  const noWrap = props.maxLines > 1 ? undefined : true;
+  return <Text as="time" noWrap={noWrap} {...props} />;
 };
 
 /**

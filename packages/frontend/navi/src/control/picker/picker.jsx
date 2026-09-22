@@ -1798,6 +1798,12 @@ const PickerFirstResolver = (props) => {
  *   press, the way a click is the innermost target's. Being a gesture, the open goes through
  *   the interaction gate as one: a `readOnly` picker refuses it and says so
  *   where the finger is, whatever `openWhileReadOnly` says.
+ * @param {number} [maxLines=1] How many lines the value may take before it is
+ *   cut with an ellipsis — `Text`'s `maxLines`, put on the value box, and
+ *   granted to a `BadgeList` in the `ui`, which caps its rows to it (see
+ *   max_lines_context.js). `variant="text"` and `variant="bare"` are not
+ *   clamped: their drawing is the caller's own, a `Text` in the `ui` cuts
+ *   itself with its own `maxLines`. See docs/typography.md.
  * @param {import("preact").ComponentChildren | "default" | import("preact").ComponentType} [ui] What the
  *   trigger draws in place of the value's default rendering (a date, a list
  *   joined by commas…) — and then all it draws: `placeholder` is not shown

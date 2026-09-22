@@ -77,6 +77,13 @@ const css = /* css */ `
       border-radius: inherit;
     }
 
+    /* Clamped to n lines. The block display and the clamp itself are inline
+       styles (lineClampStyles); the min-width is the same rule as one line
+       below: a flex item refuses to shrink under its content unless told so. */
+    &[data-text-clamp] {
+      min-width: 0;
+    }
+
     &[data-text-overflow] {
       display: block;
       min-width: 0;
@@ -527,6 +534,10 @@ const shouldInjectSpacingBetween = (left, right) => {
  *   n lines. This is the only prop to use for that — `Box`'s `lineClamp` /
  *   `overflowEllipsis` are raw CSS mappings meant for elements that are not a
  *   `Text`, and `lineClamp={1}` is never the single-line truncation you want.
+ *   Either value states the `white-space` it needs — one line does not wrap,
+ *   n lines may — so it holds inside a single-line ancestor too (a `Picker`'s
+ *   value, a `Time`); an explicit `noWrap`/`pre`/`preLine` on this `Text`
+ *   still wins.
  *   Truncation only happens if the element may become narrower than its
  *   content: `maxLines` sets `min-width: 0` here, but each `Box` between this
  *   one and the element that carries the width must set it too.
@@ -589,6 +600,19 @@ const shouldInjectSpacingBetween = (left, right) => {
  *   internally for overlays such as the skeleton container.
  */
 export const Text = (props) => {
+  if (props.maxLines > 1) {
+    props = { ...props, "data-text-clamp": "" };
+    if (!saysWhiteSpace(props)) {
+      // n lines means "you may wrap". white-space is inherited, so left unsaid
+      // a single-line ancestor (a Picker's value, a Time) leaves the clamp one
+      // line to cut, and the text runs past its box. Same tag rule as
+      // TextOverflow: a paragraph keeps its line breaks.
+      props =
+        props.as === "p"
+          ? { ...props, preLine: true }
+          : { ...props, noWrap: false };
+    }
+  }
   if (props.loading || props.skeleton) {
     return <TextSkeleton {...props} />;
   }
@@ -803,6 +827,14 @@ const TextOverflow = ({ noWrap, spacing, capitalize, children, ...rest }) => {
     >
       {children}
     </Text>
+  );
+};
+const saysWhiteSpace = ({ noWrap, pre, preWrap, preLine }) => {
+  return (
+    noWrap !== undefined ||
+    pre !== undefined ||
+    preWrap !== undefined ||
+    preLine !== undefined
   );
 };
 const TextWithSelectRange = ({ ref, selectRange, ...props }) => {

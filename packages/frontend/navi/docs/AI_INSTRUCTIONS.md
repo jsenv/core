@@ -227,7 +227,9 @@ to start when unsure which export solves a problem.
   viewport on Chrome Android and miscenters every dialog; `overflow-x: clip`.
 - `z_index.md` — DOM order first; a `z-index` without `isolation: isolate`
   competes with the page; navi's bands. Read before writing a `z-index`.
-- `typography.md` — text is a component; `maxLines` is the one truncation;
+- `typography.md` — text is a component; `maxLines` is the one truncation
+  (never `lineClamp`/`overflowEllipsis`/`text-overflow` by hand), on `Text`
+  and its family, a `Picker`'s value, a `Binder`'s tabs, a `BadgeList`'s rows;
   `attachLastChild`; one line height for everything (`--navi-line-height`,
   1.25). Read before an overflowing label, and before touching a
   `line-height`.

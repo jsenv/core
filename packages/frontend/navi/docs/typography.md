@@ -66,9 +66,34 @@ Do **not** write `lineClamp={1}`. `lineClamp` and `overflowEllipsis` are raw
 is not a `Text` (or deliberately opts out of it) and still needs that CSS. They
 know nothing about each other, so `lineClamp={1}` gives a single-line webkit box
 without the single-line handling `maxLines={1}` brings — `maxLines` switches the
-element to a block, sets `min-width: 0` on itself, and keeps `white-space`
-sensible for the tag it renders (a `<p>` keeps its line breaks). On a `Text`,
-`maxLines` is always the right answer.
+element to a block, sets `min-width: 0` on itself, and states the `white-space`
+its line count needs: one line does not wrap, n lines may (a `<p>` keeps its
+line breaks in both cases). That last part is what makes it hold anywhere:
+`white-space` is inherited, and a raw clamp put under a single-line ancestor — a
+`Picker`'s value, a `Time` — inherits `nowrap`, gets one line to cut, and lets
+the text run past its box instead. On a `Text`, `maxLines` is always the right
+answer, and an explicit `noWrap`/`pre`/`preLine` beside it still wins.
+
+### Who takes `maxLines`
+
+The prop is the same everywhere: a number of lines, cut with an ellipsis.
+
+- **`Text`** and everything built on it — `Title`, `Paragraph`, `Caption`,
+  `Link`, `Time`, `Quantity`… — the prop flows through. `Badge` is `maxLines={1}`
+  by construction.
+- **`Picker`** — its value, `maxLines={1}` by default; `variant="text"` and
+  `variant="bare"` draw the caller's own thing and are not clamped, a `Text` in
+  their `ui` cuts itself with its own `maxLines`.
+- **`PickerSpin`** (`DaySpin`, `TimeSpin`…) — its value; left out, a long value
+  wraps and the box grows.
+- **`Binder`** — its tab labels, `maxLines={1}` by default, `false` lets them
+  wrap; overridable per item.
+- **`BadgeList`** — its rows, measured (a wrapped flex row is not a line box):
+  the badges that fit and a "+N" badge for the rest. Inside a `Picker` it
+  inherits the picker's count, see [badge_list.md](./badge_list.md).
+
+On a plain `Box`, `maxLines` is the raw CSS mapping described above: it clamps
+whatever the box holds, and states nothing else.
 
 ### Truncation only happens if something says "you may shrink"
 
