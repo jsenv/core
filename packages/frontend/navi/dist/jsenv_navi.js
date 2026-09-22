@@ -34174,10 +34174,18 @@ registerNaviCommand("--navi-define", (source, event) => {
     implementation: () => executeNaviDefine(source, event, target),
   };
 });
+// A send whose target is the popup itself: what is around the source IS the
+// popup's answer, and a picker runs its action with that answer as it closes
+// (see onRequestClose in picker_custom.jsx) — dispatching the action here too
+// would run it twice. `isSend` tells this close from a dismissal (the cross,
+// a press outside, Escape): the person pressed a choice, which a picker may
+// act on even when the choice is the one it already held.
 const executeNaviDefine = (source, event, target) => {
-  // The picker's onClose already dispatches the action with the final value.
-  // Dispatching again here would fire the action twice.
-  return triggerNaviCommand(target, "--navi-close", event);
+  return dispatchCustomEvent(target, "navi_request_close", {
+    event,
+    source: resolveCommandProxySource(source),
+    isSend: true,
+  });
 };
 
 registerNaviCommand("--navi-scroll", (source, event) => {
@@ -64673,6 +64681,9 @@ const PickerCustom = props => {
     // closed on it. A confirm picker is the one saying something (see
     // picker_confirm.jsx): its press, deferred until the question is answered.
     onConfirm,
+    // A choice pressed inside the popup runs `action` even when it is the one
+    // the picker already held. See the JSDoc.
+    canSendWhileUnchanged,
     // The popup's lifecycle, the same pair Dialog and Popover take. Taken on
     // the picker and chained into its own openController below: the picker
     // hands the popup that controller, and a controlled Dialog/Popover reads
@@ -64715,6 +64726,7 @@ const PickerCustom = props => {
   delete pickerProps.defaultOpen;
   delete pickerProps.escapeEffect;
   delete pickerProps.onConfirm;
+  delete pickerProps.canSendWhileUnchanged;
   delete pickerProps.onOpen;
   delete pickerProps.onClose;
   delete pickerProps.openOn;
@@ -64814,8 +64826,17 @@ const PickerCustom = props => {
             // suggestion to accept, and confirming `undefined` cannot mean
             // anything. A picker on a defaultValue is untouched by this: it
             // shows something, so closing on it still confirms it.
-            // No action to run, but still allow the close.
-            return;
+            //
+            // Unless the close is a choice PRESSED inside the popup (a row's
+            // `--navi-send`, a `--navi-confirm`) on a picker that asked to
+            // send while unchanged: the person picked what was already picked,
+            // and for that picker the same value said again means something.
+            // A press outside, Escape, the cross say nothing and keep skipping.
+            const said = requestCloseEvent.detail.isSend || confirmEventRef.current;
+            if (!(canSendWhileUnchanged && said)) {
+              // No action to run, but still allow the close.
+              return;
+            }
           }
           dispatchRequestAction(inputEl, {
             event: requestCloseEvent,
@@ -64998,7 +65019,8 @@ const PickerCustom = props => {
           intent: "read",
           allowed: () => {
             const closing = requestClose(e, {
-              isCancel: e.detail.isCancel
+              isCancel: e.detail.isCancel,
+              isSend: e.detail.isSend
             });
             if (!closing) {
               e.preventDefault();

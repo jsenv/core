@@ -2037,6 +2037,15 @@ const PickerFirstResolver = (props) => {
  * @param {(confirmEvent: CustomEvent) => void} [onConfirm] Called once the
  *   popup has closed on a `--navi-confirm` said inside it. What a confirm
  *   picker uses to run its press; a picker of any type may listen too.
+ * @param {boolean} [canSendWhileUnchanged] Run `action` when a choice pressed
+ *   inside the popup — a row's `--navi-send`, a `--navi-confirm` — is the
+ *   value the picker already held. By default that close runs nothing: the
+ *   answer has not moved, so there is nothing new to say, same as `Form`.
+ *   Set this for a picker whose value is a setting that can be valid while
+ *   what it points to is not — a channel whose account came unlinked — so
+ *   picking it again is how the person asks for it to be put right, and the
+ *   action sees the same value and re-asks what there is to re-ask. A press
+ *   outside, Escape and the cross still send nothing: nothing was pressed.
  * @param {(openEvent: CustomEvent) => void} [onOpen] Called when the popup
  *   opens, whatever asked for it (a press, a command, history bringing it
  *   back). You most likely do NOT need this pair: "the user validated" is

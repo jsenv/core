@@ -1099,10 +1099,18 @@ registerNaviCommand("--navi-define", (source, event) => {
     implementation: () => executeNaviDefine(source, event, target),
   };
 });
+// A send whose target is the popup itself: what is around the source IS the
+// popup's answer, and a picker runs its action with that answer as it closes
+// (see onRequestClose in picker_custom.jsx) — dispatching the action here too
+// would run it twice. `isSend` tells this close from a dismissal (the cross,
+// a press outside, Escape): the person pressed a choice, which a picker may
+// act on even when the choice is the one it already held.
 const executeNaviDefine = (source, event, target) => {
-  // The picker's onClose already dispatches the action with the final value.
-  // Dispatching again here would fire the action twice.
-  return triggerNaviCommand(target, "--navi-close", event);
+  return dispatchCustomEvent(target, "navi_request_close", {
+    event,
+    source: resolveCommandProxySource(source),
+    isSend: true,
+  });
 };
 
 registerNaviCommand("--navi-scroll", (source, event) => {
