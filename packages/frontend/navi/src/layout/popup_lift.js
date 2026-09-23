@@ -78,6 +78,10 @@ const ROOT_ATTRIBUTE = "data-navi-popup-lift";
 // What the two boxes are to each other (Dialog's `lift`: "box" | "scene"),
 // worn by the root too — it decides how each picture sits in the moving box.
 const KIND_ATTRIBUTE = "data-navi-popup-lift-kind";
+// Worn by the root when the two pictures fit the moving box the whole way
+// (see picturesFitTheBox): the box's edge then has nothing to cut but the
+// pictures' own ink — a halo, a shadow — and the CSS lets it through.
+const FIT_ATTRIBUTE = "data-navi-popup-lift-fit";
 // The one node that IS the anchor once in front: the popup itself, or a node
 // inside it.
 const TARGET_SELECTOR = "[data-lift]";
@@ -197,6 +201,7 @@ export const liftPopupFromAnchor = (
     giveBackNameArriving?.();
     root.removeAttribute(ROOT_ATTRIBUTE);
     root.removeAttribute(KIND_ATTRIBUTE);
+    root.removeAttribute(FIT_ATTRIBUTE);
     root.style.removeProperty(DURATION_PROPERTY);
     root.style.removeProperty(BORDER_RADIUS_PROPERTY);
     root.style.removeProperty(BACKGROUND_COLOR_PROPERTY);
@@ -208,7 +213,7 @@ export const liftPopupFromAnchor = (
     releaseScrollHold?.();
     releaseScrollHold = trapScrollInside(popupEl, { backdrop: true });
     const room = measureRoomBetweenBars();
-    const boxLeaving = room ? elementLeaving.getBoundingClientRect() : null;
+    const boxLeaving = elementLeaving.getBoundingClientRect();
     let boxArriving = null;
     let cornersArriving = null;
     const viewTransition = startViewTransition(async () => {
@@ -226,8 +231,9 @@ export const liftPopupFromAnchor = (
       if (elementArriving) {
         giveBackNameArriving = wearLiftName(elementArriving);
         cornersArriving = readCorners(elementArriving);
-        if (room) {
-          boxArriving = elementArriving.getBoundingClientRect();
+        boxArriving = elementArriving.getBoundingClientRect();
+        if (picturesFitTheBox(lift, boxLeaving, boxArriving)) {
+          root.setAttribute(FIT_ATTRIBUTE, "");
         }
       }
     });
@@ -530,6 +536,30 @@ const animateMovingBox = ({ cornersFrom, cornersTo, room, boxFrom, boxTo }) => {
     fill: "both",
     pseudoElement: `::view-transition-image-pair(${NAME})`,
   });
+};
+
+// Whether both pictures fit the moving box from one end to the other. The
+// box's clip (dialog.jsx) is its edge for a picture larger than the box: what
+// a card gaining room uncovers, what a scene shows past the band cut from it.
+// Under "box" each picture keeps its own size, so both fit only when the two
+// boxes are the same size; under "scene" both are drawn as wide as the box
+// and centred, so they fit when the two boxes have the same aspect ratio —
+// each picture, drawn at the other box's width, is then that box's height.
+// A picture's ink past its own box (a halo, a shadow) is not content the clip
+// is there to cut, so when they fit, the clip is lifted.
+const picturesFitTheBox = (lift, boxFrom, boxTo) => {
+  if (lift === "scene") {
+    const heightFromAtWidthTo = (boxTo.width * boxFrom.height) / boxFrom.width;
+    const heightToAtWidthFrom = (boxFrom.width * boxTo.height) / boxTo.width;
+    return (
+      Math.abs(heightFromAtWidthTo - boxTo.height) < 1 &&
+      Math.abs(heightToAtWidthFrom - boxFrom.height) < 1
+    );
+  }
+  return (
+    Math.abs(boxFrom.width - boxTo.width) < 1 &&
+    Math.abs(boxFrom.height - boxTo.height) < 1
+  );
 };
 
 const insetToRoom = (room, box) =>

@@ -116,7 +116,11 @@ paints nothing, off the first descendant that has its box and paints.
 So a transparent wrapper around the card is fine, and a card whose colour
 lives on a nested element of a different size is not: publish the colour on
 the box that is the card. A gradient or an image travels as well
-(`background-image`), a shadow does not.
+(`background-image`). A shadow or a halo (`box-shadow`, `filter:
+drop-shadow()`) is in the picture but cut at the box's edge, with the content
+the box uncovers — except when the two boxes are the same size (`box`) or the
+same aspect ratio (`scene`): both pictures then fit the box the whole way,
+nothing needs uncovering, and the ink travels with the box.
 
 Corners are not paint: they are written per box, on purpose — the same card at
 two sizes does not want the same round, a 6px corner stops showing on a big

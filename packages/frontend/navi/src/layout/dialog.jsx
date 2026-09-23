@@ -734,6 +734,12 @@ const css = /* css */ `
        the box, and a change of width would read as the same card zooming
        then swapping.
 
+       A picture holds the element's ink past its own box too — a halo, a
+       shadow — and the clip cuts that along with the content, at the box's
+       corners. When both pictures fit the box the whole way (popup_lift.js,
+       picturesFitTheBox) there is no content to uncover, only ink to lose:
+       the clip is lifted and the box carries its ink along.
+
        The box paints what the lifted card paints behind its content
        (published by popup_lift.js): where it has grown past the picture it
        carries, it is the card that has grown. Its corners are those of the
@@ -750,6 +756,9 @@ const css = /* css */ `
     &::view-transition-new(navi-popup-lift) {
       block-size: auto;
       inline-size: auto;
+    }
+    &[data-navi-popup-lift-fit]::view-transition-image-pair(navi-popup-lift) {
+      overflow: visible;
     }
 
     /* The card leaves as itself and arrives as what it became: the picture
