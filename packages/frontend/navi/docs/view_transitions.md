@@ -9,7 +9,7 @@ they are met once.
 - [A name is unique per document](#a-name-is-unique-per-document)
 - [Nested groups, and the fallback fade](#nested-groups-and-the-fallback-fade)
 - [Rendering is suspended for the whole callback](#rendering-is-suspended-for-the-whole-callback)
-- [`finished` rejects when another transition replaces it](#finished-rejects-when-another-transition-replaces-it)
+- [`ready` rejects when the transition is skipped, `finished` when the update fails](#ready-rejects-when-the-transition-is-skipped-finished-when-the-update-fails)
 - [The top layer is painted through the root's picture](#the-top-layer-is-painted-through-the-roots-picture)
 - [Two frames show the live document](#two-frames-show-the-live-document)
 
@@ -59,12 +59,21 @@ that waits on the network flickers every demo shown in an iframe while the same
 app, opened on its own, shows nothing. Keep the callback short, and suspect the
 frame before the code when a scrollbar blinks.
 
-## `finished` rejects when another transition replaces it
+## `ready` rejects when the transition is skipped, `finished` when the update fails
 
-There is only ever one transition per document, so `viewTransition.finished`
-REJECTS when another one replaces this one. `.finally()` does not handle a
-rejection — an unhandled one is what it leaves behind — and `.then(done, done)`
-is the shape that ends a transition whichever way it went.
+There is only ever one transition per document, so another one starting SKIPS
+this one — as does the document going hidden or its snapshot containing block
+changing size mid-movement (a phone's address bar folding, its keyboard
+opening). A skip rejects `viewTransition.ready`, with a stackless DOMException
+(`AbortError` "skipped", or `InvalidStateError` "aborted because of invalid
+state"). `viewTransition.finished` still FULFILLS on a skip: the end state is
+reached, only the animation is not. `finished` (and `updateCallbackDone`)
+reject for one reason only, the update callback throwing.
+
+So ending a transition means handling both ways of `finished` — `.finally()`
+does not handle a rejection, an unhandled one is what it leaves behind, and
+`.then(done, done)` is the shape that ends it whichever way it went — while a
+`ready` waiter must expect the skip: `ready.then(onPictures, () => {})`.
 
 ## See also
 

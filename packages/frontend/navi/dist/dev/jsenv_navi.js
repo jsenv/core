@@ -22936,11 +22936,13 @@ const withCurrentHandlers = (computed, props) => {
  * - It runs the update no matter what. A transition is about the animation,
  *   never about the change.
  * - It swallows the rejection a SKIPPED transition produces. Starting a
- *   transition while another is running skips that other one, and a skipped
- *   transition rejects its promises; nothing is waiting on them, so the
- *   rejection surfaces as an unhandled error (a full error overlay in dev) for
- *   something that is not an error at all — two updates close together is
- *   normal in a list that is being edited.
+ *   transition while another is running skips that other one, and so does the
+ *   document going hidden or its viewport changing size mid-movement; a skipped
+ *   transition rejects `ready` with a DOMException that has no stack. Nothing
+ *   is waiting on it, so the rejection surfaces as an unhandled error (a full
+ *   error overlay in dev, an `unhandledrejection` in an app's error reporting)
+ *   for something that is not an error at all — two updates close together is
+ *   normal in a list that is being edited, and a phone locks its screen.
  *
  * navi calls it from wherever it animates a DOM change itself (see list.jsx),
  * which is why an application using navi finds the API already there.
@@ -23002,12 +23004,22 @@ const startViewTransition$2 = (updateCallback) => {
 };
 
 // "Skipped" is an outcome, not a failure — anything else is still a real error
-// and must keep travelling.
+// and must keep travelling. The browser skips for three reasons and names them
+// differently: `skipTransition()` / another transition starting is an
+// "AbortError" that says skipped, while a document hidden mid-movement, a
+// snapshot containing block that changed size (address bar folding, keyboard
+// opening) and the DOM-update timeout are "InvalidStateError"s that say
+// aborted. All three are recognized by the message: the name alone would let
+// an update callback throwing its own InvalidStateError pass for a skip.
 const ignoreSkip = (e) => {
   if (e && e.name === "AbortError") {
     return;
   }
-  if (e && typeof e.message === "string" && e.message.includes("skipped")) {
+  if (
+    e &&
+    typeof e.message === "string" &&
+    /^Transition was (?:skipped|aborted)/.test(e.message)
+  ) {
     return;
   }
   throw e;
