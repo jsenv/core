@@ -48868,6 +48868,7 @@ const css$R = /* css */`.navi_expandable {
       flex: 1;
       align-items: center;
       gap: .2em;
+      min-width: 0;
       display: flex;
     }
   }
@@ -48906,6 +48907,7 @@ const css$R = /* css */`.navi_expandable {
 
       & > .navi_expandable_ui_label {
         flex-direction: column;
+        min-height: 0;
       }
     }
 

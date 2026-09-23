@@ -147,6 +147,12 @@ const css = /* css */ `
 
       > .navi_expandable_ui_label {
         display: flex;
+        /* A flex item on the axis it must fit in: its automatic minimum size
+           is the min-content width of what it holds, so a nowrap/ellipsized
+           text would push it past the UI part instead of clipping at its
+           edge. A minWidth: 0 chain the app builds around the expandable has
+           to go through this box, which the app does not render. */
+        min-width: 0;
         flex: 1;
         align-items: center;
         gap: 0.2em;
@@ -205,6 +211,8 @@ const css = /* css */ `
         align-items: center;
 
         > .navi_expandable_ui_label {
+          /* Same floor, on the axis the label stacks along in this layout. */
+          min-height: 0;
           flex-direction: column;
         }
       }
