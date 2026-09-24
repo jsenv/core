@@ -60190,10 +60190,12 @@ let releaseLiftInProgress = null;
 // cancelled with the movement so a finished one cannot go on applying its
 // last values to the next movement's picture.
 let boxAnimationInProgress = null;
-// The page held still for the length of the movement. Its picture is frozen
-// anyway, and the browser keeps following the live anchor: a scroll would
-// carry the arriving box along under a page that does not move, and past the
-// clip to the room between the bars, computed where the boxes stood.
+// The page held still from the first read about it to the end of the
+// movement. Its picture is frozen anyway, and the browser keeps following the
+// live anchor: a scroll would carry the arriving box along under a page that
+// does not move, and past the clip to the room between the bars, computed
+// where the boxes stood — and read once, before the opening waits for its
+// target (see liftPopupFromAnchor).
 let releaseScrollHold = null;
 
 /**
@@ -60219,11 +60221,20 @@ const liftPopupFromAnchor = (
   releaseLiftInProgress?.();
 
   const elementLeaving = opened ? resolveAnchor() : resolveLiftTarget(popupEl);
-  // Read before the first write: the read brings the style up to date, and a
-  // write before it would make it bring it up to date once more.
+  // Everything read about the leaving side, before the first write. A read
+  // brings the style up to date, and the writes below land on the root — an
+  // attribute or an unregistered custom property there invalidates the
+  // computed style of every element — so a read placed after any of them is
+  // the whole document's style over again. Nothing on the leaving side moves
+  // before the movement, the page being held from here on.
+  releaseScrollHold = trapScrollInside(popupEl, { backdrop: true });
   const duration = getComputedStyle(popupEl)
     .getPropertyValue("--popup-animation-duration")
     .trim();
+  const cornersLeaving = readCorners(elementLeaving);
+  const room = measureRoomBetweenBars();
+  const boxLeaving = elementLeaving.getBoundingClientRect();
+  const paintLeaving = opened ? null : readBoxPaint(elementLeaving);
   const giveBackNameLeaving = wearLiftName(elementLeaving);
   const root = document.documentElement;
   root.setAttribute(ROOT_ATTRIBUTE, opened ? "opening" : "closing");
@@ -60234,11 +60245,10 @@ const liftPopupFromAnchor = (
     // browser's own pace.
     root.style.setProperty(DURATION_PROPERTY, duration);
   }
-  if (!opened) {
-    publishBoxPaint(elementLeaving);
-  }
-  const cornersLeaving = readCorners(elementLeaving);
   root.style.setProperty(BORDER_RADIUS_PROPERTY, cornersLeaving);
+  if (paintLeaving) {
+    publishBoxPaint(paintLeaving);
+  }
 
   let giveBackNameArriving = null;
   let stopWaitingForTarget = null;
@@ -60270,10 +60280,6 @@ const liftPopupFromAnchor = (
   releaseLiftInProgress = release;
 
   const startMovement = (change, resolveElementArriving) => {
-    releaseScrollHold?.();
-    releaseScrollHold = trapScrollInside(popupEl, { backdrop: true });
-    const room = measureRoomBetweenBars();
-    const boxLeaving = elementLeaving.getBoundingClientRect();
     let boxArriving = null;
     let cornersArriving = null;
     const viewTransition = startViewTransition(async () => {
@@ -60342,7 +60348,9 @@ const liftPopupFromAnchor = (
     popupEl.removeAttribute(ARRIVING_ATTRIBUTE);
   };
   const liftTarget = (target) => {
-    publishBoxPaint(target);
+    // The last write before the transition: nothing reads between it and the
+    // style pass the browser makes on its own to take the first picture.
+    publishBoxPaint(readBoxPaint(target));
     startMovement(reveal, () => target);
   };
   const targetNow = findLiftTarget(popupEl);
@@ -60360,10 +60368,16 @@ const liftPopupFromAnchor = (
   });
 };
 
-const publishBoxPaint = (liftedElement) => {
+// Read and published apart, so that a closing can read the paint with the
+// rest of what it reads and write it with the rest of what it writes.
+const readBoxPaint = (liftedElement) => {
   const { backgroundColor, backgroundImage } = getComputedStyle(
     findPaintedBox(liftedElement),
   );
+  return { backgroundColor, backgroundImage };
+};
+
+const publishBoxPaint = ({ backgroundColor, backgroundImage }) => {
   const root = document.documentElement;
   root.style.setProperty(BACKGROUND_COLOR_PROPERTY, backgroundColor);
   root.style.setProperty(BACKGROUND_IMAGE_PROPERTY, backgroundImage);
