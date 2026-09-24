@@ -2,18 +2,26 @@ import { useCallback, useMemo } from "preact/hooks";
 import { applySearch } from "./apply_search.js";
 
 /**
- * useSearch — reorders items so matched ones come first (sorted by score desc),
- * followed by non-matched items in their natural order. No item is hidden.
+ * useSearchText — reorders items so matched ones come first (sorted by score
+ * desc), followed by non-matched items in their natural order. No item is
+ * dropped: what a non-matching row becomes is the list's `searchNoMatchMode`.
  * Returns [orderedItems, getItemMatchInfo].
  *   - orderedItems: all items, reordered
  *   - getItemMatchInfo(item): { match, matchScore, matchRanges } — pass the
- *     whole thing straight to <ListItem matchInfo={getItemMatchInfo(item)} />,
- *     there is no need to destructure the three fields by hand.
+ *     whole thing straight to <List.Item matchInfo={getItemMatchInfo(item)} />,
+ *     there is no need to destructure the three fields by hand. The row derives
+ *     filtered / hidden / muted from it, and the list counts the rows matching
+ *     nothing (its searchFallback shows when none matches).
  *
- * When searchText is empty, natural order is preserved and all items match with score 0.
+ * When searchText is empty, natural order is preserved and all items match with
+ * score 0.
  *
- * To filter (hide non-matching items), pass filtered={!getItemMatchInfo(item).match}
- * to each ListItem. The list's matchFallback will be shown when all items are hidden.
+ * Rows declared one by one (<List.Item> children) give their place back when
+ * removed. A run (<List.Items items={...}>) does not: it keeps the room of
+ * every item it was given, drawn or held in a filler. In "remove" mode, hand
+ * the run the matching items only — the ones whose getItemMatchInfo(item).match
+ * is not false; a typed search that leaves the list without a row still shows
+ * its searchFallback.
  */
 export const useSearchText = (searchText, items, matchFn = applySearch) => {
   if (typeof searchText !== "string" && searchText !== undefined) {

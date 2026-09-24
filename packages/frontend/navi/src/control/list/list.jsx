@@ -3584,6 +3584,9 @@ const ListItemUI = (props) => {
   if (matchInfo?.match === false) {
     if (searchNoMatchMode === "remove") {
       props.filtered = true;
+      if (import.meta.dev && row) {
+        listRows.warnRunRowRemoved();
+      }
     } else if (searchNoMatchMode === "invisible_and_inert") {
       props.hidden = true;
     } else if (searchNoMatchMode === "muted") {
@@ -4120,7 +4123,10 @@ const VISIBILITY_HIDDEN_STYLE = { visibility: "hidden" };
  * @param {any[]} [props.items]
  *   The collection, when it is held in memory: all of it, in order. Nothing is
  *   ever asked for — `itemsAction`, `count`, `pageSize` and `memoryBudget` have
- *   no part to play, and no row is ever a skeleton.
+ *   no part to play, and no row is ever a skeleton. Every item is a row with
+ *   its room, whether the run draws it or holds it in a filler: a search that
+ *   is to remove rows (`searchNoMatchMode="remove"`) is applied to the array
+ *   itself — see `useSearchText` — not to the rows it draws.
  * @param {(range: object) => any} [props.itemsAction]
  *   Where the rows come from when the collection is read a slice at a time:
  *   a resource's range reader (`RESOURCE.GET_RANGE.bindParams(...)`).

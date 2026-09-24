@@ -67856,6 +67856,19 @@ const createListRows = () => {
       `List: every row stands in the same slot, so they keep the order they first rendered in — reordering them (a search, a sort) will not move them. The list's rows must be its own children: give it the rows (or a <List.Items>), not a component rendering them.`,
     );
   };
+  // A run holds the room of every item it was given, drawn or not: its
+  // fillers count them, its window frames them. A row of it that renders
+  // nothing leaves its room blank, where a declared row gives its place back.
+  let runRowRemovedWarned = false;
+  const warnRunRowRemoved = () => {
+    if (runRowRemovedWarned) {
+      return;
+    }
+    runRowRemovedWarned = true;
+    console.warn(
+      `List: a row drawn by <List.Items> matches nothing and searchNoMatchMode is "remove", but a run's rows cannot be removed: the run keeps the room of every item it was given, so the row leaves a blank. Give <List.Items> the matching items only (useSearchText orders them first; keep the ones whose getItemMatchInfo(item).match is not false), or use searchNoMatchMode="muted" / "invisible_and_inert", which keep the row.`,
+    );
+  };
   const removeFromSlot = (slotId, ownerId) => {
     const ownerIds = ownerIdsBySlot.get(slotId);
     if (!ownerIds) {
@@ -68127,6 +68140,7 @@ const createListRows = () => {
     // inside is then its to place (a run draws its groups with their rows
     // already placed), and no walk inside it has anything to declare.
     slotHasOwner: (slotId) => ownerIdsBySlot.has(slotId),
+    warnRunRowRemoved,
     // Whether any run of rows lives in this list: what makes a render window
     // mean anything (see List's renderBudget).
     hasRuns: () => locatorByOwner.size > 0,
@@ -72219,6 +72233,9 @@ const ListItemUI = props => {
   if (matchInfo?.match === false) {
     if (searchNoMatchMode === "remove") {
       props.filtered = true;
+      if (row) {
+        listRows.warnRunRowRemoved();
+      }
     } else if (searchNoMatchMode === "invisible_and_inert") {
       props.hidden = true;
     } else if (searchNoMatchMode === "muted") {
@@ -72713,7 +72730,10 @@ const VISIBILITY_HIDDEN_STYLE = {
  * @param {any[]} [props.items]
  *   The collection, when it is held in memory: all of it, in order. Nothing is
  *   ever asked for — `itemsAction`, `count`, `pageSize` and `memoryBudget` have
- *   no part to play, and no row is ever a skeleton.
+ *   no part to play, and no row is ever a skeleton. Every item is a row with
+ *   its room, whether the run draws it or holds it in a filler: a search that
+ *   is to remove rows (`searchNoMatchMode="remove"`) is applied to the array
+ *   itself — see `useSearchText` — not to the rows it draws.
  * @param {(range: object) => any} [props.itemsAction]
  *   Where the rows come from when the collection is read a slice at a time:
  *   a resource's range reader (`RESOURCE.GET_RANGE.bindParams(...)`).
@@ -80110,18 +80130,26 @@ const createSearch = (fields) => {
 };
 
 /**
- * useSearch — reorders items so matched ones come first (sorted by score desc),
- * followed by non-matched items in their natural order. No item is hidden.
+ * useSearchText — reorders items so matched ones come first (sorted by score
+ * desc), followed by non-matched items in their natural order. No item is
+ * dropped: what a non-matching row becomes is the list's `searchNoMatchMode`.
  * Returns [orderedItems, getItemMatchInfo].
  *   - orderedItems: all items, reordered
  *   - getItemMatchInfo(item): { match, matchScore, matchRanges } — pass the
- *     whole thing straight to <ListItem matchInfo={getItemMatchInfo(item)} />,
- *     there is no need to destructure the three fields by hand.
+ *     whole thing straight to <List.Item matchInfo={getItemMatchInfo(item)} />,
+ *     there is no need to destructure the three fields by hand. The row derives
+ *     filtered / hidden / muted from it, and the list counts the rows matching
+ *     nothing (its searchFallback shows when none matches).
  *
- * When searchText is empty, natural order is preserved and all items match with score 0.
+ * When searchText is empty, natural order is preserved and all items match with
+ * score 0.
  *
- * To filter (hide non-matching items), pass filtered={!getItemMatchInfo(item).match}
- * to each ListItem. The list's matchFallback will be shown when all items are hidden.
+ * Rows declared one by one (<List.Item> children) give their place back when
+ * removed. A run (<List.Items items={...}>) does not: it keeps the room of
+ * every item it was given, drawn or held in a filler. In "remove" mode, hand
+ * the run the matching items only — the ones whose getItemMatchInfo(item).match
+ * is not false; a typed search that leaves the list without a row still shows
+ * its searchFallback.
  */
 const useSearchText = (searchText, items, matchFn = applySearch) => {
   if (typeof searchText !== "string" && searchText !== undefined) {

@@ -140,6 +140,19 @@ export const createListRows = () => {
       `List: every row stands in the same slot, so they keep the order they first rendered in — reordering them (a search, a sort) will not move them. The list's rows must be its own children: give it the rows (or a <List.Items>), not a component rendering them.`,
     );
   };
+  // A run holds the room of every item it was given, drawn or not: its
+  // fillers count them, its window frames them. A row of it that renders
+  // nothing leaves its room blank, where a declared row gives its place back.
+  let runRowRemovedWarned = false;
+  const warnRunRowRemoved = () => {
+    if (runRowRemovedWarned) {
+      return;
+    }
+    runRowRemovedWarned = true;
+    console.warn(
+      `List: a row drawn by <List.Items> matches nothing and searchNoMatchMode is "remove", but a run's rows cannot be removed: the run keeps the room of every item it was given, so the row leaves a blank. Give <List.Items> the matching items only (useSearchText orders them first; keep the ones whose getItemMatchInfo(item).match is not false), or use searchNoMatchMode="muted" / "invisible_and_inert", which keep the row.`,
+    );
+  };
   const removeFromSlot = (slotId, ownerId) => {
     const ownerIds = ownerIdsBySlot.get(slotId);
     if (!ownerIds) {
@@ -411,6 +424,7 @@ export const createListRows = () => {
     // inside is then its to place (a run draws its groups with their rows
     // already placed), and no walk inside it has anything to declare.
     slotHasOwner: (slotId) => ownerIdsBySlot.has(slotId),
+    warnRunRowRemoved,
     // Whether any run of rows lives in this list: what makes a render window
     // mean anything (see List's renderBudget).
     hasRuns: () => locatorByOwner.size > 0,
