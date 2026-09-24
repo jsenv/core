@@ -4739,14 +4739,40 @@ const timeFromMinutes = (minutes) => {
 
 const padTwo$1 = (value) => String(value).padStart(2, "0");
 
-// Maps validity type names → navi input type names.
-// Numeric signal types must not fall through to the native type="number"
-// (which adds spinner buttons and has poor UX) — they map to navi_number instead.
-const VALIDITY_TYPE_TO_INPUT_TYPE = {
+// What a bound signal's type says is what its VALUE is (a validity type);
+// what a control's `type` says is what the control IS. This table is the whole
+// bridge between the two vocabularies: a value type with a row here asks for
+// that control, one without a row asks for nothing and the control keeps its
+// own default. "string" has no row on purpose — it is the value every typeless
+// control already holds — and a name only one side knows must never cross as
+// is: a control type nobody implements is a plain text field that writes an
+// object as "[object Object]" (see warnOnUnknownPickerType in picker.jsx).
+// Numeric value types map to navi_number rather than the native type="number"
+// (spinner buttons, poor UX).
+const CONTROL_TYPE_BY_SIGNAL_TYPE = {
   boolean: "checkbox",
   number: "navi_number",
   integer: "navi_number",
+  float: "navi_number",
+  ratio: "navi_number",
+  longitude: "navi_number",
+  latitude: "navi_number",
+  second: "navi_number",
+  minute: "navi_number",
+  hour: "navi_number",
+  year: "navi_number",
   percentage: "navi_percentage",
+  date: "date",
+  month: "month",
+  week: "week",
+  time: "time",
+  datetime: "datetime",
+  duration: "duration",
+  color: "color",
+  email: "email",
+  url: "url",
+  array: "array",
+  object: "object",
 };
 
 // Conceptual navi types: defaults, plus the host type they resolve to.
@@ -4877,18 +4903,16 @@ const resolveInputProps = (props, { controlType = "input" } = {}) => {
         }
       }
       if (props.type === undefined && signalOptions.type !== undefined) {
-        const typeFromSignal =
-          VALIDITY_TYPE_TO_INPUT_TYPE[signalOptions.type] ?? signalOptions.type;
-        // What a signal says is what its value IS; what a control's `type` says
-        // is what the control is. They usually agree — a date-typed signal wants
-        // a date field — but a boolean one maps to a checkbox, and a picker made
-        // into a checkbox is not a picker with a different look: it is another
-        // control, with no popup to open. A picker asked to hold a yes/no keeps
-        // its two rows and stays itself.
+        const typeFromSignal = CONTROL_TYPE_BY_SIGNAL_TYPE[signalOptions.type];
+        // A value type and the control for it usually agree — a date-typed
+        // signal wants a date field — but a boolean one maps to a checkbox, and
+        // a picker made into a checkbox is not a picker with a different look:
+        // it is another control, with no popup to open. A picker asked to hold
+        // a yes/no keeps its two rows and stays itself.
         const wouldChangeWhatTheControlIs =
           controlType === "picker" &&
           (typeFromSignal === "checkbox" || typeFromSignal === "radio");
-        if (!wouldChangeWhatTheControlIs) {
+        if (typeFromSignal !== undefined && !wouldChangeWhatTheControlIs) {
           props.type = typeFromSignal;
         }
       }
