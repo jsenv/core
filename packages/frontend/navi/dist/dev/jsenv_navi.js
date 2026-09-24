@@ -40917,6 +40917,11 @@ const uiStateHoldsNothing = (uiState) => {
  */
 const NO_ACTION_YET = Symbol("no_action_yet");
 
+// The control types rendered as an element `<label for>` can name: HTML's
+// labelable elements are button, input, select, textarea, output, meter and
+// progress — a picker's trigger is one of them, a link or a details is not.
+const CONTROL_TYPES_A_LABEL_CAN_POINT_AT = new Set(["button", "input", "select", "picker"]);
+
 // Resets field-specific contexts so nested fields inside this component
 // don't inherit the current field's id, message props, or interface reporting.
 // Sets ParentUIStateControllerContext to the leaf's own uiStateController so
@@ -41014,8 +41019,13 @@ const useControlProps = (props, {
     standalone
   } = props;
   const idDefault = useId();
-  const controlId = useContext(ControlIdContext);
-  props.id = props.id || controlId || idDefault;
+  // A Field's id is what its Label points at, so only a control a label can
+  // point at (see the set) takes it. A link in the label's own text is a
+  // control too, but never that target: taking the id would make two elements
+  // answer for it, and the label would read the link's state as its control's.
+  const fieldId = useContext(ControlIdContext);
+  const labelable = CONTROL_TYPES_A_LABEL_CAN_POINT_AT.has(controlType);
+  props.id = props.id || (labelable ? fieldId : undefined) || idDefault;
   const controlName = useContext(ControlNameContext);
   props.name = props.name || controlName;
   const isCheckable = isCheckableInput(controlType, props.type);
