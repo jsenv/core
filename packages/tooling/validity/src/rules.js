@@ -246,12 +246,12 @@ export const ONE_OF_RULE = {
     if (oneOf.includes(value)) {
       return null;
     }
-    return {
-      ...message("one_of.default", {
-        values: oneOf.map((v) => JSON.stringify(v)).join(", "),
-      }),
-      autoFix: () => oneOf[0],
-    };
+    // No repair: an enumeration has no nearest value, and its order says
+    // nothing about which one stands in. The caller declares that value, as
+    // createValidity's `fallback`.
+    return message("one_of.default", {
+      values: oneOf.map((v) => JSON.stringify(v)).join(", "),
+    });
   },
 };
 

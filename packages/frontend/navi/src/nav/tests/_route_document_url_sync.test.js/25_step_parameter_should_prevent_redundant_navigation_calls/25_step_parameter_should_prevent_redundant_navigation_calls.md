@@ -101,7 +101,9 @@ try {
     "after update url to 2.67": {
       "lon_signal_value": 2.7,
       "route_url": "http://127.0.0.1/map?lon=2.7",
-      "navToCalls": []
+      "navToCalls": [
+        "http://127.0.0.1/map?lon=2.7"
+      ]
     },
     "after update signal to 3": {
       "lon_signal_value": 3,
@@ -113,7 +115,9 @@ try {
     "after update url to 3.000001": {
       "lon_signal_value": 3,
       "route_url": "http://127.0.0.1/map?lon=3",
-      "navToCalls": []
+      "navToCalls": [
+        "http://127.0.0.1/map?lon=3"
+      ]
     }
   }
 }

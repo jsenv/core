@@ -63,6 +63,11 @@ if (import.meta.hot) {
  *   `?level=3,4` becomes `[3, 4]` instead of `["3", "4"]`. Without it items stay strings.
  * @param {number} [options.step] - For number type: step size for precision. Values will be rounded to nearest multiple of step.
  * @param {Array} [options.oneOf] - Array of valid values for validation. Signal will be marked invalid if value is not in this array
+ * @param {boolean} [options.autoFix=false] - Hold the repaired value instead of the refused one: a number
+ *   clamped to `min`/`max` and rounded to `step`, a value outside `oneOf` replaced by the signal's
+ *   default value (an enumeration has no nearest value, and its order says nothing). Without it the
+ *   refused value is held as-is, marked invalid, and `validSignal` reads `undefined`. When the value
+ *   came from the address, the address is rewritten with the repaired one (a replace).
  * @param {boolean} [options.weak=false] - The param qualifies one visit, not the screen: it is written into a
  *   url only when explicitly named (`routeParams={{ edit: id }}`), never inherited from the signal's current
  *   value, and it goes back to the default value when the route stops matching. Use it for params like an
@@ -97,11 +102,11 @@ if (import.meta.hot) {
  * });
  *
  * @example
- * // Signal with validation and auto-fix
+ * // Signal with validation and auto-fix: an unknown tab falls back to "overview"
  * const tab = stateSignal("overview", {
  *   id: "current-tab",
  *   oneOf: ["overview", "details", "settings"],
- *   autoFix: () => "overview",
+ *   autoFix: true,
  *   persists: true
  * });
  *
@@ -207,6 +212,10 @@ export const stateSignal = (defaultValue, options = {}) => {
     oneOf,
     localStorageRepresentation,
     autoFix,
+    // What a value no rule can repair falls back to: the default is what the
+    // state is when nothing says otherwise, read at repair time (from
+    // processValue, below) so a dynamic default is read where it stands.
+    fallback: () => getDefaultValue(false),
   });
   const readFromLocalStorage = persists
     ? () => {

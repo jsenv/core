@@ -35,6 +35,8 @@ import { CANNOT_CONVERT, TYPES } from "./types.js";
  * @param {boolean} [ruleConfig.noEmoji] - Refuse emoji: a name, an identifier or a title may not want one even where the layout survives it
  * @param {number} [ruleConfig.maxLineBreaks] - How many line breaks the value may hold (counted in breaks, not in rendered lines, which depend on wrapping)
  * @param {Function} [ruleConfig.formatMessage] - `(key, params) => string`, the sentence for a refusal. Defaults to English; pass the app's i18n so a field and a server refuse in the same words
+ * @param {boolean} [ruleConfig.autoFix=false] - Apply the suggestion silently: `applyOn` then holds the repaired value and marks it valid (`validity.autoFixed`)
+ * @param {any|Function} [ruleConfig.fallback] - The value suggested when no rule can repair the one given (an enumeration has no nearest value). A function is read when the repair is needed, for a fallback that moves. Suggested only when it passes every rule
  * @param {Array} [ruleConfig.rules] - Rules of the app's own, checked alongside the built-in ones. Each is `{ name, applyOn(ruleValue, value, ruleConfig) }`; `ruleValue` is `ruleConfig[name]`, and the refusal lands on `validity[name]`
  *
  * @returns {[Object, Function]} Tuple containing:
@@ -135,6 +137,7 @@ export const createValidity = (ruleConfig) => {
     representation,
     typeCoercion = true,
     autoFix: autoFixOption = false,
+    fallback,
     formatMessage = formatMessageInEnglish,
     rules: customRuleArray = [],
     ...ruleConfigWithoutRepresentation
@@ -415,6 +418,15 @@ export const createValidity = (ruleConfig) => {
     }
   }
 
+  const passesEveryRule = (candidate) => {
+    for (const { rule, ruleValue } of ruleSet) {
+      if (rule.applyOn(ruleValue, candidate, effectiveRuleConfig)) {
+        return false;
+      }
+    }
+    return true;
+  };
+
   const applyOn = (value) => {
     // Type coercion: silently convert value to canonical form before validation.
     // Disabled when strict: true.
@@ -491,20 +503,15 @@ export const createValidity = (ruleConfig) => {
       }
       // Test the final suggestion against all rules
       // (in case nested autofix is actually incompatible with all rules)
-      let suggestionIsValid = true;
-      for (const { rule, ruleValue } of ruleSet) {
-        const result = rule.applyOn(
-          ruleValue,
-          valueCandidate,
-          effectiveRuleConfig,
-        );
-        if (result) {
-          suggestionIsValid = false;
-          break;
-        }
-      }
-      if (suggestionIsValid) {
+      if (passesEveryRule(valueCandidate)) {
         validCanonicalValue = valueCandidate;
+      }
+    }
+    if (!valid && validCanonicalValue === undefined && fallback !== undefined) {
+      const fallbackValue =
+        typeof fallback === "function" ? fallback() : fallback;
+      if (fallbackValue !== undefined && passesEveryRule(fallbackValue)) {
+        validCanonicalValue = fallbackValue;
       }
     }
 

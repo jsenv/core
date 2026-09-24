@@ -17917,6 +17917,11 @@ const generateSignalId = () => {
  *   `?level=3,4` becomes `[3, 4]` instead of `["3", "4"]`. Without it items stay strings.
  * @param {number} [options.step] - For number type: step size for precision. Values will be rounded to nearest multiple of step.
  * @param {Array} [options.oneOf] - Array of valid values for validation. Signal will be marked invalid if value is not in this array
+ * @param {boolean} [options.autoFix=false] - Hold the repaired value instead of the refused one: a number
+ *   clamped to `min`/`max` and rounded to `step`, a value outside `oneOf` replaced by the signal's
+ *   default value (an enumeration has no nearest value, and its order says nothing). Without it the
+ *   refused value is held as-is, marked invalid, and `validSignal` reads `undefined`. When the value
+ *   came from the address, the address is rewritten with the repaired one (a replace).
  * @param {boolean} [options.weak=false] - The param qualifies one visit, not the screen: it is written into a
  *   url only when explicitly named (`routeParams={{ edit: id }}`), never inherited from the signal's current
  *   value, and it goes back to the default value when the route stops matching. Use it for params like an
@@ -17951,11 +17956,11 @@ const generateSignalId = () => {
  * });
  *
  * @example
- * // Signal with validation and auto-fix
+ * // Signal with validation and auto-fix: an unknown tab falls back to "overview"
  * const tab = stateSignal("overview", {
  *   id: "current-tab",
  *   oneOf: ["overview", "details", "settings"],
- *   autoFix: () => "overview",
+ *   autoFix: true,
  *   persists: true
  * });
  *
@@ -18052,6 +18057,10 @@ const stateSignal = (defaultValue, options = {}) => {
     oneOf,
     localStorageRepresentation,
     autoFix,
+    // What a value no rule can repair falls back to: the default is what the
+    // state is when nothing says otherwise, read at repair time (from
+    // processValue, below) so a dynamic default is read where it stands.
+    fallback: () => getDefaultValue(false),
   });
   const readFromLocalStorage = persists
     ? () => {
@@ -27169,6 +27178,14 @@ This prevents cross-test pollution and ensures clean state.`,
       // Apply all signal updates in a batch
       const matchingRouteSet = new Set();
       const routeUpdateSet = new Set();
+      // Params the address gave and the state could not hold as written
+      // (autoFix): the address is rewritten with what the state holds, once
+      // the sync is over, so the repaired value is not left in the url to be
+      // replayed by a reload or a copied link.
+      const repairedParamsByRoute = new Map();
+      // A query connection is inherited by the child routes of the one
+      // declaring it: the first route to record a param answers for all.
+      const repairedParamNameSet = new Set();
       batch(() => {
         for (const {
           route,
@@ -27351,6 +27368,29 @@ This prevents cross-test pollution and ensures clean state.`,
               );
             }
             paramSignal.value = urlParamValue;
+            if (
+              paramSignal.validity?.autoFixed &&
+              !repairedParamNameSet.has(paramName)
+            ) {
+              repairedParamNameSet.add(paramName);
+              const repairedValue = paramSignal.peek();
+              if (debug) {
+                console.debug(
+                  `[route] URL->Signal: ${paramName}=${urlParamValue} repaired to ${repairedValue}, the url will be rewritten`,
+                );
+              }
+              let repairedParams = repairedParamsByRoute.get(route);
+              if (!repairedParams) {
+                repairedParams = {};
+                repairedParamsByRoute.set(route, repairedParams);
+              }
+              // A default is not written in an address (see the signal -> url sync)
+              repairedParams[paramName] = connection.isDefaultValue(
+                repairedValue,
+              )
+                ? undefined
+                : repairedValue;
+            }
             continue;
           }
         }
@@ -27361,6 +27401,12 @@ This prevents cross-test pollution and ensures clean state.`,
       // Reset flag after URL -> Signal synchronization is complete
       isUpdatingRoutesFromUrl = false;
       Object.assign(returnValue, { matchingRouteSet });
+      for (const [route, repairedParams] of repairedParamsByRoute) {
+        route.replaceParams(repairedParams, {
+          callReason: `url params repaired on ${route}: ${Object.keys(repairedParams).join(", ")}`,
+          history: "replace",
+        });
+      }
     }
 
     return returnValue;

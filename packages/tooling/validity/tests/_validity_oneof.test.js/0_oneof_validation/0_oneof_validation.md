@@ -38,9 +38,9 @@ return renderTable(
 ├───────────┼───────────┼────────┼──────────────────────────────┼──────────────────────────────────────────┤
 │ "red"     │ "red"     │ true   │ "red"                        │ undefined                                │
 ├───────────┼───────────┼────────┼──────────────────────────────┼──────────────────────────────────────────┤
-│ "yellow"  │ "yellow"  │ false  │ "red"                        │ 'must be one of: "red", "green", "blue"' │
+│ "yellow"  │ "yellow"  │ false  │ undefined                    │ 'must be one of: "red", "green", "blue"' │
 ├───────────┼───────────┼────────┼──────────────────────────────┼──────────────────────────────────────────┤
-│ undefined │ undefined │ false  │ "red"                        │ 'must be one of: "red", "green", "blue"' │
+│ undefined │ undefined │ false  │ undefined                    │ 'must be one of: "red", "green", "blue"' │
 └───────────┴───────────┴────────┴──────────────────────────────┴──────────────────────────────────────────┘
 ```
 

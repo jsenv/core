@@ -862,6 +862,14 @@ This prevents cross-test pollution and ensures clean state.`,
       // Apply all signal updates in a batch
       const matchingRouteSet = new Set();
       const routeUpdateSet = new Set();
+      // Params the address gave and the state could not hold as written
+      // (autoFix): the address is rewritten with what the state holds, once
+      // the sync is over, so the repaired value is not left in the url to be
+      // replayed by a reload or a copied link.
+      const repairedParamsByRoute = new Map();
+      // A query connection is inherited by the child routes of the one
+      // declaring it: the first route to record a param answers for all.
+      const repairedParamNameSet = new Set();
       batch(() => {
         for (const {
           route,
@@ -1044,6 +1052,29 @@ This prevents cross-test pollution and ensures clean state.`,
               );
             }
             paramSignal.value = urlParamValue;
+            if (
+              paramSignal.validity?.autoFixed &&
+              !repairedParamNameSet.has(paramName)
+            ) {
+              repairedParamNameSet.add(paramName);
+              const repairedValue = paramSignal.peek();
+              if (debug) {
+                console.debug(
+                  `[route] URL->Signal: ${paramName}=${urlParamValue} repaired to ${repairedValue}, the url will be rewritten`,
+                );
+              }
+              let repairedParams = repairedParamsByRoute.get(route);
+              if (!repairedParams) {
+                repairedParams = {};
+                repairedParamsByRoute.set(route, repairedParams);
+              }
+              // A default is not written in an address (see the signal -> url sync)
+              repairedParams[paramName] = connection.isDefaultValue(
+                repairedValue,
+              )
+                ? undefined
+                : repairedValue;
+            }
             continue;
           }
         }
@@ -1054,6 +1085,12 @@ This prevents cross-test pollution and ensures clean state.`,
       // Reset flag after URL -> Signal synchronization is complete
       isUpdatingRoutesFromUrl = false;
       Object.assign(returnValue, { matchingRouteSet });
+      for (const [route, repairedParams] of repairedParamsByRoute) {
+        route.replaceParams(repairedParams, {
+          callReason: `url params repaired on ${route}: ${Object.keys(repairedParams).join(", ")}`,
+          history: "replace",
+        });
+      }
     }
 
     return returnValue;
