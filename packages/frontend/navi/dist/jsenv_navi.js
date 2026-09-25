@@ -29331,9 +29331,13 @@ installImportMetaCssBuild(import.meta);
  * - a bar only one state has never meets a counterpart. It belongs to the page
  *   that has it, so it travels with that page — leaving by the keyframes the
  *   page being left leaves by, arriving by the ones the page arriving arrives
- *   by — instead of going out with the render. Under the pages, so a page
- *   coming over it covers it — a popup over them instead, standing where it
- *   stands in the document (see the z-order in route_transition.jsx).
+ *   by — instead of going out with the render. Over that page, as it is at
+ *   rest: the page runs under it, and what it paints outside its box (a button
+ *   standing up out of a tab bar) is not cut by its own page. Under the pages
+ *   only when its page is covered by the other one — a cover-* movement — so
+ *   the sheet comes over it; a popup over everything, standing where it
+ *   stands in the document (see the z-order in route_transition.jsx). Which
+ *   side a bar is on is said by a class on its group, written here.
  *
  * A popup shown in the top layer is furniture of the same kind, and its case
  * is the sharper one: it is a DOM descendant of the area, yet painted outside
@@ -29411,11 +29415,17 @@ const FURNITURE_NAME_PREFIX = "navi-transition-furniture-";
 const TOP_LAYER_WALL_SELECTOR =
   ".navi_dialog:modal, .navi_popover_backdrop:popover-open";
 const WALL_ATTRIBUTE = "data-navi-transition-wall";
-// Worn by a bar both states have, from the hold on: its two pictures are one
-// group, and the group is ordered over the pages (route_transition.jsx). Only
-// a bar — a popup's class is written by layout/popup_css.js, and a second rule
-// on the same property would replace it.
-const SHARED_ATTRIBUTE = "data-navi-transition-furniture-shared";
+// Which side of the movement a bar is on, worn by the bar and read by the
+// browser as the class of its group (the CSS below): "leaving" from the first
+// picture, "arriving" for a bar the state arriving brought, "shared" for one
+// that stands in both states, written over "leaving" at the hold. The group's
+// class is the one captured with the LAST state the element stands in, so a
+// bar only the state being left has keeps "leaving" from the first capture,
+// and a shared one takes "shared" from the second. The z-order in
+// route_transition.jsx is written on these three. Only a bar — a popup's
+// class is written by layout/popup_css.js, and a second rule on the same
+// property would replace it.
+const FURNITURE_ATTRIBUTE = "data-navi-transition-furniture";
 // What the wall paints, resolved on the matched element in both cases (the
 // dialog for its ::backdrop, the popover's wall for itself): the same two
 // properties, copied onto the stand-in.
@@ -29424,7 +29434,15 @@ const WALL_PROPERTIES = ["--backdrop-background", "--backdrop-filter"];
 // The pictures the wall is painted into: the pages', and every bar's own.
 const FIXED_BAR_SELECTOR$1 = ".navi_fixed_bar";
 
-const TRANSITION_FURNITURE_CSS = /* css */ `.navi_fixed_bar[data-navi-transition-furniture-shared] {
+const TRANSITION_FURNITURE_CSS = /* css */ `.navi_fixed_bar[data-navi-transition-furniture="leaving"] {
+  view-transition-class: navi_furniture_leaving;
+}
+
+.navi_fixed_bar[data-navi-transition-furniture="arriving"] {
+  view-transition-class: navi_furniture_arriving;
+}
+
+.navi_fixed_bar[data-navi-transition-furniture="shared"] {
   view-transition-class: navi_furniture_shared;
 }
 
@@ -29497,7 +29515,7 @@ const nameTransitionFurniture = (owner, areaElement) => {
     furnitureOwner = owner;
     namedElements = new Set();
   }
-  nameFurnitureAround(areaElement);
+  nameFurnitureAround(areaElement, "leaving");
   const sources = paintTransitionWalls(areaElement);
   // The state being left has walls: what no picture covers starts dimmed.
   // The frame the first picture is taken on shows the live document, so the
@@ -29524,10 +29542,10 @@ const holdTransitionFurniture = (owner, areaElement) => {
     if (!element.isConnected) {
       namesLeaving.push(nameByElement.get(element));
     } else if (element.matches(FIXED_BAR_SELECTOR$1)) {
-      element.setAttribute(SHARED_ATTRIBUTE, "");
+      element.setAttribute(FURNITURE_ATTRIBUTE, "shared");
     }
   }
-  const namesArriving = nameFurnitureAround(areaElement);
+  const namesArriving = nameFurnitureAround(areaElement, "arriving");
   const sources = paintTransitionWalls(areaElement);
   // The state arriving has walls: what no picture covers ends dimmed. Painted
   // from the state being left when that one had walls (they stay up if both
@@ -29577,7 +29595,8 @@ const holdTransitionFurniture = (owner, areaElement) => {
 
 // Returns the elements it had to name, which are the ones the state arriving
 // brought: everything else was already wearing its name from the first pass.
-const nameFurnitureAround = (areaElement) => {
+// `side` is what a bar named here is told it is on (see FURNITURE_ATTRIBUTE).
+const nameFurnitureAround = (areaElement, side) => {
   const namesAdded = [];
   for (const element of document.querySelectorAll(FURNITURE_SELECTOR)) {
     if (namedElements.has(element)) {
@@ -29603,6 +29622,9 @@ const nameFurnitureAround = (areaElement) => {
       nameByElement.set(element, name);
     }
     element.style.setProperty(NAME_PROPERTY$1, name);
+    if (element.matches(FIXED_BAR_SELECTOR$1)) {
+      element.setAttribute(FURNITURE_ATTRIBUTE, side);
+    }
     namedElements.add(element);
     namesAdded.push(name);
   }
@@ -29652,7 +29674,7 @@ const releaseTransitionFurniture = (owner) => {
   furnitureOwner = null;
   for (const element of namedElements) {
     element.style.removeProperty(NAME_PROPERTY$1);
-    element.removeAttribute(SHARED_ATTRIBUTE);
+    element.removeAttribute(FURNITURE_ATTRIBUTE);
   }
   namedElements = new Set();
   if (travelStyleElement) {
@@ -29975,7 +29997,20 @@ const measureTransitionWindowState = (element) => {
   };
 };
 
-const holdTransitionWindow = (owner, element, stateBefore) => {
+/**
+ * @param {object} options
+ * @param {boolean} options.furnitureLive - Whether the bars stay live under
+ *   the pictures for the movement (a travel), or are pictures of their own
+ *   ordered over the page they belong to (a route transition, see
+ *   transition_furniture.js). Decides how far the cut may be opened for the
+ *   picture being left — see bandTheCutMayBeRelaxedTo.
+ */
+const holdTransitionWindow = (
+  owner,
+  element,
+  stateBefore,
+  { furnitureLive },
+) => {
   const bandBefore = stateBefore.band;
   const rectAfter = element.getBoundingClientRect();
   const bandAfter = readBand();
@@ -30009,7 +30044,9 @@ const holdTransitionWindow = (owner, element, stateBefore) => {
   style.setProperty(WINDOW_OLD_LEFT_PROPERTY, `${rectBefore.left}px`);
   style.setProperty(WINDOW_NEW_TOP_PROPERTY, `${rectAfter.top}px`);
   style.setProperty(WINDOW_NEW_LEFT_PROPERTY, `${rectAfter.left}px`);
-  const oldBand = bandTheCutMayBeRelaxedTo(bandBefore, bandAfter, rectAfter);
+  const oldBand = furnitureLive
+    ? bandTheCutMayBeRelaxedTo(bandBefore, bandAfter, rectAfter)
+    : bandBefore;
   style.setProperty(OLD_BAND_TOP_PROPERTY, `${oldBand.top}px`);
   style.setProperty(OLD_BAND_RIGHT_PROPERTY, `${oldBand.right}px`);
   style.setProperty(OLD_BAND_BOTTOM_PROPERTY, `${oldBand.bottom}px`);
@@ -30172,18 +30209,25 @@ const readBand = () => {
   };
 };
 
-// How far the cut may be opened for the picture being left — the band its own
-// state kept free, which is the whole point of photographing it: furniture
-// present in only one of the two states is not the frame, it is part of what
-// changes, and cutting the page being left at a bar it never had shows its
-// header being sliced instead of leaving.
+// How far the cut may be opened for the picture being left when the furniture
+// is LIVE under the pictures — the band its own state kept free, which is the
+// whole point of photographing it: furniture present in only one of the two
+// states is not the frame, it is part of what changes, and cutting the page
+// being left at a bar it never had shows its header being sliced instead of
+// leaving.
 //
 // Never past what the picture ARRIVING needs, though: the cut is one line for
 // both pictures, so opening it for one opens it for the other. A box that runs
-// under the furniture it arrives beside — a page scrolled below a top bar —
-// would then be watched painting over that bar for the length of the movement,
-// which is what the cut exists to prevent. On such an edge the arriving band
-// stands, and the page being left is cut as it always was.
+// under the live furniture it arrives beside — a page scrolled below a top bar
+// — would then be watched painting over that bar for the length of the
+// movement, which is what the cut exists to prevent. On such an edge the
+// arriving band stands, and the page being left is cut as it always was.
+//
+// With the furniture photographed (a route transition) none of this holds: a
+// bar only the arriving state has is a picture ordered over the page it
+// belongs to, and a page arriving under it paints nothing over it. The band
+// of the state being left is then published as it was, so the page being
+// left is never cut at a bar it never had.
 const bandTheCutMayBeRelaxedTo = (bandBefore, bandAfter, rectAfter) => {
   return {
     top: rectAfter.top < bandAfter.top ? bandAfter.top : bandBefore.top,
@@ -30376,6 +30420,16 @@ const startViewTransition$1 = ensureDocumentStartViewTransition();
 const TRANSITION_ATTRIBUTE = "data-navi-route-transition";
 const TRANSITION_TYPE_ATTRIBUTE = "data-navi-route-transition-type";
 const TRANSITION_DURATION_PROPERTY = "--navi-route-transition-duration";
+// Which page the other one COVERS, when the movement is one page over the
+// other: "old" (the page arriving comes over the page being left) or "new"
+// (the page being left slides off the page arriving). Published by the type
+// as a value on the root, like its keyframes (see the css), and mirrored as an
+// attribute for the length of the transition so the rules that depend on it
+// — which page is on top, what is cut, where the furniture goes — can be
+// written statically. Absent for a movement where neither page covers the
+// other.
+const TRANSITION_COVERED_PROPERTY = "--navi-route-transition-covered";
+const TRANSITION_COVERED_ATTRIBUTE = "data-navi-route-transition-covered";
 // What the movement is played on. The root snapshot spans the viewport, and
 // the regions of elements captured on their own (a named bar) are BLANK in it
 // — a page sliding vertically then drags a blank band across the screen where
@@ -30458,12 +30512,24 @@ const css$12 = /* css */`:root[data-navi-route-transition] [data-navi-route-tran
       z-index: 1;
     }
 
-    &::view-transition-group(.navi_furniture_shared) {
+    &::view-transition-group(.navi_furniture_leaving), &::view-transition-group(.navi_furniture_arriving), &::view-transition-group(.navi_furniture_shared) {
       z-index: 2;
     }
 
     &::view-transition-group(.navi_popup) {
       z-index: 3;
+    }
+
+    &[data-navi-route-transition-covered="old"] {
+      &::view-transition-group(.navi_furniture_leaving) {
+        z-index: 0;
+      }
+    }
+
+    &[data-navi-route-transition-covered="new"] {
+      &::view-transition-group(.navi_furniture_arriving) {
+        z-index: 0;
+      }
     }
 
     &::view-transition-group(*), &::view-transition-old(*), &::view-transition-new(*) {
@@ -30503,6 +30569,38 @@ const css$12 = /* css */`:root[data-navi-route-transition] [data-navi-route-tran
   &::view-transition-new(navi-route-transition) {
     top: calc(var(--navi-transition-window-new-top) - var(--navi-transition-window-top));
     left: calc(var(--navi-transition-window-new-left) - var(--navi-transition-window-left));
+  }
+
+  &[data-navi-route-transition-target="area"] {
+    &[data-navi-route-transition-covered="old"] {
+      &::view-transition-old(navi-route-transition) {
+        clip-path: polygon(calc(var(--navi-transition-old-band-left) - var(--navi-transition-window-old-left))
+              calc(var(--navi-transition-old-band-top) - var(--navi-transition-window-old-top)),
+            calc(100dvw - var(--navi-transition-old-band-right) - var(--navi-transition-window-old-left))
+              calc(var(--navi-transition-old-band-top) - var(--navi-transition-window-old-top)),
+            calc(100dvw - var(--navi-transition-old-band-right) - var(--navi-transition-window-old-left))
+              calc(100dvh - var(--navi-transition-old-band-bottom) - var(--navi-transition-window-old-top)),
+            calc(var(--navi-transition-old-band-left) - var(--navi-transition-window-old-left))
+              calc(100dvh - var(--navi-transition-old-band-bottom) - var(--navi-transition-window-old-top)));
+      }
+    }
+
+    &[data-navi-route-transition-covered="new"] {
+      &::view-transition-new(navi-route-transition) {
+        clip-path: polygon(calc(var(--navi-safe-area-inset-left) +
+                  var(--navi-transition-cover-left) - var(--navi-transition-window-new-left))
+              calc(var(--navi-safe-area-inset-top) +
+                  var(--navi-transition-cover-top) - var(--navi-transition-window-new-top)),
+            calc(100dvw - var(--navi-safe-area-inset-right) - var(--navi-transition-cover-right) - var(--navi-transition-window-new-left))
+              calc(var(--navi-safe-area-inset-top) +
+                  var(--navi-transition-cover-top) - var(--navi-transition-window-new-top)),
+            calc(100dvw - var(--navi-safe-area-inset-right) - var(--navi-transition-cover-right) - var(--navi-transition-window-new-left))
+              calc(100dvh - var(--navi-safe-area-inset-bottom) - var(--navi-transition-cover-bottom) - var(--navi-transition-window-new-top)),
+            calc(var(--navi-safe-area-inset-left) +
+                  var(--navi-transition-cover-left) - var(--navi-transition-window-new-left))
+              calc(100dvh - var(--navi-safe-area-inset-bottom) - var(--navi-transition-cover-bottom) - var(--navi-transition-window-new-top)));
+      }
+    }
   }
 
   &[data-navi-route-transition-type] {
@@ -30589,10 +30687,18 @@ const css$12 = /* css */`:root[data-navi-route-transition] [data-navi-route-tran
   }
 
   &[data-navi-route-transition-type="cover-right"], &[data-navi-route-transition-type="cover-left"], &[data-navi-route-transition-type="cover-bottom"], &[data-navi-route-transition-type="cover-top"] {
+    &[data-navi-route-transition="forward"] {
+      --navi-route-transition-covered: old;
+    }
+
     &[data-navi-route-transition="back"] {
-      &::view-transition-old(root), &::view-transition-old(navi-route-transition) {
-        z-index: 1;
-      }
+      --navi-route-transition-covered: new;
+    }
+  }
+
+  &[data-navi-route-transition-covered="new"] {
+    &::view-transition-old(root), &::view-transition-old(navi-route-transition) {
+      z-index: 1;
     }
   }
 
@@ -30795,6 +30901,11 @@ const RouteTransitionArea = ({
  *       }
  *     }
  *
+ *   A type of the application's own that plays one page OVER the other says
+ *   which one is covered, next to its keyframes:
+ *   `--navi-route-transition-covered: old` (the page arriving comes over the
+ *   page being left) or `new` (the page being left slides off the page
+ *   arriving) — see docs/route_transitions.md, "Custom movements".
  *   Whatever is written here is what EVERY crossing of the pair plays. One
  *   crossing can ask for something else — `<Link routeTransition>`, or
  *   navTo(url, { routeTransition }) — which overrides this field by field, for
@@ -31438,6 +31549,12 @@ const beginTransition = ({
   documentElement.setAttribute(TRANSITION_ATTRIBUTE, direction);
   if (type) {
     documentElement.setAttribute(TRANSITION_TYPE_ATTRIBUTE, type);
+    // Read once the type is worn, which is what makes the type's value
+    // resolve; a value a type does not publish leaves the attribute off.
+    const covered = getComputedStyle(documentElement).getPropertyValue(TRANSITION_COVERED_PROPERTY).trim();
+    if (covered === "old" || covered === "new") {
+      documentElement.setAttribute(TRANSITION_COVERED_ATTRIBUTE, covered);
+    }
   }
   // Looked up per transition, not once: the area is the application's own
   // element and follows its lifecycle — a page layout without bars has none,
@@ -31540,7 +31657,9 @@ const beginTransition = ({
     // replaced holds nothing: what it wore was taken off at the takeover.
     if (areaElement && currentTransition === transition) {
       holdTransitionFurniture(transition, areaElement);
-      holdTransitionWindow(transition, areaElement, areaStateBefore);
+      holdTransitionWindow(transition, areaElement, areaStateBefore, {
+        furnitureLive: false
+      });
     }
   });
   const end = () => {
@@ -31575,6 +31694,7 @@ const releaseTransitionRoot = transition => {
   const documentElement = document.documentElement;
   documentElement.removeAttribute(TRANSITION_ATTRIBUTE);
   documentElement.removeAttribute(TRANSITION_TYPE_ATTRIBUTE);
+  documentElement.removeAttribute(TRANSITION_COVERED_ATTRIBUTE);
   documentElement.removeAttribute(TRANSITION_TARGET_ATTRIBUTE);
   releaseTransitionWindow(transition);
   releaseTransitionDestination(transition);
@@ -32329,7 +32449,11 @@ const RouteTravel = ({
       // which is what the box is measured through: the two states are at the
       // same place in the layout without being at the same place in the window
       // (see transition_window.js).
-      holdTransitionWindow(travel, elementRef.current, stateBefore);
+      // The bars stay live under the pictures for a travel: only the box is
+      // photographed (see the TRAVEL_ATTRIBUTE css).
+      holdTransitionWindow(travel, elementRef.current, stateBefore, {
+        furnitureLive: true
+      });
     });
     travel.viewTransition = viewTransition;
     if (scrub) {

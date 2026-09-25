@@ -16,9 +16,13 @@
  * - a bar only one state has never meets a counterpart. It belongs to the page
  *   that has it, so it travels with that page — leaving by the keyframes the
  *   page being left leaves by, arriving by the ones the page arriving arrives
- *   by — instead of going out with the render. Under the pages, so a page
- *   coming over it covers it — a popup over them instead, standing where it
- *   stands in the document (see the z-order in route_transition.jsx).
+ *   by — instead of going out with the render. Over that page, as it is at
+ *   rest: the page runs under it, and what it paints outside its box (a button
+ *   standing up out of a tab bar) is not cut by its own page. Under the pages
+ *   only when its page is covered by the other one — a cover-* movement — so
+ *   the sheet comes over it; a popup over everything, standing where it
+ *   stands in the document (see the z-order in route_transition.jsx). Which
+ *   side a bar is on is said by a class on its group, written here.
  *
  * A popup shown in the top layer is furniture of the same kind, and its case
  * is the sharper one: it is a DOM descendant of the area, yet painted outside
@@ -96,11 +100,17 @@ export const FURNITURE_NAME_PREFIX = "navi-transition-furniture-";
 const TOP_LAYER_WALL_SELECTOR =
   ".navi_dialog:modal, .navi_popover_backdrop:popover-open";
 const WALL_ATTRIBUTE = "data-navi-transition-wall";
-// Worn by a bar both states have, from the hold on: its two pictures are one
-// group, and the group is ordered over the pages (route_transition.jsx). Only
-// a bar — a popup's class is written by layout/popup_css.js, and a second rule
-// on the same property would replace it.
-const SHARED_ATTRIBUTE = "data-navi-transition-furniture-shared";
+// Which side of the movement a bar is on, worn by the bar and read by the
+// browser as the class of its group (the CSS below): "leaving" from the first
+// picture, "arriving" for a bar the state arriving brought, "shared" for one
+// that stands in both states, written over "leaving" at the hold. The group's
+// class is the one captured with the LAST state the element stands in, so a
+// bar only the state being left has keeps "leaving" from the first capture,
+// and a shared one takes "shared" from the second. The z-order in
+// route_transition.jsx is written on these three. Only a bar — a popup's
+// class is written by layout/popup_css.js, and a second rule on the same
+// property would replace it.
+const FURNITURE_ATTRIBUTE = "data-navi-transition-furniture";
 // What the wall paints, resolved on the matched element in both cases (the
 // dialog for its ::backdrop, the popover's wall for itself): the same two
 // properties, copied onto the stand-in.
@@ -110,9 +120,15 @@ const WALL_PROPERTIES = ["--backdrop-background", "--backdrop-filter"];
 const FIXED_BAR_SELECTOR = ".navi_fixed_bar";
 
 const TRANSITION_FURNITURE_CSS = /* css */ `
-  /* Read by the browser at the second capture, which is where the group's
-     class comes from when both states have the element. */
-  .navi_fixed_bar[data-navi-transition-furniture-shared] {
+  /* Read by the browser at each capture; the group keeps the class of the
+     last state the element stands in (see FURNITURE_ATTRIBUTE). */
+  .navi_fixed_bar[data-navi-transition-furniture="leaving"] {
+    view-transition-class: navi_furniture_leaving;
+  }
+  .navi_fixed_bar[data-navi-transition-furniture="arriving"] {
+    view-transition-class: navi_furniture_arriving;
+  }
+  .navi_fixed_bar[data-navi-transition-furniture="shared"] {
     view-transition-class: navi_furniture_shared;
   }
 
@@ -216,7 +232,7 @@ export const nameTransitionFurniture = (owner, areaElement) => {
     furnitureOwner = owner;
     namedElements = new Set();
   }
-  nameFurnitureAround(areaElement);
+  nameFurnitureAround(areaElement, "leaving");
   const sources = paintTransitionWalls(areaElement);
   // The state being left has walls: what no picture covers starts dimmed.
   // The frame the first picture is taken on shows the live document, so the
@@ -243,10 +259,10 @@ export const holdTransitionFurniture = (owner, areaElement) => {
     if (!element.isConnected) {
       namesLeaving.push(nameByElement.get(element));
     } else if (element.matches(FIXED_BAR_SELECTOR)) {
-      element.setAttribute(SHARED_ATTRIBUTE, "");
+      element.setAttribute(FURNITURE_ATTRIBUTE, "shared");
     }
   }
-  const namesArriving = nameFurnitureAround(areaElement);
+  const namesArriving = nameFurnitureAround(areaElement, "arriving");
   const sources = paintTransitionWalls(areaElement);
   // The state arriving has walls: what no picture covers ends dimmed. Painted
   // from the state being left when that one had walls (they stay up if both
@@ -296,7 +312,8 @@ export const holdTransitionFurniture = (owner, areaElement) => {
 
 // Returns the elements it had to name, which are the ones the state arriving
 // brought: everything else was already wearing its name from the first pass.
-const nameFurnitureAround = (areaElement) => {
+// `side` is what a bar named here is told it is on (see FURNITURE_ATTRIBUTE).
+const nameFurnitureAround = (areaElement, side) => {
   const namesAdded = [];
   for (const element of document.querySelectorAll(FURNITURE_SELECTOR)) {
     if (namedElements.has(element)) {
@@ -322,6 +339,9 @@ const nameFurnitureAround = (areaElement) => {
       nameByElement.set(element, name);
     }
     element.style.setProperty(NAME_PROPERTY, name);
+    if (element.matches(FIXED_BAR_SELECTOR)) {
+      element.setAttribute(FURNITURE_ATTRIBUTE, side);
+    }
     namedElements.add(element);
     namesAdded.push(name);
   }
@@ -371,7 +391,7 @@ export const releaseTransitionFurniture = (owner) => {
   furnitureOwner = null;
   for (const element of namedElements) {
     element.style.removeProperty(NAME_PROPERTY);
-    element.removeAttribute(SHARED_ATTRIBUTE);
+    element.removeAttribute(FURNITURE_ATTRIBUTE);
   }
   namedElements = new Set();
   if (travelStyleElement) {

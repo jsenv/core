@@ -717,7 +717,11 @@ export const RouteTravel = ({
       // which is what the box is measured through: the two states are at the
       // same place in the layout without being at the same place in the window
       // (see transition_window.js).
-      holdTransitionWindow(travel, elementRef.current, stateBefore);
+      // The bars stay live under the pictures for a travel: only the box is
+      // photographed (see the TRAVEL_ATTRIBUTE css).
+      holdTransitionWindow(travel, elementRef.current, stateBefore, {
+        furnitureLive: true,
+      });
     });
     travel.viewTransition = viewTransition;
     if (scrub) {

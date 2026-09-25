@@ -185,7 +185,20 @@ export const measureTransitionWindowState = (element) => {
   };
 };
 
-export const holdTransitionWindow = (owner, element, stateBefore) => {
+/**
+ * @param {object} options
+ * @param {boolean} options.furnitureLive - Whether the bars stay live under
+ *   the pictures for the movement (a travel), or are pictures of their own
+ *   ordered over the page they belong to (a route transition, see
+ *   transition_furniture.js). Decides how far the cut may be opened for the
+ *   picture being left — see bandTheCutMayBeRelaxedTo.
+ */
+export const holdTransitionWindow = (
+  owner,
+  element,
+  stateBefore,
+  { furnitureLive },
+) => {
   const bandBefore = stateBefore.band;
   const rectAfter = element.getBoundingClientRect();
   const bandAfter = readBand();
@@ -219,7 +232,9 @@ export const holdTransitionWindow = (owner, element, stateBefore) => {
   style.setProperty(WINDOW_OLD_LEFT_PROPERTY, `${rectBefore.left}px`);
   style.setProperty(WINDOW_NEW_TOP_PROPERTY, `${rectAfter.top}px`);
   style.setProperty(WINDOW_NEW_LEFT_PROPERTY, `${rectAfter.left}px`);
-  const oldBand = bandTheCutMayBeRelaxedTo(bandBefore, bandAfter, rectAfter);
+  const oldBand = furnitureLive
+    ? bandTheCutMayBeRelaxedTo(bandBefore, bandAfter, rectAfter)
+    : bandBefore;
   style.setProperty(OLD_BAND_TOP_PROPERTY, `${oldBand.top}px`);
   style.setProperty(OLD_BAND_RIGHT_PROPERTY, `${oldBand.right}px`);
   style.setProperty(OLD_BAND_BOTTOM_PROPERTY, `${oldBand.bottom}px`);
@@ -382,18 +397,25 @@ const readBand = () => {
   };
 };
 
-// How far the cut may be opened for the picture being left — the band its own
-// state kept free, which is the whole point of photographing it: furniture
-// present in only one of the two states is not the frame, it is part of what
-// changes, and cutting the page being left at a bar it never had shows its
-// header being sliced instead of leaving.
+// How far the cut may be opened for the picture being left when the furniture
+// is LIVE under the pictures — the band its own state kept free, which is the
+// whole point of photographing it: furniture present in only one of the two
+// states is not the frame, it is part of what changes, and cutting the page
+// being left at a bar it never had shows its header being sliced instead of
+// leaving.
 //
 // Never past what the picture ARRIVING needs, though: the cut is one line for
 // both pictures, so opening it for one opens it for the other. A box that runs
-// under the furniture it arrives beside — a page scrolled below a top bar —
-// would then be watched painting over that bar for the length of the movement,
-// which is what the cut exists to prevent. On such an edge the arriving band
-// stands, and the page being left is cut as it always was.
+// under the live furniture it arrives beside — a page scrolled below a top bar
+// — would then be watched painting over that bar for the length of the
+// movement, which is what the cut exists to prevent. On such an edge the
+// arriving band stands, and the page being left is cut as it always was.
+//
+// With the furniture photographed (a route transition) none of this holds: a
+// bar only the arriving state has is a picture ordered over the page it
+// belongs to, and a page arriving under it paints nothing over it. The band
+// of the state being left is then published as it was, so the page being
+// left is never cut at a bar it never had.
 const bandTheCutMayBeRelaxedTo = (bandBefore, bandAfter, rectAfter) => {
   return {
     top: rectAfter.top < bandAfter.top ? bandAfter.top : bandBefore.top,

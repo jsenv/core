@@ -152,6 +152,16 @@ const startViewTransition = ensureDocumentStartViewTransition();
 const TRANSITION_ATTRIBUTE = "data-navi-route-transition";
 const TRANSITION_TYPE_ATTRIBUTE = "data-navi-route-transition-type";
 const TRANSITION_DURATION_PROPERTY = "--navi-route-transition-duration";
+// Which page the other one COVERS, when the movement is one page over the
+// other: "old" (the page arriving comes over the page being left) or "new"
+// (the page being left slides off the page arriving). Published by the type
+// as a value on the root, like its keyframes (see the css), and mirrored as an
+// attribute for the length of the transition so the rules that depend on it
+// — which page is on top, what is cut, where the furniture goes — can be
+// written statically. Absent for a movement where neither page covers the
+// other.
+const TRANSITION_COVERED_PROPERTY = "--navi-route-transition-covered";
+const TRANSITION_COVERED_ATTRIBUTE = "data-navi-route-transition-covered";
 // What the movement is played on. The root snapshot spans the viewport, and
 // the regions of elements captured on their own (a named bar) are BLANK in it
 // — a page sliding vertically then drags a blank band across the screen where
@@ -338,21 +348,27 @@ const css = /* css */ `
           ) - var(--navi-route-transition-clip-bottom)
       );
 
-      /* The pages travel OVER a bar only one state has. Everything captured
+      /* The bars stand over the pages, as they do at rest. Everything captured
          while an area is marked wears a name of navi's own for the length of
-         the movement (transition_furniture.js), and a bar with no counterpart
-         stands where it was photographed: under the pages, which is what lets
-         a page come over a bar that is going away, and a page leaving uncover
-         the bar arriving behind it.
+         the movement (transition_furniture.js), and its class says which side
+         it is on: a bar the two states SHARE is the frame, held where it
+         stands while the pages move behind it; a bar only one state has
+         travels with the page it belongs to, over it — the page runs under
+         its bar by design, and what the bar paints outside its box (a button
+         standing up out of a tab bar, a shadow cast on the page) must not be
+         cut by its own page. The pages are cut at the frame's band anyway
+         (the clip formulas above), so over a shared bar the order only
+         decides what is seen of it outside its box.
 
-         A bar the two states SHARE is the frame, and stands over the pages as
-         it does at rest: the pages are cut at its band anyway (the clip
-         formulas above), so the order only decides what is seen of the bar
-         OUTSIDE its box — a button standing up out of a tab bar, a shadow
-         cast on the page — and under the pages that would be cut for the
-         length of the movement. Which bars are shared is a fact about the
-         pair of states, known at the hold: transition_furniture.js writes the
-         class on them then.
+         The one exception is a page COVERED by the other one — a cover-*
+         movement, said by the type (TRANSITION_COVERED_PROPERTY): the sheet
+         coming over it must come over its furniture too, so the bars of the
+         covered page go under the pages, and that page's own picture is cut
+         at its own band instead (see below), which is what keeps it from
+         being drawn over its bar. What such a bar paints outside its box is
+         cut by its page for the length of the movement: the bar cannot be
+         both over its own page and under the other one, the two pictures
+         being one group.
 
          An open popup stands in the top layer, over everything the document
          paints, so its picture stands over all of them — a page sliding under
@@ -368,11 +384,23 @@ const css = /* css */ `
       &::view-transition-group(navi-route-transition) {
         z-index: 1;
       }
+      &::view-transition-group(.navi_furniture_leaving),
+      &::view-transition-group(.navi_furniture_arriving),
       &::view-transition-group(.navi_furniture_shared) {
         z-index: 2;
       }
       &::view-transition-group(.navi_popup) {
         z-index: 3;
+      }
+      &[data-navi-route-transition-covered="old"] {
+        &::view-transition-group(.navi_furniture_leaving) {
+          z-index: 0;
+        }
+      }
+      &[data-navi-route-transition-covered="new"] {
+        &::view-transition-group(.navi_furniture_arriving) {
+          z-index: 0;
+        }
       }
 
       /* And on the transition's own clock, whatever was captured. How long the
@@ -469,6 +497,115 @@ const css = /* css */ `
             --navi-transition-window-left
           )
       );
+    }
+
+    /* The page the other one covers is cut at its OWN band, on top of the
+       group's cut at the frame's: its furniture stands under the pages for
+       the length of the movement (the z-order above), and a page that runs
+       under a bar of its own would otherwise be drawn over it. Written on
+       the picture, in the picture's own coordinates — the band is where it
+       stood on the screen, minus the picture's own corner — which is the
+       screen's for a page that does not move, and a covered page does not:
+       it is the one standing still under the sheet. A polygon rather than
+       an inset: the cut is a line from the picture's corner, and the
+       picture's own size is nobody's to write. */
+    &[data-navi-route-transition-target="area"] {
+      &[data-navi-route-transition-covered="old"] {
+        &::view-transition-old(navi-route-transition) {
+          clip-path: polygon(
+            calc(
+                var(--navi-transition-old-band-left) - var(
+                    --navi-transition-window-old-left
+                  )
+              )
+              calc(
+                var(--navi-transition-old-band-top) - var(
+                    --navi-transition-window-old-top
+                  )
+              ),
+            calc(
+                100dvw - var(--navi-transition-old-band-right) - var(
+                    --navi-transition-window-old-left
+                  )
+              )
+              calc(
+                var(--navi-transition-old-band-top) - var(
+                    --navi-transition-window-old-top
+                  )
+              ),
+            calc(
+                100dvw - var(--navi-transition-old-band-right) - var(
+                    --navi-transition-window-old-left
+                  )
+              )
+              calc(
+                100dvh - var(--navi-transition-old-band-bottom) - var(
+                    --navi-transition-window-old-top
+                  )
+              ),
+            calc(
+                var(--navi-transition-old-band-left) - var(
+                    --navi-transition-window-old-left
+                  )
+              )
+              calc(
+                100dvh - var(--navi-transition-old-band-bottom) - var(
+                    --navi-transition-window-old-top
+                  )
+              )
+          );
+        }
+      }
+      &[data-navi-route-transition-covered="new"] {
+        &::view-transition-new(navi-route-transition) {
+          clip-path: polygon(
+            calc(
+                var(--navi-safe-area-inset-left) +
+                  var(--navi-transition-cover-left) - var(
+                    --navi-transition-window-new-left
+                  )
+              )
+              calc(
+                var(--navi-safe-area-inset-top) +
+                  var(--navi-transition-cover-top) - var(
+                    --navi-transition-window-new-top
+                  )
+              ),
+            calc(
+                100dvw - var(--navi-safe-area-inset-right) - var(
+                    --navi-transition-cover-right
+                  ) - var(--navi-transition-window-new-left)
+              )
+              calc(
+                var(--navi-safe-area-inset-top) +
+                  var(--navi-transition-cover-top) - var(
+                    --navi-transition-window-new-top
+                  )
+              ),
+            calc(
+                100dvw - var(--navi-safe-area-inset-right) - var(
+                    --navi-transition-cover-right
+                  ) - var(--navi-transition-window-new-left)
+              )
+              calc(
+                100dvh - var(--navi-safe-area-inset-bottom) - var(
+                    --navi-transition-cover-bottom
+                  ) - var(--navi-transition-window-new-top)
+              ),
+            calc(
+                var(--navi-safe-area-inset-left) +
+                  var(--navi-transition-cover-left) - var(
+                    --navi-transition-window-new-left
+                  )
+              )
+              calc(
+                100dvh - var(--navi-safe-area-inset-bottom) - var(
+                    --navi-transition-cover-bottom
+                  ) - var(--navi-transition-window-new-top)
+              )
+          );
+        }
+      }
     }
 
     /* ------------------------------------------------------------------
@@ -585,18 +722,30 @@ const css = /* css */ `
         --navi-route-transition-enter: navi-route-transition-still;
       }
     }
-    /* Going back, the page leaving is the cover: it must slide off ABOVE the
-       one it uncovers, against the browser's default of drawing the new page
-       on top. */
+    /* One page over the other, said as a value like the keyframes: the still
+       page is the covered one, and everything that follows from being
+       covered — being drawn under, being cut at its own band, its furniture
+       going under the pages — is written on the attribute mirroring this
+       (TRANSITION_COVERED_ATTRIBUTE). A type of the application's own that
+       covers says it the same way. */
     &[data-navi-route-transition-type="cover-right"],
     &[data-navi-route-transition-type="cover-left"],
     &[data-navi-route-transition-type="cover-bottom"],
     &[data-navi-route-transition-type="cover-top"] {
+      &[data-navi-route-transition="forward"] {
+        --navi-route-transition-covered: old;
+      }
       &[data-navi-route-transition="back"] {
-        &::view-transition-old(root),
-        &::view-transition-old(navi-route-transition) {
-          z-index: 1;
-        }
+        --navi-route-transition-covered: new;
+      }
+    }
+    /* The page leaving is the cover on the way back: it must slide off ABOVE
+       the one it uncovers, against the browser's default of drawing the new
+       page on top. */
+    &[data-navi-route-transition-covered="new"] {
+      &::view-transition-old(root),
+      &::view-transition-old(navi-route-transition) {
+        z-index: 1;
       }
     }
 
@@ -815,6 +964,11 @@ export const RouteTransitionArea = ({ children, ...rest }) => {
  *       }
  *     }
  *
+ *   A type of the application's own that plays one page OVER the other says
+ *   which one is covered, next to its keyframes:
+ *   `--navi-route-transition-covered: old` (the page arriving comes over the
+ *   page being left) or `new` (the page being left slides off the page
+ *   arriving) — see docs/route_transitions.md, "Custom movements".
  *   Whatever is written here is what EVERY crossing of the pair plays. One
  *   crossing can ask for something else — `<Link routeTransition>`, or
  *   navTo(url, { routeTransition }) — which overrides this field by field, for
@@ -1395,6 +1549,14 @@ const beginTransition = ({ page, url, fromUrl, direction, type, duration }) => {
   documentElement.setAttribute(TRANSITION_ATTRIBUTE, direction);
   if (type) {
     documentElement.setAttribute(TRANSITION_TYPE_ATTRIBUTE, type);
+    // Read once the type is worn, which is what makes the type's value
+    // resolve; a value a type does not publish leaves the attribute off.
+    const covered = getComputedStyle(documentElement)
+      .getPropertyValue(TRANSITION_COVERED_PROPERTY)
+      .trim();
+    if (covered === "old" || covered === "new") {
+      documentElement.setAttribute(TRANSITION_COVERED_ATTRIBUTE, covered);
+    }
   }
   // Looked up per transition, not once: the area is the application's own
   // element and follows its lifecycle — a page layout without bars has none,
@@ -1516,7 +1678,9 @@ const beginTransition = ({ page, url, fromUrl, direction, type, duration }) => {
     // replaced holds nothing: what it wore was taken off at the takeover.
     if (areaElement && currentTransition === transition) {
       holdTransitionFurniture(transition, areaElement);
-      holdTransitionWindow(transition, areaElement, areaStateBefore);
+      holdTransitionWindow(transition, areaElement, areaStateBefore, {
+        furnitureLive: false,
+      });
     }
   });
   const end = () => {
@@ -1551,6 +1715,7 @@ const releaseTransitionRoot = (transition) => {
   const documentElement = document.documentElement;
   documentElement.removeAttribute(TRANSITION_ATTRIBUTE);
   documentElement.removeAttribute(TRANSITION_TYPE_ATTRIBUTE);
+  documentElement.removeAttribute(TRANSITION_COVERED_ATTRIBUTE);
   documentElement.removeAttribute(TRANSITION_TARGET_ATTRIBUTE);
   releaseTransitionWindow(transition);
   releaseTransitionDestination(transition);

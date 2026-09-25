@@ -303,19 +303,24 @@ about the bar:
 - a bar **both states have** is one element, so its two pictures pair into one
   group and it holds where it stands. The pages move behind it, and a bar whose
   content changes with the route cross-fades without being named by hand.
-- a bar **one state has** meets no counterpart. It holds where it was
-  photographed while the pages move over it — covered as a page comes over it,
-  uncovered as one leaves — instead of appearing or vanishing in a frame. A page
-  that takes the whole screen (a full-screen wizard whose banner is its own
-  header) is this case, on the way in and on the way back.
+- a bar **one state has** meets no counterpart. It belongs to the page that
+  has it and travels with that page — leaving by the keyframes the page being
+  left leaves by, arriving by the ones the page arriving arrives by — instead
+  of appearing or vanishing in a frame. A page that takes the whole screen (a
+  full-screen wizard whose banner is its own header) is this case, on the way
+  in and on the way back.
 
-The pages are ordered above a bar only one state has for that reason, and
-below a bar both states have: the frame stands over the pages as it does at
-rest, so what a bar paints outside its box — a button standing up out of a tab
-bar, a shadow on the page — is seen for the length of the movement instead of
-being cut at the bar's edge. The price of being
-photographed is that a bar cannot answer the pointer for those few hundred
-milliseconds, which is what a route transition wants anyway: both pages are
+Every bar stands over the pages, as it does at rest: the page runs under its
+bar by design, and what a bar paints outside its box — a button standing up
+out of a tab bar, a shadow on the page — is seen for the length of the
+movement instead of being cut at the bar's edge. The one exception is a page
+**covered** by the other one (a `cover-*` movement): the sheet must come over
+that page's furniture too, so the bars of the covered page go under the pages
+and the covered page is cut at its own band instead. What such a bar paints
+outside its box is cut by its own page for those few hundred milliseconds — a
+bar cannot be both over its own page and under the other one. The price of
+being photographed is that a bar cannot answer the pointer for the length of
+the movement, which is what a route transition wants anyway: both pages are
 pictures too, and a press landing on either would be an accident. `RouteTravel`
 is the opposite case — a finger is on the box — and leaves the bars live.
 
@@ -392,6 +397,25 @@ that play them:
 That is what a fixed bar belonging to one of the two states is given to travel
 with the page it belongs to (see the transition area above). Nothing else reads
 them, and a type that publishes nothing leaves such a bar to the browser's fade.
+
+A type that plays one page **over** the other says which one is covered, the
+same way:
+
+```css
+:root[data-navi-route-transition-type="sheet"][data-navi-route-transition="forward"] {
+  --navi-route-transition-covered: old;
+}
+:root[data-navi-route-transition-type="sheet"][data-navi-route-transition="back"] {
+  --navi-route-transition-covered: new;
+}
+```
+
+`old` says the page arriving comes over the page being left, `new` that the
+page being left slides off the page arriving. Navi then draws the covered page
+under the other one, cuts it at its own band, and puts its furniture under the
+pages so the sheet comes over it (see the transition area above). The shipped
+`cover-*` types say exactly this; a movement where neither page covers the
+other publishes nothing.
 
 ## Two routes matching one url
 
