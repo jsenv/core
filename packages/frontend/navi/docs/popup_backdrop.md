@@ -62,9 +62,10 @@ dismissing click must not also press what is under it — without dimming the
 page for it. `backdrop={false}` is for a popup that must not absorb at all.
 
 **It is what decides whether a popup is modal.** `Popover` is never modal,
-either layer. A `Dialog` is modal exactly when it has a wall: with one, a
-top-layer dialog is `showModal()`'d and the browser makes everything behind
-genuinely inert; without one it goes to the same top layer through the Popover
+either layer, and neither is a `layer="local"` dialog. A top-layer `Dialog` is
+modal exactly when it has a wall: with one it is `showModal()`'d and the
+browser makes everything behind genuinely inert; without one it goes to the
+same top layer through the Popover
 API (`popover="manual"`), placed against the screen just the same, over a page
 that stays live. `Popup` forwards `backdrop` in both modes, so which of popover
 or dialog the small-screen resolution picks says nothing about whether one
@@ -179,7 +180,12 @@ panel that closes on that press then reopens on the click that follows is a
 panel meant to stay open, blinking.
 
 ```jsx
-<SidePanel id="error_panel" signal={openCardIdSignal} closeByPressOutside>
+<SidePanel
+  id="error_panel"
+  signal={openCardIdSignal}
+  backdrop={false}
+  closeByPressOutside
+>
   …
 </SidePanel>
 
@@ -198,7 +204,7 @@ adds a whole thing to the popup's ground — the card, its count, its buttons �
 and nothing in it is a dismissal.
 
 It reads a press the page hears, so it belongs with a popup that has no wall
-(`backdrop={false}`, or a popover): behind a wall, no card is pressable.
+(`backdrop={false}`): behind a wall, no card is pressable.
 
 ### `pointer-events: none` and `inert` are not this
 

@@ -6,6 +6,8 @@ An element picked up and carried, and what letting go means. It is one gesture
 the gate they go through and how a control learns which of them asked are in
 [interactions.md](./interactions.md); who owns a press when the carried thing
 stands in a box that travels is in [drag_to_travel.md](./drag_to_travel.md).
+Whatever the moment, `event.detail.event` is the `pointerdown` the carry began
+with — for the release as well, unlike a swipe's.
 
 - [Carrying something: `move`, `reorder`, `land`, `toss`, `leave`](#carrying-something-move-reorder-land-toss-leave)
   - [While it is being moved: `moving`](#while-it-is-being-moved-moving)
@@ -29,11 +31,12 @@ differs is the release. One detector reads them all, because it is one press.
 `toss` and `leave` each **combine** with `reorder` and with `land`: dropped on
 another item the element changes places, thrown far and fast it is gotten rid of,
 let go of away from every place it leaves. `leave` combines with `move` as well.
-`toss` does **not** combine with `move`, and neither do `reorder` and `land` with
-each other — one release cannot mean two of those. Declared together, the
-copy-carrying one wins and `move` is never answered — the element itself never
-travels, and a release that is not the other outcome means nothing at all (a dev
-warning says so).
+`move` does **not** combine with any of the three that carry a copy (`reorder`,
+`land`, `toss`), and neither do `reorder` and `land` with each other — one
+release cannot mean two of those. Declared together, the copy-carrying one wins
+and `move` is never answered — the element itself never travels, and a release
+that is not the other outcome means nothing at all; of `reorder` and `land`,
+`land` wins. A dev warning says so in each case.
 
 `move` carries the element ITSELF and leaves it where it was put; the others
 carry a copy and put the original back. That is the same difference said in layout
@@ -50,9 +53,10 @@ place taken by the list.
 ```
 
 `data-drag-free` on the element or a container lets it leave; by default a `move`
-stays inside what one can SEE of its container — which requires that container to
-be a scroll container at all (`overflow` anything but `visible`), since there is
-nothing else for "inside" to mean. A `move` whose answer rejects travels back, because a
+stays inside what one can SEE of its scroll container — the nearest ancestor whose
+`overflow` is `auto` or `scroll`, the page's viewport when there is none — so a
+board that only cuts its content (`hidden`, `clip`) does not hold what moves on
+it. A `move` whose answer rejects travels back, because a
 place the application would not accept must not stay on screen as if it had.
 
 **Where the position is kept is the answer's.** An element drawn from state —
@@ -202,8 +206,9 @@ back, not a row deleted — a list declares `toss`, a surface declares `leave`.
 ```
 
 `leave` combines with every other outcome. Beside `land` or `reorder`, "outside" is
-away from every place. Beside `move` — the element itself travels, and nothing is a
-place — it is outside the surface the element stands in: the nearest
+away from every place. Where nothing is a place — beside `move`, which carries the
+element itself, beside `toss`, or alone — it is outside the surface the element
+stands in: the nearest
 `data-droppable` ancestor, or, without one, what can be seen of the scroll
 container (a dev warning says which). Either way it is judged on the element's
 box no longer overlapping it, not on the pointer, which is still well inside the
@@ -220,8 +225,8 @@ frame when a small marker has just left it.
 </Plan>
 ```
 
-Its detail is `toss`'s — `{ id, x, y }`, the distance travelled being what an exit
-is animated with. Picked up and put straight back down stays a cancel: it has to
+Its detail is `toss`'s without the speed — `{ id, x, y }`, the distance travelled
+being what an exit is animated with. Picked up and put straight back down stays a cancel: it has to
 have gone somewhere to be away from anything.
 
 What the thing does while the answer is asked follows what was carried. A copy
@@ -283,8 +288,8 @@ place, swap the two, refuse.
 />
 ```
 
-`toId` is an element and **never null**: a copy over nothing is a release that
-meant nothing, and the interaction does not happen at all.
+`toId` always names an element and is **never null**: a copy over nothing is a
+release that meant nothing, and the interaction does not happen at all.
 
 **Which elements are places: those marked `data-droppable`, and only those.**
 Declaring `land` says an element can be CARRIED, which on a board is a different
@@ -487,9 +492,11 @@ vibration above, a state kept elsewhere, a counter.
 
 `grab` **reports, it does not ask**: what it returns is not waited on, and
 preventing its event does not call the gesture off. And it is not an interaction on
-its own — declared without one of the five above there is no gesture for it to be
-the beginning of, and a dev warning says so. Its detail carries `pointerType` and
-the `gestureInfo`.
+its own — declared without one of the five above (or `moving`) there is no
+gesture for it to be the beginning of, and a dev warning says so, unless the
+element declares `pan` or `zoom`, whose moments they then are
+([pan_zoom.md](./pan_zoom.md)). Its detail carries `pointerType` and the
+`gestureInfo`.
 
 A `longpress` needs none of this: it already happens at the moment the hold is
 acquired, not at the release.
@@ -574,7 +581,7 @@ prevented.
 One outcome refusing refuses the whole gesture — the five answer one carry, and
 something that must not be carried has none of them. Like `grab` and `release`,
 `refuse` **reports, it does not ask**, and it is not an interaction on its own.
-Its detail is `{ pointerType }` and nothing more: there is no `gestureInfo`
+Its detail is `{ pointerType }` beside the press (`event`), and no `gestureInfo`
 because there was no gesture, and what feedback wants to know is which hand asked
 — a vibration for a finger, nothing extra for a mouse whose cursor has already
 said it.
@@ -587,11 +594,11 @@ usually gets its own from the list around it, which the copy has left. So the
 clone's look is the page's to declare, through the attributes the gesture puts on
 it:
 
-| Attribute                 | On                                                     |
-| ------------------------- | ------------------------------------------------------ |
-| `navi-drag-clone`         | the copy being carried                                 |
-| `navi-drag-clone-wrapper` | what positions it (already shadowed, in the top layer) |
-| `navi-drag-clone-source`  | the original, still in place (already hidden)          |
+| Attribute                 | On                                                   |
+| ------------------------- | ---------------------------------------------------- |
+| `navi-drag-clone`         | the copy being carried (already shadowed and scaled) |
+| `navi-drag-clone-wrapper` | what positions it, in the top layer                  |
+| `navi-drag-clone-source`  | the original, still in place (already hidden)        |
 
 ```css
 .task[navi-drag-clone] {
@@ -603,19 +610,19 @@ it:
 Reusing the item's own class is the point: the copy is that item, so it is styled
 as that item plus whatever being carried changes.
 
-**Which is also the trap, for anything positioned on a board.** The copy is the
-same element re-parented into a carrier box, so a geometry written in the style
-attribute follows it there — `width: calc(50% - 2 * var(--gap))` then means half
-of the copy instead of half of the board, and the piece is carried at the wrong
-size. Put what a piece LOOKS like in a class and leave only which place it is
-inline (two custom properties will do), then let it fill its carrier:
+**Which is also the trap, for anything positioned on a board.** The copy is a
+deep clone of the element put in a carrier box, so a geometry written in the style
+attribute comes with it. navi takes back where it stands (`position`, `inset`,
+`margin` and `translate` are reset on the copy) but not its size —
+`width: calc(50% - 2 * var(--gap))` then means half of the carrier instead of
+half of the board, and the piece is carried at the wrong size. Put what a piece
+LOOKS like in a class and leave only which place it is inline (two custom
+properties will do), then let it fill its carrier:
 
 ```css
 [navi-drag-clone-wrapper] .piece {
-  position: static;
   width: 100%;
   height: 100%;
-  translate: none;
 }
 ```
 
@@ -654,8 +661,8 @@ from for as long as the question is open — and if the answer refuses, the copy
 back to it.
 
 `data-drag-axis` says which axes the drag walks, and its default is not the same
-for every outcome: `reorder` alone walks the list (`y`, or `x` for a list that runs
-sideways), while a `move` goes wherever it is put, a `land` wherever the board has
+for every outcome: `reorder` alone walks the list (`y`; a list that runs sideways
+says `data-drag-axis="x"`), while a `move` goes wherever it is put, a `land` wherever the board has
 places, a `toss` wherever it was thrown and a `leave` out by whichever edge (`xy`).
 `data-drag-delay`,
 `data-drag-slop`, `data-drag-threshold` tune when the press becomes a grab.
@@ -728,6 +735,9 @@ leaves the paint alone:
 import { createDragGestureController, dragAfterIntent } from "@jsenv/navi";
 
 const onPointerDown = (pointerDownEvent) => {
+  // Read now: the callback below runs once the intent shows, after dispatch,
+  // when `currentTarget` is null.
+  const element = pointerDownEvent.currentTarget;
   dragAfterIntent(pointerDownEvent, () => {
     const controller = createDragGestureController({
       onDrag: (gestureInfo) => {
@@ -741,9 +751,7 @@ const onPointerDown = (pointerDownEvent) => {
         COURT.PUT.run({ angle: angleSignal.peek() });
       },
     });
-    return controller.grabViaPointer(pointerDownEvent, {
-      element: pointerDownEvent.currentTarget,
-    });
+    return controller.grabViaPointer(pointerDownEvent, { element });
   });
 };
 ```

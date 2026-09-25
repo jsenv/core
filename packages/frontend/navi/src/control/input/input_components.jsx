@@ -1,6 +1,7 @@
 import { useContext } from "preact/hooks";
 
 import { Icon } from "@jsenv/navi/src/text/text.jsx";
+import { ControlIdContext } from "../control_context.js";
 import { Label } from "../field.jsx";
 import { InputTextualContext } from "./input_textual_context.js";
 
@@ -30,7 +31,7 @@ export const InputUnitSlot = ({ children, side = "right", ...props }) => {
   );
 };
 
-const InputSlot = ({ side, ...props }) => {
+const InputSlot = ({ side, children, ...props }) => {
   const ctx = useContext(InputTextualContext);
   const { id, readOnly, disabled } = ctx || {};
 
@@ -57,6 +58,14 @@ const InputSlot = ({ side, ...props }) => {
         }
       }}
       {...props}
-    />
+    >
+      {/* A Label hands its htmlFor to the controls inside it, for the label
+          that wraps its control. The slot's control is the input, outside
+          it: a button drawn here (a clear cross) is a control of its own and
+          would otherwise take — and answer for — the input's id. */}
+      <ControlIdContext.Provider value={undefined}>
+        {children}
+      </ControlIdContext.Provider>
+    </Label>
   );
 };

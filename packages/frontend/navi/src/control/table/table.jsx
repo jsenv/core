@@ -23,9 +23,10 @@
  * KEY PRINCIPLES:
  * - Use inset box-shadow to ensure borders appear above table cell backgrounds
  * - Use ::before pseudo-elements with position: absolute for flexible positioning
- * - Each cell draws its own borders independently (no border-collapse by default)
+ * - Each cell draws its own borders; `borderCollapse` (on by default) keeps only
+ *   the right and bottom ones, plus top on the first row and left on the first column
  * - Selection borders override table borders using higher CSS specificity
- * - Sticky borders use thicker box-shadows in accent color (yellow)
+ * - Sticky borders use thicker box-shadows in an accent color
  *
  * TECHNICAL IMPLEMENTATION:
  * - All borders use inset box-shadow with specific directional mapping:
@@ -33,9 +34,8 @@
  *   * Right: inset -1px 0 0 0
  *   * Bottom: inset 0 -1px 0 0
  *   * Left: inset 1px 0 0 0
- * - Selection borders (blue) override table borders (red) in same pseudo-element
+ * - Selection borders override table borders in the same pseudo-element
  * - Sticky borders replace regular borders with thicker colored variants
- * - Border-collapse mode available as optional feature for future use
  *
  * Note how border disappear for sticky elements when using border-collapse (https://bugzilla.mozilla.org/show_bug.cgi?id=1727594)
  *

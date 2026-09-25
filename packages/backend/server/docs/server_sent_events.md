@@ -38,7 +38,9 @@ eventSource.addEventListener("ping", (event) => {
 
 ![Screencast of server sent events execution in a terminal](./screenshots/sse-screencast.gif)
 
-An event is `{ type, data, id, retry }`; `data` is sent as is (stringify objects yourself). Every event gets an incrementing `id` and is kept (`historyLength`, 1000 by default): a client reconnecting with `last-event-id` receives what it missed. A comment is sent every `keepaliveDuration` (30s) so that proxies keep the connection open.
+An event is `{ type, data, id, retry }`; `data` is sent as is (stringify objects yourself) and must hold no line break: the event stream is line based, a line break ends the event. `JSON.stringify` without indentation is safe. Every event gets an incrementing `id` and is kept (`historyLength`, 1000 by default): a client reconnecting with a `last-event-id` header, or a `?last-event-id=` search param, receives what it missed. A comment is sent every `keepaliveDuration` (30s) so that proxies keep the connection open.
+
+A websocket client receives each event as one message, the whole event as json: `JSON.parse(message.data)` gives `{ type, data, id }`.
 
 Past `maxClientAllowed` (100) a new client is refused with 503, or the oldest one is disconnected with `actionOnClientLimitReached: "kick-oldest"`. `close()` disconnects everyone and answers 204 until `open()`. `getClientCount()` and `getAllEventSince(id)` tell where things stand.
 

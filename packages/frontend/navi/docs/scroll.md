@@ -47,7 +47,7 @@ Two shapes, and they do not behave the same:
 | `header` / `footer` alone | the container itself scrolls, and they are `position: sticky` at its edges — the content scrolls under them                                                                                       |
 | a `body` as well          | the container becomes a flex column, its own overflow turns to `hidden`, and the **body is the only thing that scrolls**; header and footer sit outside it (`position: static`, `flex-shrink: 0`) |
 
-Two consequences worth knowing before fighting them:
+Three consequences worth knowing before fighting them:
 
 - the body is `flex: 0 1 auto` — **it shrinks, it never grows**. A short body
   leaves the footer right under it rather than pushed to the bottom of a box it
@@ -61,7 +61,8 @@ Two consequences worth knowing before fighting them:
   them — positioned or not. Write `style={{ "--box-header-z-index": "auto" }}`
   (`--box-footer-z-index` likewise) at the call site that needs the opposite: a
   badge or a stamp overflowing a row is otherwise sliced by a header it never
-  scrolls under. `isolation: isolate` on the box keeps either value local to it.
+  scrolls under. The box is `isolation: isolate` already, so either value stays
+  local to it.
   See `docs/z_index.md` and `src/box/demos/9_scrollable_z_index_demo.html`.
 
 Padding belongs on the parts, not on the scrolling box: padding on a scroller
@@ -237,10 +238,11 @@ A dialog is already bounded by the room its container leaves it
 (`--dialog-maxmax-height`), so a `maxHeight` is only for making it smaller than
 that.
 
-`dialog.jsx` deliberately declares no `overflow` of its own: a modal dialog
-would inherit `auto` from the UA stylesheet and a `layer="local"` one gets
-nothing, so without a scrolling rule its `max-height` would only decide how big
-the box looks while the content kept painting straight through it.
+`dialog.jsx` deliberately declares no `overflow` of its own: the
+`[data-scrollable]` the dialog carries is its scrolling rule. A modal dialog
+would get `auto` from the UA stylesheet anyway, but a `layer="local"` one gets
+nothing, and without that rule its `max-height` would only decide how big the
+box looks while the content kept painting straight through it.
 
 ### `scrollCapture`
 
@@ -309,7 +311,7 @@ So: nothing scrollable between the cap and the slides. A `<Box body>` around
 them is a scroller (see the table at the top of this file) — and so is a bare
 `overflow="auto"` on a wrapper. The dialog keeps a shared `header` if the tabs
 are shared, with an explicit `flexShrink="0"` since the rule that gives it for
-free lives inside `[data-scrollable]`.
+free applies only next to a `body`.
 
 **Padding goes on the slide** — or on its parts, since the slide is now the
 scroller (see the top of this file) — but never on the container nor on
@@ -393,8 +395,8 @@ browser paints first — what a phone screen shows, plus a few — and `after` f
 the paint on. The switch waits for the paint itself, not for an effect: preact
 runs a component's pending effects early when that component renders again,
 and something always re-renders before a popup has painted. Do not rebuild
-this by hand with a `useEffect` that widens a slice — that is the thing it
-replaces, and it fails for that reason. The runs ask their source for `after`
+this by hand with a `useEffect` that widens a slice: that effect is one preact
+runs early, and it fails for that reason. The runs ask their source for `after`
 rows from the start, so the smaller first window costs no second request.
 
 ### Doing it well

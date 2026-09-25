@@ -1,12 +1,11 @@
 /**
- * Orchestrates the three rule managers for a UI state controller.
- *
- * Instead of holding `controller.controlInteraction` + `controller.controlValidity`
- * independently, a controller now has a single `controller.rules` object:
+ * Orchestrates the rule managers of a UI state controller, held together in
+ * one `controller.rules` object:
  *
  *   controller.rules.callout     — shared callout display manager
  *   controller.rules.interaction — interactivity gate (disabled/readonly/busy)
  *   controller.rules.validation  — value validity gate (required/pattern/etc.)
+ *   controller.rules.guard       — keystroke guard (charGuard/maxLengthGuard)
  *
  * The callout manager is created first so both interaction and validation
  * can use the same callout slot and the same lifecycle hooks.

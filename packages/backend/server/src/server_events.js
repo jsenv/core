@@ -14,7 +14,7 @@ import { WebSocketResponse } from "./web_socket_response.js";
  * @class
  * @param {Object} options - Configuration options for the SSE controller
  * @param {String} [options.logLevel] - Controls logging verbosity ('debug', 'info', 'warn', 'error', etc.)
- * @param {Boolean} [options.keepProcessAlive=false] - If true, prevents Node.js from exiting while SSE connections are active
+ * @param {Boolean} [options.keepProcessAlive=false] - If true, the keepalive timer keeps the process alive until `close()`
  * @param {Number} [options.keepaliveDuration=30000] - Milliseconds between keepalive messages to prevent connection timeout
  * @param {Number} [options.retryDuration=1000] - Suggested client reconnection delay in milliseconds
  * @param {Number} [options.historyLength=1000] - Maximum number of events to keep in history for reconnecting clients
@@ -70,7 +70,7 @@ export class ServerEvents {
  * @param {Function} producer - Function called when first client connects
  * @param {Object} [options] - Configuration options for the SSE controller
  * @param {String} [options.logLevel] - Controls logging verbosity ('debug', 'info', 'warn', 'error', etc.)
- * @param {Boolean} [options.keepProcessAlive=false] - If true, prevents Node.js from exiting while SSE connections are active
+ * @param {Boolean} [options.keepProcessAlive=false] - If true, the keepalive timer keeps the process alive until `close()`
  * @param {Number} [options.keepaliveDuration=30000] - Milliseconds between keepalive messages to prevent connection timeout
  * @param {Number} [options.retryDuration=1000] - Suggested client reconnection delay in milliseconds
  * @param {Number} [options.historyLength=1000] - Maximum number of events to keep in history for reconnecting clients
@@ -139,8 +139,9 @@ const createServerEvents = ({
 } = {}) => {
   const logger = createLogger({ logLevel });
 
+  // starts closed: open() below installs the keepalive interval
   const serverEventSource = {
-    closed: false,
+    closed: true,
   };
   const clientArray = [];
   const eventHistory = createEventHistory(historyLength);
@@ -382,6 +383,7 @@ const createServerEvents = ({
     close,
     open,
   });
+  open();
   return serverEventSource;
 };
 

@@ -31,9 +31,10 @@ Stacked, one setting per row:
 </Group>
 ```
 
-`row` (a `Box` prop — its children are laid out as rows, so they stack
-vertically) is the only prop that changes the arrangement; everything else is
-read off the members themselves.
+`row` (or `vertical`, the same prop — each member is a row, so they stack
+vertically and meet along horizontal seams) is the only prop that changes the
+arrangement; everything else is read off the members themselves. Say it rather
+than `flex="y"`: the seams follow `row`, not the layout.
 
 Live examples: `src/control/demos/15_group_demo.html`.
 

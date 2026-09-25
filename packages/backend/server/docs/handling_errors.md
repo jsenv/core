@@ -72,4 +72,4 @@ A route that has not started responding after `responseTimeout` (10 minutes by d
 
 ## Stopping on internal error
 
-`stopOnInternalError: true` stops the server once a route throws (after the error handlers answered), for a supervisor to restart it in a clean state.
+`stopOnInternalError: true` stops the server as soon as a route throws, for a supervisor to restart it in a clean state. The request that threw, and every other request still running, is answered 500 with no body: the `handleError` plugins still run, but their response is not sent.

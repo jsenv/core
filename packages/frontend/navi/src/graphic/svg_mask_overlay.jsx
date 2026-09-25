@@ -1,5 +1,18 @@
+import { cloneElement } from "preact";
+
+const css = /* css */ `
+  .svg_mask_content * {
+    color: black !important;
+    opacity: 1 !important;
+    fill: black !important;
+    fill-opacity: 1 !important;
+    stroke: black !important;
+    stroke-opacity: 1 !important;
+  }
+`;
+
 /**
- * SVGComposition Component
+ * SVGMaskOverlay
  *
  * Creates composite SVGs by combining independent SVG elements with masking.
  *
@@ -28,24 +41,10 @@
  * ```
  *
  * @param {Object} props - Component properties
- * @param {string} props.viewBox - The main viewBox for the composition (required)
- * @param {ReactNode[]} props.children - SVG elements (first is base, rest are overlays)
- * @returns {ReactElement} A composed SVG with all elements properly masked
+ * @param {string} props.viewBox - The main viewBox for the composition (required as soon as there is an overlay)
+ * @param {import("preact").ComponentChildren} props.children - SVG elements (first is base, rest are overlays)
+ * @returns {import("preact").VNode} A composed SVG with all elements properly masked
  */
-
-import { cloneElement } from "preact";
-
-const css = /* css */ `
-  .svg_mask_content * {
-    color: black !important;
-    opacity: 1 !important;
-    fill: black !important;
-    fill-opacity: 1 !important;
-    stroke: black !important;
-    stroke-opacity: 1 !important;
-  }
-`;
-
 export const SVGMaskOverlay = ({ viewBox, children }) => {
   import.meta.css = css;
   if (!Array.isArray(children)) {
@@ -55,7 +54,7 @@ export const SVGMaskOverlay = ({ viewBox, children }) => {
     return children[0];
   }
   if (!viewBox) {
-    console.error("SVGComposition requires an explicit viewBox");
+    console.error("SVGMaskOverlay requires an explicit viewBox");
     return null;
   }
 

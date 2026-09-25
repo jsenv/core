@@ -73,8 +73,8 @@ Opt-in, and for the same reason its opposite is (see
 [`data-drag-on-contact`](./drag_interactions.md#a-finger-that-does-not-have-to-wait-data-drag-on-contact)):
 navi cannot see whether anything behind the surface scrolls. You know;
 say so. It spends the hold, though: a `longpress` declared beside a `pan` that
-waits asks one finger to answer two waits of the same length, and only one of
-them is answered.
+waits asks one finger to answer two waits, and the surface's — the shorter one
+— is the one answered.
 
 The wait is then asked before every pan, which is right while each finger
 landing there is genuinely ambiguous. Once the user has settled into the plan it

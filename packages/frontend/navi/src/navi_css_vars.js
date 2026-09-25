@@ -55,7 +55,7 @@ const css = /* css */ `
          It stays a ceiling and nothing else: on a screen narrower than the app
          it never binds, so popups keep shrinking with the phone, and the gap
          each popup keeps with the edges (marginWithContainer) is subtracted
-         from it as before. A single popup that genuinely needs more can still
+         from it too. A single popup that genuinely needs more can still
          raise its own maxWidth/maxHeight prop.
 
          Read from the insets rather than as a min() of its own so that the

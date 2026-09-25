@@ -6,15 +6,15 @@
  * - Action dispatch + validity: `control_action.js` / `dispatchRequestAction`
  * - Validity checking: `control_validation.js`
  *
- * Each UI state controller gets its own `controlInteraction` instance (created by
- * `createControlInteraction`) just like it gets a `controlValidity` instance.
+ * Each UI state controller gets its own instance, `controller.rules.interaction`
+ * (created by `createControlInteraction`), beside `controller.rules.validation`.
  *
  * Flow:
  *   user interaction
  *   → dispatchRequestInteraction
  *   → "navi_request_interaction" event
  *   → onRequestInteraction
- *       → check disabled / read-only / busy (via controller.controlInteraction)
+ *       → check disabled / read-only / busy (via controller.rules.interaction)
  *         against the interaction's `intent` ("write" by default, "read" for one
  *         that only shows what is already there — see READONLY_CONSTRAINT)
  *       → if blocked  → prevented()

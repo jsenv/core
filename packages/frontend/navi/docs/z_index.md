@@ -77,6 +77,7 @@ which band it came from.
 | Band                                                                                                                                | Token                                                                                                 | Value                        |
 | ----------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ---------------------------- |
 | Top layer (`Dialog`/`Popover` with `layer="top"`)                                                                                   | —                                                                                                     | above everything             |
+| A modal's wall painted into the page for the length of a route transition, standing in for the top layer                            | `--navi-z-index-top-layer`                                                                            | 10000                        |
 | `Dialog`/`Popover` with `layer="local"`, their backdrop, callouts                                                                   | `--navi-z-index-popup`, `--navi-z-index-callout`                                                      | 1000 `+ stack order`         |
 | `FixedBar`                                                                                                                          | `--navi-z-index-bar`                                                                                  | 100                          |
 | Sticky while something scrolls under: `List` header/footer/group labels, `SidePanel` head/foot, `Box` header/footer, `<Box sticky>` | `--navi-z-index-sticky`                                                                               | 10                           |
@@ -103,7 +104,7 @@ What to read from it:
 the second half of that sentence is a condition, not decoration. A `List` group
 label at rest is a block in the flow: nothing passes under it, and painting it
 at 10 there is what slices a focus ring, a badge or a stamp that a neighbouring
-row lets out of its box — including a `Group` member raising itself to 1 or 2.
+row lets out of its box — including a `Group` member raising itself to 1, 2 or 3.
 
 CSS cannot express the condition. There is no `:stuck`, and
 `@container scroll-state(stuck: top)` styles a container's **descendants**, so
@@ -164,7 +165,7 @@ page raised passes in front of it — a `Group` member holding focus is at 2, so
 it is seen crossing a submit bar the box was written to keep last. DOM order
 cannot answer that (2 beats `auto` whatever the order) and `isolation: isolate`
 neither (the common parent holds both, isolating it does not reorder them), so
-before this the app had no move left but a literal of its own.
+without the band the app would have no move left but a literal of its own.
 
 An explicit `zIndex` wins, `zIndex="auto"` included — the way
 `--box-header-z-index` writes the band back at a call site that knows better:
@@ -181,10 +182,10 @@ to paint over its neighbour — otherwise its focus ring is sliced in half by th
 member that comes after it in the DOM. DOM order cannot express "whichever one
 is hovered", so this is a legitimate `z-index`.
 
-`isolation: isolate` on the group would contain those two values, but it would
+`isolation: isolate` on the group would contain those values, but it would
 also contain the popup of a `Picker` held in the group: its 1000 would become
 local, and the popup would be capped inside the group instead of covering the
-page. So the group is deliberately not isolated, and what keeps its 1 and 2
+page. So the group is deliberately not isolated, and what keeps its 1, 2 and 3
 harmless is the scale above them.
 
 ## A card that stacks three layers with no `z-index`
@@ -209,4 +210,4 @@ above everything — DOM order alone, in painting order:
 The only positioning trick here is `position: relative` on the content: a
 positioned element paints above a non-positioned one regardless of order, so
 the content has to be positioned too to stay above the cover link. `isolation`
-is there for what the card's children may do later, not for this file.
+is there for what the card's children may do later, not for this example.

@@ -115,9 +115,10 @@ is a value being offered to that control. It is not an action, and it is not a
 signal to write by hand:
 
 ```jsx
-<ControlGroup id="duration">
-  <TimeWheel name="duration" signal={durationSignal} />
-</ControlGroup>
+<WheelGroup id="duration" signal={durationSignal}>
+  <Wheel name="hours">…</Wheel>
+  <Wheel name="minutes">…</Wheel>
+</WheelGroup>
 
 <Button
   command="--navi-update"
@@ -217,9 +218,9 @@ They are not competing, they answer two different questions:
 - `defaultValue` is where the control starts, and where a reset goes back to.
 
 ```jsx
-// "how many players" is what my account usually answers, unless this game says
+// "which levels" is what my account usually answers, unless this game says
 // otherwise — no `??` to write, and no first render showing the wrong one
-<List selectable signal={gameLevelsSignal} defaultValue={me.levels}>
+<List selectable multiple signal={gameLevelsSignal} defaultValue={me.levels}>
 ```
 
 An emptied signal (`signal.value = undefined`) puts the control back on its
@@ -371,8 +372,8 @@ ignored** — on a leaf control as on a group (a selectable list, a checkbox
 group) — and navi says so in dev. One owner, whichever half of the binding you
 look at.
 
-Replacing `value` with `signal` also means dropping the `uiAction` that used to
-write the signal by hand — it is exactly what the binding now does. Keep
+Replacing `value` with `signal` also means dropping the `uiAction` that wrote
+the signal by hand — writing it is exactly what the binding does. Keep
 `uiAction` only for what is not "remember the value": logging, a side effect,
 something else moving with it.
 
@@ -418,10 +419,8 @@ Reference: `src/control/picker/preset/spin_time.jsx`,
 ## See also
 
 - [state_binding.md](./state_binding.md) — the same rule beyond controls:
-
   a `SlideContainer`'s area, a popup being open, the position in the app — all
   bound rather than copied back by a callback
-
 - [form_changed.md](./form_changed.md) — what a form makes of each of these:
   which fields it counts as already answered, and when it sends nothing
 - [control_object.md](./control_object.md) — several controls reading as one

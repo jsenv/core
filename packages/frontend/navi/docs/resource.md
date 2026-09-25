@@ -93,14 +93,15 @@ const GAME = resource("game", {
 ```
 
 The callback receives the bound params merged with the range the list asks for
-(`start`, `end`, `limit`, `before`, `after`, `around`, `count`), and a `signal`
-as second argument — aborted when the list stops wanting those rows. It returns
-a range the way a `Content-Range` does: **`{ items, start, count }`** — these
-rows, at this place, out of that many. `start` may be omitted when the list
-asked for a positive one; `count` defaults to `start + items.length` (a source
-that does not know its total). The items are upserted on their way in, so the
-list draws store items — never copies of the JSON — and a request sent from a
-row is read back on that row.
+(`start`, `end`, `limit`, `before`, `after`, `around`, `count`), and `{ signal }`
+as second argument — a signal aborted when the list stops wanting those rows.
+It returns a range the way a `Content-Range` does: **`{ items, start, count }`**
+— these rows, at this place, out of that many. `start` may be omitted when the
+list asked for one at or after `0` (a negative `start` counts back from the end,
+and the source must then say where the slice landed); `count` defaults to
+`start + items.length` (a source that does not know its total). The items are
+upserted on their way in, so the list draws store items — never copies of the
+JSON — and a request sent from a row is read back on that row.
 
 A row that must follow its **own fields** through a write reads them from the
 store rather than from the object it was handed:
@@ -131,9 +132,12 @@ this collection again after its screen went away finds it drawn and revalidates
 it rather than starting over
 ([list_refresh.md](./list_refresh.md#leaving-the-screen-and-coming-back)).
 
-What it does not give is membership: an item that leaves the collection stays on
-screen until the rows are asked for again. Give the screen its own way to ask
-(a refresh gesture, a `key` on the run).
+Membership is what a re-read answers: a verb listed in `rerunOn.GET_RANGE`
+(`["POST", "DELETE"]` by default) tells the run the collection moved, and it
+asks again for the window it draws, rows staying on screen meanwhile. A write
+that moves an item in or out through another verb — a `PATCH` that archives —
+is added there, or `reader.invalidate()` is called; a `key` on the run is not the
+way ([list_refresh.md](./list_refresh.md#a-paginated-list-stays-on-screen-too)).
 
 It reads a collection, so it lives on the resource itself (or on a
 `withParams()` of it), not on a relation.
@@ -411,14 +415,17 @@ rules, verified by `src/state/rest/tests/resource_graph_parent_rerun.test.js`:
   reruns the parent. Declare it explicitly with `dependencies` if you need it
   (see [`dependencies`](#dependencies-rerun-after-another-resource-writes)).
 - Within a relationship resource, the usual defaults still apply: its own
-  `GET_MANY` reruns after its own `POST`; its `GET` is reset (not rerun) by its
-  `DELETE`. Override per relation with `rerunOn`/`dependencies`, which every
-  relationship method accepts.
+  `GET_MANY` reruns after its own `POST`. A `.one`/`.many` `GET` is reset (not
+  rerun) by its own `DELETE`, as a root `GET` is; a scoped `GET` is not reset —
+  its data simply resolves to nothing once the child is dropped. Override per
+  relation with `rerunOn`/`dependencies`, which every relationship method
+  accepts.
 
 Splitting a sub-resource out of a parent `PATCH` therefore changes the refresh
-graph: what used to be refreshed by the parent's own response is now refreshed
-only by these rules. When a parent field genuinely depends on a child mutation,
-say so with `dependencies` rather than relying on a rerun that will not happen.
+graph: a parent field the parent's own response kept fresh is, once the relation
+is a resource of its own, refreshed only by these rules. When a parent field
+genuinely depends on a child mutation, say so with `dependencies` rather than
+relying on a rerun that will not happen.
 
 ## `withParams()`: a scope with reruns of its own
 

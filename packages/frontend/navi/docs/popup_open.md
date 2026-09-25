@@ -91,7 +91,7 @@ where that state lives:
 
 | what opens it                      | how                                                    |
 | ---------------------------------- | ------------------------------------------------------ |
-| a button                           | `command` / `commandfor` attributes, no `open`         |
+| a button                           | `command` / `commandFor` props, no `open`              |
 | a gesture, an event, a JS decision | `triggerNaviCommand(...)`, still no `open`             |
 | a state the app holds              | `signal` — [below](#when-the-app-holds-the-open-state) |
 | where the user is                  | `navState`, or a route `stateSignal` given to `signal` |
@@ -99,7 +99,7 @@ where that state lives:
 ## A button opens it: the attributes
 
 ```jsx
-<Button command="--navi-open" commandfor="note-dialog">
+<Button command="--navi-open" commandFor="note-dialog">
   Read the note
 </Button>
 <Dialog id="note-dialog">…</Dialog>
@@ -123,7 +123,7 @@ press:
 ## Something else opens it: `triggerNaviCommand`
 
 The attributes fire on every click of the element that carries them, and they
-cover more than "this button opens that dialog": `commandfor` says to whom,
+cover more than "this button opens that dialog": `commandFor` says to whom,
 `value` says what it is about, `--navi-x:argument` says how. Before writing any
 JS here, check none of those is the answer — `triggerNaviCommand` is the last
 resort, not the general way to run a command.
@@ -209,7 +209,7 @@ closes the popup as usual.
 
 ```jsx
 <Row
-  commandfor="row_menu"
+  commandFor="row_menu"
   interactions={{
     longpress: (event) =>
       triggerNaviCommand(event.target, "--navi-open", event),
@@ -225,7 +225,8 @@ own opening press from somebody else's comes from that gesture.
 The first argument is the command's **source** — the element it is triggered
 _from_. The target is resolved from it, in this order:
 
-1. `commandfor="someId"` on the source,
+1. `commandFor="someId"` on the source (written to the DOM as the HTML
+   `commandfor` attribute, which is what is read),
 2. `navi-command-target="parent-control" | "child-control"`,
 3. the command's own fallback — for the popup commands, `closest("[aria-expanded]")`.
 
@@ -234,7 +235,7 @@ element itself as the source resolves to that popup: `closest()` starts at the
 element itself. That is the short form used above, and it is enough whenever the
 JS that decides already holds the popup's ref.
 
-To trigger from another element instead, give that element a `commandfor`
+To trigger from another element instead, give that element a `commandFor`
 pointing at the popup's `id` — attribute-driven target resolution, JS-driven
 timing.
 
@@ -250,10 +251,11 @@ names none, and on whoever asked when nothing else says. In that order:
 3. **`detail.source`** — who asked. A button therefore opens the popup on
    itself, and a popup passed as its own source is its own anchor.
 
-For `Dialog` the anchor does nothing at all unless `sizeFromAnchor` is passed
-(then, and only then, it feeds the `--anchor-width`/`--anchor-height` CSS vars);
-for `Popover`, which really is positioned relative to its anchor, say what the
-anchor is:
+For `Dialog` the anchor does nothing at all unless `sizeFromAnchor` asks for
+it (it then feeds the `--anchor-width`/`--anchor-height` CSS vars) or
+`animation="lifting"` does (the box the dialog comes out of, see
+[popup_lift.md](./popup_lift.md)); for `Popover`, which really is positioned
+relative to its anchor, say what the anchor is:
 
 ```jsx
 <Popover ref={popoverRef} anchor={rowRef}>
@@ -261,8 +263,9 @@ anchor is:
 
 `anchorCustomEventDetail="ignore"` drops the open's side of that order
 entirely, leaving the `anchor` prop alone — for a popover that must never be
-anchored to whatever opened it (`SidePanel` does this), and for a
-`sizeFromAnchor` dialog that must never be sized from it.
+anchored to whatever opened it (`SidePanel` does this), and for a dialog that
+must never be sized from it (`sizeFromAnchor`) or lifted out of it
+(`animation="lifting"`).
 
 ## Opening it ON something
 
@@ -272,8 +275,8 @@ row is one dialog with two modes, and the press is the only thing that knows
 which one — so the press says it, with its own value:
 
 ```jsx
-<Button command="--navi-open" commandfor="radar-dialog">Nouveau radar</Button>
-<Button value={radar.id} command="--navi-open" commandfor="radar-dialog" />
+<Button command="--navi-open" commandFor="radar-dialog">Nouveau radar</Button>
+<Button value={radar.id} command="--navi-open" commandFor="radar-dialog" />
 
 <Dialog
   id="radar-dialog"
@@ -629,7 +632,7 @@ command once it succeeded.
 ```jsx
 // Stays open while save() runs, closes when it resolves, stays open if it
 // throws — with what was typed still there and the error on the button.
-<Button command="--navi-close" commandfor="note-dialog" action={save}>
+<Button command="--navi-close" commandFor="note-dialog" action={save}>
   Save
 </Button>
 ```
@@ -689,12 +692,12 @@ the popup without closing it, and the error callout stays where the press was.
 The gestures that close a popup do not all mean the same thing, and that is on
 purpose:
 
-| gesture                        | what it means | who decides                       |
-| ------------------------------ | ------------- | --------------------------------- |
-| Escape                         | cancel        | `escapeEffect="cancel"` (default) |
-| a press outside                | close, keep   | `pressOutside="close"` (default)  |
-| a close cross (`--navi-close`) | close, keep   | [the cross](#the-close-cross)     |
-| `--navi-cancel` on a button    | cancel        | the button                        |
+| gesture                        | what it means | who decides                                                                                            |
+| ------------------------------ | ------------- | ------------------------------------------------------------------------------------------------------ |
+| Escape                         | cancel        | always, for a `Dialog`/`Popover`; `escapeEffect="cancel"` (the default) for a `Picker`                 |
+| a press outside                | close, keep   | `pressOutside="close"` — the default of a `Dialog` and of a `Picker`; a bare `Popover` says `"ignore"` |
+| a close cross (`--navi-close`) | close, keep   | [the cross](#the-close-cross)                                                                          |
+| `--navi-cancel` on a button    | cancel        | the button                                                                                             |
 
 Escape says "forget it". It is the one gesture that has meant that everywhere,
 for as long as there have been dialogs, and navi keeps it that way. **A popup
@@ -757,7 +760,8 @@ empty.
 
 ### `escapeEffect="close"`, and why it is a last resort
 
-`escapeEffect="close"` makes Escape say what a click outside says. It exists,
+`escapeEffect="close"` — a `Picker` prop; a `Dialog`/`Popover` has no such
+switch — makes Escape say what a click outside says. It exists,
 and it is almost never what you want: it takes away the only key that undoes,
 and a popup with no way back is one people stop opening. Reach for a close
 cross first.
@@ -996,7 +1000,8 @@ one fill above.
 
 A press on another card is not an outside press once the card names the panel
 with `data-navi-popup-inside` (see [popup_backdrop.md](./popup_backdrop.md)).
-The full example is `src/layout/demos/7_slot_demo.html`, "two side panels".
+The full example is `src/layout/demos/7_slot_demo.html`, "Two side-panel
+slots".
 
 ## A popup that loads data
 
@@ -1116,14 +1121,20 @@ half-typed form where it left them.
 "Closed" is two states, not one — never opened yet, and closed again after an
 opening — so the `mount` prop answers both at once:
 
-| `mount`                       | before the first open | after a close |
-| ----------------------------- | --------------------- | ------------- |
-| `"always"`                    | mounted               | mounted       |
-| `"from-first-open"` (default) | not mounted           | mounted       |
-| `"while-opened"`              | not mounted           | not mounted   |
+| `mount`                       | before the first open       | after a close |
+| ----------------------------- | --------------------------- | ------------- |
+| `"always"`                    | mounted                     | mounted       |
+| `"idle"`                      | mounted once the page idles | mounted       |
+| `"from-first-open"` (default) | not mounted                 | mounted       |
+| `"while-opened"`              | not mounted                 | not mounted   |
 
 `"always"` is for content something depends on before any opening: a value read
 off it, fields a surrounding form submits, a size measured from outside.
+`"idle"` is `"always"` minus the cost on the render that draws the page.
+
+Whatever the value but `"while-opened"`, intent on the anchor — a pointer
+entering it, focus landing in it — builds the content ahead of the click that
+will open it.
 
 `"while-opened"` is what an uncontrolled field seeded from a `defaultValue`
 needs: without it, a popup reopened after the underlying value changed still

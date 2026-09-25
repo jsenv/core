@@ -12,8 +12,8 @@
  * A dialog is centered in the viewport by default, with no anchor to grow
  * out of or slide in from — `animation={true}`/`"auto"` resolves through
  * Popover's own no-real-anchor path (see popover.jsx's own top comment).
- * `positionArea` accepts the same grammar Popover does (see
- * popup_shared.js), even though several combinations land identically here
+ * `positionArea` accepts the same grammar Popover does (parsePositionArea
+ * in @jsenv/dom), even though several combinations land identically here
  * since Dialog is never really anchored — kept distinct anyway because
  * `positionArea` still picks which animation direction plays. `anchor` is
  * inert here unless something asks for it: a dialog is a surface of its own,
@@ -877,7 +877,7 @@ const css = /* css */ `
  *   within its container (the viewport for `layer="top"`, the positioned
  *   ancestor for `layer="local"`) — Dialog is never anchored to a real
  *   element for positioning purposes. Same grammar as `Popover`'s own
- *   `positionArea` (see `popup_shared.js`'s `parsePositionArea`): a single
+ *   `positionArea` (see `parsePositionArea` in @jsenv/dom): a single
  *   compass token — `top`/`top-start`/`top-end`/`top-left`/`top-right`,
  *   `right`/`right-start`/`right-end`, `bottom`/`bottom-start`/
  *   `bottom-end`/`bottom-left`/`bottom-right`, `left`/`left-start`/
@@ -896,12 +896,12 @@ const css = /* css */ `
  *   between the dialog and the edges of its container, whatever its
  *   `positionArea`: it both caps the dialog's own size (via
  *   `--x-dialog-container-spacing`, written from this prop) and offsets a docked
- *   one from the edge it docks to. Accepts a spacing token ("s", "m"…), a
- *   number of pixels, or a viewport length — "appw"/"apph" being the app's own
- *   screen (the visual viewport, or the narrower one the app declared with
- *   --navi-app-max-width) and "vvw"/"vvh" the visual viewport itself, which
- *   shrinks when the mobile keyboard opens. Pass 0 for a dialog
- *   meant to sit flush (a side panel).
+ *   one from the edge it docks to. Accepts a number of pixels, a viewport
+ *   length — "appw"/"apph" being the app's own screen (the visual viewport, or
+ *   the narrower one the app declared with --navi-app-max-width) and
+ *   "vvw"/"vvh" the visual viewport itself, which shrinks when the mobile
+ *   keyboard opens — or a container length ("3cqw", the `layer="local"`
+ *   default). Pass 0 for a dialog meant to sit flush (a side panel).
  * @param {boolean} [props.backdrop=true] - Whether anything is laid between
  *   the dialog and the page at all — asked before any question of what an
  *   outside press does or how the backdrop is painted. `false` leaves the page
@@ -914,10 +914,12 @@ const css = /* css */ `
  *   needs. What it gives up is what only a modal gets natively: the hardware
  *   back button no longer dismisses it. See docs/popup_backdrop.md.
  * @param {"close"|"cancel"|"capture"|"ignore"} [props.pressOutside="close"]
- *   - `"close"` closes the dialog on an outside press. `"capture"`/`"ignore"`
- *   both just absorb the press without closing (visually dimmed backdrop vs.
- *   not) — a dialog with a backdrop is modal one way or another, so there's
- *   always at least a press-absorbing backdrop regardless of this prop.
+ *   - `"close"` closes the dialog on an outside press, `"cancel"` closes it
+ *   as a cancel (what it holds reverts, as on Escape). `"capture"`/`"ignore"`
+ *   both just absorb the press without closing (`"capture"` paints the
+ *   blurred glass, `"ignore"` leaves the wall's paint alone) — a wall absorbs
+ *   the press whatever this prop says, natively for a modal and through the
+ *   sibling element for a local one.
  *   "Outside" is the dialog's own border box; a see-through dialog whose box is
  *   bigger than what it paints marks the difference with
  *   `data-navi-popup-outside` (see docs/popup_backdrop.md).
@@ -992,11 +994,10 @@ const css = /* css */ `
  * @param {string} [props.animationDuration] - Maps to
  *   `--popup-animation-duration`.
  * @param {Element|{current: Element}|string} [props.anchor] - Never used for
- *   positioning (see this file's top comment), and ignored entirely unless
- *   `sizeFromAnchor` or `animation="lifting"` asks for it — the first sizes
- *   the dialog via the `--anchor-width`/`--anchor-height` CSS vars, the second
- *   makes the dialog come out of the anchor's own box. Used when the open
- *   itself names none — an anchor carried by the opening event
+ *   positioning (see this file's top comment); read by `sizeFromAnchor` (the
+ *   `--anchor-width`/`--anchor-height` CSS vars), by `animation="lifting"`
+ *   (the box the dialog comes out of) and by `mount`'s warm-on-intent. Used
+ *   when the open itself names none — an anchor carried by the opening event
  *   (`e.detail.anchor`) is about that one opening and comes first; left out,
  *   whatever triggered the open (`e.detail.source`). A string is resolved via
  *   `document.getElementById` when the dialog opens — see popover.jsx's own
@@ -1058,6 +1059,9 @@ const css = /* css */ `
  *     focusable of its own.
  *   - `"restore"` — the dialog stays out of the opening focus chain unless it
  *     held focus when it closed.
+ *   - `false` — the dialog element itself is never where the focus lands; the
+ *     opening still hands the focus to what the dialog holds. Unlike
+ *     `Popover`'s `false`, it does not leave the keyboard where it was.
  *   Wherever the keyboard is a virtual one (a touch device), the surface is
  *   already what one arrives on: a popup is read before it is reached there, so
  *   the focus only leaves it for something that asked by name (`autoFocus` on
@@ -1308,8 +1312,8 @@ const useDialogProps = (props) => {
     layer = "top",
     dockedOnSmallTouchScreen,
 
-    // Same grammar as Popover's own positionArea — see this file's top
-    // comment and popup_shared.js's parsePositionArea.
+    // Same grammar as Popover's own positionArea — see parsePositionArea in
+    // @jsenv/dom.
     positionArea: positionAreaProp,
     // A dialog docked against an edge must keep the same gap its own size cap
     // already guarantees a centered one — so this drives both (see
@@ -1349,8 +1353,8 @@ const useDialogProps = (props) => {
     sizing = "auto",
     animation,
     lift = "box",
-    // Inert unless sizeFromAnchor below (see this file's top comment) —
-    // Dialog's own positioning is never relative to it.
+    // Never positioned against (see this file's top comment): read by
+    // sizeFromAnchor, by a lift, and by the warm-on-intent of `mount`.
     anchor,
     // Where a lift comes back to, when that is no longer the box it came out
     // of. Read at the close, not kept from the opening — see
@@ -1360,8 +1364,8 @@ const useDialogProps = (props) => {
     // See this prop's own JSDoc above for why a dialog does not follow its
     // trigger's box by default.
     sizeFromAnchor = false,
-    // Same meaning as Popover's own prop, applied to the only thing an anchor
-    // can do here: sizing under sizeFromAnchor.
+    // Same meaning as Popover's own prop, applied to what an anchor does here:
+    // sizing under sizeFromAnchor, and a lift.
     anchorCustomEventDetail = "override",
     // Makes the dialog itself a valid focus target so
     // autoFocus="last-resort" below has somewhere to land when it contains
@@ -1432,8 +1436,8 @@ const useDialogProps = (props) => {
         isTopLayer
         ? "3appw"
         : "3cqw");
-  // "expand || expandX", the shorthand semantics Popup used to apply before
-  // handing them over — the docked default only applies when neither was said
+  // `expand` is the shorthand for both axes; the docked default only applies
+  // when neither was said.
   const expandXUnset = expand === undefined && expandXProp === undefined;
   const expandX = expandXUnset
     ? isDocked && DOCKED.expandX
@@ -2215,8 +2219,8 @@ const useDialogProps = (props) => {
     // ("[navi-control='dialog'], [navi-control='popover']" — see openEffect
     // above), and --navi-open/--navi-close resolve their target this way.
     "navi-control": "dialog",
-    // The protocol every command target answers. It came with the control
-    // group before; a dialog is layout and still has to answer --navi-open,
+    // The protocol every command target answers: a dialog is layout, not a
+    // control, and still has to answer --navi-open,
     // --navi-close and --navi-toggle, which are dispatched here and do not
     // bubble.
     "onnavi_command": (e) => {
@@ -2238,14 +2242,12 @@ const useDialogProps = (props) => {
     "popover": isTopLayerPopover ? "manual" : undefined,
     "baseClassName": "navi_dialog",
     "pseudoClasses": DIALOG_PSEUDO_CLASSES,
-    // Distinguishes the two renderers for the CSS above (position: fixed
-    // vs. absolute) — positioning itself is entirely JS-driven now (see
-    // openEffect's own positionDialog above), no data-position-area
-    // attribute needed at all.
     // A popup scrolls, and asking Box for that overflow is also what lets what
     // it contains claim header/footer/body (see box.jsx) — a popup is always a
     // scrolling area, so it says so once, here.
     "overflow": "auto",
+    // Tells the two renderers apart for the CSS above (position: fixed vs.
+    // absolute); the placement itself is JS-driven (positionDialog).
     "data-layer": layer,
     // The sheet shape is live in CSS, not just a set of resolved defaults:
     // it is what withdraws the caller's --dialog-max-width (see the stylesheet

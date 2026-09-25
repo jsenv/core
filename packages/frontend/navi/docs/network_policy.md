@@ -29,8 +29,11 @@ cache the app never has to write:
 - **A route action left behind is aborted, not reset.** Its value survives; only
   a run in flight is called off.
 - **Running a completed action is a no-op.** Coming back to `/games/abc` from
-  the list sends nothing — `run()` on a `COMPLETED` action already has its data.
-  Only `rerun()` goes back to the network (see [actions.md](./actions.md)).
+  the list sends nothing while the instance that read it is alive — `run()` on a
+  `COMPLETED` action already has its data. Only `rerun()` goes back to the
+  network (see [actions.md](./actions.md)). An instance nothing references any
+  more is asked again, with the store row drawn meanwhile; under the policy
+  that ask is answered from the store (below).
 - **A failed rerun keeps the previous value.** Only `errorSignal` and the
   running state move; what was on screen stays on screen.
 
@@ -109,7 +112,11 @@ was asked:
 
 Which actions the policy sees: those declaring a verb (`meta.verb`) — every
 action a `resource()` makes. A plain `createAction` may not touch the network
-at all, so it is left alone; give it `meta: { verb: "GET" }` to opt in.
+at all, so it is left alone. `createAction(callback, { meta: { verb } })` opts
+it into what the action layer holds — a control bound to a write verb is
+read-only, a completed `"GET"` is not rerun — but its callback is still called
+when it runs: answering from the store and settling with a `NetworkPolicyError`
+are done by the callbacks a `resource()` wraps.
 
 ## Holding writes while reads go out
 

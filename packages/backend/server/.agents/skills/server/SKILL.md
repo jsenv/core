@@ -26,7 +26,7 @@ Exported from [index.js](../../../index.js):
 - `ProgressiveResponse` — streaming/long-poll response (`{ write, end }`).
 - `ServerEvents`, `LazyServerEvents` — SSE + websocket broadcast controllers.
 - `fetchFileSystem`, `createFileSystemFetch`, `fetchDirectory` — serve files/directories from disk as a route `fetch`.
-- `serverPluginCORS`, `serverPluginErrorHandler`, `serverPluginRequestAliases`, `serverPluginResponseAcceptanceCheck` — built-in server plugins.
+- `serverPluginCORS`, `serverPluginErrorHandler`, `serverPluginRequestAliases`, `serverPluginResponseAcceptanceCheck` — built-in server plugins (`jsenvAccessControlAllowedMethods`/`jsenvAccessControlAllowedHeaders` are the CORS defaults).
 - `pickContentType`, `pickContentEncoding`, `pickContentLanguage` — content negotiation helpers.
 - `composeTwoResponses`, `findFreePort`, `STOP_REASON_*` — misc utilities.
 - `createPluginsController` — the generic plugin controller, shared with @jsenv/core.
@@ -42,6 +42,7 @@ A route descriptor (see `createRoute` in [src/router/router.js](../../../src/rou
   description,                        // shown in the route inspector
   declarationSource: import.meta.url,
   availableMediaTypes,               // drives content negotiation + Vary (also auto-inferred from extension)
+  acceptedMediaTypes,                // request body media types a POST/PATCH/PUT route reads (415 otherwise)
   headers,                           // header pattern that must match; headers.upgrade:"websocket" marks a WS route
   permissionsRequired, permissionsToSee, // see docs/handling_requests.md
 }

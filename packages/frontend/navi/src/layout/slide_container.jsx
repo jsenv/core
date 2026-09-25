@@ -6,20 +6,13 @@
  * travels by exactly one box, so a short one and a tall one move the same
  * distance.
  *
- * `layout` says where the slides are, and it takes either a word or a map:
- *
- *   <SlideContainer layout="row">        one after the other, in DOM order
- *   <SlideContainer layout="column">     the same, downwards
- *   <SlideContainer layout={["pick   edit",
- *                            "create"]}> a map of named areas
- *
- * The map is spelled the way CSS spells grid-template-areas: one string per
- * row, "." for a hole, a name repeated to span several cells. One place to read
- * the shape, drawn as it looks; a slide only says which area it is, so moving a
- * screen is an edit to the map and nothing else. There is no "grid" keyword,
- * because a grid without names says nothing — the map IS the grid. A word is
- * the map one would have drawn for a line, so it is drawn here and everything
- * below only ever knows about maps.
+ * `layout` says where the slides are: a word for a line, or a map of named
+ * areas spelled like grid-template-areas (the grammar is in the JSDoc). One
+ * place to read the shape, drawn as it looks; a slide only says which area it
+ * is, so moving a screen is an edit to the map and nothing else. There is no
+ * "grid" keyword, because a grid without names says nothing — the map IS the
+ * grid. A word is the map one would have drawn for a line, so it is drawn here
+ * and everything below only ever knows about maps.
  *
  * A travel is ONE BOX long, whatever the distance between the two slides on the
  * map: the slide arriving is placed next to the one being left for the duration
@@ -321,9 +314,9 @@ const offsetToPx = (offset, box) => {
 
 // A press landing while the track is already travelling: what is playing is
 // sent home in a fifth of the time it has left, and the press it could not take
-// yet is taken as soon as it lands. A press has to be FELT — nudging the pace
-// of a travel already in flight (what this used to do) reads as "nothing
-// happened", because the thing was moving before the click too. Getting there
+// yet is taken as soon as it lands. A press has to be FELT — merely nudging the
+// pace of a travel already in flight reads as "nothing happened", because the
+// thing was moving before the click too. Getting there
 // almost at once and setting off again is the click being answered.
 // Played out fast rather than cut short: ending it on the spot would jump.
 // Compounds, so two presses during one travel bring it home twice as sharply,
@@ -2885,13 +2878,12 @@ const SlideNavButton = ({ ChevronSvg, locked, ...rest }) => (
     autoFocus="last-resort"
     icon
     variant="discrete"
-    // Takes the focus like any other button, on purpose. It used to refuse it
+    // Takes the focus like any other button, on purpose. Do not refuse it
     // (mousedown.preventDefault) to keep the keyboard where the user had put
-    // it — but pressing a way out with nothing focused then left the keyboard
-    // on nothing at all: the travel below only hands the focus to the slide
-    // arriving when it was leaving a slide, so a click from document.body
-    // arrived on document.body, and the next Tab started from the top of the
-    // page rather than from what is on screen.
+    // it: the travel below only hands the focus to the slide arriving when it
+    // was leaving a slide, so a press with nothing focused would arrive on
+    // document.body, and the next Tab would start from the top of the page
+    // rather than from what is on screen.
     //
     // Letting it focus is both the plain behaviour of a button and what makes
     // the rest fall into place: the press lands on the chevron, the slide left
@@ -2912,12 +2904,6 @@ const SlideNavButton = ({ ChevronSvg, locked, ...rest }) => (
   </Button>
 );
 
-/**
- * The way out of a slide, and the way into the next one. Nothing but the
- * command plus the chevron that matches the travel: a row goes left/right, a
- * column up/down — so the button points where the slide actually goes without
- * the caller having to keep the two in sync.
- */
 /**
  * A way out pointing where it goes. It says a direction, not a slide: what is
  * over there is the map's business, and moving a screen changes nothing here.

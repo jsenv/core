@@ -33,8 +33,8 @@ import { Box } from "../box/box.jsx";
  * still renders it, with no props and `isFilled={false}` — instead of
  * unmounting it. This lets `SlotRenderer` be a persistent wrapper (a
  * `SidePanel` that opens and closes with an animation instead of being
- * mounted/unmounted alongside the filler — see 7_slot_demo.html's "two side
- * panels" section). A `SlotRenderer` that wants the
+ * mounted/unmounted alongside the filler — see 7_slot_demo.html's "Two
+ * side-panel slots" section). A `SlotRenderer` that wants the
  * render-nothing-when-unfilled behavior can opt in with its own
  * `if (!isFilled) return null;` (the default `Box` renderer doesn't do
  * this — an unfilled default slot just renders an empty `<Box/>`).

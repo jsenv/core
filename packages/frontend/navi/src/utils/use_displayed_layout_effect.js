@@ -23,8 +23,8 @@ import {
  * are no-ops.
  *
  * Behavior:
- *   - No <dialog>/<details>/[popover] ancestor → runs like a normal
- *     useLayoutEffect with the provided deps.
+ *   - No <dialog>/<details>/[popover]/[aria-expanded] ancestor → runs like a
+ *     normal useLayoutEffect with the provided deps.
  *   - Inside a closed/hidden ancestor → skips the initial run; instead runs
  *     the callback once the ancestor opens — see @jsenv/dom's own
  *     observeAncestorOpenState for exactly how that's detected, and why it
@@ -38,8 +38,9 @@ import {
  *     reveals nothing about them, so it does not re-run them either. See
  *     isDisplayedDespiteClosedAncestor in @jsenv/dom.
  *
- * The callback's second argument is always a `navi_displayed` CustomEvent,
- * with `detail: { ancestor, ancestorType, becauseAncestorOpened }`:
+ * The callback is called with the element (`ref.current`), and a
+ * `navi_displayed` CustomEvent as its second argument, with
+ * `detail: { ancestor, ancestorType, becauseAncestorOpened }`:
  *   - No <dialog>/<details>/[popover]/[aria-expanded] ancestor at all →
  *     `{ ancestor: document, ancestorType: "document" }`.
  *   - Otherwise → `{ ancestor: <the matched element>, ancestorType: "dialog"

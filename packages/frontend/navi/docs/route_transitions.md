@@ -132,8 +132,9 @@ relation was written for. Two situations, two answers:
   deserves a direction. This is the case the export exists for.
 
 A default has no direction (nothing says which of two arbitrary pages is
-"before" the other), so only directionless movements make sense there. Written
-relations, and `"none"`, always win over it.
+"before" the other), so only directionless movements make sense there: navi's
+`slide-*` and `cover-*` are written on the direction, and as the default they
+play nothing. Written relations, and `"none"`, always win over it.
 
 ## When one navigation knows better
 
@@ -179,7 +180,8 @@ the same forms `defineRouteTransition` takes, plus `direction`. It overrides
 answers for. So:
 
 - `{ direction: "back" }` keeps the pair's movement and only turns it round;
-- `"zoom"` swaps the movement, keeping nothing else;
+- `"zoom"` swaps the movement; the way round and the pace are still the
+  pair's;
 - `"none"` cuts, where the pair — or the default — would have played;
 - `{ duration: 500 }` re-times what was already going to play.
 
@@ -525,12 +527,13 @@ await page.goBack();
 The window is **one frame**: the hold is given back inside the view
 transition's callback, which the browser runs at its next rendering
 opportunity. `tests/route_transition_list_revisit/` walks it the wrong way on
-purpose in its last case — under a movement the list that comes back is the same
-DOM element ten times out of ten and asks for nothing, while the same walk
-without a movement is a real one — and the window measured there is a back at 0
-or 8ms losing every round trip, at 16ms losing only the first, and past 64ms
-losing none. No thumb moves in one frame; an automated click continues in the
-same millisecond. This is a testing trap, not a user-facing behaviour.
+purpose in its last case — a back pressed the instant the URL changes — and
+which side of that frame a cycle lands on belongs to the machine's load: under
+a movement the list that comes back is either the element that never left,
+asking for nothing, or one truly remounted, asking once, while the same walk
+without a movement is a real one every time. No thumb moves in one frame; an
+automated click continues in the same millisecond. This is a testing trap, not
+a user-facing behaviour.
 
 ## The rest, briefly
 
@@ -538,6 +541,6 @@ same millisecond. This is a testing trap, not a user-facing behaviour.
   a per-relation `{ type, duration }` for one relation.
 - The URL leads: transitions play on navigations somebody else started (a
   `<Link>`, the back button, `history.back()`). Nothing here navigates.
-- A browser without view transitions (Firefox) navigates with a cut. The app
+- A browser without view transitions navigates with a cut. The app
   must remain fully usable that way — which it is, if the transitions state
   relations rather than carry information.

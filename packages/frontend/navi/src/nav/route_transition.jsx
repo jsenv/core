@@ -47,9 +47,8 @@
  * against the map, and there is no telling it from the common way by the
  * routes alone. So the navigation itself may ask for something: a `<Link
  * routeTransition>`, or navTo(url, { routeTransition }). What it asks holds
- * for THAT
- * navigation and no other, and only for the fields it names — `{ direction:
- * "back" }` keeps the pair's movement and turns it round (see
+ * for THAT navigation and no other, and only for the fields it names —
+ * `{ direction: "back" }` keeps the pair's movement and turns it round (see
  * readNavigationRequest). A pair no relation was ever written for animates the
  * same way, for the one press that asks.
  *
@@ -59,7 +58,7 @@
  * reversed, a forward onto it plays it again as it was (see
  * readTraversalReplay). That outranks everything the registry DEDUCES — the
  * reverse of a pair, a page written from anywhere, the default — so the way
- * back no longer depends on how the table orders the two pages, and what a
+ * back does not depend on how the table orders the two pages, and what a
  * link asked for covers its own way back too. It does not outrank a relation
  * WRITTEN for the exact way travelled: that line is the author's one tool for
  * breaking reciprocity, and the back button is the way back it has to reach —
@@ -772,8 +771,9 @@ export const RouteTransitionArea = ({ children, ...rest }) => {
  * Declare how a pair of routes moves against each other — or how one route is
  * entered, from wherever its door happens to be.
  *
- * @param {object|null} from - a route, or `{ route, params }` when the page is
- *   a param of a route rather than a route of its own. `null` says the page is
+ * @param {object|null} from - a route (or the `routeFallback()` page), or
+ *   `{ route, params }` when the page is a param of a route rather than a route
+ *   of its own. `null` says the page is
  *   reached FROM ANYWHERE: its door is in the furniture (a gear in the top
  *   bar, a "+" in the tab bar) rather than on a screen, so there is no pair to
  *   write it on. Arriving at `to` from any page then plays forward and leaving
@@ -821,8 +821,7 @@ export const RouteTransitionArea = ({ children, ...rest }) => {
  *   Whatever is written here is what EVERY crossing of the pair plays. One
  *   crossing can ask for something else — `<Link routeTransition>`, or
  *   navTo(url, { routeTransition }) — which overrides this field by field, for
- *   that
- *   navigation alone.
+ *   that navigation alone.
  * @returns {() => void} remove this relation.
  */
 export const defineRouteTransition = (from, to, transition) => {
@@ -897,9 +896,8 @@ const normalizeTransition = (transition) => {
  *
  * Two mouths, one meaning: the element being pressed wears it (a `<Link
  * routeTransition>`, or the attribute by hand on any anchor), or navTo() is
- * handed
- * it. Both arrive here through the announcement the navigation makes before it
- * writes anything (see before_routing.js).
+ * handed it. Both arrive here through the announcement the navigation makes
+ * before it writes anything (see before_routing.js).
  *
  * A request answers FIELD BY FIELD: what it does not say, the relation — or
  * the default — still answers for. So `{ direction: "back" }` keeps the pair's

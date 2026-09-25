@@ -25,10 +25,12 @@ Preact treats a changed ref function as "old element out, new element in": it
 calls the old function with `null` then the new function with the element. That
 causes unnecessary unmount/remount of every side-effect on every render.
 
-Instead, `useComposeElementRef` creates the `refCallback` **once** (stored in a
-`useRef`) and returns the same function identity across all renders. Preact only
-re-invokes a ref callback when the actual DOM node changes — not when the
-function identity changes — so side-effects run only when they should.
+Instead, `useComposeElementRef` keeps the `refCallback` (stored in a `useRef`)
+at one identity once Preact has handed it the element, so side-effects run again
+only when the DOM node changes. Until the element arrives it hands out a new
+callback on each render: a render that throws with no error boundary above skips
+its commit and drops its refs, and a callback that never fired would otherwise
+never fire.
 
 ---
 
@@ -74,15 +76,13 @@ The **correct fix at the mutation site** is to never mutate props:
 const ref = props.ref || refDefault; // local variable, no mutation
 ```
 
-This was the primary fix applied to `List`.
-
 ---
 
 ## The defensive fix in useComposeElementRef
 
 Because the mutation pattern is easy to accidentally reintroduce (and because
-`Box` can't control what its ancestors do), `useComposeElementRef` — and `Box`'s
-own inline ref handling — also defend against this at the forwarding level.
+`Box` can't control what its ancestors do), `useComposeElementRef` also defends
+against this at the forwarding level.
 
 On every render, the previous `externalRef` is compared to the current one. If
 the identity changed:
@@ -116,6 +116,6 @@ side, all rendered automatically on load:
    `null` with the buggy hook.
 2. **No bug** — same buggy hook, but the parent always passes the same ref
    object; identity never changes so the stable refCallback is sufficient.
-3. **Props mutation + fix** — a child mutates `props.ref` (the old `List`
-   pattern), causing the identity to change; with `useComposeElementRefFixed`
+3. **Props mutation + fix** — a child mutates `props.ref` (the pattern
+   above), causing the identity to change; with `useComposeElementRefFixed`
    the new ref is synced immediately and the crash is avoided.

@@ -780,8 +780,8 @@ const warnAboutTransformsOutsideTransform = (element) => {
  * @param {("move"|"reorder"|"toss"|"land"|"leave")[]} effects
  *   What letting go of this element can mean. `reorder`, `toss` and `land` carry a
  *   copy; `move` carries the element itself, and `leave` goes with either. Asking
- *   for `move` and `reorder` together is asking one release to mean two things,
- *   and so is asking for `reorder` and `land`.
+ *   for `move` beside any of the three that carry a copy is asking one release to
+ *   mean two things, and so is asking for `reorder` and `land`.
  * @param {object} [options]
  * @param {Element} [options.draggedElement=event.currentTarget]
  * @param {(detail: {gestureInfo: object, x: number, y: number}) => void} [options.onMoving]
@@ -801,8 +801,8 @@ const warnAboutTransformsOutsideTransform = (element) => {
  *   a node rebuilt), and the element's own translate otherwise, baked in — see
  *   settleMovedElement.
  * @param {(detail: {gestureInfo: object, x: number, y: number}) => Promise|void} [options.onLeave]
- *   It was let go of away from every place: with places (`itemSelector`), away
- *   from all of them; without, out of `outsideOf`. Beside `move` the element
+ *   It was let go of away from every place: beside `reorder` or `land`, away
+ *   from all of their places; otherwise, out of `outsideOf`. Beside `move` the element
  *   itself is left where the hand put it while this runs, and the answer says
  *   what becomes of that position — let go of on a resolve (the caller has
  *   removed the thing, or drawn it where it goes back to), travelled home on a
@@ -837,7 +837,7 @@ const warnAboutTransformsOutsideTransform = (element) => {
  *   if the promise rejects, because the thing still exists and the screen has to
  *   say so.
  * @param {(detail: {fromId: string, toId: string, x: number, y: number, width: number, height: number, syncCloneWithDropTarget: Function}) => Promise|void} [options.onLand]
- *   It came down on `toId`, which is an element and never null: nothing under the
+ *   It came down on the element `toId` names, never null: nothing under the
  *   copy is a cancelled release. `x`/`y`/`width`/`height` say WHERE on it, which
  *   is the whole answer when the place is a surface — a plan, a map — with no
  *   element under the copy to name. The copy is held until what comes back
@@ -1695,13 +1695,14 @@ const getRectInside = (element, containerElement) => {
 // Creates the two-layer clone structure used for drag-to-reorder.
 //
 // Layer 1 — wrapper (navi-drag-clone-wrapper):
-//   Positioned absolutely via --clone-top/--clone-left CSS vars.
+//   Positioned fixed via --clone-top/--clone-left CSS vars.
 //   Carries the box-shadow and size. Moved every drag frame via dragStyleController.
 //   Has a view-transition-name so the View Transitions API can animate it on release.
 //
 // Layer 2 — inner clone (navi-drag-clone):
 //   A deep clone of the grabbed element.
-//   Applies transform: scale(1.15) via the CSS rule for [navi-drag-clone],
+//   Applies transform: scale(var(--drag-clone-scale, 1.03)) via the CSS rule
+//   for [navi-drag-clone],
 //   giving the "lifted" feel. The transform-origin is set to the grab point
 //   so the element expands naturally from where the user clicked.
 //   On release, the `navi-drag-clone` attribute is removed inside
@@ -1966,7 +1967,7 @@ const createDragClone = (element, pointerEvent) => {
   wrapper.viewTransitionName = "navi-drag-clone-wrapper";
   setCloneViewportRect(wrapper, element);
   // Grab point within the element — used as transform-origin so the
-  // scale(1.15) expands from where the user clicked, not the element center.
+  // scale expands from where the user clicked, not the element center.
   // These offsets are element-relative so viewport coords are correct here.
   wrapper.style.setProperty(
     "--drag-origin",

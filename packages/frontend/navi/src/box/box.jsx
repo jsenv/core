@@ -1,54 +1,26 @@
 /**
- * Box - A Swiss Army Knife for Layout
+ * Box — the element every navi component is drawn with: a div by default (`as`
+ * picks the tag) whose props are styles written in layout terms. What each prop
+ * means is in the JSDoc on `Box` below, and in box_style_util.js.
  *
- * A regular div by default, enhanced with styling props for spacing, sizing,
- * and layout. The main value is a friendlier API over raw CSS Flexbox.
+ * How the file is organized:
+ * - the CSS: the scrolling area and the header/body/footer roles inside it
+ *   ([data-scrollable]), the corner claims a Group sends down, and the
+ *   [navi-box-flow] attributes the display is written through;
+ * - `Box`: works out what the props say (`computeBox`) once per distinct set of
+ *   props, and renders the tag;
+ * - `computeBox`: splits the props between styles, attributes and handlers kept
+ *   on the box, and props forwarded to the descendant that IS the component
+ *   when there is one (`visualSelector`/`pseudoStateSelector` — Button, Input).
  *
- * ## Display & Layout
- *
- * - `flex` — horizontal flex container (items side by side)
- * - `flex="y"` — vertical flex container (items stacked). The prop name makes
- *   the axis explicit, avoiding the classic CSS trap where `flex-direction: column`
- *   actually stacks items vertically despite "column" feeling horizontal.
- * - `grid` — grid container
- * - `inline` — switches to inline display (works with flex and grid too)
- *
- * ## Alignment
- *
- * Instead of CSS's justify-content/align-items which swap meaning based on flex-direction:
- * - `alignX` — horizontal alignment, always
- * - `alignY` — vertical alignment, always
- *
- * ## Spacing & Sizing
- *
- * Props for margin, padding, gap, width, height, expand, shrink, and more.
- *
- * ## Pseudo-class Styles
- *
- * The `style` prop supports pseudo-class keys alongside regular CSS properties.
- * This lets you express hover, focus, and custom interaction states in one object,
- * without writing CSS or adding class names:
- *
- * ```jsx
- * <Box
- *   style={{
- *     backgroundColor: "blue",
- *     ":-navi:pressed": {
- *       backgroundColor: "darkblue",
- *     },
- *     ":hover": {
- *       backgroundColor: "lightblue",
- *     },
- *   }}
- * />
- * ```
- *
- * Styles are applied directly to the DOM (not via Preact's style prop) for two reasons:
- * 1. **Pseudo-class support**: reacting to `:hover`, `:focus`, or custom states like
- *    `:-navi:pressed` without re-rendering the component on every pseudo state change.
- * 2. **Correct initial render**: pseudo-class state must be read from the DOM node at
- *    mount time. Preact's style prop runs before the DOM exists, so the right initial
- *    style can only be determined once the node is available.
+ * Styles are applied directly to the DOM (not via Preact's style prop) for two
+ * reasons:
+ * 1. **Pseudo-class support**: reacting to `:hover`, `:focus`, or custom states
+ *    like `:-navi-pressed` without re-rendering the component on every pseudo
+ *    state change.
+ * 2. **Correct initial render**: pseudo-class state must be read from the DOM
+ *    node at mount time. Preact's style prop runs before the DOM exists, so the
+ *    right initial style can only be determined once the node is available.
  */
 
 import { normalizeStyles } from "@jsenv/dom";
@@ -312,12 +284,10 @@ import.meta.css = /* css */ `
     }
   }
 
-  /* We force a given display style using html attribute instead of inline style */
-  /* No particular reason for this, logic could be moved to inline style like the rest */
-  /* It was an attempt to see if attributes where a good candidate to set style based on props */
-  /* Actullay it's not that much as it make the attribute and CSS complexity explode */
-  /* For now it's kept here and must be outside layer navi to be able to override any given display
-  Set by navi itself on their default display */
+  /* The display is forced through an html attribute rather than inline style.
+     Attributes are not a good way to style from props in general (attribute
+     and CSS complexity explode), so nothing else does it; this one stays
+     outside layer navi so it overrides the default display navi sets itself. */
   [navi-box-flow="inline"] {
     display: inline;
   }
@@ -419,9 +389,48 @@ const PSEUDO_STATE_CHILD_PROP_SET = new Set(["tabIndex", "tabindex"]);
  *   separator?: import("preact").ComponentChildren | ((index: number) => import("preact").ComponentChildren),
  *   selfInteractions?: string,
  *   interactions?: { [type: string]: "request_action" | "request_ui_action" | "refuse" | ((event: Event) => void) | false | null | undefined },
+ *   alignX?: string,
+ *   alignY?: string,
+ *   spacing?: string | number,
+ *   overflow?: string,
+ *   header?: boolean,
+ *   footer?: boolean,
+ *   body?: boolean,
+ *   sticky?: boolean,
  *   children?: import("preact").ComponentChildren,
  *   [key: string]: any,
  * }>}
+ * @param {"x"|"y"|boolean} [flex] A flex container: `"x"` (or `true`) side by
+ *   side, `"y"` stacked. Named by axis because `flex-direction: column` stacks
+ *   items vertically, the opposite of what "column" suggests.
+ * @param {boolean} [inline] The inline form of the box's display
+ *   (`inline-flex`, `inline-grid`…). An inline box given a `width`/`height`
+ *   becomes an inline flex row, since an inline box ignores both.
+ * @param {string} [alignX] Horizontal alignment of the content whatever the
+ *   flex direction: `justify-content` or `align-items` is picked from it
+ *   (`text-align` outside flex and grid).
+ * @param {string} [alignY] Vertical alignment, the same way.
+ * @param {string|number} [spacing] The gap between children in a flex or grid
+ *   box (`spacingX`/`spacingY` per axis) — there is no `gap` prop. Spacing
+ *   props (`spacing`, `margin*`, `padding*`) take the scale `"xxs"`…`"xxl"`
+ *   (`--navi-xxs`…), `"-s"` for a negative, or any CSS value.
+ * @param {object|string} [style] CSS properties, plus pseudo keys holding
+ *   their own: `style={{ color: "blue", ":hover": { color: "red" } }}`
+ *   (`":-navi-pressed"`, `"::before"`…). A pseudo class used there is tracked
+ *   on the element; nothing re-renders when it changes.
+ * @param {string} [overflow] `"auto"`/`"scroll"` (`overflowX`/`overflowY`
+ *   too) makes the box a scrolling area, which is what gives `header`/`body`/
+ *   `footer` their meaning; such a box is also `isolation: isolate` and gets a
+ *   `scroll-padding` (see docs/scroll.md).
+ * @param {boolean} [header] A part that stays put at the top of the scrolling
+ *   box it is a direct child of — nothing at all without that box's overflow.
+ *   Rendered as `<header>` unless `as` says otherwise.
+ * @param {boolean} [footer] The same at the bottom, rendered as `<footer>`.
+ * @param {boolean} [body] The only part of its scrolling box that scrolls,
+ *   `header`/`footer` sitting outside it. It shrinks, it never grows.
+ * @param {boolean} [sticky] `position: sticky` in the sticky z-index band
+ *   (`--navi-z-index-sticky`), stuck or not; an explicit `zIndex`, `"auto"`
+ *   included, wins (see docs/z_index.md). `top`/`bottom`/… take `true` for 0.
  * @param {string} [background] Any CSS background, plus two keywords for the
  *   planes an app paints: `"surface"` is the paper content sits on,
  *   `"chrome"` the frame around a screen — a top bar, a side menu, a toolbar.

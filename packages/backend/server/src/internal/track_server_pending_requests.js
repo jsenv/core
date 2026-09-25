@@ -21,14 +21,6 @@ export const trackServerPendingRequests = (nodeServer) => {
     pendingClients.clear();
     await Promise.all(
       pendingClientsArray.map(({ nodeRequest, nodeResponse }) => {
-        if (nodeResponse.headersSent === false) {
-          if (nodeRequest.stream) {
-            // http2 has no reason phrase
-            nodeResponse.writeHead(status);
-          } else {
-            nodeResponse.writeHead(status, asReasonPhrase(reason));
-          }
-        }
         return new Promise((resolve) => {
           if (nodeResponse.destroyed) {
             resolve();
@@ -37,7 +29,20 @@ export const trackServerPendingRequests = (nodeServer) => {
           nodeResponse.once("close", () => {
             resolve();
           });
-          nodeResponse.destroy();
+          if (nodeResponse.headersSent) {
+            // a status already sent cannot be replaced: the response is cut
+            nodeResponse.destroy();
+            return;
+          }
+          if (nodeRequest.stream) {
+            // http2 has no reason phrase, nor a connection header
+            nodeResponse.writeHead(status);
+          } else {
+            nodeResponse.writeHead(status, asReasonPhrase(reason), {
+              connection: "close",
+            });
+          }
+          nodeResponse.end();
         });
       }),
     );

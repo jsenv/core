@@ -25,7 +25,8 @@ a validity rule, and the constraint is only its browser-side caller.
 
 ## Constraints
 
-A constraint is `{ name, check(field) }`. `check` returns `null` when the value
+A constraint is `{ name, check(field) }` — a bare `check` function is accepted
+too. `check` returns `null` when the value
 passes, or the message to show — a string, or `{ message, target }` when the
 callout belongs on another element than the control itself.
 
@@ -44,7 +45,7 @@ plain HTML.
 | ------------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------- |
 | `required`, `pattern`           | same                                        | what the platform's attributes mean                                             |
 | `minLength`, `maxLength`        | same                                        | a string too short or too long                                                  |
-| `min`, `max`, `step`            | same                                        | a number, date, time or duration out of range                                   |
+| `min`, `max`, `step`            | same                                        | a number, date, time or duration out of range, or off its step                  |
 | `singleSpace`                   | `data-single-space`                         | a leading or trailing space, two in a row                                       |
 | `displayable`                   | `data-displayable`                          | zalgo, a value showing nothing, blank lines in series, a joiner joining nothing |
 | `maxStackedMarks`               | `data-max-stacked-marks`                    | (parameter of `displayable`)                                                    |
@@ -64,9 +65,34 @@ A boolean switch (`displayable`, `singleSpace`, `noEmoji`) passed as `false` is
 off, so `noEmoji={settings.strictNames}` says what it looks like it says. The
 others carry a value — a count, a selector — and are off by being absent.
 
-Each constraint has a `<name>Message` prop (and a `data-<name>-message`
-attribute) to replace its sentence for one field. To change it everywhere,
-override the i18n key instead — see below.
+**`singleSpace="autoFix"` corrects the value instead of refusing it.** A text
+field ends with a space more often than anyone means it to — a pause after a
+word, a mobile keyboard after a suggestion, a paste — and a refusal then asks
+the person to find and delete a character they cannot see. With `"autoFix"`,
+the leading and trailing spaces are removed and a run of spaces becomes one:
+
+```jsx
+<Input name="title" singleSpace="autoFix" />
+```
+
+- **At commit, never while typing.** The correction runs when the field is
+  left, and before an action reads the value. Correcting on each keystroke would
+  eat the space the person is about to follow with a word, so an action run
+  from typing (a search, debounced or not) reads the value as typed.
+- **Nothing to say.** The correction is validity's own `SINGLE_SPACE_RULE`, so
+  the value always passes the rule: no callout, and a server re-checking with
+  `singleSpace: true` accepts what it receives.
+- **It lands everywhere the value lives**: the field, its ui state, the bound
+  `signal`. A `disabled` or `readOnly` field is left alone, since its value is
+  the app's and not the person's.
+- **`singleSpace` is the only constraint that offers it.** A correction is worth
+  it only where it cannot change what the person meant; a `maxLength` silently
+  cutting a text would.
+
+Most constraints take a `<name>Message` prop to replace their sentence for one
+field (`requiredMessage`, `singleSpaceMessage`, `oneOfMessage`…; `step` and the
+time span constraints have none). To change it everywhere, override the i18n
+key instead — see below.
 
 Two props sit beside them and belong to the browser alone, because they act
 before there is a value to validate: `charGuard` blocks a keystroke that is not
@@ -78,7 +104,10 @@ silently swallowing it.
 field can refuse the keystroke with the same knowledge the value is checked
 against: `charGuard="tel"`, `charGuard="slug"`, `charGuard="noEmoji"`. Refusing
 the keystroke and refusing the value are different jobs — the pair
-`maxLengthGuard`/`maxLength` is the same split — and a field usually wants both.
+`maxLengthGuard`/`maxLength` is the same split — and a guard brings the value
+check along: `maxLengthGuard` is checked at submit as `maxLength`, `charGuard`
+sets an `Input`'s `pattern` from its class unless one is given. `maxLength`
+alone is the submit-only half.
 
 **A guard answers for the gesture, never for what the field already holds.** A
 value can arrive already outside the class or already too long — a

@@ -85,7 +85,9 @@ found by nothing, while the host is what the user focuses and what
 `getByRole(role, { name })` and `getByLabel()` read.
 
 ```jsx
-<Picker variant="icon" aria-label="Aide" ui={<Icon>…</Icon>} />
+<Picker variant="icon" aria-label="Aide" ui={<Icon>…</Icon>}>
+  …
+</Picker>
 ```
 
 ```html
@@ -121,6 +123,13 @@ When the wrapper IS what the test wants — a whole field with its label and its
 error message, a section, a row — put the testid on the surrounding component
 (`<Field data-testid="email-field">`, `<Box data-testid="cart-row">`); anything
 built on `Box` forwards it to its own element.
+
+A selectable `List.Item` is a control too, and the rule holds there with a
+consequence worth knowing: its host is the real checkbox or radio the row
+selects with, an input navi draws invisible (`navi-visually-hidden`) and lays
+under the row's content. A `data-testid` on the item names that input — what
+`toBeChecked()` reads, not what the eye sees. A test that presses the row, or
+waits for it to show, targets what the row draws: a testid on its content.
 
 A picker's popup is the one element the application does not render itself:
 `<Picker>` builds it, so a `data-testid` on the picker names the trigger and

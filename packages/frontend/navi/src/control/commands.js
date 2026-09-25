@@ -350,9 +350,6 @@ export const onNaviCommand = (e, { debugCommand = () => {} } = {}) => {
     `targeting`,
     commandTarget,
   );
-  // Timed once, for the wheel-in-dialog "Définir feels frozen on mobile" case;
-  // the line is gone now that the answer is known — a command that runs in 1ms
-  // said nothing, and it said it on every single interaction.
   return implementation();
 };
 
@@ -997,8 +994,8 @@ registerNaviCommand("--navi-open", (source, event, { anchor, value } = {}) => {
     target,
     implementation: () => {
       // The popup reads `anchor` first and falls back to the source (see
-      // onnavi_request_open in popover.jsx), so saying nothing keeps the old
-      // behaviour: the element asking is the element opened against.
+      // onnavi_request_open in popover.jsx): without an `anchor`, the element
+      // asking is the element opened against.
       return dispatchCustomEvent(target, "navi_request_open", {
         event,
         source: resolveCommandProxySource(source),

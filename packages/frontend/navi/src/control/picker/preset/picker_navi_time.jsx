@@ -10,7 +10,7 @@ import { timeStringToSeconds } from "../time_helpers.js";
  *
  * Unlike the native `<input type="time">`, this picker only exposes the exact
  * slots generated from min/max/step, so the user can never pick an out-of-range
- * or out-of-step value. The popover content is a `SelectableList` of the
+ * or out-of-step value. The popover content is a selectable `List` of the
  * available slots; picking one closes the popover and submits the value.
  *
  * Usage:

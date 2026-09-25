@@ -24,7 +24,9 @@ import { humanizeI18n } from "@jsenv/humanize";
  * Built-in key namespaces, all overridable — the registrations below are the
  * exhaustive list, read them to find the exact key to override:
  *   - `"button.*"`     — Clear, Reset, Send, Open, Close, Cancel, Confirm…
- *   - `"time.*"`       — what a clock writes between hours and minutes, and how the two ends of a span are named; the wording the formatters use is registered by @jsenv/humanize
+ *   - `"confirm.*"`    — the question a confirmation asks by default
+ *   - `"time.*"`       — what a clock writes between hours and minutes, and the labels of its hour and minute parts; the wording the formatters use is registered by @jsenv/humanize
+ *   - `"time_range.*"` — how the two ends of a span are named ("From", "to")
  *   - `"spin.*"`       — the ends of a steppable range
  *   - `"list.*"`       — empty/no-match/failed-rows messages
  *   - `"badge_list.*"` — the "+[count] more" overflow badge

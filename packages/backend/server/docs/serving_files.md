@@ -55,7 +55,7 @@ createFileSystemFetch(import.meta.resolve("./"), {
 A url pointing to a directory gets 403, unless:
 
 - `canReadDirectory: true` — the listing is sent, as json or as an html page of links (see `fetchDirectory`),
-- `mainFileRelativeUrl` — that file is sent for the directory itself, and for any extension-less url that does not exist (client side routing needs the same page for `/users/42`).
+- `mainFileRelativeUrl` — that file is sent for the root of the served directory, and for any extension-less url that does not exist (client side routing needs the same page for `/users/42`). A subdirectory still gets 403.
 
 `ENOENTFallback: () => fileUrl` serves another file when the requested one does not exist.
 

@@ -72,8 +72,8 @@ export const stringifyTableSelectionValue = (type, value) => {
 
 /**
  * Check if a specific cell is selected
- * @param {Array} selection - The selection set or array
- * @param {{rowIndex: number, columnIndex: number}} cellPosition - Cell coordinates
+ * @param {string[]} selection - The table's `selection` array
+ * @param {{columnId: string, rowId: string}} cell - The cell's column and row ids
  * @returns {boolean} True if the cell is selected
  */
 export const isCellSelected = (selection, { columnId, rowId }) => {
@@ -86,8 +86,8 @@ export const isCellSelected = (selection, { columnId, rowId }) => {
 
 /**
  * Check if a specific row is selected
- * @param {Array} selection - The selection set or array
- * @param {number} rowIndex - Row index
+ * @param {string[]} selection - The table's `selection` array
+ * @param {string} rowId - The row's id (the `id` of its `<Tr>`)
  * @returns {boolean} True if the row is selected
  */
 export const isRowSelected = (selection, rowId) => {
@@ -97,8 +97,8 @@ export const isRowSelected = (selection, rowId) => {
 
 /**
  * Check if a specific column is selected
- * @param {Array} selection - The selection set or array
- * @param {number} columnIndex - Column index
+ * @param {string[]} selection - The table's `selection` array
+ * @param {string} columnId - The column's id (the `id` of its `<Col>`)
  * @returns {boolean} True if the column is selected
  */
 export const isColumnSelected = (selection, columnId) => {

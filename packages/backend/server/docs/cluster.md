@@ -40,7 +40,8 @@ cluster.on("online", (worker) => {
 });
 
 cluster.on("exit", (worker, code, signal) => {
-  if (signal !== "SIGKILL") {
+  // https://nodejs.org/api/cluster.html#workerexitedafterdisconnect
+  if (worker.exitedAfterDisconnect) {
     console.log(
       `Worker ${worker.process.pid} died with code: ${code}, and signal: ${signal}`,
     );
@@ -51,7 +52,7 @@ cluster.on("exit", (worker, code, signal) => {
 ```
 
 ```console
-❯ node ./docs/cluster/cluster_demo_primary.mjs
+❯ node ./docs/demos/cluster/cluster_demo_primary.mjs
 Primary 42398 is running
 Worker 42399 is online
 Worker 42400 is online
@@ -63,7 +64,7 @@ server started at http://localhost:60000 (http://192.168.1.15:60000)
 server started at http://localhost:60000 (http://192.168.1.15:60000)
 ```
 
-# Restart on file change
+## Restart on file change
 
 ```diff
 import cluster from "node:cluster"

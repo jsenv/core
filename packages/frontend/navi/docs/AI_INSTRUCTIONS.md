@@ -81,10 +81,12 @@ to start when unsure which export solves a problem.
   a pair is animated.
 - `view_transitions.md` — what the browser does to any transition an app
   starts itself: names unique per document, the fallback fade, rendering
-  suspended for the whole callback, `finished` rejecting. Read before calling
+  suspended for the whole callback, `ready` rejecting on a skip while
+  `finished` fulfills, the top layer painted only through the root's picture,
+  and the two frames that show the live document. Read before calling
   `document.startViewTransition`.
-- `drag_to_travel.md` — a pointer pushing a whole screen aside, and who owns a
-  press several boxes want. Read before putting anything that reads the pointer
+- `drag_to_travel.md` — a pointer or a wheel pushing a whole screen aside, and
+  who owns a press several boxes want. Read before putting anything that reads the pointer
   inside a box that travels.
 
 ### Data
@@ -147,9 +149,10 @@ to start when unsure which export solves a problem.
   `canSendWhileUnchanged`, and before a control inside a group whose value it
   has no business joining.
 - `field_validation.md` — what only a browser can answer versus "is this value
-  acceptable" (validity's); constraints as props; `charGuard`/`maxLengthGuard`.
-  Read before writing a constraint: if the sentence would make sense in a
-  server's response, the rule belongs in validity.
+  acceptable" (validity's); constraints as props; `singleSpace="autoFix"`
+  correcting a value instead of refusing it; `charGuard`/`maxLengthGuard`. Read
+  before writing a constraint: if the sentence would make sense in a server's
+  response, the rule belongs in validity.
 - `create_and_edit.md` — the create/edit loop assembled from `route`,
   `resource`, `Form` and `RouteTravel`. Read before writing a create or edit
   screen.
@@ -158,13 +161,14 @@ to start when unsure which export solves a problem.
 
 ### Popups
 
-- `popup_open.md` — a popup owns its open state; `command` + `commandfor`;
+- `popup_open.md` — a popup owns its open state; `command` + `commandFor`;
   `triggerNaviCommand` as the last resort, with the event forwarded and never
   invented; opening ON something; a press that opens and acts is a `Picker`,
   and its trigger wears the wait and the error (a card that lifts, `openOn`);
-  Escape cancels; the close cross; one panel fed by a slot (`createSlot`: one
-  `SlotFill` where the choice is made, `open` bound to the screen's signal, never
-  to `isFilled`); a popup that loads data. Read before passing `open`,
+  Escape cancels; the close cross; `signal`/`navState`/`open` and what each
+  costs; one panel fed by a slot (`createSlot`: one `SlotFill` where the choice
+  is made, the panel's `signal` bound to the screen's state, never
+  `open={isFilled}`); a popup that loads data; `mount`. Read before passing `open`,
   calling `triggerNaviCommand`, or writing a close button.
 - `popup_backdrop.md` — three independent questions: a wall or not
   (`backdrop={false}`), what an outside press does, how far the page withdraws;
@@ -182,7 +186,8 @@ to start when unsure which export solves a problem.
   giving a `Dialog` or a `Picker` `animation="lifting"`, or before measuring
   why one opens slowly.
 - `dialog_shape.md` — bounds rather than a width, the container ceiling, the
-  centered box versus the bottom sheet, `marginWithContainer`. Read before
+  centered box versus the docked sheet (top edge by default, `"bottom"` opt-in),
+  `marginWithContainer`. Read before
   deriving `smallTouchScreenSignal` in an app or writing CSS to make a dialog
   fit.
 - `autofocus.md` — the ladder that hands out the keyboard, `autoFocus` on a
@@ -192,7 +197,8 @@ to start when unsure which export solves a problem.
 ### Gestures
 
 - `interactions.md` — a gesture is named, not read by hand: the `interactions`
-  prop, swipes and holds, the gate, `selfInteractions` for an affordance inside
+  prop, swipes, holds and the two counted taps (`double_click`,
+  `single_click`), the gate, `selfInteractions` for an affordance inside
   somebody else's box, `actionStandalone` for a run nothing above waits on,
   registering a detector. Read before a `pointerdown` listener of your own, and
   before stopping propagation to keep a popup shut.
@@ -216,7 +222,8 @@ to start when unsure which export solves a problem.
   `:nth-child`, `:empty`) on a container holding navi components.
 - `safe_area.md` — the two inset families, an app narrower than the window
   (`--navi-app-max-width`), `data-navi-safe-area`, which viewport is which under
-  a virtual keyboard. Read before hand-writing an offset to clear a `FixedBar`.
+  a virtual keyboard (overlaid on Chromium by default:
+  `--navi-keyboard-inset-bottom`). Read before hand-writing an offset to clear a `FixedBar`.
 - `scroll.md` — where scrolling happens: `header`/`body`/`footer`, `List`'s
   `scroller`, where a list opens and what a search does to where it is, a popup
   that scrolls, hover while scrolling; many rows: `<List.Items>` and the render
@@ -237,27 +244,36 @@ to start when unsure which export solves a problem.
   for the app's texts, `naviI18n` for navi's own. Read before writing a
   user-visible sentence.
 - `testid.md` — role and accessible name first; `data-testid` lands on the
-  control's host; what not to target. Read before a selector in a test.
+  control's host (on a selectable `List.Item`, its hidden input); what not to
+  target. Read before a selector in a test.
 
 ## Key concepts to know before guessing an API
 
 - **Routing is signal-based**: URL state (including search params) two-way
   syncs with signals. Don't build parallel state for what a route/query
   signal already tracks.
-- **Actions** model async operations with lifecycle (idle/running/success/
-  error). Components read an action's state via `useAsyncData`, not by
-  manually tracking loading/error booleans.
+- **Actions** model async operations with a lifecycle (idle, running,
+  completed, failed, aborted). Components read an action's state via
+  `useAsyncData`, not by manually tracking loading/error booleans. Reading does
+  not run it: a `routeAction`, a control's `action`, or
+  `useAsyncData(action, { run: true })` starts it.
 - **REST state is modelled with `resource()`**, and parent/child relations with
   `.one` / `.many` / `.scopedOne` / `.scopedMany`. Never encode a backend
   sub-resource (`/games/:id/candidates`) as an `op`/`type` discriminator inside
   one verb's callback. Searching a collection is that collection's `GET_MANY`
   with one more param, never a resource or an action of its own.
-- **`Box`** is the layout primitive (Flexbox wrapper: `flex`, `flex="y"` for
-  column, `grid`, `alignX`/`alignY`). Prefer it over raw CSS for layout inside
-  Navi apps.
-- **Field components** (`Input`, `Select`, `Checkbox`, etc.) take an `action`
-  prop to respond to interaction — this is the standard wiring, not
-  `onChange` + manual state.
+- **`Box`** is the element every component is drawn with: `flex` (side by
+  side), `flex="y"` (stacked), `grid`, `inline`, `alignX`/`alignY` (horizontal
+  and vertical whatever the direction), `spacing` for the gap (there is no `gap`
+  prop), sizes from the `"xxs"`…`"xxl"` scale. Prefer it over raw CSS for layout
+  inside Navi apps.
+- **A control holds its own value.** `Input` (checkbox and radio are
+  `<Input type="checkbox">`/`<Input type="radio">`, there is no `Checkbox`
+  component), `Select`, `Picker` and the others work with nothing wired at all:
+  inside a `Form`, the form reads them when it sends. When the app needs the
+  value, bind it with `signal`. `action` is one way to react to a change, for
+  work that can fail or take time; it is not how a control is wired. Never
+  `onChange` + manual state (see `control_value.md`).
 - **A gesture is named, not read by hand**: `interactions={{ swipe_right: … }}`
   on any `Box` (so on any component). Never a `pointerdown` listener of your own.
 - **Texts**: a user-visible sentence containing a value is written as one

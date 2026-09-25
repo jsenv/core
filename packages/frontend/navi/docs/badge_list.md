@@ -21,9 +21,11 @@ for, and nothing is set up for a case that cannot happen:
 
 ## How badges are counted
 
-A `Badge` inside a `BadgeList` does not render itself: it hands its props to
-the list through `BadgeListContext` and renders nothing. Badges register in
-tree order, so by the time the list gets to its own content it holds them all
+Once the list has something to decide — a `max`, a `fallback`, `maxLines` — a
+`Badge` inside it does not render itself: it hands its props to the list
+through `BadgeListContext` and renders nothing (a plain list leaves its badges
+to render themselves). Badges register in tree order, so by the time the list
+gets to its own content it holds them all
 and knows how many there are before deciding what to show — without walking
 children vnodes, and without rendering a badge it then has to take back.
 

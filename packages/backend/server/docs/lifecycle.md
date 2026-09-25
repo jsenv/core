@@ -19,7 +19,7 @@ await server.stop();
 server.getStatus(); // "stopped"
 ```
 
-`stop` closes the pending connections (a request still running is answered 503) and resolves once everything is closed. It takes a reason, anything, which `stoppedPromise` resolves with:
+`stop` answers every request still running with 503, then closes every connection, and resolves once everything is closed. A response already being written is cut short: its status is already sent. It takes a reason, anything, which `stoppedPromise` resolves with:
 
 ```js
 import { startServer, STOP_REASON_PROCESS_SIGINT } from "@jsenv/server";

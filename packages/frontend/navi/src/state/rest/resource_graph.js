@@ -34,8 +34,8 @@ const resourceLifecycleManager = createResourceLifecycleManager();
  *   with): one action per REST callback plus the relationship methods. Each
  *   relationship method calls `createResource` again for the child, injecting
  *   its own `createRestAction` — the strategy deciding how an action result is
- *   applied to the store(s). This recursion is what makes relationship
- *   resources chainable (`USER.one(...).one(...)`).
+ *   applied to the store(s). This recursion is what lets a relation be
+ *   declared on a scoped child (`TABLE.scopedMany("columns", …).one(…)`).
  * - Relationships make item properties reactive: `addItemSetup` registers a
  *   callback that defines a getter/setter on each item. The setter upserts
  *   plain values into the child store, the getter reads a computed signal, so
@@ -89,7 +89,7 @@ const debug = (...args) => {
  * @param {string} name - resource name, used in action names and error messages
  * @param {Object} restCallbacks - `{ idKey, uniqueKeys, rerunOn, dependencies, GET, GET_MANY, GET_RANGE, POST, POST_MANY, PUT, PUT_MANY, PATCH, PATCH_MANY, DELETE, DELETE_MANY }`
  * @param {string} [restCallbacks.idKey] - primary key property, defaults to `"id"`
- * @param {string[]} [restCallbacks.uniqueKeys] - alternate keys the store can find an item by (e.g. `"username"`); a callback may return a different `id` to rename the item's primary key
+ * @param {string[]} [restCallbacks.uniqueKeys] - alternate keys the store can find an item by (e.g. `"username"`)
  * @see docs/resource.md — relationships, callback return contracts, decision table
  *
  * @example
@@ -316,7 +316,7 @@ const createResource = (
    * identical parameters, preventing cross-contamination between different parameter sets.
    *
    * @param {Object} params - Parameters to bind to all actions of this resource (required)
-   * @param {Object} options - Additional options for the parameterized resource
+   * @param {{ rerunOn?: Object, dependencies?: Object[] }} [options] - reruns of that scope; left out, the scope inherits the resource's
    * @returns {Object} A new resource instance with parameter-bound actions and isolated lifecycle
    * @see docs/resource.md — what a scope isolates, and `dependencies`
    *
@@ -334,7 +334,7 @@ const createResource = (
    * const ROLE_WITH_OWNERSHIP = role.withParams({ owners: true }, {
    *   dependencies: [role, database, tables],
    * });
-   * // ROLE_WITH_OWNERSHIP.GET_MANY will autorerun when any table/database/role is POST/DELETE
+   * // ROLE_WITH_OWNERSHIP.GET_MANY reruns after any write (POST/PUT/PATCH/DELETE) on a role, a database or a table
    */
   const withParams = (
     paramsToInject,
@@ -380,13 +380,14 @@ const createResource = (
    * Callback return contracts:
    * - GET / PUT → the parent object with the relationship nested inside:
    *   `async ({ id }) => ({ id, session: { id: 10, token: "abc" } })`; `null` for no relationship
-   * - DELETE → the parent id (or `{ id }`); the property is set to `null`
+   * - DELETE → the parent id; the property is set to `null`
    *
    * The backend may also embed the child inline in a parent GET/POST response — the
    * setter on the property upserts the nested object into the child store.
    *
-   * Returns the child relationship resource, itself chainable:
-   * `USER_SESSION.one("device", DEVICE)` adds a reactive `.device` property to each session.
+   * Returns the relationship resource: its actions (`USER_SESSION.GET`, `.PUT`,
+   * `.DELETE`) write the parent's property. A relation of the child itself is
+   * declared on the child resource (`SESSION.one("device", DEVICE)`).
    *
    * @param {string} propertyName - property holding the child on each parent item
    * @param {Object} childResource - the independent resource created by `resource()`
@@ -1553,7 +1554,7 @@ Received an object with keys: ${keys.join(", ")}.`,
  * });
  *
  * syncResourceToSignals(USER, { username: usernameSignal });
- * // Now when a user item's username is updated via USER.PUT,
+ * // When a user item's username is updated via USER.PUT,
  * // usernameSignal.value is set to the new username,
  * // which in turn triggers the route Signal->URL sync and updates the browser URL.
  */
@@ -1566,6 +1567,17 @@ export const syncResourceToSignals = (resource, propertyToSignalMap) => {
   syncStoreToSignals(resource.store, propertyToSignalMap);
 };
 
+/**
+ * The same, for a `scopedOne`/`scopedMany` resource: its items live in one store
+ * per owner, so the store to watch is the one of the owner `ownerSignal` names
+ * (by id or by any unique key), and it is switched when the signal changes.
+ * Nothing is synced while `ownerSignal` holds `null`/`undefined` or names an
+ * owner nothing has been loaded for yet.
+ *
+ * @param {Object} resource - a resource made by `.scopedOne()` / `.scopedMany()`
+ * @param {import("@preact/signals").Signal} ownerSignal - the owner whose children are watched
+ * @param {Object} propertyToSignalMap - `{ [propertyName]: signal }`, as for `syncResourceToSignals`
+ */
 export const syncOwnedResourceToSignals = (
   resource,
   ownerSignal,

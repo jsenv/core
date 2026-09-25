@@ -2131,9 +2131,8 @@ const EMPTY_OBJECT = {};
  *   child changes → we update picker input → navi_ui_state_change fires →
  *   we see updatingRef=true → skip → no loop.
  *
- * This removes the need for `command="--navi-update"` on controls placed
- * inside the picker popup. It also means `commands.js` no longer has to
- * manually re-dispatch to inner controls.
+ * So a control placed inside the picker popup needs no
+ * `command="--navi-update"` to reach the picker input.
  */
 export const useUIFacadeStateController = (props, realUIStateController) => {
   const firstChildControllerRef = useRef(null);

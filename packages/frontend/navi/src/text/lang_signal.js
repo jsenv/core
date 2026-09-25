@@ -108,8 +108,8 @@ const isLanguageSupported = (lang, supportedLanguages) => {
  * supported), falls back to `supportedLanguagesSignal` itself so callers
  * still get *something* usable rather than an empty array.
  *
- * Consumers that accept either a single lang or an ordered array (this
- * package's own `matchBestLang`/`createI18n`, and native `Intl.NumberFormat`/
+ * Consumers that accept either a single lang or an ordered array
+ * (@jsenv/humanize's `createI18n` and formatters, and native `Intl.NumberFormat`/
  * `Intl.DateTimeFormat`) can pass this straight through: anything not
  * covered by the first entry falls through to the next, rather than
  * jumping straight to an unrelated default like "en".

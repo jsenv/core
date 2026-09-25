@@ -36,7 +36,7 @@ It is also the brick composite controls are built from:
 with a value of your own — two wheels that are one number of minutes, three
 fields that are one date. A group with them takes and hands back a single
 value, so it can be driven by one `value`/`signal` like any other control. It is
-what `SpinTime` is made of, and the same mechanism `InputDuration`, `SpinGroup`
+what `TimeSpin` is made of, and the same mechanism `InputDuration`, `SpinGroup`
 and `WheelGroup` use for their own members.
 
 ## `<Form>`: the shape, plus a send

@@ -459,8 +459,8 @@ const css = /* css */ `
  *   whole viewport. A real `anchor` works with either.
  * @param {string} [props.positionArea="bottom"] - Where to place the popover
  *   relative to its `anchor` (or its container, if there is none). Same
- *   grammar as `Dialog`'s own `positionArea` (see `popup_shared.js`'s
- *   `parsePositionArea`): a single compass token — `top`/`top-start`/
+ *   grammar as `Dialog`'s own `positionArea` (see `parsePositionArea` in
+ *   @jsenv/dom): a single compass token — `top`/`top-start`/
  *   `top-end`/`top-left`/`top-right`, `right`/`right-start`/`right-end`,
  *   `bottom`/`bottom-start`/`bottom-end`/`bottom-left`/`bottom-right`,
  *   `left`/`left-start`/`left-end`, or `center`. A bare token means no
@@ -489,8 +489,9 @@ const css = /* css */ `
  *   See docs/popup_backdrop.md.
  * @param {"close"|"cancel"|"capture"|"ignore"} [props.pressOutside="ignore"]
  *   - `"ignore"` (default): no backdrop at all, outside presses pass straight
- *   through. `"close"` closes the popover on an outside press. `"capture"`
- *   absorbs the press (dims the backdrop) without closing. Note this
+ *   through. `"close"` closes the popover on an outside press, `"cancel"`
+ *   closes it as a cancel (what it holds reverts, as on Escape). `"capture"`
+ *   absorbs the press (blurred glass) without closing. Note this
  *   default differs from `Dialog`'s own (`"close"`) — a popover is
  *   typically a lightweight, non-modal affordance. "Outside" is the popover's
  *   own border box; a see-through popover whose box is bigger than what it
@@ -524,9 +525,11 @@ const css = /* css */ `
  *   popover so the page/container behind it can't scroll while it's open.
  * @param {boolean} [props.focusCapture] - Traps Tab navigation inside the
  *   popover (see `focus_trap.js`).
- * @param {boolean|"auto"|"fading"|"scaling"|"sliding"|`slide-from-${string}`} [props.animation]
- *   - `true`/`"auto"` resolves to a concrete `"slide-from-*"` direction
- *   based on `positionArea`. Any other explicit value is used as-is.
+ * @param {boolean|"auto"|"fading"|"scaling"|"sliding"|`slide-from-${string}`|"expanding"|`expand-${string}`} [props.animation]
+ *   - `true`/`"auto"` resolves to `"scaling"` for a real anchor or a centered
+ *   `positionArea`, and to a concrete `"slide-from-*"` direction otherwise.
+ *   `"expanding"`/`"expand-*"` grow out of a real anchor (see popup_css.js).
+ *   Any other explicit value is used as-is.
  * @param {string} [props.animationDuration] - Maps to
  *   `--popup-animation-duration`.
  * @param {Element|{current: Element}|string} [props.anchor] - The element the
@@ -638,7 +641,7 @@ const css = /* css */ `
  * @param {object} [props.openController] - Advanced: an externally-owned
  *   open controller (see `open_controller.js`) for a caller that wants to
  *   drive open/close itself instead of `open`/`defaultOpen`/`onClose` (used
- *   by `picker_custom.jsx`/`side_panel.jsx`).
+ *   by `picker_custom.jsx`).
  * @param {"always"|"idle"|"from-first-open"|"while-opened"} [props.mount] - When
  *   `children` are built and thrown away (see popup_content_mount.js).
  *   `"from-first-open"` (the default) builds them on the first open and keeps
@@ -965,12 +968,10 @@ const usePopoverProps = (props) => {
       unfreezeSize(popoverEl);
     }
   }, [sizing]);
-  // The custom renderer's own starting-hidden state is a stylesheet default
-  // now (&:not([popover]) { display: none } on .navi_popover/
-  // .navi_popover_backdrop above) rather than set here imperatively — a
-  // plain div has no native default the way [popover]/<dialog> do, so
-  // leaving this to a layout effect meant an actual (if narrow) window
-  // where the browser could paint it visible before this ever ran.
+  // The custom renderer starts hidden from the stylesheet ([navi-hidden] on
+  // .navi_popover/.navi_popover_backdrop above), never from a layout effect:
+  // a plain div has no native hidden default the way [popover]/<dialog> do,
+  // and an effect leaves a window where the browser paints it visible first.
   // aria-expanded starts "false" the same way, but via a static literal
   // JSX prop on contentProps/backdropProps below instead of a layout
   // effect — see that prop's own comment for why a *constant* value there
@@ -989,8 +990,8 @@ const usePopoverProps = (props) => {
   openController.getElement = () => ref.current;
   openController.openEffect = (e) => {
     const popoverEl = ref.current;
-    // backdropEl is null when pressOutside is "ignore" —
-    // the backdrop isn't rendered at all in that case.
+    // backdropEl is null when there is no wall (pressOutside "ignore", or
+    // backdrop={false}): the backdrop isn't rendered at all then.
     const backdropEl = backdropRef.current;
     if (!popoverEl) {
       if (import.meta.dev) {
@@ -1052,10 +1053,8 @@ const usePopoverProps = (props) => {
     // needed here.
     const positionedAncestor = getPositionedParent(popoverEl);
     // Drives the via-attribute renderer's own position: fixed/absolute
-    // switch (see this file's top comment) — set here, well before any
-    // positioning/measurement runs, so there's no ordering subtlety to get
-    // wrong (unlike the CSS this replaced, which keyed off the resolved
-    // animation instead, known too late relative to the first measurement).
+    // switch (see this file's top comment) — set here, before any
+    // positioning/measurement runs, so the first measurement already sees it.
     // True only for a real anchor that itself scrolls with the document —
     // that's the one case `absolute` (scrolling in lockstep with it) is
     // correct; not just "has an anchor at all", since an anchor that's
@@ -1106,10 +1105,9 @@ const usePopoverProps = (props) => {
       disarmBackdropHideRef.current?.();
       disarmBackdropHideRef.current = null;
       // transitionProperty stays "none" here for both — reset later, in the
-      // final commit step alongside popoverEl's own (not resumed early the
-      // way it briefly was), so a `silent` open (see above) can keep both
-      // elements' transitions suppressed right up until after their
-      // aria-expanded flip, the same way it does for popoverEl.
+      // final commit step alongside popoverEl's own, so a `silent` open (see
+      // above) can keep both elements' transitions suppressed right up until
+      // after their aria-expanded flip, the same way it does for popoverEl.
       backdropEl.style.transitionProperty = "none";
       if (isTopLayer) {
         // Hidden first if a previous close's deferred hidePopover() (see
@@ -1582,16 +1580,10 @@ const usePopoverProps = (props) => {
       // current unconditionally on every call, and treats their mere
       // *presence* as "already positioned this session — stay on this
       // side unless it no longer fits" (its own anti-oscillation guard for
-      // repositioning mid-open, e.g. on scroll/resize). Popover's own CSS
-      // doesn't read these anymore (slide direction is resolved in JS now,
-      // see resolveDirectionValue), which is why the clearing that used to
-      // live here was removed — but that removal missed this second,
-      // still-live purpose: without clearing them on close, a later reopen
-      // sees a stale, "already positioned" value left over from a
-      // *previous* open (e.g. the container-aligned collapse from an
-      // anchorless silent open) and wrongly stays sticky to it instead of
-      // resolving fresh from the current positionArea/anchor — a real,
-      // reproduced bug, not just a leftover no-op.
+      // repositioning mid-open, e.g. on scroll/resize). Cleared on close so a
+      // later reopen resolves fresh from the current positionArea/anchor
+      // instead of staying sticky to a side left over from a previous open
+      // (e.g. the container-aligned collapse from an anchorless silent open).
       popoverEl.removeAttribute("data-position-y-current");
       popoverEl.removeAttribute("data-position-x-current");
 
@@ -1726,8 +1718,8 @@ const usePopoverProps = (props) => {
     // ("[navi-control='dialog'], [navi-control='popover']"), and
     // --navi-open/--navi-close resolve their target this way.
     "navi-control": "popover",
-    // The protocol every command target answers. It came with the control
-    // group before; a popover is layout and still has to answer --navi-open,
+    // The protocol every command target answers: a popover is layout, not a
+    // control, and still has to answer --navi-open,
     // --navi-close and --navi-toggle, which are dispatched here and do not
     // bubble.
     "onnavi_command": (e) => {
@@ -1767,7 +1759,7 @@ const usePopoverProps = (props) => {
     // already arrive here as plain props via ...rest (wired by
     // UncontrolledPopover above, forwarded through ControlledPopover's own
     // {...props} spread) — nothing extra to add here. A controlled caller
-    // (picker_custom.jsx/side_panel.jsx) wires its own equivalent handling
+    // (picker_custom.jsx) wires its own equivalent handling
     // directly against its own openController instead.
   });
 
@@ -1806,9 +1798,6 @@ const POPUP_STYLE_CSS_VARS = {
   maxHeight: "--popover-max-height",
 };
 
-// parsePositionArea/POSITION_AREA_X/Y_VALUES moved to popup_shared.js — same
-// grammar Dialog's own layer="local"/"top" now shares.
-
 /**
  * Shared by both renderers: parses `positionArea` and resolves
  * `animation="auto"`/`true`. `animationAnchor` is the real anchor element
@@ -1835,13 +1824,5 @@ const resolvePositionAreaAndAnimationKind = ({
     : animation;
   return { parsedPositionArea, resolvedAnimationKind };
 };
-
-// resolveDirectionValue/resolveAutoAnimationKind moved to popup_shared.js —
-// same logic Dialog's own auto-animation resolution now shares, since it
-// never has a real anchor either (always the "anchor === undefined" path).
-
-// suppressPointerEventsDuringTransition/armPointerDownOutsideClose moved to
-// popup_shared.js — same helpers Dialog's own custom renderer needs, no
-// Popover-specific knowledge in either.
 
 Popover.Close = PopupClose;

@@ -291,6 +291,8 @@ const TABS_ALIGN_TO_JUSTIFY_CONTENT = {
  *   onChange?: (value: any) => void,
  *   tabsPosition?: "top"|"bottom"|"left"|"right",
  *   tabsAlign?: "start"|"center"|"end"|"stretch",
+ *   scrollablePage?: boolean,
+ *   maxLines?: number|false,
  *   borderWidth?: string|number,
  *   borderRadius?: string|number,
  *   tabBorderRadius?: string|number,
@@ -484,7 +486,7 @@ export const Binder = ({
  *   position among its siblings.
  * @param {import("preact").ComponentChildren} [props.label] - What the tab
  *   shows.
- * @param {import("../route.js").Route} [props.route] - Makes the tab a `Link`
+ * @param {object} [props.route] - Makes the tab a `Link`
  *   to that route, and the binder follows the url: the open item is the one
  *   whose route matches, no `value`/`onChange` needed.
  * @param {string} [props.href] - Same, for a plain url.

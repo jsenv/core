@@ -261,7 +261,8 @@ const css = /* css */ `
  *   interaction only makes sense paired with not letting focus silently
  *   leave the panel first. A box of the page whose press must not close the
  *   panel (a card that fills it) names the panel:
- *   `data-navi-popup-inside={id}` — see docs/popup_backdrop.md.
+ *   `data-navi-popup-inside={id}`, read when the panel has no wall
+ *   (`backdrop={false}`) — see docs/popup_backdrop.md.
  * @param {boolean} [props.closeByDrag=true] - Pushing the panel back
  *   towards the edge it is docked to closes it: the panel follows the
  *   pointer and finishes leaving (or comes back to rest) when it is
@@ -276,8 +277,8 @@ const css = /* css */ `
  *   doc).
  * @param {import("preact").ComponentChildren} props.children - No built-in
  *   close button — add one wherever it makes sense for the layout (e.g. a
- *   plain `<Button command="--navi-close">`), use `SidePanel.Head`'s own
- *   `closeButton` prop, or rely on `closeByPressOutside`/Escape instead.
+ *   plain `<Button command="--navi-close">` in `SidePanel.Head`), or rely on
+ *   `closeByPressOutside`/Escape instead.
  *   A form sent inside the panel closes it, as in any popup: a panel one
  *   keeps editing in says `command="--navi-void"` on that form (see
  *   docs/form_changed.md).
@@ -370,9 +371,7 @@ const toCssLength = (value, propertyName) =>
  * Stuck to the top of the panel's own scrollable area (`position: sticky`)
  * regardless of `side` — only the panel's content in between scrolls. No
  * built-in padding or close button — add a `<Button command="--navi-close">`
- * (optionally with the `"navi_side_panel_head_close_button"` className, a
- * float-right utility this file's own CSS still provides) wherever it makes
- * sense for the layout.
+ * wherever it makes sense for the layout.
  *
  * @param {object} props
  * @param {string} [props.className] - Merged with the shared

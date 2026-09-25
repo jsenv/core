@@ -117,8 +117,9 @@ const TIMING_NOOP = () => {
  * @param {boolean} [params.stopOnSIGINT] - Stop on SIGINT (ctrl+c). Defaults to true, except
  *   inside a cluster worker where the primary process is in charge.
  * @param {boolean} [params.stopOnExit=true] - Stop on SIGHUP, SIGTERM, beforeExit and exit.
- * @param {boolean} [params.stopOnInternalError=false] - Stop when a route throws (after the
- *   "handleError" plugins answered).
+ * @param {boolean} [params.stopOnInternalError=false] - Stop as soon as a route throws. The
+ *   request that threw and every other pending request are answered 500 with no body, the
+ *   "handleError" plugins' response is not sent.
  * @param {boolean} [params.keepProcessAlive=true] - When false the server alone does not keep
  *   the process alive.
  * @param {boolean} [params.canExposeSensitiveData=false] - Lets the server hand out what
@@ -150,8 +151,9 @@ const TIMING_NOOP = () => {
  * @returns {Promise<Object>} The server: `{ origin, origins, port, hostname, nodeServer,
  *   webSocketOrigin, stop, stoppedPromise, getStatus, addEffect }`.
  *   - `origins`: `{ local, localip, externalip }`, `origin` being `origins.local`.
- *   - `stop(reason)`: resolves once every connection is closed; `reason` can be anything
- *     and defaults to `STOP_REASON_NOT_SPECIFIED`.
+ *   - `stop(reason)`: answers the pending requests with 503, closes every connection and
+ *     resolves once done; `reason` can be anything, becomes the 503 status text and
+ *     defaults to `STOP_REASON_NOT_SPECIFIED`.
  *   - `stoppedPromise`: resolves with the reason the server stopped for (one of the
  *     `STOP_REASON_*` exports or what was given to `stop`).
  *   - `getStatus()`: `"starting"`, `"opened"`, `"stopping"` or `"stopped"`.
@@ -442,16 +444,16 @@ export const startServer = async ({
   stopCallbackSet.add(removeConnectionErrorListener);
 
   const connectionsTracker = trackServerPendingConnections(nodeServer);
-  // opened connection must be shutdown before the close event is emitted
-  stopCallbackSet.add(connectionsTracker.stop);
-
   const pendingRequestsTracker = trackServerPendingRequests(nodeServer);
-  // ensure pending requests got a response from the server
-  stopCallbackSet.add((reason) => {
-    pendingRequestsTracker.stop({
+  // The pending requests are answered before any connection is destroyed:
+  // destroyed first, their clients would only see a socket error. The
+  // connections must still be shut down for the close event to be emitted.
+  stopCallbackSet.add(async ({ reason }) => {
+    await pendingRequestsTracker.stop({
       status: reason === STOP_REASON_INTERNAL_ERROR ? 500 : 503,
       reason,
     });
+    await connectionsTracker.stop(reason);
   });
 
   const applyRequestInternalRedirection = (request) => {

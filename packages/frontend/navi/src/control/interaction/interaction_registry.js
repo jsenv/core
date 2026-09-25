@@ -237,7 +237,8 @@ export const interactionsDisputeThePress = (interactions) => {
  * control (a Button) is its own; a Box inside one, or wrapping exactly one,
  * reaches it; a Box with no control anywhere near it — or laying out several,
  * which belongs to none of them — still answers with a callback of the caller's,
- * and only "request_action" has nothing to ask.
+ * and only the two requests ("request_action", "request_ui_action") have
+ * nothing to ask.
  *
  * Set up once per element rather than on every render, which is what lets a
  * detector be a plain `setup`/teardown pair. So the interactions themselves are
@@ -406,7 +407,7 @@ export const useInteractionsEffect = (ref, interactionsRef) => {
           cancelable: true,
         });
         // The event the interaction was read from stays reachable from it:
-        // `findEvent(actionEvent, "pointerdown")` still finds the press a swipe
+        // `findEvent(actionEvent, "pointerdown")` still finds the press a hold
         // was made of.
         chainEvent(interactionEvent, originalEvent);
         if (!element.dispatchEvent(interactionEvent)) {

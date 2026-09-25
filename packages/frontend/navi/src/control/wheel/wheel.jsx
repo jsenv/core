@@ -687,7 +687,7 @@ const WheelGroupContext = createContext(null);
  *   [key: string]: any,
  * }>}
  * @param {number} [props.visibleCount=3] - Odd number of rows visible in the viewport (the center one is the selection).
- * @param {number|string} [props.itemHeight] - Main-axis size of a row when vertical (number = px). Defaults to the CSS var (2.4em).
+ * @param {number|string} [props.itemHeight] - Main-axis size of a row when vertical (number = px). Defaults to the CSS var (1.8em).
  * @param {number|string} [props.itemWidth] - Main-axis size of a cell when horizontal (number = px). Defaults to the CSS var (3.5ch).
  * @param {number|string} [props.size] - Font size of the wheel: a size token ("s", "m", "l", "xl", …), a number (px), or a CSS length. Scales the digits and, since the row size is em-based, the row height too — a simple way to make the whole wheel bigger. An explicit itemHeight/itemWidth still overrides the row size.
  * @param {boolean} [props.bounded] - Give the wheel fixed ends instead of wrapping: it stops at the first/last value. By default the wheel loops endlessly (past the last value the first reappears, and vice-versa).
@@ -2241,7 +2241,7 @@ Wheel.Item = WheelItem;
  * @param {boolean} [props.horizontal] - Stack the (horizontal) wheels vertically instead of in a row.
  * @param {boolean} [props.glass] - Frost every wheel's neighbouring rows (see Wheel's glass prop) with one prop for the whole group.
  * @param {boolean} [props.frameBorder] - Line every wheel's center-window edges with a faint frame (off by default; independent of glass).
- * @param {boolean} [props.zoom] - Enlarge the centered value of every wheel (see Wheel's zoom prop) with one prop for the whole group.
+ * @param {boolean|number} [props.zoom] - Enlarge the centered value of every wheel (see Wheel's zoom prop) with one prop for the whole group.
  */
 export const WheelGroup = (props) => {
   import.meta.css = css;

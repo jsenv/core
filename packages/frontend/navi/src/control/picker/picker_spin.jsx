@@ -503,7 +503,7 @@ const TRAVELS_NONE = [];
  *   fallbackValue?: any,
  *   valueAtStep: (value: any, count: number) => any,
  *   compareValues?: (a: any, b: any) => number,
- *   renderValue?: (value: any) => import("preact").ComponentChildren,
+ *   renderValue?: (value: any, context: { maxLines?: number }) => import("preact").ComponentChildren,
  *   controlProps?: object,
  *   duration?: number,
  *   vertical?: boolean,

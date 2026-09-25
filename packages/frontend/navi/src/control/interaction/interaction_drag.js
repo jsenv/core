@@ -38,7 +38,7 @@
  *     …
  *   }}}
  *
- * `toId` is an element and never null: a copy over nothing is a release that meant
+ * `toId` names an element and is never null: a copy over nothing is a release that meant
  * nothing, and the interaction does not happen at all — unless the element
  * declares `leave` (see below), which gives that release a meaning of its own.
  *

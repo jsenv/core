@@ -43,7 +43,7 @@ if (import.meta.hot) {
  * 1. Initially takes value from the default signal
  * 2. When explicitly set (programmatically or via localStorage), the explicit value takes precedence
  * 3. When default signal changes, it only updates if no explicit value was ever set
- * 4. Calling reset() or setting to undefined makes the signal use the dynamic default again
+ * 4. Setting it to undefined makes the signal use the dynamic default again
  * 5. If dynamic default is undefined and options.default is provided, uses the static fallback
  *
  * This is useful for:
@@ -57,7 +57,9 @@ if (import.meta.hot) {
  * @param {string|number} [options.id] - Custom ID for the signal. If not provided, an auto-generated ID will be used. Used for localStorage key and route pattern detection.
  * @param {any} [options.default] - Static fallback value used when defaultValue is a signal and that signal's value is undefined
  * @param {boolean} [options.persists=false] - Whether to persist the signal value in localStorage using the signal ID as key
- * @param {"string" | "number" | "boolean" | "object"} [options.type="string"] - Type for localStorage serialization/deserialization
+ * @param {string} [options.type] - Type the value is coerced to, and read back as from localStorage and the url:
+ *   any @jsenv/validity type (`"string"`, `"number"`, `"boolean"`, `"array"`, `"object"`, `"integer"`, `"date"`,
+ *   `"time"`…). Without it the value is not coerced.
  * @param {"string" | "number" | "boolean"} [options.itemType] - For array type: type of the array items.
  *   Used when reading the value back from a url search param, where everything is a string:
  *   `?level=3,4` becomes `[3, 4]` instead of `["3", "4"]`. Without it items stay strings.

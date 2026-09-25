@@ -6,6 +6,8 @@ import { useDebugFocus } from "../../navi_debug.jsx";
 import { useDisplayedLayoutEffect } from "../use_displayed_layout_effect.js";
 import { claimUnplacedAutofocus } from "./focus_transfer.js";
 
+const NO_ELEMENT_REF = { current: null };
+
 /**
  * Programmatic autofocus that runs after Preact layout effects are flushed.
  *
@@ -58,13 +60,12 @@ import { claimUnplacedAutofocus } from "./focus_transfer.js";
  *   the browser's built-in scroll-into-view that accompanies focus.
  * @param {boolean} [options.focusVisible]
  *   Passed as `focusVisible` to `element.focus()`.
- * @param {boolean} [options.autoFocusSelect]
+ * @param {boolean} [options.autoSelect]
  *   When true, also calls `element.select()` after focusing (useful for text inputs).
- * @returns {Function} triggerAutofocus — can be called manually with a synthetic
- *   event to re-run the focus logic outside of the layout-effect lifecycle.
+ * @returns {object} The attributes to spread on the element: `navi-autofocus`
+ *   (and `navi-autofocus-select`), with `autoFocus` set to undefined so the
+ *   native attribute never lands on the node.
  */
-const NO_ELEMENT_REF = { current: null };
-
 export const useAutoFocus = (
   focusableElementRef,
   autoFocus,

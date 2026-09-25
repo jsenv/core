@@ -760,7 +760,7 @@ const SelectableInputProxy = (props) => {
   const selectableRealInputProps = useContext(SelectableRealInputContext);
   if (!selectableRealInputProps) {
     throw new Error(
-      "Selectable.Input must be used within a Selectable component",
+      "SelectableInput must be used within a row of a selectable List",
     );
   }
 

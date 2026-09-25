@@ -126,9 +126,9 @@ what asks, not to the render.**
 
    It starts one render late, and per instance: a component fetched this way
    in three places asks three times (the browser fetches the module once), and
-   coming back to it suspends for the microtask the import takes to answer
-   from the module map. Reach for it when there is genuinely no state to read
-   the request off — not to save declaring one.
+   coming back to it draws its wait again for the microtask the import takes to
+   answer from the module map. Reach for it when there is genuinely no state to
+   read the request off — not to save declaring one.
 
 Delegating instead (the hook without `loading: true`, under a `<Loading>`
 around the frame) follows the rule for data: **the `<Loading>` goes where the
@@ -210,8 +210,10 @@ The page or the component reading its code says it where it stands, as
 above. A failure left to a boundary — a page reading its code without
 `error: true` — reaches it like a failed read does; a boundary that shows only
 what came from the network and rethrows the rest as a bug recognises an import
-by its action — `error.action` is the route action the app declared for the
-code — rather than by the browser's message.
+by its action rather than by the browser's message. `error.action` is the
+instance that ran, not the route action itself (a route action hands out the
+instance for its params), and every instance bound from one action carries its
+`callback`: `error.action.callback === GAME_PAGE_CODE.callback`.
 
 ## Preact's `lazy()` is not this
 

@@ -108,10 +108,10 @@ const LoadingRectangleSvg = ({
 }) => {
   // The stroke is centered on the path, so half of it falls outside: drawing
   // at half the stroke width puts its outer edge exactly on the box, whatever
-  // the box. It used to be a share of the smaller dimension (3%, floored at
-  // 2px), which held the line further and further inside as the box grew — a
-  // caller placing the outline with `inset` got the distance it asked for on a
-  // field and something several pixels inward on a card. Nothing needs the
+  // the box. Not a share of the smaller dimension (3%, floored at 2px): that
+  // holds the line further and further inside as the box grows — a caller
+  // placing the outline with `inset` gets the distance it asked for on a field
+  // and something several pixels inward on a card. Nothing needs the
   // extra room: the svg is `overflow: visible` and whoever positions the
   // wrapper already reserves the half stroke.
   const margin = strokeWidth / 2;

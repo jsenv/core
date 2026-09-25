@@ -1752,7 +1752,7 @@ const PickerFirstResolver = (props) => {
  *   popupTestId?: string,
  *   confirmTestId?: string,
  *   cancelTestId?: string,
- *   mount?: "always" | "from-first-open" | "while-opened",
+ *   mount?: "always" | "idle" | "from-first-open" | "while-opened",
  *   dialogExpand?: boolean,
  *   dialogExpandX?: boolean,
  *   dialogExpandY?: boolean,
@@ -2189,8 +2189,8 @@ const PickerFirstResolver = (props) => {
  *   itself names the trigger (see docs/testid.md); this one is for a test that
  *   needs the popup's own box — its surface, its position, its backdrop — and
  *   not only what it holds, which a testid inside the children already names.
- *   A `mode="callout"` picker has no popup of its own — the callout is the
- *   control's, shared with its constraint messages — so it is not named.
+ *   Under `mode="callout"` it names the callout element — the control's own,
+ *   shared with its constraint messages — while the children are shown in it.
  * @param {string} [confirmTestId] `type="confirm"`, default body: the
  *   `data-testid` of the yes button; `cancelTestId` that of the no button.
  *   Both are elements navi builds, which a test may not name by class (see

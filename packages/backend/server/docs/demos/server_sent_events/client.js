@@ -1,19 +1,6 @@
 import { EventSource } from "eventsource";
-import { Agent, fetch } from "undici";
 
-const eventsourceUrl = "https://localhost:3456";
-const eventSource = new EventSource(eventsourceUrl, {
-  fetch: (input, init) =>
-    fetch(input, {
-      ...init,
-      dispatcher: new Agent({
-        connect: {
-          rejectUnauthorized: false,
-        },
-      }),
-    }),
-});
-
-eventSource.addEventListener("ping", ({ lastEventId }) => {
-  console.log("> ping from server", { lastEventId });
+const eventSource = new EventSource("http://localhost:3456/events");
+eventSource.addEventListener("ping", (event) => {
+  console.log("> ping from server", event.lastEventId, JSON.parse(event.data));
 });

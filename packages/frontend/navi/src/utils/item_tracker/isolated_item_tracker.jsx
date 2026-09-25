@@ -16,13 +16,18 @@
  *
  * 1. PRODUCER SIDE (ref-based, no re-renders):
  *    - ItemProducerProvider: Manages item registration without causing re-renders
- *    - useTrackItem: Registers individual items using refs
+ *    - useTrackIsolatedItem(id, data, explicitIndex): Registers individual items using refs
  *    - Items are stored in a mutable array via useRef
  *
- * 2. CONSUMER SIDE (state-based, re-renders when needed):
- *    - ItemConsumerProvider: Manages reactive state for consumers
- *    - useTrackedItems/useTrackedItem: Read the tracked items with reactivity
- *    - State is synchronized from producer side at controlled intervals
+ * 2. CONSUMER SIDE (no state of its own):
+ *    - ItemConsumerProvider: hands consumers the snapshot FlushSentinel took
+ *      once every producer child had registered, in the same render pass
+ *    - useTrackedIsolatedItems/useTrackedIsolatedItem: Read the tracked items
+ *
+ * createIsolatedItemTracker() returns [useIsolatedItemTrackerProvider,
+ * useTrackIsolatedItem, useTrackedIsolatedItem, useTrackedIsolatedItems];
+ * useIsolatedItemTrackerProvider() returns [ItemProducerProvider,
+ * ItemConsumerProvider, items].
  *
  * RENDER ORDER REQUIREMENT:
  * Producer MUST render before Consumer in the React tree for proper synchronization.

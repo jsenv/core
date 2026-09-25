@@ -92,7 +92,8 @@ Params may be signals, and then the action follows them:
 
 ```js
 const userAction = getUser.bindParams({ id: userIdSignal });
-// a new params value reruns it
+// a new id retargets it to the instance for that id; who runs the instance is
+// unchanged: `{ run: true }`, `actionRunEffect`, a press
 ```
 
 `{ debounce }` puts a delay between the signal and the instance, for params that
@@ -119,7 +120,7 @@ compare params by hand to find out.
 
 ### The answer is kept on the instance that ran
 
-An action's state — `dataSignal`, `errorSignal`, `loadingSignal` — belongs to
+An action's state — `dataSignal`, `errorSignal`, `runningStateSignal` — belongs to
 the instance the params made, never to the action they were bound from. So the
 thing to read is whatever `bindParams` (or anything built on it) gave back:
 
@@ -522,8 +523,9 @@ stays on screen while it does, is in [list_refresh.md](./list_refresh.md); a
 scope with reruns of its own, and a rerun after another resource writes, are
 [`withParams()`](./resource.md#withparams-a-scope-with-reruns-of-its-own).
 
-`rerunActions(actions)` / `updateActions(actions)` drive several at once (route
-changes do exactly that).
+`rerunActions(actionSet)` reruns several at once;
+`updateActions({ prerunSet, runSet, rerunSet, resetSet })` settles the four
+kinds of request in one pass — a route change goes through it.
 
 ## See also
 

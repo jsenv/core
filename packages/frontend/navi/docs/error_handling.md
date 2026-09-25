@@ -184,12 +184,16 @@ report — window `error`, the jsenv overlay in dev — and that is the right an
 for it: nothing had to guess whether someone was waiting.
 
 **Some runs have nobody to reject at**, and they say so where they start: one
-started from a signal effect because its params changed, one whose failure the
-control that started it already draws, a routing whose result every caller drops.
+started from a signal effect because its params changed, one started by the
+render that reads it (`{ run: true }`), one whose failure the control that
+started it already draws, a routing whose result every caller drops.
 They pass through [`runUnwatched()`](../src/action/run_unwatched.js), which takes
-the rejection without hiding the error — it stays in `errorSignal`. That is the
-whole list of places navi swallows one, and taking it is what obliges that place
-to ask the next question: did anything display this error? (below).
+the rejection without hiding the error — it stays in `errorSignal`. That is
+every place navi swallows one but the prefetch on intent, dropped without a
+word since nothing on screen asked for it and the arrival runs the action again
+([dynamic_import.md](./dynamic_import.md#ahead-of-the-render-intent)). Taking
+it is what obliges that place to ask the next question: did anything display
+this error? (below).
 
 Two things must never become a rejection, and do not. **A navigation**: the
 routing's promise is what the browser calls the navigation itself, and rejecting
@@ -212,24 +216,19 @@ Whatever displays the error sets `error.__handled_by__` (via
 one thing and only one: **this error is on screen somewhere.**
 
 It is the same mark the jsenv supervisor reads to keep its dev overlay out of
-the way. It has to exist because `preact/debug` re-throws, in a `setTimeout`,
-**every error a boundary handled** — deliberately, so that React-style dev
-overlays keep working:
-
-```js
-// when an error was handled by an ErrorBoundary we will nonetheless emit an error
-// event on the window object. This is to make up for react compatibility in dev mode
-// and thus make the Next.js dev overlay work.
-```
-
-Without the mark, an app calmly displaying "you are offline" gets a crash
-overlay thrown over it.
+the way: a window `error` or `unhandledrejection` carrying it is not shown. An
+error on screen can still reach window another way — a run started by hand and
+never awaited — and without the mark an app calmly displaying "you are offline"
+gets a crash overlay thrown over it. navi's own report reads the same mark
+(below).
 
 Everything navi ships already marks: `<ErrorBoundary>` when it renders its
-fallback, `<ActionRenderer>` / `<Button action>` when they render their error
-branch, `useAsyncData({ error: true })`
-when it hands the error to the component, and a run given an `onError` — asking
-for the error is taking it.
+fallback, `<ActionRenderer>` when it renders its error branch,
+`useAsyncData({ error: true })` when it hands the error to the component, and a
+run given an `onError` — asking for the error is taking it. Every control with
+an `action` runs it that way, so the control claims the failure whatever it
+then shows: a callout, a boundary (`actionErrorEffect="throw"`), or nothing
+(`"none"`, a mapping returning nothing).
 
 ## Taken by nobody: the report
 
@@ -240,10 +239,9 @@ code that produced it.
 **Being read is enough to call the report off**, displayed or not. Once a render
 has the error, everything that can happen next is already covered without this
 module: it is displayed (and marked), or it is thrown — and a thrown error either
-finds a boundary that displays it, or reaches window on its own, since
-`preact/debug` re-throws what a boundary caught and an unbounded throw aborts the
-render loudly. Reporting it here too would be a second voice, and the wrong one:
-this module cannot see which of those happened.
+finds a boundary that displays it, or reaches window on its own, since preact
+re-throws what no boundary handled. Reporting it here too would be a second
+voice, and the wrong one: this module cannot see which of those happened.
 
 **And a render stopped in the middle read nothing after it.** `useAsyncData`
 delegates a failure by throwing it out of the render — that is how the error
@@ -287,8 +285,9 @@ easy to miss when writing another one:
 
 - **Mark only what you actually render.** Marking on catch, before knowing
   whether anything is displayed, turns a boundary into a bug swallower: a
-  `TypeError` in a component becomes a blank page AND a silent one, since the
-  mark muted the overlay that would have pointed at it. navi's boundary marks
+  `TypeError` it then re-throws reaches window marked as on screen, so the
+  overlay that would have pointed at it stays out of the way — a blank page AND
+  a silent one. navi's boundary marks
   just before rendering its fallback, and re-throws untouched when it has no
   fallback — nothing to display means nothing handled.
 - **Reset on the document URL, not only on the rerun.** Re-running the failed

@@ -50,8 +50,9 @@ export const createFileSystemFetch = (directoryUrl, options) => {
  * @param {Object} [helpers] - The helpers given to a route `fetch` (used for `timing` and `canExposeSensitiveData`).
  * @param {string|URL} directoryUrl - `file://` url (or filesystem path) of the directory to serve.
  * @param {Object} [options]
- * @param {string} [options.mainFileRelativeUrl] - File served for the directory itself and,
- *   as a fallback, for extension-less urls that do not exist (client side routing).
+ * @param {string} [options.mainFileRelativeUrl] - File served for the root of `directoryUrl`
+ *   and, as a fallback, for extension-less urls that do not exist (client side routing).
+ *   A subdirectory still gets 403 unless `canReadDirectory`.
  * @param {boolean} [options.etagEnabled=false] - Send an `etag` (hash of the content) and
  *   answer 304 to a matching `if-none-match`.
  * @param {boolean} [options.etagMemory=true] - Remember etags per file (invalidated when the

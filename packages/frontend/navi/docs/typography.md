@@ -84,7 +84,7 @@ The prop is the same everywhere: a number of lines, cut with an ellipsis.
 - **`Picker`** — its value, `maxLines={1}` by default; `variant="text"` and
   `variant="bare"` draw the caller's own thing and are not clamped, a `Text` in
   their `ui` cuts itself with its own `maxLines`.
-- **`PickerSpin`** (`DaySpin`, `TimeSpin`…) — its value; left out, a long value
+- **`Spin`** (`DaySpin`, `NumberSpin`…) — its value; left out, a long value
   wraps and the box grows.
 - **`Binder`** — its tab labels, `maxLines={1}` by default, `false` lets them
   wrap; overridable per item.
@@ -104,9 +104,8 @@ width must say it too**, or the whole chain grows instead of truncating:
 
 ```jsx
 <Box flex width="300" spacing="s">
+  {/* without minWidth the row just grows */}
   <Box flex expandX minWidth="0">
-    {" "}
-    {/* without minWidth the row just grows */}
     <Text maxLines={1}>…</Text>
   </Box>
 </Box>

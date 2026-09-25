@@ -1,7 +1,7 @@
 import { applySearch } from "./apply_search.js";
 
 /**
- * createSearch — builds a matchFn compatible with useSearch that searches
+ * createSearch — builds a matchFn compatible with useSearchText that searches
  * across multiple named fields of an item, each with its own DOM selector
  * and optional priority weight.
  *
@@ -19,7 +19,7 @@ import { applySearch } from "./apply_search.js";
  *   },
  * });
  *
- * const [orderedItems, getItemMatchInfo] = useSearch(search, items, searchPerson);
+ * const [orderedItems, getItemMatchInfo] = useSearchText(search, items, searchPerson);
  * // getItemMatchInfo(item).matchRanges is { ".name": [[start,end],…], ".address": [[start,end],…] }
  * // Pass the whole thing: <ListItem matchInfo={getItemMatchInfo(item)} />
  * // — ListItem handles the per-selector object format for matchRanges.

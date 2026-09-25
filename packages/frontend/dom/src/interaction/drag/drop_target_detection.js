@@ -8,8 +8,6 @@
  * @param {Object} gestureInfo - Gesture information
  * @param {Element[]} targetElements - Array of potential drop target elements
  * @param {object} [options]
- * @param {Element} [options.dragElement] - The element being dragged. When provided and
- *   `fallbackToEdge` is true, used to compute the fallback rect.
  * @param {boolean} [options.fallbackToEdge=false] - When true and the drag element does
  *   not intersect any target, falls back to the first item (if above all items) or the
  *   last item (if below all items) so there is always a valid drop target at list edges.

@@ -115,9 +115,10 @@ const createAllowedOriginChecker = (allowedOrigins) => {
   }
 
   return {
-    // when the request origin cannot be reflected back we must still send a
-    // single valid origin, never a pattern
-    defaultOrigin: literalOrigins[0] ?? "*",
+    // sent when the request origin cannot be reflected back: a single valid
+    // origin, never a pattern, and never "*" which would allow every origin.
+    // With only patterns there is nothing to send.
+    defaultOrigin: literalOrigins[0] ?? null,
     isAllowed: (origin) => {
       if (literalOrigins.includes(origin)) {
         return true;
@@ -161,7 +162,6 @@ const generateAccessControlHeaders = ({
 
   // Access-Control-Allow-Origin must be a single value (not a list).
   // We reflect back the request's origin if it is in the allowed list.
-  // If no origin matches we fall back to "*" (only when not using credentials).
   let allowOrigin = null;
 
   const requestOrigin = readRequestOrigin(headers);
@@ -213,14 +213,16 @@ const generateAccessControlHeaders = ({
   }
 
   return {
-    "access-control-allow-origin": allowOrigin,
+    ...(allowOrigin === null
+      ? {}
+      : { "access-control-allow-origin": allowOrigin }),
     "access-control-allow-methods": allowedMethodArray.join(", "),
     "access-control-allow-headers": allowedHeaderArray.join(", "),
     ...(accessControlAllowCredentials
       ? { "access-control-allow-credentials": true }
       : {}),
     "access-control-max-age": accessControlMaxAge,
-    ...(timingAllowOriginEnabled(request)
+    ...(allowOrigin !== null && timingAllowOriginEnabled(request)
       ? { "timing-allow-origin": allowOrigin }
       : {}),
     ...(vary.length ? { vary: vary.join(", ") } : {}),

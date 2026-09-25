@@ -8,7 +8,7 @@ import { createObservable } from "./interfacing_with_node/observable.js";
  *
  * @param {(body: { write: (chunk: string|Uint8Array) => void, end: () => void }) => void | (() => void)} responseBodyHandler
  *   Receives `write` and `end`. If it returns a function, that function runs
- *   when the client disconnects before `end` was called (cleanup).
+ *   once the response is over: after `end()`, or when the client disconnects.
  * @param {Object} [init]
  * @param {number} [init.status=200]
  * @param {string} [init.statusText]

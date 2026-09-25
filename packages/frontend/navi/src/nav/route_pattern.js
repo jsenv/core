@@ -1,6 +1,6 @@
 /**
- * Custom route pattern matching system
- * Replaces URLPattern with a simpler, more predictable approach
+ * Custom route pattern matching system.
+ * Not built on URLPattern: matching here is simpler and more predictable.
  */
 
 import { globalSignalRegistry } from "../state/state_signal.js";

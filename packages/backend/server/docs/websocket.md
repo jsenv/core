@@ -59,6 +59,6 @@ _client.html_
 
 A route is a websocket route when its endpoint ends with `.websocket` or its `headers` pattern has `upgrade: "websocket"`; a plain request to it is answered 426. The handler receives the [ws](https://github.com/websockets/ws/blob/master/doc/ws.md) socket once the upgrade is done; if it returns a function, that function runs when the socket closes.
 
-A websocket route can still refuse the upgrade by returning a regular response (a 401 for instance). Returning anything but a `WebSocketResponse` with status 101 from a websocket route is an error, and so is returning a `WebSocketResponse` to a request that did not ask for an upgrade.
+A websocket route can still refuse the upgrade by returning a regular response (a 401 for instance). A 101 response that is not a `WebSocketResponse` is an error, and so is a `WebSocketResponse` returned to a request that did not ask for an upgrade.
 
 `server.webSocketOrigin` is the `ws://` (or `wss://`) origin of the server. To broadcast to many clients, see [server sent events](./server_sent_events.md): `ServerEvents` accepts websocket clients too.

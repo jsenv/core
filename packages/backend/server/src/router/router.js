@@ -659,7 +659,8 @@ const createRoute = ({
   if (!endpoint || typeof endpoint !== "string") {
     throw new TypeError(`endpoint must be a string, received ${endpoint}`);
   }
-  const [method, resource] = endpoint === "*" ? ["* *"] : endpoint.split(" ");
+  const [method, resource] =
+    endpoint === "*" ? ["*", "*"] : endpoint.split(" ");
   if (method !== "*" && !HTTP_METHODS.includes(method)) {
     throw new TypeError(`"${method}" is not an HTTP method`);
   }
@@ -878,8 +879,9 @@ const createResourceOptionsResponse = (request, resourceOptions) => {
  * @param {Object} params - Content negotiation parameters
  * @param {Array<string>} params.availableMediaTypes - Content types the server can produce
  * @param {Array<string>} params.availableLanguages - Languages the server can respond with
+ * @param {Array<string|number|Function>} params.availableVersions - Versions the server can respond with
  * @param {Array<string>} params.availableEncodings - Encodings the server supports
- * @returns {Response} A 406 Not Acceptable response
+ * @returns {Object} 406 response properties
  */
 const createNotAcceptableResponse = (
   request,

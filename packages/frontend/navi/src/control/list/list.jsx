@@ -3960,8 +3960,8 @@ const LIST_ITEM_STYLE_CSS_VARS = {
  *
  *   All three are about the row as a thing the LIST holds, never about the
  *   selection: a selectable row taken while its list sends says so on its own
- *   ("la sélection est en cours d'enregistrement"), and needs no `loading` for
- *   that.
+ *   ("le choix est en cours d'enregistrement", "la sélection…" in a `multiple`
+ *   list), and needs no `loading` for that.
  * @param {boolean} [props.readOnly]
  *   The row cannot be acted on: dimmed and click-through-proof, buttons inside
  *   it included.
@@ -5155,9 +5155,12 @@ const useItemStore = ({
  * (accessible via aria-labelledby) and a <ul role="group"> for the items.
  *
  * Props:
- *   label      — group label content
- *   labelProps — props forwarded to the label <span>
- *   ...rest    — forwarded to the outer <li role="presentation">
+ *   label            — group label content
+ *   labelProps       — props forwarded to the label <span>
+ *   hiddenWhileEmpty — the group leaves the flow (`display: none`) while it
+ *                      holds no real row — a search that emptied it, rows not
+ *                      arrived yet
+ *   ...rest          — forwarded to the outer <li role="presentation">
  */
 export const ListItemGroup = ({
   label,
@@ -5284,7 +5287,7 @@ const ListResolved = /*#__PURE__*/ createComponentResolver([
  *   uiAction?: (value: any) => void,
  *   popover?: boolean,
  *   role?: string,
- *   renderBudget?: number | string,
+ *   renderBudget?: number | string | {initial?: number, after: number},
  *   renderBudgetSkipCheck?: boolean,
  *   virtualItemSize?: number,
  *   onListVisibleItemsChange?: (visibleItems: any[]) => void,
@@ -5313,6 +5316,7 @@ const ListResolved = /*#__PURE__*/ createComponentResolver([
  *   alignX?: string,
  *   alignY?: string,
  *   flexWrap?: boolean,
+ *   overflow?: string,
  *   expandX?: boolean,
  *   expandY?: boolean,
  *   expand?: boolean,
@@ -5499,10 +5503,10 @@ const ListResolved = /*#__PURE__*/ createComponentResolver([
  * @param {number} [props.parallelGuard=4]
  *   How many runs the rows may have in flight at once, for a list whose rows
  *   carry their own `action` (a button per row). While that many are out, every
- *   row that is not running goes read-only and says how many it is waiting on;
- *   the next press is possible again as soon as one comes back. `Infinity`
- *   lifts it. Counts runs, not values — `maxLengthGuard` above is the one that
- *   says how many things the selection may hold.
+ *   control that would start another run goes read-only and says how many it is
+ *   waiting on; the next press is possible again as soon as one comes back.
+ *   `Infinity` lifts it. Counts runs, not values — `maxLengthGuard` above is
+ *   the one that says how many things the selection may hold.
  * @param {boolean} [props.standalone]
  *   This list answers for itself: it does not register with the control group
  *   or picker around it, so its selection stays out of that value and nothing

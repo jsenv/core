@@ -188,6 +188,9 @@ const FixedBarStyleCSSVars = {
  *   `border={false}` for none.
  * @param {string|number} [props.maxWidth] - Keeps the bar lined up with a
  *   content column narrower than the window (it stays centered).
+ * @param {string|number} [props.padding=0] - Along the bar only: left/right on
+ *   a top or bottom bar, top/bottom on a side one. Across it, the size is
+ *   `height`/`width`.
  */
 export const FixedBar = ({
   children,

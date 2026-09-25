@@ -24,7 +24,7 @@ await startServer({
 
 The plugin stays off (returns no plugin) unless `accessControlAllowedOrigins` lists an origin or `accessControlAllowRequestOrigin` is true. The options are in its JSDoc; the ones worth a word:
 
-- `accessControlAllowedOrigins` — the origins allowed to read the responses. `*` stands for any run of characters except `/`, so `"https://pr-*-my-app.fly.dev"` covers every preview deployment. The request origin is reflected back when it is allowed, with `vary: origin`.
+- `accessControlAllowedOrigins` — the origins allowed to read the responses. `*` stands for any run of characters except `/`, so `"https://pr-*-my-app.fly.dev"` covers every preview deployment. The request origin is reflected back when it is allowed, with `vary: origin`. An origin that is not allowed gets the first literal origin of the list, which the browser rejects, or no `access-control-allow-origin` at all when the list only has patterns.
 - `accessControlAllowRequestOrigin` — reflect any origin. Fine for a public API, not with credentials.
 - `accessControlAllowRequestMethod`, `accessControlAllowRequestHeaders` — also allow whatever a preflight asks for, on top of `accessControlAllowedMethods` (GET, POST, PUT, DELETE, OPTIONS) and `accessControlAllowedHeaders` (`x-requested-with`).
 - `accessControlMaxAge` — seconds a browser may cache a preflight (600).

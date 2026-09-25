@@ -7,7 +7,7 @@ import { runUnwatched } from "./run_unwatched.js";
 /**
  * Reactively runs an action whenever the params derived from signals change.
  *
- * @param {object} action - The action to run.
+ * @param {object | Function} action - The action to run, or a function made into one.
  * @param {Function} deriveActionParamsFromSignals - A function that reads signals and returns
  *   the params to pass to the action. It is re-evaluated automatically whenever a signal it
  *   read changes. Return `false`/`null`/`undefined` to skip running the action.
@@ -30,6 +30,8 @@ import { runUnwatched } from "./run_unwatched.js";
  *   ```
  *   The action will not fire while the user is actively changing filters; it fires once
  *   they pause for half a second.
+ * @returns {object} the instance bound to the derived params: the one to read
+ *   (`useAsyncData`), since the answer lands there and never on `action` itself.
  */
 // The run is not awaited here, and a rejection nobody waits for is an unhandled
 // one — in dev, an error overlay thrown over a page that is already saying what

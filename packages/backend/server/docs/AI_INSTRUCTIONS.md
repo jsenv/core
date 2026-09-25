@@ -4,7 +4,7 @@ An http server for Node.js: `startServer({ routes, plugins })` where a route is 
 
 ## What to read, in order
 
-1. The JSDoc of the export you use — `startServer` documents every option and the shape of a route; `createFileSystemFetch`, `serverPluginCORS`, `serverPluginErrorHandler`, `ServerEvents`, `WebSocketResponse`, `ProgressiveResponse`, `pickContentType`… document theirs. In a project the source with its JSDoc is `node_modules/@jsenv/server/dist/jsenv_server.js`.
+1. The JSDoc of the export you use — `startServer` documents every option and the shape of a route; `createFileSystemFetch`, `serverPluginCORS`, `serverPluginErrorHandler`, `ServerEvents`, `WebSocketResponse`, `ProgressiveResponse`, `pickContentType`… document theirs. In a project both `node_modules/@jsenv/server/src/` (one file per concern, `index.js` lists the exports) and the bundle `dist/jsenv_server.js` are published with their JSDoc.
 2. The guideline docs of this directory, one per area:
    - [handling_requests.md](./handling_requests.md) — routes, the `request` object, `helpers`, response formats, what the router answers by itself
    - [handling_errors.md](./handling_errors.md) — a route that throws, `serverPluginErrorHandler`, timeouts
@@ -21,6 +21,8 @@ An http server for Node.js: `startServer({ routes, plugins })` where a route is 
 - The request `headers` object has lowercased keys; `request.cookies` is a `Map`; `request.params` holds what `:name` and `*` captured.
 - A plain response object must give `status` (it defaults to 404). `statusMessage` is not `statusText`: it feeds the body of 4xx/5xx responses.
 - Without a plugin implementing `handleError` (`serverPluginErrorHandler`), a route that throws makes the process exit.
+- A plugin property that is not a hook name is ignored with a console warning (`Unexpected "handleRequest" property`): when a hook seems dead, read the console.
+- `ServerEvents` broadcasts to every connected client; there is no per-client send. A client → server message goes through a plain route (POST), or a `WebSocketResponse` when both directions are needed.
 - `canExposeSensitiveData: true` is for development on the developer's machine only (see [security.md](./security.md)).
 - A request whose `host` header is not a name of the server gets 403: a custom hostname goes in `hostname` or `allowedHosts`.
 - `request.json()` and the other readers answer 413 past 1 MiB (`requestBodyMaxSize`, or `{ maxSize }` per call).

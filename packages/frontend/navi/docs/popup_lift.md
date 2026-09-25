@@ -132,8 +132,9 @@ corners itself, or on the card inside it, reads the same.
 
 ## Same width, or a wider box
 
-`dialogSizeFromAnchor` makes the trigger's box a floor for the dialog;
-`dialogMaxWidth="var(--anchor-width)"` makes it the ceiling too. Together they
+On a `Picker`, `dialogSizeFromAnchor` makes the trigger's box a floor for the
+dialog; `dialogMaxWidth="var(--anchor-width)"` makes it the ceiling too (on a
+`Dialog` the same props are `sizeFromAnchor` and `maxWidth`). Together they
 say "the same card, brought forward": the box travels and may grow in height,
 never in width. Left out, `dialogExpandX` lets the sheet take the room it has,
 and the width change is animated — the card keeps its scale inside a box
@@ -334,7 +335,8 @@ into the picture of the state it closes into.
 
 ## What it costs, and where the time goes
 
-Measured at CPU ×6 on the demo bench (`12_picker_card_demo.html#lift-bench`),
+Measured at CPU ×6 on the demo bench
+(`src/control/demos/picker/12_picker_card_demo.html#lift-bench`),
 a card of a real edit sheet's weight (≈215 elements, 13 fields, 62 picker
 nodes):
 

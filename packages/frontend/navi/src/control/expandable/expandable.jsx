@@ -392,9 +392,10 @@ const useExpandableContext = (partName) => {
  *   height too. `"idle"` builds it in a browser idle moment after load.
  *   `"while-opened"` throws the content away once the collapse
  *   settles — after the closing animation, so it still plays on real
- *   content — and rebuilds it from scratch on every expansion. Whatever the
- *   value, intent on the UI part (pointer entering it, focus landing in it)
- *   builds the content ahead of the click.
+ *   content — and rebuilds it from scratch on every expansion. Under the
+ *   other three, intent on the UI part (pointer entering it, focus landing in
+ *   it) builds the content ahead of the click; `"while-opened"` content is
+ *   never warmed, it is built at the open.
  */
 export const Expandable = (props) => {
   import.meta.css = css;

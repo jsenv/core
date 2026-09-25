@@ -266,7 +266,8 @@ looks right, the screen disagrees, and only the screen is telling the truth.
   JS at all. To know how far a travel visibly is, compute it from the clock
   THROUGH the easing curve: the easing of a CSS animation sits on its
   keyframes (`effect.getKeyframes()[0].easing`), and CSS `ease` is parametric
-  — solve it numerically. _Reference: `revertWalkTime` in route_travel.jsx._
+  — solve it numerically. _Reference: `visibleProgress` in
+  src/transition/view_transition_revert.js._
 - **Screenshots lie too.** A re-rasterized capture (Playwright's
   `page.screenshot`) is drawn from main-thread state: it shows the animation
   where the `Animation` object says it is — pixel-perfect pictures of a
@@ -459,7 +460,8 @@ Ways to lose an afternoon on this, all seen:
   own business, and a count that works today under-waits after the next
   refactor. The component that swaps the DOM is the only one that knows when
   it has — have it say so, and await that. _Reference: `observeRouteRender` in
-  route.jsx, awaited by `whileRouteRenders` in route_travel.jsx._
+  route_render.js, armed by `armRouteRenderWait` and awaited by
+  `whilePageRenders` in route_travel.jsx._
 - **Clip on the pseudo-elements, never on your own box** — see "What moves
   inside a box stays inside the box" above; a travel between pages is the first
   of the two cases described there.

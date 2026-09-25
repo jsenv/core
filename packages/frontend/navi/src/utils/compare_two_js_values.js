@@ -157,7 +157,7 @@ export const compareTwoJsValues = (
         }
         return true;
       }
-      // Ordered array comparison (original behavior)
+      // Ordered array comparison
       let i = 0;
       while (i < a.length) {
         const aValue = a[i];

@@ -25,7 +25,7 @@ await startServer({
 
 `Accept: text/*` gets text, `Accept: application/json` gets json, `Accept: image/png` gets 406. Without an `accept` header the first media type wins. The media type of a route whose endpoint has an extension (`GET /data.json`) is inferred.
 
-The same can be done by hand with `pickContentType(request, availableMediaTypes)`, which returns the media type to use or `null` — then the 406 and the `vary` header are up to the route.
+The same can be done by hand with `pickContentType(request, availableMediaTypes)`, which returns the media type to use or `null` — then the 406 and the `vary` header are up to the route. Unlike the router, it also returns `null` when the request has no `accept` header.
 
 ## Language, version, encoding
 

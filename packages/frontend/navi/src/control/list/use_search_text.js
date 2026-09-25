@@ -30,7 +30,7 @@ export const useSearchText = (searchText, items, matchFn = applySearch) => {
     );
   }
   if (items === undefined) {
-    throw new TypeError("useSearch: items is undefined");
+    throw new TypeError("useSearchText: items is undefined");
   }
   const { orderedItems, matchInfoMap } = useMemo(() => {
     const { scoreEntries, nonMatched, matchInfoMap } = buildMatchInfo(

@@ -647,7 +647,7 @@ const PickerCustom = (props) => {
       // Not on pickerProps (the trigger): commands.js's own
       // resolveClosestExpandable() does `el.closest("[aria-expanded]")` to
       // find where to dispatch navi_request_open/navi_request_close — and
-      // the popup itself now carries its own aria-expanded (see
+      // the popup itself carries its own aria-expanded (see
       // popover.jsx/dialog.jsx), which is *closer* than the picker's own
       // aria-expanded for anything dispatched from inside the popup's own
       // content (e.g. a `command="--navi-close"` button rendered as
@@ -939,12 +939,8 @@ const PickerContentInsidePopup = (props) => {
     mode,
     pointerLock,
     scrollCapture,
-    // No default here (matches Popover's own default of inactive) — the
-    // old, differently-named `focusTrap = true` prop never actually reached
-    // Popover's real `focusCapture` prop (see this file's history), so
-    // focus-trapping has never really been active for popover-mode pickers;
-    // defaulting the now-correctly-named prop to `true` would be a real,
-    // unintended behavior change riding along with the rename.
+    // No default here: Popover's own `focusCapture` is inactive by default,
+    // and a popover-mode picker traps the focus only when asked to.
     focusCapture,
     // Popup documents its own `layer` as forwarded as-is to Dialog/Popover,
     // but popupProps is built explicitly here, so it only travels if named.

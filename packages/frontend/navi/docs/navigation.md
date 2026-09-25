@@ -713,12 +713,14 @@ too early and put back:
   hands out.
 
 **Only where the row owns the document**: nothing between the travelling box and
-the viewport may scroll or clip. A row inside a scroller of its own — a frame in
-an article, a panel beside other content — shares nothing with the document, and
+the viewport may scroll. A row inside a scroller of its own — a frame in an
+article, a panel beside other content — shares nothing with the document, and
 the offset there belongs to the page around it, which the reader never left; the
-travel leaves it alone. An `overflow: hidden` or `clip` on any ancestor is
-enough to put the row outside the document's scrollport, so a row that should
-give positions back and does not is worth looking at from that angle first.
+travel leaves it alone. An `overflow: hidden` on any ancestor is enough to put
+the row outside the document's scrollport — it holds an offset of its own even
+without a scrollbar, whereas `overflow: clip` holds none and does not count — so
+a row that should give positions back and does not is worth looking at from
+that angle first.
 
 Pages that scroll inside themselves rather than scrolling the document are not
 concerned either way: each one brings its own scrollport, which goes away with

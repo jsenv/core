@@ -14,10 +14,10 @@ const SERVER_PLUGIN_PROPERTIES = {
   grantPermissions: { type: "hook" },
   // async (error, { request }) => response | null
   handleError: { type: "hook" },
-  // (request, { response, warn }) to look at the response before it is sent
-  inspectResponse: { type: "hook" },
   // (request, response) => responseToCompose | null
   injectResponseProperties: { type: "hook" },
+  // (request, { response, warn }) to look at the final response before it is sent
+  inspectResponse: { type: "hook" },
   // ({ reason }) once the server is stopped
   serverStopped: { type: "hook" },
   // route descriptors, appended after the routes given to startServer

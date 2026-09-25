@@ -75,16 +75,18 @@ const css = /* css */ `
 /**
  * Field — a semantic wrapper that connects a label to a form control.
  *
- * It generates a stable `fieldId` (or accepts an explicit `id`) that is
+ * It generates a stable `fieldId` (or accepts an explicit one) that is
  * automatically forwarded to the `Label` inside the field as `htmlFor` and to
- * any interactive control (Picker, Input, …) as its `id`, so clicking the
- * label focuses the control without requiring manual wiring.
+ * the labelable control inside it (Input, Select, Picker, Button) as its `id`,
+ * so clicking the label focuses the control without requiring manual wiring.
  *
  * It also tracks the readOnly / disabled / interactive state reported by its
  * child control and reflects it on the `Label` (dimmed color, cursor change).
  *
  * Props:
- *   id        — optional explicit id used as the field id instead of the auto-generated one
+ *   fieldId   — optional explicit field id instead of the auto-generated one (an `id`
+ *               is the wrapper's own DOM id)
+ *   as="label" — the field IS the label, wrapping its control: no id needed
  *   flex="y"  — vertical layout; automatically sets alignX="start" and data-vertical
  *   children  — any JSX; should contain a `Label` and a form control
  *   ...rest   — forwarded to the wrapping element (className, style, flex, spacing, …)

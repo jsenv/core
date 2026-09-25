@@ -349,12 +349,17 @@ const getUserAction = createAction(async ({ userId }) => {
   return response.json();
 });
 
+// One instance per params value: equal params share it.
 const getUserWithIdAction = getUserAction.bindParams({ userId: 123 });
 
-const userProxy = createActionProxy(getUserAction, {
-  userId: userIdSignal, // Reactive
-  includeProfile: true, // Static
+// A signal in the params gives a proxy that retargets as the signal changes.
+// Retargeting does not run anything: a routeAction, a control's `action` or
+// useAsyncData(action, { run: true }) does.
+const userAction = getUserAction.bindParams({
+  userId: userIdSignal,
+  includeProfile: true,
 });
 ```
 
-Key features: automatic memoization, request deduplication, concurrent loading control, progressive loading.
+What an action is for, calling versus binding, and what a failing run rejects
+with: [packages/frontend/navi/docs/actions.md](../packages/frontend/navi/docs/actions.md).

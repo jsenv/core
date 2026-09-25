@@ -75,15 +75,6 @@ does not handle a rejection, an unhandled one is what it leaves behind, and
 `.then(done, done)` is the shape that ends it whichever way it went — while a
 `ready` waiter must expect the skip: `ready.then(onPictures, () => {})`.
 
-## See also
-
-- [route_transitions.md](./route_transitions.md) — pages moving against each
-  other on navigation
-- [drag_to_travel.md](./drag_to_travel.md) — a transition held under a finger,
-  and what the main thread cannot read of it
-- [drag_interactions.md](./drag_interactions.md#naming-what-travels) — naming
-  what moves when something is dropped on a place
-
 ## The top layer is painted through the root's picture
 
 A modal `<dialog>`, its `::backdrop`, a popover: the browser paints the top
@@ -137,3 +128,12 @@ Two consequences for the switch itself:
   `display` on: hidden before the call, a stand-in measures as a zero rect and
   lands in the wrong place; and on the capture frame it is displayed while the
   real thing is still there.
+
+## See also
+
+- [route_transitions.md](./route_transitions.md) — pages moving against each
+  other on navigation
+- [drag_to_travel.md](./drag_to_travel.md) — a transition held under a finger,
+  and what the main thread cannot read of it
+- [drag_interactions.md](./drag_interactions.md#naming-what-travels) — naming
+  what moves when something is dropped on a place

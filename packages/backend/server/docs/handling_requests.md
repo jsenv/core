@@ -58,11 +58,16 @@ request.headers; // { accept: "text/html", ... } lowercased names
 request.cookies; // Map { "session" => "abc" }
 request.signal; // AbortSignal: the client left, or the server stops
 request.http2; // true when the request came over http2
+request.proto; // "http" or "https", from the connection
+request.host; // the host header
 request.ip; // address of the socket
 request.ipForwarded; // what the forwarded / x-forwarded-for header says, unverified
 request.protoForwarded; // idem (x-forwarded-proto)
 request.hostForwarded; // idem (x-forwarded-host)
+request.logger; // debug/info/warn/error scoped to this request
 ```
+
+`request.logger` is what a route uses to log: its lines are buffered and written together with the response status line, so the logs of concurrent requests do not interleave.
 
 Reading the body, each returns a promise:
 
@@ -95,14 +100,14 @@ A route reading its body declares `acceptedMediaTypes`: an unsupported `content-
 Second argument of `fetch`:
 
 ```js
-fetch: (request, helpers) => {
+fetch: async (request, helpers) => {
   helpers.timing; // measure something, see server_timing.md
   helpers.injectResponseHeader("vary", "accept"); // added to the response, whatever it ends up being
   helpers.contentNegotiation; // { mediaType, language, version, encoding }, see content_negotiation.md
   helpers.responseCookies.set("session", "abc", { httpOnly: true, path: "/" });
   helpers.responseCookies.delete("session");
-  helpers.hasPermissions(["admin"]); // see permissions below
-  helpers.getAllPermissions();
+  await helpers.hasPermissions(["admin"]); // true or false, see permissions below
+  await helpers.getAllPermissions(); // a Set of every permission granted
   helpers.canExposeSensitiveData; // the startServer option
   helpers.router; // router.inspect() lists the routes
 };
@@ -131,6 +136,7 @@ or a plain object:
   statusMessage: "A longer explanation", // becomes the body of a 4xx/5xx response that has none
   headers: { "content-type": "text/plain" },
   body: "Hello",
+  timing: { "db query": 12.3 }, // joins the server-timing header, see server_timing.md
 }
 ```
 
@@ -184,7 +190,7 @@ As soon as one route declares permissions, a route without `permissionsRequired`
 
 ## Rewriting a request before routing
 
-The `redirectRequest` plugin hook replaces the request seen by the routes; the first one stays reachable as `request.original`. `serverPluginRequestAliases` does it from url patterns:
+The `redirectRequest` plugin hook replaces the request seen by the routes; the first one stays reachable as `request.original` (and the one just before as `request.previous`). `serverPluginRequestAliases` does it from url patterns:
 
 ```js
 import { serverPluginRequestAliases } from "@jsenv/server";

@@ -392,6 +392,7 @@ const positionOfCurrentIndicator = (currentIndicator, vertical) => {
  *   currentIndicator?: boolean|"top"|"bottom"|"left"|"right",
  *   currentIndicatorSlides?: boolean,
  *   slideContainer?: string,
+ *   panelPosition?: "before"|"after",
  * }>}
  * @param {boolean|"top"|"bottom"|"left"|"right"} [props.currentIndicator] - the
  *   bar that says which tab one is on, said once here rather than on every
@@ -417,6 +418,9 @@ const positionOfCurrentIndicator = (currentIndicator, vertical) => {
  *   container says which one is on screen, and pressing a tab travels there.
  *   Tabs that are places in the same screen rather than pages of their own —
  *   nothing is written to the URL and nothing is a link.
+ * @param {"before"|"after"} [props.panelPosition] - turns the row into folder
+ *   tabs: the current tab and the panel it opens share one surface, and this
+ *   says which side of the row the panel sits on.
  */
 export const Nav = ({
   children,

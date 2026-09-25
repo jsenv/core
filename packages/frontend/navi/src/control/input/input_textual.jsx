@@ -22,11 +22,14 @@
  *
  * - charGuard — restricts which characters can be typed, pasted, or set externally.
  *   Accepts a preset name or a raw regex character class:
- *   "numeric"      → digits only, sets inputMode="numeric" + pattern auto
+ *   true / "auto"  → picked from the field: inputMode numeric/decimal, type tel/email
+ *   "numeric"      → digits only, sets inputMode="numeric"
+ *   "decimal"      → digits, minus, dot, comma, sets inputMode="decimal"
  *   "alpha"        → letters only
  *   "alphanumeric" → letters and digits
  *   "uppercase"    → uppercase letters only
  *   "tel"          → phone chars (digits, +, -, parens, space), sets inputMode="tel"
+ *   "email"        → what an email address is made of
  *   "card"         → credit card (digits and spaces), sets inputMode="numeric"
  *   "hex"          → hexadecimal digits
  *   "pin"          → numeric PIN, sets inputMode="numeric"

@@ -469,7 +469,7 @@ Object.assign(PSEUDO_CLASSES, {
  * @param {object} props
  * @param {string} [props.href] - Destination. Also the default `value`, and
  *   (when `hrefFallback`) the default visible text.
- * @param {import("../route.js").Route} [props.route] - Renders via `route`
+ * @param {object} [props.route] - Renders via `route`
  *   instead of a raw `href`: the URL is built from the route (see
  *   `routeParams`) and "current" is derived from whether the route matches.
  * @param {object} [props.routeParams] - Params passed to `route.buildUrl`.
@@ -493,14 +493,14 @@ Object.assign(PSEUDO_CLASSES, {
  *   (`navi_value`); defaults to `href`.
  * @param {boolean} [props.current] - Forces the "current" state on (otherwise
  *   derived from the href/route).
- * @param {import("../route.js").Route|import("../route.js").Route[]} [props.currentExcept] -
+ * @param {object|object[]} [props.currentExcept] -
  *   Route(s) inside this link's own that are NOT it: while one of them matches,
  *   the link is not current even though its route still is. A bar entry
  *   standing for a whole section, and one place under that section the entry
  *   does not stand for — settings reached from everywhere and shown over
  *   whatever the reader was on. Nothing about the routing changes: the url is
  *   in the section, only the link stops claiming "you are here".
- * @param {import("../route.js").Route|import("../route.js").Route[]} [props.currentAlso] -
+ * @param {object|object[]} [props.currentAlso] -
  *   Route(s) other than this link's own that are it: the link is current while
  *   one of them matches. The other side of `currentExcept` — an entry standing
  *   for more than the one page it opens. `currentExcept` wins over it.

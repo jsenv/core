@@ -29,7 +29,8 @@ refuses in the meantime, which is what you want when the rows are alternatives.
 ```
 
 A press on another row while it runs is refused and says so, in the selection's
-own words ("la sélection est en cours d'enregistrement") rather than in a row's.
+own words ("le choix est en cours d'enregistrement", "la sélection…" in a
+`multiple` list) rather than in a row's.
 
 ## On a row's control: that row waits alone
 
@@ -38,8 +39,9 @@ part of it: it holds no action, nothing about it is busy, and the other rows
 stay live. Two rows can be in flight at once.
 
 ```jsx
-<List selectable multiple>
+<List id="the_list" selectable multiple>
   <List.Item
+    id={rowId}
     selectable
     value={person}
     readOnly={pending}
@@ -60,7 +62,7 @@ stay live. Two rows can be in flight at once.
 
 The command is what marks the row, and it runs **only if the action succeeded**
 — a button given both runs its action first and lets its command follow (see
-[actions.md](./actions.md)). So a refused invitation leaves the row unmarked
+[actions.md](./actions.md#a-press-that-opens-something-and-waits-for-the-answer)). So a refused invitation leaves the row unmarked
 without anything to undo.
 
 `selectableArea="manual"` is about the row's own surface, not about the button:
@@ -149,8 +151,9 @@ nothing about a row's own action stops someone from starting one on every row it
 draws — a dozen requests in flight because the list happened to be long.
 
 So a list allows **four runs at once by default**. While that many are out,
-every row that is not running goes read-only and says how many it is waiting on;
-the next press is possible again the moment one comes back.
+every control in it that would start another run goes read-only and says how
+many it is waiting on; the next press is possible again the moment one comes
+back.
 
 ```jsx
 <List parallelGuard={2}>      // stricter

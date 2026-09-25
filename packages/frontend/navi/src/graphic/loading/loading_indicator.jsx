@@ -8,7 +8,9 @@ import { LoadingIndicatorFluid } from "./loading_indicator_fluid.jsx";
  *
  * @param {"circle"|"dots"} [props.variant="circle"] - Visual style of the indicator
  * @param {string} [props.color="currentColor"] - Color of the indicator; inherits from CSS `color` by default
- * @param {number} [props.size=2] - Stroke width in px (circle variant only)
+ *
+ * Every other prop goes to the `Icon` it is drawn in: `size` is a font size
+ * (the indicator being 1em), `width`/`height` size it as a block.
  */
 export const LoadingIndicator = ({ variant = "circle", ...props }) => {
   if (variant === "dots") {

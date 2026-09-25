@@ -30,17 +30,18 @@ import { publishRouteRender } from "../../nav/route_render.js";
 import { usePromiseAsyncData } from "./use_promise_async_data.js";
 
 /**
- * Reads the current state of an action and returns `[data, loading, error]`.
+ * Reads the current state of an action and returns `[data, loading, error, dismissError]`.
  *
  * By default (`loading` and `error` not set) the component suspends on load
  * and throws on failure, delegating both states to the nearest `<Loading>` and
  * `<ErrorBoundary>` ancestors. Pass `loading: true` or `error: true` to handle
  * either state directly inside the component instead.
  *
- * Return value: `[data, loading, error]`
+ * Return value: `[data, loading, error, dismissError]`
  * - `data`    — the action's last successful data, or `undefined` if it has never completed
  * - `loading` — `true` while the action is running (only when `loading: true` is passed)
  * - `error`   — the Error thrown by the action (only when `error: true` is passed)
+ * - `dismissError` — takes that error out of what this hook returns, nothing else (only when `error: true` is passed)
  *
  * Stale data is always returned: the previous `data` remains available while
  * the action re-runs and after a run has failed, so a screen that had something
@@ -72,9 +73,9 @@ import { usePromiseAsyncData } from "./use_promise_async_data.js";
  *
  * `data === undefined` says there is nothing to show and `loading` says whether
  * anything is on its way: a skeleton reads both, or it claims a load nobody
- * started (see docs/list_refresh.md).
+ * started (see docs/data_states.md).
  *
- * @param {import("../../action/actions.js").Action | (() => Promise<any>) | Promise<any>} source -
+ * @param {object | (() => Promise<any>) | Promise<any>} promiseOrAction -
  *   an action, or the request this component owns written as a function:
  *   made into an action once, on the first render, and kept for the life of
  *   the instance — so it may be written inline — with what it resolves to as
@@ -498,14 +499,12 @@ const LoadingFallback = ({ loadingRef, fallback }) => {
  * Two things it gets right that a hand-written boundary rarely does, both
  * explained in docs/error_handling.md:
  *
- * - It marks the error as displayed ONLY when it actually displays it.
- *   `preact/debug` rethrows every error a boundary caught in a `setTimeout`, on
- *   purpose (React devtools compatibility), so a handled error still reaches
- *   window and the jsenv overlay covers the app unless `__handled_by__` is set.
- *   Setting it before knowing whether anything is rendered turns a boundary into
- *   a bug swallower: a TypeError in a component becomes a blank page AND a
- *   silent one. Without a `fallback` there is nothing to display, so the error is
- *   left alone and continues up.
+ * - It marks the error as displayed ONLY when it actually displays it. The
+ *   jsenv overlay skips an error carrying `__handled_by__`, so a mark set before
+ *   knowing whether anything is rendered mutes an error that then continues up:
+ *   a TypeError in a component becomes a blank page AND a silent one. Without a
+ *   `fallback` there is nothing to display, so the error is left alone and
+ *   continues up.
  *
  * - It resets on navigation, not only on rerun. Rerunning the failed action is
  *   one way out; going somewhere else is the common one. Without a reset on the

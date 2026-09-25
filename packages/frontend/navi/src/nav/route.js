@@ -1144,7 +1144,7 @@ export const useRouteStatus = (route) => {
 export const assertRoute = (route) => {
   if (!route.isRoute) {
     throw new Error(
-      "The route prop must be a route object created with createRoute",
+      "The route prop must be a route object created with route()",
     );
   }
   if (!setupRoutesCalled) {

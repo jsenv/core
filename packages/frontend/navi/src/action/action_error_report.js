@@ -33,11 +33,10 @@ export const errorIsDisplayed = (error) => {
  *
  * Whatever the reader does with it is already covered without any deadline: it
  * displays it (and marks it), or it throws it, and a thrown error either finds a
- * boundary that displays it or reaches window on its own — `preact/debug`
- * re-throws every error a boundary caught, and an unbounded one aborts the
- * render loudly. Reporting it here as well would be a second voice saying the
- * same thing, always the wrong one, since this module cannot see which of those
- * happened.
+ * boundary that displays it or reaches window on its own — preact re-throws
+ * what no boundary handled. Reporting it here as well would be a second voice
+ * saying the same thing, always the wrong one, since this module cannot see
+ * which of those happened.
  */
 const errorTakenByRenderSet = new WeakSet();
 export const markErrorAsTakenByRender = (error) => {
@@ -127,7 +126,7 @@ const errorIsAccountedFor = (error) => {
 /**
  * Rethrown rather than logged: an error nobody took is an unhandled error, and
  * the runtime already knows what to do with those (window "error" event, jsenv
- * overlay in dev). Same trick preact/debug uses for the same reason.
+ * overlay in dev). Same answer preact gives an error no boundary handled.
  */
 const errorReportedSet = new WeakSet();
 export const reportErrorIfNobodyDisplaysIt = (error, { action } = {}) => {

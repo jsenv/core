@@ -15,7 +15,7 @@ import { useLayoutEffect } from "preact/hooks";
  *     background-color: var(--search-match-background-color);
  *   }
  *
- * The `highlight` prop can be:
+ * The `highlight` argument of `useSearchHighlight` (a row's `matchInfo.matchRanges`) can be:
  *   - an array of [start, end] pairs — applied to all text nodes under the root element
  *   - an object { [domSelector]: [[start, end], …] } — applied to each sub-element
  *     matched by the selector (the format produced by createSearch)

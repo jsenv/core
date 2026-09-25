@@ -43,7 +43,8 @@ in order, and stops at the first that leads somewhere focusable:
    so a field naming itself wins over the surface around it;
 3. the first focusable element — what one came to do;
 4. the deepest `autoFocus="last-resort"`, the container itself included;
-5. nothing, and the caller decides what that means.
+5. nothing: the focus stays where it was, and [when the opening places
+   nothing](#when-the-opening-places-nothing) says what follows.
 
 Step 1 is why reopening a popup comes back to where the user was, rather than to
 what the content asks for on a fresh open.

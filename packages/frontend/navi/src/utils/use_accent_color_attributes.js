@@ -36,7 +36,8 @@ const DARK_CONTRAST_LIGHTNESS_THRESHOLD = 0.65;
  * @param {string} accentColor - The accent color value. When it changes, attributes are recomputed.
  * @param {object} [options]
  * @param {string} [options.elementSelector] - CSS selector to find the element whose computed color is read.
- *   Defaults to the root element itself. Useful when the color is applied to a probe/child element.
+ *   Defaults to the root's own `data-visual-selector` attribute, else the root element itself.
+ *   Useful when the color is applied to a probe/child element.
  * @param {string} [options.colorProperty="backgroundColor"] - Computed style property to read (e.g. "color", "borderColor").
  */
 export const useAccentColorAttributes = (

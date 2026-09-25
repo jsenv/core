@@ -79,7 +79,8 @@ const css = /* css */ `
  * @param {boolean} [props.required]
  * @param {boolean} [props.loading]
  * @param {Function} [props.uiAction] - Called on every change with the ISO 8601 value
- * @param {Function} [props.action] - Called on form submission
+ * @param {Function} [props.action] - Runs with the ISO 8601 value when it changes,
+ *   like any control's `action` (busy state, error callout)
  * @param {preact.ComponentChild} [props.unitHour] - Custom label for the hour sub-field
  * @param {"auto"|"left"|"center"|"right"} [props.textAlign="auto"] - Text alignment of sub-inputs.
  *   "auto" aligns each field toward its neighbouring separator (first→right, last→left, middle/solo→center).

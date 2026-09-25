@@ -523,7 +523,7 @@ const shouldInjectSpacingBetween = (left, right) => {
  *   boldStable?: boolean,
  *   shrinkWrap?: boolean,
  *   capitalize?: boolean,
- *   selectRange?: string | [number, number],
+ *   selectRange?: string | [number, number] | [string, string],
  *   childrenOutsideFlow?: import("preact").ComponentChildren,
  *   [key: string]: any,
  * }>}
@@ -591,9 +591,10 @@ const shouldInjectSpacingBetween = (left, right) => {
  * @param {boolean} [capitalize]
  *   Uppercases the first letter of the text content via CSS.
  *
- * @param {string|[number,number]} [selectRange]
- *   Selects a portion of the text on mount. Pass a substring to search for, or
- *   a `[start, end]` character-offset tuple.
+ * @param {string|[number,number]|[string,string]} [selectRange]
+ *   Selects a portion of the text on mount. Pass a substring to search for, a
+ *   `[start, end]` character-offset tuple, or a `[startText, endText]` pair of
+ *   substrings selecting from the first to the end of the second.
  *
  * @param {import("preact").ComponentChildren} [childrenOutsideFlow]
  *   Rendered after children but outside the text spacing/flow logic. Used

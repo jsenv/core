@@ -3034,14 +3034,6 @@ const trackServerPendingRequests = (nodeServer) => {
     pendingClients.clear();
     await Promise.all(
       pendingClientsArray.map(({ nodeRequest, nodeResponse }) => {
-        if (nodeResponse.headersSent === false) {
-          if (nodeRequest.stream) {
-            // http2 has no reason phrase
-            nodeResponse.writeHead(status);
-          } else {
-            nodeResponse.writeHead(status, asReasonPhrase(reason));
-          }
-        }
         return new Promise((resolve) => {
           if (nodeResponse.destroyed) {
             resolve();
@@ -3050,7 +3042,20 @@ const trackServerPendingRequests = (nodeServer) => {
           nodeResponse.once("close", () => {
             resolve();
           });
-          nodeResponse.destroy();
+          if (nodeResponse.headersSent) {
+            // a status already sent cannot be replaced: the response is cut
+            nodeResponse.destroy();
+            return;
+          }
+          if (nodeRequest.stream) {
+            // http2 has no reason phrase, nor a connection header
+            nodeResponse.writeHead(status);
+          } else {
+            nodeResponse.writeHead(status, asReasonPhrase(reason), {
+              connection: "close",
+            });
+          }
+          nodeResponse.end();
         });
       }),
     );
@@ -3143,7 +3148,7 @@ const getWebSocketHandler = (responseProperties) => {
  * @class
  * @param {Object} options - Configuration options for the SSE controller
  * @param {String} [options.logLevel] - Controls logging verbosity ('debug', 'info', 'warn', 'error', etc.)
- * @param {Boolean} [options.keepProcessAlive=false] - If true, prevents Node.js from exiting while SSE connections are active
+ * @param {Boolean} [options.keepProcessAlive=false] - If true, the keepalive timer keeps the process alive until `close()`
  * @param {Number} [options.keepaliveDuration=30000] - Milliseconds between keepalive messages to prevent connection timeout
  * @param {Number} [options.retryDuration=1000] - Suggested client reconnection delay in milliseconds
  * @param {Number} [options.historyLength=1000] - Maximum number of events to keep in history for reconnecting clients
@@ -3199,7 +3204,7 @@ class ServerEvents {
  * @param {Function} producer - Function called when first client connects
  * @param {Object} [options] - Configuration options for the SSE controller
  * @param {String} [options.logLevel] - Controls logging verbosity ('debug', 'info', 'warn', 'error', etc.)
- * @param {Boolean} [options.keepProcessAlive=false] - If true, prevents Node.js from exiting while SSE connections are active
+ * @param {Boolean} [options.keepProcessAlive=false] - If true, the keepalive timer keeps the process alive until `close()`
  * @param {Number} [options.keepaliveDuration=30000] - Milliseconds between keepalive messages to prevent connection timeout
  * @param {Number} [options.retryDuration=1000] - Suggested client reconnection delay in milliseconds
  * @param {Number} [options.historyLength=1000] - Maximum number of events to keep in history for reconnecting clients
@@ -3268,8 +3273,9 @@ const createServerEvents = ({
 } = {}) => {
   const logger = createLogger({ logLevel });
 
+  // starts closed: open() below installs the keepalive interval
   const serverEventSource = {
-    closed: false,
+    closed: true,
   };
   const clientArray = [];
   const eventHistory = createEventHistory(historyLength);
@@ -3511,6 +3517,7 @@ const createServerEvents = ({
     close,
     open,
   });
+  open();
   return serverEventSource;
 };
 
@@ -4681,10 +4688,10 @@ const SERVER_PLUGIN_PROPERTIES = {
   grantPermissions: { type: "hook" },
   // async (error, { request }) => response | null
   handleError: { type: "hook" },
-  // (request, { response, warn }) to look at the response before it is sent
-  inspectResponse: { type: "hook" },
   // (request, response) => responseToCompose | null
   injectResponseProperties: { type: "hook" },
+  // (request, { response, warn }) to look at the final response before it is sent
+  inspectResponse: { type: "hook" },
   // ({ reason }) once the server is stopped
   serverStopped: { type: "hook" },
   // route descriptors, appended after the routes given to startServer
@@ -6846,7 +6853,8 @@ const createRoute = ({
   if (!endpoint || typeof endpoint !== "string") {
     throw new TypeError(`endpoint must be a string, received ${endpoint}`);
   }
-  const [method, resource] = endpoint === "*" ? ["* *"] : endpoint.split(" ");
+  const [method, resource] =
+    endpoint === "*" ? ["*", "*"] : endpoint.split(" ");
   if (method !== "*" && !HTTP_METHODS.includes(method)) {
     throw new TypeError(`"${method}" is not an HTTP method`);
   }
@@ -7065,8 +7073,9 @@ const createResourceOptionsResponse = (request, resourceOptions) => {
  * @param {Object} params - Content negotiation parameters
  * @param {Array<string>} params.availableMediaTypes - Content types the server can produce
  * @param {Array<string>} params.availableLanguages - Languages the server can respond with
+ * @param {Array<string|number|Function>} params.availableVersions - Versions the server can respond with
  * @param {Array<string>} params.availableEncodings - Encodings the server supports
- * @returns {Response} A 406 Not Acceptable response
+ * @returns {Object} 406 response properties
  */
 const createNotAcceptableResponse = (
   request,
@@ -7367,8 +7376,9 @@ const TIMING_NOOP = () => {
  * @param {boolean} [params.stopOnSIGINT] - Stop on SIGINT (ctrl+c). Defaults to true, except
  *   inside a cluster worker where the primary process is in charge.
  * @param {boolean} [params.stopOnExit=true] - Stop on SIGHUP, SIGTERM, beforeExit and exit.
- * @param {boolean} [params.stopOnInternalError=false] - Stop when a route throws (after the
- *   "handleError" plugins answered).
+ * @param {boolean} [params.stopOnInternalError=false] - Stop as soon as a route throws. The
+ *   request that threw and every other pending request are answered 500 with no body, the
+ *   "handleError" plugins' response is not sent.
  * @param {boolean} [params.keepProcessAlive=true] - When false the server alone does not keep
  *   the process alive.
  * @param {boolean} [params.canExposeSensitiveData=false] - Lets the server hand out what
@@ -7400,8 +7410,9 @@ const TIMING_NOOP = () => {
  * @returns {Promise<Object>} The server: `{ origin, origins, port, hostname, nodeServer,
  *   webSocketOrigin, stop, stoppedPromise, getStatus, addEffect }`.
  *   - `origins`: `{ local, localip, externalip }`, `origin` being `origins.local`.
- *   - `stop(reason)`: resolves once every connection is closed; `reason` can be anything
- *     and defaults to `STOP_REASON_NOT_SPECIFIED`.
+ *   - `stop(reason)`: answers the pending requests with 503, closes every connection and
+ *     resolves once done; `reason` can be anything, becomes the 503 status text and
+ *     defaults to `STOP_REASON_NOT_SPECIFIED`.
  *   - `stoppedPromise`: resolves with the reason the server stopped for (one of the
  *     `STOP_REASON_*` exports or what was given to `stop`).
  *   - `getStatus()`: `"starting"`, `"opened"`, `"stopping"` or `"stopped"`.
@@ -7692,16 +7703,16 @@ const startServer = async ({
   stopCallbackSet.add(removeConnectionErrorListener);
 
   const connectionsTracker = trackServerPendingConnections(nodeServer);
-  // opened connection must be shutdown before the close event is emitted
-  stopCallbackSet.add(connectionsTracker.stop);
-
   const pendingRequestsTracker = trackServerPendingRequests(nodeServer);
-  // ensure pending requests got a response from the server
-  stopCallbackSet.add((reason) => {
-    pendingRequestsTracker.stop({
+  // The pending requests are answered before any connection is destroyed:
+  // destroyed first, their clients would only see a socket error. The
+  // connections must still be shut down for the close event to be emitted.
+  stopCallbackSet.add(async ({ reason }) => {
+    await pendingRequestsTracker.stop({
       status: reason === STOP_REASON_INTERNAL_ERROR ? 500 : 503,
       reason,
     });
+    await connectionsTracker.stop(reason);
   });
 
   const applyRequestInternalRedirection = (request) => {
@@ -8475,7 +8486,7 @@ const serverPluginErrorHandler = ({ sendErrorDetails = false } = {}) => {
  *
  * @param {(body: { write: (chunk: string|Uint8Array) => void, end: () => void }) => void | (() => void)} responseBodyHandler
  *   Receives `write` and `end`. If it returns a function, that function runs
- *   when the client disconnects before `end` was called (cleanup).
+ *   once the response is over: after `end()`, or when the client disconnects.
  * @param {Object} [init]
  * @param {number} [init.status=200]
  * @param {string} [init.statusText]
@@ -8645,9 +8656,10 @@ const createAllowedOriginChecker = (allowedOrigins) => {
   }
 
   return {
-    // when the request origin cannot be reflected back we must still send a
-    // single valid origin, never a pattern
-    defaultOrigin: literalOrigins[0] ?? "*",
+    // sent when the request origin cannot be reflected back: a single valid
+    // origin, never a pattern, and never "*" which would allow every origin.
+    // With only patterns there is nothing to send.
+    defaultOrigin: literalOrigins[0] ?? null,
     isAllowed: (origin) => {
       if (literalOrigins.includes(origin)) {
         return true;
@@ -8691,7 +8703,6 @@ const generateAccessControlHeaders = ({
 
   // Access-Control-Allow-Origin must be a single value (not a list).
   // We reflect back the request's origin if it is in the allowed list.
-  // If no origin matches we fall back to "*" (only when not using credentials).
   let allowOrigin = null;
 
   const requestOrigin = readRequestOrigin(headers);
@@ -8743,14 +8754,16 @@ const generateAccessControlHeaders = ({
   }
 
   return {
-    "access-control-allow-origin": allowOrigin,
+    ...(allowOrigin === null
+      ? {}
+      : { "access-control-allow-origin": allowOrigin }),
     "access-control-allow-methods": allowedMethodArray.join(", "),
     "access-control-allow-headers": allowedHeaderArray.join(", "),
     ...(accessControlAllowCredentials
       ? { "access-control-allow-credentials": true }
       : {}),
     "access-control-max-age": accessControlMaxAge,
-    ...(timingAllowOriginEnabled(request)
+    ...(allowOrigin !== null && timingAllowOriginEnabled(request)
       ? { "timing-allow-origin": allowOrigin }
       : {}),
     ...(vary.length ? { vary: vary.join(", ") } : {}),
@@ -9001,8 +9014,9 @@ const createFileSystemFetch = (directoryUrl, options) => {
  * @param {Object} [helpers] - The helpers given to a route `fetch` (used for `timing` and `canExposeSensitiveData`).
  * @param {string|URL} directoryUrl - `file://` url (or filesystem path) of the directory to serve.
  * @param {Object} [options]
- * @param {string} [options.mainFileRelativeUrl] - File served for the directory itself and,
- *   as a fallback, for extension-less urls that do not exist (client side routing).
+ * @param {string} [options.mainFileRelativeUrl] - File served for the root of `directoryUrl`
+ *   and, as a fallback, for extension-less urls that do not exist (client side routing).
+ *   A subdirectory still gets 403 unless `canReadDirectory`.
  * @param {boolean} [options.etagEnabled=false] - Send an `etag` (hash of the content) and
  *   answer 304 to a matching `if-none-match`.
  * @param {boolean} [options.etagMemory=true] - Remember etags per file (invalidated when the

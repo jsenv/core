@@ -782,6 +782,8 @@ const actionWeakMap = new WeakMap();
  *   long is this still true?" belongs to the question: a court list is good for
  *   the session, a count of people watching grows on its own and is worth a few
  *   minutes, a payment status is worth nothing at all.
+ * @param {{ verb?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" }} [rootOptions.meta] -
+ *   `verb` puts the action under the network policy (docs/network_policy.md).
  */
 export const createAction = (callback, rootOptions = {}) => {
   const existing = actionWeakMap.get(callback);

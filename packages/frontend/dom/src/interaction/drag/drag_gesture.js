@@ -87,12 +87,15 @@ const captureHolderByPointerId = new Map();
  * @param {boolean} [options.backdrop=true]
  * @param {number} [options.backdropZIndex=999999]
  * @returns {{grab: function, grabViaPointer: function}}
- *   `grabViaPointer(pointerdownEvent, { element, direction, cursor, scrollContainer })` for a
- *   gesture a hand starts, `grab({ element, grabX, grabY })` for one nothing pressed. Both give
- *   back the gesture — `gestureInfo` (its `layout` with `xDelta`/`yDelta`, its velocity, the way
- *   it is going), `drag`, `release`, and `addDragCallback`/`addReleaseCallback` for whoever joins
- *   after it started. `grabViaPointer` gives back `null` when the press is not one it can read: a
- *   secondary button, a text node, an element that has left the document since the press.
+ *   `grabViaPointer(pointerdownEvent, { element, direction, cursor, scrollContainer,
+ *   pointerCaptureElement })` for a gesture a hand starts — `pointerCaptureElement` (the
+ *   pressed target by default) must outlive whatever the gesture re-renders, or the capture
+ *   is lost and the gesture ends cancelled; `grab({ element, grabX, grabY })` for one nothing
+ *   pressed. Both give back the gesture — `gestureInfo` (its `layout` with `xDelta`/`yDelta`,
+ *   its velocity, the way it is going), `drag`, `release`, and
+ *   `addDragCallback`/`addReleaseCallback` for whoever joins after it started.
+ *   `grabViaPointer` gives back `null` when the press is not one it can read: a secondary
+ *   button, a text node, an element that has left the document since the press.
  */
 export const createDragGestureController = (options = {}) => {
   const {

@@ -43,8 +43,8 @@ const css = /* css */ `
       --navi-z-index-control-expanded: 3;
 
       /* Kept stuck while something scrolls under it: a list header, the head
-         and foot of a side panel, a table's sticky cells, the header and
-         footer of any scrolling Box. Above raised controls — a control
+         and foot of a side panel, the header and footer of any scrolling
+         Box (a table orders its sticky cells on a scale of its own). Above raised controls — a control
          scrolling past must go under the header that pins the column it
          belongs to, never over it.
 

@@ -80,8 +80,8 @@ uneven writes `--navi-app-inset-left` / `-right` directly instead.
 In pixels: popup placement reads this value back from CSS to compute its own
 margins, and a custom property computes to a token stream rather than to a
 length, so `40rem` would arrive there as the string `"40rem"`. A non-px value
-still caps the popup's size (that part is pure CSS) but leaves the margins
-viewport-sized, and says so in the console.
+still caps the popup's size (that part is pure CSS) but leaves its margins and
+its placement viewport-sized, and says so in the console.
 
 Every popup follows: `Dialog`, `Popover`, and everything built on them
 (`Picker`, `Select`…). It is a ceiling and nothing more — on a screen narrower
@@ -98,11 +98,13 @@ Two ways NOT to get this:
   popovers would keep sizing themselves against 1500px;
 - setting `--dialog-max-width` on `.navi_dialog` from the app. It is a
   `--component-*` token, declared on the element (see
-  [css_architecture.md](./css_architecture.md#--navi--vs---component--where-the-override-has-to-go)),
-  so components that write it themselves outrank an app rule of lower
-  specificity — `.navi_picker[aria-haspopup="dialog"] .navi_dialog` does exactly
-  that, and the app's cap silently disappears for every picker. It is also the
-  knob a single popup uses to ask for a specific size, not a ceiling:
+  [css_architecture.md](./css_architecture.md#--navi--vs---component--where-the-override-has-to-go)):
+  every dialog resets it on itself in an unlayered rule, so that a nested
+  dialog does not inherit its parent's size, and a `maxWidth` prop writes it
+  inline (a `Picker` under `dialogSizeFromAnchor` does) — an app rule of the
+  same specificity does not reliably win, and the cap silently disappears. It
+  is also the knob a single popup uses to ask for a specific size, not a
+  ceiling:
   `--navi-app-max-width` feeds `--dialog-maxmax-width`, the hard ceiling _under_
   that knob, so a popup that genuinely needs its own `maxWidth` can still say
   so without escaping the app's screen.
@@ -154,10 +156,12 @@ Beware of making that container scrollable by accident — see
 `var(--navi-safe-area-inset-bottom)` in any rule. It is always declared, whether
 or not the app ever mounts a bar.
 
-Reading it from **JS** takes a probe: an unregistered custom property keeps its
-`calc()` unresolved through `getComputedStyle`. Give a hidden box
-`height: var(--navi-safe-area-inset-bottom)` and measure it — see
-`src/layout/demos/fixed_bar/keyboard.html`.
+From **JS**, the four `--navi-safe-area-inset-*` are registered as lengths
+(`@property`, in `safe_area.js`), so
+`getComputedStyle(document.documentElement).getPropertyValue("--navi-safe-area-inset-bottom")`
+gives pixels. The level-1 `--navi-app-inset-*` are not registered and keep their
+`calc()` unresolved there: give a hidden box `height: var(…)` and measure it —
+see `src/layout/demos/fixed_bar/keyboard.html`.
 
 ### Putting something new into it
 
@@ -182,24 +186,36 @@ truth:
 
 ## The trap: which viewport
 
-Three heights are in play and they are not the same one.
+Three heights are in play and they are not the same one — and which of them
+the keyboard moves depends on the browser.
 
-| what                             | shrinks when the keyboard opens |
-| -------------------------------- | ------------------------------- |
-| `window.innerHeight` / `100dvh`  | no                              |
-| `visualViewport.height`          | yes                             |
-| `--navi-vvh` (tracks the visual) | yes                             |
+| what                             | shrinks when the keyboard opens                 |
+| -------------------------------- | ----------------------------------------------- |
+| `window.innerHeight` / `100dvh`  | no                                              |
+| `visualViewport.height`          | yes, except where the keyboard overlays (below) |
+| `--navi-vvh` (tracks the visual) | same as `visualViewport.height`                 |
+
+Wherever the browser has the VirtualKeyboard API (Chromium), navi makes the
+keyboard overlay the page rather than shrink it (`src/layout/virtual_keyboard.js`):
+no viewport shrinks, and the keyboard arrives as `--navi-keyboard-inset-bottom`
+(`env(keyboard-inset-height)`), which `--navi-app-inset-bottom` adds. Firefox,
+Safari, and an app that called `disableVirtualKeyboardOverlay()` shrink the
+visual viewport instead, and `--navi-keyboard-inset-bottom` stays 0. Either way
+`--navi-app-height` and the popup ceilings answer the part of the screen left
+visible.
 
 `position: fixed` — so every `FixedBar` — is laid out against the **layout**
-viewport. A bottom bar therefore stays at the bottom of a window the keyboard is
-covering: it ends up _behind_ the keyboard, and no inset says so, because
-nothing reduced the layout viewport.
+viewport. Where the visual viewport is what shrinks, a bottom bar therefore
+stays at the bottom of a window the keyboard is covering: it ends up _behind_
+the keyboard, and no inset says so, because nothing reduced the layout viewport.
+Where the keyboard overlays, the bar is pinned to `--navi-app-inset-bottom`,
+which counts it, and sits above it.
 
 The consequence for anything measuring against the insets: mix the two families
 and you get a drift that only appears with a keyboard open. `getBoundingClientRect`
 is in layout-viewport coordinates, so what is compared to it must be too
-(`100dvh`), while `--navi-app-*` derives from `--navi-vvh` because what navi
-_sizes_ must fit what is actually visible.
+(`100dvh`), while `--navi-app-*` derives from `--navi-vvh` (plus the keyboard
+inset) because what navi _sizes_ must fit what is actually visible.
 
 `src/layout/demos/fixed_bar/keyboard.html` puts all of these on screen at once
 and turns the bottom bar's number red when it goes under the keyboard. On a

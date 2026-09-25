@@ -408,7 +408,7 @@ export const initDragTableColumnViaPointer = (
 /**
  * Creates a MutationObserver that syncs attribute changes from original table to clone
  * @param {HTMLElement} table - The original table element
- * @param {HTMLElement} cloneTable - The cloned table element
+ * @param {HTMLElement} tableClone - The cloned table element
  * @returns {MutationObserver} The observer instance with disconnect method
  */
 const createTableAttributeSync = (table, tableClone) => {

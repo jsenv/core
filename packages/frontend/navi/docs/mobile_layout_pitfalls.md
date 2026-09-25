@@ -91,9 +91,9 @@ far from the wrapper:
 other axis to `auto`.
 
 Note: `overflow: hidden` on `<html>` would additionally create a new containing block,
-which could break `position: fixed` in edge cases. Any element that needs correct
-`position: fixed` behavior (like `<dialog>`) should be moved to `document.body` directly
-anyway (which `dialog.jsx` already does).
+which could break `position: fixed` in edge cases. A dialog in the top layer is out of
+reach of that: the top layer takes it out of every ancestor's containing block, which is
+why navi's `Dialog` stays where it is written, in its opener's subtree.
 
 ### The wrapper is a net, not a fix: find what overflows
 
@@ -132,8 +132,9 @@ scrolls down to it when it opens.
 Fix: **place `<dialog>` as the first child of `<body>`**, before any scrollable content.
 `scrollIntoView` on an element already at the top of the document has no effect.
 
-In `dialog.jsx`, `showModal()` moves the dialog to `document.body` (prepending it)
-before opening for this reason.
+This is advice for a `<dialog>` written by hand. navi's `Dialog` is not moved: it
+renders in its opener's subtree (see
+[css_architecture.md](./css_architecture.md#counting-children-what-navi-puts-in-your-tree)).
 
 ### Summary
 

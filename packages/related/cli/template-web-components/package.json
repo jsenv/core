@@ -17,7 +17,7 @@
   "devDependencies": {
     "@jsenv/custom-elements-redefine": "0.1.0",
     "@jsenv/assert": "4.5.7",
-    "@jsenv/core": "41.5.33",
+    "@jsenv/core": "41.5.34",
     "@jsenv/plugin-bundling": "2.10.31",
     "@jsenv/plugin-minification": "1.7.26",
     "@jsenv/eslint-config-relax": "2.0.7",

@@ -16,7 +16,8 @@ Where a `Dialog` sits and how big it gets. What happens _inside_ it (scrolling,
 
 ## A dialog is sized by its content, never by a `width`
 
-There is no `width` prop, and that is the whole design: a dialog is a surface
+`Dialog` has no `width` prop of its own (one handed to it is `Box`'s, still
+under the ceiling below), and that is the whole design: a dialog is a surface
 laid over the app, and what it holds is what knows how wide it should be. What
 a caller states are **bounds** — a floor under a dialog too narrow for its
 content, a ceiling over one that would sprawl:
@@ -185,9 +186,11 @@ its container is also what its size ceiling is computed from. Writing them
 separately is how a dialog ends up flush on one side and inset on the other.
 
 It defaults to a share of whatever holds the dialog (`3appw` for `layer="top"`,
-`3cqw` for `layer="local"`) and accepts a spacing token (`"s"`, `"m"`…), a
-number of pixels, or a viewport length — `appw`/`apph` being the app's own
-screen, `vvw`/`vvh` the visual viewport, which shrinks when the keyboard opens.
+`3cqw` for `layer="local"`) and accepts a number of pixels, a viewport length —
+`appw`/`apph` being the app's own screen, `vvw`/`vvh` the visual viewport, which
+shrinks when the keyboard opens — or a container length (`cqw`/`cqh`). A
+spacing token (`"s"`, `"m"`…) cannot be resolved to pixels here: navi warns
+and places the dialog flush.
 Pass `0` for something meant to sit flush (a side panel), and note that docking
 already passes `0` for you.
 
@@ -241,11 +244,12 @@ exposes both sets of bounds under prefixed names, and they mean exactly what
 they mean on `Dialog` itself:
 
 `dialogMinWidth`, `dialogMinHeight`, `dialogMaxWidth`, `dialogMaxHeight`,
-`dialogExpand`, `dialogExpandX`, `dialogExpandY`, `dockedOnSmallTouchScreen`,
-`marginWithContainer` — plus `popoverMaxHeight` and `popupWidthFitContent` for
-the other shape.
+`dialogExpand`, `dialogExpandX`, `dialogExpandY`, `dialogSizeFromAnchor`,
+`dockedOnSmallTouchScreen`, `marginWithContainer` — plus `popoverMaxHeight` and
+`popupWidthFitContent` for the other shape.
 
-`SplitButton` forwards the same set to the picker it wraps. Anything not in
+`SplitButton` forwards the same set (minus `dialogSizeFromAnchor`) to the picker
+it wraps. Anything not in
 that set lands on the split button's own box instead — so a prop that seems to
 do nothing to the menu is worth checking against that list first (see
 `POPUP_PROP_SET` in `src/control/input/split_button.jsx`).

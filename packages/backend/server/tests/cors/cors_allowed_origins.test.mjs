@@ -93,7 +93,7 @@ await snapshotServerTests(import.meta.url, ({ test }) => {
         origin: "https://wematch.fly.dev",
         accessControlAllowedOrigins: ["https://*.fly.dev"],
       }),
-      // no literal origin to fall back on, "*" is sent instead of the pattern
+      // no literal origin to fall back on: no access-control-allow-origin at all
       disallowed_origin_when_only_wildcards: await run({
         origin: "http://evil.com",
         accessControlAllowedOrigins: ["https://*.fly.dev"],

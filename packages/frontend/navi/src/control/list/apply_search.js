@@ -14,11 +14,12 @@
  *   multi-word, one word at start (all match)  0.75
  *   phrase / word at word boundary           0.625
  *   phrase / words mid-word                  0.5
+ *   acronym (2+ chars, each the first letter of a word, in order)  0.4, 0.45 at start
  *   + case-exact bonus                       +0.125
  *   multi-word partial: score × (matched/total)
  *
  * matchRanges: [start, end] pairs (exclusive end) for CSS Highlight API.
- * Intended to be passed to useSearch as the matchFn parameter.
+ * Intended to be passed to useSearchText as the matchFn parameter.
  */
 export const applySearch = (searchText, value) => {
   if (!searchText) {

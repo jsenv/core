@@ -532,7 +532,9 @@ effect(() => {
  * Built-in key namespaces, all overridable — the registrations below are the
  * exhaustive list, read them to find the exact key to override:
  *   - `"button.*"`     — Clear, Reset, Send, Open, Close, Cancel, Confirm…
- *   - `"time.*"`       — what a clock writes between hours and minutes, and how the two ends of a span are named; the wording the formatters use is registered by @jsenv/humanize
+ *   - `"confirm.*"`    — the question a confirmation asks by default
+ *   - `"time.*"`       — what a clock writes between hours and minutes, and the labels of its hour and minute parts; the wording the formatters use is registered by @jsenv/humanize
+ *   - `"time_range.*"` — how the two ends of a span are named ("From", "to")
  *   - `"spin.*"`       — the ends of a steppable range
  *   - `"list.*"`       — empty/no-match/failed-rows messages
  *   - `"badge_list.*"` — the "+[count] more" overflow badge
@@ -1540,11 +1542,10 @@ const errorIsDisplayed = (error) => {
  *
  * Whatever the reader does with it is already covered without any deadline: it
  * displays it (and marks it), or it throws it, and a thrown error either finds a
- * boundary that displays it or reaches window on its own — `preact/debug`
- * re-throws every error a boundary caught, and an unbounded one aborts the
- * render loudly. Reporting it here as well would be a second voice saying the
- * same thing, always the wrong one, since this module cannot see which of those
- * happened.
+ * boundary that displays it or reaches window on its own — preact re-throws
+ * what no boundary handled. Reporting it here as well would be a second voice
+ * saying the same thing, always the wrong one, since this module cannot see
+ * which of those happened.
  */
 const errorTakenByRenderSet = new WeakSet();
 const markErrorAsTakenByRender = (error) => {
@@ -1634,7 +1635,7 @@ const errorIsAccountedFor = (error) => {
 /**
  * Rethrown rather than logged: an error nobody took is an unhandled error, and
  * the runtime already knows what to do with those (window "error" event, jsenv
- * overlay in dev). Same trick preact/debug uses for the same reason.
+ * overlay in dev). Same answer preact gives an error no boundary handled.
  */
 const errorReportedSet = new WeakSet();
 const reportErrorIfNobodyDisplaysIt = (error, { action } = {}) => {
@@ -2155,7 +2156,7 @@ const compareTwoJsValues = (
         }
         return true;
       }
-      // Ordered array comparison (original behavior)
+      // Ordered array comparison
       let i = 0;
       while (i < a.length) {
         const aValue = a[i];
@@ -3222,6 +3223,8 @@ const actionWeakMap = new WeakMap();
  *   long is this still true?" belongs to the question: a court list is good for
  *   the session, a count of people watching grows on its own and is worth a few
  *   minutes, a payment status is worth nothing at all.
+ * @param {{ verb?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" }} [rootOptions.meta] -
+ *   `verb` puts the action under the network policy (docs/network_policy.md).
  */
 const createAction = (callback, rootOptions = {}) => {
   const existing = actionWeakMap.get(callback);
@@ -4323,7 +4326,7 @@ const runUnwatched = (startRun) => {
 /**
  * Reactively runs an action whenever the params derived from signals change.
  *
- * @param {object} action - The action to run.
+ * @param {object | Function} action - The action to run, or a function made into one.
  * @param {Function} deriveActionParamsFromSignals - A function that reads signals and returns
  *   the params to pass to the action. It is re-evaluated automatically whenever a signal it
  *   read changes. Return `false`/`null`/`undefined` to skip running the action.
@@ -4346,6 +4349,8 @@ const runUnwatched = (startRun) => {
  *   ```
  *   The action will not fire while the user is actively changing filters; it fires once
  *   they pause for half a second.
+ * @returns {object} the instance bound to the derived params: the one to read
+ *   (`useAsyncData`), since the answer lands there and never on `action` itself.
  */
 // The run is not awaited here, and a rejection nobody waits for is an unhandled
 // one — in dev, an error overlay thrown over a page that is already saying what
@@ -4860,11 +4865,12 @@ const isNumberInput = (type, naviInputType) => {
  */
 /**
  * A bound signal that carries a default of its own says the same thing on every
- * control: the control starts there and stays uncontrolled, which is what makes
- * a form read the value shown as a SUGGESTION rather than as something it
- * already holds. Uncontrolled here is about what the control HOLDS, not about
- * whether it follows the signal — the binding stays two-way either way (see
- * stateFromSignal in control_hooks.jsx). Written once and used by everything
+ * control: the control starts there, uncontrolled, and a reset goes back to it.
+ * Uncontrolled here is about where the control starts, not about whether it
+ * follows the signal — the binding stays two-way either way (see
+ * stateFromSignal in control_hooks.jsx) — nor about what a form counts as
+ * held: that is the signal's content (isUIStateHeld in held_ui_state.js), and a
+ * stateSignal holds its default. Written once and used by everything
  * that takes a `signal`, so one signal cannot mean two different things
  * depending on which control it was handed to.
  */
@@ -4924,8 +4930,7 @@ const resolveInputProps = (props, { controlType = "input" } = {}) => {
         // If no explicit defaultChecked, derive it from the signal's default
         // value so that resetUIState restores to the original default.
         // Only a stateSignal carries a default of its own; a plain signal has
-        // no `options` at all, and asking it for one used to throw on mount —
-        // the same optional read every other branch here already does.
+        // no `options` at all, hence the optional read.
         const defaultVal = signalOptions?.getDefaultValue(false);
         if (defaultVal === undefined) ; else if (props.type === "radio") {
           if (defaultVal === true) {
@@ -8835,8 +8840,8 @@ const isLanguageSupported = (lang, supportedLanguages) => {
  * supported), falls back to `supportedLanguagesSignal` itself so callers
  * still get *something* usable rather than an empty array.
  *
- * Consumers that accept either a single lang or an ordered array (this
- * package's own `matchBestLang`/`createI18n`, and native `Intl.NumberFormat`/
+ * Consumers that accept either a single lang or an ordered array
+ * (@jsenv/humanize's `createI18n` and formatters, and native `Intl.NumberFormat`/
  * `Intl.DateTimeFormat`) can pass this straight through: anything not
  * covered by the first entry falls through to the next, rather than
  * jumping straight to an unrelated default like "en".
@@ -9819,15 +9824,15 @@ const readOnlyMessage = (field) => {
  * - Action dispatch + validity: `control_action.js` / `dispatchRequestAction`
  * - Validity checking: `control_validation.js`
  *
- * Each UI state controller gets its own `controlInteraction` instance (created by
- * `createControlInteraction`) just like it gets a `controlValidity` instance.
+ * Each UI state controller gets its own instance, `controller.rules.interaction`
+ * (created by `createControlInteraction`), beside `controller.rules.validation`.
  *
  * Flow:
  *   user interaction
  *   → dispatchRequestInteraction
  *   → "navi_request_interaction" event
  *   → onRequestInteraction
- *       → check disabled / read-only / busy (via controller.controlInteraction)
+ *       → check disabled / read-only / busy (via controller.rules.interaction)
  *         against the interaction's `intent` ("write" by default, "read" for one
  *         that only shows what is already there — see READONLY_CONSTRAINT)
  *       → if blocked  → prevented()
@@ -10647,7 +10652,8 @@ const interactionsDisputeThePress = (interactions) => {
  * control (a Button) is its own; a Box inside one, or wrapping exactly one,
  * reaches it; a Box with no control anywhere near it — or laying out several,
  * which belongs to none of them — still answers with a callback of the caller's,
- * and only "request_action" has nothing to ask.
+ * and only the two requests ("request_action", "request_ui_action") have
+ * nothing to ask.
  *
  * Set up once per element rather than on every render, which is what lets a
  * detector be a plain `setup`/teardown pair. So the interactions themselves are
@@ -10806,7 +10812,7 @@ const useInteractionsEffect = (ref, interactionsRef) => {
           cancelable: true,
         });
         // The event the interaction was read from stays reachable from it:
-        // `findEvent(actionEvent, "pointerdown")` still finds the press a swipe
+        // `findEvent(actionEvent, "pointerdown")` still finds the press a hold
         // was made of.
         chainEvent(interactionEvent, originalEvent);
         if (!element.dispatchEvent(interactionEvent)) {
@@ -11554,7 +11560,7 @@ const swipeTypeOf = (axis, pulled) => {
  *     …
  *   }}}
  *
- * `toId` is an element and never null: a copy over nothing is a release that meant
+ * `toId` names an element and is never null: a copy over nothing is a release that meant
  * nothing, and the interaction does not happen at all — unless the element
  * declares `leave` (see below), which gives that release a meaning of its own.
  *
@@ -15806,7 +15812,7 @@ const debug$3 = (...args) => {
  * @param {string} name - resource name, used in action names and error messages
  * @param {Object} restCallbacks - `{ idKey, uniqueKeys, rerunOn, dependencies, GET, GET_MANY, GET_RANGE, POST, POST_MANY, PUT, PUT_MANY, PATCH, PATCH_MANY, DELETE, DELETE_MANY }`
  * @param {string} [restCallbacks.idKey] - primary key property, defaults to `"id"`
- * @param {string[]} [restCallbacks.uniqueKeys] - alternate keys the store can find an item by (e.g. `"username"`); a callback may return a different `id` to rename the item's primary key
+ * @param {string[]} [restCallbacks.uniqueKeys] - alternate keys the store can find an item by (e.g. `"username"`)
  * @see docs/resource.md — relationships, callback return contracts, decision table
  *
  * @example
@@ -16033,7 +16039,7 @@ const createResource = (
    * identical parameters, preventing cross-contamination between different parameter sets.
    *
    * @param {Object} params - Parameters to bind to all actions of this resource (required)
-   * @param {Object} options - Additional options for the parameterized resource
+   * @param {{ rerunOn?: Object, dependencies?: Object[] }} [options] - reruns of that scope; left out, the scope inherits the resource's
    * @returns {Object} A new resource instance with parameter-bound actions and isolated lifecycle
    * @see docs/resource.md — what a scope isolates, and `dependencies`
    *
@@ -16051,7 +16057,7 @@ const createResource = (
    * const ROLE_WITH_OWNERSHIP = role.withParams({ owners: true }, {
    *   dependencies: [role, database, tables],
    * });
-   * // ROLE_WITH_OWNERSHIP.GET_MANY will autorerun when any table/database/role is POST/DELETE
+   * // ROLE_WITH_OWNERSHIP.GET_MANY reruns after any write (POST/PUT/PATCH/DELETE) on a role, a database or a table
    */
   const withParams = (
     paramsToInject,
@@ -16097,13 +16103,14 @@ const createResource = (
    * Callback return contracts:
    * - GET / PUT → the parent object with the relationship nested inside:
    *   `async ({ id }) => ({ id, session: { id: 10, token: "abc" } })`; `null` for no relationship
-   * - DELETE → the parent id (or `{ id }`); the property is set to `null`
+   * - DELETE → the parent id; the property is set to `null`
    *
    * The backend may also embed the child inline in a parent GET/POST response — the
    * setter on the property upserts the nested object into the child store.
    *
-   * Returns the child relationship resource, itself chainable:
-   * `USER_SESSION.one("device", DEVICE)` adds a reactive `.device` property to each session.
+   * Returns the relationship resource: its actions (`USER_SESSION.GET`, `.PUT`,
+   * `.DELETE`) write the parent's property. A relation of the child itself is
+   * declared on the child resource (`SESSION.one("device", DEVICE)`).
    *
    * @param {string} propertyName - property holding the child on each parent item
    * @param {Object} childResource - the independent resource created by `resource()`
@@ -17264,7 +17271,7 @@ Received an object with keys: ${keys.join(", ")}.`,
  * });
  *
  * syncResourceToSignals(USER, { username: usernameSignal });
- * // Now when a user item's username is updated via USER.PUT,
+ * // When a user item's username is updated via USER.PUT,
  * // usernameSignal.value is set to the new username,
  * // which in turn triggers the route Signal->URL sync and updates the browser URL.
  */
@@ -17277,6 +17284,17 @@ const syncResourceToSignals = (resource, propertyToSignalMap) => {
   syncStoreToSignals(resource.store, propertyToSignalMap);
 };
 
+/**
+ * The same, for a `scopedOne`/`scopedMany` resource: its items live in one store
+ * per owner, so the store to watch is the one of the owner `ownerSignal` names
+ * (by id or by any unique key), and it is switched when the signal changes.
+ * Nothing is synced while `ownerSignal` holds `null`/`undefined` or names an
+ * owner nothing has been loaded for yet.
+ *
+ * @param {Object} resource - a resource made by `.scopedOne()` / `.scopedMany()`
+ * @param {import("@preact/signals").Signal} ownerSignal - the owner whose children are watched
+ * @param {Object} propertyToSignalMap - `{ [propertyName]: signal }`, as for `syncResourceToSignals`
+ */
 const syncOwnedResourceToSignals = (
   resource,
   ownerSignal,
@@ -17324,7 +17342,7 @@ const generateSignalId = () => {
  * 1. Initially takes value from the default signal
  * 2. When explicitly set (programmatically or via localStorage), the explicit value takes precedence
  * 3. When default signal changes, it only updates if no explicit value was ever set
- * 4. Calling reset() or setting to undefined makes the signal use the dynamic default again
+ * 4. Setting it to undefined makes the signal use the dynamic default again
  * 5. If dynamic default is undefined and options.default is provided, uses the static fallback
  *
  * This is useful for:
@@ -17338,7 +17356,9 @@ const generateSignalId = () => {
  * @param {string|number} [options.id] - Custom ID for the signal. If not provided, an auto-generated ID will be used. Used for localStorage key and route pattern detection.
  * @param {any} [options.default] - Static fallback value used when defaultValue is a signal and that signal's value is undefined
  * @param {boolean} [options.persists=false] - Whether to persist the signal value in localStorage using the signal ID as key
- * @param {"string" | "number" | "boolean" | "object"} [options.type="string"] - Type for localStorage serialization/deserialization
+ * @param {string} [options.type] - Type the value is coerced to, and read back as from localStorage and the url:
+ *   any @jsenv/validity type (`"string"`, `"number"`, `"boolean"`, `"array"`, `"object"`, `"integer"`, `"date"`,
+ *   `"time"`…). Without it the value is not coerced.
  * @param {"string" | "number" | "boolean"} [options.itemType] - For array type: type of the array items.
  *   Used when reading the value back from a url search param, where everything is a string:
  *   `?level=3,4` becomes `[3, 4]` instead of `["3", "4"]`. Without it items stay strings.
@@ -18501,14 +18521,12 @@ const LoadingFallback = ({
  * Two things it gets right that a hand-written boundary rarely does, both
  * explained in docs/error_handling.md:
  *
- * - It marks the error as displayed ONLY when it actually displays it.
- *   `preact/debug` rethrows every error a boundary caught in a `setTimeout`, on
- *   purpose (React devtools compatibility), so a handled error still reaches
- *   window and the jsenv overlay covers the app unless `__handled_by__` is set.
- *   Setting it before knowing whether anything is rendered turns a boundary into
- *   a bug swallower: a TypeError in a component becomes a blank page AND a
- *   silent one. Without a `fallback` there is nothing to display, so the error is
- *   left alone and continues up.
+ * - It marks the error as displayed ONLY when it actually displays it. The
+ *   jsenv overlay skips an error carrying `__handled_by__`, so a mark set before
+ *   knowing whether anything is rendered mutes an error that then continues up:
+ *   a TypeError in a component becomes a blank page AND a silent one. Without a
+ *   `fallback` there is nothing to display, so the error is left alone and
+ *   continues up.
  *
  * - It resets on navigation, not only on rerun. Rerunning the failed action is
  *   one way out; going somewhere else is the common one. Without a reset on the
@@ -21590,9 +21608,48 @@ const PSEUDO_STATE_CHILD_PROP_SET = new Set(["tabIndex", "tabindex"]);
  *   separator?: import("ignore:preact").ComponentChildren | ((index: number) => import("ignore:preact").ComponentChildren),
  *   selfInteractions?: string,
  *   interactions?: { [type: string]: "request_action" | "request_ui_action" | "refuse" | ((event: Event) => void) | false | null | undefined },
+ *   alignX?: string,
+ *   alignY?: string,
+ *   spacing?: string | number,
+ *   overflow?: string,
+ *   header?: boolean,
+ *   footer?: boolean,
+ *   body?: boolean,
+ *   sticky?: boolean,
  *   children?: import("ignore:preact").ComponentChildren,
  *   [key: string]: any,
  * }>}
+ * @param {"x"|"y"|boolean} [flex] A flex container: `"x"` (or `true`) side by
+ *   side, `"y"` stacked. Named by axis because `flex-direction: column` stacks
+ *   items vertically, the opposite of what "column" suggests.
+ * @param {boolean} [inline] The inline form of the box's display
+ *   (`inline-flex`, `inline-grid`…). An inline box given a `width`/`height`
+ *   becomes an inline flex row, since an inline box ignores both.
+ * @param {string} [alignX] Horizontal alignment of the content whatever the
+ *   flex direction: `justify-content` or `align-items` is picked from it
+ *   (`text-align` outside flex and grid).
+ * @param {string} [alignY] Vertical alignment, the same way.
+ * @param {string|number} [spacing] The gap between children in a flex or grid
+ *   box (`spacingX`/`spacingY` per axis) — there is no `gap` prop. Spacing
+ *   props (`spacing`, `margin*`, `padding*`) take the scale `"xxs"`…`"xxl"`
+ *   (`--navi-xxs`…), `"-s"` for a negative, or any CSS value.
+ * @param {object|string} [style] CSS properties, plus pseudo keys holding
+ *   their own: `style={{ color: "blue", ":hover": { color: "red" } }}`
+ *   (`":-navi-pressed"`, `"::before"`…). A pseudo class used there is tracked
+ *   on the element; nothing re-renders when it changes.
+ * @param {string} [overflow] `"auto"`/`"scroll"` (`overflowX`/`overflowY`
+ *   too) makes the box a scrolling area, which is what gives `header`/`body`/
+ *   `footer` their meaning; such a box is also `isolation: isolate` and gets a
+ *   `scroll-padding` (see docs/scroll.md).
+ * @param {boolean} [header] A part that stays put at the top of the scrolling
+ *   box it is a direct child of — nothing at all without that box's overflow.
+ *   Rendered as `<header>` unless `as` says otherwise.
+ * @param {boolean} [footer] The same at the bottom, rendered as `<footer>`.
+ * @param {boolean} [body] The only part of its scrolling box that scrolls,
+ *   `header`/`footer` sitting outside it. It shrinks, it never grows.
+ * @param {boolean} [sticky] `position: sticky` in the sticky z-index band
+ *   (`--navi-z-index-sticky`), stuck or not; an explicit `zIndex`, `"auto"`
+ *   included, wins (see docs/z_index.md). `top`/`bottom`/… take `true` for 0.
  * @param {string} [background] Any CSS background, plus two keywords for the
  *   planes an app paints: `"surface"` is the paper content sits on,
  *   `"chrome"` the frame around a screen — a top bar, a side menu, a toolbar.
@@ -23284,21 +23341,16 @@ const createUITransitionController = (
 /**
  * UITransition
  *
- * A Preact component that enables smooth animated transitions between its children when the content changes.
- * It observes content keys and phases to create different types of transitions.
+ * A Preact component that animates the change between its children: the
+ * outgoing content fades out while the incoming one fades in, and the box
+ * resizes from the one to the other (the mechanics are in ui_transition.js).
  *
- * Features:
- * - Content transitions: Between different content keys (e.g., user profiles, search results)
- * - Phase transitions: Between loading/content/error states for the same content key
- * - Automatic size animation to accommodate content changes
- * - Configurable transition types: "slide-left", "cross-fade"
- * - Independent duration control for content and phase transitions
- *
- * Usage:
- * - Wrap dynamic content in <UITransition> to animate between states
- * - Set a unique `data-content-id` on your rendered content to identify each content variant
- * - Use `data-content-phase` to mark loading/error states for phase transitions
- * - Configure transition types and durations for both content and phase changes
+ * Two kinds of change are told apart, from attributes on the rendered content:
+ * - a content transition, when the content key changes — `data-content-key` on
+ *   the rendered element (a user id, a search), or `useUITransitionContentId`
+ *   called from a component inside (what `<Route>` does with its url pattern);
+ * - a phase transition, when `data-content-phase` (a loading or error state)
+ *   changes for the same content key.
  *
  * Example:
  *
@@ -23307,9 +23359,6 @@ const createUITransitionController = (
  *       ? <Spinner data-content-key={userId} data-content-phase />
  *       : <UserProfile user={user} data-content-key={userId} />}
  *   </UITransition>
- *
- * When `data-content-id` changes, UITransition animates content transitions.
- * When `data-content-phase` changes for the same key, it animates phase transitions.
  */
 
 const UITransitionContentIdContext = createContext();
@@ -23431,16 +23480,12 @@ const UITransition = ({
 };
 
 /**
- * The goal of this hook is to allow a component to set a "content key"
- * Meaning all content within the component is identified by that key
+ * Names the content a component renders, for the <UITransition> around it:
+ * everything rendered inside is identified by that key, and the key changing
+ * is read as a content change even though the component is the same.
  *
- * When the key changes, UITransition will be able to detect that and consider the content
- * as changed even if the component is still the same
- *
- * This is used by <Route> to set the content key to the route path
- * When the route becomes inactive it will call useUITransitionContentId(undefined)
- * And if a sibling route becones active it will call useUITransitionContentId with its own path
- *
+ * <Route> calls it with the url pattern of the branch it renders; the branch
+ * unmounting removes its part, and a sibling branch mounting adds its own.
  */
 const useUITransitionContentId = value => {
   const contentId = useContext(UITransitionContentIdContext);
@@ -23465,8 +23510,8 @@ const useUITransitionContentId = value => {
 };
 
 /**
- * Custom route pattern matching system
- * Replaces URLPattern with a simpler, more predictable approach
+ * Custom route pattern matching system.
+ * Not built on URLPattern: matching here is simpler and more predictable.
  */
 
 const debug$2 = (...args) => {
@@ -30547,8 +30592,9 @@ const RouteTransitionArea = ({
  * Declare how a pair of routes moves against each other — or how one route is
  * entered, from wherever its door happens to be.
  *
- * @param {object|null} from - a route, or `{ route, params }` when the page is
- *   a param of a route rather than a route of its own. `null` says the page is
+ * @param {object|null} from - a route (or the `routeFallback()` page), or
+ *   `{ route, params }` when the page is a param of a route rather than a route
+ *   of its own. `null` says the page is
  *   reached FROM ANYWHERE: its door is in the furniture (a gear in the top
  *   bar, a "+" in the tab bar) rather than on a screen, so there is no pair to
  *   write it on. Arriving at `to` from any page then plays forward and leaving
@@ -30596,8 +30642,7 @@ const RouteTransitionArea = ({
  *   Whatever is written here is what EVERY crossing of the pair plays. One
  *   crossing can ask for something else — `<Link routeTransition>`, or
  *   navTo(url, { routeTransition }) — which overrides this field by field, for
- *   that
- *   navigation alone.
+ *   that navigation alone.
  * @returns {() => void} remove this relation.
  */
 const defineRouteTransition = (from, to, transition) => {
@@ -30680,9 +30725,8 @@ const normalizeTransition = transition => {
  *
  * Two mouths, one meaning: the element being pressed wears it (a `<Link
  * routeTransition>`, or the attribute by hand on any anchor), or navTo() is
- * handed
- * it. Both arrive here through the announcement the navigation makes before it
- * writes anything (see before_routing.js).
+ * handed it. Both arrive here through the announcement the navigation makes
+ * before it writes anything (see before_routing.js).
  *
  * A request answers FIELD BY FIELD: what it does not say, the relation — or
  * the default — still answers for. So `{ direction: "back" }` keeps the pair's
@@ -31929,10 +31973,10 @@ const css$11 = /* css */`.navi_route_travel {
  * The pages are cut at the edge of this box while they travel, and at the app's
  * safe area the box runs under, which is written on the transition's own
  * pseudo-elements — no overflow of the document reaches pictures drawn in the
- * top layer. It needs nothing of the browser beyond view
- * transitions themselves: a browser without them (Firefox) navigates without the
- * movement, and the gesture applies its change on release instead of dragging a
- * picture that does not exist.
+ * top layer. It needs nothing of the browser beyond view transitions
+ * themselves: a browser without them navigates without the movement, and the
+ * gesture applies its change on release instead of dragging a picture that does
+ * not exist.
  *
  * While a travel plays, the rest of the page is taken as a picture too — this
  * box asks for `view-transition-name: root` back for that time, so an
@@ -33508,9 +33552,6 @@ const onNaviCommand = (e, { debugCommand = () => {} } = {}) => {
     `targeting`,
     commandTarget,
   );
-  // Timed once, for the wheel-in-dialog "Définir feels frozen on mobile" case;
-  // the line is gone now that the answer is known — a command that runs in 1ms
-  // said nothing, and it said it on every single interaction.
   return implementation();
 };
 
@@ -34154,8 +34195,8 @@ registerNaviCommand("--navi-open", (source, event, { anchor, value } = {}) => {
     target,
     implementation: () => {
       // The popup reads `anchor` first and falls back to the source (see
-      // onnavi_request_open in popover.jsx), so saying nothing keeps the old
-      // behaviour: the element asking is the element opened against.
+      // onnavi_request_open in popover.jsx): without an `anchor`, the element
+      // asking is the element opened against.
       return dispatchCustomEvent(target, "navi_request_open", {
         event,
         source: resolveCommandProxySource(source),
@@ -36570,8 +36611,8 @@ const usePopupContentMount = (
  * are no-ops.
  *
  * Behavior:
- *   - No <dialog>/<details>/[popover] ancestor → runs like a normal
- *     useLayoutEffect with the provided deps.
+ *   - No <dialog>/<details>/[popover]/[aria-expanded] ancestor → runs like a
+ *     normal useLayoutEffect with the provided deps.
  *   - Inside a closed/hidden ancestor → skips the initial run; instead runs
  *     the callback once the ancestor opens — see @jsenv/dom's own
  *     observeAncestorOpenState for exactly how that's detected, and why it
@@ -36585,8 +36626,9 @@ const usePopupContentMount = (
  *     reveals nothing about them, so it does not re-run them either. See
  *     isDisplayedDespiteClosedAncestor in @jsenv/dom.
  *
- * The callback's second argument is always a `navi_displayed` CustomEvent,
- * with `detail: { ancestor, ancestorType, becauseAncestorOpened }`:
+ * The callback is called with the element (`ref.current`), and a
+ * `navi_displayed` CustomEvent as its second argument, with
+ * `detail: { ancestor, ancestorType, becauseAncestorOpened }`:
  *   - No <dialog>/<details>/[popover]/[aria-expanded] ancestor at all →
  *     `{ ancestor: document, ancestorType: "document" }`.
  *   - Otherwise → `{ ancestor: <the matched element>, ancestorType: "dialog"
@@ -36751,6 +36793,8 @@ const createDisplayedEvent = (ancestor, becauseAncestorOpened) => {
 // see also https://github.com/preactjs/preact/issues/1255
 
 
+const NO_ELEMENT_REF = { current: null };
+
 /**
  * Programmatic autofocus that runs after Preact layout effects are flushed.
  *
@@ -36803,13 +36847,12 @@ const createDisplayedEvent = (ancestor, becauseAncestorOpened) => {
  *   the browser's built-in scroll-into-view that accompanies focus.
  * @param {boolean} [options.focusVisible]
  *   Passed as `focusVisible` to `element.focus()`.
- * @param {boolean} [options.autoFocusSelect]
+ * @param {boolean} [options.autoSelect]
  *   When true, also calls `element.select()` after focusing (useful for text inputs).
- * @returns {Function} triggerAutofocus — can be called manually with a synthetic
- *   event to re-run the focus logic outside of the layout-effect lifecycle.
+ * @returns {object} The attributes to spread on the element: `navi-autofocus`
+ *   (and `navi-autofocus-select`), with `autoFocus` set to undefined so the
+ *   native attribute never lands on the node.
  */
-const NO_ELEMENT_REF = { current: null };
-
 const useAutoFocus = (
   focusableElementRef,
   autoFocus,
@@ -37002,9 +37045,10 @@ document.body.addEventListener(
  * and nothing about it stops someone from starting a run on every row before
  * any of them comes back: a dozen requests in flight, a dozen rows waiting, and
  * a server asked to do a dozen things at once because a list happened to be
- * long. The guard is what makes the surface say "not yet" instead — the rows
- * that are not running go read-only and say what they are waiting for, and the
- * next press is possible again the moment one of the runs comes back.
+ * long. The guard is what makes the surface say "not yet" instead — the
+ * controls that would start another run go read-only and say what they are
+ * waiting for, and the next press is possible again the moment one of the runs
+ * comes back.
  *
  * It counts runs, not values — which is what separates it from
  * `maxLengthGuard`, the one that says how many things a selection may HOLD.
@@ -37349,14 +37393,13 @@ const createControlGuard = (controller) => {
 };
 
 /**
- * Orchestrates the three rule managers for a UI state controller.
- *
- * Instead of holding `controller.controlInteraction` + `controller.controlValidity`
- * independently, a controller now has a single `controller.rules` object:
+ * Orchestrates the rule managers of a UI state controller, held together in
+ * one `controller.rules` object:
  *
  *   controller.rules.callout     — shared callout display manager
  *   controller.rules.interaction — interactivity gate (disabled/readonly/busy)
  *   controller.rules.validation  — value validity gate (required/pattern/etc.)
+ *   controller.rules.guard       — keystroke guard (charGuard/maxLengthGuard)
  *
  * The callout manager is created first so both interaction and validation
  * can use the same callout slot and the same lifecycle hooks.
@@ -39472,9 +39515,8 @@ const EMPTY_OBJECT = {};
  *   child changes → we update picker input → navi_ui_state_change fires →
  *   we see updatingRef=true → skip → no loop.
  *
- * This removes the need for `command="--navi-update"` on controls placed
- * inside the picker popup. It also means `commands.js` no longer has to
- * manually re-dispatch to inner controls.
+ * So a control placed inside the picker popup needs no
+ * `command="--navi-update"` to reach the picker input.
  */
 const useUIFacadeStateController = (props, realUIStateController) => {
   const firstChildControllerRef = useRef(null);
@@ -39886,9 +39928,10 @@ const uiStateHoldsNothing = (uiState) => {
  *    use `onInput` internally and route through `dispatchRequestAction` so the behavior
  *    is consistent regardless of input type.
  *
- * 2. Any field (text, checkbox, radio, picker…) can opt into debounce simply by passing
- *    a debounced action. The request-action event chain handles the timing centrally
- *    rather than each component having to manage its own debounce logic.
+ * 2. Any field (text, checkbox, radio, picker…) can opt into debounce with
+ *    `actionDebounce` (ms). The input effect every field installs (input_effect.js)
+ *    handles the timing centrally rather than each component having to manage its
+ *    own debounce logic.
  */
 const NO_ACTION_YET = Symbol("no_action_yet");
 
@@ -39964,7 +40007,7 @@ const ControlgroupChildrenWrapper = ({
 });
 
 /**
- * Core hook for interactive field components (InputText, InputCheckbox, etc.).
+ * Core hook for interactive field components (InputTextual, InputCheckbox, etc.).
  *
  * Sets up the full field lifecycle:
  * - Creates a UI state controller that manages state divergence between props and user interactions
@@ -39975,7 +40018,7 @@ const ControlgroupChildrenWrapper = ({
  * - Handles constraint validation and message props
  *
  * All state changes route through DOM events on the field element so that
- * external subscribers (e.g. useUIState, Selectable) receive every update.
+ * external subscribers (e.g. useControlUIState, Selectable) receive every update.
  *
  * @returns {[controlRootProps, controlHostProps, { uiStateController }]}
  */
@@ -41048,10 +41091,10 @@ const useReadOnlyUncontrolled = (props, controlInfo) => {
 };
 
 /**
- * Core hook for field group components (SelectableList, CheckboxList, etc.).
+ * Core hook for field group components (List selectable, CheckboxGroup, etc.).
  * - Creates a UI group state controller that aggregates child states into one group state
  * - Binds the group's action to the aggregated state signal
- * - Provides context to children: ParentUIStateController, FieldName, Disabled, ReadOnly,
+ * - Provides context to children: ParentUIStateController, ControlName, Disabled, ReadOnly,
  *   Required, Loading, Action, ActionRequester
  * - Overrides `onnavi_reset_ui_state` to cascade resets to all monitored children
  *   by dispatching `navi_reset_ui_state` DOM events on each child's DOM element
@@ -43580,10 +43623,10 @@ const LoadingRectangleSvg = ({
 }) => {
   // The stroke is centered on the path, so half of it falls outside: drawing
   // at half the stroke width puts its outer edge exactly on the box, whatever
-  // the box. It used to be a share of the smaller dimension (3%, floored at
-  // 2px), which held the line further and further inside as the box grew — a
-  // caller placing the outline with `inset` got the distance it asked for on a
-  // field and something several pixels inward on a card. Nothing needs the
+  // the box. Not a share of the smaller dimension (3%, floored at 2px): that
+  // holds the line further and further inside as the box grows — a caller
+  // placing the outline with `inset` gets the distance it asked for on a field
+  // and something several pixels inward on a card. Nothing needs the
   // extra room: the svg is `overflow: visible` and whoever positions the
   // wrapper already reserves the half stroke.
   const margin = strokeWidth / 2;
@@ -44655,7 +44698,7 @@ const shouldInjectSpacingBetween = (left, right) => {
  *   boldStable?: boolean,
  *   shrinkWrap?: boolean,
  *   capitalize?: boolean,
- *   selectRange?: string | [number, number],
+ *   selectRange?: string | [number, number] | [string, string],
  *   childrenOutsideFlow?: import("ignore:preact").ComponentChildren,
  *   [key: string]: any,
  * }>}
@@ -44723,9 +44766,10 @@ const shouldInjectSpacingBetween = (left, right) => {
  * @param {boolean} [capitalize]
  *   Uppercases the first letter of the text content via CSS.
  *
- * @param {string|[number,number]} [selectRange]
- *   Selects a portion of the text on mount. Pass a substring to search for, or
- *   a `[start, end]` character-offset tuple.
+ * @param {string|[number,number]|[string,string]} [selectRange]
+ *   Selects a portion of the text on mount. Pass a substring to search for, a
+ *   `[start, end]` character-offset tuple, or a `[startText, endText]` pair of
+ *   substrings selecting from the first to the end of the second.
  *
  * @param {import("ignore:preact").ComponentChildren} [childrenOutsideFlow]
  *   Rendered after children but outside the text spacing/flow logic. Used
@@ -45595,7 +45639,7 @@ Object.assign(PSEUDO_CLASSES, {
  * @param {object} props
  * @param {string} [props.href] - Destination. Also the default `value`, and
  *   (when `hrefFallback`) the default visible text.
- * @param {import("../route.js").Route} [props.route] - Renders via `route`
+ * @param {object} [props.route] - Renders via `route`
  *   instead of a raw `href`: the URL is built from the route (see
  *   `routeParams`) and "current" is derived from whether the route matches.
  * @param {object} [props.routeParams] - Params passed to `route.buildUrl`.
@@ -45619,14 +45663,14 @@ Object.assign(PSEUDO_CLASSES, {
  *   (`navi_value`); defaults to `href`.
  * @param {boolean} [props.current] - Forces the "current" state on (otherwise
  *   derived from the href/route).
- * @param {import("../route.js").Route|import("../route.js").Route[]} [props.currentExcept] -
+ * @param {object|object[]} [props.currentExcept] -
  *   Route(s) inside this link's own that are NOT it: while one of them matches,
  *   the link is not current even though its route still is. A bar entry
  *   standing for a whole section, and one place under that section the entry
  *   does not stand for — settings reached from everywhere and shown over
  *   whatever the reader was on. Nothing about the routing changes: the url is
  *   in the section, only the link stops claiming "you are here".
- * @param {import("../route.js").Route|import("../route.js").Route[]} [props.currentAlso] -
+ * @param {object|object[]} [props.currentAlso] -
  *   Route(s) other than this link's own that are it: the link is current while
  *   one of them matches. The other side of `currentExcept` — an entry standing
  *   for more than the one page it opens. `currentExcept` wins over it.
@@ -46530,6 +46574,7 @@ const positionOfCurrentIndicator = (currentIndicator, vertical) => {
  *   currentIndicator?: boolean|"top"|"bottom"|"left"|"right",
  *   currentIndicatorSlides?: boolean,
  *   slideContainer?: string,
+ *   panelPosition?: "before"|"after",
  * }>}
  * @param {boolean|"top"|"bottom"|"left"|"right"} [props.currentIndicator] - the
  *   bar that says which tab one is on, said once here rather than on every
@@ -46555,6 +46600,9 @@ const positionOfCurrentIndicator = (currentIndicator, vertical) => {
  *   container says which one is on screen, and pressing a tab travels there.
  *   Tabs that are places in the same screen rather than pages of their own —
  *   nothing is written to the URL and nothing is a link.
+ * @param {"before"|"after"} [props.panelPosition] - turns the row into folder
+ *   tabs: the current tab and the panel it opens share one surface, and this
+ *   says which side of the row the panel sits on.
  */
 const Nav = ({
   children,
@@ -47677,6 +47725,8 @@ const TABS_ALIGN_TO_JUSTIFY_CONTENT = {
  *   onChange?: (value: any) => void,
  *   tabsPosition?: "top"|"bottom"|"left"|"right",
  *   tabsAlign?: "start"|"center"|"end"|"stretch",
+ *   scrollablePage?: boolean,
+ *   maxLines?: number|false,
  *   borderWidth?: string|number,
  *   borderRadius?: string|number,
  *   tabBorderRadius?: string|number,
@@ -47856,7 +47906,7 @@ const Binder = ({
  *   position among its siblings.
  * @param {import("ignore:preact").ComponentChildren} [props.label] - What the tab
  *   shows.
- * @param {import("../route.js").Route} [props.route] - Makes the tab a `Link`
+ * @param {object} [props.route] - Makes the tab a `Link`
  *   to that route, and the binder follows the url: the open item is the one
  *   whose route matches, no `value`/`onChange` needed.
  * @param {string} [props.href] - Same, for a plain url.
@@ -48295,6 +48345,9 @@ const FixedBarStyleCSSVars = {
  *   `border={false}` for none.
  * @param {string|number} [props.maxWidth] - Keeps the bar lined up with a
  *   content column narrower than the window (it stays centered).
+ * @param {string|number} [props.padding=0] - Along the bar only: left/right on
+ *   a top or bottom bar, top/bottom on a side one. Across it, the size is
+ *   `height`/`width`.
  */
 const FixedBar = ({
   children,
@@ -49163,9 +49216,10 @@ const useExpandableContext = partName => {
  *   height too. `"idle"` builds it in a browser idle moment after load.
  *   `"while-opened"` throws the content away once the collapse
  *   settles — after the closing animation, so it still plays on real
- *   content — and rebuilds it from scratch on every expansion. Whatever the
- *   value, intent on the UI part (pointer entering it, focus landing in it)
- *   builds the content ahead of the click.
+ *   content — and rebuilds it from scratch on every expansion. Under the
+ *   other three, intent on the UI part (pointer entering it, focus landing in
+ *   it) builds the content ahead of the click; `"while-opened"` content is
+ *   never warmed, it is built at the open.
  */
 const Expandable = props => {
   import.meta.css = [css$R, "@jsenv/navi/src/control/expandable/expandable.jsx"];
@@ -49942,7 +49996,8 @@ const DARK_CONTRAST_LIGHTNESS_THRESHOLD = 0.65;
  * @param {string} accentColor - The accent color value. When it changes, attributes are recomputed.
  * @param {object} [options]
  * @param {string} [options.elementSelector] - CSS selector to find the element whose computed color is read.
- *   Defaults to the root element itself. Useful when the color is applied to a probe/child element.
+ *   Defaults to the root's own `data-visual-selector` attribute, else the root element itself.
+ *   Useful when the color is applied to a probe/child element.
  * @param {string} [options.colorProperty="backgroundColor"] - Computed style property to read (e.g. "color", "borderColor").
  */
 const useAccentColorAttributes = (
@@ -51981,16 +52036,18 @@ const css$L = /* css */`@layer navi {
 /**
  * Field — a semantic wrapper that connects a label to a form control.
  *
- * It generates a stable `fieldId` (or accepts an explicit `id`) that is
+ * It generates a stable `fieldId` (or accepts an explicit one) that is
  * automatically forwarded to the `Label` inside the field as `htmlFor` and to
- * any interactive control (Picker, Input, …) as its `id`, so clicking the
- * label focuses the control without requiring manual wiring.
+ * the labelable control inside it (Input, Select, Picker, Button) as its `id`,
+ * so clicking the label focuses the control without requiring manual wiring.
  *
  * It also tracks the readOnly / disabled / interactive state reported by its
  * child control and reflects it on the `Label` (dimmed color, cursor change).
  *
  * Props:
- *   id        — optional explicit id used as the field id instead of the auto-generated one
+ *   fieldId   — optional explicit field id instead of the auto-generated one (an `id`
+ *               is the wrapper's own DOM id)
+ *   as="label" — the field IS the label, wrapping its control: no id needed
  *   flex="y"  — vertical layout; automatically sets alignX="start" and data-vertical
  *   children  — any JSX; should contain a `Label` and a form control
  *   ...rest   — forwarded to the wrapping element (className, style, flex, spacing, …)
@@ -52197,6 +52254,7 @@ const InputUnitSlot = ({
 };
 const InputSlot = ({
   side,
+  children,
   ...props
 }) => {
   const ctx = useContext(InputTextualContext);
@@ -52226,7 +52284,11 @@ const InputSlot = ({
         e.preventDefault();
       }
     },
-    ...props
+    ...props,
+    children: jsx(ControlIdContext.Provider, {
+      value: undefined,
+      children: children
+    })
   });
 };
 
@@ -53691,9 +53753,9 @@ const InputWithListResolver = props => {
 };
 
 /**
- * InputWithList — connects an input to a SelectableList via its id.
+ * InputWithList — connects an input to a selectable List via its id.
  *
- * Usage: <Input navi-list="my-list-id" /> next to <SelectableList id="my-list-id" />
+ * Usage: <Input navi-list="my-list-id" /> next to <List selectable id="my-list-id">
  *
  * Behavior:
  *   - ArrowDown / ArrowUp move the list's "current item" without moving focus
@@ -54061,11 +54123,14 @@ const useAutoSelectReadOnly = (props) => {
  *
  * - charGuard — restricts which characters can be typed, pasted, or set externally.
  *   Accepts a preset name or a raw regex character class:
- *   "numeric"      → digits only, sets inputMode="numeric" + pattern auto
+ *   true / "auto"  → picked from the field: inputMode numeric/decimal, type tel/email
+ *   "numeric"      → digits only, sets inputMode="numeric"
+ *   "decimal"      → digits, minus, dot, comma, sets inputMode="decimal"
  *   "alpha"        → letters only
  *   "alphanumeric" → letters and digits
  *   "uppercase"    → uppercase letters only
  *   "tel"          → phone chars (digits, +, -, parens, space), sets inputMode="tel"
+ *   "email"        → what an email address is made of
  *   "card"         → credit card (digits and spaces), sets inputMode="numeric"
  *   "hex"          → hexadecimal digits
  *   "pin"          → numeric PIN, sets inputMode="numeric"
@@ -55133,18 +55198,13 @@ const commitSubtree = (controller, e) => {
 };
 
 /**
- *
- * Here we want the same behaviour as web standards:
- *
- * 1. When submitting the form URL does not change
- * 2. When form submission id done user is redirected (by default the current one)
- *    (we can configure this using target)
- *    So for example user might be reidrect to a page with the resource he just created
- *    I could create an example where we would put a link on the page to let user see what he created
- *    but by default user stays on the form allowing to create multiple resources at once
- *    And an other where he is redirected to the resource he created
- * 3. If form submission fails ideally we should display this somewhere on the UI
- *    right now it's just logged to the console I need to see how we can achieve this
+ * <Form>: the <form> element as a navi control group. Its named fields
+ * aggregate into one object; a submit checks their constraints, runs `action`
+ * with that object when it changed (docs/form_changed.md), and `command` — or
+ * the surface the form sits in — says what follows. The URL does not change on
+ * a submit, and a failing action is drawn as an error callout on the button
+ * that sent it (docs/error_handling.md). A form inside another form renders no
+ * <form> element (FormNested).
  */
 
 const Form = props => {
@@ -55764,9 +55824,9 @@ const offsetToPx = (offset, box) => {
 
 // A press landing while the track is already travelling: what is playing is
 // sent home in a fifth of the time it has left, and the press it could not take
-// yet is taken as soon as it lands. A press has to be FELT — nudging the pace
-// of a travel already in flight (what this used to do) reads as "nothing
-// happened", because the thing was moving before the click too. Getting there
+// yet is taken as soon as it lands. A press has to be FELT — merely nudging the
+// pace of a travel already in flight reads as "nothing happened", because the
+// thing was moving before the click too. Getting there
 // almost at once and setting off again is the click being answered.
 // Played out fast rather than cut short: ending it on the spot would jump.
 // Compounds, so two presses during one travel bring it home twice as sharply,
@@ -58337,13 +58397,12 @@ const SlideNavButton = ({
   autoFocus: "last-resort",
   icon: true,
   variant: "discrete"
-  // Takes the focus like any other button, on purpose. It used to refuse it
+  // Takes the focus like any other button, on purpose. Do not refuse it
   // (mousedown.preventDefault) to keep the keyboard where the user had put
-  // it — but pressing a way out with nothing focused then left the keyboard
-  // on nothing at all: the travel below only hands the focus to the slide
-  // arriving when it was leaving a slide, so a click from document.body
-  // arrived on document.body, and the next Tab started from the top of the
-  // page rather than from what is on screen.
+  // it: the travel below only hands the focus to the slide arriving when it
+  // was leaving a slide, so a press with nothing focused would arrive on
+  // document.body, and the next Tab would start from the top of the page
+  // rather than from what is on screen.
   //
   // Letting it focus is both the plain behaviour of a button and what makes
   // the rest fall into place: the press lands on the chevron, the slide left
@@ -58360,12 +58419,6 @@ const SlideNavButton = ({
   })
 });
 
-/**
- * The way out of a slide, and the way into the next one. Nothing but the
- * command plus the chevron that matches the travel: a row goes left/right, a
- * column up/down — so the button points where the slide actually goes without
- * the caller having to keep the two in sync.
- */
 /**
  * A way out pointing where it goes. It says a direction, not a slide: what is
  * over there is the map's business, and moving a screen changes nothing here.
@@ -61415,7 +61468,7 @@ const css$E = /* css */`
  *   within its container (the viewport for `layer="top"`, the positioned
  *   ancestor for `layer="local"`) — Dialog is never anchored to a real
  *   element for positioning purposes. Same grammar as `Popover`'s own
- *   `positionArea` (see `popup_shared.js`'s `parsePositionArea`): a single
+ *   `positionArea` (see `parsePositionArea` in @jsenv/dom): a single
  *   compass token — `top`/`top-start`/`top-end`/`top-left`/`top-right`,
  *   `right`/`right-start`/`right-end`, `bottom`/`bottom-start`/
  *   `bottom-end`/`bottom-left`/`bottom-right`, `left`/`left-start`/
@@ -61434,12 +61487,12 @@ const css$E = /* css */`
  *   between the dialog and the edges of its container, whatever its
  *   `positionArea`: it both caps the dialog's own size (via
  *   `--x-dialog-container-spacing`, written from this prop) and offsets a docked
- *   one from the edge it docks to. Accepts a spacing token ("s", "m"…), a
- *   number of pixels, or a viewport length — "appw"/"apph" being the app's own
- *   screen (the visual viewport, or the narrower one the app declared with
- *   --navi-app-max-width) and "vvw"/"vvh" the visual viewport itself, which
- *   shrinks when the mobile keyboard opens. Pass 0 for a dialog
- *   meant to sit flush (a side panel).
+ *   one from the edge it docks to. Accepts a number of pixels, a viewport
+ *   length — "appw"/"apph" being the app's own screen (the visual viewport, or
+ *   the narrower one the app declared with --navi-app-max-width) and
+ *   "vvw"/"vvh" the visual viewport itself, which shrinks when the mobile
+ *   keyboard opens — or a container length ("3cqw", the `layer="local"`
+ *   default). Pass 0 for a dialog meant to sit flush (a side panel).
  * @param {boolean} [props.backdrop=true] - Whether anything is laid between
  *   the dialog and the page at all — asked before any question of what an
  *   outside press does or how the backdrop is painted. `false` leaves the page
@@ -61452,10 +61505,12 @@ const css$E = /* css */`
  *   needs. What it gives up is what only a modal gets natively: the hardware
  *   back button no longer dismisses it. See docs/popup_backdrop.md.
  * @param {"close"|"cancel"|"capture"|"ignore"} [props.pressOutside="close"]
- *   - `"close"` closes the dialog on an outside press. `"capture"`/`"ignore"`
- *   both just absorb the press without closing (visually dimmed backdrop vs.
- *   not) — a dialog with a backdrop is modal one way or another, so there's
- *   always at least a press-absorbing backdrop regardless of this prop.
+ *   - `"close"` closes the dialog on an outside press, `"cancel"` closes it
+ *   as a cancel (what it holds reverts, as on Escape). `"capture"`/`"ignore"`
+ *   both just absorb the press without closing (`"capture"` paints the
+ *   blurred glass, `"ignore"` leaves the wall's paint alone) — a wall absorbs
+ *   the press whatever this prop says, natively for a modal and through the
+ *   sibling element for a local one.
  *   "Outside" is the dialog's own border box; a see-through dialog whose box is
  *   bigger than what it paints marks the difference with
  *   `data-navi-popup-outside` (see docs/popup_backdrop.md).
@@ -61530,11 +61585,10 @@ const css$E = /* css */`
  * @param {string} [props.animationDuration] - Maps to
  *   `--popup-animation-duration`.
  * @param {Element|{current: Element}|string} [props.anchor] - Never used for
- *   positioning (see this file's top comment), and ignored entirely unless
- *   `sizeFromAnchor` or `animation="lifting"` asks for it — the first sizes
- *   the dialog via the `--anchor-width`/`--anchor-height` CSS vars, the second
- *   makes the dialog come out of the anchor's own box. Used when the open
- *   itself names none — an anchor carried by the opening event
+ *   positioning (see this file's top comment); read by `sizeFromAnchor` (the
+ *   `--anchor-width`/`--anchor-height` CSS vars), by `animation="lifting"`
+ *   (the box the dialog comes out of) and by `mount`'s warm-on-intent. Used
+ *   when the open itself names none — an anchor carried by the opening event
  *   (`e.detail.anchor`) is about that one opening and comes first; left out,
  *   whatever triggered the open (`e.detail.source`). A string is resolved via
  *   `document.getElementById` when the dialog opens — see popover.jsx's own
@@ -61596,6 +61650,9 @@ const css$E = /* css */`
  *     focusable of its own.
  *   - `"restore"` — the dialog stays out of the opening focus chain unless it
  *     held focus when it closed.
+ *   - `false` — the dialog element itself is never where the focus lands; the
+ *     opening still hands the focus to what the dialog holds. Unlike
+ *     `Popover`'s `false`, it does not leave the keyboard where it was.
  *   Wherever the keyboard is a virtual one (a touch device), the surface is
  *   already what one arrives on: a popup is read before it is reached there, so
  *   the focus only leaves it for something that asked by name (`autoFocus` on
@@ -61839,8 +61896,8 @@ const useDialogProps = props => {
     // `backdrop` — see this file's top comment.
     layer = "top",
     dockedOnSmallTouchScreen,
-    // Same grammar as Popover's own positionArea — see this file's top
-    // comment and popup_shared.js's parsePositionArea.
+    // Same grammar as Popover's own positionArea — see parsePositionArea in
+    // @jsenv/dom.
     positionArea: positionAreaProp,
     // A dialog docked against an edge must keep the same gap its own size cap
     // already guarantees a centered one — so this drives both (see
@@ -61880,8 +61937,8 @@ const useDialogProps = props => {
     sizing = "auto",
     animation,
     lift = "box",
-    // Inert unless sizeFromAnchor below (see this file's top comment) —
-    // Dialog's own positioning is never relative to it.
+    // Never positioned against (see this file's top comment): read by
+    // sizeFromAnchor, by a lift, and by the warm-on-intent of `mount`.
     anchor,
     // Where a lift comes back to, when that is no longer the box it came out
     // of. Read at the close, not kept from the opening — see
@@ -61891,8 +61948,8 @@ const useDialogProps = props => {
     // See this prop's own JSDoc above for why a dialog does not follow its
     // trigger's box by default.
     sizeFromAnchor = false,
-    // Same meaning as Popover's own prop, applied to the only thing an anchor
-    // can do here: sizing under sizeFromAnchor.
+    // Same meaning as Popover's own prop, applied to what an anchor does here:
+    // sizing under sizeFromAnchor, and a lift.
     anchorCustomEventDetail = "override",
     // Makes the dialog itself a valid focus target so
     // autoFocus="last-resort" below has somewhere to land when it contains
@@ -61948,8 +62005,8 @@ const useDialogProps = props => {
   // narrower one) — and the positioned ancestor for a local one, where
   // reading 3% of the screen gives an absurd gap inside a small box.
   isTopLayer ? "3appw" : "3cqw");
-  // "expand || expandX", the shorthand semantics Popup used to apply before
-  // handing them over — the docked default only applies when neither was said
+  // `expand` is the shorthand for both axes; the docked default only applies
+  // when neither was said.
   const expandXUnset = expand === undefined && expandXProp === undefined;
   const expandX = expandXUnset ? isDocked && DOCKED.expandX : Boolean(expand) || Boolean(expandXProp);
   const scrollCapture = scrollCaptureProp ?? (isDocked ? DOCKED.scrollCapture : false);
@@ -62638,8 +62695,8 @@ const useDialogProps = props => {
     // ("[navi-control='dialog'], [navi-control='popover']" — see openEffect
     // above), and --navi-open/--navi-close resolve their target this way.
     "navi-control": "dialog",
-    // The protocol every command target answers. It came with the control
-    // group before; a dialog is layout and still has to answer --navi-open,
+    // The protocol every command target answers: a dialog is layout, not a
+    // control, and still has to answer --navi-open,
     // --navi-close and --navi-toggle, which are dispatched here and do not
     // bubble.
     "onnavi_command": e => {
@@ -62661,14 +62718,12 @@ const useDialogProps = props => {
     "popover": isTopLayerPopover ? "manual" : undefined,
     "baseClassName": "navi_dialog",
     "pseudoClasses": DIALOG_PSEUDO_CLASSES,
-    // Distinguishes the two renderers for the CSS above (position: fixed
-    // vs. absolute) — positioning itself is entirely JS-driven now (see
-    // openEffect's own positionDialog above), no data-position-area
-    // attribute needed at all.
     // A popup scrolls, and asking Box for that overflow is also what lets what
     // it contains claim header/footer/body (see box.jsx) — a popup is always a
     // scrolling area, so it says so once, here.
     "overflow": "auto",
+    // Tells the two renderers apart for the CSS above (position: fixed vs.
+    // absolute); the placement itself is JS-driven (positionDialog).
     "data-layer": layer,
     // The sheet shape is live in CSS, not just a set of resolved defaults:
     // it is what withdraws the caller's --dialog-max-width (see the stylesheet
@@ -63145,8 +63200,8 @@ const css$D = /* css */`
  *   whole viewport. A real `anchor` works with either.
  * @param {string} [props.positionArea="bottom"] - Where to place the popover
  *   relative to its `anchor` (or its container, if there is none). Same
- *   grammar as `Dialog`'s own `positionArea` (see `popup_shared.js`'s
- *   `parsePositionArea`): a single compass token — `top`/`top-start`/
+ *   grammar as `Dialog`'s own `positionArea` (see `parsePositionArea` in
+ *   @jsenv/dom): a single compass token — `top`/`top-start`/
  *   `top-end`/`top-left`/`top-right`, `right`/`right-start`/`right-end`,
  *   `bottom`/`bottom-start`/`bottom-end`/`bottom-left`/`bottom-right`,
  *   `left`/`left-start`/`left-end`, or `center`. A bare token means no
@@ -63175,8 +63230,9 @@ const css$D = /* css */`
  *   See docs/popup_backdrop.md.
  * @param {"close"|"cancel"|"capture"|"ignore"} [props.pressOutside="ignore"]
  *   - `"ignore"` (default): no backdrop at all, outside presses pass straight
- *   through. `"close"` closes the popover on an outside press. `"capture"`
- *   absorbs the press (dims the backdrop) without closing. Note this
+ *   through. `"close"` closes the popover on an outside press, `"cancel"`
+ *   closes it as a cancel (what it holds reverts, as on Escape). `"capture"`
+ *   absorbs the press (blurred glass) without closing. Note this
  *   default differs from `Dialog`'s own (`"close"`) — a popover is
  *   typically a lightweight, non-modal affordance. "Outside" is the popover's
  *   own border box; a see-through popover whose box is bigger than what it
@@ -63210,9 +63266,11 @@ const css$D = /* css */`
  *   popover so the page/container behind it can't scroll while it's open.
  * @param {boolean} [props.focusCapture] - Traps Tab navigation inside the
  *   popover (see `focus_trap.js`).
- * @param {boolean|"auto"|"fading"|"scaling"|"sliding"|`slide-from-${string}`} [props.animation]
- *   - `true`/`"auto"` resolves to a concrete `"slide-from-*"` direction
- *   based on `positionArea`. Any other explicit value is used as-is.
+ * @param {boolean|"auto"|"fading"|"scaling"|"sliding"|`slide-from-${string}`|"expanding"|`expand-${string}`} [props.animation]
+ *   - `true`/`"auto"` resolves to `"scaling"` for a real anchor or a centered
+ *   `positionArea`, and to a concrete `"slide-from-*"` direction otherwise.
+ *   `"expanding"`/`"expand-*"` grow out of a real anchor (see popup_css.js).
+ *   Any other explicit value is used as-is.
  * @param {string} [props.animationDuration] - Maps to
  *   `--popup-animation-duration`.
  * @param {Element|{current: Element}|string} [props.anchor] - The element the
@@ -63324,7 +63382,7 @@ const css$D = /* css */`
  * @param {object} [props.openController] - Advanced: an externally-owned
  *   open controller (see `open_controller.js`) for a caller that wants to
  *   drive open/close itself instead of `open`/`defaultOpen`/`onClose` (used
- *   by `picker_custom.jsx`/`side_panel.jsx`).
+ *   by `picker_custom.jsx`).
  * @param {"always"|"idle"|"from-first-open"|"while-opened"} [props.mount] - When
  *   `children` are built and thrown away (see popup_content_mount.js).
  *   `"from-first-open"` (the default) builds them on the first open and keeps
@@ -63634,12 +63692,10 @@ const usePopoverProps = props => {
       unfreezeSize(popoverEl);
     }
   }, [sizing]);
-  // The custom renderer's own starting-hidden state is a stylesheet default
-  // now (&:not([popover]) { display: none } on .navi_popover/
-  // .navi_popover_backdrop above) rather than set here imperatively — a
-  // plain div has no native default the way [popover]/<dialog> do, so
-  // leaving this to a layout effect meant an actual (if narrow) window
-  // where the browser could paint it visible before this ever ran.
+  // The custom renderer starts hidden from the stylesheet ([navi-hidden] on
+  // .navi_popover/.navi_popover_backdrop above), never from a layout effect:
+  // a plain div has no native hidden default the way [popover]/<dialog> do,
+  // and an effect leaves a window where the browser paints it visible first.
   // aria-expanded starts "false" the same way, but via a static literal
   // JSX prop on contentProps/backdropProps below instead of a layout
   // effect — see that prop's own comment for why a *constant* value there
@@ -63658,8 +63714,8 @@ const usePopoverProps = props => {
   openController.getElement = () => ref.current;
   openController.openEffect = e => {
     const popoverEl = ref.current;
-    // backdropEl is null when pressOutside is "ignore" —
-    // the backdrop isn't rendered at all in that case.
+    // backdropEl is null when there is no wall (pressOutside "ignore", or
+    // backdrop={false}): the backdrop isn't rendered at all then.
     const backdropEl = backdropRef.current;
     if (!popoverEl) {
       return undefined;
@@ -63714,10 +63770,8 @@ const usePopoverProps = props => {
     // needed here.
     const positionedAncestor = getPositionedParent(popoverEl);
     // Drives the via-attribute renderer's own position: fixed/absolute
-    // switch (see this file's top comment) — set here, well before any
-    // positioning/measurement runs, so there's no ordering subtlety to get
-    // wrong (unlike the CSS this replaced, which keyed off the resolved
-    // animation instead, known too late relative to the first measurement).
+    // switch (see this file's top comment) — set here, before any
+    // positioning/measurement runs, so the first measurement already sees it.
     // True only for a real anchor that itself scrolls with the document —
     // that's the one case `absolute` (scrolling in lockstep with it) is
     // correct; not just "has an anchor at all", since an anchor that's
@@ -63767,10 +63821,9 @@ const usePopoverProps = props => {
       disarmBackdropHideRef.current?.();
       disarmBackdropHideRef.current = null;
       // transitionProperty stays "none" here for both — reset later, in the
-      // final commit step alongside popoverEl's own (not resumed early the
-      // way it briefly was), so a `silent` open (see above) can keep both
-      // elements' transitions suppressed right up until after their
-      // aria-expanded flip, the same way it does for popoverEl.
+      // final commit step alongside popoverEl's own, so a `silent` open (see
+      // above) can keep both elements' transitions suppressed right up until
+      // after their aria-expanded flip, the same way it does for popoverEl.
       backdropEl.style.transitionProperty = "none";
       if (isTopLayer) {
         // Hidden first if a previous close's deferred hidePopover() (see
@@ -64195,16 +64248,10 @@ const usePopoverProps = props => {
       // current unconditionally on every call, and treats their mere
       // *presence* as "already positioned this session — stay on this
       // side unless it no longer fits" (its own anti-oscillation guard for
-      // repositioning mid-open, e.g. on scroll/resize). Popover's own CSS
-      // doesn't read these anymore (slide direction is resolved in JS now,
-      // see resolveDirectionValue), which is why the clearing that used to
-      // live here was removed — but that removal missed this second,
-      // still-live purpose: without clearing them on close, a later reopen
-      // sees a stale, "already positioned" value left over from a
-      // *previous* open (e.g. the container-aligned collapse from an
-      // anchorless silent open) and wrongly stays sticky to it instead of
-      // resolving fresh from the current positionArea/anchor — a real,
-      // reproduced bug, not just a leftover no-op.
+      // repositioning mid-open, e.g. on scroll/resize). Cleared on close so a
+      // later reopen resolves fresh from the current positionArea/anchor
+      // instead of staying sticky to a side left over from a previous open
+      // (e.g. the container-aligned collapse from an anchorless silent open).
       popoverEl.removeAttribute("data-position-y-current");
       popoverEl.removeAttribute("data-position-x-current");
       cleanup();
@@ -64334,8 +64381,8 @@ const usePopoverProps = props => {
     // ("[navi-control='dialog'], [navi-control='popover']"), and
     // --navi-open/--navi-close resolve their target this way.
     "navi-control": "popover",
-    // The protocol every command target answers. It came with the control
-    // group before; a popover is layout and still has to answer --navi-open,
+    // The protocol every command target answers: a popover is layout, not a
+    // control, and still has to answer --navi-open,
     // --navi-close and --navi-toggle, which are dispatched here and do not
     // bubble.
     "onnavi_command": e => {
@@ -64375,7 +64422,7 @@ const usePopoverProps = props => {
     // already arrive here as plain props via ...rest (wired by
     // UncontrolledPopover above, forwarded through ControlledPopover's own
     // {...props} spread) — nothing extra to add here. A controlled caller
-    // (picker_custom.jsx/side_panel.jsx) wires its own equivalent handling
+    // (picker_custom.jsx) wires its own equivalent handling
     // directly against its own openController instead.
   });
   return [hasBackdrop ? backdropProps : null, contentProps];
@@ -64407,9 +64454,6 @@ const POPUP_STYLE_CSS_VARS = {
   maxHeight: "--popover-max-height"
 };
 
-// parsePositionArea/POSITION_AREA_X/Y_VALUES moved to popup_shared.js — same
-// grammar Dialog's own layer="local"/"top" now shares.
-
 /**
  * Shared by both renderers: parses `positionArea` and resolves
  * `animation="auto"`/`true`. `animationAnchor` is the real anchor element
@@ -64437,15 +64481,6 @@ const resolvePositionAreaAndAnimationKind = ({
     resolvedAnimationKind
   };
 };
-
-// resolveDirectionValue/resolveAutoAnimationKind moved to popup_shared.js —
-// same logic Dialog's own auto-animation resolution now shares, since it
-// never has a real anchor either (always the "anchor === undefined" path).
-
-// suppressPointerEventsDuringTransition/armPointerDownOutsideClose moved to
-// popup_shared.js — same helpers Dialog's own custom renderer needs, no
-// Popover-specific knowledge in either.
-
 Popover.Close = PopupClose;
 
 installImportMetaCssBuild(import.meta);
@@ -64484,11 +64519,12 @@ const css$C = /* css */`@layer navi {
  * @param {"top"|"local"} [props.layer] - Forwarded as-is to whichever of
  *   `Dialog`/`Popover` renders — see either component's own doc.
  * @param {Element|{current: Element}} [props.anchor] - Forwarded as-is —
- *   positioning for `Popover`, and for `Dialog` sizing only, and only when
- *   `sizeFromAnchor` is also passed (see each component's own doc).
+ *   positioning for `Popover`; for `Dialog`, the box it sizes from under
+ *   `sizeFromAnchor` and lifts out of under `animation="lifting"`. In both,
+ *   intent on the anchor warms the content (see `mount`).
  * @param {"override"|"ignore"} [props.anchorCustomEventDetail] - Forwarded
  *   as-is to both — what it governs differs (positioning for `Popover`,
- *   `sizeFromAnchor` sizing for `Dialog`), but "ignore whatever anchor the
+ *   sizing and lifting for `Dialog`), but "ignore whatever anchor the
  *   triggering event carried" has to mean the same thing in either mode.
  * @param {string} [props.marginWithAnchor] - **Popover-only**, destructured
  *   out so it can't leak onto the real `<dialog>` element as a stray DOM
@@ -64518,8 +64554,9 @@ const css$C = /* css */`@layer navi {
  *   the screen-size check happens to pick, which defeats the point of
  *   having one shared API in the first place. Note this only says what a
  *   press outside *does*; whether it reaches the page at all is `backdrop`
- *   below, and `"ignore"`/`"capture"` describe a wall either way — the popup
- *   absorbs the press without closing, dimmed or not.
+ *   below. `"capture"` is a wall that absorbs the press without closing, in
+ *   either mode. `"ignore"` is not the same in both: a `Dialog` keeps its
+ *   wall, a `Popover` lays none and the press reaches the page.
  * @param {boolean} [props.backdrop] - Whether anything is laid between the
  *   popup and the page at all: `false` lets a press outside both dismiss the
  *   popup and reach whatever it landed on, in one gesture. Forwarded as-is and
@@ -64559,11 +64596,15 @@ const css$C = /* css */`@layer navi {
  *   `--x-popover-max-width`) instead of its content width — same meaning
  *   whichever mode the screen-size resolution picks.
  * @param {boolean} [props.expandY] - Same, vertically (`data-expand-y`).
- * @param {boolean} [props.scrollCapture] - Forwarded as-is.
+ * @param {boolean|"dialog"|"popover"} [props.scrollCapture] - Forwarded to
+ *   both; a mode name traps scroll only when that mode is the one rendered.
  * @param {boolean} [props.open] - Forwarded as-is (controlled).
- * @param {import("@preact/signals").Signal<boolean>} [props.signal] -
+ * @param {import("@preact/signals").Signal<any>} [props.signal] -
  *   Forwarded as-is: one binding to both drive the popup's open state and
  *   know where it is (see `Dialog`/`Popover`'s own `signal`).
+ * @param {any} [props.value] - Forwarded as-is: what `signal` holds while
+ *   THIS popup is open, for several sharing one signal (see
+ *   `Dialog`/`Popover`'s own `value`).
  * @param {boolean} [props.defaultOpen] - Forwarded as-is (uncontrolled,
  *   mount-only).
  * @param {(event: Event) => void} [props.onClose] - Forwarded as-is.
@@ -64578,6 +64619,8 @@ const css$C = /* css */`@layer navi {
  *   them afterwards. `"always"` builds them right away, for content something
  *   depends on while the popup is still closed: a value read off it, fields a
  *   surrounding form collects on submit, a size measured from outside.
+ *   `"idle"` builds them in a browser idle moment after load — `"always"`
+ *   minus the cost on the critical render.
  *   `"while-opened"` throws them away once the popup has finished closing, for
  *   content whose fresh state is its initial state: an uncontrolled field
  *   seeded from a `defaultValue` that changed while the popup was closed.
@@ -65163,7 +65206,7 @@ const PickerCustom = props => {
       // Not on pickerProps (the trigger): commands.js's own
       // resolveClosestExpandable() does `el.closest("[aria-expanded]")` to
       // find where to dispatch navi_request_open/navi_request_close — and
-      // the popup itself now carries its own aria-expanded (see
+      // the popup itself carries its own aria-expanded (see
       // popover.jsx/dialog.jsx), which is *closer* than the picker's own
       // aria-expanded for anything dispatched from inside the popup's own
       // content (e.g. a `command="--navi-close"` button rendered as
@@ -65442,12 +65485,8 @@ const PickerContentInsidePopup = props => {
     mode,
     pointerLock,
     scrollCapture,
-    // No default here (matches Popover's own default of inactive) — the
-    // old, differently-named `focusTrap = true` prop never actually reached
-    // Popover's real `focusCapture` prop (see this file's history), so
-    // focus-trapping has never really been active for popover-mode pickers;
-    // defaulting the now-correctly-named prop to `true` would be a real,
-    // unintended behavior change riding along with the rename.
+    // No default here: Popover's own `focusCapture` is inactive by default,
+    // and a popover-mode picker traps the focus only when asked to.
     focusCapture,
     // Popup documents its own `layer` as forwarded as-is to Dialog/Popover,
     // but popupProps is built explicitly here, so it only travels if named.
@@ -66084,6 +66123,8 @@ document.addEventListener(
   { capture: true, passive: true },
 );
 
+const FRAME_TIMEOUT_MS = 100;
+
 /**
  * Calls back once the browser has painted what is committed now.
  *
@@ -66095,10 +66136,9 @@ document.addEventListener(
  * has to survive. A frame not coming at all (a background tab) still answers,
  * late, through the timeout.
  *
+ * @param {() => void} callback
  * @returns {() => void} cancel
  */
-const FRAME_TIMEOUT_MS = 100;
-
 const afterPaint = (callback) => {
   let called = false;
   let timeoutId;
@@ -67645,7 +67685,7 @@ const SELECTABLE_INPUT_PSEUDO_CLASSES = [":hover", ":active", ":focus", ":focus-
 const SelectableInputProxy = props => {
   const selectableRealInputProps = useContext(SelectableRealInputContext);
   if (!selectableRealInputProps) {
-    throw new Error("Selectable.Input must be used within a Selectable component");
+    throw new Error("SelectableInput must be used within a row of a selectable List");
   }
 
   // Reset FieldToInterfaceContext to ensure we don't read id or report our
@@ -67683,7 +67723,7 @@ const SelectableInput = SelectableInputProxy;
  *     background-color: var(--search-match-background-color);
  *   }
  *
- * The `highlight` prop can be:
+ * The `highlight` argument of `useSearchHighlight` (a row's `matchInfo.matchRanges`) can be:
  *   - an array of [start, end] pairs — applied to all text nodes under the root element
  *   - an object { [domSelector]: [[start, end], …] } — applied to each sub-element
  *     matched by the selector (the format produced by createSearch)
@@ -71129,8 +71169,8 @@ const LIST_ITEM_STYLE_CSS_VARS = {
  *
  *   All three are about the row as a thing the LIST holds, never about the
  *   selection: a selectable row taken while its list sends says so on its own
- *   ("la sélection est en cours d'enregistrement"), and needs no `loading` for
- *   that.
+ *   ("le choix est en cours d'enregistrement", "la sélection…" in a `multiple`
+ *   list), and needs no `loading` for that.
  * @param {boolean} [props.readOnly]
  *   The row cannot be acted on: dimmed and click-through-proof, buttons inside
  *   it included.
@@ -72216,9 +72256,12 @@ const useItemStore = ({
  * (accessible via aria-labelledby) and a <ul role="group"> for the items.
  *
  * Props:
- *   label      — group label content
- *   labelProps — props forwarded to the label <span>
- *   ...rest    — forwarded to the outer <li role="presentation">
+ *   label            — group label content
+ *   labelProps       — props forwarded to the label <span>
+ *   hiddenWhileEmpty — the group leaves the flow (`display: none`) while it
+ *                      holds no real row — a search that emptied it, rows not
+ *                      arrived yet
+ *   ...rest          — forwarded to the outer <li role="presentation">
  */
 const ListItemGroup = ({
   label,
@@ -72330,7 +72373,7 @@ const ListResolved = /*#__PURE__*/createComponentResolver([ListFirstResolver, Li
  *   uiAction?: (value: any) => void,
  *   popover?: boolean,
  *   role?: string,
- *   renderBudget?: number | string,
+ *   renderBudget?: number | string | {initial?: number, after: number},
  *   renderBudgetSkipCheck?: boolean,
  *   virtualItemSize?: number,
  *   onListVisibleItemsChange?: (visibleItems: any[]) => void,
@@ -72359,6 +72402,7 @@ const ListResolved = /*#__PURE__*/createComponentResolver([ListFirstResolver, Li
  *   alignX?: string,
  *   alignY?: string,
  *   flexWrap?: boolean,
+ *   overflow?: string,
  *   expandX?: boolean,
  *   expandY?: boolean,
  *   expand?: boolean,
@@ -72545,10 +72589,10 @@ const ListResolved = /*#__PURE__*/createComponentResolver([ListFirstResolver, Li
  * @param {number} [props.parallelGuard=4]
  *   How many runs the rows may have in flight at once, for a list whose rows
  *   carry their own `action` (a button per row). While that many are out, every
- *   row that is not running goes read-only and says how many it is waiting on;
- *   the next press is possible again as soon as one comes back. `Infinity`
- *   lifts it. Counts runs, not values — `maxLengthGuard` above is the one that
- *   says how many things the selection may hold.
+ *   control that would start another run goes read-only and says how many it is
+ *   waiting on; the next press is possible again as soon as one comes back.
+ *   `Infinity` lifts it. Counts runs, not values — `maxLengthGuard` above is
+ *   the one that says how many things the selection may hold.
  * @param {boolean} [props.standalone]
  *   This list answers for itself: it does not register with the control group
  *   or picker around it, so its selection stays out of that value and nothing
@@ -75275,7 +75319,7 @@ const TRAVELS_NONE = [];
  *   fallbackValue?: any,
  *   valueAtStep: (value: any, count: number) => any,
  *   compareValues?: (a: any, b: any) => number,
- *   renderValue?: (value: any) => import("ignore:preact").ComponentChildren,
+ *   renderValue?: (value: any, context: { maxLines?: number }) => import("ignore:preact").ComponentChildren,
  *   controlProps?: object,
  *   duration?: number,
  *   vertical?: boolean,
@@ -76750,7 +76794,8 @@ const css$q = /* css */`.navi_input_duration {
  * @param {boolean} [props.required]
  * @param {boolean} [props.loading]
  * @param {Function} [props.uiAction] - Called on every change with the ISO 8601 value
- * @param {Function} [props.action] - Called on form submission
+ * @param {Function} [props.action] - Runs with the ISO 8601 value when it changes,
+ *   like any control's `action` (busy state, error callout)
  * @param {preact.ComponentChild} [props.unitHour] - Custom label for the hour sub-field
  * @param {"auto"|"left"|"center"|"right"} [props.textAlign="auto"] - Text alignment of sub-inputs.
  *   "auto" aligns each field toward its neighbouring separator (first→right, last→left, middle/solo→center).
@@ -77758,11 +77803,12 @@ const splitPopupProps = props => {
  *   multi-word, one word at start (all match)  0.75
  *   phrase / word at word boundary           0.625
  *   phrase / words mid-word                  0.5
+ *   acronym (2+ chars, each the first letter of a word, in order)  0.4, 0.45 at start
  *   + case-exact bonus                       +0.125
  *   multi-word partial: score × (matched/total)
  *
  * matchRanges: [start, end] pairs (exclusive end) for CSS Highlight API.
- * Intended to be passed to useSearch as the matchFn parameter.
+ * Intended to be passed to useSearchText as the matchFn parameter.
  */
 const applySearch = (searchText, value) => {
   if (!searchText) {
@@ -77972,7 +78018,7 @@ const mergeRanges = (ranges) => {
 };
 
 /**
- * createSearch — builds a matchFn compatible with useSearch that searches
+ * createSearch — builds a matchFn compatible with useSearchText that searches
  * across multiple named fields of an item, each with its own DOM selector
  * and optional priority weight.
  *
@@ -77990,7 +78036,7 @@ const mergeRanges = (ranges) => {
  *   },
  * });
  *
- * const [orderedItems, getItemMatchInfo] = useSearch(search, items, searchPerson);
+ * const [orderedItems, getItemMatchInfo] = useSearchText(search, items, searchPerson);
  * // getItemMatchInfo(item).matchRanges is { ".name": [[start,end],…], ".address": [[start,end],…] }
  * // Pass the whole thing: <ListItem matchInfo={getItemMatchInfo(item)} />
  * // — ListItem handles the per-selector object format for matchRanges.
@@ -78057,7 +78103,7 @@ const useSearchText = (searchText, items, matchFn = applySearch) => {
     );
   }
   if (items === undefined) {
-    throw new TypeError("useSearch: items is undefined");
+    throw new TypeError("useSearchText: items is undefined");
   }
   const { orderedItems, matchInfoMap } = useMemo(() => {
     const { scoreEntries, nonMatched, matchInfoMap } = buildMatchInfo(
@@ -78182,17 +78228,19 @@ const buildMatchInfo = (searchText, items, matchFn) => {
  *   - orderedKeys: number[] of visible item keys sorted by explicit order
  *   - keyToOrderedIndex: Map key → orderedKeys index, gives O(1) indexOf equivalent
  *   - keyToExplicitOrder: Map key → explicitly passed index, used to maintain sort order
- *   - allItemsSignal: signal(array), all items including hidden, ordered by explicit index
- *   - visibleItemsSignal: signal(array), non-hidden items only
+ *   - itemsSignal: signal(array), all items including hidden, ordered by explicit index
+ *   - visibleItemsSignal: signal(array), items neither hidden nor filtered
  *   - countSignal: signal(number), count of all items including hidden
  *   - visibleCountSignal: signal(number), updated in microtask batch, only when count changes
- *   - propSignals: Map propName → signal(array), updated in microtask batch with element equality
+ *   - noMatchCountSignal: signal(number), items registered with `match: false`
  *   - onChangeRef: holds the latest onChange callback, called once per microtask batch
  *
- *   useTrackItem(id, data, index): registers the item with an explicitly provided index
- *   that determines its position among siblings. The caller (e.g. items.map) knows the
- *   correct order and passes it directly — no render-sequence deduction needed.
- *   Returns the visible rank (position among non-hidden items), or -1 when hidden.
+ *   useTrackItem(data): registers the item under `data.id`, at the position
+ *   `data.index` gives it among its siblings. The caller (e.g. items.map) knows
+ *   the correct order and passes it directly — no render-sequence deduction
+ *   needed. `data.role === "presentation"` keeps it out entirely.
+ *   Returns the visible rank (position among visible items), or -1 when hidden
+ *   or filtered.
  *   Signals and onChange are deferred to a microtask so multiple items updating
  *   in one commit cause only one notification.
  *
@@ -78960,7 +79008,7 @@ const WheelGroupContext = createContext(null);
  *   [key: string]: any,
  * }>}
  * @param {number} [props.visibleCount=3] - Odd number of rows visible in the viewport (the center one is the selection).
- * @param {number|string} [props.itemHeight] - Main-axis size of a row when vertical (number = px). Defaults to the CSS var (2.4em).
+ * @param {number|string} [props.itemHeight] - Main-axis size of a row when vertical (number = px). Defaults to the CSS var (1.8em).
  * @param {number|string} [props.itemWidth] - Main-axis size of a cell when horizontal (number = px). Defaults to the CSS var (3.5ch).
  * @param {number|string} [props.size] - Font size of the wheel: a size token ("s", "m", "l", "xl", …), a number (px), or a CSS length. Scales the digits and, since the row size is em-based, the row height too — a simple way to make the whole wheel bigger. An explicit itemHeight/itemWidth still overrides the row size.
  * @param {boolean} [props.bounded] - Give the wheel fixed ends instead of wrapping: it stops at the first/last value. By default the wheel loops endlessly (past the last value the first reappears, and vice-versa).
@@ -80448,7 +80496,7 @@ Wheel.Item = WheelItem;
  * @param {boolean} [props.horizontal] - Stack the (horizontal) wheels vertically instead of in a row.
  * @param {boolean} [props.glass] - Frost every wheel's neighbouring rows (see Wheel's glass prop) with one prop for the whole group.
  * @param {boolean} [props.frameBorder] - Line every wheel's center-window edges with a faint frame (off by default; independent of glass).
- * @param {boolean} [props.zoom] - Enlarge the centered value of every wheel (see Wheel's zoom prop) with one prop for the whole group.
+ * @param {boolean|number} [props.zoom] - Enlarge the centered value of every wheel (see Wheel's zoom prop) with one prop for the whole group.
  */
 const WheelGroup = props => {
   import.meta.css = [css$m, "@jsenv/navi/src/control/wheel/wheel.jsx"];
@@ -81233,8 +81281,8 @@ const stringifyTableSelectionValue = (type, value) => {
 
 /**
  * Check if a specific cell is selected
- * @param {Array} selection - The selection set or array
- * @param {{rowIndex: number, columnIndex: number}} cellPosition - Cell coordinates
+ * @param {string[]} selection - The table's `selection` array
+ * @param {{columnId: string, rowId: string}} cell - The cell's column and row ids
  * @returns {boolean} True if the cell is selected
  */
 const isCellSelected = (selection, { columnId, rowId }) => {
@@ -81247,8 +81295,8 @@ const isCellSelected = (selection, { columnId, rowId }) => {
 
 /**
  * Check if a specific row is selected
- * @param {Array} selection - The selection set or array
- * @param {number} rowIndex - Row index
+ * @param {string[]} selection - The table's `selection` array
+ * @param {string} rowId - The row's id (the `id` of its `<Tr>`)
  * @returns {boolean} True if the row is selected
  */
 const isRowSelected = (selection, rowId) => {
@@ -81258,8 +81306,8 @@ const isRowSelected = (selection, rowId) => {
 
 /**
  * Check if a specific column is selected
- * @param {Array} selection - The selection set or array
- * @param {number} columnIndex - Column index
+ * @param {string[]} selection - The table's `selection` array
+ * @param {string} columnId - The column's id (the `id` of its `<Col>`)
  * @returns {boolean} True if the column is selected
  */
 const isColumnSelected = (selection, columnId) => {
@@ -81794,7 +81842,7 @@ const initDragTableColumnViaPointer = (pointerdownEvent, {
 /**
  * Creates a MutationObserver that syncs attribute changes from original table to clone
  * @param {HTMLElement} table - The original table element
- * @param {HTMLElement} cloneTable - The cloned table element
+ * @param {HTMLElement} tableClone - The cloned table element
  * @returns {MutationObserver} The observer instance with disconnect method
  */
 const createTableAttributeSync = (table, tableClone) => {
@@ -83759,9 +83807,10 @@ const TableUI = /*#__PURE__*/forwardRef((props, ref) => {
  * KEY PRINCIPLES:
  * - Use inset box-shadow to ensure borders appear above table cell backgrounds
  * - Use ::before pseudo-elements with position: absolute for flexible positioning
- * - Each cell draws its own borders independently (no border-collapse by default)
+ * - Each cell draws its own borders; `borderCollapse` (on by default) keeps only
+ *   the right and bottom ones, plus top on the first row and left on the first column
  * - Selection borders override table borders using higher CSS specificity
- * - Sticky borders use thicker box-shadows in accent color (yellow)
+ * - Sticky borders use thicker box-shadows in an accent color
  *
  * TECHNICAL IMPLEMENTATION:
  * - All borders use inset box-shadow with specific directional mapping:
@@ -83769,9 +83818,8 @@ const TableUI = /*#__PURE__*/forwardRef((props, ref) => {
  *   * Right: inset -1px 0 0 0
  *   * Bottom: inset 0 -1px 0 0
  *   * Left: inset 1px 0 0 0
- * - Selection borders (blue) override table borders (red) in same pseudo-element
+ * - Selection borders override table borders in the same pseudo-element
  * - Sticky borders replace regular borders with thicker colored variants
- * - Border-collapse mode available as optional feature for future use
  *
  * Note how border disappear for sticky elements when using border-collapse (https://bugzilla.mozilla.org/show_bug.cgi?id=1727594)
  *
@@ -84905,11 +84953,18 @@ const BadgeCountOverflow = () => jsx("span", {
 });
 const MAX_CHAR_AS_CIRCLE = 3;
 const MAX_FOR_CIRCLE = 99;
+
+/**
+ * @param {boolean} [circle] Drawn round rather than as a pill. A circle holds
+ *   three characters at most, so `max` defaults to 99 with it ("99+"); a `max`
+ *   above 99, or `"none"`, lets a bigger count turn the circle into a pill as
+ *   it grows.
+ * @param {number|"none"} [max] The count above which `max` and a "+" are
+ *   written in its place. 99 under `circle`, no cap otherwise.
+ */
 const BadgeCount = ({
   children,
   maxElement = jsx(BadgeCountOverflow, {}),
-  // When you use max="none" (or max > 99) it might be a good idea to force ellipse
-  // so that visually the interface do not suddently switch from circle to ellipse depending on the count
   circle,
   max = circle ? MAX_FOR_CIRCLE : Infinity,
   integer,
@@ -86092,12 +86147,13 @@ const css$7 = /* css */`.navi_text_box {
  * - Displays optional icon(s) before and/or after the text
  * - Shrinks its width to fit the longest rendered text line (no trailing blank space)
  * - Wraps long text by default (overflow-wrap: anywhere)
- * - Shows ellipsis for a single overflowing unwrappable line
+ * - Shows an ellipsis instead under `singleLine`
  *
  * Props:
  *   iconBefore — element shown to the left of the text
  *   iconAfter  — element shown to the right of the text (stays on the same line)
- *   maxHeight  — CSS max-height string; when set, content that cannot wrap gets ellipsis
+ *   singleLine — keeps the text on one line, cut with an ellipsis (no width shrinking)
+ *   maxHeight  — CSS max-height string; content past it is clipped
  *   children   — the text content
  */
 const TextBox = ({
@@ -86276,6 +86332,41 @@ const css$4 = /* css */`.svg_mask_content * {
   stroke-opacity: 1 !important;
 }
 `;
+
+/**
+ * SVGMaskOverlay
+ *
+ * Creates composite SVGs by combining independent SVG elements with masking.
+ *
+ * This component solves the challenge of combining independently created SVGs into
+ * a single visual composition. Each SVG can have its own coordinate system, viewBox,
+ * and styling, allowing for maximum reusability of individual icons or graphics.
+ *
+ * When overlaying SVGs, each subsequent overlay "cuts out" its portion from the base SVG,
+ * creating a seamless integration where SVGs appear to interact with each other visually.
+ *
+ * Key benefits:
+ * - Maintains each SVG's independence - use them individually elsewhere
+ * - Handles different viewBox dimensions automatically
+ * - Works with any SVG components regardless of internal implementation
+ * - Supports unlimited overlay elements
+ * - Creates proper masking between elements for visual integration
+ *
+ * Usage example combining two independent icon components:
+ * ```jsx
+ * <SVGMaskOverlay viewBox="0 0 24 24">
+ *   <DatabaseSvg />
+ *   <svg x="12" y="12" width="16" height="16" overflow="visible">
+ *     <PlusSvg />
+ *   </svg>
+ * </SVGMaskOverlay>
+ * ```
+ *
+ * @param {Object} props - Component properties
+ * @param {string} props.viewBox - The main viewBox for the composition (required as soon as there is an overlay)
+ * @param {import("ignore:preact").ComponentChildren} props.children - SVG elements (first is base, rest are overlays)
+ * @returns {import("ignore:preact").VNode} A composed SVG with all elements properly masked
+ */
 const SVGMaskOverlay = ({
   viewBox,
   children
@@ -86288,7 +86379,7 @@ const SVGMaskOverlay = ({
     return children[0];
   }
   if (!viewBox) {
-    console.error("SVGComposition requires an explicit viewBox");
+    console.error("SVGMaskOverlay requires an explicit viewBox");
     return null;
   }
 
@@ -87229,7 +87320,8 @@ const css = /* css */`.navi_side_panel {
  *   interaction only makes sense paired with not letting focus silently
  *   leave the panel first. A box of the page whose press must not close the
  *   panel (a card that fills it) names the panel:
- *   `data-navi-popup-inside={id}` — see docs/popup_backdrop.md.
+ *   `data-navi-popup-inside={id}`, read when the panel has no wall
+ *   (`backdrop={false}`) — see docs/popup_backdrop.md.
  * @param {boolean} [props.closeByDrag=true] - Pushing the panel back
  *   towards the edge it is docked to closes it: the panel follows the
  *   pointer and finishes leaving (or comes back to rest) when it is
@@ -87244,8 +87336,8 @@ const css = /* css */`.navi_side_panel {
  *   doc).
  * @param {import("ignore:preact").ComponentChildren} props.children - No built-in
  *   close button — add one wherever it makes sense for the layout (e.g. a
- *   plain `<Button command="--navi-close">`), use `SidePanel.Head`'s own
- *   `closeButton` prop, or rely on `closeByPressOutside`/Escape instead.
+ *   plain `<Button command="--navi-close">` in `SidePanel.Head`), or rely on
+ *   `closeByPressOutside`/Escape instead.
  *   A form sent inside the panel closes it, as in any popup: a panel one
  *   keeps editing in says `command="--navi-void"` on that form (see
  *   docs/form_changed.md).
@@ -87336,9 +87428,7 @@ const toCssLength = (value, propertyName) => value === undefined || value === nu
  * Stuck to the top of the panel's own scrollable area (`position: sticky`)
  * regardless of `side` — only the panel's content in between scrolls. No
  * built-in padding or close button — add a `<Button command="--navi-close">`
- * (optionally with the `"navi_side_panel_head_close_button"` className, a
- * float-right utility this file's own CSS still provides) wherever it makes
- * sense for the layout.
+ * wherever it makes sense for the layout.
  *
  * @param {object} props
  * @param {string} [props.className] - Merged with the shared

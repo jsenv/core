@@ -27,7 +27,7 @@ between related actions. Parent/child relations are first-class — `.one`,
 
 ## Layout & Typography
 
-**`Box`** is the main layout primitive. It wraps CSS Flexbox with a friendlier API: `flex` for horizontal layout, `flex="y"` for vertical (no more guessing what `flex-direction: column` does visually). Supports `grid`, `inline`, alignment via `alignX`/`alignY`, and spacing props.
+**`Box`** is the main layout primitive. It wraps CSS Flexbox with a friendlier API: `flex` for horizontal layout, `flex="y"` for vertical (the axis things line up on, rather than guessing what `flex-direction: column` does visually). Supports `grid`, `inline`, alignment via `alignX`/`alignY`, and spacing props.
 
 **`createSlot`** renders content declared in one place at another: a toolbar, a status, or one `SidePanel` for a whole board bound to the state that names what it shows (see [docs/popup_open.md](./docs/popup_open.md)).
 
@@ -43,15 +43,15 @@ Icons are a piece that is often missing or painful in web projects. The `Icon` c
 
 ## Fields & Forms
 
-UI field components (`Input`, `Select`, `Checkbox`, `Radio`, etc.) accept an `action` prop — the standard way to respond to user interaction. Composing fields into forms is natural, and form submission flows through the same action system.
+Field components (`Input` of every type, checkbox and radio included, `Select`, `Textarea`, `Picker`, …) hold their own value. Inside a `Form` they need nothing wired: the form reads them when it sends, through the same action system. When the app needs a value, a `signal` binds it both ways. An `action` runs what a change must cause when that can fail or take time; it is one option, not the way a field is wired. See [docs/control_value.md](./docs/control_value.md).
 
-Validation goes beyond native browser constraints: custom rules, better error positioning, real-time feedback, and a UX that doesn't punish users before they've finished typing.
+Validation goes beyond native browser constraints: custom rules, better error positioning, real-time feedback, and a UX that doesn't punish users before they've finished typing. See [docs/field_validation.md](./docs/field_validation.md).
 
 Some values are moved rather than typed: `Spin` puts the way back and the way on around a value one step at a time, and `SpinGroup` makes several of them read as one — `TimeSpin` ("07h30") and `TimeRangeSpin` ("de 7h à 21h", end after start) are built that way.
 
 ## Table
 
-A capable `Table` component that handles what you'd expect from a spreadsheet-like interface: column management, sorting, multi-selection with keyboard shortcuts, and more.
+A `Table` for spreadsheet-like screens: columns reordered by drag, columns and rows resized, sticky leading rows and columns, and cell, row and column selection with keyboard shortcuts.
 
 ## Other
 

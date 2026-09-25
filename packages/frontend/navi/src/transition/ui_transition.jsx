@@ -1,21 +1,16 @@
 /**
  * UITransition
  *
- * A Preact component that enables smooth animated transitions between its children when the content changes.
- * It observes content keys and phases to create different types of transitions.
+ * A Preact component that animates the change between its children: the
+ * outgoing content fades out while the incoming one fades in, and the box
+ * resizes from the one to the other (the mechanics are in ui_transition.js).
  *
- * Features:
- * - Content transitions: Between different content keys (e.g., user profiles, search results)
- * - Phase transitions: Between loading/content/error states for the same content key
- * - Automatic size animation to accommodate content changes
- * - Configurable transition types: "slide-left", "cross-fade"
- * - Independent duration control for content and phase transitions
- *
- * Usage:
- * - Wrap dynamic content in <UITransition> to animate between states
- * - Set a unique `data-content-id` on your rendered content to identify each content variant
- * - Use `data-content-phase` to mark loading/error states for phase transitions
- * - Configure transition types and durations for both content and phase changes
+ * Two kinds of change are told apart, from attributes on the rendered content:
+ * - a content transition, when the content key changes — `data-content-key` on
+ *   the rendered element (a user id, a search), or `useUITransitionContentId`
+ *   called from a component inside (what `<Route>` does with its url pattern);
+ * - a phase transition, when `data-content-phase` (a loading or error state)
+ *   changes for the same content key.
  *
  * Example:
  *
@@ -24,9 +19,6 @@
  *       ? <Spinner data-content-key={userId} data-content-phase />
  *       : <UserProfile user={user} data-content-key={userId} />}
  *   </UITransition>
- *
- * When `data-content-id` changes, UITransition animates content transitions.
- * When `data-content-phase` changes for the same key, it animates phase transitions.
  */
 
 import { createContext } from "preact";
@@ -157,16 +149,12 @@ export const UITransition = ({
 };
 
 /**
- * The goal of this hook is to allow a component to set a "content key"
- * Meaning all content within the component is identified by that key
+ * Names the content a component renders, for the <UITransition> around it:
+ * everything rendered inside is identified by that key, and the key changing
+ * is read as a content change even though the component is the same.
  *
- * When the key changes, UITransition will be able to detect that and consider the content
- * as changed even if the component is still the same
- *
- * This is used by <Route> to set the content key to the route path
- * When the route becomes inactive it will call useUITransitionContentId(undefined)
- * And if a sibling route becones active it will call useUITransitionContentId with its own path
- *
+ * <Route> calls it with the url pattern of the branch it renders; the branch
+ * unmounting removes its part, and a sibling branch mounting adds its own.
  */
 export const useUITransitionContentId = (value) => {
   const contentId = useContext(UITransitionContentIdContext);

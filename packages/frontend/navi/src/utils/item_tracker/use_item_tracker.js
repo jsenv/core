@@ -40,17 +40,19 @@ import { useLayoutEffect, useRef } from "preact/hooks";
  *   - orderedKeys: number[] of visible item keys sorted by explicit order
  *   - keyToOrderedIndex: Map key → orderedKeys index, gives O(1) indexOf equivalent
  *   - keyToExplicitOrder: Map key → explicitly passed index, used to maintain sort order
- *   - allItemsSignal: signal(array), all items including hidden, ordered by explicit index
- *   - visibleItemsSignal: signal(array), non-hidden items only
+ *   - itemsSignal: signal(array), all items including hidden, ordered by explicit index
+ *   - visibleItemsSignal: signal(array), items neither hidden nor filtered
  *   - countSignal: signal(number), count of all items including hidden
  *   - visibleCountSignal: signal(number), updated in microtask batch, only when count changes
- *   - propSignals: Map propName → signal(array), updated in microtask batch with element equality
+ *   - noMatchCountSignal: signal(number), items registered with `match: false`
  *   - onChangeRef: holds the latest onChange callback, called once per microtask batch
  *
- *   useTrackItem(id, data, index): registers the item with an explicitly provided index
- *   that determines its position among siblings. The caller (e.g. items.map) knows the
- *   correct order and passes it directly — no render-sequence deduction needed.
- *   Returns the visible rank (position among non-hidden items), or -1 when hidden.
+ *   useTrackItem(data): registers the item under `data.id`, at the position
+ *   `data.index` gives it among its siblings. The caller (e.g. items.map) knows
+ *   the correct order and passes it directly — no render-sequence deduction
+ *   needed. `data.role === "presentation"` keeps it out entirely.
+ *   Returns the visible rank (position among visible items), or -1 when hidden
+ *   or filtered.
  *   Signals and onChange are deferred to a microtask so multiple items updating
  *   in one commit cause only one notification.
  *

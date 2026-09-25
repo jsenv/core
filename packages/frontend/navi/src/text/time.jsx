@@ -38,14 +38,17 @@ import { Text } from "./text.jsx";
  *   - a Unix timestamp (number, in ms)
  *   - a date string `"YYYY-MM-DD"` or any string parseable by `Date`
  *   If the value cannot be parsed, it is rendered as-is.
- *   If undefined/null, renders `"–"`.
+ *   If undefined/null, renders a placeholder shaped like the type: `"–"` for
+ *   `"relative"`, `"--:--"` for `"time"`, `"--"` for the durations, the
+ *   locale's field pattern for `"date"`/`"month"`/`"week"`/`"datetime"`.
  *
- * @param {"date"|"month"|"datetime"|"time"|"hour"|"minute"|"second"|"duration"|"relative"} [type="relative"]
+ * @param {"date"|"month"|"week"|"datetime"|"time"|"hour"|"minute"|"second"|"duration"|"relative"} [type="relative"]
  *   Controls the display format:
  *   - `"date"`     → "lundi 11 mai" (long by default); `format="short"` → "lun. 11 mai"; `format="numeric"` → "11/05/2026";
  *                    `format={{ weekday: "long", month: "short" }}` spells the two apart → "mercredi 2 sept.";
  *                    a part set to `false` is dropped — `format={{ day: false, month: false }}` → "mercredi"
  *   - `"month"`    → "juin 2026"
+ *   - `"week"`     → the ISO week as given ("2026-W38"), in a `<time datetime>`
  *   - `"datetime"` → "lun. 11 mai, 14:30" (long); `format="short"` → "11 mai, 14:30"; `format="narrow"` → "11/05, 14:30"
  *   - `"time"`     → time-of-day as duration by default (e.g. "14:30" → "14 heures 30");
  *                    `format="timestring"` → clock "14 h 30". Midnight (00:xx) is
@@ -70,8 +73,9 @@ import { Text } from "./text.jsx";
  *                    → "+3 h"; `format="compact"` → "dans 1h30".
  *                    `eventDuration` defaults to 0 (instantaneous: no "En cours" window).
  *
- * @param {number} [eventDuration=0]
- *   Duration of the event in milliseconds. Only used with `type="relative"`.
+ * @param {number|string} [eventDuration=0]
+ *   Duration of the event in milliseconds, or a duration string (`"PT1H30M"`,
+ *   `"1hour30minute"`). Only used with `type="relative"`.
  *   When omitted, the event is instantaneous (point in time, no "En cours" window).
  * @param {boolean} [bare]
  *   When true, strips the past-tense literal ("il y a", "ago") and returns only integer + unit.
@@ -89,7 +93,7 @@ import { Text } from "./text.jsx";
  *                      digits, so `type="date"`/`"month"`/`"datetime"` write the
  *                      all-digit spelling ("17/09/2026", "17/09 14:30")
  *   - `"numeric"`    → numeric date, for `type="date"` and `type="month"` (e.g. "11/09/2026", "09/2026")
- *   - `"timestring"` → clock display for `type="time"`, `type="minute"`, `type="hour"`, and `type="second"` (e.g. "14:30", "01:30" for 90s)
+ *   - `"timestring"` → clock display for `type="time"`, `type="minute"`, `type="hour"`, and `type="second"` (e.g. "14:30"; `type="second"` always writes the hours, "00:01:30" for 90)
  *   - `"iso"`        → ISO 8601 string, only for `type="duration"` (e.g. "PT2H15M")
  *   - an object      → `type="date"` only, one verbosity per part
  *                      (`{ weekday: "long", month: "short" }`): a narrow card
@@ -127,7 +131,8 @@ import { Text } from "./text.jsx";
  *   ("hier", "aujourd'hui", "demain") when the date is yesterday, today, or tomorrow.
  * @param {string} [lang]
  *   BCP 47 locale tag (e.g. `"fr"`, `"en-US"`).
- *   Defaults to `languagesSignal.value` (the browser's current language).
+ *   Defaults to `languagesSignal.value`: the browser's languages, as
+ *   `setPreferredLanguage`/`setSupportedLanguages` narrow them.
  */
 export const Time = (props) => {
   const { type } = props;

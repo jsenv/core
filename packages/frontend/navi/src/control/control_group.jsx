@@ -34,7 +34,7 @@ import {
  *                by one `value`/`signal` like any other control. Same mechanism
  *                InputDuration uses for its own hour/minute/second fields (see
  *                input_duration.jsx). `name` is unaffected: it still says under
- *                which key the group's value — whatever shape it now has —
+ *                which key the group's value — whatever shape it takes —
  *                lands in the form around it.
  *
  *   distributeChildStates

@@ -1,3 +1,5 @@
+const FRAME_TIMEOUT_MS = 100;
+
 /**
  * Calls back once the browser has painted what is committed now.
  *
@@ -9,10 +11,9 @@
  * has to survive. A frame not coming at all (a background tab) still answers,
  * late, through the timeout.
  *
+ * @param {() => void} callback
  * @returns {() => void} cancel
  */
-const FRAME_TIMEOUT_MS = 100;
-
 export const afterPaint = (callback) => {
   let called = false;
   let timeoutId;

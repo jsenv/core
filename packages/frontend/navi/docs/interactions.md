@@ -104,20 +104,21 @@ which the carrying interactions answer with).
 Two holds on one press — a `longpress` declared on something inside an
 element that declares one too — are answered by the nearer one, the way a
 click is the innermost target's: the inner hold fires, the outer wait is given
-up. Delays being equal; an outer hold made shorter than the inner one fires
-first. A press that lands on something carried inside the element (`move`,
-`moving`, `reorder`…) is that thing's the same way: the outer hold does not
-wait on it, whether the source drags by holding or by distance — except a
-source that says `"refuse"` for this press, which carries nothing.
+up. That is with equal delays; an outer hold made shorter than the inner one
+fires first. navi says so in dev, once per element, the first time it happens:
+the outer hold is a declaration that can never fire, and a picker opened by
+`openOn="longpress"` around a card that already holds one is exactly where it
+happens. One hold has one meaning — two things on one card want two gestures
+(a hold and a click), not two holds. A press that lands on something carried
+inside the element (`move`, `moving`, `reorder`…) is that thing's the same
+way: the outer hold does not wait on it, whether the source drags by holding
+or by distance — except a source that says `"refuse"` for this press, which
+carries nothing.
 
 There is no `dblclick` in that table, on purpose: the browser fires it for a
 mouse and never for a finger, so an element declaring it would answer half the
 hands that reach it. `double_click` is the same gesture counted from the
-pointer — see [Twice, whichever hand it is](#twice-whichever-hand-it-is). navi says so in dev, once per element, the first time it happens: the
-outer hold is a declaration that can never fire, and a picker opened by
-`openOn="longpress"` around a card that already holds one is exactly where it
-happens. One hold has one meaning — two things on one card want two gestures
-(a hold and a click), not two holds.
+pointer — see [Twice, whichever hand it is](#twice-whichever-hand-it-is).
 
 A name nothing knows how to detect produces a dev warning naming the detectors
 that exist. The carrying family and the two surface streams each have a file of
@@ -148,8 +149,9 @@ ancestor can also listen for one, and `preventDefault()` on it means "not this
 time".
 
 The lower-level event the interaction was read from is reachable too:
-`interactionEvent.detail.event` is the `pointerdown` a swipe or a hold was made
-of — which is how a menu is opened at the point the press happened.
+`interactionEvent.detail.event` is the `pointerdown` a hold or a drag was made
+of (a drag's release included), and the `pointerup` that ended a swipe or a tap
+— which is how a menu is opened at the point the press happened.
 
 ## Reaching the control
 
@@ -157,8 +159,8 @@ Everything goes through the interaction gate of the **nearest control** — itse
 an ancestor, or the one control it wraps, in that order. So a disabled, read-only
 or busy control answers a swipe the way it answers a click: it says why, where the
 interaction happened, and nothing runs. A `Box` with no control anywhere near it
-still answers a callback; only `"request_action"` has nothing to ask, and says so
-in dev.
+still answers a callback; only the two requests (`"request_action"`,
+`"request_ui_action"`) have nothing to ask, and say so in dev.
 
 A `Box` that lays out **several** controls — a row of badges, a toolbar — belongs
 to none of them: its interactions are its own, answered with no gate, exactly as
@@ -544,10 +546,11 @@ returns how to undo whatever it did. Listeners, attributes, anything: it is a
 plain setup and teardown, so a detector counts what it needs in its own closure
 and nothing has to hold state on its behalf.
 
-`claims` takes a **set** of names rather than one, because interactions sharing an
-input have to be arbitrated together — a swipe, a hold and a click dispute the
-same press, and read apart they walk over each other. `types` (third argument) is
-which of them were actually declared here.
+`claims` is asked one name at a time, and a detector claims a **set** of them
+rather than one, because interactions sharing an input have to be arbitrated
+together — a swipe, a hold and a click dispute the same press, and read apart
+they walk over each other. `types` (third argument) is which of them were
+actually declared here.
 
 `trigger(type, originalEvent, detail)` says the interaction happened. Called with
 a single event — `trigger(event)` — the type is the detector's own, which only
@@ -577,17 +580,18 @@ container above it does not take the gesture:
   under the same finger reads it before answering: a list reordered vertically
   inside a row of slides swiped sideways leaves the sideways gesture alone, and a
   piece carried both ways inside a bottom sheet takes the press whole. Nothing to
-  wire — see `docs/drag_to_travel.md`. A `Dialog` docked to the bottom edge goes
+  wire — see `docs/drag_to_travel.md`. A `Dialog` docked to an edge goes
   further and reads the press only on its header (plus anything carrying
   `data-swipe-grip`), so its body is free whatever is in it.
 - **A hold does not take the context menu.** Declaring `longpress` says what a
   held finger does; a right click comes from the other button and keeps opening
   the browser's menu. Declare `contextmenu` beside it to make the right click do
   the same thing. (A held _finger_ is the system's own context-menu gesture, and
-  that one is refused while the wait runs.)
+  that one is refused for the length of the press, not just of the wait.)
 - **Where the press already means something, text is not selected.** An element
-  declaring `longpress` or a swipe, and a drag source standing in a
-  `data-drag-on-contact` place, keep their text unselectable: the browser answers
+  declaring `longpress`, a swipe or a counted tap (`double_click`,
+  `single_click`), and a drag source standing in a `data-drag-on-contact`
+  place, keep their text unselectable: the browser answers
   that same press with a selection of its own — the word under the thumb, blue,
   with handles — and nothing takes it back once the press is over. For every
   pointer, mouse included, which cannot finish a selection begun where the press
@@ -621,6 +625,7 @@ container above it does not take the gesture:
 - `src/control/interaction/interaction_press.js` — swipes, holds and the two
   taps, and what a swipe writes on the element.
 - `src/control/interaction/interaction_keyboard.js`,
-  `interaction_native.js` — the other two detectors.
+  `interaction_native.js` — shortcuts, and the browser's own events. The
+  carrying and surface detectors are referenced from their own docs.
 - `src/control/demos/38_interactions_demo.html` — every case above, plus a
   mailbox, a board, a surface, and a custom gesture registered from the page.

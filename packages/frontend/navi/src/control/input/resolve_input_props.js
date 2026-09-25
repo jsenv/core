@@ -122,11 +122,12 @@ export const isNumberInput = (type, naviInputType) => {
  */
 /**
  * A bound signal that carries a default of its own says the same thing on every
- * control: the control starts there and stays uncontrolled, which is what makes
- * a form read the value shown as a SUGGESTION rather than as something it
- * already holds. Uncontrolled here is about what the control HOLDS, not about
- * whether it follows the signal — the binding stays two-way either way (see
- * stateFromSignal in control_hooks.jsx). Written once and used by everything
+ * control: the control starts there, uncontrolled, and a reset goes back to it.
+ * Uncontrolled here is about where the control starts, not about whether it
+ * follows the signal — the binding stays two-way either way (see
+ * stateFromSignal in control_hooks.jsx) — nor about what a form counts as
+ * held: that is the signal's content (isUIStateHeld in held_ui_state.js), and a
+ * stateSignal holds its default. Written once and used by everything
  * that takes a `signal`, so one signal cannot mean two different things
  * depending on which control it was handed to.
  */
@@ -188,8 +189,7 @@ export const resolveInputProps = (props, { controlType = "input" } = {}) => {
         // If no explicit defaultChecked, derive it from the signal's default
         // value so that resetUIState restores to the original default.
         // Only a stateSignal carries a default of its own; a plain signal has
-        // no `options` at all, and asking it for one used to throw on mount —
-        // the same optional read every other branch here already does.
+        // no `options` at all, hence the optional read.
         const defaultVal = signalOptions?.getDefaultValue(false);
         if (defaultVal === undefined) {
           // no defaultChecked, and no default value from the signal: leave

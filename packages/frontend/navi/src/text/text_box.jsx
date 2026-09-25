@@ -29,12 +29,13 @@ const css = /* css */ `
  * - Displays optional icon(s) before and/or after the text
  * - Shrinks its width to fit the longest rendered text line (no trailing blank space)
  * - Wraps long text by default (overflow-wrap: anywhere)
- * - Shows ellipsis for a single overflowing unwrappable line
+ * - Shows an ellipsis instead under `singleLine`
  *
  * Props:
  *   iconBefore — element shown to the left of the text
  *   iconAfter  — element shown to the right of the text (stays on the same line)
- *   maxHeight  — CSS max-height string; when set, content that cannot wrap gets ellipsis
+ *   singleLine — keeps the text on one line, cut with an ellipsis (no width shrinking)
+ *   maxHeight  — CSS max-height string; content past it is clipped
  *   children   — the text content
  */
 export const TextBox = ({

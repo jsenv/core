@@ -8,9 +8,10 @@
  *    use `onInput` internally and route through `dispatchRequestAction` so the behavior
  *    is consistent regardless of input type.
  *
- * 2. Any field (text, checkbox, radio, picker…) can opt into debounce simply by passing
- *    a debounced action. The request-action event chain handles the timing centrally
- *    rather than each component having to manage its own debounce logic.
+ * 2. Any field (text, checkbox, radio, picker…) can opt into debounce with
+ *    `actionDebounce` (ms). The input effect every field installs (input_effect.js)
+ *    handles the timing centrally rather than each component having to manage its
+ *    own debounce logic.
  */
 import {
   findFocusDelegateTarget,
@@ -176,7 +177,7 @@ export const ControlgroupChildrenWrapper = ({
 );
 
 /**
- * Core hook for interactive field components (InputText, InputCheckbox, etc.).
+ * Core hook for interactive field components (InputTextual, InputCheckbox, etc.).
  *
  * Sets up the full field lifecycle:
  * - Creates a UI state controller that manages state divergence between props and user interactions
@@ -187,7 +188,7 @@ export const ControlgroupChildrenWrapper = ({
  * - Handles constraint validation and message props
  *
  * All state changes route through DOM events on the field element so that
- * external subscribers (e.g. useUIState, Selectable) receive every update.
+ * external subscribers (e.g. useControlUIState, Selectable) receive every update.
  *
  * @returns {[controlRootProps, controlHostProps, { uiStateController }]}
  */
@@ -1383,10 +1384,10 @@ const useReadOnlyUncontrolled = (props, controlInfo) => {
 };
 
 /**
- * Core hook for field group components (SelectableList, CheckboxList, etc.).
+ * Core hook for field group components (List selectable, CheckboxGroup, etc.).
  * - Creates a UI group state controller that aggregates child states into one group state
  * - Binds the group's action to the aggregated state signal
- * - Provides context to children: ParentUIStateController, FieldName, Disabled, ReadOnly,
+ * - Provides context to children: ParentUIStateController, ControlName, Disabled, ReadOnly,
  *   Required, Loading, Action, ActionRequester
  * - Overrides `onnavi_reset_ui_state` to cascade resets to all monitored children
  *   by dispatching `navi_reset_ui_state` DOM events on each child's DOM element

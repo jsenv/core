@@ -14,9 +14,9 @@ export const InputWithListResolver = (props) => {
 };
 
 /**
- * InputWithList — connects an input to a SelectableList via its id.
+ * InputWithList — connects an input to a selectable List via its id.
  *
- * Usage: <Input navi-list="my-list-id" /> next to <SelectableList id="my-list-id" />
+ * Usage: <Input navi-list="my-list-id" /> next to <List selectable id="my-list-id">
  *
  * Behavior:
  *   - ArrowDown / ArrowUp move the list's "current item" without moving focus

@@ -169,11 +169,17 @@ const BadgeCountOverflow = () => (
 const MAX_CHAR_AS_CIRCLE = 3;
 const MAX_FOR_CIRCLE = 99;
 
+/**
+ * @param {boolean} [circle] Drawn round rather than as a pill. A circle holds
+ *   three characters at most, so `max` defaults to 99 with it ("99+"); a `max`
+ *   above 99, or `"none"`, lets a bigger count turn the circle into a pill as
+ *   it grows.
+ * @param {number|"none"} [max] The count above which `max` and a "+" are
+ *   written in its place. 99 under `circle`, no cap otherwise.
+ */
 export const BadgeCount = ({
   children,
   maxElement = <BadgeCountOverflow />,
-  // When you use max="none" (or max > 99) it might be a good idea to force ellipse
-  // so that visually the interface do not suddently switch from circle to ellipse depending on the count
   circle,
   max = circle ? MAX_FOR_CIRCLE : Infinity,
   integer,

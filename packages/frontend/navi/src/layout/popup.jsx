@@ -16,9 +16,9 @@
  *
  * `layer` (shared by both — picks the top-layer vs. local-container rendering
  * strategy either way) and `anchorCustomEventDetail` (shared too: Popover
- * resolves an anchor to position against, Dialog only to size itself from,
- * and only under its own `sizeFromAnchor`) pass through untouched via
- * `...rest` to whichever of Popover/Dialog actually renders.
+ * resolves an anchor to position against, Dialog to size itself from under
+ * `sizeFromAnchor` and to lift out of under `animation="lifting"`) pass
+ * through untouched via `...rest` to whichever of Popover/Dialog renders.
  */
 
 import { withPropsClassName } from "../utils/with_props_class_name.js";
@@ -75,11 +75,12 @@ const css = /* css */ `
  * @param {"top"|"local"} [props.layer] - Forwarded as-is to whichever of
  *   `Dialog`/`Popover` renders — see either component's own doc.
  * @param {Element|{current: Element}} [props.anchor] - Forwarded as-is —
- *   positioning for `Popover`, and for `Dialog` sizing only, and only when
- *   `sizeFromAnchor` is also passed (see each component's own doc).
+ *   positioning for `Popover`; for `Dialog`, the box it sizes from under
+ *   `sizeFromAnchor` and lifts out of under `animation="lifting"`. In both,
+ *   intent on the anchor warms the content (see `mount`).
  * @param {"override"|"ignore"} [props.anchorCustomEventDetail] - Forwarded
  *   as-is to both — what it governs differs (positioning for `Popover`,
- *   `sizeFromAnchor` sizing for `Dialog`), but "ignore whatever anchor the
+ *   sizing and lifting for `Dialog`), but "ignore whatever anchor the
  *   triggering event carried" has to mean the same thing in either mode.
  * @param {string} [props.marginWithAnchor] - **Popover-only**, destructured
  *   out so it can't leak onto the real `<dialog>` element as a stray DOM
@@ -109,8 +110,9 @@ const css = /* css */ `
  *   the screen-size check happens to pick, which defeats the point of
  *   having one shared API in the first place. Note this only says what a
  *   press outside *does*; whether it reaches the page at all is `backdrop`
- *   below, and `"ignore"`/`"capture"` describe a wall either way — the popup
- *   absorbs the press without closing, dimmed or not.
+ *   below. `"capture"` is a wall that absorbs the press without closing, in
+ *   either mode. `"ignore"` is not the same in both: a `Dialog` keeps its
+ *   wall, a `Popover` lays none and the press reaches the page.
  * @param {boolean} [props.backdrop] - Whether anything is laid between the
  *   popup and the page at all: `false` lets a press outside both dismiss the
  *   popup and reach whatever it landed on, in one gesture. Forwarded as-is and
@@ -150,11 +152,15 @@ const css = /* css */ `
  *   `--x-popover-max-width`) instead of its content width — same meaning
  *   whichever mode the screen-size resolution picks.
  * @param {boolean} [props.expandY] - Same, vertically (`data-expand-y`).
- * @param {boolean} [props.scrollCapture] - Forwarded as-is.
+ * @param {boolean|"dialog"|"popover"} [props.scrollCapture] - Forwarded to
+ *   both; a mode name traps scroll only when that mode is the one rendered.
  * @param {boolean} [props.open] - Forwarded as-is (controlled).
- * @param {import("@preact/signals").Signal<boolean>} [props.signal] -
+ * @param {import("@preact/signals").Signal<any>} [props.signal] -
  *   Forwarded as-is: one binding to both drive the popup's open state and
  *   know where it is (see `Dialog`/`Popover`'s own `signal`).
+ * @param {any} [props.value] - Forwarded as-is: what `signal` holds while
+ *   THIS popup is open, for several sharing one signal (see
+ *   `Dialog`/`Popover`'s own `value`).
  * @param {boolean} [props.defaultOpen] - Forwarded as-is (uncontrolled,
  *   mount-only).
  * @param {(event: Event) => void} [props.onClose] - Forwarded as-is.
@@ -169,6 +175,8 @@ const css = /* css */ `
  *   them afterwards. `"always"` builds them right away, for content something
  *   depends on while the popup is still closed: a value read off it, fields a
  *   surrounding form collects on submit, a size measured from outside.
+ *   `"idle"` builds them in a browser idle moment after load — `"always"`
+ *   minus the cost on the critical render.
  *   `"while-opened"` throws them away once the popup has finished closing, for
  *   content whose fresh state is its initial state: an uncontrolled field
  *   seeded from a `defaultValue` that changed while the popup was closed.

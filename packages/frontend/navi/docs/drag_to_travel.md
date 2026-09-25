@@ -192,12 +192,13 @@ laptop a horizontal two-finger swipe IS the back-navigation gesture, and a
 region that neither takes it nor lets it go is the worst of the three — the page
 rocks and nothing happens.
 
-Not the same thing as the drag gesture it sits beside
-([drag_gesture.js](../../dom/src/interaction/drag/drag_gesture.js)): that one is
-for **carrying an object** across the page — it lays a backdrop over the
-document, makes everything else `inert`, takes the focus and blocks the scroll
-keys. Here nothing is picked up and the page must keep its focus and its
-scrolling while a screen slides. Same word, other gesture.
+Not the same thing as **carrying an object** across the page, although both read
+the pointer through the same loop
+([drag_gesture.js](../../dom/src/interaction/drag/drag_gesture.js)): a carry has
+it lay a backdrop over the document, make everything else `inert`, take the
+focus and block the scroll keys. Here nothing is picked up and the page must keep
+its focus and its scrolling while a screen slides, so the travel asks it for none
+of that (`documentInteractions: "manual"`). Same loop, other gesture.
 
 ## Who owns a gesture
 
@@ -333,8 +334,9 @@ the browser for what those two properties do not cover.
 
 ### What is contained, and what still leaks
 
-Containing is only ever read on a **scroll container** — an element that clips,
-in the browser's sense, whether or not it has anything to scroll. Three places
+Containing is only ever read on a **scroll container** — an element whose
+`overflow` is `hidden`, `auto` or `scroll`, whether or not it has anything to
+scroll (`clip` cuts without making one). Three places
 could carry it: the travelling box, everything inside it, or the scrollers
 themselves. Which of the three works is an engine question, and the answer
 splits in two:
@@ -365,12 +367,14 @@ them is that an empty `textarea` is contained too — a browser cannot be asked
 "only if it scrolls" — so on Blink a wheel over one moves nothing rather than
 the list around it.
 
-On Blink this leaves the boxes that **do not clip**, since those are never
-asked. Of navi's own: `SlideContainer` clips (`overflow: hidden`) and a
-`SidePanel` is a `Dialog`, which scrolls (`overflow: auto`) — both are asked. A
-`RouteTravel` box does not clip and must not be made to: a scroll container
-there would become the nearest one for every `position: sticky` inside the pages
-it holds. A row marked swipeable by `interactions` does not clip either.
+On Blink this leaves the boxes that are **not scroll containers**, since those
+are never asked. Of navi's own: a `SidePanel` is a `Dialog`, which scrolls
+(`overflow: auto`), and is asked. A `SlideContainer` cuts with `overflow: clip`,
+which is not a scroll container (`hidden` would be one, and would let the slides
+off stage be scrolled to), so it is not asked. A `RouteTravel` box does not clip
+at all and must not be made a scroll container: one there would become the
+nearest one for every `position: sticky` inside the pages it holds. A row marked
+swipeable by `interactions` is not one either.
 
 Which is why navi contains what it KNOWS scrolls, in `box.jsx`:
 
@@ -386,7 +390,8 @@ does, and it puts the containment exactly where every engine reads it. A list, a
 dialog body, a scrolling panel inside a travelling page are covered on Blink
 again.
 
-What still leaks, and only on Blink, and only under a box that does not clip: a
+What still leaks, and only on Blink, and only under a box that is not a scroll
+container: a
 scroller **nobody declared and no tag names** — a bare
 `<div style="overflow: auto">`, a widget from elsewhere. Its leftovers reach the
 page, which is the old symptom in a much smaller corner. Two ways out, per case:
@@ -447,10 +452,10 @@ The two ends cost differently, and it is worth knowing which one is being felt:
   and there is no gap at all.
 
 What the browser will not turn around with it is everything ELSE the
-transition carries — see "One gesture that bar cannot follow" at the end of
-this file.
+transition carries — see [One gesture that bar cannot
+follow](#one-gesture-that-bar-cannot-follow).
 
-Two things a travel in hand must never lose:
+What a travel in hand must never lose:
 
 - **a travel being undone is not up for grabs.** Its end is already decided;
   held again mid-revert, its animations never finish, the wait for them never
@@ -546,13 +551,13 @@ travel had started finishes without anyone. It is invisible with a mouse, which
 is why it survives a whole session of desktop testing.
 
 So a travel that has become ours refuses the `touchmove` (`preventDefault`), and
-only then — a finger that means to scroll must still scroll. Two details make it
-hold:
+only then — a finger that means to scroll must still scroll. Three details make
+it hold:
 
-- the listener sits on the element the touch LANDED on as well as on the box: a
+- the listener sits on the element the touch LANDED on as well as on the window: a
   touch keeps being dispatched at the node it started on, and a travel may
   replace the DOM under the finger (a page that travels navigates), after which
-  that node no longer passes through the box on its way up;
+  that node no longer passes through the window on its way anywhere;
 - the pointer is captured on the BOX rather than on what the finger landed on,
   for the same reason: what the caller does may take that target away, and a
   capture whose element leaves the document is a capture the browser drops;
@@ -659,7 +664,8 @@ aimed decides what that costs:
     at half of its time a travel has covered ~80% of its distance, and rewound
     at `-1` the visible way home collapses into the steep end of the curve — a
     snap, not a return. The pictures walk home over how far they visibly are
-    from home, at the travel's own pace (`revertWalkTime`);
+    from home, at the travel's own pace (`walkPicturesHome` in
+    `src/transition/view_transition_revert.js`);
   - both of the above run straight into the compositor traps: the distance is
     computed from the clock through the easing curve (the pseudo-elements'
     animated position cannot be read), and the rate is handed over with

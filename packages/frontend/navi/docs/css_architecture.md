@@ -22,7 +22,7 @@
 Navi components are styled through a combination of CSS custom properties (variables) and scoped CSS rules. The architecture is designed so that:
 
 1. **Navi wins by default** — the rules that paint and lay a component out are not placed inside `@layer`, so they beat any layered global style. The exception is deliberate and always says so in a comment: a rule navi is happy to hand back sits in `@layer navi` next to the defaults — see [The exception](#the-exception-a-rule-navi-offers-back).
-2. **Defaults are easy to override** — default values for CSS variables are declared inside `@layer navi`, which has the lowest possible specificity, making them trivially overridable from outside.
+2. **Defaults are easy to override** — default values for CSS variables are declared inside `@layer navi`, which any unlayered rule on the same element beats whatever its specificity, making them trivially overridable from outside.
 3. **The preferred override surface is component props** — props translate to inline styles or data attributes, not class names.
 
 ---
@@ -131,13 +131,15 @@ element.setAttribute(SWIPE_AXES_ATTRIBUTE, "x");
 
 ### Beware when moving a shared sheet out
 
-Splitting a chunk out of a template changes **cascade order**: the extracted
-sheet is adopted by the install call, which runs before the component's own
-assignment, so it now comes _before_ that sheet instead of after it. That matters only when the two carry
+Splitting a chunk out of a template changes **cascade order**: in the template
+it sits where it was written, while an extracted sheet is adopted by the install
+call, which runs before the component's own assignment — so its rules come
+_before_ the component's sheet. That matters only when the two carry
 the same selector at the same specificity and in the same layer — check for that
 before splitting. In navi, `popup_css.js` and `surface_text_css.js` overlap
 `.navi_dialog` and `.navi_popover` with dialog's and popover's own css, which is
-why they are still concatenated.
+why dialog.jsx and popover.jsx interpolate them, and mark those two templates
+`jsenv-css-opaque`.
 
 ### A sheet on the far side of a split
 
@@ -182,15 +184,15 @@ lower it. That is the strongest reason not to write one.
 @layer navi {
   /* CSS variable defaults — and, when navi says so, a rule it offers back */
   .navi_button {
-    --button-height: 32px;
-    --button-padding-x: 12px;
+    --button-font-size: var(--navi-control-font-size);
+    --button-border-radius: var(--navi-control-border-radius);
   }
 }
 
 /* The rules that paint and lay out — outside any layer */
 .navi_button {
-  height: var(--button-height);
-  padding-inline: var(--button-padding-x);
+  font-size: var(--button-font-size);
+  border-radius: var(--button-border-radius);
 }
 ```
 
@@ -203,7 +205,7 @@ This means an app can override a Navi default from its own unlayered CSS, withou
 ```css
 /* App CSS — no layer needed, automatically wins over @layer navi */
 .navi_button {
-  --button-height: 40px;
+  --button-font-size: 16px;
 }
 ```
 
@@ -257,10 +259,10 @@ Props are the primary way to customize appearance. They translate to inline `sty
 
 ```jsx
 // Size and color via props
-<Button size="l" primary />
+<Button size="l" color="secondary" />
 
 // Custom CSS variable via style prop
-<Button style={{ "--button-height": "48px" }} />
+<Button style={{ "--button-font-size": "18px" }} />
 ```
 
 #### Variants set defaults, never resolved values
@@ -470,8 +472,8 @@ and a paper could no longer say anything.
 A dialog lives in the browser's top layer and is calibrated on the viewport, so
 an app that is a column in a wide window states its own screen once, on `:root`,
 with `--navi-app-max-width` — and never caps popups through
-`--dialog-max-width`, a `--component-*` token the pickers already write
-themselves. The whole of it, placement included, is in
+`--dialog-max-width`, a `--component-*` token every dialog resets on itself and
+a `maxWidth` prop writes inline. The whole of it, placement included, is in
 [safe_area.md](./safe_area.md#an-app-that-is-narrower-than-the-window).
 
 ### 3. Direct rule override (avoid unless necessary)
