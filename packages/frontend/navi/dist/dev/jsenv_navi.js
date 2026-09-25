@@ -50338,10 +50338,10 @@ const css$R = /* css */`.navi_expandable {
   }
 
   & > .navi_expandable_content_container {
-    clip-path: inset(-9999px -9999px 0);
     grid-template-rows: 0fr;
     display: grid;
     position: relative;
+    overflow-y: clip;
 
     & > .navi_expandable_content_sizer {
       min-height: 0;
@@ -50354,7 +50354,6 @@ const css$R = /* css */`.navi_expandable {
   }
 
   &[data-open-direction="up"] > .navi_expandable_content_container {
-    clip-path: inset(0 -9999px -9999px);
     align-content: end;
 
     & > .navi_expandable_content_sizer {
@@ -50376,9 +50375,9 @@ const css$R = /* css */`.navi_expandable {
     }
 
     & > .navi_expandable_content_container {
-      clip-path: inset(-9999px 0 0 -9999px);
       grid-template-rows: 0fr;
       grid-template-columns: 0fr;
+      overflow: clip;
 
       & > .navi_expandable_content_sizer {
         min-width: 0;
@@ -50396,7 +50395,6 @@ const css$R = /* css */`.navi_expandable {
     }
 
     &[data-open-direction="left"] > .navi_expandable_content_container {
-      clip-path: inset(-9999px -9999px 0 0);
       justify-content: end;
 
       & > .navi_expandable_content_sizer {
@@ -50418,11 +50416,10 @@ const css$R = /* css */`.navi_expandable {
   }
 
   &[aria-expanded="true"][data-settled] > .navi_expandable_content_container {
-    clip-path: none;
+    overflow: visible;
   }
 
   &:not([aria-expanded="true"])[data-settled] > .navi_expandable_content_container {
-    clip-path: none;
     overflow: clip;
   }
 
@@ -50519,11 +50516,12 @@ const useExpandableContext = partName => {
  *   that can scroll so the content revealed past its edge is on screen: an
  *   expandable opening at the bottom of a list otherwise grows below the
  *   fold, and the user sees the row grow but not what it grew with. Measured
- *   on the open layout and done once per opening, alongside the reveal
- *   (smoothly when `animation` plays, at once otherwise). An expandable
- *   taller than the scroller keeps its UI part on screen and the content
- *   follows as far as it fits. Only the nearest scroller moves — a popup or
- *   a page around it stays where it is.
+ *   on the open layout, once per opening; when `animation` plays the
+ *   scroller rides along with the reveal, at the track's own progress, and
+ *   otherwise it goes there at once. A `scroll-margin` on the expandable is
+ *   honored. An expandable taller than the scroller keeps its UI part on
+ *   screen and the content follows as far as it fits. Only the nearest
+ *   scroller moves — a popup or a page around it stays where it is.
  * @param maxContentHeight - Caps the content height; taller content scrolls
  *   inside the expandable instead of growing it.
  * @param mount - When the content is built and thrown away, a popup's own
@@ -50646,15 +50644,27 @@ const Expandable = props => {
     cancelSettleWatchRef.current?.();
     cancelSettleWatchRef.current = null;
   };
-  const watchSettle = () => {
+  // `stopRide`, when the scroller rides along with the reveal (keepInView):
+  // the ride is part of the movement, so it ends with it — settled or
+  // cancelled — and never on its own clock.
+  const watchSettle = stopRide => {
     const contentContainer = contentContainerRef.current;
     const contentElement = contentContainer.firstElementChild.firstElementChild;
-    cancelSettleWatchRef.current = whenTransitionSettles(contentContainer, () => {
+    const cancelWatch = whenTransitionSettles(contentContainer, () => {
       cancelSettleWatchRef.current = null;
+      if (stopRide) {
+        stopRide();
+      }
       contentElement.style.width = "";
       contentElement.style.height = "";
       setSettled(true);
     });
+    cancelSettleWatchRef.current = () => {
+      if (stopRide) {
+        stopRide();
+      }
+      cancelWatch();
+    };
   };
 
   // The reveal needs the content at its final size before the track starts
@@ -50673,17 +50683,22 @@ const Expandable = props => {
     } else {
       contentElement.style.height = `${finalRect.height}px`;
     }
+    let stopRide = null;
     if (keepInView) {
-      // Here and not once the reveal settles: the layout is the open one at
-      // this point, so where the content ends is known before the movement
-      // starts, and the scroll can travel along with it. The frozen content
-      // overflowing the collapsed track is still scrollable overflow (the
-      // one-sided clip-path, see the CSS), so the scroller can reach that
-      // position from the first frame.
-      scrollExpandableIntoView(rootRef.current, {
-        revealDirection,
-        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth"
-      });
+      // Measured here and not once the reveal settles: the layout is the open
+      // one at this point, so where the content ends is known before the
+      // movement starts. The scroll then rides the movement rather than
+      // running ahead of it (see rideScrollerAlongReveal).
+      const revealScroll = measureRevealScroll(rootRef.current, revealDirection);
+      if (revealScroll) {
+        const finalContainerRect = contentContainer.getBoundingClientRect();
+        stopRide = rideScrollerAlongReveal(revealScroll, {
+          contentContainer,
+          axis: isColumn ? "x" : "y",
+          startSize: isColumn ? startRect.width : startRect.height,
+          finalSize: isColumn ? finalContainerRect.width : finalContainerRect.height
+        });
+      }
     }
     // Put the tracks back where the last paint left them and let the
     // transition play from there. In fr — px does not interpolate with fr.
@@ -50706,6 +50721,7 @@ const Expandable = props => {
     contentContainer.style.transitionProperty = "";
     contentContainer.style.gridTemplateColumns = "";
     contentContainer.style.gridTemplateRows = "";
+    return stopRide;
   };
 
   // What opening LOOKS like here, and how to undo it — the one thing an
@@ -50737,12 +50753,17 @@ const Expandable = props => {
     // transfer there is nothing to restore on close either.
     const restoreFocus = autoFocus && !silent && contentContainer ? openController.transferFocusOnOpen(contentContainer) : null;
     if (revealing) {
-      armReveal(startRect);
-      watchSettle();
+      const stopRide = armReveal(startRect);
+      watchSettle(stopRide);
     } else if (keepInView && !silent && contentContainer) {
-      scrollExpandableIntoView(rootRef.current, {
-        revealDirection
-      });
+      const revealScroll = measureRevealScroll(rootRef.current, revealDirection);
+      if (revealScroll) {
+        // No behavior: the scroller's own scroll-behavior decides.
+        revealScroll.scrollerEl.scrollTo({
+          left: revealScroll.left,
+          top: revealScroll.top
+        });
+      }
     }
     if (!silent) {
       rootRef.current.dispatchEvent(createToggleEvent(true));
@@ -50784,7 +50805,7 @@ const Expandable = props => {
         }
       }
       if (collapsing) {
-        watchSettle();
+        watchSettle(null);
       }
       rootRef.current.dispatchEvent(createToggleEvent(false));
     };
@@ -51124,16 +51145,14 @@ Expandable.Content = ExpandableContent;
 // the one exception, excluded at the call site.
 const UI_INTERACTIVE_SELECTOR = ["a[href]", "button", "input", "select", "textarea", "label", "[role='button']", "[contenteditable='']", "[contenteditable='true']", "audio[controls]", "video[controls]"].join(", ");
 
-// Scrolls the nearest scroller that can scroll so the whole expandable — UI
-// part and revealed content — is in view. Measured on the layout as it stands,
-// so the caller calls it while the open layout is the one laid out (see
-// openEffect). A root taller than the view is aligned on its UI side instead:
-// what the user pressed stays on screen, and the content follows as far as it
-// fits. One scroller only — a popup or a page around it is left where it is.
-const scrollExpandableIntoView = (rootEl, {
-  revealDirection,
-  behavior
-}) => {
+// Where the nearest scroller that can scroll would have to be for the whole
+// expandable — UI part and revealed content — to be in view. Measured on the
+// layout as it stands, so the caller measures while the open layout is the
+// one laid out (see openEffect). A root taller than the view is aligned on
+// its UI side instead: what the user pressed stays on screen, and the content
+// follows as far as it fits. One scroller only — a popup or a page around it
+// is left where it is. Null when there is no scroller, or nothing to scroll.
+const measureRevealScroll = (rootEl, revealDirection) => {
   let scrollerEl = null;
   for (const scrollContainer of getScrollContainerSet(rootEl)) {
     if (isScrollable(scrollContainer)) {
@@ -51142,7 +51161,7 @@ const scrollExpandableIntoView = (rootEl, {
     }
   }
   if (!scrollerEl) {
-    return;
+    return null;
   }
   const rootRect = rootEl.getBoundingClientRect();
   let block = "nearest";
@@ -51154,12 +51173,74 @@ const scrollExpandableIntoView = (rootEl, {
   } else if (rootRect.width > scrollerEl.clientWidth) {
     inline = revealDirection === "right" ? "start" : "end";
   }
-  scrollIntoViewScoped(rootEl, {
+  const {
+    left,
+    top
+  } = getScrollIntoViewScopedOffsets(rootEl, {
     container: scrollerEl,
     block,
-    inline,
-    behavior
+    inline
   });
+  if (left === scrollerEl.scrollLeft && top === scrollerEl.scrollTop) {
+    return null;
+  }
+  return {
+    scrollerEl,
+    left,
+    top
+  };
+};
+
+// Moves the scroller toward where the reveal ends at the pace of the reveal
+// itself: every frame the track's progress is read from the container's size
+// and the scroll stands the same fraction of its own way. The scroll cannot
+// run ahead of the track: only the box's own growth extends the scroller's
+// range, and what the target adds around the box (a parent's padding, a
+// scroll-margin) becomes reachable as the track grows — a scroll started at
+// once would be clamped short of it. One clock, the transition's, so the
+// content never waits below the fold either. Returns what stops the ride.
+const rideScrollerAlongReveal = ({
+  scrollerEl,
+  left,
+  top
+}, {
+  contentContainer,
+  axis,
+  startSize,
+  finalSize
+}) => {
+  const startLeft = scrollerEl.scrollLeft;
+  const startTop = scrollerEl.scrollTop;
+  const leftDelta = left - startLeft;
+  const topDelta = top - startTop;
+  let frameId;
+  const tick = () => {
+    const rect = contentContainer.getBoundingClientRect();
+    const size = axis === "x" ? rect.width : rect.height;
+    let progress = 1;
+    if (finalSize !== startSize) {
+      progress = (size - startSize) / (finalSize - startSize);
+      if (progress < 0) {
+        progress = 0;
+      } else if (progress > 1) {
+        progress = 1;
+      }
+    }
+    scrollerEl.scrollTo({
+      left: startLeft + leftDelta * progress,
+      top: startTop + topDelta * progress,
+      // Driven frame by frame: a smooth scroll-behavior on the scroller is
+      // for a scroll that lands, not for one that is held.
+      behavior: "instant"
+    });
+    if (progress < 1) {
+      frameId = requestAnimationFrame(tick);
+    }
+  };
+  frameId = requestAnimationFrame(tick);
+  return () => {
+    cancelAnimationFrame(frameId);
+  };
 };
 const createToggleEvent = open => {
   const newState = open ? "open" : "closed";
