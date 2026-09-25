@@ -8891,6 +8891,7 @@ const captureHolderByPointerId = new Map();
  * `[data-droppable]` places) goes inert, a backdrop unifies the cursor and takes
  * the pointer events, the focus moves to what is held and comes back at the
  * release, and the selection is refused for the length of the gesture.
+ * `documentInteractions` and `selection` each hand their part back to the caller.
  *
  * Whether the element may be grabbed AT ALL is decided before the finger lands
  * and elsewhere: see `markDragSource` in drag_after_intent.js for the
@@ -8914,6 +8915,13 @@ const captureHolderByPointerId = new Map();
  * @param {"auto"|"manual"} [options.documentInteractions="auto"]
  *   `"manual"` leaves the document alone — no inertness, no backdrop, no focus taken. For a
  *   gesture that only measures and hands over (see `dragAfterIntent`).
+ * @param {"auto"|"manual"} [options.selection="auto"]
+ *   `"auto"` refuses the selection from the grab to the release, a press that may
+ *   become a drag not being a press that starts a selection. `"manual"` leaves it
+ *   alone — nothing refused, nothing collapsed, double and triple clicks the
+ *   browser's — for a gesture where a press on text is still a selection until it
+ *   has become something else, and says so itself once it has (a travel, see
+ *   drag_to_travel.js).
  * @param {boolean} [options.backdrop=true]
  * @param {number} [options.backdropZIndex=999999]
  * @returns {{grab: function, grabViaPointer: function}}
@@ -8937,6 +8945,7 @@ const createDragGestureController = (options = {}) => {
     threshold = 5,
     direction: defaultDirection = { x: true, y: true },
     documentInteractions = "auto",
+    selection = "auto",
     backdrop = true,
     backdropZIndex = 999999,
   } = options;
@@ -9459,96 +9468,101 @@ const createDragGestureController = (options = {}) => {
     };
     dragGesture.dragViaPointer = dragViaPointer;
     dragGesture.releaseViaPointer = releaseViaPointer;
-    /*
-     * A press that starts a drag is not a press that starts a selection: the
-     * browser sees a pointer going down on text and moving, and that is its
-     * own gesture — the words under the finger turn blue while the element
-     * travels, and the selection outlives the release.
-     *
-     * Refused from the grab, before any threshold: whether the press becomes a
-     * drag is decided a few pixels later, but the selection is decided at the
-     * FIRST move, and by then it is too late to say no.
-     *
-     * `user-select: none` would say it in CSS, but it would say it to
-     * everybody: the element would stop being selectable even when nobody is
-     * dragging it. Here it is refused for the length of one gesture.
-     */
-    const preventSelectStart = (selectStartEvent) => {
-      selectStartEvent.preventDefault();
-    };
-    document.addEventListener("selectstart", preventSelectStart);
-    // A press also puts an end to the selection the page was already holding,
-    // the way the browser's own press does: refusing selectstart keeps a new
-    // selection from being made, it says nothing about the one painted before
-    // — which would otherwise sit there through a gesture that has nothing to
-    // do with it.
-    collapseSelection();
-    dragGesture.addReleaseCallback(() => {
-      document.removeEventListener("selectstart", preventSelectStart);
-    });
-    /*
-     * Refusing every selection also refuses the ones a press is entitled to
-     * make: a double click selects the word under it, a triple click the
-     * paragraph around it, and both are over before the pointer has gone
-     * anywhere. They are made here instead, spelled out (see
-     * selectWordAtPoint, selectParagraphAtPoint) rather than left to a browser
-     * heuristic that cannot tell a drag from a click.
-     *
-     * Read from `click` rather than `dblclick`, because a triple click has no
-     * event of its own: what tells the clicks apart is `detail`, the count the
-     * browser keeps of how many presses landed in the same place in a row — 2
-     * for a word, 3 and beyond for a paragraph (a fourth click keeps the
-     * paragraph, the way the browser does).
-     *
-     * On the document and outliving the gesture, because the gesture is
-     * already over when the second click completes: click comes after mouseup,
-     * the gesture ends at pointerup. Kept installed after it fires, since the
-     * click that selects a word is also the one the next click turns into a
-     * paragraph; it goes when the next press installs its own — a listener
-     * waiting for a click that never comes costs nothing until then.
-     */
-    removePendingMultiClickListener();
-    const onClick = (clickEvent) => {
-      const clickCount = clickEvent.detail;
-      if (clickCount < 2) {
-        return;
+    refuse_selection: {
+      if (selection === "manual") {
+        break refuse_selection;
       }
-      // A drag that happened is a gesture, not a click: the second press of a
-      // double click can be the one that drags, and what it drags must not end
-      // up selected too.
-      if (dragGesture.gestureInfo.started) {
-        return;
-      }
-      // Only the clicks that continue THIS press: the listener outlives the
-      // gesture and the page keeps being clicked elsewhere, where the browser
-      // is doing its own selecting — a second opinion there would only fight
-      // it.
-      const clickTarget = clickEvent.target;
-      if (
-        clickTarget !== grabEvent.target &&
-        !clickTarget.contains(grabEvent.target)
-      ) {
-        return;
-      }
-      // Text the page says is not selectable stays not selectable: a
-      // programmatic selection goes through `user-select: none` in every
-      // engine — it is a rule about what the USER may start, and the browser
-      // does not read it back when asked directly. Read here so that doing the
-      // browser's work does not also undo what the page asked of it.
-      if (!isSelectable(clickEvent.target)) {
-        return;
-      }
-      if (clickCount === 2) {
-        selectWordAtPoint(clickEvent.clientX, clickEvent.clientY);
-        return;
-      }
-      selectParagraphAtPoint(clickEvent.clientX, clickEvent.clientY);
-    };
-    document.addEventListener("click", onClick);
-    removePendingMultiClickListener = () => {
-      removePendingMultiClickListener = NOOP;
-      document.removeEventListener("click", onClick);
-    };
+      /*
+       * A press that starts a drag is not a press that starts a selection: the
+       * browser sees a pointer going down on text and moving, and that is its
+       * own gesture — the words under the finger turn blue while the element
+       * travels, and the selection outlives the release.
+       *
+       * Refused from the grab, before any threshold: whether the press becomes a
+       * drag is decided a few pixels later, but the selection is decided at the
+       * FIRST move, and by then it is too late to say no.
+       *
+       * `user-select: none` would say it in CSS, but it would say it to
+       * everybody: the element would stop being selectable even when nobody is
+       * dragging it. Here it is refused for the length of one gesture.
+       */
+      const preventSelectStart = (selectStartEvent) => {
+        selectStartEvent.preventDefault();
+      };
+      document.addEventListener("selectstart", preventSelectStart);
+      // A press also puts an end to the selection the page was already holding,
+      // the way the browser's own press does: refusing selectstart keeps a new
+      // selection from being made, it says nothing about the one painted before
+      // — which would otherwise sit there through a gesture that has nothing to
+      // do with it.
+      collapseSelection();
+      dragGesture.addReleaseCallback(() => {
+        document.removeEventListener("selectstart", preventSelectStart);
+      });
+      /*
+       * Refusing every selection also refuses the ones a press is entitled to
+       * make: a double click selects the word under it, a triple click the
+       * paragraph around it, and both are over before the pointer has gone
+       * anywhere. They are made here instead, spelled out (see
+       * selectWordAtPoint, selectParagraphAtPoint) rather than left to a browser
+       * heuristic that cannot tell a drag from a click.
+       *
+       * Read from `click` rather than `dblclick`, because a triple click has no
+       * event of its own: what tells the clicks apart is `detail`, the count the
+       * browser keeps of how many presses landed in the same place in a row — 2
+       * for a word, 3 and beyond for a paragraph (a fourth click keeps the
+       * paragraph, the way the browser does).
+       *
+       * On the document and outliving the gesture, because the gesture is
+       * already over when the second click completes: click comes after mouseup,
+       * the gesture ends at pointerup. Kept installed after it fires, since the
+       * click that selects a word is also the one the next click turns into a
+       * paragraph; it goes when the next press installs its own — a listener
+       * waiting for a click that never comes costs nothing until then.
+       */
+      removePendingMultiClickListener();
+      const onClick = (clickEvent) => {
+        const clickCount = clickEvent.detail;
+        if (clickCount < 2) {
+          return;
+        }
+        // A drag that happened is a gesture, not a click: the second press of a
+        // double click can be the one that drags, and what it drags must not end
+        // up selected too.
+        if (dragGesture.gestureInfo.started) {
+          return;
+        }
+        // Only the clicks that continue THIS press: the listener outlives the
+        // gesture and the page keeps being clicked elsewhere, where the browser
+        // is doing its own selecting — a second opinion there would only fight
+        // it.
+        const clickTarget = clickEvent.target;
+        if (
+          clickTarget !== grabEvent.target &&
+          !clickTarget.contains(grabEvent.target)
+        ) {
+          return;
+        }
+        // Text the page says is not selectable stays not selectable: a
+        // programmatic selection goes through `user-select: none` in every
+        // engine — it is a rule about what the USER may start, and the browser
+        // does not read it back when asked directly. Read here so that doing the
+        // browser's work does not also undo what the page asked of it.
+        if (!isSelectable(clickEvent.target)) {
+          return;
+        }
+        if (clickCount === 2) {
+          selectWordAtPoint(clickEvent.clientX, clickEvent.clientY);
+          return;
+        }
+        selectParagraphAtPoint(clickEvent.clientX, clickEvent.clientY);
+      };
+      document.addEventListener("click", onClick);
+      removePendingMultiClickListener = () => {
+        removePendingMultiClickListener = NOOP;
+        document.removeEventListener("click", onClick);
+      };
+    }
     const cleanup = initializer({
       onMove: dragViaPointer,
       onRelease: releaseViaPointer,
@@ -10110,6 +10124,13 @@ const dragSourceThatStoodDown = (pressEvent) => {
  *   The pointer moved or lifted before the wait was over.
  * @param {function} [options.onPress]
  *   The wait completed and the object is now held (haptics, scale…).
+ * @param {"auto"|"manual"} [options.selection="auto"]
+ *   Whether the selection is refused while the press travels towards the
+ *   distance: a press on a source belongs to the drag, so what its first pixels
+ *   would select is refused before the drag is sure (see `selection` in
+ *   drag_gesture.js). `"manual"` leaves the press to the browser until the
+ *   caller's own gesture says otherwise. A long press waits without refusing
+ *   anything either way (see the stylesheet above).
  */
 const dragAfterIntent = (
   grabEvent,
@@ -10122,6 +10143,7 @@ const dragAfterIntent = (
     onPressStart,
     onPressCancel,
     onPress,
+    selection = "auto",
   } = {},
 ) => {
   if (!isPrimaryButtonEvent(grabEvent)) {
@@ -10151,7 +10173,7 @@ const dragAfterIntent = (
     });
     return;
   }
-  dragAfterDistance(grabEvent, dragGestureInitializer, threshold);
+  dragAfterDistance(grabEvent, dragGestureInitializer, threshold, selection);
 };
 
 const startDragGesture = (dragGestureInitializer, catchUpEvent) => {
@@ -10168,13 +10190,19 @@ const startDragGesture = (dragGestureInitializer, catchUpEvent) => {
   return dragGesture;
 };
 
-const dragAfterDistance = (grabEvent, dragGestureInitializer, threshold) => {
+const dragAfterDistance = (
+  grabEvent,
+  dragGestureInitializer,
+  threshold,
+  selection,
+) => {
   const significantDragGestureController = createDragGestureController({
     threshold,
     // allow interaction for this intermediate gesture:
     // user should still be able to scroll or interact with the document
     // only once the gesture is significant we take control
     documentInteractions: "manual",
+    selection,
     onDragStart: (gestureInfo) => {
       significantDragGesture.release(); // kill that gesture
       startDragGesture(dragGestureInitializer, gestureInfo.dragEvent);
@@ -12249,6 +12277,10 @@ import.meta.css = /* css */ [`:root[data-drag-travel-gesture] {
   overscroll-behavior: none;
 }
 
+:root[data-drag-travel-walking] {
+  user-select: none;
+}
+
 [data-drag-travel*="x"] {
   overscroll-behavior-x: contain !important;
 }
@@ -12783,8 +12815,11 @@ const startDragToTravel = (
     // never come.
     // Nothing is being carried: the page keeps its focus, its scrolling and its
     // cursor while a screen slides under the finger. That is the whole
-    // difference with a drag that moves an object, and it is one option.
+    // difference with a drag that moves an object.
     documentInteractions: "manual",
+    // And a press on text is a selection until it has become a travel, which
+    // is where the selection is refused (see where WALKING_ATTRIBUTE is set).
+    selection: "manual",
     onDragStart: () => {
       document.documentElement.setAttribute(GESTURE_ATTRIBUTE, "");
     },
@@ -12885,6 +12920,9 @@ const startDragToTravel = (
           pulled: started.slack || 0,
         };
         document.documentElement.setAttribute(WALKING_ATTRIBUTE, axis);
+        // What the first pixels may have started selecting is not a selection:
+        // it is the beginning of this travel.
+        collapseSelection();
         // The travel exists: from here the pointer is this box's, and it is
         // followed wherever it goes.
         dragGesture.capturePointer();
@@ -13008,6 +13046,7 @@ const startDragToTravel = (
     dragAfterIntent(pointerDownEvent, grab, {
       longPress: false,
       threshold: DRAG_START_THRESHOLD,
+      selection: "manual",
     });
   }
   window.addEventListener("pointerup", onPressOver);
@@ -13431,7 +13470,11 @@ const findPanZoomSurface = (element) => {
  * @param {Element} element
  * @param {object} options
  * @param {(detail: {event: PointerEvent, x: number, y: number}) => void} [options.onPan]
- *   The hand moved: `x`/`y` are how far since the last report, in px.
+ *   The hand moved: `x`/`y` are how far since the last report, in px. Left out,
+ *   one pointer is not the surface's: it is heard only for the pinch a second
+ *   one would make with it, and otherwise left to whatever else reads it — no
+ *   capture, no hold waited for, no click swallowed, no grab. `afterHold` then
+ *   leaves its scroll to the page, and `"kept"` has no pan to keep.
  * @param {(detail: {event: PointerEvent|WheelEvent, factor: number, x: number, y: number}) => void} [options.onZoom]
  *   The zoom changed by `factor` (above 1 is in) around the point `x`/`y` of the
  *   surface, measured inside its border. Left out, a wheel over the surface is
@@ -13554,9 +13597,10 @@ const installPanZoom = (
 
   const activate = (anchorWhere, event) => {
     active = true;
-    if (afterHold === "kept" && holdIsOwed) {
+    if (afterHold === "kept" && holdIsOwed && onPan) {
       // Asked for and given: whatever proved it — the hold, a second finger, a
-      // mouse travelling — the surface is the hand's from here.
+      // mouse travelling — the surface is the hand's from here. What it keeps
+      // is the pan on contact, which a surface that does not pan has none of.
       keepTheHand();
     }
     for (const pointerId of pointers.keys()) {
@@ -13650,6 +13694,12 @@ const installPanZoom = (
       activate("now", event);
       return;
     }
+    if (!onPan) {
+      // One pointer is the pan's to read. Without one it is only heard for the
+      // pinch a second pointer would make with it: a tap, a hold or a double
+      // click on it belongs to whatever else reads it.
+      return;
+    }
     if (holdIsOwed && event.pointerType === "touch") {
       pointer.waitsForHold = true;
       pointer.holdWait = waitForPressHeld(event, {
@@ -13670,7 +13720,9 @@ const installPanZoom = (
     pointer.x = event.clientX;
     pointer.y = event.clientY;
     if (!active) {
-      if (pointer.waitsForHold) {
+      // No pan for the travel to start (see onPointerDown), or a finger whose
+      // travel is the page scrolling.
+      if (!onPan || pointer.waitsForHold) {
         return;
       }
       const travelled = Math.hypot(
@@ -14530,10 +14582,12 @@ const createDragToMoveGestureController = ({
  *
  * @param {PointerEvent} event The `pointerdown` that may become a drag.
  * @param {("move"|"reorder"|"toss"|"land"|"leave")[]} effects
- *   What letting go of this element can mean. `reorder`, `toss` and `land` carry a
- *   copy; `move` carries the element itself, and `leave` goes with either. Asking
- *   for `move` beside any of the three that carry a copy is asking one release to
- *   mean two things, and so is asking for `reorder` and `land`.
+ *   What letting go of this element can mean, and only what is listed is ever
+ *   answered. `reorder`, `toss` and `land` carry a copy; `move` carries the
+ *   element itself, and `leave` goes with either. Asking for `move` beside any of
+ *   the three that carry a copy is asking one release to mean two things, and so
+ *   is asking for `reorder` and `land`. A gesture taken away mid-air
+ *   (`gestureInfo.cancelled`) means none of them, and what it carried goes back.
  * @param {object} [options]
  * @param {Element} [options.draggedElement=event.currentTarget]
  * @param {(detail: {gestureInfo: object, x: number, y: number}) => void} [options.onMoving]
@@ -14652,6 +14706,7 @@ const startDragTo = (
   }
   return startDragToMoveElement(event, {
     draggedElement,
+    canMove,
     canLeave,
     ...options,
   });
@@ -14763,12 +14818,14 @@ const refuseDragTo = (
  * go of away from it, when it can `leave`.
  *
  * No copy, unlike the others: what is being moved is the thing and not a
- * stand-in for it, so there is nothing to put back and nothing to reveal.
+ * stand-in for it, so there is nothing to put back and nothing to reveal. What a
+ * release means is read by resolveDropMeaning, as it is for a copy.
  */
 const startDragToMoveElement = (
   event,
   {
     draggedElement,
+    canMove,
     canLeave,
     onMoving,
     onMove,
@@ -14818,26 +14875,26 @@ const startDragToMoveElement = (
         });
       }
       dragGesture.addReleaseCallback(async (gestureInfo) => {
+        const dropMeans = resolveDropMeaning({
+          gestureInfo,
+          releasedOutside: canLeave && isOutsideOf(gestureInfo, outsideOf),
+          canMove,
+          canLeave,
+        });
         const { xDelta, yDelta } = gestureInfo.layout;
-        if (!xDelta && !yDelta) {
-          // Picked up and put back down: nothing moved, so no outcome is told.
-          onRelease?.({ gestureInfo, x: xDelta, y: yDelta, outcome: null });
-          gestureInfo.cancelPosition();
-          return;
-        }
-        const leaving =
-          canLeave &&
-          !gestureInfo.cancelled &&
-          isOutsideOf(gestureInfo, outsideOf);
         onRelease?.({
           gestureInfo,
           x: xDelta,
           y: yDelta,
-          // Nothing answers a release that only ever said where the hand was
-          // going: `onMoving` alone has already told all of it.
-          outcome: leaving ? "leave" : onMove ? "move" : null,
+          outcome: dropMeans === "cancel" ? null : dropMeans,
         });
-        if (leaving) {
+        if (dropMeans === "cancel") {
+          // Nothing answers it: whatever the gesture translated goes home — and
+          // there is nothing to take back when `onMoving` had the caller draw.
+          gestureInfo.cancelPositionAnimated();
+          return;
+        }
+        if (dropMeans === "leave") {
           // Left where the hand let go of it while the answer is asked — a thing
           // that snaps home with the request in flight says the gesture was not
           // understood. The answer then says what becomes of that position: let
@@ -14931,10 +14988,14 @@ const readOwnLayout = (element) => ({
 const TOSS_DISTANCE_TO_COMMIT = 110;
 const TOSS_SPEED_TO_COMMIT = 0.45;
 
+// What a release means, whether it carried the element itself or a copy: one
+// reading, so a gesture taken away mid-air is nothing on both paths, and an
+// outcome is answered only when the caller listed it.
 const resolveDropMeaning = ({
   gestureInfo,
   hasDropTarget,
   releasedOutside,
+  canMove,
   canReorder,
   canToss,
   canLand,
@@ -14963,15 +15024,19 @@ const resolveDropMeaning = ({
       return "reorder";
     }
   }
+  // It has to have gone somewhere to be put anywhere, or away from anything:
+  // picked up and put straight back down is a hand that changed its mind.
+  const { xDelta, yDelta } = gestureInfo.layout;
+  if (!xDelta && !yDelta) {
+    return "cancel";
+  }
   if (canLeave && releasedOutside) {
     // Let go of away from every place — off the plan and down, deliberate and
-    // never a flick. It has to have gone somewhere to be away from anything:
-    // picked up and put straight back down is a hand that changed its mind, not
-    // a thing dropped over nothing.
-    const { xDelta, yDelta } = gestureInfo.layout;
-    if (xDelta || yDelta) {
-      return "leave";
-    }
+    // never a flick.
+    return "leave";
+  }
+  if (canMove) {
+    return "move";
   }
   return "cancel";
 };
@@ -15429,21 +15494,24 @@ const getRectInside = (element, containerElement) => {
   };
 };
 
-// Creates the two-layer clone structure used for drag-to-reorder.
+// Creates the two-layer clone structure carried by reorder, land, toss and leave.
 //
 // Layer 1 — wrapper (navi-drag-clone-wrapper):
-//   Positioned fixed via --clone-top/--clone-left CSS vars.
-//   Carries the box-shadow and size. Moved every drag frame via dragStyleController.
-//   Has a view-transition-name so the View Transitions API can animate it on release.
+//   Positioned fixed via the --clone-* CSS vars, which also give it its size.
+//   Moved every drag frame via dragStyleController.
+//   It paints nothing, so it takes no view-transition-name: a name on it would
+//   be a group with an empty image, and one more name to keep unique.
 //
 // Layer 2 — inner clone (navi-drag-clone):
-//   A deep clone of the grabbed element.
-//   Applies transform: scale(var(--drag-clone-scale, 1.03)) via the CSS rule
-//   for [navi-drag-clone],
-//   giving the "lifted" feel. The transform-origin is set to the grab point
-//   so the element expands naturally from where the user clicked.
+//   A deep clone of the grabbed element, and what the eye follows — so it is
+//   the one named (view-transition-name: navi-drag-clone).
+//   Casts the shadow and applies transform: scale(var(--drag-clone-scale, 1.03))
+//   via the CSS rule for [navi-drag-clone], giving the "lifted" feel. The
+//   transform-origin is set to the grab point so the element expands naturally
+//   from where the user clicked.
 //   On release, the `navi-drag-clone` attribute is removed inside
-//   startViewTransition to drop the scale back to 1 as the "new" state.
+//   startViewTransition to drop the scale back to 1 as the "new" state; the
+//   name stays, so the scale is morphed with the box rather than cross-faded.
 
 // The chevron is the one the table's column drop preview uses, rotated by the
 // CSS above so each cap points into the line.
@@ -15701,7 +15769,6 @@ const createDragClone = (element, pointerEvent) => {
   // Manual: it is opened and closed with the drag, and must survive an Escape
   // or a click elsewhere (light dismiss would take it away mid-gesture).
   wrapper.setAttribute("popover", "manual");
-  wrapper.viewTransitionName = "navi-drag-clone-wrapper";
   setCloneViewportRect(wrapper, element);
   // Grab point within the element — used as transform-origin so the
   // scale expands from where the user clicked, not the element center.

@@ -554,7 +554,10 @@ effect(() => {
  * The active language is read from `languagesSignal` (see lang_signal.js —
  * combines the browser's own `navigator.languages`, an optional
  * `setPreferredLanguage()` user override, and an optional
- * `setSupportedLanguages()` app-wide allow-list), live on every lookup.
+ * `setSupportedLanguages()` app-wide allow-list), live on every lookup. Each
+ * key is looked up in those languages in order, then in English, which
+ * translates every key: a language shipped for part of the keys only (German
+ * has the `time.*` words) never shows a raw key.
  *
  * Built-in key namespaces, all overridable — the registrations below are the
  * exhaustive list, read them to find the exact key to override:
@@ -1474,19 +1477,25 @@ const isNetworkPolicyError = (error) => {
  * is already saying it in words the person understands.
  *
  * navi's own report leaves it alone (action_error_report.js). What is left is
- * the screen displaying it: it does so by throwing the error to a boundary, and
- * `preact/debug` re-emits on `window` every error a boundary caught — on
- * purpose, for React devtools compatibility. Uncancelled, that lands as an
- * uncaught error in the console, over a page calmly explaining why nothing was
- * asked. Cancelling the event is what says it is handled: the browser drops
+ * the error reaching `window` on its own — a run called by hand whose failure
+ * nobody catches, a render throw no boundary took — where it lands as an
+ * uncaught error in the console, about a request the app itself declared would
+ * not leave. Cancelling the event is what says it is handled: the browser drops
  * the console line, and the jsenv supervisor skips prevented events too.
  *
  * Both shapes a failure travels in are covered, since which one it is depends
  * on whether the resource callback happened to be async — the throw reaching
  * `window`, and the rejection nobody caught.
  *
- * Scoped to the policy's own error and to nothing else — every other error a
- * boundary caught, and every other rejection let go, stays exactly as loud as
+ * A boundary displaying it raises no event at all. In dev, `preact/debug` hands
+ * every error a boundary caught to `console.error`, after the boundary took it
+ * and before it rendered anything; it reads no option and no flag, so that line
+ * stays. Muting it from here is not done: wrapping `console.error` rewrites a
+ * global, and wrapping `options._catchError` reaches into preact's private
+ * hooks, both to hide one class of error.
+ *
+ * Scoped to the policy's own error and to nothing else — every other error
+ * thrown at window, and every other rejection let go, stays exactly as loud as
  * it is.
  */
 let networkPolicyErrorSilenced = false;
@@ -1652,8 +1661,8 @@ const markErrorAsStoppingRender = (error) => {
  * An error the network policy produced is never reported: the app declared the
  * state that produced it, the request never left, and there is nothing for a
  * developer to fix. It is data a screen shows, and it stays data whether or not
- * one does (see network_policy.js, which also keeps it out of the browser
- * console).
+ * one does (see network_policy.js, which also cancels it when it reaches
+ * window).
  */
 const errorIsAccountedFor = (error) => {
   return (
@@ -12640,8 +12649,9 @@ defineInteractionDetector({
   name: "surface",
   claims: (type) =>
     type === PAN || type === ZOOM || type === GRAB || type === RELEASE,
-  // A press on the surface may be a tap, a hold or the beginning of a pan, and
-  // nothing may read it as the first until the pointer has said which.
+  // A press on the surface may be a tap, a hold or the first finger of a pan or
+  // a pinch, and nothing may read it as the first until the pointer has said
+  // which.
   disputesPress: true,
   setup: (element, trigger, { types, readConfig }) => {
     const canPan = types.includes(PAN);
@@ -15763,21 +15773,33 @@ const getActionResultProperties = (action) => {
   return actionResultPropertiesMap.get(action);
 };
 
-// PUT/PATCH results update the UI through the store, and DELETE resets the GET
-// instead of rerunning it, so a GET rerun would only ever cost a request.
-// A POST is the one case the client cannot decide alone: whether a new item
-// belongs to a list depends on filters/pagination the backend owns.
 // Rationale in full, plus when to override: docs/list_refresh.md
 const defaultRerunOn = {
+  // PUT/PATCH results update the UI through the store, and DELETE resets the
+  // GET rather than rerunning it, so a GET rerun would only ever cost a request.
   GET: false,
+  // A POST is the one case the client cannot decide alone: whether a new item
+  // belongs to a list depends on filters/pagination the backend owns.
   GET_MANY: ["POST"],
+  // DELETE is in there, unlike for GET_MANY: an action holds ids and the store
+  // drops the deleted one out of every list holding it, while a list reading
+  // by slices holds places — the row that left takes the ones after it one
+  // rank up, and only the collection knows who fills the last one.
+  GET_RANGE: ["POST", "DELETE"],
 };
-// What makes a range reader stale (rerunOn.GET_RANGE overrides it). DELETE is
-// in there, unlike for GET_MANY: an action holds ids and the store drops the
-// deleted one out of every list holding it, while a list reading by slices
-// holds places — the row that left takes the ones after it one rank up, and
-// only the collection knows who fills the last one.
-const defaultInvalidateRangeOn = ["POST", "DELETE"];
+// A key a `rerunOn` leaves out keeps the value it would have had without it:
+// the default for a resource, the value of the resource it is declared on for
+// a withParams() scope or a relation.
+const resolveRerunOn = (rerunOn, inheritedRerunOn = defaultRerunOn) => {
+  if (!rerunOn) {
+    return inheritedRerunOn;
+  }
+  return {
+    GET: rerunOn.GET ?? inheritedRerunOn.GET,
+    GET_MANY: rerunOn.GET_MANY ?? inheritedRerunOn.GET_MANY,
+    GET_RANGE: rerunOn.GET_RANGE ?? inheritedRerunOn.GET_RANGE,
+  };
+};
 
 // This handles ALL resource lifecycle logic (rerun/reset) across all resources
 const createResourceLifecycleManager = () => {
@@ -15787,7 +15809,7 @@ const createResourceLifecycleManager = () => {
 
   const registerResource = (resourceScope, config) => {
     const {
-      rerunOn = defaultRerunOn,
+      rerunOn,
       paramScope = null,
       dependencies = [],
       uniqueKeys = [],
@@ -16070,8 +16092,7 @@ const createResourceLifecycleManager = () => {
       if (!isSameResource && !isDependent) {
         continue;
       }
-      const invalidateOn = config.rerunOn.GET_RANGE ?? defaultInvalidateRangeOn;
-      if (!shouldRerunAfter(invalidateOn, triggerVerb)) {
+      if (!shouldRerunAfter(config.rerunOn.GET_RANGE, triggerVerb)) {
         continue;
       }
       for (const rangeReader of config.rangeReaderSet) {
@@ -16572,7 +16593,7 @@ const resource = (
     addItemSetup,
     createRestAction: createRestActionForRoot,
     paramScope: getParamScope(undefined),
-    rerunOn,
+    rerunOn: resolveRerunOn(rerunOn),
     dependencies,
   });
 };
@@ -16636,7 +16657,7 @@ const createResource = (
    * identical parameters, preventing cross-contamination between different parameter sets.
    *
    * @param {Object} params - Parameters to bind to all actions of this resource (required)
-   * @param {{ rerunOn?: Object, dependencies?: Object[] }} [options] - reruns of that scope; left out, the scope inherits the resource's
+   * @param {{ rerunOn?: Object, dependencies?: Object[] }} [options] - reruns of that scope; a `rerunOn` key left out keeps the resource's value, and `dependencies` left out are the resource's
    * @returns {Object} A new resource instance with parameter-bound actions and isolated lifecycle
    * @see docs/resource.md — what a scope isolates, and `dependencies`
    *
@@ -16682,7 +16703,7 @@ const createResource = (
       addItemSetup,
       createRestAction: createRestActionWithParams,
       paramScope: resolvedParamScope,
-      rerunOn: withParamsRerunOn ?? rerunOn,
+      rerunOn: resolveRerunOn(withParamsRerunOn, rerunOn),
       dependencies: withParamsDeps ?? dependencies,
     });
   };
@@ -16700,14 +16721,15 @@ const createResource = (
    * Callback return contracts:
    * - GET / PUT → the parent object with the relationship nested inside:
    *   `async ({ id }) => ({ id, session: { id: 10, token: "abc" } })`; `null` for no relationship
-   * - DELETE → the parent id; the property is set to `null`
+   * - DELETE → the parent id, or `{ id }`; the property is set to `null`
    *
    * The backend may also embed the child inline in a parent GET/POST response — the
    * setter on the property upserts the nested object into the child store.
    *
-   * Returns the relationship resource: its actions (`USER_SESSION.GET`, `.PUT`,
-   * `.DELETE`) write the parent's property. A relation of the child itself is
-   * declared on the child resource (`SESSION.one("device", DEVICE)`).
+   * Returns the relationship resource, itself chainable. Its items are the child
+   * resource's own, shared by every parent: `USER_SESSION.one("device", DEVICE)`
+   * adds a reactive `.device` property to every session, as
+   * `SESSION.one("device", DEVICE)` would.
    *
    * @param {string} propertyName - property holding the child on each parent item
    * @param {Object} childResource - the independent resource created by `resource()`
@@ -16790,11 +16812,11 @@ const createResource = (
     const createRestActionForOne = (verb, callback, { onActionComplete }) => {
       const applyResultToValue =
         verb === "DELETE"
-          ? (itemId) => {
-              const item = store.select(itemId);
+          ? (itemIdOrItemProps) => {
+              const item = store.select(itemIdOrItemProps);
               const childItemId = item[propertyName][childIdKey];
               store.upsert({
-                [idKey]: itemId,
+                [idKey]: item[idKey],
                 [propertyName]: null,
               });
               return childItemId;
@@ -16822,7 +16844,7 @@ const createResource = (
             if (!isProps(result) && !primitiveCanBeId(result)) {
               throwInvalidResult(
                 action.name,
-                `an object (that will be used to drop "${name}" resource)`,
+                `the "${name}" id, or { ${idKey} } (the item whose "${propertyName}" becomes null)`,
                 result,
               );
             }
@@ -16847,11 +16869,11 @@ const createResource = (
         PUT,
         DELETE,
       },
-      store,
-      addItemSetup,
+      store: childStore,
+      addItemSetup: childResource.addItemSetup,
       createRestAction: createRestActionForOne,
       paramScope,
-      rerunOn: oneRerunOn ?? rerunOn,
+      rerunOn: resolveRerunOn(oneRerunOn, rerunOn),
       dependencies: oneDependencies ?? dependencies,
     });
   };
@@ -16873,6 +16895,9 @@ const createResource = (
    *   but does NOT join the parent's array, which only a GET_MANY refresh changes
    * - DELETE → `[parentId, childId]`
    * - DELETE_MANY → `[parentId, [childId, childId, …]]`
+   *
+   * Returns the relationship resource, itself chainable; its items are the child
+   * resource's own, as for `.one()`.
    *
    * @param {string} propertyName - property holding the child array on each parent item
    * @param {Object} childResource - the independent resource created by `resource()`
@@ -17109,11 +17134,11 @@ const createResource = (
         DELETE,
         DELETE_MANY,
       },
-      store,
-      addItemSetup,
+      store: childStore,
+      addItemSetup: childResource.addItemSetup,
       createRestAction: createRestActionForMany,
       paramScope,
-      rerunOn: manyRerunOn ?? rerunOn,
+      rerunOn: resolveRerunOn(manyRerunOn, rerunOn),
       dependencies: manyDependencies ?? dependencies,
     });
   };
@@ -17242,7 +17267,7 @@ const createResource = (
       addItemSetup: childAddItemSetup,
       createRestAction: createRestActionForScopedOne,
       paramScope,
-      rerunOn: scopedOneRerunOn ?? rerunOn,
+      rerunOn: resolveRerunOn(scopedOneRerunOn, rerunOn),
       dependencies: scopedOneDependencies ?? dependencies,
     });
   };
@@ -17477,7 +17502,7 @@ const createResource = (
       addItemSetup: childAddItemSetup,
       createRestAction: createRestActionForScopedMany,
       paramScope,
-      rerunOn: scopedManyRerunOn ?? rerunOn,
+      rerunOn: resolveRerunOn(scopedManyRerunOn, rerunOn),
       dependencies: scopedManyDependencies ?? dependencies,
     });
     // When a scoped child collection is mutated (POST etc.), the parent GET must
@@ -20196,9 +20221,9 @@ const isSizeSpacingKey = (key) => {
 // "vvw"/"vvh" are navi's own: the *visual* viewport, which — unlike vw/dvw —
 // shrinks when the mobile virtual keyboard opens (see layout/responsive.js), so
 // they are what a popup meant to stay clear of the keyboard should use.
-// "appw"/"apph" are the same thing narrowed to the app's own screen: identical
-// to vvw/vvh until the app declares --navi-app-max-width, and a share of that
-// width afterwards. A gap meant to read as "a small margin" must use these —
+// "appw"/"apph" are the same thing narrowed to the app's own screen: the
+// visual viewport minus the app's bands (--navi-app-inset-*), so identical to
+// vvw/vvh until the app declares bands. A gap meant to read as "a small margin" must use these —
 // 3vvw on a 1500px window is a 45px gap around a 600px app.
 // Functions rather than the signals themselves: appw/apph are not a signal to
 // read but a value to compute (a signal, then a CSS var read back). Reading the
@@ -30202,8 +30227,8 @@ const TRANSITION_FURNITURE_CSS = /* css */ `.navi_fixed_bar[data-navi-transition
 }
 `;
 
-// Called from the render of whatever holds the pages, never at module scope:
-// a page that never travels between routes must not carry this sheet, and a
+// Called as a movement starts over a marked area, never at module scope: a
+// page that never travels between routes must not carry this sheet, and a
 // build that sees no caller drops the css with the function.
 const installTransitionFurnitureCss = () => {
   import.meta.css = [TRANSITION_FURNITURE_CSS, "@jsenv/navi/src/nav/transition_furniture.js"];
@@ -30666,9 +30691,10 @@ const TRANSITION_WINDOW_CSS = /* css */ `@property --navi-transition-cover-top {
 }
 `;
 
-// Called from the render of whatever needs the window, never at module scope:
-// a page that never travels between routes must not carry this sheet, and a
-// build that sees no caller drops the css with the function.
+// Called by whatever needs the window — a render, or a movement starting —
+// never at module scope: a page that never travels between routes must not
+// carry this sheet, and a build that sees no caller drops the css with the
+// function.
 const installTransitionWindowCss = () => {
   import.meta.css = [TRANSITION_WINDOW_CSS, "@jsenv/navi/src/nav/transition_window.js"];
 };
@@ -31481,9 +31507,6 @@ const RouteTransitionArea = ({
   children,
   ...rest
 }) => {
-  import.meta.css = [css$12, "@jsenv/navi/src/nav/route_transition.jsx"];
-  installTransitionWindowCss();
-  installTransitionFurnitureCss();
   const props = {
     ...rest,
     [TRANSITION_AREA_ATTRIBUTE]: ""
@@ -31552,8 +31575,6 @@ const RouteTransitionArea = ({
  * @returns {() => void} remove this relation.
  */
 const defineRouteTransition = (from, to, transition) => {
-  import.meta.css = [css$12, "@jsenv/navi/src/nav/route_transition.jsx"];
-  installTransitionWindowCss();
   if (!to) {
     throw new TypeError(`defineRouteTransition needs a destination: "to" is ${to}. The page reached from anywhere is written defineRouteTransition(null, THAT_PAGE, ...) — there is no relation the other way round, a page LEFT for anywhere being the back half of that one.`);
   }
@@ -31593,8 +31614,6 @@ const defineRouteTransition = (from, to, transition) => {
  * @returns {() => void} remove this default.
  */
 const defineRouteDefaultTransition = transition => {
-  import.meta.css = [css$12, "@jsenv/navi/src/nav/route_transition.jsx"];
-  installTransitionWindowCss();
   const value = normalizeTransition(transition);
   defaultTransition = value;
   return () => {
@@ -32176,6 +32195,10 @@ const beginTransition = ({
   // Said before the picture is taken: whoever names something for a movement
   // between two pages decides on it now (see transition_destination.js).
   holdTransitionDestination(transition, url);
+  // Adopted by what starts a movement rather than by what declares one: a link
+  // or a navTo() asks for a movement in an app that declared none, and an app
+  // that never moves never carries the sheet.
+  import.meta.css = [css$12, "@jsenv/navi/src/nav/route_transition.jsx"];
   documentElement.setAttribute(TRANSITION_ATTRIBUTE, direction);
   if (type) {
     documentElement.setAttribute(TRANSITION_TYPE_ATTRIBUTE, type);
@@ -32197,6 +32220,10 @@ const beginTransition = ({
   // left (see transition_window.js).
   let areaStateBefore = null;
   if (areaElement) {
+    // The area is the application's element as often as <RouteTransitionArea>,
+    // so what a movement on it plays with is adopted here, where it is found.
+    installTransitionWindowCss();
+    installTransitionFurnitureCss();
     documentElement.setAttribute(TRANSITION_TARGET_ATTRIBUTE, "area");
     // Said before the picture is taken, like every name (see
     // transition_furniture.js): what the bars are wearing when the transition
@@ -45400,16 +45427,6 @@ const css$Z = /* css */`@layer navi {
       border-radius: .2em;
     }
 
-    &[data-capitalize] {
-      text-transform: capitalize;
-
-      & .navi_text_sizer {
-        & .navi_text {
-          display: inline-block;
-        }
-      }
-    }
-
     &[data-shrinkwrap] {
       display: inline-block;
     }
@@ -45432,12 +45449,6 @@ time.navi_text {
 }
 
 .navi_text {
-  &[data-capitalize] {
-    &:first-letter, & .navi_text_sizer_placeholder:first-letter, & .navi_text_sizer_overlay:first-letter {
-      text-transform: uppercase;
-    }
-  }
-
   & .navi_text_sizer, & .navi_text_sizer_placeholder, & .navi_text_sizer_overlay {
     display: inherit;
     width: inherit;
@@ -45885,7 +45896,9 @@ const shouldInjectSpacingBetween = (left, right) => {
  *   text block from being wider than its content when inside a flex/grid container.
  *
  * @param {boolean} [capitalize]
- *   Uppercases the first letter of the text content via CSS.
+ *   Uppercases the first letter of the text, and only that one: "lundi 11 mai"
+ *   reads "Lundi 11 mai". Applied to the string the text starts with; a text
+ *   starting with an element keeps its first letter as written.
  *
  * @param {string|[number,number]|[string,string]} [selectRange]
  *   Selects a portion of the text on mount. Pass a substring to search for, a
@@ -46005,11 +46018,13 @@ const TextUI = props => {
     shrinkWrap,
     ...rest
   } = props;
+  if (capitalize) {
+    children = capitalizeFirstLetter(children);
+  }
   const defaultSpace = preventSpaceUnderlines ? FAKE_SPACE : REGULAR_SPACE;
   const resolvedSpacing = spacing ?? defaultSpace;
   const boxProps = {
     "as": "span",
-    "data-capitalize": capitalize ? "" : undefined,
     "data-shrinkwrap": shrinkWrap ? "" : undefined,
     ...rest,
     ref,
@@ -46309,6 +46324,28 @@ const Icon = ({
     })
   });
 };
+
+// On the string rather than with ::first-letter, which needs a block container:
+// an inline text made one is an atomic box, and the ellipsis of the line
+// holding it (a Picker's value) can then no longer cut it. The string is also
+// what every copy of the children (sizer, bold background) renders, so they
+// all read the same. Leading spaces and punctuation are skipped, and a text
+// starting with a digit is left as it is, as ::first-letter would.
+const capitalizeFirstLetter = children => {
+  if (typeof children === "string") {
+    return children.replace(FIRST_LOWERCASE_LETTER_REGEXP, (match, lead, letter) => `${lead}${letter.toLocaleUpperCase()}`);
+  }
+  if (Array.isArray(children) && children.length > 0) {
+    const first = children[0];
+    const firstCapitalized = capitalizeFirstLetter(first);
+    if (firstCapitalized === first) {
+      return children;
+    }
+    return [firstCapitalized, ...children.slice(1)];
+  }
+  return children;
+};
+const FIRST_LOWERCASE_LETTER_REGEXP = /^([\s\p{P}]*)(\p{Ll})/u;
 
 /**
  * Where a link leads, asked for when the pointer or the focus arrives on it:
@@ -61246,7 +61283,6 @@ const createSwipeToClose = (side, { grip } = {}) => {
       panelEl.style.transform = "";
       panelEl.style.clipPath = "";
       panelEl.style.transitionProperty = "";
-      panelEl.style.userSelect = "";
     };
     // The resting value is written first and the animation only covers the way
     // to it: both end on the same number, so nothing is seen changing when the
@@ -61290,10 +61326,6 @@ const createSwipeToClose = (side, { grip } = {}) => {
           return false;
         }
         panelEl.style.transitionProperty = "none";
-        panelEl.style.userSelect = "none";
-        // What the first pixels of the gesture may have started selecting is
-        // not a selection, it is the beginning of this travel.
-        window.getSelection().removeAllRanges();
         // The way out is the only way there is anything: pulling the other way
         // leans against a wall and comes back.
         return {
@@ -61999,7 +62031,7 @@ const css$E = /* css */`
          --navi-app-width rather than 3vvw): the gap must read as a small
          margin around the dialog, and 3% of a 1500px window is a 45px gap
          around a 600px app. Identical to 3vvw until the app declares
-         --navi-app-max-width. */
+         bands (--navi-app-max-width, or --navi-app-inset-* written by it). */
       --x-dialog-container-spacing: calc(0.03 * var(--navi-app-width));
 
       /* --navi-app-width, not --navi-vvw: a top-layer dialog is calibrated on
@@ -62736,8 +62768,8 @@ const css$E = /* css */`
  *   `positionArea`: it both caps the dialog's own size (via
  *   `--x-dialog-container-spacing`, written from this prop) and offsets a docked
  *   one from the edge it docks to. Accepts a number of pixels, a viewport
- *   length — "appw"/"apph" being the app's own screen (the visual viewport, or
- *   the narrower one the app declared with --navi-app-max-width) and
+ *   length — "appw"/"apph" being the app's own screen (the visual viewport
+ *   minus the app's bands, see docs/safe_area.md) and
  *   "vvw"/"vvh" the visual viewport itself, which shrinks when the mobile
  *   keyboard opens — or a container length ("3cqw", the `layer="local"`
  *   default). Pass 0 for a dialog meant to sit flush (a side panel).
@@ -65881,6 +65913,8 @@ const css$C = /* css */`@layer navi {
  *   `maxWidth` below.
  * @param {boolean} [props.sizeFromAnchor] - **Dialog-only**, same guard.
  * @param {"box"|"scene"} [props.lift] - **Dialog-only**, same guard.
+ * @param {Element|{current: Element}|string} [props.liftAnchor] -
+ *   **Dialog-only**, same guard.
  * @param {string} [props.positionArea] - Forwarded as-is — `Dialog` and
  *   `Popover` have different own defaults (`"center"` vs. `"bottom"`),
  *   deliberately not homogenized here (each reads best for its own typical
@@ -65914,8 +65948,13 @@ const css$C = /* css */`@layer navi {
  *   identically): the wash the backdrop paints over what is behind.
  * @param {string} [props.backdropFilter] - Forwarded as-is: what that wash
  *   does to the picture underneath, `"blur(4px)"` and the like.
- * @param {boolean|"auto"|"fading"|"scaling"|"sliding"|"expanding"|`slide-from-${string}`|`expand-${string}`} [props.animation]
- *   - Forwarded as-is.
+ * @param {boolean|"auto"|"fading"|"scaling"|"sliding"|`slide-from-${string}`|"expanding"|`expand-${string}`|"lifting"|{open: boolean|"auto"|"fading"|"scaling"|"sliding"|`slide-from-${string}`, close: "lifting"}} [props.animation]
+ *   - Forwarded to whichever renders — see either component's own doc.
+ *   `"expanding"`/`"expand-*"` are `Popover`'s own; `"lifting"` and
+ *   `{ open, close: "lifting" }` are `Dialog`'s. A popover has no lift, so in
+ *   popover mode `"lifting"` plays no movement (what a dialog does with no
+ *   anchor to lift out of) and the object form opens with its `open`, which
+ *   the close plays backwards like every other kind.
  * @param {string} [props.animationDuration] - Forwarded as-is.
  * @param {string} [props.maxWidth] - Forwarded as-is to both; also read
  *   here directly to help decide the automatic `mode` (a fixed length under
@@ -65981,6 +66020,8 @@ const Popup = props => {
     // mode the automatic screen-size resolution happens to pick.
     pressOutside = "close",
     backdrop,
+    // A popover is handed only the values it understands (toPopoverAnimation).
+    animation,
     // Popover-only (see this component's own doc) — destructured out so
     // they're never part of ...rest, and therefore never forwarded to
     // Dialog below, where they'd otherwise leak onto the real <dialog>
@@ -65995,6 +66036,7 @@ const Popup = props => {
     dockedOnSmallTouchScreen,
     sizeFromAnchor,
     lift,
+    liftAnchor,
     ...rest
   } = props;
   const [mode] = useResolvedPopupMode(modeProp, maxWidth, {
@@ -66014,6 +66056,8 @@ const Popup = props => {
       dockedOnSmallTouchScreen: dockedOnSmallTouchScreen,
       sizeFromAnchor: sizeFromAnchor,
       lift: lift,
+      liftAnchor: liftAnchor,
+      animation: animation,
       maxWidth: maxWidth,
       pressOutside: pressOutside,
       backdrop: backdrop,
@@ -66027,6 +66071,7 @@ const Popup = props => {
   }
   return jsx(Popover, {
     ...rest,
+    animation: toPopoverAnimation(animation),
     maxWidth: maxWidth,
     pressOutside: pressOutside,
     backdrop: backdrop,
@@ -66043,6 +66088,18 @@ const Popup = props => {
   });
 };
 Popup.Close = PopupClose;
+
+// What Dialog's own animation values mean to a popover, which has no lift
+// (see the `animation` doc above).
+const toPopoverAnimation = animation => {
+  if (animation === "lifting") {
+    return undefined;
+  }
+  if (animation !== null && typeof animation === "object") {
+    return animation.open;
+  }
+  return animation;
+};
 
 installImportMetaCssBuild(import.meta);
 const css$B = /* css */`.navi_picker_callout_dock > [data-picker-content] {
@@ -67368,9 +67425,14 @@ const PickerNaviMinute = props => {
     step,
     value
   } = props;
+
+  // resolveInputProps has already run (PickerFirstResolver), so the type
+  // handed on is one the picker renders as is — the text field a navi numeric
+  // type resolves to, told what its value is.
   return jsx(Next, {
     ...props,
-    type: "minute",
+    type: "text",
+    "navi-input-type": "minute",
     children: jsxs(Box, {
       flex: "y",
       spacing: "s",
@@ -76525,7 +76587,7 @@ const PickerFirstResolver = props => {
  * `focusOnOpen` below.
  *
  * @type {import("ignore:preact").FunctionComponent<{
- *   type?: "date" | "month" | "week" | "time" | "datetime" | "duration" | "color" | "file" | "text" | "object" | "array" | "confirm" | "navi_time" | "navi_number" | "navi_percentage",
+ *   type?: "date" | "month" | "week" | "time" | "datetime" | "duration" | "color" | "file" | "text" | "object" | "array" | "confirm" | "navi_time" | "navi_minute" | "navi_number" | "navi_percentage",
  *   value?: any,
  *   defaultValue?: any,
  *   name?: string,
@@ -88548,6 +88610,8 @@ const css$3 = /* css */`@layer navi {
 }
 
 .navi_card_layout {
+  box-sizing: border-box;
+  min-height: 100%;
   padding-top: var(--layout-margin-top, var(--layout-margin-y, var(--layout-margin)));
   padding-right: var(--layout-margin-right, var(--layout-margin-x, var(--layout-margin)));
   padding-bottom: var(--layout-margin-bottom, var(--layout-margin-y, var(--layout-margin)));
@@ -88589,6 +88653,11 @@ const CardLayoutStyleCSSVars = {
   minHeight: "--layout-min-height"
 };
 /**
+ * The card is centered in the area both ways and is as wide as its content,
+ * `minWidth` at least. Down the area, the layout takes at least the height of
+ * what holds it, so how tall that area is is up to the page around it, as for
+ * `ViewportLayout`.
+ *
  * @type {import("ignore:preact").FunctionComponent<{
  *   alignX?: string,
  *   alignY?: string,
@@ -88618,6 +88687,11 @@ const CardLayout = ({
 }) => {
   import.meta.css = [css$3, "@jsenv/navi/src/layout/card_layout.jsx"];
   return jsx(Box, {
+    flex: true
+    // The card's place in the area; alignX/alignY below are its content's.
+    ,
+    alignX: "center",
+    alignY: "center",
     baseClassName: "navi_card_layout",
     styleCSSVars: CardLayoutStyleCSSVars,
     visualSelector: ".navi_card",

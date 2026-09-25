@@ -111,79 +111,63 @@ if (vv) {
   vv.addEventListener("scroll", update);
 }
 
-// The app's own screen — the visual viewport, unless the app declared a
-// narrower one with --navi-app-max-width/--navi-app-height (see
-// navi_css_vars.js, which derives --navi-app-width/--navi-app-height from
-// these in CSS). Anything escaping normal flow is sized against this rather
-// than the viewport: an app that simulates a handheld screen keeps that width
-// even for what paints on top of it.
+// The app's own screen: the visual viewport minus the bands --navi-app-inset-*
+// describes (see safe_area.js, and navi_css_vars.js, which derives
+// --navi-app-width/--navi-app-height from the same bands in CSS). Anything
+// escaping normal flow is sized and placed against this rather than the
+// viewport: an app that simulates a handheld screen keeps that width even for
+// what paints on top of it.
 //
-// The declaration stays in CSS and is read back from there rather than handed
-// to navi a second time in JS — a JS copy would be the one that goes stale.
-// Read on the spot rather than cached in a signal: the only caller is a popup
-// resolving its own margin as it places itself, which already reads far more
-// of the DOM than this, and nothing then has to be invalidated when the value
-// changes.
-const unresolvableWarned = new Set();
-const readAppMax = (propertyName) => {
-  const declared = getComputedStyle(document.documentElement)
-    .getPropertyValue(propertyName)
-    .trim();
-  if (!declared) {
-    return Infinity;
-  }
-  // A custom property computes to a token stream, not to a length: "40rem"
-  // arrives here as the string "40rem", and parseFloat would read it as 40
-  // pixels. Only px is accepted — an app declaring the screen it simulates has
-  // a pixel number to give, and resolving arbitrary lengths would mean laying
-  // out a probe element on every read.
-  const inPixels = /^([0-9.]+)px$/.exec(declared);
-  if (!inPixels) {
-    if (!unresolvableWarned.has(propertyName)) {
-      unresolvableWarned.add(propertyName);
-      // Not silently wrong, just partially applied: CSS still caps the popup's
-      // size with the declared length, only the margin it keeps with the edges
-      // falls back to a share of the viewport (the pre-token behavior).
-      console.warn(
-        `${propertyName}="${declared}" must be a length in pixels ("600px"). Until then popups keep viewport-sized margins.`,
-      );
-    }
-    return Infinity;
-  }
-  return parseFloat(inPixels[1]);
+// The bands are read back from CSS rather than worked out again here: a JS
+// copy of the formula is the one that goes stale, and it only knows the
+// centered bands --navi-app-max-width/height produce, not the uneven ones an
+// app writes directly. They are registered as lengths (safe_area.js), so they
+// compute to pixels whatever unit they were declared in. Read on the spot
+// rather than cached in a signal: the callers are a popup resolving its margin
+// and placing itself, which already read far more of the DOM than this, and
+// nothing then has to be invalidated when the value changes.
+const readAppInsets = () => {
+  const computedStyle = getComputedStyle(document.documentElement);
+  return {
+    top: readAppInset(computedStyle, "top"),
+    right: readAppInset(computedStyle, "right"),
+    bottom: readAppInset(computedStyle, "bottom"),
+    left: readAppInset(computedStyle, "left"),
+  };
 };
-const getAppWidth = () =>
-  Math.min(visualViewportWidthSignal.value, readAppMax("--navi-app-max-width"));
-// The JS reading of --navi-app-inset-* (see safe_area.js): the centered bands
-// between the window's edges and the app's own rectangle. Handed to
-// @jsenv/dom (setPlacementViewportInsets, wired in navi_css_vars.js) so
-// placement keeps to the same rectangle the CSS size caps describe. The
-// keyboard is deliberately absent, unlike in the CSS twin: the placement
-// viewport already subtracts the keyboard overlay itself (see
-// getVisibleViewportRect in @jsenv/dom's visible_rect.js), so carrying it
-// here too would count it twice.
-const getAppInsets = () => {
-  const vvWidth = visualViewportWidthSignal.value;
-  const vvHeight = visualViewportHeightSignal.value;
-  const appMaxWidth = readAppMax("--navi-app-max-width");
-  const appMaxHeight = readAppMax("--navi-app-max-height");
-  const bandX = appMaxWidth < vvWidth ? (vvWidth - appMaxWidth) / 2 : 0;
-  const bandY = appMaxHeight < vvHeight ? (vvHeight - appMaxHeight) / 2 : 0;
-  return { left: bandX, top: bandY, right: bandX, bottom: bandY };
-};
-// Minus what the keyboard covers, so this stays the JS reading of the very
-// same rectangle --navi-app-height describes in CSS (see safe_area.js's own
-// --navi-keyboard-inset-bottom). Zero unless the app opted into the keyboard
-// overlaying its content — otherwise the shrinking visual viewport above has
-// already accounted for it, and subtracting again would count it twice.
-const getAppHeight = () =>
-  Math.max(
-    0,
-    Math.min(
-      visualViewportHeightSignal.value,
-      readAppMax("--navi-app-max-height"),
-    ) - getVirtualKeyboardOverlayHeight(),
+const readAppInset = (computedStyle, side) => {
+  const value = parseFloat(
+    computedStyle.getPropertyValue(`--navi-app-inset-${side}`),
   );
+  // A browser that cannot register a custom property hands back the calc()
+  // it was written as: JS then answers for the whole viewport.
+  return Number.isFinite(value) ? value : 0;
+};
+const getAppWidth = () => {
+  const { left, right } = readAppInsets();
+  return visualViewportWidthSignal.value - left - right;
+};
+// Handed to @jsenv/dom (setPlacementViewportInsets, wired in navi_css_vars.js)
+// so placement keeps to the same rectangle the CSS size caps describe. The
+// keyboard is taken back off the bottom band: --navi-app-inset-bottom counts
+// it, and the placement viewport already subtracts it (see
+// getVisibleViewportRect in @jsenv/dom's visible_rect.js), so it would count
+// twice.
+const getAppInsets = () => {
+  const insets = readAppInsets();
+  insets.bottom -= getVirtualKeyboardOverlayHeight();
+  return insets;
+};
+// The keyboard stays in: this is --navi-app-height, which the ceilings are
+// sized against, read in JS.
+const getAppHeight = () => {
+  const { top, bottom } = readAppInsets();
+  const height = visualViewportHeightSignal.value - top - bottom;
+  if (height < 0) {
+    return 0;
+  }
+  return height;
+};
 
 // Whether the primary input is a finger rather than a mouse. A pointer type is
 // not a size: a narrow desktop window is still a mouse, and a large tablet is
@@ -264,24 +248,49 @@ installImportMetaCssBuild(import.meta);
  *    to the band left free INSIDE that rectangle. Whatever flows, scrolls, or
  *    gets painted keeps to it.
  *
- * Level 2 is a sum, and the contract for taking part in it is only "publish
- * what you take on one edge": the device's own notch (`env(safe-area-inset-*)`,
- * which is the browser's version of this very idea), the fixed bars
- * (fixed_bar_space.js), and anything an app adds. That is the point of naming
- * it at all — a component that must stay clear of what covers the screen reads
- * ONE set of numbers, and never has to learn what is covering it.
+ * Level 2 gathers what takes an edge: the device's own notch
+ * (`env(safe-area-inset-*)`, which is the browser's version of this very idea)
+ * and the fixed bars (fixed_bar_space.js, the one slot per edge — something
+ * else covering an edge is published by being drawn as a FixedBar). That is
+ * the point of naming it at all — a component that must stay clear of what
+ * covers the screen reads ONE set of numbers, and never has to learn what is
+ * covering it.
  *
  * `max()` between the notch and the bars rather than a sum: a bar pinned to an
  * edge already reaches under the notch and counts it in its own size (see
  * fixed_bar.jsx), so adding both would reserve it twice.
  *
  * JS placement answers to the level-1 rectangle too: getAppInsets
- * (layout/responsive.js) is its reading of these same bands, handed to
- * pickPositionRelativeTo via setPlacementViewportInsets (see
+ * (layout/responsive.js) reads these same bands back off the computed style,
+ * and hands them to pickPositionRelativeTo via setPlacementViewportInsets (see
  * navi_css_vars.js).
  */
 
-const SAFE_AREA_CSS = /* css */ `@property --navi-safe-area-inset-top {
+const SAFE_AREA_CSS = /* css */ `@property --navi-app-inset-top {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0;
+}
+
+@property --navi-app-inset-right {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0;
+}
+
+@property --navi-app-inset-bottom {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0;
+}
+
+@property --navi-app-inset-left {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0;
+}
+
+@property --navi-safe-area-inset-top {
   syntax: "<length>";
   inherits: true;
   initial-value: 0;
