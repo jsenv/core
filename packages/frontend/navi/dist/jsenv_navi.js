@@ -4794,14 +4794,11 @@ const CONTROL_TYPE_BY_SIGNAL_TYPE = {
 // become something plainer — it is what says the value is a number (see
 // isNumberInput), and what lets constraint messages use domain-specific
 // wording instead of the generic "Ce nombre doit être...".
+// A type a picker preset draws (navi_time, navi_minute: see picker_preset.jsx)
+// has no row: resolveInputProps runs before the preset resolver, and a row
+// would turn the type into its host before the preset resolver reads it. The
+// preset hands the host type on itself.
 const NAVI_TYPE_DEFAULTS = {
-  navi_time: {
-    "type": "time",
-    "navi-input-type": "time",
-    "min": 0,
-    "max": 24 * 3600 - 1,
-    "step": 1,
-  },
   navi_percentage: {
     "type": "navi_number",
     "navi-input-type": "percentage",
@@ -4863,7 +4860,6 @@ const isNumberInput = (type, naviInputType) => {
  * Supported navi types and their targets:
  * - `navi_percentage` → `navi_number`  (0–100, step 1)
  * - `navi_number`     → `text`         (inputMode="numeric", no spin buttons implied)
- * - `navi_time`       → `time`         (step in seconds)
  *
  * Standard HTML input types with formatters:
  * - `date`, `month`, `week`, `time`, `datetime-local`, `datetime`:
@@ -16014,6 +16010,15 @@ const createResource = (
     paramScope,
     rerunOn,
     dependencies,
+    // Set on a scoped child: the resource owning each of its items, which
+    // live in one store per owner (`store` is the owner's).
+    ownerName,
+    // Set on a scopedMany child: its per-owner store looked up by owner key,
+    // and the owner whose GET embeds the collection. Options rather than
+    // properties added afterwards, so every facade of the relation — the one
+    // scopedMany returns and each withParams() of it — carries both.
+    getChildStore,
+    ownerDependency,
   },
 ) => {
   const params = paramScope.params;
@@ -16039,6 +16044,8 @@ const createResource = (
     // private but exposed for convenience
     store,
     addItemSetup,
+    ownerName,
+    getChildStore,
   };
 
   resourceLifecycleManager.registerResource(stateFacade, {
@@ -16047,6 +16054,17 @@ const createResource = (
     dependencies,
     uniqueKeys,
   });
+  if (ownerDependency) {
+    // A child collection mutated (POST etc.) makes the owner GET re-fetch:
+    // the owner embeds the child array and only the backend knows the new
+    // ordering. Registered per facade, since the rerun is looked up by the
+    // facade whose action completed.
+    resourceLifecycleManager.addDependency(
+      stateFacade,
+      ownerDependency.owner,
+      ownerDependency.propertyName,
+    );
+  }
   const onActionComplete = (actionCompleted) => {
     resourceLifecycleManager.onActionComplete(actionCompleted, {
       resourceScope: stateFacade,
@@ -16058,6 +16076,10 @@ const createResource = (
    *
    * Actions from parameterized resources only trigger rerun/reset for other actions with
    * identical parameters, preventing cross-contamination between different parameter sets.
+   *
+   * The actions are the resource's own kind: on a relation they keep its callback return
+   * contract and write where it writes (`TABLE_COLUMNS.withParams(…).GET_MANY` returns
+   * `[ownerId, items]` and replaces that owner's collection).
    *
    * @param {Object} params - Parameters to bind to all actions of this resource (required)
    * @param {{ rerunOn?: Object, dependencies?: Object[] }} [options] - reruns of that scope; a `rerunOn` key left out keeps the resource's value, and `dependencies` left out are the resource's
@@ -16084,7 +16106,6 @@ const createResource = (
     paramsToInject,
     { dependencies: withParamsDeps, rerunOn: withParamsRerunOn } = {},
   ) => {
-    const declarationSite = getDeclarationSite();
     if (!paramsToInject || Object.keys(paramsToInject).length === 0) {
       throw new Error(`resource(${name}).withParams() requires parameters`);
     }
@@ -16092,11 +16113,6 @@ const createResource = (
       ? { ...params, ...paramsToInject }
       : paramsToInject;
     const resolvedParamScope = getParamScope(resolvedParams);
-    const createRestActionWithParams = createRestActionFactoryForRoot(name, {
-      idKey,
-      store,
-      declarationSite,
-    });
     return createResource(name, {
       idKey,
       uniqueKeys,
@@ -16104,10 +16120,16 @@ const createResource = (
       restCallbacks,
       store,
       addItemSetup,
-      createRestAction: createRestActionWithParams,
+      // The actions of this resource's kind: a relation applies its results to
+      // its relation (a scoped child to the per-owner stores), never as root
+      // items of `store`.
+      createRestAction,
       paramScope: resolvedParamScope,
       rerunOn: resolveRerunOn(withParamsRerunOn, rerunOn),
       dependencies: withParamsDeps ?? dependencies,
+      ownerName,
+      getChildStore,
+      ownerDependency,
     });
   };
   stateFacade.withParams = withParams;
@@ -16152,6 +16174,13 @@ const createResource = (
     } = {},
   ) => {
     const declarationSite = getDeclarationSite();
+    if (ownerName) {
+      refuseCallbacksNamingScopedItem(
+        `${name}.one("${propertyName}")`,
+        { GET, PUT, DELETE },
+        { name, ownerName, propertyName, declarationSite },
+      );
+    }
     const childName = `${name}.${propertyName}`;
     const childIdKey = childResource.idKey;
     const childStore = childResource.store;
@@ -16212,7 +16241,11 @@ const createResource = (
       );
     });
 
-    const createRestActionForOne = (verb, callback, { onActionComplete }) => {
+    const createRestActionForOne = (
+      verb,
+      callback,
+      { onActionComplete, paramScope },
+    ) => {
       const applyResultToValue =
         verb === "DELETE"
           ? (itemIdOrItemProps) => {
@@ -16327,6 +16360,13 @@ const createResource = (
     } = {},
   ) => {
     const declarationSite = getDeclarationSite();
+    if (ownerName) {
+      refuseCallbacksNamingScopedItem(
+        `${name}.many("${propertyName}")`,
+        { GET_MANY, DELETE, DELETE_MANY },
+        { name, ownerName, propertyName, declarationSite },
+      );
+    }
     const childStore = childResource.store;
     const childIdKey = childResource.idKey;
     const childName = `${name}.${propertyName}`;
@@ -16358,21 +16398,23 @@ const createResource = (
     const createRestActionForMany = (
       verb,
       callback,
-      { isMany, onActionComplete },
+      { isMany, onActionComplete, paramScope },
     ) => {
       if (!isMany) {
         return createRestActionAffectingOneItem(verb, callback, {
           onActionComplete,
+          paramScope,
         });
       }
       return createRestActionAffectingManyItems(verb, callback, {
         onActionComplete,
+        paramScope,
       });
     };
     const createRestActionAffectingOneItem = (
       verb,
       callback,
-      { onActionComplete },
+      { onActionComplete, paramScope },
     ) => {
       const applyResultToValue =
         verb === "DELETE"
@@ -16435,7 +16477,7 @@ const createResource = (
     const createRestActionAffectingManyItems = (
       verb,
       callback,
-      { onActionComplete },
+      { onActionComplete, paramScope },
     ) => {
       const applyResultToValue =
         verb === "GET"
@@ -16563,7 +16605,12 @@ const createResource = (
    * Mutations apply directly to the owner's signal, so the parent GET is never rerun.
    *
    * Returns the child relationship resource, itself chainable:
-   * `USER_PROFILE.one("theme", THEME)` adds a reactive `.theme` property on each profile.
+   * `USER_PROFILE.one("theme", THEME)` adds a reactive `.theme` property on each profile,
+   * fed by what this resource's callbacks embed (`[id, { bio, theme: { id: 3 } }]`). A
+   * profile exists only inside its user, so the chained relation declares none of the
+   * callbacks whose result names a profile (`.one()` GET/PUT/DELETE, `.many()`
+   * GET_MANY/DELETE/DELETE_MANY, any `.scopedOne()`/`.scopedMany()` callback): such a
+   * result cannot say which user holds it, and the declaration throws.
    *
    * @param {string} propertyName - property holding the sub-object on each owner item
    * @param {Object} [restCallbacks] - `{ idKey, rerunOn, dependencies, GET, POST, PUT, PATCH, DELETE }`
@@ -16583,6 +16630,14 @@ const createResource = (
       DELETE,
     } = {},
   ) => {
+    const declarationSite = getDeclarationSite();
+    if (ownerName) {
+      refuseCallbacksNamingScopedItem(
+        `${name}.scopedOne("${propertyName}")`,
+        { GET, POST, PUT, PATCH, DELETE },
+        { name, ownerName, propertyName, declarationSite },
+      );
+    }
     const childName = `${name}.${propertyName}`;
 
     // Callbacks added by chained .one()/.many() on the child resource,
@@ -16612,7 +16667,12 @@ const createResource = (
           childSignal.value = childItem; // first activation: null → childItem
         }
       };
-      applyPropsMap.set(ownerId, applyProps);
+      if (!ownerName) {
+        // Declared on a scoped child, an owner id is only unique inside its
+        // own owner and no callback addresses it (see
+        // refuseCallbacksNamingScopedItem): nothing is looked up by it.
+        applyPropsMap.set(ownerId, applyProps);
+      }
 
       applyProps(ownerItem[propertyName]);
 
@@ -16624,7 +16684,7 @@ const createResource = (
     const createRestActionForScopedOne = (
       verb,
       callback,
-      { onActionComplete },
+      { onActionComplete, paramScope },
     ) => {
       const childActionName = `${childName}.${verb}`;
       return createAction(callback, {
@@ -16672,6 +16732,7 @@ const createResource = (
       paramScope,
       rerunOn: resolveRerunOn(scopedOneRerunOn, rerunOn),
       dependencies: scopedOneDependencies ?? dependencies,
+      ownerName: name,
     });
   };
 
@@ -16699,7 +16760,14 @@ const createResource = (
    * `propertyName`), and the child's own GET_MANY reruns per its `rerunOn`.
    *
    * Returns the child relationship resource, itself chainable:
-   * `TABLE_COLUMNS.one("dataType", DATA_TYPE)` adds a reactive `.dataType` property on each column.
+   * `TABLE_COLUMNS.one("dataType", DATA_TYPE)` adds a reactive `.dataType` property on each column,
+   * fed by what this resource's callbacks embed (`[id, [{ name, dataType: { id: 2 } }]]`). A
+   * column exists only inside its table — two tables can each have an `email` — so the chained
+   * relation declares none of the callbacks whose result names a column (`.one()`
+   * GET/PUT/DELETE, `.many()` GET_MANY/DELETE/DELETE_MANY, any `.scopedOne()`/`.scopedMany()`
+   * callback): such a result cannot say which table holds it, and the declaration throws.
+   * A `.scopedMany()` chained on it keeps one collection per column: `users.email` and
+   * `admins.email` never share one.
    *
    * @param {string} propertyName - property holding the collection on each owner item
    * @param {Object} [restCallbacks] - `{ idKey, rerunOn, dependencies, GET, GET_MANY, POST, POST_MANY, PUT, PUT_MANY, PATCH, PATCH_MANY, DELETE, DELETE_MANY }`
@@ -16724,6 +16792,25 @@ const createResource = (
       DELETE_MANY,
     } = {},
   ) => {
+    const declarationSite = getDeclarationSite();
+    if (ownerName) {
+      refuseCallbacksNamingScopedItem(
+        `${name}.scopedMany("${propertyName}")`,
+        {
+          GET,
+          GET_MANY,
+          POST,
+          POST_MANY,
+          PUT,
+          PUT_MANY,
+          PATCH,
+          PATCH_MANY,
+          DELETE,
+          DELETE_MANY,
+        },
+        { name, ownerName, propertyName, declarationSite },
+      );
+    }
     const childName = `${name}.${propertyName}`;
 
     // Callbacks added by chained .one()/.many() on the child resource,
@@ -16745,35 +16832,40 @@ const createResource = (
           return childItem;
         },
       });
-      const scope = { childStore, idArraySignal: signal([]) };
-      scopeMap.set(ownerKey, scope);
-      return scope;
+      return { childStore, idArraySignal: signal([]) };
     };
     addItemSetup((item) => {
       const ownerId = item[idKey];
-
-      // Reuse an existing scope if one was already created under a uniqueKey
-      // value (e.g. rows were fetched by tablename before the full table was loaded).
-      let scope = scopeMap.get(ownerId);
-      if (!scope) {
-        for (const uniqueKey of uniqueKeys) {
-          const uniqueKeyValue = item[uniqueKey];
-          if (uniqueKeyValue !== undefined && scopeMap.has(uniqueKeyValue)) {
-            scope = scopeMap.get(uniqueKeyValue);
-            break;
+      let scope;
+      if (ownerName) {
+        // The owner is itself a scoped child: its id is only unique inside its
+        // own owner, so the scope is the item's alone, never looked up by id
+        // (no callback addresses it, see refuseCallbacksNamingScopedItem).
+        scope = createScope(ownerId);
+      } else {
+        // Reuse an existing scope if one was already created under a uniqueKey
+        // value (e.g. rows were fetched by tablename before the full table was loaded).
+        scope = scopeMap.get(ownerId);
+        if (!scope) {
+          for (const uniqueKey of uniqueKeys) {
+            const uniqueKeyValue = item[uniqueKey];
+            if (uniqueKeyValue !== undefined && scopeMap.has(uniqueKeyValue)) {
+              scope = scopeMap.get(uniqueKeyValue);
+              break;
+            }
           }
         }
-      }
-      if (!scope) {
-        scope = createScope(ownerId);
-      }
-      // Register the scope under the id and every uniqueKey value so that
-      // resolveOwnerId can address it whichever key a callback returns.
-      scopeMap.set(ownerId, scope);
-      for (const uniqueKey of uniqueKeys) {
-        const uniqueKeyValue = item[uniqueKey];
-        if (uniqueKeyValue !== undefined) {
-          scopeMap.set(uniqueKeyValue, scope);
+        if (!scope) {
+          scope = createScope(ownerId);
+        }
+        // Register the scope under the id and every uniqueKey value so that
+        // resolveOwnerId can address it whichever key a callback returns.
+        scopeMap.set(ownerId, scope);
+        for (const uniqueKey of uniqueKeys) {
+          const uniqueKeyValue = item[uniqueKey];
+          if (uniqueKeyValue !== undefined) {
+            scopeMap.set(uniqueKeyValue, scope);
+          }
         }
       }
 
@@ -16813,7 +16905,7 @@ const createResource = (
     const createRestActionForScopedMany = (
       verb,
       callback,
-      { isMany, onActionComplete },
+      { isMany, onActionComplete, paramScope },
     ) => {
       const childActionName = `${childName}.${verb}`;
       return createAction(callback, {
@@ -16835,7 +16927,11 @@ const createResource = (
           );
           // Owner not in store yet: create the scope so actions can run before
           // the parent item has been loaded (e.g. rows fetched before their table).
-          const scope = scopeMap.get(ownerId) || createScope(ownerId);
+          let scope = scopeMap.get(ownerId);
+          if (!scope) {
+            scope = createScope(ownerId);
+            scopeMap.set(ownerId, scope);
+          }
           const { childStore, idArraySignal } = scope;
 
           if (verb === "DELETE") {
@@ -16907,18 +17003,17 @@ const createResource = (
       paramScope,
       rerunOn: resolveRerunOn(scopedManyRerunOn, rerunOn),
       dependencies: scopedManyDependencies ?? dependencies,
+      ownerName: name,
+      // Declared on a scoped child, the scopes are kept per item and never
+      // registered by id (see addItemSetup above): there is no owner key to
+      // find one by.
+      getChildStore: ownerName
+        ? undefined
+        : (ownerKey) => scopeMap.get(ownerKey)?.childStore,
+      // scopedOne needs no such dependency: its mutation result carries the
+      // updated object directly.
+      ownerDependency: { owner: stateFacade, propertyName },
     });
-    // When a scoped child collection is mutated (POST etc.), the parent GET must
-    // re-fetch: the parent embeds the child array and only the backend knows the
-    // new ordering. (scopedOne does not need this: the mutation result contains
-    // the updated object directly.)
-    resourceLifecycleManager.addDependency(
-      childResource,
-      stateFacade,
-      propertyName,
-    );
-    childResource.getChildStore = (ownerKey) =>
-      scopeMap.get(ownerKey)?.childStore;
     return childResource;
   };
 
@@ -17139,7 +17234,7 @@ const getLastGetItemId = (action) => {
 };
 
 // Captures the "file:line:column" of the user code that invoked the public
-// function (resource(), .one(), .many(), withParams, …), so invalid-result
+// function (resource(), .one(), .many(), .scopedOne(), …), so invalid-result
 // errors can point at where the callbacks were declared, not at this file.
 // Must be called directly from the public function: the stack offset accounts
 // for exactly two frames (getCallerInfo → getDeclarationSite → public fn → user code).
@@ -17158,6 +17253,36 @@ const createInvalidResultThrower = (originalActionName, declarationSite) => {
 ${originalActionName} source location: ${declarationSite}`,
     );
   };
+};
+
+// A scoped child's item exists only inside its owner: two owners can each hold
+// one with the same id. The callbacks of a relation chained on it whose result
+// names that item do so by its id alone — `.one()`/`.many()` as the parent
+// object or id, `.scopedOne()`/`.scopedMany()` as the `ownerId` of
+// `[ownerId, …]` — so applied they would write the owner's store (`store` of a
+// scoped child) or the scope of another owner's item. They are refused rather
+// than routed: routing needs the owner in the result, a contract none of them
+// has.
+const refuseCallbacksNamingScopedItem = (
+  relationLabel,
+  callbacks,
+  { name, ownerName, propertyName, declarationSite },
+) => {
+  const declaredKeys = [];
+  for (const key of Object.keys(callbacks)) {
+    if (callbacks[key]) {
+      declaredKeys.push(key);
+    }
+  }
+  if (declaredKeys.length === 0) {
+    return;
+  }
+  const declared = declaredKeys.join(", ");
+  throw new Error(
+    `${relationLabel} cannot declare ${declared}: a "${name}" item exists only inside its "${ownerName}", and the result of ${declared} names it without saying which "${ownerName}" holds it.
+Return "${propertyName}" embedded in what the "${name}" callbacks return ([ownerId, { …, ${propertyName} }]): those say which "${ownerName}".
+${relationLabel} source location: ${declarationSite}`,
+  );
 };
 
 // Shared by .many() and .scopedMany(): converts a raw relationship value (an
@@ -17301,22 +17426,28 @@ Received an object with keys: ${keys.join(", ")}.`,
  * // which in turn triggers the route Signal->URL sync and updates the browser URL.
  */
 const syncResourceToSignals = (resource, propertyToSignalMap) => {
-  if (resource.getChildStore) {
+  if (resource.ownerName) {
+    // A scoped child's `store` is its owner's: watching it would sync the
+    // owner items' properties, not the child's.
     throw new Error(
-      `syncResourceToSignals: "${resource.name}" is a scoped resource (scopedMany/scopedOne). Use syncOwnedResourceToSignals instead.`,
+      `syncResourceToSignals: "${resource.name}" lives inside each "${resource.ownerName}", so it has no store of its own to watch.${resource.getChildStore ? " Use syncOwnedResourceToSignals instead." : ""}`,
     );
   }
   syncStoreToSignals(resource.store, propertyToSignalMap);
 };
 
 /**
- * The same, for a `scopedOne`/`scopedMany` resource: its items live in one store
- * per owner, so the store to watch is the one of the owner `ownerSignal` names
- * (by id or by any unique key), and it is switched when the signal changes.
- * Nothing is synced while `ownerSignal` holds `null`/`undefined` or names an
- * owner nothing has been loaded for yet.
+ * The same, for a `scopedMany` resource (or a `withParams()` of one): its items
+ * live in one store per owner, so the store to watch is the one of the owner
+ * `ownerSignal` names (by id or by any unique key), and it is switched when the
+ * signal changes. Nothing is synced while `ownerSignal` holds `null`/`undefined`
+ * or names an owner nothing has been loaded for yet.
  *
- * @param {Object} resource - a resource made by `.scopedOne()` / `.scopedMany()`
+ * A `scopedOne` child has no store (each owner holds its one item), and a
+ * `scopedMany` declared on a scoped child is kept per item with no owner key to
+ * find it by: both are refused.
+ *
+ * @param {Object} resource - a resource made by `.scopedMany()`
  * @param {import("@preact/signals").Signal} ownerSignal - the owner whose children are watched
  * @param {Object} propertyToSignalMap - `{ [propertyName]: signal }`, as for `syncResourceToSignals`
  */
@@ -17326,8 +17457,13 @@ const syncOwnedResourceToSignals = (
   propertyToSignalMap,
 ) => {
   if (!resource.getChildStore) {
+    if (!resource.ownerName) {
+      throw new Error(
+        `syncOwnedResourceToSignals: "${resource.name}" is not a scoped resource. Use syncResourceToSignals instead.`,
+      );
+    }
     throw new Error(
-      `syncOwnedResourceToSignals: "${resource.name}" is not a scoped resource (scopedMany/scopedOne). Use syncResourceToSignals instead.`,
+      `syncOwnedResourceToSignals: "${resource.name}" has no store per "${resource.ownerName}" to watch: a scopedOne child is held by each owner, and a scopedMany declared on a scoped child has no owner key to find its store by.`,
     );
   }
   effect(() => {
@@ -29313,7 +29449,7 @@ const TRANSITION_FURNITURE_CSS = /* css */ `.navi_fixed_bar[data-navi-transition
   clip-path: var(--wall-holes-arriving, var(--wall-holes));
 }
 
-:root[data-navi-route-transition] {
+:root[data-navi-route-transition-target="area"] {
   & .navi_dialog::backdrop, & .navi_popover_backdrop {
     backdrop-filter: none;
     background: none;
@@ -29458,10 +29594,7 @@ const nameFurnitureAround = (areaElement) => {
     if (!name) {
       // A name the application wrote itself answers for that element, and it
       // is saying something navi is not: it wants that bar moved on the pages'
-      // clock, by its own CSS. Asked only of a bar navi has never named — a
-      // bar wearing one of ITS names is one this movement inherited from the
-      // one it interrupted, and taking it for the application's would leave it
-      // named for the rest of the document's life.
+      // clock, by its own CSS.
       if (getComputedStyle(element).viewTransitionName !== "none") {
         continue;
       }
@@ -31283,8 +31416,17 @@ const beginTransition = ({
     url: absoluteUrl(url),
     decision: navigationDecision,
     walkHome: null,
-    releaseReverting: null
+    releaseReverting: null,
+    restoreDuration: null
   };
+  // The document wears one transition at a time, and the one this interrupts
+  // ends only after this one has begun — too late to take off what it wears
+  // (see end). Taking over therefore starts by taking it off, so that what is
+  // put on below describes this transition alone, including what it leaves
+  // unset: a type, an area, a duration.
+  if (currentTransition) {
+    releaseTransitionRoot(currentTransition);
+  }
   currentTransition = transition;
   // Said before the picture is taken: whoever names something for a movement
   // between two pages decides on it now (see transition_destination.js).
@@ -31328,11 +31470,10 @@ const beginTransition = ({
   // A duration of this relation's own, worn for the length of the transition —
   // and whatever the application had written inline put back afterwards, not
   // erased.
-  let restoreDuration = null;
   if (duration !== undefined) {
     const durationBefore = documentElement.style.getPropertyValue(TRANSITION_DURATION_PROPERTY);
     documentElement.style.setProperty(TRANSITION_DURATION_PROPERTY, typeof duration === "number" ? `${duration}ms` : duration);
-    restoreDuration = () => {
+    transition.restoreDuration = () => {
       if (durationBefore) {
         documentElement.style.setProperty(TRANSITION_DURATION_PROPERTY, durationBefore);
       } else {
@@ -31393,8 +31534,11 @@ const beginTransition = ({
       renderWait.stop();
     }
     // The page arriving is in the DOM and the transition has not started
-    // playing: the one moment both states of the area can be known.
-    if (areaElement) {
+    // playing: the one moment both states of the area can be known. The
+    // browser runs this callback even for a transition skipped before its
+    // first picture — the next one starting skips it — and a transition
+    // replaced holds nothing: what it wore was taken off at the takeover.
+    if (areaElement && currentTransition === transition) {
       holdTransitionFurniture(transition, areaElement);
       holdTransitionWindow(transition, areaElement, areaStateBefore);
     }
@@ -31403,8 +31547,9 @@ const beginTransition = ({
     // Whatever ends it — played out, skipped by another transition starting,
     // failed before its callback ever ran — the hold is given back and the
     // document is handed back to the application. Both are idempotent, and
-    // the attributes belong to the LAST transition begun: an earlier one
-    // ending late must not strip what a later one is wearing.
+    // the document is handed back only by the LAST transition begun: an
+    // earlier one ending late was taken off by the one that replaced it, and
+    // must not strip what that one is wearing.
     renderWait.stop();
     releaseRendering();
     // The hold a way back took, when it is still standing: the pictures were
@@ -31416,21 +31561,28 @@ const beginTransition = ({
     }
     if (currentTransition === transition) {
       currentTransition = null;
-      documentElement.removeAttribute(TRANSITION_ATTRIBUTE);
-      documentElement.removeAttribute(TRANSITION_TYPE_ATTRIBUTE);
-      documentElement.removeAttribute(TRANSITION_TARGET_ATTRIBUTE);
-      releaseTransitionWindow(transition);
-      releaseTransitionDestination(transition);
-      releaseTransitionFurniture(transition);
-      releaseTransitionPress(transition);
-      if (restoreDuration) {
-        restoreDuration();
-      }
+      releaseTransitionRoot(transition);
     }
   };
   transition.viewTransition = viewTransition;
   viewTransition.ready.then(viewTransitionReady, ignoreSkipped$1);
   viewTransition.finished.then(end, end);
+};
+
+// Everything a transition wears on the document for its length, taken off by
+// its own end or by the transition taking over from it.
+const releaseTransitionRoot = transition => {
+  const documentElement = document.documentElement;
+  documentElement.removeAttribute(TRANSITION_ATTRIBUTE);
+  documentElement.removeAttribute(TRANSITION_TYPE_ATTRIBUTE);
+  documentElement.removeAttribute(TRANSITION_TARGET_ATTRIBUTE);
+  releaseTransitionWindow(transition);
+  releaseTransitionDestination(transition);
+  releaseTransitionFurniture(transition);
+  releaseTransitionPress(transition);
+  if (transition.restoreDuration) {
+    transition.restoreDuration();
+  }
 };
 
 /**
@@ -72675,11 +72827,15 @@ const PickerNaviTime = props => {
     max = "23:30",
     step
   } = props;
-  const stepSeconds = timeStringToSeconds(step) ?? 1800;
+  // resolveInputProps has already run (PickerFirstResolver) and left navi_time
+  // as written: what is handed on is a time input, whose step is in seconds.
+  const hostStep = timeStringToSeconds(step);
+  const stepSeconds = hostStep ?? 1800;
   const slots = useMemo(() => generateTimeSlots(min, max, stepSeconds), [min, max, stepSeconds]);
   return jsx(Next, {
     ...props,
     type: "time",
+    step: hostStep,
     children: jsx(List, {
       selectable: true,
       command: "--navi-send",
@@ -75091,6 +75247,10 @@ const PickerFirstResolver = props => {
     ...props
   });
 };
+
+// PickerFirstResolver comes before the presets so a preset reads the
+// min/max/step a bound signal fills in (resolveInputProps); a preset type
+// therefore has no row in NAVI_TYPE_DEFAULTS (resolve_input_props.js).
 const PickerResolved = /*#__PURE__*/createComponentResolver([PickerFirstResolver, PickerPresetResolver, PickerConfirmResolver, PickerCustomResolver, PickerTypeResolver, PickerButton]);
 const PickerUI = /*#__PURE__*/Object.assign(PickerDefaultUI, {
   Date: PickerDateUI,

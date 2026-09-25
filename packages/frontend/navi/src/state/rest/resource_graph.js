@@ -39,7 +39,15 @@ const resourceLifecycleManager = createResourceLifecycleManager();
  *   resources chainable: a relation declared on one attaches to its items.
  *   Those of a `.one()`/`.many()` resource are the child resource's own, so it
  *   is handed the child's store and `addItemSetup`; a scoped child is handed
- *   an `addItemSetup` applied to each per-owner child item.
+ *   an `addItemSetup` applied to each per-owner child item. A scoped child has
+ *   no single store of its items (its `store` is the owner's), and its item
+ *   ids are unique only inside their owner, so a relation chained on it is
+ *   refused the callbacks whose result names the parent item — that result
+ *   cannot say which owner holds the item (see
+ *   refuseCallbacksNamingScopedItem) — and a scoped relation on it keeps one
+ *   scope per item rather than per id. `withParams()` recurses with the
+ *   resource's own `createRestAction`: a scope of a relation writes as that
+ *   relation does.
  * - Relationships make item properties reactive: `addItemSetup` registers a
  *   callback that defines a getter/setter on each item. The setter upserts
  *   plain values into the child store, the getter reads a computed signal, so
@@ -274,6 +282,15 @@ const createResource = (
     paramScope,
     rerunOn,
     dependencies,
+    // Set on a scoped child: the resource owning each of its items, which
+    // live in one store per owner (`store` is the owner's).
+    ownerName,
+    // Set on a scopedMany child: its per-owner store looked up by owner key,
+    // and the owner whose GET embeds the collection. Options rather than
+    // properties added afterwards, so every facade of the relation — the one
+    // scopedMany returns and each withParams() of it — carries both.
+    getChildStore,
+    ownerDependency,
   },
 ) => {
   const params = paramScope.params;
@@ -299,6 +316,8 @@ const createResource = (
     // private but exposed for convenience
     store,
     addItemSetup,
+    ownerName,
+    getChildStore,
   };
 
   resourceLifecycleManager.registerResource(stateFacade, {
@@ -307,6 +326,17 @@ const createResource = (
     dependencies,
     uniqueKeys,
   });
+  if (ownerDependency) {
+    // A child collection mutated (POST etc.) makes the owner GET re-fetch:
+    // the owner embeds the child array and only the backend knows the new
+    // ordering. Registered per facade, since the rerun is looked up by the
+    // facade whose action completed.
+    resourceLifecycleManager.addDependency(
+      stateFacade,
+      ownerDependency.owner,
+      ownerDependency.propertyName,
+    );
+  }
   const onActionComplete = (actionCompleted) => {
     resourceLifecycleManager.onActionComplete(actionCompleted, {
       resourceScope: stateFacade,
@@ -318,6 +348,10 @@ const createResource = (
    *
    * Actions from parameterized resources only trigger rerun/reset for other actions with
    * identical parameters, preventing cross-contamination between different parameter sets.
+   *
+   * The actions are the resource's own kind: on a relation they keep its callback return
+   * contract and write where it writes (`TABLE_COLUMNS.withParams(…).GET_MANY` returns
+   * `[ownerId, items]` and replaces that owner's collection).
    *
    * @param {Object} params - Parameters to bind to all actions of this resource (required)
    * @param {{ rerunOn?: Object, dependencies?: Object[] }} [options] - reruns of that scope; a `rerunOn` key left out keeps the resource's value, and `dependencies` left out are the resource's
@@ -344,7 +378,6 @@ const createResource = (
     paramsToInject,
     { dependencies: withParamsDeps, rerunOn: withParamsRerunOn } = {},
   ) => {
-    const declarationSite = getDeclarationSite();
     if (!paramsToInject || Object.keys(paramsToInject).length === 0) {
       throw new Error(`resource(${name}).withParams() requires parameters`);
     }
@@ -352,11 +385,6 @@ const createResource = (
       ? { ...params, ...paramsToInject }
       : paramsToInject;
     const resolvedParamScope = getParamScope(resolvedParams);
-    const createRestActionWithParams = createRestActionFactoryForRoot(name, {
-      idKey,
-      store,
-      declarationSite,
-    });
     return createResource(name, {
       idKey,
       uniqueKeys,
@@ -364,10 +392,16 @@ const createResource = (
       restCallbacks,
       store,
       addItemSetup,
-      createRestAction: createRestActionWithParams,
+      // The actions of this resource's kind: a relation applies its results to
+      // its relation (a scoped child to the per-owner stores), never as root
+      // items of `store`.
+      createRestAction,
       paramScope: resolvedParamScope,
       rerunOn: resolveRerunOn(withParamsRerunOn, rerunOn),
       dependencies: withParamsDeps ?? dependencies,
+      ownerName,
+      getChildStore,
+      ownerDependency,
     });
   };
   stateFacade.withParams = withParams;
@@ -412,6 +446,13 @@ const createResource = (
     } = {},
   ) => {
     const declarationSite = getDeclarationSite();
+    if (ownerName) {
+      refuseCallbacksNamingScopedItem(
+        `${name}.one("${propertyName}")`,
+        { GET, PUT, DELETE },
+        { name, ownerName, propertyName, declarationSite },
+      );
+    }
     const childName = `${name}.${propertyName}`;
     const childIdKey = childResource.idKey;
     const childStore = childResource.store;
@@ -472,7 +513,11 @@ const createResource = (
       );
     });
 
-    const createRestActionForOne = (verb, callback, { onActionComplete }) => {
+    const createRestActionForOne = (
+      verb,
+      callback,
+      { onActionComplete, paramScope },
+    ) => {
       const applyResultToValue =
         verb === "DELETE"
           ? (itemIdOrItemProps) => {
@@ -587,6 +632,13 @@ const createResource = (
     } = {},
   ) => {
     const declarationSite = getDeclarationSite();
+    if (ownerName) {
+      refuseCallbacksNamingScopedItem(
+        `${name}.many("${propertyName}")`,
+        { GET_MANY, DELETE, DELETE_MANY },
+        { name, ownerName, propertyName, declarationSite },
+      );
+    }
     const childStore = childResource.store;
     const childIdKey = childResource.idKey;
     const childName = `${name}.${propertyName}`;
@@ -624,21 +676,23 @@ const createResource = (
     const createRestActionForMany = (
       verb,
       callback,
-      { isMany, onActionComplete },
+      { isMany, onActionComplete, paramScope },
     ) => {
       if (!isMany) {
         return createRestActionAffectingOneItem(verb, callback, {
           onActionComplete,
+          paramScope,
         });
       }
       return createRestActionAffectingManyItems(verb, callback, {
         onActionComplete,
+        paramScope,
       });
     };
     const createRestActionAffectingOneItem = (
       verb,
       callback,
-      { onActionComplete },
+      { onActionComplete, paramScope },
     ) => {
       const applyResultToValue =
         verb === "DELETE"
@@ -701,7 +755,7 @@ const createResource = (
     const createRestActionAffectingManyItems = (
       verb,
       callback,
-      { onActionComplete },
+      { onActionComplete, paramScope },
     ) => {
       const applyResultToValue =
         verb === "GET"
@@ -829,7 +883,12 @@ const createResource = (
    * Mutations apply directly to the owner's signal, so the parent GET is never rerun.
    *
    * Returns the child relationship resource, itself chainable:
-   * `USER_PROFILE.one("theme", THEME)` adds a reactive `.theme` property on each profile.
+   * `USER_PROFILE.one("theme", THEME)` adds a reactive `.theme` property on each profile,
+   * fed by what this resource's callbacks embed (`[id, { bio, theme: { id: 3 } }]`). A
+   * profile exists only inside its user, so the chained relation declares none of the
+   * callbacks whose result names a profile (`.one()` GET/PUT/DELETE, `.many()`
+   * GET_MANY/DELETE/DELETE_MANY, any `.scopedOne()`/`.scopedMany()` callback): such a
+   * result cannot say which user holds it, and the declaration throws.
    *
    * @param {string} propertyName - property holding the sub-object on each owner item
    * @param {Object} [restCallbacks] - `{ idKey, rerunOn, dependencies, GET, POST, PUT, PATCH, DELETE }`
@@ -849,6 +908,14 @@ const createResource = (
       DELETE,
     } = {},
   ) => {
+    const declarationSite = getDeclarationSite();
+    if (ownerName) {
+      refuseCallbacksNamingScopedItem(
+        `${name}.scopedOne("${propertyName}")`,
+        { GET, POST, PUT, PATCH, DELETE },
+        { name, ownerName, propertyName, declarationSite },
+      );
+    }
     const childName = `${name}.${propertyName}`;
 
     // Callbacks added by chained .one()/.many() on the child resource,
@@ -878,7 +945,12 @@ const createResource = (
           childSignal.value = childItem; // first activation: null → childItem
         }
       };
-      applyPropsMap.set(ownerId, applyProps);
+      if (!ownerName) {
+        // Declared on a scoped child, an owner id is only unique inside its
+        // own owner and no callback addresses it (see
+        // refuseCallbacksNamingScopedItem): nothing is looked up by it.
+        applyPropsMap.set(ownerId, applyProps);
+      }
 
       applyProps(ownerItem[propertyName]);
 
@@ -890,7 +962,7 @@ const createResource = (
     const createRestActionForScopedOne = (
       verb,
       callback,
-      { onActionComplete },
+      { onActionComplete, paramScope },
     ) => {
       const childActionName = `${childName}.${verb}`;
       return createAction(callback, {
@@ -938,6 +1010,7 @@ const createResource = (
       paramScope,
       rerunOn: resolveRerunOn(scopedOneRerunOn, rerunOn),
       dependencies: scopedOneDependencies ?? dependencies,
+      ownerName: name,
     });
   };
 
@@ -965,7 +1038,14 @@ const createResource = (
    * `propertyName`), and the child's own GET_MANY reruns per its `rerunOn`.
    *
    * Returns the child relationship resource, itself chainable:
-   * `TABLE_COLUMNS.one("dataType", DATA_TYPE)` adds a reactive `.dataType` property on each column.
+   * `TABLE_COLUMNS.one("dataType", DATA_TYPE)` adds a reactive `.dataType` property on each column,
+   * fed by what this resource's callbacks embed (`[id, [{ name, dataType: { id: 2 } }]]`). A
+   * column exists only inside its table — two tables can each have an `email` — so the chained
+   * relation declares none of the callbacks whose result names a column (`.one()`
+   * GET/PUT/DELETE, `.many()` GET_MANY/DELETE/DELETE_MANY, any `.scopedOne()`/`.scopedMany()`
+   * callback): such a result cannot say which table holds it, and the declaration throws.
+   * A `.scopedMany()` chained on it keeps one collection per column: `users.email` and
+   * `admins.email` never share one.
    *
    * @param {string} propertyName - property holding the collection on each owner item
    * @param {Object} [restCallbacks] - `{ idKey, rerunOn, dependencies, GET, GET_MANY, POST, POST_MANY, PUT, PUT_MANY, PATCH, PATCH_MANY, DELETE, DELETE_MANY }`
@@ -990,6 +1070,25 @@ const createResource = (
       DELETE_MANY,
     } = {},
   ) => {
+    const declarationSite = getDeclarationSite();
+    if (ownerName) {
+      refuseCallbacksNamingScopedItem(
+        `${name}.scopedMany("${propertyName}")`,
+        {
+          GET,
+          GET_MANY,
+          POST,
+          POST_MANY,
+          PUT,
+          PUT_MANY,
+          PATCH,
+          PATCH_MANY,
+          DELETE,
+          DELETE_MANY,
+        },
+        { name, ownerName, propertyName, declarationSite },
+      );
+    }
     const childName = `${name}.${propertyName}`;
 
     // Callbacks added by chained .one()/.many() on the child resource,
@@ -1011,35 +1110,40 @@ const createResource = (
           return childItem;
         },
       });
-      const scope = { childStore, idArraySignal: signal([]) };
-      scopeMap.set(ownerKey, scope);
-      return scope;
+      return { childStore, idArraySignal: signal([]) };
     };
     addItemSetup((item) => {
       const ownerId = item[idKey];
-
-      // Reuse an existing scope if one was already created under a uniqueKey
-      // value (e.g. rows were fetched by tablename before the full table was loaded).
-      let scope = scopeMap.get(ownerId);
-      if (!scope) {
-        for (const uniqueKey of uniqueKeys) {
-          const uniqueKeyValue = item[uniqueKey];
-          if (uniqueKeyValue !== undefined && scopeMap.has(uniqueKeyValue)) {
-            scope = scopeMap.get(uniqueKeyValue);
-            break;
+      let scope;
+      if (ownerName) {
+        // The owner is itself a scoped child: its id is only unique inside its
+        // own owner, so the scope is the item's alone, never looked up by id
+        // (no callback addresses it, see refuseCallbacksNamingScopedItem).
+        scope = createScope(ownerId);
+      } else {
+        // Reuse an existing scope if one was already created under a uniqueKey
+        // value (e.g. rows were fetched by tablename before the full table was loaded).
+        scope = scopeMap.get(ownerId);
+        if (!scope) {
+          for (const uniqueKey of uniqueKeys) {
+            const uniqueKeyValue = item[uniqueKey];
+            if (uniqueKeyValue !== undefined && scopeMap.has(uniqueKeyValue)) {
+              scope = scopeMap.get(uniqueKeyValue);
+              break;
+            }
           }
         }
-      }
-      if (!scope) {
-        scope = createScope(ownerId);
-      }
-      // Register the scope under the id and every uniqueKey value so that
-      // resolveOwnerId can address it whichever key a callback returns.
-      scopeMap.set(ownerId, scope);
-      for (const uniqueKey of uniqueKeys) {
-        const uniqueKeyValue = item[uniqueKey];
-        if (uniqueKeyValue !== undefined) {
-          scopeMap.set(uniqueKeyValue, scope);
+        if (!scope) {
+          scope = createScope(ownerId);
+        }
+        // Register the scope under the id and every uniqueKey value so that
+        // resolveOwnerId can address it whichever key a callback returns.
+        scopeMap.set(ownerId, scope);
+        for (const uniqueKey of uniqueKeys) {
+          const uniqueKeyValue = item[uniqueKey];
+          if (uniqueKeyValue !== undefined) {
+            scopeMap.set(uniqueKeyValue, scope);
+          }
         }
       }
 
@@ -1079,7 +1183,7 @@ const createResource = (
     const createRestActionForScopedMany = (
       verb,
       callback,
-      { isMany, onActionComplete },
+      { isMany, onActionComplete, paramScope },
     ) => {
       const childActionName = `${childName}.${verb}`;
       return createAction(callback, {
@@ -1101,7 +1205,11 @@ const createResource = (
           );
           // Owner not in store yet: create the scope so actions can run before
           // the parent item has been loaded (e.g. rows fetched before their table).
-          const scope = scopeMap.get(ownerId) || createScope(ownerId);
+          let scope = scopeMap.get(ownerId);
+          if (!scope) {
+            scope = createScope(ownerId);
+            scopeMap.set(ownerId, scope);
+          }
           const { childStore, idArraySignal } = scope;
 
           if (verb === "DELETE") {
@@ -1173,18 +1281,17 @@ const createResource = (
       paramScope,
       rerunOn: resolveRerunOn(scopedManyRerunOn, rerunOn),
       dependencies: scopedManyDependencies ?? dependencies,
+      ownerName: name,
+      // Declared on a scoped child, the scopes are kept per item and never
+      // registered by id (see addItemSetup above): there is no owner key to
+      // find one by.
+      getChildStore: ownerName
+        ? undefined
+        : (ownerKey) => scopeMap.get(ownerKey)?.childStore,
+      // scopedOne needs no such dependency: its mutation result carries the
+      // updated object directly.
+      ownerDependency: { owner: stateFacade, propertyName },
     });
-    // When a scoped child collection is mutated (POST etc.), the parent GET must
-    // re-fetch: the parent embeds the child array and only the backend knows the
-    // new ordering. (scopedOne does not need this: the mutation result contains
-    // the updated object directly.)
-    resourceLifecycleManager.addDependency(
-      childResource,
-      stateFacade,
-      propertyName,
-    );
-    childResource.getChildStore = (ownerKey) =>
-      scopeMap.get(ownerKey)?.childStore;
     return childResource;
   };
 
@@ -1405,7 +1512,7 @@ const getLastGetItemId = (action) => {
 };
 
 // Captures the "file:line:column" of the user code that invoked the public
-// function (resource(), .one(), .many(), withParams, …), so invalid-result
+// function (resource(), .one(), .many(), .scopedOne(), …), so invalid-result
 // errors can point at where the callbacks were declared, not at this file.
 // Must be called directly from the public function: the stack offset accounts
 // for exactly two frames (getCallerInfo → getDeclarationSite → public fn → user code).
@@ -1424,6 +1531,36 @@ const createInvalidResultThrower = (originalActionName, declarationSite) => {
 ${originalActionName} source location: ${declarationSite}`,
     );
   };
+};
+
+// A scoped child's item exists only inside its owner: two owners can each hold
+// one with the same id. The callbacks of a relation chained on it whose result
+// names that item do so by its id alone — `.one()`/`.many()` as the parent
+// object or id, `.scopedOne()`/`.scopedMany()` as the `ownerId` of
+// `[ownerId, …]` — so applied they would write the owner's store (`store` of a
+// scoped child) or the scope of another owner's item. They are refused rather
+// than routed: routing needs the owner in the result, a contract none of them
+// has.
+const refuseCallbacksNamingScopedItem = (
+  relationLabel,
+  callbacks,
+  { name, ownerName, propertyName, declarationSite },
+) => {
+  const declaredKeys = [];
+  for (const key of Object.keys(callbacks)) {
+    if (callbacks[key]) {
+      declaredKeys.push(key);
+    }
+  }
+  if (declaredKeys.length === 0) {
+    return;
+  }
+  const declared = declaredKeys.join(", ");
+  throw new Error(
+    `${relationLabel} cannot declare ${declared}: a "${name}" item exists only inside its "${ownerName}", and the result of ${declared} names it without saying which "${ownerName}" holds it.
+Return "${propertyName}" embedded in what the "${name}" callbacks return ([ownerId, { …, ${propertyName} }]): those say which "${ownerName}".
+${relationLabel} source location: ${declarationSite}`,
+  );
 };
 
 // Shared by .many() and .scopedMany(): converts a raw relationship value (an
@@ -1567,22 +1704,28 @@ Received an object with keys: ${keys.join(", ")}.`,
  * // which in turn triggers the route Signal->URL sync and updates the browser URL.
  */
 export const syncResourceToSignals = (resource, propertyToSignalMap) => {
-  if (resource.getChildStore) {
+  if (resource.ownerName) {
+    // A scoped child's `store` is its owner's: watching it would sync the
+    // owner items' properties, not the child's.
     throw new Error(
-      `syncResourceToSignals: "${resource.name}" is a scoped resource (scopedMany/scopedOne). Use syncOwnedResourceToSignals instead.`,
+      `syncResourceToSignals: "${resource.name}" lives inside each "${resource.ownerName}", so it has no store of its own to watch.${resource.getChildStore ? " Use syncOwnedResourceToSignals instead." : ""}`,
     );
   }
   syncStoreToSignals(resource.store, propertyToSignalMap);
 };
 
 /**
- * The same, for a `scopedOne`/`scopedMany` resource: its items live in one store
- * per owner, so the store to watch is the one of the owner `ownerSignal` names
- * (by id or by any unique key), and it is switched when the signal changes.
- * Nothing is synced while `ownerSignal` holds `null`/`undefined` or names an
- * owner nothing has been loaded for yet.
+ * The same, for a `scopedMany` resource (or a `withParams()` of one): its items
+ * live in one store per owner, so the store to watch is the one of the owner
+ * `ownerSignal` names (by id or by any unique key), and it is switched when the
+ * signal changes. Nothing is synced while `ownerSignal` holds `null`/`undefined`
+ * or names an owner nothing has been loaded for yet.
  *
- * @param {Object} resource - a resource made by `.scopedOne()` / `.scopedMany()`
+ * A `scopedOne` child has no store (each owner holds its one item), and a
+ * `scopedMany` declared on a scoped child is kept per item with no owner key to
+ * find it by: both are refused.
+ *
+ * @param {Object} resource - a resource made by `.scopedMany()`
  * @param {import("@preact/signals").Signal} ownerSignal - the owner whose children are watched
  * @param {Object} propertyToSignalMap - `{ [propertyName]: signal }`, as for `syncResourceToSignals`
  */
@@ -1592,8 +1735,13 @@ export const syncOwnedResourceToSignals = (
   propertyToSignalMap,
 ) => {
   if (!resource.getChildStore) {
+    if (!resource.ownerName) {
+      throw new Error(
+        `syncOwnedResourceToSignals: "${resource.name}" is not a scoped resource. Use syncResourceToSignals instead.`,
+      );
+    }
     throw new Error(
-      `syncOwnedResourceToSignals: "${resource.name}" is not a scoped resource (scopedMany/scopedOne). Use syncResourceToSignals instead.`,
+      `syncOwnedResourceToSignals: "${resource.name}" has no store per "${resource.ownerName}" to watch: a scopedOne child is held by each owner, and a scopedMany declared on a scoped child has no owner key to find its store by.`,
     );
   }
   effect(() => {

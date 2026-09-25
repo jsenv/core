@@ -163,9 +163,11 @@ const TRANSITION_FURNITURE_CSS = /* css */ `
      one DOM write, one frame, and that frame is painted by the stand-ins
      alone, which paint what the wall paints. A wall's background is not one
      of its transitioned properties, so it goes and comes back at once.
-     Scoped to navi's attribute: a view transition of the application's own
-     keeps its walls. */
-  :root[data-navi-route-transition] {
+     Scoped to a movement played on an area, the only one that puts stand-ins
+     up: a movement played on the whole document keeps the root's picture,
+     which paints the top layer, wall included — as does a view transition of
+     the application's own. */
+  :root[data-navi-route-transition-target="area"] {
     .navi_dialog::backdrop,
     .navi_popover_backdrop {
       background: transparent;
@@ -311,10 +313,7 @@ const nameFurnitureAround = (areaElement) => {
     if (!name) {
       // A name the application wrote itself answers for that element, and it
       // is saying something navi is not: it wants that bar moved on the pages'
-      // clock, by its own CSS. Asked only of a bar navi has never named — a
-      // bar wearing one of ITS names is one this movement inherited from the
-      // one it interrupted, and taking it for the application's would leave it
-      // named for the rest of the document's life.
+      // clock, by its own CSS.
       if (getComputedStyle(element).viewTransitionName !== "none") {
         continue;
       }

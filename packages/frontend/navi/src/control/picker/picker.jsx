@@ -2329,6 +2329,9 @@ const warnOnUnknownPickerType = (props) => {
   );
 };
 
+// PickerFirstResolver comes before the presets so a preset reads the
+// min/max/step a bound signal fills in (resolveInputProps); a preset type
+// therefore has no row in NAVI_TYPE_DEFAULTS (resolve_input_props.js).
 const PickerResolved = /*#__PURE__*/ createComponentResolver([
   PickerFirstResolver,
   PickerPresetResolver,

@@ -42,14 +42,11 @@ const CONTROL_TYPE_BY_SIGNAL_TYPE = {
 // become something plainer — it is what says the value is a number (see
 // isNumberInput), and what lets constraint messages use domain-specific
 // wording instead of the generic "Ce nombre doit être...".
+// A type a picker preset draws (navi_time, navi_minute: see picker_preset.jsx)
+// has no row: resolveInputProps runs before the preset resolver, and a row
+// would turn the type into its host before the preset resolver reads it. The
+// preset hands the host type on itself.
 const NAVI_TYPE_DEFAULTS = {
-  navi_time: {
-    "type": "time",
-    "navi-input-type": "time",
-    "min": 0,
-    "max": 24 * 3600 - 1,
-    "step": 1,
-  },
   navi_percentage: {
     "type": "navi_number",
     "navi-input-type": "percentage",
@@ -111,7 +108,6 @@ export const isNumberInput = (type, naviInputType) => {
  * Supported navi types and their targets:
  * - `navi_percentage` → `navi_number`  (0–100, step 1)
  * - `navi_number`     → `text`         (inputMode="numeric", no spin buttons implied)
- * - `navi_time`       → `time`         (step in seconds)
  *
  * Standard HTML input types with formatters:
  * - `date`, `month`, `week`, `time`, `datetime-local`, `datetime`:

@@ -14,6 +14,7 @@ import { createPubSub } from "../../pub_sub.js";
 import { suppressClickAfterGesture } from "../click_suppression.js";
 import { findFocusable } from "../focus/find_focusable.js";
 import { isolateInteractions } from "../isolate_interactions.js";
+import { takePress } from "../press_held.js";
 
 const css = /* css */ `
   .navi_drag_gesture_backdrop {
@@ -788,7 +789,10 @@ export const createDragGestureController = (options = {}) => {
             // last — which is what tells a hand-over from a capture the browser
             // dropped on its own (see onCaptureLost).
             captureHolderByPointerId.set(grabEvent.pointerId, dragGesture);
-            target.setPointerCapture(grabEvent.pointerId);
+            // The capture is often where the finger landed, which the browser
+            // does not announce again: takePress is what tells a hold waiting
+            // on this press that it is a drag.
+            takePress(grabEvent, target);
           };
           if (!options?.pointerCaptureDeferred) {
             dragGesture.capturePointer();

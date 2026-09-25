@@ -51,6 +51,7 @@
 import { getScrollBox, getScrollport } from "../../position/dom_coords.js";
 import { createStyleController } from "../../style/style_controller.js";
 import { suppressClickAfterGesture } from "../click_suppression.js";
+import { takePress } from "../press_held.js";
 import { getScrollContainer } from "../scroll/scroll_container.js";
 import {
   dragAfterIntent,
@@ -994,12 +995,13 @@ export const refuseDragTo = (
         onRefuse?.({ event });
         return null;
       }
-      // Nothing is carried, and the pointer is taken all the same: taking it is
+      // Nothing is carried, and the press is taken all the same: taking it is
       // how a gesture says the press is settled, and another wait counting on the
-      // same finger reads it (see press_held.js). A `longpress` declared beside
-      // the drag is answered by the grab when there is one; there must be no
+      // same finger gives up (see takePress in press_held.js), even when the
+      // finger landed on this very element. A `longpress` declared beside the
+      // drag is answered by the grab when there is one; there must be no
       // difference when there is none.
-      draggedElement.setPointerCapture(event.pointerId);
+      takePress(event, draggedElement);
       // And the click the browser fires afterwards belongs to what answered the
       // press, a refusal included: something pulled and told to stay put must not
       // also be clicked. Lifted at the release rather than with the click, which
@@ -1715,14 +1717,16 @@ const getRectInside = (element, containerElement) => {
 //
 // Layer 2 — inner clone (navi-drag-clone):
 //   A deep clone of the grabbed element, and what the eye follows — so it is
-//   the one named (view-transition-name: navi-drag-clone).
+//   the one named: a view-transition-name of its own (navi-drag-clone-<n>),
+//   and the view-transition-class navi-drag-clone that every copy shares.
 //   Casts the shadow and applies transform: scale(var(--drag-clone-scale, 1.03))
 //   via the CSS rule for [navi-drag-clone], giving the "lifted" feel. The
 //   transform-origin is set to the grab point so the element expands naturally
 //   from where the user clicked.
 //   On release, the `navi-drag-clone` attribute is removed inside
 //   startViewTransition to drop the scale back to 1 as the "new" state; the
-//   name stays, so the scale is morphed with the box rather than cross-faded.
+//   name and the class stay, so the scale is morphed with the box rather than
+//   cross-faded.
 
 // The chevron is the one the table's column drop preview uses, rotated by the
 // CSS above so each cap points into the line.
@@ -1967,6 +1971,7 @@ const liftDragClone = (cloneWrapper, pointerEvent) => {
   cloneWrapper.firstElementChild.setAttribute("navi-drag-clone", "");
 };
 
+let dragCloneCount = 0;
 const createDragClone = (element, pointerEvent) => {
   const rect = element.getBoundingClientRect();
 
@@ -2003,7 +2008,14 @@ const createDragClone = (element, pointerEvent) => {
   // dresses `[data-grabbed]` on its own element once, and the copy is that element.
   // (The original wears it too, but it is hidden — see navi-drag-clone-source.)
   elementClone.setAttribute("data-grabbed", "");
-  elementClone.style.viewTransitionName = "navi-drag-clone";
+  // A name of its own: a copy outlives its gesture while its answer is asked,
+  // so two can be on screen at once, and a name claimed twice aborts the
+  // transition. The class is what every copy shares — inline like the name,
+  // since a landing takes the [navi-drag-clone] attribute off before the
+  // capture its group's class is read from.
+  dragCloneCount++;
+  elementClone.style.viewTransitionName = `navi-drag-clone-${dragCloneCount}`;
+  elementClone.style.viewTransitionClass = "navi-drag-clone";
   // The copy takes the wrapper's box, and nothing the page said about where the
   // ORIGINAL stands may place it: a piece drawn at "left: 40px; top: 130px" on
   // its board, a marker centred by a translate, a card pushed by a margin — the

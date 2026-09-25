@@ -19,14 +19,17 @@ import { timeStringToSeconds } from "../time_helpers.js";
 export const PickerNaviTime = (props) => {
   const Next = useNextResolver();
   const { min = "00:00", max = "23:30", step } = props;
-  const stepSeconds = timeStringToSeconds(step) ?? 1800;
+  // resolveInputProps has already run (PickerFirstResolver) and left navi_time
+  // as written: what is handed on is a time input, whose step is in seconds.
+  const hostStep = timeStringToSeconds(step);
+  const stepSeconds = hostStep ?? 1800;
   const slots = useMemo(
     () => generateTimeSlots(min, max, stepSeconds),
     [min, max, stepSeconds],
   );
 
   return (
-    <Next {...props} type="time">
+    <Next {...props} type="time" step={hostStep}>
       <List selectable command="--navi-send">
         {slots.map((slot, i) => (
           <List.Item selectable key={slot} id={slot} index={i} value={slot}>

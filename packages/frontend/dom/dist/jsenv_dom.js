@@ -4549,6 +4549,39 @@ const clickIsSuppressed = (clickEvent) =>
    it. */
 const MENU_GRACE_AFTER_CANCEL = 300;
 
+/* The presses a gesture has taken, and the holds still counting on each. Keyed
+   by the `pointerdown` itself: every listener of one press is handed that same
+   object, so a hold asked for further along the dispatch that took the press is
+   told as surely as one already counting. */
+const takenPressSet = new WeakSet();
+const holdGiveUpsByPress = new WeakMap();
+
+/**
+ * A gesture takes the press: the pointer is captured on `element`, and every
+ * hold waiting on that press gives up — whatever the press turned out to be, it
+ * is that gesture and not a hold.
+ *
+ * Said here rather than left to the capture, because the browser announces a
+ * capture only when it MOVES. A finger lands already captured to what it touched
+ * (see implicitCaptureHolder below): a gesture taking that same element changes
+ * nothing the browser reports, and a hold listening for the capture alone
+ * answers in the middle of the gesture that took its press.
+ *
+ * @param {PointerEvent} pressEvent The `pointerdown` of the press taken.
+ * @param {Element} element What holds the pointer from here.
+ */
+const takePress = (pressEvent, element) => {
+  element.setPointerCapture(pressEvent.pointerId);
+  takenPressSet.add(pressEvent);
+  const holdGiveUps = holdGiveUpsByPress.get(pressEvent);
+  if (!holdGiveUps) {
+    return;
+  }
+  for (const giveUp of [...holdGiveUps]) {
+    giveUp();
+  }
+};
+
 /**
  * Waits for a press to be held still, then tells the caller.
  *
@@ -4563,7 +4596,7 @@ const MENU_GRACE_AFTER_CANCEL = 300;
  * @param {function} [options.onPressStart] The wait began (a cue that the press
  *   counts).
  * @param {function} [options.onPressCancel] The pointer moved or lifted before
- *   the wait was over.
+ *   the wait was over, or another gesture took the press (see takePress).
  * @param {(pressEvent: PointerEvent, handle: {endPress: () => void}) => void} options.onPressHeld
  *   The wait completed. Whatever the press now means outlives this call — an
  *   object is being carried, a menu is open under the finger — so the caller
@@ -4703,22 +4736,28 @@ const waitForPressHeld = (
     }
     cancelPress(pointerEndEvent);
   };
-  // Somebody else settled what this press is. Taking the pointer is how a gesture
-  // says it — and it says it about the same finger this wait is counting on, so
-  // whatever the press turned out to be, it is not a hold. Two waits on one press
-  // is the ordinary case rather than an odd one: an element that can be picked up
-  // AND held answers a finger with two delays, the shorter one wins, and without
-  // this the longer one would answer a hundred milliseconds into the carry.
-  // The listener goes with the countdown, so the gesture THIS wait starts (which
-  // captures the pointer from inside onPressHeld) never reaches it.
+  // Somebody else settled what this press is, and whatever it turned out to be,
+  // it is not a hold. Two waits on one press is the ordinary case rather than an
+  // odd one: an element that can be picked up AND held answers a finger with two
+  // delays, the shorter one wins, and without this the longer one would answer a
+  // hundred milliseconds into the carry. A gesture says it with takePress. Both
+  // ways of hearing it go with the countdown, so the gesture THIS wait starts
+  // (which takes the press from inside onPressHeld) never reaches them.
+  let holdGiveUps = holdGiveUpsByPress.get(pressEvent);
+  if (!holdGiveUps) {
+    holdGiveUps = new Set();
+    holdGiveUpsByPress.set(pressEvent, holdGiveUps);
+  }
+  holdGiveUps.add(cancelPress);
+  // A gesture that captures the pointer without takePress: heard only when the
+  // capture moves, the one it takes on the implicit holder being announced to
+  // nobody (see takePress).
   const onGotPointerCapture = (captureEvent) => {
     if (captureEvent.pointerId !== pointerId) {
       return;
     }
     if (captureEvent.target === implicitCaptureHolder) {
       // The capture the press was born with, not one somebody took (see above).
-      // A gesture taking that same element instead changes nothing for the
-      // browser, so it announces nothing, and there is nothing to miss here.
       return;
     }
     cancelPress(captureEvent);
@@ -4730,13 +4769,20 @@ const waitForPressHeld = (
   window.addEventListener("pointercancel", onPointerEnd);
   window.addEventListener("gotpointercapture", onGotPointerCapture, true);
   countdownCleanupCallbacks.push(() => {
+    holdGiveUps.delete(cancelPress);
     window.removeEventListener("pointermove", onPointerMove);
     window.removeEventListener("pointerup", onPointerEnd);
     window.removeEventListener("pointercancel", onPointerEnd);
     window.removeEventListener("gotpointercapture", onGotPointerCapture, true);
   });
 
-  onPressStart?.(pressEvent);
+  if (takenPressSet.has(pressEvent)) {
+    // Taken before this wait was asked for, by a listener earlier in the same
+    // dispatch: over before it began.
+    cancelPress();
+  } else {
+    onPressStart?.(pressEvent);
+  }
 
   return {
     cancel: () => {
@@ -9615,7 +9661,10 @@ const createDragGestureController = (options = {}) => {
             // last — which is what tells a hand-over from a capture the browser
             // dropped on its own (see onCaptureLost).
             captureHolderByPointerId.set(grabEvent.pointerId, dragGesture);
-            target.setPointerCapture(grabEvent.pointerId);
+            // The capture is often where the finger landed, which the browser
+            // does not announce again: takePress is what tells a hold waiting
+            // on this press that it is a drag.
+            takePress(grabEvent, target);
           };
           if (!options?.pointerCaptureDeferred) {
             dragGesture.capturePointer();
@@ -13603,8 +13652,8 @@ const installPanZoom = (
       // is the pan on contact, which a surface that does not pan has none of.
       keepTheHand();
     }
-    for (const pointerId of pointers.keys()) {
-      element.setPointerCapture(pointerId);
+    for (const pointer of pointers.values()) {
+      takePress(pointer.pressEvent, element);
     }
     anchor = readHand(anchorWhere);
     // The click the release leaves behind is not for what is under the hand.
@@ -13675,6 +13724,7 @@ const installPanZoom = (
       window.addEventListener("pointercancel", onPointerEnd, true);
     }
     const pointer = {
+      pressEvent: event,
       x: event.clientX,
       y: event.clientY,
       startX: event.clientX,
@@ -13686,7 +13736,7 @@ const installPanZoom = (
     };
     pointers.set(event.pointerId, pointer);
     if (active) {
-      element.setPointerCapture(event.pointerId);
+      takePress(event, element);
       anchor = readHand();
       return;
     }
@@ -13768,13 +13818,13 @@ const installPanZoom = (
     }
   };
 
-  // Whether a touchmove can be refused AT ALL is decided when the touch begins,
-  // from the non-passive listeners the browser knows about then — and here the
-  // gesture that would refuse it is not born until the hold is over. So the
-  // listener goes down with the surface and refuses nothing until the surface is
-  // the one moving: before that the page is scrolling, which is the whole point
-  // of the wait. Only in `afterHold`; a surface at `touch-action: none` has
-  // already been left nothing to refuse.
+  // A touch drag left unrefused makes Chrome Android drop the click of the NEXT
+  // tap, whatever `touch-action` says (see navi's
+  // docs/mobile_tap_suppression_after_drag.md), so the surface refuses every
+  // touchmove while it moves. Whether one can be refused at all is settled when
+  // the touch begins, before the surface moves: the listener goes down with the
+  // surface and refuses nothing until then — a tap, a hold, or under
+  // `afterHold` the page scrolling, which is the whole point of the wait.
   const preventTouchScroll = (touchMoveEvent) => {
     if (active && touchMoveEvent.cancelable) {
       touchMoveEvent.preventDefault();
@@ -13847,11 +13897,9 @@ const installPanZoom = (
 
   element.addEventListener("pointerdown", onPointerDown);
   element.addEventListener("lostpointercapture", onLostPointerCapture);
-  if (afterHold) {
-    element.addEventListener("touchmove", preventTouchScroll, {
-      passive: false,
-    });
-  }
+  element.addEventListener("touchmove", preventTouchScroll, {
+    passive: false,
+  });
   if (onZoom) {
     element.addEventListener("wheel", onWheel, { passive: false });
   }
@@ -14783,12 +14831,13 @@ const refuseDragTo = (
         onRefuse?.({ event });
         return null;
       }
-      // Nothing is carried, and the pointer is taken all the same: taking it is
+      // Nothing is carried, and the press is taken all the same: taking it is
       // how a gesture says the press is settled, and another wait counting on the
-      // same finger reads it (see press_held.js). A `longpress` declared beside
-      // the drag is answered by the grab when there is one; there must be no
+      // same finger gives up (see takePress in press_held.js), even when the
+      // finger landed on this very element. A `longpress` declared beside the
+      // drag is answered by the grab when there is one; there must be no
       // difference when there is none.
-      draggedElement.setPointerCapture(event.pointerId);
+      takePress(event, draggedElement);
       // And the click the browser fires afterwards belongs to what answered the
       // press, a refusal included: something pulled and told to stay put must not
       // also be clicked. Lifted at the release rather than with the click, which
@@ -15504,14 +15553,16 @@ const getRectInside = (element, containerElement) => {
 //
 // Layer 2 — inner clone (navi-drag-clone):
 //   A deep clone of the grabbed element, and what the eye follows — so it is
-//   the one named (view-transition-name: navi-drag-clone).
+//   the one named: a view-transition-name of its own (navi-drag-clone-<n>),
+//   and the view-transition-class navi-drag-clone that every copy shares.
 //   Casts the shadow and applies transform: scale(var(--drag-clone-scale, 1.03))
 //   via the CSS rule for [navi-drag-clone], giving the "lifted" feel. The
 //   transform-origin is set to the grab point so the element expands naturally
 //   from where the user clicked.
 //   On release, the `navi-drag-clone` attribute is removed inside
 //   startViewTransition to drop the scale back to 1 as the "new" state; the
-//   name stays, so the scale is morphed with the box rather than cross-faded.
+//   name and the class stay, so the scale is morphed with the box rather than
+//   cross-faded.
 
 // The chevron is the one the table's column drop preview uses, rotated by the
 // CSS above so each cap points into the line.
@@ -15756,6 +15807,7 @@ const liftDragClone = (cloneWrapper, pointerEvent) => {
   cloneWrapper.firstElementChild.setAttribute("navi-drag-clone", "");
 };
 
+let dragCloneCount = 0;
 const createDragClone = (element, pointerEvent) => {
   const rect = element.getBoundingClientRect();
 
@@ -15792,7 +15844,14 @@ const createDragClone = (element, pointerEvent) => {
   // dresses `[data-grabbed]` on its own element once, and the copy is that element.
   // (The original wears it too, but it is hidden — see navi-drag-clone-source.)
   elementClone.setAttribute("data-grabbed", "");
-  elementClone.style.viewTransitionName = "navi-drag-clone";
+  // A name of its own: a copy outlives its gesture while its answer is asked,
+  // so two can be on screen at once, and a name claimed twice aborts the
+  // transition. The class is what every copy shares — inline like the name,
+  // since a landing takes the [navi-drag-clone] attribute off before the
+  // capture its group's class is read from.
+  dragCloneCount++;
+  elementClone.style.viewTransitionName = `navi-drag-clone-${dragCloneCount}`;
+  elementClone.style.viewTransitionClass = "navi-drag-clone";
   // The copy takes the wrapper's box, and nothing the page said about where the
   // ORIGINAL stands may place it: a piece drawn at "left: 40px; top: 130px" on
   // its board, a marker centred by a translate, a card pushed by a margin — the

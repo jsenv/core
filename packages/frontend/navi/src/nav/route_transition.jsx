@@ -1374,7 +1374,16 @@ const beginTransition = ({ page, url, fromUrl, direction, type, duration }) => {
     decision: navigationDecision,
     walkHome: null,
     releaseReverting: null,
+    restoreDuration: null,
   };
+  // The document wears one transition at a time, and the one this interrupts
+  // ends only after this one has begun — too late to take off what it wears
+  // (see end). Taking over therefore starts by taking it off, so that what is
+  // put on below describes this transition alone, including what it leaves
+  // unset: a type, an area, a duration.
+  if (currentTransition) {
+    releaseTransitionRoot(currentTransition);
+  }
   currentTransition = transition;
   // Said before the picture is taken: whoever names something for a movement
   // between two pages decides on it now (see transition_destination.js).
@@ -1423,7 +1432,6 @@ const beginTransition = ({ page, url, fromUrl, direction, type, duration }) => {
   // A duration of this relation's own, worn for the length of the transition —
   // and whatever the application had written inline put back afterwards, not
   // erased.
-  let restoreDuration = null;
   if (duration !== undefined) {
     const durationBefore = documentElement.style.getPropertyValue(
       TRANSITION_DURATION_PROPERTY,
@@ -1432,7 +1440,7 @@ const beginTransition = ({ page, url, fromUrl, direction, type, duration }) => {
       TRANSITION_DURATION_PROPERTY,
       typeof duration === "number" ? `${duration}ms` : duration,
     );
-    restoreDuration = () => {
+    transition.restoreDuration = () => {
       if (durationBefore) {
         documentElement.style.setProperty(
           TRANSITION_DURATION_PROPERTY,
@@ -1502,8 +1510,11 @@ const beginTransition = ({ page, url, fromUrl, direction, type, duration }) => {
       renderWait.stop();
     }
     // The page arriving is in the DOM and the transition has not started
-    // playing: the one moment both states of the area can be known.
-    if (areaElement) {
+    // playing: the one moment both states of the area can be known. The
+    // browser runs this callback even for a transition skipped before its
+    // first picture — the next one starting skips it — and a transition
+    // replaced holds nothing: what it wore was taken off at the takeover.
+    if (areaElement && currentTransition === transition) {
       holdTransitionFurniture(transition, areaElement);
       holdTransitionWindow(transition, areaElement, areaStateBefore);
     }
@@ -1512,8 +1523,9 @@ const beginTransition = ({ page, url, fromUrl, direction, type, duration }) => {
     // Whatever ends it — played out, skipped by another transition starting,
     // failed before its callback ever ran — the hold is given back and the
     // document is handed back to the application. Both are idempotent, and
-    // the attributes belong to the LAST transition begun: an earlier one
-    // ending late must not strip what a later one is wearing.
+    // the document is handed back only by the LAST transition begun: an
+    // earlier one ending late was taken off by the one that replaced it, and
+    // must not strip what that one is wearing.
     renderWait.stop();
     releaseRendering();
     // The hold a way back took, when it is still standing: the pictures were
@@ -1525,21 +1537,28 @@ const beginTransition = ({ page, url, fromUrl, direction, type, duration }) => {
     }
     if (currentTransition === transition) {
       currentTransition = null;
-      documentElement.removeAttribute(TRANSITION_ATTRIBUTE);
-      documentElement.removeAttribute(TRANSITION_TYPE_ATTRIBUTE);
-      documentElement.removeAttribute(TRANSITION_TARGET_ATTRIBUTE);
-      releaseTransitionWindow(transition);
-      releaseTransitionDestination(transition);
-      releaseTransitionFurniture(transition);
-      releaseTransitionPress(transition);
-      if (restoreDuration) {
-        restoreDuration();
-      }
+      releaseTransitionRoot(transition);
     }
   };
   transition.viewTransition = viewTransition;
   viewTransition.ready.then(viewTransitionReady, ignoreSkipped);
   viewTransition.finished.then(end, end);
+};
+
+// Everything a transition wears on the document for its length, taken off by
+// its own end or by the transition taking over from it.
+const releaseTransitionRoot = (transition) => {
+  const documentElement = document.documentElement;
+  documentElement.removeAttribute(TRANSITION_ATTRIBUTE);
+  documentElement.removeAttribute(TRANSITION_TYPE_ATTRIBUTE);
+  documentElement.removeAttribute(TRANSITION_TARGET_ATTRIBUTE);
+  releaseTransitionWindow(transition);
+  releaseTransitionDestination(transition);
+  releaseTransitionFurniture(transition);
+  releaseTransitionPress(transition);
+  if (transition.restoreDuration) {
+    transition.restoreDuration();
+  }
 };
 
 /**

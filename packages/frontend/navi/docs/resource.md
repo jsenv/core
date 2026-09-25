@@ -42,6 +42,7 @@ looks like ([data_states.md](./data_states.md#data-and-loading-are-independent))
   - [`.many(propertyName, childResource, restCallbacks)`](#manypropertyname-childresource-restcallbacks)
   - [`.scopedOne(propertyName, { idKey, GET, POST, PUT, PATCH, DELETE })`](#scopedonepropertyname--idkey-get-post-put-patch-delete-)
   - [`.scopedMany(propertyName, { idKey, GET, GET_MANY, POST, PUT, PATCH, DELETE, … })`](#scopedmanypropertyname--idkey-get-get_many-post-put-patch-delete--)
+  - [A relation declared on a scoped child](#a-relation-declared-on-a-scoped-child)
 - [When the backend answers a sub-route with the whole parent](#when-the-backend-answers-a-sub-route-with-the-whole-parent)
 - [Relations and autorerun](#relations-and-autorerun)
 - [`withParams()`: a scope with reruns of its own](#withparams-a-scope-with-reruns-of-its-own)
@@ -359,6 +360,43 @@ const GAME_CANDIDATES = GAME.scopedMany("candidates", {
 `idKey` names the child's own key inside its owner (`user_id` above); it defaults
 to `"id"`.
 
+### A relation declared on a scoped child
+
+A scoped child takes relations of its own — a column pointing at a shared data
+type:
+
+```js
+const TABLE_COLUMNS = TABLE.scopedMany("columns", {
+  idKey: "name",
+  GET_MANY: async ({ id }) => [id, await fetchJson(`/tables/${id}/columns`)],
+  // [id, [{ name: "email", dataType: { id: 2, name: "varchar" } }, …]]
+  PATCH: async ({ id, name, ...props }) => [
+    id,
+    await fetchJson(`/tables/${id}/columns/${name}`, {
+      method: "PATCH",
+      body: props,
+    }),
+  ],
+});
+TABLE_COLUMNS.one("dataType", DATA_TYPE);
+```
+
+Every column gets a reactive `dataType` read from the `DATA_TYPE` store, fed by
+what the scoped child's callbacks embed. The relation itself takes none of the
+callbacks whose result names the column — `.one()`'s `GET`/`PUT`/`DELETE`,
+`.many()`'s `GET_MANY`/`DELETE`/`DELETE_MANY`, and every callback of a
+`.scopedOne()`/`.scopedMany()`, whose `ownerId` would be the column: they name
+it by its `name` alone, and a column exists only inside its table — two tables
+can each have an `email`. Declaring one throws. A column's data type is read and
+changed through `TABLE_COLUMNS`, whose results say which table
+(`[id, { name, dataType }]`); the fields of a data type itself, through
+`DATA_TYPE`.
+
+A `.scopedOne()`/`.scopedMany()` chained on a scoped child works the same way,
+and keeps one value per column: `TABLE_COLUMNS.scopedMany("constraints")` gives
+`users.email` and `admins.email` a collection each, fed by the `constraints`
+embedded in each table's columns.
+
 ## When the backend answers a sub-route with the whole parent
 
 This is the common REST shape, and it is the reason `op` dispatch feels
@@ -405,7 +443,8 @@ parent's own fields change too, either let the parent GET rerun (see below) or
 Relationship mutations do **not** invalidate their parent by default. The exact
 rules, verified by `src/state/rest/tests/resource_graph_parent_rerun.test.js`:
 
-- `.scopedMany` child **POST** reruns the owner's singular `GET` — but only when
+- `.scopedMany` child **POST** reruns the owner's singular `GET`, whether it
+  goes through the child or through a `withParams()` scope of it — but only when
   the last GET response actually embedded that property. GET_MANY on the parent
   is never rerun by a child POST (a list of parents is not stale because one of
   them gained a child).
@@ -458,6 +497,11 @@ read of either scope (held by cases 5 and 6 of
 share is the **store**: an item updated through one is the same object in the
 others, so the fields of a row change everywhere without a request — only the
 membership of each list is a question its own scope answers.
+
+It scopes a relation as well as a resource, and the scope's actions are the
+relation's: `TABLE_COLUMNS.withParams({ withTypes: true }).GET_MANY` keeps the
+`[ownerId, items]` contract of `.scopedMany()` and replaces that table's
+columns.
 
 `withParams()` chains, merging the params —
 `USER.withParams({ role: "admin" }).withParams({ gender: "male" })` is

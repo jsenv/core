@@ -42,14 +42,21 @@ when it lands; the pan stepping back for what is carried across the surface (a
 `move`, a handle, a field, a popover — the same list a travelling box steps back
 for); the pinch not beginning as a pan under its first finger; the wheel and the
 pinch writing one `zoom`; the capture, the pointer the browser drops, the click
-the release leaves behind. A pointer pans only once it has travelled a few px
-(`data-drag-threshold`), so a tap stays a tap: a `longpress` declared beside
-`pan` still gets its hold, and a `double_click` still gets its two presses.
+the release leaves behind, and the next tap's click, which Chrome on Android
+drops after a touch drag whose `touchmove`s nobody refused (see
+[mobile_tap_suppression_after_drag.md](./mobile_tap_suppression_after_drag.md)).
+A pointer pans only once it has travelled a few px (`data-drag-threshold`), so a
+tap stays a tap: a `longpress` declared beside `pan` still gets its hold, and a
+`double_click` still gets its two presses. A press that does pan is the
+surface's: a `longpress` waiting on it gives up the moment the pan begins, even
+inside its own slop.
 
 Declared alone, `zoom` takes two fingers and the wheel and leaves one pointer to
 whatever else reads it: nothing captures it, waits on it or swallows its click
 until a second finger lands, so a `click` or a `longpress` declared beside `zoom`
-answers it as it would anywhere. `pan` alone leaves the wheel to the page.
+answers it as it would anywhere. From the second finger on, both are the pinch's,
+and a `longpress` waiting on the first gives up. `pan` alone leaves the wheel to
+the page.
 
 ### A surface that scrolls past: `data-pan-after-hold`
 

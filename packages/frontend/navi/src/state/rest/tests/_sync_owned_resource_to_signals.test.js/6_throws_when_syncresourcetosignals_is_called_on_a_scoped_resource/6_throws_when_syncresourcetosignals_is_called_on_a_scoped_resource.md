@@ -22,7 +22,7 @@ return { error };
 
 ```js
 {
-  "error": 'syncResourceToSignals: "table.columns" is a scoped resource (scopedMany/scopedOne). Use syncOwnedResourceToSignals instead.'
+  "error": 'syncResourceToSignals: "table.columns" lives inside each "table", so it has no store of its own to watch. Use syncOwnedResourceToSignals instead.'
 }
 ```
 

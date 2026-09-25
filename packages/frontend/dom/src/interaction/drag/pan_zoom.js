@@ -25,10 +25,10 @@
  * A pointer starts nothing until it has travelled `threshold` px: a finger
  * landing on a surface with `touch-action: none` has no scroll to be told apart
  * from, but it may still be a tap, or the beginning of a hold that something on
- * the surface is waiting for — and a capture is what abandons a pending hold
- * (see press_held.js), so none is taken before the travel. A second pointer
- * landing is intent enough on its own. The first pixels are not lost: the
- * surface catches up with the finger the moment the pan begins.
+ * the surface is waiting for — and taking the press is what abandons a pending
+ * hold (see takePress in press_held.js), so it is not taken before the travel.
+ * A second pointer landing is intent enough on its own. The first pixels are
+ * not lost: the surface catches up with the finger the moment the pan begins.
  *
  * WHEN IT HAS THE HAND is told, and it is the one thing nobody else can see. The
  * capture taken at that instant is not that word: the browser announces one just
@@ -76,7 +76,7 @@
  */
 
 import { suppressClickAfterGesture } from "../click_suppression.js";
-import { waitForPressHeld } from "../press_held.js";
+import { takePress, waitForPressHeld } from "../press_held.js";
 import { canScroll, getScrollingElement } from "../scroll/is_scrollable.js";
 import {
   claimWheelGesture,
@@ -333,8 +333,8 @@ export const installPanZoom = (
       // is the pan on contact, which a surface that does not pan has none of.
       keepTheHand();
     }
-    for (const pointerId of pointers.keys()) {
-      element.setPointerCapture(pointerId);
+    for (const pointer of pointers.values()) {
+      takePress(pointer.pressEvent, element);
     }
     anchor = readHand(anchorWhere);
     // The click the release leaves behind is not for what is under the hand.
@@ -405,6 +405,7 @@ export const installPanZoom = (
       window.addEventListener("pointercancel", onPointerEnd, true);
     }
     const pointer = {
+      pressEvent: event,
       x: event.clientX,
       y: event.clientY,
       startX: event.clientX,
@@ -416,7 +417,7 @@ export const installPanZoom = (
     };
     pointers.set(event.pointerId, pointer);
     if (active) {
-      element.setPointerCapture(event.pointerId);
+      takePress(event, element);
       anchor = readHand();
       return;
     }
@@ -498,13 +499,13 @@ export const installPanZoom = (
     }
   };
 
-  // Whether a touchmove can be refused AT ALL is decided when the touch begins,
-  // from the non-passive listeners the browser knows about then — and here the
-  // gesture that would refuse it is not born until the hold is over. So the
-  // listener goes down with the surface and refuses nothing until the surface is
-  // the one moving: before that the page is scrolling, which is the whole point
-  // of the wait. Only in `afterHold`; a surface at `touch-action: none` has
-  // already been left nothing to refuse.
+  // A touch drag left unrefused makes Chrome Android drop the click of the NEXT
+  // tap, whatever `touch-action` says (see navi's
+  // docs/mobile_tap_suppression_after_drag.md), so the surface refuses every
+  // touchmove while it moves. Whether one can be refused at all is settled when
+  // the touch begins, before the surface moves: the listener goes down with the
+  // surface and refuses nothing until then — a tap, a hold, or under
+  // `afterHold` the page scrolling, which is the whole point of the wait.
   const preventTouchScroll = (touchMoveEvent) => {
     if (active && touchMoveEvent.cancelable) {
       touchMoveEvent.preventDefault();
@@ -577,11 +578,9 @@ export const installPanZoom = (
 
   element.addEventListener("pointerdown", onPointerDown);
   element.addEventListener("lostpointercapture", onLostPointerCapture);
-  if (afterHold) {
-    element.addEventListener("touchmove", preventTouchScroll, {
-      passive: false,
-    });
-  }
+  element.addEventListener("touchmove", preventTouchScroll, {
+    passive: false,
+  });
   if (onZoom) {
     element.addEventListener("wheel", onWheel, { passive: false });
   }

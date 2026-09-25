@@ -373,11 +373,19 @@ copy where the hand put it, over the thing appearing there.
 #### Naming what travels
 
 **The copy is already named, and it is the copy that does the visible travel.**
-It answers to `navi-drag-clone` (the wrapper carrying it paints nothing and takes
-no name), and `syncCloneWithDropTarget` moves it onto the destination inside the
-callback — so the piece the hand let go of slides to its place whether the
-application names anything or not. What is left to name is the OTHER one: the
-piece that was standing there and has to go the other way.
+`syncCloneWithDropTarget` moves it onto the destination inside the callback — so
+the piece the hand let go of slides to its place whether the application names
+anything or not. What is left to name is the OTHER one: the piece that was
+standing there and has to go the other way.
+
+The name is the copy's own, because two copies can be on screen at once — one
+still flying away while its `toss` is answered, another landing — and a name
+claimed twice aborts the transition. What every copy shares is the class
+`navi-drag-clone`, which is how a stylesheet reaches the landing:
+`::view-transition-group(.navi-drag-clone)`. A view-transition class is read
+from Chrome 125 on; before that the landing still plays, and only a rule written
+against the class goes unread. The wrapper carrying the copy paints nothing and
+takes neither.
 
 **And the original is hidden for the whole landing**, not only for the drag: it
 wears `navi-drag-clone-source` (`visibility: hidden`) until the promise returned

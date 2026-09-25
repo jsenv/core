@@ -36,6 +36,39 @@
    it. */
 const MENU_GRACE_AFTER_CANCEL = 300;
 
+/* The presses a gesture has taken, and the holds still counting on each. Keyed
+   by the `pointerdown` itself: every listener of one press is handed that same
+   object, so a hold asked for further along the dispatch that took the press is
+   told as surely as one already counting. */
+const takenPressSet = new WeakSet();
+const holdGiveUpsByPress = new WeakMap();
+
+/**
+ * A gesture takes the press: the pointer is captured on `element`, and every
+ * hold waiting on that press gives up — whatever the press turned out to be, it
+ * is that gesture and not a hold.
+ *
+ * Said here rather than left to the capture, because the browser announces a
+ * capture only when it MOVES. A finger lands already captured to what it touched
+ * (see implicitCaptureHolder below): a gesture taking that same element changes
+ * nothing the browser reports, and a hold listening for the capture alone
+ * answers in the middle of the gesture that took its press.
+ *
+ * @param {PointerEvent} pressEvent The `pointerdown` of the press taken.
+ * @param {Element} element What holds the pointer from here.
+ */
+export const takePress = (pressEvent, element) => {
+  element.setPointerCapture(pressEvent.pointerId);
+  takenPressSet.add(pressEvent);
+  const holdGiveUps = holdGiveUpsByPress.get(pressEvent);
+  if (!holdGiveUps) {
+    return;
+  }
+  for (const giveUp of [...holdGiveUps]) {
+    giveUp();
+  }
+};
+
 /**
  * Waits for a press to be held still, then tells the caller.
  *
@@ -50,7 +83,7 @@ const MENU_GRACE_AFTER_CANCEL = 300;
  * @param {function} [options.onPressStart] The wait began (a cue that the press
  *   counts).
  * @param {function} [options.onPressCancel] The pointer moved or lifted before
- *   the wait was over.
+ *   the wait was over, or another gesture took the press (see takePress).
  * @param {(pressEvent: PointerEvent, handle: {endPress: () => void}) => void} options.onPressHeld
  *   The wait completed. Whatever the press now means outlives this call — an
  *   object is being carried, a menu is open under the finger — so the caller
@@ -190,22 +223,28 @@ export const waitForPressHeld = (
     }
     cancelPress(pointerEndEvent);
   };
-  // Somebody else settled what this press is. Taking the pointer is how a gesture
-  // says it — and it says it about the same finger this wait is counting on, so
-  // whatever the press turned out to be, it is not a hold. Two waits on one press
-  // is the ordinary case rather than an odd one: an element that can be picked up
-  // AND held answers a finger with two delays, the shorter one wins, and without
-  // this the longer one would answer a hundred milliseconds into the carry.
-  // The listener goes with the countdown, so the gesture THIS wait starts (which
-  // captures the pointer from inside onPressHeld) never reaches it.
+  // Somebody else settled what this press is, and whatever it turned out to be,
+  // it is not a hold. Two waits on one press is the ordinary case rather than an
+  // odd one: an element that can be picked up AND held answers a finger with two
+  // delays, the shorter one wins, and without this the longer one would answer a
+  // hundred milliseconds into the carry. A gesture says it with takePress. Both
+  // ways of hearing it go with the countdown, so the gesture THIS wait starts
+  // (which takes the press from inside onPressHeld) never reaches them.
+  let holdGiveUps = holdGiveUpsByPress.get(pressEvent);
+  if (!holdGiveUps) {
+    holdGiveUps = new Set();
+    holdGiveUpsByPress.set(pressEvent, holdGiveUps);
+  }
+  holdGiveUps.add(cancelPress);
+  // A gesture that captures the pointer without takePress: heard only when the
+  // capture moves, the one it takes on the implicit holder being announced to
+  // nobody (see takePress).
   const onGotPointerCapture = (captureEvent) => {
     if (captureEvent.pointerId !== pointerId) {
       return;
     }
     if (captureEvent.target === implicitCaptureHolder) {
       // The capture the press was born with, not one somebody took (see above).
-      // A gesture taking that same element instead changes nothing for the
-      // browser, so it announces nothing, and there is nothing to miss here.
       return;
     }
     cancelPress(captureEvent);
@@ -217,13 +256,20 @@ export const waitForPressHeld = (
   window.addEventListener("pointercancel", onPointerEnd);
   window.addEventListener("gotpointercapture", onGotPointerCapture, true);
   countdownCleanupCallbacks.push(() => {
+    holdGiveUps.delete(cancelPress);
     window.removeEventListener("pointermove", onPointerMove);
     window.removeEventListener("pointerup", onPointerEnd);
     window.removeEventListener("pointercancel", onPointerEnd);
     window.removeEventListener("gotpointercapture", onGotPointerCapture, true);
   });
 
-  onPressStart?.(pressEvent);
+  if (takenPressSet.has(pressEvent)) {
+    // Taken before this wait was asked for, by a listener earlier in the same
+    // dispatch: over before it began.
+    cancelPress();
+  } else {
+    onPressStart?.(pressEvent);
+  }
 
   return {
     cancel: () => {
