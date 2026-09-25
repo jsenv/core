@@ -98,8 +98,10 @@ to start when unsure which export solves a problem.
   action from a component, and before putting a delay on params.
 - `resource.md` — REST state: `resource()`, the callback contract of each
   relationship method (not guessable), `GET_RANGE`, a search as the same
-  `GET_MANY`, `withParams()` scopes and `dependencies`. Read before writing a
-  resource; never encode a sub-route as an `op` discriminator.
+  `GET_MANY`, `withParams()` scopes and `dependencies`, `persist` (the last
+  `GET` answer drawn again after a reload). Read before writing a resource, and
+  before caching a response in localStorage; never encode a sub-route as an
+  `op` discriminator.
 - `data_states.md` — `data`, `loading` and `error` are three questions; the
   four combinations of the first two; `loading: true` never suspends; a skeleton
   is told whether it is loading. Read before drawing a skeleton on `!data` or

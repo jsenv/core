@@ -152,8 +152,10 @@ setRouteIntegration(browserIntegration);
 
 export const navIntegratedVia = browserIntegration.integration;
 export const navTo = (target, options) => {
-  const url = new URL(target, window.location.href).href;
+  // Resolved against the address this document says it is at, not the one the
+  // browser shows: a replace may be on its way there (see via_history.js).
   const currentUrl = documentUrlSignal.peek();
+  const url = new URL(target, currentUrl).href;
   if (url === currentUrl) {
     if (options?.state === undefined) {
       return null;
@@ -374,7 +376,7 @@ const useNavStateBasic = (
       return;
     }
     currentStateCopy[id] = value;
-    navTo(window.location.href, {
+    navTo(documentUrlSignal.peek(), {
       replace: effectiveType !== "push",
       state: currentStateCopy,
     });
@@ -408,12 +410,12 @@ const useNavStateBasic = (
       }
       delete currentStateCopy[id];
       browserIntegration.navBack({
-        landOn: { url: window.location.href, state: currentStateCopy },
+        landOn: { url: documentUrlSignal.peek(), state: currentStateCopy },
       });
       return;
     }
     delete currentStateCopy[id];
-    navTo(window.location.href, {
+    navTo(documentUrlSignal.peek(), {
       replace: true,
       state: currentStateCopy,
     });

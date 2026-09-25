@@ -13,6 +13,7 @@ import {
   navBack,
   useNavState,
 } from "../nav/browser_integration/browser_integration.js";
+import { documentUrlSignal } from "../nav/browser_integration/document_url_signal.js";
 import {
   warnSignalAsState,
   warnSignalCollision,
@@ -763,7 +764,9 @@ const writeOpenedInSignal = (signal, opened, event, popupValue) => {
       return;
     }
     writeInSignal(signal, closedValue, { history: "replace" });
-    navBack({ landOn: { url: window.location.href } });
+    // The address this document says it is at: the one the browser shows may
+    // be a replace behind it (see via_history.js).
+    navBack({ landOn: { url: documentUrlSignal.peek() } });
     return;
   }
   writeInSignal(signal, closedValue, { history: "replace" });

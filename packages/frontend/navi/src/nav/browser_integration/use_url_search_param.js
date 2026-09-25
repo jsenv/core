@@ -15,7 +15,7 @@ export const useUrlSearchParam = (paramName, defaultValue) => {
   }
 
   const setSearchParamValue = (newValue, { replace = false } = {}) => {
-    const newUrlObject = new URL(window.location.href);
+    const newUrlObject = new URL(documentUrlSignal.peek());
     newUrlObject.searchParams.set(paramName, newValue);
     const newUrl = newUrlObject.href;
     navTo(newUrl, { replace });

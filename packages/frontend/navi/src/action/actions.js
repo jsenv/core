@@ -721,7 +721,7 @@ const resolveActionProxies = (actionSet) => {
   return resolvedSet;
 };
 
-const NO_PARAMS = { __no_params__: true };
+export const NO_PARAMS = { __no_params__: true };
 const mergeActionParams = (currentParams, newParams) => {
   if (newParams === null) {
     // `null` is a question that cannot be asked: a callback destructuring its

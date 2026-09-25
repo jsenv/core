@@ -195,8 +195,11 @@ one says why is something navi has nothing to decide it with.
 - **What a screen says on a `NetworkPolicyError`** — "no network" is a fact
   about the device, "offline mode" a decision, "we are only looking" neither;
   `error.reason` is there so the screen says the right one.
-- **Persisting the store to disk**, so that a reload offline reopens a full
-  app rather than an empty one.
+- **Which answer is worth keeping across a reload.** A resource declaring
+  [`persist`](./resource.md#persist-the-last-answer-drawn-again-after-a-reload)
+  has its last `GET` answer back in the store at the first run, and under the
+  policy that row answers the `GET`: a reload offline reopens on it. Which
+  resource, into which signal, and for which session, is the app's to say.
 - **A queue of writes to replay** once the network is back. Deliberately not
   navi's: what a replayed write means (a score entered twice? a seat taken
   since?) is the app's business.

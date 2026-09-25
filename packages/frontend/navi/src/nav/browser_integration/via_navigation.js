@@ -119,7 +119,7 @@ export const setupBrowserIntegrationViaNavigation = ({
     : new Set();
   const visitedUrlsSignal = signal(0);
   const isVisited = (url) => {
-    url = new URL(url, window.location.href).href;
+    url = new URL(url, readAddress()).href;
     return visitedUrlSet.has(url);
   };
   const markUrlAsVisited = (url) => {
@@ -144,8 +144,10 @@ export const setupBrowserIntegrationViaNavigation = ({
   rememberEntryIsOfThisDocument();
   navigation.addEventListener("currententrychange", () => {
     rememberEntryIsOfThisDocument();
-    // The change has committed: the document url is the entry's url.
-    updateDocumentUrl(window.location.href);
+    // The change has committed: the document url is the entry's url — unless
+    // a debounced replace is still on its way to the browser (a state write
+    // onto the entry fires this too), in which case the document is ahead.
+    updateDocumentUrl(readAddress());
   });
 
   const adjacentEntryKey = (url) => {
@@ -266,6 +268,80 @@ export const setupBrowserIntegrationViaNavigation = ({
     return { allResult };
   };
 
+  // A replace the browser's address is allowed to follow late (see
+  // stateSignal's `debounceUrl`, and via_history.js for the rules: written
+  // once the state has settled, with the last value; a push flushes it first,
+  // a traversal drops it).
+  //
+  // Here a navigation IS the routing (the navigate event drives runRouting),
+  // so the routing is run by hand at once, exactly as the intercept handler
+  // would, and only the browser's write is deferred. That write is
+  // history.replaceState, not navigation.navigate(): the Navigation API's
+  // replace would come back as a navigate event asking to route what has
+  // already been routed, and a document leaving (pagehide) can no longer
+  // navigate at all while it can still write its entry. replaceState keeps
+  // the entry's Navigation API state (written by runRouting through
+  // updateCurrentEntry) and fires a navigate event of its own, which the
+  // listener below recognizes by `addressWriteInProgress` and leaves alone.
+  let pendingReplace = null;
+  let pendingReplaceTimer = null;
+  let addressWriteInProgress = false;
+  const readAddress = () => {
+    return pendingReplace ? pendingReplace.url : window.location.href;
+  };
+  const replaceAddressWhenSettled = (url, debounce) => {
+    const urlLeft = readAddress();
+    if (url === urlLeft) {
+      return;
+    }
+    publishBeforeRouting({ url, navigationType: "replace" });
+    try {
+      runRouting(url, {
+        reason: `navTo called with "${url}"`,
+        navigationType: "replace",
+        state: undefined,
+        urlLeft,
+      });
+    } finally {
+      publishAfterRouting({ url, navigationType: "replace" });
+    }
+    if (pendingReplaceTimer !== null) {
+      clearTimeout(pendingReplaceTimer);
+    }
+    pendingReplace = { url };
+    pendingReplaceTimer = setTimeout(flushPendingReplace, debounce);
+  };
+  const flushPendingReplace = () => {
+    const pending = pendingReplace;
+    dropPendingReplace();
+    if (pending) {
+      writeAddressNow(pending.url);
+    }
+  };
+  const dropPendingReplace = () => {
+    pendingReplace = null;
+    if (pendingReplaceTimer !== null) {
+      clearTimeout(pendingReplaceTimer);
+      pendingReplaceTimer = null;
+    }
+  };
+  const writeAddressNow = (url) => {
+    addressWriteInProgress = true;
+    try {
+      window.history.replaceState(window.history.state, null, url);
+    } finally {
+      addressWriteInProgress = false;
+    }
+  };
+  // The document is leaving, or may be killed in the background: what the
+  // entry says about it has to be what the document says.
+  window.addEventListener("pagehide", flushPendingReplace);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") {
+      flushPendingReplace();
+    }
+  });
+
   // window.location.reload() — jsenv's hot reload uses it — must stay a full
   // document reload; navigation.reload() would arrive as an interceptable
   // "reload" and be swallowed. Told apart by wrapping the one caller that is
@@ -286,6 +362,40 @@ export const setupBrowserIntegrationViaNavigation = ({
     if (!event.canIntercept) {
       // Another origin, or a cross-document traversal: the browser's business.
       return;
+    }
+    if (addressWriteInProgress) {
+      // The browser being told an address the document is already at (see
+      // replaceAddressWhenSettled): same document, already routed, nothing
+      // to do.
+      return;
+    }
+    if (pendingReplace) {
+      // A debounced replace has not reached the browser yet and another
+      // navigation is arriving. A push that can still be declined is
+      // re-asked once the pending write is out, so the entry it stacks on
+      // carries the address the document is at — the same decline-and-re-ask
+      // a replace link gets below. Anything else (a traversal, a fragment, a
+      // replace, a push the browser has decided) supersedes the entry or
+      // leaves it: the pending write is dropped, and the entry keeps the last
+      // address written.
+      if (
+        event.navigationType === "push" &&
+        event.cancelable &&
+        !event.hashChange
+      ) {
+        event.preventDefault();
+        flushPendingReplace();
+        navigation.navigate(event.destination.url, {
+          history: "push",
+          state: event.destination.getState(),
+          info: {
+            ...event.info,
+            element: event.sourceElement || event.info?.element,
+          },
+        });
+        return;
+      }
+      dropPendingReplace();
     }
     if (event.hashChange || event.downloadRequest !== null) {
       // A fragment belongs to the browser (`:target`, focus); a download is
@@ -370,7 +480,7 @@ export const setupBrowserIntegrationViaNavigation = ({
     if (
       navigationType === "push" &&
       event.destination.getState() === undefined &&
-      url !== window.location.href
+      url !== readAddress()
     ) {
       const key = adjacentEntryKey(url);
       if (key !== null) {
@@ -382,7 +492,7 @@ export const setupBrowserIntegrationViaNavigation = ({
 
     // The url the reader is being taken away from, read here because the
     // commit — and with it the document url — happens before the handler runs.
-    const urlLeft = window.location.href;
+    const urlLeft = readAddress();
     const isSameUrl = url === urlLeft;
     const isLanding = Boolean(event.info && event.info.landOn);
     // A push or a replace onto the address already displayed (useNavState)
@@ -516,7 +626,18 @@ export const setupBrowserIntegrationViaNavigation = ({
 
   installScrollRestoration();
 
-  const navTo = async (url, { replace, state, routeTransition } = {}) => {
+  const navTo = async (
+    url,
+    { replace, state, routeTransition, debounce } = {},
+  ) => {
+    if (replace && debounce && state === undefined) {
+      replaceAddressWhenSettled(url, debounce);
+      return;
+    }
+    if (!replace) {
+      // The entry being stacked on must carry the address the document is at.
+      flushPendingReplace();
+    }
     navigation.navigate(url, {
       // Not state: what is asked of a transition is about the navigation, not
       // about the entry it leaves behind. `info` is exactly that — handed to
@@ -535,7 +656,7 @@ export const setupBrowserIntegrationViaNavigation = ({
   };
 
   const reload = () => {
-    const url = window.location.href;
+    const url = readAddress();
     runRouting(url, {
       reason: "reload called",
       navigationType: "reload",

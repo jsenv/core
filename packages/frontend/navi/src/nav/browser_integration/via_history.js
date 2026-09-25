@@ -34,8 +34,6 @@ export const setupBrowserIntegrationViaHistory = ({
   applyRouting,
   isRouting,
 }) => {
-  const { history } = window;
-
   let globalAbortController = new AbortController();
   const triggerGlobalAbort = (reason) => {
     globalAbortController.abort(reason);
@@ -53,7 +51,8 @@ export const setupBrowserIntegrationViaHistory = ({
   setActionDispatcher(dispatchActions);
 
   const getDocumentState = () => {
-    return window.history.state ? { ...window.history.state } : null;
+    const entryState = readEntryState();
+    return entryState ? { ...entryState } : null;
   };
 
   const historyStartAtStart = getDocumentState();
@@ -67,7 +66,7 @@ export const setupBrowserIntegrationViaHistory = ({
   const visitedUrlsSignal = signal(0);
 
   const isVisited = (url) => {
-    url = new URL(url, window.location.href).href;
+    url = new URL(url, readAddress()).href;
     return visitedUrlSet.has(url);
   };
   const markUrlAsVisited = (url) => {
@@ -129,20 +128,20 @@ export const setupBrowserIntegrationViaHistory = ({
   let abortController = null;
   const handleRoutingTask = (target, options) => {
     // Everything below this line reasons on the URL as a whole: it is compared
-    // to window.location.href, looked up in the history stack, written into the
+    // to the address, looked up in the history stack, written into the
     // document url signal and parsed there. A relative target ("/", "../x")
     // would silently lose every one of those — the browser would still resolve
     // it in pushState, but nothing else here would. So it is resolved once, at
     // the single door every navigation goes through, rather than by each caller
     // (navBack's fallback in particular arrives here raw).
-    const url = new URL(target, window.location.href).href;
+    const url = new URL(target, readAddress()).href;
     // An address that only sends elsewhere never becomes anything here: asked
     // before the announcement, before the history write and before the routes,
     // so that what follows is entirely about where the reader is going (see
     // resolveRouteRedirection).
     const redirectionUrl = resolveRouteRedirection(url);
     if (redirectionUrl) {
-      if (redirectionUrl === window.location.href) {
+      if (redirectionUrl === readAddress()) {
         // Asked to go where we already are: an address that redirects is never
         // the one being displayed, so there is nothing to go to and nothing to
         // stack on the history.
@@ -161,7 +160,7 @@ export const setupBrowserIntegrationViaHistory = ({
     if (
       options.navigationType === "push" &&
       options.state === undefined &&
-      url !== window.location.href
+      url !== readAddress()
     ) {
       const delta = adjacentEntryDelta(url);
       if (delta === -1) {
@@ -202,12 +201,13 @@ export const setupBrowserIntegrationViaHistory = ({
   const applyRoutingTask = (url, options) => {
     // Read before the history is written: the url the reader is being taken
     // away from, which is what decides where a push lands (see startAtTop).
-    const urlLeft = window.location.href;
+    const urlLeft = readAddress();
     const {
       reason,
       navigationType, // "load", "reload", "replace", "push", "traverse"
       redirected,
       landOn,
+      debounce,
     } = options;
     let { state } = options;
 
@@ -226,7 +226,14 @@ export const setupBrowserIntegrationViaHistory = ({
           [NAV_DEPTH_STATE_KEY]: getNavDepth(),
         },
       });
-      writeHistoryEntry(navigationType, effectiveState, url);
+      if (navigationType === "replace" && debounce && state === undefined) {
+        // Nothing of its own for the entry: the address moves, the state is
+        // carried over. The one kind of write allowed to lag, and only when
+        // the state written asked for it (see replaceAddressWhenSettled).
+        replaceAddressWhenSettled(effectiveState, url, debounce);
+      } else {
+        writeHistoryEntry(navigationType, effectiveState, url);
+      }
       rememberEntryIsOfThisDocument();
       updateDocumentUrl(url);
       updateDocumentState(effectiveState);
@@ -417,7 +424,20 @@ export const setupBrowserIntegrationViaHistory = ({
   // being left must be recorded from the first pixel scrolled.
   installScrollRestoration();
 
+  // The document is leaving, or may be killed in the background: what the
+  // entry says about it has to be what the document says (see
+  // replaceAddressWhenSettled).
+  window.addEventListener("pagehide", flushPendingReplace);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") {
+      flushPendingReplace();
+    }
+  });
+
   window.addEventListener("popstate", (popstateEvent) => {
+    // The entry a pending replace was for is no longer the current one, and
+    // the History API has no way to write it (see replaceAddressWhenSettled).
+    dropPendingReplace();
     const url = window.location.href;
     const state = popstateEvent.state;
     const landOn = landOnPending;
@@ -446,11 +466,18 @@ export const setupBrowserIntegrationViaHistory = ({
     updateDocumentUrl(window.location.href);
   });
 
-  const navTo = async (url, { replace, state, routeTransition } = {}) => {
+  const navTo = async (
+    url,
+    { replace, state, routeTransition, debounce } = {},
+  ) => {
     handleRoutingTask(url, {
       reason: `navTo called with "${url}"`,
       navigationType: replace ? "replace" : "push",
       state,
+      // Milliseconds the browser's address waits for this replace to settle
+      // (see replaceAddressWhenSettled); said by the state being written
+      // (stateSignal's `debounceUrl`), never assumed.
+      debounce,
       // What this one navigation asks of a route transition, said by the call
       // that starts it rather than by an element — the programmatic half of
       // what a <Link routeTransition> says (see route_transition.jsx).
@@ -463,8 +490,8 @@ export const setupBrowserIntegrationViaHistory = ({
   };
 
   const reload = () => {
-    const url = window.location.href;
-    const state = history.state;
+    const url = readAddress();
+    const state = readEntryState();
     handleRoutingTask(url, {
       reason: "reload called",
       navigationType: "reload",
@@ -536,20 +563,83 @@ export const setupBrowserIntegrationViaHistory = ({
   };
 };
 
-// Read before the history is written, in both places that ask: a push or a
-// replace onto the url already displayed. Never a traverse — the browser has
-// already moved window.location.href when a popstate is handled, so the
-// comparison would say "same" about every back and forward.
 // Browsers refuse an address written too often: WebKit throws a SecurityError
 // past 100 writes per 10 seconds, Chromium and Firefox drop the write. A state
 // bound to the url and written per frame gets there in under two seconds, and
-// a developer working in Chromium never sees it. Every write goes through here
-// so the rate is measured against the strictest budget before any browser
-// refuses, and so a refusal names its cause rather than `replaceState`.
+// a developer working in Chromium never sees it. Every write goes through
+// writeHistoryEntry so the rate is measured against the strictest budget
+// before any browser refuses, and so a refusal names its cause rather than
+// `replaceState`.
+//
+// The address is written when the state is, and a state written per frame is
+// the app's to hold during the gesture (an address is not a recording of a
+// gesture). The one exception is asked for by the state itself (stateSignal's
+// `debounceUrl`): a value whose every intermediate IS a valid address — the
+// centre of a panned map. Its replaces are debounced: the browser is written
+// once the state has stayed still for that long, with the last value. Nothing
+// else in the document waits for it: the routes, the signals and the renders
+// have moved on the spot, and only the browser's copy of the address
+// (`window.location`) is behind — which is why everything here reads the
+// address through readAddress / readEntryState rather than from the browser.
+//
+// What never waits: a push (an entry the reader can come back to, which must
+// stand on top of the address as it is, so a pending replace is written
+// first), a write that puts something INTO the entry (a state written by
+// useNavState, a landOn — a record, not a mirror), and the writes a traversal
+// makes on the entry it lands on. A traversal DROPS a pending replace: the
+// browser has already moved to another entry, and the History API cannot
+// write the one just left. The address kept on it is the last one written.
 const HISTORY_WRITE_BUDGET = 100;
 const HISTORY_WRITE_WINDOW_MS = 10_000;
-const ADDRESS_WRITE_ADVICE = `An address is not a recording of a gesture: a value dragged per frame belongs to the gesture, and the state bound to the url is written once, on release.`;
+const ADDRESS_WRITE_ADVICE = `An address is not a recording of a gesture: a value dragged per frame belongs to the gesture, and the state bound to the url is written once, on release. A state whose every intermediate value is a valid address can declare debounceUrl (milliseconds) instead.`;
+
+// The replace waiting for the state to settle, and the address this document
+// stands at meanwhile. Read by everything here that would otherwise read
+// window.location.href or window.history.state: the document is at the
+// pending address, the browser just does not say so yet.
+let pendingReplace = null;
+let pendingReplaceTimer = null;
+const readAddress = () => {
+  return pendingReplace ? pendingReplace.url : window.location.href;
+};
+const readEntryState = () => {
+  return pendingReplace ? pendingReplace.state : window.history.state;
+};
+const replaceAddressWhenSettled = (state, url, debounce) => {
+  if (pendingReplaceTimer !== null) {
+    clearTimeout(pendingReplaceTimer);
+  }
+  pendingReplace = { state, url };
+  pendingReplaceTimer = setTimeout(flushPendingReplace, debounce);
+};
+const flushPendingReplace = () => {
+  const pending = pendingReplace;
+  dropPendingReplace();
+  if (pending) {
+    writeHistoryEntryNow("replace", pending.state, pending.url);
+  }
+};
+const dropPendingReplace = () => {
+  pendingReplace = null;
+  if (pendingReplaceTimer !== null) {
+    clearTimeout(pendingReplaceTimer);
+    pendingReplaceTimer = null;
+  }
+};
 const writeHistoryEntry = (navigationType, state, url) => {
+  if (pendingReplace) {
+    if (pendingReplace.url === url) {
+      // This write stands where the pending one would: its state was built on
+      // the pending state (see readEntryState), so it says everything the
+      // pending write had to say.
+      dropPendingReplace();
+    } else {
+      flushPendingReplace();
+    }
+  }
+  writeHistoryEntryNow(navigationType, state, url);
+};
+const writeHistoryEntryNow = (navigationType, state, url) => {
   noteHistoryWrite(url);
   try {
     if (navigationType === "push") {
@@ -592,10 +682,14 @@ const noteHistoryWrite = import.meta.dev
     })()
   : () => {};
 
+// Read before the history is written, in both places that ask: a push or a
+// replace onto the url already displayed. Never a traverse — the browser has
+// already moved the address when a popstate is handled, so the comparison
+// would say "same" about every back and forward.
 const isStateOnlyNavigation = (
   url,
   { navigationType },
-  urlLeft = window.location.href,
+  urlLeft = readAddress(),
 ) =>
   url === urlLeft &&
   (navigationType === "push" || navigationType === "replace");

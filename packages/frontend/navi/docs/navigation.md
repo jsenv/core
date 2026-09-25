@@ -431,6 +431,47 @@ param that qualifies a screen is not a place, and one entry per write turns a
 single back-press into as many as the user moved. A state whose values ARE
 places says so — see [`history: "push"`](#a-state-whose-values-are-places-history-push).
 
+#### A value written per frame
+
+Every write of the signal reaches the address, synchronously, and browsers
+refuse an address written too often: Safari throws a `SecurityError` past 100
+writes per 10 seconds, and the state then runs ahead of an address that stopped
+following. A value dragged at 60 Hz gets there in under two seconds. Chromium
+drops the writes silently, so a developer working there never sees it; navi
+warns in dev when the budget is reached.
+
+**An address is not a recording of a gesture.** What the address records is
+where the value was PUT DOWN, not the path the finger took. So the value one
+drags belongs to the gesture, and the state bound to the url is written when the
+gesture ends:
+
+- **A gesture with a release** — a disc turned, a slider dragged: hold the value
+  in the component while the pointer is down, and write the signal on release.
+  Re-reading the signal meanwhile would pull the control back mid-gesture, so
+  the held value is the one drawn.
+- **A movement with no release** — a wheel zooming, a fly-to animation: write
+  the signal when the movement has settled (a short idle timer, or the end of
+  the animation).
+
+When every intermediate value IS a valid address — the centre of a panned map,
+where each frame is a place one could reload into — the state can ask navi to
+debounce the browser's address instead, in milliseconds:
+
+```js
+const eastSignal = stateSignal(0, {
+  id: "e",
+  type: "number",
+  debounceUrl: 200,
+});
+```
+
+The routes, the document url and the renders still follow every write; only the
+browser's copy of the address (`window.location`) waits for the state to stay
+still that long, and is then written with the last value. A push is never
+debounced, and a push or a state written onto the entry flushes what is pending
+first. A back pressed before the write keeps the entry at the last address
+written: the drag in progress, and nothing else.
+
 ## Rendering routes
 
 `<Route>` is the only primitive. With `children` it is a container that renders

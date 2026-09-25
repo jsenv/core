@@ -19,6 +19,7 @@ import {
   resolveRerunOn,
 } from "./item_lifecycle_manager.js";
 import { getParamScope } from "./param_scope.js";
+import { createResourcePersistence } from "./resource_persist.js";
 import { createRangeReader } from "./resource_range_reader.js";
 
 const resourceLifecycleManager = createResourceLifecycleManager();
@@ -102,6 +103,20 @@ const debug = (...args) => {
  * @param {Object} restCallbacks - `{ idKey, uniqueKeys, rerunOn, dependencies, GET, GET_MANY, GET_RANGE, POST, POST_MANY, PUT, PUT_MANY, PATCH, PATCH_MANY, DELETE, DELETE_MANY }`
  * @param {string} [restCallbacks.idKey] - primary key property, defaults to `"id"`
  * @param {string[]} [restCallbacks.uniqueKeys] - alternate keys the store can find an item by (e.g. `"username"`)
+ * @param {{ signal: import("@preact/signals").Signal, when?: () => boolean }} [restCallbacks.persist] -
+ *   mirrors the rows `GET` lands with into `signal` — a `stateSignal` with
+ *   `persists: true` and `type: "object"` keeps them across a reload, whose
+ *   first `GET` run then draws the last known row while the request is out (a
+ *   refresh, not a first load — see docs/data_states.md); the request goes out
+ *   as usual and its answer replaces the row. The copy follows the store: a
+ *   `PUT`, a list upserting a child, a relation changing rewrite it. Put
+ *   whatever makes a stored copy unusable in the signal's `id` (the deployed
+ *   version, say): a new id starts clean. `when` is read whenever the copy is
+ *   about to be read or written: `false` neither reads it nor writes it, and
+ *   empties the signal. Writing `undefined` into the signal (sign-out) forgets
+ *   the copy until a `GET` lands again. One row is kept per params the GET was
+ *   asked with, so it is meant for a singleton or a handful of rows, not for a
+ *   resource whose GET is asked for every id.
  * @see docs/resource.md — relationships, callback return contracts, decision table
  *
  * @example
@@ -120,6 +135,7 @@ export const resource = (
     uniqueKeys = [],
     rerunOn,
     dependencies,
+    persist,
 
     GET,
     GET_MANY,
@@ -177,15 +193,20 @@ export const resource = (
       return item;
     },
   });
+  const persistence = persist
+    ? createResourcePersistence(store, { idKey, name, ...persist })
+    : null;
   // The row a GET designates, when the store already holds it — by its params:
   // the value under idKey may be the id or any unique key (a route opening a
   // user by id or by slug names both `id`), and a unique key may be given under
-  // its own name. findItemByParams is what a GET draws while its request is in
-  // flight (the action's provisionalValue). findItemInStore adds, when the
-  // params name no row (a GET without params, or whose params carry no key),
-  // the row the action last completed with: that fallback answers a GET under
-  // a network policy (see applyNetworkPolicy) and only there — a GET of a row
-  // the store lacks must draw its skeleton, never the row read just before.
+  // its own name, or, on a persisted resource, as the row kept for these
+  // params (a GET without params has one row). findItemForGet is what a GET
+  // draws while its request is in flight (the action's provisionalValue).
+  // findItemInStore adds, when the params name no row (a GET without params,
+  // or whose params carry no key), the row the action last completed with:
+  // that fallback answers a GET under a network policy (see
+  // applyNetworkPolicy) and only there — a GET of a row the store lacks must
+  // draw its skeleton, never the row read just before.
   const selectByAnyKey = (value) => {
     const item = store.select(value);
     if (item) {
@@ -224,11 +245,21 @@ export const resource = (
     }
     return null;
   };
+  const findItemForGet = (params) => {
+    const itemByParams = findItemByParams(params);
+    if (itemByParams) {
+      return itemByParams;
+    }
+    if (persistence) {
+      return persistence.findItem(params);
+    }
+    return null;
+  };
   const findItemInStore = (params, action) => {
     return untracked(() => {
-      const itemByParams = findItemByParams(params);
-      if (itemByParams) {
-        return itemByParams;
+      const itemForGet = findItemForGet(params);
+      if (itemForGet) {
+        return itemForGet;
       }
       const lastItemId = getLastGetItemId(action);
       if (lastItemId === undefined) {
@@ -240,7 +271,8 @@ export const resource = (
   const createRestActionForRoot = createRestActionFactoryForRoot(name, {
     idKey,
     store,
-    findItemByParams,
+    findItemForGet,
+    persistence,
     declarationSite,
   });
   return createResource(name, {
@@ -1344,7 +1376,8 @@ const createRestActionFactoryForRoot = (
   {
     idKey,
     store, // see array_signal_store.js
-    findItemByParams,
+    findItemForGet,
+    persistence,
     declarationSite,
   },
 ) => {
@@ -1411,6 +1444,9 @@ const createRestActionFactoryForRoot = (
           recordGetResultProperties(action, Object.keys(result));
           const itemId = applyResultToValue(result);
           lastGetItemIdWeakMap.set(action, itemId);
+          if (persistence) {
+            persistence.recordGetItem(action.params, itemId);
+          }
           return itemId;
         }
         return applyResultToValue(result);
@@ -1422,7 +1458,7 @@ const createRestActionFactoryForRoot = (
       provisionalValue:
         verb === "GET"
           ? (params) => {
-              const item = untracked(() => findItemByParams(params));
+              const item = untracked(() => findItemForGet(params));
               return item ? item[idKey] : undefined;
             }
           : undefined,

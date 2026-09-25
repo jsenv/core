@@ -34,6 +34,7 @@ Actions are read in components through the action system (`useAsyncData`,
 looks like ([data_states.md](./data_states.md#data-and-loading-are-independent)).
 
 - [`store.upsert()` is not how data enters the store](#storeupsert-is-not-how-data-enters-the-store)
+- [`persist`: the last answer, drawn again after a reload](#persist-the-last-answer-drawn-again-after-a-reload)
 - [`GET_RANGE`: feeding a list that loads as it scrolls](#get_range-feeding-a-list-that-loads-as-it-scrolls)
 - [Searching the same collection](#searching-the-same-collection)
 - [Relations: pick one of the four methods](#relations-pick-one-of-the-four-methods)
@@ -62,7 +63,8 @@ that does not return what it should.
 it yourself is the point:
 
 - seeding it with data that came from elsewhere — state rendered by the server,
-  a local cache, a websocket message;
+  a websocket message (the resource's own last answer is not "elsewhere": that
+  is [`persist`](#persist-the-last-answer-drawn-again-after-a-reload), below);
 - absorbing the parent object a relation route answered with: the relation
   callback only writes the relation, so the parent's own fields have nowhere
   else to land (see [When the backend answers a sub-route with the whole
@@ -70,6 +72,98 @@ it yourself is the point:
 
 A list that loads its rows a slice at a time is **not** one of those cases — that is
 `GET_RANGE`, right below.
+
+## `persist`: the last answer, drawn again after a reload
+
+Some `GET`s are the app. `GET /me` answers who is signed in, their things, what
+the header and the tab bar draw; until it lands, a page that is rendered has
+nothing to draw. On a reload, or when the app is reopened from the home screen,
+that wait is pure loss: the previous answer was on screen a moment ago and is
+almost always still true, and a server waking up makes it last seconds.
+
+What is wanted is the second line of the table in
+[data_states.md](./data_states.md#data-and-loading-are-independent) reached on
+a reload: the last known row drawn, the request out behind it, the fresh answer
+replacing it. `persist` names the resource whose answer is worth keeping, and
+the signal that keeps it — a `stateSignal` that persists, the primitive navi
+has for a state that survives a reload:
+
+```js
+const mePersistedSignal = stateSignal(undefined, {
+  id: `me@${APP_VERSION}`,
+  persists: true,
+  type: "object",
+});
+const ME = resource("me", {
+  persist: {
+    signal: mePersistedSignal,
+    when: () => !viewAsSignal.value,
+  },
+  GET: () => fetchJson(`/me`),
+});
+ME.one("user", USER);
+ME.many("my_games", GAME);
+```
+
+From there navi does the rest:
+
+- **the rows `GET` lands with are written into the signal** — one per params
+  the `GET` was asked with, so a `GET` without params keeps one row. Where the
+  signal keeps its value is the signal's business: `persists: true` is
+  localStorage, and a plain `signal()` keeps it for the page's lifetime, which
+  is what a test wants;
+- **the first run of the `GET` draws the kept row.** It enters the store and
+  becomes the action's provisional value: `data` is set while `loading` is
+  `true`, the row is on screen and the request is out behind it. Nothing else
+  moves — `runningState` is `running`, the answer replaces the row, an error
+  lands in `errorSignal` beside it;
+- **the copy follows the store.** It is written with its relations inline — the
+  shape the `GET` callback returns, so it re-enters through the same setters a
+  real answer goes through — and rewritten whenever the row or a row it reaches
+  through a relation changes: a `PUT` on the item, a list upserting one of its
+  children, a game joining `my_games`. A rewrite that changes nothing is
+  skipped, so the signal moves only when the copy does;
+- **under a network policy answering reads from the store, the kept row answers
+  the `GET`** ([network_policy.md](./network_policy.md)): a reload with no
+  network reopens on the last answer rather than on nothing.
+
+What stays the app's, because only the app knows:
+
+- **the key.** A stored copy is only as good as the code reading it: a deploy
+  that changes the shape of the answer must not draw the old one. Put in the
+  signal's `id` whatever makes a copy unusable — the deployed version — and a
+  new id starts clean.
+- **`when`: is the copy about this session?** A tab viewing as someone else, an
+  account being switched — the row in the store is somebody's, and it must not
+  be kept for the next person. `when` is read whenever the copy is about to be
+  read or written: `false` reads nothing, writes nothing, and empties the
+  signal. It is a function so it can read a signal, and it has to: a plain
+  variable is only looked at again when the store changes.
+- **the moment, not the state.** Sign-out is not a condition that holds, it is
+  something that happens: writing `undefined` into the signal
+  (`mePersistedSignal.value = undefined`) forgets the copy at once, and nothing
+  is written until a `GET` lands again. The store rows stay — the screen keeps
+  what it shows until the app resets the action, as it does today.
+- **what the `GET` feeds beside its return value.** Counts, badges, a feature
+  flag set from the response are the app's signals, not the row; they are not
+  kept, and the callback does not run on a kept row. Anything the app wants
+  back before the answer, it stores itself.
+- **the veil.** A loading screen that waits on the `GET` being `running` stays
+  over the drawn row for the whole request. It waits on `data` being set —
+  the emptiness test of data_states.md — and the refresh is shown as usual.
+
+What the copy is not:
+
+- **an answer.** The `GET` goes out every time; the copy is a drawing aid. A
+  screen must not read `data` as "the server confirmed": that is `loading`,
+  and the two are independent.
+- **a store on disk.** One row per params key, `GET` only — a resource whose
+  `GET` is asked for every id would keep every id. It is meant for a singleton
+  or a handful of rows.
+- **seeded at declaration.** The row enters the store at the first run of the
+  `GET`, once the relations are declared, so that its relation values are
+  normalized into their stores as a real answer's are. `ME.store` read before
+  that first run is empty.
 
 ## `GET_RANGE`: feeding a list that loads as it scrolls
 

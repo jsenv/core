@@ -87,7 +87,15 @@ if (import.meta.hot) {
  *   refuse an address written too often (Safari: 100 writes per 10 s, then a
  *   SecurityError). A value one DRAGS is written at 60 Hz: keep it in the
  *   gesture while the finger is down and write the state once, on release —
- *   an address is not a recording of a gesture.
+ *   an address is not a recording of a gesture. When every intermediate value
+ *   IS a valid address (a map centre), see `debounceUrl`.
+ * @param {number} [options.debounceUrl=0] - Milliseconds the browser's address
+ *   waits for this state to settle before a replace is written: writes closer
+ *   together than that make one write, with the last value. The routes, the
+ *   document url and the renders still move on every write; only
+ *   `window.location` is behind. For a state legitimately written per frame
+ *   (the centre of a panned map, the hour of a dragged sun), e.g. 200. A push
+ *   is never debounced.
  * @param {boolean} [options.debug=false] - Enable debug logging for this signal's operations
  * @returns {import("@preact/signals").Signal} A signal that can be synchronized with a source signal and/or persisted in localStorage. The signal includes a `validity` property for validation state.
  *
@@ -162,11 +170,17 @@ export const stateSignal = (defaultValue, options = {}) => {
     autoFix,
     weak = false,
     history = "replace",
+    debounceUrl = 0,
   } = options;
 
   if (history !== "replace" && history !== "push") {
     throw new TypeError(
       `stateSignal "${id}": history must be "replace" or "push", got ${history}.`,
+    );
+  }
+  if (typeof debounceUrl !== "number" || debounceUrl < 0) {
+    throw new TypeError(
+      `stateSignal "${id}": debounceUrl must be a number of milliseconds, got ${debounceUrl}.`,
     );
   }
   if (weak && persists) {
@@ -534,6 +548,7 @@ export const stateSignal = (defaultValue, options = {}) => {
     ...options,
     history,
     getHistory: () => historyForCurrentWrite || history,
+    debounceUrl,
   };
   globalSignalRegistry.set(signalIdString, {
     signal: facadeSignal,

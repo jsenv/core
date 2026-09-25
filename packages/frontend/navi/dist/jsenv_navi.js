@@ -15581,6 +15581,219 @@ const getParamScope = (params) => {
 };
 
 /*
+ * The rows a resource's GET landed with, mirrored into a signal the app hands
+ * over — a `stateSignal` with `persists` for a copy that survives a reload, so
+ * that the reload starts on the "refresh over a known answer" line of
+ * docs/data_states.md rather than on the first-load one. Where the signal
+ * keeps its value is the signal's business; this module only decides what the
+ * copy contains, when it enters the store, and when it is rewritten.
+ *
+ * What the signal holds: one item per params the GET was asked with (`""` for
+ * a GET without params), as the store holds it with its relations written
+ * inline — `user: { … }`, `my_games: [ … ]`. That is the shape the GET
+ * callback itself returns, so the copy re-enters the store through the same
+ * setters a real answer goes through and its relations normalize into their
+ * own stores.
+ *
+ * It re-enters at the first run of the GET asking for it, never at
+ * declaration: relations are declared after `resource()` returns, and a row
+ * upserted before them keeps its relation values as plain data.
+ *
+ * The write follows the store, not the callback: an effect reads the item and
+ * every row it reaches through a relation, so a PUT on the item or a list
+ * upserting one of its children rewrites the copy. The signal turning
+ * `undefined` from outside is "forget": nothing is written until a GET lands
+ * again.
+ */
+const createResourcePersistence = (
+  store,
+  { idKey, name, signal: persistedSignal, when },
+) => {
+  if (
+    !persistedSignal ||
+    typeof persistedSignal !== "object" ||
+    typeof persistedSignal.subscribe !== "function"
+  ) {
+    throw new TypeError(
+      `resource("${name}").persist needs a signal to write the copy into, received ${persistedSignal}`,
+    );
+  }
+
+  // paramsKey → item the signal holds that is not in the store yet
+  const storedItemMap = new Map();
+  // paramsKey → id of the row the GET holds for these params
+  const entryMapSignal = signal(new Map());
+  const recordItem = (paramsKey, itemId) => {
+    const entryMap = entryMapSignal.peek();
+    if (entryMap.get(paramsKey) === itemId) {
+      return;
+    }
+    const entryMapUpdated = new Map(entryMap);
+    entryMapUpdated.set(paramsKey, itemId);
+    entryMapSignal.value = entryMapUpdated;
+  };
+  const isAllowed = () => {
+    return when ? Boolean(when()) : true;
+  };
+
+  // An empty signal means "nothing is known": whoever emptied it — sign-out
+  // writing undefined, or `when` saying no — nothing is written again until a
+  // GET lands.
+  const forget = () => {
+    storedItemMap.clear();
+    if (entryMapSignal.peek().size > 0) {
+      entryMapSignal.value = new Map();
+    }
+  };
+  let lastWritten;
+  const write = (value) => {
+    if (compareTwoJsValues(value, lastWritten)) {
+      return;
+    }
+    lastWritten = value;
+    persistedSignal.value = value;
+  };
+  // Runs at once with what the signal already holds (the copy read from
+  // storage), then on every write — the module's own ones are recognized
+  // and left alone.
+  persistedSignal.subscribe((value) => {
+    if (value === lastWritten) {
+      return;
+    }
+    lastWritten = value;
+    storedItemMap.clear();
+    if (value === undefined || value === null) {
+      forget();
+      return;
+    }
+    if (typeof value !== "object") {
+      return;
+    }
+    for (const paramsKey of Object.keys(value)) {
+      storedItemMap.set(paramsKey, value[paramsKey]);
+    }
+  });
+
+  const findItem = (params) => {
+    const paramsKey = getParamsKey(params);
+    return untracked(() => {
+      const itemId = entryMapSignal.peek().get(paramsKey);
+      if (itemId !== undefined) {
+        const item = store.select(itemId);
+        if (item) {
+          return item;
+        }
+      }
+      if (!isAllowed()) {
+        return null;
+      }
+      const storedItem = storedItemMap.get(paramsKey);
+      if (!storedItem || typeof storedItem !== "object") {
+        return null;
+      }
+      storedItemMap.delete(paramsKey);
+      const item = store.upsert(storedItem);
+      recordItem(paramsKey, item[idKey]);
+      return item;
+    });
+  };
+  const recordGetItem = (params, itemId) => {
+    recordItem(getParamsKey(params), itemId);
+  };
+
+  effect(() => {
+    const entryMap = entryMapSignal.value;
+    if (!isAllowed()) {
+      write(undefined);
+      forget();
+      return;
+    }
+    if (entryMap.size === 0) {
+      // Nothing is known yet: the copy is what a GET will draw, it must not
+      // be erased by a page that has not asked anything.
+      return;
+    }
+    const stored = {};
+    for (const [paramsKey, storedItem] of storedItemMap) {
+      stored[paramsKey] = storedItem;
+    }
+    for (const [paramsKey, itemId] of entryMap) {
+      const item = store.select(itemId);
+      if (!item) {
+        continue;
+      }
+      stored[paramsKey] = serializeItem(item, new Set());
+    }
+    write(stored);
+  });
+
+  return {
+    findItem,
+    recordGetItem,
+  };
+};
+
+const getParamsKey = (params) => {
+  if (params === undefined || params === NO_PARAMS) {
+    return "";
+  }
+  return stableStringify(params);
+};
+
+const stableStringify = (value) => {
+  if (value === null || typeof value !== "object") {
+    return JSON.stringify(value);
+  }
+  if (Array.isArray(value)) {
+    return `[${value.map(stableStringify).join(",")}]`;
+  }
+  const keys = Object.keys(value).sort();
+  const parts = [];
+  for (const key of keys) {
+    parts.push(`${JSON.stringify(key)}:${stableStringify(value[key])}`);
+  }
+  return `{${parts.join(",")}}`;
+};
+
+// The item with its relations inline: a relation value stands for what its
+// signal holds (the child row, the child rows, or nothing), a row reached
+// twice on the same path is written as its id — the setters accept both.
+const serializeItem = (item, ancestorSet) => {
+  ancestorSet.add(item);
+  const serialized = {};
+  for (const key of Object.keys(item)) {
+    serialized[key] = serializeValue(item[key], ancestorSet);
+  }
+  ancestorSet.delete(item);
+  return serialized;
+};
+const serializeValue = (value, ancestorSet) => {
+  if (value === null || typeof value !== "object") {
+    return value;
+  }
+  if (Array.isArray(value)) {
+    return value.map((entry) => serializeValue(entry, ancestorSet));
+  }
+  const objectSignal = value[SYMBOL_OBJECT_SIGNAL];
+  if (objectSignal) {
+    const held = objectSignal.value;
+    if (held === undefined || held === null) {
+      return null;
+    }
+    return serializeValue(held, ancestorSet);
+  }
+  if (typeof value.toJSON === "function") {
+    return value;
+  }
+  if (ancestorSet.has(value)) {
+    return Object.hasOwn(value, SYMBOL_IDENTITY)
+      ? value[SYMBOL_IDENTITY]
+      : null;
+  }
+  return serializeItem(value, ancestorSet);
+};
+
+/*
  * GET_RANGE: reading a resource one slice at a time, for a list that draws its
  * rows as it goes (`<List.Items itemsAction>`).
  *
@@ -15830,6 +16043,20 @@ const debug$3 = (...args) => {
  * @param {Object} restCallbacks - `{ idKey, uniqueKeys, rerunOn, dependencies, GET, GET_MANY, GET_RANGE, POST, POST_MANY, PUT, PUT_MANY, PATCH, PATCH_MANY, DELETE, DELETE_MANY }`
  * @param {string} [restCallbacks.idKey] - primary key property, defaults to `"id"`
  * @param {string[]} [restCallbacks.uniqueKeys] - alternate keys the store can find an item by (e.g. `"username"`)
+ * @param {{ signal: import("@preact/signals").Signal, when?: () => boolean }} [restCallbacks.persist] -
+ *   mirrors the rows `GET` lands with into `signal` — a `stateSignal` with
+ *   `persists: true` and `type: "object"` keeps them across a reload, whose
+ *   first `GET` run then draws the last known row while the request is out (a
+ *   refresh, not a first load — see docs/data_states.md); the request goes out
+ *   as usual and its answer replaces the row. The copy follows the store: a
+ *   `PUT`, a list upserting a child, a relation changing rewrite it. Put
+ *   whatever makes a stored copy unusable in the signal's `id` (the deployed
+ *   version, say): a new id starts clean. `when` is read whenever the copy is
+ *   about to be read or written: `false` neither reads it nor writes it, and
+ *   empties the signal. Writing `undefined` into the signal (sign-out) forgets
+ *   the copy until a `GET` lands again. One row is kept per params the GET was
+ *   asked with, so it is meant for a singleton or a handful of rows, not for a
+ *   resource whose GET is asked for every id.
  * @see docs/resource.md — relationships, callback return contracts, decision table
  *
  * @example
@@ -15848,6 +16075,7 @@ const resource = (
     uniqueKeys = [],
     rerunOn,
     dependencies,
+    persist,
 
     GET,
     GET_MANY,
@@ -15905,15 +16133,20 @@ const resource = (
       return item;
     },
   });
+  const persistence = persist
+    ? createResourcePersistence(store, { idKey, name, ...persist })
+    : null;
   // The row a GET designates, when the store already holds it — by its params:
   // the value under idKey may be the id or any unique key (a route opening a
   // user by id or by slug names both `id`), and a unique key may be given under
-  // its own name. findItemByParams is what a GET draws while its request is in
-  // flight (the action's provisionalValue). findItemInStore adds, when the
-  // params name no row (a GET without params, or whose params carry no key),
-  // the row the action last completed with: that fallback answers a GET under
-  // a network policy (see applyNetworkPolicy) and only there — a GET of a row
-  // the store lacks must draw its skeleton, never the row read just before.
+  // its own name, or, on a persisted resource, as the row kept for these
+  // params (a GET without params has one row). findItemForGet is what a GET
+  // draws while its request is in flight (the action's provisionalValue).
+  // findItemInStore adds, when the params name no row (a GET without params,
+  // or whose params carry no key), the row the action last completed with:
+  // that fallback answers a GET under a network policy (see
+  // applyNetworkPolicy) and only there — a GET of a row the store lacks must
+  // draw its skeleton, never the row read just before.
   const selectByAnyKey = (value) => {
     const item = store.select(value);
     if (item) {
@@ -15952,11 +16185,21 @@ const resource = (
     }
     return null;
   };
+  const findItemForGet = (params) => {
+    const itemByParams = findItemByParams(params);
+    if (itemByParams) {
+      return itemByParams;
+    }
+    if (persistence) {
+      return persistence.findItem(params);
+    }
+    return null;
+  };
   const findItemInStore = (params, action) => {
     return untracked(() => {
-      const itemByParams = findItemByParams(params);
-      if (itemByParams) {
-        return itemByParams;
+      const itemForGet = findItemForGet(params);
+      if (itemForGet) {
+        return itemForGet;
       }
       const lastItemId = getLastGetItemId(action);
       if (lastItemId === undefined) {
@@ -15968,7 +16211,8 @@ const resource = (
   const createRestActionForRoot = createRestActionFactoryForRoot(name, {
     idKey,
     store,
-    findItemByParams,
+    findItemForGet,
+    persistence,
     declarationSite,
   });
   return createResource(name, {
@@ -17066,7 +17310,8 @@ const createRestActionFactoryForRoot = (
   {
     idKey,
     store, // see array_signal_store.js
-    findItemByParams,
+    findItemForGet,
+    persistence,
     declarationSite,
   },
 ) => {
@@ -17133,6 +17378,9 @@ const createRestActionFactoryForRoot = (
           recordGetResultProperties(action, Object.keys(result));
           const itemId = applyResultToValue(result);
           lastGetItemIdWeakMap.set(action, itemId);
+          if (persistence) {
+            persistence.recordGetItem(action.params, itemId);
+          }
           return itemId;
         }
         return applyResultToValue(result);
@@ -17144,7 +17392,7 @@ const createRestActionFactoryForRoot = (
       provisionalValue:
         verb === "GET"
           ? (params) => {
-              const item = untracked(() => findItemByParams(params));
+              const item = untracked(() => findItemForGet(params));
               return item ? item[idKey] : undefined;
             }
           : undefined,
@@ -17547,7 +17795,15 @@ const generateSignalId = () => {
  *   refuse an address written too often (Safari: 100 writes per 10 s, then a
  *   SecurityError). A value one DRAGS is written at 60 Hz: keep it in the
  *   gesture while the finger is down and write the state once, on release —
- *   an address is not a recording of a gesture.
+ *   an address is not a recording of a gesture. When every intermediate value
+ *   IS a valid address (a map centre), see `debounceUrl`.
+ * @param {number} [options.debounceUrl=0] - Milliseconds the browser's address
+ *   waits for this state to settle before a replace is written: writes closer
+ *   together than that make one write, with the last value. The routes, the
+ *   document url and the renders still move on every write; only
+ *   `window.location` is behind. For a state legitimately written per frame
+ *   (the centre of a panned map, the hour of a dragged sun), e.g. 200. A push
+ *   is never debounced.
  * @param {boolean} [options.debug=false] - Enable debug logging for this signal's operations
  * @returns {import("@preact/signals").Signal} A signal that can be synchronized with a source signal and/or persisted in localStorage. The signal includes a `validity` property for validation state.
  *
@@ -17622,11 +17878,17 @@ const stateSignal = (defaultValue, options = {}) => {
     autoFix,
     weak = false,
     history = "replace",
+    debounceUrl = 0,
   } = options;
 
   if (history !== "replace" && history !== "push") {
     throw new TypeError(
       `stateSignal "${id}": history must be "replace" or "push", got ${history}.`,
+    );
+  }
+  if (typeof debounceUrl !== "number" || debounceUrl < 0) {
+    throw new TypeError(
+      `stateSignal "${id}": debounceUrl must be a number of milliseconds, got ${debounceUrl}.`,
     );
   }
   if (weak && persists) {
@@ -17984,6 +18246,7 @@ const stateSignal = (defaultValue, options = {}) => {
     ...options,
     history,
     getHistory: () => historyForCurrentWrite || history,
+    debounceUrl,
   };
   globalSignalRegistry.set(signalIdString, {
     signal: facadeSignal,
@@ -26127,19 +26390,23 @@ const route = (
       const routeUrl = route.buildUrl(params);
       return integration.navTo(routeUrl, options);
     };
-    route.redirectTo = (params, { callReason, history = "replace" } = {}) => {
+    route.redirectTo = (
+      params,
+      { callReason, history = "replace", debounceUrl } = {},
+    ) => {
       if (!integration) {
         return Promise.resolve();
       }
       const routeUrl = route.buildUrl(params);
       return integration.navTo(routeUrl, {
         replace: history !== "push",
+        debounce: debounceUrl,
         callReason,
       });
     };
     route.replaceParams = (
       newParams,
-      { callReason, isSignalChange, history = "replace" } = {},
+      { callReason, isSignalChange, history = "replace", debounceUrl } = {},
     ) => {
       const matching = route.matchingSignal.peek();
       if (!matching) {
@@ -26194,6 +26461,7 @@ const route = (
         return mostSpecificRoute.redirectTo(newParams, {
           callReason: `replaceParams delegation from ${route} to ${mostSpecificRoute} (original reason: ${callReason})`,
           history,
+          debounceUrl,
         });
       }
 
@@ -26210,6 +26478,7 @@ const route = (
       );
       return integration.navTo(targetUrl, {
         replace: history !== "push",
+        debounce: debounceUrl,
         callReason,
       });
     };
@@ -26287,6 +26556,9 @@ const route = (
       // which is what a param qualifying a screen is.
       const historyOfWrite = () =>
         paramSignal.options?.getHistory?.() || "replace";
+      // Milliseconds the browser's address waits for this state to settle
+      // (see stateSignal's `debounceUrl`); 0 writes at once. A plain signal says nothing.
+      const debounceUrl = paramSignal.options?.debounceUrl || 0;
       if (debug) {
         console.debug(
           `[route] connecting url param "${paramName}" to signal`,
@@ -26330,6 +26602,7 @@ const route = (
               callReason: `${paramName} signal change on ${route}`,
               isSignalChange: true,
               history: historyOfWrite(),
+              debounceUrl,
             },
           );
           return;
@@ -26348,6 +26621,7 @@ const route = (
               callReason: `${paramName} signal reset to default on ${route}`,
               isSignalChange: true,
               history: historyOfWrite(),
+              debounceUrl,
             },
           );
           return;
@@ -26368,6 +26642,7 @@ const route = (
             callReason: `${paramName} signal change on ${route}`,
             isSignalChange: true,
             history: historyOfWrite(),
+            debounceUrl,
           },
         );
       });
@@ -27660,8 +27935,6 @@ const setupBrowserIntegrationViaHistory = ({
   applyRouting,
   isRouting,
 }) => {
-  const { history } = window;
-
   let globalAbortController = new AbortController();
   const triggerGlobalAbort = (reason) => {
     globalAbortController.abort(reason);
@@ -27679,7 +27952,8 @@ const setupBrowserIntegrationViaHistory = ({
   setActionDispatcher(dispatchActions);
 
   const getDocumentState = () => {
-    return window.history.state ? { ...window.history.state } : null;
+    const entryState = readEntryState();
+    return entryState ? { ...entryState } : null;
   };
 
   const historyStartAtStart = getDocumentState();
@@ -27693,7 +27967,7 @@ const setupBrowserIntegrationViaHistory = ({
   const visitedUrlsSignal = signal(0);
 
   const isVisited = (url) => {
-    url = new URL(url, window.location.href).href;
+    url = new URL(url, readAddress()).href;
     return visitedUrlSet.has(url);
   };
   const markUrlAsVisited = (url) => {
@@ -27755,20 +28029,20 @@ const setupBrowserIntegrationViaHistory = ({
   let abortController = null;
   const handleRoutingTask = (target, options) => {
     // Everything below this line reasons on the URL as a whole: it is compared
-    // to window.location.href, looked up in the history stack, written into the
+    // to the address, looked up in the history stack, written into the
     // document url signal and parsed there. A relative target ("/", "../x")
     // would silently lose every one of those — the browser would still resolve
     // it in pushState, but nothing else here would. So it is resolved once, at
     // the single door every navigation goes through, rather than by each caller
     // (navBack's fallback in particular arrives here raw).
-    const url = new URL(target, window.location.href).href;
+    const url = new URL(target, readAddress()).href;
     // An address that only sends elsewhere never becomes anything here: asked
     // before the announcement, before the history write and before the routes,
     // so that what follows is entirely about where the reader is going (see
     // resolveRouteRedirection).
     const redirectionUrl = resolveRouteRedirection(url);
     if (redirectionUrl) {
-      if (redirectionUrl === window.location.href) {
+      if (redirectionUrl === readAddress()) {
         // Asked to go where we already are: an address that redirects is never
         // the one being displayed, so there is nothing to go to and nothing to
         // stack on the history.
@@ -27787,7 +28061,7 @@ const setupBrowserIntegrationViaHistory = ({
     if (
       options.navigationType === "push" &&
       options.state === undefined &&
-      url !== window.location.href
+      url !== readAddress()
     ) {
       const delta = adjacentEntryDelta(url);
       if (delta === -1) {
@@ -27828,12 +28102,13 @@ const setupBrowserIntegrationViaHistory = ({
   const applyRoutingTask = (url, options) => {
     // Read before the history is written: the url the reader is being taken
     // away from, which is what decides where a push lands (see startAtTop).
-    const urlLeft = window.location.href;
+    const urlLeft = readAddress();
     const {
       reason,
       navigationType, // "load", "reload", "replace", "push", "traverse"
       redirected,
       landOn,
+      debounce,
     } = options;
     let { state } = options;
 
@@ -27852,7 +28127,14 @@ const setupBrowserIntegrationViaHistory = ({
           [NAV_DEPTH_STATE_KEY]: getNavDepth(),
         },
       });
-      writeHistoryEntry(navigationType, effectiveState, url);
+      if (navigationType === "replace" && debounce && state === undefined) {
+        // Nothing of its own for the entry: the address moves, the state is
+        // carried over. The one kind of write allowed to lag, and only when
+        // the state written asked for it (see replaceAddressWhenSettled).
+        replaceAddressWhenSettled(effectiveState, url, debounce);
+      } else {
+        writeHistoryEntry(navigationType, effectiveState, url);
+      }
       rememberEntryIsOfThisDocument();
       updateDocumentUrl(url);
       updateDocumentState(effectiveState);
@@ -28043,7 +28325,20 @@ const setupBrowserIntegrationViaHistory = ({
   // being left must be recorded from the first pixel scrolled.
   installScrollRestoration();
 
+  // The document is leaving, or may be killed in the background: what the
+  // entry says about it has to be what the document says (see
+  // replaceAddressWhenSettled).
+  window.addEventListener("pagehide", flushPendingReplace);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") {
+      flushPendingReplace();
+    }
+  });
+
   window.addEventListener("popstate", (popstateEvent) => {
+    // The entry a pending replace was for is no longer the current one, and
+    // the History API has no way to write it (see replaceAddressWhenSettled).
+    dropPendingReplace();
     const url = window.location.href;
     const state = popstateEvent.state;
     const landOn = landOnPending;
@@ -28072,11 +28367,18 @@ const setupBrowserIntegrationViaHistory = ({
     updateDocumentUrl(window.location.href);
   });
 
-  const navTo = async (url, { replace, state, routeTransition } = {}) => {
+  const navTo = async (
+    url,
+    { replace, state, routeTransition, debounce } = {},
+  ) => {
     handleRoutingTask(url, {
       reason: `navTo called with "${url}"`,
       navigationType: replace ? "replace" : "push",
       state,
+      // Milliseconds the browser's address waits for this replace to settle
+      // (see replaceAddressWhenSettled); said by the state being written
+      // (stateSignal's `debounceUrl`), never assumed.
+      debounce,
       // What this one navigation asks of a route transition, said by the call
       // that starts it rather than by an element — the programmatic half of
       // what a <Link routeTransition> says (see route_transition.jsx).
@@ -28089,8 +28391,8 @@ const setupBrowserIntegrationViaHistory = ({
   };
 
   const reload = () => {
-    const url = window.location.href;
-    const state = history.state;
+    const url = readAddress();
+    const state = readEntryState();
     handleRoutingTask(url, {
       reason: "reload called",
       navigationType: "reload",
@@ -28161,8 +28463,55 @@ const setupBrowserIntegrationViaHistory = ({
     visitedUrlsSignal,
   };
 };
-const ADDRESS_WRITE_ADVICE = `An address is not a recording of a gesture: a value dragged per frame belongs to the gesture, and the state bound to the url is written once, on release.`;
+const ADDRESS_WRITE_ADVICE = `An address is not a recording of a gesture: a value dragged per frame belongs to the gesture, and the state bound to the url is written once, on release. A state whose every intermediate value is a valid address can declare debounceUrl (milliseconds) instead.`;
+
+// The replace waiting for the state to settle, and the address this document
+// stands at meanwhile. Read by everything here that would otherwise read
+// window.location.href or window.history.state: the document is at the
+// pending address, the browser just does not say so yet.
+let pendingReplace = null;
+let pendingReplaceTimer = null;
+const readAddress = () => {
+  return pendingReplace ? pendingReplace.url : window.location.href;
+};
+const readEntryState = () => {
+  return pendingReplace ? pendingReplace.state : window.history.state;
+};
+const replaceAddressWhenSettled = (state, url, debounce) => {
+  if (pendingReplaceTimer !== null) {
+    clearTimeout(pendingReplaceTimer);
+  }
+  pendingReplace = { state, url };
+  pendingReplaceTimer = setTimeout(flushPendingReplace, debounce);
+};
+const flushPendingReplace = () => {
+  const pending = pendingReplace;
+  dropPendingReplace();
+  if (pending) {
+    writeHistoryEntryNow("replace", pending.state, pending.url);
+  }
+};
+const dropPendingReplace = () => {
+  pendingReplace = null;
+  if (pendingReplaceTimer !== null) {
+    clearTimeout(pendingReplaceTimer);
+    pendingReplaceTimer = null;
+  }
+};
 const writeHistoryEntry = (navigationType, state, url) => {
+  if (pendingReplace) {
+    if (pendingReplace.url === url) {
+      // This write stands where the pending one would: its state was built on
+      // the pending state (see readEntryState), so it says everything the
+      // pending write had to say.
+      dropPendingReplace();
+    } else {
+      flushPendingReplace();
+    }
+  }
+  writeHistoryEntryNow(navigationType, state, url);
+};
+const writeHistoryEntryNow = (navigationType, state, url) => {
   try {
     if (navigationType === "push") {
       window.history.pushState(state, null, url);
@@ -28180,10 +28529,14 @@ const writeHistoryEntry = (navigationType, state, url) => {
   }
 };
 
+// Read before the history is written, in both places that ask: a push or a
+// replace onto the url already displayed. Never a traverse — the browser has
+// already moved the address when a popstate is handled, so the comparison
+// would say "same" about every back and forward.
 const isStateOnlyNavigation = (
   url,
   { navigationType },
-  urlLeft = window.location.href,
+  urlLeft = readAddress(),
 ) =>
   url === urlLeft &&
   (navigationType === "push" || navigationType === "replace");
@@ -28310,8 +28663,10 @@ setRouteIntegration(browserIntegration);
 
 const navIntegratedVia = browserIntegration.integration;
 const navTo = (target, options) => {
-  const url = new URL(target, window.location.href).href;
+  // Resolved against the address this document says it is at, not the one the
+  // browser shows: a replace may be on its way there (see via_history.js).
   const currentUrl = documentUrlSignal.peek();
+  const url = new URL(target, currentUrl).href;
   if (url === currentUrl) {
     if (options?.state === undefined) {
       return null;
@@ -28445,7 +28800,7 @@ const useNavStateBasic = (
       return;
     }
     currentStateCopy[id] = value;
-    navTo(window.location.href, {
+    navTo(documentUrlSignal.peek(), {
       replace: effectiveType !== "push",
       state: currentStateCopy,
     });
@@ -28479,12 +28834,12 @@ const useNavStateBasic = (
       }
       delete currentStateCopy[id];
       browserIntegration.navBack({
-        landOn: { url: window.location.href, state: currentStateCopy },
+        landOn: { url: documentUrlSignal.peek(), state: currentStateCopy },
       });
       return;
     }
     delete currentStateCopy[id];
-    navTo(window.location.href, {
+    navTo(documentUrlSignal.peek(), {
       replace: true,
       state: currentStateCopy,
     });
@@ -28538,7 +28893,7 @@ const useUrlSearchParam = (paramName, defaultValue) => {
   }
 
   const setSearchParamValue = (newValue, { replace = false } = {}) => {
-    const newUrlObject = new URL(window.location.href);
+    const newUrlObject = new URL(documentUrlSignal.peek());
     newUrlObject.searchParams.set(paramName, newValue);
     const newUrl = newUrlObject.href;
     navTo(newUrl, { replace });
@@ -35979,7 +36334,9 @@ const writeOpenedInSignal = (signal, opened, event, popupValue) => {
       return;
     }
     writeInSignal(signal, closedValue, { history: "replace" });
-    navBack({ landOn: { url: window.location.href } });
+    // The address this document says it is at: the one the browser shows may
+    // be a replace behind it (see via_history.js).
+    navBack({ landOn: { url: documentUrlSignal.peek() } });
     return;
   }
   writeInSignal(signal, closedValue, { history: "replace" });

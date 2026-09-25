@@ -279,7 +279,10 @@ export const route = (
       const routeUrl = route.buildUrl(params);
       return integration.navTo(routeUrl, options);
     };
-    route.redirectTo = (params, { callReason, history = "replace" } = {}) => {
+    route.redirectTo = (
+      params,
+      { callReason, history = "replace", debounceUrl } = {},
+    ) => {
       if (!integration) {
         if (import.meta.dev) {
           console.warn(
@@ -296,12 +299,13 @@ export const route = (
       }
       return integration.navTo(routeUrl, {
         replace: history !== "push",
+        debounce: debounceUrl,
         callReason,
       });
     };
     route.replaceParams = (
       newParams,
-      { callReason, isSignalChange, history = "replace" } = {},
+      { callReason, isSignalChange, history = "replace", debounceUrl } = {},
     ) => {
       const matching = route.matchingSignal.peek();
       if (!matching) {
@@ -372,6 +376,7 @@ export const route = (
         return mostSpecificRoute.redirectTo(newParams, {
           callReason: `replaceParams delegation from ${route} to ${mostSpecificRoute} (original reason: ${callReason})`,
           history,
+          debounceUrl,
         });
       }
 
@@ -398,6 +403,7 @@ export const route = (
       }
       return integration.navTo(targetUrl, {
         replace: history !== "push",
+        debounce: debounceUrl,
         callReason,
       });
     };
@@ -475,6 +481,9 @@ export const route = (
       // which is what a param qualifying a screen is.
       const historyOfWrite = () =>
         paramSignal.options?.getHistory?.() || "replace";
+      // Milliseconds the browser's address waits for this state to settle
+      // (see stateSignal's `debounceUrl`); 0 writes at once. A plain signal says nothing.
+      const debounceUrl = paramSignal.options?.debounceUrl || 0;
       if (debug) {
         console.debug(
           `[route] connecting url param "${paramName}" to signal`,
@@ -518,6 +527,7 @@ export const route = (
               callReason: `${paramName} signal change on ${route}`,
               isSignalChange: true,
               history: historyOfWrite(),
+              debounceUrl,
             },
           );
           return;
@@ -536,6 +546,7 @@ export const route = (
               callReason: `${paramName} signal reset to default on ${route}`,
               isSignalChange: true,
               history: historyOfWrite(),
+              debounceUrl,
             },
           );
           return;
@@ -556,6 +567,7 @@ export const route = (
             callReason: `${paramName} signal change on ${route}`,
             isSignalChange: true,
             history: historyOfWrite(),
+            debounceUrl,
           },
         );
       });
