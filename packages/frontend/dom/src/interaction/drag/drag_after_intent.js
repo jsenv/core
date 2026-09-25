@@ -279,6 +279,13 @@ export const dragSourceThatStoodDown = (pressEvent) => {
  *   The pointer moved or lifted before the wait was over.
  * @param {function} [options.onPress]
  *   The wait completed and the object is now held (haptics, scale…).
+ * @param {"auto"|"manual"} [options.selection="auto"]
+ *   Whether the selection is refused while the press travels towards the
+ *   distance: a press on a source belongs to the drag, so what its first pixels
+ *   would select is refused before the drag is sure (see `selection` in
+ *   drag_gesture.js). `"manual"` leaves the press to the browser until the
+ *   caller's own gesture says otherwise. A long press waits without refusing
+ *   anything either way (see the stylesheet above).
  */
 export const dragAfterIntent = (
   grabEvent,
@@ -291,6 +298,7 @@ export const dragAfterIntent = (
     onPressStart,
     onPressCancel,
     onPress,
+    selection = "auto",
   } = {},
 ) => {
   if (!isPrimaryButtonEvent(grabEvent)) {
@@ -320,7 +328,7 @@ export const dragAfterIntent = (
     });
     return;
   }
-  dragAfterDistance(grabEvent, dragGestureInitializer, threshold);
+  dragAfterDistance(grabEvent, dragGestureInitializer, threshold, selection);
 };
 
 const startDragGesture = (dragGestureInitializer, catchUpEvent) => {
@@ -337,13 +345,19 @@ const startDragGesture = (dragGestureInitializer, catchUpEvent) => {
   return dragGesture;
 };
 
-const dragAfterDistance = (grabEvent, dragGestureInitializer, threshold) => {
+const dragAfterDistance = (
+  grabEvent,
+  dragGestureInitializer,
+  threshold,
+  selection,
+) => {
   const significantDragGestureController = createDragGestureController({
     threshold,
     // allow interaction for this intermediate gesture:
     // user should still be able to scroll or interact with the document
     // only once the gesture is significant we take control
     documentInteractions: "manual",
+    selection,
     onDragStart: (gestureInfo) => {
       significantDragGesture.release(); // kill that gesture
       startDragGesture(dragGestureInitializer, gestureInfo.dragEvent);

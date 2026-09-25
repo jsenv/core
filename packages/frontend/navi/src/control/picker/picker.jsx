@@ -1686,7 +1686,7 @@ const PickerFirstResolver = (props) => {
  * `focusOnOpen` below.
  *
  * @type {import("preact").FunctionComponent<{
- *   type?: "date" | "month" | "week" | "time" | "datetime" | "duration" | "color" | "file" | "text" | "object" | "array" | "confirm" | "navi_time" | "navi_number" | "navi_percentage",
+ *   type?: "date" | "month" | "week" | "time" | "datetime" | "duration" | "color" | "file" | "text" | "object" | "array" | "confirm" | "navi_time" | "navi_minute" | "navi_number" | "navi_percentage",
  *   value?: any,
  *   defaultValue?: any,
  *   name?: string,

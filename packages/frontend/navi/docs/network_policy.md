@@ -100,10 +100,18 @@ was asked:
   the reason.
 
   It is an error only in the way it travels. Nothing treats it as a bug: navi
-  never reports it as unhandled, and the window `error` event a boundary's
-  display produces in dev is cancelled, so neither the browser console nor the
-  jsenv overlay says anything. The person reads the screen; nobody else has to
-  hear about it.
+  never reports it as unhandled, and when one reaches `window` anyway — a run
+  called by hand whose failure nobody catches, a render throw no boundary took
+  — navi cancels the event, so neither the browser console nor the jsenv
+  overlay says anything. The person reads the screen; nobody else has to hear
+  about it.
+
+  One line is left, in dev only. A boundary displaying it — `<ErrorBoundary>`,
+  a control with `actionErrorEffect="throw"` — makes `preact/debug` log it with
+  `console.error`, as it logs every error a boundary catches, 404s and failed
+  fetches included. `preact/debug` reads no option or flag that would say the
+  error is handled, so that line stays. The jsenv overlay stays quiet, and a
+  build does not load `preact/debug`.
 
 - **A write is refused before the press.** A control bound to a `POST`, `PUT`,
   `PATCH` or `DELETE` action — or any control inside a `<Form>` bound to one —

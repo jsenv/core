@@ -61,6 +61,7 @@ const captureHolderByPointerId = new Map();
  * `[data-droppable]` places) goes inert, a backdrop unifies the cursor and takes
  * the pointer events, the focus moves to what is held and comes back at the
  * release, and the selection is refused for the length of the gesture.
+ * `documentInteractions` and `selection` each hand their part back to the caller.
  *
  * Whether the element may be grabbed AT ALL is decided before the finger lands
  * and elsewhere: see `markDragSource` in drag_after_intent.js for the
@@ -84,6 +85,13 @@ const captureHolderByPointerId = new Map();
  * @param {"auto"|"manual"} [options.documentInteractions="auto"]
  *   `"manual"` leaves the document alone — no inertness, no backdrop, no focus taken. For a
  *   gesture that only measures and hands over (see `dragAfterIntent`).
+ * @param {"auto"|"manual"} [options.selection="auto"]
+ *   `"auto"` refuses the selection from the grab to the release, a press that may
+ *   become a drag not being a press that starts a selection. `"manual"` leaves it
+ *   alone — nothing refused, nothing collapsed, double and triple clicks the
+ *   browser's — for a gesture where a press on text is still a selection until it
+ *   has become something else, and says so itself once it has (a travel, see
+ *   drag_to_travel.js).
  * @param {boolean} [options.backdrop=true]
  * @param {number} [options.backdropZIndex=999999]
  * @returns {{grab: function, grabViaPointer: function}}
@@ -107,6 +115,7 @@ export const createDragGestureController = (options = {}) => {
     threshold = 5,
     direction: defaultDirection = { x: true, y: true },
     documentInteractions = "auto",
+    selection = "auto",
     backdrop = true,
     backdropZIndex = 999999,
   } = options;
@@ -632,96 +641,101 @@ export const createDragGestureController = (options = {}) => {
     };
     dragGesture.dragViaPointer = dragViaPointer;
     dragGesture.releaseViaPointer = releaseViaPointer;
-    /*
-     * A press that starts a drag is not a press that starts a selection: the
-     * browser sees a pointer going down on text and moving, and that is its
-     * own gesture — the words under the finger turn blue while the element
-     * travels, and the selection outlives the release.
-     *
-     * Refused from the grab, before any threshold: whether the press becomes a
-     * drag is decided a few pixels later, but the selection is decided at the
-     * FIRST move, and by then it is too late to say no.
-     *
-     * `user-select: none` would say it in CSS, but it would say it to
-     * everybody: the element would stop being selectable even when nobody is
-     * dragging it. Here it is refused for the length of one gesture.
-     */
-    const preventSelectStart = (selectStartEvent) => {
-      selectStartEvent.preventDefault();
-    };
-    document.addEventListener("selectstart", preventSelectStart);
-    // A press also puts an end to the selection the page was already holding,
-    // the way the browser's own press does: refusing selectstart keeps a new
-    // selection from being made, it says nothing about the one painted before
-    // — which would otherwise sit there through a gesture that has nothing to
-    // do with it.
-    collapseSelection();
-    dragGesture.addReleaseCallback(() => {
-      document.removeEventListener("selectstart", preventSelectStart);
-    });
-    /*
-     * Refusing every selection also refuses the ones a press is entitled to
-     * make: a double click selects the word under it, a triple click the
-     * paragraph around it, and both are over before the pointer has gone
-     * anywhere. They are made here instead, spelled out (see
-     * selectWordAtPoint, selectParagraphAtPoint) rather than left to a browser
-     * heuristic that cannot tell a drag from a click.
-     *
-     * Read from `click` rather than `dblclick`, because a triple click has no
-     * event of its own: what tells the clicks apart is `detail`, the count the
-     * browser keeps of how many presses landed in the same place in a row — 2
-     * for a word, 3 and beyond for a paragraph (a fourth click keeps the
-     * paragraph, the way the browser does).
-     *
-     * On the document and outliving the gesture, because the gesture is
-     * already over when the second click completes: click comes after mouseup,
-     * the gesture ends at pointerup. Kept installed after it fires, since the
-     * click that selects a word is also the one the next click turns into a
-     * paragraph; it goes when the next press installs its own — a listener
-     * waiting for a click that never comes costs nothing until then.
-     */
-    removePendingMultiClickListener();
-    const onClick = (clickEvent) => {
-      const clickCount = clickEvent.detail;
-      if (clickCount < 2) {
-        return;
+    refuse_selection: {
+      if (selection === "manual") {
+        break refuse_selection;
       }
-      // A drag that happened is a gesture, not a click: the second press of a
-      // double click can be the one that drags, and what it drags must not end
-      // up selected too.
-      if (dragGesture.gestureInfo.started) {
-        return;
-      }
-      // Only the clicks that continue THIS press: the listener outlives the
-      // gesture and the page keeps being clicked elsewhere, where the browser
-      // is doing its own selecting — a second opinion there would only fight
-      // it.
-      const clickTarget = clickEvent.target;
-      if (
-        clickTarget !== grabEvent.target &&
-        !clickTarget.contains(grabEvent.target)
-      ) {
-        return;
-      }
-      // Text the page says is not selectable stays not selectable: a
-      // programmatic selection goes through `user-select: none` in every
-      // engine — it is a rule about what the USER may start, and the browser
-      // does not read it back when asked directly. Read here so that doing the
-      // browser's work does not also undo what the page asked of it.
-      if (!isSelectable(clickEvent.target)) {
-        return;
-      }
-      if (clickCount === 2) {
-        selectWordAtPoint(clickEvent.clientX, clickEvent.clientY);
-        return;
-      }
-      selectParagraphAtPoint(clickEvent.clientX, clickEvent.clientY);
-    };
-    document.addEventListener("click", onClick);
-    removePendingMultiClickListener = () => {
-      removePendingMultiClickListener = NOOP;
-      document.removeEventListener("click", onClick);
-    };
+      /*
+       * A press that starts a drag is not a press that starts a selection: the
+       * browser sees a pointer going down on text and moving, and that is its
+       * own gesture — the words under the finger turn blue while the element
+       * travels, and the selection outlives the release.
+       *
+       * Refused from the grab, before any threshold: whether the press becomes a
+       * drag is decided a few pixels later, but the selection is decided at the
+       * FIRST move, and by then it is too late to say no.
+       *
+       * `user-select: none` would say it in CSS, but it would say it to
+       * everybody: the element would stop being selectable even when nobody is
+       * dragging it. Here it is refused for the length of one gesture.
+       */
+      const preventSelectStart = (selectStartEvent) => {
+        selectStartEvent.preventDefault();
+      };
+      document.addEventListener("selectstart", preventSelectStart);
+      // A press also puts an end to the selection the page was already holding,
+      // the way the browser's own press does: refusing selectstart keeps a new
+      // selection from being made, it says nothing about the one painted before
+      // — which would otherwise sit there through a gesture that has nothing to
+      // do with it.
+      collapseSelection();
+      dragGesture.addReleaseCallback(() => {
+        document.removeEventListener("selectstart", preventSelectStart);
+      });
+      /*
+       * Refusing every selection also refuses the ones a press is entitled to
+       * make: a double click selects the word under it, a triple click the
+       * paragraph around it, and both are over before the pointer has gone
+       * anywhere. They are made here instead, spelled out (see
+       * selectWordAtPoint, selectParagraphAtPoint) rather than left to a browser
+       * heuristic that cannot tell a drag from a click.
+       *
+       * Read from `click` rather than `dblclick`, because a triple click has no
+       * event of its own: what tells the clicks apart is `detail`, the count the
+       * browser keeps of how many presses landed in the same place in a row — 2
+       * for a word, 3 and beyond for a paragraph (a fourth click keeps the
+       * paragraph, the way the browser does).
+       *
+       * On the document and outliving the gesture, because the gesture is
+       * already over when the second click completes: click comes after mouseup,
+       * the gesture ends at pointerup. Kept installed after it fires, since the
+       * click that selects a word is also the one the next click turns into a
+       * paragraph; it goes when the next press installs its own — a listener
+       * waiting for a click that never comes costs nothing until then.
+       */
+      removePendingMultiClickListener();
+      const onClick = (clickEvent) => {
+        const clickCount = clickEvent.detail;
+        if (clickCount < 2) {
+          return;
+        }
+        // A drag that happened is a gesture, not a click: the second press of a
+        // double click can be the one that drags, and what it drags must not end
+        // up selected too.
+        if (dragGesture.gestureInfo.started) {
+          return;
+        }
+        // Only the clicks that continue THIS press: the listener outlives the
+        // gesture and the page keeps being clicked elsewhere, where the browser
+        // is doing its own selecting — a second opinion there would only fight
+        // it.
+        const clickTarget = clickEvent.target;
+        if (
+          clickTarget !== grabEvent.target &&
+          !clickTarget.contains(grabEvent.target)
+        ) {
+          return;
+        }
+        // Text the page says is not selectable stays not selectable: a
+        // programmatic selection goes through `user-select: none` in every
+        // engine — it is a rule about what the USER may start, and the browser
+        // does not read it back when asked directly. Read here so that doing the
+        // browser's work does not also undo what the page asked of it.
+        if (!isSelectable(clickEvent.target)) {
+          return;
+        }
+        if (clickCount === 2) {
+          selectWordAtPoint(clickEvent.clientX, clickEvent.clientY);
+          return;
+        }
+        selectParagraphAtPoint(clickEvent.clientX, clickEvent.clientY);
+      };
+      document.addEventListener("click", onClick);
+      removePendingMultiClickListener = () => {
+        removePendingMultiClickListener = NOOP;
+        document.removeEventListener("click", onClick);
+      };
+    }
     const cleanup = initializer({
       onMove: dragViaPointer,
       onRelease: releaseViaPointer,
@@ -1091,7 +1105,7 @@ const isSelectable = (element) => {
   return userSelect !== "none";
 };
 
-const collapseSelection = () => {
+export const collapseSelection = () => {
   const selection = window.getSelection();
   if (selection && !selection.isCollapsed) {
     selection.removeAllRanges();

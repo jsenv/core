@@ -107,8 +107,9 @@ defineInteractionDetector({
   name: "surface",
   claims: (type) =>
     type === PAN || type === ZOOM || type === GRAB || type === RELEASE,
-  // A press on the surface may be a tap, a hold or the beginning of a pan, and
-  // nothing may read it as the first until the pointer has said which.
+  // A press on the surface may be a tap, a hold or the first finger of a pan or
+  // a pinch, and nothing may read it as the first until the pointer has said
+  // which.
   disputesPress: true,
   setup: (element, trigger, { types, readConfig }) => {
     const canPan = types.includes(PAN);

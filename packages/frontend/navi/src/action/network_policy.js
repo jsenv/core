@@ -167,19 +167,25 @@ export const isNetworkPolicyError = (error) => {
  * is already saying it in words the person understands.
  *
  * navi's own report leaves it alone (action_error_report.js). What is left is
- * the screen displaying it: it does so by throwing the error to a boundary, and
- * `preact/debug` re-emits on `window` every error a boundary caught — on
- * purpose, for React devtools compatibility. Uncancelled, that lands as an
- * uncaught error in the console, over a page calmly explaining why nothing was
- * asked. Cancelling the event is what says it is handled: the browser drops
+ * the error reaching `window` on its own — a run called by hand whose failure
+ * nobody catches, a render throw no boundary took — where it lands as an
+ * uncaught error in the console, about a request the app itself declared would
+ * not leave. Cancelling the event is what says it is handled: the browser drops
  * the console line, and the jsenv supervisor skips prevented events too.
  *
  * Both shapes a failure travels in are covered, since which one it is depends
  * on whether the resource callback happened to be async — the throw reaching
  * `window`, and the rejection nobody caught.
  *
- * Scoped to the policy's own error and to nothing else — every other error a
- * boundary caught, and every other rejection let go, stays exactly as loud as
+ * A boundary displaying it raises no event at all. In dev, `preact/debug` hands
+ * every error a boundary caught to `console.error`, after the boundary took it
+ * and before it rendered anything; it reads no option and no flag, so that line
+ * stays. Muting it from here is not done: wrapping `console.error` rewrites a
+ * global, and wrapping `options._catchError` reaches into preact's private
+ * hooks, both to hide one class of error.
+ *
+ * Scoped to the policy's own error and to nothing else — every other error
+ * thrown at window, and every other rejection let go, stays exactly as loud as
  * it is.
  */
 let networkPolicyErrorSilenced = false;

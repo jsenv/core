@@ -47,7 +47,9 @@ the release leaves behind. A pointer pans only once it has travelled a few px
 `pan` still gets its hold, and a `double_click` still gets its two presses.
 
 Declared alone, `zoom` takes two fingers and the wheel and leaves one pointer to
-whatever else reads it; `pan` alone leaves the wheel to the page.
+whatever else reads it: nothing captures it, waits on it or swallows its click
+until a second finger lands, so a `click` or a `longpress` declared beside `zoom`
+answers it as it would anywhere. `pan` alone leaves the wheel to the page.
 
 ### A surface that scrolls past: `data-pan-after-hold`
 
@@ -75,6 +77,10 @@ navi cannot see whether anything behind the surface scrolls. You know;
 say so. It spends the hold, though: a `longpress` declared beside a `pan` that
 waits asks one finger to answer two waits, and the surface's — the shorter one
 — is the one answered.
+
+On a surface that only zooms there is no pan to wait for: one finger is the
+page's to scroll, two are the surface's, and `"kept"` (below) has nothing to
+keep.
 
 The wait is then asked before every pan, which is right while each finger
 landing there is genuinely ambiguous. Once the user has settled into the plan it
@@ -152,11 +158,11 @@ place `data-pan-after-hold` is.
 
 ### When the surface has the hand: `grab`, `release`, `[data-grabbed]`
 
-A surface that is asked for — by a hold, or by the first few pixels of travel —
-has an instant where it becomes the hand's, and nothing on screen says it. The
-hand then moves too early and scrolls the page instead, or waits long past the
-moment out of doubt. So the surface says it, the same two words a carried element
-says (`grab`, `release`) and the same attribute:
+A surface that is asked for — by a hold, by the first few pixels of travel, or
+by a second finger — has an instant where it becomes the hand's, and nothing on
+screen says it. The hand then moves too early and scrolls the page instead, or
+waits long past the moment out of doubt. So the surface says it, the same two
+words a carried element says (`grab`, `release`) and the same attribute:
 
 ```jsx
 <Box
@@ -180,7 +186,8 @@ says (`grab`, `release`) and the same attribute:
 }
 ```
 
-`[data-grabbed]` is on the element for as long as a hand is on the surface, so
+`[data-grabbed]` is on the element for as long as a hand is on the surface (on
+one that only zooms, from the second finger landing to the last one lifting), so
 a contour, a veil or a raised shadow needs no listener — which is what this is
 usually for. (`[data-hand-kept]` is the other one, and it outlasts the finger:
 see [`data-pan-after-hold`](#a-surface-that-scrolls-past-data-pan-after-hold).) `grab` and `release` are for the rest: a vibration, a state kept

@@ -17,6 +17,11 @@ import { createI18n } from "./i18n.js";
  * — the opposite of what an app is advised to do for its own texts; navi's
  * `docs/i18n.md` explains why.
  *
+ * English translates every key, so it is the `fallbackLang`: the other
+ * languages cover part of the keys only (German has the `time.*` words, not
+ * navi's buttons), and a key the reader's languages all lack reads in English
+ * rather than as its raw name.
+ *
  * @example
  * import { humanizeI18n } from "@jsenv/humanize";
  *
@@ -26,7 +31,7 @@ import { createI18n } from "./i18n.js";
  * // Teach a language that is not shipped:
  * humanizeI18n.addLangKeys("ja", { "time.midnight": "真夜中" });
  */
-export const humanizeI18n = createI18n();
+export const humanizeI18n = createI18n({ fallbackLang: "en" });
 
 // What the time formatters in ../time/format_time.js write in words:
 // relative wording, the midnight word, the mark between the two bounds of a

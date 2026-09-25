@@ -760,9 +760,6 @@ const css = /* css */ `
  * @type {import("preact").FunctionComponent<{ children?: any, [key: string]: any }>}
  */
 export const RouteTransitionArea = ({ children, ...rest }) => {
-  import.meta.css = css;
-  installTransitionWindowCss();
-  installTransitionFurnitureCss();
   const props = { ...rest, [TRANSITION_AREA_ATTRIBUTE]: "" };
   return <Box {...props}>{children}</Box>;
 };
@@ -825,8 +822,6 @@ export const RouteTransitionArea = ({ children, ...rest }) => {
  * @returns {() => void} remove this relation.
  */
 export const defineRouteTransition = (from, to, transition) => {
-  import.meta.css = css;
-  installTransitionWindowCss();
   if (!to) {
     throw new TypeError(
       `defineRouteTransition needs a destination: "to" is ${to}. The page reached from anywhere is written defineRouteTransition(null, THAT_PAGE, ...) — there is no relation the other way round, a page LEFT for anywhere being the back half of that one.`,
@@ -865,8 +860,6 @@ export const defineRouteTransition = (from, to, transition) => {
  * @returns {() => void} remove this default.
  */
 export const defineRouteDefaultTransition = (transition) => {
-  import.meta.css = css;
-  installTransitionWindowCss();
   const value = normalizeTransition(transition);
   defaultTransition = value;
   return () => {
@@ -1386,6 +1379,10 @@ const beginTransition = ({ page, url, fromUrl, direction, type, duration }) => {
   // Said before the picture is taken: whoever names something for a movement
   // between two pages decides on it now (see transition_destination.js).
   holdTransitionDestination(transition, url);
+  // Adopted by what starts a movement rather than by what declares one: a link
+  // or a navTo() asks for a movement in an app that declared none, and an app
+  // that never moves never carries the sheet.
+  import.meta.css = css;
   documentElement.setAttribute(TRANSITION_ATTRIBUTE, direction);
   if (type) {
     documentElement.setAttribute(TRANSITION_TYPE_ATTRIBUTE, type);
@@ -1412,6 +1409,10 @@ const beginTransition = ({ page, url, fromUrl, direction, type, duration }) => {
   // left (see transition_window.js).
   let areaStateBefore = null;
   if (areaElement) {
+    // The area is the application's element as often as <RouteTransitionArea>,
+    // so what a movement on it plays with is adopted here, where it is found.
+    installTransitionWindowCss();
+    installTransitionFurnitureCss();
     documentElement.setAttribute(TRANSITION_TARGET_ATTRIBUTE, "area");
     // Said before the picture is taken, like every name (see
     // transition_furniture.js): what the bars are wearing when the transition

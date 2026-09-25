@@ -51,8 +51,9 @@ Two consequences worth knowing before writing CSS of your own:
   (`--navi-app-width`/`--navi-app-height`, which track the visual viewport), so
   the browser reflows the dialog as the keyboard opens. Nothing to wire.
 - "the container" is the **app's own screen** for `layer="top"` — the visual
-  viewport, or the narrower one the app declared with `--navi-app-max-width`
-  (see [`safe_area.md`](./safe_area.md)) — and the positioned ancestor for
+  viewport minus the app's bands, whether `--navi-app-max-width` centers them
+  or the app writes `--navi-app-inset-*` itself (see
+  [`safe_area.md`](./safe_area.md)) — and the positioned ancestor for
   `layer="local"`.
 
 ## One dialog, two shapes

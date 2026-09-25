@@ -778,10 +778,12 @@ const warnAboutTransformsOutsideTransform = (element) => {
  *
  * @param {PointerEvent} event The `pointerdown` that may become a drag.
  * @param {("move"|"reorder"|"toss"|"land"|"leave")[]} effects
- *   What letting go of this element can mean. `reorder`, `toss` and `land` carry a
- *   copy; `move` carries the element itself, and `leave` goes with either. Asking
- *   for `move` beside any of the three that carry a copy is asking one release to
- *   mean two things, and so is asking for `reorder` and `land`.
+ *   What letting go of this element can mean, and only what is listed is ever
+ *   answered. `reorder`, `toss` and `land` carry a copy; `move` carries the
+ *   element itself, and `leave` goes with either. Asking for `move` beside any of
+ *   the three that carry a copy is asking one release to mean two things, and so
+ *   is asking for `reorder` and `land`. A gesture taken away mid-air
+ *   (`gestureInfo.cancelled`) means none of them, and what it carried goes back.
  * @param {object} [options]
  * @param {Element} [options.draggedElement=event.currentTarget]
  * @param {(detail: {gestureInfo: object, x: number, y: number}) => void} [options.onMoving]
@@ -915,6 +917,7 @@ export const startDragTo = (
   }
   return startDragToMoveElement(event, {
     draggedElement,
+    canMove,
     canLeave,
     ...options,
   });
@@ -1026,12 +1029,14 @@ export const refuseDragTo = (
  * go of away from it, when it can `leave`.
  *
  * No copy, unlike the others: what is being moved is the thing and not a
- * stand-in for it, so there is nothing to put back and nothing to reveal.
+ * stand-in for it, so there is nothing to put back and nothing to reveal. What a
+ * release means is read by resolveDropMeaning, as it is for a copy.
  */
 const startDragToMoveElement = (
   event,
   {
     draggedElement,
+    canMove,
     canLeave,
     onMoving,
     onMove,
@@ -1081,26 +1086,26 @@ const startDragToMoveElement = (
         });
       }
       dragGesture.addReleaseCallback(async (gestureInfo) => {
+        const dropMeans = resolveDropMeaning({
+          gestureInfo,
+          releasedOutside: canLeave && isOutsideOf(gestureInfo, outsideOf),
+          canMove,
+          canLeave,
+        });
         const { xDelta, yDelta } = gestureInfo.layout;
-        if (!xDelta && !yDelta) {
-          // Picked up and put back down: nothing moved, so no outcome is told.
-          onRelease?.({ gestureInfo, x: xDelta, y: yDelta, outcome: null });
-          gestureInfo.cancelPosition();
-          return;
-        }
-        const leaving =
-          canLeave &&
-          !gestureInfo.cancelled &&
-          isOutsideOf(gestureInfo, outsideOf);
         onRelease?.({
           gestureInfo,
           x: xDelta,
           y: yDelta,
-          // Nothing answers a release that only ever said where the hand was
-          // going: `onMoving` alone has already told all of it.
-          outcome: leaving ? "leave" : onMove ? "move" : null,
+          outcome: dropMeans === "cancel" ? null : dropMeans,
         });
-        if (leaving) {
+        if (dropMeans === "cancel") {
+          // Nothing answers it: whatever the gesture translated goes home — and
+          // there is nothing to take back when `onMoving` had the caller draw.
+          gestureInfo.cancelPositionAnimated();
+          return;
+        }
+        if (dropMeans === "leave") {
           // Left where the hand let go of it while the answer is asked — a thing
           // that snaps home with the request in flight says the gesture was not
           // understood. The answer then says what becomes of that position: let
@@ -1194,10 +1199,14 @@ const readOwnLayout = (element) => ({
 const TOSS_DISTANCE_TO_COMMIT = 110;
 const TOSS_SPEED_TO_COMMIT = 0.45;
 
+// What a release means, whether it carried the element itself or a copy: one
+// reading, so a gesture taken away mid-air is nothing on both paths, and an
+// outcome is answered only when the caller listed it.
 const resolveDropMeaning = ({
   gestureInfo,
   hasDropTarget,
   releasedOutside,
+  canMove,
   canReorder,
   canToss,
   canLand,
@@ -1226,15 +1235,19 @@ const resolveDropMeaning = ({
       return "reorder";
     }
   }
+  // It has to have gone somewhere to be put anywhere, or away from anything:
+  // picked up and put straight back down is a hand that changed its mind.
+  const { xDelta, yDelta } = gestureInfo.layout;
+  if (!xDelta && !yDelta) {
+    return "cancel";
+  }
   if (canLeave && releasedOutside) {
     // Let go of away from every place — off the plan and down, deliberate and
-    // never a flick. It has to have gone somewhere to be away from anything:
-    // picked up and put straight back down is a hand that changed its mind, not
-    // a thing dropped over nothing.
-    const { xDelta, yDelta } = gestureInfo.layout;
-    if (xDelta || yDelta) {
-      return "leave";
-    }
+    // never a flick.
+    return "leave";
+  }
+  if (canMove) {
+    return "move";
   }
   return "cancel";
 };
@@ -1692,21 +1705,24 @@ const getRectInside = (element, containerElement) => {
   };
 };
 
-// Creates the two-layer clone structure used for drag-to-reorder.
+// Creates the two-layer clone structure carried by reorder, land, toss and leave.
 //
 // Layer 1 — wrapper (navi-drag-clone-wrapper):
-//   Positioned fixed via --clone-top/--clone-left CSS vars.
-//   Carries the box-shadow and size. Moved every drag frame via dragStyleController.
-//   Has a view-transition-name so the View Transitions API can animate it on release.
+//   Positioned fixed via the --clone-* CSS vars, which also give it its size.
+//   Moved every drag frame via dragStyleController.
+//   It paints nothing, so it takes no view-transition-name: a name on it would
+//   be a group with an empty image, and one more name to keep unique.
 //
 // Layer 2 — inner clone (navi-drag-clone):
-//   A deep clone of the grabbed element.
-//   Applies transform: scale(var(--drag-clone-scale, 1.03)) via the CSS rule
-//   for [navi-drag-clone],
-//   giving the "lifted" feel. The transform-origin is set to the grab point
-//   so the element expands naturally from where the user clicked.
+//   A deep clone of the grabbed element, and what the eye follows — so it is
+//   the one named (view-transition-name: navi-drag-clone).
+//   Casts the shadow and applies transform: scale(var(--drag-clone-scale, 1.03))
+//   via the CSS rule for [navi-drag-clone], giving the "lifted" feel. The
+//   transform-origin is set to the grab point so the element expands naturally
+//   from where the user clicked.
 //   On release, the `navi-drag-clone` attribute is removed inside
-//   startViewTransition to drop the scale back to 1 as the "new" state.
+//   startViewTransition to drop the scale back to 1 as the "new" state; the
+//   name stays, so the scale is morphed with the box rather than cross-faded.
 
 // The chevron is the one the table's column drop preview uses, rotated by the
 // CSS above so each cap points into the line.
@@ -1964,7 +1980,6 @@ const createDragClone = (element, pointerEvent) => {
   // Manual: it is opened and closed with the drag, and must survive an Escape
   // or a click elsewhere (light dismiss would take it away mid-gesture).
   wrapper.setAttribute("popover", "manual");
-  wrapper.viewTransitionName = "navi-drag-clone-wrapper";
   setCloneViewportRect(wrapper, element);
   // Grab point within the element — used as transform-origin so the
   // scale expands from where the user clicked, not the element center.

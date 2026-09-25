@@ -160,7 +160,7 @@ const css = /* css */ `
          --navi-app-width rather than 3vvw): the gap must read as a small
          margin around the dialog, and 3% of a 1500px window is a 45px gap
          around a 600px app. Identical to 3vvw until the app declares
-         --navi-app-max-width. */
+         bands (--navi-app-max-width, or --navi-app-inset-* written by it). */
       --x-dialog-container-spacing: calc(0.03 * var(--navi-app-width));
 
       /* --navi-app-width, not --navi-vvw: a top-layer dialog is calibrated on
@@ -897,8 +897,8 @@ const css = /* css */ `
  *   `positionArea`: it both caps the dialog's own size (via
  *   `--x-dialog-container-spacing`, written from this prop) and offsets a docked
  *   one from the edge it docks to. Accepts a number of pixels, a viewport
- *   length — "appw"/"apph" being the app's own screen (the visual viewport, or
- *   the narrower one the app declared with --navi-app-max-width) and
+ *   length — "appw"/"apph" being the app's own screen (the visual viewport
+ *   minus the app's bands, see docs/safe_area.md) and
  *   "vvw"/"vvh" the visual viewport itself, which shrinks when the mobile
  *   keyboard opens — or a container length ("3cqw", the `layer="local"`
  *   default). Pass 0 for a dialog meant to sit flush (a side panel).

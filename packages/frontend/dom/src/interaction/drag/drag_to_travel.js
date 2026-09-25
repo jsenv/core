@@ -8,7 +8,7 @@
  * (@jsenv/dom's drag_gesture + drag_after_intent), and this asks it for the
  * plain version — nothing carried, so no backdrop over the page, nothing made
  * inert, no focus taken: a screen slides and the page keeps its scrolling and
- * its keyboard.
+ * its keyboard, and its selection until the press has become a travel.
  *
  * What IS here is everything that makes a travel a travel rather than a
  * carry — and it is policy, not plumbing:
@@ -37,7 +37,10 @@
  *   not (see axesLeftBy).
  */
 
-import { createDragGestureController } from "./drag_gesture.js";
+import {
+  collapseSelection,
+  createDragGestureController,
+} from "./drag_gesture.js";
 import {
   dragAfterIntent,
   dragSourceThatStoodDown,
@@ -64,11 +67,20 @@ import.meta.css = /* css */ `
        and the swipe that goes back in history with it. Both are the browser
        answering a gesture that is already answered, here, by what the finger is
        dragging: the page rocks under a travel that is doing its own moving, and
-       one gesture is seen twice. From the press, because the browser starts
-       answering from the press — waiting for the first pixel that travels would
-       let it happen once, every time. Only while a finger is down, so a page
-       that bounces the rest of the time goes on bouncing. */
+       one gesture is seen twice. Said once the press has become a gesture (the
+       distance crossed, a travel caught in flight, a first wheel event) and
+       taken back when it ends, so a page that bounces the rest of the time goes
+       on bouncing. A browser decides this when the gesture begins, so said this
+       late it is a last resort: the contain rules below are what do the work. */
     overscroll-behavior: none;
+  }
+  :root[data-drag-travel-walking] {
+    /* A press on text is how one selects it, so the selection is left alone
+       until the press has become a travel — and refused from then on, or the
+       text the travel crosses turns blue. What its first pixels selected is
+       collapsed at that same moment (see where the attribute is set). */
+    user-select: none;
+    -webkit-user-select: none;
   }
   /* …and nothing inside a travelling box hands its leftovers to what is above
      it: a list that reaches its end passes what is left of the gesture up the
@@ -667,8 +679,11 @@ export const startDragToTravel = (
     // never come.
     // Nothing is being carried: the page keeps its focus, its scrolling and its
     // cursor while a screen slides under the finger. That is the whole
-    // difference with a drag that moves an object, and it is one option.
+    // difference with a drag that moves an object.
     documentInteractions: "manual",
+    // And a press on text is a selection until it has become a travel, which
+    // is where the selection is refused (see where WALKING_ATTRIBUTE is set).
+    selection: "manual",
     onDragStart: () => {
       document.documentElement.setAttribute(GESTURE_ATTRIBUTE, "");
     },
@@ -769,6 +784,9 @@ export const startDragToTravel = (
           pulled: started.slack || 0,
         };
         document.documentElement.setAttribute(WALKING_ATTRIBUTE, axis);
+        // What the first pixels may have started selecting is not a selection:
+        // it is the beginning of this travel.
+        collapseSelection();
         // The travel exists: from here the pointer is this box's, and it is
         // followed wherever it goes.
         dragGesture.capturePointer();
@@ -892,6 +910,7 @@ export const startDragToTravel = (
     dragAfterIntent(pointerDownEvent, grab, {
       longPress: false,
       threshold: DRAG_START_THRESHOLD,
+      selection: "manual",
     });
   }
   window.addEventListener("pointerup", onPressOver);

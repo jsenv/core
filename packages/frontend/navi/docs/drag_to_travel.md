@@ -325,7 +325,9 @@ page moved a little, and it looked wrong":
   rather than the thing that does the work;
 - **the selection** a drag paints across the text it crosses: `user-select:
 none`, but only once the press has become a travel — a press on text IS how
-  one selects it, and nothing has said otherwise yet.
+  one selects it, and nothing has said otherwise yet. What its first pixels
+  selected is collapsed at that same moment: it was the beginning of the
+  travel, not a selection.
 
 Both are written by the gesture itself (`data-drag-travel-gesture` and
 `data-drag-travel-walking` on `:root`), so a page that bounces the rest of the

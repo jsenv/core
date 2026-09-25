@@ -256,7 +256,8 @@ These are not guessable — each relationship method has its own shape.
 
 ### `.one(propertyName, childResource, { GET, PUT, DELETE })`
 
-The callback returns the **parent** object with the child nested inside:
+`GET` and `PUT` return the **parent** object with the child nested inside;
+`DELETE` returns the parent id, or `{ id }`:
 
 ```js
 const USER_SESSION = USER.one("session", SESSION, {
@@ -419,7 +420,8 @@ rules, verified by `src/state/rest/tests/resource_graph_parent_rerun.test.js`:
   rerun) by its own `DELETE`, as a root `GET` is; a scoped `GET` is not reset —
   its data simply resolves to nothing once the child is dropped. Override per
   relation with `rerunOn`/`dependencies`, which every relationship method
-  accepts.
+  accepts; what a relation leaves out is its parent resource's (`rerunOn` key
+  by key).
 
 Splitting a sub-resource out of a parent `PATCH` therefore changes the refresh
 graph: a parent field the parent's own response kept fresh is, once the relation
@@ -460,8 +462,10 @@ membership of each list is a question its own scope answers.
 `withParams()` chains, merging the params —
 `USER.withParams({ role: "admin" }).withParams({ gender: "male" })` is
 `USER.withParams({ role: "admin", gender: "male" })`. Its second argument takes
-`rerunOn` and `dependencies` for that scope; left out, the scope inherits the
-resource's. Empty params throw: a scope has to be about something.
+`rerunOn` and `dependencies` for that scope; what it leaves out is the
+resource's — a `rerunOn` key by key, so `{ rerunOn: { GET: ["PATCH"] } }` keeps
+the resource's `GET_MANY` and `GET_RANGE`. Empty params throw: a scope has to be
+about something.
 
 It is not the tool for a param the user types. A search word bound with
 `withParams()` would keep its results from refreshing after a write on the

@@ -257,9 +257,11 @@ one, is not covered: nothing tells it apart from an action nobody reads.
 
 One error is never reported whoever looks at it: a **`NetworkPolicyError`**.
 The app declared the state that produced it and the request never left, so there
-is no bug to point at — it is data a screen shows. navi also cancels the window
-`error` event that displaying it produces in dev, which keeps the browser
-console and the jsenv overlay out of it
+is no bug to point at — it is data a screen shows. When one reaches window
+anyway, navi cancels the event, which keeps the browser console and the jsenv
+overlay out of it. A boundary displaying one still leaves a `console.error` line
+in dev: `preact/debug` logs every error a boundary catches, and reads nothing
+that would tell it the error is handled
 ([network_policy.md](./network_policy.md)).
 
 So what reaches the report is an error **nothing looked at** — an action nobody

@@ -37,10 +37,10 @@ import { getRuntimeLang } from "./runtime_lang.js";
  *   ```
  *
  * @param {string} [options.fallbackLang]
- *   Language consulted when the active language has no translation for a key
- *   — per key, not per language: a partially translated language falls through
- *   to `fallbackLang` only for the keys it is missing. Without it, a missing
- *   translation returns the key itself.
+ *   Language consulted for a key none of the requested languages translates,
+ *   before giving up and returning the key itself. Set it to a language holding
+ *   every key whenever keys are opaque: without it, a reader whose languages
+ *   all miss a key sees that key's raw name.
  *
  * @param {string|string[]} [options.runtimeLang]
  *   The active language (BCP 47 tag or ordered array of tags) — named
@@ -83,19 +83,27 @@ import { getRuntimeLang } from "./runtime_lang.js";
  *
  * **`i18n(key, values?, { lang? })`** — the translation for `key`, with
  * `[placeholder]` occurrences replaced from `values` (see `interpolateText`).
- * Returns `key` itself when nothing matches, so an untranslated string still
- * renders something readable. `i18n.format` is an alias of this call.
+ * `i18n.format` is an alias of this call.
  *
- * **`i18n.has(key, { lang? })`** — whether a translation genuinely exists,
- * i.e. how to tell "no translation" apart from "translation equal to the key".
+ * The language is resolved per key, not once for the whole registry: each
+ * requested language in order (`lang`, else `runtimeLang` — a regional tag
+ * reaching its registered parent, `"de-DE"` → `"de"`), then `fallbackLang`;
+ * the first one translating `key` wins. A language translated for only part of
+ * the keys therefore reads its own words where it has them and the next
+ * language's everywhere else. When none translates it, `key` itself comes
+ * back, so an untranslated string still renders something readable.
+ *
+ * **`i18n.has(key, { lang? })`** — whether a translation genuinely exists in
+ * one of the languages above, i.e. how to tell "no translation" apart from
+ * "translation equal to the key".
  *
  * @returns {Function & { add, addAll, addLangKeys, has, format, languageMap }}
  */
 export const createI18n = ({ keyLang, fallbackLang, runtimeLang } = {}) => {
   const languageMap = new Map();
-  // Bumped by addLangKeys — the only thing besides the active lang itself
-  // that could change what getActiveLang()/getResolvedFallbackLang() below
-  // resolve to, so it's what invalidates their own small caches.
+  // Bumped by addLangKeys — the only thing besides the requested lang itself
+  // that could change what resolveLangChain() below resolves to, so it's what
+  // invalidates its small cache.
   let languageMapVersion = 0;
 
   // Without an explicit runtimeLang, the runtime language source is re-read
@@ -103,49 +111,39 @@ export const createI18n = ({ keyLang, fallbackLang, runtimeLang } = {}) => {
   // ignore an app-wide language change (see runtime_lang.js) for the rest of
   // this instance's life.
   const hasExplicitRuntimeLang = runtimeLang !== undefined;
-
-  // matchBestLang does real work (a Map lookup per candidate, a possible
-  // "fr-CA" → "fr" split-and-retry loop) — worth skipping on every single
-  // format()/has() call in the common case, since what it resolves to only
-  // ever changes when languageMap itself changes (addLangKeys) or, for the
-  // non-explicit case, when the runtime lang itself changes (see
-  // runtime_lang.js; an installed source is expected to keep its reference
-  // stable while nothing changed, and the default one caches its string) —
-  // comparing those two cheaply (===) is enough to know the cached result
-  // below is still valid.
-  let cachedActiveLang;
-  let cachedActiveLangRuntimeLang;
-  let cachedActiveLangVersion = -1;
-  const getActiveLang = () => {
-    const currentRuntimeLang = hasExplicitRuntimeLang
-      ? runtimeLang
-      : getRuntimeLang();
-    if (
-      cachedActiveLangVersion === languageMapVersion &&
-      cachedActiveLangRuntimeLang === currentRuntimeLang
-    ) {
-      return cachedActiveLang;
-    }
-    cachedActiveLang = matchBestLang(currentRuntimeLang, languageMap);
-    cachedActiveLangVersion = languageMapVersion;
-    cachedActiveLangRuntimeLang = currentRuntimeLang;
-    return cachedActiveLang;
+  const getDefaultLang = () => {
+    return hasExplicitRuntimeLang ? runtimeLang : getRuntimeLang();
   };
 
-  // fallbackLang is a plain, never-reactive option set once at creation —
-  // its own resolution only ever needs recomputing when languageMap does.
-  let cachedResolvedFallbackLang;
-  let cachedResolvedFallbackLangVersion = -1;
-  const getResolvedFallbackLang = () => {
-    if (!fallbackLang) {
-      return null;
+  // Walked per key rather than one language picked for the whole registry: a
+  // registry is rarely translated evenly (@jsenv/humanize ships German time
+  // words, navi ships its buttons in en/fr only), and a single language would
+  // show the raw name of every key it lacks. Cached on the lang reference,
+  // which the runtime lang source keeps stable while nothing changed.
+  let cachedLangChain;
+  let cachedLangChainLang;
+  let cachedLangChainVersion = -1;
+  const resolveLangChain = (lang) => {
+    if (
+      cachedLangChainVersion === languageMapVersion &&
+      cachedLangChainLang === lang
+    ) {
+      return cachedLangChain;
     }
-    if (cachedResolvedFallbackLangVersion === languageMapVersion) {
-      return cachedResolvedFallbackLang;
+    const langChain = [];
+    for (const candidate of [
+      ...toLangList(lang),
+      ...toLangList(fallbackLang),
+    ]) {
+      const match = matchLang(candidate, languageMap);
+      if (match && !langChain.includes(match)) {
+        langChain.push(match);
+      }
     }
-    cachedResolvedFallbackLang = matchBestLang(fallbackLang, languageMap);
-    cachedResolvedFallbackLangVersion = languageMapVersion;
-    return cachedResolvedFallbackLang;
+    cachedLangChain = langChain;
+    cachedLangChainLang = lang;
+    cachedLangChainVersion = languageMapVersion;
+    return langChain;
   };
 
   const addLangKeys = (lang, translations) => {
@@ -184,47 +182,25 @@ export const createI18n = ({ keyLang, fallbackLang, runtimeLang } = {}) => {
     }
   };
 
-  const _getTemplate = (key, lang) => {
-    // matchBestLang, not matchLang directly: lang can be an ordered array of
-    // preferences, and matchLang alone assumes a plain string, throwing on
-    // .split() otherwise.
-    const resolvedLang = lang ? matchBestLang(lang, languageMap) : null;
-    if (resolvedLang) {
-      const translations = languageMap.get(resolvedLang);
-      const translated = translations[key];
+  const getTemplate = (key, lang) => {
+    for (const resolvedLang of resolveLangChain(lang)) {
+      const translated = languageMap.get(resolvedLang)[key];
       if (translated !== undefined) {
         return translated;
-      }
-    }
-    const resolvedFallbackLang = getResolvedFallbackLang();
-    if (resolvedFallbackLang) {
-      const fallbackTranslations = languageMap.get(resolvedFallbackLang);
-      const fallbackTranslated = fallbackTranslations[key];
-      if (fallbackTranslated !== undefined) {
-        return fallbackTranslated;
       }
     }
     // No translation found — return key as-is (opaque fallback)
     return key;
   };
 
-  const format = (key, values, { lang = getActiveLang() } = {}) => {
-    const template = _getTemplate(key, lang);
+  const format = (key, values, { lang = getDefaultLang() } = {}) => {
+    const template = getTemplate(key, lang);
     return interpolateText(template, values);
   };
 
-  const has = (key, { lang = getActiveLang() } = {}) => {
-    const resolvedLang = lang ? matchBestLang(lang, languageMap) : null;
-    if (resolvedLang) {
-      const translations = languageMap.get(resolvedLang);
-      if (translations && key in translations) {
-        return true;
-      }
-    }
-    const resolvedFallbackLang = getResolvedFallbackLang();
-    if (resolvedFallbackLang) {
-      const fallbackTranslations = languageMap.get(resolvedFallbackLang);
-      if (fallbackTranslations && key in fallbackTranslations) {
+  const has = (key, { lang = getDefaultLang() } = {}) => {
+    for (const resolvedLang of resolveLangChain(lang)) {
+      if (key in languageMap.get(resolvedLang)) {
         return true;
       }
     }
@@ -259,17 +235,13 @@ const matchLang = (lang, languageMap) => {
   return null;
 };
 
-// lang can be a string or an ordered array of preference strings
-const matchBestLang = (lang, languageMap) => {
+// lang can be a string, an ordered array of preference strings, or nothing
+const toLangList = (lang) => {
   if (!lang) {
-    return null;
+    return [];
   }
-  const candidates = Array.isArray(lang) ? lang : [lang];
-  for (const candidate of candidates) {
-    const match = matchLang(candidate, languageMap);
-    if (match) {
-      return match;
-    }
+  if (Array.isArray(lang)) {
+    return lang;
   }
-  return null;
+  return [lang];
 };

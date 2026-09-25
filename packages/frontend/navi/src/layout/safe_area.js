@@ -16,29 +16,53 @@
  *    to the band left free INSIDE that rectangle. Whatever flows, scrolls, or
  *    gets painted keeps to it.
  *
- * Level 2 is a sum, and the contract for taking part in it is only "publish
- * what you take on one edge": the device's own notch (`env(safe-area-inset-*)`,
- * which is the browser's version of this very idea), the fixed bars
- * (fixed_bar_space.js), and anything an app adds. That is the point of naming
- * it at all — a component that must stay clear of what covers the screen reads
- * ONE set of numbers, and never has to learn what is covering it.
+ * Level 2 gathers what takes an edge: the device's own notch
+ * (`env(safe-area-inset-*)`, which is the browser's version of this very idea)
+ * and the fixed bars (fixed_bar_space.js, the one slot per edge — something
+ * else covering an edge is published by being drawn as a FixedBar). That is
+ * the point of naming it at all — a component that must stay clear of what
+ * covers the screen reads ONE set of numbers, and never has to learn what is
+ * covering it.
  *
  * `max()` between the notch and the bars rather than a sum: a bar pinned to an
  * edge already reaches under the notch and counts it in its own size (see
  * fixed_bar.jsx), so adding both would reserve it twice.
  *
  * JS placement answers to the level-1 rectangle too: getAppInsets
- * (layout/responsive.js) is its reading of these same bands, handed to
- * pickPositionRelativeTo via setPlacementViewportInsets (see
+ * (layout/responsive.js) reads these same bands back off the computed style,
+ * and hands them to pickPositionRelativeTo via setPlacementViewportInsets (see
  * navi_css_vars.js).
  */
 
 const SAFE_AREA_CSS = /* css */ `
   /* Declared as lengths so that they COMPUTE to one: an unregistered custom
-     property keeps the calc() it was written as, and the sum below is then a
-     string no one can read back. Reading it off the computed style — which a
-     route transition does, to keep the band the page being left had (see
-     nav/transition_window.js) — only works for a registered property. */
+     property keeps the calc() it was written as, and the sums below are then
+     strings no one can read back. Reading them off the computed style only
+     works for a registered property, and both levels are read there: level 1
+     by popup placement, which must keep to the same rectangle as the CSS
+     whether the bands are centered or written by the app (getAppInsets in
+     layout/responsive.js); level 2 by a route transition, to keep the band the
+     page being left had (nav/transition_window.js). */
+  @property --navi-app-inset-top {
+    syntax: "<length>";
+    inherits: true;
+    initial-value: 0px;
+  }
+  @property --navi-app-inset-right {
+    syntax: "<length>";
+    inherits: true;
+    initial-value: 0px;
+  }
+  @property --navi-app-inset-bottom {
+    syntax: "<length>";
+    inherits: true;
+    initial-value: 0px;
+  }
+  @property --navi-app-inset-left {
+    syntax: "<length>";
+    inherits: true;
+    initial-value: 0px;
+  }
   @property --navi-safe-area-inset-top {
     syntax: "<length>";
     inherits: true;

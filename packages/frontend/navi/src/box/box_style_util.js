@@ -839,9 +839,9 @@ export const isSizeSpacingKey = (key) => {
 // "vvw"/"vvh" are navi's own: the *visual* viewport, which — unlike vw/dvw —
 // shrinks when the mobile virtual keyboard opens (see layout/responsive.js), so
 // they are what a popup meant to stay clear of the keyboard should use.
-// "appw"/"apph" are the same thing narrowed to the app's own screen: identical
-// to vvw/vvh until the app declares --navi-app-max-width, and a share of that
-// width afterwards. A gap meant to read as "a small margin" must use these —
+// "appw"/"apph" are the same thing narrowed to the app's own screen: the
+// visual viewport minus the app's bands (--navi-app-inset-*), so identical to
+// vvw/vvh until the app declares bands. A gap meant to read as "a small margin" must use these —
 // 3vvw on a 1500px window is a 45px gap around a 600px app.
 // Functions rather than the signals themselves: appw/apph are not a signal to
 // read but a value to compute (a signal, then a CSS var read back). Reading the

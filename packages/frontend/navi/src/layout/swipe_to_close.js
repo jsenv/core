@@ -89,7 +89,6 @@ export const createSwipeToClose = (side, { grip } = {}) => {
       panelEl.style.transform = "";
       panelEl.style.clipPath = "";
       panelEl.style.transitionProperty = "";
-      panelEl.style.userSelect = "";
     };
     // The resting value is written first and the animation only covers the way
     // to it: both end on the same number, so nothing is seen changing when the
@@ -133,10 +132,6 @@ export const createSwipeToClose = (side, { grip } = {}) => {
           return false;
         }
         panelEl.style.transitionProperty = "none";
-        panelEl.style.userSelect = "none";
-        // What the first pixels of the gesture may have started selecting is
-        // not a selection, it is the beginning of this travel.
-        window.getSelection().removeAllRanges();
         // The way out is the only way there is anything: pulling the other way
         // leans against a wall and comes back.
         return {

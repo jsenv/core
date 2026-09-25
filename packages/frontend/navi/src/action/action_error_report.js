@@ -111,8 +111,8 @@ export const markErrorAsStoppingRender = (error) => {
  * An error the network policy produced is never reported: the app declared the
  * state that produced it, the request never left, and there is nothing for a
  * developer to fix. It is data a screen shows, and it stays data whether or not
- * one does (see network_policy.js, which also keeps it out of the browser
- * console).
+ * one does (see network_policy.js, which also cancels it when it reaches
+ * window).
  */
 const errorIsAccountedFor = (error) => {
   return (

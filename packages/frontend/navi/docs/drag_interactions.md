@@ -373,11 +373,11 @@ copy where the hand put it, over the thing appearing there.
 #### Naming what travels
 
 **The copy is already named, and it is the copy that does the visible travel.**
-The wrapper carrying it answers to `navi-drag-clone-wrapper`, the copy inside it
-to `navi-drag-clone`, and `syncCloneWithDropTarget` moves that box onto the
-destination inside the callback — so the piece the hand let go of slides to its
-place whether the application names anything or not. What is left to name is the
-OTHER one: the piece that was standing there and has to go the other way.
+It answers to `navi-drag-clone` (the wrapper carrying it paints nothing and takes
+no name), and `syncCloneWithDropTarget` moves it onto the destination inside the
+callback — so the piece the hand let go of slides to its place whether the
+application names anything or not. What is left to name is the OTHER one: the
+piece that was standing there and has to go the other way.
 
 **And the original is hidden for the whole landing**, not only for the drag: it
 wears `navi-drag-clone-source` (`visibility: hidden`) until the promise returned

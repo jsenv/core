@@ -44,8 +44,6 @@ const css = /* css */ `
              --navi-app-max-width: 600px;
            }
 
-         In pixels — see readAppMax in layout/responsive.js for why.
-
          Typically an app simulating a handheld screen: a column centered in a
          wide window with bands on the sides. A dialog is in the top layer, so
          it answers to the viewport, not to that column — left alone it would

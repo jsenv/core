@@ -23,15 +23,6 @@ const css = /* css */ `
         border-radius: 0.2em;
       }
 
-      &[data-capitalize] {
-        text-transform: capitalize;
-
-        .navi_text_sizer {
-          .navi_text {
-            display: inline-block; /* We need inline-block to match the pseudo element */
-          }
-        }
-      }
       &[data-shrinkwrap] {
         display: inline-block;
       }
@@ -46,20 +37,6 @@ const css = /* css */ `
   }
 
   .navi_text {
-    /* There is a chrome specific bug that prevents text-transform: capitalize to be applied in nested DOM structure */
-    /* The CSS below ensure capitalize is propagated to the bold clones */
-    &[data-capitalize] {
-      &::first-letter {
-        text-transform: uppercase;
-      }
-      .navi_text_sizer_placeholder::first-letter {
-        text-transform: uppercase;
-      }
-      .navi_text_sizer_overlay::first-letter {
-        text-transform: uppercase;
-      }
-    }
-
     .navi_text_sizer,
     .navi_text_sizer_placeholder,
     .navi_text_sizer_overlay {
@@ -589,7 +566,9 @@ const shouldInjectSpacingBetween = (left, right) => {
  *   text block from being wider than its content when inside a flex/grid container.
  *
  * @param {boolean} [capitalize]
- *   Uppercases the first letter of the text content via CSS.
+ *   Uppercases the first letter of the text, and only that one: "lundi 11 mai"
+ *   reads "Lundi 11 mai". Applied to the string the text starts with; a text
+ *   starting with an element keeps its first letter as written.
  *
  * @param {string|[number,number]|[string,string]} [selectRange]
  *   Selects a portion of the text on mount. Pass a substring to search for, a
@@ -693,11 +672,13 @@ const TextUI = (props) => {
     shrinkWrap,
     ...rest
   } = props;
+  if (capitalize) {
+    children = capitalizeFirstLetter(children);
+  }
   const defaultSpace = preventSpaceUnderlines ? FAKE_SPACE : REGULAR_SPACE;
   const resolvedSpacing = spacing ?? defaultSpace;
   const boxProps = {
     "as": "span",
-    "data-capitalize": capitalize ? "" : undefined,
     "data-shrinkwrap": shrinkWrap ? "" : undefined,
     ...rest,
     ref,
@@ -1015,3 +996,28 @@ export const Icon = ({
     </TextAnchor>
   );
 };
+
+// On the string rather than with ::first-letter, which needs a block container:
+// an inline text made one is an atomic box, and the ellipsis of the line
+// holding it (a Picker's value) can then no longer cut it. The string is also
+// what every copy of the children (sizer, bold background) renders, so they
+// all read the same. Leading spaces and punctuation are skipped, and a text
+// starting with a digit is left as it is, as ::first-letter would.
+const capitalizeFirstLetter = (children) => {
+  if (typeof children === "string") {
+    return children.replace(
+      FIRST_LOWERCASE_LETTER_REGEXP,
+      (match, lead, letter) => `${lead}${letter.toLocaleUpperCase()}`,
+    );
+  }
+  if (Array.isArray(children) && children.length > 0) {
+    const first = children[0];
+    const firstCapitalized = capitalizeFirstLetter(first);
+    if (firstCapitalized === first) {
+      return children;
+    }
+    return [firstCapitalized, ...children.slice(1)];
+  }
+  return children;
+};
+const FIRST_LOWERCASE_LETTER_REGEXP = /^([\s\p{P}]*)(\p{Ll})/u;

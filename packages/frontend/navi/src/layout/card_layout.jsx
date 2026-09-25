@@ -26,6 +26,11 @@ const css = /* css */ `
     }
   }
   .navi_card_layout {
+    /* At least the height of what holds it, so the card is centered down the
+       area and not only across it — the room kept around it included, or
+       that room would overflow the area. */
+    box-sizing: border-box;
+    min-height: 100%;
     padding-top: var(
       --layout-margin-top,
       var(--layout-margin-y, var(--layout-margin))
@@ -92,6 +97,11 @@ const CardLayoutStyleCSSVars = {
   minHeight: "--layout-min-height",
 };
 /**
+ * The card is centered in the area both ways and is as wide as its content,
+ * `minWidth` at least. Down the area, the layout takes at least the height of
+ * what holds it, so how tall that area is is up to the page around it, as for
+ * `ViewportLayout`.
+ *
  * @type {import("preact").FunctionComponent<{
  *   alignX?: string,
  *   alignY?: string,
@@ -123,6 +133,10 @@ export const CardLayout = ({
 
   return (
     <Box
+      flex
+      // The card's place in the area; alignX/alignY below are its content's.
+      alignX="center"
+      alignY="center"
       baseClassName="navi_card_layout"
       styleCSSVars={CardLayoutStyleCSSVars}
       visualSelector=".navi_card"

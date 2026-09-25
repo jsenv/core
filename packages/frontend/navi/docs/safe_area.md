@@ -75,13 +75,8 @@ So the app states its own screen once, and never names a component:
 
 The bands fall out of it (centered), `--navi-app-width` follows, and `FixedBar`
 pins itself to the column's edges rather than the glass. An app wanting them
-uneven writes `--navi-app-inset-left` / `-right` directly instead.
-
-In pixels: popup placement reads this value back from CSS to compute its own
-margins, and a custom property computes to a token stream rather than to a
-length, so `40rem` would arrive there as the string `"40rem"`. A non-px value
-still caps the popup's size (that part is pure CSS) but leaves its margins and
-its placement viewport-sized, and says so in the console.
+uneven writes `--navi-app-inset-left` / `-right` directly instead; everything
+below follows those the same way, popup placement included.
 
 Every popup follows: `Dialog`, `Popover`, and everything built on them
 (`Picker`, `Select`…). It is a ceiling and nothing more — on a screen narrower
@@ -116,15 +111,19 @@ price.
 
 #### Placement follows the same rectangle
 
-`--navi-app-max-width` moves where a popup is placed, not only how big it may
+The app's rectangle moves where a popup is placed, not only how big it may
 get. Placement is computed against the visual viewport narrowed to the level-1
-bands: `getAppInsets` (`src/layout/responsive.js`) is the JS reading of them,
-navi hands them to `@jsenv/dom` once (`setPlacementViewportInsets`, wired in
+bands: `getAppInsets` (`src/layout/responsive.js`) reads `--navi-app-inset-*`
+back off the computed style — the bands `--navi-app-max-width` centers and the
+ones an app writes by hand alike, in any length unit — navi hands them to
+`@jsenv/dom` once (`setPlacementViewportInsets`, wired in
 `navi_css_vars.js`), and `pickPositionRelativeTo` reads them on every
-placement. Invisible for anything centered on its cross axis — `center`,
-`bottom`, `top`, which is what a dialog does nearly always — but it is what puts
-anything anchored to an edge (a `positionArea` like `bottom-start`, a
-`SidePanel`) flush against the app column's edge rather than the window's.
+placement. With centered bands it is invisible for anything centered on its
+cross axis — `center`, `bottom`, `top`, which is what a dialog does nearly
+always — and with uneven ones it is what centers that dialog on the app column
+rather than on the window. Either way it is what puts anything anchored to an
+edge (a `positionArea` like `bottom-start`, a `SidePanel`) flush against the
+app column's edge rather than the window's.
 `FixedBar` reads the same description through CSS instead: it is pinned to
 `--navi-app-inset-*`, which says where the app's rectangle is in the window
 rather than how wide it may be.
@@ -156,20 +155,25 @@ Beware of making that container scrollable by accident — see
 `var(--navi-safe-area-inset-bottom)` in any rule. It is always declared, whether
 or not the app ever mounts a bar.
 
-From **JS**, the four `--navi-safe-area-inset-*` are registered as lengths
-(`@property`, in `safe_area.js`), so
+From **JS**, both levels are registered as lengths (`@property`, in
+`safe_area.js`), so
 `getComputedStyle(document.documentElement).getPropertyValue("--navi-safe-area-inset-bottom")`
-gives pixels. The level-1 `--navi-app-inset-*` are not registered and keep their
-`calc()` unresolved there: give a hidden box `height: var(…)` and measure it —
-see `src/layout/demos/fixed_bar/keyboard.html`.
+gives pixels, and so does `--navi-app-inset-*`.
 
 ### Putting something new into it
 
-Publish what you take on one edge, into that edge's slot. That is the whole
-contract — a native banner, an OS strip, anything an app invents joins the sum
-without a single component learning it exists. `FixedBar` is the worked example:
-it measures its own border box (notch included) and writes
-`--navi-fixed-bar-space-*` (`src/layout/fixed_bar/fixed_bar_space.js`).
+Level 2 has one slot per edge, `--navi-fixed-bar-space-*`, and it belongs to
+`FixedBar`: each bar measures its own border box (notch included), and navi
+writes the largest one on that edge inline on `<html>`
+(`src/layout/fixed_bar/fixed_bar_space.js`). The slot is combined with
+`env(safe-area-inset-*)` through `max()`, not added to it, since a bar measured
+with its notch already covers the notch.
+
+Something else taking an edge — a native banner, an OS strip — is published by
+being drawn as a `FixedBar`; every component reading the safe area then clears
+it without learning it exists. Writing the slot by hand holds only while no bar
+takes that edge: the first bar mounting there replaces the value rather than
+adding to it.
 
 ## What already reads it
 

@@ -19,7 +19,10 @@ import { humanizeI18n } from "@jsenv/humanize";
  * The active language is read from `languagesSignal` (see lang_signal.js —
  * combines the browser's own `navigator.languages`, an optional
  * `setPreferredLanguage()` user override, and an optional
- * `setSupportedLanguages()` app-wide allow-list), live on every lookup.
+ * `setSupportedLanguages()` app-wide allow-list), live on every lookup. Each
+ * key is looked up in those languages in order, then in English, which
+ * translates every key: a language shipped for part of the keys only (German
+ * has the `time.*` words) never shows a raw key.
  *
  * Built-in key namespaces, all overridable — the registrations below are the
  * exhaustive list, read them to find the exact key to override:

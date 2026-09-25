@@ -128,9 +128,10 @@ const TRANSITION_WINDOW_CSS = /* css */ `
   }
 `;
 
-// Called from the render of whatever needs the window, never at module scope:
-// a page that never travels between routes must not carry this sheet, and a
-// build that sees no caller drops the css with the function.
+// Called by whatever needs the window — a render, or a movement starting —
+// never at module scope: a page that never travels between routes must not
+// carry this sheet, and a build that sees no caller drops the css with the
+// function.
 export const installTransitionWindowCss = () => {
   import.meta.css = TRANSITION_WINDOW_CSS;
 };

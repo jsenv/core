@@ -12,21 +12,33 @@ const getActionResultProperties = (action) => {
   return actionResultPropertiesMap.get(action);
 };
 
-// PUT/PATCH results update the UI through the store, and DELETE resets the GET
-// instead of rerunning it, so a GET rerun would only ever cost a request.
-// A POST is the one case the client cannot decide alone: whether a new item
-// belongs to a list depends on filters/pagination the backend owns.
 // Rationale in full, plus when to override: docs/list_refresh.md
 const defaultRerunOn = {
+  // PUT/PATCH results update the UI through the store, and DELETE resets the
+  // GET rather than rerunning it, so a GET rerun would only ever cost a request.
   GET: false,
+  // A POST is the one case the client cannot decide alone: whether a new item
+  // belongs to a list depends on filters/pagination the backend owns.
   GET_MANY: ["POST"],
+  // DELETE is in there, unlike for GET_MANY: an action holds ids and the store
+  // drops the deleted one out of every list holding it, while a list reading
+  // by slices holds places — the row that left takes the ones after it one
+  // rank up, and only the collection knows who fills the last one.
+  GET_RANGE: ["POST", "DELETE"],
 };
-// What makes a range reader stale (rerunOn.GET_RANGE overrides it). DELETE is
-// in there, unlike for GET_MANY: an action holds ids and the store drops the
-// deleted one out of every list holding it, while a list reading by slices
-// holds places — the row that left takes the ones after it one rank up, and
-// only the collection knows who fills the last one.
-const defaultInvalidateRangeOn = ["POST", "DELETE"];
+// A key a `rerunOn` leaves out keeps the value it would have had without it:
+// the default for a resource, the value of the resource it is declared on for
+// a withParams() scope or a relation.
+export const resolveRerunOn = (rerunOn, inheritedRerunOn = defaultRerunOn) => {
+  if (!rerunOn) {
+    return inheritedRerunOn;
+  }
+  return {
+    GET: rerunOn.GET ?? inheritedRerunOn.GET,
+    GET_MANY: rerunOn.GET_MANY ?? inheritedRerunOn.GET_MANY,
+    GET_RANGE: rerunOn.GET_RANGE ?? inheritedRerunOn.GET_RANGE,
+  };
+};
 
 // This handles ALL resource lifecycle logic (rerun/reset) across all resources
 export const createResourceLifecycleManager = () => {
@@ -36,7 +48,7 @@ export const createResourceLifecycleManager = () => {
 
   const registerResource = (resourceScope, config) => {
     const {
-      rerunOn = defaultRerunOn,
+      rerunOn,
       paramScope = null,
       dependencies = [],
       uniqueKeys = [],
@@ -319,8 +331,7 @@ export const createResourceLifecycleManager = () => {
       if (!isSameResource && !isDependent) {
         continue;
       }
-      const invalidateOn = config.rerunOn.GET_RANGE ?? defaultInvalidateRangeOn;
-      if (!shouldRerunAfter(invalidateOn, triggerVerb)) {
+      if (!shouldRerunAfter(config.rerunOn.GET_RANGE, triggerVerb)) {
         continue;
       }
       for (const rangeReader of config.rangeReaderSet) {

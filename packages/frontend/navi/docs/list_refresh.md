@@ -252,10 +252,11 @@ Defaults are `{ GET: false, GET_MANY: ["POST"], GET_RANGE: ["POST", "DELETE"] }`
 | `GET_MANY: ["POST"]`            | Whether a new item belongs in this list depends on filters, pagination, sort — the backend knows, the client does not. `DELETE` is excluded because the store already removes the item from every list.                                                                             |
 | `GET_RANGE: ["POST", "DELETE"]` | A slice is a range of places: a row leaving the collection shifts every place after it, which the store cannot do. Add the verb that moves an item in or out of the collection — a `PATCH` that archives, one that changes an item's tab.                                           |
 
-A `rerunOn` given replaces the `GET` and `GET_MANY` defaults whole: a key it
-leaves out reruns nothing, so `rerunOn: { GET_RANGE: ["POST", "DELETE", "PATCH"] }`
-alone also turns off `GET_MANY`'s `["POST"]`. Only `GET_RANGE`, left out, keeps
-its default. Restate every key the resource is read through.
+`rerunOn` is read key by key: a key it names replaces that default, a key it
+leaves out keeps it. `rerunOn: { GET_RANGE: ["POST", "DELETE", "PATCH"] }`
+changes what re-reads the slices and nothing else — `GET_MANY` still reruns after
+`POST`. `false` turns a key off. A `withParams()` scope or a relation reads its
+own `rerunOn` the same way, against the resource it is declared on.
 
 Adding `PUT`/`PATCH` to `GET_MANY` is the usual over-correction: it costs a
 request and a `loading` pass to obtain something the response already contained.

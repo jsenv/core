@@ -16,6 +16,7 @@ import {
 import {
   createResourceLifecycleManager,
   recordGetResultProperties,
+  resolveRerunOn,
 } from "./item_lifecycle_manager.js";
 import { getParamScope } from "./param_scope.js";
 import { createRangeReader } from "./resource_range_reader.js";
@@ -34,8 +35,11 @@ const resourceLifecycleManager = createResourceLifecycleManager();
  *   with): one action per REST callback plus the relationship methods. Each
  *   relationship method calls `createResource` again for the child, injecting
  *   its own `createRestAction` — the strategy deciding how an action result is
- *   applied to the store(s). This recursion is what lets a relation be
- *   declared on a scoped child (`TABLE.scopedMany("columns", …).one(…)`).
+ *   applied to the store(s). This recursion is what makes relationship
+ *   resources chainable: a relation declared on one attaches to its items.
+ *   Those of a `.one()`/`.many()` resource are the child resource's own, so it
+ *   is handed the child's store and `addItemSetup`; a scoped child is handed
+ *   an `addItemSetup` applied to each per-owner child item.
  * - Relationships make item properties reactive: `addItemSetup` registers a
  *   callback that defines a getter/setter on each item. The setter upserts
  *   plain values into the child store, the getter reads a computed signal, so
@@ -252,7 +256,7 @@ export const resource = (
     addItemSetup,
     createRestAction: createRestActionForRoot,
     paramScope: getParamScope(undefined),
-    rerunOn,
+    rerunOn: resolveRerunOn(rerunOn),
     dependencies,
   });
 };
@@ -316,7 +320,7 @@ const createResource = (
    * identical parameters, preventing cross-contamination between different parameter sets.
    *
    * @param {Object} params - Parameters to bind to all actions of this resource (required)
-   * @param {{ rerunOn?: Object, dependencies?: Object[] }} [options] - reruns of that scope; left out, the scope inherits the resource's
+   * @param {{ rerunOn?: Object, dependencies?: Object[] }} [options] - reruns of that scope; a `rerunOn` key left out keeps the resource's value, and `dependencies` left out are the resource's
    * @returns {Object} A new resource instance with parameter-bound actions and isolated lifecycle
    * @see docs/resource.md — what a scope isolates, and `dependencies`
    *
@@ -362,7 +366,7 @@ const createResource = (
       addItemSetup,
       createRestAction: createRestActionWithParams,
       paramScope: resolvedParamScope,
-      rerunOn: withParamsRerunOn ?? rerunOn,
+      rerunOn: resolveRerunOn(withParamsRerunOn, rerunOn),
       dependencies: withParamsDeps ?? dependencies,
     });
   };
@@ -380,14 +384,15 @@ const createResource = (
    * Callback return contracts:
    * - GET / PUT → the parent object with the relationship nested inside:
    *   `async ({ id }) => ({ id, session: { id: 10, token: "abc" } })`; `null` for no relationship
-   * - DELETE → the parent id; the property is set to `null`
+   * - DELETE → the parent id, or `{ id }`; the property is set to `null`
    *
    * The backend may also embed the child inline in a parent GET/POST response — the
    * setter on the property upserts the nested object into the child store.
    *
-   * Returns the relationship resource: its actions (`USER_SESSION.GET`, `.PUT`,
-   * `.DELETE`) write the parent's property. A relation of the child itself is
-   * declared on the child resource (`SESSION.one("device", DEVICE)`).
+   * Returns the relationship resource, itself chainable. Its items are the child
+   * resource's own, shared by every parent: `USER_SESSION.one("device", DEVICE)`
+   * adds a reactive `.device` property to every session, as
+   * `SESSION.one("device", DEVICE)` would.
    *
    * @param {string} propertyName - property holding the child on each parent item
    * @param {Object} childResource - the independent resource created by `resource()`
@@ -470,11 +475,11 @@ const createResource = (
     const createRestActionForOne = (verb, callback, { onActionComplete }) => {
       const applyResultToValue =
         verb === "DELETE"
-          ? (itemId) => {
-              const item = store.select(itemId);
+          ? (itemIdOrItemProps) => {
+              const item = store.select(itemIdOrItemProps);
               const childItemId = item[propertyName][childIdKey];
               store.upsert({
-                [idKey]: itemId,
+                [idKey]: item[idKey],
                 [propertyName]: null,
               });
               return childItemId;
@@ -502,7 +507,7 @@ const createResource = (
             if (!isProps(result) && !primitiveCanBeId(result)) {
               throwInvalidResult(
                 action.name,
-                `an object (that will be used to drop "${name}" resource)`,
+                `the "${name}" id, or { ${idKey} } (the item whose "${propertyName}" becomes null)`,
                 result,
               );
             }
@@ -527,11 +532,11 @@ const createResource = (
         PUT,
         DELETE,
       },
-      store,
-      addItemSetup,
+      store: childStore,
+      addItemSetup: childResource.addItemSetup,
       createRestAction: createRestActionForOne,
       paramScope,
-      rerunOn: oneRerunOn ?? rerunOn,
+      rerunOn: resolveRerunOn(oneRerunOn, rerunOn),
       dependencies: oneDependencies ?? dependencies,
     });
   };
@@ -553,6 +558,9 @@ const createResource = (
    *   but does NOT join the parent's array, which only a GET_MANY refresh changes
    * - DELETE → `[parentId, childId]`
    * - DELETE_MANY → `[parentId, [childId, childId, …]]`
+   *
+   * Returns the relationship resource, itself chainable; its items are the child
+   * resource's own, as for `.one()`.
    *
    * @param {string} propertyName - property holding the child array on each parent item
    * @param {Object} childResource - the independent resource created by `resource()`
@@ -795,11 +803,11 @@ const createResource = (
         DELETE,
         DELETE_MANY,
       },
-      store,
-      addItemSetup,
+      store: childStore,
+      addItemSetup: childResource.addItemSetup,
       createRestAction: createRestActionForMany,
       paramScope,
-      rerunOn: manyRerunOn ?? rerunOn,
+      rerunOn: resolveRerunOn(manyRerunOn, rerunOn),
       dependencies: manyDependencies ?? dependencies,
     });
   };
@@ -928,7 +936,7 @@ const createResource = (
       addItemSetup: childAddItemSetup,
       createRestAction: createRestActionForScopedOne,
       paramScope,
-      rerunOn: scopedOneRerunOn ?? rerunOn,
+      rerunOn: resolveRerunOn(scopedOneRerunOn, rerunOn),
       dependencies: scopedOneDependencies ?? dependencies,
     });
   };
@@ -1163,7 +1171,7 @@ const createResource = (
       addItemSetup: childAddItemSetup,
       createRestAction: createRestActionForScopedMany,
       paramScope,
-      rerunOn: scopedManyRerunOn ?? rerunOn,
+      rerunOn: resolveRerunOn(scopedManyRerunOn, rerunOn),
       dependencies: scopedManyDependencies ?? dependencies,
     });
     // When a scoped child collection is mutated (POST etc.), the parent GET must

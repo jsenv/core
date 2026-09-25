@@ -200,7 +200,11 @@ export const findPanZoomSurface = (element) => {
  * @param {Element} element
  * @param {object} options
  * @param {(detail: {event: PointerEvent, x: number, y: number}) => void} [options.onPan]
- *   The hand moved: `x`/`y` are how far since the last report, in px.
+ *   The hand moved: `x`/`y` are how far since the last report, in px. Left out,
+ *   one pointer is not the surface's: it is heard only for the pinch a second
+ *   one would make with it, and otherwise left to whatever else reads it — no
+ *   capture, no hold waited for, no click swallowed, no grab. `afterHold` then
+ *   leaves its scroll to the page, and `"kept"` has no pan to keep.
  * @param {(detail: {event: PointerEvent|WheelEvent, factor: number, x: number, y: number}) => void} [options.onZoom]
  *   The zoom changed by `factor` (above 1 is in) around the point `x`/`y` of the
  *   surface, measured inside its border. Left out, a wheel over the surface is
@@ -323,9 +327,10 @@ export const installPanZoom = (
 
   const activate = (anchorWhere, event) => {
     active = true;
-    if (afterHold === "kept" && holdIsOwed) {
+    if (afterHold === "kept" && holdIsOwed && onPan) {
       // Asked for and given: whatever proved it — the hold, a second finger, a
-      // mouse travelling — the surface is the hand's from here.
+      // mouse travelling — the surface is the hand's from here. What it keeps
+      // is the pan on contact, which a surface that does not pan has none of.
       keepTheHand();
     }
     for (const pointerId of pointers.keys()) {
@@ -419,6 +424,12 @@ export const installPanZoom = (
       activate("now", event);
       return;
     }
+    if (!onPan) {
+      // One pointer is the pan's to read. Without one it is only heard for the
+      // pinch a second pointer would make with it: a tap, a hold or a double
+      // click on it belongs to whatever else reads it.
+      return;
+    }
     if (holdIsOwed && event.pointerType === "touch") {
       pointer.waitsForHold = true;
       pointer.holdWait = waitForPressHeld(event, {
@@ -439,7 +450,9 @@ export const installPanZoom = (
     pointer.x = event.clientX;
     pointer.y = event.clientY;
     if (!active) {
-      if (pointer.waitsForHold) {
+      // No pan for the travel to start (see onPointerDown), or a finger whose
+      // travel is the page scrolling.
+      if (!onPan || pointer.waitsForHold) {
         return;
       }
       const travelled = Math.hypot(
