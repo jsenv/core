@@ -29164,39 +29164,43 @@ const idUsageMap = new Map();
 // Keys found in the entry with nobody to claim them, already reported.
 const orphanKeysReported = new Set();
 const useNavStateWithWarnings = (id, options) => {
-  const idRef = useRef(undefined);
-  if (idRef.current !== id) {
-    const oldId = idRef.current;
-    idUsageMap.delete(oldId);
-    idRef.current = id;
+  const ownerRef = useRef(null);
+  if (!ownerRef.current) {
+    ownerRef.current = {};
+  }
+  const owner = ownerRef.current;
+  // Claimed during render so warnAboutOrphanGeneratedKeys sees every id of
+  // the commit, including the ones whose effect has not run yet. The conflict
+  // is judged in the effect: when a screen replaces another in one commit,
+  // preact renders the new children before unmounting the old ones, so at
+  // render time the id may still be held by a component about to go.
+  if (id !== undefined && !idUsageMap.has(id)) {
+    idUsageMap.set(id, { owner, stackTrace: new Error().stack });
+  }
 
+  useEffect(() => {
+    if (id === undefined) {
+      return undefined;
+    }
     const usage = idUsageMap.get(id);
-    if (!usage) {
-      idUsageMap.set(id, {
-        stackTrace: new Error().stack,
-      });
-    } else {
+    if (usage && usage.owner !== owner) {
       console.warn(
         `useNavState ID conflict detected!
 ID "${id}" is already in use by another component.
 This can cause UI state conflicts and unexpected behavior.
 Consider using unique IDs for each component instance.`,
       );
-    }
-  }
-
-  useEffect(() => {
-    // Registered here as well as in the render above: preact/compat's
-    // Suspense parks a subtree by running every hook cleanup in it, and the
-    // render resuming it carries the same id.
-    if (!idUsageMap.has(id)) {
-      idUsageMap.set(id, {
-        stackTrace: new Error().stack,
-      });
+    } else {
+      // Also set when absent: preact/compat's Suspense parks a subtree by
+      // running every hook cleanup in it, and the render resuming it carries
+      // the same id.
+      idUsageMap.set(id, { owner, stackTrace: new Error().stack });
     }
     warnAboutOrphanGeneratedKeys();
     return () => {
-      idUsageMap.delete(id);
+      if (idUsageMap.get(id)?.owner === owner) {
+        idUsageMap.delete(id);
+      }
     };
   }, [id]);
 
