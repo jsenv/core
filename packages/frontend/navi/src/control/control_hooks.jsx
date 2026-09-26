@@ -530,6 +530,10 @@ export const useControlProps = (
             return {
               name: "click",
               allowed: () => onButtonInteractionAllowed(e),
+              // A refused press keeps nothing of the click's default: the href
+              // of a <Button route> (rendered as <a>), a form submit, a
+              // popovertarget.
+              prevented: () => e.preventDefault(),
             };
           },
         };
