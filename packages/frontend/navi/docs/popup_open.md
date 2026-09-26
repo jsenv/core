@@ -1008,7 +1008,8 @@ slots".
 Being open is where the user is, and what a popup draws belongs to the screen
 exactly the way a page's own data does. So a popup that loads something binds
 its open state (above) and asks for its data with a `routeAction` whose params
-are `false` while it is closed:
+are `false` while it is closed — and its content reads the question itself,
+without the part that says whether it is open:
 
 ```js
 const groupSheetOpenSignal = stateSignal(false, {
@@ -1016,11 +1017,16 @@ const groupSheetOpenSignal = stateSignal(false, {
   type: "boolean",
 });
 
+// asked while the sheet is open
 export const GROUP_MEMBERS = routeAction(GAME_ROUTE, USER.GET_MANY, () => {
   if (!groupSheetOpenSignal.value) {
     return false;
   }
   return { group: groupSignal.value };
+});
+// read by the sheet, open or closed
+export const GROUP_MEMBERS_SHOWN = USER.GET_MANY.bindParams({
+  group: groupSignal,
 });
 ```
 
@@ -1030,15 +1036,16 @@ export const GROUP_MEMBERS = routeAction(GAME_ROUTE, USER.GET_MANY, () => {
 </Dialog>;
 
 const GroupMembers = () => {
-  const [members] = useAsyncData(GROUP_MEMBERS); // reads, never runs
+  const [members] = useAsyncData(GROUP_MEMBERS_SHOWN); // reads, never runs
   …
 };
 ```
 
 The same shape when the popup is one of many — a sheet on every card, opened
 from wherever the card is read. Its open state then says which one, and the
-route action reads the id straight from it. Declared on the root route, since a
-card is not a page:
+route action reads the id straight from it, while each card's content reads the
+question of its own card. Declared on the root route, since a card is not a
+page:
 
 ```js
 const seatSheetSignal = stateSignal(undefined, {
@@ -1048,17 +1055,38 @@ const seatSheetSignal = stateSignal(undefined, {
 });
 const ANY_PAGE = route("/", { searchParams: { seat: seatSheetSignal } });
 
+export const seatableUsersOf = (gameId) => ({ game: gameId });
 export const SEATABLE_USERS = routeAction(ANY_PAGE, USER.GET_MANY, () => {
   const gameId = seatSheetSignal.value;
-  return gameId ? { game: gameId } : false;
+  return gameId ? seatableUsersOf(gameId) : false;
 });
 ```
 
 ```jsx
 <Dialog signal={seatSheetSignal} value={game.id}>
-  <SeatableUsers />
-</Dialog>
+  <SeatableUsers gameId={game.id} />
+</Dialog>;
+
+const SeatableUsers = ({ gameId }) => {
+  const [users] = useAsyncData(
+    USER.GET_MANY.bindParams(seatableUsersOf(gameId)),
+  );
+  …
+};
 ```
+
+**The content reads its question, never the route action.** The route action's
+params are `false` while the popup is closed, and for the route action that is
+right: it says _when_ to ask. Read by the content, the same `false` says there
+is nothing to show — `useAsyncData` hands back `undefined` the moment the popup
+closes, the list empties while hidden, and the next opening builds it again from
+the top: the scroll position is lost, and every row is rendered once more for an
+answer that never left the store. When the popup is one of many, it is worse: the
+route action follows whichever popup is open, so a card's sheet kept mounted
+since an earlier opening redraws with another card's rows each time that one
+opens. Closing a popup does not change what it is about, so what it reads leaves
+the open state out. Equal params share one instance — the content reads the very
+one the route action runs, so nothing is asked twice and nothing is copied.
 
 **A popup that waits holds its own `<Loading>`**, like every other part of a
 screen that can wait — it is not built into `Dialog`/`Popover`, because only the
@@ -1116,7 +1144,8 @@ become a popup's private request — asked for late, and asked for alone.
 
 A closed popup builds nothing: `children` are mounted on the first open, and
 stay mounted afterwards — a reopened popup finds its scroll position and its
-half-typed form where it left them.
+half-typed form where it left them, as long as the data it draws does not leave
+with the close (see [A popup that loads data](#a-popup-that-loads-data)).
 
 "Closed" is two states, not one — never opened yet, and closed again after an
 opening — so the `mount` prop answers both at once:
