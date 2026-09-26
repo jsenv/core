@@ -500,9 +500,8 @@ export const installPanZoom = (
   };
 
   // A touch drag left unrefused makes Chrome Android drop the click of the NEXT
-  // tap, whatever `touch-action` says (see navi's
-  // docs/mobile_tap_suppression_after_drag.md), so the surface refuses every
-  // touchmove while it moves. Whether one can be refused at all is settled when
+  // tap, whatever `touch-action` says (see navi's docs/mobile_touch.md), so the
+  // surface refuses every touchmove while it moves. Whether one can be refused at all is settled when
   // the touch begins, before the surface moves: the listener goes down with the
   // surface and refuses nothing until then — a tap, a hold, or under
   // `afterHold` the page scrolling, which is the whole point of the wait.

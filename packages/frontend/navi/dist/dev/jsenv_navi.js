@@ -82400,7 +82400,7 @@ const useWheelInteractions = ({
     // button right after a fling still fires its click. Only while a drag is
     // active, and on touchmove (not touchstart) — the drag IS the move, and
     // preventing touchstart has wider side effects. Requires a non-passive
-    // listener. See docs/mobile_tap_suppression_after_drag.md.
+    // listener. See docs/mobile_touch.md.
     const onTouchMove = e => {
       // cancelable=false when the touch landed while a scroll was already in
       // progress (e.g. the page still coasting from a fling): the browser owns

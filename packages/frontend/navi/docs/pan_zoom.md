@@ -44,7 +44,7 @@ for); the pinch not beginning as a pan under its first finger; the wheel and the
 pinch writing one `zoom`; the capture, the pointer the browser drops, the click
 the release leaves behind, and the next tap's click, which Chrome on Android
 drops after a touch drag whose `touchmove`s nobody refused (see
-[mobile_tap_suppression_after_drag.md](./mobile_tap_suppression_after_drag.md)).
+[mobile_touch.md](./mobile_touch.md#a-tap-dropped-after-a-touch-drag)).
 A pointer pans only once it has travelled a few px (`data-drag-threshold`), so a
 tap stays a tap: a `longpress` declared beside `pan` still gets its hold, and a
 `double_click` still gets its two presses. A press that does pan is the

@@ -475,8 +475,11 @@ export const createDragGestureController = (options = {}) => {
         const deltaX = Math.abs(dragX - grabX);
         const deltaY = Math.abs(dragY - grabY);
         if (direction.x && direction.y) {
-          // Both directions: check both axes
-          if (deltaX < threshold && deltaY < threshold) {
+          // The distance walked, not the larger of the two axes: a browser
+          // measures its own touch slop that way, and a gesture racing it for
+          // a touch (see DRAG_START_THRESHOLD_TOUCH in drag_to_travel.js) must
+          // not be 1.4 times later than it on a diagonal.
+          if (Math.hypot(deltaX, deltaY) < threshold) {
             return dragData;
           }
         } else if (direction.x) {

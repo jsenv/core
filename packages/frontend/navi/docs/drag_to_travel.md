@@ -35,9 +35,10 @@ and are referenced from here rather than restated.
 
 ## What the rules are
 
-- A press is not a gesture until it has wandered ~10px, and the axis it leans on
-  then is the axis it walks, for good — how that axis is read, and why the
-  reading is biased, has [a section of its own
+- A press is not a gesture until it has wandered 10px with a mouse, 6px with a
+  finger or a pen, and the axis it leans on then is the axis it walks, for good
+  — how that axis is read, why the reading is biased, and why a finger's number
+  is a deadline rather than a feel, has [a section of its own
   below](#the-axis-is-read-once-and-read-with-a-bias). **Except on something
   already moving**: there the hand said what it wanted by reaching for it, so
   the gesture answers from its first pixel and owes it every one of them —
@@ -89,7 +90,7 @@ and are referenced from here rather than restated.
 ## The axis is read once, and read with a bias
 
 The axis is decided on the first movement report after the threshold and never
-revisited. That report is ~10-25px of movement, and for a thumb those pixels
+revisited. For a thumb that report is a few pixels of movement, and those pixels
 misstate the gesture: a thumb swiping sideways moves along an ARC, and the
 start of the arc leans off-axis far more than the swipe does. Read even
 (whichever axis covered more), the lean hands the whole press to an axis
@@ -109,19 +110,35 @@ Why the decision cannot simply wait for more evidence — this boundary is
 physics, not caution:
 
 - the browser is racing for the same press, on the axis `touch-action` leaves
-  it, and it holds off only while the touchmoves are being refused;
-- refusing a touchmove is **irreversible for that touch**: whether the stream
-  can scroll is decided at its first refusable move, and un-refusing later
-  resurrects nothing;
-- so every frame spent gathering evidence is a frame of the page's scroll
-  spent, for good. A decision deferred until the arc has proven itself would
-  make every genuinely vertical swipe over the box a dead gesture — the exact
-  bug, mirrored onto the page.
+  it — and on every axis over a scroller inside the box, since a scroller
+  resets `touch-action` for what it holds;
+- and it does not wait for us: **about 8px in, it commits the touch to its own
+  pan**, reading the direction evenly (Chrome at the first `touchmove` it
+  sends, Safari at the one near 9px). From then on refusing a `touchmove`
+  changes nothing: the pointer is cancelled, and the swipe does nothing — or
+  the travel that had started goes back;
+- refusing a touchmove is **irreversible for that touch** too, the other way
+  round: one refused before that moment keeps the whole touch from scrolling,
+  and un-refusing later resurrects nothing;
+- so the reading has to be done before the browser's, and every frame spent
+  gathering evidence past it is not evidence, it is a lost gesture. A decision
+  deferred until the arc has proven itself would make every genuinely vertical
+  swipe over the box a dead gesture — the exact bug, mirrored onto the page.
+
+Hence the finger's threshold, 6px of distance (`DRAG_START_THRESHOLD_TOUCH`):
+under the browser's 8px with a margin, because Safari does not wait for the
+answer to a report that jumps over its decision. A distance and not a per-axis
+reach, because the browser measures its own slop as one. Its price is the
+click of a tap that shook more than 6px. The engines' side of all this —
+measured, per engine, with how to reproduce it — is
+[mobile_touch.md](./mobile_touch.md).
 
 The bias moves the frame-one boundary to where the two hands actually
-separate; nothing can remove the boundary. A first report steeper than the
-bias (a start more than twice off-axis) is genuinely ambiguous with a scroll
-and goes to the page — which at least answers it visibly.
+separate; nothing can remove the boundary. It only works because it is read
+first: read after the browser's own reading, it is never consulted, the
+pointer already being cancelled. A first report steeper than the bias (a start
+more than twice off-axis) is genuinely ambiguous with a scroll and goes to the
+page — which at least answers it visibly.
 
 ## Two inputs, one travel
 
@@ -553,8 +570,15 @@ travel had started finishes without anyone. It is invisible with a mouse, which
 is why it survives a whole session of desktop testing.
 
 So a travel that has become ours refuses the `touchmove` (`preventDefault`), and
-only then — a finger that means to scroll must still scroll. Three details make
-it hold:
+only then — a finger that means to scroll must still scroll. "Only then" has a
+deadline: the browser takes the touch about 8px in if nothing has refused it by
+then, which is why a finger becomes a travel at 6px (see [the axis
+section](#the-axis-is-read-once-and-read-with-a-bias)). `touch-action` on the
+box does not cover for a late answer over content that scrolls: a scroller
+inside the box resets it for what it holds, and Chrome then pans even the axis
+the box travels on, with nothing to scroll that way (see
+[mobile_touch.md](./mobile_touch.md#touch-action-stops-at-the-first-scroller)).
+Three details make the refusal hold:
 
 - the listener sits on the element the touch LANDED on as well as on the window: a
   touch keeps being dispatched at the node it started on, and a travel may
@@ -728,9 +752,16 @@ The reading side has traps of its own:
   measured velocities come out below the numbers written in the script — read
   the measured ones, not the intended ones;
 - what the real browser does with an unclaimed touch — take it for a pan and
-  cancel the stream, kill a momentum tail the moment a finger lands — does not
-  exist in emulation at all. Claims about it are only ever settled on a
-  device (and the Firefox wheel limitation above is the same kind of fact).
+  cancel the stream, withhold the click — is reproducible without a device, but
+  only through two paths: Chrome's mobile touch emulator (headed, driven with
+  mouse events) and Safari in the iOS simulator driven by `safaridriver`. The
+  obvious one, Playwright's `touchscreen` / CDP `Input.dispatchTouchEvent`,
+  runs Chrome's desktop slop (15px), where a travel deciding at 10px always
+  wins and the race that loses swipes on a phone never shows. The recipe is in
+  [mobile_touch.md](./mobile_touch.md#verifying-without-a-device). What stays a
+  device question: a real finger's lift, a real device's event timing, a
+  momentum tail killed by a landing finger (and the Firefox wheel limitation
+  above is the same kind of fact).
 
 What to read while it runs: the `navi_drag_*` events (grab, start, release)
 say which stage a press reached and with what velocity; the box's state

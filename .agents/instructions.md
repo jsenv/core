@@ -333,6 +333,13 @@ Read it before changing anything under
 `packages/frontend/dom/src/interaction/` or any component that travels or
 swipes (slides, route travel, side panels, swipeable rows).
 
+A finger is also read by the browser, which answers it first unless the page
+does — and none of that shows with a mouse. What Chrome and Safari do with a
+touch, measured, and how to reproduce it without a phone:
+[packages/frontend/navi/docs/mobile_touch.md](../packages/frontend/navi/docs/mobile_touch.md).
+Read it before touching anything a finger reads, and before investigating a
+"works on desktop, not on mobile" report.
+
 ### Focus
 
 Who holds the keyboard, and whether a ring shows, are decided in one place and

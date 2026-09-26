@@ -175,6 +175,19 @@ import.meta.css = /* css */ `
 // How far a pointer goes before it is a travel rather than a click: below this
 // a press that wandered a pixel is still a press, and nothing budges.
 const DRAG_START_THRESHOLD = 10;
+// …and for a finger or a pen, which the browser pans with and has a deadline:
+// ~8px in, it commits the touch to its own pan if that way is open to it (the
+// axis touch-action leaves, or any axis over a scroller inside the box, which
+// resets touch-action for what it holds). Chrome does it with the first
+// touchmove it sends, held back until the touch leaves its slop; Safari with
+// its pan recognizer. Refusing the touchmoves after that moment changes
+// nothing — the pointer is cancelled and the swipe does nothing, or the travel
+// already under way goes back. So the axis has to be read before it, with a
+// margin: Safari does not wait for the answer to a report that jumps over its
+// decision. The price is a tap that shook more than this: it is a swipe that
+// went nowhere, and its click is lost (Chrome would click it up to 8px, Safari
+// never once a touchmove is refused).
+const DRAG_START_THRESHOLD_TOUCH = 6;
 // How much the cross axis must dominate the travel axis, over the first
 // reported pixels, to take the press away from the box (see the axis decision
 // in onDrag). Sized against the two hands it separates: a thumb's arc leans up
@@ -592,6 +605,10 @@ export const startDragToTravel = (
   if (immediate && !axesLeft.includes(immediate)) {
     return null;
   }
+  const startThreshold =
+    pointerDownEvent.pointerType === "mouse"
+      ? DRAG_START_THRESHOLD
+      : DRAG_START_THRESHOLD_TOUCH;
 
   // The travel in hand: null until the finger has picked an axis and the caller
   // has accepted it.
@@ -776,10 +793,10 @@ export const startDragToTravel = (
           // and is owed to it.
           origin: immediate
             ? 0
-            : covered > DRAG_START_THRESHOLD
-              ? DRAG_START_THRESHOLD
-              : covered < -DRAG_START_THRESHOLD
-                ? -DRAG_START_THRESHOLD
+            : covered > startThreshold
+              ? startThreshold
+              : covered < -startThreshold
+                ? -startThreshold
                 : covered,
           pulled: started.slack || 0,
         };
@@ -909,7 +926,7 @@ export const startDragToTravel = (
   } else {
     dragAfterIntent(pointerDownEvent, grab, {
       longPress: false,
-      threshold: DRAG_START_THRESHOLD,
+      threshold: startThreshold,
       selection: "manual",
     });
   }

@@ -210,8 +210,13 @@ to start when unsure which export solves a problem.
   moving anything with the pointer.
 - `pan_zoom.md` — a surface under the hand: `pan`, `zoom`, and what a touch or
   a wheel over it may do to the page around it.
-- `mobile_tap_suppression_after_drag.md` — Chrome Android drops the click that
-  follows a JS-driven touch drag; refuse `touchmove` while dragging.
+- `mobile_touch.md` — what Chrome and Safari do with a finger a gesture also
+  reads, measured: they commit it to their own pan ~8px in (read a finger's
+  intent before that), `touch-action` restarts at every scroller, when the
+  click survives, the tap Chrome drops after a touch drag, and how to reproduce
+  all of it without a device (Chrome's mobile touch emulator, Safari in the iOS
+  simulator). Read before reading a finger yourself, and before concluding a
+  gesture works because it works with a mouse.
 
 ### Layout, CSS and text
 
