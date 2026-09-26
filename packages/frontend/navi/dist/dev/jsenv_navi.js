@@ -42108,7 +42108,15 @@ const useControlProps = (props, {
             if (actsOnMouseDown) {
               return {
                 name: "mousedown",
-                allowed: () => onButtonInteractionAllowed(e)
+                allowed: () => onButtonInteractionAllowed(e),
+                // The press is answered here, refusal included: the click it
+                // leaves behind would otherwise follow the href of a
+                // <Button route>. Not asked about again — a second refusal
+                // reads as "got it" and dismisses the callout just shown.
+                prevented: () => {
+                  const clickSuppressionIsOver = suppressClickAfterGesture();
+                  clickSuppressionIsOver();
+                }
               };
             }
             return null;
@@ -42119,7 +42127,11 @@ const useControlProps = (props, {
             }
             return {
               name: "click",
-              allowed: () => onButtonInteractionAllowed(e)
+              allowed: () => onButtonInteractionAllowed(e),
+              // A refused press keeps nothing of the click's default: the href
+              // of a <Button route> (rendered as <a>), a form submit, a
+              // popovertarget.
+              prevented: () => e.preventDefault()
             };
           }
         };

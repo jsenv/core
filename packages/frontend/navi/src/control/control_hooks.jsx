@@ -17,6 +17,7 @@ import {
   findFocusDelegateTarget,
   getElementSignature,
   getKeyboardEventDefaultAction,
+  suppressClickAfterGesture,
 } from "@jsenv/dom";
 import { computed, signal } from "@preact/signals";
 import {
@@ -519,6 +520,14 @@ export const useControlProps = (
               return {
                 name: "mousedown",
                 allowed: () => onButtonInteractionAllowed(e),
+                // The press is answered here, refusal included: the click it
+                // leaves behind would otherwise follow the href of a
+                // <Button route>. Not asked about again — a second refusal
+                // reads as "got it" and dismisses the callout just shown.
+                prevented: () => {
+                  const clickSuppressionIsOver = suppressClickAfterGesture();
+                  clickSuppressionIsOver();
+                },
               };
             }
             return null;
