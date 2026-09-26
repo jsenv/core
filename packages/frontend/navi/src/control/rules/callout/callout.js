@@ -145,16 +145,21 @@ const css = /* css */ `
     border: none;
     outline: none; /* programmatic focus may land here briefly before being redirected to close button */
     opacity: 0;
-    /* opacity only: the placement lives in the translate property, which
-       applyNewPosition (visible_rect.js) owns and animates itself through the
-       Web Animations API, same mechanism Popover/Dialog use. */
-    transition: opacity 0.2s ease-in-out;
     cursor: initial; /* Do not inherit element cursor, inside the element but should use regular cursor */
     pointer-events: auto; /* Must be interactive to be closabled (overrid list item pointer-events none for instance)  */
     overflow: visible;
 
     &[data-anchor-scrolls] {
       position: absolute;
+    }
+
+    /* Armed after the first placement: the first show answers a tap or a
+       click and appears at once, the fade is for the anchor scrolling out of
+       view and back. Opacity only: the placement lives in the translate
+       property, which applyNewPosition (visible_rect.js) owns and animates
+       itself through the Web Animations API, same mechanism Popover/Dialog use. */
+    &[data-placed] {
+      transition: opacity 0.12s ease-out;
     }
 
     &[data-status="success"] {
@@ -1609,6 +1614,13 @@ const positionCallout = (
         calloutFrameElement.style.bottom = `-${BORDER_WIDTH}px`;
         calloutFrameElement.innerHTML = generateSvgWithoutArrow(width, height);
         calloutElement.style.opacity = 1;
+      }
+      if (!calloutElement.hasAttribute("data-placed")) {
+        // Style flush between the first opacity write and arming the
+        // transition, so that first write lands unanimated in the same frame.
+        // eslint-disable-next-line no-unused-expressions
+        getComputedStyle(calloutElement).opacity;
+        calloutElement.setAttribute("data-placed", "");
       }
       applyNewPosition(calloutElement, position);
     },
