@@ -362,6 +362,7 @@ const readCSSVarEntry = (entry) => {
   }
   return [entry, null];
 };
+const readCSSVarName = (entry) => (Array.isArray(entry) ? entry[0] : entry);
 // When only pseudoStateSelector is set (no visualSelector), the box owns its
 // visual identity. Only event handlers and these explicit props are forwarded
 // to the inner semantic/interactive child element.
@@ -465,10 +466,13 @@ export const Box = (props) => {
   // exception — a closure is new on every render — so they are compared by
   // name only and put back fresh, see withCurrentHandlers.
   const renderMemoRef = useRef(null);
+  if (!renderMemoRef.current) {
+    renderMemoRef.current = { props: null, parentBoxFlow: null, computed: null };
+  }
   const renderMemo = renderMemoRef.current;
   let computed;
   if (
-    renderMemo &&
+    renderMemo.computed &&
     renderMemo.parentBoxFlow === parentBoxFlow &&
     arePropsEquivalent(renderMemo.props, computeProps)
   ) {
@@ -476,7 +480,9 @@ export const Box = (props) => {
   } else {
     computed = computeBox(computeProps, parentBoxFlow);
   }
-  renderMemoRef.current = { props: computeProps, parentBoxFlow, computed };
+  renderMemo.props = computeProps;
+  renderMemo.parentBoxFlow = parentBoxFlow;
+  renderMemo.computed = computed;
   const {
     TagName,
     boxFlow,
@@ -511,6 +517,17 @@ export const Box = (props) => {
     );
   }
 
+  // Only a Box reads the flow, and a box holding nothing but text has no Box
+  // below it: the provider, a component of its own, is left out there. Moving
+  // between the two shapes recreates text nodes, never a component.
+  if (mayHoldComponent(innerChildren)) {
+    innerChildren = (
+      <BoxFlowContext.Provider value={boxFlow}>
+        {innerChildren}
+      </BoxFlowContext.Provider>
+    );
+  }
+
   return (
     <TagName
       ref={finalRef}
@@ -522,9 +539,7 @@ export const Box = (props) => {
       data-visual-selector={visualSelector}
       {...selfForwardedProps}
     >
-      <BoxFlowContext.Provider value={boxFlow}>
-        {innerChildren}
-      </BoxFlowContext.Provider>
+      {innerChildren}
     </TagName>
   );
 };
@@ -766,21 +781,17 @@ const computeBox = (props, parentBoxFlow) => {
     let innerPseudoState;
     if (basePseudoState && pseudoState) {
       innerPseudoState = {};
-      const baseStateKeys = Object.keys(basePseudoState);
-      const pseudoStateKeySet = new Set(Object.keys(pseudoState));
-      for (const key of baseStateKeys) {
-        if (pseudoStateKeySet.has(key)) {
-          pseudoStateKeySet.delete(key);
-          const value = pseudoState[key];
-          styleDeps.push(key, value);
-          innerPseudoState[key] = value;
-        } else {
-          const value = basePseudoState[key];
-          styleDeps.push(key, value);
-          innerPseudoState[key] = value;
-        }
+      for (const key of Object.keys(basePseudoState)) {
+        const value = Object.hasOwn(pseudoState, key)
+          ? pseudoState[key]
+          : basePseudoState[key];
+        styleDeps.push(key, value);
+        innerPseudoState[key] = value;
       }
-      for (const key of pseudoStateKeySet) {
+      for (const key of Object.keys(pseudoState)) {
+        if (Object.hasOwn(basePseudoState, key)) {
+          continue;
+        }
         const value = pseudoState[key];
         styleDeps.push(key, value);
         innerPseudoState[key] = value;
@@ -820,7 +831,7 @@ const computeBox = (props, parentBoxFlow) => {
         name,
         styleContext,
       );
-      const [cssVar] = readCSSVarEntry(styleContext.styleCSSVars[name]);
+      const cssVar = readCSSVarName(styleContext.styleCSSVars[name]);
       if (cssVar) {
         addCSSVar(mergedValue, cssVar, stylesTarget);
         if (name === "borderRadius" && value === "inherit") {
@@ -888,12 +899,12 @@ const computeBox = (props, parentBoxFlow) => {
         if (boxPseudoNamedStyles === PSEUDO_NAMED_STYLES_DEFAULT) {
           boxPseudoNamedStyles = {};
         }
+        const pseudoCSSVars = styleCSSVars[name];
         const pseudoStyleContext = {
           ...styleContext,
-          styleCSSVars: {
-            ...styleCSSVars,
-            ...styleCSSVars[name],
-          },
+          styleCSSVars: pseudoCSSVars
+            ? { ...styleCSSVars, ...pseudoCSSVars }
+            : styleCSSVars,
           pseudoName: name,
         };
         const pseudoStyleKeys = Object.keys(value);
@@ -1222,16 +1233,51 @@ const declaresSomething = (value) => {
   return true;
 };
 const isScrollingOverflow = (value) => value === "auto" || value === "scroll";
+const mayHoldComponent = (children) => {
+  if (children === null || children === undefined) {
+    return false;
+  }
+  const type = typeof children;
+  if (type === "string" || type === "number" || type === "boolean") {
+    return false;
+  }
+  if (Array.isArray(children)) {
+    for (const child of children) {
+      if (mayHoldComponent(child)) {
+        return true;
+      }
+    }
+    return false;
+  }
+  return true;
+};
 
 // Same props as far as computeBox is concerned. Handlers count by name only,
-// see withCurrentHandlers; no style or state key starts with "on".
-const arePropsEquivalent = (previousProps, props) =>
-  compareTwoJsValues(previousProps, props, { keyComparator: comparePropAt });
-const comparePropAt = (a, b, key, recurse) => {
-  if (typeof key === "string" && key.startsWith("on")) {
-    return true;
+// see withCurrentHandlers. Identity first: most values are the very ones of
+// the previous render, only what a caller rebuilds inline (a style, a pseudo
+// state) needs the deep walk.
+const arePropsEquivalent = (previousProps, props) => {
+  const keys = Object.keys(props);
+  if (keys.length !== Object.keys(previousProps).length) {
+    return false;
   }
-  return recurse(a, b);
+  for (const key of keys) {
+    if (!Object.hasOwn(previousProps, key)) {
+      return false;
+    }
+    if (key.startsWith("on")) {
+      continue;
+    }
+    const value = props[key];
+    const previousValue = previousProps[key];
+    if (value === previousValue) {
+      continue;
+    }
+    if (!compareTwoJsValues(previousValue, value)) {
+      return false;
+    }
+  }
+  return true;
 };
 // The previous computation with this render's handlers: a handler goes where
 // its name went the previous time, self or child, the split being decided by

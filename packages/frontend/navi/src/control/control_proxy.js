@@ -44,6 +44,9 @@ export const findControlProxyTarget = (el) => {
   return document.getElementById(proxyFor);
 };
 
+// Shared: asked on every pseudo state change of every box, and almost always
+// empty.
+const NO_PROXIES = Object.freeze([]);
 /**
  * Given a real control element, returns every proxy that visually represents
  * it — a control can have more than one (an "enable"/"disable" button pair for
@@ -58,11 +61,11 @@ export const findControlProxyTarget = (el) => {
  */
 export const findControlProxies = (el) => {
   if (!el.id) {
-    return [];
+    return NO_PROXIES;
   }
   const proxyControllerSet = findProxyControllers(el.id);
   if (!proxyControllerSet) {
-    return [];
+    return NO_PROXIES;
   }
   const proxyElements = [];
   for (const proxyController of proxyControllerSet) {

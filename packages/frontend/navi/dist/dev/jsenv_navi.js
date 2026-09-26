@@ -6472,6 +6472,9 @@ const findControlProxyTarget = (el) => {
   return document.getElementById(proxyFor);
 };
 
+// Shared: asked on every pseudo state change of every box, and almost always
+// empty.
+const NO_PROXIES = Object.freeze([]);
 /**
  * Given a real control element, returns every proxy that visually represents
  * it — a control can have more than one (an "enable"/"disable" button pair for
@@ -6486,11 +6489,11 @@ const findControlProxyTarget = (el) => {
  */
 const findControlProxies = (el) => {
   if (!el.id) {
-    return [];
+    return NO_PROXIES;
   }
   const proxyControllerSet = findProxyControllers(el.id);
   if (!proxyControllerSet) {
-    return [];
+    return NO_PROXIES;
   }
   const proxyElements = [];
   for (const proxyController of proxyControllerSet) {
@@ -10955,15 +10958,17 @@ const resolveInteractions = (interactions) => {
     }
   }
   const kept = {};
+  let keptSome = false;
   for (const type of Object.keys(resolved)) {
     if (resolved[type]) {
       kept[type] = resolved[type];
+      keptSome = true;
     }
   }
-  resolved = kept;
-  if (Object.keys(resolved).length === 0) {
+  if (!keptSome) {
     return null;
   }
+  resolved = kept;
   {
     for (const type of Object.keys(resolved)) {
       const detector = detectors.find((candidate) => candidate.claims(type));
@@ -22169,8 +22174,7 @@ const getStyleToApply = (styles, pseudoState, pseudoNamedStyles) => {
   }
   let style = styles;
   for (const pseudoKey of Object.keys(pseudoNamedStyles)) {
-    const requiredStates = getPseudoKeyRequiredStates(pseudoKey);
-    if (!requiredStates.every((state) => pseudoState[state])) {
+    if (!hasEveryState(pseudoState, getPseudoKeyRequiredStates(pseudoKey))) {
       continue;
     }
     if (style === styles) {
@@ -22224,6 +22228,14 @@ const getPseudoKeyRequiredStates = (pseudoKey) => {
   }
   pseudoKeyRequiredStatesMap.set(pseudoKey, requiredStates);
   return requiredStates;
+};
+const hasEveryState = (pseudoState, states) => {
+  for (const state of states) {
+    if (!pseudoState[state]) {
+      return false;
+    }
+  }
+  return true;
 };
 
 // element → the style object last written to it, so the next one is written
@@ -22302,7 +22314,7 @@ const updateStyle = (element, style, preventInitialTransition) => {
 // the browser for a frame costs more than that, and a page mounting thousands of
 // boxes asks thousands of times in the same tick. A Set, so an element styled
 // twice before the frame arrives is still one entry.
-const elementSetWaitingFirstFrame = new Set();
+let elementSetWaitingFirstFrame = new Set();
 let firstFrameScheduled = false;
 const afterFirstFrame = (element) => {
   elementSetWaitingFirstFrame.add(element);
@@ -22312,8 +22324,8 @@ const afterFirstFrame = (element) => {
   firstFrameScheduled = true;
   requestAnimationFrame(() => {
     firstFrameScheduled = false;
-    const elements = [...elementSetWaitingFirstFrame];
-    elementSetWaitingFirstFrame.clear();
+    const elements = elementSetWaitingFirstFrame;
+    elementSetWaitingFirstFrame = new Set();
     for (const element of elements) {
       if (elementTransitionWeakMap.has(element)) {
         const transitionToRestore = elementTransitionWeakMap.get(element);
@@ -22649,6 +22661,7 @@ const readCSSVarEntry = entry => {
   }
   return [entry, null];
 };
+const readCSSVarName = entry => Array.isArray(entry) ? entry[0] : entry;
 // When only pseudoStateSelector is set (no visualSelector), the box owns its
 // visual identity. Only event handlers and these explicit props are forwarded
 // to the inner semantic/interactive child element.
@@ -22758,18 +22771,23 @@ const Box = props => {
   // exception — a closure is new on every render — so they are compared by
   // name only and put back fresh, see withCurrentHandlers.
   const renderMemoRef = useRef(null);
+  if (!renderMemoRef.current) {
+    renderMemoRef.current = {
+      props: null,
+      parentBoxFlow: null,
+      computed: null
+    };
+  }
   const renderMemo = renderMemoRef.current;
   let computed;
-  if (renderMemo && renderMemo.parentBoxFlow === parentBoxFlow && arePropsEquivalent(renderMemo.props, computeProps)) {
+  if (renderMemo.computed && renderMemo.parentBoxFlow === parentBoxFlow && arePropsEquivalent(renderMemo.props, computeProps)) {
     computed = withCurrentHandlers(renderMemo.computed, computeProps);
   } else {
     computed = computeBox(computeProps, parentBoxFlow);
   }
-  renderMemoRef.current = {
-    props: computeProps,
-    parentBoxFlow,
-    computed
-  };
+  renderMemo.props = computeProps;
+  renderMemo.parentBoxFlow = parentBoxFlow;
+  renderMemo.computed = computed;
   const {
     TagName,
     boxFlow,
@@ -22801,6 +22819,16 @@ const Box = props => {
       children: innerChildren
     });
   }
+
+  // Only a Box reads the flow, and a box holding nothing but text has no Box
+  // below it: the provider, a component of its own, is left out there. Moving
+  // between the two shapes recreates text nodes, never a component.
+  if (mayHoldComponent(innerChildren)) {
+    innerChildren = jsx(BoxFlowContext.Provider, {
+      value: boxFlow,
+      children: innerChildren
+    });
+  }
   return jsx(TagName, {
     ref: finalRef,
     className: innerClassName,
@@ -22810,10 +22838,7 @@ const Box = props => {
     "navi-aspect-ratio": aspectRatio ? aspectRatio : undefined,
     "data-visual-selector": visualSelector,
     ...selfForwardedProps,
-    children: jsx(BoxFlowContext.Provider, {
-      value: boxFlow,
-      children: innerChildren
-    })
+    children: innerChildren
   });
 };
 
@@ -23039,21 +23064,15 @@ const computeBox = (props, parentBoxFlow) => {
     let innerPseudoState;
     if (basePseudoState && pseudoState) {
       innerPseudoState = {};
-      const baseStateKeys = Object.keys(basePseudoState);
-      const pseudoStateKeySet = new Set(Object.keys(pseudoState));
-      for (const key of baseStateKeys) {
-        if (pseudoStateKeySet.has(key)) {
-          pseudoStateKeySet.delete(key);
-          const value = pseudoState[key];
-          styleDeps.push(key, value);
-          innerPseudoState[key] = value;
-        } else {
-          const value = basePseudoState[key];
-          styleDeps.push(key, value);
-          innerPseudoState[key] = value;
-        }
+      for (const key of Object.keys(basePseudoState)) {
+        const value = Object.hasOwn(pseudoState, key) ? pseudoState[key] : basePseudoState[key];
+        styleDeps.push(key, value);
+        innerPseudoState[key] = value;
       }
-      for (const key of pseudoStateKeySet) {
+      for (const key of Object.keys(pseudoState)) {
+        if (Object.hasOwn(basePseudoState, key)) {
+          continue;
+        }
         const value = pseudoState[key];
         styleDeps.push(key, value);
         innerPseudoState[key] = value;
@@ -23087,7 +23106,7 @@ const computeBox = (props, parentBoxFlow) => {
     const canForwardToChild = hasChildUsingForwardedProps;
     const addStyle = (value, name, styleContext, stylesTarget) => {
       const mergedValue = prepareStyleValue(stylesTarget[name], value, name, styleContext);
-      const [cssVar] = readCSSVarEntry(styleContext.styleCSSVars[name]);
+      const cssVar = readCSSVarName(styleContext.styleCSSVars[name]);
       if (cssVar) {
         addCSSVar(mergedValue, cssVar, stylesTarget);
         if (name === "borderRadius" && value === "inherit") {
@@ -23143,12 +23162,13 @@ const computeBox = (props, parentBoxFlow) => {
         if (boxPseudoNamedStyles === PSEUDO_NAMED_STYLES_DEFAULT) {
           boxPseudoNamedStyles = {};
         }
+        const pseudoCSSVars = styleCSSVars[name];
         const pseudoStyleContext = {
           ...styleContext,
-          styleCSSVars: {
+          styleCSSVars: pseudoCSSVars ? {
             ...styleCSSVars,
-            ...styleCSSVars[name]
-          },
+            ...pseudoCSSVars
+          } : styleCSSVars,
           pseudoName: name
         };
         const pseudoStyleKeys = Object.keys(value);
@@ -23395,17 +23415,51 @@ const declaresSomething = value => {
   return true;
 };
 const isScrollingOverflow = value => value === "auto" || value === "scroll";
+const mayHoldComponent = children => {
+  if (children === null || children === undefined) {
+    return false;
+  }
+  const type = typeof children;
+  if (type === "string" || type === "number" || type === "boolean") {
+    return false;
+  }
+  if (Array.isArray(children)) {
+    for (const child of children) {
+      if (mayHoldComponent(child)) {
+        return true;
+      }
+    }
+    return false;
+  }
+  return true;
+};
 
 // Same props as far as computeBox is concerned. Handlers count by name only,
-// see withCurrentHandlers; no style or state key starts with "on".
-const arePropsEquivalent = (previousProps, props) => compareTwoJsValues(previousProps, props, {
-  keyComparator: comparePropAt
-});
-const comparePropAt = (a, b, key, recurse) => {
-  if (typeof key === "string" && key.startsWith("on")) {
-    return true;
+// see withCurrentHandlers. Identity first: most values are the very ones of
+// the previous render, only what a caller rebuilds inline (a style, a pseudo
+// state) needs the deep walk.
+const arePropsEquivalent = (previousProps, props) => {
+  const keys = Object.keys(props);
+  if (keys.length !== Object.keys(previousProps).length) {
+    return false;
   }
-  return recurse(a, b);
+  for (const key of keys) {
+    if (!Object.hasOwn(previousProps, key)) {
+      return false;
+    }
+    if (key.startsWith("on")) {
+      continue;
+    }
+    const value = props[key];
+    const previousValue = previousProps[key];
+    if (value === previousValue) {
+      continue;
+    }
+    if (!compareTwoJsValues(previousValue, value)) {
+      return false;
+    }
+  }
+  return true;
 };
 // The previous computation with this render's handlers: a handler goes where
 // its name went the previous time, self or child, the split being decided by

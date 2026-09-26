@@ -166,15 +166,17 @@ export const resolveInteractions = (interactions) => {
     }
   }
   const kept = {};
+  let keptSome = false;
   for (const type of Object.keys(resolved)) {
     if (resolved[type]) {
       kept[type] = resolved[type];
+      keptSome = true;
     }
   }
-  resolved = kept;
-  if (Object.keys(resolved).length === 0) {
+  if (!keptSome) {
     return null;
   }
+  resolved = kept;
   if (import.meta.dev) {
     for (const type of Object.keys(resolved)) {
       const detector = detectors.find((candidate) => candidate.claims(type));

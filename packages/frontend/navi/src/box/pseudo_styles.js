@@ -1040,8 +1040,7 @@ const getStyleToApply = (styles, pseudoState, pseudoNamedStyles) => {
   }
   let style = styles;
   for (const pseudoKey of Object.keys(pseudoNamedStyles)) {
-    const requiredStates = getPseudoKeyRequiredStates(pseudoKey);
-    if (!requiredStates.every((state) => pseudoState[state])) {
+    if (!hasEveryState(pseudoState, getPseudoKeyRequiredStates(pseudoKey))) {
       continue;
     }
     if (style === styles) {
@@ -1095,6 +1094,14 @@ const getPseudoKeyRequiredStates = (pseudoKey) => {
   }
   pseudoKeyRequiredStatesMap.set(pseudoKey, requiredStates);
   return requiredStates;
+};
+const hasEveryState = (pseudoState, states) => {
+  for (const state of states) {
+    if (!pseudoState[state]) {
+      return false;
+    }
+  }
+  return true;
 };
 
 // element → the style object last written to it, so the next one is written
@@ -1173,7 +1180,7 @@ const updateStyle = (element, style, preventInitialTransition) => {
 // the browser for a frame costs more than that, and a page mounting thousands of
 // boxes asks thousands of times in the same tick. A Set, so an element styled
 // twice before the frame arrives is still one entry.
-const elementSetWaitingFirstFrame = new Set();
+let elementSetWaitingFirstFrame = new Set();
 let firstFrameScheduled = false;
 const afterFirstFrame = (element) => {
   elementSetWaitingFirstFrame.add(element);
@@ -1183,8 +1190,8 @@ const afterFirstFrame = (element) => {
   firstFrameScheduled = true;
   requestAnimationFrame(() => {
     firstFrameScheduled = false;
-    const elements = [...elementSetWaitingFirstFrame];
-    elementSetWaitingFirstFrame.clear();
+    const elements = elementSetWaitingFirstFrame;
+    elementSetWaitingFirstFrame = new Set();
     for (const element of elements) {
       if (elementTransitionWeakMap.has(element)) {
         const transitionToRestore = elementTransitionWeakMap.get(element);
