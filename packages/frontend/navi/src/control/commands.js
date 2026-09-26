@@ -1005,6 +1005,30 @@ registerNaviCommand("--navi-open", (source, event, { anchor, value } = {}) => {
     },
   };
 });
+/**
+ * Tells the popup a source opens that a press on it has started, ahead of the
+ * release that runs the command: what the opening will read can be asked for
+ * now (see open_controller.js). A press rather than a hover, because what
+ * that reads is keyed by the popup — one sheet per card — and a pointer
+ * crossing a list of cards has chosen none of them; on a touch screen the
+ * press is the first thing the finger says anyway.
+ *
+ * The target is found the way --navi-open finds it, but silently: nothing
+ * runs here, and a source with no target says so at the release.
+ */
+export const announceOpeningPress = (source, command) => {
+  if (command !== "--navi-open" && command !== "--navi-toggle") {
+    return;
+  }
+  const commandFor = source.getAttribute("commandfor");
+  const target = commandFor
+    ? document.getElementById(commandFor)
+    : resolveExplicitTarget(source) || resolveClosestExpandable(source);
+  if (!target) {
+    return;
+  }
+  dispatchCustomEvent(target, "navi_open_press");
+};
 // "--navi-close:all" closes every expandable above the source, nearest first —
 // a link leaving from a badge shown over a sheet leaves both. A surface that
 // refuses (a form asking about its changes) keeps what is above it open too:

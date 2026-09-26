@@ -17751,6 +17751,33 @@ const syncOwnedResourceToSignals = (
 
 // Global signal registry for route template detection
 const globalSignalRegistry = new Map();
+
+// The values some states are about to hold, answered in place of what they
+// hold for the length of one readStateAsIf.
+let valuesAsIf = null;
+/**
+ * Runs `read` as if each state in `values` held the value given for it: the
+ * address a press is about to write, read before it is written. Nothing is
+ * written, so whoever watches those states hears nothing, and `read`
+ * subscribes to nothing.
+ *
+ * Only a read of the state itself is answered this way. A `computed` derived
+ * from one answers what it last computed — or, evaluated for the first time
+ * inside `read`, caches a value derived from this answer: `read` reads the
+ * states it depends on directly (a route action's params do).
+ *
+ * @param {Map<import("@preact/signals").Signal, any>} values
+ * @param {() => any} read
+ */
+const readStateAsIf = (values, read) => {
+  const previous = valuesAsIf;
+  valuesAsIf = values;
+  try {
+    return untracked(read);
+  } finally {
+    valuesAsIf = previous;
+  }
+};
 let signalIdCounter = 0;
 const generateSignalId = () => {
   const id = signalIdCounter++;
@@ -18074,6 +18101,9 @@ const stateSignal = (defaultValue, options = {}) => {
   const valueDescriptor = Object.getOwnPropertyDescriptor(signalProto, "value");
   Object.defineProperty(preactSignal, "value", {
     get() {
+      if (valuesAsIf !== null && valuesAsIf.has(preactSignal)) {
+        return valuesAsIf.get(preactSignal);
+      }
       return valueDescriptor.get.call(preactSignal);
     },
     set(newValue) {
@@ -26332,7 +26362,8 @@ const route = (
   };
   // Asks ahead of the arrival for what this route's actions ask without the
   // address — a page's code, a read without params (see routeAction). An
-  // action keyed by a param waits for the arrival: a prefetch has no address.
+  // action keyed by a param waits for the arrival: a prefetch has no address
+  // (preloadState is the one that has one).
   route.preload = () => {
     const preloadSet = routePreloadMap.get(route);
     if (!preloadSet) {
@@ -26896,6 +26927,40 @@ const preloadUrl = (url) => {
     const { routePattern } = getRoutePrivateProperties(route);
     if (routePattern.applyOn(url)) {
       route.preload();
+    }
+  }
+};
+
+const routeStatePreloadMap = new WeakMap();
+const registerRouteStatePreload = (route, preload) => {
+  let preloadSet = routeStatePreloadMap.get(route);
+  if (!preloadSet) {
+    preloadSet = new Set();
+    routeStatePreloadMap.set(route, preloadSet);
+  }
+  preloadSet.add(preload);
+};
+/**
+ * Preloads what the routes one is on will ask for once `signal` holds
+ * `value`: the address a popup's opening is about to write (see
+ * open_controller.js), known at the press that opens it. Only the routes
+ * matching now are asked — writing a state keeps one on the same page.
+ */
+const preloadState = (signal, value) => {
+  if (!activeRouteSet) {
+    return;
+  }
+  const values = new Map([[signal, value]]);
+  for (const route of activeRouteSet) {
+    if (!route.matchingSignal.peek()) {
+      continue;
+    }
+    const preloadSet = routeStatePreloadMap.get(route);
+    if (!preloadSet) {
+      continue;
+    }
+    for (const preload of preloadSet) {
+      preload(values);
     }
   }
 };
@@ -33880,10 +33945,14 @@ const writeCover = (edge, element, size) => {
  *   the address, which is also what makes it worth fetching AHEAD of the
  *   arrival: a link to the route preruns it when the pointer or the focus
  *   reaches the link (see docs/dynamic_import.md). An action whose params
- *   come from the address is never prefetched — a prefetch has no address.
+ *   come from the address is not prefetched by a link — a link's prefetch has
+ *   no address. It is by the press that opens a popup bound to a state these
+ *   params read: that address is the current one with the state set to the
+ *   popup's value (see `prefetch` on Button).
  * @param {object} [options]
- * @param {boolean} [options.prefetch=true] - `false` keeps a param-less action
- *   from being prerun on intent, when the read is not worth a hover.
+ * @param {boolean} [options.prefetch=true] - `false` keeps the action from
+ *   being prerun ahead of what asks for it, when the read is not worth a
+ *   hover or a press that may not end in an opening.
  */
 const routeAction = (
   routeOrRoutes,
@@ -33912,27 +33981,47 @@ const routeAction = (
     },
     options,
   );
-  if (!paramsEffect && prefetch) {
+  if (prefetch) {
     for (const route of routes) {
-      registerRoutePreload(route, () => {
-        prefetchParamless(action);
-      });
+      if (paramsEffect) {
+        registerRouteStatePreload(route, (values) => {
+          prefetchAsIf(action, paramsEffect, values);
+        });
+      } else {
+        registerRoutePreload(route, () => {
+          prerunAhead(action.bindParams(true));
+        });
+      }
     }
   }
   return actionBoundToRoute;
 };
 
-// The instance the effect above runs on the match is the one bound to `true`
-// (the default params), so a prerun here is what the arrival promotes to a
-// run. A prefetch that fails is not reported: nothing on screen asked for it,
-// and the failure stays on the instance, where a run asks again — a FAILED
-// action is run, only RUNNING and COMPLETED are left alone — and the arrival
-// shows its own. It is left FAILED on purpose, not reset: the press that
-// brings the arrival also focuses the link, so a prerun can be in flight when
-// the arrival promotes it, and a reset landing after that would pull the
-// answer from under the page that is reading it.
-const prefetchParamless = (action) => {
-  const instance = action.bindParams(true);
+// The params as they will read once the states hold what they are about to
+// (see readStateAsIf), prerun only when that changes them: params the state
+// leaves alone are the ones the action already runs on — or is meant not to,
+// and a prerun would retry a FAILED one behind the screen's back.
+const prefetchAsIf = (action, paramsEffect, values) => {
+  const params = readStateAsIf(values, paramsEffect);
+  if (!params) {
+    return;
+  }
+  if (compareTwoJsValues(params, untracked(paramsEffect))) {
+    return;
+  }
+  prerunAhead(action.bindParams(params));
+};
+
+// The instance prerun is the one the arrival runs on — the one bound to the
+// params it reads (`true` for a param-less action) — so the arrival promotes
+// it to a run. A prefetch that fails is not reported: nothing on screen asked
+// for it, and the failure stays on the instance, where a run asks again — a
+// FAILED action is run, only RUNNING and COMPLETED are left alone — and the
+// arrival shows its own. It is left FAILED on purpose, not reset: a prerun is
+// often still in flight when the arrival promotes it (the press that brings
+// the arrival focuses the link, or is the one that asked), and a reset
+// landing after that would pull the answer from under the page reading it.
+const prerunAhead = (instance) => {
   let result;
   try {
     result = instance.prerun({ reason: "intent" });
@@ -34930,6 +35019,30 @@ registerNaviCommand("--navi-open", (source, event, { anchor, value } = {}) => {
     },
   };
 });
+/**
+ * Tells the popup a source opens that a press on it has started, ahead of the
+ * release that runs the command: what the opening will read can be asked for
+ * now (see open_controller.js). A press rather than a hover, because what
+ * that reads is keyed by the popup — one sheet per card — and a pointer
+ * crossing a list of cards has chosen none of them; on a touch screen the
+ * press is the first thing the finger says anyway.
+ *
+ * The target is found the way --navi-open finds it, but silently: nothing
+ * runs here, and a source with no target says so at the release.
+ */
+const announceOpeningPress = (source, command) => {
+  if (command !== "--navi-open" && command !== "--navi-toggle") {
+    return;
+  }
+  const commandFor = source.getAttribute("commandfor");
+  const target = commandFor
+    ? document.getElementById(commandFor)
+    : resolveExplicitTarget(source) || resolveClosestExpandable(source);
+  if (!target) {
+    return;
+  }
+  dispatchCustomEvent(target, "navi_open_press");
+};
 // "--navi-close:all" closes every expandable above the source, nearest first —
 // a link leaving from a badge shown over a sheet leaves both. A surface that
 // refuses (a form asking about its changes) keeps what is above it open too:
@@ -36383,7 +36496,7 @@ const writeOpenedInSignal = (signal, opened, event, popupValue) => {
     return;
   }
   if (opened) {
-    signal.value = popupValue === undefined ? true : popupValue;
+    signal.value = readOpenValue(popupValue);
     return;
   }
   const closedValue = readClosedValue(signalValue);
@@ -36414,6 +36527,9 @@ const readOpened = (signalValue, popupValue) => {
     );
   }
   return signalValue === popupValue;
+};
+const readOpenValue = (popupValue) => {
+  return popupValue === undefined ? true : popupValue;
 };
 const readClosedValue = (openSignalValue) => {
   return openSignalValue === true ? false : undefined;
@@ -36488,6 +36604,29 @@ const useOpenPropsEffectOnOpenController = (
           }
         }
       : null;
+  // A press that will open this popup has started (see announceOpeningPress
+  // in commands.js). What the opening writes — the popup's value, in its
+  // signal — is known before the release, so what the screen reads off it is
+  // asked for now (see preloadState).
+  useEffect(() => {
+    if (!signal) {
+      return undefined;
+    }
+    const element = openController.getElement?.();
+    if (!element) {
+      return undefined;
+    }
+    const onOpenPress = () => {
+      if (openController.opened) {
+        return;
+      }
+      preloadState(signal, readOpenValue(value));
+    };
+    element.addEventListener("navi_open_press", onOpenPress);
+    return () => {
+      element.removeEventListener("navi_open_press", onOpenPress);
+    };
+  }, [signal, value]);
   // Tracks whether the effect below has ever run before — only the very
   // first run gets the "mount already open" treatment (`open` truthy from
   // the start, or the uncontrolled, mount-only `defaultOpen`); every
@@ -37182,17 +37321,30 @@ const armOutsidePressClose = (
  * content ahead of the click that will open it. Deferring the build to the
  * opening puts its whole cost in the frame right after the click — the frame
  * where a delay is felt hardest — while the ~100-300ms between hovering a
- * trigger and pressing it are free. The warming render is asynchronous
- * (batched, not flushed): nothing here needs the content in the DOM before
- * the click, only before the open that follows it.
+ * trigger and pressing it are free. The warming render starts at the frame
+ * after the one that follows the intent: nothing here needs the content in the
+ * DOM before the click, only before the open that follows it, and on a touch
+ * screen `pointerenter` arrives together with the `pointerdown` — a build
+ * started there would hold back the frame that shows the press. Two animation
+ * frames, never a timeout: browsers hold timers back while a finger is down,
+ * and a timeout started by the press fires at its release, on top of the click.
  *
- * "while-opened" content is never warmed. That mode promises two things
- * warming would break: the content is built at open time (so a `defaultValue`
- * read at build time is fresh, not seeded at pointer-enter time), and it is
- * only ever mounted between an open and a close — unmounting happens on close,
- * so a warmed popup that never opens would keep its content in the document
- * indefinitely. Callers lean on that guarantee (e.g. several pickers sharing
- * one set of content ids because only one content exists at a time).
+ * "while-opened" content is warmed by a press on the anchor, never by a hover
+ * or a focus. That mode promises content built fresh for the gesture that
+ * opens it, and mounted only while that gesture and its opening last: callers
+ * lean on it (several pickers sharing one set of content ids, because only one
+ * content exists at a time). A pointer crossing four anchors would build four
+ * contents; a press is the start of one opening. So the press builds it, and
+ * the press ending without an open throws it away — its click reaching the
+ * document with the popup still closed, no click coming after the release,
+ * the browser taking the gesture (`pointercancel`), or the next press
+ * starting, before any of its own handlers run: one press at a time holds a
+ * content. A keyboard opening
+ * builds at open time, as without warming. What this gives up: a press-warmed
+ * content is built before `onOpen` runs. The popups seeding their content from
+ * `onOpen` are opened ON something by a command, whose press is not on their
+ * anchor, so they are not warmed; one pressed on its own anchor that still
+ * seeds from `onOpen` reads the value from before it.
  */
 
 
@@ -37234,26 +37386,35 @@ const usePopupContentMount = (
   { mount = MOUNT_DEFAULT, anchor },
 ) => {
   const mountedAlways = mount === "always";
-  const [contentMounted, setContentMounted] = useState(
+  const [contentMounted, setContentMountedState] = useState(
     () => mountedAlways || openController.opened,
   );
-  openController.mountContent = contentMounted
-    ? null
-    : () => {
-        const popupElement = ref?.current;
-        if (popupElement) {
-          popupsMountingContentForOpen.add(popupElement);
-        }
-        try {
-          flushSyncRendering(() => {
-            setContentMounted(true);
-          });
-        } finally {
-          if (popupElement) {
-            popupsMountingContentForOpen.delete(popupElement);
-          }
-        }
-      };
+  // What was last asked for, ahead of the render that performs it: an open
+  // landing in between (a press-warmed content given up just before the open
+  // that wanted it) must still find it has to build.
+  const contentMountedRef = useRef(contentMounted);
+  const setContentMounted = (value) => {
+    contentMountedRef.current = value;
+    setContentMountedState(value);
+  };
+  openController.mountContent = () => {
+    if (contentMountedRef.current) {
+      return;
+    }
+    const popupElement = ref?.current;
+    if (popupElement) {
+      popupsMountingContentForOpen.add(popupElement);
+    }
+    try {
+      flushSyncRendering(() => {
+        setContentMounted(true);
+      });
+    } finally {
+      if (popupElement) {
+        popupsMountingContentForOpen.delete(popupElement);
+      }
+    }
+  };
   openController.unmountContent =
     mount === "while-opened"
       ? () => {
@@ -37291,39 +37452,138 @@ const usePopupContentMount = (
       cancelIdle(idleId);
     };
   }, [mount, contentMounted]);
-  // Warm on intent (see the top comment; "while-opened" is excluded there).
-  // The anchor accepts the same shapes Popover resolves at open time — a
-  // string id, a ref, an element — but is resolved here at effect time: an id
-  // that matches nothing yet simply doesn't warm, the open still mounts the
-  // content like it always does.
+  // Warm on intent (see the top comment).
   useEffect(() => {
     if (contentMounted || !anchor || mount === "while-opened") {
       return undefined;
     }
-    const anchorElement =
-      typeof anchor === "string"
-        ? document.getElementById(anchor)
-        : // A ref is unwrapped even when it holds nothing: an expandable with
-          // no UI part hands an empty ref over, and the ref object itself is
-          // truthy — it would reach addEventListener below and throw.
-          "current" in anchor
-          ? anchor.current
-          : anchor;
+    const anchorElement = resolveAnchorElement(anchor);
     if (!anchorElement) {
       return undefined;
     }
+    let cancelWarm = null;
     const warm = () => {
-      setContentMounted(true);
+      if (cancelWarm) {
+        return;
+      }
+      cancelWarm = requestFrameAfterNext(() => {
+        setContentMounted(true);
+      });
     };
     anchorElement.addEventListener("pointerenter", warm);
     anchorElement.addEventListener("focusin", warm);
     return () => {
+      cancelWarm?.();
       anchorElement.removeEventListener("pointerenter", warm);
       anchorElement.removeEventListener("focusin", warm);
     };
   }, [contentMounted, anchor, mount]);
+  // Warm on the press, for "while-opened" (see the top comment). Listening for
+  // as long as the anchor is there, not only while the content is unmounted:
+  // the press that throws a warmed content away can be a new press on this
+  // same anchor, and it must warm again.
+  useEffect(() => {
+    if (!anchor || mount !== "while-opened") {
+      return undefined;
+    }
+    const anchorElement = resolveAnchorElement(anchor);
+    if (!anchorElement) {
+      return undefined;
+    }
+    let stopPressWarm = null;
+    const onPointerDown = (pointerdownEvent) => {
+      if (pointerdownEvent.button !== 0 || contentMountedRef.current) {
+        return;
+      }
+      const cancelBuild = requestFrameAfterNext(() => {
+        setContentMounted(true);
+      });
+      const stopWatching = watchPressEnd(() => {
+        stopPressWarm = null;
+        cancelBuild();
+        if (!openController.opened) {
+          setContentMounted(false);
+        }
+      });
+      stopPressWarm = () => {
+        cancelBuild();
+        stopWatching();
+      };
+    };
+    anchorElement.addEventListener("pointerdown", onPointerDown);
+    return () => {
+      stopPressWarm?.();
+      anchorElement.removeEventListener("pointerdown", onPointerDown);
+    };
+  }, [anchor, mount]);
 
   return contentMounted;
+};
+
+// The anchor accepts the same shapes Popover resolves at open time — a string
+// id, a ref, an element — but is resolved at effect time: an id that matches
+// nothing yet simply doesn't warm, the open still mounts the content.
+const resolveAnchorElement = (anchor) => {
+  if (typeof anchor === "string") {
+    return document.getElementById(anchor);
+  }
+  // A ref is unwrapped even when it holds nothing: an expandable with no UI
+  // part hands an empty ref over, and the ref object itself is truthy — it
+  // would reach addEventListener and throw.
+  if ("current" in anchor) {
+    return anchor.current;
+  }
+  return anchor;
+};
+
+// The next frame paints what the input just changed (the pressed trigger); the
+// callback runs at the start of the one after.
+const requestFrameAfterNext = (callback) => {
+  let frame = requestAnimationFrame(() => {
+    frame = requestAnimationFrame(callback);
+  });
+  return () => {
+    cancelAnimationFrame(frame);
+  };
+};
+
+// How long the click of a released press may take to arrive. Nothing tells a
+// page that a release brings no click — a press that became a drag has its
+// click swallowed (suppressClickAfterGesture in @jsenv/dom) — so past this the
+// press is taken to have ended without one. Longer than the 300ms a browser
+// still waits before the click of a tap on a page not sized for phones.
+const PRESS_CLICK_WAIT_MS = 500;
+
+// Installed during the press's own pointerdown: the capture listeners below
+// only hear the presses after it.
+const watchPressEnd = (onEnd) => {
+  let timeout;
+  const stop = () => {
+    clearTimeout(timeout);
+    document.removeEventListener("click", onClick);
+    document.removeEventListener("pointerup", onPointerUp, { capture: true });
+    document.removeEventListener("pointercancel", end, { capture: true });
+    document.removeEventListener("pointerdown", end, { capture: true });
+  };
+  const end = () => {
+    stop();
+    onEnd();
+  };
+  // Bubble phase, on the document: every click handler that could open the
+  // popup has run by then.
+  const onClick = (clickEvent) => {
+    if (isPressDrivenClick(clickEvent)) {
+      end();
+    }
+  };
+  const onPointerUp = () => {
+    timeout = setTimeout(end, PRESS_CLICK_WAIT_MS);
+  };
+  document.addEventListener("click", onClick);
+  document.addEventListener("pointerup", onPointerUp, { capture: true });
+  document.addEventListener("pointercancel", end, { capture: true });
+  document.addEventListener("pointerdown", end, { capture: true });
+  return stop;
 };
 
 /**
@@ -45966,6 +46226,31 @@ const usePreloadOnIntent = (ref, href, prefetch = true) => {
 };
 
 /**
+ * What a popup's opening will read, asked for when the press on the element
+ * whose command opens it starts (see announceOpeningPress): the popup, the
+ * value it opens on and so the address it will write are all known before
+ * the release.
+ */
+const usePreloadOpeningOnPress = (ref, command, prefetch = true) => {
+  useEffect(() => {
+    if (!prefetch || !command) {
+      return undefined;
+    }
+    const element = ref.current;
+    if (!element) {
+      return undefined;
+    }
+    const onPointerDown = () => {
+      announceOpeningPress(element, command);
+    };
+    element.addEventListener("pointerdown", onPointerDown);
+    return () => {
+      element.removeEventListener("pointerdown", onPointerDown);
+    };
+  }, [ref, command, prefetch]);
+};
+
+/**
  * Hook that reactively checks if a URL is visited.
  * Re-renders when the visited URL set changes.
  *
@@ -49965,7 +50250,8 @@ const useExpandableContext = partName => {
  *   content — and rebuilds it from scratch on every expansion. Under the
  *   other three, intent on the UI part (pointer entering it, focus landing in
  *   it) builds the content ahead of the click; `"while-opened"` content is
- *   never warmed, it is built at the open.
+ *   built by a press on it only, and thrown away if that press does not
+ *   expand it.
  */
 const Expandable = props => {
   import.meta.css = [css$R, "@jsenv/navi/src/control/expandable/expandable.jsx"];
@@ -51277,6 +51563,9 @@ const ButtonUI = props => {
   // Nothing to prefetch on the way to another document: the routes do not
   // lead there.
   usePreloadOnIntent(ref, href, isDocument ? false : prefetch);
+  // A press the button refuses opens nothing: nothing to ask ahead for.
+  const refusesPress = basePseudoState[":read-only"] || basePseudoState[":disabled"] || loading;
+  usePreloadOpeningOnPress(ref, props.command, prefetch && !refusesPress);
   useAccentColorAttributes(ref, null, {
     elementSelector: visualSelector
   });
@@ -51768,8 +52057,11 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  *   pointer or the focus arrives, ahead of the press (see
  *   docs/dynamic_import.md): the route actions that ask nothing of the
  *   address — a page's code, a read without params — are prerun; one keyed by
- *   a param waits for the arrival. `false` for a destination not worth
- *   fetching on a hover.
+ *   a param waits for the arrival. With a `--navi-open`/`--navi-toggle`
+ *   command instead, the press — not the hover: what it asks is keyed by the
+ *   popup — preruns the route actions whose params the popup's opening
+ *   changes, read as if its `signal` held its `value`. `false` for a
+ *   destination not worth fetching ahead.
  * @param {boolean} [pressableDuringRouteTransition] Keep answering presses
  *   while a route transition plays: what a movement photographs goes deaf to
  *   the pointer for its whole length, and the door that opened the page — a
@@ -62537,9 +62829,10 @@ const css$E = /* css */`
  *   the cost on the critical render. `"while-opened"` throws them away once
  *   the popup has finished closing, for content whose fresh state is its
  *   initial state: an uncontrolled field seeded from a `defaultValue` that
- *   changed while the popup was closed. Whatever the value, intent on the
- *   anchor (pointer entering it, focus landing in it) builds the content
- *   ahead of the click.
+ *   changed while the popup was closed. Intent on the anchor (pointer
+ *   entering it, focus landing in it) builds the content ahead of the click;
+ *   under `"while-opened"`, only a press on it does, and a press that does not
+ *   open the popup throws it away.
  * @param {import("ignore:preact").ComponentChildren} props.children
  */
 const Dialog = props => {
@@ -64217,9 +64510,10 @@ const css$D = /* css */`
  *   the cost on the critical render. `"while-opened"` throws them away once
  *   the popup has finished closing, for content whose fresh state is its
  *   initial state: an uncontrolled field seeded from a `defaultValue` that
- *   changed while the popup was closed. Whatever the value, intent on the
- *   anchor (pointer entering it, focus landing in it) builds the content
- *   ahead of the click.
+ *   changed while the popup was closed. Intent on the anchor (pointer
+ *   entering it, focus landing in it) builds the content ahead of the click;
+ *   under `"while-opened"`, only a press on it does, and a press that does not
+ *   open the popup throws it away.
  * @param {import("ignore:preact").ComponentChildren} props.children
  */
 const Popover = props => {
@@ -78354,6 +78648,9 @@ const css$n = /* css */`.navi_split_button {
  *   defaultValue?: any,
  *   label?: import("ignore:preact").ComponentChildren,
  *   action?: (value: any, event: Event) => void | Promise<void>,
+ *   command?: string,
+ *   commandFor?: string,
+ *   prefetch?: boolean,
  *   onValueChange?: (value: any, event: Event) => void,
  *   chooseEffect?: "select" | "run",
  *   menuLabel?: string,
@@ -78407,6 +78704,12 @@ const css$n = /* css */`.navi_split_button {
  *   entry given. Pressed on the button it is the entry the button stands for;
  *   with `chooseEffect="run"` it is also the entry just chosen. Awaited: the
  *   whole split button is busy until it settles.
+ * @param {string} [command] What a press on the button does once its `action`
+ *   is done, as on a `<Button>` (with `commandFor`, and `command-value` when
+ *   what the command is about is not the entry the button stands for). A
+ *   split button whose button opens a popup says it here rather than from its
+ *   `action`: the press is then read as an opening before it runs, and asks
+ *   ahead for what the popup's opening reads (see `prefetch` on Button).
  * @param {"select"|"run"} [chooseEffect="select"] What choosing an entry does.
  *   "select" hands the button that entry, to be run by a press on it — for
  *   something one does again and again, where the last choice is the likely
@@ -78448,6 +78751,10 @@ const SplitButton = props => {
     defaultValue,
     label,
     action,
+    command,
+    commandFor,
+    "command-value": commandValue,
+    prefetch,
     onValueChange,
     chooseEffect = "select",
     menuLabel = naviI18n("button.more_actions"),
@@ -78541,6 +78848,10 @@ const SplitButton = props => {
         id: idResolved,
         value: valueResolved,
         action: actionResolved,
+        command: command,
+        commandFor: commandFor,
+        "command-value": commandValue,
+        prefetch: prefetch,
         ...halfProps,
         children: label === undefined ? optionShown?.label : label
       }), jsxs("div", {

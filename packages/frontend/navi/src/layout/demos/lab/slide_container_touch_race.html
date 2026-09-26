@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Slide container — touch race (lab)</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: system-ui, sans-serif;
+      }
+      .zone {
+        height: 400px;
+        border-bottom: 4px solid black;
+      }
+      .face {
+        display: flex;
+        height: 100%;
+        align-items: center;
+        justify-content: center;
+        font-size: 48px;
+      }
+      .tall {
+        height: 1200px;
+        padding: 16px;
+        font-size: 32px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { SlideContainer, Slide } from "@jsenv/navi";
+
+      const COLORS = ["#fca5a5", "#fdba74", "#86efac", "#93c5fd", "#c4b5fd"];
+
+      const App = () => (
+        <>
+          {/* the trophy gallery: slides that do not scroll */}
+          <div className="zone" id="gallery">
+            <SlideContainer layout="row" expandY>
+              {COLORS.map((color, index) => (
+                <Slide key={color} id={`gallery_${index}`}>
+                  <div className="face" style={{ background: color }}>
+                    {index}
+                  </div>
+                </Slide>
+              ))}
+            </SlideContainer>
+          </div>
+          {/* the settings panel: slides that scroll vertically */}
+          <div className="zone" id="scrolling">
+            <SlideContainer layout="row" expandY>
+              {COLORS.map((color, index) => (
+                <Slide key={color} id={`scrolling_${index}`} overflowY="auto">
+                  <div className="tall" style={{ background: color }}>
+                    {index}
+                  </div>
+                </Slide>
+              ))}
+            </SlideContainer>
+          </div>
+          <div style={{ height: "1500px" }}></div>
+        </>
+      );
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>

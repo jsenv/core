@@ -146,8 +146,11 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  *   pointer or the focus arrives, ahead of the press (see
  *   docs/dynamic_import.md): the route actions that ask nothing of the
  *   address — a page's code, a read without params — are prerun; one keyed by
- *   a param waits for the arrival. `false` for a destination not worth
- *   fetching on a hover.
+ *   a param waits for the arrival. With a `--navi-open`/`--navi-toggle`
+ *   command instead, the press — not the hover: what it asks is keyed by the
+ *   popup — preruns the route actions whose params the popup's opening
+ *   changes, read as if its `signal` held its `value`. `false` for a
+ *   destination not worth fetching ahead.
  * @param {boolean} [pressableDuringRouteTransition] Keep answering presses
  *   while a route transition plays: what a movement photographs goes deaf to
  *   the pointer for its whole length, and the door that opened the page — a

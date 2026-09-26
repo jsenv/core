@@ -146,8 +146,9 @@ by the code arriving.
 `prefetch={false}` opts one out. The url is matched against the routes on
 screen, a section and the page inside it alike, and what is prerun is **every
 route action that asks nothing of the address** — a page's code, a read
-without params. An action whose params come from the address is never
-prefetched: a prefetch has no address, the id may still be chosen.
+without params. An action whose params come from the address is not
+prefetched by a link: a link's prefetch has no address, the id may still be
+chosen.
 `routeAction(route, action, undefined, { prefetch: false })` keeps a
 param-less read that is not worth a hover out of it.
 

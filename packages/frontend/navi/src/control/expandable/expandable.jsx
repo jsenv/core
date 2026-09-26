@@ -389,7 +389,8 @@ const useExpandableContext = (partName) => {
  *   content — and rebuilds it from scratch on every expansion. Under the
  *   other three, intent on the UI part (pointer entering it, focus landing in
  *   it) builds the content ahead of the click; `"while-opened"` content is
- *   never warmed, it is built at the open.
+ *   built by a press on it only, and thrown away if that press does not
+ *   expand it.
  */
 export const Expandable = (props) => {
   import.meta.css = css;

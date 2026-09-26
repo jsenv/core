@@ -1,5 +1,6 @@
 import { useEffect } from "preact/hooks";
 
+import { announceOpeningPress } from "../control/commands.js";
 import { preloadUrl } from "./route.js";
 
 /**
@@ -28,4 +29,29 @@ export const usePreloadOnIntent = (ref, href, prefetch = true) => {
       element.removeEventListener("focusin", preload);
     };
   }, [ref, href, prefetch]);
+};
+
+/**
+ * What a popup's opening will read, asked for when the press on the element
+ * whose command opens it starts (see announceOpeningPress): the popup, the
+ * value it opens on and so the address it will write are all known before
+ * the release.
+ */
+export const usePreloadOpeningOnPress = (ref, command, prefetch = true) => {
+  useEffect(() => {
+    if (!prefetch || !command) {
+      return undefined;
+    }
+    const element = ref.current;
+    if (!element) {
+      return undefined;
+    }
+    const onPointerDown = () => {
+      announceOpeningPress(element, command);
+    };
+    element.addEventListener("pointerdown", onPointerDown);
+    return () => {
+      element.removeEventListener("pointerdown", onPointerDown);
+    };
+  }, [ref, command, prefetch]);
 };

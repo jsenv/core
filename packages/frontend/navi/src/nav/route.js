@@ -145,7 +145,8 @@ export const route = (
   };
   // Asks ahead of the arrival for what this route's actions ask without the
   // address — a page's code, a read without params (see routeAction). An
-  // action keyed by a param waits for the arrival: a prefetch has no address.
+  // action keyed by a param waits for the arrival: a prefetch has no address
+  // (preloadState is the one that has one).
   route.preload = () => {
     const preloadSet = routePreloadMap.get(route);
     if (!preloadSet) {
@@ -756,6 +757,40 @@ export const preloadUrl = (url) => {
     const { routePattern } = getRoutePrivateProperties(route);
     if (routePattern.applyOn(url)) {
       route.preload();
+    }
+  }
+};
+
+const routeStatePreloadMap = new WeakMap();
+export const registerRouteStatePreload = (route, preload) => {
+  let preloadSet = routeStatePreloadMap.get(route);
+  if (!preloadSet) {
+    preloadSet = new Set();
+    routeStatePreloadMap.set(route, preloadSet);
+  }
+  preloadSet.add(preload);
+};
+/**
+ * Preloads what the routes one is on will ask for once `signal` holds
+ * `value`: the address a popup's opening is about to write (see
+ * open_controller.js), known at the press that opens it. Only the routes
+ * matching now are asked — writing a state keeps one on the same page.
+ */
+export const preloadState = (signal, value) => {
+  if (!activeRouteSet) {
+    return;
+  }
+  const values = new Map([[signal, value]]);
+  for (const route of activeRouteSet) {
+    if (!route.matchingSignal.peek()) {
+      continue;
+    }
+    const preloadSet = routeStatePreloadMap.get(route);
+    if (!preloadSet) {
+      continue;
+    }
+    for (const preload of preloadSet) {
+      preload(values);
     }
   }
 };

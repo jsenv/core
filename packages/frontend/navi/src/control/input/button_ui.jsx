@@ -4,7 +4,10 @@ import { Box, BoxForwardedPropsContext } from "../../box/box.jsx";
 import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
 import { useDocumentUrl } from "../../nav/browser_integration/document_url_signal.js";
 import { getHrefTargetInfo } from "../../nav/browser_integration/href_target_info.js";
-import { usePreloadOnIntent } from "../../nav/use_preload_on_intent.js";
+import {
+  usePreloadOnIntent,
+  usePreloadOpeningOnPress,
+} from "../../nav/use_preload_on_intent.js";
 import { LINK_DOCUMENT_ATTRIBUTE } from "../../nav/browser_integration/link_document.js";
 import { LINK_REPLACE_ATTRIBUTE } from "../../nav/browser_integration/link_replace.js";
 import { PRESSABLE_ATTRIBUTE } from "../../nav/transition_press.js";
@@ -576,6 +579,10 @@ export const ButtonUI = (props) => {
   // Nothing to prefetch on the way to another document: the routes do not
   // lead there.
   usePreloadOnIntent(ref, href, isDocument ? false : prefetch);
+  // A press the button refuses opens nothing: nothing to ask ahead for.
+  const refusesPress =
+    basePseudoState[":read-only"] || basePseudoState[":disabled"] || loading;
+  usePreloadOpeningOnPress(ref, props.command, prefetch && !refusesPress);
   useAccentColorAttributes(ref, null, {
     elementSelector: visualSelector,
   });

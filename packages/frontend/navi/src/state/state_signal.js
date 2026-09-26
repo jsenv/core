@@ -1,10 +1,37 @@
 import { createValidity } from "@jsenv/validity";
-import { computed, effect, signal } from "@preact/signals";
+import { computed, effect, signal, untracked } from "@preact/signals";
 
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 
 // Global signal registry for route template detection
 export const globalSignalRegistry = new Map();
+
+// The values some states are about to hold, answered in place of what they
+// hold for the length of one readStateAsIf.
+let valuesAsIf = null;
+/**
+ * Runs `read` as if each state in `values` held the value given for it: the
+ * address a press is about to write, read before it is written. Nothing is
+ * written, so whoever watches those states hears nothing, and `read`
+ * subscribes to nothing.
+ *
+ * Only a read of the state itself is answered this way. A `computed` derived
+ * from one answers what it last computed — or, evaluated for the first time
+ * inside `read`, caches a value derived from this answer: `read` reads the
+ * states it depends on directly (a route action's params do).
+ *
+ * @param {Map<import("@preact/signals").Signal, any>} values
+ * @param {() => any} read
+ */
+export const readStateAsIf = (values, read) => {
+  const previous = valuesAsIf;
+  valuesAsIf = values;
+  try {
+    return untracked(read);
+  } finally {
+    valuesAsIf = previous;
+  }
+};
 let signalIdCounter = 0;
 const generateSignalId = () => {
   const id = signalIdCounter++;
@@ -359,6 +386,9 @@ export const stateSignal = (defaultValue, options = {}) => {
   const valueDescriptor = Object.getOwnPropertyDescriptor(signalProto, "value");
   Object.defineProperty(preactSignal, "value", {
     get() {
+      if (valuesAsIf !== null && valuesAsIf.has(preactSignal)) {
+        return valuesAsIf.get(preactSignal);
+      }
       return valueDescriptor.get.call(preactSignal);
     },
     set(newValue) {

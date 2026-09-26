@@ -5,7 +5,7 @@ import {
   isPressDrivenClick,
   isTouchDrivenEvent,
 } from "@jsenv/dom";
-import { useLayoutEffect, useRef } from "preact/hooks";
+import { useEffect, useLayoutEffect, useRef } from "preact/hooks";
 
 import { useDebugInteraction } from "@jsenv/navi/src/navi_debug.jsx";
 import { canNavBackSignal } from "../nav/browser_integration/document_back_and_forward.js";
@@ -14,6 +14,7 @@ import {
   useNavState,
 } from "../nav/browser_integration/browser_integration.js";
 import { documentUrlSignal } from "../nav/browser_integration/document_url_signal.js";
+import { preloadState } from "../nav/route.js";
 import {
   warnSignalAsState,
   warnSignalCollision,
@@ -747,7 +748,7 @@ const writeOpenedInSignal = (signal, opened, event, popupValue) => {
     return;
   }
   if (opened) {
-    signal.value = popupValue === undefined ? true : popupValue;
+    signal.value = readOpenValue(popupValue);
     return;
   }
   const closedValue = readClosedValue(signalValue);
@@ -778,6 +779,9 @@ const readOpened = (signalValue, popupValue) => {
     );
   }
   return signalValue === popupValue;
+};
+const readOpenValue = (popupValue) => {
+  return popupValue === undefined ? true : popupValue;
 };
 const readClosedValue = (openSignalValue) => {
   return openSignalValue === true ? false : undefined;
@@ -865,6 +869,29 @@ export const useOpenPropsEffectOnOpenController = (
           }
         }
       : null;
+  // A press that will open this popup has started (see announceOpeningPress
+  // in commands.js). What the opening writes — the popup's value, in its
+  // signal — is known before the release, so what the screen reads off it is
+  // asked for now (see preloadState).
+  useEffect(() => {
+    if (!signal) {
+      return undefined;
+    }
+    const element = openController.getElement?.();
+    if (!element) {
+      return undefined;
+    }
+    const onOpenPress = () => {
+      if (openController.opened) {
+        return;
+      }
+      preloadState(signal, readOpenValue(value));
+    };
+    element.addEventListener("navi_open_press", onOpenPress);
+    return () => {
+      element.removeEventListener("navi_open_press", onOpenPress);
+    };
+  }, [signal, value]);
   // Tracks whether the effect below has ever run before — only the very
   // first run gets the "mount already open" treatment (`open` truthy from
   // the start, or the uncontrolled, mount-only `defaultOpen`); every

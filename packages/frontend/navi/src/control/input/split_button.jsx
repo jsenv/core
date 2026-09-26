@@ -61,6 +61,9 @@ const css = /* css */ `
  *   defaultValue?: any,
  *   label?: import("preact").ComponentChildren,
  *   action?: (value: any, event: Event) => void | Promise<void>,
+ *   command?: string,
+ *   commandFor?: string,
+ *   prefetch?: boolean,
  *   onValueChange?: (value: any, event: Event) => void,
  *   chooseEffect?: "select" | "run",
  *   menuLabel?: string,
@@ -114,6 +117,12 @@ const css = /* css */ `
  *   entry given. Pressed on the button it is the entry the button stands for;
  *   with `chooseEffect="run"` it is also the entry just chosen. Awaited: the
  *   whole split button is busy until it settles.
+ * @param {string} [command] What a press on the button does once its `action`
+ *   is done, as on a `<Button>` (with `commandFor`, and `command-value` when
+ *   what the command is about is not the entry the button stands for). A
+ *   split button whose button opens a popup says it here rather than from its
+ *   `action`: the press is then read as an opening before it runs, and asks
+ *   ahead for what the popup's opening reads (see `prefetch` on Button).
  * @param {"select"|"run"} [chooseEffect="select"] What choosing an entry does.
  *   "select" hands the button that entry, to be run by a press on it — for
  *   something one does again and again, where the last choice is the likely
@@ -156,6 +165,10 @@ export const SplitButton = (props) => {
     defaultValue,
     label,
     action,
+    command,
+    commandFor,
+    "command-value": commandValue,
+    prefetch,
     onValueChange,
     chooseEffect = "select",
     menuLabel = naviI18n("button.more_actions"),
@@ -267,6 +280,10 @@ export const SplitButton = (props) => {
           id={idResolved}
           value={valueResolved}
           action={actionResolved}
+          command={command}
+          commandFor={commandFor}
+          command-value={commandValue}
+          prefetch={prefetch}
           {...halfProps}
         >
           {label === undefined ? optionShown?.label : label}

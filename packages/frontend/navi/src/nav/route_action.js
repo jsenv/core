@@ -1,8 +1,10 @@
-import { computed, signal } from "@preact/signals";
+import { computed, signal, untracked } from "@preact/signals";
 
 import { actionRunEffect } from "../action/action_run_effect.js";
 import { createAction } from "../action/actions.js";
-import { registerRoutePreload } from "./route.js";
+import { readStateAsIf } from "../state/state_signal.js";
+import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
+import { registerRoutePreload, registerRouteStatePreload } from "./route.js";
 
 /**
  * Binds an action to a route: it runs when the route matches, with the params
@@ -28,10 +30,14 @@ import { registerRoutePreload } from "./route.js";
  *   the address, which is also what makes it worth fetching AHEAD of the
  *   arrival: a link to the route preruns it when the pointer or the focus
  *   reaches the link (see docs/dynamic_import.md). An action whose params
- *   come from the address is never prefetched — a prefetch has no address.
+ *   come from the address is not prefetched by a link — a link's prefetch has
+ *   no address. It is by the press that opens a popup bound to a state these
+ *   params read: that address is the current one with the state set to the
+ *   popup's value (see `prefetch` on Button).
  * @param {object} [options]
- * @param {boolean} [options.prefetch=true] - `false` keeps a param-less action
- *   from being prerun on intent, when the read is not worth a hover.
+ * @param {boolean} [options.prefetch=true] - `false` keeps the action from
+ *   being prerun ahead of what asks for it, when the read is not worth a
+ *   hover or a press that may not end in an opening.
  */
 export const routeAction = (
   routeOrRoutes,
@@ -60,27 +66,47 @@ export const routeAction = (
     },
     options,
   );
-  if (!paramsEffect && prefetch) {
+  if (prefetch) {
     for (const route of routes) {
-      registerRoutePreload(route, () => {
-        prefetchParamless(action);
-      });
+      if (paramsEffect) {
+        registerRouteStatePreload(route, (values) => {
+          prefetchAsIf(action, paramsEffect, values);
+        });
+      } else {
+        registerRoutePreload(route, () => {
+          prerunAhead(action.bindParams(true));
+        });
+      }
     }
   }
   return actionBoundToRoute;
 };
 
-// The instance the effect above runs on the match is the one bound to `true`
-// (the default params), so a prerun here is what the arrival promotes to a
-// run. A prefetch that fails is not reported: nothing on screen asked for it,
-// and the failure stays on the instance, where a run asks again — a FAILED
-// action is run, only RUNNING and COMPLETED are left alone — and the arrival
-// shows its own. It is left FAILED on purpose, not reset: the press that
-// brings the arrival also focuses the link, so a prerun can be in flight when
-// the arrival promotes it, and a reset landing after that would pull the
-// answer from under the page that is reading it.
-const prefetchParamless = (action) => {
-  const instance = action.bindParams(true);
+// The params as they will read once the states hold what they are about to
+// (see readStateAsIf), prerun only when that changes them: params the state
+// leaves alone are the ones the action already runs on — or is meant not to,
+// and a prerun would retry a FAILED one behind the screen's back.
+const prefetchAsIf = (action, paramsEffect, values) => {
+  const params = readStateAsIf(values, paramsEffect);
+  if (!params) {
+    return;
+  }
+  if (compareTwoJsValues(params, untracked(paramsEffect))) {
+    return;
+  }
+  prerunAhead(action.bindParams(params));
+};
+
+// The instance prerun is the one the arrival runs on — the one bound to the
+// params it reads (`true` for a param-less action) — so the arrival promotes
+// it to a run. A prefetch that fails is not reported: nothing on screen asked
+// for it, and the failure stays on the instance, where a run asks again — a
+// FAILED action is run, only RUNNING and COMPLETED are left alone — and the
+// arrival shows its own. It is left FAILED on purpose, not reset: a prerun is
+// often still in flight when the arrival promotes it (the press that brings
+// the arrival focuses the link, or is the one that asked), and a reset
+// landing after that would pull the answer from under the page reading it.
+const prerunAhead = (instance) => {
   let result;
   try {
     result = instance.prerun({ reason: "intent" });

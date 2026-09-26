@@ -48,20 +48,34 @@
  * content ahead of the click that will open it. Deferring the build to the
  * opening puts its whole cost in the frame right after the click — the frame
  * where a delay is felt hardest — while the ~100-300ms between hovering a
- * trigger and pressing it are free. The warming render is asynchronous
- * (batched, not flushed): nothing here needs the content in the DOM before
- * the click, only before the open that follows it.
+ * trigger and pressing it are free. The warming render starts at the frame
+ * after the one that follows the intent: nothing here needs the content in the
+ * DOM before the click, only before the open that follows it, and on a touch
+ * screen `pointerenter` arrives together with the `pointerdown` — a build
+ * started there would hold back the frame that shows the press. Two animation
+ * frames, never a timeout: browsers hold timers back while a finger is down,
+ * and a timeout started by the press fires at its release, on top of the click.
  *
- * "while-opened" content is never warmed. That mode promises two things
- * warming would break: the content is built at open time (so a `defaultValue`
- * read at build time is fresh, not seeded at pointer-enter time), and it is
- * only ever mounted between an open and a close — unmounting happens on close,
- * so a warmed popup that never opens would keep its content in the document
- * indefinitely. Callers lean on that guarantee (e.g. several pickers sharing
- * one set of content ids because only one content exists at a time).
+ * "while-opened" content is warmed by a press on the anchor, never by a hover
+ * or a focus. That mode promises content built fresh for the gesture that
+ * opens it, and mounted only while that gesture and its opening last: callers
+ * lean on it (several pickers sharing one set of content ids, because only one
+ * content exists at a time). A pointer crossing four anchors would build four
+ * contents; a press is the start of one opening. So the press builds it, and
+ * the press ending without an open throws it away — its click reaching the
+ * document with the popup still closed, no click coming after the release,
+ * the browser taking the gesture (`pointercancel`), or the next press
+ * starting, before any of its own handlers run: one press at a time holds a
+ * content. A keyboard opening
+ * builds at open time, as without warming. What this gives up: a press-warmed
+ * content is built before `onOpen` runs. The popups seeding their content from
+ * `onOpen` are opened ON something by a command, whose press is not on their
+ * anchor, so they are not warmed; one pressed on its own anchor that still
+ * seeds from `onOpen` reads the value from before it.
  */
 
-import { useEffect, useLayoutEffect, useState } from "preact/hooks";
+import { isPressDrivenClick } from "@jsenv/dom";
+import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 
 import { flushSyncRendering } from "../utils/flush_sync_rendering.js";
 import { whenTransitionSettles } from "./popup_shared.js";
@@ -104,26 +118,35 @@ export const usePopupContentMount = (
   { mount = MOUNT_DEFAULT, anchor },
 ) => {
   const mountedAlways = mount === "always";
-  const [contentMounted, setContentMounted] = useState(
+  const [contentMounted, setContentMountedState] = useState(
     () => mountedAlways || openController.opened,
   );
-  openController.mountContent = contentMounted
-    ? null
-    : () => {
-        const popupElement = ref?.current;
-        if (popupElement) {
-          popupsMountingContentForOpen.add(popupElement);
-        }
-        try {
-          flushSyncRendering(() => {
-            setContentMounted(true);
-          });
-        } finally {
-          if (popupElement) {
-            popupsMountingContentForOpen.delete(popupElement);
-          }
-        }
-      };
+  // What was last asked for, ahead of the render that performs it: an open
+  // landing in between (a press-warmed content given up just before the open
+  // that wanted it) must still find it has to build.
+  const contentMountedRef = useRef(contentMounted);
+  const setContentMounted = (value) => {
+    contentMountedRef.current = value;
+    setContentMountedState(value);
+  };
+  openController.mountContent = () => {
+    if (contentMountedRef.current) {
+      return;
+    }
+    const popupElement = ref?.current;
+    if (popupElement) {
+      popupsMountingContentForOpen.add(popupElement);
+    }
+    try {
+      flushSyncRendering(() => {
+        setContentMounted(true);
+      });
+    } finally {
+      if (popupElement) {
+        popupsMountingContentForOpen.delete(popupElement);
+      }
+    }
+  };
   openController.unmountContent =
     mount === "while-opened"
       ? () => {
@@ -161,37 +184,136 @@ export const usePopupContentMount = (
       cancelIdle(idleId);
     };
   }, [mount, contentMounted]);
-  // Warm on intent (see the top comment; "while-opened" is excluded there).
-  // The anchor accepts the same shapes Popover resolves at open time — a
-  // string id, a ref, an element — but is resolved here at effect time: an id
-  // that matches nothing yet simply doesn't warm, the open still mounts the
-  // content like it always does.
+  // Warm on intent (see the top comment).
   useEffect(() => {
     if (contentMounted || !anchor || mount === "while-opened") {
       return undefined;
     }
-    const anchorElement =
-      typeof anchor === "string"
-        ? document.getElementById(anchor)
-        : // A ref is unwrapped even when it holds nothing: an expandable with
-          // no UI part hands an empty ref over, and the ref object itself is
-          // truthy — it would reach addEventListener below and throw.
-          "current" in anchor
-          ? anchor.current
-          : anchor;
+    const anchorElement = resolveAnchorElement(anchor);
     if (!anchorElement) {
       return undefined;
     }
+    let cancelWarm = null;
     const warm = () => {
-      setContentMounted(true);
+      if (cancelWarm) {
+        return;
+      }
+      cancelWarm = requestFrameAfterNext(() => {
+        setContentMounted(true);
+      });
     };
     anchorElement.addEventListener("pointerenter", warm);
     anchorElement.addEventListener("focusin", warm);
     return () => {
+      cancelWarm?.();
       anchorElement.removeEventListener("pointerenter", warm);
       anchorElement.removeEventListener("focusin", warm);
     };
   }, [contentMounted, anchor, mount]);
+  // Warm on the press, for "while-opened" (see the top comment). Listening for
+  // as long as the anchor is there, not only while the content is unmounted:
+  // the press that throws a warmed content away can be a new press on this
+  // same anchor, and it must warm again.
+  useEffect(() => {
+    if (!anchor || mount !== "while-opened") {
+      return undefined;
+    }
+    const anchorElement = resolveAnchorElement(anchor);
+    if (!anchorElement) {
+      return undefined;
+    }
+    let stopPressWarm = null;
+    const onPointerDown = (pointerdownEvent) => {
+      if (pointerdownEvent.button !== 0 || contentMountedRef.current) {
+        return;
+      }
+      const cancelBuild = requestFrameAfterNext(() => {
+        setContentMounted(true);
+      });
+      const stopWatching = watchPressEnd(() => {
+        stopPressWarm = null;
+        cancelBuild();
+        if (!openController.opened) {
+          setContentMounted(false);
+        }
+      });
+      stopPressWarm = () => {
+        cancelBuild();
+        stopWatching();
+      };
+    };
+    anchorElement.addEventListener("pointerdown", onPointerDown);
+    return () => {
+      stopPressWarm?.();
+      anchorElement.removeEventListener("pointerdown", onPointerDown);
+    };
+  }, [anchor, mount]);
 
   return contentMounted;
+};
+
+// The anchor accepts the same shapes Popover resolves at open time — a string
+// id, a ref, an element — but is resolved at effect time: an id that matches
+// nothing yet simply doesn't warm, the open still mounts the content.
+const resolveAnchorElement = (anchor) => {
+  if (typeof anchor === "string") {
+    return document.getElementById(anchor);
+  }
+  // A ref is unwrapped even when it holds nothing: an expandable with no UI
+  // part hands an empty ref over, and the ref object itself is truthy — it
+  // would reach addEventListener and throw.
+  if ("current" in anchor) {
+    return anchor.current;
+  }
+  return anchor;
+};
+
+// The next frame paints what the input just changed (the pressed trigger); the
+// callback runs at the start of the one after.
+const requestFrameAfterNext = (callback) => {
+  let frame = requestAnimationFrame(() => {
+    frame = requestAnimationFrame(callback);
+  });
+  return () => {
+    cancelAnimationFrame(frame);
+  };
+};
+
+// How long the click of a released press may take to arrive. Nothing tells a
+// page that a release brings no click — a press that became a drag has its
+// click swallowed (suppressClickAfterGesture in @jsenv/dom) — so past this the
+// press is taken to have ended without one. Longer than the 300ms a browser
+// still waits before the click of a tap on a page not sized for phones.
+const PRESS_CLICK_WAIT_MS = 500;
+
+// Installed during the press's own pointerdown: the capture listeners below
+// only hear the presses after it.
+const watchPressEnd = (onEnd) => {
+  let timeout;
+  const stop = () => {
+    clearTimeout(timeout);
+    document.removeEventListener("click", onClick);
+    document.removeEventListener("pointerup", onPointerUp, { capture: true });
+    document.removeEventListener("pointercancel", end, { capture: true });
+    document.removeEventListener("pointerdown", end, { capture: true });
+  };
+  const end = () => {
+    stop();
+    onEnd();
+  };
+  // Bubble phase, on the document: every click handler that could open the
+  // popup has run by then.
+  const onClick = (clickEvent) => {
+    if (isPressDrivenClick(clickEvent)) {
+      end();
+    }
+  };
+  const onPointerUp = () => {
+    timeout = setTimeout(end, PRESS_CLICK_WAIT_MS);
+  };
+  document.addEventListener("click", onClick);
+  document.addEventListener("pointerup", onPointerUp, { capture: true });
+  document.addEventListener("pointercancel", end, { capture: true });
+  document.addEventListener("pointerdown", end, { capture: true });
+  return stop;
 };
