@@ -59,7 +59,9 @@ const TIMING_NOOP = () => {
  *   - `endpoint` {string} — Required. `"GET /users/:id"`: an http method (or `*` for any)
  *     and a resource pattern. `:name` captures a segment and `*` a run of segments, both
  *     land in `request.params`; `?page=:page` captures a search param. `"*"` alone
- *     matches everything. An endpoint ending in `.websocket` marks a websocket route.
+ *     matches everything. A resource ending with `/` covers everything under it
+ *     (`GET /docs/` answers `/docs/intro`, `GET /` answers everything): declare the
+ *     routes it covers before it. An endpoint ending in `.websocket` marks a websocket route.
  *   - `fetch` {Function} — Required. `(request, helpers) => response`, async or not.
  *     Returns a `Response`, a plain `{ status, statusText, statusMessage, headers, body,
  *     timing }` object (`status` defaults to 404, `statusMessage` feeds the body of 4xx/5xx

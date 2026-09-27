@@ -19,16 +19,17 @@ await startServer({
 
 `endpoint` is an http method (or `*`) followed by a resource pattern:
 
-| endpoint               | matches                                                             |
-| ---------------------- | ------------------------------------------------------------------- |
-| `GET /`                | exactly `/`                                                         |
-| `GET /users/:id`       | `/users/42`, with `request.params.id === "42"`                      |
-| `GET /assets/*`        | `/assets/css/main.css`, with `request.params[0] === "css/main.css"` |
-| `GET /search?q=:query` | `/search?q=hello`, with `request.params.query === "hello"`          |
-| `* /api/*`             | any method                                                          |
-| `GET *`                | anything: a catch-all, put it last                                  |
+| endpoint               | matches                                                                                        |
+| ---------------------- | ---------------------------------------------------------------------------------------------- |
+| `GET /users/:id`       | `/users/42`, with `request.params.id === "42"`                                                 |
+| `GET /docs/`           | `/docs`, `/docs/` and everything under it: `/docs/intro`, with `request.params[0] === "intro"` |
+| `GET /`                | anything, like `GET *`: it ends with `/` too                                                   |
+| `GET /assets/*`        | `/assets/css/main.css`, with `request.params[0] === "css/main.css"`                            |
+| `GET /search?q=:query` | `/search?q=hello`, with `request.params.query === "hello"`                                     |
+| `* /api/*`             | any method                                                                                     |
+| `GET *`                | anything: a catch-all, put it last                                                             |
 
-Routes are tried in order. `fetch` can be async; returning `null` or `undefined` declines the request and the next route is tried.
+Routes are tried in order, so a route covering others (`GET /docs/`, `GET *`) goes after them. `fetch` can be async; returning `null` or `undefined` declines the request and the next route is tried.
 
 When no route answers, the router builds the response from what almost matched:
 

@@ -8666,17 +8666,6 @@ const devServerPluginHttpsTrust = ({ rootCertificate }) => {
     name: "jsenv:https_trust",
     routes: [
       {
-        endpoint: `GET ${HTTPS_TRUST_PATHNAME}`,
-        description:
-          "Page to trust the dev server https on another device (a phone). Served over http.",
-        declarationSource: import.meta.url,
-        fetch: () => {
-          return new Response(readFileSync(httpsTrustPageFileUrl), {
-            headers: { "content-type": "text/html" },
-          });
-        },
-      },
-      {
         endpoint: `GET ${HTTPS_TRUST_PATHNAME}root.crt`,
         description: "The root certificate signing the dev server certificate.",
         declarationSource: import.meta.url,
@@ -8704,6 +8693,19 @@ const devServerPluginHttpsTrust = ({ rootCertificate }) => {
         declarationSource: import.meta.url,
         fetch: () => {
           return new Response(null, { status: 204 });
+        },
+      },
+      // Last: an endpoint ending with "/" covers everything under it, so
+      // declared first it would answer for the files above.
+      {
+        endpoint: `GET ${HTTPS_TRUST_PATHNAME}`,
+        description:
+          "Page to trust the dev server https on another device (a phone). Served over http.",
+        declarationSource: import.meta.url,
+        fetch: () => {
+          return new Response(readFileSync(httpsTrustPageFileUrl), {
+            headers: { "content-type": "text/html" },
+          });
         },
       },
     ],
