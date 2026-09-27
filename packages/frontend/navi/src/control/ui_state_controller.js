@@ -235,6 +235,9 @@ export const useUIStateController = (
         // The suggestion this control started on — what tells a field showing
         // its default from one carrying an answer (see isUIStateHeld).
         defaultValue: controlInfo.defaultValue,
+        // The default last put on screen, which lags `defaultValue` while an
+        // edit holds a newer one back (see followDefaultValue).
+        defaultValueTaken: controlInfo.defaultValue,
 
         facadeChild: null,
         // Set for the duration of one interaction by whatever wants the
@@ -510,7 +513,11 @@ export const useUIStateController = (
             }
             // initial_state_push is pure initialization (equivalent to defaultValue on the
             // child itself): skip uiAction entirely so no side effects fire on mount.
-            if (e.type !== "initial_state_push") {
+            // A default followed after mount is the same initialization, later.
+            if (
+              e.type !== "initial_state_push" &&
+              e.type !== "default_value_change"
+            ) {
               // Still fire uiAction so external listeners (e.g. signals) stay in
               // sync, but do NOT fire the command and do NOT notify the parent —
               // both would cause an infinite loop when a parent cascades state
@@ -562,6 +569,19 @@ export const useUIStateController = (
               // state silently drifts out of sync with this child.
               s.parentUIStateController.onChildUIAction(controller, e, {
                 stateChanged: true,
+              });
+            }
+            if (
+              e.type === "default_value_change" ||
+              (e.type === "facade_child_mount_sync" && isDefaultValueFollow(e))
+            ) {
+              // Heard the way a control mounting on that value would be:
+              // silently, nobody acted. But heard, all the way up — a picker
+              // whose popup followed tells its own group in turn — or what
+              // the groups send is not what is on screen.
+              s.parentUIStateController?.onChildUIAction(controller, e, {
+                stateChanged: true,
+                silent: true,
               });
             }
             return true;
@@ -671,6 +691,37 @@ export const useUIStateController = (
           // pick — the signal would hand it straight back on the next render,
           // and the refused value would win over the rollback.
           writeBoundSignal(controller.state);
+          controller.followDefaultValue();
+        },
+        // An uncontrolled control starts on its defaultValue, and a new one is
+        // what it would start on if it were mounted again — a record saved
+        // and handed back normalized, refreshed from elsewhere. It takes it
+        // while it holds no edit of its own: nothing typed since the value the
+        // outside last accepted (uiState equal to state). An edit is never
+        // undone; the default waits for it to be accepted or rolled back.
+        followDefaultValue: () => {
+          // A bound signal carries its own default, followed through
+          // stateFromSignal; a proxy shows the control it stands for.
+          if (
+            controller.hasStateProp ||
+            controller.isProxy ||
+            controller.props.signal
+          ) {
+            return;
+          }
+          const { defaultValue } = controller;
+          if (compareTwoJsValues(defaultValue, controller.defaultValueTaken)) {
+            return;
+          }
+          if (!compareTwoJsValues(controller.uiState, controller.state)) {
+            return;
+          }
+          controller.defaultValueTaken = defaultValue;
+          controller.state = defaultValue;
+          controller.setUIState(
+            defaultValue,
+            new CustomEvent("default_value_change", { detail: {} }),
+          );
         },
         // Read by the callout manager when it has nowhere else to point.
         getCalloutAnchorElement: (event) =>
@@ -684,7 +735,12 @@ export const useUIStateController = (
           if (controller.hasStateProp || controller.queuedActionAllowedEvent) {
             return;
           }
+          // A picker told yes is told for what its popup shows too, the way a
+          // group tells its children. First, so that a default one of them
+          // takes on the way is part of what this control accepts below.
+          controller.facadeChild?.acknowledgeUIState();
           controller.state = controller.uiState;
+          controller.followDefaultValue();
         },
         onActionEnd: (e) => {
           debugUIState(`"${controlType}" actionEnd called`);
@@ -841,6 +897,7 @@ export const useUIStateController = (
             }
           }
         }
+        controller.followDefaultValue();
       }
       return liveValues();
     },
@@ -1431,7 +1488,12 @@ export const useUIGroupStateController = (
           // deferred alongside a mount sync stays a real change.
           const pendingChange = pendingChangeRef.current;
           pendingChangeRef.current = {
-            e,
+            // A default followed is not replaced by a mount deferred beside
+            // it: the event is what lets the sync below read the children.
+            e:
+              pendingChange && isDefaultValueFollow(pendingChange.e)
+                ? pendingChange.e
+                : e,
             notifyExternal:
               pendingChange?.notifyExternal === true ? true : notifyExternal,
             actingChild,
@@ -1439,6 +1501,13 @@ export const useUIGroupStateController = (
           return;
         }
         const { controller } = s;
+        if (isDefaultValueFollow(e)) {
+          // Not a partial reading: the child was there already and its value
+          // moved, told by the outside. The group is worth what its children
+          // show, whatever it was handed before — kept, the value it sends
+          // would be one the screen no longer shows.
+          controller.stateGivenFromAbove = false;
+        }
         // A child mounting or unmounting is not somebody answering: while the
         // children of a group are still arriving, their aggregate is a partial
         // reading, and taking it for the truth is how the value the group was
@@ -2276,7 +2345,11 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
           if (child !== firstChildControllerRef.current) {
             return;
           }
-          if (silent && uiStateHoldsNothing(child.uiState)) {
+          if (
+            silent &&
+            !isDefaultValueFollow(e) &&
+            uiStateHoldsNothing(child.uiState)
+          ) {
             // A silent sync means the child's own structure changed (children
             // mounted/unmounted), not that the user acted. A child that ends up
             // with no value there is one that currently *cannot* express one —
@@ -2287,7 +2360,8 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
             // still nothing to adopt: the sync would only respell one nothing
             // as another (an array picker's [] becoming undefined, say) and
             // hand that to uiAction — an empty array picker opened its popup
-            // and told its owner the value changed.
+            // and told its owner the value changed. A default followed down to
+            // nothing is not that: the outside emptied a value the child held.
             return;
           }
           updatingRef.current = true;
@@ -2442,9 +2516,16 @@ const INTERNAL_EVENT_SET = new Set([
   // no action of the control's own — but what it holds really did move, so
   // uiAction, the bound signal and the parent notification below all happen.
   "auto_fix",
+  // An uncontrolled control taking a new defaultValue (see
+  // followDefaultValue): initialization arriving after mount, so nothing
+  // fires, and the groups above hear it silently.
+  "default_value_change",
 ]);
 const isInternalEvent = (e) => {
   return INTERNAL_EVENT_SET.has(e.type);
+};
+const isDefaultValueFollow = (e) => {
+  return Boolean(findEvent(e, "default_value_change"));
 };
 
 /**
