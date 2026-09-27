@@ -57,7 +57,7 @@
     "https:setup": "npx @jsenv/https-local setup",
     "md:build": "node ./docs/build.js",
     "monorepo:node_modules_clear": "npx @jsenv/filesystem clear **/node_modules/",
-    "monorepo:publish": "node ./scripts/monorepo/publish_packages.mjs",
+    "monorepo:publish": "node ./scripts/monorepo/prepare_publish.mjs",
     "monorepo:sync_versions": "node ./scripts/monorepo/sync_packages_versions.mjs",
     "monorepo:upgrade_versions": "node ./scripts/monorepo/upgrade_external_versions.mjs",
     "oto:start": "npm run start -w oto",

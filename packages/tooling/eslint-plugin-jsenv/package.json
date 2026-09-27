@@ -3,6 +3,11 @@
   "version": "1.5.0",
   "type": "module",
   "description": "Custom ESLint rules for jsenv projects",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsenv/core",
+    "directory": "packages/tooling/eslint-plugin-jsenv"
+  },
   "author": "jsenv",
   "license": "MIT",
   "engines": {

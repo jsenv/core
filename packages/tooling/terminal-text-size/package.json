@@ -1,7 +1,12 @@
 {
   "name": "@jsenv/terminal-text-size",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsenv/core",
+    "directory": "packages/tooling/terminal-text-size"
+  },
   "exports": {
     ".": {
       "node": "./src/terminal_text_size_node.js",
@@ -11,13 +16,13 @@
   },
   "dependencies": {
     "emoji-regex-xs": "2.0.1",
-    "get-east-asian-width": "1.6.0",
+    "get-east-asian-width": "1.7.0",
     "strip-ansi": "7.2.0"
   },
   "devDependencies": {
     "@jsenv/snapshot": "../snapshot",
     "@jsenv/terminal-text-size": "./",
-    "string-width": "8.2.2"
+    "string-width": "8.3.0"
   },
   "publishConfig": {
     "access": "public"

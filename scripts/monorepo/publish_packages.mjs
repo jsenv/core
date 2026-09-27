@@ -1,5 +1,9 @@
 /*
  * Publish all package if needed (when version found in package file is not already published)
+ *
+ * Runs in .github/workflows/publish.yml where npm authenticates with trusted publishing.
+ * Locally it uses the token from secrets.json, needed only for the first publish
+ * of a new package (trusted publishing can only be configured on an existing package).
  */
 
 import { readFile } from "@jsenv/filesystem";

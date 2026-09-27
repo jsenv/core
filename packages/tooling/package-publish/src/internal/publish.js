@@ -16,12 +16,16 @@ export const publish = async ({
 }) => {
   const publishTask = createTaskLog(`publish ${packageSlug} on ${registryUrl}`);
   try {
-    // process.env.NODE_AUTH_TOKEN
-    const previousValue = process.env.NODE_AUTH_TOKEN;
-    const restoreProcessEnv = () => {
-      process.env.NODE_AUTH_TOKEN = previousValue;
-    };
-    process.env.NODE_AUTH_TOKEN = token;
+    // without a token npm authenticates by itself, for instance through
+    // trusted publishing (OIDC) in a GitHub workflow
+    let restoreProcessEnv = () => {};
+    if (token) {
+      const previousValue = process.env.NODE_AUTH_TOKEN;
+      restoreProcessEnv = () => {
+        process.env.NODE_AUTH_TOKEN = previousValue;
+      };
+      process.env.NODE_AUTH_TOKEN = token;
+    }
     // updating package.json to publish on the correct registry
     let restorePackageFile = () => {};
     const rootPackageFileUrl = new URL("./package.json", rootDirectoryUrl);
@@ -41,7 +45,7 @@ export const publish = async ({
         JSON.stringify(packageObject, null, "  "),
       );
     }
-    // updating .npmrc to add the token
+    // updating .npmrc to add the registry (and the token when there is one)
     const npmConfigFileUrl = new URL("./.npmrc", rootDirectoryUrl);
     let restoreNpmConfigFile;
     let npmConfigFileContent;
@@ -60,7 +64,7 @@ export const publish = async ({
     writeFileSync(
       npmConfigFileUrl,
       setNpmConfig(npmConfigFileContent, {
-        [computeRegistryTokenKey(registryUrl)]: token,
+        ...(token ? { [computeRegistryTokenKey(registryUrl)]: token } : {}),
         [computeRegistryKey(packageObject.name)]: registryUrl,
       }),
     );

@@ -1,0 +1,53 @@
+# This file configure a GitHub workflow responsible to publish packages on npm.
+#
+# It runs when a commit created by "npm run monorepo:publish" (its message
+# starts with "[publish]") is pushed to main, and can be started by hand
+# from the Actions tab to retry a failed publish.
+#
+# It publishes every package whose version is not on npm yet and fails
+# when versions in package.json files are not in sync.
+#
+# npm authenticates with trusted publishing (OIDC): no token is involved but
+# each package must be configured on npm to trust this workflow file.
+
+name: publish
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || contains(join(github.event.commits.*.message, ' '), '[publish]'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # required by trusted publishing
+    env:
+      CI: true
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26.5.0
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      ## --- NPM INSTALL START --- ##
+      # sudo ulimit should prevent npm link failure
+      - name: Increase Linux fs limits
+        run: |
+          sudo sysctl fs.inotify.max_user_watches=524288
+          sudo sysctl -p
+          sudo sh -c "ulimit -n 65536 && exec su $LOGNAME"
+          ulimit -n
+      - name: Install node modules
+        run: npm install
+      ## --- NPM INSTALL END --- ##
+      - name: Publish packages
+        run: node ./scripts/monorepo/publish_packages.mjs

@@ -74,6 +74,7 @@ Use a tool like "git diff" to see the new versions and ensure this is what you w
       workspacePackages,
       registryLatestVersions,
       outdatedPackageNames,
+      toPublishPackageNames,
       versionUpdates,
       dependencyUpdates,
     };
@@ -248,6 +249,7 @@ Use a tool like "git diff" to see the new versions and ensure this is what you w
     workspacePackages,
     registryLatestVersions,
     outdatedPackageNames,
+    toPublishPackageNames,
     versionUpdates,
     dependencyUpdates,
   };
