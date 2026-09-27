@@ -50,6 +50,7 @@ const returnValue = await requestCertificate({
     returnValue: {
       certificate: assert.any(String),
       privateKey: assert.any(String),
+      rootCertificate: assert.any(String),
       rootCertificateFilePath: assert.any(String),
     },
   };

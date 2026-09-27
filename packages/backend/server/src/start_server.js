@@ -99,8 +99,10 @@ const TIMING_NOOP = () => {
  *   host is answered 403: a page served elsewhere cannot read the responses by rebinding
  *   its DNS name to this machine. `true` disables the check.
  * @param {Object|false} [params.https=false] - `{ certificate, privateKey }` (PEM strings) to serve https.
- * @param {boolean} [params.redirectHttpToHttps] - With https, answer http requests with a 301
- *   to the https origin. Defaults to true unless `allowHttpRequestOnHttps` is set.
+ * @param {boolean|Function} [params.redirectHttpToHttps] - With https, answer http requests
+ *   with a 301 to https, on the host the request was sent to. Defaults to true unless
+ *   `allowHttpRequestOnHttps` is set. `({ resource }) => boolean` redirects only the requests
+ *   it returns true for; the others are served over http.
  * @param {boolean} [params.allowHttpRequestOnHttps=false] - With https, also serve plain http
  *   requests on the same port (`request.origin` tells them apart).
  * @param {boolean} [params.http2=false] - Serve http2 (needs `https`, http/1.1 clients are still
@@ -794,6 +796,10 @@ export const startServer = async ({
   };
 
   request: {
+    const shouldRedirectHttpToHttps =
+      typeof redirectHttpToHttps === "function"
+        ? redirectHttpToHttps
+        : () => redirectHttpToHttps;
     const requestEventHandler = async (nodeRequest, nodeResponse) => {
       const requestTarget = readRequestTarget(nodeRequest.url);
       if (!requestTarget) {
@@ -811,9 +817,17 @@ export const startServer = async ({
         nodeResponse.end("Host not allowed");
         return;
       }
-      if (redirectHttpToHttps && !nodeRequest.connection.encrypted) {
+      if (
+        !nodeRequest.connection.encrypted &&
+        shouldRedirectHttpToHttps(requestTarget)
+      ) {
         nodeResponse.writeHead(301, {
-          location: `${serverOrigin}${requestTarget.resource}`,
+          location: httpsUrlFromHttpRequest({
+            requestHost,
+            resource: requestTarget.resource,
+            port,
+            serverOrigin,
+          }),
         });
         nodeResponse.end();
         return;
@@ -1060,6 +1074,25 @@ const createNodeServer = async ({
   }
   const { createServer } = await import("node:http");
   return createServer();
+};
+
+// http and https share the port (see server_polyglot.js): only the scheme
+// changes, the host stays the one the client used. The server origin would
+// send a phone that typed the network ip to its own loopback.
+const httpsUrlFromHttpRequest = ({
+  requestHost,
+  resource,
+  port,
+  serverOrigin,
+}) => {
+  const httpsUrlString = `https://${requestHost}`;
+  // no host header (http/1.0), or any host at all with `allowedHosts: true`
+  if (requestHost === undefined || !URL.canParse(httpsUrlString)) {
+    return `${serverOrigin}${resource}`;
+  }
+  const httpsUrl = new URL(httpsUrlString);
+  httpsUrl.port = port;
+  return `${httpsUrl.origin}${resource}`;
 };
 
 const REQUEST_BODY_LINGER_MS = 5_000;

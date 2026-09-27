@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Trust the dev server https</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --ink: #111827;
+        --muted: #6b7280;
+        --paper: #f3f4f6;
+        --card: #ffffff;
+        --line: #e5e7eb;
+        --accent: #2563eb;
+        --accent-ink: #ffffff;
+        --ok: #15803d;
+        --ok-paper: #dcfce7;
+        --warn: #b45309;
+        --warn-paper: #fef3c7;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --ink: #e5e7eb;
+          --muted: #9ca3af;
+          --paper: #0b1020;
+          --card: #111827;
+          --line: #1f2937;
+          --accent: #3b82f6;
+          --ok: #4ade80;
+          --ok-paper: #052e16;
+          --warn: #fbbf24;
+          --warn-paper: #2d1a02;
+        }
+      }
+      body {
+        margin: 0;
+        padding: 16px;
+        color: var(--ink);
+        font:
+          15px/1.5 -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          Roboto,
+          sans-serif;
+        background: var(--paper);
+      }
+      main {
+        display: flex;
+        max-width: 34rem;
+        margin: 0 auto;
+        flex-direction: column;
+        gap: 16px;
+      }
+      h1 {
+        margin: 8px 0 0;
+        font-size: 1.35rem;
+      }
+      h2 {
+        margin: 0;
+        font-size: 1rem;
+      }
+      p {
+        margin: 0;
+      }
+      ol {
+        margin: 0;
+        padding-left: 1.3em;
+      }
+      li + li {
+        margin-top: 6px;
+      }
+      code {
+        font:
+          0.85em ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          monospace;
+      }
+      .muted {
+        color: var(--muted);
+      }
+      .card {
+        display: flex;
+        padding: 14px 16px;
+        flex-direction: column;
+        gap: 10px;
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+      }
+      .button {
+        display: block;
+        padding: 12px 16px;
+        color: var(--accent);
+        font-weight: 600;
+        text-align: center;
+        text-decoration: none;
+        border: 1px solid var(--accent);
+        border-radius: 8px;
+      }
+      .button[data-primary] {
+        color: var(--accent-ink);
+        background: var(--accent);
+      }
+      #status {
+        font-weight: 600;
+      }
+      #status_card[data-state="trusted"] {
+        background: var(--ok-paper);
+        border-color: var(--ok);
+      }
+      #status_card[data-state="trusted"] #status {
+        color: var(--ok);
+      }
+      #status_card[data-state="untrusted"] {
+        background: var(--warn-paper);
+        border-color: var(--warn);
+      }
+      #status_card[data-state="untrusted"] #status {
+        color: var(--warn);
+      }
+      #fingerprint {
+        display: block;
+        word-break: break-all;
+      }
+      details {
+        padding: 14px 16px;
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+      }
+      summary {
+        font-weight: 600;
+        cursor: pointer;
+      }
+      details[open] summary {
+        margin-bottom: 10px;
+      }
+      details .this_device {
+        display: none;
+        color: var(--muted);
+        font-weight: 400;
+      }
+      details[data-current] .this_device {
+        display: inline;
+      }
+      details p + ol,
+      details ol + p,
+      details p + p {
+        margin-top: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Trust the dev server https</h1>
+      <p class="muted">
+        Install the root certificate of the computer running the dev server and
+        this device opens it over https without a warning. Service workers,
+        push, install and the other secure-context APIs need it.
+      </p>
+
+      <div id="status_card" class="card" data-state="checking">
+        <p id="status">Checking whether this device trusts the dev server…</p>
+        <a id="continue" class="button" href="/">Continue to https</a>
+      </div>
+
+      <div class="card">
+        <a id="download" class="button" href="./root.crt" data-primary>
+          Download the root certificate
+        </a>
+        <p>
+          <span class="muted">SHA-256 fingerprint</span>
+          <code id="fingerprint">…</code>
+        </p>
+        <p class="muted">
+          Once installed, the fingerprint the device shows must match the one
+          the dev server prints in its terminal: this page travels over plain
+          http, so the network could swap the file.
+        </p>
+      </div>
+
+      <div id="platforms">
+        <details data-platform="android" open>
+          <summary>
+            Android <span class="this_device">(this device)</span>
+          </summary>
+          <ol>
+            <li>
+              Tap <b>Download the root certificate</b>. Opening the file only
+              says CA certificates must be installed from Settings: that is
+              expected.
+            </li>
+            <li>
+              In <b>Settings</b>, search for <b>CA certificate</b>. Or go to
+              Security → Encryption &amp; credentials → Install a certificate →
+              CA certificate.
+            </li>
+            <li>
+              Tap <b>Install anyway</b> and pick the file in Downloads. Android
+              asks for a screen lock if there is none.
+            </li>
+            <li>Come back here, the check above turns green.</li>
+          </ol>
+          <p class="muted">
+            Android then shows “Network may be monitored”: expected, the device
+            trusts a certificate installed by hand. Chrome honors it, most apps
+            do not.
+          </p>
+        </details>
+        <details data-platform="ios" open>
+          <summary>
+            iPhone, iPad <span class="this_device">(this device)</span>
+          </summary>
+          <ol>
+            <li>
+              Open this page in <b>Safari</b>, tap
+              <b>Download the root certificate</b>, then <b>Allow</b>.
+            </li>
+            <li>
+              In <b>Settings</b>, tap <b>Profile Downloaded</b> →
+              <b>Install</b>.
+            </li>
+            <li>
+              Then
+              <b>Settings → General → About → Certificate Trust Settings</b> and
+              turn on <b class="common_name">the root certificate</b>. Without
+              this step the certificate is installed but not trusted.
+            </li>
+            <li>Come back here, the check above turns green.</li>
+          </ol>
+        </details>
+        <details data-platform="desktop" open>
+          <summary>
+            Computer <span class="this_device">(this device)</span>
+          </summary>
+          <p>
+            On the computer running the dev server,
+            <code>npx @jsenv/https-local init</code> installs and trusts the
+            root certificate.
+          </p>
+          <p>
+            On another computer, download it and add it to the trusted root
+            certificates of the system. On macOS: open the file, then set it to
+            “Always Trust” in Keychain Access.
+          </p>
+        </details>
+      </div>
+
+      <details open>
+        <summary>Good to know</summary>
+        <p>
+          The device trusts anything signed by this root certificate. Its key
+          never leaves the computer running the dev server, only the certificate
+          is served: the trade-off already made on that computer.
+        </p>
+        <p>
+          <b>See the fingerprint, or remove it.</b> Android: Settings →
+          Encryption &amp; credentials → Trusted credentials → User → tap it.
+          iPhone, iPad: Settings → General → VPN &amp; Device Management → the
+          profile.
+        </p>
+      </details>
+    </main>
+
+    <script type="module">
+      const readPlatform = () => {
+        const userAgent = window.navigator.userAgent;
+        if (/android/i.test(userAgent)) {
+          return "android";
+        }
+        if (/iPhone|iPad|iPod/.test(userAgent)) {
+          return "ios";
+        }
+        // iPadOS Safari introduces itself as a Mac
+        if (
+          /Macintosh/.test(userAgent) &&
+          window.navigator.maxTouchPoints > 1
+        ) {
+          return "ios";
+        }
+        return "desktop";
+      };
+      const platform = readPlatform();
+      const platforms = document.querySelector("#platforms");
+      for (const details of platforms.querySelectorAll("[data-platform]")) {
+        if (details.getAttribute("data-platform") === platform) {
+          details.setAttribute("data-current", "");
+          platforms.prepend(details);
+        } else {
+          details.open = false;
+        }
+      }
+
+      // http and https share the port of the dev server
+      const port =
+        window.location.port ||
+        (window.location.protocol === "https:" ? "443" : "80");
+      const httpsOrigin = new URL(`https://${window.location.hostname}:${port}`)
+        .origin;
+      const continueLink = document.querySelector("#continue");
+      continueLink.href = `${httpsOrigin}/`;
+
+      const statusCard = document.querySelector("#status_card");
+      const status = document.querySelector("#status");
+      const download = document.querySelector("#download");
+      const checkTrust = async () => {
+        try {
+          // rejects as long as the certificate is not trusted, unless this
+          // browser clicked through the certificate warning for this host
+          await fetch(`${httpsOrigin}${window.location.pathname}ping`, {
+            mode: "no-cors",
+            cache: "no-store",
+          });
+        } catch {
+          statusCard.setAttribute("data-state", "untrusted");
+          status.textContent = "This device does not trust the dev server yet.";
+          continueLink.removeAttribute("data-primary");
+          download.setAttribute("data-primary", "");
+          return;
+        }
+        statusCard.setAttribute("data-state", "trusted");
+        status.textContent = "✓ This device trusts the dev server.";
+        continueLink.setAttribute("data-primary", "");
+        download.removeAttribute("data-primary");
+      };
+      checkTrust();
+      // back from the settings where the certificate was installed
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") {
+          checkTrust();
+        }
+      });
+
+      const response = await fetch("./root.json");
+      const { fingerprint256, commonName } = await response.json();
+      document.querySelector("#fingerprint").textContent = fingerprint256;
+      for (const element of document.querySelectorAll(".common_name")) {
+        element.textContent = commonName;
+      }
+    </script>
+  </body>
+</html>

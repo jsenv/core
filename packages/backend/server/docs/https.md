@@ -20,7 +20,7 @@ const server = await startServer({
 server.origin.startsWith("https://"); // true
 ```
 
-Without certificate files, [@jsenv/https-local](https://github.com/jsenv/core/tree/main/packages/tooling/https-local) generates one for localhost, signed by an authority it can install on the machine:
+Without certificate files, [@jsenv/https-local](https://github.com/jsenv/core/tree/main/packages/tooling/https-local) generates one valid for every name of the machine (localhost, its network ips, its name), signed by an authority it can install on the machine:
 
 ```js
 import { requestCertificate } from "@jsenv/https-local";
@@ -32,7 +32,18 @@ await startServer({ https: { certificate, privateKey } });
 
 ## Http requests on an https server
 
-By default an https server also accepts http on the same port and redirects it (301) to the https origin. `redirectHttpToHttps: false` refuses http instead. To serve both:
+By default an https server also accepts http on the same port and redirects it (301) to https, on the host the request was sent to: a phone that typed `http://192.168.1.12:3000/app` lands on `https://192.168.1.12:3000/app`. `server.origin` would not do, with `acceptAnyIp` it is the loopback, which for the phone is the phone itself. `redirectHttpToHttps: false` refuses http instead.
+
+A function picks what is redirected, the rest is served over http. It receives the request target (`resource` is the path and the search) before the request is read. The case for it is a page that must load before the device trusts the certificate: over https it would show the very warning it is there to remove.
+
+```js
+await startServer({
+  https: { certificate, privateKey },
+  redirectHttpToHttps: ({ resource }) => !resource.startsWith("/trust/"),
+});
+```
+
+To serve both everywhere:
 
 ```js
 await startServer({

@@ -17,6 +17,7 @@ import {
   browserDefaultRuntimeCompat,
   inferRuntimeCompatFromClosestPackage,
 } from "@jsenv/runtime-compat";
+import { X509Certificate } from "node:crypto";
 import { existsSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
@@ -31,6 +32,10 @@ import { jsenvPluginPatches } from "../plugins/patches/jsenv_plugin_patches.js";
 import { getCorePlugins } from "../plugins/plugins.js";
 import { jsenvPluginServerEvents } from "../plugins/server_events/jsenv_plugin_server_events.js";
 import { devServerPluginChromeDevToolsJson } from "./dev_server_plugins/dev_server_plugin_chrome_devtools_json.js";
+import {
+  HTTPS_TRUST_PATHNAME,
+  devServerPluginHttpsTrust,
+} from "./dev_server_plugins/dev_server_plugin_https_trust.js";
 import { devServerPluginInjectServerResponseHeader } from "./dev_server_plugins/dev_server_plugin_inject_server_response_header.js";
 import { devServerPluginOmegaErrorHandler } from "./dev_server_plugins/dev_server_plugin_omega_error_handler.js";
 import { devServerPluginServeSourceFiles } from "./dev_server_plugins/dev_server_plugin_serve_source_files.js";
@@ -51,7 +56,7 @@ const EXECUTED_BY_TEST_PLAN = process.argv.includes("--jsenv-test");
  * @param {number} [params.port=3456] - Port to listen on (0 = a free port).
  * @param {string} [params.hostname] - Hostname to bind to.
  * @param {boolean} [params.acceptAnyIp=false] - Also accept connections on the machine's IPs (so other devices on the network — a phone — can reach the server). Off by default: exposing the dev server beyond localhost is an explicit choice, not something a dev tool decides.
- * @param {boolean|object} [params.https=false] - HTTPS as `{ certificate, privateKey }`.
+ * @param {object} [params.https] - HTTPS as `{ certificate, privateKey }` (PEM strings). With `rootCertificate` (the PEM of the authority that signed `certificate`) and `acceptAnyIp`, the dev server also serves `http://<ip>:<port>/.internal/https/`, a page to trust that authority on a phone (see docs/users/b_dev/b_dev.md, "Trusting it on a phone").
  * @param {boolean} [params.http2=false] - HTTP/2 (requires https).
  * @param {Array} [params.plugins=[]] - jsenv plugins (transformUrlContent, serverRoutes, serverEvents, effect, …).
  * @param {Array} [params.serverPlugins=[]] - `@jsenv/server`-level plugins.
@@ -184,6 +189,7 @@ export const startDevServer = async ({
       );
     }
   }
+  let httpsTrust = null;
   // params normalization
   {
     if (runtimeCompat === undefined) {
@@ -197,6 +203,16 @@ export const startDevServer = async ({
     }
     if (clientAutoreload === false) {
       clientAutoreload = { enabled: false };
+    }
+    if (https) {
+      const { certificate, privateKey, rootCertificate } = https;
+      https = { certificate, privateKey };
+      // a localhost-only server has no phone to serve
+      if (rootCertificate && acceptAnyIp) {
+        httpsTrust = {
+          rootCertificate: new X509Certificate(rootCertificate),
+        };
+      }
     }
   }
 
@@ -355,6 +371,7 @@ export const startDevServer = async ({
     }),
     // chrome devtools
     devServerPluginChromeDevToolsJson({ sourceDirectoryUrl }),
+    ...(httpsTrust ? [devServerPluginHttpsTrust(httpsTrust)] : []),
     ...serverPlugins,
     devServerPluginServeSourceFiles({
       packageDirectory,
@@ -393,6 +410,12 @@ export const startDevServer = async ({
     startLog: false,
 
     https,
+    ...(httpsTrust
+      ? {
+          redirectHttpToHttps: ({ resource }) =>
+            !resource.startsWith(HTTPS_TRUST_PATHNAME),
+        }
+      : {}),
     http2,
     acceptAnyIp,
     hostname,
@@ -418,6 +441,17 @@ export const startDevServer = async ({
   logger.info(``);
   Object.keys(server.origins).forEach((key) => {
     logger.info(`- ${server.origins[key]}`);
+    if (httpsTrust && key === "externalip") {
+      const externalHostname = new URL(server.origins.externalip).hostname;
+      const httpsTrustPageUrl = new URL(
+        HTTPS_TRUST_PATHNAME,
+        `http://${externalHostname}:${server.port}`,
+      );
+      logger.info(`  trust it on a phone: ${httpsTrustPageUrl}`);
+      logger.info(
+        `  root certificate SHA-256: ${httpsTrust.rootCertificate.fingerprint256}`,
+      );
+    }
   });
   logger.info(``);
   return {

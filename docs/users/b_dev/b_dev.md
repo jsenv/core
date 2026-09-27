@@ -528,7 +528,7 @@ await startDevServer({
 
 ## 2.10 https
 
-The dev server can use HTTPS with a certificate and private key:
+The dev server serves https when given a certificate and its private key:
 
 ```js
 import { startDevServer } from "@jsenv/core";
@@ -543,7 +543,73 @@ await startDevServer({
 });
 ```
 
-**Tip**: Use [@jsenv/https-local](https://github.com/jsenv/https-local)<sup>↗</sup> to generate certificates programmatically.
+An http request reaching the same port is redirected (301) to https, on the host it was sent to.
+
+### 2.10.1 Getting a certificate
+
+[@jsenv/https-local](https://github.com/jsenv/core/tree/main/packages/tooling/https-local) installs a certificate authority on the machine and trusts it in the operating system and the browsers. Once per machine:
+
+```console
+npx @jsenv/https-local init
+```
+
+Then ask it for a fresh certificate each time the dev server starts:
+
+```js
+import { startDevServer } from "@jsenv/core";
+import { requestCertificate } from "@jsenv/https-local";
+
+const { certificate, privateKey } = requestCertificate();
+await startDevServer({
+  sourceDirectoryUrl: import.meta.resolve("../src/"),
+  https: { certificate, privateKey },
+});
+```
+
+The certificate is valid for every name of the machine: `localhost`, `127.0.0.1`, the machine name, `<name>.local` and the network ips. A name missing from it fails in the browser (`ERR_CERT_COMMON_NAME_INVALID`) even when the authority is trusted. The network ips are read when the dev server starts: after joining another network, restart it.
+
+### 2.10.2 Trusting it on a phone
+
+What needs a secure context (service worker, push, install, clipboard, camera) must be tried on a real device, and clicking through a certificate warning is not enough: Chrome, for one, refuses to register a service worker on an origin whose certificate error was bypassed. The phone has to trust the authority that signed the certificate.
+
+Give that authority to the dev server with `rootCertificate`, and let the phone reach the server with `acceptAnyIp`:
+
+```js
+import { startDevServer } from "@jsenv/core";
+import { requestCertificate } from "@jsenv/https-local";
+
+const { certificate, privateKey, rootCertificate } = requestCertificate();
+await startDevServer({
+  sourceDirectoryUrl: import.meta.resolve("../src/"),
+  https: { certificate, privateKey, rootCertificate },
+  acceptAnyIp: true,
+});
+```
+
+The terminal then shows the page to open on the phone:
+
+```console
+- https://192.168.1.12:3456
+  trust it on a phone: http://192.168.1.12:3456/.internal/https/
+  root certificate SHA-256: 71:21:01:96:5C:52:9D:58:EA:36:AA:6B:C1:E0:EB:86:...
+```
+
+That page:
+
+- offers the root certificate for download;
+- gives the steps for Android, iOS and computers, those of the device first. On iOS the one everyone misses is the last: installing the profile is not enough, full trust must be turned on in Settings › General › About › Certificate Trust Settings;
+- tells whether the device trusts the dev server yet, and checks again when coming back from the settings;
+- links to the dev server over https, at the address the phone used.
+
+The page is served over plain http. It is the one page that must load before the certificate is trusted: over https it would show the very warning it is there to remove. Everything else stays redirected to https.
+
+**What the device trusts.** Anything signed by the authority's private key. That key never leaves the machine, only the certificate is served: it is the trade-off `init` already made on the machine. The page tells how to remove the certificate from the device.
+
+**Check the fingerprint.** The page travels over http, so someone on the network could swap the file. Once installed, the SHA-256 fingerprint shown by the phone must match the one printed in the terminal, not the one on the page, which travels with the file. Android shows it in Settings › Encryption & credentials › Trusted credentials › User; iOS in Settings › General › VPN & Device Management, on the profile.
+
+**A browser that clicked through the warning** earlier can make the page say the device trusts the dev server when it does not: the browser remembers that decision for the host for a while.
+
+**Without `acceptAnyIp`** the page is not served: a dev server listening on localhost only has no phone to serve.
 
 <!-- PLACEHOLDER_START:NAV_PREV_NEXT -->
 

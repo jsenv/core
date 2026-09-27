@@ -19,6 +19,7 @@ Generate locally trusted HTTPS certificates for local development.
     - [generate](#generate)
     - [cleanup](#cleanup)
   - [Certificate Expiration](#certificate-expiration)
+  - [Other Devices](#other-devices)
   - [JavaScript API](#javascript-api)
     - [requestCertificate](#requestcertificate)
     - [trustCertificateAuthority](#trustcertificateauthority)
@@ -148,6 +149,8 @@ Example:
 npx @jsenv/https-local generate --certificate server.pem --private-key server.key --hostnames localhost,myapp.local
 ```
 
+The default is `localhost` alone, unlike [requestCertificate](#requestcertificate): a file keeps the network ips of the day it was written, and they change with the network.
+
 ### cleanup
 
 ```console
@@ -167,6 +170,19 @@ The **server certificate** expires after one year, which is the maximum duration
 
 The **authority root certificate** expires after 20 years. Re-running `init` after expiry will reinstall and re-trust a new one.
 
+## Other Devices
+
+`init` trusts the authority on the machine it runs on, and in the iOS simulators booted there. Another device, a phone for instance, trusts it once the root certificate is installed on it. Until then, it shows a certificate warning; clicking through it is not enough for what needs a secure context: Chrome, for one, refuses to register a service worker on such an origin.
+
+The [jsenv dev server](https://github.com/jsenv/core/blob/main/docs/users/b_dev/b_dev.md#2102-trusting-it-on-a-phone) serves a page doing it from the phone itself (download, steps for Android and iOS, a check that it worked) when given the `rootCertificate` returned by [requestCertificate](#requestcertificate).
+
+By hand: copy `https_local_root_certificate.crt` to the device, never the `.key` next to it.
+
+- **Android**: in Settings, search for "CA certificate", then install the file. Android requires a screen lock and then shows "Network may be monitored".
+- **iOS**: send the file with AirDrop, or open a link to it in Safari, then Settings › Profile Downloaded › Install. Then Settings › General › About › Certificate Trust Settings, and turn on full trust for the certificate: without it the certificate is installed but not trusted.
+
+The device then trusts anything signed by the authority's key, the trade-off already made on the machine. Remove it from Android's Settings › Encryption & credentials › Trusted credentials › User, or from iOS's Settings › General › VPN & Device Management.
+
 ## JavaScript API
 
 To use the JavaScript API, add the package to your dev dependencies:
@@ -178,6 +194,10 @@ npm install --save-dev @jsenv/https-local
 ### requestCertificate
 
 The `requestCertificate` function generates a fresh certificate each time it is called and returns it in memory. Because the certificate is generated on every server startup, it is always valid — as long as your server is restarted at least once a year.
+
+Without `altNames`, the certificate is valid for every name of the machine: `localhost`, `127.0.0.1`, `::1`, the machine name, `<name>.local` and the network ips. That is what another device on the network types to reach it; a name missing from the certificate fails in the browser (`ERR_CERT_COMMON_NAME_INVALID`) even when the authority is trusted. The network ips are read at the time of the call: after joining another network, restart the server.
+
+Besides `certificate` and `privateKey`, it returns the authority as `rootCertificate` (PEM), for a device that must trust it (see [Other Devices](#other-devices)), and `rootCertificateFilePath`.
 
 ```js
 import { createServer } from "node:https";
