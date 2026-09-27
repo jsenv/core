@@ -3,9 +3,9 @@
 Where scrolling happens in a navi app, and how the pieces that live inside a
 scrolling area (`Box header/body/footer`, `List`, a popup) are told about it.
 
-Where a navigation LANDS is another subject — a push at the top, a back or
-forward where the page was left, a row of tabs giving each tab back the offset
-it was read at: see
+Where a navigation LANDS is another subject — a push at the top, a push with a
+`#id` on the element it names, a back or forward where the page was left, a row
+of tabs giving each tab back the offset it was read at: see
 [navigation.md](./navigation.md#where-a-navigation-lands-the-scroll).
 
 - [What makes header/body/footer work: the overflow](#what-makes-headerbodyfooter-work-the-overflow)

@@ -16,6 +16,7 @@ linking to them, and turning them into tabs.
 - [The back arrow: `navBack`](#the-back-arrow-navback)
 - [Tabs that travel: `RouteTravel`](#tabs-that-travel-routetravel)
 - [Where a navigation lands: the scroll](#where-a-navigation-lands-the-scroll)
+  - [Landing on an element: the fragment](#landing-on-an-element-the-fragment)
 - [Creating something, then editing it](#creating-something-then-editing-it)
 - [Tabs that are not routes](#tabs-that-are-not-routes)
   - [A `SlideContainer` in the URL: a position that is not a place one came from](#a-slidecontainer-in-the-url-a-position-that-is-not-a-place-one-came-from)
@@ -694,7 +695,7 @@ the two, never both: see [route_transitions.md](./route_transitions.md).
 
 ## Where a navigation lands: the scroll
 
-Four cases, and they are not a policy to configure but four different facts:
+Five cases, and they are not a policy to configure but five different facts:
 
 - **Going somewhere new** (a `<Link>`, anything that pushes to another path)
   lands at the top. It is an arrival: the offset one had elsewhere means nothing
@@ -704,6 +705,10 @@ Four cases, and they are not a policy to configure but four different facts:
   reader is scrolled in — a [layer](#a-layer-over-the-screen-what-its-address-may-say)
   opening, a [state whose values are places](#a-state-whose-values-are-places-history-push)
   written — and moves nothing, like a replace.
+- **Going somewhere new, to an element** (`/places/le-set#tournaments`) lands
+  on the element whose `id` is the fragment, once it is rendered — even when it
+  arrives with the data a second later. See
+  [Landing on an element](#landing-on-an-element-the-fragment).
 - **Going back or forward** (the browser's buttons, `navBack()`,
   `history.back()`) lands where that page was left. navi keeps the position and
   puts it back once the page is really rendered, which is what the browser
@@ -731,6 +736,71 @@ that must ALWAYS behave as a back — even far from the entry it targets, even
 in a browser with no Navigation API — is `navBack()`. Where there may be
 nothing to go back to (a shared link opened cold), decide what the arrow does
 from the history, not from the link.
+
+### Landing on an element: the fragment
+
+A link meant to bring one element under the reader's eyes — a notification
+pointing at a section several screens down, a shared link to a comment, a row
+in a list — is an `id` on the element and a `#id` in the link. Nothing else:
+
+```jsx
+<Box id="tournaments">…</Box>
+
+// anywhere else
+<Link href={`${PLACE_ROUTE.buildUrl({ slug })}#tournaments`}>…</Link>
+```
+
+`<Link route>` builds no fragment, so the link spells its `href`.
+
+The browser alone is not enough in an app. It answers a fragment when the
+document finishes loading and on a fragment navigation within the page — both
+before the data has drawn the element — and a navigation navi routes is not a
+fragment navigation at all. So navi answers every URL carrying a hash itself:
+
+- **It waits for the element.** The element is reached when it exists and
+  shows something (`checkVisibility`): one still loading, or rendered inside a
+  closed tab or a folded `<details>`, has not arrived yet. navi opens nothing to
+  reach it.
+- **It gives up.** Once the document has had no route or action loading for
+  `graceAfterIdle` (1 s), or after `maxWait` (10 s) in a document that never
+  stops working. A link to an element that is gone brings nothing: no scroll,
+  no mark.
+- **It answers once per arrival.** What is watched is the path and the hash: a
+  search param written while the reader is there (a filter, a page) does not
+  throw them back to the element. Pressing the very link one is on answers
+  again.
+- **What the reader gets**: the element against the top edge, instantly (what
+  the browser does with a fragment); the keyboard focus on it when it is itself
+  focusable — an `id` on the link or the button, not on a box around one; and a
+  fading ring, the element carrying `data-url-target` for `markDuration` (2 s).
+  The ring is coloured by `--navi-url-target-color` and lives in `@layer navi`:
+  an unlayered `[data-url-target] { … }` replaces it, `animation: none` removes
+  it. Its length is `markDuration`, which also publishes
+  `--navi-url-target-duration` to CSS — setting only the variable makes the ring
+  and the attribute disagree.
+- **Adjusting it**: `setUrlTargetOptions()`, once, at the app's start — the
+  alignment (`block`), `behavior`, `markDuration`, `graceAfterIdle`, `maxWait`.
+
+**`:target` is not the lasting "this one".** The browser sets it only when it
+answers the fragment itself — an in-page `#id` link to an element already
+there, a document whose load found the element. After a navigation navi
+routes, or for an element that arrived after the load, it never matches
+(measured in Chrome, Firefox and Safari). What must stay marked while the URL
+points at it reads `useUrlTargetId()` — the id the hash designates, `""` when
+there is none, re-rendering when it changes — and says so in an attribute of
+its own.
+
+#### A fragment, or a search param
+
+A fragment says where to look; a search param says what to show. When the page
+draws something differently for the value — a filter, a selected row, an open
+panel — it is a [search param](#search-params). When the page is the same and
+only the reader's eyes should go somewhere, it is a fragment, down to a single
+row (`#tournament_42`).
+
+A search param plus a `scrollIntoView` in an effect rebuilds this, less well:
+the effect fires at mount, before what sits above the element has laid out,
+and nothing ever tells it to stop waiting.
 
 ### A row of tabs, where a replace IS an arrival
 

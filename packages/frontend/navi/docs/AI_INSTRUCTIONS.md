@@ -71,9 +71,10 @@ to start when unsure which export solves a problem.
 
 - `navigation.md` — the position of the user belongs in the URL by default,
   and that decision is not retrofittable: routes, params, search params,
-  `<Route>`, tab rows, `navBack`, `RouteTravel`, where a navigation lands, a
-  `SlideContainer` read from the URL, and what a layer drawn over the screen may
-  say in its address. Read before writing any routing code.
+  `<Route>`, tab rows, `navBack`, `RouteTravel`, where a navigation lands (a
+  `#id` landing on the element it names), a `SlideContainer` read from the URL,
+  and what a layer drawn over the screen may say in its address. Read before
+  writing any routing code, and before scrolling to an element on arrival.
 - `route_transitions.md` — a transition states a relation the user reads as a
   map; a pair of routes is animated by `RouteTravel` or by a transition, never
   both; a test waits for the page arriving, never for its address. Read before
@@ -259,6 +260,9 @@ to start when unsure which export solves a problem.
 - **Routing is signal-based**: URL state (including search params) two-way
   syncs with signals. Don't build parallel state for what a route/query
   signal already tracks.
+- **A link lands on an element by its fragment**: give the element an `id` and
+  link to `#id`. Never a search param plus `scrollIntoView` in an effect (see
+  `navigation.md`).
 - **Actions** model async operations with a lifecycle (idle, running,
   completed, failed, aborted). Components read an action's state via
   `useAsyncData`, not by manually tracking loading/error booleans. Reading does

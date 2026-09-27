@@ -7,12 +7,12 @@
  * request, both are too early — the element does not exist yet, there is
  * nothing to scroll to, and the moment passes.
  *
- * What is already acquired, and what this file therefore does not redo:
- * `:target` is live — as soon as an element carries the hash's id it matches,
- * even if it arrives a second later. The durable "this is the one" state is
- * there for free, and an app styles it in CSS. What is lost is the one-shot
- * action tied to a moment: bringing the target under the reader's eyes, and
- * saying it just arrived. That is all of what follows.
+ * `:target` is no help either: the browser sets it only when it answers the
+ * fragment itself, never for an element arriving after the load, nor after a
+ * pushState or an intercepted navigation (measured in Chrome, Firefox and
+ * Safari). The durable "this is the one" state is `useUrlTargetId()`. What
+ * this file does is the one-shot action tied to a moment: bringing the target
+ * under the reader's eyes, and saying it just arrived.
  *
  * Two decisions worth knowing before reading:
  *
@@ -29,10 +29,10 @@
  *   month-old link to a deleted element simply brings nothing and the reader
  *   lands on the page — the right degradation.
  *
- * The case where none of this is needed is worth naming: when a list's skeleton
+ * The case where no wait is needed is worth naming: when a list's skeleton
  * already knows the ids of its slice (they are in cache, or they come from the
  * URL), putting them on the placeholders is enough — the target then exists on
- * the very first render and the browser does everything on its own.
+ * the very first render and is answered at once.
  */
 
 import { elementIsFocusable } from "@jsenv/dom";
