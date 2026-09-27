@@ -99,12 +99,11 @@ const SAFE_AREA_CSS = /* css */ `
       --navi-fixed-bar-space-left: 0px;
 
       /* What the on-screen keyboard covers — and ONLY where it overlays the
-         content rather than shrinking the viewport, which is navi's default
-         wherever the browser has the VirtualKeyboard API (see
-         layout/virtual_keyboard.js). Zero on Firefox/Safari, which have no
-         such API, and zero for an app that called
-         disableVirtualKeyboardOverlay(): both get a keyboard that shrinks the
-         visual viewport instead, which --navi-vvh already tracks. Reading
+         content rather than shrinking the viewport, which an app asks for
+         with enableVirtualKeyboardOverlay() (layout/virtual_keyboard.js).
+         Zero otherwise, and always on Firefox/Safari, which have no such API:
+         the keyboard shrinks the visual viewport instead, which --navi-vvh
+         already tracks. Reading
          env() rather than a JS-written value keeps it live: the keyboard
          slides in over several frames and this follows it without a
          listener. */
@@ -216,10 +215,11 @@ const SAFE_AREA_CSS = /* css */ `
     /* The keyboard's room, for a page that marked nothing: the document is
        then what scrolls under the keyboard, and a field near its end needs as
        much room below it as the keyboard and its strip are tall to be brought
-       out from under them (layout/virtual_keyboard.js). Unlike the bars, this
-       is owed without the app asking: the keyboard only covers the page
-       because navi made it overlay. A marked element already gives that room
-       in its padding-bottom, hence the :has().
+       out from under them (layout/virtual_keyboard.js). Unlike the bars, it
+       is given without the app marking anything: a viewport that shrinks
+       always leaves the browser that room, and enabling the overlay must not
+       take it away. A marked element already gives that room in its
+       padding-bottom, hence the :has().
 
        A pseudo-element rather than a padding on :root, which the common reset
        zeroing html's padding would take away. */

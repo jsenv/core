@@ -24,9 +24,10 @@
  * to do with the field being typed into — the page reflows, fixed bars move,
  * and a mobile browser fires that resize transiently as focus goes from one
  * input to the next. Overlaying leaves the layout alone and hands over a
- * number instead. So navi takes it by default (see its own index.js) and only
- * offers a way back out, for an app whose own layout was built around the
- * viewport shrinking.
+ * number instead. navi offers it (enableVirtualKeyboardOverlay) rather than
+ * taking it by default: the deal also takes away what the browser does for a
+ * shrinking viewport, and that has to be redone by hand (see navi's
+ * layout/virtual_keyboard.js).
  */
 
 const virtualKeyboard = window.navigator.virtualKeyboard;

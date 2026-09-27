@@ -232,8 +232,8 @@ to start when unsure which export solves a problem.
   `:nth-child`, `:empty`) on a container holding navi components.
 - `safe_area.md` — the two inset families, an app narrower than the window
   (`--navi-app-max-width`), `data-navi-safe-area`, which viewport is which under
-  a virtual keyboard (overlaid on Chromium by default:
-  `--navi-keyboard-inset-bottom`). Read before hand-writing an offset to clear a `FixedBar`.
+  a virtual keyboard (overlaid on Chromium only with
+  `enableVirtualKeyboardOverlay()`: `--navi-keyboard-inset-bottom`). Read before hand-writing an offset to clear a `FixedBar`.
 - `scroll.md` — where scrolling happens: `header`/`body`/`footer`, `List`'s
   `scroller`, where a list opens and what a search does to where it is, a popup
   that scrolls, hover while scrolling; many rows: `<List.Items>` and the render

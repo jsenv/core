@@ -10,13 +10,6 @@ import {
   visualViewportWidthSignal,
 } from "./layout/responsive.js";
 import "./layout/safe_area.js";
-// Side-effect import: turns the on-screen keyboard into something that
-// overlays the app instead of resizing the viewport, which is navi's default
-// (see that module for why, and safe_area.js's own
-// --navi-keyboard-inset-bottom for what then reads the geometry). Here rather
-// than in each component: it is one decision about the whole window, and this
-// is the module that already makes those.
-import "./layout/virtual_keyboard.js";
 
 const button = document.createElement("button");
 button.style.display = "none";
@@ -420,7 +413,7 @@ effect(() => {
 // that positions popups (pickPositionRelativeTo in @jsenv/dom) computes
 // against the visual viewport narrowed by the app's own bands, so a dialog
 // centers on the app column and a side panel docks flush against the app's
-// edge rather than the window's. Here rather than in each component, for the
-// same reason as virtual_keyboard.js above: one decision about the whole
-// window.
+// edge rather than the window's. Here rather than in each component: it is
+// one decision about the whole window, and this is the module that makes
+// those.
 setPlacementViewportInsets(getAppInsets);

@@ -200,12 +200,12 @@ the keyboard moves depends on the browser.
 | `visualViewport.height`          | yes, except where the keyboard overlays (below) |
 | `--navi-vvh` (tracks the visual) | same as `visualViewport.height`                 |
 
-Wherever the browser has the VirtualKeyboard API (Chromium), navi makes the
-keyboard overlay the page rather than shrink it (`src/layout/virtual_keyboard.js`):
-no viewport shrinks, and the keyboard arrives as `--navi-keyboard-inset-bottom`
-(`env(keyboard-inset-height)`), which `--navi-app-inset-bottom` adds. Firefox,
-Safari, and an app that called `disableVirtualKeyboardOverlay()` shrink the
-visual viewport instead, and `--navi-keyboard-inset-bottom` stays 0. Either way
+By default the keyboard shrinks the visual viewport, on every browser, and
+`--navi-keyboard-inset-bottom` stays 0. Where the browser has the VirtualKeyboard
+API (Chromium), an app can call `enableVirtualKeyboardOverlay()` to make the
+keyboard overlay the page instead (`src/layout/virtual_keyboard.js`): no viewport
+shrinks, and the keyboard arrives as `--navi-keyboard-inset-bottom`
+(`env(keyboard-inset-height)`), which `--navi-app-inset-bottom` adds. Either way
 `--navi-app-height` and the popup ceilings answer the part of the screen left
 visible.
 

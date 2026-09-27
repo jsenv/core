@@ -36,7 +36,7 @@ import {
  * and only on browsers with no visualViewport at all.
  *
  * The keyboard is then subtracted rather than assumed to have already shrunk
- * the viewport: with `overlaysContent` (virtual_keyboard.js, navi turns it on)
+ * the viewport: with `overlaysContent` (virtual_keyboard.js, an app turns it on)
  * the viewport stays full height and the keyboard is painted over its bottom.
  * Zero everywhere else, the browser having done the subtraction itself.
  */

@@ -406,9 +406,8 @@
         NaviDebug,
         SlideContainer,
         Text,
-        disableVirtualKeyboardOverlay,
+        enableVirtualKeyboardOverlay,
       } from "@jsenv/navi";
-      import { setVirtualKeyboardOverlaysContent } from "@jsenv/dom";
       import { ChevronUpSvg } from "@jsenv/navi/src/graphic/icons/chevron_stroke_svg.jsx";
       import { PlusSvg } from "@jsenv/navi/src/graphic/icons/plus_svg.jsx";
       import {
@@ -2057,16 +2056,13 @@
         );
       };
 
-      // Both mechanisms at once, on the same dialogs. Checked (navi's own
-      // default) is the VirtualKeyboard API's overlay: the viewport keeps its
-      // full height and env(keyboard-inset-height) is what navi subtracts
-      // instead (--navi-keyboard-inset-bottom). Unchecked is what
-      // disableVirtualKeyboardOverlay() goes back to, and all Firefox/Safari
-      // ever do: the browser shrinks the visual viewport itself. They are
-      // meant to look identical from here — which is the point of having them
-      // side by side. Toggled through @jsenv/dom's own setter rather than
-      // navi's one-way disable, since a demo has to be able to turn it back
-      // on.
+      // Both mechanisms at once, on the same dialogs. Unchecked (navi's
+      // default, and all Firefox/Safari ever do): the browser shrinks the
+      // visual viewport itself. Checked is enableVirtualKeyboardOverlay(): the
+      // viewport keeps its full height and env(keyboard-inset-height) is what
+      // navi subtracts instead (--navi-keyboard-inset-bottom). They are meant
+      // to look identical from here — which is the point of having them side
+      // by side.
       //
       // Support is read straight off the platform rather than through navi: navi has
       // nothing to say about a browser without the API — it just keeps
@@ -2079,14 +2075,13 @@
           useAnimateControls("dialog_demo_keyboard");
         const [overlaysContent, setOverlaysContent] = useStoredBoolean(
           "dialog_demo_keyboard_overlays_content",
-          true,
+          false,
         );
         useEffect(() => {
-          if (overlaysContent) {
-            setVirtualKeyboardOverlaysContent(true);
-          } else {
-            disableVirtualKeyboardOverlay();
+          if (!overlaysContent) {
+            return undefined;
           }
+          return enableVirtualKeyboardOverlay();
         }, [overlaysContent]);
         return (
           <section class="demo-section">
@@ -2102,15 +2097,15 @@
             </p>
             <p>
               The checkbox at the bottom of the section switches which mechanism
-              is in play. On (navi's default): the keyboard overlays the page,
-              the viewport keeps its full height, and{" "}
+              is in play. Off (navi's default, and all Firefox/Safari ever do):
+              the browser shrinks the visual viewport and{" "}
+              <code>--navi-vvh</code> follows it. On — what{" "}
+              <code>enableVirtualKeyboardOverlay()</code> asks for: the keyboard
+              overlays the page, the viewport keeps its full height, and{" "}
               <code>env(keyboard-inset-height)</code> is what navi subtracts
               from the app's own rectangle (<code>--navi-app-inset-bottom</code>
-              , see <code>safe_area.js</code>). Off — what{" "}
-              <code>disableVirtualKeyboardOverlay()</code> goes back to, and all
-              Firefox/Safari ever do: the browser shrinks the visual viewport
-              and <code>--navi-vvh</code> follows it. Both should look the same
-              from here.
+              , see <code>safe_area.js</code>). Both should look the same from
+              here.
             </p>
             <Heading level={3} id="keyboard-single-input">
               One input
