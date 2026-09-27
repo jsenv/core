@@ -54,6 +54,11 @@ export const setVirtualKeyboardOverlaysContent = (value) => {
  * `overlaysContent` is false: a keyboard that resized the viewport covers
  * nothing that is left of it, so the zero is the right answer rather than a
  * missing one.
+ *
+ * The height only, never `boundingRect.y`: moving focus from one field to
+ * another with the keyboard up, Chrome 153 (Android 10) reported the same
+ * height with a top 200px off, its bottom nowhere near the screen's. The
+ * keyboard is at the bottom of the viewport; its height is what holds.
  */
 export const getVirtualKeyboardOverlayHeight = () => {
   if (!virtualKeyboard) {

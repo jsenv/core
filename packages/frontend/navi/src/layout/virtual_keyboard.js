@@ -21,10 +21,12 @@
  * bringing the focused field out from under the keyboard. A viewport that
  * shrinks makes the browser scroll to the field; a keyboard that merely paints
  * over the page leaves whatever is under it under it. So navi does that
- * scroll here, and it needs two things safe_area.js provides: a
- * scroll-padding-bottom that counts the keyboard in, so the scroll stops right
- * above it, and room at the end of the scroller, so a field near the end of
- * the page has somewhere to go.
+ * scroll here, with three things safe_area.js provides: a
+ * scroll-padding-bottom that counts the keyboard in, which bounds the band the
+ * field is brought into; room at the end of the scroller, so a field near the
+ * end of the page has somewhere to go; and an allowance for the strip Chrome
+ * paints above the keyboard without reporting it
+ * (--navi-keyboard-strip-allowance).
  */
 
 import {
@@ -52,11 +54,16 @@ const revealFocusedField = () => {
   if (!isEditableTarget(field)) {
     return;
   }
-  // "nearest" against a scroll-padding-bottom that counts the keyboard in
-  // (:root and [data-navi-safe-area], see safe_area.js): a field already clear
-  // of it does not move, one under it stops right above it.
+  if (isInDocumentBand(field)) {
+    return;
+  }
+  // "center" rather than "nearest": nearest stops the field on the edge the
+  // keyboard reports, which is under the strip Chrome paints above it. The
+  // middle of the band clears the strip whatever its height — and centering
+  // what is not fully visible is what Chrome does itself when the viewport
+  // shrinks.
   scrollIntoViewThroughScrollables(field, {
-    block: "nearest",
+    block: "center",
     behavior: "instant",
   });
 };
@@ -65,3 +72,20 @@ subscribeVirtualKeyboardGeometryChange(revealFocusedField);
 // From one field to the next with the keyboard up: when both want the same
 // keyboard it does not move, and no geometrychange fires.
 document.addEventListener("focusin", revealFocusedField, { capture: true });
+
+// The band the document leaves visible: inside its scroll-padding (the bars,
+// the keyboard as reported, see safe_area.js), and above the strip nothing
+// reports. Against the window rather than each scroller's own band: the
+// keyboard covers the window, and a field hidden inside its own scroller is
+// what the browser's focus already scrolls to.
+const isInDocumentBand = (field) => {
+  const documentElement = document.documentElement;
+  const style = getComputedStyle(documentElement);
+  const bandTop = parseFloat(style.scrollPaddingTop) || 0;
+  const bandBottom =
+    documentElement.clientHeight -
+    (parseFloat(style.scrollPaddingBottom) || 0) -
+    parseFloat(style.getPropertyValue("--navi-keyboard-strip-allowance"));
+  const { top, bottom } = field.getBoundingClientRect();
+  return top >= bandTop && bottom <= bandBottom;
+};

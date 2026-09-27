@@ -42,7 +42,9 @@ const SAFE_AREA_CSS = /* css */ `
      by popup placement, which must keep to the same rectangle as the CSS
      whether the bands are centered or written by the app (getAppInsets in
      layout/responsive.js); level 2 by a route transition, to keep the band the
-     page being left had (nav/transition_window.js). */
+     page being left had (nav/transition_window.js). The keyboard's strip
+     allowance is read by the reveal of the focused field
+     (layout/virtual_keyboard.js). */
   @property --navi-app-inset-top {
     syntax: "<length>";
     inherits: true;
@@ -83,6 +85,11 @@ const SAFE_AREA_CSS = /* css */ `
     inherits: true;
     initial-value: 0px;
   }
+  @property --navi-keyboard-strip-allowance {
+    syntax: "<length>";
+    inherits: true;
+    initial-value: 0px;
+  }
 
   @layer navi {
     /* Layered whole, rules included: the two rules below are offers, not
@@ -109,6 +116,21 @@ const SAFE_AREA_CSS = /* css */ `
          slides in over several frames and this follows it without a
          listener. */
       --navi-keyboard-inset-bottom: env(keyboard-inset-height, 0px);
+      /* What Chrome paints right above the keyboard without counting it in
+         the keyboard's geometry: the autofill/suggestion strip, which neither
+         env(keyboard-inset-height) nor geometrychange reports (see
+         window_size.js in @jsenv/dom). 49–64px measured on Android 10 /
+         Chrome 153; 0 while no keyboard is up.
+
+         Kept out of --navi-keyboard-inset-bottom: the strip is not always
+         there, and whatever sits against the keyboard (a fixed bar, a popup)
+         would float above it with a gap when it is missing. Only the room to
+         scroll into and the reveal of the focused field take it, where an
+         excess costs nothing. */
+      --navi-keyboard-strip-allowance: min(
+        var(--navi-keyboard-inset-bottom),
+        64px
+      );
 
       /* Level 1. Centered bands, so that declaring one ceiling
          (--navi-app-max-width) is all an app has to do to be a narrow screen in
@@ -177,7 +199,10 @@ const SAFE_AREA_CSS = /* css */ `
     [data-navi-safe-area] {
       padding-top: var(--navi-safe-area-inset-top);
       padding-right: var(--navi-safe-area-inset-right);
-      padding-bottom: var(--navi-safe-area-inset-bottom);
+      padding-bottom: calc(
+        var(--navi-safe-area-inset-bottom) +
+          var(--navi-keyboard-strip-allowance)
+      );
       padding-left: var(--navi-safe-area-inset-left);
 
       scroll-padding-top: var(--navi-safe-area-inset-top);
@@ -188,17 +213,19 @@ const SAFE_AREA_CSS = /* css */ `
 
     /* The keyboard's room, for a page that marked nothing: the document is
        then what scrolls under the keyboard, and a field near its end needs as
-       much room below it as the keyboard is tall to be brought out from under
-       it (layout/virtual_keyboard.js). Unlike the bars, this is owed without
-       the app asking: the keyboard only covers the page because navi made it
-       overlay. A marked element already gives that room in its padding-bottom,
-       hence the :has().
+       much room below it as the keyboard and its strip are tall to be brought
+       out from under them (layout/virtual_keyboard.js). Unlike the bars, this
+       is owed without the app asking: the keyboard only covers the page
+       because navi made it overlay. A marked element already gives that room
+       in its padding-bottom, hence the :has().
 
        A pseudo-element rather than a padding on :root, which the common reset
        zeroing html's padding would take away. */
     :root:not(:has([data-navi-safe-area]))::after {
       display: block;
-      height: var(--navi-keyboard-inset-bottom);
+      height: calc(
+        var(--navi-keyboard-inset-bottom) + var(--navi-keyboard-strip-allowance)
+      );
       content: "";
     }
   }
