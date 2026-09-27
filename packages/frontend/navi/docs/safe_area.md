@@ -212,15 +212,15 @@ visible.
 An overlaying keyboard is one the browser no longer scrolls the focused field
 out from under, so navi does: when the keyboard rises or resizes, and when focus
 moves to another field with the keyboard up, a focused field that is not fully
-in the visible band is centered in it. The band is the document's
-`scroll-padding` box (bars, and the keyboard as reported) minus
-`--navi-keyboard-strip-allowance` at the bottom: Chrome paints an
+inside the document's `scroll-padding` box is centered in it. Chrome paints an
 autofill/suggestion strip above the keyboard that neither
-`env(keyboard-inset-height)` nor `geometrychange` counts, so a field brought
-exactly to the reported edge ends up under it. The room to scroll into comes
-from the marked element's `padding-bottom`, or, on a page that marked nothing,
-from a block navi adds at the end of the document while the keyboard is up —
-both count the keyboard and the allowance.
+`env(keyboard-inset-height)` nor `geometrychange` counts, so
+`scroll-padding-bottom` adds `--navi-keyboard-strip-allowance` on top of the
+keyboard — which also keeps Chrome's own caret-following, as a textarea grows
+under typing, clear of the strip. The room to scroll into comes from the marked
+element's `padding-bottom`, or, on a page that marked nothing, from a block navi
+adds at the end of the document while the keyboard is up — both count the
+keyboard and the allowance.
 
 `position: fixed` — so every `FixedBar` — is laid out against the **layout**
 viewport. Where the visual viewport is what shrinks, a bottom bar therefore

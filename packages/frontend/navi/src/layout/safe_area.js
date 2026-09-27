@@ -42,9 +42,7 @@ const SAFE_AREA_CSS = /* css */ `
      by popup placement, which must keep to the same rectangle as the CSS
      whether the bands are centered or written by the app (getAppInsets in
      layout/responsive.js); level 2 by a route transition, to keep the band the
-     page being left had (nav/transition_window.js). The keyboard's strip
-     allowance is read by the reveal of the focused field
-     (layout/virtual_keyboard.js). */
+     page being left had (nav/transition_window.js). */
   @property --navi-app-inset-top {
     syntax: "<length>";
     inherits: true;
@@ -85,11 +83,6 @@ const SAFE_AREA_CSS = /* css */ `
     inherits: true;
     initial-value: 0px;
   }
-  @property --navi-keyboard-strip-allowance {
-    syntax: "<length>";
-    inherits: true;
-    initial-value: 0px;
-  }
 
   @layer navi {
     /* Layered whole, rules included: the two rules below are offers, not
@@ -124,9 +117,12 @@ const SAFE_AREA_CSS = /* css */ `
 
          Kept out of --navi-keyboard-inset-bottom: the strip is not always
          there, and whatever sits against the keyboard (a fixed bar, a popup)
-         would float above it with a gap when it is missing. Only the room to
-         scroll into and the reveal of the focused field take it, where an
-         excess costs nothing. */
+         would float above it with a gap when it is missing. Only scrolling
+         takes it, where an excess costs nothing: the room to scroll into, and
+         the scroll-padding-bottom a scroll lands against — navi's reveal of
+         the focused field (layout/virtual_keyboard.js), and Chrome's own,
+         which keeps the caret flush on scroll-padding-bottom as a textarea
+         grows under typing. */
       --navi-keyboard-strip-allowance: min(
         var(--navi-keyboard-inset-bottom),
         64px
@@ -177,7 +173,10 @@ const SAFE_AREA_CSS = /* css */ `
          landing under a bar is never what anyone wants. */
       scroll-padding-top: var(--navi-safe-area-inset-top);
       scroll-padding-right: var(--navi-safe-area-inset-right);
-      scroll-padding-bottom: var(--navi-safe-area-inset-bottom);
+      scroll-padding-bottom: calc(
+        var(--navi-safe-area-inset-bottom) +
+          var(--navi-keyboard-strip-allowance)
+      );
       scroll-padding-left: var(--navi-safe-area-inset-left);
     }
 
@@ -207,7 +206,10 @@ const SAFE_AREA_CSS = /* css */ `
 
       scroll-padding-top: var(--navi-safe-area-inset-top);
       scroll-padding-right: var(--navi-safe-area-inset-right);
-      scroll-padding-bottom: var(--navi-safe-area-inset-bottom);
+      scroll-padding-bottom: calc(
+        var(--navi-safe-area-inset-bottom) +
+          var(--navi-keyboard-strip-allowance)
+      );
       scroll-padding-left: var(--navi-safe-area-inset-left);
     }
 
