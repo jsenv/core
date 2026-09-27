@@ -69,20 +69,36 @@ export const getVirtualKeyboardOverlayHeight = () => {
 };
 
 /**
- * Calls `callback` whenever the keyboard shows, hides or resizes. Returns an
- * unsubscribe function; a no-op (never calls back) without support.
+ * Calls `callback` whenever the keyboard shows, hides or resizes — whenever
+ * getVirtualKeyboardOverlayHeight() changes. Returns an unsubscribe function;
+ * a no-op (never calls back) without support.
+ *
+ * On the height alone: Chrome (Android 10 / Chrome 153) also fires
+ * "geometrychange" at an unchanged height while the page is scrolled with the
+ * keyboard up, and a listener acting on those — bringing the focused field
+ * back into view — takes the scroll away from the user. The rest of the rect
+ * says nothing either (see getVirtualKeyboardOverlayHeight for its y).
  *
  * Undebounced on purpose, unlike window/visualViewport resize
- * (window_size.js): "geometrychange" is not the transient storm those are —
- * it fires on the keyboard itself changing, not on the layout reacting to it,
- * which is the whole point of overlaying.
+ * (window_size.js): filtered on the height, what is left is the keyboard
+ * itself changing, not the layout reacting to it, which is the whole point of
+ * overlaying.
  */
 export const subscribeVirtualKeyboardGeometryChange = (callback) => {
   if (!virtualKeyboard) {
     return () => {};
   }
-  virtualKeyboard.addEventListener("geometrychange", callback);
+  let height = getVirtualKeyboardOverlayHeight();
+  const onGeometryChange = (event) => {
+    const newHeight = getVirtualKeyboardOverlayHeight();
+    if (newHeight === height) {
+      return;
+    }
+    height = newHeight;
+    callback(event);
+  };
+  virtualKeyboard.addEventListener("geometrychange", onGeometryChange);
   return () => {
-    virtualKeyboard.removeEventListener("geometrychange", callback);
+    virtualKeyboard.removeEventListener("geometrychange", onGeometryChange);
   };
 };
