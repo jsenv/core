@@ -17,20 +17,51 @@
  * with disableVirtualKeyboardOverlay(), and gets the behavior Firefox and
  * Safari give it anyway.
  *
- * The one thing it hands back to the app: scrolling the focused field into
- * view. A viewport that shrinks makes the browser do it; a keyboard that
- * merely paints over the page leaves whatever is under it under it. navi
- * answers that for what it places itself — a popup is sized and positioned
- * against the app rectangle the keyboard was just subtracted from — and for
- * anything marked [data-navi-safe-area], whose scroll-padding-bottom counts
- * the keyboard in (safe_area.js). A field in a scroller the app never marked
- * is the app's own to handle.
+ * Taking the deal means taking over what the browser stops doing under it:
+ * bringing the focused field out from under the keyboard. A viewport that
+ * shrinks makes the browser scroll to the field; a keyboard that merely paints
+ * over the page leaves whatever is under it under it. So navi does that
+ * scroll here, and it needs two things safe_area.js provides: a
+ * scroll-padding-bottom that counts the keyboard in, so the scroll stops right
+ * above it, and room at the end of the scroller, so a field near the end of
+ * the page has somewhere to go.
  */
 
-import { setVirtualKeyboardOverlaysContent } from "@jsenv/dom";
+import {
+  getVirtualKeyboardOverlayHeight,
+  scrollIntoViewThroughScrollables,
+  setVirtualKeyboardOverlaysContent,
+  subscribeVirtualKeyboardGeometryChange,
+} from "@jsenv/dom";
+
+import { isEditableTarget } from "../box/pseudo_styles.js";
 
 setVirtualKeyboardOverlaysContent(true);
 
 export const disableVirtualKeyboardOverlay = () => {
   setVirtualKeyboardOverlaysContent(false);
 };
+
+const revealFocusedField = () => {
+  // 0 as well once the overlay is disabled: the viewport shrinks and the
+  // browser reveals the field itself.
+  if (getVirtualKeyboardOverlayHeight() === 0) {
+    return;
+  }
+  const field = document.activeElement;
+  if (!isEditableTarget(field)) {
+    return;
+  }
+  // "nearest" against a scroll-padding-bottom that counts the keyboard in
+  // (:root and [data-navi-safe-area], see safe_area.js): a field already clear
+  // of it does not move, one under it stops right above it.
+  scrollIntoViewThroughScrollables(field, {
+    block: "nearest",
+    behavior: "instant",
+  });
+};
+// The keyboard rising, or changing height (suggestion strip, emoji panel).
+subscribeVirtualKeyboardGeometryChange(revealFocusedField);
+// From one field to the next with the keyboard up: when both want the same
+// keyboard it does not move, and no geometrychange fires.
+document.addEventListener("focusin", revealFocusedField, { capture: true });

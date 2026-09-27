@@ -185,6 +185,22 @@ const SAFE_AREA_CSS = /* css */ `
       scroll-padding-bottom: var(--navi-safe-area-inset-bottom);
       scroll-padding-left: var(--navi-safe-area-inset-left);
     }
+
+    /* The keyboard's room, for a page that marked nothing: the document is
+       then what scrolls under the keyboard, and a field near its end needs as
+       much room below it as the keyboard is tall to be brought out from under
+       it (layout/virtual_keyboard.js). Unlike the bars, this is owed without
+       the app asking: the keyboard only covers the page because navi made it
+       overlay. A marked element already gives that room in its padding-bottom,
+       hence the :has().
+
+       A pseudo-element rather than a padding on :root, which the common reset
+       zeroing html's padding would take away. */
+    :root:not(:has([data-navi-safe-area]))::after {
+      display: block;
+      height: var(--navi-keyboard-inset-bottom);
+      content: "";
+    }
   }
 `;
 import.meta.css = SAFE_AREA_CSS;

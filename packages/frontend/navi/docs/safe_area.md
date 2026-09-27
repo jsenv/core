@@ -145,7 +145,8 @@ brings its target to.
 
 Which element scrolls is the app's business, so navi never picks one. `:root`
 gets the `scroll-padding` unconditionally, since the document is the scrollport
-in the common case.
+in the common case — and, while nothing is marked, the keyboard's room at its
+end (see below).
 
 Beware of making that container scrollable by accident — see
 [mobile_layout_pitfalls.md](./mobile_layout_pitfalls.md).
@@ -207,6 +208,15 @@ Safari, and an app that called `disableVirtualKeyboardOverlay()` shrink the
 visual viewport instead, and `--navi-keyboard-inset-bottom` stays 0. Either way
 `--navi-app-height` and the popup ceilings answer the part of the screen left
 visible.
+
+An overlaying keyboard is one the browser no longer scrolls the focused field
+out from under, so navi does: when the keyboard rises or resizes, and when focus
+moves to another field with the keyboard up, the focused field is scrolled to
+the nearest position clear of it. That scroll relies on both paddings — the
+`scroll-padding-bottom` counts the keyboard, and the room to scroll into comes
+from the marked element's `padding-bottom`, or, on a page that marked nothing,
+from a block navi adds at the end of the document for as long as the keyboard
+is up.
 
 `position: fixed` — so every `FixedBar` — is laid out against the **layout**
 viewport. Where the visual viewport is what shrinks, a bottom bar therefore
