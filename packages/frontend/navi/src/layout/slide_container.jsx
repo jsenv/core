@@ -2303,6 +2303,57 @@ export const SlideContainer = ({
         drag.areaPulled = pulled > 0 ? drag.areaBack : drag.areaOn;
         paintDrag();
       },
+      // The slide being brought in walked whole and the hand still going, or a
+      // travel caught on its way thrown on: either way the hand asks for the
+      // slide past it, and the gesture moves on to it. Nothing on screen moves
+      // for that — the slide reached becomes the one dragged, the one the hand
+      // came from stays next to it for a hand that turns around, and the slide
+      // past it is put on the other side.
+      onEdge: ({ axis, sign }) => {
+        const reached = sign > 0 ? drag.areaBack : drag.areaOn;
+        const { slideElements, placeOf } = readMap();
+        const reachedElement =
+          reached &&
+          slideElements.find(
+            (slideElement) => readArea(slideElement) === reached,
+          );
+        if (!reachedElement) {
+          return false;
+        }
+        // The gate goToArea reads at the release, asked of the slide the hand
+        // is now in: a slide holding on to the user is not walked through.
+        const holds = reachedElement.hasAttribute(
+          sign > 0 ? "data-prevent-nav-previous" : "data-prevent-nav-next",
+        );
+        const past = holds
+          ? undefined
+          : axis === "x"
+            ? areaTowards(-sign, 0, reached)
+            : areaTowards(0, -sign, reached);
+        if (!past) {
+          return false;
+        }
+        const currentElement =
+          slideElements.find((slideElement) =>
+            slideElement.hasAttribute("data-current"),
+          ) || slideElements[0];
+        const basePlace = stageRef.current?.placeByArea.get(reached) ||
+          placeOf.get(reached) || { x: 0, y: 0 };
+        drag.areaBack = sign > 0 ? past : drag.area;
+        drag.areaOn = sign > 0 ? drag.area : past;
+        drag.area = reached;
+        drag.basePlace = basePlace;
+        drag.baseOffset = {
+          x: -basePlace.x * drag.box.width,
+          y: -basePlace.y * drag.box.height,
+        };
+        stageDrag(drag, readArea(currentElement));
+        return {
+          size: axis === "x" ? drag.box.width : drag.box.height,
+          travelBack: Boolean(drag.areaBack),
+          travelOn: Boolean(drag.areaOn),
+        };
+      },
       onEnd: ({ axis, sign, travels, event }) => {
         dragRef.current = null;
         // Where the gesture leaves the slides: on the one it was pulling in

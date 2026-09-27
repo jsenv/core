@@ -199,6 +199,11 @@ export const restoreScrollPosition = (url) => {
 // So `from`, the url being left, tells an arrival from the same place said
 // differently, and only the first is moved.
 //
+// A fragment does not make it less of an arrival. The browser finds nothing to
+// scroll to after a pushState; url_target.js brings the element in once it
+// renders, from this top — and when it never comes, the page is read from its
+// top like any other.
+//
 // The document, because the document is the scrollport in the common case. An
 // app that scrolls an element of its own scrolls it itself.
 export const startAtTop = (url, { from } = {}) => {
@@ -208,14 +213,10 @@ export const startAtTop = (url, { from } = {}) => {
   window.scrollTo({ top: 0, left: 0, behavior: "instant" });
 };
 const isArrival = (url, { from }) => {
-  const urlObject = new URL(url, window.location.href);
-  // A fragment names where to land, and the browser is the one that finds it.
-  if (urlObject.hash) {
-    return false;
-  }
   if (
     from !== undefined &&
-    new URL(from, window.location.href).pathname === urlObject.pathname
+    new URL(from, window.location.href).pathname ===
+      new URL(url, window.location.href).pathname
   ) {
     return false;
   }

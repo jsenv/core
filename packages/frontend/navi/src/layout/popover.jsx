@@ -654,8 +654,9 @@ const css = /* css */ `
  *   initial state: an uncontrolled field seeded from a `defaultValue` that
  *   changed while the popup was closed. Intent on the anchor (pointer
  *   entering it, focus landing in it) builds the content ahead of the click;
- *   under `"while-opened"`, only a press on it does, and a press that does not
- *   open the popup throws it away.
+ *   under `"while-opened"`, only a press on what opens the popup does (a
+ *   `--navi-open` button, a picker's trigger), never with an `onOpen`, and a
+ *   press that does not open the popup throws it away.
  * @param {import("preact").ComponentChildren} props.children
  */
 export const Popover = (props) => {

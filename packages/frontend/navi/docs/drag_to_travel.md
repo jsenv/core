@@ -59,6 +59,10 @@ and are referenced from here rather than restated.
   because the picture alone decided. Only a release at rest, or a slow retreat,
   is judged by the picture — about a third of a box — because there the
   position is the only witness left.
+- **A travel caught in flight and thrown on the way it was going asks for the
+  one after.** Two swipes the same way are two screens, however close
+  together: the second one is not a vote for the screen already arriving. See
+  [below](#a-hand-reaching-for-something-still-moving-is-reaching-for-that-thing).
 - **The bars those verdicts compare against sit well below the speed the
   fingertip actually has, and they must.** Velocity is averaged over a trailing
   window (pointer events arrive irregularly, and the last one before a release
@@ -449,6 +453,26 @@ Taking over means the pictures stop where they are and answer the finger again,
 from where they stand (`slack`) rather than from zero. Only one box is in hand,
 and walking out of either of its ends is a travel of its own — see below.
 
+What letting go of it again means is read from the hand, three ways:
+
+- **merely touched** — a press that moved less than a gesture's worth: nobody
+  asked the travel to stop, it was asked to wait, and it carries on to where it
+  was going;
+- **thrown back** — against the way it was going, fast: everything goes back;
+- **thrown on** — the way it was already going, fast, having moved by more than
+  a tremor: that is a second push, and it asks for the screen AFTER the one
+  arriving (`thrownOn`). Read as a verdict on the box in hand, it only confirms
+  what was already arriving — the travel stops at the press and goes on to the
+  same place, and the hand feels its second swipe swallowed. So the gesture
+  asks for the next box at the release (`onEdge` with `thrown`), with the
+  picture still short of the end of the one in hand, and nothing on screen
+  moves for it: the travel goes on from where the hand left it, to one screen
+  further. It is the wheel's rule (a second push over the tail is a screen, not
+  credit towards one) said for a hand.
+
+A slow hand going the same way and stopping before it lets go is not thrown:
+there the picture decides, and the screen arriving arrives.
+
 ### A hand that does not stop at the end of a page is asking for the next one
 
 One travel brings in one neighbour, but a gesture is not over because a travel
@@ -469,6 +493,14 @@ The two ends cost differently, and it is worth knowing which one is being felt:
   so pointing the router at the other neighbour is enough for it to show that
   one instead. The travel turns around where it stands, on the same transition,
   and there is no gap at all.
+
+That cost is a `RouteTravel` one: a `SlideContainer` has every slide mounted,
+so handing over is only re-staging — the slide reached becomes the one dragged,
+the one left stays beside it, the slide past it is put on the other side, and
+nothing on screen moves. Which is also why only a `SlideContainer` answers a
+throw (`thrown`, above): a `RouteTravel` would have to jump its pictures the
+rest of the way before handing over, a page seen leaping, so it declines and
+the page caught simply arrives.
 
 What the browser will not turn around with it is everything ELSE the
 transition carries — see [One gesture that bar cannot

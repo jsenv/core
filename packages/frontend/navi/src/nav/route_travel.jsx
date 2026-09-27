@@ -1148,9 +1148,13 @@ export const RouteTravel = ({
     // what it asks for is the page past that end, and it has said so by not
     // stopping. Which end decides how it is answered, and the two are not the
     // same amount of work.
-    onEdge: ({ sign }) => {
+    onEdge: ({ sign, thrown }) => {
       const travel = travelRef.current;
       if (
+        // Thrown on before its end: handing over from there would mean jumping
+        // the pictures the rest of the way first (see scrubTravel below), a
+        // page seen leaping. The travel caught simply arrives.
+        thrown ||
         !travel ||
         travel.noPicture ||
         travel.ended ||

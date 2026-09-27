@@ -46,7 +46,11 @@ export const usePreloadOpeningOnPress = (ref, command, prefetch = true) => {
     if (!element) {
       return undefined;
     }
-    const onPointerDown = () => {
+    const onPointerDown = (pointerdownEvent) => {
+      // A right click opens a menu, never the popup.
+      if (pointerdownEvent.button !== 0) {
+        return;
+      }
       announceOpeningPress(element, command);
     };
     element.addEventListener("pointerdown", onPointerDown);

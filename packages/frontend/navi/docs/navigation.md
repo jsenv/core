@@ -760,11 +760,12 @@ fragment navigation at all. So navi answers every URL carrying a hash itself:
 - **It waits for the element.** The element is reached when it exists and
   shows something (`checkVisibility`): one still loading, or rendered inside a
   closed tab or a folded `<details>`, has not arrived yet. navi opens nothing to
-  reach it.
+  reach it, and reaches it as soon as it shows — the reader opening the
+  `<details>`, switching to the tab — while the wait lasts.
 - **It gives up.** Once the document has had no route or action loading for
   `graceAfterIdle` (1 s), or after `maxWait` (10 s) in a document that never
-  stops working. A link to an element that is gone brings nothing: no scroll,
-  no mark.
+  stops working. A link to an element that is gone lands where a link without
+  a fragment would — at the top of a page one arrives at — with no mark.
 - **It answers once per arrival.** What is watched is the path and the hash: a
   search param written while the reader is there (a filter, a page) does not
   throw them back to the element. Pressing the very link one is on answers
@@ -781,14 +782,15 @@ fragment navigation at all. So navi answers every URL carrying a hash itself:
 - **Adjusting it**: `setUrlTargetOptions()`, once, at the app's start — the
   alignment (`block`), `behavior`, `markDuration`, `graceAfterIdle`, `maxWait`.
 
-**`:target` is not the lasting "this one".** The browser sets it only when it
-answers the fragment itself — an in-page `#id` link to an element already
-there, a document whose load found the element. After a navigation navi
-routes, or for an element that arrived after the load, it never matches
-(measured in Chrome, Firefox and Safari). What must stay marked while the URL
-points at it reads `useUrlTargetId()` — the id the hash designates, `""` when
-there is none, re-rendering when it changes — and says so in an attribute of
-its own.
+**`:target` is the lasting "this one"**, and `data-url-target` the moment it
+arrived. navi sets `:target` on the element as it lands on it — the browser
+alone never would after a navigation navi routes, nor for an element that
+arrived after the load — and takes it off once the URL stops naming the
+element, which the browser alone would not either: a search param written on
+the page rebuilds the address without its fragment, a back returns to the page
+without one. It stays on the element navi landed on; a node rendered in its
+place later is another one. In JS, `useUrlTargetId()` is the id the hash
+designates, `""` when there is none, re-rendering when it changes.
 
 #### A fragment, or a search param
 

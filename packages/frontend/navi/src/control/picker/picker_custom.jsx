@@ -38,7 +38,10 @@ import { isControlValueGivenByProps } from "../control_hooks.jsx";
 import { commitUIStateAsAnswer, isUIStateHeld } from "../held_ui_state.js";
 import { dispatchRequestAction } from "../rules/control_action.js";
 import { createOpenToken } from "../rules/control_callout.js";
-import { dispatchRequestInteraction } from "../rules/control_interaction.js";
+import {
+  allowsInteraction,
+  dispatchRequestInteraction,
+} from "../rules/control_interaction.js";
 import { getUIStateFromElement } from "../ui_state_dom.js";
 
 const css = /* css */ `
@@ -616,6 +619,11 @@ const PickerCustom = (props) => {
       "onnavi_request_open": (e) => {
         dispatchCustomEvent(popupRef.current, "navi_request_open", e.detail);
       },
+      // And the press announcing that request (see announceOpeningPress in
+      // commands.js), for the popup's content to be built on it.
+      "onnavi_open_press": () => {
+        dispatchCustomEvent(popupRef.current, "navi_open_press");
+      },
       "onnavi_request_close": (e) => {
         const closing = dispatchCustomEvent(
           popupRef.current,
@@ -816,6 +824,28 @@ const PickerCustom = (props) => {
       // below), and the keyboard keeps its own ways in (the shortcuts above).
       const openOnList = Array.isArray(openOn) ? openOn : [openOn];
       const opensOnPress = openOnList.includes("press");
+      // A press on the trigger of a picker a press opens is announced as it
+      // starts, as a --navi-open button announces its own (see
+      // announceOpeningPress in commands.js). Only a press that can open it: a
+      // picker opened by a hold says nothing on a tap, nor does one refusing
+      // to open (read-only with openWhileReadOnly={false}, busy). The
+      // interactivity is asked alone, not the whole gate: a drag source
+      // cancels the pointerdown, and the click that opens still comes.
+      if (opensOnPress) {
+        pickerProps.onPointerDown = (pointerdownEvent) => {
+          props.onPointerDown?.(pointerdownEvent);
+          const pickerEl = ref.current;
+          if (
+            pointerdownEvent.button !== 0 ||
+            openController.opened ||
+            isWithinPickerContent(pointerdownEvent.target) ||
+            !allowsInteraction(pickerEl, { intent: "read" })
+          ) {
+            return;
+          }
+          dispatchCustomEvent(pickerEl, "navi_open_press");
+        };
+      }
       let interactions = props.interactions;
       if (!opensOnPress) {
         interactions = { ...interactions };

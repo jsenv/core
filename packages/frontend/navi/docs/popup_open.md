@@ -320,12 +320,6 @@ So a dialog whose content is seeded once — an uncontrolled field on a
 first render. Learning it afterwards would mean mounting on the previous subject
 and correcting it, which is a flicker at best and stale fields at worst.
 
-One opening does not follow that order: a `mount="while-opened"` popup pressed on
-its own `anchor` (a picker's trigger, an expandable's UI part) has its content
-built by the press, ahead of the click (see
-[what the popup holds while it is closed](#what-the-popup-holds-while-it-is-closed)). A popup opened ON something is
-opened by a command pressed elsewhere, and keeps the order above.
-
 The two other places one could listen are not that moment, and it is worth
 knowing why:
 
@@ -1169,9 +1163,13 @@ off it, fields a surrounding form submits, a size measured from outside.
 
 Whatever the value but `"while-opened"`, intent on the anchor — a pointer
 entering it, focus landing in it — builds the content ahead of the click that
-will open it. A `"while-opened"` popup is warmed by a press on its anchor only,
-and a press that ends without opening it — a scroll, a drag, a release
-elsewhere — throws the content away: there is still one content at a time.
+will open it. A `"while-opened"` popup is warmed only by a press on what opens
+it — a `--navi-open` button, a picker's trigger when a press opens it, an
+expandable's UI part — and a press that ends without opening it (a scroll, a
+drag, a release elsewhere) throws the content away: there is still one content
+at a time. A popup with an `onOpen` is never warmed, so the content is always
+built after it (see
+[`onOpen` runs before the popup has built anything](#onopen-runs-before-the-popup-has-built-anything)).
 
 `"while-opened"` is what an uncontrolled field seeded from a `defaultValue`
 needs: without it, a popup reopened after the underlying value changed still

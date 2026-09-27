@@ -39,7 +39,10 @@ import { setActionDispatcher } from "../../action/actions.js";
 import { executeWithCleanup } from "../../utils/execute_with_cleanup.js";
 import { whenRenderingResumes } from "../rendering_hold.js";
 import { resolveRouteRedirection } from "../route.js";
-import { rearmUrlTarget } from "../url_target/url_target.js";
+import {
+  isTargetWriteInProgress,
+  rearmUrlTarget,
+} from "../url_target/url_target.js";
 import { publishAfterRouting, publishBeforeRouting } from "./before_routing.js";
 import {
   applyNavigationToNavDepth,
@@ -143,6 +146,11 @@ export const setupBrowserIntegrationViaNavigation = ({
   };
   rememberEntryIsOfThisDocument();
   navigation.addEventListener("currententrychange", () => {
+    if (isTargetWriteInProgress()) {
+      // The fragment navigation navi makes to set `:target` (see
+      // url_target.js), put back to the address and the state it left.
+      return;
+    }
     rememberEntryIsOfThisDocument();
     // The change has committed: the document url is the entry's url — unless
     // a debounced replace is still on its way to the browser (a state write
@@ -367,6 +375,13 @@ export const setupBrowserIntegrationViaNavigation = ({
       // The browser being told an address the document is already at (see
       // replaceAddressWhenSettled): same document, already routed, nothing
       // to do.
+      return;
+    }
+    if (isTargetWriteInProgress()) {
+      // The fragment navigation navi makes to set `:target` (see
+      // url_target.js). It keeps the address's fragment most of the time, and
+      // the browser then does not call it a hashChange: intercepted, it would
+      // route the page again.
       return;
     }
     if (pendingReplace) {

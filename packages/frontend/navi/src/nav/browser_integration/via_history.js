@@ -11,7 +11,10 @@ import {
   restoreScrollPosition,
   startAtTop,
 } from "./scroll_restoration.js";
-import { rearmUrlTarget } from "../url_target/url_target.js";
+import {
+  isTargetWriteInProgress,
+  rearmUrlTarget,
+} from "../url_target/url_target.js";
 import { publishAfterRouting, publishBeforeRouting } from "./before_routing.js";
 import {
   applyNavigationToNavDepth,
@@ -435,6 +438,11 @@ export const setupBrowserIntegrationViaHistory = ({
   });
 
   window.addEventListener("popstate", (popstateEvent) => {
+    if (isTargetWriteInProgress()) {
+      // The fragment navigation navi makes to set `:target` (see
+      // url_target.js): the entry keeps its address and its state.
+      return;
+    }
     // The entry a pending replace was for is no longer the current one, and
     // the History API has no way to write it (see replaceAddressWhenSettled).
     dropPendingReplace();
@@ -510,9 +518,14 @@ export const setupBrowserIntegrationViaHistory = ({
       // one), so whoever awaits this reads a document url and state that
       // already say where it landed.
       const landedPromise = new Promise((resolve) => {
-        window.addEventListener("popstate", () => resolve(true), {
-          once: true,
-        });
+        const onPopstate = () => {
+          if (isTargetWriteInProgress()) {
+            return;
+          }
+          window.removeEventListener("popstate", onPopstate);
+          resolve(true);
+        };
+        window.addEventListener("popstate", onPopstate);
       });
       landOnPending = landOn || null;
       window.history.back();

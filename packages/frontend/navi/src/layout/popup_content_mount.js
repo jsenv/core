@@ -56,22 +56,28 @@
  * frames, never a timeout: browsers hold timers back while a finger is down,
  * and a timeout started by the press fires at its release, on top of the click.
  *
- * "while-opened" content is warmed by a press on the anchor, never by a hover
- * or a focus. That mode promises content built fresh for the gesture that
- * opens it, and mounted only while that gesture and its opening last: callers
- * lean on it (several pickers sharing one set of content ids, because only one
- * content exists at a time). A pointer crossing four anchors would build four
- * contents; a press is the start of one opening. So the press builds it, and
- * the press ending without an open throws it away — its click reaching the
- * document with the popup still closed, no click coming after the release,
- * the browser taking the gesture (`pointercancel`), or the next press
- * starting, before any of its own handlers run: one press at a time holds a
- * content. A keyboard opening
- * builds at open time, as without warming. What this gives up: a press-warmed
- * content is built before `onOpen` runs. The popups seeding their content from
- * `onOpen` are opened ON something by a command, whose press is not on their
- * anchor, so they are not warmed; one pressed on its own anchor that still
- * seeds from `onOpen` reads the value from before it.
+ * "while-opened" content is warmed by an opening press, never by a hover or a
+ * focus. That mode promises content built fresh for the gesture that opens
+ * it, and mounted only while that gesture and its opening last: callers lean
+ * on it (several pickers sharing one set of content ids, because only one
+ * content exists at a time). A pointer crossing four triggers would build four
+ * contents; a press is the start of one opening.
+ *
+ * Only what opens the popup can say its press is one, and it says so as the
+ * press starts, with a `navi_open_press` on the popup (see
+ * announceOpeningPress in commands.js): a `--navi-open` button, a picker's
+ * trigger when a press is what opens it, an expandable's UI part. Not the
+ * anchor: it says where the popup is placed, not what opens it — a card
+ * opened by a hold is pressed all day by taps meant for what it holds.
+ *
+ * The press builds the content, and the press ending without an open throws
+ * it away — its click reaching the document with the popup still closed, no
+ * click coming after the release, the browser taking the gesture
+ * (`pointercancel`), or the next press starting, before any of its own
+ * handlers run: one press at a time holds a content. A keyboard opening builds
+ * at open time. A popup with an `onOpen` is never warmed: that callback runs
+ * before the content is built (see open_controller.js), and a content seeding
+ * itself from what it writes must be built after it.
  */
 
 import { isPressDrivenClick } from "@jsenv/dom";
@@ -210,21 +216,21 @@ export const usePopupContentMount = (
       anchorElement.removeEventListener("focusin", warm);
     };
   }, [contentMounted, anchor, mount]);
-  // Warm on the press, for "while-opened" (see the top comment). Listening for
-  // as long as the anchor is there, not only while the content is unmounted:
-  // the press that throws a warmed content away can be a new press on this
-  // same anchor, and it must warm again.
+  // Warm on an opening press, for "while-opened" (see the top comment).
+  // Listening for as long as the popup is there, not only while the content is
+  // unmounted: the press that throws a warmed content away can be a new
+  // opening press of this same popup, and it must warm again.
   useEffect(() => {
-    if (!anchor || mount !== "while-opened") {
+    if (mount !== "while-opened") {
       return undefined;
     }
-    const anchorElement = resolveAnchorElement(anchor);
-    if (!anchorElement) {
+    const element = openController.getElement?.();
+    if (!element) {
       return undefined;
     }
     let stopPressWarm = null;
-    const onPointerDown = (pointerdownEvent) => {
-      if (pointerdownEvent.button !== 0 || contentMountedRef.current) {
+    const onOpeningPress = () => {
+      if (contentMountedRef.current || openController.onOpen) {
         return;
       }
       const cancelBuild = requestFrameAfterNext(() => {
@@ -242,12 +248,12 @@ export const usePopupContentMount = (
         stopWatching();
       };
     };
-    anchorElement.addEventListener("pointerdown", onPointerDown);
+    element.addEventListener("navi_open_press", onOpeningPress);
     return () => {
       stopPressWarm?.();
-      anchorElement.removeEventListener("pointerdown", onPointerDown);
+      element.removeEventListener("navi_open_press", onOpeningPress);
     };
-  }, [anchor, mount]);
+  }, [mount]);
 
   return contentMounted;
 };

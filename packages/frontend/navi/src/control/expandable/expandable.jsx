@@ -72,6 +72,7 @@
  * popover or focus ring inside is not cut at the edges.
  */
 import {
+  dispatchCustomEvent,
   elementIsFocusable,
   findAfter,
   getKeyboardEventDefaultAction,
@@ -474,8 +475,18 @@ export const Expandable = (props) => {
   // before the click ever fires — so what held the focus has to be remembered
   // at pointerdown time.
   const focusedAtPointerDownRef = useRef(null);
-  const onUIPointerDown = () => {
+  const onUIPointerDown = (pointerdownEvent) => {
     focusedAtPointerDownRef.current = document.activeElement;
+    // The start of an expansion, announced as a --navi-open button announces
+    // its own (see announceOpeningPress in commands.js) — unless aimed at a
+    // control inside the UI part, whose click does not toggle (see onUIClick).
+    if (
+      pointerdownEvent.button === 0 &&
+      !openController.opened &&
+      !isAimedAtControlInsideUI(pointerdownEvent.target)
+    ) {
+      dispatchCustomEvent(rootRef.current, "navi_open_press");
+    }
   };
 
   // The content keeps its final size while the track animates (see the top
@@ -802,18 +813,21 @@ export const Expandable = (props) => {
     if (clickEvent.defaultPrevented) {
       return;
     }
-    const { target } = clickEvent;
-    if (target.nodeType === 1) {
-      const interactiveElement = target.closest(UI_INTERACTIVE_SELECTOR);
-      if (
-        interactiveElement &&
-        interactiveElement !== uiRef.current &&
-        uiRef.current.contains(interactiveElement)
-      ) {
-        return;
-      }
+    if (isAimedAtControlInsideUI(clickEvent.target)) {
+      return;
     }
     toggle(clickEvent);
+  };
+  const isAimedAtControlInsideUI = (target) => {
+    if (target.nodeType !== 1) {
+      return false;
+    }
+    const interactiveElement = target.closest(UI_INTERACTIVE_SELECTOR);
+    return (
+      Boolean(interactiveElement) &&
+      interactiveElement !== uiRef.current &&
+      uiRef.current.contains(interactiveElement)
+    );
   };
 
   // Space/Enter on the UI part itself (role button) — a key pressed on a

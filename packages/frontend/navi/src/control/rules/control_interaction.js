@@ -275,6 +275,26 @@ export const dispatchRequestInteraction = (
   });
 };
 
+/**
+ * Whether the control `element` belongs to lets an interaction of this intent
+ * through, asked ahead of the event the gate will judge, and silently: nothing
+ * is reported, nothing runs. For what a press is about to lead to (see
+ * announceOpeningPress in commands.js) — the press itself is not that event: a
+ * drag source cancels a `pointerdown` whose click still comes and opens.
+ *
+ * @param {Element} element
+ * @param {{ intent: "read" | "write" }} options
+ * @returns {boolean}
+ */
+export const allowsInteraction = (element, { intent }) => {
+  const controlHost = findControlHost(element) || element;
+  const ci = controlHost.__uiStateController__?.rules.interaction;
+  if (!ci) {
+    return true;
+  }
+  return ci.checkInteractivity({ intent });
+};
+
 export const onRequestInteraction = (
   requestInteractionCustomEvent,
   { debugInteraction },
