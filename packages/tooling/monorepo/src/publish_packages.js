@@ -1,14 +1,10 @@
-import { createLogger, createTaskLog, UNICODE } from "@jsenv/humanize";
+import { createLogger, UNICODE } from "@jsenv/humanize";
 import { publish } from "@jsenv/package-publish/src/internal/publish.js";
 import {
-  checkVersionStatusInRegistry,
   VERSION_STATUS,
   waitForStagedVersionToLand,
 } from "@jsenv/package-publish/src/internal/staged_version.js";
-import {
-  compareTwoPackageVersions,
-  VERSION_COMPARE_RESULTS,
-} from "./internal/compare_two_package_versions.js";
+import { collectUnpublishedPackages } from "./internal/collect_unpublished_packages.js";
 import { syncPackagesVersions } from "./sync_packages_versions.js";
 
 const REGISTRY_URL = "https://registry.npmjs.org";
@@ -21,63 +17,19 @@ export const publishPackages = async ({ directoryUrl, packagesRelations }) => {
       directoryUrl,
       packagesRelations,
     });
-  const toPublishPackageNames = Object.keys(workspacePackages).filter(
-    (packageName) => {
-      const workspacePackage = workspacePackages[packageName];
-      const registryLatestVersion = registryLatestVersions[packageName];
-      if (registryLatestVersion === null) {
-        return true;
-      }
-      const result = compareTwoPackageVersions(
-        workspacePackage.packageObject.version,
-        registryLatestVersion,
-      );
-      return (
-        result === VERSION_COMPARE_RESULTS.GREATER ||
-        result === VERSION_COMPARE_RESULTS.DIFF_TAG
-      );
-    },
-  );
-  if (toPublishPackageNames.length === 0) {
-    console.log(`${UNICODE.OK} packages are published on registry`);
-    return;
-  }
-
   const token = process.env.NPM_TOKEN;
-  const statusTask = createTaskLog(`check versions on registry`);
-  let packageInfos;
-  try {
-    packageInfos = await Promise.all(
-      toPublishPackageNames.map(async (packageName) => {
-        const workspacePackage = workspacePackages[packageName];
-        const packageVersion = workspacePackage.packageObject.version;
-        const versionStatus = await checkVersionStatusInRegistry({
-          registryUrl: REGISTRY_URL,
-          packageName,
-          packageVersion,
-          token,
-        });
-        return {
-          packageName,
-          packageVersion,
-          packageSlug: `${packageName}@${packageVersion}`,
-          rootDirectoryUrl: new URL("./", workspacePackage.packageUrl),
-          versionStatus,
-        };
-      }),
-    );
-    statusTask.done();
-  } catch (e) {
-    statusTask.fail();
-    throw e;
-  }
-  const packagesToPublish = packageInfos.filter(
+  const unpublishedPackages = await collectUnpublishedPackages({
+    workspacePackages,
+    registryLatestVersions,
+    registryUrl: REGISTRY_URL,
+    token,
+  });
+  const packagesToPublish = unpublishedPackages.filter(
     ({ versionStatus }) => versionStatus === VERSION_STATUS.ABSENT,
   );
-  const stagedPackages = packageInfos.filter(
+  const stagedPackages = unpublishedPackages.filter(
     ({ versionStatus }) => versionStatus === VERSION_STATUS.STAGED,
   );
-
   if (packagesToPublish.length === 0 && stagedPackages.length === 0) {
     console.log(`${UNICODE.OK} packages are published on registry`);
     return;

@@ -47,16 +47,34 @@ export const checkVersionStatusInRegistry = async ({
   return VERSION_STATUS.ABSENT;
 };
 
-export const waitForStagedVersionToLand = async ({
+export const waitForStagedVersionToLand = ({
   registryUrl,
   packageName,
   packageVersion,
   token,
 }) => {
+  return waitForVersionInRegistry({
+    registryUrl,
+    packageName,
+    packageVersion,
+    token,
+    timeout: STAGED_VERSION_TIMEOUT_MS,
+    timeoutErrorMessage: `${packageName}@${packageVersion} is staged on ${registryUrl} but did not get published. Run the publish again to keep waiting; a staged version cannot be published again.`,
+  });
+};
+
+export const waitForVersionInRegistry = async ({
+  registryUrl,
+  packageName,
+  packageVersion,
+  token,
+  timeout,
+  timeoutErrorMessage,
+}) => {
   const waitTask = createTaskLog(
     `wait for ${packageName}@${packageVersion} to be published by ${registryUrl}`,
   );
-  const msBeforeTimeout = Date.now() + STAGED_VERSION_TIMEOUT_MS;
+  const msBeforeTimeout = Date.now() + timeout;
   try {
     while (true) {
       const versionIsInRegistry = await checkVersionIsInRegistry({
@@ -70,9 +88,7 @@ export const waitForStagedVersionToLand = async ({
         return;
       }
       if (Date.now() > msBeforeTimeout) {
-        throw new Error(
-          `${packageName}@${packageVersion} is staged on ${registryUrl} but did not get published. Run the publish again to keep waiting; a staged version cannot be published again.`,
-        );
+        throw new Error(timeoutErrorMessage);
       }
       await new Promise((resolve) => {
         setTimeout(resolve, STAGED_VERSION_POLL_INTERVAL_MS);

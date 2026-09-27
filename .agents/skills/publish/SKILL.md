@@ -5,7 +5,7 @@ description: How to publish new versions of this monorepo's packages to npm (bum
 
 ## How publishing works here
 
-- **Publishing happens in CI**, in [.github/workflows/publish.yml](../../../.github/workflows/publish.yml), with npm trusted publishing (OIDC, no token). `npm run monorepo:publish` only prepares: it syncs versions, then commits everything (`git add --all`) with a message starting with `[publish]`. Pushing that commit to `main` starts the workflow. It can also be started by hand from the Actions tab (e.g. to retry).
+- **Publishing happens in CI**, in [.github/workflows/publish.yml](../../../.github/workflows/publish.yml), with npm trusted publishing (OIDC, no token). `npm run monorepo:publish` only prepares: it syncs versions, stages everything (`git add --all`) and writes a message starting with `[publish]` in `.git/SQUASH_MSG`, which VSCode and `git commit --no-edit` use for the next commit. Pushing that commit to `main` starts the workflow. It can also be started by hand from the Actions tab (e.g. to retry).
 - **A package publishes when its `package.json` `version` is ahead of the npm registry.** `publishPackages` (from `@jsenv/monorepo`) compares each workspace package to npm and publishes only the ones that differ. It's **idempotent**: an already-published version is skipped (an `EPUBLISHCONFLICT` is treated as success), so re-running is safe. It **fails** when versions are not in sync or when a publish fails.
 - **`npm publish --no-workspaces` is run per package.** So each package's own `prepublishOnly` fires — notably `@jsenv/core`'s runs a **full build** (`npm run build`). That's the slow one.
 - **Each package must trust the workflow on npm** (trusted publisher: repo `jsenv/core`, workflow `publish.yml`, direct `npm publish` allowed) and its `package.json` `repository.url` must be `https://github.com/jsenv/core`. Trusted publishing can only be configured on a package that exists, so a **new package** is published once locally — `node ./scripts/monorepo/publish_packages.mjs` with a token in `secrets.json` (git-ignored, `{ "NPM_TOKEN": "..." }`) — then trusted with `npm trust github <name> --repo jsenv/core --file publish.yml --allow-publish`.
@@ -75,11 +75,13 @@ Spotting expected-vs-regression in these snapshots is usually straightforward; d
 
 ### 5. Hand off — the user commits, pushes, and publishes
 
-**Stop here.** Do NOT commit, push, or run `npm run monorepo:publish` (it commits; see `.agents/instructions.md`: the user always commits, never the agent). Leave the version bumps + synced files in the working tree and tell the user what's ready. The user then runs, in order:
+**Stop here.** Do NOT commit, push, or run `npm run monorepo:publish` (it prepares the commit; see `.agents/instructions.md`: the user always commits, never the agent). Leave the version bumps + synced files in the working tree and tell the user what's ready. The user then runs, in order:
 
 ```sh
-npm run monorepo:publish   # syncs versions, commits everything as "[publish] ..."
+npm run monorepo:publish   # syncs versions, stages everything, prepares the "[publish] ..." message
+git commit --no-edit       # or commit from VSCode, the message is pre-filled
 git push                   # the publish workflow publishes every package ahead of npm
+npm run monorepo:wait_publish  # optional: returns once the versions are on npm
 ```
 
 ## The cascade (important)
@@ -93,12 +95,13 @@ Consequence in practice:
 
 ## Quick reference
 
-| Command                                            | What it does                                                                |
-| -------------------------------------------------- | --------------------------------------------------------------------------- |
-| `npm run monorepo:sync_versions`                   | Propagate bumped versions into pinned deps + cascade-bump dependents        |
-| `npm run build`                                    | Build `@jsenv/core` `dist/`                                                 |
-| `npm test`                                         | Full test suite                                                             |
-| `npm run build packages`                           | Build every workspace package's `dist/`                                     |
-| `npm run test:packages`                            | Test across `./packages/`                                                   |
-| `npm run build <pkg\|dir>` / `npm test <pkg\|dir>` | Affected-only build/test (the fast path)                                    |
-| `npm run monorepo:publish`                         | Sync versions + create the `[publish]` commit that CI publishes once pushed |
+| Command                                            | What it does                                                                  |
+| -------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `npm run monorepo:wait_publish`                    | Wait until the versions in package.json files are on npm (fails after 15 min) |
+| `npm run monorepo:sync_versions`                   | Propagate bumped versions into pinned deps + cascade-bump dependents          |
+| `npm run build`                                    | Build `@jsenv/core` `dist/`                                                   |
+| `npm test`                                         | Full test suite                                                               |
+| `npm run build packages`                           | Build every workspace package's `dist/`                                       |
+| `npm run test:packages`                            | Test across `./packages/`                                                     |
+| `npm run build <pkg\|dir>` / `npm test <pkg\|dir>` | Affected-only build/test (the fast path)                                      |
+| `npm run monorepo:publish`                         | Sync versions + stage the `[publish]` commit that CI publishes once pushed    |

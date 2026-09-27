@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/snapshot",
-  "version": "2.19.27",
+  "version": "2.19.28",
   "type": "module",
   "description": "Snapshot testing",
   "repository": {
@@ -28,18 +28,18 @@
   ],
   "dependencies": {
     "@jsenv/assert": "4.5.7",
-    "@jsenv/ast": "6.10.9",
+    "@jsenv/ast": "6.10.10",
     "@jsenv/exception": "1.2.3",
-    "@jsenv/filesystem": "4.15.27",
-    "@jsenv/humanize": "1.8.5",
-    "@jsenv/terminal-recorder": "1.5.71",
+    "@jsenv/filesystem": "4.15.28",
+    "@jsenv/humanize": "1.8.6",
+    "@jsenv/terminal-recorder": "1.5.72",
     "@jsenv/url-meta": "8.5.8",
-    "@jsenv/urls": "2.9.16",
+    "@jsenv/urls": "2.9.17",
     "@jsenv/utils": "2.3.1",
-    "ansi-regex": "6.3.0",
+    "ansi-regex": "6.4.0",
     "pixelmatch": "7.2.0",
     "pngjs": "7.0.0",
-    "prettier": "3.9.6",
+    "prettier": "3.9.9",
     "strip-ansi": "7.2.0"
   },
   "devDependencies": {

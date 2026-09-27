@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "41.5.34",
+  "version": "41.5.35",
   "type": "module",
   "description": "Tool to develop, test and build js projects",
   "repository": {
@@ -60,6 +60,7 @@
     "monorepo:publish": "node ./scripts/monorepo/prepare_publish.mjs",
     "monorepo:sync_versions": "node ./scripts/monorepo/sync_packages_versions.mjs",
     "monorepo:upgrade_versions": "node ./scripts/monorepo/upgrade_external_versions.mjs",
+    "monorepo:wait_publish": "node ./scripts/monorepo/wait_publish.mjs",
     "oto:start": "npm run start -w oto",
     "performances": "node --expose-gc ./scripts/performance/generate_performance_report.mjs --log --once",
     "playwright:install": "npx playwright install-deps && npx playwright install",
@@ -73,14 +74,14 @@
     "test:snapshot_clear": "npx @jsenv/filesystem clear **/tests/**/side_effects/"
   },
   "dependencies": {
-    "@jsenv/ast": "6.10.9",
-    "@jsenv/js-module-fallback": "1.6.13",
-    "@jsenv/plugin-bundling": "2.10.31",
-    "@jsenv/plugin-minification": "1.7.26",
-    "@jsenv/plugin-supervisor": "1.8.28",
-    "@jsenv/plugin-transpilation": "1.7.13",
+    "@jsenv/ast": "6.10.10",
+    "@jsenv/js-module-fallback": "1.6.14",
+    "@jsenv/plugin-bundling": "2.10.32",
+    "@jsenv/plugin-minification": "1.7.27",
+    "@jsenv/plugin-supervisor": "1.8.29",
+    "@jsenv/plugin-transpilation": "1.7.14",
     "@jsenv/server": "17.6.8",
-    "@jsenv/sourcemap": "1.4.12",
+    "@jsenv/sourcemap": "1.4.13",
     "react-table": "7.8.0"
   },
   "devDependencies": {
