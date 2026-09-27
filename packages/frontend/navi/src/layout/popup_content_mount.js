@@ -64,8 +64,8 @@
  * contents; a press is the start of one opening.
  *
  * Only what opens the popup can say its press is one, and it says so as the
- * press starts, with a `navi_open_press` on the popup (see
- * announceOpeningPress in commands.js): a `--navi-open` button, a picker's
+ * press starts, with a `navi_open_press` delivered where the opening request
+ * would be (see announceOpeningPress in commands.js): a `--navi-open` button, a picker's
  * trigger when a press is what opens it, an expandable's UI part. Not the
  * anchor: it says where the popup is placed, not what opens it — a card
  * opened by a hold is pressed all day by taps meant for what it holds.
@@ -216,42 +216,36 @@ export const usePopupContentMount = (
       anchorElement.removeEventListener("focusin", warm);
     };
   }, [contentMounted, anchor, mount]);
-  // Warm on an opening press, for "while-opened" (see the top comment).
-  // Listening for as long as the popup is there, not only while the content is
-  // unmounted: the press that throws a warmed content away can be a new
-  // opening press of this same popup, and it must warm again.
-  useEffect(() => {
-    if (mount !== "while-opened") {
-      return undefined;
-    }
-    const element = openController.getElement?.();
-    if (!element) {
-      return undefined;
-    }
-    let stopPressWarm = null;
-    const onOpeningPress = () => {
-      if (contentMountedRef.current || openController.onOpen) {
-        return;
-      }
-      const cancelBuild = requestFrameAfterNext(() => {
-        setContentMounted(true);
-      });
-      const stopWatching = watchPressEnd(() => {
-        stopPressWarm = null;
-        cancelBuild();
-        if (!openController.opened) {
-          setContentMounted(false);
+  // Warm on an opening press, for "while-opened" (see the top comment). Told
+  // by the popup's own element, which hears the announcement where it hears
+  // the opening request: `onnavi_open_press` beside each `onnavi_request_open`.
+  const stopPressWarmRef = useRef(null);
+  openController.onOpeningPress =
+    mount === "while-opened"
+      ? () => {
+          if (contentMountedRef.current || openController.onOpen) {
+            return;
+          }
+          const cancelBuild = requestFrameAfterNext(() => {
+            setContentMounted(true);
+          });
+          const stopWatching = watchPressEnd(() => {
+            stopPressWarmRef.current = null;
+            cancelBuild();
+            if (!openController.opened) {
+              setContentMounted(false);
+            }
+          });
+          stopPressWarmRef.current = () => {
+            stopPressWarmRef.current = null;
+            cancelBuild();
+            stopWatching();
+          };
         }
-      });
-      stopPressWarm = () => {
-        cancelBuild();
-        stopWatching();
-      };
-    };
-    element.addEventListener("navi_open_press", onOpeningPress);
+      : null;
+  useEffect(() => {
     return () => {
-      stopPressWarm?.();
-      element.removeEventListener("navi_open_press", onOpeningPress);
+      stopPressWarmRef.current?.();
     };
   }, [mount]);
 

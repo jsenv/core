@@ -902,6 +902,12 @@ export const Expandable = (props) => {
         rest.onnavi_request_open?.(e);
         openController.open(e);
       }}
+      // The press announcing that request (see announceOpeningPress in
+      // commands.js), heard where the request is.
+      onnavi_open_press={(e) => {
+        rest.onnavi_open_press?.(e);
+        openController.onOpeningPress?.();
+      }}
       onnavi_request_close={(e) => {
         rest.onnavi_request_close?.(e);
         const closing = openController.requestClose(e, {
@@ -983,6 +989,9 @@ const ExpandableUI = ({ marker, children, ...rest }) => {
         },
         onnavi_request_open: (e) => {
           openController.open(e);
+        },
+        onnavi_open_press: () => {
+          openController.onOpeningPress?.();
         },
         onnavi_request_close: (e) => {
           openController.requestClose(e, { isCancel: e.detail?.isCancel });

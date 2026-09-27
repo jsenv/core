@@ -1209,6 +1209,11 @@ const UncontrolledDialog = (props) => {
           value: e.detail?.value,
         });
       }}
+      // The press announcing that request (see announceOpeningPress in
+      // commands.js), heard where the request is.
+      onnavi_open_press={() => {
+        openController.onOpeningPress?.();
+      }}
       onnavi_request_close={(e) => {
         const closing = openController.requestClose(e, {
           isCancel: e.detail?.isCancel,

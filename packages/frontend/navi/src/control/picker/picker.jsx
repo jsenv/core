@@ -1104,10 +1104,11 @@ const PickerButton = (props) => {
         // This wrapper will receive keyboard event bubbling from the picker popup content
         // we re-dispatch on the input (to get escape to close for instance)
         onKeyDown={inputProps.onKeyDown}
-        // in case request open/close are dispatched on the control root ->
-        // redispatch them to the host
+        // in case request open/close (or the press announcing an open) are
+        // dispatched on the control root -> redispatch them to the host
         onnavi_request_open={inputProps.onnavi_request_open}
         onnavi_request_close={inputProps.onnavi_request_close}
+        onnavi_open_press={inputProps.onnavi_open_press}
         // `--navi-select`/`--navi-unselect` about one entry of the list the
         // picker holds — a chip on the façade, a suggestion beside the field.
         // Answered here rather than by the control drawing that list in the

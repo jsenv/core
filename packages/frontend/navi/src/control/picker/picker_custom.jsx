@@ -704,6 +704,12 @@ const PickerCustom = (props) => {
           },
         });
       },
+      // The press announcing that request (see announceOpeningPress in
+      // commands.js), heard where the request is — here too for the same
+      // reason. Nothing to gate: the announcer asked before saying it.
+      onnavi_open_press: () => {
+        openController.onOpeningPress?.();
+      },
       onnavi_request_close: (e) => {
         requestInteraction({
           event: e,
@@ -1221,6 +1227,7 @@ const PickerCalloutPopup = ({
   onnavi_request_open,
   onnavi_request_close,
   onnavi_request_confirm,
+  onnavi_open_press,
   mount,
   children: childrenProp,
 }) => {
@@ -1319,6 +1326,7 @@ const PickerCalloutPopup = ({
       onnavi_request_open={onnavi_request_open}
       onnavi_request_close={onnavi_request_close}
       onnavi_request_confirm={onnavi_request_confirm}
+      onnavi_open_press={onnavi_open_press}
     >
       {/* A child of the span in the tree, and moved out of it by hand while
           the callout shows it: preact places a matched child again only when

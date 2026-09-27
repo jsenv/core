@@ -738,6 +738,11 @@ const UncontrolledPopover = (props) => {
           value: e.detail?.value,
         });
       }}
+      // The press announcing that request (see announceOpeningPress in
+      // commands.js), heard where the request is.
+      onnavi_open_press={() => {
+        openController.onOpeningPress?.();
+      }}
       onnavi_request_close={(e) => {
         const closing = openController.requestClose(e, {
           isCancel: e.detail?.isCancel,
@@ -1757,7 +1762,8 @@ const usePopoverProps = (props) => {
       onKeyDownShortcuts(e);
     },
     children,
-    // onnavi_request_open/onnavi_request_close: for the uncontrolled case,
+    // onnavi_request_open/onnavi_request_close/onnavi_open_press: for the
+    // uncontrolled case,
     // already arrive here as plain props via ...rest (wired by
     // UncontrolledPopover above, forwarded through ControlledPopover's own
     // {...props} spread) — nothing extra to add here. A controlled caller

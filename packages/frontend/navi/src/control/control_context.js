@@ -46,6 +46,9 @@ export const CONTROL_ATTRIBUTE_SET = new Set([
   "onnavi_command",
   "onnavi_request_open",
   "onnavi_request_close",
+  // The press announcing that request (see announceOpeningPress in
+  // commands.js): heard where the request itself is.
+  "onnavi_open_press",
 
   "data-callout-arrow-x",
   "data-callout-point-to-border-box",
