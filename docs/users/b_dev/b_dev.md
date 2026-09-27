@@ -607,7 +607,7 @@ The page is served over plain http. It is the one page that must load before the
 
 **Check the fingerprint.** The page travels over http, so someone on the network could swap the file. Once installed, the SHA-256 fingerprint shown by the phone must match the one printed in the terminal, not the one on the page, which travels with the file. Android shows it in Settings › Encryption & credentials › Trusted credentials › User; iOS in Settings › General › VPN & Device Management, on the profile.
 
-**A browser that clicked through the warning** earlier can make the page say the device trusts the dev server when it does not: the browser remembers that decision for the host for a while.
+**How the page checks.** Once a certificate warning is clicked through, the browser shows the dev server's pages and answers its requests, so neither proves the certificate is trusted. The page served over http only tells that the device reaches the dev server over https, then moves itself there. Over https it registers a service worker, removed at once: Chrome refuses one on an origin whose warning was clicked through. A browser without service workers gets no verdict, the padlock of its address bar has it.
 
 **Without `acceptAnyIp`** the page is not served: a dev server listening on localhost only has no phone to serve.
 

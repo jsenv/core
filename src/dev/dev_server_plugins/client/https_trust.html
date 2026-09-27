@@ -313,25 +313,63 @@
       const statusCard = document.querySelector("#status_card");
       const status = document.querySelector("#status");
       const download = document.querySelector("#download");
-      const checkTrust = async () => {
-        try {
-          // rejects as long as the certificate is not trusted, unless this
-          // browser clicked through the certificate warning for this host
-          await fetch(`${httpsOrigin}${window.location.pathname}ping`, {
-            mode: "no-cors",
-            cache: "no-store",
-          });
-        } catch {
-          statusCard.setAttribute("data-state", "untrusted");
-          status.textContent = "This device does not trust the dev server yet.";
+      const setState = (state, text) => {
+        statusCard.setAttribute("data-state", state);
+        status.textContent = text;
+        if (state === "trusted") {
+          continueLink.setAttribute("data-primary", "");
+          download.removeAttribute("data-primary");
+        } else {
           continueLink.removeAttribute("data-primary");
           download.setAttribute("data-primary", "");
+        }
+      };
+      // Routes of the dev server, not files: as string literals the build would
+      // look for them on disk.
+      const checkWorkerUrl = `${window.location.pathname}check_worker.js`;
+      const checkWorkerScope = `${window.location.pathname}check_worker_scope/`;
+      const checkTrust = async () => {
+        if (window.location.protocol === "http:") {
+          try {
+            await fetch(`${httpsOrigin}${window.location.pathname}ping`, {
+              mode: "no-cors",
+              cache: "no-store",
+            });
+          } catch {
+            setState(
+              "untrusted",
+              "This device does not trust the dev server yet.",
+            );
+            return;
+          }
+          // The request also passes once a certificate warning was clicked
+          // through: only this page served over https tells the two apart.
+          window.location.replace(`${httpsOrigin}${window.location.pathname}`);
           return;
         }
-        statusCard.setAttribute("data-state", "trusted");
-        status.textContent = "✓ This device trusts the dev server.";
-        continueLink.setAttribute("data-primary", "");
-        download.removeAttribute("data-primary");
+        if (!window.navigator.serviceWorker) {
+          setState(
+            "unknown",
+            "This browser cannot tell: the padlock of its address bar says whether it trusts the dev server.",
+          );
+          return;
+        }
+        try {
+          // Chrome shows a page whose certificate warning was clicked through,
+          // but never registers a service worker there.
+          const registration = await window.navigator.serviceWorker.register(
+            checkWorkerUrl,
+            { scope: checkWorkerScope },
+          );
+          await registration.unregister();
+        } catch {
+          setState(
+            "untrusted",
+            "This browser went past a certificate warning: it does not trust the dev server and refuses its service workers. Install the certificate, then reload this page.",
+          );
+          return;
+        }
+        setState("trusted", "✓ This device trusts the dev server.");
       };
       checkTrust();
       // back from the settings where the certificate was installed

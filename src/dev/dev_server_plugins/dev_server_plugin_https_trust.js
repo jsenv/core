@@ -61,10 +61,21 @@ export const devServerPluginHttpsTrust = ({ rootCertificate }) => {
       {
         endpoint: `GET ${HTTPS_TRUST_PATHNAME}ping`,
         description:
-          "Fetched over https by the page: it fails as long as the device does not trust the certificate.",
+          "Fetched over https by the page served over http: it fails while the certificate is neither trusted nor clicked through.",
         declarationSource: import.meta.url,
         fetch: () => {
           return new Response(null, { status: 204 });
+        },
+      },
+      {
+        endpoint: `GET ${HTTPS_TRUST_PATHNAME}check_worker.js`,
+        description:
+          "Service worker the page served over https registers and removes at once: refused where a certificate warning was clicked through.",
+        declarationSource: import.meta.url,
+        fetch: () => {
+          return new Response("", {
+            headers: { "content-type": "text/javascript" },
+          });
         },
       },
       // Last: an endpoint ending with "/" covers everything under it, so
