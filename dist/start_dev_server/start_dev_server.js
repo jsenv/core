@@ -1,4 +1,5 @@
 import { WebSocketResponse, pickContentType, ServerEvents, serverPluginErrorHandler, fetchDirectory, composeTwoResponses, serverPluginCORS, jsenvAccessControlAllowedHeaders, startServer } from "@jsenv/server";
+import { randomUUID, X509Certificate } from "node:crypto";
 import { existsSync, statSync, readFileSync, realpathSync, readdirSync, lstatSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { urlToRelativeUrl, registerFileLifecycle, lookupPackageDirectory, readPackageAtOrNull, generateContentFrame, errorToHTML, URL_META, asUrlWithoutSearch, DATA_URL, CONTENT_TYPE, normalizeImportMap, composeTwoImportMaps, resolveImport, createDetailedMessage, UNICODE, JS_QUOTES, urlToExtension, urlToBasename, applyNodeEsmResolution, readCustomConditionsFromProcessArgs, urlIsOrIsInsideOf, collectFiles, registerDirectoryLifecycle, readEntryStatSync, applyFileSystemMagicResolution, getExtensionsToTry, urlToFilename, ensurePathnameTrailingSlash, compareFileUrls, setUrlExtension, stringifyUrlSite, injectQueryParamsIntoSpecifier, isSpecifierForNodeBuiltin, injectQueryParams, urlToFileSystemPath, writeFileSync, moveUrl, ensureWindowsDriveLetter, validateResponseIntegrity, setUrlFilename, getCallerPosition, asSpecifierWithoutSearch, bufferToEtag, isFileSystemPath, urlToPathname, setUrlBasename, createLogger, normalizeUrl, ANSI, RUNTIME_COMPAT, formatError, assertAndNormalizeDirectoryUrl, browserDefaultRuntimeCompat, inferRuntimeCompatFromClosestPackage, createTaskLog } from "./jsenv_core_packages.js";
@@ -8,7 +9,6 @@ import { createMagicSource, composeTwoSourcemaps, generateSourcemapFileUrl, gene
 import { jsenvPluginSupervisor } from "@jsenv/plugin-supervisor";
 import { jsenvPluginTranspilation } from "@jsenv/plugin-transpilation";
 import { bundleJsModules } from "@jsenv/plugin-bundling";
-import { randomUUID } from "node:crypto";
 import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/plugins/filesystem/filesystem_error_to_response.js";
 import "./jsenv_core_node_modules.js";
 import "node:process";
@@ -986,11 +986,11 @@ const clientReporterFileUrl = new URL(
   import.meta.url,
 ).href;
 const clientsPageFileUrl = new URL(
-  "../html/clients_page.html",
+  "../client/client_monitoring/clients_page.html",
   import.meta.url,
 ).href;
 const clientMonitorPageFileUrl = new URL(
-  "../html/client_monitor_page.html",
+  "../client/client_monitoring/client_monitor_page.html",
   import.meta.url,
 ).href;
 
@@ -8602,6 +8602,99 @@ const devServerPluginChromeDevToolsJson = ({ sourceDirectoryUrl }) => {
   };
 };
 
+/*
+ * Lets another device (a phone) trust the root certificate that signs the dev
+ * server certificate, so it opens the dev server over https without a warning.
+ *
+ * Everything under HTTPS_TRUST_PATHNAME is served over plain http too (see the
+ * redirectHttpToHttps passed by startDevServer): it is the one page that must
+ * load before the certificate is trusted, over https it would show the very
+ * warning it exists to remove. Only the certificate is served, never its key.
+ *
+ * The page is sent as written, not cooked like the project pages: it needs
+ * nothing cooking injects, and a project plugin rewriting html must not be able
+ * to break the one page reached before trust.
+ *
+ * What it means for the device, and why the fingerprint must be compared with
+ * the terminal: docs/users/b_dev/b_dev.md, "Trusting it on a phone".
+ */
+
+
+const HTTPS_TRUST_PATHNAME = "/.internal/https/";
+
+const httpsTrustPageFileUrl = new URL(
+  "../client/https_trust/https_trust.html",
+  import.meta.url,
+);
+
+// rootCertificate is a node:crypto X509Certificate
+const devServerPluginHttpsTrust = ({ rootCertificate }) => {
+  const commonName = readCommonName(rootCertificate.subject);
+  const rootCertificateInfo = {
+    fingerprint256: rootCertificate.fingerprint256,
+    commonName,
+  };
+  // "https local root certificate" -> "https_local_root_certificate.crt"
+  const rootCertificateFilename = `${commonName.replace(/[^\w.-]+/g, "_")}.crt`;
+
+  return {
+    name: "jsenv:https_trust",
+    routes: [
+      {
+        endpoint: `GET ${HTTPS_TRUST_PATHNAME}`,
+        description:
+          "Page to trust the dev server https on another device (a phone). Served over http.",
+        declarationSource: import.meta.url,
+        fetch: () => {
+          return new Response(readFileSync(httpsTrustPageFileUrl), {
+            headers: { "content-type": "text/html" },
+          });
+        },
+      },
+      {
+        endpoint: `GET ${HTTPS_TRUST_PATHNAME}root.crt`,
+        description: "The root certificate signing the dev server certificate.",
+        declarationSource: import.meta.url,
+        fetch: () => {
+          return new Response(rootCertificate.toString(), {
+            headers: {
+              "content-type": "application/x-x509-ca-cert",
+              "content-disposition": `attachment; filename="${rootCertificateFilename}"`,
+            },
+          });
+        },
+      },
+      {
+        endpoint: `GET ${HTTPS_TRUST_PATHNAME}root.json`,
+        description: "Fingerprint and name of the root certificate.",
+        declarationSource: import.meta.url,
+        fetch: () => {
+          return Response.json(rootCertificateInfo);
+        },
+      },
+      {
+        endpoint: `GET ${HTTPS_TRUST_PATHNAME}ping`,
+        description:
+          "Fetched over https by the page: it fails as long as the device does not trust the certificate.",
+        declarationSource: import.meta.url,
+        fetch: () => {
+          return new Response(null, { status: 204 });
+        },
+      },
+    ],
+  };
+};
+
+// "CN=https local root certificate\nO=..." -> "https local root certificate"
+const readCommonName = (subject) => {
+  for (const line of subject.split("\n")) {
+    if (line.startsWith("CN=")) {
+      return line.slice("CN=".length);
+    }
+  }
+  return subject;
+};
+
 const devServerPluginInjectServerResponseHeader = ({
   sourceDirectoryUrl,
 }) => {
@@ -12527,7 +12620,7 @@ const EXECUTED_BY_TEST_PLAN = process.argv.includes("--jsenv-test");
  * @param {number} [params.port=3456] - Port to listen on (0 = a free port).
  * @param {string} [params.hostname] - Hostname to bind to.
  * @param {boolean} [params.acceptAnyIp=false] - Also accept connections on the machine's IPs (so other devices on the network — a phone — can reach the server). Off by default: exposing the dev server beyond localhost is an explicit choice, not something a dev tool decides.
- * @param {boolean|object} [params.https=false] - HTTPS as `{ certificate, privateKey }`.
+ * @param {object} [params.https] - HTTPS as `{ certificate, privateKey }` (PEM strings). With `rootCertificate` (the PEM of the authority that signed `certificate`) and `acceptAnyIp`, the dev server also serves `http://<ip>:<port>/.internal/https/`, a page to trust that authority on a phone (see docs/users/b_dev/b_dev.md, "Trusting it on a phone").
  * @param {boolean} [params.http2=false] - HTTP/2 (requires https).
  * @param {Array} [params.plugins=[]] - jsenv plugins (transformUrlContent, serverRoutes, serverEvents, effect, …).
  * @param {Array} [params.serverPlugins=[]] - `@jsenv/server`-level plugins.
@@ -12659,6 +12752,7 @@ const startDevServer = async ({
       );
     }
   }
+  let httpsTrust = null;
   // params normalization
   {
     if (runtimeCompat === undefined) {
@@ -12672,6 +12766,16 @@ const startDevServer = async ({
     }
     if (clientAutoreload === false) {
       clientAutoreload = { enabled: false };
+    }
+    if (https) {
+      const { certificate, privateKey, rootCertificate } = https;
+      https = { certificate, privateKey };
+      // a localhost-only server has no phone to serve
+      if (rootCertificate && acceptAnyIp) {
+        httpsTrust = {
+          rootCertificate: new X509Certificate(rootCertificate),
+        };
+      }
     }
   }
 
@@ -12830,6 +12934,7 @@ const startDevServer = async ({
     }),
     // chrome devtools
     devServerPluginChromeDevToolsJson({ sourceDirectoryUrl }),
+    ...(httpsTrust ? [devServerPluginHttpsTrust(httpsTrust)] : []),
     ...serverPlugins,
     devServerPluginServeSourceFiles({
       packageDirectory,
@@ -12868,6 +12973,12 @@ const startDevServer = async ({
     startLog: false,
 
     https,
+    ...(httpsTrust
+      ? {
+          redirectHttpToHttps: ({ resource }) =>
+            !resource.startsWith(HTTPS_TRUST_PATHNAME),
+        }
+      : {}),
     http2,
     acceptAnyIp,
     hostname,
@@ -12893,6 +13004,17 @@ const startDevServer = async ({
   logger.info(``);
   Object.keys(server.origins).forEach((key) => {
     logger.info(`- ${server.origins[key]}`);
+    if (httpsTrust && key === "externalip") {
+      const externalHostname = new URL(server.origins.externalip).hostname;
+      const httpsTrustPageUrl = new URL(
+        HTTPS_TRUST_PATHNAME,
+        `http://${externalHostname}:${server.port}`,
+      );
+      logger.info(`  trust it on a phone: ${httpsTrustPageUrl}`);
+      logger.info(
+        `  root certificate SHA-256: ${httpsTrust.rootCertificate.fingerprint256}`,
+      );
+    }
   });
   logger.info(``);
   return {

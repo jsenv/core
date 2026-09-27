@@ -41,6 +41,9 @@ await build({
         "**/*": "error",
       },
     },
+    // Files running in the browser, reached from the node code above through
+    // new URL() or import.meta.resolve. Left out of this list, they would be
+    // built along the node entry, for node.
     "./src/kitchen/client/inline_content.js": {
       buildRelativeUrl: "./client/inline_content/inline_content.js",
       runtimeCompat: clientRuntimeCompat,
@@ -73,6 +76,18 @@ await build({
       buildRelativeUrl: "./client/directory_listing/directory_listing.html",
       runtimeCompat: clientRuntimeCompat,
       plugins: [jsenvPluginPreact({})],
+    },
+    "./src/plugins/client_monitoring/client/clients_page.html": {
+      buildRelativeUrl: "./client/client_monitoring/clients_page.html",
+      runtimeCompat: clientRuntimeCompat,
+    },
+    "./src/plugins/client_monitoring/client/client_monitor_page.html": {
+      buildRelativeUrl: "./client/client_monitoring/client_monitor_page.html",
+      runtimeCompat: clientRuntimeCompat,
+    },
+    "./src/dev/dev_server_plugins/client/https_trust.html": {
+      buildRelativeUrl: "./client/https_trust/https_trust.html",
+      runtimeCompat: clientRuntimeCompat,
     },
     "./src/plugins/ribbon/client/ribbon.js": {
       buildRelativeUrl: "./client/ribbon/ribbon.js",

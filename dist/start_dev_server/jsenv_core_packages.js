@@ -1264,7 +1264,8 @@ const startSpinner = ({
 
 const createTaskLog = (
   label,
-  { disabled = false, animated = true, stopOnWriteFromOutside } = {},
+  // animated defaults to what the spinner decides: only when stdout is a terminal
+  { disabled = false, animated, stopOnWriteFromOutside } = {},
 ) => {
   if (disabled) {
     return {
@@ -1274,7 +1275,7 @@ const createTaskLog = (
       fail: () => {},
     };
   }
-  if (animated && process.env.CAPTURING_SIDE_EFFECTS) {
+  if (process.env.CAPTURING_SIDE_EFFECTS) {
     animated = false;
   }
   const startMs = Date.now();

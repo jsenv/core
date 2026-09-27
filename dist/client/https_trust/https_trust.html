@@ -1,156 +1,173 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Trust the dev server https</title>
-    <style>
-      :root {
-        color-scheme: light dark;
-        --ink: #111827;
-        --muted: #6b7280;
-        --paper: #f3f4f6;
-        --card: #ffffff;
-        --line: #e5e7eb;
-        --accent: #2563eb;
-        --accent-ink: #ffffff;
-        --ok: #15803d;
-        --ok-paper: #dcfce7;
-        --warn: #b45309;
-        --warn-paper: #fef3c7;
-      }
-      @media (prefers-color-scheme: dark) {
-        :root {
-          --ink: #e5e7eb;
-          --muted: #9ca3af;
-          --paper: #0b1020;
-          --card: #111827;
-          --line: #1f2937;
-          --accent: #3b82f6;
-          --ok: #4ade80;
-          --ok-paper: #052e16;
-          --warn: #fbbf24;
-          --warn-paper: #2d1a02;
-        }
-      }
-      body {
-        margin: 0;
-        padding: 16px;
-        color: var(--ink);
-        font:
-          15px/1.5 -apple-system,
-          BlinkMacSystemFont,
-          "Segoe UI",
-          Roboto,
-          sans-serif;
-        background: var(--paper);
-      }
-      main {
-        display: flex;
-        max-width: 34rem;
-        margin: 0 auto;
-        flex-direction: column;
-        gap: 16px;
-      }
-      h1 {
-        margin: 8px 0 0;
-        font-size: 1.35rem;
-      }
-      h2 {
-        margin: 0;
-        font-size: 1rem;
-      }
-      p {
-        margin: 0;
-      }
-      ol {
-        margin: 0;
-        padding-left: 1.3em;
-      }
-      li + li {
-        margin-top: 6px;
-      }
-      code {
-        font:
-          0.85em ui-monospace,
-          SFMono-Regular,
-          Menlo,
-          monospace;
-      }
-      .muted {
-        color: var(--muted);
-      }
-      .card {
-        display: flex;
-        padding: 14px 16px;
-        flex-direction: column;
-        gap: 10px;
-        background: var(--card);
-        border: 1px solid var(--line);
-        border-radius: 10px;
-      }
-      .button {
-        display: block;
-        padding: 12px 16px;
-        color: var(--accent);
-        font-weight: 600;
-        text-align: center;
-        text-decoration: none;
-        border: 1px solid var(--accent);
-        border-radius: 8px;
-      }
-      .button[data-primary] {
-        color: var(--accent-ink);
-        background: var(--accent);
-      }
-      #status {
-        font-weight: 600;
-      }
-      #status_card[data-state="trusted"] {
-        background: var(--ok-paper);
-        border-color: var(--ok);
-      }
-      #status_card[data-state="trusted"] #status {
-        color: var(--ok);
-      }
-      #status_card[data-state="untrusted"] {
-        background: var(--warn-paper);
-        border-color: var(--warn);
-      }
-      #status_card[data-state="untrusted"] #status {
-        color: var(--warn);
-      }
-      #fingerprint {
-        display: block;
-        word-break: break-all;
-      }
-      details {
-        padding: 14px 16px;
-        background: var(--card);
-        border: 1px solid var(--line);
-        border-radius: 10px;
-      }
-      summary {
-        font-weight: 600;
-        cursor: pointer;
-      }
-      details[open] summary {
-        margin-bottom: 10px;
-      }
-      details .this_device {
-        display: none;
-        color: var(--muted);
-        font-weight: 400;
-      }
-      details[data-current] .this_device {
-        display: inline;
-      }
-      details p + ol,
-      details ol + p,
-      details p + p {
-        margin-top: 10px;
-      }
-    </style>
+    <style>:root {
+  --lightningcss-light: initial;
+  --lightningcss-dark: ;
+  color-scheme: light dark;
+  --ink: #111827;
+  --muted: #6b7280;
+  --paper: #f3f4f6;
+  --card: #fff;
+  --line: #e5e7eb;
+  --accent: #2563eb;
+  --accent-ink: #fff;
+  --ok: #15803d;
+  --ok-paper: #dcfce7;
+  --warn: #b45309;
+  --warn-paper: #fef3c7;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --lightningcss-light: ;
+    --lightningcss-dark: initial;
+    --ink: #e5e7eb;
+    --muted: #9ca3af;
+    --paper: #0b1020;
+    --card: #111827;
+    --line: #1f2937;
+    --accent: #3b82f6;
+    --ok: #4ade80;
+    --ok-paper: #052e16;
+    --warn: #fbbf24;
+    --warn-paper: #2d1a02;
+  }
+}
+
+body {
+  color: var(--ink);
+  background: var(--paper);
+  margin: 0;
+  padding: 16px;
+  font: 15px / 1.5 -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif;
+}
+
+main {
+  flex-direction: column;
+  gap: 16px;
+  max-width: 34rem;
+  margin: 0 auto;
+  display: flex;
+}
+
+h1 {
+  margin: 8px 0 0;
+  font-size: 1.35rem;
+}
+
+h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+p {
+  margin: 0;
+}
+
+ol {
+  margin: 0;
+  padding-left: 1.3em;
+}
+
+li + li {
+  margin-top: 6px;
+}
+
+code {
+  font: .85em ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  display: flex;
+}
+
+.button {
+  color: var(--accent);
+  text-align: center;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-weight: 600;
+  text-decoration: none;
+  display: block;
+}
+
+.button[data-primary] {
+  color: var(--accent-ink);
+  background: var(--accent);
+}
+
+#status {
+  font-weight: 600;
+}
+
+#status_card[data-state="trusted"] {
+  background: var(--ok-paper);
+  border-color: var(--ok);
+}
+
+#status_card[data-state="trusted"] #status {
+  color: var(--ok);
+}
+
+#status_card[data-state="untrusted"] {
+  background: var(--warn-paper);
+  border-color: var(--warn);
+}
+
+#status_card[data-state="untrusted"] #status {
+  color: var(--warn);
+}
+
+#fingerprint {
+  word-break: break-all;
+  display: block;
+}
+
+details {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+
+summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+details[open] summary {
+  margin-bottom: 10px;
+}
+
+details .this_device {
+  color: var(--muted);
+  font-weight: 400;
+  display: none;
+}
+
+details[data-current] .this_device {
+  display: inline;
+}
+
+details p + ol, details ol + p, details p + p {
+  margin-top: 10px;
+}
+</style>
   </head>
   <body>
     <main>
@@ -163,19 +180,13 @@
 
       <div id="status_card" class="card" data-state="checking">
         <p id="status">Checking whether this device trusts the dev server…</p>
-        <a id="continue" class="button" jsenv-ignore href="/">
+        <a id="continue" class="button" href="/">
           Continue to https
         </a>
       </div>
 
       <div class="card">
-        <a
-          id="download"
-          class="button"
-          jsenv-ignore
-          href="./root.crt"
-          data-primary
-        >
+        <a id="download" class="button" href="./root.crt" data-primary="">
           Download the root certificate
         </a>
         <p>
@@ -190,7 +201,7 @@
       </div>
 
       <div id="platforms">
-        <details data-platform="android" open>
+        <details data-platform="android" open="">
           <summary>
             Android <span class="this_device">(this device)</span>
           </summary>
@@ -217,7 +228,7 @@
             do not.
           </p>
         </details>
-        <details data-platform="ios" open>
+        <details data-platform="ios" open="">
           <summary>
             iPhone, iPad <span class="this_device">(this device)</span>
           </summary>
@@ -239,7 +250,7 @@
             <li>Come back here, the check above turns green.</li>
           </ol>
         </details>
-        <details data-platform="desktop" open>
+        <details data-platform="desktop" open="">
           <summary>
             Computer <span class="this_device">(this device)</span>
           </summary>
@@ -256,7 +267,7 @@
         </details>
       </div>
 
-      <details open>
+      <details open="">
         <summary>Good to know</summary>
         <p>
           The device trusts anything signed by this root certificate. Its key
@@ -272,8 +283,7 @@
       </details>
     </main>
 
-    <script type="module">
-      const readPlatform = () => {
+    <script type="module">const readPlatform = () => {
         const userAgent = window.navigator.userAgent;
         if (/android/i.test(userAgent)) {
           return "android";
@@ -347,6 +357,6 @@
       for (const element of document.querySelectorAll(".common_name")) {
         element.textContent = commonName;
       }
-    </script>
+</script>
   </body>
 </html>

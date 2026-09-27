@@ -89,6 +89,12 @@ The browser URL stays as requested (the redirect is internal). `?search` is carr
 
 If a `transformUrlContent.html` hook injects into every page (like the devices client), exclude your own internal pages by matching their file URL (`asUrlWithoutSearch(urlInfo.url) === pageFileUrl`), since after cooking their url is the template file url, not the `/.internal/...` request path.
 
+### Shipping an internal page in `dist/`
+
+`@jsenv/core` is published built, so an internal page is built too, whichever way it is served: the build reaches it through the `new URL(..., import.meta.url)` of the node code. Declare it as an entry point in [scripts/build/build_core.mjs](../../../scripts/build/build_core.mjs), with the browser target of the other client entries. Left out, it is built along the node entry, for node, and nothing says so: its css and scripts are never checked against a browser. The same goes for any file running in the browser.
+
+The build follows every url of the page, and fails on one that leads to no file. A url answered by a route rather than a file (a link to `/`, to a `GET /.internal/...` route) gets `jsenv-ignore` on its element; the build strips the attribute from its output. Reference: [client/https_trust.html](../../../src/dev/dev_server_plugins/client/https_trust.html).
+
 ## Out directory (`.jsenv/`) writes stay synchronous
 
 Every cooked file is written into `outDirectoryUrl` (a debug aid, on by
