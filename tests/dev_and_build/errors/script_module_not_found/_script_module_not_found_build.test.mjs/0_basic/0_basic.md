@@ -13,6 +13,9 @@ base/client/main.html:10:27
 10 |     <script type="module" src="./404.js"></script>
                                ^
 no entry on filesystem
+--- suggestion ---
+when "./404.js" is answered by a server rather than a file, add "jsenv-ignore" so the build leaves that url alone:
+<script jsenv-ignore src="./404.js" />
 --- plugin name ---
 "jsenv:file_url_fetching"
   at createFailedToFetchUrlContentError (@jsenv/core/src/kitchen/errors.js:98:24)

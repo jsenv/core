@@ -85,6 +85,18 @@ await build({
       buildRelativeUrl: "./client/client_monitoring/client_monitor_page.html",
       runtimeCompat: clientRuntimeCompat,
     },
+    "./src/plugins/client_monitoring/client/client_reporter.js": {
+      buildRelativeUrl: "./client/client_monitoring/client_reporter.js",
+      runtimeCompat: clientRuntimeCompat,
+    },
+    "./src/plugins/dependency_status/client/dependency_status.js": {
+      buildRelativeUrl: "./client/dependency_status/dependency_status.js",
+      runtimeCompat: clientRuntimeCompat,
+    },
+    "./src/plugins/page_switcher/client/page_switcher.js": {
+      buildRelativeUrl: "./client/page_switcher/page_switcher.js",
+      runtimeCompat: clientRuntimeCompat,
+    },
     "./src/dev/dev_server_plugins/client/https_trust.html": {
       buildRelativeUrl: "./client/https_trust/https_trust.html",
       runtimeCompat: clientRuntimeCompat,

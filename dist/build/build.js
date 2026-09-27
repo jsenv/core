@@ -438,7 +438,7 @@ ${reason}`,
       return createFailedToFetchUrlContentError({
         code: "NOT_FOUND",
         reason: "no entry on filesystem",
-        ...detailsFromInjectionsOnOwner(urlInfo.firstReference),
+        ...detailsFromHtmlUrlNotFound(urlInfo.firstReference),
       });
     }
   }
@@ -694,6 +694,31 @@ const detailsFromInjectionsOnOwner = (reference) => {
   }
   return {
     suggestion: `injections are configured for this file; when "${reference.specifier}" is meant to be written by one of them, check the placeholder spelling, or add "jsenv-ignore" so jsenv leaves that url alone:
+<${node.nodeName} jsenv-ignore ${attributeName}="${reference.specifier}" />`,
+  };
+};
+
+// An url of an html attribute leading to no file may be meant for a server rather
+// than for jsenv: a route of a backend, which "jsenv-ignore" leaves alone. Only the
+// build is concerned: in dev the browser requests the url whatever jsenv does with it.
+const detailsFromHtmlUrlNotFound = (reference) => {
+  const detailsFromInjections = detailsFromInjectionsOnOwner(reference);
+  if (detailsFromInjections.suggestion) {
+    return detailsFromInjections;
+  }
+  if (!reference) {
+    return {};
+  }
+  const ownerUrlInfo = reference.ownerUrlInfo;
+  if (ownerUrlInfo.type !== "html" || !ownerUrlInfo.context.build) {
+    return {};
+  }
+  const { node, attributeName } = reference.astInfo || {};
+  if (!node || !attributeName) {
+    return {};
+  }
+  return {
+    suggestion: `when "${reference.specifier}" is answered by a server rather than a file, add "jsenv-ignore" so the build leaves that url alone:
 <${node.nodeName} jsenv-ignore ${attributeName}="${reference.specifier}" />`,
   };
 };
@@ -9821,7 +9846,7 @@ const STATIC_IMPORT_SUBTYPES = ["import_static", "export_named", "export_all"];
  */
 
 
-const clientFileUrl = import.meta.resolve("../js/dependency_status.js");
+const clientFileUrl = import.meta.resolve("../client/dependency_status/dependency_status.js");
 
 const jsenvPluginDependencyStatus = ({
   dependencyProblemEventEmitter,

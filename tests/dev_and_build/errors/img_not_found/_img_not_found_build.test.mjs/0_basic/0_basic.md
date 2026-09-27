@@ -13,6 +13,9 @@ base/client/main.html:9:10
 9 |     <img src="./img.png" />
              ^
 no entry on filesystem
+--- suggestion ---
+when "./img.png" is answered by a server rather than a file, add "jsenv-ignore" so the build leaves that url alone:
+<img jsenv-ignore src="./img.png" />
 --- plugin name ---
 "jsenv:file_url_fetching"
   at createFailedToFetchUrlContentError (@jsenv/core/src/kitchen/errors.js:98:24)
