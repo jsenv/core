@@ -2112,13 +2112,10 @@ export const SlideContainer = ({
     });
   };
 
-  // A travel that is playing when a gesture arrives is STOPPED where it stands,
-  // before the gesture has said anything about itself. Not at the first pixels
-  // that decide an axis: over those the slides go on at their own speed under a
-  // hand already resting on them, and when the gesture finally takes them they
-  // are pinned to a hand moving at a quite different pace — the slide does not
-  // jump, it stops dead, which is what one reads as a jolt and as "it got away
-  // from me".
+  // A travel that is playing when a gesture takes hold of it is STOPPED where it
+  // stands, at the moment the hand holds it (see readTravelInFlight for when
+  // that is): the track stays exactly under the eye, and the hand answers it
+  // from there.
   // A gesture that turns out to be nothing lets the travel carry on from where
   // it was caught (see onGiveUp).
   const catchTravelInFlight = () => {
@@ -2144,15 +2141,31 @@ export const SlideContainer = ({
       to: moving.to,
     };
   };
-  // Which way a caught travel was going: a hand reaching for something moving
-  // has no axis left to decide, and a first pixel of tremor read as one gives
-  // the gesture up — and lets go of what it just caught.
-  const axisOfCaughtTravel = (caught) => {
-    const boxRect = caught.trackElement.getBoundingClientRect();
-    const targetPx = offsetToPx(caught.offsetTarget, boxRect);
-    const towardsX = Math.abs(targetPx.x - caught.onScreenPx.x);
-    const towardsY = Math.abs(targetPx.y - caught.onScreenPx.y);
-    return towardsX >= towardsY ? "x" : "y";
+  // Which way a travel still playing is going, read without touching it: a
+  // hand landing on something moving has no axis left to decide (a first pixel
+  // of tremor read as one gives the gesture up), and which WAY along it the
+  // travel goes is what tells the next swipe from a catch. `way` is the sign a
+  // pull going the same way would have.
+  const readTravelInFlight = () => {
+    const trackElement = trackRef.current;
+    const animation = trackAnimationRef.current;
+    if (!animation || animation.playState !== "running") {
+      return null;
+    }
+    const onScreenPx = trackOffsetPx(trackElement, containerRef.current);
+    const targetPx = offsetToPx(
+      offsetRef.current,
+      trackElement.getBoundingClientRect(),
+    );
+    const towardsX = targetPx.x - onScreenPx.x;
+    const towardsY = targetPx.y - onScreenPx.y;
+    const axis = Math.abs(towardsX) >= Math.abs(towardsY) ? "x" : "y";
+    const towards = axis === "x" ? towardsX : towardsY;
+    if (Math.abs(towards) < 1) {
+      // On its last pixel: nothing left to catch or to push.
+      return null;
+    }
+    return { axis, way: towards > 0 ? 1 : -1 };
   };
 
   // What a travel gesture does to the slides, whoever asked for it: a pointer
@@ -2180,7 +2193,12 @@ export const SlideContainer = ({
     };
     return {
       drag,
-      onStart: ({ axis, sign, target }) => {
+      onStart: ({ axis, sign, target, caught }) => {
+        // A travel left playing under the press, which the hand has now taken
+        // hold of: stopped here, where it stands at this moment.
+        if (caught) {
+          caughtTravel = catchTravelInFlight();
+        }
         // Everything positional is read HERE rather than when the pointer
         // landed: the travel that was playing then may have arrived since, and
         // it is what the slides are doing at the moment the gesture takes them
@@ -2476,17 +2494,39 @@ export const SlideContainer = ({
     if (!canStartTravel()) {
       return;
     }
-    const caughtTravel = catchTravelInFlight();
-    const caughtAxis = caughtTravel ? axisOfCaughtTravel(caughtTravel) : null;
+    const travelInFlight = readTravelInFlight();
+    // Left playing when the hand can take it: the press is then far more
+    // likely the next swipe than a catch, and stopping the travel under it is
+    // what that swipe feels as a stall — the gesture listens to the hand first
+    // and says which it was (see inFlight in drag_to_travel.js). On an axis the
+    // hand cannot drag, it is caught at the press, as a travel under a finger
+    // that starts something else.
+    const leftPlaying = Boolean(
+      travelInFlight && dragAxes.includes(travelInFlight.axis),
+    );
+    const caughtTravel =
+      travelInFlight && !leftPlaying ? catchTravelInFlight() : null;
     const handlers = createTravelHandlers(caughtTravel);
     const gesture = startDragToTravel(pointerDownEvent, {
       element: containerRef.current,
       axes: dragAxes,
-      // Caught in flight: the hand is already in the gesture, so it is answered
-      // from its first pixel rather than after a threshold it has no reason to
-      // cross twice — on the axis what it caught is travelling on.
-      immediate:
-        caughtAxis && dragAxes.includes(caughtAxis) ? caughtAxis : false,
+      inFlight: leftPlaying ? travelInFlight : false,
+      // The next swipe over a travel still playing: one slide further, and the
+      // travel goes on there from where it is — the way a second arrow press
+      // sends it — without ever having stopped under the hand.
+      onPushOn: ({ axis, sign, event }) => {
+        if (trackAnimationRef.current?.playState !== "running") {
+          return false;
+        }
+        // Nothing is held: the box is free for the travel that follows.
+        dragRef.current = null;
+        if (axis === "x") {
+          move(-sign, 0, event);
+        } else {
+          move(0, -sign, event);
+        }
+        return true;
+      },
       ...handlers,
     });
     if (!gesture) {

@@ -40,11 +40,10 @@ and are referenced from here rather than restated.
   — how that axis is read, why the reading is biased, and why a finger's number
   is a deadline rather than a feel, has [a section of its own
   below](#the-axis-is-read-once-and-read-with-a-bias). **Except on something
-  already moving**: there the hand said what it wanted by reaching for it, so
-  the gesture answers from its first pixel and owes it every one of them —
-  asking it to cross a threshold is asking twice, and over those pixels the
-  thing it is holding answers to nobody. A diagonal would ask for two travels at
-  once and only one screen can arrive.
+  already moving**: its axis is already decided, and a diagonal would ask for
+  two travels at once when only one screen can arrive. What the hand wants
+  there — the next screen, or that one — is read from its first steps, [see
+  below](#a-hand-reaching-for-something-still-moving-is-reaching-for-that-thing).
 - **Of the way covered when the gesture forms, only the threshold is withheld**
   — never the whole first report. Movement reports are coalesced to frames, so
   the faster the gesture the bigger its first report is: charged whole, a flick
@@ -435,25 +434,57 @@ not ask for a new one, and it is not refused. Refusing it is what makes a page
 rock: a gesture given back to the browser is answered by the browser, over a
 travel that is already moving.
 
-**Touching it stops it, at the press** — in both consumers — and not at the first
-pixels that decide an axis. A hand landing on something that is moving expects it to obey at once;
-waiting for a threshold lets the pages travel on under a finger already resting
-on them, which is the one moment a gesture must not ask for proof. A press that
-turns out to be nothing lets go again and the travel carries on from where it
-was caught, over what is left of it.
+But a hand landing on a travel is two different hands, and the likelier one is
+not reaching for it at all: **it is the next swipe**, thrown while the last one
+is still playing. Stopping the travel at the press answers the rarer hand —
+the one catching — and makes the likelier one feel a stall: the screen stops
+dead under a swipe that starts from rest, then crawls at the finger's speed
+before it goes anywhere. So what the hand is doing is listened to first
+(`inFlight`), with the touch refused from the first pixel meanwhile (the
+browser's deadline does not wait for us — see
+[mobile_touch.md](./mobile_touch.md)):
 
-Position alone does not say it is working: caught late, the picture is already
-where the finger is and nothing looks wrong. What gives it away is SPEED — a
-travel that keeps its pace under a resting finger, then is pinned to a hand
-moving at another one. Measure the position frame by frame across the press: it
-must stop on the frame the finger lands, not on the one where the axis is
-decided.
+- **a step the travel's way** (the start threshold) is the next swipe: one
+  screen further (`onPushOn`), and the travel goes on there from where it is —
+  as a second arrow press sends it — never having stopped. The hand holds
+  nothing; it pushed;
+- **a step against it, or a hand saying nothing** for `DRAG_CATCH_HOLD_MS`
+  (100ms) is a catch: the travel stops where it stands at that moment, and the
+  hand holds it from there;
+- **let go before either** — a tap — and the travel was never touched.
+
+The price is paid by the rarer hand: a catch lands up to 100ms after the finger,
+so the screen goes on that much under it. A slow hand stepping the travel's way
+before stopping reads as the next swipe too. Both are the right side to be
+wrong on.
+
+Both consumers answer the next swipe without stopping anything, each in its own
+way:
+
+- a `SlideContainer` sets off a new travel from where the track is, to the slide
+  after — the one a second arrow press asks for — over the distance left, so it
+  speeds up;
+- a `RouteTravel` keeps the transition it is playing and points the router one
+  page further — what a tab pressed while it plays does (see [Asking for a page
+  while one is on its
+  way](#asking-for-a-page-while-one-is-on-its-way)) — so the pace does not
+  change and the page arriving is simply the next one. What the transition
+  carries besides the pages cannot follow that, see [One gesture that bar
+  cannot follow](#one-gesture-that-bar-cannot-follow).
+
+Position alone does not say either is working. What gives it away is SPEED:
+measure the position frame by frame across the press (for a `RouteTravel`, the
+`currentTime` and `playState` of the transition's animations). A next swipe
+must not change the pace at all until the travel takes the new target, and
+then only keep it or speed up; a catch must stop on the frame the hold is
+decided, not later.
 
 Taking over means the pictures stop where they are and answer the finger again,
 from where they stand (`slack`) rather than from zero. Only one box is in hand,
 and walking out of either of its ends is a travel of its own — see below.
 
-What letting go of it again means is read from the hand, three ways:
+What letting go of a travel caught this way means is read from the hand, three
+ways:
 
 - **merely touched** — a press that moved less than a gesture's worth: nobody
   asked the travel to stop, it was asked to wait, and it carries on to where it
@@ -461,9 +492,10 @@ What letting go of it again means is read from the hand, three ways:
 - **thrown back** — against the way it was going, fast: everything goes back;
 - **thrown on** — the way it was already going, fast, having moved by more than
   a tremor: that is a second push, and it asks for the screen AFTER the one
-  arriving (`thrownOn`). Read as a verdict on the box in hand, it only confirms
-  what was already arriving — the travel stops at the press and goes on to the
-  same place, and the hand feels its second swipe swallowed. So the gesture
+  arriving (`thrownOn`) — the same answer as a step the travel's way, for a
+  hand that caught it first. Read as a verdict on the box in hand, it only
+  confirms what was already arriving, and the hand feels its second swipe
+  swallowed. So the gesture
   asks for the next box at the release (`onEdge` with `thrown`), with the
   picture still short of the end of the one in hand, and nothing on screen
   moves for it: the travel goes on from where the hand left it, to one screen
@@ -497,10 +529,11 @@ The two ends cost differently, and it is worth knowing which one is being felt:
 That cost is a `RouteTravel` one: a `SlideContainer` has every slide mounted,
 so handing over is only re-staging — the slide reached becomes the one dragged,
 the one left stays beside it, the slide past it is put on the other side, and
-nothing on screen moves. Which is also why only a `SlideContainer` answers a
-throw (`thrown`, above): a `RouteTravel` would have to jump its pictures the
-rest of the way before handing over, a page seen leaping, so it declines and
-the page caught simply arrives.
+nothing on screen moves. A throw (`thrown`, above) is answered differently for
+the same reason: a `SlideContainer` hands over by re-staging, while a
+`RouteTravel` would have to jump its pictures the rest of the way before
+handing over, a page seen leaping — so it aims the travel in hand one page
+further instead, hands nothing over, and lets it go: it arrives there.
 
 What the browser will not turn around with it is everything ELSE the
 transition carries — see [One gesture that bar cannot
@@ -752,7 +785,11 @@ stood, and where it was going to stand. That second place is now one nobody is
 going to, and the thing itself has already moved on in the live page — so the
 picture and the thing are in two places at once, and one sees two bars.
 
-So on that one gesture the pictures of everything that is not the pages are
+The same holds whenever a travel is aimed further the same way while it plays
+— a tab pressed two pages along, the next swipe landing on a page still
+arriving: the bar was photographed going to a tab nobody is going to anymore.
+
+So on those gestures the pictures of everything that is not the pages are
 dropped, and those things are left where they are, live: the bar jumps to the
 tab one is heading for instead of sliding to a tab one is not. A slide would be
 nicer, and it is not available — the browser measured both of its ends before

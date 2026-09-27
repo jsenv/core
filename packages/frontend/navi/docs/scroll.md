@@ -207,7 +207,8 @@ what keeps a `scrollIntoView()` on a row from landing under the sticky header.
 
 - **`loading` / `loadingFallback` / `loadingSkeletonCount` / `renderSkeleton`**
   — "I have nothing at all to show yet". Placeholder rows (or a `"loader"`
-  spinner) stand in for the whole list.
+  spinner) stand in for the whole list; the rows are held to the render
+  window like the ones they stand for.
 - **`<List.Items count>`** — "I know how many rows are coming". The rows not
   held yet are drawn as skeletons _in their own place_, virtualized like the
   rest, and asked for as they enter the render window.

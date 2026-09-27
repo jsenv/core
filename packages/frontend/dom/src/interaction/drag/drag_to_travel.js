@@ -217,6 +217,12 @@ const DRAG_DRIFT_DISTANCE = 8;
 // already going, it asks for the one after (see thrownOn). Well above the drift
 // bar, so a hand merely wavering as it lets go does not read as a throw.
 const DRAG_THROW_VELOCITY = 0.3;
+// A hand landing on a travel still playing, and saying nothing for this long —
+// no step its way, none against it — is holding it: the travel stops there.
+// Short enough that what was reached for is still where the eye saw it, long
+// enough for the far likelier hand to have said otherwise: the next swipe lands
+// already moving, and has covered the start threshold well before this.
+const DRAG_CATCH_HOLD_MS = 100;
 // Pulling towards nothing: what travels follows at a fraction of the finger, so
 // the gesture is answered (something moves) while saying there is nothing that
 // way. Let go and it comes back — a wall one can lean on, never walk through.
@@ -545,19 +551,35 @@ const thrownOn = ({ pulled, slack, velocity, towardsSomething, cancelled }) => {
  *   this one travels is not one of them: it is that box's, and this call
  *   returns null when nothing is left (see axesLeftBy). Say so in the DOM with
  *   [data-travel-by-drag] for the boxes above to read.
- * @param {false|"x"|"y"} [options.immediate=false] - the axis this press is
- *   already on, for a press that landed on something moving: the gesture is
- *   then read from its first pixel instead of waiting for an intent, and every
- *   pixel since the grab is owed to the hand. The axis comes from the caller
- *   rather than from the movement, because there is nothing to decide — what
- *   was caught is travelling on one already.
+ * @param {false|{axis: "x"|"y", way: 1|-1}} [options.inFlight=false] - a travel
+ *   still playing under the press, on `axis`, going `way` (the sign a pull
+ *   going the same way would have). The axis comes from the caller rather than
+ *   from the movement: there is nothing to decide, what the press landed on is
+ *   travelling on one already. The caller stops nothing at the press: a hand
+ *   landing on a moving travel is far more often the next swipe than a catch,
+ *   and stopping it at the press is what that swipe feels as a stall. So the
+ *   hand is listened to first — with the touch refused from its first pixel
+ *   meanwhile, before the browser takes it for a pan:
+ *   - a step of the start threshold the travel's way is the next swipe:
+ *     `onPushOn` is asked for the screen after, and the gesture is over — the
+ *     travel goes on, it is not held. If it has arrived in the meantime
+ *     (`onPushOn` answers `false`), the press is a swipe like any other;
+ *   - a step against it, or `DRAG_CATCH_HOLD_MS` of saying nothing, is a
+ *     catch: `onStart` is asked with `caught: true`, which is when the caller
+ *     stops the travel where it stands;
+ *   - let go before either, and nothing was touched.
+ * @param {(detail: {axis: string, sign: number, event: PointerEvent}) => boolean} [options.onPushOn]
+ *   - see `inFlight`: go on to the screen after the one the travel is bringing
+ *   in, without stopping it. Answer whether there was a travel to push.
  * @param {number} [options.commitRatio=0.3] - what fraction of the box has to
  *   be pulled for letting go to carry on rather than put things back. A
  *   fraction and never a distance, so the same gesture asks for the same thing
  *   on a phone and on a wide screen. Speed still answers on its own (see
  *   travelsAfter), whatever this says.
- * @param {(detail: {axis: string, sign: number, target: Element, event: PointerEvent}) => false|{size: number, slack?: number, travelBack?: boolean, travelOn?: boolean}} options.onStart
- *   - the finger has picked its axis. Answer `false` to give the gesture up, or
+ * @param {(detail: {axis: string, sign: number, target: Element, caught: boolean, event: PointerEvent}) => false|{size: number, slack?: number, travelBack?: boolean, travelOn?: boolean}} options.onStart
+ *   - the finger has picked its axis. `caught`: the hand has taken hold of the
+ *   travel given as `inFlight`, which the caller stops now, where it stands.
+ *   Answer `false` to give the gesture up, or
  *   with the geometry it walks: `size` (one box along that axis), `slack` (how
  *   far the box already sits from its resting place, for a travel grabbed
  *   mid-flight) and whether there is anywhere to go each way — `travelBack`
@@ -576,8 +598,10 @@ const thrownOn = ({ pulled, slack, velocity, towardsSomething, cancelled }) => {
  *   gesture stays on the box it has and leans on it.
  *   `thrown`: the hand did not walk there, it let go throwing a travel it had
  *   caught on the way it was already going (see thrownOn). The box is asked for
- *   at the release, with the picture still short of the end; answer `false` if
- *   it cannot be handed over from there, and the travel simply arrives.
+ *   at the release, with the picture still short of the end. Answer `false`
+ *   when there is no box to hand over from there, and the travel is let go of
+ *   as it is: it arrives where it is aimed — which a caller whose travel can
+ *   be aimed further without moving has just done, before answering.
  * @param {(detail: {axis: string, pulled: number, size: number, sign: number, travels: boolean, cancelled: boolean, event: PointerEvent}) => void} options.onEnd
  *   - the finger is off. `travels` is the gesture's answer: carry on to what was
  *   being pulled in, or put things back. `sign` is the side of what was being
@@ -593,15 +617,18 @@ export const startDragToTravel = (
   {
     element,
     axes = "xy",
-    immediate = false,
+    inFlight = false,
     commitRatio = DRAG_COMMIT_RATIO,
     onStart,
     onPull,
     onEnd,
     onEdge = () => false,
+    onPushOn = () => false,
     onGiveUp = () => {},
   },
 ) => {
+  // The axis a press landing on something moving is already on.
+  const movingAxis = inFlight && inFlight.axis;
   const target = pointerDownEvent.target;
   if (!target.closest || isPressExcluded(target, element)) {
     return null;
@@ -631,7 +658,7 @@ export const startDragToTravel = (
   // What was caught in flight travels on an axis of its own, and it is not up
   // for decision: a box below has taken that axis, so what this press caught it
   // cannot carry on either.
-  if (immediate && !axesLeft.includes(immediate)) {
+  if (movingAxis && !axesLeft.includes(movingAxis)) {
     return null;
   }
   const startThreshold =
@@ -644,12 +671,19 @@ export const startDragToTravel = (
   let travel = null;
   let dragGesture = null;
   let over = false;
+  // What the hand has said about a travel left playing (see inFlight):
+  // "listening" until it steps one way or the other or holds still, then
+  // "caught", or "arrived" when the travel it would have pushed on is over.
+  let inFlightAnswer = inFlight ? "listening" : null;
+  let holdElapsed = false;
+  let holdTimeout = null;
 
   const finish = () => {
     if (over) {
       return;
     }
     over = true;
+    clearTimeout(holdTimeout);
     document.documentElement.removeAttribute(GESTURE_ATTRIBUTE);
     document.documentElement.removeAttribute(WALKING_ATTRIBUTE);
     window.removeEventListener("pointerup", onPressOver);
@@ -717,6 +751,180 @@ export const startDragToTravel = (
     return pulled;
   };
 
+  // What the hand says, read on every report of it: which axis, whether it has
+  // become a travel, and where that travel stands.
+  const readHand = (gestureInfo) => {
+    if (!travel) {
+      let axis;
+      if (movingAxis) {
+        // The axis is not up for decision: what this press landed on is
+        // already travelling on one, and the caller said which. The first pixel
+        // of a hand landing on something moving is a tremor as often as it is
+        // a direction — read as a lean across the axis, it gives the gesture up
+        // and lets go of what was caught, under a finger that has not asked
+        // for anything yet.
+        axis = movingAxis;
+      } else {
+        // ONE axis, decided by the first movement reported and never
+        // revisited: a diagonal would ask for two travels at once and only
+        // one thing can arrive.
+        //
+        // The axis this box travels is favoured in that reading: a thumb
+        // swiping a box sideways moves along an ARC, and its first reported
+        // pixels — which are all this decision ever sees — lean off-axis
+        // far more than the gesture does. Read even, that lean hands the
+        // whole gesture to an axis nobody meant (the press is given up, and
+        // the hand's remaining hundred pixels are read by no one). So the
+        // cross axis has to win CLEARLY to take the press — and a gesture
+        // that is really the page's own (a scroll is near-pure on its axis
+        // from the first pixel) still is, at once, whole.
+        const reachX = Math.abs(coveredOn("x", gestureInfo));
+        const reachY = Math.abs(coveredOn("y", gestureInfo));
+        if (!reachX && !reachY) {
+          return;
+        }
+        const travelsX = axesLeft.includes("x");
+        const travelsY = axesLeft.includes("y");
+        if (travelsX && !travelsY) {
+          axis = reachY > reachX * AXIS_CROSS_DOMINANCE ? "y" : "x";
+        } else if (travelsY && !travelsX) {
+          axis = reachX > reachY * AXIS_CROSS_DOMINANCE ? "x" : "y";
+        } else {
+          axis = reachX >= reachY ? "x" : "y";
+        }
+        if (!axesLeft.includes(axis)) {
+          giveUp();
+          return;
+        }
+      }
+      const covered = coveredOn(axis, gestureInfo);
+      if (inFlightAnswer === "listening") {
+        const along = covered * inFlight.way;
+        if (along >= startThreshold) {
+          // The travel's way: the next swipe, landed while the last one is
+          // still playing. It asks for a screen more, and the travel carries on
+          // towards it without ever having stopped under the hand.
+          if (
+            onPushOn({ axis, sign: inFlight.way, event: gestureInfo.dragEvent })
+          ) {
+            giveUp();
+            return;
+          }
+          // Nothing left to push: the travel arrived meanwhile, and this is a
+          // swipe on a screen at rest like any other.
+          inFlightAnswer = "arrived";
+        } else if (along <= -startThreshold || holdElapsed) {
+          inFlightAnswer = "caught";
+        } else {
+          return;
+        }
+      }
+      const caught = inFlightAnswer === "caught";
+      if (!covered && !caught) {
+        // Nothing said on that axis: a grab without a movement, or one
+        // straight across it. There is no gesture in that.
+        giveUp();
+        return;
+      }
+      const sign = covered ? Math.sign(covered) : inFlight.way;
+      const started = onStart({
+        axis,
+        sign,
+        target,
+        caught,
+        event: gestureInfo.dragEvent || pointerDownEvent,
+      });
+      if (!started || !started.size) {
+        giveUp();
+        return;
+      }
+      travel = {
+        axis,
+        size: started.size,
+        travelBack: Boolean(started.travelBack),
+        travelOn: Boolean(started.travelOn),
+        slack: started.slack || 0,
+        // Only what the intent threshold cost is withheld, so what travels
+        // does not jump those few pixels at the start — and nothing more:
+        // a fast gesture arrives coalesced, and the first report can carry
+        // most of a flick. Charged whole, the flick would set off with
+        // nothing left of itself to have pulled, move nothing on screen and
+        // be refused at the release for it. Except for a travel caught (see
+        // inFlight): it is stopped where it stands at that moment, and what
+        // the hand did before holding it moved nothing.
+        origin: caught
+          ? covered
+          : covered > startThreshold
+            ? startThreshold
+            : covered < -startThreshold
+              ? -startThreshold
+              : covered,
+        pulled: started.slack || 0,
+      };
+      document.documentElement.setAttribute(WALKING_ATTRIBUTE, axis);
+      // What the first pixels may have started selecting is not a selection:
+      // it is the beginning of this travel.
+      collapseSelection();
+      // The travel exists: from here the pointer is this box's, and it is
+      // followed wherever it goes.
+      dragGesture.capturePointer();
+    }
+    const { axis } = travel;
+    let pulled = pullOf(gestureInfo);
+    // Which side is being pulled in: dragging to the right brings in what is
+    // on the left, which is what comes BEFORE.
+    let towardsSomething = pulled > 0 ? travel.travelBack : travel.travelOn;
+    // Past the start of the box in hand, and the caller has a box that way:
+    // the hand is not leaning on a wall, it is walking into the next one
+    // backwards. Asked before the resistance, so what it is handed is the
+    // hand's own distance rather than a damped one.
+    if (!towardsSomething && pulled) {
+      const relayed = relayTo(pulled > 0 ? 1 : -1, pulled, gestureInfo);
+      if (relayed !== null) {
+        pulled = relayed;
+        towardsSomething = true;
+      }
+    }
+    let size = travel.size;
+    if (!towardsSomething) {
+      pulled *= DRAG_RESISTANCE;
+    }
+    if (pulled > size || pulled < -size) {
+      const sign = pulled > 0 ? 1 : -1;
+      // How far past the edge the hand has gone. Its own number, because it
+      // is what the next box is owed if there is one.
+      const overshoot = pulled - sign * size;
+      pulled = sign * size;
+      if (towardsSomething) {
+        // A box walked whole, and the finger still going: the caller may have
+        // another one to put under it. Then the gesture WALKS ON — the pixels
+        // past the edge are its first ones, so the hand feels one movement
+        // and not a wall it had to let go of to cross.
+        const relayed = relayTo(sign, overshoot, gestureInfo);
+        if (relayed === null) {
+          // A box travels one box, and the hand can go further than that.
+          // Those extra pixels are not owed back: the gesture is measured
+          // from where the finger IS once it has reached the end, so turning
+          // around moves the picture at once instead of first walking back
+          // over the distance the hand went too far.
+          travel.origin =
+            coveredOn(axis, gestureInfo) - (pulled - travel.slack);
+        } else {
+          pulled = relayed;
+          size = travel.size;
+        }
+      }
+    }
+    travel.pulled = pulled;
+    onPull({
+      axis,
+      pulled,
+      size,
+      progress: pulled / size,
+      event: gestureInfo.dragEvent,
+    });
+  };
+
   const controller = createDragGestureController({
     // The threshold is left at its default and never crossed: what says this
     // press has become a gesture is the intent module below, which calls
@@ -740,158 +948,7 @@ export const startDragToTravel = (
       if (over) {
         return;
       }
-      if (!travel) {
-        let axis;
-        if (immediate) {
-          // The axis is not up for decision: what this press caught is already
-          // travelling on one, and the caller said which. The first pixel of a
-          // hand landing on something moving is a tremor as often as it is a
-          // direction — read as a lean across the axis, it gives the gesture up
-          // and lets go of what was caught, under a finger that has not asked
-          // for anything yet.
-          axis = immediate;
-        } else {
-          // ONE axis, decided by the first movement reported and never
-          // revisited: a diagonal would ask for two travels at once and only
-          // one thing can arrive.
-          //
-          // The axis this box travels is favoured in that reading: a thumb
-          // swiping a box sideways moves along an ARC, and its first reported
-          // pixels — which are all this decision ever sees — lean off-axis
-          // far more than the gesture does. Read even, that lean hands the
-          // whole gesture to an axis nobody meant (the press is given up, and
-          // the hand's remaining hundred pixels are read by no one). So the
-          // cross axis has to win CLEARLY to take the press — and a gesture
-          // that is really the page's own (a scroll is near-pure on its axis
-          // from the first pixel) still is, at once, whole.
-          const reachX = Math.abs(coveredOn("x", gestureInfo));
-          const reachY = Math.abs(coveredOn("y", gestureInfo));
-          if (!reachX && !reachY) {
-            return;
-          }
-          const travelsX = axesLeft.includes("x");
-          const travelsY = axesLeft.includes("y");
-          if (travelsX && !travelsY) {
-            axis = reachY > reachX * AXIS_CROSS_DOMINANCE ? "y" : "x";
-          } else if (travelsY && !travelsX) {
-            axis = reachX > reachY * AXIS_CROSS_DOMINANCE ? "x" : "y";
-          } else {
-            axis = reachX >= reachY ? "x" : "y";
-          }
-          if (!axesLeft.includes(axis)) {
-            giveUp();
-            return;
-          }
-        }
-        const covered = coveredOn(axis, gestureInfo);
-        if (!covered) {
-          // Nothing said on that axis yet: a grab without a movement, or one
-          // straight across it. There is no gesture in that and nothing to give
-          // up on either — whatever the caller caught at the press stays
-          // caught, and the next report will say.
-          if (immediate) {
-            return;
-          }
-          giveUp();
-          return;
-        }
-        const sign = Math.sign(covered);
-        const started = onStart({
-          axis,
-          sign,
-          target,
-          event: gestureInfo.dragEvent,
-        });
-        if (!started || !started.size) {
-          giveUp();
-          return;
-        }
-        travel = {
-          axis,
-          size: started.size,
-          travelBack: Boolean(started.travelBack),
-          travelOn: Boolean(started.travelOn),
-          slack: started.slack || 0,
-          // Only what the intent threshold cost is withheld, so what travels
-          // does not jump those few pixels at the start — and nothing more:
-          // a fast gesture arrives coalesced, and the first report can carry
-          // most of a flick. Charged whole, the flick would set off with
-          // nothing left of itself to have pulled, move nothing on screen and
-          // be refused at the release for it. Except when the intent was
-          // established before the press (see immediate): there was no
-          // threshold to cross, so every pixel since the grab is the hand's
-          // and is owed to it.
-          origin: immediate
-            ? 0
-            : covered > startThreshold
-              ? startThreshold
-              : covered < -startThreshold
-                ? -startThreshold
-                : covered,
-          pulled: started.slack || 0,
-        };
-        document.documentElement.setAttribute(WALKING_ATTRIBUTE, axis);
-        // What the first pixels may have started selecting is not a selection:
-        // it is the beginning of this travel.
-        collapseSelection();
-        // The travel exists: from here the pointer is this box's, and it is
-        // followed wherever it goes.
-        dragGesture.capturePointer();
-      }
-      const { axis } = travel;
-      let pulled = pullOf(gestureInfo);
-      // Which side is being pulled in: dragging to the right brings in what is
-      // on the left, which is what comes BEFORE.
-      let towardsSomething = pulled > 0 ? travel.travelBack : travel.travelOn;
-      // Past the start of the box in hand, and the caller has a box that way:
-      // the hand is not leaning on a wall, it is walking into the next one
-      // backwards. Asked before the resistance, so what it is handed is the
-      // hand's own distance rather than a damped one.
-      if (!towardsSomething && pulled) {
-        const relayed = relayTo(pulled > 0 ? 1 : -1, pulled, gestureInfo);
-        if (relayed !== null) {
-          pulled = relayed;
-          towardsSomething = true;
-        }
-      }
-      let size = travel.size;
-      if (!towardsSomething) {
-        pulled *= DRAG_RESISTANCE;
-      }
-      if (pulled > size || pulled < -size) {
-        const sign = pulled > 0 ? 1 : -1;
-        // How far past the edge the hand has gone. Its own number, because it
-        // is what the next box is owed if there is one.
-        const overshoot = pulled - sign * size;
-        pulled = sign * size;
-        if (towardsSomething) {
-          // A box walked whole, and the finger still going: the caller may have
-          // another one to put under it. Then the gesture WALKS ON — the pixels
-          // past the edge are its first ones, so the hand feels one movement
-          // and not a wall it had to let go of to cross.
-          const relayed = relayTo(sign, overshoot, gestureInfo);
-          if (relayed === null) {
-            // A box travels one box, and the hand can go further than that.
-            // Those extra pixels are not owed back: the gesture is measured
-            // from where the finger IS once it has reached the end, so turning
-            // around moves the picture at once instead of first walking back
-            // over the distance the hand went too far.
-            travel.origin =
-              coveredOn(axis, gestureInfo) - (pulled - travel.slack);
-          } else {
-            pulled = relayed;
-            size = travel.size;
-          }
-        }
-      }
-      travel.pulled = pulled;
-      onPull({
-        axis,
-        pulled,
-        size,
-        progress: pulled / size,
-        event: gestureInfo.dragEvent,
-      });
+      readHand(gestureInfo);
     },
     onRelease: (gestureInfo) => {
       if (over || !travel) {
@@ -978,12 +1035,19 @@ export const startDragToTravel = (
     });
     return dragGesture;
   };
-  if (immediate) {
-    // Already in the gesture: what this press landed on was moving, and a hand
-    // that reaches for something in motion has said what it wants by reaching.
-    // Asking it to prove it over ten pixels is asking twice — and over those
-    // pixels the thing it is holding answers to nobody.
+  if (inFlight) {
+    // Started from the grab: what this press landed on is moving, and what the
+    // hand means by it is still being listened to (see readHand), but the touch
+    // is refused from its first pixel, before the browser takes it for a pan of
+    // its own.
     grab()?.start();
+    holdTimeout = setTimeout(() => {
+      if (over || travel || !dragGesture) {
+        return;
+      }
+      holdElapsed = true;
+      readHand(dragGesture.gestureInfo);
+    }, DRAG_CATCH_HOLD_MS);
   } else {
     dragAfterIntent(pointerDownEvent, grab, {
       longPress: false,

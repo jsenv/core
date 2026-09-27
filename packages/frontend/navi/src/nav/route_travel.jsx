@@ -577,8 +577,6 @@ export const RouteTravel = ({
   // and read back as "the page changed" it would start a second travel nobody
   // asked for, over pictures that are already showing something else.
   const pageAskedForRef = useRef(null);
-  // What a press stopped in flight, until the gesture says what it is about.
-  const caughtAtPressRef = useRef(null);
   // The latest way to answer a gesture, for a watcher that outlives every
   // render (see the wheel effect below).
   const travelHandlersRef = useRef(null);
@@ -1016,6 +1014,23 @@ export const RouteTravel = ({
     redirectTravel(travel, page, toIndex > fromIndex ? "forward" : "back");
   };
 
+  // One page further than the travel in flight is going, the same way: what
+  // a second swipe asks for over a page still arriving. Reached the way a tab
+  // pressed while it plays reaches it — the same pictures, the router pointed
+  // one page further (see redirectTravel) — so nothing restarts and nothing
+  // stops. Past the last page there is nothing to aim at, and the travel
+  // simply arrives where it was going.
+  const aimOnePageFurther = (travel, sign) => {
+    const fromIndex = pageIndexOf(pages, travel.page);
+    const page = sign > 0 ? pages[fromIndex - 1] : pages[fromIndex + 1];
+    if (fromIndex === -1 || !page) {
+      return;
+    }
+    redirectTravel(travel, page, travel.direction);
+    pageAskedForRef.current = page;
+    travelTo(page, "drag");
+  };
+
   const endTravel = (travel) => {
     if (travel.ended) {
       return;
@@ -1087,7 +1102,8 @@ export const RouteTravel = ({
         ) {
           return { size, travelBack: false, travelOn: false };
         }
-        caughtAtPressRef.current = null;
+        // Stopped here, where it stands now: left playing under the press
+        // until the hand said it holds it (see inFlight in onPointerDown).
         holdTravel(travelInFlight);
         // Where the pictures stand right now, said as a pull: what the finger
         // continues from, so nothing jumps when it takes them over.
@@ -1150,11 +1166,18 @@ export const RouteTravel = ({
     // same amount of work.
     onEdge: ({ sign, thrown }) => {
       const travel = travelRef.current;
+      if (thrown) {
+        // Caught, then thrown on before its end: the page after is reached by
+        // aiming the travel in hand further, and let go of it arrives there.
+        // There is no box to hand over — a new one would mean jumping these
+        // pictures the rest of the way first, a page seen leaping — so none
+        // is answered, and the gesture lets the travel go as it is.
+        if (travel && !travel.noPicture && !travel.ended && !travel.reverting) {
+          aimOnePageFurther(travel, sign);
+        }
+        return false;
+      }
       if (
-        // Thrown on before its end: handing over from there would mean jumping
-        // the pictures the rest of the way first (see scrubTravel below), a
-        // page seen leaping. The travel caught simply arrives.
-        thrown ||
         !travel ||
         travel.noPicture ||
         travel.ended ||
@@ -1226,9 +1249,26 @@ export const RouteTravel = ({
         travelOn: sign < 0,
       };
     },
+    // The next swipe over a page still arriving: the page after it, and the
+    // travel in flight goes there — the same pictures, the router pointed one
+    // page further, exactly what a tab pressed while it plays does (see
+    // retargetTravel). Nothing is held and nothing restarts.
+    onPushOn: ({ sign }) => {
+      const travel = travelRef.current;
+      if (
+        !travel ||
+        travel.noPicture ||
+        travel.ended ||
+        travel.reverting ||
+        travel.scrub
+      ) {
+        return false;
+      }
+      aimOnePageFurther(travel, sign);
+      return true;
+    },
     onEnd: ({ travels }) => {
       gestureRef.current = null;
-      caughtAtPressRef.current = null;
       const travel = travelRef.current;
       if (!travel) {
         // The travel this gesture was holding ended under it. Nothing left to
@@ -1256,44 +1296,37 @@ export const RouteTravel = ({
     if (!travelByDrag || gestureRef.current) {
       return;
     }
-    // Touching something that is moving STOPS it, right there, before the
-    // gesture has said anything about itself. Waiting for the first pixels that
-    // decide an axis would let the pages travel on under a finger that has
-    // already landed on them, which is the one moment a hand expects to be
-    // obeyed without asking. If the press turns out to be nothing, the travel
-    // is let go of again and carries on (see onGiveUp).
-    const travelToCatch = travelRef.current;
-    if (
-      travelToCatch &&
-      !travelToCatch.noPicture &&
-      !travelToCatch.ended &&
-      !travelToCatch.reverting
-    ) {
-      holdTravel(travelToCatch);
-      caughtAtPressRef.current = travelToCatch;
-    }
-    // A travel already playing is not a reason to refuse the press: a hand
-    // reaching for a page that is still sliding is reaching for THAT page, and
-    // the gesture takes it over (see onStart).
+    // A travel playing under the press is left playing: a hand landing on a
+    // page still sliding is far more often the next swipe than a catch, and
+    // stopping the pages at the press is what that swipe feels as a stall. The
+    // gesture listens to the hand first and says which it was — the next page
+    // (onPushOn) or this one, held (onStart) — see inFlight in
+    // drag_to_travel.js. Either way the press is not refused: a gesture given
+    // back to the browser is a page that rocks under a travel already moving.
+    const travelInFlight = travelRef.current;
+    const leftPlaying =
+      travelInFlight &&
+      !travelInFlight.noPicture &&
+      !travelInFlight.ended &&
+      !travelInFlight.reverting &&
+      !travelInFlight.scrub;
     if (currentIndex === -1) {
       return;
     }
-    // A press that never became a gesture: whatever it stopped goes on its way,
-    // from where the finger caught it.
     const giveUp = () => {
       gestureRef.current = null;
-      const caught = caughtAtPressRef.current;
-      caughtAtPressRef.current = null;
-      if (caught && !caught.ended) {
-        releaseHold(caught);
-      }
     };
     const gesture = startDragToTravel(pointerDownEvent, {
       element: elementRef.current,
       axes: axis,
-      // Caught in flight: the hand is already in the gesture (see above), so it
-      // is answered from its first pixel, on the axis the pages travel.
-      immediate: caughtAtPressRef.current ? axis : false,
+      inFlight: leftPlaying
+        ? {
+            axis,
+            // The way a pull bringing in the page on its way would go:
+            // dragging towards the end of the axis brings in what is BEFORE.
+            way: travelInFlight.direction === "back" ? 1 : -1,
+          }
+        : false,
       ...travelHandlers,
       onGiveUp: giveUp,
     });

@@ -6,7 +6,7 @@ import {
   scrollIntoViewScoped,
 } from "@jsenv/dom";
 import { signal } from "@preact/signals";
-import { cloneElement, createContext, Fragment } from "preact";
+import { cloneElement, createContext } from "preact";
 import {
   useContext,
   useId,
@@ -1171,31 +1171,15 @@ const ListUI = (props) => {
     );
   } else if (loading && loadingFallback) {
     if (loadingFallback === "skeleton") {
-      // Skeleton rows draw their own separators: they never reach ListItemUI
-      // (where real items get theirs from SeparatorContext), and without them
-      // the list would visibly gain its dividers only once loaded.
-      const skeletons = [];
-      let skeletonIndex = 0;
-      while (skeletonIndex < loadingSkeletonCount) {
-        if (separator && skeletonIndex > 0) {
-          skeletons.push(
-            cloneElement(resolveSeparatorVnode(separator, skeletonIndex - 1), {
-              key: `navi-list-skeleton-separator-${skeletonIndex}`,
-            }),
-          );
-        }
-        skeletons.push(
-          <Fragment key={`navi-list-skeleton-${skeletonIndex}`}>
-            {renderSkeleton ? (
-              renderSkeleton(skeletonIndex)
-            ) : (
-              <ListItem skeleton />
-            )}
-          </Fragment>,
-        );
-        skeletonIndex++;
-      }
-      content = skeletons;
+      // Held to the render budget like the rows they stand for: a list
+      // expecting a hundred rows draws the ones its window frames, and the
+      // room of the others is there, so nothing moves when they arrive.
+      content = (
+        <ListLoadingRows
+          key="navi-list-loading-rows"
+          count={loadingSkeletonCount}
+        />
+      );
     } else if (loadingFallback === "loader") {
       content = (
         <ListItem
@@ -4175,19 +4159,61 @@ const VISIBILITY_HIDDEN_STYLE = { visibility: "hidden" };
  *   unmounted while asking says `busy: false` on its way out.
  */
 export const ListItems = ({
-  renderItem,
   items,
   itemsAction,
   count,
-  pageSize,
   memoryBudget,
-  groupBy,
-  renderGroupLabel,
-  groupLabelProps,
-  renderSkeleton,
-  renderError,
   onRequestStateChange,
+  ...rowProps
 }) => {
+  const store = useItemStore({
+    items,
+    count,
+    itemsAction,
+    memoryBudget,
+    onRequestStateChange,
+  });
+  return useRunRows(store, rowProps);
+};
+
+// The rows a `loading` list is told to expect (loadingSkeletonCount): a run
+// holding none of them, and asking for none — they arrive through the app.
+// Drawn as a run's missing rows are, under the render window with fillers
+// holding the room of the rest, since that is what they stand for.
+const ListLoadingRows = ({ count }) => {
+  return useRunRows(createStoreHoldingNothing(count), LOADING_ROWS_PROPS);
+};
+const LOADING_ROWS_PROPS = {};
+const createStoreHoldingNothing = (rowCount) => {
+  return {
+    rowCount,
+    failure: null,
+    refreshing: false,
+    forget: () => {},
+    retry: () => {},
+    getItem: () => undefined,
+    eachHeld: () => {},
+    holds: () => false,
+    useRequestMissing: () => {},
+  };
+};
+
+// What a run draws: the rows its window frames, a skeleton for each one the
+// store does not hold, and fillers holding the room of the rows outside it.
+// Which rows are held, and fetching the others, is the store's (see
+// useItemStore).
+const useRunRows = (
+  store,
+  {
+    renderItem,
+    pageSize,
+    groupBy,
+    renderGroupLabel,
+    groupLabelProps,
+    renderSkeleton,
+    renderError,
+  },
+) => {
   const ownerId = useId();
   const listRows = useContext(ListRowsContext);
   const slotId = useContext(ListSlotContext);
@@ -4205,13 +4231,6 @@ export const ListItems = ({
     rowVnodesRef.current = { renderItem, byItem: new Map() };
   }
   const rowVnodesByItem = rowVnodesRef.current.byItem;
-  const store = useItemStore({
-    items,
-    count,
-    itemsAction,
-    memoryBudget,
-    onRequestStateChange,
-  });
   const renderRowSkeleton =
     renderSkeleton === undefined ? listRows.renderSkeleton : renderSkeleton;
   // A row on its way takes the room the list reserves for it: anything else
@@ -5381,13 +5400,16 @@ const ListResolved = /*#__PURE__*/ createComponentResolver([
  *   `loadingSkeletonCount` placeholder rows (look:
  *   `renderSkeleton`), `"loader"` a single centered spinner, and
  *   anything else is rendered as-is in a row of its own. A falsy value
- *   displays nothing. A list that knows how many rows it will have has no use
- *   for this — see `<List.Items count>`, whose not-yet-loaded rows are drawn
- *   as skeletons in place, one per row, virtualized like the rest.
+ *   displays nothing. A list read a slice at a time has no use for this — see
+ *   `<List.Items count>`, whose not-yet-loaded rows are drawn as skeletons in
+ *   place, one per row, virtualized like the rest.
  * @param {number} [props.loadingSkeletonCount=3]
- *   How many placeholder rows `loadingFallback="skeleton"` draws. `0` says the
- *   list is already known to be empty: the empty `fallback` shows right away
- *   rather than an empty frame, so nothing moves when the response arrives.
+ *   How many rows `loadingFallback="skeleton"` stands for — the number the
+ *   answer will hold, so nothing moves when it arrives. Drawn under
+ *   `renderBudget` like the rows they stand for: the ones the window frames
+ *   are skeletons, the others hold their room. `0` says the list is already
+ *   known to be empty: the empty `fallback` shows right away rather than an
+ *   empty frame.
  * @param {"start"|"end"|number|{id: string, offset?: number}} [props.defaultScrolled="start"]
  *   Where the list opens, after which the user owns the scroll — unless it is
  *   being come back to (see `scrollResetOnNavigation`). `"end"` is a
