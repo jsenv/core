@@ -43,6 +43,10 @@ import {
   dispatchRequestInteraction,
 } from "../rules/control_interaction.js";
 import { getUIStateFromElement } from "../ui_state_dom.js";
+import {
+  followOutsideSinceOpen,
+  readStatesAtOpen,
+} from "../ui_state_controller.js";
 
 const css = /* css */ `
   /* Popover and Dialog size, pad and scroll themselves. What is written here
@@ -432,9 +436,14 @@ const PickerCustom = (props) => {
       // a defaultValue holds nothing, so closing on it untouched IS the answer
       // ("yes, 2h15") — the same rule Form applies to an untouched field (see
       // isUIStateHeld). Read at open, before anything inside can change it.
-      const heldAtOpen = isUIStateHeld(
-        getPickerInput(ref.current)?.__uiStateController__,
-      );
+      const pickerController = getPickerInput(
+        ref.current,
+      )?.__uiStateController__;
+      const heldAtOpen = isUIStateHeld(pickerController);
+      // What a cancel must not take back: see followOutsideSinceOpen.
+      const statesAtOpen = pickerController
+        ? readStatesAtOpen(pickerController)
+        : null;
       debugPopup(
         openEvent,
         `picker opened, store value at open`,
@@ -520,6 +529,12 @@ const PickerCustom = (props) => {
               valueAtOpen,
               rollbackEvent,
             );
+            if (statesAtOpen) {
+              followOutsideSinceOpen(
+                inputEl.__uiStateController__,
+                statesAtOpen,
+              );
+            }
           } else if (!heldAtOpen) {
             // Confirmed a suggestion: nothing changed, so nothing has told the
             // control's own bound signal / uiAction that this is now the

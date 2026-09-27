@@ -10,6 +10,8 @@ somewhere else in the app.
 - [A button that proposes a value is `--navi-update`](#a-button-that-proposes-a-value-is---navi-update)
   - [`--navi-update:smooth`: the control is seen answering](#--navi-updatesmooth-the-control-is-seen-answering)
 - [`signal` + `defaultValue`: the answer and where it starts](#signal--defaultvalue-the-answer-and-where-it-starts)
+- [A `defaultValue` follows what it was read from](#a-defaultvalue-follows-what-it-was-read-from)
+- [Drawing what a control holds](#drawing-what-a-control-holds)
 - [What a signal holds, control by control](#what-a-signal-holds-control-by-control)
 - [Empty keeps the shape of the question](#empty-keeps-the-shape-of-the-question)
 - [Which controls take a `signal`](#which-controls-take-a-signal)
@@ -22,12 +24,12 @@ somewhere else in the app.
 
 ## The three answers
 
-| what you pass          | who holds the value | when the user acts                          |
-| ---------------------- | ------------------- | ------------------------------------------- |
-| nothing                | the control         | it keeps it; `uiAction` tells you           |
-| `defaultValue`         | the control         | same — the default is only where it starts  |
-| `signal`               | the signal          | the control writes it back, both ways       |
-| `value` (or `checked`) | you                 | nothing moves until you hand a new one down |
+| what you pass          | who holds the value | when the user acts                                                                    |
+| ---------------------- | ------------------- | ------------------------------------------------------------------------------------- |
+| nothing                | the control         | it keeps it; `uiAction` tells you                                                     |
+| `defaultValue`         | the control         | same — the default is where it starts, and a new one is taken while nothing is edited |
+| `signal`               | the signal          | the control writes it back, both ways                                                 |
+| `value` (or `checked`) | you                 | nothing moves until you hand a new one down                                           |
 
 A control given `value` and nothing to listen to it (`uiAction`, `action`, a
 `signal`, a surrounding form) is read-only, and says so in dev: it is showing
@@ -227,6 +229,50 @@ An emptied signal (`signal.value = undefined`) puts the control back on its
 default rather than leaving it blank — which is what makes "nothing decided
 here, use the usual answer" expressible at all. Without a `defaultValue`, an
 emptied signal empties the control.
+
+## A `defaultValue` follows what it was read from
+
+A field editing a record starts on that record, `defaultValue={user.first_name}`,
+and the record moves after mount: the save comes back normalized (a trailing
+space trimmed), another screen or device changed it, a refresh arrived. The
+control takes the new default **while it holds no edit** — nothing typed, picked
+or toggled since the value the outside last accepted. An edit is never undone:
+the default waits, and lands once that edit is accepted (the action succeeded)
+or taken back (the action failed, the popup was cancelled).
+
+This holds for a control, for a group given a `defaultValue` (a selectable list,
+a `ControlGroup`), and for everything inside a picker's popup, which stays
+mounted while closed. So the record goes in as `defaultValue` and nothing
+else: no `key` to remount the popup when it changes. A key is worse than
+unnecessary here, since it also destroys whatever is being typed when the
+answer to ANOTHER field arrives.
+
+A picker's cancel follows the same line. It puts back what the picker held at
+open, which undoes the person's edits, but what the outside moved during the
+opening stays moved.
+
+## Drawing what a control holds
+
+A picker's trigger usually shows the choice (a label for a code, a summary of
+an object). Read it from the picker rather than keeping a copy:
+
+```jsx
+const VisibilityLabel = ({ value }) => <Text>{labelOf(value)}</Text>;
+
+<Picker name="visibility" defaultValue={user.visibility} ui={VisibilityLabel}>
+  …
+</Picker>;
+```
+
+`ui={Component}` is handed `value`, `loading` and `interactive`. A `ui` given as
+an element reads the same three with `usePickerState()`.
+
+What not to write: `const s = useSignal(defaultValue)` bound as `signal={s}`,
+just to have something to read. `useSignal` reads its argument once, so the
+signal never hears the record move, and a bound signal takes precedence over the
+control's own `defaultValue`. The field is stuck on its first value. A signal is
+for a value the app owns and writes itself (a url param, state shared between
+screens), not a mirror kept for drawing.
 
 ## What a signal holds, control by control
 

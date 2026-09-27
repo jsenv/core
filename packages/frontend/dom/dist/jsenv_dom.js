@@ -12399,10 +12399,12 @@ const DRAG_COMMIT_RATIO = 0.3;
 // a movement from a tap that shook.
 const DRAG_DRIFT_VELOCITY = 0.03;
 const DRAG_DRIFT_DISTANCE = 8;
-// Thrown back: a hand moving AWAY from what it was bringing in this fast asks
-// for it to be put back, whatever the distance already covered. Well above the
-// drift bar, so a hand merely wavering as it lets go does not read as a throw.
-const DRAG_THROW_BACK_VELOCITY = 0.3;
+// Thrown: a hand moving this fast as it lets go says where things go, whatever
+// the distance already covered. AWAY from what it was bringing in, it asks for
+// it to be put back (travelsAfter); the way a travel it caught in flight was
+// already going, it asks for the one after (see thrownOn). Well above the drift
+// bar, so a hand merely wavering as it lets go does not read as a throw.
+const DRAG_THROW_VELOCITY = 0.3;
 // Pulling towards nothing: what travels follows at a fraction of the finger, so
 // the gesture is answered (something moves) while saying there is nothing that
 // way. Let go and it comes back — a wall one can lean on, never walk through.
@@ -12672,7 +12674,7 @@ const travelsAfter = ({
   // two thirds and thrown back still arrives: the gesture was read as the
   // place it was let go of rather than as a movement.
   if (
-    Math.abs(velocity) > DRAG_THROW_BACK_VELOCITY &&
+    Math.abs(velocity) > DRAG_THROW_VELOCITY &&
     Math.sign(velocity) !== sign
   ) {
     return false;
@@ -12685,6 +12687,27 @@ const travelsAfter = ({
   }
   // At rest: the position is the only witness left.
   return Math.abs(pulled) > size * commitRatio;
+};
+
+// A travel caught in flight and thrown on the way it was already going: a
+// second push, and it asks for the screen AFTER the one on its way — two
+// gestures, two screens, as a second push over a wheel's tail is. Read as the
+// verdict above, it only confirms what was already arriving: the throw stops
+// the travel at the press and lets it go on to the same place, and what the
+// hand feels is its second swipe swallowed. The hand has to have moved that way
+// by more than a tremor, so a travel merely touched still carries on to where
+// it was going (see the slack rule in travelsAfter).
+const thrownOn = ({ pulled, slack, velocity, towardsSomething, cancelled }) => {
+  if (!slack || cancelled || !towardsSomething) {
+    return false;
+  }
+  const way = Math.sign(slack);
+  return (
+    Math.sign(pulled) === way &&
+    (pulled - slack) * way >= DRAG_START_THRESHOLD &&
+    Math.sign(velocity) === way &&
+    Math.abs(velocity) > DRAG_THROW_VELOCITY
+  );
 };
 
 /**
@@ -12731,7 +12754,7 @@ const travelsAfter = ({
  * @param {(detail: {axis: string, pulled: number, size: number, progress: number, event: PointerEvent}) => void} options.onPull
  *   - the finger has moved. `pulled` is in px from the resting place, `progress`
  *   the same as a fraction of the box, signed the same way.
- * @param {(detail: {axis: string, sign: number, event: PointerEvent}) => false|{size: number, travelBack?: boolean, travelOn?: boolean}} [options.onEdge]
+ * @param {(detail: {axis: string, sign: number, thrown: boolean, event: PointerEvent}) => false|{size: number, travelBack?: boolean, travelOn?: boolean}} [options.onEdge]
  *   - the hand has reached an end of the box it holds and keeps going: `sign`
  *   says which one — the far edge, a box walked whole, or its start, a box
  *   walked back to where it began. Answer with the geometry of the box that
@@ -12739,9 +12762,15 @@ const travelsAfter = ({
  *   become its first ones, so nothing is spent twice and the hand feels one
  *   continuous movement. Answer `false` (or leave it out) for a wall — the
  *   gesture stays on the box it has and leans on it.
+ *   `thrown`: the hand did not walk there, it let go throwing a travel it had
+ *   caught on the way it was already going (see thrownOn). The box is asked for
+ *   at the release, with the picture still short of the end; answer `false` if
+ *   it cannot be handed over from there, and the travel simply arrives.
  * @param {(detail: {axis: string, pulled: number, size: number, sign: number, travels: boolean, cancelled: boolean, event: PointerEvent}) => void} options.onEnd
  *   - the finger is off. `travels` is the gesture's answer: carry on to what was
- *   being pulled in, or put things back.
+ *   being pulled in, or put things back. `sign` is the side of what was being
+ *   pulled in — the side `pulled` is on, except after a throw handed over at
+ *   the release, where the picture still stands short of the new box.
  * @param {() => void} [options.onGiveUp] - the press is over without ever
  *   becoming a travel: it stayed still, leaned the wrong way, or `onStart`
  *   refused it. Nothing was painted and nothing has to be put back — this is
@@ -12852,10 +12881,11 @@ const startDragToTravel = (
   // from where the finger IS: nothing is spent twice, and the gesture is one
   // movement rather than a wall the hand had to let go of to cross.
   // Returns where the new box stands, or null when there is nothing that way.
-  const relayTo = (sign, distance, gestureInfo) => {
+  const relayTo = (sign, distance, gestureInfo, { thrown = false } = {}) => {
     const next = onEdge({
       axis: travel.axis,
       sign,
+      thrown,
       event: gestureInfo.dragEvent,
     });
     if (!next || !next.size) {
@@ -13062,6 +13092,37 @@ const startDragToTravel = (
         axis === "x" ? gestureInfo.velocityX : gestureInfo.velocityY;
       const releaseEvent = gestureInfo.releaseEvent || gestureInfo.dragEvent;
       const { cancelled } = gestureInfo;
+      if (thrownOn({ pulled, slack, velocity, towardsSomething, cancelled })) {
+        const sign = pulled > 0 ? 1 : -1;
+        // Where the picture stands, said from the box past the one in hand:
+        // short of it by what is left of the travel that was caught.
+        const relayed = relayTo(sign, pulled - sign * size, gestureInfo, {
+          thrown: true,
+        });
+        if (relayed !== null) {
+          // Nothing moves: the same place, measured from the new box — so the
+          // caller's picture of the gesture agrees with it before it is let go.
+          onPull({
+            axis,
+            pulled: relayed,
+            size: travel.size,
+            progress: relayed / travel.size,
+            event: releaseEvent,
+          });
+          onEnd({
+            axis,
+            pulled: relayed,
+            size: travel.size,
+            // The way it was thrown, not the side the picture stands on: it
+            // still sits short of the box it was bringing in.
+            sign,
+            travels: true,
+            cancelled: false,
+            event: releaseEvent,
+          });
+          return;
+        }
+      }
       onEnd({
         axis,
         pulled,

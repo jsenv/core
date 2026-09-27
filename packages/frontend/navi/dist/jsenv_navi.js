@@ -4,10 +4,10 @@
  */
 import { installImportMetaCssBuild, windowHeightSignal, windowWidthSignal, visualViewportHeightSignal, visualViewportWidthSignal, getAppHeight, getAppWidth, coarsePointerSignal, smallTouchScreenSignal } from "./jsenv_navi_side_effects.js";
 export { disableVirtualKeyboardOverlay } from "./jsenv_navi_side_effects.js";
-import { elementIsFocusable, createIterableWeakSet, dispatchInternalCustomEvent, dispatchCustomEvent, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, getElementSignature, createPubSub, findEvent, createValueEffect, findFocusDelegateTarget, findFocusable, scrollIntoViewThroughScrollables, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, getScrollContainerSet, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, keepTouchRefusable, isPressDrivenClick, waitForTap, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, dragSourceThatStoodDown, markDragSource, refuseDragTo, startDragTo, installPanZoom, createInternalCustomEvent, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, normalizeStyles, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, getScrollContainer, watchWheelTravel, scrollRoomTowards, isTouchDrivenEvent, scrollIntoViewScoped, closestOpenableAncestor, isAncestorOpen, isDisplayedDespiteClosedAncestor, observeAncestorOpenState, getAncestorOpenType, findBefore, findAfter, resolveCSSSize, hasCSSSizeUnit, releaseWheelGesture, getScrollIntoViewScopedOffsets, wheelGestureIsTakenFrom, claimWheelGesture, initFocusGroup, stringifyStyle as stringifyStyle$1, isScrollable, resolveOklchLightness, contrastColor, trapScrollInside, parsePositionArea, snapToPixel, trapFocusInside, onAncestorReopen, isPressDisputedByDrag, canScroll, measureWidestChildRow, performTabNavigation, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
+import { createPubSub, elementIsFocusable, createIterableWeakSet, dispatchInternalCustomEvent, dispatchCustomEvent, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, getElementSignature, findEvent, createValueEffect, findFocusDelegateTarget, findFocusable, scrollIntoViewThroughScrollables, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, getScrollContainerSet, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, chainEvent, keepTouchRefusable, isPressDrivenClick, waitForTap, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, dragSourceThatStoodDown, markDragSource, refuseDragTo, startDragTo, installPanZoom, createInternalCustomEvent, getKeyboardEventDefaultAction, activeElementSignal, normalizeStyle, mergeOneStyle, getPositionedParent, normalizeStyles, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, getScrollContainer, watchWheelTravel, scrollRoomTowards, isTouchDrivenEvent, scrollIntoViewScoped, closestOpenableAncestor, isAncestorOpen, isDisplayedDespiteClosedAncestor, observeAncestorOpenState, getAncestorOpenType, findBefore, findAfter, resolveCSSSize, hasCSSSizeUnit, releaseWheelGesture, getScrollIntoViewScopedOffsets, wheelGestureIsTakenFrom, claimWheelGesture, initFocusGroup, stringifyStyle as stringifyStyle$1, isScrollable, resolveOklchLightness, contrastColor, trapScrollInside, parsePositionArea, snapToPixel, trapFocusInside, onAncestorReopen, isPressDisputedByDrag, canScroll, measureWidestChildRow, performTabNavigation, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
 export { chainEvent, clickIsSuppressed, contrastColor, createDragGestureController, dragAfterIntent, findEvent, markDragSource, startDragTo } from "@jsenv/dom";
 import { signal, computed, effect, untracked, batch, useComputed, useSignal } from "@preact/signals";
-import { isValidElement, createContext, render, h, toChildArray, options, cloneElement, createElement, Fragment as Fragment$1 } from "preact";
+import { options, isValidElement, createContext, render, h, toChildArray, cloneElement, createElement, Fragment as Fragment$1 } from "preact";
 import { useErrorBoundary, useLayoutEffect, useContext, useCallback, useRef, useState, useEffect, useMemo, useId } from "preact/hooks";
 import { humanizeI18n, setRuntimeLangSource, formatDuration, formatMonth, formatDay, resolveTimeRangePrecision, formatDatePlaceholder, toDate, getRelativeDay, formatDayRelative, formatMonthPlaceholder, formatWeekPlaceholder, formatDatetimePlaceholder, formatDatetime, toTimeOfDay, formatTimeOfDay, formatTime, formatMinuteDuration, formatSecondDuration, formatHourDuration, formatTimeRelative, formatNumber, interpolateText, installInterpolateJsx } from "@jsenv/humanize";
 export { createI18n, formatDatetime, formatDay, formatDayRelative, formatDuration, formatHourDuration, formatMinuteDuration, formatMonth, formatNumber, formatSecondDuration, formatTime, formatTimeOfDay, formatTimeRange, formatTimeRelative, interpolateText } from "@jsenv/humanize";
@@ -94,6 +94,29 @@ const css$17 = /* css */ `@layer navi {
 }
 `;
 import.meta.css = [css$17, "@jsenv/navi/src/navi_z_indexes.js"];
+
+/**
+ * A navigation is ABOUT to be applied — said before its very first write.
+ *
+ * Everything else a router says arrives once the change is made: a route
+ * announces that it matches, an action that it is running. That is too late for
+ * anyone who needs the page as it stands BEFORE, and the browser's view
+ * transitions are exactly that kind of reader — the picture they keep of the
+ * page being left is taken at the next frame, and a render answering a signal
+ * written a moment ago is already in the DOM by then (see route_travel.jsx).
+ *
+ * So this is the one moment where nothing has moved yet. It is published
+ * synchronously, from the top of the navigation, and whoever listens runs
+ * before the URL, the visited set, or any route has changed.
+ *
+ * The other end is published too, and for the same kind of reader: whoever
+ * held something across the change and has nobody to hand it to gets a moment
+ * to let go of it that does not depend on guessing how long the change takes.
+ */
+
+
+const [publishBeforeRouting, observeBeforeRouting] = createPubSub();
+const [publishAfterRouting, observeAfterRouting] = createPubSub();
 
 const addIntoArray = (array, ...valuesToAdd) => {
   if (valuesToAdd.length === 1) {
@@ -298,6 +321,112 @@ const urlToScheme = (url) => {
   return scheme;
 };
 
+/**
+ * The document's rendering, held for the one frame a view transition needs.
+ *
+ * The browser does not take the picture of the page being left when a
+ * transition is ASKED for — it takes it at the next frame, just before running
+ * the update callback. Preact renders sooner than that, in a microtask: so a
+ * change nobody asked for (a tab pressed, the back button) has already reached
+ * the DOM when the picture is taken, and the picture is of the page ARRIVING.
+ * Both sides of the animation then show it, and one watches a page slide onto
+ * itself.
+ *
+ * So what Preact has queued waits until the update callback, which is the
+ * moment the API is built around — the change belongs inside it. The whole
+ * document is held: it is about to be frozen under a picture anyway.
+ *
+ * ONE hold for the whole document, whoever animates. The hold is a wrapper
+ * around Preact's `options.debounceRendering`, and two of them installed
+ * independently restore each other in the wrong order when they let go — every
+ * render queued in between is then handed to a wrapper nobody will ever
+ * release. Everything that photographs a navigation (RouteTravel's box, a
+ * route transition) must therefore hold through this module, never through a
+ * wrapper of its own.
+ */
+
+
+let renderingHold = null;
+const holdRendering = () => {
+  if (renderingHold) {
+    return renderingHold.release;
+  }
+  const debounceRenderingBefore = options.debounceRendering;
+  const hold = {
+    render: null,
+    waiting: [],
+    release: () => {
+      // Only the hold that is still standing may be given back: a holder
+      // releasing after another has taken over must not let go of what it
+      // does not hold.
+      if (renderingHold !== hold) {
+        return;
+      }
+      renderingHold = null;
+      options.debounceRendering = debounceRenderingBefore;
+      const { render, waiting } = hold;
+      hold.render = null;
+      hold.waiting = [];
+      if (render) {
+        render();
+      }
+      for (const wait of waiting) {
+        wait();
+      }
+    },
+  };
+  renderingHold = hold;
+  options.debounceRendering = (render) => {
+    hold.render = render;
+  };
+  return hold.release;
+};
+
+// Anything else that must not happen before the picture is taken, and the
+// scroll is the other one: a page one arrives at starts at its top, and the
+// document put back to its top while the page being left is still on screen is
+// a page that has ALREADY jumped when the picture is taken. Worse, the browser
+// paints what the new offset shows and nothing else, so the picture keeps only
+// the band it had already painted — the page being left is then seen in
+// fragments, whatever the movement does afterwards.
+//
+// Run at once when nobody is photographing anything, which is the common case
+// and must stay free.
+const whenRenderingResumes = (callback) => {
+  if (!renderingHold) {
+    callback();
+    return;
+  }
+  renderingHold.waiting.push(callback);
+};
+
+// The hold a navigation takes on its way in — from before its first write,
+// because by the time a route announces that it matches, Preact has already
+// been told and the render is queued; a hold taken then is a hold taken too
+// late. Kept here until whoever animates the change takes it over, or the
+// navigation turns out to be one nobody animates.
+let routingRenderingHold = null;
+const holdRenderingForRouting = () => {
+  routingRenderingHold = holdRendering();
+};
+// Nobody had a picture to take: a page held for a change it does not animate
+// is a page that stutters for nothing.
+const releaseRoutingRenderingHold = () => {
+  const release = routingRenderingHold;
+  routingRenderingHold = null;
+  if (release) {
+    release();
+  }
+};
+// An animator takes the navigation's hold as its own — taking another would be
+// taking a hold on a page that is holding still — or takes a fresh one when
+// the change it animates is not a navigation.
+const takeoverRoutingRenderingHold = () => {
+  const release = routingRenderingHold || holdRendering();
+  routingRenderingHold = null;
+  return release;
+};
+
 installImportMetaCssBuild(import.meta);
 
 const URL_TARGET_ATTRIBUTE = "data-url-target";
@@ -347,7 +476,8 @@ let urlTargetOptions = {
  *   How long, in ms, to keep waiting for a target that has not arrived, counted
  *   from the moment the document stops working.
  * @param {number} [options.maxWait=10000]
- *   Longest wait, in ms, for a document that never stops working.
+ *   Longest wait, in ms, for a document that never stops working. The element
+ *   is then answered as it stands, when it is there.
  */
 const setUrlTargetOptions = (options) => {
   urlTargetOptions = { ...urlTargetOptions, ...options };
@@ -374,6 +504,23 @@ const useUrlTargetId = () => {
 let stopWaitingForCurrentTarget = null;
 let currentTargetKey;
 
+const documentLoadIsReturn = () => {
+  const [navigationEntry] = performance.getEntriesByType("navigation");
+  if (!navigationEntry) {
+    return false;
+  }
+  return (
+    navigationEntry.type === "reload" || navigationEntry.type === "back_forward"
+  );
+};
+// The url the document is on its way back to — a back, a forward, a reload —
+// where the reader was, as opposed to a place just sent to. Said by the
+// navigation before it writes anything, and by the load for the first url.
+let returningToUrl = documentLoadIsReturn() ? window.location.href : null;
+observeBeforeRouting(({ url, navigationType }) => {
+  returningToUrl = navigationType === "traverse" ? url : null;
+});
+
 /**
  * Answers the URL's target again, as if it had just been designated.
  *
@@ -383,10 +530,10 @@ let currentTargetKey;
  */
 const rearmUrlTarget = () => {
   currentTargetKey = undefined;
-  armUrlTarget(documentUrlSignal.peek());
+  armUrlTarget(documentUrlSignal.peek(), { isReturn: false });
 };
 
-const armUrlTarget = (documentUrl) => {
+const armUrlTarget = (documentUrl, { isReturn }) => {
   const targetKey = urlToTargetKey(documentUrl);
   if (targetKey === currentTargetKey) {
     return;
@@ -397,11 +544,25 @@ const armUrlTarget = (documentUrl) => {
     stopWaitingForCurrentTarget = null;
   }
   const targetId = urlToTargetId(documentUrl);
+  // The browser leaves `:target` on the element a URL named once the URL has
+  // stopped naming it — a pushState never touches it.
+  const staleTarget = document.querySelector(":target");
+  if (staleTarget && staleTarget.id !== targetId) {
+    writeTarget(null);
+  }
   if (!targetId) {
     return;
   }
-  stopWaitingForCurrentTarget = waitForElementWithId(targetId, (element) => {
+  stopWaitingForCurrentTarget = waitForUrlTarget(targetId, (element) => {
     stopWaitingForCurrentTarget = null;
+    if (!element.matches(":target")) {
+      writeTarget(element);
+    }
+    if (isReturn) {
+      // The offset put back by scroll_restoration.js is the reader's own: the
+      // element is named by the URL, not arrived at.
+      return;
+    }
     revealUrlTarget(element);
   });
 };
@@ -418,14 +579,27 @@ const urlToTargetId = (url) => {
   return hash ? decodeURIComponent(hash.slice(1)) : "";
 };
 
-const waitForElementWithId = (id, onFound) => {
+// Calls `onSettled` with the element once it can be answered: it exists, it
+// shows something, and the document is done working. Found is not enough while
+// the document works — what sits above it may still be drawn and push it down,
+// and a page reusing a node of the page being left holds it before its own
+// data has come.
+//
+// Confirmed at the next frame, once rendering has resumed: the render the last
+// answer asked for has run by then, and a component starting its own run from
+// that render has made the document busy again.
+const waitForUrlTarget = (id, onSettled) => {
+  const { graceAfterIdle, maxWait } = urlTargetOptions;
+  let stopped = false;
+  let confirmationPending = false;
+  let frame = null;
   let mutationObserver = null;
   let stopWatchingBusy = null;
   let idleTimeout = null;
   let maxWaitTimeout = null;
-  let found = false;
 
   const stopWaiting = () => {
+    stopped = true;
     if (mutationObserver) {
       mutationObserver.disconnect();
       mutationObserver = null;
@@ -436,76 +610,214 @@ const waitForElementWithId = (id, onFound) => {
     }
     clearTimeout(idleTimeout);
     clearTimeout(maxWaitTimeout);
+    if (frame !== null) {
+      cancelAnimationFrame(frame);
+      frame = null;
+    }
   };
 
-  const checkForElement = () => {
+  const findElement = () => {
     const element = document.getElementById(id);
     if (!element) {
-      return;
+      return null;
     }
     // Rendered inside a closed tab, a folded details, a view that is not the
-    // one on screen: the element exists but would show nothing. Keep waiting —
-    // it is the same wait, for the same reason.
+    // one on screen: the element exists but would show nothing.
     if (element.checkVisibility && !element.checkVisibility()) {
+      return null;
+    }
+    return element;
+  };
+  const settle = (element) => {
+    stopWaiting();
+    onSettled(element);
+  };
+  const check = () => {
+    if (confirmationPending || documentIsBusySignal.peek() || !findElement()) {
       return;
     }
-    found = true;
-    stopWaiting();
-    onFound(element);
+    confirmationPending = true;
+    whenRenderingResumes(() => {
+      if (stopped) {
+        return;
+      }
+      frame = requestAnimationFrame(() => {
+        frame = null;
+        confirmationPending = false;
+        if (documentIsBusySignal.peek()) {
+          return;
+        }
+        const element = findElement();
+        if (element) {
+          settle(element);
+        }
+      });
+    });
   };
 
-  checkForElement();
-  if (found) {
-    return stopWaiting;
-  }
-
-  mutationObserver = new MutationObserver(checkForElement);
+  mutationObserver = new MutationObserver(check);
+  // Every attribute, not only `id`: what shows an element that is already
+  // there — a <details> opening, a tab panel losing its display: none — is an
+  // attribute written somewhere above it, and nothing else says so.
   mutationObserver.observe(document.documentElement, {
     childList: true,
     subtree: true,
     attributes: true,
-    attributeFilter: ["id"],
   });
-  const { graceAfterIdle, maxWait } = urlTargetOptions;
   stopWatchingBusy = effect(() => {
     const documentIsBusy = documentIsBusySignal.value;
     clearTimeout(idleTimeout);
-    if (!documentIsBusy) {
-      idleTimeout = setTimeout(stopWaiting, graceAfterIdle);
+    if (documentIsBusy) {
+      return;
     }
+    check();
+    // The grace is for an element that has not come; one already there and
+    // waiting for rendering to resume is not given up on.
+    idleTimeout = setTimeout(() => {
+      if (!confirmationPending) {
+        stopWaiting();
+      }
+    }, graceAfterIdle);
   });
-  maxWaitTimeout = setTimeout(stopWaiting, maxWait);
+  // A document that never stops working: the element as it stands, when it is
+  // there at all.
+  maxWaitTimeout = setTimeout(() => {
+    const element = findElement();
+    if (element) {
+      settle(element);
+    } else {
+      stopWaiting();
+    }
+  }, maxWait);
 
   return stopWaiting;
 };
 
 const revealUrlTarget = (element) => {
   const { block, behavior, markDuration } = urlTargetOptions;
-  // The element just entered the DOM: where it sits is only known once layout
-  // has run.
-  requestAnimationFrame(() => {
-    const prefersReducedMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
-    element.scrollIntoView({
-      block,
-      behavior: prefersReducedMotion ? "instant" : behavior,
-    });
-    // What the browser does when it handles a fragment itself: keyboard
-    // navigation resumes from the target, not from the top of the document.
-    if (elementIsFocusable(element)) {
-      element.focus({ preventScroll: true });
-    }
-    element.setAttribute(URL_TARGET_ATTRIBUTE, "");
-    setTimeout(() => {
-      element.removeAttribute(URL_TARGET_ATTRIBUTE);
-    }, markDuration);
+  const prefersReducedMotion = window.matchMedia(
+    "(prefers-reduced-motion: reduce)",
+  ).matches;
+  element.scrollIntoView({
+    block,
+    behavior: prefersReducedMotion ? "instant" : behavior,
   });
+  // What the browser does when it handles a fragment itself: keyboard
+  // navigation resumes from the target, not from the top of the document.
+  if (elementIsFocusable(element)) {
+    element.focus({ preventScroll: true });
+  }
+  element.setAttribute(URL_TARGET_ATTRIBUTE, "");
+  setTimeout(() => {
+    element.removeAttribute(URL_TARGET_ATTRIBUTE);
+  }, markDuration);
+};
+
+let targetWriteInProgress = false;
+/**
+ * True while navi writes the browser's `:target`. The fragment navigation that
+ * takes is announced like any other — a popstate, a navigate event, an entry
+ * change — and names the address and the state the document is already at, so
+ * whoever routes on those events leaves it alone.
+ */
+const isTargetWriteInProgress = () => {
+  return targetWriteInProgress;
+};
+
+// `:target` onto `element`, or off whatever holds it when `element` is null.
+//
+// A replace towards the address the browser is at: the browser answers it as a
+// fragment navigation, and that is the only moment it sets `:target`. It also
+// scrolls to what the fragment designates, resets the entry's states
+// (history.state in Firefox, the Navigation API state everywhere) and fires a
+// popstate (Chrome, Safari) and a navigate event. The address, both states and
+// the scroll are put back in the same task, so nothing of it is painted; a
+// running view transition is not skipped by it (measured in Chrome, Firefox
+// and Safari).
+const writeTarget = (element) => {
+  const address = window.location.href;
+  const historyState = window.history.state;
+  const { navigation } = window;
+  const entry = navigation ? navigation.currentEntry : null;
+  const entryState = entry ? entry.getState() : undefined;
+  const putScrollBack = captureScroll(element);
+  const addressFragment = new URL(address).hash.slice(1);
+  const addressTargetId = decodeURIComponent(addressFragment);
+
+  let fragmentUrl;
+  let silencedElement = null;
+  if (element) {
+    fragmentUrl =
+      element.id === addressTargetId
+        ? address
+        : `${urlWithoutFragment(address)}#${encodeURIComponent(element.id)}`;
+  } else if (addressFragment) {
+    // The address itself, so the fragment does not change and no hashchange
+    // follows; the element it names briefly without its id, so it designates
+    // nothing.
+    fragmentUrl = address;
+    silencedElement = document.getElementById(addressTargetId);
+  } else {
+    // An empty fragment designates the top of the document; the scroll it
+    // makes is put back with the others.
+    fragmentUrl = `${address}#`;
+  }
+
+  targetWriteInProgress = true;
+  try {
+    if (silencedElement) {
+      silencedElement.removeAttribute("id");
+    }
+    window.location.replace(fragmentUrl);
+  } finally {
+    if (silencedElement) {
+      silencedElement.id = addressTargetId;
+    }
+    window.history.replaceState(historyState, null, address);
+    if (entry && navigation.currentEntry) {
+      navigation.updateCurrentEntry({ state: entryState });
+    }
+    targetWriteInProgress = false;
+  }
+  putScrollBack();
+};
+
+// Every box a fragment navigation towards `element` may scroll: its ancestors,
+// and the document.
+const captureScroll = (element) => {
+  const boxes = [];
+  let box = element ? element.parentElement : null;
+  while (box) {
+    boxes.push(box);
+    box = box.parentElement;
+  }
+  const { scrollingElement } = document;
+  if (!boxes.includes(scrollingElement)) {
+    boxes.push(scrollingElement);
+  }
+  const positions = boxes.map((box) => {
+    return { box, left: box.scrollLeft, top: box.scrollTop };
+  });
+  return () => {
+    for (const { box, left, top } of positions) {
+      if (box.scrollLeft !== left || box.scrollTop !== top) {
+        box.scrollTo({ left, top, behavior: "instant" });
+      }
+    }
+  };
+};
+
+const urlWithoutFragment = (url) => {
+  const urlObject = new URL(url);
+  urlObject.hash = "";
+  return urlObject.href;
 };
 
 effect(() => {
   const documentUrl = documentUrlSignal.value;
-  armUrlTarget(documentUrl);
+  const isReturn = returningToUrl === documentUrl;
+  returningToUrl = null;
+  armUrlTarget(documentUrl, { isReturn });
 });
 
 /**
@@ -10101,6 +10413,26 @@ const dispatchRequestInteraction = (
     always,
     ...detailRest,
   });
+};
+
+/**
+ * Whether the control `element` belongs to lets an interaction of this intent
+ * through, asked ahead of the event the gate will judge, and silently: nothing
+ * is reported, nothing runs. For what a press is about to lead to (see
+ * announceOpeningPress in commands.js) — the press itself is not that event: a
+ * drag source cancels a `pointerdown` whose click still comes and opens.
+ *
+ * @param {Element} element
+ * @param {{ intent: "read" | "write" }} options
+ * @returns {boolean}
+ */
+const allowsInteraction = (element, { intent }) => {
+  const controlHost = findControlHost(element) || element;
+  const ci = controlHost.__uiStateController__?.rules.interaction;
+  if (!ci) {
+    return true;
+  }
+  return ci.checkInteractivity({ intent });
 };
 
 const onRequestInteraction = (
@@ -27539,112 +27871,6 @@ const dropGeneratedIdKeys = (state) => {
 };
 
 /**
- * The document's rendering, held for the one frame a view transition needs.
- *
- * The browser does not take the picture of the page being left when a
- * transition is ASKED for — it takes it at the next frame, just before running
- * the update callback. Preact renders sooner than that, in a microtask: so a
- * change nobody asked for (a tab pressed, the back button) has already reached
- * the DOM when the picture is taken, and the picture is of the page ARRIVING.
- * Both sides of the animation then show it, and one watches a page slide onto
- * itself.
- *
- * So what Preact has queued waits until the update callback, which is the
- * moment the API is built around — the change belongs inside it. The whole
- * document is held: it is about to be frozen under a picture anyway.
- *
- * ONE hold for the whole document, whoever animates. The hold is a wrapper
- * around Preact's `options.debounceRendering`, and two of them installed
- * independently restore each other in the wrong order when they let go — every
- * render queued in between is then handed to a wrapper nobody will ever
- * release. Everything that photographs a navigation (RouteTravel's box, a
- * route transition) must therefore hold through this module, never through a
- * wrapper of its own.
- */
-
-
-let renderingHold = null;
-const holdRendering = () => {
-  if (renderingHold) {
-    return renderingHold.release;
-  }
-  const debounceRenderingBefore = options.debounceRendering;
-  const hold = {
-    render: null,
-    waiting: [],
-    release: () => {
-      // Only the hold that is still standing may be given back: a holder
-      // releasing after another has taken over must not let go of what it
-      // does not hold.
-      if (renderingHold !== hold) {
-        return;
-      }
-      renderingHold = null;
-      options.debounceRendering = debounceRenderingBefore;
-      const { render, waiting } = hold;
-      hold.render = null;
-      hold.waiting = [];
-      if (render) {
-        render();
-      }
-      for (const wait of waiting) {
-        wait();
-      }
-    },
-  };
-  renderingHold = hold;
-  options.debounceRendering = (render) => {
-    hold.render = render;
-  };
-  return hold.release;
-};
-
-// Anything else that must not happen before the picture is taken, and the
-// scroll is the other one: a page one arrives at starts at its top, and the
-// document put back to its top while the page being left is still on screen is
-// a page that has ALREADY jumped when the picture is taken. Worse, the browser
-// paints what the new offset shows and nothing else, so the picture keeps only
-// the band it had already painted — the page being left is then seen in
-// fragments, whatever the movement does afterwards.
-//
-// Run at once when nobody is photographing anything, which is the common case
-// and must stay free.
-const whenRenderingResumes = (callback) => {
-  if (!renderingHold) {
-    callback();
-    return;
-  }
-  renderingHold.waiting.push(callback);
-};
-
-// The hold a navigation takes on its way in — from before its first write,
-// because by the time a route announces that it matches, Preact has already
-// been told and the render is queued; a hold taken then is a hold taken too
-// late. Kept here until whoever animates the change takes it over, or the
-// navigation turns out to be one nobody animates.
-let routingRenderingHold = null;
-const holdRenderingForRouting = () => {
-  routingRenderingHold = holdRendering();
-};
-// Nobody had a picture to take: a page held for a change it does not animate
-// is a page that stutters for nothing.
-const releaseRoutingRenderingHold = () => {
-  const release = routingRenderingHold;
-  routingRenderingHold = null;
-  if (release) {
-    release();
-  }
-};
-// An animator takes the navigation's hold as its own — taking another would be
-// taking a hold on a page that is holding still — or takes a fresh one when
-// the change it animates is not a navigation.
-const takeoverRoutingRenderingHold = () => {
-  const release = routingRenderingHold || holdRendering();
-  routingRenderingHold = null;
-  return release;
-};
-
-/**
  * Where a page was left, given back when one comes back to it.
  *
  * The browser does this on its own, and gets it wrong here for a reason that
@@ -27844,6 +28070,11 @@ const restoreScrollPosition = (url) => {
 // So `from`, the url being left, tells an arrival from the same place said
 // differently, and only the first is moved.
 //
+// A fragment does not make it less of an arrival. The browser finds nothing to
+// scroll to after a pushState; url_target.js brings the element in once it
+// renders, from this top — and when it never comes, the page is read from its
+// top like any other.
+//
 // The document, because the document is the scrollport in the common case. An
 // app that scrolls an element of its own scrolls it itself.
 const startAtTop = (url, { from } = {}) => {
@@ -27853,14 +28084,10 @@ const startAtTop = (url, { from } = {}) => {
   window.scrollTo({ top: 0, left: 0, behavior: "instant" });
 };
 const isArrival = (url, { from }) => {
-  const urlObject = new URL(url, window.location.href);
-  // A fragment names where to land, and the browser is the one that finds it.
-  if (urlObject.hash) {
-    return false;
-  }
   if (
     from !== undefined &&
-    new URL(from, window.location.href).pathname === urlObject.pathname
+    new URL(from, window.location.href).pathname ===
+      new URL(url, window.location.href).pathname
   ) {
     return false;
   }
@@ -27936,29 +28163,6 @@ const forgetScrollerUnlessPageLeft = (name) => {
     positionByName.delete(name);
   }
 };
-
-/**
- * A navigation is ABOUT to be applied — said before its very first write.
- *
- * Everything else a router says arrives once the change is made: a route
- * announces that it matches, an action that it is running. That is too late for
- * anyone who needs the page as it stands BEFORE, and the browser's view
- * transitions are exactly that kind of reader — the picture they keep of the
- * page being left is taken at the next frame, and a render answering a signal
- * written a moment ago is already in the DOM by then (see route_travel.jsx).
- *
- * So this is the one moment where nothing has moved yet. It is published
- * synchronously, from the top of the navigation, and whoever listens runs
- * before the URL, the visited set, or any route has changed.
- *
- * The other end is published too, and for the same kind of reader: whoever
- * held something across the change and has nobody to hand it to gets a moment
- * to let go of it that does not depend on guessing how long the change takes.
- */
-
-
-const [publishBeforeRouting, observeBeforeRouting] = createPubSub();
-const [publishAfterRouting, observeAfterRouting] = createPubSub();
 
 const getHrefTargetInfo = (href) => {
   href = String(href);
@@ -28467,6 +28671,11 @@ const setupBrowserIntegrationViaHistory = ({
   });
 
   window.addEventListener("popstate", (popstateEvent) => {
+    if (isTargetWriteInProgress()) {
+      // The fragment navigation navi makes to set `:target` (see
+      // url_target.js): the entry keeps its address and its state.
+      return;
+    }
     // The entry a pending replace was for is no longer the current one, and
     // the History API has no way to write it (see replaceAddressWhenSettled).
     dropPendingReplace();
@@ -28542,9 +28751,14 @@ const setupBrowserIntegrationViaHistory = ({
       // one), so whoever awaits this reads a document url and state that
       // already say where it landed.
       const landedPromise = new Promise((resolve) => {
-        window.addEventListener("popstate", () => resolve(true), {
-          once: true,
-        });
+        const onPopstate = () => {
+          if (isTargetWriteInProgress()) {
+            return;
+          }
+          window.removeEventListener("popstate", onPopstate);
+          resolve(true);
+        };
+        window.addEventListener("popstate", onPopstate);
       });
       landOnPending = landOn || null;
       window.history.back();
@@ -33365,10 +33579,15 @@ const RouteTravel = ({
     // stopping. Which end decides how it is answered, and the two are not the
     // same amount of work.
     onEdge: ({
-      sign
+      sign,
+      thrown
     }) => {
       const travel = travelRef.current;
-      if (!travel || travel.noPicture || travel.ended || travel.reverting || !CAN_KEEP_PICTURE) {
+      if (
+      // Thrown on before its end: handing over from there would mean jumping
+      // the pictures the rest of the way first (see scrubTravel below), a
+      // page seen leaping. The travel caught simply arrives.
+      thrown || !travel || travel.noPicture || travel.ended || travel.reverting || !CAN_KEEP_PICTURE) {
         return false;
       }
       // Where the page in hand is coming from, said the way the gesture says
@@ -37329,22 +37548,28 @@ const armOutsidePressClose = (
  * frames, never a timeout: browsers hold timers back while a finger is down,
  * and a timeout started by the press fires at its release, on top of the click.
  *
- * "while-opened" content is warmed by a press on the anchor, never by a hover
- * or a focus. That mode promises content built fresh for the gesture that
- * opens it, and mounted only while that gesture and its opening last: callers
- * lean on it (several pickers sharing one set of content ids, because only one
- * content exists at a time). A pointer crossing four anchors would build four
- * contents; a press is the start of one opening. So the press builds it, and
- * the press ending without an open throws it away — its click reaching the
- * document with the popup still closed, no click coming after the release,
- * the browser taking the gesture (`pointercancel`), or the next press
- * starting, before any of its own handlers run: one press at a time holds a
- * content. A keyboard opening
- * builds at open time, as without warming. What this gives up: a press-warmed
- * content is built before `onOpen` runs. The popups seeding their content from
- * `onOpen` are opened ON something by a command, whose press is not on their
- * anchor, so they are not warmed; one pressed on its own anchor that still
- * seeds from `onOpen` reads the value from before it.
+ * "while-opened" content is warmed by an opening press, never by a hover or a
+ * focus. That mode promises content built fresh for the gesture that opens
+ * it, and mounted only while that gesture and its opening last: callers lean
+ * on it (several pickers sharing one set of content ids, because only one
+ * content exists at a time). A pointer crossing four triggers would build four
+ * contents; a press is the start of one opening.
+ *
+ * Only what opens the popup can say its press is one, and it says so as the
+ * press starts, with a `navi_open_press` on the popup (see
+ * announceOpeningPress in commands.js): a `--navi-open` button, a picker's
+ * trigger when a press is what opens it, an expandable's UI part. Not the
+ * anchor: it says where the popup is placed, not what opens it — a card
+ * opened by a hold is pressed all day by taps meant for what it holds.
+ *
+ * The press builds the content, and the press ending without an open throws
+ * it away — its click reaching the document with the popup still closed, no
+ * click coming after the release, the browser taking the gesture
+ * (`pointercancel`), or the next press starting, before any of its own
+ * handlers run: one press at a time holds a content. A keyboard opening builds
+ * at open time. A popup with an `onOpen` is never warmed: that callback runs
+ * before the content is built (see open_controller.js), and a content seeding
+ * itself from what it writes must be built after it.
  */
 
 
@@ -37478,21 +37703,21 @@ const usePopupContentMount = (
       anchorElement.removeEventListener("focusin", warm);
     };
   }, [contentMounted, anchor, mount]);
-  // Warm on the press, for "while-opened" (see the top comment). Listening for
-  // as long as the anchor is there, not only while the content is unmounted:
-  // the press that throws a warmed content away can be a new press on this
-  // same anchor, and it must warm again.
+  // Warm on an opening press, for "while-opened" (see the top comment).
+  // Listening for as long as the popup is there, not only while the content is
+  // unmounted: the press that throws a warmed content away can be a new
+  // opening press of this same popup, and it must warm again.
   useEffect(() => {
-    if (!anchor || mount !== "while-opened") {
+    if (mount !== "while-opened") {
       return undefined;
     }
-    const anchorElement = resolveAnchorElement(anchor);
-    if (!anchorElement) {
+    const element = openController.getElement?.();
+    if (!element) {
       return undefined;
     }
     let stopPressWarm = null;
-    const onPointerDown = (pointerdownEvent) => {
-      if (pointerdownEvent.button !== 0 || contentMountedRef.current) {
+    const onOpeningPress = () => {
+      if (contentMountedRef.current || openController.onOpen) {
         return;
       }
       const cancelBuild = requestFrameAfterNext(() => {
@@ -37510,12 +37735,12 @@ const usePopupContentMount = (
         stopWatching();
       };
     };
-    anchorElement.addEventListener("pointerdown", onPointerDown);
+    element.addEventListener("navi_open_press", onOpeningPress);
     return () => {
       stopPressWarm?.();
-      anchorElement.removeEventListener("pointerdown", onPointerDown);
+      element.removeEventListener("navi_open_press", onOpeningPress);
     };
-  }, [anchor, mount]);
+  }, [mount]);
 
   return contentMounted;
 };
@@ -38641,6 +38866,9 @@ const useUIStateController = (
         // The suggestion this control started on — what tells a field showing
         // its default from one carrying an answer (see isUIStateHeld).
         defaultValue: controlInfo.defaultValue,
+        // The default last put on screen, which lags `defaultValue` while an
+        // edit holds a newer one back (see followDefaultValue).
+        defaultValueTaken: controlInfo.defaultValue,
 
         facadeChild: null,
         // Set for the duration of one interaction by whatever wants the
@@ -38742,6 +38970,18 @@ const useUIStateController = (
             e.currentTarget || controller.ref.current,
           );
           const currentUIState = controller.uiState;
+          // What a control is STARTED on is accepted, as its own defaultValue
+          // would be: a value placed on it as it registers, or what a picker
+          // takes up from its popup while it holds nothing of its own. A
+          // rollback goes back there, and a control left on it holds no edit.
+          if (!controller.hasStateProp) {
+            if (
+              e.type === "initial_state_push" ||
+              (e.type === "facade_child_mount_sync" && !controller.holdsEdit())
+            ) {
+              controller.state = newUIState;
+            }
+          }
           const stateIsTheSame = compareTwoJsValues(newUIState, currentUIState);
           if (stateIsTheSame) {
             if (controlType === "button" || controlType === "link") {
@@ -38907,7 +39147,12 @@ const useUIStateController = (
             }
             // initial_state_push is pure initialization (equivalent to defaultValue on the
             // child itself): skip uiAction entirely so no side effects fire on mount.
-            if (e.type !== "initial_state_push") {
+            // A value the outside moved since (see outside_value_follow) is the
+            // same initialization, later.
+            if (
+              e.type !== "initial_state_push" &&
+              e.type !== "outside_value_follow"
+            ) {
               // Still fire uiAction so external listeners (e.g. signals) stay in
               // sync, but do NOT fire the command and do NOT notify the parent —
               // both would cause an infinite loop when a parent cascades state
@@ -38959,6 +39204,19 @@ const useUIStateController = (
               // state silently drifts out of sync with this child.
               s.parentUIStateController.onChildUIAction(controller, e, {
                 stateChanged: true,
+              });
+            }
+            if (
+              e.type === "outside_value_follow" ||
+              (e.type === "facade_child_mount_sync" && isOutsideValueFollow(e))
+            ) {
+              // Heard the way a control mounting on that value would be:
+              // silently, nobody acted. But heard, all the way up — a picker
+              // whose popup followed tells its own group in turn — or what
+              // the groups send is not what is on screen.
+              s.parentUIStateController?.onChildUIAction(controller, e, {
+                stateChanged: true,
+                silent: true,
               });
             }
             return true;
@@ -39056,6 +39314,41 @@ const useUIStateController = (
           // pick — the signal would hand it straight back on the next render,
           // and the refused value would win over the rollback.
           writeBoundSignal(controller.state);
+          controller.followDefaultValue();
+        },
+        // Something typed, picked or toggled since the value the outside last
+        // gave or accepted.
+        holdsEdit: () => {
+          return !compareTwoJsValues(controller.uiState, controller.state);
+        },
+        // An uncontrolled control starts on its defaultValue, and a new one is
+        // what it would start on if it were mounted again — a record saved
+        // and handed back normalized, refreshed from elsewhere. It takes it
+        // while it holds no edit. An edit is never undone; the default waits
+        // for it to be accepted or rolled back.
+        followDefaultValue: () => {
+          // A bound signal carries its own default, followed through
+          // stateFromSignal; a proxy shows the control it stands for.
+          if (
+            controller.hasStateProp ||
+            controller.isProxy ||
+            controller.props.signal
+          ) {
+            return;
+          }
+          const { defaultValue } = controller;
+          if (compareTwoJsValues(defaultValue, controller.defaultValueTaken)) {
+            return;
+          }
+          if (controller.holdsEdit()) {
+            return;
+          }
+          controller.defaultValueTaken = defaultValue;
+          controller.state = defaultValue;
+          controller.setUIState(
+            defaultValue,
+            new CustomEvent("outside_value_follow", { detail: {} }),
+          );
         },
         // Read by the callout manager when it has nowhere else to point.
         getCalloutAnchorElement: (event) =>
@@ -39069,7 +39362,12 @@ const useUIStateController = (
           if (controller.hasStateProp || controller.queuedActionAllowedEvent) {
             return;
           }
+          // A picker told yes is told for what its popup shows too, the way a
+          // group tells its children. First, so that a default one of them
+          // takes on the way is part of what this control accepts below.
+          controller.facadeChild?.acknowledgeUIState();
           controller.state = controller.uiState;
+          controller.followDefaultValue();
         },
         onActionEnd: (e) => {
           acknowledgeOwnAction(controller);
@@ -39224,6 +39522,7 @@ const useUIStateController = (
             }
           }
         }
+        controller.followDefaultValue();
       }
       return liveValues();
     },
@@ -39804,7 +40103,12 @@ const useUIGroupStateController = (
           // deferred alongside a mount sync stays a real change.
           const pendingChange = pendingChangeRef.current;
           pendingChangeRef.current = {
-            e,
+            // A default followed is not replaced by a mount deferred beside
+            // it: the event is what lets the sync below read the children.
+            e:
+              pendingChange && isOutsideValueFollow(pendingChange.e)
+                ? pendingChange.e
+                : e,
             notifyExternal:
               pendingChange?.notifyExternal === true ? true : notifyExternal,
             actingChild,
@@ -39812,6 +40116,13 @@ const useUIGroupStateController = (
           return;
         }
         const { controller } = s;
+        if (isOutsideValueFollow(e)) {
+          // Not a partial reading: the child was there already and its value
+          // moved, told by the outside. The group is worth what its children
+          // show, whatever it was handed before — kept, the value it sends
+          // would be one the screen no longer shows.
+          controller.stateGivenFromAbove = false;
+        }
         // A child mounting or unmounting is not somebody answering: while the
         // children of a group are still arriving, their aggregate is a partial
         // reading, and taking it for the truth is how the value the group was
@@ -39990,6 +40301,9 @@ const useUIGroupStateController = (
         name,
         value,
         defaultValue,
+        // Same as the leaf's (see useUIStateController): the default last
+        // placed on the children, behind `defaultValue` while an edit waits.
+        defaultValueTaken: defaultValue,
         hasValueProp,
         hasDefaultValueProp,
         props,
@@ -40270,6 +40584,7 @@ const useUIGroupStateController = (
             }
           }
           onChange(e, { notifyExternal: true });
+          controller.followDefaultValue();
         },
         clearUIState: (e) => {
           const ev = new CustomEvent("propagate_down_clear_ui_state", {
@@ -40298,6 +40613,46 @@ const useUIGroupStateController = (
               c.acknowledgeUIState();
             }
           }
+          controller.followDefaultValue();
+        },
+        // A group holds no value of its own to have edited: it holds an edit
+        // when one of its children does.
+        holdsEdit: () => {
+          return childUIStateControllerArray.some(
+            (c) => shouldPropagateStateToChild(c) && c.holdsEdit(),
+          );
+        },
+        // The leaf's rule (see useUIStateController), for a group given a
+        // plain `defaultValue`: a new one is placed on the children the way
+        // the first one was as they registered, while none of them holds an
+        // edit. A signal's own default is followed by the update below.
+        followDefaultValue: () => {
+          if (controller.hasValueProp || controller.props.signal) {
+            return;
+          }
+          const { defaultValue } = controller;
+          if (compareTwoJsValues(defaultValue, controller.defaultValueTaken)) {
+            return;
+          }
+          if (controller.holdsEdit()) {
+            return;
+          }
+          controller.defaultValueTaken = defaultValue;
+          const followEvent = new CustomEvent("outside_value_follow", {
+            detail: {},
+          });
+          const placeEvent = new CustomEvent("initial_state_push", {
+            detail: {},
+          });
+          chainEvent(placeEvent, followEvent);
+          controller.setUIState(
+            defaultValue === undefined ? fallbackState : defaultValue,
+            placeEvent,
+          );
+          s.parentUIStateController?.onChildUIAction(controller, followEvent, {
+            stateChanged: true,
+            silent: true,
+          });
         },
         onActionEnd: (e) => {
           acknowledgeOwnAction(controller);
@@ -40420,6 +40775,7 @@ const useUIGroupStateController = (
         // former value back over it on the next child interaction.
         placeChildrenFrom(defaultValue);
       }
+      controller.followDefaultValue();
 
       return liveValues();
     },
@@ -40644,7 +41000,11 @@ const useUIFacadeStateController = (props, realUIStateController) => {
           if (child !== firstChildControllerRef.current) {
             return;
           }
-          if (silent && uiStateHoldsNothing(child.uiState)) {
+          if (
+            silent &&
+            !isOutsideValueFollow(e) &&
+            uiStateHoldsNothing(child.uiState)
+          ) {
             // A silent sync means the child's own structure changed (children
             // mounted/unmounted), not that the user acted. A child that ends up
             // with no value there is one that currently *cannot* express one —
@@ -40655,7 +41015,8 @@ const useUIFacadeStateController = (props, realUIStateController) => {
             // still nothing to adopt: the sync would only respell one nothing
             // as another (an array picker's [] becoming undefined, say) and
             // hand that to uiAction — an empty array picker opened its popup
-            // and told its owner the value changed.
+            // and told its owner the value changed. A default followed down to
+            // nothing is not that: the outside emptied a value the child held.
             return;
           }
           updatingRef.current = true;
@@ -40717,6 +41078,69 @@ const useUIFacadeStateController = (props, realUIStateController) => {
   );
 
   return scope.controller;
+};
+
+/**
+ * What every control of a picker — the picker and the controls in its popup —
+ * has been accepted on as the popup opens. Read back by followOutsideSinceOpen
+ * when the popup is cancelled.
+ */
+const readStatesAtOpen = (pickerController) => {
+  const statesAtOpen = new Map();
+  visitControllers(pickerController, (controller) => {
+    if (Object.hasOwn(controller, "state")) {
+      statesAtOpen.set(controller, controller.state);
+    }
+  });
+  return statesAtOpen;
+};
+
+/**
+ * A cancel puts back the value the picker held at open, which takes back
+ * everything that moved since — and not only what the user moved: a record
+ * refreshed while the popup was open, a default that arrived under a field
+ * holding an edit. Those were not the user's to take back. Once the value at
+ * open is back, each control the outside moved since shows what the outside
+ * holds again, and a default left waiting on an edit is taken there.
+ *
+ * Children before the control around them: a picker given its value by its
+ * owner has the last word over the controls in its popup.
+ */
+const followOutsideSinceOpen = (pickerController, statesAtOpen) => {
+  visitControllers(
+    pickerController,
+    (controller) => {
+      if (
+        statesAtOpen.has(controller) &&
+        !compareTwoJsValues(controller.state, statesAtOpen.get(controller)) &&
+        controller.holdsEdit()
+      ) {
+        controller.setUIState(
+          controller.state,
+          new CustomEvent("outside_value_follow", { detail: {} }),
+        );
+      }
+      controller.followDefaultValue();
+    },
+    { childrenFirst: true },
+  );
+};
+
+// A picker reaches the controls of its popup through its facade child, a group
+// through the children it registered.
+const visitControllers = (controller, visit, { childrenFirst } = {}) => {
+  if (!childrenFirst) {
+    visit(controller);
+  }
+  const children = controller.facadeChild
+    ? [controller.facadeChild]
+    : controller.getChildControllers?.() || [];
+  for (const child of children) {
+    visitControllers(child, visit, { childrenFirst });
+  }
+  if (childrenFirst) {
+    visit(controller);
+  }
 };
 
 const describePicker = (props) =>
@@ -40783,9 +41207,17 @@ const INTERNAL_EVENT_SET = new Set([
   // no action of the control's own — but what it holds really did move, so
   // uiAction, the bound signal and the parent notification below all happen.
   "auto_fix",
+  // A control put on a value the outside moved while nobody was editing it: a
+  // new defaultValue (see followDefaultValue), or what a cancel puts back
+  // (see followOutsideSinceOpen). Initialization arriving after mount, so
+  // nothing fires, and the groups above hear it silently.
+  "outside_value_follow",
 ]);
 const isInternalEvent = (e) => {
   return INTERNAL_EVENT_SET.has(e.type);
+};
+const isOutsideValueFollow = (e) => {
+  return Boolean(findEvent(e, "outside_value_follow"));
 };
 
 /**
@@ -46240,7 +46672,11 @@ const usePreloadOpeningOnPress = (ref, command, prefetch = true) => {
     if (!element) {
       return undefined;
     }
-    const onPointerDown = () => {
+    const onPointerDown = (pointerdownEvent) => {
+      // A right click opens a menu, never the popup.
+      if (pointerdownEvent.button !== 0) {
+        return;
+      }
       announceOpeningPress(element, command);
     };
     element.addEventListener("pointerdown", onPointerDown);
@@ -50330,8 +50766,14 @@ const Expandable = props => {
   // before the click ever fires — so what held the focus has to be remembered
   // at pointerdown time.
   const focusedAtPointerDownRef = useRef(null);
-  const onUIPointerDown = () => {
+  const onUIPointerDown = pointerdownEvent => {
     focusedAtPointerDownRef.current = document.activeElement;
+    // The start of an expansion, announced as a --navi-open button announces
+    // its own (see announceOpeningPress in commands.js) — unless aimed at a
+    // control inside the UI part, whose click does not toggle (see onUIClick).
+    if (pointerdownEvent.button === 0 && !openController.opened && !isAimedAtControlInsideUI(pointerdownEvent.target)) {
+      dispatchCustomEvent(rootRef.current, "navi_open_press");
+    }
   };
 
   // The content keeps its final size while the track animates (see the top
@@ -50629,16 +51071,17 @@ const Expandable = props => {
     if (clickEvent.defaultPrevented) {
       return;
     }
-    const {
-      target
-    } = clickEvent;
-    if (target.nodeType === 1) {
-      const interactiveElement = target.closest(UI_INTERACTIVE_SELECTOR);
-      if (interactiveElement && interactiveElement !== uiRef.current && uiRef.current.contains(interactiveElement)) {
-        return;
-      }
+    if (isAimedAtControlInsideUI(clickEvent.target)) {
+      return;
     }
     toggle(clickEvent);
+  };
+  const isAimedAtControlInsideUI = target => {
+    if (target.nodeType !== 1) {
+      return false;
+    }
+    const interactiveElement = target.closest(UI_INTERACTIVE_SELECTOR);
+    return Boolean(interactiveElement) && interactiveElement !== uiRef.current && uiRef.current.contains(interactiveElement);
   };
 
   // Space/Enter on the UI part itself (role button) — a key pressed on a
@@ -58941,6 +59384,52 @@ const SlideContainer = ({
         drag.areaPulled = pulled > 0 ? drag.areaBack : drag.areaOn;
         paintDrag();
       },
+      // The slide being brought in walked whole and the hand still going, or a
+      // travel caught on its way thrown on: either way the hand asks for the
+      // slide past it, and the gesture moves on to it. Nothing on screen moves
+      // for that — the slide reached becomes the one dragged, the one the hand
+      // came from stays next to it for a hand that turns around, and the slide
+      // past it is put on the other side.
+      onEdge: ({
+        axis,
+        sign
+      }) => {
+        const reached = sign > 0 ? drag.areaBack : drag.areaOn;
+        const {
+          slideElements,
+          placeOf
+        } = readMap();
+        const reachedElement = reached && slideElements.find(slideElement => readArea(slideElement) === reached);
+        if (!reachedElement) {
+          return false;
+        }
+        // The gate goToArea reads at the release, asked of the slide the hand
+        // is now in: a slide holding on to the user is not walked through.
+        const holds = reachedElement.hasAttribute(sign > 0 ? "data-prevent-nav-previous" : "data-prevent-nav-next");
+        const past = holds ? undefined : axis === "x" ? areaTowards(-sign, 0, reached) : areaTowards(0, -sign, reached);
+        if (!past) {
+          return false;
+        }
+        const currentElement = slideElements.find(slideElement => slideElement.hasAttribute("data-current")) || slideElements[0];
+        const basePlace = stageRef.current?.placeByArea.get(reached) || placeOf.get(reached) || {
+          x: 0,
+          y: 0
+        };
+        drag.areaBack = sign > 0 ? past : drag.area;
+        drag.areaOn = sign > 0 ? drag.area : past;
+        drag.area = reached;
+        drag.basePlace = basePlace;
+        drag.baseOffset = {
+          x: -basePlace.x * drag.box.width,
+          y: -basePlace.y * drag.box.height
+        };
+        stageDrag(drag, readArea(currentElement));
+        return {
+          size: axis === "x" ? drag.box.width : drag.box.height,
+          travelBack: Boolean(drag.areaBack),
+          travelOn: Boolean(drag.areaOn)
+        };
+      },
       onEnd: ({
         axis,
         sign,
@@ -62831,8 +63320,9 @@ const css$E = /* css */`
  *   initial state: an uncontrolled field seeded from a `defaultValue` that
  *   changed while the popup was closed. Intent on the anchor (pointer
  *   entering it, focus landing in it) builds the content ahead of the click;
- *   under `"while-opened"`, only a press on it does, and a press that does not
- *   open the popup throws it away.
+ *   under `"while-opened"`, only a press on what opens the popup does (a
+ *   `--navi-open` button, a picker's trigger), never with an `onOpen`, and a
+ *   press that does not open the popup throws it away.
  * @param {import("ignore:preact").ComponentChildren} props.children
  */
 const Dialog = props => {
@@ -64512,8 +65002,9 @@ const css$D = /* css */`
  *   initial state: an uncontrolled field seeded from a `defaultValue` that
  *   changed while the popup was closed. Intent on the anchor (pointer
  *   entering it, focus landing in it) builds the content ahead of the click;
- *   under `"while-opened"`, only a press on it does, and a press that does not
- *   open the popup throws it away.
+ *   under `"while-opened"`, only a press on what opens the popup does (a
+ *   `--navi-open` button, a picker's trigger), never with an `onOpen`, and a
+ *   press that does not open the popup throws it away.
  * @param {import("ignore:preact").ComponentChildren} props.children
  */
 const Popover = props => {
@@ -66176,7 +66667,10 @@ const PickerCustom = props => {
       // a defaultValue holds nothing, so closing on it untouched IS the answer
       // ("yes, 2h15") — the same rule Form applies to an untouched field (see
       // isUIStateHeld). Read at open, before anything inside can change it.
-      const heldAtOpen = isUIStateHeld(getPickerInput(ref.current)?.__uiStateController__);
+      const pickerController = getPickerInput(ref.current)?.__uiStateController__;
+      const heldAtOpen = isUIStateHeld(pickerController);
+      // What a cancel must not take back: see followOutsideSinceOpen.
+      const statesAtOpen = pickerController ? readStatesAtOpen(pickerController) : null;
       onOpen?.(openEvent);
       return {
         onRequestClose: requestCloseEvent => {
@@ -66244,6 +66738,9 @@ const PickerCustom = props => {
             });
             chainEvent(rollbackEvent, closeEvent);
             inputEl.__uiStateController__.setUIState(valueAtOpen, rollbackEvent);
+            if (statesAtOpen) {
+              followOutsideSinceOpen(inputEl.__uiStateController__, statesAtOpen);
+            }
           } else if (!heldAtOpen) {
             // Confirmed a suggestion: nothing changed, so nothing has told the
             // control's own bound signal / uiAction that this is now the
@@ -66323,6 +66820,11 @@ const PickerCustom = props => {
       // popupProps) is the single place actually deciding open/close.
       "onnavi_request_open": e => {
         dispatchCustomEvent(popupRef.current, "navi_request_open", e.detail);
+      },
+      // And the press announcing that request (see announceOpeningPress in
+      // commands.js), for the popup's content to be built on it.
+      "onnavi_open_press": () => {
+        dispatchCustomEvent(popupRef.current, "navi_open_press");
       },
       "onnavi_request_close": e => {
         const closing = dispatchCustomEvent(popupRef.current, "navi_request_close", e.detail);
@@ -66518,6 +67020,25 @@ const PickerCustom = props => {
       // below), and the keyboard keeps its own ways in (the shortcuts above).
       const openOnList = Array.isArray(openOn) ? openOn : [openOn];
       const opensOnPress = openOnList.includes("press");
+      // A press on the trigger of a picker a press opens is announced as it
+      // starts, as a --navi-open button announces its own (see
+      // announceOpeningPress in commands.js). Only a press that can open it: a
+      // picker opened by a hold says nothing on a tap, nor does one refusing
+      // to open (read-only with openWhileReadOnly={false}, busy). The
+      // interactivity is asked alone, not the whole gate: a drag source
+      // cancels the pointerdown, and the click that opens still comes.
+      if (opensOnPress) {
+        pickerProps.onPointerDown = pointerdownEvent => {
+          props.onPointerDown?.(pointerdownEvent);
+          const pickerEl = ref.current;
+          if (pointerdownEvent.button !== 0 || openController.opened || isWithinPickerContent(pointerdownEvent.target) || !allowsInteraction(pickerEl, {
+            intent: "read"
+          })) {
+            return;
+          }
+          dispatchCustomEvent(pickerEl, "navi_open_press");
+        };
+      }
       let interactions = props.interactions;
       if (!opensOnPress) {
         interactions = {

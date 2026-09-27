@@ -15,20 +15,27 @@
  * keeps `:target` on the element the URL names, which is the durable "this is
  * the one" state an app styles in CSS.
  *
- * Three decisions worth knowing before reading:
+ * Four decisions worth knowing before reading:
  *
- * - **navi places the target itself, every time.** The scroll the browser
- *   would have done — target against the top edge, instantly — is applied
- *   here, after layout, so one rule holds whether the target was there all
- *   along or arrived late; `setUrlTargetOptions` lets an app pick another
+ * - **navi places the target itself, on every arrival.** The scroll the
+ *   browser would have done — target against the top edge, instantly — is
+ *   applied here, after layout, so one rule holds whether the target was there
+ *   all along or arrived late; `setUrlTargetOptions` lets an app pick another
  *   alignment or a smooth behavior. A page with nothing to scroll simply
  *   does not move, which is the whole of the "the list already fits on screen"
  *   case — the transient mark alone then says which one was meant.
  *
- * - **Wait, but not forever.** As long as the document is working (routes,
- *   actions) the target may still arrive; once it has been idle for a moment, a
- *   month-old link to a deleted element simply brings nothing and the reader
- *   lands on the page — the right degradation.
+ * - **A return is not an arrival.** A back, a forward or a reload lands where
+ *   the reader was (scroll_restoration.js), as the browser itself does for a
+ *   fragment it traverses to. The fragment then only says which element the
+ *   URL names: `:target`, no scroll, no mark, no focus.
+ *
+ * - **Wait for the page, but not forever.** The element is answered once the
+ *   document is done working (routes, actions): until then it may not exist
+ *   yet, and when it does, what sits above it may still be drawn and push it
+ *   down. Once the document has been idle for a moment, a month-old link to a
+ *   deleted element simply brings nothing and the reader lands on the page —
+ *   the right degradation.
  *
  * - **`:target` is written with a fragment navigation of navi's own.** No API
  *   sets it, so navi replaces the entry with the very address it is at, which
@@ -46,8 +53,10 @@
 import { elementIsFocusable } from "@jsenv/dom";
 import { computed, effect } from "@preact/signals";
 
+import { observeBeforeRouting } from "../browser_integration/before_routing.js";
 import { documentIsBusySignal } from "../browser_integration/document_loading_signal.js";
 import { documentUrlSignal } from "../browser_integration/document_url_signal.js";
+import { whenRenderingResumes } from "../rendering_hold.js";
 
 const URL_TARGET_ATTRIBUTE = "data-url-target";
 
@@ -99,7 +108,8 @@ let urlTargetOptions = {
  *   How long, in ms, to keep waiting for a target that has not arrived, counted
  *   from the moment the document stops working.
  * @param {number} [options.maxWait=10000]
- *   Longest wait, in ms, for a document that never stops working.
+ *   Longest wait, in ms, for a document that never stops working. The element
+ *   is then answered as it stands, when it is there.
  */
 export const setUrlTargetOptions = (options) => {
   urlTargetOptions = { ...urlTargetOptions, ...options };
@@ -126,6 +136,23 @@ export const useUrlTargetId = () => {
 let stopWaitingForCurrentTarget = null;
 let currentTargetKey;
 
+const documentLoadIsReturn = () => {
+  const [navigationEntry] = performance.getEntriesByType("navigation");
+  if (!navigationEntry) {
+    return false;
+  }
+  return (
+    navigationEntry.type === "reload" || navigationEntry.type === "back_forward"
+  );
+};
+// The url the document is on its way back to — a back, a forward, a reload —
+// where the reader was, as opposed to a place just sent to. Said by the
+// navigation before it writes anything, and by the load for the first url.
+let returningToUrl = documentLoadIsReturn() ? window.location.href : null;
+observeBeforeRouting(({ url, navigationType }) => {
+  returningToUrl = navigationType === "traverse" ? url : null;
+});
+
 /**
  * Answers the URL's target again, as if it had just been designated.
  *
@@ -135,10 +162,10 @@ let currentTargetKey;
  */
 export const rearmUrlTarget = () => {
   currentTargetKey = undefined;
-  armUrlTarget(documentUrlSignal.peek());
+  armUrlTarget(documentUrlSignal.peek(), { isReturn: false });
 };
 
-const armUrlTarget = (documentUrl) => {
+const armUrlTarget = (documentUrl, { isReturn }) => {
   const targetKey = urlToTargetKey(documentUrl);
   if (targetKey === currentTargetKey) {
     return;
@@ -158,8 +185,16 @@ const armUrlTarget = (documentUrl) => {
   if (!targetId) {
     return;
   }
-  stopWaitingForCurrentTarget = waitForElementWithId(targetId, (element) => {
+  stopWaitingForCurrentTarget = waitForUrlTarget(targetId, (element) => {
     stopWaitingForCurrentTarget = null;
+    if (!element.matches(":target")) {
+      writeTarget(element);
+    }
+    if (isReturn) {
+      // The offset put back by scroll_restoration.js is the reader's own: the
+      // element is named by the URL, not arrived at.
+      return;
+    }
     revealUrlTarget(element);
   });
 };
@@ -176,14 +211,27 @@ const urlToTargetId = (url) => {
   return hash ? decodeURIComponent(hash.slice(1)) : "";
 };
 
-const waitForElementWithId = (id, onFound) => {
+// Calls `onSettled` with the element once it can be answered: it exists, it
+// shows something, and the document is done working. Found is not enough while
+// the document works — what sits above it may still be drawn and push it down,
+// and a page reusing a node of the page being left holds it before its own
+// data has come.
+//
+// Confirmed at the next frame, once rendering has resumed: the render the last
+// answer asked for has run by then, and a component starting its own run from
+// that render has made the document busy again.
+const waitForUrlTarget = (id, onSettled) => {
+  const { graceAfterIdle, maxWait } = urlTargetOptions;
+  let stopped = false;
+  let confirmationPending = false;
+  let frame = null;
   let mutationObserver = null;
   let stopWatchingBusy = null;
   let idleTimeout = null;
   let maxWaitTimeout = null;
-  let found = false;
 
   const stopWaiting = () => {
+    stopped = true;
     if (mutationObserver) {
       mutationObserver.disconnect();
       mutationObserver = null;
@@ -194,30 +242,52 @@ const waitForElementWithId = (id, onFound) => {
     }
     clearTimeout(idleTimeout);
     clearTimeout(maxWaitTimeout);
+    if (frame !== null) {
+      cancelAnimationFrame(frame);
+      frame = null;
+    }
   };
 
-  const checkForElement = () => {
+  const findElement = () => {
     const element = document.getElementById(id);
     if (!element) {
-      return;
+      return null;
     }
     // Rendered inside a closed tab, a folded details, a view that is not the
-    // one on screen: the element exists but would show nothing. Keep waiting —
-    // it is the same wait, for the same reason.
+    // one on screen: the element exists but would show nothing.
     if (element.checkVisibility && !element.checkVisibility()) {
+      return null;
+    }
+    return element;
+  };
+  const settle = (element) => {
+    stopWaiting();
+    onSettled(element);
+  };
+  const check = () => {
+    if (confirmationPending || documentIsBusySignal.peek() || !findElement()) {
       return;
     }
-    found = true;
-    stopWaiting();
-    onFound(element);
+    confirmationPending = true;
+    whenRenderingResumes(() => {
+      if (stopped) {
+        return;
+      }
+      frame = requestAnimationFrame(() => {
+        frame = null;
+        confirmationPending = false;
+        if (documentIsBusySignal.peek()) {
+          return;
+        }
+        const element = findElement();
+        if (element) {
+          settle(element);
+        }
+      });
+    });
   };
 
-  checkForElement();
-  if (found) {
-    return stopWaiting;
-  }
-
-  mutationObserver = new MutationObserver(checkForElement);
+  mutationObserver = new MutationObserver(check);
   // Every attribute, not only `id`: what shows an element that is already
   // there — a <details> opening, a tab panel losing its display: none — is an
   // attribute written somewhere above it, and nothing else says so.
@@ -226,44 +296,53 @@ const waitForElementWithId = (id, onFound) => {
     subtree: true,
     attributes: true,
   });
-  const { graceAfterIdle, maxWait } = urlTargetOptions;
   stopWatchingBusy = effect(() => {
     const documentIsBusy = documentIsBusySignal.value;
     clearTimeout(idleTimeout);
-    if (!documentIsBusy) {
-      idleTimeout = setTimeout(stopWaiting, graceAfterIdle);
+    if (documentIsBusy) {
+      return;
     }
+    check();
+    // The grace is for an element that has not come; one already there and
+    // waiting for rendering to resume is not given up on.
+    idleTimeout = setTimeout(() => {
+      if (!confirmationPending) {
+        stopWaiting();
+      }
+    }, graceAfterIdle);
   });
-  maxWaitTimeout = setTimeout(stopWaiting, maxWait);
+  // A document that never stops working: the element as it stands, when it is
+  // there at all.
+  maxWaitTimeout = setTimeout(() => {
+    const element = findElement();
+    if (element) {
+      settle(element);
+    } else {
+      stopWaiting();
+    }
+  }, maxWait);
 
   return stopWaiting;
 };
 
 const revealUrlTarget = (element) => {
   const { block, behavior, markDuration } = urlTargetOptions;
-  // The element just entered the DOM: where it sits is only known once layout
-  // has run.
-  requestAnimationFrame(() => {
-    if (!element.matches(":target")) {
-      writeTarget(element);
-    }
-    const prefersReducedMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
-    element.scrollIntoView({
-      block,
-      behavior: prefersReducedMotion ? "instant" : behavior,
-    });
-    // What the browser does when it handles a fragment itself: keyboard
-    // navigation resumes from the target, not from the top of the document.
-    if (elementIsFocusable(element)) {
-      element.focus({ preventScroll: true });
-    }
-    element.setAttribute(URL_TARGET_ATTRIBUTE, "");
-    setTimeout(() => {
-      element.removeAttribute(URL_TARGET_ATTRIBUTE);
-    }, markDuration);
+  const prefersReducedMotion = window.matchMedia(
+    "(prefers-reduced-motion: reduce)",
+  ).matches;
+  element.scrollIntoView({
+    block,
+    behavior: prefersReducedMotion ? "instant" : behavior,
   });
+  // What the browser does when it handles a fragment itself: keyboard
+  // navigation resumes from the target, not from the top of the document.
+  if (elementIsFocusable(element)) {
+    element.focus({ preventScroll: true });
+  }
+  element.setAttribute(URL_TARGET_ATTRIBUTE, "");
+  setTimeout(() => {
+    element.removeAttribute(URL_TARGET_ATTRIBUTE);
+  }, markDuration);
 };
 
 let targetWriteInProgress = false;
@@ -368,5 +447,7 @@ const urlWithoutFragment = (url) => {
 
 effect(() => {
   const documentUrl = documentUrlSignal.value;
-  armUrlTarget(documentUrl);
+  const isReturn = returningToUrl === documentUrl;
+  returningToUrl = null;
+  armUrlTarget(documentUrl, { isReturn });
 });

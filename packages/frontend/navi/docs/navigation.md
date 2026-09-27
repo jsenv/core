@@ -757,15 +757,23 @@ document finishes loading and on a fragment navigation within the page — both
 before the data has drawn the element — and a navigation navi routes is not a
 fragment navigation at all. So navi answers every URL carrying a hash itself:
 
-- **It waits for the element.** The element is reached when it exists and
-  shows something (`checkVisibility`): one still loading, or rendered inside a
-  closed tab or a folded `<details>`, has not arrived yet. navi opens nothing to
-  reach it, and reaches it as soon as it shows — the reader opening the
-  `<details>`, switching to the tab — while the wait lasts.
+- **It waits for the element, and for the page.** The element is reached when
+  it exists and shows something (`checkVisibility`): one still loading, or
+  rendered inside a closed tab or a folded `<details>`, has not arrived yet.
+  navi opens nothing to reach it, and reaches it as soon as it shows — the
+  reader opening the `<details>`, switching to the tab — while the wait lasts.
+  And it is reached once no route or action is loading: until then, what sits
+  above it may still be drawn and push it down — and a page reusing the node of
+  the page being left (`/places/a#tournaments` → `/places/b#tournaments`) holds
+  it before its own data has come.
 - **It gives up.** Once the document has had no route or action loading for
-  `graceAfterIdle` (1 s), or after `maxWait` (10 s) in a document that never
-  stops working. A link to an element that is gone lands where a link without
-  a fragment would — at the top of a page one arrives at — with no mark.
+  `graceAfterIdle` (1 s). A link to an element that is gone lands where a link
+  without a fragment would — at the top of a page one arrives at — with no
+  mark. A document that never stops working is answered after `maxWait`
+  (10 s), with the element as it stands.
+- **A return is not an arrival.** Back, forward and a reload land where the
+  page was left, as they do without a fragment; the fragment then only puts
+  `:target` on its element — no scroll, no ring, no focus.
 - **It answers once per arrival.** What is watched is the path and the hash: a
   search param written while the reader is there (a filter, a page) does not
   throw them back to the element. Pressing the very link one is on answers

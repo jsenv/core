@@ -348,6 +348,18 @@ export const useUIStateController = (
             e.currentTarget || controller.ref.current,
           );
           const currentUIState = controller.uiState;
+          // What a control is STARTED on is accepted, as its own defaultValue
+          // would be: a value placed on it as it registers, or what a picker
+          // takes up from its popup while it holds nothing of its own. A
+          // rollback goes back there, and a control left on it holds no edit.
+          if (!controller.hasStateProp) {
+            if (
+              e.type === "initial_state_push" ||
+              (e.type === "facade_child_mount_sync" && !controller.holdsEdit())
+            ) {
+              controller.state = newUIState;
+            }
+          }
           const stateIsTheSame = compareTwoJsValues(newUIState, currentUIState);
           if (stateIsTheSame) {
             if (controlType === "button" || controlType === "link") {
@@ -513,10 +525,11 @@ export const useUIStateController = (
             }
             // initial_state_push is pure initialization (equivalent to defaultValue on the
             // child itself): skip uiAction entirely so no side effects fire on mount.
-            // A default followed after mount is the same initialization, later.
+            // A value the outside moved since (see outside_value_follow) is the
+            // same initialization, later.
             if (
               e.type !== "initial_state_push" &&
-              e.type !== "default_value_change"
+              e.type !== "outside_value_follow"
             ) {
               // Still fire uiAction so external listeners (e.g. signals) stay in
               // sync, but do NOT fire the command and do NOT notify the parent —
@@ -572,8 +585,8 @@ export const useUIStateController = (
               });
             }
             if (
-              e.type === "default_value_change" ||
-              (e.type === "facade_child_mount_sync" && isDefaultValueFollow(e))
+              e.type === "outside_value_follow" ||
+              (e.type === "facade_child_mount_sync" && isOutsideValueFollow(e))
             ) {
               // Heard the way a control mounting on that value would be:
               // silently, nobody acted. But heard, all the way up — a picker
@@ -693,12 +706,16 @@ export const useUIStateController = (
           writeBoundSignal(controller.state);
           controller.followDefaultValue();
         },
+        // Something typed, picked or toggled since the value the outside last
+        // gave or accepted.
+        holdsEdit: () => {
+          return !compareTwoJsValues(controller.uiState, controller.state);
+        },
         // An uncontrolled control starts on its defaultValue, and a new one is
         // what it would start on if it were mounted again — a record saved
         // and handed back normalized, refreshed from elsewhere. It takes it
-        // while it holds no edit of its own: nothing typed since the value the
-        // outside last accepted (uiState equal to state). An edit is never
-        // undone; the default waits for it to be accepted or rolled back.
+        // while it holds no edit. An edit is never undone; the default waits
+        // for it to be accepted or rolled back.
         followDefaultValue: () => {
           // A bound signal carries its own default, followed through
           // stateFromSignal; a proxy shows the control it stands for.
@@ -713,14 +730,14 @@ export const useUIStateController = (
           if (compareTwoJsValues(defaultValue, controller.defaultValueTaken)) {
             return;
           }
-          if (!compareTwoJsValues(controller.uiState, controller.state)) {
+          if (controller.holdsEdit()) {
             return;
           }
           controller.defaultValueTaken = defaultValue;
           controller.state = defaultValue;
           controller.setUIState(
             defaultValue,
-            new CustomEvent("default_value_change", { detail: {} }),
+            new CustomEvent("outside_value_follow", { detail: {} }),
           );
         },
         // Read by the callout manager when it has nowhere else to point.
@@ -1491,7 +1508,7 @@ export const useUIGroupStateController = (
             // A default followed is not replaced by a mount deferred beside
             // it: the event is what lets the sync below read the children.
             e:
-              pendingChange && isDefaultValueFollow(pendingChange.e)
+              pendingChange && isOutsideValueFollow(pendingChange.e)
                 ? pendingChange.e
                 : e,
             notifyExternal:
@@ -1501,7 +1518,7 @@ export const useUIGroupStateController = (
           return;
         }
         const { controller } = s;
-        if (isDefaultValueFollow(e)) {
+        if (isOutsideValueFollow(e)) {
           // Not a partial reading: the child was there already and its value
           // moved, told by the outside. The group is worth what its children
           // show, whatever it was handed before — kept, the value it sends
@@ -1686,6 +1703,9 @@ export const useUIGroupStateController = (
         name,
         value,
         defaultValue,
+        // Same as the leaf's (see useUIStateController): the default last
+        // placed on the children, behind `defaultValue` while an edit waits.
+        defaultValueTaken: defaultValue,
         hasValueProp,
         hasDefaultValueProp,
         props,
@@ -1969,6 +1989,7 @@ export const useUIGroupStateController = (
             }
           }
           onChange(e, { notifyExternal: true });
+          controller.followDefaultValue();
         },
         clearUIState: (e) => {
           const ev = new CustomEvent("propagate_down_clear_ui_state", {
@@ -1997,6 +2018,46 @@ export const useUIGroupStateController = (
               c.acknowledgeUIState();
             }
           }
+          controller.followDefaultValue();
+        },
+        // A group holds no value of its own to have edited: it holds an edit
+        // when one of its children does.
+        holdsEdit: () => {
+          return childUIStateControllerArray.some(
+            (c) => shouldPropagateStateToChild(c) && c.holdsEdit(),
+          );
+        },
+        // The leaf's rule (see useUIStateController), for a group given a
+        // plain `defaultValue`: a new one is placed on the children the way
+        // the first one was as they registered, while none of them holds an
+        // edit. A signal's own default is followed by the update below.
+        followDefaultValue: () => {
+          if (controller.hasValueProp || controller.props.signal) {
+            return;
+          }
+          const { defaultValue } = controller;
+          if (compareTwoJsValues(defaultValue, controller.defaultValueTaken)) {
+            return;
+          }
+          if (controller.holdsEdit()) {
+            return;
+          }
+          controller.defaultValueTaken = defaultValue;
+          const followEvent = new CustomEvent("outside_value_follow", {
+            detail: {},
+          });
+          const placeEvent = new CustomEvent("initial_state_push", {
+            detail: {},
+          });
+          chainEvent(placeEvent, followEvent);
+          controller.setUIState(
+            defaultValue === undefined ? fallbackState : defaultValue,
+            placeEvent,
+          );
+          s.parentUIStateController?.onChildUIAction(controller, followEvent, {
+            stateChanged: true,
+            silent: true,
+          });
         },
         onActionEnd: (e) => {
           acknowledgeOwnAction(controller);
@@ -2119,6 +2180,7 @@ export const useUIGroupStateController = (
         // former value back over it on the next child interaction.
         placeChildrenFrom(defaultValue);
       }
+      controller.followDefaultValue();
 
       return liveValues();
     },
@@ -2347,7 +2409,7 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
           }
           if (
             silent &&
-            !isDefaultValueFollow(e) &&
+            !isOutsideValueFollow(e) &&
             uiStateHoldsNothing(child.uiState)
           ) {
             // A silent sync means the child's own structure changed (children
@@ -2423,6 +2485,69 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
   );
 
   return scope.controller;
+};
+
+/**
+ * What every control of a picker — the picker and the controls in its popup —
+ * has been accepted on as the popup opens. Read back by followOutsideSinceOpen
+ * when the popup is cancelled.
+ */
+export const readStatesAtOpen = (pickerController) => {
+  const statesAtOpen = new Map();
+  visitControllers(pickerController, (controller) => {
+    if (Object.hasOwn(controller, "state")) {
+      statesAtOpen.set(controller, controller.state);
+    }
+  });
+  return statesAtOpen;
+};
+
+/**
+ * A cancel puts back the value the picker held at open, which takes back
+ * everything that moved since — and not only what the user moved: a record
+ * refreshed while the popup was open, a default that arrived under a field
+ * holding an edit. Those were not the user's to take back. Once the value at
+ * open is back, each control the outside moved since shows what the outside
+ * holds again, and a default left waiting on an edit is taken there.
+ *
+ * Children before the control around them: a picker given its value by its
+ * owner has the last word over the controls in its popup.
+ */
+export const followOutsideSinceOpen = (pickerController, statesAtOpen) => {
+  visitControllers(
+    pickerController,
+    (controller) => {
+      if (
+        statesAtOpen.has(controller) &&
+        !compareTwoJsValues(controller.state, statesAtOpen.get(controller)) &&
+        controller.holdsEdit()
+      ) {
+        controller.setUIState(
+          controller.state,
+          new CustomEvent("outside_value_follow", { detail: {} }),
+        );
+      }
+      controller.followDefaultValue();
+    },
+    { childrenFirst: true },
+  );
+};
+
+// A picker reaches the controls of its popup through its facade child, a group
+// through the children it registered.
+const visitControllers = (controller, visit, { childrenFirst } = {}) => {
+  if (!childrenFirst) {
+    visit(controller);
+  }
+  const children = controller.facadeChild
+    ? [controller.facadeChild]
+    : controller.getChildControllers?.() || [];
+  for (const child of children) {
+    visitControllers(child, visit, { childrenFirst });
+  }
+  if (childrenFirst) {
+    visit(controller);
+  }
 };
 
 const describePicker = (props) =>
@@ -2516,16 +2641,17 @@ const INTERNAL_EVENT_SET = new Set([
   // no action of the control's own — but what it holds really did move, so
   // uiAction, the bound signal and the parent notification below all happen.
   "auto_fix",
-  // An uncontrolled control taking a new defaultValue (see
-  // followDefaultValue): initialization arriving after mount, so nothing
-  // fires, and the groups above hear it silently.
-  "default_value_change",
+  // A control put on a value the outside moved while nobody was editing it: a
+  // new defaultValue (see followDefaultValue), or what a cancel puts back
+  // (see followOutsideSinceOpen). Initialization arriving after mount, so
+  // nothing fires, and the groups above hear it silently.
+  "outside_value_follow",
 ]);
 const isInternalEvent = (e) => {
   return INTERNAL_EVENT_SET.has(e.type);
 };
-const isDefaultValueFollow = (e) => {
-  return Boolean(findEvent(e, "default_value_change"));
+const isOutsideValueFollow = (e) => {
+  return Boolean(findEvent(e, "outside_value_follow"));
 };
 
 /**

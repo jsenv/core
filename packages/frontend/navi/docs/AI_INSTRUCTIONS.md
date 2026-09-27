@@ -138,7 +138,9 @@ to start when unsure which export solves a problem.
   `action`, `command` + `commandFor`). Read before writing any handler whose
   body only assigns state.
 - `control_value.md` — who holds a control's value; `--navi-update` for a
-  button proposing a value; empty keeps the shape of the question; what a
+  button proposing a value; a `defaultValue` follows the record it was read
+  from (no `key` to remount); drawing what a picker holds (`ui={Component}`,
+  not a signal of your own); empty keeps the shape of the question; what a
   `stateSignal` brings; a time of day typed (`TimeSpin`) or turned
   (`TimeWheel`). Read before wiring a value with `value` + `uiAction`.
 - `control_object.md` — one value made of several controls: `ControlGroup`
