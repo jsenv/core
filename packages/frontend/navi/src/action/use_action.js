@@ -61,12 +61,13 @@ const useBoundAction = (action, actionParamsSignal) => {
     if (existingNoopAction) {
       return existingNoopAction;
     }
+    // Not bound to the params signal: nothing reads what a noop runs with, and
+    // a proxy following the signal would retarget (a new child action for each
+    // new value) at every change — for every button of a form, at every change
+    // of any of its fields.
     const noopAction = createAction(() => {}, { params: undefined });
-    const noopActionBound = actionParamsSignal
-      ? noopAction.bindParams(actionParamsSignal)
-      : noopAction;
-    noopActionRef.current = noopActionBound;
-    return noopActionBound;
+    noopActionRef.current = noopAction;
+    return noopAction;
   }
   const isFunction = typeof action === "function";
   if (!isFunction) {
