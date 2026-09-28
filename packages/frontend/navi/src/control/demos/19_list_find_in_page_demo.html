@@ -19,6 +19,10 @@
         margin: 0 0 8px;
         font-size: 1.1rem;
       }
+      h3 {
+        margin: 24px 0 8px;
+        font-size: 0.95rem;
+      }
       .demo-section {
         margin-bottom: 24px;
         padding: 24px;
@@ -26,16 +30,33 @@
         border-radius: 8px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       }
+      .demo-section p {
+        margin: 0 0 12px;
+        color: #555;
+        font-size: 0.9rem;
+      }
       .caption {
         margin: 0 0 12px;
         color: #555;
         font-size: 0.8rem;
         font-family: monospace;
       }
+      .find_terms {
+        display: flex;
+        margin-bottom: 12px;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 16px;
+        font-size: 0.85rem;
+      }
+      .find_term_item {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
       /* Écrits par le CSS pour que Cmd/Ctrl + F ne les trouve pas sur la page
          elle-même: seule la liste doit répondre. */
       .find_term {
-        margin-left: 6px;
         padding: 1px 6px;
         background: #eef2ff;
         border-radius: 4px;
@@ -107,8 +128,8 @@
       import { render } from "preact";
       import { useRef, useState } from "preact/hooks";
       import { List, Link } from "@jsenv/navi";
-      import { DemoHeader } from "../../../internal/demo_header.jsx";
-      import { DocumentToc } from "../../../internal/document_toc.jsx";
+      import { DemoHeader } from "../../internal/demo_header.jsx";
+      import { DocumentToc } from "../../internal/document_toc.jsx";
 
       const ROW_COUNT = 5000;
       const ROW_HEIGHT = 36;
@@ -177,15 +198,49 @@
       };
 
       const FindTerms = () => (
-        <p className="caption">
-          Cmd/Ctrl + F
+        <div className="find_terms">
+          <span>Cmd/Ctrl + F</span>
           {FIND_TERMS.map((term) => (
-            <code key={term} className="find_term" data-term={term} />
+            <FindTerm key={term} term={term} />
           ))}
-        </p>
+        </div>
+      );
+      const FindTerm = ({ term }) => {
+        const [copied, setCopied] = useState(false);
+        return (
+          <span className="find_term_item">
+            <code className="find_term" data-term={term} />
+            <button
+              type="button"
+              onClick={async () => {
+                await window.navigator.clipboard.writeText(term);
+                setCopied(true);
+                setTimeout(() => {
+                  setCopied(false);
+                }, 1500);
+              }}
+            >
+              {copied ? "copié" : "copier"}
+            </button>
+          </span>
+        );
+      };
+
+      const findRowText = (row) => row.text;
+      const renderRow = (row) => (
+        <List.Item
+          paddingX={`${ROW_PADDING_X}px`}
+          style={{
+            height: `${ROW_HEIGHT}px`,
+            lineHeight: `${ROW_HEIGHT}px`,
+            whiteSpace: "pre",
+          }}
+        >
+          {row.text}
+        </List.Item>
       );
 
-      const FindList = ({ mirror, mirrorVisible, findText }) => {
+      const FindList = ({ findText, mirror, mirrorVisible }) => {
         const scrollerRef = useRef(null);
         return (
           <div className="find_scroller" ref={scrollerRef}>
@@ -201,18 +256,7 @@
                 <List.Items
                   items={ROWS}
                   findText={findText}
-                  renderItem={(row) => (
-                    <List.Item
-                      paddingX={`${ROW_PADDING_X}px`}
-                      style={{
-                        height: `${ROW_HEIGHT}px`,
-                        lineHeight: `${ROW_HEIGHT}px`,
-                        whiteSpace: "pre",
-                      }}
-                    >
-                      {row.text}
-                    </List.Item>
-                  )}
+                  renderItem={renderRow}
                 />
               </List>
               {mirror && (
@@ -262,27 +306,42 @@
         );
       };
 
-      const WithoutMirrorSection = () => (
+      const OnDemand = ({ children }) => {
+        const [shown, setShown] = useState(false);
+        return (
+          <>
+            <p>
+              <button
+                type="button"
+                onClick={() => {
+                  setShown(!shown);
+                }}
+              >
+                {shown ? "Retirer la liste" : "Afficher la liste"}
+              </button>
+            </p>
+            {shown && children}
+          </>
+        );
+      };
+
+      const FindTextSection = () => (
         <section className="demo-section">
-          <Heading id="sans_miroir">Sans miroir</Heading>
+          <Heading id="find_text">findText</Heading>
           <p className="caption">
-            {ROW_COUNT} lignes, renderBudget={RENDER_BUDGET}
+            {ROW_COUNT} lignes, renderBudget={RENDER_BUDGET}, findText=
+            {"{(row) => row.text}"}
           </p>
           <FindTerms />
-          <FindList />
+          <FindList findText={findRowText} />
         </section>
       );
 
-      const WithMirrorSection = () => {
+      const MirrorList = () => {
         const [mirror, setMirror] = useState("textarea");
         const [mirrorVisible, setMirrorVisible] = useState(false);
         return (
-          <section className="demo-section">
-            <Heading id="avec_miroir">Avec un miroir transparent</Heading>
-            <p className="caption">
-              {ROW_COUNT} lignes, renderBudget={RENDER_BUDGET}
-            </p>
-            <FindTerms />
+          <>
             <div className="settings">
               <fieldset>
                 {["textarea", "div"].map((value) => (
@@ -311,20 +370,31 @@
               </label>
             </div>
             <FindList mirror={mirror} mirrorVisible={mirrorVisible} />
-          </section>
+          </>
         );
       };
 
-      const findRowText = (row) => row.text;
-      const FindTextSection = () => (
+      const ComparisonSection = () => (
         <section className="demo-section">
-          <Heading id="find_text">findText (hidden="until-found")</Heading>
-          <p className="caption">
-            {ROW_COUNT} lignes, renderBudget={RENDER_BUDGET}, findText=
-            {"{(row) => row.text}"}
+          <Heading id="comparer">Pour comparer</Heading>
+          <p>
+            Affichées à la demande: leurs lignes s'ajouteraient sinon aux
+            résultats de Cmd/Ctrl + F.
           </p>
-          <FindTerms />
-          <FindList findText={findRowText} />
+
+          <Heading level={3} id="sans_find_text">
+            Sans findText
+          </Heading>
+          <OnDemand>
+            <FindList />
+          </OnDemand>
+
+          <Heading level={3} id="miroir">
+            Miroir transparent par-dessus la liste
+          </Heading>
+          <OnDemand>
+            <MirrorList />
+          </OnDemand>
         </section>
       );
 
@@ -334,9 +404,8 @@
           <section className="demo-section">
             <DocumentToc />
           </section>
-          <WithoutMirrorSection />
-          <WithMirrorSection />
           <FindTextSection />
+          <ComparisonSection />
         </>
       );
 

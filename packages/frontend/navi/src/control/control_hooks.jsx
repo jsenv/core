@@ -30,8 +30,11 @@ import {
   useState,
 } from "preact/hooks";
 
-import { useActionBoundToOneParam } from "@jsenv/navi/src/action/use_action.js";
-import { useActionStatus } from "@jsenv/navi/src/action/use_action_status.js";
+import { RUNNING } from "@jsenv/navi/src/action/action_run_states.js";
+import {
+  useAction,
+  useActionBoundToOneParam,
+} from "@jsenv/navi/src/action/use_action.js";
 import {
   isWriteAction,
   useNetworkPolicyReason,
@@ -274,10 +277,14 @@ export const useControlProps = (
     persists,
     uiActionInternal,
   });
-  const [boundAction] = useActionBoundToOneParam(
-    props.action,
-    uiStateController.uiStateSignal,
-  );
+  // What the control draws is what it holds by itself, and this read is what
+  // re-renders it when that changes. A button inheriting the value of the
+  // control around it (a submit in a form, see ownUIStateSignal) draws none of
+  // that value, it only hands it to its action: subscribed to it, every button
+  // of a form would re-render at each change of any of its fields.
+  // eslint-disable-next-line no-unused-expressions
+  uiStateController.ownUIStateSignal.value;
+  const boundAction = useAction(props.action, uiStateController.uiStateSignal);
   const [controlRootProps, controlHostProps] = useInteractiveProps(props, {
     uiStateController,
     boundAction,
@@ -1107,7 +1114,9 @@ export const useControlProps = (
     }
   }
 
-  const uiState = uiStateController.uiStateSignal.peek();
+  // Its own, like syncDomState: a button's DOM value is not the value it
+  // inherits from the control around it.
+  const uiState = uiStateController.ownUIStateSignal.peek();
   const domProps = toDomProps(uiState);
   {
     // Same as syncDomState: a field being typed into keeps its own text, so a
@@ -1705,7 +1714,10 @@ const useInteractiveProps = (
     // stop waiting on a run that is still going. What it waits on is the run
     // it started, from navi_action_start to its settlement.
     const runningAction = uiStateController.runningActionSignal.value;
-    const actionStatus = useActionStatus(runningAction || boundAction);
+    // Only whether it runs: the whole status (useActionStatus) reads the params
+    // too, which for a button inheriting its form's value are the form.
+    const actionRunning =
+      (runningAction || boundAction).runningStateSignal.value === RUNNING;
     const networkPolicyReason = useNetworkPolicyReason();
     const {
       disabled,
@@ -1778,7 +1790,7 @@ const useInteractiveProps = (
     // just set stays visible and interactive while the action runs — no
     // loading, no readonly. On failure resetOnError rolls the state back and
     // the error callout says why.
-    const actionLoading = optimistic ? false : actionStatus.loading;
+    const actionLoading = optimistic ? false : actionRunning;
     const loadingResolved = loadingBase || actionLoading;
     const readOnlyResolved = readOnlyBase || actionLoading;
     // Read-only, and what this control opens still opens: reading what is in
@@ -1982,8 +1994,11 @@ const useInteractiveProps = (
       errorEffect: actionErrorEffect,
       errorMapping,
     });
-    const dataAction =
-      action === undefined ? undefined : boundAction.callSource;
+    // What the attribute says is that an action is there (see
+    // findClosestControlWithAction); its text is a label. Peeked (toString),
+    // because `.callSource` follows the params — for a button inheriting its
+    // form's value, a re-render at every change of any field.
+    const dataAction = action === undefined ? undefined : String(boundAction);
     Object.assign(controlHostProps, {
       "data-action": dataAction,
     });

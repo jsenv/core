@@ -38,7 +38,8 @@ export const useActionBoundToOneArrayParam = (action, paramsSignal) => {
   result.remove = remove;
   return result;
 };
-// used by <details> to just call their action
+// The action bound to the signal, without reading it: the caller is not
+// re-rendered by the params (a control, a <details>).
 export const useAction = (action, paramsSignal) => {
   return useBoundAction(action, paramsSignal);
 };

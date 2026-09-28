@@ -400,6 +400,57 @@ this by hand with a `useEffect` that widens a slice: that effect is one preact
 runs early, and it fails for that reason. The runs ask their source for `after`
 rows from the start, so the smaller first window costs no second request.
 
+### Cmd/Ctrl + F: `findText`
+
+The browser's find in page searches the DOM, and a row outside the render
+window is not in it: Cmd/Ctrl + F finds the rows on screen and a few around
+them, nothing else.
+
+```jsx
+<List.Items
+  items={users}
+  renderItem={renderUser}
+  findText={(user) => user.name}
+/>
+```
+
+With `findText`, the fillers carry the text of the rows they hold the room of,
+one line per row at the row size, inside `hidden="until-found"` elements:
+nothing of it is laid out or painted, and find still reaches it. On a match the
+browser reveals the element and scrolls to the line — which is where the row
+stands — and the render window, following that scroll like any other, draws
+the row. A row inside the window has no hidden copy, so every row is found
+exactly once and the count in the find bar is right.
+
+What it costs, and where it stops:
+
+- **A cost that follows the collection again.** The text of every row outside
+  the window is rebuilt when the window slides (one `findText` call per row)
+  and sits in the DOM as text, one element per 64 rows. Give it to a list a
+  user would search with the browser, not to every run.
+- **One line per row**, and only that line is found while the row is not
+  drawn: return what a user would type, not everything the row shows.
+- **What the client holds, no more.** A row a paginated run has not loaded has
+  no text to be found by.
+- **Chrome 102, Firefox 148, Safari 26.2.** Elsewhere the attribute reads as a
+  plain `hidden`: find stops at the window, as without `findText`.
+
+Two things not to write beside it:
+
+- **A transparent copy of the list's text laid over it** (a `<textarea>` or a
+  `<div>` in `color: transparent`). Every row in the window is then found
+  twice, drawn and copied, and the copy only lines up with rows of one fixed
+  height. It is the first idea everyone has; the demo keeps it for comparison.
+- **A `beforematch` listener moving the window.** The list re-renders in the
+  microtask after the event, which removes the element before the browser has
+  scrolled to it. The browser's own scroll is what moves the window.
+
+And one trap outside the list: a CSS reset forcing `[hidden] { display: none }`
+must leave `[hidden="until-found"]` out — an element hidden with `display: none`
+is never revealed. navi's own does (`src/box/box.jsx`).
+
+Reference: `src/control/demos/19_list_find_in_page_demo.html`.
+
 ### Doing it well
 
 - **A stable `id` on every item.** The run keys its rows on `item.id` — it is
@@ -434,7 +485,7 @@ row is ever a skeleton with `items`, and it costs what the same rows would as
 children. There is no reason to hold back from it for a list that might grow.
 
 Reference: `src/control/list/list.jsx` (JSDoc on `List` — `renderBudget`,
-`virtualItemSize` — and on `List.Items`),
+`virtualItemSize` — and on `List.Items` — `findText`),
 `src/control/demos/17_virtual_scroll_and_filter_demo.html` (a run in memory,
 searched), `src/control/demos/integration/1_list_loaded_by_scroll_demo.html`
 (a run reading a slice at a time). What a run reads back after a write is in
