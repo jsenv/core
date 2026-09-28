@@ -264,6 +264,15 @@ const css = /* css */ `
        the corners would visually overflow the rounded corners during scroll. */
     overflow: hidden;
 
+    /* The default radius is the border's. A list asked for no border draws no
+       edge, and a curve kept on it only cuts into the rows sitting there — a
+       grid of framed cards loses its outer corners. With no curve left, the
+       clip above has nothing to do: the scroll box inside clips what scrolls. */
+    &[data-borderless] {
+      --x-list-border-radius: 0px;
+      overflow: visible;
+    }
+
     /* overflow="visible" asks for the exact opposite of the clipping above: the
        content must be free to paint outside the list's box and to overflow into
        whatever scroll container is around it. Setting it on the inner scroll
@@ -1232,6 +1241,7 @@ const ListUI = (props) => {
       data-item-transition={itemTransition ? "" : undefined}
       popover={popover}
       data-horizontal={horizontal ? "" : undefined}
+      data-borderless={isBorderless(rest) ? "" : undefined}
       data-scroller={getScrollerAttribute(scroller)}
       data-overflow-visible={getOverflowVisibleAttribute(
         overflow,
@@ -2785,6 +2795,21 @@ const getScrollerAttribute = (scroller) => {
     return "document";
   }
   return "parent";
+};
+
+// A radius asked for explicitly is kept: a borderless list painting a
+// background of its own may want that surface rounded, and clipped to it.
+const isBorderless = ({ border, borderWidth, borderRadius }) => {
+  if (borderRadius !== undefined) {
+    return false;
+  }
+  if (borderWidth !== undefined) {
+    return parseFloat(borderWidth) === 0;
+  }
+  if (border === undefined) {
+    return false;
+  }
+  return border === "none" || parseFloat(border) === 0;
 };
 
 // overflow lands as an inline style on the inner scroll element, which is

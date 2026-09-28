@@ -555,3 +555,46 @@ read as a box in a box. `borderWidth="0"` removes it — the prop writes
 `--list-border-width` inline, which wins over the `-default`. A list that is
 itself the content of a `[popover]`/`<dialog>` already drops the default on its
 own.
+
+### The corners: the frame clips, not the scroll box
+
+A list clips its content twice, at the same edge, for two different reasons:
+
+- the **scroll box** (`.navi_list_scroll_container`, square, `overflow: auto`)
+  cuts what scrolls;
+- the **frame** (`.navi_list_container`, `overflow: hidden` plus the radius)
+  rounds that cut at the corners.
+
+The curve belongs on the frame. Do not move it onto the scroll box. A scroll
+container does not clip its own scrollbar to its `border-radius`: measured in
+Chromium with classic scrollbars, the scrollbar paints square over the rounded
+corner, while the frame's clip cuts it. The scroll box would also need the
+inner radius (the outer radius minus the border width). CSS cannot know that
+radius when the border was removed by the `border` prop.
+
+The curve cuts whatever sits on it. For rows drawn as full-width stripes, that
+is what you want: a selected row's background follows the corner. For rows that
+are framed cards themselves (a grid of hours, a column of game cards), the
+list's curve cuts their outer corners whenever its radius is larger than
+theirs. At a fractional pixel ratio, the frame's clip can also blur the last
+row's bottom edge (measured in WebKit at DPR 2.625).
+
+### Without a border, no corner
+
+The default radius is the border's radius. A list given `border="none"`,
+`border="0"` or `borderWidth="0"`, and no `borderRadius`, is marked
+`data-borderless`. It then has no radius, and its frame stops clipping, because
+rounding the corners was that clip's only job. The scroll box still clips. A
+badge crossing the list's edge is still cut there, and `overflow="visible"`
+remains the only way to let content out.
+
+- An explicit `borderRadius` keeps both the curve and the frame's clip: a
+  borderless list painting a background of its own may want that surface
+  rounded, with the rows clipped to it.
+- Only the props turn it on. A border removed from CSS (the popup's own
+  `-default`, an app class) keeps the default radius. In a dialog, the corners
+  that touch the dialog's squared edge are squared by rules keyed on the
+  dialog's `data-flush-*` attributes, in `list.jsx`.
+
+Reference: `src/control/list/list.jsx` (the `.navi_list_container` CSS and
+`isBorderless`).

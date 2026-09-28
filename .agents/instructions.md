@@ -2,6 +2,7 @@
 
 - [Communication Style](#communication-style)
 - [Constraints](#constraints)
+- [Temporary Files](#temporary-files)
 - [Writing Skill Files](#writing-skill-files)
 - [Project Overview](#project-overview)
 - [Running jsenv source](#running-jsenv-source--always-use---conditionsdevjsenv)
@@ -34,6 +35,53 @@
 - **Persistent preferences belong in this repo, not in agent-specific memory**: when a durable preference, workflow rule, or constraint is established, write it into `.agents/instructions.md` or a relevant file under `.agents/skills/` and get it committed — don't rely solely on a tool-specific memory/notes system tied to one machine or one agent. This repo is worked on by multiple agents/tools across machines; instructions written here are the ones that actually persist and apply everywhere.
 - **Disabling a lint rule is allowed**: a targeted `// eslint-disable-next-line <rule>` with a comment saying why beats contorting the code to please a rule that does not apply to this line. Use it when you know why the rule is wrong here — never to silence something you have not understood.
 - **Run prettier/eslint silently**: after editing files, running `prettier --write`/`eslint` to check/fix them is fine and expected, but don't report on it in chat (no "ran prettier, all clean" messages) — it's a mechanical detail the user doesn't want to see.
+
+## Temporary Files
+
+**When you hand the work back, the working tree holds the change that was asked
+for and nothing else.** Anything written only to find something out — a page
+reproducing a bug, a measuring script, a screenshot, a log dump — is gone by
+then. The user reviews and commits everything `git status` shows: a stray file
+either slips into a commit or costs them time working out what it is and
+whether it matters. One sitting among real files is worse still: a
+`zz_tmp_repro.html` in a demos directory reads as a demo, and the dev server
+lists it and serves it like one.
+
+### Where it goes
+
+- **Nothing needs to serve it or resolve imports from the repo** (output files,
+  screenshots, notes): the session's scratchpad or the OS temp directory,
+  outside the repo.
+- **It has to live under the repo**: a page the dev server must serve, or a
+  script that imports `playwright` or `@jsenv/*` from the repo's
+  `node_modules`. Put it in a directory named `git_ignored/`, next to what it
+  exercises (e.g. `packages/frontend/navi/src/control/demos/git_ignored/`).
+  `.gitignore` ignores that name everywhere, and the dev server still serves it
+  at the matching URL. This keeps it out of `git status`, but not off the disk,
+  so it still gets deleted.
+- **Never next to real files**, whatever the name: a `tmp_`/`zz_` prefix does
+  not make a file temporary, it only makes it look deliberate.
+
+### Every path a tool writes to is absolute
+
+A relative output path resolves against the process's working directory, which
+is usually the repo root. `page.screenshot({ path: "shot.png" })`, a
+`> out.json` redirect or a `writeFileSync("result.txt")` then drops a file at the
+top of the repo that nobody meant to put there. Give every output an absolute
+path into the scratchpad or into the `git_ignored/` directory above.
+
+### Delete as soon as the answer is in
+
+Remove the files in the step where the measurement ends, not "with the fix" or
+"at the end". A turn can stop before a planned later step: a tool is refused, a
+check fails, the user redirects. Cleanup tied to that step then never happens.
+Then run `git status --short` and remove every untracked file you created that
+the user did not ask for. Also empty any `git_ignored/` directory you used,
+since `git status` does not show it.
+
+A temporary file becomes permanent only when the user asks to keep it. It then
+gets a real name and a real place: a demo following the `demo-files` skill, or
+a test.
 
 ## Writing Skill Files
 

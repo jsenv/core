@@ -236,7 +236,8 @@ to start when unsure which export solves a problem.
   `enableVirtualKeyboardOverlay()`: `--navi-keyboard-inset-bottom`). Read before hand-writing an offset to clear a `FixedBar`.
 - `scroll.md` — where scrolling happens: `header`/`body`/`footer`, `List`'s
   `scroller`, where a list opens and what a search does to where it is, a popup
-  that scrolls, hover while scrolling; many rows: `<List.Items>` and the render
+  that scrolls, hover while scrolling, how a list clips at its rounded corners
+  and why a borderless list has none; many rows: `<List.Items>` and the render
   window (`renderBudget`, its `{ initial, after }` form for a list opening in
   a click, `virtualItemSize`, `findText` for Cmd/Ctrl + F beyond the window).
   Read before writing CSS to make something scroll, and before rendering a
