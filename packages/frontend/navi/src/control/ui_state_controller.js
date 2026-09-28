@@ -1777,6 +1777,13 @@ export const useUIGroupStateController = (
           placeOneChild(childUIStateController, childNewState, e);
         },
         setUIState: (newUIState, e) => {
+          // `undefined` is how a parent empties a child (see the object
+          // group's distributeChildUIState): what a leaf holds when it holds
+          // nothing, and for a group of the default shape, the empty of its
+          // type — not a value of the wrong shape to refuse.
+          if (newUIState === undefined && stateShapeIsTheDefaultOne) {
+            newUIState = fallbackState;
+          }
           if (
             stateType === "object" &&
             stateShapeIsTheDefaultOne &&
