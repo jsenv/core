@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>Liste virtualisée et Cmd/Ctrl + F</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 40px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      #root {
+        max-width: 720px;
+        margin: 0 auto;
+      }
+      h2 {
+        margin: 0 0 8px;
+        font-size: 1.1rem;
+      }
+      .demo-section {
+        margin-bottom: 24px;
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      .caption {
+        margin: 0 0 12px;
+        color: #555;
+        font-size: 0.8rem;
+        font-family: monospace;
+      }
+      /* Écrits par le CSS pour que Cmd/Ctrl + F ne les trouve pas sur la page
+         elle-même: seule la liste doit répondre. */
+      .find_term {
+        margin-left: 6px;
+        padding: 1px 6px;
+        background: #eef2ff;
+        border-radius: 4px;
+        &::after {
+          content: attr(data-term);
+        }
+      }
+      .settings {
+        display: flex;
+        margin-bottom: 12px;
+        flex-wrap: wrap;
+        gap: 8px 20px;
+        font-size: 0.85rem;
+      }
+      .settings fieldset {
+        display: flex;
+        margin: 0;
+        padding: 0;
+        gap: 12px;
+        border: none;
+      }
+
+      .find_scroller {
+        height: 320px;
+        font-size: 15px;
+        background: #fff;
+        border: 1px solid #d5d8dd;
+        border-radius: 6px;
+        overflow: auto;
+      }
+      .find_scroller_content {
+        position: relative;
+      }
+      /* Le miroir: le texte de toutes les lignes, une par ligne de texte, à la
+         hauteur d'une ligne de la liste. Posé par-dessus, transparent, et
+         traversé par le pointeur. */
+      .find_mirror {
+        position: absolute;
+        top: 0;
+        left: 0;
+        z-index: 1;
+        box-sizing: border-box;
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        color: transparent;
+        caret-color: transparent;
+        font: inherit;
+        white-space: pre;
+        background: transparent;
+        border: none;
+        outline: none;
+        /* Le surlignage du navigateur est peint par le miroir, donc au-dessus
+           de la ligne: multiplié, le jaune reste jaune sur le fond blanc et le
+           texte de la ligne reste noir par-dessus. */
+        mix-blend-mode: multiply;
+        pointer-events: none;
+        resize: none;
+        overflow: hidden;
+        &[data-visible] {
+          color: rgb(220 0 0 / 0.7);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useRef, useState } from "preact/hooks";
+      import { List, Link } from "@jsenv/navi";
+      import { DemoHeader } from "../../../internal/demo_header.jsx";
+      import { DocumentToc } from "../../../internal/document_toc.jsx";
+
+      const ROW_COUNT = 5000;
+      const ROW_HEIGHT = 36;
+      const ROW_PADDING_X = 12;
+      const RENDER_BUDGET = 100;
+
+      const GREEK = [
+        "Alpha",
+        "Beta",
+        "Gamma",
+        "Delta",
+        "Epsilon",
+        "Zeta",
+        "Eta",
+        "Theta",
+        "Iota",
+        "Kappa",
+        "Lambda",
+        "Mu",
+        "Nu",
+        "Xi",
+        "Omicron",
+        "Pi",
+        "Rho",
+        "Sigma",
+        "Tau",
+        "Upsilon",
+        "Phi",
+        "Chi",
+        "Psi",
+        "Omega",
+      ];
+      const CITIES = [
+        "Lyon",
+        "Nantes",
+        "Lille",
+        "Brest",
+        "Nice",
+        "Dijon",
+        "Rennes",
+        "Tours",
+        "Metz",
+        "Pau",
+        "Caen",
+      ];
+      const ROWS = Array.from({ length: ROW_COUNT }, (_, i) => ({
+        id: `row_${i}`,
+        text: `${GREEK[i % GREEK.length]}-${String(i).padStart(4, "0")} · ${
+          CITIES[(i * 7) % CITIES.length]
+        }`,
+      }));
+      const FIND_TERMS = [ROWS[1234], ROWS[2718], ROWS[4999]].map(
+        (row) => row.text.split(" · ")[0],
+      );
+
+      const Heading = ({ level = 2, id, children }) => {
+        const Tag = `h${level}`;
+        return (
+          <Tag id={id}>
+            <Link anchor revealOnInteraction href={`#${id}`}>
+              #
+            </Link>
+            {children}
+          </Tag>
+        );
+      };
+
+      const FindTerms = () => (
+        <p className="caption">
+          Cmd/Ctrl + F
+          {FIND_TERMS.map((term) => (
+            <code key={term} className="find_term" data-term={term} />
+          ))}
+        </p>
+      );
+
+      const FindList = ({ mirror, mirrorVisible, findText }) => {
+        const scrollerRef = useRef(null);
+        return (
+          <div className="find_scroller" ref={scrollerRef}>
+            <div className="find_scroller_content">
+              <List
+                scroller={scrollerRef}
+                expandX
+                borderWidth="0"
+                borderRadius="0"
+                renderBudget={RENDER_BUDGET}
+                virtualItemSize={ROW_HEIGHT}
+              >
+                <List.Items
+                  items={ROWS}
+                  findText={findText}
+                  renderItem={(row) => (
+                    <List.Item
+                      paddingX={`${ROW_PADDING_X}px`}
+                      style={{
+                        height: `${ROW_HEIGHT}px`,
+                        lineHeight: `${ROW_HEIGHT}px`,
+                        whiteSpace: "pre",
+                      }}
+                    >
+                      {row.text}
+                    </List.Item>
+                  )}
+                />
+              </List>
+              {mirror && (
+                <FindInPageMirror
+                  as={mirror}
+                  rows={ROWS}
+                  visible={mirrorVisible}
+                />
+              )}
+            </div>
+          </div>
+        );
+      };
+
+      // Same text, same place as the rows: one line per row at the row height,
+      // the row's own horizontal padding.
+      const FindInPageMirror = ({ as, rows, visible }) => {
+        const text = rows.map((row) => row.text).join("\n");
+        const style = {
+          lineHeight: `${ROW_HEIGHT}px`,
+          paddingInline: `${ROW_PADDING_X}px`,
+        };
+        if (as === "textarea") {
+          return (
+            <textarea
+              className="find_mirror"
+              data-visible={visible ? "" : undefined}
+              style={style}
+              value={text}
+              readOnly
+              wrap="off"
+              tabIndex={-1}
+              spellcheck={false}
+              aria-hidden="true"
+            />
+          );
+        }
+        return (
+          <div
+            className="find_mirror"
+            data-visible={visible ? "" : undefined}
+            style={style}
+            aria-hidden="true"
+          >
+            {text}
+          </div>
+        );
+      };
+
+      const WithoutMirrorSection = () => (
+        <section className="demo-section">
+          <Heading id="sans_miroir">Sans miroir</Heading>
+          <p className="caption">
+            {ROW_COUNT} lignes, renderBudget={RENDER_BUDGET}
+          </p>
+          <FindTerms />
+          <FindList />
+        </section>
+      );
+
+      const WithMirrorSection = () => {
+        const [mirror, setMirror] = useState("textarea");
+        const [mirrorVisible, setMirrorVisible] = useState(false);
+        return (
+          <section className="demo-section">
+            <Heading id="avec_miroir">Avec un miroir transparent</Heading>
+            <p className="caption">
+              {ROW_COUNT} lignes, renderBudget={RENDER_BUDGET}
+            </p>
+            <FindTerms />
+            <div className="settings">
+              <fieldset>
+                {["textarea", "div"].map((value) => (
+                  <label key={value}>
+                    <input
+                      type="radio"
+                      name="mirror"
+                      checked={mirror === value}
+                      onChange={() => {
+                        setMirror(value);
+                      }}
+                    />
+                    &lt;{value}&gt;
+                  </label>
+                ))}
+              </fieldset>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={mirrorVisible}
+                  onChange={(e) => {
+                    setMirrorVisible(e.target.checked);
+                  }}
+                />
+                voir le miroir
+              </label>
+            </div>
+            <FindList mirror={mirror} mirrorVisible={mirrorVisible} />
+          </section>
+        );
+      };
+
+      const findRowText = (row) => row.text;
+      const FindTextSection = () => (
+        <section className="demo-section">
+          <Heading id="find_text">findText (hidden="until-found")</Heading>
+          <p className="caption">
+            {ROW_COUNT} lignes, renderBudget={RENDER_BUDGET}, findText=
+            {"{(row) => row.text}"}
+          </p>
+          <FindTerms />
+          <FindList findText={findRowText} />
+        </section>
+      );
+
+      const App = () => (
+        <>
+          <DemoHeader title="Liste virtualisée et Cmd/Ctrl + F" />
+          <section className="demo-section">
+            <DocumentToc />
+          </section>
+          <WithoutMirrorSection />
+          <WithMirrorSection />
+          <FindTextSection />
+        </>
+      );
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>

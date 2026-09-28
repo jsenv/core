@@ -534,6 +534,18 @@ const css = /* css */ `
     flex-shrink: 0; /* prevent eventual flex parent from shrinking fillers */
     list-style: none;
   }
+  /* The text of the rows a filler holds the room of (List.Items findText),
+     one line per row at the row size: a match found there is where its row
+     will be drawn. Transparent once revealed — the row drawn over that place
+     is what the user sees. No display of its own: a browser without
+     hidden="until-found" reads it as plain hidden and draws nothing. */
+  .navi_list_find_stand_in {
+    height: calc(var(--x-find-line-count) * var(--x-find-line-size));
+    color: transparent;
+    line-height: var(--x-find-line-size);
+    white-space: pre;
+    overflow: clip;
+  }
   .navi_list_container[data-horizontal] {
     --list-max-height: none;
 
@@ -541,8 +553,16 @@ const css = /* css */ `
        list: a vertical list nested in a row of a horizontal one fills along y
        and must keep the default above. */
     > .navi_list_scroll_container > .navi_list > .navi_list_virtual_filler {
+      display: flex;
       width: var(--size-to-fill, 0px);
       height: 100%;
+
+      > .navi_list_find_stand_in {
+        width: calc(var(--x-find-line-count) * var(--x-find-line-size));
+        height: auto;
+        flex-shrink: 0;
+        writing-mode: vertical-lr;
+      }
     }
   }
 
@@ -3405,9 +3425,10 @@ const Fallback = ({ fallback }) => {
 // Reads the row size itself: it is what the size is for, and a run holding
 // every row it draws must not be redrawn — every row of it — because the size
 // settled after the first commit.
-const VirtualFiller = ({ edge, itemCount }) => {
+const VirtualFiller = ({ edge, itemCount, findChunks }) => {
   const listRows = useContext(ListRowsContext);
-  const sizeToFill = itemCount * listRows.virtualItemSizeSignal.value;
+  const virtualItemSize = listRows.virtualItemSizeSignal.value;
+  const sizeToFill = itemCount * virtualItemSize;
   if (!sizeToFill) {
     return null;
   }
@@ -3419,8 +3440,24 @@ const VirtualFiller = ({ edge, itemCount }) => {
       aria-hidden
       style={{
         "--size-to-fill": `${sizeToFill}px`,
+        "--x-find-line-size": findChunks ? `${virtualItemSize}px` : undefined,
       }}
-    />
+    >
+      {findChunks &&
+        findChunks.map((chunk) => (
+          <div
+            // The browser removes the attribute of the chunk it reveals, and
+            // preact, handed the same prop again, would not put it back: a
+            // chunk whose rows change is another element, hidden again.
+            key={`${chunk.from}_${chunk.to}`}
+            className="navi_list_find_stand_in"
+            hidden="until-found"
+            style={{ "--x-find-line-count": chunk.to - chunk.from }}
+          >
+            {chunk.text}
+          </div>
+        ))}
+    </li>
   );
 };
 
@@ -4086,6 +4123,7 @@ const VISIBILITY_HIDDEN_STYLE = { visibility: "hidden" };
  *
  * @type {import("preact").FunctionComponent<{
  *   renderItem: (item: any, index: number, state: {refreshing: boolean}) => import("preact").ComponentChildren,
+ *   findText?: (item: any, index: number) => string,
  *   items?: any[],
  *   itemsAction?: (range: {start: number, end: number, limit: number, before?: string, after?: string, around?: string, count?: number, signal: AbortSignal}) => any,
  *   count?: number,
@@ -4104,6 +4142,13 @@ const VISIBILITY_HIDDEN_STYLE = { visibility: "hidden" };
  *   the run. `state.refreshing` says the rows drawn are the ones from before
  *   while the run reads the collection again — the list carries
  *   `navi-refreshing` for the same reason.
+ * @param {(item: any, index: number) => string} [props.findText]
+ *   The text of a row as the browser's find in page (Cmd/Ctrl + F) sees it
+ *   while the row is not drawn — without it, find reaches only the rows in the
+ *   render window. The rows held off screen then carry that text where they
+ *   stand, hidden until the browser finds it there: it scrolls to the place,
+ *   and the list draws the row. One line per row. A row the run does not hold
+ *   yet has nothing to be found by.
  * @param {any[]} [props.items]
  *   The collection, when it is held in memory: all of it, in order. Nothing is
  *   ever asked for — `itemsAction`, `count`, `pageSize` and `memoryBudget` have
@@ -4198,6 +4243,12 @@ const createStoreHoldingNothing = (rowCount) => {
   };
 };
 
+// How many rows share one element of the text a filler carries for find in
+// page (see findText). One element per row would put back the DOM nodes the
+// window saves; one per filler would be revealed whole — every row of it laid
+// out — by the first match found in it.
+const FIND_CHUNK_ROW_COUNT = 64;
+
 // What a run draws: the rows its window frames, a skeleton for each one the
 // store does not hold, and fillers holding the room of the rows outside it.
 // Which rows are held, and fetching the others, is the store's (see
@@ -4206,6 +4257,7 @@ const useRunRows = (
   store,
   {
     renderItem,
+    findText,
     pageSize,
     groupBy,
     renderGroupLabel,
@@ -4441,6 +4493,35 @@ const useRunRows = (
     }
     group.children.push(rowNode);
   };
+  // The text of the rows a filler stands for, cut in chunks aligned on the
+  // run's own ranks: the window sliding changes the chunk at its edge and
+  // leaves the others as they are.
+  const getFindChunks = (from, to) => {
+    if (!findText) {
+      return null;
+    }
+    const chunks = [];
+    let chunkFrom = from;
+    while (chunkFrom < to) {
+      const chunkIndex = Math.floor(rankOf(chunkFrom) / FIND_CHUNK_ROW_COUNT);
+      const alignedTo = rowOf((chunkIndex + 1) * FIND_CHUNK_ROW_COUNT);
+      const chunkTo = alignedTo < to ? alignedTo : to;
+      const lines = [];
+      let lineRowIndex = chunkFrom;
+      while (lineRowIndex < chunkTo) {
+        const item = getItemAt(lineRowIndex);
+        // A row not held has nothing to find, but keeps its line: the rows
+        // after it stay at their place.
+        lines.push(
+          item === undefined ? "" : toFindLine(findText(item, lineRowIndex)),
+        );
+        lineRowIndex++;
+      }
+      chunks.push({ from: chunkFrom, to: chunkTo, text: lines.join("\n") });
+      chunkFrom = chunkTo;
+    }
+    return chunks;
+  };
   // The room held for this run's own rows that the window leaves out. It
   // belongs to the run and not to the list: a list is not necessarily made of
   // one run, and what sits before or after it (a header, rows given one by
@@ -4451,6 +4532,7 @@ const useRunRows = (
         key="navi-list-filler-before"
         edge="before"
         itemCount={windowFrom - runStart}
+        findChunks={getFindChunks(runStart, windowFrom)}
       />,
     );
   }
@@ -4562,10 +4644,19 @@ const useRunRows = (
         key="navi-list-filler-after"
         edge="after"
         itemCount={runEnd - windowTo}
+        findChunks={getFindChunks(windowTo, runEnd)}
       />,
     );
   }
   return rows;
+};
+// One row, one line: a line break inside it would push every row below off
+// its place.
+const toFindLine = (text) => {
+  if (text === undefined || text === null) {
+    return "";
+  }
+  return String(text).replace(/[\r\n]+/g, " ");
 };
 
 // A run's row that has not arrived, standing where the real one will. It never

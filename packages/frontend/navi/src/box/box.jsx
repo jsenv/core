@@ -344,8 +344,10 @@ import.meta.css = /* css */ `
   .component_class[hidden] { display: none; }
 
   To avoid this extra work and potential mistakes we force the default behavior of [hidden] attribute.
+  hidden="until-found" is left out: it hides with content-visibility, and an
+  element with display: none is never revealed by find in page.
   */
-  [hidden] {
+  [hidden]:not([hidden="until-found" i]) {
     display: none !important;
   }
 `;
@@ -467,7 +469,11 @@ export const Box = (props) => {
   // name only and put back fresh, see withCurrentHandlers.
   const renderMemoRef = useRef(null);
   if (!renderMemoRef.current) {
-    renderMemoRef.current = { props: null, parentBoxFlow: null, computed: null };
+    renderMemoRef.current = {
+      props: null,
+      parentBoxFlow: null,
+      computed: null,
+    };
   }
   const renderMemo = renderMemoRef.current;
   let computed;
