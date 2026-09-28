@@ -1,5 +1,8 @@
-import { useDocumentUrl } from "@jsenv/navi/src/nav/browser_integration/document_url_signal.js";
-import { getHrefTargetInfo } from "@jsenv/navi/src/nav/browser_integration/href_target_info.js";
+import { documentUrlSignal } from "@jsenv/navi/src/nav/browser_integration/document_url_signal.js";
+import {
+  getHrefTargetInfo,
+  useHrefTargetFlag,
+} from "@jsenv/navi/src/nav/browser_integration/href_target_info.js";
 import {
   renderResolver,
   useNextResolver,
@@ -13,16 +16,14 @@ export const ButtonHrefResolver = (props) => {
   return <Next {...props} />;
 };
 
-// What the href means next to the page one is on depends on the document url,
-// so a button with an href re-renders at every address write. One without
-// never reaches here: it has nothing to re-compute, and every button on screen
-// would otherwise pay for each write.
+// Whether the href is the page one is on depends on the address, and re-renders
+// the button only when it flips (see useHrefTargetFlag). Whether it leaves the
+// site does not depend on the address.
 const ButtonWithHref = (props) => {
   const Next = useNextResolver();
   const { href, target, rel, pseudoState } = props;
-  // Read for the subscription: getHrefTargetInfo reads window.location.
-  useDocumentUrl();
-  const { isSameSite, isCurrent } = getHrefTargetInfo(href);
+  const isCurrent = useHrefTargetFlag(href, "isCurrent");
+  const { isSameSite } = getHrefTargetInfo(href, documentUrlSignal.peek());
   return (
     <Next
       {...props}

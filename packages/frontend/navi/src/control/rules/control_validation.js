@@ -302,7 +302,9 @@ export const createControlValidation = (
 
     let newConstraintValidityState = { valid: true };
     const constraintSet = getConstraintSet();
-    const elementSig = getElementSignature(controller.ref.current);
+    // Only for the debug lines of a failure or a change: computed when one of
+    // them is written, not at every check (every notch of a wheel).
+    const elementSig = () => getElementSignature(controller.ref.current);
     // Not logged: every control checks its constraints on every interaction and
     // almost always passes, so this line alone was most of the debug output —
     // and with devtools open, formatting it costs a frame. What matters is a
@@ -328,7 +330,7 @@ export const createControlValidation = (
         constraintValidityInfo.message,
       );
       debugUIState(
-        `${elementSig} constraint "${constraint.name}" failed -> ${constraintValidityInfo.message}`,
+        `${elementSig()} constraint "${constraint.name}" failed -> ${constraintValidityInfo.message}`,
       );
       const thisConstraintFailureInfo = {
         name: constraint.name,
@@ -402,7 +404,7 @@ export const createControlValidation = (
       if (element) {
         debugUIState(
           event,
-          `${elementSig} constraint validity changed -> dispatch ${NAVI_VALIDITY_CHANGE_CUSTOM_EVENT}`,
+          `${elementSig()} constraint validity changed -> dispatch ${NAVI_VALIDITY_CHANGE_CUSTOM_EVENT}`,
         );
         dispatchPublicCustomEvent(element, NAVI_VALIDITY_CHANGE_CUSTOM_EVENT);
       }
@@ -448,7 +450,7 @@ export const createControlValidation = (
     event,
     { report = false, fromRequestAction = false } = {},
   ) => {
-    const elementSig = getElementSignature(controller.ref.current);
+    const elementSig = () => getElementSignature(controller.ref.current);
     const isValid = checkValidity({ event, fromRequestAction });
     if (failingManagedControlValidity) {
       // Group/form case: find the actual failing leaf and report on it.
@@ -470,7 +472,7 @@ export const createControlValidation = (
       if (report) {
         debugUIState(
           event,
-          `syncValidity ${elementSig}: has failing constraint and report=true -> reportValidity`,
+          `syncValidity ${elementSig()}: has failing constraint and report=true -> reportValidity`,
         );
         reportValidity({ event });
       } else if (failedConstraintInfo.status === "error") {
@@ -480,12 +482,12 @@ export const createControlValidation = (
         // on the next action attempt via autoResetOnAction.
         debugUIState(
           event,
-          `syncValidity ${elementSig}: has error constraint and report=false -> keep callout open`,
+          `syncValidity ${elementSig()}: has error constraint and report=false -> keep callout open`,
         );
       } else {
         debugUIState(
           event,
-          `syncValidity ${elementSig}: has failing constraint but report=false -> close callout if any`,
+          `syncValidity ${elementSig()}: has failing constraint but report=false -> close callout if any`,
         );
         callout.removeOpenToken(VALIDATION_TOKEN, event);
       }

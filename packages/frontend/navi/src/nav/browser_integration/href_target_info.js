@@ -1,4 +1,15 @@
-export const getHrefTargetInfo = (href) => {
+import { computed } from "@preact/signals";
+import { useMemo } from "preact/hooks";
+
+import { documentUrlSignal } from "./document_url_signal.js";
+
+// `currentUrlString`: the address the href is compared with — the document's by
+// default. A caller subscribed to documentUrlSignal passes the value it read,
+// which is ahead of window.location while a debounced write is pending.
+export const getHrefTargetInfo = (
+  href,
+  currentUrlString = window.location.href,
+) => {
   href = String(href);
 
   if (!href || href.trim() === "") {
@@ -11,8 +22,8 @@ export const getHrefTargetInfo = (href) => {
     };
   }
 
-  const currentUrl = new URL(window.location.href);
-  const targetUrl = new URL(href, window.location.href);
+  const currentUrl = new URL(currentUrlString);
+  const targetUrl = new URL(href, currentUrlString);
 
   let isCurrent = false;
   current: {
@@ -57,3 +68,18 @@ export const getHrefTargetInfo = (href) => {
 export const isAnchor = (href) => getHrefTargetInfo(href).isAnchor;
 export const isSameOrigin = (href) => getHrefTargetInfo(href).isSameOrigin;
 export const isSameSite = (href) => getHrefTargetInfo(href).isSameSite;
+
+// A field of getHrefTargetInfo that depends on the page one is on (isCurrent,
+// isAnchor), read through a computed of that one boolean: the caller re-renders
+// when it flips, not at every address write — a search param bound to a wheel
+// writes the address at every notch.
+export const useHrefTargetFlag = (href, flagName) => {
+  const flagSignal = useMemo(
+    () =>
+      computed(
+        () => getHrefTargetInfo(href, documentUrlSignal.value)[flagName],
+      ),
+    [href, flagName],
+  );
+  return flagSignal.value;
+};

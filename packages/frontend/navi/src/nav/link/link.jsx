@@ -17,8 +17,11 @@ import {
 import { PhoneSvg } from "../../graphic/icons/phone_svg.jsx";
 import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
 import { Icon, markAsOutsideTextFlow, Text } from "../../text/text.jsx";
-import { useDocumentUrl } from "../browser_integration/document_url_signal.js";
-import { getHrefTargetInfo } from "../browser_integration/href_target_info.js";
+import { documentUrlSignal } from "../browser_integration/document_url_signal.js";
+import {
+  getHrefTargetInfo,
+  useHrefTargetFlag,
+} from "../browser_integration/href_target_info.js";
 import { usePreloadOnIntent } from "../use_preload_on_intent.js";
 import { LINK_DOCUMENT_ATTRIBUTE } from "../browser_integration/link_document.js";
 import { LINK_REPLACE_ATTRIBUTE } from "../browser_integration/link_replace.js";
@@ -727,9 +730,12 @@ const LinkPlain = (props) => {
   const loading = basePseudoState[":-navi-loading"];
   const shouldDimColor = readOnly || disabled;
   useDimColorWhen(props.ref, shouldDimColor);
-  // subscribe to document url to re-render and re-compute getHrefTargetInfo
-  useDocumentUrl();
-  const { isSameSite, isAnchor, isCurrent } = getHrefTargetInfo(href);
+  // Re-rendered when one of these flips, not at every address write (see
+  // useHrefTargetFlag). Whether the href leaves the site does not depend on
+  // the address.
+  const isCurrent = useHrefTargetFlag(href, "isCurrent");
+  const isAnchor = useHrefTargetFlag(href, "isAnchor");
+  const { isSameSite } = getHrefTargetInfo(href, documentUrlSignal.peek());
   // A tab that is a SLIDE is current when the container is on it — which the
   // <Nav> around reads off that container, so nothing here has to be told.
   const innerCurrent =
