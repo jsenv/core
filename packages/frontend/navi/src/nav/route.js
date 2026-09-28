@@ -847,6 +847,7 @@ This prevents cross-test pollution and ensures clean state.`,
 
   // Store previous route states to detect changes
   const routePreviousStateMap = new WeakMap();
+  let previousPath = null;
   const updateRoutes = (
     url,
     {
@@ -855,6 +856,14 @@ This prevents cross-test pollution and ensures clean state.`,
     } = {},
   ) => {
     currentUrl = url;
+    // Whether a route matches is decided by the path alone: the search string
+    // only fills the params (see matchUrl). An address that keeps its path — a
+    // search param written, at every notch of a wheel bound to it — cannot make
+    // a route start or stop matching, so only the routes already matching are
+    // read again.
+    const path = urlWithoutSearchAndHash(url);
+    const pathKept = path === previousPath;
+    previousPath = path;
     const returnValue = {};
     const routeMatchInfoSet = new Set();
     for (const route of routeSet) {
@@ -870,7 +879,8 @@ This prevents cross-test pollution and ensures clean state.`,
       const oldParams = previousState.params;
       const oldActionParams = previousState.actionParams;
 
-      let extractedParams = routePattern.applyOn(url);
+      let extractedParams =
+        pathKept && !oldMatching ? null : routePattern.applyOn(url);
       let newMatching = Boolean(extractedParams);
       let newParams;
       if (extractedParams) {
@@ -939,6 +949,25 @@ This prevents cross-test pollution and ensures clean state.`,
           }
         }
 
+        // What the matching routes say, read once for every connection of every
+        // route that does not match (below), rather than by walking all the
+        // routes again for each of those connections.
+        const matchingRawParamsArray = [];
+        const paramNameDeclaredByMatchingRouteSet = new Set();
+        const matchingFamilyRootSet = new Set();
+        for (const matchingRoute of matchingRouteSet) {
+          matchingRawParamsArray.push(matchingRoute.rawParamsSignal.value);
+          const matchingPattern =
+            getRoutePrivateProperties(matchingRoute).routePattern;
+          for (const paramName of matchingPattern.queryConnectionMap.keys()) {
+            paramNameDeclaredByMatchingRouteSet.add(paramName);
+          }
+          for (const paramName of matchingPattern.pathConnectionMap.keys()) {
+            paramNameDeclaredByMatchingRouteSet.add(paramName);
+          }
+          matchingFamilyRootSet.add(matchingPattern.familyRoot);
+        }
+
         for (const {
           route,
           routePrivateProperties,
@@ -954,40 +983,21 @@ This prevents cross-test pollution and ensures clean state.`,
             const urlParamValue = rawParams[paramName];
 
             if (!newMatching) {
-              // Route doesn't match - check if any matching route extracts this parameter
-              let parameterExtractedByMatchingRoute = false;
-              let parameterDeclaredByMatchingRoute = false;
-              let matchingRouteInSameFamily = false;
-
-              for (const otherRoute of routeSet) {
-                if (otherRoute === route || !otherRoute.matching) {
-                  continue;
-                }
-                const otherRawParams = otherRoute.rawParamsSignal.value;
-
-                // Check if this matching route extracts the parameter
-                if (paramName in otherRawParams) {
-                  parameterExtractedByMatchingRoute = true;
-                }
-
-                // Same param, on the page one is arriving at: what it is worth
-                // there is that page's business, url or no url — it may open on
-                // a default of its own (see searchParams' `{ signal, default }`).
-                const otherPattern =
-                  getRoutePrivateProperties(otherRoute).routePattern;
-                if (
-                  otherPattern.queryConnectionMap.has(paramName) ||
-                  otherPattern.pathConnectionMap.has(paramName)
-                ) {
-                  parameterDeclaredByMatchingRoute = true;
-                }
-
-                // Same family = same topmost ancestor
-                // (familyRoot, computed in setupRoutePatterns)
-                if (otherPattern.familyRoot === routePattern.familyRoot) {
-                  matchingRouteInSameFamily = true;
-                }
-              }
+              // Whether a matching route extracts this parameter from the url
+              const parameterExtractedByMatchingRoute =
+                matchingRawParamsArray.some(
+                  (matchingRawParams) => paramName in matchingRawParams,
+                );
+              // Same param, on the page one is arriving at: what it is worth
+              // there is that page's business, url or no url — it may open on
+              // a default of its own (see searchParams' `{ signal, default }`).
+              const parameterDeclaredByMatchingRoute =
+                paramNameDeclaredByMatchingRouteSet.has(paramName);
+              // Same family = same topmost ancestor
+              // (familyRoot, computed in setupRoutePatterns)
+              const matchingRouteInSameFamily = matchingFamilyRootSet.has(
+                routePattern.familyRoot,
+              );
 
               // A weak param qualifies one visit: leaving the route ends it,
               // whatever the family and whatever the default. Coming back by a
@@ -1247,4 +1257,9 @@ const getParamsCacheKey = (params) => {
     key += `${name}=${type}:${value}\n`;
   }
   return key;
+};
+
+const urlWithoutSearchAndHash = (url) => {
+  const urlObject = new URL(url);
+  return `${urlObject.origin}${urlObject.pathname}`;
 };
