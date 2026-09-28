@@ -740,6 +740,7 @@ const useWheelInteractions = ({
   attemptInteraction,
   cancelAnim,
   setPos,
+  releaseScrub,
   snapPosToRow,
   getItemSize,
   viewportMain,
@@ -1162,6 +1163,8 @@ const useWheelInteractions = ({
       clearTimeout(settleTimer);
       stopClaimingGesture();
       cancelAnim();
+      // Nothing is left to settle the scrub in progress.
+      releaseScrub();
       document.removeEventListener("pointerdown", onDocumentPointerDown, {
         capture: true,
       });
@@ -1326,11 +1329,11 @@ function WheelUI(props) {
         ...props,
         ref: inputRef,
         type: "navi_js",
-        // uiAction fires live (every center-crossing, via setPos live reports);
-        // the committed action must fire only when the wheel stabilizes. "custom"
-        // stops setUIState from auto-firing the action on every value change, so
-        // the live reports are uiAction-only; commitSelection then dispatches the
-        // action explicitly on settle. A caller can still override actionEvent.
+        // An arrow or a tap changes the value at once while the row glides into
+        // place, and the action must wait for the wheel to come to rest. "custom"
+        // stops setUIState from auto-firing the action on every value change;
+        // commitSelection dispatches it explicitly on settle. A caller can still
+        // override actionEvent.
         actionEvent: props.actionEvent ?? "custom",
       },
       { controlType: "input" },
@@ -1428,6 +1431,11 @@ function WheelUI(props) {
   // while our own scroll-driven selection does not scroll a second time. Holds the
   // TARGET so rapid inputs step from it and accumulate. null = nothing pending.
   const centeredIndexRef = useRef(null);
+  // A user scrub moved the wheel onto a row that is not the value yet: set at
+  // the first row it crosses, cleared when it settles (commitSelection), when
+  // an arrow or a tap sets a value at once (glideToIndex), or when it is
+  // dropped (releaseScrub). See setPos.
+  const scrubHoldsRowRef = useRef(false);
   // The wheel does NOT use native scroll. `posRef` is our own virtual scroll
   // position (px, main axis); the list track is translated by -pos. This is the
   // single source of truth, wrapped modulo the real-list extent in loop mode, so
@@ -1482,9 +1490,23 @@ function WheelUI(props) {
     ...style,
   };
 
-  // Main-axis size of the viewport, from the orientation.
-  const viewportMain = (vp) =>
+  // Main-axis size of the viewport, from the orientation. Cached like the row
+  // size: applyOffset runs right after each window commit, where reading the
+  // box would force a layout at every row crossing. The observer below keeps it
+  // current; 0 (no box yet) is never kept, so the next read measures again.
+  const viewportSizeRef = useRef(0);
+  const measureViewportMain = (vp) =>
     isHorizontal ? vp.clientWidth : vp.clientHeight;
+  const viewportMain = (vp) => {
+    if (viewportSizeRef.current > 0) {
+      return viewportSizeRef.current;
+    }
+    const size = measureViewportMain(vp);
+    if (size > 0) {
+      viewportSizeRef.current = size;
+    }
+    return size;
+  };
 
   // Row size (px). Rows are uniform, so one measurement (cached) drives all the
   // geometry — positions are then computed from value indices, not read off the
@@ -1567,6 +1589,21 @@ function WheelUI(props) {
       applyOffset(vp);
     }
   };
+  // Refreshes the cached viewport size (see viewportMain). Read in the observer
+  // callback, where the layout is already clean. A new size moves the center
+  // window, so the offset is re-applied with it.
+  useLayoutEffect(() => {
+    const vp = getViewport();
+    viewportSizeRef.current = 0;
+    const resizeObserver = new ResizeObserver(() => {
+      viewportSizeRef.current = measureViewportMain(vp);
+      applyOffset(vp);
+    });
+    resizeObserver.observe(vp);
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [isHorizontal]);
 
   // The value index at the center for the current position.
   const centeredIndex = (vp) => {
@@ -1605,12 +1642,14 @@ function WheelUI(props) {
     posRef.current = clampNumber(posRef.current, 0, (count - 1) * size);
   };
 
-  // `live` (user scrubs: drag, momentum, wheel scroll) reports the value as each
-  // item crosses the center, so uiAction tracks the wheel in real time — like
-  // every other control. The committed action still fires only once it settles
-  // (commitSelection). A programmatic move (centerOnIndex on an external value
-  // sync) omits it, so scrolling the wheel into place doesn't echo the value
-  // back out.
+  // `live` marks a user scrub (drag, momentum, wheel scroll). A scrub moves the
+  // drawing, not the value: the row it reaches is held by the wheel, and only
+  // commitSelection turns it into the value, once the motion settles. Reported
+  // at each crossing, every notch would be a value change for all that is
+  // bound to the wheel — its group, its form, a signal, the address, which
+  // records where a value was put down, not the path the finger took
+  // (navigation.md, "A value written per frame"). A programmatic move
+  // (centerOnIndex) omits `live`: it places the value the wheel already has.
   const setPos = (vp, pos, { live = false } = {}) => {
     posRef.current = pos;
     if (!isLoop) {
@@ -1619,17 +1658,27 @@ function WheelUI(props) {
     renderPos(vp);
     if (live && interactive) {
       const index = centeredIndex(vp);
-      if (index !== centeredIndexRef.current) {
-        const item = trackedItemsRef.current[index];
-        if (item) {
-          // Keep centeredIndexRef in step so the every-render
-          // syncCenterToSelection doesn't read this as an external change and
-          // fight the in-progress motion.
-          centeredIndexRef.current = index;
-          requestSelectValue(item.value, new CustomEvent("navi_wheel_scrub"));
-        }
+      if (
+        index !== centeredIndexRef.current &&
+        trackedItemsRef.current[index]
+      ) {
+        // In step with the scrub so the next arrow or tap steps from the row
+        // the wheel is on (see currentTargetIndex).
+        centeredIndexRef.current = index;
+        scrubHoldsRowRef.current = true;
       }
     }
+  };
+  // The scrub was dropped before it settled (the wheel stopped being
+  // interactive, or its input bindings were torn down): the row it held never
+  // became the value. Forgetting it lets the next sync put the wheel back on
+  // the value.
+  const releaseScrub = () => {
+    if (!scrubHoldsRowRef.current) {
+      return;
+    }
+    scrubHoldsRowRef.current = false;
+    centeredIndexRef.current = null;
   };
 
   // Returns whether it actually interrupted a motion in flight — lets the caller
@@ -1666,6 +1715,7 @@ function WheelUI(props) {
       renderPos(vp);
     }
     centeredIndexRef.current = index;
+    scrubHoldsRowRef.current = false;
     if (!interactive || glideFromOutsideRef.current) {
       return;
     }
@@ -1868,6 +1918,7 @@ function WheelUI(props) {
   // inputs accumulate.
   const glideToIndex = (vp, index, event) => {
     centeredIndexRef.current = index;
+    scrubHoldsRowRef.current = false;
     requestSelectValue(trackedItemsRef.current[index].value, event);
     glideTo(vp, glideTargetFor(vp, index));
   };
@@ -1898,12 +1949,12 @@ function WheelUI(props) {
   // Sync the center with the current value — used on first display and whenever
   // the controlled value changes from outside.
   const syncCenterToSelection = (viewportEl, behavior) => {
-    // A fling in flight reports its own value at every row crossing and commits
-    // on settle: the finger that threw it owns the wheel until then, and a value
-    // arriving meanwhile is re-stated by the next crossing anyway. A glide is
-    // different: its target is re-aimed below (glideTo never restarts the
-    // loop), so a value set from outside mid-glide is where the wheel ends up.
-    if (momentumRef.current !== null) {
+    // A fling in flight, or a scrub holding a row, commits on settle: the finger
+    // owns the wheel until then, and the row it leaves the wheel on overrules a
+    // value arriving meanwhile. A glide is different: its target is re-aimed
+    // below (glideTo never restarts the loop), so a value set from outside
+    // mid-glide is where the wheel ends up.
+    if (momentumRef.current !== null || scrubHoldsRowRef.current) {
       return;
     }
     if (trackedItemsRef.current.length === 0) {
@@ -1993,6 +2044,7 @@ function WheelUI(props) {
     attemptInteraction,
     cancelAnim,
     setPos,
+    releaseScrub,
     snapPosToRow,
     getItemSize,
     viewportMain,

@@ -2,8 +2,6 @@ import { useContext } from "preact/hooks";
 
 import { Box, BoxForwardedPropsContext } from "../../box/box.jsx";
 import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
-import { useDocumentUrl } from "../../nav/browser_integration/document_url_signal.js";
-import { getHrefTargetInfo } from "../../nav/browser_integration/href_target_info.js";
 import {
   usePreloadOnIntent,
   usePreloadOpeningOnPress,
@@ -533,33 +531,9 @@ export const ButtonUI = (props) => {
   const { basePseudoState, children } = buttonControlHostProps;
   const loading = basePseudoState[":-navi-loading"];
 
-  // subscribe to document url to re-render and re-compute getHrefTargetInfo
-  useDocumentUrl();
-  const isLink = href !== undefined;
-  let as = "button";
-  let innerTarget;
-  let innerRel;
-  let innerCurrent;
-  if (isLink) {
-    as = "a";
-    const { isSameSite, isCurrent } = getHrefTargetInfo(href);
-    innerTarget =
-      target === undefined ? (isSameSite ? undefined : "_blank") : target;
-    innerRel =
-      rel === undefined
-        ? isSameSite
-          ? undefined
-          : "noopener noreferrer"
-        : rel;
-    innerCurrent = isCurrent;
-  }
-  // For a button that has only an href: nothing else knows it points at the
-  // page one is on. A route says so through `pseudoState`, which Box lays over
-  // this one.
-  buttonControlHostProps.basePseudoState = {
-    ...basePseudoState,
-    ":-navi-href-current": innerCurrent,
-  };
+  // Where the href leads next to the page one is on (the target, the rel, the
+  // current state) is resolved above, by ButtonHrefResolver.
+  const as = href === undefined ? "button" : "a";
 
   // Worn as an attribute, like a link's (see link_replace.js): read off the
   // anchor by the click handler, off the source by --navi-nav-to.
@@ -607,8 +581,8 @@ export const ButtonUI = (props) => {
       ref={ref}
       as={as}
       href={href}
-      target={innerTarget}
-      rel={innerRel}
+      target={target}
+      rel={rel}
       replace={undefined}
       {...replaceRequest}
       document={undefined}

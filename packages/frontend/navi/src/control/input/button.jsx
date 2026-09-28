@@ -8,6 +8,7 @@ import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { FormContext } from "../form_context.js";
 import { useSelfInteractionsHidden } from "../self_interactions.js";
 import { ButtonConfirmResolver } from "./button_confirm.jsx";
+import { ButtonHrefResolver } from "./button_href.jsx";
 import { ButtonRouteResolver } from "./button_route.jsx";
 import { ButtonUI } from "./button_ui.jsx";
 
@@ -238,5 +239,6 @@ export const Button = /*#__PURE__*/ createComponentResolver([
   ButtonRouteResolver,
   ButtonCommandPropResolver,
   ButtonConfirmResolver,
+  ButtonHrefResolver,
   ButtonUI,
 ]);

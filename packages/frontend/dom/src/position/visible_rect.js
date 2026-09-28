@@ -688,13 +688,26 @@ export const visibleRectEffect = (
       }
     }
     on_window_touchmove: {
+      // One check per frame, in the frame's animation callbacks: a touchmove
+      // arrives after the pointermove handlers wrote to the DOM, so checking
+      // synchronously forces a layout inside every move of every drag on the
+      // page (a wheel spun in an open sheet), for a position the frame's own
+      // layout gives for free a moment later, before anything is painted.
+      let touchMoveRafId = null;
       const onWindowTouchMove = (e) => {
-        autoCheck(e);
+        if (touchMoveRafId !== null) {
+          return;
+        }
+        touchMoveRafId = requestAnimationFrame(() => {
+          touchMoveRafId = null;
+          autoCheck(e);
+        });
       };
       window.addEventListener("touchmove", onWindowTouchMove, {
         passive: true,
       });
       addTeardown(() => {
+        cancelAnimationFrame(touchMoveRafId);
         window.removeEventListener("touchmove", onWindowTouchMove, {
           passive: true,
         });

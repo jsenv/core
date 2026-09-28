@@ -195,12 +195,13 @@ That is what the `:smooth` argument asks for:
   one whose first step would be — is not travelled to at all: the same message
   the chevron that way gives, said on the spin, and the value is left alone.
 - **A gesture on the control itself is never fought.** A wheel being dragged
-  or flung keeps reporting its own rows; the requested value is where it goes
-  once the finger's movement is over. A value a wheel merely caught up with is
-  not a choice either: arriving on it fires no settle, no `action` — those
-  belong to the user's own inputs. A spin is the other way round, and for the
-  same reason: the travel IS the answer being given, so landing tells
-  `uiAction` about it, with the press that asked for it.
+  or flung holds the rows it crosses without making them its value; the row it
+  comes to rest on is the value, and overrules one requested meanwhile. A
+  value a wheel merely caught up with is not a choice either: arriving on it
+  fires no settle, no `action` — those belong to the user's own inputs. A spin
+  is the other way round, and for the same reason: the travel IS the answer
+  being given, so landing tells `uiAction` about it, with the press that asked
+  for it.
 - **`prefers-reduced-motion` keeps the instant swap.** The option describes
   how the change is shown, and whoever asked to see less motion is answered
   first.
