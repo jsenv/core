@@ -216,6 +216,10 @@ export const Popup = (props) => {
     scrollCapture,
     positionAreaFixed,
     positionAreaWhenAnchorIsInvalid,
+    // A top-layer dialog's wall is its native ::backdrop, which goes with the
+    // dialog on the press that closes it: no click is left on it to hand to a
+    // peer (see handWallClickToPeer).
+    group,
     // Dialog-only, destructured out for the same reason: forwarded below only
     // in the dialog branch, so they never reach the popover element.
     dockedOnSmallTouchScreen,
@@ -272,6 +276,7 @@ export const Popup = (props) => {
       positionAreaWhenAnchorIsInvalid={positionAreaWhenAnchorIsInvalid}
       scrollCapture={scrollCapture === "popover" || scrollCapture}
       positionAreaFixed={positionAreaFixed}
+      group={group}
       className={withPropsClassName("navi_popup", className)}
       expand={expand}
       expandX={expandX}

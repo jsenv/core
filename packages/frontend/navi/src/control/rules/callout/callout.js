@@ -40,6 +40,7 @@ import {
   isControl,
 } from "../../control_dom.js";
 import { findControlProxy } from "../../control_proxy.js";
+import { findPopupPeer } from "../../../layout/popup_shared.js";
 import { surfaceTextCss } from "../../../layout/surface_text_css.js";
 import {
   clearCalloutMessage,
@@ -58,6 +59,24 @@ let calloutCount = 0;
 // dismissing it: small enough that any deliberate scroll gesture reaches it,
 // large enough to survive the pixel or two a trackpad rests on.
 const CLOSE_BY_SCROLL_DISTANCE = 10;
+
+// The events of a press a `backdrop` callout spends, up to its click (which
+// closes the callout and is spent there), and `pointercancel`, which says the
+// browser took the press. No touch events: they are the scroll's, and what
+// listens to them — a list learning the user took its scroll over — is
+// watching the finger, not answering the press.
+const SPENT_PRESS_EVENT_TYPES = [
+  "pointerdown",
+  "pointerup",
+  "pointercancel",
+  "mousedown",
+  "mouseup",
+  "contextmenu",
+];
+// Where a press lands on something drawn over the page rather than on the page
+// itself: a popup of navi's (either layer) or a native top-layer element.
+const LAYER_SELECTOR =
+  '[popover], dialog, [navi-control="popover"], [navi-control="dialog"]';
 
 const css = /* css */ `
   /* jsenv-css-opaque: same as dialog.jsx, cascade order. */
@@ -347,6 +366,17 @@ const css = /* css */ `
  *   the callout opened, so scrolling back cancels nothing but a round trip shorter than the
  *   distance leaves it open. Unlike an outside click it also dismisses an "error" callout: the
  *   caller asked for it explicitly.
+ * @param {boolean} [options.backdrop=false] - Spend an outside press on closing the callout,
+ *   the way a popup's wall spends it: no link followed, no control pressed, no focus moved, no
+ *   hold or drag started under it. Without it that press closes the callout and is answered by
+ *   what it landed on too. Not a wall, though: the scroll a finger starts beside the callout
+ *   still scrolls, a press on a layer drawn over the page (a sheet the callout's content
+ *   opened) is that layer's, and a press that does not close the callout (an "error" one) is
+ *   not spent either
+ * @param {string} [options.group] - With `backdrop`: the name the callout's peers carry in
+ *   `data-navi-popup-group` — the triggers of other popups, callouts or not. A press inside a
+ *   peer still closes the callout but is not spent, so the peer it landed on opens its own
+ *   popup in the same press — a menu bar, where pressing another menu switches to it
  * @param {Event} [options.openingEvent] - The gesture the callout belongs to. It names the
  *   opener — `currentTarget` while the event is still dispatching, `target` once it is over,
  *   so awaiting before opening changes nothing — and the opener is the one part of the anchor
@@ -411,6 +441,8 @@ export const openCallout = (
     closeByPressOutside = status === "info",
     closeOnFocusLeave = closeByPressOutside,
     closeByScroll = false,
+    backdrop = false,
+    group,
     closeButton = true,
     openingEvent,
     reopen = "toggle",
@@ -496,6 +528,9 @@ export const openCallout = (
       reason,
     });
   };
+  // Asked again at each press rather than once: `update` changes both.
+  const pressOutsideCloses = () =>
+    closeByPressOutside && callout.status !== "error";
   const onRequestClose = (event) => {
     if (!callout.opened) {
       return;
@@ -504,10 +539,7 @@ export const openCallout = (
     const clickOrSpaceOutside =
       reason === "click_outside" || reason === "space_outside";
     if (clickOrSpaceOutside) {
-      if (!closeByPressOutside) {
-        return;
-      }
-      if (callout.status === "error") {
+      if (!pressOutsideCloses()) {
         return;
       }
     } else if (reason === "focus_leave") {
@@ -787,16 +819,36 @@ export const openCallout = (
       }
       return openerElement === target || openerElement.contains(target);
     };
+    // Whether an outside press on `target` is spent on closing the callout
+    // (`backdrop`). What is not the page behind the callout keeps its press: a
+    // layer the callout is not part of — its own page may well be a sheet, a
+    // sheet its content opened is in front of it — and a peer, which the press
+    // is meant to open.
+    const spendsPressOn = (target) => {
+      if (!backdrop || !pressOutsideCloses()) {
+        return false;
+      }
+      const layer = target.closest?.(LAYER_SELECTOR);
+      if (layer && !layer.contains(calloutElement)) {
+        return false;
+      }
+      if (findPopupPeer(target, group)) {
+        return false;
+      }
+      return true;
+    };
+    const spend = (event) => {
+      debug(event, `outside press spent on closing the callout (backdrop)`);
+      event.preventDefault();
+      event.stopPropagation();
+    };
     const handleClickOutside = (event) => {
       if (event.button !== 0) {
         // right click
         return;
       }
       const clickTarget = event.target;
-      if (
-        clickTarget === calloutElement ||
-        calloutElement.contains(clickTarget)
-      ) {
+      if (calloutElement.contains(clickTarget)) {
         return;
       }
       if (isInsideOpener(clickTarget)) {
@@ -809,14 +861,20 @@ export const openCallout = (
         debug(event, `click on opener, let its handler decide`);
         return;
       }
+      // Read before the close, which takes the callout out of the document —
+      // and out of the layer it stands in, for spendsPressOn to find.
+      const spent = spendsPressOn(clickTarget);
       requestClose(event, "click_outside");
+      if (spent) {
+        spend(event);
+      }
     };
     const handleSpaceOutside = (event) => {
       if (event.key !== " ") {
         return;
       }
       const keyTarget = event.target;
-      if (keyTarget === calloutElement || calloutElement.contains(keyTarget)) {
+      if (calloutElement.contains(keyTarget)) {
         return;
       }
       if (isInsideOpener(keyTarget)) {
@@ -825,7 +883,41 @@ export const openCallout = (
         debug(event, `space on opener, let its handler decide`);
         return;
       }
+      const spent = spendsPressOn(keyTarget);
       requestClose(event, "space_outside");
+      if (spent) {
+        spend(event);
+      }
+    };
+    // The press before its click: a click ends a gesture whose pointerdown
+    // already reached the page, and what acts on the press itself — a hold, a
+    // drag, the focus moving — would otherwise happen under a callout that only
+    // closes on the click. Decided at the pointerdown and kept for the whole
+    // press, wherever its later events land: a release beside the callout ends
+    // a drag started inside it, and must reach it.
+    let pressSpent = false;
+    const handlePressOutside = (event) => {
+      if (event.type === "pointerdown") {
+        const pressTarget = event.target;
+        pressSpent =
+          event.button === 0 &&
+          !calloutElement.contains(pressTarget) &&
+          !isInsideOpener(pressTarget) &&
+          spendsPressOn(pressTarget);
+      } else if (event.type === "pointercancel") {
+        // The browser took the press over — a scroll — and nothing follows it.
+        pressSpent = false;
+        return;
+      }
+      if (!pressSpent) {
+        return;
+      }
+      if (event.type === "mousedown" || event.type === "contextmenu") {
+        // What the press does on its own: the focus moving, a selection
+        // starting, the menu of a held finger.
+        event.preventDefault();
+      }
+      event.stopPropagation();
     };
 
     const registerClickOutsideListener = () => {
@@ -835,6 +927,16 @@ export const openCallout = (
         document.removeEventListener("click", handleClickOutside, true);
         document.removeEventListener("keydown", handleSpaceOutside, true);
       });
+      if (backdrop) {
+        for (const type of SPENT_PRESS_EVENT_TYPES) {
+          document.addEventListener(type, handlePressOutside, true);
+        }
+        addTeardown(() => {
+          for (const type of SPENT_PRESS_EVENT_TYPES) {
+            document.removeEventListener(type, handlePressOutside, true);
+          }
+        });
+      }
     };
     // A callout opened during a press (mousedown or pointerdown) must wait for the
     // matching release before listening for click-outside, otherwise the same

@@ -86,6 +86,7 @@ import { freezeSize, unfreezeSize } from "./freeze_size.js";
 import {
   armOutsidePressClose,
   armPointerDownOutsideClose,
+  handWallClickToPeer,
   clearTextSelectionInside,
   handlePressOnOutsideRegion,
   keepFocusedElementVisible,
@@ -489,6 +490,13 @@ const css = /* css */ `
  *   is a `Popover`-level answer only for `"close"`/`"cancel"`; `"capture"` has
  *   nothing left to absorb without a wall, and `"ignore"` renders no wall anyway.
  *   See docs/popup_backdrop.md.
+ * @param {string} [props.group] - The popover's peers: the triggers carrying
+ *   `data-navi-popup-group` with this name. A press on one, while the popover
+ *   is open, closes it and opens the peer's popup in that same press — a
+ *   menu bar, where pressing another menu switches to it. The wall still
+ *   takes the press (the page behind stays out of reach, hover included) and
+ *   hands its click to the peer it covered. Without a wall there is nothing
+ *   to ask: the press reaches the peer on its own.
  * @param {"close"|"cancel"|"capture"|"ignore"} [props.pressOutside="ignore"]
  *   - `"ignore"` (default): no backdrop at all, outside presses pass straight
  *   through. `"close"` closes the popover on an outside press, `"cancel"`
@@ -870,6 +878,7 @@ const usePopoverProps = (props) => {
     // which is a sibling element (see this file's top comment).
     backdropColor,
     backdropFilter,
+    group,
     scrollCapture,
     focusCapture,
     // "auto" (default) → the popover follows its content. "frozen" → measured
@@ -1579,12 +1588,20 @@ const usePopoverProps = (props) => {
         backdropEl.setAttribute("aria-expanded", "false");
         disarmBackdropHideRef.current = armPointerDownOutsideClose(
           closeEvent,
-          () => {
+          (clickEvent) => {
             // Set regardless of isTopLayer — see openEffect's own identical
             // comment for why hidePopover() alone isn't reliably sufficient.
             backdropEl.setAttribute("navi-hidden", "");
             if (isTopLayer) {
               backdropEl.hidePopover();
+            }
+            if (group && clickEvent) {
+              handWallClickToPeer(clickEvent, {
+                wallEl: backdropEl,
+                popupEl: popoverEl,
+                anchorEl: anchorElement,
+                group,
+              });
             }
           },
         );

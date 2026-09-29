@@ -1763,6 +1763,7 @@ const PickerFirstResolver = (props) => {
  *   escapeEffect?: "cancel" | "close",
  *   pressOutside?: "close" | "cancel" | "capture",
  *   backdrop?: boolean,
+ *   popupGroup?: string,
  *   backdropVariant?: "auto" | "lift" | "discrete" | "invisible",
  *   backdropColor?: string,
  *   backdropFilter?: string,
@@ -2162,10 +2163,23 @@ const PickerFirstResolver = (props) => {
  *   and the page at all. `false` lets a press outside both close the popup and
  *   reach whatever it landed on, in one gesture — for a picker opened over a
  *   page that stays as pressable as it looks (a plan, a map, a canvas), where a
- *   wall would spend the first press on dismissing. Honoured in both modes: a
+ *   wall would spend the first press on dismissing. Honoured in every mode: a
  *   dialog with no wall is shown through the Popover API rather than
  *   `showModal()`, so a picker docked as a bottom sheet on a phone still
- *   leaves the plan behind it live.
+ *   leaves the plan behind it live. `false` by default under `mode="callout"`,
+ *   a bubble that dims nothing; `true` there spends the press outside on
+ *   closing it — the link under it not followed, the card under it not held —
+ *   without a wall: the scroll a finger starts beside the bubble still
+ *   scrolls, and a peer (`popupGroup`) still gets its press.
+ * @param {string} [popupGroup] Pickers sharing the name are peers, whatever
+ *   their mode: pressing one while another's popup is open goes from that
+ *   popup to this one in a single press — a menu bar, where pressing another
+ *   menu switches to it. A popover's wall still takes that press — the page
+ *   behind stays out of reach, hover included — and hands its click to the
+ *   peer it covered; a callout with `backdrop` closes on it without spending
+ *   it. Not read in dialog mode: a dialog's wall goes with it on the press
+ *   that closes it. Written on the trigger as `data-navi-popup-group`, which
+ *   is also how anything else joins the group.
  * @param {"auto"|"lift"|"discrete"|"invisible"} [backdropVariant="auto"] How
  *   visible the popup's backdrop is, independently of what a click outside
  *   does: `"auto"` is the paint `pressOutside` implies,

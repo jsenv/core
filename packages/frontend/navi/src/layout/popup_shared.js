@@ -234,9 +234,11 @@ export const armPointerDownOutsideClose = (closeEvent, hide) => {
     hide();
     return undefined;
   }
-  const onClick = () => {
+  // `hide` is handed the click, for a wall with peers to re-aim it (see
+  // handWallClickToPeer).
+  const onClick = (clickEvent) => {
     document.removeEventListener("click", onClick, { capture: true });
-    hide();
+    hide(clickEvent);
   };
   document.addEventListener("click", onClick, { capture: true });
   return () => {
@@ -357,6 +359,72 @@ const OUTSIDE_REGION_ATTRIBUTE = "data-navi-popup-outside";
  * own ground, and nothing in it is a dismissal.
  */
 const INSIDE_ATTRIBUTE = "data-navi-popup-inside";
+
+/**
+ * `data-navi-popup-group` names the peers of a popup: the triggers of the other
+ * popups a press goes to from this one — a menu bar, where pressing another
+ * menu while one is open switches to it, in that one press. A trigger joins by
+ * carrying the name (a Picker's `popupGroup` writes it on its own), and a popup
+ * reads it off what the press landed on.
+ *
+ * Returns the peer `target` is in, or null.
+ */
+export const findPopupPeer = (target, group) => {
+  if (!group || !target || typeof target.closest !== "function") {
+    return null;
+  }
+  return target.closest(`[data-navi-popup-group="${CSS.escape(group)}"]`);
+};
+
+/**
+ * The click a wall took, handed to the peer (see findPopupPeer) it covered.
+ *
+ * A wall cannot let one press through and not another: it is what the pointer
+ * hits, and that is the whole of how it spends a press. So it goes on taking
+ * every one — the page behind stays as unhoverable and unpressable as it looks
+ * — and once the press is over, its click is re-aimed at what the wall stood
+ * over at that point, when that is a peer. The click alone, for the reason
+ * transition_press.js gives: a pointer stream made up with no pointer behind it
+ * starts gestures (a hold, a drag) that nothing ever ends, and a click is what
+ * opens a popup's trigger.
+ *
+ * Called with the click that takes the wall down after a press closed the
+ * popup (see armPointerDownOutsideClose), so the peer opens as the popup it
+ * replaces goes.
+ */
+export const handWallClickToPeer = (
+  clickEvent,
+  { wallEl, popupEl, anchorEl, group },
+) => {
+  if (!clickEvent.isTrusted || clickEvent.target !== wallEl) {
+    // A click dispatched by hand is already aimed, and one that did not land
+    // on the wall (a press on the popup's own outside region) was no wall's.
+    return;
+  }
+  // The topmost element under the wall at that point: what the press would
+  // have landed on with no wall. Asked past the wall rather than after hiding
+  // it, which a fading wall may not be yet.
+  const covered = document
+    .elementsFromPoint(clickEvent.clientX, clickEvent.clientY)
+    .find((el) => el !== wallEl && !popupEl.contains(el));
+  const peer = findPopupPeer(covered, group);
+  if (!peer) {
+    return;
+  }
+  if (peer.contains(popupEl) || (anchorEl && peer.contains(anchorEl))) {
+    // The popup's own trigger — the one holding it (a picker renders its
+    // popup inside itself) or the one it opened against: the press through
+    // the wall closed the popup, and handing the trigger its click would open
+    // it again.
+    return;
+  }
+  // The page sees one click, on the peer, rather than two.
+  clickEvent.stopPropagation();
+  // A PointerEvent where the browser makes clicks of them, a MouseEvent
+  // elsewhere: the same kind, copied field by field.
+  const ClickEvent = clickEvent.constructor;
+  covered.dispatchEvent(new ClickEvent(clickEvent.type, clickEvent));
+};
 
 /**
  * What a press landing on a region the caller declared as not-its-surface

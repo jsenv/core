@@ -1056,6 +1056,7 @@ const PickerContentInsidePopup = (props) => {
     calloutIcon,
     calloutCloseButton,
     calloutCloseByScroll,
+    popupGroup,
     ...rest
   } = props;
   const isPopover = mode === "popover";
@@ -1065,6 +1066,9 @@ const PickerContentInsidePopup = (props) => {
     <Next
       aria-haspopup={isPopover ? "listbox" : "dialog"}
       navi-popover-mode={isPopover ? popoverMode : undefined}
+      // On the trigger, whatever the mode: a peer's popup reads it off the
+      // press that lands here (see `group` in callout.js).
+      data-navi-popup-group={popupGroup}
       {...rest}
       // On popupProps already (see the picker's popup assembly); they mean
       // nothing to the picker element.
@@ -1103,6 +1107,10 @@ const PickerContentInsidePopup = (props) => {
           icon={calloutIcon}
           closeButton={calloutCloseButton}
           closeByScroll={calloutCloseByScroll}
+          // Left unsaid, the callout's own default: no backdrop. It dims
+          // nothing, so the page looks as pressable as it did before.
+          backdrop={backdrop}
+          group={popupGroup}
         >
           <PopupModeContext.Provider value={mode}>
             {children}
@@ -1160,6 +1168,7 @@ const PickerContentInsidePopup = (props) => {
           backdropVariant={backdropVariant}
           backdropColor={backdropColor}
           backdropFilter={backdropFilter}
+          group={popupGroup}
           focusCapture={isPopover ? focusCapture : undefined}
           expand={isPopover ? undefined : dialogExpand}
           expandX={isPopover ? undefined : dialogExpandX}
@@ -1224,6 +1233,8 @@ const PickerCalloutPopup = ({
   icon,
   closeButton,
   closeByScroll,
+  backdrop,
+  group,
   onnavi_request_open,
   onnavi_request_close,
   onnavi_request_confirm,
@@ -1271,6 +1282,8 @@ const PickerCalloutPopup = ({
       icon,
       closeButton,
       closeByScroll,
+      backdrop,
+      group,
       anchorElement,
       // The request, chained to the press that made it: the callout reads the
       // mousedown off it to wait for the release before listening for a click
