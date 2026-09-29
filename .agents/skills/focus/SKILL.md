@@ -76,10 +76,21 @@ focus back _before_ its element is taken out. The one exception is a close
 caused by an unmount: it runs from a cleanup while the tree leaving with it is
 still in the document, and the element to give the focus back to may be leaving
 in the same commit — focused, it makes the removal of its whole subtree restyle
-it. That hand-back waits for the commit (a microtask) and gives the focus only
-to an element still connected. _Reference: `UNMOUNT_EVENT_TYPE` in
-layout/open_controller.js and the hand-back in control/rules/control_callout.js.
-`restoreFocus()` (Dialog, Popover) owes the same wait and does not make it yet._
+it. That hand-back waits for the commit (a microtask), gives the focus only to
+an element still connected, and only into a void: whatever took the focus in
+the meantime (the page arriving, focusing a field of its own) keeps it.
+_Reference: `giveFocusBackAfterCommit` in utils/focus/focus_transfer.js, used by
+the callout manager and by every popup's close (layout/open_controller.js)._
+
+The browser hands the focus back on its own, and never waits: `dialog.close()`
+focuses whatever held the focus before `showModal()` — even from `<body>` —
+and `hidePopover()` does the same for a popover holding it. Removing either
+from the document hands it to nobody. So a popup closing because it leaves
+the tree does not close natively on the spot: a `<dialog>` is closed once the
+commit is over (its removal took it out of the top layer; what remains is its
+`open` attribute, which a subtree parked by `<Suspense>` would otherwise show
+again), and a popover is left to its removal. _Reference: the close cleanups
+in layout/dialog.jsx and layout/popover.jsx._
 
 **Departing from that policy is allowed, and has to be argued in place.** The
 coarse-pointer rule is about arrivals: something appears and the user reads it.

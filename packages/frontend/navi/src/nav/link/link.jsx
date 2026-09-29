@@ -29,7 +29,8 @@ import { PRESSABLE_ATTRIBUTE } from "../transition_press.js";
 import { useIsVisited } from "../browser_integration/use_is_visited.js";
 import { BinderItemContext } from "../binder/binder_context.js";
 import { NavContext } from "./nav_context.js";
-import { assertRoute, useRouteStatus } from "../route.js";
+import { assertRoute } from "../route.js";
+import { useRouteCurrent } from "../use_route_current.js";
 import { useDimColorWhen } from "./use_dim_color.js";
 
 /*
@@ -635,15 +636,17 @@ const LinkWithRoute = ({
     assertRoute(route);
   }
   const url = route.buildUrl(routeParams);
-  const { matching } = useRouteStatus(route);
-  const paramsAreMatching = route.matchesParams(routeParams);
-  const someExceptedRouteMatching = useSomeRouteMatching(currentExcept);
-  const someAlsoRouteMatching = useSomeRouteMatching(currentAlso);
-  // "Except" is a veto: a route named there is somewhere else, whatever the
-  // rest of the reading says.
-  const linkMatching =
-    !someExceptedRouteMatching &&
-    ((matching && paramsAreMatching) || someAlsoRouteMatching);
+  if (import.meta.dev) {
+    for (const amendingRoute of [currentExcept, currentAlso].flat()) {
+      if (amendingRoute) {
+        assertRoute(amendingRoute);
+      }
+    }
+  }
+  const linkMatching = useRouteCurrent(route, routeParams, {
+    except: currentExcept,
+    also: currentAlso,
+  });
   const innerCurrent = current || linkMatching;
 
   return (
@@ -651,25 +654,6 @@ const LinkWithRoute = ({
       {children || route.buildRelativeUrl(routeParams)}
     </Link>
   );
-};
-// A route, or a list of them, read as one answer: does any of them match.
-// Reading matchingSignal during the render is what subscribes the component to
-// it, so every route is read even once one has answered yes — stopping early
-// would leave the component deaf to the ones it skipped.
-const useSomeRouteMatching = (routes) => {
-  if (!routes) {
-    return false;
-  }
-  let someMatching = false;
-  for (const route of Array.isArray(routes) ? routes : [routes]) {
-    if (import.meta.dev) {
-      assertRoute(route);
-    }
-    if (route.matchingSignal.value) {
-      someMatching = true;
-    }
-  }
-  return someMatching;
 };
 
 const LinkPlain = (props) => {

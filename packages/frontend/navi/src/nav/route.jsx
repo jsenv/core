@@ -306,7 +306,11 @@ const useContentKeepingLeavingPages = (branch) => {
     // mounted with, or it would be mounted again.
     key = shown.key;
     page = shown.page;
-  } else if (shown && leavingPagesHold) {
+  } else if (shown && leavingPagesHold && !document.querySelector(":modal")) {
+    // Never while a modal dialog is open: it keeps everything but itself out
+    // of reach — the page arriving could not even take the focus — for as long
+    // as it is open, and one in a page kept while leaving stays open for the
+    // whole movement. The page is then taken down at once, as without one.
     leavingRef.current.push({
       vnode: shown.vnode,
       page: shown.page,
@@ -344,10 +348,17 @@ const useContentKeepingLeavingPages = (branch) => {
       }
       entry.hidden = true;
       entry.page.leavingSignal.value = true;
+      const focusedElement = document.activeElement;
       let node = start.nextSibling;
       while (node && node !== end) {
         if (node.nodeType === Node.ELEMENT_NODE) {
           node.setAttribute(LEAVING_ATTRIBUTE, "");
+          // What the keyboard held in it goes where the page's removal would
+          // have sent it: a hidden element keeps the focus, and would go on
+          // receiving the keys pressed during the movement.
+          if (node.contains(focusedElement)) {
+            focusedElement.blur();
+          }
         }
         node = node.nextSibling;
       }

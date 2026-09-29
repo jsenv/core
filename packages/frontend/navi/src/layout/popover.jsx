@@ -48,6 +48,7 @@
 import {
   applyNewPosition,
   createPubSub,
+  findEvent,
   findSelfOrAncestorFixedPosition,
   getPositionedParent,
   getBorderSizes,
@@ -74,6 +75,7 @@ import { createOnKeyDownForShortcuts } from "../keyboard/keyboard_shortcuts.js";
 import { useDebugFocus, useDebugPopup } from "../navi_debug.jsx";
 import {
   openedDuringThisPress,
+  UNMOUNT_EVENT_TYPE,
   useOpenController,
   useOpenPropsEffectOnOpenController,
 } from "./open_controller.js";
@@ -1550,7 +1552,13 @@ const usePopoverProps = (props) => {
       // reliably sufficient once a consumer's own CSS also sets display.
       popoverEl.setAttribute("navi-hidden", "");
       if (isTopLayer) {
-        popoverEl.hidePopover();
+        // Left to its removal when the popover leaves the tree: that hides it
+        // and hands the focus to nobody, where hidePopover() hands the focus
+        // to whatever held it before the opening — often a trigger leaving in
+        // the same commit (see giveFocusBackAfterCommit).
+        if (!findEvent(closeEvent, UNMOUNT_EVENT_TYPE)) {
+          popoverEl.hidePopover();
+        }
       } else {
         openLocalPopoverCount = Math.max(0, openLocalPopoverCount - 1);
       }

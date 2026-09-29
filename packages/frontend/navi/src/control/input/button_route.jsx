@@ -1,4 +1,5 @@
-import { assertRoute, useRouteStatus } from "@jsenv/navi/src/nav/route.js";
+import { assertRoute } from "@jsenv/navi/src/nav/route.js";
+import { useRouteCurrent } from "@jsenv/navi/src/nav/use_route_current.js";
 import {
   renderResolver,
   useNextResolver,
@@ -19,9 +20,7 @@ const ButtonWithRoute = (props) => {
     assertRoute(route);
   }
   const url = route.buildUrl(routeParams);
-  const { matching } = useRouteStatus(route);
-  const paramsAreMatching = route.matchesParams(routeParams);
-  const linkMatching = matching && paramsAreMatching;
+  const linkMatching = useRouteCurrent(route, routeParams);
 
   // Merged into whatever the caller already holds: a button can be forced into
   // a state for a demo and still learn its own current-ness from its route.

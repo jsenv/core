@@ -567,6 +567,13 @@ What that means for a page and for the application around it:
   is photographed on the old side only, leaves with its page, and is closed
   when the page is taken down (see
   [view_transitions.md](./view_transitions.md#a-hidden-element-is-not-photographed-even-in-the-top-layer)).
+- **The focus it holds goes where its removal would have sent it** — to no
+  element — when it is hidden: a hidden element keeps the focus otherwise,
+  and would receive the keys pressed during the movement.
+- **Never while a modal dialog is open.** An open modal keeps everything but
+  itself out of reach — the page arriving could not even take the focus — and
+  one in a page kept while leaving would stay open for the whole movement. The
+  page is then taken down at once, as without a movement.
 - **Only where the page would have been taken down anyway.** A page rendered by
   the same element on both sides — two routes, one component — is the same
   instance carried over, as without a movement.
@@ -630,12 +637,16 @@ elements):
   navi's movements declare nothing inheritable on the root; a custom type
   publishing values of its own writes them on `::view-transition` (see
   [Custom movements](#custom-movements)).
-- **The page being left reacting to the address it no longer matches.** Every
-  component in it that re-renders on a URL change does so inside the update
-  callback, next to the page arriving being built — measured: about 2,500
-  component renders for the list of thirty cards, its links and its list
-  first. Taking the page down there instead would drop them, and still costs
-  more; what re-renders on the address is worth keeping to what has to.
+- **The page being left reacting to what the navigation changed.** Every
+  component in it that re-renders on the change does so inside the update
+  callback, next to the page arriving being built. A link or a button pointing
+  at a route (`<Link route>`, `<Button route>`) reads one flag — whether it is
+  current — and stays still unless that flips: a profile opening leaves the
+  links to a hundred other profiles exactly as they were (on the list of
+  thirty cards: 90 re-renders gone, first frame 58 → 41 ms). What else reacts
+  is worth keeping to what has to — measured: every card of the page being
+  left re-rendering when the page arriving loads its own games into the store
+  the cards read theirs from.
 - **Re-rendering what did not change, on the press itself.** A component that
   only wants a yes or a no reads a computed flag, not the signal it is derived
   from: a list whose rows each read the count of runs in flight re-rendered

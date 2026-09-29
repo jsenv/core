@@ -1852,8 +1852,12 @@ const useInteractiveProps = (
     }
     // Read by READONLY_CONSTRAINT to say how many runs are already out, and by
     // the action handlers below, which are where a run joins and leaves the
-    // count (a labelled block away, hence through the controller).
-    uiStateController.parallelGuard = parallelGuard;
+    // count (a labelled block away, hence through the controller). None for a
+    // control without an action of its own, by the same rule as being held
+    // back: what it runs (the noop every such control has, a link's
+    // navigation) is nothing the guard counts, and would hold a slot for its
+    // length.
+    uiStateController.parallelGuard = props.action ? parallelGuard : null;
     if (heldByParallelGuard) {
       controlHostProps["data-readonly-reason"] = "parallel-guard";
     }
@@ -2134,7 +2138,11 @@ const useInteractiveProps = (
         // carried by every navi_action_* event of that run).
         uiStateController.pendingActionEvent = e.detail.event;
         uiStateController.actionInFlight = true;
-        uiStateController.parallelGuard?.claim(uiStateController);
+        // Given back to the guard it was counted in, whatever the control
+        // holds by then: one that lost its action mid-run has no guard left
+        // to name, and the slot would stay taken.
+        const countedIn = uiStateController.parallelGuard;
+        countedIn?.claim(uiStateController);
         if (optimistic) {
           syncOptimisticAttribute(true);
         }
@@ -2153,7 +2161,7 @@ const useInteractiveProps = (
         e.detail.addSideEffect((outcome, outcomeEvent) => {
           uiStateController.actionInFlight = false;
           uiStateController.runningActionSignal.value = null;
-          uiStateController.parallelGuard?.release(uiStateController);
+          countedIn?.release(uiStateController);
           // The outcome callbacks are told from here, the run's side effect,
           // and not from the onnavi_action_* handlers below: the run can
           // outlive this control (its own answer, written to a store the

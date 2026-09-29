@@ -97,10 +97,7 @@
           <Dialog
             className="dialog_box"
             backdropColor="rgba(0, 0, 0, 0.55)"
-            open={dialogOpenSignal}
-            onClose={() => {
-              dialogOpenSignal.value = false;
-            }}
+            signal={dialogOpenSignal}
           >
             <p style={{ marginTop: 0 }}>Une dialog ouverte sur la page A.</p>
             <Link route={B_ROUTE}>Aller page B →</Link>

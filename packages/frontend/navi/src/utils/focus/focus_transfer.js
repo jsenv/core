@@ -493,6 +493,31 @@ export const moveFocusTo = (
   });
 };
 
+/**
+ * Gives the focus back to `target` once the commit a close is part of is over:
+ * for a close caused by an unmount (UNMOUNT_EVENT_TYPE in
+ * layout/open_controller.js), which runs from a cleanup while the tree leaving
+ * with it is still in the document. Only its end tells a target leaving with
+ * it — disconnected by then, and skipped — from one staying, and a focused
+ * element that leaves makes the removal of its whole subtree restyle it.
+ *
+ * And only into a void: the close took the focus with it, so something holding
+ * the focus by then — a page arriving that focused a field of its own — took it
+ * after, and keeps it.
+ */
+export const giveFocusBackAfterCommit = (target, giveFocus) => {
+  queueMicrotask(() => {
+    if (!target || !target.isConnected) {
+      return;
+    }
+    const focusedNow = document.activeElement;
+    if (focusedNow && focusedNow !== document.body) {
+      return;
+    }
+    giveFocus();
+  });
+};
+
 const focusTransferTarget = (target, focusVisible) => {
   moveFocusTo(target, { focusVisible });
   if (target.hasAttribute("navi-autofocus-select")) {

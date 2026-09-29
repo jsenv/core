@@ -76,6 +76,7 @@
 import {
   applyNewPosition,
   createPubSub,
+  findEvent,
   getElementSignature,
   getPositionedParent,
   getVirtualKeyboardOverlayHeight,
@@ -105,6 +106,7 @@ import { createOnKeyDownForShortcuts } from "../keyboard/keyboard_shortcuts.js";
 import { isDebugNoop, useDebugFocus, useDebugPopup } from "../navi_debug.jsx";
 import {
   openedDuringThisPress,
+  UNMOUNT_EVENT_TYPE,
   useOpenController,
   useOpenPropsEffectOnOpenController,
 } from "./open_controller.js";
@@ -2079,10 +2081,24 @@ const useDialogProps = (props) => {
       // whichever show call ran, not just when a stray authored display
       // property is actually present — harmless the rest of the time.
       dialogEl.setAttribute("navi-hidden", "");
-      if (isTopLayerPopover) {
-        dialogEl.hidePopover();
+      const hideNatively = () => {
+        if (isTopLayerPopover) {
+          dialogEl.hidePopover();
+        } else {
+          dialogEl.close();
+        }
+      };
+      if (findEvent(closeEvent, UNMOUNT_EVENT_TYPE)) {
+        // Leaving the tree: hidden natively once the commit is over. Its
+        // removal takes it out of the top layer and hands the focus to
+        // nobody, where closing it now hands the focus to whatever held it
+        // before the opening — often a trigger leaving in the same commit
+        // (see giveFocusBackAfterCommit). What is left to close then is its
+        // state: a <dialog> removed while open keeps its `open` attribute, and
+        // a subtree <Suspense> parks and puts back would show it again.
+        queueMicrotask(hideNatively);
       } else {
-        dialogEl.close();
+        hideNatively();
       }
       // Held at the size it has right now, for the whole way out. cleanup()
       // below already stops the JS repositioning, but the size is CSS-driven

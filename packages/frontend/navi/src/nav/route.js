@@ -1234,7 +1234,7 @@ if (import.meta.hot) {
 // A key set to undefined is content too — it says "without this one", which
 // a params object not naming it does not say (see buildIntendedState).
 const PARAMS_CACHE_MAX = 1000;
-const getParamsCacheKey = (params) => {
+export const getParamsCacheKey = (params) => {
   if (params === undefined || params === null) {
     return "";
   }

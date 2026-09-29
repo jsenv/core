@@ -15,6 +15,7 @@ at the end of this page.
 - [What a field says about itself](#what-a-field-says-about-itself)
 - [When the opening places nothing](#when-the-opening-places-nothing)
 - [The ring is decided too](#the-ring-is-decided-too)
+- [When a popup closes](#when-a-popup-closes)
 - [Moving the focus yourself](#moving-the-focus-yourself)
 
 ## What we want
@@ -201,6 +202,24 @@ focused while the input is). Style the standard name and you get that for free.
   outline: 2px solid var(--navi-focus-outline-color);
 }
 ```
+
+## When a popup closes
+
+The focus goes back to what held it when the popup opened — the trigger, most
+of the time — so the user carries on where they were.
+
+A popup that closes because it **leaves the tree** — its component unmounted,
+the page holding it left — gives the focus back once that change is over, and
+only to an element still in the document: the trigger often leaves in the same
+render, and focusing it just before it goes would be focusing nothing (and
+making its removal cost more). It gives the focus back only into a void, too:
+when something else took the focus meanwhile — the page arriving, focusing a
+field of its own — that one keeps it.
+
+So `{editing && <Dialog open>…</Dialog>}` unmounted from a button inside it
+lands the focus back on the button that opened it, and a dialog left along
+with the page around it lands it nowhere (`<body>`), exactly as if the page
+had simply been removed.
 
 ## Moving the focus yourself
 

@@ -20,6 +20,7 @@ import {
   warnSignalCollision,
 } from "../control/control_value.js";
 import {
+  giveFocusBackAfterCommit,
   prepareFocusTransfer,
   markAutofocusRestoreOnClose,
 } from "../utils/focus/focus_transfer.js";
@@ -478,6 +479,12 @@ export const createOpenController = (
               closeEvent,
               `closed by focusout -> let focus go away`,
             );
+          } else if (findEvent(closeEvent, UNMOUNT_EVENT_TYPE)) {
+            // Left the tree: what held the focus before the opening may be
+            // leaving with it (see giveFocusBackAfterCommit).
+            giveFocusBackAfterCommit(focusTransfer.focusedElement, () => {
+              focusTransfer.restoreFocus(closeEvent);
+            });
           } else {
             // Only the mousedown, deliberately: a popup with no backdrop is
             // closed by a `pointerdown` that belongs to the page (see
