@@ -187,7 +187,7 @@ to start when unsure which export solves a problem.
   to; `animation={{ open, close: "lifting" }}` for a popup that did not come out of what it
   lands in, the landing rendered by `onClose`; what an opening costs and where
   the time goes;
-  the wall at half strength on the frame before the movement. Read before
+  the wall arriving from nothing, over the movement. Read before
   giving a `Dialog` or a `Picker` `animation="lifting"`, or before measuring
   why one opens slowly.
 - `dialog_shape.md` — bounds rather than a width, the container ceiling, the

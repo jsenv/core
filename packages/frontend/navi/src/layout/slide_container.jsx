@@ -536,6 +536,8 @@ const readArea = (slideElement) =>
  *   is where one stops — after which the signal is written with the area
  *   actually shown, so it says where one IS and never where one asked to be.
  *   The walk starts from where the state itself opens (see `defaultCurrent`).
+ *   An area no slide carries yet is left as asked, and walked to by the render
+ *   that brings its slide (content arriving a request later).
  *   PUTTING THE AREA IN THE URL is that binding and nothing more: hand it a
  *   `stateSignal` a route declares as a search param, and `?step=<area>` is
  *   written on every travel, read on a load, a bookmark, a link, a traversal —
@@ -1541,8 +1543,8 @@ export const SlideContainer = ({
   // every slide between here and there is asked to let go the way a key going
   // that way would ask it, and the first one that holds is where one stops.
   // `?step=done` cannot open a confirmation screen for something nobody sent.
-  // Whatever comes of it, the state is then written with the area actually
-  // shown: it says where one IS, never where one asked to be.
+  // Whatever the walk comes to, the state is then written with the area
+  // actually shown: it says where one IS, never where one asked to be.
   //
   // Read on every render rather than subscribed to a dependency: the slides are
   // not always there when the request is (a screen whose content arrives a
@@ -1557,19 +1559,25 @@ export const SlideContainer = ({
       // it wrote itself.
       return;
     }
-    // Where the box IS, read off the DOM: `current` is undefined until someone
-    // names a slide, and the container standing on its first one is a fact only
-    // the map knows (see the layout effect that paints it).
-    const areaOnScreen = containerRef.current?.getAttribute(
-      SLIDE_CURRENT_ATTRIBUTE,
-    );
-    if (!areaOnScreen) {
-      // There are no slides yet, so there is no road to walk and nothing to
-      // refuse. Nothing is remembered either: this request has not been
-      // answered, and the render that brings the slides asks it again.
+    // The slide asked for is not rendered yet — no slides at all, or one whose
+    // content arrives a request later. Not a refusal: nothing is remembered and
+    // nothing is written, and the render that brings the slide asks again. A
+    // name that will never be a slide is the state's to refuse (`oneOf`), not
+    // the container's: from here, "later" and "never" look the same.
+    if (
+      !readMap().slideElements.some(
+        (slideElement) => readArea(slideElement) === currentFromCaller,
+      )
+    ) {
       return;
     }
     areaAskedSeenRef.current = currentFromCaller;
+    // Where the box IS, read off the DOM: `current` is undefined until someone
+    // names a slide, and the container standing on its first one is a fact only
+    // the map knows (see the layout effect that paints it).
+    const areaOnScreen = containerRef.current.getAttribute(
+      SLIDE_CURRENT_ATTRIBUTE,
+    );
     if (currentFromCaller === areaOnScreen) {
       return;
     }
@@ -1584,10 +1592,10 @@ export const SlideContainer = ({
       tellCurrentChange(reached, { cause: "state" }, areaOnScreen);
       return;
     }
-    // Nowhere this map knows, or somewhere the walk is not allowed to reach:
-    // the state is put back on the slide one is actually looking at, rather
-    // than left saying one is somewhere one is not. A caller holding `current`
-    // themselves is told instead — it is their value to correct.
+    // A slide the map gives no place to, or one the walk is not allowed to
+    // reach: the state is put back on the slide one is actually looking at,
+    // rather than left saying one is somewhere one is not. A caller holding
+    // `current` themselves is told instead — it is their value to correct.
     if (currentSignal) {
       writeAreaAsked(areaOnScreen, { cause: "refusal" });
       return;

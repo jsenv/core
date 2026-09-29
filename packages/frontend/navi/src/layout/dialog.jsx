@@ -483,15 +483,14 @@ const css = /* css */ `
         opacity: 0;
       }
     }
-    /* The wall of a lifting dialog is on screen a frame before the movement
-       (popup_lift.js opens the dialog on the spot and holds it unpainted), and
-       on that frame the anchor is still an element of the page, underneath
-       it. At full strength, an opaque blurred wall takes away the very thing
-       the movement is about to lift. So it arrives over the movement's own
-       duration, from half strength: the page has visibly receded — the tap is
-       answered — and the anchor is still there to be picked up. Half rather
-       than nothing, because that frame is the only one painted before the
-       pictures are taken, and it lasts as long as what the dialog builds. */
+    /* The wall of a lifting dialog is displayed a frame before the movement
+       (popup_lift.js opens the dialog on the spot and holds it unpainted), for
+       as long as the dialog takes to build. On that frame the anchor is still
+       an element of the page, under the wall, and the movement then draws it
+       on its own, sharp, above the wall: any wall on that frame — even a
+       half-strength wash and blur — is a flash on the anchor. So the wall
+       arrives from nothing, over the movement: on that frame the page is
+       untouched, and the anchor with it. */
     &[data-lifting] {
       &::backdrop {
         opacity: 1;
@@ -500,7 +499,7 @@ const css = /* css */ `
         transition-timing-function: ease;
 
         @starting-style {
-          opacity: 0.5;
+          opacity: 0;
         }
       }
     }
@@ -661,14 +660,14 @@ const css = /* css */ `
         opacity: 0;
       }
     }
-    /* Same arrival as the modal's ::backdrop (see it for why half). Keyed on
-       the aria-expanded flip rather than @starting-style: this element is
-       displayed with its transitions off (see openEffect). The transition is
-       declared on the open state only, so the close is instant, as it is for
-       the dialog itself under this animation. */
+    /* Same arrival as the modal's ::backdrop (see it for why from nothing).
+       Keyed on the aria-expanded flip rather than @starting-style: this
+       element is displayed with its transitions off (see openEffect). The
+       transition is declared on the open state only, so the close is instant,
+       as it is for the dialog itself under this animation. */
     &[data-lifting] {
       &[aria-expanded="false"] {
-        opacity: 0.5;
+        opacity: 0;
       }
       &[aria-expanded="true"] {
         opacity: 1;
@@ -679,10 +678,11 @@ const css = /* css */ `
     }
   }
 
-  /* Opened ahead of its movement (popup_lift.js): the backdrop is on screen,
-     and the dialog waits, unpainted, for the picture of the page being left —
-     the movement is what brings it in. Its ::backdrop is a box of its own in
-     the top layer, so the opacity leaves it alone. */
+  /* Opened ahead of its movement (popup_lift.js): the dialog waits, unpainted,
+     for the picture of the page being left — the movement is what brings it
+     in. Its ::backdrop is a box of its own in the top layer, so the opacity
+     leaves it alone: the wall's arrival is its own (see the [data-lifting]
+     backdrop rules above). */
   .navi_dialog[data-navi-popup-lift-arriving] {
     opacity: 0;
   }

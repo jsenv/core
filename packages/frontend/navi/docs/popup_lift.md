@@ -49,9 +49,8 @@ and the box the closing goes back into unless `liftAnchor` names another (see
 The opening waits for it. What a popup holds often arrives after the tap —
 code fetched for the address, a row fetched for the popup — and a movement
 started before the lifted node exists would carry the card into an empty box.
-So the dialog is opened at once, held unpainted under a half-strength wall
-(the card still readable beneath), and the lift starts the moment `data-lift`
-is in the DOM. Past a second without it, the dialog is shown where it stands,
+So the dialog is opened at once, held unpainted over a page left untouched,
+and the lift starts the moment `data-lift` is in the DOM. Past a second without it, the dialog is shown where it stands,
 with no movement, and dev warns.
 
 **Render the lifted node at once.** Waiting is a safety net, not the design: a
@@ -371,14 +370,23 @@ included.
 
 ## The wall, and the frame before the movement
 
-The tap is answered on the frame the dialog opens, before the pictures are
-taken: the wall is on screen at half strength, the card still readable under
-it, and the lift starts from there — the wall completes over the movement.
-That single frame lasts as long as the pictures take; with nothing left to
-build it is 40–60 ms, with a sheet to render it is the sheet's build. Half
-rather than nothing, because the first painted frame is the whole feedback of
-a slow tap; half rather than full, because a full opaque wall erases the card
-the movement is about to lift.
+The frame the dialog opens on is the picture the movement starts from, and it
+lasts as long as the pictures take: 40–60 ms with nothing left to build, the
+sheet's build with a sheet to render. On it the card is still an element of
+the page, under the wall, and the movement then draws it on its own, sharp,
+above the wall. So the wall arrives from nothing, over the movement: that
+frame shows the page untouched, card included.
+
+Any wall on that frame is worn by the card for its whole length, then taken
+off at once when the movement starts: a flash. A wall at half strength, to
+answer a slow tap before the movement, leaves the card dim and blurred for the
+length of the build (≈130 ms at ×6), then sharp; at full strength the card is
+gone.
+
+What that frame does not do is say a tap was taken. That answer belongs to
+the trigger, which is what the movement starts from anyway: a hold has the
+finger still on it, and a `Picker`'s trigger wears `aria-expanded="true"` from
+the open on, for an app that wants it pressed in while the sheet builds.
 
 `animation="lifting"` brings its own wall — opaque and blurred
 (`--navi-backdrop-lift-*`), the page it came out of being what the movement

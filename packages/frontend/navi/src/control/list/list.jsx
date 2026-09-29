@@ -737,7 +737,13 @@ const css = /* css */ `
     }
   }
 
-  ::highlight(navi-search-match) {
+  /* Written for the rows and what they hold, never for every element: with a
+     ::highlight() rule every element matches, a view transition starting
+     restyles the whole document (Chrome), in the frame the page being left is
+     photographed. Both selectors, for a browser without highlight
+     inheritance. */
+  .navi_list_item::highlight(navi-search-match),
+  .navi_list_item ::highlight(navi-search-match) {
     color: var(--list-item-color-highlight);
     background-color: var(--list-item-background-color-highlight);
   }

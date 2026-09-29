@@ -9,8 +9,10 @@ import { useLayoutEffect } from "preact/hooks";
  * The highlight is not specific to ListItem — any element that wants to mark
  * search match ranges (e.g. Suggestion, custom search results) can use these.
  *
- * CSS to paint the highlight:
- *   ::highlight(navi-search-match) {
+ * CSS to paint the highlight, scoped to the elements holding the ranges — a
+ * ::highlight() rule every element matches makes each view transition restyle
+ * the whole document (see the rule in list.jsx):
+ *   .my_results ::highlight(navi-search-match) {
  *     color: var(--search-match-color);
  *     background-color: var(--search-match-background-color);
  *   }

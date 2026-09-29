@@ -22,12 +22,11 @@
  * (ARRIVING_ATTRIBUTE, opacity 0 in dialog.jsx), and what the transition
  * photographs is the reveal alone. Between a tap and the first frame there is
  * then only the open itself — showing, building, placing — and not, on top of
- * it, a picture of the page before and a picture of the popup after, with
- * nothing painted in between: the backdrop, which is all the user needs to
- * know the tap landed, reaches the screen with the open — at half strength,
- * the anchor under it still being the thing about to be lifted (see the
- * [data-lifting] backdrop rules in dialog.jsx) — and the box lifts out of the
- * anchor from there.
+ * it, a picture of the page before and a picture of the popup after. That
+ * first frame is also the picture the movement starts from, anchor included,
+ * so it shows the page untouched: the wall arrives from nothing over the
+ * movement (see the [data-lifting] backdrop rules in dialog.jsx), and the box
+ * lifts out of the anchor from there.
  *
  * What is lifted is named: `data-lift` on the one node that IS the anchor
  * once in front — inside the popup, or the popup itself when the popup is
@@ -36,8 +35,7 @@
  * task or a round trip later. A movement started before it exists would carry
  * the anchor into an empty box — the card dissolving into nothing, and the
  * content appearing later where the box landed. So the opening waits for it
- * (TARGET_WAIT_MS), on the half-strength frame where the anchor is still
- * readable, and lifts the moment it is there.
+ * (TARGET_WAIT_MS), and lifts the moment it is there.
  *
  * A closing may land where no opening took off: a dialog opened the plain way
  * (`animation={{ open, close: "lifting" }}` in dialog.jsx), closing into a box the close
@@ -86,8 +84,7 @@ const FIT_ATTRIBUTE = "data-navi-popup-lift-fit";
 // inside it.
 const TARGET_SELECTOR = "[data-lift]";
 // Worn by the popup from its opening to the reveal, keeping it unpainted
-// (dialog.jsx) while its backdrop is already on screen: the popup is brought
-// in by the movement, not by the open.
+// (dialog.jsx): the popup is brought in by the movement, not by the open.
 const ARRIVING_ATTRIBUTE = "data-navi-popup-lift-arriving";
 // How long an opening waits for something to lift. What arrives with an
 // opening — code fetched for the address, a row fetched for the popup — is a
