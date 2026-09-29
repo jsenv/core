@@ -99,10 +99,9 @@ const [found, searching] = useAsyncData(searchAction, {
 The delay lives in the binding — no effect, nothing to own — and two call sites
 passing the same signal and delay share the instance. During the delay it holds
 the previous answer, and `loading` says a newer one is coming: don't compare
-params by hand. It follows where the signal **settles**, never a value it only
-passed through (`A → B → A` sends nothing for `B`). `actionRunEffect`, which
-takes the action itself and a params getter, is for a request that must go out
-whether or not something draws it.
+params by hand. It follows where the signal **settles** (`A → B → A` sends
+nothing for `B`). `actionRunEffect`, which takes the action itself and a params
+getter, is for a request that must go out whether or not something draws it.
 
 ### The answer is kept on the instance that ran
 
@@ -245,15 +244,16 @@ reference on filled fields
 ## The instance a control runs
 
 A control takes the action and wires the rest — `<Button action>` runs it on
-click, draws its wait, puts its error where the user can see it — whether handed
-an instance or a function calling the verb (what separates the two:
+click, draws its wait, puts its error where the user can see it — whether it is
+handed an action or a plain function, which it wraps into one (what that wrapper
+lacks against a resource verb's instance:
 [resource.md](./resource.md#a-function-calling-the-verb-or-the-instance)). It
 binds what it is given to its own UI state and runs the result, so which
 instance runs depends on the value the control carries:
 
-- a **button on its own** contributes no params, so what it runs **is** the
-  instance it was handed: `useActionStatus` on that instance sees the click,
-  the run, the data.
+- a **button outside any form or group** contributes no params, so what it runs
+  **is** the instance it was handed: `useActionStatus` on that instance sees the
+  click, the run, the data.
 - a **button inside a `<Form>` or another group**, with no `value` of its own,
   carries the value around it — a submit carries its form's — and runs the
   child instance bound to that value, as the controls below do.
@@ -396,10 +396,9 @@ on a read-only control — holds everywhere but on a control with
 
 ## `uiAction` mirrors the state, it does not report a gesture
 
-`uiAction` fires whenever the control's state changes, whoever changed it — a
-button and a link being the exception their shape makes plain: they hold no
-state to mirror, so each press is exactly one call. Everywhere else the user
-typing is one cause among several: a `value` prop coming back down after a
+`uiAction` fires whenever the control's state changes, whoever changed it (a
+button and a link hold no state to mirror: there, each press is one call). The
+user typing is one cause among several: a `value` prop coming back down after a
 render, a popup control propagating its choice up to the picker holding it, a
 group cascading a value into its children — all of them reach `uiAction`, so
 that a signal or a local variable listening to it never drifts out of sync.

@@ -106,9 +106,9 @@ if (items === undefined) {
 return <ItemList items={items} busy={loading} />;
 ```
 
-`loading` reads the action, not the intent: an action holding params that
-nothing started — idle, or aborted — reads `loading: true`, so a skeleton told
-it shimmers until something runs that action.
+`loading` is not proof that a request is out, either: an action holding params
+that nothing started — idle, or aborted — reads `loading: true`, so a skeleton
+told it shimmers until something runs that action.
 
 navi's own placeholders take that flag rather than inventing it: `<Text loading>`
 shimmers, `<Text skeleton>` is the same bar held still, and

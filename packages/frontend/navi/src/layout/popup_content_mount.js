@@ -270,7 +270,7 @@ const resolveAnchorElement = (anchor) => {
 
 // The next frame paints what the input just changed (the pressed trigger); the
 // callback runs at the start of the one after.
-const requestFrameAfterNext = (callback) => {
+export const requestFrameAfterNext = (callback) => {
   let frame = requestAnimationFrame(() => {
     frame = requestAnimationFrame(callback);
   });

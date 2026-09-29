@@ -1814,8 +1814,8 @@ const PickerFirstResolver = (props) => {
  *   filter", "anywhere"), so its empty look is the caller's. A `ui` must
  *   therefore say on its own that the picker is empty, and take the same room
  *   empty as it does filled. A <BadgeList> gets both from its `fallback` — the
- *   placeholder text, as plain text, see docs/badge_list.md. `"default"` draws
- *   nothing in the slot at all.
+ *   placeholder text, as plain text, see docs/typography.md#badgelist.
+ *   `"default"` draws nothing in the slot at all.
  *
  *   Under `variant="icon"` there is no value to draw, so this IS the trigger:
  *   left out it is the icon the right slot would have shown (`rightSlotIcon`,

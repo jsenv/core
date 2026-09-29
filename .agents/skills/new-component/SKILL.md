@@ -36,7 +36,7 @@ request (see the constraints in
 - **A control that can be grouped** declares the radius of its frame on its own
   root and answers `<Group>`'s corner claims — see "Writing a control that
   belongs in a group" in
-  [control_group.md](../../../packages/frontend/navi/docs/control_group.md).
+  [group.md](../../../packages/frontend/navi/docs/group.md).
   Never hand-write negative margins or per-member radius resets.
 - **JSDoc** on every exported component: see "JSDoc" in
   [.agents/instructions.md](../../instructions.md#jsdoc).

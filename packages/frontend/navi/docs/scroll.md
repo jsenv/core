@@ -103,44 +103,30 @@ list's own — is not the one most call sites want:
 > area, and it needs a height to scroll in (`maxHeight`, or `expandY` inside a
 > bounded parent).
 
-A `"self"` list inside a scrolling box nests a second scroller that sizes
-itself independently — and a virtualized run holds the room of every row it
-stands for, so the popup or panel around it ends up sized on that rather than
-on the rows drawn. With anything other than `"self"` there is no nested
-scrollport and no height to compute.
+A `"self"` list inside a scrolling box nests a second scroller sized on its
+own — and a virtualized run holds the room of every row it stands for, so the
+popup or panel around it is sized on that rather than on the rows drawn.
 
-`scroller` is not only where the scrollbar appears: it names the box the
-render window follows (see
+`scroller` also names the box the render window follows (see
 [Many rows](#many-rows-listitems-and-the-render-window)). A `"self"` list given
-no height is exactly as tall as its rows and scrolls nothing; the window then
-follows whatever box does show the list, and dev warns when nothing scrolls it
-at all — a recovery, not the shape to aim for. `"parent"` finds its ancestor by
-measuring; when that is still not the box you mean, say so with `"document"` or
-the element itself.
+no height scrolls nothing; the window then follows whatever box does show the
+list, and dev warns when nothing scrolls it at all — a recovery, not the shape
+to aim for. When `"parent"` (found by measuring) is still not the box you mean,
+say so with `"document"` or the element itself.
 
 ### Where the list opens, and where it is
 
-- **`defaultScrolled`** — `"start"` (default), `"end"`, an index, or
-  `{id, offset}`. The `{id, offset}` form is what `onScrolledChange` hands out:
-  it asks for the row BY NAME, then puts it back by MEASURING it, so it lands
-  where it was even if rows were inserted before it, and whatever the screen it
-  was saved on — "reopen a thread where I left it", already provided.
-  `offset: 0` is where `scrollIntoView()` would put the row: past the room a
-  fixed bar publishes, below the sticky header and the group label above it,
-  none of which has to be restated as a number.
-- **`scrolled`** is the controlled form, and **`onScrolledChange`** gives
-  `{id, index, offset, visibleCount}` as the user scrolls. Keep it whole:
-  `visibleCount` also says how many rows to draw before the first paint.
-- A list with an `id` **comes back where it was** when its screen is left and
-  come back to, the way the page does — kept under the list's `id` and the
-  page's url, for the session. A fresh arrival still opens at
-  `defaultScrolled`. **`scrollResetOnNavigation`** opts out: the list then
-  opens the same way every time.
-- A list scrolling the document and opening on a row **places the document
-  itself**, on the row: the offset the page kept for its url is not put back
-  over it. Those are pixels of the page as it was drawn, and the rows the
-  window holds off screen are fillers of an estimated height — the same pixels
-  now fall on other rows.
+`defaultScrolled` (or `scrolled`, held) takes `{id, offset}` — what
+`onScrolledChange` hands out — and asks for the row BY NAME, then puts it back
+by MEASURING it: it lands where it was even if rows were inserted before it,
+whatever the screen it was saved on. "Reopen a thread where I left it" is
+already provided; keep the position whole, its `visibleCount` sizes the first
+paint. A list with an `id` also **comes back where it was** when its screen is
+left and come back to, the way the page does; **`scrollResetOnNavigation`**
+opts out. A list scrolling the document that opens on a row places the
+document itself: the offset the page kept for its url is not put back over it
+— the rows held off screen are fillers of an estimated height, and the same
+pixels now fall on other rows.
 
 ### A search moves the list, and gives it back
 
@@ -253,18 +239,14 @@ emptiness.
 </Dialog>
 ```
 
-The cap on the height comes from above and must reach the slides as a
-**constraint**, never as a scroller. `SlideContainer` is `flex: 0 1 auto` — it
-shrinks into what is left (growing is the caller's decision, `expandY`) — the
-grid hands that height to **every** slide, and a slide with an `overflow` of its
-own scrolls only when ITS content is taller than that. The short ones take the
-height the context imposes and ignore the height of their neighbour.
-
-So: nothing scrollable between the cap and the slides — a `<Box body>` around
-them is a scroller, and so is a bare `overflow="auto"` on a wrapper. The dialog
-keeps a shared `header` if the tabs are shared, with an explicit
-`flexShrink="0"`, since the rule that gives it for free applies only next to a
-`body`.
+The cap on the height must reach the slides as a **constraint**, never as a
+scroller: `SlideContainer` shrinks into what is left (`flex: 0 1 auto`; growing
+is `expandY`), the grid hands that height to **every** slide, and a slide with
+an `overflow` of its own scrolls only when ITS content is taller. So nothing
+scrollable between the cap and the slides — a `<Box body>` around them is a
+scroller, and so is a bare `overflow="auto"` on a wrapper. A shared `header`
+takes an explicit `flexShrink="0"`: the rule that gives it for free applies
+only next to a `body`.
 
 **Padding goes on the slide** — or on its parts, since the slide is the
 scroller — never on the container nor on anything above it. Overflow clips at
@@ -282,11 +264,10 @@ than the others" case in `src/layout/demos/8_slide_container_demo.html`.
 
 ## Many rows: `List.Items` and the render window
 
-What a list costs must not follow the size of its collection. A row is many
-components once every box and context provider is counted, and the browser
-paints nothing until the render that draws them has ended: forty rows given to
-a list that opens in a click are forty rows drawn before anything is seen, for
-a screen that shows a dozen.
+What a list costs must not follow the size of its collection: the browser
+paints nothing until the render that draws the rows has ended, so forty rows
+given to a list that opens in a click are forty rows drawn before anything is
+seen, for a screen that shows a dozen.
 
 So the rule: **rows as `<List.Item>` children are all drawn**, and that is the
 right shape only for a list the caller knows to be short — a menu, a settings
@@ -349,12 +330,10 @@ them, nothing else.
 />
 ```
 
-With `findText`, the fillers carry the text of the rows they hold the room of,
-one line per row, inside `hidden="until-found"` elements: nothing of it is laid
-out or painted, and find still reaches it. On a match the browser reveals the
-line and scrolls to it — where the row stands — and the render window, following
-that scroll like any other, draws the row. A row inside the window has no hidden
-copy, so every row is found exactly once and the count in the find bar is right.
+With `findText`, the fillers carry the text of the rows they stand for, inside
+`hidden="until-found"` elements: on a match the browser scrolls there and the
+render window, following that scroll like any other, draws the row. A row
+inside the window has no hidden copy, so every row is found exactly once.
 
 What it costs, and where it stops:
 
@@ -408,11 +387,10 @@ run reading a slice at a time).
 ## Hover while scrolling
 
 A scroll moves the content under a pointer that does not move, and the browser
-reports that as hover: `mouseleave` + `mouseenter` for **every element crossing
-the cursor**. It is free as long as hover only paints a background. It stops
-being free the moment hover triggers real work — a highlight elsewhere in the
-tree, a prefetch, a map redrawing a layer — because that work lands on the main
-thread exactly while a scroll animation is running, and the scroll stutters.
+reports that as hover on **every element crossing the cursor**. Free while hover
+only paints a background; once hover triggers real work — a highlight
+elsewhere, a prefetch, a map redrawing a layer — that work lands on the main
+thread mid-scroll, and the scroll stutters.
 
 ### The fact is in the DOM: `navi-scrolling`
 

@@ -236,7 +236,11 @@ export const createOpenController = (
     const applyChange = () => {
       // Recorded with the change itself: what the DOM shows is what a render
       // landing between the ask and the picture must draw (see `openedInDom`).
-      controller.openedInDom = opened;
+      // An opening records it inside the change, once its content is built
+      // (see open() below).
+      if (!opened) {
+        controller.openedInDom = false;
+      }
       change();
     };
     const { transitionChange } = controller;
@@ -516,15 +520,17 @@ export const createOpenController = (
           controller.mountContent?.();
           // Only now — after the content has been built, before openEffect
           // shows it. Dialog/Popover recompute aria-expanded and navi-hidden
-          // from this flag on every render, and mountContent above renders
+          // from `openedInDom` on every render, and mountContent above renders
           // synchronously: flipping it any earlier commits an already-open DOM
           // (aria-expanded "true", navi-hidden gone) before openEffect has run
           // a single statement, so the "closed" frame it pins to transition
           // from is in fact the open one and the entrance animation has
-          // nothing to play. It also gives the content it just built the
-          // opening it is documented to observe — mounted while the popup
-          // reads as closed, told it opened right after (see
-          // popup_content_mount.js and use_displayed_layout_effect.js).
+          // nothing to play — on every first opening that builds its content.
+          // It also gives the content it just built the opening it is
+          // documented to observe — mounted while the popup reads as closed,
+          // told it opened right after (see popup_content_mount.js and
+          // use_displayed_layout_effect.js).
+          controller.openedInDom = true;
           controller.opened = true;
           // Which press it opened during, so the release of that press is not
           // read as somebody dismissing it (see openedDuringThisPress).
@@ -787,7 +793,7 @@ const writeOpenedInSignal = (signal, opened, event, popupValue) => {
   }
   writeInSignal(signal, closedValue, { history: "replace" });
 };
-const readOpened = (signalValue, popupValue) => {
+export const readOpened = (signalValue, popupValue) => {
   if (popupValue === undefined) {
     return (
       signalValue !== undefined && signalValue !== null && signalValue !== false
@@ -795,7 +801,7 @@ const readOpened = (signalValue, popupValue) => {
   }
   return signalValue === popupValue;
 };
-const readOpenValue = (popupValue) => {
+export const readOpenValue = (popupValue) => {
   return popupValue === undefined ? true : popupValue;
 };
 const readClosedValue = (openSignalValue) => {
@@ -933,7 +939,14 @@ export const useOpenPropsEffectOnOpenController = (
     lastRunOpenRef.current = open;
 
     if (isFirstRun) {
-      const mountOpenReason = open || defaultOpen;
+      // "interaction" is said even over what the caller holds reading open: a
+      // popup built by the request that opens it — a dialog standing in until
+      // its signal said open, see DialogStandIn in dialog.jsx — mounts BECAUSE
+      // of that opening.
+      const mountOpenReason =
+        open && defaultOpen === "interaction"
+          ? "interaction"
+          : open || defaultOpen;
       if (mountOpenReason) {
         // Whether this popup being open is something that just happened, or
         // something that was already true when the page appeared. "interaction"

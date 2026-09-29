@@ -108,6 +108,17 @@ export const useDisplayedLayoutEffect = (ref, callback, deps) => {
         decisionDeferredToRef.current = popupMounting;
         return;
       }
+      if (
+        (el.tagName === "DIALOG" || el.hasAttribute("popover")) &&
+        !isAncestorOpen(el)
+      ) {
+        // Itself a closed <dialog> or [popover]: display:none by the UA's own
+        // rules, which the markup says without asking the layout — asked, every
+        // closed popup mounting would force a style recalculation, and a list
+        // whose rows each hold a few mounts hundreds of them. The observer
+        // below fires as for any element the ancestor hides.
+        return;
+      }
       if (!isDisplayedDespiteClosedAncestor(el, ancestor)) {
         // Ancestor is closed and took this element off screen with it — skip
         // now; the observeAncestorOpenState call below will fire once it

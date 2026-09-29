@@ -76,6 +76,7 @@
 import {
   applyNewPosition,
   createPubSub,
+  dispatchCustomEvent,
   findEvent,
   getElementSignature,
   getPositionedParent,
@@ -87,7 +88,8 @@ import {
   trapScrollInside,
   visibleRectEffect,
 } from "@jsenv/dom";
-import { useEffect, useRef } from "preact/hooks";
+import { computed } from "@preact/signals";
+import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 
 import { onNaviCommand } from "../control/commands.js";
 import { dispatchRequestInteraction } from "../control/rules/control_interaction.js";
@@ -106,11 +108,18 @@ import { createOnKeyDownForShortcuts } from "../keyboard/keyboard_shortcuts.js";
 import { isDebugNoop, useDebugFocus, useDebugPopup } from "../navi_debug.jsx";
 import {
   openedDuringThisPress,
+  readOpened,
+  readOpenValue,
   UNMOUNT_EVENT_TYPE,
   useOpenController,
   useOpenPropsEffectOnOpenController,
 } from "./open_controller.js";
-import { usePopupContentMount } from "./popup_content_mount.js";
+import {
+  requestFrameAfterNext,
+  usePopupContentMount,
+} from "./popup_content_mount.js";
+import { preloadState } from "../nav/route.js";
+import { flushSyncRendering } from "../utils/flush_sync_rendering.js";
 import { popupCss } from "./popup_css.js";
 import { surfaceTextCss } from "./surface_text_css.js";
 import { freezeSize, unfreezeSize } from "./freeze_size.js";
@@ -1117,7 +1126,9 @@ const css = /* css */ `
  * @param {"always"|"idle"|"from-first-open"|"while-opened"} [props.mount] - When
  *   `children` are built and thrown away (see popup_content_mount.js).
  *   `"from-first-open"` (the default) builds them on the first open and keeps
- *   them afterwards. `"always"` builds them right away, for content something
+ *   them afterwards — and the dialog itself is built then too: until its first
+ *   request (an open, a press on what opens it, its signal saying open) it is
+ *   a bare `<dialog>` holding its id (see docs/popup_open.md). `"always"` builds them right away, for content something
  *   depends on while the popup is still closed: a value read off it, fields a
  *   surrounding form collects on submit, a size measured from outside.
  *   `"idle"` builds them in a browser idle moment after load — "always" minus
@@ -1137,7 +1148,122 @@ export const Dialog = (props) => {
   if (props.openController) {
     return <ControlledDialog {...props} />;
   }
-  return <UncontrolledDialog {...props} />;
+  return <DialogStandIn {...props} />;
+};
+
+// A dialog nobody has asked for yet stands in as its bare <dialog>. That
+// element is all that reaches a closed dialog before its first opening: a
+// command finds it by id (`commandfor`) and asks it to open, a press on what
+// opens it announces itself on it (navi_open_press), --navi-toggle reads its
+// aria-expanded. The dialog proper — its open controller, its box, its focus
+// and pseudo-class wiring — is built at the first request: an open, a press
+// about to open it, its signal or its `open` saying open. A list whose rows
+// each hold a few dialogs mounts hundreds of them, and would pay for every one
+// at every mount, for openings that mostly never come. Built once, the dialog
+// stays: the next opening finds it there.
+const DialogStandIn = (props) => {
+  const { ref, id, signal, value, open } = props;
+  const ownRef = useRef();
+  const dialogRef = ref || ownRef;
+  // Why the dialog proper exists, once it does; never undone.
+  const builtRef = useRef(null);
+  const mountedRef = useRef(false);
+  const isMount = !mountedRef.current;
+  mountedRef.current = true;
+  // Its own reading of the signal: the dialog of one card among many, told
+  // apart by `value`, follows whether IT is the one open rather than every
+  // write the others cause.
+  const openedSignal = useMemo(
+    () => (signal ? computed(() => readOpened(signal.value, value)) : null),
+    [signal, value],
+  );
+  const openedBySignal = openedSignal ? openedSignal.value : false;
+  if (builtRef.current === null) {
+    if (isMount && (needsDialogFromMount(props) || open || openedBySignal)) {
+      builtRef.current = "mount";
+    } else if (open || openedBySignal) {
+      // Asked open while this stood in: the opening is happening now, and it
+      // plays like any other (see defaultOpen "interaction").
+      builtRef.current = "interaction";
+    }
+  }
+  const [, setBuildCount] = useState(0);
+  const warmRef = useRef(null);
+  const build = (reason) => {
+    if (builtRef.current !== null) {
+      return;
+    }
+    builtRef.current = reason;
+    flushSyncRendering(() => {
+      setBuildCount((count) => count + 1);
+    });
+  };
+
+  const builtReason = builtRef.current;
+  if (builtReason !== null) {
+    return (
+      <UncontrolledDialog
+        {...props}
+        ref={dialogRef}
+        defaultOpen={
+          builtReason === "interaction" ? "interaction" : props.defaultOpen
+        }
+      />
+    );
+  }
+  return (
+    <dialog
+      ref={dialogRef}
+      id={id}
+      className="navi_dialog"
+      // eslint-disable-next-line react/no-unknown-property
+      navi-hidden=""
+      // eslint-disable-next-line react/no-unknown-property
+      navi-out-of-flow=""
+      aria-expanded="false"
+      data-testid={props["data-testid"]}
+      // eslint-disable-next-line react/no-unknown-property
+      onnavi_request_open={(e) => {
+        // Built in this same event, and asked again: the opening is the one
+        // the dialog proper would have had — its source, its anchor, its value.
+        build("request");
+        const opened = dispatchCustomEvent(
+          dialogRef.current,
+          "navi_request_open",
+          e.detail,
+        );
+        if (!opened) {
+          e.preventDefault();
+        }
+      }}
+      // eslint-disable-next-line react/no-unknown-property
+      onnavi_open_press={() => {
+        // What the opening will read is asked for at once, as the dialog
+        // proper does (see open_controller.js); the dialog itself two frames
+        // later, so the pressed trigger is painted first — the click that
+        // follows opens it built, or builds it itself when it comes sooner.
+        if (signal) {
+          preloadState(signal, readOpenValue(value));
+        }
+        if (warmRef.current) {
+          return;
+        }
+        warmRef.current = requestFrameAfterNext(() => {
+          warmRef.current = null;
+          build("press");
+        });
+      }}
+    />
+  );
+};
+// What needs the dialog proper from the start: an opening at mount, content
+// built ahead of any opening, a history entry to read, an anchor whose hover
+// or focus builds the content ahead of the click.
+const needsDialogFromMount = (props) => {
+  if (props.defaultOpen || props.navState || props.anchor !== undefined) {
+    return true;
+  }
+  return props.mount !== undefined && props.mount !== "from-first-open";
 };
 
 // No openController passed: this Dialog is used declaratively (e.g. driven

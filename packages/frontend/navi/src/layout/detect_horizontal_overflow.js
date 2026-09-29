@@ -4,9 +4,9 @@
  * A page that overflows horizontally is a bug wherever it happens, and on
  * Chrome Android it is a catastrophic one: the layout viewport inflates to the
  * content and `position: fixed` centering goes with it (see
- * docs/mobile_layout_pitfalls.md). The remedy there is a wrapper in
- * `overflow-x: clip`, and it works — at the price of making the cause
- * invisible: nothing sticks out anymore, so nothing says a fixed width, a
+ * docs/safe_area.md#a-document-wider-than-the-screen). The remedy there is a
+ * wrapper in `overflow-x: clip`, and it works — at the price of making the
+ * cause invisible: nothing sticks out anymore, so nothing says a fixed width, a
  * `min-width` or an unbreakable string is still oversized. This puts the
  * signal back, without giving up the net.
  *

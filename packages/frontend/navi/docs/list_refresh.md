@@ -46,7 +46,7 @@ Partial props are fine (`{ id, paused: true }` merges into the stored item); the
 key is what cannot be missing. A callback that returns nothing — a `204`, or a
 `fetch` whose result is dropped — is refused with a `TypeError` naming the verb
 (`game.PATCH must return an object…`), and nothing reaches the store. For a
-`204`, return `{ id, ...params }` yourself.
+`204`, return what was written yourself: `{ id, ...props }`.
 
 `DELETE` is symmetric: returning the id drops the item from the store, and every
 list containing it drops it too.
@@ -135,10 +135,10 @@ playing between the two pages: the **source** the list reads through is what
 answers, and it answers the same way whether the user arrived by a link, by
 `history.back()`, or under a route transition.
 
-| The list reads through          | Coming back to it                                                                                                                                  |
-| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The list reads through          | Coming back to it                                                                                                                               |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
 | `routeAction` over `GET_MANY`   | **nothing goes out** — the action holds its response, and `.run()` on a `COMPLETED` action is a no-op; only `.rerun()` goes back to the network |
-| `<List.Items>` over `GET_RANGE` | **one ask goes out** — the reader kept ranks, not rows, and revalidates the window it draws                                                        |
+| `<List.Items>` over `GET_RANGE` | **one ask goes out** — the reader kept ranks, not rows, and revalidates the window it draws                                                     |
 
 Both are deliberate: an action that kept its answer has the answer, while a
 composition is a claim about an order that any write elsewhere may have made
@@ -235,7 +235,7 @@ updated item — not client-side refreshing.
 | a field of one item         | no — the write's response is enough                  |
 | membership of the list      | yes (`POST`) — the backend decides who belongs       |
 | the ORDER of the list       | yes — the store stores, it does not sort (see below) |
-| nothing came back (`204`)   | no — the callback returns `{ id, ...params }` itself |
+| nothing came back (`204`)   | no — the callback returns `{ id, ...props }` itself  |
 | a place in a paginated list | yes — a `GET_RANGE` reads places, and places shift   |
 
 ## The store stores, it does not sort

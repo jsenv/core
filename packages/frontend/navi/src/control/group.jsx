@@ -1,7 +1,7 @@
 /**
  * A row or column of controls sharing one frame: the borders where two of them
  * meet are drawn once instead of twice, and only the outer corners stay
- * rounded. See docs/control_group.md.
+ * rounded. See docs/group.md.
  */
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";

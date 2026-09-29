@@ -3,8 +3,8 @@
 A dialog, a popover, a slide arriving: one of them opens and something inside
 has to hold the keyboard. `autoFocus` is how each element takes part in that
 decision. Handing the focus over answers a second question at the same time —
-whether what receives it shows a focus ring — and navi answers that one too,
-at the end of this page.
+whether what receives it shows a focus ring — and navi answers that one too, at
+the end of this page.
 
 - [What we want](#what-we-want)
 - [The ladder](#the-ladder)
@@ -21,8 +21,8 @@ at the end of this page.
 ## What we want
 
 The focus is where the user is. So an opening has to answer one question — what
-did the user come here to do? — and the answer is rarely "type": a picker opens
-on its search box, but a popup that explains something opens on the explanation.
+did the user come here to do? — and the answer is rarely "type": a popup that
+explains something opens on the explanation.
 
 On a phone the difference is not a nuance. Focusing a field raises the virtual
 keyboard, the keyboard takes a third of the height, and the popup scrolls the
@@ -40,12 +40,14 @@ Whoever hands out the focus — a popup opening, a slide arriving — tries thes
 in order, and stops at the first that leads somewhere focusable:
 
 1. the element that held the focus when this container was last closed;
-2. the first `autoFocus` — "put it here". The container's own comes last here,
-   so a field naming itself wins over the surface around it;
+2. the first `autoFocus` — "put it here", the container's own tried last;
 3. the first focusable element — what one came to do;
-4. the deepest `autoFocus="last-resort"`, the container itself included;
-5. nothing: the focus stays where it was, and [when the opening places
-   nothing](#when-the-opening-places-nothing) says what follows.
+4. one `autoFocus="last-resort"`: the first found that holds no other, the
+   container's own only when nothing inside says it;
+5. what held the focus before the opening (the trigger, for a press): the focus
+   stays outside, and
+   [when the opening places nothing](#when-the-opening-places-nothing) says what
+   follows.
 
 Step 1 is why reopening a popup comes back to where the user was, rather than to
 what the content asks for on a fresh open.
@@ -77,7 +79,7 @@ the opposite: "anything in here before me".
 2 of the ladder, and the container's own mark is tried last there. The two can
 be stated together without a conflict to resolve — the surface says where the
 focus goes by default, a field that really is what the user came for says so
-itself.
+itself, on a touch device too.
 
 ```jsx
 <Dialog autoFocus>
@@ -90,38 +92,32 @@ itself.
 
 Where the keyboard is a virtual one — anything answering `pointer: coarse` — an
 arrival drops step 3 of the ladder entirely: the focus goes where something
-ASKED for it, and otherwise to the surface itself.
+ASKED for it, and otherwise to the surface itself. Step 4 still runs, though: a
+`last-resort` inside is picked before a surface that is only `last-resort`
+itself, the default — a chevron marked so takes the focus, and a field marked
+so raises the keyboard.
 
-Every arrival, not just a popup opening. A slide travelling in (so a
-`RouteTravel` screen too) hands out the focus the same way and loses the same
-thing by landing on the first focusable — more of it, even, a screen having more
-above the fold than a popup. Its surface is the `SlideContainer` box, which is
-what takes the keyboard when the slide holds nothing that can, so the arrows
-keep working from there.
+Every arrival, not just a popup opening. A slide travelling into a
+`SlideContainer` hands out the focus the same way and would lose the same thing
+by landing on the first focusable — more of it, even, a screen having more above
+the fold than a popup. Its surface is the `SlideContainer` box, which takes the
+keyboard when the slide holds nothing that can, so the arrows keep working from
+there.
 
 The condition is the device, not the shape of what arrives and not the gesture
-that brought it. A virtual keyboard is a fact about the screen: it costs a third
-of the height whatever raised it, and an arrival with no pointer in it at all —
-a popup opened by the page loading, a travel asked for by code — is exactly the
-one that must not be answered "no keyboard here". Docking only makes the cost
-more visible (a bottom sheet is short, so there is less room to lose before the
-title goes), it is not what creates it.
-
-Withdrawing only the FIELDS would not be enough either. The first focusable is
-wherever the content happens to put it — and in a popup that explains before it
-asks, what comes first is the explanation, so the first focusable is far down:
-the terms checkbox, the submit button. Landing there scrolls the popup to it and
-the title is above the top edge again, keyboard or no keyboard. The cause
-changes, the user sees the same thing.
-
-Nothing to pass, and nothing to remember per call site.
+that brought it. A virtual keyboard costs a third of the height whatever raised
+it, and an arrival with no pointer in it at all — a popup opened by the page
+loading, a travel asked for by code — is exactly the one that must not be
+answered "no keyboard here". Withdrawing only the fields would not do either: in
+a popup that explains before it asks, the first focusable is far down (the terms
+checkbox, the submit button), and landing there scrolls the title away, keyboard
+or no keyboard.
 
 ### Opting a field back in
 
-Some popups — and some screens — really are opened to type in: one comment box,
-one rename field.
-There, the field says so itself, and that beats the device — step 2 of the
-ladder comes before step 3 was ever skipped.
+Some popups — and some screens — really are opened to type in: one comment
+box, one rename field. There, the field says so itself, and that beats the
+device — step 2 of the ladder comes before step 3 was ever skipped.
 
 ```jsx
 <Dialog>
@@ -130,18 +126,15 @@ ladder comes before step 3 was ever skipped.
 </Dialog>
 ```
 
-Worth saying out loud before writing it: a popup holding one field is not
-necessarily a popup opened to fill it — it is often opened to READ what the
-field holds, and raising the keyboard over it then costs the reading for nothing.
-The default answers that case; `autoFocus` on the field answers the other, and
-saying which is which is the caller's to make because nothing about the markup
-can tell them apart.
+A popup holding one field is not necessarily a popup opened to fill it — it is
+often opened to READ what the field holds, and raising the keyboard over it then
+costs the reading for nothing. Nothing about the markup tells the two apart, so
+saying which is the caller's.
 
 ## What a field says about itself
 
-- `autoFocus` — "I am what the user came for". A picker's search box, the field
-  of a popup opened to type in it. It holds on a touch device too: it is how a
-  field opts back into a keyboard the surface would otherwise keep down.
+- `autoFocus` — "I am what the user came for": the field of a popup opened to
+  type in it.
 - `autoFocus="restore"` — "never on a fresh open, but bring me back". A field
   the user was typing in when a popup over it closed: reopening returns to it,
   opening for the first time does not raise a keyboard on it.
@@ -153,10 +146,8 @@ can tell them apart.
 ## When the opening places nothing
 
 A popup can open on content that holds nothing focusable yet — content still
-being built, a screen not yet interactive. The ladder then comes back empty and
-the opening places no focus at all.
-
-That debt is settled two ways, whichever comes first:
+being built, a screen not yet interactive. The ladder then places nothing inside
+it, and that debt is settled two ways, whichever comes first:
 
 - what arrives a moment later takes it — an `autoFocus` in content built during
   the opening is honored, rather than deferring to a transfer that never
@@ -165,9 +156,8 @@ That debt is settled two ways, whichever comes first:
   before the browser paints and long before the user can do anything. A surface
   that says `autoFocus` about itself is placed by that second try.
 
-Without this, the same popup would land the focus in a different place — or
-nowhere — depending on whether it was opened by a click or by the page loading,
-which is the same popup behaving differently for no reason the user can see.
+So the same popup places the focus the same way whether a click or the page
+loading opened it.
 
 ## The ring is decided too
 
@@ -180,25 +170,25 @@ answers instead, and the answer is the **modality of what asked**:
   arrow key: a ring;
 - a finger or a mouse asked: no ring, whatever the code did in between;
 - the element receiving it is **editable** — a text input, a textarea, a
-  contenteditable: a ring anyway. Someone about to type has to see where.
+  contenteditable: a ring anyway. Someone about to type has to see where, so
+  opening a search field with a mouse click still rings.
 
-That last one is why opening a search field with a mouse click still rings: the
-field is where you are about to type, not somewhere you merely landed.
-
-Nothing to pass, and nothing to opt into: it is how every navi component moves
-the focus.
+The ladder answers it this way, and so does `moveFocusTo`
+([below](#moving-the-focus-yourself)).
 
 ### In your CSS
 
-`:focus-visible` and `[data-focus-visible]` — the standard selectors, nothing
-navi-specific. navi implements them with a wider meaning than the browser's: an
-element also counts as focused while a **proxy** holds the focus (a read-only
-range delegating to a sibling) or while an element **controlling** it does (a
-combobox input with `aria-controls` on its listbox — the listbox reads as
-focused while the input is). Style the standard name and you get that for free.
+Navi's "focused" is wider than the browser's: an element counts as focused while
+an element **controlling** it holds the focus (a listbox, while the combobox
+input with `aria-controls` on it does), and a **proxy** — the visible stand-in
+for a hidden real control — while its real control does. That meaning lives in
+`[data-focus-visible]`, the attribute navi writes on an element tracking the
+pseudo-class: navi's own controls, and a `Box` of yours once its `style` holds a
+`":focus-visible"` key. A native `:focus-visible` rule only gets the browser's
+behaviour.
 
 ```css
-.my_row:focus-visible {
+.my_row[data-focus-visible] {
   outline: 2px solid var(--navi-focus-outline-color);
 }
 ```
@@ -217,18 +207,21 @@ when something else took the focus meanwhile — the page arriving, focusing a
 field of its own — that one keeps it.
 
 So `{editing && <Dialog open>…</Dialog>}` unmounted from a button inside it
-lands the focus back on the button that opened it, and a dialog left along
-with the page around it lands it nowhere (`<body>`), exactly as if the page
-had simply been removed.
+lands the focus back on the button that opened it, and a dialog left along with
+the page around it lands it nowhere (`<body>`), exactly as if the page had
+simply been removed.
 
 ## Moving the focus yourself
 
 Prefer saying where the focus belongs over moving it: `autoFocus` on the field
 or the surface (the ladder above), and navi places it at the right moment, with
-the right ring, without scrolling anything.
+the right ring, without scrolling it into view.
 
 When you really do have to move it — a control of your own handing over to
-another — use `moveFocusTo` rather than `element.focus()`:
+another — use `moveFocusTo` rather than `element.focus()`. A bare `.focus()`
+answers "who" and leaves "is this visible" to the browser, which reads the last
+thing that touched the DOM — your own call. `moveFocusTo` applies both decisions
+above, no scroll-into-view and the ring of the modality:
 
 ```js
 import { moveFocusTo } from "@jsenv/navi";
@@ -236,15 +229,5 @@ import { moveFocusTo } from "@jsenv/navi";
 moveFocusTo(searchInputElement);
 ```
 
-That is the whole call. It applies the two decisions above for you: no
-scroll-into-view, and a ring only where the user is on the keyboard (an
-editable target ringing anyway). A bare `element.focus()` answers "who" and
-leaves "is this visible" to the browser, and the browser reads the last thing
-that touched the DOM — which was your own call.
-
-Pass `focusVisible` when you know better than the last interaction does, and
-`preventScroll: false` when the element really has to be brought into view:
-
-```js
-moveFocusTo(element, { focusVisible: true });
-```
+`focusVisible` is for when you know better than the last interaction does, and
+`preventScroll: false` for an element that really has to be brought into view.

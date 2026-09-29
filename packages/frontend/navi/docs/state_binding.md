@@ -113,7 +113,8 @@ const styleSignal = useSignalSync(user.share_image_style);
 ```
 
 One write at a time shows nothing: the answer carries the value the signal
-already holds. Two in flight — two notches in quick succession — and every
+already holds. Two in flight — two notches in quick succession, nothing
+reordered, only an answer landing after a newer write was sent — and every
 answer is to a request the user has already moved past: the container walks to
 it, the callback saves it, and that write's answer starts the next turn. The
 loop never closes.

@@ -22,9 +22,7 @@ linking to them, and turning them into tabs.
   - [A `SlideContainer` in the URL: a position that is not a place one came from](#a-slidecontainer-in-the-url-a-position-that-is-not-a-place-one-came-from)
   - [A state whose values ARE places: `history: "push"`](#a-state-whose-values-are-places-history-push)
 - [A layer over the screen: what its address may say](#a-layer-over-the-screen-what-its-address-may-say)
-  - [Why a layer is a routing question at all](#why-a-layer-is-a-routing-question-at-all)
   - [`/me/settings` names a place the reader is not at](#mesettings-names-a-place-the-reader-is-not-at)
-  - [It is not "use a search param"](#it-is-not-use-a-search-param)
   - [What the search param buys: the way back is in the address](#what-the-search-param-buys-the-way-back-is-in-the-address)
   - [The wiring](#the-wiring)
   - [Places inside the layer](#places-inside-the-layer)
@@ -34,30 +32,23 @@ linking to them, and turning them into tabs.
 
 Where the user is — which section, which tab, which sub-page — is state. Put it
 in the URL unless there is a reason not to. What that buys, none of which can be
-retrofitted later:
-
-- the browser's back and forward buttons work, because each place is a history
-  entry;
-- the place is shareable and bookmarkable — someone can send a link to exactly
-  what they are looking at;
-- the place is **targetable**: anything, anywhere in the app, can send the user
-  there with a `<Link route={…}>`, without knowing anything about the component
-  that displays it;
-- a reload lands where the user was.
+retrofitted later: back and forward work, each place being a history entry; the
+place is shareable and bookmarkable; it is **targetable** — anything in the app
+can send the user there with a `<Link route={…}>`, knowing nothing of the
+component that displays it; and a reload lands where the user was.
 
 So the default shape of a tab row is routes: `<Nav>` + `<Link route>` +
-`<RouteTravel>`. `SlideContainer` is the exception, not the starting point — see
-[Tabs that are not routes](#tabs-that-are-not-routes) for the cases that
-genuinely are one, and
-[A `SlideContainer` in the URL](#a-slidecontainer-in-the-url-a-position-that-is-not-a-place-one-came-from)
-for the middle answer: a position READ from the URL and restored on reload,
-without a route and without a history entry per step.
+`<RouteTravel>`. `SlideContainer` is the exception, not the starting point (see
+[Tabs that are not routes](#tabs-that-are-not-routes)), with a middle answer: a
+position READ from the URL and restored on reload, without a history entry per
+step
+([A `SlideContainer` in the URL](#a-slidecontainer-in-the-url-a-position-that-is-not-a-place-one-came-from)).
 
 ## Declaring routes
 
-Every route is created with `route()` and they are all declared to `setupRoutes()`
-in one call — the routing system resolves specificity and signal ownership across
-the whole set, so it has to see the whole set.
+Every route is created with `route()` and all are declared to `setupRoutes()` in
+one call: the routing system resolves specificity and signal ownership across the
+whole set, so it has to see the whole set.
 
 ```js
 // routes.js
@@ -71,49 +62,22 @@ setupRoutes([HOME_ROUTE, GAMES_ROUTE, GAME_ROUTE]);
 ```
 
 Named exports from one module, on purpose: the file is the map of the
-application, and an import line says which places a component deals with.
-Routes are plain objects usable outside of any component — `route.buildUrl()`,
-`route.navTo()`, `route.redirectTo()`, `route.matching` — which is why they are
-declared apart from the JSX that renders them.
+application, and an import line says which places a component deals with. Routes
+are plain objects usable outside any component (`buildUrl()`, `navTo()`,
+`redirectTo()`, `matching`), which is why they are declared apart from the JSX.
 
 ### A document that is not at the root: `setBaseUrl`
 
 A second document in the same site — an admin panel at `/admin/admin.html`
-alongside the app at `/` — owns the addresses below its own directory, and its
-routes are written as if that directory were the root:
-
-```js
-// admin/routes.js
-import { route, setBaseUrl, setupRoutes } from "@jsenv/navi";
-
-setBaseUrl("/admin/admin.html");
-
-export const PLACES_ROUTE = route("/places");
-export const PLACE_ROUTE = route("/places/:placeId");
-
-setupRoutes([PLACES_ROUTE, PLACE_ROUTE]);
-```
-
-`/admin/places/42` matches `PLACE_ROUTE`, and `buildUrl` puts the prefix back —
-nothing else in the document ever spells `/admin` again, so the panel can be
-moved by changing this one line.
-
-Two things about it:
-
-- **it belongs in the routes module, above `setupRoutes()`** — the base url
-  is read whenever an address is matched or built, and the first match happens
-  right there, as the routes are set up against the current address. In the
-  entry point it would be too late: the import of the routes module runs
-  first, `setupRoutes()` with it, and an import sorter would put the call after
-  anyway;
-- **the server has to answer the document for every address below it.** jsenv's
-  dev server already does: an address it finds no file for is answered with the
-  closest html file above it, `<dirname>.html` included, so `/admin/places/42`
-  is served `/admin/admin.html`. Any other host needs the same rule.
+beside the app at `/` — writes its routes as if its directory were the root,
+after `setBaseUrl("/admin/admin.html")` in its routes module, above
+`setupRoutes()` (see its JSDoc). **The server has to answer the document for
+every address below it.** jsenv's dev server already does — an address it finds
+no file for is answered with the closest html file above it, `<dirname>.html`
+included, so `/admin/places/42` is served `/admin/admin.html` — and any other
+host needs the same rule.
 
 ### A section is allowed to be a route of its own
-
-This is the most commonly missed point.
 
 When a segment can take a **finite, known set of values**, declare one literal
 route per value rather than one parameterized route you pass params to:
@@ -125,49 +89,24 @@ export const CANDIDATE_GAMES_ROUTE = route("/games/candidates");
 export const FINISHED_GAMES_ROUTE = route("/games/finished");
 ```
 
-A literal route may sit alongside a parameterized one on the same segment
-(`/games/:section` and `/games/my_games`). Both match, and the literal one is
-taken as the more specific — so declaring the sections costs nothing and takes
-nothing away.
+The routes are then listable — `routes.js` shows the places the application has,
+where `/games/:section` shows one and hides three; call sites need no
+`routeParams`, so a wrong section is a missing import rather than a string nobody
+checks; and each section can carry search params of its own. Params stay for what
+the code cannot enumerate (an id, a date), and for a finite set handled
+**uniformly** — a row built by `.map()` over the sections — bound to a signal for
+validation and a default.
 
-Why prefer it:
-
-- **The routes are listable.** `routes.js` shows the places the application has.
-  A single `/games/:section` shows one place and hides three.
-- **No `routeParams` at the call sites.** `<Link route={MY_GAMES_ROUTE}>` instead
-  of `<Link route={GAMES_ROUTE} routeParams={{ section: "my_games" }}>`, and the
-  same for `<Route>`. A wrong section is then a missing import rather than a
-  string nobody checks.
-- **Each section can carry its own search params.** `/games/finished` may have a
-  `sort` the other sections have no business knowing about.
-
-Params stay for what is genuinely dynamic — a value the code cannot enumerate:
-
-```js
-export const GAME_ROUTE = route("/games/:gameId"); // ✅ an id
-export const DAY_ROUTE = route("/planning/:day"); // ✅ any date
-```
-
-A parameterized route also remains right for a finite set that must be handled
-**uniformly** — a row built by `.map()` over a list of sections, where writing
-one branch per section would be writing the same branch N times. Bind the param
-to a signal to get validation and a default:
-
-```js
-import { stateSignal } from "@jsenv/navi";
-
-const sectionSignal = stateSignal("to_come", {
-  id: "games_section",
-  oneOf: ["candidate", "to_come", "done"],
-  autoFix: true,
-});
-export const GAMES_SECTION_ROUTE = route(`/games/:section=${sectionSignal}`);
-```
+A literal and a parameterized route can sit on the same segment, and both then
+match: `/games/my_games` is also a `/games/:section`, whose signal is written
+`"my_games"`. Where both exist,
+the literal branch goes first (see [Rendering routes](#rendering-routes)) and the
+param is constrained to the values it really takes (see
+[Which values a param accepts](#which-values-a-param-accepts)).
 
 #### Declaring the sections is what makes them places
 
-Both forms can be written together, and they say different things — which is
-why declaring the literals is not decoration:
+Both forms written together say different things:
 
 ```js
 export const MY_GAMES_ROUTE = route(`/games/me/:section=${sectionSignal}`);
@@ -176,49 +115,28 @@ export const MY_GAMES_CANDIDATE_ROUTE = route("/games/me/candidate");
 export const MY_GAMES_DONE_ROUTE = route("/games/me/done");
 ```
 
-Standing on `/games/me/done`:
+On `/games/me/done`, `MY_GAMES_ROUTE.buildUrl()` gives `/games/me/done`: the
+parameterized route reads its signal, so a link to "my games" from the bottom bar
+**reopens the section you were looking at**. `MY_GAMES_TO_COME_ROUTE.buildUrl()`
+gives `/games/me`, always: a tab must point at its own section, never at the one
+already open — a tab pointing at the current page cannot be clicked. The default
+section has no segment, so its literal route is the **parent** of the
+parameterized one, and still does not inherit the param.
 
-- `MY_GAMES_ROUTE.buildUrl()` → `/games/me/done`. The parameterized route reads
-  its signal, so a link to "my games" from the bottom bar **reopens the section
-  you were looking at**. That is what the signal is for, and `persists` makes it
-  survive the night;
-- `MY_GAMES_TO_COME_ROUTE.buildUrl()` → `/games/me`, always. A tab must point at
-  its own section, never at the one already open — a tab pointing at the current
-  page is a tab that cannot be clicked.
-
-The default section is the delicate one: it has no segment of its own, so its
-literal route is the **parent** of the parameterized one. It still means the
-default section and does not inherit the param.
-
-What tells navi these values name pages rather than qualify one is precisely
-that the literal routes exist. Where no literal is declared, the value stays a
-qualifier and an ancestor url keeps it:
+That the literals exist is what tells navi these values name pages. Where none is
+declared, the value stays a qualifier, carried by an ancestor url:
 
 ```js
-const tabSignal = stateSignal("general", { id: "settings_tab" });
 export const ADMIN_ROUTE = route(`/admin/:section=${sectionSignal}/`);
 export const ADMIN_SETTINGS_ROUTE = route(`/admin/settings/:tab=${tabSignal}`);
 // nobody declared /admin/settings/advanced, so on tab "advanced":
 // ADMIN_ROUTE.buildUrl() → /admin/settings/advanced — "admin, where you left it"
 ```
 
-So the rule is the one you would want: name a section and it becomes a place;
-leave it unnamed and it stays a setting carried along.
-
 ### Which values a param accepts
 
 A param says which segments it accepts, and a segment it declines is not a
 half-match to be sorted out later — the route simply does not match:
-
-```js
-export const GAME_ROUTE = route(`/:gameId=${gameIdSignal}`, {
-  params: { gameId: /^W-[A-Z0-9]{8}$/i },
-});
-```
-
-A constraint is a regexp, the list of accepted values, or a `(value) => boolean`
-— the list is compared as strings, so it can be the very `oneOf` given to the
-signal bound to that param:
 
 ```js
 const SECTIONS = ["candidate", "to_come", "done"];
@@ -229,27 +147,25 @@ const sectionSignal = stateSignal("to_come", {
 export const GAMES_SECTION_ROUTE = route(`/games/:section=${sectionSignal}`, {
   params: { section: SECTIONS },
 });
+export const GAME_ROUTE = route(`/:gameId=${gameIdSignal}`, {
+  params: { gameId: /^W-[A-Z0-9]{8}$/i },
+});
 ```
 
-This is what makes a param usable at the root, where it would otherwise swallow
-every single-segment address: `/cgu` and `/me` stay other routes' urls,
-`<Route fallback>` is reachable for `/whatever`, and no signal is written for a
-url this route has nothing to do with.
-
-A constrained param is also **required** — no segment is not one of the values
-it accepts — so `/:gameId` does not match `/`. The address with no segment is a
-route of its own, which is the shape you want anyway.
+This is what lets a param sit at the root without swallowing every single-segment
+address: `/cgu` stays another route's url, `<Route fallback>` is reachable, and
+no signal is written for a url this route has nothing to do with. A constrained
+param is also **required**: `/:gameId` does not match `/`. The accepted forms are
+in `route()`'s JSDoc.
 
 #### Constrain the shape, never the existence
 
 A constraint answers one question: **is this segment addressed to this route?**
 It is decided on the url alone, before anything is written, so it can only be
 about shape — that a segment looks like a game code, not that the game exists.
-
-Whether the value is any good is a different question, asked later and answered
-by different things: the signal's own validation (`oneOf`, `autoFix`) and the
-route action's data. That question belongs to a route that **did** match, with a
-page free to repair itself, show a not-found screen, offer a way out:
+Whether the value is any good is asked later, by the signal's validation and the
+route action's data, on a route that **did** match, with a page free to show a
+not-found screen and offer a way out:
 
 ```js
 // ✅ /W-ZZZZZZZZ matches, the action 404s, the page says so
@@ -257,122 +173,52 @@ page free to repair itself, show a not-found screen, offer a way out:
 //    and "no route matched" is a worse answer than "this game is gone"
 ```
 
-So the signal never takes part in matching. It knows what to make of a value;
-the route decides whether the url is its own.
-
-#### Why order stops being load-bearing
-
-When several routes match one url and bind the **same signal** on a param of the
-same name, they all write it, in declaration order — the last one wins:
-
-```js
-route(`/games/:gameId=${gameIdSignal}`); // declared first
-route(`/:gameId=${gameIdSignal}/:state`); // declared later
-// on /games/W-ABC234PQ the second one matches too and writes "games"
-```
-
-Constraining `gameId` removes that second match entirely, which is the fix.
-Where a param genuinely cannot be constrained, the routes must not share a
-signal.
+Constraining is also the fix when several routes match one url and bind the
+**same signal** on a param of the same name: they all write it, in declaration
+order, the last one winning (`/:gameId/:state` matches `/games/W-ABC234PQ` and
+writes `"games"` into a `gameIdSignal` it shares). Where a param genuinely cannot
+be constrained, the routes must not share a signal.
 
 ### An address that only sends elsewhere
 
-Some addresses are not pages: the root of an app whose home screen is « my
-games », the old address of a section that moved, the share link of a game
-carrying a segment only WhatsApp cares about. They exist to be resolved, and a
-route says so itself:
+Some addresses are not pages — the root of an app whose home screen is « my
+games », the old address of a section that moved, a share link carrying a
+segment only WhatsApp cares about — and the route says so itself:
 
 ```js
 export const HOME_ROUTE = route("/", { redirectRoute: MY_GAMES_ROUTE });
-export const GAME_SHARED_ROUTE = route("/:gameId/:shareState", {
-  redirectRoute: GAME_ROUTE,
-});
 ```
-
-The params found in the url carry over to the ones the target route declares
-under the same name — `gameId` above needs no help — and what it cannot place
-is left behind, `shareState` included. `redirectRouteParams` says the rest:
-
-```js
-// renaming, when the two routes do not call it the same thing
-route("/partie/:id", {
-  redirectRoute: GAME_ROUTE,
-  redirectRouteParams: ({ id }) => ({ gameId: id }),
-});
-// dropping one, keeping the others
-route("/:gameId/invite", {
-  redirectRoute: MY_GAMES_ROUTE,
-  redirectRouteParams: { gameId: undefined },
-});
-// carrying nothing over
-route("/tri", { redirectRoute: MY_GAMES_ROUTE, redirectRouteParams: null });
-```
-
-#### Why it is not a page rendering `null`
 
 The redirection is resolved at the door of the navigation, before the url is
-written anywhere. Nothing about that address ever happens: no history entry, no
-route matching, no route action loading data for a screen nobody will see, no
-element mounted, nothing painted — and going back lands on the page before it
-rather than replaying the redirection forever.
-
-A page doing it in an effect gets none of that. It has to be routed to first,
-which means the address exists, its action runs, and the app is on a screen
-nobody should see for one paint — one a route transition can even animate _to_.
-Anything reached by rendering is already too late, so a redirection is declared
-with the address and never appears in the `<Route>` tree at all.
-
-It fires on the route's own address only. `/` catches everything below it when
-it renders a container, and would carry `/cgu` away with it if redirecting
-followed the same reading — so redirecting asks the stricter question: is this
-url exactly that route's address?
-
-Where several redirecting routes answer for one url, the more specific wins —
-`/:gameId/invite` over `/:gameId/:shareState`, the same reading the rest of the
-router uses. Chains collapse into one navigation, and a cycle throws naming the
-addresses it goes through.
+written anywhere: no history entry, no route action, nothing mounted, and going
+back lands on the page before it. A page redirecting in an effect gets none of
+that — the address exists, its action runs, and a screen nobody should see is
+painted, one a route transition can even animate _to_ — so a redirection is
+declared on the route, **never as a page rendering `null`**. It fires on the
+route's own address only (`/` matches everything below it for rendering, and
+would carry `/cgu` away); of several redirecting routes the more specific wins,
+chains collapse into one navigation, and a cycle throws. Which params carry over:
+the JSDoc of `redirectRoute` and `redirectRouteParams`.
 
 #### A search param only the link carries: `dropSearchParams`
 
-A share link can carry a param that is not for the app at all: `?v=k3f9x2`, a
-fingerprint of what the link preview shows, there because WhatsApp caches one
-preview per address. Once the link is opened it has done its job, and left in
-the bar it gets copied and shared again, stale. The route that owns the address
-declares it:
-
-```js
-export const GAME_ROUTE = route(`/games/:gameId=${gameIdSignal}`, {
-  searchParams: { weather: weatherSignal },
-  dropSearchParams: ["v"],
-});
-```
-
-`/games/W-ABC234PQ?weather&v=k3f9x2` becomes `/games/W-ABC234PQ?weather` at the
-door, exactly like a redirection: no history entry, no route action, no signal
-written. The other params stay as they were written. Like a redirection, it
-applies to the route's own address only.
-
-A redirecting route on `/games/:gameId` cannot do this. A search param never
-makes a pattern fail to match, so that route also matches the address without
-`v`. It then redirects the address to itself, which does nothing, and it
-reports `matching` next to `GAME_ROUTE` on every game page.
+A share link can carry a param that is not for the app at all — `?v=k3f9x2`,
+there because WhatsApp caches one link preview per address — and left in the bar
+it gets copied and shared again, stale. The route that owns the address drops it
+at the door, like a redirection, with `dropSearchParams: ["v"]`. A redirecting
+route cannot do this: a search param never makes a pattern fail to match, so it
+would match the address without `v` too, redirect it to itself, and report
+`matching` next to the real route on every page.
 
 #### When the destination depends on data
 
-`/admin` sends the reader to the first section their permissions allow: the
-target is not known until `GET /me` has answered. That is not a redirection at
-all — the door resolves an address from the url alone, and there is nothing to
-resolve yet.
-
-What it is, is a **landing that loads**, so it is declared the way every load is:
-a route action, and the redirection once the answer is there.
+`/admin` sends the reader to the first section their permissions allow: a target
+not known until `GET /me` has answered. That is not a redirection — the door
+resolves an address from the url alone — it is a **landing that loads**: a route
+action, and the redirection once the answer is there.
 
 ```js
-export const ADMIN_ROUTE = route("/admin");
-const anySectionMatchingSignal = anyMatchingRouteSignal([
-  PLACES_ROUTE,
-  USERS_ROUTE,
-]);
+export const ADMIN_ROUTE = route("/admin"); // no trailing slash: the landing alone
 
 routeAction(
   ADMIN_ROUTE,
@@ -380,31 +226,19 @@ routeAction(
     const me = await ME.GET.run();
     firstSectionAllowed(me).redirectTo();
   },
-  // only on the landing itself: "/admin" also matches every section below it
-  () => !anySectionMatchingSignal.value,
+  // params, even constant ones: an action without them is prerun on a hover
+  () => true,
 );
 ```
 
-`redirectTo()` replaces the entry rather than stacking onto it, so the back
-button still leaves by where the reader came in — the one property of a
-redirection worth keeping here.
-
-The params are not optional here, for two reasons. A container address matches
-everything below it, so without the gate the landing would fire on every
-section and send the reader back to the first one. And a route action declared
-without params is fetched ahead of the arrival — a link to it preruns it when
-the pointer reaches the link (see [dynamic_import.md](./dynamic_import.md)),
-which for a read is a head start and for a navigation is the navigation
-happening on a hover. Params say the action asks something of the address, and
-that is what keeps it from being prerun.
-
-What it costs, and there is no way around it: the address exists, and something
-is on screen while the request is out. That is honest — the reader IS waiting —
-so give `/admin` the screen a wait deserves (the section frame, a `<Loading>`)
-rather than a page rendering `null`. What must not happen is the rest of the
-list: the wait belongs to the route action, so no page below it runs, and the
-destination is decided in one place instead of in an effect that fires again on
-every render.
+`redirectTo()` replaces the entry, so the back button still leaves by where the
+reader came in. The params function is not optional: a route action declared
+without one is prerun when the pointer reaches a link to it (see
+[dynamic_import.md](./dynamic_import.md#ahead-of-the-render-intent)) — for a read
+a head start, for a navigation the navigation happening on a hover. The cost: the
+address exists, and something is on screen while the request is out — give it
+the screen a wait deserves (the section frame, a `<Loading>`), not a page
+rendering `null`.
 
 ### Search params
 
@@ -419,44 +253,29 @@ const vueSignal = stateSignal("liste", {
 export const HOME_ROUTE = route("/", { searchParams: { vue: vueSignal } });
 ```
 
-The signal and the URL are the same state: writing the signal rewrites the URL,
-and a URL arriving from outside writes the signal. Never keep a `useState`
-beside a route param for the same fact.
-
-Declared on the **root route**, a search param is a position that holds wherever
-one is in the application — a view mode that survives moving from page to page.
-Declared on one route, it exists only there.
+The signal and the URL are the same state: never keep a `useState` beside a route
+param for the same fact. Declared on the **root route**, a search param holds
+wherever one is in the application; declared on one route, it exists only there.
 
 Writing it AMENDS the history entry one is on rather than stacking a new one: a
 param that qualifies a screen is not a place, and one entry per write turns a
-single back-press into as many as the user moved. A state whose values ARE
-places says so — see [`history: "push"`](#a-state-whose-values-are-places-history-push).
+single back-press into as many as the user moved. A state whose values ARE places
+says so — see [`history: "push"`](#a-state-whose-values-are-places-history-push).
 
 #### A value written per frame
 
-Every write of the signal reaches the address, synchronously, and browsers
-refuse an address written too often: Safari throws a `SecurityError` past 100
-writes per 10 seconds, and the state then runs ahead of an address that stopped
-following. A value dragged at 60 Hz gets there in under two seconds. Chromium
-drops the writes silently, so a developer working there never sees it; navi
-warns in dev when the budget is reached.
+Every write reaches the address, synchronously, and browsers refuse an address
+written too often: Safari throws a `SecurityError` past 100 writes per 10
+seconds, and the state then runs ahead of an address that stopped following
+(Chromium and Firefox drop the writes silently; navi warns in dev).
 
-**An address is not a recording of a gesture.** What the address records is
-where the value was PUT DOWN, not the path the finger took. So the value one
-drags belongs to the gesture, and the state bound to the url is written when the
-gesture ends:
-
-- **A gesture with a release** — a disc turned, a slider dragged: hold the value
-  in the component while the pointer is down, and write the signal on release.
-  Re-reading the signal meanwhile would pull the control back mid-gesture, so
-  the held value is the one drawn.
-- **A movement with no release** — a wheel zooming, a fly-to animation: write
-  the signal when the movement has settled (a short idle timer, or the end of
-  the animation).
-
-When every intermediate value IS a valid address — the centre of a panned map,
-where each frame is a place one could reload into — the state can ask navi to
-debounce the browser's address instead, in milliseconds:
+**An address is not a recording of a gesture.** It records where the value was
+PUT DOWN, not the path the finger took: a value one drags is held in the
+component while the pointer is down and written on release — re-reading the
+signal meanwhile would pull the control back mid-gesture — and a movement with no
+release (a wheel zooming, a fly-to) is written once it has settled. When every
+intermediate value IS a valid address — the centre of a panned map — the state
+can ask navi to debounce the browser's copy of the address instead:
 
 ```js
 const eastSignal = stateSignal(0, {
@@ -466,18 +285,24 @@ const eastSignal = stateSignal(0, {
 });
 ```
 
-The routes, the document url and the renders still follow every write; only the
-browser's copy of the address (`window.location`) waits for the state to stay
-still that long, and is then written with the last value. A push is never
-debounced, and a push or a state written onto the entry flushes what is pending
-first. A back pressed before the write keeps the entry at the last address
-written: the drag in progress, and nothing else.
+The routes, the document url and the renders still follow every write; only
+`window.location` waits for the state to stay still that long, and a back pressed
+before the write keeps the last address written. A push is never debounced.
 
 ## Rendering routes
 
 `<Route>` is the only primitive. With `children` it is a container that renders
 the branch matching the URL; with a `route` it is a branch; with `fallback` it is
 the branch taken when no sibling matches.
+
+A route matches its own address and nothing below it — `/games/:gameId` does not
+match `/games/2/edit` — except `/` and a pattern ending in `/`, which match
+everything below them too (`route("/games/")` matches `/games/2/edit`): that is
+what keeps a section's container on screen while one is inside it. Two patterns
+can still match one url — `/games/my_games` is also a `/games/:gameId` — and a
+container renders the **first** branch that matches, in the order written, not
+the most specific. So the branches go from the most precise to the widest, and
+the pages of a `RouteTravel` row alike:
 
 ```jsx
 <Route>
@@ -488,18 +313,11 @@ the branch taken when no sibling matches.
 </Route>
 ```
 
-`elementProps` passes props to the element, which is how a section hands its own
-local state down to its sub-pages.
-
-Two shapes for a section, and which one applies is decided by the URL:
-
-- **A section with a shared prefix owns its own sub-router.** One leaf
-  `<Route route={DASHBOARD_SECTION_ROUTE} element={DashboardSection} />` at the
-  top, and `DashboardSection` renders its own `<Route>` tree plus whatever chrome
-  it has. Everything about the section is in one file.
-- **Pages sharing a layout but no prefix** (`/profile` and `/settings` inside an
-  authenticated shell) use a container `<Route element={AuthLayout}>`: the active
-  child is injected into the layout as its children.
+A section with a shared prefix owns its own sub-router: one leaf on
+`/dashboard/` whose element renders its own `<Route>` tree and chrome, handing its
+local state down through `elementProps`. Pages sharing a layout but no prefix
+(`/profile`, `/settings`) use a container `<Route element={AuthLayout}>`, which
+injects the active child as its children.
 
 ### Loading data
 
@@ -525,102 +343,72 @@ section of pages shares one:
 </Route>
 ```
 
-The order matters: the boundary goes **outside** the `<Loading>`. A page
-suspends first and fails second, and a boundary placed under the `Suspense` it
-suspended in is part of the tree being held.
+The order matters: the boundary goes **outside** the `<Loading>`. A page suspends
+first and fails second, and a boundary placed under the `Suspense` it suspended
+in is part of the tree being held.
 
 A branch selected inside a wrapper keeps it — the container renders the active
-branch alone, wrapper included, so `<Loading>`/`<ErrorBoundary>` can bracket a
-subset of the branches rather than the whole router. What happens to a failure
-no boundary takes: [error_handling.md](./error_handling.md).
+branch alone, wrapper included — so `<Loading>`/`<ErrorBoundary>` can bracket a
+subset of the branches rather than the whole router. What happens to a failure no
+boundary takes: [error_handling.md](./error_handling.md).
 
 ## Links and tab rows
 
-`<Link route={…}>` builds its href from the route and knows on its own whether it
-is the current one — that is what draws the current-tab state. It also fetches
-the code of where it leads when the pointer or the focus reaches it, for a page
-loaded on demand (see [dynamic_import.md](./dynamic_import.md)). `<Nav>` says once,
-for the whole row, where the bar that marks the current tab goes:
+`<Link route={…}>` builds its href from the route, knows on its own whether it is
+the current one — that is what draws the current-tab state — and fetches the code
+of where it leads when the pointer or the focus reaches it (see
+[dynamic_import.md](./dynamic_import.md#ahead-of-the-render-intent)). `<Nav>`
+says once, for the whole row, where the bar that marks the current tab goes:
 
 ```jsx
 <Nav currentIndicator>
-  <Link route={MY_GAMES_ROUTE} variant="tab">
+  <Link route={MY_GAMES_ROUTE} variant="tab" replace>
     Mes parties
   </Link>
-  <Link route={CANDIDATE_GAMES_ROUTE} variant="tab">
+  <Link route={CANDIDATE_GAMES_ROUTE} variant="tab" replace>
     Candidatures
   </Link>
 </Nav>
 ```
 
-The bar travels from one tab to the next rather than blinking, because `<Nav>`
-gives it a `view-transition-name` of its own: the browser then moves it on the
-same clock as any transition playing — including a `RouteTravel` swipe, with no
-wiring between the two.
+The bar glides from one tab to the next when the change between them plays as a
+view transition — a `RouteTravel` swipe, a route transition — because `<Nav>`
+names it for that movement (`currentIndicatorSlides`, on by default), and only
+for a movement between two tabs of its own row: during any other route movement
+the bar leaves or arrives with its row, a named element inside a page that moves
+standing still (see
+[view_transitions.md](./view_transitions.md#a-name-is-unique-per-document)).
+With no transition at all, it jumps.
 
-An entry of the row usually stands for a whole section, not for the single page
-it opens: "Lieux" must stay lit while the reader is on `/places/42`. That is
-`currentAlso` — the routes, other than the link's own, that the entry also
-stands for:
+`replace` is what a row of tabs wants: the neighbour is a lateral move, not a step
+deeper, so the destination takes the place of the current history entry — the
+whole row weighs one entry, and the back button (the arrow at the top, the
+phone's own) leaves by where the reader came in. The link stays a link (an
+address, a middle click, `aria-current`); the same word is
+`navTo(url, { replace: true })`, `route.redirectTo()`, `<Button replace>`. A
+replaced entry inherits the state of the one it takes the place of: **an entry's
+state does not say how it arrived** — only the navigation being applied does, and
+navi is the one applying it.
 
-```jsx
-<Link route={PLACES_ROUTE} currentAlso={[PLACE_ROUTE]} variant="tab">
-  Lieux
-</Link>
-```
-
-`currentExcept` is the other side: a place under the section the entry does NOT
-stand for. Both amend what a link claims about itself and nothing else — which
-is why neither of them is an answer to a route that lies about where the reader
+An entry usually stands for a whole section: "Lieux" stays lit on `/places/42`
+with `currentAlso={[PLACE_ROUTE]}`, and `currentExcept` names a place under the
+section it does NOT stand for. Both amend what a link claims about itself and
+nothing else — neither is an answer to a route that lies about where the reader
 is (see [what its address may say](#a-layer-over-the-screen-what-its-address-may-say)).
-
-A row of tabs is a lateral move: the neighbour is one finger away, and going
-there is not going one step deeper. `replace` says exactly that — the
-destination takes the place of the current history entry instead of stacking
-onto it, so the whole row weighs one entry and the back button (the arrow at the
-top, the phone's own) leaves by where the reader came in:
-
-```jsx
-<Link route={CANDIDATE_GAMES_ROUTE} variant="tab" replace>
-  Candidatures
-</Link>
-```
-
-The link stays a link — an address, a middle click, the keyboard, `aria-current`
-— only the way there changes. It is the same word as `navTo(url, { replace:
-true })` and `route.redirectTo()` — and as `<Button replace>`, on an `href` or
-on a `--navi-nav-to` command.
-
-A replaced entry inherits the state of the one it takes the place of (so does
-`route.redirectTo()`): **an entry's state does not say how it arrived**. Only
-the navigation being applied says that, and navi is the one applying it — see
-the back arrow below, which is what that fact is usually needed for.
 
 ## The back arrow: `navBack`
 
 An arrow drawn inside the app promises the screen the reader came from — never
-the page they were on before the app. Both cases are real for the same url: one
-descends into a profile from a list, or one opens it cold from a shared link, a
-bookmark, a notification. `history.back()` answers the first and, on the second,
-gives back the conversation the link came from.
-
-`window.history.length` cannot tell them apart — it counts the whole tab — and
-neither can an entry's state, for the reason just above. What answers is a count
-of how many entries of THIS document stand underneath, kept as the navigations
-are applied and written into each entry so it survives a reload mid-stack. navi
-keeps it: an app that kept its own would have to be told about every single
-`replace` it performs, and the one it forgets shows up only on a cold-opened
-screen after a precise gesture.
+the page before the app, which is what `history.back()` gives on a screen opened
+cold from a shared link, a bookmark, a notification. `window.history.length`
+counts the whole tab and cannot tell the two cases apart, and neither can an
+entry's state (above). navi counts the entries of THIS document underneath,
+through every push and replace it applies — an app keeping its own count forgets
+one, and it shows only on a cold-opened screen after a precise gesture.
 
 ```jsx
-const BackButton = () => {
-  const canNavBack = useCanNavBack();
-  ...
-};
+const canNavBack = useCanNavBack(); // reactive; canNavBackSignal outside components
 ```
-
-`useCanNavBack()` (or `canNavBackSignal` outside a component) is reactive: the
-arrow appears and disappears as the stack moves, it is not decided at mount.
 
 ```js
 navBack({ fallback: USER_ME_ROUTE.buildUrl() });
@@ -628,12 +416,9 @@ navBack({ fallback: USER_ME_ROUTE.buildUrl() });
 
 The `fallback` takes the place of the current entry rather than stacking on it:
 pushed, it would put the screen just left one press ahead, and the phone's own
-back button would walk straight back into it — a loop with no way out of the
-app. Without a `fallback`, a `navBack()` with nothing of ours behind does
-nothing.
-
-Said by a button, it is a command, the fallback being its argument the way
-`--navi-nav-to` carries its destination:
+back button would walk straight back into it — a loop with no way out of the app.
+Without a `fallback`, a `navBack()` with nothing of ours behind does nothing. Said
+by a button, it is a command carrying the fallback:
 
 ```jsx
 <Button command={`--navi-nav-back:${USER_ME_ROUTE.buildUrl()}`}>←</Button>
@@ -643,7 +428,7 @@ Said by a button, it is a command, the fallback being its argument the way
 
 `<RouteTravel>` wraps the `<Route>` tree of a row of tabs and makes every change
 between them a movement — a tab pressed, a key, the back button, and a thumb
-dragging the pages.
+dragging the pages:
 
 ```jsx
 <SectionNav />
@@ -656,215 +441,144 @@ dragging the pages.
 </RouteTravel>
 ```
 
-The router still mounts only the branch that matches; the page being left is
-shown from the picture the browser keeps of it. The page arriving mounts during
-the gesture and fills in under the finger, as its own loading state.
+The router still mounts only the branch that matches: the page being left is the
+picture the browser keeps of it, and the page arriving mounts during the gesture,
+filling in under the finger as its own loading state. The order of the tabs —
+"one step that way", which no URL says — is the order the children are written;
+the row is on the **first** of its pages that matches, like a `<Route>`; a page
+left out of the row does not travel. A swipe **replaces** the current entry, as
+`<Link replace>` does for a tab pressed: two gestures towards the same neighbour
+must not write two different histories — and a row of tabs is the one place a
+replace moves the scroll
+([below](#a-row-of-tabs-where-a-replace-is-an-arrival)). Several `RouteTravel`
+boxes may live on one page, and only the one travelling is captured.
 
-The order of the tabs — what "one step that way" means, which no URL says — is
-read from the children in the order they are written. Pass `routes` only to say
-another order, or when the pages are not children of the box. An entry is a route,
-or `{ route, params }` when the tabs are params of one route.
-
-The row is on the **first** of its pages that matches, the way a `<Route>` shows
-its first matching branch — several routes match at once when one is a case of
-another. A page left out of the row does not travel: reaching it is a change of
-place, not a step along the row, and it plays no movement. `axis="y"` lays the
-pages out as a column instead: forward is then the page rising and the next one
-coming up from below.
-
-A swipe **replaces** the current history entry, and a tab pressed says the same
-thing when its link asks for it (`<Link replace>`, see above) — the two gestures
-towards the same neighbour must not write two different histories. `onTravel`
-decides otherwise. A replace normally leaves the scroll where it is; a row of
-tabs is the exception, and gives each tab back the offset it was read at — see
-[A row of tabs, where a replace IS an arrival](#a-row-of-tabs-where-a-replace-is-an-arrival).
-
-Several `RouteTravel` boxes may live on one page — a section of the path and a
-search param of the root route are two rows of tabs, both live — and only the one
-actually travelling is captured.
-
-Demo: [../src/nav/demos/route_travel/route_travel.html](../src/nav/demos/route_travel/route_travel.html)
-and [../src/nav/demos/tabs/tabs.html](../src/nav/demos/tabs/tabs.html). The full
-spec of the gesture is [drag_to_travel.md](./drag_to_travel.md).
-
-`RouteTravel` is for pages that form a ROW the finger can push. Pages related
-pair by pair without being a row — a game opened from several places, a
-settings page rising over whatever showed it — are animated with
-`defineRouteTransition` instead, and a given pair must be animated by one of
-the two, never both: see [route_transitions.md](./route_transitions.md).
+`RouteTravel` is for pages that form a ROW the finger can push; pages related
+pair by pair are animated with `defineRouteTransition`, and a given pair by one
+of the two, never both (see
+[route_transitions.md](./route_transitions.md#route-transitions-and-routetravel--one-pair-one-system)).
+The gesture itself: [drag_to_travel.md](./drag_to_travel.md). Demos:
+`src/nav/demos/route_travel/route_travel.html`, `src/nav/demos/tabs/tabs.html`.
 
 ## Where a navigation lands: the scroll
 
 Five cases, and they are not a policy to configure but five different facts:
 
-- **Going somewhere new** (a `<Link>`, anything that pushes to another path)
-  lands at the top. It is an arrival: the offset one had elsewhere means nothing
-  here, and left alone the new entry would be born holding the previous page's
-  offset — which the browser would then hand back as if it were this page's own.
-  A push that keeps the path is not one: it stacks an entry over the page the
-  reader is scrolled in — a [layer](#a-layer-over-the-screen-what-its-address-may-say)
+- **Going somewhere new** (a push to another path) lands at the top. It is an
+  arrival: left alone, the new entry would be born holding the previous page's
+  offset, which the browser would then hand back as this page's own. A push that
+  keeps the path — a [layer](#a-layer-over-the-screen-what-its-address-may-say)
   opening, a [state whose values are places](#a-state-whose-values-are-places-history-push)
-  written — and moves nothing, like a replace.
-- **Going somewhere new, to an element** (`/places/le-set#tournaments`) lands
-  on the element whose `id` is the fragment, once it is rendered — even when it
-  arrives with the data a second later. See
-  [Landing on an element](#landing-on-an-element-the-fragment).
-- **Going back or forward** (the browser's buttons, `navBack()`,
-  `history.back()`) lands where that page was left. navi keeps the position and
-  puts it back once the page is really rendered, which is what the browser
-  cannot do: it restores at the instant the entry changes, when the document
-  still holds the page being left, so anything further down than that page is
-  tall is clamped away.
+  — stacks an entry over the page the reader is scrolled in, and moves nothing.
+- **Going somewhere new, to an element** (`/places/le-set#tournaments`) lands on
+  the element once it is rendered (see
+  [Landing on an element](#landing-on-an-element-the-fragment)).
+- **Going back or forward** lands where that page was left, put back once the
+  page is really rendered. The browser restores at the instant the entry changes,
+  while the document still holds the page being left, and clamps away anything
+  further down than that page is tall.
 - **Replacing the entry** (`<Link replace>`, `route.redirectTo()`, a param
-  settling, a state written) moves nothing. It is the same place said
-  differently, and the reader is still in the page they were reading — a row of
-  tabs is the one shape where that reading is wrong, see below.
+  settling) moves nothing: the same place said differently — except in a row of
+  tabs, below.
 - **A reload** lands where one was, as it would have without navi.
 
-One consequence is softened where the browser exposes its stack (the
-Navigation API — everywhere but Firefox today): **a `<Link>` whose destination
-is the entry right next to the current one becomes a real traversal** instead
-of a push. A "back" link to the page one just came from therefore behaves as a
-back — the stack stays what the reader thinks it is (no A, B, A, B… growth)
-and the scroll comes back; one step forward too, so returning to the page one
-just left resumes it where it was. Only towards entries of this document (a
-traversal to another one would be a full page load no link asked for), and
-never when the push carries explicit state.
-
-Everywhere else a `<Link>` is an arrival and lands at the top. A back arrow
-that must ALWAYS behave as a back — even far from the entry it targets, even
-in a browser with no Navigation API — is `navBack()`. Where there may be
-nothing to go back to (a shared link opened cold), decide what the arrow does
-from the history, not from the link.
+Where the browser exposes its stack (the Navigation API), **a `<Link>` whose
+destination is the entry right next to the current one becomes a real
+traversal**: a "back" link to the page one just came from behaves as a back — no
+A, B, A, B… growth, and the scroll comes back — and one step forward too. Only
+towards entries of this document, and never when the push carries explicit
+state. An arrow that must ALWAYS behave as a back is `navBack()`.
 
 ### Landing on an element: the fragment
 
 A link meant to bring one element under the reader's eyes — a notification
-pointing at a section several screens down, a shared link to a comment, a row
-in a list — is an `id` on the element and a `#id` in the link. Nothing else:
+pointing at a section several screens down, a shared link to a comment, a row in
+a list — is an `id` on the element and a `#id` in the link. Nothing else:
 
 ```jsx
 <Box id="tournaments">…</Box>
 
-// anywhere else
+// anywhere else — <Link route> builds no fragment, so the link spells its href
 <Link href={`${PLACE_ROUTE.buildUrl({ slug })}#tournaments`}>…</Link>
 ```
 
-`<Link route>` builds no fragment, so the link spells its `href`.
+The browser answers a fragment when the document finishes loading and on a
+fragment navigation within the page — both before the data has drawn the element
+— and a navigation navi routes is not a fragment navigation at all. So navi
+answers every navigation it routes to a URL carrying a hash (a `#id` link to the
+page one is already on stays the browser's own, without the wait or the ring):
 
-The browser alone is not enough in an app. It answers a fragment when the
-document finishes loading and on a fragment navigation within the page — both
-before the data has drawn the element — and a navigation navi routes is not a
-fragment navigation at all. So navi answers every URL carrying a hash itself:
+- **it waits for the element, and for the page.** The element must exist and
+  show something (`checkVisibility`): one inside a closed tab or a folded
+  `<details>` has not arrived, and navi opens nothing to reach it. And no route
+  or action may be loading: what sits above it may still push it down, and a
+  node reused from the page being left is there before its own data;
+- **it gives up** once the document has stopped working for a moment (or after a
+  maximum wait, for one that never does): a link to an element that is gone lands
+  where a link without a fragment would, with no mark;
+- **a return is not an arrival**: back, forward and a reload land where the page
+  was left, and only put `:target` on the element — no scroll, no ring, no focus;
+- **it answers once per arrival**: a search param written while the reader is
+  there does not throw them back to the element; pressing the very link one is on
+  answers again.
 
-- **It waits for the element, and for the page.** The element is reached when
-  it exists and shows something (`checkVisibility`): one still loading, or
-  rendered inside a closed tab or a folded `<details>`, has not arrived yet.
-  navi opens nothing to reach it, and reaches it as soon as it shows — the
-  reader opening the `<details>`, switching to the tab — while the wait lasts.
-  And it is reached once no route or action is loading: until then, what sits
-  above it may still be drawn and push it down — and a page reusing the node of
-  the page being left (`/places/a#tournaments` → `/places/b#tournaments`) holds
-  it before its own data has come.
-- **It gives up.** Once the document has had no route or action loading for
-  `graceAfterIdle` (1 s). A link to an element that is gone lands where a link
-  without a fragment would — at the top of a page one arrives at — with no
-  mark. A document that never stops working is answered after `maxWait`
-  (10 s), with the element as it stands.
-- **A return is not an arrival.** Back, forward and a reload land where the
-  page was left, as they do without a fragment; the fragment then only puts
-  `:target` on its element — no scroll, no ring, no focus.
-- **It answers once per arrival.** What is watched is the path and the hash: a
-  search param written while the reader is there (a filter, a page) does not
-  throw them back to the element. Pressing the very link one is on answers
-  again.
-- **What the reader gets**: the element against the top edge, instantly (what
-  the browser does with a fragment); the keyboard focus on it when it is itself
-  focusable — an `id` on the link or the button, not on a box around one; and a
-  fading ring, the element carrying `data-url-target` for `markDuration` (2 s).
-  The ring is coloured by `--navi-url-target-color` and lives in `@layer navi`:
-  an unlayered `[data-url-target] { … }` replaces it, `animation: none` removes
-  it. Its length is `markDuration`, which also publishes
-  `--navi-url-target-duration` to CSS — setting only the variable makes the ring
-  and the attribute disagree.
-- **Adjusting it**: `setUrlTargetOptions()`, once, at the app's start — the
-  alignment (`block`), `behavior`, `markDuration`, `graceAfterIdle`, `maxWait`.
+What the reader gets: the element against the top edge, instantly; the keyboard
+focus on it when it is itself focusable — an `id` on the link or the button, not
+on a box around one; and a fading ring, the element carrying `data-url-target`.
+The ring is coloured by `--navi-url-target-color` and lives in `@layer navi`: an
+unlayered `[data-url-target] { … }` replaces it, `animation: none` removes it.
+Its length is `markDuration`, set with `setUrlTargetOptions()` along with the
+alignment and the waits; it also publishes `--navi-url-target-duration`, and
+setting only the variable makes the ring and the attribute disagree.
 
-**`:target` is the lasting "this one"**, and `data-url-target` the moment it
-arrived. navi sets `:target` on the element as it lands on it — the browser
-alone never would after a navigation navi routes, nor for an element that
-arrived after the load — and takes it off once the URL stops naming the
-element, which the browser alone would not either: a search param written on
-the page rebuilds the address without its fragment, a back returns to the page
-without one. It stays on the element navi landed on; a node rendered in its
-place later is another one. In JS, `useUrlTargetId()` is the id the hash
-designates, `""` when there is none, re-rendering when it changes.
-
-#### A fragment, or a search param
+**`:target` is the lasting "this one"**, `data-url-target` the moment it arrived.
+navi sets `:target` as it lands on the element — the browser never would after a
+navigation navi routes, nor for an element arriving after the load — and takes
+it off once the URL stops naming it: a search param a route writes rebuilds the
+address without its fragment, a back returns to the page without one. A node
+rendered in its place later is another element. `useUrlTargetId()` is the id the
+hash designates, reactive.
 
 A fragment says where to look; a search param says what to show. When the page
 draws something differently for the value — a filter, a selected row, an open
-panel — it is a [search param](#search-params). When the page is the same and
-only the reader's eyes should go somewhere, it is a fragment, down to a single
-row (`#tournament_42`).
-
-A search param plus a `scrollIntoView` in an effect rebuilds this, less well:
-the effect fires at mount, before what sits above the element has laid out,
-and nothing ever tells it to stop waiting.
+panel — it is a [search param](#search-params); when only the reader's eyes
+should go somewhere, a fragment, down to a single row (`#tournament_42`) — never
+a search param plus a `scrollIntoView` in an effect, which fires before what sits
+above the element has laid out, with nothing to tell it how long to wait.
 
 ### A row of tabs, where a replace IS an arrival
 
 The tabs of a `<RouteTravel>` navigate by replacing, and yet each one is another
-route. They also share a single scrollport — the document — and the tab on
-screen is what makes it tall. So leaving the offset alone does not keep it: the
-moment the arriving tab is shorter, the browser clamps, and the reader's place
-is gone before anything of navi's is asked.
-
-The row is the only thing that knows this, so the row is what says it. On every
-travel — a tab pressed, a thumb dragging the pages, a wheel, a travel let go of
-too early and put back:
-
-- the arriving tab is given back the offset it was read at, once it is really
-  rendered;
-- a tab never read opens at its **top**, rather than wherever its neighbour
-  happened to be;
-- the clamp itself is never recorded. It is not the reader scrolling, and the
-  url it would be written against is already the arriving tab's — recorded, it
-  destroys that tab's own position, which is then what a later back or forward
-  hands out.
+route, sharing one scrollport — the document — that the tab on screen makes
+tall: the moment the arriving tab is shorter, the browser clamps, and the
+reader's place is gone. The row is the only thing that knows this, so on every
+travel — a tab pressed, a thumb, a wheel, a travel put back — it gives the
+arriving tab the offset it was read at, once it is really rendered; opens a tab
+never read at its **top**, not wherever its neighbour happened to be; and never
+records the clamp, which, recorded against the arriving tab's url, would destroy
+that tab's own position.
 
 **Only where the row owns the document**: nothing between the travelling box and
-the viewport may scroll. A row inside a scroller of its own — a frame in an
-article, a panel beside other content — shares nothing with the document, and
-the offset there belongs to the page around it, which the reader never left; the
-travel leaves it alone. An `overflow: hidden` on any ancestor is enough to put
-the row outside the document's scrollport — it holds an offset of its own even
-without a scrollbar, whereas `overflow: clip` holds none and does not count — so
-a row that should give positions back and does not is worth looking at from
-that angle first.
-
-Pages that scroll inside themselves rather than scrolling the document are not
-concerned either way: each one brings its own scrollport, which goes away with
-the page and has nothing to give back.
-
-What is not covered: a page whose height depends on something still loading is
-not tall enough at the moment its position is put back, so a deep position is
-clamped as it was before. Only the page knows when it is whole.
+the viewport may scroll, and a row inside a scroller of its own leaves that
+offset alone. An `overflow: hidden` on any ancestor is enough to take the row out
+of the document's scrollport — it holds an offset even without a scrollbar, where
+`overflow: clip` holds none — so it is the first thing to look for when a row
+does not give positions back. And a page whose height depends on something still
+loading is not tall enough when its position is put back: only the page knows
+when it is whole.
 
 ## Creating something, then editing it
 
 The create screen, the page of what was created, the edit screen — three routes,
-one form, and a movement between them. It is assembled in
-[create_and_edit.md](./create_and_edit.md), which is also where the two matching
-rules that decide the shape of the `<Route>` tree are spelled out (several routes
-match at once; the first matching branch wins).
+one form, and a movement between them — are assembled in
+[create_and_edit.md](./create_and_edit.md).
 
 ## Tabs that are not routes
 
 `SlideContainer` holds slides that replace one another in one box, with the same
-gestures and the same travelling bar, and — unless the signal it is bound to is
-one the URL holds, see below — nothing written to the URL. Use it when the
-position genuinely is not a place one should be able to link to:
+gestures and the same travelling bar, and — unless its signal is one the URL
+holds, see below — nothing written to the URL. Use it when the position genuinely
+is not a place one should be able to link to:
 
 - the steps of a wizard, or the screens of a picker, inside a dialog or a popover
   — a popup is promoted to the browser's top layer, so no container can hold two
@@ -886,33 +600,29 @@ route.
 </SlideContainer>
 ```
 
-`<Nav slideContainer>` names the container by id — the row can sit anywhere on the
-page. It reads which slide is on screen from the container itself, and its bar
-follows the slides, a finger dragging them included. `<Link slide>` has no href
-and behaves like a button: this is not a link to anywhere.
+The row names its container by id, so it can sit anywhere on the page, and its
+bar follows the slides, a finger dragging them included. `<Link slide>` has no
+href and behaves like a button: this is not a link to anywhere.
 
 ### A `SlideContainer` in the URL: a position that is not a place one came from
 
 "Should a link be able to open the app on this?" has a third answer, and a wizard
-is exactly it: **yes for reading and for reloading, no for history.** The step one
-is on should be legible in the address bar and should survive a reload —
-`/alerts/W-123/edit` reopening on "Lieu" because that is where the reader was —
-and it should NOT stack an entry per step, because the back arrow of a form means
-"leave this form", not "one question back". Four steps that each push turn one
-back-press into four, and walk the reader backwards through a form they thought
-they had left.
-
-There is nothing to invent for it: a search param already IS a position in the
-URL that replaces rather than pushes ([Search params](#search-params)). Declare
-the step as one, and hand its signal to the container:
+is exactly it: **yes for reading and for reloading, no for history.** The step
+should be legible in the address bar and survive a reload, and should NOT stack
+an entry per step: the back arrow of a form means "leave this form", not "one
+question back", and four steps that each push walk the reader backwards through a
+form they thought they had left. A search param already IS a position in the URL
+that replaces rather than pushes; declare the step as one, and hand its signal to
+the container:
 
 ```js
 const stepSignal = stateSignal("when", {
   id: "step",
   oneOf: ["when", "where", "who", "recap", "done"],
+  autoFix: true, // a value outside oneOf is repaired, and the address with it
   // the step qualifies THIS visit, not the screen: a link built to the editor
-  // does not inherit the step one happens to be on, and it goes back to the
-  // default when the route stops matching
+  // does not inherit it, and it goes back to the default when the route stops
+  // matching
   weak: true,
 });
 export const ALERT_EDIT_ROUTE = route("/alerts/:alertId/edit", {
@@ -924,31 +634,20 @@ export const ALERT_EDIT_ROUTE = route("/alerts/:alertId/edit", {
 <SlideContainer signal={stepSignal}>
 ```
 
-That is the whole wiring, and every half of it is the piece that already
-existed. Worth naming, because each answers a question a wizard actually has:
-
-- **where it opens is the state's own default** — the first argument of
-  `stateSignal`. The container has a `defaultCurrent` for when it owns its
-  position, but a bound container does not own it: one place says where the step
-  starts, and it is the same place a reset goes back to;
-- **the param is absent while the step IS that default** (route.js prunes it), so
-  `/alerts/W-123/edit` is clean on the first step, gains `?step=where` on the
-  second, and loses it again coming back. The address carries what differs from
-  the usual answer and nothing else;
-- **the container walks to the step rather than jumping to it.** The address comes
-  from outside the box (typed, shared, kept from a session that has moved on), so
-  every slide between here and there is asked to let go the way a key going that
-  way would ask it, and the first one that holds is where one stops. `?step=done`
-  cannot open a confirmation screen for something nobody sent. The signal is then
-  written with the area actually shown, so the address never says one is
-  somewhere one is not;
-- **only the travels that HAPPENED are written.** A travel a lock refused, or one
-  `onCurrentChange` refused late, never reaches the signal — or is written back
-  when it does.
-
-A container remembers nothing across a reload, so a step whose `required` the app
-knows is already satisfied says so itself (`required={!alreadyFilled}`); the same
-holds for a hold that a finished job lifts (`preventNavNext={!published}`).
+Where it opens is the state's own default — a bound container does not own its
+position, so one place says where the step starts, the same place a reset goes
+back to — and the param is absent from the address while the step IS that
+default. The container **walks** to the step the address asks for rather than
+jumping to it: the address comes from outside the box (typed, shared, kept from a
+session that has moved on), so every slide on the way is asked to let go the way
+a key would ask it, and the first one that holds is where one stops —
+`?step=done` cannot open a confirmation for something nobody sent. The signal is
+then written with the area actually shown, and only the travels that HAPPENED are
+written (one a lock or `onCurrentChange` refused never reaches it, or is written
+back). A value no slide carries is left as asked: refusing it is the state's job,
+`oneOf` + `autoFix`. A container remembers nothing across a reload, so a step the
+app knows is already satisfied says so itself (`required={!alreadyFilled}`,
+`preventNavNext={!published}`).
 
 **A start that depends on the page one is on** — a wizard creating something
 opens on its first question, the same wizard editing something opens on its
@@ -963,72 +662,44 @@ route("/alerts/:alertId/edit", {
 ```
 
 Everything that asks "is this the default" then asks the route one is on: both
-addresses stay clean on the step they open on — `/alerts/create` on "when",
-`/alerts/W-123/edit` on "recap" — an address naming no step puts the state back
-on that page's own, and going from one to the other moves the step with it.
-
-Not a `computed` over the route's `matchingSignal`: a state and the route that
-declares it cannot name each other — whichever is written first, the other is
-not initialised yet, and a dynamic default is read while `stateSignal` is being
-built. The route is the right place regardless; it is the thing that knows which
-page one is on.
-
-Two containers on one screen are two signals, and that is the whole answer to
-"which one owns the param": the one holding the route's signal. A gallery of
-seven wizards side by side hands each of them a `useSignal` of its own, and
-nothing goes into the address.
+addresses stay clean on the step they open on, and going from one to the other
+moves the step with it. Two containers on one screen are two signals — the one
+holding the route's signal owns the param; a gallery of wizards side by side
+hands each a `useSignal` of its own, and nothing goes into the address.
 
 ### A state whose values ARE places: `history: "push"`
 
 Replacement is the default because most URL-held state qualifies the screen one
 is on. A state whose values are places one came from — the photo being looked at
-in a gallery — says so where the state is declared:
+in a gallery — says so where it is declared, and one write can still say
+otherwise:
 
 ```js
 const photoSignal = stateSignal(undefined, { id: "photo", history: "push" });
-```
-
-Every write of it then stacks an entry, wherever the write comes from. Except
-where the writer knows this particular move is not one: a slide reached by
-DRAGGING replaces even in a container that pushes, because swiping back and forth
-with a thumb is browsing, not a trail one wants to walk home along. That is said
-at the write rather than declared:
-
-```js
 photoSignal.set(nextPhoto, { history: "replace" });
 ```
 
-`SlideContainer` already does exactly that for its own drags, so a gallery gets
-it by declaring the state and nothing else.
+A slide reached by DRAGGING is such a write — swiping back and forth with a thumb
+is browsing, not a trail one wants to walk home along — and `SlideContainer`
+replaces for its own drags even when its state pushes.
 
 ### What this is not
 
-It is not a route. Nothing is declared for the steps themselves, nothing matches
-on them, and no page transition plays — a transition needs the page to change
-([route_transitions.md](./route_transitions.md)), and a search param moving is
-not one. What travels is the box, and the address is a label on where the box
-stands. A position several parts of the app must react to is still a route.
-
-Demo: [../src/layout/demos/8_slide_container_demo.html](../src/layout/demos/8_slide_container_demo.html).
+It is not a route. A search param bound to a `SlideContainer` moves the box, not
+a page: nothing is declared for the steps, nothing matches on them, and no route
+transition is written for them. A position several parts of the app must react
+to is still a route. Demo: `src/layout/demos/8_slide_container_demo.html`.
 
 ## A layer over the screen: what its address may say
 
 Some things are opened from everywhere and drawn OVER whatever the reader was
 looking at: the settings behind a gear in the top bar, a photo, a help sheet.
-Closing one puts the reader back exactly where they were — not on a page the app
-picked, on the one they had. And the address has to hold it, for the same reasons
+Closing one puts the reader back exactly where they were — on the page they had,
+not one the app picked — and the address has to hold it, for the same reasons
 every other position does: a reload lands on it, a link opens on it, the back
-button closes it.
-
-### Why a layer is a routing question at all
-
-Layout should not decide routing. But routing decides a great deal of what is on
-screen: which page is mounted, whose data loads, which bar entry lights up, which
-movement plays between two screens. An address is not a label — it is read by
-everything — so a layer, which is a pure fact of layout, cannot be given just any
-address.
-
-The rule that falls out of it, and the whole of this section:
+button closes it. Routing decides a great deal of what is on screen — which page
+is mounted, whose data loads, which bar entry lights up, which movement plays —
+so a layer, a pure fact of layout, cannot be given just any address:
 
 > The URL may say what is drawn OVER the screen. It must never name a place the
 > reader is not at.
@@ -1040,43 +711,29 @@ when they conceptually belong to "me". Written `/me/settings`, the router
 believes otherwise, and everything that reads the router inherits the belief:
 
 - the bar entry for the "me" section lights up while the settings cover a game;
-- `/me` matches, so the screen the reader was on is REPLACED. The covering is a
-  fiction that lasts as long as the animation, and the page beneath is gone;
+- the screen the reader was on is REPLACED by a page of the "me" section: the
+  covering is a fiction that lasts as long as the animation;
 - a route transition plays a crossing between two pages that never crossed, and
   its back half plays on every way out — the sheet lifts to reveal a page that
   was never underneath;
-- and it is wrong on the way out too: closing does not return to `/me`, it
-  returns to wherever the reader was, which the address never said.
+- closing does not return to `/me`, it returns to wherever the reader was, which
+  the address never said.
 
-These do not get fixed one at a time. `currentExcept` stops one link from
-claiming "you are here"; a `"none"` relation silences one crossing; a hand-rolled
-`active` replaces one reading. Each patches a reader of the lie without removing
-it, and the next reader arrives quietly wrong.
-
-### It is not "use a search param"
-
-`/settings` at the top level does not claim to be inside `/me` — it is honest
-about not being there, and every symptom above goes with it. What it still is,
-though, is a PAGE: it names a screen, so the screen beneath is gone, and closing
-has nowhere written to return to. `whatever/settings` is the same answer in a
-longer word.
-
-So the rule is not about search params. It is about not claiming a position. A
-path can be honest; what a path cannot do is carry what is underneath.
+These do not get fixed one at a time: `currentExcept`, a `"none"` relation, a
+hand-rolled `active` each patch one reader of the lie, and the next reader
+arrives quietly wrong.
 
 ### What the search param buys: the way back is in the address
 
-`/places?settings` says two things at once — which screen the reader is on, and
-what is drawn over it. That is what makes closing exact from a cold start: a
-reload, a link someone sent, a new tab. The layer's address CONTAINS the address
-of what it covers, so "close" needs no memory at all.
-
-`/settings` has to remember instead. In practice the browser often does — after a
-reload the session's history is still there, so a back-press lands somewhere —
-but that is the BROWSER's memory of this tab, not the address. A link someone
-else opens has none of it, and neither does a bookmark. Only the address travels,
-which is what makes the param shape the right model rather than the convenient
-one.
+`/settings` at the top level is honest about not being inside `/me`, but it is
+still a PAGE: the screen beneath is gone, and closing has nowhere written to
+return to — so the rule is about not claiming a position, not about search
+params. `/places?settings` says both which screen the reader is on and what is
+drawn over it, so closing needs no memory at all: exact after a reload, from a
+link someone sent, in a new tab. `/settings` has to remember instead — the
+browser's history of the tab often covers for it after a reload, but a link
+someone else opens has none of it, and neither does a bookmark. Only the address
+travels.
 
 ### The wiring
 
@@ -1095,31 +752,35 @@ export const ROOT_ROUTE = route("/", {
 ```jsx
 <Button command="--navi-toggle" commandFor="settings_panel">⚙</Button>
 …
-<SidePanel id="settings_panel" signal={settingsSignal} side="top" expandY />
+<SidePanel
+  id="settings_panel"
+  signal={settingsSignal}
+  side="top"
+  expandY
+  animation
+/>
 ```
 
 Every piece of it answers something:
 
-- **declared on the ROOT route**, so the layer opens over every screen. Declared
-  on one route it would only exist there, and a door in the furniture is on every
-  screen ([Search params](#search-params));
-- **`weak`**, so a link built to a page never inherits a layer that happens to be
-  open. A layer qualifies one visit; it is not part of anyone's address;
-- **`history: "push"`**, so the layer is a place one came from and the back button
-  closes it. The closing itself is never an entry of its own — see
-  [popup_open.md](./popup_open.md), which owns what a `signal` bound to a URL
-  writes on open, on close, and on cancel;
-- **the panel is rendered outside the page area**, next to the router rather than
-  inside it. It is drawn over the pages and the fixed bars alike, and it stays
-  mounted while closed so it has somewhere to animate from;
+- **declared on the ROOT route**, so the layer opens over every screen, where its
+  door in the furniture is;
+- **`weak`**: a link built to a page never inherits a layer that happens to be
+  open — a layer qualifies one visit, it is not part of anyone's address;
+- **`history: "push"`**: the layer is a place one came from, and the back button
+  closes it. The closing is never an entry of its own —
+  [popup_open.md](./popup_open.md#signal--the-app-holds-it-both-ways) owns what a
+  `signal` bound to a URL writes on open, on close, and on cancel;
+- **the panel is rendered outside the page area**, next to the router: over the
+  pages and the fixed bars alike, mounted while closed, `animation` giving it an
+  entrance of its own (a `SidePanel` has none by default);
 - **`expandY`**, because a sheet is content-tall by default and a layer covers
-  the screen. It is also what any tab row inside it must NOT be given: `expand`
-  is both axes, and in the panel's own column that makes the row eat the height
-  and push everything below it off screen;
-- **no `defineRouteTransition` for it.** Nothing crosses: the page beneath does
-  not change, so there is no pair of pages and no movement between them. A layer
-  has an entrance of its own, and route transitions are for pages replacing pages
-  ([route_transitions.md](./route_transitions.md)).
+  the screen. A tab row inside it must NOT get `expand`: that is both axes, and
+  in the panel's column the row eats the height and pushes everything below it
+  off screen;
+- **no `defineRouteTransition` for it.** The page beneath does not change, so
+  there is no pair of pages to move between — route transitions are for pages
+  replacing pages ([route_transitions.md](./route_transitions.md)).
 
 ### Places inside the layer
 
@@ -1127,9 +788,9 @@ A layer big enough to have tabs holds them the way a wizard does — a search pa
 of its own, `oneOf` its pages, replacing rather than pushing, so the back button
 closes the layer instead of stepping back one tab. Everything in
 [A `SlideContainer` in the URL](#a-slidecontainer-in-the-url-a-position-that-is-not-a-place-one-came-from)
-applies unchanged, and a layer is exactly the case that section names for
-`SlideContainer` over `RouteTravel`: a popup lives in the browser's top layer,
-where two pages cannot stand side by side.
+applies unchanged, and a layer is exactly the case
+[Tabs that are not routes](#tabs-that-are-not-routes) names for `SlideContainer`
+over `RouteTravel`.
 
 ```js
 const settingsTabSignal = stateSignal("account", {
@@ -1141,16 +802,11 @@ const settingsTabSignal = stateSignal("account", {
 
 The address then grows and shrinks with what the reader does: `/me` closed,
 `/me?settings` open on the tab it opens on, `/me?settings&settings_tab=alerts`
-one tab further, and back to `/me?settings` returning to the first.
-
-Two params, because they answer two questions — is the layer there, and which of
-its pages is shown. One param whose value is "which page of the layer, or none"
-(`?settings=alerts`) is arguably the shape the address wants, and a popup cannot
-hold it: it is open on exactly one value of its signal (`value`, see
-[popup_open.md](./popup_open.md#signal--the-app-holds-it-both-ways)), so a tab
-changing under it would read as the layer closing. `value` is for the other
-question — WHICH of several popups is open, one sheet per card under a single
-`?seat=<gameId>` — not for what varies inside one.
+one tab further, and back to `/me?settings` returning to the first. Two params,
+because they answer two questions — is the layer there, and which of its pages
+is shown. A popup's `value` answers another one, WHICH of several popups is open
+(one sheet per card under a single `?seat=<gameId>`), not what varies inside one
+(see [popup_open.md](./popup_open.md#signal--the-app-holds-it-both-ways)).
 
 ### What it costs
 
@@ -1161,14 +817,12 @@ This is a compromise, and it is worth stating rather than discovering:
   a route "you are covered", and nothing should be inferred from a layer being
   open — the reader is still on that page, and will be back on it in a moment;
 - **the router knows nothing about layers.** `<Route>` renders pages; the layer is
-  drawn beside them by the application. The address is honest about it, but "over"
-  is not a routing concept, and no `<Route>` shape expresses it;
-- **the app really is on the page underneath**, which is right for `aria-current`,
-  for the bar, for a link built while the layer is open — and is exactly wrong for
-  anything wanting "the settings are what is current". If something needs to
-  answer that, it reads the layer's own state, not the router.
+  drawn beside them by the application, and "over" is not a routing concept;
+- **the app really is on the page underneath**, which is right for
+  `aria-current`, for the bar, for a link built while the layer is open — and
+  wrong for anything wanting "the settings are what is current": that reads the
+  layer's own state, not the router.
 
-Demo:
-[../src/nav/demos/route_transition_fixed_bars/route_transition_fixed_bars.html](../src/nav/demos/route_transition_fixed_bars/route_transition_fixed_bars.html)
+Demo: `src/nav/demos/route_transition_fixed_bars/route_transition_fixed_bars.html`
 — a bar holding both doors side by side: notifications, a page that replaces the
 screen with a route transition, and settings, a layer that covers it.

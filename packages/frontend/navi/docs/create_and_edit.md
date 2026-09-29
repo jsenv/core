@@ -55,9 +55,10 @@ of this page is how it is kept.
 const HOME_ROUTE = route("/");
 const NEW_GAME_ROUTE = route("/games/new", {
   searchParams: {
-    name: nameSignal,
-    level: levelSignal,
-    players: playersSignal,
+    name: draftNameSignal,
+    level: draftLevelSignal,
+    players: draftPlayersSignal,
+    place: draftPlaceSignal,
   },
 });
 const GAME_ROUTE = route("/games/:gameId");
@@ -204,10 +205,10 @@ const [game, loading, error] = useAsyncData(GAME_OF_ROUTE, {
 <Form pristineKey={game?.id}>;
 ```
 
-`onLoad` fires once per set of params — never again for the same game handed
-back by a PUT, a list reloading or a poll, which would overwrite what the
-person is writing — and from a layout effect, so the fields are filled by the
-time `pristineKey`, the id itself, takes the reference (see
+`onLoad` fires once per set of params: a PUT, a list reloading, a poll all hand
+the same game back, and copying it again would overwrite what the person is
+writing. It fires from a layout effect, so the fields are filled by the time
+`pristineKey`, the id itself, takes the reference (see
 [actions.md](./actions.md#reading-an-action),
 [form_changed.md](./form_changed.md#a-screen-filled-after-it-opened-pristinekey)).
 By hand this is a `useEffect` keyed on `game?.id` — `[game]` is the natural,
@@ -270,7 +271,8 @@ already holds**". On the backend side, `include` is:
 - **never an error when it designates nothing**: the answer is the page, and the
   screen's "not found" case then says something true (that place is gone)
   instead of being an artefact of pagination;
-- **several values** when several fields are pre-filled: `GET /users?include=42,57`.
+- **several values** when several fields are pre-filled:
+  `GET /users?include=42,57`.
 
 The other half is answered by the resource: **what comes back with a resource
 carries its own label**. The game's page shows "Lieu: Halle des sports" with no

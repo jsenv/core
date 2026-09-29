@@ -1,315 +1,231 @@
 # @jsenv/navi — context for AI assistants
 
-This file gives context for using `@jsenv/navi` as intended, useful whether
-you're reading the source directly or the built `dist/jsenv_navi.js` (e.g.
-inside `node_modules/@jsenv/navi/`).
+This file gives context for using `@jsenv/navi` as intended, whether you read
+the source or the built `dist/jsenv_navi.js` (e.g. inside
+`node_modules/@jsenv/navi/`).
 
-`dist/jsenv_navi.js` is the bundled build of navi's actual source, not an
-opaque blob — JSDoc comments on individual functions/exports are preserved
-and carry real, useful information. What's lost in bundling is only
-file-level comments and anything attached to an import/re-export statement
-(the bundler only keeps a comment that sits directly above a declaration it
-retains as-is).
+`dist/jsenv_navi.js` is navi's actual source, bundled — not an opaque blob. The
+JSDoc on functions and exports is kept and carries real information; what
+bundling loses is only file-level comments and comments attached to an
+import/re-export statement.
 
 ## Where the answer to "how do I use X" is
 
-There is deliberately **no per-export reference page** here, and there never
-will be: a page per component drifts from the code the day after it is written,
-and the code is right there. Each source of knowledge has one job:
+There is deliberately **no per-export reference page**, and there never will
+be: a page per component drifts from the code the day after it is written. Each
+source of knowledge has one job:
 
 - **These `docs/*.md` files** — decisions, concepts and invariants: what a
-  mechanism is for, what it costs, what not to hand-write beside it. They are
-  what you cannot deduce from a signature. Read the relevant one BEFORE writing
-  code in its area; they are listed below.
-- **JSDoc on an export** (`@type`, `@param`) — a hint at the call site: what a
-  prop means and what it accepts, for autocompletion and for you. It is not
-  exhaustive and does not pretend to be: props that flow through to `Box`, the
-  interplay between two props, everything a component composes are not repeated
+  mechanism is for, what it costs, what not to hand-write beside it — what a
+  signature cannot say. Read the relevant one BEFORE writing code in its area;
+  they are listed below.
+- **JSDoc on an export** (`@type`, `@param`) — what a prop means and accepts. A
+  hint at the call site, not exhaustive: the props that flow through to `Box`,
+  the interplay between two props, what a component composes are not repeated
   there.
-- **The built code, `dist/jsenv_navi.js`** — the exhaustive truth about the API.
-  It is navi's real source, bundled, with the JSDoc kept (see above). When a
-  signature, a default, an accepted value or a prop nobody documented is what
-  you need, read it there rather than guessing. It ships in the npm package, so
-  it is always available under `node_modules/@jsenv/navi/`.
-- **Sources, demos and tests** — how an export is really used, and the closest
-  thing to an example gallery: `src/**/demos/*_demo.html` exercise one component
-  per page, prop by prop. They are NOT published to npm (the whole source tree
-  would dwarf the package), so they live only in the repo:
-  https://github.com/jsenv/core/tree/main/packages/frontend/navi. A project that
-  wants an AI to work with navi seriously is better off with a local clone of
-  that repo alongside it — the demos answer "how is this used" faster than any
-  page could.
+- **The built code, `dist/jsenv_navi.js`** — the exhaustive truth about the API,
+  JSDoc included, always under `node_modules/@jsenv/navi/`. When a signature, a
+  default or an accepted value is what you need, read it there rather than
+  guessing.
+- **Sources, demos and tests** — how an export is really used:
+  `src/**/demos/*_demo.html` exercise one component per page, prop by prop. They
+  are not published to npm, so they live only in the repo
+  (https://github.com/jsenv/core/tree/main/packages/frontend/navi); a project
+  that wants an AI to work with navi seriously keeps a local clone beside it.
 
-So the loop, when the JSDoc did not answer: read the built export, then find a
-demo using it. Write the answer down in one of these `docs/*.md` files only if
-what you learned is a decision or an invariant — never as a reference page for
-one component.
+So when the JSDoc did not answer: read the built export, then find a demo using
+it. Write what you learned into a `docs/*.md` only if it is a decision or an
+invariant — never as a reference page for one component.
 
 ## Library, but also a framework
 
-Navi is a library in the sense that every export is independently usable —
-pick just `stateSignal` or just `Table` if that's all you need, no
-all-or-nothing adoption required.
-
-But it's also meant as a framework: it provides low-level primitives for
-things most apps otherwise reinvent inconsistently — routing, async data
-lifecycle, CSS layering/design tokens, focus/keyboard handling, and more.
-When building something Navi already has a primitive for, prefer that
-primitive over a custom one, even if the custom one would be quicker to
-write for this one case — the value of using Navi as a framework comes from
-consistency across the app, not from any single call site.
+Every export is usable on its own — just `stateSignal`, just `Table`. But navi
+also provides the primitives most apps otherwise reinvent inconsistently:
+routing, the async data lifecycle, CSS layering and tokens, focus and keyboard
+handling, and more. When navi has a primitive for what you are building, prefer
+it over a custom one, even when the custom one would be quicker to write for this
+one case: the value of navi as a framework is the consistency across the app,
+not any single call site.
 
 ## The docs, and when to read each
 
-One line per file: what it decides, and the moment to open it. The file itself
-holds the reasoning; nothing here substitutes for it.
+One line per file: what it decides, and the moment to open it.
 
-`README.md` (package root) names what navi provides, area by area — the place
-to start when unsure which export solves a problem.
+`README.md` (package root) names what navi provides, area by area — the place to
+start when unsure which export solves a problem.
 
 ### Routing and movement
 
-- `navigation.md` — the position of the user belongs in the URL by default,
-  and that decision is not retrofittable: routes, params, search params,
-  `<Route>`, tab rows, `navBack`, `RouteTravel`, where a navigation lands (a
-  `#id` landing on the element it names), a `SlideContainer` read from the URL,
-  and what a layer drawn over the screen may say in its address. Read before
-  writing any routing code, and before scrolling to an element on arrival.
-- `route_transitions.md` — a transition states a relation the user reads as a
-  map; a pair of routes is animated by `RouteTravel` or by a transition, never
-  both; a test waits for the page arriving, never for its address; the page
-  being left stays mounted, hidden, until the movement is over (so what it
-  registers globally must let the last arrival win, and an action it reads
-  goes through `useAsyncData`, which leaves a page no longer shown alone —
-  `.value` on the action's signals re-renders it hidden); what a transition
-  costs.
-  Read before animating a navigation, before writing a custom movement, and
-  before believing a symptom that only appears once a pair is animated.
-- `view_transitions.md` — what the browser does to any transition an app
-  starts itself: names unique per document, the fallback fade, rendering
-  suspended for the whole callback, `ready` rejecting on a skip while
-  `finished` fulfills, the top layer painted only through the root's picture,
-  the two frames that show the live document, what makes the start of a
-  transition restyle the whole document (an unscoped `::highlight()`, a value
-  changed on `:root`), and a hidden popup photographed on one side only. Read
-  before calling `document.startViewTransition`, and before putting a value on
-  `:root` for a movement.
-- `drag_to_travel.md` — a pointer or a wheel pushing a whole screen aside, and
-  who owns a press several boxes want. Read before putting anything that reads the pointer
+- `navigation.md` — the position of the user belongs in the URL by default:
+  routes and which branch renders, search params, redirections, the back arrow
+  (`navBack`), where a navigation lands (a `#id` for an element), a
+  `SlideContainer` read from the URL, what a layer drawn over the screen may say
+  in its address. Before any routing code.
+- `route_transitions.md` — a transition states a relation between two pages;
+  `RouteTravel` or a transition, never both on one pair; fixed bars and
+  `RouteTransitionArea`; the page being left stays mounted, hidden, until the
+  movement is over; a test waits for the page, never for its address; what a
+  transition costs. Before animating a navigation, and before believing a
+  symptom that only appears once a pair is animated.
+- `view_transitions.md` — what the browser does to any view transition: unique
+  names (and none inside a page that moves), the fallback fade, a callback in
+  which no frame ticks, `ready` and `finished`, the top layer, what restyles the
+  whole document, what cannot be pointed at while one plays. Before
+  `document.startViewTransition`, and before putting a value on `:root` for a
+  movement.
+- `drag_to_travel.md` — a pointer or a wheel pushing a screen aside, and who owns
+  a press several boxes want. Before putting anything that reads the pointer
   inside a box that travels.
 
 ### Data
 
-- `actions.md` — an action and its params: calling versus binding, a failing
-  run rejects, reading is not running (`{ run: true }` is the fallback),
-  `action` versus `uiAction`, an action and a command on one press, and a
-  debounced binding following where its signal settles. Read before running an
-  action from a component, and before putting a delay on params.
-- `resource.md` — REST state: `resource()`, the callback contract of each
-  relationship method (not guessable), `GET_RANGE`, a search as the same
-  `GET_MANY`, `withParams()` scopes and `dependencies`, `persist` (the last
-  `GET` answer drawn again after a reload). Read before writing a resource, and
-  before caching a response in localStorage; never encode a sub-route as an
-  `op` discriminator.
-- `data_states.md` — `data`, `loading` and `error` are three questions; the
-  four combinations of the first two; `loading: true` never suspends; a skeleton
-  is told whether it is loading. Read before drawing a skeleton on `!data` or
-  hiding content because `error` is set.
-- `list_refresh.md` — what a write sends back and what stays on screen
-  meanwhile; `rerunOn` and its defaults; a paginated list re-reading its window;
-  on the way back, the source decides the re-read and never the navigation.
-  Read before adding verbs to `rerunOn` or remounting a list to refresh it.
+- `actions.md` — calling versus binding, a failing run rejects, reading is not
+  running (`{ run: true }` is the fallback), `action` versus `uiAction`, an
+  action and a command on one press. Before running an action from a component.
+- `resource.md` — `resource()` and its relations (never an `op` discriminator),
+  `GET_RANGE`, a search as the same `GET_MANY`, `withParams()` scopes and
+  `dependencies`, `persist`, a function versus the verb's instance. Before
+  writing a resource, and before caching a response yourself.
+- `data_states.md` — `data`, `loading` and `error` are three questions;
+  `loading: true` never suspends; a skeleton is told whether it is loading.
+  Before drawing a skeleton on `!data` or hiding content because `error` is set.
+- `list_refresh.md` — what a write sends back and what stays on screen meanwhile;
+  `rerunOn` and its defaults; coming back to a list. Before adding verbs to
+  `rerunOn` or remounting a list to refresh it.
 - `list_action.md` — where the `action` lives decides who waits; a row whose
-  button works is `readOnly`, not `loading`; `parallelGuard`. Read before
+  button works is `readOnly`, not `loading`; `parallelGuard`. Before
   `<List readOnly={pending}>` or a second spinner beside a control's own.
-- `error_handling.md` — two kinds of error kept apart; where each is shown;
-  what a failing run rejects with; the `__handled_by__` mark; the two rules of
-  a boundary. Read before displaying an error by hand or writing a boundary.
-- `network_policy.md` — `setNetworkPolicy`: hold the writes, and answer the
-  reads from the store (`reads: "store"`, no network) or let them go out
-  (`reads: "network"`). Read before caching responses in the app, and before
-  guarding writes in the app's own request layer.
-- `dynamic_import.md` — a screen's code arrives like its data: a page's
-  import is a `routeAction` read with `loading: true` (a branch, not a
-  `<Loading>`), a component's is started by what asks — `actionRunEffect` on a
-  state, `useAsyncData(() => import(…))` only as the fallback;
-  links prerun on intent what asks nothing of the address; a transition
-  photographs the pending screen; a chunk's `import.meta.css`; a chunk that
-  does not come is never a bug and never comes twice in one document — offer
-  `reload()`; why not preact's `lazy`. Read before an `import()` in a component
-  or a page, and before `prefetch={false}`.
+- `error_handling.md` — a refusal versus a bug, where each is shown, displaying
+  is claiming, the rules of a boundary. Before displaying an error by hand or
+  writing a boundary.
+- `network_policy.md` — `setNetworkPolicy`: writes held before the press, reads
+  answered from the store or let through. Before caching responses in the app, or
+  guarding writes in its own request layer.
+- `dynamic_import.md` — code arrives like data: a page's import is a route
+  action, a component's is started by what asks; links prefetch on intent; a
+  chunk that does not come needs a fresh document; no `lazy()`. Before an
+  `import()` in a component or a page.
 
 ### Controls and forms
 
-- `state_binding.md` — the rule the API rests on: state navi shows is BOUND
-  (`signal`), not copied back by a callback; the three shapes (`signal`,
-  `action`, `command` + `commandFor`). Read before writing any handler whose
-  body only assigns state.
-- `control_value.md` — who holds a control's value; `--navi-update` for a
-  button proposing a value; a `defaultValue` follows the record it was read
-  from (no `key` to remount); drawing what a picker holds (`ui={Component}`,
-  not a signal of your own); empty keeps the shape of the question; what a
-  `stateSignal` brings; a time of day typed (`TimeSpin`) or turned
-  (`TimeWheel`). Read before wiring a value with `value` + `uiAction`.
-- `control_object.md` — one value made of several controls: `ControlGroup`
-  versus `Form`, naming, `<Picker type="object">`, `distributeChildStates`, a
-  settings sheet. Read before putting anything in a picker popup.
-- `control_group.md` — `<Group>`: several controls reading as one framed
-  object. Read before negative margins or `border-radius: 0` by hand.
+- `state_binding.md` — state navi shows is bound (`signal`), not copied back by a
+  callback; the three shapes (`signal`, `action`, `command` + `commandFor`).
+  Before any handler whose body only assigns state.
+- `control_value.md` — who holds a control's value; `--navi-update` for a button
+  proposing one; a `defaultValue` follows the record it was read from; empty
+  keeps the shape of the question. Before wiring a value with `value` +
+  `uiAction`.
+- `control_object.md` — one value made of several controls: `ControlGroup` versus
+  `Form`, naming, `<Picker type="object">`, a settings sheet. Before putting
+  anything in a picker popup.
+- `group.md` — `<Group>`: several controls reading as one framed object. Before
+  negative margins or `border-radius: 0` by hand.
 - `form_changed.md` — a form sends nothing when nothing changed; what "changed"
-  is measured against; `pristineKey`; `standalone`; what follows a send, and
-  `command="--navi-void"` for a form that keeps its popup open. Read before
-  `canSendWhileUnchanged`, and before a control inside a group whose value it
-  has no business joining.
+  is measured against; `pristineKey`; `standalone`; what follows a send
+  (`command`, `--navi-void`). Before `canSendWhileUnchanged`, and before a control
+  inside a group whose value it has no business joining.
 - `field_validation.md` — what only a browser can answer versus "is this value
-  acceptable" (validity's); constraints as props; `singleSpace="autoFix"`
-  correcting a value instead of refusing it; `charGuard`/`maxLengthGuard`. Read
-  before writing a constraint: if the sentence would make sense in a server's
-  response, the rule belongs in validity.
+  acceptable" (@jsenv/validity's); constraints as props; `singleSpace="autoFix"`;
+  guards. Before writing a constraint.
 - `create_and_edit.md` — the create/edit loop assembled from `route`,
-  `resource`, `Form` and `RouteTravel`. Read before writing a create or edit
-  screen.
-- `badge_list.md` — how a `BadgeList` counts its badges, `maxLines` inside a
-  `Picker`, why it needs a `fallback` there.
+  `resource`, `Form` and `RouteTravel`. Before writing a create or edit screen.
 
 ### Popups
 
-- `popup_open.md` — a popup owns its open state; `command` + `commandFor`;
-  `triggerNaviCommand` as the last resort, with the event forwarded and never
-  invented; opening ON something; a press that opens and acts is a `Picker`,
-  and its trigger wears the wait and the error (a card that lifts, `openOn`);
-  Escape cancels; the close cross; `signal`/`navState`/`open` and what each
-  costs; one panel fed by a slot (`createSlot`: one `SlotFill` where the choice
-  is made, the panel's `signal` bound to the screen's state, never
-  `open={isFilled}`); a popup that loads data; `mount`. Read before passing `open`,
-  calling `triggerNaviCommand`, or writing a close button.
-- `popup_backdrop.md` — three independent questions: a wall or not
-  (`backdrop={false}`), what an outside press does, how far the page withdraws;
-  `data-navi-popup-outside`, and `data-navi-popup-inside` for a box of the
-  page whose press is not a dismissal. Read before writing CSS for a backdrop.
-- `popup_lift.md` — `animation="lifting"`: the pressed card brought to the
-  front. `data-lift` names what is lifted and is rendered at once; the
-  trigger's box is the card's box; `lift="box"` for a card, `"scene"` for a
-  drawing framed the same way; one popup for a whole row, walked from the front
-  through a `SlideContainer`, `liftAnchor` naming where the closing comes back
-  to; `animation={{ open, close: "lifting" }}` for a popup that did not come out of what it
-  lands in, the landing rendered by `onClose`; what an opening costs and where
-  the time goes;
-  the wall arriving from nothing, over the movement. Read before
-  giving a `Dialog` or a `Picker` `animation="lifting"`, or before measuring
-  why one opens slowly.
+- `popup_open.md` — a popup owns its open state; `command` + `commandFor`,
+  `triggerNaviCommand` as the last resort; opening ON something; a press that
+  opens and acts is a `Picker`; Escape cancels; the close cross;
+  `signal`/`navState`/`open`; a popup that loads data; `mount`; a closed
+  `Dialog` costs one element until asked (a row may hold the dialogs of its
+  own actions). Before passing `open`, calling `triggerNaviCommand`, or
+  writing a close button.
+- `popup_backdrop.md` — three independent questions: a wall or not, what an
+  outside press does, how far the page withdraws. Before CSS for a backdrop.
+- `popup_lift.md` — `animation="lifting"`: the pressed card brought to the front.
+  Before giving a `Dialog` or a `Picker` `animation="lifting"`.
 - `dialog_shape.md` — bounds rather than a width, the container ceiling, the
-  centered box versus the docked sheet (top edge by default, `"bottom"` opt-in),
-  `marginWithContainer`. Read before
-  deriving `smallTouchScreenSignal` in an app or writing CSS to make a dialog
-  fit.
+  docked sheet. Before deriving `smallTouchScreenSignal` in an app or writing CSS
+  to make a dialog fit.
 - `autofocus.md` — the ladder that hands out the keyboard, `autoFocus` on a
-  surface versus on a field, the ring decided by the modality of what asked,
-  `moveFocusTo`. Read before calling `element.focus()` anywhere.
+  surface versus a field, the ring, `moveFocusTo`. Before calling
+  `element.focus()` anywhere.
 
 ### Gestures
 
 - `interactions.md` — a gesture is named, not read by hand: the `interactions`
-  prop, swipes, holds and the two counted taps (`double_click`,
-  `single_click`), the gate, `selfInteractions` for an affordance inside
-  somebody else's box, `actionStandalone` for a run nothing above waits on,
-  registering a detector. Read before a `pointerdown` listener of your own, and
-  before stopping propagation to keep a popup shut.
+  prop, swipes, holds, counted taps, the gate, `selfInteractions`, registering a
+  detector. Before a `pointerdown` listener of your own, and before stopping
+  propagation to keep a popup shut.
 - `drag_interactions.md` — an element carried: `move`, `reorder`, `land`,
-  `toss`, `leave`, `moving`, the `grab`/`release`/`refuse` moments, dressing the
-  clone, and the machinery for a gesture whose product is a value. Read before
-  moving anything with the pointer.
-- `pan_zoom.md` — a surface under the hand: `pan`, `zoom`, and what a touch or
-  a wheel over it may do to the page around it.
-- `mobile_touch.md` — what Chrome and Safari do with a finger a gesture also
-  reads, measured: they commit it to their own pan ~8px in (read a finger's
-  intent before that), `touch-action` restarts at every scroller, when the
-  click survives, the tap Chrome drops after a touch drag, the capture every
-  finger lands with (which `hasPointerCapture` misses on a field), and how to
-  reproduce all of it without a device (Chrome's mobile touch emulator, Safari
-  in the iOS simulator). Read before reading a finger yourself, and before concluding a
-  gesture works because it works with a mouse.
+  `toss`, `leave`, `moving`, the `grab`/`release`/`refuse` moments,
+  `--navi-grab`, dressing the clone. Before moving anything with the pointer.
+- `pan_zoom.md` — a surface under the hand: `pan`, `zoom`, and what a touch or a
+  wheel over it may do to the page around it.
+- `mobile_touch.md` — what Chrome and Safari do with a finger, measured, and how
+  to reproduce it without a device. Before reading a finger yourself, and before
+  concluding a gesture works because it works with a mouse.
 
 ### Layout, CSS and text
 
-- `css_architecture.md` — navi wins by default, defaults sit in `@layer navi`,
-  props first; `--navi-*` versus `--component-*`; what a popup inherits from its
-  opener; a popup and a callout are element children your `:last-child` counts;
-  `import.meta.css` and what a `${}` costs; browsers are the consuming app's
-  target. Read before overriding a component style, before any
-  `import.meta.css`, and before a structural selector (`:last-child`,
-  `:nth-child`, `:empty`) on a container holding navi components.
-- `safe_area.md` — the two inset families, an app narrower than the window
-  (`--navi-app-max-width`), `data-navi-safe-area`, which viewport is which under
-  a virtual keyboard (overlaid on Chromium only with
-  `enableVirtualKeyboardOverlay()`: `--navi-keyboard-inset-bottom`). Read before hand-writing an offset to clear a `FixedBar`.
-- `scroll.md` — where scrolling happens: `header`/`body`/`footer`, `List`'s
-  `scroller`, where a list opens and what a search does to where it is, a popup
-  that scrolls, hover while scrolling, how a list clips at its rounded corners
-  and why a borderless list has none; many rows: `<List.Items>` and the render
-  window (`renderBudget`, its `{ initial, after }` form for a list whose first
-  picture is taken — opening in a click, coming back in a route transition —
-  counted from the row it opens on; the whole `onScrolledChange` position,
-  `visibleCount` included, handed back to open on it; `virtualItemSize`,
-  `findText` for Cmd/Ctrl + F beyond the window).
-  Read before writing CSS to make something scroll, and before rendering a
-  collection as `<List.Item>` children.
-- `mobile_layout_pitfalls.md` — a horizontal overflow inflates the layout
-  viewport on Chrome Android and miscenters every dialog; `overflow-x: clip`.
+- `css_architecture.md` — navi wins by default, defaults in `@layer navi`, props
+  first; `--navi-*` versus `--component-*`; what a popup inherits from its
+  opener; structural selectors (`:last-child`…) and navi's out-of-flow children;
+  `import.meta.css` and what a `${}` costs; browser support. Before overriding a
+  component style or writing `import.meta.css`.
+- `safe_area.md` — the app's rectangle and the band left free inside it, an app
+  narrower than the window (`--navi-app-max-width`), `data-navi-safe-area`, the
+  viewport under a virtual keyboard, a document wider than the screen. Before
+  hand-writing an offset to clear a `FixedBar`.
+- `scroll.md` — where scrolling happens: `header`/`body`/`footer`, a `List`'s
+  `scroller`, where a list opens (a position handed back whole, `visibleCount`
+  included), a popup that scrolls, many rows (`<List.Items>`, the render window
+  and its first picture, `findText`), hover while scrolling. Before writing CSS
+  to make something scroll, and before rendering a collection as `<List.Item>`
+  children.
 - `z_index.md` — DOM order first; a `z-index` without `isolation: isolate`
-  competes with the page; navi's bands. Read before writing a `z-index`.
-- `typography.md` — text is a component; `maxLines` is the one truncation
-  (never `lineClamp`/`overflowEllipsis`/`text-overflow` by hand), on `Text`
-  and its family, a `Picker`'s value, a `Binder`'s tabs, a `BadgeList`'s rows;
-  `attachLastChild`; one line height for everything (`--navi-line-height`,
-  1.25). Read before an overflowing label, and before touching a
-  `line-height`.
+  competes with the page; navi's bands. Before writing a `z-index`.
+- `typography.md` — text is a component; `maxLines` is the one truncation; one
+  line height for everything; `BadgeList`. Before an overflowing label, and
+  before touching a `line-height`.
 - `i18n.md` — `interpolateText`/`<Interpolate>` for one sentence, `createI18n`
-  for the app's texts, `naviI18n` for navi's own. Read before writing a
-  user-visible sentence.
-- `testid.md` — role and accessible name first; `data-testid` lands on the
-  control's host (on a selectable `List.Item`, its hidden input); what not to
-  target. Read before a selector in a test.
+  for the app's texts, `naviI18n` for navi's own. Before writing a user-visible
+  sentence.
+- `testid.md` — role and accessible name first; where `data-testid` lands; what
+  not to target. Before a selector in a test.
 
 ## Key concepts to know before guessing an API
 
-- **Routing is signal-based**: URL state (including search params) two-way
-  syncs with signals. Don't build parallel state for what a route/query
-  signal already tracks.
+- **Routing is signal-based**: URL state, search params included, two-way syncs
+  with signals. Don't build parallel state for what a route or query signal
+  already tracks.
 - **A link lands on an element by its fragment**: give the element an `id` and
-  link to `#id`. Never a search param plus `scrollIntoView` in an effect (see
-  `navigation.md`).
-- **Actions** model async operations with a lifecycle (idle, running,
-  completed, failed, aborted). Components read an action's state via
-  `useAsyncData`, not by manually tracking loading/error booleans. Reading does
-  not run it: a `routeAction`, a control's `action`, or
-  `useAsyncData(action, { run: true })` starts it.
+  link to `#id` — never a search param plus `scrollIntoView` in an effect.
+- **Actions** model async operations with a lifecycle (idle, running, completed,
+  failed, aborted). Components read an action's state with `useAsyncData`, not
+  hand-tracked loading/error booleans. Reading does not run it: a `routeAction`,
+  a control's `action`, or `useAsyncData(action, { run: true })` starts it.
 - **REST state is modelled with `resource()`**, and parent/child relations with
-  `.one` / `.many` / `.scopedOne` / `.scopedMany`. Never encode a backend
-  sub-resource (`/games/:id/candidates`) as an `op`/`type` discriminator inside
-  one verb's callback. Searching a collection is that collection's `GET_MANY`
-  with one more param, never a resource or an action of its own.
-- **`Box`** is the element every component is drawn with: `flex` (side by
-  side), `flex="y"` (stacked), `grid`, `inline`, `alignX`/`alignY` (horizontal
-  and vertical whatever the direction), `spacing` for the gap (there is no `gap`
-  prop), sizes from the `"xxs"`…`"xxl"` scale. Prefer it over raw CSS for layout
-  inside Navi apps.
+  `.one` / `.many` / `.scopedOne` / `.scopedMany` — never a backend sub-resource
+  (`/games/:id/candidates`) encoded as an `op`/`type` discriminator inside one
+  verb's callback. Searching a collection is that collection's `GET_MANY` with
+  one more param.
+- **`Box`** is the element every component is drawn with: `flex` (side by side),
+  `flex="y"` (stacked), `grid`, `inline`, `alignX`/`alignY`, `spacing` for the gap
+  (there is no `gap` prop), sizes from the `"xxs"`…`"xxl"` scale. Prefer it over
+  raw CSS for layout.
 - **A control holds its own value.** `Input` (checkbox and radio are
-  `<Input type="checkbox">`/`<Input type="radio">`, there is no `Checkbox`
-  component), `Select`, `Picker` and the others work with nothing wired at all:
-  inside a `Form`, the form reads them when it sends. When the app needs the
-  value, bind it with `signal`. `action` is one way to react to a change, for
-  work that can fail or take time; it is not how a control is wired. Never
-  `onChange` + manual state (see `control_value.md`).
+  `<Input type="checkbox">`/`<Input type="radio">`; there is no `Checkbox`),
+  `Select`, `Picker` and the others work with nothing wired: inside a `Form`, the
+  form reads them when it sends. When the app needs the value, bind it with
+  `signal`. `action` reacts to a change that can fail or take time; it is not how
+  a control is wired. Never `onChange` + manual state.
 - **A gesture is named, not read by hand**: `interactions={{ swipe_right: … }}`
-  on any `Box` (so on any component). Never a `pointerdown` listener of your own.
-- **Texts**: a user-visible sentence containing a value is written as one
-  template with `[placeholder]`s (`interpolateText` / `<Interpolate>`), not cut
-  into JSX fragments or concatenations. Beyond a handful of texts, an app
-  declares them in its own `createI18n()` instance — using the English text
-  itself as the key, whereas navi's `naviI18n` uses opaque keys. Application
-  texts never go into `naviI18n`.
+  on any `Box`, so on any component — never a `pointerdown` listener of your own.
+- **Texts**: a user-visible sentence containing a value is one template with
+  `[placeholder]`s (`interpolateText` / `<Interpolate>`), not JSX fragments or
+  concatenations. Beyond a handful of texts, the app declares them in its own
+  `createI18n()` instance, the English text as the key; navi's `naviI18n` uses
+  opaque keys, and application texts never go into it.
 - **View transitions**: navi components animate their own changes and never
-  decide for the whole document. What an app starting its own transition has
-  to know — unique names, the fallback fade, a callback in which no frame ever
-  ticks — is `view_transitions.md`.
+  decide for the whole document. What an app starting its own transition has to
+  know is `view_transitions.md`.

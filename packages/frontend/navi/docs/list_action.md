@@ -29,8 +29,7 @@ refuses in the meantime, which is what you want when the rows are alternatives.
 ```
 
 A press on another row while it runs is refused and says so, in the selection's
-own words ("le choix est en cours d'enregistrement", "la sélection…" in a
-`multiple` list) rather than in a row's.
+own words rather than in a row's.
 
 ## On a row's control: that row waits alone
 
@@ -61,22 +60,20 @@ stay live. Two rows can be in flight at once.
 ```
 
 The command is what marks the row, and it runs **only if the action succeeded**
-— a button given both runs its action first and lets its command follow (see
-[actions.md](./actions.md#a-press-that-opens-something-and-waits-for-the-answer)). So a refused invitation leaves the row unmarked
-without anything to undo.
-
-`selectableArea="manual"` is about the row's own surface, not about the button:
-a control inside a row answers its own press whichever area the row claims.
-What it removes is the row selecting under a press that lands beside the button
-— here what marks the row is the command, once the invitation went through.
+(see [actions.md](./actions.md#a-press-that-opens-something-and-waits-for-the-answer)),
+so a refused invitation leaves the row unmarked without anything to undo.
+`selectableArea="manual"` keeps the row from selecting under a press that lands
+beside the button — here what marks the row is the command, once the invitation
+went through; a control inside a row answers its own press whichever area the
+row claims.
 
 ## Who draws the wait, and who answers a press
 
 **Whatever control is on the row carries the wait and the refusal.** A button,
 a checkbox, a picker — it has a place to draw a spinner and an anchor to hang a
-callout on, and it is what the user pressed. The row itself is the fallback,
-for a row that holds nothing but text: it draws a loading outline, swallows
-presses (its buttons included) and opens the sentence itself.
+callout on, and it is what the user pressed. The row itself is the fallback, for
+a row that holds nothing but text: it draws a loading outline, swallows presses
+(its buttons included) and opens the sentence itself.
 
 That is why a selectable row does not answer a press twice. It swallows the
 press so nothing inside it acts, then asks the control it carries to explain —
@@ -95,13 +92,8 @@ belongs on the button; pressed on the row's own surface, on the row:
 | the button of a row held back by something else | the button                 |
 
 The last one needs nothing special: that row is not blocked, so the press
-reaches the button and the button's own gate answers it.
-
-A row that would rather always take it says so once:
-
-```jsx
-<List.Item data-callout-anchor="item" />
-```
+reaches the button and the button's own gate answers it. A row that would rather
+always take it says so once: `<List.Item data-callout-anchor="item" />`.
 
 ## Read-only, not loading
 
@@ -113,10 +105,10 @@ use, and what says that is `readOnly`:
 ```
 
 `loading` on a row means the ROW is waiting on something — being added to the
-list, removed from it, saved where it is (see the `loading` values on
-`List.Item`). Putting it there for a control's run draws a second wait next to
-the one the button is already drawing, and says the row is being changed when it
-is only being used.
+list, removed from it, saved where it is (the `loading` values of `List.Item`).
+Putting it there for a control's run draws a second wait next to the one the
+button is already drawing, and says the row is being changed when it is only
+being used.
 
 Give the row a `readOnlyMessage` when it is held for a reason that will pass:
 the default sentence is about availability ("this option is not available"),
@@ -125,45 +117,38 @@ which is the wrong thing to say about a wait.
 ## Hold the rows, not the list
 
 It is tempting to write `<List readOnly={pending}>` to keep a second row from
-being pressed while one is in flight. It works, and it works by luck: the
-command the button fires on success (`--navi-select`) is aimed at the list, and
-a list still read-only at that moment refuses it — the call goes through and the
-row is never marked, silently.
+being pressed while one is in flight, and it works by luck: the command the
+button fires on success (`--navi-select`) is aimed at the list, and a list still
+read-only at that moment refuses it — the call goes through and the row is never
+marked, silently. Whether it lands comes down to one tick (the flag cleared in a
+`finally`, or a moment later), and nothing on screen says which you wrote.
 
-Whether it lands comes down to one tick. Clearing the flag in a `finally` clears
-it before the command runs, so the selection arrives; clearing it a moment later
-— a transition, a debounce, one more `await` on the way out — loses it. Nothing
-on screen says which of the two you wrote.
-
-Hold the rows instead. `readOnly` on every row is what "one at a time" looks
-like, it says the same thing on screen, and it leaves the list free to take the
-answer whenever the answer comes:
+Hold the rows instead: `readOnly` on every row says the same thing on screen and
+leaves the list free to take the answer whenever the answer comes.
 
 ```jsx
 <List.Item readOnly={pending !== null} />   // all of them: one at a time
 <List.Item readOnly={pending.includes(name)} />  // this one: each on its own
 ```
 
+One at a time also needs no state of the app's: `<List parallelGuard={1}>`
+holds every control that would start a run while one is out (below).
+
 ## How many at once: `parallelGuard`
 
-A list is a place where the same gesture is available many times over, and
-nothing about a row's own action stops someone from starting one on every row it
-draws — a dozen requests in flight because the list happened to be long.
-
-So a list allows **four runs at once by default**. While that many are out,
-every control in it that would start another run goes read-only and says how
-many it is waiting on; the next press is possible again the moment one comes
-back.
+Nothing about a row's own action stops someone from starting one on every row a
+list draws — a dozen requests in flight because the list happened to be long. So
+a list allows **four runs at once by default**. While that many are out, every
+control in it that would start another run goes read-only and says how many it
+is waiting on; the next press is possible again the moment one comes back.
 
 ```jsx
 <List parallelGuard={2}>      // stricter
 <List parallelGuard={Infinity}>  // lifted, without taking it out of the tree
 ```
 
-It counts runs, not values — which is the whole difference from `maxLengthGuard`
-next to it: that one says how many things the selection may HOLD, this one how
-many may be HAPPENING. A list can carry either, or both, and they refuse for
-unrelated reasons.
-
-Only a control that would start a run is held: a row with nothing to run, or a
-button that merely fires a command, never waits its turn.
+It counts runs, not values — the whole difference from `maxLengthGuard`, which
+says how many things the selection may HOLD, where this one says how many may be
+HAPPENING. A list can carry either, or both, and they refuse for unrelated
+reasons. Only a control that would start a run is held: a row with nothing to
+run, or a button that merely fires a command, never waits its turn.

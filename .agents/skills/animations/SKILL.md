@@ -166,34 +166,31 @@ so it can only be called by whoever owns the change:
   "A hold is not yours" below).
 - **Keep the page out of it**: `:root { view-transition-name: none }`. The UA
   names the root `root`, so by default the whole document is replaced by a
-  picture for the duration — and a captured element is dead in BOTH senses: it
-  stops rendering live, and it cannot be pointed at anymore. Nothing hit-tests
-  to it; every press over it falls through to the nearest ancestor still being
-  painted, whatever the pseudo-elements are told about `pointer-events`. Opted
-  out, only the named elements are captured and the rest of the page keeps
+  picture for the duration — and a captured element stops rendering live and
+  cannot be pointed at
+  ([view_transitions.md](../../../packages/frontend/navi/docs/view_transitions.md#an-element-captured-in-a-view-transition-cannot-be-pointed-at)).
+  Opted out, only the named elements are captured and the rest of the page keeps
   answering. Even a transition that slides whole screens past each other does
-  not need the root: the travelling box is itself captured, so it paints
-  nothing of its own, and its two pictures cover its rectangle between them at
-  every moment of the travel. _Reference: the `TRAVEL_ATTRIBUTE` CSS in
-  route_travel.jsx._
-  - **Unless the top layer is part of the movement.** A modal dialog, its
-    `::backdrop`, a popover: the browser paints the top layer during a
-    transition only as part of the root's picture. With the root opted out,
-    the wall and the dialog go unpainted for the length of the movement, and
-    a named element inside the dialog is photographed empty. A movement that opens or closes a top-layer
-    surface keeps the root's default name and pays the frozen page — under a
-    modal wall it costs nothing. _Reference: `popup_lift.js`._ A movement that
-    NEEDS the root out (pages split from their bars) stands the top layer in
-    instead: what a wall paints, painted into each picture and into one live
-    element for what no picture covers, with the real wall switched off for
-    exactly the same span. _Reference: `transition_furniture.js`, and the two
-    frames every stand-in must reckon with in
-    [view_transitions.md](../../../packages/frontend/navi/docs/view_transitions.md#two-frames-show-the-live-document)._
+  not need the root: the travelling box is itself captured, and its two pictures
+  cover its rectangle between them at every moment. _Reference: the
+  `TRAVEL_ATTRIBUTE` CSS in route_travel.jsx._
+  - **Unless the top layer is part of the movement**: it is painted only through
+    the root's picture
+    ([view_transitions.md](../../../packages/frontend/navi/docs/view_transitions.md#the-top-layer-is-painted-through-the-roots-picture)).
+    A movement that opens or closes a top-layer surface keeps the root's name and
+    pays the frozen page — under a modal wall it costs nothing (_Reference:
+    `popup_lift.js`_). A movement that NEEDS the root out (pages split from their
+    bars) stands the top layer in, with the real wall switched off for exactly the
+    same span (_Reference: `transition_furniture.js`, and
+    [the two live frames](../../../packages/frontend/navi/docs/view_transitions.md#two-frames-show-the-live-document)
+    every stand-in must reckon with_).
 
 Facts worth knowing before reaching for one:
 
-- **A name must be unique in the document** — a duplicate aborts the
-  transition. Scope names by list, by picker, by whatever makes them unique.
+- **A name is unique in the document, and never inside a page that moves** —
+  a duplicate aborts the transition, and a named element inside a moving page
+  stands still while the pages slide
+  ([view_transitions.md](../../../packages/frontend/navi/docs/view_transitions.md#a-name-is-unique-per-document)).
 - **A name that depends on browser support is written in CSS, not in JS** — see
   "Where a browser cannot nest, it must not animate" below. Box's
   `viewTransitionName` prop (and inline styles in general) cannot be put behind
@@ -473,9 +470,9 @@ The gesture then drives a transition instead of driving pixels:
   back and forth must not bury the way out of the page under six history
   entries. What is aimed at (a tab pressed) is the one that pushes.
 - **What must follow the gesture is NAMED, not told.** A trait under a tab row,
-  a header: give it its own `view-transition-name` and the browser animates it
-  from where it was to where it is, on the same clock. Nothing measures
-  anything, and it works for elements outside the box that travels.
+  a header — outside the pages that travel: give it its own
+  `view-transition-name` and the browser animates it from where it was to where
+  it is, on the same clock. Nothing measures anything.
 - **A browser with no view transitions has no "before"**, so there is nothing to
   drag: read the gesture anyway and apply the change on release. Detect it
   before `ensureDocumentStartViewTransition()` has installed the polyfill (it
@@ -508,23 +505,17 @@ Traps:
   `ensureDocumentStartViewTransition()` returns, which every transition navi
   starts goes through and which releases what `holdViewTransition` registered
   (`start_view_transition_polyfill.js`).
-- **The pictures are not on screen from the call to `finished`.** The frame the
-  first picture is taken on is rendered and shown, and so is the frame after
-  the pictures drop, before `finished` runs. Anything switched on for the
-  movement is seen on both, next to whatever it stands in for unless that is
-  switched off by the same DOM write. Doubt a flash under the press before
-  doubting the movement; a CDP screencast shows it, a paused animation never
-  does. _Reference: the "rest" wall in `transition_furniture.js`._
-- **A press during a transition does not reach a captured element** — captured
-  means not painted where it stands, so nothing hit-tests to it (see "Keep the
-  page out of it" above, which is half of the answer). The other half is the
-  travelling box itself, whose rectangle is legitimately covered by pictures: a
-  gesture meant to grab what is still moving is caught at the document and
-  matched against the box's rectangle — otherwise reaching for a page
-  mid-flight does nothing, and the browser answers the gesture instead (the
-  page rocks under a travel that is already moving). A wheel costs more than a
-  press there: a press is one event, a wheel gesture is a stream, and heard on
-  the box alone it loses every event after the first.
+- **The pictures are not on screen from the call to `finished`**: the capture
+  frame and the frame after the pictures drop are live
+  ([view_transitions.md](../../../packages/frontend/navi/docs/view_transitions.md#two-frames-show-the-live-document)).
+  Doubt a flash under the press before doubting the movement; a CDP screencast
+  shows it, a paused animation never does. _Reference: the "rest" wall in
+  `transition_furniture.js`._
+- **A press during a transition does not reach a captured element** (see "Keep
+  the page out of it" above). A gesture meant to grab what is still moving is
+  caught at the document and matched against the travelling box's rectangle —
+  how, and why a wheel costs more than a press there, is in the
+  [gestures skill](../gestures/SKILL.md).
 
 _Reference: `route_travel.jsx` (whole file), demo
 `src/nav/demos/route_travel/route_travel.html`. The full spec of the travel

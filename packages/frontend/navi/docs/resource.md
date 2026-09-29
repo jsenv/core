@@ -310,10 +310,10 @@ out with an example in its JSDoc:
   `session: null` for none); `DELETE` the parent id, or `{ id }`. A parent
   `GET`/`POST` that embeds the child inline works too.
 - **`.many(propertyName, CHILD, callbacks)`** — `GET_MANY` returns the
-  **parent** with the array nested inside; `POST`/`PUT`/`PATCH` the **child**,
-  upserted into the child store but not joining the parent's array, which only a
-  `GET_MANY` rewrites; `DELETE` `[parentId, childId]`, `DELETE_MANY`
-  `[parentId, [childId, …]]`.
+  **parent** with the array nested inside; `GET`/`POST`/`PUT`/`PATCH` the
+  **child**, upserted into the child store but not joining the parent's array,
+  which only a `GET_MANY` rewrites; `DELETE` `[parentId, childId]`,
+  `DELETE_MANY` `[parentId, [childId, …]]`.
 - **`.scopedOne(propertyName, callbacks)`** — every callback returns
   `[ownerId, props | null]`; the property is `null` until one does.
 - **`.scopedMany(propertyName, { idKey, … })`** — `[ownerId, props]`; `PUT` (an

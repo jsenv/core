@@ -71,12 +71,10 @@ on. A testid on the wrapper would answer a click with a hit on the padding.
 </span>
 ```
 
-This routing is what `CONTROL_ATTRIBUTE_SET` in
-`src/control/control_context.js` lists: the props navi hands to the host rather
-than to the box around it (`id`, `name`, `type`, `value`, `tabIndex`,
-`data-testid`, …). Any prop navi does not know lands on the root box instead —
-so a `data-test-id` or a `data-qa` of your own would name the wrapper, which is
-the second reason to keep the standard spelling.
+Navi hands the host the props it knows belong there (`id`, `name`, `type`,
+`value`, `tabIndex`, `data-testid`, …); any prop it does not know lands on the
+root box instead — so a `data-test-id` or a `data-qa` of your own would name
+the wrapper, which is the second reason to keep the standard spelling.
 
 `aria-label` and `aria-labelledby` take the same road, and for the reason the
 section above gives: the name has to be where the role is. The root box has no
@@ -124,16 +122,16 @@ error message, a section, a row — put the testid on the surrounding component
 (`<Field data-testid="email-field">`, `<Box data-testid="cart-row">`); anything
 built on `Box` forwards it to its own element.
 
-A selectable `List.Item` is a control too, and the rule holds there with a
-consequence worth knowing: its host is the real checkbox or radio the row
-selects with, an input navi draws invisible (`navi-visually-hidden`) and lays
-under the row's content. A `data-testid` on the item names that input — what
-`toBeChecked()` reads, not what the eye sees. A test that presses the row, or
-waits for it to show, targets what the row draws: a testid on its content.
+A selectable `List.Item` is a control too, and the rule holds there: its host is
+the real checkbox or radio the row selects with, an input navi draws invisible
+and lays under the row's content. A `data-testid` on the item names that input —
+what `toBeChecked()` reads, not what the eye sees. A test that presses the row,
+or waits for it to show, targets what the row draws: a testid on its content.
 
-A picker's popup is the one element the application does not render itself:
-`<Picker>` builds it, so a `data-testid` on the picker names the trigger and
-nothing names the popup. `popupTestId` does:
+What navi builds itself is named through props. A `data-testid` on a `<Picker>`
+names the trigger; `popupTestId` names the popup it builds (the callout, under
+`mode="callout"`), and `confirmTestId` / `cancelTestId` the yes and no buttons
+of a `type="confirm"` picker's default body:
 
 ```jsx
 <Picker data-testid="tie-break" popupTestId="tie-break-sheet">
@@ -141,13 +139,11 @@ nothing names the popup. `popupTestId` does:
 </Picker>
 ```
 
-Most tests do not need it — a testid on what the popup holds (`<Box
+Most tests do not need `popupTestId`: a testid on what the popup holds (`<Box
 data-testid="place-pick">` among the children) names the screen, not the frame,
 and is the better name for a test that reads or clicks the content. Reach for
-`popupTestId` when the frame IS what the test looks at: a screenshot of the
-popup's surface, its position, its size, its backdrop. It names the popup in
-every mode, including `mode="callout"`, where the frame is a callout rather
-than a sheet.
+it when the frame IS what the test looks at — a screenshot of the popup's
+surface, its position, its size, its backdrop.
 
 ## A callout is a role first
 
@@ -168,9 +164,8 @@ for it is what a live region is for, and the role is what makes a screen reader
 read it out. A test targeting it asserts that.
 
 When the role is not enough — two callouts up at once, a screenshot of one
-particular surface — `openCallout` takes a `testId`, and a picker's
-`popupTestId` covers the one it opens. Waiting on `.navi_callout` is the thing
-to replace: it is a navi class like any other.
+particular surface — `openCallout` takes a `testId`. Waiting on `.navi_callout`
+is the thing to replace: it is a navi class like any other.
 
 `<ControlSwap.Side>` answers the same situation the other way: the cap at the
 end of the row is drawn by navi, and every prop the side does not use for

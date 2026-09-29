@@ -141,10 +141,10 @@ const useBadgeRegistry = (children, enabled) => {
  *   list renders nothing at all. In a <Picker> this is the only placeholder
  *   the user gets — a picker given a `ui` does not draw its own — so pass the
  *   placeholder text: `fallback="Select skills…"`. Plain text is the right
- *   choice there: it reads at the picker's size, in the placeholder color the
- *   picker gives its empty value slot, and the box stays the same height. A
- *   transparent <Badge> matches the slot to the pixel instead, at the price of
- *   badge-sized text. See docs/badge_list.md.
+ *   choice there: it reads at the picker's size, in the normal text color (a
+ *   caller's `ui` is never greyed as a placeholder), and the box stays the same
+ *   height. A transparent <Badge> matches the slot to the pixel instead, at the
+ *   price of badge-sized text. See docs/typography.md#badgelist.
  * @param {boolean} [shrinkWrap]
  *   Narrows the list down to its widest row so the last row isn't ragged.
  *   Defaults to true inside a <Picker> — the trigger draws a border around the

@@ -57,7 +57,7 @@ Validation goes beyond native browser constraints: custom rules, better error po
 
 Some values are moved rather than typed: `Spin` puts the way back and the way on around a value one step at a time, and `SpinGroup` makes several of them read as one — `TimeSpin` ("07h30") and `TimeRangeSpin` ("de 7h à 21h", end after start) are built that way. `Wheel` is the scroll picker a phone shows for the same job, with `TimeWheel` and `TimeRangeWheel` built on it.
 
-`Group` makes several controls read as one framed object, `Editable` edits a value in place, exactly where it is written.
+`Group` makes several controls read as one framed object (see [docs/group.md](./docs/group.md)), `Editable` edits a value in place, exactly where it is written.
 
 ## List
 
