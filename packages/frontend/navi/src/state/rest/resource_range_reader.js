@@ -74,7 +74,7 @@ export const createRangeReader = (
         `${actionName} must return { items, start, count }, received ${describeResult(result)}.`,
       );
     }
-    const items = store.upsert(result.items);
+    const items = store.upsertAnswer(result.items);
     let { start, count } = result;
     if (start === undefined) {
       const startAsked = rangeParams.start;

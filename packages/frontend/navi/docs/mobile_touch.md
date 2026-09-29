@@ -19,6 +19,7 @@ changes, measure again before trusting a number here.
 - [Only the start is contested](#only-the-start-is-contested)
 - [The click is the browser's call as much as ours](#the-click-is-the-browsers-call-as-much-as-ours)
 - [A tap dropped after a touch drag](#a-tap-dropped-after-a-touch-drag)
+- [A finger is captured to what it touched, inside shadow trees too](#a-finger-is-captured-to-what-it-touched-inside-shadow-trees-too)
 - [A finger never makes a wheel event](#a-finger-never-makes-a-wheel-event)
 - [Verifying without a device](#verifying-without-a-device)
 
@@ -159,6 +160,40 @@ variable per row, in `src/control/demos/lab/` (`tap_after_drag_experiment.html`,
 Chromium's `gesture_provider.cc` (`ignore_single_tap_`, reset on the next down)
 and `tap_suppression_controller.cc` (the tap that stops a fling, 180ms) for the
 two mechanisms that do NOT explain it.
+
+## A finger is captured to what it touched, inside shadow trees too
+
+A touch pointer is captured the moment it lands, by the browser, to the element
+it landed on — nobody calls `setPointerCapture`. A mouse and a pen are not.
+That capture is announced like any other, with a `gotpointercapture` just
+before the first pointer event that follows, and a finger resting still sends
+one soon: its contact changes, so `pointermove`s with unchanged coordinates
+come within the first 100ms or so. Nearly every touch press therefore sees a
+`gotpointercapture` it never asked for. Code that reads it as "another gesture
+took this press" gives up on almost every finger.
+
+Recognising that capture is where Chrome misleads: **it goes to the deepest
+element under the finger, shadow trees included.** On an `<input>` or a
+`<textarea>` that is the inner editor, inside the field's own shadow tree; in a
+web component, whatever its shadow root holds there. `hasPointerCapture` on
+what the page sees — the field, the host — answers `false` at `pointerdown`,
+after `gotpointercapture`, and for the whole press. Yet the `gotpointercapture`
+reaches the page retargeted to that same element. An open shadow root shows
+both halves: the host answers `false`, the element inside it `true`.
+
+So the browser's capture is recognised by where it lands, never asked for: on
+a touch press, a capture announced on the press's own target is the browser's,
+whenever it arrives. Compare both events from the same tree: each is
+retargeted to the shadow host from outside. A gesture that takes the press onto
+that same element cannot be told apart from it, so it has to say so another way.
+
+Measured in Chromium 153 through `Input.dispatchTouchEvent`. The capture does
+not depend on the slop, so the desktop path shows it; see
+[Verifying without a device](#verifying-without-a-device). The same `false` on
+a field shows on an Android phone (Chrome 153). Not measured in Safari.
+
+Reference: `implicitCaptureHolder` and `takePress` in `@jsenv/dom`'s
+`press_held.js`.
 
 ## A finger never makes a wheel event
 

@@ -300,6 +300,19 @@ store are written, and re-renders when its row is — `useArray` to the whole
 store. An entry of `useAllByIds` given by a unique key rather than by id can
 only be found by reading the whole store, and that read follows it too.
 
+A row counts as written only when something in it changed:
+
+- **An answer** — what a callback returns — is compared to the row held in
+  depth. Parsed JSON makes every object nested in a row a new one; a
+  revalidation returning the same rows keeps every one of them, and their
+  readers stay still.
+- **A relation** changes its row when the row points at other children. What
+  happens to the children themselves is followed through the relation:
+  `game.place.label` read in a render re-renders it when the place is written,
+  and the game row stays the one it was.
+- **A value written with `store.upsert()`** is compared by reference: a new
+  object is a change, whatever it holds.
+
 ## Relations: pick one of the four methods
 
 A backend sub-route (`/games/:id/candidates`, `/games/:id/candidates/:userId/seen`)

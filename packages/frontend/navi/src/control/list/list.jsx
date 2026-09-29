@@ -110,6 +110,17 @@ const ListRowContext = createContext(null);
 const ListSlotContext = createContext(null);
 
 const css = /* css */ `
+  /* The height of a group's sticky label, written on the group once it is
+     measured — as the group mounts — and read by the group's rows alone (their
+     scroll-margin, below). Inherited, it would be taken by every element in
+     the group, and writing it would restyle all of them: a list's worth of rows
+     and everything inside each. Handed down the two levels that lead to the
+     rows instead. */
+  @property --list-group-label-height {
+    syntax: "<length>";
+    inherits: false;
+    initial-value: 0px;
+  }
   @layer navi {
     .navi_list_container {
       --list-outline-width: 1px;
@@ -784,6 +795,7 @@ const css = /* css */ `
       }
     }
     .navi_list_item_group_list {
+      --list-group-label-height: inherit;
       display: flex;
       width: 100%;
       margin: 0;
@@ -791,11 +803,14 @@ const css = /* css */ `
       flex-direction: column;
       list-style: none;
 
+      > .navi_list_item {
+        --list-group-label-height: inherit;
+      }
       /* Items inside a group must account for the sticky group label height
          on top of the list's global header/scroll-padding spacing. */
       .navi_list_item {
         scroll-margin-top: calc(
-          var(--x-list-scroll-spacing-top) + var(--list-group-label-height, 0px)
+          var(--x-list-scroll-spacing-top) + var(--list-group-label-height)
         );
       }
     }

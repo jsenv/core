@@ -98,19 +98,20 @@ export const waitForPressHeld = (
 ) => {
   const { pointerId, clientX, clientY } = pressEvent;
 
-  /* The one capture that says nothing about the press. A pointer that cannot
-     hover is given a capture the moment it lands, by the browser and to the
-     element it landed on, without anybody asking — and it is announced like any
-     other, just before the first pointer event that follows. EVERY touch press
-     has it, so it cannot be read as this one having been settled: read that way,
-     the wait dies at the first pixel of a finger that was only resting on the
-     glass, which is what a finger does. That is the hold that fails one time in
-     two, on the pointer this whole module exists for.
-     Asked rather than assumed, and asked HERE: the press is the one moment where
-     a capture can only be the browser's, since nothing has taken one yet. */
-  const implicitCaptureHolder = pressEvent.target.hasPointerCapture?.(pointerId)
-    ? pressEvent.target
-    : null;
+  /* The one capture that says nothing about the press. A finger is given a
+     capture the moment it lands, by the browser and to the element it landed
+     on, without anybody asking — and it is announced like any other, just
+     before the first pointer event that follows. EVERY touch press has it, so it
+     cannot be read as this one having been settled: read that way, the wait
+     dies at the first pixel of a finger that was only resting on the glass,
+     which is what a finger does. A mouse or a pen is given none.
+     Known from the press, never asked with hasPointerCapture: the capture goes
+     to the deepest element under the finger, and inside a shadow tree (the
+     inner editor of every <input> and <textarea>, any web component) the
+     element the page sees answers false, while the announcement reaches the
+     page retargeted to it. */
+  const implicitCaptureHolder =
+    pressEvent.pointerType === "touch" ? pressEvent.target : null;
 
   const pressCleanupCallbacks = [];
   // Who is still holding the refusal. The finger holds it because the finger is
@@ -237,8 +238,8 @@ export const waitForPressHeld = (
   }
   holdGiveUps.add(cancelPress);
   // A gesture that captures the pointer without takePress: heard only when the
-  // capture moves, the one it takes on the implicit holder being announced to
-  // nobody (see takePress).
+  // capture moves, the one it takes on the implicit holder being
+  // indistinguishable from the browser's (see takePress).
   const onGotPointerCapture = (captureEvent) => {
     if (captureEvent.pointerId !== pointerId) {
       return;

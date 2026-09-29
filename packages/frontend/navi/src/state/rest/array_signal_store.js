@@ -1,5 +1,7 @@
 import { computed, effect, signal } from "@preact/signals";
 
+import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
+
 export const primitiveCanBeId = (value) => {
   const type = typeof value;
   if (type === "string" || type === "number" || type === "symbol") {
@@ -244,7 +246,16 @@ ${[idKey, ...uniqueKeys].join(", ")}`,
     }
     return itemSignal;
   };
-  const upsert = (...args) => {
+  // A value changes a row when it is another object — the app writing a new
+  // one says something changed, and that is taken as said. An answer says it
+  // with every object nested in its rows: JSON.parse makes them all new, the
+  // ones that did not move included, so a revalidation returning the same
+  // rows would replace every one of them for every reader. What an answer
+  // sends again equal in depth is the value already held (see upsertAnswer).
+  const valueChangedByWrite = (newValue, oldValue) => newValue !== oldValue;
+  const valueChangedByAnswer = (newValue, oldValue) =>
+    newValue !== oldValue && !compareTwoJsValues(newValue, oldValue);
+  const upsertWith = (args, valueChanged) => {
     const mutationsMap = new Map(); // Map<itemId, propertyMutations>
     const triggerPropertyMutations = () => {
       for (const itemPropertiesObserver of itemPropertiesObserverSet) {
@@ -308,7 +319,27 @@ ${[idKey, ...uniqueKeys].join(", ")}`,
         const newValue = props[key];
         if (itemOwnKeys.includes(key)) {
           const oldValue = item[key];
-          if (newValue !== oldValue) {
+          const { set } = itemOwnPropertyDescriptors[key];
+          if (set) {
+            // A relation (.one(), .many() and their scoped forms in
+            // resource_graph.js): the row holds which children it points to,
+            // the children live in their own store, and whoever reads them
+            // follows them there. Its setter writes them and says whether the
+            // row points elsewhere now. Compared as a value instead, the
+            // children received are never the object the row hands out, and
+            // every write naming the relation would replace the row.
+            if (set.call(itemWithProps, newValue)) {
+              hasChanges = true;
+              propertyMutations[key] = {
+                oldValue,
+                newValue,
+                target: item,
+                newTarget: itemWithProps,
+              };
+            }
+            continue;
+          }
+          if (valueChanged(newValue, oldValue)) {
             hasChanges = true;
             itemWithProps[key] = newValue;
             propertyMutations[key] = {
@@ -460,6 +491,9 @@ ${[idKey, ...uniqueKeys].join(", ")}`,
     triggerPropertyMutations();
     return item;
   };
+  const upsert = (...args) => upsertWith(args, valueChangedByWrite);
+  // The same, for the result of a callback — what the server answered.
+  const upsertAnswer = (...args) => upsertWith(args, valueChangedByAnswer);
   const drop = (...args) => {
     const removedItemArray = [];
     const triggerRemovedMutations = () => {
@@ -636,6 +670,7 @@ ${[idKey, ...uniqueKeys].join(", ")}`,
     selectAll,
     itemSignalForId,
     upsert,
+    upsertAnswer,
     drop,
 
     observeItemProperties,

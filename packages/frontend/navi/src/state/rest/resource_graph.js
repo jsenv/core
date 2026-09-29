@@ -586,7 +586,7 @@ const createResource = (
           : // GET/PUT contract (see .one() JSDoc): the parent object with the
             // relationship nested inside, or null for no relationship.
             (result) => {
-              const item = store.upsert(result);
+              const item = store.upsertAnswer(result);
               const childItem = item[propertyName];
               return childItem ? childItem[childIdKey] : undefined;
             };
@@ -773,8 +773,8 @@ const createResource = (
           : (childData) => {
               // an array is [property, value, props], used to rename the child id
               const childItem = Array.isArray(childData)
-                ? childStore.upsert(...childData)
-                : childStore.upsert(childData);
+                ? childStore.upsertAnswer(...childData)
+                : childStore.upsertAnswer(childData);
               return childItem[childIdKey];
             };
       const throwInvalidResult = createInvalidResultThrower(
@@ -816,7 +816,7 @@ const createResource = (
           ? (result) => {
               // GET_MANY contract (see .many() JSDoc): the parent object with
               // the child array nested inside; the array replaces the relationship.
-              const item = store.upsert(result);
+              const item = store.upsertAnswer(result);
               const childItemArray = item[propertyName];
               return childItemArray.map((childItem) => childItem[childIdKey]);
             }
@@ -847,7 +847,7 @@ const createResource = (
                 return deletedChildItemIdArray;
               }
             : (childDataArray) => {
-                const childItemArray = childStore.upsert(childDataArray);
+                const childItemArray = childStore.upsertAnswer(childDataArray);
                 return childItemArray.map((childItem) => childItem[childIdKey]);
               };
       const throwInvalidResult = createInvalidResultThrower(
@@ -986,18 +986,37 @@ const createResource = (
         childSetup(childItem);
       }
       const childSignal = signal(null);
+      // Returns whether the child changed — what the store asks a relation
+      // (see assign in array_signal_store.js). Assigned in place, the child
+      // tells nobody itself: a prop it receives changed is a change of the
+      // owner's row, which is how its readers see it.
       const applyProps = (props) => {
         if (!props) {
+          if (childSignal.peek() === null) {
+            return false;
+          }
           childSignal.value = null;
-          return;
+          return true;
         }
-        // Assign each prop in place. Reactive setters (from chained .one() etc.) will fire.
+        let changed = false;
+        // Assign each prop in place. Reactive setters (from chained .one()
+        // etc.) fire, and say whether their relation changed.
         for (const [key, value] of Object.entries(props)) {
-          childItem[key] = value;
+          const descriptor = Object.getOwnPropertyDescriptor(childItem, key);
+          if (descriptor && descriptor.set) {
+            if (descriptor.set.call(childItem, value)) {
+              changed = true;
+            }
+          } else if (childItem[key] !== value) {
+            childItem[key] = value;
+            changed = true;
+          }
         }
         if (childSignal.peek() !== childItem) {
           childSignal.value = childItem; // first activation: null → childItem
+          changed = true;
         }
+        return changed;
       };
       if (!ownerName) {
         // Declared on a scoped child, an owner id is only unique inside its
@@ -1285,7 +1304,7 @@ const createResource = (
           if (isMany) {
             // GET_MANY, POST_MANY, PUT_MANY etc: rest[0] is the array of items,
             // and it replaces the whole collection.
-            const itemArray = childStore.upsert(rest[0]);
+            const itemArray = childStore.upsertAnswer(rest[0]);
             const idArray = itemArray.map((childItem) => childItem[childIdKey]);
             idArraySignal.value = idArray;
             return [ownerId, idArray];
@@ -1294,8 +1313,8 @@ const createResource = (
           // GET, POST, PUT, PATCH: rest may be [props] or [oldId, props] for renames
           const childItem =
             rest.length > 1
-              ? childStore.upsert(...rest)
-              : childStore.upsert(rest[0]);
+              ? childStore.upsertAnswer(...rest)
+              : childStore.upsertAnswer(rest[0]);
           return [ownerId, childItem[childIdKey]];
         },
         valueToData: (value) => {
@@ -1431,8 +1450,8 @@ const createRestActionFactoryForRoot = (
             // An array result is [property, value, props] — used to rename the
             // idKey of an item: store.upsert("name", "currentName", { name: "newName" })
             const item = Array.isArray(result)
-              ? store.upsert(...result)
-              : store.upsert(result);
+              ? store.upsertAnswer(...result)
+              : store.upsertAnswer(result);
             return item[idKey];
           };
     const throwInvalidResult = createInvalidResultThrower(
@@ -1496,7 +1515,7 @@ const createRestActionFactoryForRoot = (
       verb === "DELETE"
         ? (idOrMutableIdArray) => store.drop(idOrMutableIdArray)
         : (dataArray) => {
-            const itemArray = store.upsert(dataArray);
+            const itemArray = store.upsertAnswer(dataArray);
             return itemArray.map((item) => item[idKey]);
           };
 
@@ -1625,14 +1644,17 @@ ${relationLabel} source location: ${declarationSite}`,
 // array of child props/ids, or anything else meaning "empty") into an array of
 // child ids, upserting each entry into the child store. The id array signal is
 // only touched when the resulting ids actually differ.
+// Returns whether the children the row points to changed — what the store asks
+// a relation (see assign in array_signal_store.js).
 const createChildIdArrayUpdater = (childStore, childIdKey, idArraySignal) => {
   return (valueArray) => {
     const currentIdArray = idArraySignal.peek();
     if (!Array.isArray(valueArray)) {
       if (currentIdArray.length > 0) {
         idArraySignal.value = [];
+        return true;
       }
-      return;
+      return false;
     }
     const idArray = [];
     let modified = false;
@@ -1654,7 +1676,9 @@ const createChildIdArrayUpdater = (childStore, childIdKey, idArraySignal) => {
     }
     if (modified || currentIdArray.length !== idArray.length) {
       idArraySignal.value = idArray;
+      return true;
     }
+    return false;
   };
 };
 

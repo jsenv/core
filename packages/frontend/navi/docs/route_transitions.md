@@ -657,6 +657,18 @@ elements):
   speed). A component reading the action's signals itself
   (`action.dataSignal.value`) does not get that, and re-renders in the hidden
   page.
+- **Restyling the page arriving more than once.** Built inside the update
+  callback, it is styled as it lands; anything written afterwards that its
+  elements inherit, or that re-selects them, restyles all of them again. On the
+  list of thirty cards (~7,000 elements) three did, 16–19 ms each at full
+  speed: the height of a list group's sticky label, written on the group once
+  measured (navi keeps it from being inherited, which took the movement 17 ms
+  sooner); the room a fixed bar takes (`--navi-fixed-bar-space-*`, feeding the
+  inherited `--navi-safe-area-inset-*`), which changes on the root when a bar
+  arrives or leaves with the page; and an app's `:has()` rule on the list
+  container over its rows (`.navi_list_container:has(.card) …`), evaluated
+  again as the rows land. An attribute the app sets on the container says the
+  same thing as that `:has()`, for nothing.
 - **Re-rendering what did not change, on the press itself.** A component that
   only wants a yes or a no reads a computed flag, not the signal it is derived
   from: a list whose rows each read the count of runs in flight re-rendered
