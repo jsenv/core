@@ -1,13 +1,20 @@
 import { useLayoutEffect } from "preact/hooks";
 
+// The title belongs to the last Head to arrive, whatever order they leave in:
+// the page being left by a route transition is taken down AFTER the page
+// arriving is up (see keepLeavingPages in route.jsx), and putting back the
+// title it found would put its own page's title over the new one.
+const titleEntries = [];
+let titleWithoutHead = null;
+
 export const Head = ({ children }) => {
   useLayoutEffect(() => {
     if (!children) {
       return undefined;
     }
     const childArray = Array.isArray(children) ? children : [children];
-    const previousTitle = document.title;
     const appendedElements = [];
+    let titleEntry = null;
 
     for (const child of childArray) {
       if (!child) {
@@ -15,9 +22,11 @@ export const Head = ({ children }) => {
       }
       if (child.type === "title") {
         const titleChildren = child.props.children;
-        document.title = Array.isArray(titleChildren)
-          ? titleChildren.join("")
-          : (titleChildren ?? "");
+        titleEntry = {
+          title: Array.isArray(titleChildren)
+            ? titleChildren.join("")
+            : (titleChildren ?? ""),
+        };
         continue;
       }
       const el = document.createElement(child.type);
@@ -28,9 +37,20 @@ export const Head = ({ children }) => {
       document.head.appendChild(el);
       appendedElements.push(el);
     }
+    if (titleEntry) {
+      if (titleEntries.length === 0) {
+        titleWithoutHead = document.title;
+      }
+      titleEntries.push(titleEntry);
+      document.title = titleEntry.title;
+    }
 
     return () => {
-      document.title = previousTitle;
+      if (titleEntry) {
+        titleEntries.splice(titleEntries.indexOf(titleEntry), 1);
+        const lastEntry = titleEntries[titleEntries.length - 1];
+        document.title = lastEntry ? lastEntry.title : titleWithoutHead;
+      }
       for (const el of appendedElements) {
         el.remove();
       }

@@ -1,7 +1,8 @@
 import { signal } from "@preact/signals";
-import { useLayoutEffect, useRef } from "preact/hooks";
+import { useContext, useLayoutEffect, useRef } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
+import { RoutePageContext } from "../nav/route.jsx";
 
 /**
  * Creates a linked `[Slot, SlotFill]` pair so content rendered anywhere in
@@ -12,8 +13,12 @@ import { Box } from "../box/box.jsx";
  *
  * Holds at most one filler at a time — there is no stacking/queueing. The
  * filler is the last `SlotFill` (from this same `createSlot()` call) to
- * render; a `SlotFill` unmounting empties the slot only while it is still
- * that one.
+ * mount, or the first to render into an empty slot; later renders of a
+ * `SlotFill` that is not the filler leave the slot alone. A `SlotFill`
+ * unmounting empties the slot only while it is still that one, and so does one
+ * in a page a route transition keeps while leaving (see keepLeavingPages in
+ * nav/route.jsx): still mounted, hidden, it must neither stay in the slot nor
+ * take it back from the page arriving.
  *
  * **One `SlotFill`, rendered where the choice is made.** `isFilled` follows
  * the fills as they mount and unmount, in the order the tree walks them. A
@@ -62,8 +67,7 @@ export const createSlot = (SlotRenderer = Box) => {
 
   const SlotFill = (props) => {
     const fillerRef = useRef();
-    filler = fillerRef;
-    slotPropsSignal.value = props;
+    const routePage = useContext(RoutePageContext);
     useLayoutEffect(() => {
       return () => {
         // Within one diff preact mounts the newcomer before unmounting the
@@ -76,7 +80,26 @@ export const createSlot = (SlotRenderer = Box) => {
         slotPropsSignal.value = null;
       };
     }, []);
-
+    // In a page kept while leaving: out of the slot as if unmounted, since
+    // the page arriving is what the slot must show — or nothing, when it
+    // fills none.
+    if (routePage && routePage.leavingSignal.value) {
+      if (filler === fillerRef) {
+        filler = null;
+        slotPropsSignal.value = null;
+      }
+      return null;
+    }
+    if (!fillerRef.current) {
+      fillerRef.current = true;
+      filler = fillerRef;
+    }
+    if (filler === null) {
+      filler = fillerRef;
+    }
+    if (filler === fillerRef) {
+      slotPropsSignal.value = props;
+    }
     return null;
   };
 

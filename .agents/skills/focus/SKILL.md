@@ -67,6 +67,20 @@ container returns to where the user was in it), the policy for a coarse pointer
 — where an arrival must not raise a virtual keyboard over what it just showed —
 and the second try for content that was not built yet.
 
+**The focus goes back before its holder leaves, and only to something that
+stays.** Removing the element that holds the focus is not silent: Chrome fires
+`blur` and a `focusout` with no `relatedTarget` that bubbles through whatever
+still contains it — to any listener, the focus just left for nowhere (a popover
+closing when the focus leaves it closes). So a surface that closes hands the
+focus back _before_ its element is taken out. The one exception is a close
+caused by an unmount: it runs from a cleanup while the tree leaving with it is
+still in the document, and the element to give the focus back to may be leaving
+in the same commit — focused, it makes the removal of its whole subtree restyle
+it. That hand-back waits for the commit (a microtask) and gives the focus only
+to an element still connected. _Reference: `UNMOUNT_EVENT_TYPE` in
+layout/open_controller.js and the hand-back in control/rules/control_callout.js.
+`restoreFocus()` (Dialog, Popover) owes the same wait and does not make it yet._
+
 **Departing from that policy is allowed, and has to be argued in place.** The
 coarse-pointer rule is about arrivals: something appears and the user reads it.
 A press on a control whose whole purpose is to reach a field is not that, and

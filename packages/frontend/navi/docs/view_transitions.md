@@ -12,6 +12,8 @@ they are met once.
 - [`ready` rejects when the transition is skipped, `finished` when the update fails](#ready-rejects-when-the-transition-is-skipped-finished-when-the-update-fails)
 - [The top layer is painted through the root's picture](#the-top-layer-is-painted-through-the-roots-picture)
 - [Two frames show the live document](#two-frames-show-the-live-document)
+- [What makes a transition restyle the whole document](#what-makes-a-transition-restyle-the-whole-document)
+- [A hidden element is not photographed, even in the top layer](#a-hidden-element-is-not-photographed-even-in-the-top-layer)
 
 ## A name is unique per document
 
@@ -128,6 +130,65 @@ Two consequences for the switch itself:
   `display` on: hidden before the call, a stand-in measures as a zero rect and
   lands in the wrong place; and on the capture frame it is displayed while the
   real thing is still there.
+
+## What makes a transition restyle the whole document
+
+Starting a transition restyles what changed and nothing more: in a bare page,
+the capture of the old state restyles a handful of elements, however long the
+page is. Two things make it restyle every one of them, in the frame the old
+state is photographed — on a page of ~4,700 elements, 17–21 ms at full speed
+and 60–90 ms with the CPU throttled 4×, added to every transition before
+anything moves:
+
+- **A `::highlight()` rule every element matches.** Written for the whole
+  document, `::highlight(x) { … }` makes Chrome restyle every element when a
+  view transition starts (Chrome 153, bare page: 10,009 of 10,009 elements; 6
+  once the rule is scoped). Scope it to the elements that hold the ranges —
+  `.results::highlight(x), .results ::highlight(x)` (both: a browser without
+  highlight inheritance only paints what the rule matches). navi's own search
+  highlight is scoped to list rows.
+- **A custom property changed on `:root`.** Every element inherits it, so
+  changing one restyles the document — and a movement changes its values as it
+  starts. What the pictures read belongs on `::view-transition` instead: the
+  pseudo-element tree inherits from it, and no element of the document does.
+
+  ```css
+  :root[data-my-movement] {
+    &::view-transition {
+      --my-distance: 120px;
+    }
+  }
+  ```
+
+  A value computed in JS cannot get there through an inline style, which
+  cannot target a pseudo-element: it goes in a rule of a sheet of its own,
+  `:root::view-transition {}`, set with `rule.style.setProperty()` (navi does
+  this in `nav/transition_values.js`).
+
+  A value JS has to read back is the exception: what JS reads off
+  `::view-transition` is not reliable outside a live transition —
+  `getComputedStyle(root, "::view-transition")` answers while none runs, but
+  in Chrome and WebKit alike it went on answering empty for rules added after
+  its first read. Such a value stays on `:root`, registered with `@property`
+  and `inherits: false` so that the document does not inherit it, and is
+  handed to the pictures explicitly: `--x: inherit` on `::view-transition` and
+  on the pseudo-elements below it.
+
+Whatever does depend on the root is paid once, by the frame of the capture —
+unless a style read follows a write on the root, which forces the restyle on
+the spot, in the click. Read what the transition needs (names, rectangles)
+before writing anything on the root.
+
+## A hidden element is not photographed, even in the top layer
+
+A popover or a modal `<dialog>` whose ancestor is `display: none` still matches
+`:popover-open` or `:modal`, but it is not rendered: `checkVisibility()` is
+false, its rectangle is empty, and a transition taking its pictures then has it
+on the old side only — it leaves, as if it were gone. `isConnected` says
+nothing about it; `checkVisibility()` is what tells which of the two states an
+element is part of. navi relies on it to keep the page left by a route
+transition mounted but out of the second picture (see
+[route_transitions.md](./route_transitions.md#the-page-being-left-stays-until-its-movement-is-over)).
 
 ## See also
 

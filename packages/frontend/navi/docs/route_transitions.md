@@ -23,7 +23,9 @@ Demos: [the movements](../src/nav/demos/route_transition/route_transition.html),
 - [Two routes matching one url](#two-routes-matching-one-url)
 - [Route transitions and `RouteTravel` — one pair, one system](#route-transitions-and-routetravel--one-pair-one-system)
 - [A transition says nothing about data](#a-transition-says-nothing-about-data)
+- [The page being left stays until its movement is over](#the-page-being-left-stays-until-its-movement-is-over)
 - [Waiting for a navigation: the address is not the page](#waiting-for-a-navigation-the-address-is-not-the-page)
+- [What a transition costs](#what-a-transition-costs)
 - [The rest, briefly](#the-rest-briefly)
 
 ## What a transition is for
@@ -417,6 +419,23 @@ pages so the sheet comes over it (see the transition area above). The shipped
 `cover-*` types say exactly this; a movement where neither page covers the
 other publishes nothing.
 
+Those three values are read by navi from the root, so they are written there,
+and navi registers them as not inherited: writing them costs nothing. Any other
+value a custom movement's pictures read goes on `::view-transition` instead:
+
+```css
+:root[data-navi-route-transition-type="spin"] {
+  &::view-transition {
+    --spin-turns: 0.5;
+  }
+}
+```
+
+The pictures inherit it from there, and no element of the document does.
+Written on the root, every element would, and the page being left would be
+restyled in full in the frame it is photographed (see
+[What a transition costs](#what-a-transition-costs)).
+
 ## Two routes matching one url
 
 A relation is written between two pages, and it is resolved through **which page
@@ -516,6 +535,42 @@ below. See
 [list_refresh.md](./list_refresh.md#who-decides-the-re-read--and-who-does-not)
 for which source refreshes on a revisit and which does not.
 
+## The page being left stays until its movement is over
+
+The picture of the page being left is taken before the change; the page
+arriving is built inside the transition's update callback, and everything done
+there delays the first frame of the movement. Taking a page down is a large
+part of it — every hook of every component in it cleaned up: on a page of
+thirty game cards, about 67 of the callback's 90 ms with the CPU throttled 4×,
+more than building the page arriving. Its picture already exists, so it only
+has to stay out of the second one: a container that changes page during the
+callback keeps the page it was showing, hidden (`display: none`), and takes it
+down once the movement is over (`keepLeavingPages` in `nav/route.jsx`).
+Measured on that page, first frame of the movement: 63 → 45 ms at full speed,
+211 → 188 ms at 4×.
+
+What that means for a page and for the application around it:
+
+- **It is still mounted for the length of the movement.** Its effects keep
+  running, and it still reads the address: whatever re-renders when the URL
+  changes re-renders in it too, hidden (see
+  [What a transition costs](#what-a-transition-costs)).
+- **It is taken down after the page arriving is up.** A cleanup that puts back
+  what it found — a document title, a class on `<body>`, a value in a shared
+  store — puts a stale value back over the new page's. Such a registration is
+  written as "the last to arrive wins": navi's `<Head>` keeps its titles as a
+  stack, and a slot shows the last `SlotFill` to arrive.
+- **What it fills outside its own nodes leaves at once.** A `SlotFill` in a
+  page kept while leaving steps out of its slot, so a bar each page fills shows
+  the page arriving — or nothing, when that page fills none.
+- **Its popups leave with it.** A popup it holds open is no longer rendered: it
+  is photographed on the old side only, leaves with its page, and is closed
+  when the page is taken down (see
+  [view_transitions.md](./view_transitions.md#a-hidden-element-is-not-photographed-even-in-the-top-layer)).
+- **Only where the page would have been taken down anyway.** A page rendered by
+  the same element on both sides — two routes, one component — is the same
+  instance carried over, as without a movement.
+
 ## Waiting for a navigation: the address is not the page
 
 A navigation changes the URL first and the screen after — always. Under a
@@ -559,10 +614,44 @@ without a movement is a real one every time. No thumb moves in one frame; an
 automated click continues in the same millisecond. This is a testing trap, not
 a user-facing behaviour.
 
+## What a transition costs
+
+A transition adds one frame to a navigation: the browser photographs the page
+being left at its next rendering opportunity, and the page arriving is built
+only then, inside the update callback. Anything beyond that is avoidable, and
+each of these was measured doing it on a list of thirty cards (~4,700
+elements):
+
+- **Restyling the whole page being left in the frame it is photographed** —
+  17–21 ms at full speed, 60–90 ms at 4× CPU. Two browser facts cause it: a
+  `::highlight()` rule every element matches, and a custom property changed on
+  the root as the movement starts (see
+  [view_transitions.md](./view_transitions.md#what-makes-a-transition-restyle-the-whole-document)).
+  navi's movements declare nothing inheritable on the root; a custom type
+  publishing values of its own writes them on `::view-transition` (see
+  [Custom movements](#custom-movements)).
+- **The page being left reacting to the address it no longer matches.** Every
+  component in it that re-renders on a URL change does so inside the update
+  callback, next to the page arriving being built — measured: about 2,500
+  component renders for the list of thirty cards, its links and its list
+  first. Taking the page down there instead would drop them, and still costs
+  more; what re-renders on the address is worth keeping to what has to.
+- **Re-rendering what did not change, on the press itself.** A component that
+  only wants a yes or a no reads a computed flag, not the signal it is derived
+  from: a list whose rows each read the count of runs in flight re-rendered
+  all thirty cards twice when a link in one of them was pressed — 774
+  component renders before the navigation even started, 18 once the rows read
+  whether the list is full instead.
+- **Nothing is gained by starting at the press.** The click's own work is the
+  navigation, and the picture can only be taken on the frame after it; work
+  moved to the pointer-down is paid again, for nothing, by every press that
+  turns into a scroll.
+
 ## The rest, briefly
 
 - Pace: `--navi-route-transition-duration` (CSS, default 300ms) for everyone;
-  a per-relation `{ type, duration }` for one relation.
+  a per-relation `{ type, duration }` for one relation, worn by that
+  movement's pictures only.
 - The URL leads: transitions play on navigations somebody else started (a
   `<Link>`, the back button, `history.back()`). Nothing here navigates.
 - A browser without view transitions navigates with a cut. The app

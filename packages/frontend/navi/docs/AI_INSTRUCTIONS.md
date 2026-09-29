@@ -77,15 +77,20 @@ to start when unsure which export solves a problem.
   writing any routing code, and before scrolling to an element on arrival.
 - `route_transitions.md` — a transition states a relation the user reads as a
   map; a pair of routes is animated by `RouteTravel` or by a transition, never
-  both; a test waits for the page arriving, never for its address. Read before
-  animating a navigation, and before believing a symptom that only appears once
-  a pair is animated.
+  both; a test waits for the page arriving, never for its address; the page
+  being left stays mounted, hidden, until the movement is over (so what it
+  registers globally must let the last arrival win); what a transition costs.
+  Read before animating a navigation, before writing a custom movement, and
+  before believing a symptom that only appears once a pair is animated.
 - `view_transitions.md` — what the browser does to any transition an app
   starts itself: names unique per document, the fallback fade, rendering
   suspended for the whole callback, `ready` rejecting on a skip while
   `finished` fulfills, the top layer painted only through the root's picture,
-  and the two frames that show the live document. Read before calling
-  `document.startViewTransition`.
+  the two frames that show the live document, what makes the start of a
+  transition restyle the whole document (an unscoped `::highlight()`, a value
+  changed on `:root`), and a hidden popup photographed on one side only. Read
+  before calling `document.startViewTransition`, and before putting a value on
+  `:root` for a movement.
 - `drag_to_travel.md` — a pointer or a wheel pushing a whole screen aside, and
   who owns a press several boxes want. Read before putting anything that reads the pointer
   inside a box that travels.

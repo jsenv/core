@@ -68,8 +68,8 @@
  */
 
 import { signal } from "@preact/signals";
-import { cloneElement, h } from "preact";
-import { useLayoutEffect, useRef } from "preact/hooks";
+import { cloneElement, createContext, createRef, h } from "preact";
+import { useLayoutEffect, useReducer, useRef } from "preact/hooks";
 
 import { useUITransitionContentId } from "../transition/ui_transition.jsx";
 import { unwireRouteFallback, wireRouteFallback } from "./route_fallback.js";
@@ -99,6 +99,55 @@ export const freezeRouteRender = () => {
     routeRenderFrozenSignal.value++;
   };
 };
+
+/**
+ * Keep the page a container leaves, hidden, until its route transition is over.
+ *
+ * The browser photographs the page being left before the change, and the page
+ * arriving inside the transition's update callback — where everything done
+ * delays the movement. Taking the page being left down is most of that: every
+ * hook of every component in it is cleaned up, and a page of thirty cards
+ * takes longer to take down than the page arriving takes to build. Its picture
+ * is already taken, so it only has to stay out of the second one: a container
+ * that changes page while this is held keeps the page it was showing, hidden,
+ * and drops it once the movement is over (see route_transition.jsx).
+ *
+ * Kept only where Preact would have unmounted it: a page rendered by the same
+ * element on both sides is the same component instance carried over, exactly
+ * as without a movement.
+ */
+let leavingPagesHold = null;
+export const keepLeavingPages = () => {
+  const hold = { released: false, containers: new Set() };
+  leavingPagesHold = hold;
+  return () => {
+    if (hold.released) {
+      return;
+    }
+    hold.released = true;
+    if (leavingPagesHold === hold) {
+      leavingPagesHold = null;
+    }
+    for (const rerender of hold.containers) {
+      rerender();
+    }
+    hold.containers.clear();
+  };
+};
+
+// What a page can learn about its place from the container rendering it:
+// whether it is a page kept while leaving (see keepLeavingPages). Such a page
+// is still mounted, and whatever it fills OUTSIDE its own nodes — a slot in a
+// bar, say — would otherwise go on showing with the page arriving (see
+// layout/slot.jsx).
+export const RoutePageContext = createContext(null);
+
+const LEAVING_ATTRIBUTE = "data-navi-route-leaving";
+const css = /* css */ `
+  [data-navi-route-leaving] {
+    display: none !important;
+  }
+`;
 
 const DEBUG = false;
 const debug = (...args) => {
@@ -201,6 +250,7 @@ const RouteContainer = ({ id, element, elementProps, children }) => {
     shownBranchRef.current = activeBranch;
   }
   const branch = shownBranchRef.current || activeBranch;
+  const content = useContentKeepingLeavingPages(branch);
 
   // The two things this component knows that nobody outside can find out: the
   // pages a named fallback is the absence of — the children it was written
@@ -224,7 +274,6 @@ const RouteContainer = ({ id, element, elementProps, children }) => {
 
   debug(`[container "${id}"] RENDER, active=${branch ? branch.type : "none"}`);
 
-  const content = branch ? branch.node : null;
   if (!content) {
     return null;
   }
@@ -233,12 +282,133 @@ const RouteContainer = ({ id, element, elementProps, children }) => {
   }
   return content;
 };
+// What a container renders: the page it shows and, while a route transition
+// keeps them (see keepLeavingPages), the pages it has left — each the very
+// vnode rendered last time, which Preact does not look into, between two
+// markers that say which nodes to hide. Always an array, even of one page: the
+// page being left must stay the child it was when a page is added beside it,
+// or Preact takes it down and builds it again.
+let leavingKeyCount = 0;
+const useContentKeepingLeavingPages = (branch) => {
+  const [, rerender] = useReducer(countRenders, 0);
+  const shownRef = useRef(null);
+  const leavingRef = useRef([]);
+  const shown = shownRef.current;
+  const element = branchElement(branch);
+  let key;
+  let page = null;
+  if (
+    shown &&
+    branch &&
+    (shown.id === branch.id || shown.element === element)
+  ) {
+    // The same page, or one Preact carries over from it: the key it was
+    // mounted with, or it would be mounted again.
+    key = shown.key;
+    page = shown.page;
+  } else if (shown && leavingPagesHold) {
+    leavingRef.current.push({
+      vnode: shown.vnode,
+      page: shown.page,
+      key: `navi-route-leaving-${++leavingKeyCount}`,
+      hold: leavingPagesHold,
+      startRef: createRef(),
+      endRef: createRef(),
+      hidden: false,
+    });
+    leavingPagesHold.containers.add(rerender);
+    // Keyed apart from the page it takes the place of, which is still there.
+    key = `navi-route-${++leavingKeyCount}`;
+  }
+  let vnode = null;
+  if (branch) {
+    if (!page) {
+      page = { leavingSignal: signal(false) };
+    }
+    vnode = h(RoutePageContext.Provider, { key, value: page }, branch.node);
+  }
+  shownRef.current = branch
+    ? { id: branch.id, element, key, vnode, page }
+    : null;
+  const leaving = leavingRef.current.filter((entry) => !entry.hold.released);
+  leavingRef.current = leaving;
+
+  // Hidden as soon as it is in the DOM next to the page arriving: this runs in
+  // the update callback's render, before the second picture is taken.
+  useLayoutEffect(() => {
+    for (const entry of leavingRef.current) {
+      const start = entry.startRef.current;
+      const end = entry.endRef.current;
+      if (entry.hidden || !start || !end) {
+        continue;
+      }
+      entry.hidden = true;
+      entry.page.leavingSignal.value = true;
+      let node = start.nextSibling;
+      while (node && node !== end) {
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          node.setAttribute(LEAVING_ATTRIBUTE, "");
+        }
+        node = node.nextSibling;
+      }
+    }
+  });
+  useLayoutEffect(() => {
+    return () => {
+      for (const entry of leavingRef.current) {
+        entry.hold.containers.delete(rerender);
+      }
+    };
+  }, []);
+
+  if (leaving.length === 0) {
+    return vnode ? [vnode] : null;
+  }
+  import.meta.css = css;
+  const children = vnode ? [vnode] : [];
+  for (const entry of leaving) {
+    children.push(
+      h("template", { key: `${entry.key}-start`, ref: entry.startRef }),
+      entry.vnode,
+      h("template", { key: `${entry.key}-end`, ref: entry.endRef }),
+    );
+  }
+  return children;
+};
+const countRenders = (count) => count + 1;
+// What Preact compares when a container changes page, below the <Route> it
+// renders either way: the element the page is rendered with — a layout, for a
+// container branch.
+const branchElement = (branch) => {
+  if (!branch) {
+    return null;
+  }
+  let node = branch.node;
+  while (node && node.type !== Route) {
+    // A wrapper around the branch (see wrapBranch).
+    node = node.props.children;
+  }
+  if (!node) {
+    return null;
+  }
+  const { element } = node.props;
+  if (element === undefined || typeof element === "function") {
+    return element;
+  }
+  return element.type;
+};
+
 // Walk JSX children vnodes (without rendering) to build a branch list and
 // find the active one in the same pass. Anything that is not a <Route> is read
 // through and kept around the branch it holds (see below).
 // Returns { matchingBranch, fallbackBranch, activeBranch, pages }.
-const collectBranches = (children) => {
+//
+// Each branch is given an id from where it is written among the children,
+// which is what tells a container it changed page: the vnodes themselves are
+// new at every render of the parent.
+const collectBranches = (children, path = "") => {
   let matchingBranch = null;
+  let childIndex = 0;
   let fallbackBranch = null;
   // Every page a branch can be on, at any depth: what a named fallback is the
   // ABSENCE of (see route_fallback.js). A container with a guard route counts
@@ -257,6 +427,7 @@ const collectBranches = (children) => {
       }
       return;
     }
+    const id = `${path}${childIndex++}`;
     if (child.type !== Route) {
       // Anything else is a wrapper around branches, and the two that matter are
       // navi's own: a page says what it renders and delegates what it cannot —
@@ -278,7 +449,7 @@ const collectBranches = (children) => {
         matchingBranch: matchingInside,
         fallbackBranch: fallbackInside,
         pages: pagesInside,
-      } = collectBranches(wrapperChildren);
+      } = collectBranches(wrapperChildren, `${id}.`);
       for (const pageInside of pagesInside) {
         pages.push(pageInside);
       }
@@ -301,7 +472,7 @@ const collectBranches = (children) => {
         matchingBranch: matchingChild,
         fallbackBranch: fallbackChild,
         pages: pagesChild,
-      } = collectBranches(nodeChildren);
+      } = collectBranches(nodeChildren, `${id}.`);
       if (fallbackChild && !route) {
         // A fallback is the branch taken for an address none of its siblings
         // claim — so something has to make that address BELONG to this
@@ -322,7 +493,7 @@ const collectBranches = (children) => {
       for (const pageChild of pagesChild) {
         pages.push(pageChild);
       }
-      const branch = { type: "container", node: child };
+      const branch = { type: "container", id, node: child };
       const guardMatching = route ? route.matchingSignal.value : false;
       if (!matchingBranch) {
         if (matchingChild) {
@@ -338,12 +509,13 @@ const collectBranches = (children) => {
       if (!fallbackBranch) {
         fallbackBranch = {
           type: "fallback",
+          id,
           node: child,
           page: fallback.isRouteFallback ? fallback : null,
         };
       }
     } else {
-      const branch = { type: "leaf", node: child };
+      const branch = { type: "leaf", id, node: child };
       pages.push({ route, params: routeParams });
       // every signal is read even once a match is found: reading is what
       // subscribes the container to it, and a branch that is skipped today is

@@ -212,6 +212,22 @@ Facts worth knowing before reaching for one:
   screen that is off screen animates nothing — and can cost a movement the
   user IS looking at (the rule above). Start one only when what changes is
   what the user is watching.
+- **Its start restyles what changed — or the whole document.** A capture in a
+  bare page restyles a handful of elements. A `::highlight()` rule every
+  element matches, or a value inherited from `:root` changing as the movement
+  starts, makes it every element, in the frame the old state is photographed:
+  a flat tax on every transition, proportional to the page being left (see
+  [view_transitions.md](../../../packages/frontend/navi/docs/view_transitions.md#what-makes-a-transition-restyle-the-whole-document)).
+  A new rule on the root, or a new `::highlight()`, is checked against that
+  before it ships.
+- **What the update callback does delays the first frame.** Everything in it
+  runs between the two pictures with the screen frozen: build the state
+  arriving, and nothing else. Taking the state being left down is not part of
+  it when that state can be hidden instead — hidden, it is out of the second
+  picture, and it is taken down once the movement is over (see
+  `keepLeavingPages` in navi/src/nav/route.jsx, and what a page kept that way
+  must tolerate in
+  [route_transitions.md](../../../packages/frontend/navi/docs/route_transitions.md#the-page-being-left-stays-until-its-movement-is-over)).
 
 ### Several elements in one movement: name them by role
 
@@ -239,9 +255,19 @@ style adds rides on `::view-transition-image-pair` INSIDE that group, where a
 front.
 
 A value that differs per occurrence — how far to step aside, which way, measured
-between the two boxes at that moment — cannot be written in the rule. Set it as a
-custom property on the **document element**: the `::view-transition` tree hangs
-off the root and inherits from there, and from nowhere else.
+between the two boxes at that moment — cannot be written in the rule. Set it on
+**`::view-transition`**, the root of the pseudo-element tree, through a rule of
+a sheet of its own (an inline style cannot target a pseudo-element):
+`setTransitionValue` in navi/src/nav/transition_values.js. The pictures inherit
+from there, and no element of the document does. The document element reaches
+them too, but every element inherits what is written there, and changing it
+restyles the whole document — at the start of a movement, in the very frame the
+old state is photographed (see
+[view_transitions.md](../../../packages/frontend/navi/docs/view_transitions.md#what-makes-a-transition-restyle-the-whole-document)).
+The one exception is a value JS has to read back, since what JS reads off
+`::view-transition` outside a live transition is not reliable: it stays on the
+root, registered `inherits: false`, and is handed down with `--x: inherit`
+(the `--navi-route-transition-leave/-enter/-covered` of route_transition.jsx).
 
 Which leaves the choice itself in one word — an attribute on the root, one rule
 per way of moving — so trying another is changing that word, not rewriting the
@@ -533,6 +559,17 @@ re-rasterized screenshots BOTH describe the main thread, and both can describe
 a movement the screen never played (see "The main thread lies about a running
 transition"). For those, verify on a compositor capture: a CDP screencast, or
 an eye.
+
+When a change must leave a movement exactly as it was — a performance change
+above all — compare what defines it with the animations **pinned at the same
+time** (`animation.pause(); animation.currentTime = t` on every
+`::view-transition-*` animation), then read the pseudo-elements' computed
+styles, the attributes on the root, and the list of running animations.
+Sampled "N ms after it started" instead, the numbers also move with how busy
+the main thread was, and a real difference cannot be told from a timing one:
+pinned, a 45px gap in a page's translate was left standing, and it was real —
+a top bar the new state should not have had, which changed how far the page
+travels. Do it in Chrome and in WebKit.
 
 A second family: two properties that must agree, one composited and one
 painted (see "One clock per movement"). Every number JS reads shows them in

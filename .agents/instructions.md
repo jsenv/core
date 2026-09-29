@@ -372,6 +372,10 @@ routes and route actions). Open the app's actual code there before reasoning
 about a report from its description alone — a report describes what its author
 believes the shape is, and the shell decides which boundary a wait reaches.
 
+A report that something is slow is measured in wematch before anything is
+changed, and a fix is proved there: read
+[.agents/skills/performance/SKILL.md](skills/performance/SKILL.md).
+
 ### Gestures
 
 What a pointer dragging a screen, a wheel pushing it, or a swipe on a row IS —

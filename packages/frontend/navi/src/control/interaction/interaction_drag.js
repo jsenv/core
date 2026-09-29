@@ -280,7 +280,9 @@
  * meantime, nothing is picked up. The carry is the element's own, outcomes and
  * refusal included, without the wait for intent (the hold was the proof), and
  * the copy is brought to the finger rather than following it from wherever the
- * element stands. A copy or nothing: `move` and `moving` carry the thing itself,
+ * element stands. Let go of there before it has travelled — the hold only meant
+ * to open the popup — it goes back and nothing is answered, whatever it was
+ * brought over. A copy or nothing: `move` and `moving` carry the thing itself,
  * which would leave its place just for being handed a press. When it starts is
  * navi's — after a popup still being lifted (see `--navi-grab` in commands.js).
  *

@@ -256,7 +256,7 @@ export const holdTransitionFurniture = (owner, areaElement) => {
   }
   const namesLeaving = [];
   for (const element of namedElements) {
-    if (!element.isConnected) {
+    if (!isRendered(element)) {
       namesLeaving.push(nameByElement.get(element));
     } else if (element.matches(FIXED_BAR_SELECTOR)) {
       element.setAttribute(FURNITURE_ATTRIBUTE, "shared");
@@ -375,11 +375,16 @@ const travelRule = (side, names, movementProperty) => {
  * The pictures are up and about to move: what no picture covers heads to the
  * state arriving, on the same clock.
  */
-export const startTransitionFurniture = (owner) => {
+export const startTransitionFurniture = (owner, { duration } = {}) => {
   if (owner !== furnitureOwner) {
     return;
   }
   for (const restWall of restWallElements) {
+    // A duration of the movement's own is written for its pictures alone (see
+    // transition_values.js); the stand-in is an element, and is told.
+    if (duration !== undefined) {
+      restWall.style.setProperty("--navi-route-transition-duration", duration);
+    }
     restWall.style.opacity = restWallOpacity;
   }
 };
@@ -410,7 +415,9 @@ export const releaseTransitionFurniture = (owner) => {
 // area's stand-in answers for it.
 const paintTransitionWalls = (areaElement) => {
   removeTransitionWalls();
-  const sources = document.querySelectorAll(TOP_LAYER_WALL_SELECTOR);
+  const sources = Array.from(
+    document.querySelectorAll(TOP_LAYER_WALL_SELECTOR),
+  ).filter(isRendered);
   if (sources.length === 0) {
     return sources;
   }
@@ -610,6 +617,14 @@ const subtractRect = (rect, hole) => {
     });
   }
   return pieces;
+};
+
+// Out of the state arriving: taken out of the document, or in a page kept
+// hidden until its movement is over (see keepLeavingPages in route.jsx) —
+// where a dialog is still :modal and a popover still :popover-open, and
+// neither is painted or photographed.
+const isRendered = (element) => {
+  return element.isConnected && element.checkVisibility();
 };
 
 const removeRestWalls = () => {

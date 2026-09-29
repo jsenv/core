@@ -96,6 +96,11 @@
  */
 import { getScrollContainer } from "@jsenv/dom";
 
+import {
+  removeTransitionValue,
+  setTransitionValue,
+} from "./transition_values.js";
+
 const TRANSITION_WINDOW_CSS = /* css */ `
   @property --navi-transition-cover-top {
     syntax: "<length>";
@@ -125,94 +130,6 @@ const TRANSITION_WINDOW_CSS = /* css */ `
       --navi-transition-cover-bottom: 0px;
       --navi-transition-cover-left: 0px;
     }
-  }
-
-  /* The numbers measured here are written on the root and read by the
-     movement's pictures alone, so they are not inherited: a value every
-     element inherits, written on the root, restyles the whole document — as
-     the pages are held, as a scroll moves the window, and as the movement
-     ends. The pictures take them explicitly, down the pseudo-element tree. */
-  @property --navi-transition-window-top {
-    syntax: "*";
-    inherits: false;
-  }
-  @property --navi-transition-window-left {
-    syntax: "*";
-    inherits: false;
-  }
-  @property --navi-transition-window-width {
-    syntax: "*";
-    inherits: false;
-  }
-  @property --navi-transition-window-height {
-    syntax: "*";
-    inherits: false;
-  }
-  @property --navi-transition-window-old-top {
-    syntax: "*";
-    inherits: false;
-  }
-  @property --navi-transition-window-old-left {
-    syntax: "*";
-    inherits: false;
-  }
-  @property --navi-transition-window-new-top {
-    syntax: "*";
-    inherits: false;
-  }
-  @property --navi-transition-window-new-left {
-    syntax: "*";
-    inherits: false;
-  }
-  @property --navi-transition-old-band-top {
-    syntax: "*";
-    inherits: false;
-  }
-  @property --navi-transition-old-band-right {
-    syntax: "*";
-    inherits: false;
-  }
-  @property --navi-transition-old-band-bottom {
-    syntax: "*";
-    inherits: false;
-  }
-  @property --navi-transition-old-band-left {
-    syntax: "*";
-    inherits: false;
-  }
-  :root::view-transition,
-  :root::view-transition-group(*),
-  :root::view-transition-image-pair(*),
-  :root::view-transition-old(*),
-  :root::view-transition-new(*) {
-    --navi-transition-window-top: inherit;
-    --navi-transition-window-left: inherit;
-    --navi-transition-window-width: inherit;
-    --navi-transition-window-height: inherit;
-    --navi-transition-window-old-top: inherit;
-    --navi-transition-window-old-left: inherit;
-    --navi-transition-window-new-top: inherit;
-    --navi-transition-window-new-left: inherit;
-    --navi-transition-old-band-top: inherit;
-    --navi-transition-old-band-right: inherit;
-    --navi-transition-old-band-bottom: inherit;
-    --navi-transition-old-band-left: inherit;
-  }
-  /* On its own rule: a selector a browser cannot parse takes the whole list it
-     is written in down with it. */
-  :root::view-transition-group-children(*) {
-    --navi-transition-window-top: inherit;
-    --navi-transition-window-left: inherit;
-    --navi-transition-window-width: inherit;
-    --navi-transition-window-height: inherit;
-    --navi-transition-window-old-top: inherit;
-    --navi-transition-window-old-left: inherit;
-    --navi-transition-window-new-top: inherit;
-    --navi-transition-window-new-left: inherit;
-    --navi-transition-old-band-top: inherit;
-    --navi-transition-old-band-right: inherit;
-    --navi-transition-old-band-bottom: inherit;
-    --navi-transition-old-band-left: inherit;
   }
 `;
 
@@ -311,22 +228,21 @@ export const holdTransitionWindow = (
   const right =
     rectBefore.right > rectAfter.right ? rectBefore.right : rectAfter.right;
   windowOwner = owner;
-  const { style } = document.documentElement;
-  style.setProperty(WINDOW_TOP_PROPERTY, `${top}px`);
-  style.setProperty(WINDOW_LEFT_PROPERTY, `${left}px`);
-  style.setProperty(WINDOW_WIDTH_PROPERTY, `${right - left}px`);
-  style.setProperty(WINDOW_HEIGHT_PROPERTY, `${bottom - top}px`);
-  style.setProperty(WINDOW_OLD_TOP_PROPERTY, `${rectBefore.top}px`);
-  style.setProperty(WINDOW_OLD_LEFT_PROPERTY, `${rectBefore.left}px`);
-  style.setProperty(WINDOW_NEW_TOP_PROPERTY, `${rectAfter.top}px`);
-  style.setProperty(WINDOW_NEW_LEFT_PROPERTY, `${rectAfter.left}px`);
+  setTransitionValue(WINDOW_TOP_PROPERTY, `${top}px`);
+  setTransitionValue(WINDOW_LEFT_PROPERTY, `${left}px`);
+  setTransitionValue(WINDOW_WIDTH_PROPERTY, `${right - left}px`);
+  setTransitionValue(WINDOW_HEIGHT_PROPERTY, `${bottom - top}px`);
+  setTransitionValue(WINDOW_OLD_TOP_PROPERTY, `${rectBefore.top}px`);
+  setTransitionValue(WINDOW_OLD_LEFT_PROPERTY, `${rectBefore.left}px`);
+  setTransitionValue(WINDOW_NEW_TOP_PROPERTY, `${rectAfter.top}px`);
+  setTransitionValue(WINDOW_NEW_LEFT_PROPERTY, `${rectAfter.left}px`);
   const oldBand = furnitureLive
     ? bandTheCutMayBeRelaxedTo(bandBefore, bandAfter, rectAfter)
     : bandBefore;
-  style.setProperty(OLD_BAND_TOP_PROPERTY, `${oldBand.top}px`);
-  style.setProperty(OLD_BAND_RIGHT_PROPERTY, `${oldBand.right}px`);
-  style.setProperty(OLD_BAND_BOTTOM_PROPERTY, `${oldBand.bottom}px`);
-  style.setProperty(OLD_BAND_LEFT_PROPERTY, `${oldBand.left}px`);
+  setTransitionValue(OLD_BAND_TOP_PROPERTY, `${oldBand.top}px`);
+  setTransitionValue(OLD_BAND_RIGHT_PROPERTY, `${oldBand.right}px`);
+  setTransitionValue(OLD_BAND_BOTTOM_PROPERTY, `${oldBand.bottom}px`);
+  setTransitionValue(OLD_BAND_LEFT_PROPERTY, `${oldBand.left}px`);
   followArrivingState(element, rectAfter, {
     outerScroll,
     windowTop: top,
@@ -348,9 +264,8 @@ export const releaseTransitionWindow = (owner) => {
   if (unfollowArrivingState) {
     unfollowArrivingState();
   }
-  const { style } = document.documentElement;
   for (const property of WINDOW_PROPERTIES) {
-    style.removeProperty(property);
+    removeTransitionValue(property);
   }
 };
 
@@ -359,12 +274,11 @@ export const releaseTransitionWindow = (owner) => {
 // file) — and with it the offset outside the box, which carries the window
 // and the corner of the state being left along. Requested, never awaited: the
 // first call runs inside the update callback, where a frame cannot come.
-// Written only when it moved: every write restyles the root and the pictures.
+// Written only when it moved: every write restyles the pictures.
 const followArrivingState = (element, rectAtHold, heldAt) => {
   if (unfollowArrivingState) {
     unfollowArrivingState();
   }
-  const { style } = document.documentElement;
   let top = rectAtHold.top;
   let left = rectAtHold.left;
   let outerTop = heldAt.outerScroll.top;
@@ -373,24 +287,27 @@ const followArrivingState = (element, rectAtHold, heldAt) => {
     const rect = element.getBoundingClientRect();
     if (rect.top !== top) {
       top = rect.top;
-      style.setProperty(WINDOW_NEW_TOP_PROPERTY, `${top}px`);
+      setTransitionValue(WINDOW_NEW_TOP_PROPERTY, `${top}px`);
     }
     if (rect.left !== left) {
       left = rect.left;
-      style.setProperty(WINDOW_NEW_LEFT_PROPERTY, `${left}px`);
+      setTransitionValue(WINDOW_NEW_LEFT_PROPERTY, `${left}px`);
     }
     const outerScroll = readOuterScroll(element);
     if (outerScroll.top !== outerTop) {
       outerTop = outerScroll.top;
       const shift = heldAt.outerScroll.top - outerTop;
-      style.setProperty(WINDOW_TOP_PROPERTY, `${heldAt.windowTop + shift}px`);
-      style.setProperty(WINDOW_OLD_TOP_PROPERTY, `${heldAt.oldTop + shift}px`);
+      setTransitionValue(WINDOW_TOP_PROPERTY, `${heldAt.windowTop + shift}px`);
+      setTransitionValue(WINDOW_OLD_TOP_PROPERTY, `${heldAt.oldTop + shift}px`);
     }
     if (outerScroll.left !== outerLeft) {
       outerLeft = outerScroll.left;
       const shift = heldAt.outerScroll.left - outerLeft;
-      style.setProperty(WINDOW_LEFT_PROPERTY, `${heldAt.windowLeft + shift}px`);
-      style.setProperty(
+      setTransitionValue(
+        WINDOW_LEFT_PROPERTY,
+        `${heldAt.windowLeft + shift}px`,
+      );
+      setTransitionValue(
         WINDOW_OLD_LEFT_PROPERTY,
         `${heldAt.oldLeft + shift}px`,
       );

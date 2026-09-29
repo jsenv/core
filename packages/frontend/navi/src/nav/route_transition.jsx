@@ -109,7 +109,7 @@ import { NAV_DEPTH_STATE_KEY } from "./browser_integration/document_back_and_for
 import { documentStateSignal } from "./browser_integration/document_state_signal.js";
 import { documentUrlSignal } from "./browser_integration/document_url_signal.js";
 import { Box } from "../box/box.jsx";
-import { observeRouteRender } from "./route.jsx";
+import { keepLeavingPages, observeRouteRender } from "./route.jsx";
 import { pageIsCurrent } from "./route_page.js";
 import {
   holdRenderingForRouting,
@@ -138,6 +138,10 @@ import {
   releaseTransitionWindow,
   installTransitionWindowCss,
 } from "./transition_window.js";
+import {
+  removeTransitionValue,
+  setTransitionValue,
+} from "./transition_values.js";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import { ensureDocumentStartViewTransition } from "../transition/start_view_transition_polyfill.js";
 import {
@@ -196,12 +200,15 @@ const ROUTE_TRAVEL_ATTRIBUTE = "data-navi-route-travel";
 // included).
 
 const css = /* css */ `
-  /* What a movement publishes on the root is read by its pictures and by
-     nothing else in the document, so it is not inherited: a value every
-     element inherits, changed on the root, restyles the whole document — and
-     these change as the movement starts, in the frame the browser photographs
-     the page being left. The pictures take them explicitly instead, down the
-     pseudo-element tree (read from JS, they are still the root's own). */
+  /* The values a type publishes (see the types below): the only ones this
+     sheet declares on the root rather than on ::view-transition, because JS
+     reads them there (the covered page, the keyframes the furniture travels
+     by — see transition_furniture.js), and an application's own type publishes
+     them there too. Not inherited, though: a value every element inherits,
+     changed on the root, restyles the whole document — and these change as
+     the movement starts, in the frame the browser photographs the page being
+     left. The pictures that play the keyframes take them explicitly; the
+     covered page is read by JS alone. */
   @property --navi-route-transition-leave {
     syntax: "*";
     inherits: false;
@@ -214,30 +221,6 @@ const css = /* css */ `
     syntax: "*";
     inherits: false;
   }
-  @property --navi-route-transition-clip-top {
-    syntax: "*";
-    inherits: false;
-  }
-  @property --navi-route-transition-clip-right {
-    syntax: "*";
-    inherits: false;
-  }
-  @property --navi-route-transition-clip-bottom {
-    syntax: "*";
-    inherits: false;
-  }
-  @property --navi-route-transition-clip-left {
-    syntax: "*";
-    inherits: false;
-  }
-  @property --navi-route-transition-travel-x {
-    syntax: "*";
-    inherits: false;
-  }
-  @property --navi-route-transition-travel-y {
-    syntax: "*";
-    inherits: false;
-  }
   :root::view-transition,
   :root::view-transition-group(*),
   :root::view-transition-image-pair(*),
@@ -245,27 +228,6 @@ const css = /* css */ `
   :root::view-transition-new(*) {
     --navi-route-transition-leave: inherit;
     --navi-route-transition-enter: inherit;
-    --navi-route-transition-covered: inherit;
-    --navi-route-transition-clip-top: inherit;
-    --navi-route-transition-clip-right: inherit;
-    --navi-route-transition-clip-bottom: inherit;
-    --navi-route-transition-clip-left: inherit;
-    --navi-route-transition-travel-x: inherit;
-    --navi-route-transition-travel-y: inherit;
-  }
-  /* The groups nested in another one (view-transition-group: contain). On its
-     own rule: a selector a browser cannot parse takes the whole list it is
-     written in down with it. */
-  :root::view-transition-group-children(*) {
-    --navi-route-transition-leave: inherit;
-    --navi-route-transition-enter: inherit;
-    --navi-route-transition-covered: inherit;
-    --navi-route-transition-clip-top: inherit;
-    --navi-route-transition-clip-right: inherit;
-    --navi-route-transition-clip-bottom: inherit;
-    --navi-route-transition-clip-left: inherit;
-    --navi-route-transition-travel-x: inherit;
-    --navi-route-transition-travel-y: inherit;
   }
 
   /* The marked region is a picture of its own for the length of a transition of
@@ -334,12 +296,14 @@ const css = /* css */ `
     &[data-navi-route-transition-target="area"] {
       view-transition-name: none;
 
-      /* Where the pages are cut, and how far they travel — said on the root so
-         that EVERY picture of the movement inherits them, not just the pages':
-         a fixed bar or a popup travelling with the page it belongs to
-         (transition_furniture.js) crosses the same window's worth of distance
-         the pages do, whatever its own size. The pages are then cut with what
-         is written here, on their group below.
+      /* Where the pages are cut, and how far they travel — said on the root of
+         the pictures, ::view-transition, so that EVERY picture of the movement
+         inherits them and no element of the document does: a fixed bar or a
+         popup travelling with the page it belongs to (transition_furniture.js)
+         crosses the same window's worth of distance the pages do, whatever its
+         own size. The window's numbers they are made of are written there too
+         (transition_values.js). The pages are then cut with what is written
+         here, on their group below.
 
          The cut: the area's own box, and on top of it whatever covers the area.
          The pictures are drawn in the top layer, so they cover a fixed bar as
@@ -366,59 +330,62 @@ const css = /* css */ `
          of them is part of what changes, and cutting the page being left at a
          bar it never had shows its own header being sliced instead of
          leaving. */
-      --navi-route-transition-clip-top: max(
-        0px,
-        min(
-            var(--navi-safe-area-inset-top) + var(--navi-transition-cover-top),
-            var(--navi-transition-old-band-top)
-          ) - var(--navi-transition-window-top)
-      );
-      --navi-route-transition-clip-left: max(
-        0px,
-        min(
-            var(--navi-safe-area-inset-left) + var(--navi-transition-cover-left),
-            var(--navi-transition-old-band-left)
-          ) - var(--navi-transition-window-left)
-      );
-      --navi-route-transition-clip-bottom: max(
-        0px,
-        var(--navi-transition-window-top) +
-          var(--navi-transition-window-height) +
+      &::view-transition {
+        --navi-route-transition-clip-top: max(
+          0px,
           min(
-            var(--navi-safe-area-inset-bottom) +
-              var(--navi-transition-cover-bottom),
-            var(--navi-transition-old-band-bottom)
-          ) -
-          100dvh
-      );
-      --navi-route-transition-clip-right: max(
-        0px,
-        var(--navi-transition-window-left) +
-          var(--navi-transition-window-width) +
+              var(--navi-safe-area-inset-top) + var(--navi-transition-cover-top),
+              var(--navi-transition-old-band-top)
+            ) - var(--navi-transition-window-top)
+        );
+        --navi-route-transition-clip-left: max(
+          0px,
           min(
-            var(--navi-safe-area-inset-right) +
-              var(--navi-transition-cover-right),
-            var(--navi-transition-old-band-right)
-          ) -
-          100dvw
-      );
+              var(--navi-safe-area-inset-left) +
+                var(--navi-transition-cover-left),
+              var(--navi-transition-old-band-left)
+            ) - var(--navi-transition-window-left)
+        );
+        --navi-route-transition-clip-bottom: max(
+          0px,
+          var(--navi-transition-window-top) +
+            var(--navi-transition-window-height) +
+            min(
+              var(--navi-safe-area-inset-bottom) +
+                var(--navi-transition-cover-bottom),
+              var(--navi-transition-old-band-bottom)
+            ) -
+            100dvh
+        );
+        --navi-route-transition-clip-right: max(
+          0px,
+          var(--navi-transition-window-left) +
+            var(--navi-transition-window-width) +
+            min(
+              var(--navi-safe-area-inset-right) +
+                var(--navi-transition-cover-right),
+              var(--navi-transition-old-band-right)
+            ) -
+            100dvw
+        );
 
-      /* How far a page travels: the WINDOW it is seen through, not its own
-         size. A page is as tall as its content — several screens of it — and a
-         movement measured on the picture would send it thousands of pixels
-         away, off screen for most of the transition and flying past at the
-         end. What one page crossing another means is one window's worth of
-         movement, whatever the pages are made of (see the keyframes). */
-      --navi-route-transition-travel-x: calc(
-        var(--navi-transition-window-width) - var(
-            --navi-route-transition-clip-left
-          ) - var(--navi-route-transition-clip-right)
-      );
-      --navi-route-transition-travel-y: calc(
-        var(--navi-transition-window-height) - var(
-            --navi-route-transition-clip-top
-          ) - var(--navi-route-transition-clip-bottom)
-      );
+        /* How far a page travels: the WINDOW it is seen through, not its own
+           size. A page is as tall as its content — several screens of it — and a
+           movement measured on the picture would send it thousands of pixels
+           away, off screen for most of the transition and flying past at the
+           end. What one page crossing another means is one window's worth of
+           movement, whatever the pages are made of (see the keyframes). */
+        --navi-route-transition-travel-x: calc(
+          var(--navi-transition-window-width) - var(
+              --navi-route-transition-clip-left
+            ) - var(--navi-route-transition-clip-right)
+        );
+        --navi-route-transition-travel-y: calc(
+          var(--navi-transition-window-height) - var(
+              --navi-route-transition-clip-top
+            ) - var(--navi-route-transition-clip-bottom)
+        );
+      }
 
       /* The bars stand over the pages, as they do at rest. Everything captured
          while an area is marked wears a name of navi's own for the length of
@@ -1602,7 +1569,9 @@ const beginTransition = ({ page, url, fromUrl, direction, type, duration }) => {
     decision: navigationDecision,
     walkHome: null,
     releaseReverting: null,
+    duration: undefined,
     restoreDuration: null,
+    releaseLeavingPages: null,
   };
   // The document wears one transition at a time, and the one this interrupts
   // ends only after this one has begun — too late to take off what it wears
@@ -1660,26 +1629,14 @@ const beginTransition = ({ page, url, fromUrl, direction, type, duration }) => {
   if (areaElement) {
     documentElement.setAttribute(TRANSITION_TARGET_ATTRIBUTE, "area");
   }
-  // A duration of this relation's own, worn for the length of the transition —
-  // and whatever the application had written inline put back afterwards, not
-  // erased.
+  // A duration of this relation's own, worn by the pictures for the length of
+  // the transition, over whatever the application says on the root.
   if (duration !== undefined) {
-    const durationBefore = documentElement.style.getPropertyValue(
-      TRANSITION_DURATION_PROPERTY,
-    );
-    documentElement.style.setProperty(
-      TRANSITION_DURATION_PROPERTY,
-      typeof duration === "number" ? `${duration}ms` : duration,
-    );
+    transition.duration =
+      typeof duration === "number" ? `${duration}ms` : duration;
+    setTransitionValue(TRANSITION_DURATION_PROPERTY, transition.duration);
     transition.restoreDuration = () => {
-      if (durationBefore) {
-        documentElement.style.setProperty(
-          TRANSITION_DURATION_PROPERTY,
-          durationBefore,
-        );
-      } else {
-        documentElement.style.removeProperty(TRANSITION_DURATION_PROPERTY);
-      }
+      removeTransitionValue(TRANSITION_DURATION_PROPERTY);
     };
   }
   const releaseRendering = takeoverRoutingRenderingHold();
@@ -1692,7 +1649,7 @@ const beginTransition = ({ page, url, fromUrl, direction, type, duration }) => {
   // the only place the silent misconfigurations show. They are all about the
   // same thing — a movement playing on pictures that are not the pages.
   const viewTransitionReady = () => {
-    startTransitionFurniture(transition);
+    startTransitionFurniture(transition, { duration: transition.duration });
     const capturedNames = capturedViewTransitionNames();
     if (areaElements.length > 0) {
       if (!capturedNames.has(AREA_NAME)) {
@@ -1724,6 +1681,10 @@ const beginTransition = ({ page, url, fromUrl, direction, type, duration }) => {
     // is awaited here must be able to resolve without a frame: the document
     // is frozen for the whole of this callback.
     try {
+      // The page being left is photographed already: it only has to stay out
+      // of the second picture, not be taken down before it (see
+      // keepLeavingPages in route.jsx).
+      transition.releaseLeavingPages = keepLeavingPages();
       // Releasing flushes the held render synchronously, so a route that
       // rendered has already resolved the wait by the next line.
       releaseRendering();
@@ -1778,6 +1739,11 @@ const beginTransition = ({ page, url, fromUrl, direction, type, duration }) => {
     // must not strip what that one is wearing.
     renderWait.stop();
     releaseRendering();
+    // Taken down once nobody sees it any more.
+    if (transition.releaseLeavingPages) {
+      transition.releaseLeavingPages();
+      transition.releaseLeavingPages = null;
+    }
     // The hold a way back took, when it is still standing: the pictures were
     // turned round a second time and played out, or something else took the
     // document over mid-walk. A hold nobody gives back freezes the page.

@@ -95,7 +95,7 @@ export const measureLongestVisualLineWidth = (el) => {
   return longestLineWidth;
 };
 
-const sharesLine = (line, rect) => {
+export const sharesLine = (line, rect) => {
   const overlapTop = rect.top > line.top ? rect.top : line.top;
   const overlapBottom = rect.bottom < line.bottom ? rect.bottom : line.bottom;
   const overlap = overlapBottom - overlapTop;

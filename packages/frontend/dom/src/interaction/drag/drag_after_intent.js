@@ -252,6 +252,11 @@ export const dragSourceThatStoodDown = (pressEvent) => {
   return pressEvent[STOOD_DOWN] || null;
 };
 
+// How far (px) a press travels before it means drag. Also how far a carry that
+// was handed over must go before it has gone anywhere (see handedOver in
+// drag_to.js): that is the same question, asked of the hand holding it.
+export const DRAG_INTENT_THRESHOLD = 5;
+
 /**
  * Waits for the user to mean it, then starts a drag gesture.
  *
@@ -297,7 +302,7 @@ export const dragAfterIntent = (
   grabEvent,
   dragGestureInitializer,
   {
-    threshold = 5,
+    threshold = DRAG_INTENT_THRESHOLD,
     longPress = "if-touch",
     longPressDelay = 400,
     longPressSlop = 8,

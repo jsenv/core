@@ -55,6 +55,7 @@ import { readPressDown } from "../press_down.js";
 import { takePress } from "../press_held.js";
 import { getScrollContainer } from "../scroll/scroll_container.js";
 import {
+  DRAG_INTENT_THRESHOLD,
   dragAfterIntent,
   keepTouchRefusable,
   markDragSource,
@@ -888,8 +889,12 @@ const warnAboutTransformsOutsideTransform = (element) => {
  * hold that handed it over, so the carry starts at once. And where the hand is
  * has nothing to do with where the element stands, so the copy is brought to
  * the hand — centred on the finger, flying there from the element's box —
- * rather than following it from a distance. The pointer is taken on the
- * element, away from what the finger first touched. Only a copy can be brought
+ * rather than following it from a distance. Where it was brought then stands
+ * for the element's own place: over whatever the finger happened to be on, so
+ * nothing counts as under it until the hand has taken it further than
+ * `threshold`, and a release before that is a hand that changed its mind. The
+ * pointer is taken on the element, away from what the finger first touched.
+ * Only a copy can be brought
  * like that: `move` carries the element itself, which would leave its place
  * just by being handed a press, and is not started.
  *
@@ -1264,6 +1269,10 @@ const resolveDropMeaning = ({
   canLeave,
   tossDistance = TOSS_DISTANCE_TO_COMMIT,
   tossSpeed = TOSS_SPEED_TO_COMMIT,
+  // How far it may have been taken and still have been taken nowhere: not at
+  // all for a carry that starts over its own place, the drag threshold for one
+  // brought to a hand (see handedOver).
+  stillWithin = 0,
 }) => {
   if (gestureInfo.cancelled) {
     // Nobody let go of anything: the gesture was taken away mid-air (the
@@ -1289,7 +1298,7 @@ const resolveDropMeaning = ({
   // It has to have gone somewhere to be put anywhere, or away from anything:
   // picked up and put straight back down is a hand that changed its mind.
   const { xDelta, yDelta } = gestureInfo.layout;
-  if (!xDelta && !yDelta) {
+  if (Math.hypot(xDelta, yDelta) <= stillWithin) {
     return "cancel";
   }
   if (canLeave && releasedOutside) {
@@ -1347,7 +1356,9 @@ const startDragToCarryCopy = (
     direction = canLand || canLeave
       ? { x: true, y: true }
       : { x: false, y: true },
-    threshold,
+    // Defaulted here rather than left to dragAfterIntent: a carry handed over
+    // reads it too (see stillWithin).
+    threshold = DRAG_INTENT_THRESHOLD,
     longPress,
     longPressDelay,
     longPressSlop,
@@ -1396,6 +1407,13 @@ const startDragToCarryCopy = (
         const reach = handedTo
           ? measureReach(draggedElement, handedTo)
           : undefined;
+        // …and has been taken nowhere until it is further from there than a
+        // press travels to mean drag.
+        const stillWithin = handedTo ? threshold : 0;
+        const hasNotLeftHand = (gestureInfo) =>
+          Boolean(handedTo) &&
+          Math.hypot(gestureInfo.layout.xDelta, gestureInfo.layout.yDelta) <=
+            stillWithin;
         const cloneWrapper =
           cloneWrapperCaught ||
           createDragClone(draggedElement, handedTo || pointerEvent, reach);
@@ -1486,6 +1504,16 @@ const startDragToCarryCopy = (
 
         dragGesture.addDragCallback((gestureInfo) => {
           if (!dropHintEl) {
+            return;
+          }
+          // Brought to the hand, the copy starts over whatever the finger is on,
+          // and a place found there is one it was never taken to — the release
+          // frame included, which is how a hold let go of without moving would
+          // land. Around where it was brought is its own place, as the element's
+          // box is for a carry that starts there: nothing is under it yet.
+          if (hasNotLeftHand(gestureInfo)) {
+            clearDropHint();
+            gestureInfo.dropTargetInfo = null;
             return;
           }
           const allItems = [];
@@ -1634,6 +1662,7 @@ const startDragToCarryCopy = (
             canLeave,
             tossDistance,
             tossSpeed,
+            stillWithin,
           });
           // The hand has let go, and what that means is already known — the
           // answer to it has not run yet. Told, not asked: nothing here waits on
