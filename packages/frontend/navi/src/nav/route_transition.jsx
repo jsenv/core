@@ -991,6 +991,7 @@ export const defineRouteTransition = (from, to, transition) => {
   warnAboutBothWaysWritten(relation);
   relations.push(relation);
   rebuildWatcher();
+  installRouteTransitionCss();
   return () => {
     const index = relations.indexOf(relation);
     if (index > -1) {
@@ -1016,6 +1017,7 @@ export const defineRouteTransition = (from, to, transition) => {
 export const defineRouteDefaultTransition = (transition) => {
   const value = normalizeTransition(transition);
   defaultTransition = value;
+  installRouteTransitionCss();
   return () => {
     if (defaultTransition === value) {
       defaultTransition = null;
@@ -1542,22 +1544,9 @@ const beginTransition = ({ page, url, fromUrl, direction, type, duration }) => {
   // Said before the picture is taken: whoever names something for a movement
   // between two pages decides on it now (see transition_destination.js).
   holdTransitionDestination(transition, url);
-  // Adopted by what starts a movement rather than by what declares one: a link
-  // or a navTo() asks for a movement in an app that declared none, and an app
-  // that never moves never carries the sheet.
-  import.meta.css = css;
-  documentElement.setAttribute(TRANSITION_ATTRIBUTE, direction);
-  if (type) {
-    documentElement.setAttribute(TRANSITION_TYPE_ATTRIBUTE, type);
-    // Read once the type is worn, which is what makes the type's value
-    // resolve; a value a type does not publish leaves the attribute off.
-    const covered = getComputedStyle(documentElement)
-      .getPropertyValue(TRANSITION_COVERED_PROPERTY)
-      .trim();
-    if (covered === "old" || covered === "new") {
-      documentElement.setAttribute(TRANSITION_COVERED_ATTRIBUTE, covered);
-    }
-  }
+  // Before anything is read: placing the walls and reading the band need their
+  // sheets (see installRouteTransitionCss).
+  installRouteTransitionCss();
   // Looked up per transition, not once: the area is the application's own
   // element and follows its lifecycle — a page layout without bars has none,
   // and the movement then plays on the document itself.
@@ -1580,16 +1569,24 @@ const beginTransition = ({ page, url, fromUrl, direction, type, duration }) => {
   // left (see transition_window.js).
   let areaStateBefore = null;
   if (areaElement) {
-    // The area is the application's element as often as <RouteTransitionArea>,
-    // so what a movement on it plays with is adopted here, where it is found.
-    installTransitionWindowCss();
-    installTransitionFurnitureCss();
-    documentElement.setAttribute(TRANSITION_TARGET_ATTRIBUTE, "area");
     // Said before the picture is taken, like every name (see
     // transition_furniture.js): what the bars are wearing when the transition
     // starts is what the browser photographs.
     nameTransitionFurniture(transition, areaElement);
     areaStateBefore = measureTransitionWindowState(areaElement);
+  }
+  // Worn only once everything above has been read: the types' rules change
+  // custom properties on the root, which every element inherits, so a read
+  // after these writes restyles the whole page being left, inside the press.
+  // The three go on together: layout/popup_css.js names a popup when the
+  // direction is worn without the area, and nameTransitionFurniture would take
+  // that name for the application's own.
+  documentElement.setAttribute(TRANSITION_ATTRIBUTE, direction);
+  if (type) {
+    documentElement.setAttribute(TRANSITION_TYPE_ATTRIBUTE, type);
+  }
+  if (areaElement) {
+    documentElement.setAttribute(TRANSITION_TARGET_ATTRIBUTE, "area");
   }
   // A duration of this relation's own, worn for the length of the transition —
   // and whatever the application had written inline put back afterwards, not
@@ -1676,7 +1673,24 @@ const beginTransition = ({ page, url, fromUrl, direction, type, duration }) => {
     // browser runs this callback even for a transition skipped before its
     // first picture — the next one starting skips it — and a transition
     // replaced holds nothing: what it wore was taken off at the takeover.
-    if (areaElement && currentTransition === transition) {
+    if (currentTransition !== transition) {
+      return;
+    }
+    if (type) {
+      // Not read as the transition begins: the type's values live on the root,
+      // so the read restyles the whole document, and there it is the page
+      // being left, inside the press. Here the page arriving has to be styled
+      // anyway, and nothing needs the attribute sooner — every rule written on
+      // it is on a pseudo-element, styled once this callback is done. A value
+      // a type does not publish leaves the attribute off.
+      const covered = getComputedStyle(documentElement)
+        .getPropertyValue(TRANSITION_COVERED_PROPERTY)
+        .trim();
+      if (covered === "old" || covered === "new") {
+        documentElement.setAttribute(TRANSITION_COVERED_ATTRIBUTE, covered);
+      }
+    }
+    if (areaElement) {
       holdTransitionFurniture(transition, areaElement);
       holdTransitionWindow(transition, areaElement, areaStateBefore, {
         furnitureLive: false,
@@ -2003,3 +2017,18 @@ const warnPagesBothCurrent = (pageKept, pageIgnored) => {
 
 const describePage = ({ route, params }) =>
   params ? `${route} with ${JSON.stringify(params)}` : `${route}`;
+
+// Everything a movement is written in, adopted where a movement is declared:
+// adopting a sheet restyles the whole document, and done by the press that
+// starts the first movement, that is the page being left paying for it once
+// more. An app that declares a movement moves. The press adopts too — a no-op
+// by then — for a link or a navTo() asking for a movement in an app that
+// declared none; an app that never moves never carries any of it. The window
+// and furniture sheets go with it whether or not an area is marked: the area
+// is the application's element as often as <RouteTransitionArea>, and is
+// only found as a movement starts.
+const installRouteTransitionCss = () => {
+  import.meta.css = css;
+  installTransitionWindowCss();
+  installTransitionFurnitureCss();
+};

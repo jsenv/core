@@ -593,6 +593,12 @@ const ENTER_ACTIVATING_DEFAULT_ACTION_SET = new Set([
   "form_submit",
 ]);
 
+// What a popup leaving the tree while open closes on (see useOpenController).
+// It closes from a cleanup, while the tree leaving with it is still in the
+// document: whatever that close sets off can tell from this event that where
+// the focus may go is only known once the commit is over.
+export const UNMOUNT_EVENT_TYPE = "navi_unmount";
+
 // Created once per popup instance: openHandler is wrapped in a stable callback
 // so the controller identity never changes across renders, even though
 // Dialog/Popover read fresh closures (scrollTrap, etc.) via
@@ -622,7 +628,9 @@ export const useOpenController = (openHandler) => {
       // subtree by running every hook cleanup in it, so a `<Loading>` above
       // the popup lands here for a wait it comes back from.
       controllerRef.current.onOpenedChange = null;
-      controllerRef.current.close();
+      controllerRef.current.close(
+        new CustomEvent(UNMOUNT_EVENT_TYPE, { detail: {} }),
+      );
     };
   }, []);
   return controllerRef.current;

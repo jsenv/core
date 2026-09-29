@@ -137,6 +137,27 @@ let boxAnimationInProgress = null;
 // where the boxes stood — and read once, before the opening waits for its
 // target (see liftPopupFromAnchor).
 let releaseScrollHold = null;
+// Who is waiting for the page to hold still (see afterPopupLift).
+const liftOverCallbackSet = new Set();
+
+/**
+ * Runs `callback` once no popup is lifting: at once when none is, otherwise
+ * when the movement is over. For what has to measure a box, or put something
+ * in the top layer, inside a popup being lifted: its box is still being moved
+ * by the transition, and whatever the top layer gains meanwhile is painted
+ * only inside the root's frozen picture — see `--navi-grab` in commands.js.
+ *
+ * Also through the time an opening waits for its `data-lift` target, with the
+ * popup open and unpainted: the movement has not begun, and nothing in the
+ * popup is where it will be.
+ */
+export const afterPopupLift = (callback) => {
+  if (!releaseLiftInProgress) {
+    callback();
+    return;
+  }
+  liftOverCallbackSet.add(callback);
+};
 
 /**
  * Runs `applyChange` — the DOM change that opens or closes `popupEl` — inside
@@ -216,6 +237,7 @@ export const liftPopupFromAnchor = (
     root.style.removeProperty(BORDER_RADIUS_PROPERTY);
     root.style.removeProperty(BACKGROUND_COLOR_PROPERTY);
     root.style.removeProperty(BACKGROUND_IMAGE_PROPERTY);
+    callLiftOverCallbacks();
   };
   releaseLiftInProgress = release;
 
@@ -591,4 +613,20 @@ const wearLiftName = (element) => {
     }
     element.style.removeProperty(NAME_PROPERTY);
   };
+};
+
+// Asked again a microtask later rather than told at once: a movement is also
+// released by the one replacing it, which takes the page over in the same run
+// of code, and that one has to be waited out as well.
+const callLiftOverCallbacks = () => {
+  if (liftOverCallbackSet.size === 0) {
+    return;
+  }
+  const callbacks = [...liftOverCallbackSet];
+  liftOverCallbackSet.clear();
+  queueMicrotask(() => {
+    for (const callback of callbacks) {
+      afterPopupLift(callback);
+    }
+  });
 };

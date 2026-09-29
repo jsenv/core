@@ -51,6 +51,7 @@
 import { getScrollBox, getScrollport } from "../../position/dom_coords.js";
 import { createStyleController } from "../../style/style_controller.js";
 import { suppressClickAfterGesture } from "../click_suppression.js";
+import { readPressDown } from "../press_down.js";
 import { takePress } from "../press_held.js";
 import { getScrollContainer } from "../scroll/scroll_container.js";
 import {
@@ -277,6 +278,19 @@ const css = /* css */ `
   }
   [navi-drag-clone-wrapper][data-tossed="away"] {
     opacity: 0;
+  }
+
+  /* Brought to a hand that pressed somewhere else (see handedOver): it stands
+     under the finger and flies there from the element's box, on a translate the
+     drag does not touch — the drag moves it with transform, so a finger moving
+     meanwhile is followed while the gap closes. */
+  [navi-drag-clone-wrapper][data-reaching] {
+    transition: translate 0.2s ease-out;
+  }
+  @starting-style {
+    [navi-drag-clone-wrapper][data-reaching] {
+      translate: var(--clone-reach-from);
+    }
   }
 
   [navi-drag-clone] {
@@ -714,6 +728,11 @@ export const createDragToMoveGestureController = ({
     element,
     referenceElement,
     elementToMove,
+    // How far from `element` what moves starts, when it does not start over it
+    // (a copy brought to a hand that pressed elsewhere, see handedOver). The
+    // layout is then the box the hand holds, so constraints and auto-scroll
+    // read what is seen; the translate is unaffected, it counts from the grab.
+    grabOffset,
     event,
     ...rest
   } = {}) => {
@@ -726,8 +745,12 @@ export const createDragToMoveGestureController = ({
     const dragGesture = grab({
       element,
       scrollContainer,
-      layoutScrollableLeft: elementScrollableLeft,
-      layoutScrollableTop: elementScrollableTop,
+      layoutScrollableLeft: grabOffset
+        ? elementScrollableLeft + grabOffset.x
+        : elementScrollableLeft,
+      layoutScrollableTop: grabOffset
+        ? elementScrollableTop + grabOffset.y
+        : elementScrollableTop,
       event,
       ...rest,
     });
@@ -852,6 +875,23 @@ const warnAboutTransformsOutsideTransform = (element) => {
  *   for: one without the other is moving the thing while hesitating, and nothing is
  *   thrown away on a hesitation. A throw is judged before any landing; a release
  *   with no place under it is `leave`'s, not a toss — there is no speed to it.
+ * @param {boolean} [options.handedOver=false]
+ *   `event` is a press held on something ELSE, handed to this element: a hold
+ *   opened a popup, and what the popup holds is to be carried by the finger
+ *   still down (see HANDED OVER below). Nothing happens when that press has
+ *   ended in the meantime.
+ *
+ * HANDED OVER. The press did not land on the element, and the element may not
+ * have existed when it did, so the three things a press on it would have said
+ * are said otherwise. Where it landed is none of the element's business (no
+ * opted-out area is looked for). Whether the hand means it was proved by the
+ * hold that handed it over, so the carry starts at once. And where the hand is
+ * has nothing to do with where the element stands, so the copy is brought to
+ * the hand — centred on the finger, flying there from the element's box —
+ * rather than following it from a distance. The pointer is taken on the
+ * element, away from what the finger first touched. Only a copy can be brought
+ * like that: `move` carries the element itself, which would leave its place
+ * just by being handed a press, and is not started.
  *
  * Everything else is forwarded to `createDragToMoveGestureController`
  * (`areaConstraint`, `autoScrollAreaPadding`, `direction`…) and to `dragAfterIntent`
@@ -873,8 +913,9 @@ export const startDragTo = (
   { draggedElement = event.currentTarget, ...options } = {},
 ) => {
   // An area that opted out of dragging (a text one wants to select, a control that
-  // owns the gesture, a callout): the press there is none of our business.
-  if (isPressIgnored(event.target, draggedElement)) {
+  // owns the gesture, a callout): the press there is none of our business. A
+  // press handed over landed outside the element by construction.
+  if (!options.handedOver && isPressIgnored(event.target, draggedElement)) {
     return undefined;
   }
   // A secondary button (right click and friends) is a context menu, not a grab.
@@ -915,6 +956,14 @@ export const startDragTo = (
       canLeave,
       ...options,
     });
+  }
+  if (options.handedOver) {
+    if (import.meta.dev) {
+      console.warn(
+        `startDragTo: a press handed over brings a copy to the hand, and "move"/"onMoving" carry the element itself — it would leave its place just by being handed the press. Nothing is carried.`,
+      );
+    }
+    return undefined;
   }
   return startDragToMoveElement(event, {
     draggedElement,
@@ -1305,23 +1354,35 @@ const startDragToCarryCopy = (
     onPressStart,
     onPressCancel,
     onPress,
+    handedOver,
     ...options
   },
 ) => {
   // An area that opted out of dragging (a text one wants to select, a control
   // that owns the gesture, a callout): the press there is none of our business.
-  if (isPressIgnored(event.target, draggedElement)) {
+  if (!handedOver && isPressIgnored(event.target, draggedElement)) {
     return undefined;
   }
   // A secondary button (right click and friends) is a context menu, not a grab.
   if (!isPrimaryButtonEvent(event)) {
     return undefined;
   }
+  // Where the hand is, for a press handed over: its `pointerdown` says where it
+  // WAS, before the hold and whatever the hold opened. Let go of meanwhile, it
+  // is not picked up after the fact.
+  const handedPointer = handedOver ? readPressDown(event) : null;
+  if (handedOver && !handedPointer) {
+    return undefined;
+  }
   // One press, one carry — and the same carry over again when the hand comes back
   // for the copy while it is still flying home (see settleCloneBack). Nothing is
   // made twice in that case: it is the same copy, taken in hand again where it
-  // had got to.
-  const startCarry = (pointerEvent, cloneWrapperCaught, onCarryStart) => {
+  // had got to — by a press ON it, so never a press handed over.
+  const startCarry = (
+    pointerEvent,
+    { cloneWrapperCaught, onCarryStart } = {},
+  ) => {
+    const handedTo = cloneWrapperCaught ? null : handedPointer;
     pointerEvent.preventDefault();
     return dragAfterIntent(
       pointerEvent,
@@ -1330,8 +1391,14 @@ const startDragToCarryCopy = (
         // one moment both ways in (a finger held still, a mouse travelled)
         // agree on.
         onCarryStart?.();
+        // From the element's centre to the finger: the copy is brought that far,
+        // since the hand that pressed elsewhere has nothing to follow it from.
+        const reach = handedTo
+          ? measureReach(draggedElement, handedTo)
+          : undefined;
         const cloneWrapper =
-          cloneWrapperCaught || createDragClone(draggedElement, pointerEvent);
+          cloneWrapperCaught ||
+          createDragClone(draggedElement, handedTo || pointerEvent, reach);
         if (cloneWrapperCaught) {
           liftDragClone(cloneWrapperCaught, pointerEvent);
         }
@@ -1343,10 +1410,26 @@ const startDragToCarryCopy = (
           areaConstraint,
           ...options,
         });
-        const dragGesture = gestureController.grabViaPointer(pointerEvent, {
-          element: draggedElement,
-          elementToMove: cloneWrapper,
-        });
+        const dragGesture = gestureController.grabViaPointer(
+          pointerEvent,
+          handedTo
+            ? {
+                element: draggedElement,
+                elementToMove: cloneWrapper,
+                // Counted from where the finger is now, so a release that
+                // never moved it is still a hand that changed its mind.
+                grabX: handedTo.clientX,
+                grabY: handedTo.clientY,
+                grabOffset: reach,
+                // Off what the finger first touched, which the popup now
+                // covers: the pointer is the carry's from here.
+                pointerCaptureElement: draggedElement,
+              }
+            : {
+                element: draggedElement,
+                elementToMove: cloneWrapper,
+              },
+        );
         // getDropTargetInfo uses gestureInfo.elementImpacted to compute the dragged rect.
         // Point it at the clone so drop detection tracks the clone's current position.
         dragGesture.gestureInfo.elementImpacted = cloneWrapper;
@@ -1520,6 +1603,10 @@ const startDragToCarryCopy = (
         dragGesture.addReleaseCallback(async (gestureInfo) => {
           clearDropHintDOM();
           dropHintEl?.remove();
+          // Let go of on its way to the hand: it is where the hand is, and from
+          // there it goes wherever the answer sends it — on a translate of its
+          // own, which the flight to the hand must not be holding.
+          cloneWrapper.removeAttribute("data-reaching");
 
           // What THIS release means, from what the element said it can answer. A
           // throw is asked about first: it is the more insistent of the two, and a
@@ -1564,7 +1651,10 @@ const startDragToCarryCopy = (
           const copyLetGoOf = letCopyBeCaught(
             cloneWrapper,
             (pointerDownEvent, whenCarried) =>
-              startCarry(pointerDownEvent, cloneWrapper, whenCarried),
+              startCarry(pointerDownEvent, {
+                cloneWrapperCaught: cloneWrapper,
+                onCarryStart: whenCarried,
+              }),
           );
 
           // The copy stops where the hand left it, and the answer is given a way to
@@ -1668,6 +1758,7 @@ const startDragToCarryCopy = (
         onPressStart,
         onPressCancel,
         onPress,
+        handedOver: Boolean(handedTo),
       },
     );
   };
@@ -1971,9 +2062,23 @@ const liftDragClone = (cloneWrapper, pointerEvent) => {
   cloneWrapper.firstElementChild.setAttribute("navi-drag-clone", "");
 };
 
-let dragCloneCount = 0;
-const createDragClone = (element, pointerEvent) => {
+// From the centre of the element to the pointer, for a copy brought to a hand
+// that pressed elsewhere (see handedOver): centred rather than held at the point
+// the finger had on what it pressed, since that was another box.
+const measureReach = (element, pointer) => {
   const rect = element.getBoundingClientRect();
+  return {
+    x: pointer.clientX - (rect.left + rect.width / 2),
+    y: pointer.clientY - (rect.top + rect.height / 2),
+  };
+};
+
+let dragCloneCount = 0;
+const createDragClone = (element, grabPoint, reach) => {
+  const rect = element.getBoundingClientRect();
+  // Over the element, or shifted to where the hand is (see measureReach).
+  const left = reach ? rect.left + reach.x : rect.left;
+  const top = reach ? rect.top + reach.y : rect.top;
 
   const wrapper = document.createElement("div");
   wrapper.setAttribute("navi-drag-clone-wrapper", "");
@@ -1985,13 +2090,26 @@ const createDragClone = (element, pointerEvent) => {
   // Manual: it is opened and closed with the drag, and must survive an Escape
   // or a click elsewhere (light dismiss would take it away mid-gesture).
   wrapper.setAttribute("popover", "manual");
-  setCloneViewportRect(wrapper, element);
-  // Grab point within the element — used as transform-origin so the
+  wrapper.style.setProperty("--clone-top", `${top}px`);
+  wrapper.style.setProperty("--clone-left", `${left}px`);
+  wrapper.style.setProperty("--clone-width", `${rect.width}px`);
+  wrapper.style.setProperty("--clone-height", `${rect.height}px`);
+  if (reach) {
+    // It flies there from the element's box, so the eye follows what was
+    // picked up rather than seeing it appear under the finger (see the
+    // stylesheet).
+    wrapper.style.setProperty(
+      "--clone-reach-from",
+      `${-reach.x}px ${-reach.y}px`,
+    );
+    wrapper.setAttribute("data-reaching", "");
+  }
+  // Grab point within the copy — used as transform-origin so the
   // scale expands from where the user clicked, not the element center.
-  // These offsets are element-relative so viewport coords are correct here.
+  // These offsets are copy-relative so viewport coords are correct here.
   wrapper.style.setProperty(
     "--drag-origin",
-    `${pointerEvent.clientX - rect.left}px ${pointerEvent.clientY - rect.top}px`,
+    `${grabPoint.clientX - left}px ${grabPoint.clientY - top}px`,
   );
   const elementClone = element.cloneNode(true);
   // A deep copy copies the ids too, and two elements answering to one id is a

@@ -9,6 +9,8 @@
  *
  * There is one gesture, with a trigger per pointer:
  * - a dedicated handle ([data-drag-handle]) says it outright: drag on contact
+ * - a press handed over by the hold that opened what it lands in says it too:
+ *   that hold was the proof
  * - a mouse resolves it by distance — a mouse scrolls with its wheel, so travel
  *   can only mean drag
  * - a finger resolves it by time — travel is exactly what a scroll looks like,
@@ -286,6 +288,10 @@ export const dragSourceThatStoodDown = (pressEvent) => {
  *   drag_gesture.js). `"manual"` leaves the press to the browser until the
  *   caller's own gesture says otherwise. A long press waits without refusing
  *   anything either way (see the stylesheet above).
+ * @param {boolean} [options.handedOver=false]
+ *   The press was held on something else, which handed it to this drag (see
+ *   `handedOver` in drag_to.js): the hold that did so established the intent,
+ *   so the gesture starts at once, as it does from a dedicated handle.
  */
 export const dragAfterIntent = (
   grabEvent,
@@ -299,6 +305,7 @@ export const dragAfterIntent = (
     onPressCancel,
     onPress,
     selection = "auto",
+    handedOver = false,
   } = {},
 ) => {
   if (!isPrimaryButtonEvent(grabEvent)) {
@@ -307,7 +314,7 @@ export const dragAfterIntent = (
   const target = grabEvent.target;
   const isDedicatedHandle =
     target.closest && target.closest("[data-drag-handle]");
-  if (isDedicatedHandle) {
+  if (isDedicatedHandle || handedOver) {
     startDragGesture(dragGestureInitializer);
     return;
   }

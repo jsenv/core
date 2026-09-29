@@ -15,10 +15,12 @@
 
 import {
   createPubSub,
+  findEvent,
   findFocusDelegateTarget,
   getElementSignature,
 } from "@jsenv/dom";
 
+import { UNMOUNT_EVENT_TYPE } from "../../layout/open_controller.js";
 import { openCallout } from "./callout/callout.js";
 
 // The close reason the manager gives itself when the callout has to be drawn on
@@ -110,11 +112,29 @@ export const createCalloutManager = (
         ) {
           const focusTarget =
             findFocusDelegateTarget(anchorElement) || anchorElement;
-          debugFocus(
-            closeEvent,
-            `callout is closing with focus, give focus back to the control ${getElementSignature(focusTarget)}.focus()`,
-          );
-          focusTarget.focus();
+          const giveFocusBack = () => {
+            debugFocus(
+              closeEvent,
+              `callout is closing with focus, give focus back to the control ${getElementSignature(focusTarget)}.focus()`,
+            );
+            focusTarget.focus();
+          };
+          if (findEvent(closeEvent, UNMOUNT_EVENT_TYPE)) {
+            // Closed by a popup leaving the tree: the control may be leaving
+            // in the same commit, which only its end tells. A leaving control
+            // must not get the focus — the removal of a subtree holding it
+            // restyles the whole subtree.
+            queueMicrotask(() => {
+              if (focusTarget.isConnected) {
+                giveFocusBack();
+              }
+            });
+          } else {
+            // Given before the callout leaves the document: removed while it
+            // holds the focus, it sends a focusout with nowhere to go up
+            // through the page it is drawn in.
+            giveFocusBack();
+          }
         }
       },
     });

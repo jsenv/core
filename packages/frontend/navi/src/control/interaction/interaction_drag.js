@@ -268,13 +268,34 @@
  * vibration for a finger, nothing more for a mouse whose cursor has already said
  * it.
  *
+ * WHEN THE PRESS WAS MADE ELSEWHERE: `--navi-grab`.
+ *
+ *   triggerNaviCommand(seatElement, "--navi-grab", openEvent);
+ *
+ * A hold opens a popup, and something in it is what the hand meant to take: the
+ * finger is still down, and moving it should move that thing without lifting and
+ * pressing again. The press cannot get there by itself — it landed on something
+ * the popup now covers, before the element even existed — so it is handed over
+ * with the event it set off, and read from that chain. Let go of in the
+ * meantime, nothing is picked up. The carry is the element's own, outcomes and
+ * refusal included, without the wait for intent (the hold was the proof), and
+ * the copy is brought to the finger rather than following it from wherever the
+ * element stands. A copy or nothing: `move` and `moving` carry the thing itself,
+ * which would leave its place just for being handed a press. When it starts is
+ * navi's — after a popup still being lifted (see `--navi-grab` in commands.js).
+ *
  * What the copy LOOKS like is the application's too. A copy of a transparent
  * element is invisible — a row usually gets its background from the list around it,
  * which the copy has left — so it is dressed through the attributes the gesture
  * writes: `navi-drag-clone` on the copy, `navi-drag-clone-source` on the original.
  */
 
-import { markDragSource, refuseDragTo, startDragTo } from "@jsenv/dom";
+import {
+  findEvent,
+  markDragSource,
+  refuseDragTo,
+  startDragTo,
+} from "@jsenv/dom";
 
 import { defineInteractionDetector } from "./interaction_registry.js";
 
@@ -451,39 +472,21 @@ defineInteractionDetector({
     // And what the element saying no is about: the carry, whether it is told at
     // the release or all along.
     const carries = canMoving ? [...effects, MOVING] : effects;
+    // Whether what travels is a copy — the element itself stays for `move` and
+    // `moving`, and for a `leave` beside either.
+    const carriesCopy =
+      canReorder || canLand || canToss || (canLeave && !canMove && !canMoving);
 
     // Whether there is anywhere to land, asked at the first press rather than
     // here: the places are drawn by whatever renders them, which at setup may
     // not have happened yet.
     let placesLookedFor = false;
 
-    const onPointerDown = (pointerDownEvent) => {
-      // Asked at every press and never once: what an interaction does is the
-      // caller's latest render, and a thing is locked and unlocked while its
-      // listeners stay where they are. One outcome saying no is enough — the
-      // element is carried or it is not, and each of the five is an answer to
-      // that same carry.
-      if (carries.some(isRefused)) {
-        refuseDragTo(pointerDownEvent, {
-          draggedElement: element,
-          threshold: readConfig(THRESHOLD_ATTRIBUTE, undefined),
-          longPressDelay: readConfig(DELAY_ATTRIBUTE, undefined),
-          longPressSlop: readConfig(SLOP_ATTRIBUTE, undefined),
-          // The refusal comes where the grab would have: nothing to be told
-          // before that, since up to there the gesture is one that could still
-          // have been anything. Who keeps the press meanwhile is refuseDragTo's
-          // to say — a surface under the element pans from it, and nothing else
-          // wants it.
-          onRefuse: tellsWhenRefused
-            ? () => {
-                trigger(REFUSE, pointerDownEvent, {
-                  pointerType: pointerDownEvent.pointerType,
-                });
-              }
-            : undefined,
-        });
-        return;
-      }
+    // The carry itself, from a press on the element or from one handed over.
+    // `causeEvent` is what the interactions are chained to: the press, or the
+    // request that handed it over — which reaches back to the press through
+    // its own chain, and says how it got here as well.
+    const carry = (pressEvent, causeEvent, { handedOver } = {}) => {
       if (import.meta.dev && canLand && !placesLookedFor) {
         placesLookedFor = true;
         warnWhenNothingToLandOn(element, dropContainer, canLeave);
@@ -491,8 +494,9 @@ defineInteractionDetector({
       // What this element says a release can mean. The gesture then runs only what
       // those need — no copy for a move, no drop hint for something that can only
       // be thrown away.
-      startDragTo(pointerDownEvent, effects, {
+      startDragTo(pressEvent, effects, {
         draggedElement: element,
+        handedOver,
         // Nothing to land on when nothing reorders.
         itemSelector: canLand
           ? `[${DROPPABLE_ATTRIBUTE}]`
@@ -529,8 +533,8 @@ defineInteractionDetector({
         // comes back: this says something happened, it does not ask for work.
         onDragStart: tellsWhenGrabbed
           ? (gestureInfo) => {
-              trigger(GRAB, pointerDownEvent, {
-                pointerType: pointerDownEvent.pointerType,
+              trigger(GRAB, causeEvent, {
+                pointerType: pressEvent.pointerType,
                 gestureInfo,
               });
             }
@@ -541,7 +545,7 @@ defineInteractionDetector({
         // comes back either.
         onRelease: tellsWhenReleased
           ? ({ x, y, outcome }) => {
-              trigger(RELEASE, pointerDownEvent, {
+              trigger(RELEASE, causeEvent, {
                 id: element.id,
                 x,
                 y,
@@ -553,37 +557,97 @@ defineInteractionDetector({
         // promise while the answer is still going, which is what the gesture waits
         // on before it lets go of what it carries.
         onReorder: (fromId, toId, syncCloneWithDropTarget) =>
-          trigger(REORDER, pointerDownEvent, {
+          trigger(REORDER, causeEvent, {
             fromId,
             toId,
             syncCloneWithDropTarget,
           }),
-        onLand: (detail) => trigger(LAND, pointerDownEvent, detail),
+        onLand: (detail) => trigger(LAND, causeEvent, detail),
         onToss: ({ gestureInfo }) =>
-          trigger(TOSS, pointerDownEvent, {
+          trigger(TOSS, causeEvent, {
             id: element.id,
             velocity: gestureInfo.velocity,
             x: gestureInfo.layout.xDelta,
             y: gestureInfo.layout.yDelta,
           }),
         onLeave: ({ x, y }) =>
-          trigger(LEAVE, pointerDownEvent, { id: element.id, x, y }),
-        onMove: ({ x, y }) => trigger(MOVE, pointerDownEvent, { x, y }),
+          trigger(LEAVE, causeEvent, { id: element.id, x, y }),
+        onMove: ({ x, y }) => trigger(MOVE, causeEvent, { x, y }),
         // Every frame, and nothing is waited on: the caller is drawing, and a
         // draw that has to be awaited before the next frame is one frame late.
         onMoving: canMoving
           ? ({ x, y }) => {
-              trigger(MOVING, pointerDownEvent, { x, y });
+              trigger(MOVING, causeEvent, { x, y });
             }
           : undefined,
       });
     };
+
+    const onPointerDown = (pointerDownEvent) => {
+      // Asked at every press and never once: what an interaction does is the
+      // caller's latest render, and a thing is locked and unlocked while its
+      // listeners stay where they are. One outcome saying no is enough — the
+      // element is carried or it is not, and each of the five is an answer to
+      // that same carry.
+      if (carries.some(isRefused)) {
+        refuseDragTo(pointerDownEvent, {
+          draggedElement: element,
+          threshold: readConfig(THRESHOLD_ATTRIBUTE, undefined),
+          longPressDelay: readConfig(DELAY_ATTRIBUTE, undefined),
+          longPressSlop: readConfig(SLOP_ATTRIBUTE, undefined),
+          // The refusal comes where the grab would have: nothing to be told
+          // before that, since up to there the gesture is one that could still
+          // have been anything. Who keeps the press meanwhile is refuseDragTo's
+          // to say — a surface under the element pans from it, and nothing else
+          // wants it.
+          onRefuse: tellsWhenRefused
+            ? () => {
+                trigger(REFUSE, pointerDownEvent, {
+                  pointerType: pointerDownEvent.pointerType,
+                });
+              }
+            : undefined,
+        });
+        return;
+      }
+      carry(pointerDownEvent, pointerDownEvent);
+    };
     element.addEventListener("pointerdown", onPointerDown);
+
+    // A press made somewhere else, handed to this element (see --navi-grab in
+    // commands.js). What opened without a press — a key, a right click — has
+    // none to hand over, and nothing happens.
+    const onRequestGrab = (requestEvent) => {
+      const pressEvent = findEvent(requestEvent, "pointerdown");
+      if (!pressEvent) {
+        return;
+      }
+      if (carries.some(isRefused)) {
+        if (tellsWhenRefused) {
+          trigger(REFUSE, requestEvent, {
+            pointerType: pressEvent.pointerType,
+          });
+        }
+        return;
+      }
+      if (!carriesCopy) {
+        if (import.meta.dev) {
+          console.warn(
+            `interactions: a press handed over (--navi-grab) brings a copy to the hand, and "${canMoving ? MOVING : MOVE}" carries the element itself — it would leave its place just by being handed the press. Nothing is carried.`,
+            element,
+          );
+        }
+        return;
+      }
+      carry(pressEvent, requestEvent, { handedOver: true });
+    };
+    element.addEventListener("navi_request_grab", onRequestGrab);
 
     return () => {
       element.removeAttribute(REORDERABLE_ATTRIBUTE);
       unmarkDragSource();
       element.removeEventListener("pointerdown", onPointerDown);
+      element.removeEventListener("navi_request_grab", onRequestGrab);
     };
   },
 });

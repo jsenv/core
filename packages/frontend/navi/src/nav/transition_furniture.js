@@ -192,8 +192,8 @@ const TRANSITION_FURNITURE_CSS = /* css */ `
   }
 `;
 
-// Called as a movement starts over a marked area, never at module scope: a
-// page that never travels between routes must not carry this sheet, and a
+// Called where a route movement is declared or starts, never at module scope:
+// a page that never travels between routes must not carry this sheet, and a
 // build that sees no caller drops the css with the function.
 export const installTransitionFurnitureCss = () => {
   import.meta.css = TRANSITION_FURNITURE_CSS;

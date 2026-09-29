@@ -4,6 +4,7 @@ import {
   navBack,
   navTo,
 } from "../nav/browser_integration/browser_integration.js";
+import { afterPopupLift } from "../layout/popup_lift.js";
 import { linkAsksForReplace } from "../nav/browser_integration/link_replace.js";
 import {
   findClosestControlWithAction,
@@ -1147,6 +1148,34 @@ registerNaviCommand("--navi-scroll", (source, event) => {
         event,
         id: resolveCommandValue(source, event),
       });
+    },
+  };
+});
+// The press a hand is still making, given to something that can be carried: a
+// hold opened a popup, and what the popup holds is to follow that same finger
+// without it lifting and pressing again. `event` is what the press set off (the
+// popup's open event), and the press is read from its chain. Run once the popup
+// has settled, which the caller cannot see: the carry measures its element and
+// puts a copy in the top layer, neither of which holds while a transition is
+// still moving the box (see afterPopupLift). What the carry then is — its
+// outcomes, its refusal — is the element's (see interaction_drag.js).
+registerNaviCommand("--navi-grab", (source, event) => {
+  const target =
+    resolveExplicitTarget(source) || source.closest("[data-drag-source]");
+  if (!target) {
+    return undefined;
+  }
+  return {
+    target,
+    implementation: () => {
+      afterPopupLift(() => {
+        // Taken away with the popup before it settled.
+        if (!target.isConnected) {
+          return;
+        }
+        dispatchCustomEvent(target, "navi_request_grab", { event });
+      });
+      return true;
     },
   };
 });
