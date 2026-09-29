@@ -26,7 +26,11 @@ import { createAction } from "../../action/actions.js";
 import { runUnwatched } from "../../action/run_unwatched.js";
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 import { documentUrlSignal } from "../../nav/browser_integration/document_url_signal.js";
-import { publishRouteRender } from "../../nav/route_render.js";
+import {
+  observeRouteRender,
+  publishRouteRender,
+} from "../../nav/route_render.js";
+import { RoutePageContext } from "../../nav/route_page_context.js";
 import { usePromiseAsyncData } from "./use_promise_async_data.js";
 
 /**
@@ -222,13 +226,40 @@ const useActionAsyncData = (
   // has already processed the settlement and the detached DOM is discarded.
   const runningState = action.runningStateSignal.peek();
   const [, setTick] = useState(0);
+  const routePage = useContext(RoutePageContext);
   useEffect(() => {
+    let stopOwingRender = null;
+    const rerender = () => {
+      // Not for a page the address has left: it is about to be taken down,
+      // or hidden until the route transition leaving it is over, and its
+      // route's action moving as that route stops matching would re-render
+      // the whole page — inside the transition's update callback, where
+      // every render delays the movement (see route_page_context.js).
+      if (routePage && !routePage.isShown()) {
+        // Owed rather than dropped: the address can come back before the
+        // container renders (a redirect straight back), and the page then
+        // stays on screen with what it read last.
+        if (!stopOwingRender) {
+          stopOwingRender = observeRouteRender(() => {
+            if (routePage.isShown()) {
+              rerender();
+            }
+          });
+        }
+        return;
+      }
+      if (stopOwingRender) {
+        stopOwingRender();
+        stopOwingRender = null;
+      }
+      setTick((n) => n + 1);
+    };
     const unsubscribeFromRunningState = action.runningStateSignal.subscribe(
       (state) => {
         if (state === RUNNING) {
           dismissedActionWeakSet.delete(action);
         }
-        setTick((n) => n + 1);
+        rerender();
       },
     );
     // The data does not come from this action's runs alone: dataSignal is a
@@ -243,7 +274,7 @@ const useActionAsyncData = (
         dataNotificationIsInitial = false;
         return;
       }
-      setTick((n) => n + 1);
+      rerender();
     });
     // The params say WHICH question this is, and this hook reads them: to know
     // there is nothing to ask for, and to start the run it owns. A binding
@@ -256,7 +287,7 @@ const useActionAsyncData = (
         paramsNotificationIsInitial = false;
         return;
       }
-      setTick((n) => n + 1);
+      rerender();
     });
     // A debounced binding waits before it retargets, so nothing above changes
     // while the delay runs — but what is on screen is already out of date.
@@ -267,7 +298,7 @@ const useActionAsyncData = (
           settlingNotificationIsInitial = false;
           return;
         }
-        setTick((n) => n + 1);
+        rerender();
       },
     );
     return () => {
@@ -275,11 +306,14 @@ const useActionAsyncData = (
       unsubscribeFromData();
       unsubscribeFromParams();
       unsubscribeFromParamsSettling();
+      if (stopOwingRender) {
+        stopOwingRender();
+      }
     };
     // Bound to the action, not to the mount: params given as a plain object
     // make another action instance, and the component would otherwise stay
     // subscribed to the state of the one it no longer reads.
-  }, [action]);
+  }, [action, routePage]);
 
   // The params moved and the run has not started: under a debounce the action
   // is still the previous one, COMPLETED with the previous answer. There is no

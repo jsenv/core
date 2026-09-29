@@ -552,9 +552,11 @@ Measured on that page, first frame of the movement: 63 → 45 ms at full speed,
 What that means for a page and for the application around it:
 
 - **It is still mounted for the length of the movement.** Its effects keep
-  running, and it still reads the address: whatever re-renders when the URL
-  changes re-renders in it too, hidden (see
-  [What a transition costs](#what-a-transition-costs)).
+  running, and it still reads the address: a component reading the URL, a
+  route or a signal directly re-renders in it too, hidden (see
+  [What a transition costs](#what-a-transition-costs)). What it reads through
+  `useAsyncData` does not: navi leaves a page alone as soon as its container
+  would no longer show it.
 - **It is taken down after the page arriving is up.** A cleanup that puts back
   what it found — a document title, a class on `<body>`, a value in a shared
   store — puts a stale value back over the new page's. Such a registration is
@@ -646,10 +648,15 @@ elements):
   thirty cards: 90 re-renders gone, first frame 58 → 41 ms). A row read with
   `RESOURCE.useById` follows that row only, so the page arriving loading rows
   of its own into the same store leaves the cards of the page being left as
-  they were. What reacts is then the page's own reading of its route's action
-  — its params, its data and its state all move as the route stops matching —
-  and that re-renders the page with everything in it (on the list of thirty
-  cards: about 1,150 component renders, the largest share of the callback).
+  they were. What moves last is the page's own reading of its route's action
+  — its params, its data and its state all change as the route stops
+  matching. `useAsyncData` gives no render to a page its container no longer
+  shows: the page is about to be taken down, or hidden until the movement is
+  over (on the list of thirty cards: about 450 component renders gone from the
+  callback, first frame 10–20 ms sooner at 4× CPU, nothing measurable at full
+  speed). A component reading the action's signals itself
+  (`action.dataSignal.value`) does not get that, and re-renders in the hidden
+  page.
 - **Re-rendering what did not change, on the press itself.** A component that
   only wants a yes or a no reads a computed flag, not the signal it is derived
   from: a list whose rows each read the count of runs in flight re-rendered

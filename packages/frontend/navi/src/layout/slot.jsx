@@ -2,7 +2,7 @@ import { signal } from "@preact/signals";
 import { useContext, useLayoutEffect, useRef } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
-import { RoutePageContext } from "../nav/route.jsx";
+import { RoutePageContext } from "../nav/route_page_context.js";
 
 /**
  * Creates a linked `[Slot, SlotFill]` pair so content rendered anywhere in

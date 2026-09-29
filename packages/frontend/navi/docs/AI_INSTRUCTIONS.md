@@ -79,7 +79,10 @@ to start when unsure which export solves a problem.
   map; a pair of routes is animated by `RouteTravel` or by a transition, never
   both; a test waits for the page arriving, never for its address; the page
   being left stays mounted, hidden, until the movement is over (so what it
-  registers globally must let the last arrival win); what a transition costs.
+  registers globally must let the last arrival win, and an action it reads
+  goes through `useAsyncData`, which leaves a page no longer shown alone —
+  `.value` on the action's signals re-renders it hidden); what a transition
+  costs.
   Read before animating a navigation, before writing a custom movement, and
   before believing a symptom that only appears once a pair is animated.
 - `view_transitions.md` — what the browser does to any transition an app

@@ -67,13 +67,14 @@
  * ```
  */
 
-import { signal } from "@preact/signals";
-import { cloneElement, createContext, createRef, h } from "preact";
-import { useLayoutEffect, useReducer, useRef } from "preact/hooks";
+import { signal, untracked } from "@preact/signals";
+import { cloneElement, createRef, h } from "preact";
+import { useContext, useLayoutEffect, useReducer, useRef } from "preact/hooks";
 
 import { useUITransitionContentId } from "../transition/ui_transition.jsx";
 import { unwireRouteFallback, wireRouteFallback } from "./route_fallback.js";
 import { observeRouteRender, publishRouteRender } from "./route_render.js";
+import { RoutePageContext } from "./route_page_context.js";
 
 export { observeRouteRender };
 
@@ -134,13 +135,6 @@ export const keepLeavingPages = () => {
     hold.containers.clear();
   };
 };
-
-// What a page can learn about its place from the container rendering it:
-// whether it is a page kept while leaving (see keepLeavingPages). Such a page
-// is still mounted, and whatever it fills OUTSIDE its own nodes — a slot in a
-// bar, say — would otherwise go on showing with the page arriving (see
-// layout/slot.jsx).
-export const RoutePageContext = createContext(null);
 
 const LEAVING_ATTRIBUTE = "data-navi-route-leaving";
 const css = /* css */ `
@@ -250,7 +244,25 @@ const RouteContainer = ({ id, element, elementProps, children }) => {
     shownBranchRef.current = activeBranch;
   }
   const branch = shownBranchRef.current || activeBranch;
-  const content = useContentKeepingLeavingPages(branch);
+  // What this container would show if it rendered now, by the same rule as
+  // the render above — asked from outside any render (see isShown below).
+  const childrenRef = useRef(null);
+  childrenRef.current = children;
+  const readShownBranchRef = useRef(null);
+  if (!readShownBranchRef.current) {
+    readShownBranchRef.current = () => {
+      if (routeRenderFrozen) {
+        return shownBranchRef.current;
+      }
+      return collectBranches(childrenRef.current).activeBranch;
+    };
+  }
+  const parentPage = useContext(RoutePageContext);
+  const content = useContentKeepingLeavingPages(
+    branch,
+    readShownBranchRef.current,
+    parentPage,
+  );
 
   // The two things this component knows that nobody outside can find out: the
   // pages a named fallback is the absence of — the children it was written
@@ -289,7 +301,7 @@ const RouteContainer = ({ id, element, elementProps, children }) => {
 // page being left must stay the child it was when a page is added beside it,
 // or Preact takes it down and builds it again.
 let leavingKeyCount = 0;
-const useContentKeepingLeavingPages = (branch) => {
+const useContentKeepingLeavingPages = (branch, readShownBranch, parentPage) => {
   const [, rerender] = useReducer(countRenders, 0);
   const shownRef = useRef(null);
   const leavingRef = useRef([]);
@@ -311,6 +323,7 @@ const useContentKeepingLeavingPages = (branch) => {
     // of reach — the page arriving could not even take the focus — for as long
     // as it is open, and one in a page kept while leaving stays open for the
     // whole movement. The page is then taken down at once, as without one.
+    shown.page.left = true;
     leavingRef.current.push({
       vnode: shown.vnode,
       page: shown.page,
@@ -327,8 +340,11 @@ const useContentKeepingLeavingPages = (branch) => {
   let vnode = null;
   if (branch) {
     if (!page) {
-      page = { leavingSignal: signal(false) };
+      page = createRoutePage(readShownBranch, parentPage);
     }
+    // A page carried over follows the branch it is now the page of.
+    page.branchId = branch.id;
+    page.element = element;
     vnode = h(RoutePageContext.Provider, { key, value: page }, branch.node);
   }
   shownRef.current = branch
@@ -387,6 +403,36 @@ const useContentKeepingLeavingPages = (branch) => {
   return children;
 };
 const countRenders = (count) => count + 1;
+// The page a container renders, as RoutePageContext hands it over (see
+// route_page_context.js). Shown while the container would pick its branch, or
+// a branch rendering the same element (it is then carried over), and while the
+// page it sits in is shown itself. Never again once kept while leaving: coming
+// back to its route mounts the page anew.
+const createRoutePage = (readShownBranch, parentPage) => {
+  const page = {
+    branchId: null,
+    element: undefined,
+    left: false,
+    leavingSignal: signal(false),
+    isShown: () => {
+      if (page.left) {
+        return false;
+      }
+      if (parentPage && !parentPage.isShown()) {
+        return false;
+      }
+      const shownBranch = untracked(readShownBranch);
+      if (!shownBranch) {
+        return false;
+      }
+      return (
+        shownBranch.id === page.branchId ||
+        branchElement(shownBranch) === page.element
+      );
+    },
+  };
+  return page;
+};
 // What Preact compares when a container changes page, below the <Route> it
 // renders either way: the element the page is rendered with — a layout, for a
 // container branch.

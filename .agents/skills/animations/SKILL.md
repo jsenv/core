@@ -228,6 +228,10 @@ Facts worth knowing before reaching for one:
   `keepLeavingPages` in navi/src/nav/route.jsx, and what a page kept that way
   must tolerate in
   [route_transitions.md](../../../packages/frontend/navi/docs/route_transitions.md#the-page-being-left-stays-until-its-movement-is-over)).
+  Re-rendering it is not part of it either: a hook that re-renders from a
+  subscription asks `RoutePageContext`'s `isShown()` first, as `useAsyncData`
+  does (navi/src/nav/route_page_context.js) — Preact renders a dirty component
+  whatever its ancestors, so nothing above the page can hold that render back.
 
 ### Several elements in one movement: name them by role
 
