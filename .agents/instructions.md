@@ -374,10 +374,9 @@ changed, and a fix is proved there: read
 
 What a pointer dragging a screen, a wheel pushing it, or a swipe on a row IS —
 who owns a press, when it becomes a gesture, how its axis is read, what letting
-go means — is one spec shared by @jsenv/dom and navi:
-[packages/frontend/navi/docs/drag_to_travel.md](../packages/frontend/navi/docs/drag_to_travel.md).
-Read it before changing anything under
-`packages/frontend/dom/src/interaction/` or any component that travels or
+go means — is one spec shared by @jsenv/dom and navi: the
+[gestures skill](skills/gestures/SKILL.md). Read it before changing anything
+under `packages/frontend/dom/src/interaction/` or any component that travels or
 swipes (slides, route travel, side panels, swipeable rows).
 
 A finger is also read by the browser, which answers it first unless the page

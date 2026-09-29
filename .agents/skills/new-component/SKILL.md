@@ -40,3 +40,50 @@ request (see the constraints in
   Never hand-write negative margins or per-member radius resets.
 - **JSDoc** on every exported component: see "JSDoc" in
   [.agents/instructions.md](../../instructions.md#jsdoc).
+
+### A variant sets defaults, never resolved values
+
+A control resolves each styled property in two steps: the public variable holds
+what was asked for (`--picker-background-color`), an internal `--x-` variable
+what is finally painted, per state:
+
+```css
+.navi_picker {
+  --x-picker-background-color: var(--picker-background-color);
+
+  &[data-hover] {
+    --x-picker-background-color: var(--picker-background-color-hover);
+  }
+}
+```
+
+A variant (`icon`, `discrete`, `bare`, `border`, `headless`…) describes what
+the caller did **not** say, so it writes the public variable — the default —
+and never the `--x-` one:
+
+```css
+&[data-variant="icon"] {
+  /* ✅ a default: a backgroundColor prop, inline on this same element, wins */
+  --picker-background-color: transparent;
+  /* ❌ a verdict: the prop is read, translated, and then thrown away */
+  --x-picker-background-color: transparent;
+}
+```
+
+Writing `--x-` from a variant is the failure that costs real time to diagnose:
+the prop is accepted, reaches its variable with the right value, and nothing
+happens. Two things come with moving the default:
+
+- the **per-state** variables are derived from the base one by formula (hover
+  = 5% black over the background, disabled = 5% grey), so a variant that clears
+  the background re-points them at the base
+  (`--picker-background-color-hover: var(--picker-background-color)`), or a box
+  reappears on hover. A resting movement is a mix **into** the background
+  (`color-mix(in srgb, currentColor 8%, var(--picker-background-color))`), so it
+  still composes with a color the caller gave;
+- a variable fed by another prop keeps that chain in its fallback:
+  `--button-background-color: var(--button-background, transparent)` leaves both
+  `background` and `backgroundColor` working.
+
+The same holds for sizing: a variant lowers `--picker-padding-x-default`, not
+`--x-picker-padding-left`.

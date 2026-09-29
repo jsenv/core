@@ -27,10 +27,9 @@ whether a missing list is a skeleton, a sentence or an illustration.
 
 Without options, `useAsyncData` **delegates**: it suspends while the data is not
 there and throws when the action failed, so the states are drawn by the
-`<Loading>` and `<ErrorBoundary>` above rather than by the component.
-
-Each option turns one of those from something done _to_ the component into a
-value the component reads:
+`<Loading>` and `<ErrorBoundary>` above rather than by the component. Each
+option turns one of those from something done _to_ the component into a value
+the component reads:
 
 | passed          | the wait                  | the failure                  |
 | --------------- | ------------------------- | ---------------------------- |
@@ -44,24 +43,19 @@ suspends.** Not while the action runs, not while a debounced binding is
 settling, not while it holds params nobody has started yet, not after a failure
 whose message was dismissed. Every one of those comes back as a value.
 
-That is not a detail of the wait — it is what keeps the component alive.
-Suspending does not draw a spinner over a subtree: it takes the subtree away and
-puts the boundary's fallback in its place, and everything under it is remounted
-when it comes back. A dialog open inside it leaves with it and is reopened when it returns, a scroll position is lost,
-half-typed text is gone, and the retry button the component was offering
-disappears along with the component. A component that said it draws its own
-states is never taken away from the person looking at it.
-
-`error: true` says the same thing about failure, and it has the same
-consequence: the component stays, so it is still there to offer the way out.
+That is what keeps the component alive. Suspending does not draw a spinner over
+a subtree: it takes the subtree away and puts the boundary's fallback in its
+place, and everything under it is remounted when it comes back — a dialog open
+inside it leaves and is reopened, a scroll position is lost, half-typed text is
+gone, and the retry button the component was offering disappears with it.
+`error: true` says the same thing about failure: the component stays, so it is
+still there to offer the way out.
 
 A component that delegates nothing needs no `<Loading>` above it. One that
 delegates its wait does, since that is where the suspension lands, and navi says
 so rather than leaving the subtree blank. Inside a popup that boundary is the
-popup's own — `{ loading: true }`, or a `<Loading>` inside the popup — never
-the one above the page: a suspension landing there takes the popup away with
-the page it copies, and the popup does not open at all (see
-[popup_open.md](./popup_open.md#a-popup-that-loads-data)).
+popup's own, never the one above the page
+([popup_open.md](./popup_open.md#a-popup-that-loads-data)).
 
 ## `data` and `loading` are independent
 
@@ -75,28 +69,28 @@ means something different:
 | set         | `false`   | settled                       | the content              |
 | `undefined` | `false`   | nothing here, nothing coming  | an empty state           |
 
-Two consequences worth stating out loud.
-
 **A first load is only a first load when nothing is known.** A resource `GET`
 whose params name a row the store already holds — read earlier by a `GET_MANY`,
-a relation, a list — starts on the second line, not the first: the row is drawn
-and the request goes out behind it. The response replaces it, and a failure
-lands beside it like any refresh failure. A `GET` of a row the store lacks
-still starts on the first line, so what is drawn is never a different row. A
-row known from the previous page load counts too, when the resource asks for
-it: [`persist`](./resource.md#persist-the-last-answer-drawn-again-after-a-reload)
-puts a reload on the second line as well.
+a relation, a list — starts on the second line, not the first: the row is
+drawn, the request goes out behind it, and a failure lands beside it like any
+refresh failure. A row known from the previous page load counts too, when the
+resource asks for it:
+[`persist`](./resource.md#persist-the-last-answer-drawn-again-after-a-reload)
+puts a reload on the second line as well. A `GET` bound through a signal — a
+route action, a `bindParams` holding one — is on the second line when the signal
+moves to params it has not answered yet, with the previous params' row: its
+`data` stays that row until the new answer lands, whether or not the store holds
+the new one.
 
 **The emptiness test is `data === undefined`, never `loading`.** Reading
 `loading` as "there is nothing to display" blanks the screen on every refresh —
-for a checkbox ticked on one row of a list, the whole list goes.
-
-A list is no exception. A plural action — `GET_MANY`, a `.many()` or
-`.scopedMany()` read — has no data until its first answer: `undefined`, not
-`[]`. An empty array is an answer ("the collection is empty"), and the two are
-different facts drawn differently: a skeleton for the first, an empty state for
-the second. So a component reading a plural action must accept `undefined`
-before dereferencing (`items?.map`, `items ?? []`, or the branch above).
+for a checkbox ticked on one row of a list, the whole list goes. A list is no
+exception: a plural action — `GET_MANY`, a `.many()` or `.scopedMany()` read —
+has no data until its first answer, `undefined`, not `[]`. An empty array is an
+answer ("the collection is empty"), and the two are drawn differently: a
+skeleton for the first, an empty state for the second. So a component reading a
+plural action accepts `undefined` before dereferencing (`items?.map`,
+`items ?? []`, or the branch below).
 
 **A skeleton is told whether it is loading; it does not deduce it.** The last
 row of the table is the one that gets forgotten, and it is reachable: a first
@@ -112,16 +106,19 @@ if (items === undefined) {
 return <ItemList items={items} busy={loading} />;
 ```
 
-navi's own placeholders take that flag rather than inventing it: `<Text loading>`
-shimmers, `<Text skeleton>` is the same bar held still, and `<Text skeleton
-loading={loading}>` is one that tells the truth either way.
+`loading` reads the action, not the intent: an action holding params that
+nothing started — idle, or aborted — reads `loading: true`, so a skeleton told
+it shimmers until something runs that action.
 
-**Knowing the count beforehand beats guessing it.** How many skeleton rows to
-draw is a question the response answers too late; a screen that already knows —
-a count carried by the parent resource, a total returned alongside a previous
-page — says so, and `<List loading loadingSkeletonCount={0}>` draws the empty
-state right away instead of three rows that will vanish. Nothing jumps when the
-response lands.
+navi's own placeholders take that flag rather than inventing it: `<Text loading>`
+shimmers, `<Text skeleton>` is the same bar held still, and
+`<Text skeleton loading={loading}>` is one that tells the truth either way.
+
+**Knowing the count beforehand beats guessing it.** A screen that already knows
+how many rows are coming — a count carried by the parent resource, a total
+returned alongside a previous page — says so, and
+`<List loading loadingSkeletonCount={0}>` draws the empty state right away
+instead of three rows that will vanish.
 
 ## An error is a message on the screen, not the screen
 
@@ -156,7 +153,7 @@ drawn, not as a stronger version of the same thing. Which of the two, and where
 an error goes when neither takes it, is
 [error_handling.md](./error_handling.md).
 
-## Reference
+## See also
 
 - [error_handling.md](./error_handling.md) — the two kinds of error, where each
   is shown, and what happens to one nobody displays.

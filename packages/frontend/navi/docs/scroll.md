@@ -47,7 +47,7 @@ Two shapes, and they do not behave the same:
 | `header` / `footer` alone | the container itself scrolls, and they are `position: sticky` at its edges — the content scrolls under them                                                                                       |
 | a `body` as well          | the container becomes a flex column, its own overflow turns to `hidden`, and the **body is the only thing that scrolls**; header and footer sit outside it (`position: static`, `flex-shrink: 0`) |
 
-Three consequences worth knowing before fighting them:
+Before fighting them:
 
 - the body is `flex: 0 1 auto` — **it shrinks, it never grows**. A short body
   leaves the footer right under it rather than pushed to the bottom of a box it
@@ -56,19 +56,21 @@ Three consequences worth knowing before fighting them:
   footer), not a `box-shadow`: a shadow is drawn outside the box and lost to
   whatever is painted after it, so the body would cover the very line meant to
   separate them. Don't add a border of your own — you get two lines.
-- header and footer sit in the sticky band
-  (`var(--navi-z-index-sticky)`), so everything the box contains passes under
-  them — positioned or not. Write `style={{ "--box-header-z-index": "auto" }}`
-  (`--box-footer-z-index` likewise) at the call site that needs the opposite: a
-  badge or a stamp overflowing a row is otherwise sliced by a header it never
-  scrolls under. The box is `isolation: isolate` already, so either value stays
-  local to it.
-  See `docs/z_index.md` and `src/box/demos/9_scrollable_z_index_demo.html`.
+- a sticky header or footer (the shape without a body) is in the sticky
+  z-index band, so everything the box contains passes under it, positioned or
+  not; beside a body it is a plain block. What that costs and the way out are
+  in [z_index.md](./z_index.md#a-sticky-part-is-only-in-the-band-while-it-is-stuck).
 
 Padding belongs on the parts, not on the scrolling box: padding on a scroller
 sits inside the scrollbars, and a control flush against the edge of a scrolling
 area raises a scrollbar of its own (a focus outline is drawn outside the control
 it belongs to).
+
+The scrolling box — the body, when there is one — has
+`scroll-padding: var(--navi-scroll-padding, var(--navi-s))`: what the browser
+scrolls into view lands inside the area with room for its focus ring, rather
+than flush on the edge where a footer or the edge of a popup half-swallows it.
+`--navi-scroll-padding` changes that room.
 
 Reference: `src/box/box.jsx` (the `[data-scrollable]` CSS),
 `src/box/demos/8_scrollable_demo.html`,
@@ -76,71 +78,45 @@ Reference: `src/box/box.jsx` (the `[data-scrollable]` CSS),
 
 ## 1. The document scrolls
 
-The default case: nothing to do, the document scrolls.
-
-What needs wiring is whatever covers the viewport — fixed bars (a top bar, a
-bottom nav, the normal shape of a mobile app), the device's own notch, a band an
-app reserves for itself. Each publishes what it takes, navi adds them up on
-`<html>` as `--navi-safe-area-inset-*`, and the container that scrolls under
-them says so with `data-navi-safe-area`, which gives it back both the `padding`
-and the `scroll-padding` the bars took. The two levels of inset, what the marker
-does and why both paddings are needed are in
-[safe_area.md](./safe_area.md#something-that-scrolls-under-the-furniture); the
-one way to turn that container into a scroller by accident (an `overflow-x:
-auto` where a `clip` was meant) is in
-[mobile_layout_pitfalls.md](./mobile_layout_pitfalls.md).
+The default case: nothing to do, the document scrolls. What covers it — fixed
+bars, the device's notch — is published as `--navi-safe-area-inset-*`, and the
+container that scrolls under it says so with `data-navi-safe-area`: see
+[safe_area.md](./safe_area.md#something-that-scrolls-under-the-furniture), and
+[A document wider than the screen](./safe_area.md#a-document-wider-than-the-screen)
+for the one way to turn that container into a scroller by accident.
 
 A `List` in this case takes `scroller="document"` (in dev it warns when it finds
 itself inside a scrollport anyway, and names the element).
 
 ## 2. A part of the document scrolls
 
-```jsx
-<Box overflow="auto" maxHeight="60vh">
-  <Box header>…</Box>
-  <Box body>…</Box>
-</Box>
-```
+A `Box` with an `overflow`, the shape at the top of this file. What needs
+saying is a `List` inside it.
 
 ### `List` and its `scroller`
 
-`List` has a `scroller` prop, and the default is not the one most call sites
-want:
-
-| value                   | which box scrolls                                          |
-| ----------------------- | ---------------------------------------------------------- |
-| `"self"` _(default)_    | the list gets a scroll box **of its own**                  |
-| `"parent"`              | it virtualizes against the scrollable ancestor it lives in |
-| `"document"`            | the page                                                   |
-| `Element` / `{current}` | that element, nothing is guessed                           |
+`List` has a `scroller` prop, and its default, `"self"` — a scroll box of the
+list's own — is not the one most call sites want:
 
 > If the list already lives in a box that scrolls (a dialog's `body`, a panel),
 > it is `scroller="parent"`. `"self"` is for the list that IS the scrolling
-> area.
+> area, and it needs a height to scroll in (`maxHeight`, or `expandY` inside a
+> bounded parent).
 
-`"self"` is also the value that needs something from the call site: a height to
-scroll in (`maxHeight`, or `expandY` inside a bounded parent). A list given none
-is exactly as tall as its rows, so its own box scrolls nothing — and what the
-list's render window follows is that box (see "Many rows" below). The list then
-follows whatever box does show it, measured as for `"parent"`, and dev warns
-when nothing scrolls it at all.
+A `"self"` list inside a scrolling box nests a second scroller that sizes
+itself independently — and a virtualized run holds the room of every row it
+stands for, so the popup or panel around it ends up sized on that rather than
+on the rows drawn. With anything other than `"self"` there is no nested
+scrollport and no height to compute.
 
-With `"self"` the list nests a scroll box inside the surrounding one and sizes
-itself independently of it — its `maxHeight` then decides how tall that inner
-box is allowed to get, and a virtualized run holds the room of the rows it
-stands for (see `List.Items count` below), so the surrounding popup or panel
-ends up sized on that rather than on the rows actually drawn. With anything
-other than `"self"`, the list's own scroll box is made transparent to layout
-(`max-height: none; overflow: visible`) — there is no nested scrollport and no
-height to compute.
-
-`"parent"` finds the ancestor **by measuring**: the nearest one whose content
-actually overflows it, the page if none does. Declaring an `overflow` is not
-enough to be picked (a box with `overflow-x: auto` that grows with its content
-computes `overflow-y: auto` without ever scrolling). The answer is taken again
-as the geometry moves, so an ancestor that starts scrolling once it fills up is
-picked up then. When it is still not the box you mean, say so explicitly with
-`"document"` or the element itself.
+`scroller` is not only where the scrollbar appears: it names the box the
+render window follows (see
+[Many rows](#many-rows-listitems-and-the-render-window)). A `"self"` list given
+no height is exactly as tall as its rows and scrolls nothing; the window then
+follows whatever box does show the list, and dev warns when nothing scrolls it
+at all — a recovery, not the shape to aim for. `"parent"` finds its ancestor by
+measuring; when that is still not the box you mean, say so with `"document"` or
+the element itself.
 
 ### Where the list opens, and where it is
 
@@ -148,27 +124,16 @@ picked up then. When it is still not the box you mean, say so explicitly with
   `{id, offset}`. The `{id, offset}` form is what `onScrolledChange` hands out:
   it asks for the row BY NAME, then puts it back by MEASURING it, so it lands
   where it was even if rows were inserted before it, and whatever the screen it
-  was saved on. That is "reopen a thread where I left it", already provided.
-  `offset` is counted from where the row lands on its own — past the scroller's
-  `scroll-padding` (the room a fixed bar publishes) and the row's own
-  `scroll-margin` (the sticky header, the group label above it) — so `offset: 0`
-  is exactly where `scrollIntoView()` would put it and none of that room has to
-  be restated as a number.
-- **`scrolled`** is the controlled form of the same thing — same pair as
-  `open`/`defaultOpen` elsewhere in navi. The list goes back there every time it
-  changes, even after the user scrolled.
-- **`onScrolledChange`** gives `{id, index, offset, visibleCount}` as the user
-  scrolls. `visibleCount` is how many rows were on screen from that one on:
-  handed back whole (`defaultScrolled={position}`), the position also says what
-  to draw first — the list's first commit draws those rows (and the one above,
-  when it stood partly in view) and the rest of its window once painted. An app
-  keeping only the `id` (in its url, say) keeps the place and drops that: the
-  list then draws its whole window before its first picture.
+  was saved on — "reopen a thread where I left it", already provided.
+  `offset: 0` is where `scrollIntoView()` would put the row: past the room a
+  fixed bar publishes, below the sticky header and the group label above it,
+  none of which has to be restated as a number.
+- **`scrolled`** is the controlled form, and **`onScrolledChange`** gives
+  `{id, index, offset, visibleCount}` as the user scrolls. Keep it whole:
+  `visibleCount` also says how many rows to draw before the first paint.
 - A list with an `id` **comes back where it was** when its screen is left and
-  come back to, the way the page does: the position is kept under the list's
-  `id` and the page's url, for the session, and put back by name the way
-  `defaultScrolled={{id, offset}}` is — `visibleCount` included, and kept even
-  when the list was never scrolled. A fresh arrival at the page still opens at
+  come back to, the way the page does — kept under the list's `id` and the
+  page's url, for the session. A fresh arrival still opens at
   `defaultScrolled`. **`scrollResetOnNavigation`** opts out: the list then
   opens the same way every time.
 - A list scrolling the document and opening on a row **places the document
@@ -185,47 +150,33 @@ makes that possible is `searchText` on the `List` — without it the list sees n
 children and nothing else.
 
 - **While the search is on**, the list scrolls back to its first row every time
-  the best matches change. "Best matches" is the top `renderBudget` rows, taken
-  by id and by `matchInfo.matchScore`, so a letter that promotes nobody new
-  leaves the list where the user put it.
+  the best matches change (the top `renderBudget` rows, by id and
+  `matchInfo.matchScore`), so a letter that promotes nobody new leaves the list
+  where the user put it.
 - **When the search is emptied**, the list returns to the offset it was at when
-  the search started, render window included. It goes back by offset, not by
-  row: the collection is the one from before again, in the order it was in.
+  the search started, render window included.
 
 Both rest on each row knowing where it stands, which for rows declared one by
-one is the order they are written in — `useSearchText` hands the collection back
-reordered, the caller renders it in that order, and the places follow. Two things
-are needed for that, and the list warns in dev when the second is missing:
+one is the order they are written in. Two things are needed for that, and the
+list warns in dev when the second is missing:
 
 - **a stable `key` on every row**, which is what says a row moved rather than a
   row changed;
 - **the rows as the list's own children**. The places are read off the children
   the list is given, so a component of yours rendering the rows is one child
-  however many rows come out of it — they all take the same place and keep the
-  order they first mounted in. Hand the list the rows, or a `<List.Items>`.
+  however many rows come out of it — they all take the same place. Hand the
+  list the rows, or a `<List.Items>`.
 
-One case is knowingly left out: a row selected during the search does not hold
-the view. Emptying the search takes the list back to where it was, which may be
-nowhere near the row just chosen.
-
-### Sticky rows inside the list
-
-`<List.Item header>` / `<List.Item footer>` are sticky rows inside the list.
-They publish their measured size as `--list-header-height` /
-`--list-footer-height`, which feeds the `scroll-margin` of the rows — this is
-what keeps a `scrollIntoView()` on a row from landing under the sticky header.
+A row selected during the search does not hold the view: emptying the search
+takes the list back to where it was, which may be nowhere near that row.
 
 ### Loading: two different situations
 
-- **`loading` / `loadingFallback` / `loadingSkeletonCount` / `renderSkeleton`**
-  — "I have nothing at all to show yet". Placeholder rows (or a `"loader"`
-  spinner) stand in for the whole list; the rows are held to the render
-  window like the ones they stand for.
-- **`<List.Items count>`** — "I know how many rows are coming". The rows not
-  held yet are drawn as skeletons _in their own place_, virtualized like the
-  rest, and asked for as they enter the render window.
-
-A list that knows its count has no use for the first one.
+`loading` (with `loadingFallback`, `loadingSkeletonCount`, `renderSkeleton`)
+says "I have nothing at all to show yet": placeholder rows stand in for the
+whole list. `<List.Items count>` says "I know how many rows are coming": the
+rows not held yet are skeletons in their own place, asked for as they enter the
+render window — a list that knows its count has no use for the first one.
 
 Reference: `src/control/list/list.jsx` (JSDoc on `List` and `List.Items`).
 
@@ -238,7 +189,7 @@ everyone else does, by asking for the overflow — and it already asks, on itsel
 So the parts are direct children of the `Dialog`:
 
 ```jsx
-<Dialog id="…" dockedOnSmallTouchScreen scrollCapture>
+<Dialog id="…" dockedOnSmallTouchScreen>
   <Box header>title + close</Box>
   <Box body>
     <List scroller="parent" /> {/* NOT "self" */}
@@ -247,15 +198,9 @@ So the parts are direct children of the `Dialog`:
 </Dialog>
 ```
 
-A dialog is already bounded by the room its container leaves it
-(`--dialog-maxmax-height`), so a `maxHeight` is only for making it smaller than
-that.
-
-`dialog.jsx` deliberately declares no `overflow` of its own: the
-`[data-scrollable]` the dialog carries is its scrolling rule. A modal dialog
-would get `auto` from the UA stylesheet anyway, but a `layer="local"` one gets
-nothing, and without that rule its `max-height` would only decide how big the
-box looks while the content kept painting straight through it.
+A dialog is already bounded by the room its container leaves it, so a
+`maxHeight` is only for making it smaller than that (see
+[dialog_shape.md](./dialog_shape.md#the-ceiling-nobody-sets)).
 
 ### `scrollCapture`
 
@@ -264,16 +209,13 @@ box looks while the content kept painting straight through it.
 ```
 
 Traps wheel/touch gestures inside the popup so the page behind it cannot
-scroll. **Without it, on mobile, reaching the end of the content keeps going and
-the screen underneath scrolls** — the sheet stays put while the content it
-covers changes. It does not look like a scroll bug, and it is one.
-
-Two details:
-
-- a `layer="local"` dialog **always** locks its own positioned ancestor's scroll
-  while open (its backdrop only covers the scrollport, so scrolling there would
-  reveal uncovered content); `scrollCapture` extends the lock to the whole page;
-- `Popover` has the same prop, plus `focusCapture` for Tab.
+scroll. **Without it, reaching the end of the content keeps going and the
+screen underneath scrolls** — the sheet stays put while the content it covers
+changes. It does not look like a scroll bug, and it is one. A dialog docked by
+`dockedOnSmallTouchScreen` — the phone's sheet — has it by default (see
+[dialog_shape.md](./dialog_shape.md#one-dialog-two-shapes)), so the prop above
+matters for the other shapes. `Popover` has the same prop, plus `focusCapture`
+for Tab.
 
 ### `SlideContainer` inside a popup
 
@@ -282,11 +224,11 @@ All slides live in **the same grid cell**, so the box measures itself on the
 between slides — and it also means a short slide shows empty room below it. It
 is a trade, not a leak.
 
-**The slide IS the body.** This is the one thing to get right, and the shape
-everyone writes first gets it wrong: a `Dialog` with a `<Box body>` around the
-slides puts a scroller ABOVE them, and that scroller's content is the grid —
-measured on the tallest slide. Stand on a short slide and it carries the
-scrollbar of a neighbour, scrolling through emptiness.
+**The slide IS the body.** The shape everyone writes first gets it wrong: a
+`Dialog` with a `<Box body>` around the slides puts a scroller ABOVE them, and
+that scroller's content is the grid — measured on the tallest slide. Stand on a
+short slide and it carries the scrollbar of a neighbour, scrolling through
+emptiness.
 
 ```jsx
 // WRONG — the dialog's body scrolls the tallest slide, on every slide
@@ -311,48 +253,40 @@ scrollbar of a neighbour, scrolling through emptiness.
 </Dialog>
 ```
 
-Why it then behaves: the cap on the height comes from above and must reach the
-slides as a **constraint**, never as a scroller. `SlideContainer` is
-`flex: 0 1 auto` — it shrinks into what is left (growing is the caller's
-decision, `expandY`) — the grid hands that height to **every** slide, and a
-slide with an `overflow` of its own scrolls only when ITS content is taller than
-that. The tall slide scrolls; the short ones are tall boxes with a short content
-in them, which is what one wants: they take the height the context imposes and
-ignore the height of their neighbour.
+The cap on the height comes from above and must reach the slides as a
+**constraint**, never as a scroller. `SlideContainer` is `flex: 0 1 auto` — it
+shrinks into what is left (growing is the caller's decision, `expandY`) — the
+grid hands that height to **every** slide, and a slide with an `overflow` of its
+own scrolls only when ITS content is taller than that. The short ones take the
+height the context imposes and ignore the height of their neighbour.
 
-So: nothing scrollable between the cap and the slides. A `<Box body>` around
-them is a scroller (see the table at the top of this file) — and so is a bare
-`overflow="auto"` on a wrapper. The dialog keeps a shared `header` if the tabs
-are shared, with an explicit `flexShrink="0"` since the rule that gives it for
-free applies only next to a `body`.
+So: nothing scrollable between the cap and the slides — a `<Box body>` around
+them is a scroller, and so is a bare `overflow="auto"` on a wrapper. The dialog
+keeps a shared `header` if the tabs are shared, with an explicit
+`flexShrink="0"`, since the rule that gives it for free applies only next to a
+`body`.
 
-**Padding goes on the slide** — or on its parts, since the slide is now the
-scroller (see the top of this file) — but never on the container nor on
-anything above it.
-Overflow clips at the _padding_ edge, so a padding on the container is a band
-the clipping does not cover: the arriving slide is seen there before it has
-reached the frame. And a padding above the slides does not travel — the two
-contents cross each other flush, instead of each arriving already inset. On the
-slide, the inset travels with what it insets.
+**Padding goes on the slide** — or on its parts, since the slide is the
+scroller — never on the container nor on anything above it. Overflow clips at
+the _padding_ edge, so a padding on the container is a band the clipping does
+not cover: the arriving slide is seen there before it has reached the frame.
+And a padding above the slides does not travel — the two contents cross each
+other flush, instead of each arriving already inset.
 
 Pass `travelByKeyboard={false}` when the arrow keys belong to the content (a list
 one walks through, a picker whose slides are steps): otherwise the right arrow
 changes screen mid-reading.
 
-Reference: `src/layout/dialog.jsx`, `src/layout/popover.jsx`,
-`src/layout/slide_container.jsx`, and the "One slide much taller than the
-others" case in `src/layout/demos/8_slide_container_demo.html`.
+Reference: `src/layout/slide_container.jsx`, and the "One slide much taller
+than the others" case in `src/layout/demos/8_slide_container_demo.html`.
 
 ## Many rows: `List.Items` and the render window
 
-What a list costs must not follow the size of its collection. A row is a
-`<List.Item>` with a checkbox, a text and a button or two — around 150 to 250
-components once every resolver, box and context provider is counted — and the
-browser paints nothing until the render that draws them has ended. Forty rows
-given to a list that opens in a click are forty rows drawn before anything is
-seen, and a hundred are a hundred: with the CPU throttled to a phone's, the
-click that opens a sheet of 40 users took 536 ms, and 952 ms for 100 (wematch,
-September 2026). A screen shows fourteen of them.
+What a list costs must not follow the size of its collection. A row is many
+components once every box and context provider is counted, and the browser
+paints nothing until the render that draws them has ended: forty rows given to
+a list that opens in a click are forty rows drawn before anything is seen, for
+a screen that shows a dozen.
 
 So the rule: **rows as `<List.Item>` children are all drawn**, and that is the
 right shape only for a list the caller knows to be short — a menu, a settings
@@ -374,49 +308,32 @@ sheet, a handful of tabs. A collection whose size the caller does not decide
 The run draws only the rows inside the **render window** — `renderBudget` of
 them, 100 by default — and holds the room of the others with fillers, so the
 scrollbar says how long the collection is and the DOM says how many rows fit a
-screen and some. The window slides as the user scrolls: it keeps three
-quarters of its spare rows ahead of the direction the user goes, and moves
-once those fall under half a screen — a row crossed is not a window rebuilt,
-and a row reached is never a blank one. So the budget has to exceed what the
-scroller shows at once, with room for that lookahead: the list warns below
-30, and when a budget leaves fewer than two rows beyond the screen.
+screen and some. The window slides as the user scrolls, ahead of the direction
+the user goes, so the budget has to exceed what the scroller shows at once,
+with room for that lookahead: the list warns below 30, and when a budget leaves
+fewer than two rows beyond the screen.
 
-### The window follows one box, and `scroller` names it
-
-That box is the list's own with the default `scroller="self"`, the ancestor or
-the page with `"parent"`/`"document"` (see
-[2. A part of the document scrolls](#2-a-part-of-the-document-scrolls)). So
-`scroller` is not only where the scrollbar appears: it is what decides whether
-the window moves at all. A box with nothing to scroll reports nothing, the
-window stays where it was drawn, and the rows it does not cover stay as
-fillers — the list shows its first `renderBudget` rows and then blank space,
-down to where it ends.
-
-A list told `"self"` with no height to scroll in is exactly such a box: as tall
-as its rows, scrolling nothing. The window then follows the box that does show
-the list, measured the way `"parent"` is, and dev warns when nothing around it
-scrolls either. Both are recoveries, not the shape to aim for — say which box
-scrolls: a `maxHeight` on a list that IS the scrolling area,
-`scroller="parent"` in a dialog body or a panel, `"document"` on a page.
+A run whose rows all fit the window is just rows: nothing is virtualized, and
+it costs what the same rows would as children. There is no reason to hold back
+from it for a list that might grow.
 
 ### The first paint of a list that opens in a click
 
-A popup's content is built in the click that opens it (see `popup_open.md`),
-and rows below the fold cost the same there as rows on screen. A page coming
-back in a route transition is the same case: it is built in the transition's
-update callback, and every row drawn there delays the movement. `renderBudget`
-takes `{ initial, after }` for exactly this: `initial` rows in the commit the
-browser paints first — what a phone screen shows, plus a few — and `after` from
-the paint on. They are counted from the row the list opens on: the first
-picture of a list opening on a row shows that row and what is below it, and
-the window is centered on it only from the paint on. A position handed back
-with its `visibleCount` sizes that first window itself, whatever `initial`
-guessed. The switch waits for the paint itself, not for an effect: preact
-runs a component's pending effects early when that component renders again,
-and something always re-renders before a popup has painted. Do not rebuild
-this by hand with a `useEffect` that widens a slice: that effect is one preact
-runs early, and it fails for that reason. The runs ask their source for `after`
-rows from the start, so the smaller first window costs no second request.
+A popup's content is built in the click that opens it (see
+[popup_open.md](./popup_open.md)), and a page coming back in a route transition
+is built in the transition's update callback: rows below the fold cost the same
+there as rows on screen, and delay the movement. `renderBudget` takes
+`{ initial, after }` for exactly this: `initial` rows in the commit the browser
+paints first — what a phone screen shows, plus a few — counted from the row the
+list opens on, and `after` from the paint on. A position handed back with its
+`visibleCount` sizes that first window itself, whatever `initial` guessed. The
+runs ask their source for `after` rows from the start, so the smaller first
+window costs no second request.
+
+The switch waits for the paint itself. Do not rebuild it with a `useEffect`
+that widens a slice: preact runs a component's pending effects early when that
+component renders again, and something always re-renders before a popup has
+painted.
 
 ### Cmd/Ctrl + F: `findText`
 
@@ -433,19 +350,18 @@ them, nothing else.
 ```
 
 With `findText`, the fillers carry the text of the rows they hold the room of,
-one line per row at the row size, inside `hidden="until-found"` elements:
-nothing of it is laid out or painted, and find still reaches it. On a match the
-browser reveals the element and scrolls to the line — which is where the row
-stands — and the render window, following that scroll like any other, draws
-the row. A row inside the window has no hidden copy, so every row is found
-exactly once and the count in the find bar is right.
+one line per row, inside `hidden="until-found"` elements: nothing of it is laid
+out or painted, and find still reaches it. On a match the browser reveals the
+line and scrolls to it — where the row stands — and the render window, following
+that scroll like any other, draws the row. A row inside the window has no hidden
+copy, so every row is found exactly once and the count in the find bar is right.
 
 What it costs, and where it stops:
 
 - **A cost that follows the collection again.** The text of every row outside
   the window is rebuilt when the window slides (one `findText` call per row)
-  and sits in the DOM as text, one element per 64 rows. Give it to a list a
-  user would search with the browser, not to every run.
+  and sits in the DOM as text. Give it to a list a user would search with the
+  browser, not to every run.
 - **One line per row**, and only that line is found while the row is not
   drawn: return what a user would type, not everything the row shows.
 - **What the client holds, no more.** A row a paginated run has not loaded has
@@ -455,17 +371,16 @@ What it costs, and where it stops:
 
 Two things not to write beside it:
 
-- **A transparent copy of the list's text laid over it** (a `<textarea>` or a
-  `<div>` in `color: transparent`). Every row in the window is then found
-  twice, drawn and copied, and the copy only lines up with rows of one fixed
-  height. It is the first idea everyone has; the demo keeps it for comparison.
-- **A `beforematch` listener moving the window.** The list re-renders in the
-  microtask after the event, which removes the element before the browser has
-  scrolled to it. The browser's own scroll is what moves the window.
+- **A transparent copy of the list's text laid over it** (a `<textarea>`, a
+  `<div>` in `color: transparent`): every row in the window is then found
+  twice, and the copy only lines up with rows of one fixed height.
+- **A `beforematch` listener moving the window**: the list re-renders after the
+  event, which removes the element before the browser has scrolled to it. The
+  browser's own scroll is what moves the window.
 
 And one trap outside the list: a CSS reset forcing `[hidden] { display: none }`
 must leave `[hidden="until-found"]` out — an element hidden with `display: none`
-is never revealed. navi's own does (`src/box/box.jsx`).
+is never revealed. navi's own does.
 
 Reference: `src/control/demos/19_list_find_in_page_demo.html`.
 
@@ -474,60 +389,36 @@ Reference: `src/control/demos/19_list_find_in_page_demo.html`.
 - **A stable `id` on every item.** The run keys its rows on `item.id` — it is
   what addresses a row from outside (`--navi-select`, `scrolled={{ id }}`), and
   what tells a row that moved from a row that changed.
-- **A stable `renderItem`.** The run keeps the vnode it drew for an item and
-  hands preact the same one on its next render — the window sliding, the
-  first paint's budget giving way — so an unchanged row is not walked again.
-  It can only do that for the same function as last time: `renderItem` written
-  inline in a component that re-renders is a new function each time, and every
-  row is redrawn with it. Define it outside the component, or `useCallback` it,
-  and let it read the item and the index it is given rather than closing over
-  state.
-- **`renderItem` returns a `<List.Item>` carrying its own props** —
-  `selectable`, `value`, `selected`, the buttons in it — there is no second
-  place describing the row.
-- **`virtualItemSize` when the rows are uniform.** Without it the list measures
-  a row: once at mount, again when the popup around it opens (a row inside a
-  closed dialog measures 0), and after each commit while rows are held off
-  screen. Given, nothing is measured, and the fillers are right from the first
-  commit.
-- **A `key` on the run when the collection changes** as a whole (`itemsAction`
-  with another scope): another collection is another run. With `items`,
-  another array is already another collection.
-- **`scroller="parent"` inside a popup body**, as everywhere else in this file.
-- **Groups come from the data**: `groupBy` on the run, `renderGroupLabel` for
-  the label — the only way a list discovering its rows page by page has
-  sections.
+- **A stable `renderItem`.** The run hands preact the vnode it drew for an item
+  last time, so an unchanged row is not walked again — only for the same
+  function as last time: `renderItem` written inline in a component that
+  re-renders is a new function each time, and every row is redrawn with it.
+  Define it outside the component, or `useCallback` it, and let it read the
+  item and the index it is given rather than closing over state.
 
-A run whose rows all fit the window is just rows: nothing is virtualized, no
-row is ever a skeleton with `items`, and it costs what the same rows would as
-children. There is no reason to hold back from it for a list that might grow.
-
-Reference: `src/control/list/list.jsx` (JSDoc on `List` — `renderBudget`,
-`virtualItemSize` — and on `List.Items` — `findText`),
+The rest — `virtualItemSize` for uniform rows, a `key` on the run when the
+collection changes as a whole (never to refresh it, see
+[list_refresh.md](./list_refresh.md#a-paginated-list-stays-on-screen-too)),
+`groupBy` for sections — is in the JSDoc of `List` and `List.Items`
+(`src/control/list/list.jsx`). Demos:
 `src/control/demos/17_virtual_scroll_and_filter_demo.html` (a run in memory,
-searched), `src/control/demos/integration/1_list_loaded_by_scroll_demo.html`
-(a run reading a slice at a time). What a run reads back after a write is in
-[list_refresh.md](./list_refresh.md).
+searched), `src/control/demos/integration/1_list_loaded_by_scroll_demo.html` (a
+run reading a slice at a time).
 
 ## Hover while scrolling
 
-A scroll moves the content under a pointer that does not move. The browser
-reports that as hover: it fires `mouseleave` + `mouseenter` for **every element
-crossing the cursor** — a dozen per wheel tick. None of it was asked for; the
-user asked to scroll.
-
-It is free as long as hover only paints a background. It stops being free the
-moment hover triggers real work — a highlight somewhere else in the tree, a
-prefetch, a map redrawing a layer — because that work then lands on the main
+A scroll moves the content under a pointer that does not move, and the browser
+reports that as hover: `mouseleave` + `mouseenter` for **every element crossing
+the cursor**. It is free as long as hover only paints a background. It stops
+being free the moment hover triggers real work — a highlight elsewhere in the
+tree, a prefetch, a map redrawing a layer — because that work lands on the main
 thread exactly while a scroll animation is running, and the scroll stutters.
 
 ### The fact is in the DOM: `navi-scrolling`
 
-While an element scrolls it carries `navi-scrolling`, written by one capturing
-listener on the document (`scroll` does not bubble, but it does propagate in
-the capture phase) and removed once it has been quiet for a moment — scroll
-events stop before the movement does. Nothing subscribes to anything: whoever
-is concerned says so in CSS.
+While an element scrolls it carries `navi-scrolling`, removed once it has been
+quiet for a moment — scroll events stop before the movement does. Whoever is
+concerned says so in CSS:
 
 ```css
 /* my rows answer the pointer only when nothing is moving them */
@@ -536,11 +427,10 @@ is concerned says so in CSS.
 }
 ```
 
-`pointer-events` is what does the work, and it does the whole of it: enter,
-move and leave at once, in the browser, at no cost per element. Hand-written in
-JS the same suppression takes three handlers — once `mouseenter` has been
-swallowed the pointer is already inside the element, so only `mousemove` can
-ever bring the hover back.
+`pointer-events` does the whole of it: enter, move and leave at once, in the
+browser, at no cost per element. Hand-written in JS the same suppression takes
+three handlers — once `mouseenter` has been swallowed, only `mousemove` can
+bring the hover back.
 
 The page scroll carries the attribute on `document.scrollingElement`, so an
 ancestor rule covers it too. In JS the same fact reads as `isScrolling()` /
@@ -549,17 +439,9 @@ ancestor rule covers it too. In JS the same fact reads as `isScrolling()` /
 ### In a `List`: nothing to do
 
 `List` rows leave hit-testing while anything scrolling them moves — its own
-scroll box, the panel around it, the page.
-
-```jsx
-<List hoverWhileScrolling>   {/* opt back in */}
-```
-
-The default costs one thing, and it is the honest half of the same trade: right
-after a scroll, the row under the pointer lights up only once the pointer moves
-by a pixel.
-
-Reference: `src/utils/scroll_activity.js`.
+scroll box, the panel around it, the page. `hoverWhileScrolling` opts back in.
+The default costs one thing: right after a scroll, the row under the pointer
+lights up only once the pointer moves by a pixel.
 
 ## The list border
 
@@ -574,45 +456,25 @@ read as a box in a box. `borderWidth="0"` removes it — the prop writes
 itself the content of a `[popover]`/`<dialog>` already drops the default on its
 own.
 
-### The corners: the frame clips, not the scroll box
-
-A list clips its content twice, at the same edge, for two different reasons:
-
-- the **scroll box** (`.navi_list_scroll_container`, square, `overflow: auto`)
-  cuts what scrolls;
-- the **frame** (`.navi_list_container`, `overflow: hidden` plus the radius)
-  rounds that cut at the corners.
-
-The curve belongs on the frame. Do not move it onto the scroll box. A scroll
-container does not clip its own scrollbar to its `border-radius`: measured in
-Chromium with classic scrollbars, the scrollbar paints square over the rounded
-corner, while the frame's clip cuts it. The scroll box would also need the
-inner radius (the outer radius minus the border width). CSS cannot know that
-radius when the border was removed by the `border` prop.
-
-The curve cuts whatever sits on it. For rows drawn as full-width stripes, that
-is what you want: a selected row's background follows the corner. For rows that
-are framed cards themselves (a grid of hours, a column of game cards), the
-list's curve cuts their outer corners whenever its radius is larger than
-theirs. At a fractional pixel ratio, the frame's clip can also blur the last
-row's bottom edge (measured in WebKit at DPR 2.625).
-
 ### Without a border, no corner
 
-The default radius is the border's radius. A list given `border="none"`,
-`border="0"` or `borderWidth="0"`, and no `borderRadius`, is marked
-`data-borderless`. It then has no radius, and its frame stops clipping, because
-rounding the corners was that clip's only job. The scroll box still clips. A
-badge crossing the list's edge is still cut there, and `overflow="visible"`
-remains the only way to let content out.
+The default radius is the border's, and the frame (not the scroll box) clips
+the rows to its curve. A list given `border="none"`, `border="0"` or
+`borderWidth="0"`, and no `borderRadius`, is marked `data-borderless`: it has
+no radius, and its frame stops clipping, because rounding the corners was that
+clip's only job. The scroll box still clips: a badge crossing the list's edge
+is still cut there, and `overflow="visible"` remains the only way to let
+content out.
 
 - An explicit `borderRadius` keeps both the curve and the frame's clip: a
   borderless list painting a background of its own may want that surface
   rounded, with the rows clipped to it.
 - Only the props turn it on. A border removed from CSS (the popup's own
-  `-default`, an app class) keeps the default radius. In a dialog, the corners
-  that touch the dialog's squared edge are squared by rules keyed on the
-  dialog's `data-flush-*` attributes, in `list.jsx`.
+  `-default`, an app class) keeps the default radius.
 
-Reference: `src/control/list/list.jsx` (the `.navi_list_container` CSS and
-`isBorderless`).
+The curve cuts whatever sits on it: a selected row's background follows the
+corner, and rows that are framed cards themselves lose their outer corners
+whenever the list's radius is larger than theirs. At a fractional pixel ratio,
+the frame's clip can also blur the last row's bottom edge.
+
+Reference: `src/control/list/list.jsx` (the `.navi_list_container` CSS).

@@ -158,11 +158,12 @@ so it can only be called by whoever owns the change:
   exception to the rule above but the same rule read the other way. A component
   that navigates — it is the one calling the router — holds the "before" until
   it decides to leave it. _Reference: `beginTravel` in route_travel.jsx._
-- **Call it through `ensureDocumentStartViewTransition()`**
-  (navi/src/transition): installs the API where missing, runs the update
-  whatever happens, and swallows the rejection a _skipped_ transition produces
-  (two updates close together are normal; the raw API turns the second into an
-  unhandled error).
+- **Start it with the function `ensureDocumentStartViewTransition()` returns**
+  (navi/src/transition): it installs the API where missing, runs the update
+  whatever happens, swallows the rejection a _skipped_ transition produces (two
+  updates close together are normal; the raw API turns the second into an
+  unhandled error), and releases a transition a finger is holding first (see
+  "A hold is not yours" below).
 - **Keep the page out of it**: `:root { view-transition-name: none }`. The UA
   names the root `root`, so by default the whole document is replaced by a
   picture for the duration — and a captured element is dead in BOTH senses: it
@@ -179,8 +180,7 @@ so it can only be called by whoever owns the change:
     `::backdrop`, a popover: the browser paints the top layer during a
     transition only as part of the root's picture. With the root opted out,
     the wall and the dialog go unpainted for the length of the movement, and
-    a named element inside the dialog is photographed empty (Chrome 153,
-    reproduced in a bare page). A movement that opens or closes a top-layer
+    a named element inside the dialog is photographed empty. A movement that opens or closes a top-layer
     surface keeps the root's default name and pays the frozen page — under a
     modal wall it costs nothing. _Reference: `popup_lift.js`._ A movement that
     NEEDS the root out (pages split from their bars) stands the top layer in
@@ -282,9 +282,9 @@ they do about it.
 ### The main thread lies about a running transition
 
 The pseudo-elements' animations run on the **compositor**, and everything JS
-can read answers from the main thread instead. Three traps, each of which cost
-an afternoon here, and the pattern behind all three is the same: the number
-looks right, the screen disagrees, and only the screen is telling the truth.
+can read answers from the main thread instead. Three traps, and the pattern
+behind all three is the same: the number looks right, the screen disagrees, and
+only the screen is telling the truth.
 
 - **The `playbackRate` setter is a jump on screen.** For a composited
   animation the setter is a non-seamless change: the pictures leap straight to
@@ -343,6 +343,7 @@ get it, and the choice is not a matter of taste:
   have named under it.
 
   _Reference: `itemTransition` in list.jsx (`.navi_list_transition`), demo
+  `src/control/demos/12_list_demo.html`; the same CSS written by hand in
   `src/control/demos/many/4_reorderable_list_demo.html`._
 
 Clipping is not the only thing nesting restores: a group drawn inside another
@@ -413,8 +414,8 @@ wanted, what turns it off is one line:
 whole document, and only whoever owns the page knows whether a fade is a
 downgrade or a glitch there — a list or a route travel writing it would be
 deciding for every other transition on the page. So navi documents it where the
-transition is turned on (`itemTransition`, RouteTravel) and leaves it to the
-caller, case by case.
+transition is turned on (`itemTransition`'s JSDoc) and leaves it to the caller,
+case by case.
 
 What is left in JS is the `startViewTransition` call and an attribute. Nothing
 tests a browser.
@@ -480,7 +481,7 @@ The gesture then drives a transition instead of driving pixels:
   before `ensureDocumentStartViewTransition()` has installed the polyfill (it
   marks itself `isPolyfill`).
 
-Ways to lose an afternoon on this, all seen:
+Traps:
 
 - **Never wait for a frame inside the update callback.** The browser has
   stopped rendering while it runs — it is waiting for that very promise before
@@ -503,9 +504,10 @@ Ways to lose an afternoon on this, all seen:
   starting a second skips the first, and the second is then born paused with
   nobody holding it. It never finishes, its pictures stand over the page, and
   the page cannot be touched again. Release at the single place that knows a
-  transition is about to start — for navi, `holdViewTransition` in
-  `start_view_transition_polyfill.js`, which every transition it starts goes
-  through.
+  transition is about to start — for navi, the function
+  `ensureDocumentStartViewTransition()` returns, which every transition navi
+  starts goes through and which releases what `holdViewTransition` registered
+  (`start_view_transition_polyfill.js`).
 - **The pictures are not on screen from the call to `finished`.** The frame the
   first picture is taken on is rendered and shown, and so is the frame after
   the pictures drop, before `finished` runs. Anything switched on for the
@@ -526,8 +528,8 @@ Ways to lose an afternoon on this, all seen:
 
 _Reference: `route_travel.jsx` (whole file), demo
 `src/nav/demos/route_travel/route_travel.html`. The full spec of the travel
-gesture — who owns it, the wheel reading, the retargeting rules — is
-[packages/frontend/navi/docs/drag_to_travel.md](../../../packages/frontend/navi/docs/drag_to_travel.md)._
+gesture — who owns it, the wheel reading, the retargeting rules — is the
+[gestures skill](../gestures/SKILL.md)._
 
 ## Which tool for which movement
 
@@ -571,8 +573,10 @@ techniques, roughly in order of preference:
 
 ## Verifying
 
-Movement is measured, not eyeballed. Drive the demo with Playwright and read
-the numbers: the moving property mid-travel (`getComputedStyle`), the pace
+Movement is measured, not eyeballed — once verification is asked for or has
+been earned (see the constraints in
+[.agents/instructions.md](../../instructions.md#constraints)). Drive the demo
+with Playwright and read the numbers: the moving property mid-travel (`getComputedStyle`), the pace
 (`element.getAnimations()[0].effect.getTiming()`), the state attribute while
 the pixels are still moving. Feelings have numbers too: "each press is felt"
 is a speed spike in the samples right after the press; "mushy" is its absence.
@@ -592,10 +596,8 @@ time** (`animation.pause(); animation.currentTime = t` on every
 `::view-transition-*` animation), then read the pseudo-elements' computed
 styles, the attributes on the root, and the list of running animations.
 Sampled "N ms after it started" instead, the numbers also move with how busy
-the main thread was, and a real difference cannot be told from a timing one:
-pinned, a 45px gap in a page's translate was left standing, and it was real —
-a top bar the new state should not have had, which changed how far the page
-travels. Do it in Chrome and in WebKit.
+the main thread was, and a real difference cannot be told from a timing one.
+Do it in Chrome and in WebKit.
 
 A second family: two properties that must agree, one composited and one
 painted (see "One clock per movement"). Every number JS reads shows them in

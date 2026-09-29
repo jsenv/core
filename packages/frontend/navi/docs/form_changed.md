@@ -1,10 +1,10 @@
 # What a form sends, and what it measures against
 
 A form answers a question. Asked again with the same answer, it has nothing to
-say — so by default **a `<Form>` sends nothing when nothing changed**. This is
-the whole subject of this file: what "changed" is measured against, what counts
-as an answer the form already holds, and what to do on a screen whose fields are
-filled a request later.
+say — so by default **a `<Form>` sends nothing when nothing changed**. This file
+is about what "changed" is measured against, what counts as an answer the form
+already holds, and what to do on a screen whose fields are filled a request
+later.
 
 - [Sending nothing is the default](#sending-nothing-is-the-default)
 - [What follows a send](#what-follows-a-send)
@@ -21,8 +21,9 @@ hold their defaults, one reopened and left alone — runs **no action**. No
 request, nothing in the network tab.
 
 Everything around the action still happens: the constraints are checked, and
-what follows the send still follows it (the popup closes, the slide moves on).
-The user is done either way; there was simply nothing to send.
+what follows the send still follows it — the popup closes, the slide moves on,
+the page changes. The user is done either way; there was simply nothing to
+send.
 
 `canSendWhileUnchanged` turns that off, for a form where sending the same thing
 twice is the point — a single button firing a notification, an action whose
@@ -35,18 +36,24 @@ duplicates are fine.
 ## What follows a send
 
 The form has answered its question; `command` says what the screen does about
-it — dismiss the popup (`--navi-close`), move on the slide map
-(`--navi-left`…), go to a page (`--navi-nav-to:/games/42`), go back to the one
-the reader came from (`--navi-nav-back:/games`), empty itself and stay where it
-is (`--navi-reset`), stay put as it is (`--navi-void`). Left out, the surface the
-form sits in decides: a popup closes, a slide goes on, a form on a page does
-nothing.
+it — `--navi-close`, `--navi-left`…, `--navi-nav-to:/games/42`,
+`--navi-nav-back:/games` (back to the page the reader came from),
+`--navi-reset` (empty itself and stay), `--navi-void` (stay put as it is). Left
+out, the surface the form sits in decides: a popup closes, a slide goes on, a
+form on a page does nothing. A submit button says its own with `formCommand`,
+which wins over the form's: in a form with two ways out, "save" stays and
+"delete" goes back to the list.
+
+It is a prop, decided before the send, because it runs **whether or not there
+was anything to send**. Nothing runs when the send fails, or when a constraint
+refuses it: the form stays in front of the person, showing what it is waiting
+for.
 
 ### A popup that stays open
 
-A side panel, a dialog or a popover closes once a form inside it is sent. When
-the popup is a place one keeps working in — a panel where a push is sent, two
-fields are fixed, an account is linked — the form says it stays:
+A popup closes once a form inside it is sent. When it is a place one keeps
+working in — a panel where a push is sent, two fields are fixed, an account is
+linked — the form says it stays:
 
 ```jsx
 <SidePanel signal={openUserSignal} value={user.id}>
@@ -56,13 +63,9 @@ fields are fixed, an account is linked — the form says it stays:
 </SidePanel>
 ```
 
-The form says it, not the popup. A popup does not know which of its forms is
-its answer: the same panel can hold a form you edit in over and over and a
-"delete" whose send has to close it. A popup that stays open whatever is sent
-inside it would make every form in it that should close say so again, which
-is the same repetition in the other direction. Nor does a `SidePanel` get a
-different default from a `Dialog`: the same content in either one should
-behave the same, and on a small screen a `SidePanel` often _is_ a dialog.
+The form says it, not the popup: the same panel can hold a form edited in over
+and over and a "delete" whose send has to close it, and the same content should
+behave the same in a `SidePanel` or a `Dialog`.
 
 When the popup's open state is a url param (`signal` bound to a route's search
 param), closing it takes the param out of the url. A form that forgot
@@ -71,28 +74,20 @@ is what a reload would have brought back.
 
 `--navi-reset` is the one to reach for when the form is a place one comes back
 to — an entry created, then the next one: the fields go back to their
-`defaultValue`, ready for the next entry. (What the form is measured against
-stays what was just sent — see below — so the emptied form reads as changed,
-and the fields' own constraints are what keep an empty one from being sent.)
+`defaultValue`. What the form is measured against stays what was just sent (see
+below), so the emptied form reads as changed, and the fields' own constraints
+are what keep an empty one from being sent.
 
 ```jsx
 <Form action={createPlaceGroup} command="--navi-reset">
 ```
 
-It runs **whether or not there was anything to send** — that is the other half
-of the rule above: the person is done either way, and a submit that ran no
-action still closes the popup, still moves on, still navigates. Which is why
-this is a prop, decided before the send: the form has to know where it goes even
-when nothing happened.
-
-Nothing runs when the send fails, or when a constraint refuses it. The form then
-stays in front of the person, showing what it is waiting for.
-
 ### When only the response knows where to go
 
 A creation lands on the page the server just made, and its id comes back with
 the response — too late for a prop. Do it in the action, which is where the
-answer is:
+answer is (a creation always has something to send, so there is no "the press
+did nothing" case for `command` to cover):
 
 ```jsx
 <Form
@@ -103,13 +98,10 @@ answer is:
 >
 ```
 
-Nothing to declare: a creation always has something to send, so there is no
-"the press did nothing" case for `command` to cover.
-
-If you would rather it go through the command machinery all the same (to reuse
-whatever a command does on that surface), the form carries what follows the send
-as `data-after-send`, read once the send has succeeded — so an action can write
-it while it runs:
+To go through the command machinery all the same (to reuse whatever a command
+does on that surface), write it where the form keeps what follows the send,
+`data-after-send`, read once the send has succeeded — an action can write it
+while it runs:
 
 ```js
 formRef.current.setAttribute("data-after-send", `--navi-nav-to:/games/${id}`);
@@ -151,19 +143,17 @@ An age that is usually 18, a duration that is usually 1h30 — the form holds
 nothing there, and confirming the suggestion IS an answer ("yes, 18"), which
 must be sendable. A bound signal falls on whichever side its content puts it: a
 signal restored from the url or set by whoever fills the screen carries an
-answer, even when the signal also declares a default (its default only says
-where a reset goes back to).
-
-The same question is asked of a single control by `isUIStateHeld`
-(`src/control/held_ui_state.js`) — a form asks it once per field.
+answer. A `stateSignal` that declares a default is never empty — the default is
+what it holds until something else is written, and what writing `undefined`
+puts back — so its field counts as held from the start.
 
 ## A screen filled after it opened: `pristineKey`
 
-The baseline is taken as soon as the fields have registered, which is right for
-a form whose values are there on the first render — and wrong for a screen that
-modifies something: the resource arrives a request later and fills the fields,
-so a form measured against what it held BEFORE that opens **already changed**.
-Its submit is live, and pressing it sends back the resource untouched.
+The baseline taken as the fields register is right for a form whose values are
+there on the first render — and wrong for a screen that modifies something: the
+resource arrives a request later and fills the fields, so the form opens
+**already changed**. Its submit is live, and pressing it sends back the resource
+untouched.
 
 `pristineKey` takes the baseline again. Pass whatever says the filling is done:
 
@@ -171,23 +161,19 @@ Its submit is live, and pressing it sends back the resource untouched.
 <Form pristineKey={game && players && places ? "loaded" : undefined}>
 ```
 
-Change it **once**, when the screen is ready. Taken again after someone started
-typing, it would call what they wrote the reference.
-
-No need to delay it by a tick: the reference is taken when the fields have
-settled, and again at the end of that same tick — so a row that arrives in a
-render of its own (a value computed from signals, a memoized row) is part of it
-without the screen having to know which of its fields settle late.
+Change it **once**, when the screen is ready: taken again after someone started
+typing, it would call what they wrote the reference. There is no tick to wait
+for — fields that settle in a render of their own are part of it.
 
 Do not use a `key` on the `<Form>` for this: it remounts every control and every
 popup inside it, and anything half-typed goes with them.
 
 ## A submit that says it is waiting
 
-By default a submit that sends nothing is still accepted — in a dialog or a
-slide it closes / moves on all the same. In a form that goes nowhere on its own,
-the press would visibly do nothing; `readOnlyWhileFormUnchanged` on the button
-holds it back and says what it is waiting for.
+A submit that sends nothing is still accepted — in a dialog or a slide it closes
+or moves on all the same. In a form that goes nowhere on its own, the press
+would visibly do nothing; `readOnlyWhileFormUnchanged` on the button holds it
+back and says what it is waiting for.
 
 ```jsx
 <Button type="submit" readOnlyWhileFormUnchanged>
@@ -208,26 +194,23 @@ something, a list acting on every touch. They say so with `standalone`:
 ```
 
 `standalone` is not a filter, it is the absence of a relationship: the control
-does not register with the group around it. Nothing goes up — its value is not
-collected, and the form stays unchanged whatever it does — and nothing comes
-down either: the form's reset does not reach it, nor does its validation
-cascade.
+does not register with the group around it. Nothing goes up (its value is not
+collected, the form stays unchanged whatever it does) and nothing comes down
+(the form's reset, its validation cascade).
 
 What it does **not** say is "ignore everything around me". `disabled`,
 `readOnly` and `loading` travel on their own contexts and go on reaching it,
-and that is deliberate: a door that carries no value of its own can still
-write into the form through what its popup does, and a read-only form must
-still shut it. An affordance that genuinely writes nowhere says that
-separately, with `whenSelfInteractionsBlocked="ignore"` — as it says whose
-press it is with `selfInteractions`, and a control whose action is meant to be
-left running says THAT separately too, with `actionStandalone`. One question
-each, one prop each (see
+deliberately: a door with no value of its own can still write into the form
+through what its popup does, and a read-only form must still shut it. An
+affordance that genuinely writes nowhere says so separately
+(`whenSelfInteractionsBlocked="ignore"`), as it says whose press it is with
+`selfInteractions`, and a control whose action is meant to be left running
+with `actionStandalone` — one question each, one prop each (see
 [interactions.md](./interactions.md#the-third-question-whose-value-is-it)).
 
-Every control takes the prop, groups included — `<Form standalone>` is the
-same sentence, and so is a `<List standalone>` inside a picker's popup, which
-is what lets a search box or a second list sit beside the one that IS the
-answer (see
+Every control takes the prop, groups included — `<Form standalone>`, or a
+`<List standalone>` sitting beside the one that IS the answer in a picker's
+popup (see
 [control_object.md](./control_object.md#a-picker-whose-value-is-an-object)).
 
 ## See also

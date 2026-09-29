@@ -37,9 +37,8 @@ something nobody can change.
 
 ## A bound signal works in both directions
 
-This is the part that does not show in a call site: `signal` is not a seed. The
-control writes every change into it, **and follows it when something else
-writes it**.
+`signal` is not a seed. The control writes every change into it, **and follows
+it when something else writes it**:
 
 ```jsx
 const minutesSignal = useSignal(0);
@@ -58,32 +57,35 @@ minutesSignal.value = 30;
 
 "Every change" includes the ones the control did not decide: a group placing
 its children, a picker filling its popup at open, and the same picker putting
-back what it held when Escape cancels. The signal mirrors the control, so it
-always says where the control actually is — which is what lets a settings sheet
-reopen on the tab it was left on (see
-[control_object.md](./control_object.md#a-settings-sheet)). What it does NOT
-mirror is a picker's popup being played with: a picker's own signal is written
-when the picker commits, on close.
+back what it held when Escape cancels. So the signal always says where the
+control actually is — which is what lets a settings sheet reopen on the tab it
+was left on ([control_object.md](./control_object.md#a-settings-sheet)). A
+picker's own signal follows its popup the same way, gesture by gesture, and so
+does its `uiAction`. What waits for the close is the picker's `action` — and a
+suggestion nobody touched, which becomes the answer when the popup closes on it.
 
-Both halves are worth knowing about, because each replaces a habit:
+The write-back replaces the `uiAction` that copies the value into a signal:
 
-- the write-back replaces `uiAction={(v) => (mySignal.value = v)}`;
-- the follow replaces the `key` or the `value`/`uiAction` pair used to push an
-  outside change into a control.
+```jsx
+// ✗ the control is told what it now holds, and the app writes it back down
+<Picker value={side} uiAction={(value) => (sideSignal.value = value)} />
+// ✓
+<Picker signal={sideSignal} />
+```
 
-The follow goes all the way up: a bound control that lives inside a group — two
-wheels in a `WheelGroup`, a field in a `ControlGroup` — makes that group
-re-aggregate when its signal is written, and the form above sees the new value.
-A value pushed in from anywhere is an answer like any other: the wheels roll,
+The follow goes all the way up: a bound control inside a group — two wheels in
+a `WheelGroup`, a field in a `ControlGroup` — makes that group re-aggregate when
+its signal is written, and the form above sees the new value: the wheels roll,
 and the submit lights up. Which is why a **button** offering such a value is not
-a hand-written signal write — see the next section.
+a hand-written signal write — see
+[below](#a-button-that-proposes-a-value-is---navi-update).
 
 ## A picker fills its popup: the control inside already knows
 
 A picker mirrors the control in its popup, both ways
-([popup_open.md](./popup_open.md#composing-a-value-or-doing-work)) — and the
-first half of that mirroring happens **at open**: the picker fills the control
-with the value it holds, before anything is shown.
+([popup_open.md](./popup_open.md#composing-a-value-or-doing-work)), and the
+first half happens **at open**: the picker fills the control with the value it
+holds, before anything is shown.
 
 ```jsx
 // the row matching the picker's value is already selected, painted and
@@ -101,20 +103,16 @@ with the value it holds, before anything is shown.
 
 So a `current`, a `selected` per row, or a `value` computed from what the picker
 holds is not "being explicit": it is a second answer to a question already
-answered, and it is the one that goes stale — the picker's value moves on a
-cancel, on a `--navi-update`, on a signal written elsewhere, and none of those
-pass through the prop the app is computing.
-
-What is left for the app is what to make of the selection, not what it is:
-a row is marked (`aria-selected`) and painted by the list itself, so anything
-extra hangs off that marker in CSS rather than off a prop.
+answered, and the one that goes stale — the picker's value moves on a cancel, a
+`--navi-update`, a signal written elsewhere, and none of those pass through that
+prop. The list marks the selected row itself (`aria-selected`); anything extra
+hangs off that marker in CSS.
 
 ## A button that proposes a value is `--navi-update`
 
-A shortcut beside a control — "Tous niveaux" / "Aucun niveau" next to a list of
-levels, "1h / 1h30 / 2h" next to a pair of wheels, a suggestion under a field —
-is a value being offered to that control. It is not an action, and it is not a
-signal to write by hand:
+A shortcut beside a control — "Tous niveaux" next to a list of levels, "1h /
+1h30 / 2h" next to a pair of wheels, a suggestion under a field — is a value
+offered to that control. It is not an action, and not a signal to write by hand:
 
 ```jsx
 <WheelGroup id="duration" signal={durationSignal}>
@@ -131,25 +129,21 @@ signal to write by hand:
 </Button>
 ```
 
-- the **value** is the button's own `value`, whatever shape it has — a string, an
+- the **value** is the button's own `value`, whatever its shape — a string, an
   array of levels, an object of two wheels;
-- the **target** is `commandFor`, naming the control's id — left out, the nearest
-  control around the button is used, which is what a button placed inside the
+- the **target** is `commandFor`, naming the control's id — left out, the
+  nearest control around the button, which is what a button placed inside the
   control it proposes to wants;
-- and the press goes through the same gate as every other interaction, so a
+- the press goes through the same gate as every other interaction, so a
   read-only, disabled or busy control **refuses it and says why**.
 
-That last point is the whole reason, and the counter-example is what everybody
-writes first:
+That last point is the reason, and the counter-example is what everybody writes
+first:
 
 ```jsx
 // ✗ not gated — plain DOM. On a read-only sheet the button greys out and fires
 //   all the same, rewriting a value nobody is allowed to change.
-<Button
-  onClick={() => {
-    durationSignal.value = { hours: 1, minutes: 30 };
-  }}
->
+<Button onClick={() => (durationSignal.value = { hours: 1, minutes: 30 })}>
   1h30
 </Button>
 ```
@@ -159,20 +153,17 @@ to a control: moving something else on screen, seeding state before anything is
 drawn.
 
 The id goes **on the control**, and a group is one — `ControlGroup`, `Form`,
-`WheelGroup`, `List selectable`. Put it on a layout box around the control and
-the command finds an element that holds no value; navi says so in dev rather
-than letting the press do nothing at all. An id that matches nothing is a dev
-warning too, naming the id it looked for.
+`WheelGroup`, `List selectable`. Put on a layout box around the control, the
+command finds an element that holds no value, and navi says so in dev rather
+than letting the press do nothing; an id that matches nothing is a dev warning
+too, naming the id it looked for.
 
 ### `--navi-update:smooth`: the control is seen answering
 
-A shortcut sets the value at once, and on a phone the thumb covers the button
-while the eye is on the control: with two wheels above four shortcuts, « soir »
-swaps the digits and nothing shows which wheel changed, or by how much. The
-control should be the thing that answers — seen moving to the value the way it
-moves under a finger.
-
-That is what the `:smooth` argument asks for:
+On a phone the thumb covers the shortcut while the eye is on the control, and a
+value swapped at once shows neither which control changed nor by how much.
+`:smooth` asks for the control to be seen moving to the value, the way it moves
+under a finger:
 
 ```jsx
 <Button command="--navi-update:smooth" commandFor={hoursId} value={evening}>
@@ -180,37 +171,26 @@ That is what the `:smooth` argument asks for:
 </Button>
 ```
 
-- **The control decides how it moves, and when the value lands.** The
-  argument says nothing about pixels or duration, and the two controls that
-  know it answer it differently because their movement is a different thing. A
-  wheel is a value one lands ON: it takes the value at once — whoever reads the
-  control right after the press (a form, `--navi-send`, a signal) gets it — and
-  scrolls to the row the way it glides after an arrow key, the short way round
-  when it loops. A spin is a value one GOES TO: it plays the travel a chevron
-  would play, one travel whatever the distance, and the value lands with the
-  slides, 250 ms later (`duration`). A slider would slide its thumb; a control
-  with nothing to move sets its value and that is all. A control that does not
-  know the argument is not broken — it answers like a plain `--navi-update`.
-- **A spin says no the way its chevron does.** A value past `min`/`max` — or
-  one whose first step would be — is not travelled to at all: the same message
-  the chevron that way gives, said on the spin, and the value is left alone.
-- **A gesture on the control itself is never fought.** A wheel being dragged
-  or flung keeps reporting its own rows; the requested value is where it goes
-  once the finger's movement is over. A value a wheel merely caught up with is
-  not a choice either: arriving on it fires no settle, no `action` — those
-  belong to the user's own inputs. A spin is the other way round, and for the
-  same reason: the travel IS the answer being given, so landing tells
-  `uiAction` about it, with the press that asked for it.
-- **`prefers-reduced-motion` keeps the instant swap.** The option describes
-  how the change is shown, and whoever asked to see less motion is answered
-  first.
+- **The control decides how it moves, and when the value lands.** A wheel takes
+  the value at once — whoever reads the control right after the press (a form,
+  `--navi-send`, a signal) gets it — and glides to the row, the short way round
+  when it loops. A spin plays the one travel a chevron would play, whatever the
+  distance, and the value lands with the slides (`duration`, 250 ms by
+  default); a value past `min`/`max` is refused the way that chevron refuses
+  it, and left alone. An `editable` spin (a `NumberSpin`, so a `TimeSpin`) is a
+  field, and nothing travels around a field: the value is swapped in place. A
+  control that does not know the argument answers like a plain `--navi-update`.
+- **A gesture on the control itself is never fought.** A wheel being dragged or
+  flung keeps reporting its own rows, and goes to the requested value once the
+  finger's movement is over. A value a wheel merely caught up with is not a
+  choice: it fires no settle, no `action`. A spin's landing IS the answer being
+  given, so it tells `uiAction`, with the press that asked for it.
+- **`prefers-reduced-motion` keeps the instant swap**: whoever asked to see less
+  motion is answered first.
 
-The same request is available from JS, for what is not a button —
-`dispatchRequestSetUIState(el, value, { behavior: "smooth" })` — and it
-survives a group: sent to a `TimeRangeWheel`, it reaches each of its wheels.
-
-_Reference: the wheel (`wheel.jsx`, `pendingBehaviorRef`) and the spin
-(`picker_spin.jsx`, `travelsPending`) are the controls honouring it._
+From JS, for what is not a button:
+`dispatchRequestSetUIState(el, value, { behavior: "smooth" })` — sent to a
+group such as `TimeRangeWheel`, it reaches each of its wheels.
 
 ## `signal` + `defaultValue`: the answer and where it starts
 
@@ -242,14 +222,12 @@ or taken back (the action failed, the popup was cancelled).
 
 This holds for a control, for a group given a `defaultValue` (a selectable list,
 a `ControlGroup`), and for everything inside a picker's popup, which stays
-mounted while closed. So the record goes in as `defaultValue` and nothing
-else: no `key` to remount the popup when it changes. A key is worse than
-unnecessary here, since it also destroys whatever is being typed when the
-answer to ANOTHER field arrives.
-
-A picker's cancel follows the same line. It puts back what the picker held at
-open, which undoes the person's edits, but what the outside moved during the
-opening stays moved.
+mounted while closed. So the record goes in as `defaultValue` and nothing else —
+no `key` to remount the popup when it changes: a key also destroys whatever is
+being typed when the answer to ANOTHER field arrives. A picker's cancel follows
+the same line: it undoes the person's edits
+([popup_open.md](./popup_open.md#what-cancel-actually-undoes)), and what the
+outside moved during the opening stays moved.
 
 ## Drawing what a control holds
 
@@ -257,6 +235,8 @@ A picker's trigger usually shows the choice (a label for a code, a summary of
 an object). Read it from the picker rather than keeping a copy:
 
 ```jsx
+// a `ui` component is handed `value`, `loading` and `interactive`;
+// a `ui` element reads the same three with usePickerState()
 const VisibilityLabel = ({ value }) => <Text>{labelOf(value)}</Text>;
 
 <Picker name="visibility" defaultValue={user.visibility} ui={VisibilityLabel}>
@@ -264,13 +244,10 @@ const VisibilityLabel = ({ value }) => <Text>{labelOf(value)}</Text>;
 </Picker>;
 ```
 
-`ui={Component}` is handed `value`, `loading` and `interactive`. A `ui` given as
-an element reads the same three with `usePickerState()`.
-
 What not to write: `const s = useSignal(defaultValue)` bound as `signal={s}`,
 just to have something to read. `useSignal` reads its argument once, so the
 signal never hears the record move, and a bound signal takes precedence over the
-control's own `defaultValue`. The field is stuck on its first value. A signal is
+control's own `defaultValue`: the field is stuck on its first value. A signal is
 for a value the app owns and writes itself (a url param, state shared between
 screens), not a mirror kept for drawing.
 
@@ -287,13 +264,12 @@ attribute:
 | `List selectable multiple`, checkbox group                    | the array of selected values      |
 
 A group (a selectable list, a checkbox group) writes its whole selection into
-the signal, not one item's value — its children put it together between them.
-
-A `<Form>` (or a `<ControlGroup>`) takes one the same way, holding the whole
-object: its named children are filled from it, they move when something else
-writes it, and what they change is written back into it. One signal for a screen
-whose values arrive together — see
-[create_and_edit.md](./create_and_edit.md#two-screens-two-states).
+the signal, which its children put together between them. A `<Form>` (or a
+`<ControlGroup>`) takes one the same way, holding the whole object: its named
+children are filled from it, move when something else writes it, and write back
+what they change. One signal for a screen whose values arrive together and where
+no field needs a url of its own — the fields then take nothing but their `name`
+(see [create_and_edit.md](./create_and_edit.md#two-screens-two-states)).
 
 ## Empty keeps the shape of the question
 
@@ -309,36 +285,28 @@ it holds something. A list of days nobody picked is `[]`, not `""`:
 | radio, checkbox holding a value of its own        | absent   |
 
 This is what a clear (`--navi-clear`, a row's cross) leaves behind and what the
-object around it carries, so the conversion nobody writes — `value.days || []` —
-is not needed, and not needed only after having watched the wrong shape reach
-the server.
+object around it carries, so `value.days || []` is not needed.
 
 A checkbox is a member of a set, the way HTML has it: checked it carries its
 `value` (`"on"` when it was given none), unchecked it carries nothing at all —
 which is what lets several checkboxes sharing a name aggregate into an array. A
-checkbox that is a yes/no rather than a member says so with `value={true}`, and
-is then `true` or `false`. Its bound `signal` holds the boolean either way (see
-the table above): what a signal on a checkbox is about is whether it is checked.
+checkbox that is a yes/no says so with `value={true}`, and is then `true` or
+`false`. Its bound `signal` holds the boolean either way: what a signal on a
+checkbox is about is whether it is checked.
 
 ## Which controls take a `signal`
 
 All of them: `Input` (every type), `Picker`, `Select`, `Wheel`, `Spin`,
-`List selectable` (single and multiple), and control groups in general. Anything
-that is a navi control goes through the same state controller, and the same
-`signal` prop.
-
-`SlideContainer` takes one too, though it is layout rather than a control: the
-area it shows is a piece of state like any other, and binding it is what lets
-something else read where the slides are — or move them by writing it. Bind it
-to a `stateSignal` a route declares as a search param and the area is in the
-address, with no route per slide — see
-[navigation.md](./navigation.md#a-slidecontainer-in-the-url-a-position-that-is-not-a-place-one-came-from).
+`List selectable` (single and multiple), and control groups in general — they
+go through the same state controller. `SlideContainer` takes one too, for the
+area it shows (see
+[navigation.md](./navigation.md#a-slidecontainer-in-the-url-a-position-that-is-not-a-place-one-came-from)).
 
 Inside a `List selectable` you can bind the list, or give each `List.Item` its
 own `selected` — but not expect the two to arbitrate. An item that declares
 `selected` is answering for itself, and the list's signal does not reposition
-it. On screen that reads as a list where clicking does nothing, so navi says it
-in dev the moment the two claims meet: bind one end or the other, not both.
+it: a list where clicking does nothing. navi says it in dev the moment the two
+claims meet — bind one end or the other, not both.
 
 ## The PROP is what controls, not its value
 
@@ -364,9 +332,9 @@ tries to place a child that has claimed itself this way.
 
 ## A yes/no shown as two rows
 
-A checkbox is one way to ask a yes/no; two rows one can compare — "Publique, we
-propose it to players looking for this kind of game" against "Privée, it travels
-only by the link you send" — is another, and it is the same value:
+A checkbox is one way to ask a yes/no; two rows one can compare — "Publique" and
+"Privée", each with the sentence that tells them apart — is another, and it is
+the same value:
 
 ```jsx
 <Picker name="visibility" signal={isPublicSignal}>
@@ -380,8 +348,7 @@ only by the link you send" — is another, and it is the same value:
 Nothing translates: the row holds the boolean, the form carries the boolean.
 What cannot be done is give a row `undefined` to mean "no value" — `undefined`
 is what UNCHECKED means, here as in HTML, so such a row can never be ticked.
-A value the control can hold is a value one can see; "nothing chosen" is the
-absence of a row, not a row.
+"Nothing chosen" is the absence of a row, not a row.
 
 ## Clearing, resetting, and what is shown meanwhile
 
@@ -396,84 +363,53 @@ Three things that look alike and are not:
 
 So a row whose cross means "back to the one from my profile" needs nothing of
 its own: clearing empties it, and `placeholder` is where that sentence is
-written.
+written. The app then reads `undefined` (or the empty of the row's type), which
+is what "nothing chosen here, use the usual answer" means everywhere else.
 
 ```jsx
 <Picker clearable placeholder="Celui de mon profil" signal={sideSignal} />
 ```
 
-What the app then reads is `undefined` (or the empty of the row's type), which
-is what "nothing chosen here, use the usual answer" already means everywhere
-else — the same rule as an emptied signal falling back on its default.
-
 A control that cannot show emptiness — a pair of wheels has no blank row to land
 on — takes the same `placeholder` as a POSITION instead of a word (see
-`TimeWheel`): shown, and still not an answer.
+`TimeWheel`): shown, and still not an answer. A clear, or a value written as
+`undefined`, puts it back on that position and back to answering nothing.
 
 ## `value` and `signal` exclude each other
 
 `value` (or `checked`) says "you hold it", `signal` says "the signal holds it".
 Passing both is a call site to fix: **the signal wins and the other prop is
 ignored** — on a leaf control as on a group (a selectable list, a checkbox
-group) — and navi says so in dev. One owner, whichever half of the binding you
-look at.
-
-Replacing `value` with `signal` also means dropping the `uiAction` that wrote
-the signal by hand — writing it is exactly what the binding does. Keep
-`uiAction` only for what is not "remember the value": logging, a side effect,
-something else moving with it.
+group) — and navi says so in dev. What is left for a `uiAction` once the signal
+is bound: [state_binding.md](./state_binding.md#what-is-left-for-the-callback).
 
 ## A `stateSignal` brings more than a value
 
-A plain signal (`useSignal`, `signal()`) is enough to bind a control. A
-`stateSignal` also carries its own `options`, and a control reads them so it
+A plain signal (`useSignal`, `signal()`) is enough to bind a control, both ways.
+A `stateSignal` also carries its own `options`, and a control reads them so it
 does not have to be told twice: `type` (which decides the input type and the
 validation messages), `min`, `max`, `step`, and its **default**, which seeds
 `defaultValue`/`defaultChecked` — so a reset goes back to the signal's original
 default rather than to whatever it happened to hold at the last render.
 
-That is the only difference. A plain signal binds the same way in both
-directions; it just has nothing extra to say.
-
 ## A time of day: typed, or turned
 
-A time of day, and a span between two of them, come as a pair of components,
-and the choice between them is about the GESTURE: `TimeSpin`/`TimeRangeSpin`
-are fields one types in, `TimeWheel`/`TimeRangeWheel` are wheels one turns.
-Both carry a single `"HH:MM"` (or `{ start, end }` for a span), so a form holds
-one field either way.
-
-Prefer the wheels whenever a half-written value would be nonsense: a time typed
-digit by digit goes through states that are not times ("1" on its way to "18"),
-each of them bounded and corrected under the fingers, while a wheel only ever
-shows values that exist. Two things only the wheels have:
-
-- the bounds of a span PUSH each other while they turn (`minDuration`) instead
-  of being refused at send;
-- `placeholder` is a position shown without being an answer — for a span that
-  is optional ("any time of day") on wheels that have no blank row to land on. A
-  clear, or a value written as `undefined`, puts such a pair back on its
-  placeholder and back to answering nothing, so a row's cross means what it says
-  (the rule of [clearing](#clearing-resetting-and-what-is-shown-meanwhile)).
-
-`hours` bounds what the wheels offer (`{ min: 7, max: 21 }`, or the list
-itself): rows nobody can land on are rows in the way.
-
-Reference: `src/control/picker/preset/spin_time.jsx`,
-`src/control/wheel/wheel_time.jsx`.
+`TimeSpin`/`TimeRangeSpin` are fields one types in, `TimeWheel`/`TimeRangeWheel`
+are wheels one turns; both carry a single `"HH:MM"` (or `{ start, end }` for a
+span), so a form holds one field either way. Prefer the wheels whenever a
+half-written value would be nonsense: a time typed digit by digit goes through
+states that are not times ("1" on its way to "18"), while a wheel only ever
+shows values that exist. Only the wheels push the bounds of a span apart as they
+turn (`minDuration`, which the spins check at send) and take a `placeholder` as
+a position. Their props are in their JSDoc
+(`src/control/picker/preset/spin_time.jsx`, `src/control/wheel/wheel_time.jsx`).
 
 ## See also
 
-- [state_binding.md](./state_binding.md) — the same rule beyond controls:
-  a `SlideContainer`'s area, a popup being open, the position in the app — all
-  bound rather than copied back by a callback
-- [form_changed.md](./form_changed.md) — what a form makes of each of these:
-  which fields it counts as already answered, and when it sends nothing
-- [control_object.md](./control_object.md) — several controls reading as one
-  object: which group aggregates them, and how the value travels down by name
-- [control_group.md](./control_group.md) — several controls reading as one
-  framed object
-- [actions.md](./actions.md#action-or-uiaction) — `action` or `uiAction`: which
-  one carries loading and error, and which one carries nothing
-- [popup_open.md](./popup_open.md#escape-cancels-the-other-gestures-keep) — what
-  a cancelled popup does to the value inside it
+- [state_binding.md](./state_binding.md) — the same rule beyond controls
+- [form_changed.md](./form_changed.md) — which fields a form counts as already
+  answered, and when it sends nothing
+- [control_object.md](./control_object.md) — several controls answering one
+  object
+- [group.md](./group.md) — several controls drawn as one frame
+- [actions.md](./actions.md#action-or-uiaction) — `action` or `uiAction`

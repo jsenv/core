@@ -84,7 +84,8 @@ are read at the press, before the box moves:
    so with `data-press-only`, and a travel starts there like anywhere else.
 2. **A scroller in between with room left that way.** It keeps the gesture until
    it has no room left, and only then hands the travel over — so a row that
-   scrolls sideways inside a page still scrolls sideways.
+   scrolls sideways inside a page still scrolls sideways. A row swiped with
+   `interactions` is the exception: its swipe does not ask.
 3. **Another travelling box in between** — see
    [Boxes inside boxes](#boxes-inside-boxes).
 4. **Something in between that is picked up and carried** — see
@@ -192,14 +193,14 @@ A popup pushed back towards its edge and a swiped row are travels too, the
 simple kind: one box, one direction, no neighbour to bring in. The two below
 carry screens.
 
-|                         | `SlideContainer`                    | `RouteTravel`                      |
-| ----------------------- | ----------------------------------- | ---------------------------------- |
-| what the screens are    | `<Slide>`s in one box, all mounted  | routes — one mounted, ever         |
-| what says which is here | a `signal`, `current` / a command   | the URL                            |
-| what the finger moves   | a translated track                  | the pictures of a view transition  |
-| letting go too early    | the track comes back                | the transition is played backwards |
-| what says the order     | the layout map                      | the `<Route>` children, in order   |
-| what one wheel push is  | `move(±1)`, as an arrow key         | one travel, as a tab pressed       |
+|                         | `SlideContainer`                   | `RouteTravel`                      |
+| ----------------------- | ---------------------------------- | ---------------------------------- |
+| what the screens are    | `<Slide>`s in one box, all mounted | routes — one mounted, ever         |
+| what says which is here | a `signal`, `current` / a command  | the URL                            |
+| what the finger moves   | a translated track                 | the pictures of a view transition  |
+| letting go too early    | the track comes back               | the transition is played backwards |
+| what says the order     | the layout map                     | the `<Route>` children, in order   |
+| what one wheel push is  | `move(±1)`, as an arrow key        | one travel, as a tab pressed       |
 
 Both expose how far the travel has come, and the way to read it differs because
 what draws an indicator differs. `SlideContainer` writes

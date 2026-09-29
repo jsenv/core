@@ -44,9 +44,10 @@ still before being allowed to swipe.
 commits the touch to its own pan — on the axis `touch-action` leaves it, and on
 every axis over a scroller inside the box — and refusing after that changes
 nothing: the pointer is cancelled, the swipe dies or the travel under way goes
-back. Hence 6px, under 8 with a margin, because Safari does not wait for the
-answer to a report that jumps over its decision. Its price is the click of a tap
-that shook more than 6px.
+back. The other way round too: one `touchmove` refused before it keeps the whole
+touch from scrolling, and nothing can be un-refused. Hence 6px, under 8 with a
+margin, because Safari does not wait for the answer to a report that jumps over
+its decision. Its price is the click of a tap that shook more than 6px.
 
 **The axis is decided by the first movement report after the threshold, never
 revisited** — a diagonal would ask for two travels when one screen can arrive —
@@ -59,12 +60,11 @@ twice over (`AXIS_CROSS_DOMINANCE`); a scroll, near-pure from its first pixel
 (4-6×), still leaves whole, at once. A box travelling both axes reads even.
 
 **Deferring the decision is not available** — physics, not caution. Past the
-browser's 8px, a frame spent gathering evidence is a lost gesture: waiting for
-the arc to prove itself makes every genuinely vertical swipe over the box a dead
-gesture, the same bug mirrored onto the page. The bias only works because it is
-read before the browser reads the same pixels evenly; a first report steeper
-than it is genuinely ambiguous and goes to the page, which at least answers it
-visibly.
+browser's 8px a frame spent gathering evidence is a lost gesture: waiting for
+the arc to prove itself makes every vertical swipe over the box a dead gesture,
+the bug mirrored onto the page. The bias only works because it is read before
+the browser reads the same pixels evenly; a first report steeper than it is
+ambiguous with a scroll and goes to the page, which at least answers visibly.
 
 **On something already moving the axis is not read**: the consumer gives it
 (`inFlight.axis`) — the first pixel of a hand landing on a moving thing is a
@@ -103,8 +103,8 @@ asks — "may I go there", not "is there a screen that way" — where the gestur
 ARMED. Asked at the release alone, the hold forbids the arrival and allows the
 journey: the screen one may not reach is walked to, read, then taken back. Said
 `false` at the start, the rubber band, the screen kept off stage and a release
-with nothing to refuse follow for free. `onEdge` asks the gate again of the box
-walked into.
+with nothing to refuse follow for free. The consumer's `onEdge` asks the gate
+again of the box walked into.
 
 **The extra pixels are not owed back**: at an end with nothing beyond, the
 gesture is re-measured from where the finger IS, so turning around moves the
@@ -122,10 +122,9 @@ points at).
 
 ## A wheel points, a hand holds
 
-**A hand HOLDS a screen**: owed every pixel, free to change its mind, and letting
-go is a question with an answer (`onStart`/`onPull`/`onEnd`). **A wheel POINTS**
-at the next screen: one push, one screen (`onStep`), the travel playing at its
-own pace as from a tab or an arrow key.
+**A hand HOLDS a screen and is owed every pixel; a wheel POINTS at the next
+one**: one push, one screen (`onStep`), played at its own pace like a tab or an
+arrow key (the `watchWheelTravel` JSDoc).
 
 A wheel gesture has no press, no release and no target — each event lands on
 whatever is under the pointer then. So it is **claimed at its first event and
@@ -142,28 +141,24 @@ with the fingers gone, and counted, one flick is five slides:
 - **the first event of a gesture moves a screen**, whatever it is worth: a hand
   that moved and saw nothing happen pushes harder rather than waiting;
 - **every screen after it costs a lot**: later events add up to 600 per screen
-  (`WHEEL_NEXT_STEP_DELTA`), and a stream weakening twice in a row is momentum
-  and adds nothing. Deliberately steep: an overshoot leaves someone three
-  screens away, an undershoot costs one more push. A mouse wheel spun faster
-  than the silence is therefore ONE gesture — ten 100px notches 40 to 120ms
-  apart are two screens; 160ms apart, ten;
+  (`WHEEL_NEXT_STEP_DELTA`, steep on purpose: an overshoot leaves someone three
+  screens away, an undershoot costs one more push), and a stream weakening
+  twice in a row is momentum and adds nothing. A mouse wheel spun faster than
+  the silence is therefore ONE gesture — ten 100px notches 40 to 120ms apart
+  are two screens; 160ms apart, ten;
 - **a faded stream that grows twice in a row is a hand pushing again**
-  (`WHEEL_REGROW_RUN`): momentum only weakens, and decay jitter bumps up in
-  isolated events, never twice running. The browser sees one burst, so "the
-  hand asked again" is reconstructed, never received — and answered like a first
-  event, a screen now: charged the second screen's price, it reads as "my swipes
-  are ignored until I wait";
+  (`WHEEL_REGROW_RUN`; decay jitter bumps up alone, never twice running), and
+  it is answered like a first event — a screen, now, never credit towards one:
+  charged the second screen's price, it reads as "my swipes are ignored";
 - **a sign that flips restarts the ledger, not the gesture**: a tail rocking to
   zero read as a first event walks a slide per event;
-- **cross-axis events are swallowed absolutely, and renew nothing.** No per-event
-  reading tells a scroll's onset from the gesture's wobble: end-of-fade crumbs
-  land on either axis, a diagonal tail carries hand-sized deltas on both, and one
-  crumb let through scrolls the slide's content under the travel, a header
-  creeping off the edge one pixel per leak. **Do not re-attempt a cross-axis
-  "hand it back when it is really a scroll" heuristic: every filter leaks.** The
-  honest boundary is the claim: renewed by what it eats, the gesture would
-  outlive its stream, so it lapses once its own axis goes quiet and the browser
-  answers the rest of the scroll.
+- **cross-axis events are swallowed absolutely, and renew nothing.** No
+  per-event reading tells a scroll's onset from the gesture's wobble, and one
+  crumb let through scrolls the slide's content under the travel. **Do not
+  re-attempt a cross-axis "hand it back when it is really a scroll" heuristic:
+  every filter leaks.** The honest boundary is the claim: renewed by what it
+  eats, the gesture would outlive its stream, so it lapses once its own axis
+  goes quiet and the browser answers the rest of the scroll.
 
 Taking the wheel is also the only way to keep the browser from answering it: on
 a laptop a horizontal two-finger swipe IS the back navigation, and a region that
@@ -176,14 +171,14 @@ A promise about a gesture has to be readable before the gesture exists, from
 nothing but the DOM under the finger — so every claimant is read there, at the
 press:
 
-- **Exclusion** (`DRAG_EXCLUDED_SELECTOR`): what the browser already answers the
-  pointer on unless it says `data-press-only`; `data-drag-handle`;
-  `data-no-drag-travel`; `data-self-interactions` naming `drag` or `*`; any
-  `[popover]` or `dialog`. The nearest word wins: excluded INSIDE the box takes
-  the press from it, around the box does not — a docked dialog IS the box.
-  Buttons, links and the inputs that only read the press are out on purpose: a
-  selectable row is covered by an invisible radio, and excluding every input is
-  a list no finger can push.
+- **Exclusion** (`DRAG_EXCLUDED_SELECTOR`, each entry argued in place): what the
+  browser already answers the pointer on unless it says `data-press-only`;
+  `data-drag-handle`; `data-no-drag-travel`; `data-self-interactions` naming
+  `drag` or `*`; any `[popover]` or `dialog`. The nearest word wins: excluded
+  INSIDE the box takes the press from it, around the box does not — a docked
+  dialog IS the box. Buttons, links and the inputs that only read the press stay
+  out on purpose: excluding every input is a list of selectable rows (each under
+  an invisible radio) that no finger can push.
 - **Nested boxes and carried things** (`axesLeftBy`): boxes say their axes
   (`data-travel-by-drag`, `data-travel-by-wheel`), drag sources theirs
   (`data-drag-source`), and the innermost takes what it walks. **Read at the
@@ -194,16 +189,16 @@ press:
   top-layer element on the way up (`:popover-open`, `dialog:modal`,
   `:fullscreen`) takes everything.
 - **A scroller with room left that way** (`scrollRoomTowards`, which also stops
-  at the top layer): for a press each consumer's `onStart` asks it; the module
-  asks it itself only for the wheel.
+  at the top layer): for a press the consumer's `onStart` asks it (the
+  `interactions` swipes do not); the module asks it itself only for the wheel.
 - **A grip**: `createSwipeToClose(side, { grip })` reads the press only where
   `closest(grip)` finds one inside the popup.
 
-**A travel is not a carry**, although both read the pointer through one loop
-(`drag_gesture.js`): a carry lays a backdrop, makes the rest `inert`, takes the
-focus and blocks the scroll keys. A travel picks nothing up, and the page keeps
-its focus, scrolling and keyboard (`documentInteractions: "manual"`) — and its
-selection until the press is a travel (`selection: "manual"`).
+**A travel is not a carry**, though both read the pointer through one loop
+(`drag_gesture.js`): nothing is picked up, so no backdrop, nothing `inert`, and
+the page keeps its focus, scrolling and keyboard (`documentInteractions:
+"manual"`) — and its selection until the press is a travel (`selection:
+"manual"`).
 
 ## The browser answers too: containment
 
@@ -243,11 +238,10 @@ anything to scroll (`clip` makes none):
 
 So the box is contained everywhere, and everything inside only outside Blink
 (`@supports not (-webkit-app-region: none)`, a property that names an engine).
-The scrollers a browser makes on its own — `textarea`, `select[multiple]`,
-`select[size]` — are named wherever they are, since nothing else can find them;
-not `input`, which has nothing to scroll on a travel axis and would make a
-row-wide invisible checkbox a hole. The cost: an empty textarea is contained
-too, and on Blink a wheel over it moves nothing.
+The scrollers a browser makes on its own (`textarea`, `select[multiple]`,
+`select[size]` — never `input`) are named wherever they are, since nothing else
+can find them; the stylesheet's comments in `drag_to_travel.js` say why, and
+what it costs.
 
 On Blink that leaves the boxes that are not scroll containers, never asked: a
 `SlideContainer` (`overflow: clip` — `hidden` would let the slides off stage be
@@ -295,12 +289,11 @@ ways (`travelsAfter`, `thrownOn`):
 - **thrown back**, fast: everything goes back;
 - **thrown on**, fast, the way it was going, by more than a tremor: a second
   push, asking for the screen AFTER the one arriving — the wheel's rule said for
-  a hand. As a verdict on the box in hand it would only confirm what was
-  arriving, the second swipe swallowed; so the next box is asked for at the
-  release (`onEdge` with `thrown`). A `SlideContainer` re-stages; a
-  `RouteTravel` aims the travel one page further and hands nothing over (a new
-  box would first jump its pictures the rest of the way). A slow hand stopping
-  before it lets go is not thrown: the picture decides.
+  a hand; read as a verdict on the box in hand, the second swipe would be
+  swallowed. It is asked for at the release (`onEdge` with `thrown`, see its
+  JSDoc): a `SlideContainer` re-stages, a `RouteTravel` aims the travel one page
+  further and hands nothing over. A slow hand stopping before it lets go is not
+  thrown: the picture decides.
 
 **Verify it by speed, not position**: sample the position frame by frame across
 the press (for a `RouteTravel`, the `currentTime` and `playState` of the
@@ -416,15 +409,14 @@ and paints nothing, and the two pictures cover its rectangle.
   each direction, its release gate asked early.
 - **The BOX as `element`**, where the pointer is captured: the consumer's answer
   may take away what the finger landed on (a page that travels navigates), and a
-  capture whose element leaves the document is dropped. `startDragToTravel`
-  captures only once the travel is ACCEPTED: one capture per pointer for the
-  whole document, and taking it takes it from whoever had it — who is told its
-  gesture ended — so a travel giving itself up one event later (an axis the box
-  does not walk, an `onStart` refusing) would have killed a gesture carrying
-  something. Nothing is missed for it: moves and the release are always read at
-  the window, filtered by pointer id, and the refusing `touchmove` listener sits
-  on the element the touch landed on as well as on the window
-  (`preventTouchScroll` in `drag_gesture.js`).
+  capture whose element leaves the document is dropped. The capture is deferred
+  until the travel is ACCEPTED (`pointerCaptureDeferred`, argued where
+  `startDragToTravel` grabs): there is one per pointer for the whole document,
+  and a travel giving itself up one event later would have taken it from a
+  gesture already carrying something. Nothing is missed meanwhile: moves and the
+  release are always read at the window, filtered by pointer id, and the
+  refusing `touchmove` listener sits on the element the touch landed on as well
+  as on the window (`preventTouchScroll` in `drag_gesture.js`).
 
 ## The four consumers
 
@@ -463,13 +455,12 @@ stage a press reached, with its velocity), the box's state
 (`data-slide-current`, the URL), and the track's position sampled across frames,
 which shows the mini-movements and stalls no end-state check sees.
 
-The touch race shows only in Chrome's mobile touch emulator (headed) and in
-Safari on the iOS simulator driven by `safaridriver`: Playwright's `touchscreen`
-runs Chrome's desktop slop (15px), where a travel reading a finger at 6px always
-wins. Recipes:
-[mobile_touch.md](../../../packages/frontend/navi/docs/mobile_touch.md#verifying-without-a-device).
-A real finger's lift, a real device's timing, a momentum tail killed by a
-landing finger and Firefox's wheel stay device questions.
+The touch race shows only through the two paths in
+[mobile_touch.md](../../../packages/frontend/navi/docs/mobile_touch.md#verifying-without-a-device):
+Playwright's `touchscreen` runs Chrome's desktop slop (15px), where a travel
+reading a finger at 6px always wins. A real finger's lift, a device's timing, a
+momentum tail killed by a landing finger and Firefox's wheel stay device
+questions.
 
 ## Reference
 

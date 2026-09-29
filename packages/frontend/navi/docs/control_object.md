@@ -31,13 +31,13 @@ its own `action`/`uiAction`/`command` if you want one.
 // worth { street, city, zip }
 ```
 
-It is also the brick composite controls are built from:
-`aggregateChildStates` / `distributeChildUIState` replace "one key per child"
-with a value of your own — two wheels that are one number of minutes, three
-fields that are one date. A group with them takes and hands back a single
-value, so it can be driven by one `value`/`signal` like any other control. It is
-what `TimeSpin` is made of, and the same mechanism `InputDuration`, `SpinGroup`
-and `WheelGroup` use for their own members.
+It is also the brick composite controls are built from: with
+`aggregateChildStates` / `distributeChildUIState` (see its JSDoc) a group takes
+and hands back a single value of your own — two wheels that are one number of
+minutes, three fields that are one date — and is driven by one `value`/`signal`
+like any other control. `TimeRangeSpin` is a `ControlGroup` of two `TimeSpin`s;
+`SpinGroup` (which a `TimeSpin` is), `WheelGroup` and `InputDuration` use the
+same mechanism for their own members.
 
 ## `<Form>`: the shape, plus a send
 
@@ -45,10 +45,8 @@ A `<Form>` aggregates exactly the same way. What it adds is everything about
 **sending**: the reference it measures against, the refusal to act when nothing
 changed (see [form_changed.md](./form_changed.md)), the submit button and its
 `readOnlyWhileFormUnchanged`, what follows a successful send (`command`), and a
-`<form>` element with the browser's own submit/reset.
-
-So the choice is not about the value, it is about whether this cluster is a
-**question with a send**:
+`<form>` element with the browser's own submit/reset. So the choice is not
+about the value, it is about whether this cluster is a **question with a send**:
 
 - a shape inside a bigger whole → `ControlGroup`;
 - something the user sends → `Form`.
@@ -58,11 +56,9 @@ the `<form>` element — and it is a **second question**, not a sub-object of th
 first: what it holds is its own, and the form around it never sees it. Not in
 the value it sends, not in its "nothing changed", and not in the constraints it
 checks before sending — a required field in a popup nobody opened cannot refuse
-the outer submit and point at something the screen is not showing.
-
-So the inner form carries all of the above with it: its own reference, its own
-"nothing changed", its own submit story. Grouping three fields into a sub-object
-should cost none of that — that is a `ControlGroup`.
+the outer submit and point at something the screen is not showing. Grouping
+three fields into a sub-object should cost none of that — that is a
+`ControlGroup`.
 
 ## Naming, and what a nameless group does
 
@@ -70,10 +66,9 @@ A group's `name` is the key its value lands under, in the group above it — a
 `ControlGroup`, or a `Form` inside something that is not a form (a picker, say).
 A form inside a form lands nowhere: it answers for itself, named or not.
 
-Left nameless, a group is a **grouping**: it exists to hold its children
-together (shared navigation, a visual cluster) without claiming a key, and what
-it holds is merged into the object around it as if its children had been written
-there.
+Left nameless, a group is a **grouping**: it holds its children together (shared
+navigation, a visual cluster) without claiming a key, and what it holds is
+merged into the object around it as if its children had been written there.
 
 ```jsx
 <ControlGroup name="when">
@@ -86,11 +81,10 @@ there.
 // worth { day, hours, minutes } — the WheelGroup adds no key of its own
 ```
 
-A nameless **leaf** is a different story: it is a control whose value has
-nowhere to go, and it is warned about. A control that is not answering this
-group's question at all — one that only opens something, one that commits on
-its own — says so with `standalone` and leaves the group entirely (see
-[form_changed.md](./form_changed.md#a-control-that-answers-for-itself)).
+A nameless **leaf** is a different story: a control whose value has nowhere to
+go, and it is warned about — unless it is not answering this group's question at
+all, which it says with `standalone`
+([form_changed.md](./form_changed.md#a-control-that-answers-for-itself)).
 
 ## A picker whose value is an object
 
@@ -98,39 +92,33 @@ its own — says so with `standalone` and leaves the group entirely (see
 aggregates (next to `type="array"`, whose value is a selection):
 
 ```jsx
-<Picker name="when" type="object" value={{ day, hours, minutes }}>
+<Picker name="when" type="object" signal={whenSignal}>
   <ControlGroup>
-    <DaySpin name="day" signal={daySignal} />
+    <DaySpin name="day" />
     <WheelGroup>
-      <Wheel name="hours" signal={hoursSignal} />
-      <Wheel name="minutes" signal={minutesSignal} />
+      <Wheel name="hours" />
+      <Wheel name="minutes" />
     </WheelGroup>
   </ControlGroup>
 </Picker>
+// whenSignal holds { day, hours, minutes }
 ```
-
-Two things to get right:
 
 - **One control in the popup, and it must be the group.** A picker syncs with a
   single control: the first one receives the picker's whole value and is the
-  only one read back. Two controls side by side in a popup is the shape to
-  avoid — the second is neither filled nor collected, and navi says so in dev.
-  Wrap them in one `ControlGroup` (or one `Form`, when the popup has a send of
-  its own — but only while the picker itself is not inside a form, since a form
-  inside a form answers for itself and the picker would be left with nothing to
-  fill).
-- **The value travels by name.** What the picker was given goes down into the
-  group, which hands each named child its own key; a nameless grouping inside
-  receives the whole object and picks out what it names. Give a picker of this
-  kind a scalar type and there is no group to distribute anything — the whole
-  object lands on one control, which is how `"[object Object]"` ends up in a
-  url.
-- **A control that helps FIND the answer is not the answer.** A search box above
-  a long list, a "select all" beside it: they are tools, and a tool says so with
-  `standalone`. The picker then walks past it and talks to the list, which is
-  what a popup made of one choice and the means to reach it needs. Never put it
-  on the control that IS the value — the picker would have nobody left to fill,
-  and the popup would open blank on a value it holds.
+  only one read back; a second one beside it is neither filled nor collected,
+  and navi says so in dev. Wrap them in one `ControlGroup` (or one `Form`, for a
+  popup with a send of its own — only while the picker is not inside a form: a
+  form inside a form answers for itself, leaving the picker nothing to fill).
+- **The value travels by name.** The group hands each named child its own key;
+  a nameless grouping inside receives the whole object and picks out what it
+  names. Give such a picker a scalar type and the whole object lands on one
+  control — which is how `"[object Object]"` ends up in a url.
+- **A control that helps FIND the answer is not the answer.** A search box
+  above a long list, a "select all" beside it are tools, marked `standalone`:
+  the picker walks past them to the list. Never put it on the control that IS
+  the value — the picker would have nobody left to fill, and the popup would
+  open blank on a value it holds.
 
 ```jsx
 <Picker name="place_ids" type="array">
@@ -143,109 +131,56 @@ Two things to get right:
 
 A popup can also hold **no** answer for the picker: several lists that are the
 same one choice, each acting on every touch, nothing read back on close. Mark
-them all `standalone` and the picker talks to none of them — the shape to reach
-for when one `ControlGroup` around them would be wrong, because its value would
-be one key per list where the answer is a single value.
+them all `standalone` and the picker talks to none of them — rather than one
+`ControlGroup` around them, whose value would be one key per list where the
+answer is a single value.
 
 ## A group holds what it was given
 
 A group's value looks like it is made of its children, and mostly it is — but
-the two are not the same thing, and the difference shows the moment the children
-are not all there yet:
+not while the children are not all there yet:
 
 - a group **told** a value holds it whole, before any child has registered to
-  show it. A list whose items are still loading, a popup built at open, a row
-  scrolled out of a virtualized list — none of them make the value smaller;
+  show it: items still loading, a popup built at open, a row scrolled out of a
+  virtualized list do not make the value smaller;
 - **a child mounting or unmounting is not somebody answering.** While children
-  are arriving, their aggregate is a partial reading; a group takes it for its
-  own value only once it has derived that value itself (nobody handed it one),
-  or once a child really acts;
-- a child arriving **after** the value did is placed from what the group holds,
-  so it shows its part of it. A child arriving with something of its own to show
-  is answering, and keeps it. A child bound to a `signal` is placed like any
-  other — bound is not frozen — and the placement writes the signal, so an
-  `<Input type="hidden" signal>` carrying a piece of the answer shows what the
-  group holds. Only a child controlled by a `value`/`checked` prop is left
-  alone: its owner decides.
+  arrive, their aggregate is a partial reading; the group takes it for its value
+  only once it derived that value itself (nobody handed it one), or once a child
+  really acts;
+- a child arriving **after** the value did is placed from what the group holds;
+  one arriving with something of its own to show is answering, and keeps it. A
+  child bound to a `signal` is placed like any other — bound is not frozen — and
+  the placement writes the signal, so an `<Input type="hidden" signal>` carrying
+  a piece of the answer shows what the group holds. Only a child controlled by a
+  `value`/`checked` prop is left alone: its owner decides.
 
-`distributeChildUIState` is asked child by child, which is fine while each child
-can be placed on its own. When it cannot — four seats where who sits down
-decides who moves, a row whose first answer changes what the others may show —
-`distributeChildStates` is the same way down asked ONCE for all of them:
+When children cannot be placed one at a time — four seats where who sits down
+decides who moves — `distributeChildStates(groupValue, children) => Map` places
+them all at once (see the `ControlGroup` JSDoc). It closes the loop: the group
+holds ONE answer its children are views OF, so when one speaks the others are
+placed again — without it a seat keeps showing somebody the list no longer
+holds, above all in a picker's popup, where the façade never echoes the value
+back down. What follows:
 
-```js
-distributeChildStates: (groupValue, children) => new Map([[child, state], …])
-```
-
-the mirror of `aggregateChildStates`, which already sees every child. A child
-the Map does not name is left where it is. Given both, the plural one wins.
-
-**It closes the loop, which the per-child one does not.** A group with a plural
-distribute holds ONE answer its children are views OF — a list saying who plays,
-four seats saying who sits where — rather than a value that IS what they said.
-So when one view speaks, the answer moves and **the other views are placed
-again**; the one that just acted is left where the user put it. Without that, a
-seat keeps showing somebody the list no longer holds, and nothing says so.
-
-This is the same rule as "a child arriving after the value did is placed from
-what the group holds", for a child that was there when the value moved without
-it. It matters most inside a picker's popup, where nothing else would bring the
-value back down: a picker's value IS what the control in its popup holds, so the
-façade never echoes it back.
-
-Five things follow, and each of them was paid for twice before being written
-here:
-
-- **the group's value has to be the view that carries the MOST.** Four seats say
-  who plays AND who sits where; a list of who plays says half of that. Make the
-  seating the value and the list is derived from it (`value.filter(Boolean)`);
-  make the list the value and every gesture on a seat has to be guessed at. The
-  rule to apply: between two views of one answer, the value is the one the other
-  can be computed from;
-- **the Map must name EVERY child**, the derived view included. A child the Map
-  does not name is left where it is — which reads as "the list never fills";
-- **name the children you WANT, never exclude the one you don't.** A group holds
-  more than the views: a search box, a filter, whatever the popup needs. Reading
-  the seats as "every child except the list" collects those too, and the value
-  ends up with five slots for four seats. Finding them by name says what it
-  means;
-- **a gesture that moves two children must never leave the value in an
-  in-between.** Dragging somebody from one seat to another is one intention and
-  two writes, and the group aggregates between them: for one instant the person
-  is in the list and in no seat, which a value that IS the seating has no room
-  for. Measured, that instant costs the person — the aggregate drops them and
-  the distribute unticks them before the second write lands. Two ways out, and
-  the first is the one to prefer:
-
-  1. **write the group's value once.** `rowSignal.value = slots` with both seats
-     already moved: there is no in-between at all. Available when the row is
-     where the placement lives;
-  2. **write the destination first**, when the seats are the truth and must stay
-     separate signals. The person is somewhere at every observable moment (in
-     two seats for an instant, which the rule then resolves), instead of nowhere.
-     Source-first loses them — measured, and silently.
-
-  Wrapping the two writes in a signal `batch()` does NOT help: the group
-  aggregates on each child's change, not on the render that follows.
-
-- **and when the in-between cannot be avoided, the aggregate says so.** Two
-  people swapping seats means one leaves before the other arrives, whichever
-  order the writes take. What is avoidable is PUBLISHING that half-state: an
-  aggregate that returns **what the group already holds** says "not yet, ask me
-  again" — nothing is placed, nothing is handed to the row above, and the next
-  assembly publishes the whole answer. Returning `undefined` says the opposite
-  ("there is no answer"), and wipes the row.
-
-```js
-// "not yet": the moving person is picked and seated nowhere, and it is not
-// somebody who was just ticked — so this is a gesture in flight
-const midMove = picked.some(
-  (id) => !seatedNow.includes(id) && lastAnswer.includes(id),
-);
-if (midMove) {
-  return lastAnswer; // what the group already holds
-}
-```
+- **the group's value is the view that carries the MOST.** Four seats say who
+  plays AND who sits where, a list of who plays says half of that: make the
+  seating the value and derive the list (`value.filter(Boolean)`). Between two
+  views of one answer, the value is the one the other can be computed from;
+- **the Map names EVERY child**, the derived view included (one it does not name
+  is left where it is: "the list never fills"), and **by name** — "every child
+  except the list" also collects the search box the popup holds;
+- **a gesture that moves two children never leaves the value in an
+  in-between.** A drag from one seat to another is two writes, and the group
+  aggregates between them: for an instant the person is in no seat, and is
+  dropped. Write the group's value once, both seats already moved; or, when the
+  seats must stay separate signals, write the destination first (two seats for
+  an instant, never none) — source-first loses them silently. A signal `batch()`
+  does NOT help: the group aggregates on each child's change, not on the render;
+- **an in-between that cannot be avoided** (two people swapping seats) is not
+  published: an aggregate returning what the group already holds says "not
+  yet" — nothing is placed or handed up, and the next assembly publishes the
+  whole answer. Returning `undefined` says "there is no answer", and wipes the
+  row.
 
 ```jsx
 // the seats are found by name, never as "everything that is not the list"
@@ -286,25 +221,22 @@ AND which levels, when it starts AND when it ends — hands back a sub-object:
 ```
 
 Flattening those into the sent object is the caller's business
-(`{ ...value.level, ...value.hours }`), and it is the only reasonable place for
-it: a picker with no name of its own could not be collected, and one merging its
-keys into the object around it would take the row's own identity away — nothing
-would say which row a key came from, nor which row to put an incoming value
-back on. A `<ControlGroup>` with no name IS that merge, and it exists for the
-case where there is no row: several controls in one screen, no door between
-them.
+(`{ ...value.level, ...value.hours }`): a picker with no name of its own could
+not be collected, and one merging its keys into the object around it would take
+the row's identity away — nothing would say which row a key came from, nor which
+row to put an incoming value back on. A `<ControlGroup>` with no name IS that
+merge, for the case where there is no row: several controls in one screen, no
+door between them.
 
 ## A settings sheet
 
 A popup that is not one choice but a handful of settings — four tabs, a select,
 a field, a button that answers with a place — and ONE answer, which must reach
-the app only when the popup closes. The list behind it must not move while it is
-open, and Escape must leave things exactly as they were found.
-
-Nothing new is needed for that: it is the object picker above, with the group in
-its popup. A picker's `action` runs on close and only on close (its `uiAction`
-follows every gesture, which is what the popup shows), so what is inside acts on
-nothing until the user is done.
+the app only when the popup closes: the list behind it must not move while it is
+open, and Escape must leave things exactly as they were found. It is the object
+picker above, with the group in its popup: a picker's `action` runs on close and
+only on close (its `uiAction` follows every gesture, which is what the popup
+shows).
 
 ```jsx
 <Picker
@@ -327,70 +259,41 @@ nothing until the user is done.
     </SlideContainer>
   </ControlGroup>
 </Picker>
+// `save` receives, on close and once:
+// { origin: "city", city: "Antibes", radius: "30", department: "" }
 ```
 
-```js
-// what `save` receives, on close and once
-{ origin: "city", city: "Antibes", radius: "30", department: "" }
-```
+**Which tab is showing is part of the answer**: the same fields mean different
+things depending on the tab they were filled on. A tab bar is a navigation
+(`<Nav slideContainer>` + `<Link slide>`), not a field, so the current area
+reaches the value through an `<Input type="hidden">` bound to the container's
+signal (a tab bar made of radios is a field already). That signal is written
+both ways — a value handed DOWN writes it too, on open and when Escape puts back
+what the picker held — so the sheet reopens on the tab of the answer, not on the
+one being tried.
 
-**Which tab is showing is part of the answer.** The same fields mean different
-things depending on the tab they were filled on, so the tab is a key of the
-value like the rest — a sheet handing back `{ city: "Antibes" }` without saying
-which tab it was left on has not said what was chosen. A tab bar is a navigation
-(`<Nav slideContainer>` + `<Link slide>`), so nothing in it is a field: the
-current area reaches the value through an `<Input type="hidden">` bound to the
-same signal as the container. That is what a hidden field is for — a
-piece of the answer with no control to be read from, here because the tabs are
-places rather than choices. A tab bar made of radios needs none: it is a field
-already, under its own name.
+**Every field answers**, including those on another tab: they stay mounted and
+come back in the object, and whoever receives it reads `origin` to know which
+count. Aggregating the sheet to a single value of its own
+(`aggregateChildStates`) throws away what makes the answer readable, starting
+with the tab. **A button inside is not a field**: the one asking for a position
+acts on the press, and what it answers goes into a control that IS one (a
+read-only field showing the place found).
 
-That signal is written in both directions, which is what makes the sheet reopen
-where it was left: a value handed DOWN to a control writes it too — on open, and
-when Escape puts back what the picker held — so the tabs go back to the answer
-rather than staying on the one that was being tried.
-
-**Every field answers, including the ones the current tab does not use.** A
-field on another tab stays mounted, keeps what was typed in it, and comes back
-in the object. Which of them count is read from `origin` by whoever receives the
-value — the group has no opinion about it, and does not need one. Deriving
-something narrower (a stored string, an id) is that reader's business too:
-`action` receives the object and stores whatever it wants, `value` hands the
-object back.
-
-A group CAN be worth a single value of its own — `aggregateChildStates` and
-`distributeChildUIState`, see the top of this file — and a sheet is precisely
-where that is the wrong reach: it throws away the state that makes the answer
-readable, starting with the tab.
-
-**A button inside is not a field.** The one asking for a position acts on the
-press, like anywhere else; what it answers goes into a control that IS a field
-(a read-only one showing the place it found), and the group picks it up from
-there.
-
-The façade stays on what is saved by reading the app's own state
-(`value={zone}` + a `ui` rendered from `zone`), while the picker holds the
-draft: the summary behind the open dialog then shows the answer, not the
-attempt.
-
-Seen working — the tabs, the geolocation button, the cancel — in
+The façade reads the app's own state (`value={zone}` + a `ui` rendered from
+`zone`) while the picker holds the draft, so the summary behind the open dialog
+shows the answer, not the attempt. Demo:
 `control/demos/picker/9_picker_settings_sheet_demo.html`.
 
 ## `Group` is not `ControlGroup`
 
-Two names, two subjects, no relation:
-
-- `<Group>` is about the **frame** — several controls reading as one object to
-  the eye, one border per seam. See [control_group.md](./control_group.md).
-- `<ControlGroup>` is about the **value** — several controls reading as one
-  object to the action.
-
-They compose: a `Group` around controls that also happen to be a
-`ControlGroup`'s children is fine, and either can exist without the other.
+`<Group>` is about the **frame** — several controls reading as one object to the
+eye ([group.md](./group.md)); `<ControlGroup>` is about the **value**. They
+compose, and either can exist without the other.
 
 ## See also
 
 - [form_changed.md](./form_changed.md) — what a form sends, and what it measures
   against
 - [control_value.md](./control_value.md) — who holds a single control's value
-- [control_group.md](./control_group.md) — the visual `<Group>`
+- [group.md](./group.md) — the visual `<Group>`

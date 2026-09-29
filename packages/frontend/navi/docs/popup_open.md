@@ -26,44 +26,23 @@ Where the focus goes once it is open is its own subject — see
 A `Dialog`/`Popover` with no `open` prop keeps its own open state and listens
 for requests to change it. That is the default way to use one, and it buys
 something a `useState` in the parent cannot give back: **a popup refuses to
-close while a control inside it is mid-action**.
+close while a control inside it is mid-action**. A form that is sending holds an
+answer that is neither committed nor given up. Escape, the backdrop, a close
+button — all of them ask, and the busy control answers, the same way it would
+answer anyone else.
 
-```js
-// what both do on every close request (popup_busy.js)
-const controlsHolding = findControlsHoldingPopup(popupEl);
-if (controlsHolding.length) {
-  dispatchRequestInteraction(controlsHolding[0].element, { ... });
-  requestCloseEvent.preventDefault();
-}
-```
-
-A form that is sending holds an answer that is neither committed nor given up.
-Escape, the backdrop, a close button — all of them ask, and the busy control
-answers, the same way it would answer anyone else.
-
-That is the right answer for a run bounded by a request that comes back. A run
-deliberately left going is the other case — activating a service worker update,
-which lands only once the browser switches over and can take as long as the
-page's own in-flight work takes. Nothing is held there: the app stays usable
-while it settles, and a panel that waits for it is a panel that may never close
-again. The control says so, and no popup around it is told:
-
-```jsx
-<Button action={() => activateUpdate()} actionStandalone>
-  Activate
-</Button>
-```
-
-It is still busy for itself — the spinner, the second press refused, the error
-callout — which is the whole point of keeping `action` (see
+A run deliberately left going is the other case — activating a service worker
+update, which lands only once the browser switches over. A panel that waits for
+it may never close again, so the control says `actionStandalone`: still busy for
+itself (the spinner, the second press refused, the error callout), and no popup
+around it is told (see
 [interactions.md](./interactions.md#the-fourth-question-whose-wait-is-it)).
 
 Between the two sits a run that IS being waited on and may never end. A request
 over a network that stopped answering settles neither way, and the hold then
-lasts exactly as long as the run: the popup closes for nothing and nobody, and
-the page has to be reloaded. `actionAbortable` gives that hold a release — the
-person waiting decides the answer is not coming, and closing is how they say
-it:
+lasts exactly as long as the run: the popup no longer closes, and the page has
+to be reloaded. `actionAbortable` gives that hold a release — the person
+waiting decides the answer is not coming, and closing is how they say it:
 
 ```jsx
 <Form action={saveScore} actionAbortable>
@@ -72,18 +51,16 @@ it:
 Every close request then goes through and calls the run off on the way out:
 Escape, the backdrop, the cross, the phone's back gesture. No gesture is singled
 out, because the cancel/keep distinction below is about the VALUE a popup holds,
-and there is nothing left to keep or put back once the answer is already on the
-wire — each of those gestures means "I want out of here", which is the only
-thing being answered.
+and once the answer is on the wire each of them means "I want out of here".
 
-What it costs is written down: aborting frees the client and nothing more, so
-the write may have landed anyway (see
+What it costs: aborting frees the client and nothing more, so the write may
+have landed anyway (see
 [actions.md](./actions.md#aborting-saves-resources-it-does-not-undo)). Say it
 where the screen can be re-opened on what is actually there, never where the
 popup is the only place the outcome could be read. Everything inside the form
-inherits it along with the wait itself; a popup holding one run that may be
-given up on and one that may not still refuses, since calling off half of them
-would cost an answer and change nothing on screen.
+inherits it along with the wait; a popup holding one run that may be given up on
+and one that may not still refuses, since calling off half of them would cost an
+answer and change nothing on screen.
 
 So the question is never "should this popup be controlled?" but "what triggers
 the opening?" — and, when the answer is the application rather than a gesture,
@@ -106,13 +83,12 @@ where that state lives:
 ```
 
 The available commands: `--navi-open`, `--navi-close`, `--navi-toggle`,
-`--navi-cancel` (closes, telling the popup the close means "revert"),
-`--navi-confirm` (says yes, then closes). What "revert" does to what is inside
-is [its own section](#escape-cancels-the-other-gestures-keep) — it is also what
-Escape says. `--navi-close:all` closes every popup above the button, nearest
-first; a popup that refuses to close keeps the ones above it open too. A link
-that leaves is the usual case — a badge shown over a sheet, both left in one
-press:
+`--navi-cancel` (closes, telling the popup the close means "revert" — what that
+undoes is [its own section](#escape-cancels-the-other-gestures-keep), and it is
+also what Escape says), `--navi-confirm` (says yes, then closes).
+`--navi-close:all` closes every popup above the button, nearest first; a popup
+that refuses to close keeps the ones above it open too. A link that leaves is
+the usual case — a badge shown over a sheet, both left in one press:
 
 ```jsx
 <Link href={PLAYER_ROUTE.buildUrl({ playerId })} command="--navi-close:all">
@@ -122,48 +98,45 @@ press:
 
 ## Something else opens it: `triggerNaviCommand`
 
-The attributes fire on every click of the element that carries them, and they
-cover more than "this button opens that dialog": `commandFor` says to whom,
-`value` says what it is about, `--navi-x:argument` says how. Before writing any
-JS here, check none of those is the answer — `triggerNaviCommand` is the last
-resort, not the general way to run a command.
-
-What it is for is a decision rather than a click — a long press, the end of a
-drag, a double-click, a keyboard shortcut, a server answer, an
-`IntersectionObserver`:
+The attributes cover more than "this button opens that dialog": `commandFor`
+says to whom, `value` says what it is about, `--navi-x:argument` says how.
+Before writing any JS here, check none of those is the answer —
+`triggerNaviCommand` is the last resort, for a decision rather than a press on
+the element carrying the attributes: a long press, the end of a drag, a
+double-click, a keyboard shortcut, a server answer, an `IntersectionObserver`.
+A plain `Box` has no command wiring of its own, so its click is one too:
 
 ```jsx
 import { triggerNaviCommand } from "@jsenv/navi";
 
 const dialogRef = useRef(null);
-const open = (event) => {
-  if (draggedRef.current) {
-    // the click that ends a throw is not a request to open
-    return;
-  }
-  triggerNaviCommand(dialogRef.current, "--navi-open", event);
-};
 
-<Box role="button" onClick={open}>…</Box>
+<Box
+  interactions={{
+    click: (event) =>
+      triggerNaviCommand(dialogRef.current, "--navi-open", event),
+  }}
+>
+  …
+</Box>
 <Dialog ref={dialogRef}>…</Dialog>
 ```
 
-This is the same entry point the attributes go through: same target resolution,
-same command proxies, same events. The popup stays uncontrolled, and keeps its
-say over closing.
+No guard against a drag: beside a `move` on the same box, the click a drag
+leaves behind is already suppressed. This is the same entry point the attributes
+go through — same target resolution, same command proxies, same events — so the
+popup stays uncontrolled, and keeps its say over closing.
 
 ### The event is forwarded, not invented
 
 `event` is what caused the decision, and it is mandatory — triggering a command
 without one throws. It is chained into the request event, and that chain is what
-lets the popup handle focus correctly (which element to give focus back to,
-whether a mousedown's click must be swallowed) and what the debug panel groups
-the whole sequence under.
-
-So the event to pass is **the one that is already there**, threaded down through
-every function between the handler and the call. A `CustomEvent` built on the
-spot satisfies the signature and defeats its purpose: the origin is a name
-instead of a gesture, and everything read off the real event is gone.
+the popup reads to hand the focus back and to know whether a mousedown's click
+must be swallowed, and what the debug panel groups the sequence under. So the
+event to pass is **the one that is already there**, threaded down through every
+function between the handler and the call — one layer deeper too, when the
+decision is taken by something navi handed an event to (an `interactions`
+detector, an `onOpen`, an action's callback):
 
 ```js
 // ✗ the handler drops the event, the command is told a story instead
@@ -178,34 +151,19 @@ const openMenu = (event) => {
 };
 ```
 
-A helper several presses share takes the event as a parameter like any other;
-the same holds one layer deeper, when the decision is taken by something navi
-handed an event to — an `interactions` detector, an `onOpen`, an action's
-callback. Follow it back: there is a gesture at the start of nearly every
-sequence.
-
 The exception is the sequence that genuinely started on its own — a timer
-firing, an action settling, a signal changing. Then say what happened with a
-`CustomEvent` named after it, rather than leaving the origin unsaid:
-
-```js
-import { chainEvent, triggerNaviCommand } from "@jsenv/navi";
-
-const expiredEvent = new CustomEvent("session_expired");
-chainEvent(expiredEvent, causeEvent); // when something did precede it
-triggerNaviCommand(dialogRef.current, "--navi-open", expiredEvent);
-```
+firing, an action settling, a signal changing: a `CustomEvent` named after what
+happened, chained (`chainEvent`) to whatever preceded it, as the
+`triggerNaviCommand` JSDoc shows.
 
 ### Opening while the finger is still down
 
-A menu opened by a `longpress` appears **during** the press that asked for it —
-that is what a long press is for, and it is the ordinary case here. The popup is
-told: it remembers which press it opened during, and the release of that press
-does not dismiss it, whatever the browser makes of it afterwards (a tap ends with
-a synthesized `mousedown`, `mouseup` and `click`, fired after `touchend` at the
-place the finger left — landing on a backdrop that did not exist when the finger
-came down). Nothing to do, and nothing to give up: the very next press outside
-closes the popup as usual.
+A menu opened by a `longpress` appears **during** the press that asked for it,
+and the release of that press does not dismiss it, whatever the browser makes of
+it afterwards (a tap ends with a synthesized `mousedown`, `mouseup` and `click`
+at the place the finger left — on a backdrop that did not exist when the finger
+came down). Nothing to do: the very next press outside closes the popup as
+usual.
 
 ```jsx
 <Row
@@ -217,9 +175,6 @@ closes the popup as usual.
 />
 ```
 
-It is one more reason to forward the real event: what the popup reads to tell its
-own opening press from somebody else's comes from that gesture.
-
 ## Which element receives the command
 
 The first argument is the command's **source** — the element it is triggered
@@ -230,14 +185,10 @@ _from_. The target is resolved from it, in this order:
 2. `navi-command-target="parent-control" | "child-control"`,
 3. the command's own fallback — for the popup commands, `closest("[aria-expanded]")`.
 
-A popup carries `aria-expanded` from its very first render, so passing the popup
-element itself as the source resolves to that popup: `closest()` starts at the
-element itself. That is the short form used above, and it is enough whenever the
-JS that decides already holds the popup's ref.
-
-To trigger from another element instead, give that element a `commandFor`
-pointing at the popup's `id` — attribute-driven target resolution, JS-driven
-timing.
+A popup carries `aria-expanded` from its very first render, and `closest()`
+starts at the element itself, so passing the popup element as the source
+resolves to that popup — the short form used above. To trigger from another
+element, give that element a `commandFor` pointing at the popup's `id`.
 
 ## The anchor
 
@@ -245,27 +196,20 @@ A popup opens on the place the open names, on the `anchor` prop when the open
 names none, and on whoever asked when nothing else says. In that order:
 
 1. **`detail.anchor`** — what `triggerNaviCommand`'s own `anchor` option puts
-   there. It is a statement about that one opening: a menu belongs at the point
-   the press happened, and the press is the only thing that knows that point.
+   there: a statement about that one opening. A menu belongs at the point the
+   press happened, and the press is the only thing that knows that point.
 2. **the `anchor` prop** — where this popup opens when nobody says.
 3. **`detail.source`** — who asked. A button therefore opens the popup on
    itself, and a popup passed as its own source is its own anchor.
 
-For `Dialog` the anchor does nothing at all unless `sizeFromAnchor` asks for
-it (it then feeds the `--anchor-width`/`--anchor-height` CSS vars) or
-`animation="lifting"` does (the box the dialog comes out of, see
-[popup_lift.md](./popup_lift.md)); for `Popover`, which really is positioned
-relative to its anchor, say what the anchor is:
-
-```jsx
-<Popover ref={popoverRef} anchor={rowRef}>
-```
-
-`anchorCustomEventDetail="ignore"` drops the open's side of that order
-entirely, leaving the `anchor` prop alone — for a popover that must never be
-anchored to whatever opened it (`SidePanel` does this), and for a dialog that
-must never be sized from it (`sizeFromAnchor`) or lifted out of it
-(`animation="lifting"`).
+A `Popover` is positioned against its anchor
+(`<Popover ref={popoverRef} anchor={rowRef}>`). A `Dialog` only reads it for
+`sizeFromAnchor` (the `--anchor-width`/`--anchor-height` CSS vars) and for
+`animation="lifting"` (the box the dialog comes out of, see
+[popup_lift.md](./popup_lift.md)). `anchorCustomEventDetail="ignore"` drops the
+open's side of that order, leaving the `anchor` prop alone — for a popover that
+must never be anchored to whatever opened it (`SidePanel` does this), a dialog
+never sized from it or lifted out of it.
 
 ## Opening it ON something
 
@@ -288,14 +232,12 @@ which one — so the press says it, with its own value:
 ```
 
 That subject travels as the command's **value**, not as an argument after a
-colon (`--navi-open:radar-42`). The two places say different things and the
-distinction holds across every command: an argument says WHAT the command does —
-`--navi-go-to-slide:edit` needs one, "go" without a destination is not an
-instruction — and `value` says what it is about. "Open" is already a complete
-instruction; the radar is what it is about. A button therefore says it the way it
-says it everywhere else, with `value`, and nothing has to be parsed.
-
-A JS decision says the same thing through the same door:
+colon (`--navi-open:radar-42`). The distinction holds across every command: an
+argument says WHAT the command does — `--navi-go-to-slide:edit` needs one, "go"
+without a destination is not an instruction — and `value` says what it is about.
+"Open" is already a complete instruction; the radar is what it is about. A JS
+decision says the same thing through the same door, and `--navi-toggle` carries
+it too, on the half that opens:
 
 ```js
 triggerNaviCommand(dialogRef.current, "--navi-open", event, {
@@ -303,11 +245,9 @@ triggerNaviCommand(dialogRef.current, "--navi-open", event, {
 });
 ```
 
-`--navi-toggle` carries it too, on the half that opens.
-
 ### `onOpen` runs before the popup has built anything
 
-The order is the whole point, and it is a guarantee, not a coincidence:
+On a `Dialog`/`Popover` the order is a guarantee, not a coincidence:
 
 ```
 onOpen(openEvent)   ← the subject is decided here
@@ -316,79 +256,32 @@ positioned, shown
 ```
 
 So a dialog whose content is seeded once — an uncontrolled field on a
-`defaultValue`, a form keyed on what it edits — reads the right thing on its very
-first render. Learning it afterwards would mean mounting on the previous subject
-and correcting it, which is a flicker at best and stale fields at worst.
+`defaultValue`, a form keyed on what it edits — reads the right thing on its
+very first render. Learning it afterwards would mean mounting on the previous
+subject and correcting it, which is a flicker at best and stale fields at worst.
+Only `mount="while-opened"` makes it true of the content every time: content
+kept from an earlier opening, or warmed by a hover, is already there when
+`onOpen` runs (see
+[what the popup holds while it is closed](#what-the-popup-holds-while-it-is-closed)).
+A `Picker`'s `onOpen` is not this moment: it runs once its popup is built and
+shown.
 
-The two other places one could listen are not that moment, and it is worth
-knowing why:
-
-| where                         | when it runs                   | chained to the caller |
-| ----------------------------- | ------------------------------ | --------------------- |
-| `onOpen`                      | before the content is built    | yes — this prop       |
-| `onnavi_command` on the popup | after the command has been run | yes                   |
-| `navi_request_open` listener  | before the popup's own handler | on the element only   |
-
-`onnavi_command` receives the whole command string and its value, but it runs
-**after** the opening: whatever it writes lands on a popup that is already open.
-That works only as long as nothing has read the state yet — which
-`mount="while-opened"` makes a real race rather than a theoretical one.
-
-A `navi_request_open` listener added on the element is the request itself, ahead
-of the popup acting on it — but it is ordered against the popup's own handler by
-registration, and it has to be attached in an effect on a ref. `onOpen` is that
-moment, said as a prop.
+The two other places one could listen are not that moment either.
+`onnavi_command` on the popup runs **after** the opening: whatever it writes
+lands on a popup already open, which `mount="while-opened"` makes a real race. A
+`navi_request_open` listener is the request itself, but ordered against the
+popup's own handler by registration, and attached in an effect on a ref.
+`onOpen` is that moment, said as a prop.
 
 ## A press that opens a popup and acts on it
 
 A press that opens something and then does something with what came of it — a
 "save this guest" prompt on a row, which replaces the guest once the profile
-exists — is not a dialog plus a way home. It is a `Picker`: a trigger, a popup,
-and an `action` that runs on what the popup settled.
+exists — is not a dialog plus a way home. It is a `Picker`: a trigger and a
+popup, written where the press is.
 
 ```jsx
-// one per row: the trigger IS the thing that receives the answer
-<Picker
-  variant="icon"
-  rightSlotIcon={<DisketteSvg />}
-  action={async (created) => {
-    await USERS.GET_MANY.rerun();
-    replaceGuest(guest, created);
-  }}
->
-  <GuestSavePrompt kind="player" name={guest.name} />
-</Picker>
-```
-
-Two things fall out of writing it this way, and both are the reason to prefer it
-over a shared dialog opened by `--navi-open`:
-
-- **what the popup needs to know travels as props**, because the popup is
-  written where the press is. No value to carry through the command, nothing to
-  read back out of an event;
-- **the popup is built the first time it opens**, not once per row on the render
-  that draws the list (see [what a popup holds while it is
-  closed](#what-the-popup-holds-while-it-is-closed)). A hundred rows is a
-  hundred triggers, not a hundred dialogs.
-
-The same component can of course be written once and used in every picker —
-`<GuestSavePrompt>` above is one — so "the prompt exists once" is a question
-about components, not about the DOM.
-
-### Composing a value, or doing work
-
-A picker mirrors **one** control in its popup — the first one that is not a
-button, a link or a control that answers for itself (`standalone`). That
-mirror is what makes `<Picker><List selectable/></Picker>` work with nothing
-wired: the picker's value IS the list's, both ways, and the picker's `action`
-runs on it when the popup closes.
-
-That is the shape for a popup that **composes a value**. A popup that **does
-work** — creates a profile, uploads a file — is the other shape, and it does not
-need the picker's `action` at all: the work is written where the press is, so
-its callback already has everything around it.
-
-```jsx
+// one per row: the popup is written where the press is
 <Picker variant="icon" rightSlotIcon={<DisketteSvg />}>
   <Form
     action={async (fields) => {
@@ -401,22 +294,53 @@ its callback already has everything around it.
 </Picker>
 ```
 
-Nothing travels back, because nothing left. This is the difference a shared
-dialog hides: a popup written once, far from every press that opens it, has to
-be told what it is about and has to answer somebody — and neither question
-exists once the popup is written where it is used.
+What the popup needs to know travels as props, and what it does has the row in
+scope: no value carried through the command, nothing read back out of an event,
+nobody to answer. That is the difference a shared dialog hides — written once,
+far from every press that opens it, it has to be told what it is about and has
+to answer somebody. The content can still be one component used in every picker:
+"the prompt exists once" is a question about components, not about the DOM.
+
+What each row costs depends on what the picker is told. A picker told no value
+— no `value`, `defaultValue` or `signal` — builds its popup at render, closed:
+it reads its value off the control in there, which has to exist before anything
+opens. A hundred rows is then a hundred closed popups. One heavy enough to
+matter can say `mount="from-first-open"`, and the picker then knows nothing of
+what that control holds until the first opening: its trigger cannot draw it, and
+nothing reading the picker sees it. A picker told a value, a `type="confirm"`
+and a `mode="callout"` build on the first open already.
+
+### Composing a value, or doing work
+
+A picker mirrors **one** control in its popup — the first one that is not a
+button, a link or a control that answers for itself (`standalone`). That mirror
+is what makes `<Picker><List selectable/></Picker>` work with nothing wired: the
+picker's value IS the list's, both ways, and the picker's `action` runs on it
+when the popup closes.
+
+That is the shape for a popup that **composes a value**. A popup that **does
+work** — creates a profile, uploads a file — is the other shape, the one above:
+the work is written where the press is, its callback already has everything
+around it, and the picker needs no `action` at all. Nothing travels back,
+because nothing left.
+
+**Do not mix the two.** A `<Form>` at the root of a picker's popup IS the
+mirrored control, so its value is the picker's value: handing the picker
+something else (a created profile, say) pushes it back down into the form's
+named fields and comes back as the form's aggregate. When the popup does work,
+let the work keep its result.
 
 ### The trigger wears the wait
 
-The picker's `action` runs on the trigger, not in the popup: it is dispatched
-on the close that keeps, and the popup goes while it runs. So what is still on
+The picker's `action` runs on the trigger, not in the popup: it is dispatched on
+the close that keeps, and the popup goes while it runs. So what is still on
 screen answers for the write — `aria-busy` and the loading outline on the
-trigger while the request is out, the error callout on it if the server
-refuses, and the value rolled back to the last accepted one — on by default
-for a picker, and what one wants: nobody is left mid-edit behind a closed
-popup, and the card goes on saying what the server knows. A
-card that IS the trigger (`variant="bare"`, the card as `ui`) therefore waits
-as a card and is refused as a card, wherever in the tree the sheet was written.
+trigger while the request is out, the error callout on it if the server refuses,
+and the value rolled back to the last accepted one (`resetOnError`, on by
+default for a picker). Nobody is left mid-edit behind a closed popup, and the
+card goes on saying what the server knows. A card that IS the trigger
+(`variant="bare"`, the card as `ui`) therefore waits as a card and is refused as
+a card, wherever in the tree the sheet was written.
 
 ```jsx
 <Picker
@@ -435,50 +359,40 @@ as a card and is refused as a card, wherever in the tree the sheet was written.
 </Picker>
 ```
 
-The card shows the answer the moment the sheet leaves when its `ui` is drawn
-from what the picker holds rather than from what the caller knows — the same
-state navi's own default `ui` reads, rolled back by `resetOnError` (and
-`resetOnAbort`), so nothing
-about the pending value is the caller's to keep or to put back. Two ways to
-read it: `ui={MatchCard}` hands the component `value`, `loading` and
-`interactive` as props; `ui={<MatchCard match={match} />}` keeps the caller's
-own props and reads the same three with `usePickerState()` inside. The
-`loading` is the wait: navi's loading outline is a two-pixel run around the
-box, which a card-sized trigger moves clear of its frame with
-`loadingOutlineInset`, or draws its own waiting state for, with
-`loadingOutline="custom"` so the two do not add up.
+The card shows the answer the moment the sheet leaves when its `ui` reads what
+the picker holds — `ui={MatchCard}` is handed `value`, `loading` and
+`interactive`; `<MatchCard match={match} />` reads the same three with
+`usePickerState()` inside (see
+[control_value.md](./control_value.md#drawing-what-a-control-holds)). Drawn from
+the caller's own state instead, as
+[a settings sheet](./control_object.md#a-settings-sheet) is, the trigger keeps
+showing the saved answer until that state moves: which to draw from is whether
+the trigger should show the pending answer or the saved one. `loading` is the
+wait: a card-sized trigger moves navi's loading outline clear of its frame with
+`loadingOutlineInset`, or draws the wait itself with `loadingOutline="custom"`.
 
 What the picker measures as "changed since open" is what its mirrored group
-holds. A piece of the answer living outside the controls — a seating
-rearranged by drag, kept in component state — has to be held by a control in
-the group too (a named control bound to that state), or a close over it reads
-as nothing changed and nothing runs.
+holds. A piece of the answer living outside the controls — a seating rearranged
+by drag, kept in component state — has to be held by a control in the group too
+(a named control bound to that state), or a close over it reads as nothing
+changed and nothing runs.
 
-Two props finish the construct. `openOn="longpress"` (or
-`["longpress", "contextmenu"]`) makes the hold what opens it, so a tap on the
-card stays a tap — what a card in a list needs: the drawing gets its pointer
-back, a link in it navigates, a button in it presses, a picker in it opens on
-its own click, with nothing to declare. Two pickers on one card is the score
-sheet inside the edit card (`12_picker_card_demo.html`): the inner one names
-the card as its `anchor` so it lifts the whole card, and says `standalone` so
-its value stays its own. One card, one wait: each picker wears the other's
-run through `loading` (from its `onActionStart`/`onActionEnd`), so while
-either write is out the hold and the click are both refused, with the busy
-reason where the finger is — the click only once the score picker says
-`openWhileReadOnly={false}`: a busy picker otherwise still opens, to be read,
-and a sheet of fields to fill in is not that. One wait, one outline as well:
-the inner picker says `loadingOutline="custom"`, and the card's is drawn by
-the picker whose box the card is. A hold declared inside the card answers before the
-card's own: the nearer hold takes the press. `animation="lifting"` with
-`dialogSizeFromAnchor` (as wide as the card, floor and ceiling),
-`popupBackgroundColor="transparent"` and `popupBoxShadow="none"` lifts the
-card out of its place and puts it back (`data-lift` on the card inside the
-sheet) — what to respect for that movement to be right and quick is
-`popup_lift.md`. `12_picker_card_demo.html` shows all of it, against a
-backend that answers when told to.
+`openOn="longpress"` (or `["longpress", "contextmenu"]`) makes the hold what
+opens it, so a tap on the card stays a tap: a link in it navigates, a button in
+it presses, a picker in it opens on its own click. A hold declared inside the
+card answers before the card's own. Two pickers on one card is the score sheet
+inside the edit card (`12_picker_card_demo.html`): the inner one names the card
+as its `anchor` so it lifts the whole card, and says `standalone` so its value
+stays its own. One card, one wait: each picker wears the other's run through
+`loading` (from its `onActionStart`/`onActionEnd`), so while either write is out
+the hold and the click are both refused where the finger is — the click only
+once the score picker says `openWhileReadOnly={false}`, since a busy picker
+otherwise still opens, to be read. One outline too: the inner picker says
+`loadingOutline="custom"`. Lifting the card out of its place and back is
+[popup_lift.md](./popup_lift.md).
 
-A gesture inside the sheet that is not a field — cancel the game, delete it —
-is still an answer the sheet gives. A named button says which:
+A gesture inside the sheet that is not a field — cancel the game, delete it — is
+still an answer the sheet gives. A named button says which:
 
 ```jsx
 <Button name="op" value="cancel" command="--navi-send">
@@ -486,18 +400,17 @@ is still an answer the sheet gives. A named button says which:
 </Button>
 ```
 
-Its name and value travel with the fields (the group takes the sender's
-value, see `wantRequesterButtonState`), the sheet leaves on the send, and the
-picker's `action` receives `{ …fields, op: "cancel" }` — so this write is
-worn by the trigger exactly like the others, callout included, and a drawing
-reading `usePickerState()` can already show the "cancelled" stamp while the
-request is out. No button inside the popup needs an action of its own: a run
-started in there would belong to a control the close takes away.
+Its name and value travel with the fields, the sheet leaves on the send, and the
+picker's `action` receives `{ …fields, op: "cancel" }` — worn by the trigger
+like the other writes, callout included, and a drawing reading
+`usePickerState()` can show the "cancelled" stamp while the request is out. No
+button inside the popup needs an action of its own: a run started in there would
+belong to a control the close takes away.
 
 This is not `optimistic`. `optimistic` on a control is "draw no wait at all";
-here the wait is drawn, on the trigger, and the popup was never what held it.
-An optimistic picker is for a write not worth showing — the card then reads
-the store and says nothing until the answer lands.
+here the wait is drawn, on the trigger, and the popup was never what held it. An
+optimistic picker is for a write not worth showing — the card then reads the
+store and says nothing until the answer lands.
 
 The same shape with nothing to write is a **door**: a drawing that grows to be
 looked at — a weather scene, a plan — and comes back. `picksNothing`, no
@@ -519,73 +432,23 @@ looked at — a weather scene, a plan — and comes back. `picksNothing`, no
 ```
 
 A `Button` opening a `Dialog` with an `anchor` does the same and is not wrong;
-what the picker removes is the id plumbing (the trigger is the anchor, the
-popup is its own), and what it keeps is the day the drawing becomes editable —
-it is already the thing that wears the wait. The button + shared dialog stays
-the answer for [the two cases where a popup must be
-shared](#when-a-shared-popup-is-still-the-right-answer).
-
-### A trigger that is only an icon
-
-`variant="icon"` draws no value, and therefore no slot beside one either: the
-whole trigger is its `ui`.
-
-```jsx
-<Picker variant="icon" ui={<DisketteSvg />} />
-```
-
-Left out, that `ui` is the icon the slot would have shown — the chevron, or the
-one the picker's type carries (a pencil for `type="text"`, a calendar for
-`type="date"`), so `<Picker type="date" variant="icon" />` is a calendar and
-nothing else. `rightSlotIcon`/`rightSlot` belong to the shapes that DO draw a
-value and want something beside it; under `variant="icon"` the first is only the
-default for `ui`, and the second has nowhere to go — the clear cross included.
+what the picker removes is the id plumbing (the trigger is the anchor, the popup
+is its own), and what it keeps is the day the drawing becomes editable — it is
+already the thing that wears the wait. The button + shared dialog stays the
+answer for
+[the cases where a popup must be shared](#when-a-shared-popup-is-still-the-right-answer).
 
 ### A trigger that draws nothing, pressed from elsewhere
 
-Some things cannot be a picker's façade. An object placed on a map — absolutely
-positioned, dragged by its own `move`, drawn by pieces that sit outside its own
-box — owns its press: catching it under an invisible field is exactly what must
-not happen. The press stays the object's, and it opens the picker itself:
-
-```jsx
-<Box
-  id={court.id}
-  interactions={{
-    move: (event) => placeCourt(court, event.detail),
-    click: (event) =>
-      triggerNaviCommand(pickerRef.current, "--navi-open", event, {
-        anchor: event.currentTarget,
-        value: court.settings,
-      }),
-  }}
-/>
-
-// out of the map's flow: what draws nothing still takes a box (below)
-<div style={{ position: "relative" }}>
-  <Picker
-    ref={pickerRef}
-    variant="headless"
-    value={court.settings}
-    uiAction={(settings) => showCourt(court, settings)}
-    action={(settings) => saveCourt(court, settings)}
-  >
-    <CourtSettings />
-  </Picker>
-</div>
-```
-
-Everything a picker promises still holds — the value at open, "changed since
-open", the revert on Escape, the action on a close that keeps — and the popup
-lands on the object because the open named it (see [the
-anchor](#the-anchor)).
-
-One thing to know about `variant="headless"`: it is not the `ui`'s box but its
-parent's. It stretches to the nearest positioned element around it, so that a
-picker put INSIDE what opens it — a button, a row — hangs its popup off that
-whole element. A picker opened from something it does not sit in must therefore
-be given an element of its own to stretch into; dropped straight into the map
-frame it would cover it, and every press on the empty plan would open it.
+Some things cannot be a picker's façade: an object placed on a map, dragged by
+its own `move`, owns its press. It opens the picker itself, from its `click`
+(`triggerNaviCommand(pickerRef.current, "--navi-open", event, { anchor, value })`),
+and everything a picker promises still holds. The picker is
+`variant="headless"`, which is not the `ui`'s box but its parent's: it stretches
+to the nearest positioned element around it. Opened from something it does not
+sit in, it must be given an element of its own to stretch into — dropped
+straight into the map frame it would cover it, and every press on the empty plan
+would open it.
 
 ### When a shared popup is still the right answer
 
@@ -603,31 +466,22 @@ Three cases, and only three:
 
 None of them is "one popup per row of a list", which is what a picker is for.
 
-Do not mix the two. A `<Form>` at the root of a picker's popup IS the mirrored
-control, so its value is the picker's value: handing the picker something else
-(a created profile, say) pushes it back down into the form's named fields and
-comes back as the form's aggregate. When the popup does work, let the work keep
-its result.
-
 ## Reacting to open and close
 
-`onOpen` is called on every open, before the popup builds anything (see
-[above](#opening-it-on-something)); `onClose` is called on every real close, and
-carries `detail.isCancel` when the close meant "revert".
+`onOpen` is called on every open — before anything is built on a
+`Dialog`/`Popover` ([above](#onopen-runs-before-the-popup-has-built-anything)),
+once the popup is built and shown on a `Picker`. `onClose` is called on every
+real close, and carries `detail.isCancel` when the close meant "revert".
 
-```jsx
-<Dialog onOpen={(e) => {}} onClose={(e) => {}}>
-```
-
-Neither can veto: `onClose` is the close happening, not a request to close.
-Refusing a close is `onRequestClose`, which belongs to whoever owns an
-`openController` (see `open_controller.js`) — an uncontrolled popup already
-refuses the one close that matters, the one over a control mid-action.
+Neither can veto: `onClose` is the close happening, not a request to close. The
+refusals are navi's own: a popup refuses to close over a control mid-action, and
+a `Picker` over a value that does not validate.
 
 ### Closing when a button also runs an action
 
 A button that carries both runs them in that order: the action first, the
-command once it succeeded.
+command once it succeeded (the rule is
+[actions.md](./actions.md#a-press-that-opens-something-and-waits-for-the-answer)'s).
 
 ```jsx
 // Stays open while save() runs, closes when it resolves, stays open if it
@@ -637,55 +491,45 @@ command once it succeeded.
 </Button>
 ```
 
-The command is what the press means AFTER the work, so it waits for the work:
-closing first would take the form off the screen over a request that can still
-fail, and the error callout it raises would land on a button nobody can see any
-more. An action that ends in an error or an abort — a `confirm` answered "no" is
-an abort — leaves the popup where it is. Same rule a form already follows for
-what comes after its send (`data-after-send`, see `resolveAfterSend` in
-commands.js).
-
-The action is free to replace that button while it runs — and it usually does:
-what came back is put in the store, the tree re-renders, and the branch the
-button stood in goes with it. The popup closes all the same. What the command
-aims at is read at the press, while the button is still in the document (see
-`resolveNaviCommand` in commands.js); only the running of it waits. The popup
-pressed in is the popup that closes, even when the press is what emptied it.
+Closing first would take the form off the screen over a request that can still
+fail, and the error callout would land on a button nobody can see. An error or an
+abort — a `confirm` answered "no" is an abort — leaves the popup where it is. The
+action is free to replace that button while it runs (what came back is put in
+the store, and the branch the button stood in re-renders away): what the command
+aims at is read at the press, so the popup pressed in is the popup that closes,
+even when the press is what emptied it.
 
 The wait is why closing **from inside** the action still does not close: while
 the action runs, the button that started it is busy, and a busy control is
-exactly what a popup refuses to close over (see the top of this page). The
-refusal is not silent — the busy control raises a callout saying so — but the
-popup stays open, and the first Escape afterwards dismisses that callout rather
-than the popup, which reads as a popup that no longer closes at all. Nothing has
-to be hand-written to work around it: `command` next to `action` is that
-workaround, done at the one moment where the action has settled and the button
-is no longer busy.
+exactly what a popup refuses to close over (see
+[the top of this page](#the-popup-owns-its-open-state)). The refusal is not
+silent — the busy control raises a callout saying so — but the popup stays open,
+and the first Escape afterwards dismisses that callout rather than the popup,
+which reads as a popup that no longer closes at all. `command` next to `action`
+is the workaround, run at the one moment the action has settled.
 
-When what opened the popup is still on screen and should answer for the write
-— its wait, its refusal — the popup was a picker's all along: see [the trigger
-wears the wait](#the-trigger-wears-the-wait). What follows is for the other
-case, a popup nobody stands in for. To close on the press — the answer taken as
-soon as it is given, the save running on its own behind a closed popup — say so
-on the control:
+When what opened the popup is still on screen and should answer for the write —
+its wait, its refusal — the popup was a picker's all along: see
+[the trigger wears the wait](#the-trigger-wears-the-wait). For a popup nobody
+stands in for, closing on the press — the answer taken as soon as it is given,
+the save running on its own behind a closed popup — is said on the control:
 
 ```jsx
 <Form command="--navi-close" action={saveScore} optimistic resetOnError>
 ```
 
-`optimistic` is the control taking its action as done on its own word, and
-what it holds goes with it: the popup closes at once, the slide moves on, and
-the run continues detached — still watched, still able to fail. Know what it
-costs: **a save that fails does so behind a closed popup**. `resetOnError` puts
-the control back, and the error callout, with no sheet left to point at, is
-drawn on what surrounds the closed popup — the card it opened from, typically,
-which keeps the refusal next to what it is about. What the page shows meanwhile — a card reading
-the store — is the app's to draw and to take back. For a write not worth being
-waited for; never for one whose refusal changes what the person does next.
+`optimistic` is the control taking its action as done on its own word: the popup
+closes at once, the slide moves on, and the run continues detached — still
+watched, still able to fail. Know what it costs: **a save that fails does so
+behind a closed popup**. `resetOnError` puts the control back, and the error
+callout, with no sheet left to point at, is drawn on what surrounds the closed
+popup — the card it opened from, typically. What the page shows meanwhile is the
+app's to draw and to take back. For a write not worth being waited for; never
+for one whose refusal changes what the person does next.
 
-Nobody wanting to close, but everybody wanting to be ABLE to, is a different
-need and has its own answer: `actionStandalone` (see the top of this page) frees
-the popup without closing it, and the error callout stays where the press was.
+Nobody wanting to close, but everybody wanting to be ABLE to, is
+`actionStandalone` ([above](#the-popup-owns-its-open-state)): it frees the popup
+without closing it, and the error callout stays where the press was.
 
 ## Escape cancels, the other gestures keep
 
@@ -710,12 +554,13 @@ something else.
 Cancelling is not itself an undo: it marks the close, and whoever holds a value
 decides what to do with the mark.
 
-- `Dialog` and `Popover` hold nothing, so they undo nothing. The close event
-  carries `detail.isCancel` and `onClose` receives it — reverting is then the
-  caller's own business.
+- `Dialog` and `Popover` hold nothing, so they undo nothing: `onClose` receives
+  `detail.isCancel`, and reverting is the caller's own business.
 - `Picker` holds a value, so it puts back **the value it held when it opened**.
   That is what makes a picker a picker: opening one is trying something on, and
-  Escape is putting it back.
+  Escape is putting it back. What the outside moved while it was open stays
+  moved (see
+  [control_value.md](./control_value.md#a-defaultvalue-follows-what-it-was-read-from)).
 
 ```jsx
 // Escape here puts back the level the picker held at open, and the list's
@@ -725,22 +570,14 @@ decides what to do with the mark.
 </Picker>
 ```
 
-The trap is the FIRST open. A picker holds what its popup told it, and before
-the popup has ever been open it has been told nothing — so "the value at open"
-is nothing, even when the control inside starts on a `defaultValue` or on a
-value the app passes it. Escape on that first pass goes back to empty, not to
-what was on screen when the popup opened. From the second open onwards it puts
-back what was really there.
-
 ### A picker that holds nothing and shows nothing
 
 The gestures that KEEP (a click outside, a close cross) let a picker send what
 it is showing: a picker sitting on a `defaultValue` holds nothing, so closing on
-it untouched IS the answer ("yes, 1h30"), and the action runs.
-
-A picker used as a **menu of gestures** — no `value`, no `defaultValue`, no
-signal, each row a command — shows nothing, so there is nothing to confirm.
-Closing it without choosing runs no action; only an explicit choice sends.
+it untouched IS the answer ("yes, 1h30"), and the action runs. A picker used as
+a **menu of gestures** — no `value`, no `defaultValue`, no signal, each row a
+command — shows nothing, so there is nothing to confirm: closing it without
+choosing runs no action, and only an explicit choice sends.
 
 ```jsx
 // Clicking outside closes this and sends nothing.
@@ -753,22 +590,22 @@ Closing it without choosing runs no action; only an explicit choice sends.
 </Picker>
 ```
 
-Note this is about a picker holding NOTHING. Passing `value={undefined}` is not
-that: a `value` prop is held whatever is in it, and navi puts it back after each
-click — the rows then appear to do nothing. Drop the prop instead of passing it
-empty.
+Passing `value={undefined}` is not holding nothing: a `value` prop is held
+whatever is in it, and navi puts it back after each click — the rows then appear
+to do nothing. Drop the prop instead of passing it empty.
 
 ### `escapeEffect="close"`, and why it is a last resort
 
 `escapeEffect="close"` — a `Picker` prop; a `Dialog`/`Popover` has no such
-switch — makes Escape say what a click outside says. It exists,
-and it is almost never what you want: it takes away the only key that undoes,
-and a popup with no way back is one people stop opening. Reach for a close
-cross first.
+switch — makes Escape say what a click outside says. It is almost never what you
+want: it takes away the only key that undoes, and a popup with no way back is one
+people stop opening. Reach for a close cross first.
 
-A dialog picker's cancel also goes back in history, so anything written to the
-url while it was open (a route `stateSignal`, a search param) goes back with it
-— one more reason Escape and the click outside are not interchangeable.
+A cancel can undo the address too: under a pushed history entry — a dialog
+picker with an `id`, a `navState={{ type: "push" }}` — it goes back in history,
+taking with it anything written to the url while the popup was open (a route
+`stateSignal`, a search param). One more reason Escape and the click outside are
+not interchangeable.
 
 ## The close cross
 
@@ -786,8 +623,8 @@ popup is being written. The caller places it, and nothing else:
 </Dialog>
 ```
 
-It comes with the things a hand-written cross has to remember: the `aria-label`
-in the active language (`label` overrides it), and the padding that turns a
+It comes with what a hand-written cross has to remember: the `aria-label` in the
+active language (`label` overrides it), and the padding that turns a
 three-millimetre glyph into a target a thumb can hit.
 
 ### It is the way out, so the state around it does not reach it
@@ -795,18 +632,18 @@ three-millimetre glyph into a target a thumb can hit.
 **A close button written by hand refuses the press inside a read-only control.**
 A read-only `Picker` still opens — what it holds is often a shape only its popup
 draws, and reading it changes nothing — and it hands its popup that same
-read-only so every control in there refuses on its own terms. The cross is not
+read-only, so every control in there refuses on its own terms. The cross is not
 one of those controls: closing writes nothing to the picker. `<Dialog.Close />`
 says so (`whenSelfInteractionsBlocked="ignore"`, see
-[interactions.md](./interactions.md)); a `<Button command="--navi-close" />`
-does not, wears the read-only it was handed, and answers a press aimed at the
-way out with "this action is not available right now".
+[interactions.md](./interactions.md#where-the-zone-blocks-does-it-write-to-the-control-it-sits-in));
+a `<Button command="--navi-close" />` does not, wears the read-only it was
+handed, and answers a press aimed at the way out with "this action is not
+available right now". The same holds for a disabled zone, and for a form busy
+sending: the way out of a popup is never held by the state of what the popup
+belongs to.
 
-The same holds for a disabled zone, and for a form busy sending: the way out of
-a popup is never held by the state of what the popup belongs to.
-
-If a cross really has to be hand-written — it is drawn into a bigger affordance
-of the app's own, say — it carries the claim itself:
+If a cross really has to be hand-written — drawn into a bigger affordance of the
+app's own, say — it carries the claim itself:
 
 ```jsx
 <Button command="--navi-close" icon whenSelfInteractionsBlocked="ignore">
@@ -819,28 +656,21 @@ of the app's own, say — it carries the claim itself:
 Being exempt from the state around it is not being exempt from the popup's
 answer. The cross sends `--navi-close`, which reaches the popup as a close
 REQUEST — the same one Escape and the click outside make — and the popup
-decides:
-
-- a control inside it is mid-action → the close is refused, and that control
-  says why ([above](#the-popup-owns-its-open-state));
-- `onRequestClose` calls `preventDefault()` → the popup stays open;
-- a `Picker` takes the close as an answer, so it validates what its popup holds
-  and runs its action on the way out — and an invalid value keeps it open.
-
-The cross therefore lands exactly where a click outside lands: same request,
-same refusals, same "close, keep". A popup that must not be dismissed at a given
-moment says so in its own `onRequestClose`, where Escape and the backdrop are
-refused too — not by hiding or disabling the cross, which only removes the one
-way out that is visible.
+decides: a control inside it mid-action refuses the close and says why
+([above](#the-popup-owns-its-open-state)); a `Picker` takes the close as an
+answer, validates what its popup holds and runs its action on the way out, and
+an invalid value keeps it open. The cross lands exactly where a click outside
+lands: same request, same refusals, same "close, keep". Hiding or disabling it
+to hold a popup open only removes the one way out that is visible.
 
 ## When the app holds the open state
 
 A popup whose being-open is a fact about the application rather than about the
 user's last gesture — a sheet an address can be reloaded into, an error the app
 decides to show — needs somewhere to keep that fact. Three props say it, and
-what separates them is where the state lives, not how hard the popup is driven:
-all three go through the same `requestClose`, so a busy control inside still
-refuses to be left mid-action. What changes is whether anyone hears the refusal.
+what separates them is where the state lives: all three go through the same
+close request, so a busy control inside still refuses to be left mid-action.
+What changes is whether anyone hears the refusal.
 
 ### `signal` — the app holds it, both ways
 
@@ -857,19 +687,17 @@ which is what every navi control does with its value (see
 on them (`SidePanel`) all take it. A signal already `true` at mount means the
 popup was already open when the page appeared: no entrance plays.
 
-`value` makes the signal say WHICH popup is open, for several sharing it —
-one sheet per card in a feed, with a single `?seat=<gameId>` for all of them:
+`value` makes the signal say WHICH popup is open, for several sharing it — one
+sheet per card in a feed, with a single `?seat=<gameId>` for all of them:
 
 ```jsx
 <Dialog signal={seatSheetSignal} value={game.id} />
 ```
 
-The popup is open while the signal holds its value and closed otherwise;
-opening writes the value, closing writes `undefined`, which a state signal reads
-as its default and takes out of the url. Everything above still holds — the
-same writes, the same history rules — only what "open" is worth in the signal
-changes. A popup is open on exactly one value: what varies while it is open (a
-tab inside it) is a param of its own, see
+The popup is open while the signal holds its value and closed otherwise; opening
+writes the value, closing writes `undefined`, which a state signal reads as its
+default and takes out of the url. A popup is open on exactly one value: what
+varies while it is open (a tab inside it) is a param of its own, see
 [navigation.md](./navigation.md#places-inside-the-layer).
 
 The other way round — ONE sheet showing whichever card the address names — is
@@ -877,21 +705,13 @@ the same signal with no `value`: a popup without one reads anything the signal
 holds as open, except `false`, `null` and `undefined`. The panel's content reads
 the id from the signal, a card's press writes it, and the popup never writes
 over it: opening writes `true` only into a signal that reads closed, closing
-writes `undefined` (or `false`, where the signal held `true`).
-
-When the popup is opened ON a card (`<Button command="--navi-open" value={id}>`),
-`onOpen` is where the id is written: it runs before the popup writes its own
-open, and a signal that already reads open is left as it is — the address holds
-the card, never `true`. With the route's search-param `stateSignal` as the walk
-signal, that is how [a row of
-cards](./popup_lift.md#a-row-of-cards-one-popup-that-walks) survives leaving
-the page: the address names the card, and the sheet reopens on it.
-
-```jsx
-<SidePanel signal={errorOpenSignal} side="right">
-  <ErrorPanel /> {/* reads errorOpenSignal.value to know which card */}
-</SidePanel>
-```
+writes `undefined` (or `false`, where the signal held `true`). When the popup is
+opened ON a card (`<Button command="--navi-open" value={id}>`), `onOpen` is
+where the id is written: it runs before the popup writes its own open, and a
+signal that already reads open is left as it is. With the route's search-param
+`stateSignal` as the walk signal, that is how
+[a row of cards](./popup_lift.md#a-row-of-cards-one-popup-that-walks) survives
+leaving the page: the address names the card, and the sheet reopens on it.
 
 ### `navState` — the history entry holds it
 
@@ -900,17 +720,16 @@ the page: the address names the card, and the sheet reopens on it.
 ```
 
 The open state goes into the history entry, so a screen left and come back to
-finds the popup as it was, and so does a reload. `true` stores it under the
-popup's own `id`; a string names the key instead. `{ type: "push" }` makes the
-opening an entry of its own — the back button then closes the popup rather than
-leaving the screen, and the cancel takes back with it whatever was written to
-the url while it was open. A `Picker` given an `id` needs none of this: its
-popup's open state is nav state by construction, under that id, and in dialog
-mode the opening is an entry of its own. Without an `id` the key is a generated
-one, which names one mount: the page left with the picker open and come back to
-is a new mount with a new id, and the state stays in the entry with nothing to
-read it — navi warns when a mount finds such a key. A picker whose popup leads
-somewhere, a link inside it, has an `id`.
+finds the popup as it was, and so does a reload. `{ type: "push" }` makes the
+opening an entry of its own: the back button then closes the popup rather than
+leaving the screen, and a cancel goes back with that entry (see
+[`escapeEffect`](#escapeeffectclose-and-why-it-is-a-last-resort)). A `Picker`
+given an `id` needs none of this: its popup's open state is nav state by
+construction, under that id, and in dialog mode the opening is an entry of its
+own. Without an `id` the key is a generated one, which names one mount: the page
+left with the picker open and come back to is a new mount, and the state stays
+in the entry with nothing to read it — navi warns when a mount finds such a key.
+A picker whose popup leads somewhere, a link inside it, has an `id`.
 
 The two meet when the signal IS a route's: a search-param `stateSignal` given to
 `signal` puts the open state in the address itself, where a link can point at
@@ -922,13 +741,13 @@ settings opened from every screen and closed back onto the one the reader was on
 ### `open`, and what it costs
 
 `open` is the one-way half of `signal` — the parent re-renders with a boolean
-and the popup follows — and the refusal is what it costs. `open={false}` goes
-through the same `requestClose`, and when a busy control denies it, the parent's
-state says closed while the popup stayed open. The two disagree from then on:
-the effect only reacts to `open` _changing_, so setting it back to `true`
-matches the popup's real state and does nothing, and the popup can no longer be
-closed by the prop at all until it closes on its own. A `signal` has no such
-gap, since the popup writes back what really happened.
+and the popup follows — and the refusal is what it costs. `open={false}` asks
+for the close as a cancel, and when a busy control denies it, the parent's state
+says closed while the popup stayed open. The two disagree from then on: the
+effect only reacts to `open` _changing_, so setting it back to `true` matches
+the popup's real state and does nothing, and only a new change to `false` asks
+again — or the popup closes on its own. A `signal` has no such gap, since the
+popup writes back what really happened.
 
 `defaultOpen` is the middle ground: mount-only, and the popup owns everything
 afterwards. `defaultOpen="interaction"` means the mount _is_ the opening (the
@@ -941,7 +760,8 @@ A board with a detail pane wants one panel that stays open as long as something
 asks to be shown in it, and whose content changes from one card to the next
 without the panel closing and reopening. That is a slot: `createSlot(Renderer)`
 keeps the renderer mounted whether or not anything fills it, and the panel is
-the renderer.
+the renderer. `<PanelSlot />` sits once at the board level, and so does the one
+`<PanelSlotFill>`, rendered by the board with the named card's content:
 
 ```jsx
 const Panel = ({ children }) => (
@@ -950,13 +770,7 @@ const Panel = ({ children }) => (
   </SidePanel>
 );
 const [PanelSlot, PanelSlotFill] = createSlot(Panel);
-```
 
-`<PanelSlot />` sits once at the board level, and so does the one
-`<PanelSlotFill>`, rendered by the board with the named card's content as its
-children:
-
-```jsx
 const openCardId = openCardIdSignal.value;
 return (
   <Box>
@@ -973,35 +787,26 @@ return (
 );
 ```
 
-Two rules hold this shape together, and each guards against a trap the other
-shape falls into.
+Two rules hold this shape together:
 
-**One `SlotFill`, rendered where the choice is made.** The tempting shape is a
-`SlotFill` inside each card, rendered by the card that is open. It works until
-two cards cross: each card reads the signal on its own, so switching from A to
-B is two separate renders, A's fill unmounting in one and B's mounting in the
-other. Between the two the slot is empty, and its renderer is rendered on that
-empty frame — whichever of A or B the tree walks first, the gap exists in one
-of the two directions. The slot cannot tell that gap from a real emptying, and
-does not try to: a fix there would have to guess the scheduler. Rendered once,
-by the component that holds the choice, the fill never leaves; only its
-children change, and there is no gap to fall into.
+**One `SlotFill`, rendered where the choice is made** — not one inside each
+card, rendered by the card that is open: two cards crossing are two separate
+renders, the slot is empty between them, and it cannot tell that gap from a real
+emptying. Rendered once, by the component that holds the choice, the fill never
+leaves; only its children change.
 
-**The panel is bound to the screen's state, not to `isFilled`.** `isFilled` is
-a fact about the render — whether a fill is mounted right now — and the signal
-is a fact about the screen — which card the address names. `open={isFilled}`
-turns any empty frame into a close, and its `onClose` then clears the very
-state the next fill was waiting for. Bound to the signal, the panel is open
-exactly while a card is named, its own ways out (the close cross, Escape, an
-outside press) clear the signal themselves, and the fill only has to say what
-the panel shows. `isFilled` stays the right `open` for a renderer that has no
-such state — a toolbar or a status shown while anything fills it — fed by the
-one fill above.
+**The panel is bound to the screen's state, not to `isFilled`.** `isFilled` is a
+fact about the render, the signal a fact about the screen. `open={isFilled}`
+turns any empty frame into a close, and its `onClose` then clears the very state
+the next fill was waiting for. Bound to the signal, the panel is open exactly
+while a card is named, its own ways out clear the signal themselves, and the fill
+only says what the panel shows. `isFilled` stays the right `open` for a renderer
+with no such state — a toolbar shown while anything fills it.
 
 A press on another card is not an outside press once the card names the panel
-with `data-navi-popup-inside` (see [popup_backdrop.md](./popup_backdrop.md)).
-The full example is `src/layout/demos/7_slot_demo.html`, "Two side-panel
-slots".
+with `data-navi-popup-inside` (see
+[popup_backdrop.md](./popup_backdrop.md#a-box-of-the-page-that-is-not-outside)).
+The full example is `src/layout/demos/7_slot_demo.html`, "Two side-panel slots".
 
 ## A popup that loads data
 
@@ -1015,6 +820,9 @@ without the part that says whether it is open:
 const groupSheetOpenSignal = stateSignal(false, {
   id: "group_sheet",
   type: "boolean",
+});
+export const GAME_ROUTE = route("/games/:gameId", {
+  searchParams: { group_sheet: groupSheetOpenSignal },
 });
 
 // asked while the sheet is open
@@ -1042,10 +850,9 @@ const GroupMembers = () => {
 ```
 
 The same shape when the popup is one of many — a sheet on every card, opened
-from wherever the card is read. Its open state then says which one, and the
-route action reads the id straight from it, while each card's content reads the
-question of its own card. Declared on the root route, since a card is not a
-page:
+from wherever the card is read. Its open state then says which one, the route
+action reads the id straight from it, and each card's content reads the question
+of its own card. Declared on the root route, since a card is not a page:
 
 ```js
 const seatSheetSignal = stateSignal(undefined, {
@@ -1076,17 +883,15 @@ const SeatableUsers = ({ gameId }) => {
 ```
 
 **The content reads its question, never the route action.** The route action's
-params are `false` while the popup is closed, and for the route action that is
-right: it says _when_ to ask. Read by the content, the same `false` says there
-is nothing to show — `useAsyncData` hands back `undefined` the moment the popup
-closes, the list empties while hidden, and the next opening builds it again from
-the top: the scroll position is lost, and every row is rendered once more for an
-answer that never left the store. When the popup is one of many, it is worse: the
-route action follows whichever popup is open, so a card's sheet kept mounted
-since an earlier opening redraws with another card's rows each time that one
-opens. Closing a popup does not change what it is about, so what it reads leaves
-the open state out. Equal params share one instance — the content reads the very
-one the route action runs, so nothing is asked twice and nothing is copied.
+`false` says _when_ to ask. Read by the content, the same `false` says there is
+nothing to show: the list empties the moment the popup closes, and the next
+opening builds it again from the top — the scroll position lost, every row
+rendered once more for an answer that never left the store. When the popup is
+one of many it is worse: the route action follows whichever popup is open, so a
+card's sheet kept mounted since an earlier opening redraws with another card's
+rows each time that one opens. Closing a popup does not change what it is about.
+Equal params share one instance, so the content reads the very one the route
+action runs: nothing is asked twice.
 
 **A popup that waits holds its own `<Loading>`**, like every other part of a
 screen that can wait — it is not built into `Dialog`/`Popover`, because only the
@@ -1100,19 +905,11 @@ code inside knows whether anything in there loads at all:
 </Dialog>
 ```
 
-Without it the nearest boundary is one that holds the popup itself, and what
-happens then is worth knowing because nothing says it: the request goes out and
-**the popup does not open at all** — no fallback drawn, no error raised. A
-boundary waiting on an update keeps the page as it was, as a copy; the popup
-being opened is part of that copy, so `showModal()` reaches a node the app no
-longer owns, and once the data is there the subtree is rebuilt from scratch —
-closed, and empty. The press is simply lost, and the next one works. In dev the popup says so
-rather than leaving it to be guessed. The alternative is the component drawing its
-own wait (`useAsyncData(action, { loading: true })`), which needs no boundary of
-its own; what is not an option is neither of the two.
-
-Both, and what each one looks like, are on
-`src/layout/demos/13_popup_loading_demo.html`.
+Without it the nearest boundary is one that holds the popup itself, and the
+opening is lost: the popup does not open at all, and dev says why. The other
+option is the component drawing its own wait
+(`useAsyncData(action, { loading: true })`); what is not an option is neither.
+Both are on `src/layout/demos/13_popup_loading_demo.html`.
 
 What the popup gains is everything a page has:
 
@@ -1123,39 +920,35 @@ What the popup gains is everything a page has:
   [actions.md](./actions.md#reading-an-action));
 - the action layer's rerun rules, its dependencies
   ([resource.md](./resource.md#dependencies-rerun-after-another-resource-writes))
-  and the
-  aborted-not-reset treatment a route action gets when the screen is left
-  ([network_policy.md](./network_policy.md));
-- a reload keeps the open state, so it keeps the request too;
-- and the routes keep saying what an address needs, which is why they declare
-  it.
+  and the aborted-not-reset treatment a route action gets when the screen is
+  left ([network_policy.md](./network_policy.md));
+- a reload keeps the open state, so it keeps the request too.
 
-The fallback — the popup owning its request, `useAsyncData(action, { run: true })`
-— is for the parameter chosen inside the popup and dying with it: a filter the
-sheet itself holds and nothing else remembers. It cannot do better than the
-gesture that opened the popup, since it starts with the component that draws it;
-a route action left with the screen. Hand-written (`bindParams` in the component,
-`run()` from a `useEffect`, `data === undefined` as the loading flag) it looks
-harmless, and that is the problem: nothing at the call site says which of the two
-it is, so the day the parameter comes from the address, screen data has quietly
-become a popup's private request — asked for late, and asked for alone.
+The popup owning its request — `useAsyncData(action, { run: true })` — is the
+fallback, for a parameter chosen inside the popup and dying with it: a filter
+the sheet itself holds and nothing else remembers (see
+[actions.md](./actions.md#reading-an-action)). Hand-written, with `run()` from a
+`useEffect`, nothing at the call site says which of the two it is, and screen
+data quietly becomes a popup's private request — asked for late, and alone.
 
 ## What the popup holds while it is closed
 
-A closed popup builds nothing: `children` are mounted on the first open, and
-stay mounted afterwards — a reopened popup finds its scroll position and its
-half-typed form where it left them, as long as the data it draws does not leave
-with the close (see [A popup that loads data](#a-popup-that-loads-data)).
+A closed `Dialog`/`Popover` builds nothing: `children` are mounted on the first
+open, and stay mounted afterwards — a reopened popup finds its scroll position
+and its half-typed form where it left them, as long as the data it draws does
+not leave with the close (see [A popup that loads data](#a-popup-that-loads-data)).
+A `Picker` told no value is the exception: it builds its popup at render (see
+[a press that opens a popup and acts on it](#a-press-that-opens-a-popup-and-acts-on-it)).
 
 "Closed" is two states, not one — never opened yet, and closed again after an
 opening — so the `mount` prop answers both at once:
 
-| `mount`                       | before the first open       | after a close |
-| ----------------------------- | --------------------------- | ------------- |
-| `"always"`                    | mounted                     | mounted       |
-| `"idle"`                      | mounted once the page idles | mounted       |
-| `"from-first-open"` (default) | not mounted                 | mounted       |
-| `"while-opened"`              | not mounted                 | not mounted   |
+| `mount`                                  | before the first open       | after a close |
+| ---------------------------------------- | --------------------------- | ------------- |
+| `"always"` (a `Picker` told no value)    | mounted                     | mounted       |
+| `"idle"`                                 | mounted once the page idles | mounted       |
+| `"from-first-open"` (default)            | not mounted                 | mounted       |
+| `"while-opened"`                         | not mounted                 | not mounted   |
 
 `"always"` is for content something depends on before any opening: a value read
 off it, fields a surrounding form submits, a size measured from outside.
@@ -1163,23 +956,20 @@ off it, fields a surrounding form submits, a size measured from outside.
 
 Whatever the value but `"while-opened"`, intent on the anchor — a pointer
 entering it, focus landing in it — builds the content ahead of the click that
-will open it. A `"while-opened"` popup is warmed only by a press on what opens
-it — a `--navi-open` button, a picker's trigger when a press opens it, an
-expandable's UI part — and a press that ends without opening it (a scroll, a
-drag, a release elsewhere) throws the content away: there is still one content
-at a time. A popup with an `onOpen` is never warmed, so the content is always
-built after it (see
-[`onOpen` runs before the popup has built anything](#onopen-runs-before-the-popup-has-built-anything)).
+will open it, `onOpen` or not. A `"while-opened"` popup is warmed only by a
+press on what opens it — a `--navi-open` button, a picker's trigger when a press
+opens it, an expandable's UI part — and a press that ends without opening it (a
+scroll, a drag, a release elsewhere) throws the content away: there is still one
+content at a time. A `Dialog`/`Popover` with an `onOpen` is never warmed under
+`"while-opened"`, which makes it the one value where the content is always built
+after `onOpen`.
 
-`"while-opened"` is what an uncontrolled field seeded from a `defaultValue`
-needs: without it, a popup reopened after the underlying value changed still
-shows what it showed at closing time.
-
-```jsx
-<Dialog ref={dialogRef} mount="while-opened">
-  <Textarea defaultValue={note.text} />
-</Dialog>
-```
+`"while-opened"` is for content whose fresh state is its initial state. An
+untouched field does not need it to show a new `defaultValue`: it follows one
+while it holds no edit (see
+[control_value.md](./control_value.md#a-defaultvalue-follows-what-it-was-read-from)).
+What kept content carries into the next opening is an unsent edit, and
+`"while-opened"` is what throws that away.
 
 The content is dropped only once the exit transition is over, so the popup never
 plays it on a blank surface; a popup reopened while it was leaving keeps the

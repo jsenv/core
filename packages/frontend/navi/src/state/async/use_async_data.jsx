@@ -180,6 +180,19 @@ export const useAsyncData = (
 
 // ─── useAction ────────────────────────────────────────────────────────────────
 
+// subscribe() calls back at once with the value the signal holds; what these
+// subscriptions are for is what changes after.
+const subscribeToChanges = (signal, onChange) => {
+  let initial = true;
+  return signal.subscribe((value) => {
+    if (initial) {
+      initial = false;
+      return;
+    }
+    onChange(value);
+  });
+};
+
 const LoadingContext = createContext(null);
 const actionPendingPromiseWeakMap = new WeakMap();
 const dismissedActionWeakSet = new WeakSet();
@@ -227,6 +240,15 @@ const useActionAsyncData = (
   const runningState = action.runningStateSignal.peek();
   const [, setTick] = useState(0);
   const routePage = useContext(RoutePageContext);
+  // What this render read of the action, for the subscriptions below to tell
+  // a change that came between the render and them from none at all.
+  const readRef = useRef(null);
+  readRef.current = {
+    runningState,
+    data: action.dataSignal.peek(),
+    params: action.paramsSignal.peek(),
+    settling: action.paramsSettlingSignal.peek(),
+  };
   useEffect(() => {
     let stopOwingRender = null;
     const rerender = () => {
@@ -254,7 +276,13 @@ const useActionAsyncData = (
       }
       setTick((n) => n + 1);
     };
-    const unsubscribeFromRunningState = action.runningStateSignal.subscribe(
+    // A run under way is a new try: an error dismissed before it is not the
+    // one it may end on.
+    if (action.runningStateSignal.peek() === RUNNING) {
+      dismissedActionWeakSet.delete(action);
+    }
+    const unsubscribeFromRunningState = subscribeToChanges(
+      action.runningStateSignal,
       (state) => {
         if (state === RUNNING) {
           dismissedActionWeakSet.delete(action);
@@ -267,40 +295,35 @@ const useActionAsyncData = (
     // (a PUT upserting an item that a GET_MANY list already holds) changes the
     // data while this action stays COMPLETED. Subscribing here re-renders
     // through the same controlled path as the run state, instead of `.value`.
-    let dataNotificationIsInitial = true;
-    const unsubscribeFromData = action.dataSignal.subscribe(() => {
-      if (dataNotificationIsInitial) {
-        // subscribe() calls back synchronously with the current value
-        dataNotificationIsInitial = false;
-        return;
-      }
-      rerender();
-    });
+    const unsubscribeFromData = subscribeToChanges(action.dataSignal, rerender);
     // The params say WHICH question this is, and this hook reads them: to know
     // there is nothing to ask for, and to start the run it owns. A binding
     // retargeting from no question to a question — a filter chosen, a first
     // character typed — is announced by nothing above: a fresh target is IDLE
     // holding no data, the very state the hook already sees.
-    let paramsNotificationIsInitial = true;
-    const unsubscribeFromParams = action.paramsSignal.subscribe(() => {
-      if (paramsNotificationIsInitial) {
-        paramsNotificationIsInitial = false;
-        return;
-      }
-      rerender();
-    });
+    const unsubscribeFromParams = subscribeToChanges(
+      action.paramsSignal,
+      rerender,
+    );
     // A debounced binding waits before it retargets, so nothing above changes
     // while the delay runs — but what is on screen is already out of date.
-    let settlingNotificationIsInitial = true;
-    const unsubscribeFromParamsSettling = action.paramsSettlingSignal.subscribe(
-      () => {
-        if (settlingNotificationIsInitial) {
-          settlingNotificationIsInitial = false;
-          return;
-        }
-        rerender();
-      },
+    const unsubscribeFromParamsSettling = subscribeToChanges(
+      action.paramsSettlingSignal,
+      rerender,
     );
+    // Subscribed once the browser has painted, so the action may have moved
+    // since the render: a run that very render started may be over already,
+    // and nothing would say so again. What the render read, against what is
+    // there now — and nothing moved, nothing to draw again.
+    const read = readRef.current;
+    if (
+      action.runningStateSignal.peek() !== read.runningState ||
+      action.dataSignal.peek() !== read.data ||
+      action.paramsSignal.peek() !== read.params ||
+      action.paramsSettlingSignal.peek() !== read.settling
+    ) {
+      rerender();
+    }
     return () => {
       unsubscribeFromRunningState();
       unsubscribeFromData();

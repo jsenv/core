@@ -45,26 +45,43 @@ The two engines reach that moment differently:
   them from any point before about 9px keeps the whole touch for the page, and
   so does refusing the first one alone: native scrolling never starts, even
   when the later ones are left alone. If the one at about 9px goes unrefused,
-  Safari pans. It does not wait for the page's
-  answer to a report that jumps over that distance in one go: after a small
-  unrefused report, a report that jumps past 9px is already too late.
+  Safari pans. It does not wait for the page's answer to a report that jumps
+  over that distance in one go: after a small unrefused report, a report that
+  jumps past 9px is already too late.
 
 So **a gesture that shares a surface with the page's pan has to read its
 intent before about 8px**, and measure it as a distance (`Math.hypot`), not per
 axis: the browser measures its slop as a distance, and a per-axis threshold is
 up to 1.4 times later on a diagonal. Waiting for more evidence is not
 available, because whatever is read after the browser's moment is read about
-a pointer that has already been cancelled. The travel reads a finger's intent
-at 6px for exactly this reason (`DRAG_START_THRESHOLD_TOUCH` in
-`@jsenv/dom`'s `drag_to_travel.js`). Its bias toward the box's own axis only
-means something because it is read before the browser reads the same pixels
-evenly.
+a pointer that has already been cancelled. It is why a travel reads a finger at
+6px, leaning towards its own axis before the browser reads the same pixels
+evenly (see [drag_to_travel.md](./drag_to_travel.md#what-the-rules-are)).
 
 Whether a `touchmove` can be refused at all is settled even earlier, when the
-finger lands: a non-passive listener must already be on the touch's path (see
-`keepTouchRefusable`, and
-[drag_to_travel.md](./drag_to_travel.md#on-a-touchscreen-the-browser-takes-the-gesture-unless-it-is-refused)).
-Being refusable is decided at the touchstart; being refused, before 8px.
+finger lands: the non-passive listener that will refuse must already be on the
+touch's path. Registered at the `pointerdown`, it is handed events that are
+`cancelable: false`, and its `preventDefault` does nothing, silently. A refusal
+that only comes after a wait — a long press turning into a carry — also needs
+an explicit `touch-action` other than `auto` on the region (`pan-y` still lets
+the page scroll): left at `auto`, Chrome has taken the touch by the time the
+wait is over. Being refusable is decided at the touchstart; being refused,
+before 8px.
+
+The passive-by-default intervention covers `touchmove` listeners on `window`,
+`document` and `document.body`: one added there says `{ passive: false }`, while
+on any other element a plain listener — a framework's event prop included — is
+non-passive already (navi's travelling boxes render
+`onTouchMove={keepTouchRefusable}`, from @jsenv/dom). And a touch keeps being
+dispatched at the node it started on, even once that node has left the
+document, where nothing above it hears it, the window included: a gesture that
+may replace the DOM under the finger (a page that travels navigates) listens on
+that node too.
+
+Missed, the listener costs the middle of a gesture, not its start: the gesture
+takes the press, then the thumb's arc bends towards the axis `touch-action`
+leaves to the page, the browser starts its own scroll and cancels the pointer,
+and what the hand was carrying snaps back under a finger still down.
 
 ## touch-action stops at the first scroller
 
@@ -112,6 +129,10 @@ first ~8px.
 - **Safari** does not click at all once a `touchmove` has been refused, even
   after 6px. A touch that was never refused still clicks: an unrefused sideways
   movement over `pan-y` clicks even after 20px.
+- **Two taps** in the same place, 120ms apart, give two `pointerup`, ONE `click`
+  and no `dblclick` at all (measured on a phone): the browser keeps the double
+  tap for its own zoom. Whatever means "twice" under a finger counts presses —
+  see [interactions.md](./interactions.md#twice-whichever-hand-it-is).
 
 A gesture that reads its intent early therefore costs the click of a tap that
 shook more than its threshold. Safari drops that click on its own, and on
@@ -125,7 +146,7 @@ On Chrome for Android, the tap that follows a finger-driven drag does not fire
 its `click` when it comes quickly: `pointerdown` and `pointerup` arrive, the
 synthesized `click` (and the `mousedown`/`mouseup` compat events) does not. Wait
 about half a second and the same tap works. It is what makes a wheel feel
-broken — spin it, tap "Définir" at once, and the command never runs.
+broken: a wheel spun, then a button tapped at once, and the command never runs.
 
 It is the browser's, not ours: a bare `div` moved by hand under `pointermove`,
 with no framework, reproduces it. An un-prevented touch drag feeds Chromium's
@@ -141,57 +162,30 @@ active, from a non-passive listener. `touchmove` rather than `touchstart`: the
 move is the event whose default the drag actually owns, and preventing
 `touchstart` also suppresses the surface's own focus and synthesized events.
 
-```js
-const onTouchMove = (e) => {
-  if (drag) {
-    e.preventDefault();
-  }
-};
-viewport.addEventListener("touchmove", onTouchMove, { passive: false });
-```
-
-Two theories were tried first and disproven on the device, so they are not
-worth trying again: pointer capture on touch, and a momentum re-render moving
-the element under the tap.
+Two theories were disproven on the device, not worth trying again: pointer
+capture on touch, and a momentum re-render moving the element under the tap.
 
 Reference: `onTouchMove` in `src/control/wheel/wheel.jsx`; the reductions, one
 variable per row, in `src/control/demos/lab/` (`tap_after_drag_experiment.html`,
-`surface_css_matrix_experiment.html`, `preventdefault_matrix_experiment.html`);
-Chromium's `gesture_provider.cc` (`ignore_single_tap_`, reset on the next down)
-and `tap_suppression_controller.cc` (the tap that stops a fling, 180ms) for the
-two mechanisms that do NOT explain it.
+`surface_css_matrix_experiment.html`, `preventdefault_matrix_experiment.html`).
 
 ## A finger is captured to what it touched, inside shadow trees too
 
 A touch pointer is captured the moment it lands, by the browser, to the element
-it landed on — nobody calls `setPointerCapture`. A mouse and a pen are not.
-That capture is announced like any other, with a `gotpointercapture` just
-before the first pointer event that follows, and a finger resting still sends
-one soon: its contact changes, so `pointermove`s with unchanged coordinates
-come within the first 100ms or so. Nearly every touch press therefore sees a
-`gotpointercapture` it never asked for. Code that reads it as "another gesture
-took this press" gives up on almost every finger.
+it landed on (a mouse and a pen are not), and a finger resting still announces
+it within about 100ms: nearly every touch press sees a `gotpointercapture` it
+never asked for. Code reading it as "another gesture took this press" gives up
+on almost every finger. Chrome gives that capture to **the deepest element under
+the finger, shadow trees included** — the inner editor of an `<input>`, whatever
+a web component's shadow root holds there: `hasPointerCapture` on the field or
+the host answers `false` for the whole press, while the `gotpointercapture`
+reaches the page retargeted to it. So the browser's capture is recognised by
+where it lands, never asked for: on a touch press, a capture announced on the
+press's own target (compared from the same tree) is the browser's, and a gesture
+taking the press onto that same element has to say so another way.
 
-Recognising that capture is where Chrome misleads: **it goes to the deepest
-element under the finger, shadow trees included.** On an `<input>` or a
-`<textarea>` that is the inner editor, inside the field's own shadow tree; in a
-web component, whatever its shadow root holds there. `hasPointerCapture` on
-what the page sees — the field, the host — answers `false` at `pointerdown`,
-after `gotpointercapture`, and for the whole press. Yet the `gotpointercapture`
-reaches the page retargeted to that same element. An open shadow root shows
-both halves: the host answers `false`, the element inside it `true`.
-
-So the browser's capture is recognised by where it lands, never asked for: on
-a touch press, a capture announced on the press's own target is the browser's,
-whenever it arrives. Compare both events from the same tree: each is
-retargeted to the shadow host from outside. A gesture that takes the press onto
-that same element cannot be told apart from it, so it has to say so another way.
-
-Measured in Chromium 153 through `Input.dispatchTouchEvent`. The capture does
-not depend on the slop, so the desktop path shows it; see
-[Verifying without a device](#verifying-without-a-device). The same `false` on
-a field shows on an Android phone (Chrome 153). Not measured in Safari.
-
+Measured in Chromium 153 (`Input.dispatchTouchEvent`: the capture does not
+depend on the slop) and on an Android phone (Chrome 153); not in Safari.
 Reference: `implicitCaptureHolder` and `takePress` in `@jsenv/dom`'s
 `press_held.js`.
 
@@ -243,11 +237,11 @@ them exactly as on a phone:
   and a restarted `safaridriver`. The page's `localStorage` does not survive
   that, so whatever must be read is read before the swipe.
 
-What to synthesize is the hand's imperfection, as
-[drag_to_travel.md](./drag_to_travel.md#verifying-a-gesture) says: a slow start
-landing a report between 6 and 9px, steep first pixels, a report that jumps. What
-to read: the `touchmove`s with `cancelable` and `defaultPrevented`, the
-`pointercancel`, `scrollY`, and what the gesture itself says (for a travel,
+What to synthesize is the hand's imperfection — a gesture simulated as clean,
+evenly spaced points passes forever and proves nothing: a slow start landing a
+report between 6 and 9px, steep first pixels, a report that jumps. What to read:
+the `touchmove`s with `cancelable` and `defaultPrevented`, the `pointercancel`,
+`scrollY`, and what the gesture itself says (for a travel,
 `data-drag-travel-walking` on `:root` and the slide that ends up current).
 
 What neither path shows: the lift of a real finger (the last reports before

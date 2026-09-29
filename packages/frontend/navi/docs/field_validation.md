@@ -10,8 +10,7 @@ them apart is the whole subject.
 **What only a browser can answer.** A keystroke blocked before the value exists,
 a callout placed next to the field, `required` on a radio group, `data-one-of`
 reading an option list out of the document, the moment a message appears
-(typing? blur? submit?).
-This is navi's, and it stays navi's.
+(typing? blur? submit?). This is navi's, and it stays navi's.
 
 **« Is this value acceptable ».** A length, a set of allowed characters, a
 value that renders nothing, a business rule. This is not a DOM question — a
@@ -26,20 +25,17 @@ a validity rule, and the constraint is only its browser-side caller.
 ## Constraints
 
 A constraint is `{ name, check(field) }` — a bare `check` function is accepted
-too. `check` returns `null` when the value
-passes, or the message to show — a string, or `{ message, target }` when the
-callout belongs on another element than the control itself.
+too. `check` returns `null` when the value passes, or the message to show — a
+string, or `{ message, target }` when the callout belongs on another element
+than the control itself.
 
 Navi's own constraints are switched on by an attribute on the control —
-standard when the platform has one, `data-*` when it does not.
-
-**They are written as props, in camelCase.** A constraint declares the attribute
-it reads (`data-no-emoji`) and a control accepts the prop that stands for it
-(`noEmoji`), putting it on the control host under the attribute name — the same
-conversion `element.dataset` does. So `singleSpace` is what you write and
-`data-single-space` is what ends up in the DOM (and in the devtools, and in a
-test selector). The attribute form is accepted too, for a control written in
-plain HTML.
+standard when the platform has one, `data-*` when it does not. **They are
+written as props, in camelCase**, which land on the control host as the
+attribute the constraint reads — the conversion `element.dataset` does:
+`singleSpace` is what you write, `data-single-space` is what ends up in the DOM
+(the devtools, a test selector). The attribute form is accepted too, for a
+control written in plain HTML.
 
 | prop                            | attribute                                   | refuses                                                                         |
 | ------------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------- |
@@ -52,9 +48,9 @@ plain HTML.
 | `noEmoji`                       | `data-no-emoji`                             | an emoji, where a name, an identifier or a title does not want one              |
 | `maxLineBreaks`                 | `data-max-line-breaks`                      | a value holding more line breaks than that                                      |
 | `oneOf`                         | `data-one-of`                               | a value outside the option list its CSS selector points at                      |
-| `sameAs`                        | `data-same-as`                              | a value differing from the field it names                                       |
+| `sameAs`                        | `data-same-as`                              | a value differing from the field its CSS selector points at                     |
 | `minDigit`, `minUpperLetter`, … | `data-min-digit`, …                         | a password missing a kind of character                                          |
-| `timeAfter`, `timeMinDuration`  | `data-time-after`, `data-time-min-duration` | a time span that ends before it starts, or is too short                         |
+| `minDuration`                   | `data-time-after`, `data-time-min-duration` | a `TimeRangeSpin`/`TimeRangeWheel` span ending before it starts, or too short   |
 
 ```jsx
 <Input required singleSpace noEmoji maxLength={80} />
@@ -75,39 +71,33 @@ the leading and trailing spaces are removed and a run of spaces becomes one:
 <Input name="title" singleSpace="autoFix" />
 ```
 
-- **At commit, never while typing.** The correction runs when the field is
-  left, and before an action reads the value. Correcting on each keystroke would
-  eat the space the person is about to follow with a word, so an action run
-  from typing (a search, debounced or not) reads the value as typed.
-- **Nothing to say.** The correction is validity's own `SINGLE_SPACE_RULE`, so
-  the value always passes the rule: no callout, and a server re-checking with
-  `singleSpace: true` accepts what it receives.
-- **It lands everywhere the value lives**: the field, its ui state, the bound
-  `signal`. A `disabled` or `readOnly` field is left alone, since its value is
-  the app's and not the person's.
-- **`singleSpace` is the only constraint that offers it.** A correction is worth
-  it only where it cannot change what the person meant; a `maxLength` silently
-  cutting a text would.
+- **At commit, never while typing**: when the field is left, and before an
+  action reads the value. Correcting on each keystroke would eat the space the
+  person is about to follow with a word, so an action run from typing (a
+  search, debounced or not) reads the value as typed.
+- **Nothing to say**: the correction is validity's own rule, so no callout, and
+  a server re-checking with `singleSpace: true` accepts what it receives.
+- **It lands everywhere the value lives** — the field, its ui state, the bound
+  `signal` — except in a `disabled` or `readOnly` field, whose value is the
+  app's and not the person's.
+- **`singleSpace` is the only constraint that offers it**: a correction is worth
+  it only where it cannot change what the person meant, which a `maxLength`
+  silently cutting a text would.
 
 Most constraints take a `<name>Message` prop to replace their sentence for one
 field (`requiredMessage`, `singleSpaceMessage`, `oneOfMessage`…; `step` and the
 time span constraints have none). To change it everywhere, override the i18n
-key instead — see below.
+key instead — see [Messages](#messages).
 
 Two props sit beside them and belong to the browser alone, because they act
 before there is a value to validate: `charGuard` blocks a keystroke that is not
-in its character class, `maxLengthGuard` blocks the one that would overflow (and
-truncates a paste). Both show what they refused in a callout rather than
-silently swallowing it.
-
-`charGuard` takes a character class or one of validity's preset names, so a
-field can refuse the keystroke with the same knowledge the value is checked
-against: `charGuard="tel"`, `charGuard="slug"`, `charGuard="noEmoji"`. Refusing
-the keystroke and refusing the value are different jobs — the pair
-`maxLengthGuard`/`maxLength` is the same split — and a guard brings the value
-check along: `maxLengthGuard` is checked at submit as `maxLength`, `charGuard`
-sets an `Input`'s `pattern` from its class unless one is given. `maxLength`
-alone is the submit-only half.
+in its character class (or one of validity's preset names: `charGuard="tel"`,
+`"slug"`, `"noEmoji"`), `maxLengthGuard` blocks the one that would overflow and
+truncates a paste. Both show what they refused in a callout rather than
+silently swallowing it. Refusing the keystroke and refusing the value are
+different jobs, and a guard brings the value check along: `maxLengthGuard` is
+checked at submit as `maxLength`, `charGuard` sets an `Input`'s `pattern` from
+its class unless one is given. `maxLength` alone is the submit-only half.
 
 **A guard answers for the gesture, never for what the field already holds.** A
 value can arrive already outside the class or already too long — a
@@ -119,21 +109,12 @@ is already there is the constraint's business, and it says so at submit.
 
 ## Reading the validity without submitting
 
-`useConstraintValidityState(ref)` gives the control's validity as it stands,
-re-read whenever it changes:
-
-```js
-const state = useConstraintValidityState(inputRef);
-state.valid; // false
-state.single_space.messageString; // the sentence
-state.reported; // "max_length" — the one the callout says
-```
-
-Several constraints fail at once and only one sentence is shown: the one with
-the highest priority — an `error` status first, then `required`, then the
-platform's own constraints, then navi's and the app's, ties going to the first
-registered. `reported` names it, so a summary drawn beside the field says the
-same thing as the callout rather than picking a second one.
+`useConstraintValidityState(ref)` gives the control's validity as it stands
+(see its JSDoc). When several constraints fail at once, only one sentence is
+shown: the one with the highest priority — an `error` status first, then
+`required`, then the platform's own constraints, then navi's and the app's, ties
+going to the first registered. `reported` names it, so a summary drawn beside
+the field says the same thing as the callout rather than picking a second one.
 
 `src/control/demos/validation/text_rules_demo.html` is that, one rule per row: a
 value that breaks it, its message read live, and a submit to see the callout.
@@ -142,46 +123,25 @@ value that breaks it, its message read live, and a submit to see the callout.
 
 Every sentence navi says is a key in `naviI18n`, and the validation ones are
 `constraint.*`. An app changes one for its whole app by registering over it:
-
-```js
-import { naviI18n } from "@jsenv/navi";
-
-naviI18n.add("constraint.single_space.consecutive", {
-  fr: "Pas deux espaces d'affilée.",
-});
-```
+`naviI18n.add("constraint.single_space.consecutive", { fr: "…" })`.
 
 The keys of everything validity owns are validity's own key prefixed with
 `constraint.` — `single_space.start` is `constraint.single_space.start`,
 `char_class.slug` is `constraint.char_class.slug`. That is deliberate: the
 sentence a server returns and the sentence the field shows are looked up under
 one name, so making them agree is registering one key, not maintaining a
-translation table. See `src/control/rules/validity_bridge.js`, and `i18n.md` for
-how the registry itself works.
+translation table. See [i18n.md](./i18n.md) for how the registry itself works.
 
 ## An app's own rules
 
 An app puts its rules in the package its server reads too, and then decides, per
-rule, who runs it.
+rule, who runs it — see validity's
+[Rules of your own](../../../tooling/validity/README.md#rules-of-your-own) and
+[Front and back](../../../tooling/validity/README.md#front-and-back-sharing-what-is-worth-sharing).
+The navi side:
 
-**Both sides.** The rule is a validity rule; navi wears it as a constraint.
-
-```js
-// shared/src/text_rules.js — read by the server and by the front
-export const MAX_WORDS_RULE = {
-  name: "maxWords",
-  applyOn: (maxWords, value) => {
-    if (maxWords === undefined || typeof value !== "string") {
-      return null;
-    }
-    const count = value.trim().split(/\s+/).length;
-    if (count <= maxWords) {
-      return null;
-    }
-    return { key: "max_words", params: { max: maxWords, count } };
-  },
-};
-```
+**Both sides.** The rule is a validity rule; navi wears it as a constraint,
+built once:
 
 ```js
 // front — once, at module level: a constraint rebuilt on every render is a new
@@ -195,9 +155,9 @@ const MAX_WORDS_CONSTRAINT = constraintFromValidityRule(MAX_WORDS_RULE, {
 <Textarea constraints={[MAX_WORDS_CONSTRAINT]} />;
 ```
 
-The rule's key is looked up in `naviI18n` under `constraint.max_words`, so
-register it there — or pass `formatMessage` beside the parameters to say it
-through the app's own i18n instead.
+The rule's key is looked up in `naviI18n` under `constraint.<key>`
+(`constraint.max_words`), so register it there — or pass `formatMessage` beside
+the parameters to say it through the app's own i18n instead.
 
 **The server alone.** A rule needing the database, another user's data or a
 secret stays in `createValidity({ rules })` and never reaches the front; its

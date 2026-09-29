@@ -225,9 +225,9 @@ Anything that means "twice" therefore counts presses, which is what
 ```
 
 The rhythm is one window, opened by the FIRST press: the second has to land
-inside it and near enough to it (`data-double-click-delay` and
-`data-double-click-slop`, see [Tuning](#tuning)) — a fingertip rather than a
-pixel, because between the two the finger leaves the glass and lands again. The
+inside it (`data-double-click-delay`) and near enough to it
+(`data-double-click-slop`, a fingertip rather than a pixel, because between the
+two the finger leaves the glass and lands again — see [Tuning](#tuning)). The
 window is shorter than the hold's wait, so a press slow enough to be a hold
 cannot start a double click, and a hold answered on the second press takes that
 press back.
@@ -418,7 +418,9 @@ the effect failed), `implies`, `refusable`, `disputesPress` — and
 `38_interactions_demo.html` registers a `triple_click` from the page. A detector
 claims a **set** of names rather than one, because interactions sharing an input
 have to be arbitrated together: a swipe, a hold and a click dispute the same
-press, and read apart they walk over each other.
+press, and read apart they walk over each other. An event handed to `trigger`
+that already bears the interaction's name (a native one) IS the interaction, and
+no second one is dispatched.
 
 A detector that reads the pointer says two more things: `disputesPress`, so a
 control asking for its action on the press waits for the click (see

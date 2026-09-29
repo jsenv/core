@@ -2,15 +2,15 @@
 
 When a write touches one item of a list, two questions decide what the user
 sees: **what goes back to the network**, and **what stays on screen meanwhile**.
-Getting either wrong turns "pause one row" into a full page reload.
-
-The same two questions decide what a list does when the user leaves it and
-comes back, which is the second half of this file.
+Getting either wrong turns "pause one row" into a full page reload. The same two
+questions decide what a list does when the user leaves it and comes back, which
+is the second half of this file.
 
 The short answer:
 
-- A write that returns the modified item fixes every list containing it, with
-  no request and no loading state at all.
+- A write that returns the modified item fixes every list read through an action
+  that contains it, with no request and no loading state at all — and, in a
+  `<List.Items>` over `GET_RANGE`, every row reading its item with `useById`.
 - `useAsyncData(action, { loading: true })` keeps returning the previous data
   while the action re-runs — the list is never taken away unless the component
   throws it away.
@@ -20,23 +20,16 @@ The short answer:
 ## `loading: true` returns the previous value
 
 During a re-run, `useAsyncData(action, { loading: true })` hands back the
-**previous** data with `loading` up — never `undefined`, which is the first
-load only, for a `GET_MANY` as for anything else — so the emptiness test is
-`data === undefined`, and a list is never blanked for a checkbox ticked on one
-of its rows. Read `loading` as "what you are displaying is from before", not
-"there is nothing to display". The four combinations of `data` and `loading`,
-and what each one draws, are in [data_states.md](./data_states.md).
+**previous** data with `loading` up. Read `loading` as "what you are displaying
+is from before", never as "there is nothing to display": the emptiness test is
+`data === undefined`
+([data_states.md](./data_states.md#data-and-loading-are-independent)), and a
+refresh that failed comes back beside the rows, not in place of them
+([data_states.md](./data_states.md#an-error-is-a-message-on-the-screen-not-the-screen)).
 
 `<List loading>` is the first-load answer, not the refresh one: it replaces the
 rows with skeletons. Pass it while stale rows exist and they disappear — same
 mistake as `loading ? null :`, one level down.
-
-A refresh that failed does not unmake the rows either. With `error: true` the
-failure comes back **beside** them, so the list stays and the failure is said
-over it — a strip above the rows, a retry, `dismissError()` to close the strip
-without asking anything again. Taking the rows away is `<ErrorBoundary>`'s job,
-and only when the screen genuinely cannot be drawn — see
-[data_states.md](./data_states.md#an-error-is-a-message-on-the-screen-not-the-screen).
 
 ## What updates without a request
 
@@ -50,22 +43,25 @@ The condition is the whole hinge of the system:
 > **the write's callback must return the item, with its key** — `{ id, … }`.
 
 Partial props are fine (`{ id, paused: true }` merges into the stored item); the
-key is what cannot be missing. The corollary matters just as much: a callback
-that returns nothing — a `204`, or a `fetch` whose result is dropped — writes
-nothing to the store, and the change never reaches the screen. There, the only
-way back is a re-read.
+key is what cannot be missing. A callback that returns nothing — a `204`, or a
+`fetch` whose result is dropped — is refused with a `TypeError` naming the verb
+(`game.PATCH must return an object…`), and nothing reaches the store. For a
+`204`, return `{ id, ...params }` yourself.
 
 `DELETE` is symmetric: returning the id drops the item from the store, and every
 list containing it drops it too.
 
+A `<List.Items>` over `GET_RANGE` keeps the objects it was handed, so its rows
+follow a write only where they read their item from the store with `useById`
+([resource.md](./resource.md#get_range-feeding-a-list-that-loads-as-it-scrolls)).
+
 ## A paginated list stays on screen too
 
-A `<List.Items>` reading through `GET_RANGE` draws places in a collection, not
-a list of ids, so nothing the store does can fix them: a row that changed tab,
-or one that was deleted, moves every row after it one rank up, and only the
-collection knows who fills the last place.
-
-It is told, and it re-reads by itself:
+A `<List.Items>` reading through `GET_RANGE` draws places in a collection, not a
+list of ids, so nothing the store does can fix them: a row that changed tab, or
+one that was deleted, moves every row after it one rank up, and only the
+collection knows who fills the last place. It is told, and it re-reads by
+itself:
 
 ```jsx
 <List.Items
@@ -88,11 +84,11 @@ it meanwhile:
 | answer received                 | the new rows         | —            |
 
 The rows, the scroll position and the row being read all stay; the slices
-outside the window are forgotten only once the answer is in, and asked for
-again if the user goes back to them. A re-read that fails leaves the rows from
-before on screen. While it is in flight, the list carries `navi-refreshing` and
-`renderItem` gets `{ refreshing }` — read it as "what you see is from before",
-never as "there is nothing to see".
+outside the window are forgotten only once the answer is in, and asked for again
+if the user goes back to them. A re-read that fails leaves the rows from before
+on screen. While it is in flight, the list carries `navi-refreshing` and
+`renderItem` gets `{ refreshing }` — "what you see is from before", never "there
+is nothing to see".
 
 An app that knows a row is on its way out (it is the one deleting it) says so
 itself: it is the one rendering the row, so it draws it loading, muted, or not
@@ -118,24 +114,19 @@ GAME.GET_RANGE { radar: "R-42" }    →  { count: 18,  byIndex: … }
 
 Ids, never rows: the rows are in the store already, shared and live, and a row
 dropped from the store simply stops resolving — a composition cannot hold a
-stale copy of anything.
-
-A run that finds a composition takes the `refreshing` line of the table above
-rather than the loading one: the rows are on screen while it asks again for the
+stale copy of anything. A run that finds a composition takes the `refreshing`
+line of the table above: the rows are on screen while it asks again for the
 window it draws. So the two lists an app cannot tell apart from the outside —
 one reading `GET_MANY`, one reading `GET_RANGE` — look the same on the way back:
 neither blanks, neither shows a first load. What they do behind that is not the
-same, and the next section is about exactly that.
+same (next section).
 
-What a composition is about is the **values** its params hold, not the reader
-instance: `GET_RANGE.bindParams({ scope: "thread" })` called from two places
-reads and writes the same one (and gives back the same reader, memoized the way
-an action's `bindParams` is).
-
-The rest follows the rules already stated: a verb in `rerunOn.GET_RANGE`, or
-`reader.invalidate()`, drops the compositions — they stand for an order that is
-gone — and `memoryBudget` (1000 ranks by default) trims the ranks far from any
-window, which are asked for again if the user goes back to them.
+A composition is about the **values** its params hold, not the reader instance:
+`GET_RANGE.bindParams({ scope: "thread" })` called from two places reads and
+writes the same one. A verb in `rerunOn.GET_RANGE`, or `reader.invalidate()`,
+drops the compositions — they stand for an order that is gone — and
+`memoryBudget` (1000 ranks by default) trims the ranks far from any window,
+which are asked for again if the user goes back to them.
 
 ### Who decides the re-read — and who does not
 
@@ -144,48 +135,36 @@ playing between the two pages: the **source** the list reads through is what
 answers, and it answers the same way whether the user arrived by a link, by
 `history.back()`, or under a route transition.
 
-| The list reads through          | Coming back to it                                                                                     |
-| ------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `routeAction` over `GET_MANY`   | **nothing goes out** — the action holds its response, and `.run()` on a `COMPLETED` action is a no-op |
-| `<List.Items>` over `GET_RANGE` | **one ask goes out** — the reader kept ranks, not rows, and revalidates the window it draws           |
+| The list reads through          | Coming back to it                                                                                                                                  |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `routeAction` over `GET_MANY`   | **nothing goes out** — the action holds its response, and `.run()` on a `COMPLETED` action is a no-op; only `.rerun()` goes back to the network |
+| `<List.Items>` over `GET_RANGE` | **one ask goes out** — the reader kept ranks, not rows, and revalidates the window it draws                                                        |
 
-Both are deliberate, and they are not in tension: an action that kept its answer
-has the answer, while a composition is a claim about an order that any write
-elsewhere may have made false. What a `GET_MANY` list wants on the way back it
-has to say itself — `.rerun()` when the route becomes current again, or a verb
-in `rerunOn` if a write is what makes it stale.
+Both are deliberate: an action that kept its answer has the answer, while a
+composition is a claim about an order that any write elsewhere may have made
+false. What a `GET_MANY` list wants on the way back it has to say itself —
+`.rerun()` when the route becomes current again, or a verb in `rerunOn` if a
+write is what makes it stale.
 
-Nothing above changes when `defineRouteTransition` is written for the pair the
-list is walked through. A transition states a relation between two pages (see
-[route_transitions.md](./route_transitions.md)); it takes the document's
-rendering hold for the one frame the browser needs to photograph it, and gives
-it back. It never decides what the page arriving is allowed to ask for. Held by
-`tests/route_transition_list_revisit/`, which mounts the same app twice — with
-and without a relation on the pair — and walks the way back ten times on each,
-counting what goes out at every revisit.
-
-When a list stops refreshing after a transition was added, two things account
-for it, in this order:
-
-1. **The revisit did not happen.** A back taken before the page being opened was
-   ever on screen returns to a list that never left, and a page that never left
-   has nothing to come back from (see
-   [route_transitions.md](./route_transitions.md#waiting-for-a-navigation-the-address-is-not-the-page)).
-   This is what an automated walk does by default, and it is the answer far more
-   often than the next one.
-2. **The list is on the first row of the table.** A `GET_MANY` list never
-   refreshed on its own; what changed is whatever else in the app was doing the
-   re-read.
+A `defineRouteTransition` written for the pair changes none of this: a
+transition states a relation between two pages (see
+[route_transitions.md](./route_transitions.md)) and takes the document's
+rendering hold for the one frame the browser needs to photograph it; it never
+decides what the page arriving may ask for. A list that stops refreshing after a
+transition was added most often saw no revisit at all — a back taken before the
+page being opened was ever on screen returns to a list that never left
+([route_transitions.md](./route_transitions.md#waiting-for-a-navigation-the-address-is-not-the-page));
+otherwise it is a `GET_MANY` list, which never refreshed on its own.
 
 ### Watching what the run asks for
 
 A run that decides **not** to ask is invisible from the application's side: it
 sends nothing and changes no state, so the network is silent and
-`onRequestStateChange` — which reports what a request is doing — has no request
-to report. A run that declined and a run that was never mounted look identical.
-`debugScroll` is where that difference is visible; it carries the render window
-and the run's asking, which are one subject. It logs in navi's development build
-only.
+`onRequestStateChange` has no request to report — a run that declined and a run
+that was never mounted look identical. `debugScroll` is where that difference is
+visible, in navi's development build only. Record into an array rather than
+printing: the sink is called during rendering, and a `console.log` in the way
+can move a timing-sensitive symptom.
 
 ```jsx
 window.askLog = [];
@@ -194,7 +173,8 @@ window.askLog = [];
 </NaviDebug>;
 ```
 
-One line per pass of the run, whatever the outcome:
+One line per pass of the run, whatever the outcome — so no line for a revisit
+means the run never rendered:
 
 ```
 ask 0-49: sent (revalidating=true holdPending=false count=412)
@@ -211,26 +191,11 @@ ask 0-49: held on a row not reached yet (revalidating=true holdPending=true coun
 | `a request still covers this window` | what is in flight is still what the list would draw                                                     |
 | `this range was asked for already`   | asking again could only produce the same answer                                                         |
 
-The state that decides is on the line rather than left to be inferred:
-
-- **`revalidating`** — the run knows what it holds is from before. A revisit
-  showing `revalidating=false` never restored a composition, which is a
-  different problem from one showing `revalidating=true` and no `sent`.
-- **`holdPending`** — the list is held somewhere it has not reached.
-- **`count`** — how many rows the run stands for, `undefined` before its first
-  answer.
-
-**Record, do not print.** The sink is called during rendering: push into an
-array. Formatting an object in a console costs far more than what it measures,
-and a timing-sensitive symptom moves under one — a list that fails to refresh on
-the first revisit can start refreshing on the first two as soon as a
-`console.log` is in the way, which makes the log a report about the log.
-
-An absence in the trace is a fact too: no line for a revisit means the run never
-rendered, which is about the list being mounted, not about what it asked for.
-The usual cause is a revisit that never happened — a back taken before the page
-being opened was ever on screen, which returns to a list that never left (see
-[route_transitions.md](./route_transitions.md#waiting-for-a-navigation-the-address-is-not-the-page)).
+The state that decides is on the line: `revalidating` — the run knows what it
+holds is from before, so a revisit showing `revalidating=false` never restored a
+composition, a different problem from `revalidating=true` and no `sent`;
+`holdPending` — the list is held somewhere it has not reached; `count` — how
+many rows the run stands for, `undefined` before its first answer.
 
 ## `rerunOn`, verb by verb
 
@@ -270,7 +235,7 @@ updated item — not client-side refreshing.
 | a field of one item         | no — the write's response is enough                  |
 | membership of the list      | yes (`POST`) — the backend decides who belongs       |
 | the ORDER of the list       | yes — the store stores, it does not sort (see below) |
-| nothing came back (`204`)   | yes — there is nothing to put in the store           |
+| nothing came back (`204`)   | no — the callback returns `{ id, ...params }` itself |
 | a place in a paginated list | yes — a `GET_RANGE` reads places, and places shift   |
 
 ## The store stores, it does not sort
@@ -286,16 +251,9 @@ comes back in the old order on the next visit. After a reorder, re-read the list
 explicitly:
 
 ```js
-await REORDER_ACTION.run({ … });
+await REORDER_ACTION({ … });
 GET_MANY_ACTION.rerun();
 ```
-
-## `.rerun()`, not `.run()`, to refresh
-
-`.run()` on an action that already `COMPLETED` does nothing: it is a request to
-have the data, and the data is there. Wiring a "check now" button to `.run()`
-therefore checks nothing, silently. Use `.rerun()`, which resets the action and
-runs it again.
 
 ## See also
 

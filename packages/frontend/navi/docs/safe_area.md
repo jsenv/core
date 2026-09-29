@@ -60,9 +60,8 @@ Declared in `src/layout/safe_area.js`.
 An app that never spans the whole window — a phone-shaped column centered in a
 wide one, bands on the sides — has one problem with popups: a dialog lives in
 the browser's top layer, so it is calibrated on the _viewport_, and would paint
-1500px of modal over a 600px app. The top bar and the bottom nav have the same
-problem and solve it by repeating the app width by hand; popups must not need
-that, because the app would then have to know which components exist.
+1500px of modal over a 600px app. Popups must not need to be told, or the app
+would have to know which components exist.
 
 So the app states its own screen once, and never names a component:
 
@@ -76,57 +75,28 @@ So the app states its own screen once, and never names a component:
 The bands fall out of it (centered), `--navi-app-width` follows, and `FixedBar`
 pins itself to the column's edges rather than the glass. An app wanting them
 uneven writes `--navi-app-inset-left` / `-right` directly instead; everything
-below follows those the same way, popup placement included.
+below follows those the same way.
 
-Every popup follows: `Dialog`, `Popover`, and everything built on them
-(`Picker`, `Select`…). It is a ceiling and nothing more — on a screen narrower
-than the app it never binds, and each popup still subtracts its own
-`marginWithContainer` from it, so the gap with the edges is kept either way.
-That gap is itself a share of the app's screen, not of the window (`"3appw"`,
-navi's own unit alongside `vvw`/`vvh`) — otherwise a 3% margin measured on a
-1500px window would eat 90px out of a 600px app.
+Every popup follows — `Dialog`, `Popover`, and everything built on them
+(`Picker`, `Select`…) — as a ceiling and nothing more: on a screen narrower
+than the app it never binds. A `Dialog` keeps its `marginWithContainer` inside
+that screen, and its default gap is a share of the app's screen, not of the
+window (see
+[dialog_shape.md](./dialog_shape.md#marginwithcontainer-decides-the-gap-and-the-ceiling));
+a `Popover` is capped at 95% of it. Placement uses the same rectangle: a dialog
+centers on the app column, and anything anchored to an edge (a `positionArea`
+like `bottom-start`, a `SidePanel`) sits flush with the column's edge rather
+than the window's.
 
-Two ways NOT to get this:
-
-- mounting empty `FixedBar area="left"/"right"`: they would reserve the room,
-  but the app's rectangle would still be the whole window, so dialogs and
-  popovers would keep sizing themselves against 1500px;
-- setting `--dialog-max-width` on `.navi_dialog` from the app. It is a
-  `--component-*` token, declared on the element (see
-  [css_architecture.md](./css_architecture.md#--navi--vs---component--where-the-override-has-to-go)):
-  every dialog resets it on itself in an unlayered rule, so that a nested
-  dialog does not inherit its parent's size, and a `maxWidth` prop writes it
-  inline (a `Picker` under `dialogSizeFromAnchor` does) — an app rule of the
-  same specificity does not reliably win, and the cap silently disappears. It
-  is also the knob a single popup uses to ask for a specific size, not a
-  ceiling:
-  `--navi-app-max-width` feeds `--dialog-maxmax-width`, the hard ceiling _under_
-  that knob, so a popup that genuinely needs its own `maxWidth` can still say
-  so without escaping the app's screen.
-
-An app can also get all of it by rendering itself in an iframe of the target
-width: the viewport then genuinely _is_ the app's screen and no token is needed.
-`--navi-app-max-width` is the answer for an app that does not want to pay that
-price.
-
-#### Placement follows the same rectangle
-
-The app's rectangle moves where a popup is placed, not only how big it may
-get. Placement is computed against the visual viewport narrowed to the level-1
-bands: `getAppInsets` (`src/layout/responsive.js`) reads `--navi-app-inset-*`
-back off the computed style — the bands `--navi-app-max-width` centers and the
-ones an app writes by hand alike, in any length unit — navi hands them to
-`@jsenv/dom` once (`setPlacementViewportInsets`, wired in
-`navi_css_vars.js`), and `pickPositionRelativeTo` reads them on every
-placement. With centered bands it is invisible for anything centered on its
-cross axis — `center`, `bottom`, `top`, which is what a dialog does nearly
-always — and with uneven ones it is what centers that dialog on the app column
-rather than on the window. Either way it is what puts anything anchored to an
-edge (a `positionArea` like `bottom-start`, a `SidePanel`) flush against the
-app column's edge rather than the window's.
-`FixedBar` reads the same description through CSS instead: it is pinned to
-`--navi-app-inset-*`, which says where the app's rectangle is in the window
-rather than how wide it may be.
+Two ways NOT to get this: empty `FixedBar area="left"/"right"` reserve the
+room, but the app's rectangle stays the whole window and popups keep sizing
+themselves against it; and `--dialog-max-width` set from the app is a
+`--component-*` token every dialog resets on itself (a `maxWidth` prop writes it
+inline), so the cap silently disappears — see
+[css_architecture.md](./css_architecture.md#--navi--vs---component--where-the-override-has-to-go).
+`--navi-app-max-width` feeds the hard ceiling _under_ that knob, so a popup that
+genuinely needs its own `maxWidth` can still say so without escaping the app's
+screen.
 
 ### Something that scrolls under the furniture
 
@@ -148,16 +118,15 @@ gets the `scroll-padding` unconditionally, since the document is the scrollport
 in the common case — and, while nothing is marked, the keyboard's room at its
 end (see below).
 
-Beware of making that container scrollable by accident — see
-[mobile_layout_pitfalls.md](./mobile_layout_pitfalls.md).
+Beware of making that container a scroller by accident — see
+[A document wider than the screen](#a-document-wider-than-the-screen).
 
 ### Reading it yourself
 
 `var(--navi-safe-area-inset-bottom)` in any rule. It is always declared, whether
 or not the app ever mounts a bar.
 
-From **JS**, both levels are registered as lengths (`@property`, in
-`safe_area.js`), so
+From **JS**, both levels are registered as lengths (`@property`), so
 `getComputedStyle(document.documentElement).getPropertyValue("--navi-safe-area-inset-bottom")`
 gives pixels, and so does `--navi-app-inset-*`.
 
@@ -165,29 +134,13 @@ gives pixels, and so does `--navi-app-inset-*`.
 
 Level 2 has one slot per edge, `--navi-fixed-bar-space-*`, and it belongs to
 `FixedBar`: each bar measures its own border box (notch included), and navi
-writes the largest one on that edge inline on `<html>`
-(`src/layout/fixed_bar/fixed_bar_space.js`). The slot is combined with
-`env(safe-area-inset-*)` through `max()`, not added to it, since a bar measured
-with its notch already covers the notch.
+writes the largest one on that edge inline on `<html>`.
 
 Something else taking an edge — a native banner, an OS strip — is published by
 being drawn as a `FixedBar`; every component reading the safe area then clears
 it without learning it exists. Writing the slot by hand holds only while no bar
 takes that edge: the first bar mounting there replaces the value rather than
 adding to it.
-
-## What already reads it
-
-Pointers, not a list to keep in sync — grep `--navi-safe-area-inset` for the
-truth:
-
-- `FixedBar` pins itself to `--navi-app-inset-*`.
-- `List` offsets its sticky group labels when `scroller="document"`, so a label
-  comes to rest in front of the bar and not behind it.
-- `RouteTravel` clips the pictures of a travel to the safe area. It has to: a
-  view transition paints in the top layer, where no `overflow` of the document
-  reaches it, and the box pages travel in runs _under_ the bars by design — so
-  a page scrolled by one pixel would be watched painting over them.
 
 ## The trap: which viewport
 
@@ -203,24 +156,20 @@ the keyboard moves depends on the browser.
 By default the keyboard shrinks the visual viewport, on every browser, and
 `--navi-keyboard-inset-bottom` stays 0. Where the browser has the VirtualKeyboard
 API (Chromium), an app can call `enableVirtualKeyboardOverlay()` to make the
-keyboard overlay the page instead (`src/layout/virtual_keyboard.js`): no viewport
-shrinks, and the keyboard arrives as `--navi-keyboard-inset-bottom`
-(`env(keyboard-inset-height)`), which `--navi-app-inset-bottom` adds. Either way
-`--navi-app-height` and the popup ceilings answer the part of the screen left
-visible.
+keyboard overlay the page instead: no viewport shrinks, and the keyboard arrives
+as `--navi-keyboard-inset-bottom` (`env(keyboard-inset-height)`), which
+`--navi-app-inset-bottom` adds. Either way `--navi-app-height` and the popup
+ceilings answer the part of the screen left visible.
 
 An overlaying keyboard is one the browser no longer scrolls the focused field
 out from under, so navi does: when the keyboard rises or resizes, and when focus
 moves to another field with the keyboard up, a focused field that is not fully
-inside the document's `scroll-padding` box is centered in it. Chrome paints an
-autofill/suggestion strip above the keyboard that neither
-`env(keyboard-inset-height)` nor `geometrychange` counts, so
-`scroll-padding-bottom` adds `--navi-keyboard-strip-allowance` on top of the
-keyboard — which also keeps Chrome's own caret-following, as a textarea grows
-under typing, clear of the strip. The room to scroll into comes from the marked
-element's `padding-bottom`, or, on a page that marked nothing, from a block navi
-adds at the end of the document while the keyboard is up — both count the
-keyboard and the allowance.
+inside the document's `scroll-padding` box is centered in it.
+`scroll-padding-bottom` also adds `--navi-keyboard-strip-allowance`, for the
+suggestion strip Chrome paints above the keyboard and no inset counts. The room
+to scroll into comes from the marked element's `padding-bottom`, or, on a page
+that marked nothing, from a block navi adds at the end of the document while
+the keyboard is up.
 
 `position: fixed` — so every `FixedBar` — is laid out against the **layout**
 viewport. Where the visual viewport is what shrinks, a bottom bar therefore
@@ -238,3 +187,67 @@ inset) because what navi _sizes_ must fit what is actually visible.
 `src/layout/demos/fixed_bar/keyboard.html` puts all of these on screen at once
 and turns the bottom bar's number red when it goes under the keyboard. On a
 phone; a desktop has no keyboard to open.
+
+## A document wider than the screen
+
+On Chrome Android, **anything that makes the document overflow horizontally
+inflates the layout viewport** to the size of the content: a 2000px-wide grid
+on a 412px phone takes `window.innerWidth` and `innerHeight` to about four times
+the screen, while `visualViewport.width` still says 412. The document grows a
+large empty area below the real content, and what is centered in the layout
+viewport — a `<dialog>`'s `position: fixed; margin: auto` — lands far below the
+visible area, miscentered or out of sight.
+
+So the document itself never overflows in x. Wrap the app in a box that clips,
+and clip `html` and `body` as a net for anything that escapes the wrapper:
+
+```html
+<body>
+  <div style="overflow-x: clip">
+    <!-- all app content goes here -->
+  </div>
+</body>
+```
+
+```css
+html,
+body {
+  overflow-x: clip;
+}
+```
+
+What it costs: content wider than the screen is cut off instead of reachable by
+dragging. An element that genuinely needs to scroll horizontally (a wide table,
+a carousel) gets its own `overflow-x: auto` — the wrapper stays `clip`.
+
+**`clip`, never `auto`, `hidden` or `scroll`.** `clip` is the only value that
+clips without turning the box into a scroll container (and it leaves
+`overflow-y` at `visible`, where the others force it to `auto`). A wrapper that
+scrolls, even by accident, takes every `position: sticky` in the app with it:
+sticky resolves against the nearest scroll container, and this one grows with
+its content and never scrolls, so sticky headers and `<List groupBy>` labels
+scroll away with the content. Worse, a sticky element sticks within its scroll
+container's box shrunk by that container's `scroll-padding`: a wrapper carrying
+`data-navi-safe-area` has `scroll-padding-top: var(--navi-safe-area-inset-top)`,
+so the labels come to rest that far below the bar, covering the content above
+them.
+
+**The wrapper is a net, not a fix.** Clipping makes the symptom disappear, and
+with it the signal: something wider than the screen — a width in px, a
+`min-width`, a grid of fixed columns, an unbreakable string coming from the
+data — is still a layout bug. In dev, ask who overflows:
+
+```js
+import { detectHorizontalOverflow } from "@jsenv/navi";
+
+if (import.meta.dev) {
+  detectHorizontalOverflow({ root: document.querySelector("#main") });
+}
+```
+
+It outlines the culprits in red and names them in the console, at load and
+whenever the layout changes. It reports the **outermost** box that sticks out
+(its children stick out because it does), and stays quiet about what cannot
+reach the document: anything inside a box that scrolls or clips on its own — a
+wide table in its own `overflow-x: auto` container is doing the right thing —
+and anything `position: fixed` or in the top layer.
