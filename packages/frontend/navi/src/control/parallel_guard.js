@@ -1,4 +1,4 @@
-import { signal } from "@preact/signals";
+import { computed, signal } from "@preact/signals";
 import { createContext } from "preact";
 import { useRef } from "preact/hooks";
 
@@ -33,9 +33,19 @@ export const useParallelGuard = (max) => {
     // not be counted twice.
     const runningSet = new Set();
     const runningCountSignal = signal(0);
+    const maxSignal = signal(max);
+    // What a control held back reads: whether the surface is full, never the
+    // count. Every run starting or ending moves the count, and a control
+    // reading it re-renders each time — every row of the list, twice, for a
+    // press on any one of them — while the answer only changes at the edge.
+    const fullSignal = computed(
+      () => runningCountSignal.value >= maxSignal.value,
+    );
     const guard = {
-      max,
-      runningCountSignal,
+      maxSignal,
+      get max() {
+        return maxSignal.peek();
+      },
       claim: (controller) => {
         if (runningSet.has(controller)) {
           return;
@@ -50,7 +60,7 @@ export const useParallelGuard = (max) => {
         runningCountSignal.value = runningSet.size;
       },
       blocks: (controller) => {
-        if (guard.max === Infinity) {
+        if (maxSignal.peek() === Infinity) {
           return false;
         }
         if (runningSet.has(controller)) {
@@ -58,11 +68,11 @@ export const useParallelGuard = (max) => {
         }
         // Read through the signal so a control held back re-renders — and
         // becomes pressable again — the moment one of the runs comes back.
-        return runningCountSignal.value >= guard.max;
+        return fullSignal.value;
       },
     };
     guardRef.current = guard;
   }
-  guardRef.current.max = max;
+  guardRef.current.maxSignal.value = max;
   return guardRef.current;
 };

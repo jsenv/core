@@ -196,6 +196,78 @@ const ROUTE_TRAVEL_ATTRIBUTE = "data-navi-route-travel";
 // included).
 
 const css = /* css */ `
+  /* What a movement publishes on the root is read by its pictures and by
+     nothing else in the document, so it is not inherited: a value every
+     element inherits, changed on the root, restyles the whole document — and
+     these change as the movement starts, in the frame the browser photographs
+     the page being left. The pictures take them explicitly instead, down the
+     pseudo-element tree (read from JS, they are still the root's own). */
+  @property --navi-route-transition-leave {
+    syntax: "*";
+    inherits: false;
+  }
+  @property --navi-route-transition-enter {
+    syntax: "*";
+    inherits: false;
+  }
+  @property --navi-route-transition-covered {
+    syntax: "*";
+    inherits: false;
+  }
+  @property --navi-route-transition-clip-top {
+    syntax: "*";
+    inherits: false;
+  }
+  @property --navi-route-transition-clip-right {
+    syntax: "*";
+    inherits: false;
+  }
+  @property --navi-route-transition-clip-bottom {
+    syntax: "*";
+    inherits: false;
+  }
+  @property --navi-route-transition-clip-left {
+    syntax: "*";
+    inherits: false;
+  }
+  @property --navi-route-transition-travel-x {
+    syntax: "*";
+    inherits: false;
+  }
+  @property --navi-route-transition-travel-y {
+    syntax: "*";
+    inherits: false;
+  }
+  :root::view-transition,
+  :root::view-transition-group(*),
+  :root::view-transition-image-pair(*),
+  :root::view-transition-old(*),
+  :root::view-transition-new(*) {
+    --navi-route-transition-leave: inherit;
+    --navi-route-transition-enter: inherit;
+    --navi-route-transition-covered: inherit;
+    --navi-route-transition-clip-top: inherit;
+    --navi-route-transition-clip-right: inherit;
+    --navi-route-transition-clip-bottom: inherit;
+    --navi-route-transition-clip-left: inherit;
+    --navi-route-transition-travel-x: inherit;
+    --navi-route-transition-travel-y: inherit;
+  }
+  /* The groups nested in another one (view-transition-group: contain). On its
+     own rule: a selector a browser cannot parse takes the whole list it is
+     written in down with it. */
+  :root::view-transition-group-children(*) {
+    --navi-route-transition-leave: inherit;
+    --navi-route-transition-enter: inherit;
+    --navi-route-transition-covered: inherit;
+    --navi-route-transition-clip-top: inherit;
+    --navi-route-transition-clip-right: inherit;
+    --navi-route-transition-clip-bottom: inherit;
+    --navi-route-transition-clip-left: inherit;
+    --navi-route-transition-travel-x: inherit;
+    --navi-route-transition-travel-y: inherit;
+  }
+
   /* The marked region is a picture of its own for the length of a transition of
      OURS, and only then — the name is what makes the pages a picture the
      movement below can carry.
