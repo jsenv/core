@@ -229,6 +229,21 @@ ${[idKey, ...uniqueKeys].join(", ")}`,
     }
     return result;
   };
+  // A computed of the row with this id, one per id: what a render reads to
+  // follow that row and no other. An upsert replaces only the items it changes
+  // (see assign below), so a row nobody wrote keeps its object, and its
+  // computed stays still while the rest of the store moves — read through
+  // `select`, a render follows the whole store. Kept as long as the store,
+  // like the rows it holds.
+  const itemSignalById = new Map();
+  const itemSignalForId = (id) => {
+    let itemSignal = itemSignalById.get(id);
+    if (!itemSignal) {
+      itemSignal = computed(() => idMapSignal.value.get(id));
+      itemSignalById.set(id, itemSignal);
+    }
+    return itemSignal;
+  };
   const upsert = (...args) => {
     const mutationsMap = new Map(); // Map<itemId, propertyMutations>
     const triggerPropertyMutations = () => {
@@ -619,6 +634,7 @@ ${[idKey, ...uniqueKeys].join(", ")}`,
     arraySignal,
     select,
     selectAll,
+    itemSignalForId,
     upsert,
     drop,
 

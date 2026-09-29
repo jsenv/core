@@ -332,12 +332,34 @@ const createResource = (
     idKey,
     uniqueKeys,
 
-    // Reactive reads, not hooks: they subscribe the render that calls them to
-    // the store's array signal. Nothing hook-shaped inside, so a loop or a
-    // condition is fine. `useAllByIds` skips the ids the store does not hold.
+    // Reactive reads, not hooks: nothing hook-shaped inside, so a loop or a
+    // condition is fine. Each subscribes the render that calls it to what it
+    // returns: the rows asked for, each through a computed of that row (see
+    // itemSignalForId in array_signal_store.js), or the whole store for
+    // `useArray` — a card reading its own row stays still while the page next
+    // to it loads rows of its own. `useAllByIds` skips the ids the store does
+    // not hold.
     useArray: () => store.arraySignal.value,
-    useById: (id) => store.select(idKey, id),
-    useAllByIds: (idArray) => store.selectAll(idArray),
+    useById: (id) => store.itemSignalForId(id).value,
+    useAllByIds: (idArray) => {
+      const items = [];
+      for (const idOrProps of idArray) {
+        let id = idOrProps;
+        if (isProps(idOrProps) && !Object.hasOwn(idOrProps, idKey)) {
+          // Named by a unique key: which row that is can only be read off
+          // the whole store.
+          const item = store.select(idOrProps);
+          id = item ? item[idKey] : undefined;
+        } else if (isProps(idOrProps)) {
+          id = idOrProps[idKey];
+        }
+        const item = store.itemSignalForId(id).value;
+        if (item) {
+          items.push(item);
+        }
+      }
+      return items;
+    },
 
     withParams: undefined,
     one: undefined,

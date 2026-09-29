@@ -643,10 +643,13 @@ elements):
   at a route (`<Link route>`, `<Button route>`) reads one flag — whether it is
   current — and stays still unless that flips: a profile opening leaves the
   links to a hundred other profiles exactly as they were (on the list of
-  thirty cards: 90 re-renders gone, first frame 58 → 41 ms). What else reacts
-  is worth keeping to what has to — measured: every card of the page being
-  left re-rendering when the page arriving loads its own games into the store
-  the cards read theirs from.
+  thirty cards: 90 re-renders gone, first frame 58 → 41 ms). A row read with
+  `RESOURCE.useById` follows that row only, so the page arriving loading rows
+  of its own into the same store leaves the cards of the page being left as
+  they were. What reacts is then the page's own reading of its route's action
+  — its params, its data and its state all move as the route stops matching —
+  and that re-renders the page with everything in it (on the list of thirty
+  cards: about 1,150 component renders, the largest share of the callback).
 - **Re-rendering what did not change, on the press itself.** A component that
   only wants a yes or a no reads a computed flag, not the signal it is derived
   from: a list whose rows each read the count of runs in flight re-rendered

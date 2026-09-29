@@ -292,9 +292,13 @@ Keep their **ids**, not the objects: an object is a snapshot, and it stops
 following its row the moment anything writes to it. `RESOURCE.useAllByIds(ids)`
 reads those rows as they are now — a kept id turned back into something that
 stays fresh, and the ids the store no longer holds simply drop out.
-`RESOURCE.useById(id)` is the singular, `RESOURCE.useArray()` the whole store;
-all three subscribe the render that calls them, and none is a hook (a `.map()`
-over them is fine).
+`RESOURCE.useById(id)` is the singular, `RESOURCE.useArray()` the whole store.
+None is a hook (a `.map()` over them is fine), and each subscribes the render
+that calls it to what it returns: `useById` and `useAllByIds` to the rows they
+hand back — a card reading its own row stays still while other rows of the
+store are written, and re-renders when its row is — `useArray` to the whole
+store. An entry of `useAllByIds` given by a unique key rather than by id can
+only be found by reading the whole store, and that read follows it too.
 
 ## Relations: pick one of the four methods
 
