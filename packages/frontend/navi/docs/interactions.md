@@ -9,7 +9,6 @@
 - [What a swipe draws, and what it leaves to you](#what-a-swipe-draws-and-what-it-leaves-to-you)
 - [Twice, whichever hand it is](#twice-whichever-hand-it-is)
   - [The click on the way there](#the-click-on-the-way-there)
-- [Carrying something, or a surface under the hand](#carrying-something-or-a-surface-under-the-hand)
 - [An affordance inside somebody else's box: `selfInteractions`](#an-affordance-inside-somebody-elses-box-selfinteractions)
   - [Why it is a list, and why it is required](#why-it-is-a-list-and-why-it-is-required)
   - [Where the zone blocks: does it write to the control it sits in?](#where-the-zone-blocks-does-it-write-to-the-control-it-sits-in)
@@ -63,13 +62,20 @@ one — `Box`, `List.Item`, `Button`, `Link`, the field components. Its keys are
 />
 ```
 
-`action` is a control's prop and is untouched by this: a control keeps its own
-wiring — a click on a button, a change on a field — and `interactions` is the
-other half, everything that is not that natural one. A plain `Box` has no such
-wiring: it does nothing with `action` (dev warns), and a click on it is declared
-like any other interaction, `interactions={{ click: onSelect }}`. The click the
-browser fires after a drag is already suppressed, so `click` sits next to `move`
-or `grab` without fighting them.
+`interactions` adds, it does not replace: a control keeps its own wiring for
+`action` — a click on a button, a change on a field — and `interactions` is
+everything else. One thing moves. A control asking for its action on the press
+(`actionEvent="mousedown"`, `actionOnMouseDown`) waits for the `click` instead
+as soon as a gesture disputing that press is declared — a swipe, a `longpress`,
+the two counted taps, the drag family, `pan`/`zoom` — because the press is not
+known to be a press until the gesture gives it up. `single_click` goes further
+and takes the element's click itself (see
+[The click on the way there](#the-click-on-the-way-there)).
+
+A plain `Box` has no such wiring: it does nothing with `action` (dev warns), and
+a click on it is declared like any other interaction,
+`interactions={{ click: onSelect }}` — beside `move` or `grab` too, the click a
+drag leaves behind being already suppressed.
 
 ### The four values
 
@@ -101,29 +107,20 @@ which the carrying interactions answer with).
 | `pan` `zoom`                                       | a surface under the hand, or under a wheel                  |
 | `"keyboard:<shortcut>"`                            | keys, e.g. `"keyboard:ctrl+backspace"`                      |
 
-Two holds on one press — a `longpress` declared on something inside an
-element that declares one too — are answered by the nearer one, the way a
-click is the innermost target's: the inner hold fires, the outer wait is given
-up. That is with equal delays; an outer hold made shorter than the inner one
-fires first. navi says so in dev, once per element, the first time it happens:
-the outer hold is a declaration that can never fire, and a picker opened by
-`openOn="longpress"` around a card that already holds one is exactly where it
-happens. One hold has one meaning — two things on one card want two gestures
-(a hold and a click), not two holds. A press that lands on something carried
-inside the element (`move`, `moving`, `reorder`…) is that thing's the same
-way: the outer hold does not wait on it, whether the source drags by holding
-or by distance — except a source that says `"refuse"` for this press, which
-carries nothing.
+Two holds on one press — a `longpress` declared inside an element that declares
+one too — are answered by the nearer one, the way a click is the innermost
+target's (with equal delays; an outer hold made shorter fires first), and dev
+says so once per element: the outer hold is a declaration that never fires. One
+hold has one meaning — two things on one card want a hold and a click, not two
+holds. A press on something carried inside the element (`move`, `moving`,
+`reorder`…) is that thing's the same way, whether it drags by holding or by
+distance — unless it says `"refuse"` for this press, and then it carries nothing.
 
-There is no `dblclick` in that table, on purpose: the browser fires it for a
-mouse and never for a finger, so an element declaring it would answer half the
-hands that reach it. `double_click` is the same gesture counted from the
-pointer — see [Twice, whichever hand it is](#twice-whichever-hand-it-is).
-
-A name nothing knows how to detect produces a dev warning naming the detectors
-that exist. The carrying family and the two surface streams each have a file of
-their own — [drag_interactions.md](./drag_interactions.md) and
-[pan_zoom.md](./pan_zoom.md).
+There is no `dblclick`, on purpose (see
+[Twice, whichever hand it is](#twice-whichever-hand-it-is)). A name nothing knows
+how to detect gets a dev warning naming the detectors that exist. The carrying
+family and the surface have a file each:
+[drag_interactions.md](./drag_interactions.md) and [pan_zoom.md](./pan_zoom.md).
 
 ## Which interaction asked
 
@@ -148,10 +145,11 @@ receives.
 ancestor can also listen for one, and `preventDefault()` on it means "not this
 time".
 
-The lower-level event the interaction was read from is reachable too:
-`interactionEvent.detail.event` is the `pointerdown` a hold or a drag was made
-of (a drag's release included), and the `pointerup` that ended a swipe or a tap
-— which is how a menu is opened at the point the press happened.
+The lower-level event is reachable too: `interactionEvent.detail.event` is the
+`pointerdown` a hold was made of, and the `pointerup` that ended a swipe or a
+tap — which is how a menu is opened at the point the press happened. A drag's
+is its `pointerdown`, release included, with one exception (see
+[drag_interactions.md](./drag_interactions.md)).
 
 ## Reaching the control
 
@@ -163,24 +161,18 @@ still answers a callback; only the two requests (`"request_action"`,
 `"request_ui_action"`) have nothing to ask, and say so in dev.
 
 A `Box` that lays out **several** controls — a row of badges, a toolbar — belongs
-to none of them: its interactions are its own, answered with no gate, exactly as
-a `Box` with no control near it. A click on its empty part is the box's, and a
-click on one of the controls reaches the box too, the way any click bubbles;
-the callback reads `event.target` when it has to tell them apart.
+to none of them: its interactions are its own, answered with no gate. A click on
+one of the controls reaches the box too, the way any click bubbles; the callback
+reads `event.target` when it has to tell them apart.
 
-The one thing the gate weighs besides the control's state is what the
-interaction would do to it. Everything writes unless it says otherwise; an
-interaction that only shows what is already there declares `intent: "read"`, and
-a control held read-only lets that one through. That is how a read-only
-`<Picker>` still opens: the popup is where its answer is really drawn, so it
-opens and everything inside it is held read-only in turn. Disabled and busy go
-on refusing either way — one is out of service, the other is mid-operation, and
-neither has anything to show.
-
-Which controls let a read through is theirs to say, not the caller's: a picker
-with no popup of its own opens the browser's, which cannot be held read-only, so
-that one refuses. `openWhileReadOnly={false}` is how a caller says the popup is
-a form with nothing to read.
+**The gate takes every declared interaction for a write.** Letting a read through
+a read-only or busy control is navi's to grant inside its own controls, and
+`interactions` cannot ask for it: a callback on a read-only control is refused, a
+`longpress` included. So a plain press opens a read-only or busy `<Picker>` — its
+popup is where its answer is drawn, held read-only in turn — while a read-only
+one opened by `openOn="longpress"` refuses, whatever `openWhileReadOnly` says.
+Disabled refuses everything. Which pickers open, and `openWhileReadOnly={false}`,
+are in the Picker's JSDoc.
 
 ## What a swipe draws, and what it leaves to you
 
@@ -196,9 +188,9 @@ that — and says where the gesture is up to:
 
 WHAT is revealed behind is yours: navi does not know what putting a row away
 looks like. A trail is usually a child of the swiped element sized off
-`--swipe-pulled`. Both values inherit, so a child reads them; a sibling cannot,
-which is why the trail goes inside — and it travels with the row, since what
-navi translates is the element that declares the gesture.
+`--swipe-pulled`: both values inherit, so a child reads them and a sibling
+cannot — and the child travels with the row, since what navi translates is the
+element that declares the gesture.
 
 ```css
 .trail {
@@ -215,41 +207,30 @@ navi translates is the element that declares the gesture.
 ```
 
 While the answer takes time, the element **stays where the gesture left it**, and
-comes back once it settles — a failure leaves the row in place so it can be tried
-again. What a success does to the element is yours (a list that redemands its
-rows, a row that leaves): navi does not make it disappear.
+comes back once it settles — a failure leaves the row in place to be tried
+again. What a success does to it is yours (a list that redemands its rows, a row
+that leaves): navi does not make it disappear.
 
 ## Twice, whichever hand it is
 
-At the finger there is no `dblclick`. There is not even a second `click`: two
-taps in the same place are a gesture the browser keeps for itself (its own
-zoom), so it withholds them — measured on a phone, two taps 120 ms apart give
-two `pointerup`, ONE `click` and no `dblclick` at all. Anything that wants to
-mean "twice" therefore has to count presses, which is what `double_click` is:
+At the finger there is no `dblclick`, and not even a second `click`: two taps in
+the same place are the browser's own zoom gesture, so it withholds them (see
+[mobile_touch.md](./mobile_touch.md#the-click-is-the-browsers-call-as-much-as-ours)).
+An element declaring `dblclick` would answer half the hands that reach it.
+Anything that means "twice" therefore counts presses, which is what
+`double_click` is — one name for the mouse and the finger:
 
 ```jsx
 <Box interactions={{ pan, zoom, double_click: (event) => open(event) }} />
 ```
 
-One name for the mouse and for the finger — a tap is a click, and the same
-gesture opens the plan at a desk and on a phone.
-
 The rhythm is one window, opened by the FIRST press: the second has to land
-inside it, and near enough to it.
-
-| Attribute                 | Default | Meaning                                     |
-| ------------------------- | ------- | ------------------------------------------- |
-| `data-double-click-delay` | `400`   | ms the window stays open                    |
-| `data-double-click-slop`  | `30`    | px the second press may land from the first |
-
-The two numbers are read against the rest of the family rather than picked. 400
-sits under the hold's 450: a pause longer than the wait navi calls "held" is
-longer than one gesture — which also means a press slow enough to be a hold
+inside it and near enough to it (`data-double-click-delay` and
+`data-double-click-slop`, see [Tuning](#tuning)) — a fingertip rather than a
+pixel, because between the two the finger leaves the glass and lands again. The
+window is shorter than the hold's wait, so a press slow enough to be a hold
 cannot start a double click, and a hold answered on the second press takes that
-press back. 30 px is a fingertip and not a pixel, because between the two the
-finger leaves the glass and lands again where it means to; the 8 px of
-`data-longpress-slop` answer a different question (has this finger stood
-still?).
+press back.
 
 ### The click on the way there
 
@@ -258,10 +239,10 @@ By default both happen, the way they do in a browser: the first press is a
 would have left behind is swallowed, the way every gesture swallows the one it
 leaves.
 
-`single_click` is for the case where even the first one is too much: two
-answers that exclude each other — a plan that opens on the double must not do
-whatever a lone tap does on the way there. It is the same window read the other
-way, the tap that STAYED alone, said once the window has closed on it:
+`single_click` is for two answers that exclude each other — a plan that opens on
+the double must not do whatever a lone tap does on the way there. It is the same
+window read the other way, the tap that STAYED alone, said once the window has
+closed on it:
 
 ```jsx
 <Box
@@ -279,18 +260,6 @@ control that wants its action on a lone click asks for it there —
 `single_click: "request_action"`, not `action` reached by a click that no longer
 arrives. A keyboard activation is not held: nothing can double it, so it is said
 at once.
-
-## Carrying something, or a surface under the hand
-
-Two families of interaction have a file of their own, because each is a subject:
-
-- [drag_interactions.md](./drag_interactions.md) — an element picked up and
-  carried: `move`, `reorder`, `land`, `toss`, `leave`, the `moving` stream,
-  the `grab`/`release`/`refuse` moments, how the copy is dressed, and the
-  machinery handed over for a gesture whose product is a value;
-- [pan_zoom.md](./pan_zoom.md) — a surface dragged to look elsewhere on and
-  pinched or wheeled to look closer at: `pan`, `zoom`, and what a touch and a
-  wheel over it may do to the page around it.
 
 ## An affordance inside somebody else's box: `selfInteractions`
 
@@ -313,20 +282,13 @@ instead of firing from the DOM.
 A press is not a drag. A drag announces itself — a few pixels of travel with a
 mouse, a long hold with a finger — and a click is the absence of both, so the
 two can be told apart without anyone guessing at pointerdown. An affordance
-that claimed every gesture at once would be a HOLE in whatever it sits in: a
-badge drawn against the edge of a card is a seventh of that card, and precisely
-the edge one grabs to carry it.
-
-So the claim names its interactions, and what it does not name stays the zone's:
-
-| written                         | takes                        | leaves                                     |
-| ------------------------------- | ---------------------------- | ------------------------------------------ |
-| `selfInteractions="click"`      | the press                    | the grab — the card is still carried by it |
-| `selfInteractions="click drag"` | both                         | —                                          |
-| `selfInteractions="*"`          | every gesture, now and later | —                                          |
-
-`"*"` is there for the case where it is true, not as a shorthand: it is the one
-value that will silently swallow a gesture navi has not shipped yet.
+that claimed every gesture at once would be a HOLE in whatever it sits in, at
+precisely the edge one grabs to carry it. So the claim names its interactions,
+and what it does not name stays the zone's: `"click"` takes the press and leaves
+the grab — the card is still carried by it — `"click drag"` takes both, and
+`"*"` takes every gesture, now and later. `"*"` is there for the case where it
+is true, not as a shorthand: it is the one value that will silently swallow a
+gesture navi has not shipped yet.
 
 `data-drag-ignore` says a different thing, to the gesture alone and for all of
 them at once: the press there is none of the gesture's business, and the element
@@ -335,26 +297,22 @@ keeps both its cursor and its text selection.
 ### Where the zone blocks: does it write to the control it sits in?
 
 That question, and nothing else, picks `whenSelfInteractionsBlocked` — what
-becomes of the affordance where the zone around it is disabled or read-only.
-The claimed interactions are its subject, and only them: the ones left to the
-zone were never this element's to block.
+becomes of the affordance where the zone around it is disabled or read-only. Only
+the claimed interactions are its subject: the ones left to the zone were never
+this element's to block.
 
-| what it does                                                 | written                                | on a blocked zone                         |
-| ------------------------------------------------------------ | -------------------------------------- | ----------------------------------------- |
-| writes to it (a cross that removes, a stepper)               | nothing — `"hide"` is the default      | it goes                                   |
-| writes to it, and its presence says there is something there | `whenSelfInteractionsBlocked="refuse"` | it stays and refuses with a callout       |
-| never touches it (a diskette saving into MY address book)    | `whenSelfInteractionsBlocked="ignore"` | nothing changes: still lit, still pressed |
+| what it does                                                 | `whenSelfInteractionsBlocked` | on a blocked zone                   |
+| ------------------------------------------------------------ | ----------------------------- | ----------------------------------- |
+| writes to it (a cross that removes, a stepper)               | `"hide"`, the default         | it goes                             |
+| writes to it, and its presence says there is something there | `"refuse"`                    | it stays and refuses with a callout |
+| never touches it (a diskette saving into MY address book)    | `"ignore"`                    | still lit, still pressed            |
 
 A greyed cross that still removes is worse than no cross — hence the default.
-`"ignore"` is the other extreme and the caller owns it: the zone's read-only is
-about a value the affordance does not write, so answering "read-only" to a
-gesture that was never going to write anything says nothing true. Use it only
-when that is really the case.
-
-navi's own `<Dialog.Close />` is the second canonical case: a read-only picker
-still opens, and leaving what it opened writes nothing to it — so the cross is
-`"ignore"` and a hand-written one must say the same, or it refuses the press
-aimed at the way out (see
+`"ignore"` is the other extreme and the caller owns it: answering "read-only" to
+a gesture that was never going to write says nothing true, so use it only when
+that is really the case. navi's `<Dialog.Close />` is one — leaving what a
+read-only picker opened writes nothing to it — and a hand-written cross must say
+the same, or it refuses the way out (see
 [popup_open.md](./popup_open.md#the-close-cross)).
 
 Busy is not on the list because busy does not block: it is the read-only a
@@ -362,118 +320,64 @@ running action sets on its way that does.
 
 ### The third question: whose value is it?
 
-`selfInteractions` and `whenSelfInteractionsBlocked` are about the **gesture** —
-who a pointer event belongs to, and what a block on the box around it does to
-that gesture. Whose **value** an element carries is a separate question, and
-`standalone` answers it: the control does not register with the form, picker or
-group around it, so what it holds never joins that value (see
-[form_changed.md](./form_changed.md#a-control-that-answers-for-itself)).
-
+`selfInteractions` and `whenSelfInteractionsBlocked` are about the **gesture**.
+Whose **value** an element carries is a separate question, and `standalone`
+answers it: the control does not register with the form, picker or group around
+it (see [form_changed.md](./form_changed.md#a-control-that-answers-for-itself)).
 They come apart, which is why they are separate props:
 
-| the element                                             | says                                                                        |
-| ------------------------------------------------------- | --------------------------------------------------------------------------- |
-| a chip's cross                                          | `selfInteractions` — it is a button, it never carried a value               |
-| a door opening a sheet that writes into the form        | `standalone` — no value of its own, but a read-only form must still shut it |
-| a diskette filing a name into the reader's address book | all three — own press, block is not about it, own value                     |
-
-Reading `standalone` as "ignore everything around me" is the trap: `disabled`,
-`readOnly` and `loading` travel on their own contexts and go on reaching it,
-because "what do I hold" and "may anything be changed here" are not the same
-question.
+| the element                                      | says                                                   |
+| ------------------------------------------------ | ------------------------------------------------------ |
+| a chip's cross                                   | `selfInteractions` — it never carried a value          |
+| a door opening a sheet that writes into the form | `standalone` — but a read-only form must still shut it |
+| the diskette above                               | all three: own press, block not about it, own value    |
 
 ### The fourth question: whose wait is it?
 
 A running action says two things at once. To the control: I am mid-action —
 busy, a second press refused, the error callout if it fails. To everything
-around it: nothing here moves on — the form does not submit, and the popup does
-not close (see
-[popup_open.md](./popup_open.md#the-popup-owns-its-open-state)).
+around it: nothing here moves on — the form does not submit, the popup does not
+close. `actionStandalone` keeps the first and drops the second: the wait is the
+control's own, which is why it is `action` plus a word rather than the three
+re-implemented by hand, and no ancestor is told.
 
-The second half is a promise about an answer: a send holds something neither
-committed nor given up, so the screen showing it stays. It is exactly wrong for
-a run that was started to be LEFT running — activating a service worker update,
-which lands only once the browser switches over and can be held by the page's
-own in-flight work for minutes. Waiting is not the point; the app goes on being
-used and the feedback is somewhere else entirely. `actionStandalone` says the
-wait is the control's own:
-
-```jsx
-<Button action={() => activateUpdate()} actionStandalone>
-  Activate
-</Button>
-```
-
-Everything the control does for itself stays: it renders busy, it refuses a
-second press, and it raises the error callout — which is why it keeps `action`
-rather than re-implementing the three by hand. What changes is that no ancestor
-is told: the form around it submits, and the panel it sits in closes on Escape,
-on the backdrop and on its cross.
-
-The question that picks it is what closing over the run would lose. An answer
-being sent: everything — the popup is the only place its failure can be read,
-and `actionStandalone` there is how a save fails behind a closed popup. Something
-the app watches from somewhere else: nothing — it was never being watched here.
-
-And when the answer being sent may never arrive at all — a request over a
-network that stopped answering — the hold outlives what it was protecting:
-nothing can close the popup, ever. `actionAbortable` keeps the hold and gives it
-a release, so closing calls the run off rather than being refused. What that
-costs, and where it may be said, is
-[popup_open.md](./popup_open.md#the-popup-owns-its-open-state).
+What picks it is what closing over the run would lose. Something the app watches
+from somewhere else — a service worker update being activated — loses nothing.
+An answer being sent loses everything: the popup is the only place its failure
+can be read. That hold, and `actionAbortable` for a run whose answer may never
+come, are [popup_open.md](./popup_open.md#the-popup-owns-its-open-state)'s.
 
 ### On something you draw yourself
 
 `selfInteractions` is a `Box` prop too, so an affordance does not have to become
 a control to claim its interactions — a pastille positioned in a card's corner
-by its own class stays exactly what it was drawn as:
+by its own class stays what it was drawn as:
 
 ```jsx
 <Box as="button" selfInteractions="click" className="court_side" onClick={explain}>
 ```
 
-On a box the prop does exactly one thing: it writes `data-self-interactions`.
-That attribute is the claim — it is what the controls above read, and what the
-gesture readers read (`data-drag-handle`, `data-drag-ignore` and friends are the
-same vocabulary), each picking its own word out of it. Writing it by hand on an
-element navi does not render works and is the last resort: a typo there is
-silent, whereas the prop is spelled once and checked.
-
-`whenSelfInteractionsBlocked` is the other half, and it belongs to controls: it
-is about a gate, a callout and a control's own read-only, none of which a box
-has. A box claims interactions and nothing more; put the affordance on a control
-when what it does about a held zone matters.
+On a box the prop does one thing: it writes `data-self-interactions`, the claim
+itself — read by the controls above and by the gesture readers
+(`data-drag-handle`, `data-drag-ignore` and friends are the same vocabulary).
+Writing it by hand on an element navi does not render is the last resort: a typo
+there is silent, whereas the prop is checked. `whenSelfInteractionsBlocked`
+belongs to controls — a gate, a callout, a read-only of its own, none of which a
+box has — so put the affordance on a control when what it does about a held zone
+matters.
 
 ### When the affordance should sit OUTSIDE instead
 
-`selfInteractions` says a façade CAN yield a zone; it does not say it should.
-What decides is whether the affordance stays where the finger left it.
+`selfInteractions` says a façade CAN yield a zone; it does not say it should. An
+affordance that acts on what it sits in (a chip's cross, a stepper, an eye on a
+row) belongs inside, and takes its press back with `selfInteractions`. One that
+swaps what is being shown belongs outside both controls, at a fixed place, so the
+pixel that opened the search is the one that closes it: `<ControlSwap>` is that
+row.
 
-An icon that lives inside its control while that control is showing, and
-becomes a pill of its own once it is not, is a switch that moves when you flip
-it: the finger that opened the search has to travel somewhere else to close it.
-Draw it outside both controls, at a fixed place, and the same pixel does both —
-which is the whole gesture on a phone. `<ControlSwap>` is that row: two
-controls taking turns in the middle, a fixed cap at each end.
-
-So: an affordance that acts on what it sits in (a chip's cross, a stepper, an
-eye on a row) belongs inside, and takes its press back with `selfInteractions`.
-One that swaps what is being shown belongs outside it, where it can stay put.
-
-Whichever side of the frame it ends up on, the control must be told, because a
-control draws affordances of its own and will otherwise draw a second one:
-
-- **inside** — a field has slots for it, `Input.UI.LeftSlot`,
-  `Input.UI.RightSlot`, `Input.UI.IconSlot` (an icon sized on the line rather
-  than on a character) and `Input.UI.UnitSlot`. They label the field, so a
-  press lands on it rather than blurring it — except when the field is not
-  focused yet, where the slot may take the focus itself, which is what a clear
-  cross or a reveal-password eye needs.
-- **outside** — the icon the type would have drawn has to go, or it sits two
-  centimetres from yours: `icon={null}`. It is the same prop that replaces it
-  (`icon={<MySvg />}`) and that leaves it alone (left out). A `search` field
-  still swaps that slot for its clear cross once it holds a value, whatever
-  `icon` says — the cross is about the value, not about the decoration.
+Either way the control must be told, or it draws a second affordance of its
+own: inside a field it goes in an `Input.UI` slot, and outside, `icon={null}`
+takes away the icon the type would have drawn.
 
 ```jsx
 <Input type="search" icon={null} /> // the row draws the magnifier
@@ -492,15 +396,13 @@ there yourself if it must not.
 Read off the element or any ancestor carrying the attribute, so a whole list is
 tuned in one place and a stylesheet can read the same value.
 
-| Attribute              | Default | Meaning                                   |
-| ---------------------- | ------- | ----------------------------------------- |
-| `data-swipe-threshold` | `0.33`  | fraction of the element to pull to commit |
-| `data-longpress-delay` | `450`   | ms the press must be held                 |
-| `data-longpress-slop`  | `8`     | px the pointer may drift during the wait  |
-
-Plus the two the double click is counted with, `data-double-click-delay` and
-`data-double-click-slop` (see [Twice, whichever hand it
-is](#twice-whichever-hand-it-is)).
+| Attribute                 | Default | Meaning                                        |
+| ------------------------- | ------- | ---------------------------------------------- |
+| `data-swipe-threshold`    | `0.33`  | fraction of the element to pull to commit      |
+| `data-longpress-delay`    | `450`   | ms the press must be held                      |
+| `data-longpress-slop`     | `8`     | px the pointer may drift during the wait       |
+| `data-double-click-delay` | `400`   | ms the window stays open, from the first press |
+| `data-double-click-slop`  | `30`    | px the second press may land from the first    |
 
 A threshold is a **fraction and never a distance**: the same gesture must mean
 the same thing on a phone and on a wide screen. Speed answers on its own on top
@@ -509,114 +411,55 @@ of it — a brief flick counts whatever the distance covered.
 ## Registering an interaction navi does not have
 
 The registry holds no detector of its own: navi's swipes, holds and shortcuts go
-through the same door an application uses.
+through the same door an application uses, `defineInteractionDetector`. Its
+JSDoc is the contract — `setup` once per element and its teardown, what
+`trigger` returns (`null` when nothing ran, else a promise that rejects when
+the effect failed), `implies`, `refusable`, `disputesPress` — and
+`38_interactions_demo.html` registers a `triple_click` from the page. A detector
+claims a **set** of names rather than one, because interactions sharing an input
+have to be arbitrated together: a swipe, a hold and a click dispute the same
+press, and read apart they walk over each other.
 
-```js
-import { defineInteractionDetector } from "@jsenv/navi";
-
-defineInteractionDetector({
-  name: "triple_click",
-  claims: (type) => type === "triple_click",
-  setup: (element, trigger) => {
-    let count = 0;
-    let timeout = null;
-    const onClick = (clickEvent) => {
-      count++;
-      clearTimeout(timeout);
-      timeout = setTimeout(() => {
-        count = 0;
-      }, 1000);
-      if (count < 3) {
-        return;
-      }
-      count = 0;
-      trigger(clickEvent);
-    };
-    element.addEventListener("click", onClick);
-    return () => {
-      clearTimeout(timeout);
-      element.removeEventListener("click", onClick);
-    };
-  },
-});
-```
-
-`setup(element, trigger, { types, readConfig })` runs **once per element** and
-returns how to undo whatever it did. Listeners, attributes, anything: it is a
-plain setup and teardown, so a detector counts what it needs in its own closure
-and nothing has to hold state on its behalf.
-
-`claims` is asked one name at a time, and a detector claims a **set** of them
-rather than one, because interactions sharing an input have to be arbitrated
-together — a swipe, a hold and a click dispute the same press, and read apart
-they walk over each other. `types` (third argument) is which of them were
-actually declared here.
-
-`trigger(type, originalEvent, detail)` says the interaction happened. Called with
-a single event — `trigger(event)` — the type is the detector's own, which only
-works when exactly one of its names is declared. When `originalEvent.type` is
-already the interaction's name (a native one), that event IS the interaction and
-no second one is dispatched.
-
-It returns **`null` when nothing ran** (the gate refused, no control to ask, the
-interaction event was prevented) and otherwise a **promise**: resolved once the
-effect worked, rejected when it did not. Those two answers are not the same and a
-detector usually treats them differently — a row pulled out comes back either
-way, something thrown off the screen only comes back if the throw failed.
-
-`readConfig(attribute, defaultValue)` reads a number off the element or any
-ancestor carrying that attribute, so a whole list is tuned in one place.
-
-A detector that reads the pointer must mark itself in the DOM so a travelling
-container above it does not take the gesture:
-`element.setAttribute("data-no-drag-travel", "")`, undone in the teardown (see
-`docs/drag_to_travel.md`). navi's own swipes do the equivalent with
-`data-travel-by-drag`.
+A detector that reads the pointer says two more things: `disputesPress`, so a
+control asking for its action on the press waits for the click (see
+[The prop](#the-prop)); and `data-no-drag-travel` on the element, undone in the
+teardown, so a travelling container above it does not take the gesture (see
+[drag_to_travel.md](./drag_to_travel.md#a-navi-component-that-reads-the-pointer-marks-itself)).
 
 ## Things worth knowing before guessing
 
-- **A drag says its axes to whoever else answers the press.** `data-drag-axis`
-  is written into the DOM as `data-drag-source`, and a box above that travels
-  under the same finger reads it before answering: a list reordered vertically
-  inside a row of slides swiped sideways leaves the sideways gesture alone, and a
-  piece carried both ways inside a bottom sheet takes the press whole. Nothing to
-  wire — see `docs/drag_to_travel.md`. A `Dialog` docked to an edge goes
-  further and reads the press only on its header (plus anything carrying
-  `data-swipe-grip`), so its body is free whatever is in it.
+- **A drag says its axes to whoever else answers the press.** A list reordered
+  vertically inside a row of slides swiped sideways leaves the sideways gesture
+  alone, and a piece carried both ways inside a bottom sheet takes the press
+  whole (see [drag_to_travel.md](./drag_to_travel.md#who-owns-a-gesture), grips
+  included).
 - **A hold does not take the context menu.** Declaring `longpress` says what a
   held finger does; a right click comes from the other button and keeps opening
-  the browser's menu. Declare `contextmenu` beside it to make the right click do
-  the same thing. (A held _finger_ is the system's own context-menu gesture, and
-  that one is refused for the length of the press, not just of the wait.)
+  the browser's menu — declare `contextmenu` beside it to make it do the same.
+  (A held _finger_ is the system's own context-menu gesture, and that one is
+  refused for the length of the press, not just of the wait.)
 - **Where the press already means something, text is not selected.** An element
-  declaring `longpress`, a swipe or a counted tap (`double_click`,
-  `single_click`), and a drag source standing in a `data-drag-on-contact`
-  place, keep their text unselectable: the browser answers
-  that same press with a selection of its own — the word under the thumb, blue,
-  with handles — and nothing takes it back once the press is over. For every
-  pointer, mouse included, which cannot finish a selection begun where the press
-  is a gesture. What never answered that press keeps its text: a field, a popover
-  or a dialog opened from inside, and anything marked `data-drag-ignore`. A drag
-  source taken by long press is not concerned — the grab happens first, and the
-  gesture refuses the selection for its own length.
+  declaring `longpress`, a swipe or a counted tap, and a drag source in a
+  `data-drag-on-contact` place, keep their text unselectable, for every pointer:
+  the browser answers that same press with a selection of its own (the word
+  under the thumb, blue, with handles) that nothing takes back, and a mouse
+  cannot finish a selection begun where the press is a gesture. What never
+  answered that press keeps its text: a field, a popover or a dialog opened from
+  inside, anything marked `data-drag-ignore`. Any other drag source has the
+  selection refused only for the length of its gesture — in time for a mouse,
+  too late for a finger held still — so it says `user-select: none` itself (see
+  [drag_interactions.md](./drag_interactions.md#the-text-inside-user-select-none)).
 - **A swipe cannot also be dragged out of the page.** An element declaring a
   swipe gets `draggable={false}` and its `dragstart` refused — a native drag _is_
   press-and-move, and a link or an image is draggable without anyone asking. One
   gesture cannot mean both.
-- **`interactions` adds, it does not replace.** A control's own wiring stays:
-  `actionEvent` / `actionOnMouseDown` are still how you change what triggers
-  `action` by default.
-- **A popup can open while the finger is still down.** navi's `Popover` is
-  `popover="manual"` and owns its dismissal, so the `pointerup` ending a hold is
-  not read as an interaction outside it — a menu can appear under a waiting
-  finger, which is the native gesture. To place it at the press point rather than
-  on the element:
-  `triggerNaviCommand(target, "--navi-open", interactionEvent, { anchor })`.
-- **A swipe has no keyboard equivalent, and neither has a double click.** There
-  is nothing to press that means "swipe right", and no key that means "twice",
-  so either is only reachable if something else on the element offers the same
-  thing — a `"keyboard:<shortcut>"`, a `contextmenu`, or the control's own
-  action.
+- **A popup can open while the finger is still down** — a menu under a waiting
+  finger is the native gesture (see
+  [popup_open.md](./popup_open.md#opening-while-the-finger-is-still-down), and
+  [the anchor](./popup_open.md#the-anchor) to place it at the press point).
+- **A swipe has no keyboard equivalent, and neither has a double click.** Either
+  is only reachable if something else on the element offers the same thing — a
+  `"keyboard:<shortcut>"`, a `contextmenu`, or the control's own action.
 
 ## Reference
 
@@ -625,7 +468,6 @@ container above it does not take the gesture:
 - `src/control/interaction/interaction_press.js` — swipes, holds and the two
   taps, and what a swipe writes on the element.
 - `src/control/interaction/interaction_keyboard.js`,
-  `interaction_native.js` — shortcuts, and the browser's own events. The
-  carrying and surface detectors are referenced from their own docs.
+  `interaction_native.js` — shortcuts, and the browser's own events.
 - `src/control/demos/38_interactions_demo.html` — every case above, plus a
   mailbox, a board, a surface, and a custom gesture registered from the page.

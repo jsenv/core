@@ -247,8 +247,11 @@ to start when unsure which export solves a problem.
   `scroller`, where a list opens and what a search does to where it is, a popup
   that scrolls, hover while scrolling, how a list clips at its rounded corners
   and why a borderless list has none; many rows: `<List.Items>` and the render
-  window (`renderBudget`, its `{ initial, after }` form for a list opening in
-  a click, `virtualItemSize`, `findText` for Cmd/Ctrl + F beyond the window).
+  window (`renderBudget`, its `{ initial, after }` form for a list whose first
+  picture is taken — opening in a click, coming back in a route transition —
+  counted from the row it opens on; the whole `onScrolledChange` position,
+  `visibleCount` included, handed back to open on it; `virtualItemSize`,
+  `findText` for Cmd/Ctrl + F beyond the window).
   Read before writing CSS to make something scroll, and before rendering a
   collection as `<List.Item>` children.
 - `mobile_layout_pitfalls.md` — a horizontal overflow inflates the layout

@@ -12,11 +12,10 @@ one run.
 
 Three reasons, each met the hard way:
 
-- **A report's diagnosis is a hypothesis**, however precise its trace. One
-  report was right about the forced restyles in the click and right about the
-  focus hand-back; its proposal to "warm the transition at the press" had
-  nothing to warm; and the restyle it called "needed" turned out to be one CSS
-  rule written for text highlights, nowhere near the code under suspicion.
+- **A report's diagnosis is a hypothesis**, however precise its trace: a report
+  can be right about where the time goes and wrong about the fix — a restyle
+  called "needed" turned out to be one CSS rule written for text highlights,
+  nowhere near the code under suspicion.
 - **The prize is measured before the work.** Two proposals of the same size
   can be worth 20 ms and nothing. Build the cheapest experiment that shows how
   much a change can win — a patch of the served bundle, a stylesheet disabled
@@ -48,6 +47,10 @@ something alive, deferring it, or skipping it changes what else can see it
   real tap holds ~100 ms. Anything that is supposed to happen during the press
   needs a real hold (`Input.dispatchTouchEvent` start, wait, end).
 - Unminified builds: a profile is read by function name.
+- **The harness has four parts**, rebuilt the same way each time: an API stub
+  per endpoint the page reads, a warm-up navigation (so first-time costs do not
+  pollute every run), a frame-labelling `requestAnimationFrame` loop, and
+  trace/profile collection over a fixed window after the press.
 
 ### Measure what the user waits for
 
@@ -106,11 +109,7 @@ Read what defines the result, before and after:
 
 ## Reference
 
-- The route transition pass of 2026-09-29 (from navi 0.29.412), on wematch: a press on a link inside a callout, a slide-x to a profile, a list of
-  30 cards. What it found is written where it applies —
-  [route_transitions.md](../../../packages/frontend/navi/docs/route_transitions.md#what-a-transition-costs),
-  [view_transitions.md](../../../packages/frontend/navi/docs/view_transitions.md#what-makes-a-transition-restyle-the-whole-document) —
-  and the harness it used had four parts worth rebuilding the same way: an API
-  stub per endpoint the page reads, a warm-up navigation (so first-transition
-  costs do not pollute every run), a frame-labelling rAF loop, and trace/profile
-  collection over a fixed window after the click.
+What past passes found is written where it applies, as rules rather than
+numbers:
+[route_transitions.md](../../../packages/frontend/navi/docs/route_transitions.md#what-a-transition-costs),
+[view_transitions.md](../../../packages/frontend/navi/docs/view_transitions.md#what-makes-a-transition-restyle-the-whole-document).

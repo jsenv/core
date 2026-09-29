@@ -6,8 +6,7 @@ description: How to write, run and verify the `*_demo.html` files scattered acro
 ## Writing a demo: show, don't explain
 
 A demo is something the reader _uses_. The effort goes into the examples, never into
-the commentary around them. See
-[.agents/instructions.md](../../instructions.md#demo-files) for the rule; concretely:
+the commentary around them:
 
 - **Default to no prose.** Each example gets a short `<Label>`/`<legend>`/caption
   naming the case and the prop that drives it (`minWidth="140"`, `maxLines=3`,
@@ -64,13 +63,16 @@ Shared furniture lives next to the source, not copy-pasted into each demo:
     adds a "repartir de zéro" button next to the mode — for a demo one comes
     back to, where putting the data back would be the first minute of every
     visit.
-  - The **mode** picker (top right) answers for you — 50 ms, 500 ms, 2 s, or
-    always fail — and is remembered across reloads, for a page that exercises
-    something else and only needs the backend to behave. "manuel" stays the
-    default.
+  - The **mode** picker (top right) answers for you — 50 ms, 500 ms, 2 s, or a
+    failure after 500 ms — and is remembered across reloads, for a page that
+    exercises something else and only needs the backend to behave. "manuel"
+    stays the default.
 - **`src/control/demos/utils/call_log.jsx`** — `useCallLog()` + `<CallLog>`: what
   was called with what, and from which event. Use it for `uiAction`/`action`
   rather than a paragraph describing when they fire.
+- **`src/internal/demo_address.jsx`** — `<DemoAddress>`: the address as the
+  browser holds it, drawn on the page. For a demo about the url, where the
+  address bar is what is being watched and a screenshot does not contain it.
 
 The first three sections are always the same three, in this order — a reader
 opening any component's demo finds the same beginning:
@@ -117,12 +119,15 @@ Many packages (especially `@jsenv/navi`) ship standalone `*_demo.html` files nex
 
 ### The dev server
 
-Started with:
+Started from the repo root with:
 
 ```sh
-node scripts/dev/dev.mjs
+npm run dev
 ```
 
+(`scripts/dev/dev.mjs`, run with `--conditions=dev:jsenv` so it serves the
+source rather than the built `dist/` — see
+[.agents/instructions.md](../../instructions.md#running-jsenv-source--always-use---conditionsdevjsenv)).
 It serves the whole repo (`sourceDirectoryUrl` = repo root) on **port 3456**.
 
 **Check before starting one** — it's often already running in the background:

@@ -669,6 +669,15 @@ elements):
   container over its rows (`.navi_list_container:has(.card) …`), evaluated
   again as the rows land. An attribute the app sets on the container says the
   same thing as that `:has()`, for nothing.
+- **Building rows the first picture does not show.** A list coming back
+  where it was draws, in the update callback, the rows that were on screen
+  then — the `visibleCount` of the position it is handed back (see
+  [scroll.md](./scroll.md#where-the-list-opens-and-where-it-is)) — and the
+  rest of its window once the movement has started. The movement does not wait
+  for them: it plays on the compositor, which keeps presenting frames while the
+  main thread builds the rows. On the list of thirty cards, handed its whole
+  position back: the movement starts 70–85 ms after the click instead of
+  185–270.
 - **Re-rendering what did not change, on the press itself.** A component that
   only wants a yes or a no reads a computed flag, not the signal it is derived
   from: a list whose rows each read the count of runs in flight re-rendered

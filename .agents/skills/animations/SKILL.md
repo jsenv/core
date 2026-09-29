@@ -542,10 +542,32 @@ gesture — who owns it, the wheel reading, the retargeting rules — is
 
 ## First paint
 
-Transitions and animations play on change, never on mount. The techniques
-(`@starting-style`, the reflow trick, gating on displayed) are in
-[.agents/instructions.md](../../instructions.md#css) — that rule applies
-everywhere, not only here.
+Transitions and animations play on change, never on mount: a user never sees
+an element animate into its initial state just because the page appeared, and
+an already-open element re-rendering replays nothing. This holds for
+color/opacity/transform transitions and keyframe animations alike. The
+techniques, roughly in order of preference:
+
+- **No transition at all**: when the emphasis can be positional (a fixed
+  overlay the content moves under) rather than a per-element state flip, there
+  is nothing to animate on mount by construction.
+- **`@starting-style`**: declare the "from" state in a `@starting-style` block
+  so the browser interpolates from it _only_ the first time the element is
+  displayed. Pair it with `transition-behavior: allow-discrete` when animating
+  `display`/`overlay` (a popover or a dialog entering). No JS, no flags — the
+  choice whenever the from-state is a fixed style.
+- **The reflow trick**, when `@starting-style` cannot express the from-state —
+  it depends on a layout box that only exists once shown: set
+  `transition-property: none`, apply the "closed" state, force a layout read
+  (`getBoundingClientRect()`) so that closed frame is genuinely rendered, then
+  flip to the target state and restore `transition-property`. _Reference:
+  `navi/src/layout/popover.jsx` (search `transitionProperty = "none"`), and the top
+  comment of `navi/src/layout/popup_css.js` for why `@starting-style` does not work
+  there._
+- **Gate on displayed, not mounted**: arm the entrance transition only when the
+  element becomes displayed, so it does not replay when something already open
+  re-renders. _Reference: `useDisplayedLayoutEffect`
+  (`navi/src/utils/use_displayed_layout_effect.js`)._
 
 ## Verifying
 

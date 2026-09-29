@@ -157,13 +157,25 @@ picked up then. When it is still not the box you mean, say so explicitly with
 - **`scrolled`** is the controlled form of the same thing — same pair as
   `open`/`defaultOpen` elsewhere in navi. The list goes back there every time it
   changes, even after the user scrolled.
-- **`onScrolledChange`** gives `{id, index, offset}` as the user scrolls.
+- **`onScrolledChange`** gives `{id, index, offset, visibleCount}` as the user
+  scrolls. `visibleCount` is how many rows were on screen from that one on:
+  handed back whole (`defaultScrolled={position}`), the position also says what
+  to draw first — the list's first commit draws those rows (and the one above,
+  when it stood partly in view) and the rest of its window once painted. An app
+  keeping only the `id` (in its url, say) keeps the place and drops that: the
+  list then draws its whole window before its first picture.
 - A list with an `id` **comes back where it was** when its screen is left and
   come back to, the way the page does: the position is kept under the list's
   `id` and the page's url, for the session, and put back by name the way
-  `defaultScrolled={{id, offset}}` is. A fresh arrival at the page still opens
-  at `defaultScrolled`. **`scrollResetOnNavigation`** opts out: the list then
+  `defaultScrolled={{id, offset}}` is — `visibleCount` included, and kept even
+  when the list was never scrolled. A fresh arrival at the page still opens at
+  `defaultScrolled`. **`scrollResetOnNavigation`** opts out: the list then
   opens the same way every time.
+- A list scrolling the document and opening on a row **places the document
+  itself**, on the row: the offset the page kept for its url is not put back
+  over it. Those are pixels of the page as it was drawn, and the rows the
+  window holds off screen are fillers of an estimated height — the same pixels
+  now fall on other rows.
 
 ### A search moves the list, and gives it back
 
@@ -390,10 +402,16 @@ scrolls: a `maxHeight` on a list that IS the scrolling area,
 ### The first paint of a list that opens in a click
 
 A popup's content is built in the click that opens it (see `popup_open.md`),
-and rows below the fold cost the same there as rows on screen. `renderBudget`
+and rows below the fold cost the same there as rows on screen. A page coming
+back in a route transition is the same case: it is built in the transition's
+update callback, and every row drawn there delays the movement. `renderBudget`
 takes `{ initial, after }` for exactly this: `initial` rows in the commit the
 browser paints first — what a phone screen shows, plus a few — and `after` from
-the paint on. The switch waits for the paint itself, not for an effect: preact
+the paint on. They are counted from the row the list opens on: the first
+picture of a list opening on a row shows that row and what is below it, and
+the window is centered on it only from the paint on. A position handed back
+with its `visibleCount` sizes that first window itself, whatever `initial`
+guessed. The switch waits for the paint itself, not for an effect: preact
 runs a component's pending effects early when that component renders again,
 and something always re-renders before a popup has painted. Do not rebuild
 this by hand with a `useEffect` that widens a slice: that effect is one preact

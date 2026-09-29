@@ -28,6 +28,7 @@ import { Box, BoxForwardedPropsContext } from "../../box/box.jsx";
 import { isLikelyPreactGeneratedId } from "../../nav/browser_integration/document_state_signal.js";
 import {
   forgetScrollerUnlessPageLeft,
+  holdDocumentScroll,
   recallScrollerPosition,
   rememberScrollerPosition,
 } from "../../nav/browser_integration/scroll_restoration.js";
@@ -1016,8 +1017,21 @@ const ListUI = (props) => {
   // later just as well. `after` takes over after the paint (see afterPaint for
   // why not an effect), and the floor of 30 is its: it protects the scrolling
   // window, not a picture nobody has seen yet.
-  const { initial: initialRenderBudget, after: renderBudgetAfterPaint } =
+  const { initial: initialRenderBudgetProp, after: renderBudgetAfterPaint } =
     resolveRenderBudget(renderBudgetProp);
+  // Opening on a position that says how many rows were on screen from its row
+  // on (the way back to where the list was, see reportPosition): that is what
+  // the first picture shows, whatever `initial` guessed — with the row above
+  // when it stood partly in view. The rest waits for the paint like any
+  // `initial`: a page coming back in a route transition builds it inside the
+  // update callback, and every row below the fold delays the movement.
+  const openingPosition = scrolled ?? defaultScrolled;
+  const initialRenderBudget =
+    openingPosition &&
+    typeof openingPosition === "object" &&
+    typeof openingPosition.visibleCount === "number"
+      ? openingPosition.visibleCount + (openingPosition.offset > 0 ? 1 : 0)
+      : initialRenderBudgetProp;
   let renderBudget = renderBudgetAfterPaint;
   if (renderBudget < 30 && !renderBudgetSkipCheck) {
     console.warn(
@@ -1551,12 +1565,25 @@ const useListScrollSync = ({
     });
   };
 
+  // How many rows the window keeps above the row the list is held at. Around it
+  // for the scrolling to come, from the first paint on; before, the window is
+  // the first picture's, and a picture of the list opening on a row shows that
+  // row and what is below it — with the one above when a remembered position
+  // says it stood partly in view.
+  const rowsAboveOpening = (openAt, windowSize) => {
+    if (renderBudget !== renderBudgetSteady) {
+      return openAt && typeof openAt === "object" && openAt.offset > 0 ? 1 : 0;
+    }
+    return Math.floor(windowSize / 2);
+  };
   const [renderWindow, setRenderWindow] = useState(() => {
     // Opening somewhere else than the beginning starts by framing there: the
     // rows the list will draw are the rows it will ask for.
     const openAt = scrolled ?? defaultScrolled;
     const start =
-      typeof openAt === "number" ? openAt - Math.floor(renderBudget / 2) : 0;
+      typeof openAt === "number"
+        ? openAt - rowsAboveOpening(openAt, renderBudget)
+        : 0;
     const startClamped = start < 0 ? 0 : start;
     return { start: startClamped, end: startClamped + renderBudget };
   });
@@ -1619,8 +1646,12 @@ const useListScrollSync = ({
     // is not what it will frame, so nothing should be fetched for it.
     listRows.holdPending =
       scrolledWanted !== "start" && scrolledWanted !== undefined;
+    // Zero until the runs have rendered — they count their rows as they do,
+    // after the list — which is not a collection fitting in the window: it is
+    // one whose end is not known yet, and the window then frames the row the
+    // list opens on, already in the first commit.
     const total = listRows.totalSignal.peek();
-    if (total <= renderBudget) {
+    if (total > 0 && total <= renderBudget) {
       // The whole collection is what the list draws: wherever in it the list is
       // held, the window is already its place. Nowhere to move to means nothing
       // to wait for — a hold left standing here is a list that never asks for
@@ -1628,21 +1659,21 @@ const useListScrollSync = ({
       listRows.holdPending = false;
       return;
     }
-    const half = Math.floor(renderBudget / 2);
+    const above = rowsAboveOpening(scrolledWanted, renderBudget);
     let wantedStart = null;
     if (scrolledWanted === "end") {
       wantedStart = total - renderBudget;
     } else if (typeof scrolledWanted === "number") {
-      wantedStart = scrolledWanted - half;
+      wantedStart = scrolledWanted - above;
     } else if (scrolledWanted && scrolledWanted.id !== undefined) {
       const rowIndex = listRows.locateRow(scrolledWanted.id);
       if (rowIndex !== null) {
-        wantedStart = rowIndex - half;
+        wantedStart = rowIndex - above;
       } else if (typeof scrolledWanted.index === "number") {
         // The row has not come back yet, but where it stood is known: near
         // enough to frame, and to put the scrollbar roughly where it will end
         // up rather than at the top.
-        wantedStart = scrolledWanted.index - half;
+        wantedStart = scrolledWanted.index - above;
       }
     }
     if (wantedStart === null) {
@@ -1651,11 +1682,11 @@ const useListScrollSync = ({
       // back — the run asks for it by name (see useRequestMissing).
       return;
     }
+    if (total > 0 && wantedStart + renderBudget > total) {
+      wantedStart = total - renderBudget;
+    }
     if (wantedStart < 0) {
       wantedStart = 0;
-    }
-    if (wantedStart + renderBudget > total) {
-      wantedStart = total - renderBudget;
     }
     const { start, end } = renderWindowRef.current;
     if (wantedStart === start && end - start === renderBudget) {
@@ -2012,8 +2043,8 @@ const useListScrollSync = ({
       } else {
         const { start, end } = renderWindowRef.current;
         if (rowIndex < start || rowIndex >= end) {
-          const half = Math.floor((end - start) / 2);
-          const wantedStart = rowIndex - half < 0 ? 0 : rowIndex - half;
+          const above = rowsAboveOpening(scrolledWanted, end - start);
+          const wantedStart = rowIndex - above < 0 ? 0 : rowIndex - above;
           updateRenderWindow(
             wantedStart,
             wantedStart + (end - start),
@@ -2069,6 +2100,15 @@ const useListScrollSync = ({
     }
   };
   useLayoutEffect(placeWhereHeld);
+  // Held on a row of a list scrolling the document: where the document goes is
+  // this list's to say, measured on the row, not the url's offset in pixels
+  // (see holdDocumentScroll).
+  useLayoutEffect(() => {
+    if (!heldSomewhere || getScroller() !== document.scrollingElement) {
+      return undefined;
+    }
+    return holdDocumentScroll();
+  }, [heldSomewhere, scrollerElResolved]);
   // What to do when the list's own geometry moves under it, kept fresh for the
   // observer below (which is installed once).
   const onGeometryChangeRef = useRef(null);
@@ -2113,37 +2153,61 @@ const useListScrollSync = ({
   // Where the list was at the last thing that moved it. Kept whether anyone
   // asked for it or not: it is what a resize needs to put things back.
   const positionRef = useRef(null);
-  const reportPosition = () => {
-    if (!ref.current) {
-      return;
-    }
-    const position = captureScrollAnchor({
+  const captureListAnchor = (countVisible) =>
+    captureScrollAnchor({
       scrollerEl: getScroller(),
       listEl: getListEl(),
       items: listRows.visibleItemsSignal.peek(),
       horizontal,
+      countVisible,
     });
-    if (!position) {
-      return;
-    }
-    positionRef.current = position;
-    const remember = rememberScrollRef.current;
-    const onScrolledChange = onScrolledChangeRef.current;
-    if (!remember && !onScrolledChange) {
-      return;
-    }
+  // Said from where the row lands on its own, and with `visibleCount`: the
+  // rows on screen from that one on, which is what a list given this position
+  // back draws first (see ListUI).
+  const toScrolledPosition = (position) => {
     const rowEl = findRowElement(getListEl(), position.id);
-    const scrolledNow = {
+    return {
       id: position.id,
       index: position.index,
       offset:
         position.offset - getRowScrollInset(getScroller(), rowEl, horizontal),
+      visibleCount: position.visibleCount,
     };
+  };
+  const reportPosition = () => {
+    if (!ref.current) {
+      return;
+    }
+    const remember = rememberScrollRef.current;
+    const onScrolledChange = onScrolledChangeRef.current;
+    const position = captureListAnchor(remember || Boolean(onScrolledChange));
+    if (!position) {
+      return;
+    }
+    positionRef.current = position;
+    if (!remember && !onScrolledChange) {
+      return;
+    }
+    const scrolledNow = toScrolledPosition(position);
     if (remember) {
       rememberScrollerPosition(listId, scrolledNow);
     }
     if (onScrolledChange) {
       onScrolledChange(scrolledNow);
+    }
+  };
+  // Nothing scrolled, yet what is on screen changed: the list has just been
+  // laid out, its rows have arrived, one of them grew. A list read where it
+  // opened would otherwise come back with nothing kept — opening again as a
+  // fresh arrival does, all of its window drawn in the first commit instead of
+  // the rows that were on screen. Kept, and told to nobody: nobody scrolled.
+  const rememberPosition = () => {
+    if (!rememberScrollRef.current || !ref.current) {
+      return;
+    }
+    const position = captureListAnchor(true);
+    if (position) {
+      rememberScrollerPosition(listId, toScrolledPosition(position));
     }
   };
   // Leaving: with its page, or alone (see forgetScrollerUnlessPageLeft).
@@ -2171,6 +2235,7 @@ const useListScrollSync = ({
       // list which has outgrown a bounded ancestor stops holding on to the
       // page.
       resolveScroller();
+      rememberPosition();
       // Two things resize here, and they call for opposite answers. The LIST
       // growing is its own content settling: only a list holding itself
       // somewhere cares (the end it aims at has moved), and a list the user is
@@ -3005,8 +3070,16 @@ const getRowName = (rowEl) => rowEl.getAttribute("navi-list-item-real");
 // the list is rebuilt around it. Read off the rows' own boxes, not by
 // hit-testing the screen: a scrolling list takes its rows out of hit-testing
 // (see the navi-scrolling rule in the css above), and the scroll event is
-// precisely when this is asked.
-const captureScrollAnchor = ({ scrollerEl, listEl, items, horizontal }) => {
+// precisely when this is asked. `countVisible` adds how many rows are on
+// screen from that one on: what a list coming back there has to draw before
+// anything else (see the first paint in ListUI).
+const captureScrollAnchor = ({
+  scrollerEl,
+  listEl,
+  items,
+  horizontal,
+  countVisible,
+}) => {
   if (!scrollerEl || !listEl) {
     return null;
   }
@@ -3034,6 +3107,14 @@ const captureScrollAnchor = ({ scrollerEl, listEl, items, horizontal }) => {
     const offset = rowStart - viewportFrom;
     const anchor = { id: item.itemId, index: item.index, offset };
     if (offset >= 0) {
+      if (countVisible) {
+        anchor.visibleCount = countRowsStartingBefore(
+          rowEls,
+          i,
+          range.to,
+          horizontal,
+        );
+      }
       return anchor;
     }
     // The row under the top of the view starts above it. Good enough to hold
@@ -3042,9 +3123,30 @@ const captureScrollAnchor = ({ scrollerEl, listEl, items, horizontal }) => {
     // top" reads, and can be drawn. Keep looking; this one is the fallback.
     if (!fallbackAnchor) {
       fallbackAnchor = anchor;
+      if (countVisible) {
+        anchor.visibleCount = countRowsStartingBefore(
+          rowEls,
+          i,
+          range.to,
+          horizontal,
+        );
+      }
     }
   }
   return fallbackAnchor;
+};
+// How many of the rows from `fromIndex` on start before `to` along the scroll
+// axis — the ones on screen, when `to` is where the view ends.
+const countRowsStartingBefore = (rowEls, fromIndex, to, horizontal) => {
+  let index = fromIndex;
+  while (index < rowEls.length) {
+    const rect = rowEls[index].getBoundingClientRect();
+    if ((horizontal ? rect.left : rect.top) >= to) {
+      break;
+    }
+    index++;
+  }
+  return index - fromIndex;
 };
 // The part of the list that is on screen, along the scrolling axis. Both edges
 // matter: the scroller may be larger than the list (scroller="parent") as well
@@ -5547,7 +5649,7 @@ const ListResolved = /*#__PURE__*/ createComponentResolver([
  *   are skeletons, the others hold their room. `0` says the list is already
  *   known to be empty: the empty `fallback` shows right away rather than an
  *   empty frame.
- * @param {"start"|"end"|number|{id: string, offset?: number}} [props.defaultScrolled="start"]
+ * @param {"start"|"end"|number|{id: string, index?: number, offset?: number, visibleCount?: number}} [props.defaultScrolled="start"]
  *   Where the list opens, after which the user owns the scroll — unless it is
  *   being come back to (see `scrollResetOnNavigation`). `"end"` is a
  *   thread read backwards — the last rows are the ones to show, and the ones
@@ -5559,8 +5661,10 @@ const ListResolved = /*#__PURE__*/ createComponentResolver([
  *   the screen it was saved on. `offset: 0` is where a `scrollIntoView()` puts
  *   it — in front of the fixed bar the scroller gives room for, below the
  *   sticky header and the group label the row lives under — so nothing of that
- *   room has to be restated as a number by whoever asks.
- * @param {"start"|"end"|number|{id: string, offset?: number}} [props.scrolled]
+ *   room has to be restated as a number by whoever asks. The `index` and
+ *   `visibleCount` it also hands out say where to aim before the row is found,
+ *   and how many rows to draw before the first paint (see `renderBudget`).
+ * @param {"start"|"end"|number|{id: string, index?: number, offset?: number, visibleCount?: number}} [props.scrolled]
  *   The same, but held: the list goes back there every time this changes, even
  *   after the user has scrolled — the caller owns where the list is (see
  *   `defaultScrolled` for the uncontrolled form, and `open`/`defaultOpen`
@@ -5571,12 +5675,12 @@ const ListResolved = /*#__PURE__*/ createComponentResolver([
  *   In every form the list holds itself there while it is still finding out
  *   how many rows there are and how tall one is, and lets go the moment the
  *   user reaches for the list.
- * @param {(scrolled: {id: string, index: number, offset: number}) => void} [props.onScrolledChange]
+ * @param {(scrolled: {id: string, index: number, offset: number, visibleCount: number}) => void} [props.onScrolledChange]
  *   Where the list is, as the user scrolls: the row at the top of the view and
  *   how far below the place a row lands on its own (see `defaultScrolled`) it
- *   starts. Keep it to come back to it
- *   later through `scrolled`/`defaultScrolled` — an index would not do, since
- *   rows get inserted while a list is being read.
+ *   starts, and how many rows are on screen from that one on. Keep it whole to
+ *   come back to it later through `scrolled`/`defaultScrolled` — an index alone
+ *   would not do, since rows get inserted while a list is being read.
  * @param {number|{initial: number, after: number}} [props.renderBudget=100]
  *   How many rows of a `<List.Items>` run are in the DOM at once: the render
  *   window, which slides as the user scrolls while fillers hold the room of
@@ -5588,11 +5692,15 @@ const ListResolved = /*#__PURE__*/ createComponentResolver([
  *   once, with room for that lookahead — the list warns below 30, and when a
  *   budget leaves fewer than two rows beyond the screen.
  *
- *   `{ initial, after }` for a list drawn in the click that opens it (a popup):
- *   `initial` rows in the commit the browser paints first — about what a phone
- *   screen shows — and `after` from the paint on, where the floor of 30
- *   applies. The runs ask their source for `after` rows from the start, so the
- *   first picture costs no second request.
+ *   `{ initial, after }` for a list whose first picture is taken as it is
+ *   built — drawn in the click that opens a popup, or in the update callback
+ *   of a route transition bringing its page back: `initial` rows in the commit
+ *   the browser paints first — about what a phone screen shows — counted from
+ *   the row the list opens on, and `after` from the paint on, around it, where
+ *   the floor of 30 applies. Opening on a position that says how many rows were
+ *   on screen (`visibleCount`, see `onScrolledChange`) draws those first,
+ *   whatever `initial` says. The runs ask their source for `after` rows from
+ *   the start, so the first picture costs no second request.
  * @param {number} [props.virtualItemSize]
  *   The size of one row along the scroll axis, in px, when every row has the
  *   same: what the fillers are sized with and what a scroll position is

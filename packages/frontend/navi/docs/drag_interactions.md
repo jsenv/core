@@ -6,8 +6,6 @@ An element picked up and carried, and what letting go means. It is one gesture
 the gate they go through and how a control learns which of them asked are in
 [interactions.md](./interactions.md); who owns a press when the carried thing
 stands in a box that travels is in [drag_to_travel.md](./drag_to_travel.md).
-Whatever the moment, `event.detail.event` is the `pointerdown` the carry began
-with — for the release as well, unlike a swipe's.
 
 - [Carrying something: `move`, `reorder`, `land`, `toss`, `leave`](#carrying-something-move-reorder-land-toss-leave)
   - [While it is being moved: `moving`](#while-it-is-being-moved-moving)
@@ -17,6 +15,7 @@ with — for the release as well, unlike a swipe's.
   - [Saying the grab is acquired: `grab`](#saying-the-grab-is-acquired-grab)
   - [Saying the hold is let go: `release`](#saying-the-hold-is-let-go-release)
   - [The hand pulls and nothing follows: `refuse`](#the-hand-pulls-and-nothing-follows-refuse)
+  - [A press made elsewhere: `--navi-grab`](#a-press-made-elsewhere---navi-grab)
   - [Dressing the clone](#dressing-the-clone)
   - [What says a thing can be picked up](#what-says-a-thing-can-be-picked-up)
   - [The text inside: `user-select: none`](#the-text-inside-user-select-none)
@@ -25,23 +24,19 @@ with — for the release as well, unlike a swipe's.
 
 ## Carrying something: `move`, `reorder`, `land`, `toss`, `leave`
 
-All five are the same gesture — the element is picked up and carried — and what
-differs is the release. One detector reads them all, because it is one press.
+`move` carries the element ITSELF and leaves it where it was put; `reorder`,
+`land` and `toss` carry a copy and put the original back; `leave` carries the
+element beside `move` or `moving`, a copy otherwise. Something moved has a new
+place of its own; something reordered had its place taken by the list.
 
 `toss` and `leave` each **combine** with `reorder` and with `land`: dropped on
 another item the element changes places, thrown far and fast it is gotten rid of,
 let go of away from every place it leaves. `leave` combines with `move` as well.
-`move` does **not** combine with any of the three that carry a copy (`reorder`,
-`land`, `toss`), and neither do `reorder` and `land` with each other — one
-release cannot mean two of those. Declared together, the copy-carrying one wins
-and `move` is never answered — the element itself never travels, and a release
-that is not the other outcome means nothing at all; of `reorder` and `land`,
-`land` wins. A dev warning says so in each case.
-
-`move` carries the element ITSELF and leaves it where it was put; the others
-carry a copy and put the original back. That is the same difference said in layout
-terms: something moved has a new place of its own, something reordered had its
-place taken by the list.
+`move` does **not** combine with the three that carry a copy, and neither do
+`reorder` and `land` with each other — one release cannot mean two of those.
+Declared together, the copy-carrying one wins and the element itself never
+travels; of `reorder` and `land`, `land` wins. `moving` goes with `move` and
+`leave`, never with a copy. A dev warning says so in each case.
 
 ```jsx
 <Box
@@ -52,34 +47,47 @@ place taken by the list.
 />
 ```
 
-`data-drag-free` on the element or a container lets it leave; by default a `move`
-stays inside what one can SEE of its scroll container — the nearest ancestor whose
-`overflow` is `auto` or `scroll`, the page's viewport when there is none — so a
-board that only cuts its content (`hidden`, `clip`) does not hold what moves on
-it. A `move` whose answer rejects travels back, because a
-place the application would not accept must not stay on screen as if it had.
+What each one is told, in `event.detail` beside `event` — the `pointerdown` the
+carry began with, for the release as well (unlike a swipe's), except for
+[a press handed over](#a-press-made-elsewhere---navi-grab):
 
-**Where the position is kept is the answer's.** An element drawn from state —
-`left`/`top` computed from a position the application holds — is redrawn by the
-handler above, and from then on its layout owns the position: navi sees the
-element drawn elsewhere while the answer was given and lets go of its own
-translate, so the thing does not land twice as far as the hand went. A handler
-that draws nothing (a token on a free canvas) leaves the position to the element,
-where it is baked in. Nothing to declare either way — but a handler whose draw
-comes later than its answer has to return the promise of that draw.
+| interaction      | `event.detail`                                                   |
+| ---------------- | ---------------------------------------------------------------- |
+| `move`, `moving` | `{ x, y }`, how far from the grab: once, or on every frame       |
+| `reorder`        | `{ fromId, toId, syncCloneWithDropTarget }`                      |
+| `land`           | `{ fromId, toId, x, y, width, height, syncCloneWithDropTarget }` |
+| `toss`           | `{ id, velocity, x, y }`                                         |
+| `leave`          | `{ id, x, y }`                                                   |
+| `grab`           | `{ pointerType, gestureInfo }`                                   |
+| `release`        | `{ id, x, y, outcome }`                                          |
+| `refuse`         | `{ pointerType }`                                                |
 
-That is one answer, at the release, with the whole of the gesture in it: `move` is
-not told while the hand moves, and until the release navi carries the element with
-a translate of its own. A thing that has to change something WHILE it is dragged —
-or that must never be translated at all — declares `moving` instead (below).
+Items and places are named by their `id`. **What an outcome returns is waited
+on**: the gesture holds what it carries until that promise settles, and a
+rejection sends it home — a place the application would not accept must not stay
+on screen as if it had. `moving`, `grab`, `release` and `refuse` **report, they
+do not ask**: what they return is not waited on, and preventing their event
+calls nothing off.
 
-**A copy that can be thrown frees its own area.** What is dragged is otherwise kept
-inside its scroll area — right for a reorder, since a row belongs to its list, and
-fatal for a throw: the copy hits the edge of the list, no distance is ever covered,
-so no throw can happen and no sideways movement is even visible. So `toss` lifts
-that constraint for the copy it carries, and `leave` lifts it for whatever it is
-declared on — a thing that can be let go of outside has to be able to get there.
-Neither is a way to free a plain `move`, which says `data-drag-free`.
+**Where the position is kept is the answer's.** Until the release navi carries
+the element with a translate of its own, and `move` is told once, at the end. An
+element drawn from state — `left`/`top` computed from a position the application
+holds — is redrawn by the handler, and from then on its layout owns the
+position: navi sees it drawn elsewhere and lets go of its translate (both kept,
+it would land twice as far as the hand went). A handler that draws nothing (a
+token on a free canvas) leaves the position to the element, baked in. A handler
+whose draw comes later than its answer returns the promise of that draw. A thing
+that has to change something WHILE it is dragged, or must never be translated,
+declares [`moving`](#while-it-is-being-moved-moving).
+
+**Where it may go.** A `move` stays inside what one can SEE of its scroll
+container — the nearest ancestor whose `overflow` is `auto` or `scroll`, the
+viewport when there is none — so a board that only cuts its content (`hidden`,
+`clip`) does not hold it; a copy stays inside its scroll area, right for a row
+that belongs to its list. `data-drag-free` on the element or a container lets it
+out, and a `toss`, a `leave` or a `data-drop-container` free the copy on their
+own: a throw kept inside its list covers no distance, and a place outside can
+only be reached from outside.
 
 ```jsx
 <List.Item
@@ -98,41 +106,33 @@ Neither is a way to free a plain `move`, which says `data-drag-free`.
 />
 ```
 
-The gesture is `startDragTo`'s, whole: `move` carries the element itself, the
-others carry a copy above the page while the original keeps its place, with a
-drop hint, drop targets found by intersection, no-op drops filtered out, and the
-flight of a thrown copy plus its return when the answer refuses. Only what the
-declared outcomes need runs — no copy for a move, no hint for something
-that can only be thrown away.
-
 Every element declaring `reorder` marks itself, so the set of items IS the set of
 elements that declared it — no selector to pass, and an item that must not move
 simply does not declare it. An element declaring only `toss` marks nothing: it is
-not a place anything lands. Items are named by their `id`.
+not a place anything lands. `toId` is null for a drop at the end.
 
-`toId` is null for a drop at the end. `syncCloneWithDropTarget` must be called
-synchronously inside the transition callback, next to the state change, so the copy
-is captured where it lands rather than where it was let go of.
-
-**The promise matters in both cases**: the gesture holds its copy until the answer
-settles. Returning the transition is what makes a landing continuous; a `toss` that
-rejects brings the copy back, because the thing still exists and the screen has to
-say so.
+`syncCloneWithDropTarget` must be called synchronously inside the transition
+callback, next to the state change, so the copy is captured where it lands rather
+than where it was let go of; returning the transition is what makes a landing
+continuous. Starting that transition is the application's call, not navi's: a
+`view-transition-name` must be unique per document, so only the application can
+name what moves.
 
 A throw is asked about before a landing: a hand that sent something across the
 screen has not asked for it to swap places with whatever it flew over.
-
-Starting a document transition is the application's call, not navi's: a
-`view-transition-name` must be unique per document, so only the application can
-name what moves.
 
 | Attribute                                                | Meaning                                |
 | -------------------------------------------------------- | -------------------------------------- |
 | `data-drag-axis="x"\|"y"\|"xy"`                          | which axes the drag walks              |
 | `data-drag-delay` `data-drag-slop` `data-drag-threshold` | when the press becomes a grab          |
 | `data-drag-on-contact`                                   | a finger may drag by travelling too    |
+| `data-drag-free`                                         | it may leave its scroll area           |
 | `data-toss-distance` `data-toss-speed`                   | how far and how fast counts as a throw |
 | `data-drop-container`                                    | where the places are looked for        |
+
+`data-drag-axis` is `y` for a `reorder` with no `land`, `toss` or `leave` beside
+it — it walks the list; a list that runs sideways says `x` — and `xy` for
+everything else, which goes wherever the hand takes it.
 
 ### While it is being moved: `moving`
 
@@ -152,42 +152,32 @@ all along, and needs to be the one drawing.
 />
 ```
 
-Declaring it says both things at once: the element is told where the hand has
-taken it on every frame, and **navi moves nothing** — no translate while the
-gesture runs, nothing to hand back at the release, no reading the element
-afterwards to find out who owns its position. The caller draws, from the numbers
-it is given.
+Declaring it says both at once: the element is told where the hand has taken it
+on every frame, and **navi moves nothing** — no translate, nothing to hand back
+at the release. The numbers are counted from the grab, not steps since the last
+frame (which is what `pan` gives, a surface having no grab to count from): a
+caller adding up steps drifts, and has nothing to re-read after a frame it
+missed.
 
-Its detail is `{ x, y }`: where it is now, counted from the grab — the very
-numbers `move` ends with, said all along instead of once. Not steps since the last
-frame, which is what `pan` gives (a surface has no grab to count from): a caller
-adding up steps drifts, and has nothing to re-read after a frame it missed.
-
-Told, not asked, like `grab` and `release` — a draw that has to be awaited before
-the next frame is a draw one frame late. Where it differs from those two is that
-it is a gesture of its own: `moving` alone is a complete declaration, and it keeps
-everything the drag knows — the axes, the threshold, the hold a finger owes,
-`data-drag-free`, `grab`/`release`, `leave`, and `"refuse"` to lock it. Write
-`move` beside it only when the release settles something the frames did not.
-
-Nothing travels back, either: a `move` or a `leave` beside it whose answer rejects
-normally sends the element home, and there is no home to send it to when navi
-never moved it. The state the frames wrote is the caller's to put back.
-
-It carries the element itself, so it goes with `move` and `leave` and not with the
-three that carry a copy — for those, the original never goes anywhere, and there
-is nothing being moved to tell about (a dev warning says so).
+Told, not asked — a draw that has to be awaited before the next frame is a draw
+one frame late — yet a gesture of its own: `moving` alone is a complete
+declaration, keeping everything the drag knows (the axes, the threshold, the
+hold a finger owes, `data-drag-free`, `grab`/`release`, `leave`, `"refuse"` to
+lock it). Write `move` beside it only when the release settles something the
+frames did not. And nothing travels back: a `move` or a `leave` beside it that
+is refused has no home to send the element to, so the state the frames wrote is
+the caller's to put back.
 
 ### Let go of away from every place: `leave`
 
-A throw is a **gesture**: far and fast, the flick that gets rid of a row, judged
-before any landing. A release outside is a **place**: the hand let go with nothing
-under the thing, judged after a landing was looked for. They share the outcome an
-application usually attaches to them and nothing else — so `toss` is the throw,
-`leave` is the release outside, and neither reads the other's rules. There is no
-speed to a release; a fast drag across a plan that ends ON it has not asked for the
-thing to go, and a row pulled sideways out of its list and let go is a row put
-back, not a row deleted — a list declares `toss`, a surface declares `leave`.
+A throw is a **gesture**: far and fast, judged before any landing. A release
+outside is a **place**: the hand let go with nothing under the thing, judged
+after a landing was looked for. They share the outcome an application usually
+attaches to them and nothing else, so neither reads the other's rules — there is
+no speed to a release, and a fast drag across a plan that ends ON it has not
+asked for the thing to go. A row pulled sideways out of its list and let go is a
+row put back, not a row deleted: a list declares `toss`, a surface declares
+`leave`.
 
 ```jsx
 <div data-drop-container>
@@ -205,37 +195,21 @@ back, not a row deleted — a list declares `toss`, a surface declares `leave`.
 </div>
 ```
 
-`leave` combines with every other outcome. Beside `land` or `reorder`, "outside" is
-away from every place. Where nothing is a place — beside `move`, which carries the
-element itself, beside `toss`, or alone — it is outside the surface the element
-stands in: the nearest
+`leave` combines with every other outcome. Beside `land` or `reorder`, "outside"
+is away from every place. Where nothing is a place — beside `move`, beside
+`toss`, or alone — it is outside the surface the element stands in: the nearest
 `data-droppable` ancestor, or, without one, what can be seen of the scroll
 container (a dev warning says which). Either way it is judged on the element's
 box no longer overlapping it, not on the pointer, which is still well inside the
-frame when a small marker has just left it.
+frame when a small marker has just left it. Picked up and put straight back down
+stays a cancel: it has to have gone somewhere to be away from anything. Its
+`x`/`y` are what an exit is animated with.
 
-```jsx
-<Plan data-droppable>
-  <Marker
-    interactions={{
-      move: (event) => remember(event.detail.x, event.detail.y),
-      leave: () => remove(marker.id),
-    }}
-  />
-</Plan>
-```
-
-Its detail is `toss`'s without the speed — `{ id, x, y }`, the distance travelled
-being what an exit is animated with. Picked up and put straight back down stays a cancel: it has to
-have gone somewhere to be away from anything.
-
-What the thing does while the answer is asked follows what was carried. A copy
-fades where it was let go of; the element itself stays where the hand put it. A
-resolve takes the copy away and lets go of the element's position — the
-application has removed the thing, or drawn it where it goes back to (the address
-point returns to where the geocoder put it) — and a reject brings either back, as
-a refused `move` does. A surface that clips its overflow clips the element on its
-way out; the copy a `land` carries lives in the top layer and does not.
+While the answer is asked, a copy fades where it was let go of and the element
+itself stays where the hand put it; a resolve takes the copy away and lets go of
+the element's position (the application removed the thing, or drew it where it
+goes back to). A surface that clips its overflow clips the element on its way
+out; the copy lives in the top layer and does not.
 
 ### A finger that does not have to wait: `data-drag-on-contact`
 
@@ -296,17 +270,15 @@ Declaring `land` says an element can be CARRIED, which on a board is a different
 thing from being somewhere one can be put — a zone receives without ever being
 carried, a piece is carried without ever receiving, and both at once is a third
 case (dropped on a piece, the two swap, so it says `data-droppable` as well). A
-list has no such distinction, every row being both, which is why `reorder` needs
-no marker in the markup.
+list has no such distinction, which is why `reorder` needs no marker.
 
 Places are looked for among the carried element's **siblings**, which is what a
-board is: pieces drawn beside the places, positioned over them. When what is
-carried does not stand among the places — a palette BESIDE the surface it fills, a
-marker drawn INSIDE the surface it can be put back on — say what holds both with
-`data-drop-container`. It holds the places rather than being one, so it goes on an
-ancestor of them: a surface that is itself the place is never found from inside
-itself. Missed, nothing lands and nothing says why — so the first press on a
-`land` with no place in reach warns, and names the surface it is standing on.
+board is. When what is carried does not stand among the places — a palette
+BESIDE the surface it fills, a marker drawn INSIDE the surface it can be put back
+on — say what holds both with `data-drop-container`, on an ancestor of the
+places: a surface that is itself the place is never found from inside itself.
+Missed, nothing lands, so the first press on a `land` with no place in reach
+warns, and names the surface it is standing on.
 
 ```jsx
 <div data-drop-container>
@@ -319,36 +291,20 @@ itself. Missed, nothing lands and nothing says why — so the first press on a
 </div>
 ```
 
-It also frees the copy's travel: the places being elsewhere by construction, a
-copy kept inside its own scroll area could never reach them.
-
 **When the place is bigger than what stands on it** — a zone holding a smaller
 card, a square holding a piece — the copy must not take the place's box, or it
-resizes on landing and resizes back when the real element appears.
-`syncCloneWithDropTarget` takes an element for that: the copy comes down on THAT
-box instead of the target's. Pass whatever occupies the destination — the piece
-already standing there, the empty slot waiting.
-
-```jsx
-land: (event) => {
-  const { fromId, toId, syncCloneWithDropTarget } = event.detail;
-  const landingElement = pieceAt(toId) || slotOf(toId);
-  return document.startViewTransition(() => {
-    syncCloneWithDropTarget(landingElement);
-    …
-  }).finished;
-};
-```
+resizes on landing and resizes back when the real element appears. Pass
+`syncCloneWithDropTarget` whatever occupies the destination — the piece already
+standing there, the empty slot waiting — and the copy comes down on THAT box:
+`syncCloneWithDropTarget(pieceAt(toId) || slotOf(toId))`.
 
 #### A place that is a surface
 
-A board's place is an element one can point at. A **surface** — a plan drawn over
-an aerial photo, a map, a floor — is one box where every point is a place, and
-"which element did it come down on" says nothing there. So the detail says
-**where**: `x`, `y`, `width`, `height`, the box the copy came down in, measured
-inside the place with its border and its scroll taken out. `toId` still names the
-surface it came down on, and nothing changes about the rest — the copy travels,
-the original stays where it was.
+A **surface** — a plan drawn over an aerial photo, a map, a floor — is one box
+where every point is a place, and "which element did it come down on" says
+nothing there. So the detail says **where**: `x`, `y`, `width`, `height`, the box
+the copy came down in, measured inside the place with its border and its scroll
+taken out. `toId` names the surface.
 
 ```jsx
 <Shape
@@ -363,62 +319,35 @@ the original stays where it was.
 
 The size comes along because the anchor is yours: a chip dragged out of a palette
 is not the shape it becomes, so the middle of what the hand carried is usually the
-point that was aimed at.
-
-`syncCloneWithDropTarget` is the one thing to leave alone here — called with
-nothing it takes the whole surface's box, and there is rarely an element to pass
-it either, the thing being created by the answer itself. Not calling it leaves the
-copy where the hand put it, over the thing appearing there.
+point that was aimed at. Leave `syncCloneWithDropTarget` alone here — called with
+nothing it takes the whole surface's box, and the thing is created by the answer
+itself — so the copy stays where the hand put it, over the thing appearing there.
 
 #### Naming what travels
 
-**The copy is already named, and it is the copy that does the visible travel.**
-`syncCloneWithDropTarget` moves it onto the destination inside the callback — so
-the piece the hand let go of slides to its place whether the application names
-anything or not. What is left to name is the OTHER one: the piece that was
-standing there and has to go the other way.
+**The copy is already named, and it is the copy that does the visible travel**:
+`syncCloneWithDropTarget` moves it onto the destination inside the callback,
+whether the application names anything or not. Each copy has a name of its own,
+two being on screen at once while a `toss` is answered; what they share is the
+class `navi-drag-clone`, so a stylesheet reaches the landing with
+`::view-transition-group(.navi-drag-clone)` (read from Chrome 125 on; before
+that only a rule written against the class goes unread).
 
-The name is the copy's own, because two copies can be on screen at once — one
-still flying away while its `toss` is answered, another landing — and a name
-claimed twice aborts the transition. What every copy shares is the class
-`navi-drag-clone`, which is how a stylesheet reaches the landing:
-`::view-transition-group(.navi-drag-clone)`. A view-transition class is read
-from Chrome 125 on; before that the landing still plays, and only a rule written
-against the class goes unread. The wrapper carrying the copy paints nothing and
-takes neither.
+What is left to name is the OTHER piece, the one that was standing there and
+goes the other way. **A name rides the element that MOVES, and that element has
+to be visible at both ends of the transition.** Never the source: it stays
+hidden (`navi-drag-clone-source`) until the promise `land` returned settles, and
+a hidden element is still captured, so a name on it is a group fading in from
+nothing, or out into nothing, over the copy doing the real travel. Where the
+places are fixed and the pieces drawn into them, key each piece by WHO it is
+(`key={playerId}`), so the same node walks from one place to the other instead
+of two boxes changing content.
 
-**And the original is hidden for the whole landing**, not only for the drag: it
-wears `navi-drag-clone-source` (`visibility: hidden`) until the promise returned
-by `land` settles, because the copy stands for it until then. An element that
-paints nothing is still captured — the group gets an empty image — so a name put
-on the source is a group fading in from nothing, or out into nothing, over the
-copy that is doing the real travel. That is what a swap looks like when it fades
-instead of sliding.
-
-Both follow from one rule: **a name rides the element that MOVES, and that
-element has to be visible at both ends of the transition.** Where the places are
-fixed and the pieces are drawn into them, nothing moves — two boxes change
-content, and hand-writing a name on each so that it "follows the player" names a
-journey whose start or end is the hidden source. Key the piece by WHO it is and
-let it be re-parented:
-
-```jsx
-{places.map((place) => {
-  const playerId = lineupAt(place.id);
-  // Keyed by the player: the same DOM node walks from one place to the other,
-  // so the browser has something to morph — and the displaced one was visible
-  // before and is visible after.
-  return <Piece key={playerId} id={playerId} style={boxOf(place)} … />;
-})}
-```
-
-**The name is written twice, and neither write is redundant.** The old state is
-captured the moment `startViewTransition` is called, before any render, so the
-name must be on the DOM by then — written by hand, on the element. The render
-happening inside the callback would then put the plain name straight back, so
-the same name must also come from state. Clear that state when `finished`
-resolves: a name left behind is claimed twice by the next transition, and that
-one is dropped for it.
+The name is written twice, and neither write is redundant: by hand on the DOM,
+because the old state is captured the moment `startViewTransition` is called;
+and from state, because the render inside the callback would put the plain name
+straight back. Clear that state when `finished` resolves — a name left behind is
+claimed twice by the next transition, and that one is dropped for it.
 
 ```jsx
 land: (event) => {
@@ -438,29 +367,17 @@ land: (event) => {
 };
 ```
 
-The roles are names because a `::view-transition` pseudo can be selected by name
-and by nothing else — which is also how one of the two is told to pass over the
-other, and how the travel is given a length worth a card crossing a board rather
-than a menu opening. Both the group and the image pair are addressed: the morph
-lives in one, anything a style adds rides in the other.
+The roles are names because a `::view-transition` pseudo is selected by name and
+by nothing else — which is how one piece is told to pass over the other, and the
+travel given a length worth a card crossing a board. Address both
+`::view-transition-group(…)` and `::view-transition-image-pair(…)`: the morph
+lives in one, anything a style adds rides in the other. The whole board is in
+`38_interactions_demo.html`.
 
-```css
-::view-transition-group(swap_over) {
-  z-index: 20;
-}
-::view-transition-group(swap_over),
-::view-transition-image-pair(swap_over) {
-  animation-duration: 420ms;
-  animation-timing-function: ease-in-out;
-}
-```
-
-The hint follows what a place is: a line drawn in the gap for `reorder`, the
-place itself lit up for `land`. Both are drawn among the places — the carried
-element's parent, or the `data-drop-container` when there is one — so the
-variables dressing them are read from the list, the board or the surface and reach
-them by plain inheritance. The copy goes the other way: it is drawn beside the
-thing it copies, and dressed by where that thing stands.
+The drop hint follows what a place is: a line drawn in the gap for `reorder`, the
+place itself lit up for `land`. Both are drawn among the places — the parent, or
+the `data-drop-container` — so the variables dressing them are set on the list,
+the board or the surface and reach them by inheritance:
 
 | Variable                                                                                   | Dresses                 |
 | ------------------------------------------------------------------------------------------ | ----------------------- |
@@ -471,10 +388,10 @@ thing it copies, and dressed by where that thing stands.
 
 ### Saying the grab is acquired: `grab`
 
-The interactions above answer the **release**. Between the press and the release there is
-one instant that counts for the hand: the one where the object stops being pressed
-and starts being held. `grab` is that instant — the same one whichever way the drag
-was entered, a finger held still or a mouse travelled a few pixels.
+The outcomes answer the **release**. Between the press and the release there is
+one instant that counts for the hand: the one where the object stops being
+pressed and starts being held — the same one whichever way the drag was entered,
+a finger held still or a mouse travelled a few pixels. `grab` is that instant.
 
 ```jsx
 <Box
@@ -485,36 +402,26 @@ was entered, a finger held still or a mouse travelled a few pixels.
 />
 ```
 
-It matters most where it is least visible. On a screen the held object is under the
-thumb that hides it, so the only feedback available is the one that is felt; without
-it the hand waits, doubts the press was heard, and lets go too early — the whole
-gesture fails, not its decoration. With a mouse the grab is acquired after a few
-pixels and the object has visibly moved, so the answer is already there.
+It matters most where it is least visible. On a screen the held object is under
+the thumb that hides it, so the only feedback available is the one that is felt;
+without it the hand waits, doubts the press was heard, and lets go too early —
+the whole gesture fails, not its decoration. (With a mouse the object has visibly
+moved by then.) If the moment is for **paint**, no listener is needed: navi puts
+`data-grabbed` on the element for as long as the gesture holds it. `grab` is for
+what a stylesheet cannot do — a vibration, a state kept elsewhere, a counter.
 
-Nothing here is about vibration: a sound, a class, a measure are the same moment.
-
-If what the moment is for is **paint**, no listener is needed at all: navi puts
-`data-grabbed` on the element for as long as the gesture holds it, and a
-stylesheet draws from that. `grab` is for what a stylesheet cannot do — the
-vibration above, a state kept elsewhere, a counter.
-
-`grab` **reports, it does not ask**: what it returns is not waited on, and
-preventing its event does not call the gesture off. And it is not an interaction on
-its own — declared without one of the five above (or `moving`) there is no
-gesture for it to be the beginning of, and a dev warning says so, unless the
-element declares `pan` or `zoom`, whose moments they then are
-([pan_zoom.md](./pan_zoom.md)). Its detail carries `pointerType` and the
-`gestureInfo`.
-
-A `longpress` needs none of this: it already happens at the moment the hold is
-acquired, not at the release.
+It is not an interaction on its own: declared without an outcome or `moving`
+there is no gesture for it to begin, and a dev warning says so — unless the
+element declares `pan` or `zoom`, whose moment it then is
+([pan_zoom.md](./pan_zoom.md)). A `longpress` needs none of this: it already
+happens at the moment the hold is acquired.
 
 ### Saying the hold is let go: `release`
 
-The mirror of `grab`, and the only interaction of the family always told. Each of
-the five above answers ONE meaning, so a release that means none of them — let go
-of over nothing, taken away by the system — reaches nobody, and whatever `grab` set
-up stays set up with nothing to take it down.
+The mirror of `grab`, and the only interaction of the family always told. Each
+outcome answers ONE meaning, so a release that means none of them — let go of
+over nothing, taken away by the system — reaches nobody, and whatever `grab` set
+up (a counter of what is in the hand) stays set up with nothing to take it down.
 
 ```jsx
 <Chip
@@ -526,28 +433,20 @@ up stays set up with nothing to take it down.
 />
 ```
 
-A bank of chips one drags onto a plan is the case: the counter must count what is
-in the hand from the moment the copy takes off — « Terrain 4/21 » before it lands —
-and something has to say when the hand is empty again, whether the copy landed,
-flew off or came home.
-
-Its detail is `{ id, x, y, outcome }`. `outcome` is which of the five is about to
-answer — `"move"`, `"reorder"`, `"land"`, `"toss"`, `"leave"` — or `null` when the
-release means none of them. It is told **before** that answer runs, so what the grab
-put up comes down at the moment the hand lets go, while still knowing whether
-something is on its way.
-
-Like `grab`, it **reports, it does not ask**, and it is not an interaction on its
-own: a moment of a drag needs a drag to happen in, and a dev warning says so.
+`outcome` is which one is about to answer — `"move"`, `"reorder"`, `"land"`,
+`"toss"`, `"leave"` — or `null` when the release means none of them. It is told
+**before** that answer runs, so what the grab put up comes down the moment the
+hand lets go, while still knowing whether something is on its way. Like `grab`,
+it needs a drag to happen in, and a dev warning says so.
 
 ### The hand pulls and nothing follows: `refuse`
 
 Something that can be carried is not always free to be: a court whose place on the
 plan is settled, a marker pinned by whoever owns it. Taking the interaction away —
-`move: false` — makes the element **deaf** rather than locked. The press is then
-nobody's, so whatever it stands on answers it (the surface pans under an object the
-hand was aiming at), and the pull is told nothing at all — and a thing that does not
-move and says nothing reads as a screen that is broken, so the hand insists.
+`move: false` — makes the element **deaf** rather than locked: the press is
+nobody's, so whatever it stands on answers it (the surface pans under an object
+the hand was aiming at), and the pull is told nothing — a thing that does not move
+and says nothing reads as a broken screen, so the hand insists.
 
 ```jsx
 <Court
@@ -563,44 +462,50 @@ move and says nothing reads as a screen that is broken, so the hand insists.
 />
 ```
 
-So the interaction stays declared and says `"refuse"` in place of what it does. The
-threshold is the same one (a mouse travelling, a finger holding still, the first
-pixel inside a `data-drag-on-contact`), and at the instant the grab would have been
-acquired there is none: nothing translates, no copy is made, no release is
-answered. `refuse` is that instant, and the one where feedback is expected.
+So the interaction stays declared and says `"refuse"` in place of what it does.
+The threshold is the same one — a mouse travelling, a finger holding still, a
+mouse's few pixels inside a `data-drag-on-contact` — and at the instant the grab
+would have been acquired there is none: nothing translates, no copy is made, no
+release is answered. `refuse` is told at that instant, where feedback is
+expected; it has no `gestureInfo`, there being no gesture, and `pointerType`
+says which hand asked — a vibration for a finger, nothing extra for a mouse whose
+cursor has already said it. One outcome refusing refuses the whole carry.
 
-**It walks no axis, so it takes none.** Everything that reads what a drag source
-walks to know what is left for itself — a box that travels, a surface that pans —
-steps over an element that is refusing: a swipe starting on a locked row is the
-row of slides' swipe, a drag starting on a pinned court pans the plan. A thing
-that cannot be taken hold of is exactly the one a hand rests on without thinking,
-and a surface with a dead zone the size of an object in the middle of it is wrong
-every time. So `move: "refuse"` really is `move: false` plus a word to the hand.
+**It walks no axis, so it takes none.** Whatever reads what a drag source walks
+to know what is left for itself — a box that travels, a surface that pans — steps
+over an element that is refusing: a swipe starting on a locked row is the row of
+slides' swipe, a drag starting on a pinned court pans the plan. A thing that
+cannot be taken hold of is exactly the one a hand rests on without thinking, and
+a surface with a dead zone the size of an object in the middle of it is wrong
+every time. For the axes, `move: "refuse"` is `move: false`. For the press it is
+not:
 
-**The press itself stays the element's**, and is settled there like any other
-gesture settles one: the pointer is taken, so a `longpress` declared beside the
-drag does not answer a hundred milliseconds later, and the click the release
-leaves behind is swallowed. What is locked behaves like what is not, up to the
-moment it says no. The exception is a box declaring `pan`/`zoom`, the one thing
-that takes a press whole and in every direction: there the surface keeps it, and
-the refusal is told without taking anything — no pointer, no click, nothing
-prevented.
+**The press itself stays the element's**, settled there like any gesture settles
+one: the pointer is taken, so a `longpress` declared beside the drag does not
+answer afterwards, and the click the release leaves behind is swallowed. What is
+locked behaves like what is not, up to the moment it says no. The exception is a
+box declaring `pan`/`zoom`, the one thing that takes a press whole and in every
+direction: there the surface keeps it, and the refusal is told without taking
+anything — no pointer, no click, nothing prevented.
 
-One outcome refusing refuses the whole gesture — the five answer one carry, and
-something that must not be carried has none of them. Like `grab` and `release`,
-`refuse` **reports, it does not ask**, and it is not an interaction on its own.
-Its detail is `{ pointerType }` beside the press (`event`), and no `gestureInfo`
-because there was no gesture, and what feedback wants to know is which hand asked
-— a vibration for a finger, nothing extra for a mouse whose cursor has already
-said it.
+### A press made elsewhere: `--navi-grab`
+
+A hold opens a popup, and something in it is what the hand meant to take:
+`triggerNaviCommand(element, "--navi-grab", openEvent)` hands the press still
+down to that element (or the drag source around it), so the finger carries it
+without lifting and pressing again. It brings **a copy only**, to the finger,
+once the popup has settled: `move` and `moving` carry nothing there (a dev
+warning says so), and let go of before it has travelled — the hold only meant to
+open the popup — the copy goes back and nothing is answered. Its interactions
+are chained to that request rather than to a press on the element, so
+`event.detail.event` is the request: reach the `pointerdown` with
+`findEvent(event, "pointerdown")`.
 
 ### Dressing the clone
 
-What the pointer carries is a copy, and a copy of a transparent element is
-invisible — an element has no background unless something gave it one, and a row
-usually gets its own from the list around it, which the copy has left. So the
-clone's look is the page's to declare, through the attributes the gesture puts on
-it:
+A copy of a transparent element is invisible — a row usually gets its background
+from the list around it, which the copy has left. So the clone's look is the
+page's to declare, through the attributes the gesture puts on it:
 
 | Attribute                 | On                                                   |
 | ------------------------- | ---------------------------------------------------- |
@@ -615,17 +520,19 @@ it:
 }
 ```
 
-Reusing the item's own class is the point: the copy is that item, so it is styled
-as that item plus whatever being carried changes.
+Reusing the item's own class is the point: the copy is that item, styled as that
+item plus whatever being carried changes.
 
 **Which is also the trap, for anything positioned on a board.** The copy is a
-deep clone of the element put in a carrier box, so a geometry written in the style
-attribute comes with it. navi takes back where it stands (`position`, `inset`,
-`margin` and `translate` are reset on the copy) but not its size —
-`width: calc(50% - 2 * var(--gap))` then means half of the carrier instead of
-half of the board, and the piece is carried at the wrong size. Put what a piece
-LOOKS like in a class and leave only which place it is inline (two custom
-properties will do), then let it fill its carrier:
+deep clone put in a carrier box, so a geometry written in the style attribute
+comes with it. navi takes back where it stands (`position`, `inset`, `margin` and
+`translate` are reset on the copy) but not its size —
+`width: calc(50% - 2 * var(--gap))` then means half of the carrier, and the piece
+is carried at the wrong size. Put what a piece LOOKS like in a class, leave only
+which place it is inline (two custom properties will do), and let it fill its
+carrier — said of what is inside the wrapper rather than of `[navi-drag-clone]`,
+because the copy loses that mark as it lands (that is how it drops its lift for
+the transition) and has to keep its size all the way down:
 
 ```css
 [navi-drag-clone-wrapper] .piece {
@@ -634,24 +541,18 @@ properties will do), then let it fill its carrier:
 }
 ```
 
-Said of what is inside the wrapper rather than of `[navi-drag-clone]` itself,
-because the copy loses that mark as it lands — that is how it drops its lift for
-the transition — and it has to keep its size all the way down. The copy is a real element in the
-page, in the top layer, and everything about its look is reachable from CSS —
-including these, read off the dragged element so a whole list or a single item can
-answer:
+Read off the dragged element, so a whole list or a single item can answer:
 
 | Variable              | What it changes                                               |
 | --------------------- | ------------------------------------------------------------- |
 | `--drag-clone-shadow` | what being lifted casts; `none` for something that flies flat |
 | `--drag-clone-scale`  | how much bigger it gets once picked up; `1` to keep its size  |
 
-**What stays behind is the source, not a hole.** The original is never taken out of
-the page — it keeps its place in the layout and wears `navi-drag-clone-source`,
-which only makes it `visibility: hidden`. So a mark left where the thing was — an
-imprint, a dashed outline, the shape a note was pinned on — is drawn ON that
-element and not next to it, and its parts have to say `visibility: visible` to come
-back from the hidden source:
+**What stays behind is the source, not a hole.** The original keeps its place in
+the layout, only `visibility: hidden`, until the answer settles — so it says
+where the thing left from for as long as the question is open. A mark left where
+the thing was — an imprint, a dashed outline — is drawn ON that element, and its
+parts say `visibility: visible` to come back from the hidden source:
 
 ```css
 .paper[navi-drag-clone-source]::after {
@@ -664,17 +565,6 @@ back from the hidden source:
 }
 ```
 
-It stays until the answer settles, which is what makes it say where the thing left
-from for as long as the question is open — and if the answer refuses, the copy comes
-back to it.
-
-`data-drag-axis` says which axes the drag walks, and its default is not the same
-for every outcome: `reorder` alone walks the list (`y`; a list that runs sideways
-says `data-drag-axis="x"`), while a `move` goes wherever it is put, a `land` wherever the board has
-places, a `toss` wherever it was thrown and a `leave` out by whichever edge (`xy`).
-`data-drag-delay`,
-`data-drag-slop`, `data-drag-threshold` tune when the press becomes a grab.
-
 ### What says a thing can be picked up
 
 Almost nothing, on purpose. A **handle** (`data-drag-handle`) exists only to drag,
@@ -686,8 +576,8 @@ text inside cannot be selected either — a finger is another matter, see below)
 
 So on a board where a piece is also clickable, the cursor is already spoken for and
 the affordance has to be said in the piece itself — a grip mark in a corner, a
-shadow appearing under the pointer, a handle. It is worth deciding, not defaulting:
-a board one may drag on is worth nothing if nobody tries.
+shadow appearing under the pointer, a handle. Decide it rather than default it: a
+board one may drag on is worth nothing if nobody tries.
 
 ### The text inside: `user-select: none`
 
@@ -711,9 +601,9 @@ a stylesheet, and it has to be true before the press:
 
 **Most of the time that is what you want.** What can be picked up carries a
 label rather than a text to read — a token, a row, a card one moves — and the
-press is there for the drag: nobody selects the word inside a thing they are
-carrying. Keep the selection where the text IS the point (a note one copies from)
-and give that one a `data-drag-handle`: the grip drags, the text stays text.
+press is there for the drag. Keep the selection where the text IS the point (a
+note one copies from) and give that one a `data-drag-handle`: the grip drags, the
+text stays text.
 
 navi says it on its own in one place only, inside `[data-drag-on-contact]`, where
 there is no wait left to answer the finger with.
@@ -721,42 +611,49 @@ there is no wait left to answer the finger with.
 ## A gesture whose product is a value
 
 `move`, `reorder`, `land`, `toss` and `leave` answer the same question — where did
-the element end up — because all five carry it. A rotation does not: what comes out
-of it is an angle, and the handle that produced it stays exactly where it is. Same
-for a scale, or a sun dragged around a plan to set the hour.
+the element end up. A rotation does not: what comes out of it is an angle, and
+the handle that produced it stays exactly where it is. Same for a scale, or a sun
+dragged around a plan to set the hour.
 
-What navi names is never the value: it does not know that these pixels are an
+What navi names is never the value — it does not know that these pixels are an
 angle, that the angle snaps to the neighbouring court, or where the result is
-kept. What it names is the **arbitration** — a press that could have been a tap, a
-scroll, a page travelling, the surface underneath — and once that is settled it
-hands the numbers over. `moving` is that for something carried (the deltas from the
-grab, every frame, nothing translated), `pan` and `zoom` for a surface under the
-hand ([pan_zoom.md](./pan_zoom.md)). A value gesture written on either of those two shapes is `interactions`
-work, and the machinery below is not needed for it.
+kept — but the **arbitration**: a press that could have been a tap, a scroll, a
+page travelling, the surface underneath. Once that is settled it hands the
+numbers over. **A value computed from how far a handle was taken is `moving`**:
+the deltas from the grab, every frame, nothing translated, and `move` beside it
+when the release commits something. A value read off a surface is `pan` and
+`zoom` ([pan_zoom.md](./pan_zoom.md)). Both are `interactions` work.
 
-What is left to it is a gesture whose SHAPE is none of navi's: it does not begin on
-an element that could be carried, or on a surface — it begins wherever the
-application says, on its own rules. Then navi hands over the machinery instead and
-leaves the paint alone:
+What is left is a gesture whose SHAPE is none of navi's: it does not begin on an
+element that could be carried, or on a surface — it begins wherever the
+application says, on its own rules. Then navi hands over the machinery and leaves
+the paint alone; the options are in the JSDoc of `dragAfterIntent`,
+`markDragSource` and `createDragGestureController`:
 
 ```js
-import { createDragGestureController, dragAfterIntent } from "@jsenv/navi";
+import {
+  createDragGestureController,
+  dragAfterIntent,
+  markDragSource,
+} from "@jsenv/navi";
+
+// At mount, not in the pointerdown.
+const unmarkDragSource = markDragSource(element, "xy");
 
 const onPointerDown = (pointerDownEvent) => {
-  // Read now: the callback below runs once the intent shows, after dispatch,
-  // when `currentTarget` is null.
-  const element = pointerDownEvent.currentTarget;
+  // `element`, not `pointerDownEvent.currentTarget`: the callback runs once the
+  // intent shows, after dispatch, when `currentTarget` is null.
   dragAfterIntent(pointerDownEvent, () => {
     const controller = createDragGestureController({
       onDrag: (gestureInfo) => {
         const { xDelta, yDelta } = gestureInfo.layout;
-        angleSignal.value = snapToNeighbours(angleFromDelta(xDelta, yDelta));
+        valueSignal.value = valueFrom(xDelta, yDelta);
       },
       onRelease: (gestureInfo) => {
         if (gestureInfo.cancelled) {
           return;
         }
-        COURT.PUT.run({ angle: angleSignal.peek() });
+        commit(valueSignal.peek());
       },
     });
     return controller.grabViaPointer(pointerDownEvent, { element });
@@ -764,40 +661,39 @@ const onPointerDown = (pointerDownEvent) => {
 };
 ```
 
-An element that ends up somewhere is NOT this: that one is `move` — or `land` when
-what it ends up on is a surface and a copy is what travels — and doing it by hand
-gives up the constraint, the commit and the way back when the answer refuses.
+An element that ends up somewhere is NOT this: that one is `move` — or `land`
+when what it ends up on is a surface — and doing it by hand gives up the
+constraint, the commit and the way back when the answer refuses. What the
+machinery brings is the reason not to write it again:
 
-Three things come with the machinery, and they are the reason not to write it again:
-
-- **When the press becomes a drag** is `dragAfterIntent`, and the answer is not one
-  policy but three: a `data-drag-handle` exists only to drag, so it takes the
-  gesture on contact; a mouse resolves it by distance; a finger resolves it by
-  TIME, because travel is exactly what a scroll looks like. One timer for every
-  pointer makes the mouse wait for something it never had to prove.
-- **A touch has to be refusable before it is refused.** `touch-action` must be
-  non-`auto` when the finger LANDS: after that the touch is on the compositor's
-  fast path, every `preventDefault` is an intervention, and on Android the scroll
-  runs away with the object. `markDragSource(element, axes)` says it from a
-  stylesheet, on the source itself — which is how what surrounds it keeps
-  scrolling. A blanket `touch-action: none` on the container buys the same drag by
-  taking the pan away, and the pan then has to be written by hand too.
+- **When the press becomes a drag** is `dragAfterIntent`: a `data-drag-handle`
+  on contact, a mouse by distance, a finger by TIME, because travel is exactly
+  what a scroll looks like — one timer for every pointer makes the mouse wait for
+  something it never had to prove.
+- **A touch has to be refusable before it is refused**: `markDragSource` goes
+  down at mount, on the source itself, so what surrounds it keeps scrolling (the
+  two conditions are in
+  [mobile_touch.md](./mobile_touch.md#the-browser-decides-about-8px-in-and-does-not-wait)).
+  A blanket `touch-action: none` on the container buys the same drag by taking
+  the pan away, and the pan then has to be written by hand too.
 - **A capture that goes was not necessarily given back.** `lostpointercapture`
-  reads the same whether the gesture handed the pointer over or the browser dropped
-  it mid-drag, which it does more often than the specification suggests. The loop
-  tells the two apart, and `gestureInfo.cancelled` is where it comes out: a release
-  nobody asked for must commit nothing.
+  reads the same whether the gesture handed the pointer over or the browser
+  dropped it mid-drag, which it does more often than the specification suggests.
+  The loop tells the two apart, and `gestureInfo.cancelled` is where it comes
+  out: a release nobody asked for must commit nothing.
 
-A gesture driven this way is outside the registry, so it says so itself to whatever
-travels above it: `data-no-drag-travel` (see `docs/drag_to_travel.md`).
+A gesture driven this way is outside the registry, so it says so itself to
+whatever travels above it: `data-no-drag-travel` (see
+[drag_to_travel.md](./drag_to_travel.md#a-navi-component-that-reads-the-pointer-marks-itself)).
 
 ## Reference
 
-- `src/control/interaction/interaction_drag.js` — `move`, `reorder`, `land`,
-  `toss`, `leave` and the `grab`/`release`/`refuse` moments.
-- `@jsenv/dom` — `src/interaction/drag/drag_gesture.js` (the loop, its options
-  and what `gestureInfo` holds) and `src/interaction/drag/drag_after_intent.js`
-  (when a press becomes a drag, and what a source says in the stylesheet).
+- `src/control/interaction/interaction_drag.js` — the outcomes, `moving`, the
+  `grab`/`release`/`refuse` moments and `--navi-grab`.
+- `@jsenv/dom` — `src/interaction/drag/drag_to.js` (`startDragTo`,
+  `refuseDragTo`), `drag_gesture.js` (the loop and what `gestureInfo` holds),
+  `drag_after_intent.js` (when a press becomes a drag, and what a source says in
+  the stylesheet).
 - `src/control/demos/38_interactions_demo.html` — a board whose places are
   zones and the same board whose places are the pieces.
 - `src/control/demos/integration/5_plan_editor_demo.html` — a place that is a

@@ -20,34 +20,28 @@ visible", and the browser then decides — from the last thing that happened to
 touch the DOM rather than from what the user did.
 
 An app must never have to think about either. Every navi component answers the
-same way, out of one place, which is what makes the answer trustworthy.
+same way, out of one place, which is what makes the answer trustworthy. What an
+app is told about it — the ladder, `autoFocus`, the ring, `moveFocusTo` — is
+[docs/autofocus.md](../../../packages/frontend/navi/docs/autofocus.md); this
+skill holds what navi's own code must respect to keep that true.
 
 ## The rules
 
 **Never call `element.focus()` bare** — `moveFocusTo(element)` is the one way
-to move the focus, in navi and in an app using navi:
-
-```js
-moveFocusTo(target);
-```
-
-It states the two answers a bare `focus()` leaves to the browser:
+to move the focus, in navi as in an app. Two of its decisions are easy to undo
+from inside navi:
 
 - `focusVisible` is the **modality of what asked for the transfer**, never the
   state of the element handing over. That element is often no witness at all: a
   trigger whose mousedown was prevented keeps a `:focus-visible` nobody can
   see, and something focused by code was itself focused without a ring, so it
   would report "no ring" for a movement asked for with a key.
-- An **editable target outranks the modality**: a field one is about to type in
-  draws its ring on any focus, so the native `:focus-visible` is told the same
-  rather than left to disagree with what navi paints.
 - `preventScroll` is on because the browser's scroll-into-view reads geometry
   that navi's own layout effects are often still deciding.
 
-Both are overridable, and both overrides are for a caller who knows something
-the last interaction does not — a transfer speaking for the gesture that opened
-a container, an element that genuinely has to be scrolled into view. Neither is
-a way to skip thinking about the question.
+Both are overridable, and only by a caller who knows something the last
+interaction does not — a transfer speaking for the gesture that opened a
+container, an element that genuinely has to be scrolled into view.
 
 **Never pick the target by hand.** Who receives the focus is one ladder, and it
 knows things a `querySelector` does not: the marks that ask for it, the ones
@@ -98,11 +92,12 @@ A press on a control whose whole purpose is to reach a field is not that, and
 may take the keyboard. What is not acceptable is departing silently: the next
 reader has to be able to tell a decision from an oversight.
 
-**Write `:focus-visible` / `[data-focus-visible]` in CSS and nothing else.**
-navi implements both with enriched semantics — an element also counts as
-focused when a proxy or a controlling element (`aria-controls`) holds the focus
-— under the native names on purpose, so every existing selector benefits. A
-navi-specific pseudo-class would mean updating every component.
+**The enriched state is `[data-focus-visible]`.** navi's own `:focus-visible`
+test — which also counts a proxy or a controlling element (`aria-controls`)
+holding the focus — is written on the element as that attribute, and navi's
+CSS keys on it. A native `:focus-visible` rule only ever gets the browser's
+meaning. _Reference: `definePseudoClass(":focus-visible", …)` in
+`src/box/pseudo_styles.js`._
 
 ## Where it lives
 

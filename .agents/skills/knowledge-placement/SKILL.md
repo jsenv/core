@@ -39,8 +39,18 @@ big for npm), so a project that wants this to work well keeps a clone of
   example gallery; prose describing usage is the thing it replaces.
 - **Why this line is like this** → a code comment, right there (see the comment
   rules in [.agents/instructions.md](../../instructions.md#coding-conventions)).
+- **A rule only the package's maintainers need** — how a mechanism must be
+  changed, what its internals must never lose, how it is verified — → the
+  `.agents/skills/*` of that task, or the top-of-file comment of the module it
+  governs. Not `docs/`: `docs/` ships in the npm package and is read by people
+  building apps, who pay for every paragraph that is not for them.
 - **Everything else** → nowhere. Most of what you just learned reading the code
   is retrievable by reading the code again.
+
+Knowledge an app developer AND a maintainer need lives in `docs/`, and the skill
+links to it instead of restating it. Never the other way round: `.agents/` is
+not published, so a link from `docs/` into it is a dead link for everyone who
+reads the package from `node_modules/`.
 
 ## Before adding a `.md`
 

@@ -133,6 +133,28 @@ export const suspendScrollRecording = () => {
   };
 };
 
+// A list scrolling the document that opens on a row puts the document where
+// that row is, by measuring it (see placeWhereHeld in list.jsx). The offset kept
+// for the url is pixels of the page as it was drawn — and a list draws a window
+// of its rows and holds the room of the others with fillers of an estimated
+// height, so the same pixels now fall on other rows. Put back after the list
+// has placed itself, they would undo it, in the very picture a route transition
+// takes. So the list holds the document while it is placing itself, and the
+// url's offset is not put back meanwhile. Counted: two lists can share one
+// document.
+let documentHoldCount = 0;
+export const holdDocumentScroll = () => {
+  documentHoldCount++;
+  let released = false;
+  return () => {
+    if (released) {
+      return;
+    }
+    released = true;
+    documentHoldCount--;
+  };
+};
+
 let installed = false;
 export const installScrollRestoration = () => {
   if (installed) {
@@ -167,6 +189,9 @@ export const installScrollRestoration = () => {
   if (positionOnLoad && (positionOnLoad.x || positionOnLoad.y)) {
     const stopListening = observeRouteRender(() => {
       stopListening();
+      if (documentHoldCount) {
+        return;
+      }
       scrollTo(positionOnLoad);
     });
   }
@@ -180,6 +205,11 @@ export const restoreScrollPosition = (url) => {
   const position = positionByUrl.get(new URL(url, window.location.href).href);
   if (!position) {
     return false;
+  }
+  if (documentHoldCount) {
+    // There is a place to go back to, and the list holding the document is
+    // putting it back (see holdDocumentScroll).
+    return true;
   }
   scrollTo(position);
   return true;

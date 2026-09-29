@@ -171,7 +171,7 @@ There is exactly one family of question this flag is wrong for: what a consumer 
 
 - Use `@type {import("preact").FunctionComponent<{ ... }>}` on exported components so VSCode can autocomplete prop types
 - For non-obvious props, add `@param` entries after the `@type` block to provide textual descriptions — VSCode shows both in the hover tooltip
-- See `packages/frontend/navi/src/control/list/list.jsx` for a `@type`-only reference example
+- See `packages/frontend/navi/src/text/unit.jsx` for a `@type`-only reference example
 - See `packages/frontend/navi/src/text/text.jsx` for a combined `@type` + `@param` example
 
 #### Top-level file comments
@@ -185,10 +185,9 @@ Nothing else belongs there. Other sources already cover everything else — the 
 
 #### Demo files
 
-Demos are used, not read: the work goes into the examples, never into the commentary
-around them. Read [.agents/skills/demo-files/SKILL.md](skills/demo-files/SKILL.md)
-before writing or editing one — it holds the writing rules, the page structure and
-how to run them.
+Read [.agents/skills/demo-files/SKILL.md](skills/demo-files/SKILL.md) before
+writing or editing one — it holds the writing rules, the page structure and how
+to run them.
 
 ### CSS
 
@@ -196,12 +195,7 @@ how to run them.
   closing this chapter before writing one
 - CSS variables for theming and customization
 - `light-dark()` for automatic theme switching
-- **Transitions/animations play on change, never on first paint**: a transition or animation must fire when something _changes_ (interaction, state update, value change) — not when the component first mounts, the page loads, or an already-open element re-renders. A user should never see an element animate into its initial state just because the page appeared. Techniques, roughly in order of preference:
-  - **`@starting-style`** (standards-first): declare the "from" state in a `@starting-style` block so the browser interpolates from it _only_ on the element's first render / first time it's displayed. Pair with `transition-behavior: allow-discrete` when animating `display`/`overlay` (e.g. popovers/dialogs entering). No JS, no flags — prefer this when the from-state is a fixed style.
-  - **The reflow trick** (when `@starting-style` can't express the from-state — e.g. it depends on a real layout box that only exists once shown, as with a positioned popover): set `transition-property: none`, apply the initial ("closed") state, force a layout read (`el.getBoundingClientRect()` / `el.offsetHeight`) so that closed frame is genuinely rendered, then flip to the target state and restore `transition-property`. See `packages/frontend/navi/src/popup/popover.jsx` (search `transitionProperty = "none"` and the `getBoundingClientRect()` reflow) — it also explains in its top comment _why_ `@starting-style` doesn't work there.
-  - **Gate on actually-displayed, not merely mounted**: only arm the entrance transition when the element becomes displayed, so it doesn't replay when something already open just re-renders. `useDisplayedLayoutEffect` runs an effect once the element is really on screen; popover.jsx suppresses transitions until it has measured/positioned the element, then arms them.
-  - **Simplest of all — no transition at all**: if the emphasis can be positional/compositional (e.g. a fixed overlay the content moves under) rather than a per-element state flip, there's nothing to animate on mount by construction. Prefer this when it fits.
-    This applies to color/opacity/transform transitions and keyframe animations alike.
+- **Transitions/animations play on change, never on first paint**: a transition or animation fires when something _changes_ (interaction, state update, value change) — never because the component mounted, the page loaded, or an already-open element re-rendered. The techniques are in the animations skill's "First paint".
 - **Anything that moves over time**: read [.agents/skills/animations/SKILL.md](skills/animations/SKILL.md) — who owns the state while something animates, how an interrupted movement picks up, how it keeps up with a user faster than it, and where view transitions may live.
 
 #### `${}` in `import.meta.css`
@@ -403,23 +397,7 @@ on the right element.
 
 ### Actions System
 
-```js
-const getUserAction = createAction(async ({ userId }) => {
-  const response = await fetch(`/api/users/${userId}`);
-  return response.json();
-});
-
-// One instance per params value: equal params share it.
-const getUserWithIdAction = getUserAction.bindParams({ userId: 123 });
-
-// A signal in the params gives a proxy that retargets as the signal changes.
-// Retargeting does not run anything: a routeAction, a control's `action` or
-// useAsyncData(action, { run: true }) does.
-const userAction = getUserAction.bindParams({
-  userId: userIdSignal,
-  includeProfile: true,
-});
-```
-
-What an action is for, calling versus binding, and what a failing run rejects
-with: [packages/frontend/navi/docs/actions.md](../packages/frontend/navi/docs/actions.md).
+What an action is for, calling versus binding (equal params share one
+instance; a signal in the params retargets without running anything), and what
+a failing run rejects with:
+[packages/frontend/navi/docs/actions.md](../packages/frontend/navi/docs/actions.md).
