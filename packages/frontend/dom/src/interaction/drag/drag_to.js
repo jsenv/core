@@ -982,10 +982,11 @@ export const startDragTo = (
  * A press that WOULD be a drag, and is not.
  *
  * Recognized exactly as `startDragTo` recognizes it: the intent is established by
- * the same threshold — a mouse travelling, a finger holding still, the first
- * pixel inside a `[data-drag-on-contact]`. What differs is what happens once it
- * is established: nothing is grabbed, nothing translates, and `onRefuse` is told
- * at the instant the grab would have been acquired.
+ * the same threshold — a mouse travelling a few pixels, a finger holding still,
+ * or travelling those same few pixels inside a `[data-drag-on-contact]`. What
+ * differs is what happens once it is established: nothing is grabbed, nothing
+ * translates, and `onRefuse` is told at the instant the grab would have been
+ * acquired.
  *
  * That instant is the whole point. An object that stays put under the hand and
  * says nothing reads as a screen that is broken, and the hand pulls harder; the

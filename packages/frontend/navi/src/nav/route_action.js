@@ -4,13 +4,17 @@ import { actionRunEffect } from "../action/action_run_effect.js";
 import { createAction } from "../action/actions.js";
 import { readStateAsIf } from "../state/state_signal.js";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
-import { registerRoutePreload, registerRouteStatePreload } from "./route.js";
+import {
+  registerRoutePreload,
+  registerRouteReload,
+  registerRouteStatePreload,
+} from "./route.js";
 
 /**
  * Binds an action to a route: it runs when the route matches, with the params
- * the effect reads off the address, and is aborted when the route is left.
- * Its data, its wait and its failure are read by the page through
- * `useAsyncData`.
+ * the effect reads off the address, runs again on a `reload()`, and is aborted
+ * when the route is left. Its data, its wait and its failure are read by the
+ * page through `useAsyncData`.
  *
  * A page's CODE is declared the same way — the import is one more thing the
  * address asks for, started with the data rather than after it:
@@ -54,18 +58,21 @@ export const routeAction = (
       ? routes[0].matchingSignal
       : anyMatchingRouteSignal(routes);
   const readParams = paramsEffect || (() => true);
-  const actionBoundToRoute = actionRunEffect(
-    action,
-    () => {
-      const matching = routeMatchingSignal.value;
-      const params = readParams();
-      if (!matching) {
-        return null;
-      }
-      return params;
-    },
-    options,
-  );
+  const readParamsAsked = () => {
+    const matching = routeMatchingSignal.value;
+    const params = readParams();
+    if (!matching) {
+      return null;
+    }
+    return params;
+  };
+  const actionBoundToRoute = actionRunEffect(action, readParamsAsked, options);
+  for (const route of routes) {
+    // Asked of the route's params as they are, like the effect asks them.
+    registerRouteReload(route, () =>
+      untracked(readParamsAsked) ? actionBoundToRoute : null,
+    );
+  }
   if (prefetch) {
     for (const route of routes) {
       if (paramsEffect) {

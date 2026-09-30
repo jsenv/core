@@ -40,16 +40,17 @@ import { dispatchRequestResetUIState } from "./ui_state_dom.js";
  *   it would register into is a form, which never owns another form's fields.
  * @param {boolean} [props.canSendWhileUnchanged] - Send even when nothing changed. By
  *   default a form only acts on an answer that is actually new: submitting a
- *   form nobody touched — one just rendered, one whose fields still hold their
- *   defaults, one reopened and left alone — runs no action, and after the first
- *   submission it is that value the next one is compared against. Everything
- *   around the action still happens either way: the constraints are checked,
- *   and what follows the send still follows it (the slide moves on, the popup
- *   closes) — the user is done regardless of whether there was anything to
- *   send. Set this for a form where sending the same thing twice is the point —
- *   a single button that fires off a notification, an action whose duplicates
- *   are fine. See also `readOnlyWhileFormUnchanged` on `Button`, for a submit that
- *   should say it is waiting rather than accept a press that sends nothing.
+ *   form nobody touched — one just rendered, one reopened and left alone — runs
+ *   no action (a field still showing its `defaultValue` is an answer: confirming
+ *   a suggestion), and after the first submission it is that value the next
+ *   one is compared against. Everything around the action still happens either
+ *   way: the constraints are checked, and what follows the send still follows
+ *   it (the slide moves on, the popup closes) — the user is done regardless of
+ *   whether there was anything to send. Set this for a form where sending the
+ *   same thing twice is the point — a single button that fires off a
+ *   notification, an action whose duplicates are fine. See also
+ *   `readOnlyWhileFormUnchanged` on `Button`, for a submit that should say it
+ *   is waiting rather than accept a press that sends nothing.
  * @param {boolean} [props.actionAbortable] - The person waiting may give up on
  *   the send: closing the popup this form holds calls the run off and goes
  *   through, instead of being refused. For a send whose answer may never come —
@@ -65,7 +66,8 @@ import { dispatchRequestResetUIState } from "./ui_state_dom.js";
  *   no sheet to be read in: `resetOnError` puts the form back and the error
  *   callout is drawn on what surrounds the closed sheet. For a write not worth being
  *   waited for — a score, a note — never for one whose refusal changes what the
- *   person does next (see docs/popup_open.md#the-popup-owns-its-open-state).
+ *   person does next (see
+ *   docs/popup_open.md#closing-when-a-button-also-runs-an-action).
  * @param {any} [props.pristineKey] - What the form is measured against, taken
  *   again every time this changes. A form knows what it holds as soon as its
  *   fields have registered, which is the right moment for a form whose values

@@ -16,9 +16,11 @@ later.
 
 ## Sending nothing is the default
 
-Submitting a form nobody touched — one just rendered, one whose fields still
-hold their defaults, one reopened and left alone — runs **no action**. No
-request, nothing in the network tab.
+Submitting a form nobody touched — one just rendered, one reopened and left
+alone — runs **no action**. No request, nothing in the network tab. The
+exception is a field still showing its `defaultValue`: confirming a suggestion
+is an answer, sent once (see
+[What counts as already held](#what-counts-as-already-held)).
 
 Everything around the action still happens: the constraints are checked, and
 what follows the send still follows it — the popup closes, the slide moves on,

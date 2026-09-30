@@ -103,14 +103,14 @@ import.meta.css = /* css */ `
 
      Said on the box, where it is a statement about the box and not about what
      it happens to hold — and read only where a browser asks the box at all:
-     one that CLIPS is asked (it is a scroll container, which is what "asked"
-     means to a browser), one that does not is walked past. A box that travels
-     usually clips, because moving something in and out of a box is what
-     clipping is for. One that does not still travels — what an inner scroller
-     has left over reaches the page there, and the rule below says why that is
-     the lesser of the two prices. An application that knows which of ITS
-     elements scroll can contain those itself, on the element every engine
-     reads; nothing in here can know that from a stylesheet. */
+     one that is a scroll container (overflow hidden, auto or scroll) is
+     asked, one that is not is walked past. Overflow clip cuts without making
+     one, so a box that clips that way is walked past like a box that does not
+     clip at all. It still travels — what an inner scroller has left over
+     reaches the page there, and the last rule below says why that is the
+     lesser of the two prices. An application that knows which of ITS elements
+     scroll can contain those itself, on the element every engine reads;
+     nothing in here can know that from a stylesheet. */
   [data-drag-travel*="x"] {
     overscroll-behavior-x: contain !important;
   }
@@ -145,19 +145,19 @@ import.meta.css = /* css */ `
      Two readings of "contain" are out there, and the rule above lands in only
      one of them. Blink walks EVERY scroll container between the pointer and the
      page and asks each one whether the gesture may go past it, whether or not
-     it had anything to scroll: the box above is asked, and containing it is the
-     whole answer. Gecko and WebKit ask only the ones that actually scroll: the
-     box is skipped (it travels, it does not scroll), and what is left of a
-     list's gesture reaches the page unless the LIST itself was told — which is
-     what this does, to everything, because which descendant scrolls is not
-     something a stylesheet can know.
+     it had anything to scroll: a box above that is one is asked, and
+     containing it is the whole answer. Gecko and WebKit ask only the ones that
+     actually scroll: the box is skipped (it travels, it does not scroll), and
+     what is left of a list's gesture reaches the page unless the LIST itself
+     was told — which is what this does, to everything, because which
+     descendant scrolls is not something a stylesheet can know.
 
-     Not said to Blink, where it is not needed and does harm: an element that
-     clips is a scroll container to a browser (a line of text with an ellipsis,
-     a rounded card, an invisible checkbox covering a row), and Blink asking one
-     of those with nothing to scroll gets "no further" for an answer — the wheel
-     stops there and the list right above it never moves. A dead zone under the
-     pointer, wherever something inside the box happens to clip.
+     Not said to Blink, where it does harm: an element can be a scroll
+     container with nothing to scroll (a line of text with an ellipsis, a
+     rounded card cut with overflow hidden, an invisible checkbox covering a
+     row), and Blink asking one of those gets "no further" for an answer — the
+     wheel stops there and the list right above it never moves. A dead zone
+     under the pointer, wherever something inside the box happens to be one.
 
      Blink is told apart by a property only it has, rather than by reading a user
      agent: the split above is between engines, and -webkit-app-region is one of

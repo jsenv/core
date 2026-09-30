@@ -18,7 +18,7 @@ import { naviI18n } from "../text/navi_i18n.js";
  *
  * Exempt from the state around it, never from the popup's own answer: the cross
  * ASKS, and the popup decides — a dialog holding a form mid-send keeps the
- * close, an `onRequestClose` calling `preventDefault()` keeps it too.
+ * close, a Picker holding a value that does not validate keeps it too.
  *
  * @type {import("preact").FunctionComponent<{
  *   label?: string,

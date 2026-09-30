@@ -300,8 +300,9 @@ const PickerCustom = (props) => {
     open,
     defaultOpen,
     // What Escape means for this picker. "cancel" (the default) puts back the
-    // value the picker had at open and, for a dialog, goes back in history —
-    // so everything written to the url while it was open goes back too.
+    // value the picker had at open and, for a dialog with an explicit id, goes
+    // back in history — so everything written to the url while it was open
+    // goes back too (see pickerNavType below).
     // "close" makes Escape say the same thing as clicking outside: keep what
     // was chosen, close the popup.
     escapeEffect = "cancel",
@@ -1023,9 +1024,10 @@ const PickerContentInsidePopup = (props) => {
     // itself, and this one does not. Popover ignores it, same as Dialog ignores
     // marginWithAnchor.
     dockedOnSmallTouchScreen,
-    // Same again: the dialog takes the trigger's box as a floor (and, with
-    // dialogMaxWidth="var(--anchor-width)", as a ceiling) — what keeps a card
-    // its own width once lifted. Dialog's own `sizeFromAnchor`.
+    // Same again: the dialog takes the trigger's box as a floor (Dialog's own
+    // `sizeFromAnchor`) and, unless a dialogMaxWidth says otherwise, as a
+    // ceiling (see maxWidth below) — what keeps a card its own width once
+    // lifted.
     dialogSizeFromAnchor,
     // The caller's word on the popup's own box. Written on the popup element,
     // where Popover/Dialog map them to their own vars, rather than as vars on

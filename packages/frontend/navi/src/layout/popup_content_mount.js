@@ -38,10 +38,11 @@
  * without the content, and the browser builds it in an idle moment after
  * load — so by the time anyone clicks, it is usually already there.
  *
- * "while-opened" is the opposite end: content that must be rebuilt from
- * scratch every time, because what it shows is read once at build time and can
- * change while the popup is closed — an uncontrolled field seeded from a
- * `defaultValue`, a form whose fresh state is its initial state.
+ * "while-opened" is the opposite end: content rebuilt from scratch every
+ * time, a form whose fresh state is its initial state. What kept content
+ * carries into the next opening is an unsent edit — an untouched field
+ * follows a new `defaultValue` on its own (see followDefaultValue in
+ * ui_state_controller.js) — and this is what throws that edit away.
  *
  * On top of whichever value is picked, intent on the anchor warms the content:
  * a pointer entering the popup's anchor, or focus landing in it, builds the
@@ -75,9 +76,11 @@
  * click coming after the release, the browser taking the gesture
  * (`pointercancel`), or the next press starting, before any of its own
  * handlers run: one press at a time holds a content. A keyboard opening builds
- * at open time. A popup with an `onOpen` is never warmed: that callback runs
- * before the content is built (see open_controller.js), and a content seeding
- * itself from what it writes must be built after it.
+ * at open time. A "while-opened" popup with an `onOpen` is not warmed by the
+ * press: that callback runs before the content is built (see
+ * open_controller.js), and a content seeding itself from what it writes must
+ * be built after it. Hover and focus warming, for the other values, builds
+ * ahead of `onOpen` all the same.
  */
 
 import { isPressDrivenClick } from "@jsenv/dom";

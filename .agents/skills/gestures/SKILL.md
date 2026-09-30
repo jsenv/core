@@ -311,8 +311,8 @@ both sides match and the way back is invisible. The PAGES are held
 (`freezeRouteRender`) until the pictures are home, and they walk home over how
 far they visibly are, at the travel's pace, the rate handed over with
 `updatePlaybackRate`. **Rewinding at `-1` collapses the eased way home into a
-snap** (the animations skill: "Cancelling is the same movement backwards", "The
-main thread lies about a running transition").
+snap** (the animations skill: "Cancelling is the same movement backwards", "What
+JS reads of a running transition, and what the screen shows").
 
 Turned around or aimed further, everything ELSE the transition carries was
 photographed on its way to a place nobody is going to: those pictures are

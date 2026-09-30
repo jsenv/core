@@ -719,7 +719,7 @@ const css = /* css */ `
      the length of the movement, and the picture of the lifted node comes out
      empty (Chrome 153, reproduced in a bare page). The price is a page frozen
      and unpressable while the movement plays: under a modal wall at the
-     opening, and for a quarter of a second at the closing. */
+     opening, and for the popup's --popup-animation-duration at the closing. */
   :root[data-navi-popup-lift] {
     /* The popup's own pace, published on the root by popup_lift.js because the
        ::view-transition tree hangs off it and inherits from nowhere else. */
@@ -1063,16 +1063,21 @@ const css = /* css */ `
  * @param {boolean|"last-resort"|"restore"} [props.autoFocus="last-resort"] -
  *   Where the keyboard goes when this dialog opens — one rung of the ladder in
  *   `docs/autofocus.md`, which is what to read for the whole of it.
- *   - `true` — the dialog element itself takes the keyboard, whatever it holds.
- *     For a dialog whose content is READ before it is filled: the focus starts
- *     at the top of the reading order and no virtual keyboard rises over it.
+ *   - `true` — the dialog element itself takes the keyboard rather than the
+ *     first focusable it holds; something inside that asks by name
+ *     (`autoFocus`) still comes first. For a dialog whose content is READ
+ *     before it is filled: the focus starts at the top of the reading
+ *     order and no virtual keyboard rises over it.
  *   - `"last-resort"` — the dialog takes the keyboard only if it holds nothing
  *     focusable of its own.
  *   - `"restore"` — the dialog stays out of the opening focus chain unless it
  *     held focus when it closed.
- *   - `false` — the dialog element itself is never where the focus lands; the
- *     opening still hands the focus to what the dialog holds. Unlike
- *     `Popover`'s `false`, it does not leave the keyboard where it was.
+ *   - `false` — the dialog says nothing, and the opening still hands out the
+ *     focus: a `<dialog>` is focusable and the first focusable of its own
+ *     subtree, so it takes the keyboard as with `true`. Where the first
+ *     focusable is skipped (a touch device, below), a last resort inside is
+ *     tried instead, and nothing there leaves the keyboard where it was.
+ *     Unlike `Popover`'s `false`, the transfer runs.
  *   Wherever the keyboard is a virtual one (a touch device), the surface is
  *   already what one arrives on: a popup is read before it is reached there, so
  *   the focus only leaves it for something that asked by name (`autoFocus` on
@@ -1106,9 +1111,9 @@ const css = /* css */ `
  *   is "new" or "edit X" depending on the press must know which one it is
  *   before what it holds is rendered.
  * @param {(event: Event) => void} [props.onClose] - Called when the dialog
- *   actually closes — not preventable (see `open_controller.js`'s own
- *   `onRequestClose`/`onClose` distinction; `onRequestClose` is where you'd
- *   veto a close instead).
+ *   actually closes — not preventable: it is the close happening, not a
+ *   request. What refuses a close is navi's: a control inside still
+ *   running its action (see popup_busy.js for the runs that let it through).
  * @param {boolean|string|{id?: string, type?: "push"|"replace"}} [props.navState] -
  *   Keeps the open state in the history entry, so a screen left and come back
  *   to finds this popup as it was — open, and without an entrance playing: it
@@ -1134,8 +1139,9 @@ const css = /* css */ `
  *   `"idle"` builds them in a browser idle moment after load — "always" minus
  *   the cost on the critical render. `"while-opened"` throws them away once
  *   the popup has finished closing, for content whose fresh state is its
- *   initial state: an uncontrolled field seeded from a `defaultValue` that
- *   changed while the popup was closed. Intent on the anchor (pointer
+ *   initial state: an edit left unsent at the close does not come back at
+ *   the next opening (an untouched field needs none of this to show a new
+ *   `defaultValue` — it follows one). Intent on the anchor (pointer
  *   entering it, focus landing in it) builds the content ahead of the click;
  *   under `"while-opened"`, only a press on what opens the popup does (a
  *   `--navi-open` button, a picker's trigger), never with an `onOpen`, and a
@@ -1859,10 +1865,10 @@ const useDialogProps = (props) => {
     }
 
     // Suppressed until committed below — same @starting-style-avoidance
-    // reasoning as popover.jsx's own openEffect (see its top comment), even
-    // though Dialog never needs to measure/flip anything: it still needs a
-    // genuinely rendered "closed" frame to transition from, not a jump
-    // straight from not-shown to aria-expanded="true".
+    // reasoning as popover.jsx's own openEffect (see popup_css.js's top
+    // comment), even though Dialog never needs to measure/flip anything: it
+    // still needs a genuinely rendered "closed" frame to transition from, not a
+    // jump straight from not-shown to aria-expanded="true".
     dialogEl.style.transitionProperty = "none";
 
     if (backdropEl) {

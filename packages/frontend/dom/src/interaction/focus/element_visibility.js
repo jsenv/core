@@ -55,14 +55,19 @@ export const getFocusVisibilityInfo = (node, { excludeAriaHidden } = {}) => {
       }
       // Continue checking ancestors
     }
-    if (elementIsDialog(nodeOrAncestor) && !nodeOrAncestor.open) {
+    const isPopover =
+      nodeOrAncestor.popover !== null && nodeOrAncestor.popover !== undefined;
+    const isOpenPopover = isPopover && nodeOrAncestor.matches(":popover-open");
+    // A dialog shown as a popover (showPopover()) is open without `open`,
+    // which only show() and showModal() set.
+    if (
+      elementIsDialog(nodeOrAncestor) &&
+      !nodeOrAncestor.open &&
+      !isOpenPopover
+    ) {
       return { visible: false, reason: "inside closed dialog element" };
     }
-    if (
-      nodeOrAncestor.popover !== null &&
-      nodeOrAncestor.popover !== undefined &&
-      !nodeOrAncestor.matches(":popover-open")
-    ) {
+    if (isPopover && !isOpenPopover) {
       return { visible: false, reason: "inside closed popover element" };
     }
     // Open popovers and open dialogs render in the top layer: they escape
@@ -71,11 +76,7 @@ export const getFocusVisibilityInfo = (node, { excludeAriaHidden } = {}) => {
     if (elementIsDialog(nodeOrAncestor) && nodeOrAncestor.open) {
       break;
     }
-    if (
-      nodeOrAncestor.popover !== null &&
-      nodeOrAncestor.popover !== undefined &&
-      nodeOrAncestor.matches(":popover-open")
-    ) {
+    if (isOpenPopover) {
       break;
     }
     nodeOrAncestor = nodeOrAncestor.parentNode;

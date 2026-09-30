@@ -96,29 +96,31 @@ import.meta.css = /* css */ `
      of it only navi can write.
 
      What a browser is asked, and where, is not the same everywhere: Blink asks
-     every scroll container between the pointer and the page, so containing the
-     travelling box answers for everything inside it; Gecko and WebKit ask only
-     the ones that actually scroll, so the box — which travels, it does not
-     scroll — is walked past and the SCROLLER itself has to be told. drag_to_
-     travel says it to everything inside the box for those two, and to the box
-     alone on Blink, where saying it to everything turns anything that clips
-     (an ellipsis, a rounded card, the invisible checkbox covering a selectable
-     row) into a dead zone under the wheel — a scroll container with nothing to
-     scroll, and Blink stops at it.
+     every scroll container between the pointer and the page, so containing a
+     travelling box that is one answers for everything inside it; Gecko and
+     WebKit ask only the ones that actually scroll, so the box — which travels,
+     it does not scroll — is walked past and the SCROLLER itself has to be
+     told. drag_to_travel says it to everything inside the box for those two,
+     and to the box alone on Blink, where saying it to everything turns any
+     scroll container with nothing to scroll (an ellipsis, a rounded card, the
+     invisible checkbox covering a selectable row) into a dead zone under the
+     wheel — Blink stops at it.
 
-     Which leaves, on Blink, a travelling box that does NOT clip: nothing is
-     asked, and the leftovers reach the page. RouteTravel is that box, and
-     cannot be made to clip — a scroll container there would become the nearest
-     one for every "position: sticky" inside the pages it holds.
+     Which leaves, on Blink, a travelling box that is NOT a scroll container:
+     nothing is asked, and the leftovers reach the page. RouteTravel is one,
+     and cannot be made a scroll container — it would become the nearest one
+     for every "position: sticky" inside the pages it holds. SlideContainer is
+     another: overflow clip cuts without making one (see slide_container.jsx).
 
      So navi contains what it KNOWS scrolls. [data-scrollable] is worn by a Box
      that ASKED for overflow auto/scroll (see below), never by one that merely
      clips: containing it costs nothing on the engines where the rule above
      already covers it, and on Blink it is what keeps a list inside a travelling
      page from taking the page with it. What is left over is a scroller nobody
-     declared — a bare div with an overflow of its own, a textarea, a widget
-     from elsewhere: those still hand their leftovers up, on Blink, under a box
-     that does not clip. */
+     declared — a bare div with an overflow of its own, a widget from
+     elsewhere: those still hand their leftovers up, on Blink, under a box that
+     is not a scroll container. The native ones (a textarea, a select list)
+     are contained by name in drag_to_travel. */
   [data-drag-travel*="x"] [data-scrollable] {
     overscroll-behavior-x: contain !important;
   }

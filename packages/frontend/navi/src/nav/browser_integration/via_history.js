@@ -8,7 +8,7 @@ import { resolveRouteRedirection } from "../route.js";
 import {
   forgetScrollersOnArrival,
   installScrollRestoration,
-  restoreScrollPosition,
+  restoreScrollPositionOnReturn,
   startAtTop,
 } from "./scroll_restoration.js";
 import {
@@ -21,6 +21,7 @@ import {
   canNavBackSignal,
   getNavDepth,
   NAV_DEPTH_STATE_KEY,
+  stateWithNavDepthOnLoad,
 } from "./document_back_and_forward.js";
 import {
   dropGeneratedIdKeys,
@@ -297,12 +298,12 @@ export const setupBrowserIntegrationViaHistory = ({
       isVisited,
       state,
     });
-    // Where the document lands, said by what kind of arrival this is. Both are
-    // waited for, and for the same two reasons: the page has to be there to be
-    // scrolled, and a picture taken before it would be of a page at its top
-    // (see rendering_hold.js, which is where the waiting happens). After the
-    // history has been written too, so the entry being left keeps the offset
-    // it is at.
+    // Where the document lands, said by what kind of arrival this is. Never
+    // before the picture of a transition is taken, which would be of a page
+    // at its top (see rendering_hold.js), and after the history has been
+    // written, so the entry being left keeps the offset it is at. A return
+    // also waits for the page it returns to: an offset is clamped to whatever
+    // page the document holds when it is written.
     //
     // A replace gets neither: it is the same place said differently — a param
     // settling, a state written — and moving the reader for it would throw
@@ -313,7 +314,7 @@ export const setupBrowserIntegrationViaHistory = ({
     if (navigationType === "push") {
       whenRenderingResumes(() => startAtTop(url, { from: urlLeft }));
     } else if (navigationType === "traverse") {
-      whenRenderingResumes(() => restoreScrollPosition(url));
+      restoreScrollPositionOnReturn(url);
     }
     executeWithCleanup(
       () => allResult,
@@ -548,11 +549,12 @@ export const setupBrowserIntegrationViaHistory = ({
   const init = () => {
     const url = window.location.href;
     const stateOnEntry = window.history.state;
-    const state = dropGeneratedIdKeys(stateOnEntry);
+    const state = stateWithNavDepthOnLoad(dropGeneratedIdKeys(stateOnEntry));
     if (state !== stateOnEntry) {
-      // The entry itself has to lose them too, not just the document state:
-      // getDocumentState() reads the entry back, and every state write copies
-      // what it finds there onto the next one.
+      // The entry itself has to carry it, not just the document state:
+      // getDocumentState() reads the entry back, every state write copies what
+      // it finds there onto the next one, and a back returning here reads its
+      // depth from it.
       writeHistoryEntry("replace", state, url);
     }
     handleRoutingTask(url, {

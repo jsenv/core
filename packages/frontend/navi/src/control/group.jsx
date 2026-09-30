@@ -51,10 +51,11 @@ const css = /* css */ `
          the neighbour painted after it, is what this avoids. z-index needs a
          positioned element to mean anything, hence position: relative.
          Deliberately not paired with isolation: isolate — a stacking context
-         here would also trap the popup of a picker held in the group, which
-         counts on its own band reaching the whole page. What keeps these
-         values from escaping is instead that everything they could reach is a
-         band above them (see navi_z_indexes.js). */
+         here would also trap the layer="local" popup of a picker held in the
+         group, which counts on its own band reaching the whole page (a popup in
+         the top layer, the default, escapes any stacking context). What keeps
+         these values from escaping is instead that everything they could reach
+         is a band above them (see navi_z_indexes.js). */
       &:hover,
       &[data-hover] {
         position: relative;

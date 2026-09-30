@@ -533,8 +533,9 @@ const css = /* css */ `
  *   - how to go to a tab. The default REPLACES the current history entry
  *   rather than pushing one: a swipe is how one browses a page, not a place one
  *   aimed at, and three swipes back and forth must not bury the way out of the
- *   page under six entries. A tab pressed is the other case and pushes, which
- *   is what its <Link> already does.
+ *   page under six entries. A tab pressed goes the way its <Link> says —
+ *   `<Link replace>` for a row of tabs, so a press and a swipe towards the
+ *   same neighbour write the same history.
  *
  * Every other prop lands on the box itself (`id`, `data-testid`, `className`,
  * …), which is how one of these is named: a page can hold several — a row of
@@ -549,10 +550,11 @@ const css = /* css */ `
  * gesture applies its change on release instead of dragging a picture that does
  * not exist.
  *
- * While a travel plays, the rest of the page is taken as a picture too — this
- * box asks for `view-transition-name: root` back for that time, so an
- * application that opts the document out for its own transitions gets its rule
- * back the moment the travel is over.
+ * While a travel plays, the rest of the page is NOT taken as a picture: the
+ * root's name is dropped for that time (`view-transition-name: none`), so what
+ * stands around the box — a tab row beside it — stays live and answers a press
+ * mid-travel. The application's own rule for the root applies again the moment
+ * the travel is over.
  */
 export const RouteTravel = ({
   routes: routesProp,

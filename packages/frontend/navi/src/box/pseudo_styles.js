@@ -420,10 +420,11 @@ export const isKeyboardModality = () => keyboardNavigationUsed;
 focus_classes: {
   // We implement :focus and :focus-visible with enriched semantics:
   // an element is considered focused not only when it natively has focus, but also
-  // when a "focus proxy" element has focus (e.g. a read-only range input delegates
-  // focus to a sibling span) or when a controlling element has focus (e.g. a combobox
-  // input with aria-controls pointing to a listbox — the listbox should appear focused
-  // while the input is focused).
+  // when it is a control proxy whose real control has focus (the proxy is what is
+  // seen, the focus is dealt to the real control — see control_proxy.js) or when
+  // a controlling element has focus (e.g. a combobox input with aria-controls
+  // pointing to a listbox — the listbox should appear focused while the input is
+  // focused).
   //
   // We intentionally reuse the native :focus / :focus-visible names rather than
   // introducing new navi-specific pseudo-classes (e.g. :-navi-focus). This is a
@@ -515,7 +516,7 @@ focus_classes: {
 
   // Returns true when el holds focus indirectly — either because a controlling
   // element (aria-controls) has focus, or because el is a proxy whose target
-  // is itself controlled by a focused element.
+  // has focus or is itself controlled by a focused element.
   const hasIndirectFocus = (el, { requireFocusVisible = false } = {}) => {
     // No ring inheritance without a keyboard: an editable target draws its own
     // ring on any focus (see isMatchingFocusVisible), but propagating that ring

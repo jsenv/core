@@ -194,7 +194,8 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  *   `command` runs at once — the popup it sits in closes over the run, which
  *   goes on behind. A failure then has no popup to be read in: `resetOnError`
  *   puts the button back and the error callout is drawn on what surrounds the
- *   closed popup (see docs/popup_open.md#the-popup-owns-its-open-state).
+ *   closed popup (see
+ *   docs/popup_open.md#closing-when-a-button-also-runs-an-action).
  * @param {boolean} [actionAbortable] The person waiting may give up on this
  *   button's action: closing the popup the run holds calls it off and goes
  *   through, instead of being refused. For a run whose answer may never come —

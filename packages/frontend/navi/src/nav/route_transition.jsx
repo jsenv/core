@@ -939,11 +939,11 @@ const css = /* css */ `
  *
  * It is a real box, and it must be: what is photographed and clipped IS its
  * rectangle. So `display: contents` cannot be used on it — an element with no
- * box is never captured, the movement plays on nothing and the browser aborts
- * the transition. Give it the layout the pages need instead — it is a `Box`,
- * so `flex`, `className`, `style` and the rest are there for that. An
- * application that already has an element holding its pages can mark that one
- * with `data-navi-route-transition-area` rather than nesting another.
+ * box is never captured, and the movement then plays on nothing (navi warns
+ * once the pictures are taken). Give it the layout the pages need instead —
+ * it is a `Box`, so `flex`, `className`, `style` and the rest are there for
+ * that. An application that already has an element holding its pages can mark
+ * that one with `data-navi-route-transition-area` rather than nesting another.
  *
  * @type {import("preact").FunctionComponent<{ children?: any, [key: string]: any }>}
  */
@@ -995,10 +995,14 @@ export const RouteTransitionArea = ({ children, ...rest }) => {
  *   length of the transition the root carries
  *   `data-navi-route-transition-type="<type>"` next to
  *   `data-navi-route-transition="forward"|"back"`, and the application's CSS
- *   defines the movement against the view transition pseudo-elements:
+ *   defines the movement against the view transition pseudo-elements, for
+ *   both groups: `root` when the document travels, `navi-route-transition`
+ *   when an area is marked — the root is then unnamed, and a rule written for
+ *   `(root)` alone never applies:
  *
  *     :root[data-navi-route-transition-type="spin"][data-navi-route-transition="forward"] {
- *       &::view-transition-new(root) {
+ *       &::view-transition-new(root),
+ *       &::view-transition-new(navi-route-transition) {
  *         animation-name: my-spin-in;
  *       }
  *     }
@@ -1597,7 +1601,7 @@ const beginTransition = ({ page, url, fromUrl, direction, type, duration }) => {
   if (areaElements.length > 1) {
     warnOnce(
       "several-areas",
-      `${areaElements.length} elements carry ${TRANSITION_AREA_ATTRIBUTE}. They all take the same view-transition-name, and a name belongs to one element at a time: the browser refuses EVERY view transition of the document while this holds. Mark the one element the pages live in.`,
+      `${areaElements.length} elements carry ${TRANSITION_AREA_ATTRIBUTE}. They all take the same view-transition-name, and a name belongs to one element at a time: the browser refuses EVERY route transition while this holds. Mark the one element the pages live in.`,
     );
   }
   const areaElement = areaElements.length > 0 ? areaElements[0] : null;

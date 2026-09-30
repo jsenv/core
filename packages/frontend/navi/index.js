@@ -372,9 +372,10 @@ export { moveFocusTo } from "./src/utils/focus/focus_transfer.js";
 
 // Interactions
 export { startDragTo } from "@jsenv/dom";
-// For a drag whose product is a VALUE — an angle, a scale, an offset — rather
-// than an element that ends up somewhere. navi names the second kind and not the
-// first (see docs/drag_interactions.md), so what it hands over here is the machinery:
+// For a drag whose SHAPE is none of navi's: one that begins wherever the
+// application says, not on an element that is carried or a surface that pans (a
+// value taken from how far a handle went is the `moving` interaction's, see
+// docs/drag_interactions.md). What is handed over here is the machinery:
 // when a press becomes a drag, the loop that follows the pointer, and what an
 // element must say BEFORE the finger lands for its touch to be refusable at all.
 // Re-exported so that does not cost an app a direct dependency on @jsenv/dom.

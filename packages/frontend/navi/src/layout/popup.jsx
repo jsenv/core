@@ -185,8 +185,9 @@ const css = /* css */ `
  *   `"idle"` builds them in a browser idle moment after load — `"always"`
  *   minus the cost on the critical render.
  *   `"while-opened"` throws them away once the popup has finished closing, for
- *   content whose fresh state is its initial state: an uncontrolled field
- *   seeded from a `defaultValue` that changed while the popup was closed.
+ *   content whose fresh state is its initial state: an edit left unsent at
+ *   the close does not come back at the next opening (an untouched field
+ *   needs none of this to show a new `defaultValue` — it follows one).
  * @param {import("preact").ComponentChildren} props.children
  */
 export const Popup = (props) => {

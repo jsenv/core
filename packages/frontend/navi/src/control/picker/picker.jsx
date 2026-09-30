@@ -1758,6 +1758,7 @@ const PickerFirstResolver = (props) => {
  *   dialogExpandX?: boolean,
  *   dialogExpandY?: boolean,
  *   dialogSizeFromAnchor?: boolean,
+ *   dockedOnSmallTouchScreen?: boolean | "top" | "bottom",
  *   marginWithContainer?: number | string,
  *   anchor?: import("preact").RefObject<HTMLElement> | HTMLElement,
  *   escapeEffect?: "cancel" | "close",
@@ -2136,14 +2137,23 @@ const PickerFirstResolver = (props) => {
  *   about it changes. `dialogMaxWidth="var(--anchor-width)"` says the same
  *   ceiling by hand: the popup props are written on the dialog element, where
  *   that variable lives.
+ * @param {boolean|"top"|"bottom"} [dockedOnSmallTouchScreen] Dialog mode,
+ *   Dialog's own: on a small touch screen the dialog becomes a sheet docked
+ *   full width to one edge — `true` or `"top"` the top edge, out of the
+ *   virtual keyboard's way; `"bottom"` the bottom one, for a sheet that is
+ *   read and tapped. Anywhere else it stays the centered box. Ignored in
+ *   popover mode.
  * @param {"cancel"|"close"} [escapeEffect="cancel"] What Escape does to an open
  *   picker. "cancel" puts back the value the picker had at open, and a dialog
- *   picker also goes back in history — so anything written to the url while it
- *   was open (a route `stateSignal`, a search param) goes back with it. "close"
- *   makes Escape say what clicking outside says: keep what was chosen, close —
- *   a last resort, see docs/popup_open.md ("Escape cancels, the other gestures
- *   keep") for why Escape should go on meaning cancel, and for what the value
- *   at open is on the picker's very first open.
+ *   picker with an explicit `id` (its opening being an entry of its own)
+ *   also goes back in history — so anything written to the url while it was
+ *   open (a route `stateSignal`, a search param) goes back with it. "close"
+ *   makes Escape say what clicking outside says: keep what was chosen,
+ *   close — a last resort, see
+ *   docs/popup_open.md#escape-cancels-the-other-gestures-keep for why Escape
+ *   should go on meaning cancel, and
+ *   docs/popup_open.md#what-cancel-actually-undoes for what a cancel puts
+ *   back.
  * @param {import("preact").RefObject<HTMLElement>|HTMLElement} [anchor] What
  *   the popup hangs off, when that is not the picker itself: a picker whose
  *   trigger is one piece of a bigger control (the chevron half of a split
@@ -2198,7 +2208,9 @@ const PickerFirstResolver = (props) => {
  *   positioned ancestor for `popupLayer="local"`). Caps the popup's size as
  *   well as its placement, so what an expanded dialog leaves visible around
  *   itself is set here. Defaults to `popoverSpacing` in popover mode, and to
- *   Dialog's own 3vvw in dialog mode.
+ *   Dialog's own in dialog mode: `3appw` in the top layer, `3cqw` under
+ *   `popupLayer="local"`, 0 for a dialog docked by
+ *   `dockedOnSmallTouchScreen`.
  * @param {string} [popupTestId] The `data-testid` of the popup element — the
  *   popover or dialog the children open in. A `data-testid` on the picker
  *   itself names the trigger (see docs/testid.md); this one is for a test that

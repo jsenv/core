@@ -45,6 +45,7 @@
  * route_travel.jsx).
  */
 
+import { whenPageRendered } from "../rendering_hold.js";
 import { observeRouteRender } from "../route_render.js";
 
 const STORAGE_KEY = "navi_scroll_positions";
@@ -197,11 +198,18 @@ export const installScrollRestoration = () => {
   }
 };
 
+// Where the document lands is the last arrival's to say. A return waits for its
+// page (see restoreScrollPositionOnReturn), and an arrival decided meanwhile — a
+// page that sends the reader elsewhere as it mounts — must not be scrolled to
+// where the return was going.
+let arrivalCount = 0;
+
 // Nothing to put back is not the same as putting back the top: a page arrived
 // at for the first time is startAtTop's business, and this must not step on it.
 // Whether there was anything, for a caller who has an answer of its own for the
 // page that has never been read.
-export const restoreScrollPosition = (url) => {
+const restoreScrollPosition = (url) => {
+  arrivalCount++;
   const position = positionByUrl.get(new URL(url, window.location.href).href);
   if (!position) {
     return false;
@@ -213,6 +221,28 @@ export const restoreScrollPosition = (url) => {
   }
   scrollTo(position);
   return true;
+};
+
+// A traversal back to `url`. The offset is written once the page returned to is
+// rendered: written sooner, the document still holds the page being left and
+// clamps it to that page's height. It is read at once all the same — a page
+// left taller than the one arriving is clamped by the render itself, and that
+// clamp is a scroll recorded under the url already returned to.
+export const restoreScrollPositionOnReturn = (url) => {
+  const arrival = ++arrivalCount;
+  const position = positionByUrl.get(new URL(url, window.location.href).href);
+  if (!position) {
+    return;
+  }
+  whenPageRendered(() => {
+    if (arrival !== arrivalCount) {
+      return;
+    }
+    if (documentHoldCount) {
+      return;
+    }
+    scrollTo(position);
+  });
 };
 
 // A page one arrives at for the first time starts at its top. Only a document
@@ -240,6 +270,7 @@ export const startAtTop = (url, { from } = {}) => {
   if (!isArrival(url, { from })) {
     return;
   }
+  arrivalCount++;
   window.scrollTo({ top: 0, left: 0, behavior: "instant" });
 };
 const isArrival = (url, { from }) => {

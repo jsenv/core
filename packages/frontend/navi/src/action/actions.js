@@ -766,6 +766,8 @@ const actionWeakMap = new WeakMap();
  *   than a first load (data_states.md). Called at the start of every run whose
  *   value is undefined; the answer replaces it as usual, and `undefined` means
  *   "nothing known". A resource `GET` uses it to draw the row its store holds.
+ *   An action declaring it is asked for it by a binding moving to new params,
+ *   rather than handed the previous params' answer (see inheritData).
  * @param {{ ms?: number, max?: number }} [rootOptions.keep] - how long an
  *   answer stays good once it has landed. Without it an answer lives exactly as
  *   long as something references it: the screen that asked goes away, and
@@ -1433,7 +1435,14 @@ export const createAction = (callback, rootOptions = {}) => {
             if (rejected) {
               return failRun(rejectedValue);
             }
-            return onRunEnd();
+            // Turning the answer into a value can throw as well — a resource
+            // write answering nothing to upsert. That fails the run, as the
+            // catch below does when the callback answered synchronously.
+            try {
+              return onRunEnd();
+            } catch (e) {
+              return failRun(e);
+            }
           });
         } catch (e) {
           return failRun(e);
@@ -1476,6 +1485,7 @@ export const createAction = (callback, rootOptions = {}) => {
 
       const privateProperties = {
         valueInitial,
+        provisionalValue,
 
         performRun,
         performReset,
@@ -1507,7 +1517,8 @@ export const createAction = (callback, rootOptions = {}) => {
  *   This enables live updates - for example, performing an HTTP GET request every time
  *   a list of filters changes, providing real-time results without user interaction.
  * @param {boolean} options.inheritData - When false, each new target action starts fresh with no inherited state.
- *   By default (true), the proxy carries over the previous target's value and error into the new action.
+ *   By default (true), the proxy carries over the previous target's value and error into the new action —
+ *   unless the action declares a `provisionalValue`, which then says what the new one holds.
  *   This keeps the facade in sync with the latest known data: `action.dataSignal.value` only changes when a
  *   new action completes, not when it starts loading. Code that needs to distinguish loading state can still
  *   check `action.runningState`, while code that just reads `action.data` always sees the most recent
@@ -1554,8 +1565,14 @@ const createActionProxyFromSignal = (
   let currentActionPrivateProperties = getActionPrivateProperties(action);
   let actionTargetPreviousWeakRef = null;
 
+  // An action saying for itself what it holds for params it has not answered
+  // (provisionalValue: a resource GET draws the row its store holds) is not
+  // handed the previous params' answer — an answer about another row. What it
+  // does not know stays unknown: a skeleton, never a different row.
+  const inheritsAnswer =
+    inheritData && !getActionPrivateProperties(action).provisionalValue;
   const createTarget = (params) => {
-    if (inheritData) {
+    if (inheritsAnswer) {
       const previousActionTarget = actionTargetPreviousWeakRef?.deref();
       const previousTarget = previousActionTarget || action;
       return action.bindParams(params, {
@@ -1668,6 +1685,12 @@ const createActionProxyFromSignal = (
     return signalProxy;
   };
 
+  // Params bound onto this binding make the action bound to both — these over
+  // the ones it follows, as an instance's go over its action's — following the
+  // signals of both: what a control does with the action it is given, and
+  // actionRunEffect. Kept per params like the action's own bindings, since a
+  // control binds its action again at every render.
+  const bindingOnProxyWeakMap = createJsValueWeakMap();
   Object.assign(actionProxy, {
     isAction: true,
     isProxy: true,
@@ -1692,14 +1715,27 @@ const createActionProxyFromSignal = (
       });
       return currentAction;
     },
-    bindParams: () => {
-      throw new Error(
-        `bindParams() is not supported on action proxies, use the underlying action instead`,
+    bindParams: (newParamsOrSignal, options) => {
+      const existingBinding = bindingOnProxyWeakMap.get(newParamsOrSignal);
+      if (existingBinding) {
+        return existingBinding;
+      }
+      const binding = action.bindParams(
+        computed(() =>
+          mergeActionParams(
+            paramsSignal.value,
+            readParamsHandedToBind(newParamsOrSignal),
+          ),
+        ),
+        options,
       );
+      bindingOnProxyWeakMap.set(newParamsOrSignal, binding);
+      return binding;
     },
     replaceParams: null, // Will be set below
     toString: () => callSourceSignal.peek(), // peek: see the action's toString
     meta: action.meta,
+    debug: action.debug,
 
     paramsSignal: proxyParamsSignal,
     paramsSettlingSignal,
@@ -1840,6 +1876,29 @@ const generateActionCallSource = (name, params) => {
     asFunctionArgs: true,
   });
   return `${name}${argsString}`;
+};
+
+// What params handed to bindParams say at this moment, read as a binding reads
+// them (see _bindParams): a signal is its value, and so is each signal a plain
+// object holds at its first level. Read inside a computed, it follows them.
+const readParamsHandedToBind = (newParamsOrSignal) => {
+  if (isSignal(newParamsOrSignal)) {
+    return newParamsOrSignal.value;
+  }
+  if (!isPlainObject(newParamsOrSignal)) {
+    return newParamsOrSignal;
+  }
+  const params = {};
+  for (const key of Object.keys(newParamsOrSignal)) {
+    const value = newParamsOrSignal[key];
+    const valueSignal = isSignal(value)
+      ? value
+      : value
+        ? value[SYMBOL_OBJECT_SIGNAL]
+        : undefined;
+    params[key] = valueSignal ? valueSignal.value : value;
+  }
+  return params;
 };
 
 const isPlainObject = (obj) => {

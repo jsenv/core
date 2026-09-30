@@ -49,6 +49,7 @@ import {
   canNavBackSignal,
   getNavDepth,
   NAV_DEPTH_STATE_KEY,
+  stateWithNavDepthOnLoad,
 } from "./document_back_and_forward.js";
 import {
   documentStateSignal,
@@ -63,7 +64,7 @@ import { linkAsksForReplace } from "./link_replace.js";
 import {
   forgetScrollersOnArrival,
   installScrollRestoration,
-  restoreScrollPosition,
+  restoreScrollPositionOnReturn,
   startAtTop,
 } from "./scroll_restoration.js";
 
@@ -265,7 +266,7 @@ export const setupBrowserIntegrationViaNavigation = ({
     if (navigationType === "push") {
       whenRenderingResumes(() => startAtTop(url, { from: urlLeft }));
     } else if (navigationType === "traverse") {
-      whenRenderingResumes(() => restoreScrollPosition(url));
+      restoreScrollPositionOnReturn(url);
     }
     executeWithCleanup(
       () => allResult,
@@ -579,7 +580,7 @@ export const setupBrowserIntegrationViaNavigation = ({
           });
           if (isLanding) {
             // The arrival is the back's, whatever the replace that wrote it.
-            whenRenderingResumes(() => restoreScrollPosition(url));
+            restoreScrollPositionOnReturn(url);
           }
           // The handler's promise IS the navigation for the browser (its
           // loading UI follows it) — but a routing that fails is displayed by
@@ -718,11 +719,12 @@ export const setupBrowserIntegrationViaNavigation = ({
   const init = () => {
     const url = window.location.href;
     const stateOnEntry = getDocumentState();
-    const state = dropGeneratedIdKeys(stateOnEntry);
+    const state = stateWithNavDepthOnLoad(dropGeneratedIdKeys(stateOnEntry));
     if (state !== stateOnEntry) {
-      // The entry itself has to lose them too, not just the document state:
-      // getDocumentState() reads the entry back, and every state write copies
-      // what it finds there onto the next one.
+      // The entry itself has to carry it, not just the document state:
+      // getDocumentState() reads the entry back, every state write copies what
+      // it finds there onto the next one, and a back returning here reads its
+      // depth from it.
       writeEntryState(state);
     }
     runRouting(url, {

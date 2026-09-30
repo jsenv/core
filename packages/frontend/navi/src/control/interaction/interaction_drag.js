@@ -240,10 +240,11 @@
  * insists.
  *
  * So the interaction stays declared and says "refuse" in place of what it does.
- * The threshold is the same one — a mouse travelling, a finger holding still, the
- * first pixel inside a `data-drag-on-contact` — and at the instant the grab would
- * have been acquired there is none: nothing translates, no copy is made, no
- * release is answered. `refuse` is that instant.
+ * The threshold is the same one — a mouse travelling a few pixels, a finger
+ * holding still, or travelling those same few pixels inside a
+ * `data-drag-on-contact` — and at the instant the grab would have been
+ * acquired there is none: nothing translates, no copy is made, no release is
+ * answered. `refuse` is that instant.
  *
  * It walks no axis, so it takes none: a box that travels and a surface that pans
  * both step over an element that is refusing, and a gesture starting on a locked

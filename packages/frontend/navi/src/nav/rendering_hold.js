@@ -78,6 +78,22 @@ export const whenRenderingResumes = (callback) => {
   renderingHold.waiting.push(callback);
 };
 
+// After the render the change being applied has queued, for what depends on
+// the page that change puts on screen — an offset given back to a page is
+// clamped to whatever page the document holds when it is written. Under a hold
+// that render runs when the hold is released, and this right after it.
+// Otherwise the render is Preact's own, queued in a microtask, and every
+// microtask has run by the next frame — before it paints.
+export const whenPageRendered = (callback) => {
+  if (renderingHold) {
+    renderingHold.waiting.push(callback);
+    return;
+  }
+  requestAnimationFrame(() => {
+    callback();
+  });
+};
+
 // The hold a navigation takes on its way in — from before its first write,
 // because by the time a route announces that it matches, Preact has already
 // been told and the render is queued; a hold taken then is a hold taken too

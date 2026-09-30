@@ -98,14 +98,19 @@
          reçoit de navi de quoi ressembler à un mouvement (images à leur taille,
          pages opaques, animation tenue) : ce qui reste à écrire, ce sont les
          deux animation-name. */
-      :root[data-navi-route-transition-type="spin"] {
+      html:root[data-navi-route-transition][data-navi-route-transition-type="spin"] {
         &::view-transition-old(navi-route-transition),
         &::view-transition-new(navi-route-transition) {
           /* Un seul des deux côtés tourne, l'autre garde le fondu du
              navigateur — et un fondu, ce sont deux images à demi transparentes
              qui doivent S'AJOUTER plutôt que se recouvrir, sinon le fond se
              voit au milieu du mouvement. Un mouvement où les deux pages
-             bougent garde l'opacité que navi pose. */
+             bougent garde l'opacité que navi pose — un mix-blend-mode normal,
+             écrit depuis
+             :root[data-navi-route-transition][data-navi-route-transition-type]
+             dans une feuille venue après celle-ci : pour le reprendre, le
+             sélecteur d'ici pèse plus lourd (html:root et les deux attributs),
+             sinon il est ignoré sans bruit. */
           mix-blend-mode: plus-lighter;
         }
       }

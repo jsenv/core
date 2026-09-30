@@ -73,14 +73,13 @@ means something different:
 whose params name a row the store already holds — read earlier by a `GET_MANY`,
 a relation, a list — starts on the second line, not the first: the row is
 drawn, the request goes out behind it, and a failure lands beside it like any
-refresh failure. A row known from the previous page load counts too, when the
-resource asks for it:
+refresh failure. A `GET` of a row the store lacks starts on the first line, so
+what is drawn is never a different row — a `GET` bound through a signal (a route
+action, a `bindParams` holding one) included, when the signal moves to other
+params. A row known from the previous page load counts too, when the resource
+asks for it:
 [`persist`](./resource.md#persist-the-last-answer-drawn-again-after-a-reload)
-puts a reload on the second line as well. A `GET` bound through a signal — a
-route action, a `bindParams` holding one — is on the second line when the signal
-moves to params it has not answered yet, with the previous params' row: its
-`data` stays that row until the new answer lands, whether or not the store holds
-the new one.
+puts a reload on the second line as well.
 
 **The emptiness test is `data === undefined`, never `loading`.** Reading
 `loading` as "there is nothing to display" blanks the screen on every refresh —

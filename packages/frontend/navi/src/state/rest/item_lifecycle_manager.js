@@ -265,8 +265,9 @@ export const createResourceLifecycleManager = () => {
           }
 
           // scopedMany auto-dependency: only rerun parent singular GET on child POST,
-          // and only when the parent GET previously returned the sub-resource embedded
-          // inside its response (detected via action._resultProperties).
+          // only the GET of the owner the child was posted to, and only when that
+          // GET previously returned the sub-resource embedded inside its response
+          // (detected via action._resultProperties).
           // GET_MANY is excluded — a list of parents is not stale just because one
           // child item was added to one of them.
           scoped_many_effect: {
@@ -286,6 +287,15 @@ export const createResourceLifecycleManager = () => {
               } of parentEntries) {
                 if (parentResource !== resourceScope) {
                   continue;
+                }
+                if (
+                  !isOwnerReadBy(
+                    triggerResourceScope,
+                    triggeringAction,
+                    actionCandidate,
+                  )
+                ) {
+                  break scoped_many_effect;
                 }
                 // Only rerun if the last GET response included the embedded sub-resource.
                 if (
@@ -401,4 +411,25 @@ const isParamSubset = (parentParams, childParams) => {
     }
   }
   return true;
+};
+
+// Whether a GET of the owner read the item a scoped child's action was answered
+// for. The child's value names its owner first ([ownerKey, …], see scopedMany);
+// the GET's value is the id of the item it read. The key may be a unique key
+// rather than that id: both lead to the owner's one store of children. Values
+// are read off the signals: the child's action is still completing, and its
+// `value` property is only written once that batch ends.
+const isOwnerReadBy = (childResource, childAction, ownerGetAction) => {
+  const childValue = childAction.valueSignal.peek();
+  if (!Array.isArray(childValue)) {
+    return false;
+  }
+  const [ownerKey] = childValue;
+  const ownerId = ownerGetAction.valueSignal.peek();
+  const { getChildStore } = childResource;
+  if (!getChildStore) {
+    return ownerKey === ownerId;
+  }
+  const childStore = getChildStore(ownerKey);
+  return childStore !== undefined && childStore === getChildStore(ownerId);
 };

@@ -36,7 +36,6 @@ const applyRouting = (
   url,
   {
     globalAbortSignal,
-    abortSignal,
     // state
     navigationType,
     isVisited,
@@ -48,45 +47,36 @@ const applyRouting = (
     // likely because code does not uses routing at all
     return {};
   }
-  const {
-    loadSet,
-    reloadSet,
-    abortSignalMap,
-    routeLoadRequestedMap,
-    activeRouteSet,
-  } = updateRoutes(url, {
+  // The routes' actions follow the address by themselves (see routeAction):
+  // what a navigation leaves to the routing is a reload, the one that asks
+  // them again with the address unchanged.
+  const { reloadSet } = updateRoutes(url, {
     navigationType,
     isVisited,
     // state,
   });
-  if (
-    (!loadSet || loadSet.size === 0) &&
-    (!reloadSet || reloadSet.size === 0)
-  ) {
+  if (!reloadSet || reloadSet.size === 0) {
     return {
       allResult: undefined,
       requestedResult: undefined,
-      activeRouteSet: new Set(),
     };
   }
   const updateActionsResult = updateActions({
     globalAbortSignal,
-    abortSignal,
-    runSet: loadSet,
+    // Not the navigation's own signal: the next navigation aborts that one, and
+    // an action whose route still matches there would be left aborted — its
+    // params do not change, so nothing would run it again.
+    abortSignal: new AbortController().signal,
     rerunSet: reloadSet,
-    abortSignalMap,
     reason,
-    isReplace: navigationType === "replace",
   });
   const { allResult, runningActionSet } = updateActionsResult;
   const pendingTaskNameArray = [];
-  for (const [route, routeAction] of routeLoadRequestedMap) {
-    if (runningActionSet.has(routeAction)) {
-      pendingTaskNameArray.push(`${route.relativeUrl} -> ${routeAction.name}`);
-    }
+  for (const runningAction of runningActionSet) {
+    pendingTaskNameArray.push(runningAction.name);
   }
   routingWhile(() => allResult, pendingTaskNameArray);
-  return { ...updateActionsResult, activeRouteSet };
+  return updateActionsResult;
 };
 
 // via_navigation.js is ready and implements the same contract, but history is
@@ -181,6 +171,12 @@ export const stopLoad = (reason = "stopLoad() called") => {
     browserIntegration.stop(reason);
   }
 };
+/**
+ * Asks again for the page one is on, without reloading the document: the
+ * actions of the routes matching the url run again (see routeAction), one that
+ * failed included — what a "Retry" under a page that could not load calls.
+ * The address, the history and the scroll stay as they are.
+ */
 export const reload = browserIntegration.reload;
 /**
  * Go back to the screen this document came from.
@@ -203,11 +199,13 @@ export const reload = browserIntegration.reload;
  *   way a screen closed over a url keeps what was written to the url while it
  *   was open (see useNavState's leave()).
  * @returns {Promise<boolean>|undefined}
- *   When there is something to go back to: a promise resolved once the back
- *   has landed and been applied (`true` — the document url and state say
- *   where it landed), or `false` when the traversal was preempted and landed
- *   nowhere. `undefined` otherwise — nothing happened, or the fallback took
- *   the current entry's place.
+ *   When there is something to go back to: a promise resolved with `true`
+ *   once the back has landed and been applied — the document url and state
+ *   then say where it landed. A back preempted by another navigation, which
+ *   lands nowhere, resolves `false` only under the Navigation API integration
+ *   (see USE_NAVIGATION_API, off today): the History API does not tell it
+ *   apart. `undefined` otherwise — nothing happened, or the fallback took the
+ *   current entry's place.
  */
 export const navBack = browserIntegration.navBack;
 export const navForward = browserIntegration.navForward;

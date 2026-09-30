@@ -63,9 +63,16 @@ export const actionRunEffect = (
     }
     return params;
   });
+  // Whether the getter asks for a run is read off what it returned, never off
+  // the params of the instance it leads to: an action handed here holding
+  // params of its own (an instance, a binding) keeps them when the getter
+  // returns nothing — and nothing must still run nothing.
+  let asking = Boolean(actionParamsSignal.peek());
   const actionRunnedByThisEffect = action.bindParams(actionParamsSignal, {
     debounce,
     onChange: (actionTarget, actionTargetPrevious, { explicitRunIntent }) => {
+      const askingBefore = asking;
+      asking = Boolean(actionParamsSignal.peek());
       if (explicitRunIntent) {
         // The caller already issued an explicit run/rerun/prerun/reset/abort —
         // don't attempt to also auto-run from the params change to avoid double-runs.
@@ -76,7 +83,7 @@ export const actionRunEffect = (
       }
       if (!actionTargetPrevious && actionTarget) {
         // first run
-        if (!actionTarget.params) {
+        if (!asking) {
           // falsy params, don't run
           return;
         }
@@ -92,12 +99,12 @@ export const actionRunEffect = (
         actionTarget
       ) {
         // params changed
-        if (!actionTarget.params) {
+        if (!asking) {
           // falsy params, don't run
           actionTargetPrevious.abort("abortOnFalsyParams");
           return;
         }
-        if (!actionTargetPrevious.params) {
+        if (!askingBefore) {
           // coming from falsy-params state: action may already be cached, avoid unnecessary rerun
           runUnwatched(() =>
             actionTarget.run({ reason: "params restored from falsy state" }),
@@ -109,7 +116,7 @@ export const actionRunEffect = (
     },
     ...options,
   });
-  if (actionParamsSignal.peek()) {
+  if (asking) {
     runUnwatched(() =>
       actionRunnedByThisEffect.run({ reason: "initial truthy params" }),
     );

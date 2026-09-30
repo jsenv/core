@@ -276,32 +276,54 @@ movement. Two elements exchanging places is the case that asks for all of this:
 morphed straight, they cross THROUGH each other, and the whole question is what
 they do about it.
 
-### The main thread lies about a running transition
+### What JS reads of a running transition, and what the screen shows
 
-The pseudo-elements' animations run on the **compositor**, and everything JS
-can read answers from the main thread instead. Three traps, and the pattern
-behind all three is the same: the number looks right, the screen disagrees, and
-only the screen is telling the truth.
+A composited animation is two things: the `Animation` object on the main
+thread, and the picture the compositor draws. While the main thread is free
+they agree. Everything JS reads — `currentTime`, `getComputedStyle` — describes
+the `Animation`, and the cases below are where the screen parts from it.
+Measured on Chromium 153 and WebKit 26.6 (2026-09-29).
 
-- **The `playbackRate` setter is a jump on screen.** For a composited
-  animation the setter is a non-seamless change: the pictures leap straight to
-  their end state while the `Animation` object goes on ticking (or ticking
-  backwards) unseen. Hand a new rate over with `updatePlaybackRate()` — the
-  seamless, async variant is what it exists for.
-- **`getComputedStyle` on a `::view-transition-*` pseudo returns the
-  UN-animated value.** Where the pictures actually stand cannot be read from
-  JS at all. To know how far a travel visibly is, compute it from the clock
-  THROUGH the easing curve: the easing of a CSS animation sits on its
-  keyframes (`effect.getKeyframes()[0].easing`), and CSS `ease` is parametric
-  — solve it numerically. _Reference: `visibleProgress` in
+- **`getComputedStyle` on a `::view-transition-*` pseudo returns the animated
+  value**, running or pinned, in both engines (WebKit's can be a frame older
+  than a `currentTime` read in the same task). It reports the `Animation`: where
+  the screen parts from it, it follows the `Animation`. How far a travel
+  visibly is, as a fraction whatever the property, is computed from the clock
+  THROUGH the easing curve: the easing of a CSS animation sits on its keyframes
+  (`effect.getKeyframes()[0].easing`), and CSS `ease` is parametric — solve it
+  numerically. _Reference: `visibleProgress` in
   src/transition/view_transition_revert.js._
-- **Screenshots lie too.** A re-rasterized capture (Playwright's
-  `page.screenshot`) is drawn from main-thread state: it shows the animation
-  where the `Animation` object says it is — pixel-perfect pictures of a
-  movement the screen never played. Only a compositor capture tells the truth:
-  a CDP screencast (`Page.startScreencast`), a screen recording, a human eye.
-  When a human reports a snap that every number says cannot happen, believe
-  the human and reach for the screencast.
+- **A negative rate goes through `updatePlaybackRate()`.** In Chromium, the
+  `playbackRate` setter with a negative rate puts a composited picture — an
+  element's or a pseudo's — at keyframe 0, where the rewind ends, and leaves
+  it there while `currentTime` counts down (a one-frame flash instead, when
+  something else makes the main thread commit every frame).
+  `updatePlaybackRate(-1)` is seamless; WebKit takes both seamlessly. A
+  positive rate — `hurryTravel`'s ×5 — changes pace on the next frame without
+  a jump, in both engines, whichever way it is handed over.
+- **A rate changed just before the main thread blocks jumps, whichever way it
+  is handed over.** The picture keeps the old pace for the whole block, then:
+  - with the setter it jumps to where the `Animation` is — its end, if it
+    finished meanwhile;
+  - `updatePlaybackRate` is no cure. Chromium applies it with a stale frame
+    time: the picture jumps BACK to where it stood at the call, trails the
+    `Animation` by block × rate, and snaps when it finishes. WebKit is
+    usually seamless, and sometimes jumps like the setter.
+- **Not every pseudo animation is composited.** WebKit runs the browser's own
+  `::view-transition-group` animation on the main thread: it never parts from
+  the `Animation`, and it stops when the thread does.
+- **Screenshots.** Chromium's (`page.screenshot()`, CDP
+  `Page.captureScreenshot`) show the screen — the picture a screencast shows at
+  that moment, even where it disagrees with the `Animation` — and neither
+  resolves while the main thread is blocked. WebKit's leaves the
+  `::view-transition-*` pictures out of a view transition entirely: named
+  elements vanish, the root shows un-transitioned. The screencast shows the
+  movement in both: CDP `Page.startScreencast` in Chromium, `page.screencast`
+  in WebKit (~21 fps, too slow for a one-frame event).
+
+When a human reports a snap that every number says cannot happen, believe the
+human: the numbers describe the `Animation`. Look for a rate changed around a
+blocked frame, or a negative setter, and reach for the screencast.
 
 ## What moves inside a box stays inside the box
 
@@ -458,8 +480,9 @@ The gesture then drives a transition instead of driving pixels:
   has covered ~80% of its distance, and rewound at `-1` the whole visible way
   back collapses into the steep end of the curve — a snap, not a return. Walk
   the pictures home over how far they visibly are from home, at the travel's
-  own pace, and hand the rate over with `updatePlaybackRate()` (see "The main
-  thread lies about a running transition" — both halves of this are traps).
+  own pace, and hand the rate over with `updatePlaybackRate()`: in Chromium the
+  setter parks a rewinding picture at its start (see "What JS reads of a
+  running transition, and what the screen shows").
 - **Put the state back UNDER the picture before dropping the picture.** When a
   cancelled gesture has run the animations back to 0, what is on screen is the
   old state; undo the state change, let it render, and only then skip the
@@ -574,12 +597,12 @@ is a speed spike in the samples right after the press; "mushy" is its absence.
 A duration wrong by a factor of two is invisible to the eye but obvious in the
 number.
 
-One family of exceptions: anything running on the compositor — the
-pseudo-elements of a view transition first of all. There the numbers and the
-re-rasterized screenshots BOTH describe the main thread, and both can describe
-a movement the screen never played (see "The main thread lies about a running
-transition"). For those, verify on a compositor capture: a CDP screencast, or
-an eye.
+One family of exceptions: anything composited — the pseudo-elements of a view
+transition first of all. There the numbers describe the `Animation`, and the
+screen can play something else (see "What JS reads of a running transition,
+and what the screen shows"). A screenshot does not settle it: Chromium's
+cannot be taken while the thread is blocked, and WebKit's leaves the
+view-transition pictures out. Verify those on a screencast, or an eye.
 
 When a change must leave a movement exactly as it was — a performance change
 above all — compare what defines it with the animations **pinned at the same
@@ -594,8 +617,9 @@ A second family: two properties that must agree, one composited and one
 painted (see "One clock per movement"). Every number JS reads shows them in
 step; the bug only exists when the main thread is late. Make it late on
 purpose: in `page.evaluate`, trigger the movement and then spin the thread
-for 400ms without awaiting, and capture from node during the block — a frame
-taken while the thread is blocked can only be the compositor's. Compare with
+for 400ms without awaiting, and read the screencast frames that arrive during
+the block — a frame drawn while the thread is blocked can only be the
+compositor's (a screenshot waits for the block to end). Compare with
 the same movement slowed to 2s, where the lag is a fraction of the animation
 instead of the whole of it: a bug that shows at 300ms and vanishes at 2s is
 this one.

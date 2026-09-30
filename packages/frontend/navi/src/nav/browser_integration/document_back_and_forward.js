@@ -40,6 +40,28 @@ let navDepthMax = 0;
 
 export const getNavDepth = () => navDepth;
 
+// Where an entry's state says it stands, undefined when it says nothing.
+export const readNavDepthInState = (state) => {
+  if (state && typeof state[NAV_DEPTH_STATE_KEY] === "number") {
+    return state[NAV_DEPTH_STATE_KEY];
+  }
+  return undefined;
+};
+
+// The state of the entry a document is loaded into, carrying its depth. One
+// that says a depth was written by this document (a reload in the middle of
+// the stack) and keeps it. One that says none was not: a url opened cold, the
+// first of the stack — or, rarely, an entry the browser made for a fragment,
+// reloaded, which 0 under-reports as above. Written into the entry by the
+// integrations, because a back that returns there reads where it stands from
+// the entry alone.
+export const stateWithNavDepthOnLoad = (state) => {
+  if (readNavDepthInState(state) !== undefined) {
+    return state;
+  }
+  return { ...state, [NAV_DEPTH_STATE_KEY]: 0 };
+};
+
 export const applyNavigationToNavDepth = (navigationType, state) => {
   if (navigationType === "push") {
     navDepth++;
@@ -49,10 +71,7 @@ export const applyNavigationToNavDepth = (navigationType, state) => {
     // An entry taking the place of another stands exactly where it stood.
   } else {
     // load, reload, traverse: the entry itself says where it stands.
-    const depthInState =
-      state && typeof state[NAV_DEPTH_STATE_KEY] === "number"
-        ? state[NAV_DEPTH_STATE_KEY]
-        : undefined;
+    const depthInState = readNavDepthInState(state);
     if (depthInState !== undefined) {
       navDepth = depthInState;
       if (navDepth > navDepthMax) {

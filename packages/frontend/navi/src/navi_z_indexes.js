@@ -74,12 +74,14 @@ const css = /* css */ `
          hovered control can ever be seen crossing it. */
       --navi-z-index-bar: 100;
 
-      /* Popups: Dialog/Popover with layer="local", their backdrop, and the
-         validation callouts. Above everything the page can produce, which is
-         the whole point of the gap — a popup never has to guess. Each opened
-         popup adds its stack order on top, so the last one opened wins.
-         Dialog/Popover with layer="top" use the browser top layer instead and
-         appear in no scale at all. */
+      /* Popups: Dialog/Popover with layer="local" and their backdrop. Above
+         everything the page can produce, which is the whole point of the gap —
+         a popup never has to guess. Each opened popup adds its stack order on
+         top, so the last one opened wins. Dialog/Popover with layer="top" use
+         the browser top layer instead and appear in no scale at all, and so
+         do the callouts (a manual popover, shown with showPopover()): the
+         callout value below reaches their --callout-z-index, which no rule
+         reads. */
       --navi-z-index-popup: 1000;
       --navi-z-index-callout: var(--navi-z-index-popup);
 

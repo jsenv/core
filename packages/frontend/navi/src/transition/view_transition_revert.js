@@ -18,11 +18,13 @@
  * where they are going, at the movement's own pace, each animation at the rate
  * that gets it there in that time.
  *
- * Where they visibly stand is computed from the clock THROUGH the easing curve,
- * never read off the pseudo-elements: getComputedStyle on them answers with the
- * un-animated value — the animated one lives on the compositor, where no
- * reading from here reaches. It is the same trap as the playbackRate setter,
- * which is why every rate below is handed over with updatePlaybackRate.
+ * Where they visibly stand is computed from the clock THROUGH the easing curve:
+ * a fraction of the way, whatever property carries it — getComputedStyle on
+ * the pseudo-elements gives the animated value of each property, with nothing
+ * saying how far along its keyframes that value is. The rates are handed over
+ * with updatePlaybackRate: in Chromium, the playbackRate setter given a
+ * negative rate puts the pictures at their start at once, and leaves them
+ * there while the clock counts down.
  */
 
 export const viewTransitionAnimations = () => {

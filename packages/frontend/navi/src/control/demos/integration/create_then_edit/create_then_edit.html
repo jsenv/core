@@ -464,10 +464,11 @@
       };
 
       const EditGamePage = () => {
-        // Les signaux de cet écran: ce qu'on est en train de modifier n'est pas
-        // le brouillon de création. L'écran est là avant ses valeurs — elles
-        // arrivent une requête plus tard — donc les champs partent vides et
-        // attendent, plutôt que de laisser un écran blanc.
+        // Les signaux de cet écran, pas ceux du brouillon de création, et une
+        // copie plutôt que `defaultValue={game?.name}`: une valeur par défaut
+        // est une suggestion, que le premier « Enregistrer » enverrait sans
+        // qu'on ait rien touché. Les champs partent vides et attendent la
+        // partie, plutôt que de laisser un écran blanc.
         const nameSignal = useSignal(undefined);
         const levelSignal = useSignal(undefined);
         const playersSignal = useSignal(undefined);

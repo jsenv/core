@@ -761,6 +761,18 @@ export const preloadUrl = (url) => {
   }
 };
 
+// What a reload asks of each action bound to a route (see routeAction): the
+// action to run again, or nothing when its params ask nothing.
+const routeReloadMap = new WeakMap();
+export const registerRouteReload = (route, reload) => {
+  let reloadSet = routeReloadMap.get(route);
+  if (!reloadSet) {
+    reloadSet = new Set();
+    routeReloadMap.set(route, reloadSet);
+  }
+  reloadSet.add(reload);
+};
+
 const routeStatePreloadMap = new WeakMap();
 export const registerRouteStatePreload = (route, preload) => {
   let preloadSet = routeStatePreloadMap.get(route);
@@ -851,6 +863,7 @@ This prevents cross-test pollution and ensures clean state.`,
   const updateRoutes = (
     url,
     {
+      navigationType,
       isVisited = () => false,
       // state
     } = {},
@@ -1148,6 +1161,27 @@ This prevents cross-test pollution and ensures clean state.`,
           history: "replace",
         });
       }
+    }
+
+    // A route's actions run again when their params change (see routeAction),
+    // and a reload changes none: it asks again for the page one is on. So the
+    // actions of every matching route are handed back, to be rerun — except
+    // those whose params ask nothing.
+    if (navigationType === "reload") {
+      const reloadSet = new Set();
+      for (const route of returnValue.matchingRouteSet) {
+        const routeReloadSet = routeReloadMap.get(route);
+        if (!routeReloadSet) {
+          continue;
+        }
+        for (const reload of routeReloadSet) {
+          const actionToRerun = reload();
+          if (actionToRerun) {
+            reloadSet.add(actionToRerun);
+          }
+        }
+      }
+      returnValue.reloadSet = reloadSet;
     }
 
     return returnValue;

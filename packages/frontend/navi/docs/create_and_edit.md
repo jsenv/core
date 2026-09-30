@@ -215,6 +215,16 @@ By hand this is a `useEffect` keyed on `game?.id` — `[game]` is the natural,
 wrong, thing to write — and a passive effect is too late: the screen opens
 **already changed**, and Save sends the resource back untouched.
 
+`defaultValue={game?.name}` on the fields needs no copy — a field follows a new
+default while it holds no edit
+([control_value.md](./control_value.md#a-defaultvalue-follows-what-it-was-read-from))
+— and fails the same way: a default is a suggestion the form does not hold, and
+confirming one is an answer
+([form_changed.md](./form_changed.md#what-counts-as-already-held)), so the
+untouched game goes out on the first Save. What the copy gives up is that
+follow: a game moved while the screen is open stays as `onLoad` found it — which
+a screen left on saving, and copied afresh when it opens again, can afford.
+
 **Or the screen waits, showing nothing of the form**: a skeleton until the
 resource is there, then the form holding its values from its first render —
 for a screen that can be blanked without the person losing their place.

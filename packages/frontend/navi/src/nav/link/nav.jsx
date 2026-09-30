@@ -172,8 +172,8 @@ const css = /* css */ `
   .navi_nav .navi_link[data-href-current] .navi_current_indicator {
     view-transition-name: var(--nav-indicator-name);
   }
-  /* Named for a movement it takes part in, and for that alone. While the PAGES
-     are the ones moving — a route transition, a route travel — a name lifts the
+  /* Unnamed for a route movement it takes no part in. While the PAGES are the
+     ones moving — a route transition, a route travel — a name lifts the
      bar out of its page's picture into a picture of its own, and a picture of
      its own is precisely what does not travel: it stands where it was captured,
      fading, while the row slides away under it. Right when the row is on both
@@ -407,12 +407,13 @@ const positionOfCurrentIndicator = (currentIndicator, vertical) => {
  *   does so by being NAMED, which is all the browser needs: any change played as
  *   a view transition animates it on the same clock as everything else in that
  *   transition. Inside a `RouteTravel` that means it follows the pages, and the
- *   thumb dragging them, without either of them being told about the other. It
- *   is named for a movement between two tabs of the row and for nothing else:
- *   when the pages move and the row is on one side only, the bar leaves or
- *   arrives with its row. For a nav made of slides (`slideContainer`) the bar
- *   is one element for the whole row, and it reads the travel the container
- *   publishes.
+ *   thumb dragging them, without either of them being told about the other.
+ *   During a route transition or a route travel it keeps the name only for a
+ *   movement between two tabs of the row: when the row is on one side only,
+ *   the bar leaves or arrives with its row. Any other view transition finds it
+ *   named, a picture of its own. For a nav made of slides (`slideContainer`)
+ *   the bar is one element for the whole row, and it reads the travel the
+ *   container publishes.
  * @param {string} [props.slideContainer] - the id of a `<SlideContainer>` these
  *   tabs are about: each one says which slide it is (`<Link slide="…">`), the
  *   container says which one is on screen, and pressing a tab travels there.

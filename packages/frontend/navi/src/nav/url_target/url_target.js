@@ -406,7 +406,10 @@ const writeTarget = (element) => {
       silencedElement.id = addressTargetId;
     }
     window.history.replaceState(historyState, null, address);
-    if (entry && navigation.currentEntry) {
+    // Only a state the entry had is put back: an entry nobody wrote one on
+    // (via_history.js never does) has nothing to lose, and updateCurrentEntry
+    // cannot say "none" — `state` is a required member, and undefined throws.
+    if (entry && navigation.currentEntry && entryState !== undefined) {
       navigation.updateCurrentEntry({ state: entryState });
     }
     targetWriteInProgress = false;
