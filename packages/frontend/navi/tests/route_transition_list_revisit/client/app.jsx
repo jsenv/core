@@ -117,7 +117,6 @@ export const start = ({ transition }) => {
         <List
           scroller="parent"
           renderBudget={30}
-          renderBudgetSkipCheck
           scrolled={heldRowSignal.value}
           onScrolledChange={writeHeldRow}
         >

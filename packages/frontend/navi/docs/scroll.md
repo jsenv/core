@@ -136,7 +136,7 @@ makes that possible is `searchText` on the `List` — without it the list sees n
 children and nothing else.
 
 - **While the search is on**, the list scrolls back to its first row every time
-  the best matches change (the top `renderBudget` rows, by id and
+  the best matches change (as many top rows as the window draws, by id and
   `matchInfo.matchScore`), so a letter that promotes nobody new leaves the list
   where the user put it.
 - **When the search is emptied**, the list returns to the offset it was at when
@@ -286,13 +286,24 @@ sheet, a handful of tabs. A collection whose size the caller does not decide
 </List>
 ```
 
-The run draws only the rows inside the **render window** — `renderBudget` of
-them, 100 by default — and holds the room of the others with fillers, so the
-scrollbar says how long the collection is and the DOM says how many rows fit a
-screen and some. The window slides as the user scrolls, ahead of the direction
-the user goes, so the budget has to exceed what the scroller shows at once,
-with room for that lookahead: the list warns below 30, and when a budget leaves
-fewer than two rows beyond the screen.
+The run draws only the items inside the **render window** — `renderBudget`,
+`"100item"` by default — and holds the room of the others with fillers, so the
+scrollbar says how long the collection is and the DOM says how many items fit a
+screen and some. The window slides as the user scrolls, three quarters of what
+the screen leaves of it ahead of the direction the user goes, so the budget has
+to exceed what the scroller shows at once, with room for that lookahead: the
+list warns when it leaves less than two items beyond the screen.
+
+The budget is a count of items or a size: `"300px"`, or `"150%"` of the
+viewport of the box that scrolls the list. A size is for items that do not
+weigh the same: a list mixing one-line items and full cards (a thread of past
+games and games to come) holds ten times more of the first on a screen than of
+the second. `"100item"` covers four screens of the one-line items and thirty of
+the cards, and nobody scrolls to the thirtieth; a count right for the cards
+leaves blank screens when a fling crosses the one-line items. With a size, the
+window weighs the items it draws where they stand, and an item it has not drawn
+yet like the drawn items next to it — items of one kind come together — then
+weighs it again once it is drawn.
 
 A run whose rows all fit the window is just rows: nothing is virtualized, and
 it costs what the same rows would as children. There is no reason to hold back
@@ -304,12 +315,14 @@ A popup's content is built in the click that opens it (see
 [popup_open.md](./popup_open.md)), and a page coming back in a route transition
 is built in the transition's update callback: rows below the fold cost the same
 there as rows on screen, and delay the movement. `renderBudget` takes
-`{ initial, after }` for exactly this: `initial` rows in the commit the browser
-paints first — what a phone screen shows, plus a few — counted from the row the
-list opens on, and `after` from the paint on. A position handed back with its
-`visibleCount` sizes that first window itself, whatever `initial` guessed. The
-runs ask their source for `after` rows from the start, so the smaller first
-window costs no second request.
+`{ initial, after }` for exactly this: `initial` items in the commit the
+browser paints first — what a phone screen shows, plus a few — counted from the
+item the list opens on, and `after` from the paint on. `initial` is a count
+because nothing is laid out yet to measure a size with. A position handed back
+with its `visibleCount` sizes that first window itself, whatever `initial`
+guessed. The runs ask their source for a page of items (`<List.Items
+pageSize>`, 100 by default) whatever either says, so the smaller first window
+costs no second request.
 
 The switch waits for the paint itself. Do not rebuild it with a `useEffect`
 that widens a slice: preact runs a component's pending effects early when that

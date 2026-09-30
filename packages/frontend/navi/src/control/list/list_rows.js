@@ -382,12 +382,11 @@ export const createListRows = () => {
     noMatchCountSignal,
     // Called once per frame in which the items changed. Set by the list.
     onChange: null,
-    // What a run needs to know about the list it lives in: how many rows the
-    // list is willing to draw at once, which end it opens on, and how much
-    // room one row is given — a row whose content has not arrived must take
-    // exactly that, or the rows drawn would not reach where the list says they
-    // are.
-    renderBudget: 0,
+    // What a run needs to know about the list it lives in: how many rows to
+    // ask its source for at a time, which end it opens on, and how much room
+    // one row is given — a row whose content has not arrived must take exactly
+    // that, or the rows drawn would not reach where the list says they are.
+    pageSize: 0,
     scrolled: "start",
     // The list is on its way somewhere: what the window frames is not what it
     // is about to frame, so a run must not fetch for it (see holdWindow).

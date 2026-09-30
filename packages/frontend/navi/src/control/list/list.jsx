@@ -68,12 +68,25 @@ const PendingScrollRefContext = createContext(null);
 //   "muted"               — keep in DOM, visible but opacified and still interactive
 const SearchNoMatchModeContext = createContext("remove");
 
-// How many rows the list draws at once. Past that, a render window [start, end)
-// caps the number of DOM nodes: the window slides as the user scrolls, using
-// actual DOM positions (getBoundingClientRect) to find the first visible item —
-// no height estimation. It frames the rows a run draws (see ListItems); items
-// declared one by one (<List.Item>) are all drawn, whatever the budget.
-const RENDER_BUDGET_DEFAULT = 100;
+// How much of the items a run draws (see ListItems) the list puts in the DOM at
+// once: the render window [start, end), which slides as the user scrolls. Said
+// with a unit, since items do not all weigh the same: "100item" is a count,
+// "300px" and "150%" (of the box that scrolls the list) are sizes, and the
+// window then holds whatever number of items that size takes — a few cards, a
+// few dozen one-line items (see evaluateWindow). Items declared one by one
+// (<List.Item>) are all drawn, whatever the budget.
+const RENDER_BUDGET_DEFAULT = { value: 100, unit: "item" };
+// The items of the very first commit for a budget that is a size: nothing is
+// laid out yet to measure one with. The window is sized on the screen before
+// the browser paints.
+const FIRST_WINDOW_ITEM_COUNT = 10;
+// How many items a run asks its source for at a time (see List.Items'
+// `pageSize`): a page is what the network is asked for, which the screen does
+// not decide.
+const PAGE_SIZE_DEFAULT = 100;
+// An item drawn by the list carries its index in it: what the render window
+// reads its geometry from (see readWindowGeometry).
+const LIST_ITEM_INDEX_ATTRIBUTE = "navi-list-item-index";
 
 // Attribute used on <li> elements rendered by ListItemReal so the scroll listener
 // and filler-height calculation can find real items without matching presentation ones.
@@ -919,38 +932,43 @@ const LIST_PADDING_PROP_SET = new Set([
   "paddingLeft",
 ]);
 
-// Accepts a string too (renderBudget="50" from an HTML attribute): the
-// arithmetic on the budget (renderBudget / 2, start + renderBudget) would
-// silently misbehave on a raw string ("+" concatenates).
-const toRenderBudgetNumber = (value) => {
-  if (typeof value === "string") {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : RENDER_BUDGET_DEFAULT;
-  }
+// "100item", "300px", "150%", or a number of items. A bare numeric string
+// counts items too (renderBudget="50" from an HTML attribute): the arithmetic
+// on the budget would silently misbehave on a raw string ("+" concatenates).
+const RENDER_BUDGET_PATTERN = /^(\d+(?:\.\d+)?)(item|px|%)?$/;
+const parseRenderBudget = (value) => {
   if (typeof value === "number") {
-    return value;
+    return { value, unit: "item" };
+  }
+  if (typeof value === "string") {
+    const match = RENDER_BUDGET_PATTERN.exec(value.trim());
+    if (match) {
+      return { value: Number(match[1]), unit: match[2] || "item" };
+    }
+  }
+  if (value !== undefined) {
+    console.warn(
+      `List: renderBudget=${JSON.stringify(value)} is not understood; it takes a number of items or a size: "100item", "300px", "150%" (of the box that scrolls the list). Using "100item".`,
+    );
   }
   return RENDER_BUDGET_DEFAULT;
 };
 const resolveRenderBudget = (renderBudget) => {
   if (renderBudget && typeof renderBudget === "object") {
+    const initial = Number(renderBudget.initial);
     return {
-      initial:
-        renderBudget.initial === undefined
-          ? undefined
-          : toRenderBudgetNumber(renderBudget.initial),
-      after: toRenderBudgetNumber(renderBudget.after),
+      initial: Number.isFinite(initial) ? initial : undefined,
+      after: parseRenderBudget(renderBudget.after),
     };
   }
-  return { initial: undefined, after: toRenderBudgetNumber(renderBudget) };
+  return { initial: undefined, after: parseRenderBudget(renderBudget) };
 };
 
 const ListUI = (props) => {
   import.meta.css = css;
   const {
     ref,
-    renderBudget: renderBudgetProp = RENDER_BUDGET_DEFAULT,
-    renderBudgetSkipCheck,
+    renderBudget: renderBudgetProp,
     role,
     fallback,
     searchFallback,
@@ -1009,15 +1027,14 @@ const ListUI = (props) => {
       delete rest[name];
     }
   }
-  // `renderBudget` is a number, or `{ initial, after }`: the window of the
-  // first commit, until the browser has painted it, and the window from then
+  // `renderBudget` is the window, or `{ initial, after }`: `initial` items in
+  // the first commit, until the browser has painted it, and `after` from then
   // on. A list opening inside a popup draws in the click that opens it, and
-  // the browser paints nothing before that render ends: rows below the fold
-  // cost the same as rows on screen there, and are drawn to be seen one frame
-  // later just as well. `after` takes over after the paint (see afterPaint for
-  // why not an effect), and the floor of 30 is its: it protects the scrolling
-  // window, not a picture nobody has seen yet.
-  const { initial: initialRenderBudgetProp, after: renderBudgetAfterPaint } =
+  // the browser paints nothing before that render ends: items below the fold
+  // cost the same as items on screen there, and are drawn to be seen one frame
+  // later just as well. `initial` is a count because nothing is laid out yet
+  // to measure a size with.
+  const { initial: initialItemCountProp, after: renderBudget } =
     resolveRenderBudget(renderBudgetProp);
   // Opening on a position that says how many rows were on screen from its row
   // on (the way back to where the list was, see reportPosition): that is what
@@ -1026,32 +1043,12 @@ const ListUI = (props) => {
   // `initial`: a page coming back in a route transition builds it inside the
   // update callback, and every row below the fold delays the movement.
   const openingPosition = scrolled ?? defaultScrolled;
-  const initialRenderBudget =
+  const initialItemCount =
     openingPosition &&
     typeof openingPosition === "object" &&
     typeof openingPosition.visibleCount === "number"
       ? openingPosition.visibleCount + (openingPosition.offset > 0 ? 1 : 0)
-      : initialRenderBudgetProp;
-  let renderBudget = renderBudgetAfterPaint;
-  if (renderBudget < 30 && !renderBudgetSkipCheck) {
-    console.warn(
-      `List: renderBudget=${renderBudget} is too low. A renderBudget below 30 is not supported: on large screens or when the list grows, items outside the window would appear as blank space instead of rendered content. Use a value of at least 30, or omit the prop to use the default (${RENDER_BUDGET_DEFAULT}).`,
-    );
-  }
-  const [firstPaintPending, setFirstPaintPending] = useState(
-    initialRenderBudget !== undefined,
-  );
-  useLayoutEffect(() => {
-    if (!firstPaintPending) {
-      return undefined;
-    }
-    return afterPaint(() => {
-      setFirstPaintPending(false);
-    });
-  }, []);
-  if (firstPaintPending) {
-    renderBudget = initialRenderBudget;
-  }
+      : initialItemCountProp;
 
   // lockSize: capture the container's dimensions on first render so filtering
   // cannot collapse the layout. Measurement happens on the initial (unfiltered)
@@ -1102,10 +1099,9 @@ const ListUI = (props) => {
   useLayoutEffect(() => {
     listRows.flushSync();
   });
-  // What the runs ask for and stand for: the steady budget, whatever the
-  // window of the first paint draws — a run asking for the rows of the first
-  // picture and then for the rest is two round trips for one opening.
-  listRows.renderBudget = renderBudgetAfterPaint;
+  // What the runs ask for and stand for, in rows: a source paginates in rows,
+  // and asks for the first picture's rows and the rest in one round trip.
+  listRows.pageSize = PAGE_SIZE_DEFAULT;
   listRows.scrolled = scrolled ?? defaultScrolled;
 
   const {
@@ -1117,8 +1113,8 @@ const ListUI = (props) => {
   } = useListScrollSync({
     ref,
     listRows,
+    initialItemCount,
     renderBudget,
-    renderBudgetSteady: renderBudgetAfterPaint,
     virtualItemSize,
     scrolled,
     defaultScrolled,
@@ -1145,7 +1141,7 @@ const ListUI = (props) => {
     }
     renderBudgetWarnedRef.current = true;
     console.warn(
-      `List: renderBudget=${renderBudget} has no effect here. The render window frames the rows a run draws (<List.Items itemsAction>); items declared one by one (<List.Item>) are all rendered. Move the items to <List.Items> to cap the number of DOM nodes, or drop the prop.`,
+      `List: renderBudget has no effect here. The render window frames the rows a run draws (<List.Items itemsAction>); items declared one by one (<List.Item>) are all rendered. Move the items to <List.Items> to cap the number of DOM nodes, or drop the prop.`,
     );
   });
 
@@ -1476,8 +1472,8 @@ const LIST_PSEUDO_CLASSES = [
 const useListScrollSync = ({
   ref,
   listRows,
+  initialItemCount,
   renderBudget,
-  renderBudgetSteady,
   virtualItemSize,
   scrolled,
   defaultScrolled,
@@ -1489,11 +1485,27 @@ const useListScrollSync = ({
   horizontal,
 }) => {
   const debugScroll = useDebugScroll();
+  // The rows drawn, [start, end) among the list's own. A ref as well as a
+  // state: the render moves it where the list is held (holdWindow) without a
+  // commit of its own.
+  const renderWindowRef = useRef(null);
+  const windowLeavesRowsOut = () => {
+    const renderWindow = renderWindowRef.current;
+    if (!renderWindow) {
+      return false;
+    }
+    return (
+      renderWindow.start > 0 || renderWindow.end < listRows.totalSignal.peek()
+    );
+  };
   const virtualItemSizeSignal = useVirtualItemSizeSignal(
     ref,
     virtualItemSize,
     horizontal,
-    { listRows, renderBudget, scrolledWanted: scrolled ?? defaultScrolled },
+    {
+      windowLeavesRowsOut,
+      scrolledWanted: scrolled ?? defaultScrolled,
+    },
   );
   const getScroller = () => getScrollerEl(ref.current, scroller, horizontal);
   const getListEl = () => ref.current.querySelector(".navi_list");
@@ -1518,7 +1530,8 @@ const useListScrollSync = ({
   useStuckWindowWarning({
     ref,
     scrollerElResolved,
-    renderBudget,
+    renderWindowRef,
+    windowLeavesRowsOut,
     totalSignal: listRows.totalSignal,
     virtualItemSizeSignal,
     horizontal,
@@ -1565,16 +1578,35 @@ const useListScrollSync = ({
     });
   };
 
-  // How many rows the window keeps above the row the list is held at. Around it
-  // for the scrolling to come, from the first paint on; before, the window is
-  // the first picture's, and a picture of the list opening on a row shows that
-  // row and what is below it — with the one above when a remembered position
-  // says it stood partly in view.
+  // The window of the first commit is a count of items — `initial`, the
+  // budget when it is one, a few otherwise — since nothing is laid out yet to
+  // measure a size with. It is placed around the screen once the list is (see
+  // settleFirstWindow), and by the scroll alone from then on (see
+  // evaluateWindow).
+  const firstWindowRowCountRef = useRef(
+    initialItemCount !== undefined
+      ? initialItemCount
+      : renderBudget.unit === "item"
+        ? renderBudget.value
+        : FIRST_WINDOW_ITEM_COUNT,
+  );
+  const firstWindowRowCount = firstWindowRowCountRef.current;
+  const firstWindowRef = useRef(true);
+  // `initial` asks for a first picture of its own: the window keeps its items
+  // until the browser has painted them. Without it, the window is placed
+  // before the paint, and the first picture is the scrolling one.
+  const firstWindowWaitsForPaintRef = useRef(initialItemCount !== undefined);
+
+  // How many rows the window keeps above the row the list is held at. The
+  // first window is a picture of the list opening on a row: that row and what
+  // is below it — with the one above when a remembered position says it stood
+  // partly in view. After it, the quarter a window keeps behind the screen
+  // (see evaluateWindow), until the screen sizes it around that row.
   const rowsAboveOpening = (openAt, windowSize) => {
-    if (renderBudget !== renderBudgetSteady) {
+    if (firstWindowRef.current) {
       return openAt && typeof openAt === "object" && openAt.offset > 0 ? 1 : 0;
     }
-    return Math.floor(windowSize / 2);
+    return Math.floor(windowSize / 4);
   };
   const [renderWindow, setRenderWindow] = useState(() => {
     // Opening somewhere else than the beginning starts by framing there: the
@@ -1582,33 +1614,26 @@ const useListScrollSync = ({
     const openAt = scrolled ?? defaultScrolled;
     const start =
       typeof openAt === "number"
-        ? openAt - rowsAboveOpening(openAt, renderBudget)
+        ? openAt - rowsAboveOpening(openAt, firstWindowRowCount)
         : 0;
     const startClamped = start < 0 ? 0 : start;
-    return { start: startClamped, end: startClamped + renderBudget };
+    return { start: startClamped, end: startClamped + firstWindowRowCount };
   });
-  const renderWindowRef = useRef(null);
   renderWindowRef.current = renderWindow;
-  // The window is as wide as the budget says, whatever the state holds: a
-  // budget that changes (the first paint's giving way to the scrolling one)
-  // re-frames the window where it stands, in the render itself, the way
-  // holdWindow below moves it — nothing else would, the scroll listener only
-  // moves a window the user is about to leave. Derived on every render and
-  // not written once: the state keeps the width it had, and the next render
-  // copies it back into the ref above. The same object is handed out for as
-  // long as the numbers hold, so the rows are not told about a window that
+  // A window running past the last row slides back instead of framing fewer
+  // rows than it was given: every row that fits in it stays drawn. Derived on
+  // every render and not written once: the state keeps the window it had, and
+  // a collection growing back gives it back. The same object is handed out for
+  // as long as the numbers hold, so the rows are not told about a window that
   // did not move.
   const framedWindowRef = useRef(null);
   {
     const { start, end } = renderWindowRef.current;
     const total = listRows.totalSignal.peek();
-    let framedStart = start;
-    let framedEnd = start + renderBudget;
-    if (total > 0 && framedEnd > total) {
-      framedEnd = total;
-      framedStart = total - renderBudget < 0 ? 0 : total - renderBudget;
-    }
-    if (framedStart !== start || framedEnd !== end) {
+    if (total > 0 && end > total) {
+      const windowSize = end - start;
+      const framedStart = total - windowSize < 0 ? 0 : total - windowSize;
+      const framedEnd = total;
       const framed = framedWindowRef.current;
       if (framed && framed.start === framedStart && framed.end === framedEnd) {
         renderWindowRef.current = framed;
@@ -1651,7 +1676,9 @@ const useListScrollSync = ({
     // one whose end is not known yet, and the window then frames the row the
     // list opens on, already in the first commit.
     const total = listRows.totalSignal.peek();
-    if (total > 0 && total <= renderBudget) {
+    const { start, end } = renderWindowRef.current;
+    const windowSize = end - start;
+    if (total > 0 && total <= windowSize) {
       // The whole collection is what the list draws: wherever in it the list is
       // held, the window is already its place. Nowhere to move to means nothing
       // to wait for — a hold left standing here is a list that never asks for
@@ -1659,43 +1686,52 @@ const useListScrollSync = ({
       listRows.holdPending = false;
       return;
     }
-    const above = rowsAboveOpening(scrolledWanted, renderBudget);
+    let heldRow = null;
     let wantedStart = null;
     if (scrolledWanted === "end") {
-      wantedStart = total - renderBudget;
+      heldRow = total - 1;
+      wantedStart = total - windowSize;
     } else if (typeof scrolledWanted === "number") {
-      wantedStart = scrolledWanted - above;
+      heldRow = scrolledWanted;
     } else if (scrolledWanted && scrolledWanted.id !== undefined) {
       const rowIndex = listRows.locateRow(scrolledWanted.id);
       if (rowIndex !== null) {
-        wantedStart = rowIndex - above;
+        heldRow = rowIndex;
       } else if (typeof scrolledWanted.index === "number") {
         // The row has not come back yet, but where it stood is known: near
         // enough to frame, and to put the scrollbar roughly where it will end
         // up rather than at the top.
-        wantedStart = scrolledWanted.index - above;
+        heldRow = scrolledWanted.index;
       }
     }
-    if (wantedStart === null) {
+    if (heldRow === null) {
       // Held on a row nobody can place yet: the window frames the start, which
       // is not where the list is going. The hold stands until the row comes
       // back — the run asks for it by name (see useRequestMissing).
       return;
     }
-    if (total > 0 && wantedStart + renderBudget > total) {
-      wantedStart = total - renderBudget;
+    if (!firstWindowRef.current && heldRow >= start && heldRow < end) {
+      // Around the row it holds, the window is the screen's to size (see
+      // evaluateWindow): the hold only brings that row into it.
+      listRows.holdPending = false;
+      return;
+    }
+    if (wantedStart === null) {
+      wantedStart = heldRow - rowsAboveOpening(scrolledWanted, windowSize);
+    }
+    if (total > 0 && wantedStart + windowSize > total) {
+      wantedStart = total - windowSize;
     }
     if (wantedStart < 0) {
       wantedStart = 0;
     }
-    const { start, end } = renderWindowRef.current;
-    if (wantedStart === start && end - start === renderBudget) {
+    if (wantedStart === start) {
       listRows.holdPending = false;
       return;
     }
     renderWindowRef.current = {
       start: wantedStart,
-      end: wantedStart + renderBudget,
+      end: wantedStart + windowSize,
     };
     listRows.holdPending = false;
   };
@@ -1759,9 +1795,11 @@ const useListScrollSync = ({
         scrollItemIntoView(itemEl);
       },
     };
-    const half = Math.floor(renderBudget / 2);
+    const { start, end } = renderWindowRef.current;
+    const windowSize = end - start;
+    const half = Math.floor(windowSize / 2);
     const newStart = Math.max(0, index - half);
-    const newEnd = newStart + renderBudget;
+    const newEnd = newStart + windowSize;
     updateRenderWindow(
       newStart,
       newEnd,
@@ -1876,7 +1914,7 @@ const useListScrollSync = ({
     },
     [],
   );
-  // Watch scores of the top renderBudget items.
+  // Watch scores of the top items, as many as the window draws.
   // When scores change during an active search, scroll to top to reveal the most relevant items.
   // When search becomes empty, put the list back at the offset (and the render
   // window) it was at when the search started — see docs/scroll.md.
@@ -1955,7 +1993,8 @@ const useListScrollSync = ({
       return undefined;
     }
     const visibleItems = listRows.visibleItemsSignal.peek();
-    const topItems = visibleItems.slice(0, renderBudget);
+    const { start, end } = renderWindowRef.current;
+    const topItems = visibleItems.slice(0, end - start);
     const topMatchScoresKey = topItems
       .map((i) => `${i.id}:${i.matchInfo?.matchScore ?? ""}`)
       .join(",");
@@ -2100,6 +2139,31 @@ const useListScrollSync = ({
     }
   };
   useLayoutEffect(placeWhereHeld);
+  // The first window sized on the screen, where the list stands once it is
+  // placed — tried at every commit until the list is laid out somewhere it can
+  // be measured (a closed popup is not). A first picture of its own (`initial`)
+  // is sized once the browser has painted it: afterPaint rather than an
+  // effect, since preact runs a component's pending effects early whenever it
+  // renders again, and something always does before a popup has painted.
+  const settleFirstWindow = () => {
+    if (!firstWindowRef.current || firstWindowWaitsForPaintRef.current) {
+      return;
+    }
+    firstWindowRef.current = false;
+    if (!evaluateWindowRef.current("sized on the screen", { force: true })) {
+      firstWindowRef.current = true;
+    }
+  };
+  useLayoutEffect(settleFirstWindow);
+  useLayoutEffect(() => {
+    if (!firstWindowWaitsForPaintRef.current) {
+      return undefined;
+    }
+    return afterPaint(() => {
+      firstWindowWaitsForPaintRef.current = false;
+      settleFirstWindow();
+    });
+  }, []);
   // Held on a row of a list scrolling the document: where the document goes is
   // this list's to say, measured on the row, not the url's offset in pixels
   // (see holdDocumentScroll).
@@ -2113,10 +2177,15 @@ const useListScrollSync = ({
   // observer below (which is installed once).
   const onGeometryChangeRef = useRef(null);
   onGeometryChangeRef.current = () => {
+    settleFirstWindow();
     if (heldSomewhere) {
       placeWhereHeld();
       return true;
     }
+    // Rows that came in at another size than what stood in for them (a
+    // skeleton becoming its row) leave the window short of the screen, or past
+    // it, and nothing scrolled to say so.
+    evaluateWindowRef.current("rows resized");
     return false;
   };
   useLayoutEffect(() => {
@@ -2366,132 +2435,178 @@ const useListScrollSync = ({
     }
   });
 
-  // The window the visible band asks for, decided from geometry: the band's
-  // two edges in row units, from where the scroller's viewport cuts the list
-  // and the row size. What has to be drawn is everything between the edges,
-  // plus what the scroll is about to bring — so the window is judged on the
-  // rows it keeps AHEAD of the band, in the direction the user goes, and moves
-  // once those fall under half a screen. Re-framed, it puts three quarters of
-  // its spare rows ahead and one quarter behind: a window centred on the band
-  // is due to move again as soon as the band has crossed the few rows it kept
-  // ahead, and each move is rows drawn while the user waits for them.
-  // Without a row size there is no geometry to reason on; the row under a
-  // probe stands in for the band, framed the old way.
+  // The window the budget asks for around the screen: what is on screen, and
+  // the rest of the budget three quarters ahead of the direction the user goes
+  // and one quarter behind — the whole of it on one side when the other is the
+  // edge of the collection. A budget in items counts each item as one; a
+  // budget that is a size ("300px", "150%") weighs each item on screen (see
+  // createItemSizeReader), so the same budget holds a few cards or a few dozen
+  // one-line items. Which items the screen shows is read off the items drawn
+  // either way, not estimated from an average size: items ten times apart in
+  // height put the average nowhere near any of them.
+  // It moves once what it keeps ahead of the screen falls under half a screen,
+  // or half of what it keeps there: re-framed, it holds enough ahead that the
+  // next move is a while away, instead of drawing items at every scroll event
+  // while the user waits for them. What it keeps behind is judged the same
+  // way, for the user turning around.
+  // `force` places it whatever it holds (the first window, see
+  // settleFirstWindow). Answers whether the list could be measured.
   const scrollDirectionRef = useRef(1);
   const windowSlidRef = useRef(false);
   const budgetWarnedRef = useRef(false);
-  const evaluateWindow = (reason) => {
+  const evaluateWindow = (reason, { force } = {}) => {
+    if (firstWindowRef.current) {
+      // The first window is the first picture's (see settleFirstWindow).
+      return false;
+    }
     const total = listRows.totalSignal.peek();
-    if (total <= renderBudget) {
-      return;
+    if (total === 0 || !ref.current) {
+      return false;
     }
     const scrollerEl = getScroller();
     const listEl = getListEl();
     if (!scrollerEl || !listEl) {
-      return;
+      return false;
     }
+    const geometry = readWindowGeometry(scrollerEl, listEl, horizontal);
+    if (!geometry) {
+      return false;
+    }
+    const { screenSize, bandFrom, bandTo, items } = geometry;
     const { start, end } = renderWindowRef.current;
-    const virtualItemSize = virtualItemSizeSignal.peek();
-    if (virtualItemSize === 0) {
-      const scrollInfo = getScrollInfo({
-        scrollValues: {
-          left: scrollerEl.scrollLeft,
-          top: scrollerEl.scrollTop,
-        },
-        scrollerEl,
-        listEl,
-        listRows,
-        virtualItemSizeSignal,
-        renderWindowRef,
-        horizontal,
-      });
-      if (!scrollInfo) {
-        return;
-      }
-      const { index } = scrollInfo;
-      const margin = Math.floor(renderBudget / 4);
-      const farFromStart = index - start >= margin || start === 0;
-      const farFromEnd = end - index > margin || end === total;
-      if (farFromStart && farFromEnd) {
-        return;
-      }
-      const half = Math.floor(renderBudget / 2);
-      let newStart = index - half < 0 ? 0 : index - half;
-      let newEnd = newStart + renderBudget;
-      if (newEnd > total) {
-        newEnd = total;
-        newStart = total - renderBudget < 0 ? 0 : total - renderBudget;
-      }
-      windowSlidRef.current = true;
-      updateRenderWindow(newStart, newEnd, `${reason}: ${scrollInfo.reason}`);
-      return;
-    }
-    const viewportRect = getScrollerViewportRect(scrollerEl);
-    const listRect = listEl.getBoundingClientRect();
-    const viewportFrom = horizontal ? viewportRect.left : viewportRect.top;
-    const viewportTo = horizontal ? viewportRect.right : viewportRect.bottom;
-    const listFrom = horizontal ? listRect.left : listRect.top;
-    let bandStart = Math.floor((viewportFrom - listFrom) / virtualItemSize);
-    // Exclusive, like the window's end.
-    let bandEnd = Math.ceil((viewportTo - listFrom) / virtualItemSize);
-    if (bandStart < 0) {
-      bandStart = 0;
+    const itemSize = virtualItemSizeSignal.peek();
+    let bandStart = findBandStart(items, bandFrom, itemSize);
+    let bandEnd =
+      bandTo > bandFrom ? findBandEnd(items, bandTo, itemSize) : bandStart;
+    if (bandStart > total) {
+      bandStart = total;
     }
     if (bandEnd > total) {
       bandEnd = total;
     }
-    if (bandEnd <= bandStart) {
-      return;
+    if (bandEnd < bandStart) {
+      bandEnd = bandStart;
     }
-    const visibleCount = bandEnd - bandStart;
-    const spare = renderBudget - visibleCount;
-    if (
-      import.meta.dev &&
-      !budgetWarnedRef.current &&
-      renderBudget === renderBudgetSteady &&
-      spare < 2
-    ) {
-      budgetWarnedRef.current = true;
-      console.warn(
-        `List: renderBudget=${renderBudget} draws ${renderBudget} rows and this scroller shows ${visibleCount} at once: rows will go blank as it scrolls. Give it room for a screen ahead — ${visibleCount * 2} or more.`,
-      );
+    const countsItems = renderBudget.unit === "item";
+    // The screen and the budget in the budget's own unit.
+    const screen = countsItems ? bandEnd - bandStart : screenSize;
+    const budget =
+      renderBudget.unit === "%"
+        ? (renderBudget.value / 100) * screenSize
+        : renderBudget.value;
+    const spare = budget > screen ? budget - screen : 0;
+    const behindSize = countsItems ? Math.floor(spare / 4) : spare / 4;
+    const aheadSize = spare - behindSize;
+    if (import.meta.dev && !budgetWarnedRef.current && bandEnd > bandStart) {
+      const twoItems = countsItems
+        ? 2
+        : (2 * (bandTo - bandFrom)) / (bandEnd - bandStart);
+      if (spare < twoItems) {
+        budgetWarnedRef.current = true;
+        console.warn(
+          `List: renderBudget=${renderBudget.value}${renderBudget.unit} leaves less than two items beyond what the screen shows (${bandEnd - bandStart} items): items will go blank as it scrolls. Give it room for a screen ahead or more — "300%" of the box that scrolls it, say.`,
+        );
+      }
     }
-    const behind = spare > 0 ? Math.floor(spare / 4) : 0;
-    const ahead = spare > 0 ? spare - behind : 0;
-    const halfScreen = Math.ceil(visibleCount / 2);
-    const aheadNeeded =
-      halfScreen < ahead / 2 ? halfScreen : Math.floor(ahead / 2);
-    const behindNeeded =
-      halfScreen < behind / 2 ? halfScreen : Math.floor(behind / 2);
     const forward = scrollDirectionRef.current > 0;
-    const rowsAheadOfBand = forward ? end - bandEnd : bandStart - start;
-    const rowsBehindBand = forward ? bandStart - start : end - bandEnd;
-    const atEdgeAhead = forward ? end === total : start === 0;
-    const atEdgeBehind = forward ? start === 0 : end === total;
-    const coversBand = start <= bandStart && end >= bandEnd;
-    const coversAhead = atEdgeAhead || rowsAheadOfBand >= aheadNeeded;
-    const coversBehind = atEdgeBehind || rowsBehindBand >= behindNeeded;
-    if (coversBand && coversAhead && coversBehind) {
-      return;
+    const sizeOf = countsItems
+      ? () => 1
+      : createItemSizeReader(items, start, end, itemSize);
+    if (!force) {
+      let firstItem = null;
+      let lastItem = null;
+      for (const item of items) {
+        if (item.index >= start && item.index < end) {
+          if (!firstItem) {
+            firstItem = item;
+          }
+          lastItem = item;
+        }
+      }
+      if (firstItem) {
+        let roomBefore;
+        let roomAfter;
+        if (countsItems) {
+          roomBefore = bandStart - start;
+          roomAfter = end - bandEnd;
+        } else {
+          roomBefore = bandFrom - firstItem.from;
+          roomAfter = lastItem.to - bandTo;
+        }
+        if (start <= 0) {
+          roomBefore = Infinity;
+        }
+        if (end >= total) {
+          roomAfter = Infinity;
+        }
+        const roomAhead = forward ? roomAfter : roomBefore;
+        const roomBehind = forward ? roomBefore : roomAfter;
+        const halfScreen = screen / 2;
+        const aheadNeeded =
+          halfScreen < aheadSize / 2 ? halfScreen : aheadSize / 2;
+        const behindNeeded =
+          halfScreen < behindSize / 2 ? halfScreen : behindSize / 2;
+        if (roomAhead >= aheadNeeded && roomBehind >= behindNeeded) {
+          return true;
+        }
+      }
     }
-    let newStart = forward
-      ? bandStart - behind
-      : bandEnd + behind - renderBudget;
-    if (newStart < 0) {
-      newStart = 0;
+    const walkBefore = (from, sizeWanted) => {
+      let index = from;
+      let size = 0;
+      while (index > 0 && size < sizeWanted) {
+        index--;
+        size += sizeOf(index);
+      }
+      return { index, sizeLeft: size < sizeWanted ? sizeWanted - size : 0 };
+    };
+    const walkAfter = (from, sizeWanted) => {
+      let index = from;
+      let size = 0;
+      while (index < total && size < sizeWanted) {
+        size += sizeOf(index);
+        index++;
+      }
+      return { index, sizeLeft: size < sizeWanted ? sizeWanted - size : 0 };
+    };
+    let newStart;
+    let newEnd;
+    if (budget <= screen) {
+      // A budget the screen alone exceeds is still the budget: it is drawn
+      // from the edge the user goes away from, and the rest of the screen
+      // stays blank (said once, above).
+      if (forward) {
+        newStart = bandStart;
+        newEnd = walkAfter(bandStart, budget).index;
+      } else {
+        newEnd = bandEnd;
+        newStart = walkBefore(bandEnd, budget).index;
+      }
+    } else {
+      const before = walkBefore(bandStart, forward ? behindSize : aheadSize);
+      const after = walkAfter(
+        bandEnd,
+        (forward ? aheadSize : behindSize) + before.sizeLeft,
+      );
+      newStart =
+        after.sizeLeft > 0
+          ? walkBefore(before.index, after.sizeLeft).index
+          : before.index;
+      newEnd = after.index;
     }
-    let newEnd = newStart + renderBudget;
-    if (newEnd > total) {
-      newEnd = total;
-      newStart = total - renderBudget < 0 ? 0 : total - renderBudget;
+    if (newStart === start && newEnd === end) {
+      return true;
     }
     windowSlidRef.current = true;
     updateRenderWindow(
       newStart,
       newEnd,
-      `${reason}: rows ${bandStart}-${bandEnd} on screen, going ${forward ? "forward" : "backward"}`,
+      `${reason}: items ${bandStart}-${bandEnd} on screen, going ${forward ? "forward" : "backward"}`,
     );
+    return true;
   };
+  const evaluateWindowRef = useRef(null);
+  evaluateWindowRef.current = evaluateWindow;
   // A slide is judged again once its rows are laid out: the scroll had moved
   // on while the rows were being drawn, or the anchoring of this very commit
   // moved it, and a window that stops short of the screen's edge with no
@@ -2503,7 +2618,7 @@ const useListScrollSync = ({
     }
     windowSlidRef.current = false;
     const frameId = requestAnimationFrame(() => {
-      evaluateWindow("after slide");
+      evaluateWindowRef.current("after slide");
     });
     return () => {
       cancelAnimationFrame(frameId);
@@ -2543,7 +2658,7 @@ const useListScrollSync = ({
         return;
       }
       reportPosition();
-      evaluateWindow("scroll");
+      evaluateWindowRef.current("scroll");
     };
     // A page-level scroller does not emit "scroll" on the element itself
     // (document.scrollingElement); the document does.
@@ -2555,7 +2670,7 @@ const useListScrollSync = ({
     return () => {
       scrollEventTarget.removeEventListener("scroll", onScroll);
     };
-  }, [renderBudget, scrollerElResolved]);
+  }, [scrollerElResolved]);
 
   holdWindow();
   return {
@@ -2586,7 +2701,8 @@ const getScrollerViewportRect = (scrollerEl) => {
 const useStuckWindowWarning = ({
   ref,
   scrollerElResolved,
-  renderBudget,
+  renderWindowRef,
+  windowLeavesRowsOut,
   totalSignal,
   virtualItemSizeSignal,
   horizontal,
@@ -2598,8 +2714,7 @@ const useStuckWindowWarning = ({
     if (!import.meta.dev || doneRef.current || !scrollerElResolved) {
       return;
     }
-    const total = totalSignal.peek();
-    if (total <= renderBudget || !virtualItemSizeSignal.peek()) {
+    if (!windowLeavesRowsOut() || !virtualItemSizeSignal.peek()) {
       // Nothing is held outside the window yet, or the room it takes is not
       // measured: there is no blank tail to report.
       return;
@@ -2614,8 +2729,9 @@ const useStuckWindowWarning = ({
       return;
     }
     doneRef.current = true;
+    const { start, end } = renderWindowRef.current;
     console.warn(
-      `<List> draws ${renderBudget} of ${total} rows and holds the room of the others, and the box its render window follows, ${getElementSignature(
+      `<List> draws ${end - start} of ${totalSignal.peek()} rows and holds the room of the others, and the box its render window follows, ${getElementSignature(
         scrollerElResolved,
       )}, scrolls nothing: the window never moves and those rows stay blank. Give the list a bounded height so its own scroll box scrolls, or name the box that scrolls it with scroller="parent" / "document" / {element}.`,
       { list: ref.current, scroller: scrollerElResolved },
@@ -3182,6 +3298,202 @@ const findRowsFrom = (listEl, from, horizontal) => {
   }
   return { rowEls, index: low };
 };
+// What the render window is placed and sized on (see evaluateWindow), along
+// the scroll axis and in viewport coordinates: the size of the screen, the part
+// of the list on it (the band), and the items drawn, in the order they stand.
+// The screen is the viewport of the box that scrolls the list — what "150%"
+// is a percentage of. A box that does not scroll — a list given no height, as
+// tall as its items — shows no more of them than the browser does: its
+// viewport is cut by the browser's, or a budget in % would draw items to fill
+// a screen they make grow. A list off screen is met at its edge nearest to the
+// screen, where it comes in.
+const readWindowGeometry = (scrollerEl, listEl, horizontal) => {
+  const scrollerRect = getScrollerViewportRect(scrollerEl);
+  let screenFrom = horizontal ? scrollerRect.left : scrollerRect.top;
+  let screenTo = horizontal ? scrollerRect.right : scrollerRect.bottom;
+  if (!canScrollerScroll(scrollerEl, horizontal ? "x" : "y")) {
+    const browserSize = horizontal
+      ? document.documentElement.clientWidth
+      : document.documentElement.clientHeight;
+    if (screenFrom < 0) {
+      screenFrom = 0;
+    }
+    if (screenTo > browserSize) {
+      screenTo = browserSize;
+    }
+  }
+  const screenSize = screenTo - screenFrom;
+  if (screenSize < 1) {
+    return null;
+  }
+  const listRect = listEl.getBoundingClientRect();
+  const listFrom = horizontal ? listRect.left : listRect.top;
+  const listTo = horizontal ? listRect.right : listRect.bottom;
+  if (listTo - listFrom < 1) {
+    return null;
+  }
+  let bandFrom = screenFrom < listFrom ? listFrom : screenFrom;
+  if (bandFrom > listTo) {
+    bandFrom = listTo;
+  }
+  let bandTo = screenTo > listTo ? listTo : screenTo;
+  if (bandTo < bandFrom) {
+    bandTo = bandFrom;
+  }
+  const items = [];
+  for (const itemEl of listEl.querySelectorAll(
+    `[${LIST_ITEM_INDEX_ATTRIBUTE}]`,
+  )) {
+    const rect = itemEl.getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) {
+      // Not laid out (display: none): it stands nowhere.
+      continue;
+    }
+    items.push({
+      index: Number(itemEl.getAttribute(LIST_ITEM_INDEX_ATTRIBUTE)),
+      from: horizontal ? rect.left : rect.top,
+      to: horizontal ? rect.right : rect.bottom,
+    });
+  }
+  if (items.length === 0) {
+    return null;
+  }
+  return { screenSize, bandFrom, bandTo, items };
+};
+// The first item the screen shows from `position` on, and the item after the
+// last one it shows up to `position` (exclusive, like the window's end). An
+// item drawn is read off its box; in the room a filler holds for items not
+// drawn, the item is counted at the size the filler gives each of them — the
+// only way a scroll position there says which item it is.
+const findBandStart = (items, position, itemSize) => {
+  let low = 0;
+  let high = items.length;
+  while (low < high) {
+    const mid = (low + high) >> 1;
+    if (items[mid].to > position) {
+      high = mid;
+    } else {
+      low = mid + 1;
+    }
+  }
+  const next = items[low];
+  const previous = items[low - 1];
+  if (!next) {
+    if (!itemSize) {
+      return previous.index + 1;
+    }
+    return previous.index + 1 + Math.floor((position - previous.to) / itemSize);
+  }
+  if (next.from <= position) {
+    return next.index;
+  }
+  if (!previous) {
+    if (!itemSize) {
+      return next.index;
+    }
+    const index = next.index - Math.ceil((next.from - position) / itemSize);
+    return index < 0 ? 0 : index;
+  }
+  if (!itemSize || next.index === previous.index + 1) {
+    // Between two items that follow each other: a separator, a group label.
+    return next.index;
+  }
+  const index =
+    previous.index + 1 + Math.floor((position - previous.to) / itemSize);
+  return index < next.index ? index : next.index;
+};
+const findBandEnd = (items, position, itemSize) => {
+  let low = 0;
+  let high = items.length;
+  while (low < high) {
+    const mid = (low + high) >> 1;
+    if (items[mid].from >= position) {
+      high = mid;
+    } else {
+      low = mid + 1;
+    }
+  }
+  const previous = items[low - 1];
+  const next = items[low];
+  if (!previous) {
+    if (!itemSize) {
+      return next.index;
+    }
+    const index = next.index - Math.ceil((next.from - position) / itemSize) + 1;
+    return index < 0 ? 0 : index;
+  }
+  if (previous.to >= position) {
+    return previous.index + 1;
+  }
+  if (!itemSize || (next && next.index === previous.index + 1)) {
+    return previous.index + 1;
+  }
+  const index =
+    previous.index + 2 + Math.floor((position - previous.to) / itemSize);
+  if (next && index > next.index) {
+    return next.index;
+  }
+  return index;
+};
+// What each item weighs along the scroll axis, for a budget that is a size: an
+// item drawn weighs the room it stands in — up to the next item, so a
+// separator, or the label of a group opening above the next item, is counted
+// too — and an item not drawn is taken to weigh what the drawn items at that
+// edge of the window weigh. Items of one kind come together (the one-line
+// items of the past, the cards ahead), and an item misjudged is weighed again
+// once it is drawn (see "after slide"): weighing it at the average of all
+// items would draw the cards next to one-line items at the one-line size, and
+// a few dozen of them.
+const EDGE_SAMPLE_ITEM_COUNT = 8;
+const createItemSizeReader = (items, start, end, itemSize) => {
+  const sizeByIndex = new Map();
+  const windowSizes = [];
+  let i = 0;
+  while (i < items.length) {
+    const item = items[i];
+    const next = items[i + 1];
+    const size =
+      next && next.index === item.index + 1
+        ? next.from - item.from
+        : item.to - item.from;
+    sizeByIndex.set(item.index, size);
+    if (item.index >= start && item.index < end) {
+      windowSizes.push(size);
+    }
+    i++;
+  }
+  const averageOf = (sizes) => {
+    let sum = 0;
+    for (const size of sizes) {
+      sum += size;
+    }
+    return sum / sizes.length;
+  };
+  const sizeOfAny =
+    itemSize > 0 ? itemSize : averageOf([...sizeByIndex.values()]);
+  const sizeBefore = windowSizes.length
+    ? averageOf(windowSizes.slice(0, EDGE_SAMPLE_ITEM_COUNT))
+    : sizeOfAny;
+  const sizeAfter = windowSizes.length
+    ? averageOf(windowSizes.slice(-EDGE_SAMPLE_ITEM_COUNT))
+    : sizeOfAny;
+  // A pixel at least: items laid side by side (columns) share a line, and all
+  // but the last weigh nothing, which would walk the whole collection.
+  const atLeastOnePixel = (size) => (size < 1 ? 1 : size);
+  return (index) => {
+    const measured = sizeByIndex.get(index);
+    if (measured !== undefined) {
+      return atLeastOnePixel(measured);
+    }
+    if (index < start) {
+      return atLeastOnePixel(sizeBefore);
+    }
+    if (index >= end) {
+      return atLeastOnePixel(sizeAfter);
+    }
+    return atLeastOnePixel(sizeOfAny);
+  };
+};
 // Whether a filler (the room held for rows outside the window) is what stands
 // at that position along the scroll axis.
 const isFillerAt = (listEl, position, horizontal) => {
@@ -3336,7 +3648,7 @@ const useVirtualItemSizeSignal = (
   ref,
   virtualItemSizeProp = 0,
   horizontal,
-  { listRows, renderBudget, scrolledWanted },
+  { windowLeavesRowsOut, scrolledWanted },
 ) => {
   const virtualSizeSignalRef = useRef(null);
   if (!virtualSizeSignalRef.current) {
@@ -3390,7 +3702,7 @@ const useVirtualItemSizeSignal = (
   // size is for, and a list drawing every row it has would pay a layout on
   // each of its renders for a number nothing reads.
   const sizeAlreadyKnown = virtualSizeSignal.peek() !== 0;
-  const rowsHeldOffScreen = listRows.totalSignal.peek() > renderBudget;
+  const rowsHeldOffScreen = windowLeavesRowsOut();
   if (
     !virtualItemSizeProp &&
     sizeAlreadyKnown &&
@@ -3412,7 +3724,7 @@ const useVirtualItemSizeSignal = (
     // that is. A list drawing every row it has, opening at its start, would
     // pay a layout in every commit for a number nobody reads.
     const sizeRead =
-      listRows.totalSignal.peek() > renderBudget ||
+      windowLeavesRowsOut() ||
       (scrolledWanted !== undefined && scrolledWanted !== "start");
     if (!sizeRead) {
       return undefined;
@@ -3693,7 +4005,7 @@ const ListItemSkeleton = (props) => {
   // Without vertical padding the bars of consecutive rows touch and read as one
   // block; "s" is enough air for them to be seen as separate rows.
   // eslint-disable-next-line no-unused-vars
-  const { skeleton, children, paddingY = "s", ...rest } = props;
+  const { skeleton, children, paddingY = "s", index, ...rest } = props;
   const itemColumnsOverrideProps = useItemColumnsOverrideProps(rest.style);
 
   return (
@@ -3702,6 +4014,9 @@ const ListItemSkeleton = (props) => {
       role="presentation"
       aria-hidden="true"
       paddingY={paddingY}
+      // The index of the item it stands for, when a run draws it: the window
+      // is sized on skeletons like on the items they stand for.
+      navi-list-item-index={index}
       {...rest}
       {...itemColumnsOverrideProps}
       baseClassName={`navi_list_item ${SKELETON_LIST_ITEM_CLASS}`}
@@ -3949,6 +4264,7 @@ const ListItemReal = (props) => {
       styleCSSVars={LIST_ITEM_STYLE_CSS_VARS}
       id={id}
       navi-list-item-real={itemId}
+      navi-list-item-index={rest.index}
       {...rest}
       {...itemColumnsOverrideProps}
       index={undefined}
@@ -4321,10 +4637,9 @@ const VISIBILITY_HIDDEN_STYLE = { visibility: "hidden" };
  *   its group (a day behind us, today, one ahead) rather than just naming it:
  *   the state then sits on the element the CSS styles, instead of being read
  *   back from a child.
- * @param {number} [props.pageSize]
+ * @param {number} [props.pageSize=100]
  *   How many rows to ask for at a time. A turn of the wheel opens a hole three
  *   rows wide; asking for exactly that would ask again at the next turn.
- *   Defaults to List's own `renderBudget` — what the list would draw at once.
  * @param {number} [props.memoryBudget=1000]
  *   How many rows the run keeps in memory. Past that, the ones far from what is
  *   on screen are dropped (and asked for again if the user goes back) — the
@@ -4521,7 +4836,7 @@ const useRunRows = (
   let askStart = missingStart;
   let askEnd = missingEnd;
   if (missingStart !== -1) {
-    const rowsPerPage = pageSize || listRows.renderBudget;
+    const rowsPerPage = pageSize || listRows.pageSize;
     const holeSize = missingEnd - missingStart + 1;
     if (holeSize < rowsPerPage) {
       // Which way the page grows: away from the rows already held, which is
@@ -5016,9 +5331,9 @@ const useItemStore = ({
     listRows.pagesSignal.value = listRows.pagesSignal.peek() + 1;
   });
   // Before the first answer a run does not know how many rows it stands for.
-  // It stands for a windowful of them: a list that is about to be filled looks
+  // It stands for a page of them: a list that is about to be filled looks
   // like rows on their way, not like an empty list.
-  const rowCount = pages.count ?? count ?? listRows.renderBudget;
+  const rowCount = pages.count ?? count ?? listRows.pageSize;
   // A run that never received anything has nothing to keep on screen: asking
   // again is its first ask, not a refresh.
   if (staleRef.current && pages.count === undefined) {
@@ -5139,7 +5454,7 @@ const useItemStore = ({
       // how many rows there are, so it asks for the rows the list would open
       // on — counting back from the end when that is where it opens, the way
       // an HTTP range does.
-      const budget = listRows.renderBudget;
+      const budget = listRows.pageSize;
       let start = missingStart;
       let end = missingEnd;
       let around;
@@ -5545,8 +5860,7 @@ const ListResolved = /*#__PURE__*/ createComponentResolver([
  *   uiAction?: (value: any) => void,
  *   popover?: boolean,
  *   role?: string,
- *   renderBudget?: number | string | {initial?: number, after: number},
- *   renderBudgetSkipCheck?: boolean,
+ *   renderBudget?: number | string | {initial?: number, after?: number | string},
  *   virtualItemSize?: number,
  *   onListVisibleItemsChange?: (visibleItems: any[]) => void,
  *   scrolled?: "start" | "end" | number | {id: string, offset?: number},
@@ -5681,26 +5995,34 @@ const ListResolved = /*#__PURE__*/ createComponentResolver([
  *   starts, and how many rows are on screen from that one on. Keep it whole to
  *   come back to it later through `scrolled`/`defaultScrolled` — an index alone
  *   would not do, since rows get inserted while a list is being read.
- * @param {number|{initial: number, after: number}} [props.renderBudget=100]
- *   How many rows of a `<List.Items>` run are in the DOM at once: the render
- *   window, which slides as the user scrolls while fillers hold the room of
- *   the rows outside it. Rows declared one by one as `<List.Item>` children
- *   are all drawn, whatever this says — a list with more than a few dozen rows
- *   gives them to a run (see docs/scroll.md, "Many rows"). The window keeps
- *   most of its spare rows ahead of the scroll, and moves once those fall
- *   under half a screen; it has to be larger than what the scroller shows at
- *   once, with room for that lookahead — the list warns below 30, and when a
- *   budget leaves fewer than two rows beyond the screen.
+ * @param {number|string|{initial?: number, after?: number|string}} [props.renderBudget="100item"]
+ *   How much of a `<List.Items>` run is in the DOM at once: the render window,
+ *   which slides as the user scrolls while fillers hold the room of the items
+ *   outside it. A count of items (`"100item"`, or `100`), or a size: `"300px"`,
+ *   or `"150%"` of the viewport of the box that scrolls the list (see
+ *   `scroller`). A size holds whatever number of items it takes — a few cards,
+ *   a few dozen one-line items — which is what a list mixing items of very
+ *   different sizes wants: a count right for the small ones draws screens of
+ *   the big ones nobody scrolls to, and a count right for the big ones leaves
+ *   blank screens when a fling crosses the small ones. Items declared one by
+ *   one as `<List.Item>` children are all drawn, whatever this says — a list
+ *   with more than a few dozen items gives them to a run (see docs/scroll.md,
+ *   "Many rows"). The window keeps three quarters of what the screen leaves of
+ *   it ahead of the scroll, and moves once that falls under half a screen; it
+ *   has to hold more than the screen shows, with room for that lookahead — the
+ *   list warns when it leaves less than two items beyond the screen.
  *
  *   `{ initial, after }` for a list whose first picture is taken as it is
  *   built — drawn in the click that opens a popup, or in the update callback
- *   of a route transition bringing its page back: `initial` rows in the commit
- *   the browser paints first — about what a phone screen shows — counted from
- *   the row the list opens on, and `after` from the paint on, around it, where
- *   the floor of 30 applies. Opening on a position that says how many rows were
- *   on screen (`visibleCount`, see `onScrolledChange`) draws those first,
- *   whatever `initial` says. The runs ask their source for `after` rows from
- *   the start, so the first picture costs no second request.
+ *   of a route transition bringing its page back: `initial` items in the
+ *   commit the browser paints first — about what a phone screen shows —
+ *   counted from the item the list opens on, and `after` from the paint on,
+ *   around it. `initial` is a count because nothing is laid out yet to measure
+ *   a size with. Opening on a position that says how many items were on
+ *   screen (`visibleCount`, see `onScrolledChange`) draws those first,
+ *   whatever `initial` says. What the runs ask their source for is a page (see
+ *   `<List.Items pageSize>`), whatever either says, so the first picture costs
+ *   no second request.
  * @param {number} [props.virtualItemSize]
  *   The size of one row along the scroll axis, in px, when every row has the
  *   same: what the fillers are sized with and what a scroll position is
