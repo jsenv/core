@@ -569,8 +569,8 @@ const css = /* css */ `
     list-style: none;
   }
   /* The text of the items a filler holds the room of (List.Items findText),
-     one line per item at the item size: a match found there is where its item
-     will be drawn. Transparent once revealed — the item drawn over that place
+     one line per item at the item size — its share of its line, in a grid: a
+     match found there is where its item will be drawn. Transparent once revealed — the item drawn over that place
      is what the user sees. No display of its own: a browser without
      hidden="until-found" reads it as plain hidden and draws nothing. */
   .navi_list_find_stand_in {
@@ -604,9 +604,11 @@ const css = /* css */ `
      as navi-box-flow="grid" (see box.jsx), which this keys off directly rather
      than threading the value through React just for this. A grid track only
      ever spans the single column it is placed in by default, so without this
-     the filler would collapse into just the first column's width instead of
-     reserving height across the whole row. */
-  .navi_list[navi-box-flow="grid"] > .navi_list_virtual_filler {
+     the filler — or the band of items that never came — would collapse into
+     just the first column's width instead of reserving height across the
+     whole row. */
+  .navi_list[navi-box-flow="grid"] > .navi_list_virtual_filler,
+  .navi_list[navi-box-flow="grid"] > .navi_list_failed_items {
     grid-column: 1 / -1;
   }
 
@@ -1130,6 +1132,7 @@ const ListUI = (props) => {
     scroller,
     searchText,
     horizontal,
+    columns,
   });
 
   // renderBudget frames the items of a run; a list whose items are all declared
@@ -1489,6 +1492,7 @@ const useListScrollSync = ({
   scroller,
   searchText,
   horizontal,
+  columns,
 }) => {
   const debugScroll = useDebugScroll();
   // The items drawn, [start, end) among the list's own. A ref as well as a
@@ -1509,6 +1513,7 @@ const useListScrollSync = ({
     virtualItemSize,
     horizontal,
     {
+      inLines: Boolean(columns),
       windowLeavesItemsOut,
       scrolledWanted: scrolled ?? defaultScrolled,
       // The fillers hold the room of items above the screen at this size: a
@@ -1586,6 +1591,38 @@ const useListScrollSync = ({
       horizontal,
     });
   };
+
+  // How many items share a line: the tracks a grid of items (`columns`)
+  // resolves to, one otherwise. A layout result under auto-fill, so it is read
+  // off the list once laid out, at each commit and each resize — for the runs
+  // alone, which draw in lines: items declared one by one are all drawn. A
+  // line of another length rewraps every item drawn: the item at the top of
+  // the view is held where it is across it.
+  const itemsPerLineRef = useRef(1);
+  const [itemsPerLine, setItemsPerLine] = useState(1);
+  const updateItemsPerLine = () => {
+    if (!ref.current) {
+      return;
+    }
+    const itemsPerLineNow =
+      columns && listItems.hasRuns() ? readItemsPerLine(getListEl()) : 1;
+    if (
+      itemsPerLineNow === null ||
+      itemsPerLineNow === itemsPerLineRef.current
+    ) {
+      return;
+    }
+    captureAnchor();
+    itemsPerLineRef.current = itemsPerLineNow;
+    setItemsPerLine(itemsPerLineNow);
+  };
+  const updateItemsPerLineRef = useRef(null);
+  updateItemsPerLineRef.current = updateItemsPerLine;
+  useLayoutEffect(() => {
+    if (columns || itemsPerLineRef.current !== 1) {
+      updateItemsPerLine();
+    }
+  });
 
   // What the window holds goes through three stages (see settleWindow):
   // - "first": the first commit, a count of items since nothing is laid out
@@ -1994,6 +2031,7 @@ const useListScrollSync = ({
           listEl: getListEl(),
           listItems,
           virtualItemSizeSignal,
+          itemsPerLine: itemsPerLineRef.current,
           renderWindowRef,
           horizontal,
         });
@@ -2349,20 +2387,14 @@ const useListScrollSync = ({
     }
     const scrollerEl = getScroller();
     const listEl = getListEl();
-    const observer = new ResizeObserver((entries) => {
-      // A box that grows may be a box that starts to scroll — the scroller is
-      // resolved again before anything is done about the resize, so that a
-      // list which has outgrown a bounded ancestor stops holding on to the
-      // page.
-      resolveScroller();
-      rememberPosition();
-      // Two things resize here, and they call for opposite answers. The LIST
-      // growing is its own content settling: only a list holding itself
-      // somewhere cares (the end it aims at has moved), and a list the user is
-      // reading must not be touched — its items are held still by the anchoring,
-      // which this would undo. The SCROLLER resizing is the window around it
-      // changing shape, and then the item that was at the top goes back where it
-      // was.
+    // Two things resize here, and they call for opposite answers. The LIST
+    // growing is its own content settling: only a list holding itself
+    // somewhere cares (the end it aims at has moved), and a list the user is
+    // reading must not be touched — its items are held still by the anchoring,
+    // which this would undo. The SCROLLER resizing is the window around it
+    // changing shape, and then the item that was at the top goes back where it
+    // was.
+    const putTopItemBack = (entries) => {
       const listResized = entries.some((entry) => entry.target === listEl);
       if (listResized && onGeometryChangeRef.current()) {
         return;
@@ -2399,6 +2431,19 @@ const useListScrollSync = ({
       } else {
         scrollerEl.scrollTop += delta;
       }
+    };
+    const observer = new ResizeObserver((entries) => {
+      // A box that grows may be a box that starts to scroll — the scroller is
+      // resolved again before anything is done about the resize, so that a
+      // list which has outgrown a bounded ancestor stops holding on to the
+      // page.
+      resolveScroller();
+      rememberPosition();
+      putTopItemBack(entries);
+      // Once the top item is back where it was: that is the place a line of
+      // another length has to keep, and putting it back drops any anchor
+      // captured before.
+      updateItemsPerLineRef.current();
     });
     observer.observe(scrollerEl);
     observer.observe(listEl);
@@ -2547,7 +2592,10 @@ const useListScrollSync = ({
     }
     const { screenSize, bandFrom, bandTo, items } = geometry;
     const { start, end } = renderWindowRef.current;
-    const itemSize = virtualItemSizeSignal.peek();
+    // What an item not drawn weighs: its share of a line, which the items side
+    // by side on it take together.
+    const itemsPerLineNow = itemsPerLineRef.current;
+    const itemSize = virtualItemSizeSignal.peek() / itemsPerLineNow;
     const pixelsOf = createItemSizeReader(items, start, end, itemSize);
     const walkBefore = (from, sizeWanted, sizeOf) => {
       let index = from;
@@ -2618,13 +2666,13 @@ const useListScrollSync = ({
       !budgetWarnedRef.current &&
       bandEnd > bandStart
     ) {
-      const twoItems = countsItems
-        ? 2
-        : (2 * (bandTo - bandFrom)) / (bandEnd - bandStart);
-      if (spare < twoItems) {
+      const twoLines =
+        (countsItems ? 2 : (2 * (bandTo - bandFrom)) / (bandEnd - bandStart)) *
+        itemsPerLineNow;
+      if (spare < twoLines) {
         budgetWarnedRef.current = true;
         console.warn(
-          `List: renderBudget=${renderBudget.value}${renderBudget.unit} leaves less than two items beyond what the screen shows (${bandEnd - bandStart} items): items will go blank as it scrolls. Give it room for a screen ahead or more — "300%" of the box that scrolls it, say.`,
+          `List: renderBudget=${renderBudget.value}${renderBudget.unit} leaves less than two ${itemsPerLineNow > 1 ? "lines of items" : "items"} beyond what the screen shows (${bandEnd - bandStart} items): items will go blank as it scrolls. Give it room for a screen ahead or more — "300%" of the box that scrolls it, say.`,
         );
       }
     }
@@ -2851,9 +2899,30 @@ const useListScrollSync = ({
   useLayoutEffect(() => {
     reportPosition({ ifChanged: true });
   }, [windowStart, windowEnd]);
+  // What the runs draw: the window widened to whole lines. The window itself
+  // moves an item at a time, and a grid lays the first item drawn in its first
+  // column — started anywhere but on a line, every item drawn would sit in the
+  // column of another. Started on one, an item is in the column its place says
+  // whatever the window frames. The same object while the numbers hold, so the
+  // runs are not told about a window that did not move.
+  const windowDrawnRef = useRef(null);
+  const drawnStart = windowStart - (windowStart % itemsPerLine);
+  const endPastLine = windowEnd % itemsPerLine;
+  const drawnEnd =
+    endPastLine === 0 ? windowEnd : windowEnd + itemsPerLine - endPastLine;
+  let windowDrawn = windowDrawnRef.current;
+  if (
+    !windowDrawn ||
+    windowDrawn.start !== drawnStart ||
+    windowDrawn.end !== drawnEnd ||
+    windowDrawn.itemsPerLine !== itemsPerLine
+  ) {
+    windowDrawn = { start: drawnStart, end: drawnEnd, itemsPerLine };
+    windowDrawnRef.current = windowDrawn;
+  }
   return {
     virtualItemSizeSignal,
-    renderWindow: renderWindowRef.current,
+    renderWindow: windowDrawn,
     pendingScrollRef,
     scrollToItem,
     captureAnchor,
@@ -2869,6 +2938,21 @@ const getScrollerViewportRect = (scrollerEl) => {
     return { top: 0, left: 0, right: width, bottom: height, width, height };
   }
   return scrollerEl.getBoundingClientRect();
+};
+// The tracks a grid resolved its template to, as its computed
+// grid-template-columns lists them once laid out: "150px 150px [end] 150px".
+// Not laid out (a closed popup), that is the template as written, which says
+// nothing yet under auto-fill: `null`.
+const readItemsPerLine = (listEl) => {
+  const tracks = getComputedStyle(listEl).gridTemplateColumns;
+  if (tracks === "none" || tracks.includes("(")) {
+    return null;
+  }
+  const sizes = tracks.replace(/\[[^\]]*\]/g, " ").trim();
+  if (!sizes) {
+    return null;
+  }
+  return sizes.split(/\s+/).length;
 };
 // A window that cannot move is the one failure of a virtualized list that
 // looks like nothing: the items outside it are fillers holding their room, so
@@ -3787,6 +3871,7 @@ const getScrollInfo = ({
   listEl,
   listItems,
   virtualItemSizeSignal,
+  itemsPerLine,
   renderWindowRef,
   horizontal,
 }) => {
@@ -3821,7 +3906,9 @@ const getScrollInfo = ({
   // mean we don't know the real on-screen index, only the scroll position,
   // so estimate from it rather than assume nothing changed.
   const estimateFromScrollPos = (reasonPrefix) => {
-    const virtualItemSize = virtualItemSizeSignal.peek();
+    // An item's share of its line: the items side by side on it take it
+    // together.
+    const virtualItemSize = virtualItemSizeSignal.peek() / itemsPerLine;
     if (virtualItemSize === 0) {
       return null;
     }
@@ -3880,8 +3967,10 @@ const getScrollInfo = ({
 const VIRTUAL_ITEM_SIZE_EPSILON = 0.5;
 // Measures the items currently in the DOM, edge to edge: what a filler stands in
 // for is the room a run of items takes together — separators and group labels
-// included — not the height of one <li>.
-const measureItemSize = (listEl, horizontal) => {
+// included — not the height of one <li>. The size of a line of them: one item
+// in a list, the items side by side in a grid (`inLines`), counted where a new
+// line starts.
+const measureItemSize = (listEl, horizontal, inLines) => {
   let fromSkeletons = false;
   let itemEls = listEl.querySelectorAll(REAL_LIST_ITEM_SELECTOR);
   if (itemEls.length === 0) {
@@ -3905,9 +3994,22 @@ const measureItemSize = (listEl, horizontal) => {
   if (span <= 0) {
     return null;
   }
+  let lineCount = itemEls.length;
+  if (inLines) {
+    lineCount = 0;
+    let lineFrom = -Infinity;
+    for (const itemEl of itemEls) {
+      const rect = itemEl.getBoundingClientRect();
+      const from = horizontal ? rect.left : rect.top;
+      if (from > lineFrom + 0.5) {
+        lineCount++;
+        lineFrom = from;
+      }
+    }
+  }
   return {
-    size: span / itemEls.length,
-    itemCount: itemEls.length,
+    size: span / lineCount,
+    lineCount,
     fromSkeletons,
   };
 };
@@ -3916,7 +4018,7 @@ const useVirtualItemSizeSignal = (
   ref,
   virtualItemSizeProp = 0,
   horizontal,
-  { windowLeavesItemsOut, scrolledWanted, beforeSizeChange },
+  { inLines, windowLeavesItemsOut, scrolledWanted, beforeSizeChange },
 ) => {
   const virtualSizeSignalRef = useRef(null);
   if (!virtualSizeSignalRef.current) {
@@ -3953,8 +4055,8 @@ const useVirtualItemSizeSignal = (
         return;
       }
     }
-    samples.sum += measure.size * measure.itemCount;
-    samples.count += measure.itemCount;
+    samples.sum += measure.size * measure.lineCount;
+    samples.count += measure.lineCount;
     const next = samples.sum / samples.count;
     const current = virtualSizeSignal.peek();
     if (Math.abs(next - current) > VIRTUAL_ITEM_SIZE_EPSILON) {
@@ -3979,7 +4081,9 @@ const useVirtualItemSizeSignal = (
     ref.current
   ) {
     const listEl = ref.current.querySelector(".navi_list");
-    const measure = listEl ? measureItemSize(listEl, horizontal) : null;
+    const measure = listEl
+      ? measureItemSize(listEl, horizontal, inLines)
+      : null;
     if (measure) {
       feedSample(measure);
     }
@@ -4002,11 +4106,11 @@ const useVirtualItemSizeSignal = (
     if (!listEl) {
       return undefined;
     }
-    const measure = measureItemSize(listEl, horizontal);
+    const measure = measureItemSize(listEl, horizontal, inLines);
     if (measure) {
       const samples = samplesRef.current;
-      samples.sum = measure.size * measure.itemCount;
-      samples.count = measure.itemCount;
+      samples.sum = measure.size * measure.lineCount;
+      samples.count = measure.lineCount;
       samples.fromSkeletons = measure.fromSkeletons;
       virtualSizeSignal.value = measure.size;
       return undefined;
@@ -4154,10 +4258,12 @@ const Fallback = ({ fallback }) => {
 // Reads the item size itself: it is what the size is for, and a run holding
 // every item it draws must not be redrawn — every item of it — because the size
 // settled after the first commit.
-const VirtualFiller = ({ edge, itemCount, findChunks }) => {
+// It holds lines: the items side by side on one take its room together, and a
+// last line left short takes it all the same.
+const VirtualFiller = ({ edge, itemCount, itemsPerLine, findChunks }) => {
   const listItems = useContext(ListItemsContext);
-  const virtualItemSize = listItems.virtualItemSizeSignal.value;
-  const sizeToFill = itemCount * virtualItemSize;
+  const lineSize = listItems.virtualItemSizeSignal.value;
+  const sizeToFill = Math.ceil(itemCount / itemsPerLine) * lineSize;
   // A filler resizing moves what stands below it — the items on screen, when it
   // holds the room of items above them — and it resizes in a commit of its own
   // when the item size settles after the list has rendered: the list puts its
@@ -4176,7 +4282,9 @@ const VirtualFiller = ({ edge, itemCount, findChunks }) => {
       aria-hidden
       style={{
         "--size-to-fill": `${sizeToFill}px`,
-        "--x-find-line-size": findChunks ? `${virtualItemSize}px` : undefined,
+        "--x-find-line-size": findChunks
+          ? `${lineSize / itemsPerLine}px`
+          : undefined,
       }}
     >
       {findChunks &&
@@ -5098,6 +5206,7 @@ const useRunItems = (
   const rankOf = (itemIndex) => itemIndex - runStart;
   const indexOfRank = (rank) => rank + runStart;
   const getItemAt = (itemIndex) => store.getItem(rankOf(itemIndex));
+  const { itemsPerLine } = renderWindow;
   const windowFrom =
     renderWindow.start > runStart ? renderWindow.start : runStart;
   const windowTo = renderWindow.end < runEnd ? renderWindow.end : runEnd;
@@ -5216,18 +5325,30 @@ const useRunItems = (
   // band is drawn among the items. A negative start is not a rank but a count
   // back from the end (the very first ask, before the count is known) — there
   // is no item to convert it to, and the band falls back to the window.
-  const failureFrom =
+  let failureFrom =
     store.failure === null
       ? -1
       : store.failure.start < 0 || indexOfRank(store.failure.start) < windowFrom
         ? windowFrom
         : indexOfRank(store.failure.start);
-  const failureTo =
+  let failureTo =
     store.failure === null
       ? -1
       : store.failure.end < 0 || indexOfRank(store.failure.end) > windowTo - 1
         ? windowTo - 1
         : indexOfRank(store.failure.end);
+  if (store.failure !== null && itemsPerLine > 1) {
+    // In a grid the band takes whole lines, like the window: begun mid-line,
+    // it would push every item after it into another column.
+    failureFrom -= failureFrom % itemsPerLine;
+    if (failureFrom < windowFrom) {
+      failureFrom = windowFrom;
+    }
+    failureTo += itemsPerLine - 1 - (failureTo % itemsPerLine);
+    if (failureTo > windowTo - 1) {
+      failureTo = windowTo - 1;
+    }
+  }
   const nodes = [];
   // Items that belong together, as the data says (a day of messages, a month of
   // games): consecutive items sharing a group key are wrapped in one group, so
@@ -5311,6 +5432,7 @@ const useRunItems = (
         key="navi-list-filler-before"
         edge="before"
         itemCount={windowFrom - runStart}
+        itemsPerLine={itemsPerLine}
         findChunks={getFindChunks(runStart, windowFrom)}
       />,
     );
@@ -5326,7 +5448,7 @@ const useRunItems = (
           key={`${ownerId}_failure_${failureFrom}`}
           className="navi_list_failed_items"
           style={{
-            "--size-to-fill": `${failedItemCount * listItems.virtualItemSizeSignal.value}px`,
+            "--size-to-fill": `${Math.ceil(failedItemCount / itemsPerLine) * listItems.virtualItemSizeSignal.value}px`,
           }}
         >
           {renderError ? (
@@ -5429,6 +5551,7 @@ const useRunItems = (
         key="navi-list-filler-after"
         edge="after"
         itemCount={runEnd - windowTo}
+        itemsPerLine={itemsPerLine}
         findChunks={getFindChunks(windowTo, runEnd)}
       />,
     );
@@ -6222,12 +6345,16 @@ const ListResolved = /*#__PURE__*/ createComponentResolver([
  * @param {string} [props.columns]
  *   The list's own columns: a `grid-template-columns` value the ITEMS are laid
  *   into — a sheet of icons (`repeat(auto-fill, minmax(2.5rem, 1fr))`), a row of
- *   choices (`repeat(3, minmax(0, 1fr))`). Each item takes one cell, and an item
- *   meant to take a whole line says so for itself
- *   (`style={{ gridColumn: "1 / -1" }}`). Several items to a line is a shape the
- *   list cannot virtualize — its render window and the room it holds for the
- *   items it does not draw both count one item per line — so it is for a set of
- *   items the caller renders whole, not for a `<List.Items>` collection.
+ *   choices (`repeat(3, minmax(0, 1fr))`), a feed of covers
+ *   (`repeat(auto-fill, minmax(150px, 1fr))` over a `<List.Items>`). Each item
+ *   takes one cell, and an item meant to take a whole line says so for itself
+ *   (`style={{ gridColumn: "1 / -1" }}`). A `<List.Items>` run is drawn in whole
+ *   lines — as many items to a line as the template resolves to, read again
+ *   when the list's width changes: its window starts and ends on a line, so an
+ *   item is always in the column its place says, and the fillers hold the room
+ *   of the lines it does not draw (`virtualItemSize` is then a line's size).
+ *   That count holds only while every item of the run takes one cell: an item
+ *   spanning a line, or a `groupBy`, puts the ones after it in other columns.
  * @param {string} [props.itemColumns]
  *   The columns inside an ITEM: a `grid-template-columns` value each item fills
  *   with its own children, a table whose cells line up down the list. Every item
@@ -6243,8 +6370,9 @@ const ListResolved = /*#__PURE__*/ createComponentResolver([
  *   scroll box, which fills it and has nothing to arrange.
  * @param {boolean} [props.flexWrap]
  *   Lets a horizontal list's items fall to the next line instead of running
- *   past the edge — a row of choices under a `maxWidth`, say. Same caveat as
- *   `columns` above: a line holding several items is not virtualizable.
+ *   past the edge — a row of choices under a `maxWidth`, say. A wrapped line
+ *   holding several items is not virtualizable: a long collection laid several
+ *   to a line goes in `columns`.
  * @param {string} [props.overflow]
  *   `"visible"` lets the items paint outside the list — a check in an item's
  *   corner, a badge crossing the edge. A list clips by default, which is what
@@ -6363,7 +6491,8 @@ const ListResolved = /*#__PURE__*/ createComponentResolver([
  *   one-line size) — an item guessed too small builds one more, an item
  *   guessed too big leaves a blank (see docs/scroll.md, "What the list knows,
  *   and what it guesses"). The items drawn are measured either way: the render
- *   window is sized on them.
+ *   window is sized on them. In a grid (`columns`), the size is a line's: a
+ *   card's, which the items side by side on it share.
  * @param {"self"|"parent"|"document"|Element|{current: Element}} [props.scroller="self"]
  *   Which box scrolls — and with it, which box the render window follows and
  *   which box a scroll position is read from (`onScrolledChange`). `"self"`

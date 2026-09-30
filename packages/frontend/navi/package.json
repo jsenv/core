@@ -34,7 +34,7 @@
     "preact": "^11.0.0-rc.2"
   },
   "dependencies": {
-    "@jsenv/dom": "0.17.87",
+    "@jsenv/dom": "0.17.88",
     "@jsenv/humanize": "1.8.6",
     "@jsenv/validity": "0.4.5"
   },
