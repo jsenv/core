@@ -9,11 +9,12 @@
  *
  * The wait also has to hold off the system's own answer to the same gesture: a
  * FINGER held long enough IS the context-menu gesture, and Android's menu (around
- * 500ms) or iOS's callout lands a tenth of a second after the press was answered
- * here. The half of that which is an event is refused below; the half that is not
- * (iOS selecting the word under the finger) is a stylesheet the caller writes on
- * its own elements — `-webkit-touch-callout: none` has to be true before the
- * finger lands, so it cannot be set from here.
+ * 500ms) with the word under the finger selected, or iOS's callout, lands a tenth
+ * of a second after the press was answered here. What of that is an event — the
+ * menu, and the selection outside iOS — is refused below; what is not (iOS
+ * selecting the word under the finger) is a stylesheet the caller writes on its
+ * own elements — `-webkit-touch-callout: none` has to be true before the finger
+ * lands, so it cannot be set from here.
  *
  * THE REFUSAL LASTS THE PRESS, NOT THE WAIT. The system's delay is the longer of
  * the two, so between the moment this wait gives up and the moment the finger
@@ -134,18 +135,21 @@ export const waitForPressHeld = (
   };
 
   /* A FINGER held down is the system's own context-menu gesture, and the menu it
-     raises lands on top of the answer this press was already given. A MOUSE is
-     not: its context menu comes from the other button, has nothing to do with
-     this press, and is the user asking for the browser's menu — so it is left
-     alone, and only a touch press refuses it.
-     The listener goes on window, in capture: what answers the press may cover the
-     page (a drag backdrop, a popup), and the contextmenu event is then aimed at
-     that instead of at the element pressed. */
+     raises, with the word it selects, lands on top of the answer this press was
+     already given. A MOUSE is not: its context menu comes from the other button,
+     has nothing to do with this press, and is the user asking for the browser's
+     menu — so it is left alone, and only a touch press refuses it.
+     The listeners go on window, in capture: what answers the press may cover the
+     page (a drag backdrop, a popup), and both events are then aimed at that
+     instead of at the element pressed. Which is also why the pressed element's
+     own `user-select: none` does not cover the selection: the word selected is
+     the one under the finger when the system answers, in what the hold opened. */
   if (pressEvent.pointerType === "touch") {
-    const preventContextMenu = (contextMenuEvent) => {
-      contextMenuEvent.preventDefault();
+    const preventSystemAnswer = (event) => {
+      event.preventDefault();
     };
-    window.addEventListener("contextmenu", preventContextMenu, true);
+    window.addEventListener("contextmenu", preventSystemAnswer, true);
+    window.addEventListener("selectstart", preventSystemAnswer, true);
     /* The finger letting go, watched for the length of the press rather than for
        the length of the wait: the wait can be over long before the hand is.
        A pointerCANCEL is not the hand letting go, it is the browser saying it is
@@ -172,7 +176,8 @@ export const waitForPressHeld = (
     window.addEventListener("pointercancel", onPressPointerEnd, true);
     pressCleanupCallbacks.push(() => {
       clearTimeout(menuGraceTimeout);
-      window.removeEventListener("contextmenu", preventContextMenu, true);
+      window.removeEventListener("contextmenu", preventSystemAnswer, true);
+      window.removeEventListener("selectstart", preventSystemAnswer, true);
       window.removeEventListener("pointerup", onPressPointerEnd, true);
       window.removeEventListener("pointercancel", onPressPointerEnd, true);
     });

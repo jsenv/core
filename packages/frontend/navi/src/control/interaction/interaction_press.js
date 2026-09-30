@@ -243,7 +243,9 @@ import.meta.css = /* css */ `
      business, a layer OVER the element, and a field, whose caret is placed by
      dragging through its text — a door that only looks like one has no text of its
      own to place a caret in. The same list, read for the same reason, as the drag
-     sources in @jsenv/dom (see DRAG_IGNORED_SELECTOR in drag_to.js).
+     sources in @jsenv/dom (see DRAG_IGNORED_SELECTOR in drag_to.js). A layer a
+     hold opens under the finger is not selected by that same press: the hold
+     refuses the selection until the finger lifts (see waitForPressHeld).
      Given as text and not as auto: auto computes to none under a parent that is
      none, so it would give back nothing. */
   :is([data-longpress], [data-swipe], [data-double-click])
