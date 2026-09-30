@@ -52,10 +52,18 @@
  * trigger and pressing it are free. The warming render starts at the frame
  * after the one that follows the intent: nothing here needs the content in the
  * DOM before the click, only before the open that follows it, and on a touch
- * screen `pointerenter` arrives together with the `pointerdown` — a build
+ * screen `pointerover` arrives together with the `pointerdown` — a build
  * started there would hold back the frame that shows the press. Two animation
  * frames, never a timeout: browsers hold timers back while a finger is down,
  * and a timeout started by the press fires at its release, on top of the click.
+ *
+ * The anchor only says where the popup is placed, so intent inside it is read
+ * off the control it is aimed at, the nearest one around the target. A control
+ * the anchor holds that is not the one holding this popup keeps that intent:
+ * a player's own picker in a card that another picker opens from warms the
+ * player's callout, never the card's sheet. And a pointer on a trigger that a
+ * press does not open (`data-open-on`: a picker opened by a hold, or only by a
+ * command) says nothing; the keyboard still opens it, so focus there warms.
  *
  * "while-opened" content is warmed by an opening press, never by a hover or a
  * focus. That mode promises content built fresh for the gesture that opens
@@ -211,12 +219,40 @@ export const usePopupContentMount = (
         setContentMounted(true);
       });
     };
-    anchorElement.addEventListener("pointerenter", warm);
-    anchorElement.addEventListener("focusin", warm);
+    // The anchor itself when it is a control (a Popover anchored on the button
+    // opening it), or the one the popup is written in (a picker's trigger).
+    const isOwnControl = (control) =>
+      control === anchorElement || control.contains(ref?.current);
+    // pointerover rather than pointerenter: it says which element the pointer
+    // is over, and that element decides whose intent it is.
+    const onPointerOver = (pointeroverEvent) => {
+      const control = findControlAimedAt(
+        pointeroverEvent.target,
+        anchorElement,
+      );
+      if (control) {
+        if (!isOwnControl(control)) {
+          return;
+        }
+        if (control.hasAttribute("data-open-on")) {
+          return;
+        }
+      }
+      warm();
+    };
+    const onFocusIn = (focusinEvent) => {
+      const control = findControlAimedAt(focusinEvent.target, anchorElement);
+      if (control && !isOwnControl(control)) {
+        return;
+      }
+      warm();
+    };
+    anchorElement.addEventListener("pointerover", onPointerOver);
+    anchorElement.addEventListener("focusin", onFocusIn);
     return () => {
       cancelWarm?.();
-      anchorElement.removeEventListener("pointerenter", warm);
-      anchorElement.removeEventListener("focusin", warm);
+      anchorElement.removeEventListener("pointerover", onPointerOver);
+      anchorElement.removeEventListener("focusin", onFocusIn);
     };
   }, [contentMounted, anchor, mount]);
   // Warm on an opening press, for "while-opened" (see the top comment). Told
@@ -269,6 +305,16 @@ const resolveAnchorElement = (anchor) => {
     return anchor.current;
   }
   return anchor;
+};
+
+// The nearest control around the target, when the anchor holds it or is it.
+// Null for content of the anchor that no control of its own claims.
+const findControlAimedAt = (target, anchorElement) => {
+  const control = target.closest("[navi-control]");
+  if (!control || !anchorElement.contains(control)) {
+    return null;
+  }
+  return control;
 };
 
 // The next frame paints what the input just changed (the pressed trigger); the
