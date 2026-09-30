@@ -171,11 +171,11 @@ naviI18n.addAll({
     en: "No item matches this search. The rest is shown below.",
     fr: "Aucun élément ne correspond à cette recherche. Le reste est affiché ci-dessous.",
   },
-  "list.rows_failed": {
+  "list.items_failed": {
     en: "These elements could not be loaded.",
     fr: "Ces élements n'ont pas pu être chargées.",
   },
-  "list.rows_retry": {
+  "list.items_retry": {
     en: "Retry",
     fr: "Réessayer",
   },
