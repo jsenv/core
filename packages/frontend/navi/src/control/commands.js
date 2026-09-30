@@ -595,6 +595,16 @@ const resolveAfterSend = (target, requester) => {
   }
   return undefined;
 };
+// What follows a send is caused by the send, not by the gesture: the send
+// answered the gesture and may have prevented it (an Enter must not also click
+// the submit button, nor activate the trigger of the popup it closed), and a
+// follow-up judged on that event is refused as a gesture someone cancelled.
+// Chained, so the gesture stays readable behind it.
+const createSentEvent = (event) => {
+  const sentEvent = new CustomEvent("sent", { detail: {} });
+  chainEvent(sentEvent, event);
+  return sentEvent;
+};
 
 registerNaviCommand("--navi-send", (source, event, { requester }) => {
   const expandable = resolveExpandableAround(source);
@@ -627,7 +637,9 @@ registerNaviCommand("--navi-send", (source, event, { requester }) => {
           source.getAttribute("data-after-send") ||
           target.getAttribute("data-after-send");
         if (afterSend) {
-          triggerNaviCommand(target, afterSend, event, { optional: true });
+          triggerNaviCommand(target, afterSend, createSentEvent(event), {
+            optional: true,
+          });
         }
         return result;
       },
@@ -671,7 +683,9 @@ registerNaviCommand("--navi-send", (source, event, { requester }) => {
         if (!afterSend) {
           return;
         }
-        triggerNaviCommand(source, afterSend, event, { optional: true });
+        triggerNaviCommand(source, afterSend, createSentEvent(event), {
+          optional: true,
+        });
       };
       const {
         result: sent,

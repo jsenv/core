@@ -1661,12 +1661,22 @@ const useListScrollSync = ({
   };
   const [renderWindow, setRenderWindow] = useState(() => {
     // Opening somewhere else than the beginning starts by framing there: the
-    // items the list will draw are the items it will ask for.
+    // items the list will draw are the items it will ask for. A named item is
+    // framed where it stood when it was written down, which is where holdWindow
+    // aims before anyone can say where it is.
     const openAt = scrolled ?? defaultScrolled;
-    const start =
+    const openIndex =
       typeof openAt === "number"
-        ? openAt - itemsAboveOpening(openAt, firstWindowItemCount)
-        : 0;
+        ? openAt
+        : openAt &&
+            typeof openAt === "object" &&
+            typeof openAt.index === "number"
+          ? openAt.index
+          : null;
+    const start =
+      openIndex === null
+        ? 0
+        : openIndex - itemsAboveOpening(openAt, firstWindowItemCount);
     const startClamped = start < 0 ? 0 : start;
     return { start: startClamped, end: startClamped + firstWindowItemCount };
   });
@@ -1779,14 +1789,15 @@ const useListScrollSync = ({
     if (wantedStart < 0) {
       wantedStart = 0;
     }
-    if (wantedStart === start) {
-      listItems.holdPending = false;
-      return;
-    }
-    renderWindowRef.current = {
-      start: wantedStart,
-      end: wantedStart + windowSize,
-    };
+    // The window the hold frames goes into the state, not into this render
+    // alone: the next render starts from the state, and once the item stands
+    // inside the window the hold stops framing it — a window left where the
+    // state had it would draw around another place.
+    updateRenderWindow(
+      wantedStart,
+      wantedStart + windowSize,
+      `held on item ${heldItem}`,
+    );
     listItems.holdPending = false;
   };
 
@@ -1942,6 +1953,17 @@ const useListScrollSync = ({
         return;
       }
       hasBeenDisplayedRef.current = true;
+      const place = startPlaceRef.current;
+      if (
+        !place.userTookOver &&
+        place.wanted !== "start" &&
+        place.wanted !== undefined
+      ) {
+        // Held somewhere: where the list opens is the hold's to say (see
+        // placeWhereHeld). Scrolled here too, the list would go to the top or
+        // the selected item for as long as the hold takes to put it back.
+        return;
+      }
       const items = listItems.itemsSignal.peek();
       const firstSelected = items.find((i) => {
         if (i.selected) {
