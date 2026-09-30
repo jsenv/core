@@ -301,13 +301,47 @@ games and games to come) holds ten times more of the first on a screen than of
 the second. `"100item"` covers four screens of the one-line items and thirty of
 the cards, and nobody scrolls to the thirtieth; a count right for the cards
 leaves blank screens when a fling crosses the one-line items. With a size, the
-window weighs the items it draws where they stand, and an item it has not drawn
-yet like the drawn items next to it — items of one kind come together — then
-weighs it again once it is drawn.
+window weighs the items it draws (see below).
 
 A run whose rows all fit the window is just rows: nothing is virtualized, and
 it costs what the same rows would as children. There is no reason to hold back
 from it for a list that might grow.
+
+### What the list knows, and what it guesses
+
+A virtualized list has one aim: draw as few items as it can, and never show a
+blank where an item should be — with one simple rule, not a model of every kind
+of item.
+
+What is drawn, the list measures: the render window is sized on the room the
+items it draws actually take. What is not drawn it cannot measure, so it
+guesses:
+
+- the fillers hold every item outside the window at one size — `virtualItemSize`
+  when given, the average of the items measured so far otherwise. A scroll
+  position inside a filler is read with it too, and an item on its way takes at
+  least that room;
+- when the window reaches past what it has drawn, it weighs the next items like
+  the drawn ones next to them, and measures them once they are drawn.
+
+A guess is wrong one way or the other, and the two ways do not cost the same.
+An item guessed **smaller** than it is makes the list count more items to fill
+a space than it needs: it builds one or two more, and the screen is covered. An
+item guessed **bigger** makes it count too few, and a blank shows until they
+are measured. So a size you give is the **worst case**: in a list whose items
+differ in height, `virtualItemSize` is the smallest an item can be — the
+one-line item, in a thread of one-line items and cards. The scrollbar then
+under-states a list made mostly of big items; the screen stays covered. One
+number for the whole list is the point: a size per kind of item, or per state
+of one, is a model to keep in step with the markup, for a scrollbar a little
+more exact.
+
+The window's own guess past what it has drawn is the one that is not the worst
+case, on purpose. Guessing the smallest there walks into cards at the one-line
+size and builds them several at a time — tasks of 50–65 ms while reading down
+through cards, measured, for no blank spared. It guesses the neighbours' size
+instead: items of one kind come together, and a window that comes up short is
+measured and extended on the next frame.
 
 ### The first paint of a list that opens in a click
 
@@ -390,8 +424,8 @@ Reference: `src/control/demos/19_list_find_in_page_demo.html`.
   item and the index it is given rather than closing over state.
 
 The rest — `virtualItemSize`, the room an item not drawn is held at (uniform
-items, or the size most of a mixed list has), a `key` on the run when the
-collection changes as a whole (never to refresh it, see
+items, or the smallest one of a mixed list — the worst case, see above), a `key`
+on the run when the collection changes as a whole (never to refresh it, see
 [list_refresh.md](./list_refresh.md#a-paginated-list-stays-on-screen-too)),
 `groupBy` for sections — is in the JSDoc of `List` and `List.Items`
 (`src/control/list/list.jsx`). Demos:

@@ -6357,11 +6357,13 @@ const ListResolved = /*#__PURE__*/ createComponentResolver([
  *   position inside them is read with, and the least an item on its way takes
  *   (see `renderSkeleton`). Left out, it is the average of the items measured
  *   so far — once when the list mounts, again when a popup around it opens,
- *   and after each commit while items are held off screen. Give it when you
- *   know an item not drawn better than that average does: the size every item
- *   has, or, in a list whose items differ, the size most of it has (a thread
- *   of one-line items with a few cards: the one-line size). The items drawn
- *   are measured either way: the render window is sized on them.
+ *   and after each commit while items are held off screen. Given, it is the
+ *   worst case: the size every item has, or, in a list whose items differ, the
+ *   smallest an item can be (a thread of one-line items and cards: the
+ *   one-line size) — an item guessed too small builds one more, an item
+ *   guessed too big leaves a blank (see docs/scroll.md, "What the list knows,
+ *   and what it guesses"). The items drawn are measured either way: the render
+ *   window is sized on them.
  * @param {"self"|"parent"|"document"|Element|{current: Element}} [props.scroller="self"]
  *   Which box scrolls — and with it, which box the render window follows and
  *   which box a scroll position is read from (`onScrolledChange`). `"self"`
