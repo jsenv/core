@@ -285,14 +285,19 @@ far from every press that opens it, it has to be told what it is about and has
 to answer somebody. The content can still be one component used in every picker:
 "the prompt exists once" is a question about components, not about the DOM.
 
-What each row costs depends on what the picker is told. A picker told no value —
-no `value`, `defaultValue` or `signal` — builds its popup at render, closed: it
-reads its value off the control in there, which has to exist before anything
-opens. A hundred rows is then a hundred closed popups. One heavy enough to
-matter can say `mount="from-first-open"`, and the picker then knows nothing of
-what that control holds until the first opening: its trigger cannot draw it, and
-nothing reading the picker sees it. A picker told a value, a `type="confirm"`
-and a `mode="callout"` build on the first open already.
+What each row costs depends on what reads the picker's value before anything
+opens. A picker told no value — no `value`, `defaultValue` or `signal` — holds
+what the control in its popup holds, so that popup is built, closed, as soon as
+something reads the value: the trigger navi draws (no `ui`, a `Picker.UI.*`, a
+component `ui` handed `value`), the clear cross, a form or group collecting it,
+an element `ui` calling `usePickerState()`. A hundred such rows is then a
+hundred closed popups. One heavy enough to matter can say
+`mount="from-first-open"`, and the picker then knows nothing of what that
+control holds until the first opening: its trigger cannot draw it, and nothing
+reading the picker sees it. A picker read by nothing before it opens — its
+trigger a drawing of the caller's that does not ask for the value, no name, no
+cross — builds on the first open, like a picker told a value, a
+`type="confirm"` and a `mode="callout"`.
 
 ### Composing a value, or doing work
 
@@ -865,8 +870,8 @@ alone.
 A closed `Dialog`/`Popover` builds nothing: `children` are mounted on the first
 open, and stay mounted afterwards — a reopened popup finds its scroll position
 and its half-typed form where it left them, as long as the data it draws does
-not leave with the close. A `Picker` told no value is the exception: it builds
-its popup at render (see
+not leave with the close. A `Picker` told no value whose value something reads
+is the exception: it builds its popup as soon as that value is read (see
 [above](#a-press-that-opens-a-popup-and-acts-on-it)).
 
 A `Dialog` nobody has asked for yet is not even built. It stands in as its bare
@@ -890,7 +895,7 @@ opening — so the `mount` prop answers both at once:
 | `"while-opened"`              | not mounted                 | not mounted   |
 
 `"always"` is for content something depends on before any opening: a value read
-off it (the default of a picker told no value), fields a surrounding form
+off it (the default of a picker told no value whose value is read), fields a surrounding form
 submits, a size measured from outside. `"idle"` is `"always"` minus the cost on
 the render that draws the page.
 

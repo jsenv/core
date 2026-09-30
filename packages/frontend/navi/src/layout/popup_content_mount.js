@@ -32,7 +32,11 @@
  *
  * "always" is for content something else depends on before any opening: a
  * value the popup's owner reads off its own children, fields a form around it
- * collects on submit, a size measured from outside.
+ * collects on submit, a size measured from outside. When the popup's owner
+ * cannot tell at mount whether anything will depend on it, the content waits
+ * and whatever depends on it asks for it, closed, with
+ * `openController.buildContent()` (a picker's drawing reading the value its
+ * popup holds, see usePickerContext).
  *
  * "idle" is "always" minus the cost on the critical render: the page appears
  * without the content, and the browser builds it in an idle moment after
@@ -163,6 +167,14 @@ export const usePopupContentMount = (
         popupsMountingContentForOpen.delete(popupElement);
       }
     }
+  };
+  // A plain render rather than a flush: the popup stays closed, and nothing is
+  // about to measure it.
+  openController.buildContent = () => {
+    if (contentMountedRef.current) {
+      return;
+    }
+    setContentMounted(true);
   };
   openController.unmountContent =
     mount === "while-opened"

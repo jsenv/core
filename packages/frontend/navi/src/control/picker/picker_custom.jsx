@@ -32,6 +32,7 @@ import {
 import { interactionsDisputeThePress } from "../interaction/interactions.js";
 import { LONGPRESS_ATTRIBUTE } from "../interaction/interaction_press.js";
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
+import { useStableCallback } from "../../utils/use_stable_callback.js";
 import { moveFocusTo } from "../../utils/focus/focus_transfer.js";
 import { ControlIdContext } from "../control_context.js";
 import { isControlValueGivenByProps } from "../control_hooks.jsx";
@@ -45,8 +46,10 @@ import {
 import { getUIStateFromElement } from "../ui_state_dom.js";
 import {
   followOutsideSinceOpen,
+  ParentUIStateControllerContext,
   readStatesAtOpen,
 } from "../ui_state_controller.js";
+import { pickerUIIsNaviOwn } from "./picker_context.jsx";
 
 const css = /* css */ `
   /* Popover and Dialog size, pad and scroll themselves. What is written here
@@ -333,6 +336,12 @@ const PickerCustom = (props) => {
   const idDefault = useId();
   const controlId = useContext(ControlIdContext);
   props.id = props.id || controlId || idDefault;
+  // Given no value, the picker holds what the control in its popup holds (see
+  // the `mount` decision below) — and a group around it collects that from the
+  // moment both exist.
+  const valueInPopup = !isControlValueGivenByProps(props);
+  const parentController = useContext(ParentUIStateControllerContext);
+  const answersToGroup = Boolean(parentController) && !props.standalone;
   // Same narrow-container/maxWidth-compact heuristic Popup itself uses (see
   // popup_mode.jsx's own useResolvedPopupMode) — frozen for the lifetime of an opening
   // (computed when closed, stable while open, so a screen resize mid-session
@@ -615,8 +624,16 @@ const PickerCustom = (props) => {
       dispatchRequestInteraction(ref.current, options);
     };
 
+    // What a drawing of the caller's calls as it reads the value (see
+    // usePickerContext): the popup holding it, built while closed. Only when
+    // `mount` is left to the picker — a caller who set it has said when.
+    const requestValue = useStableCallback(() => {
+      openController.buildContent();
+    });
     const { onActionStart, children, uiAction: uiActionProp } = props;
     Object.assign(pickerProps, {
+      "requestValue":
+        valueInPopup && props.mount === undefined ? requestValue : undefined,
       "aria-expanded": Boolean(expanded),
       "onActionStart": (e) => {
         onActionStart?.(e);
@@ -659,15 +676,16 @@ const PickerCustom = (props) => {
       anchor: props.anchor || props.ref,
       openController,
       // A picker whose value was never given to it reads it off the control in
-      // its popup (see useUIFacadeStateController): the trigger shows what the
-      // list inside says is selected, so that list has to exist before anyone
-      // opens anything. Told a value — even an empty one — the picker owns it
-      // and pushes it down instead, leaving the popup free to build its
-      // content only when it is first opened (see popup_content_mount.js).
-      // A caller who knows better says so with the popup's own props.
+      // its popup (see useUIFacadeStateController), so that control is built as
+      // soon as something reads the value: at mount when the picker sees the
+      // reader, otherwise when a drawing of the caller's asks (requestValue
+      // above). Told a value — even an empty one — the picker pushes it down,
+      // and the popup waits for its first open (see popup_content_mount.js).
       mount:
         props.mount ??
-        (isControlValueGivenByProps(props) ? MOUNT_DEFAULT : "always"),
+        (valueInPopup && isPickerValueReadAtMount(props, answersToGroup)
+          ? "always"
+          : MOUNT_DEFAULT),
       // Not on pickerProps (the trigger): commands.js's own
       // resolveClosestExpandable() does `el.closest("[aria-expanded]")` to
       // find where to dispatch navi_request_open/navi_request_close — and
@@ -965,6 +983,27 @@ const PickerCustom = (props) => {
     ...pickerProps,
     mode,
   });
+};
+
+// Whether something reads a picker's value before its popup has opened, as
+// far as the picker sees from its own props: the drawing navi renders for it
+// (its own, or the typed one PickerTypeResolver installs — `ui` is still unset
+// here), one of navi's Picker.UI.*, a component handed `value`, the clear
+// cross, a form submitting it by name, a group it answers to. A headless
+// picker draws nothing, and an element `ui` is the caller's: it reads through
+// usePickerContext, which asks for the value then.
+const isPickerValueReadAtMount = (props, answersToGroup) => {
+  if (props.name !== undefined || answersToGroup) {
+    return true;
+  }
+  if (props.variant === "headless") {
+    return false;
+  }
+  if (props.clearable) {
+    return true;
+  }
+  const { ui } = props;
+  return ui === undefined || typeof ui === "function" || pickerUIIsNaviOwn(ui);
 };
 
 // A hold declared on something AROUND the picker (a card opened by

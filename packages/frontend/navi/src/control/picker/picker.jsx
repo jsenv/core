@@ -37,7 +37,11 @@ import {
   getUIStateFromElement,
 } from "../ui_state_dom.js";
 import { PickerConfirmResolver } from "./picker_confirm.jsx";
-import { PickerContext, pickerUIIsNaviOwn } from "./picker_context.jsx";
+import {
+  PickerContext,
+  pickerUIIsNaviOwn,
+  usePickerContext,
+} from "./picker_context.jsx";
 import { PickerCustomResolver } from "./picker_custom.jsx";
 import { PickerPresetResolver } from "./picker_preset.jsx";
 import {
@@ -930,6 +934,10 @@ const PickerButton = (props) => {
     loadingOutline,
     // Where the outline runs, in px from the picker's box: negative is outside.
     loadingOutlineInset = -2,
+    // Builds the popup this picker's value is read from, for a drawing that
+    // reads it (see usePickerContext). Set by PickerCustom, only while that
+    // value lives in the popup.
+    requestValue,
   } = props;
   // A word in a sentence is never truncated — and the clamp's overflow: hidden
   // would cut its dotted underline, which sits on the edge of the line box
@@ -1052,6 +1060,7 @@ const PickerButton = (props) => {
     interactive,
     loading,
     clearConfirm,
+    requestValue,
   };
 
   return (
@@ -1101,6 +1110,7 @@ const PickerButton = (props) => {
         dayLabel={undefined}
         loadingOutline={undefined}
         loadingOutlineInset={undefined}
+        requestValue={undefined}
         // This wrapper will receive keyboard event bubbling from the picker popup content
         // we re-dispatch on the input (to get escape to close for instance)
         onKeyDown={inputProps.onKeyDown}
@@ -1349,7 +1359,7 @@ const PickerButton = (props) => {
  *   `paddingX`, `aria-label`, …).
  */
 const PickerClear = ({ size = "inherit", children, ...rest }) => {
-  const pickerContext = useContext(PickerContext);
+  const pickerContext = usePickerContext();
   if (!pickerContext) {
     warnOnClearOutsidePicker();
     return null;
@@ -1652,7 +1662,7 @@ const PickerStyleCSSVars = {
 };
 
 const PickerDefaultUI = () => {
-  const { value, placeholder } = useContext(PickerContext);
+  const { value, placeholder } = usePickerContext();
 
   if (!value) {
     if (!placeholder) {
@@ -2225,10 +2235,13 @@ const PickerFirstResolver = (props) => {
  * @param {string} [cancelTestId]
  * @param {"always"|"idle"|"from-first-open"|"while-opened"} [mount] The popup's own
  *   (see Popup): when the children are built and thrown away. Left out, a
- *   picker told no value builds them right away (`"always"`) — it reads its
- *   value off the control they hold — and one told a value waits for the first
- *   open. A `type="confirm"` picker never builds them early: its popup is a
- *   question, there is nothing to read.
+ *   picker told no value holds what the control they hold holds, and builds
+ *   them as soon as that value is read: right away (`"always"`) when navi draws
+ *   it (no `ui`, a `Picker.UI.*`, a component `ui`), when there is a clear
+ *   cross, or when a form or group around the picker collects it; when an
+ *   element `ui` calls `usePickerState()`. Read by nothing, it waits for the
+ *   first open, like a picker told a value. A `type="confirm"` picker never
+ *   builds them early: its popup is a question, there is nothing to read.
  */
 // Every picker type is resolved into one of these before it gets here (see
 // PickerTypeResolver and resolveInputProps): a native input type, or navi_js

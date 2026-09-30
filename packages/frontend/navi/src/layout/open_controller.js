@@ -394,6 +394,9 @@ export const createOpenController = (
     // content is still waiting for a first open to be built. Called below,
     // before openEffect, so the popup measures and positions the real thing.
     mountContent: null,
+    // Set alongside mountContent: the content asked for outside any opening,
+    // by something that reads it while the popup is closed.
+    buildContent: null,
     // The caller's own `onOpen`, set by Dialog/Popover from their props on
     // every render (like openEffect). Called BEFORE mountContent, so whatever
     // it decides — which record this dialog is opening on — is already true by

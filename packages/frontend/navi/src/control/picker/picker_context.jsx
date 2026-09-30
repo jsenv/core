@@ -1,7 +1,24 @@
 import { createContext } from "preact";
-import { useContext } from "preact/hooks";
+import { useContext, useLayoutEffect } from "preact/hooks";
 
 export const PickerContext = createContext();
+
+/*
+ * The picker's context, for whatever draws its value. A picker told no value
+ * holds what the control in its popup holds, and builds that popup only when
+ * something reads it (see the mount decision in picker_custom.jsx): what the
+ * picker draws itself it knows about, a drawing given as an element is the
+ * caller's, and says so here by reading. In a layout effect, so the frame that
+ * first shows the drawing already shows the value.
+ */
+export const usePickerContext = () => {
+  const context = useContext(PickerContext);
+  const requestValue = context?.requestValue;
+  useLayoutEffect(() => {
+    requestValue?.();
+  }, [requestValue]);
+  return context;
+};
 
 /*
  * A typed picker (`type="date"`, `type="array"`, …) draws its value with a ui
@@ -33,7 +50,7 @@ export const pickerUIIsNaviOwn = (ui) => {
  *   null outside a picker.
  */
 export const usePickerState = () => {
-  const context = useContext(PickerContext);
+  const context = usePickerContext();
   if (!context) {
     return null;
   }

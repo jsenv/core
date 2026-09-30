@@ -1,5 +1,3 @@
-import { useContext } from "preact/hooks";
-
 import { CloseSvg } from "@jsenv/navi/src/graphic/icons/close_svg.jsx";
 import {
   renderResolver,
@@ -13,7 +11,7 @@ import { Icon, Text } from "@jsenv/navi/src/text/text.jsx";
 import { Time } from "@jsenv/navi/src/text/time.jsx";
 import { renderSafe } from "@jsenv/navi/src/utils/render_safe.js";
 import { uiStateHoldsNothing } from "../ui_state_controller.js";
-import { asPickerOwnUI, PickerContext } from "./picker_context.jsx";
+import { asPickerOwnUI, usePickerContext } from "./picker_context.jsx";
 import { CalendarSvg } from "../../graphic/icons/calendar_svg.jsx";
 import { ClockSvg } from "../../graphic/icons/clock_svg.jsx";
 import { ColorSvg } from "../../graphic/icons/color_svg.jsx";
@@ -85,7 +83,7 @@ const PickerObject = (props) => {
   );
 };
 export const PickerObjectUI = /*#__PURE__*/ asPickerOwnUI(() => {
-  const { value, placeholder } = useContext(PickerContext);
+  const { value, placeholder } = usePickerContext();
 
   if (uiStateHoldsNothing(value)) {
     if (!placeholder) {
@@ -121,7 +119,7 @@ const PickerArray = (props) => {
   );
 };
 export const PickerArrayUI = /*#__PURE__*/ asPickerOwnUI(() => {
-  const { value, placeholder, maxLines } = useContext(PickerContext);
+  const { value, placeholder, maxLines } = usePickerContext();
 
   if (uiStateHoldsNothing(value)) {
     if (!placeholder) {
@@ -197,7 +195,7 @@ const PickerColor = (props) => {
   );
 };
 export const PickerColorUI = /*#__PURE__*/ asPickerOwnUI(() => {
-  const { value, placeholder } = useContext(PickerContext);
+  const { value, placeholder } = usePickerContext();
 
   if (!value) {
     if (!placeholder) {
@@ -221,7 +219,7 @@ const PickerDate = (props) => {
   );
 };
 export const PickerDateUI = /*#__PURE__*/ asPickerOwnUI((props) => {
-  const { value, placeholder } = useContext(PickerContext);
+  const { value, placeholder } = usePickerContext();
 
   if (!value) {
     if (!placeholder) {
@@ -256,7 +254,7 @@ const PickerMonth = (props) => {
   );
 };
 export const PickerMonthUI = /*#__PURE__*/ asPickerOwnUI((props) => {
-  const { value, placeholder } = useContext(PickerContext);
+  const { value, placeholder } = usePickerContext();
 
   if (!value) {
     if (!placeholder) {
@@ -286,7 +284,7 @@ const PickerWeek = (props) => {
   );
 };
 export const PickerWeekUI = /*#__PURE__*/ asPickerOwnUI((props) => {
-  const { value, placeholder } = useContext(PickerContext);
+  const { value, placeholder } = usePickerContext();
 
   if (!value) {
     if (!placeholder) {
@@ -316,7 +314,7 @@ const PickerTime = (props) => {
   );
 };
 export const PickerTimeUI = /*#__PURE__*/ asPickerOwnUI((props) => {
-  const { value, placeholder } = useContext(PickerContext);
+  const { value, placeholder } = usePickerContext();
 
   if (!value) {
     if (!placeholder) {
@@ -347,7 +345,7 @@ const PickerDuration = (props) => {
   );
 };
 export const PickerDurationUI = /*#__PURE__*/ asPickerOwnUI((props) => {
-  const { value, placeholder } = useContext(PickerContext);
+  const { value, placeholder } = usePickerContext();
 
   if (!value) {
     if (!placeholder) {
@@ -377,7 +375,7 @@ const PickerDatetime = (props) => {
   );
 };
 export const PickerDatetimeUI = /*#__PURE__*/ asPickerOwnUI((props) => {
-  const { value, placeholder } = useContext(PickerContext);
+  const { value, placeholder } = usePickerContext();
 
   if (!value) {
     if (!placeholder) {
@@ -407,7 +405,7 @@ const PickerFile = (props) => {
   );
 };
 export const PickerFileUI = /*#__PURE__*/ asPickerOwnUI(() => {
-  const { value, placeholder } = useContext(PickerContext);
+  const { value, placeholder } = usePickerContext();
 
   if (!value) {
     if (!placeholder) {
