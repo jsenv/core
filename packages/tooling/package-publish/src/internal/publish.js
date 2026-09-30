@@ -4,7 +4,6 @@ import { exec } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { setNpmConfig } from "./set_npm_config.js";
-import { waitForStagedVersionToLand } from "./staged_version.js";
 
 export const publish = async ({
   logger,
@@ -112,6 +111,9 @@ export const publish = async ({
                   reason: "already-published",
                 });
               } else if (error.message.includes("previously staged version")) {
+                // an earlier publish of this version was accepted and the
+                // registry holds it (see version_in_registry.js): it exposes
+                // it later by itself, nothing more can be done from here
                 resolve({
                   success: true,
                   reason: "staged",
@@ -149,28 +151,20 @@ export const publish = async ({
           });
         }
       });
-      if (publishResult.reason === "already-published") {
-        publishTask.setRightText(`(already published)`);
-      } else if (publishResult.reason === "staged") {
-        publishTask.setRightText(`(staged)`);
+      if (publishResult.reason === "staged") {
+        publishTask.happen(
+          `${packageSlug} is staged on ${registryUrl}, an earlier publish handed it over and the registry exposes it later`,
+        );
+      } else {
+        if (publishResult.reason === "already-published") {
+          publishTask.setRightText(`(already published)`);
+        }
+        publishTask.done();
       }
-      publishTask.done();
     } finally {
       restoreProcessEnv();
       restorePackageFile();
       restoreNpmConfigFile();
-    }
-    if (publishResult.reason === "staged") {
-      await waitForStagedVersionToLand({
-        registryUrl,
-        packageName: packageObject.name,
-        packageVersion: packageObject.version,
-        token,
-      });
-      return {
-        success: true,
-        reason: "already-published",
-      };
     }
     return publishResult;
   } catch (e) {

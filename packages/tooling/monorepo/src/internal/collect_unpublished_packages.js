@@ -1,17 +1,12 @@
 import { createTaskLog } from "@jsenv/humanize";
-import {
-  checkVersionStatusInRegistry,
-  VERSION_STATUS,
-} from "@jsenv/package-publish/src/internal/staged_version.js";
+import { checkVersionIsInRegistry } from "@jsenv/package-publish/src/internal/version_in_registry.js";
 import {
   compareTwoPackageVersions,
   VERSION_COMPARE_RESULTS,
 } from "./compare_two_package_versions.js";
 
 /*
- * The workspace packages whose version is not published on the registry, each
- * with its status there: absent, or staged (the registry has it but does not
- * expose it yet)
+ * The workspace packages whose version is not published on the registry
  */
 export const collectUnpublishedPackages = async ({
   workspacePackages,
@@ -47,7 +42,7 @@ export const collectUnpublishedPackages = async ({
       aheadPackageNames.map(async (packageName) => {
         const workspacePackage = workspacePackages[packageName];
         const packageVersion = workspacePackage.packageObject.version;
-        const versionStatus = await checkVersionStatusInRegistry({
+        const versionIsInRegistry = await checkVersionIsInRegistry({
           registryUrl,
           packageName,
           packageVersion,
@@ -58,7 +53,7 @@ export const collectUnpublishedPackages = async ({
           packageVersion,
           packageSlug: `${packageName}@${packageVersion}`,
           rootDirectoryUrl: new URL("./", workspacePackage.packageUrl),
-          versionStatus,
+          versionIsInRegistry,
         };
       }),
     );
@@ -67,7 +62,5 @@ export const collectUnpublishedPackages = async ({
     statusTask.fail();
     throw e;
   }
-  return packageInfos.filter(
-    ({ versionStatus }) => versionStatus !== VERSION_STATUS.PUBLISHED,
-  );
+  return packageInfos.filter(({ versionIsInRegistry }) => !versionIsInRegistry);
 };

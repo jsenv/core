@@ -5,7 +5,7 @@
  */
 
 import { humanizeDuration, UNICODE } from "@jsenv/humanize";
-import { waitForVersionInRegistry } from "@jsenv/package-publish/src/internal/staged_version.js";
+import { waitForVersionInRegistry } from "@jsenv/package-publish/src/internal/version_in_registry.js";
 import { collectUnpublishedPackages } from "./internal/collect_unpublished_packages.js";
 import { collectWorkspacePackages } from "./internal/collect_workspace_packages.js";
 import { fetchWorkspaceLatests } from "./internal/fetch_workspace_latests.js";

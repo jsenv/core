@@ -20,23 +20,48 @@ export const syncPackagesVersions = async ({
   // when the caller already knows what is on the registry it can pass it here
   // so that a single command does not fetch the same data twice
   registryLatestVersions,
+  // versions already handed to the registry, by package name. The registry can
+  // hold a version it accepted for hours before exposing it, and refuses to
+  // publish it again meanwhile: a package still at such a version is not
+  // "to publish", a dependency change bumps it like any published one
+  takenVersions = {},
 }) => {
   const workspacePackages = await collectWorkspacePackages({ directoryUrl });
   registryLatestVersions ??= await fetchWorkspaceLatests(workspacePackages);
+
+  const latestVersions = {};
+  const notExposedPackageSlugs = [];
+  for (const packageName of Object.keys(workspacePackages)) {
+    const registryLatestVersion = registryLatestVersions[packageName];
+    const takenVersion = takenVersions[packageName];
+    if (
+      takenVersion &&
+      (registryLatestVersion === null ||
+        compareTwoPackageVersions(takenVersion, registryLatestVersion) ===
+          VERSION_COMPARE_RESULTS.GREATER)
+    ) {
+      latestVersions[packageName] = takenVersion;
+      notExposedPackageSlugs.push(`${packageName}@${takenVersion}`);
+    } else {
+      latestVersions[packageName] = registryLatestVersion;
+    }
+  }
+  if (logs && notExposedPackageSlugs.length) {
+    console.log(`${UNICODE.INFO} ${notExposedPackageSlugs.length} versions handed to the registry are not exposed yet
+  - ${notExposedPackageSlugs.join(`
+  - `)}`);
+  }
 
   const outdatedPackageNames = [];
   const toPublishPackageNames = [];
   for (const packageName of Object.keys(workspacePackages)) {
     const workspacePackage = workspacePackages[packageName];
     const workspacePackageVersion = workspacePackage.packageObject.version;
-    const registryLatestVersion = registryLatestVersions[packageName];
+    const latestVersion = latestVersions[packageName];
     const result =
-      registryLatestVersion === null
+      latestVersion === null
         ? VERSION_COMPARE_RESULTS.GREATER
-        : compareTwoPackageVersions(
-            workspacePackageVersion,
-            registryLatestVersion,
-          );
+        : compareTwoPackageVersions(workspacePackageVersion, latestVersion);
     if (result === VERSION_COMPARE_RESULTS.SMALLER) {
       outdatedPackageNames.push(packageName);
       continue;
@@ -58,7 +83,7 @@ export const syncPackagesVersions = async ({
       outdatedPackageNames.forEach((outdatedPackageName) => {
         const workspacePackage = workspacePackages[outdatedPackageName];
         workspacePackage.packageObject.version =
-          registryLatestVersions[outdatedPackageName];
+          latestVersions[outdatedPackageName];
         workspacePackage.updateFile(workspacePackage.packageObject);
       });
     }

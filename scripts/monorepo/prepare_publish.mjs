@@ -8,15 +8,20 @@ import { syncPackagesVersions } from "@jsenv/monorepo";
 import { execFileSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import { packagesRelations } from "./packages_relations.mjs";
+import {
+  createPublishCommitMessage,
+  readVersionsNamedByPublishCommits,
+} from "./publish_commit.mjs";
 
 const directoryUrl = new URL("../../", import.meta.url);
 const { outdatedPackageNames, toPublishPackageNames, workspacePackages } =
   await syncPackagesVersions({
     directoryUrl,
     packagesRelations,
+    takenVersions: readVersionsNamedByPublishCommits(directoryUrl),
   });
 if (outdatedPackageNames.length) {
-  // their version was set back to the one on npm: to review before publishing
+  // their version was set back to the latest one on npm (or handed to it): to review before publishing
   process.exit(1);
 }
 if (toPublishPackageNames.length === 0) {
@@ -27,12 +32,7 @@ const packageSlugs = toPublishPackageNames.map(
   (packageName) =>
     `${packageName}@${workspacePackages[packageName].packageObject.version}`,
 );
-const commitMessage =
-  packageSlugs.length === 1
-    ? `[publish] ${packageSlugs[0]}`
-    : `[publish] ${packageSlugs.length} packages
-
-${packageSlugs.map((packageSlug) => `- ${packageSlug}`).join("\n")}`;
+const commitMessage = createPublishCommitMessage(packageSlugs);
 const git = (...args) =>
   String(execFileSync("git", args, { cwd: directoryUrl })).trim();
 git("add", "--all");
