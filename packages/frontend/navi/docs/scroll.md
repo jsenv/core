@@ -315,14 +315,15 @@ A popup's content is built in the click that opens it (see
 [popup_open.md](./popup_open.md)), and a page coming back in a route transition
 is built in the transition's update callback: rows below the fold cost the same
 there as rows on screen, and delay the movement. `renderBudget` takes
-`{ initial, after }` for exactly this: `initial` items in the commit the
-browser paints first — what a phone screen shows, plus a few — counted from the
-item the list opens on, and `after` from the paint on. `initial` is a count
-because nothing is laid out yet to measure a size with. A position handed back
-with its `visibleCount` sizes that first window itself, whatever `initial`
-guessed. The runs ask their source for a page of items (`<List.Items
-pageSize>`, 100 by default) whatever either says, so the smaller first window
-costs no second request.
+`{ initial, after }` for exactly this: `initial` for the picture the browser
+paints first, counted from the item the list opens on, and `after` from the
+paint on. `initial: "100%"` is the screen and nothing more, whatever the items
+weigh: a few are drawn to be measured, and the window is sized on them before
+the browser paints — a count (`initial: 6`) is a guess that holds for one kind
+of item only. A position handed back with its `visibleCount` sizes that first
+window itself, whatever `initial` says. The runs ask their source for a page of
+items (`<List.Items pageSize>`, 100 by default) whatever either says, so the
+smaller first window costs no second request.
 
 The switch waits for the paint itself. Do not rebuild it with a `useEffect`
 that widens a slice: preact runs a component's pending effects early when that
