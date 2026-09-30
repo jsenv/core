@@ -395,7 +395,7 @@ export const createListRows = () => {
     // move because something arrived above it. Set by the list itself, with
     // what puts the view back once they have (see VirtualFiller).
     captureAnchor: () => {},
-    holdAnchorStill: () => {},
+    holdViewStill: () => {},
     horizontal: false,
     virtualItemSizeSignal: null,
     renderSkeleton: undefined,

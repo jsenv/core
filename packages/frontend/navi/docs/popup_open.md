@@ -894,14 +894,24 @@ off it (the default of a picker told no value), fields a surrounding form
 submits, a size measured from outside. `"idle"` is `"always"` minus the cost on
 the render that draws the page.
 
-Whatever the value but `"while-opened"`, intent on the anchor — a pointer
-entering it, focus landing in it — builds the content ahead of the click,
-`onOpen` or not. A `"while-opened"` popup is warmed only by a press on what
-opens it (a `--navi-open` button, a picker's trigger when a press opens it, an
-expandable's UI part), throws that content away when the press ends without
-opening it — one content at a time — and is never warmed on a
-`Dialog`/`Popover` with an `onOpen`: the one value where the content is always
-built after `onOpen`.
+Whatever the value but `"while-opened"`, intent on what opens the popup builds
+the content ahead of the click, `onOpen` or not: a pointer over its anchor, or
+focus landing in it. The anchor only says where the popup is placed, so what
+counts is the control that intent is aimed at: the anchor itself when it is a
+control, or the one the popup is written in (a picker's trigger). Any other
+control inside the anchor keeps the intent for itself. A player's own picker,
+inside a card that another picker opens from, warms the player's callout and
+never the card's sheet; tiles anchored on the whole bar they sit in warm only
+the menu of the tile under the pointer. A pointer on a trigger that a press does
+not open — a picker with `openOn={[]}`, or one opened by a hold — warms nothing:
+the card it draws is pressed all day for what it holds. Focus on it still warms,
+since the keyboard opens it.
+
+A `"while-opened"` popup is warmed only by a press on what opens it (a
+`--navi-open` button, a picker's trigger when a press opens it, an expandable's
+UI part), throws that content away when the press ends without opening it — one
+content at a time — and is never warmed on a `Dialog`/`Popover` with an
+`onOpen`: the one value where the content is always built after `onOpen`.
 
 `"while-opened"` is for content whose fresh state is its initial state. An
 untouched field does not need it to show a new `defaultValue`: it follows one
