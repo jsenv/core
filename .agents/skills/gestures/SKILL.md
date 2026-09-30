@@ -93,6 +93,15 @@ its coordinates: measured on that pair, every throw ends at zero), and the
 release adds a sample at the same place. Both pull the measure down from the
 hand's peak: a bar sized against the hand refuses the hand.
 
+**The third is not tuned per box**: not a `SlideContainer` or `RouteTravel`
+prop, not lowered for slides against a sheet pushed back. A hand learns one
+number, and this one already asks less than the platforms do (iOS paging snaps
+to the nearest page, Android's ViewPager wants 60%). A "short swipe goes back"
+report is almost never the ratio: a short swipe is a moving release, judged by
+speed, so look first at how the speed was read — behind a busy main thread,
+samples stamped when handled rather than when they happened read a thumb's
+last drift as a throw back (the velocity window in `drag_gesture.js`).
+
 **Towards nothing, the picture follows at 0.3 and comes back**: a wall one can
 lean on, never walk through. A direction with nothing there resists; it is not
 refused.

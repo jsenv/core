@@ -244,7 +244,7 @@ export const createDragGestureController = (options = {}) => {
     // Where the pointer IS is not where it is going: throwing something is a
     // matter of speed, and the gesture is the only place that sees the timing of
     // the events it receives.
-    const measureVelocity = createVelocityMeter(grabX, grabY);
+    const measureVelocity = createVelocityMeter(grabX, grabY, event.timeStamp);
 
     document_interactions: {
       if (documentInteractions === "manual") {
@@ -539,7 +539,11 @@ export const createDragGestureController = (options = {}) => {
         dragEvent: event,
         isRelease,
       });
-      const [velocityX, velocityY] = measureVelocity(dragX, dragY);
+      const [velocityX, velocityY] = measureVelocity(
+        dragX,
+        dragY,
+        event.timeStamp,
+      );
       const startedPrevious = gestureInfo.started;
       const layoutPrevious = gestureInfo.layout;
       // previousGestureInfo = { ...gestureInfo };
@@ -996,13 +1000,18 @@ export const isPrimaryButtonEvent = (event) =>
  * A pointer held still keeps producing samples at the same place, so the window
  * empties itself of movement and the speed falls back to zero on its own: put
  * down slowly is not thrown.
+ * Each sample carries the time of its event (`timeStamp`, the clock of
+ * `performance.now()`), not the time it is handled: behind a long frame, every
+ * report the hand made meanwhile is handled in one burst with the release, and
+ * stamped then, the last few pixels — often a thumb drifting back as it lifts —
+ * fill the window and read as a throw the other way. A programmatic event is
+ * stamped at its creation, which is when it happens.
  */
 const VELOCITY_WINDOW_MS = 100;
-const createVelocityMeter = (grabX, grabY) => {
-  const samples = [{ time: performance.now(), x: grabX, y: grabY }];
+const createVelocityMeter = (grabX, grabY, grabTime) => {
+  const samples = [{ time: grabTime, x: grabX, y: grabY }];
 
-  const measureVelocity = (x, y) => {
-    const time = performance.now();
+  const measureVelocity = (x, y, time) => {
     samples.push({ time, x, y });
     while (samples.length > 2 && time - samples[1].time > VELOCITY_WINDOW_MS) {
       samples.shift();
