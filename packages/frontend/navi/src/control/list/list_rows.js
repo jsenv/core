@@ -392,8 +392,10 @@ export const createListRows = () => {
     // is about to frame, so a run must not fetch for it (see holdWindow).
     holdPending: false,
     // Called by a run just before rows land in it: what is on screen must not
-    // move because something arrived above it. Set by the list itself.
+    // move because something arrived above it. Set by the list itself, with
+    // what puts the view back once they have (see VirtualFiller).
     captureAnchor: () => {},
+    holdAnchorStill: () => {},
     horizontal: false,
     virtualItemSizeSignal: null,
     renderSkeleton: undefined,

@@ -1505,6 +1505,9 @@ const useListScrollSync = ({
     {
       windowLeavesRowsOut,
       scrolledWanted: scrolled ?? defaultScrolled,
+      // The fillers hold the room of rows above the screen at this size: a
+      // size that changes moves what is on screen, like rows landing above it.
+      beforeSizeChange: () => listRows.captureAnchor(),
     },
   );
   const getScroller = () => getScrollerEl(ref.current, scroller, horizontal);
@@ -2360,8 +2363,10 @@ const useListScrollSync = ({
   // single pixel. The browser will not do it for us — overflow-anchor gives up
   // on changes it attributes to a scroll, and the fillers resize in the very
   // same commit — so the row at the top of the viewport is measured before the
-  // commit and put back at the same offset after it.
-  useLayoutEffect(() => {
+  // commit and put back at the same offset after it. Asked after every commit
+  // of the list, and of a filler, which can resize in a commit of its own (see
+  // VirtualFiller).
+  const holdAnchorStill = () => {
     const anchor = anchorRef.current;
     if (!anchor || !ref.current || heldSomewhere) {
       anchorRef.current = null;
@@ -2433,7 +2438,9 @@ const useListScrollSync = ({
     } else {
       scrollerEl.scrollTop += drift;
     }
-  });
+  };
+  listRows.holdAnchorStill = holdAnchorStill;
+  useLayoutEffect(holdAnchorStill);
 
   // The window the budget asks for around the screen: what is on screen, and
   // the rest of the budget three quarters ahead of the direction the user goes
@@ -3648,7 +3655,7 @@ const useVirtualItemSizeSignal = (
   ref,
   virtualItemSizeProp = 0,
   horizontal,
-  { windowLeavesRowsOut, scrolledWanted },
+  { windowLeavesRowsOut, scrolledWanted, beforeSizeChange },
 ) => {
   const virtualSizeSignalRef = useRef(null);
   if (!virtualSizeSignalRef.current) {
@@ -3690,6 +3697,7 @@ const useVirtualItemSizeSignal = (
     const next = samples.sum / samples.count;
     const current = virtualSizeSignal.peek();
     if (Math.abs(next - current) > VIRTUAL_ITEM_SIZE_EPSILON) {
+      beforeSizeChange();
       virtualSizeSignal.value = next;
     }
   };
@@ -3889,6 +3897,13 @@ const VirtualFiller = ({ edge, itemCount, findChunks }) => {
   const listRows = useContext(ListRowsContext);
   const virtualItemSize = listRows.virtualItemSizeSignal.value;
   const sizeToFill = itemCount * virtualItemSize;
+  // A filler resizing moves what stands below it — the rows on screen, when it
+  // holds the room of rows above them — and it resizes in a commit of its own
+  // when the row size settles after the list has rendered: the list holds its
+  // view still from here too (see holdAnchorStill).
+  useLayoutEffect(() => {
+    listRows.holdAnchorStill();
+  }, [sizeToFill]);
   if (!sizeToFill) {
     return null;
   }
