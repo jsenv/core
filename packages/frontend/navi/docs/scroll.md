@@ -292,7 +292,10 @@ scrollbar says how long the collection is and the DOM says how many items fit a
 screen and some. The window slides as the user scrolls, three quarters of what
 the screen leaves of it ahead of the direction the user goes, so the budget has
 to exceed what the scroller shows at once, with room for that lookahead: the
-list warns when it leaves less than two items beyond the screen.
+list warns when it holds no more than the screen. How much room is enough is
+measured, not counted: the lookahead is the time the page has to draw the next
+items before a fling reaches them, so it depends on the device and on what else
+runs as the list scrolls — fling it on the slowest device it runs on.
 
 The budget is a count of items or a size: `"300px"`, or `"150%"` of the
 viewport of the box that scrolls the list. A size is for items that do not

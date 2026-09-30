@@ -2660,21 +2660,22 @@ const useListScrollSync = ({
     const spare = budget > screen ? budget - screen : 0;
     const behindSize = countsItems ? Math.floor(spare / 4) : spare / 4;
     const aheadSize = spare - behindSize;
+    // Said only when the budget holds nothing past the screen: the blank is
+    // then certain. Past the screen, whether a fling outruns the window is
+    // what the device and the rest of the main thread's work decide, and a
+    // number of items cannot tell it — two one-line items are 76 px, two
+    // cards a whole screen. That is measured on the list, not guessed here.
     if (
       import.meta.dev &&
       stage === "steady" &&
       !budgetWarnedRef.current &&
-      bandEnd > bandStart
+      bandEnd > bandStart &&
+      spare === 0
     ) {
-      const twoLines =
-        (countsItems ? 2 : (2 * (bandTo - bandFrom)) / (bandEnd - bandStart)) *
-        itemsPerLineNow;
-      if (spare < twoLines) {
-        budgetWarnedRef.current = true;
-        console.warn(
-          `List: renderBudget=${renderBudget.value}${renderBudget.unit} leaves less than two ${itemsPerLineNow > 1 ? "lines of items" : "items"} beyond what the screen shows (${bandEnd - bandStart} items): items will go blank as it scrolls. Give it room for a screen ahead or more — "300%" of the box that scrolls it, say.`,
-        );
-      }
+      budgetWarnedRef.current = true;
+      console.warn(
+        `List: renderBudget=${renderBudget.value}${renderBudget.unit} holds no more than what the screen shows (${bandEnd - bandStart} items on it): the screen goes blank past it as soon as the list scrolls. Give it more than a screen — "150%" of the box that scrolls it, say.`,
+      );
     }
     if (!force) {
       const roomAround = readRoomAround({
@@ -6573,7 +6574,8 @@ const ListResolved = /*#__PURE__*/ createComponentResolver([
  *   "Many rows"). The window keeps three quarters of what the screen leaves of
  *   it ahead of the scroll, and moves once that falls under half a screen; it
  *   has to hold more than the screen shows, with room for that lookahead — the
- *   list warns when it leaves less than two items beyond the screen.
+ *   list warns when it holds no more than the screen. How much more is
+ *   measured: fling the list on the slowest device it runs on.
  *
  *   `{ initial, after }` for a list whose first picture is taken as it is
  *   built — drawn in the click that opens a popup, or in the update callback
