@@ -83,10 +83,11 @@ it meanwhile:
 | re-reading after a first answer | the rows from before | `refreshing` |
 | answer received                 | the new rows         | —            |
 
-The rows, the scroll position and the row being read all stay; the slices
-outside the window are forgotten only once the answer is in, and asked for again
-if the user goes back to them. A re-read that fails leaves the rows from before
-on screen. While it is in flight, the list carries `navi-refreshing` and
+The items, the scroll position and the item being read all stay. An answer
+confirms or replaces the ranks it covers, and nothing else: an item it did not
+cover stays drawn as it was, and is asked for again when the window reaches it —
+the window keeps moving while the ask is out. A re-read that fails leaves the
+items from before on screen. While it is in flight, the list carries `navi-refreshing` and
 `renderItem` gets `{ refreshing }` — "what you see is from before", never "there
 is nothing to see".
 

@@ -5356,13 +5356,24 @@ const useRunItems = (
   // rebuilt as the window slides — a group holds the items of its day that are
   // currently drawn, which is exactly the span its label has to survive.
   let group = null;
+  // Two groups can still share a key (a failure band standing mid-group, data
+  // not sorted by group): the later ones are told apart by their rank among
+  // them, so the first keeps its element. A group keyed by where it starts
+  // would lose its element each time the window slides past its first item.
+  const groupCountByKey = new Map();
   const closeGroup = () => {
     if (!group) {
       return;
     }
+    const groupCount = (groupCountByKey.get(group.key) || 0) + 1;
+    groupCountByKey.set(group.key, groupCount);
     nodes.push(
       <ListItemGroup
-        key={`${ownerId}_group_${group.key}`}
+        key={
+          groupCount === 1
+            ? `${ownerId}_group_${group.key}`
+            : `${ownerId}_group_${group.key}_${groupCount}`
+        }
         label={group.label}
         labelProps={group.labelProps}
       >
@@ -5371,9 +5382,43 @@ const useRunItems = (
     );
     group = null;
   };
+  // An item not held has no group of its own. Between two items of the open
+  // group it is a line of that group whose content has not arrived: drawn
+  // outside, it would cut the group in two and show its label twice. A hole at
+  // a group's edge stays outside — nothing says which side it belongs to.
+  let holeTo = -1;
+  let holeGroupKey;
+  const groupKeyOfHole = (itemIndex) => {
+    if (itemIndex < holeTo) {
+      return holeGroupKey;
+    }
+    holeTo = itemIndex + 1;
+    while (
+      holeTo < windowTo &&
+      holeTo !== failureFrom &&
+      getItemAt(holeTo) === undefined
+    ) {
+      holeTo++;
+    }
+    holeGroupKey = undefined;
+    if (group && holeTo < windowTo && holeTo !== failureFrom) {
+      const keyAfterHole = groupBy(getItemAt(holeTo), holeTo);
+      if (keyAfterHole === group.key) {
+        holeGroupKey = keyAfterHole;
+      }
+    }
+    return holeGroupKey;
+  };
   // Which group an item belongs to, or undefined when it belongs to none.
-  const groupKeyOf = (item, itemIndex) =>
-    groupBy && item !== undefined ? groupBy(item, itemIndex) : undefined;
+  const groupKeyOf = (item, itemIndex) => {
+    if (!groupBy) {
+      return undefined;
+    }
+    if (item === undefined) {
+      return groupKeyOfHole(itemIndex);
+    }
+    return groupBy(item, itemIndex);
+  };
   const pushItem = (itemNode, item, itemIndex, groupKey) => {
     if (groupKey === undefined) {
       closeGroup();
@@ -5732,10 +5777,17 @@ const useItemStore = ({
   }
   const pages = pagesRef.current;
   const [, setPageVersion] = useState(0);
-  // The items held are out of date and the run has not asked for the new ones
-  // yet. They stay on screen until the answer comes: what is drawn is from
-  // before, which is not the same thing as nothing to draw.
-  const staleRef = useRef(restored);
+  // The ranks whose item is from before: the run came back to the screen, or
+  // the source said the collection moved. They stay drawn until a page confirms
+  // or replaces them, rank by rank. A page covers what the window framed when it
+  // was asked for, and the window keeps growing meanwhile: dropping what the
+  // page did not cover empties items on screen.
+  const staleRanksRef = useRef(null);
+  if (staleRanksRef.current === null) {
+    staleRanksRef.current = restored
+      ? new Set(pages.byIndex.keys())
+      : new Set();
+  }
   const [refreshing, setRefreshing] = useState(false);
   // A source that says when what it reads has moved (a resource range reader
   // does: see rerunOn.GET_RANGE) is heard here — a write deciding who belongs
@@ -5747,7 +5799,7 @@ const useItemStore = ({
   const invalidationRef = useRef(invalidation);
   if (invalidationRef.current !== invalidation) {
     invalidationRef.current = invalidation;
-    staleRef.current = true;
+    staleRanksRef.current = new Set(pages.byIndex.keys());
   }
   // The one request in flight, with the means to call it off: a page asked for
   // a window the list has left is work the server and the browser are doing for
@@ -5781,11 +5833,6 @@ const useItemStore = ({
   // It stands for a page of them: a list that is about to be filled looks
   // like items on their way, not like an empty list.
   const itemCount = pages.count ?? count ?? listItems.pageSize;
-  // A run that never received anything has nothing to keep on screen: asking
-  // again is its first ask, not a refresh.
-  if (staleRef.current && pages.count === undefined) {
-    staleRef.current = false;
-  }
   useLayoutEffect(() => {
     if (!refreshing) {
       return null;
@@ -5861,9 +5908,11 @@ const useItemStore = ({
       const keepFrom = windowFrom - ITEM_STORE_KEEP_AROUND;
       const keepTo = windowTo + ITEM_STORE_KEEP_AROUND;
       if (pages.byIndex.size > budget) {
+        const staleRanks = staleRanksRef.current;
         for (const index of pages.byIndex.keys()) {
           if (index < keepFrom || index > keepTo) {
             pages.byIndex.delete(index);
+            staleRanks.delete(index);
           }
         }
       }
@@ -5905,10 +5954,24 @@ const useItemStore = ({
       let start = missingStart;
       let end = missingEnd;
       let around;
-      // Items that are all there but out of date: the ask is the window itself,
-      // anchored on the item at its top — a source paginating by cursor gets an
-      // item to count from, and the reading position is what must survive.
-      const revalidating = staleRef.current;
+      // The window draws items from before: they are asked for again, and stay
+      // drawn meanwhile.
+      const staleRanks = staleRanksRef.current;
+      let staleFrom = -1;
+      let staleTo = -1;
+      if (staleRanks.size > 0) {
+        let rank = windowFrom;
+        while (rank < windowTo) {
+          if (staleRanks.has(rank)) {
+            if (staleFrom === -1) {
+              staleFrom = rank;
+            }
+            staleTo = rank;
+          }
+          rank++;
+        }
+      }
+      const revalidating = staleFrom !== -1;
       // The list is held on an item nothing on screen leads to: the items it holds
       // do not contain it, so no window it could draw will ever bring it. Only
       // asking for it by name does.
@@ -5933,18 +5996,36 @@ const useItemStore = ({
         start = from < 0 ? 0 : from;
         end = start + budget - 1;
       } else if (revalidating) {
-        start = windowFrom;
-        end = windowTo - 1;
-        if (end < start) {
-          // Nothing of this run is on screen (the window frames another one, or
-          // the list is scrolled past it): its own first items are what it will
-          // draw next.
-          start = 0;
-          end = budget - 1;
+        // The items from before that the window draws, and the missing ones
+        // with them: one ask.
+        if (start === -1 || staleFrom < start) {
+          start = staleFrom;
         }
-        const firstHeld = pages.byIndex.get(windowFrom);
-        if (firstHeld && firstHeld.id !== undefined) {
-          around = firstHeld.id;
+        if (staleTo > end) {
+          end = staleTo;
+        }
+        // Grown over the items from before on either side, up to a page: the
+        // window grows past its first picture right after it is painted, and
+        // what it grows onto would otherwise be asked for once more.
+        while (end - start + 1 < budget) {
+          const staleBefore = staleRanks.has(start - 1);
+          const staleAfter = staleRanks.has(end + 1);
+          if (!staleBefore && !staleAfter) {
+            break;
+          }
+          if (staleBefore) {
+            start--;
+          }
+          if (staleAfter && end - start + 1 < budget) {
+            end++;
+          }
+        }
+        // Anchored on the first item from before on screen: a source
+        // paginating by cursor gets an item to count from, and the reading
+        // position is what must survive.
+        const firstStale = pages.byIndex.get(staleFrom);
+        if (firstStale && firstStale.id !== undefined) {
+          around = firstStale.id;
         }
       } else if (pages.count === undefined) {
         const scrolled = listItems.scrolled;
@@ -6011,7 +6092,8 @@ const useItemStore = ({
             debugAsk("already revalidating");
             return;
           }
-          // A page for a window that is about to be replaced wholesale.
+          // A page asked for before the items went stale answers for the
+          // collection as it was.
           request.controller?.abort();
           request.busy = false;
         }
@@ -6034,12 +6116,11 @@ const useItemStore = ({
           request.controller?.abort();
           request.busy = false;
         }
-        const held = pages.byIndex.size;
         // Asking again for a range that was already asked for, having received
-        // nothing since, can only produce the same answer. A revalidation is
-        // exactly the case where it produces another one.
+        // nothing since, can only produce the same answer — unless the
+        // collection moved since, which is what an invalidation says.
+        const held = `${pages.byIndex.size}/${staleRanks.size}/${invalidation}`;
         if (
-          !revalidating &&
           request.start === start &&
           request.end === end &&
           request.held === held
@@ -6079,7 +6160,6 @@ const useItemStore = ({
             request.revalidating = false;
             setFailure(null);
             if (revalidating) {
-              staleRef.current = false;
               setRefreshing(false);
             }
             publishRequestState();
@@ -6100,15 +6180,38 @@ const useItemStore = ({
           // Before the items land: what is on screen has to stay where it is,
           // and the DOM still shows the state to hold onto.
           listItems.captureAnchor();
-          if (revalidating) {
-            // The items held stood for a composition that has moved on; the
-            // ones outside the window are forgotten and asked for again if the
-            // user goes back to them.
-            pages.byIndex = new Map();
+          // An item from before is gone from where it stood when the page puts
+          // it at another rank (it would be drawn twice), or when its rank is
+          // past the end of the collection.
+          const staleRanksNow = staleRanksRef.current;
+          const pageEnd = pageStart + pageItems.length;
+          let dropped = false;
+          if (staleRanksNow.size > 0) {
+            const pageIds = new Set();
+            for (const pageItem of pageItems) {
+              if (pageItem && pageItem.id !== undefined) {
+                pageIds.add(pageItem.id);
+              }
+            }
+            for (const rank of staleRanksNow) {
+              if (rank >= pageStart && rank < pageEnd) {
+                continue;
+              }
+              const staleItem = pages.byIndex.get(rank);
+              if (
+                rank >= pageCount ||
+                (staleItem && pageIds.has(staleItem.id))
+              ) {
+                staleRanksNow.delete(rank);
+                pages.byIndex.delete(rank);
+                dropped = true;
+              }
+            }
           }
           let i = 0;
           while (i < pageItems.length) {
             pages.byIndex.set(pageStart + i, pageItems[i]);
+            staleRanksNow.delete(pageStart + i);
             i++;
           }
           pages.count = pageCount;
@@ -6118,7 +6221,7 @@ const useItemStore = ({
             itemsAction.writeComposition({
               byIndex: pages.byIndex,
               count: pageCount,
-              replace: revalidating,
+              replace: dropped,
             });
           }
           listItems.pagesSignal.value = listItems.pagesSignal.peek() + 1;
@@ -6133,9 +6236,14 @@ const useItemStore = ({
           request.revalidating = false;
           publishRequestState();
           if (revalidating) {
-            // The items from before stay: a revalidation that failed has
+            // The items from before stay, and are not asked for again until the
+            // source says the collection moved: a revalidation that failed has
             // nothing better to put in their place.
-            staleRef.current = false;
+            let rank = start;
+            while (rank <= end) {
+              staleRanksRef.current.delete(rank);
+              rank++;
+            }
             setRefreshing(false);
             return;
           }

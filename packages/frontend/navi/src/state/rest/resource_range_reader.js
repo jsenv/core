@@ -117,10 +117,11 @@ export const createRangeReader = (
     });
     return { byIndex, count: composition.count };
   };
-  // `replace` is a revalidation: the ranks that are not in what just came back
-  // stood for a composition that has moved on. Otherwise the ranks are merged,
-  // so two lists reading the same collection through their own windows add up
-  // to one composition instead of taking turns erasing each other.
+  // `replace` says the list dropped ranks it held (an item the collection moved
+  // elsewhere, ranks past its end): kept here, they would come back at the next
+  // mount. Otherwise the ranks are merged, so two lists reading the same
+  // collection through their own windows add up to one composition instead of
+  // taking turns erasing each other.
   readRange.writeComposition = ({ byIndex, count, replace }) => {
     const params = currentParams();
     let composition = findComposition(params);
