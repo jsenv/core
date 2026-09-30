@@ -2275,8 +2275,18 @@ const useListScrollSync = ({
       visibleCount: position.visibleCount,
     };
   };
-  const reportPosition = () => {
+  // A position read at a scroll event is read before the window has drawn what
+  // the scroll brought on screen: the items below the top one can still be
+  // fillers then, and `visibleCount` counts the items drawn. So it is read
+  // again once the screen is better known — a window change on screen, items
+  // landing or resizing — and said again when it reads differently (`ifChanged`):
+  // the same scroll, the screen said right.
+  const announcedRef = useRef(null);
+  const reportPosition = ({ ifChanged } = {}) => {
     if (!ref.current) {
+      return;
+    }
+    if (ifChanged && !announcedRef.current) {
       return;
     }
     const remember = rememberScrollRef.current;
@@ -2290,6 +2300,10 @@ const useListScrollSync = ({
       return;
     }
     const scrolledNow = toScrolledPosition(position);
+    if (ifChanged && isSamePosition(scrolledNow, announcedRef.current)) {
+      return;
+    }
+    announcedRef.current = scrolledNow;
     if (remember) {
       rememberScrollerPosition(listId, scrolledNow);
     }
@@ -2301,8 +2315,13 @@ const useListScrollSync = ({
   // laid out, its items have arrived, one of them grew. A list read where it
   // opened would otherwise come back with nothing kept — opening again as a
   // fresh arrival does, all of its window drawn in the first commit instead of
-  // the items that were on screen. Kept, and told to nobody: nobody scrolled.
+  // the items that were on screen. Kept, and told to nobody while nobody
+  // scrolled; once a position was said, it is said again (see reportPosition).
   const rememberPosition = () => {
+    if (announcedRef.current) {
+      reportPosition({ ifChanged: true });
+      return;
+    }
     if (!rememberScrollRef.current || !ref.current) {
       return;
     }
@@ -2828,6 +2847,10 @@ const useListScrollSync = ({
   }, [scrollerElResolved]);
 
   holdWindow();
+  const { start: windowStart, end: windowEnd } = renderWindowRef.current;
+  useLayoutEffect(() => {
+    reportPosition({ ifChanged: true });
+  }, [windowStart, windowEnd]);
   return {
     virtualItemSizeSignal,
     renderWindow: renderWindowRef.current,
@@ -3406,6 +3429,18 @@ const captureScrollAnchor = ({
     }
   }
   return fallbackAnchor;
+};
+// Two positions handed out say the same thing (see reportPosition): the same
+// item, as far below the top within a pixel, as many items on screen.
+const isSamePosition = (a, b) => {
+  if (a.id !== b.id || a.index !== b.index) {
+    return false;
+  }
+  if (a.visibleCount !== b.visibleCount) {
+    return false;
+  }
+  const offsetDelta = a.offset - b.offset;
+  return offsetDelta > -0.5 && offsetDelta < 0.5;
 };
 // How many of the items from `fromIndex` on start before `to` along the scroll
 // axis — the ones on screen, when `to` is where the view ends.
@@ -6278,9 +6313,12 @@ const ListResolved = /*#__PURE__*/ createComponentResolver([
  * @param {(scrolled: {id: string, index: number, offset: number, visibleCount: number}) => void} [props.onScrolledChange]
  *   Where the list is, as the user scrolls: the item at the top of the view and
  *   how far below the place an item lands on its own (see `defaultScrolled`) it
- *   starts, and how many items are on screen from that one on. Keep it whole to
- *   come back to it later through `scrolled`/`defaultScrolled` — an index alone
- *   would not do, since items get inserted while a list is being read.
+ *   starts, and how many items are on screen from that one on. Said again for
+ *   the same scroll when the screen reads differently once the items it
+ *   brought are drawn, or once items landing change what it shows: the last
+ *   one said is the one to keep. Keep it whole to come back to it later
+ *   through `scrolled`/`defaultScrolled` — an index alone would not do, since
+ *   items get inserted while a list is being read.
  * @param {number|string|{initial?: number|string, after?: number|string}} [props.renderBudget="100item"]
  *   How much of a `<List.Items>` run is in the DOM at once: the render window,
  *   which slides as the user scrolls while fillers hold the room of the items
