@@ -1,16 +1,18 @@
 import { batch, signal } from "@preact/signals";
 
-// Everything the list knows about its rows, in one place: how many the
-// collection has and where each child's rows start (the places), which rows
-// are drawn and which of those mount and show (the rows), and what each says
-// about itself (the items). Two clocks. Places and "is anything standing
-// above me" answer synchronously, in the middle of a render pass — a row asks
-// about the rows before it, and those have rendered already. The items and
-// the counts settle once per frame (a microtask): many rows change in one
-// commit, and what reads them wants one notification.
+// Everything the list knows about its items, in one place: how many the
+// collection has and where each child's items start (the places), which
+// entries are drawn and which of those mount and show (the entries), and what
+// each says about itself (the items). An entry is whatever is drawn at a place
+// of the list — an item, a skeleton standing in for one, a group's wrapper —
+// and only the first of these is an item (see draw). Two clocks. Places and "is
+// anything standing above me" answer synchronously, in the middle of a render
+// pass — an entry asks about the entries before it, and those have rendered
+// already. The items and the counts settle once per frame (a microtask): many
+// entries change in one commit, and what reads them wants one notification.
 //
 // Why places are read off the walk and not off the renders: a child knows how
-// many rows it stands for but not what was declared before it, and it cannot
+// many items it stands for but not what was declared before it, and it cannot
 // deduce that from when it renders — a render is free to skip it. A child that
 // draws from signals and whose props are all referentially === the previous
 // ones does not render again (@preact/signals installs a shouldComponentUpdate
@@ -19,37 +21,37 @@ import { batch, signal } from "@preact/signals";
 // one that was skipped. So the list names a slot for each of its children and
 // declares them here, in order, before any of them renders (see
 // ListDeclaredChildren). A child then takes its place BY SLOT, and the place
-// is a signal: it moves when what stands before it changes — a row filtered
-// out, a run taking in rows, a slot added or moved — and the child follows,
+// is a signal: it moves when what stands before it changes — an item filtered
+// out, a run taking in items, a slot added or moved — and the child follows,
 // rendered again for it whether or not anything else would have rendered it.
 //
-// Why "first" is a signal too: only the row itself knows, once it renders,
-// that it renders nothing (filtered out by a search), and the rows after it
-// may have been handed back unchanged. The first mounted row of a scope is
+// Why "first" is a signal too: only the entry itself knows, once it renders,
+// that it renders nothing (filtered out by a search), and the entries after it
+// may have been handed back unchanged. The first mounted entry of a scope is
 // kept as a signal each of them reads; when it leaves, they are rendered again.
 
 const UNGROUPED = Symbol("ungrouped");
 
-export const createListRows = () => {
+export const createListItems = () => {
   const totalSignal = signal(0);
-  // Bumped whenever a run takes in rows. The list itself has to hear about it:
-  // rows arriving outside the render window change nothing it can see (nothing
-  // registers, nothing is drawn), and yet they are what it may have been
-  // waiting for — the row it was told to open on, for one.
+  // Bumped whenever a run takes in items. The list itself has to hear about
+  // it: items arriving outside the render window change nothing it can see
+  // (nothing registers, nothing is drawn), and yet they are what it may have
+  // been waiting for — the item it was told to open on, for one.
   const pagesSignal = signal(0);
-  // How many runs are re-reading rows they already show. The list wears it as
+  // How many runs are re-reading items they already show. The list wears it as
   // an attribute: what is drawn is from before, and the app may want to say so
   // without taking anything away.
   const refreshingSignal = signal(0);
   // The slots each walk declared, in order, by the slot the walk stands in
   // (null for the list's own children). Together they are a tree: a group's
-  // rows live inside the group's slot.
+  // items live inside the group's slot.
   const slotIdsByParent = new Map();
-  // Who took a place — a row, or a run of rows — and how many rows of the
+  // Who took a place — an item, or a run of items — and how many items of the
   // collection it stands for. The place itself is a signal, see take.
   const ownerById = new Map();
   // The owners standing in each slot, in the order they took their place.
-  // One, as a rule; a child that renders several rows keeps them in the order
+  // One, as a rule; a child that renders several items keeps them in the order
   // they first rendered, which is all it can be told.
   const ownerIdsBySlot = new Map();
   const locatorByOwner = new Map();
@@ -57,14 +59,14 @@ export const createListRows = () => {
   // Rebuilt once a walk has changed the tree, read to place the owners.
   const slotWalk = [];
   const rankBySlot = new Map();
-  let rowTotal = 0;
+  let itemTotal = 0;
   // Owners have left and the others have not been moved up yet. Done on the
-  // next ask rather than on the spot: rows leave many at a time (a search, a
+  // next ask rather than on the spot: items leave many at a time (a search, a
   // list unmounting), and moving the others up once is enough.
   let placesStale = false;
   // Where the last slot holding an owner stands: an owner arriving at or after
   // it is placed at the end without going over the others — a whole first
-  // render, rows arriving in order, costs each row nothing but itself.
+  // render, items arriving in order, costs each item nothing but itself.
   let rankOwnedLast = -1;
 
   const rebuildWalk = () => {
@@ -97,13 +99,13 @@ export const createListRows = () => {
         for (const ownerId of ownerIds) {
           const owner = ownerById.get(ownerId);
           owner.placeSignal.value = index;
-          index += owner.rowCount;
+          index += owner.itemCount;
         }
         rankOwnedLast = rank;
       }
       rank++;
     }
-    rowTotal = index;
+    itemTotal = index;
     totalSignal.value = index;
     // A run's edges are places too (see refreshFirst).
     markStale(UNGROUPED);
@@ -115,17 +117,18 @@ export const createListRows = () => {
     } else {
       ownerIdsBySlot.set(slotId, [ownerId]);
     }
-    warnIfEveryRowInOneSlot(slotId);
+    warnIfEveryItemInOneSlot(slotId);
   };
-  // Rows that all stand in the same slot keep the order they first mounted in:
-  // the walk is over the children the list is given, and a component holding
-  // them is one child however many rows it renders. Everything about a place
-  // then stops following what the caller writes — a search reordering the rows
-  // moves nothing. Said once, and only for the shape that can be nothing else:
-  // the list's whole content is one child, and several rows came out of it.
-  let everyRowInOneSlotWarned = false;
-  const warnIfEveryRowInOneSlot = (slotId) => {
-    if (everyRowInOneSlotWarned) {
+  // Items that all stand in the same slot keep the order they first mounted
+  // in: the walk is over the children the list is given, and a component
+  // holding them is one child however many items it renders. Everything about
+  // a place then stops following what the caller writes — a search reordering
+  // the items moves nothing. Said once, and only for the shape that can be
+  // nothing else: the list's whole content is one child, and several items
+  // came out of it.
+  let everyItemInOneSlotWarned = false;
+  const warnIfEveryItemInOneSlot = (slotId) => {
+    if (everyItemInOneSlotWarned) {
       return;
     }
     const rootSlotIds = slotIdsByParent.get(null);
@@ -135,22 +138,22 @@ export const createListRows = () => {
     if (ownerIdsBySlot.get(slotId).length < 2) {
       return;
     }
-    everyRowInOneSlotWarned = true;
+    everyItemInOneSlotWarned = true;
     console.warn(
-      `List: every row stands in the same slot, so they keep the order they first rendered in — reordering them (a search, a sort) will not move them. The list's rows must be its own children: give it the rows (or a <List.Items>), not a component rendering them.`,
+      `List: every item stands in the same slot, so they keep the order they first rendered in — reordering them (a search, a sort) will not move them. The list's items must be its own children: give it the items (or a <List.Items>), not a component rendering them.`,
     );
   };
   // A run holds the room of every item it was given, drawn or not: its
-  // fillers count them, its window frames them. A row of it that renders
-  // nothing leaves its room blank, where a declared row gives its place back.
-  let runRowRemovedWarned = false;
-  const warnRunRowRemoved = () => {
-    if (runRowRemovedWarned) {
+  // fillers count them, its window frames them. An item of it that renders
+  // nothing leaves its room blank, where a declared item gives its place back.
+  let runItemRemovedWarned = false;
+  const warnRunItemRemoved = () => {
+    if (runItemRemovedWarned) {
       return;
     }
-    runRowRemovedWarned = true;
+    runItemRemovedWarned = true;
     console.warn(
-      `List: a row drawn by <List.Items> matches nothing and searchNoMatchMode is "remove", but a run's rows cannot be removed: the run keeps the room of every item it was given, so the row leaves a blank. Give <List.Items> the matching items only (useSearchText orders them first; keep the ones whose getItemMatchInfo(item).match is not false), or use searchNoMatchMode="muted" / "invisible_and_inert", which keep the row.`,
+      `List: an item drawn by <List.Items> matches nothing and searchNoMatchMode is "remove", but a run's items cannot be removed: the run keeps the room of every item it was given, so the item leaves a blank. Give <List.Items> the matching items only (useSearchText orders them first; keep the ones whose getItemMatchInfo(item).match is not false), or use searchNoMatchMode="muted" / "invisible_and_inert", which keep the item.`,
     );
   };
   const removeFromSlot = (slotId, ownerId) => {
@@ -185,19 +188,19 @@ export const createListRows = () => {
     }
   };
 
-  // ---- the rows drawn ----
-  // rowId → { ownerId, place, groupId, data, mounted, visible, item }
-  const rowById = new Map();
+  // ---- the entries drawn ----
+  // entryId → { ownerId, place, groupId, data, mounted, visible, item }
+  const entryById = new Map();
   // groupId → { firstSignal, countSignal, noMatchCountSignal }
   const groupById = new Map();
   // ownerId → { from, to }, for the runs (see declareWindow).
   const windowByOwner = new Map();
-  // The first place something stands at, outside any group: the mounted rows
-  // and the rows a run holds above its window. Per group, the group's first
-  // mounted row.
+  // The first place something stands at, outside any group: the mounted
+  // entries and the items a run holds above its window. Per group, the group's
+  // first mounted entry.
   const firstStandingSignal = signal(-1);
-  // The scopes whose first row left: recounted on the next ask, or at the end
-  // of the frame, whichever comes first. A row mounting before the first one
+  // The scopes whose first entry left: recounted on the next ask, or at the end
+  // of the frame, whichever comes first. An entry mounting before the first one
   // moves it at once, no recount needed — the first can only ever move up.
   const staleScopes = new Set();
   const scopeOf = (groupId) => (groupId === undefined ? UNGROUPED : groupId);
@@ -223,9 +226,9 @@ export const createListRows = () => {
         first = place;
       }
     };
-    for (const row of rowById.values()) {
-      if (row.mounted && scopeOf(row.groupId) === scope) {
-        consider(row.place);
+    for (const entry of entryById.values()) {
+      if (entry.mounted && scopeOf(entry.groupId) === scope) {
+        consider(entry.place);
       }
     }
     if (scope === UNGROUPED) {
@@ -238,7 +241,7 @@ export const createListRows = () => {
         if (window.from > start) {
           consider(start);
         }
-        if (window.to < start + owner.rowCount) {
+        if (window.to < start + owner.itemCount) {
           consider(window.to);
         }
       }
@@ -256,9 +259,9 @@ export const createListRows = () => {
       }
     });
   };
-  const leaveFirst = (row) => {
-    const scope = scopeOf(row.groupId);
-    if (firstSignalOf(scope).peek() === row.place) {
+  const leaveFirst = (entry) => {
+    const scope = scopeOf(entry.groupId);
+    if (firstSignalOf(scope).peek() === entry.place) {
       markStale(scope);
     }
   };
@@ -272,13 +275,13 @@ export const createListRows = () => {
   let notifyScheduled = false;
   const runNotify = () => {
     batch(() => {
-      const itemRows = [];
-      for (const row of rowById.values()) {
-        if (row.item) {
-          itemRows.push(row);
+      const itemEntries = [];
+      for (const entry of entryById.values()) {
+        if (entry.item) {
+          itemEntries.push(entry);
         }
       }
-      itemRows.sort(compareRowPlaces);
+      itemEntries.sort(compareEntryPlaces);
       const items = [];
       const visibleItems = [];
       let noMatchCount = 0;
@@ -286,10 +289,10 @@ export const createListRows = () => {
       const noMatchCountByGroup = new Map();
       const prevItems = itemsSignal.peek();
       const prevVisibleItems = visibleItemsSignal.peek();
-      let itemsChanged = prevItems.length !== itemRows.length;
+      let itemsChanged = prevItems.length !== itemEntries.length;
       let visibleItemsChanged = false;
-      for (const row of itemRows) {
-        const item = row.data;
+      for (const entry of itemEntries) {
+        const item = entry.data;
         // Compared by reference: any prop change (selected, disabled, …) is a
         // new props object.
         if (!itemsChanged && item !== prevItems[items.length]) {
@@ -300,19 +303,19 @@ export const createListRows = () => {
         if (noMatch) {
           noMatchCount++;
         }
-        if (row.groupId !== undefined) {
+        if (entry.groupId !== undefined) {
           countByGroup.set(
-            row.groupId,
-            (countByGroup.get(row.groupId) || 0) + 1,
+            entry.groupId,
+            (countByGroup.get(entry.groupId) || 0) + 1,
           );
           if (noMatch) {
             noMatchCountByGroup.set(
-              row.groupId,
-              (noMatchCountByGroup.get(row.groupId) || 0) + 1,
+              entry.groupId,
+              (noMatchCountByGroup.get(entry.groupId) || 0) + 1,
             );
           }
         }
-        if (row.visible) {
+        if (entry.visible) {
           if (
             !visibleItemsChanged &&
             item !== prevVisibleItems[visibleItems.length]
@@ -350,8 +353,8 @@ export const createListRows = () => {
         group.countSignal.value = countByGroup.get(groupId) || 0;
         group.noMatchCountSignal.value = noMatchCountByGroup.get(groupId) || 0;
       }
-      if (someChange && listRows.onChange) {
-        listRows.onChange();
+      if (someChange && listItems.onChange) {
+        listItems.onChange();
       }
     });
   };
@@ -369,12 +372,13 @@ export const createListRows = () => {
     });
   };
 
-  const listRows = {
+  const listItems = {
     totalSignal,
     pagesSignal,
     refreshingSignal,
-    // The rows that are items, in place order — every one drawn, and the ones
-    // that show — and what the search made of them. Written once per frame.
+    // The entries that are items, in place order — every one drawn, and the
+    // ones that show — and what the search made of them. Written once per
+    // frame.
     itemsSignal,
     visibleItemsSignal,
     countSignal,
@@ -382,16 +386,17 @@ export const createListRows = () => {
     noMatchCountSignal,
     // Called once per frame in which the items changed. Set by the list.
     onChange: null,
-    // What a run needs to know about the list it lives in: how many rows to
+    // What a run needs to know about the list it lives in: how many items to
     // ask its source for at a time, which end it opens on, and how much room
-    // one row is given — a row whose content has not arrived must take exactly
-    // that, or the rows drawn would not reach where the list says they are.
+    // one item is given — an item whose content has not arrived must take
+    // exactly that, or the items drawn would not reach where the list says
+    // they are.
     pageSize: 0,
     scrolled: "start",
     // The list is on its way somewhere: what the window frames is not what it
     // is about to frame, so a run must not fetch for it (see holdWindow).
     holdPending: false,
-    // Called by a run just before rows land in it: what is on screen must not
+    // Called by a run just before items land in it: what is on screen must not
     // move because something arrived above it. Set by the list itself, with
     // what puts the view back once they have (see VirtualFiller).
     captureAnchor: () => {},
@@ -422,21 +427,21 @@ export const createListRows = () => {
       refreshPlaces();
     },
     // Whether something has taken this slot for its own: what it renders
-    // inside is then its to place (a run draws its groups with their rows
+    // inside is then its to place (a run draws its groups with their items
     // already placed), and no walk inside it has anything to declare.
     slotHasOwner: (slotId) => ownerIdsBySlot.has(slotId),
-    warnRunRowRemoved,
-    // Whether any run of rows lives in this list: what makes a render window
+    warnRunItemRemoved,
+    // Whether any run of items lives in this list: what makes a render window
     // mean anything (see List's renderBudget).
     hasRuns: () => locatorByOwner.size > 0,
-    setRowLocator: (ownerId, locate) => {
+    setItemLocator: (ownerId, locate) => {
       locatorByOwner.set(ownerId, locate);
     },
-    dropRowLocator: (ownerId) => {
+    dropItemLocator: (ownerId) => {
       locatorByOwner.delete(ownerId);
     },
-    // Where the row named by that id sits, asked of whoever holds it.
-    locateRow: (id) => {
+    // Where the item named by that id sits, asked of whoever holds it.
+    locateItem: (id) => {
       for (const locate of locatorByOwner.values()) {
         const index = locate(id);
         if (index !== null) {
@@ -445,18 +450,18 @@ export const createListRows = () => {
       }
       return null;
     },
-    // The place the owner's rows start at — read from a signal, so that the
-    // owner is rendered again when it moves (see the top of this file). Asked on
-    // every render, and answered without a second look for as long as the
-    // owner stands in the same slot for the same number of rows.
-    take: (ownerId, rowCount, slotId) => {
+    // The place the owner's items start at — read from a signal, so that the
+    // owner is rendered again when it moves (see the top of this file). Asked
+    // on every render, and answered without a second look for as long as the
+    // owner stands in the same slot for the same number of items.
+    take: (ownerId, itemCount, slotId) => {
       let owner = ownerById.get(ownerId);
       if (owner) {
-        if (owner.slotId !== slotId || owner.rowCount !== rowCount) {
+        if (owner.slotId !== slotId || owner.itemCount !== itemCount) {
           removeFromSlot(owner.slotId, ownerId);
           addToSlot(slotId, ownerId);
           owner.slotId = slotId;
-          owner.rowCount = rowCount;
+          owner.itemCount = itemCount;
           placesStale = true;
         }
         if (placesStale) {
@@ -470,19 +475,19 @@ export const createListRows = () => {
       const rank = rankBySlot.get(slotId);
       addToSlot(slotId, ownerId);
       if (rank !== undefined && rank >= rankOwnedLast) {
-        owner = { slotId, rowCount, placeSignal: signal(rowTotal) };
+        owner = { slotId, itemCount, placeSignal: signal(itemTotal) };
         ownerById.set(ownerId, owner);
-        rowTotal += rowCount;
+        itemTotal += itemCount;
         rankOwnedLast = rank;
-        totalSignal.value = rowTotal;
+        totalSignal.value = itemTotal;
         return owner.placeSignal.value;
       }
-      owner = { slotId, rowCount, placeSignal: signal(0) };
+      owner = { slotId, itemCount, placeSignal: signal(0) };
       ownerById.set(ownerId, owner);
       refreshPlaces();
       return owner.placeSignal.value;
     },
-    // The owner stands for no row of the collection: it was filtered out by a
+    // The owner stands for no item of the collection: it was filtered out by a
     // search, or it is gone.
     drop: (ownerId) => {
       const owner = ownerById.get(ownerId);
@@ -503,11 +508,11 @@ export const createListRows = () => {
       });
     },
 
-    // ---- the rows drawn ----
+    // ---- the entries drawn ----
 
-    // A run says which of its rows it draws. The others stand: rows above the
-    // window are above every row drawn, whether or not any of the drawn ones
-    // mounts (see refreshFirst).
+    // A run says which of its items it draws. The others stand: items above
+    // the window are above every entry drawn, whether or not any of the drawn
+    // ones mounts (see refreshFirst).
     declareWindow: (ownerId, from, to) => {
       const window = windowByOwner.get(ownerId);
       if (window && window.from === from && window.to === to) {
@@ -516,35 +521,35 @@ export const createListRows = () => {
       windowByOwner.set(ownerId, { from, to });
       markStale(UNGROUPED);
     },
-    // A row says what it is, where it renders: its place, the group it is
-    // in, and its data — from which follows whether it mounts at all
-    // (filtered out), whether it shows (hidden keeps the room, not the
-    // content), and whether it is an item (a group wrapper, a skeleton, are
-    // rows of the list but items of nobody). Said in the name of the
-    // component, not of the item id: two components may stand for one item for
-    // a moment, one leaving as the other arrives.
-    draw: (rowId, { ownerId, place, groupId, data }) => {
+    // An entry says what it is, where it renders: its place, the group it is
+    // in, and its data — from which follows whether it mounts at all (filtered
+    // out), whether it shows (hidden keeps the room, not the content), and
+    // whether it is an item (a group wrapper, a skeleton, are entries of the
+    // list but items of nobody). Said in the name of the component, not of the
+    // item id: two components may stand for one item for a moment, one leaving
+    // as the other arrives.
+    draw: (entryId, { ownerId, place, groupId, data }) => {
       const mounted = !data.filtered;
       const visible = mounted && !data.hidden;
       const item = !data.skeleton && data.role !== "presentation";
-      let row = rowById.get(rowId);
-      if (row) {
+      let entry = entryById.get(entryId);
+      if (entry) {
         if (
-          row.mounted &&
-          (row.place !== place || row.groupId !== groupId || !mounted)
+          entry.mounted &&
+          (entry.place !== place || entry.groupId !== groupId || !mounted)
         ) {
-          leaveFirst(row);
+          leaveFirst(entry);
         }
-        row.ownerId = ownerId;
-        row.place = place;
-        row.groupId = groupId;
-        row.data = data;
-        row.mounted = mounted;
-        row.visible = visible;
-        row.item = item;
+        entry.ownerId = ownerId;
+        entry.place = place;
+        entry.groupId = groupId;
+        entry.data = data;
+        entry.mounted = mounted;
+        entry.visible = visible;
+        entry.item = item;
       } else {
-        row = { ownerId, place, groupId, data, mounted, visible, item };
-        rowById.set(rowId, row);
+        entry = { ownerId, place, groupId, data, mounted, visible, item };
+        entryById.set(entryId, entry);
       }
       if (mounted) {
         const firstSignal = firstSignalOf(scopeOf(groupId));
@@ -555,44 +560,44 @@ export const createListRows = () => {
       }
       notify();
     },
-    // The row is gone. A declared row is its own owner and gives its place
-    // back with it; a run's row leaves the run's places alone.
-    erase: (rowId) => {
-      const row = rowById.get(rowId);
-      if (!row) {
+    // The entry is gone. A declared item is its own owner and gives its place
+    // back with it; a run's item leaves the run's places alone.
+    erase: (entryId) => {
+      const entry = entryById.get(entryId);
+      if (!entry) {
         return;
       }
-      rowById.delete(rowId);
-      if (row.mounted) {
-        leaveFirst(row);
+      entryById.delete(entryId);
+      if (entry.mounted) {
+        leaveFirst(entry);
       }
-      if (row.ownerId === rowId) {
-        listRows.drop(rowId);
+      if (entry.ownerId === entryId) {
+        listItems.drop(entryId);
       }
       notify();
     },
-    // Whether nothing of the list stands above this row: in its group, no
-    // other row of the group mounts before it; outside groups, no row mounts
-    // before it and no run has rows above its window before it. Answered from
-    // a signal, so a row rendered from a kept vnode is rendered again when the
-    // row before it leaves or comes back.
-    isFirst: (rowId) => {
-      const row = rowById.get(rowId);
-      const scope = scopeOf(row.groupId);
+    // Whether nothing of the list stands above this entry: in its group, no
+    // other entry of the group mounts before it; outside groups, no entry
+    // mounts before it and no run has items above its window before it.
+    // Answered from a signal, so an entry rendered from a kept vnode is
+    // rendered again when the entry before it leaves or comes back.
+    isFirst: (entryId) => {
+      const entry = entryById.get(entryId);
+      const scope = scopeOf(entry.groupId);
       if (staleScopes.has(scope)) {
         refreshFirst(scope);
       }
-      return firstSignalOf(scope).value === row.place;
+      return firstSignalOf(scope).value === entry.place;
     },
-    // What a group knows about its rows: how many, and how many of them the
+    // What a group knows about its items: how many, and how many of them the
     // search left out (see ListItemGroup).
     group: (groupId) => groupOf(groupId),
     dropGroup: (groupId) => {
       groupById.delete(groupId);
       staleScopes.delete(groupId);
     },
-    // Written when a frame's rows have settled (see notify); the value to act
-    // on is peeked from wherever the change is heard.
+    // Written when a frame's entries have settled (see notify); the value to
+    // act on is peeked from wherever the change is heard.
     flushSync: () => {
       if (!notifyScheduled) {
         return;
@@ -601,7 +606,7 @@ export const createListRows = () => {
       runNotify();
     },
   };
-  return listRows;
+  return listItems;
 };
 const sameSlotIds = (left, right) => {
   if (left.length !== right.length) {
@@ -617,8 +622,9 @@ const sameSlotIds = (left, right) => {
   return true;
 };
 
-// Rows in place order; a row with no place (a declared row filtered out) last.
-const compareRowPlaces = (left, right) => {
+// Entries in place order; an entry with no place (a declared item filtered
+// out) last.
+const compareEntryPlaces = (left, right) => {
   if (left.place === undefined) {
     return right.place === undefined ? 0 : 1;
   }
