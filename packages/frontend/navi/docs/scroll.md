@@ -389,7 +389,8 @@ Reference: `src/control/demos/19_list_find_in_page_demo.html`.
   Define it outside the component, or `useCallback` it, and let it read the
   item and the index it is given rather than closing over state.
 
-The rest — `virtualItemSize` for uniform rows, a `key` on the run when the
+The rest — `virtualItemSize`, the room an item not drawn is held at (uniform
+items, or the size most of a mixed list has), a `key` on the run when the
 collection changes as a whole (never to refresh it, see
 [list_refresh.md](./list_refresh.md#a-paginated-list-stays-on-screen-too)),
 `groupBy` for sections — is in the JSDoc of `List` and `List.Items`

@@ -3706,9 +3706,12 @@ const readRoomAround = ({
 // too — and an item not drawn is taken to weigh what the drawn items at that
 // edge of the window weigh. Items of one kind come together (the one-line
 // items of the past, the cards ahead), and an item misjudged is weighed again
-// once it is drawn (see "after slide"): weighing it at the average of all
-// items would draw the cards next to one-line items at the one-line size, and
-// a few dozen of them.
+// once it is drawn (see "after slide"): a window that came up short is
+// extended on the next frame, from what it measured. Weighing an item not drawn
+// at the average of all items, or at the smallest an item can be so that the
+// window never comes up short, walks into the cards at the one-line size,
+// several at a time — the latter measured in wematch: no blank spared, 50–65 ms
+// tasks while reading down through the cards.
 const EDGE_SAMPLE_ITEM_COUNT = 8;
 const createItemSizeReader = (items, start, end, itemSize) => {
   const sizeByIndex = new Map();
@@ -6349,11 +6352,16 @@ const ListResolved = /*#__PURE__*/ createComponentResolver([
  *   source for is a page (see `<List.Items pageSize>`), whatever either says,
  *   so the first picture costs no second request.
  * @param {number} [props.virtualItemSize]
- *   The size of one item along the scroll axis, in px, when every item has the
- *   same: what the fillers are sized with and what a scroll position is
- *   estimated from. Left out, the list measures its items — once when it
- *   mounts, again when a popup around it opens, and after each commit while
- *   items are held off screen. Given, it never measures.
+ *   The room an item not drawn is held at, in px along the scroll axis: what
+ *   the fillers hold for each item outside the render window, what a scroll
+ *   position inside them is read with, and the least an item on its way takes
+ *   (see `renderSkeleton`). Left out, it is the average of the items measured
+ *   so far — once when the list mounts, again when a popup around it opens,
+ *   and after each commit while items are held off screen. Give it when you
+ *   know an item not drawn better than that average does: the size every item
+ *   has, or, in a list whose items differ, the size most of it has (a thread
+ *   of one-line items with a few cards: the one-line size). The items drawn
+ *   are measured either way: the render window is sized on them.
  * @param {"self"|"parent"|"document"|Element|{current: Element}} [props.scroller="self"]
  *   Which box scrolls — and with it, which box the render window follows and
  *   which box a scroll position is read from (`onScrolledChange`). `"self"`
