@@ -116,8 +116,11 @@ start when unsure which export solves a problem.
   keeps the shape of the question. Before wiring a value with `value` +
   `uiAction`.
 - `control_object.md` — one value made of several controls: `ControlGroup` versus
-  `Form`, naming, `<Picker type="object">`, a settings sheet. Before putting
-  anything in a picker popup.
+  `Form`, naming, `<Picker type="object">`, a settings sheet, controls that are
+  not there (lazy slides, popups, deferred boxes, items outside the render
+  window: the group keeps their keys, shared state is written through it).
+  Before putting anything in a picker popup, and before lazy-mounting anything
+  that holds named controls.
 - `group.md` — `<Group>`: several controls reading as one framed object. Before
   negative margins or `border-radius: 0` by hand.
 - `form_changed.md` — a form sends nothing when nothing changed; what "changed"
@@ -179,9 +182,10 @@ start when unsure which export solves a problem.
 - `scroll.md` — where scrolling happens: `header`/`body`/`footer`, a `List`'s
   `scroller`, where a list opens (a position handed back whole, `visibleCount`
   included), a popup that scrolls, many rows (`<List.Items>`, the render window
-  and its first picture, `findText`), hover while scrolling. Before writing CSS
-  to make something scroll, and before rendering a collection as `<List.Item>`
-  children.
+  and its first picture, `findText`), many sections (`<Box mount="after-paint">`
+  and what it leaves out of reach), hover while scrolling. Before writing CSS to
+  make something scroll, before rendering a collection as `<List.Item>`
+  children, and before deferring part of a page.
 - `z_index.md` — DOM order first; a `z-index` without `isolation: isolate`
   competes with the page; navi's bands. Before writing a `z-index`.
 - `typography.md` — text is a component; `maxLines` is the one truncation; one

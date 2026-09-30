@@ -1104,6 +1104,65 @@ const keptOrFirstDefinedChildUIState = (children, fallbackState, kept) => {
   }
   return kept;
 };
+// The same claim, for an object: a key whose control is not there cannot be
+// contradicted by it — a slide not built yet (SlideContainer mount="near"), a
+// row scrolled out, a page parked. A key of `kept` stays until a control of
+// that name, there, says otherwise; a value put ON the group replaces the
+// whole object, which is how a key is dropped on purpose.
+const keptAndNamedChildUIStates = (children, fallbackState, kept) => {
+  const groupValues =
+    kept !== null && typeof kept === "object" && !Array.isArray(kept)
+      ? { ...kept }
+      : {};
+  return Object.assign(
+    groupValues,
+    readNamedChildUIStates(children, { warnNameless: true }),
+  );
+};
+// What the named controls among `children` say, one key each. A nameless
+// GROUP is a grouping, not a value: it exists to hold its children together
+// (a WheelGroup sharing navigation, a fieldset-ish cluster) without claiming a
+// key of its own, so what its controls say is written as if they were here.
+// Naming it is what turns the same group into one key — see ControlGroup's
+// `name`. Only what its CONTROLS say: such a grouping is handed the whole
+// object around it (see distributeChildUIState below) and keeps what they do
+// not answer for, so merged whole it would carry its siblings' keys back up,
+// stale.
+const readNamedChildUIStates = (children, { warnNameless }) => {
+  const values = {};
+  for (const child of children) {
+    const { name, emptyUIState } = child;
+    // A control holding nothing writes its own empty, not a hole: the key is in
+    // the object either way, and what is read from it keeps the shape the
+    // reader was promised (see resolveEmptyUIState).
+    const uiState =
+      child.uiState === undefined && emptyUIState !== undefined
+        ? emptyUIState
+        : child.uiState;
+    if (!name) {
+      if (isNamelessGrouping(child, uiState)) {
+        Object.assign(
+          values,
+          child.keepsUnansweredKeys
+            ? readNamedChildUIStates(child.getChildControllers(), {
+                warnNameless: false,
+              })
+            : uiState,
+        );
+        continue;
+      }
+      if (warnNameless) {
+        console.warn(
+          "A group child is missing a name property, its state won't be included in the group state",
+          child,
+        );
+      }
+      continue;
+    }
+    values[name] = uiState;
+  }
+  return values;
+};
 
 // Default aggregate/distribute implementations keyed by controlType or stateType.
 // Looked up in useUIGroupStateController to fill in omitted aggregateChildStates /
@@ -1173,37 +1232,7 @@ const GROUP_DEFAULTS = {
     childControlFilter: (child) => {
       return child.controlType !== "button" && child.controlType !== "link";
     },
-    aggregateChildStates: (children) => {
-      const groupValues = {};
-      for (const child of children) {
-        const { name, emptyUIState } = child;
-        // A control holding nothing writes its own empty, not a hole: the key
-        // is in the object either way, and what is read from it keeps the shape
-        // the reader was promised (see resolveEmptyUIState).
-        const uiState =
-          child.uiState === undefined && emptyUIState !== undefined
-            ? emptyUIState
-            : child.uiState;
-        if (!name) {
-          // A nameless GROUP is a grouping, not a value: it exists to hold its
-          // children together (a WheelGroup sharing navigation, a fieldset-ish
-          // cluster) without claiming a key of its own, so what it holds is
-          // merged in as if its children had been written here. Naming it is
-          // what turns the same group into one key — see ControlGroup's `name`.
-          if (isNamelessGrouping(child, uiState)) {
-            Object.assign(groupValues, uiState);
-            continue;
-          }
-          console.warn(
-            "A group child is missing a name property, its state won't be included in the group state",
-            child,
-          );
-          continue;
-        }
-        groupValues[name] = uiState;
-      }
-      return groupValues;
-    },
+    aggregateChildStates: keptAndNamedChildUIStates,
     distributeChildUIState: (newUIState, child) => {
       const childName = child.name;
       if (
@@ -1227,7 +1256,8 @@ const GROUP_DEFAULTS = {
         return childUIState;
       }
       // Merged in on the way up (see above), so on the way down it takes the
-      // whole object and picks out its own keys — the same value it produced.
+      // whole object: its controls pick out their own keys, and it keeps the
+      // rest for those of its controls that are not there yet.
       // Only for a child with no name of its own: the same condition the
       // aggregate applies before merging. A NAMED child holding an object (a
       // `type="object"` picker, say) answers for one key, and the object it is
@@ -1715,6 +1745,11 @@ export const useUIGroupStateController = (
         // a picker filling its popup, a value prop) rather than worked out from
         // its children. What it protects is read in onChange.
         stateGivenFromAbove: hasValueProp || hasDefaultValueProp,
+        // Its value carries keys none of its controls answers for (see
+        // keptAndNamedChildUIStates): a group merging it as a nameless
+        // grouping reads its controls instead of its value.
+        keepsUnansweredKeys:
+          resolvedAggregateChildStates === keptAndNamedChildUIStates,
         uiStateSignal,
         wantRequesterButtonState,
         ref,

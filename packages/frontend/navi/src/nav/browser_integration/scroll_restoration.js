@@ -35,7 +35,9 @@
  * What is NOT covered, and cannot be from here: a page whose height depends on
  * something still loading. Its content is not there at the moment it is put
  * back, so a position beyond what has arrived is clamped as before. Only the
- * page knows when it is whole.
+ * page knows when it is whole. What navi itself leaves out of a first render
+ * is the exception — a `<Box mount="after-paint">` — and is built before the
+ * offset that shows it is written (see mount_after_paint.jsx).
  *
  * WHEN a page is arrived at is not decided here either. A document navigation
  * lands where its kind says (see via_history.js), and one scrollport can be
@@ -45,6 +47,7 @@
  * route_travel.jsx).
  */
 
+import { buildDeferredBoxesAbove } from "../../box/mount_after_paint.jsx";
 import { whenPageRendered } from "../rendering_hold.js";
 import { observeRouteRender } from "../route_render.js";
 
@@ -186,14 +189,18 @@ export const installScrollRestoration = () => {
   // What a reload asks for, now that the browser has been told not to do it.
   // Once, and at the first render of a route: the position is only meaningful
   // once there is a page under it.
+  // Written once the commit that rendered it has ended: said from inside it,
+  // and what the offset shows may still have to be built (see scrollTo).
   const positionOnLoad = positionByUrl.get(window.location.href);
   if (positionOnLoad && (positionOnLoad.x || positionOnLoad.y)) {
     const stopListening = observeRouteRender(() => {
       stopListening();
-      if (documentHoldCount) {
-        return;
-      }
-      scrollTo(positionOnLoad);
+      queueMicrotask(() => {
+        if (documentHoldCount) {
+          return;
+        }
+        scrollTo(positionOnLoad);
+      });
     });
   }
 };
@@ -300,14 +307,25 @@ export const forgetScrollersOnArrival = (url, { from } = {}) => {
 // last read. Where this one was read, and its top when it never was — leaving
 // the offset alone would seat the reader wherever the neighbour happened to
 // be, so here "nothing recorded" and "stay" are not the same thing.
+//
+// Called outside a Preact commit only, like scrollTo: a row of tabs measures
+// its window right after, so what the top shows is built first here rather
+// than in the frame (see mount_after_paint.jsx).
 export const arriveAtScrollPosition = (url) => {
   if (restoreScrollPosition(url)) {
     return;
   }
+  buildDeferredBoxesAbove(window.innerHeight);
   startAtTop(url);
 };
 
+// What the offset shows is built first: written into a document still missing
+// a deferred box, the offset is clamped (see mount_after_paint.jsx). That build
+// is a render of its own, so this is never called from inside a commit — a
+// caller that learns the page is there from a layout effect (observeRouteRender)
+// writes once that commit has ended.
 const scrollTo = ({ x, y }) => {
+  buildDeferredBoxesAbove(y + window.innerHeight);
   window.scrollTo({ top: y, left: x, behavior: "instant" });
 };
 

@@ -565,7 +565,10 @@ of the document's scrollport — it holds an offset even without a scrollbar, wh
 `overflow: clip` holds none — so it is the first thing to look for when a row
 does not give positions back. And a page whose height depends on something still
 loading is not tall enough when its position is put back: only the page knows
-when it is whole.
+when it is whole. What navi itself builds after the first frame
+(`<Box mount="after-paint">`, see
+[scroll.md](./scroll.md#many-sections-box-mountafter-paint)) is not such a
+page: the part the position shows is built before it is written.
 
 ## Creating something, then editing it
 

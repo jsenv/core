@@ -648,12 +648,19 @@ const readArea = (slideElement) =>
  *   would bring alongside (neighbours on the map, along the axes
  *   `travelByDrag` opens, the other end of a `loop` included) — and kept from
  *   then on. For slides that are costly to build (a grid of a few hundred
- *   controls each): opening builds the slide shown and its neighbours rather
+ *   items each): opening builds the slide shown and its neighbours rather
  *   than all of them, and a jump to a far slide builds that one and none of
  *   those in between, which a travel never shows. The box is then as large as
  *   the largest slide BUILT so far (see `sizing`), so it grows as a larger one
  *   is reached: give it a size of its own when the slides differ.
  *   `<Slide mount>` says it for one slide — a heavy one among light ones.
+ *   A slide not built has no controls, and a group around the container keeps
+ *   their keys for them: what it was handed reaches them once built. What is
+ *   shared between slides is written through that group (its `signal`, a
+ *   `--navi-update` aimed at it), never into one control's own `signal`, which
+ *   nobody reads while that control is not built; and nothing validates a
+ *   field before its slide is built. See docs/control_object.md, "A control
+ *   that is not there".
  */
 export const SlideContainer = ({
   layout = "row",

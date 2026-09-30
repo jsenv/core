@@ -135,6 +135,7 @@ import {
 import {
   holdTransitionWindow,
   measureTransitionWindowState,
+  placeTransitionWindow,
   releaseTransitionWindow,
   installTransitionWindowCss,
 } from "./transition_window.js";
@@ -481,11 +482,11 @@ const css = /* css */ `
     &::view-transition-group(navi-route-transition) {
       /* Held still for the whole transition, at the rectangle that contains
          both states (see transition_window.js). Held by dropping the group's
-         animation rather than by winning against it with !important. The
-         browser puts the group where the ARRIVING area stands — on every
-         frame, from the live element — so it is moved from there back to the
-         window's own corner by a corner read just as often (see
-         transition_window.js). */
+         animation rather than by winning against it with !important. Until
+         the pictures exist the browser puts the group where the ARRIVING area
+         stands, and it is moved from there back to the window's own corner by
+         a corner read every frame; from then on it is placed by the rule
+         below. */
       top: calc(
         var(--navi-transition-window-top) - var(
             --navi-transition-window-new-top
@@ -507,6 +508,24 @@ const css = /* css */ `
           var(--navi-route-transition-clip-left)
       );
       animation-name: none;
+    }
+    /* Once the pictures exist the group owes nothing to the live area: the
+       browser paints the group where IT puts the area, which is not always
+       where the area is read, and the page being left would stand off by the
+       difference. So where the viewport stands in the pictures' space is
+       taken once, and the group is held at the window from there (see
+       placeTransitionWindow). */
+    &[data-navi-transition-window-placed]::view-transition-group(
+        navi-route-transition
+      ) {
+      top: calc(
+        var(--navi-transition-window-top) + var(--navi-transition-viewport-top)
+      );
+      left: calc(
+        var(--navi-transition-window-left) +
+          var(--navi-transition-viewport-left)
+      );
+      transform: none;
     }
     /* Each picture at the corner its own state stood at, which is not the
        window's: the window contains both states, and a state that is scrolled
@@ -1653,6 +1672,8 @@ const beginTransition = ({ page, url, fromUrl, direction, type, duration }) => {
   // the only place the silent misconfigurations show. They are all about the
   // same thing — a movement playing on pictures that are not the pages.
   const viewTransitionReady = () => {
+    // Read before anything below writes to the document.
+    placeTransitionWindow(transition, AREA_NAME);
     startTransitionFurniture(transition, { duration: transition.duration });
     const capturedNames = capturedViewTransitionNames();
     if (areaElements.length > 0) {

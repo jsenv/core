@@ -307,6 +307,11 @@ A run whose rows all fit the window is just rows: nothing is virtualized, and
 it costs what the same rows would as children. There is no reason to hold back
 from it for a list that might grow.
 
+What an item outside the window holds is not lost with its row: a selection
+keeps the items it does not draw (`--navi-select` reaches them by id), and a
+group keeps the keys of named controls that are not there
+([control_object.md](./control_object.md#a-control-that-is-not-there)).
+
 ### What the list knows, and what it guesses
 
 A virtualized list has one aim: draw as few items as it can, and never show a
@@ -432,6 +437,54 @@ on the run when the collection changes as a whole (never to refresh it, see
 `src/control/demos/17_virtual_scroll_and_filter_demo.html` (a run in memory,
 searched), `src/control/demos/integration/1_list_loaded_by_scroll_demo.html` (a
 run reading a slice at a time).
+
+## Many sections: `<Box mount="after-paint">`
+
+The render window's twin for a page that is not a list — a profile, a settings
+screen, sections stacked in a column. The browser paints nothing until the
+render that builds the page has ended, and the sections below the first screen
+weigh in it as much as those on it.
+
+```jsx
+<Box flex="y" spacing="l">
+  <ProfileHeader user={user} />
+  <UpcomingGames user={user} />
+  <Box flex="y" spacing="l" mount="after-paint">
+    <Searches user={user} />
+    <Badges user={user} />
+    <LinkedAccounts />
+  </Box>
+</Box>
+```
+
+The box is empty in the render that mounts it, and built right after the first
+frame that shows the page (the first frame of its route transition, when there
+is one), then kept: a later render of the page renders it as usual.
+
+Which sections lie below the screen is not left to the app's guess, which a
+taller phone or an empty first section breaks. navi looks at each box before
+that frame is painted, and one the frame would show — on the screen, or above
+it — is built before the paint all the same: marking too much costs a second
+render in that frame, never a section popping in. A page put back where it was
+left (see
+[navigation.md](./navigation.md#where-a-navigation-lands-the-scroll)) has the
+boxes that offset shows built before the offset is written, so the offset is not
+clamped by a document still missing its bottom.
+
+What navi cannot do is make the content exist before it is built. So the box is
+only for content nothing reaches during that first frame:
+
+- **Named controls** inside are not there until built: what a group holds for
+  them waits, a value written into their own `signal` reaches nothing, and
+  nothing inside checks itself (see
+  [control_object.md](./control_object.md#a-control-that-is-not-there)).
+- **Ids**: a `commandFor`, a popup `anchor` or a `triggerNaviCommand` aimed
+  inside finds nothing, and neither does a focus put back there. A `#fragment`
+  aimed inside lands a frame late, once the element is there; a popup opened
+  from the address opens once built, since it reads its signal then.
+- **Size**: the box has no height until it is built (a `minHeight` reserves
+  one). Anything measuring it in that frame — a sticky offset, a size read from
+  outside — sees it empty.
 
 ## Hover while scrolling
 

@@ -25,18 +25,28 @@
  *   in the window — one page is scrolled and the other is not, one has a top
  *   bar over it and the other has the screen. Each picture is placed at its
  *   own corner inside the window.
- * - **where the arriving state IS, frame after frame.** The browser places the
- *   group from the live arriving element on every frame of the movement — that
- *   is what makes a picture pair follow an element that moves — and the
- *   formula that moves the group back to the window's corner cancels that
- *   placement with this corner. Read once, the two stop cancelling the moment
- *   anything scrolls the document under the movement (a slice landing and
- *   putting a row back, a list placing its default row, a height growing under
- *   a restored offset): the window drifts by as much, and both pictures with
- *   it — the photograph of the page being left included. So this corner alone
- *   is kept live, as often as the browser reads its side of it. It is also
- *   the arriving picture's own corner, which then stays where the page really
- *   is and lands with no jump when the pictures are dropped.
+ * - **where the viewport stands in the space the pictures are drawn in.** The
+ *   pictures are drawn from the snapshot containing block, and on a phone
+ *   whose address bar scrolls away that block starts UNDER the bar: its corner
+ *   is not the viewport's, by the height of the bar while it shows. The
+ *   browser places the group from the live arriving element on every frame,
+ *   which counts that height for us — and also puts the group wherever the
+ *   browser paints that element, which is not always where a script reads it:
+ *   Chrome on Android paints a scroll offset the main thread capped as it was
+ *   asked, and every picture in the group, the page being left included,
+ *   stands off by the difference for the whole movement. So the group is
+ *   placed by the browser only until the pictures exist. Then the difference
+ *   between that placement and our reading of the same element is taken once,
+ *   and the group is held at the window with it, owing nothing more to the
+ *   live element (see placeTransitionWindow).
+ * - **where the arriving state IS, frame after frame.** The arriving picture's
+ *   own corner, which anything can move under the movement (a slice landing
+ *   and putting a row back, a list placing its default row, a height growing
+ *   under a restored offset). Read once, the arriving picture would be left
+ *   where the page was: it is re-read every frame, so it stays where the page
+ *   really is and lands with no jump when the pictures are dropped. Until the
+ *   group is placed, the same reading also cancels the browser's placement of
+ *   the group.
  * - **what moves the BOX, as opposed to what moves a page in it.** Two things
  *   move the box in the window and they mean opposite things. The scroller
  *   the pages scroll in — the document, for a row of tabs that is the screen;
@@ -61,12 +71,13 @@
  *   at the one moment the state being left still exists, the cut can be taken
  *   at what is furniture on BOTH sides (see the clip formulas).
  *
- * Only the measuring needs JS, and apart from the arriving corner and the
- * outer offset it happens at the one moment both states exist: the page
- * arriving is in the DOM and the transition has not started playing. The
- * window, the corner of the state being left and its band describe a state
- * that no longer exists, and measuring them again is what must never happen
- * — they are only ever carried along with the box.
+ * Only the measuring needs JS, and apart from the arriving corner, the outer
+ * offset and the viewport's corner (taken once the pictures exist) it happens
+ * at the one moment both states exist: the page arriving is in the DOM and the
+ * transition has not started playing. The window, the corner of the state
+ * being left and its band describe a state that no longer exists, and
+ * measuring them again is what must never happen — they are only ever carried
+ * along with the box.
  * Everything DERIVED from these numbers — the band a fixed bar covers, how far
  * a page travels — is derived in CSS, so the application's own numbers (the
  * room its bars give back, see layout/safe_area.js; what covers the box from
@@ -153,6 +164,13 @@ const OLD_BAND_TOP_PROPERTY = "--navi-transition-old-band-top";
 const OLD_BAND_RIGHT_PROPERTY = "--navi-transition-old-band-right";
 const OLD_BAND_BOTTOM_PROPERTY = "--navi-transition-old-band-bottom";
 const OLD_BAND_LEFT_PROPERTY = "--navi-transition-old-band-left";
+const VIEWPORT_TOP_PROPERTY = "--navi-transition-viewport-top";
+const VIEWPORT_LEFT_PROPERTY = "--navi-transition-viewport-left";
+// Worn by the root once the group is held at the window by our numbers alone
+// (see placeTransitionWindow): the group rule of each movement is written on
+// it. Read by rules on pseudo-elements only, so wearing it restyles nothing
+// the document inherits.
+const WINDOW_PLACED_ATTRIBUTE = "data-navi-transition-window-placed";
 const WINDOW_PROPERTIES = [
   WINDOW_TOP_PROPERTY,
   WINDOW_LEFT_PROPERTY,
@@ -166,6 +184,8 @@ const WINDOW_PROPERTIES = [
   OLD_BAND_RIGHT_PROPERTY,
   OLD_BAND_BOTTOM_PROPERTY,
   OLD_BAND_LEFT_PROPERTY,
+  VIEWPORT_TOP_PROPERTY,
+  VIEWPORT_LEFT_PROPERTY,
 ];
 
 // Whose numbers are currently published. The window belongs to the movement
@@ -173,6 +193,8 @@ const WINDOW_PROPERTIES = [
 // after another has replaced it must not wipe numbers the new one is standing
 // on.
 let windowOwner = null;
+// The element the box is captured as, for as long as the window is held.
+let windowElement = null;
 // Stops re-reading the arriving state's corner, when a movement is on.
 let unfollowArrivingState = null;
 
@@ -228,6 +250,10 @@ export const holdTransitionWindow = (
   const right =
     rectBefore.right > rectAfter.right ? rectBefore.right : rectAfter.right;
   windowOwner = owner;
+  windowElement = element;
+  // Pictures of a movement this one took over from are placed by the browser
+  // until this one's own pictures exist.
+  document.documentElement.removeAttribute(WINDOW_PLACED_ATTRIBUTE);
   setTransitionValue(WINDOW_TOP_PROPERTY, `${top}px`);
   setTransitionValue(WINDOW_LEFT_PROPERTY, `${left}px`);
   setTransitionValue(WINDOW_WIDTH_PROPERTY, `${right - left}px`);
@@ -252,6 +278,33 @@ export const holdTransitionWindow = (
   });
 };
 
+/**
+ * Called once the pictures exist — the view transition's `ready` — with the
+ * name the box was captured under. Where the viewport's corner stands in the
+ * space the pictures are drawn in is the browser's placement of the group
+ * minus our reading of the same element, both taken in this one instant; the
+ * group is held at the window with it from then on (see the top of the file).
+ * A browser that does not hand the group's placement back leaves the group
+ * where it places it, moved to the window by the arriving corner.
+ */
+export const placeTransitionWindow = (owner, groupName) => {
+  if (owner !== windowOwner) {
+    return;
+  }
+  const { transform } = getComputedStyle(
+    document.documentElement,
+    `::view-transition-group(${groupName})`,
+  );
+  if (!transform || transform === "none") {
+    return;
+  }
+  const placement = new DOMMatrixReadOnly(transform);
+  const rect = windowElement.getBoundingClientRect();
+  setTransitionValue(VIEWPORT_TOP_PROPERTY, `${placement.m42 - rect.top}px`);
+  setTransitionValue(VIEWPORT_LEFT_PROPERTY, `${placement.m41 - rect.left}px`);
+  document.documentElement.setAttribute(WINDOW_PLACED_ATTRIBUTE, "");
+};
+
 // The live layout takes the box back. A discontinuity by construction — the
 // window stands at the held height, the box is at its own — and an invisible
 // one: the page arriving is fully in place, and the strip below it that the
@@ -261,20 +314,22 @@ export const releaseTransitionWindow = (owner) => {
     return;
   }
   windowOwner = null;
+  windowElement = null;
   if (unfollowArrivingState) {
     unfollowArrivingState();
   }
+  document.documentElement.removeAttribute(WINDOW_PLACED_ATTRIBUTE);
   for (const property of WINDOW_PROPERTIES) {
     removeTransitionValue(property);
   }
 };
 
-// The arriving state's corner, re-read every frame — as often as the browser
-// refreshes the group's placement from the same element (see the top of the
-// file) — and with it the offset outside the box, which carries the window
-// and the corner of the state being left along. Requested, never awaited: the
-// first call runs inside the update callback, where a frame cannot come.
-// Written only when it moved: every write restyles the pictures.
+// The arriving state's corner, re-read every frame — as often as anything can
+// move the page arriving (see the top of the file) — and with it the offset
+// outside the box, which carries the window and the corner of the state being
+// left along. Requested, never awaited: the first call runs inside the update
+// callback, where a frame cannot come. Written only when it moved: every write
+// restyles the pictures.
 const followArrivingState = (element, rectAtHold, heldAt) => {
   if (unfollowArrivingState) {
     unfollowArrivingState();

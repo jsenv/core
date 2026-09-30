@@ -895,9 +895,12 @@ opening — so the `mount` prop answers both at once:
 | `"while-opened"`              | not mounted                 | not mounted   |
 
 `"always"` is for content something depends on before any opening: a value read
-off it (the default of a picker told no value whose value is read), fields a surrounding form
-submits, a size measured from outside. `"idle"` is `"always"` minus the cost on
-the render that draws the page.
+off it (the default of a picker told no value whose value is read), fields a
+surrounding form must validate or read their own `defaultValue` from, a size
+measured from outside. What such a form was handed it keeps for fields not built
+yet, and hands them once they are
+([control_object.md](./control_object.md#a-control-that-is-not-there)).
+`"idle"` is `"always"` minus the cost on the render that draws the page.
 
 Whatever the value but `"while-opened"`, intent on what opens the popup builds
 the content ahead of the click, `onOpen` or not: a pointer over its anchor, or

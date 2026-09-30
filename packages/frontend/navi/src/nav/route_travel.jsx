@@ -61,6 +61,7 @@ import {
 import {
   holdTransitionWindow,
   measureTransitionWindowState,
+  placeTransitionWindow,
   releaseTransitionWindow,
   installTransitionWindowCss,
 } from "./transition_window.js";
@@ -250,10 +251,10 @@ const css = /* css */ `
          watching it get there.
 
          Held by dropping the group's animation rather than by winning against
-         it with !important. The browser puts the group where the ARRIVING box
-         stands — on every frame, from the live element — so it is moved from
-         there back to the window's own corner by a corner read just as often
-         (see transition_window.js). */
+         it with !important. Until the pictures exist the browser puts the
+         group where the ARRIVING box stands, and it is moved from there back
+         to the window's own corner by a corner read every frame; from then on
+         it is placed by the rule below. */
       top: calc(
         var(--navi-transition-window-top) - var(
             --navi-transition-window-new-top
@@ -335,6 +336,24 @@ const css = /* css */ `
       );
       animation-duration: var(--navi-route-travel-duration, 300ms);
       animation-name: none;
+    }
+    /* Once the pictures exist the group owes nothing to the live box: the
+       browser paints the group where IT puts the box, which is not always
+       where the box is read, and the page being left would stand off by the
+       difference. So where the viewport stands in the pictures' space is
+       taken once, and the group is held at the window from there (see
+       placeTransitionWindow). */
+    &[data-navi-transition-window-placed]::view-transition-group(
+        navi-route-travel
+      ) {
+      top: calc(
+        var(--navi-transition-window-top) + var(--navi-transition-viewport-top)
+      );
+      left: calc(
+        var(--navi-transition-window-left) +
+          var(--navi-transition-viewport-left)
+      );
+      transform: none;
     }
   }
 
@@ -724,6 +743,10 @@ export const RouteTravel = ({
       });
     });
     travel.viewTransition = viewTransition;
+    // Subscribed first, so it reads before the scrub below writes anything.
+    viewTransition.ready.then(() => {
+      placeTransitionWindow(travel, TRAVEL_NAME);
+    }, ignoreSkipped);
     if (scrub) {
       // Said only now: the release has to have something to let go of, and the
       // transition did not exist a line above.
@@ -928,13 +951,17 @@ export const RouteTravel = ({
           // what makes the document tall enough to hold that offset again —
           // and the recording stays deaf until then, over the clamp the swap
           // back makes on the way. Its own deafness rather than the travel's:
-          // the travel ends here, and this outlives it by a render.
+          // the travel ends here, and this outlives it by a render. Written
+          // once the commit that says so has ended, as arriveAtScrollPosition
+          // asks.
           const resumeScrollRecording = suspendScrollRecording();
           const stopWatchingRender = observeRouteRender(() => {
             stopWatchingRender();
-            const { route, params } = travel.fromPage;
-            arriveAtScrollPosition(route.buildUrl(params));
-            resumeScrollRecording();
+            queueMicrotask(() => {
+              const { route, params } = travel.fromPage;
+              arriveAtScrollPosition(route.buildUrl(params));
+              resumeScrollRecording();
+            });
           });
         }
         releaseRendering();

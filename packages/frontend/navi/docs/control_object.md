@@ -12,6 +12,7 @@ whose value is an object needs in its popup.
 - [Naming, and what a nameless group does](#naming-and-what-a-nameless-group-does)
 - [A picker whose value is an object](#a-picker-whose-value-is-an-object)
 - [A group holds what it was given](#a-group-holds-what-it-was-given)
+- [A control that is not there](#a-control-that-is-not-there)
 - [One line, one key](#one-line-one-key)
 - [A settings sheet](#a-settings-sheet)
 - [`Group` is not `ControlGroup`](#group-is-not-controlgroup)
@@ -142,7 +143,9 @@ not while the children are not all there yet:
 
 - a group **told** a value holds it whole, before any child has registered to
   show it: items still loading, a popup built at open, a row scrolled out of a
-  virtualized list do not make the value smaller;
+  virtualized list do not make the value smaller, nor does a child acting while
+  others are away (see
+  [A control that is not there](#a-control-that-is-not-there));
 - **a child mounting or unmounting is not somebody answering.** While children
   arrive, their aggregate is a partial reading; the group takes it for its value
   only once it derived that value itself (nobody handed it one), or once a child
@@ -209,6 +212,76 @@ const moveTo = (from, to) => {
 };
 ```
 
+## A control that is not there
+
+The answer lives in the group — and in the signal bound to it, or to the
+picker around it — and the controls are views of it. A view can be missing
+while the answer still matters: a slide not built yet
+(`SlideContainer mount="near"`), a popup or an `Expandable` not opened yet, a
+`<Box mount="after-paint">` before its first frame, an item outside a list's
+render window, a page parked while a route action reruns. None of that makes
+the answer smaller:
+
+- **a key stays until a control of that name, there, says otherwise.** The
+  group keeps what it holds for a control that is not there, the way a
+  selectable list keeps the selection of items it does not draw. A control that
+  arrives is placed from it; one that leaves takes nothing with it;
+- **a value put ON the group reaches every key**, whether its control is there
+  or not: the group's `signal` or `value`, a picker filling its popup, a cancel
+  putting back what the picker held at open, a `--navi-update` aimed at the
+  group. It replaces the whole object, which is also how a key is dropped on
+  purpose;
+- **a control's own `signal` reaches that control only.** Written while the
+  control is not there, nobody is listening: the group never hears of it, and a
+  cancel has nothing to take back. The answer is ONE signal, on the group or on
+  the picker holding it — never one per control, assembled by hand;
+- **only a control that is there checks itself.** `required`, a pattern, a range
+  are verified by the control, so a field not built yet is not validated;
+- **a field hidden on purpose keeps its key too**: the group cannot tell
+  "removed" from "not built yet". Empty it before hiding it, or put the value
+  without it on the group.
+
+So something shared by controls that are not all there — seven days of which
+one is on screen, a copy of one day onto the others — is written as one value,
+through the group:
+
+```jsx
+// the week, keyed by day: what the tabs, the summary and the save read
+const weekSignal = useSignal({ 1: [], 2: [18, 19], 3: [], … });
+
+<Picker type="object" signal={weekSignal} action={saveWeek} ui={<WeekSummary />}>
+  <ControlGroup id="week">
+    <SlideContainer mount="near" signal={daySignal}>
+      {DAYS.map((day) => (
+        <Slide key={day} area={day}>
+          <List selectable multiple name={day}>…</List>
+        </Slide>
+      ))}
+    </SlideContainer>
+    {/* every day, the ones not built included — and a cancel takes it back */}
+    <Button
+      command="--navi-update"
+      commandFor="week"
+      value={sameEveryDay(weekSignal.value[daySignal.value])}
+    >
+      Same hours every day
+    </Button>
+  </ControlGroup>
+</Picker>
+```
+
+```jsx
+// ✗ one signal per day, written by hand: the days not built never hear it,
+//   and Escape leaves them changed
+for (const day of DAYS) {
+  daySignals[day].value = [...shownHours];
+}
+```
+
+The picker's signal follows the popup gesture by gesture, so the button reads
+the day shown from it; the dots on the tabs read it too, for days whose slide
+was never built.
+
 ## One line, one key
 
 A row that opens a popup is one control, so what it answers arrives under its
@@ -274,7 +347,8 @@ one being tried.
 
 **Every field answers**, including those on another tab: they stay mounted and
 come back in the object, and whoever receives it reads `origin` to know which
-count. Aggregating the sheet to a single value of its own
+count. Under `mount="near"` a tab not built yet answers with what the group
+holds for it ([A control that is not there](#a-control-that-is-not-there)). Aggregating the sheet to a single value of its own
 (`aggregateChildStates`) throws away what makes the answer readable, starting
 with the tab. **A button inside is not a field**: the one asking for a position
 acts on the press, and what it answers goes into a control that IS one (a

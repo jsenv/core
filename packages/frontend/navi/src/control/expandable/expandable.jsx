@@ -391,7 +391,8 @@ const useExpandableContext = (partName) => {
  *   other three, intent on the UI part (pointer entering it, focus landing in
  *   it) builds the content ahead of the click; `"while-opened"` content is
  *   built by a press on it only, and thrown away if that press does not
- *   expand it.
+ *   expand it. Named controls in content not built are kept by the group
+ *   around them (docs/control_object.md, "A control that is not there").
  */
 export const Expandable = (props) => {
   import.meta.css = css;

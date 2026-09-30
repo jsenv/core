@@ -48,6 +48,7 @@ import {
   stringifyStyleValue,
 } from "./box_style_util.js";
 import { getDefaultDisplay } from "./display_defaults.js";
+import { MountAfterPaint } from "./mount_after_paint.jsx";
 import {
   applyStyle,
   initPseudoStyles,
@@ -402,6 +403,7 @@ const PSEUDO_STATE_CHILD_PROP_SET = new Set(["tabIndex", "tabindex"]);
  *   footer?: boolean,
  *   body?: boolean,
  *   sticky?: boolean,
+ *   mount?: "always" | "after-paint",
  *   children?: import("preact").ComponentChildren,
  *   [key: string]: any,
  * }>}
@@ -450,9 +452,20 @@ const PSEUDO_STATE_CHILD_PROP_SET = new Set(["tabIndex", "tabindex"]);
  *   (see docs/interactions.md). A plain box has no wiring of its own: it does
  *   nothing with `action` (that is a control's prop), so a click on it is
  *   declared here like any other interaction: `interactions={{ click: fn }}`.
+ * @param {"always"|"after-paint"} [mount="always"] When `children` are built.
+ *   `"after-paint"` leaves the box empty in the render that first mounts it and
+ *   builds them right after the first frame that shows the page, then keeps
+ *   them: for the sections of a page that lie below its first screen. navi
+ *   measures where the box stands before that frame, and one the frame would
+ *   show (or where the document is put back, on a return) is built before the
+ *   paint all the same. Until built, what is inside is not in the document:
+ *   no id there is found, no named control there is there to hear its own
+ *   `signal` (see docs/control_object.md). Only for content nothing reaches
+ *   before the first frame (see docs/scroll.md).
  */
 export const Box = (props) => {
-  const { ref, children, separator, interactions, ...computeProps } = props;
+  const { ref, children, separator, interactions, mount, ...computeProps } =
+    props;
   const parentBoxFlow = useContext(BoxFlowContext);
   // Which interactions this box answers, and with what. Read here rather than
   // on the control, so a swipe or a hold can be declared on anything — a row, a
@@ -533,6 +546,11 @@ export const Box = (props) => {
       <BoxFlowContext.Provider value={boxFlow}>
         {innerChildren}
       </BoxFlowContext.Provider>
+    );
+  }
+  if (mount === "after-paint") {
+    innerChildren = (
+      <MountAfterPaint boxRef={finalRef}>{innerChildren}</MountAfterPaint>
     );
   }
 
