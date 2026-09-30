@@ -640,6 +640,20 @@ const readArea = (slideElement) =>
  *   `sizing={loading ? "largest" : "frozen"}` and is measured once the real
  *   content is there. The freeze holds against what happens INSIDE the box, not
  *   against the room it is given: a window resize measures again.
+ * @param {"always"|"near"} [props.mount="always"] - when a slide's CONTENT is
+ *   rendered. The <Slide> element always is, so areas, tabs following the box
+ *   and `aria-labelledby` are the same either way. "always": every slide's,
+ *   from the start. "near": once a travel can show it — the slide on screen,
+ *   the one a travel is going to, and at rest the ones a hand dragging the box
+ *   would bring alongside (neighbours on the map, along the axes
+ *   `travelByDrag` opens, the other end of a `loop` included) — and kept from
+ *   then on. For slides that are costly to build (a grid of a few hundred
+ *   controls each): opening builds the slide shown and its neighbours rather
+ *   than all of them, and a jump to a far slide builds that one and none of
+ *   those in between, which a travel never shows. The box is then as large as
+ *   the largest slide BUILT so far (see `sizing`), so it grows as a larger one
+ *   is reached: give it a size of its own when the slides differ.
+ *   `<Slide mount>` says it for one slide — a heavy one among light ones.
  */
 export const SlideContainer = ({
   layout = "row",
@@ -655,6 +669,7 @@ export const SlideContainer = ({
   travelByScroll = "x",
   duration = "300ms",
   sizing = "largest",
+  mount = "always",
   children,
   ...rest
 }) => {
@@ -774,6 +789,17 @@ export const SlideContainer = ({
   // Undefined at mount on purpose: the first area held outside is news like any
   // other, and it is walked to rather than opened on.
   const areaAskedSeenRef = useRef(undefined);
+  // An area held outside that this container has not answered yet: the effect
+  // reading currentFromCaller walks to it, after the render that brings it.
+  const requestIsNews = () =>
+    currentFromCaller !== undefined &&
+    currentFromCaller !== areaAskedSeenRef.current;
+  // The slide about to be on screen, as far as a render can tell: the area
+  // asked from outside while it is news — the picture is walked there before
+  // it is painted, the first request included — and the container's own answer
+  // otherwise. What a slide waiting for a travel reads to have its content in
+  // the very render that shows it (see Slide's `mount`).
+  const areaShownNext = requestIsNews() ? currentFromCaller : current;
   // Where the container stands, said where the caller holds it.
   //
   // Whether a slide is a place one came from is the STATE's own business (see
@@ -827,6 +853,22 @@ export const SlideContainer = ({
   // state: nothing on screen depends on it, and a travel must read what the
   // one before it wrote, not what the last render saw.
   const cameFromRef = useRef({});
+  // The slides a travel has come near while their content was not rendered
+  // (mount="near", see renderNear): only ever grows, and only for a slide that
+  // was waiting — a container whose slides all render never re-renders for it.
+  const [nearAreas, setNearAreas] = useState([]);
+  // Nothing names the slide on screen (no area held outside, no default): it
+  // is the first one in the DOM, which the first render cannot read yet. The
+  // first Slide to render is that one, so it claims it — the slide on screen
+  // then has its content from the first commit (a size frozen at mount, a
+  // focus landing in it) rather than one render late.
+  const openingClaimRef = useRef(null);
+  const claimOpening = (area) => {
+    if (openingClaimRef.current === null) {
+      openingClaimRef.current = area;
+    }
+    return openingClaimRef.current === area;
+  };
 
   // The controller has caught up with the slide the container went to on its
   // own (commit="rest"): there are no longer two answers to give, so the
@@ -973,6 +1015,46 @@ export const SlideContainer = ({
     }
   };
 
+  // The slides a hand dragging the box from this area would bring alongside:
+  // the map's neighbours on the axes it drags, read the way the drag reads them
+  // (areaTowards knows the holes and a loop's two ends).
+  const areasAlongside = (area) => {
+    const alongside = [];
+    if (dragAxes?.includes("x")) {
+      alongside.push(areaTowards(-1, 0, area), areaTowards(1, 0, area));
+    }
+    if (dragAxes?.includes("y")) {
+      alongside.push(areaTowards(0, -1, area), areaTowards(0, 1, area));
+    }
+    return alongside;
+  };
+
+  // mount="near": the content of a slide is asked for before a travel shows
+  // it. The neighbours are asked for AT REST, never when a travel sets off: the
+  // travel shows the slide it goes to and nothing past it, and a slide built in
+  // the render that starts it is a frame the travel waits for. At rest nothing
+  // moves, and a hand landing next is still answered after the build.
+  const renderNear = (area, { alongside }) => {
+    // Asked on every render: a container with nothing waiting stops here.
+    if (!trackRef.current?.querySelector(":scope > [data-slide-unrendered]")) {
+      return;
+    }
+    const unrendered = readMap()
+      .slideElements.filter((slideElement) =>
+        slideElement.hasAttribute("data-slide-unrendered"),
+      )
+      .map(readArea);
+    const near = alongside ? [area, ...areasAlongside(area)] : [area];
+    const toRender = near.filter((nearArea) => unrendered.includes(nearArea));
+    if (!toRender.length) {
+      return;
+    }
+    setNearAreas((previous) => {
+      const added = toRender.filter((nearArea) => !previous.includes(nearArea));
+      return added.length ? [...previous, ...added] : previous;
+    });
+  };
+
   // The travel is over: the stage is struck and every slide goes back where the
   // map says it is. Nothing is seen moving for it — the slide on screen sits at
   // the same place whatever the arrangement (its own offset and the track's are
@@ -1014,6 +1096,7 @@ export const SlideContainer = ({
     const offset = `${-x * 100}% ${-y * 100}%`;
     offsetRef.current = offset;
     track.style.setProperty("--slide-container-offset", offset);
+    renderNear(currentArea, { alongside: true });
     // Arrived, so the change can be told (commit="rest"): the picture is at
     // rest and whatever the caller does with it — write the URL, ask a server —
     // costs the gesture nothing anymore.
@@ -1336,6 +1419,15 @@ export const SlideContainer = ({
     if (!stageRef.current) {
       drawnAreaRef.current = currentArea;
     }
+    // What a travel can show next (mount="near"), around where the picture
+    // SETTLES: a request from outside is walked to by an effect running after
+    // this one, in the same commit, and the slides around a picture about to be
+    // walked away from would be built for nothing. The neighbours only at
+    // rest, see renderNear.
+    const settlingArea =
+      (requestIsNews() && reachableTowards(currentArea, currentFromCaller)) ||
+      currentArea;
+    renderNear(settlingArea, { alongside: !stageRef.current });
     // Said last, and after data-current has been written: what a travel would do
     // is read off the map from the slide that is now current, and off the locks
     // that slide is wearing in this very commit.
@@ -1551,12 +1643,9 @@ export const SlideContainer = ({
   // request later), and what nothing has answered yet must still be answered
   // once it can be.
   useLayoutEffect(() => {
-    if (currentFromCaller === undefined) {
-      return;
-    }
-    if (currentFromCaller === areaAskedSeenRef.current) {
-      // Not news: either nothing moved, or this container is reading back what
-      // it wrote itself.
+    if (!requestIsNews()) {
+      // Not news: nothing held outside, nothing moved, or this container
+      // reading back what it wrote itself.
       return;
     }
     // The slide asked for is not rendered yet — no slides at all, or one whose
@@ -2359,6 +2448,9 @@ export const SlideContainer = ({
         if (!past) {
           return false;
         }
+        // Two slides from the one at rest, so possibly never rendered: asked
+        // for now, and built before the frame that brings it in is painted.
+        renderNear(past, { alongside: false });
         const currentElement =
           slideElements.find((slideElement) =>
             slideElement.hasAttribute("data-current"),
@@ -2781,6 +2873,12 @@ export const SlideContainer = ({
             done,
             valueByArea,
             settleFocus,
+            // What a slide reads to know whether its content is rendered yet
+            // (see Slide's `mount`).
+            mount,
+            areaShownNext,
+            nearAreas,
+            claimOpening: areaShownNext === undefined ? claimOpening : null,
             // The box itself, for what is written INSIDE it to read the same
             // facts what is written outside reads by id (useSlideContainer):
             // a way out is a way out on either side of the box.
@@ -2840,9 +2938,12 @@ const warnOnNonStringArea = (area) => {
  *   try to leave.
  * @param {boolean} [props.preventNavNext] - hold them from going right or down.
  * @param {boolean} [props.preventNavPrevious] - …left or up.
+ * @param {"always"|"near"} [props.mount] - when this slide's content is
+ *   rendered; the container's `mount` when not said (see there).
  */
 export const Slide = ({
   area,
+  mount,
   required,
   preventNav,
   preventNavNext = preventNav,
@@ -2855,6 +2956,24 @@ export const Slide = ({
   if (import.meta.dev) {
     warnOnNonStringArea(slideArea);
   }
+  // Asked by every slide, whatever its own mode: the claim goes to the first
+  // slide to RENDER, and a slide that skipped asking would hand it to the one
+  // after it.
+  const opening = container?.claimOpening?.(slideArea);
+  // Kept once rendered (mount="near"): going back builds nothing again, and a
+  // slide being left keeps its content for as long as it is still in the frame.
+  const renderedRef = useRef(false);
+  if (
+    !renderedRef.current &&
+    (!container ||
+      (mount ?? container.mount) !== "near" ||
+      opening ||
+      slideArea === container.areaShownNext ||
+      container.nearAreas.includes(slideArea))
+  ) {
+    renderedRef.current = true;
+  }
+  const rendered = renderedRef.current;
   const answered = Boolean(container?.answeredAreas.includes(slideArea));
   const holdsUntilAnswered = Boolean(required) && !answered;
   const nextIsLocked = Boolean(preventNavNext) || holdsUntilAnswered;
@@ -2902,13 +3021,16 @@ export const Slide = ({
           data-slide-area={slideArea}
           data-prevent-nav-next={nextIsLocked ? "" : undefined}
           data-prevent-nav-previous={preventNavPrevious ? "" : undefined}
+          // What the container reads to know a slide is waiting for a travel
+          // to come near (see renderNear).
+          data-slide-unrendered={rendered ? undefined : ""}
           // A surface one interacts with says what state it is in, the way every
           // other surface does — a dialog carries the very same set.
           // :focus-within is the one a slide is really about: it is what tells
           // the slide holding the keyboard from the ones waiting.
           pseudoClasses={SLIDE_PSEUDO_CLASSES}
         >
-          {children}
+          {rendered ? children : null}
         </Box>
       </SlideValueContext.Provider>
     </SlideContext.Provider>
