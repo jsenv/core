@@ -263,3 +263,9 @@ What an action is for, calling versus binding (equal params share one
 instance; a signal in the params retargets without running anything), and what
 a failing run rejects with:
 [packages/frontend/navi/docs/actions.md](../packages/frontend/navi/docs/actions.md).
+
+### Lists hold items
+
+A list runs along x as well as along y, so what it holds is an **item**, never
+a "row" — in code, comments, docs and messages alike. A range of items asked
+for at a time is a **page**. "Row" stays a layout word (a CSS grid or flex row).
