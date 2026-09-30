@@ -153,13 +153,31 @@ const ButtonConfirm = ({
     <span
       className="navi_button_confirm"
       ref={askingRef}
+      // A place for the focus, so a press anywhere in the question keeps it
+      // inside: WebKit does not focus a pressed button, and a press on
+      // "Confirmer" would otherwise blur toward <body> — a focusout with no
+      // relatedTarget, read below as the person leaving. The callout answers
+      // the same ambiguity the same way.
+      tabIndex={-1}
+      // "not me, unless you have nothing else": the ladder in the effect above
+      // walks past the question to what it holds.
+      // eslint-disable-next-line react/no-unknown-property
+      navi-autofocus="last-resort"
       onKeyDown={(e) => {
         if (e.key === "Escape") {
           cancel(true);
         }
       }}
       onFocusOut={(e) => {
-        if (!askingRef.current.contains(e.relatedTarget)) {
+        // Chrome also fires this from the question's own removal, once preact
+        // has cleared the ref: nobody left, and cancel(false) would undo the
+        // focus the answer gives back. That focus cannot go back before the
+        // removal: the button it lands on is mounted by the same commit.
+        const askingEl = askingRef.current;
+        if (!askingEl) {
+          return;
+        }
+        if (!askingEl.contains(e.relatedTarget)) {
           cancel(false);
         }
       }}

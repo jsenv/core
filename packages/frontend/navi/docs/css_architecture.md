@@ -355,7 +355,7 @@ the layer:
 
 | taken back                                                                                  | how                                                                                  |
 | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| the ink (`color`)                                                                           | `--navi-popup-color` on a popup; the UA's `CanvasText` on a callout                  |
+| the ink (`color`)                                                                           | `--navi-popup-color`, on a popup and on a callout                                    |
 | text properties that belong to the opener (alignment, transform, shadow, spacing, wrapping) | reset in `@layer navi`, so an app that wants one of them back says so on the surface |
 | the five color keywords `--navi-color-primary/secondary/emphasis/discrete/hint`             | re-declared on each surface, so a `:root` value of one stops there                   |
 

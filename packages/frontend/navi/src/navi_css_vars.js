@@ -322,15 +322,11 @@ const css = /* css */ `
 
     /* A surface is a new paper: it writes in an ink of its own, and the
        keywords below are computed against that ink rather than the
-       container's. A popup writes in --navi-popup-color. */
+       container's. A popup and a callout write in --navi-popup-color. */
     .navi_popover,
-    .navi_dialog {
-      --navi-color-primary: var(--navi-popup-color);
-    }
-    /* A callout writes in the UA's own ink: callout.js sets color: revert on
-       a [popover] element, which the UA styles CanvasText. */
+    .navi_dialog,
     .navi_callout {
-      --navi-color-primary: CanvasText;
+      --navi-color-primary: var(--navi-popup-color);
     }
 
     /* The keywords derived from the ink, declared on every paper — :root, and

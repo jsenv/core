@@ -7,11 +7,10 @@ export const READONLY_CONSTRAINT = {
   name: "readonly",
   messageAttribute: "data-readonly-message",
   check: (field, { intent } = {}) => {
-    const readOnly = Boolean(
-      field.controlHostProps.readOnly ||
-      field.controlHostProps["aria-readonly"] === "true",
-    );
-    if (!readOnly) {
+    // Not off the rendered `readOnly`/`aria-readonly`: they also carry the run
+    // of the control's own action, a frame behind (see readOnlyWithoutRun in
+    // control_hooks.jsx). That run is BUSY_CONSTRAINT's, which reads it live.
+    if (!field.readOnlyWithoutRun) {
       return null;
     }
 

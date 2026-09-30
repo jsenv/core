@@ -1793,6 +1793,11 @@ const useInteractiveProps = (
     const actionLoading = optimistic ? false : actionRunning;
     const loadingResolved = loadingBase || actionLoading;
     const readOnlyResolved = readOnlyBase || actionLoading;
+    // What READONLY_CONSTRAINT refuses for. The run of the control's own action
+    // is BUSY_CONSTRAINT's, read live: readOnlyResolved is a render snapshot,
+    // still read-only in the tick the run settles — the tick a form's
+    // after-send `--navi-reset` asks the form to empty itself.
+    uiStateController.readOnlyWithoutRun = Boolean(readOnlyBase);
     // Read-only, and what this control opens still opens: reading what is in
     // there changes nothing. Read by READONLY_CONSTRAINT, which lets an
     // interaction that only reads through on it.
@@ -2266,10 +2271,10 @@ const useInteractiveProps = (
     });
   }
   // controlHostProps is a curated subset of props with resolved values applied
-  // (e.g. readOnly resolved from context + action loading). The interaction system
-  // reads off uiStateController.controlHostProps at runtime (e.g. READONLY_CONSTRAINT
-  // checks controlHostProps.readOnly), so pointing the controller at controlHostProps
-  // keeps those reads current without any extra bookkeeping.
+  // (e.g. readOnly resolved from context + action loading). The constraints
+  // read off uiStateController.controlHostProps at runtime (e.g. DISABLED_CONSTRAINT,
+  // the readonly reason), so pointing the controller at controlHostProps keeps
+  // those reads current without any extra bookkeeping.
   const firstRender = uiStateController.controlHostProps === undefined;
   uiStateController.controlHostProps = controlHostProps;
   // The action itself, not just what the last render made of it: its running

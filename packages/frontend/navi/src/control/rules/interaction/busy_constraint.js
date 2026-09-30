@@ -91,16 +91,18 @@ const findBusySource = (field) => {
   // a new interaction is queued behind the run (see the action queue in
   // control_hooks.jsx) rather than refused.
   if (!field.optimistic && boundAction) {
-    // The INSTANCE the proxy resolves to right now, not the proxy's own
-    // signal: that one is a MIRROR, synced by an effect the settling batch
-    // defers — read mid-batch (a state echo carrying the user's event back
-    // down, an automatic follow-up), it still says RUNNING for an action
-    // that is already over, and the gate would refuse — callout included —
-    // for nothing. The resolved instance is the live truth: at that echo it
-    // is the instance that just settled, already COMPLETED. And it IS the
-    // running one whenever one runs — a non-optimistic control's state
-    // cannot move mid-run, this very gate blocks it.
-    const liveAction = boundAction.getCurrentAction?.() ?? boundAction;
+    // The instance the run in flight uses, as the render reads it (see
+    // runningActionSignal in control_hooks.jsx): the state a proxy follows can
+    // move mid-run — a popup content unmounting takes the group's value — and
+    // the proxy would resolve to an idle instance. With no run out, the
+    // instance the proxy resolves to right now, never the proxy's own signal:
+    // a MIRROR synced by an effect the settling batch defers, which still says
+    // RUNNING mid-batch (a state echo, an automatic follow-up) for an action
+    // already over. An instance is COMPLETED the moment it settles.
+    const liveAction =
+      field.runningActionSignal.value ??
+      boundAction.getCurrentAction?.() ??
+      boundAction;
     if (liveAction.runningStateSignal.value === RUNNING) {
       return { field, action: liveAction };
     }

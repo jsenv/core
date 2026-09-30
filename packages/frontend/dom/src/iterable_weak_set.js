@@ -1,20 +1,27 @@
 export const createIterableWeakSet = () => {
   const objectWeakRefSet = new Set();
+  // The one WeakRef of each member, so that adding a member twice keeps one
+  // entry and deleting it once removes it. Weak on the object, and a WeakRef
+  // holds nothing: this keeps nothing alive.
+  let weakRefMap = new WeakMap();
 
   return {
     add: (object) => {
+      if (weakRefMap.has(object)) {
+        return;
+      }
       const objectWeakRef = new WeakRef(object);
       objectWeakRefSet.add(objectWeakRef);
+      weakRefMap.set(object, objectWeakRef);
     },
 
     delete: (object) => {
-      for (const weakRef of objectWeakRefSet) {
-        if (weakRef.deref() === object) {
-          objectWeakRefSet.delete(weakRef);
-          return true;
-        }
+      const objectWeakRef = weakRefMap.get(object);
+      if (!objectWeakRef) {
+        return false;
       }
-      return false;
+      weakRefMap.delete(object);
+      return objectWeakRefSet.delete(objectWeakRef);
     },
 
     *[Symbol.iterator]() {
@@ -29,21 +36,12 @@ export const createIterableWeakSet = () => {
     },
 
     has: (object) => {
-      for (const weakRef of objectWeakRefSet) {
-        const objectCandidate = weakRef.deref();
-        if (objectCandidate === undefined) {
-          objectWeakRefSet.delete(weakRef);
-          continue;
-        }
-        if (objectCandidate === object) {
-          return true;
-        }
-      }
-      return false;
+      return weakRefMap.has(object);
     },
 
     clear: () => {
       objectWeakRefSet.clear();
+      weakRefMap = new WeakMap();
     },
 
     get size() {

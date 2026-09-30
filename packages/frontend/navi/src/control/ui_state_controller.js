@@ -2387,6 +2387,7 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
         ref: realUIStateController.ref,
         uiStateSignal: realUIStateController.uiStateSignal,
         controlHostProps: realUIStateController.controlHostProps,
+        readOnlyWithoutRun: realUIStateController.readOnlyWithoutRun,
         registerChild: (child) => {
           if (!canRegisterAsFacadeChild(child)) {
             return;
@@ -2516,6 +2517,8 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
       s.controller.ref = realUIStateController.ref;
       s.controller.uiStateSignal = realUIStateController.uiStateSignal;
       s.controller.controlHostProps = realUIStateController.controlHostProps;
+      s.controller.readOnlyWithoutRun =
+        realUIStateController.readOnlyWithoutRun;
       realUIStateController.pushStateDownToFacadeChild =
         s.controller.pushStateDownToChild;
 

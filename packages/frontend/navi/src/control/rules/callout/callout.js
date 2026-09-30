@@ -95,8 +95,7 @@ const css = /* css */ `
       --callout-error-color: var(--navi-callout-error-color);
       --callout-neutral-color: var(--navi-callout-neutral-color);
 
-      --callout-background-color: white;
-      --callout-icon-color: black;
+      --callout-background-color: var(--navi-popup-background-color);
       --callout-padding: 8px;
       --callout-z-index: var(--navi-z-index-callout);
       /* The page's line, said here rather than inherited: the icon and the
@@ -150,11 +149,11 @@ const css = /* css */ `
     height: auto; /* User agent reset */
     margin: 0;
     padding: 0; /* User agent reset */
-    /* The UA's ink for a [popover] element (CanvasText), not the element's:
-       a callout sits inside the element but writes on its own paper. The
-       color keywords are re-declared against that same ink in
-       navi_css_vars.js (.navi_callout). */
-    color: revert;
+    /* A callout sits inside the element but writes on its own paper: the
+       popup's ink, paired with the popup's paper it is drawn on, so the two
+       follow color-scheme and the theme together. The color keywords are
+       re-declared against that same ink in navi_css_vars.js. */
+    color: var(--navi-popup-color);
     font-weight: initial; /* Callout fells disconnected from the element, font weight should be predictible and stable */
     font-size: initial; /* Callout fells disconnected from the element, font size should be predictible and stable */
     line-height: var(

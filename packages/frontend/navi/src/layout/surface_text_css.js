@@ -21,9 +21,9 @@
  * `font-family` is deliberately absent: a surface keeps the face of what
  * opened it, so a section written in a display font gets its tooltips in that
  * font. `color`, `font-size` and `font-weight` are absent too — each surface
- * answers those its own way (a popup writes in --navi-popup-color and follows
- * the size of what opened it; a callout reverts to the document's ink and
- * size).
+ * answers those its own way (a popup and a callout write in
+ * --navi-popup-color; a popup follows the size of what opened it, a callout
+ * resets to the document's size).
  *
  * In `@layer navi` so an app that wants one of these back says so on the
  * surface and wins, without having to out-specify anything.
