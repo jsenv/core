@@ -130,11 +130,15 @@ const updateIsNew = version !== null && version !== APP_VERSION;
 
 The browser activates the update only once the current worker has finished
 its in-flight events (a fetch it is still answering on a slow network, for
-instance): the promise can stay pending for a while, and it rejects when the
-update is discarded (`update.readyState === "redundant"`) or refuses. Draw the
-progress from `update.readyState` (`"activation_pending"` while the current
-worker holds the switch, then `"activating"`, `"activated"`) rather than
-keeping a control busy on the promise; `update.error` holds the failure.
+instance): the promise can stay pending for a while (Chromium gives up waiting
+after 5 minutes), and it rejects when the update is discarded
+(`update.readyState === "redundant"`) or refuses. Draw the progress from
+`update.readyState` (`"activation_pending"` while the current worker holds the
+switch, then `"activating"`, `"activated"`) rather than keeping a control busy
+on the promise; `update.error` holds the failure. While it is pending, let the
+person go on rather than offer a reload: the switch is the browser's, and a
+reload before it happens lands on the old worker, and the update shows up as
+`"installed"` again.
 
 ### Restarting is the app's call
 

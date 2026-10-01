@@ -74,7 +74,8 @@ import { pwaLogger } from "./pwa_logger.js";
  *     is also written to `state.update.error`. The browser activates the
  *     update only once the current worker has finished its in-flight events
  *     (a fetch it is still answering, for instance): the promise can stay
- *     pending for as long as that takes, `state.update.readyState` reports
+ *     pending for as long as that takes (Chromium gives up waiting after 5
+ *     minutes), `state.update.readyState` reports
  *     where it stands ("activation_pending" while the current worker holds
  *     the switch). It stops there: the page keeps running, reloading is
  *     `reloadClients()`.
@@ -219,7 +220,7 @@ export const createServiceWorkerFacade = ({
       toServiceWorker.addEventListener("statechange", applyUpdateStateEffects);
     })();
 
-    const activate = async () => {
+    const activate = async (registration) => {
       try {
         await trackingPromise;
         await whenServiceWorkerReaches(toServiceWorker, "installed");
@@ -227,6 +228,17 @@ export const createServiceWorkerFacade = ({
           mutate({
             update: { error: null, readyState: "activation_pending" },
           });
+        }
+        // Chromium asks the outgoing worker to stop at its first idle moment
+        // only if it is running when skipWaiting is processed. One still
+        // starting (any fetch of the page wakes it) is kept until it idles,
+        // up to 5 minutes while the page fetches. A round-trip makes it run.
+        const outgoingServiceWorker = registration.active;
+        if (
+          outgoingServiceWorker &&
+          outgoingServiceWorker !== toServiceWorker
+        ) {
+          await inspectServiceWorker(outgoingServiceWorker);
         }
         pwaLogger.info("request skipWaiting");
         await requestSkipWaitingOnServiceWorker(toServiceWorker);
@@ -437,7 +449,7 @@ export const createServiceWorkerFacade = ({
         return;
       }
       const update = trackUpdate(serviceWorker);
-      await update.activate();
+      await update.activate(registration);
     },
     reloadClients: async () => {
       if (!canUseServiceWorkers) {
