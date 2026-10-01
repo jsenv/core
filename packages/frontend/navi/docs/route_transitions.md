@@ -267,7 +267,11 @@ travelling with the pages has a rectangle where it will be, not where it is seen
 finger is on the box — and leaves the bars live.
 
 A **modal `Dialog` open on a page** is furniture of the same kind: it travels with
-its page, or holds if both states have it. Its wall cannot be photographed (see
+its page, or holds if both states have it. One the navigation itself opens or
+closes — a layer whose `weak` param the link drops, or the back brings back —
+moves that way only, with no entrance or exit of its own on top
+([navigation.md](./navigation.md#a-link-inside-the-layer-leads-to-a-page)). The
+dialog's wall cannot be photographed (see
 [view_transitions.md](./view_transitions.md#the-top-layer-is-painted-through-the-roots-picture)),
 and dropping it for the movement makes the window blink under the press, so navi
 paints it into the pictures: a page leaving from under a wall leaves dimmed, one

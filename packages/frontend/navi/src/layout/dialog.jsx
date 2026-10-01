@@ -514,6 +514,12 @@ const css = /* css */ `
         }
       }
     }
+    /* Off while the dialog's own transitions are off (switchTransitionsOff):
+       the inline style that turns them off cannot reach a pseudo-element.
+       After the rules above, which it must win over at equal weight. */
+    &[navi-transitions-off]::backdrop {
+      transition-property: none;
+    }
 
     &[data-focus-visible],
     /* …or something filling it holds the keyboard and offers its ring to
@@ -1760,8 +1766,9 @@ const useDialogProps = (props) => {
         const dialogEl = ref.current;
         // A mount-time opening was never seen closed (see openEffect's own
         // `silent`): there is no box it comes from, because nothing was shown
-        // before it.
-        if (!dialogEl || (opened && (!lifting || event.detail.silent))) {
+        // before it. And a change a page change carries moves with that page,
+        // in and out of no anchor (see page_change.js).
+        if (!dialogEl || event.detail.silent || (opened && !lifting)) {
           applyChange();
           return;
         }
@@ -1823,8 +1830,9 @@ const useDialogProps = (props) => {
     }
 
     // Set by useOpenControllerByProps for the very first open triggered by
-    // `open`/`defaultOpen` already being truthy at mount — see popover.jsx's
-    // own openEffect for the full reasoning, mirrored here identically.
+    // `open`/`defaultOpen` already being truthy at mount, and for an open a
+    // page change carries — see popover.jsx's own openEffect for the full
+    // reasoning, mirrored here identically.
     const silent = Boolean(e.detail.silent);
 
     // document.documentElement — the shared "no real container, use the
@@ -1873,7 +1881,7 @@ const useDialogProps = (props) => {
     // comment), even though Dialog never needs to measure/flip anything: it
     // still needs a genuinely rendered "closed" frame to transition from, not a
     // jump straight from not-shown to aria-expanded="true".
-    dialogEl.style.transitionProperty = "none";
+    switchTransitionsOff(dialogEl);
 
     if (backdropEl) {
       disarmBackdropHideRef.current?.();
@@ -2156,12 +2164,12 @@ const useDialogProps = (props) => {
       dialogEl.setAttribute("aria-expanded", "true");
       backdropEl?.setAttribute("aria-expanded", "true");
       dialogEl.getBoundingClientRect();
-      dialogEl.style.transitionProperty = "";
+      switchTransitionsOn(dialogEl);
       if (backdropEl) {
         backdropEl.style.transitionProperty = "";
       }
     } else {
-      dialogEl.style.transitionProperty = "";
+      switchTransitionsOn(dialogEl);
       dialogEl.setAttribute("aria-expanded", "true");
       backdropEl?.setAttribute("aria-expanded", "true");
       if (backdropEl) {
@@ -2208,6 +2216,15 @@ const useDialogProps = (props) => {
         `"${closeEvent.type}" on ${getElementSignature(closeEvent.target)} -> closeDialog`,
       );
       clearTextSelectionInside(dialogEl);
+      // Closed by the navigation that puts another page on screen: it leaves
+      // with that page, and plays no exit of its own (see page_change.js).
+      const silent = Boolean(closeEvent.detail.silent);
+      if (silent) {
+        switchTransitionsOff(dialogEl);
+        if (backdropEl) {
+          backdropEl.style.transitionProperty = "none";
+        }
+      }
       dialogEl.setAttribute("aria-expanded", "false");
       if (!isTopLayer) {
         openLocalDialogCount = Math.max(0, openLocalDialogCount - 1);
@@ -2247,7 +2264,7 @@ const useDialogProps = (props) => {
       // next opening clears it (see openEffect's own unfreezeSize).
       freezeSize(dialogEl);
       cancelOpenInteractionSuppression?.();
-      if (hasCssTransitionAnimation) {
+      if (hasCssTransitionAnimation && !silent) {
         suppressPointerEventsDuringTransition(dialogEl);
       }
       if (backdropEl) {
@@ -2261,6 +2278,15 @@ const useDialogProps = (props) => {
       }
       restoreFocus(closeEvent);
       cleanup();
+      if (silent) {
+        // The closed frame committed with nothing transitioning, before
+        // transitions come back for the next opening.
+        dialogEl.getBoundingClientRect();
+        switchTransitionsOn(dialogEl);
+        if (backdropEl) {
+          backdropEl.style.transitionProperty = "";
+        }
+      }
     };
   };
 
@@ -2541,6 +2567,19 @@ const warnBottomSheetHoldingKeyboardControl = (dialogEl) => {
     `[navi] a Dialog docked to the bottom edge (dockedOnSmallTouchScreen="bottom") holds a field that raises the virtual keyboard. On a phone the keyboard rises from the edge the sheet rests on and reflows the sheet into the strip left above it, at every keystroke. A sheet one types into rests on the top edge: dockedOnSmallTouchScreen without a value. "bottom" is for a sheet one reads and taps.`,
     controlEl,
   );
+};
+
+// The dialog's own transitions, off while a frame is pinned (the closed one an
+// entrance starts from, the open one a silent opening lands on, the closed one
+// a silent close leaves) and back on after it. A modal's wall is its native
+// ::backdrop, which takes no inline style: it reads the attribute instead.
+const switchTransitionsOff = (dialogEl) => {
+  dialogEl.style.transitionProperty = "none";
+  dialogEl.setAttribute("navi-transitions-off", "");
+};
+const switchTransitionsOn = (dialogEl) => {
+  dialogEl.style.transitionProperty = "";
+  dialogEl.removeAttribute("navi-transitions-off");
 };
 
 const DIALOG_PSEUDO_CLASSES = [

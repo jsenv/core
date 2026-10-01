@@ -1027,8 +1027,10 @@ const usePopoverProps = (props) => {
     // `open`/`defaultOpen` already being truthy at mount — there's nothing
     // to visually transition away from (nothing was ever shown as "closed"
     // to the user), so this open skips the animation entirely instead of
-    // playing it against a closed frame that was never actually seen. See
-    // the final commit step below for how that's done.
+    // playing it against a closed frame that was never actually seen. Set
+    // too for an open the page changing carries: that page is its movement
+    // (see page_change.js). See the final commit step below for how that's
+    // done.
     const silent = Boolean(e.detail.silent);
 
     const [cleanup, addCleanup] = createPubSub(true);
@@ -1499,7 +1501,7 @@ const usePopoverProps = (props) => {
     // focus in. Inlined rather than a standalone function since it only
     // has this one call site.
     //
-    // `silent` (mounting already open via `open`/`defaultOpen`) flips the
+    // `silent` (mounting already open, or carried by a page change) flips the
     // order instead: aria-expanded first, *then* re-enable transitions, with
     // its own forced reflow in between the two — without that reflow, the
     // browser coalesces "flip aria-expanded" and "re-enable transitions"
@@ -1557,6 +1559,15 @@ const usePopoverProps = (props) => {
     return (closeEvent) => {
       debugPopup(closeEvent, `closePopover()`);
       clearTextSelectionInside(popoverEl);
+      // Closed by the navigation that puts another page on screen: it leaves
+      // with that page, and plays no exit of its own (see page_change.js).
+      const silent = Boolean(closeEvent.detail.silent);
+      if (silent) {
+        popoverEl.style.transitionProperty = "none";
+        if (backdropEl) {
+          backdropEl.style.transitionProperty = "none";
+        }
+      }
       popoverEl.setAttribute("aria-expanded", "false");
       // Set regardless of isTopLayer — see the open side's own identical
       // comment (openEffect above) for why hidePopover() alone isn't
@@ -1583,7 +1594,7 @@ const usePopoverProps = (props) => {
       // open is its own separate call with no way to reach back into this
       // one).
       cancelOpenInteractionSuppression?.();
-      if (hasCssTransitionAnimation) {
+      if (hasCssTransitionAnimation && !silent) {
         suppressPointerEventsDuringTransition(popoverEl);
       }
       if (backdropEl) {
@@ -1622,6 +1633,15 @@ const usePopoverProps = (props) => {
       popoverEl.removeAttribute("data-position-x-current");
 
       cleanup();
+      if (silent) {
+        // The closed frame committed with nothing transitioning, before
+        // transitions come back for the next opening.
+        popoverEl.getBoundingClientRect();
+        popoverEl.style.transitionProperty = "";
+        if (backdropEl) {
+          backdropEl.style.transitionProperty = "";
+        }
+      }
     };
   };
 

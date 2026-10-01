@@ -636,7 +636,10 @@ opens or closes on its own — Escape, the backdrop, a `--navi-close` — and af
 a close a busy control denied, when the signal says "open" again, because that
 is what is true (see [state_binding.md](./state_binding.md)). A signal already
 `true` at mount means the popup was already open when the page appeared: no
-entrance plays.
+entrance plays. Nor does an opening — or an exit — the signal asks for in the
+navigation that puts another page on screen: that page is the popup's movement
+([navigation.md](./navigation.md#a-link-inside-the-layer-leads-to-a-page)), and
+the same holds for `open` and `navState`.
 
 `value` makes the signal say WHICH popup is open, for several sharing it — one
 sheet per card in a feed, with a single `?seat=<gameId>` for all of them:

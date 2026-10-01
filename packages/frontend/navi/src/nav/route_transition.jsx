@@ -109,6 +109,7 @@ import { NAV_DEPTH_STATE_KEY } from "./browser_integration/document_back_and_for
 import { documentStateSignal } from "./browser_integration/document_state_signal.js";
 import { documentUrlSignal } from "./browser_integration/document_url_signal.js";
 import { Box } from "../box/box.jsx";
+import { notePageChange } from "./page_change.js";
 import { keepLeavingPages, observeRouteRender } from "./route.jsx";
 import { pageIsCurrent } from "./route_page.js";
 import {
@@ -1305,6 +1306,9 @@ const rebuildWatcher = () => {
     if (fromIndex === index) {
       return;
     }
+    // A page of a relation can be a param: a move between two of them is a
+    // page change the path does not show (see page_change.js).
+    notePageChange();
     if (navigationAnimated) {
       // The movement on screen was turned round for this very navigation (see
       // turnRunningTransitionRound): it is already being answered, by the

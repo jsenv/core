@@ -876,8 +876,12 @@ This prevents cross-test pollution and ensures clean state.`,
     // read again.
     const path = urlWithoutSearchAndHash(url);
     const pathKept = path === previousPath;
+    // A new path is a new page: what the integration tells whatever reacts to
+    // this change in the render it causes (see page_change.js). Not the first
+    // one — there was no page before it, and what it mounts mounts as it is.
+    const pageChanged = previousPath !== null && !pathKept;
     previousPath = path;
-    const returnValue = {};
+    const returnValue = { pageChanged };
     const routeMatchInfoSet = new Set();
     for (const route of routeSet) {
       const routePrivateProperties = getRoutePrivateProperties(route);

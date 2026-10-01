@@ -26,6 +26,7 @@ linking to them, and turning them into tabs.
   - [What the search param buys: the way back is in the address](#what-the-search-param-buys-the-way-back-is-in-the-address)
   - [The wiring](#the-wiring)
   - [Places inside the layer](#places-inside-the-layer)
+  - [A link inside the layer leads to a page](#a-link-inside-the-layer-leads-to-a-page)
   - [What it costs](#what-it-costs)
 
 ## The rule that decides everything else: the position belongs in the URL
@@ -783,7 +784,9 @@ Every piece of it answers something:
   off screen;
 - **no `defineRouteTransition` for it.** The page beneath does not change, so
   there is no pair of pages to move between — route transitions are for pages
-  replacing pages ([route_transitions.md](./route_transitions.md)).
+  replacing pages ([route_transitions.md](./route_transitions.md)). When a link
+  inside the layer does change it, see
+  [below](#a-link-inside-the-layer-leads-to-a-page).
 
 ### Places inside the layer
 
@@ -810,6 +813,30 @@ because they answer two questions — is the layer there, and which of its pages
 is shown. A popup's `value` answers another one, WHICH of several popups is open
 (one sheet per card under a single `?seat=<gameId>`), not what varies inside one
 (see [popup_open.md](./popup_open.md#signal--the-app-holds-it-both-ways)).
+
+### A link inside the layer leads to a page
+
+The terms of use behind an About dialog, a profile behind a name in the
+notifications: a link inside the layer leads to another page, and the layer does
+not follow — its params are `weak`, the link drops them, and the layer closes in
+the navigation that brings the page. The back button brings both back: the page,
+and the layer over it as it was, on the tab it was on.
+
+Neither is a movement of the layer's. **The page changing is its movement**: a
+layer opened or closed by the navigation that puts another page on screen plays
+no entrance and no exit, and its slides land where the address puts them rather
+than travelling there — a tab row's indicator with them. A route transition
+towards that page already carries the layer: photographed with the page it
+covers, it leaves with that page and comes back with it
+([route_transitions.md](./route_transitions.md#pages-between-fixed-bars-the-transition-area)).
+Without one, the page cuts, and the layer cuts with it. Played on its own as
+well, the layer would move twice — dropping in over a page that is sliding.
+
+The line is the page, not how the navigation was made: the back button closing
+the layer itself (`/me?settings` → `/me`) is the layer's own movement, and plays
+its exit. A page is what navi moves between — a new path, or a param that a
+relation or a `RouteTravel` row names as a page. A search param the page merely
+reads keeps the page, and a layer that changes with it moves on its own.
 
 ### What it costs
 

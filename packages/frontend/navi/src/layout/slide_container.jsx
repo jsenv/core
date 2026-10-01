@@ -82,6 +82,7 @@ import {
 } from "@jsenv/dom";
 import { onNaviCommand } from "../control/commands.js";
 import { warnSignalCollision } from "../control/control_value.js";
+import { isRenderingPageChange } from "../nav/page_change.js";
 import { useDebugFocus } from "../navi_debug.jsx";
 import { Button } from "../control/input/button.jsx";
 import {
@@ -1143,10 +1144,26 @@ export const SlideContainer = ({
     paintCurrentArea(currentArea);
     const realPlaceOf = (area) => placeOf.get(area) || { x: 0, y: 0 };
     const durationMs = durationToMs(duration);
+    // A change of slide the page changing carries is no travel: the page is
+    // the movement, and the slides land where the address puts them (see
+    // page_change.js). A travel still playing is cut on the spot, and the
+    // indicator riding it with it.
+    const landsWithPage =
+      isRenderingPageChange() &&
+      (stageRef.current ? stageRef.current.area : drawnAreaRef.current) !==
+        currentArea;
+    if (landsWithPage && trackAnimationRef.current) {
+      trackAnimationRef.current.cancel();
+      trackAnimationRef.current = null;
+      movingRef.current = null;
+      cancelTravelProgressAnimation();
+      paintTravelProgress(0);
+    }
+    const still = noTravel || landsWithPage;
     // Nothing is travelling, so nothing is staged: the picture to paint is the
     // map itself, and a stage left over from a travel that has just been given
     // up on would be painted instead of it.
-    if (noTravel) {
+    if (still) {
       stageRef.current = null;
     }
     let stage = stageRef.current;
@@ -1155,7 +1172,7 @@ export const SlideContainer = ({
     let travelStep = null;
     const drawnArea = stage ? stage.area : drawnAreaRef.current;
     const travelStarts =
-      !noTravel &&
+      !still &&
       durationMs > 0 &&
       drawnArea !== undefined &&
       drawnArea !== currentArea &&
@@ -1308,7 +1325,7 @@ export const SlideContainer = ({
       travelInFlight && !offsetDragged && offsetTargetBefore === offset;
     const travels =
       !sameTravelPlaying &&
-      !noTravel &&
+      !still &&
       durationMs > 0 &&
       offsetBefore !== undefined &&
       offsetBefore !== offset;

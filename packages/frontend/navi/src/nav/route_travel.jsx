@@ -75,6 +75,7 @@ import {
   freezeRouteRender,
   observeRouteRender,
 } from "./route.jsx";
+import { notePageChange } from "./page_change.js";
 import { pageIsCurrent } from "./route_page.js";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import {
@@ -819,6 +820,10 @@ export const RouteTravel = ({
         }
         return;
       }
+      // Whoever asked for it: a tab of this row can be a param, and a move
+      // between two of them is a page change the path does not show (see
+      // page_change.js).
+      notePageChange();
       const page = pages[index];
       // A page this box asked for itself — a travel's own navigation, or one
       // it had given up waiting on: what arrives here is the answer to a

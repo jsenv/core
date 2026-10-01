@@ -617,11 +617,13 @@ export const Expandable = (props) => {
   openController.openEffect = (openEvent) => {
     const contentContainer = contentContainerRef.current;
     // `silent`: the expandable was already open when the page appeared
-    // (`open`/`defaultOpen` at mount). Nothing changed for anyone to be told
-    // about, nothing was ever shown closed to move away from, and a page must
-    // not have its focus stolen by a section that was simply already open — so
-    // an opening that was never an opening plays nothing, says nothing and
-    // takes nothing. The action it carries still runs: its content is due.
+    // (`open`/`defaultOpen` at mount, or the navigation putting that page on
+    // screen opening it — see page_change.js). Nothing changed for anyone to
+    // be told about, nothing was ever shown closed to move away from, and a
+    // page must not have its focus stolen by a section that was simply
+    // already open — so an opening that was never an opening plays nothing,
+    // says nothing and takes nothing. The action it carries still runs: its
+    // content is due.
     const silent = Boolean(openEvent.detail.silent);
     const revealing = animation && !silent && Boolean(contentContainer);
     // Where the last paint left the track — 0 when fully closed, partway when
@@ -680,7 +682,12 @@ export const Expandable = (props) => {
         effectiveAction.abort();
       }
       cancelSettleWatch();
-      const collapsing = animation && Boolean(contentContainerAtClose);
+      // `silent`: closed by the navigation that puts another page on screen,
+      // which is its movement (see page_change.js).
+      const collapsing =
+        animation &&
+        !closeEvent.detail.silent &&
+        Boolean(contentContainerAtClose);
       if (collapsing) {
         // Now, while the content is still fully laid out — the collapsing
         // track uncovers a content frozen at that size.

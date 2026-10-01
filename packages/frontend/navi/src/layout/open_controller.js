@@ -14,6 +14,7 @@ import {
   useNavState,
 } from "../nav/browser_integration/browser_integration.js";
 import { documentUrlSignal } from "../nav/browser_integration/document_url_signal.js";
+import { isRenderingPageChange } from "../nav/page_change.js";
 import { preloadState } from "../nav/route.js";
 import {
   warnSignalAsState,
@@ -919,8 +920,8 @@ export const useOpenPropsEffectOnOpenController = (
   // Tracks whether the effect below has ever run before — only the very
   // first run gets the "mount already open" treatment (`open` truthy from
   // the start, or the uncontrolled, mount-only `defaultOpen`); every
-  // subsequent `open` change is a real, later toggle and should animate
-  // normally like any other interactive open/close.
+  // subsequent `open` change is a real, later toggle and animates like any
+  // interactive open/close — unless a page change carries it (see below).
   const isFirstRunRef = useRef(true);
   // What `open` was on the previous run of the effect below. preact re-runs
   // an effect for a change of its deps — or for none at all, when a
@@ -940,6 +941,12 @@ export const useOpenPropsEffectOnOpenController = (
     isFirstRunRef.current = false;
     const openChanged = open !== lastRunOpenRef.current;
     lastRunOpenRef.current = open;
+    // Opened or closed by the navigation that puts another page on screen: a
+    // link inside the popup leading away, a back to the page it stood over.
+    // The page changing is its movement, so it has none of its own — a route
+    // transition carries it with its page, and without one it cuts with the
+    // page (see page_change.js).
+    const carriedByPageChange = isRenderingPageChange();
 
     if (isFirstRun) {
       // "interaction" is said even over what the caller holds reading open: a
@@ -958,10 +965,12 @@ export const useOpenPropsEffectOnOpenController = (
         // other truthy value means it was simply already open: nothing was ever
         // shown as "closed" for the user to see it transition away from, so the
         // entrance is skipped (`silent`, see popover.jsx's own openEffect).
-        //
+        // A popup built by an opening a page change carries is silent too,
+        // whatever built it: read now, the answer only holds for this render.
+        const silent = mountOpenReason !== "interaction" || carriedByPageChange;
         mountOpenOwedRef.current = () =>
           openController.open(new CustomEvent("open_by_prop", { detail: {} }), {
-            silent: mountOpenReason !== "interaction",
+            silent,
           });
       }
       return undefined;
@@ -993,11 +1002,13 @@ export const useOpenPropsEffectOnOpenController = (
           });
         return undefined;
       }
-      openController.open(new CustomEvent("open_by_prop", { detail: {} }));
+      openController.open(new CustomEvent("open_by_prop", { detail: {} }), {
+        silent: carriedByPageChange,
+      });
     } else {
       openController.requestClose(
         new CustomEvent("close_by_prop", { detail: {} }),
-        { isCancel: true },
+        { isCancel: true, silent: carriedByPageChange },
       );
     }
     // The request can be refused (a busy form denying the close): the popup

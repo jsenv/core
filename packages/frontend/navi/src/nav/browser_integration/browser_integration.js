@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef } from "preact/hooks";
 import { installReportDeadlineExtension } from "../../action/action_error_report.js";
 import { updateActions } from "../../action/actions.js";
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
+import { notePageChange } from "../page_change.js";
 import { setOnAllRouteReady, setRouteIntegration } from "../route.js";
 import {
   documentIsBusySignal,
@@ -50,11 +51,14 @@ const applyRouting = (
   // The routes' actions follow the address by themselves (see routeAction):
   // what a navigation leaves to the routing is a reload, the one that asks
   // them again with the address unchanged.
-  const { reloadSet } = updateRoutes(url, {
+  const { pageChanged, reloadSet } = updateRoutes(url, {
     navigationType,
     isVisited,
     // state,
   });
+  if (pageChanged) {
+    notePageChange();
+  }
   if (!reloadSet || reloadSet.size === 0) {
     return {
       allResult: undefined,
