@@ -130,7 +130,7 @@ import.meta.css = /* css */ `
   }
 
   [data-scrollable] {
-    overflow: var(--x-scrollable-overflow, auto);
+    overflow: auto;
     /* What lands here has to land IN the area, not on its edge: a control
        scrolled flush against it reads as half-swallowed by whatever comes next
        (a footer, the edge of a popup) and the ring it draws around itself is
@@ -148,7 +148,7 @@ import.meta.css = /* css */ `
     isolation: isolate;
 
     &[data-scrollable-overflow="scroll"] {
-      --x-scrollable-overflow: scroll;
+      overflow: scroll;
     }
 
     /* A real border and not a box-shadow: a shadow is drawn outside the box, so
@@ -183,8 +183,10 @@ import.meta.css = /* css */ `
          told "take what is left" below. */
       display: flex;
       flex-direction: column;
-      /* the body is the only thing that scrolls */
-      --x-scrollable-overflow: hidden;
+      /* The body is the only thing that scrolls. Declared as overflow itself:
+         a custom property carrying "hidden" would inherit, and every scroller
+         inside the body (a list, a dialog opened from it) would read it too. */
+      overflow: hidden;
 
       > [data-header],
       > [data-footer] {

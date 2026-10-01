@@ -1780,7 +1780,11 @@ const useDialogProps = (props) => {
         }
         const anchorElement = resolveAnchorElement(event);
         if (!anchorElement) {
-          if (import.meta.dev) {
+          // An opening by the caller's state (`open`, `signal`, `navState`) is
+          // told nothing about its cause, and that cause may be the address —
+          // a back to an entry where the dialog was open, nothing pressed — so
+          // a missing anchor there is not something the app could have given.
+          if (import.meta.dev && event.type !== "open_by_prop") {
             console.warn(
               `[navi] Dialog has animation="lifting" and no anchor to lift out of, so it simply appears. The anchor is whatever opened it — a <Button command="--navi-open">, the "source" given to triggerNaviCommand — or the "anchor" prop.`,
             );
