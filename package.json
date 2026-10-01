@@ -156,7 +156,7 @@
     "@playwright/browser-webkit": true
   },
   "volta": {
-    "node": "26.5.0",
+    "node": "26.10.0",
     "npm": "11.17.0"
   }
 }
