@@ -26,8 +26,8 @@ Three independent features (use any of them alone):
   value and again on every change, returning an unsubscribe function. There is
   no `isAvailable()` / `listenAvailabilityChange()` style API.
 - **The facade holds reactive state**: `swFacade.state` is a plain object
-  (`error`, `readyState`, `meta`, `update: { error, readyState, meta,
-reloadRequired }`) read from `swFacade.stateSignal`, and
+  (`error`, `readyState`, `meta`, `update: { error, errorKind, readyState,
+meta, reloadRequired }`) read from `swFacade.stateSignal`, and
   `swFacade.subscribe(callback)` re-runs the callback on every state change. `readyState` progresses through
   `"registering" → "installing" → "installed" → "activating" → "activated"`
   (or `"redundant"`); `state.update.readyState === "installed"` means an update

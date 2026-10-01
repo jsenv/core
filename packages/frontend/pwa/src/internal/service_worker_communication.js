@@ -1,4 +1,7 @@
-export const inspectServiceWorker = async (serviceWorker) => {
+export const inspectServiceWorker = async (
+  serviceWorker,
+  { timeout = 1000 } = {},
+) => {
   let serviceWorkerResponse;
   const inspectPromise = postMessageToServiceWorker(serviceWorker, {
     action: "inspect",
@@ -10,16 +13,16 @@ export const inspectServiceWorker = async (serviceWorker) => {
     }
     serviceWorkerResponse = info;
   });
-  let timeout;
+  let timer;
   let timeoutReached = false;
   const timeoutPromise = new Promise((resolve) => {
-    timeout = setTimeout(() => {
+    timer = setTimeout(() => {
       timeoutReached = true;
       resolve();
-    }, 1000);
+    }, timeout);
   });
   await Promise.race([inspectPromise, timeoutPromise]);
-  clearTimeout(timeout);
+  clearTimeout(timer);
   if (timeoutReached) {
     return {};
   }

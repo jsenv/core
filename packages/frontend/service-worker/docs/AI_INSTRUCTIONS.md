@@ -55,7 +55,7 @@ small and its JSDoc is right there. Each source of knowledge has one job:
     workers.
 - **`init` options** (all optional): `name`, `version`, `meta`, `logLevel`,
   `logBackgroundColor`, `logColor`, `resources`, `navigationFallback`,
-  `actions`, `install`, `activate` — see the JSDoc. Anything else (cache expiration, per-resource
+  `staticRouting`, `actions`, `install`, `activate` — see the JSDoc. Anything else (cache expiration, per-resource
   fetch strategies, runtime caching of unlisted urls, precache priorities) is
   NOT supported; don't invent options.
 - **`resources` is a precache list, nothing more.** Keys are urls (relative
@@ -137,6 +137,9 @@ small and its JSDoc is right there. Each source of knowledge has one job:
   Same for a second `fetch` listener answering app routes with the cached
   html: that is `navigationFallback`, and a hand-written one must mirror the
   precached urls and guess the cache name to stay out of the worker's way.
+  Such a listener also needs `staticRouting: false`: by default the browser
+  sends every request the worker does not answer straight to the network,
+  where no `fetch` listener sees it.
 - Rely on `addCacheKey` to make a url part of the app's offline set: it fills
   the current worker's cache only; the next worker version starts again from
   `resources`.

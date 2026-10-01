@@ -74,6 +74,8 @@ const sw = self.__sw__;
    * Requests for urls absent from `resources`, and non GET/HEAD requests, are
    * left to the browser: this is a precache, not a runtime cache. The one
    * exception is `navigationFallback`, for the addresses of a single page app.
+   * Where the browser allows it, those requests do not even start the worker
+   * (see `staticRouting`).
    *
    * @param {Object} [options]
    * @param {string} [options.name="jsenv"] Prefix of the caches created by this
@@ -122,6 +124,11 @@ const sw = self.__sw__;
    *   those navigations reach the network as any unlisted request does, with
    *   a consequence for update UIs: the document then runs the latest
    *   deployment while the active worker still caches the previous one.
+   * @param {boolean} [options.staticRouting=true] Declares, with the Static
+   *   Routing API (Chromium), every request this worker does not answer as
+   *   network-only: the browser sends it without starting the worker. Set it
+   *   to false when the worker script has a "fetch" listener of its own,
+   *   which those requests would never reach.
    * @param {Object<string, Function>} [options.actions={}] Extra handlers
    *   callable from the page via @jsenv/pwa `sendMessage({ action, payload })`,
    *   see `registerActions`. The built-in names ("inspect", "skipWaiting",
@@ -145,6 +152,7 @@ const sw = self.__sw__;
       "/": {},
     },
     navigationFallback = null,
+    staticRouting = true,
     actions = {},
     install = () => {},
     activate = () => {},
@@ -226,12 +234,53 @@ const sw = self.__sw__;
       });
       self.addEventListener("install", (installEvent) => {
         logger.info(`install (${label})`);
+        if (staticRouting) {
+          routeUnansweredRequestsToNetwork(installEvent);
+        }
         const installPromise = Promise.all([
           handleInstallEvent(installEvent),
           install(installEvent),
         ]);
         installEvent.waitUntil(installPromise);
       });
+      // Every request of a controlled page starts the worker to dispatch
+      // "fetch", the ones it lets through included (an api call): a worker
+      // start each, which a phone feels, and an outgoing worker caught
+      // starting delays the activation of the next one. The condition mirrors
+      // what the "fetch" listener answers.
+      const routeUnansweredRequestsToNetwork = (installEvent) => {
+        if (!installEvent.addRoutes) {
+          return;
+        }
+        const answeredConditions = [];
+        for (const url of Object.keys(resources)) {
+          answeredConditions.push({ urlPattern: createExactUrlPattern(url) });
+          const { versionedUrl } = resources[url];
+          if (versionedUrl) {
+            answeredConditions.push({
+              urlPattern: createExactUrlPattern(versionedUrl),
+            });
+          }
+        }
+        if (navigationFallback) {
+          answeredConditions.push({ requestMode: "navigate" });
+        }
+        const onRoutesRefused = (e) => {
+          logger.warn(
+            `static routing refused, every request starts the worker (${e.message})`,
+          );
+        };
+        try {
+          installEvent
+            .addRoutes({
+              condition: { not: { or: answeredConditions } },
+              source: "network",
+            })
+            .catch(onRoutesRefused);
+        } catch (e) {
+          onRoutesRefused(e);
+        }
+      };
       const handleInstallEvent = async () => {
         logger.debug(`open cache`);
         const cache = await self.caches.open(cacheName);
@@ -504,6 +553,22 @@ const asAbsoluteUrl = (relativeUrl) =>
   String(new URL(relativeUrl, self.location));
 
 const asRelativeUrl = (url) => url.slice(self.location.origin.length);
+
+// A url matching this one only, fragment excluded: the characters of the
+// pattern syntax are escaped so the url stays a literal
+const createExactUrlPattern = (url) => {
+  const { protocol, hostname, port, pathname, search } = new URL(url);
+  return new URLPattern({
+    protocol: escapeUrlPatternSyntax(protocol.slice(0, -1)),
+    hostname: escapeUrlPatternSyntax(hostname),
+    port,
+    pathname: escapeUrlPatternSyntax(pathname),
+    search: escapeUrlPatternSyntax(search.slice(1)),
+    hash: "",
+  });
+};
+const escapeUrlPatternSyntax = (string) =>
+  string.replace(/[\\:*?+(){}]/g, "\\$&");
 
 const resolveResources = (resources) => {
   const resourcesResolved = {};

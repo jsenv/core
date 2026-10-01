@@ -67,22 +67,33 @@ import { pwaLogger } from "./pwa_logger.js";
  *     returns an unsubscribe function
  *   - `setRegistrationPromise(promise)`: give it the return value of
  *     `navigator.serviceWorker.register(url)`
- *   - `checkForUpdates()`: async, resolves to true if an update was found
+ *   - `checkForUpdates()`: async, resolves to true if an update was found. A
+ *     failed check resolves to false, writes the browser's error to
+ *     `state.update.error` and what failed to `state.update.errorKind`:
+ *     "network" (no answer: offline, server unreachable or failing with a
+ *     5xx; a later check may succeed), "http" (the server refuses the script
+ *     with a 4xx) or "script" (the browser refused the script it received: it
+ *     throws, has a wrong MIME type, redirects).
  *   - `activateUpdate()`: async, asks the installed update to skip waiting and
- *     resolves once it controls the page. Rejects when the update is discarded
- *     (its state becomes "redundant") or refuses skipWaiting/claim; the error
- *     is also written to `state.update.error`. The browser activates the
- *     update only once the current worker has finished its in-flight events
- *     (a fetch it is still answering, for instance): the promise can stay
- *     pending for as long as that takes (Chromium gives up waiting after 5
- *     minutes), `state.update.readyState` reports
- *     where it stands ("activation_pending" while the current worker holds
- *     the switch). It stops there: the page keeps running, reloading is
- *     `reloadClients()`.
+ *     resolves once it controls the page. A newer update found meanwhile
+ *     replaces it, and the promise goes on with that one. Rejects when the
+ *     update refuses skipWaiting/claim or is discarded; the error carries the
+ *     `meta` of the update it was activating (`error.meta`) and is also
+ *     written to `state.update.error`, `state.update.errorKind` being
+ *     "activation". The browser activates the update only once the current
+ *     worker has finished its in-flight events (a fetch it is still
+ *     answering, for instance): the promise can stay pending for as long as
+ *     that takes (Chromium gives up waiting after 5 minutes),
+ *     `state.update.readyState` reports where it stands ("activation_pending"
+ *     while the current worker holds the switch). Calling it again meanwhile
+ *     asks the browser nothing new. It stops there: the page keeps running,
+ *     reloading is `reloadClients()`.
  *   - `reloadClients()`: async, asks the service worker to tell every client
- *     tab — this page included — to reload. Call it once
- *     `state.update.reloadRequired` says the update needs a restart, at the
- *     moment that suits the app. Until then the page runs on the new worker
+ *     tab — this page included — to reload. Call it once `activateUpdate()`
+ *     resolved and `state.update.reloadRequired` says the update needs a
+ *     restart, at the moment that suits the app: called while the update
+ *     still waits, every tab reloads on the current worker and finds the
+ *     update waiting again. After activation the page runs on the new worker
  *     while the cache it was served from is gone, so anything fetched lazily
  *     comes from the new build or the network.
  *   - `unregister()`: async, unregisters the service worker
@@ -101,6 +112,7 @@ export const createServiceWorkerFacade = ({
     meta: {},
     update: {
       error: null,
+      errorKind: null, // network, http, script (a failed check), activation
       readyState: "", // installing, installed, activation_pending, activating, activated, redundant
       meta: {},
       reloadRequired: true,
@@ -130,6 +142,15 @@ export const createServiceWorkerFacade = ({
       return updateTracked;
     }
 
+    // state.update describes the latest tracked worker: once a newer one is
+    // found, this one's events and failures stay out of it. Its listeners
+    // remain, the page may still end up running on this worker.
+    const mutateWhileTracked = (partial) => {
+      if (updateTracked.serviceWorker === toServiceWorker) {
+        mutate(partial);
+      }
+    };
+
     let controllingPromise = null;
     const ensureControlling = () => {
       if (!controllingPromise) {
@@ -138,8 +159,10 @@ export const createServiceWorkerFacade = ({
       return controllingPromise;
     };
 
+    let toScriptMeta = {};
     const trackingPromise = (async () => {
-      const [fromScriptMeta, toScriptMeta] = await Promise.all([
+      let fromScriptMeta;
+      [fromScriptMeta, toScriptMeta] = await Promise.all([
         currentInspectPromise || {},
         inspectServiceWorker(toServiceWorker),
       ]);
@@ -152,10 +175,11 @@ export const createServiceWorkerFacade = ({
       });
       // readyState is written with the meta: what is left in the state from a
       // previous update must not be read next to this one's meta
-      mutate({
+      mutateWhileTracked({
         meta: fromScriptMeta,
         update: {
           error: null,
+          errorKind: null,
           readyState: toServiceWorker.state,
           meta: toScriptMeta,
           reloadRequired: !serviceWorkerHotReplacer,
@@ -169,28 +193,30 @@ export const createServiceWorkerFacade = ({
       const applyUpdateStateEffects = async () => {
         const effects = {
           installing: () => {
-            mutate({
+            mutateWhileTracked({
               update: { readyState: "installing" },
             });
           },
           installed: () => {
-            mutate({
+            mutateWhileTracked({
               update: { readyState: "installed" },
             });
           },
           activating: () => {
-            mutate({
+            mutateWhileTracked({
               update: { readyState: "activating" },
             });
           },
           activated: async () => {
-            mutate({
+            mutateWhileTracked({
               update: { readyState: "activated" },
             });
             try {
               await ensureControlling();
             } catch (e) {
-              mutate({ update: { error: e } });
+              mutateWhileTracked({
+                update: { error: e, errorKind: "activation" },
+              });
               return;
             }
             pwaLogger.info("update is controlling navigator");
@@ -209,7 +235,7 @@ export const createServiceWorkerFacade = ({
               "statechange",
               applyUpdateStateEffects,
             );
-            mutate({
+            mutateWhileTracked({
               update: { readyState: "redundant" },
             });
           },
@@ -225,20 +251,27 @@ export const createServiceWorkerFacade = ({
         await trackingPromise;
         await whenServiceWorkerReaches(toServiceWorker, "installed");
         if (toServiceWorker.state === "installed") {
-          mutate({
-            update: { error: null, readyState: "activation_pending" },
+          mutateWhileTracked({
+            update: {
+              error: null,
+              errorKind: null,
+              readyState: "activation_pending",
+            },
           });
         }
-        // Chromium asks the outgoing worker to stop at its first idle moment
-        // only if it is running when skipWaiting is processed. One still
-        // starting (any fetch of the page wakes it) is kept until it idles,
-        // up to 5 minutes while the page fetches. A round-trip makes it run.
+        // Chromium asks the outgoing worker to stop as soon as idle only if it
+        // is running when skipWaiting is processed; one still starting (any
+        // fetch of the page wakes it) is kept up to 5 minutes. A round-trip
+        // makes it run, and waiting costs nothing: activation waits for that
+        // start anyway. The bound covers a start that fails and drops it.
         const outgoingServiceWorker = registration.active;
         if (
           outgoingServiceWorker &&
           outgoingServiceWorker !== toServiceWorker
         ) {
-          await inspectServiceWorker(outgoingServiceWorker);
+          await inspectServiceWorker(outgoingServiceWorker, {
+            timeout: 10_000,
+          });
         }
         pwaLogger.info("request skipWaiting");
         await requestSkipWaitingOnServiceWorker(toServiceWorker);
@@ -247,7 +280,15 @@ export const createServiceWorkerFacade = ({
         pwaLogger.info("update is activated");
         await ensureControlling();
       } catch (e) {
-        mutate({ update: { error: e } });
+        if (updateTracked.serviceWorker !== toServiceWorker) {
+          // a newer update made this one redundant while it activated: it is
+          // the update the person asked for now
+          pwaLogger.info("update replaced by a newer one, activate it instead");
+          await updateTracked.activate(registration);
+          return;
+        }
+        e.meta = toScriptMeta;
+        mutate({ update: { error: e, errorKind: "activation" } });
         throw e;
       }
     };
@@ -397,6 +438,7 @@ export const createServiceWorkerFacade = ({
       mutate({
         update: {
           error: null,
+          errorKind: null,
         },
       });
       try {
@@ -405,11 +447,8 @@ export const createServiceWorkerFacade = ({
         // read off the registration already in scope
         await registration.update();
       } catch (e) {
-        mutate({
-          update: {
-            error: e,
-          },
-        });
+        const errorKind = await getCheckErrorKind(registration);
+        mutate({ update: { error: e, errorKind } });
         return false;
       }
       // An update found by THIS check is on registration.installing: update()
@@ -573,6 +612,28 @@ const ensureIsControllingNavigator = (serviceWorker) => {
       reject(e);
     });
   });
+};
+
+// The browser says why an update check failed in its message only, worded by
+// each browser: asking the server for the script again tells it the same way
+// everywhere. A connection changing between both requests can mislabel one.
+const getCheckErrorKind = async (registration) => {
+  // registration.update() fetches the script of its newest worker
+  const { scriptURL } =
+    registration.installing || registration.waiting || registration.active;
+  let response;
+  try {
+    response = await fetch(scriptURL, { cache: "no-store" });
+  } catch {
+    return "network";
+  }
+  if (response.status >= 500) {
+    return "network";
+  }
+  if (!response.ok) {
+    return "http";
+  }
+  return "script";
 };
 
 // https://github.com/GoogleChrome/workbox/issues/1120

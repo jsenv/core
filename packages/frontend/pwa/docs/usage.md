@@ -131,14 +131,27 @@ const updateIsNew = version !== null && version !== APP_VERSION;
 The browser activates the update only once the current worker has finished
 its in-flight events (a fetch it is still answering on a slow network, for
 instance): the promise can stay pending for a while (Chromium gives up waiting
-after 5 minutes), and it rejects when the update is discarded
-(`update.readyState === "redundant"`) or refuses. Draw the progress from
-`update.readyState` (`"activation_pending"` while the current worker holds the
-switch, then `"activating"`, `"activated"`) rather than keeping a control busy
-on the promise; `update.error` holds the failure. While it is pending, let the
-person go on rather than offer a reload: the switch is the browser's, and a
-reload before it happens lands on the old worker, and the update shows up as
-`"installed"` again.
+after 5 minutes). A newer update deployed meanwhile replaces the one being
+activated, and the promise goes on with it. It rejects when the update refuses
+or is discarded, with an error carrying the `meta` of the update that failed
+(`error.meta`), whatever `state.update` describes by then. Draw the progress
+from `update.readyState` (`"activation_pending"` while the current worker holds
+the switch, then `"activating"`, `"activated"`) rather than keeping a control
+busy on the promise; `update.error` holds the failure. While it is pending, let
+the
+person go on rather than offer a retry or a reload: the switch is the
+browser's, pressing again asks it nothing new, and a reload before the switch
+lands on the old worker, where the update shows up as `"installed"` again.
+
+An update that fails before it installs only surfaces through
+`checkForUpdates()` (the browser's own checks fail silently): it resolves to
+`false`, `update.error` holds the browser's rejection and `update.errorKind`
+what failed. `"network"` is the noise of a phone (offline, server unreachable or
+answering 5xx) and a later check may succeed; `"http"` (a 4xx on the script)
+and `"script"` (a script the browser refused: it throws, wrong MIME type,
+redirect) are a broken deployment, the ones worth reporting. An update
+that fails during install (a resource that cannot be cached) rejects nothing:
+it turns `"redundant"`, and the reason is in the worker's console only.
 
 ### Restarting is the app's call
 

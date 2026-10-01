@@ -39,3 +39,29 @@ without it you test the stale `dist/` bundle instead of your source edits.
 - Browser tests use Playwright for real browser behavior.
 - Node.js tests cover server-side and CLI functionality.
 - Integration tests cover cross-package interactions.
+
+## Service worker lifecycle
+
+A test or a measurement of when a worker stops, activates or fails to update
+must see what a real browser does. Three things in the usual harness change it
+without a warning:
+
+- **Playwright attaches DevTools to every service worker**, and Chromium never
+  stops an idle worker with DevTools attached. Anything that waits on a worker
+  stopping (activation after `skipWaiting()`, the 30 s idle stop) then never
+  happens. Launch Chromium by hand (`chromium.executablePath()` with
+  `--headless=new --remote-debugging-port=<port> --user-data-dir=<tmp>`) and
+  speak raw CDP to the page target listed by `/json/list`:
+  `ServiceWorker.enable` reads worker states without attaching to them,
+  `ServiceWorker.stopAllWorkers` puts every worker in a known state.
+- **`context.setOffline()` and `page.route()` don't reach the worker script's
+  update request.** A failing update is produced by the server: a 404 mode, a
+  closed socket, a script that throws.
+- **A simulated deploy changes `resources` or `version`.** The cache name of
+  `@jsenv/service-worker` is hashed from them, not from `meta` nor the worker
+  code: a deploy changing only those installs into the cache the active worker
+  serves from.
+
+Desktop Chromium runs the same lifecycle as Chrome Android; a phone (raw CDP
+through `adb forward tcp:9222 localabstract:chrome_devtools_remote`, dropped
+when the screen sleeps) is for what is Android-specific.
