@@ -6769,9 +6769,11 @@ const ListResolved = /*#__PURE__*/ createComponentResolver([
  *   does, and for a list that scrolls itself the page's own restoration cannot
  *   see. The position is kept under the list's `id` and the page's url, for
  *   the session (a reload comes back too); a list without an `id` of its own
- *   has nothing to be remembered by. A fresh arrival at the page opens at
- *   `defaultScrolled` either way, and so does a list the caller holds through
- *   `scrolled`.
+ *   has nothing to be remembered by, and two lists mounted at once under one
+ *   `id` — a popup over the page, the page a route transition is leaving —
+ *   overwrite each other (see docs/scroll.md). A fresh arrival at the page
+ *   opens at `defaultScrolled` either way, and so does a list the caller holds
+ *   through `scrolled`.
  * @param {boolean} [props.deselectable]
  *   A single-select list allowed to hold nothing: the selected item, pressed
  *   again, lets go. Without it the list is a radio group — a choice, once

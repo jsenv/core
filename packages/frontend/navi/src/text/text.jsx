@@ -440,6 +440,19 @@ const applySpacingOnTextChildren = (children, spacing, defaultSpace) => {
   }
   return childrenWithGap;
 };
+const isSpacingWidth = (spacing) => {
+  if (typeof spacing === "number") {
+    return true;
+  }
+  if (typeof spacing !== "string") {
+    return false;
+  }
+  return (
+    isSizeSpacingKey(spacing) ||
+    hasCSSSizeUnit(spacing) ||
+    spacing.startsWith("var(")
+  );
+};
 const outsideTextFlowSet = new Set();
 export const markAsOutsideTextFlow = (jsxElement) => {
   outsideTextFlowSet.add(jsxElement);
@@ -699,9 +712,11 @@ const TextUI = (props) => {
   }
   const shouldPreserveSpacing = rest.as === "pre" || rest.flex || rest.grid;
   if (shouldPreserveSpacing) {
-    // Only the caller's spacing becomes the gap: the default separator is a
-    // space character, and whitespace between flex/grid items has no width.
-    boxProps.spacing = spacing;
+    // Between flex/grid items spacing is a gap, so only a width carries over: a
+    // separator (the default space, a text, an element) or "pre" has no gap.
+    if (isSpacingWidth(spacing)) {
+      boxProps.spacing = spacing;
+    }
   } else {
     children = applySpacingOnTextChildren(
       children,

@@ -467,6 +467,10 @@ What that means for a page and for the application around it:
 - **The focus it holds goes where its removal would have sent it** — to no element
   — when it is hidden: a hidden element keeps the focus otherwise, and would
   receive the keys pressed during the movement.
+- **Its lists are mounted beside the page arriving's.** A list remembering where
+  it was (`<List id>`) under the same `id` as a list of the page arriving is the
+  same list to navi, and the two overwrite each other's position (see
+  [scroll.md](./scroll.md#a-list-that-comes-back-one-id-one-list)).
 - **Never while a modal dialog is open.** An open modal keeps everything but
   itself out of reach — the page arriving could not even take the focus — and one
   in a page kept while leaving would stay open for the whole movement. The page is

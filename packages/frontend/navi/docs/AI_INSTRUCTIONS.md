@@ -183,9 +183,10 @@ start when unsure which export solves a problem.
   hand-writing an offset to clear a `FixedBar`.
 - `scroll.md` — where scrolling happens: `header`/`body`/`footer`, a `List`'s
   `scroller`, where a list opens (a position handed back whole, `visibleCount`
-  included), a popup that scrolls, many rows (`<List.Items>`, the render window
-  and its first picture, `findText`), many sections (`<Box mount="after-paint">`
-  and what it leaves out of reach), hover while scrolling. Before writing CSS to
+  included), a list that comes back (its `id` names one list of the app), a
+  popup that scrolls, many rows (`<List.Items>`, the render window and its first
+  picture, `findText`), many sections (`<Box mount="after-paint">` and what it
+  leaves out of reach), hover while scrolling. Before writing CSS to
   make something scroll, before rendering a collection as `<List.Item>`
   children, and before deferring part of a page.
 - `z_index.md` — DOM order first; a `z-index` without `isolation: isolate`

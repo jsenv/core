@@ -192,6 +192,20 @@ const toHex = ([r, g, b]) =>
 // sure to be understood in, whatever getComputedStyle answered with.
 let colorContext = null;
 const parseColor = (color) => {
+  const [r, g, b, a] = drawColor(color);
+  if (a === 0 || a === 255) {
+    return [r, g, b, a / 255];
+  }
+  // The canvas keeps a pixel premultiplied by its alpha, in bytes: the
+  // channels of a translucent colour come back rounded at that alpha —
+  // rgba(12, 23, 44, 0.45) reads 11, 22, 44. Made opaque, they read whole.
+  const [rOpaque, gOpaque, bOpaque] = drawColor(
+    `color(from ${color} srgb r g b / 1)`,
+  );
+  return [rOpaque, gOpaque, bOpaque, a / 255];
+};
+
+const drawColor = (color) => {
   if (!colorContext) {
     const canvas = document.createElement("canvas");
     canvas.width = 1;
@@ -204,6 +218,5 @@ const parseColor = (color) => {
   colorContext.fillStyle = "transparent";
   colorContext.fillStyle = color;
   colorContext.fillRect(0, 0, 1, 1);
-  const [r, g, b, a] = colorContext.getImageData(0, 0, 1, 1).data;
-  return [r, g, b, a / 255];
+  return colorContext.getImageData(0, 0, 1, 1).data;
 };

@@ -122,11 +122,44 @@ by MEASURING it: it lands where it was even if rows were inserted before it,
 whatever the screen it was saved on. "Reopen a thread where I left it" is
 already provided; keep the position whole, its `visibleCount` sizes the first
 paint. A list with an `id` also **comes back where it was** when its screen is
-left and come back to, the way the page does; **`scrollResetOnNavigation`**
-opts out. A list scrolling the document that opens on a row places the
-document itself: the offset the page kept for its url is not put back over it
-— the rows held off screen are fillers of an estimated height, and the same
-pixels now fall on other rows.
+left and come back to, the way the page does (its `id` must name one list of the
+app, see [below](#a-list-that-comes-back-one-id-one-list));
+**`scrollResetOnNavigation`** opts out. A list scrolling the document that
+opens on a row places the document itself: the offset the page kept for its url
+is not put back over it — the rows held off screen are fillers of an estimated
+height, and the same pixels now fall on other rows.
+
+### A list that comes back: one `id`, one list
+
+The position a list comes back to is kept under its `id` and the page's url, so
+the `id` names **one list of the app**, not one list of the page. Two lists
+mounted at the same time under the same `id` are one entry: each writes over the
+other's position, and the one that goes takes the other's with it. The list
+arriving then opens where the other one was, or comes back at its top after a
+back.
+
+Lists are mounted together more often than the screen shows:
+
+- a list in a popup and a list in the page under it;
+- a list in a bar or a sidebar kept by every page, and a list in one of the
+  pages;
+- the two pages of a **route transition**: the page being left stays mounted,
+  hidden, until the movement is over (see
+  [route_transitions.md](./route_transitions.md#the-page-being-left-stays-until-its-movement-is-over)),
+  its lists with it.
+
+So:
+
+- **Name the list for what it lists** — `players_list`, `thread_messages`, never
+  `list`, `results` or `items`.
+- **A component that draws a list on several pages takes the `id` from the page
+  using it** (a prop), rather than writing one of its own.
+- **A list with no use for coming back** says `scrollResetOnNavigation`: it keeps
+  nothing, and its `id` no longer matters for this.
+
+Not a clash: a page rendered by the same element on both sides — one route whose
+params change (`/threads/1` to `/threads/2`), two routes with one `element` — is
+carried over, and its list is one list moving from one url to the next.
 
 ### A search moves the list, and gives it back
 

@@ -431,7 +431,7 @@ export const setupBrowserIntegrationViaHistory = ({
   // The browser's own scroll restoration is taken over here rather than left
   // to whoever navigates: it is a decision about the document, and the entry
   // being left must be recorded from the first pixel scrolled.
-  installScrollRestoration();
+  installScrollRestoration({ readAddress });
 
   // The document is leaving, or may be killed in the background: what the
   // entry says about it has to be what the document says (see

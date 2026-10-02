@@ -642,7 +642,7 @@ export const setupBrowserIntegrationViaNavigation = ({
     { capture: true },
   );
 
-  installScrollRestoration();
+  installScrollRestoration({ readAddress });
 
   const navTo = async (
     url,
