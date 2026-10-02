@@ -186,13 +186,22 @@ export const installScrollRestoration = () => {
     },
     { passive: true },
   );
+  const positionOnLoad = positionByUrl.get(window.location.href);
+  if (!positionOnLoad) {
+    // Where the browser landed the first page, written down for the reason
+    // startAtTop writes its top: no scroll event says so.
+    positionByUrl.set(window.location.href, {
+      x: window.scrollX,
+      y: window.scrollY,
+    });
+    return;
+  }
   // What a reload asks for, now that the browser has been told not to do it.
   // Once, and at the first render of a route: the position is only meaningful
   // once there is a page under it.
   // Written once the commit that rendered it has ended: said from inside it,
   // and what the offset shows may still have to be built (see scrollTo).
-  const positionOnLoad = positionByUrl.get(window.location.href);
-  if (positionOnLoad && (positionOnLoad.x || positionOnLoad.y)) {
+  if (positionOnLoad.x || positionOnLoad.y) {
     const stopListening = observeRouteRender(() => {
       stopListening();
       queueMicrotask(() => {
@@ -278,6 +287,11 @@ export const startAtTop = (url, { from } = {}) => {
     return;
   }
   arrivalCount++;
+  // Written down as well as done: a document already at its top fires no
+  // scroll event, and a page left without ever being scrolled would have no
+  // position to come back to — the return would keep the offset of the page
+  // being left.
+  positionByUrl.set(new URL(url, window.location.href).href, { x: 0, y: 0 });
   window.scrollTo({ top: 0, left: 0, behavior: "instant" });
 };
 const isArrival = (url, { from }) => {

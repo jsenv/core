@@ -13,6 +13,7 @@ import { createOnKeyDownForShortcuts } from "@jsenv/navi/src/keyboard/keyboard_s
 import { useNavState } from "@jsenv/navi/src/nav/browser_integration/browser_integration.js";
 import { useDebugFocus, useDebugPopup } from "@jsenv/navi/src/navi_debug.jsx";
 import {
+  openedDuringThisPress,
   useOpenController,
   useOpenPropsEffectOnOpenController,
 } from "@jsenv/navi/src/layout/open_controller.js";
@@ -946,6 +947,27 @@ const PickerCustom = (props) => {
           click: (e) => {
             if (isWithinPickerContent(e.target)) {
               return null;
+            }
+            // Still open at the click of a later press: that press brought no
+            // mousedown to close on (a drag source cancelled its pointerdown),
+            // so it closes here, as it opens here in that case. A mousedown
+            // that came has closed it already; the press that opened it is
+            // only ending.
+            if (
+              openController.opened &&
+              !openedDuringThisPress(openController)
+            ) {
+              return {
+                name: "click to close picker",
+                intent: "read",
+                prevented: () => {
+                  e.preventDefault();
+                },
+                allowed: () => {
+                  requestClose(e, { isCancel: true });
+                  e.preventDefault();
+                },
+              };
             }
             if (!opensOnPress) {
               // Neither the tap, nor the click a hold leaves behind: the press

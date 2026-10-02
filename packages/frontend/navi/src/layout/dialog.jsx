@@ -119,6 +119,7 @@ import {
   usePopupContentMount,
 } from "./popup_content_mount.js";
 import { preloadState } from "../nav/route.js";
+import { pushPopupThemeColor } from "../nav/theme_color.js";
 import { flushSyncRendering } from "../utils/flush_sync_rendering.js";
 import { popupCss } from "./popup_css.js";
 import { surfaceTextCss } from "./surface_text_css.js";
@@ -501,9 +502,17 @@ const css = /* css */ `
        on its own, sharp, above the wall: any wall on that frame — even a
        half-strength wash and blur — is a flash on the anchor. So the wall
        arrives from nothing, over the movement: on that frame the page is
-       untouched, and the anchor with it. */
+       untouched, and the anchor with it.
+       Keyed on the aria-expanded flip, like the local wall: openEffect reads
+       the layout while the transitions are off, which spends @starting-style
+       with nothing armed. @starting-style stays for an opening that reads
+       nothing before the flip. A silent opening flips before the transitions
+       come back, hence the :not(): its wall lands at once. */
     &[data-lifting] {
-      &::backdrop {
+      &[aria-expanded="false"]::backdrop {
+        opacity: 0;
+      }
+      &[aria-expanded="true"]:not([navi-transitions-off])::backdrop {
         opacity: 1;
         transition-property: opacity;
         transition-duration: var(--navi-popup-lift-duration, 0.25s);
@@ -963,6 +972,16 @@ const css = /* css */ `
  *   `saturate()`/`grayscale()` work too. How far what is behind withdraws is
  *   a question of paint, not of what an outside click does — a backdrop that
  *   closes can blur.
+ * @param {string|false} [props.themeColor] - The colour the browser paints
+ *   above the page (`<meta name="theme-color">`: Chrome's address bar on
+ *   Android, an installed app's status bar) while this dialog is open.
+ *   Left out, it is what the dialog lays over the top edge of the screen: its
+ *   backdrop over the colour the page asked for (`<Head>`), and its own
+ *   background over that when it is flush with the top edge
+ *   (`marginWithContainer={0}` with `expand`/`expandY` or a top
+ *   `positionArea`). A colour forces it, for a surface whose colour cannot be
+ *   read (an image, a gradient); `false` leaves the page's colour alone.
+ *   `layer="top"` only.
  * @param {boolean} [props.scrollCapture] - Traps scroll gestures inside the
  *   dialog so the page/container behind it can't scroll while it's open.
  *   A `layer="local"` dialog always locks its own positioned ancestor's
@@ -1494,6 +1513,9 @@ const useDialogProps = (props) => {
     // so both objects below get them (see this file's CSS).
     backdropColor,
     backdropFilter,
+    // Read at the opening, with the backdrop and the surface it would
+    // otherwise be worked out from (see openEffect).
+    themeColor,
     scrollCapture: scrollCaptureProp,
     // "auto" (default) → the dialog follows its content. "frozen" → measured
     // once, held at that size while open. See this prop's own JSDoc above.
@@ -2175,6 +2197,22 @@ const useDialogProps = (props) => {
       if (backdropEl) {
         backdropEl.style.transitionProperty = "";
       }
+    }
+    // What the browser paints above the page goes with what is laid over its
+    // top edge, from the start of the opening to the start of the closing: a
+    // local dialog lays nothing there.
+    if (isTopLayer && themeColor !== false) {
+      addCleanup(
+        pushPopupThemeColor({
+          themeColor,
+          backdropColor: backdrop
+            ? getComputedStyle(dialogEl, "::backdrop").backgroundColor
+            : null,
+          surfaceColor: flushEdges.top
+            ? getComputedStyle(dialogEl).backgroundColor
+            : null,
+        }),
+      );
     }
     const cancelOpenInteractionSuppression =
       !silent && hasCssTransitionAnimation

@@ -454,8 +454,9 @@ What that means for a page and for the application around it:
 - **It is taken down after the page arriving is up.** A cleanup that puts back
   what it found — a document title, a class on `<body>`, a value in a shared store
   — puts a stale value back over the new page's. Such a registration is written as
-  "the last to arrive wins": navi's `<Head>` keeps its titles as a stack, and a
-  slot shows the last `SlotFill` to arrive.
+  "the last to arrive wins": navi's `<Head>` keeps its titles and its
+  `theme-color` metas as a stack, and a slot shows the last `SlotFill` to
+  arrive.
 - **What it fills outside its own nodes leaves at once.** A `SlotFill` in a page
   kept while leaving steps out of its slot, so a bar each page fills shows the
   page arriving — or nothing, when that page fills none.

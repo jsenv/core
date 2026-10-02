@@ -254,6 +254,59 @@ eye is on — a picture opened full, a plan, a card painting its own surface.
 `"invisible"` is the one kind with no filter token: it paints nothing, and a
 filter would still be seen.
 
+## Above the screen: the browser's colour
+
+On a phone the browser paints a band above the page — Chrome's address bar, the
+status bar of an installed app — in the colour of `<meta name="theme-color">`.
+It touches the page's top edge, so it reads as part of whatever is drawn there.
+A backdrop that stops at the top of the viewport, under a band still at full
+brightness, reads as two layers that do not belong together. So navi works that
+colour out from what is on screen:
+
+- **The page says it with `<Head>`**, the way it says its title:
+
+  ```jsx
+  <Head>
+    <meta name="theme-color" content="#2563a8" />
+  </Head>
+  ```
+
+  The last `<Head>` to arrive wins, whatever order they leave in (a route
+  transition puts the arriving page up before it takes the leaving one down). A
+  `theme-color` meta written in the HTML shows when no `<Head>` gives one.
+
+- **Each open popup in the top layer paints over it**, in the order they
+  opened: its backdrop colour over the colour under it, then its own background
+  over that when it is flush with the top edge — `marginWithContainer={0}` with
+  `expand`/`expandY` or a top `positionArea`, which is what a full-screen
+  dialog or a `SidePanel side="top"` is. A wash of `rgba(12, 23, 44, 0.45)` over
+  a `#2563a8` bar gives `#1a4170`. A navy full-screen dialog gives its navy.
+
+The colour changes when the opening starts, and changes back when the closing
+starts. If the page under an open popup changes its colour, the popup paints
+over the new one. Each `media` a page gives (one colour per
+`prefers-color-scheme`) is painted over on its own.
+
+Nothing is written at the call site. The `themeColor` prop is for what navi
+cannot read:
+
+- the `backdropFilter` is left out: a flat colour has nothing to blur;
+- a surface painted with an image or a gradient has no colour to read, and
+  `themeColor="#0c172c"` gives it one;
+- `themeColor={false}` leaves the colour under the popup as it is.
+
+A popup that lays nothing over the edge changes nothing: `backdropVariant="invisible"`,
+`backdrop={false}`, a `Popover` without a backdrop, any `layer="local"` popup.
+A `Popover` paints its backdrop only, never its surface: it has no notion of
+being flush with an edge.
+
+**A `<Head>` inside a popup does not give the popup's colour.** It counts as a
+page's `<Head>`, under every popup, including the one holding it. It also stays
+after the closing. A popup's content stays mounted once built (`mount`, see
+[`popup_open.md`](./popup_open.md)), and its `<Head>` stays with it, so its colour
+remains after the popup has gone. `themeColor` lasts exactly as long as the
+popup is open.
+
 ## Why props, and not a rule in the app's stylesheet
 
 **The backdrop is not inside the popup**, and which element it is depends on the

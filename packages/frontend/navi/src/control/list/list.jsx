@@ -19,6 +19,7 @@ import {
 // scrolls, which the CSS below reads.
 import "../../utils/scroll_activity.js";
 import { afterPaint } from "../../utils/after_paint.js";
+import { isScrollGliding } from "../../utils/scroll_glide.js";
 
 import {
   createComponentResolver,
@@ -1883,7 +1884,12 @@ const useListScrollSync = ({
     scrolled === undefined || scrolled === null
       ? "start"
       : (defaultScrolled ?? "start");
-  const startPlaceRef = useRef({ userTookOver: false, wanted: scrolledWanted });
+  const startPlaceRef = useRef({
+    userTookOver: false,
+    wanted: scrolledWanted,
+    way: null,
+    arrived: false,
+  });
   if (startPlaceRef.current.wanted !== scrolledWanted) {
     startPlaceRef.current.wanted = scrolledWanted;
     startPlaceRef.current.userTookOver = false;
@@ -2106,8 +2112,10 @@ const useListScrollSync = ({
   // keeps moving while the list is still finding out how many items it has and
   // how tall one is, so landing there once would land next to it. What ends the
   // hold is the user reaching for the list — a wheel, a finger, a key, a hand
-  // on the scrollbar — and not the scroll event itself, which the list provokes
-  // as much as the user does.
+  // on the scrollbar — or anything else moving it. A scroll event alone does
+  // not say which: the list provokes as many as the user does, so only one
+  // landing off the way of the list's own placement ends it (see
+  // sendHeldScroll).
   const placeWhereHeld = () => {
     if (
       scrolledWanted === "start" ||
@@ -2168,12 +2176,9 @@ const useListScrollSync = ({
     }
     const scrollerEl = getScroller();
     if (openAt === "end") {
-      anchorRef.current = null;
-      if (horizontal) {
-        scrollerEl.scrollLeft = scrollerEl.scrollWidth;
-      } else {
-        scrollerEl.scrollTop = scrollerEl.scrollHeight;
-      }
+      sendHeldScroll(
+        horizontal ? scrollerEl.scrollWidth : scrollerEl.scrollHeight,
+      );
       return;
     }
     if (typeof openAt === "number") {
@@ -2203,15 +2208,44 @@ const useListScrollSync = ({
     const offsetNow = horizontal
       ? itemRect.left - viewportRect.left
       : itemRect.top - viewportRect.top;
+    const scrollNow = horizontal ? scrollerEl.scrollLeft : scrollerEl.scrollTop;
     const delta = offsetNow - offsetWanted;
     if (delta > -0.5 && delta < 0.5) {
+      sendHeldScroll(scrollNow);
       return;
     }
+    sendHeldScroll(scrollNow + delta);
+  };
+  // Every placement goes through here, the ones that find the list in place
+  // too: it keeps the way from where the scroller was to where it is sent,
+  // which is how a scroll event tells the hold's own scrolls from anyone
+  // else's (see letGoUnlessHeldScroll). The whole way, not just its end: under
+  // `scroll-behavior: smooth` the write glides, and every position on the way
+  // is the list's until it gets there.
+  const sendHeldScroll = (position) => {
+    const scrollerEl = getScroller();
+    const from = horizontal ? scrollerEl.scrollLeft : scrollerEl.scrollTop;
+    const max = horizontal
+      ? scrollerEl.scrollWidth - scrollerEl.clientWidth
+      : scrollerEl.scrollHeight - scrollerEl.clientHeight;
+    let to = position;
+    if (to > max) {
+      to = max;
+    }
+    if (to < 0) {
+      to = 0;
+    }
     anchorRef.current = null;
+    const place = startPlaceRef.current;
+    place.way = { from, to };
+    if (to === from) {
+      place.arrived = true;
+      return;
+    }
     if (horizontal) {
-      scrollerEl.scrollLeft += delta;
+      scrollerEl.scrollLeft = to;
     } else {
-      scrollerEl.scrollTop += delta;
+      scrollerEl.scrollTop = to;
     }
   };
   useLayoutEffect(placeWhereHeld);
@@ -2279,6 +2313,19 @@ const useListScrollSync = ({
     // it, and nothing scrolled to say so.
     evaluateWindowRef.current("items resized");
     return false;
+  };
+  // The box around a held list changing shape is the hold's to answer too: it
+  // places the list again, the way it writes every scroll of its own (see
+  // sendHeldScroll) — written any other way, the scroll would read as someone
+  // else moving the list, and end the hold.
+  const placeIfHeldRef = useRef(null);
+  placeIfHeldRef.current = () => {
+    // Read again: a scroll may have ended the hold since this render.
+    if (!heldSomewhere || startPlaceRef.current.userTookOver) {
+      return false;
+    }
+    placeWhereHeld();
+    return true;
   };
   useLayoutEffect(() => {
     if (
@@ -2424,6 +2471,9 @@ const useListScrollSync = ({
       if (!entries.some((entry) => entry.target === scrollerEl)) {
         return;
       }
+      if (placeIfHeldRef.current()) {
+        return;
+      }
       const position = positionRef.current;
       if (!position) {
         return;
@@ -2547,6 +2597,15 @@ const useListScrollSync = ({
       return;
     }
     anchorRef.current = null;
+    if (isScrollGliding(scrollerEl)) {
+      // Nobody is looking at items standing still: they are passing by, on
+      // their way somewhere the browser was asked to take them (a key, a smooth
+      // scrollTo, the status bar). The write would be an instant scroll, and
+      // the browser abandons the glide for it, short of where it was going.
+      // Left alone, the items drawn above push the rest by `drift` while all
+      // of it moves, and the glide lands.
+      return;
+    }
     scrolledByListRef.current = true;
     if (horizontal) {
       scrollerEl.scrollLeft += drift;
@@ -2902,8 +2961,47 @@ const useListScrollSync = ({
         reportPosition();
         return;
       }
+      letGoUnlessHeldScroll();
       reportPosition();
       evaluateWindowRef.current("scroll");
+    };
+    // A scroll the hold did not write is someone else moving the list, which
+    // ends the hold like a wheel does — the ones that come with no input event
+    // at all: the status bar tap on iOS, find in page, a script.
+    // Only once the list has stood where it holds itself, though. Until then
+    // the page is still settling around it, and some of that is written after
+    // the list placed itself: a navigation holding the rendering for its
+    // transition takes the arriving page to its top once the page rendered
+    // (whenRenderingResumes), and the hold puts it back at its next commit.
+    const letGoUnlessHeldScroll = () => {
+      const place = startPlaceRef.current;
+      const way = place.way;
+      if (
+        place.userTookOver ||
+        place.wanted === "start" ||
+        place.wanted === undefined ||
+        !way
+      ) {
+        return;
+      }
+      const position = horizontal
+        ? scrollerEl.scrollLeft
+        : scrollerEl.scrollTop;
+      if (position > way.to - 1 && position < way.to + 1) {
+        // From then on only that place is the list's, or a scroll back the
+        // way it came would pass for its own.
+        place.way = { from: way.to, to: way.to };
+        place.arrived = true;
+        return;
+      }
+      if (!place.arrived) {
+        return;
+      }
+      const low = way.from < way.to ? way.from : way.to;
+      const high = way.from < way.to ? way.to : way.from;
+      if (position < low - 1 || position > high + 1) {
+        place.userTookOver = true;
+      }
     };
     // A page-level scroller does not emit "scroll" on the element itself
     // (document.scrollingElement); the document does.
@@ -6571,7 +6669,8 @@ const ListResolved = /*#__PURE__*/ createComponentResolver([
  *
  *   In every form the list holds itself there while it is still finding out
  *   how many items there are and how tall one is, and lets go the moment the
- *   user reaches for the list.
+ *   user reaches for the list, or anything else scrolls it (a script, find in
+ *   page, the status bar tap on iOS).
  * @param {(scrolled: {id: string, index: number, offset: number, visibleCount: number}) => void} [props.onScrolledChange]
  *   Where the list is, as the user scrolls: the item at the top of the view and
  *   how far below the place an item lands on its own (see `defaultScrolled`) it

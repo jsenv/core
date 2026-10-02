@@ -133,6 +133,10 @@ const css = /* css */ `
  *   identically): the wash the backdrop paints over what is behind.
  * @param {string} [props.backdropFilter] - Forwarded as-is: what that wash
  *   does to the picture underneath, `"blur(4px)"` and the like.
+ * @param {string|false} [props.themeColor] - Forwarded as-is: the colour the
+ *   browser paints above the page while the popup is open, worked out from
+ *   what it lays over the top edge when left out. A colour forces it, `false`
+ *   leaves the page's colour alone.
  * @param {boolean|"auto"|"fading"|"scaling"|"sliding"|`slide-from-${string}`|"expanding"|`expand-${string}`|"lifting"|{open: boolean|"auto"|"fading"|"scaling"|"sliding"|`slide-from-${string}`, close: "lifting"}} [props.animation]
  *   - Forwarded to whichever renders — see either component's own doc.
  *   `"expanding"`/`"expand-*"` are `Popover`'s own; `"lifting"` and
