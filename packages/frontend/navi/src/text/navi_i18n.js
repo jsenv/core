@@ -106,8 +106,10 @@ naviI18n.addAll({
   },
 });
 
-// Spin messages — the ends of what one steps through, said without naming
-// what it is made of: the same words fit days, months, pages or sizes.
+// Spin messages — the ends of what one steps through when the control holding
+// it has no sentence of its own for a bound (a day or a number says its
+// constraint.min/max one, see picker_spin.jsx): said without naming what it is
+// made of, so they fit pages, sizes or any list of items.
 naviI18n.addAll({
   "spin.previous": {
     en: "Previous",

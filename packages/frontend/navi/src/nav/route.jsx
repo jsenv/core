@@ -380,11 +380,17 @@ const useContentKeepingLeavingPages = (branch, readShownBranch, parentPage) => {
       }
     }
   });
+  // Also run when a Suspense boundary above parks this container — a page
+  // arriving that suspends to a `<Loading>` around both pages: every hook of
+  // the pages kept while leaving has then been cleaned up, which is all that
+  // keeping them saved. Dropped, so the render resuming the container takes
+  // them down, rather than re-running every effect of a hidden page.
   useLayoutEffect(() => {
     return () => {
       for (const entry of leavingRef.current) {
         entry.hold.containers.delete(rerender);
       }
+      leavingRef.current = [];
     };
   }, []);
 

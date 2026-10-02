@@ -54,6 +54,7 @@ import { Icon } from "@jsenv/navi/src/text/text.jsx";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { Time } from "@jsenv/navi/src/text/time.jsx";
 import { triggerNaviCommand } from "../commands.js";
+import { findControlHost } from "../control_dom.js";
 import {
   DisabledContext,
   LoadingContext,
@@ -67,6 +68,11 @@ import {
 import { Input } from "../input/input.jsx";
 import { useInputGroup } from "../input/use_input_group.js";
 import { openCallout } from "../rules/callout/callout.js";
+import { getConstraintMessage } from "../rules/constraint_message.js";
+import {
+  MAX_CONSTRAINT,
+  MIN_CONSTRAINT,
+} from "../rules/validation/standard_constraints.js";
 import { dispatchRequestSetUIState } from "../ui_state_dom.js";
 import { Picker } from "./picker.jsx";
 
@@ -496,6 +502,8 @@ const TRAVELS_NONE = [];
  *   name?: string,
  *   min?: any,
  *   max?: any,
+ *   minMessage?: any,
+ *   maxMessage?: any,
  *   step?: number,
  *   type?: string,
  *   editable?: boolean,
@@ -534,7 +542,15 @@ const TRAVELS_NONE = [];
  * @param {number} [step=1] How many steps a press covers.
  * @param {number} [duration=250] How long a travel takes, in milliseconds.
  * @param {any} [min] The first value one can reach; `max` is the last. Beyond
- *   them the travel simply does not happen and the chevron that way says so.
+ *   them the travel simply does not happen and the chevron that way says so,
+ *   in the words the control in the middle uses for a value past that end ("La
+ *   date doit être au plus tard le 2 avril 2027", "Max 5"). A value the control
+ *   has no such sentence for — what a plain `Spin` steps through — is "nothing
+ *   after this one".
+ * @param {any} [maxMessage] What is said at `max` instead: by the chevron
+ *   refused there, by a travel asked past it, and by the control in the middle
+ *   for a value past it (picked in the calendar, typed). `minMessage` is its
+ *   twin at `min`.
  * @param {string} [padding] The room around the value, `paddingX`/`paddingY`
  *   and the four sides included. It goes on what is inside the box rather than
  *   on the box: above and below it is taken by the value AND by the two
@@ -564,6 +580,8 @@ export const Spin = ({
   name,
   min,
   max,
+  minMessage,
+  maxMessage,
   step = 1,
   duration = 250,
   type = "text",
@@ -698,15 +716,38 @@ export const Spin = ({
   );
   const disabledResolved = Boolean(disabled || disabledFromAbove);
 
+  // The end of what one may reach, said the way the control in the middle
+  // says it about a value past that end — its `minMessage`/`maxMessage`, or the
+  // sentence its type has for the bound — so a chevron, the calendar and a
+  // typed value refuse in the same words. Asked of the control at the press:
+  // it is not there yet on the first render. `goingNext` is towards the bigger
+  // values, whichever end of the box that is.
+  const boundMessage = (goingNext) => {
+    const constraint = goingNext ? MAX_CONSTRAINT : MIN_CONSTRAINT;
+    const controlEl = controlRef.current;
+    const controller = (findControlHost(controlEl) || controlEl)
+      .__uiStateController__;
+    const { message } = getConstraintMessage(
+      controller,
+      constraint,
+      constraint.messageAtBound(controller),
+      {},
+    );
+    return (
+      message ??
+      naviI18n(goingNext ? "spin.nothing_after" : "spin.nothing_before")
+    );
+  };
+
   // Why a chevron refuses, in its own words — and only when the reason is
   // ours: the end of what one may reach is something this control knows and
   // navi cannot guess. For everything else the reason belongs to the state the
   // whole control is in, and it is said about the control ("read-only",
   // "busy") rather than about the button, which is not what the user was
   // pressing.
-  const wayOutMessage = (allowed, endKey) => {
+  const wayOutMessage = (allowed, isNext) => {
     if (!allowed) {
-      return naviI18n(endKey);
+      return boundMessage(isNext);
     }
     if (loadingResolved) {
       return naviI18n("constraint.busy.default");
@@ -828,14 +869,11 @@ export const Spin = ({
       // answer belongs.
       e.preventDefault();
       e.stopPropagation();
-      openCallout(
-        naviI18n(goingNext ? "spin.nothing_after" : "spin.nothing_before"),
-        {
-          anchorElement: middleRef.current,
-          status: "info",
-          openingEvent: e.detail.event ?? e,
-        },
-      );
+      openCallout(boundMessage(goingNext), {
+        anchorElement: middleRef.current,
+        status: "info",
+        openingEvent: e.detail.event ?? e,
+      });
       return;
     }
     // Taken here and answered when the slides land (see onLoop): the control
@@ -904,16 +942,15 @@ export const Spin = ({
 
   const wayOut = (atStart) => {
     const isNext = atStart ? startIsNext : !startIsNext;
+    const allowed = atStart ? startAllowed : endAllowed;
     return (
       <WayOut
         atStart={atStart}
         onPointerDown={(e) => {
           wayOutPointerTypeRef.current = e.pointerType;
         }}
-        unavailableMessage={wayOutMessage(
-          atStart ? startAllowed : endAllowed,
-          isNext ? "spin.nothing_after" : "spin.nothing_before",
-        )}
+        unavailable={!allowed || loadingResolved || readOnlyResolved}
+        unavailableMessage={() => wayOutMessage(allowed, isNext)}
         label={
           isNext
             ? (nextLabel ?? naviI18n("spin.next"))
@@ -987,6 +1024,8 @@ export const Spin = ({
             {...valueProps}
             min={min}
             max={max}
+            minMessage={minMessage}
+            maxMessage={maxMessage}
             step={step}
             readOnly={readOnly}
             disabled={disabled}
@@ -1028,6 +1067,8 @@ export const Spin = ({
               {...valueProps}
               min={min}
               max={max}
+              minMessage={minMessage}
+              maxMessage={maxMessage}
               readOnly={readOnly}
               disabled={disabled}
               loading={loading}
@@ -1136,6 +1177,7 @@ export const Spin = ({
 const WayOut = ({
   atStart,
   commandFor,
+  unavailable,
   unavailableMessage,
   label,
   onPress,
@@ -1146,10 +1188,10 @@ const WayOut = ({
   // onPointerUp below).
   const pointerDownRef = useRef(null);
   const press = (e) => {
-    if (unavailableMessage) {
+    if (unavailable) {
       // Why it does nothing, said where one pressed: a control would have
       // done this through its own interaction gate, and this one has none.
-      openCallout(unavailableMessage, {
+      openCallout(unavailableMessage(), {
         anchorElement: e.currentTarget,
         status: "info",
         openingEvent: e,
@@ -1175,8 +1217,8 @@ const WayOut = ({
       // nothing that way, so it keeps its place.
       role="button"
       aria-label={label}
-      aria-disabled={unavailableMessage ? "true" : undefined}
-      data-unavailable={unavailableMessage ? "" : undefined}
+      aria-disabled={unavailable ? "true" : undefined}
+      data-unavailable={unavailable ? "" : undefined}
       // At the chevron, not beside it: a callout aims its arrow at where the
       // anchor's text starts, and there is no text here — only a glyph in the
       // middle of the box, which is what one pressed and what the answer is
@@ -1406,6 +1448,8 @@ SpinGroup.Separator = SpinGroupSeparator;
  *   defaultValue?: number|string,
  *   min?: number,
  *   max?: number,
+ *   minMessage?: any,
+ *   maxMessage?: any,
  *   step?: number,
  *   pad?: number,
  *   loop?: boolean,
@@ -1507,6 +1551,8 @@ const numberAtStep = (value, count, { min, max, loop }) => {
  *   name?: string,
  *   min?: string,
  *   max?: string,
+ *   minMessage?: any,
+ *   maxMessage?: any,
  *   step?: number,
  *   lang?: string,
  *   renderDay?: (day: string) => import("preact").ComponentChildren,

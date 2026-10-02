@@ -384,18 +384,17 @@ export const MIN_CONSTRAINT = {
       if (cmp === null || cmp >= 0) {
         return null;
       }
-
-      return naviI18n("constraint.min.duration.default", {
-        min: formatDuration(min),
-      });
+      return boundMessage(field, "min");
     }
     if (field.controlType !== "input" && field.controlType !== "picker") {
       return null;
     }
-    const minString = field.controlHostProps.min;
-    if (!minString) {
+    const min = field.controlHostProps.min;
+    // 0 is a bound like any other: only a bound nobody gave is skipped.
+    if (min === undefined || min === null || min === "") {
       return null;
     }
+    const minString = String(min);
     const type = field.controlHostProps.type;
     const naviInputType = field.controlHostProps["navi-input-type"];
     const valueAsString = uiStateAsText(field.uiState);
@@ -411,40 +410,16 @@ export const MIN_CONSTRAINT = {
       if (isNaN(numericValue)) {
         return null;
       }
-      if (numericValue < minNumber) {
-        if (naviInputType === "hour") {
-          return naviI18n(`constraint.min.hour.default`, {
-            min: minString,
-          });
-        }
-        if (naviInputType === "minute") {
-          return naviI18n(`constraint.min.minute.default`, {
-            min: minString,
-          });
-        }
-        if (naviInputType === "second") {
-          return naviI18n(`constraint.min.second.default`, {
-            min: minString,
-          });
-        }
-        if (naviInputType === "percentage") {
-          return naviI18n(`constraint.min.percentage.default`, {
-            min: minString,
-          });
-        }
-        return naviI18n(`constraint.min.number.default`, {
-          min: minString,
-        });
+      if (numericValue >= minNumber) {
+        return null;
       }
-      return null;
+      return boundMessage(field, "min");
     }
     if (type === "time") {
       const [minHours, minMinutes] = minString.split(":").map(Number);
       const [hours, minutes] = valueAsString.split(":").map(Number);
       if (hours < minHours || (hours === minHours && minutes < minMinutes)) {
-        return naviI18n("constraint.min.time.default", {
-          min: minString,
-        });
+        return boundMessage(field, "min");
       }
       return null;
     }
@@ -452,18 +427,13 @@ export const MIN_CONSTRAINT = {
     // so they never need a min/max validation message.
     if (DATE_INPUT_TYPE_SET.has(type)) {
       if (valueAsString < minString) {
-        const todayIso = getTodayIso(type);
-        if (minString === todayIso) {
-          return naviI18n("constraint.min.date.today.default");
-        }
-        return naviI18n("constraint.min.date.default", {
-          min: formatDateIso(minString, type),
-        });
+        return boundMessage(field, "min");
       }
       return null;
     }
     return null;
   },
+  messageAtBound: (field) => boundMessage(field, "min"),
 };
 CONSTRAINT_ATTRIBUTE_SET.add("min");
 
@@ -483,18 +453,17 @@ export const MAX_CONSTRAINT = {
       if (cmp === null || cmp <= 0) {
         return null;
       }
-
-      return naviI18n("constraint.max.duration.default", {
-        max: formatDuration(max),
-      });
+      return boundMessage(field, "max");
     }
     if (field.controlType !== "input" && field.controlType !== "picker") {
       return null;
     }
-    const maxString = field.controlHostProps.max;
-    if (!maxString) {
+    const max = field.controlHostProps.max;
+    // 0 is a bound like any other: only a bound nobody gave is skipped.
+    if (max === undefined || max === null || max === "") {
       return null;
     }
+    const maxString = String(max);
     const type = field.controlHostProps.type;
     const naviInputType = field.controlHostProps["navi-input-type"];
     const valueAsString = uiStateAsText(field.uiState);
@@ -513,38 +482,13 @@ export const MAX_CONSTRAINT = {
       if (numericValue <= maxNumber) {
         return null;
       }
-
-      if (naviInputType === "hour") {
-        return naviI18n(`constraint.max.hour.default`, {
-          max: maxString,
-        });
-      }
-      if (naviInputType === "minute") {
-        return naviI18n(`constraint.max.minute.default`, {
-          max: maxString,
-        });
-      }
-      if (naviInputType === "second") {
-        return naviI18n(`constraint.max.second.default`, {
-          max: maxString,
-        });
-      }
-      if (naviInputType === "percentage") {
-        return naviI18n(`constraint.max.percentage.default`, {
-          max: maxString,
-        });
-      }
-      return naviI18n(`constraint.max.number.default`, {
-        max: maxString,
-      });
+      return boundMessage(field, "max");
     }
     if (type === "time") {
       const [maxHours, maxMinutes] = maxString.split(":").map(Number);
       const [hours, minutes] = valueAsString.split(":").map(Number);
       if (hours > maxHours || (hours === maxHours && minutes > maxMinutes)) {
-        return naviI18n("constraint.max.time.default", {
-          max: maxString,
-        });
+        return boundMessage(field, "max");
       }
       return null;
     }
@@ -552,17 +496,11 @@ export const MAX_CONSTRAINT = {
       if (valueAsString <= maxString) {
         return null;
       }
-
-      const todayIso = getTodayIso(type);
-      if (maxString === todayIso) {
-        return naviI18n("constraint.max.date.today.default");
-      }
-      return naviI18n("constraint.max.date.default", {
-        max: formatDateIso(maxString, type),
-      });
+      return boundMessage(field, "max");
     }
     return null;
   },
+  messageAtBound: (field) => boundMessage(field, "max"),
 };
 CONSTRAINT_ATTRIBUTE_SET.add("max");
 
@@ -756,6 +694,51 @@ const formatMsToTime = (ms, showSeconds) => {
   const ss = String(s).padStart(2, "0");
   return `${hh}:${mm}:${ss}`;
 };
+
+// What a bound says, whatever the value: the sentence `check` gives a value
+// past it, and the one a spin gives when its chevron is refused there
+// (picker_spin.jsx) — one sentence, so the two refuse in the same words. null
+// for a type that has nothing to say about a bound.
+const boundMessage = (field, bound) => {
+  const boundValue = field.controlHostProps[bound];
+  if (field.controlType === "duration_group") {
+    return naviI18n(`constraint.${bound}.duration.default`, {
+      [bound]: formatDuration(boundValue),
+    });
+  }
+  const type = field.controlHostProps.type;
+  const naviInputType = field.controlHostProps["navi-input-type"];
+  if (isNumberInput(type, naviInputType)) {
+    const numberKind = NUMBER_BOUND_KIND_SET.has(naviInputType)
+      ? naviInputType
+      : "number";
+    return naviI18n(`constraint.${bound}.${numberKind}.default`, {
+      [bound]: String(boundValue),
+    });
+  }
+  if (type === "time") {
+    return naviI18n(`constraint.${bound}.time.default`, {
+      [bound]: boundValue,
+    });
+  }
+  if (DATE_INPUT_TYPE_SET.has(type)) {
+    if (boundValue === getTodayIso(type)) {
+      return naviI18n(`constraint.${bound}.date.today.default`);
+    }
+    return naviI18n(`constraint.${bound}.date.default`, {
+      [bound]: formatDateIso(boundValue, type),
+    });
+  }
+  return null;
+};
+// The numbers whose bound is said with what they count ("Max 23 heures");
+// any other is "Ce nombre".
+const NUMBER_BOUND_KIND_SET = new Set([
+  "hour",
+  "minute",
+  "second",
+  "percentage",
+]);
 
 const getTodayIso = (inputType) => {
   const now = new Date();

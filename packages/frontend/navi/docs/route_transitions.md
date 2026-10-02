@@ -451,6 +451,9 @@ What that means for a page and for the application around it:
   running, and a component reading the URL, a route or a signal directly
   re-renders in it too, hidden. What it reads through `useAsyncData` does not:
   navi leaves a page alone as soon as its container would no longer show it.
+  Its `navState` keeps the entry it was shown on: a section or a popup open
+  there stays open until the page is taken down, rather than being closed by
+  the entry that replaced it.
 - **It is taken down after the page arriving is up.** A cleanup that puts back
   what it found — a document title, a class on `<body>`, a value in a shared store
   — puts a stale value back over the new page's. Such a registration is written as
@@ -475,6 +478,10 @@ What that means for a page and for the application around it:
   itself out of reach — the page arriving could not even take the focus — and one
   in a page kept while leaving would stay open for the whole movement. The page is
   then taken down at once, as without a movement.
+- **Not past a `<Loading>` around both pages.** When the page arriving suspends
+  to a boundary that holds the page being left too, the boundary parks both and
+  runs every cleanup in them: the page being left is then taken down when the
+  boundary resumes, instead of having all its effects run again while hidden.
 - **Only where the page would have been taken down anyway.** A page rendered by
   the same element on both sides — two routes, one component — is the same
   instance carried over.

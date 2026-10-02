@@ -1,11 +1,19 @@
 import { computed } from "@preact/signals";
-import { useEffect, useMemo, useRef } from "preact/hooks";
+import {
+  useContext,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+} from "preact/hooks";
 
 import { installReportDeadlineExtension } from "../../action/action_error_report.js";
 import { updateActions } from "../../action/actions.js";
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 import { notePageChange } from "../page_change.js";
 import { setOnAllRouteReady, setRouteIntegration } from "../route.js";
+import { RoutePageContext } from "../route_page_context.js";
+import { observeRouteRender } from "../route_render.js";
 import {
   documentIsBusySignal,
   routingWhile,
@@ -306,6 +314,7 @@ if (import.meta.hot) {
 
 const NO_OP = () => {};
 const NO_ID_GIVEN = [undefined, NO_OP, NO_OP];
+const countRenders = (count) => count + 1;
 // What the computed below answers for a key the document state does not hold:
 // key presence is the flag, and the value under a present key may be anything,
 // undefined included.
@@ -334,7 +343,36 @@ const useNavStateBasic = (
     [id],
   );
   const keyValue = keyValueComputed.value;
-  const keyInState = keyValue !== KEY_NOT_IN_STATE;
+  // A page the address has left keeps reading the entry it was shown on until
+  // it is taken down (kept hidden while a route transition plays): the new
+  // entry would close what was open there — a Picker as a cancel — where the
+  // same page taken down at once is only unmounted. Its render still happens:
+  // the state is written before the routes say the page is left.
+  const routePage = useContext(RoutePageContext);
+  const keyValueReadRef = useRef(keyValue);
+  const keyValueWithheld =
+    keyValue !== keyValueReadRef.current &&
+    routePage !== null &&
+    !routePage.isShown();
+  if (!keyValueWithheld) {
+    keyValueReadRef.current = keyValue;
+  }
+  const keyValueRead = keyValueReadRef.current;
+  // Owed rather than dropped, as in useAsyncData: the address can come back
+  // before the container renders (a redirect straight back), and the page then
+  // stays on screen.
+  const [, rerender] = useReducer(countRenders, 0);
+  useEffect(() => {
+    if (!keyValueWithheld) {
+      return undefined;
+    }
+    return observeRouteRender(() => {
+      if (routePage.isShown()) {
+        rerender();
+      }
+    });
+  }, [keyValueWithheld]);
+  const keyInState = keyValueRead !== KEY_NOT_IN_STATE;
   const onLeaveRef = useRef(onLeave);
   onLeaveRef.current = onLeave;
   const prevKeyInStateRef = useRef(keyInState);
@@ -369,7 +407,7 @@ const useNavStateBasic = (
     effectiveType = "replace";
   }
 
-  const currentValue = keyInState ? keyValue : defaultValue;
+  const currentValue = keyInState ? keyValueRead : defaultValue;
 
   if (debug) {
     console.debug(`useNavState(${id}) current value is ${currentValue}`);
@@ -437,6 +475,8 @@ const useNavStateBasic = (
 /**
  * Stores a named value in the browser's document state and returns it reactively.
  * The component re-renders whenever the value changes (navigation, back/forward button).
+ * In a page the address has left — kept hidden while a route transition plays —
+ * the value stays the one of the entry that page was shown on.
  *
  * @param {string} id
  *   Unique key used to store the value in document state. Must be stable across renders.
