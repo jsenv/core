@@ -1479,6 +1479,46 @@ const LIST_PSEUDO_CLASSES = [
   ":-navi-void",
   ":-navi-expanded",
 ];
+// Two lists mounted at once under one `id` are one entry to the scroll memory:
+// each overwrites the other's position (see docs/scroll.md). Said the moment
+// the second one mounts, once per id — on a route transition, that is the page
+// arriving while the page being left is still mounted, hidden.
+const createSharedRememberedIdWarning = () => {
+  const mountedListsById = new Map();
+  const warnedIdSet = new Set();
+  return (listId, rememberScroll, ref) => {
+    useLayoutEffect(() => {
+      if (!rememberScroll) {
+        return undefined;
+      }
+      let mountedLists = mountedListsById.get(listId);
+      if (!mountedLists) {
+        mountedLists = new Set();
+        mountedListsById.set(listId, mountedLists);
+      }
+      const mounted = { element: ref.current };
+      if (mountedLists.size > 0 && !warnedIdSet.has(listId)) {
+        warnedIdSet.add(listId);
+        const [other] = mountedLists;
+        console.warn(
+          `<List id="${listId}"> mounted while another list with this id is mounted. The position a list comes back to is kept under its id, so the two overwrite each other's: the one arriving can open where the other one was, or come back at its top. Lists are mounted together on one page, under a popup, in a bar every page keeps, and during a route transition, whose page being left stays mounted until the movement ends. Give each list an id naming it in the app (a component drawing a list on several pages takes its id from the page), or set scrollResetOnNavigation on a list with no use for coming back. See docs/scroll.md.`,
+          { list: mounted.element, otherList: other.element },
+        );
+      }
+      mountedLists.add(mounted);
+      return () => {
+        mountedLists.delete(mounted);
+        if (mountedLists.size === 0) {
+          mountedListsById.delete(listId);
+        }
+      };
+    }, [listId, rememberScroll]);
+  };
+};
+const useWarnSharedRememberedId = import.meta.dev
+  ? createSharedRememberedIdWarning()
+  : () => {};
+
 const useListScrollSync = ({
   ref,
   listItems,
@@ -2445,6 +2485,7 @@ const useListScrollSync = ({
       }
     };
   }, []);
+  useWarnSharedRememberedId(listId, rememberScroll, ref);
 
   // A list that gets narrower rewraps every item it holds, so everything below
   // moves and the reader loses their place — the very thing scrolling a long
