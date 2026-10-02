@@ -10,6 +10,7 @@ import {
   installScrollRestoration,
   restoreScrollPositionOnReturn,
   startAtTop,
+  stayInPlace,
 } from "./scroll_restoration.js";
 import {
   isTargetWriteInProgress,
@@ -305,14 +306,18 @@ export const setupBrowserIntegrationViaHistory = ({
     // also waits for the page it returns to: an offset is clamped to whatever
     // page the document holds when it is written.
     //
-    // A replace gets neither: it is the same place said differently — a param
-    // settling, a state written — and moving the reader for it would throw
-    // them out of a page they never left. A push that keeps the pathname is
-    // read the same way, by startAtTop itself. The one replace that IS an
-    // arrival is a row of tabs travelling, and the row says so for itself (see
-    // route_travel.jsx).
+    // A replace leaves the document where it is: it is the same place said
+    // differently — a param settling, a state written — and moving the reader
+    // for it would throw them out of a page they never left. Where they stay
+    // is written down for the new address (see stayInPlace). A push that keeps
+    // the pathname is read the same way, by startAtTop itself. The one replace
+    // that IS an arrival is a row of tabs travelling, and the row says so for
+    // itself (see route_travel.jsx) — from inside the routing above, which is
+    // why the replace is written down after it.
     if (navigationType === "push") {
       whenRenderingResumes(() => startAtTop(url, { from: urlLeft }));
+    } else if (navigationType === "replace") {
+      stayInPlace(url);
     } else if (navigationType === "traverse") {
       restoreScrollPositionOnReturn(url);
     }

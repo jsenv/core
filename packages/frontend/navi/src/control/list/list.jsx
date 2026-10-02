@@ -19,7 +19,7 @@ import {
 // scrolls, which the CSS below reads.
 import "../../utils/scroll_activity.js";
 import { afterPaint } from "../../utils/after_paint.js";
-import { isScrollGliding } from "../../utils/scroll_glide.js";
+import { wouldInterruptScroll } from "../../utils/scroll_in_flight.js";
 
 import {
   createComponentResolver,
@@ -2497,6 +2497,13 @@ const useListScrollSync = ({
       if (delta > -0.5 && delta < 0.5) {
         return;
       }
+      if (wouldInterruptScroll(scrollerEl)) {
+        // As the anchoring's write would (see holdAnchorStill). The document's
+        // box is the scroller of a list scrolling the page, and it resizes with
+        // every item drawn taller than its filler: while the page scrolls, that
+        // is at every window move.
+        return;
+      }
       anchorRef.current = null;
       if (horizontal) {
         scrollerEl.scrollLeft += delta;
@@ -2597,13 +2604,12 @@ const useListScrollSync = ({
       return;
     }
     anchorRef.current = null;
-    if (isScrollGliding(scrollerEl)) {
+    if (wouldInterruptScroll(scrollerEl)) {
       // Nobody is looking at items standing still: they are passing by, on
-      // their way somewhere the browser was asked to take them (a key, a smooth
-      // scrollTo, the status bar). The write would be an instant scroll, and
-      // the browser abandons the glide for it, short of where it was going.
-      // Left alone, the items drawn above push the rest by `drift` while all
-      // of it moves, and the glide lands.
+      // their way somewhere the browser takes them (a key, a smooth scrollTo,
+      // the status bar, a fling). The write would stop that scroll short of
+      // where it was going. Left alone, the items drawn above push the rest by
+      // `drift` while all of it moves, and the scroll lands.
       return;
     }
     scrolledByListRef.current = true;

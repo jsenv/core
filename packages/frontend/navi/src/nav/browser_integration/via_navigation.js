@@ -66,6 +66,7 @@ import {
   installScrollRestoration,
   restoreScrollPositionOnReturn,
   startAtTop,
+  stayInPlace,
 } from "./scroll_restoration.js";
 
 export const setupBrowserIntegrationViaNavigation = ({
@@ -192,7 +193,7 @@ export const setupBrowserIntegrationViaNavigation = ({
   let abortController = null;
   const runRouting = (
     url,
-    { reason, navigationType, state, abortEvent, urlLeft },
+    { reason, navigationType, state, abortEvent, urlLeft, landing },
   ) => {
     const redirectionUrl = resolveRouteRedirection(url);
     if (redirectionUrl) {
@@ -263,10 +264,14 @@ export const setupBrowserIntegrationViaNavigation = ({
     });
     // Same rule, same timing as via_history.js's own, and the same reading of
     // a replace: only the row that travels knows one of its own is an arrival.
+    // A landing is the back's return, whatever the replace that writes it (see
+    // navBack's `landOn`).
     if (navigationType === "push") {
       whenRenderingResumes(() => startAtTop(url, { from: urlLeft }));
-    } else if (navigationType === "traverse") {
+    } else if (navigationType === "traverse" || landing) {
       restoreScrollPositionOnReturn(url);
+    } else if (navigationType === "replace") {
+      stayInPlace(url);
     }
     executeWithCleanup(
       () => allResult,
@@ -577,11 +582,8 @@ export const setupBrowserIntegrationViaNavigation = ({
             state,
             abortEvent: event.signal,
             urlLeft,
+            landing: isLanding,
           });
-          if (isLanding) {
-            // The arrival is the back's, whatever the replace that wrote it.
-            restoreScrollPositionOnReturn(url);
-          }
           // The handler's promise IS the navigation for the browser (its
           // loading UI follows it) — but a routing that fails is displayed by
           // the page, never thrown at the navigation: rejected here, the

@@ -54,6 +54,11 @@ import { observeRouteRender } from "../route_render.js";
 const STORAGE_KEY = "navi_scroll_positions";
 
 const positionByUrl = new Map();
+// Where the document stands, as its scroll events last said, whoever it
+// belongs to: what a url shown without the document moving is given (see
+// stayInPlace). Null until the restoration is installed — nothing is recorded
+// before.
+let documentOffset = null;
 // url -> (scroller name -> position). The position is whatever the scroller
 // handed in: what it can put itself back on, in its own terms.
 const scrollerPositionsByUrl = new Map();
@@ -170,30 +175,25 @@ export const installScrollRestoration = () => {
   }
   window.history.scrollRestoration = "manual";
   loadStore();
+  documentOffset = { x: window.scrollX, y: window.scrollY };
   // Read as it happens rather than when leaving: a traverse changes the url
   // before anything here is told, so a position read then would be read for
   // the wrong page.
   window.addEventListener(
     "scroll",
     () => {
+      documentOffset = { x: window.scrollX, y: window.scrollY };
       if (suspendCount) {
         return;
       }
-      positionByUrl.set(window.location.href, {
-        x: window.scrollX,
-        y: window.scrollY,
-      });
+      positionByUrl.set(window.location.href, documentOffset);
     },
     { passive: true },
   );
   const positionOnLoad = positionByUrl.get(window.location.href);
   if (!positionOnLoad) {
-    // Where the browser landed the first page, written down for the reason
-    // startAtTop writes its top: no scroll event says so.
-    positionByUrl.set(window.location.href, {
-      x: window.scrollX,
-      y: window.scrollY,
-    });
+    // The first page, where the browser landed it.
+    stayInPlace(window.location.href);
     return;
   }
   // What a reload asks for, now that the browser has been told not to do it.
@@ -284,6 +284,7 @@ export const restoreScrollPositionOnReturn = (url) => {
 // app that scrolls an element of its own scrolls it itself.
 export const startAtTop = (url, { from } = {}) => {
   if (!isArrival(url, { from })) {
+    stayInPlace(url);
     return;
   }
   arrivalCount++;
@@ -303,6 +304,23 @@ const isArrival = (url, { from }) => {
     return false;
   }
   return true;
+};
+
+// A url the document is shown under without moving: a replace, a push that
+// keeps the page (see startAtTop), the first page loaded. No scroll event says
+// where it stands, so it is written down here, or a return to it would find
+// nothing and keep the offset of the page being left. The offset the scroll
+// events last told, not read again: a read here would lay the page out in the
+// middle of a routing, once per address a settling param writes.
+//
+// Deaf with the recording: a row of tabs replaces the url as it travels, and
+// the offset belongs to nobody until the row says where its tab lands (see
+// arriveAtScrollPosition).
+export const stayInPlace = (url) => {
+  if (documentOffset === null || suspendCount) {
+    return;
+  }
+  positionByUrl.set(new URL(url, window.location.href).href, documentOffset);
 };
 
 // The same arrival, for the page's own scrollers. The document is scrolled to
