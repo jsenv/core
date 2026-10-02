@@ -699,7 +699,9 @@ const TextUI = (props) => {
   }
   const shouldPreserveSpacing = rest.as === "pre" || rest.flex || rest.grid;
   if (shouldPreserveSpacing) {
-    boxProps.spacing = resolvedSpacing;
+    // Only the caller's spacing becomes the gap: the default separator is a
+    // space character, and whitespace between flex/grid items has no width.
+    boxProps.spacing = spacing;
   } else {
     children = applySpacingOnTextChildren(
       children,

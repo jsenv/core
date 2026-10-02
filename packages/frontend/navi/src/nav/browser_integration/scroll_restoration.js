@@ -28,9 +28,11 @@
  * (recallScrollerPosition). What a push means for them is what it means for
  * the document — an arrival opens at the top (see startAtTop): the page
  * arrived at has its named positions dropped before its lists render, so a
- * list recalls only on the way back. A scroller that goes while its page
- * stays — a popup closing over the same address — has nothing to come back
- * to, and says so as it leaves (forgetScrollerUnlessPageLeft).
+ * list recalls only on the way back. An address the page stays under — a
+ * replace, a push that keeps the page — carries the scrollers still there
+ * (see stayInPlace). A scroller that goes while its page stays — a popup
+ * closing over the same address — has nothing to come back to, and says so as
+ * it leaves (forgetScrollerUnlessPageLeft).
  *
  * What is NOT covered, and cannot be from here: a page whose height depends on
  * something still loading. Its content is not there at the moment it is put
@@ -192,8 +194,9 @@ export const installScrollRestoration = () => {
   );
   const positionOnLoad = positionByUrl.get(window.location.href);
   if (!positionOnLoad) {
-    // The first page, where the browser landed it.
-    stayInPlace(window.location.href);
+    // The first page, where the browser landed it: no scroll event says so
+    // (see stayInPlace).
+    positionByUrl.set(window.location.href, documentOffset);
     return;
   }
   // What a reload asks for, now that the browser has been told not to do it.
@@ -306,21 +309,47 @@ const isArrival = (url, { from }) => {
   return true;
 };
 
-// A url the document is shown under without moving: a replace, a push that
-// keeps the page (see startAtTop), the first page loaded. No scroll event says
-// where it stands, so it is written down here, or a return to it would find
-// nothing and keep the offset of the page being left. The offset the scroll
-// events last told, not read again: a read here would lay the page out in the
-// middle of a routing, once per address a settling param writes.
+// A url the page is shown under without changing: a replace, a push that
+// keeps the page (see startAtTop). Nothing scrolls, so nothing says where the
+// page stands under it — written down here, or a return to it would find
+// nothing: the document would keep the offset of the page being left, and a
+// list would open at its top.
 //
-// Deaf with the recording: a row of tabs replaces the url as it travels, and
-// the offset belongs to nobody until the row says where its tab lands (see
-// arriveAtScrollPosition).
+// The document's offset as its scroll events last told it, not read again: a
+// read here would lay the page out in the middle of a routing, once per
+// address a settling param writes. Deaf with the recording: a row of tabs
+// replaces the url as it travels, and the offset belongs to nobody until the
+// row says where its tab lands (see arriveAtScrollPosition).
 export const stayInPlace = (url) => {
-  if (documentOffset === null || suspendCount) {
-    return;
+  const href = new URL(url, window.location.href).href;
+  if (documentOffset !== null && !suspendCount) {
+    positionByUrl.set(href, documentOffset);
   }
-  positionByUrl.set(new URL(url, window.location.href).href, documentOffset);
+  whenPageRendered(() => {
+    carryScrollersTo(href);
+  });
+};
+// The scrollers the page kept through the change, told apart once it has
+// rendered: until then a list about to be swapped out — in the tab a row is
+// leaving — is as mounted as one that stays, and carried over, its position is
+// what a list of the same name arriving would read. One that left has said so
+// (forgetScrollerUnlessPageLeft); one that arrived speaks under this url
+// already. One still mounted but on its way out (a page kept hidden while its
+// route transition plays) is carried, and forgets the copy as it unmounts
+// under this url.
+const carryScrollersTo = (url) => {
+  for (const [name, urlSpokenUnder] of urlByScrollerName) {
+    if (urlSpokenUnder === url) {
+      continue;
+    }
+    const positionByName = scrollerPositionsByUrl.get(urlSpokenUnder);
+    if (!positionByName || !positionByName.has(name)) {
+      // Dropped by an arrival at the url it spoke under (see
+      // forgetScrollersOnArrival): it has not spoken since.
+      continue;
+    }
+    writeScrollerPosition(url, name, positionByName.get(name));
+  }
 };
 
 // The same arrival, for the page's own scrollers. The document is scrolled to
@@ -363,7 +392,9 @@ const scrollTo = ({ x, y }) => {
 
 export const rememberScrollerPosition = (name, position) => {
   loadStore();
-  const url = window.location.href;
+  writeScrollerPosition(window.location.href, name, position);
+};
+const writeScrollerPosition = (url, name, position) => {
   let positionByName = scrollerPositionsByUrl.get(url);
   if (!positionByName) {
     positionByName = new Map();
