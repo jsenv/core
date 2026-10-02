@@ -226,15 +226,12 @@ const useNavStateWithWarnings = (id, options) => {
     ownerRef.current = {};
   }
   const owner = ownerRef.current;
-  // Claimed during render so warnAboutOrphanGeneratedKeys sees every id of
-  // the commit, including the ones whose effect has not run yet. The conflict
-  // is judged in the effect: when a screen replaces another in one commit,
-  // preact renders the new children before unmounting the old ones, so at
-  // render time the id may still be held by a component about to go.
-  if (id !== undefined && !idUsageMap.has(id)) {
-    idUsageMap.set(id, { owner, stackTrace: new Error().stack });
-  }
 
+  // Claimed in the effect, never during render: only the effect has a cleanup
+  // to give the id back, and a render is not always followed by its effects.
+  // A page parked by a Suspense boundary (every hook cleanup run), rendered
+  // again and taken down before the paint, leaves a render-time claim holding
+  // the id for nobody — and the next mount reads a conflict.
   useEffect(() => {
     if (id === undefined) {
       return undefined;
@@ -248,12 +245,9 @@ This can cause UI state conflicts and unexpected behavior.
 Consider using unique IDs for each component instance.`,
       );
     } else {
-      // Also set when absent: preact/compat's Suspense parks a subtree by
-      // running every hook cleanup in it, and the render resuming it carries
-      // the same id.
       idUsageMap.set(id, { owner, stackTrace: new Error().stack });
     }
-    warnAboutOrphanGeneratedKeys();
+    scheduleOrphanGeneratedKeysCheck();
     return () => {
       if (idUsageMap.get(id)?.owner === owner) {
         idUsageMap.delete(id);
@@ -269,6 +263,20 @@ Consider using unique IDs for each component instance.`,
 // and the mount coming back to the entry generates another id: the state is
 // there, and nothing reads it. Reported when a component mounting on the entry
 // finds such a key, the moment someone expected the state back.
+//
+// Checked once every effect of the flush has claimed its id: a component
+// whose effect comes later in the same flush is not an orphan.
+let orphanGeneratedKeysCheckScheduled = false;
+const scheduleOrphanGeneratedKeysCheck = () => {
+  if (orphanGeneratedKeysCheckScheduled) {
+    return;
+  }
+  orphanGeneratedKeysCheckScheduled = true;
+  queueMicrotask(() => {
+    orphanGeneratedKeysCheckScheduled = false;
+    warnAboutOrphanGeneratedKeys();
+  });
+};
 const warnAboutOrphanGeneratedKeys = () => {
   const state = browserIntegration.getDocumentState();
   if (!state) {

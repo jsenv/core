@@ -610,6 +610,26 @@ export const Expandable = (props) => {
     return stopRide;
   };
 
+  // A silent change is a state the page was already in (see openEffect): it
+  // lands at once. Not playing a reveal is not enough — the stylesheet's own
+  // transition plays it whenever the previous state's style was resolved
+  // before the render: an expandable mounted closed and measured in the same
+  // commit (a List sizing its items) before its deferred mount-time open, or
+  // one kept on screen across the page change.
+  const renderWithoutMovement = (contentContainer, render) => {
+    if (!animation || !contentContainer) {
+      flushSyncRendering(render);
+      return;
+    }
+    contentContainer.style.transitionProperty = "none";
+    flushSyncRendering(render);
+    // The new style must be resolved while transitions are off — re-enabled
+    // in the same recalc, the change would transition after all.
+    // eslint-disable-next-line no-unused-expressions
+    getComputedStyle(contentContainer).transitionProperty;
+    contentContainer.style.transitionProperty = "";
+  };
+
   // What opening LOOKS like here, and how to undo it — the one thing an
   // expandable owns that a popup does not (see open_controller.js). Reassigned
   // on every render so it always closes over the latest props.
@@ -632,10 +652,15 @@ export const Expandable = (props) => {
       ? contentContainer.getBoundingClientRect()
       : null;
     cancelSettleWatch();
-    flushSyncRendering(() => {
+    const renderOpened = () => {
       setOpened(true);
       setSettled(!revealing);
-    });
+    };
+    if (silent) {
+      renderWithoutMovement(contentContainer, renderOpened);
+    } else {
+      flushSyncRendering(renderOpened);
+    }
     if (hasAction) {
       runUnwatched(() => effectiveAction.run());
     }
@@ -684,19 +709,23 @@ export const Expandable = (props) => {
       cancelSettleWatch();
       // `silent`: closed by the navigation that puts another page on screen,
       // which is its movement (see page_change.js).
+      const silentClose = Boolean(closeEvent.detail.silent);
       const collapsing =
-        animation &&
-        !closeEvent.detail.silent &&
-        Boolean(contentContainerAtClose);
+        animation && !silentClose && Boolean(contentContainerAtClose);
       if (collapsing) {
         // Now, while the content is still fully laid out — the collapsing
         // track uncovers a content frozen at that size.
         freezeContentSize();
       }
-      flushSyncRendering(() => {
+      const renderClosed = () => {
         setOpened(false);
         setSettled(!collapsing);
-      });
+      };
+      if (silentClose) {
+        renderWithoutMovement(contentContainerAtClose, renderClosed);
+      } else {
+        flushSyncRendering(renderClosed);
+      }
       if (restoreFocus) {
         restoreFocus(closeEvent);
       } else if (
