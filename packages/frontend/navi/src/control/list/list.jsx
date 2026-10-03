@@ -572,7 +572,8 @@ const css = /* css */ `
     list-style: none;
   }
   /* The text of the items a filler holds the room of (List.Items findText),
-     one line per item at the item size — its share of its line, in a grid: a
+     one line per item at the room the filler holds for it — the item size,
+     its share of its line in a grid, the room it took when it was drawn: a
      match found there is where its item will be drawn. Transparent once revealed — the item drawn over that place
      is what the user sees. No display of its own: a browser without
      hidden="until-found" reads it as plain hidden and draws nothing. */
@@ -1697,6 +1698,8 @@ const useListScrollSync = ({
       return;
     }
     captureAnchor();
+    // What was measured is the room of an item alone on its line.
+    listItems.roomById.clear();
     itemsPerLineRef.current = itemsPerLineNow;
     setItemsPerLine(itemsPerLineNow);
   };
@@ -1790,11 +1793,27 @@ const useListScrollSync = ({
       }
     }
   }
+  // The items about to leave the window are still drawn: the room each takes
+  // is kept, and the filler holding its place from then on holds exactly that
+  // (see VirtualFiller). Nothing above the screen then changes as the window
+  // slides, which matters most where the anchoring cannot write: a scroll in
+  // flight (see holdAnchorStill). Every item drawn is read, since any may be
+  // the next to leave. A room kept is the room of the last drawing: an item
+  // that changed since is measured again when drawn again, and the anchoring
+  // holds the view across the difference. Items laid side by side in a grid
+  // share a line, which the fillers hold at the one size.
+  const rememberItemRooms = () => {
+    if (!ref.current || itemsPerLineRef.current !== 1) {
+      return;
+    }
+    readItemRooms(getListEl(), horizontal, listItems.roomById);
+  };
   const updateRenderWindow = (newStart, newEnd, reason) => {
     const { start, end } = renderWindowRef.current;
     if (newStart === start && newEnd === end) {
       return null;
     }
+    rememberItemRooms();
     captureAnchor();
     debugScroll(`updateRenderWindow(${newStart}, ${newEnd}, "${reason}")`);
     const renderWindow = { start: newStart, end: newEnd };
@@ -2674,9 +2693,9 @@ const useListScrollSync = ({
     if (wouldInterruptScroll(scrollerEl)) {
       // Nobody is looking at items standing still: they are passing by, on
       // their way somewhere the browser takes them (a key, a smooth scrollTo,
-      // the status bar, a fling). The write would stop that scroll short of
-      // where it was going. Left alone, the items drawn above push the rest by
-      // `drift` while all of it moves, and the scroll lands.
+      // the status bar, a fling on iOS). The write would stop that scroll short
+      // of where it was going. Left alone, the items drawn above push the rest
+      // by `drift` while all of it moves, and the scroll lands.
       return;
     }
     scrolledByListRef.current = true;
@@ -2789,9 +2808,20 @@ const useListScrollSync = ({
       bandEnd = walkAfter(hold.index, screenSize - hold.above, pixelsOf).index;
       forward = true;
     } else {
-      bandStart = findBandStart(items, bandFrom, itemSize);
+      // In the room a filler holds, an item is counted at what the filler
+      // gives it.
+      const fillerSizeOf =
+        itemSize > 0
+          ? (index) => {
+              const room = listItems.roomAt(index);
+              return room === undefined ? itemSize : room;
+            }
+          : null;
+      bandStart = findBandStart(items, bandFrom, fillerSizeOf, total);
       bandEnd =
-        bandTo > bandFrom ? findBandEnd(items, bandTo, itemSize) : bandStart;
+        bandTo > bandFrom
+          ? findBandEnd(items, bandTo, fillerSizeOf, total)
+          : bandStart;
       forward = scrollDirectionRef.current > 0;
     }
     if (bandStart > total) {
@@ -3847,12 +3877,56 @@ const readWindowGeometry = (scrollerEl, listEl, horizontal) => {
   }
   return { screenSize, bandFrom, bandTo, items };
 };
+// The room each item drawn takes along the scroll axis (see
+// rememberItemRooms): up to the next item when that one is drawn too, so that
+// what stands between them — a separator, the label of a group the next one
+// opens — is counted; its own box otherwise. A stand-in is not measured: it
+// takes the room it is given, not the room of its item.
+const readItemRooms = (listEl, horizontal, roomById) => {
+  let previous = null;
+  const keepRoom = (item, next) => {
+    if (item.id === null) {
+      return;
+    }
+    roomById.set(
+      item.id,
+      next && next.index === item.index + 1
+        ? next.from - item.from
+        : item.to - item.from,
+    );
+  };
+  for (const itemEl of listEl.querySelectorAll(
+    `[${LIST_ITEM_INDEX_ATTRIBUTE}]`,
+  )) {
+    if (!isOwnItem(itemEl, listEl)) {
+      continue;
+    }
+    const rect = itemEl.getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) {
+      continue;
+    }
+    const item = {
+      id: getItemName(itemEl),
+      index: Number(itemEl.getAttribute(LIST_ITEM_INDEX_ATTRIBUTE)),
+      from: horizontal ? rect.left : rect.top,
+      to: horizontal ? rect.right : rect.bottom,
+    };
+    if (previous) {
+      keepRoom(previous, item);
+    }
+    previous = item;
+  }
+  if (previous) {
+    keepRoom(previous, null);
+  }
+};
 // The first item the screen shows from `position` on, and the item after the
 // last one it shows up to `position` (exclusive, like the window's end). An
 // item drawn is read off its box; in the room a filler holds for items not
-// drawn, the item is counted at the size the filler gives each of them — the
-// only way a scroll position there says which item it is.
-const findBandStart = (items, position, itemSize) => {
+// drawn, each item is counted at the size the filler gives it (`sizeOf`) —
+// the only way a scroll position there says which item it is. Without a size
+// (`null`), the room a filler holds says nothing.
+const findBandStart = (items, position, sizeOf, total) => {
   let low = 0;
   let high = items.length;
   while (low < high) {
@@ -3866,30 +3940,40 @@ const findBandStart = (items, position, itemSize) => {
   const next = items[low];
   const previous = items[low - 1];
   if (!next) {
-    if (!itemSize) {
+    if (!sizeOf) {
       return previous.index + 1;
     }
-    return previous.index + 1 + Math.floor((position - previous.to) / itemSize);
+    return findIndexAfter(
+      previous.index + 1,
+      previous.to,
+      position,
+      sizeOf,
+      total,
+    );
   }
   if (next.from <= position) {
     return next.index;
   }
   if (!previous) {
-    if (!itemSize) {
+    if (!sizeOf) {
       return next.index;
     }
-    const index = next.index - Math.ceil((next.from - position) / itemSize);
+    const index = findIndexBefore(next.index, next.from, position, sizeOf);
     return index < 0 ? 0 : index;
   }
-  if (!itemSize || next.index === previous.index + 1) {
+  if (!sizeOf || next.index === previous.index + 1) {
     // Between two items that follow each other: a separator, a group label.
     return next.index;
   }
-  const index =
-    previous.index + 1 + Math.floor((position - previous.to) / itemSize);
-  return index < next.index ? index : next.index;
+  return findIndexAfter(
+    previous.index + 1,
+    previous.to,
+    position,
+    sizeOf,
+    next.index,
+  );
 };
-const findBandEnd = (items, position, itemSize) => {
+const findBandEnd = (items, position, sizeOf, total) => {
   let low = 0;
   let high = items.length;
   while (low < high) {
@@ -3903,24 +3987,59 @@ const findBandEnd = (items, position, itemSize) => {
   const previous = items[low - 1];
   const next = items[low];
   if (!previous) {
-    if (!itemSize) {
+    if (!sizeOf) {
       return next.index;
     }
-    const index = next.index - Math.ceil((next.from - position) / itemSize) + 1;
-    return index < 0 ? 0 : index;
+    return findIndexBefore(next.index, next.from, position, sizeOf) + 1;
   }
   if (previous.to >= position) {
     return previous.index + 1;
   }
-  if (!itemSize || (next && next.index === previous.index + 1)) {
+  if (!sizeOf || (next && next.index === previous.index + 1)) {
     return previous.index + 1;
   }
   const index =
-    previous.index + 2 + Math.floor((position - previous.to) / itemSize);
+    findIndexAfter(
+      previous.index + 1,
+      previous.to,
+      position,
+      sizeOf,
+      next ? next.index : total,
+    ) + 1;
   if (next && index > next.index) {
     return next.index;
   }
   return index;
+};
+// The item whose room holds `position`, the rooms laid one after the other
+// from `from` on, starting with the item at `index` — `limit` when `position`
+// is past them all.
+const findIndexAfter = (index, from, position, sizeOf, limit) => {
+  let at = from;
+  let itemIndex = index;
+  while (itemIndex < limit) {
+    const size = sizeOf(itemIndex);
+    if (at + size > position) {
+      return itemIndex;
+    }
+    at += size;
+    itemIndex++;
+  }
+  return limit;
+};
+// The same, the rooms laid back from `to`, ending with the item before the
+// one at `index` — -1 when `position` is before them all.
+const findIndexBefore = (index, to, position, sizeOf) => {
+  let at = to;
+  let itemIndex = index;
+  while (at > position) {
+    if (itemIndex === 0) {
+      return -1;
+    }
+    itemIndex--;
+    at -= sizeOf(itemIndex);
+  }
+  return itemIndex;
 };
 // How much the window holds on each side of the screen, in the budget's unit:
 // read off the items' boxes where they stand, or — while the list holds itself
@@ -4453,11 +4572,22 @@ const Fallback = ({ fallback }) => {
 // every item it draws must not be redrawn — every item of it — because the size
 // settled after the first commit.
 // It holds lines: the items side by side on one take its room together, and a
-// last line left short takes it all the same.
-const VirtualFiller = ({ edge, itemCount, itemsPerLine, findChunks }) => {
+// last line left short takes it all the same. An item the list drew before
+// takes the room it took then instead (see rememberItemRooms).
+const VirtualFiller = ({
+  edge,
+  itemCount,
+  itemsPerLine,
+  itemsRemembered,
+  roomRemembered,
+  findChunks,
+}) => {
   const listItems = useContext(ListItemsContext);
   const lineSize = listItems.virtualItemSizeSignal.value;
-  const sizeToFill = Math.ceil(itemCount / itemsPerLine) * lineSize;
+  const sizeToFill =
+    Math.ceil(itemCount / itemsPerLine) * lineSize -
+    (itemsRemembered * lineSize) / itemsPerLine +
+    roomRemembered;
   // A filler resizing moves what stands below it — the items on screen, when it
   // holds the room of items above them — and it resizes in a commit of its own
   // when the item size settles after the list has rendered: the list puts its
@@ -4474,12 +4604,7 @@ const VirtualFiller = ({ edge, itemCount, itemsPerLine, findChunks }) => {
       // eslint-disable-next-line react/no-unknown-property
       navi-virtual-filler={edge}
       aria-hidden
-      style={{
-        "--size-to-fill": `${sizeToFill}px`,
-        "--x-find-line-size": findChunks
-          ? `${lineSize / itemsPerLine}px`
-          : undefined,
-      }}
+      style={{ "--size-to-fill": `${sizeToFill}px` }}
     >
       {findChunks &&
         findChunks.map((chunk) => (
@@ -4490,7 +4615,10 @@ const VirtualFiller = ({ edge, itemCount, itemsPerLine, findChunks }) => {
             key={`${chunk.from}_${chunk.to}`}
             className="navi_list_find_stand_in"
             hidden="until-found"
-            style={{ "--x-find-line-count": chunk.to - chunk.from }}
+            style={{
+              "--x-find-line-count": chunk.to - chunk.from,
+              "--x-find-line-size": `${chunk.room === undefined ? lineSize / itemsPerLine : chunk.room}px`,
+            }}
           >
             {chunk.text}
           </div>
@@ -5416,16 +5544,48 @@ const useRunItems = (
   // Where an item named from outside actually sits. Only the run can answer:
   // items it holds but does not draw are nowhere else — a list only knows the
   // items it has drawn (they register themselves, see ListItemUI).
-  listItems.setItemLocator(ownerId, (id) => {
-    let found = null;
-    store.eachHeld((item, rank) => {
-      const itemIndex = indexOfRank(rank);
-      if (found === null && idOf(item, itemIndex) === id) {
-        found = itemIndex;
-      }
-    });
-    return found;
+  const idAt = (itemIndex) => {
+    if (itemIndex < runStart || itemIndex >= runEnd) {
+      return undefined;
+    }
+    const item = getItemAt(itemIndex);
+    return item === undefined ? undefined : idOf(item, itemIndex);
+  };
+  listItems.setItemLocator(ownerId, {
+    indexOf: (id) => {
+      let found = null;
+      store.eachHeld((item, rank) => {
+        const itemIndex = indexOfRank(rank);
+        if (found === null && idOf(item, itemIndex) === id) {
+          found = itemIndex;
+        }
+      });
+      return found;
+    },
+    idAt,
   });
+  // The room an item took when the list last drew it (see rememberItemRooms),
+  // or undefined: a filler holds an item it never drew at the item size.
+  const roomOf = (itemIndex) => {
+    const id = idAt(itemIndex);
+    return id === undefined ? undefined : listItems.roomById.get(id);
+  };
+  const readRemembered = (from, to) => {
+    const remembered = { room: 0, count: 0 };
+    if (listItems.roomById.size === 0) {
+      return remembered;
+    }
+    let itemIndex = from;
+    while (itemIndex < to) {
+      const room = roomOf(itemIndex);
+      if (room !== undefined) {
+        remembered.room += room;
+        remembered.count++;
+      }
+      itemIndex++;
+    }
+    return remembered;
+  };
   useLayoutEffect(() => {
     return () => {
       listItems.dropItemLocator(ownerId);
@@ -5634,7 +5794,9 @@ const useRunItems = (
   };
   // The text of the items a filler stands for, cut in chunks aligned on the
   // run's own ranks: the window sliding changes the chunk at its edge and
-  // leaves the others as they are.
+  // leaves the others as they are. A chunk's lines are all as tall as the
+  // room its items take in the filler, so it also ends where that room
+  // changes: a match is then found where its item will be drawn.
   const getFindChunks = (from, to) => {
     if (!findText) {
       return null;
@@ -5644,10 +5806,11 @@ const useRunItems = (
     while (chunkFrom < to) {
       const chunkIndex = Math.floor(rankOf(chunkFrom) / FIND_CHUNK_ITEM_COUNT);
       const alignedTo = indexOfRank((chunkIndex + 1) * FIND_CHUNK_ITEM_COUNT);
-      const chunkTo = alignedTo < to ? alignedTo : to;
+      const chunkEnd = alignedTo < to ? alignedTo : to;
+      const room = roomOf(chunkFrom);
       const lines = [];
       let lineIndex = chunkFrom;
-      while (lineIndex < chunkTo) {
+      while (lineIndex < chunkEnd && roomOf(lineIndex) === room) {
         const item = getItemAt(lineIndex);
         // An item not held has nothing to find, but keeps its line: the items
         // after it stay at their place.
@@ -5656,8 +5819,13 @@ const useRunItems = (
         );
         lineIndex++;
       }
-      chunks.push({ from: chunkFrom, to: chunkTo, text: lines.join("\n") });
-      chunkFrom = chunkTo;
+      chunks.push({
+        from: chunkFrom,
+        to: lineIndex,
+        room,
+        text: lines.join("\n"),
+      });
+      chunkFrom = lineIndex;
     }
     return chunks;
   };
@@ -5666,12 +5834,15 @@ const useRunItems = (
   // one run, and what sits before or after it (a header, items given one by
   // one) is not virtualized at all.
   if (windowFrom > runStart) {
+    const remembered = readRemembered(runStart, windowFrom);
     nodes.push(
       <VirtualFiller
         key="navi-list-filler-before"
         edge="before"
         itemCount={windowFrom - runStart}
         itemsPerLine={itemsPerLine}
+        itemsRemembered={remembered.count}
+        roomRemembered={remembered.room}
         findChunks={getFindChunks(runStart, windowFrom)}
       />,
     );
@@ -5785,12 +5956,15 @@ const useRunItems = (
   }
   closeGroup();
   if (runEnd > windowTo) {
+    const remembered = readRemembered(windowTo, runEnd);
     nodes.push(
       <VirtualFiller
         key="navi-list-filler-after"
         edge="after"
         itemCount={runEnd - windowTo}
         itemsPerLine={itemsPerLine}
+        itemsRemembered={remembered.count}
+        roomRemembered={remembered.room}
         findChunks={getFindChunks(windowTo, runEnd)}
       />,
     );

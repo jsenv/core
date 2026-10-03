@@ -54,7 +54,13 @@ export const createListItems = () => {
   // One, as a rule; a child that renders several items keeps them in the order
   // they first rendered, which is all it can be told.
   const ownerIdsBySlot = new Map();
+  // What each run answers about the items it holds, drawn or not: where the
+  // one of an id sits, which one sits at an index.
   const locatorByOwner = new Map();
+  // The room each item took along the scroll axis the last time it was drawn,
+  // by id: what a filler holds for it once it is not (see rememberItemRooms in
+  // list.jsx). A number per item drawn while the list is mounted.
+  const roomById = new Map();
   // The slots as the tree reads, first to last, and where each stands in it.
   // Rebuilt once a walk has changed the tree, read to place the owners.
   const slotWalk = [];
@@ -403,6 +409,7 @@ export const createListItems = () => {
     holdViewStill: () => {},
     horizontal: false,
     virtualItemSizeSignal: null,
+    roomById,
     renderSkeleton: undefined,
     // The children a walk stands over, in order — said in one call, before any
     // of them renders, so that what a child asks next is answered against the
@@ -434,21 +441,32 @@ export const createListItems = () => {
     // Whether any run of items lives in this list: what makes a render window
     // mean anything (see List's renderBudget).
     hasRuns: () => locatorByOwner.size > 0,
-    setItemLocator: (ownerId, locate) => {
-      locatorByOwner.set(ownerId, locate);
+    setItemLocator: (ownerId, locator) => {
+      locatorByOwner.set(ownerId, locator);
     },
     dropItemLocator: (ownerId) => {
       locatorByOwner.delete(ownerId);
     },
     // Where the item named by that id sits, asked of whoever holds it.
     locateItem: (id) => {
-      for (const locate of locatorByOwner.values()) {
-        const index = locate(id);
+      for (const locator of locatorByOwner.values()) {
+        const index = locator.indexOf(id);
         if (index !== null) {
           return index;
         }
       }
       return null;
+    },
+    // The room the item at that index took when it was last drawn, or
+    // undefined: never drawn, not held, or not an item of a run.
+    roomAt: (index) => {
+      for (const locator of locatorByOwner.values()) {
+        const id = locator.idAt(index);
+        if (id !== undefined) {
+          return roomById.get(id);
+        }
+      }
+      return undefined;
     },
     // The place the owner's items start at — read from a signal, so that the
     // owner is rendered again when it moves (see the top of this file). Asked
