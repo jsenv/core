@@ -64,7 +64,9 @@ Everything the data layer decides then holds for the code:
   without `error: true`.
 - **Fetched once.** A route action left behind is aborted, not reset, and a
   completed one is not run again: coming back to the page renders synchronously,
-  only the data is asked for per params.
+  only the data is asked for per params. A refresh of the page on screen reruns
+  `activeRouteReadsSignal`, which leaves the code out: rerun, it would take a
+  page reading it delegated off the screen for a frame.
 - **Fetched ahead**, on intent ([below](#ahead-of-the-render-intent)).
 
 ## A component inside a page that stays: who asks for its code

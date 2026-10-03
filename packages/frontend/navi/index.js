@@ -136,6 +136,7 @@ export { RouteTravel } from "./src/nav/route_travel.jsx";
 export { useTransitionCover } from "./src/nav/transition_cover.js";
 export {
   activeRouteActionsSignal,
+  activeRouteReadsSignal,
   anyMatchingRouteSignal,
   routeAction,
 } from "./src/nav/route_action.js";

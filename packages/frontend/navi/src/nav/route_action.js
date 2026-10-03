@@ -34,12 +34,9 @@ let activeRouteActionsPrevious = new Set();
  * The route actions asking something for the page on screen: their route
  * matches and their params getter returns something — the running ones, not
  * every matching one, so an action bound to every page that asks only when a
- * popup is open over it counts while it is open. Read to rerun what the page
- * reads (the app back from the background), and by `keepPageOnScreen`.
+ * popup is open over it counts while it is open. The page's code included (see
+ * `activeRouteReadsSignal` for the set to rerun). Read by `keepPageOnScreen`.
  * The set is handed out again only when its members change.
- *
- * A page's code is declared as a route action too; `action.meta.verb` says
- * which ones read data.
  *
  * @type {import("@preact/signals").ReadonlySignal<Set<object>>}
  */
@@ -55,6 +52,36 @@ export const activeRouteActionsSignal = computed(() => {
   }
   activeRouteActionsPrevious = active;
   return active;
+});
+
+let activeRouteReadsPrevious = new Set();
+/**
+ * `activeRouteActionsSignal` without the page's code: what to rerun to read
+ * the page on screen again, the app back from the background. A page's code
+ * has nothing to read again — a module does not change until a deploy — and
+ * rerunning it is not free: a page reading its code the delegated way
+ * (`useAsyncData(CODE)` under a `<Loading>`) leaves the document for the frame
+ * the import takes, and its lists lose their scroll position.
+ *
+ * Code is told by its answer: a function (the page component) or a module
+ * namespace. An import that failed has none and stays in the set; rerun, it
+ * fails again at once, since the document refuses a module it failed to fetch.
+ *
+ * @type {import("@preact/signals").ReadonlySignal<Set<object>>}
+ */
+export const activeRouteReadsSignal = computed(() => {
+  const reads = new Set();
+  for (const routeAction of activeRouteActionsSignal.value) {
+    if (isCode(routeAction.valueSignal.value)) {
+      continue;
+    }
+    reads.add(routeAction);
+  }
+  if (haveSameMembers(reads, activeRouteReadsPrevious)) {
+    return activeRouteReadsPrevious;
+  }
+  activeRouteReadsPrevious = reads;
+  return reads;
 });
 
 /**
@@ -211,6 +238,17 @@ export const anyMatchingRouteSignal = (routes) => {
     return someMatching;
   });
   return anyMatchingSignal;
+};
+
+const isCode = (value) => {
+  if (typeof value === "function") {
+    return true;
+  }
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    value[Symbol.toStringTag] === "Module"
+  );
 };
 
 const rootActionOf = (action) => {

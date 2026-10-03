@@ -165,8 +165,9 @@ keepPageOnScreen({
 screens: `GAME.GET` for any game opened, `USER.GET_MANY` for a tab and for
 every search. Kept per resource, that is every game ever opened. The page's
 reads are what navi already runs for it: the route actions asking something for
-the page (`activeRouteActionsSignal`, which the app also reads to rerun the page
-when it comes back to the foreground), and the compositions the `<List.Items>`
+the page (`activeRouteActionsSignal`; `activeRouteReadsSignal` is the same set
+without the page's code, what the app reruns when it comes back to the
+foreground), and the compositions the `<List.Items>`
 on screen read. A navigation replaces the slot with the next page's reads.
 
 What is kept, for the next document's first run of the same read with the same
