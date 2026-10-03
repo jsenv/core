@@ -17,6 +17,7 @@ import { routedSignal } from "./route.js";
 import {
   activeRouteActionsSignal,
   anyMatchingRouteSignal,
+  getRouteActionKeptName,
 } from "./route_action.js";
 
 /*
@@ -33,6 +34,15 @@ import {
  * (activeRouteActionsSignal) and the compositions the lists on screen read
  * (shownRangeReadersSignal). A search typed on the page is neither, and is not
  * kept.
+ *
+ * What a read is made of on the way out depends on what it holds. A resource
+ * read holds ids, which name rows a new document's store does not have: its
+ * rows are written, and re-enter the store. Any other route action holds its
+ * value, written as it is when JSON brings it back as it was — a page's code
+ * (a function), a Date built by the callback, a Map, are not, and are left
+ * out. Such an action is recognized in the next document by its place among
+ * the route actions declared (see getRouteActionKeptName), not by a name the
+ * app would have to give every action made from a callback.
  *
  * A read is written once it has answered in this document. Before that it
  * keeps what the previous document kept for it, never what it shows meanwhile:
@@ -60,17 +70,19 @@ let stopKeepingCurrent = null;
  * draws it again while its reads go out, rather than skeletons.
  *
  * What the page reads is what navi runs for it: the route actions asking
- * something for it (see `activeRouteActionsSignal`) whose action is a resource
- * `GET` or `GET_MANY`, and the `GET_RANGE` compositions the `<List.Items>` on
- * screen read, around the window they draw. A navigation replaces the slot with
- * the next page's reads, and the page left is dropped. In the next document,
- * the first run of the same read with the same params draws the kept answer as
- * its provisional value: `data` set while `loading` is `true`, the answer
- * replacing it. Under a network policy answering reads from the store, the
- * kept answer answers the read. The copy follows the store: a `PUT` on a row
- * rewrites it.
+ * something for it (see `activeRouteActionsSignal`), and the `GET_RANGE`
+ * compositions the `<List.Items>` on screen read, around the window they draw.
+ * A resource read keeps its rows; any other route action keeps its value when
+ * JSON brings it back as it was. A navigation replaces the slot with the next
+ * page's reads, and the page left is dropped. In the next document, the first
+ * run of the same read with the same params draws the kept answer as its
+ * provisional value: `data` set while `loading` is `true`, the answer replacing
+ * it. Under a network policy answering reads from the store, a resource read
+ * completes with it. The copy follows the store: a `PUT` on a row rewrites it.
  *
- * Call it before the routes start: the first runs are the ones that look.
+ * Call it before the routes start: the first runs are the ones that look. And
+ * declare the route actions where the app starts: one that is not a resource
+ * read is recognized by its place among them.
  *
  * @param {object} options
  * @param {import("@preact/signals").Signal} options.signal - where the slot is
@@ -193,7 +205,7 @@ export const keepPageOnScreen = ({
   });
 
   const actionReadWeakMap = new WeakMap();
-  const actionReadOf = (action) => {
+  const actionReadOf = (action, keptName, readEntryOf) => {
     let read = actionReadWeakMap.get(action);
     if (read) {
       return read;
@@ -207,16 +219,10 @@ export const keepPageOnScreen = ({
         answeredActionWeakSet.add(action);
       }
       return {
-        key: getKeptReadKey(action.name, action.params),
+        key: getKeptReadKey(keptName, action.params),
         answered: answeredActionWeakSet.has(action),
         landed,
-        readEntry: () => {
-          const data = action.dataSignal.value;
-          if (data === undefined || data === null) {
-            return undefined;
-          }
-          return serializeData(data);
-        },
+        readEntry: () => readEntryOf(action),
       };
     };
     actionReadWeakMap.set(action, read);
@@ -255,10 +261,20 @@ export const keepPageOnScreen = ({
       // eslint-disable-next-line no-unused-expressions
       routeAction.callSource;
       const action = getActionPrivateProperties(routeAction).currentAction;
-      if (action.params === NO_PARAMS || !isKeepableRead(action)) {
+      if (action.params === NO_PARAMS) {
         continue;
       }
-      reads.push(actionReadOf(action));
+      if (isKeepableRead(action)) {
+        reads.push(actionReadOf(action, action.name, readRows));
+      } else {
+        reads.push(
+          actionReadOf(
+            action,
+            getRouteActionKeptName(routeAction),
+            readPlainValue,
+          ),
+        );
+      }
     }
     for (const reader of shownRangeReadersSignal.value.keys()) {
       reads.push(rangeReadOf(reader));
@@ -342,4 +358,55 @@ export const keepPageOnScreen = ({
   };
   stopKeepingCurrent = stop;
   return stop;
+};
+
+const readRows = (action) => {
+  const data = action.dataSignal.value;
+  if (data === undefined || data === null) {
+    return undefined;
+  }
+  return serializeData(data);
+};
+const readPlainValue = (action) => {
+  const value = action.valueSignal.value;
+  if (value === undefined || !isPlainData(value, new Set())) {
+    return undefined;
+  }
+  return value;
+};
+// What JSON writes and reads back as it was. `undefined` inside is accepted:
+// JSON drops the key, which reads the same.
+const isPlainData = (value, ancestorSet) => {
+  if (value === null || value === undefined) {
+    return true;
+  }
+  const type = typeof value;
+  if (type === "string" || type === "boolean") {
+    return true;
+  }
+  if (type === "number") {
+    return Number.isFinite(value);
+  }
+  if (type !== "object") {
+    return false;
+  }
+  if (ancestorSet.has(value)) {
+    return false;
+  }
+  const isArray = Array.isArray(value);
+  if (!isArray) {
+    const proto = Object.getPrototypeOf(value);
+    if (proto !== Object.prototype && proto !== null) {
+      return false;
+    }
+  }
+  ancestorSet.add(value);
+  const entries = isArray ? value : Object.values(value);
+  for (const entry of entries) {
+    if (!isPlainData(entry, ancestorSet)) {
+      return false;
+    }
+  }
+  ancestorSet.delete(value);
+  return true;
 };

@@ -176,14 +176,19 @@ params:
 | --------------------------------------- | ------------------------------------------------------------ |
 | a route action on a resource `GET`      | the row, its relations inline                                |
 | a route action on a resource `GET_MANY` | the rows in order, written the same way                      |
+| any other route action                  | its value                                                    |
 | a `<List.Items>` reading a `GET_RANGE`  | the count and the ranks around the window drawn, rows inline |
 
-The `GET` and the `GET_MANY` draw it as their provisional value: `data` set
-while `loading` is `true`, the answer replacing it. The list finds it as a
-composition it left
+A resource read is kept as rows because its value is ids, and ids name rows the
+next document's store does not hold. The rows re-enter the store. Any other
+route action (a summary, a preview the server composes) holds its answer as its
+value, and that value is what is kept. A route action draws what was kept as its
+provisional value: `data` set while `loading` is `true`, the answer replacing
+it. Some of it will be out of date by then, which is the point: it is on screen
+while the refresh is out. The list finds it as a composition it left
 ([list_refresh.md](./list_refresh.md#leaving-the-screen-and-coming-back)): every
 rank stale, one request for the window. Under a network policy answering reads
-from the store, the kept answer answers the read
+from the store, a resource read completes with what was kept
 ([network_policy.md](./network_policy.md)).
 
 What is not kept, and why:
@@ -192,11 +197,15 @@ What is not kept, and why:
   `.scopedMany()`). Its answer enters the store through its owner: the parent
   row it is nested in, or the store of the owner it is scoped to. It is not rows
   of its own that could be written back alone.
-- **a plain `createAction`** (a summary, a count the server computes). Its value
-  is whatever the callback returns, with no store to give it a shape to write
-  and to read back. A page's code is a route action too, and it is a function.
+- **a value JSON would not bring back as it was.** The slot is written as JSON:
+  a function (a page's code is a route action too), a `Date` the callback built,
+  a `Map`, a class instance would come back as something else, and a screen
+  calling `.getTime()` on a string breaks. Such a value is left out, and its
+  route action draws its first load as before. An answer read from JSON is
+  plain data already.
 - **a read that is not a route action**: a search typed on the page, a popup's
-  own load.
+  own load. Declaring which route reads it is what makes a read part of the
+  page.
 
 A read writes what it shows once it has answered in this document. Until then
 the slot keeps what the previous document kept for it, never what the read
@@ -206,6 +215,15 @@ and is flushed when the document is hidden, which is when the system may discard
 it. Between those moments a navigation goes through half-built pages: the route
 matched but its list not mounted, or the page left still drawn under a
 transition.
+
+**Declare the route actions where the app starts.** A route action that is not
+a resource read is most often an action made from a callback, named
+`"anonymous"`, and a page has several. The next document recognizes it by its
+place among the route actions declared, which the same build declares in the
+same order. A route action declared by a module loaded on demand moves every one
+declared after it. The params are part of the key, so a mix-up needs the same
+place and the same params, and a deploy starts clean anyway (the version in the
+signal's `id`).
 
 **The start page.** An installed app launched after being killed opens at its
 start address, not on the page that was left. The reads made while a route of

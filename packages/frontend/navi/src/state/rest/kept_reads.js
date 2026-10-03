@@ -15,10 +15,10 @@ import { SYMBOL_IDENTITY } from "../../utils/compare_two_js_values.js";
  * out again, after a reset say, it would write the previous document's rows
  * over a fresher answer.
  *
- * This module is the half the resources see: `resource()` and the range reader
- * take from it, and say which of their reads can be kept at all. Which reads
- * are on the page on screen, and what the slot is written into, is
- * page_kept.js.
+ * This module is the half the reads see: `resource()` and the range reader
+ * take from it and say which of their reads are kept as rows, routeAction takes
+ * from it for any other action (through action/kept_values.js). Which reads are
+ * on the page on screen, and what the slot is written into, is page_kept.js.
  */
 
 // key → what the read answered in the previous document, not handed out yet
@@ -41,9 +41,10 @@ export const takeKeptRead = (key) => {
   return entry;
 };
 
-// The root actions whose answer is rows of a store, written and read back the
-// same way: a resource's GET and GET_MANY. Anything else a route runs (a page's
-// code, a computation) has nothing a later document could draw.
+// The root actions whose answer is rows of a store: a resource's GET and
+// GET_MANY. They are kept as rows, since their value (ids) names rows a new
+// document's store does not hold. Any other route action is kept by its value
+// (see page_kept.js).
 const keepableReadWeakSet = new WeakSet();
 export const markKeepableRead = (rootAction) => {
   keepableReadWeakSet.add(rootAction);

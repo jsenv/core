@@ -1,7 +1,14 @@
 import { computed, signal, untracked } from "@preact/signals";
 
+import { getActionPrivateProperties } from "../action/action_private_properties.js";
 import { actionRunEffect } from "../action/action_run_effect.js";
 import { createAction } from "../action/actions.js";
+import { addKeptValueSource } from "../action/kept_values.js";
+import {
+  getKeptReadKey,
+  isKeepableRead,
+  takeKeptRead,
+} from "../state/rest/kept_reads.js";
 import { readStateAsIf } from "../state/state_signal.js";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import {
@@ -13,6 +20,15 @@ import {
 // Every route action, with whether it asks something of the address at the
 // moment: its route matches and its params getter returns something.
 const routeActionEntriesSignal = signal([]);
+// What a route action is called in the page kept for the next document (see
+// keepPageOnScreen): its place among the route actions declared, which the
+// next document of the same build declares in the same order. A resource read
+// has a name of its own and is kept by it; an action made from a callback is
+// most often "anonymous", and several of them read the same page.
+const keptNameWeakMap = new WeakMap();
+export const getRouteActionKeptName = (routeAction) => {
+  return keptNameWeakMap.get(routeAction);
+};
 let activeRouteActionsPrevious = new Set();
 /**
  * The route actions asking something for the page on screen: their route
@@ -97,7 +113,16 @@ export const routeAction = (
     }
     return params;
   };
+  const rootAction = rootActionOf(action);
+  const keptName = `route_action#${routeActionEntriesSignal.peek().length} ${rootAction.name}`;
+  if (!isKeepableRead(rootAction)) {
+    // Before the effect below: it may run the action at once.
+    addKeptValueSource(rootAction, (params) =>
+      takeKeptRead(getKeptReadKey(keptName, params)),
+    );
+  }
   const actionBoundToRoute = actionRunEffect(action, readParamsAsked, options);
+  keptNameWeakMap.set(actionBoundToRoute, keptName);
   routeActionEntriesSignal.value = [
     ...routeActionEntriesSignal.peek(),
     {
@@ -186,6 +211,13 @@ export const anyMatchingRouteSignal = (routes) => {
     return someMatching;
   });
   return anyMatchingSignal;
+};
+
+const rootActionOf = (action) => {
+  if (action.isProxy) {
+    return rootActionOf(getActionPrivateProperties(action).currentAction);
+  }
+  return action.rootAction || action;
 };
 
 const haveSameMembers = (setA, setB) => {

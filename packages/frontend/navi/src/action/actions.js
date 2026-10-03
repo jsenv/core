@@ -20,6 +20,7 @@ import {
   RUNNING,
 } from "./action_run_states.js";
 import { markErrorAsDisplayedBy } from "./action_error_report.js";
+import { takeKeptValue } from "./kept_values.js";
 import { isRerunHeldByNetworkPolicy } from "./network_policy.js";
 import { SYMBOL_OBJECT_SIGNAL } from "./symbol_object_signal.js";
 
@@ -1280,8 +1281,12 @@ export const createAction = (callback, rootOptions = {}) => {
         actionAbortMap.set(action, abort);
 
         batch(() => {
-          if (provisionalValue && valueSignal.peek() === undefined) {
-            const provisional = provisionalValue(params, action);
+          if (valueSignal.peek() === undefined) {
+            // An action saying nothing of its own may still have a value the
+            // page kept from the previous document (see kept_values.js).
+            const provisional = provisionalValue
+              ? provisionalValue(params, action)
+              : takeKeptValue(action, params);
             if (provisional !== undefined) {
               valueSignal.value = provisional;
             }
