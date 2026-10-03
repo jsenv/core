@@ -18,8 +18,10 @@ import { getBorderSizes } from "@jsenv/dom";
 import { useCallback, useLayoutEffect, useRef, useState } from "preact/hooks";
 
 import { Box } from "../../box/box.jsx";
+import { moveFocusTo } from "../../utils/focus/focus_transfer.js";
 import { Input } from "../input/input.jsx";
 import { Textarea } from "../input/textarea.jsx";
+import { dispatchRequestResetUIState } from "../ui_state_dom.js";
 
 const css = /* css */ `
   .navi_editable_wrapper {
@@ -239,23 +241,49 @@ export const Editable = (props) => {
     editingPreviousRef.current = editing;
   }
 
-  // Simulate typing the initial value when editing starts with a custom value
+  // The field is mounted the whole time, so edition starting is when it
+  // arrives, and Editable places the focus itself: a mount-time autofocus
+  // would only ever see the first `editing`. Starting edition is a press aimed
+  // at typing, so the field takes the keyboard whatever asked for it — a
+  // click, Enter, a letter key.
+  const focusedBeforeEditionRef = useRef(null);
   useLayoutEffect(() => {
+    const field = ref.current;
     if (!editing) {
+      const focusedBeforeEdition = focusedBeforeEditionRef.current;
+      focusedBeforeEditionRef.current = null;
+      if (!focusedBeforeEdition || !focusedBeforeEdition.isConnected) {
+        return;
+      }
+      // The field just went inert while holding the focus (Enter, Escape, the
+      // action ending): the focus goes back to where edition was asked from.
+      // Focus the user took away, the blur that ended edition, stays where
+      // they put it — on the body included.
+      if (document.activeElement !== field) {
+        return;
+      }
+      moveFocusTo(focusedBeforeEdition);
       return;
     }
-    const editingEvent = editing.event;
-    if (editingEvent) {
-      const editingEventInitialValue = editingEvent.detail?.initialValue;
-      if (editingEventInitialValue !== undefined) {
-        const input = ref.current;
-        input.value = editingEventInitialValue;
-        input.dispatchEvent(
-          new CustomEvent("input", {
-            bubbles: false,
-          }),
-        );
-      }
+    focusedBeforeEditionRef.current = document.activeElement;
+    if (!valueSignal) {
+      // An edition starts from the value, not from what a cancelled one left
+      // typed in the field. Done before the focus: written into a focused
+      // field, it would read as a change to send (see input_effect.js).
+      dispatchRequestResetUIState(field, editing.event);
+    }
+    moveFocusTo(field);
+    const initialValue = editing.event?.detail?.initialValue;
+    if (initialValue !== undefined) {
+      // The key that started edition is its first keystroke.
+      field.value = initialValue;
+      field.dispatchEvent(new CustomEvent("input", { bubbles: false }));
+      return;
+    }
+    if (autoFocusSelect) {
+      field.select();
+      // Keep the beginning of the text visible instead of scrolling to the end
+      field.scrollLeft = 0;
     }
   }, [editing]);
 
@@ -265,9 +293,6 @@ export const Editable = (props) => {
     name,
     value,
     valueSignal,
-    autoFocus: editing,
-    autoFocusVisible: true,
-    autoFocusSelect,
     cancelOnEscape: true,
     cancelOnBlurInvalid: true,
     constraints,
@@ -287,6 +312,11 @@ export const Editable = (props) => {
       });
     },
     onBlur: (e) => {
+      if (!editing) {
+        // The focus handed back once edition ended (see the effect above):
+        // the edition is already over, this blur is its consequence.
+        return;
+      }
       let inputValue;
       const valueWhenEditStart = valueWhenEditStartRef.current;
       let inputValueWhenEditStart;
@@ -358,7 +388,7 @@ export const Editable = (props) => {
         // - input not focusable (via keyboard or anything)
         // - cannot be interacted with pointer (click, hover, etc)
         // - is ignored by screen readers
-        inert={editing ? undefined : ""}
+        inert={!editing}
         data-editing={editing ? "" : undefined}
       >
         {control}

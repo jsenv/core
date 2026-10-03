@@ -791,7 +791,7 @@ export const serverPluginDatabaseRestApi = ({ pathname }) => {
         },
       },
       {
-        endpoint: `GET ${DATABASE_REST_API_PATHNAME}/`,
+        endpoint: `GET ${DATABASE_REST_API_PATHNAME}/*`,
         description: "Fallback for api endpoints (404).",
         declarationSource: import.meta.url,
         fetch: (request) => {

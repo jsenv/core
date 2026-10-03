@@ -98,7 +98,7 @@ import {
   toDomValue,
 } from "./controller_registry.js";
 import { FormContext } from "./form_context.js";
-import { addInputEffect } from "./input_effect.js";
+import { addInputCancel, addInputEffect } from "./input_effect.js";
 import {
   ParentUIStateControllerContext,
   useUIFacadeStateController,
@@ -1015,22 +1015,32 @@ export const useControlProps = (
     // ref so the effect always fires the current render's reaction.
     const applyEventReactionRef = useRef();
     applyEventReactionRef.current = applyEventReaction;
+    const isTypedField =
+      controlType === "input" && !isCheckable && props.type !== "range";
     const refCallback = useCallback(
       (field) => {
-        if (!hasNaviChangeEventReaction || actionEvent === "custom") {
-          return undefined;
-        }
-        return addInputEffect(
-          field,
-          (e) => applyEventReactionRef.current("naviChange", e),
-          {
-            waitForChange: actionAfterChange,
-            debounce: actionDebounce,
-            debugInteraction,
-          },
-        );
+        const removeInputCancel = isTypedField
+          ? addInputCancel(field, uiStateController)
+          : undefined;
+        const removeInputEffect =
+          hasNaviChangeEventReaction && actionEvent !== "custom"
+            ? addInputEffect(
+                field,
+                (e) => applyEventReactionRef.current("naviChange", e),
+                {
+                  waitForChange: actionAfterChange,
+                  debounce: actionDebounce,
+                  debugInteraction,
+                },
+              )
+            : undefined;
+        return () => {
+          removeInputCancel?.();
+          removeInputEffect?.();
+        };
       },
       [
+        isTypedField,
         actionEvent,
         actionAfterChange,
         actionDebounce,
@@ -2090,7 +2100,7 @@ const useInteractiveProps = (
           }
           if (
             // error prevent cancellation until the user closes it (or something closes it)
-            e.detail.failedConstraintInfo.level === "error" &&
+            e.detail.failedConstraintInfo.status === "error" &&
             e.detail.failedConstraintInfo.reportStatus !== "closed"
           ) {
             return;

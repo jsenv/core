@@ -22,37 +22,36 @@ export const createResourcePattern = (pattern) => {
     });
   }
 
-  const patternEndsWithSlash = pathnamePatternString.endsWith("/");
+  // "/docs/*" also answers the directory itself ("/docs/" and "/docs") with an
+  // empty star, so one route serves a directory and its index. Only a star
+  // widens a pattern: "/docs/" is that one path and "/" the home page.
+  const directoryPattern = pathnamePatternString.endsWith("/*")
+    ? PATTERN.create(pathnamePatternString.slice(0, -1), {
+        namedGroupDelimiter: "/",
+      })
+    : null;
   // a pattern constraining nothing: every resource matches it, so whoever uses
   // it cannot name the resource that matched
   const matchesEveryResource =
     !searchPattern &&
     !hashPattern &&
-    (pathnamePatternString === "*" ||
-      pathnamePatternString === "/" ||
-      pathnamePatternString === "/*");
+    (pathnamePatternString === "*" || pathnamePatternString === "/*");
 
   return {
     matchesEveryResource,
     match: (resource) => {
       const [pathname, search, hash] = resourceToParts(resource);
       let decodedPathname = decodeURIComponent(pathname);
-      let result;
-      if (patternEndsWithSlash && !searchPattern && !hashPattern) {
-        // also match the path without trailing slash (e.g. /foo matches /foo/)
-        const pathnamePatternWithoutSlash = pathnamePatternString.slice(0, -1);
-        if (decodedPathname === pathnamePatternWithoutSlash) {
-          result = { named: {}, stars: [""] };
-        } else if (!decodedPathname.startsWith(pathnamePatternString)) {
-          return null;
-        } else {
-          result = {
-            named: {},
-            stars: [decodedPathname.slice(pathnamePatternString.length)],
-          };
+      let result = pathnamePattern.match(decodedPathname);
+      if (!result && directoryPattern) {
+        result = directoryPattern.match(
+          decodedPathname.endsWith("/")
+            ? decodedPathname
+            : `${decodedPathname}/`,
+        );
+        if (result) {
+          result.stars = [...(result.stars || []), ""];
         }
-      } else {
-        result = pathnamePattern.match(decodedPathname);
       }
       if (!result) {
         return null;

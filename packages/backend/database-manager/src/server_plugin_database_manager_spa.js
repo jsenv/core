@@ -22,7 +22,7 @@ export const serverPluginDatabaseManagerSpa = ({
       },
 
       {
-        endpoint: `GET ${pathname}/`,
+        endpoint: `GET ${pathname}/*`,
         description: "Manage database using a Web interface",
         declarationSource: import.meta.url,
         fetch: (request) => {

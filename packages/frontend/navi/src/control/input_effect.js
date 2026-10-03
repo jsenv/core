@@ -1,4 +1,55 @@
-import { createPubSub, findEvent } from "@jsenv/dom";
+import {
+  createPubSub,
+  dispatchInternalCustomEvent,
+  findEvent,
+} from "@jsenv/dom";
+
+/**
+ * Tells a typed field's control that the user gave up on what they typed:
+ * `navi_cancel` with its reason — Escape, or leaving the field invalid. What
+ * giving up means is the control's to decide (onnavi_cancel in
+ * control_hooks.jsx: resetOnCancel, cancelOnEscape, cancelOnBlurInvalid).
+ *
+ * Leaving a field empty is not a cancel: the "change" of that same blur has
+ * already sent the empty value. A field that must not be left empty says
+ * `required`, and leaving it is then a blur_invalid.
+ */
+export const addInputCancel = (input, controller) => {
+  const dispatchCancel = (detail) => {
+    dispatchInternalCustomEvent(input, "navi_cancel", detail);
+  };
+  const onkeydown = (e) => {
+    if (e.key !== "Escape") {
+      return;
+    }
+    if (controller.rules.callout.callout) {
+      // Escape closes the open callout first (callout.js listens on its anchor).
+      return;
+    }
+    dispatchCancel({ event: e, reason: "escape_key" });
+  };
+  const onblur = (e) => {
+    if (input.closest("[inert]")) {
+      // The page took the field away (an edition ending, a side swapped out)
+      // and the focus went with it: the user did not leave it.
+      return;
+    }
+    const { failedConstraintInfo } = controller.rules.validation;
+    if (failedConstraintInfo) {
+      dispatchCancel({
+        event: e,
+        reason: "blur_invalid",
+        failedConstraintInfo,
+      });
+    }
+  };
+  input.addEventListener("keydown", onkeydown);
+  input.addEventListener("blur", onblur);
+  return () => {
+    input.removeEventListener("keydown", onkeydown);
+    input.removeEventListener("blur", onblur);
+  };
+};
 
 export const addInputEffect = (
   input,
@@ -188,11 +239,15 @@ const listenInputStateChange = (
     callback(e);
   };
   input.addEventListener("input", oninput);
-  input.addEventListener("keydown", onkeydown);
+  // Capture: the guard is set before the control reacts to the key. Its
+  // reaction can end what the field is in (Enter sends, Escape cancels, an
+  // edition closes and hands the focus away), and the "change" of that blur
+  // arrives in the microtasks between two listeners of this keydown.
+  input.addEventListener("keydown", onkeydown, { capture: true });
   input.addEventListener("change", onchange);
   addTeardown(() => {
     input.removeEventListener("input", oninput);
-    input.removeEventListener("keydown", onkeydown);
+    input.removeEventListener("keydown", onkeydown, { capture: true });
     input.removeEventListener("change", onchange);
   });
 

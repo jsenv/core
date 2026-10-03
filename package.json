@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "41.5.40",
+  "version": "41.5.41",
   "type": "module",
   "description": "Tool to develop, test and build js projects",
   "repository": {
@@ -80,7 +80,7 @@
     "@jsenv/plugin-minification": "1.7.27",
     "@jsenv/plugin-supervisor": "1.8.29",
     "@jsenv/plugin-transpilation": "1.7.14",
-    "@jsenv/server": "17.6.9",
+    "@jsenv/server": "17.7.0",
     "@jsenv/sourcemap": "1.4.13",
     "react-table": "7.8.0"
   },

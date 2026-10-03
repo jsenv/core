@@ -196,6 +196,25 @@ export const Table = (props) => {
     canChangeColumnOrder: Boolean(onColumnOrderChange),
   });
 
+  // Edition starts from a cell holding the focus itself. Once started, the
+  // focus is in the cell's field and its keys are the field's: an Enter there
+  // validates, it must not start edition again.
+  const canStartEditing = () =>
+    dragContextValue.grabTarget === null &&
+    document.activeElement.tagName === "TD";
+  // The key starting edition is its first keystroke, typed by Editable
+  // (initialValue). Its default is prevented: the browser would type it a
+  // second time into the field that takes the focus during this keydown.
+  const startEditingWithKey = (e) => {
+    e.preventDefault();
+    document.activeElement.dispatchEvent(
+      new CustomEvent("editrequested", {
+        bubbles: false,
+        detail: { initialValue: e.key },
+      }),
+    );
+    return true;
+  };
   useKeyboardShortcuts(ref, [
     ...createSelectionKeyboardShortcuts(selectionController, {
       toggleEnabled: true,
@@ -204,14 +223,9 @@ export const Table = (props) => {
     {
       key: "enter",
       description: "Edit table cell content",
-      enabled: () => dragContextValue.grabTarget === null,
+      enabled: canStartEditing,
       handler: () => {
-        // Find the currently focused cell
-        const activeCell = document.activeElement.closest("td");
-        if (!activeCell) {
-          return false;
-        }
-        activeCell.dispatchEvent(
+        document.activeElement.dispatchEvent(
           new CustomEvent("editrequested", { bubbles: false }),
         );
         return true;
@@ -220,38 +234,14 @@ export const Table = (props) => {
     {
       key: "a-z",
       description: "Start editing table cell content",
-      enabled: () => dragContextValue.grabTarget === null,
-      handler: (e) => {
-        const activeCell = document.activeElement.closest("td");
-        if (!activeCell) {
-          return false;
-        }
-        activeCell.dispatchEvent(
-          new CustomEvent("editrequested", {
-            bubbles: false,
-            detail: { initialValue: e.key },
-          }),
-        );
-        return true;
-      },
+      enabled: canStartEditing,
+      handler: startEditingWithKey,
     },
     {
       key: "0-9",
       description: "Start editing table cell content",
-      enabled: () => dragContextValue.grabTarget === null,
-      handler: (e) => {
-        const activeCell = document.activeElement.closest("td");
-        if (!activeCell) {
-          return false;
-        }
-        activeCell.dispatchEvent(
-          new CustomEvent("editrequested", {
-            bubbles: false,
-            detail: { initialValue: e.key },
-          }),
-        );
-        return true;
-      },
+      enabled: canStartEditing,
+      handler: startEditingWithKey,
     },
   ]);
 

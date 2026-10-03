@@ -9,7 +9,7 @@ const server = await startServer({
   keepProcessAlive: false,
   routes: [
     {
-      endpoint: "GET /public/",
+      endpoint: "GET /public/*",
       fetch: createFileSystemFetch(testDirectoryUrl, {
         mainFileRelativeUrl: "index.html",
       }),

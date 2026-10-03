@@ -6,7 +6,7 @@ await startServer({
   plugins: [serverPluginDatabaseManager()],
   routes: [
     {
-      endpoint: "GET /",
+      endpoint: "GET /*",
       fetch: fetchFileSystem(import.meta.resolve("./")),
     },
   ],
