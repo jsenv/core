@@ -134,7 +134,14 @@ export { RouteTravel } from "./src/nav/route_travel.jsx";
 // sticky row above the pages — so its pictures are cut at it instead of sliding
 // over it (see src/nav/transition_cover.js).
 export { useTransitionCover } from "./src/nav/transition_cover.js";
-export { anyMatchingRouteSignal, routeAction } from "./src/nav/route_action.js";
+export {
+  activeRouteActionsSignal,
+  anyMatchingRouteSignal,
+  routeAction,
+} from "./src/nav/route_action.js";
+// What the page on screen reads, kept for the document that opens on it next
+// (see src/nav/page_kept.js).
+export { keepPageOnScreen } from "./src/nav/page_kept.js";
 export { rawUrlPart, setBaseUrl } from "./src/nav/route_pattern.js";
 export {
   setUrlTargetOptions,

@@ -67,9 +67,13 @@ was asked:
   what it holds instead of falling into its error boundary. A route opening a
   user by id **or** by slug gives navi both keys to look by:
   `resource("user", { uniqueKeys: ["slug"], … })`.
-- **A completed read stays completed.** `GET_MANY` (and every other read) has
-  nowhere to answer from: the store holds items, not queries, and only the
-  action's own value knows which ids answered `/users?scope=shareable`. So a
+- **A read drawing a kept answer completes with it.** A root `GET` or
+  `GET_MANY` whose first run drew what the page kept from the previous document
+  (`keepPageOnScreen`) answers with those rows: a reload with no network reopens
+  on the page.
+- **A completed read stays completed.** Otherwise `GET_MANY` (and every other
+  read) has nowhere to answer from: the store holds items, not queries, and only
+  the action's own value knows which ids answered `/users?scope=shareable`. So a
   rerun asked of a completed read under the policy is held — the action keeps
   its state, its value and its data, exactly as a `run()` on a completed action
   would.
@@ -185,7 +189,7 @@ has nothing to decide which one says why.
   which signal, for which session: a resource declaring
   [`persist`](./resource.md#persist-the-last-answer-drawn-again-after-a-reload)
   has its kept row answer the `GET` under the policy, so a reload offline
-  reopens on it.
+  reopens on it; `keepPageOnScreen` does the same for the page on screen.
 - **A queue of writes to replay** once the network is back — not navi's: what a
   replayed write means (a score entered twice? a seat taken since?) is the app's
   business.

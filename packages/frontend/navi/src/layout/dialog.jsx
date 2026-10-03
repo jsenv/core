@@ -630,7 +630,7 @@ const css = /* css */ `
     /* A plain div, unlike dialogEl itself (a real <dialog>, natively hidden
        by default until .show()/.showModal() adds [open]) — needs its own
        starting-hidden mechanism. [navi-hidden] is set from useDialogProps'
-       own backdropProps (recomputed from openController.opened on every
+       own backdropProps (recomputed from openController.openedInDom on every
        render, present from the very first one), then toggled by plain
        removeAttribute/setAttribute in openEffect/close, never an explicit
        display override — removing the attribute just lets this rule stop
@@ -2359,7 +2359,7 @@ const useDialogProps = (props) => {
     "navi-out-of-flow": "",
     "baseClassName": "navi_dialog_backdrop",
     "aria-hidden": "true",
-    // Recomputed fresh on every render from openController.opened (not
+    // Recomputed fresh on every render from openController.openedInDom (not
     // driven through a mount-time layout effect, unlike this file's own
     // imperative open/close toggling below) — present in the DOM
     // synchronously from the very first commit, matching this file's own
@@ -2369,7 +2369,7 @@ const useDialogProps = (props) => {
     // needs — see popover.jsx's own identical prop for the full reasoning.
     "aria-expanded": openController.openedInDom ? "true" : "false",
     // Present from this very first render (recomputed fresh on every one
-    // from openController.opened, not a frozen mount-time constant) so
+    // from openController.openedInDom, not a frozen mount-time constant) so
     // there's no gap for the browser to ever paint this plain-div backdrop
     // visible before anything has actually opened it — see popover.jsx's
     // own identical prop for the full reasoning, and this file's own CSS
@@ -2389,7 +2389,7 @@ const useDialogProps = (props) => {
     // (kept once, not repeated here).
     "aria-expanded": openController.openedInDom ? "true" : "false",
     // Present from the very first render (recomputed fresh from
-    // openController.opened every time, not a frozen mount-time constant —
+    // openController.openedInDom every time, not a frozen mount-time constant —
     // see popover.jsx's own identical prop for the full reasoning) so a
     // consumer whose own CSS also sets display (e.g. Popup's flex prop)
     // can't silently defeat showModal()/close()'s native open/close — see

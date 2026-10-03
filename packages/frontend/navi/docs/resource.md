@@ -129,7 +129,9 @@ What the copy is not:
 - **an answer.** The `GET` goes out every time; a screen must not read `data` as
   "the server confirmed" — that is `loading`, and the two are independent.
 - **a store on disk.** One row per params key, `GET` only: meant for a singleton
-  or a handful of rows, not a resource whose `GET` is asked for every id.
+  or a handful of rows, not a resource whose `GET` is asked for every id. What
+  the page on screen reads, lists included, is kept by `keepPageOnScreen`
+  (`src/nav/page_kept.js`), and dropped once the page is left.
 - **seeded at declaration.** The row enters the store at the first run of the
   `GET`, once the relations are declared, so its relation values are normalized
   as a real answer's are. `ME.store` read before that first run is empty.

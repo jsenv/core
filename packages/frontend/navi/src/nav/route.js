@@ -733,6 +733,9 @@ const paramsTargetCanPlace = (redirectRoute, urlParams) => {
 
 let setupRoutesCalled = false;
 let activeRouteSet = null;
+// True once the routes have been matched against an address. Before that, no
+// route matching says nothing about the page: nothing has been asked yet.
+export const routedSignal = signal(false);
 
 const routePreloadMap = new WeakMap();
 export const registerRoutePreload = (route, preload) => {
@@ -1158,6 +1161,7 @@ This prevents cross-test pollution and ensures clean state.`,
       }
       // Reset flag after URL -> Signal synchronization is complete
       isUpdatingRoutesFromUrl = false;
+      routedSignal.value = true;
       Object.assign(returnValue, { matchingRouteSet });
       for (const [route, repairedParams] of repairedParamsByRoute) {
         route.replaceParams(repairedParams, {
@@ -1208,6 +1212,7 @@ This prevents cross-test pollution and ensures clean state.`,
     setupRoutesCalled = false;
     activeRouteSet = null;
     activeCleanup = null;
+    routedSignal.value = false;
   };
   activeCleanup = clearRoutes;
   return {

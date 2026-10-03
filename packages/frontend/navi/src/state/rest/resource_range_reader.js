@@ -34,12 +34,32 @@
  * of what a rerun is for an action. Every reader made by `bindParams` shares
  * the signal and the compositions of the one it comes from: the params say
  * which slices are read, not which collection.
+ *
+ * A composition also outlives the document when a list on the page on screen
+ * reads it (see keepPageOnScreen): the ranks around the window it draws are
+ * written with their rows, and the first read of the next document finds them
+ * as a composition left by a list that went away — the same return, after a
+ * longer absence.
  */
 
 import { signal, untracked } from "@preact/signals";
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 import { isSignal } from "../../utils/is_signal.js";
 import { createJsValueWeakMap } from "../../utils/js_value_weak_map.js";
+import {
+  getKeptReadKey,
+  serializeItem,
+  takeKeptRead,
+  upsertKeptItem,
+} from "./kept_reads.js";
+
+// The ranks kept of a composition for the next document: the window a list
+// draws, widened by at least one step on each side, and snapped to steps so a
+// scroll within one draws the same ranks and writes nothing.
+const KEPT_RANK_STEP = 20;
+// Counts the answers every composition took, so that one landing can be told
+// from one seen before (see readKept).
+let answerSequence = 0;
 
 export const createRangeReader = (
   actionName,
@@ -49,6 +69,9 @@ export const createRangeReader = (
     params: boundParams,
     invalidationSignal = signal(0),
     compositionSet = new Set(),
+    // Bumped whenever what is kept of a composition for the next document
+    // changes (see readKept); shared like the compositions themselves.
+    keptVersionSignal = signal(0),
   },
 ) => {
   // Which composition this reader is about: the values its params hold, not its
@@ -64,6 +87,40 @@ export const createRangeReader = (
       }
     }
     return null;
+  };
+  const keptKeyOf = (params) => getKeptReadKey(actionName, params);
+  const bumpKeptVersion = () => {
+    keptVersionSignal.value = keptVersionSignal.peek() + 1;
+  };
+  // The composition the previous document kept for these params, entering the
+  // store and the compositions as if a list had just left it.
+  const restoreKeptComposition = (params) => {
+    const kept = takeKeptRead(keptKeyOf(params));
+    if (!kept || typeof kept.count !== "number" || !kept.items) {
+      return null;
+    }
+    const composition = {
+      params,
+      idByIndex: new Map(),
+      count: kept.count,
+      keptFrom: undefined,
+      keptTo: undefined,
+      answeredAt: 0,
+    };
+    for (const rank of Object.keys(kept.items)) {
+      const index = Number(rank);
+      const item = upsertKeptItem(store, kept.items[rank]);
+      composition.idByIndex.set(index, item[store.idKey]);
+      if (composition.keptFrom === undefined || index < composition.keptFrom) {
+        composition.keptFrom = index;
+      }
+      if (composition.keptTo === undefined || index + 1 > composition.keptTo) {
+        composition.keptTo = index + 1;
+      }
+    }
+    compositionSet.add(composition);
+    bumpKeptVersion();
+    return composition;
   };
   const readRange = async (range = {}) => {
     const { signal, ...rangeParams } = range;
@@ -98,11 +155,15 @@ export const createRangeReader = (
   readRange.invalidate = () => {
     compositionSet.clear();
     invalidationSignal.value = invalidationSignal.peek() + 1;
+    bumpKeptVersion();
   };
   // The rows of a composition, drawn from the store: a rank whose row is gone
   // from the store resolves to nothing and is asked for again.
   readRange.readComposition = () => {
-    const composition = findComposition(currentParams());
+    const params = currentParams();
+    const composition = untracked(
+      () => findComposition(params) || restoreKeptComposition(params),
+    );
     if (!composition) {
       return null;
     }
@@ -126,18 +187,85 @@ export const createRangeReader = (
     const params = currentParams();
     let composition = findComposition(params);
     if (!composition) {
-      composition = { params, idByIndex: new Map(), count };
+      composition = {
+        params,
+        idByIndex: new Map(),
+        count,
+        keptFrom: undefined,
+        keptTo: undefined,
+        answeredAt: 0,
+      };
       compositionSet.add(composition);
     } else if (replace) {
       composition.idByIndex = new Map();
     }
     composition.count = count;
+    answerSequence++;
+    composition.answeredAt = answerSequence;
     for (const [index, item] of byIndex) {
       const id = item ? item[store.idKey] : undefined;
       if (id !== undefined) {
         composition.idByIndex.set(index, id);
       }
     }
+    bumpKeptVersion();
+  };
+  // The ranks [windowFrom, windowTo) a list draws of this composition: what is
+  // kept of it for the next document is around them (see readKept).
+  readRange.frameComposition = (windowFrom, windowTo) => {
+    const composition = findComposition(currentParams());
+    if (!composition) {
+      return;
+    }
+    let keptFrom =
+      Math.floor((windowFrom - KEPT_RANK_STEP) / KEPT_RANK_STEP) *
+      KEPT_RANK_STEP;
+    if (keptFrom < 0) {
+      keptFrom = 0;
+    }
+    const keptTo =
+      Math.ceil((windowTo + KEPT_RANK_STEP) / KEPT_RANK_STEP) * KEPT_RANK_STEP;
+    if (composition.keptFrom === keptFrom && composition.keptTo === keptTo) {
+      return;
+    }
+    composition.keptFrom = keptFrom;
+    composition.keptTo = keptTo;
+    bumpKeptVersion();
+  };
+  // What a document keeps of the composition these params read, for the
+  // next one (see keepPageOnScreen): the count, and the ranks around the
+  // window last drawn with their rows inline. Read inside an effect, it
+  // follows the composition and the rows. `answeredAt` grows with every answer
+  // the composition takes (0: none in this document, restored from a kept one).
+  readRange.readKept = () => {
+    // eslint-disable-next-line no-unused-expressions
+    keptVersionSignal.value;
+    const params = resolveParams(boundParams);
+    const key = keptKeyOf(params);
+    const composition = findComposition(params);
+    if (!composition || composition.count === undefined) {
+      return { key, answeredAt: 0, readEntry: () => undefined };
+    }
+    const readEntry = () => {
+      const items = {};
+      for (const [index, id] of composition.idByIndex) {
+        if (
+          composition.keptFrom !== undefined &&
+          index < composition.keptFrom
+        ) {
+          continue;
+        }
+        if (composition.keptTo !== undefined && index >= composition.keptTo) {
+          continue;
+        }
+        const item = store.select(id);
+        if (item) {
+          items[index] = serializeItem(item, new Set());
+        }
+      }
+      return { count: composition.count, items };
+    };
+    return { key, answeredAt: composition.answeredAt, readEntry };
   };
   // The same trade a list makes with the rows it holds, applied to what is kept
   // for the next mount. Two lists on one collection each trim by their own
@@ -148,10 +276,15 @@ export const createRangeReader = (
     if (!composition || composition.idByIndex.size <= budget) {
       return;
     }
+    let trimmed = false;
     for (const index of composition.idByIndex.keys()) {
       if (index < keepFrom || index > keepTo) {
         composition.idByIndex.delete(index);
+        trimmed = true;
       }
+    }
+    if (trimmed) {
+      bumpKeptVersion();
     }
   };
   // Memoized for the reasons an action's bindParams is (see actions.js): params
@@ -168,6 +301,7 @@ export const createRangeReader = (
       params: boundParams ? { ...boundParams, ...paramsToBind } : paramsToBind,
       invalidationSignal,
       compositionSet,
+      keptVersionSignal,
     });
     readerByParams.set(paramsToBind, reader);
     return reader;

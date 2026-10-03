@@ -1,11 +1,7 @@
 import { effect, signal, untracked } from "@preact/signals";
 
-import { NO_PARAMS } from "../../action/actions.js";
-import { SYMBOL_OBJECT_SIGNAL } from "../../action/symbol_object_signal.js";
-import {
-  compareTwoJsValues,
-  SYMBOL_IDENTITY,
-} from "../../utils/compare_two_js_values.js";
+import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
+import { getParamsKey, serializeItem } from "./kept_reads.js";
 
 /*
  * The rows a resource's GET landed with, mirrored into a signal the app hands
@@ -158,64 +154,4 @@ export const createResourcePersistence = (
     findItem,
     recordGetItem,
   };
-};
-
-const getParamsKey = (params) => {
-  if (params === undefined || params === NO_PARAMS) {
-    return "";
-  }
-  return stableStringify(params);
-};
-
-const stableStringify = (value) => {
-  if (value === null || typeof value !== "object") {
-    return JSON.stringify(value);
-  }
-  if (Array.isArray(value)) {
-    return `[${value.map(stableStringify).join(",")}]`;
-  }
-  const keys = Object.keys(value).sort();
-  const parts = [];
-  for (const key of keys) {
-    parts.push(`${JSON.stringify(key)}:${stableStringify(value[key])}`);
-  }
-  return `{${parts.join(",")}}`;
-};
-
-// The item with its relations inline: a relation value stands for what its
-// signal holds (the child row, the child rows, or nothing), a row reached
-// twice on the same path is written as its id — the setters accept both.
-const serializeItem = (item, ancestorSet) => {
-  ancestorSet.add(item);
-  const serialized = {};
-  for (const key of Object.keys(item)) {
-    serialized[key] = serializeValue(item[key], ancestorSet);
-  }
-  ancestorSet.delete(item);
-  return serialized;
-};
-const serializeValue = (value, ancestorSet) => {
-  if (value === null || typeof value !== "object") {
-    return value;
-  }
-  if (Array.isArray(value)) {
-    return value.map((entry) => serializeValue(entry, ancestorSet));
-  }
-  const objectSignal = value[SYMBOL_OBJECT_SIGNAL];
-  if (objectSignal) {
-    const held = objectSignal.value;
-    if (held === undefined || held === null) {
-      return null;
-    }
-    return serializeValue(held, ancestorSet);
-  }
-  if (typeof value.toJSON === "function") {
-    return value;
-  }
-  if (ancestorSet.has(value)) {
-    return Object.hasOwn(value, SYMBOL_IDENTITY)
-      ? value[SYMBOL_IDENTITY]
-      : null;
-  }
-  return serializeItem(value, ancestorSet);
 };

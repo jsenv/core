@@ -10,6 +10,37 @@ import {
   registerRouteStatePreload,
 } from "./route.js";
 
+// Every route action, with whether it asks something of the address at the
+// moment: its route matches and its params getter returns something.
+const routeActionEntriesSignal = signal([]);
+let activeRouteActionsPrevious = new Set();
+/**
+ * The route actions asking something for the page on screen: their route
+ * matches and their params getter returns something — the running ones, not
+ * every matching one, so an action bound to every page that asks only when a
+ * popup is open over it counts while it is open. Read to rerun what the page
+ * reads (the app back from the background), and by `keepPageOnScreen`.
+ * The set is handed out again only when its members change.
+ *
+ * A page's code is declared as a route action too; `action.meta.verb` says
+ * which ones read data.
+ *
+ * @type {import("@preact/signals").ReadonlySignal<Set<object>>}
+ */
+export const activeRouteActionsSignal = computed(() => {
+  const active = new Set();
+  for (const { routeAction, askingSignal } of routeActionEntriesSignal.value) {
+    if (askingSignal.value) {
+      active.add(routeAction);
+    }
+  }
+  if (haveSameMembers(active, activeRouteActionsPrevious)) {
+    return activeRouteActionsPrevious;
+  }
+  activeRouteActionsPrevious = active;
+  return active;
+});
+
 /**
  * Binds an action to a route: it runs when the route matches, with the params
  * the effect reads off the address, runs again on a `reload()`, and is aborted
@@ -67,6 +98,13 @@ export const routeAction = (
     return params;
   };
   const actionBoundToRoute = actionRunEffect(action, readParamsAsked, options);
+  routeActionEntriesSignal.value = [
+    ...routeActionEntriesSignal.peek(),
+    {
+      routeAction: actionBoundToRoute,
+      askingSignal: computed(() => Boolean(readParamsAsked())),
+    },
+  ];
   for (const route of routes) {
     // Asked of the route's params as they are, like the effect asks them.
     registerRouteReload(route, () =>
@@ -148,4 +186,16 @@ export const anyMatchingRouteSignal = (routes) => {
     return someMatching;
   });
   return anyMatchingSignal;
+};
+
+const haveSameMembers = (setA, setB) => {
+  if (setA.size !== setB.size) {
+    return false;
+  }
+  for (const value of setA) {
+    if (!setB.has(value)) {
+      return false;
+    }
+  }
+  return true;
 };

@@ -234,6 +234,13 @@ export const createOpenController = (
     change();
   };
   const runChange = (change, { opened, event }) => {
+    // What the controller answers about itself is the decision, written before
+    // the change runs, whatever runs it. Whoever asks meanwhile reads it: the
+    // render an opening forces (onOpen, mountContent) reads the open state
+    // the caller holds, and an onOpen writing the popup's own `signal` has
+    // useOpenPropsEffectOnOpenController asking for this very opening — a
+    // second one, nested in the first, if `opened` still said closed.
+    controller.opened = opened;
     const applyChange = () => {
       // Recorded with the change itself: what the DOM shows is what a render
       // landing between the ask and the picture must draw (see `openedInDom`).
@@ -249,12 +256,8 @@ export const createOpenController = (
       applyChange();
       return;
     }
-    // What the controller answers about itself does not wait for the picture:
-    // whoever just asked reads `opened` on the spot (see
-    // useOpenPropsEffectOnOpenController, which writes it back into the
-    // caller's own signal), and a request arriving before the change lands
-    // runs it first rather than reading a DOM that disagrees.
-    controller.opened = opened;
+    // A request arriving before the change lands runs it first rather than
+    // reading a DOM that disagrees.
     changeAwaitingTransition = applyChange;
     transitionChange(
       () => {
@@ -267,7 +270,6 @@ export const createOpenController = (
   };
 
   const performClose = (closeEvent) => {
-    controller.opened = false;
     // Read before any close effect touches the DOM: closing a native <dialog>
     // hands the focus back to whatever held it at showModal() time, so by the
     // time the close cleanup runs, the popup's content has already lost the
@@ -535,7 +537,6 @@ export const createOpenController = (
           // told it opened right after (see popup_content_mount.js and
           // use_displayed_layout_effect.js).
           controller.openedInDom = true;
-          controller.opened = true;
           // Which press it opened during, so the release of that press is not
           // read as somebody dismissing it (see openedDuringThisPress).
           controller.pressCountAtOpen = pressCount;
@@ -980,8 +981,10 @@ export const useOpenPropsEffectOnOpenController = (
       return undefined;
     }
     // Skip when the controller is already in the desired state.
-    // openController.opened tracks actual open/close (updated by onopen/onclose,
-    // not by renders) so it is the authoritative check against feedback loops.
+    // openController.opened is what the controller decided, written before an
+    // opening renders anything (see runChange), so it is the authoritative
+    // check against feedback loops — the popup's own onOpen writing its
+    // `signal` included.
     if (open === openController.opened) {
       return undefined;
     }

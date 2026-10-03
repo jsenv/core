@@ -44,6 +44,8 @@ import { naviI18n } from "../../text/navi_i18n.js";
 import { Text } from "../../text/text.jsx";
 import { withPropsClassName } from "../../utils/with_props_class_name.js";
 import { useDisplayedLayoutEffect } from "../../utils/use_displayed_layout_effect.js";
+import { showRangeReader } from "../../state/rest/kept_reads.js";
+import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 import { getUIStateControllerById } from "../controller_registry.js";
 import { ParallelGuardContext, useParallelGuard } from "../parallel_guard.js";
 import { ListItemHeaderOrFooterResolver } from "./list_item_header_footer.jsx";
@@ -1111,7 +1113,6 @@ const ListUI = (props) => {
   // What the runs ask for and stand for, in items: a source paginates in items,
   // and asks for the first picture's items and the rest in one round trip.
   listItems.pageSize = PAGE_SIZE_DEFAULT;
-  listItems.scrolled = scrolled ?? defaultScrolled;
 
   const {
     virtualItemSizeSignal,
@@ -1536,6 +1537,48 @@ const useListScrollSync = ({
   columns,
 }) => {
   const debugScroll = useDebugScroll();
+  // Where the list must be: what the caller holds it at (`scrolled`), or where
+  // it opens and then lets go (`defaultScrolled`). A `scrolled` that changes is
+  // the caller moving the list, so the hold is armed again — that is what makes
+  // it controlled. A `defaultScrolled` that changes is where the list opens,
+  // read again from something that answered again (a count fresher than the
+  // one kept from the previous visit): followed for as long as nobody has
+  // moved the list, and compared by value, since it is said at every render.
+  // Nothing to hold it at (a position not saved yet) is not a position: the
+  // list opens where it opens.
+  const startPlaceRef = useRef(null);
+  if (startPlaceRef.current === null) {
+    startPlaceRef.current = {
+      userTookOver: false,
+      wanted: scrolled ?? defaultScrolled,
+      scrolled,
+      defaultScrolled,
+      way: null,
+      arrived: false,
+    };
+  } else {
+    const place = startPlaceRef.current;
+    if (place.scrolled !== scrolled) {
+      place.scrolled = scrolled;
+      place.defaultScrolled = defaultScrolled;
+      place.wanted = scrolled ?? defaultScrolled;
+      place.userTookOver = false;
+    } else if (
+      (scrolled === undefined || scrolled === null) &&
+      !compareTwoJsValues(place.defaultScrolled, defaultScrolled)
+    ) {
+      place.defaultScrolled = defaultScrolled;
+      if (!place.userTookOver) {
+        place.wanted = defaultScrolled;
+        // Placed again from where it stands: the way to the previous place
+        // says nothing about whose the next scrolls are.
+        place.way = null;
+        place.arrived = false;
+      }
+    }
+  }
+  const scrolledWanted = startPlaceRef.current.wanted;
+  listItems.scrolled = scrolledWanted;
   // The items drawn, [start, end) among the list's own. A ref as well as a
   // state: the render moves it where the list is held (holdWindow) without a
   // commit of its own.
@@ -1556,7 +1599,7 @@ const useListScrollSync = ({
     {
       inLines: Boolean(columns),
       windowLeavesItemsOut,
-      scrolledWanted: scrolled ?? defaultScrolled,
+      scrolledWanted,
       // The fillers hold the room of items above the screen at this size: a
       // size that changes moves what is on screen, like items landing above it.
       beforeSizeChange: () => listItems.captureAnchor(),
@@ -1913,27 +1956,10 @@ const useListScrollSync = ({
     );
   };
 
-  // Where the list must be: what the caller holds it at (`scrolled`), or where
-  // it opens and then lets go (`defaultScrolled`). A `scrolled` that changes is
-  // the caller moving the list, so the hold is armed again — that is what makes
-  // it controlled.
-  // Nothing to hold it at (a position not saved yet) is not a position: the
-  // list opens where it opens.
-  const scrolledWanted = scrolled ?? defaultScrolled;
   const scrolledFallback =
     scrolled === undefined || scrolled === null
       ? "start"
       : (defaultScrolled ?? "start");
-  const startPlaceRef = useRef({
-    userTookOver: false,
-    wanted: scrolledWanted,
-    way: null,
-    arrived: false,
-  });
-  if (startPlaceRef.current.wanted !== scrolledWanted) {
-    startPlaceRef.current.wanted = scrolledWanted;
-    startPlaceRef.current.userTookOver = false;
-  }
   // Only one thing owns the scroll at a time: while the list is holding itself
   // somewhere, the anchoring stays out of it (holding an item still is precisely
   // not being at the end anymore once what is above it shrinks).
@@ -5945,6 +5971,17 @@ const useItemStore = ({
   }
   const pages = pagesRef.current;
   const [, setPageVersion] = useState(0);
+  // A list on screen is part of what the page reads: the composition it reads
+  // is kept with the page for the next document (see keepPageOnScreen).
+  useLayoutEffect(() => {
+    if (inMemory || typeof itemsAction !== "function") {
+      return undefined;
+    }
+    if (!itemsAction.isRangeReader) {
+      return undefined;
+    }
+    return showRangeReader(itemsAction);
+  }, [inMemory, itemsAction]);
   // The ranks whose item is from before: the run came back to the screen, or
   // the source said the collection moved. They stay drawn until a page confirms
   // or replaces them, rank by rank. A page covers what the window framed when it
@@ -6085,6 +6122,7 @@ const useItemStore = ({
         }
       }
       if (typeof itemsAction === "function" && itemsAction.trimComposition) {
+        itemsAction.frameComposition(windowFrom, windowTo);
         itemsAction.trimComposition(keepFrom, keepTo, budget);
       }
     },
@@ -6706,6 +6744,9 @@ const ListResolved = /*#__PURE__*/ createComponentResolver([
  *   room has to be restated as a number by whoever asks. The `index` and
  *   `visibleCount` it also hands out say where to aim before the item is found,
  *   and how many items to draw before the first paint (see `renderBudget`).
+ *   A value that changes before anyone has moved the list is followed (a place
+ *   read from a count that answered again): it is compared by value, so it can
+ *   be computed at every render.
  * @param {"start"|"end"|number|{id: string, index?: number, offset?: number, visibleCount?: number}} [props.scrolled]
  *   The same, but held: the list goes back there every time this changes, even
  *   after the user has scrolled — the caller owns where the list is (see

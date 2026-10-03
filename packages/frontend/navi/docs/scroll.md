@@ -121,7 +121,9 @@ say so with `"document"` or the element itself.
 by MEASURING it: it lands where it was even if rows were inserted before it,
 whatever the screen it was saved on. "Reopen a thread where I left it" is
 already provided; keep the position whole, its `visibleCount` sizes the first
-paint. A list with an `id` also **comes back where it was** when its screen is
+paint. A `defaultScrolled` that changes before anyone has moved the list is
+followed — a place read from an answer that refreshes (yesterday's "today", then
+today's) — and it is compared by value, so it can be computed at every render. A list with an `id` also **comes back where it was** when its screen is
 left and come back to, the way the page does (its `id` must name one list of the
 app, see [below](#a-list-that-comes-back-one-id-one-list));
 **`scrollResetOnNavigation`** opts out. A list scrolling the document that

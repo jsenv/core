@@ -18,6 +18,13 @@ import {
   recordGetResultProperties,
   resolveRerunOn,
 } from "./item_lifecycle_manager.js";
+import {
+  getKeptReadKey,
+  isKeepableRead,
+  markKeepableRead,
+  takeKeptRead,
+  upsertKeptItem,
+} from "./kept_reads.js";
 import { getParamScope } from "./param_scope.js";
 import { createResourcePersistence } from "./resource_persist.js";
 import { createRangeReader } from "./resource_range_reader.js";
@@ -1458,7 +1465,7 @@ const createRestActionFactoryForRoot = (
       `${name}.${verb}`,
       declarationSite,
     );
-    return createAction(callback, {
+    const action = createAction(callback, {
       name: `${name}.${verb}`,
       meta: { verb, isMany: false, paramScope },
       resultToValue: (result, action) => {
@@ -1494,17 +1501,33 @@ const createRestActionFactoryForRoot = (
       },
       valueToData: (itemId) => store.select(itemId),
       // While the request is out, the row the store already holds for these
-      // params is drawn: the action starts on the "refresh over a known
+      // params is drawn, or the row the page kept from the previous document
+      // (kept_reads.js): the action starts on the "refresh over a known
       // answer" line of data_states.md rather than the first-load one.
       provisionalValue:
         verb === "GET"
-          ? (params) => {
-              const item = untracked(() => findItemForGet(params));
+          ? (params, action) => {
+              const item = untracked(() => {
+                const itemForGet = findItemForGet(params);
+                if (itemForGet) {
+                  return itemForGet;
+                }
+                const keptItem = takeKeptRead(
+                  getKeptReadKey(action.name, params),
+                );
+                return keptItem ? upsertKeptItem(store, keptItem) : null;
+              });
               return item ? item[idKey] : undefined;
             }
           : undefined,
+      // Another params' answer is another row.
+      inheritData: verb !== "GET",
       completeSideEffect: onActionComplete,
     });
+    if (verb === "GET") {
+      markKeepableRead(action);
+    }
+    return action;
   };
   const createActionAffectingManyItems = (
     verb,
@@ -1519,7 +1542,7 @@ const createRestActionFactoryForRoot = (
             return itemArray.map((item) => item[idKey]);
           };
 
-    return createAction(callback, {
+    const action = createAction(callback, {
       meta: { verb, isMany: true, paramScope },
       name: `${name}.${verb}_MANY`,
       resultToValue: applyResultToValue,
@@ -1527,6 +1550,25 @@ const createRestActionFactoryForRoot = (
       // undefined so a screen can tell "not asked yet" from "answered: none".
       valueToData: (idArray) =>
         idArray === undefined ? undefined : store.selectAll(idArray),
+      // The rows the page kept from the previous document (kept_reads.js),
+      // drawn while the request is out. A binding moving to new params still
+      // hands over the previous answer when there are none: a list standing
+      // in for the next one beats a skeleton.
+      provisionalValue:
+        verb === "GET"
+          ? (params, action) =>
+              untracked(() => {
+                const keptItems = takeKeptRead(
+                  getKeptReadKey(action.name, params),
+                );
+                if (!Array.isArray(keptItems)) {
+                  return undefined;
+                }
+                return keptItems.map(
+                  (keptItem) => upsertKeptItem(store, keptItem)[idKey],
+                );
+              })
+          : undefined,
       completeSideEffect: (actionCompleted) => {
         onActionComplete(actionCompleted);
         if (
@@ -1542,6 +1584,10 @@ const createRestActionFactoryForRoot = (
         return syncIdArrayOnRename(store, idKey, actionCompleted.valueSignal);
       },
     });
+    if (verb === "GET") {
+      markKeepableRead(action);
+    }
+    return action;
   };
 
   return createActionForRoot;
@@ -1552,10 +1598,12 @@ const createRestActionFactoryForRoot = (
 // NetworkPolicyError carrying the policy's reason. A read is called or not depending
 // on where the policy answers reads from. Answered from the store, a GET of a
 // root resource completes with the row the store holds for it (see
-// findItemInStore) — handing the item back is an upsert without effect, so the
-// action completes with what it had and nothing is asked; a relationship GET
-// has no row of its own to answer with and settles with the same error. A
-// completed GET asked to rerun never gets here (actions.js holds it).
+// findItemInStore), and a root GET or GET_MANY holding rows for these params
+// (the kept page, drawn while the request is out) with those — handing them
+// back is an upsert without effect, so the action completes with what it had
+// and nothing is asked. A relationship GET has no row of its own to answer
+// with and settles with the same error. A completed GET asked to rerun never
+// gets here (actions.js holds it).
 const applyNetworkPolicy = (
   restCallback,
   { verb, isMany, findItemInStore },
@@ -1568,6 +1616,12 @@ const applyNetworkPolicy = (
     if (verb === "GET") {
       if (!policy.readsFromStore) {
         return restCallback(params, context);
+      }
+      if (isKeepableRead(context.action)) {
+        const dataHeld = context.action.dataSignal.peek();
+        if (dataHeld !== undefined) {
+          return dataHeld;
+        }
       }
       if (!isMany && findItemInStore) {
         const item = findItemInStore(params, context.action);

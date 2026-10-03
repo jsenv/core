@@ -766,8 +766,11 @@ const actionWeakMap = new WeakMap();
  *   than a first load (data_states.md). Called at the start of every run whose
  *   value is undefined; the answer replaces it as usual, and `undefined` means
  *   "nothing known". A resource `GET` uses it to draw the row its store holds.
- *   An action declaring it is asked for it by a binding moving to new params,
- *   rather than handed the previous params' answer (see inheritData).
+ * @param {boolean} [rootOptions.inheritData=true] - `false`: a binding moving
+ *   to new params starts the new instance without the previous params' answer
+ *   (see createActionProxyFromSignal). For an answer that would say something
+ *   false about the new params (a `GET` drawing another row), not for one that
+ *   stands in while the next one comes (a list of search results).
  * @param {{ ms?: number, max?: number }} [rootOptions.keep] - how long an
  *   answer stays good once it has landed. Without it an answer lives exactly as
  *   long as something references it: the screen that asked goes away, and
@@ -810,6 +813,7 @@ export const createAction = (callback, rootOptions = {}) => {
       resultToValue,
       valueToData,
       provisionalValue,
+      inheritData = true,
       dataDefault,
       data = dataDefault,
 
@@ -1486,6 +1490,7 @@ export const createAction = (callback, rootOptions = {}) => {
       const privateProperties = {
         valueInitial,
         provisionalValue,
+        inheritData,
 
         performRun,
         performReset,
@@ -1518,7 +1523,7 @@ export const createAction = (callback, rootOptions = {}) => {
  *   a list of filters changes, providing real-time results without user interaction.
  * @param {boolean} options.inheritData - When false, each new target action starts fresh with no inherited state.
  *   By default (true), the proxy carries over the previous target's value and error into the new action —
- *   unless the action declares a `provisionalValue`, which then says what the new one holds.
+ *   unless the action itself declares `inheritData: false` (createAction), which a resource `GET` does.
  *   This keeps the facade in sync with the latest known data: `action.dataSignal.value` only changes when a
  *   new action completes, not when it starts loading. Code that needs to distinguish loading state can still
  *   check `action.runningState`, while code that just reads `action.data` always sees the most recent
@@ -1565,12 +1570,12 @@ const createActionProxyFromSignal = (
   let currentActionPrivateProperties = getActionPrivateProperties(action);
   let actionTargetPreviousWeakRef = null;
 
-  // An action saying for itself what it holds for params it has not answered
-  // (provisionalValue: a resource GET draws the row its store holds) is not
-  // handed the previous params' answer — an answer about another row. What it
-  // does not know stays unknown: a skeleton, never a different row.
+  // An action whose answer for other params would be false for these (a
+  // resource GET: another row) says so itself, and is not handed it. What it
+  // does not know stays unknown: a skeleton, or its provisionalValue, never a
+  // different row.
   const inheritsAnswer =
-    inheritData && !getActionPrivateProperties(action).provisionalValue;
+    inheritData && getActionPrivateProperties(action).inheritData;
   const createTarget = (params) => {
     if (inheritsAnswer) {
       const previousActionTarget = actionTargetPreviousWeakRef?.deref();

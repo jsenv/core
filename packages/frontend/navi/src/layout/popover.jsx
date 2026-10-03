@@ -268,7 +268,7 @@ const css = /* css */ `
        without this it would flash visible for one frame on mount, before
        openEffect's own JS ever gets a chance to hide it. [navi-hidden] is
        set from usePopoverProps' own contentProps (recomputed from
-       openController.opened on every render, present from the very first
+       openController.openedInDom on every render, present from the very first
        one — see there for why), then toggled by plain
        removeAttribute/setAttribute in openEffect/close, never an explicit
        display override: removing the attribute just lets this rule stop
@@ -1701,7 +1701,7 @@ const usePopoverProps = (props) => {
     "navi-out-of-flow": "",
     "baseClassName": "navi_popover_backdrop",
     "aria-hidden": "true",
-    // Recomputed fresh on every render from openController.opened (not a
+    // Recomputed fresh on every render from openController.openedInDom (not a
     // frozen mount-time constant, same pattern as navi-hidden just below)
     // rather than driven through a mount-time layout effect — its own
     // actual open/close toggling is still done entirely imperatively
@@ -1780,7 +1780,7 @@ const usePopoverProps = (props) => {
     // starting-hidden default) — present from this very first render so
     // there's no gap for the browser to ever paint it visible before
     // anything has actually opened it. Recomputed fresh on every render from
-    // openController.opened (not a frozen mount-time constant) — Preact
+    // openController.openedInDom (not a frozen mount-time constant) — Preact
     // only touches the DOM for a prop whose value actually changed since
     // the last render, so as long as this always reflects the *current*
     // truth, it never fights the imperative

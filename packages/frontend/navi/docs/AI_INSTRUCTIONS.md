@@ -84,8 +84,9 @@ start when unsure which export solves a problem.
   action and a command on one press. Before running an action from a component.
 - `resource.md` — `resource()` and its relations (never an `op` discriminator),
   `GET_RANGE`, a search as the same `GET_MANY`, `withParams()` scopes and
-  `dependencies`, `persist`, a function versus the verb's instance. Before
-  writing a resource, and before caching a response yourself.
+  `dependencies`, `persist` (and `keepPageOnScreen` for the page on screen), a
+  function versus the verb's instance. Before writing a resource, and before
+  caching a response yourself.
 - `data_states.md` — `data`, `loading` and `error` are three questions;
   `loading: true` never suspends; a skeleton is told whether it is loading.
   Before drawing a skeleton on `!data` or hiding content because `error` is set.
