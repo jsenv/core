@@ -1584,6 +1584,8 @@ const useListScrollSync = ({
   // state: the render moves it where the list is held (holdWindow) without a
   // commit of its own.
   const renderWindowRef = useRef(null);
+  // A window was asked for that no render has drawn yet (see settleWindow).
+  const windowAskedRef = useRef(false);
   const windowLeavesItemsOut = () => {
     const renderWindow = renderWindowRef.current;
     if (!renderWindow) {
@@ -1806,7 +1808,11 @@ const useListScrollSync = ({
     if (!ref.current || itemsPerLineRef.current !== 1) {
       return;
     }
-    readItemRooms(getListEl(), horizontal, listItems.roomById);
+    const listEl = getListEl();
+    if (!listEl) {
+      return;
+    }
+    readItemRooms(listEl, horizontal, listItems.roomById);
   };
   const updateRenderWindow = (newStart, newEnd, reason) => {
     const { start, end } = renderWindowRef.current;
@@ -1818,6 +1824,7 @@ const useListScrollSync = ({
     debugScroll(`updateRenderWindow(${newStart}, ${newEnd}, "${reason}")`);
     const renderWindow = { start: newStart, end: newEnd };
     renderWindowRef.current = renderWindow;
+    windowAskedRef.current = true;
     setRenderWindow(renderWindow);
     return renderWindow;
   };
@@ -2261,6 +2268,17 @@ const useListScrollSync = ({
     }
     const scrollerEl = getScroller();
     if (openAt === "end") {
+      const total = listItems.totalSignal.peek();
+      const { start, end } = renderWindowRef.current;
+      if (end < total) {
+        // The window was framed before the runs said how many items there are
+        // (see holdWindow): the end of the document is the end of a filler.
+        // Aimed at the last items first, like a named item.
+        const windowSize = end - start;
+        const wantedStart = total - windowSize < 0 ? 0 : total - windowSize;
+        updateRenderWindow(wantedStart, total, "opening at the end");
+        return;
+      }
       sendHeldScroll(
         horizontal ? scrollerEl.scrollWidth : scrollerEl.scrollHeight,
       );
@@ -2343,6 +2361,13 @@ const useListScrollSync = ({
   const settleWindow = () => {
     const stage = stageRef.current;
     if (stage === "steady") {
+      return;
+    }
+    if (windowAskedRef.current) {
+      // The hold has just aimed the window where the list opens — its end, an
+      // item it found — and the next commit draws it. Sized now, the window
+      // would weigh the items there by the ones drawn here, nowhere near them:
+      // the one-line items at the start of a thread opening on its cards.
       return;
     }
     const initialBudget = initialBudgetRef.current;
@@ -3119,6 +3144,8 @@ const useListScrollSync = ({
   }, [scrollerElResolved]);
 
   holdWindow();
+  // Whatever was asked for until now is what this render draws.
+  windowAskedRef.current = false;
   const { start: windowStart, end: windowEnd } = renderWindowRef.current;
   useLayoutEffect(() => {
     reportPosition({ ifChanged: true });
@@ -6973,19 +7000,20 @@ const ListResolved = /*#__PURE__*/ createComponentResolver([
  *   source for is a page (see `<List.Items pageSize>`), whatever either says,
  *   so the first picture costs no second request.
  * @param {number} [props.virtualItemSize]
- *   The room an item not drawn is held at, in px along the scroll axis: what
- *   the fillers hold for each item outside the render window, what a scroll
- *   position inside them is read with, and the least an item on its way takes
- *   (see `renderSkeleton`). Left out, it is the average of the items measured
- *   so far — once when the list mounts, again when a popup around it opens,
- *   and after each commit while items are held off screen. Given, it is the
- *   worst case: the size every item has, or, in a list whose items differ, the
- *   smallest an item can be (a thread of one-line items and cards: the
- *   one-line size) — an item guessed too small builds one more, an item
- *   guessed too big leaves a blank (see docs/scroll.md, "What the list knows,
- *   and what it guesses"). The items drawn are measured either way: the render
- *   window is sized on them. In a grid (`columns`), the size is a line's: a
- *   card's, which the items side by side on it share.
+ *   The room an item never drawn is held at, in px along the scroll axis: what
+ *   the fillers hold for it outside the render window, what a scroll position
+ *   inside them is read with, and the least an item on its way takes (see
+ *   `renderSkeleton`). An item the list has drawn is held at the room it took
+ *   then. Left out, it is the average of the items measured so far — once when
+ *   the list mounts, again when a popup around it opens, and after each commit
+ *   while items are held off screen. Given, it is the worst case: the size
+ *   every item has, or, in a list whose items differ, the smallest an item can
+ *   be (a thread of one-line items and cards: the one-line size) — an item
+ *   guessed too small builds one more, an item guessed too big leaves a blank
+ *   (see docs/scroll.md, "What the list knows, and what it guesses"). The items
+ *   drawn are measured either way: the render window is sized on them. In a
+ *   grid (`columns`), the size is a line's: a card's, which the items side by
+ *   side on it share, and the lines drawn are held at it too.
  * @param {"self"|"parent"|"document"|Element|{current: Element}} [props.scroller="self"]
  *   Which box scrolls — and with it, which box the render window follows and
  *   which box a scroll position is read from (`onScrolledChange`). `"self"`
