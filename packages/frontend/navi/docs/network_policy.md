@@ -69,7 +69,7 @@ was asked:
   `resource("user", { uniqueKeys: ["slug"], … })`.
 - **A read drawing a kept answer completes with it.** A root `GET` or
   `GET_MANY` whose first run drew what the page kept from the previous document
-  (`keepPageOnScreen`) answers with those rows: a reload with no network reopens
+  ([`keepPageOnScreen`](./resource.md#keeppageonscreen-the-page-on-screen-drawn-again-by-the-next-document)) answers with those rows: a reload with no network reopens
   on the page.
 - **A completed read stays completed.** Otherwise `GET_MANY` (and every other
   read) has nowhere to answer from: the store holds items, not queries, and only
@@ -189,7 +189,8 @@ has nothing to decide which one says why.
   which signal, for which session: a resource declaring
   [`persist`](./resource.md#persist-the-last-answer-drawn-again-after-a-reload)
   has its kept row answer the `GET` under the policy, so a reload offline
-  reopens on it; `keepPageOnScreen` does the same for the page on screen.
+  reopens on it; [`keepPageOnScreen`](./resource.md#keeppageonscreen-the-page-on-screen-drawn-again-by-the-next-document) does the same for the page
+  on screen.
 - **A queue of writes to replay** once the network is back — not navi's: what a
   replayed write means (a score entered twice? a seat taken since?) is the app's
   business.

@@ -79,7 +79,8 @@ action, a `bindParams` holding one) included, when the signal moves to other
 params. A row known from the previous page load counts too, when the resource
 asks for it:
 [`persist`](./resource.md#persist-the-last-answer-drawn-again-after-a-reload)
-puts a reload on the second line as well, and so does `keepPageOnScreen` for
+puts a reload on the second line as well, and so does
+[`keepPageOnScreen`](./resource.md#keeppageonscreen-the-page-on-screen-drawn-again-by-the-next-document) for
 what the page on screen reads — a `GET_MANY` and a `GET_RANGE` included.
 
 **The emptiness test is `data === undefined`, never `loading`.** Reading

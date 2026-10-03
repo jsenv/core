@@ -85,6 +85,7 @@ let stopKeepingCurrent = null;
  *   page is left, until it is visited again: the page an app opens on when it
  *   is launched rather than reloaded.
  * @returns {() => void} stops keeping the page.
+ * @see docs/resource.md — what is kept and what is not, what stays the app's
  */
 export const keepPageOnScreen = ({
   signal: keptSignal,

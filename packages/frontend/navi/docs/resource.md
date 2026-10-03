@@ -34,6 +34,7 @@ Actions are read in components through the action system (`useAsyncData`,
 
 - [`store.upsert()` is not how data enters the store](#storeupsert-is-not-how-data-enters-the-store)
 - [`persist`: the last answer, drawn again after a reload](#persist-the-last-answer-drawn-again-after-a-reload)
+- [`keepPageOnScreen`: the page on screen, drawn again by the next document](#keeppageonscreen-the-page-on-screen-drawn-again-by-the-next-document)
 - [`GET_RANGE`: feeding a list that loads as it scrolls](#get_range-feeding-a-list-that-loads-as-it-scrolls)
 - [Searching the same collection](#searching-the-same-collection)
 - [Relations: pick one of the four methods](#relations-pick-one-of-the-four-methods)
@@ -130,11 +131,100 @@ What the copy is not:
   "the server confirmed" — that is `loading`, and the two are independent.
 - **a store on disk.** One row per params key, `GET` only: meant for a singleton
   or a handful of rows, not a resource whose `GET` is asked for every id. What
-  the page on screen reads, lists included, is kept by `keepPageOnScreen`
-  (`src/nav/page_kept.js`), and dropped once the page is left.
+  the page on screen reads, lists included, is
+  [`keepPageOnScreen`](#keeppageonscreen-the-page-on-screen-drawn-again-by-the-next-document),
+  below.
 - **seeded at declaration.** The row enters the store at the first run of the
   `GET`, once the relations are declared, so its relation values are normalized
   as a real answer's are. `ME.store` read before that first run is empty.
+
+## `keepPageOnScreen`: the page on screen, drawn again by the next document
+
+A reload, a pull-to-refresh, a tab the system discarded in the background: a
+new document opens at the same address, on the page that was left, and what
+that page reads almost always answers what it answered a moment ago. `persist`
+keeps one row of one resource. A page reads several things, lists included,
+and which ones depends on the page. `keepPageOnScreen` keeps that set, one
+slot, replaced when the user moves:
+
+```js
+const pageKeptSignal = stateSignal(undefined, {
+  id: `page@${APP_VERSION}`,
+  persists: true,
+  type: "object",
+});
+// Before the routes start: the first runs are the ones that look.
+keepPageOnScreen({
+  signal: pageKeptSignal,
+  when: () => !viewAsSignal.value,
+  always: [MY_GAMES_PAGE],
+});
+```
+
+**The unit is the page, not the resource.** One resource is read by several
+screens: `GAME.GET` for any game opened, `USER.GET_MANY` for a tab and for
+every search. Kept per resource, that is every game ever opened. The page's
+reads are what navi already runs for it: the route actions asking something for
+the page (`activeRouteActionsSignal`, which the app also reads to rerun the page
+when it comes back to the foreground), and the compositions the `<List.Items>`
+on screen read. A navigation replaces the slot with the next page's reads.
+
+What is kept, for the next document's first run of the same read with the same
+params:
+
+| read                                    | kept                                                         |
+| --------------------------------------- | ------------------------------------------------------------ |
+| a route action on a resource `GET`      | the row, its relations inline                                |
+| a route action on a resource `GET_MANY` | the rows in order, written the same way                      |
+| a `<List.Items>` reading a `GET_RANGE`  | the count and the ranks around the window drawn, rows inline |
+
+The `GET` and the `GET_MANY` draw it as their provisional value: `data` set
+while `loading` is `true`, the answer replacing it. The list finds it as a
+composition it left
+([list_refresh.md](./list_refresh.md#leaving-the-screen-and-coming-back)): every
+rank stale, one request for the window. Under a network policy answering reads
+from the store, the kept answer answers the read
+([network_policy.md](./network_policy.md)).
+
+What is not kept, and why:
+
+- **a relationship read** (`.one()`, `.many()`, `.scopedOne()`,
+  `.scopedMany()`). Its answer enters the store through its owner: the parent
+  row it is nested in, or the store of the owner it is scoped to. It is not rows
+  of its own that could be written back alone.
+- **a plain `createAction`** (a summary, a count the server computes). Its value
+  is whatever the callback returns, with no store to give it a shape to write
+  and to read back. A page's code is a route action too, and it is a function.
+- **a read that is not a route action**: a search typed on the page, a popup's
+  own load.
+
+A read writes what it shows once it has answered in this document. Until then
+the slot keeps what the previous document kept for it, never what the read
+shows meanwhile: an answer handed over from other params (a list standing in
+for the next search) is not about these. The write waits for the page to settle
+and is flushed when the document is hidden, which is when the system may discard
+it. Between those moments a navigation goes through half-built pages: the route
+matched but its list not mounted, or the page left still drawn under a
+transition.
+
+**The start page.** An installed app launched after being killed opens at its
+start address, not on the page that was left. The reads made while a route of
+`always` matches stay kept once that page is left, until the next visit
+replaces them.
+
+What stays the app's, as for `persist`: **the key** (the deployed version in the
+signal's `id`), **`when`** (`false` reads nothing, writes nothing, and empties
+the signal), and **the moment**: sign-out writes `undefined` into the signal,
+whatever page it holds, and nothing is written again until a read lands. Also
+**what the reads feed beside their data**: a count the app sets from an answer
+is its own signal to keep. When a list's opening position comes from such a
+count, `defaultScrolled` follows the fresh value as long as nobody has moved the
+list ([scroll.md](./scroll.md#where-the-list-opens-and-where-it-is)).
+
+What it costs: the copy follows the store, so a `PUT` on a row rewrites it, and
+every change in the stores the page reads serializes the page's reads again.
+Only the write to the signal is coalesced. A list's window with its rows inline
+is tens of kilobytes.
 
 ## `GET_RANGE`: feeding a list that loads as it scrolls
 

@@ -129,7 +129,7 @@ drops the compositions — they stand for an order that is gone — and
 `memoryBudget` (1000 ranks by default) trims the ranks far from any window,
 which are asked for again if the user goes back to them. A composition read by a
 list on screen also outlives the document when the page is kept
-(`keepPageOnScreen`): the ranks around the window it draws are written with
+([`keepPageOnScreen`](./resource.md#keeppageonscreen-the-page-on-screen-drawn-again-by-the-next-document)): the ranks around the window it draws are written with
 their rows, and a reload is the same return after a longer absence.
 
 ### Who decides the re-read — and who does not
