@@ -26,6 +26,7 @@ import {
   useNextResolver,
 } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Box, BoxForwardedPropsContext } from "../../box/box.jsx";
+import { stringifySpacingStyle } from "../../box/box_style_util.js";
 import { isLikelyPreactGeneratedId } from "../../nav/browser_integration/document_state_signal.js";
 import {
   forgetScrollerUnlessPageLeft,
@@ -838,6 +839,33 @@ const css = /* css */ `
     /* Hide groups that have no rendered items. */
     &[data-hidden-while-empty]:not(:has([navi-list-item-real])) {
       display: none;
+    }
+
+    /* A group the window cuts: what stands before its first item — the gap
+       and the label — is held by the filler above it, in the room of the item
+       that opens the group (see readItemRooms). Drawn here with room of their
+       own, they would push what is below down as soon as the window cuts a
+       group: when a page lands under a screen of stand-ins. The label is laid
+       over the items instead, in the same cell, which takes no measuring: it
+       holds from the first layout. It still rides the top of the screen; at
+       the edge of the window, off screen, it covers the first item drawn. */
+    &[data-continued] {
+      display: grid;
+      margin-top: calc(-1 * var(--x-list-gap, 0px));
+
+      > .navi_list_item_group_label,
+      > .navi_list_item_group_list {
+        grid-area: 1 / 1;
+      }
+      > .navi_list_item_group_label {
+        align-self: start;
+      }
+    }
+    /* Begun in the items not held just before it: its label stands where the
+       group does not start, over an item, and it is drawn again where the
+       group starts once those items land. */
+    &[data-continued="hole"] > .navi_list_item_group_label {
+      visibility: hidden;
     }
   }
 
@@ -1804,6 +1832,7 @@ const useListScrollSync = ({
   // that changed since is measured again when drawn again, and the anchoring
   // holds the view across the difference. Items laid side by side in a grid
   // share a line, which the fillers hold at the one size.
+  const givenRoomWarnedRef = useRef(false);
   const rememberItemRooms = () => {
     if (!ref.current || itemsPerLineRef.current !== 1) {
       return;
@@ -1812,7 +1841,24 @@ const useListScrollSync = ({
     if (!listEl) {
       return;
     }
-    readItemRooms(listEl, horizontal, listItems.roomById);
+    readItemRooms(listEl, horizontal, (item, room, complete) => {
+      listItems.roomById.set(item.id, room);
+      if (!import.meta.dev || !complete || givenRoomWarnedRef.current) {
+        return;
+      }
+      const givenRoom = listItems.givenRoomAt(item.index);
+      if (givenRoom === undefined) {
+        return;
+      }
+      const difference = room - givenRoom;
+      if (difference > -0.5 && difference < 0.5) {
+        return;
+      }
+      givenRoomWarnedRef.current = true;
+      console.warn(
+        `List.Items itemSize gives ${givenRoom}px to the item at index ${item.index}, which took ${Math.round(room * 10) / 10}px from the end of the item before it to its own end. The items not drawn are held at the room itemSize gives, so the screen moves by the difference when they are drawn above it — and nothing corrects it during a fling on iOS.`,
+      );
+    });
   };
   const updateRenderWindow = (newStart, newEnd, reason) => {
     const { start, end } = renderWindowRef.current;
@@ -3893,23 +3939,17 @@ const readWindowGeometry = (scrollerEl, listEl, horizontal) => {
   return { screenSize, bandFrom, bandTo, items };
 };
 // The room each item drawn takes along the scroll axis (see
-// rememberItemRooms): up to the next item when that one is drawn too, so that
-// what stands between them — a separator, the label of a group the next one
-// opens — is counted; its own box otherwise. A stand-in is not measured: it
-// takes the room it is given, not the room of its item.
-const readItemRooms = (listEl, horizontal, roomById) => {
+// rememberItemRooms): from where the item before it ends to where it ends, so
+// that what stands between the two — a separator, the label of the group it
+// opens — is counted with the item it comes with. A group the window cuts
+// draws its label without room (see the data-continued rule above): that
+// label's room is held by the item that opens the group, in the filler. The
+// first item drawn is measured from the end of what stands before it in the
+// list (a filler, a header); a stand-in is not measured, it takes the room it
+// is given and not the room of its item, but an item after it ends where it
+// ends. `complete` says whether the room was read up to an end before it.
+const readItemRooms = (listEl, horizontal, onRoom) => {
   let previous = null;
-  const keepRoom = (item, next) => {
-    if (item.id === null) {
-      return;
-    }
-    roomById.set(
-      item.id,
-      next && next.index === item.index + 1
-        ? next.from - item.from
-        : item.to - item.from,
-    );
-  };
   for (const itemEl of listEl.querySelectorAll(
     `[${LIST_ITEM_INDEX_ATTRIBUTE}]`,
   )) {
@@ -3926,14 +3966,54 @@ const readItemRooms = (listEl, horizontal, roomById) => {
       from: horizontal ? rect.left : rect.top,
       to: horizontal ? rect.right : rect.bottom,
     };
-    if (previous) {
-      keepRoom(previous, item);
+    if (item.id !== null) {
+      const endBefore =
+        previous && previous.index === item.index - 1
+          ? previous.to
+          : readEndBefore(itemEl, listEl, horizontal);
+      if (endBefore === null) {
+        onRoom(item, item.to - item.from, false);
+      } else {
+        onRoom(item, item.to - endBefore, true);
+      }
     }
     previous = item;
   }
-  if (previous) {
-    keepRoom(previous, null);
+};
+// Where what stands before an item in the list ends: the element before the
+// item, or before its group when it is the first of it — or the start of the
+// list's content when nothing does. Null when the element before is not laid
+// out.
+const readEndBefore = (itemEl, listEl, horizontal) => {
+  let slotEl = itemEl;
+  const groupListEl = itemEl.parentElement;
+  if (
+    groupListEl &&
+    groupListEl.classList.contains("navi_list_item_group_list") &&
+    groupListEl.firstElementChild === itemEl
+  ) {
+    slotEl = groupListEl.closest(".navi_list_item_group") || itemEl;
   }
+  const beforeEl = slotEl.previousElementSibling;
+  if (beforeEl) {
+    const rect = beforeEl.getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) {
+      return null;
+    }
+    return horizontal ? rect.right : rect.bottom;
+  }
+  if (slotEl.parentElement !== listEl) {
+    return null;
+  }
+  const listRect = listEl.getBoundingClientRect();
+  const listStyle = window.getComputedStyle(listEl);
+  return horizontal
+    ? listRect.left +
+        parseFloat(listStyle.borderLeftWidth) +
+        parseFloat(listStyle.paddingLeft)
+    : listRect.top +
+        parseFloat(listStyle.borderTopWidth) +
+        parseFloat(listStyle.paddingTop);
 };
 // The first item the screen shows from `position` on, and the item after the
 // last one it shows up to `position` (exclusive, like the window's end). An
@@ -4521,6 +4601,8 @@ const UnorderedList = ({
       grid={trackColumns ? true : undefined}
       gridTemplateColumns={trackColumns}
       {...rest}
+      // The gap a group the window cuts takes back (see data-continued).
+      style={withListGap(rest.style, spacing)}
       spacing={spacing}
       baseClassName="navi_list"
     >
@@ -4547,6 +4629,18 @@ const UnorderedList = ({
       </SearchNoMatchModeContext.Provider>
     </Box>
   );
+};
+// The list's spacing as a variable, next to the style it is given (an object
+// or a css string, as Box takes either).
+const withListGap = (style, spacing) => {
+  if (spacing === undefined) {
+    return style;
+  }
+  const gap = stringifySpacingStyle(spacing, "gap");
+  if (typeof style === "string") {
+    return `${style};--x-list-gap:${gap}`;
+  }
+  return { ...style, "--x-list-gap": gap };
 };
 
 // The "no match" message. Whether it shows is decided by ListUI (see its
@@ -4587,22 +4681,23 @@ const Fallback = ({ fallback }) => {
 // every item it draws must not be redrawn — every item of it — because the size
 // settled after the first commit.
 // It holds lines: the items side by side on one take its room together, and a
-// last line left short takes it all the same. An item the list drew before
-// takes the room it took then instead (see rememberItemRooms).
+// last line left short takes it all the same. An item whose room is known takes
+// that room instead: the one it took when the list drew it before (see
+// rememberItemRooms), or the one its run is given (see List.Items' itemSize).
 const VirtualFiller = ({
   edge,
   itemCount,
   itemsPerLine,
-  itemsRemembered,
-  roomRemembered,
+  itemsKnown,
+  roomKnown,
   findChunks,
 }) => {
   const listItems = useContext(ListItemsContext);
   const lineSize = listItems.virtualItemSizeSignal.value;
   const sizeToFill =
     Math.ceil(itemCount / itemsPerLine) * lineSize -
-    (itemsRemembered * lineSize) / itemsPerLine +
-    roomRemembered;
+    (itemsKnown * lineSize) / itemsPerLine +
+    roomKnown;
   // A filler resizing moves what stands below it — the items on screen, when it
   // holds the room of items above them — and it resizes in a commit of its own
   // when the item size settles after the list has rendered: the list puts its
@@ -5355,6 +5450,7 @@ const VISIBILITY_HIDDEN_STYLE = { visibility: "hidden" };
  *   pageSize?: number,
  *   memoryBudget?: number,
  *   renderSkeleton?: false | ((index: number) => import("preact").ComponentChildren),
+ *   itemSize?: (index: number) => number,
  *   renderError?: (failure: {error: any, retry: () => void, start: number, end: number}) => import("preact").ComponentChildren,
  *   onRequestStateChange?: (state: {busy: boolean, refreshing: boolean, range: {start: number, end: number}|null}) => void,
  * }>}
@@ -5387,6 +5483,10 @@ const VISIBILITY_HIDDEN_STYLE = { visibility: "hidden" };
  *   `<List.Group>` whose label (`renderGroupLabel`) stays on screen for as long
  *   as one of them is. The groups are found in the data as it arrives, which is
  *   the only way a list that discovers its items page by page can have any.
+ *   Style the label, not the group element: a group the render window cuts is
+ *   laid out by the list, its label over its first items, so that the label
+ *   and the gap before it — held in the room of the item opening the group —
+ *   take no room twice.
  * @param {(item: any, index: number) => any} [props.renderGroupLabel]
  *   The label of the group an item opens, given that item.
  * @param {(item: any, index: number) => object} [props.groupLabelProps]
@@ -5405,9 +5505,26 @@ const VISIBILITY_HIDDEN_STYLE = { visibility: "hidden" };
  *   further out. `Infinity` keeps every item the run ever received; `0` keeps
  *   only the ones around the window.
  * @param {false|(index: number) => any} [props.renderSkeleton]
- *   What to draw for an item the run does not hold. Defaults to List's own
+ *   What to draw for an item the run does not hold, at the room that item will
+ *   take: a screen of skeletons alone has no item for the list to hold still,
+ *   and when the page lands, what is below a skeleton of the wrong size moves
+ *   by the difference (see docs/scroll.md). Defaults to List's own
  *   `renderSkeleton`, then to a bare `<List.Item skeleton>`; `false` leaves the
  *   item empty (its room is still held, or the list would jump as it loads).
+ * @param {(index: number) => number} [props.itemSize]
+ *   The room the item at an index takes along the scroll axis, in px, known
+ *   before the item arrives: from where the item before it ends to where it
+ *   ends — what stands between the two is its own (the gap, a separator, the
+ *   label of the group it opens; the first item of the list has no gap before
+ *   it). The fillers then hold every item the list has not drawn at its own
+ *   room instead of List's `virtualItemSize`, and an item drawn above the
+ *   screen takes exactly the room held for it: nothing on screen moves. It is
+ *   the only way the screen holds still during a fling on iOS, where writing
+ *   the scroll to correct it would stop the fling. The same index
+ *   `renderSkeleton` is given — the two draw on the same knowledge. A room
+ *   measured on an item drawn wins over it, and in development one that
+ *   differs from it is reported. Items side by side in a grid (`columns`)
+ *   share a line, which keeps `virtualItemSize`.
  * @param {(failure: {error: any, retry: () => void, start: number, end: number}) => any} [props.renderError]
  *   What to draw where items were asked for and never came: given the `error`,
  *   a `retry` to call, and the `start`/`end` of the range that failed — the
@@ -5480,6 +5597,7 @@ const useRunItems = (
     renderItem,
     findText,
     pageSize,
+    itemSize,
     groupBy,
     renderGroupLabel,
     groupLabelProps,
@@ -5566,6 +5684,28 @@ const useRunItems = (
     const item = getItemAt(itemIndex);
     return item === undefined ? undefined : idOf(item, itemIndex);
   };
+  // The room the caller says an item takes (`itemSize`), drawn or not.
+  const givenRoomOf = (itemIndex) => {
+    if (
+      !itemSize ||
+      itemsPerLine !== 1 ||
+      itemIndex < runStart ||
+      itemIndex >= runEnd
+    ) {
+      return undefined;
+    }
+    const room = itemSize(itemIndex);
+    return room > 0 ? room : undefined;
+  };
+  // The room an item took when the list last drew it (see rememberItemRooms),
+  // else the room the caller gives it, else undefined: a filler holds an item
+  // it knows nothing about at the item size.
+  const roomOf = (itemIndex) => {
+    const id = idAt(itemIndex);
+    const remembered =
+      id === undefined ? undefined : listItems.roomById.get(id);
+    return remembered === undefined ? givenRoomOf(itemIndex) : remembered;
+  };
   listItems.setItemLocator(ownerId, {
     indexOf: (id) => {
       let found = null;
@@ -5577,29 +5717,24 @@ const useRunItems = (
       });
       return found;
     },
-    idAt,
+    roomAt: roomOf,
+    givenRoomAt: givenRoomOf,
   });
-  // The room an item took when the list last drew it (see rememberItemRooms),
-  // or undefined: a filler holds an item it never drew at the item size.
-  const roomOf = (itemIndex) => {
-    const id = idAt(itemIndex);
-    return id === undefined ? undefined : listItems.roomById.get(id);
-  };
-  const readRemembered = (from, to) => {
-    const remembered = { room: 0, count: 0 };
-    if (listItems.roomById.size === 0) {
-      return remembered;
+  const readKnownRooms = (from, to) => {
+    const known = { room: 0, count: 0 };
+    if (listItems.roomById.size === 0 && !itemSize) {
+      return known;
     }
     let itemIndex = from;
     while (itemIndex < to) {
       const room = roomOf(itemIndex);
       if (room !== undefined) {
-        remembered.room += room;
-        remembered.count++;
+        known.room += room;
+        known.count++;
       }
       itemIndex++;
     }
-    return remembered;
+    return known;
   };
   useLayoutEffect(() => {
     return () => {
@@ -5745,6 +5880,7 @@ const useRunItems = (
         }
         label={group.label}
         labelProps={group.labelProps}
+        continued={group.continued}
       >
         {group.children}
       </ListItemGroup>,
@@ -5788,10 +5924,41 @@ const useRunItems = (
     }
     return groupBy(item, itemIndex);
   };
+  // Where a group opened at that item began, when not there (see
+  // data-continued): "above" the window, or in the "hole" of items not held
+  // drawn right before it. Items not held belong to the group they lead to as
+  // often as not — a page lands every hundred items, a group starts a few
+  // times in a thread — so a group the window starts in is taken to go on
+  // above it unless the item before, held, says otherwise.
+  // Along y only, never built along x: there a group stands its label over
+  // its items, so the label takes no room on the axis (unless it is wider than
+  // the items drawn) and only the gap would be taken back — `margin-left`,
+  // without the overlay of the data-continued rule. Nothing measured it yet.
+  let afterHole = false;
+  const whereGroupContinues = (groupKey, itemIndex) => {
+    if (listItems.horizontal) {
+      return undefined;
+    }
+    if (afterHole) {
+      return "hole";
+    }
+    if (itemIndex !== windowFrom || windowFrom <= runStart) {
+      return undefined;
+    }
+    const itemBefore = getItemAt(windowFrom - 1);
+    if (
+      itemBefore === undefined ||
+      groupBy(itemBefore, windowFrom - 1) === groupKey
+    ) {
+      return "above";
+    }
+    return undefined;
+  };
   const pushItem = (itemNode, item, itemIndex, groupKey) => {
     if (groupKey === undefined) {
       closeGroup();
       nodes.push(itemNode);
+      afterHole = item === undefined;
       return;
     }
     if (!group || group.key !== groupKey) {
@@ -5802,9 +5969,11 @@ const useRunItems = (
         labelProps: groupLabelProps
           ? groupLabelProps(item, itemIndex)
           : undefined,
+        continued: whereGroupContinues(groupKey, itemIndex),
         children: [],
       };
     }
+    afterHole = false;
     group.children.push(itemNode);
   };
   // The text of the items a filler stands for, cut in chunks aligned on the
@@ -5849,15 +6018,15 @@ const useRunItems = (
   // one run, and what sits before or after it (a header, items given one by
   // one) is not virtualized at all.
   if (windowFrom > runStart) {
-    const remembered = readRemembered(runStart, windowFrom);
+    const known = readKnownRooms(runStart, windowFrom);
     nodes.push(
       <VirtualFiller
         key="navi-list-filler-before"
         edge="before"
         itemCount={windowFrom - runStart}
         itemsPerLine={itemsPerLine}
-        itemsRemembered={remembered.count}
-        roomRemembered={remembered.room}
+        itemsKnown={known.count}
+        roomKnown={known.room}
         findChunks={getFindChunks(runStart, windowFrom)}
       />,
     );
@@ -5888,6 +6057,7 @@ const useRunItems = (
           )}
         </li>,
       );
+      afterHole = false;
       itemIndex = failureTo + 1;
       continue;
     }
@@ -5971,15 +6141,15 @@ const useRunItems = (
   }
   closeGroup();
   if (runEnd > windowTo) {
-    const remembered = readRemembered(windowTo, runEnd);
+    const known = readKnownRooms(windowTo, runEnd);
     nodes.push(
       <VirtualFiller
         key="navi-list-filler-after"
         edge="after"
         itemCount={runEnd - windowTo}
         itemsPerLine={itemsPerLine}
-        itemsRemembered={remembered.count}
-        roomRemembered={remembered.room}
+        itemsKnown={known.count}
+        roomKnown={known.room}
         findChunks={getFindChunks(windowTo, runEnd)}
       />,
     );
@@ -6683,12 +6853,17 @@ const useItemStore = ({
  *   hiddenWhileEmpty — the group leaves the flow (`display: none`) while it
  *                      holds no real item — a search that emptied it, items not
  *                      arrived yet
+ *   continued        — set by a run of items, not by callers: the group began
+ *                      before the first item drawn ("above" the render window,
+ *                      or in a "hole" of items not held), and what stands
+ *                      before that item takes no room (see data-continued)
  *   ...rest          — forwarded to the outer <li role="presentation">
  */
 export const ListItemGroup = ({
   label,
   labelProps,
   hiddenWhileEmpty,
+  continued,
   children,
   ...rest
 }) => {
@@ -6739,6 +6914,7 @@ export const ListItemGroup = ({
       baseClassName="navi_list_item_group"
       role="presentation"
       data-hidden-while-empty={hiddenWhileEmpty ? "" : undefined}
+      data-continued={continued}
     >
       <span
         {...labelRest}
@@ -6992,7 +7168,8 @@ const ListResolved = /*#__PURE__*/ createComponentResolver([
  *   the fillers hold for it outside the render window, what a scroll position
  *   inside them is read with, and the least an item on its way takes (see
  *   `renderSkeleton`). An item the list has drawn is held at the room it took
- *   then. Left out, it is the average of the items measured so far — once when
+ *   then, and an item whose run says its room (`<List.Items itemSize>`) at
+ *   that room. Left out, it is the average of the items measured so far — once when
  *   the list mounts, again when a popup around it opens, and after each commit
  *   while items are held off screen. Given, it is the worst case: the size
  *   every item has, or, in a list whose items differ, the smallest an item can

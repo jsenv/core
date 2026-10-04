@@ -196,8 +196,10 @@ takes the list back to where it was, which may be nowhere near that row.
 `loading` (with `loadingFallback`, `loadingSkeletonCount`, `renderSkeleton`)
 says "I have nothing at all to show yet": placeholder rows stand in for the
 whole list. `<List.Items count>` says "I know how many rows are coming": the
-rows not held yet are skeletons in their own place, asked for as they enter the
-render window — a list that knows its count has no use for the first one.
+rows not held yet are skeletons in their own place, at their own size (see
+[What the list knows, and what it guesses](#what-the-list-knows-and-what-it-guesses)),
+asked for as they enter the render window — a list that knows its count has no
+use for the first one.
 
 Reference: `src/control/list/list.jsx` (JSDoc on `List` and `List.Items`).
 
@@ -362,9 +364,9 @@ room it took — the window sliding changes nothing above the screen. What was
 never drawn it cannot measure, so it guesses:
 
 - the fillers hold every item never drawn at one size — `virtualItemSize` when
-  given, the average of the items measured so far otherwise. A scroll position
-  inside a filler is read with it too, and an item on its way takes at least
-  that room;
+  given, the average of the items measured so far otherwise — unless its run
+  says the room it takes (see below). A scroll position inside a filler is
+  read with it too, and an item on its way takes at least that room;
 - when the window reaches past what it has drawn, it weighs the next items like
   the drawn ones next to them, and measures them once they are drawn.
 
@@ -375,10 +377,35 @@ item guessed **bigger** makes it count too few, and a blank shows until they
 are measured. So a size you give is the **worst case**: in a list whose items
 differ in height, `virtualItemSize` is the smallest an item can be — the
 one-line item, in a thread of one-line items and cards. The scrollbar then
-under-states a list made mostly of big items; the screen stays covered. One
-number for the whole list is the point: a size per kind of item, or per state
-of one, is a model to keep in step with the markup, for a scrollbar a little
-more exact.
+under-states a list made mostly of big items; the screen stays covered.
+
+A guess costs something else when its item is drawn above the screen: the item
+takes its real room, and what is on screen moves by the difference. The list
+puts the screen back by writing the scroll, except where a write would cost the
+user the scroll in progress — and on iOS a fling stops at any write, so during
+a fling every card drawn above the screen pushes it down. A list that knows
+the room of each item before the item arrives says it with `<List.Items
+itemSize>`, and guesses nothing: the fillers hold every item at its own room.
+That is a model to keep in step with the markup (in development, a drawn item
+whose room differs from it is reported), worth it where the items above the
+screen come in a few sizes the data tells apart before it arrives — the
+one-line games and the compact cards of a thread, when the server says which
+past games have a score.
+
+The items on their way are held the same way: a skeleton stands where its item
+will be, at the room it is drawn at, and when the page lands each item takes
+its own room — what is below a skeleton of the wrong size moves by the
+difference. The list puts the screen back while a real item is on it, but a
+fling into a part of the collection not loaded yet leaves a screen of skeletons
+alone, with no item to hold: the screen moves with every skeleton that was
+wrong (hundreds of pixels, in a thread drawing one-line skeletons where compact
+cards land). So `renderSkeleton` draws each index at the room its item will
+take, from what is known before the data — the same knowledge `itemSize` gives
+the fillers. Items that cannot be told apart before they arrive are better
+drawn at one height than announced by skeletons that guess. And anything drawn
+above the screen that changes size afterwards — an image without its
+dimensions, a block that expands — moves the screen the same way, which nothing
+puts back during a fling on iOS: reserve its room.
 
 The window's own guess past what it has drawn is the one that is not the worst
 case, on purpose. Guessing the smallest there walks into cards at the one-line
@@ -457,6 +484,9 @@ Reference: `src/control/demos/19_list_find_in_page_demo.html`.
 
 ### Doing it well
 
+- **Skeletons at the size of their item**, and `itemSize` when the items above
+  the screen come in sizes the data tells apart before it arrives (see
+  [What the list knows, and what it guesses](#what-the-list-knows-and-what-it-guesses)).
 - **A stable `id` on every item.** The run keys its rows on `item.id` — it is
   what addresses a row from outside (`--navi-select`, `scrolled={{ id }}`), and
   what tells a row that moved from a row that changed.

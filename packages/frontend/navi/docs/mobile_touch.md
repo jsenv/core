@@ -207,8 +207,9 @@ below, though: the obvious ones hide the race.
 **Chrome**: drive DevTools' touch emulator, which goes through Chrome's
 gesture detector with the **mobile** configuration (8px slop):
 
-- a headed Chromium (`chromium.launch({ headless: false })`) — headless
-  delivers nothing through this path;
+- a full browser: Chrome (`chromium.launch({ channel: "chrome" })`), headless
+  or not, or a headed Chromium (`headless: false`) — Playwright's default
+  headless shell delivers nothing through this path;
 - on a CDP session, `Emulation.setEmitTouchEventsForMouse({ enabled: true,
 configuration: "mobile" })`, then `Input.dispatchMouseEvent` with
   `mousePressed` / `mouseMoved` / `mouseReleased` (`buttons: 1` while down). The
@@ -237,6 +238,18 @@ them exactly as on a phone:
   and a restarted `safaridriver`. The page's `localStorage` does not survive
   that, so whatever must be read is read before the swipe.
 
+A fling — the momentum a lifted finger leaves — is out of `safaridriver`'s
+reach for the same reason. The Simulator turns the Mac's mouse into a finger:
+system mouse events (`CGEvent`, a press, moves a frame apart, a release while
+still moving fast) on the Simulator window fling Safari exactly like a thumb,
+its momentum included (over 3 s: flings closer than that add up). The window
+has to be on screen in the current Space: when it is not, activating the
+Simulator does not bring it, and the events land in whatever window is under
+the pointer — check which window is topmost at the points of the drag before
+sending any, and wait for the Space to switch after activating. What the page
+records is read back through a request it sends itself (the page runs on a
+local server), since nothing can query it.
+
 What to synthesize is the hand's imperfection — a gesture simulated as clean,
 evenly spaced points passes forever and proves nothing: a slow start landing a
 report between 6 and 9px, steep first pixels, a report that jumps. What to read:
@@ -244,10 +257,10 @@ the `touchmove`s with `cancelable` and `defaultPrevented`, the `pointercancel`,
 `scrollY`, and what the gesture itself says (for a travel,
 `data-drag-travel-walking` on `:root` and the slide that ends up current).
 
-What neither path shows: the lift of a real finger (the last reports before
-`pointerup`), a real device's event timing (the order in which the browser's
-cancel and the next report reach the page), a momentum tail killed by a landing
-finger. Those remain device questions.
+What these paths do not show: the lift of a real finger (the last reports
+before `pointerup`), a real device's event timing (the order in which the
+browser's cancel and the next report reach the page), a momentum tail killed by
+a landing finger. Those remain device questions.
 
 Reference: `src/layout/demos/lab/slide_container_touch_race.html` — a row of
 slides that do not scroll and a row that do, for the two cases above.

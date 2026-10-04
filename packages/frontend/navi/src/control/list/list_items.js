@@ -457,13 +457,24 @@ export const createListItems = () => {
       }
       return null;
     },
-    // The room the item at that index took when it was last drawn, or
-    // undefined: never drawn, not held, or not an item of a run.
+    // The room the item at that index takes: the room it took when it was
+    // last drawn, else the room its run is given for it (see List.Items'
+    // itemSize), else undefined.
     roomAt: (index) => {
       for (const locator of locatorByOwner.values()) {
-        const id = locator.idAt(index);
-        if (id !== undefined) {
-          return roomById.get(id);
+        const room = locator.roomAt(index);
+        if (room !== undefined) {
+          return room;
+        }
+      }
+      return undefined;
+    },
+    // The room the run of that index is given for it, whatever was measured.
+    givenRoomAt: (index) => {
+      for (const locator of locatorByOwner.values()) {
+        const room = locator.givenRoomAt(index);
+        if (room !== undefined) {
+          return room;
         }
       }
       return undefined;
