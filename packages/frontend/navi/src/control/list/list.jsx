@@ -19,7 +19,7 @@ import {
 // scrolls, which the CSS below reads.
 import "../../utils/scroll_activity.js";
 import { afterPaint } from "../../utils/after_paint.js";
-import { wouldInterruptScroll } from "../../utils/scroll_in_flight.js";
+import { scrollByUnlessInterrupting } from "../../utils/scroll_in_flight.js";
 
 import {
   createComponentResolver,
@@ -2608,18 +2608,12 @@ const useListScrollSync = ({
       if (delta > -0.5 && delta < 0.5) {
         return;
       }
-      if (wouldInterruptScroll(scrollerEl)) {
-        // As the anchoring's write would (see holdAnchorStill). The document's
-        // box is the scroller of a list scrolling the page, and it resizes with
-        // every item drawn taller than its filler: while the page scrolls, that
-        // is at every window move.
-        return;
-      }
-      anchorRef.current = null;
-      if (horizontal) {
-        scrollerEl.scrollLeft += delta;
-      } else {
-        scrollerEl.scrollTop += delta;
+      // Not into a scroll it would cut short, as the anchoring's write (see
+      // holdAnchorStill). The document's box is the scroller of a list
+      // scrolling the page, and it resizes with every item drawn taller than
+      // its filler: while the page scrolls, that is at every window move.
+      if (scrollByUnlessInterrupting(scrollerEl, delta, { horizontal })) {
+        anchorRef.current = null;
       }
     };
     const observer = new ResizeObserver((entries) => {
@@ -2715,19 +2709,13 @@ const useListScrollSync = ({
       return;
     }
     anchorRef.current = null;
-    if (wouldInterruptScroll(scrollerEl)) {
-      // Nobody is looking at items standing still: they are passing by, on
-      // their way somewhere the browser takes them (a key, a smooth scrollTo,
-      // the status bar, a fling on iOS). The write would stop that scroll short
-      // of where it was going. Left alone, the items drawn above push the rest
-      // by `drift` while all of it moves, and the scroll lands.
-      return;
-    }
-    scrolledByListRef.current = true;
-    if (horizontal) {
-      scrollerEl.scrollLeft += drift;
-    } else {
-      scrollerEl.scrollTop += drift;
+    // Not written into a scroll nobody is looking at: its items are passing
+    // by, on their way somewhere the browser takes them (a key, a smooth
+    // scrollTo, the status bar, a fling on iOS). The write would stop that
+    // scroll short of where it was going. Left alone, the items drawn above
+    // push the rest by `drift` while all of it moves, and the scroll lands.
+    if (scrollByUnlessInterrupting(scrollerEl, drift, { horizontal })) {
+      scrolledByListRef.current = true;
     }
   };
   useLayoutEffect(holdAnchorStill);

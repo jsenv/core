@@ -1,13 +1,14 @@
 /*
- * Whether writing a scroll position now would cost the user the scroll in
- * progress. A write is an instant scroll, and the browser abandons for it any
- * scroll it is playing on its own, short of where that one was going: a key
- * (Home, PageDown, Space), a smooth `scrollTo` or `scrollIntoView`, the status
- * bar tap on iOS. A scroll following a hand is not abandoned: the wheel's next
- * turn carries on, and on most engines a finger keeps dragging from wherever
- * the write left it, and the fling it leaves behind once it lifts carries on
- * from there too (Chrome under DevTools' touch emulation: flings written to at
- * every move of a list's window went as far as flings never written to).
+ * Moves a scroll by what the content moved under the user, unless the write
+ * would cost them the scroll in progress. A write is an instant scroll, and
+ * the browser abandons for it any scroll it is playing on its own, short of
+ * where that one was going: a key (Home, PageDown, Space), a smooth `scrollTo`
+ * or `scrollIntoView`, the status bar tap on iOS. A scroll following a hand is
+ * not abandoned: the wheel's next turn carries on, and on most engines a
+ * finger keeps dragging from wherever the write left it, and the fling it
+ * leaves behind once it lifts carries on from there too (Chrome under
+ * DevTools' touch emulation: flings written to at every move of a list's
+ * window went as far as flings never written to).
  *
  * A fling must not be taken for a scroll the browser plays on its own. A list
  * then leaves uncorrected, for the whole fling, the room its fillers lose above
@@ -34,6 +35,18 @@
  * while the finger is still on one of them, and the touchend of a removed
  * element never reaches the document.
  *
+ * Chrome ends a scroll at every write, a finger's fling included: "scrollend"
+ * a frame after the write, and the fling goes on a frame later as a scroll of
+ * its own, as far as it was going (a bare page written to every 120ms of a
+ * fling: 9 "scrollend" for 8 writes, the fling as long). Taken for a new
+ * scroll, it is nobody's once it starts far enough from the finger's last
+ * move, and the list's corrections are refused for the rest of the fling: in
+ * wematch, cards drawn above the screen pushing it down at every window slide.
+ * So a scroll starting right after the "scrollend" of a scroll written to here
+ * goes on as that scroll: same start, same hand. Only a written one: a scroll
+ * starting right after one that ended on its own is a new one, a key or a
+ * smooth `scrollTo` must not pass for the fling before it.
+ *
  * In a browser without "scrollend", no write is said to interrupt anything: a
  * scroll would never be seen ending.
  */
@@ -43,8 +56,8 @@
 // hand on a scroll that came from elsewhere.
 const WHEEL_REACH = 100;
 // The fling Chrome plays as a scroll of its own starts a frame or two after the
-// drag's last move (DevTools' touch emulation, 4× CPU: 12ms after the drag's
-// "scrollend").
+// "scrollend" of the drag, or of a write (DevTools' touch emulation, 4× CPU:
+// 12ms after the drag's, 24 to 40ms after a write's in wematch).
 const FLING_REACH = 150;
 // iOS's touch handling, the one engine whose finger drops writes (see above).
 const FINGER_KEEPS_WRITES = !window.CSS.supports(
@@ -53,15 +66,42 @@ const FINGER_KEEPS_WRITES = !window.CSS.supports(
 );
 
 const flightMap = new WeakMap();
+// Scrollers written to since their last "scrollend": that "scrollend" may be
+// the write's.
+const writtenScrollerSet = new WeakSet();
+// The flight of a written scroller, from its "scrollend" until a scroll goes on
+// with it.
+const writtenFlightEndMap = new WeakMap();
 let fingersDown = 0;
 let wheelTimeStamp = -Infinity;
 let fingerScrollTimeStamp = -Infinity;
 
 /**
+ * Answers whether it wrote.
+ *
  * @param {Element} scrollerEl
+ * @param {number} delta
+ * @param {{ horizontal?: boolean }} [options]
  * @returns {boolean}
  */
-export const wouldInterruptScroll = (scrollerEl) => {
+export const scrollByUnlessInterrupting = (
+  scrollerEl,
+  delta,
+  { horizontal } = {},
+) => {
+  if (wouldInterruptScroll(scrollerEl)) {
+    return false;
+  }
+  writtenScrollerSet.add(scrollerEl);
+  if (horizontal) {
+    scrollerEl.scrollLeft += delta;
+  } else {
+    scrollerEl.scrollTop += delta;
+  }
+  return true;
+};
+
+const wouldInterruptScroll = (scrollerEl) => {
   const flight = flightMap.get(scrollerEl);
   if (!flight) {
     return false;
@@ -103,6 +143,15 @@ if ("onscrollend" in window) {
       if (flightMap.has(scroller)) {
         return;
       }
+      const writtenFlightEnd = writtenFlightEndMap.get(scroller);
+      writtenFlightEndMap.delete(scroller);
+      if (
+        writtenFlightEnd &&
+        e.timeStamp - writtenFlightEnd.timeStamp < FLING_REACH
+      ) {
+        flightMap.set(scroller, writtenFlightEnd.flight);
+        return;
+      }
       flightMap.set(scroller, { timeStamp: e.timeStamp });
     },
     { capture: true, passive: true },
@@ -110,7 +159,13 @@ if ("onscrollend" in window) {
   document.addEventListener(
     "scrollend",
     (e) => {
-      flightMap.delete(asScroller(e.target));
+      const scroller = asScroller(e.target);
+      const flight = flightMap.get(scroller);
+      flightMap.delete(scroller);
+      if (flight && writtenScrollerSet.has(scroller)) {
+        writtenFlightEndMap.set(scroller, { flight, timeStamp: e.timeStamp });
+      }
+      writtenScrollerSet.delete(scroller);
     },
     { capture: true, passive: true },
   );
