@@ -114,8 +114,8 @@ start when unsure which export solves a problem.
   Before any handler whose body only assigns state.
 - `control_value.md` — who holds a control's value; `--navi-update` for a button
   proposing one; a `defaultValue` follows the record it was read from; empty
-  keeps the shape of the question. Before wiring a value with `value` +
-  `uiAction`.
+  keeps the shape of the question; what a checkbox is worth (`boolean` for a
+  yes/no). Before wiring a value with `value` + `uiAction`.
 - `control_object.md` — one value made of several controls: `ControlGroup` versus
   `Form`, naming, `<Picker type="object">`, a settings sheet, controls that are
   not there (lazy slides, popups, deferred boxes, items outside the render
@@ -226,8 +226,10 @@ start when unsure which export solves a problem.
   `<Input type="checkbox">`/`<Input type="radio">`; there is no `Checkbox`),
   `Select`, `Picker` and the others work with nothing wired: inside a `Form`, the
   form reads them when it sends. When the app needs the value, bind it with
-  `signal`. `action` reacts to a change that can fail or take time; it is not how
-  a control is wired. Never `onChange` + manual state.
+  `signal`. A checkbox is HTML's (`"on"` or its `value`, `undefined` unchecked);
+  a yes/no is `<Input type="checkbox" boolean>`, `true` or `false`. `action`
+  reacts to a change that can fail or take time; it is not how a control is
+  wired. Never `onChange` + manual state.
 - **A gesture is named, not read by hand**: `interactions={{ swipe_right: … }}`
   on any `Box`, so on any component — never a `pointerdown` listener of your own.
 - **Texts**: a user-visible sentence containing a value is one template with

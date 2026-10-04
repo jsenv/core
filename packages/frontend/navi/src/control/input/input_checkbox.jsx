@@ -330,7 +330,27 @@ const css = /* css */ `
 export const InputCheckbox = (props) => {
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
-  props.value = props.value === undefined ? "on" : props.value;
+  const valueWarnedRef = useRef(false);
+  if (import.meta.dev && !valueWarnedRef.current) {
+    // `true` is what `boolean` writes into `value` below, and Preact hands the
+    // same props object back on a re-render the component triggers itself.
+    if (props.boolean && props.value !== undefined && props.value !== true) {
+      valueWarnedRef.current = true;
+      console.warn(
+        `[checkbox] "boolean" is true or false, its "value" is ignored: remove value={${JSON.stringify(props.value)}}.`,
+      );
+    } else if (!props.boolean && props.value === true) {
+      valueWarnedRef.current = true;
+      console.warn(
+        `[checkbox] value={true} is a value like any other: unchecked is undefined. For a yes/no (true or false), use the "boolean" prop.`,
+      );
+    }
+  }
+  if (props.boolean) {
+    props.value = true;
+  } else if (props.value === undefined) {
+    props.value = "on";
+  }
 
   if (props.headless) {
     return <InputCheckboxHeadless {...props} headless={undefined} />;

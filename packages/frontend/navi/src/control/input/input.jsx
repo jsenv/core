@@ -15,8 +15,15 @@ import { resolveInputProps } from "./resolve_input_props.js";
  *   type?: string,
  *   icon?: import("preact").ComponentChildren | null,
  *   clearable?: boolean,
+ *   value?: any,
+ *   boolean?: boolean,
  *   [key: string]: any,
  * }>}
+ * @param {any} [value] On a checkbox, what it is worth checked (`"on"` when
+ *   left out); unchecked it is `undefined`. See control_value.md, "What a
+ *   checkbox is worth".
+ * @param {boolean} [boolean] Makes a checkbox a yes/no: `true` checked, `false`
+ *   unchecked, everywhere it hands its value. Takes no `value`.
  * @param {import("preact").ComponentChildren|null} [icon] What the textual
  *   types that draw an icon (`search`, `email`, `tel`) put in their slot: left
  *   out, the type's own glyph; `null`, nothing — for a field an application

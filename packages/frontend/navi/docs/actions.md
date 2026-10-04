@@ -313,12 +313,16 @@ the control's value, so the callback receives what the control now holds.
 ```jsx
 // ✓ the box shows it is saving, says so if the save fails, and goes back to
 //   where it was — nothing to write for any of it
-<Input type="checkbox" action={(visibility) => saveMe({ visibility })} />
+<Input type="checkbox" boolean action={(visibility) => saveMe({ visibility })} />
 
 // ✗ same save, and the user learns nothing: no pending state, and a failure
 //   leaves the box showing something the server never accepted
-<Input type="checkbox" uiAction={(visibility) => saveMe({ visibility })} />
+<Input type="checkbox" boolean uiAction={(visibility) => saveMe({ visibility })} />
 ```
+
+`boolean` makes the box a yes/no, `true` or `false`; without it, unchecked is
+`undefined` and the save sends nothing (see
+[control_value.md](./control_value.md#what-a-checkbox-is-worth)).
 
 The give-away is an `async` `uiAction`, or one that calls something that writes:
 `uiAction` never waits for what it starts, so nobody is left holding the result.

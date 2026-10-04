@@ -130,6 +130,10 @@ export const CONTROL_PROP_SET = new Set([
   "charGuard",
   "maxLengthGuard",
 
+  // A checkbox that is a yes/no: `true` checked, `false` unchecked, instead of
+  // HTML's value-or-nothing (see resolveEmptyUIState).
+  "boolean",
+
   // This control answers for itself: it registers into no group, no form and no
   // picker around it (see useUIStateController). It belongs here rather than
   // being deleted off `props` where it is read: props is the vnode's own object

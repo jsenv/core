@@ -284,7 +284,7 @@ export const useControlProps = (
   // of a form would re-render at each change of any of its fields.
   // eslint-disable-next-line no-unused-expressions
   uiStateController.ownUIStateSignal.value;
-  const boundAction = useAction(props.action, uiStateController.uiStateSignal);
+  const boundAction = useAction(props.action, uiStateController.valueSignal);
   const [controlRootProps, controlHostProps] = useInteractiveProps(props, {
     uiStateController,
     boundAction,

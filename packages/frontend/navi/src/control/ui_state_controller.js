@@ -183,6 +183,14 @@ export const useUIStateController = (
             return ownUIState || parentUIState;
           })
         : ownUIStateSignal;
+      // What the control is worth, which its action is bound to: what it
+      // holds, or its own empty when it holds nothing. Apart from
+      // uiStateSignal because unchecked is `undefined` there (the DOM reads any
+      // other value as checked), while a yes/no unchecked is worth `false`.
+      const emptyUIStateSignal = signal(emptyUIState);
+      const valueSignal = computed(() =>
+        uiStateOrEmpty(uiStateSignal.value, emptyUIStateSignal.value),
+      );
 
       // The two-way half of a bound `signal` prop: setting it re-renders and
       // re-syncs via state_prop_change, but with the same value → guarded as a
@@ -231,6 +239,7 @@ export const useUIStateController = (
         // travel command ended up carrying a picker's selection: see
         // resolveCommandValue in commands.js.
         ownUIStateSignal,
+        valueSignal,
         value: controlInfo.value,
         // The suggestion this control started on — what tells a field showing
         // its default from one carrying an answer (see isUIStateHeld).
@@ -294,8 +303,12 @@ export const useUIStateController = (
           }
           s.uiActionInternal?.(currentUIState, e);
           if (s.uiAction) {
-            debugUIState(`calling uiAction for ${controlType}`, currentUIState);
-            s.uiAction(currentUIState, e);
+            const value = uiStateOrEmpty(
+              currentUIState,
+              controller.emptyUIState,
+            );
+            debugUIState(`calling uiAction for ${controlType}`, value);
+            s.uiAction(value, e);
           }
           if (skipCommand) {
           } else {
@@ -800,6 +813,7 @@ export const useUIStateController = (
       return {
         controller,
         parentUiStateSignalHolder,
+        emptyUIStateSignal,
         ...liveValues(),
       };
     },
@@ -921,6 +935,7 @@ export const useUIStateController = (
   );
   scope.parentUiStateSignalHolder.value =
     parentUIStateController?.uiStateSignal ?? null;
+  scope.emptyUIStateSignal.value = emptyUIState;
 
   const { controller } = scope;
   const controllerRef = controller.ref;
@@ -1131,14 +1146,11 @@ const keptAndNamedChildUIStates = (children, fallbackState, kept) => {
 const readNamedChildUIStates = (children, { warnNameless }) => {
   const values = {};
   for (const child of children) {
-    const { name, emptyUIState } = child;
+    const { name } = child;
     // A control holding nothing writes its own empty, not a hole: the key is in
     // the object either way, and what is read from it keeps the shape the
     // reader was promised (see resolveEmptyUIState).
-    const uiState =
-      child.uiState === undefined && emptyUIState !== undefined
-        ? emptyUIState
-        : child.uiState;
+    const uiState = uiStateOrEmpty(child.uiState, child.emptyUIState);
     if (!name) {
       if (isNamelessGrouping(child, uiState)) {
         Object.assign(
@@ -2485,11 +2497,10 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
           // whose last item was unselected holds [], the same thing clearing it
           // leaves — not a value that changes type on its owner the moment it
           // empties.
-          const { emptyUIState } = s.realUIStateController;
-          const uiStateToAdopt =
-            child.uiState === undefined && emptyUIState !== undefined
-              ? emptyUIState
-              : child.uiState;
+          const uiStateToAdopt = uiStateOrEmpty(
+            child.uiState,
+            s.realUIStateController.emptyUIState,
+          );
           s.realUIStateController.setUIState(uiStateToAdopt, propagateUpEvent);
           updatingRef.current = false;
         },
@@ -2813,8 +2824,9 @@ const resolveEmptyUIState = (props, controlType) => {
   if (controlType === "input" && props.type === "checkbox") {
     // A checkbox is a member of a set, the way HTML has it: checked it sends
     // its value ("on" by default), unchecked it sends nothing at all. Only one
-    // holding `true` is a yes/no, and a yes/no nobody said yes to is `false`.
-    return props.value === true ? false : undefined;
+    // declared `boolean` is a yes/no, and a yes/no nobody said yes to is
+    // `false`.
+    return props.boolean ? false : undefined;
   }
   const stateShape = props["navi-state-shape"];
   if (stateShape === "array") {
@@ -2824,6 +2836,15 @@ const resolveEmptyUIState = (props, controlType) => {
     return EMPTY_OBJECT;
   }
   return undefined;
+};
+
+// What a control holding `uiState` is worth: its own empty when it holds
+// nothing, so the reader gets the shape it was promised.
+const uiStateOrEmpty = (uiState, emptyUIState) => {
+  if (uiState === undefined && emptyUIState !== undefined) {
+    return emptyUIState;
+  }
+  return uiState;
 };
 
 // What a cleared control shows: its own empty, kept in the shape it was holding.

@@ -14,6 +14,7 @@ somewhere else in the app.
 - [Drawing what a control holds](#drawing-what-a-control-holds)
 - [What a signal holds, control by control](#what-a-signal-holds-control-by-control)
 - [Empty keeps the shape of the question](#empty-keeps-the-shape-of-the-question)
+- [What a checkbox is worth](#what-a-checkbox-is-worth)
 - [Which controls take a `signal`](#which-controls-take-a-signal)
 - [The PROP is what controls, not its value](#the-prop-is-what-controls-not-its-value)
 - [A yes/no shown as two rows](#a-yesno-shown-as-two-rows)
@@ -281,18 +282,37 @@ it holds something. A list of days nobody picked is `[]`, not `""`:
 | `Picker type="array"`, `List selectable multiple` | `[]`     |
 | `Picker type="object"`                            | `{}`     |
 | text/number/date `Input`, `Select`                | `""`     |
-| `Input type="checkbox" value={true}`              | `false`  |
-| radio, checkbox holding a value of its own        | absent   |
+| `Input type="checkbox" boolean`                   | `false`  |
+| radio, any other checkbox                         | absent   |
 
 This is what a clear (`--navi-clear`, a row's cross) leaves behind and what the
 object around it carries, so `value.days || []` is not needed.
 
-A checkbox is a member of a set, the way HTML has it: checked it carries its
-`value` (`"on"` when it was given none), unchecked it carries nothing at all —
-which is what lets several checkboxes sharing a name aggregate into an array. A
-checkbox that is a yes/no says so with `value={true}`, and is then `true` or
-`false`. Its bound `signal` holds the boolean either way: what a signal on a
-checkbox is about is whether it is checked.
+## What a checkbox is worth
+
+A checkbox answers the way HTML's does: checked it carries its `value`,
+unchecked it carries nothing. `boolean` makes it a yes/no instead:
+
+| checkbox       | checked  | unchecked   |
+| -------------- | -------- | ----------- |
+| no `value`     | `"on"`   | `undefined` |
+| `value="toto"` | `"toto"` | `undefined` |
+| `value={true}` | `true`   | `undefined` |
+| `boolean`      | `true`   | `false`     |
+
+That is what it hands everywhere: to its own `action` and `uiAction`, and to
+the form or group around it. Only a bound `signal` differs: it holds whether the
+box is checked, a boolean in every row above.
+
+Choose by what the box asks:
+
+- **A yes/no** (a setting, a consent, a favourite) is `boolean`. Unchecked has
+  to say "no", and `undefined` says nothing: `{ favourite: undefined }` is sent
+  as `{}`, the server changes nothing, and the box shows a "no" nobody
+  accepted.
+- **A member of a set** (several checkboxes sharing a `name`, each adding its
+  value) takes its own `value`, or none for `"on"`. Unchecked carries nothing,
+  so the group gathers only the checked ones into an array.
 
 ## Which controls take a `signal`
 
