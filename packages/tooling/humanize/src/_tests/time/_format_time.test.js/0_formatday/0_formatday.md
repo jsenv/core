@@ -8,31 +8,31 @@ return table(
       "2026-05-10 (yesterday)",
       "default",
       "fr",
-      formatDay(new Date("2026-05-10T09:00:00"), { lang: "fr" }),
+      formatDay(new Date("2026-05-10T09:00:00"), { lang: "fr", ...opts }),
     ],
     [
       "2026-05-11 (today)",
       "default",
       "fr",
-      formatDay(new Date("2026-05-11T09:00:00"), { lang: "fr" }),
+      formatDay(new Date("2026-05-11T09:00:00"), { lang: "fr", ...opts }),
     ],
     [
       "2026-05-12 (tomorrow)",
       "default",
       "fr",
-      formatDay(new Date("2026-05-12T09:00:00"), { lang: "fr" }),
+      formatDay(new Date("2026-05-12T09:00:00"), { lang: "fr", ...opts }),
     ],
     [
       "2026-05-18 (next week)",
       "default",
       "fr",
-      formatDay(new Date("2026-05-18T09:00:00"), { lang: "fr" }),
+      formatDay(new Date("2026-05-18T09:00:00"), { lang: "fr", ...opts }),
     ],
     [
       "2026-05-11 (today)",
       "default",
       "en",
-      formatDay(new Date("2026-05-11T09:00:00"), { lang: "en" }),
+      formatDay(new Date("2026-05-11T09:00:00"), { lang: "en", ...opts }),
     ],
     [
       "2026-05-11 (today)",
@@ -40,6 +40,7 @@ return table(
       "fr",
       formatDay(new Date("2026-05-11T09:00:00"), {
         lang: "fr",
+        ...opts,
         format: "long",
       }),
     ],
@@ -49,6 +50,7 @@ return table(
       "fr",
       formatDay(new Date("2026-05-18T09:00:00"), {
         lang: "fr",
+        ...opts,
         format: "long",
       }),
     ],
@@ -59,6 +61,7 @@ return table(
       "fr",
       formatDay(new Date("2026-09-02T09:00:00"), {
         lang: "fr",
+        ...opts,
         format: "short",
       }),
     ],
@@ -68,6 +71,7 @@ return table(
       "fr",
       formatDay(new Date("2026-09-02T09:00:00"), {
         lang: "fr",
+        ...opts,
         format: { weekday: "long", month: "short" },
       }),
     ],
@@ -77,6 +81,7 @@ return table(
       "fr",
       formatDay(new Date("2026-09-02T09:00:00"), {
         lang: "fr",
+        ...opts,
         format: { month: "short" },
       }),
     ],
@@ -86,6 +91,7 @@ return table(
       "en",
       formatDay(new Date("2026-09-02T09:00:00"), {
         lang: "en",
+        ...opts,
         format: { weekday: "long", month: "short" },
       }),
     ],

@@ -44,7 +44,8 @@ import { Text } from "./text.jsx";
  *
  * @param {"date"|"month"|"week"|"datetime"|"time"|"hour"|"minute"|"second"|"duration"|"relative"} [type="relative"]
  *   Controls the display format:
- *   - `"date"`     → "lundi 11 mai" (long by default); `format="short"` → "lun. 11 mai"; `format="numeric"` → "11/05/2026";
+ *   - `"date"`     → "lundi 11 mai" (long by default), "samedi 1 janvier 2050" outside the current year (see `year`);
+ *                    `format="short"` → "lun. 11 mai"; `format="numeric"` → "11/05/2026";
  *                    `format={{ weekday: "long", month: "short" }}` spells the two apart → "mercredi 2 sept.";
  *                    a part set to `false` is dropped — `format={{ day: false, month: false }}` → "mercredi"
  *   - `"month"`    → "juin 2026"
@@ -122,10 +123,13 @@ import { Text } from "./text.jsx";
  *   `pad` implies; the one reason to force `"minute"` on an unpadded clock is
  *   to agree with a partner that has minutes of its own, which is what
  *   `<TimeRange>` does for you.
- * @param {boolean|"auto"} [year=true]
- *   `type="date"` + `format="numeric"` only — whether the year is written.
- *   `false` drops it ("30/07", the day/month order still following the
- *   locale), `"auto"` drops it only when the date is in the current year.
+ * @param {boolean|"auto"} [year]
+ *   `type="date"` only — whether the year is written. `"auto"` writes it only
+ *   when the date is not in the current year, the way a calendar does
+ *   ("lundi 11 mai", but "samedi 1 janvier 2050"); `false` drops it ("30/07",
+ *   the day/month order still following the locale). Defaults to `"auto"`
+ *   for the spelled formats and to `true` for `format="numeric"`. A format
+ *   without the month (`{ month: false }`) never writes it.
  * @param {boolean} [dayLabel]
  *   When true and `type="date"`, appends the locale-aware relative label
  *   ("hier", "aujourd'hui", "demain") when the date is yesterday, today, or tomorrow.

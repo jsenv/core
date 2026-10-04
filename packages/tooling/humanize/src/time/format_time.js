@@ -109,11 +109,13 @@ const resolveFormat = (format, { fnName, reads, as }) => {
  *   day-of-month ("mardi 18"), `{ weekday: false }` the date without its
  *   anchor ("18 juillet"). At least one part must stay — with all three
  *   dropped, Intl falls back to its own default date spelling.
- * @param {boolean|"auto"} [options.year=true]
- *   Whether the `"numeric"` spelling writes the year: `false` drops it
- *   ("30/07", the day/month order still following the locale), `"auto"` drops
- *   it only when the date is in the current year (`now`'s year). The spelled
- *   formats never write the year, so they ignore it.
+ * @param {boolean|"auto"} [options.year]
+ *   Whether the year is written. `"auto"` writes it only when the date is not
+ *   in the current year (`now`'s year), the way a calendar does: "lundi 11
+ *   mai", but "samedi 1 janvier 2050". `false` drops it ("30/07", the
+ *   day/month order still following the locale). Defaults to `"auto"` for the
+ *   spelled formats and to `true` for `"numeric"`. The year qualifies a month,
+ *   so a spelling without one (`{ month: false }`) never writes it.
  * @param {string} [options.timeZone]
  *   IANA zone the instant is worded in ("Europe/Paris"); defaults to the
  *   runtime's own zone. The case is a server wording an instant for readers
@@ -127,6 +129,8 @@ const resolveFormat = (format, { fnName, reads, as }) => {
  * formatDay(new Date(), { lang: "fr", format: "narrow" }) // "lu. 11 mai"
  * formatDay(new Date(), { lang: "fr", format: "numeric" }) // "11/05/2026"
  * formatDay(new Date(), { lang: "fr", format: "numeric", year: false }) // "11/05"
+ * formatDay(new Date(2050, 0, 1), { lang: "fr" })          // "samedi 1 janvier 2050"
+ * formatDay(new Date(), { lang: "fr", year: true })       // "lundi 11 mai 2026"
  * formatDay(new Date(), { lang: "fr", format: { weekday: "long", month: "short" } }) // "mercredi 2 sept."
  * formatDay(new Date(), { lang: "fr", format: { day: false, month: false } }) // "mercredi"
  * formatDay(new Date(), { lang: "fr", format: { month: false } })             // "mercredi 2"
@@ -136,7 +140,7 @@ export const formatDay = (
   {
     lang = getRuntimeLang(),
     format = "long",
-    year = true,
+    year,
     now = new Date(),
     timeZone,
   } = {},
@@ -152,10 +156,11 @@ export const formatDay = (
     });
   }
   if (format === "numeric") {
-    const yearWritten =
-      year === "auto"
-        ? readYear(date, timeZone) !== readYear(now, timeZone)
-        : year !== false;
+    const yearWritten = isYearWritten(year === undefined ? true : year, {
+      date,
+      now,
+      timeZone,
+    });
     return memoIntl("DateTimeFormat", lang, {
       day: "2-digit",
       month: "2-digit",
@@ -168,11 +173,16 @@ export const formatDay = (
     day = true,
     month = "long",
   } = typeof format === "string" ? { weekday: format, month: format } : format;
+  // The year qualifies a month: "mardi 18" and "mardi" have none to carry it.
+  const yearWritten =
+    month !== false &&
+    isYearWritten(year === undefined ? "auto" : year, { date, now, timeZone });
   // a `false` part is omitted, not passed: Intl rejects false as a value
   return memoIntl("DateTimeFormat", lang, {
     ...(weekday === false ? {} : { weekday }),
     ...(day === false ? {} : { day: "numeric" }),
     ...(month === false ? {} : { month }),
+    ...(yearWritten ? { year: "numeric" } : {}),
     timeZone,
   }).format(date);
 };
@@ -1308,6 +1318,13 @@ const readClock = (date, timeZone) => {
     }
   }
   return { hours, minutes };
+};
+
+const isYearWritten = (year, { date, now, timeZone }) => {
+  if (year === "auto") {
+    return readYear(date, timeZone) !== readYear(now, timeZone);
+  }
+  return year !== false;
 };
 
 // Reads the calendar year of an instant in `timeZone` (the runtime's own zone
