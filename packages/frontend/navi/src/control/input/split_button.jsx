@@ -293,12 +293,6 @@ export const SplitButton = (props) => {
             icon
             paddingX="s"
             expandY
-            // flex + align: the icon is the whole content, so it is laid out as
-            // its own box in the middle of the button. Left to flow inline it
-            // would sit on the baseline of a line of text that is not there,
-            // with the descender space still kept below it.
-            flex
-            align="center"
             aria-label={menuLabel}
             command="--navi-open"
             commandFor={menuId}

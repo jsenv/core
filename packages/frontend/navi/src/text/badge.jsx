@@ -1,3 +1,4 @@
+import { isValidElement, toChildArray } from "preact";
 import { useContext, useRef } from "preact/hooks";
 
 import { useControlProps } from "../control/control_hooks.jsx";
@@ -62,7 +63,6 @@ const css = /* css */ `
     padding-right: var(--x-badge-padding-right);
     padding-bottom: var(--x-badge-padding-bottom);
     padding-left: var(--x-badge-padding-left);
-    align-items: stretch;
     color: var(--x-color);
     font-size: var(--font-size);
     /* Cuts the font's half-leading above the first line and below the last one,
@@ -81,21 +81,44 @@ const css = /* css */ `
 
     &[data-text-overflow] {
       display: inline;
+    }
 
-      .navi_text_overflow_wrapper {
-        /* Keep badge text and button together */
-        gap: 0;
-      }
+    /* A badge holding a button is a row whose items are centred: on a line of
+       text the button would be placed by its baseline, which says nothing
+       about where the badge's middle is. The trim and the truncation go to the
+       label, since a flex container trims none of its items. */
+    &[data-has-button] {
+      display: inline-flex;
+      align-items: center;
+    }
+    .navi_badge_label {
+      min-width: 0;
+      /* The badge's baseline is the label's whichever child comes first, so in
+         a sentence the badge sits on the text, not on a leading button. */
+      align-self: baseline;
+      text-overflow: ellipsis;
+      text-box: trim-both cap alphabetic;
+      /* Only the inline axis is clipped: ink above the capitals and below the
+         baseline overflows the trimmed label into the badge's padding. */
+      overflow-x: clip;
+      overflow-clip-margin: padding-box calc((1lh - 1em) / 2);
     }
 
     [role="button"] {
       display: inline-flex;
+      /* As tall as the label, so the margins below cancel exactly its padding:
+         the button spans the badge from edge to edge whatever it holds, and
+         its content (a glyph taller than the capitals) is centred on the
+         label and overflows into that padding. */
+      box-sizing: content-box;
+      height: 1cap;
       margin-top: calc(-1 * var(--x-badge-padding-top));
       margin-bottom: calc(-1 * var(--x-badge-padding-bottom));
       padding-top: var(--x-badge-padding-top);
       padding-right: calc(var(--x-badge-padding-right) / 2);
       padding-bottom: var(--x-badge-padding-bottom);
       padding-left: calc(var(--x-badge-padding-left) / 2);
+      flex-shrink: 0;
       align-items: center;
       cursor: pointer;
       pointer-events: auto;
@@ -140,6 +163,12 @@ export const BadgeUI = ({ children, className, ...props }) => {
   props.ref = props.ref || defaultRef;
   const { ref } = props;
   useAccentColorAttributes(ref, null);
+
+  const childArray = toChildArray(children);
+  if (childArray.some(isBadgeButton)) {
+    props = { "inline": true, "flex": true, ...props, "data-has-button": "" };
+    children = wrapLabels(childArray);
+  }
 
   return (
     <Text
@@ -206,3 +235,30 @@ const BadgeButtonUI = (props) => {
   );
 };
 Badge.Button = BadgeButton;
+
+const isBadgeButton = (child) => {
+  return isValidElement(child) && child.type === BadgeButton;
+};
+// Each run of children between buttons becomes one label: a single flex item
+// holding its text, so the trim reaches a bare string and the text keeps its
+// own baseline alignment inside.
+const wrapLabels = (childArray) => {
+  const items = [];
+  let run = [];
+  const closeRun = () => {
+    if (run.length > 0) {
+      items.push(<span className="navi_badge_label">{run}</span>);
+      run = [];
+    }
+  };
+  for (const child of childArray) {
+    if (isBadgeButton(child)) {
+      closeRun();
+      items.push(child);
+    } else {
+      run.push(child);
+    }
+  }
+  closeRun();
+  return items;
+};

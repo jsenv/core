@@ -56,8 +56,6 @@ export const ButtonCopyToClipboard = ({ children, ...props }) => {
       </Box>
       <Button
         className="navi_copy_button"
-        flex="y"
-        alignY="center"
         icon
         revealOnInteraction
         square

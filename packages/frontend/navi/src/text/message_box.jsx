@@ -140,8 +140,6 @@ export const MessageBox = ({
                 action={onClose}
                 icon
                 border="none"
-                alignX="center"
-                alignY="center"
                 style={{
                   ":hover": {
                     backgroundColor: "rgba(0, 0, 0, 0.1)",

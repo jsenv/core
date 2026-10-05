@@ -165,7 +165,7 @@ export const PickerArrayUI = /*#__PURE__*/ asPickerOwnUI(() => {
  */
 export const PickerChip = ({ value, commandFor, children, ...rest }) => {
   return (
-    <Badge inline flex {...rest}>
+    <Badge {...rest}>
       {children}
       <Badge.Button
         selfInteractions="click"

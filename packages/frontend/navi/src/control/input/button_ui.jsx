@@ -440,7 +440,11 @@ const css = /* css */ `
 
     &[data-icon] {
       --button-padding: 0;
-      display: inline-flex;
+      /* A width/height the caller gave it is a target area: the icon belongs
+         in its middle, whatever the padding. Defaults the alignX/alignY props
+         override; the content frame inherits both. */
+      align-items: center;
+      justify-content: center;
     }
     /* cta: call-to-action — a filled button whose border matches its fill.
        Like the variants above it moves the DEFAULTS, so a backgroundColor /
@@ -565,6 +569,10 @@ export const ButtonUI = (props) => {
     <Box
       inline
       block
+      // An icon is laid out as a box rather than on a line of text that is not
+      // there, which is also what makes alignX/alignY place it. Before the
+      // caller's props, so their own flex direction wins.
+      flex={icon ? "x" : undefined}
       {...buttonControlRootProps}
       {...buttonControlHostProps}
       // eslint-disable-next-line react/no-children-prop
