@@ -47,6 +47,12 @@ const DEFAULT_PLACEHOLDER_LIGHT = "#d4d8dd";
 const DEFAULT_PLACEHOLDER_DARK = "#374151";
 
 /**
+ * The props may come in any order: `src` and `srcset` reach the element after
+ * `loading` and the other hints. A plain `<img>` (or `<Box as="img">`) written
+ * in JSX must put `loading` before `src`: WebKit, so every browser on iOS,
+ * decides whether to load when `src` is set, and an image whose `src` came
+ * first loads, lazy or not.
+ *
  * @param {string|false} [props.placeholderColor] - Background color shown while the image loads.
  *   Defaults to a light gray. Pass `false` to disable.
  * @param {boolean} [props.placeholderDark] - Use a dark default placeholder color,
@@ -56,6 +62,9 @@ const DEFAULT_PLACEHOLDER_DARK = "#374151";
 export const Image = ({
   placeholderColor,
   placeholderDark = false,
+  srcset,
+  srcSet,
+  src,
   ...rest
 }) => {
   import.meta.css = css;
@@ -85,6 +94,12 @@ export const Image = ({
         imageEl.setAttribute("navi-loaded", "");
         rest.onLoad?.(e);
       }}
+      // Last, srcset before src: an <img> decides its request when they are
+      // set, with the attributes it has at that moment. WebKit loads an image
+      // whose src arrives before loading="lazy", and does not take it back.
+      srcset={srcset}
+      srcSet={srcSet}
+      src={src}
     />
   );
 };

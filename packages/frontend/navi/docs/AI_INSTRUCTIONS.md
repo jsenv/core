@@ -186,11 +186,13 @@ start when unsure which export solves a problem.
   `scroller`, where a list opens (a position handed back whole, `visibleCount`
   included), a list that comes back (its `id` names one list of the app), a
   popup that scrolls, many rows (`<List.Items>`, the render window and its first
-  picture, skeletons at the size of their item, `itemSize`, `findText`), many
+  picture, skeletons at the size of their item, `itemSize`, `findText`, how far
+  ahead its images load and `loading` before `src`), many
   sections (`<Box mount="after-paint">` and what it leaves out of reach), hover
   while scrolling. Before writing CSS to make something scroll, before
   rendering a collection as `<List.Item>` children, before writing a
-  `renderSkeleton`, and before deferring part of a page.
+  `renderSkeleton`, before putting images in a run, and before deferring part
+  of a page.
 - `z_index.md` — DOM order first; a `z-index` without `isolation: isolate`
   competes with the page; navi's bands. Before writing a `z-index`.
 - `typography.md` — text is a component; `maxLines` is the one truncation; one

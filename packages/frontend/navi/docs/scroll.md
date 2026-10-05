@@ -482,6 +482,44 @@ is never revealed. navi's own does.
 
 Reference: `src/control/demos/19_list_find_in_page_demo.html`.
 
+### Images in a run
+
+An `<img>` asks for its file once it is in the DOM, and an item outside the
+render window is not. So in a run, two things decide how far ahead of the screen
+images load, the window and the browser, and the nearer one wins:
+
+- **Without `loading="lazy"`**, the window decides. Every item it draws loads
+  its images, so the lookahead that keeps a fling covered (three quarters of
+  what the screen leaves of `renderBudget`, which is dozens of items with the
+  default) is downloaded when the list opens, and again each time the window
+  slides.
+- **With `loading="lazy"`**, the browser decides inside the window, and each
+  engine decides differently. Measured in October 2026, this is how far below
+  the screen an image's top is when its request starts:
+
+  | engine                        | distance           |
+  | ----------------------------- | ------------------ |
+  | Chromium                      | ~3000 px           |
+  | WebKit (every browser on iOS) | ~1 viewport height |
+  | Firefox                       | ~600 px            |
+
+  Chromium keeps the same distance on 3G and on 4G. When the window's lookahead
+  is shorter than the engine's distance, the window decides again.
+
+It is a trade between bytes and images that are ready. Lazy images follow the
+screen, and nothing the user never reaches is downloaded. Eager ones are
+already there when a fling arrives, at the cost of a whole window of downloads.
+How far ahead is enough depends on how fast the screen is crossed and how fast
+a file arrives. Like the window's own lookahead, it is measured on the slowest
+device and connection the list serves. Whichever you choose, give each image
+its dimensions (see
+[What the list knows, and what it guesses](#what-the-list-knows-and-what-it-guesses)).
+
+`loading` only holds if it is set before `src`. `Image` does this whatever the
+order of its props. A plain `<img>` written in JSX must put `loading` first:
+WebKit decides when `src` is set, and an image whose `src` came first loads
+whatever `loading` says afterwards.
+
 ### Doing it well
 
 - **Skeletons at the size of their item**, and `itemSize` when the items above
