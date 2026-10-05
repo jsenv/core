@@ -154,7 +154,10 @@ const css = /* css */ `
  * `pressOutside`, `escapeEffect`, `closeOnFocusOut`,
  * `scrollCapture`, `focusCapture`, `popupBackgroundColor`,
  * `popupBorderRadius`, `animation`. See picker.jsx for what each one says.
- * Anything else lands on the split button's own box.
+ * An `aria-*` attribute describes the button and reaches the main half —
+ * `aria-pressed` for a split button whose main half toggles a mode;
+ * `aria-hidden` excepted, which hides the whole control. Anything else lands
+ * on the split button's own box.
  */
 export const SplitButton = (props) => {
   import.meta.css = css;
@@ -192,11 +195,12 @@ export const SplitButton = (props) => {
     id,
     ...rest
   } = props;
-  // Everything the popup answers to travels to the Picker; everything else is
-  // the split button's own box (margins, width, data-*). Sorted by name rather
-  // than named one by one so a Picker popup prop is forwarded by adding it to
-  // that list, not by threading it through here.
-  const [popupProps, boxProps] = splitPopupProps(rest);
+  // Everything the popup answers to travels to the Picker; an aria-* describes
+  // the button a screen reader meets, which is the main half; everything else
+  // is the split button's own box (margins, width, data-*). Sorted by name
+  // rather than named one by one so a Picker popup prop is forwarded by adding
+  // it to that list, not by threading it through here.
+  const [popupProps, buttonAriaProps, boxProps] = sortRestProps(rest);
   // A split button is a control on the page, not a place one goes: its menu
   // hangs off it even on a phone, where a picker left to itself would decide a
   // small screen means a dialog. Passing mode="dialog" asks for that back.
@@ -284,6 +288,7 @@ export const SplitButton = (props) => {
           commandFor={commandFor}
           command-value={commandValue}
           prefetch={prefetch}
+          {...buttonAriaProps}
           {...halfProps}
         >
           {label === undefined ? optionShown?.label : label}
@@ -420,15 +425,20 @@ const POPUP_PROP_SET = new Set([
   "popupBorderRadius",
   "animation",
 ]);
-const splitPopupProps = (props) => {
+const sortRestProps = (props) => {
   const popupProps = {};
+  const buttonAriaProps = {};
   const boxProps = {};
   for (const key of Object.keys(props)) {
     if (POPUP_PROP_SET.has(key)) {
       popupProps[key] = props[key];
+    } else if (key.startsWith("aria-") && key !== "aria-hidden") {
+      // aria-hidden hides a subtree rather than describing a button: on the
+      // main half alone it would leave the chevron half exposed.
+      buttonAriaProps[key] = props[key];
     } else {
       boxProps[key] = props[key];
     }
   }
-  return [popupProps, boxProps];
+  return [popupProps, buttonAriaProps, boxProps];
 };
