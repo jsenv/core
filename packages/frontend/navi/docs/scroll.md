@@ -536,10 +536,14 @@ whatever `loading` says afterwards.
   item and the index it is given rather than closing over state.
 
 The rest — `virtualItemSize`, the room an item not drawn is held at (uniform
-items, or the smallest one of a mixed list — the worst case, see above), a `key`
-on the run when the collection changes as a whole (never to refresh it, see
+items, or the smallest one of a mixed list — the worst case, see above), a
+collection that changes as a whole (another array, another reader — drawn from
+its first item; never a `key` to refresh it, see
 [list_refresh.md](./list_refresh.md#a-paginated-list-stays-on-screen-too)),
-`groupBy` for sections — is in the JSDoc of `List` and `List.Items`
+`debounce` for a question following a search field
+([resource.md](./resource.md#a-question-that-follows-a-search-field)),
+`onCountChange` for the screen around the list to say how many items there
+are, `groupBy` for sections — is in the JSDoc of `List` and `List.Items`
 (`src/control/list/list.jsx`). Demos:
 `src/control/demos/17_virtual_scroll_and_filter_demo.html` (a run in memory,
 searched), `src/control/demos/integration/1_list_loaded_by_scroll_demo.html` (a

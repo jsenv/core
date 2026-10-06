@@ -145,13 +145,16 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useRef, useState } from "preact/hooks";
+      import { signal } from "@preact/signals";
       import {
         Box,
         Button,
+        Input,
         List,
         SelectableInput,
         Text,
         Time,
+        resource,
       } from "@jsenv/navi";
       import { DemoHeader } from "../../../internal/demo_header.jsx";
       import { FakeBackend } from "../../../internal/fake_backend.jsx";
@@ -787,6 +790,157 @@
         );
       };
 
+      /* ------------------------------------------------------------------
+         Une question qui suit la frappe: chaque touche lie le lecteur à un
+         autre `q`, donc à une autre collection. Une ressource par colonne,
+         pour que chacune compte ses propres requêtes.
+         ------------------------------------------------------------------ */
+      const BOOK_SUBJECTS = [
+        "Le secret",
+        "La nuit",
+        "Le voyage",
+        "La maison",
+        "Le dernier",
+        "La mer",
+        "Le jardin",
+        "La guerre",
+      ];
+      const BOOK_COMPLEMENTS = [
+        "du capitaine",
+        "des succubes",
+        "de la lune",
+        "du nord",
+        "des ombres",
+        "du roi",
+        "de Paris",
+        "des étoiles",
+      ];
+      const BOOKS = [];
+      for (const subject of BOOK_SUBJECTS) {
+        for (const complement of BOOK_COMPLEMENTS) {
+          for (let volume = 1; volume <= 6; volume++) {
+            BOOKS.push({
+              id: `book_${BOOKS.length}`,
+              title: `${subject} ${complement}, tome ${volume}`,
+            });
+          }
+        }
+      }
+      const readBookPage = ({ q, start, end }) => {
+        const word = q.trim().toLowerCase();
+        const matches = word
+          ? BOOKS.filter((book) => book.title.toLowerCase().includes(word))
+          : BOOKS;
+        return {
+          items: matches.slice(start, end + 1).map((book) => ({ ...book })),
+          start,
+          count: matches.length,
+        };
+      };
+      const createBookSource = (name) => {
+        const requestsSignal = signal([]);
+        const BOOK = resource(name, {
+          GET_RANGE: (params, { signal: abortSignal } = {}) => {
+            requestsSignal.value = [...requestsSignal.value, params];
+            return new Promise((resolve, reject) => {
+              const timeout = setTimeout(
+                () => resolve(readBookPage(params)),
+                LATENCY,
+              );
+              abortSignal?.addEventListener("abort", () => {
+                clearTimeout(timeout);
+                reject(abortSignal.reason ?? new Error("aborted"));
+              });
+            });
+          },
+        });
+        return { BOOK, requestsSignal };
+      };
+      const bookSearchSignal = signal("");
+      const BOOKS_EACH_KEY = createBookSource("demo_book_each_key");
+      const BOOKS_SETTLED = createBookSource("demo_book_settled");
+
+      const renderBook = (book) => (
+        <List.Item paddingX="m" paddingY="xs">
+          <Text>{book.title}</Text>
+        </List.Item>
+      );
+      const renderBookSkeleton = () => (
+        <List.Item skeleton paddingX="m" paddingY="xs">
+          <Text loading width="14em">
+            {" "}
+          </Text>
+        </List.Item>
+      );
+
+      const BookColumn = ({ source, debounce, caption }) => {
+        const [count, setCount] = useState(undefined);
+        const requests = source.requestsSignal.value;
+        return (
+          <Box flex="y" spacing="xs" style={COLUMN_STYLE}>
+            <span className="caption">{caption}</span>
+            <Text size="s" color="#555">
+              {count === undefined
+                ? " "
+                : `${count} sur ${BOOKS.length} livres`}
+            </Text>
+            <List maxHeight="220px" expandX renderSkeleton={renderBookSkeleton}>
+              <List.Items
+                itemsAction={source.BOOK.GET_RANGE.bindParams({
+                  q: bookSearchSignal.value,
+                })}
+                debounce={debounce}
+                onCountChange={setCount}
+                renderItem={renderBook}
+              />
+            </List>
+            <span className="caption">
+              {requests.length} requête{requests.length > 1 ? "s" : ""}
+            </span>
+            {requests.slice(-5).map((request, index) => (
+              <span key={index} className="caption">
+                q="{request.q}" {request.start}–{request.end}
+              </span>
+            ))}
+          </Box>
+        );
+      };
+
+      const SearchSection = () => (
+        <Section
+          title="Une recherche qui suit la frappe"
+          caption="itemsAction={BOOK.GET_RANGE.bindParams({ q })} onCountChange"
+        >
+          <Box flex spacing="s" alignY="center">
+            <Input
+              type="search"
+              placeholder="succ, lune, nuit du…"
+              value={bookSearchSignal.value}
+              uiAction={(text) => {
+                bookSearchSignal.value = text;
+              }}
+            />
+            <Button
+              onClick={() => {
+                bookSearchSignal.value = "";
+                BOOKS_EACH_KEY.requestsSignal.value = [];
+                BOOKS_SETTLED.requestsSignal.value = [];
+              }}
+            >
+              effacer
+            </Button>
+          </Box>
+          <Box flex spacing="m" alignY="start">
+            <BookColumn source={BOOKS_EACH_KEY} caption="sans debounce" />
+            <BookColumn
+              source={BOOKS_SETTLED}
+              debounce={300}
+              caption="debounce={300}"
+            />
+          </Box>
+        </Section>
+      );
+
       const App = () => (
         <Box flex="y" spacing="l">
           <DemoHeader
@@ -803,6 +957,7 @@
           <GameToJoinSection />
           <ScrollerParentSection />
           <PageByPageSection />
+          <SearchSection />
         </Box>
       );
 

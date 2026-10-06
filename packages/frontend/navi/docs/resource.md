@@ -269,13 +269,20 @@ const GAME = resource("game", {
 
 The callback receives the bound params merged with the range the list asks for
 (`start`, `end`, `limit`, `before`, `after`, `around`), and `{ signal }`,
-aborted when the list stops wanting those rows. It returns a range the way a
-`Content-Range` does: **`{ items, start, count }`** — these rows, at this place,
-out of that many. `start` may be omitted when the list asked for one at or after
-`0` (a negative `start` counts back from the end, and the source must then say
-where the slice landed); `count` defaults to `start + items.length`. The items
-are upserted on their way in, so the list draws store items, never copies of the
-JSON.
+aborted when the list stops wanting those rows. `end` is the last place asked
+for, included, as in `Range: items=0-99`: `limit` is `end - start + 1`, and an
+API whose end is excluded is called with `start + limit`. It returns a range the
+way a `Content-Range` does: **`{ items, start, count }`** — these rows, at this
+place, out of that many. `start` may be omitted when the list asked for one at
+or after `0` (a negative `start` counts back from the end, and the source must
+then say where the slice landed); `count` defaults to `start + items.length`.
+The items are upserted on their way in, so the list draws store items, never
+copies of the JSON.
+
+The count is also what the screen around the list says — "5 of 83 books". The
+run hands it out with `onCountChange`: `undefined` until a slice has answered,
+then each count a slice brings, and again for each collection the run draws, so
+the number always belongs to the rows on screen.
 
 But the list keeps the object it was handed, and an update replaces the item
 object (the store holds values, which is what makes a change detectable). So a
@@ -303,6 +310,30 @@ rows staying on screen
 ([list_refresh.md](./list_refresh.md#a-paginated-list-stays-on-screen-too)). It
 reads a collection, so it lives on the resource (or on a `withParams()` of it),
 not on a relation.
+
+### A question that follows a search field
+
+A reader bound to other params is another collection, and the run draws it
+from its first item — it needs no `key` for that. A param following what is
+typed then makes one collection per key, and one request each, the server
+receiving every one even when the list calls it off. `debounce` on the run
+waits for the reader to hold still, and keeps the collection from before drawn
+meanwhile, `refreshing`:
+
+```jsx
+<List.Items
+  itemsAction={BOOK.GET_RANGE.bindParams({ q: searchSignal.value })}
+  debounce={300}
+  onCountChange={(count) => {
+    bookCountSignal.value = count;
+  }}
+  renderItem={renderBook}
+/>
+```
+
+A `key` that follows the field defeats it: the run remounts at each key, and
+its wait with it. Demo: `src/control/demos/integration/1_list_loaded_by_scroll_demo.html`
+("Une recherche qui suit la frappe").
 
 ## Searching the same collection
 

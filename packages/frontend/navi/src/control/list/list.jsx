@@ -433,6 +433,11 @@ const css = /* css */ `
   }
 
   .navi_list {
+    /* Written on the list once two of its items are drawn (see
+       readSpaceBetweenItems); declared here so a list inside an item does
+       not size its skeletons with what stands between the outer items. */
+    --x-list-item-between: 0px;
+
     box-sizing: border-box;
     margin: 0;
     padding: 0;
@@ -1654,7 +1659,7 @@ const useListScrollSync = ({
     );
   };
   useLayoutEffect(resolveScroller);
-  useStickyScrollportWarning(ref, scroller);
+  useStickyScrollportWarning(ref, scroller, getScroller, horizontal);
   useDuplicateHeaderWarning(ref);
   useStuckWindowWarning({
     ref,
@@ -1738,6 +1743,32 @@ const useListScrollSync = ({
   useLayoutEffect(() => {
     if (columns || itemsPerLineRef.current !== 1) {
       updateItemsPerLine();
+    }
+  });
+
+  // What stands between two items along the axis — the gap, a separator and
+  // the gaps around it — which an item on its way takes out of the room it is
+  // given (see getSkeletonItem): virtualItemSize is an item's room, from the
+  // end of the item before to its own end, and a skeleton whose box took all
+  // of it would be taller than the item replacing it, moving everything below
+  // by the difference. Read before the anchoring of this commit runs, and
+  // written to the list's own box so the skeletons follow without rendering.
+  // Items side by side in a grid share a line: none stands between them.
+  useLayoutEffect(() => {
+    if (columns || !ref.current || !listItems.hasRuns()) {
+      return;
+    }
+    const listEl = getListEl();
+    if (!listEl) {
+      return;
+    }
+    const spaceBetween = readSpaceBetweenItems(listEl, horizontal);
+    if (spaceBetween === null) {
+      return;
+    }
+    const value = `${spaceBetween}px`;
+    if (listEl.style.getPropertyValue("--x-list-item-between") !== value) {
+      listEl.style.setProperty("--x-list-item-between", value);
     }
   });
 
@@ -3298,25 +3329,45 @@ const canScrollerScroll = (scrollerEl, axis) => {
   return scrollSize - clientSize > 1;
 };
 // What a sticky part of the list sticks to is the nearest scroll container in
-// the DOM; `scroller` has no say in it. A list told the page scrolls it can
-// therefore have its group labels and its header stuck to a wrapper that never
-// scrolls — and pushed down by that wrapper's scroll-padding on top of it. The
-// usual culprit is an app wrapper carrying `overflow-x: auto` to keep the
-// document from overflowing horizontally on mobile; `overflow-x: clip` keeps
-// that guarantee without making a scroll container.
+// the DOM; `scroller` has no say in it. A list scrolled by a box around it can
+// therefore have its group labels and its header stuck to a wrapper between
+// the two that never scrolls along that axis — and pushed down by that
+// wrapper's scroll-padding on top of it. The usual culprit is a wrapper
+// carrying `overflow-x: auto`: to keep the document from overflowing
+// horizontally on mobile, where `overflow-x: clip` keeps that guarantee without
+// making a scroll container, or to let a wide table scroll sideways, where the
+// header cannot stick to both boxes.
 const STICKY_LIST_PART_SELECTOR = `.navi_list_item_header, .navi_list_item_footer, .navi_list_item_group_label`;
-const useStickyScrollportWarning = (ref, scroller) => {
+const useStickyScrollportWarning = (ref, scroller, getScroller, horizontal) => {
   const doneRef = useRef(false);
   useLayoutEffect(() => {
-    if (!import.meta.dev || doneRef.current || scroller !== "document") {
+    if (!import.meta.dev || doneRef.current) {
+      return;
+    }
+    const scrollerNamed = scroller && typeof scroller === "object";
+    if (scroller !== "document" && scroller !== "parent" && !scrollerNamed) {
+      // The list scrolls itself: its sticky parts stick to its own box.
+      return;
+    }
+    if (scrollerNamed && !(scroller.nodeType === 1 || scroller.current)) {
+      // The ref is not set yet: the box that scrolls is not known.
       return;
     }
     const listContainerEl = ref.current;
     if (!listContainerEl) {
       return;
     }
+    const scrollerEl = getScroller();
+    if (
+      scroller === "parent" &&
+      scrollerEl !== document.scrollingElement &&
+      !canScroll(scrollerEl, horizontal ? "x" : "y")
+    ) {
+      // Measured: until the box around scrolls, which one it is is not known.
+      return;
+    }
     const scrollportEl = findScrollportEl(listContainerEl);
-    if (!scrollportEl) {
+    if ((scrollportEl || document.scrollingElement) === scrollerEl) {
       doneRef.current = true;
       return;
     }
@@ -3326,11 +3377,20 @@ const useStickyScrollportWarning = (ref, scroller) => {
       return;
     }
     doneRef.current = true;
+    const scrolledBy =
+      scrollerEl === document.scrollingElement
+        ? "the page"
+        : getElementSignature(scrollerEl);
     console.warn(
-      `<List scroller="document"> is inside ${getElementSignature(
+      `<List> is scrolled by ${scrolledBy}, but it is inside ${getElementSignature(
         scrollportEl,
-      )}, a scroll container: its sticky group labels and header stick to that box instead of to the page. Give that box "overflow: clip" (it clips without creating a scroll container), or tell the list about it with scroller={element}.`,
-      { list: listContainerEl, scrollport: scrollportEl, sticky: stickyEl },
+      )}, a scroll container closer to it: its sticky header and group labels stick to that box instead. A box there to clip: give it "overflow: clip", which clips without creating a scroll container. A box that scrolls the list: name it, scroller={element}. A box there to scroll a wide list sideways: the sticky parts cannot stick to both boxes — let ${scrolledBy} scroll sideways too, or keep the header at the top of the list.`,
+      {
+        list: listContainerEl,
+        scroller: scrollerEl,
+        scrollport: scrollportEl,
+        sticky: stickyEl,
+      },
     );
   });
 };
@@ -3862,6 +3922,38 @@ const findItemsFrom = (listEl, from, horizontal) => {
 // items (a card holding a list of its own): both carry the same attributes.
 // Groups nest the items in a list of their own class, not in another list.
 const isOwnItem = (itemEl, listEl) => itemEl.closest(".navi_list") === listEl;
+// From where an item ends to where the item after it starts, read on the first
+// two that follow each other in the same container (a group's label stands
+// between two items of different groups). Null when no two items do.
+const readSpaceBetweenItems = (listEl, horizontal) => {
+  let previous = null;
+  for (const itemEl of listEl.querySelectorAll(
+    `[${LIST_ITEM_INDEX_ATTRIBUTE}]`,
+  )) {
+    if (!isOwnItem(itemEl, listEl)) {
+      continue;
+    }
+    const rect = itemEl.getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) {
+      previous = null;
+      continue;
+    }
+    const index = Number(itemEl.getAttribute(LIST_ITEM_INDEX_ATTRIBUTE));
+    if (
+      previous &&
+      previous.index === index - 1 &&
+      previous.containerEl === itemEl.parentElement
+    ) {
+      return (horizontal ? rect.left : rect.top) - previous.to;
+    }
+    previous = {
+      index,
+      containerEl: itemEl.parentElement,
+      to: horizontal ? rect.right : rect.bottom,
+    };
+  }
+  return null;
+};
 // The item drawn at an index of the list, a stand-in or a real one.
 const findItemElementAt = (listEl, index) => {
   for (const itemEl of listEl.querySelectorAll(
@@ -5429,10 +5521,12 @@ const VISIBILITY_HIDDEN_STYLE = { visibility: "hidden" };
  * A collection read a slice at a time comes from `itemsAction(range)`: the run
  * asks for what it is about to draw and keeps what it gets. The range says the
  * same thing three ways, so a source can read it however it paginates —
- * `{ start, end }` (places in the collection, a negative `start` counting back
- * from the end like `Range: items=-25`, which is what a list opening on its
- * last items asks for before it knows how many there are), `limit` (how many
- * items), and
+ * `{ start, end }` (places in the collection, `end` included as in
+ * `Range: items=0-99`; a negative `start` counting back from the end like
+ * `Range: items=-25`, which is what a list opening on its last items asks for
+ * before it knows how many there are), `limit` (how many items:
+ * `end - start + 1` — an API whose end is excluded is called with
+ * `start + limit`), and
  * `before`/`after`/`around` (the id of an item to count from, for a source
  * paginating by cursor). Answer with the items (an array — that is all of
  * them), or with a range the way a Content-Range does: `{ items, start, count }`
@@ -5579,6 +5673,11 @@ const VISIBILITY_HIDDEN_STYLE = { visibility: "hidden" };
  *   again, so the number always belongs to the collection on screen.
  */
 export const ListItems = ({ itemsAction, debounce, ...props }) => {
+  // Read so that this component renders in the pass of the List moving its
+  // window, and the run with it: the List frames its window on the items its
+  // runs drew in that same commit (see settleWindow). Skipped as an unchanged
+  // child, it would leave the run to a render of its own, after that commit.
+  useContext(RenderWindowContext);
   const { reader, settling } = useSettledReader(itemsAction, debounce);
   return (
     <ListItemsRun
@@ -5738,10 +5837,13 @@ const useRunItems = (
     skeletonItem = {};
     const virtualItemSize = listItems.virtualItemSizeSignal.value;
     if (virtualItemSize) {
+      // The room is the item's and what stands before it (see
+      // readSpaceBetweenItems): the box takes what is left of it.
+      const minSize = `calc(${virtualItemSize}px - var(--x-list-item-between, 0px))`;
       if (listItems.horizontal) {
-        skeletonItem.itemMinWidth = `${virtualItemSize}px`;
+        skeletonItem.itemMinWidth = minSize;
       } else {
-        skeletonItem.itemMinHeight = `${virtualItemSize}px`;
+        skeletonItem.itemMinHeight = minSize;
       }
     }
     return skeletonItem;
@@ -7289,8 +7391,9 @@ const ListResolved = /*#__PURE__*/ createComponentResolver([
  * @param {number} [props.virtualItemSize]
  *   The room an item never drawn is held at, in px along the scroll axis: what
  *   the fillers hold for it outside the render window, what a scroll position
- *   inside them is read with, and the least an item on its way takes (see
- *   `renderSkeleton`). An item the list has drawn is held at the room it took
+ *   inside them is read with, and the least room an item on its way takes
+ *   (see `renderSkeleton`) — a room counts what stands before the item, a
+ *   gap or a separator, so the item's own box takes the rest of it. An item the list has drawn is held at the room it took
  *   then, and an item whose run says its room (`<List.Items itemSize>`) at
  *   that room. Left out, it is the average of the items measured so far — once when
  *   the list mounts, again when a popup around it opens, and after each commit
