@@ -3983,7 +3983,10 @@ const readItemRooms = (listEl, horizontal, onRoom) => {
 // Where what stands before an item in the list ends: the element before the
 // item, or before its group when it is the first of it — or the start of the
 // list's content when nothing does. Null when the element before is not laid
-// out.
+// out. It is where that element ends in the flow: where the item (or its
+// group) starts, less the gap and the margins between the two. Its own box is
+// where it is painted, which a sticky header stuck to the top of the screen
+// puts thousands of pixels away from its place in the list.
 const readEndBefore = (itemEl, listEl, horizontal) => {
   let slotEl = itemEl;
   const groupListEl = itemEl.parentElement;
@@ -3996,11 +3999,30 @@ const readEndBefore = (itemEl, listEl, horizontal) => {
   }
   const beforeEl = slotEl.previousElementSibling;
   if (beforeEl) {
-    const rect = beforeEl.getBoundingClientRect();
-    if (rect.width === 0 && rect.height === 0) {
+    const beforeRect = beforeEl.getBoundingClientRect();
+    if (beforeRect.width === 0 && beforeRect.height === 0) {
       return null;
     }
-    return horizontal ? rect.right : rect.bottom;
+    const slotRect = slotEl.getBoundingClientRect();
+    const containerStyle = window.getComputedStyle(slotEl.parentElement);
+    const slotStyle = window.getComputedStyle(slotEl);
+    const beforeStyle = window.getComputedStyle(beforeEl);
+    // A gap the browser computes as "normal" is none in a flex or grid list.
+    const lengthOf = (value) => parseFloat(value) || 0;
+    if (horizontal) {
+      return (
+        slotRect.left -
+        lengthOf(containerStyle.columnGap) -
+        lengthOf(slotStyle.marginLeft) -
+        lengthOf(beforeStyle.marginRight)
+      );
+    }
+    return (
+      slotRect.top -
+      lengthOf(containerStyle.rowGap) -
+      lengthOf(slotStyle.marginTop) -
+      lengthOf(beforeStyle.marginBottom)
+    );
   }
   if (slotEl.parentElement !== listEl) {
     return null;
@@ -5425,10 +5447,11 @@ const VISIBILITY_HIDDEN_STYLE = { visibility: "hidden" };
  * (see docs/resource.md).
  *
  * A collection that changes as a whole (a search reordering it) is a different
- * collection: with `items`, another array is another collection and the run
- * draws it from its first item; with `itemsAction`, give the run a `key` that
- * changes with it, the way one does for anything else that is not the same
- * thing anymore.
+ * collection, and the run draws it from its first item: with `items`, another
+ * array is another collection; with `itemsAction`, another reader is — a
+ * reader bound to other params (`bindParams({ q })` with another `q`). A param
+ * held in a signal changes what the reader reads without changing the reader:
+ * give the run a `key` that follows it.
  *
  * An item says what it is where it is drawn: `renderItem` returns a
  * `<List.Item>` carrying its own props (`selectable`, `value`, `selected`…),
@@ -5443,6 +5466,7 @@ const VISIBILITY_HIDDEN_STYLE = { visibility: "hidden" };
  *   findText?: (item: any, index: number) => string,
  *   items?: any[],
  *   itemsAction?: (range: {start: number, end: number, limit: number, before?: string, after?: string, around?: string, count?: number, signal: AbortSignal}) => any,
+ *   debounce?: number,
  *   count?: number,
  *   groupBy?: (item: any, index: number) => any,
  *   renderGroupLabel?: (item: any, index: number) => import("preact").ComponentChildren,
@@ -5453,6 +5477,7 @@ const VISIBILITY_HIDDEN_STYLE = { visibility: "hidden" };
  *   itemSize?: (index: number) => number,
  *   renderError?: (failure: {error: any, retry: () => void, start: number, end: number}) => import("preact").ComponentChildren,
  *   onRequestStateChange?: (state: {busy: boolean, refreshing: boolean, range: {start: number, end: number}|null}) => void,
+ *   onCountChange?: (count: number|undefined) => void,
  * }>}
  * @param {(item: any, index: number, state: {refreshing: boolean}) => any} props.renderItem
  *   What is drawn for one item, given its data and where it sits — its place in the list,
@@ -5477,6 +5502,12 @@ const VISIBILITY_HIDDEN_STYLE = { visibility: "hidden" };
  * @param {(range: object) => any} [props.itemsAction]
  *   Where the items come from when the collection is read a slice at a time:
  *   a resource's range reader (`RESOURCE.GET_RANGE.bindParams(...)`).
+ * @param {number} [props.debounce]
+ *   Milliseconds the reader must hold still before the run draws the
+ *   collection it reads: params following a field as the user types
+ *   (`bindParams({ q })`) ask once typing stops, not once per key. Meanwhile
+ *   the run keeps drawing the collection from before, `refreshing`. The
+ *   first collection is drawn at once.
  * @param {(item: any, index: number) => any} [props.groupBy]
  *   What tells items that belong together apart from the others — the day of a
  *   message, the month of a game. Consecutive items sharing it are wrapped in a
@@ -5540,23 +5571,90 @@ const VISIBILITY_HIDDEN_STYLE = { visibility: "hidden" };
  *   collection's own ranks as `itemsAction` sees them, `null` once nothing is.
  *   A range called off and asked again right away stays one `busy`, and a list
  *   unmounted while asking says `busy: false` on its way out.
+ * @param {(count: number|undefined) => void} [props.onCountChange]
+ *   Called with how many items the collection holds when that changes — for
+ *   the screen around the list to say it ("5 of 83 books"): the `count` the
+ *   source answers with each slice, or the one given to the run.
+ *   `undefined` until it is known; a run drawing another collection says it
+ *   again, so the number always belongs to the collection on screen.
  */
-export const ListItems = ({
+export const ListItems = ({ itemsAction, debounce, ...props }) => {
+  const { reader, settling } = useSettledReader(itemsAction, debounce);
+  return (
+    <ListItemsRun
+      // Another reader is another collection — bindParams gives back the
+      // reader it made for equal params — and the run holds the ranks, the
+      // count and the asks of the one it draws.
+      key={reader && reader.isRangeReader ? readerKeyOf(reader) : undefined}
+      itemsAction={reader}
+      settling={settling}
+      {...props}
+    />
+  );
+};
+const ListItemsRun = ({
   items,
   itemsAction,
+  settling,
   count,
   memoryBudget,
   onRequestStateChange,
+  onCountChange,
   ...runProps
 }) => {
   const store = useItemStore({
     items,
     count,
     itemsAction,
+    settling,
     memoryBudget,
     onRequestStateChange,
+    onCountChange,
   });
   return useRunItems(store, runProps);
+};
+const readerKeyByReader = new WeakMap();
+let readerKeyPrevious = 0;
+const readerKeyOf = (reader) => {
+  let key = readerKeyByReader.get(reader);
+  if (key === undefined) {
+    readerKeyPrevious++;
+    key = readerKeyPrevious;
+    readerKeyByReader.set(reader, key);
+  }
+  return key;
+};
+// The reader the run draws: the one it is given, or under `debounce` the one
+// it was drawing until the one given has held still that long. Only between
+// two range readers — the first collection is drawn at once, and a collection
+// held in memory costs no request to follow.
+const useSettledReader = (itemsAction, debounce) => {
+  const settledRef = useRef(itemsAction);
+  const [, setSettleCount] = useState(0);
+  const settled = settledRef.current;
+  const waits =
+    Boolean(debounce) &&
+    itemsAction !== settled &&
+    Boolean(itemsAction && itemsAction.isRangeReader) &&
+    Boolean(settled && settled.isRangeReader);
+  if (!waits) {
+    settledRef.current = itemsAction;
+  }
+  useLayoutEffect(() => {
+    if (!waits) {
+      return undefined;
+    }
+    const timeout = setTimeout(() => {
+      settledRef.current = itemsAction;
+      setSettleCount((settleCount) => settleCount + 1);
+    }, debounce);
+    return () => {
+      clearTimeout(timeout);
+    };
+  }, [waits, itemsAction, debounce]);
+  return waits
+    ? { reader: settled, settling: true }
+    : { reader: itemsAction, settling: false };
 };
 
 // The items a `loading` list is told to expect (loadingSkeletonCount): a run
@@ -6234,6 +6332,7 @@ const ListItemsFailure = ({ error, retry }) => {
 // hits the network again.
 const ITEM_STORE_MAX_DEFAULT = 1000;
 const ITEM_STORE_KEEP_AROUND = 250;
+const COUNT_NOT_SAID = {};
 
 const rangeIsSame = (a, b) => {
   if (!a || !b) {
@@ -6251,8 +6350,10 @@ const useItemStore = ({
   items,
   count,
   itemsAction,
+  settling,
   memoryBudget,
   onRequestStateChange,
+  onCountChange,
 }) => {
   // A collection given whole (`items`) is held from the first render: nothing
   // to ask for, nothing to keep across mounts, nothing to invalidate. The rest
@@ -6397,15 +6498,37 @@ const useItemStore = ({
   // It stands for a page of them: a list that is about to be filled looks
   // like items on their way, not like an empty list.
   const itemCount = pages.count ?? count ?? listItems.pageSize;
+  // The items drawn are from before while they are read again, and while the
+  // collection that replaces them waits for its params to hold still (see
+  // useSettledReader).
+  const refreshingShown = refreshing || Boolean(settling);
   useLayoutEffect(() => {
-    if (!refreshing) {
+    if (!refreshingShown) {
       return null;
     }
     listItems.refreshingSignal.value = listItems.refreshingSignal.peek() + 1;
     return () => {
       listItems.refreshingSignal.value = listItems.refreshingSignal.peek() - 1;
     };
-  }, [refreshing]);
+  }, [refreshingShown]);
+
+  // How many items the collection holds, for the screen around the list to
+  // say: the count the source answered or the caller gave, never the page the
+  // run stands for before it knows. Said by each run on its first commit, so a
+  // run drawing another collection takes back what the one before said.
+  const countKnown = pages.count ?? count;
+  const onCountChangeRef = useRef(onCountChange);
+  onCountChangeRef.current = onCountChange;
+  const countSaidRef = useRef(COUNT_NOT_SAID);
+  useLayoutEffect(() => {
+    if (countSaidRef.current === countKnown) {
+      return;
+    }
+    countSaidRef.current = countKnown;
+    if (onCountChangeRef.current) {
+      onCountChangeRef.current(countKnown);
+    }
+  });
 
   // What the run is doing, for the screen around the list to draw: the list has
   // its own skeletons, what is around it has to be told. Read from the request
@@ -6456,7 +6579,7 @@ const useItemStore = ({
   const store = {
     itemCount,
     failure,
-    refreshing,
+    refreshing: refreshingShown,
     // JS memory is cheap next to the DOM, but a long enough scroll accumulates
     // everything it ever went through. Items far from what is on screen are
     // dropped and simply asked for again if the user goes back — the same
