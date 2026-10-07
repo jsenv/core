@@ -92,7 +92,8 @@ start when unsure which export solves a problem.
   `loading: true` never suspends; a skeleton is told whether it is loading.
   Before drawing a skeleton on `!data` or hiding content because `error` is set.
 - `list_refresh.md` — what a write sends back and what stays on screen meanwhile;
-  `rerunOn` and its defaults; coming back to a list. Before adding verbs to
+  `rerunOn` and its defaults; coming back to a list (Back keeps its
+  composition, a reload only under `keepPageOnScreen`). Before adding verbs to
   `rerunOn` or remounting a list to refresh it.
 - `list_action.md` — where the `action` lives decides who waits; a row whose
   button works is `readOnly`, not `loading`; `parallelGuard`. Before
@@ -187,13 +188,14 @@ start when unsure which export solves a problem.
   `scroller`, where a list opens (a position handed back whole, `visibleCount`
   included), a list that comes back (its `id` names one list of the app), a
   popup that scrolls, many rows (`<List.Items>`, the render window and its first
-  picture, skeletons at the size of their item, `itemSize`, `findText`, how far
+  picture, what a run knows when it opens — `count`, a composition kept, Back
+  versus a reload —, skeletons at the size of their item, `itemSize`, `findText`, how far
   ahead its images load and `loading` before `src`), many
   sections (`<Box mount="after-paint">` and what it leaves out of reach), hover
   while scrolling. Before writing CSS to make something scroll, before
   rendering a collection as `<List.Item>` children, before writing a
-  `renderSkeleton`, before putting images in a run, and before deferring part
-  of a page.
+  `renderSkeleton`, before deciding whether to give a run its `count`, before
+  putting images in a run, and before deferring part of a page.
 - `z_index.md` — DOM order first; a `z-index` without `isolation: isolate`
   competes with the page; navi's bands. Before writing a `z-index`.
 - `typography.md` — text is a component; `maxLines` is the one truncation; one

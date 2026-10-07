@@ -124,9 +124,11 @@ already provided; keep the position whole, its `visibleCount` sizes the first
 paint. A `defaultScrolled` that changes before anyone has moved the list is
 followed — a place read from an answer that refreshes (yesterday's "today", then
 today's) — and it is compared by value, so it can be computed at every render. A list with an `id` also **comes back where it was** when its screen is
-left and come back to, the way the page does (its `id` must name one list of the
-app, see [below](#a-list-that-comes-back-one-id-one-list));
-**`scrollResetOnNavigation`** opts out. A list scrolling the document that
+left and come back to, or the page reloaded, the way the page does (its `id`
+must name one list of the app, see [below](#a-list-that-comes-back-one-id-one-list));
+**`scrollResetOnNavigation`** opts out. What it draws there before its source
+answers is another matter
+([What a run knows when it opens](#what-a-run-knows-when-it-opens)). A list scrolling the document that
 opens on a row places the document itself: the offset the page kept for its url
 is not put back over it — the rows held off screen are fillers of an estimated
 height, and the same pixels now fall on other rows.
@@ -199,7 +201,8 @@ whole list. `<List.Items count>` says "I know how many rows are coming": the
 rows not held yet are skeletons in their own place, at their own size (see
 [What the list knows, and what it guesses](#what-the-list-knows-and-what-it-guesses)),
 asked for as they enter the render window — a list that knows its count has no
-use for the first one.
+use for the first one. A run that does not know it learns it from its first
+answer ([What a run knows when it opens](#what-a-run-knows-when-it-opens)).
 
 Reference: `src/control/list/list.jsx` (JSDoc on `List` and `List.Items`).
 
@@ -351,6 +354,35 @@ What an item outside the window holds is not lost with its row: a selection
 keeps the items it does not draw (`--navi-select` reaches them by id), and a
 group keeps the keys of named controls that are not there
 ([control_object.md](./control_object.md#a-control-that-is-not-there)).
+
+### What a run knows when it opens
+
+A run reading a source (`itemsAction`) asks for what its window misses. What it
+can draw before the first answer, and how many asks it takes to stand where the
+list opens, follow from what it knows when it mounts:
+
+| When it mounts, the run knows                                     | Before the first answer                                                                | It asks for                                                                                     |
+| ----------------------------------------------------------------- | -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| nothing                                                           | skeletons where the list opens, the scrollbar a guess (up to there and a page past it) | the window, naming the item it opens on — and again if the answer ends the collection inside it |
+| how many items there are (`count`)                                | skeletons where the list opens, the scrollbar right                                    | the window                                                                                      |
+| the composition it left (Back; a reload under `keepPageOnScreen`) | the rows from before, `refreshing`                                                     | the window, read again                                                                          |
+
+So `count` is worth giving when the app already has it: a total shown
+elsewhere, a profile saying how many games there are. It is not worth a request
+of its own, since the first answer gives it anyway. Without it, a list opening
+near the end of its collection asks twice: the first answer is the one that
+says where the end is.
+
+A reload is a new document. A list with an `id` gets its position back, but the
+composition is gone with the document that read it: skeletons and a first load,
+unless the page is kept
+([list_refresh.md](./list_refresh.md#leaving-the-screen-and-coming-back)).
+
+A list coming back to a remembered position draws first the items that were on
+screen, and sizes its whole window once the browser has painted them (see
+`renderBudget`'s `initial`). Its first ask is a page around what was on screen;
+the edge of the window past that page, below the screen, comes with the next
+one.
 
 ### What the list knows, and what it guesses
 

@@ -127,10 +127,16 @@ A composition is about the **values** its params hold, not the reader instance:
 writes the same one. A verb in `rerunOn.GET_RANGE`, or `reader.invalidate()`,
 drops the compositions — they stand for an order that is gone — and
 `memoryBudget` (1000 ranks by default) trims the ranks far from any window,
-which are asked for again if the user goes back to them. A composition read by a
-list on screen also outlives the document when the page is kept
-([`keepPageOnScreen`](./resource.md#keeppageonscreen-the-page-on-screen-drawn-again-by-the-next-document)): the ranks around the window it draws are written with
-their rows, and a reload is the same return after a longer absence.
+which are asked for again if the user goes back to them.
+
+A composition lives as long as the document. **Back keeps it; a reload keeps it
+only under `keepPageOnScreen`.** Coming back within the same document finds it
+on its own. A reload, a link opened in another tab, a tab the system discarded
+open a new document, where the list gets back its position (kept under its
+`id`) and nothing to draw there: skeletons, and a first load. A page kept with
+[`keepPageOnScreen`](./resource.md#keeppageonscreen-the-page-on-screen-drawn-again-by-the-next-document)
+writes the ranks around the window each list on screen draws, with their rows,
+and a reload is then the same return after a longer absence.
 
 ### Who decides the re-read — and who does not
 

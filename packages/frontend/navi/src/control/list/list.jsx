@@ -5601,6 +5601,15 @@ const VISIBILITY_HIDDEN_STYLE = { visibility: "hidden" };
  * @param {(range: object) => any} [props.itemsAction]
  *   Where the items come from when the collection is read a slice at a time:
  *   a resource's range reader (`RESOURCE.GET_RANGE.bindParams(...)`).
+ * @param {number} [props.count]
+ *   How many items the collection holds, when the app knows it before the
+ *   first answer: a total shown elsewhere, a profile saying how many there are.
+ *   The list is then as long as the collection from its first frame: it opens
+ *   where it is held, the scrollbar right, and asks for that window. Without
+ *   it, the run stands for skeletons up to the item the list opens on and a
+ *   page past it, until the first answer says how many there are. Not worth a
+ *   request of its own, since the first answer gives it (see docs/scroll.md,
+ *   "What a run knows when it opens").
  * @param {number} [props.debounce]
  *   Milliseconds the reader must hold still before the run draws the
  *   collection it reads: params following a field as the user types
