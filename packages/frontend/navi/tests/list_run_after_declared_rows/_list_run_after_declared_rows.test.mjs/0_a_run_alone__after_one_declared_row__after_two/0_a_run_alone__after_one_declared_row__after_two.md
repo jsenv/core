@@ -8,15 +8,15 @@ return await readLists();
 {
   "no_declared_row": {
     "rows_drawn": "item 0 | item 1 | item 2",
-    "asked": "0-99"
+    "asked": "0-2"
   },
   "one_declared_row": {
     "rows_drawn": "declared a | item 0 | item 1 | item 2",
-    "asked": "0-99"
+    "asked": "0-2"
   },
   "two_declared_rows": {
     "rows_drawn": "declared a | declared b | item 0 | item 1 | item 2",
-    "asked": "0-99"
+    "asked": "0-2"
   },
   "errors": []
 }

@@ -407,6 +407,9 @@ export const createListItems = () => {
     // what puts the view back once they have (see VirtualFiller).
     captureAnchor: () => {},
     holdViewStill: () => {},
+    // The list has asked for a window no render has drawn yet: a run holding
+    // the one before has nothing to ask for it (see useRequestMissing).
+    windowOnItsWay: () => false,
     horizontal: false,
     virtualItemSizeSignal: null,
     roomById,

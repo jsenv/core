@@ -1619,6 +1619,7 @@ const useListScrollSync = ({
   const renderWindowRef = useRef(null);
   // A window was asked for that no render has drawn yet (see settleWindow).
   const windowAskedRef = useRef(false);
+  listItems.windowOnItsWay = () => windowAskedRef.current;
   const windowLeavesItemsOut = () => {
     const renderWindow = renderWindowRef.current;
     if (!renderWindow) {
@@ -3210,6 +3211,7 @@ const useListScrollSync = ({
 
   holdWindow();
   // Whatever was asked for until now is what this render draws.
+  const windowWasAsked = windowAskedRef.current;
   windowAskedRef.current = false;
   const { start: windowStart, end: windowEnd } = renderWindowRef.current;
   useLayoutEffect(() => {
@@ -3220,7 +3222,9 @@ const useListScrollSync = ({
   // column — started anywhere but on a line, every item drawn would sit in the
   // column of another. Started on one, an item is in the column its place says
   // whatever the window frames. The same object while the numbers hold, so the
-  // runs are not told about a window that did not move.
+  // runs are not told about a window that did not move — except after a window
+  // was asked for: a run waiting for it to ask (see useRequestMissing) must be
+  // told, even when the window framed comes back to the same numbers.
   const windowDrawnRef = useRef(null);
   const drawnStart = windowStart - (windowStart % itemsPerLine);
   const endPastLine = windowEnd % itemsPerLine;
@@ -3229,6 +3233,7 @@ const useListScrollSync = ({
   let windowDrawn = windowDrawnRef.current;
   if (
     !windowDrawn ||
+    windowWasAsked ||
     windowDrawn.start !== drawnStart ||
     windowDrawn.end !== drawnEnd ||
     windowDrawn.itemsPerLine !== itemsPerLine
@@ -5706,6 +5711,7 @@ const ListItemsRun = ({
     count,
     itemsAction,
     settling,
+    pageSize: runProps.pageSize,
     memoryBudget,
     onRequestStateChange,
     onCountChange,
@@ -5980,9 +5986,17 @@ const useRunItems = (
         // A hole with nothing on either side (the scrollbar was thrown into
         // territory never visited): grow it both ways around what is on
         // screen.
-        const grow = Math.floor((itemsPerPage - holeSize) / 2);
-        askStart = missingStart - grow;
-        askEnd = missingEnd + grow;
+        askStart = missingStart - Math.floor((itemsPerPage - holeSize) / 2);
+        askEnd = askStart + itemsPerPage - 1;
+        // Cut by an edge of the run (the first page, the last one), the page
+        // takes the room on the other side.
+        if (askStart < runStart) {
+          askEnd += runStart - askStart;
+          askStart = runStart;
+        } else if (askEnd > runEnd - 1) {
+          askStart -= askEnd - (runEnd - 1);
+          askEnd = runEnd - 1;
+        }
       }
     }
     if (askStart < runStart) {
@@ -6436,6 +6450,22 @@ const ITEM_STORE_MAX_DEFAULT = 1000;
 const ITEM_STORE_KEEP_AROUND = 250;
 const COUNT_NOT_SAID = {};
 
+// The index of the item the list is held at, when the hold names one: a number,
+// or a position remembered with its index (see placeWhereHeld).
+const readHeldIndex = (scrolled) => {
+  if (typeof scrolled === "number") {
+    return scrolled;
+  }
+  if (
+    scrolled &&
+    typeof scrolled === "object" &&
+    typeof scrolled.index === "number"
+  ) {
+    return scrolled.index;
+  }
+  return null;
+};
+
 const rangeIsSame = (a, b) => {
   if (!a || !b) {
     return a === b;
@@ -6453,6 +6483,7 @@ const useItemStore = ({
   count,
   itemsAction,
   settling,
+  pageSize,
   memoryBudget,
   onRequestStateChange,
   onCountChange,
@@ -6661,8 +6692,17 @@ const useItemStore = ({
   });
   // Before the first answer a run does not know how many items it stands for.
   // It stands for a page of them: a list that is about to be filled looks
-  // like items on their way, not like an empty list.
-  const itemCount = pages.count ?? count ?? listItems.pageSize;
+  // like items on their way, not like an empty list. A list held on an item
+  // (see placeWhereHeld) is about to be filled there: the run stands for the
+  // items up to that one and a page past it, so the window frames the item
+  // before any answer, and what the run asks for first is that window.
+  const itemsPerPage = pageSize || listItems.pageSize;
+  const countKnown = pages.count ?? count;
+  let itemCount = countKnown;
+  if (itemCount === undefined) {
+    const heldIndex = readHeldIndex(listItems.scrolled);
+    itemCount = heldIndex === null ? itemsPerPage : heldIndex + itemsPerPage;
+  }
   // The items drawn are from before while they are read again, and while the
   // collection that replaces them waits for its params to hold still (see
   // useSettledReader).
@@ -6681,7 +6721,6 @@ const useItemStore = ({
   // say: the count the source answered or the caller gave, never the page the
   // run stands for before it knows. Said by each run on its first commit, so a
   // run drawing another collection takes back what the one before said.
-  const countKnown = pages.count ?? count;
   const onCountChangeRef = useRef(onCountChange);
   onCountChangeRef.current = onCountChange;
   const countSaidRef = useRef(COUNT_NOT_SAID);
@@ -6730,6 +6769,8 @@ const useItemStore = ({
   // A list taken off the screen while it was asking leaves nothing ringing
   // behind it: whoever is drawing "looking for items" has to stop.
   const mountedRef = useRef(false);
+  // Which render's ask is the one to send (see useRequestMissing).
+  const askTurnRef = useRef(0);
   useLayoutEffect(() => {
     mountedRef.current = true;
     return () => {
@@ -6802,11 +6843,7 @@ const useItemStore = ({
       // what it hands over (see rankOf). The one thing read from the list
       // itself is where it is being held, which is a list item.
       const rankOfIndex = (itemIndex) => itemIndex - runStart;
-      // The very first ask has nothing to go on: the run does not even know
-      // how many items there are, so it asks for the items the list would open
-      // on — counting back from the end when that is where it opens, the way
-      // an HTTP range does.
-      const budget = listItems.pageSize;
+      const budget = itemsPerPage;
       let start = missingStart;
       let end = missingEnd;
       let around;
@@ -6884,32 +6921,26 @@ const useItemStore = ({
           around = firstStale.id;
         }
       } else if (pages.count === undefined) {
+        // The very first ask is what the window misses, like any other: the
+        // run stands for the items up to where the list opens (see
+        // itemCount), so the window frames that place already.
         const scrolled = listItems.scrolled;
-        if (scrolled === "end") {
-          // Counting back from the end, the way an HTTP range does: a list
-          // opening on its last items asks for them before it knows how many
-          // there are.
+        if (scrolled === "end" && countKnown === undefined) {
+          // Except the end, which no window can frame before the count is
+          // known: counted back from, the way an HTTP range does.
           start = -budget;
           end = -1;
-        } else if (scrolled && scrolled.id !== undefined) {
-          // Asked for by name, since a place can have changed hands since it
-          // was written down — but the place it had is sent too, so a source
-          // that paginates by index has something to work with, and the answer
-          // says where it really landed (see the page's own `start`).
-          const from =
-            typeof scrolled.index === "number"
-              ? rankOfIndex(scrolled.index) - Math.floor(budget / 2)
-              : 0;
-          start = from < 0 ? 0 : from;
-          end = start + budget - 1;
+        } else if (start === -1) {
+          // The window does not reach the run yet: its first page is asked
+          // for all the same, which says how many items it stands for.
+          start = 0;
+          end = budget - 1;
+        }
+        if (scrolled && scrolled.id !== undefined) {
+          // Asked for by name too, since a place can have changed hands since
+          // it was written down: the answer says where it really landed (see
+          // the page's own `start`).
           around = scrolled.id;
-        } else {
-          const first =
-            typeof scrolled === "number"
-              ? rankOfIndex(scrolled) - Math.floor(budget / 2)
-              : 0;
-          start = first < 0 ? 0 : first;
-          end = start + budget - 1;
         }
       }
       const ask = () => {
@@ -6926,6 +6957,12 @@ const useItemStore = ({
             `(revalidating=${revalidating} holdPending=${listItems.holdPending} count=${pages.count})`,
           );
         };
+        if (listItems.windowOnItsWay()) {
+          // The list moved its window after this render drew the one it had:
+          // the run draws the new one in the list's next pass, and asks then.
+          debugAsk("the list is moving its window");
+          return;
+        }
         if (start === -1) {
           // Nothing missing and nothing to revalidate: the run has what it
           // draws.
@@ -7086,9 +7123,20 @@ const useItemStore = ({
           done(result);
         }
       };
+      // Asked once the commit is over rather than from the effect: the list
+      // frames its window after its runs, in that same commit — sized on the
+      // screen, aimed at the item it is held on — and what the run asks for is
+      // the window the list settles on. A render coming meanwhile asks instead.
       useLayoutEffect(() => {
-        ask();
-        publishRequestState();
+        askTurnRef.current++;
+        const turn = askTurnRef.current;
+        queueMicrotask(() => {
+          if (turn !== askTurnRef.current || !mountedRef.current) {
+            return;
+          }
+          ask();
+          publishRequestState();
+        });
       });
     },
   };
