@@ -6555,6 +6555,64 @@ const useItemStore = ({
       ? new Set(pages.byIndex.keys())
       : new Set();
   }
+  const takeInPage = ({ pageItems, pageStart, pageCount }) => {
+    // An item from before is gone from where it stood when the page puts
+    // it at another rank (it would be drawn twice), or when its rank is
+    // past the end of the collection.
+    const staleRanks = staleRanksRef.current;
+    const pageEnd = pageStart + pageItems.length;
+    let dropped = false;
+    if (staleRanks.size > 0) {
+      const pageIds = new Set();
+      for (const pageItem of pageItems) {
+        if (pageItem && pageItem.id !== undefined) {
+          pageIds.add(pageItem.id);
+        }
+      }
+      for (const rank of staleRanks) {
+        if (rank >= pageStart && rank < pageEnd) {
+          continue;
+        }
+        const staleItem = pages.byIndex.get(rank);
+        if (rank >= pageCount || (staleItem && pageIds.has(staleItem.id))) {
+          staleRanks.delete(rank);
+          pages.byIndex.delete(rank);
+          dropped = true;
+        }
+      }
+    }
+    let i = 0;
+    while (i < pageItems.length) {
+      pages.byIndex.set(pageStart + i, pageItems[i]);
+      staleRanks.delete(pageStart + i);
+      i++;
+    }
+    pages.count = pageCount;
+    // Which rank holds which id, kept by the source so a list drawing
+    // this collection again finds it drawn (see readComposition above).
+    if (itemsAction.writeComposition) {
+      itemsAction.writeComposition({
+        byIndex: pages.byIndex,
+        count: pageCount,
+        replace: dropped,
+      });
+    }
+  };
+  // The pages answered since the last render, taken in by the render and not
+  // as they land: what the list reads of the run — how many items it stands for
+  // (see listItems.take), where an item sits (its locator) — then moves in one
+  // step. Taken in on landing, an item could be located past the count the list
+  // still holds, and a list held on it would aim its window there at every
+  // render, framed back each time.
+  const pagesLandedRef = useRef([]);
+  const pagesLanded = pagesLandedRef.current;
+  const pagesTakenIn = pagesLanded.length > 0;
+  if (pagesTakenIn) {
+    pagesLandedRef.current = [];
+    for (const page of pagesLanded) {
+      takeInPage(page);
+    }
+  }
   const [refreshing, setRefreshing] = useState(false);
   // A source that says when what it reads has moved (a resource range reader
   // does: see rerunOn.GET_RANGE) is heard here — a write deciding who belongs
@@ -6587,13 +6645,18 @@ const useItemStore = ({
 
   const listItems = useContext(ListItemsContext);
   // The items are there, which is what the list waits for to place itself on the
-  // item it is held at (see placeWhereHeld). Said from an effect: a signal read
-  // during this very render must not be written during it.
+  // item it is held at (see placeWhereHeld). Said from an effect, once the run
+  // has drawn them: a signal read during this very render must not be written
+  // during it.
   useLayoutEffect(() => {
-    if (!inMemory || itemsHeldRef.current) {
+    if (inMemory) {
+      if (itemsHeldRef.current) {
+        return;
+      }
+      itemsHeldRef.current = true;
+    } else if (!pagesTakenIn) {
       return;
     }
-    itemsHeldRef.current = true;
     listItems.pagesSignal.value = listItems.pagesSignal.peek() + 1;
   });
   // Before the first answer a run does not know how many items it stands for.
@@ -6666,8 +6729,11 @@ const useItemStore = ({
   };
   // A list taken off the screen while it was asking leaves nothing ringing
   // behind it: whoever is drawing "looking for items" has to stop.
+  const mountedRef = useRef(false);
   useLayoutEffect(() => {
+    mountedRef.current = true;
     return () => {
+      mountedRef.current = false;
       if (requestStateRef.current.busy && onRequestStateChangeRef.current) {
         onRequestStateChangeRef.current({
           busy: false,
@@ -6967,54 +7033,17 @@ const useItemStore = ({
           const pageCount = Array.isArray(page)
             ? pageItems.length
             : (page.count ?? pageStart + pageItems.length);
+          const pageLanded = { pageItems, pageStart, pageCount };
+          if (!mountedRef.current) {
+            // No render is coming to take it in, and the source still keeps
+            // what came back for the next list drawing this collection.
+            takeInPage(pageLanded);
+            return;
+          }
           // Before the items land: what is on screen has to stay where it is,
           // and the DOM still shows the state to hold onto.
           listItems.captureAnchor();
-          // An item from before is gone from where it stood when the page puts
-          // it at another rank (it would be drawn twice), or when its rank is
-          // past the end of the collection.
-          const staleRanksNow = staleRanksRef.current;
-          const pageEnd = pageStart + pageItems.length;
-          let dropped = false;
-          if (staleRanksNow.size > 0) {
-            const pageIds = new Set();
-            for (const pageItem of pageItems) {
-              if (pageItem && pageItem.id !== undefined) {
-                pageIds.add(pageItem.id);
-              }
-            }
-            for (const rank of staleRanksNow) {
-              if (rank >= pageStart && rank < pageEnd) {
-                continue;
-              }
-              const staleItem = pages.byIndex.get(rank);
-              if (
-                rank >= pageCount ||
-                (staleItem && pageIds.has(staleItem.id))
-              ) {
-                staleRanksNow.delete(rank);
-                pages.byIndex.delete(rank);
-                dropped = true;
-              }
-            }
-          }
-          let i = 0;
-          while (i < pageItems.length) {
-            pages.byIndex.set(pageStart + i, pageItems[i]);
-            staleRanksNow.delete(pageStart + i);
-            i++;
-          }
-          pages.count = pageCount;
-          // Which rank holds which id, kept by the source so a list drawing
-          // this collection again finds it drawn (see readComposition above).
-          if (itemsAction.writeComposition) {
-            itemsAction.writeComposition({
-              byIndex: pages.byIndex,
-              count: pageCount,
-              replace: dropped,
-            });
-          }
-          listItems.pagesSignal.value = listItems.pagesSignal.peek() + 1;
+          pagesLandedRef.current.push(pageLanded);
           setPageVersion((version) => version + 1);
         };
         const failed = (error) => {

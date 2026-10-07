@@ -64,9 +64,11 @@ export const actionRunEffect = (
     return params;
   });
   // Whether the getter asks for a run is read off what it returned, never off
-  // the params of the instance it leads to: an action handed here holding
-  // params of its own (an instance, a binding) keeps them when the getter
-  // returns nothing — and nothing must still run nothing.
+  // the instances it moves between: an action handed here holding params of
+  // its own (an instance, a binding) keeps them when the getter returns
+  // nothing — and nothing must still run nothing; an instance reset under the
+  // effect (a same-resource DELETE) reads as never run — and the next params
+  // the getter asks for must still run.
   let asking = Boolean(actionParamsSignal.peek());
   const actionRunnedByThisEffect = action.bindParams(actionParamsSignal, {
     debounce,
@@ -93,11 +95,7 @@ export const actionRunEffect = (
         return;
       }
 
-      if (
-        actionTargetPrevious &&
-        !actionTargetPrevious.isPrerun &&
-        actionTarget
-      ) {
+      if (actionTargetPrevious && actionTarget) {
         // params changed
         if (!asking) {
           // falsy params, don't run
