@@ -561,6 +561,7 @@ export const useUIStateController = (
             if (
               e.type === "facade_propagate_up" ||
               e.type === "cancel_rollback" ||
+              e.type === "navi_reset_ui_state" ||
               e.type === "auto_fix"
             ) {
               // Exception: when the facade propagates a child state change up to the
@@ -570,7 +571,9 @@ export const useUIStateController = (
               // the Form's uiAction fires on every value change.
               // A cancel takes the same road back: the Form was told what the
               // popup was picking, so it has to be told the picker went back to
-              // where it opened, or it sends a value the user said no to.
+              // where it opened, or it sends a value the user said no to. A
+              // reset is that road too, for a field put back after its own
+              // action failed.
               // A correction is the same story once more: the Form sends what
               // its fields add up to, and a field that just put its own value
               // right has to be counted for the corrected one.
@@ -2692,6 +2695,13 @@ const INTERNAL_EVENT_SET = new Set([
   // notification below still happen, exactly as they did on the way in (see
   // picker_custom.jsx's onClose).
   "cancel_rollback",
+  // A rollback navi asks for (see dispatchRequestResetUIState): the action
+  // failed or was aborted, the edit was cancelled, a reset command aimed here.
+  // Nobody acted on the control, so no command — a `<Picker type="confirm"
+  // action command>` refused by the server would otherwise go where only its
+  // success leads. Where the value moves back, uiAction and the parent
+  // notification below still happen, as for cancel_rollback.
+  "navi_reset_ui_state",
   // A constraint allowed to correct the value put it right as the value was
   // committed (see applyAutoFix). Nobody pressed anything, so no command and
   // no action of the control's own — but what it holds really did move, so
