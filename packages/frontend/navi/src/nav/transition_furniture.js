@@ -112,9 +112,16 @@ const WALL_ATTRIBUTE = "data-navi-transition-wall";
 // property would replace it.
 const FURNITURE_ATTRIBUTE = "data-navi-transition-furniture";
 // What the wall paints, resolved on the matched element in both cases (the
-// dialog for its ::backdrop, the popover's wall for itself): the same two
-// properties, copied onto the stand-in.
-const WALL_PROPERTIES = ["--backdrop-background", "--backdrop-filter"];
+// dialog for its ::backdrop, the popover's wall for itself), and what a colour
+// in it depends on: color-scheme for light-dark() and the system colours,
+// color for currentcolor. Copied onto the stand-in, which paints them in a
+// context of its own.
+const WALL_PROPERTIES = [
+  "--backdrop-background",
+  "--backdrop-filter",
+  "color-scheme",
+  "color",
+];
 
 // The pictures the wall is painted into: the pages', and every bar's own.
 const FIXED_BAR_SELECTOR = ".navi_fixed_bar";

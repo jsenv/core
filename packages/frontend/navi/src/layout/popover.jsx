@@ -79,7 +79,7 @@ import {
   useOpenController,
   useOpenPropsEffectOnOpenController,
 } from "./open_controller.js";
-import { pushPopupThemeColor } from "../nav/theme_color.js";
+import { pushPopupThemeColor, readBackdropColor } from "../nav/theme_color.js";
 import { usePopupContentMount } from "./popup_content_mount.js";
 import { popupCss } from "./popup_css.js";
 import { surfaceTextCss } from "./surface_text_css.js";
@@ -1551,9 +1551,7 @@ const usePopoverProps = (props) => {
       addCleanup(
         pushPopupThemeColor({
           themeColor,
-          backdropColor: backdropEl
-            ? getComputedStyle(backdropEl).backgroundColor
-            : null,
+          backdropColor: backdropEl ? readBackdropColor(backdropEl) : null,
         }),
       );
     }

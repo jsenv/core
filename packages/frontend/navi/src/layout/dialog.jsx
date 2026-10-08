@@ -119,7 +119,7 @@ import {
   usePopupContentMount,
 } from "./popup_content_mount.js";
 import { preloadState } from "../nav/route.js";
-import { pushPopupThemeColor } from "../nav/theme_color.js";
+import { pushPopupThemeColor, readBackdropColor } from "../nav/theme_color.js";
 import { flushSyncRendering } from "../utils/flush_sync_rendering.js";
 import { popupCss } from "./popup_css.js";
 import { surfaceTextCss } from "./surface_text_css.js";
@@ -2205,9 +2205,7 @@ const useDialogProps = (props) => {
       addCleanup(
         pushPopupThemeColor({
           themeColor,
-          backdropColor: backdrop
-            ? getComputedStyle(dialogEl, "::backdrop").backgroundColor
-            : null,
+          backdropColor: backdrop ? readBackdropColor(dialogEl) : null,
           surfaceColor: flushEdges.top
             ? getComputedStyle(dialogEl).backgroundColor
             : null,

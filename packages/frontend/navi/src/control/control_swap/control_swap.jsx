@@ -239,12 +239,17 @@ export const ControlSwap = (props) => {
   }
   // Reading .value during render is what subscribes the row to it.
   const valueRequested = signal ? signal.value : value;
-  const [activeName, setActiveName] = useState(() => {
+  // The side holding the floor, and the cap whose press gave it (null when
+  // `value`/`signal` did): which cap was pressed decides where the focus goes.
+  const [floor, setFloor] = useState(() => {
     const nameRequested =
       valueRequested === undefined ? defaultValue : valueRequested;
-    return nameRequested === undefined ? sides[0].name : nameRequested;
+    return {
+      name: nameRequested === undefined ? sides[0].name : nameRequested,
+      pressedCapIndex: null,
+    };
   });
-  const activeIndexFound = sides.findIndex((side) => side.name === activeName);
+  const activeIndexFound = sides.findIndex((side) => side.name === floor.name);
   const activeIndex = activeIndexFound === -1 ? 0 : activeIndexFound;
   const activeSide = sides[activeIndex];
 
@@ -252,15 +257,15 @@ export const ControlSwap = (props) => {
   const slotRefs = [useRef(), useRef()];
   const slotIdPrefix = useId();
 
-  const activeNameRef = useRef(activeName);
+  const activeNameRef = useRef(floor.name);
   activeNameRef.current = activeSide.name;
 
-  const swapTo = (name, event) => {
+  const swapTo = (name, event, pressedCapIndex = null) => {
     if (name === activeNameRef.current) {
       return;
     }
     activeNameRef.current = name;
-    setActiveName(name);
+    setFloor({ name, pressedCapIndex });
     if (signal) {
       signal.value = name;
     }
@@ -297,14 +302,17 @@ export const ControlSwap = (props) => {
       slotRefs[activeIndex].current,
       activeSide,
       capRefs[activeIndex].current,
+      floor.pressedCapIndex === null
+        ? null
+        : capRefs[floor.pressedCapIndex].current,
     );
   }, [activeSide.name]);
 
   // Both caps do the same thing, and it is the reason they sit outside the
   // controls: whichever one the finger lands on, the floor goes to the other
   // side. The same pixel opens the search and closes it.
-  const swapOnPress = (event) => {
-    swapTo(sides[activeIndex === 0 ? 1 : 0].name, event);
+  const swapOnPress = (event, pressedCapIndex) => {
+    swapTo(sides[activeIndex === 0 ? 1 : 0].name, event, pressedCapIndex);
   };
 
   return (
@@ -321,7 +329,7 @@ export const ControlSwap = (props) => {
         side={sides[0]}
         slotId={`${slotIdPrefix}_0`}
         active={activeIndex === 0}
-        onPress={swapOnPress}
+        onPress={(event) => swapOnPress(event, 0)}
       />
       <div className="navi_control_swap_stage">
         <div className="navi_control_swap_track">
@@ -343,7 +351,7 @@ export const ControlSwap = (props) => {
         side={sides[1]}
         slotId={`${slotIdPrefix}_1`}
         active={activeIndex === 1}
-        onPress={swapOnPress}
+        onPress={(event) => swapOnPress(event, 1)}
       />
     </Box>
   );
@@ -375,12 +383,14 @@ export const ControlSwap = (props) => {
  *   the collapsed one — the side holding the floor spells out in full what a
  *   dot could only hint at — so it is read straight off the state
  *   (`badge={Boolean(groupId)}`), with no "and this side is hidden" to add.
- * @param autoFocus - On by default: the focus goes into this control when it
- *   takes the floor, where navi's ladder puts it — an `autoFocus` inside the
- *   control first, its first focusable otherwise. `false` leaves it on the cap
- *   that was pressed, for a control one reads before writing in (and, on a
- *   phone, for a keyboard that must not rise). Never on mount, whatever the
- *   setting.
+ * @param autoFocus - On by default: the focus goes into this control when its
+ *   own cap (or `value`/`signal`) gives it the floor, where navi's ladder puts
+ *   it — an `autoFocus` inside the control first, its first focusable
+ *   otherwise. `false` leaves it on the cap that was pressed, for a control one
+ *   reads before writing in (and, on a phone, for a keyboard that must not
+ *   rise). Whatever the setting, never on mount, and never when the floor comes
+ *   back because the other side was put away by its own cap: that press closed
+ *   something, it did not ask for this control.
  *
  * Anything else — `data-testid`, `variant`, `backgroundColor`, `color`, an
  * `aria-describedby` — goes to the cap, which is a `<Button>`. It is the one
@@ -446,9 +456,13 @@ const readSides = (children) => {
   return sides;
 };
 
-// The floor moved: the press that gave it landed on a cap, and what one wants
-// next is the control that just arrived — typing into the search field one just
-// opened, not pressing its icon again.
+// The floor moved. A press on the arriving side's own cap — the collapsed one —
+// asks for that control: what one wants next is typing into the search field
+// one just opened, not pressing its icon again. A press on the other cap puts
+// the side holding the floor away, and the arriving one only comes back because
+// the row has room for one control: the focus stays on the cap pressed, and on
+// a phone no keyboard rises over the list one went back to. A swap with no
+// press behind it (`value`/`signal` moved) is taken as asking for the arrival.
 //
 // WHERE inside is navi's own ladder (findFocusTarget): an `autoFocus` in the
 // control's own content first, the first focusable otherwise, a last resort
@@ -463,8 +477,14 @@ const readSides = (children) => {
 //   open". A field marked that way so its sheet opens quietly would otherwise
 //   leave the focus on the magnifier that was pressed to reach it.
 // A side one reads before writing in says `autoFocus={false}`.
-const focusWithTheFloor = (arrivingSlot, arrivingSide, arrivingCap) => {
-  if (arrivingSide.autoFocus !== false) {
+const focusWithTheFloor = (
+  arrivingSlot,
+  arrivingSide,
+  arrivingCap,
+  pressedCap,
+) => {
+  const arrivalAskedFor = !pressedCap || pressedCap === arrivingCap;
+  if (arrivalAskedFor && arrivingSide.autoFocus !== false) {
     const found = findFocusTarget(arrivingSlot, { restoreMayClaim: true });
     if (found) {
       moveFocusTo(found.target);
@@ -472,10 +492,11 @@ const focusWithTheFloor = (arrivingSlot, arrivingSide, arrivingCap) => {
     }
   }
   // Whatever the leaving slot held is inert and off the window now, so the
-  // browser dropped its focus to the document body: it has to land somewhere,
-  // and the cap of the side taking over is where the gesture was.
+  // browser dropped its focus to the document body (Safari never gave it to
+  // the pressed button in the first place): it has to land somewhere, and the
+  // cap pressed is where the gesture was.
   const { activeElement } = document;
   if (!activeElement || activeElement === document.body) {
-    moveFocusTo(arrivingCap);
+    moveFocusTo(pressedCap || arrivingCap);
   }
 };

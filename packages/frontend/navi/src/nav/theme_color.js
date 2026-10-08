@@ -79,6 +79,34 @@ export const pushPopupThemeColor = ({
   };
 };
 
+/**
+ * What a popup's wall paints, read off the `--backdrop-background` it is
+ * painted from rather than off the wall: for the length of a route transition
+ * played on an area the wall itself is turned transparent and stood in for
+ * (transition_furniture.js), and a popup opening then would find nothing laid
+ * over the edge. The variable holds a token list, resolved to a colour on an
+ * element of its own, given what the wall inherits that a colour depends on:
+ * color-scheme for light-dark() and the system colours, color for
+ * currentcolor.
+ *
+ * @param {Element} element - The element declaring the variable: the dialog
+ *   for its ::backdrop, a popover's wall for itself.
+ * @returns {string}
+ */
+export const readBackdropColor = (element) => {
+  const elementStyle = getComputedStyle(element);
+  const probe = document.createElement("div");
+  probe.style.colorScheme = elementStyle.colorScheme;
+  probe.style.color = elementStyle.color;
+  probe.style.background = elementStyle.getPropertyValue(
+    "--backdrop-background",
+  );
+  document.body.append(probe);
+  const color = getComputedStyle(probe).backgroundColor;
+  probe.remove();
+  return color;
+};
+
 let renderQueued = false;
 // Once per commit: a Head re-rendering leaves and arrives again in the same
 // commit, and the browser must not be handed the colour from in between.
