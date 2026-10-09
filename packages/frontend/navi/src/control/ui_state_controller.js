@@ -2683,12 +2683,6 @@ const INTERNAL_EVENT_SET = new Set([
   // on registration, and group pushing value/defaultValue to children on registerChild.
   // Equivalent to defaultValue initialization: no uiAction, no commands, no parent notification.
   "initial_state_push",
-  // navi undoing its own optimistic write: the clear cross emptied the control
-  // before the send that commits it, the send failed, and the value it emptied
-  // goes back where it was (see the --navi-clear command). Nothing acted — the
-  // control is being put back on the state the caller still holds — so this
-  // must not fire a uiAction, a command, or a report on the way.
-  "clear_rollback",
   // A picker's popup closed on a cancel (the no button, Escape, a click
   // outside): what the picker held at open goes back. Nobody acted — no
   // command — but the value really did move back, so uiAction and the parent

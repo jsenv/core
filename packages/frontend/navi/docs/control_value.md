@@ -65,6 +65,21 @@ picker's own signal follows its popup the same way, gesture by gesture, and so
 does its `uiAction`. What waits for the close is the picker's `action` — and a
 suggestion nobody touched, which becomes the answer when the popup closes on it.
 
+A change made while the popup is **closed** has no close to wait for, so it is
+sent at once: the clear cross, a `Picker.Chip`'s cross, a paste or a cut on the
+trigger, a [`--navi-update`](#a-button-that-proposes-a-value-is---navi-update)
+aimed at it — each runs the picker's `action` on the spot, and a failure puts
+the value back. That is what lets a picker whose every gesture saves stand alone,
+with no "Save" button around it. Three things send nothing:
+
+- a value written from elsewhere (its signal, a rollback): the picker is told,
+  nobody acted;
+- a button with an `action` of its own, whose command clears or updates the
+  picker: that action already made the request, and the command only brings
+  the picker in line with it;
+- a picker that picks nothing (`type="confirm"`): its `action` is the yes of its
+  question, never something its trigger can say.
+
 The write-back replaces the `uiAction` that copies the value into a signal:
 
 ```jsx
@@ -135,6 +150,9 @@ offered to that control. It is not an action, and not a signal to write by hand:
 - the **target** is `commandFor`, naming the control's id — left out, the
   nearest control around the button, which is what a button placed inside the
   control it proposes to wants;
+- a closed picker with an `action` sends the value at once, as it does for any
+  change made to it while closed (see
+  [above](#a-bound-signal-works-in-both-directions));
 - the press goes through the same gate as every other interaction, so a
   read-only, disabled or busy control **refuses it and says why**.
 

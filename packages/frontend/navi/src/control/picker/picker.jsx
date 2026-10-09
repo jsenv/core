@@ -1494,7 +1494,7 @@ const requestPickerListEntry = (pickerEl, pickerInputEl, e, goal) => {
     }
     return;
   }
-  const { id: entry } = e.detail;
+  const { id: entry, requester } = e.detail;
   const isThere = uiState.some((item) => compareTwoJsValues(item, entry));
   if (goal === "select" ? isThere : !isThere) {
     return;
@@ -1509,7 +1509,11 @@ const requestPickerListEntry = (pickerEl, pickerInputEl, e, goal) => {
     prevented: () => e.preventDefault(),
     allowed: () => {
       dispatchRequestSetUIState(pickerInputEl, uiStateNext, { event: e });
-      sendClosedPickerChange(pickerInputEl, { event: e, name: goal });
+      sendClosedPickerChange(pickerInputEl, {
+        event: e,
+        name: goal,
+        requester,
+      });
     },
   });
 };
@@ -2005,7 +2009,9 @@ const PickerFirstResolver = (props) => {
  *   the `<Picker type="confirm">` the cross then is, plain text or JSX. Asked
  *   BEFORE the ui state is emptied, so answering no leaves the field exactly
  *   as it was; answering yes clears and sends, and the picker's own action
- *   receives the cleared value like any other choice.
+ *   receives the cleared value like any other choice. A cut (Ctrl+X) on such a
+ *   picker copies the value and leaves it in place: no clear without the
+ *   question.
  * @param {"icon"|"headless"|"discrete"|"button"|"text"|"bare"|"picker"} [variant]
  *   How the trigger is drawn. `"button"` is a Button's drawing — surface,
  *   padding, a centered label, no chevron — and what a `type="confirm"` picker

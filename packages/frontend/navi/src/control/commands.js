@@ -438,20 +438,6 @@ registerNaviCommand("--navi-clear", (source, event) => {
     return undefined;
   }
   const fromInput = source.closest(`[navi-control="input"]`);
-  // A control that commits on an explicit send — a picker, whose list sends the
-  // moment a value is chosen — has nothing that would commit a clear: its
-  // action never runs on a ui state change. Left alone, the field goes empty
-  // while the caller still holds the value it gave, and renders it right back.
-  //
-  // Unless the source committed the clear itself: a clear button given its own
-  // action (`<Button action={remove} command="--navi-clear">`) already made the
-  // request — the ui state is being brought in line with what just happened, and
-  // sending the picker's own action on top would ask twice.
-  const sourceController = source.__uiStateController__;
-  const fromSendOnlyControl = Boolean(
-    source.closest?.(`[navi-control=picker]`) &&
-    !sourceController?.props.action,
-  );
 
   const performClear = (clearEvent) => {
     dispatchRequestInteraction(target, {
@@ -462,46 +448,11 @@ registerNaviCommand("--navi-clear", (source, event) => {
       requester: source,
       prevented: () => clearEvent.preventDefault(),
       allowed: () => {
-        // What the control holds, before it holds nothing: the clear is
-        // optimistic — the field empties now and the send that commits it may
-        // still fail — so what it emptied has to be kept to be put back.
-        const uiStateBefore = getUIStateFromElement(target);
         dispatchRequestClearUIState(target, clearEvent);
-        if (!fromSendOnlyControl) {
-          return;
-        }
-        // After the clear, never before: the action is bound to the ui
-        // state signal, so this sends the value the control now holds.
-        const actionHost = findControlHost(target) || target;
-        const completion = watchActionCompletion(actionHost, () => {
-          triggerNaviCommand(source, "--navi-send", clearEvent, {
-            optional: true,
-          });
-        });
-        completion.whenSettled(({ error, aborted }) => {
-          if (!error && !aborted) {
-            return;
-          }
-          // The removal did not happen, so the field must stop saying it did.
-          // The error itself stays where the action put it — on the control,
-          // which is still there, unlike the cross that has just gone with the
-          // value it cleared (see addErrorMessage in use_execute_action.js).
-          //
-          // Put back from the inside ("clear_rollback" is an internal event
-          // type, see ui_state_controller.js) rather than asked for the way a
-          // user would: nobody acted, the control is being returned to the
-          // state its caller still holds. Asked from the outside it would be
-          // answered with "this element is busy" — the action is still
-          // settling — over the very error that explains why the value is back.
-          const controller = actionHost.__uiStateController__;
-          if (!controller) {
-            return;
-          }
-          const rollbackEvent = new CustomEvent("clear_rollback", {
-            detail: {},
-          });
-          chainEvent(rollbackEvent, clearEvent);
-          controller.setUIState(uiStateBefore, rollbackEvent);
+        sendClosedPickerChange(target, {
+          event: clearEvent,
+          name: "--navi-clear",
+          requester: source,
         });
       },
     });
@@ -1241,6 +1192,7 @@ registerNaviCommand("--navi-select", (source, event) => {
       return dispatchCustomEvent(target, "navi_request_select", {
         event,
         id: resolveCommandValue(source, event),
+        requester: source,
       });
     },
   };
@@ -1257,6 +1209,7 @@ registerNaviCommand("--navi-unselect", (source, event) => {
       return dispatchCustomEvent(target, "navi_request_unselect", {
         event,
         id: resolveCommandValue(source, event),
+        requester: source,
       });
     },
   };
