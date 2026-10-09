@@ -29,7 +29,6 @@ import { uiStateHoldsNothing } from "../ui_state_controller.js";
 import { Button } from "../input/button.jsx";
 import { resolveInputProps } from "../input/resolve_input_props.js";
 import { useAutoSelectReadOnly } from "../input/use_autoselect_read_only.js";
-import { dispatchRequestAction } from "../rules/control_action.js";
 import { createOpenToken } from "../rules/control_callout.js";
 import { dispatchRequestInteraction } from "../rules/control_interaction.js";
 import {
@@ -37,6 +36,7 @@ import {
   dispatchRequestSetUIState,
   getUIStateFromElement,
 } from "../ui_state_dom.js";
+import { sendClosedPickerChange } from "./picker_closed_change.js";
 import { PickerConfirmResolver } from "./picker_confirm.jsx";
 import {
   PickerContext,
@@ -1198,15 +1198,25 @@ const PickerButton = (props) => {
                   "application/x-navi",
                   JSON.stringify(uiState),
                 );
+                e.preventDefault();
+                // A picker that asks before its cross clears anything is not
+                // emptied by a keystroke without the question: the cut copies,
+                // and the value stays.
+                if (clearConfirm !== undefined) {
+                  return;
+                }
                 // the clear ui state part need control to be interactable
                 dispatchRequestInteraction(pickerEl, {
                   event: e,
                   name: "cut",
                   allowed: () => {
                     dispatchRequestClearUIState(inputRef.current, e);
+                    sendClosedPickerChange(inputRef.current, {
+                      event: e,
+                      name: "cut",
+                    });
                   },
                 });
-                e.preventDefault();
               }}
               onPaste={(e) => {
                 const pickerEl = ref.current;
@@ -1231,6 +1241,10 @@ const PickerButton = (props) => {
                   allowed: () => {
                     dispatchRequestSetUIState(inputRef.current, pasteValue, {
                       event: e,
+                    });
+                    sendClosedPickerChange(inputRef.current, {
+                      event: e,
+                      name: "paste",
                     });
                   },
                 });
@@ -1495,18 +1509,7 @@ const requestPickerListEntry = (pickerEl, pickerInputEl, e, goal) => {
     prevented: () => e.preventDefault(),
     allowed: () => {
       dispatchRequestSetUIState(pickerInputEl, uiStateNext, { event: e });
-      // An open popup sends what it holds when it closes. A closed picker has
-      // no close coming: the entry taken out (or put in) from beside it is the
-      // whole gesture, so it is sent now — as the clear cross does (see
-      // --navi-clear). A failing action puts the entry back, as it does after
-      // a close (resetOnError).
-      if (pickerEl.getAttribute("aria-expanded") === "true") {
-        return;
-      }
-      if (!pickerInputEl.__uiStateController__.props.action) {
-        return;
-      }
-      dispatchRequestAction(pickerInputEl, { event: e, name: goal });
+      sendClosedPickerChange(pickerInputEl, { event: e, name: goal });
     },
   });
 };

@@ -14,6 +14,7 @@ import {
   isControlRoot,
 } from "./control_dom.js";
 import { readControlValue } from "./control_value.js";
+import { sendClosedPickerChange } from "./picker/picker_closed_change.js";
 import {
   dispatchRequestAction,
   watchActionCompletion,
@@ -419,6 +420,11 @@ registerNaviCommand("--navi-update", (source, event, { argument }) => {
           dispatchRequestSetUIState(target, commandValue, {
             event,
             behavior: argument,
+          });
+          sendClosedPickerChange(target, {
+            event,
+            name: "--navi-update",
+            requester: source,
           });
         },
       });
