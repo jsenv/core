@@ -29,6 +29,7 @@ import { uiStateHoldsNothing } from "../ui_state_controller.js";
 import { Button } from "../input/button.jsx";
 import { resolveInputProps } from "../input/resolve_input_props.js";
 import { useAutoSelectReadOnly } from "../input/use_autoselect_read_only.js";
+import { dispatchRequestAction } from "../rules/control_action.js";
 import { createOpenToken } from "../rules/control_callout.js";
 import { dispatchRequestInteraction } from "../rules/control_interaction.js";
 import {
@@ -1494,6 +1495,18 @@ const requestPickerListEntry = (pickerEl, pickerInputEl, e, goal) => {
     prevented: () => e.preventDefault(),
     allowed: () => {
       dispatchRequestSetUIState(pickerInputEl, uiStateNext, { event: e });
+      // An open popup sends what it holds when it closes. A closed picker has
+      // no close coming: the entry taken out (or put in) from beside it is the
+      // whole gesture, so it is sent now — as the clear cross does (see
+      // --navi-clear). A failing action puts the entry back, as it does after
+      // a close (resetOnError).
+      if (pickerEl.getAttribute("aria-expanded") === "true") {
+        return;
+      }
+      if (!pickerInputEl.__uiStateController__.props.action) {
+        return;
+      }
+      dispatchRequestAction(pickerInputEl, { event: e, name: goal });
     },
   });
 };

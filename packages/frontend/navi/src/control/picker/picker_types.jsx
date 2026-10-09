@@ -139,7 +139,9 @@ export const PickerArrayUI = /*#__PURE__*/ asPickerOwnUI(() => {
 /**
  * One value the picker holds, drawn as a chip with a cross that takes it back
  * out. Sits wherever the application draws what was picked — on the picker's
- * façade (`ui`) or inside its popup — and both behave the same.
+ * façade (`ui`) or inside its popup. Inside the open popup the removal waits
+ * for the close like any change made there; pressed while the popup is closed
+ * it is the whole gesture, and the picker's `action` runs at once.
  *
  * The cross asks with `--navi-unselect` rather than writing a new list, and it
  * asks the picker — which holds what was picked, and hands it down to whatever

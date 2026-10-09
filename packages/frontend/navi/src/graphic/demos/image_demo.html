@@ -66,7 +66,7 @@
             <Image
               key={key}
               src={`./image_demo_asset?section=no-height&theme=${theme}&delay=${delay}&v=${key}`}
-              width="200px"
+              width={200}
             />
             <p style={{ margin: 0, fontSize: "14px" }}>
               Text after the image — it shifts down when the image loads.
@@ -86,8 +86,8 @@
             <Image
               key={key}
               src={`./image_demo_asset?section=with-height&theme=${theme}&delay=${delay}&v=${key}`}
-              width="200px"
-              height="150px"
+              width={200}
+              height={150}
             />
             <p style={{ margin: 0, fontSize: "14px" }}>
               Text after the image — it stays in place while the image loads.
@@ -117,8 +117,8 @@
               <Image
                 key={key}
                 src={`./image_demo_asset?section=dark-bg&theme=${theme}&delay=${delay}&v=${key}`}
-                width="200px"
-                height="150px"
+                width={200}
+                height={150}
                 placeholderDark
               />
               <p style={{ margin: 0, fontSize: "14px", color: "#9ca3af" }}>

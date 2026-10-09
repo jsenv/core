@@ -45,6 +45,10 @@ const css = /* css */ `
 
 const DEFAULT_PLACEHOLDER_LIGHT = "#d4d8dd";
 const DEFAULT_PLACEHOLDER_DARK = "#374151";
+// On an <img>, width/height describe the image: they stay HTML attributes.
+// Box would write them as inline styles, which beat every stylesheet rule, so
+// an image given its file's size (3840×2160) would overflow the box sizing it.
+const IMAGE_ATTRIBUTE_PROP_SET = new Set(["width", "height"]);
 
 /**
  * The props may come in any order: `src` and `srcset` reach the element after
@@ -53,6 +57,12 @@ const DEFAULT_PLACEHOLDER_DARK = "#374151";
  * decides whether to load when `src` is set, and an image whose `src` came
  * first loads, lazy or not.
  *
+ * @param {number} [props.width] - The image's width in pixels, written as the
+ *   `<img>` attribute, like `height`. Given both, the browser reserves the
+ *   aspect ratio before the bytes arrive. They size the element only while no
+ *   stylesheet rule does: a box that holds the image sizes it with CSS (or
+ *   `style`) and keeps the ratio.
+ * @param {number} [props.height] - The image's height in pixels, see `width`.
  * @param {string|false} [props.placeholderColor] - Background color shown while the image loads.
  *   Defaults to a light gray. Pass `false` to disable.
  * @param {boolean} [props.placeholderDark] - Use a dark default placeholder color,
@@ -82,6 +92,7 @@ export const Image = ({
       {...rest}
       as="img"
       baseClassName="navi_image"
+      childPropSet={IMAGE_ATTRIBUTE_PROP_SET}
       navi-placeholder={loadedRef.current ? undefined : ""}
       style={{
         "--placeholder-color": resolvedPlaceholder || undefined,

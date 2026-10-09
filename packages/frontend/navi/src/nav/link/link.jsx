@@ -649,9 +649,16 @@ const LinkWithRoute = ({
   });
   const innerCurrent = current || linkMatching;
 
+  // What a childless link shows is LinkPlain's call (hrefFallback); a route
+  // only says it the way its pattern writes it, not as the resolved href.
   return (
-    <Link href={url} current={innerCurrent} {...rest}>
-      {children || route.buildRelativeUrl(routeParams)}
+    <Link
+      href={url}
+      hrefText={route.buildRelativeUrl(routeParams)}
+      current={innerCurrent}
+      {...rest}
+    >
+      {children}
     </Link>
   );
 };
@@ -680,6 +687,7 @@ const LinkPlain = (props) => {
     revealOnInteraction = false,
     stretch,
     hrefFallback = !anchor,
+    hrefText = href,
     routeTransition,
     pressableDuringRouteTransition,
     replace,
@@ -825,7 +833,7 @@ const LinkPlain = (props) => {
   // interception looks for it (see link_document.js).
   const documentRequest = isDocument ? { [LINK_DOCUMENT_ATTRIBUTE]: "" } : null;
 
-  const innerChildren = children || (hrefFallback ? href : children);
+  const innerChildren = children || (hrefFallback ? hrefText : children);
   const startIconEl = startIcon;
   const endIconEl = innerEndIcon;
 
@@ -884,6 +892,7 @@ const LinkPlain = (props) => {
       startIcon={undefined}
       endIcon={undefined}
       hrefFallback={undefined}
+      hrefText={undefined}
       routeTransition={undefined}
       pressableDuringRouteTransition={undefined}
       replace={undefined}
