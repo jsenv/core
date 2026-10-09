@@ -61,6 +61,10 @@
 
 import { trapScrollInside } from "@jsenv/dom";
 
+import {
+  removeTransitionValue,
+  setTransitionValue,
+} from "../nav/transition_values.js";
 import { ensureDocumentStartViewTransition } from "../transition/start_view_transition_polyfill.js";
 
 // The name the two boxes take turns wearing. A single literal one is enough,
@@ -98,27 +102,34 @@ const TARGET_WAIT_MS = 1000;
 // covers is a render, not a fetch. Past it the popup's picture plays out on
 // its own.
 const LANDING_WAIT_MS = 300;
-// The popup's own animation duration, published on the root because the
-// ::view-transition tree hangs off it and inherits from nowhere else.
+// What the pictures are told — the popup's pace, the lifted card's paint, the
+// corners — is written on ::view-transition (transition_values.js), the root of
+// the pseudo-element tree they inherit from. Never on the document's root: a
+// custom property there is inherited by every element, and writing or removing
+// it restyles the whole document — at the press, again when the app reads
+// style before the first picture, and once more as the movement ends.
+//
+// The popup's own animation duration, for the pictures; the wall reads it off
+// the popup itself (dialog.jsx).
 const DURATION_PROPERTY = "--navi-popup-lift-duration";
 // The fixed bars (fixed_bar.jsx): the popup is placed in the room between
 // them, and the moving picture is clipped to that room on the way.
 const FIXED_BAR_SELECTOR = ".navi_fixed_bar";
-// The paint of the lifted node, published the same way: the box wears the
-// card's own background, so where it has grown past the picture it carries it
-// is the card that has grown, not a picture fading into a bigger one. Read off
-// the lifted node rather than the anchor: the anchor is often a bare trigger
-// around the card, painting nothing of its own, while the lifted node IS the
-// card — and a card does not change colour on the way.
+// The paint of the lifted node: the box wears the card's own background, so
+// where it has grown past the picture it carries it is the card that has
+// grown, not a picture fading into a bigger one. Read off the lifted node
+// rather than the anchor: the anchor is often a bare trigger around the card,
+// painting nothing of its own, while the lifted node IS the card — and a card
+// does not change colour on the way.
 const BACKGROUND_COLOR_PROPERTY = "--navi-popup-lift-background-color";
 const BACKGROUND_IMAGE_PROPERTY = "--navi-popup-lift-background-image";
-// The corners of the box the movement starts from, published the same way —
-// and, unlike the paint, not kept for the length of the movement: a corner is
-// written per box, on purpose, the same card at two sizes not wanting the same
-// round (a 6px corner stops showing on a big card). The moving box leaves with
-// the corners of the box it leaves and arrives with those of the box it
-// arrives on, the two authored values interpolated on the group's own clock
-// (see animateMovingBox).
+// The corners of the box the movement starts from — and, unlike the paint, not
+// kept for the length of the movement: a corner is written per box, on
+// purpose, the same card at two sizes not wanting the same round (a 6px corner
+// stops showing on a big card). The moving box leaves with the corners of the
+// box it leaves and arrives with those of the box it arrives on, the two
+// authored values interpolated on the group's own clock (see
+// animateMovingBox).
 const BORDER_RADIUS_PROPERTY = "--navi-popup-lift-border-radius";
 
 let releaseLiftInProgress = null;
@@ -179,11 +190,9 @@ export const liftPopupFromAnchor = (
   releaseLiftInProgress?.();
 
   const elementLeaving = opened ? resolveAnchor() : resolveLiftTarget(popupEl);
-  // Everything read about the leaving side, before the first write. A read
-  // brings the style up to date, and the writes below land on the root — an
-  // attribute or an unregistered custom property there invalidates the
-  // computed style of every element — so a read placed after any of them is
-  // the whole document's style over again. Nothing on the leaving side moves
+  // Everything read about the leaving side, before the first write: a read
+  // brings the style up to date, and one placed after the writes below would
+  // pay for them on the spot, in the press. Nothing on the leaving side moves
   // before the movement, the page being held from here on.
   releaseScrollHold = trapScrollInside(popupEl, { backdrop: true });
   const duration = getComputedStyle(popupEl)
@@ -201,9 +210,9 @@ export const liftPopupFromAnchor = (
     // Empty would substitute into `animation-duration:` as nothing at all,
     // which computes to 0s — a movement nobody sees rather than one at the
     // browser's own pace.
-    root.style.setProperty(DURATION_PROPERTY, duration);
+    setTransitionValue(DURATION_PROPERTY, duration);
   }
-  root.style.setProperty(BORDER_RADIUS_PROPERTY, cornersLeaving);
+  setTransitionValue(BORDER_RADIUS_PROPERTY, cornersLeaving);
   if (paintLeaving) {
     publishBoxPaint(paintLeaving);
   }
@@ -230,10 +239,10 @@ export const liftPopupFromAnchor = (
     root.removeAttribute(ROOT_ATTRIBUTE);
     root.removeAttribute(KIND_ATTRIBUTE);
     root.removeAttribute(FIT_ATTRIBUTE);
-    root.style.removeProperty(DURATION_PROPERTY);
-    root.style.removeProperty(BORDER_RADIUS_PROPERTY);
-    root.style.removeProperty(BACKGROUND_COLOR_PROPERTY);
-    root.style.removeProperty(BACKGROUND_IMAGE_PROPERTY);
+    removeTransitionValue(DURATION_PROPERTY);
+    removeTransitionValue(BORDER_RADIUS_PROPERTY);
+    removeTransitionValue(BACKGROUND_COLOR_PROPERTY);
+    removeTransitionValue(BACKGROUND_IMAGE_PROPERTY);
     callLiftOverCallbacks();
   };
   releaseLiftInProgress = release;
@@ -320,8 +329,6 @@ export const liftPopupFromAnchor = (
     if (import.meta.dev && lift === "box") {
       warnDrawingLiftedAsBox(target);
     }
-    // The last write before the transition: nothing reads between it and the
-    // style pass the browser makes on its own to take the first picture.
     publishBoxPaint(readBoxPaint(target));
     startMovement(reveal, () => target);
   };
@@ -373,9 +380,8 @@ const readBoxPaint = (liftedElement) => {
 };
 
 const publishBoxPaint = ({ backgroundColor, backgroundImage }) => {
-  const root = document.documentElement;
-  root.style.setProperty(BACKGROUND_COLOR_PROPERTY, backgroundColor);
-  root.style.setProperty(BACKGROUND_IMAGE_PROPERTY, backgroundImage);
+  setTransitionValue(BACKGROUND_COLOR_PROPERTY, backgroundColor);
+  setTransitionValue(BACKGROUND_IMAGE_PROPERTY, backgroundImage);
 };
 
 // The corners of a box: the first round found going down through children

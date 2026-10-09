@@ -110,6 +110,58 @@ let openLocalPopoverCount = 0;
 const css = /* css */ `
   /* jsenv-css-opaque: popupCss overlaps these rules, own sheet = cascade
      order depending on which popup renders first. */
+
+  /* Not inherited: each is written on the popover or derived there — by its
+     placement (the anchor box included; see popup_css.js for what inheriting
+     would cost), by its opening (the stack order, which the backdrop gets a
+     copy of) or from the minWidth/maxWidth/minHeight/maxHeight props — and
+     read by the popover alone. Inherited, a popover nested in another popup
+     would also open at the outer one's size. */
+  @property --popover-stack-order {
+    syntax: "*";
+    inherits: false;
+  }
+  @property --anchor-width {
+    syntax: "*";
+    inherits: false;
+  }
+  @property --anchor-height {
+    syntax: "*";
+    inherits: false;
+  }
+  @property --anchor-inner-width {
+    syntax: "*";
+    inherits: false;
+  }
+  @property --anchor-inner-height {
+    syntax: "*";
+    inherits: false;
+  }
+  @property --popover-min-width {
+    syntax: "*";
+    inherits: false;
+  }
+  @property --popover-max-width {
+    syntax: "*";
+    inherits: false;
+  }
+  @property --popover-min-height {
+    syntax: "*";
+    inherits: false;
+  }
+  @property --popover-max-height {
+    syntax: "*";
+    inherits: false;
+  }
+  @property --x-popover-max-width {
+    syntax: "*";
+    inherits: false;
+  }
+  @property --x-popover-max-height {
+    syntax: "*";
+    inherits: false;
+  }
+
   @layer navi {
     .navi_popover {
       /* soft: user-configurable preferred max-height. Kept as a *default*
@@ -170,21 +222,6 @@ const css = /* css */ `
     --x-corner-top-right-radius: initial;
     --x-corner-bottom-right-radius: initial;
     --x-corner-bottom-left-radius: initial;
-
-    /* Sizing is per popover: the anchor box and the
-       minWidth/maxWidth/minHeight/maxHeight props are written inline on THIS
-       element, and an inline declaration wins over these resets. Without
-       them, a popover nested in another popup (or opened without an anchor
-       inside one sized from its own) would inherit the outer inline values
-       and open at the outer size. */
-    --anchor-width: initial;
-    --anchor-height: initial;
-    --anchor-inner-width: initial;
-    --anchor-inner-height: initial;
-    --popover-min-width: initial;
-    --popover-max-width: initial;
-    --popover-min-height: initial;
-    --popover-max-height: initial;
 
     --x-popover-max-width: min(
       var(--popover-max-width, var(--popover-maxmax-width)),
@@ -314,10 +351,8 @@ const css = /* css */ `
        "position: absolute" above. */
     &[popover] {
       position: fixed;
-      /* The native top layer already gives "last shown wins" for free —
-         --popover-stack-order is only ever set by the custom renderer's own
-         openEffect, but reset here regardless in case a consumer sets the
-         var directly on an ancestor. */
+      /* The native top layer already gives "last shown wins" for free: the
+         custom renderer's stack order has no say here. */
       z-index: unset;
       padding: 0;
 

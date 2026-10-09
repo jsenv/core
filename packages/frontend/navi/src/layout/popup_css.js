@@ -102,6 +102,70 @@
  */
 
 export const popupCss = /* css */ `
+  /* Not inherited: what the placement writes on a popup (applyNewPosition in
+     @jsenv/dom) and what the popup derives from it are read by the popup
+     alone, for its own size and cut. Inherited, every element of its content
+     carries a copy, and each placement restyles all of them before the first
+     frame. A popup nested in another also stops reading the outer one's values
+     where its own are unset. "*" keeps them untyped: var() substitutes them as
+     it does an unregistered property. */
+  @property --container-position-room-top {
+    syntax: "*";
+    inherits: false;
+  }
+  @property --container-position-room-right {
+    syntax: "*";
+    inherits: false;
+  }
+  @property --container-position-room-bottom {
+    syntax: "*";
+    inherits: false;
+  }
+  @property --container-position-room-left {
+    syntax: "*";
+    inherits: false;
+  }
+  @property --container-position-remaining-height {
+    syntax: "*";
+    inherits: false;
+  }
+  @property --container-position-remaining-width {
+    syntax: "*";
+    inherits: false;
+  }
+  @property --x-popup-cut-top-at-area {
+    syntax: "*";
+    inherits: false;
+  }
+  @property --x-popup-cut-right-at-area {
+    syntax: "*";
+    inherits: false;
+  }
+  @property --x-popup-cut-bottom-at-area {
+    syntax: "*";
+    inherits: false;
+  }
+  @property --x-popup-cut-left-at-area {
+    syntax: "*";
+    inherits: false;
+  }
+  @property --x-popup-cut-top {
+    syntax: "*";
+    inherits: false;
+  }
+  @property --x-popup-cut-right {
+    syntax: "*";
+    inherits: false;
+  }
+  @property --x-popup-cut-bottom {
+    syntax: "*";
+    inherits: false;
+  }
+  @property --x-popup-cut-left {
+    syntax: "*";
+    inherits: false;
+  }
+
   @layer navi {
     .navi_popover,
     .navi_dialog {
@@ -116,29 +180,6 @@ export const popupCss = /* css */ `
 
   .navi_popover,
   .navi_dialog {
-    /* The translate property is deliberately absent from this list — it
-       carries where the popup stands, and applyNewPosition (visible_rect.js)
-       owns it and drives its own transition through the Web Animations API
-       instead of CSS, so it stays independent of whatever this list contains
-       (no shared transition-property to clobber, no propertyName to filter).
-       What moves here is transform, which composes under it. */
-    &[navi-animation] {
-      /* clip-path takes the translate's own duration, for the one cut that
-         still moves (a band of glass beside the app — see this file's top
-         comment for why every other cut is a constant). A constant cut, or a
-         kind that sets none, has the same value on both sides of the change,
-         which costs nothing. */
-      transition-property:
-        display, overlay, opacity, transform, scale, box-shadow, clip-path;
-      transition-duration:
-        var(--popup-animation-duration), var(--popup-animation-duration),
-        var(--popup-opacity-duration), var(--popup-translate-duration),
-        var(--popup-scale-duration), var(--popup-animation-duration),
-        var(--popup-translate-duration);
-      transition-timing-function: ease;
-      transition-behavior: allow-discrete;
-    }
-
     /* Where a travel may be cut, per side, in the popup's own coordinates.
        --container-position-room-* is how far past each of its own edges the
        popup may still paint before reaching the edge of the area it was placed
@@ -170,6 +211,28 @@ export const popupCss = /* css */ `
       -1 * var(--container-position-room-left, 100vmax) - 100vmax +
         min(100vmax, var(--navi-app-inset-left, 0px) * 1000000)
     );
+    /* The translate property is deliberately absent from this list — it
+       carries where the popup stands, and applyNewPosition (visible_rect.js)
+       owns it and drives its own transition through the Web Animations API
+       instead of CSS, so it stays independent of whatever this list contains
+       (no shared transition-property to clobber, no propertyName to filter).
+       What moves here is transform, which composes under it. */
+    &[navi-animation] {
+      /* clip-path takes the translate's own duration, for the one cut that
+         still moves (a band of glass beside the app — see this file's top
+         comment for why every other cut is a constant). A constant cut, or a
+         kind that sets none, has the same value on both sides of the change,
+         which costs nothing. */
+      transition-property:
+        display, overlay, opacity, transform, scale, box-shadow, clip-path;
+      transition-duration:
+        var(--popup-animation-duration), var(--popup-animation-duration),
+        var(--popup-opacity-duration), var(--popup-translate-duration),
+        var(--popup-scale-duration), var(--popup-animation-duration),
+        var(--popup-translate-duration);
+      transition-timing-function: ease;
+      transition-behavior: allow-discrete;
+    }
     /* A local popup is clipped by its clip wrapper (a static ancestor sized to
        the container, overflow: hidden): nothing is left for a cut to hide. */
     &[data-layer="local"] {
@@ -299,7 +362,6 @@ export const popupCss = /* css */ `
         transform: translate(var(--x-popup-travel-x), var(--x-popup-travel-y));
       }
     }
-
   }
 
   .navi_popover {

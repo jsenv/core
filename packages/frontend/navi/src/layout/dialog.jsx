@@ -152,6 +152,62 @@ let openLocalDialogCount = 0;
 const css = /* css */ `
   /* jsenv-css-opaque: popupCss overlaps these rules, own sheet = cascade
      order depending on which popup renders first. */
+
+  /* Not inherited: each is written on the dialog or derived there — by its
+     placement (see popup_css.js for what inheriting would cost), by its
+     opening (the anchor box under sizeFromAnchor, the stack order) or from the
+     minWidth/maxWidth/minHeight/maxHeight props — and read by the dialog
+     alone. Inherited, a dialog nested in this one would also open at this
+     one's size. */
+  @property --dialog-stack-order {
+    syntax: "*";
+    inherits: false;
+  }
+  @property --anchor-width {
+    syntax: "*";
+    inherits: false;
+  }
+  @property --anchor-height {
+    syntax: "*";
+    inherits: false;
+  }
+  @property --dialog-min-width {
+    syntax: "*";
+    inherits: false;
+  }
+  @property --dialog-max-width {
+    syntax: "*";
+    inherits: false;
+  }
+  @property --dialog-min-height {
+    syntax: "*";
+    inherits: false;
+  }
+  @property --dialog-max-height {
+    syntax: "*";
+    inherits: false;
+  }
+  @property --x-dialog-container-spacing {
+    syntax: "*";
+    inherits: false;
+  }
+  @property --dialog-maxmax-width {
+    syntax: "*";
+    inherits: false;
+  }
+  @property --dialog-maxmax-height {
+    syntax: "*";
+    inherits: false;
+  }
+  @property --x-dialog-max-width {
+    syntax: "*";
+    inherits: false;
+  }
+  @property --x-dialog-max-height {
+    syntax: "*";
+    inherits: false;
+  }
+
   @layer navi {
     .navi_dialog {
       /* Min gap between the dialog and the edges of its container. Written
@@ -248,18 +304,6 @@ const css = /* css */ `
     --x-corner-top-right-radius: initial;
     --x-corner-bottom-right-radius: initial;
     --x-corner-bottom-left-radius: initial;
-
-    /* Sizing is per dialog: the anchor box (sizeFromAnchor) and the
-       minWidth/maxWidth/minHeight/maxHeight props are written inline on THIS
-       element, and an inline declaration wins over these resets. Without
-       them, a dialog nested in another dialog would inherit its parent's
-       inline values and open at the parent's size. */
-    --anchor-width: initial;
-    --anchor-height: initial;
-    --dialog-min-width: initial;
-    --dialog-max-width: initial;
-    --dialog-min-height: initial;
-    --dialog-max-height: initial;
 
     /* Computed once, reused by both max-width itself and min-width's own
        clamp below (see its comment for why) — avoids repeating the same
@@ -515,7 +559,7 @@ const css = /* css */ `
       &[aria-expanded="true"]:not([navi-transitions-off])::backdrop {
         opacity: 1;
         transition-property: opacity;
-        transition-duration: var(--navi-popup-lift-duration, 0.25s);
+        transition-duration: var(--popup-animation-duration, 0.18s);
         transition-timing-function: ease;
 
         @starting-style {
@@ -698,7 +742,7 @@ const css = /* css */ `
       &[aria-expanded="true"] {
         opacity: 1;
         transition-property: opacity;
-        transition-duration: var(--navi-popup-lift-duration, 0.25s);
+        transition-duration: var(--popup-animation-duration);
         transition-timing-function: ease;
       }
     }
@@ -736,8 +780,9 @@ const css = /* css */ `
      and unpressable while the movement plays: under a modal wall at the
      opening, and for the popup's --popup-animation-duration at the closing. */
   :root[data-navi-popup-lift] {
-    /* The popup's own pace, published on the root by popup_lift.js because the
-       ::view-transition tree hangs off it and inherits from nowhere else. */
+    /* The popup's own pace, published on ::view-transition by popup_lift.js:
+       the pictures inherit from nowhere else. The wall reads it off the
+       dialog itself (the [data-lifting] backdrop rules above). */
     &::view-transition-group(navi-popup-lift),
     &::view-transition-old(navi-popup-lift),
     &::view-transition-new(navi-popup-lift),
