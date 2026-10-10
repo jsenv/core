@@ -39,8 +39,32 @@ export const pushHeadThemeColors = (themeColors) => {
 };
 
 /**
+ * What a popup asks of the colour while it is open: its `themeColor` prop,
+ * else the `--navi-popup-theme-color` it inherits — where the choice goes
+ * when it is the app's, or a part of the app's, rather than one popup's.
+ *
+ * @param {Element} element - The popup element.
+ * @param {string|false} [themeColor] - The popup's prop.
+ * @returns {string} `"auto"` paints what the popup lays over the top edge,
+ *   `"none"` leaves the colour as it is, anything else is a colour forcing it.
+ */
+export const readPopupThemeColor = (element, themeColor) => {
+  if (themeColor === false) {
+    return "none";
+  }
+  if (themeColor) {
+    return themeColor;
+  }
+  const token = getComputedStyle(element)
+    .getPropertyValue("--navi-popup-theme-color")
+    .trim();
+  return token || "auto";
+};
+
+/**
  * @param {object} paint
- * @param {string} [paint.themeColor] - Forces the colour, nothing is painted.
+ * @param {string} paint.themeColor - `"auto"` paints the two colours below,
+ *   a colour forces it and nothing is painted.
  * @param {string|null} [paint.backdropColor] - Laid over the page's colour.
  * @param {string|null} [paint.surfaceColor] - Laid over that, for a popup
  *   flush with the top edge.
@@ -52,7 +76,7 @@ export const pushPopupThemeColor = ({
   surfaceColor,
 }) => {
   let layer;
-  if (themeColor) {
+  if (themeColor !== "auto") {
     layer = { color: themeColor };
   } else {
     const paints = [];

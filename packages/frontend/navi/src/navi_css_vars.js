@@ -175,6 +175,11 @@ const css = /* css */ `
          way it does around a photo, not a surface tinted to match a theme. */
       --navi-backdrop-lift-background: rgb(6 10 20 / 88%);
       --navi-backdrop-lift-backdrop-filter: blur(4px);
+      /* What a top-layer popup does to the colour the browser paints above
+         the page (<meta name="theme-color">): "auto" paints what it lays over
+         the top edge, "none" leaves the colour as it is, a colour forces it.
+         Read off the popup at each opening (theme_color.js). */
+      --navi-popup-theme-color: auto;
 
       /* Link colors. They live here rather than only on .navi_link because a
          var declared on the element itself always beats the same var inherited

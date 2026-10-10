@@ -295,6 +295,22 @@ cannot read:
   `themeColor="#0c172c"` gives it one;
 - `themeColor={false}` leaves the colour under the popup as it is.
 
+**An app that wants one colour up there, whatever is open,** says so once:
+
+```css
+:root {
+  --navi-popup-theme-color: none;
+}
+```
+
+A `theme-color` meta in the HTML cannot do this on its own: it is the bottom of
+the stack, and every popup paints over it. The token takes the prop's values:
+`auto` (the default) paints, `none` leaves the colour as it is, a colour
+forces that one under every popup. The prop wins over it, so
+`themeColor="auto"` is how one popup paints again. The token is a custom
+property and inherits, so a part of the app can set it on its container. It is
+read when a popup starts opening.
+
 A popup that lays nothing over the edge changes nothing: `backdropVariant="invisible"`,
 `backdrop={false}`, a `Popover` without a backdrop, any `layer="local"` popup.
 A `Popover` paints its backdrop only, never its surface: it has no notion of

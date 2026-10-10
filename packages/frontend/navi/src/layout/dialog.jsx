@@ -119,7 +119,11 @@ import {
   usePopupContentMount,
 } from "./popup_content_mount.js";
 import { preloadState } from "../nav/route.js";
-import { pushPopupThemeColor, readBackdropColor } from "../nav/theme_color.js";
+import {
+  pushPopupThemeColor,
+  readBackdropColor,
+  readPopupThemeColor,
+} from "../nav/theme_color.js";
 import { flushSyncRendering } from "../utils/flush_sync_rendering.js";
 import { popupCss } from "./popup_css.js";
 import { surfaceTextCss } from "./surface_text_css.js";
@@ -1017,16 +1021,17 @@ const css = /* css */ `
  *   `saturate()`/`grayscale()` work too. How far what is behind withdraws is
  *   a question of paint, not of what an outside click does — a backdrop that
  *   closes can blur.
- * @param {string|false} [props.themeColor] - The colour the browser paints
- *   above the page (`<meta name="theme-color">`: Chrome's address bar on
- *   Android, an installed app's status bar) while this dialog is open.
- *   Left out, it is what the dialog lays over the top edge of the screen: its
+ * @param {"auto"|string|false} [props.themeColor] - The colour the browser
+ *   paints above the page (`<meta name="theme-color">`: Chrome's address bar
+ *   on Android, an installed app's status bar) while this dialog is open.
+ *   `"auto"` is what the dialog lays over the top edge of the screen: its
  *   backdrop over the colour the page asked for (`<Head>`), and its own
  *   background over that when it is flush with the top edge
  *   (`marginWithContainer={0}` with `expand`/`expandY` or a top
  *   `positionArea`). A colour forces it, for a surface whose colour cannot be
  *   read (an image, a gradient); `false` leaves the page's colour alone.
- *   `layer="top"` only.
+ *   Left out, the `--navi-popup-theme-color` token decides, `"auto"` unless
+ *   the app says otherwise. `layer="top"` only.
  * @param {boolean} [props.scrollCapture] - Traps scroll gestures inside the
  *   dialog so the page/container behind it can't scroll while it's open.
  *   A `layer="local"` dialog always locks its own positioned ancestor's
@@ -2246,16 +2251,19 @@ const useDialogProps = (props) => {
     // What the browser paints above the page goes with what is laid over its
     // top edge, from the start of the opening to the start of the closing: a
     // local dialog lays nothing there.
-    if (isTopLayer && themeColor !== false) {
-      addCleanup(
-        pushPopupThemeColor({
-          themeColor,
-          backdropColor: backdrop ? readBackdropColor(dialogEl) : null,
-          surfaceColor: flushEdges.top
-            ? getComputedStyle(dialogEl).backgroundColor
-            : null,
-        }),
-      );
+    if (isTopLayer) {
+      const popupThemeColor = readPopupThemeColor(dialogEl, themeColor);
+      if (popupThemeColor !== "none") {
+        addCleanup(
+          pushPopupThemeColor({
+            themeColor: popupThemeColor,
+            backdropColor: backdrop ? readBackdropColor(dialogEl) : null,
+            surfaceColor: flushEdges.top
+              ? getComputedStyle(dialogEl).backgroundColor
+              : null,
+          }),
+        );
+      }
     }
     const cancelOpenInteractionSuppression =
       !silent && hasCssTransitionAnimation

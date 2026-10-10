@@ -79,7 +79,11 @@ import {
   useOpenController,
   useOpenPropsEffectOnOpenController,
 } from "./open_controller.js";
-import { pushPopupThemeColor, readBackdropColor } from "../nav/theme_color.js";
+import {
+  pushPopupThemeColor,
+  readBackdropColor,
+  readPopupThemeColor,
+} from "../nav/theme_color.js";
 import { usePopupContentMount } from "./popup_content_mount.js";
 import { popupCss } from "./popup_css.js";
 import { surfaceTextCss } from "./surface_text_css.js";
@@ -567,12 +571,14 @@ const css = /* css */ `
  *   `saturate()`/`grayscale()` work too. How far what is behind withdraws is
  *   a question of paint, not of what an outside click does — a backdrop that
  *   closes can blur.
- * @param {string|false} [props.themeColor] - The colour the browser paints
- *   above the page (`<meta name="theme-color">`: Chrome's address bar on
- *   Android, an installed app's status bar) while this popover is open.
- *   Left out, it is the backdrop laid over the colour the page asked for
+ * @param {"auto"|string|false} [props.themeColor] - The colour the browser
+ *   paints above the page (`<meta name="theme-color">`: Chrome's address bar
+ *   on Android, an installed app's status bar) while this popover is open.
+ *   `"auto"` is the backdrop laid over the colour the page asked for
  *   (`<Head>`), and the page's colour when there is no backdrop. A colour
- *   forces it; `false` leaves the page's colour alone. `layer="top"` only.
+ *   forces it; `false` leaves the page's colour alone. Left out, the
+ *   `--navi-popup-theme-color` token decides, `"auto"` unless the app says
+ *   otherwise. `layer="top"` only.
  * @param {boolean} [props.scrollCapture] - Traps scroll gestures inside the
  *   popover so the page/container behind it can't scroll while it's open.
  * @param {boolean} [props.focusCapture] - Traps Tab navigation inside the
@@ -1582,13 +1588,16 @@ const usePopoverProps = (props) => {
     // What the browser paints above the page goes with what is laid over its
     // top edge, from the start of the opening to the start of the closing: a
     // local popover's backdrop stops at its container.
-    if (isTopLayer && themeColor !== false) {
-      addCleanup(
-        pushPopupThemeColor({
-          themeColor,
-          backdropColor: backdropEl ? readBackdropColor(backdropEl) : null,
-        }),
-      );
+    if (isTopLayer) {
+      const popupThemeColor = readPopupThemeColor(popoverEl, themeColor);
+      if (popupThemeColor !== "none") {
+        addCleanup(
+          pushPopupThemeColor({
+            themeColor: popupThemeColor,
+            backdropColor: backdropEl ? readBackdropColor(backdropEl) : null,
+          }),
+        );
+      }
     }
     const cancelOpenInteractionSuppression =
       !silent && hasCssTransitionAnimation
