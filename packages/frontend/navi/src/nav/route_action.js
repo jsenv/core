@@ -113,6 +113,14 @@ export const activeRouteReadsSignal = computed(() => {
  *   params read: that address is the current one with the state set to the
  *   popup's value (see `prefetch` on Button).
  * @param {object} [options]
+ * @param {() => any} [options.when] - a condition on app state the action
+ *   asks under, read off signals like the params: falsy, it runs nothing.
+ *   Unlike a params function it leaves the action asking nothing of the
+ *   address, so a link to the route still prefetches an action without
+ *   params when the condition holds at that moment — a page's code only some
+ *   readers may download (`() => meIsAdminSignal.value`). A condition reading
+ *   the address belongs in the params: a link reads `when` as it is, not as
+ *   the address it leads to will make it.
  * @param {boolean} [options.prefetch=true] - `false` keeps the action from
  *   being prerun ahead of what asks for it, when the read is not worth a
  *   hover or a press that may not end in an opening.
@@ -121,7 +129,7 @@ export const routeAction = (
   routeOrRoutes,
   action,
   paramsEffect,
-  { prefetch = true, ...options } = {},
+  { when, prefetch = true, ...options } = {},
 ) => {
   if (typeof action === "function") {
     action = createAction(action);
@@ -131,7 +139,12 @@ export const routeAction = (
     routes.length === 1
       ? routes[0].matchingSignal
       : anyMatchingRouteSignal(routes);
-  const readParams = paramsEffect || (() => true);
+  const readParams = () => {
+    if (when && !when()) {
+      return null;
+    }
+    return paramsEffect ? paramsEffect() : true;
+  };
   const readParamsAsked = () => {
     const matching = routeMatchingSignal.value;
     const params = readParams();
@@ -167,10 +180,13 @@ export const routeAction = (
     for (const route of routes) {
       if (paramsEffect) {
         registerRouteStatePreload(route, (values) => {
-          prefetchAsIf(action, paramsEffect, values);
+          prefetchAsIf(action, readParams, values);
         });
       } else {
         registerRoutePreload(route, () => {
+          if (!untracked(readParams)) {
+            return;
+          }
           prerunAhead(action.bindParams(true));
         });
       }
@@ -183,12 +199,12 @@ export const routeAction = (
 // (see readStateAsIf), prerun only when that changes them: params the state
 // leaves alone are the ones the action already runs on — or is meant not to,
 // and a prerun would retry a FAILED one behind the screen's back.
-const prefetchAsIf = (action, paramsEffect, values) => {
-  const params = readStateAsIf(values, paramsEffect);
+const prefetchAsIf = (action, readParams, values) => {
+  const params = readStateAsIf(values, readParams);
   if (!params) {
     return;
   }
-  if (compareTwoJsValues(params, untracked(paramsEffect))) {
+  if (compareTwoJsValues(params, untracked(readParams))) {
     return;
   }
   prerunAhead(action.bindParams(params));

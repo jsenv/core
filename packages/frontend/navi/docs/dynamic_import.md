@@ -145,6 +145,24 @@ that asks for nothing (`() => true`).
 `routeAction(route, action, undefined, { prefetch: false })` keeps a param-less
 read that is not worth a hover out of it.
 
+A page only some readers may download keeps its condition out of the params and
+says it with `when`: a condition on app state, not on the address, so the link
+still prefetches the action, as long as the condition holds when the pointer
+arrives. A reader for whom it does not hold downloads nothing, not even by
+typing the address.
+
+```js
+const VIDEO_PAGE_CODE = routeAction(
+  VIDEO_ROUTE,
+  () => import("./video_page.jsx").then((m) => m.VideoPage),
+  undefined,
+  { when: () => meIsAdminSignal.value },
+);
+```
+
+The link reads `when` as it is at that moment, not as the address it leads to
+will make it: a condition that reads the address belongs in the params.
+
 A prefetch that fails is not reported: nothing on screen asked for it. The failure
 stays on the action, and a failed action is run again by whatever asks next — the
 arrival, which shows its own failure, and every later hover alike.
