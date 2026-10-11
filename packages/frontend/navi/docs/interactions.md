@@ -122,6 +122,33 @@ how to detect gets a dev warning naming the detectors that exist. The carrying
 family and the surface have a file each:
 [drag_interactions.md](./drag_interactions.md) and [pan_zoom.md](./pan_zoom.md).
 
+A declared key takes the key: the browser's default for it does not happen as
+well, whether the gate lets it through or refuses it. On a field this includes
+the field's own keys — the caret, typing — so a text field can say what its
+arrows do, through the same gate as a number field's:
+
+```jsx
+const step = (event, seconds) => {
+  const input = findEvent(event, "keydown").target;
+  const next = formatTime(parseTime(input.value) + seconds);
+  dispatchRequestSetUIState(input, next, { event });
+};
+
+<Input
+  value={formatTime(start)}
+  interactions={{
+    "keyboard:arrowup": (event) => step(event, 1),
+    "keyboard:arrowdown": (event) => step(event, -1),
+    "keyboard:shift+arrowup": (event) => step(event, 60),
+    "keyboard:shift+arrowdown": (event) => step(event, -60),
+  }}
+/>;
+```
+
+A shortcut is matched with its exact modifiers, so Shift is a key of its own.
+Keys declared on something around a field — a list item, a row — leave the
+field inside every key it has a use for.
+
 ## Which interaction asked
 
 An interaction navi makes is **dispatched as an event of its own name** —

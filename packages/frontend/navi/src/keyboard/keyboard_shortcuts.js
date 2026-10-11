@@ -150,10 +150,9 @@ export const useKeyboardShortcuts = (
     );
     shortcut.action = useAction(shortcut.action);
   }
-  const onKeyDown = createOnKeyDownForShortcutArray(
-    shortcuts,
-    shortcutActionIsBusyRef,
-  );
+  const onKeyDown = createOnKeyDownForShortcutArray(shortcuts, {
+    busyRef: shortcutActionIsBusyRef,
+  });
   useEffect(() => {
     const element = elementRef.current;
     if (!element) {
@@ -171,7 +170,10 @@ export const useKeyboardShortcuts = (
   }, [shortcutDeps]);
 };
 
-const createOnKeyDownForShortcutArray = (shortcuts, busyRef) => {
+const createOnKeyDownForShortcutArray = (
+  shortcuts,
+  { busyRef, ownsTarget } = {},
+) => {
   const shortcutsCopy = [];
   for (const shortcutCandidate of shortcuts) {
     shortcutsCopy.push({
@@ -217,10 +219,20 @@ const createOnKeyDownForShortcutArray = (shortcuts, busyRef) => {
   }
 
   return (keyboardEvent) => {
-    return applyKeyboardShortcuts(shortcutsCopy, keyboardEvent);
+    return applyKeyboardShortcuts(shortcutsCopy, keyboardEvent, {
+      ownsTarget,
+    });
   };
 };
-export const createOnKeyDownForShortcuts = (shortcuts) => {
+/**
+ * @param {object} shortcuts
+ * @param {object} [options]
+ * @param {(target: Element) => boolean} [options.ownsTarget] Whether a
+ *   descendant the key was pressed in is one the shortcuts speak for, so its
+ *   native behavior (the caret, typing) is theirs to take. Without it only the
+ *   listening element itself is; a descendant keeps every key it has a use for.
+ */
+export const createOnKeyDownForShortcuts = (shortcuts, { ownsTarget } = {}) => {
   const shortcutsArray = [];
   for (const key of Object.keys(shortcuts)) {
     const value = shortcuts[key];
@@ -232,15 +244,17 @@ export const createOnKeyDownForShortcuts = (shortcuts) => {
     }
     shortcutsArray.push(shortcut);
   }
-  return createOnKeyDownForShortcutArray(shortcutsArray);
+  return createOnKeyDownForShortcutArray(shortcutsArray, { ownsTarget });
 };
 
-const applyKeyboardShortcuts = (shortcuts, keyboardEvent) => {
+const applyKeyboardShortcuts = (shortcuts, keyboardEvent, { ownsTarget }) => {
   const currentTarget = keyboardEvent.currentTarget;
   const target = keyboardEvent.target;
   let canIntercept;
   if (target === currentTarget) {
     // the event occurs on the element itself so we are sure we won't interfere with native behaviors of child elements
+    canIntercept = true;
+  } else if (ownsTarget && ownsTarget(target)) {
     canIntercept = true;
   } else {
     // we need to check if the default action is something that we can allow to be intercepted
