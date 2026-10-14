@@ -64,6 +64,7 @@ import { linkAsksForReplace } from "./link_replace.js";
 import {
   forgetScrollersOnArrival,
   installScrollRestoration,
+  isArrival,
   restoreScrollPositionOnReturn,
   startAtTop,
   stayInPlace,
@@ -193,7 +194,7 @@ export const setupBrowserIntegrationViaNavigation = ({
   let abortController = null;
   const runRouting = (
     url,
-    { reason, navigationType, state, abortEvent, urlLeft, landing },
+    { reason, navigationType, state, abortEvent, urlLeft, stateLeft, landing },
   ) => {
     const redirectionUrl = resolveRouteRedirection(url);
     if (redirectionUrl) {
@@ -208,10 +209,12 @@ export const setupBrowserIntegrationViaNavigation = ({
     if (navigationType === "push" || navigationType === "replace") {
       markUrlAsVisited(url);
       // The entry already exists (interception commits before the handler
-      // runs), so the state is written onto it.
+      // runs), so the state is written onto it — and what the entry left held
+      // is read by the caller, before that commit.
       const effectiveState = resolveEffectiveDocumentState(state, {
         navigationType,
-        currentState: getDocumentState(),
+        isArrival: isArrival(url, { from: urlLeft }),
+        currentState: stateLeft,
         sharedState: {
           jsenv_visited_urls: Array.from(visitedUrlSet),
           [NAV_DEPTH_STATE_KEY]: getNavDepth(),
@@ -315,6 +318,7 @@ export const setupBrowserIntegrationViaNavigation = ({
         navigationType: "replace",
         state: undefined,
         urlLeft,
+        stateLeft: getDocumentState(),
       });
     } finally {
       publishAfterRouting({ url, navigationType: "replace" });
@@ -511,9 +515,11 @@ export const setupBrowserIntegrationViaNavigation = ({
       }
     }
 
-    // The url the reader is being taken away from, read here because the
-    // commit — and with it the document url — happens before the handler runs.
+    // The url the reader is being taken away from, and what its entry holds,
+    // read here because the commit — and with it the document url and the
+    // entry the state is read from — happens before the handler runs.
     const urlLeft = readAddress();
+    const stateLeft = getDocumentState();
     const isSameUrl = url === urlLeft;
     const isLanding = Boolean(event.info && event.info.landOn);
     // A push or a replace onto the address already displayed (useNavState)
@@ -573,7 +579,7 @@ export const setupBrowserIntegrationViaNavigation = ({
             return;
           }
           if (isStateOnly) {
-            runStateOnly(navigationType, state);
+            runStateOnly(navigationType, state, stateLeft);
             return;
           }
           const { allResult } = runRouting(url, {
@@ -582,6 +588,7 @@ export const setupBrowserIntegrationViaNavigation = ({
             state,
             abortEvent: event.signal,
             urlLeft,
+            stateLeft,
             landing: isLanding,
           });
           // The handler's promise IS the navigation for the browser (its
@@ -599,11 +606,13 @@ export const setupBrowserIntegrationViaNavigation = ({
     });
   });
 
-  const runStateOnly = (navigationType, state) => {
+  const runStateOnly = (navigationType, state, stateLeft) => {
     applyNavigationToNavDepth(navigationType, state);
     const effectiveState = resolveEffectiveDocumentState(state, {
       navigationType,
-      currentState: getDocumentState(),
+      // The address does not change: the page stays.
+      isArrival: false,
+      currentState: stateLeft,
       sharedState: {
         jsenv_visited_urls: Array.from(visitedUrlSet),
         [NAV_DEPTH_STATE_KEY]: getNavDepth(),
@@ -663,7 +672,7 @@ export const setupBrowserIntegrationViaNavigation = ({
       info: routeTransition === undefined ? undefined : { routeTransition },
       // undefined stays "inherit" through the event: navigate() stores no
       // state, destination.getState() answers undefined, and runRouting reads
-      // that as "keep what the document holds".
+      // that as a neutral navigation (see resolveEffectiveDocumentState).
       state,
       history: replace ? "replace" : "auto",
     });

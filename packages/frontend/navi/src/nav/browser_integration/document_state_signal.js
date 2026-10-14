@@ -14,27 +14,29 @@ export const updateDocumentState = (value) => {
  * `state`:
  * - `undefined` — a neutral navigation: a link click, a `replaceUrl` writing a
  *   search param. A **replace** stays on the entry the document is already on,
- *   so what that entry holds stays with it. A **push** opens a NEW entry, and
- *   what was written for the one being left — an open dialog, an expanded
- *   picker (see `useNavState`) — describes that entry alone: carried forward it
- *   would reopen on the next screen, and on the one after that, until something
- *   mounting the same id opens out of nowhere.
+ *   so what that entry holds stays with it. A **push** opens a NEW entry. One
+ *   arriving at another page (`isArrival`, see scroll_restoration.js) starts
+ *   empty: what was written for the entry being left — an open dialog, an
+ *   expanded picker (see `useNavState`) — describes that entry alone, and
+ *   carried forward it would reopen on the next screen, and on the one after
+ *   that, until something mounting the same id opens out of nowhere. A push
+ *   that keeps the page (a layer bound to a search param, opened over it)
+ *   carries the state: whatever holds it is still mounted under the new
+ *   address, and an empty entry would close it there — an expanded row
+ *   collapsing under the layer, expanding again when the back takes it away.
  * - `null` — an explicit reset.
  * - an object — built by the caller (`enter()`/`leave()` copy the current state
  *   themselves), taken as given.
  *
- * `sharedState` always wins: it describes the document, not the entry.
- *
- * The push/replace split is the Navigation API's own rule for a `navigate()`
- * carrying no state — which is why via_navigation.js gets it from the browser
- * and via_history.js has to spell it out to say the same thing.
+ * `currentState` is what the entry being left holds. `sharedState` always
+ * wins: it describes the document, not the entry.
  */
 export const resolveEffectiveDocumentState = (
   state,
-  { navigationType, currentState, sharedState },
+  { navigationType, isArrival, currentState, sharedState },
 ) => {
   if (state === undefined) {
-    if (navigationType === "push") {
+    if (navigationType === "push" && isArrival) {
       return sharedState;
     }
     return { ...(currentState || {}), ...sharedState };

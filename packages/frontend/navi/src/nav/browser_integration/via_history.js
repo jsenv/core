@@ -8,6 +8,7 @@ import { resolveRouteRedirection } from "../route.js";
 import {
   forgetScrollersOnArrival,
   installScrollRestoration,
+  isArrival,
   restoreScrollPositionOnReturn,
   startAtTop,
   stayInPlace,
@@ -205,7 +206,8 @@ export const setupBrowserIntegrationViaHistory = ({
 
   const applyRoutingTask = (url, options) => {
     // Read before the history is written: the url the reader is being taken
-    // away from, which is what decides where a push lands (see startAtTop).
+    // away from, which is what decides where a push lands (see startAtTop) and
+    // whether it carries the state (see resolveEffectiveDocumentState).
     const urlLeft = readAddress();
     const {
       reason,
@@ -225,6 +227,7 @@ export const setupBrowserIntegrationViaHistory = ({
       markUrlAsVisited(url);
       const effectiveState = resolveEffectiveDocumentState(state, {
         navigationType,
+        isArrival: isArrival(url, { from: urlLeft }),
         currentState: getDocumentState(),
         sharedState: {
           jsenv_visited_urls: Array.from(visitedUrlSet),

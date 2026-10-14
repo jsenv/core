@@ -784,8 +784,10 @@ Every piece of it answers something:
   off screen;
 - **no `defineRouteTransition` for it.** The page beneath does not change, so
   there is no pair of pages to move between — route transitions are for pages
-  replacing pages ([route_transitions.md](./route_transitions.md)). When a link
-  inside the layer does change it, see
+  replacing pages ([route_transitions.md](./route_transitions.md)). Nor does
+  what is open on it: a popup or a section kept with `navState` stays open under
+  the layer ([popup_open.md](./popup_open.md#navstate--the-history-entry-holds-it)).
+  When a link inside the layer does change the page, see
   [below](#a-link-inside-the-layer-leads-to-a-page).
 
 ### Places inside the layer

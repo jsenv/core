@@ -680,6 +680,23 @@ picker open and come back to is a new mount, and the state stays in the entry
 with nothing to read it (navi warns). A picker whose popup leads somewhere, a
 link inside it, has an `id`.
 
+What a new entry inherits is decided by the page, not by the address. A push to
+another path starts its entry empty: a popup open on the page being left
+describes that page alone, and carried onto the next one it would open whatever
+mounts there under the same key. A push that keeps the path — a
+[layer](./navigation.md#a-layer-over-the-screen-what-its-address-may-say)
+opening over the page, a
+[state whose values are places](./navigation.md#a-state-whose-values-are-places-history-push)
+— stacks an entry over a page that is still mounted, and that entry starts with
+what the one below it held: an `Expandable` section open under the layer stays
+open, and closing the layer finds it as it was, with nothing played again. The
+scroll reads the same rule
+([navigation.md](./navigation.md#where-a-navigation-lands-the-scroll)).
+
+A link inside the popup follows the same rule: one to the same path with other
+search params leaves the popup open on the entry it pushes. A link whose press
+is a choice that ends the popup says so itself, with `command="--navi-close"`.
+
 The two meet when the signal IS a route's: a search-param `stateSignal` given to
 `signal` puts the open state in the address itself, where a link can point at
 it — the shape of a popup that is a LAYER over the screen, whose address is

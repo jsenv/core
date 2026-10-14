@@ -320,7 +320,9 @@ export const startAtTop = (url, { from } = {}) => {
   positionByUrl.set(href, { x: 0, y: 0 });
   window.scrollTo({ top: 0, left: 0, behavior: "instant" });
 };
-const isArrival = (url, { from }) => {
+// Also what decides whether a push carries the state of the page it keeps
+// (see resolveEffectiveDocumentState).
+export const isArrival = (url, { from }) => {
   if (
     from !== undefined &&
     new URL(from, window.location.href).pathname ===
