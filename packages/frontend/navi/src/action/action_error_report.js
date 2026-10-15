@@ -46,6 +46,27 @@ export const markErrorAsTakenByRender = (error) => {
 };
 
 /**
+ * A prerun's failure is owed to no screen: nothing on screen asked for that
+ * run, so the component that owns the read asks again rather than show a
+ * failure from before it existed (see `run` in use_async_data.jsx). Taken
+ * once, so the run asking again fails as its own even when it fails with the
+ * same error object. Held by the error, it lasts as long as the failure stays
+ * on the action: a later run replaces it, whether or not an owner ever came.
+ */
+const prerunFailureSet = new WeakSet();
+export const markErrorAsPrerunFailure = (error) => {
+  if (error && typeof error === "object") {
+    prerunFailureSet.add(error);
+  }
+};
+export const takePrerunFailure = (error) => {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+  return prerunFailureSet.delete(error);
+};
+
+/**
  * When the answer "nobody took it" is final.
  *
  * The floor is one macrotask: every render that could take the error — Preact's

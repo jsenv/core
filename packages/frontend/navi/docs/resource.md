@@ -613,6 +613,27 @@ is inferred — a relation that really is a sub-route of the parent is modelled
 with the relationship methods ([above](#relations-and-autorerun)), never
 declared as a dependency.
 
+When only some writes change what the reads show — a count of videos moves
+when one is created or deleted, not when a chapter is rated — name them with
+`on`:
+
+```js
+const SUMMARY = resource("summary", {
+  dependencies: [
+    BOOK, // every write
+    { resource: VIDEO, on: ["PATCH_MANY", "DELETE"] },
+    { resource: VIDEO_FILE, on: ["POST", "DELETE"] },
+  ],
+  GET: …,
+});
+```
+
+`on` names callbacks, not verbs: `PATCH` does not cover `PATCH_MANY` the way it
+does in `rerunOn`, so each write keeps its own answer. A name that is not a
+write, or that the resource does not define, throws at declaration — a
+dependency that never fires leaves a count on its old value with nothing to say
+so.
+
 ## A function calling the verb, or the instance
 
 Both forms are real, and what separates them is narrower than it looks:

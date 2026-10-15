@@ -110,6 +110,10 @@ const debug = (...args) => {
  * @param {Object} restCallbacks - `{ idKey, uniqueKeys, rerunOn, dependencies, GET, GET_MANY, GET_RANGE, POST, POST_MANY, PUT, PUT_MANY, PATCH, PATCH_MANY, DELETE, DELETE_MANY }`
  * @param {string} [restCallbacks.idKey] - primary key property, defaults to `"id"`
  * @param {string[]} [restCallbacks.uniqueKeys] - alternate keys the store can find an item by (e.g. `"username"`)
+ * @param {Array<Object | { resource: Object, on: string[] }>} [restCallbacks.dependencies] -
+ *   resources whose writes rerun this one's reads: one listed bare counts every
+ *   write, `{ resource, on: ["PATCH_MANY", "DELETE"] }` only the callbacks it
+ *   names (`PATCH` is not `PATCH_MANY`)
  * @param {{ signal: import("@preact/signals").Signal, when?: () => boolean }} [restCallbacks.persist] -
  *   mirrors the rows `GET` lands with into `signal` — a `stateSignal` with
  *   `persists: true` and `type: "object"` keeps them across a reload, whose
