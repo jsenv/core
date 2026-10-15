@@ -1,6 +1,5 @@
 import { useContext, useLayoutEffect, useRef } from "preact/hooks";
 
-import { PSEUDO_CLASSES } from "../../box/pseudo_styles.js";
 import { triggerNaviCommand } from "../../control/commands.js";
 import { useControlProps } from "../../control/control_hooks.jsx";
 import {
@@ -442,18 +441,6 @@ const LinkPseudoClasses = [
   ":-navi-selected",
 ];
 const LinkPseudoElements = ["::-navi-loader", "::-navi-indicator"];
-
-Object.assign(PSEUDO_CLASSES, {
-  ":-navi-href-internal": {
-    attribute: "data-href-internal",
-  },
-  ":-navi-href-external": {
-    attribute: "data-href-external",
-  },
-  ":-navi-href-anchor": {
-    attribute: "data-href-anchor",
-  },
-});
 
 /**
  * An anchor (`<a>`) rendered as a navi control: it carries the full control

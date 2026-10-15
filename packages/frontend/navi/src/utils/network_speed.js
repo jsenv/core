@@ -35,9 +35,21 @@ const updateNetworkSpeed = () => {
   networkSpeedSignal.value = getNetworkSpeed();
 };
 
-export const networkSpeedSignal = signal(getNetworkSpeed());
+// Monitored while something reads it: an app that never shows a fluid loading
+// indicator listens to nothing and polls nothing. Read again when the watching
+// starts, since nothing was listening for a change before.
+let stopNetworkMonitoring;
+export const networkSpeedSignal = /*#__PURE__*/ signal(getNetworkSpeed(), {
+  watched: () => {
+    updateNetworkSpeed();
+    stopNetworkMonitoring = startNetworkMonitoring();
+  },
+  unwatched: () => {
+    stopNetworkMonitoring();
+  },
+});
 
-const setupNetworkMonitoring = () => {
+const startNetworkMonitoring = () => {
   const cleanupFunctions = [];
 
   // ✅ 1. Écouter les changements natifs
@@ -80,4 +92,3 @@ const setupNetworkMonitoring = () => {
     cleanupFunctions.forEach((cleanup) => cleanup());
   };
 };
-setupNetworkMonitoring();

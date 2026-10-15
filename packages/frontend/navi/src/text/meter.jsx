@@ -1,7 +1,6 @@
 import { useRef } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
-import { PSEUDO_CLASSES } from "../box/pseudo_styles.js";
 import { LoadingOutline } from "../graphic/loading/loading_outline.jsx";
 import { useAccentColorAttributes } from "../utils/use_accent_color_attributes.js";
 import { Quantity } from "./quantity.jsx";
@@ -265,17 +264,6 @@ const MeterPseudoClasses = [
   ":-navi-meter-suboptimum",
   ":-navi-meter-even-less-good",
 ];
-Object.assign(PSEUDO_CLASSES, {
-  ":-navi-meter-optimum": {
-    attribute: "data-optimum",
-  },
-  ":-navi-meter-suboptimum": {
-    attribute: "data-suboptimum",
-  },
-  ":-navi-meter-even-less-good": {
-    attribute: "data-even-less-good",
-  },
-});
 
 const getMeterLevel = (value, min, max, low, high, optimum) => {
   // Without low/high thresholds the whole range is one region → always optimum

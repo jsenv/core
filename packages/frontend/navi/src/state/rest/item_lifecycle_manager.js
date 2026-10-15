@@ -316,7 +316,8 @@ export const createResourceLifecycleManager = () => {
           // scopedMany auto-dependency: only rerun parent singular GET on child POST,
           // only the GET of the owner the child was posted to, and only when that
           // GET previously returned the sub-resource embedded inside its response
-          // (detected via action._resultProperties).
+          // (recordGetResultProperties) — a GET still on its first load is taken
+          // at what scopedMany declares, an owner embedding its children.
           // GET_MANY is excluded — a list of parents is not stale just because one
           // child item was added to one of them.
           scoped_many_effect: {
@@ -341,15 +342,15 @@ export const createResourceLifecycleManager = () => {
                   !isOwnerReadBy(
                     triggerResourceScope,
                     triggeringAction,
+                    resourceScope,
                     actionCandidate,
                   )
                 ) {
                   break scoped_many_effect;
                 }
-                // Only rerun if the last GET response included the embedded sub-resource.
-                if (
-                  !getActionResultProperties(actionCandidate)?.has(propertyName)
-                ) {
+                const resultProperties =
+                  getActionResultProperties(actionCandidate);
+                if (resultProperties && !resultProperties.has(propertyName)) {
                   break scoped_many_effect;
                 }
                 actionsToRerun.add(actionCandidate);
@@ -498,17 +499,52 @@ const isParamSubset = (parentParams, childParams) => {
 // rather than that id: both lead to the owner's one store of children. Values
 // are read off the signals: the child's action is still completing, and its
 // `value` property is only written once that batch ends.
-const isOwnerReadBy = (childResource, childAction, ownerGetAction) => {
+const isOwnerReadBy = (
+  childResource,
+  childAction,
+  ownerResource,
+  ownerGetAction,
+) => {
   const childValue = childAction.valueSignal.peek();
   if (!Array.isArray(childValue)) {
     return false;
   }
   const [ownerKey] = childValue;
   const ownerId = ownerGetAction.valueSignal.peek();
+  // A first load the store has no row to draw for holds no id yet: the keys
+  // its params name are all it says of the owner.
+  const ownerKeysRead =
+    ownerId === undefined
+      ? ownerKeysNamedBy(ownerResource, ownerGetAction.params)
+      : [ownerId];
   const { getChildStore } = childResource;
-  if (!getChildStore) {
-    return ownerKey === ownerId;
+  const childStore = getChildStore ? getChildStore(ownerKey) : undefined;
+  for (const ownerKeyRead of ownerKeysRead) {
+    if (ownerKeyRead === ownerKey) {
+      return true;
+    }
+    if (
+      childStore !== undefined &&
+      getChildStore(ownerKeyRead) === childStore
+    ) {
+      return true;
+    }
   }
-  const childStore = getChildStore(ownerKey);
-  return childStore !== undefined && childStore === getChildStore(ownerId);
+  return false;
+};
+// The keys a GET's params name its item by: the params themselves when they
+// are the id, otherwise the value under idKey (an id or a unique key) and the
+// ones under each unique key.
+const ownerKeysNamedBy = (ownerResource, params) => {
+  if (params === null || typeof params !== "object") {
+    return [params];
+  }
+  const keys = [];
+  for (const key of [ownerResource.idKey, ...ownerResource.uniqueKeys]) {
+    const value = params[key];
+    if (value !== undefined) {
+      keys.push(value);
+    }
+  }
+  return keys;
 };

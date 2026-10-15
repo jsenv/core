@@ -59,7 +59,18 @@ import { humanizeI18n } from "@jsenv/humanize";
  */
 export const naviI18n = humanizeI18n;
 
-naviI18n.addAll({
+// Each catalogue is registered by the call defining it, which returns naviI18n
+// itself: the components read their texts through that handle (buttonI18n,
+// constraintI18n…), so a bundler keeps a catalogue exactly when something reads
+// it. A plain naviI18n.addAll() here would be kept by any app importing navi.
+const defineNaviMessages = (...keyMaps) => {
+  for (const keyMap of keyMaps) {
+    naviI18n.addAll(keyMap);
+  }
+  return naviI18n;
+};
+
+export const buttonI18n = /*#__PURE__*/ defineNaviMessages({
   "button.clear": {
     en: "Clear",
     fr: "Effacer",
@@ -110,7 +121,7 @@ naviI18n.addAll({
 // it has no sentence of its own for a bound (a day or a number says its
 // constraint.min/max one, see picker_spin.jsx): said without naming what it is
 // made of, so they fit pages, sizes or any list of items.
-naviI18n.addAll({
+export const spinI18n = /*#__PURE__*/ defineNaviMessages({
   "spin.previous": {
     en: "Previous",
     fr: "Précédent",
@@ -131,7 +142,7 @@ naviI18n.addAll({
 
 // Time spin messages — what a clock writes between an hour and its minutes,
 // and how the two ends of a span are named.
-naviI18n.addAll({
+export const timeI18n = /*#__PURE__*/ defineNaviMessages({
   "time.hour_separator": {
     en: ":",
     fr: "h",
@@ -160,7 +171,7 @@ naviI18n.addAll({
 });
 
 // List messages — override any key to customize list messages
-naviI18n.addAll({
+export const listI18n = /*#__PURE__*/ defineNaviMessages({
   "list.empty": {
     en: "No items in this list.",
     fr: "Aucun élément dans cette liste.",
@@ -184,7 +195,7 @@ naviI18n.addAll({
 });
 
 // Badge list messages
-naviI18n.addAll({
+export const badgeListI18n = /*#__PURE__*/ defineNaviMessages({
   "badge_list.more": {
     en: "+[count] more",
     fr: "+[count] de plus",
@@ -192,7 +203,7 @@ naviI18n.addAll({
 });
 
 // What a gesture says when it did nothing on purpose
-naviI18n.addAll({
+export const interactionI18n = /*#__PURE__*/ defineNaviMessages({
   // A bare wheel over a surface that could zoom, in a page that scrolls: the
   // page got its scroll, and this says how to zoom anyway.
   "interaction.zoom.needs_modifier": {
@@ -202,7 +213,7 @@ naviI18n.addAll({
 });
 
 // Constraint validation messages — override any key to customize error messages
-naviI18n.addAll({
+const CONSTRAINT_MESSAGES = {
   "constraint.available": {
     fr: '"[value]" est utilisé. Veuillez entrer une autre valeur.',
     en: '"[value]" is already taken. Please enter a different value.',
@@ -701,13 +712,13 @@ naviI18n.addAll({
     fr: "Ce champ doit contenir au moins [min] caractères spéciaux. ([charset])",
     en: "This field must contain at least [min] special characters. ([charset])",
   },
-});
+};
 
 // Character class and maxLengthGuard messages. The char class keys are
 // @jsenv/validity's own ("char_class.slug"), prefixed with "constraint." —
 // the same sentence refuses a keystroke in a callout and a whole value in a
 // constraint, so there is one key for both.
-naviI18n.addAll({
+const CHAR_CLASS_MESSAGES = {
   // Preset-specific char messages — more informative than the generic fallback
   "constraint.char_class.numeric": {
     fr: "Ce champ ne peut contenir que des chiffres.",
@@ -757,4 +768,8 @@ naviI18n.addAll({
     fr: "[max] max.",
     en: "[max] max.",
   },
-});
+};
+export const constraintI18n = /*#__PURE__*/ defineNaviMessages(
+  CONSTRAINT_MESSAGES,
+  CHAR_CLASS_MESSAGES,
+);

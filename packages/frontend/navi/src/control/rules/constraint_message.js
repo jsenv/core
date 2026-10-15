@@ -23,7 +23,7 @@ export const CONSTRAINT_NAME_TO_PROP = {
   available: "availableMessage",
 };
 
-export const CONSTRAINT_MESSAGE_PROP_NAME_SET = new Set(
+export const CONSTRAINT_MESSAGE_PROP_NAME_SET = /*#__PURE__*/ new Set(
   Object.values(CONSTRAINT_NAME_TO_PROP),
 );
 

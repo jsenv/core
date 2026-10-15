@@ -1,7 +1,7 @@
 import { Button } from "../control/input/button.jsx";
 import { Icon } from "../text/text.jsx";
 import { CloseSvg } from "../graphic/icons/close_svg.jsx";
-import { naviI18n } from "../text/navi_i18n.js";
+import { buttonI18n } from "../text/navi_i18n.js";
 
 /**
  * The cross that closes the popup it sits in — reached as `<Popup.Close />`,
@@ -50,7 +50,7 @@ export const PopupClose = ({ label, iconSize, ...rest }) => {
       // wide; the padding is what makes it a target a thumb can hit.
       paddingX="s"
       paddingY="s"
-      aria-label={label === undefined ? naviI18n("button.close") : label}
+      aria-label={label === undefined ? buttonI18n("button.close") : label}
       {...rest}
     >
       <Icon size={iconSize}>

@@ -6,7 +6,7 @@ import {
 import { Badge } from "@jsenv/navi/src/text/badge.jsx";
 import { BadgeList } from "@jsenv/navi/src/text/badge_list.jsx";
 import { Color } from "@jsenv/navi/src/text/color.jsx";
-import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
+import { buttonI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { Icon, Text } from "@jsenv/navi/src/text/text.jsx";
 import { Time } from "@jsenv/navi/src/text/time.jsx";
 import { renderSafe } from "@jsenv/navi/src/utils/render_safe.js";
@@ -174,7 +174,7 @@ export const PickerChip = ({ value, commandFor, children, ...rest }) => {
         command="--navi-unselect"
         commandFor={commandFor}
         value={value}
-        aria-label={naviI18n("button.remove")}
+        aria-label={buttonI18n("button.remove")}
       >
         <Icon lineOverflow="allow">
           <CloseSvg />

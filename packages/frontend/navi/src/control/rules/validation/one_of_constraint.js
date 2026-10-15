@@ -1,4 +1,4 @@
-import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
+import { constraintI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
 
 export const ONE_OF_CONSTRAINT = {
@@ -35,9 +35,9 @@ export const ONE_OF_CONSTRAINT = {
     const noMatchMessage =
       field.controlHostProps["data-one-of-no-match-message"];
     if (isNoMatch) {
-      return noMatchMessage || naviI18n("constraint.one_of.no_match");
+      return noMatchMessage || constraintI18n("constraint.one_of.no_match");
     }
-    return message || naviI18n("constraint.one_of.default");
+    return message || constraintI18n("constraint.one_of.default");
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("data-one-of");

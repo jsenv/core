@@ -13,7 +13,7 @@ import {
   renderResolver,
   useNextResolver,
 } from "@jsenv/navi/src/resolver/resolver.jsx";
-import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
+import { constraintI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { useFocusGroup } from "@jsenv/navi/src/utils/focus/use_focus_group.js";
 import { ControlIdContext, ReadOnlyContext } from "../control_context.js";
 import { listItemBusyMessage } from "./list_item_blocked_message.js";
@@ -632,12 +632,12 @@ const ListItemSelectable = (props) => {
   // Handed to the row as well as to the control: whichever of the two catches
   // the press answers it, and they must not answer it differently.
   const readOnlyMessageResolved =
-    props.readOnlyMessage ?? naviI18n(readOnlyMessageKey, props);
+    props.readOnlyMessage ?? constraintI18n(readOnlyMessageKey, props);
   const busyMessageResolved =
     props.busyMessage ??
     (loading
       ? listItemBusyMessage(loading, props)
-      : naviI18n(
+      : constraintI18n(
           multiple ? `constraint.busy.selection` : `constraint.busy.choice`,
           props,
         ));

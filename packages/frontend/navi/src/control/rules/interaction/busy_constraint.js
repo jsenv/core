@@ -1,5 +1,5 @@
 import { RUNNING } from "@jsenv/navi/src/action/action_run_states.js";
-import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
+import { constraintI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
 
 export const BUSY_CONSTRAINT = {
@@ -34,8 +34,8 @@ export const BUSY_CONSTRAINT = {
 
     const isButton = field.controlType === "button";
     const message = isButton
-      ? naviI18n("constraint.busy.button")
-      : naviI18n("constraint.busy.default");
+      ? constraintI18n("constraint.busy.button")
+      : constraintI18n("constraint.busy.default");
     return {
       message,
       status: "info",

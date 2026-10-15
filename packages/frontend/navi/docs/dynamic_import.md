@@ -68,6 +68,10 @@ Everything the data layer decides then holds for the code:
   `activeRouteReadsSignal`, which leaves the code out: rerun, it would take a
   page reading it delegated off the screen for a frame.
 - **Fetched ahead**, on intent ([below](#ahead-of-the-render-intent)).
+- **A reload lands where the reader was.** The scroll position waits for the
+  code and the render that draws the page, rather than being written into the
+  pending screen and clamped to its height
+  ([navigation.md](./navigation.md#a-page-that-is-not-whole-yet)).
 
 ## A component inside a page that stays: who asks for its code
 

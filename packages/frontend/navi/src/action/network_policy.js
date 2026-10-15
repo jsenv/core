@@ -1,6 +1,6 @@
 import { signal, untracked } from "@preact/signals";
 
-import { naviI18n } from "../text/navi_i18n.js";
+import { constraintI18n } from "../text/navi_i18n.js";
 import { isSignal } from "../utils/is_signal.js";
 
 /*
@@ -134,7 +134,7 @@ export const getNetworkPolicyReadOnlyMessage = () => {
   if (readOnlyMessage) {
     return readOnlyMessage;
   }
-  return naviI18n("constraint.readonly.network_policy");
+  return constraintI18n("constraint.readonly.network_policy");
 };
 
 /**
@@ -144,7 +144,7 @@ export const getNetworkPolicyReadOnlyMessage = () => {
  * out. The class names the mechanism, never the reason.
  */
 export class NetworkPolicyError extends Error {
-  constructor(reason, message = naviI18n("network_policy.held")) {
+  constructor(reason, message = constraintI18n("network_policy.held")) {
     super(message);
     this.name = "NetworkPolicyError";
     this.reason = reason;

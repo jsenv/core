@@ -77,7 +77,7 @@
 import { installPanZoom } from "@jsenv/dom";
 
 import { isMac } from "../../keyboard/os.js";
-import { naviI18n } from "../../text/navi_i18n.js";
+import { interactionI18n } from "../../text/navi_i18n.js";
 import { openCallout } from "../rules/callout/callout.js";
 import { defineInteractionDetector } from "./interaction_registry.js";
 
@@ -148,7 +148,7 @@ defineInteractionDetector({
         return;
       }
       hint = openCallout(
-        naviI18n("interaction.zoom.needs_modifier", {
+        interactionI18n("interaction.zoom.needs_modifier", {
           key: isMac ? "⌘" : "Ctrl",
         }),
         {

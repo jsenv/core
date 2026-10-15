@@ -1,4 +1,4 @@
-import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
+import { constraintI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
 import { uiStateAsText } from "../ui_state_as_text.js";
 
@@ -31,20 +31,20 @@ export const SAME_AS_CONSTRAINT = {
     // sameAs implies the field must be filled — no need for required on a confirm field.
     if (!valueAsString) {
       if (type === "password") {
-        return naviI18n("constraint.same_as.missing.password");
+        return constraintI18n("constraint.same_as.missing.password");
       }
       if (type === "email") {
-        return naviI18n("constraint.same_as.missing.email");
+        return constraintI18n("constraint.same_as.missing.email");
       }
-      return naviI18n("constraint.same_as.missing.default");
+      return constraintI18n("constraint.same_as.missing.default");
     }
     if (type === "password") {
-      return naviI18n("constraint.same_as.password");
+      return constraintI18n("constraint.same_as.password");
     }
     if (type === "email") {
-      return naviI18n("constraint.same_as.email");
+      return constraintI18n("constraint.same_as.email");
     }
-    return naviI18n("constraint.same_as.default");
+    return constraintI18n("constraint.same_as.default");
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("data-same-as");

@@ -26,7 +26,7 @@ import {
 } from "@jsenv/validity";
 
 import { languagesSignal } from "./lang_signal.js";
-import { naviI18n } from "./navi_i18n.js";
+import { timeI18n } from "./navi_i18n.js";
 import { Text } from "./text.jsx";
 
 /**
@@ -571,7 +571,7 @@ export const TimeRange = ({
   lang = languagesSignal.value,
   pad = true,
   precision,
-  separator = naviI18n("time.range_separator", undefined, { lang }),
+  separator = timeI18n("time.range_separator", undefined, { lang }),
   ...props
 }) => {
   const boundProps = { type, format, lang };

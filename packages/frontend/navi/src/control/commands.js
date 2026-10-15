@@ -117,9 +117,9 @@ export const resolveNaviCommand = (
       `"${command}" triggered without an event: it is mandatory, a command must say what caused it. Forward the gesture that led here, or a CustomEvent naming the cause when no gesture did — see triggerNaviCommand's jsdoc.`,
     );
   }
-  const naviCommand =
+  const commandHandler =
     NAVI_COMMANDS[command] || NAVI_COMMANDS[commandName(command)];
-  if (!naviCommand) {
+  if (!commandHandler) {
     console.warn(`Unknown command "${command}"`);
     return undefined;
   }
@@ -131,7 +131,7 @@ export const resolveNaviCommand = (
     // attribute was present but target not found — already warned inside resolveExplicitTarget
     return undefined;
   }
-  const execute = naviCommand.commandHandler(element, event, {
+  const execute = commandHandler(element, event, {
     // Whatever followed the colon: "--navi-go-to-slide:edit" → "edit".
     argument: command.includes(":") ? commandArgument(command) : undefined,
     anchor,
@@ -355,7 +355,6 @@ export const onNaviCommand = (e, { debugCommand = () => {} } = {}) => {
   return implementation();
 };
 
-const NAVI_COMMANDS = {};
 // commandHandler(source, event, { argument, anchor, value, requester })
 //   → { target, implementation } | undefined
 // - Each handler calls resolveExplicitTarget(source) first, then falls back to
@@ -370,15 +369,7 @@ const NAVI_COMMANDS = {};
 const commandName = (command) => command.split(":")[0];
 const commandArgument = (command) => command.slice(command.indexOf(":") + 1);
 
-const registerNaviCommand = (command, commandHandler) => {
-  NAVI_COMMANDS[command] = {
-    name: command,
-    commandHandler,
-    toString: () => command,
-  };
-};
-
-registerNaviCommand("--navi-void", (source) => {
+const voidCommand = (source) => {
   const target =
     resolveExplicitTarget(source) || resolveFirstParentControl(source);
   if (!target) {
@@ -391,14 +382,14 @@ registerNaviCommand("--navi-void", (source) => {
       return true;
     },
   };
-});
+};
 
 // "--navi-update:smooth" asks the control to be SEEN moving to the value — a
 // wheel scrolls to it rather than swapping its digits, a spin plays the travel
 // its chevron would play — so a shortcut under a control shows which value it
 // changed, and by how much. What that movement is, and whether the value
 // travels with it, belongs to the control: see control_value.md.
-registerNaviCommand("--navi-update", (source, event, { argument }) => {
+const updateCommand = (source, event, { argument }) => {
   const target =
     resolveExplicitTarget(source) || resolveFirstParentControl(source);
   if (!target) {
@@ -430,8 +421,8 @@ registerNaviCommand("--navi-update", (source, event, { argument }) => {
       });
     },
   };
-});
-registerNaviCommand("--navi-clear", (source, event) => {
+};
+const clearCommand = (source, event) => {
   const target =
     resolveExplicitTarget(source) || resolveFirstParentControl(source);
   if (!target) {
@@ -485,8 +476,8 @@ registerNaviCommand("--navi-clear", (source, event) => {
     target,
     implementation: () => performClear(event),
   };
-});
-registerNaviCommand("--navi-reset", (source, event) => {
+};
+const resetCommand = (source, event) => {
   const target =
     resolveExplicitTarget(source) || resolveFirstParentControl(source);
   if (!target) {
@@ -506,7 +497,7 @@ registerNaviCommand("--navi-reset", (source, event) => {
       });
     },
   };
-});
+};
 /**
  * What a successful send does once the value is committed. The control says it
  * (`command` on a Form, kept in the DOM as data-after-send), and when it says
@@ -563,7 +554,7 @@ const createSentEvent = (event) => {
   return sentEvent;
 };
 
-registerNaviCommand("--navi-send", (source, event, { requester }) => {
+const sendCommand = (source, event, { requester }) => {
   const expandable = resolveExpandableAround(source);
   const target =
     resolveExplicitTarget(source) ||
@@ -702,13 +693,13 @@ registerNaviCommand("--navi-send", (source, event, { requester }) => {
       return sent;
     },
   };
-});
+};
 
 // "What I was here for is done" — said to the surface the control lives in, not
 // to the screen that should come next. What a finished step does to the walk is
 // the slide's own business (mark it answered, move on), the same way closing
 // would be the dialog's.
-registerNaviCommand("--navi-done", (source, event) => {
+const doneCommand = (source, event) => {
   const target =
     resolveExplicitTarget(source) || source.closest("[data-slide]");
   if (!target) {
@@ -722,7 +713,7 @@ registerNaviCommand("--navi-done", (source, event) => {
         source: resolveCommandProxySource(source),
       }),
   };
-});
+};
 
 // Which slide is shown is the slide container's own business: a button says
 // which way to go, not "show the slide with that id" — which is what lets them
@@ -732,34 +723,28 @@ registerNaviCommand("--navi-done", (source, event) => {
 // slide_container.jsx), and on a map "next" only means something when there is
 // a single axis to walk. One vocabulary for both cases beats a second one that
 // works half the time.
-const registerSlideCommand = (command, dx, dy) => {
-  registerNaviCommand(command, (source, event) => {
-    const target =
-      resolveExplicitTarget(source) || source.closest("[data-slide-container]");
-    if (!target) {
-      return undefined;
-    }
-    return {
-      target,
-      implementation: () =>
-        dispatchCustomEvent(target, "navi_slide_move", {
-          event,
-          dx,
-          dy,
-          // What the source was worth, carried along: a button that says which
-          // entry it is about (value={{ name }}) sends that with the travel, and
-          // the slide arriving keeps it — see Slide's own `useSlideValue`. Read
-          // the same way every other command reads a value, so a source says it
-          // in one way whatever the command.
-          value: resolveCommandValue(source, event),
-        }),
-    };
-  });
+const slideCommand = (dx, dy) => (source, event) => {
+  const target =
+    resolveExplicitTarget(source) || source.closest("[data-slide-container]");
+  if (!target) {
+    return undefined;
+  }
+  return {
+    target,
+    implementation: () =>
+      dispatchCustomEvent(target, "navi_slide_move", {
+        event,
+        dx,
+        dy,
+        // What the source was worth, carried along: a button that says which
+        // entry it is about (value={{ name }}) sends that with the travel, and
+        // the slide arriving keeps it — see Slide's own `useSlideValue`. Read
+        // the same way every other command reads a value, so a source says it
+        // in one way whatever the command.
+        value: resolveCommandValue(source, event),
+      }),
+  };
 };
-registerSlideCommand("--navi-right", 1, 0);
-registerSlideCommand("--navi-left", -1, 0);
-registerSlideCommand("--navi-down", 0, 1);
-registerSlideCommand("--navi-up", 0, -1);
 
 // A step along a line, and the two ends of it. Said without an axis on purpose:
 // a list is a line of items whichever way it is laid out, and a container of
@@ -774,49 +759,43 @@ const resolveWalkableTarget = (source) =>
   resolveExplicitTarget(source) ||
   source.closest("[navi-selectable], [data-slide-container]");
 
-const registerWalkCommand = (command, goal) => {
-  registerNaviCommand(command, (source, event) => {
-    const target = resolveWalkableTarget(source);
-    if (!target) {
-      return undefined;
-    }
-    const isList = target.hasAttribute("navi-selectable");
-    return {
-      target,
-      implementation: () => {
-        if (isList) {
-          return dispatchCustomEvent(target, "navi_request_nav", {
-            event,
-            goal,
-          });
-        }
-        if (goal === "first" || goal === "last") {
-          return dispatchCustomEvent(target, "navi_slide_end", {
-            event,
-            last: goal === "last",
-            value: resolveCommandValue(source, event),
-          });
-        }
-        // A line of slides: onwards is to the right, or downwards when that is
-        // where they are — which the container decides, not this.
-        return dispatchCustomEvent(target, "navi_slide_step", {
+const walkCommand = (goal) => (source, event) => {
+  const target = resolveWalkableTarget(source);
+  if (!target) {
+    return undefined;
+  }
+  const isList = target.hasAttribute("navi-selectable");
+  return {
+    target,
+    implementation: () => {
+      if (isList) {
+        return dispatchCustomEvent(target, "navi_request_nav", {
           event,
           goal,
+        });
+      }
+      if (goal === "first" || goal === "last") {
+        return dispatchCustomEvent(target, "navi_slide_end", {
+          event,
+          last: goal === "last",
           value: resolveCommandValue(source, event),
         });
-      },
-    };
-  });
+      }
+      // A line of slides: onwards is to the right, or downwards when that is
+      // where they are — which the container decides, not this.
+      return dispatchCustomEvent(target, "navi_slide_step", {
+        event,
+        goal,
+        value: resolveCommandValue(source, event),
+      });
+    },
+  };
 };
-registerWalkCommand("--navi-previous", "previous");
-registerWalkCommand("--navi-next", "next");
-registerWalkCommand("--navi-first", "first");
-registerWalkCommand("--navi-last", "last");
 
 // "Take the thing one is on": choosing the item a list is pointing at, without
 // naming it — the keyboard's own Enter, said as a command so a button can offer
 // it too.
-registerNaviCommand("--navi-activate", (source, event) => {
+const activateCommand = (source, event) => {
   const target =
     resolveExplicitTarget(source) || source.closest("[navi-selectable]");
   if (!target) {
@@ -827,7 +806,7 @@ registerNaviCommand("--navi-activate", (source, event) => {
     implementation: () =>
       dispatchCustomEvent(target, "navi_request_activate", { event }),
   };
-});
+};
 
 // By name, when a direction cannot say it: a screen reached from several
 // places, or from one that is not next to it on the map. The name is part of
@@ -835,38 +814,35 @@ registerNaviCommand("--navi-activate", (source, event) => {
 // what every other command uses it for: what this is about. A source needs to
 // be able to say both, and it says them in the two places that already mean
 // those two things.
-registerNaviCommand(
-  "--navi-go-to-slide",
-  (source, event, { argument } = {}) => {
-    const target =
-      resolveExplicitTarget(source) || source.closest("[data-slide-container]");
-    if (!target) {
-      return undefined;
-    }
-    if (!argument) {
-      console.warn(
-        `--navi-go-to-slide needs the area to go to: --navi-go-to-slide:my_area`,
-        source,
-      );
-      return undefined;
-    }
-    return {
-      target,
-      implementation: () =>
-        dispatchCustomEvent(target, "navi_slide_go_to", {
-          event,
-          area: argument,
-          value: resolveCommandValue(source, event),
-        }),
-    };
-  },
-);
+const goToSlideCommand = (source, event, { argument } = {}) => {
+  const target =
+    resolveExplicitTarget(source) || source.closest("[data-slide-container]");
+  if (!target) {
+    return undefined;
+  }
+  if (!argument) {
+    console.warn(
+      `--navi-go-to-slide needs the area to go to: --navi-go-to-slide:my_area`,
+      source,
+    );
+    return undefined;
+  }
+  return {
+    target,
+    implementation: () =>
+      dispatchCustomEvent(target, "navi_slide_go_to", {
+        event,
+        area: argument,
+        value: resolveCommandValue(source, event),
+      }),
+  };
+};
 
 // Back where one came from — the slide that sent the user here, whichever way
 // that was. What "back" means is a fact about the travel, not about the map: a
 // screen reached from two places goes back to the one it was reached from, and
 // no direction can say that.
-registerNaviCommand("--navi-back", (source, event) => {
+const backCommand = (source, event) => {
   const target =
     resolveExplicitTarget(source) || source.closest("[data-slide-container]");
   if (!target) {
@@ -877,7 +853,7 @@ registerNaviCommand("--navi-back", (source, event) => {
     implementation: () =>
       dispatchCustomEvent(target, "navi_slide_back", { event }),
   };
-});
+};
 
 // Where a press takes the user. The destination is the command's argument
 // because it says WHAT the command does — "--navi-nav-to:/games/42" — which is how
@@ -889,7 +865,7 @@ registerNaviCommand("--navi-back", (source, event) => {
 // the press had nothing to send. A destination the response decides (a
 // creation, whose id comes back with it) is the action's own business: it
 // navigates itself.
-registerNaviCommand("--navi-nav-to", (source, event, { argument }) => {
+const navToCommand = (source, event, { argument }) => {
   if (!argument) {
     console.warn(
       `[navi] "--navi-nav-to" needs a destination: --navi-nav-to:/the/url (relative to the current page, or absolute).`,
@@ -907,56 +883,52 @@ registerNaviCommand("--navi-nav-to", (source, event, { argument }) => {
         linkAsksForReplace(source) ? { replace: true } : undefined,
       ),
   };
-});
+};
 
 // Back to the screen the reader came from, with somewhere to land when there
 // is none of ours behind — a url opened cold (see navBack). The fallback is
 // the argument for the reason --navi-nav-to's destination is: it says WHAT the
 // command does when there is nothing to go back to.
-registerNaviCommand("--navi-nav-back", (source, event, { argument }) => {
+const navBackCommand = (source, event, { argument }) => {
   const target = resolveExplicitTarget(source) || source;
   return {
     target,
     implementation: () => navBack({ fallback: argument }),
   };
-});
+};
 
-registerNaviCommand(
-  "--navi-toggle",
-  (source, event, { anchor, value } = {}) => {
-    const target =
-      resolveExplicitTarget(source) || resolveClosestExpandable(source);
-    if (!target) {
-      return undefined;
-    }
-    return {
-      target,
-      implementation: () => {
-        const isExpanded = target.getAttribute("aria-expanded") === "true";
-        const customEventName = isExpanded
-          ? "navi_request_close"
-          : "navi_request_open";
-        return dispatchCustomEvent(target, customEventName, {
-          event,
-          source: resolveCommandProxySource(source),
-          anchor,
-          // Same as --navi-open below: the half of the toggle that opens says
-          // what it opens ON, and the half that closes carries it too so the
-          // popup never has to ask which half it just heard.
-          value:
-            value === undefined ? resolveCommandValue(source, event) : value,
-        });
-      },
-    };
-  },
-);
+const toggleCommand = (source, event, { anchor, value } = {}) => {
+  const target =
+    resolveExplicitTarget(source) || resolveClosestExpandable(source);
+  if (!target) {
+    return undefined;
+  }
+  return {
+    target,
+    implementation: () => {
+      const isExpanded = target.getAttribute("aria-expanded") === "true";
+      const customEventName = isExpanded
+        ? "navi_request_close"
+        : "navi_request_open";
+      return dispatchCustomEvent(target, customEventName, {
+        event,
+        source: resolveCommandProxySource(source),
+        anchor,
+        // Same as --navi-open below: the half of the toggle that opens says
+        // what it opens ON, and the half that closes carries it too so the
+        // popup never has to ask which half it just heard.
+        value: value === undefined ? resolveCommandValue(source, event) : value,
+      });
+    },
+  };
+};
 // A popup that edits opens ON something, and the press is the only place that
 // knows which one. It says it with `value` — "what this is about", as
 // everywhere else — rather than with an argument, which says what the command
 // DOES: "open" is already a complete instruction, unlike --navi-go-to-slide.
 //   <Button value={radar.id} command="--navi-open" commandfor="radar-dialog">
 // The popup is told before it opens — see Dialog/Popover's `onOpen`.
-registerNaviCommand("--navi-open", (source, event, { anchor, value } = {}) => {
+const openCommand = (source, event, { anchor, value } = {}) => {
   const target =
     resolveExplicitTarget(source) || resolveClosestExpandable(source);
   if (!target) {
@@ -976,7 +948,7 @@ registerNaviCommand("--navi-open", (source, event, { anchor, value } = {}) => {
       });
     },
   };
-});
+};
 /**
  * Tells the popup a source opens that a press on it has started, ahead of the
  * release that runs the command: what the opening will read can be asked for
@@ -1005,7 +977,7 @@ export const announceOpeningPress = (source, command, pointerdownEvent) => {
 // a link leaving from a badge shown over a sheet leaves both. A surface that
 // refuses (a form asking about its changes) keeps what is above it open too:
 // one cannot be out of the sheet while still in the badge.
-registerNaviCommand("--navi-close", (source, event, { argument }) => {
+const closeCommand = (source, event, { argument }) => {
   const target =
     resolveExplicitTarget(source) || resolveClosestExpandable(source);
   if (!target) {
@@ -1021,7 +993,7 @@ registerNaviCommand("--navi-close", (source, event, { argument }) => {
       return dispatchCustomEvent(target, "navi_request_close", detail);
     },
   };
-});
+};
 const requestCloseUpward = (target, detail) => {
   let expandable = target;
   while (expandable) {
@@ -1038,7 +1010,7 @@ const requestCloseUpward = (target, detail) => {
   }
   return true;
 };
-registerNaviCommand("--navi-cancel", (source, event) => {
+const cancelCommand = (source, event) => {
   const target =
     resolveExplicitTarget(source) || resolveClosestExpandable(source);
   if (!target) {
@@ -1054,13 +1026,13 @@ registerNaviCommand("--navi-cancel", (source, event) => {
       });
     },
   };
-});
+};
 // "Yes, do it" — said inside the popup of a confirm picker (see
 // picker/picker_confirm.jsx), by its own yes button or by whatever a caller put
 // there instead. Its counterpart is --navi-cancel; the difference between the
 // two is this event, since both then close the popup, and a popup that closes
 // without having said this is the answer "no".
-registerNaviCommand("--navi-confirm", (source, event) => {
+const confirmCommand = (source, event) => {
   const target =
     resolveExplicitTarget(source) || resolveClosestExpandable(source);
   if (!target) {
@@ -1080,8 +1052,8 @@ registerNaviCommand("--navi-confirm", (source, event) => {
       });
     },
   };
-});
-registerNaviCommand("--navi-define", (source, event) => {
+};
+const defineCommand = (source, event) => {
   const target =
     resolveExplicitTarget(source) || resolveClosestExpandable(source);
   if (!target) {
@@ -1091,7 +1063,7 @@ registerNaviCommand("--navi-define", (source, event) => {
     target,
     implementation: () => executeNaviDefine(source, event, target),
   };
-});
+};
 // A send whose target is the popup itself: what is around the source IS the
 // popup's answer, and a picker runs its action with that answer as it closes
 // (see onRequestClose in picker_custom.jsx) — dispatching the action here too
@@ -1106,7 +1078,7 @@ const executeNaviDefine = (source, event, target) => {
   });
 };
 
-registerNaviCommand("--navi-scroll", (source, event) => {
+const scrollCommand = (source, event) => {
   const target =
     resolveExplicitTarget(source) || resolveFirstParentControl(source);
   if (!target) {
@@ -1121,7 +1093,7 @@ registerNaviCommand("--navi-scroll", (source, event) => {
       });
     },
   };
-});
+};
 // The press a hand is still making, given to something that can be carried: a
 // hold opened a popup, and what the popup holds is to follow that same finger
 // without it lifting and pressing again. `event` is what the press set off (the
@@ -1130,7 +1102,7 @@ registerNaviCommand("--navi-scroll", (source, event) => {
 // puts a copy in the top layer, neither of which holds while a transition is
 // still moving the box (see afterPopupLift). What the carry then is — its
 // outcomes, its refusal — is the element's (see interaction_drag.js).
-registerNaviCommand("--navi-grab", (source, event) => {
+const grabCommand = (source, event) => {
   const target =
     resolveExplicitTarget(source) || source.closest("[data-drag-source]");
   if (!target) {
@@ -1149,8 +1121,8 @@ registerNaviCommand("--navi-grab", (source, event) => {
       return true;
     },
   };
-});
-registerNaviCommand("--navi-check", (source, event) => {
+};
+const checkCommand = (source, event) => {
   const target =
     resolveExplicitTarget(source) || resolveFirstParentControl(source);
   if (!target) {
@@ -1164,8 +1136,8 @@ registerNaviCommand("--navi-check", (source, event) => {
       });
     },
   };
-});
-registerNaviCommand("--navi-uncheck", (source, event) => {
+};
+const uncheckCommand = (source, event) => {
   const target =
     resolveExplicitTarget(source) || resolveFirstParentControl(source);
   if (!target) {
@@ -1179,8 +1151,8 @@ registerNaviCommand("--navi-uncheck", (source, event) => {
       });
     },
   };
-});
-registerNaviCommand("--navi-select", (source, event) => {
+};
+const selectCommand = (source, event) => {
   const target =
     resolveExplicitTarget(source) || resolveFirstParentControl(source);
   if (!target) {
@@ -1196,8 +1168,8 @@ registerNaviCommand("--navi-select", (source, event) => {
       });
     },
   };
-});
-registerNaviCommand("--navi-unselect", (source, event) => {
+};
+const unselectCommand = (source, event) => {
   const target =
     resolveExplicitTarget(source) || resolveFirstParentControl(source);
   if (!target) {
@@ -1213,4 +1185,41 @@ registerNaviCommand("--navi-unselect", (source, event) => {
       });
     },
   };
-});
+};
+
+// A literal rather than a registry filled by calls: handlers trigger commands
+// themselves, so a registry they read keeps every registering call — and every
+// handler — in the bundle of an app that never runs a command.
+const NAVI_COMMANDS = {
+  "--navi-void": voidCommand,
+  "--navi-update": updateCommand,
+  "--navi-clear": clearCommand,
+  "--navi-reset": resetCommand,
+  "--navi-send": sendCommand,
+  "--navi-done": doneCommand,
+  "--navi-right": slideCommand(1, 0),
+  "--navi-left": slideCommand(-1, 0),
+  "--navi-down": slideCommand(0, 1),
+  "--navi-up": slideCommand(0, -1),
+  "--navi-previous": walkCommand("previous"),
+  "--navi-next": walkCommand("next"),
+  "--navi-first": walkCommand("first"),
+  "--navi-last": walkCommand("last"),
+  "--navi-activate": activateCommand,
+  "--navi-go-to-slide": goToSlideCommand,
+  "--navi-back": backCommand,
+  "--navi-nav-to": navToCommand,
+  "--navi-nav-back": navBackCommand,
+  "--navi-toggle": toggleCommand,
+  "--navi-open": openCommand,
+  "--navi-close": closeCommand,
+  "--navi-cancel": cancelCommand,
+  "--navi-confirm": confirmCommand,
+  "--navi-define": defineCommand,
+  "--navi-scroll": scrollCommand,
+  "--navi-grab": grabCommand,
+  "--navi-check": checkCommand,
+  "--navi-uncheck": uncheckCommand,
+  "--navi-select": selectCommand,
+  "--navi-unselect": unselectCommand,
+};

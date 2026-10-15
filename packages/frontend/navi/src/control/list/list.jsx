@@ -41,7 +41,7 @@ import { findControlHost, isControlRoot } from "../control_dom.js";
 import { dispatchRequestInteraction } from "../rules/control_interaction.js";
 import { Separator } from "../../layout/separator.jsx";
 import { useDebugScroll } from "../../navi_debug.jsx";
-import { naviI18n } from "../../text/navi_i18n.js";
+import { buttonI18n, listI18n } from "../../text/navi_i18n.js";
 import { Text } from "../../text/text.jsx";
 import { withPropsClassName } from "../../utils/with_props_class_name.js";
 import { useDisplayedLayoutEffect } from "../../utils/use_displayed_layout_effect.js";
@@ -4768,7 +4768,7 @@ const withListGap = (style, spacing) => {
 // not disable it.
 const SearchFallback = ({ searchFallback }) => {
   if (searchFallback === undefined) {
-    searchFallback = naviI18n("list.no_match");
+    searchFallback = listI18n("list.no_match");
   }
   return (
     <ListItem
@@ -4785,7 +4785,7 @@ const SearchFallback = ({ searchFallback }) => {
 // "no match" state (SearchFallback), not an empty-list state.
 const Fallback = ({ fallback }) => {
   if (fallback === undefined) {
-    fallback = naviI18n("list.empty");
+    fallback = listI18n("list.empty");
   }
   return (
     <ListItem
@@ -5294,7 +5294,7 @@ const ListItemReal = (props) => {
               className="navi_list_item_error_dismiss"
               onClick={onErrorDismiss}
             >
-              {naviI18n("button.close", props)}
+              {buttonI18n("button.close", props)}
             </button>
           )}
         </>
@@ -6439,14 +6439,14 @@ const ListItemsFailure = ({ error, retry }) => {
         ⚠
       </span>
       <span className="navi_list_item_error_message">
-        {error && error.message ? error.message : naviI18n("list.items_failed")}
+        {error && error.message ? error.message : listI18n("list.items_failed")}
       </span>
       <button
         type="button"
         className="navi_list_item_error_dismiss"
         onClick={retry}
       >
-        {naviI18n("list.items_retry")}
+        {listI18n("list.items_retry")}
       </button>
     </Box>
   );

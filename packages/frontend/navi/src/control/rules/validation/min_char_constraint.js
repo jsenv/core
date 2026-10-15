@@ -1,4 +1,4 @@
-import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
+import { constraintI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
 import { uiStateAsText } from "../ui_state_as_text.js";
 
@@ -29,9 +29,9 @@ export const MIN_LOWER_LETTER_CONSTRAINT = {
     if (min === 1) {
       const type = field.controlHostProps.type;
       if (type === "password") {
-        return naviI18n("constraint.min_lower_letter.password.singular");
+        return constraintI18n("constraint.min_lower_letter.password.singular");
       }
-      return naviI18n("constraint.min_lower_letter.default.singular");
+      return constraintI18n("constraint.min_lower_letter.default.singular");
     }
     const key = (() => {
       const type = field.controlHostProps.type;
@@ -40,7 +40,7 @@ export const MIN_LOWER_LETTER_CONSTRAINT = {
       }
       return "constraint.min_lower_letter.default.plural";
     })();
-    return naviI18n(key, {
+    return constraintI18n(key, {
       min: String(min),
     });
   },
@@ -74,9 +74,9 @@ export const MIN_UPPER_LETTER_CONSTRAINT = {
     const type = field.controlHostProps.type;
     const context = type === "password" ? "password" : "default";
     if (min === 1) {
-      return naviI18n(`constraint.min_upper_letter.${context}.singular`);
+      return constraintI18n(`constraint.min_upper_letter.${context}.singular`);
     }
-    return naviI18n(`constraint.min_upper_letter.${context}.plural`, {
+    return constraintI18n(`constraint.min_upper_letter.${context}.plural`, {
       min: String(min),
     });
   },
@@ -110,9 +110,9 @@ export const MIN_DIGIT_CONSTRAINT = {
     const type = field.controlHostProps.type;
     const context = type === "password" ? "password" : "default";
     if (min === 1) {
-      return naviI18n(`constraint.min_digit.${context}.singular`);
+      return constraintI18n(`constraint.min_digit.${context}.singular`);
     }
-    return naviI18n(`constraint.min_digit.${context}.plural`, {
+    return constraintI18n(`constraint.min_digit.${context}.plural`, {
       min: String(min),
     });
   },
@@ -151,11 +151,11 @@ export const MIN_SPECIAL_CHAR_CONSTRAINT = {
     const type = field.controlHostProps.type;
     const context = type === "password" ? "password" : "default";
     if (min === 1) {
-      return naviI18n(`constraint.min_special_char.${context}.singular`, {
+      return constraintI18n(`constraint.min_special_char.${context}.singular`, {
         charset: specialCharset,
       });
     }
-    return naviI18n(`constraint.min_special_char.${context}.plural`, {
+    return constraintI18n(`constraint.min_special_char.${context}.plural`, {
       min: String(min),
       charset: specialCharset,
     });

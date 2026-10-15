@@ -7,43 +7,13 @@ import {
 import { isValidElement } from "preact";
 import { useCallback, useLayoutEffect, useState } from "preact/hooks";
 
-import { registerGlobalConstraint } from "../control/rules/control_validation.js";
+import {
+  clearActionError,
+  setActionError,
+} from "../control/rules/validation/action_error_constraint.js";
 import { useResetErrorBoundary } from "../error_boundary_context.js";
 import { useDebugAction } from "../navi_debug.jsx";
 import { runUnwatched } from "./run_unwatched.js";
-
-const actionErrorWeakMap = new WeakMap();
-const NAVI_ACTION_ERROR_CONSTRAINT = {
-  name: "navi_action_error",
-  check: (controller) => {
-    const errorInfo = actionErrorWeakMap.get(controller);
-    if (!errorInfo) {
-      return null;
-    }
-    const { target, message } = errorInfo;
-    return {
-      status: "error",
-      target,
-      message,
-    };
-  },
-  // This should not prevent <form> submission
-  // so whenever user tries to submit the form again the error is cleared
-  // (Hitting enter key, clicking on submit button, etc. would allow to re-submit the form in error state)
-  autoResetOnAction: true,
-  onAutoResetOnAction: (controller) => {
-    actionErrorWeakMap.delete(controller);
-  },
-};
-registerGlobalConstraint(NAVI_ACTION_ERROR_CONSTRAINT);
-const setActionError = (controller, message, { target } = {}) => {
-  actionErrorWeakMap.set(controller, { message, target });
-};
-const clearActionError = (controller) => {
-  if (actionErrorWeakMap.has(controller)) {
-    actionErrorWeakMap.delete(controller);
-  }
-};
 
 export const useExecuteAction = (
   elementRef,

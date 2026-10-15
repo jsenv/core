@@ -11,7 +11,7 @@ import {
 } from "@jsenv/validity";
 
 import { languagesSignal } from "@jsenv/navi/src/text/lang_signal.js";
-import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
+import { constraintI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { isNumberInput } from "@jsenv/navi/src/control/input/resolve_input_props.js";
 import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
 import { naviI18nFromValidityMessage } from "../validity_bridge.js";
@@ -34,7 +34,7 @@ export const REQUIRED_CONSTRAINT = {
         return null;
       }
       return {
-        message: naviI18n("constraint.required.radio"),
+        message: constraintI18n("constraint.required.radio"),
         target: field.ref.current,
       };
     }
@@ -48,7 +48,7 @@ export const REQUIRED_CONSTRAINT = {
         return null;
       }
       return {
-        message: naviI18n("constraint.required.radio"),
+        message: constraintI18n("constraint.required.radio"),
         target: field.ref.current,
       };
     }
@@ -62,7 +62,7 @@ export const REQUIRED_CONSTRAINT = {
         return null;
       }
       return {
-        message: naviI18n("constraint.required.checkbox_group"),
+        message: constraintI18n("constraint.required.checkbox_group"),
         target: field.ref.current,
       };
     }
@@ -75,7 +75,7 @@ export const REQUIRED_CONSTRAINT = {
       if (field.uiState !== undefined) {
         return null;
       }
-      return naviI18n("constraint.required.checkbox");
+      return constraintI18n("constraint.required.checkbox");
     }
 
     const valueAsString = uiStateAsText(field.uiState);
@@ -84,39 +84,39 @@ export const REQUIRED_CONSTRAINT = {
     }
 
     if (type === "password") {
-      return naviI18n("constraint.required.password");
+      return constraintI18n("constraint.required.password");
     }
     if (type === "email") {
-      return naviI18n("constraint.required.email");
+      return constraintI18n("constraint.required.email");
     }
     if (type === "color") {
-      return naviI18n("constraint.required.color");
+      return constraintI18n("constraint.required.color");
     }
     if (type === "date") {
-      return naviI18n("constraint.required.date");
+      return constraintI18n("constraint.required.date");
     }
     if (type === "month") {
-      return naviI18n("constraint.required.month");
+      return constraintI18n("constraint.required.month");
     }
     if (type === "week") {
-      return naviI18n("constraint.required.week");
+      return constraintI18n("constraint.required.week");
     }
     if (type === "time") {
-      return naviI18n("constraint.required.time");
+      return constraintI18n("constraint.required.time");
     }
     if (isNumberInput(type, field.controlHostProps["navi-input-type"])) {
-      return naviI18n("constraint.required.number");
+      return constraintI18n("constraint.required.number");
     }
     if (type === "datetime-local") {
-      return naviI18n("constraint.required.datetime");
+      return constraintI18n("constraint.required.datetime");
     }
     if (type === "file") {
       const multiple = field.controlHostProps.multiple;
       return multiple
-        ? naviI18n("constraint.required.file.multiple")
-        : naviI18n("constraint.required.file");
+        ? constraintI18n("constraint.required.file.multiple")
+        : constraintI18n("constraint.required.file");
     }
-    return naviI18n("constraint.required.default");
+    return constraintI18n("constraint.required.default");
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("required");
@@ -144,12 +144,12 @@ export const PATTERN_CONSTRAINT = {
 
     const type = field.controlHostProps.type;
     if (type === "email") {
-      return naviI18n("constraint.pattern.email");
+      return constraintI18n("constraint.pattern.email");
     }
     if (type === "password") {
-      return naviI18n("constraint.pattern.password");
+      return constraintI18n("constraint.pattern.password");
     }
-    return naviI18n("constraint.pattern.default");
+    return constraintI18n("constraint.pattern.default");
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("pattern");
@@ -216,7 +216,7 @@ export const MIN_LENGTH_CONSTRAINT = {
         }
         return `constraint.min_length.singular.default`;
       })();
-      return naviI18n(singularKey, {
+      return constraintI18n(singularKey, {
         min: String(minLength),
       });
     }
@@ -229,7 +229,7 @@ export const MIN_LENGTH_CONSTRAINT = {
       }
       return `constraint.min_length.plural.default`;
     })();
-    return naviI18n(pluralKey, {
+    return constraintI18n(pluralKey, {
       min: String(minLength),
       count: String(valueLength),
     });
@@ -268,7 +268,7 @@ export const MAX_LENGTH_CONSTRAINT = {
         return null;
       }
       return {
-        message: naviI18n("constraint.max_length.selection", {
+        message: constraintI18n("constraint.max_length.selection", {
           max: String(maxLength),
           count: String(count),
         }),
@@ -310,7 +310,7 @@ export const MAX_LENGTH_CONSTRAINT = {
       }
       return `constraint.max_length.default`;
     })();
-    return naviI18n(maxLengthKey, {
+    return constraintI18n(maxLengthKey, {
       max: String(maxLength),
       count: String(valueLength),
     });
@@ -343,18 +343,18 @@ export const TYPE_NUMBER_CONSTRAINT = {
     }
 
     if (naviType === "hour") {
-      return naviI18n(`constraint.type.hour.default`);
+      return constraintI18n(`constraint.type.hour.default`);
     }
     if (naviType === "minute") {
-      return naviI18n(`constraint.type.minute.default`);
+      return constraintI18n(`constraint.type.minute.default`);
     }
     if (naviType === "second") {
-      return naviI18n(`constraint.type.second.default`);
+      return constraintI18n(`constraint.type.second.default`);
     }
     if (naviType === "percentage") {
-      return naviI18n(`constraint.type.percentage.default`);
+      return constraintI18n(`constraint.type.percentage.default`);
     }
-    return naviI18n(`constraint.type.number.default`);
+    return constraintI18n(`constraint.type.number.default`);
   },
 };
 
@@ -548,7 +548,7 @@ export const STEP_CONSTRAINT = {
 
       const before = valueSeconds - remainder;
       const after = before + stepSeconds;
-      return naviI18n("constraint.step.duration.default", {
+      return constraintI18n("constraint.step.duration.default", {
         step: formatDuration(stepSeconds),
         before: formatDuration(before),
         after: formatDuration(after),
@@ -605,7 +605,7 @@ export const STEP_CONSTRAINT = {
         }
         return `number`;
       })();
-      return naviI18n(`constraint.step.${context}.default`, {
+      return constraintI18n(`constraint.step.${context}.default`, {
         step: stepString,
         before: before.toFixed(decimals),
         after: after.toFixed(decimals),
@@ -627,20 +627,20 @@ export const STEP_CONSTRAINT = {
         const before = formatMsToTime(beforeMs, showSeconds);
         const after = formatMsToTime(afterMs, showSeconds);
         if (stepSeconds % 3600 === 0) {
-          return naviI18n("constraint.step.time.hour", {
+          return constraintI18n("constraint.step.time.hour", {
             step: String(stepSeconds / 3600),
             before,
             after,
           });
         }
         if (stepSeconds % 60 === 0) {
-          return naviI18n("constraint.step.time.minute", {
+          return constraintI18n("constraint.step.time.minute", {
             step: String(stepSeconds / 60),
             before,
             after,
           });
         }
-        return naviI18n("constraint.step.time.second", {
+        return constraintI18n("constraint.step.time.second", {
           step: stepString,
           before,
           after,
@@ -663,7 +663,7 @@ export const STEP_CONSTRAINT = {
       beforeDate.setDate(beforeDate.getDate() + beforeDays);
       const afterDate = new Date(baseDate);
       afterDate.setDate(afterDate.getDate() + afterDays);
-      return naviI18n("constraint.step.date.default", {
+      return constraintI18n("constraint.step.date.default", {
         step: stepString,
         before: formatDateIso(beforeDate.toISOString().slice(0, 10), type),
         after: formatDateIso(afterDate.toISOString().slice(0, 10), type),
@@ -702,7 +702,7 @@ const formatMsToTime = (ms, showSeconds) => {
 const boundMessage = (field, bound) => {
   const boundValue = field.controlHostProps[bound];
   if (field.controlType === "duration_group") {
-    return naviI18n(`constraint.${bound}.duration.default`, {
+    return constraintI18n(`constraint.${bound}.duration.default`, {
       [bound]: formatDuration(boundValue),
     });
   }
@@ -712,20 +712,20 @@ const boundMessage = (field, bound) => {
     const numberKind = NUMBER_BOUND_KIND_SET.has(naviInputType)
       ? naviInputType
       : "number";
-    return naviI18n(`constraint.${bound}.${numberKind}.default`, {
+    return constraintI18n(`constraint.${bound}.${numberKind}.default`, {
       [bound]: String(boundValue),
     });
   }
   if (type === "time") {
-    return naviI18n(`constraint.${bound}.time.default`, {
+    return constraintI18n(`constraint.${bound}.time.default`, {
       [bound]: boundValue,
     });
   }
   if (DATE_INPUT_TYPE_SET.has(type)) {
     if (boundValue === getTodayIso(type)) {
-      return naviI18n(`constraint.${bound}.date.today.default`);
+      return constraintI18n(`constraint.${bound}.date.today.default`);
     }
-    return naviI18n(`constraint.${bound}.date.default`, {
+    return constraintI18n(`constraint.${bound}.date.default`, {
       [bound]: formatDateIso(boundValue, type),
     });
   }

@@ -19,7 +19,7 @@
 import { createContext } from "preact";
 import { useContext, useId, useMemo, useRef } from "preact/hooks";
 
-import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
+import { timeI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { Text } from "@jsenv/navi/src/text/text.jsx";
 import { Box } from "../../box/box.jsx";
 import { ControlGroup } from "../control_group.jsx";
@@ -113,8 +113,8 @@ export const TimeWheel = ({
   loop = true,
   placeholder,
   separator,
-  hourLabel = naviI18n("time.hour_label"),
-  minuteLabel = naviI18n("time.minute_label"),
+  hourLabel = timeI18n("time.hour_label"),
+  minuteLabel = timeI18n("time.minute_label"),
   size,
   wheelProps,
   onnavi_wheel_settle,
@@ -122,7 +122,7 @@ export const TimeWheel = ({
 }) => {
   const wholeHours = minuteStep >= MINUTES_PER_HOUR;
   if (separator === undefined) {
-    separator = naviI18n(
+    separator = timeI18n(
       wholeHours ? "time.hour_suffix" : "time.hour_separator",
     );
   }
@@ -292,8 +292,8 @@ export const TimeRangeWheel = ({
   loop = true,
   placeholder,
   size,
-  startLabel = naviI18n("time_range.from"),
-  endLabel = naviI18n("time_range.to"),
+  startLabel = timeI18n("time_range.from"),
+  endLabel = timeI18n("time_range.to"),
   labelPosition = "before",
   timeProps,
   startTimeProps,

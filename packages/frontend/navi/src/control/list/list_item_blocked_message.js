@@ -1,4 +1,4 @@
-import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
+import { constraintI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 
 // What a row may say it is waiting on, all of them about the row as a thing
 // the LIST holds: joining it, leaving it, or being saved where it is. A
@@ -17,9 +17,9 @@ const LOADING_REASON_SET = new Set(["adding", "removing", "updating"]);
  */
 export const listItemBusyMessage = (loading, props) => {
   if (LOADING_REASON_SET.has(loading)) {
-    return naviI18n(`constraint.busy.item.${loading}`, props);
+    return constraintI18n(`constraint.busy.item.${loading}`, props);
   }
-  return naviI18n("constraint.busy.item", props);
+  return constraintI18n("constraint.busy.item", props);
 };
 
 /**
@@ -33,5 +33,7 @@ export const listItemBlockedMessage = (loading, props) => {
   if (loading) {
     return props.busyMessage ?? listItemBusyMessage(loading, props);
   }
-  return props.readOnlyMessage ?? naviI18n("constraint.readonly.item", props);
+  return (
+    props.readOnlyMessage ?? constraintI18n("constraint.readonly.item", props)
+  );
 };

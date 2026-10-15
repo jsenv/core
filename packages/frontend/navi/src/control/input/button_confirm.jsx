@@ -22,7 +22,7 @@
 import { useId, useLayoutEffect, useRef, useState } from "preact/hooks";
 
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
-import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
+import { buttonI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import {
   findFocusTarget,
   moveFocusTo,
@@ -50,8 +50,8 @@ export const ButtonConfirmResolver = (props) => {
 const ButtonConfirm = ({
   Next,
   confirm,
-  confirmLabel = naviI18n("button.confirm"),
-  cancelLabel = naviI18n("button.cancel"),
+  confirmLabel = buttonI18n("button.confirm"),
+  cancelLabel = buttonI18n("button.cancel"),
   confirmTestId,
   cancelTestId,
   ...props
@@ -183,7 +183,7 @@ const ButtonConfirm = ({
       }}
     >
       <span id={questionId}>
-        {confirm === true ? naviI18n("confirm.message") : confirm}
+        {confirm === true ? buttonI18n("confirm.message") : confirm}
       </span>
       <Next
         {...props}

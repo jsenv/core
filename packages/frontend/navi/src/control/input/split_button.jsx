@@ -24,7 +24,7 @@ import { Box } from "@jsenv/navi/src/box/box.jsx";
 import { ChevronDownSvg } from "@jsenv/navi/src/graphic/icons/chevron_updown_svg.jsx";
 import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.jsx";
 import { Icon } from "@jsenv/navi/src/text/text.jsx";
-import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
+import { buttonI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { useActionStatus } from "@jsenv/navi/src/action/use_action_status.js";
 import { Group } from "../group.jsx";
 import { List } from "../list/list.jsx";
@@ -174,7 +174,7 @@ export const SplitButton = (props) => {
     prefetch,
     onValueChange,
     chooseEffect = "select",
-    menuLabel = naviI18n("button.more_actions"),
+    menuLabel = buttonI18n("button.more_actions"),
     menuIcon = <ChevronDownSvg />,
     menuIconSize,
     loading,

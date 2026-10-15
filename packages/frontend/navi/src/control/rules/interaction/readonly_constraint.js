@@ -1,5 +1,5 @@
 import { getNetworkPolicyReadOnlyMessage } from "@jsenv/navi/src/action/network_policy.js";
-import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
+import { constraintI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
 import { MAX_LENGTH_CONSTRAINT } from "../validation/standard_constraints.js";
 
@@ -35,7 +35,7 @@ export const READONLY_CONSTRAINT = {
       return {
         name: MAX_LENGTH_CONSTRAINT.name,
         constraint: MAX_LENGTH_CONSTRAINT,
-        message: naviI18n("constraint.guard.max_length.selection", {
+        message: constraintI18n("constraint.guard.max_length.selection", {
           max: String(parent.props.maxLengthGuard),
         }),
         status: "info",
@@ -71,7 +71,7 @@ const readOnlyMessage = (field) => {
   // what stops the press is the queue, and it says how long it is.
   if (reason === "parallel-guard") {
     const { max } = field.parallelGuard;
-    return naviI18n("constraint.readonly.parallel_guard", {
+    return constraintI18n("constraint.readonly.parallel_guard", {
       max,
       s: max > 1 ? "s" : "",
     });
@@ -80,10 +80,10 @@ const readOnlyMessage = (field) => {
   // Button's own `readOnlyWhileFormUnchanged`) — what stops the press is not the
   // button, it is the form still waiting for a change, so that is what it says.
   if (reason === "form-unchanged") {
-    return naviI18n("constraint.readonly.awaiting_change");
+    return constraintI18n("constraint.readonly.awaiting_change");
   }
   if (field.controlType === "button") {
-    return naviI18n("constraint.readonly.button");
+    return constraintI18n("constraint.readonly.button");
   }
-  return naviI18n("constraint.readonly.default");
+  return constraintI18n("constraint.readonly.default");
 };

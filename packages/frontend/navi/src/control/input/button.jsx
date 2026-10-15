@@ -4,7 +4,7 @@ import {
   createComponentResolver,
   useNextResolver,
 } from "@jsenv/navi/src/resolver/resolver.jsx";
-import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
+import { buttonI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { FormContext } from "../form_context.js";
 import { useSelfInteractionsHidden } from "../self_interactions.js";
 import { ButtonConfirmResolver } from "./button_confirm.jsx";
@@ -65,7 +65,7 @@ const ButtonCommandPropResolver = (props) => {
   const readOnly = heldByForm ? true : props.readOnly;
 
   // Called fresh on every render (not a module-level object computed once
-  // at import time) — naviI18n(...) must be re-evaluated per call so a
+  // at import time) — buttonI18n(...) must be re-evaluated per call so a
   // Button using a command's built-in default label actually follows
   // setPreferredLanguage()/a "languagechange" event instead of staying
   // stuck with whatever language was active the first time this module was
@@ -94,30 +94,30 @@ const ButtonCommandPropResolver = (props) => {
 };
 const COMMAND_DEFAULT_PROPS_FACTORIES = {
   "--navi-clear": () => ({
-    children: naviI18n("button.clear"),
+    children: buttonI18n("button.clear"),
   }),
   "--navi-reset": () => ({
-    children: naviI18n("button.reset"),
+    children: buttonI18n("button.reset"),
   }),
   "--navi-define": () => ({
-    children: naviI18n("button.define"),
+    children: buttonI18n("button.define"),
   }),
   "--navi-send": () => ({
-    children: naviI18n("button.send"),
+    children: buttonI18n("button.send"),
     cta: true,
   }),
   "--navi-cancel": () => ({
-    children: naviI18n("button.cancel"),
+    children: buttonI18n("button.cancel"),
   }),
   "--navi-confirm": () => ({
-    children: naviI18n("button.confirm"),
+    children: buttonI18n("button.confirm"),
     cta: true,
   }),
   "--navi-close": () => ({
-    children: naviI18n("button.close"),
+    children: buttonI18n("button.close"),
   }),
   "--navi-open": () => ({
-    children: naviI18n("button.open"),
+    children: buttonI18n("button.open"),
   }),
 };
 

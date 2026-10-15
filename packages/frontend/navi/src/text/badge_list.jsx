@@ -5,7 +5,7 @@ import { Box } from "../box/box.jsx";
 import { BadgeUI } from "./badge.jsx";
 import { BadgeListContext, createBadgeRegistry } from "./badge_list_context.js";
 import { MaxLinesContext } from "./max_lines_context.js";
-import { naviI18n } from "./navi_i18n.js";
+import { badgeListI18n } from "./navi_i18n.js";
 
 const css = /* css */ `
   @layer navi {
@@ -481,7 +481,7 @@ const BadgeListContent = ({ registry, fallback, max, measuring, rowFit }) => {
       ))}
       {hasMore && (
         <BadgeUI className="navi_badge_more">
-          {naviI18n("badge_list.more", {
+          {badgeListI18n("badge_list.more", {
             count: measuring ? count : count - shownCount,
           })}
         </BadgeUI>

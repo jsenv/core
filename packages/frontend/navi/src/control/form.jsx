@@ -200,6 +200,7 @@ const FormControl = (props) => {
   const { ref, method = "GET" } = props;
   const { formRootProps, formProps, onnavi_action_end, inside } =
     useFormGroup(props);
+  useRequestSubmitThroughGates(ref);
 
   return (
     <Box
@@ -403,25 +404,34 @@ const FormPseudoClasses = [
 ];
 
 // https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Constraint_validation
-// Override requestSubmit so that programmatic form submissions go through the
-// navi interaction gate (interactivity check) and then the action gate (validity).
-const requestSubmit = HTMLFormElement.prototype.requestSubmit;
-HTMLFormElement.prototype.requestSubmit = function (submitter) {
-  const form = this;
-  const controller = form.__uiStateController__;
-  if (!controller) {
-    requestSubmit.call(form, submitter);
-    return;
-  }
-  const programmaticEvent = new CustomEvent("programmatic_request_submit", {
-    cancelable: true,
-    detail: { submitter },
-  });
-  dispatchRequestAction(form, {
-    event: programmaticEvent,
-    name: "requestSubmit",
-    requester: submitter,
-  });
+// requestSubmit overridden on the form element so that programmatic form
+// submissions go through the navi interaction gate (interactivity check) and
+// then the action gate (validity). On the element rather than on
+// HTMLFormElement.prototype: only a navi form has those gates, and a prototype
+// patch would be installed by importing navi, whether a form is used or not.
+const useRequestSubmitThroughGates = (ref) => {
+  useLayoutEffect(() => {
+    const form = ref.current;
+    form.requestSubmit = (submitter) => {
+      const controller = form.__uiStateController__;
+      if (!controller) {
+        HTMLFormElement.prototype.requestSubmit.call(form, submitter);
+        return;
+      }
+      const programmaticEvent = new CustomEvent("programmatic_request_submit", {
+        cancelable: true,
+        detail: { submitter },
+      });
+      dispatchRequestAction(form, {
+        event: programmaticEvent,
+        name: "requestSubmit",
+        requester: submitter,
+      });
+    };
+    return () => {
+      delete form.requestSubmit;
+    };
+  }, []);
 };
 
 // const dispatchCustomEventOnFormAndFormElements = (type, options) => {

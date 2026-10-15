@@ -31,7 +31,7 @@ import {
   resolveCharClass,
 } from "@jsenv/validity";
 
-import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
+import { constraintI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { naviI18nFromValidityMessage } from "./rules/validity_bridge.js";
 import { createOpenToken } from "./rules/control_callout.js";
 import { uiStateAsText } from "./rules/ui_state_as_text.js";
@@ -70,7 +70,7 @@ const getMaxLengthInsertionMessage = (el, { maxLength }) => {
   const selEnd = el.selectionEnd ?? el.value.length;
   const newLen = el.value.length - (selEnd - selStart) + 1;
   if (newLen <= maxLength) return null;
-  return naviI18n("constraint.guard.max_length.typing", {
+  return constraintI18n("constraint.guard.max_length.typing", {
     max: maxLength,
     s: s(maxLength),
   });
@@ -113,7 +113,7 @@ const getLengthOverflowResult = (uiState, { maxLength, uiStateNow }) => {
   if (str.length <= strNow.length) return null;
   return {
     fixedValue: str.slice(0, maxLength),
-    message: naviI18n("constraint.guard.max_length.value", {
+    message: constraintI18n("constraint.guard.max_length.value", {
       max: maxLength,
       s: s(maxLength),
     }),

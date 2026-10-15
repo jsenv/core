@@ -696,15 +696,19 @@ const All_PROPS = {
   ...VISUAL_PROPS,
   ...CONTENT_PROPS,
 };
-const LAYOUT_PROP_NAME_SET = new Set(Object.keys(LAYOUT_PROPS));
+// Annotated: a bundler cannot tell `new Set(Object.keys(...))` has no effect,
+// and keeps it — with every style function of the props it names — in an app
+// that renders no Box. For the same reason no set below is built by spreading
+// another set: that is kept even annotated.
+const LAYOUT_PROP_NAME_SET = /*#__PURE__*/ new Set(Object.keys(LAYOUT_PROPS));
 // const OUTER_PROP_NAME_SET = new Set(Object.keys(OUTER_PROPS));
-const INNER_PROP_NAME_SET = new Set(Object.keys(INNER_PROPS));
+const INNER_PROP_NAME_SET = /*#__PURE__*/ new Set(Object.keys(INNER_PROPS));
 // const DIMENSION_PROP_NAME_SET = new Set(Object.keys(DIMENSION_PROPS));
 // const POSITION_PROP_NAME_SET = new Set(Object.keys(POSITION_PROPS));
-const TYPO_PROP_NAME_SET = new Set(Object.keys(TYPO_PROPS));
-const VISUAL_PROP_NAME_SET = new Set(Object.keys(VISUAL_PROPS));
-const CONTENT_PROP_NAME_SET = new Set(Object.keys(CONTENT_PROPS));
-const STYLE_PROP_NAME_SET = new Set(Object.keys(All_PROPS));
+const TYPO_PROP_NAME_SET = /*#__PURE__*/ new Set(Object.keys(TYPO_PROPS));
+const VISUAL_PROP_NAME_SET = /*#__PURE__*/ new Set(Object.keys(VISUAL_PROPS));
+const CONTENT_PROP_NAME_SET = /*#__PURE__*/ new Set(Object.keys(CONTENT_PROPS));
+const STYLE_PROP_NAME_SET = /*#__PURE__*/ new Set(Object.keys(All_PROPS));
 const SPACING_PROP_SET = new Set([
   "borderRadius",
   "spacing",
@@ -726,8 +730,8 @@ const SPACING_PROP_SET = new Set([
   "paddingY",
 ]);
 
+// Along with the layout props.
 const COPIED_ON_VISUAL_CHILD_PROP_SET = new Set([
-  ...LAYOUT_PROP_NAME_SET,
   "expand",
   "expandX",
   "expandY",
@@ -740,16 +744,18 @@ const COPIED_ON_VISUAL_CHILD_PROP_SET = new Set([
   "minWidth",
   "minHeight",
 ]);
-const HANDLED_BY_VISUAL_CHILD_PROP_SET = new Set([
-  ...INNER_PROP_NAME_SET,
-  ...VISUAL_PROP_NAME_SET,
-  ...CONTENT_PROP_NAME_SET,
-]);
 export const getVisualChildStylePropStrategy = (name) => {
-  if (COPIED_ON_VISUAL_CHILD_PROP_SET.has(name)) {
+  if (
+    LAYOUT_PROP_NAME_SET.has(name) ||
+    COPIED_ON_VISUAL_CHILD_PROP_SET.has(name)
+  ) {
     return "copy";
   }
-  if (HANDLED_BY_VISUAL_CHILD_PROP_SET.has(name)) {
+  if (
+    INNER_PROP_NAME_SET.has(name) ||
+    VISUAL_PROP_NAME_SET.has(name) ||
+    CONTENT_PROP_NAME_SET.has(name)
+  ) {
     return "forward";
   }
   return null;
@@ -799,8 +805,8 @@ export const prepareStyleValue = (existingValue, value, name, styleContext) => {
   return mergedValue;
 };
 
-const negativeEntries = (map) => {
-  const result = {};
+const withNegativeEntries = (map) => {
+  const result = { ...map };
   for (const key of Object.keys(map)) {
     result[`-${key}`] = `calc(-1 * ${map[key]})`;
   }
@@ -810,7 +816,7 @@ const negativeEntries = (map) => {
 // Unified design scale using t-shirt sizes with rem units for accessibility.
 // This scale is used for spacing to create visual harmony
 // and consistent proportions throughout the design system.
-const SIZE_MAP = {
+const SIZE_MAP = /*#__PURE__*/ withNegativeEntries({
   xxs: "var(--navi-xxs)",
   xs: "var(--navi-xs)",
   s: "var(--navi-s)",
@@ -818,9 +824,8 @@ const SIZE_MAP = {
   l: "var(--navi-l)",
   xl: "var(--navi-xl)",
   xxl: "var(--navi-xxl)",
-};
-Object.assign(SIZE_MAP, negativeEntries(SIZE_MAP));
-const TYPO_SIZE_MAP = {
+});
+const TYPO_SIZE_MAP = /*#__PURE__*/ withNegativeEntries({
   xxs: "var(--navi-typo-xxs)",
   xs: "var(--navi-typo-xs)",
   s: "var(--navi-typo-s)",
@@ -828,9 +833,8 @@ const TYPO_SIZE_MAP = {
   l: "var(--navi-typo-l)",
   xl: "var(--navi-typo-xl)",
   xxl: "var(--navi-typo-xxl)",
-};
-Object.assign(TYPO_SIZE_MAP, negativeEntries(TYPO_SIZE_MAP));
-const sizeSpacingKeySet = new Set(Object.keys(SIZE_MAP));
+});
+const sizeSpacingKeySet = /*#__PURE__*/ new Set(Object.keys(SIZE_MAP));
 export const isSizeSpacingKey = (key) => {
   return sizeSpacingKeySet.has(key);
 };

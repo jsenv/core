@@ -51,7 +51,7 @@ import {
 } from "@jsenv/navi/src/layout/slide_container.jsx";
 import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.jsx";
 import { Icon } from "@jsenv/navi/src/text/text.jsx";
-import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
+import { constraintI18n, spinI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { Time } from "@jsenv/navi/src/text/time.jsx";
 import { triggerNaviCommand } from "../commands.js";
 import { findControlHost } from "../control_dom.js";
@@ -735,7 +735,7 @@ export const Spin = ({
     );
     return (
       message ??
-      naviI18n(goingNext ? "spin.nothing_after" : "spin.nothing_before")
+      spinI18n(goingNext ? "spin.nothing_after" : "spin.nothing_before")
     );
   };
 
@@ -750,10 +750,10 @@ export const Spin = ({
       return boundMessage(isNext);
     }
     if (loadingResolved) {
-      return naviI18n("constraint.busy.default");
+      return constraintI18n("constraint.busy.default");
     }
     if (readOnlyResolved) {
-      return naviI18n("constraint.readonly.default");
+      return constraintI18n("constraint.readonly.default");
     }
     return undefined;
   };
@@ -953,8 +953,8 @@ export const Spin = ({
         unavailableMessage={() => wayOutMessage(allowed, isNext)}
         label={
           isNext
-            ? (nextLabel ?? naviI18n("spin.next"))
-            : (previousLabel ?? naviI18n("spin.previous"))
+            ? (nextLabel ?? spinI18n("spin.next"))
+            : (previousLabel ?? spinI18n("spin.previous"))
         }
         onPress={(e) => {
           focusMiddle();

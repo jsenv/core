@@ -58,7 +58,8 @@ start when unsure which export solves a problem.
 
 - `navigation.md` — the position of the user belongs in the URL by default:
   routes and which branch renders, search params, redirections, the back arrow
-  (`navBack`), where a navigation lands (a `#id` for an element), a
+  (`navBack`), where a navigation lands (a `#id` for an element; a page not
+  whole yet holds its position with `useHoldScrollRestoration`), a
   `SlideContainer` read from the URL, what a layer drawn over the screen may say
   in its address. Before any routing code.
 - `route_transitions.md` — a transition states a relation between two pages;

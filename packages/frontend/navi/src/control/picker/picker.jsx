@@ -11,7 +11,7 @@ import {
   useNextResolver,
 } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { MaxLinesContext } from "@jsenv/navi/src/text/max_lines_context.js";
-import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
+import { buttonI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { Icon, Text } from "@jsenv/navi/src/text/text.jsx";
 import { compareTwoJsValues } from "@jsenv/navi/src/utils/compare_two_js_values.js";
 import { renderSafe } from "@jsenv/navi/src/utils/render_safe.js";
@@ -1408,7 +1408,7 @@ const PickerClear = ({ size = "inherit", children, ...rest }) => {
         command="--navi-clear"
         commandFor={id}
         tabIndex="-1"
-        aria-label={naviI18n("button.clear")}
+        aria-label={buttonI18n("button.clear")}
         {...rest}
       />
     );
@@ -1436,7 +1436,7 @@ const PickerClear = ({ size = "inherit", children, ...rest }) => {
       }}
       flex
       align="center"
-      aria-label={naviI18n("button.clear")}
+      aria-label={buttonI18n("button.clear")}
       {...rest}
     >
       {icon}

@@ -18,7 +18,7 @@
 
 import { MOUNT_DEFAULT } from "@jsenv/navi/src/layout/popup_content_mount.js";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
-import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
+import { buttonI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { triggerNaviCommand } from "../commands.js";
 import { findControlHost } from "../control_dom.js";
 import { Button } from "../input/button.jsx";
@@ -167,7 +167,9 @@ const PickerConfirmBody = ({
 }) => {
   return (
     <div className="navi_picker_confirm_body">
-      <div>{message === undefined ? naviI18n("confirm.message") : message}</div>
+      <div>
+        {message === undefined ? buttonI18n("confirm.message") : message}
+      </div>
       <div className="navi_picker_confirm_actions">
         <Button
           command="--navi-cancel"

@@ -102,6 +102,9 @@ export const scrollByUnlessInterrupting = (
 };
 
 const wouldInterruptScroll = (scrollerEl) => {
+  if (!scrollFlightsFollowed) {
+    return false;
+  }
   const flight = flightMap.get(scrollerEl);
   if (!flight) {
     return false;
@@ -131,7 +134,13 @@ const onTouchEnd = (e) => {
   fingersDown = e.touches.length;
 };
 
-if ("onscrollend" in window) {
+// Listening from the moment the module runs, as a scroll can start before
+// anything asks about it — through a call annotated pure, which wouldInterruptScroll
+// reads: a bundler drops it with its reader, from an app that has no List.
+const followScrollFlights = () => {
+  if (!("onscrollend" in window)) {
+    return false;
+  }
   // Capturing: "scroll" and "scrollend" do not bubble from an element.
   document.addEventListener(
     "scroll",
@@ -186,4 +195,6 @@ if ("onscrollend" in window) {
     },
     { capture: true, passive: true },
   );
-}
+  return true;
+};
+const scrollFlightsFollowed = /*#__PURE__*/ followScrollFlights();

@@ -69,6 +69,7 @@ import {
   getMessageString,
 } from "./constraint_message.js";
 import { createOpenToken } from "./control_callout.js";
+import { NAVI_ACTION_ERROR_CONSTRAINT } from "./validation/action_error_constraint.js";
 import { DISPLAYABLE_CONSTRAINT } from "./validation/displayable_constraint.js";
 import { MAX_LINE_BREAKS_CONSTRAINT } from "./validation/max_line_breaks_constraint.js";
 import { NO_EMOJI_CONSTRAINT } from "./validation/no_emoji_constraint.js";
@@ -124,15 +125,11 @@ const NAVI_CONSTRAINT_SET = new Set([
   SAME_AS_CONSTRAINT,
   ONE_OF_CONSTRAINT,
   TIME_RANGE_CONSTRAINT,
-]);
-const DEFAULT_CONSTRAINT_SET = new Set([
-  ...STANDARD_CONSTRAINT_SET,
-  ...NAVI_CONSTRAINT_SET,
+  NAVI_ACTION_ERROR_CONSTRAINT,
 ]);
 export const registerGlobalConstraint = (customConstraint) => {
   const constraint = normalizeConstraint(customConstraint);
   NAVI_CONSTRAINT_SET.add(constraint);
-  DEFAULT_CONSTRAINT_SET.add(constraint);
 };
 
 // A constraint may be written as a bare check function; the rest of the code
@@ -184,8 +181,11 @@ export const createControlValidation = (
   controlValidity.getConstraintValidityState = getConstraintValidityState;
 
   const getConstraintSet = () => {
+    // Merged here rather than in a module-scope set: spreading a Set at module
+    // scope is a statement a bundler must keep, with every constraint it names.
     const constraintSet = new Set([
-      ...DEFAULT_CONSTRAINT_SET,
+      ...STANDARD_CONSTRAINT_SET,
+      ...NAVI_CONSTRAINT_SET,
       ...dynamicConstraintSet,
     ]);
     // An app constraint declared at the call site: `constraints={[MY_CONSTRAINT]}`.

@@ -16,6 +16,7 @@ linking to them, and turning them into tabs.
 - [The back arrow: `navBack`](#the-back-arrow-navback)
 - [Tabs that travel: `RouteTravel`](#tabs-that-travel-routetravel)
 - [Where a navigation lands: the scroll](#where-a-navigation-lands-the-scroll)
+  - [A page that is not whole yet](#a-page-that-is-not-whole-yet)
   - [Landing on an element: the fragment](#landing-on-an-element-the-fragment)
 - [Creating something, then editing it](#creating-something-then-editing-it)
 - [Tabs that are not routes](#tabs-that-are-not-routes)
@@ -481,7 +482,8 @@ Five cases, and they are not a policy to configure but five different facts:
 - **Replacing the entry** (`<Link replace>`, `route.redirectTo()`, a param
   settling) moves nothing: the same place said differently — except in a row of
   tabs, below.
-- **A reload** lands where one was, as it would have without navi.
+- **A reload** lands where one was, as it would have without navi, once the
+  page is there ([below](#a-page-that-is-not-whole-yet)).
 
 Where the browser exposes its stack (the Navigation API), **a `<Link>` whose
 destination is the entry right next to the current one becomes a real
@@ -489,6 +491,47 @@ traversal**: a "back" link to the page one just came from behaves as a back — 
 A, B, A, B… growth, and the scroll comes back — and one step forward too. Only
 towards entries of this document, and never when the push carries explicit
 state. An arrow that must ALWAYS behave as a back is `navBack()`.
+
+### A page that is not whole yet
+
+A position is put back into whatever the page shows at that moment. When that is
+a stand-in — a pending screen, a `<Loading>` fallback, a list of three skeletons
+— the document is shorter than the page the position was taken on, the offset is
+clamped to it, and the reader lands at the top of a page that arrives a moment
+later.
+
+**After a reload, navi waits for the route actions** that the first render had
+nothing to draw for: the page's code arriving on its own
+([dynamic_import.md](./dynamic_import.md)), a read the previous document did not
+keep ([`keepPageOnScreen`](./resource.md#keeppageonscreen-the-page-on-screen-drawn-again-by-the-next-document) draws a kept one at once, and that one
+is not waited for). The position is put back once they have answered and the
+page has rendered. When one of them fails, nothing is written: the screen saying
+so is not the page the position was taken on, and the position stays for the
+reload that brings it back. What it costs: a slow read that every page asks for
+delays the position of every page, since nothing tells navi which reads set the
+height.
+
+**What navi cannot see, the page says**: a read it starts itself
+(`useAsyncData(…, { run: true })`), content whose height arrives late. While
+`useHoldScrollRestoration(held)` is given `true`, the position of a reload or of
+a back/forward waits; it is put back after the render that turns it `false`:
+
+```jsx
+const [games] = useAsyncData(GAMES, { loading: true, run: true });
+useHoldScrollRestoration(games === undefined);
+```
+
+A read that fails leaves it `true`, and nothing is written, for the same reason
+as above. A row of tabs is not held: it gives a tab its position as it travels,
+and measures right after (see [below](#a-row-of-tabs-where-a-replace-is-an-arrival)).
+
+**The reader taking over cancels it.** A finger, a click, a wheel or a key
+before the position is written, and it is not written: moved afterwards, they
+would lose whatever they had started on. Going elsewhere cancels it too.
+
+A `<List>` that opens on an item is the opposite case, and needs nothing: it
+places the document itself, by measuring the item, and the url's offset is not
+put back over it ([scroll.md](./scroll.md#where-the-list-opens-and-where-it-is)).
 
 ### Landing on an element: the fragment
 
@@ -564,9 +607,10 @@ the viewport may scroll, and a row inside a scroller of its own leaves that
 offset alone. An `overflow: hidden` on any ancestor is enough to take the row out
 of the document's scrollport — it holds an offset even without a scrollbar, where
 `overflow: clip` holds none — so it is the first thing to look for when a row
-does not give positions back. And a page whose height depends on something still
-loading is not tall enough when its position is put back: only the page knows
-when it is whole. What navi itself builds after the first frame
+does not give positions back. And a tab whose height depends on something still
+loading is not tall enough when its position is put back: the row does not wait
+for it ([A page that is not whole yet](#a-page-that-is-not-whole-yet) is for a
+reload and a back). What navi itself builds after the first frame
 (`<Box mount="after-paint">`, see
 [scroll.md](./scroll.md#many-sections-box-mountafter-paint)) is not such a
 page: the part the position shows is built before it is written.

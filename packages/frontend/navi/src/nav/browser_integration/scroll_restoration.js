@@ -39,14 +39,16 @@
  * ahead of the browser's: a replace waiting for its state to settle has moved
  * the page and not yet `window.location` (see readShownUrl).
  *
- * What is NOT covered, and cannot be from here: a page whose height depends on
- * something still loading. Its content is not there at the moment it is put
- * back, so a position beyond what has arrived is clamped as before. Only the
- * page knows when it is whole. What navi knows a first render left out is the
- * exception: a `<Box mount="after-paint">` is built before the offset that
- * shows it is written (see mount_after_paint.jsx), and a document load waits
- * for the route actions that render had nothing to draw for — the page's code
- * among them (see restoreScrollPositionOnLoad).
+ * A page whose height depends on something still loading is not there at the
+ * moment it is put back, and a position beyond what has arrived is clamped.
+ * What navi knows a first render left out, it waits for: a `<Box
+ * mount="after-paint">` is built before the offset that shows it is written
+ * (see mount_after_paint.jsx), and a reload waits for the route actions that
+ * render had nothing to draw for — the page's code among them (see
+ * restoreScrollPositionOnLoad). Anything else only the page knows, and it says
+ * so (useHoldScrollRestoration). A wait can be long, so the reader reaching for
+ * the page during it cancels the position: moved afterwards, they would lose
+ * whatever they had started on.
  *
  * WHEN a page is arrived at is not decided here either. A document navigation
  * lands where its kind says (see via_history.js), and one scrollport can be
@@ -55,6 +57,8 @@
  * needs, see suspendScrollRecording — is asked for by the row itself (see
  * route_travel.jsx).
  */
+
+import { useLayoutEffect } from "preact/hooks";
 
 import { COMPLETED, RUNNING } from "../../action/action_run_states.js";
 import { buildDeferredBoxesAbove } from "../../box/mount_after_paint.jsx";
@@ -165,6 +169,36 @@ export const suspendScrollRecording = () => {
   };
 };
 
+// The position a reload or a return is about to put back, until it is written.
+// Where the document lands is the last arrival's to say: an arrival decided
+// meanwhile — a page that sends the reader elsewhere as it mounts — replaces it
+// (see startAtTop), and must not be scrolled to where the return was going.
+// So does the reader reaching for the page before it is written: where they
+// are is theirs (see installScrollRestoration).
+let pendingRestoration = null;
+const startRestoration = (position) => {
+  const restoration = { position, due: false };
+  pendingRestoration = restoration;
+  return restoration;
+};
+// Called once the page is there. Outside the commit that rendered it: what the
+// offset shows may still have to be built (see scrollTo).
+const putBack = (restoration) => {
+  if (pendingRestoration !== restoration) {
+    return;
+  }
+  restoration.due = true;
+  if (restorationHoldCount) {
+    // The page is not whole yet: the last release puts it back.
+    return;
+  }
+  pendingRestoration = null;
+  if (documentHoldCount) {
+    return;
+  }
+  scrollTo(restoration.position);
+};
+
 // A list scrolling the document that opens on a row puts the document where
 // that row is, by measuring it (see placeWhereHeld in list.jsx). The offset kept
 // for the url is pixels of the page as it was drawn — and a list draws a window
@@ -185,6 +219,61 @@ export const holdDocumentScroll = () => {
     released = true;
     documentHoldCount--;
   };
+};
+
+// What a page holds instead: not the place, which stays the url's, but the
+// moment it is put back (see useHoldScrollRestoration). Counted: several parts
+// of one page can be waiting.
+let restorationHoldCount = 0;
+const holdScrollRestoration = () => {
+  restorationHoldCount++;
+  let released = false;
+  return () => {
+    if (released) {
+      return;
+    }
+    released = true;
+    restorationHoldCount--;
+    if (restorationHoldCount) {
+      return;
+    }
+    const restoration = pendingRestoration;
+    if (restoration && restoration.due) {
+      // Released from the commit that drew what was missing.
+      queueMicrotask(() => {
+        putBack(restoration);
+      });
+    }
+  };
+};
+
+/**
+ * Holds back the scroll position a reload or a back/forward gives the page,
+ * while the page is not whole yet: written into what the page shows meanwhile,
+ * it is clamped to that height and lost. Put back after the commit in which
+ * `held` turns false — unless the reader has reached for the page in the
+ * meantime (a finger, a click, a wheel, a key), or gone elsewhere.
+ *
+ * After a reload, the page's route actions are waited for without this — its
+ * code, a read the previous document did not keep. This is for what navi
+ * cannot see: a read the page starts itself, content whose height arrives late.
+ *
+ * ```jsx
+ * const [games] = useAsyncData(GAMES, { loading: true, run: true });
+ * useHoldScrollRestoration(games === undefined);
+ * ```
+ *
+ * @param {boolean} held - true while what sets the page's height is missing.
+ *   A read that fails leaves it true, and nothing is written: the screen saying
+ *   so is not the page the position was taken on.
+ */
+export const useHoldScrollRestoration = (held) => {
+  useLayoutEffect(() => {
+    if (!held) {
+      return undefined;
+    }
+    return holdScrollRestoration();
+  }, [held]);
 };
 
 let installed = false;
@@ -214,6 +303,19 @@ export const installScrollRestoration = ({ readAddress }) => {
     },
     { passive: true },
   );
+  // The reader taking over is told by their hand, not by a scroll event: the
+  // page arriving clamps the document as much as they move it.
+  const onReaderReach = (event) => {
+    if (event.isTrusted) {
+      pendingRestoration = null;
+    }
+  };
+  for (const type of ["pointerdown", "wheel", "keydown"]) {
+    window.addEventListener(type, onReaderReach, {
+      capture: true,
+      passive: true,
+    });
+  }
   const urlOnLoad = readShownUrl();
   const positionOnLoad = positionByUrl.get(urlOnLoad);
   if (!positionOnLoad) {
@@ -228,12 +330,6 @@ export const installScrollRestoration = ({ readAddress }) => {
   }
 };
 
-// Where the document lands is the last arrival's to say. A return waits for its
-// page (see restoreScrollPositionOnReturn), and an arrival decided meanwhile — a
-// page that sends the reader elsewhere as it mounts — must not be scrolled to
-// where the return was going.
-let arrivalCount = 0;
-
 // The position is only meaningful once there is a page under it: at the first
 // render of a route, unless that render had nothing to draw for one of the
 // route actions asking — the page's code arriving on its own, a read the
@@ -245,18 +341,7 @@ let arrivalCount = 0;
 // page the position was taken on, and the position stays for the reload that
 // brings the page back.
 const restoreScrollPositionOnLoad = (position) => {
-  const arrival = ++arrivalCount;
-  // Outside the commit that rendered the page: what the offset shows may still
-  // have to be built (see scrollTo).
-  const write = () => {
-    if (arrival !== arrivalCount) {
-      return;
-    }
-    if (documentHoldCount) {
-      return;
-    }
-    scrollTo(position);
-  };
+  const restoration = startRestoration(position);
   const stopListening = observeRouteRender(() => {
     stopListening();
     const unanswered = [];
@@ -269,7 +354,9 @@ const restoreScrollPositionOnLoad = (position) => {
       }
     }
     if (unanswered.length === 0) {
-      queueMicrotask(write);
+      queueMicrotask(() => {
+        putBack(restoration);
+      });
       return;
     }
     // A reader drawing its own wait subscribes in an effect, after the first
@@ -278,7 +365,9 @@ const restoreScrollPositionOnLoad = (position) => {
     const waitOver = () => {
       waitCount--;
       if (waitCount === 0) {
-        whenPageRendered(write);
+        whenPageRendered(() => {
+          putBack(restoration);
+        });
       }
     };
     afterPaint(waitOver);
@@ -319,8 +408,11 @@ const whenSettled = (actions, callback) => {
 // at for the first time is startAtTop's business, and this must not step on it.
 // Whether there was anything, for a caller who has an answer of its own for the
 // page that has never been read.
+//
+// Written at once, never held (see useHoldScrollRestoration): a row of tabs
+// measures its window right after.
 const restoreScrollPosition = (url) => {
-  arrivalCount++;
+  pendingRestoration = null;
   const position = positionByUrl.get(new URL(url, window.location.href).href);
   if (!position) {
     return false;
@@ -340,21 +432,16 @@ const restoreScrollPosition = (url) => {
 // left taller than the one arriving is clamped by the render itself, and that
 // clamp is a scroll recorded under the url already returned to.
 export const restoreScrollPositionOnReturn = (url) => {
-  const arrival = ++arrivalCount;
+  pendingRestoration = null;
   const href = new URL(url, window.location.href).href;
   carryScrollersOnceRendered(href);
   const position = positionByUrl.get(href);
   if (!position) {
     return;
   }
+  const restoration = startRestoration(position);
   whenPageRendered(() => {
-    if (arrival !== arrivalCount) {
-      return;
-    }
-    if (documentHoldCount) {
-      return;
-    }
-    scrollTo(position);
+    putBack(restoration);
   });
 };
 
@@ -384,7 +471,7 @@ export const startAtTop = (url, { from } = {}) => {
     stayInPlace(url);
     return;
   }
-  arrivalCount++;
+  pendingRestoration = null;
   const href = new URL(url, window.location.href).href;
   carryScrollersOnceRendered(href);
   // Written down as well as done: a document already at its top fires no

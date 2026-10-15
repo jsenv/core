@@ -65,8 +65,12 @@ const notifyPseudoStateSubscribers = (element, value, oldValue) => {
   }
 };
 
-export const PSEUDO_CLASSES = {};
-Object.assign(PSEUDO_CLASSES, {
+// Filled by a literal and by assignments under a literal key, nothing else: a
+// bundler drops those when nothing reads the registry, where an Object.assign
+// or a define(name, definition) helper keeps it — and every pseudo-class with
+// it — in an app that renders no Box. The attribute-only ones are written by
+// whoever knows the state.
+export const PSEUDO_CLASSES = {
   ":valid": {
     attribute: "data-valid",
     test: (el) => el.matches(":valid"),
@@ -83,9 +87,63 @@ Object.assign(PSEUDO_CLASSES, {
   ":-navi-href-current": {
     attribute: "data-href-current",
   },
-});
-const definePseudoClass = (pseudoClass, definition) => {
-  PSEUDO_CLASSES[pseudoClass] = definition;
+  // Written by a Link from its href.
+  ":-navi-href-internal": {
+    attribute: "data-href-internal",
+  },
+  ":-navi-href-external": {
+    attribute: "data-href-external",
+  },
+  ":-navi-href-anchor": {
+    attribute: "data-href-anchor",
+  },
+  // Written by a Meter from where its value stands against low/high/optimum.
+  ":-navi-meter-optimum": {
+    attribute: "data-optimum",
+  },
+  ":-navi-meter-suboptimum": {
+    attribute: "data-suboptimum",
+  },
+  ":-navi-meter-even-less-good": {
+    attribute: "data-even-less-good",
+  },
+  ":-navi-pointed": {
+    attribute: "data-pointed",
+  },
+  ":-navi-pointed-by-mouse": {
+    attribute: "data-pointed-by-mouse",
+  },
+  ":-navi-pointed-by-keyboard": {
+    attribute: "data-pointed-by-keyboard",
+  },
+  ":-navi-pointed-by-proxy": {
+    attribute: "data-pointed-by-proxy",
+  },
+  ":-navi-selected": {
+    attribute: "data-selected",
+  },
+  ":-navi-loading": {
+    attribute: "data-loading",
+  },
+  ":-navi-status-info": {
+    attribute: "data-status-info",
+  },
+  ":-navi-status-success": {
+    attribute: "data-status-success",
+  },
+  ":-navi-status-warning": {
+    attribute: "data-status-warning",
+  },
+  ":-navi-status-error": {
+    attribute: "data-status-error",
+  },
+  ":-navi-expanded": {
+    attribute: "data-expanded",
+  },
+  ":-navi-void": {
+    attribute: "data-void",
+  },
+  "::highlight": {},
 };
 
 // On touch devices (hover: none), browsers synthesize mouseenter/mouseleave
@@ -95,7 +153,7 @@ const definePseudoClass = (pseudoClass, definition) => {
 // touching the element. Checking (hover: hover) lets us skip hover tracking
 // entirely on touch-only devices where persistent hover makes no sense.
 const hoverSupported = window.matchMedia("(hover: hover)").matches;
-definePseudoClass(":hover", {
+PSEUDO_CLASSES[":hover"] = {
   attribute: "data-hover",
   setup: (el, callback) => {
     if (!hoverSupported) {
@@ -176,8 +234,8 @@ definePseudoClass(":hover", {
     }
     return false;
   },
-});
-definePseudoClass(":disabled", {
+};
+PSEUDO_CLASSES[":disabled"] = {
   attribute: "data-disabled",
   add: (el) => {
     if (
@@ -199,8 +257,8 @@ definePseudoClass(":disabled", {
       el.disabled = false;
     }
   },
-});
-definePseudoClass(":read-only", {
+};
+PSEUDO_CLASSES[":read-only"] = {
   attribute: "data-readonly",
   add: (el) => {
     if (
@@ -228,8 +286,8 @@ definePseudoClass(":read-only", {
       // el.readOnly = false;
     }
   },
-});
-definePseudoClass(":checked", {
+};
+PSEUDO_CLASSES[":checked"] = {
   attribute: "data-checked",
   setup: (el, callback) => {
     if (el.type === "checkbox") {
@@ -285,8 +343,8 @@ definePseudoClass(":checked", {
     return () => {};
   },
   test: (el) => el.matches(":checked"),
-});
-definePseudoClass(":active", {
+};
+PSEUDO_CLASSES[":active"] = {
   attribute: "data-active",
   setup: (el, callback) => {
     // I'ts recommended to use :-navi-pressed over :active for interactive elements.
@@ -306,7 +364,7 @@ definePseudoClass(":active", {
     };
   },
   test: (el) => el.matches(":active"),
-});
+};
 
 // The current input modality: true after a keyboard navigation key (arrow keys,
 // Escape, Enter, Ctrl, Alt, Shift, Space — Space ignored on editable fields),
@@ -648,7 +706,7 @@ focus_classes: {
     });
   };
 
-  definePseudoClass(":focus", {
+  PSEUDO_CLASSES[":focus"] = {
     attribute: "data-focus",
     setup: trackFocus,
     test: (el) => {
@@ -660,8 +718,8 @@ focus_classes: {
       }
       return false;
     },
-  });
-  definePseudoClass(":focus-visible", {
+  };
+  PSEUDO_CLASSES[":focus-visible"] = {
     attribute: "data-focus-visible",
     // No per-element keydown/keyup listener: the shared recheckFocusChainOnKey
     // handler re-checks the focused element (the only one a keystroke can turn
@@ -676,8 +734,8 @@ focus_classes: {
       }
       return false;
     },
-  });
-  definePseudoClass(":focus-within", {
+  };
+  PSEUDO_CLASSES[":focus-within"] = {
     attribute: "data-focus-within",
     setup: trackFocus,
     test: (el) => {
@@ -694,49 +752,10 @@ focus_classes: {
       }
       return false;
     },
-  });
+  };
 }
 
-Object.assign(PSEUDO_CLASSES, {
-  ":-navi-pointed": {
-    attribute: "data-pointed",
-  },
-  ":-navi-pointed-by-mouse": {
-    attribute: "data-pointed-by-mouse",
-  },
-  ":-navi-pointed-by-keyboard": {
-    attribute: "data-pointed-by-keyboard",
-  },
-  ":-navi-pointed-by-proxy": {
-    attribute: "data-pointed-by-proxy",
-  },
-  ":-navi-selected": {
-    attribute: "data-selected",
-  },
-  ":-navi-loading": {
-    attribute: "data-loading",
-  },
-  ":-navi-status-info": {
-    attribute: "data-status-info",
-  },
-  ":-navi-status-success": {
-    attribute: "data-status-success",
-  },
-  ":-navi-status-warning": {
-    attribute: "data-status-warning",
-  },
-  ":-navi-status-error": {
-    attribute: "data-status-error",
-  },
-  ":-navi-expanded": {
-    attribute: "data-expanded",
-  },
-  ":-navi-void": {
-    attribute: "data-void",
-  },
-  "::highlight": {},
-});
-definePseudoClass(":-navi-has-value", {
+PSEUDO_CLASSES[":-navi-has-value"] = {
   attribute: "data-has-value",
   setup: (el, callback) => {
     const controlHost = findControlHost(el) || el;
@@ -755,10 +774,10 @@ definePseudoClass(":-navi-has-value", {
     }
     return true;
   },
-});
+};
 navi_pressed: {
   const pressedElements = new WeakSet();
-  definePseudoClass(":-navi-pressed", {
+  PSEUDO_CLASSES[":-navi-pressed"] = {
     attribute: "data-pressed",
     setup: (el, callback) => {
       // Prefer :-navi-pressed over :active for interactive elements because:
@@ -818,11 +837,11 @@ navi_pressed: {
       };
     },
     test: (el) => pressedElements.has(el),
-  });
+  };
 }
 
 navi_drag: {
-  definePseudoClass(":-navi-drag-grabbed", {
+  PSEUDO_CLASSES[":-navi-drag-grabbed"] = {
     attribute: "navi-drag-grabbed",
     setup: (el, callback) => {
       const onGrab = () => {
@@ -839,8 +858,8 @@ navi_drag: {
       };
     },
     test: (el) => el.hasAttribute("data-drag-grabbed"),
-  });
-  definePseudoClass(":-navi-dragging", {
+  };
+  PSEUDO_CLASSES[":-navi-dragging"] = {
     attribute: "navi-dragging",
     setup: (el, callback) => {
       const onStart = () => {
@@ -857,7 +876,7 @@ navi_drag: {
       };
     },
     test: (el) => el.hasAttribute("data-dragging"),
-  });
+  };
 }
 
 const EMPTY_STATE = {};

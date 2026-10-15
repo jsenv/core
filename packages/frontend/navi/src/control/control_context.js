@@ -61,9 +61,8 @@ export const CONTROL_ATTRIBUTE_SET = new Set([
   "data-separator", // used by InputGroup paste-to-fill
 ]);
 // prop concerning control but that won't end up in the DOM if not inside CONTROL_ATTRIBUTE_SET
+// (the constraint message props are too, see isControlProp)
 export const CONTROL_PROP_SET = new Set([
-  ...CONSTRAINT_MESSAGE_PROP_NAME_SET,
-
   "action",
   "actionEvent",
   "actionAfterChange",
@@ -156,8 +155,12 @@ export const controlAttributeFromProp = (key) => {
   return constraintAttributeFromProp(key);
 };
 
+// Two sets asked rather than one built from both: spreading a set at module
+// scope is a statement a bundler keeps, with all it references.
 export const isControlProp = (key) =>
-  CONTROL_PROP_SET.has(key) || controlAttributeFromProp(key) !== null;
+  CONTROL_PROP_SET.has(key) ||
+  CONSTRAINT_MESSAGE_PROP_NAME_SET.has(key) ||
+  controlAttributeFromProp(key) !== null;
 
 export const MessagePropsRefContext = createContext();
 

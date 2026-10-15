@@ -99,7 +99,7 @@ import { installTableCss } from "./table_css.js";
 import { TableUI } from "./table_ui.jsx";
 
 const [useColumnTrackerProviders, useRegisterColumn, useColumnByIndex] =
-  createIsolatedItemTracker();
+  /*#__PURE__*/ createIsolatedItemTracker();
 
 const TableRowTrackerContext = createContext(null);
 const useRegisterRow = (rowItem) => {

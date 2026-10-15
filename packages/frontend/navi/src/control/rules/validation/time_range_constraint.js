@@ -1,4 +1,4 @@
-import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
+import { constraintI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { getUIStateControllerById } from "../../controller_registry.js";
 import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
 
@@ -34,12 +34,12 @@ export const TIME_RANGE_CONSTRAINT = {
       return null;
     }
     if (minDuration > 0) {
-      return naviI18n("constraint.time_after.min_duration").replace(
+      return constraintI18n("constraint.time_after.min_duration").replace(
         "[duration]",
         String(minDuration),
       );
     }
-    return naviI18n("constraint.time_after.default");
+    return constraintI18n("constraint.time_after.default");
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("data-time-after");

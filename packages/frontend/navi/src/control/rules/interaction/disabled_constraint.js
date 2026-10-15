@@ -1,4 +1,4 @@
-import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
+import { constraintI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
 
 export const DISABLED_CONSTRAINT = {
@@ -13,11 +13,11 @@ export const DISABLED_CONSTRAINT = {
     const type = field.controlHostProps.type;
     let message;
     if (type === "radio") {
-      message = naviI18n(`constraint.disabled.radio`);
+      message = constraintI18n(`constraint.disabled.radio`);
     } else if (type === "checkbox") {
-      message = naviI18n(`constraint.disabled.checkbox`);
+      message = constraintI18n(`constraint.disabled.checkbox`);
     } else {
-      message = naviI18n(`constraint.disabled.default`);
+      message = constraintI18n(`constraint.disabled.default`);
     }
     // A disabled element does not block its parent from submitting.
     return { message, status: "info", ignoredByParents: true };

@@ -1236,6 +1236,11 @@ export const createAction = (callback, rootOptions = {}) => {
     private_properties: {
       let sideEffectCleanup;
       let completeSideEffectCleanup;
+      // The run whose outcome is this instance's: the last one started, until
+      // a reset says nobody holds an answer. A run called off that way keeps
+      // going until its callback settles, and must find nothing of the
+      // instance to write into by then (see settleCalledOff).
+      let currentRun = null;
 
       const performRun = (runParams) => {
         const {
@@ -1253,9 +1258,17 @@ export const createAction = (callback, rootOptions = {}) => {
           prerunProtectionRegistry.protect(action);
         }
 
+        const thisRun = {};
+        currentRun = thisRun;
         const internalAbortController = new AbortController();
         const internalAbortSignal = internalAbortController.signal;
         const abort = (abortReason) => {
+          if (currentRun !== thisRun) {
+            // Called off already (see settleCalledOff): what fires here is a
+            // signal of the update that started it, and the instance is
+            // another run's, or idle.
+            return;
+          }
           runningStateSignal.value = ABORTED;
           internalAbortController.abort(abortReason);
           actionAbortMap.delete(action);
@@ -1317,13 +1330,31 @@ export const createAction = (callback, rootOptions = {}) => {
         let runResult;
         let rejected = false;
         let rejectedValue;
-        const onRunEnd = () => {
+        const removeAbortListeners = () => {
           if (abortSignal) {
             abortSignal.removeEventListener("abort", onAbortFromSpecific);
           }
           if (globalAbortSignal) {
             globalAbortSignal.removeEventListener("abort", onAbortFromGlobal);
           }
+        };
+        // Reset away, or taken over by a newer run, while its callback was
+        // out: what the callback settles with — the abort it honoured, an
+        // answer, a failure — belongs to no one. It settles as an abort,
+        // writing nothing: not the instance's state, not its value, not the
+        // store a resource writes from it, not the maps holding the run that
+        // replaced it.
+        const settleCalledOff = () => {
+          removeAbortListeners();
+          const abortReason = internalAbortSignal.reason;
+          onAbort?.(abortReason, { event, action, args });
+          return abortReason;
+        };
+        const onRunEnd = () => {
+          if (currentRun !== thisRun) {
+            return settleCalledOff();
+          }
+          removeAbortListeners();
           prerunProtectionRegistry.unprotect(action);
           actionAbortMap.delete(action);
           actionPromiseMap.delete(action);
@@ -1366,26 +1397,16 @@ export const createAction = (callback, rootOptions = {}) => {
           const data = dataSignal.peek();
           return data;
         };
-        const isAbortError = (error) =>
-          (internalAbortSignal.aborted &&
-            error === internalAbortSignal.reason) ||
-          error.name === "AbortError";
         const onRunError = (error) => {
-          if (abortSignal) {
-            abortSignal.removeEventListener("abort", onAbortFromSpecific);
-          }
-          if (globalAbortSignal) {
-            globalAbortSignal.removeEventListener("abort", onAbortFromGlobal);
-          }
+          removeAbortListeners();
           actionAbortMap.delete(action);
           actionPromiseMap.delete(action);
-          if (isAbortError(error)) {
-            // Called off by navi (abort, reset, rerun): abort() said ABORTED
-            // then, and the instance may since belong to the run that
-            // replaced this one — or be back to IDLE after a reset.
-            if (!internalAbortSignal.aborted) {
-              runningStateSignal.value = ABORTED;
-            }
+          const isAbort =
+            (internalAbortSignal.aborted &&
+              error === internalAbortSignal.reason) ||
+            error.name === "AbortError";
+          if (isAbort) {
+            runningStateSignal.value = ABORTED;
             if (isPrerun && abortSignal.aborted) {
               prerunProtectionRegistry.unprotect(action);
             }
@@ -1423,8 +1444,11 @@ export const createAction = (callback, rootOptions = {}) => {
         // then happens inside a `then`. An abort is neither: it settles with
         // its reason as its value, the way it always has.
         const failRun = (error) => {
+          if (currentRun !== thisRun) {
+            return settleCalledOff();
+          }
           const errorSettled = onRunError(error);
-          if (isAbortError(error)) {
+          if (runningStateSignal.peek() === ABORTED) {
             return errorSettled;
           }
           throw errorSettled;
@@ -1471,6 +1495,7 @@ export const createAction = (callback, rootOptions = {}) => {
 
       const performReset = ({ reason, willRunOrPrerun }) => {
         abort(reason);
+        currentRun = null;
         if (import.meta.dev && DEBUG) {
           console.log(`"${action}": resetting (reason: ${reason})`);
         }

@@ -1,4 +1,4 @@
-import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
+import { constraintI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 
 export const createAvailableConstraint = (
   // the set might be incomplete (the front usually don't have the full copy of all the items from the backend)
@@ -20,7 +20,7 @@ export const createAvailableConstraint = (
         return null;
       }
 
-      return naviI18n(message, { value: fieldValue });
+      return constraintI18n(message, { value: fieldValue });
     },
   };
 };

@@ -13,6 +13,7 @@ export const CodeBlock = ({
   children,
   ...props
 }) => {
+  defineCodeBlockElements();
   return (
     <code-block
       data-language={language}
@@ -24,7 +25,18 @@ export const CodeBlock = ({
   );
 };
 
-(() => {
+// Defined by the first CodeBlock rendered rather than at import, so a bundler
+// drops both elements from an app that never uses CodeBlock. The custom
+// element registry is what says whether it is done.
+const defineCodeBlockElements = () => {
+  if (customElements.get("code-block")) {
+    return;
+  }
+  defineClipboardCopyElement();
+  defineCodeBlockElement();
+};
+
+const defineClipboardCopyElement = () => {
   const css = /* css */ `
     *[aria-hidden="true"] {
       display: none;
@@ -142,9 +154,9 @@ export const CodeBlock = ({
     const clipboardItem = new ClipboardItem(clipboardItemData);
     await window.navigator.clipboard.write([clipboardItem]);
   };
-})();
+};
 
-(() => {
+const defineCodeBlockElement = () => {
   /*
   :host {
       display: block;
@@ -256,4 +268,4 @@ export const CodeBlock = ({
     escape.innerHTML = html;
     return escape.textContent;
   }
-})();
+};

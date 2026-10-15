@@ -360,6 +360,9 @@ export {
   isScrolling,
   scrollActivitySignal,
 } from "./src/utils/scroll_activity.js";
+// A page not whole yet holds back the position a reload or a back gives it
+// (see src/nav/browser_integration/scroll_restoration.js).
+export { useHoldScrollRestoration } from "./src/nav/browser_integration/scroll_restoration.js";
 
 // Responsivness
 export {

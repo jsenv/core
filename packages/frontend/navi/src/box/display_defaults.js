@@ -122,13 +122,17 @@ const DEFAULT_DISPLAY_BY_TAG_NAME = {
 };
 
 // Create a reverse map for quick lookup: tagName -> display value
-const TAG_NAME_TO_DEFAULT_DISPLAY = new Map();
-for (const display of Object.keys(DEFAULT_DISPLAY_BY_TAG_NAME)) {
-  const displayTagnameSet = DEFAULT_DISPLAY_BY_TAG_NAME[display];
-  for (const tagName of displayTagnameSet) {
-    TAG_NAME_TO_DEFAULT_DISPLAY.set(tagName, display);
+// (a call annotated pure so that a bundler drops the loop with its last reader)
+const TAG_NAME_TO_DEFAULT_DISPLAY = /*#__PURE__*/ (() => {
+  const map = new Map();
+  for (const display of Object.keys(DEFAULT_DISPLAY_BY_TAG_NAME)) {
+    const displayTagnameSet = DEFAULT_DISPLAY_BY_TAG_NAME[display];
+    for (const tagName of displayTagnameSet) {
+      map.set(tagName, display);
+    }
   }
-}
+  return map;
+})();
 
 /**
  * Get the default CSS display value for a given HTML tag name

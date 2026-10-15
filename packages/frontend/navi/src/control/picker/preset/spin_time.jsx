@@ -13,7 +13,7 @@
 
 import { useId } from "preact/hooks";
 
-import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
+import { timeI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { Text } from "@jsenv/navi/src/text/text.jsx";
 import { ControlGroup } from "../../control_group.jsx";
 import { formatTimeParts, parseTimeParts } from "../time_helpers.js";
@@ -52,9 +52,9 @@ export const TimeSpin = ({
   minuteStep = 1,
   pad = 2,
   loop = true,
-  separator = naviI18n("time.hour_separator"),
-  hourLabel = naviI18n("time.hour_label"),
-  minuteLabel = naviI18n("time.minute_label"),
+  separator = timeI18n("time.hour_separator"),
+  hourLabel = timeI18n("time.hour_label"),
+  minuteLabel = timeI18n("time.minute_label"),
   ...rest
 }) => (
   <SpinGroup
@@ -144,8 +144,8 @@ export const TimeRangeSpin = ({
   pad = 2,
   loop = true,
   size,
-  startLabel = naviI18n("time_range.from"),
-  endLabel = naviI18n("time_range.to"),
+  startLabel = timeI18n("time_range.from"),
+  endLabel = timeI18n("time_range.to"),
   timeProps,
   startTimeProps,
   endTimeProps,

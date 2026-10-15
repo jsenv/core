@@ -13,7 +13,7 @@
  * its server, worn by a control as a constraint.
  */
 
-import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
+import { constraintI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 
 /**
  * Turns a @jsenv/validity rule into a constraint a control can wear, so an app
@@ -60,10 +60,10 @@ export const constraintFromValidityRule = (rule, ruleConfig = {}) => {
 export const naviI18nFromValidityMessage = ({ key, params }) => {
   if (params && typeof params.max === "number") {
     // Lets a template pluralize on the bound it names: "[max] retour[s]".
-    return naviI18n(`constraint.${key}`, {
+    return constraintI18n(`constraint.${key}`, {
       ...params,
       s: params.max > 1 ? "s" : "",
     });
   }
-  return naviI18n(`constraint.${key}`, params);
+  return constraintI18n(`constraint.${key}`, params);
 };
