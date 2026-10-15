@@ -800,8 +800,8 @@ const UncontrolledPopover = (props) => {
       }}
       // The press announcing that request (see announceOpeningPress in
       // commands.js), heard where the request is.
-      onnavi_open_press={() => {
-        openController.onOpeningPress?.();
+      onnavi_open_press={(e) => {
+        openController.onOpeningPress?.(e);
       }}
       onnavi_request_close={(e) => {
         const closing = openController.requestClose(e, {

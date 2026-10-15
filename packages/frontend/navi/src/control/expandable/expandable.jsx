@@ -486,7 +486,9 @@ export const Expandable = (props) => {
       !openController.opened &&
       !isAimedAtControlInsideUI(pointerdownEvent.target)
     ) {
-      dispatchCustomEvent(rootRef.current, "navi_open_press");
+      dispatchCustomEvent(rootRef.current, "navi_open_press", {
+        event: pointerdownEvent,
+      });
     }
   };
 
@@ -943,7 +945,7 @@ export const Expandable = (props) => {
       // commands.js), heard where the request is.
       onnavi_open_press={(e) => {
         rest.onnavi_open_press?.(e);
-        openController.onOpeningPress?.();
+        openController.onOpeningPress?.(e);
       }}
       onnavi_request_close={(e) => {
         rest.onnavi_request_close?.(e);
@@ -1027,8 +1029,8 @@ const ExpandableUI = ({ marker, children, ...rest }) => {
         onnavi_request_open: (e) => {
           openController.open(e);
         },
-        onnavi_open_press: () => {
-          openController.onOpeningPress?.();
+        onnavi_open_press: (e) => {
+          openController.onOpeningPress?.(e);
         },
         onnavi_request_close: (e) => {
           openController.requestClose(e, { isCancel: e.detail?.isCancel });

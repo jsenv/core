@@ -288,33 +288,34 @@ const css = /* css */ `
     );
 
     transition: opacity 0.2s ease;
-    /* overflow:hidden is required on the container (not the inner scroll element)
-       so that border-radius clips the content correctly. Without it, items near
-       the corners would visually overflow the rounded corners during scroll. */
-    overflow: hidden;
+
+    /* The frame does not clip to its rounded corners: Chrome cannot hit-test a
+       rounded clip (overflow or clip-path) on the compositor, so a scroll box
+       inside one sends every touch scroll start to the main thread, where it
+       waits for whatever the page is running. Anything painted over the scroll
+       box does the same where it covers it, so the edge is not redrawn above
+       the items either: one with a background in a corner covers the inside of
+       the curve, and past a radius of ~3.4 times the border width its square
+       corner shows outside it. */
+    &:not([data-borderless], [data-overflow-visible], [data-scroller]) {
+      /* A flex or grid item that does not clip takes its content's height as
+         its minimum: a frame given a height (expandY) would grow to all its
+         items, and the page would scroll instead of the list. */
+      min-height: 0;
+    }
 
     /* The default radius is the border's. A list asked for no border draws no
        edge, and a curve kept on it only cuts into the items sitting there — a
-       grid of framed cards loses its outer corners. With no curve left, the
-       clip above has nothing to do: the scroll box inside clips what scrolls. */
+       grid of framed cards loses its outer corners. */
     &[data-borderless] {
       --x-list-border-radius: 0px;
-      overflow: visible;
     }
 
-    /* overflow="visible" asks for the exact opposite of the clipping above: the
-       content must be free to paint outside the list's box and to overflow into
-       whatever scroll container is around it. Setting it on the inner scroll
-       element alone changes nothing visible — this frame would clip it right
-       back — so the frame has to let go of it too, and with it of the rounded
-       corners it was clipping to. The two cannot both be true.
-       An axis asked to be visible pairs with "clip" on the other one rather
-       than "hidden": mixing visible with a scrollport value makes the browser
-       compute the visible one to "auto" (a scrollport again), while
-       visible/clip is the one pairing it keeps as written. */
-    &[data-overflow-visible="both"] {
-      overflow: visible;
-    }
+    /* overflow="visible" on one axis: the content may paint outside the list's
+       box along it, and the frame still clips along the other.
+       "clip" rather than "hidden" there: mixing visible with a scrollport value
+       makes the browser compute the visible one to "auto" (a scrollport
+       again), while visible/clip is the one pairing it keeps as written. */
     &[data-overflow-visible="x"] {
       overflow-x: visible;
       overflow-y: clip;
@@ -399,7 +400,7 @@ const css = /* css */ `
          Box). The scroll container must then fill that grown height and take
          over the internal scroll — flex:1 fills it, min-height:0 lets it shrink
          below its content so overflow:auto scrolls instead of the content
-         pushing past the container (which overflow:hidden would just clip). */
+         pushing past the container. */
       > .navi_list_scroll_container {
         min-height: 0;
         flex: 1;

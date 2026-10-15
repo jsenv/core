@@ -988,7 +988,7 @@ registerNaviCommand("--navi-open", (source, event, { anchor, value } = {}) => {
  * The target is found the way --navi-open finds it, but silently: nothing
  * runs here, and a source with no target says so at the release.
  */
-export const announceOpeningPress = (source, command) => {
+export const announceOpeningPress = (source, command, pointerdownEvent) => {
   if (command !== "--navi-open" && command !== "--navi-toggle") {
     return;
   }
@@ -999,7 +999,7 @@ export const announceOpeningPress = (source, command) => {
   if (!target) {
     return;
   }
-  dispatchCustomEvent(target, "navi_open_press");
+  dispatchCustomEvent(target, "navi_open_press", { event: pointerdownEvent });
 };
 // "--navi-close:all" closes every expandable above the source, nearest first —
 // a link leaving from a badge shown over a sheet leaves both. A surface that

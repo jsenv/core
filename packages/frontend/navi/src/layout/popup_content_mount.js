@@ -55,11 +55,18 @@
  * where a delay is felt hardest — while the ~100-300ms between hovering a
  * trigger and pressing it are free. The warming render starts at the frame
  * after the one that follows the intent: nothing here needs the content in the
- * DOM before the click, only before the open that follows it, and on a touch
- * screen `pointerover` arrives together with the `pointerdown` — a build
- * started there would hold back the frame that shows the press. Two animation
- * frames, never a timeout: browsers hold timers back while a finger is down,
- * and a timeout started by the press fires at its release, on top of the click.
+ * DOM before the click, only before the open that follows it, and a build
+ * started at once would hold back the frame that shows the hover or the focus.
+ *
+ * Under a finger, `pointerover` is not an intent yet: it arrives with the
+ * `pointerdown` of every touch, the ones starting a scroll included, and at
+ * reading speed the browser decides a touch is a scroll about 35ms in — a
+ * build started then holds that scroll start back. So a touch warms once it has been held
+ * TOUCH_WARM_HOLD_MS without the browser taking it (`pointercancel`) or the
+ * finger lifting; a quicker tap builds at the open, like a click with no hover
+ * before it. Counted in animation frames, never a timeout: browsers hold timers
+ * back while a finger is down, and a timeout started by the press fires at its
+ * release, on top of the click.
  *
  * The anchor only says where the popup is placed, so intent inside it is read
  * off the control it is aimed at, the nearest one around the target. A control
@@ -83,8 +90,11 @@
  * anchor: it says where the popup is placed, not what opens it — a card
  * opened by a hold is pressed all day by taps meant for what it holds.
  *
- * The press builds the content, and the press ending without an open throws
- * it away — its click reaching the document with the popup still closed, no
+ * The press builds the content when it starts, a touch once it has been held
+ * as above: the announcement carries the pointerdown that made it. A press
+ * released before its build leaves the building to the open its click asks
+ * for. The press ending without an open throws the content away — its click
+ * reaching the document with the popup still closed, no
  * click coming after the release, the browser taking the gesture
  * (`pointercancel`), or the next press starting, before any of its own
  * handlers run: one press at a time holds a content. A keyboard opening builds
@@ -132,6 +142,12 @@ const cancelIdle = (id) =>
   typeof cancelIdleCallback === "function"
     ? cancelIdleCallback(id)
     : clearTimeout(id);
+
+// How long a finger rests on an anchor before it warms it: past the ~35ms at
+// which the browser takes a touch moving at reading speed for a scroll, short
+// of the ~100ms a tap is held, so a deliberate tap is warmed before its
+// release.
+const TOUCH_WARM_HOLD_MS = 80;
 
 export const usePopupContentMount = (
   openController,
@@ -223,13 +239,34 @@ export const usePopupContentMount = (
       return undefined;
     }
     let cancelWarm = null;
+    let warmIsTouchHold = false;
     const warm = () => {
       if (cancelWarm) {
         return;
       }
+      warmIsTouchHold = false;
       cancelWarm = requestFrameAfterNext(() => {
         setContentMounted(true);
       });
+    };
+    const warmAfterTouchHold = () => {
+      if (cancelWarm) {
+        return;
+      }
+      warmIsTouchHold = true;
+      cancelWarm = requestFrameAfterDuration(TOUCH_WARM_HOLD_MS, () => {
+        setContentMounted(true);
+      });
+    };
+    // A touch leaves the anchor when the finger lifts or the browser takes the
+    // touch: either way, before the hold said anything.
+    const onPointerLeave = () => {
+      if (!warmIsTouchHold) {
+        return;
+      }
+      cancelWarm();
+      cancelWarm = null;
+      warmIsTouchHold = false;
     };
     // The anchor itself when it is a control (a Popover anchored on the button
     // opening it), or the one the popup is written in (a picker's trigger).
@@ -250,6 +287,10 @@ export const usePopupContentMount = (
           return;
         }
       }
+      if (pointeroverEvent.pointerType === "touch") {
+        warmAfterTouchHold();
+        return;
+      }
       warm();
     };
     const onFocusIn = (focusinEvent) => {
@@ -260,10 +301,12 @@ export const usePopupContentMount = (
       warm();
     };
     anchorElement.addEventListener("pointerover", onPointerOver);
+    anchorElement.addEventListener("pointerleave", onPointerLeave);
     anchorElement.addEventListener("focusin", onFocusIn);
     return () => {
       cancelWarm?.();
       anchorElement.removeEventListener("pointerover", onPointerOver);
+      anchorElement.removeEventListener("pointerleave", onPointerLeave);
       anchorElement.removeEventListener("focusin", onFocusIn);
     };
   }, [contentMounted, anchor, mount]);
@@ -273,19 +316,26 @@ export const usePopupContentMount = (
   const stopPressWarmRef = useRef(null);
   openController.onOpeningPress =
     mount === "while-opened"
-      ? () => {
+      ? (openPressEvent) => {
           if (contentMountedRef.current || openController.onOpen) {
             return;
           }
-          const cancelBuild = requestFrameAfterNext(() => {
+          const build = () => {
             setContentMounted(true);
-          });
-          const stopWatching = watchPressEnd(() => {
-            stopPressWarmRef.current = null;
-            cancelBuild();
-            if (!openController.opened) {
-              setContentMounted(false);
-            }
+          };
+          const cancelBuild =
+            openPressEvent.detail.event.pointerType === "touch"
+              ? requestFrameAfterDuration(TOUCH_WARM_HOLD_MS, build)
+              : requestFrameAfterNext(build);
+          const stopWatching = watchPressEnd({
+            onRelease: cancelBuild,
+            onEnd: () => {
+              stopPressWarmRef.current = null;
+              cancelBuild();
+              if (!openController.opened) {
+                setContentMounted(false);
+              }
+            },
           });
           stopPressWarmRef.current = () => {
             stopPressWarmRef.current = null;
@@ -340,6 +390,24 @@ export const requestFrameAfterNext = (callback) => {
   };
 };
 
+// The first frame at least `ms` after the call, read off the frames' own
+// timestamps: a 120Hz screen waits as long as a 60Hz one.
+const requestFrameAfterDuration = (ms, callback) => {
+  const start = performance.now();
+  let frame;
+  const onFrame = (timestamp) => {
+    if (timestamp - start >= ms) {
+      callback();
+      return;
+    }
+    frame = requestAnimationFrame(onFrame);
+  };
+  frame = requestAnimationFrame(onFrame);
+  return () => {
+    cancelAnimationFrame(frame);
+  };
+};
+
 // How long the click of a released press may take to arrive. Nothing tells a
 // page that a release brings no click — a press that became a drag has its
 // click swallowed (suppressClickAfterGesture in @jsenv/dom) — so past this the
@@ -349,7 +417,7 @@ const PRESS_CLICK_WAIT_MS = 500;
 
 // Installed during the press's own pointerdown: the capture listeners below
 // only hear the presses after it.
-const watchPressEnd = (onEnd) => {
+const watchPressEnd = ({ onRelease, onEnd }) => {
   let timeout;
   const stop = () => {
     clearTimeout(timeout);
@@ -370,6 +438,7 @@ const watchPressEnd = (onEnd) => {
     }
   };
   const onPointerUp = () => {
+    onRelease();
     timeout = setTimeout(end, PRESS_CLICK_WAIT_MS);
   };
   document.addEventListener("click", onClick);

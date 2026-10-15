@@ -655,8 +655,8 @@ const PickerCustom = (props) => {
       },
       // And the press announcing that request (see announceOpeningPress in
       // commands.js), for the popup's content to be built on it.
-      "onnavi_open_press": () => {
-        dispatchCustomEvent(popupRef.current, "navi_open_press");
+      "onnavi_open_press": (e) => {
+        dispatchCustomEvent(popupRef.current, "navi_open_press", e.detail);
       },
       "onnavi_request_close": (e) => {
         const closing = dispatchCustomEvent(
@@ -727,8 +727,8 @@ const PickerCustom = (props) => {
       // The press announcing that request (see announceOpeningPress in
       // commands.js), heard where the request is — here too for the same
       // reason. Nothing to gate: the announcer asked before saying it.
-      onnavi_open_press: () => {
-        openController.onOpeningPress?.();
+      onnavi_open_press: (e) => {
+        openController.onOpeningPress?.(e);
       },
       onnavi_request_close: (e) => {
         requestInteraction({
@@ -884,7 +884,9 @@ const PickerCustom = (props) => {
           ) {
             return;
           }
-          dispatchCustomEvent(pickerEl, "navi_open_press");
+          dispatchCustomEvent(pickerEl, "navi_open_press", {
+            event: pointerdownEvent,
+          });
         };
       }
       let interactions = props.interactions;

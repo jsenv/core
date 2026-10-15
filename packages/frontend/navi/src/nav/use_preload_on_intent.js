@@ -51,7 +51,7 @@ export const usePreloadOpeningOnPress = (ref, command, prefetch = true) => {
       if (pointerdownEvent.button !== 0) {
         return;
       }
-      announceOpeningPress(element, command);
+      announceOpeningPress(element, command, pointerdownEvent);
     };
     element.addEventListener("pointerdown", onPointerDown);
     return () => {
