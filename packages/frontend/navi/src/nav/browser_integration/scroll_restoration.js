@@ -43,11 +43,11 @@
  * moment it is put back, and a position beyond what has arrived is clamped.
  * What navi knows a first render left out, it waits for: a `<Box
  * mount="after-paint">` is built before the offset that shows it is written
- * (see mount_after_paint.jsx), and a reload waits for the route actions that
- * render had nothing to draw for — the page's code among them — and for one
- * that starts asking later, when the position did not fit what was there (see
- * restoreScrollPositionOnLoad). Anything else only the page knows, and it says
- * so (useHoldScrollRestoration). A wait can be long, so the reader reaching for
+ * (see mount_after_paint.jsx), and a reload or a return waits for the route
+ * actions the page has nothing to draw for — its code among them — including
+ * one that starts asking after the position is written (see
+ * putBackOnceAnswered). Anything else only the page knows, and it says so
+ * (useHoldScrollRestoration). A wait can be long, so the reader reaching for
  * the page during it cancels the position: moved afterwards, they would lose
  * whatever they had started on.
  *
@@ -59,14 +59,17 @@
  * route_travel.jsx).
  */
 
-import { effect, untracked } from "@preact/signals";
+import { effect } from "@preact/signals";
 import { useLayoutEffect } from "preact/hooks";
 
-import { COMPLETED, RUNNING } from "../../action/action_run_states.js";
+import { COMPLETED, IDLE, RUNNING } from "../../action/action_run_states.js";
 import { buildDeferredBoxesAbove } from "../../box/mount_after_paint.jsx";
 import { afterPaint } from "../../utils/after_paint.js";
 import { whenPageRendered } from "../rendering_hold.js";
-import { activeRouteActionsSignal } from "../route_action.js";
+import {
+  activeRouteActionsSignal,
+  routeActionYetToAskSignal,
+} from "../route_action.js";
 import { observeRouteRender } from "../route_render.js";
 
 const STORAGE_KEY = "navi_scroll_positions";
@@ -171,17 +174,16 @@ export const suspendScrollRecording = () => {
   };
 };
 
-// The position a reload or a return is about to put back, until it is written.
-// Where the document lands is the last arrival's to say: an arrival decided
-// meanwhile — a page that sends the reader elsewhere as it mounts — replaces it
-// (see startAtTop), and must not be scrolled to where the return was going.
-// So does the reader reaching for the page before it is written: where they
-// are is theirs (see installScrollRestoration).
+// The position a reload or a return is about to put back, until it is written
+// into a page that will ask nothing more (see stayForLateAsks). Where the
+// document lands is the last arrival's to say: an arrival decided meanwhile — a
+// page that sends the reader elsewhere as it mounts — replaces it (see
+// startAtTop), and must not be scrolled to where the return was going. So does
+// the reader reaching for the page: where they are is theirs (see
+// installScrollRestoration).
 let pendingRestoration = null;
-// `untilReached`: a write the document is too short for leaves it pending (see
-// putBackOnLateAnswer).
-const startRestoration = (position, { untilReached = false } = {}) => {
-  const restoration = { position, due: false, untilReached };
+const startRestoration = (position) => {
+  const restoration = { position, due: false };
   pendingRestoration = restoration;
   return restoration;
 };
@@ -196,16 +198,13 @@ const putBack = (restoration) => {
     // The page is not whole yet: the last release puts it back.
     return;
   }
-  pendingRestoration = null;
   if (documentHoldCount) {
+    pendingRestoration = null;
     return;
   }
   scrollTo(restoration.position);
-  if (restoration.untilReached && fellShortOf(restoration.position)) {
-    restoration.due = false;
-    pendingRestoration = restoration;
-    putBackOnLateAnswer(restoration);
-  }
+  restoration.due = false;
+  stayForLateAsks(restoration);
 };
 
 // A list scrolling the document that opens on a row puts the document where
@@ -263,9 +262,10 @@ const holdScrollRestoration = () => {
  * `held` turns false — unless the reader has reached for the page in the
  * meantime (a finger, a click, a wheel, a key), or gone elsewhere.
  *
- * After a reload, the page's route actions are waited for without this — its
- * code, a read the previous document did not keep. This is for what navi
- * cannot see: a read the page starts itself, content whose height arrives late.
+ * The page's route actions are waited for without this — its code, a read
+ * with no answer yet, one gated on app state that asks later. This is for
+ * what navi cannot see: a read the page starts itself, content whose height
+ * arrives late.
  *
  * ```jsx
  * const [games] = useAsyncData(GAMES, { loading: true, run: true });
@@ -350,19 +350,22 @@ export const installScrollRestoration = ({ readAddress }) => {
 // page the position was taken on, and the position stays for the reload that
 // brings the page back.
 const restoreScrollPositionOnLoad = (position) => {
-  const restoration = startRestoration(position, { untilReached: true });
+  const restoration = startRestoration(position);
   const stopListening = observeRouteRender(() => {
     stopListening();
     putBackOnceAnswered(restoration);
   });
 };
 
-// Reads the actions to wait for at once: from the commit of the first render,
+// Reads the actions to wait for at once: called from the commit of a render,
 // the ones it had nothing to draw for are those still running then. An answer
 // can start another read (params made of that answer), so the actions asking
 // are read again before the position is written.
+//
+// The same for a reload and a return: a return to a page this document has
+// never drawn, or whose read was reset since, finds no answer either.
 const putBackOnceAnswered = (restoration) => {
-  const unanswered = untracked(readUnansweredRouteActions);
+  const unanswered = readUnansweredRouteActions();
   if (unanswered.length === 0) {
     queueMicrotask(() => {
       putBack(restoration);
@@ -390,10 +393,10 @@ const putBackOnceAnswered = (restoration) => {
 
 const readUnansweredRouteActions = () => {
   const unanswered = [];
-  for (const routeAction of activeRouteActionsSignal.value) {
+  for (const routeAction of activeRouteActionsSignal.peek()) {
     if (
-      routeAction.runningStateSignal.value === RUNNING &&
-      routeAction.dataSignal.value === undefined
+      routeAction.runningStateSignal.peek() === RUNNING &&
+      routeAction.dataSignal.peek() === undefined
     ) {
       unanswered.push(routeAction);
     }
@@ -401,31 +404,46 @@ const readUnansweredRouteActions = () => {
   return unanswered;
 };
 
-// A page can start asking after its first render: an action gated on app
-// state that render did not have yet (`when`, or params reading an app-wide
-// read), and nothing tells "not yet" from "never" before it asks. So the
-// position is written into what the page lets it, and a write the document
-// could not hold is not the end of it: the next route action that starts
-// without an answer is waited for like the first ones, and the position put
-// back again. Not told when the restoration is dropped (pendingRestoration is
-// no signal): it notices at its next run.
-const putBackOnLateAnswer = (restoration) => {
+// A page can start asking after the position is written: an action gated on
+// app state not there yet (`when`, or params reading an app-wide read), and
+// nothing tells "not yet" from "never" before it asks (see
+// routeActionYetToAskSignal). So a written position stays pending while a
+// route action of the page has not asked: the next one that starts without an
+// answer is waited for like the first ones, and the position put back once it
+// is drawn. Not told when the restoration is dropped (pendingRestoration is no
+// signal): it notices at its next run.
+const stayForLateAsks = (restoration) => {
   effect(function () {
+    let running = false;
+    let starting = false;
+    for (const routeAction of activeRouteActionsSignal.value) {
+      if (routeAction.dataSignal.value !== undefined) {
+        continue;
+      }
+      const runningState = routeAction.runningStateSignal.value;
+      if (runningState === RUNNING) {
+        running = true;
+      } else if (runningState === IDLE) {
+        // Asking, and run by an effect of the same batch that has not run yet.
+        starting = true;
+      }
+    }
+    const yetToAsk = routeActionYetToAskSignal.value;
     if (pendingRestoration !== restoration) {
       this.dispose();
       return;
     }
-    if (readUnansweredRouteActions().length === 0) {
+    if (running) {
+      this.dispose();
+      putBackOnceAnswered(restoration);
+      return;
+    }
+    if (starting || yetToAsk) {
       return;
     }
     this.dispose();
-    putBackOnceAnswered(restoration);
+    pendingRestoration = null;
   });
-};
-
-// A pixel of slack: the offset kept is the fractional one the browser reports.
-const fellShortOf = (position) => {
-  return position.y - window.scrollY > 1;
 };
 
 // Calls back once none of the actions is running, saying whether all of them
@@ -476,10 +494,11 @@ const restoreScrollPosition = (url) => {
 };
 
 // A traversal back to `url`. The offset is written once the page returned to is
-// rendered: written sooner, the document still holds the page being left and
-// clamps it to that page's height. It is read at once all the same — a page
-// left taller than the one arriving is clamped by the render itself, and that
-// clamp is a scroll recorded under the url already returned to.
+// rendered and answered (see putBackOnceAnswered): written sooner, the document
+// still holds the page being left, or a stand-in for the one arriving, and
+// clamps it to that height. It is read at once all the same — a page left
+// taller than the one arriving is clamped by the render itself, and that clamp
+// is a scroll recorded under the url already returned to.
 export const restoreScrollPositionOnReturn = (url) => {
   pendingRestoration = null;
   const href = new URL(url, window.location.href).href;
@@ -490,7 +509,7 @@ export const restoreScrollPositionOnReturn = (url) => {
   }
   const restoration = startRestoration(position);
   whenPageRendered(() => {
-    putBack(restoration);
+    putBackOnceAnswered(restoration);
   });
 };
 

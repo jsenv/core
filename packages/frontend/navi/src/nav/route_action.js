@@ -55,6 +55,26 @@ export const activeRouteActionsSignal = computed(() => {
   return active;
 });
 
+/**
+ * Whether a route action of the page on screen asks nothing yet: its route
+ * matches and its params (or `when`) say no. Gated on app state not there yet,
+ * or never meant to ask on this page — nothing tells one from the other before
+ * it asks. Read by the scroll restoration, which stays ready for it.
+ *
+ * @type {import("@preact/signals").ReadonlySignal<boolean>}
+ */
+export const routeActionYetToAskSignal = computed(() => {
+  for (const {
+    routeMatchingSignal,
+    askingSignal,
+  } of routeActionEntriesSignal.value) {
+    if (routeMatchingSignal.value && !askingSignal.value) {
+      return true;
+    }
+  }
+  return false;
+});
+
 let activeRouteReadsPrevious = new Set();
 /**
  * `activeRouteActionsSignal` without the page's code: what to rerun to read
@@ -168,6 +188,7 @@ export const routeAction = (
     ...routeActionEntriesSignal.peek(),
     {
       routeAction: actionBoundToRoute,
+      routeMatchingSignal,
       askingSignal: computed(() => Boolean(readParamsAsked())),
     },
   ];

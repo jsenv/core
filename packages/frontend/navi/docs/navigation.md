@@ -500,25 +500,26 @@ a stand-in — a pending screen, a `<Loading>` fallback, a list of three skeleto
 clamped to it, and the reader lands at the top of a page that arrives a moment
 later.
 
-**After a reload, navi waits for the route actions** that the first render had
-nothing to draw for: the page's code arriving on its own
+**After a reload or a back/forward, navi waits for the route actions** that the
+page has nothing to draw for: its code arriving on its own
 ([dynamic_import.md](./dynamic_import.md)), a read the previous document did not
 keep ([`keepPageOnScreen`](./resource.md#keeppageonscreen-the-page-on-screen-drawn-again-by-the-next-document) draws a kept one at once, and that one
-is not waited for). The position is put back once they have answered and the
-page has rendered. When one of them fails, nothing is written: the screen saying
-so is not the page the position was taken on, and the position stays for the
-reload that brings it back. What it costs: a slow read that every page asks for
-delays the position of every page, since nothing tells navi which reads set the
-height.
+is not waited for), a read reset since the page was left. The position is put
+back once they have answered and the page has rendered. When one of them fails,
+nothing is written: the screen saying so is not the page the position was taken
+on, and the position stays for the visit that brings it back. What it costs: a
+slow read that every page asks for delays the position of every page, since
+nothing tells navi which reads set the height.
 
-A route action that starts asking only after that render is waited for too: one
-gated on app state the first render did not have yet (`when`, or params that
-read an app-wide read such as the signed-in user), or one whose params are
-another's answer. Before it asks, nothing tells "not yet" from "never", so the
-position is written into what the page shows. When the document is too short to
-hold it, the position is not spent: the next route action that starts without an
-answer is waited for the same way, and the position is put back again once it
-is drawn.
+A route action that starts asking later is waited for too: one gated on app
+state the page did not have yet (`when`, or params that read an app-wide read
+such as the signed-in user), or one whose params are another's answer. Before it
+asks, nothing tells "not yet" from "never", so the position is written into what
+the page shows — and stays pending while a route action of the page has not
+asked: the next one that starts without an answer is waited for the same way,
+and the position is put back again once it is drawn. It ends once every route
+action of the page has asked; an action that never asks on this page (a search
+with no query) keeps it pending until the reader takes over.
 
 **What navi cannot see, the page says**: a read it starts itself
 (`useAsyncData(…, { run: true })`), content whose height arrives late. While
@@ -535,8 +536,8 @@ as above. A row of tabs is not held: it gives a tab its position as it travels,
 and measures right after (see [below](#a-row-of-tabs-where-a-replace-is-an-arrival)).
 
 **The reader taking over cancels it.** A finger, a click, a wheel or a key
-before the position is written, and it is not written: moved afterwards, they
-would lose whatever they had started on. Going elsewhere cancels it too.
+while the position is pending, and it is not written again: moved afterwards,
+they would lose whatever they had started on. Going elsewhere cancels it too.
 
 A `<List>` that opens on an item is the opposite case, and needs nothing: it
 places the document itself, by measuring the item, and the url's offset is not
