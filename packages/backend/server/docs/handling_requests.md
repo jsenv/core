@@ -31,7 +31,7 @@ await startServer({
 | `GET /*`               | anything, with the path in `request.params[0]`                                                          |
 | `GET *`                | anything: a catch-all, put it last                                                                      |
 
-A `GET` route also answers `HEAD`: the response is built the same way and sent without its body.
+A `GET` route also answers `HEAD`: the response is built the same way and sent without its body. When building that body is costly, declare a `HEAD` route for the same resource before the `GET` one: it answers `HEAD` in its place.
 
 Only `*` widens a pattern. Routes are tried in order, so a route covering others (`GET /docs/*`, `GET *`) goes after them. `fetch` can be async; returning `null` or `undefined` declines the request and the next route is tried.
 

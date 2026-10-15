@@ -766,6 +766,7 @@ const createRoute = ({
       }
       return {
         method,
+        methods,
         resource,
         description,
         availableMediaTypes,

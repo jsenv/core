@@ -421,10 +421,17 @@ ${lines.join("\n")}`,
   const staysFailedSet = new Set();
   const staysCompletedSet = new Set();
 
+  // Every decision below reads an action's state from its signals. The plain
+  // properties copying them (action.runningState, action.isPrerun) catch up
+  // only once the effect or batch in progress is over: a reset asked just
+  // before this update in the same effect — a kept answer the lookup found
+  // expired — still reads as completed there, and the run asked after it
+  // would join an answer that is gone.
+
   // Step 1: Determine which actions will be reset
   collect_actions_to_reset: {
     for (const actionToReset of resetSet) {
-      if (actionToReset.runningState !== IDLE) {
+      if (actionToReset.runningStateSignal.peek() !== IDLE) {
         willResetSet.add(actionToReset);
       }
     }
@@ -438,10 +445,11 @@ ${lines.join("\n")}`,
     ) => {
       const isPrerun = requestType === "prerun";
       const isRerun = requestType === "rerun";
+      const runningState = action.runningStateSignal.peek();
 
       if (
         isRerun &&
-        action.runningState === COMPLETED &&
+        runningState === COMPLETED &&
         !willResetSet.has(action) &&
         isRerunHeldByNetworkPolicy(action)
       ) {
@@ -452,10 +460,7 @@ ${lines.join("\n")}`,
         );
         return;
       }
-      if (
-        action.runningState === RUNNING ||
-        action.runningState === COMPLETED
-      ) {
+      if (runningState === RUNNING || runningState === COMPLETED) {
         // Action is already running/completed
         // By default, we don't interfere with already active actions
         // Unless it's a rerun or the action is also being reset
@@ -471,6 +476,12 @@ ${lines.join("\n")}`,
           // The request performs nothing, and still has to be answered: what
           // the caller asked for is the answer, not the running.
           willJoinSet.add(action);
+          if (requestType === "run" && action.isPrerunSignal.peek()) {
+            // A prerun's run, or its answer, becomes the one this run asked
+            // for. A prerun that failed or was aborted carries nothing to
+            // promote: it is run like any other, in the branches below.
+            willPromoteSet.add(action);
+          }
         }
       } else if (isPrerun) {
         willPrerunSet.add(action);
@@ -492,13 +503,6 @@ ${lines.join("\n")}`,
     for (const actionToRun of runSet) {
       if (rerunSet.has(actionToRun)) {
         // rerun wins over run - skip run
-        continue;
-      }
-      if (actionToRun.isPrerun && actionToRun.runningState !== IDLE) {
-        // Special case: action was prerun but not yet requested to run
-        // Just promote it to "run requested" without rerunning
-        willPromoteSet.add(actionToRun);
-        willJoinSet.add(actionToRun);
         continue;
       }
       handleActionRequest(actionToRun, "run");
@@ -529,11 +533,12 @@ ${lines.join("\n")}`,
       }
     }
     for (const actionSettled of settledSet) {
+      const runningState = actionSettled.runningStateSignal.peek();
       if (willResetSet.has(actionSettled)) {
         // will be reset
-      } else if (actionSettled.runningState === ABORTED) {
+      } else if (runningState === ABORTED) {
         staysAbortedSet.add(actionSettled);
-      } else if (actionSettled.runningState === FAILED) {
+      } else if (runningState === FAILED) {
         staysFailedSet.add(actionSettled);
       } else {
         staysCompletedSet.add(actionSettled);

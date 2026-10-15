@@ -443,6 +443,17 @@
         background: var(--method-color);
         border-radius: 3px;
       }
+      .route_also_method {
+        margin-left: 6px;
+        padding: 3px 6px;
+        color: #fff;
+        font-weight: 700;
+        font-size: 11px;
+        font-family: sans-serif;
+        text-shadow: 0 1px 0 rgba(0, 0, 0, 0.1);
+        background: var(--method-color);
+        border-radius: 3px;
+      }
       .route_resource {
         margin-top: 0;
         margin-bottom: 0;
@@ -486,7 +497,8 @@
         border-color: var(--forbidden-border-color);
         opacity: 0.85;
       }
-      .route_details[data-forbidden] .route_method {
+      .route_details[data-forbidden] .route_method,
+      .route_details[data-forbidden] .route_also_method {
         opacity: 0.7;
         filter: grayscale(60%);
       }
@@ -1428,6 +1440,7 @@
       const RouteDetails = ({
         meta,
         method,
+        methods,
         resource,
         description,
         availableMediaTypes,
@@ -1451,6 +1464,10 @@
         if (selectedPackageName && packageName !== selectedPackageName) {
           return null;
         }
+        // what the router answers beyond the declared method (a GET route
+        // also answers HEAD); a "*" route answers everything, its chip says so
+        const alsoMethods =
+          method === "*" ? [] : methods.filter((m) => m !== method);
 
         return html`<details
             class="route_details"
@@ -1460,6 +1477,14 @@
           >
             <summary class="route_summary_container">
               <span class="route_method">${method}</span>
+              ${alsoMethods.map(
+                (alsoMethod) => html`<span
+                    class="route_also_method"
+                    style="--method-color: var(--method-${alsoMethod.toLowerCase()}-color)"
+                    title="Also answers ${alsoMethod}"
+                    >+${alsoMethod}</span
+                  >`,
+              )}
               <p class="route_resource">${resource}</p>
               ${method === "GET" && !forbidden
                 ? html`<a

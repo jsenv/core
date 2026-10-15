@@ -511,6 +511,15 @@ reload that brings it back. What it costs: a slow read that every page asks for
 delays the position of every page, since nothing tells navi which reads set the
 height.
 
+A route action that starts asking only after that render is waited for too: one
+gated on app state the first render did not have yet (`when`, or params that
+read an app-wide read such as the signed-in user), or one whose params are
+another's answer. Before it asks, nothing tells "not yet" from "never", so the
+position is written into what the page shows. When the document is too short to
+hold it, the position is not spent: the next route action that starts without an
+answer is waited for the same way, and the position is put back again once it
+is drawn.
+
 **What navi cannot see, the page says**: a read it starts itself
 (`useAsyncData(…, { run: true })`), content whose height arrives late. While
 `useHoldScrollRestoration(held)` is given `true`, the position of a reload or of
