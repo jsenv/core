@@ -202,8 +202,9 @@ this one cannot start before the component that draws it exists — a render lat
 at best, a gesture late in a popup. It is for a parameter chosen inside the
 component and dying with it. Outside a component,
 `actionRunEffect(action, () => …)` is that same run declared once — it runs on
-the first truthy params, reruns when they change, aborts when they go false —
-and the machinery `routeAction` is built on.
+the first truthy params, reruns when they change (unless the action declared
+`keep` and still holds the answer for the new ones), aborts when they go
+false — and the machinery `routeAction` is built on.
 
 **Which of the two it is, is decided by the parameter, not by what draws it.**
 If the parameter is in the address — a path param, a search param bound to a

@@ -42,9 +42,11 @@
  * What is NOT covered, and cannot be from here: a page whose height depends on
  * something still loading. Its content is not there at the moment it is put
  * back, so a position beyond what has arrived is clamped as before. Only the
- * page knows when it is whole. What navi itself leaves out of a first render
- * is the exception — a `<Box mount="after-paint">` — and is built before the
- * offset that shows it is written (see mount_after_paint.jsx).
+ * page knows when it is whole. What navi knows a first render left out is the
+ * exception: a `<Box mount="after-paint">` is built before the offset that
+ * shows it is written (see mount_after_paint.jsx), and a document load waits
+ * for the route actions that render had nothing to draw for — the page's code
+ * among them (see restoreScrollPositionOnLoad).
  *
  * WHEN a page is arrived at is not decided here either. A document navigation
  * lands where its kind says (see via_history.js), and one scrollport can be
@@ -54,8 +56,11 @@
  * route_travel.jsx).
  */
 
+import { COMPLETED, RUNNING } from "../../action/action_run_states.js";
 import { buildDeferredBoxesAbove } from "../../box/mount_after_paint.jsx";
+import { afterPaint } from "../../utils/after_paint.js";
 import { whenPageRendered } from "../rendering_hold.js";
+import { activeRouteActionsSignal } from "../route_action.js";
 import { observeRouteRender } from "../route_render.js";
 
 const STORAGE_KEY = "navi_scroll_positions";
@@ -218,20 +223,8 @@ export const installScrollRestoration = ({ readAddress }) => {
     return;
   }
   // What a reload asks for, now that the browser has been told not to do it.
-  // Once, and at the first render of a route: the position is only meaningful
-  // once there is a page under it.
-  // Written once the commit that rendered it has ended: said from inside it,
-  // and what the offset shows may still have to be built (see scrollTo).
   if (positionOnLoad.x || positionOnLoad.y) {
-    const stopListening = observeRouteRender(() => {
-      stopListening();
-      queueMicrotask(() => {
-        if (documentHoldCount) {
-          return;
-        }
-        scrollTo(positionOnLoad);
-      });
-    });
+    restoreScrollPositionOnLoad(positionOnLoad);
   }
 };
 
@@ -240,6 +233,87 @@ export const installScrollRestoration = ({ readAddress }) => {
 // page that sends the reader elsewhere as it mounts — must not be scrolled to
 // where the return was going.
 let arrivalCount = 0;
+
+// The position is only meaningful once there is a page under it: at the first
+// render of a route, unless that render had nothing to draw for one of the
+// route actions asking — the page's code arriving on its own, a read the
+// previous document did not keep. What it drew is their stand-in, a pending
+// screen or a <Loading> fallback, which clamps the offset; so the position
+// waits for their answers and the render that draws them.
+//
+// Nothing is written when one of them fails: the screen saying so is not the
+// page the position was taken on, and the position stays for the reload that
+// brings the page back.
+const restoreScrollPositionOnLoad = (position) => {
+  const arrival = ++arrivalCount;
+  // Outside the commit that rendered the page: what the offset shows may still
+  // have to be built (see scrollTo).
+  const write = () => {
+    if (arrival !== arrivalCount) {
+      return;
+    }
+    if (documentHoldCount) {
+      return;
+    }
+    scrollTo(position);
+  };
+  const stopListening = observeRouteRender(() => {
+    stopListening();
+    const unanswered = [];
+    for (const routeAction of activeRouteActionsSignal.peek()) {
+      if (
+        routeAction.runningStateSignal.peek() === RUNNING &&
+        routeAction.dataSignal.peek() === undefined
+      ) {
+        unanswered.push(routeAction);
+      }
+    }
+    if (unanswered.length === 0) {
+      queueMicrotask(write);
+      return;
+    }
+    // A reader drawing its own wait subscribes in an effect, after the first
+    // paint (see afterPaint): an answer that came before is drawn only then.
+    let waitCount = 2;
+    const waitOver = () => {
+      waitCount--;
+      if (waitCount === 0) {
+        whenPageRendered(write);
+      }
+    };
+    afterPaint(waitOver);
+    whenSettled(unanswered, (answered) => {
+      if (answered) {
+        waitOver();
+      }
+    });
+  });
+};
+
+// Calls back once none of the actions is running, saying whether all of them
+// completed.
+const whenSettled = (actions, callback) => {
+  const unsubscribes = [];
+  const check = () => {
+    let completed = true;
+    for (const action of actions) {
+      const state = action.runningStateSignal.peek();
+      if (state === RUNNING) {
+        return;
+      }
+      if (state !== COMPLETED) {
+        completed = false;
+      }
+    }
+    for (const unsubscribe of unsubscribes) {
+      unsubscribe();
+    }
+    callback(completed);
+  };
+  for (const action of actions) {
+    unsubscribes.push(action.runningStateSignal.subscribe(check));
+  }
+};
 
 // Nothing to put back is not the same as putting back the top: a page arrived
 // at for the first time is startAtTop's business, and this must not step on it.

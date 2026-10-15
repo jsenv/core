@@ -1366,6 +1366,10 @@ export const createAction = (callback, rootOptions = {}) => {
           const data = dataSignal.peek();
           return data;
         };
+        const isAbortError = (error) =>
+          (internalAbortSignal.aborted &&
+            error === internalAbortSignal.reason) ||
+          error.name === "AbortError";
         const onRunError = (error) => {
           if (abortSignal) {
             abortSignal.removeEventListener("abort", onAbortFromSpecific);
@@ -1375,12 +1379,13 @@ export const createAction = (callback, rootOptions = {}) => {
           }
           actionAbortMap.delete(action);
           actionPromiseMap.delete(action);
-          const isAbort =
-            (internalAbortSignal.aborted &&
-              error === internalAbortSignal.reason) ||
-            error.name === "AbortError";
-          if (isAbort) {
-            runningStateSignal.value = ABORTED;
+          if (isAbortError(error)) {
+            // Called off by navi (abort, reset, rerun): abort() said ABORTED
+            // then, and the instance may since belong to the run that
+            // replaced this one — or be back to IDLE after a reset.
+            if (!internalAbortSignal.aborted) {
+              runningStateSignal.value = ABORTED;
+            }
             if (isPrerun && abortSignal.aborted) {
               prerunProtectionRegistry.unprotect(action);
             }
@@ -1419,7 +1424,7 @@ export const createAction = (callback, rootOptions = {}) => {
         // its reason as its value, the way it always has.
         const failRun = (error) => {
           const errorSettled = onRunError(error);
-          if (runningStateSignal.peek() === ABORTED) {
+          if (isAbortError(error)) {
             return errorSettled;
           }
           throw errorSettled;
@@ -1502,6 +1507,7 @@ export const createAction = (callback, rootOptions = {}) => {
         valueInitial,
         provisionalValue,
         inheritData,
+        keepsAnswers: keptAnswerRegistry !== null,
 
         performRun,
         performReset,

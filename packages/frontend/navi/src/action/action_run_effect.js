@@ -1,6 +1,7 @@
 import { computed } from "@preact/signals";
 
 import { stringifyForDisplay } from "../utils/stringify_for_display.js";
+import { getActionPrivateProperties } from "./action_private_properties.js";
 import { createAction } from "./actions.js";
 import { runUnwatched } from "./run_unwatched.js";
 
@@ -107,6 +108,11 @@ export const actionRunEffect = (
           runUnwatched(() =>
             actionTarget.run({ reason: "params restored from falsy state" }),
           );
+        } else if (getActionPrivateProperties(actionTarget).keepsAnswers) {
+          // The lookup that moved the binding here already reset an answer
+          // older than its `keep`: what the instance holds is still good, and
+          // a prerun still out is joined rather than asked again.
+          runUnwatched(() => actionTarget.run({ reason: "params modified" }));
         } else {
           runUnwatched(() => actionTarget.rerun({ reason: "params modified" }));
         }

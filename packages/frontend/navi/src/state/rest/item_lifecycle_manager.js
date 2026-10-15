@@ -1,3 +1,4 @@
+import { RUNNING } from "../../action/action_run_states.js";
 import { getActionDispatcher } from "../../action/actions.js";
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 
@@ -108,6 +109,18 @@ export const createResourceLifecycleManager = () => {
     const { verb, isMany } = triggeringAction.meta;
     return writeNameSet.has(isMany ? `${verb}_MANY` : verb);
   };
+  const isScopedManyOwner = (resourceScope, childScope) => {
+    const parentEntries = scopedManyParents.get(childScope);
+    if (!parentEntries) {
+      return false;
+    }
+    for (const { resource } of parentEntries) {
+      if (resource === resourceScope) {
+        return true;
+      }
+    }
+    return false;
+  };
   // Only the reader the resource exposes is registered; the ones `bindParams`
   // makes share its signal (see resource_range_reader.js).
   const registerRangeReader = (resourceScope, rangeReader) => {
@@ -153,13 +166,19 @@ export const createResourceLifecycleManager = () => {
         triggeringAction,
         triggerResourceScope,
       );
+      // Read by no rerunOn rule: the owner's GET_MANY/GET settings say
+      // nothing about the child collection its GET embeds.
+      const ownsPostedScopedMany =
+        triggerVerb === "POST" &&
+        isScopedManyOwner(resourceScope, triggerResourceScope);
 
       if (
         !shouldRerunGetMany &&
         !shouldRerunGet &&
         triggerVerb !== "DELETE" &&
         !hasUniqueKeyAutorerun &&
-        !isHeardDependency
+        !isHeardDependency &&
+        !ownsPostedScopedMany
       ) {
         continue;
       }
@@ -175,10 +194,14 @@ export const createResourceLifecycleManager = () => {
       };
 
       for (const restAction of config.restActionSet) {
-        // Find all instances of this action
+        // A read still out left before this write landed: its answer is as
+        // stale as a completed one, and replaces what the write put in the
+        // store. A rerun aborts it and asks again.
         const actionCandidateArray = restAction.matchAllSelfOrDescendant(
           (action) =>
-            !action.isPrerun && action.completed && action !== triggeringAction,
+            !action.isPrerun &&
+            (action.completed || action.runningState === RUNNING) &&
+            action !== triggeringAction,
         );
 
         for (const actionCandidate of actionCandidateArray) {
