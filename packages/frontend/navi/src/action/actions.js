@@ -19,7 +19,10 @@ import {
   IDLE,
   RUNNING,
 } from "./action_run_states.js";
-import { markErrorAsDisplayedBy } from "./action_error_report.js";
+import {
+  markErrorAsDisplayedBy,
+  markErrorAsPrerunFailure,
+} from "./action_error_report.js";
 import { takeKeptValue } from "./kept_values.js";
 import { isRerunHeldByNetworkPolicy } from "./network_policy.js";
 import { SYMBOL_OBJECT_SIGNAL } from "./symbol_object_signal.js";
@@ -1388,6 +1391,9 @@ export const createAction = (callback, rootOptions = {}) => {
             console.log(`"${action}": failed (error: ${error})`);
           }
           error.action = action;
+          if (isPrerun) {
+            markErrorAsPrerunFailure(error);
+          }
           batch(() => {
             errorSignal.value = error;
             runningStateSignal.value = FAILED;

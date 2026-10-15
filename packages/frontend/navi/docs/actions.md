@@ -222,6 +222,21 @@ decided to write, whatever its parameter, and `{ run: true }` says it — a toke
 a share button must already hold when pressed, for instance, since the OS share
 sheet only opens inside the gesture, never after an `await`.
 
+**A head start is `{ prerun: true }`.** When the params are known before the
+component owning the read exists — a card already says which chapter a book
+has, the book page draws its pages once the book is there — a component
+drawing nothing can send the read ahead, on the instance the owner will read:
+
+```jsx
+// draws nothing: the pages leave with the book instead of after it
+useAsyncData(chapterPagesAction, { prerun: true });
+```
+
+It needs no `<Loading>`, and its failure reaches no boundary: nothing on screen
+asked for a prerun, so the owner's `{ run: true }` asks again, once, when it
+reads it. A failure of the owner's own run is shown, and asked again by a
+`rerun()`, never by a render. A head start still running is the owner's wait.
+
 `{ onLoad }` is what the screen does with the data **once, when it becomes
 known** — seed the fields someone is about to edit, focus something, remember
 where a list was:

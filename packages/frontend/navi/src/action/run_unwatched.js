@@ -39,3 +39,22 @@ export const runUnwatched = (startRun) => {
   }
   return result;
 };
+
+/**
+ * Starts a prerun navi has nobody to await. Its failure is not reported:
+ * nothing on screen asked for it. It stays on the action, marked as a
+ * prerun's (see markErrorAsPrerunFailure), where whatever owns the read asks
+ * again.
+ */
+export const prerunUnwatched = (startPrerun) => {
+  let result;
+  try {
+    result = startPrerun();
+  } catch {
+    return undefined;
+  }
+  if (result && typeof result.catch === "function") {
+    result.catch(() => {});
+  }
+  return result;
+};

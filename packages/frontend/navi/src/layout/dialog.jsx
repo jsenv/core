@@ -115,7 +115,7 @@ import {
   useOpenPropsEffectOnOpenController,
 } from "./open_controller.js";
 import {
-  requestFrameAfterNext,
+  requestBuildOnPress,
   usePopupContentMount,
 } from "./popup_content_mount.js";
 import { preloadState } from "../nav/route.js";
@@ -1318,10 +1318,10 @@ const DialogStandIn = (props) => {
         }
       }}
       // eslint-disable-next-line react/no-unknown-property
-      onnavi_open_press={() => {
+      onnavi_open_press={(e) => {
         // What the opening will read is asked for at once, as the dialog
-        // proper does (see open_controller.js); the dialog itself two frames
-        // later, so the pressed trigger is painted first — the click that
+        // proper does (see open_controller.js); the dialog itself once the
+        // press is taken for one (see requestBuildOnPress) — the click that
         // follows opens it built, or builds it itself when it comes sooner.
         if (signal) {
           preloadState(signal, readOpenValue(value));
@@ -1329,9 +1329,14 @@ const DialogStandIn = (props) => {
         if (warmRef.current) {
           return;
         }
-        warmRef.current = requestFrameAfterNext(() => {
-          warmRef.current = null;
-          build("press");
+        warmRef.current = requestBuildOnPress(e, {
+          onBuild: () => {
+            warmRef.current = null;
+            build("press");
+          },
+          onGiveUp: () => {
+            warmRef.current = null;
+          },
         });
       }}
     />

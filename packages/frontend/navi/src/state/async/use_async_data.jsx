@@ -15,6 +15,7 @@ import {
   markErrorAsDisplayedBy,
   markErrorAsStoppingRender,
   markErrorAsTakenByRender,
+  takePrerunFailure,
 } from "../../action/action_error_report.js";
 import {
   COMPLETED,
@@ -23,7 +24,7 @@ import {
   RUNNING,
 } from "../../action/action_run_states.js";
 import { createAction } from "../../action/actions.js";
-import { runUnwatched } from "../../action/run_unwatched.js";
+import { prerunUnwatched, runUnwatched } from "../../action/run_unwatched.js";
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 import { documentUrlSignal } from "../../nav/browser_integration/document_url_signal.js";
 import {
@@ -86,12 +87,17 @@ import { usePromiseAsyncData } from "./use_promise_async_data.js";
  *   the data and `run` implied. Code loaded on demand reads this way
  *   (`() => import("./plan.jsx").then((m) => m.Plan)`, see
  *   docs/dynamic_import.md), as does anything else asked for once per mount.
- * @param {{ loading?: true, error?: true, run?: true, onLoad?: (data: any, context: {params: any}) => void }} [options]
+ * @param {{ loading?: true, error?: true, run?: true, prerun?: true, onLoad?: (data: any, context: {params: any}) => void }} [options]
  * @param {true} [options.run] - The fallback for data nothing else can ask for:
  *   this component owns the request and starts it, from the render that reads
  *   it. `loading` and `error` keep their meaning — delegated by default,
  *   handled inline when asked for — so a run started here suspends into
  *   `<Loading>` like any other.
+ *
+ *   A failure is shown, not asked again: a render that retried it would retry
+ *   it in a loop while the network is down — that is `rerun()`'s job. Except a
+ *   failure a prerun left (a `prerun: true` head start, a press that preran
+ *   it): nothing on screen asked for that run, so this asks again, once.
  *
  *   Prefer a `routeAction` wherever the parameter is one the address holds (a
  *   path param, a search param bound to a `stateSignal`), popup included: it is
@@ -102,6 +108,13 @@ import { usePromiseAsyncData } from "./use_promise_async_data.js";
  *   it — and any run that WRITES, whatever its parameter: an address asks again
  *   on every arrival, which is right for a read and wrong for a write (see
  *   docs/actions.md and docs/popup_open.md).
+ * @param {true} [options.prerun] - A head start: this component starts a
+ *   read that another one, mounted later, owns with `run: true` — the read
+ *   leaves as soon as its params are known instead of once the owner exists.
+ *   Started from the render like `run`, as a prerun: it draws none of it, so
+ *   nothing suspends (no `<Loading>` needed) and a failure is neither thrown
+ *   nor reported — the owner asks again. A head start still running when the
+ *   owner reads it is the owner's wait.
  * @param {(data: any, context: {params: any}) => void} [options.onLoad] - what
  *   this screen does with the data ONCE, when it becomes known: seed the fields
  *   someone is about to edit, remember where a list was, focus something.
@@ -144,7 +157,7 @@ import { usePromiseAsyncData } from "./use_promise_async_data.js";
  */
 export const useAsyncData = (
   promiseOrAction,
-  { loading = "delegate", error = "delegate", run, onLoad } = {},
+  { loading = "delegate", error = "delegate", run, prerun, onLoad } = {},
 ) => {
   // The request this component owns, as a function: one action per instance,
   // made on the first render and kept — the function's identity changes on
@@ -169,6 +182,7 @@ export const useAsyncData = (
       loadingEffect: loading,
       errorEffect: error,
       run,
+      prerun,
       onLoad,
     });
   }
@@ -200,8 +214,13 @@ const dismissedActionPendingPromiseWeakMap = new WeakMap();
 
 const useActionAsyncData = (
   action,
-  { loadingEffect, errorEffect, run, onLoad },
+  { loadingEffect, errorEffect, run, prerun, onLoad },
 ) => {
+  if (prerun) {
+    // A head start draws none of what it starts, so it has no wait to
+    // delegate.
+    loadingEffect = "use";
+  }
   const loadingRef = useContext(LoadingContext);
   // The boundary is where a suspension lands, so only the delegating path needs
   // one: `loading: true` draws the wait itself and never suspends.
@@ -219,14 +238,19 @@ const useActionAsyncData = (
   // no-op — which is what makes starting it while rendering sound. From there
   // the wait is the ordinary one: suspended into <Loading>, or drawn by the
   // component under `loading: true`, exactly as for data someone else ran.
-  if (
-    run &&
-    action.runningStateSignal.peek() === IDLE &&
-    action.paramsSignal.peek() !== undefined
-  ) {
+  if (run && action.paramsSignal.peek() !== undefined && runIsOwed(action)) {
     // Nothing waits on this run: the failure is held by the action, and this
     // hook is what reads it back.
     runUnwatched(() => action.run({ reason: "useAsyncData({ run: true })" }));
+  }
+  if (
+    prerun &&
+    action.runningStateSignal.peek() === IDLE &&
+    action.paramsSignal.peek() !== undefined
+  ) {
+    prerunUnwatched(() =>
+      action.prerun({ reason: "useAsyncData({ prerun: true })" }),
+    );
   }
 
   // Use peek() instead of .value to avoid subscribing this component to the signal.
@@ -355,6 +379,11 @@ const useActionAsyncData = (
     return [action.dataSignal.peek(), false, undefined];
   }
   if (runningState === FAILED) {
+    if (prerun) {
+      // Neither shown nor reported from a head start: the failure is the
+      // owner's to ask again (see runIsOwed).
+      return [action.dataSignal.peek(), false, undefined];
+    }
     if (dismissedActionWeakSet.has(action)) {
       // Dismissing removes the error and nothing else: what is handed back is
       // the action's state without it — the data it holds, and no run in
@@ -455,6 +484,21 @@ const useActionAsyncData = (
     actionPendingPromiseWeakMap.set(action, pendingPromise);
   }
   throw pendingPromise;
+};
+
+// What `run: true` starts from: an action nobody ran, or one a prerun failed.
+// Any other failure stays — a render retrying it would loop while the network
+// is down — but nothing on screen asked for a prerun, so its failure is asked
+// again, once: the mark is taken here, and the run started fails as its own.
+const runIsOwed = (action) => {
+  const runningState = action.runningStateSignal.peek();
+  if (runningState === IDLE) {
+    return true;
+  }
+  if (runningState === FAILED) {
+    return takePrerunFailure(action.errorSignal.peek());
+  }
+  return false;
 };
 
 // What a screen does with the data once, when it becomes known (see onLoad in

@@ -320,22 +320,17 @@ export const usePopupContentMount = (
           if (contentMountedRef.current || openController.onOpen) {
             return;
           }
-          const build = () => {
-            setContentMounted(true);
-          };
-          const cancelBuild =
-            openPressEvent.detail.event.pointerType === "touch"
-              ? requestFrameAfterDuration(TOUCH_WARM_HOLD_MS, build)
-              : requestFrameAfterNext(build);
-          const stopWatching = watchPressEnd({
-            onRelease: cancelBuild,
-            onEnd: () => {
-              stopPressWarmRef.current = null;
-              cancelBuild();
-              if (!openController.opened) {
-                setContentMounted(false);
-              }
+          const cancelBuild = requestBuildOnPress(openPressEvent, {
+            onBuild: () => {
+              setContentMounted(true);
             },
+          });
+          const stopWatching = watchPressEnd(() => {
+            stopPressWarmRef.current = null;
+            cancelBuild();
+            if (!openController.opened) {
+              setContentMounted(false);
+            }
           });
           stopPressWarmRef.current = () => {
             stopPressWarmRef.current = null;
@@ -381,13 +376,53 @@ const findControlAimedAt = (target, anchorElement) => {
 
 // The next frame paints what the input just changed (the pressed trigger); the
 // callback runs at the start of the one after.
-export const requestFrameAfterNext = (callback) => {
+const requestFrameAfterNext = (callback) => {
   let frame = requestAnimationFrame(() => {
     frame = requestAnimationFrame(callback);
   });
   return () => {
     cancelAnimationFrame(frame);
   };
+};
+
+// What an opening press builds, it builds at the frame after the next one, so
+// the pressed trigger is painted first — under a finger, once the touch has
+// been held TOUCH_WARM_HOLD_MS (see the top comment). Released or taken by the
+// browser before then, the press builds nothing: the open its click asks for
+// builds, when one comes. Called from the press's own pointerdown, through its
+// navi_open_press: the capture listeners below only hear what follows.
+export const requestBuildOnPress = (openPressEvent, { onBuild, onGiveUp }) => {
+  const pointerdownEvent = openPressEvent.detail.event;
+  const cancelFrame =
+    pointerdownEvent.pointerType === "touch"
+      ? requestFrameAfterDuration(TOUCH_WARM_HOLD_MS, () => {
+          stopListening();
+          onBuild();
+        })
+      : requestFrameAfterNext(() => {
+          stopListening();
+          onBuild();
+        });
+  const onPressEnd = (pointerEvent) => {
+    if (pointerEvent.pointerId !== pointerdownEvent.pointerId) {
+      return;
+    }
+    cancel();
+    onGiveUp?.();
+  };
+  const stopListening = () => {
+    document.removeEventListener("pointerup", onPressEnd, { capture: true });
+    document.removeEventListener("pointercancel", onPressEnd, {
+      capture: true,
+    });
+  };
+  const cancel = () => {
+    cancelFrame();
+    stopListening();
+  };
+  document.addEventListener("pointerup", onPressEnd, { capture: true });
+  document.addEventListener("pointercancel", onPressEnd, { capture: true });
+  return cancel;
 };
 
 // The first frame at least `ms` after the call, read off the frames' own
@@ -417,7 +452,7 @@ const PRESS_CLICK_WAIT_MS = 500;
 
 // Installed during the press's own pointerdown: the capture listeners below
 // only hear the presses after it.
-const watchPressEnd = ({ onRelease, onEnd }) => {
+const watchPressEnd = (onEnd) => {
   let timeout;
   const stop = () => {
     clearTimeout(timeout);
@@ -438,7 +473,6 @@ const watchPressEnd = ({ onRelease, onEnd }) => {
     }
   };
   const onPointerUp = () => {
-    onRelease();
     timeout = setTimeout(end, PRESS_CLICK_WAIT_MS);
   };
   document.addEventListener("click", onClick);

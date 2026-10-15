@@ -92,7 +92,17 @@ const css = /* css */ `
       flex-direction: column;
     }
 
-    /* The list scrolls inside the popover */
+    /* A list that scrolls itself is what scrolls here: the popover around it
+       neither scrolls nor clips. A rounded clip around the list would send
+       every touch scroll start in it to the main thread (see the frame of
+       .navi_list_container in list.jsx); at the picker's default radius, the
+       corner of an item no longer clipped stays inside the curve. */
+    &:has(
+      > .navi_list_container:not([data-scroller], [data-overflow-visible])
+    ) {
+      overflow: visible;
+    }
+
     .navi_list_container {
       width: 100%;
       /* The list's radius var, not border-radius itself: the longhands it
@@ -105,14 +115,6 @@ const css = /* css */ `
         var(--popover-border-radius) - var(--popover-border-width)
       );
       overscroll-behavior: none;
-
-      /* Skipped when the list asks for overflow="visible": that ask is
-         about escaping every box the list sits in, and this selector is
-         specific enough to win over the list's own rules and silently put
-         the scroll back. */
-      &:not([data-overflow-visible]) {
-        overflow: auto;
-      }
     }
   }
 
@@ -143,8 +145,15 @@ const css = /* css */ `
       flex-direction: column;
     }
 
-    /* The list scrolls inside the dialog — same as the popover branch
-       above, including why this is the var and not the shorthand. */
+    /* Same as the popover branch above: the list scrolls itself, the dialog
+       around it does not clip — and the list's radius is set through the var,
+       not the shorthand. */
+    &:has(
+      > .navi_list_container:not([data-scroller], [data-overflow-visible])
+    ) {
+      overflow: visible;
+    }
+
     .navi_list_container {
       width: 100%;
       --list-border-radius: max(
@@ -152,10 +161,6 @@ const css = /* css */ `
         var(--dialog-border-radius) - var(--dialog-border-width)
       );
       overscroll-behavior: none;
-
-      &:not([data-overflow-visible]) {
-        overflow: auto;
-      }
     }
   }
 `;

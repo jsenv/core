@@ -17,6 +17,7 @@ changes, measure again before trusting a number here.
 - [The browser decides about 8px in, and does not wait](#the-browser-decides-about-8px-in-and-does-not-wait)
 - [touch-action stops at the first scroller](#touch-action-stops-at-the-first-scroller)
 - [Only the start is contested](#only-the-start-is-contested)
+- [A rounded clip makes the scroll wait for the main thread](#a-rounded-clip-makes-the-scroll-wait-for-the-main-thread)
 - [The click is the browser's call as much as ours](#the-click-is-the-browsers-call-as-much-as-ours)
 - [A tap dropped after a touch drag](#a-tap-dropped-after-a-touch-drag)
 - [A finger is captured to what it touched, inside shadow trees too](#a-finger-is-captured-to-what-it-touched-inside-shadow-trees-too)
@@ -122,6 +123,48 @@ it back:
 A gesture that has won the start keeps the touch. What loses gestures is the
 first ~8px.
 
+## A rounded clip makes the scroll wait for the main thread
+
+Before it scrolls under a finger, Chrome's compositor finds the scroller under
+it. Where it cannot tell on its own, it asks the main thread, and the scroll
+starts when the main thread answers — after whatever task is running there.
+Meanwhile the finger keeps moving: the content holds still, then catches up in
+one step. A small scroll is mostly its start, so that is where it is felt. The
+wheel asks the same way on a desktop, where the main thread is rarely busy at
+that moment.
+
+Two things make Chrome ask (Chrome 155, mobile emulation; not measured in
+Safari):
+
+- **A rounded clip on the scroller or around it**: `overflow` other than
+  `visible` with a `border-radius`, or a rounded `clip-path`. Every scroll
+  start inside it is asked, wherever the finger lands. A popup that scrolls is
+  one: a rounded `overflow: auto` box.
+- **Anything painted over the scroller**, even with `pointer-events: none` and
+  square corners (an overlay drawing an edge above the items, say), but only
+  where it covers it: a 6px band along the top leaves the rest decided on the
+  compositor.
+
+The wait costs whatever runs at the touch: 0.1–2ms when nothing does; with a
+render built on the touch at 6× CPU, 7.5ms median and up to 27ms, and a scroll
+started a frame late one time in three. So navi keeps both away from what
+scrolls. A framed `List` does not clip to its rounded corners: its edge stays
+under the items, and one with a background covers the inside of the curve. A
+picker popup whose list scrolls itself does not clip either. And a finger on
+something that opens builds nothing before it has been held ~80ms. Wrapping a
+`List` in a rounded box of your own with `overflow: hidden` brings the wait
+back.
+
+A box that stops clipping needs `min-height: 0` if it is a flex or grid item
+holding the scroller: without a clip its minimum height is its content's, so a
+box given a height grows to all its items and the page scrolls instead. Nothing
+waits for the main thread then, because the wrong thing scrolls — check that
+the scroller's own `scrollTop` moved.
+
+Reference: `.navi_list_container` in `src/control/list/list.jsx`, the
+`[data-picker-popup]` rules in `src/control/picker/picker_custom.jsx`,
+`TOUCH_WARM_HOLD_MS` in `src/layout/popup_content_mount.js`.
+
 ## The click is the browser's call as much as ours
 
 - **Chrome** clicks after a touch that moved up to 8px and never beyond, whether
@@ -220,6 +263,19 @@ configuration: "mobile" })`, then `Input.dispatchMouseEvent` with
 `Input.dispatchTouchEvent` — what Playwright's `touchscreen` uses — goes
 through the desktop configuration instead: a 15px slop. Anything deciding at
 10px wins there, and the race that loses swipes on a phone is invisible.
+
+Where a scroll's start is decided shows only in a trace, never in the page's
+events: `Tracing.start` with `input`, `cc` and `disabled-by-default-cc.debug`.
+After the last `InputHandlerProxy::HandleTouchStart`, a
+`WidgetInputHandlerManager::FindScrollTargetOnMainThread` is the scroller looked
+up on the main thread, the gap between the two
+`InputHandlerProxy::HandleGestureScrollBegin` is how long that took, and a
+`delta_y` larger than one move on the first
+`InputHandler::ScrollLatchedScroller` says the first step merged two moves.
+Not under Playwright: its injected script puts a non-passive `touchstart`
+listener on `window`, which makes every touch blocking and changes the path
+being measured. Start Chrome by hand (`--headless=new
+--remote-debugging-port`) and drive the page's websocket directly.
 
 **Safari**: the iOS simulator, driven by `safaridriver`, which turns W3C touch
 actions into real UIKit touches — Safari's own pan recognizers compete for

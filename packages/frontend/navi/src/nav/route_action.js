@@ -4,6 +4,7 @@ import { getActionPrivateProperties } from "../action/action_private_properties.
 import { actionRunEffect } from "../action/action_run_effect.js";
 import { createAction } from "../action/actions.js";
 import { addKeptValueSource } from "../action/kept_values.js";
+import { prerunUnwatched } from "../action/run_unwatched.js";
 import {
   getKeptReadKey,
   isKeepableRead,
@@ -220,15 +221,7 @@ const prefetchAsIf = (action, readParams, values) => {
 // the arrival focuses the link, or is the one that asked), and a reset
 // landing after that would pull the answer from under the page reading it.
 const prerunAhead = (instance) => {
-  let result;
-  try {
-    result = instance.prerun({ reason: "intent" });
-  } catch {
-    return;
-  }
-  if (result && typeof result.catch === "function") {
-    result.catch(() => {});
-  }
+  prerunUnwatched(() => instance.prerun({ reason: "intent" }));
 };
 
 // I delibrately prefer the term "any" and avoid "some" so dev are not tempted to think
