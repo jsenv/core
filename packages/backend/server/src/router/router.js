@@ -121,9 +121,7 @@ export const createRouter = (
     };
   };
   const forEachMethodAllowed = (route, onMethodAllowed) => {
-    const supportedMethods =
-      route.method === "*" ? HTTP_METHODS : [route.method];
-    for (const supportedMethod of supportedMethods) {
+    for (const supportedMethod of route.methods) {
       onMethodAllowed(supportedMethod);
     }
   };
@@ -359,7 +357,9 @@ It should be should be one of route.${routePropertyName}: ${availableValues.join
           // matching every resource ("GET *", "GET /*") names no resource, so
           // it cannot make that assertion and an unknown address stays a 404
           if (!route.isFallback && !route.matchesEveryResource) {
-            wouldHaveMatched.methodSet.add(route.method);
+            for (const routeMethod of route.methods) {
+              wouldHaveMatched.methodSet.add(routeMethod);
+            }
           }
           continue;
         }
@@ -683,6 +683,14 @@ const createRoute = ({
   ) {
     availableMediaTypes.push(extensionWellKnownContentType);
   }
+  // HEAD is GET without the body (RFC 9110 §9.3.2): a GET route answers it and
+  // the server drops the body when sending
+  const methods =
+    method === "*"
+      ? HTTP_METHODS
+      : method === "GET"
+        ? ["GET", "HEAD"]
+        : [method];
   const resourcePattern = createResourcePattern(resource);
   const headersPattern = headers ? createHeadersPattern(headers) : null;
 
@@ -702,8 +710,11 @@ const createRoute = ({
     availableVersions,
     availableEncodings,
     acceptedMediaTypes,
+    methods,
     matchMethod:
-      method === "*" ? () => true : (requestMethod) => requestMethod === method,
+      method === "*"
+        ? () => true
+        : (requestMethod) => methods.includes(requestMethod),
     matchResource:
       resource === "*"
         ? () => true

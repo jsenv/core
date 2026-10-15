@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/server",
-  "version": "17.7.0",
+  "version": "17.7.1",
   "type": "module",
   "description": "A modern Node.js HTTP server with declarative routing, content negotiation, and WebSocket support",
   "repository": {
@@ -37,7 +37,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "launch-editor": "2.14.1"
+    "launch-editor": "2.14.2"
   },
   "devDependencies": {
     "@jsenv/abort": "../../tooling/abort",

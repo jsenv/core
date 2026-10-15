@@ -27,7 +27,7 @@ return {
 ```js
 {
   "patch_status": 405,
-  "patch_allow": "GET",
+  "patch_allow": "GET, HEAD",
   "post_status": 404
 }
 ```
