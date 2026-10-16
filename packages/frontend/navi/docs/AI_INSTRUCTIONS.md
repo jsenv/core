@@ -147,9 +147,11 @@ start when unsure which export solves a problem.
   own actions). Before passing `open`, calling `triggerNaviCommand`, or
   writing a close button.
 - `popup_backdrop.md` — three independent questions: a wall or not, what an
-  outside press does, how far the page withdraws; and the browser's
-  `theme-color` that a popup paints over. Before CSS for a backdrop, or a
-  `theme-color` meta.
+  outside press does, how far the page withdraws; popups that hand over to
+  each other in one press (`PopupGroup`: the wall around a box of the page);
+  and the browser's `theme-color` that a popup paints over. Before CSS for a
+  backdrop, a `theme-color` meta, or making a popup's neighbours pressable
+  above its wall.
 - `popup_lift.md` — `animation="lifting"`: the pressed card brought to the front.
   Before giving a `Dialog` or a `Picker` `animation="lifting"`.
 - `dialog_shape.md` — bounds rather than a width, the container ceiling, the

@@ -58,8 +58,8 @@ const SCROLL_LOCK_STRATEGY = "gesture";
  *   trapScrollGestureInside: where `element` is on screen when that is less
  *   than its border box.
  * @param {boolean} [options.containInside] - Forwarded to
- *   trapScrollGestureInside: a gesture inside `element` that nothing in it can
- *   scroll does not reach the background either.
+ *   trapScrollGestureInside: a gesture or a scroll key inside `element` that
+ *   nothing in it can scroll does not reach the background either.
  * @returns {() => void} Cleanup function that restores all modified styles.
  */
 export const trapScrollInside = (

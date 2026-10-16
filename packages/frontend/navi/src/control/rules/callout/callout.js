@@ -40,7 +40,6 @@ import {
   isControl,
 } from "../../control_dom.js";
 import { findControlProxy } from "../../control_proxy.js";
-import { findPopupPeer } from "../../../layout/popup_shared.js";
 import { surfaceTextCss } from "../../../layout/surface_text_css.js";
 import {
   clearCalloutMessage,
@@ -374,10 +373,6 @@ const css = /* css */ `
  *   still scrolls, a press on a layer drawn over the page (a sheet the callout's content
  *   opened) is that layer's, and a press that does not close the callout (an "error" one) is
  *   not spent either
- * @param {string} [options.group] - With `backdrop`: the name the callout's peers carry in
- *   `data-navi-popup-group` — the triggers of other popups, callouts or not. A press inside a
- *   peer still closes the callout but is not spent, so the peer it landed on opens its own
- *   popup in the same press — a menu bar, where pressing another menu switches to it
  * @param {Event} [options.openingEvent] - The gesture the callout belongs to. It names the
  *   opener — `currentTarget` while the event is still dispatching, `target` once it is over,
  *   so awaiting before opening changes nothing — and the opener is the one part of the anchor
@@ -443,7 +438,6 @@ export const openCallout = (
     closeOnFocusLeave = closeByPressOutside,
     closeByScroll = false,
     backdrop = false,
-    group,
     closeButton = true,
     openingEvent,
     reopen = "toggle",
@@ -823,17 +817,13 @@ export const openCallout = (
     // Whether an outside press on `target` is spent on closing the callout
     // (`backdrop`). What is not the page behind the callout keeps its press: a
     // layer the callout is not part of — its own page may well be a sheet, a
-    // sheet its content opened is in front of it — and a peer, which the press
-    // is meant to open.
+    // sheet its content opened is in front of it.
     const spendsPressOn = (target) => {
       if (!backdrop || !pressOutsideCloses()) {
         return false;
       }
       const layer = target.closest?.(LAYER_SELECTOR);
       if (layer && !layer.contains(calloutElement)) {
-        return false;
-      }
-      if (findPopupPeer(target, group)) {
         return false;
       }
       return true;

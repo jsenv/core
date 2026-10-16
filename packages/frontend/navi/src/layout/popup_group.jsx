@@ -9,12 +9,12 @@
  *
  * The box is a <dialog>, shown with showModal() where it stands. That is what
  * makes it the layer: everything that is not its DOM descendant goes inert, its
- * ::backdrop is the wall, and its popups (Popover, Dialog, a Picker's popup —
- * popover.jsx and dialog.jsx read PopupGroupContext) draw no wall of their own
- * and are shown above it. It is also the one shape that holds inside another
- * modal: a peer that is not a descendant of the topmost modal dialog is inert,
- * whatever it is painted above, so the peers have to be inside the layer in
- * the DOM. At rest the dialog is closed and laid out like any box of the page;
+ * ::backdrop is the wall, and its popups (Popover, Dialog, a Picker's popup or
+ * callout — popover.jsx, dialog.jsx and picker_custom.jsx read
+ * PopupGroupContext) draw no wall of their own and are shown above it. It is
+ * also the one shape that holds inside another modal: a peer that is not a
+ * descendant of the topmost modal dialog is inert, whatever it is painted
+ * above, so the peers have to be inside the layer in the DOM. At rest the dialog is closed and laid out like any box of the page;
  * @jsenv/dom and navi tell it from a surface by [navi-popup-group].
  *
  * Shown modal, an element leaves the flow and the clip of its ancestors. So
@@ -38,6 +38,7 @@
 import {
   closestOpenableAncestor,
   findEvent,
+  getKeyboardEventDefaultAction,
   isPressDrivenClick,
   observeAncestorOpenState,
   trapScrollInside,
@@ -71,6 +72,15 @@ export const warnWallPropsInsidePopupGroup = (popupKind) => {
     `[navi] a ${popupKind} inside a <PopupGroup> has no wall of its own: its backdropVariant, backdropColor and backdropFilter are not read. The wall is the group's — set them on <PopupGroup>.`,
   );
 };
+
+/**
+ * What a press outside a popup of the group does, read against a wall that is
+ * always up: "ignore" closes, as "close" does. For a press the group does not
+ * see itself, on a region the popup declared outside
+ * (handlePressOnOutsideRegion).
+ */
+export const readPressOutsideInPopupGroup = (pressOutside) =>
+  pressOutside === "ignore" ? "close" : pressOutside;
 
 // The groups shown modal right now, for the popup around one of them to close
 // it first (see closePopupGroupsInside).
@@ -198,10 +208,21 @@ const css = /* css */ `
 
   /* While the pages move, an engaged group takes a picture of its own above
      them, the way an open popup does (see popup_css.js): it is in the top
-     layer, and the page holds nothing but its placeholder. */
+     layer, and the page holds nothing but its placeholder. Named here when
+     the whole document moves; a movement played on an area names it itself
+     (nav/transition_furniture.js). */
   :root[data-navi-route-transition] .navi_popup_group:modal,
   :root[data-navi-route-travel] .navi_popup_group:modal {
     view-transition-class: navi_popup;
+  }
+  @supports (view-transition-name: match-element) {
+    :root[data-navi-route-transition]:not(
+        [data-navi-route-transition-target="area"]
+      )
+      .navi_popup_group:modal,
+    :root[data-navi-route-travel] .navi_popup_group:modal {
+      view-transition-name: match-element;
+    }
   }
 `;
 
@@ -214,12 +235,15 @@ const css = /* css */ `
  * what it holds stays lit and live, the rest of the screen is behind its wall,
  * and a press on another of its popups' triggers closes the open one and opens
  * that one in the same press. Its popups draw no wall of their own (their
- * backdrop props are not read), and a Dialog in it is never modal.
+ * backdrop props are not read), and a Dialog in it is never modal. The page
+ * behind stays still while one of its Popovers or Dialogs is open; a callout
+ * of it lets the page scroll, as a callout does anywhere.
  *
  * Its element is a `<dialog>`, closed at rest and laid out like any box: the
  * app styles it as it would a `<div>`. While engaged, an invisible placeholder
  * holds its place in the page, as the element before it, marked
- * `navi-out-of-flow` like everything navi adds to a tree.
+ * `navi-out-of-flow` like everything navi adds to a tree. See
+ * docs/popup_backdrop.md.
  *
  * @type {import("preact").FunctionComponent<{
  *   backdropVariant?: "auto" | "lift" | "discrete" | "invisible",
@@ -331,6 +355,13 @@ const createPopupGroup = () => {
     }
     return openMembers;
   };
+  // The page behind is held still by the group for as long as a popup that
+  // holds it still on its own (a Popover, a Dialog) is open.
+  const followScrollLock = () => {
+    engagement.followScrollLock(
+      getOpenMembers().some((openMember) => !openMember.pageScrolls),
+    );
+  };
 
   const group = {
     themeColor: undefined,
@@ -348,7 +379,10 @@ const createPopupGroup = () => {
     },
     /**
      * Called by a popup of the group as it opens, before it shows itself.
-     * `member`: { openController, popupElement, pressOutside, event }.
+     * `member`: { openController, popupElement, pressOutside, event,
+     * pageScrolls }. `popupElement` is read at each press, so a member whose
+     * element is drawn after it engaged (a callout) passes a getter.
+     * `pageScrolls`: the page behind may scroll while it is open.
      */
     engage: (member) => {
       // One popup of the group at a time. A press on a peer has closed the
@@ -366,15 +400,16 @@ const createPopupGroup = () => {
       openMemberMap.set(member.openController, member);
       if (engagement) {
         engagement.cancelPendingCheck();
-        return;
+      } else {
+        if (!groupEl || !groupEl.isConnected) {
+          return;
+        }
+        engagement = engageGroup(groupEl, group, {
+          silent: Boolean(member.event?.detail?.silent),
+        });
+        engagedGroupSet.add(group);
       }
-      if (!groupEl || !groupEl.isConnected) {
-        return;
-      }
-      engagement = engageGroup(groupEl, group, {
-        silent: Boolean(member.event?.detail?.silent),
-      });
-      engagedGroupSet.add(group);
+      followScrollLock();
     },
     /**
      * Called by a popup of the group as it closes. Whether the group goes back
@@ -397,6 +432,7 @@ const createPopupGroup = () => {
       if (!engagement) {
         return;
       }
+      followScrollLock();
       if (
         findEvent(closeEvent, [
           "pointerdown",
@@ -454,6 +490,9 @@ const engageGroup = (groupEl, group, { silent }) => {
   // Everything read before anything is written.
   const rect = groupEl.getBoundingClientRect();
   const groupStyle = getComputedStyle(groupEl);
+  // Copied out: the style is live, and shown modal the group has its margins
+  // and its bounds forced.
+  const { marginLeft, marginRight, minWidth, maxWidth } = groupStyle;
   const ancestorClip = readAncestorClip(groupEl, groupStyle);
   const baselineDescent = readBaselineDescent(groupEl, groupStyle, rect);
   const themeColor = readPopupThemeColor(groupEl, group.themeColor);
@@ -513,12 +552,15 @@ const engageGroup = (groupEl, group, { silent }) => {
   // Measured once the group has left the flow, where a parent sized by its
   // content no longer counts it. Only a box given its width by what holds it
   // goes on following that width (a rotation while engaged); one sized by its
-  // content, or placed by margins read here as px (auto ones, percentages),
-  // is held at the width it has.
+  // content, bounded by a min or max width the placeholder does not carry, or
+  // placed by margins read here as px (auto ones, percentages), is held at
+  // the width it has.
   const placeholderWidth = placeholder.getBoundingClientRect().width;
   if (
-    parseFloat(groupStyle.marginLeft) !== 0 ||
-    parseFloat(groupStyle.marginRight) !== 0 ||
+    parseFloat(marginLeft) !== 0 ||
+    parseFloat(marginRight) !== 0 ||
+    maxWidth !== "none" ||
+    (minWidth !== "auto" && parseFloat(minWidth) !== 0) ||
     placeholderWidth < rect.width - 0.5 ||
     placeholderWidth > rect.width + 0.5
   ) {
@@ -580,44 +622,56 @@ const engageGroup = (groupEl, group, { silent }) => {
       }
       // close() hands the focus back to whatever held it at showModal() time
       // (focusedBefore), undoing where a popup of the group, or the user, put
-      // it since. That element is made inert for the call — an inert element
-      // is no focus target, so the focus stays where it is — unless no popup
-      // moved the focus since showModal() did.
+      // it since. Unless no popup moved the focus since showModal() did, that
+      // element is made no focus target for the call, so the focus stays where
+      // it is: inert — or, when the focus is inside it (the sheet around the
+      // group, focused by a press on its blank), without its tabindex, inert
+      // taking the focus with it.
       const focusedBeforeClose = document.activeElement;
       const ringBeforeClose = Boolean(
         focusedBeforeClose?.matches?.(":focus-visible"),
       );
-      const keepsFocusWhereItIs =
+      const focusMovedSinceShowModal =
         focusedBeforeClose &&
         focusedBeforeClose !== document.body &&
         focusedBeforeClose !== groupEl &&
         focusedBeforeClose !== focusLeftByShowModal &&
-        focusedBeforeClose.isConnected &&
+        focusedBeforeClose.isConnected;
+      const keepsFocusWhereItIs =
+        focusMovedSinceShowModal &&
         focusedBefore &&
         focusedBefore !== focusedBeforeClose &&
         focusedBefore !== document.body &&
-        focusedBefore.isConnected &&
-        !focusedBefore.contains(focusedBeforeClose) &&
-        !focusedBefore.inert;
-      if (keepsFocusWhereItIs) {
+        focusedBefore.isConnected;
+      const holdsFocusInside =
+        keepsFocusWhereItIs && focusedBefore.contains(focusedBeforeClose);
+      const madeInert =
+        keepsFocusWhereItIs && !holdsFocusInside && !focusedBefore.inert;
+      const tabindexSetAside = holdsFocusInside
+        ? focusedBefore.getAttribute("tabindex")
+        : null;
+      if (madeInert) {
         focusedBefore.inert = true;
+      }
+      if (tabindexSetAside !== null) {
+        focusedBefore.removeAttribute("tabindex");
       }
       try {
         if (groupEl.open) {
           groupEl.close();
         }
       } finally {
-        if (keepsFocusWhereItIs) {
+        if (madeInert) {
           focusedBefore.inert = false;
         }
+        if (tabindexSetAside !== null) {
+          focusedBefore.setAttribute("tabindex", tabindexSetAside);
+        }
       }
-      // Where the engine moved it anyway.
+      // Where the engine moved it anyway (an element focusable without a
+      // tabindex).
       if (
-        focusedBeforeClose &&
-        focusedBeforeClose !== document.body &&
-        focusedBeforeClose !== groupEl &&
-        focusedBeforeClose !== focusLeftByShowModal &&
-        focusedBeforeClose.isConnected &&
+        focusMovedSinceShowModal &&
         document.activeElement !== focusedBeforeClose
       ) {
         moveFocusTo(focusedBeforeClose, { focusVisible: ringBeforeClose });
@@ -666,16 +720,28 @@ const engageGroup = (groupEl, group, { silent }) => {
   addCleanup(followPlaceholder(groupEl, placeholder, engagement));
   // A wheel or a finger on the wall would scroll the page behind, and with it
   // the place the group is pinned to. On the wall means outside what is shown
-  // of the group, which a clip can make less than its box.
-  addCleanup(
-    trapScrollInside(groupEl, {
-      backdrop: true,
-      getElementBox: () => engagement.visibleBox,
-      // The group is no scroll container: shown fixed in the top layer, a
-      // gesture over what it holds would go straight on to the page.
-      containInside: true,
-    }),
-  );
+  // of the group, which a clip can make less than its box. Held only while the
+  // open popup would hold the page still on its own: with a callout open, the
+  // page scrolls and the group goes along with its place.
+  let releaseScrollLock = null;
+  engagement.followScrollLock = (locked) => {
+    if (locked && !releaseScrollLock) {
+      releaseScrollLock = trapScrollInside(groupEl, {
+        backdrop: true,
+        getElementBox: () => engagement.visibleBox,
+        // The group is no scroll container: shown fixed in the top layer, a
+        // gesture over what it holds, or a scroll key pressed in it, would go
+        // straight on to the page.
+        containInside: true,
+      });
+    } else if (!locked && releaseScrollLock) {
+      releaseScrollLock();
+      releaseScrollLock = null;
+    }
+  };
+  addCleanup(() => {
+    engagement.followScrollLock(false);
+  });
   if (themeColor !== "none") {
     addCleanup(
       pushPopupThemeColor({
@@ -687,6 +753,39 @@ const engageGroup = (groupEl, group, { silent }) => {
 
   // Escape and the back gesture reach the topmost modal, which is the group:
   // they are the open popup's to answer, as they would be with focus in it.
+  // Escape is answered at its keydown, before it becomes the browser's close
+  // request: a cancel can be prevented only while the page has a user
+  // activation to spend, and Escape gives none — at the second one the
+  // browser closes the group itself, whatever the open popup said. A keydown
+  // prevented is no close request at all. Left to what the key was pressed in
+  // when that uses it (a search field clearing itself), as the open popup's
+  // own shortcut leaves it.
+  const onKeyDown = (keydownEvent) => {
+    if (keydownEvent.key !== "Escape" || keydownEvent.defaultPrevented) {
+      // Answered already: by the open popup's own shortcut, when the focus is
+      // in it.
+      return;
+    }
+    if (keydownEvent.target !== groupEl) {
+      const defaultAction = getKeyboardEventDefaultAction(keydownEvent);
+      if (defaultAction && defaultAction !== "dismiss") {
+        return;
+      }
+    }
+    const openMember = group.getOpenMember();
+    if (!openMember) {
+      return;
+    }
+    // Closed, the popup prevents the keydown (release); refusing, it does too
+    // (requestClose).
+    openMember.openController.requestClose(keydownEvent, { isCancel: true });
+  };
+  groupEl.addEventListener("keydown", onKeyDown);
+  addCleanup(() => {
+    groupEl.removeEventListener("keydown", onKeyDown);
+  });
+  // What still reaches the group as a close request: the back gesture, an
+  // Escape with nothing of the group open.
   const onCancel = (cancelEvent) => {
     if (cancelEvent.target !== cancelEvent.currentTarget) {
       // A file input inside the group cancelling its own picker.
@@ -704,8 +803,8 @@ const engageGroup = (groupEl, group, { silent }) => {
   addCleanup(() => {
     groupEl.removeEventListener("cancel", onCancel);
   });
-  // The browser may close the group itself (a second Escape with no user
-  // activation in between ignores preventDefault).
+  // The browser may close the group itself: a close request with no user
+  // activation left to spend (a second back gesture) ignores preventDefault.
   const onNativeClose = (closeEvent) => {
     if (groupEl.open) {
       // Queued by an earlier engagement's close(): the group has been shown
@@ -805,9 +904,8 @@ const armPressArbiter = (groupEl, group, engagement) => {
     }
     return openMember;
   };
-  // The group always has a wall up: "ignore" has no meaning in it.
   const readPressOutside = (openMember) =>
-    openMember.pressOutside === "ignore" ? "close" : openMember.pressOutside;
+    readPressOutsideInPopupGroup(openMember.pressOutside);
   const arbitrate = (event) => {
     const openMember = findMemberPressedOutside(event);
     if (!openMember) {
@@ -1068,7 +1166,16 @@ const createPlaceholder = (groupStyle, rect, baselineDescent) => {
   return placeholder;
 };
 const establishesFormattingContext = (style) => {
-  const { display, overflowX, overflowY, contain } = style;
+  const {
+    display,
+    overflowX,
+    overflowY,
+    contain,
+    containerType,
+    contentVisibility,
+    columnCount,
+    columnWidth,
+  } = style;
   if (
     display === "flow-root" ||
     display === "flex" ||
@@ -1082,6 +1189,19 @@ const establishesFormattingContext = (style) => {
     (overflowX !== "visible" && overflowX !== "clip") ||
     (overflowY !== "visible" && overflowY !== "clip")
   ) {
+    return true;
+  }
+  // Containment the computed `contain` does not show: a size container, a box
+  // whose content-visibility skips its content.
+  if (
+    /\b(?:size|inline-size)\b/.test(containerType) ||
+    contentVisibility === "auto" ||
+    contentVisibility === "hidden"
+  ) {
+    return true;
+  }
+  // A multi-column box.
+  if (columnCount !== "auto" || columnWidth !== "auto") {
     return true;
   }
   return /\b(?:layout|paint|strict|content)\b/.test(contain);
@@ -1255,9 +1375,15 @@ const isContainingBlockForAbsolute = (style) =>
   style.scale !== "none" ||
   style.perspective !== "none" ||
   style.filter !== "none" ||
-  style.backdropFilter !== "none" ||
+  // Prefixed alone before Safari 18.
+  (style.backdropFilter ?? style.webkitBackdropFilter ?? "none") !== "none" ||
   /\b(?:layout|paint|strict|content)\b/.test(style.contain) ||
-  /\b(?:transform|perspective|filter)\b/.test(style.willChange);
+  // Layout containment the computed `contain` does not show.
+  style.contentVisibility === "auto" ||
+  /\b(?:size|inline-size)\b/.test(style.containerType) ||
+  /\b(?:transform|translate|rotate|scale|perspective|filter|backdrop-filter|contain)\b/.test(
+    style.willChange,
+  );
 
 const intersectBox = (rect, clip) => {
   let { left, top, right, bottom } = rect;

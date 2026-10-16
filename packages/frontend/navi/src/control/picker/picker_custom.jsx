@@ -5,7 +5,7 @@ import {
   isPressDisputedByDrag,
   isTouchDrivenEvent,
 } from "@jsenv/dom";
-import { useContext, useId, useRef } from "preact/hooks";
+import { useContext, useId, useLayoutEffect, useRef } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
 import { CalloutStatusIcon } from "../rules/callout/callout_status_icon.jsx";
@@ -14,9 +14,14 @@ import { useNavState } from "@jsenv/navi/src/nav/browser_integration/browser_int
 import { useDebugFocus, useDebugPopup } from "@jsenv/navi/src/navi_debug.jsx";
 import {
   openedDuringThisPress,
+  UNMOUNT_EVENT_TYPE,
   useOpenController,
   useOpenPropsEffectOnOpenController,
 } from "@jsenv/navi/src/layout/open_controller.js";
+import {
+  closePopupGroupsInside,
+  PopupGroupContext,
+} from "@jsenv/navi/src/layout/popup_group.jsx";
 import {
   PopupModeContext,
   useResolvedPopupMode,
@@ -1126,7 +1131,6 @@ const PickerContentInsidePopup = (props) => {
     calloutIcon,
     calloutCloseButton,
     calloutCloseByScroll,
-    popupGroup,
     ...rest
   } = props;
   const isPopover = mode === "popover";
@@ -1136,9 +1140,6 @@ const PickerContentInsidePopup = (props) => {
     <Next
       aria-haspopup={isPopover ? "listbox" : "dialog"}
       navi-popover-mode={isPopover ? popoverMode : undefined}
-      // On the trigger, whatever the mode: a peer's popup reads it off the
-      // press that lands here (see `group` in callout.js).
-      data-navi-popup-group={popupGroup}
       {...rest}
       // On popupProps already (see the picker's popup assembly); they mean
       // nothing to the picker element.
@@ -1180,7 +1181,7 @@ const PickerContentInsidePopup = (props) => {
           // Left unsaid, the callout's own default: no backdrop. It dims
           // nothing, so the page looks as pressable as it did before.
           backdrop={backdrop}
-          group={popupGroup}
+          pressOutside={pressOutside}
         >
           <PopupModeContext.Provider value={mode}>
             {children}
@@ -1303,7 +1304,7 @@ const PickerCalloutPopup = ({
   closeButton,
   closeByScroll,
   backdrop,
-  group,
+  pressOutside,
   onnavi_request_open,
   onnavi_request_close,
   onnavi_request_confirm,
@@ -1320,6 +1321,16 @@ const PickerCalloutPopup = ({
     anchor,
   });
   const children = contentMounted ? childrenProp : null;
+  // Inside a <PopupGroup> the wall is the group's (see popup_group.jsx): it
+  // decides what a press outside the callout does, and the callout spends and
+  // closes on none of its own.
+  const popupGroup = useContext(PopupGroupContext);
+  useLayoutEffect(() => {
+    if (!popupGroup) {
+      return undefined;
+    }
+    return popupGroup.register(openController);
+  }, [popupGroup, openController]);
   // Reassigned on every render, like Popover's own, so it closes over the
   // latest props.
   openController.getElement = () => pickerRef.current;
@@ -1340,6 +1351,20 @@ const PickerCalloutPopup = ({
         : anchor && "current" in anchor
           ? anchor.current
           : anchor;
+    // First, so the group already stands where it stands in the top layer
+    // when the callout reads its anchor and shows itself above it.
+    popupGroup?.engage({
+      openController,
+      // Drawn by the manager below, once the group stands.
+      get popupElement() {
+        return calloutManager.callout.element;
+      },
+      pressOutside,
+      event: openEvent,
+      // A callout never holds the page still: a scroll is its own
+      // closeByScroll's to answer.
+      pageScrolls: true,
+    });
     calloutManager.addOpenToken(PICKER_CALLOUT_CONTENT_TOKEN, {
       message: host,
       // The popup a `popupTestId` names is this callout: it is the surface the
@@ -1351,8 +1376,8 @@ const PickerCalloutPopup = ({
       icon,
       closeButton,
       closeByScroll,
-      backdrop,
-      group,
+      backdrop: popupGroup ? false : backdrop,
+      closeByPressOutside: popupGroup ? false : undefined,
       anchorElement,
       // The request, chained to the press that made it: the callout reads the
       // mousedown off it to wait for the release before listening for a click
@@ -1383,9 +1408,15 @@ const PickerCalloutPopup = ({
         "navi_request_confirm",
         forwardConfirm,
       );
+      if (!findEvent(closeEvent, UNMOUNT_EVENT_TYPE)) {
+        // Before the content goes back to the dock: a group engaged in there
+        // would leave the top layer with it, its arbiter still listening.
+        closePopupGroupsInside(calloutElement, closeEvent);
+      }
       calloutManager.removeOpenToken(PICKER_CALLOUT_CONTENT_TOKEN, closeEvent);
       dock.appendChild(host);
       dock.setAttribute("aria-expanded", "false");
+      popupGroup?.release(openController, closeEvent);
     };
   };
 
@@ -1414,7 +1445,15 @@ const PickerCalloutPopup = ({
           the callout shows it: preact places a matched child again only when
           its siblings reorder, and this one has none. */}
       <div ref={hostRef} data-picker-content="">
-        {children}
+        {/* A popup opened from inside the callout is in front of it, not a
+            peer of it: the group stops here. */}
+        {popupGroup ? (
+          <PopupGroupContext.Provider value={null}>
+            {children}
+          </PopupGroupContext.Provider>
+        ) : (
+          children
+        )}
       </div>
     </Box>
   );

@@ -111,6 +111,7 @@ import { PopupClose } from "./popup_close.jsx";
 import {
   closePopupGroupsInside,
   PopupGroupContext,
+  readPressOutsideInPopupGroup,
   warnWallPropsInsidePopupGroup,
 } from "./popup_group.jsx";
 
@@ -1906,7 +1907,10 @@ const usePopoverProps = (props) => {
       handlePressOnOutsideRegion(e, {
         popupEl: ref.current,
         openController,
-        pressOutside,
+        // In a group, the press the group's wall would get.
+        pressOutside: popupGroup
+          ? readPressOutsideInPopupGroup(pressOutside)
+          : pressOutside,
       });
     },
     "onKeyDown": (e) => {

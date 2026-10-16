@@ -365,22 +365,6 @@ export const isDeclaredInsidePopup = (target, popupEl) =>
   );
 
 /**
- * `data-navi-popup-group` names the peers of a callout: the triggers of the
- * other popups a press goes to from this one, in that one press. A trigger
- * joins by carrying the name (a Picker's `popupGroup` writes it on its own),
- * and the callout reads it off what the press landed on. Popovers and dialogs
- * have their peers inside a <PopupGroup> instead (popup_group.jsx).
- *
- * Returns the peer `target` is in, or null.
- */
-export const findPopupPeer = (target, group) => {
-  if (!group || !target || typeof target.closest !== "function") {
-    return null;
-  }
-  return target.closest(`[data-navi-popup-group="${CSS.escape(group)}"]`);
-};
-
-/**
  * What a press landing on a region the caller declared as not-its-surface
  * does: exactly what the same press on the backdrop would do.
  *

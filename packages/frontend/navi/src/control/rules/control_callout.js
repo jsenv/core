@@ -7,7 +7,7 @@
  *
  * Usage:
  *   const myToken = createOpenToken();
- *   calloutManager.addOpenToken(myToken, { message, status, testId, closeByScroll, backdrop, group, anchorElement, event, skipFocus, onClose });
+ *   calloutManager.addOpenToken(myToken, { message, status, testId, closeByScroll, backdrop, closeByPressOutside, anchorElement, event, skipFocus, onClose });
  *   calloutManager.removeOpenToken(myToken, event);
  *   calloutManager.requestCloseCallout(event, debugReason); // force-close all
  *   calloutManager.callout  // current open callout or null
@@ -73,10 +73,12 @@ export const createCalloutManager = (
       testId: tokenData.testId,
       icon: tokenData.icon,
       closeButton: tokenData.closeButton,
-      closeByPressOutside: tokenData.status !== "error",
+      // Unless the token says otherwise: what a press outside a picker's
+      // callout does inside a PopupGroup is the group's to decide.
+      closeByPressOutside:
+        tokenData.closeByPressOutside ?? tokenData.status !== "error",
       closeByScroll: tokenData.closeByScroll,
       backdrop: tokenData.backdrop,
-      group: tokenData.group,
       anchorElement,
       openingEvent: event,
       skipFocus: tokenData.skipFocus,
@@ -206,7 +208,7 @@ export const createCalloutManager = (
       closeButton,
       closeByScroll,
       backdrop,
-      group,
+      closeByPressOutside,
       anchorElement,
       event,
       skipFocus,
@@ -225,7 +227,7 @@ export const createCalloutManager = (
       closeButton,
       closeByScroll,
       backdrop,
-      group,
+      closeByPressOutside,
       skipFocus,
       onClose,
       // Resolved as the token is added, and kept with it: a token shown later

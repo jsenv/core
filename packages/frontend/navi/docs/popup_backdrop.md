@@ -55,10 +55,12 @@ absorb at all.
 
 **It is what decides whether a popup is modal.** `Popover` is never modal,
 either layer, and neither is a `layer="local"` dialog. A top-layer `Dialog` is
-modal exactly when it has a wall: with one it is `showModal()`'d and the browser
-makes everything behind genuinely inert; without one it goes to the same top
-layer through the Popover API, placed against the screen just the same, over a
-page that stays live. `Popup` forwards `backdrop` in both modes, so which of
+modal exactly when it has a wall of its own: with one it is `showModal()`'d and
+the browser makes everything behind genuinely inert; without one it goes to the
+same top layer through the Popover API, placed against the screen just the
+same, over a page that stays live — or, in a `PopupGroup`, over a page the
+group's wall covers (see
+[Popups that hand over to each other](#popups-that-hand-over-to-each-other-popupgroup)). `Popup` forwards `backdrop` in both modes, so which of
 popover or dialog the small-screen resolution picks says nothing about whether
 one press or two are needed.
 
@@ -183,7 +185,8 @@ beside the board still closes when a card is pressed. Unlike the outside marker,
 this one answers for its whole subtree: it adds a whole thing to the popup's
 ground — the card, its count, its buttons — and nothing in it is a dismissal. It
 reads a press the page hears, so it belongs with a popup that has no wall
-(`backdrop={false}`): behind a wall, no card is pressable.
+(`backdrop={false}`), or with a popup of a `PopupGroup` and a box of that group:
+behind a wall, no card is pressable.
 
 ### `pointer-events: none` and `inert` are not this
 
@@ -195,6 +198,106 @@ the marked box, either makes the marker unreachable (navi warns about
 `pointer-events: none` in dev). On a decoration _inside_ a marked box,
 `pointer-events: none` is the one useful case: the press falls to the marked
 box, which is the answer wanted.
+
+## Popups that hand over to each other: `PopupGroup`
+
+A wall spends the first press, and between popups that follow one another that
+is the wrong press to spend. On a row of score cells, each a picker, going from
+one cell to the next costs a press to dismiss and a second one to open, though
+the user pointed at the next cell straight away. `backdrop={false}` gives the
+press back, but leaves the whole page live; `"invisible"` hides the dim and
+gives nothing back.
+
+`PopupGroup` keeps the wall and moves it: around a box of the page, with that
+box in front.
+
+```jsx
+<PopupGroup backdropColor="rgb(6 10 20 / 60%)">
+  <Picker mode="popover">…</Picker>
+  <Picker mode="popover">…</Picker>
+  <Button action={addSet}>+</Button>
+</PopupGroup>
+```
+
+While one of its popups is open, what the group holds stays lit and answers for
+real — hover, the pressed state, a gesture, the focus — and the rest of the
+screen is behind the wall, which can now be dimmed: the screen says what
+answers. A row of score cells, a menu bar, a toolbar, the players of a court
+each opening a bubble.
+
+### Inside is the DOM
+
+A popup is a member by being rendered inside the group: no name, no id.
+`Popover`, `Dialog` and what is built on them count — `Popup`, `SidePanel`,
+`SplitButton`, a `Picker`'s popover, dialog or callout. Every other control the
+group holds is pressable too: a "+" or a delete button needs nothing.
+
+**What is not a descendant of the group is behind the wall, wherever it is
+painted.** While a popup of the group is open, the group is the modal, and the
+browser makes everything else inert: a neighbour lifted above the wall with a
+`z-index`, or rendered elsewhere through a portal, is painted and dead.
+
+A popup opened from inside a member is in front of it, not a peer of it: the
+group stops at each popup. What is lit is the group's whole box, its background
+and border with it, so the group is the smallest box that holds the peers — on a
+court that also draws its links and its empty seats, a layer that holds only
+the players.
+
+### What a press does while one is open
+
+- On another popup's trigger: the open popup closes — a `Picker` notes its
+  value — and that one opens, in the same press.
+- On anything else in the group: the open popup closes, and the press does what
+  it does there.
+- On the wall: the open popup closes, and nothing else hears the press.
+- Inside the open popup, or on a box marked `data-navi-popup-inside` for it:
+  nothing closes.
+
+One popup of the group is open at a time: one opened from the keyboard or from
+code asks the open one to close first. A popup that refuses to close (a value
+it cannot note) keeps the press, and nothing else opens.
+
+**`pressOutside` stays the popup's, read against a wall that is always there.**
+`"close"` and `"cancel"` work as everywhere, `"capture"` spends the press and
+stays open, and `"ignore"` closes like `"close"`: there is no page under it to
+reach. `backdrop={false}` on a member changes nothing.
+
+### The group is the modal, its popups are not
+
+A `Dialog` in a group is never `showModal()`'d: it goes to the top layer
+through the Popover API, above the group. It keeps what a modal gives all the
+same, since the group is one: everything outside is inert, the keyboard reaches
+only what the group holds, and Escape and the back gesture close the open popup
+as a cancel, wherever the focus is in the group. A group works inside a sheet,
+and closes with it.
+
+**The wall is the group's.** `backdropVariant`, `backdropColor`,
+`backdropFilter` and `themeColor` go on `<PopupGroup>`, whose default paint is
+the `close` pair, like a top-layer `Dialog`'s. A member's own are not read, and
+navi warns in dev; neither is what its `"capture"` or its `animation="lifting"`
+would paint — `backdropVariant="lift"` on the group is that wall. Above the
+screen, the browser's colour is the group's wall over the page's colour.
+
+**The page behind stays still while a `Popover` or a `Dialog` of the group is
+open**, the wheel or the finger on the wall or over a part of the group with
+nothing to scroll. A callout of the group lets the page scroll, as a callout
+does anywhere, and goes away on that scroll when told to
+(`calloutCloseByScroll`).
+
+### While one is open, the group leaves the page
+
+To stand in front, the group is shown in the top layer where it stands. An
+invisible placeholder keeps its place in the page — the element just before it,
+marked `navi-out-of-flow` (see
+[`css_architecture.md`](./css_architecture.md#counting-children-what-navi-puts-in-your-tree))
+— and the group stays pinned to that place: it follows a scroll, a resize, a
+sheet that moves, and is clipped as its ancestors clip it. At rest it is a
+`<dialog>` the app styles as it would a `<div>`.
+
+Two things follow from everything else being inert. A popup cannot stay modal
+inside a group: rendered in it, a `Dialog` is a member. And a drag that starts
+in the group while one of its popups is open cannot land outside it until that
+press is over.
 
 ## Painting one popup: two props
 
@@ -333,6 +436,7 @@ renderer:
 | `Dialog layer="top"`   | the native `::backdrop` pseudo-element of the `<dialog>`          |
 | `Dialog layer="local"` | a sibling `div.navi_dialog_backdrop`, before the dialog's wrapper |
 | `Popover`              | a sibling `.navi_popover_backdrop`                                |
+| a popup of a group     | the native `::backdrop` of the `PopupGroup`'s `<dialog>`          |
 
 The pseudo-element inherits custom properties from the dialog — which is what
 makes the tokens above reach it at all. The sibling elements do not: they

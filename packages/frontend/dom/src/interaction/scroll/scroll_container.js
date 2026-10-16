@@ -21,6 +21,10 @@ export const getScrollContainer = (arg, { includeHidden } = {}) => {
     return null;
   }
   if (isScrollBoundary(element)) {
+    const placeholder = findEngagedPopupGroupPlaceholder(element);
+    if (placeholder) {
+      return getScrollContainer(placeholder, { includeHidden });
+    }
     return getScrollingElement(element.ownerDocument);
   }
   return (
@@ -52,12 +56,15 @@ const findScrollContainer = (element, { includeHidden } = {}) => {
       return null;
     }
     // A boundary that scrolls is the scroll container of what it holds — a
-    // popup whose own box scrolls, a PopupGroup shown modal where it stands —
-    // and nothing beyond it is.
+    // popup whose own box scrolls, a PopupGroup shown modal where it stands.
     if (isScrollable(parent, { includeHidden })) {
       return parent;
     }
     if (isScrollBoundary(parent)) {
+      const placeholder = findEngagedPopupGroupPlaceholder(parent);
+      if (placeholder) {
+        return findScrollContainer(placeholder, { includeHidden });
+      }
       return null;
     }
     parent = parent.parentNode;
@@ -81,6 +88,29 @@ const isScrollBoundary = (node) => {
     return true;
   }
   return getStyle(node, "position") === "fixed";
+};
+
+// Except a PopupGroup shown modal (@jsenv/navi's popup_group.jsx): fixed in the
+// top layer at the place a placeholder holds for it in the page, it follows
+// that place, so what scrolls the placeholder moves the group and what it
+// holds. The placeholder is inserted just before it; something rendered
+// before the group meanwhile lands in between.
+const findEngagedPopupGroupPlaceholder = (node) => {
+  if (
+    node.tagName !== "DIALOG" ||
+    !node.hasAttribute("navi-popup-group") ||
+    !node.matches(":modal")
+  ) {
+    return null;
+  }
+  let previous = node.previousElementSibling;
+  while (previous) {
+    if (previous.hasAttribute("navi-popup-group-placeholder")) {
+      return previous;
+    }
+    previous = previous.previousElementSibling;
+  }
+  return null;
 };
 
 export const getSelfAndAncestorScrolls = (element, startOnParent) => {
