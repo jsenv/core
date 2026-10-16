@@ -1063,6 +1063,24 @@ const PickerButton = (props) => {
     clearConfirm,
     requestValue,
   };
+  // `--navi-select`/`--navi-unselect` about one entry of the list the picker
+  // holds — a chip on the façade, a suggestion beside the field. Answered here
+  // rather than by the control drawing that list in the popup, even though rows
+  // are what such a control owns: a picker given its own value builds its popup
+  // only on first open (see popup_content_mount.js), so before that there is no
+  // such control at all — and building the whole popup to have someone to talk
+  // to, for a cross, is the wrong price. The picker holds the value in the first
+  // place and hands it down whenever the popup is built.
+  //
+  // Heard on both elements, like every request a control answers: a chip inside
+  // the picker aims at its root (the parent control), one standing elsewhere
+  // names it with `commandFor`, and the picker's id is on its input.
+  const onRequestSelect = (e) => {
+    requestPickerListEntry(ref.current, inputRef.current, e, "select");
+  };
+  const onRequestUnselect = (e) => {
+    requestPickerListEntry(ref.current, inputRef.current, e, "unselect");
+  };
 
   return (
     /* Read-only crosses into everything the picker is made of: what it really
@@ -1120,21 +1138,8 @@ const PickerButton = (props) => {
         onnavi_request_open={inputProps.onnavi_request_open}
         onnavi_request_close={inputProps.onnavi_request_close}
         onnavi_open_press={inputProps.onnavi_open_press}
-        // `--navi-select`/`--navi-unselect` about one entry of the list the
-        // picker holds — a chip on the façade, a suggestion beside the field.
-        // Answered here rather than by the control drawing that list in the
-        // popup, even though rows are what such a control owns: a picker given
-        // its own value builds its popup only on first open (see
-        // popup_content_mount.js), so before that there is no such control at
-        // all — and building the whole popup to have someone to talk to, for a
-        // cross, is the wrong price. The picker holds the value in the first
-        // place and hands it down whenever the popup is built.
-        onnavi_request_select={(e) => {
-          requestPickerListEntry(ref.current, inputRef.current, e, "select");
-        }}
-        onnavi_request_unselect={(e) => {
-          requestPickerListEntry(ref.current, inputRef.current, e, "unselect");
-        }}
+        onnavi_request_select={onRequestSelect}
+        onnavi_request_unselect={onRequestUnselect}
       >
         <span
           className="navi_picker_box"
@@ -1161,6 +1166,8 @@ const PickerButton = (props) => {
               // eslint-disable-next-line react/no-children-prop
               children={undefined} // we will render children into the div
               ui={ui}
+              onnavi_request_select={onRequestSelect}
+              onnavi_request_unselect={onRequestUnselect}
               onCopy={(e) => {
                 const pickerEl = ref.current;
                 if (isWithinPickerContent(e.target, pickerEl)) {
