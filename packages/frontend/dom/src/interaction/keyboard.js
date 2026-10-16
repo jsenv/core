@@ -69,6 +69,20 @@ export const getKeyboardEventDefaultAction = (keyboardEvent) => {
   return "";
 };
 
+// Whether the keyboard follows macOS's conventions: there Home and End scroll
+// the page even from a text field, and a chord with Cmd or Option scrolls it to
+// an end or a page away.
+let isMac;
+export const isMacPlatform = () => {
+  if (isMac === undefined) {
+    const { userAgentData, userAgent } = window.navigator;
+    isMac = userAgentData
+      ? userAgentData.platform === "macOS"
+      : /Mac|iPhone|iPad|iPod/.test(userAgent);
+  }
+  return isMac;
+};
+
 const isTypingIntent = (e) => {
   // Modifier keys used for shortcuts: skip
   if (e.metaKey || e.ctrlKey) {
@@ -110,10 +124,11 @@ const DEFAULT_BEHAVIORS = [
         return "activate";
       },
       enter: (e) => (e.target.form ? "form_submit" : ""),
-      arrowleft: "focus_nav",
-      arrowright: "focus_nav",
-      arrowup: "focus_nav",
-      arrowdown: "focus_nav",
+      // Moving through a radio group; a checkbox lets them scroll.
+      arrowleft: (e) => (e.target.type === "radio" ? "focus_nav" : undefined),
+      arrowright: (e) => (e.target.type === "radio" ? "focus_nav" : undefined),
+      arrowup: (e) => (e.target.type === "radio" ? "focus_nav" : undefined),
+      arrowdown: (e) => (e.target.type === "radio" ? "focus_nav" : undefined),
     },
   },
   {
@@ -136,8 +151,10 @@ const DEFAULT_BEHAVIORS = [
       arrowright: (e) => (e.target.readOnly ? "scroll" : "cursor_move"),
       arrowup: (e) => (e.target.readOnly ? "scroll" : "cursor_move"),
       arrowdown: (e) => (e.target.readOnly ? "scroll" : "cursor_move"),
-      home: (e) => (e.target.readOnly ? "scroll" : "cursor_move"),
-      end: (e) => (e.target.readOnly ? "scroll" : "cursor_move"),
+      home: (e) =>
+        e.target.readOnly || isMacPlatform() ? "scroll" : "cursor_move",
+      end: (e) =>
+        e.target.readOnly || isMacPlatform() ? "scroll" : "cursor_move",
     },
     fallback: (e) => (isTypingIntent(e) ? "type" : undefined),
   },
@@ -222,13 +239,17 @@ const DEFAULT_BEHAVIORS = [
     fallback: (e) => (isTypingIntent(e) ? "type" : undefined),
   },
   {
-    // Buttons and links: Space/Enter trigger the element's default action
+    // Buttons and links: Enter triggers the element's default action, Space
+    // only a button's — on a link it scrolls the page.
     test: (el) =>
       el.tagName === "BUTTON" ||
       el.tagName === "A" ||
       el.getAttribute("role") === "button",
     keys: {
-      space: "activate",
+      space: (e) =>
+        e.target.tagName === "A" && e.target.getAttribute("role") !== "button"
+          ? undefined
+          : "activate",
       enter: "activate",
     },
   },

@@ -1000,7 +1000,8 @@ const css = /* css */ `
  *   wall is shown through the Popover API rather than `showModal()`, which is
  *   what a sheet docked to the screen's bottom edge over a still-readable map
  *   needs. What it gives up is what only a modal gets natively: the hardware
- *   back button no longer dismisses it. See docs/popup_backdrop.md.
+ *   back button no longer dismisses it. Not read inside a `<PopupGroup>`,
+ *   whose wall it is. See docs/popup_backdrop.md.
  * @param {"close"|"cancel"|"capture"|"ignore"} [props.pressOutside="close"]
  *   - `"close"` closes the dialog on an outside press, `"cancel"` closes it
  *   as a cancel (what it holds reverts, as on Escape). `"capture"`/`"ignore"`

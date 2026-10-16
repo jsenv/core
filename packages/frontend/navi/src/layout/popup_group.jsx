@@ -38,7 +38,9 @@
 import {
   closestOpenableAncestor,
   findEvent,
+  findSelfOrAncestorFixedPosition,
   getKeyboardEventDefaultAction,
+  getScrollContainer,
   isPressDrivenClick,
   observeAncestorOpenState,
   trapScrollInside,
@@ -355,11 +357,17 @@ const createPopupGroup = () => {
     }
     return openMembers;
   };
-  // The page behind is held still by the group for as long as a popup that
-  // holds it still on its own (a Popover, a Dialog) is open.
+  // The page behind is held still unless what is open is a callout, which
+  // lets it scroll as it does anywhere (its closeByScroll answers that
+  // scroll). Kept as it is while nothing is open: the wall stays up until the
+  // press that closed the last popup ends.
   const followScrollLock = () => {
+    const openMembers = getOpenMembers();
+    if (openMembers.length === 0) {
+      return;
+    }
     engagement.followScrollLock(
-      getOpenMembers().some((openMember) => !openMember.pageScrolls),
+      openMembers.some((openMember) => !openMember.pageScrolls),
     );
   };
 
@@ -380,9 +388,11 @@ const createPopupGroup = () => {
     /**
      * Called by a popup of the group as it opens, before it shows itself.
      * `member`: { openController, popupElement, pressOutside, event,
-     * pageScrolls }. `popupElement` is read at each press, so a member whose
-     * element is drawn after it engaged (a callout) passes a getter.
-     * `pageScrolls`: the page behind may scroll while it is open.
+     * pageScrolls, popupId }. `popupElement` is read at each press, so a
+     * member whose element is drawn after it engaged (a callout) passes a
+     * getter. `pageScrolls`: the page behind may scroll while it is open.
+     * `popupId`: the id a data-navi-popup-inside names it by, when it is not
+     * the popup element's own.
      */
     engage: (member) => {
       // One popup of the group at a time. A press on a peer has closed the
@@ -419,16 +429,6 @@ const createPopupGroup = () => {
      */
     release: (openController, closeEvent) => {
       openMemberMap.delete(openController);
-      const escapeKeydown = findEvent(
-        closeEvent,
-        (event) => event.type === "keydown" && event.key === "Escape",
-      );
-      if (escapeKeydown) {
-        // This Escape closed a popup of the group; once dispatched, it would
-        // also be the browser's close request for the modal around the group,
-        // the group being gone by then.
-        escapeKeydown.preventDefault();
-      }
       if (!engagement) {
         return;
       }
@@ -503,6 +503,16 @@ const engageGroup = (groupEl, group, { silent }) => {
     groupEl.contains(focusedBefore);
   const ringBefore = Boolean(focusedBefore?.matches?.(":focus-visible"));
   const { scrollTop, scrollLeft } = groupEl;
+  // A gesture on a box fixed in the top layer goes to the viewport: only a
+  // place that scrolls with the viewport moves under it.
+  const placeScroller = getScrollContainer(groupEl);
+  const placeScrollsWithViewport =
+    (placeScroller === document.scrollingElement ||
+      // Reported as a scroll container on an app setting `body {
+      // overflow-x: hidden }` (its computed overflow-y turns auto), it never
+      // scrolls itself: the viewport does.
+      (placeScroller === document.body && bodyOverflowIsTheViewports())) &&
+    !findSelfOrAncestorFixedPosition(groupEl);
 
   const placeholder = createPlaceholder(groupStyle, rect, baselineDescent);
   groupEl.before(placeholder);
@@ -625,8 +635,10 @@ const engageGroup = (groupEl, group, { silent }) => {
       // it since. Unless no popup moved the focus since showModal() did, that
       // element is made no focus target for the call, so the focus stays where
       // it is: inert — or, when the focus is inside it (the sheet around the
-      // group, focused by a press on its blank), without its tabindex, inert
-      // taking the focus with it.
+      // popover around the group, focused by a press on its blank), without
+      // its tabindex, inert taking the focus with it. A <dialog> stays
+      // focusable without one: around a Dialog sheet, close() focuses it and
+      // the moveFocusTo below brings the focus back.
       const focusedBeforeClose = document.activeElement;
       const ringBeforeClose = Boolean(
         focusedBeforeClose?.matches?.(":focus-visible"),
@@ -647,9 +659,10 @@ const engageGroup = (groupEl, group, { silent }) => {
         keepsFocusWhereItIs && focusedBefore.contains(focusedBeforeClose);
       const madeInert =
         keepsFocusWhereItIs && !holdsFocusInside && !focusedBefore.inert;
-      const tabindexSetAside = holdsFocusInside
-        ? focusedBefore.getAttribute("tabindex")
-        : null;
+      const tabindexSetAside =
+        holdsFocusInside && focusedBefore.tagName !== "DIALOG"
+          ? focusedBefore.getAttribute("tabindex")
+          : null;
       if (madeInert) {
         focusedBefore.inert = true;
       }
@@ -720,12 +733,23 @@ const engageGroup = (groupEl, group, { silent }) => {
   addCleanup(followPlaceholder(groupEl, placeholder, engagement));
   // A wheel or a finger on the wall would scroll the page behind, and with it
   // the place the group is pinned to. On the wall means outside what is shown
-  // of the group, which a clip can make less than its box. Held only while the
-  // open popup would hold the page still on its own: with a callout open, the
-  // page scrolls and the group goes along with its place.
+  // of the group, which a clip can make less than its box. Let go for a
+  // callout only where the group's place scrolls with the viewport: in a
+  // sheet, a list scrolling on its own, a fixed bar, the gesture would scroll
+  // the document behind and never the box the group stands in.
   let releaseScrollLock = null;
-  engagement.followScrollLock = (locked) => {
-    if (locked && !releaseScrollLock) {
+  const letGoOfScroll = () => {
+    if (releaseScrollLock) {
+      releaseScrollLock();
+      releaseScrollLock = null;
+    }
+  };
+  engagement.followScrollLock = (openMemberHoldsPage) => {
+    if (!openMemberHoldsPage && placeScrollsWithViewport) {
+      letGoOfScroll();
+      return;
+    }
+    if (!releaseScrollLock) {
       releaseScrollLock = trapScrollInside(groupEl, {
         backdrop: true,
         getElementBox: () => engagement.visibleBox,
@@ -734,14 +758,9 @@ const engageGroup = (groupEl, group, { silent }) => {
         // straight on to the page.
         containInside: true,
       });
-    } else if (!locked && releaseScrollLock) {
-      releaseScrollLock();
-      releaseScrollLock = null;
     }
   };
-  addCleanup(() => {
-    engagement.followScrollLock(false);
-  });
+  addCleanup(letGoOfScroll);
   if (themeColor !== "none") {
     addCleanup(
       pushPopupThemeColor({
@@ -776,8 +795,7 @@ const engageGroup = (groupEl, group, { silent }) => {
     if (!openMember) {
       return;
     }
-    // Closed, the popup prevents the keydown (release); refusing, it does too
-    // (requestClose).
+    // requestClose prevents the keydown, whether the popup closes or refuses.
     openMember.openController.requestClose(keydownEvent, { isCancel: true });
   };
   groupEl.addEventListener("keydown", onKeyDown);
@@ -887,7 +905,7 @@ const armPressArbiter = (groupEl, group, engagement) => {
     if (popupElement.contains(target)) {
       return null;
     }
-    if (isDeclaredInsidePopup(target, popupElement)) {
+    if (isDeclaredInsidePopup(target, openMember.popupId || popupElement.id)) {
       return null;
     }
     // In front of the open popup: something open inside the group that is
@@ -1301,11 +1319,8 @@ const readAncestorClip = (element, elementStyle) => {
   if (elementStyle.position === "fixed") {
     return null;
   }
-  // The overflow of <body> is the viewport's when the root leaves its own
-  // visible: read on body, it clips nothing.
-  const rootStyle = getComputedStyle(document.documentElement);
-  const bodyOverflowIsTheViewports =
-    rootStyle.overflowX === "visible" && rootStyle.overflowY === "visible";
+  // Read on body, an overflow that is the viewport's clips nothing.
+  const bodyClipsNothing = bodyOverflowIsTheViewports();
   let left = -Infinity;
   let top = -Infinity;
   let right = Infinity;
@@ -1327,7 +1342,7 @@ const readAncestorClip = (element, elementStyle) => {
     skipUntilContainingBlock = false;
     const { overflowX, overflowY, position } = ancestorStyle;
     const overflowGoesToViewport =
-      ancestor === document.body && bodyOverflowIsTheViewports;
+      ancestor === document.body && bodyClipsNothing;
     const clipsX = !overflowGoesToViewport && overflowX !== "visible";
     const clipsY = !overflowGoesToViewport && overflowY !== "visible";
     if (clipsX || clipsY) {
@@ -1367,6 +1382,13 @@ const readAncestorClip = (element, elementStyle) => {
   }
   return clipped ? { left, top, right, bottom } : null;
 };
+// The overflow of <body> is the viewport's when the root leaves its own
+// visible: body itself then neither scrolls nor clips.
+const bodyOverflowIsTheViewports = () => {
+  const rootStyle = getComputedStyle(document.documentElement);
+  return rootStyle.overflowX === "visible" && rootStyle.overflowY === "visible";
+};
+
 const isContainingBlockForAbsolute = (style) =>
   style.position !== "static" ||
   style.transform !== "none" ||

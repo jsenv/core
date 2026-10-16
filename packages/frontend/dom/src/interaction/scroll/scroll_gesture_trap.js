@@ -1,4 +1,4 @@
-import { getKeyboardEventDefaultAction } from "../keyboard.js";
+import { getKeyboardEventDefaultAction, isMacPlatform } from "../keyboard.js";
 import { canScroll } from "./is_scrollable.js";
 
 // A gesture on an element the browser paints in the top layer belongs to that
@@ -118,41 +118,41 @@ export const trapScrollGestureInside = (
     return true;
   };
 
-  // Whether something from `target` up to `element` scrolls the way the
-  // gesture mostly goes, with room left to go there. A box in the top layer,
-  // or fixed, ends the walk: its scroll chain goes on to the viewport, not to
-  // its parent in the DOM.
-  const isTakenInside = (target, deltaX, deltaY) => {
+  // Whether something on the event's way from what it landed on up to
+  // `element` scrolls the way the gesture mostly goes, with room left to go
+  // there. The composed path, not the parents: a scroller inside a shadow
+  // root, or the shadow scroller a slotted element shows in, is on it. A box
+  // in the top layer, or fixed, ends the walk: its scroll chain goes on to the
+  // viewport, not to its parent in the DOM.
+  const isTakenInside = (event, deltaX, deltaY) => {
     const axis = Math.abs(deltaY) >= Math.abs(deltaX) ? "y" : "x";
     const delta = axis === "y" ? deltaY : deltaX;
-    let ancestorOrSelf = target;
-    while (ancestorOrSelf && ancestorOrSelf.nodeType === 1) {
-      if (
-        canScroll(ancestorOrSelf, axis) &&
-        hasRoomToScroll(ancestorOrSelf, axis, delta)
-      ) {
+    for (const node of event.composedPath()) {
+      if (node.nodeType !== 1) {
+        continue;
+      }
+      if (canScroll(node, axis) && hasRoomToScroll(node, axis, delta)) {
         return true;
       }
-      if (ancestorOrSelf === element) {
+      if (node === element) {
         return false;
       }
       if (
-        ancestorOrSelf.matches(TOP_LAYER_SELECTOR) ||
-        getComputedStyle(ancestorOrSelf).position === "fixed"
+        node.matches(TOP_LAYER_SELECTOR) ||
+        getComputedStyle(node).position === "fixed"
       ) {
         return false;
       }
-      ancestorOrSelf = ancestorOrSelf.parentNode;
     }
     return false;
   };
   // On `element` itself too, inside its box: on its padding, between what it
   // holds. Outside that box it is the wall, decided first (isBackgroundGesture).
-  const leaksFromInside = (target, deltaX, deltaY) =>
+  const leaksFromInside = (event, deltaX, deltaY) =>
     // A move with no direction scrolls nothing.
     (deltaX !== 0 || deltaY !== 0) &&
-    element.contains(target) &&
-    !isTakenInside(target, deltaX, deltaY);
+    element.contains(event.target) &&
+    !isTakenInside(event, deltaX, deltaY);
 
   const onWheel = (wheelEvent) => {
     if (wheelEvent.ctrlKey) {
@@ -178,9 +178,7 @@ export const trapScrollGestureInside = (
     ) {
       return;
     }
-    if (
-      leaksFromInside(wheelEvent.target, wheelEvent.deltaX, wheelEvent.deltaY)
-    ) {
+    if (leaksFromInside(wheelEvent, wheelEvent.deltaX, wheelEvent.deltaY)) {
       wheelEvent.preventDefault();
     }
   };
@@ -224,7 +222,7 @@ export const trapScrollGestureInside = (
     if (touchMoveEvent.defaultPrevented || !touchMoveEvent.cancelable) {
       return;
     }
-    if (leaksFromInside(touchMoveEvent.target, deltaX, deltaY)) {
+    if (leaksFromInside(touchMoveEvent, deltaX, deltaY)) {
       touchMoveEvent.preventDefault();
     }
   };
@@ -250,15 +248,10 @@ export const trapScrollGestureInside = (
   // A key whose default would scroll, pressed where nothing between there and
   // `element` scrolls that way.
   const onKeyDownInside = (keydownEvent) => {
-    if (
-      keydownEvent.defaultPrevented ||
-      keydownEvent.altKey ||
-      keydownEvent.ctrlKey ||
-      keydownEvent.metaKey
-    ) {
+    if (keydownEvent.defaultPrevented) {
       return;
     }
-    const scrollDelta = SCROLL_KEY_DELTA_MAP.get(keydownEvent.key);
+    const scrollDelta = readKeyScrollDelta(keydownEvent);
     if (!scrollDelta) {
       return;
     }
@@ -278,9 +271,8 @@ export const trapScrollGestureInside = (
     if (defaultAction !== "scroll" && defaultAction !== "scroll_self") {
       return;
     }
-    const [deltaX, deltaY] =
-      keydownEvent.key === " " && keydownEvent.shiftKey ? [0, -1] : scrollDelta;
-    if (!isTakenInside(target, deltaX, deltaY)) {
+    const [deltaX, deltaY] = scrollDelta;
+    if (!isTakenInside(keydownEvent, deltaX, deltaY)) {
       keydownEvent.preventDefault();
     }
   };
@@ -339,18 +331,71 @@ const hasRoomToScroll = (scroller, axis, delta) => {
     : position;
   return delta < 0 ? fromStart > 1 : fromStart < range - 1;
 };
-const isScrollOriginAtTheEnd = ({ writingMode, direction }, axis) => {
+const isScrollOriginAtTheEnd = (
+  { writingMode, direction, display, flexDirection, flexWrap },
+  axis,
+) => {
   const vertical =
     writingMode.startsWith("vertical") || writingMode.startsWith("sideways");
+  let atTheEnd;
   if (!vertical) {
-    return axis === "x" && direction === "rtl";
-  }
-  if (axis === "x") {
+    atTheEnd = axis === "x" && direction === "rtl";
+  } else if (axis === "x") {
     // Lines stacked from the right.
-    return writingMode.endsWith("-rl");
+    atTheEnd = writingMode.endsWith("-rl");
+  } else {
+    // sideways-lr runs its text bottom to top.
+    atTheEnd =
+      writingMode === "sideways-lr" ? direction !== "rtl" : direction === "rtl";
   }
-  // sideways-lr runs its text bottom to top.
-  return writingMode === "sideways-lr"
-    ? direction !== "rtl"
-    : direction === "rtl";
+  // A reversed flex container starts at the other end of that axis: its main
+  // axis for a reversed direction (a log resting on its newest item), its
+  // cross axis for wrap-reverse.
+  if (display === "flex" || display === "inline-flex") {
+    const inlineAxis = vertical ? "y" : "x";
+    const blockAxis = vertical ? "x" : "y";
+    const mainAxis = flexDirection.startsWith("row") ? inlineAxis : blockAxis;
+    const reversed =
+      axis === mainAxis
+        ? flexDirection.endsWith("-reverse")
+        : flexWrap === "wrap-reverse";
+    if (reversed) {
+      atTheEnd = !atTheEnd;
+    }
+  }
+  return atTheEnd;
+};
+
+// The way a key scrolls, as a wheel would: [deltaX, deltaY], or null for a key
+// that scrolls nothing. With a modifier, only the platform's own chords to the
+// top, the bottom or a page away; never the arrows sideways, which go back and
+// forward in the history.
+const readKeyScrollDelta = (keydownEvent) => {
+  const { key, altKey, ctrlKey, metaKey, shiftKey } = keydownEvent;
+  if (!altKey && !ctrlKey && !metaKey) {
+    if (key === " " && shiftKey) {
+      return [0, -1];
+    }
+    return SCROLL_KEY_DELTA_MAP.get(key) || null;
+  }
+  if (isMacPlatform()) {
+    if (!ctrlKey && (metaKey || altKey)) {
+      if (key === "ArrowUp") {
+        return [0, -1];
+      }
+      if (key === "ArrowDown") {
+        return [0, 1];
+      }
+    }
+    return null;
+  }
+  if (ctrlKey && !altKey && !metaKey) {
+    if (key === "Home") {
+      return [0, -1];
+    }
+    if (key === "End") {
+      return [0, 1];
+    }
+  }
+  return null;
 };

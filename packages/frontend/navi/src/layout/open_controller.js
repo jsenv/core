@@ -624,22 +624,24 @@ export const createOpenController = (
       });
       chainEvent(requestCloseEvent, e);
       closeHandlers?.onRequestClose?.(requestCloseEvent);
+      // An Escape this popup answered, by closing or by refusing: dispatched
+      // on, it would also be the browser's close request for a modal around
+      // the popup (a PopupGroup, a dialog), closing what this popup kept open,
+      // or what is still closing with it (a lifting dialog closes a frame
+      // later).
+      const escapeKeydown = findEvent(
+        requestCloseEvent,
+        (event) => event.type === "keydown" && event.key === "Escape",
+      );
+      if (escapeKeydown) {
+        escapeKeydown.preventDefault();
+      }
       if (requestCloseEvent.defaultPrevented) {
         // The native <dialog> "cancel" event (Escape key) closes the dialog
         // by default; prevent that default so denial actually keeps it open.
         const nativeCancelEvent = findEvent(requestCloseEvent, "cancel");
         if (nativeCancelEvent) {
           nativeCancelEvent.preventDefault();
-        }
-        // An Escape this popup answered, by refusing: dispatched on, it would
-        // also be the browser's close request for a modal around the popup (a
-        // PopupGroup, a dialog), closing what this popup just kept open.
-        const escapeKeydown = findEvent(
-          requestCloseEvent,
-          (event) => event.type === "keydown" && event.key === "Escape",
-        );
-        if (escapeKeydown) {
-          escapeKeydown.preventDefault();
         }
         return false;
       }

@@ -352,6 +352,10 @@ const css = /* css */ `
  *   If not provided or too big, callout will be centered in viewport. It says where the
  *   callout is drawn, not what dismisses it: see `openingEvent` for what a container anchor
  *   costs
+ * @param {HTMLElement} [options.containerElement] - Where the callout element goes in the
+ *   DOM, when that is not where the anchor puts it (the anchor itself, or beside it). What
+ *   holds a callout decides what it inherits and whether it can be reached at all: outside
+ *   an engaged PopupGroup it is inert. The anchor still says where it points
  * @param {string} [options.status=""] - Callout status: "info" | "warning" | "error" | "success"
  * @param {string} [options.testId] - `data-testid` on the callout element. The callout is
  *   drawn by navi, so nothing the caller renders can carry the name a test needs — same
@@ -433,6 +437,7 @@ export const openCallout = (
     // "" - neutral information
     status = "",
     testId,
+    containerElement,
     onClose,
     closeByPressOutside = status === "info",
     closeOnFocusLeave = closeByPressOutside,
@@ -752,10 +757,11 @@ export const openCallout = (
     }
   }
   const calloutContainer = (() => {
-    if (!anchorElement || anchorElement === document.body) {
+    const holder = containerElement || anchorElement;
+    if (!holder || holder === document.body) {
       return document.body;
     }
-    const closestLabel = anchorElement.closest("label");
+    const closestLabel = holder.closest("label");
     if (closestLabel) {
       // Putting callout inside label would be problematic:
       // - Click on callout would be catched by the browser and re-dispatched to the label
@@ -767,10 +773,10 @@ export const openCallout = (
       return labelParent;
     }
     // Some elements (e.g. <input>) cannot have children
-    if (canContainCallout(anchorElement)) {
-      return anchorElement;
+    if (canContainCallout(holder)) {
+      return holder;
     }
-    return anchorElement.parentNode || document.body;
+    return holder.parentNode || document.body;
   })();
 
   close_on_click_outside: {

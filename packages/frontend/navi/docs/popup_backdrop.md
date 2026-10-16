@@ -79,14 +79,17 @@ Going `layer="local"` to keep the map live instead confines the sheet to the box
 it was declared in — full width and flush against _that_, which on a partial
 container reads as a sheet that failed rather than as a sheet.
 
-What a dialog that is not modal — wall-less, or `layer="local"` — gives up is
-the one thing only a modal gets natively: the hardware/gesture back button no
-longer dismisses it. No web API hooks into that outside the browser's own
+Outside a `PopupGroup`, what a dialog that is not modal — wall-less, or
+`layer="local"` — gives up is the one thing only a modal gets natively: the
+hardware/gesture back button no longer dismisses it. No web API hooks into that outside the browser's own
 modal-dismissal stack, which only a genuine `showModal()` element joins: an
 accepted limitation, not an oversight. A wall-less `Dialog` does not trap the
 focus either, deliberately — a page meant to be reachable is meant to be
 reachable with the keyboard too. (A `SidePanel` that closes on an outside press
-does trap Tab in popover mode: it sets `focusCapture`.)
+does trap Tab in popover mode: it sets `focusCapture`.) In a group the group is
+the modal: the back gesture closes the open popup as a cancel, and the keyboard
+stays in the group (see
+[Popups that hand over to each other](#popups-that-hand-over-to-each-other-popupgroup)).
 
 `pressOutside="capture"` and `backdrop={false}` contradict each other —
 absorbing is what a wall does — and navi warns rather than silently behaving
@@ -253,9 +256,11 @@ the players.
 - Inside the open popup, or on a box marked `data-navi-popup-inside` for it:
   nothing closes.
 
-One popup of the group is open at a time: one opened from the keyboard or from
-code asks the open one to close first. A popup that refuses to close (a value
-it cannot note) keeps the press, and nothing else opens.
+One popup of the group is open at a time: a press on another trigger, or a
+popup opened from the keyboard or from code, asks the open one to close first.
+A popup that refuses to close (a value it cannot note) stays open: it keeps the
+press, and nothing else opens; one opened from the keyboard or from code opens
+beside it.
 
 **`pressOutside` stays the popup's, read against a wall that is always there.**
 `"close"` and `"cancel"` work as everywhere, `"capture"` spends the press and
@@ -271,18 +276,25 @@ only what the group holds, and Escape and the back gesture close the open popup
 as a cancel, wherever the focus is in the group. A group works inside a sheet,
 and closes with it.
 
-**The wall is the group's.** `backdropVariant`, `backdropColor`,
-`backdropFilter` and `themeColor` go on `<PopupGroup>`, whose default paint is
-the `close` pair, like a top-layer `Dialog`'s. A member's own are not read, and
-navi warns in dev; neither is what its `"capture"` or its `animation="lifting"`
-would paint — `backdropVariant="lift"` on the group is that wall. Above the
-screen, the browser's colour is the group's wall over the page's colour.
+**The wall is the group's.** `backdropVariant`, `backdropColor` and
+`backdropFilter` go on `<PopupGroup>`, whose default paint is the `close` pair,
+like a top-layer `Dialog`'s. A member's own are not read, and navi warns in
+dev; neither is what its `"capture"` or its `animation="lifting"` would paint —
+`backdropVariant="lift"` on the group is that wall. Above the screen, the
+browser's colour is the group's wall over the page's colour, and the group's
+`themeColor` answers for it; a member flush with the top edge still lays its
+surface over that, and a member's own `themeColor`, when it names a colour,
+gives the colour while it is open.
 
 **The page behind stays still while a `Popover` or a `Dialog` of the group is
 open**, the wheel or the finger on the wall or over a part of the group with
 nothing to scroll. A callout of the group lets the page scroll, as a callout
 does anywhere, and goes away on that scroll when told to
-(`calloutCloseByScroll`).
+(`calloutCloseByScroll`) — where the group stands in the page's own scroll. In
+a sheet, a list that scrolls on its own or a fixed bar, a gesture on the wall
+could only scroll the document behind, never the box the group stands in: the
+page stays still there too, and a wheel over the bubble still scrolls that
+box.
 
 ### While one is open, the group leaves the page
 
@@ -294,10 +306,11 @@ marked `navi-out-of-flow` (see
 sheet that moves, and is clipped as its ancestors clip it. At rest it is a
 `<dialog>` the app styles as it would a `<div>`.
 
-Two things follow from everything else being inert. A popup cannot stay modal
-inside a group: rendered in it, a `Dialog` is a member. And a drag that starts
-in the group while one of its popups is open cannot land outside it until that
-press is over.
+Two things follow from the group being the modal. A `Dialog` rendered among
+the group's peers is a member, never modal; one opened from inside a member is
+in front of it, and modal as anywhere. And a drag that starts in the group
+while one of its popups is open cannot land outside it until that press is
+over.
 
 ## Painting one popup: two props
 

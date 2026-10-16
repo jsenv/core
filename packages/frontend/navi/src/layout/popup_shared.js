@@ -357,12 +357,11 @@ const OUTSIDE_REGION_ATTRIBUTE = "data-navi-popup-outside";
  * own ground, and nothing in it is a dismissal.
  */
 const INSIDE_ATTRIBUTE = "data-navi-popup-inside";
-// Whether `target` is in a box of the page declared as part of `popupEl`.
-export const isDeclaredInsidePopup = (target, popupEl) =>
-  Boolean(popupEl.id) &&
-  Boolean(
-    target?.closest?.(`[${INSIDE_ATTRIBUTE}~="${CSS.escape(popupEl.id)}"]`),
-  );
+// Whether `target` is in a box of the page declared as part of the popup
+// named `popupId`.
+export const isDeclaredInsidePopup = (target, popupId) =>
+  Boolean(popupId) &&
+  Boolean(target?.closest?.(`[${INSIDE_ATTRIBUTE}~="${CSS.escape(popupId)}"]`));
 
 /**
  * What a press landing on a region the caller declared as not-its-surface
@@ -503,7 +502,7 @@ export const armOutsidePressClose = (
     ) {
       return;
     }
-    if (isDeclaredInsidePopup(pointerDownEvent.target, popupEl)) {
+    if (isDeclaredInsidePopup(pointerDownEvent.target, popupEl.id)) {
       return;
     }
     // Real DOM containment wins over the rectangle below — an element

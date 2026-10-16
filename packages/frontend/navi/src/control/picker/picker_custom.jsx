@@ -1016,6 +1016,9 @@ const PickerCustom = (props) => {
   return renderResolver(PickerContentInsidePopup, {
     ...pickerProps,
     mode,
+    // What a callout's own Escape means (see PickerCalloutPopup): the bubble
+    // answers the key itself when the focus is in it.
+    escapeEffect,
   });
 };
 
@@ -1131,6 +1134,7 @@ const PickerContentInsidePopup = (props) => {
     calloutIcon,
     calloutCloseButton,
     calloutCloseByScroll,
+    escapeEffect,
     ...rest
   } = props;
   const isPopover = mode === "popover";
@@ -1182,6 +1186,7 @@ const PickerContentInsidePopup = (props) => {
           // nothing, so the page looks as pressable as it did before.
           backdrop={backdrop}
           pressOutside={pressOutside}
+          escapeEffect={escapeEffect}
         >
           <PopupModeContext.Provider value={mode}>
             {children}
@@ -1305,6 +1310,7 @@ const PickerCalloutPopup = ({
   closeByScroll,
   backdrop,
   pressOutside,
+  escapeEffect,
   onnavi_request_open,
   onnavi_request_close,
   onnavi_request_confirm,
@@ -1359,6 +1365,9 @@ const PickerCalloutPopup = ({
       get popupElement() {
         return calloutManager.callout.element;
       },
+      // What a data-navi-popup-inside names this popup by (aria-controls
+      // names it too): the dock, not the callout drawn for it.
+      popupId: id,
       pressOutside,
       event: openEvent,
       // A callout never holds the page still: a scroll is its own
@@ -1378,6 +1387,9 @@ const PickerCalloutPopup = ({
       closeByScroll,
       backdrop: popupGroup ? false : backdrop,
       closeByPressOutside: popupGroup ? false : undefined,
+      // Inside the group whatever it points at: what is not a descendant of
+      // an engaged group is inert, a bubble drawn there included.
+      containerElement: popupGroup ? pickerEl : undefined,
       anchorElement,
       // The request, chained to the press that made it: the callout reads the
       // mousedown off it to wait for the release before listening for a click
@@ -1386,8 +1398,12 @@ const PickerCalloutPopup = ({
       // Not skipped: the callout moves the focus into the picker when it is
       // elsewhere, which is what lets Escape find the callout right away.
       skipFocus: false,
-      onClose: ({ event }) => {
-        openController.close(event);
+      // An Escape the callout answered itself (the focus in the bubble) means
+      // what the picker's own Escape means.
+      onClose: ({ event, reason }) => {
+        openController.close(event, {
+          isCancel: reason === "escape_key" && escapeEffect === "cancel",
+        });
       },
     });
     // A --navi-confirm said inside the callout is aimed at the callout (its
