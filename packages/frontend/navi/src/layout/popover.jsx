@@ -60,7 +60,13 @@ import {
   trapScrollInside,
   visibleRectEffect,
 } from "@jsenv/dom";
-import { useEffect, useId, useRef } from "preact/hooks";
+import {
+  useContext,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+} from "preact/hooks";
 
 import { onNaviCommand } from "../control/commands.js";
 import { dispatchRequestInteraction } from "../control/rules/control_interaction.js";
@@ -91,7 +97,6 @@ import { freezeSize, unfreezeSize } from "./freeze_size.js";
 import {
   armOutsidePressClose,
   armPointerDownOutsideClose,
-  handWallClickToPeer,
   clearTextSelectionInside,
   handlePressOnOutsideRegion,
   keepFocusedElementVisible,
@@ -103,6 +108,11 @@ import {
   warnPopupHasNoElementToOpen,
 } from "./popup_shared.js";
 import { PopupClose } from "./popup_close.jsx";
+import {
+  closePopupGroupsInside,
+  PopupGroupContext,
+  warnWallPropsInsidePopupGroup,
+} from "./popup_group.jsx";
 
 // Custom renderer only (layer="local") — count of currently-open instances,
 // see --popover-stack-order's own CSS comment for why a plain "last shown"
@@ -530,13 +540,6 @@ const css = /* css */ `
  *   is a `Popover`-level answer only for `"close"`/`"cancel"`; `"capture"` has
  *   nothing left to absorb without a wall, and `"ignore"` renders no wall anyway.
  *   See docs/popup_backdrop.md.
- * @param {string} [props.group] - The popover's peers: the triggers carrying
- *   `data-navi-popup-group` with this name. A press on one, while the popover
- *   is open, closes it and opens the peer's popup in that same press — a
- *   menu bar, where pressing another menu switches to it. The wall still
- *   takes the press (the page behind stays out of reach, hover included) and
- *   hands its click to the peer it covered. Without a wall there is nothing
- *   to ask: the press reaches the peer on its own.
  * @param {"close"|"cancel"|"capture"|"ignore"} [props.pressOutside="ignore"]
  *   - `"ignore"` (default): no backdrop at all, outside presses pass straight
  *   through. `"close"` closes the popover on an outside press, `"cancel"`
@@ -931,7 +934,6 @@ const usePopoverProps = (props) => {
     // Read at the opening, with the backdrop it would otherwise be worked out
     // from (see openEffect).
     themeColor,
-    group,
     scrollCapture,
     focusCapture,
     // "auto" (default) → the popover follows its content. "frozen" → measured
@@ -994,8 +996,17 @@ const usePopoverProps = (props) => {
   // (see resolveAutoAnimationKind).
   const isAutoAnimation = animation === true || animation === "auto";
 
-  const hasBackdrop = pressOutside !== "ignore" && backdrop;
-  if (!backdrop && pressOutside === "capture") {
+  // Inside a <PopupGroup> the wall is the group's (see popup_group.jsx): this
+  // popover draws none, and the group decides what a press outside does.
+  const popupGroup = useContext(PopupGroupContext);
+  useLayoutEffect(() => {
+    if (!popupGroup) {
+      return undefined;
+    }
+    return popupGroup.register(openController);
+  }, [popupGroup, openController]);
+  const hasBackdrop = pressOutside !== "ignore" && backdrop && !popupGroup;
+  if (!popupGroup && !backdrop && pressOutside === "capture") {
     console.warn(
       `Popover: pressOutside="capture" needs a backdrop. Absorbing a press is what a wall does, and backdrop={false} takes it away — every press outside reaches the page, exactly as with "ignore".`,
     );
@@ -1073,6 +1084,23 @@ const usePopoverProps = (props) => {
     if (import.meta.dev) {
       warnAboutUnreachableOutsideRegions(popoverEl);
     }
+    if (
+      import.meta.dev &&
+      popupGroup &&
+      (backdropColor ||
+        backdropFilter ||
+        (backdropVariant && backdropVariant !== "auto"))
+    ) {
+      warnWallPropsInsidePopupGroup("Popover");
+    }
+    // First, so the group already stands where it stands in the top layer
+    // when this popover reads its anchor and shows itself above it.
+    popupGroup?.engage({
+      openController,
+      popupElement: popoverEl,
+      pressOutside,
+      event: e,
+    });
 
     // Set by useOpenControllerByProps for the very first open triggered by
     // `open`/`defaultOpen` already being truthy at mount — there's nothing
@@ -1387,9 +1415,11 @@ const usePopoverProps = (props) => {
 
     // With no backdrop of its own to catch a press, the popover hears an
     // outside one from the document and takes nothing from it: it closes, and
-    // the press goes on to whatever it landed on (armOutsidePressClose).
+    // the press goes on to whatever it landed on (armOutsidePressClose). Not
+    // inside a group: the group's wall is up, and the group hears the press.
     if (
       !hasBackdrop &&
+      !popupGroup &&
       (pressOutside === "close" || pressOutside === "cancel")
     ) {
       addCleanup(
@@ -1400,7 +1430,12 @@ const usePopoverProps = (props) => {
       );
     }
     if (scrollCapture) {
-      addCleanup(trapScrollInside(popoverEl, { backdrop: backdropEl }));
+      addCleanup(
+        trapScrollInside(popoverEl, {
+          // A group's ::backdrop covers the page while this popover is open.
+          backdrop: popupGroup ? true : backdropEl,
+        }),
+      );
     }
     if (focusCapture) {
       addCleanup(trapFocusInside(popoverEl, { debug: debugFocus }));
@@ -1638,6 +1673,11 @@ const usePopoverProps = (props) => {
       // comment (openEffect above) for why hidePopover() alone isn't
       // reliably sufficient once a consumer's own CSS also sets display.
       popoverEl.setAttribute("navi-hidden", "");
+      if (!findEvent(closeEvent, UNMOUNT_EVENT_TYPE)) {
+        // Before its own focus restore: a group engaged inside it is the
+        // topmost modal, and keeps everything else inert until it goes.
+        closePopupGroupsInside(popoverEl, closeEvent);
+      }
       if (isTopLayer) {
         // Left to its removal when the popover leaves the tree: that hides it
         // and hands the focus to nobody, where hidePopover() hands the focus
@@ -1666,24 +1706,18 @@ const usePopoverProps = (props) => {
         backdropEl.setAttribute("aria-expanded", "false");
         disarmBackdropHideRef.current = armPointerDownOutsideClose(
           closeEvent,
-          (clickEvent) => {
+          () => {
+            disarmBackdropHideRef.current = null;
             // Set regardless of isTopLayer — see openEffect's own identical
             // comment for why hidePopover() alone isn't reliably sufficient.
             backdropEl.setAttribute("navi-hidden", "");
             if (isTopLayer) {
               backdropEl.hidePopover();
             }
-            if (group && clickEvent) {
-              handWallClickToPeer(clickEvent, {
-                wallEl: backdropEl,
-                popupEl: popoverEl,
-                anchorEl: anchorElement,
-                group,
-              });
-            }
           },
         );
       }
+      popupGroup?.release(openController, closeEvent);
       restoreFocus?.(closeEvent);
 
       // pickPositionRelativeTo (visible_rect.js) writes data-position-y/x-
@@ -1763,8 +1797,14 @@ const usePopoverProps = (props) => {
     // Read fresh on every render (not frozen at mount), so it stays
     // correct even across a re-render that happens to occur while open —
     // see contentProps' own identical prop just below for the full
-    // reasoning (kept once, not repeated here).
-    "navi-hidden": openController.openedInDom ? undefined : "",
+    // reasoning (kept once, not repeated here). The wall outlives its popup
+    // by the press that closed it (armPointerDownOutsideClose): a render
+    // before that press's click must leave it up — a popup's owner commonly
+    // renders on its close, in a microtask the release comes after.
+    "navi-hidden":
+      openController.openedInDom || disarmBackdropHideRef.current
+        ? undefined
+        : "",
     "styleCSSVars": POPUP_STYLE_CSS_VARS,
     "animationDuration": rest.animationDuration,
     "data-press-outside": pressOutside,
@@ -1873,7 +1913,15 @@ const usePopoverProps = (props) => {
       onKeyDown?.(e);
       onKeyDownShortcuts(e);
     },
-    children,
+    // A popup opened from inside this one is in front of it, not a peer of
+    // it: the group stops here.
+    "children": popupGroup ? (
+      <PopupGroupContext.Provider value={null}>
+        {children}
+      </PopupGroupContext.Provider>
+    ) : (
+      children
+    ),
     // onnavi_request_open/onnavi_request_close/onnavi_open_press: for the
     // uncontrolled case,
     // already arrive here as plain props via ...rest (wired by

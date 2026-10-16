@@ -63,7 +63,9 @@ export const getFocusVisibilityInfo = (node, { excludeAriaHidden } = {}) => {
     if (
       elementIsDialog(nodeOrAncestor) &&
       !nodeOrAncestor.open &&
-      !isOpenPopover
+      !isOpenPopover &&
+      // A closed PopupGroup is displayed in the page (see ancestor_open.js).
+      !nodeOrAncestor.hasAttribute("navi-popup-group")
     ) {
       return { visible: false, reason: "inside closed dialog element" };
     }

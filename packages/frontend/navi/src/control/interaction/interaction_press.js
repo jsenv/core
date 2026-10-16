@@ -249,7 +249,11 @@ import.meta.css = /* css */ `
      Given as text and not as auto: auto computes to none under a parent that is
      none, so it would give back nothing. */
   :is([data-longpress], [data-swipe], [data-double-click])
-    :is([data-drag-ignore], [popover], dialog),
+    :is(
+      [data-drag-ignore],
+      [popover],
+      dialog:not([navi-popup-group]:not(:modal))
+    ),
   :is([data-longpress], [data-swipe], [data-double-click])
     :is(input:not([data-press-only]), textarea),
   :is([data-longpress], [data-swipe], [data-double-click])

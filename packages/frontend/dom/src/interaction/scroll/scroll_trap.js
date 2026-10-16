@@ -54,16 +54,24 @@ const SCROLL_LOCK_STRATEGY = "gesture";
  *   while the overlay is open: the backdrop element, or `true` when the browser
  *   paints it itself (a modal dialog's `::backdrop`). Enables the gesture
  *   strategy described above.
+ * @param {Function} [options.getElementBox] - Forwarded to
+ *   trapScrollGestureInside: where `element` is on screen when that is less
+ *   than its border box.
+ * @param {boolean} [options.containInside] - Forwarded to
+ *   trapScrollGestureInside: a gesture inside `element` that nothing in it can
+ *   scroll does not reach the background either.
  * @returns {() => void} Cleanup function that restores all modified styles.
  */
 export const trapScrollInside = (
   element,
-  { boundaryElement, backdrop } = {},
+  { boundaryElement, backdrop, getElementBox, containInside } = {},
 ) => {
   if (backdrop && SCROLL_LOCK_STRATEGY === "gesture") {
     return trapScrollGestureInside(element, {
       boundaryElement,
       backdropElement: backdrop === true ? null : backdrop,
+      getElementBox,
+      containInside,
     });
   }
 

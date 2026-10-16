@@ -85,20 +85,21 @@ const TOP_LAYER_SELECTOR = ":modal, :popover-open";
 // stands over the pages in the top layer. A sticky row inside the pages needs
 // none of this — it lives in the area, so it is already part of the pages' own
 // picture, and so is a popup rendered with layer="local".
-const FURNITURE_SELECTOR = `.navi_fixed_bar, .navi_popover:is(${TOP_LAYER_SELECTOR}), .navi_dialog:is(${TOP_LAYER_SELECTOR})`;
+const FURNITURE_SELECTOR = `.navi_fixed_bar, .navi_popover:is(${TOP_LAYER_SELECTOR}), .navi_dialog:is(${TOP_LAYER_SELECTOR}), .navi_popup_group:is(${TOP_LAYER_SELECTOR})`;
 // Worn by the root for the length of a route transition (route_transition.jsx
 // owns it). Written out rather than imported: importing the module that owns
 // it back into this one would close a cycle.
 const TRANSITION_ATTRIBUTE = "data-navi-route-transition";
 const NAME_PROPERTY = "view-transition-name";
 export const FURNITURE_NAME_PREFIX = "navi-transition-furniture-";
-// The walls painted in the top layer: a modal dialog's, which is its
-// ::backdrop, and a popover's, which is a real element shown as a popover
+// The walls painted in the top layer: a modal dialog's (a PopupGroup's too,
+// layout/popup_group.jsx), which is its ::backdrop, and a popover's, which is
+// a real element shown as a popover
 // beside it (layout/popover.jsx) — unnamed, so covered by the pictures for
 // the length of the movement all the same. A top-layer dialog without a wall
 // is shown as a popover and has nothing to stand in for.
 const TOP_LAYER_WALL_SELECTOR =
-  ".navi_dialog:modal, .navi_popover_backdrop:popover-open";
+  ".navi_dialog:modal, .navi_popover_backdrop:popover-open, .navi_popup_group:modal";
 const WALL_ATTRIBUTE = "data-navi-transition-wall";
 // Which side of the movement a bar is on, worn by the bar and read by the
 // browser as the class of its group (the CSS below): "leaving" from the first
@@ -192,6 +193,7 @@ const TRANSITION_FURNITURE_CSS = /* css */ `
      the application's own. */
   :root[data-navi-route-transition-target="area"] {
     .navi_dialog::backdrop,
+    .navi_popup_group::backdrop,
     .navi_popover_backdrop {
       background: transparent;
       backdrop-filter: none;

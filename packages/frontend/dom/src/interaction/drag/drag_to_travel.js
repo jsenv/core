@@ -324,7 +324,8 @@ export const DRAG_EXCLUDED_SELECTOR = [
   '[data-self-interactions~="drag"]',
   '[data-self-interactions~="*"]',
   "[popover]",
-  "dialog",
+  // An idle PopupGroup is part of the page (see DRAG_IGNORED_SELECTOR).
+  "dialog:not([navi-popup-group]:not(:modal))",
 ].join(",");
 
 // Which axes a box travels on, one attribute per gesture, said in the DOM by

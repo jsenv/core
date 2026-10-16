@@ -15,7 +15,10 @@
  * what a popup outside the top layer says for itself).
  */
 
-const LAYER_OVER_SELECTOR = "[data-drag-ignore],[popover],dialog";
+// An idle PopupGroup is a closed <dialog> that is part of the page, not a layer
+// over it (see popup_group.jsx).
+const LAYER_OVER_SELECTOR =
+  "[data-drag-ignore],[popover],dialog:not([navi-popup-group]:not(:modal))";
 
 /**
  * The nearest word wins: a layer INSIDE the element takes the press away from

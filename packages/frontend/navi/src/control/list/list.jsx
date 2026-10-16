@@ -203,7 +203,7 @@ const css = /* css */ `
      already drew it, and two frames around the same items read as a box in a box
      (the Picker's list, a select's suggestions). Only the default is dropped —
      a borderWidth asked for explicitly still applies. */
-  :where([popover], dialog) > .navi_list_container,
+  :where([popover], dialog:not([navi-popup-group])) > .navi_list_container,
   .navi_list_container[popover] {
     --list-border-width-default: 0px;
   }

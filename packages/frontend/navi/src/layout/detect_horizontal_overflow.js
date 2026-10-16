@@ -142,7 +142,11 @@ const findOverflows = (root) => {
       if (style.display === "none" || style.position === "fixed") {
         continue;
       }
-      if (el.hasAttribute("popover") || el.tagName === "DIALOG") {
+      if (
+        el.hasAttribute("popover") ||
+        // An idle PopupGroup is a box of the page (see popup_group.jsx).
+        (el.tagName === "DIALOG" && !el.hasAttribute("navi-popup-group"))
+      ) {
         continue;
       }
       const rect = el.getBoundingClientRect();

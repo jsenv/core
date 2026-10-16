@@ -210,7 +210,7 @@ const css = /* css */ `
   [data-self-interactions~="drag"],
   [data-self-interactions~="*"],
   [data-drag-source] [popover],
-  [data-drag-source] dialog {
+  [data-drag-source] dialog:not([navi-popup-group]:not(:modal)) {
     cursor: auto;
   }
 
@@ -337,8 +337,10 @@ import.meta.css = css;
 // stays a descendant of whatever it is anchored in (a callout next to a button,
 // in the card that carries both), and the press bubbles through the surface as
 // if it had landed on it.
+// An idle PopupGroup is a closed <dialog> that is part of the page, not a layer
+// over it (see @jsenv/navi's popup_group.jsx).
 const DRAG_IGNORED_SELECTOR =
-  '[data-drag-ignore],[data-self-interactions~="drag"],[data-self-interactions~="*"],[popover],dialog';
+  '[data-drag-ignore],[data-self-interactions~="drag"],[data-self-interactions~="*"],[popover],dialog:not([navi-popup-group]:not(:modal))';
 
 /**
  * Creates a gesture controller that moves elements via drag.

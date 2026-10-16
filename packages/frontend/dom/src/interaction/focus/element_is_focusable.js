@@ -19,6 +19,11 @@ export const elementIsFocusable = (node, { excludeAriaHidden } = {}) => {
   if (node.hasAttribute("navi-focus-delegate")) {
     return false;
   }
+  // A <dialog> because it is shown modal while one of its popups is open, not
+  // a surface of its own to focus (see ancestor_open.js).
+  if (node.hasAttribute("navi-popup-group")) {
+    return false;
+  }
   if (!canInteract(node)) {
     return false;
   }

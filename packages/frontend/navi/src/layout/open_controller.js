@@ -137,6 +137,48 @@ export const createOpenController = (
   // armSuppressNextOpenRequest below.
   let suppressNextOpenRequest = false;
   let disarmSuppressNextOpenRequest = null;
+  // The press a press-close came from, for as long as that press lasts (see
+  // open() for what it is read for).
+  let pressCountAtPressClose = null;
+  let releaseThisPress = null;
+  const holdReopenForThisPress = (closeEvent) => {
+    releaseThisPress?.();
+    pressCountAtPressClose = pressCount;
+    let timeout = null;
+    const release = () => {
+      clearTimeout(timeout);
+      document.removeEventListener("click", onPressEnd, { capture: true });
+      document.removeEventListener("pointercancel", onPressEnd, {
+        capture: true,
+      });
+      document.removeEventListener("pointerdown", release, { capture: true });
+      pressCountAtPressClose = null;
+      releaseThisPress = null;
+    };
+    // Once the task the press ends in is over: every reaction to the closing
+    // press is synchronous to it, while an open asked for later — a command a
+    // button runs once its action resolves — is somebody asking again.
+    const onPressEnd = () => {
+      document.removeEventListener("click", onPressEnd, { capture: true });
+      document.removeEventListener("pointercancel", onPressEnd, {
+        capture: true,
+      });
+      timeout = setTimeout(release);
+    };
+    if (findEvent(closeEvent, "click")) {
+      // Closed by the press's own click: a listener added during its dispatch
+      // would only hear the next one.
+      timeout = setTimeout(release);
+    } else {
+      document.addEventListener("click", onPressEnd, { capture: true });
+      document.addEventListener("pointercancel", onPressEnd, {
+        capture: true,
+      });
+    }
+    // A press whose click was swallowed (a gesture) ends with the next one.
+    document.addEventListener("pointerdown", release, { capture: true });
+    releaseThisPress = release;
+  };
 
   // When the popup closes because of a press (clicking the backdrop, or a
   // press outside a popup with no backdrop), the browser still dispatches the
@@ -292,6 +334,7 @@ export const createOpenController = (
           `closed by ${pressEvent.type} -> ignore next click`,
         );
         armSuppressNextOpenRequest();
+        holdReopenForThisPress(closeEvent);
         break prevent_reopen;
       }
 
@@ -426,7 +469,9 @@ export const createOpenController = (
     // called once the open/close has fully happened rather than mid-sequence.
     onOpenedChange: null,
     open: (e, detail) => {
-      flushChangeAwaitingTransition();
+      // The refusals below read the decision (`opened`), which is written
+      // before a change waiting for its view transition runs: a refused open
+      // must not force that change through and take its picture away.
       if (controller.opened || !controller.openEffect) {
         return;
       }
@@ -434,6 +479,20 @@ export const createOpenController = (
         suppressNextOpenRequest = false;
         return;
       }
+      if (
+        pressCountAtPressClose === pressCount &&
+        findEvent(e, isEventOfAPress)
+      ) {
+        // The press that closed it, heard again by what opens it. With nothing
+        // between a popup and its own trigger (no wall, or a PopupGroup), the
+        // press is still on its way when the popup closes, and the trigger's
+        // own reaction to that same press asks to open it again: at its
+        // mousedown, before the click the suppression above waits for — or at
+        // the very click that closed it, whose suppression is armed during its
+        // own dispatch and so only hears the next one.
+        return;
+      }
+      flushChangeAwaitingTransition();
       const requestOpenEvent = new CustomEvent("navi_request_open", {
         detail: { event: e, ...detail },
         cancelable: true,
@@ -572,6 +631,16 @@ export const createOpenController = (
         if (nativeCancelEvent) {
           nativeCancelEvent.preventDefault();
         }
+        // An Escape this popup answered, by refusing: dispatched on, it would
+        // also be the browser's close request for a modal around the popup (a
+        // PopupGroup, a dialog), closing what this popup just kept open.
+        const escapeKeydown = findEvent(
+          requestCloseEvent,
+          (event) => event.type === "keydown" && event.key === "Escape",
+        );
+        if (escapeKeydown) {
+          escapeKeydown.preventDefault();
+        }
         return false;
       }
       performClose(requestCloseEvent);
@@ -593,13 +662,24 @@ export const createOpenController = (
   return controller;
 };
 
+// A click a keyboard made (detail 0) is not one: nothing pressed for it.
+const isEventOfAPress = (event) =>
+  event.type === "pointerdown" ||
+  event.type === "mousedown" ||
+  (event.type === "click" && event.detail > 0);
+
 // Inside a popup that is open right now — the popup being closed, in practice,
 // since that is the one the key press was delivered to.
 const isInsideOpenPopup = (element) => {
   if (!element || element.nodeType !== 1) {
     return false;
   }
-  return Boolean(element.closest("dialog[open], [popover]:popover-open"));
+  // An engaged PopupGroup is open too, around peers that are not the popup.
+  return Boolean(
+    element.closest(
+      "dialog[open]:not([navi-popup-group]), [popover]:popover-open",
+    ),
+  );
 };
 
 // What Enter is about to do when it is about to activate something: press the

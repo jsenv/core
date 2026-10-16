@@ -128,7 +128,7 @@ const css = /* css */ `
      none, so it would give back nothing. */
   [data-drag-on-contact] [data-drag-ignore],
   [data-drag-on-contact] [popover],
-  [data-drag-on-contact] dialog,
+  [data-drag-on-contact] dialog:not([navi-popup-group]:not(:modal)),
   [data-drag-on-contact] :is(input:not([data-press-only]), textarea),
   [data-drag-on-contact] :is([contenteditable=""], [contenteditable="true"]) {
     user-select: text;
@@ -142,7 +142,7 @@ const css = /* css */ `
   [data-self-interactions~="drag"],
   [data-self-interactions~="*"],
   [data-drag-source] [popover],
-  [data-drag-source] dialog {
+  [data-drag-source] dialog:not([navi-popup-group]:not(:modal)) {
     -webkit-touch-callout: default;
     touch-action: auto;
   }

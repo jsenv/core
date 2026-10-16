@@ -89,7 +89,14 @@ import {
   visibleRectEffect,
 } from "@jsenv/dom";
 import { computed } from "@preact/signals";
-import { useEffect, useMemo, useRef, useState } from "preact/hooks";
+import {
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "preact/hooks";
 
 import { onNaviCommand } from "../control/commands.js";
 import { dispatchRequestInteraction } from "../control/rules/control_interaction.js";
@@ -144,6 +151,11 @@ import {
   warnPopupHasNoElementToOpen,
 } from "./popup_shared.js";
 import { PopupClose } from "./popup_close.jsx";
+import {
+  closePopupGroupsInside,
+  PopupGroupContext,
+  warnWallPropsInsidePopupGroup,
+} from "./popup_group.jsx";
 
 // Same need popover.jsx has for its own local renderer (see its
 // openLocalPopoverCount): a layer="local" dialog is a plain positioned element
@@ -1554,7 +1566,7 @@ const useDialogProps = (props) => {
     // before how it is painted (backdropVariant below). It also picks the show
     // call for layer="top": a wall is what showModal() is for, and without one
     // the dialog goes to the same top layer through the Popover API instead.
-    backdrop = true,
+    backdrop: backdropProp = true,
     // How loudly the backdrop says it is there — independent of what it
     // *does* (that's pressOutside above). "lift" is the
     // opaque wall at one end, "invisible" a wall that is not seen at the
@@ -1622,9 +1634,20 @@ const useDialogProps = (props) => {
   // Where it is placed, and whether there is a wall — the two questions that
   // pick the show call (see this file's top comment).
   const isTopLayer = layer === "top";
+  // Inside a <PopupGroup> the wall is the group's (see popup_group.jsx): the
+  // dialog takes the wall-less path, never showModal() — a modal dialog makes
+  // everything outside it inert, the group's other popups included.
+  const popupGroup = useContext(PopupGroupContext);
+  useLayoutEffect(() => {
+    if (!popupGroup) {
+      return undefined;
+    }
+    return popupGroup.register(openController);
+  }, [popupGroup, openController]);
+  const backdrop = backdropProp && !popupGroup;
   const isModal = isTopLayer && backdrop;
   const isTopLayerPopover = isTopLayer && !backdrop;
-  if (!backdrop && pressOutside === "capture") {
+  if (!popupGroup && !backdrop && pressOutside === "capture") {
     console.warn(
       `Dialog: pressOutside="capture" needs a backdrop. Absorbing a press is what a wall does, and backdrop={false} takes it away.`,
     );
@@ -1905,6 +1928,23 @@ const useDialogProps = (props) => {
         warnBottomSheetHoldingKeyboardControl(dialogEl);
       }
     }
+    if (
+      import.meta.dev &&
+      popupGroup &&
+      (backdropColor ||
+        backdropFilter ||
+        (backdropVariant && backdropVariant !== "auto"))
+    ) {
+      warnWallPropsInsidePopupGroup("Dialog");
+    }
+    // First, so the group already stands where it stands in the top layer
+    // when this dialog shows itself above it.
+    popupGroup?.engage({
+      openController,
+      popupElement: dialogEl,
+      pressOutside,
+      event: e,
+    });
 
     // Set by useOpenControllerByProps for the very first open triggered by
     // `open`/`defaultOpen` already being truthy at mount, and for an open a
@@ -2008,7 +2048,8 @@ const useDialogProps = (props) => {
       // backdrop element when it renders one.
       addCleanup(
         trapScrollInside(dialogEl, {
-          backdrop: isModal || backdropEl,
+          // A group's ::backdrop covers the page while this dialog is open.
+          backdrop: popupGroup ? true : isModal || backdropEl,
         }),
       );
     } else if (!isTopLayer) {
@@ -2290,6 +2331,8 @@ const useDialogProps = (props) => {
     // mid-transition.
     if (
       (isModal || !backdrop) &&
+      // The group's wall is up, and the group hears the press itself.
+      !popupGroup &&
       (pressOutside === "close" || pressOutside === "cancel")
     ) {
       addCleanup(
@@ -2335,6 +2378,11 @@ const useDialogProps = (props) => {
           dialogEl.close();
         }
       };
+      if (!findEvent(closeEvent, UNMOUNT_EVENT_TYPE)) {
+        // Before its own focus restore: a group engaged inside it is the
+        // topmost modal, and keeps everything else inert until it goes.
+        closePopupGroupsInside(dialogEl, closeEvent);
+      }
       if (findEvent(closeEvent, UNMOUNT_EVENT_TYPE)) {
         // Leaving the tree: hidden natively once the commit is over. Its
         // removal takes it out of the top layer and hands the focus to
@@ -2366,10 +2414,12 @@ const useDialogProps = (props) => {
         disarmBackdropHideRef.current = armPointerDownOutsideClose(
           closeEvent,
           () => {
+            disarmBackdropHideRef.current = null;
             backdropEl.setAttribute("navi-hidden", "");
           },
         );
       }
+      popupGroup?.release(openController, closeEvent);
       restoreFocus(closeEvent);
       cleanup();
       if (silent) {
@@ -2429,8 +2479,12 @@ const useDialogProps = (props) => {
     // there's no gap for the browser to ever paint this plain-div backdrop
     // visible before anything has actually opened it — see popover.jsx's
     // own identical prop for the full reasoning, and this file's own CSS
-    // for the rule it drives.
-    "navi-hidden": openController.openedInDom ? undefined : "",
+    // for the rule it drives. Left up while the press that closed the dialog
+    // has its click still to come, as popover.jsx's own wall is.
+    "navi-hidden":
+      openController.openedInDom || disarmBackdropHideRef.current
+        ? undefined
+        : "",
     "styleCSSVars": DIALOG_STYLE_CSS_VARS,
     "animationDuration": rest.animationDuration,
     "data-press-outside": pressOutside,
@@ -2587,7 +2641,15 @@ const useDialogProps = (props) => {
       // prevented it already (see requestClose).
       e.preventDefault();
     },
-    children,
+    // A popup opened from inside this one is in front of it, not a peer of
+    // it: the group stops here.
+    "children": popupGroup ? (
+      <PopupGroupContext.Provider value={null}>
+        {children}
+      </PopupGroupContext.Provider>
+    ) : (
+      children
+    ),
   });
 
   // Outside-click handling for the wall we render ourselves. A modal's is a

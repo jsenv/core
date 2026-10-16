@@ -2220,15 +2220,13 @@ const PickerFirstResolver = (props) => {
  *   closing it — the link under it not followed, the card under it not held —
  *   without a wall: the scroll a finger starts beside the bubble still
  *   scrolls, and a peer (`popupGroup`) still gets its press.
- * @param {string} [popupGroup] Pickers sharing the name are peers, whatever
- *   their mode: pressing one while another's popup is open goes from that
- *   popup to this one in a single press — a menu bar, where pressing another
- *   menu switches to it. A popover's wall still takes that press — the page
- *   behind stays out of reach, hover included — and hands its click to the
- *   peer it covered; a callout with `backdrop` closes on it without spending
- *   it. Not read in dialog mode: a dialog's wall goes with it on the press
- *   that closes it. Written on the trigger as `data-navi-popup-group`, which
- *   is also how anything else joins the group.
+ * @param {string} [popupGroup] For `mode="callout"`: pickers sharing the name
+ *   are peers, so pressing one while another's bubble is open closes that
+ *   bubble without spending the press, and this one opens in that same press.
+ *   Written on the trigger as `data-navi-popup-group`, which is also how
+ *   anything else joins. Popovers and dialogs that hand over to each other
+ *   are wrapped in a `<PopupGroup>` instead: being inside it is what makes
+ *   them peers.
  * @param {"auto"|"lift"|"discrete"|"invisible"} [backdropVariant="auto"] How
  *   visible the popup's backdrop is, independently of what a click outside
  *   does: `"auto"` is the paint `pressOutside` implies,

@@ -3,7 +3,11 @@
 // directions: hide when a container closes, recheck when it reopens) — the
 // selector/open-detection/timing primitives are identical for both, only
 // what each does with a transition differs.
-const OPENABLE_SELECTOR = "dialog, details, [popover], [aria-expanded]";
+// Not a PopupGroup (@jsenv/navi's popup_group.jsx): a <dialog> that is a box
+// of the page, closed or shown modal where it stands. Its `open` says nothing
+// about whether what it holds is on screen.
+const OPENABLE_SELECTOR =
+  "dialog:not([navi-popup-group]), details, [popover], [aria-expanded]";
 
 // An element that IS openable is closed in exactly the same way an element
 // inside one is — which matters for anything positioned against it, e.g. a

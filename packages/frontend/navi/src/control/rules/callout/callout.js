@@ -74,9 +74,11 @@ const SPENT_PRESS_EVENT_TYPES = [
   "contextmenu",
 ];
 // Where a press lands on something drawn over the page rather than on the page
-// itself: a popup of navi's (either layer) or a native top-layer element.
+// itself: a popup of navi's (either layer) or a native top-layer element. An
+// idle PopupGroup is a closed <dialog> that is part of the page (see
+// popup_group.jsx).
 const LAYER_SELECTOR =
-  '[popover], dialog, [navi-control="popover"], [navi-control="dialog"]';
+  '[popover], dialog:not([navi-popup-group]:not(:modal)), [navi-control="popover"], [navi-control="dialog"]';
 
 const css = /* css */ `
   /* jsenv-css-opaque: same as dialog.jsx, cascade order. */

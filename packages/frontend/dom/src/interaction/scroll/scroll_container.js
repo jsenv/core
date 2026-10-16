@@ -51,11 +51,14 @@ const findScrollContainer = (element, { includeHidden } = {}) => {
     if (parent === document) {
       return null;
     }
-    if (isScrollBoundary(parent)) {
-      return null;
-    }
+    // A boundary that scrolls is the scroll container of what it holds — a
+    // popup whose own box scrolls, a PopupGroup shown modal where it stands —
+    // and nothing beyond it is.
     if (isScrollable(parent, { includeHidden })) {
       return parent;
+    }
+    if (isScrollBoundary(parent)) {
+      return null;
     }
     parent = parent.parentNode;
   }

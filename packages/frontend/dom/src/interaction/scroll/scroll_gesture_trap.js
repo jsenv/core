@@ -1,3 +1,5 @@
+import { canScroll } from "./is_scrollable.js";
+
 // A gesture on an element the browser paints in the top layer belongs to that
 // element, wherever it sits in the DOM.
 const TOP_LAYER_SELECTOR = [
@@ -51,12 +53,27 @@ const SCROLL_KEY_SET = new Set([
  *   background, when it is one of ours (a modal dialog covers it with its own
  *   `::backdrop` and there is nothing to pass). It is in the top layer like the
  *   overlay itself, yet a gesture on it aims at the background behind it.
+ * @param {() => {left: number, top: number, right: number, bottom: number}} [options.getElementBox]
+ *   - Where `element` is on screen, when that is less than its border box (an
+ *   overlay clipped by a clip-path): a gesture outside that box but reported on
+ *   `element` landed on its `::backdrop`.
+ * @param {boolean} [options.containInside] - Also cancel a gesture landing
+ *   inside `element` that nothing between it and `element` can scroll in its
+ *   direction. For an overlay that is not a scroll container itself (a box of
+ *   the page shown in the top layer where it stood): its scroll chain goes
+ *   straight to the viewport, and no `overscroll-behavior` of its own can stop
+ *   it there.
  * @returns {() => void} Cleanup function removing the listeners.
  */
 
 export const trapScrollGestureInside = (
   element,
-  { boundaryElement, backdropElement } = {},
+  {
+    boundaryElement,
+    backdropElement,
+    getElementBox = () => element.getBoundingClientRect(),
+    containInside = false,
+  } = {},
 ) => {
   const { ownerDocument } = element;
   const lockedRegion = boundaryElement || ownerDocument.documentElement;
@@ -73,7 +90,7 @@ export const trapScrollGestureInside = (
       if (target !== element) {
         return false;
       }
-      const { left, right, top, bottom } = element.getBoundingClientRect();
+      const { left, right, top, bottom } = getElementBox();
       return (
         clientX < left || clientX > right || clientY < top || clientY > bottom
       );
@@ -91,6 +108,42 @@ export const trapScrollGestureInside = (
     return true;
   };
 
+  // Whether something from `target` up to `element` scrolls the way the
+  // gesture goes, with room left to go there.
+  const isTakenInside = (target, deltaX, deltaY) => {
+    let ancestorOrSelf = target;
+    while (ancestorOrSelf && ancestorOrSelf.nodeType === 1) {
+      if (deltaY && canScroll(ancestorOrSelf, "y")) {
+        const { scrollTop, scrollHeight, clientHeight } = ancestorOrSelf;
+        if (
+          deltaY < 0 ? scrollTop > 0 : scrollTop + clientHeight < scrollHeight
+        ) {
+          return true;
+        }
+      }
+      if (deltaX && canScroll(ancestorOrSelf, "x")) {
+        const { scrollLeft, scrollWidth, clientWidth } = ancestorOrSelf;
+        if (
+          deltaX < 0
+            ? Math.abs(scrollLeft) > 0
+            : Math.abs(scrollLeft) + clientWidth < scrollWidth
+        ) {
+          return true;
+        }
+      }
+      if (ancestorOrSelf === element) {
+        break;
+      }
+      ancestorOrSelf = ancestorOrSelf.parentNode;
+    }
+    return false;
+  };
+  const leaksFromInside = (target, deltaX, deltaY) =>
+    containInside &&
+    target !== element &&
+    element.contains(target) &&
+    !isTakenInside(target, deltaX, deltaY);
+
   const onWheel = (wheelEvent) => {
     if (wheelEvent.ctrlKey) {
       // Browser zoom, not a scroll — cancelling it would take zoom away from
@@ -102,10 +155,21 @@ export const trapScrollGestureInside = (
         wheelEvent.target,
         wheelEvent.clientX,
         wheelEvent.clientY,
-      )
+      ) ||
+      leaksFromInside(wheelEvent.target, wheelEvent.deltaX, wheelEvent.deltaY)
     ) {
       wheelEvent.preventDefault();
     }
+  };
+  // Where the finger was at the previous touch event: a touchmove carries no
+  // delta of its own.
+  let previousTouch = null;
+  const onTouchStart = (touchStartEvent) => {
+    const { touches } = touchStartEvent;
+    previousTouch =
+      touches.length === 1
+        ? { x: touches[0].clientX, y: touches[0].clientY }
+        : null;
   };
   const onTouchMove = (touchMoveEvent) => {
     const { touches } = touchMoveEvent;
@@ -113,8 +177,17 @@ export const trapScrollGestureInside = (
       return; // pinch
     }
     const [touch] = touches;
+    // The content moves against the finger.
+    const deltaX = previousTouch ? previousTouch.x - touch.clientX : 0;
+    const deltaY = previousTouch ? previousTouch.y - touch.clientY : 0;
+    previousTouch = { x: touch.clientX, y: touch.clientY };
     if (
-      isBackgroundGesture(touchMoveEvent.target, touch.clientX, touch.clientY)
+      isBackgroundGesture(
+        touchMoveEvent.target,
+        touch.clientX,
+        touch.clientY,
+      ) ||
+      leaksFromInside(touchMoveEvent.target, deltaX, deltaY)
     ) {
       touchMoveEvent.preventDefault();
     }
@@ -142,9 +215,18 @@ export const trapScrollGestureInside = (
   // effective at all on wheel/touchmove.
   const listenerOptions = { capture: true, passive: false };
   ownerDocument.addEventListener("wheel", onWheel, listenerOptions);
+  if (containInside) {
+    ownerDocument.addEventListener("touchstart", onTouchStart, {
+      capture: true,
+      passive: true,
+    });
+  }
   ownerDocument.addEventListener("touchmove", onTouchMove, listenerOptions);
   ownerDocument.addEventListener("keydown", onKeyDown, listenerOptions);
   return () => {
+    ownerDocument.removeEventListener("touchstart", onTouchStart, {
+      capture: true,
+    });
     ownerDocument.removeEventListener("wheel", onWheel, listenerOptions);
     ownerDocument.removeEventListener(
       "touchmove",

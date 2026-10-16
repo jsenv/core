@@ -261,8 +261,9 @@ const css = /* css */ `
  *   interaction only makes sense paired with not letting focus silently
  *   leave the panel first. A box of the page whose press must not close the
  *   panel (a card that fills it) names the panel:
- *   `data-navi-popup-inside={id}`, read when the panel has no wall
- *   (`backdrop={false}`) — see docs/popup_backdrop.md.
+ *   `data-navi-popup-inside={id}`, read when the panel has no wall of its own
+ *   (`backdrop={false}`, or inside a `<PopupGroup>`) — see
+ *   docs/popup_backdrop.md.
  * @param {boolean} [props.closeByDrag=true] - Pushing the panel back
  *   towards the edge it is docked to closes it: the panel follows the
  *   pointer and finishes leaving (or comes back to rest) when it is

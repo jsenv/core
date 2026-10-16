@@ -1238,7 +1238,6 @@ const PickerContentInsidePopup = (props) => {
           backdropVariant={backdropVariant}
           backdropColor={backdropColor}
           backdropFilter={backdropFilter}
-          group={popupGroup}
           focusCapture={isPopover ? focusCapture : undefined}
           expand={isPopover ? undefined : dialogExpand}
           expandX={isPopover ? undefined : dialogExpandX}

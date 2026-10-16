@@ -170,7 +170,7 @@ const css = /* css */ `
          clicked, however far from the row it is painted. Matched on what makes
          an element a popup to the browser rather than on navi's own attribute:
          anything shown over the page has the same claim, navi's or not. */
-      dialog,
+      dialog:not([navi-popup-group]:not(:modal)),
       [popover] {
         pointer-events: auto;
       }
