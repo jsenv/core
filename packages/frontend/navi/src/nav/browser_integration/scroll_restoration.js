@@ -45,8 +45,8 @@
  * mount="after-paint">` is built before the offset that shows it is written
  * (see mount_after_paint.jsx), and a reload or a return waits for the route
  * actions the page has nothing to draw for — its code among them — including
- * one that starts asking after the position is written (see
- * putBackOnceAnswered). Anything else only the page knows, and it says so
+ * one whose `when` lets it ask after the position is written (see
+ * stayForLateAsks). Anything else only the page knows, and it says so
  * (useHoldScrollRestoration). A wait can be long, so the reader reaching for
  * the page during it cancels the position: moved afterwards, they would lose
  * whatever they had started on.
@@ -263,7 +263,7 @@ const holdScrollRestoration = () => {
  * meantime (a finger, a click, a wheel, a key), or gone elsewhere.
  *
  * The page's route actions are waited for without this — its code, a read
- * with no answer yet, one gated on app state that asks later. This is for
+ * with no answer yet, one whose `when` holds later. This is for
  * what navi cannot see: a read the page starts itself, content whose height
  * arrives late.
  *
@@ -404,14 +404,15 @@ const readUnansweredRouteActions = () => {
   return unanswered;
 };
 
-// A page can start asking after the position is written: an action gated on
-// app state not there yet (`when`, or params reading an app-wide read), and
-// nothing tells "not yet" from "never" before it asks (see
-// routeActionYetToAskSignal). So a written position stays pending while a
-// route action of the page has not asked: the next one that starts without an
-// answer is waited for like the first ones, and the position put back once it
-// is drawn. Not told when the restoration is dropped (pendingRestoration is no
-// signal): it notices at its next run.
+// A page can still be arriving after the position is written: an action whose
+// `when` waits for app state not there yet (see routeActionYetToAskSignal). So
+// a written position stays pending while one does: the next one that starts
+// without an answer is waited for like the first ones, and the position put
+// back once it is drawn. Params that say no are not waited for: the address
+// asks nothing of the action, and one that asks later — a search typed — is
+// the page moving on under the reader, not arriving. Not told when the
+// restoration is dropped (pendingRestoration is no signal): it notices at its
+// next run.
 const stayForLateAsks = (restoration) => {
   effect(function () {
     let running = false;

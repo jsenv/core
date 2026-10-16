@@ -511,15 +511,30 @@ on, and the position stays for the visit that brings it back. What it costs: a
 slow read that every page asks for delays the position of every page, since
 nothing tells navi which reads set the height.
 
-A route action that starts asking later is waited for too: one gated on app
-state the page did not have yet (`when`, or params that read an app-wide read
-such as the signed-in user), or one whose params are another's answer. Before it
-asks, nothing tells "not yet" from "never", so the position is written into what
-the page shows — and stays pending while a route action of the page has not
-asked: the next one that starts without an answer is waited for the same way,
-and the position is put back again once it is drawn. It ends once every route
-action of the page has asked; an action that never asks on this page (a search
-with no query) keeps it pending until the reader takes over.
+A route action that starts asking later is waited for when it says what it
+waits for: its `when`, a condition on app state the page did not have yet (the
+signed-in user, an age gate). The position is written into what the page shows
+and stays pending while a `when` of the page says no; the action that starts
+once it holds is waited for the same way, and the position is put back again
+once it is drawn. Params that say no are not waited for: they read the address,
+and this one asks nothing of the action — when it asks later (a search typed),
+the page has changed under the reader, and writing the old position would undo
+whatever they or the app did meanwhile. So a gate on app state goes in `when`,
+and the params keep what depends on the page:
+
+```js
+const BOOK_ACTION = routeAction(
+  BOOK_ROUTE,
+  BOOK.GET,
+  () => ({ slug: bookSlugSignal.value }),
+  { when: () => catalogOpenSignal.value },
+);
+```
+
+A `when` that never holds on this page (a reader who is not an admin) keeps the
+position pending until the reader takes over. An action whose params are
+another's answer needs nothing: the position is read again once that answer is
+drawn, and the action asking by then is waited for.
 
 **What navi cannot see, the page says**: a read it starts itself
 (`useAsyncData(…, { run: true })`), content whose height arrives late. While

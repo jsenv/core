@@ -30,6 +30,8 @@ const keptNameWeakMap = new WeakMap();
 export const getRouteActionKeptName = (routeAction) => {
   return keptNameWeakMap.get(routeAction);
 };
+// Shared by every route action without a `when`.
+const NOT_GATED_SIGNAL = signal(false);
 let activeRouteActionsPrevious = new Set();
 /**
  * The route actions asking something for the page on screen: their route
@@ -56,19 +58,17 @@ export const activeRouteActionsSignal = computed(() => {
 });
 
 /**
- * Whether a route action of the page on screen asks nothing yet: its route
- * matches and its params (or `when`) say no. Gated on app state not there yet,
- * or never meant to ask on this page — nothing tells one from the other before
- * it asks. Read by the scroll restoration, which stays ready for it.
+ * Whether a route action of the page on screen waits for app state to ask: its
+ * route matches and its `when` says no. Params that say no are not waiting:
+ * they read the address, and this one asks nothing of the action — a later ask
+ * is the page changing under the reader (a search typed), not arriving. Read
+ * by the scroll restoration, which stays ready for it.
  *
  * @type {import("@preact/signals").ReadonlySignal<boolean>}
  */
 export const routeActionYetToAskSignal = computed(() => {
-  for (const {
-    routeMatchingSignal,
-    askingSignal,
-  } of routeActionEntriesSignal.value) {
-    if (routeMatchingSignal.value && !askingSignal.value) {
+  for (const { gatedSignal } of routeActionEntriesSignal.value) {
+    if (gatedSignal.value) {
       return true;
     }
   }
@@ -141,7 +141,9 @@ export const activeRouteReadsSignal = computed(() => {
  *   params when the condition holds at that moment — a page's code only some
  *   readers may download (`() => meIsAdminSignal.value`). A condition reading
  *   the address belongs in the params: a link reads `when` as it is, not as
- *   the address it leads to will make it.
+ *   the address it leads to will make it. It is also what a reload's scroll
+ *   position waits for: the page is not whole while a `when` says no, whereas
+ *   params that say no ask nothing on this page (see scroll_restoration.js).
  * @param {boolean} [options.prefetch=true] - `false` keeps the action from
  *   being prerun ahead of what asks for it, when the read is not worth a
  *   hover or a press that may not end in an opening.
@@ -188,8 +190,10 @@ export const routeAction = (
     ...routeActionEntriesSignal.peek(),
     {
       routeAction: actionBoundToRoute,
-      routeMatchingSignal,
       askingSignal: computed(() => Boolean(readParamsAsked())),
+      gatedSignal: when
+        ? computed(() => Boolean(routeMatchingSignal.value) && !when())
+        : NOT_GATED_SIGNAL,
     },
   ];
   for (const route of routes) {
