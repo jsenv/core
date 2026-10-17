@@ -1608,12 +1608,12 @@ const whilePageRenders = async (page, change, wait = armRouteRenderWait()) => {
 // (`overflow: clip`) holds nothing and is walked straight through — see
 // is_scrollable.js.
 const pagesScrollTheDocument = (element) => {
-  const scrollContainer = getScrollContainer(element, { includeHidden: true });
-  // html and body are one answer: whichever of them the walk stops on, what
-  // scrolls is the viewport, which is what window.scrollTo moves.
+  // What window.scrollTo moves. A body whose overflow is the viewport's is
+  // walked through to it (see overflowGoesToViewport in @jsenv/dom); a body
+  // the walk stops on scrolls itself, out of the viewport's reach.
   return (
-    scrollContainer === document.documentElement ||
-    scrollContainer === document.body
+    getScrollContainer(element, { includeHidden: true }) ===
+    document.documentElement
   );
 };
 

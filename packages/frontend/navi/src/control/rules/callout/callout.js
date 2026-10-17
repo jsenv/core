@@ -1000,8 +1000,10 @@ export const openCallout = (
     }
     calloutCloseButton.tabIndex = -1;
     calloutCloseButton.setAttribute("navi-focus-delegate", "");
+    // One Escape closes one popup: an Escape already spent by one in front
+    // of the callout — a menu opened from its content — is not this one's.
     const onAnchorKeydown = (e) => {
-      if (e.key === "Escape") {
+      if (e.key === "Escape" && !e.defaultPrevented) {
         requestClose(e, "escape_key");
         e.stopPropagation();
         e.preventDefault();
@@ -1016,7 +1018,7 @@ export const openCallout = (
     // Usually callout is inside anchor so the anchor would see the escape being pressed
     // but callout can be appended outside anchor when anchor cannot receive children
     const onCalloutKeydown = (e) => {
-      if (e.key === "Escape") {
+      if (e.key === "Escape" && !e.defaultPrevented) {
         requestClose(e, "escape_key");
         e.stopPropagation();
         e.preventDefault();
@@ -1062,21 +1064,23 @@ export const openCallout = (
     //
     // Only for the ones that cannot be heard otherwise, and only while they are
     // open: a callout the anchor can hear about is left to the anchor, so
-    // Escape goes on meaning what it means where the user is.
+    // Escape goes on meaning what it means where the user is. Heard once the
+    // key has been through what it was pressed in: one that answered it (a
+    // popup closing, a field clearing) spent it.
     if (anchorElement && anchorElement.contains(document.activeElement)) {
       break close_on_escape_from_anywhere;
     }
     const onDocumentKeydown = (e) => {
-      if (e.key !== "Escape") {
+      if (e.key !== "Escape" || e.defaultPrevented) {
         return;
       }
       requestClose(e, "escape_key");
       e.stopPropagation();
       e.preventDefault();
     };
-    document.addEventListener("keydown", onDocumentKeydown, true);
+    document.addEventListener("keydown", onDocumentKeydown);
     addTeardown(() => {
-      document.removeEventListener("keydown", onDocumentKeydown, true);
+      document.removeEventListener("keydown", onDocumentKeydown);
     });
   }
   close_on_custom_event: {

@@ -109,6 +109,7 @@ export { captureScrollState } from "./src/interaction/scroll/capture_scroll.js";
 export {
   canScroll,
   isScrollable,
+  overflowGoesToViewport,
 } from "./src/interaction/scroll/is_scrollable.js";
 export { preventIntermediateScrollbar } from "./src/interaction/scroll/prevent_intermediate_scrollbar.js";
 export {

@@ -2438,9 +2438,13 @@ const useDialogProps = (props) => {
 
   const onKeyDownShortcuts = createOnKeyDownForShortcuts({
     escape: (e) => {
-      // Only a modal <dialog> fires "cancel" on Escape natively (handled via
-      // onCancel below); neither a .show()n nor a showPopover()n one does.
-      if (isModal || !openController.opened) {
+      // Answered at the keydown, modal or not: the innermost popup takes the
+      // key and spends it (requestClose prevents it), so one Escape closes
+      // one popup. A modal's native "cancel" comes only once the keydown has
+      // been dispatched, and the key would reach a popup around this one
+      // first — a picker whose drawing holds this dialog. onCancel below is
+      // left the close requests that are no keydown: the back gesture.
+      if (!openController.opened) {
         return null;
       }
       return {
@@ -2628,9 +2632,9 @@ const useDialogProps = (props) => {
       onKeyDownShortcuts(e);
     },
     "onCancel": (e) => {
-      // The dialog's own "cancel" (Escape on a modal showModal() dialog —
-      // the Escape handling for the other two shows lives in
-      // onKeyDownShortcuts above) fires on the dialog element itself. But a child
+      // The dialog's own "cancel" — a close request that is no keydown (the
+      // back gesture), an Escape being answered at its keydown (see
+      // onKeyDownShortcuts above) — fires on the dialog element itself. But a child
       // <input type="file"> also fires a BUBBLING "cancel" when the user
       // dismisses the file chooser (per the HTML spec), and it lands here
       // too; only the dialog's own cancel means "close".

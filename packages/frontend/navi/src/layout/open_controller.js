@@ -419,6 +419,17 @@ export const createOpenController = (
       { opened: false, event: closeEvent },
     );
   };
+  // A cancel an Escape asked for, read with what Escape means for this popup.
+  const readCloseDetail = (e, detail) => {
+    if (
+      detail?.isCancel &&
+      controller.escapeEffect !== "cancel" &&
+      findEvent(e, isEscapeKeydown)
+    ) {
+      return { ...detail, isCancel: false };
+    }
+    return detail;
+  };
   const controller = {
     opened: false,
     // What the DOM currently shows, as opposed to what the controller has
@@ -450,6 +461,11 @@ export const createOpenController = (
     // whole point: learning it afterwards means the content mounted on the
     // previous subject first.
     onOpen: null,
+    // What an Escape means for this popup, whoever heard the key — its own
+    // shortcut, its trigger's, the group it stands in, a bubble's: a cancel
+    // (what it holds reverts), unless its owner says otherwise (a Picker's
+    // escapeEffect="close"). Read from the close the key asked for.
+    escapeEffect: "cancel",
     // The counterpart, set only when the popup was told to throw its content
     // away on close (`mount="while-opened"`). Called from performClose above.
     unmountContent: null,
@@ -619,7 +635,7 @@ export const createOpenController = (
         return true;
       }
       const requestCloseEvent = new CustomEvent("navi_request_close", {
-        detail: { event: e, ...detail },
+        detail: { event: e, ...readCloseDetail(e, detail) },
         cancelable: true,
       });
       chainEvent(requestCloseEvent, e);
@@ -629,10 +645,7 @@ export const createOpenController = (
       // the popup (a PopupGroup, a dialog), closing what this popup kept open,
       // or what is still closing with it (a lifting dialog closes a frame
       // later).
-      const escapeKeydown = findEvent(
-        requestCloseEvent,
-        (event) => event.type === "keydown" && event.key === "Escape",
-      );
+      const escapeKeydown = findEvent(requestCloseEvent, isEscapeKeydown);
       if (escapeKeydown) {
         escapeKeydown.preventDefault();
       }
@@ -654,7 +667,7 @@ export const createOpenController = (
         return;
       }
       const closeEvent = new CustomEvent("navi_close", {
-        detail: { event: e, ...detail },
+        detail: { event: e, ...readCloseDetail(e, detail) },
       });
       chainEvent(closeEvent, e);
       // Skips onRequestClose entirely — there is no choice here.
@@ -665,6 +678,9 @@ export const createOpenController = (
 };
 
 // A click a keyboard made (detail 0) is not one: nothing pressed for it.
+const isEscapeKeydown = (event) =>
+  event.type === "keydown" && event.key === "Escape";
+
 const isEventOfAPress = (event) =>
   event.type === "pointerdown" ||
   event.type === "mousedown" ||

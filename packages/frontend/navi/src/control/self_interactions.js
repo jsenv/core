@@ -156,6 +156,12 @@ export const isAimedAtSelfInteractionsBelow = (
   if (!target || typeof target.closest !== "function") {
     return false;
   }
+  if (event.type === "keydown" || event.type === "keyup") {
+    // A key is no press: the claim is the pointer's. An Escape pressed while
+    // the focus rests on the claimer asks the controls around it — the sheet
+    // it sits in closing.
+    return false;
+  }
   const claimer = target.closest(CLICK_SELECTOR);
   if (!claimer) {
     return false;

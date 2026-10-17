@@ -613,6 +613,10 @@ const PickerCustom = (props) => {
         },
       };
     });
+    // Whoever hears the Escape — this picker's trigger, its popup, the group
+    // it stands in, its bubble — asks for a cancel; the controller reads it
+    // with this (see escapeEffect in open_controller.js).
+    openController.escapeEffect = escapeEffect;
     // scroll <button> of the picker into view when opening it
     // -> would be overriden by dialog.jsx or popover.jsx
     // so ideally openEffect should be either protective or a pubSub to allow multiple callbacks
@@ -846,12 +850,12 @@ const PickerCustom = (props) => {
           if (!openController.opened) {
             return null;
           }
-          const isCancel = escapeEffect === "cancel";
           return {
-            name: isCancel ? "escape_to_cancel" : "escape_to_close",
+            name: "escape_to_cancel",
             intent: "read",
             allowed: () => {
-              requestClose(e, { isCancel });
+              // Read with escapeEffect by the controller (see above).
+              requestClose(e, { isCancel: true });
               e.preventDefault(); // prevent browser from closing the dialog (if any)
             },
           };
@@ -1016,9 +1020,6 @@ const PickerCustom = (props) => {
   return renderResolver(PickerContentInsidePopup, {
     ...pickerProps,
     mode,
-    // What a callout's own Escape means (see PickerCalloutPopup): the bubble
-    // answers the key itself when the focus is in it.
-    escapeEffect,
   });
 };
 
@@ -1134,7 +1135,6 @@ const PickerContentInsidePopup = (props) => {
     calloutIcon,
     calloutCloseButton,
     calloutCloseByScroll,
-    escapeEffect,
     ...rest
   } = props;
   const isPopover = mode === "popover";
@@ -1186,7 +1186,6 @@ const PickerContentInsidePopup = (props) => {
           // nothing, so the page looks as pressable as it did before.
           backdrop={backdrop}
           pressOutside={pressOutside}
-          escapeEffect={escapeEffect}
         >
           <PopupModeContext.Provider value={mode}>
             {children}
@@ -1310,7 +1309,6 @@ const PickerCalloutPopup = ({
   closeByScroll,
   backdrop,
   pressOutside,
-  escapeEffect,
   onnavi_request_open,
   onnavi_request_close,
   onnavi_request_confirm,
@@ -1398,12 +1396,10 @@ const PickerCalloutPopup = ({
       // Not skipped: the callout moves the focus into the picker when it is
       // elsewhere, which is what lets Escape find the callout right away.
       skipFocus: false,
-      // An Escape the callout answered itself (the focus in the bubble) means
-      // what the picker's own Escape means.
+      // An Escape the callout answered itself (the focus in the bubble) is
+      // the picker's Escape (see escapeEffect in open_controller.js).
       onClose: ({ event, reason }) => {
-        openController.close(event, {
-          isCancel: reason === "escape_key" && escapeEffect === "cancel",
-        });
+        openController.close(event, { isCancel: reason === "escape_key" });
       },
     });
     // A --navi-confirm said inside the callout is aimed at the callout (its

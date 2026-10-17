@@ -413,7 +413,7 @@ const readOuterScroll = (element) => {
 };
 
 const isDocumentScroller = (node) => {
-  return node === document.documentElement || node === document.body;
+  return node === document.documentElement;
 };
 
 const isPinnedToViewport = (node) => {

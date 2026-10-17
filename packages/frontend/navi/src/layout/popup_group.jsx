@@ -43,6 +43,7 @@ import {
   getScrollContainer,
   isPressDrivenClick,
   observeAncestorOpenState,
+  overflowGoesToViewport,
   trapScrollInside,
 } from "@jsenv/dom";
 import { createContext } from "preact";
@@ -54,7 +55,10 @@ import {
   readBackdropColor,
   readPopupThemeColor,
 } from "../nav/theme_color.js";
-import { moveFocusTo } from "../utils/focus/focus_transfer.js";
+import {
+  giveFocusBackAfterCommit,
+  moveFocusTo,
+} from "../utils/focus/focus_transfer.js";
 import { openedDuringThisPress } from "./open_controller.js";
 import { isDeclaredInsidePopup } from "./popup_shared.js";
 
@@ -501,17 +505,20 @@ const engageGroup = (groupEl, group, { silent }) => {
     Boolean(focusedBefore) &&
     focusedBefore !== groupEl &&
     groupEl.contains(focusedBefore);
+  // What the focus goes back to, when nothing holds it any more at the close.
+  const focusOrigin =
+    !focusWasInGroup &&
+    focusedBefore &&
+    focusedBefore !== document.body &&
+    focusedBefore !== groupEl
+      ? focusedBefore
+      : null;
   const ringBefore = Boolean(focusedBefore?.matches?.(":focus-visible"));
   const { scrollTop, scrollLeft } = groupEl;
   // A gesture on a box fixed in the top layer goes to the viewport: only a
   // place that scrolls with the viewport moves under it.
-  const placeScroller = getScrollContainer(groupEl);
   const placeScrollsWithViewport =
-    (placeScroller === document.scrollingElement ||
-      // Reported as a scroll container on an app setting `body {
-      // overflow-x: hidden }` (its computed overflow-y turns auto), it never
-      // scrolls itself: the viewport does.
-      (placeScroller === document.body && bodyOverflowIsTheViewports())) &&
+    getScrollContainer(groupEl) === document.scrollingElement &&
     !findSelfOrAncestorFixedPosition(groupEl);
 
   const placeholder = createPlaceholder(groupStyle, rect, baselineDescent);
@@ -524,29 +531,50 @@ const engageGroup = (groupEl, group, { silent }) => {
   if (silent) {
     groupEl.setAttribute("navi-transitions-off", "");
   }
-  // showModal() runs the dialog focusing steps: it focuses the first element
-  // marked autofocus, or else the first focusable the group holds — and
-  // scrolls the group's own scroller to it. Pointed at what already has the
-  // focus, or at the group itself, with any other mark set aside for the
-  // call, so nothing moves. A native autofocus is otherwise never used (see
-  // the focus skill): this one exists for the length of the call, to steer
-  // the browser's own pick, not to transfer anything.
-  const autofocusTarget = focusWasInGroup ? focusedBefore : groupEl;
+  // showModal() runs the dialog focusing steps — it focuses the first element
+  // marked autofocus, or else the first focusable the group holds, and
+  // scrolls the group's own scroller to it — and records what held the focus,
+  // for close() to give it back there. A native autofocus is otherwise never
+  // used (see the focus skill): these exist for the length of the call, to
+  // steer the browser's own pick, not to transfer anything.
+  //
+  // From inside the group the pick is what holds the focus already, any other
+  // mark set aside, so nothing moves. From outside, a stop is put first in the
+  // group and focused: it is what showModal() picks and records, and it is
+  // gone by the close, which then moves nothing (see cleanup) — what the focus
+  // came from, a sheet around the group, could not be kept from taking it
+  // back. The focus goes on to the group itself, so no peer is focused on the
+  // way.
+  let focusStop = null;
+  if (!focusWasInGroup) {
+    focusStop = document.createElement("span");
+    focusStop.setAttribute("navi-out-of-flow", "");
+    focusStop.setAttribute("aria-hidden", "true");
+    focusStop.tabIndex = -1;
+    focusStop.style.cssText =
+      "position: absolute; width: 0; height: 0; overflow: hidden";
+    groupEl.prepend(focusStop);
+    moveFocusTo(focusStop, { focusVisible: false });
+  }
+  const autofocusTarget = focusWasInGroup ? focusedBefore : focusStop;
   const autofocusWasSet = autofocusTarget.hasAttribute("autofocus");
-  const autofocusSetAside = focusWasInGroup
-    ? [...groupEl.querySelectorAll("[autofocus]")].filter(
-        (element) => element !== autofocusTarget,
-      )
-    : [];
+  const autofocusSetAside = [...groupEl.querySelectorAll("[autofocus]")].filter(
+    (element) => element !== autofocusTarget,
+  );
   for (const element of autofocusSetAside) {
     element.removeAttribute("autofocus");
   }
   if (!autofocusWasSet) {
     autofocusTarget.setAttribute("autofocus", "");
   }
+  // Chromium takes a <dialog> without a tabindex for no focus target. Lent
+  // for the whole engagement: taken back from the group holding the focus,
+  // it would lose it.
+  const tabindexLent = Boolean(focusStop) && !groupEl.hasAttribute("tabindex");
   try {
     groupEl.showModal();
   } catch (error) {
+    focusStop?.remove();
     placeholder.remove();
     clearPlacement(groupEl);
     groupEl.removeAttribute("navi-transitions-off");
@@ -558,6 +586,13 @@ const engageGroup = (groupEl, group, { silent }) => {
     for (const element of autofocusSetAside) {
       element.setAttribute("autofocus", "");
     }
+  }
+  if (focusStop) {
+    if (tabindexLent) {
+      groupEl.tabIndex = -1;
+    }
+    moveFocusTo(groupEl, { focusVisible: false });
+    focusStop.remove();
   }
   // Measured once the group has left the flow, where a parent sized by its
   // content no longer counts it. Only a box given its width by what holds it
@@ -586,9 +621,6 @@ const engageGroup = (groupEl, group, { silent }) => {
   if (focusWasInGroup && document.activeElement !== focusedBefore) {
     moveFocusTo(focusedBefore, { focusVisible: ringBefore });
   }
-  // What showModal() left focused when the focus came from outside: that is
-  // the browser's pick, not a restore of navi's, at the close (see cleanup).
-  const focusLeftByShowModal = focusWasInGroup ? null : document.activeElement;
   if (silent) {
     // The wall's starting style is resolved with no transition to play from
     // it; giving the transition back afterwards changes no value, so nothing
@@ -619,50 +651,70 @@ const engageGroup = (groupEl, group, { silent }) => {
       placeholder.remove();
       if (leavingTree) {
         // Closed once the commit is over, as a Dialog leaving the tree is (see
-        // its close cleanup): closing now would hand the focus to what held it
-        // at showModal() time, often leaving in this same commit. A park
-        // takes the group out of the top layer and leaves its `open`
-        // attribute, which the reveal would show.
+        // its close cleanup). A park takes the group out of the top layer and
+        // leaves its `open` attribute, which the reveal would show.
         queueMicrotask(() => {
           if (groupEl.open) {
             groupEl.close();
           }
+          if (tabindexLent) {
+            groupEl.removeAttribute("tabindex");
+          }
         });
+        if (focusOrigin) {
+          // The focus left with the group: back where it was, if that stays.
+          giveFocusBackAfterCommit(focusOrigin, () => {
+            moveFocusTo(focusOrigin, { focusVisible: ringBefore });
+          });
+        }
         return;
       }
-      // close() hands the focus back to whatever held it at showModal() time
-      // (focusedBefore), undoing where a popup of the group, or the user, put
-      // it since. Unless no popup moved the focus since showModal() did, that
-      // element is made no focus target for the call, so the focus stays where
-      // it is: inert — or, when the focus is inside it (the sheet around the
-      // popover around the group, focused by a press on its blank), without
-      // its tabindex, inert taking the focus with it. A <dialog> stays
-      // focusable without one: around a Dialog sheet, close() focuses it and
-      // the moveFocusTo below brings the focus back.
       const focusedBeforeClose = document.activeElement;
+      if (!focusWasInGroup) {
+        // What showModal() recorded is the stop, gone by now: close() moves
+        // nothing, and the focus stays where a popup of the group, or the
+        // user, put it. Only one still on the group, or lost, goes back to
+        // where it came from.
+        if (groupEl.open) {
+          groupEl.close();
+        }
+        if (
+          focusOrigin &&
+          focusOrigin.isConnected &&
+          (!focusedBeforeClose ||
+            focusedBeforeClose === document.body ||
+            focusedBeforeClose === groupEl)
+        ) {
+          moveFocusTo(focusOrigin, { focusVisible: ringBefore });
+        }
+        if (tabindexLent) {
+          groupEl.removeAttribute("tabindex");
+        }
+        return;
+      }
+      // Coming from inside the group, the focus was recorded where it was,
+      // and close() gives it back there, undoing where a popup of the group,
+      // or the user, put it since. Unless nothing moved it, that element is
+      // made no focus target for the call: inert — or, holding the focus
+      // inside it, without its tabindex, inert taking the focus with it.
       const ringBeforeClose = Boolean(
         focusedBeforeClose?.matches?.(":focus-visible"),
       );
-      const focusMovedSinceShowModal =
+      const focusMovedInGroup =
+        focusWasInGroup &&
         focusedBeforeClose &&
         focusedBeforeClose !== document.body &&
         focusedBeforeClose !== groupEl &&
-        focusedBeforeClose !== focusLeftByShowModal &&
-        focusedBeforeClose.isConnected;
-      const keepsFocusWhereItIs =
-        focusMovedSinceShowModal &&
-        focusedBefore &&
-        focusedBefore !== focusedBeforeClose &&
-        focusedBefore !== document.body &&
+        focusedBeforeClose !== focusedBefore &&
+        focusedBeforeClose.isConnected &&
         focusedBefore.isConnected;
       const holdsFocusInside =
-        keepsFocusWhereItIs && focusedBefore.contains(focusedBeforeClose);
+        focusMovedInGroup && focusedBefore.contains(focusedBeforeClose);
       const madeInert =
-        keepsFocusWhereItIs && !holdsFocusInside && !focusedBefore.inert;
-      const tabindexSetAside =
-        holdsFocusInside && focusedBefore.tagName !== "DIALOG"
-          ? focusedBefore.getAttribute("tabindex")
-          : null;
+        focusMovedInGroup && !holdsFocusInside && !focusedBefore.inert;
+      const tabindexSetAside = holdsFocusInside
+        ? focusedBefore.getAttribute("tabindex")
+        : null;
       if (madeInert) {
         focusedBefore.inert = true;
       }
@@ -680,13 +732,13 @@ const engageGroup = (groupEl, group, { silent }) => {
         if (tabindexSetAside !== null) {
           focusedBefore.setAttribute("tabindex", tabindexSetAside);
         }
+        if (tabindexLent) {
+          groupEl.removeAttribute("tabindex");
+        }
       }
-      // Where the engine moved it anyway (an element focusable without a
-      // tabindex).
-      if (
-        focusMovedSinceShowModal &&
-        document.activeElement !== focusedBeforeClose
-      ) {
+      // Where the engine moved it anyway: an element focusable without a
+      // tabindex.
+      if (focusMovedInGroup && document.activeElement !== focusedBeforeClose) {
         moveFocusTo(focusedBeforeClose, { focusVisible: ringBeforeClose });
       }
     },
@@ -868,7 +920,8 @@ const engageGroup = (groupEl, group, { silent }) => {
  * screen it is synthesized at touchend and hit-tested again, with the group
  * still up, so a finger that scrolled the group (pointercancel, no mousedown)
  * closes nothing. A pointerdown cancelled downstream (a drag source) brings no
- * mousedown: its click decides instead. A popup that captures the outside is
+ * mousedown: its click decides instead, or the start of the drag it turns
+ * into, which brings no click. A popup that captures the outside is
  * answered at the pointerdown itself: nothing of that press may reach a peer.
  */
 const armPressArbiter = (groupEl, group, engagement) => {
@@ -1035,12 +1088,34 @@ const armPressArbiter = (groupEl, group, engagement) => {
       engagement.checkAfterTask();
     }
   };
+  // A press that becomes a drag brings no click: decided at the click, it
+  // would leave the open popup over a card being carried away, its own
+  // trigger maybe. A drag starting outside the open popup closes it, as a
+  // press there does. Nothing is left to hand over to then, so the group goes
+  // back into the page at once — where the drag can land: what is outside the
+  // group is inert while it is engaged.
+  const onDragStart = (dragStartEvent) => {
+    const openMember = findMemberPressedOutside(dragStartEvent);
+    if (openMember) {
+      const pressOutside = readPressOutside(openMember);
+      if (pressOutside !== "capture") {
+        openMember.openController.requestClose(dragStartEvent, {
+          isCancel: pressOutside === "cancel",
+        });
+      }
+    }
+    if (engagement.pressClosed) {
+      engagement.pressClosed = false;
+      group.disengageIfNothingOpen();
+    }
+  };
   const listeners = [
     ["pointerdown", onPointerDown],
     ["mousedown", onMouseDown],
     ["click", onClick],
     ["pointerup", onPointerUp],
     ["pointercancel", onPointerCancel],
+    ["navi_drag_start", onDragStart],
   ];
   for (const [type, listener] of listeners) {
     document.addEventListener(type, listener, { capture: true });
@@ -1319,8 +1394,6 @@ const readAncestorClip = (element, elementStyle) => {
   if (elementStyle.position === "fixed") {
     return null;
   }
-  // Read on body, an overflow that is the viewport's clips nothing.
-  const bodyClipsNothing = bodyOverflowIsTheViewports();
   let left = -Infinity;
   let top = -Infinity;
   let right = Infinity;
@@ -1341,10 +1414,10 @@ const readAncestorClip = (element, elementStyle) => {
     }
     skipUntilContainingBlock = false;
     const { overflowX, overflowY, position } = ancestorStyle;
-    const overflowGoesToViewport =
-      ancestor === document.body && bodyClipsNothing;
-    const clipsX = !overflowGoesToViewport && overflowX !== "visible";
-    const clipsY = !overflowGoesToViewport && overflowY !== "visible";
+    // Read on a body whose overflow is the viewport's, it clips nothing.
+    const clipsNothing = overflowGoesToViewport(ancestor);
+    const clipsX = !clipsNothing && overflowX !== "visible";
+    const clipsY = !clipsNothing && overflowY !== "visible";
     if (clipsX || clipsY) {
       clipped = true;
       const ancestorRect = ancestor.getBoundingClientRect();
@@ -1382,13 +1455,6 @@ const readAncestorClip = (element, elementStyle) => {
   }
   return clipped ? { left, top, right, bottom } : null;
 };
-// The overflow of <body> is the viewport's when the root leaves its own
-// visible: body itself then neither scrolls nor clips.
-const bodyOverflowIsTheViewports = () => {
-  const rootStyle = getComputedStyle(document.documentElement);
-  return rootStyle.overflowX === "visible" && rootStyle.overflowY === "visible";
-};
-
 const isContainingBlockForAbsolute = (style) =>
   style.position !== "static" ||
   style.transform !== "none" ||

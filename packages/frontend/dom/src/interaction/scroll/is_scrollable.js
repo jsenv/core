@@ -14,6 +14,9 @@ import { isDocumentElement } from "../../utils.js";
 // `visible` is the other non-scrolling value, and the only one on which the
 // content still reaches the ancestors.
 export const isScrollable = (element, { includeHidden } = {}) => {
+  if (overflowGoesToViewport(element)) {
+    return false;
+  }
   if (canHaveVerticalScroll(element, { includeHidden })) {
     return true;
   }
@@ -33,6 +36,9 @@ export const canScroll = (element, axis) => {
   if (!element || element.nodeType !== 1) {
     return false;
   }
+  if (overflowGoesToViewport(element)) {
+    return false;
+  }
   const style = getComputedStyle(element);
   const overflow = axis === "x" ? style.overflowX : style.overflowY;
   if (overflow !== "auto" && overflow !== "scroll") {
@@ -43,6 +49,23 @@ export const canScroll = (element, axis) => {
   // A pixel of slack: subpixel content rounds scrollSize up on boxes that have
   // nowhere to scroll to.
   return scrollSize - clientSize > 1;
+};
+
+/**
+ * Whether `element` is a <body> whose overflow belongs to the viewport: when
+ * the root leaves its own overflow visible, the body's values are the
+ * viewport's (CSS overflow propagation), and body itself neither scrolls nor
+ * clips, whatever its computed overflow reads — `body { overflow-x: hidden }`
+ * computes overflow-y to auto there. The viewport scrolls, through the
+ * scrolling element.
+ */
+export const overflowGoesToViewport = (element) => {
+  const { ownerDocument } = element;
+  if (element !== ownerDocument.body) {
+    return false;
+  }
+  const rootStyle = getComputedStyle(ownerDocument.documentElement);
+  return rootStyle.overflowX === "visible" && rootStyle.overflowY === "visible";
 };
 
 const canHaveVerticalScroll = (element, { includeHidden }) => {

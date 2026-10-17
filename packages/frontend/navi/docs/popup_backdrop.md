@@ -306,11 +306,11 @@ marked `navi-out-of-flow` (see
 sheet that moves, and is clipped as its ancestors clip it. At rest it is a
 `<dialog>` the app styles as it would a `<div>`.
 
-Two things follow from the group being the modal. A `Dialog` rendered among
-the group's peers is a member, never modal; one opened from inside a member is
-in front of it, and modal as anywhere. And a drag that starts in the group
-while one of its popups is open cannot land outside it until that press is
-over.
+A `Dialog` rendered among the group's peers is a member, never modal; one
+opened from inside a member is in front of it, and modal as anywhere. A drag
+that starts outside the open popup — a card carried from the group — closes it
+as a press there would, and the group goes back into the page at once, where
+the drag can land.
 
 ## Painting one popup: two props
 
