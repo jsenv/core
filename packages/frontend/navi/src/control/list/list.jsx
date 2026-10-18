@@ -2141,6 +2141,13 @@ const useListScrollSync = ({
         // the selected item for as long as the hold takes to put it back.
         return;
       }
+      if (getScroller() === document.scrollingElement) {
+        // Where the document opens is the arrival's (see scroll_restoration.js),
+        // and a list asks for a place in it through `defaultScrolled`. A box
+        // around the list (a popup's body) has no other owner, so the selected
+        // item is still centered there.
+        return;
+      }
       const items = listItems.itemsSignal.peek();
       const firstSelected = items.find((i) => {
         if (i.selected) {
