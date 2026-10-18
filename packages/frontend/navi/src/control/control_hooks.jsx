@@ -1256,8 +1256,10 @@ const createControlInfo = (props, { controlType }) => {
   } else if (controlType === "details") {
     statePropName = "open";
     defaultStatePropName = "defaultOpen";
-    stateInitial = props.open || props.defaultOpen;
     value = props.value || "open";
+    // Held like a checkbox: the value while open, nothing while closed — the
+    // shape the toggle writes back (see details.jsx).
+    stateInitial = props.open || props.defaultOpen ? value : undefined;
   } else if (controlType === "picker" || controlType === "select") {
     statePropName = "value";
     defaultStatePropName = "defaultValue";

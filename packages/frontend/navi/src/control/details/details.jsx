@@ -86,6 +86,7 @@ const DetailsField = (props) => {
       },
     );
   const { value, children } = detailsProps;
+  const { uiStateController } = controlChildrenWrapperProps;
   const open = Boolean(value);
 
   useFocusGroup(ref, {
@@ -177,6 +178,13 @@ const DetailsField = (props) => {
           return;
         }
         const details = ref.current;
+        // The browser has already toggled the element (a summary press, the
+        // arrow shortcuts): the state follows it whatever the gate says, or the
+        // marker and whoever reads the value keep the old one.
+        uiStateController.setUIState(
+          details.open ? uiStateController.value : undefined,
+          e,
+        );
         dispatchRequestInteraction(details, {
           event: e,
           wantAction: true,

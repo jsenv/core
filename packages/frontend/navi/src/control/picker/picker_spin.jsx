@@ -68,6 +68,7 @@ import {
 import { Input } from "../input/input.jsx";
 import { useInputGroup } from "../input/use_input_group.js";
 import { openCallout } from "../rules/callout/callout.js";
+import { dispatchRequestInteraction } from "../rules/control_interaction.js";
 import { getConstraintMessage } from "../rules/constraint_message.js";
 import {
   MAX_CONSTRAINT,
@@ -1043,6 +1044,40 @@ export const Spin = ({
             outlineWidth={group ? undefined : "0"}
             textAlign="center"
             expandX
+            // The arrow keys are the chevrons at the keyboard: one step the way
+            // the spin steps (`valueAtStep`, round at the ends when it loops),
+            // refused at a bound in the chevron's words. The field's own
+            // stepping (input_resolver_mode) stands down on a prevented keydown.
+            onKeyDown={(e) => {
+              controlProps?.onKeyDown?.(e);
+              if (e.defaultPrevented) {
+                return;
+              }
+              if (e.key !== "ArrowUp" && e.key !== "ArrowDown") {
+                return;
+              }
+              // Up is towards the bigger values however the spin lies: what a
+              // field means by it, and what ▲ means on a NumberSpin.
+              const isNext = e.key === "ArrowUp";
+              if (!(isNext ? nextAllowed : previousAllowed)) {
+                e.preventDefault();
+                openCallout(boundMessage(isNext), {
+                  anchorElement: middleRef.current,
+                  status: "info",
+                  openingEvent: e,
+                });
+                return;
+              }
+              dispatchRequestInteraction(e.currentTarget, {
+                event: e,
+                name: "--navi-arrow-up-down",
+                prevented: () => e.preventDefault(),
+                allowed: () => {
+                  setValue(isNext ? valueNext : valuePrevious, e);
+                  e.preventDefault();
+                },
+              });
+            }}
             uiAction={(valueNext, event) => {
               uiAction?.(valueNext, stepEventRef.current ?? event);
             }}
