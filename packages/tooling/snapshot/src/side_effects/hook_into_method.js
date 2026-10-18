@@ -259,6 +259,18 @@ export const METHOD_EXECUTION_NODE_CALLBACK = ({
       });
     }
   }
+  // A threadpool job (WriteFileJob) carries its callback itself, as "ondone"
+  if (thisValue && typeof thisValue.ondone === "function") {
+    const originalCallback = thisValue.ondone;
+    return installProxyAndCall(originalCallback, (callbackProxy) => {
+      thisValue.ondone = callbackProxy;
+      return () => {
+        if (thisValue.ondone === callbackProxy) {
+          thisValue.ondone = originalCallback;
+        }
+      };
+    });
+  }
   return METHOD_EXECUTION_STANDARD({
     original,
     thisValue,

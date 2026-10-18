@@ -7,7 +7,7 @@
   },
   "runtime": {
     "name": "node",
-    "version": "26.5.0"
+    "version": "26.10.0"
   },
   "memoryUsage": {
     "os": {
@@ -58,13 +58,13 @@
       "count": 1,
       "runtimeType": "browser",
       "runtimeName": "chromium",
-      "runtimeVersion": "151.0.7922.34"
+      "runtimeVersion": "153.0.8010.12"
     },
     "b": {
       "count": 1,
       "runtimeType": "browser",
       "runtimeName": "chromium",
-      "runtimeVersion": "151.0.7922.34"
+      "runtimeVersion": "153.0.8010.12"
     }
   },
   "counters": {

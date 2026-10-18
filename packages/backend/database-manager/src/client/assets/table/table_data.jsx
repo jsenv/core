@@ -18,10 +18,10 @@
 import {
   Box,
   Button,
-  Checkbox,
   Col,
   Colgroup,
   filterTableSelection,
+  Input,
   Label,
   RowNumberCol,
   RowNumberTableCell,
@@ -180,7 +180,8 @@ export const TableData = ({ table }) => {
         </Box>
         <Box column spacing="s" alignY="center" paddingY="s">
           <Label column alignY="center" spacing="xs">
-            <Checkbox
+            <Input
+              type="checkbox"
               checked={selectedRowCount > 0}
               action={() => {
                 if (selectedRowCount === 0) {

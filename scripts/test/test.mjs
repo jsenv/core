@@ -15,6 +15,11 @@ import {
   webkit,
 } from "@jsenv/test";
 
+// Snapshots holding a date rendered in local time must read the same on every
+// machine, CI included. Set before any execution starts: a worker thread
+// inherits the zone of the process but cannot change it.
+process.env.TZ = "UTC";
+
 if (process.argv.length === 2) {
   process.argv.push("@jsenv/core");
 }

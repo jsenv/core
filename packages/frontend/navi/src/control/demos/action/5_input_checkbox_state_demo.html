@@ -12,7 +12,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import { Button, Form, Label, Checkbox } from "@jsenv/navi";
+      import { Button, Form, Input, Label } from "@jsenv/navi";
 
       const App = () => {
         return (
@@ -158,7 +158,8 @@
                     <legend>Notification Settings:</legend>
 
                     <Label style="display: flex; align-items: center; gap: 10px; font-size: 16px; cursor: pointer;">
-                      <Checkbox
+                      <Input
+                        type="checkbox"
                         name="notifications"
                         checked={isEnabledInState}
                         onUIStateChange={(uiState) =>

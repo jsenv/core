@@ -3,10 +3,11 @@
 ```js
 // In practice: min: Date.now()
 // Here we freeze the date for snapshot stability
+// A date is a day of the local calendar, and so is the day a timestamp falls on
 const now = new Date(2024, 5, 15).getTime();
-const yesterday = new Date(2024, 5, 14).toISOString().slice(0, 10);
-const today = new Date(2024, 5, 15).toISOString().slice(0, 10);
-const tomorrow = new Date(2024, 5, 16).toISOString().slice(0, 10);
+const yesterday = "2024-06-14";
+const today = "2024-06-15";
+const tomorrow = "2024-06-16";
 const [validity, applyOn] = createValidity({
   type: "date",
   min: now,
@@ -27,11 +28,11 @@ return makeTable(
 ┌──────────────────────────┬──────────────┬────────┬──────────────────────────────┬─────────────────────────────────┐
 │ input                    │ .value       │ .valid │ .representations.valid.value │ .min                            │
 ├──────────────────────────┼──────────────┼────────┼──────────────────────────────┼─────────────────────────────────┤
-│ "2024-06-14" (today)     │ "2024-06-14" │ false  │ "2024-06-15"                 │ "must be on or after 6/15/2024" │
+│ "2024-06-15" (today)     │ "2024-06-15" │ true   │ "2024-06-15"                 │ undefined                       │
 ├──────────────────────────┼──────────────┼────────┼──────────────────────────────┼─────────────────────────────────┤
-│ "2024-06-13" (yesterday) │ "2024-06-13" │ false  │ "2024-06-15"                 │ "must be on or after 6/15/2024" │
+│ "2024-06-14" (yesterday) │ "2024-06-14" │ false  │ "2024-06-15"                 │ "must be on or after 6/15/2024" │
 ├──────────────────────────┼──────────────┼────────┼──────────────────────────────┼─────────────────────────────────┤
-│ "2024-06-15" (tomorrow)  │ "2024-06-15" │ true   │ "2024-06-15"                 │ undefined                       │
+│ "2024-06-16" (tomorrow)  │ "2024-06-16" │ true   │ "2024-06-16"                 │ undefined                       │
 └──────────────────────────┴──────────────┴────────┴──────────────────────────────┴─────────────────────────────────┘
 ```
 

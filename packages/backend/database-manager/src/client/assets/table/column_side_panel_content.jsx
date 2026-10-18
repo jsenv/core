@@ -3,12 +3,10 @@ import { useState } from "preact/hooks";
 import {
   Box,
   Button,
-  Checkbox,
   Input,
   Label,
   Link,
-  Radio,
-  RadioList,
+  RadioGroup,
   Text,
   Textarea,
 } from "@jsenv/navi";
@@ -200,8 +198,10 @@ export const ColumnSidePanelContent = ({ tablename, column_name, columns }) => {
             <Text bold uppercase size="xxs" color="#6c757d">
               Identity
             </Text>
-            <Checkbox
-              appearance="toggle"
+            <Input
+              type="checkbox"
+              switch
+              boolean
               size="xxs"
               checked={isIdentity}
               action={async (v) => {
@@ -270,8 +270,10 @@ const ValueRequiredField = ({ isNullable, isIdentity, putColumn }) => {
     <Box flex="y" spacing="xs">
       <Box flex spacing="s" alignY="center">
         <FieldLabel>Value required</FieldLabel>
-        <Checkbox
-          appearance="toggle"
+        <Input
+          type="checkbox"
+          switch
+          boolean
           size="xxs"
           checked={isRequired}
           readOnly={isIdentity}
@@ -384,7 +386,7 @@ const TextTypeOptions = ({ column, putColumn }) => {
 
   return (
     <Box flex="y" spacing="s">
-      <RadioList
+      <RadioGroup
         name="text_mode"
         flex="y"
         spacing="xs"
@@ -394,11 +396,11 @@ const TextTypeOptions = ({ column, putColumn }) => {
         }}
       >
         <Label spacing="s" alignY="center">
-          <Radio value="free" checked={mode === "free"} />
+          <Input type="radio" value="free" checked={mode === "free"} />
           Free text
         </Label>
         <Label spacing="s" alignY="center">
-          <Radio value="max" checked={mode === "max"} />
+          <Input type="radio" value="max" checked={mode === "max"} />
           Max length
           {mode === "max" && (
             <Input
@@ -416,7 +418,7 @@ const TextTypeOptions = ({ column, putColumn }) => {
           )}
         </Label>
         <Label spacing="s" alignY="center">
-          <Radio value="fixed" checked={mode === "fixed"} />
+          <Input type="radio" value="fixed" checked={mode === "fixed"} />
           Fixed length
           {mode === "fixed" && (
             <Input
@@ -433,7 +435,7 @@ const TextTypeOptions = ({ column, putColumn }) => {
             />
           )}
         </Label>
-      </RadioList>
+      </RadioGroup>
       <FieldDescription>
         Free text: unlimited. Max length: varchar(n), saves space up to limit.
         Fixed length: char(n), always pads to exact length.
@@ -462,52 +464,77 @@ const NumberTypeOptions = ({ column, putColumn }) => {
 
   return (
     <Box flex="y" spacing="s">
-      <RadioList
+      <RadioGroup
         name="number_type"
         flex="y"
         spacing="xs"
         action={(type) => putColumn("data_type", type)}
       >
         <Label spacing="s" alignY="center">
-          <Radio value="smallint" checked={currentType === "smallint"} />
+          <Input
+            type="radio"
+            value="smallint"
+            checked={currentType === "smallint"}
+          />
           smallint — 2 bytes (up to 32,767)
         </Label>
         <Label spacing="s" alignY="center">
-          <Radio value="integer" checked={currentType === "integer"} />
+          <Input
+            type="radio"
+            value="integer"
+            checked={currentType === "integer"}
+          />
           integer — 4 bytes (up to 2 billion)
         </Label>
         <Label spacing="s" alignY="center">
-          <Radio value="bigint" checked={currentType === "bigint"} />
+          <Input
+            type="radio"
+            value="bigint"
+            checked={currentType === "bigint"}
+          />
           bigint — 8 bytes (very large numbers)
         </Label>
         <Label spacing="s" alignY="center">
-          <Radio value="serial" checked={currentType === "serial"} />
+          <Input
+            type="radio"
+            value="serial"
+            checked={currentType === "serial"}
+          />
           serial — auto-increment integer
         </Label>
         <Label spacing="s" alignY="center">
-          <Radio value="bigserial" checked={currentType === "bigserial"} />
+          <Input
+            type="radio"
+            value="bigserial"
+            checked={currentType === "bigserial"}
+          />
           bigserial — auto-increment bigint
         </Label>
         <Label spacing="s" alignY="center">
-          <Radio value="numeric" checked={currentType === "numeric"} />
+          <Input
+            type="radio"
+            value="numeric"
+            checked={currentType === "numeric"}
+          />
           numeric — exact decimal (configurable precision)
         </Label>
         <Label spacing="s" alignY="center">
-          <Radio value="real" checked={currentType === "real"} />
+          <Input type="radio" value="real" checked={currentType === "real"} />
           real — 4-byte floating point
         </Label>
         <Label spacing="s" alignY="center">
-          <Radio
+          <Input
+            type="radio"
             value="double precision"
             checked={currentType === "double precision"}
           />
           double precision — 8-byte floating point
         </Label>
         <Label spacing="s" alignY="center">
-          <Radio value="money" checked={currentType === "money"} />
+          <Input type="radio" value="money" checked={currentType === "money"} />
           money — currency (2 decimal places)
         </Label>
-      </RadioList>
+      </RadioGroup>
       {isExact && (
         <Box spacing="s">
           <Box flex="y" spacing="xs">
@@ -556,7 +583,7 @@ const DateTimeTypeOptions = ({ column, putColumn }) => {
 
   return (
     <Box flex="y" spacing="s">
-      <RadioList
+      <RadioGroup
         name="datetime_type"
         flex="y"
         spacing="xs"
@@ -566,28 +593,34 @@ const DateTimeTypeOptions = ({ column, putColumn }) => {
         }}
       >
         <Label spacing="s" alignY="center">
-          <Radio value="date" checked={base === "date"} />
+          <Input type="radio" value="date" checked={base === "date"} />
           date — calendar date (no time)
         </Label>
         <Label spacing="s" alignY="center">
-          <Radio value="time" checked={base === "time"} />
+          <Input type="radio" value="time" checked={base === "time"} />
           time — time of day (no date)
         </Label>
         <Label spacing="s" alignY="center">
-          <Radio value="timestamp" checked={base === "timestamp"} />
+          <Input
+            type="radio"
+            value="timestamp"
+            checked={base === "timestamp"}
+          />
           timestamp — date and time
         </Label>
         <Label spacing="s" alignY="center">
-          <Radio value="interval" checked={base === "interval"} />
+          <Input type="radio" value="interval" checked={base === "interval"} />
           interval — duration / time span
         </Label>
-      </RadioList>
+      </RadioGroup>
       {(base === "time" || base === "timestamp") && (
         <Box flex="y" spacing="xs">
           <Box spacing="s" alignY="center">
             <FieldLabel>With timezone</FieldLabel>
-            <Checkbox
-              appearance="toggle"
+            <Input
+              type="checkbox"
+              switch
+              boolean
               checked={timezone}
               action={async (newChecked) => {
                 setTimezone(newChecked);
@@ -619,25 +652,29 @@ const NetworkTypeOptions = ({ column, putColumn }) => {
     : "inet";
 
   return (
-    <RadioList
+    <RadioGroup
       name="network_type"
       flex="y"
       spacing="xs"
       action={(type) => putColumn("data_type", type)}
     >
       <Label spacing="s" alignY="center">
-        <Radio value="inet" checked={currentType === "inet"} />
+        <Input type="radio" value="inet" checked={currentType === "inet"} />
         inet — IPv4 or IPv6 address
       </Label>
       <Label spacing="s" alignY="center">
-        <Radio value="cidr" checked={currentType === "cidr"} />
+        <Input type="radio" value="cidr" checked={currentType === "cidr"} />
         cidr — network address range
       </Label>
       <Label spacing="s" alignY="center">
-        <Radio value="macaddr" checked={currentType === "macaddr"} />
+        <Input
+          type="radio"
+          value="macaddr"
+          checked={currentType === "macaddr"}
+        />
         macaddr — MAC address
       </Label>
-    </RadioList>
+    </RadioGroup>
   );
 };
 
@@ -649,25 +686,25 @@ const OtherTypeOptions = ({ column, putColumn }) => {
     : "uuid";
 
   return (
-    <RadioList
+    <RadioGroup
       name="other_type"
       flex="y"
       spacing="xs"
       action={(type) => putColumn("data_type", type)}
     >
       <Label spacing="s" alignY="center">
-        <Radio value="uuid" checked={currentType === "uuid"} />
+        <Input type="radio" value="uuid" checked={currentType === "uuid"} />
         uuid — universally unique identifier
       </Label>
       <Label spacing="s" alignY="center">
-        <Radio value="xml" checked={currentType === "xml"} />
+        <Input type="radio" value="xml" checked={currentType === "xml"} />
         xml — XML document
       </Label>
       <Label spacing="s" alignY="center">
-        <Radio value="ARRAY" checked={currentType === "ARRAY"} />
+        <Input type="radio" value="ARRAY" checked={currentType === "ARRAY"} />
         ARRAY — typed array
       </Label>
-    </RadioList>
+    </RadioGroup>
   );
 };
 
@@ -695,8 +732,10 @@ const BinaryTypeOptions = ({ column, putColumn }) => {
       <Box flex="y" spacing="xs">
         <Box spacing="s" alignY="center">
           <FieldLabel>Bit string</FieldLabel>
-          <Checkbox
-            appearance="toggle"
+          <Input
+            type="checkbox"
+            switch
+            boolean
             checked={useBit}
             action={async (newChecked) => {
               setUseBit(newChecked);
@@ -732,8 +771,10 @@ const BinaryTypeOptions = ({ column, putColumn }) => {
           <Box flex="y" spacing="xs">
             <Box spacing="s" alignY="center">
               <FieldLabel>Variable length</FieldLabel>
-              <Checkbox
-                appearance="toggle"
+              <Input
+                type="checkbox"
+                switch
+                boolean
                 checked={variable}
                 action={async (newChecked) => {
                   setVariable(newChecked);

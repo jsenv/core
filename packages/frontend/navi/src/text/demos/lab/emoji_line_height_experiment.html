@@ -177,7 +177,7 @@
       // par VS16 (❤️), suivi de ses modificateurs / séquences ZWJ. Un drapeau
       // est deux Regional Indicators qu'il ne faut pas séparer.
       const EMOJI_REGEX =
-        /(?:\p{Regional_Indicator}{2}|(?:\p{Emoji_Presentation}|\p{Extended_Pictographic}\uFE0F)(?:\p{Emoji_Modifier}|\uFE0F|\u200D(?:\p{Emoji_Presentation}|\p{Extended_Pictographic})\uFE0F?)*)/gu;
+        /\p{Regional_Indicator}{2}|(?:\p{Emoji_Presentation}|\p{Extended_Pictographic}\uFE0F)(?:[\p{Emoji_Modifier}\uFE0F]|\u200D[\p{Emoji_Presentation}\p{Extended_Pictographic}]\uFE0F?)*/gu;
 
       const splitEmoji = (text) => {
         const parts = [];

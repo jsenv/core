@@ -96,8 +96,9 @@ const onDocumentClick = (clickEvent) => {
     // application sees ONE click, on the control it was aimed at, rather than
     // two: this one falling through and the one below.
     clickEvent.stopPropagation();
+    const ClickEventConstructor = clickEvent.constructor;
     pressable.dispatchEvent(
-      new clickEvent.constructor(clickEvent.type, clickEvent),
+      new ClickEventConstructor(clickEvent.type, clickEvent),
     );
     return;
   }

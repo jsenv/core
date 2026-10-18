@@ -4,6 +4,12 @@ import { COLORS, renderTable } from "@jsenv/terminal-table";
 
 import { createValidity } from "../src/validity.js";
 
+// A datetime is shown in UTC and its rule messages in local time: the zone is
+// pinned so the snapshot reads the same on every machine. This covers a run of
+// the file alone; under the test plan it runs in a worker, which cannot change
+// the zone, and scripts/test/test.mjs pins it for the whole plan.
+process.env.TZ = "UTC";
+
 const BORDER = { color: COLORS.GREY };
 const cell = (value) => ({ value, border: BORDER });
 
@@ -41,7 +47,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
       ['"2024-06-15"', "2024-06-15"],
       ['"not a datetime"', "not a datetime"],
       ["timestamp (number)", Date.UTC(2024, 5, 15, 14, 30)],
-      ["Date instance", new Date(2024, 5, 15, 14, 30)],
+      ["Date instance", new Date(Date.UTC(2024, 5, 15, 14, 30))],
       ["undefined", undefined],
     ], ["type"]);
   });

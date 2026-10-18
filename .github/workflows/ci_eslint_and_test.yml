@@ -39,7 +39,7 @@ jobs:
         # https://github.com/actions/runner-images
         os:
           - ubuntu-22.04
-          - macos-14 # might cause https://github.com/microsoft/playwright/issues/30585
+          - macos-26 # might cause https://github.com/microsoft/playwright/issues/30585
           # - windows-2022 # disabled until got a windows to make it work again
         node: [26.10.0]
     runs-on: ${{ matrix.os }}

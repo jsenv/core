@@ -55,10 +55,11 @@ await snapshotTests(import.meta.url, ({ test }) => {
   test("date min as timestamp (e.g. Date.now())", () => {
     // In practice: min: Date.now()
     // Here we freeze the date for snapshot stability
+    // A date is a day of the local calendar, and so is the day a timestamp falls on
     const now = new Date(2024, 5, 15).getTime();
-    const yesterday = new Date(2024, 5, 14).toISOString().slice(0, 10);
-    const today = new Date(2024, 5, 15).toISOString().slice(0, 10);
-    const tomorrow = new Date(2024, 5, 16).toISOString().slice(0, 10);
+    const yesterday = "2024-06-14";
+    const today = "2024-06-15";
+    const tomorrow = "2024-06-16";
     const [validity, applyOn] = createValidity({
       type: "date",
       min: now,

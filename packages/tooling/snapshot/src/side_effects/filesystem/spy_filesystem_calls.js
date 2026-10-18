@@ -281,6 +281,24 @@ export const spyFilesystemCalls = (
       };
     },
   );
+  // fs.writeFile opens, writes and closes the file in a single threadpool job:
+  // none of it goes through the open/close hooks above.
+  const writeFileJobHook = _internalFs.WriteFileJob
+    ? hookIntoMethod(
+        _internalFs.WriteFileJob.prototype,
+        "run",
+        (filePath) => {
+          const stateBefore = getFileStateWithinHook(filePath);
+          return {
+            return: () => {
+              const stateAfter = getFileStateWithinHook(filePath);
+              onWriteFileDone(stateBefore, stateAfter);
+            },
+          };
+        },
+        { execute: METHOD_EXECUTION_NODE_CALLBACK },
+      )
+    : null;
   const unlinkHook = hookIntoMethod(_internalFs, "unlink", (filePath) => {
     return {
       return: () => {
@@ -324,6 +342,9 @@ export const spyFilesystemCalls = (
     openHook.remove();
     closeHook.remove();
     writeFileUtf8Hook.remove();
+    if (writeFileJobHook) {
+      writeFileJobHook.remove();
+    }
     unlinkHook.remove();
     copyFileHook.remove();
     renameHook.remove();

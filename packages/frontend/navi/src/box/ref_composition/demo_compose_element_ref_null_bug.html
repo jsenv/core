@@ -183,7 +183,8 @@
       const OkDemo = () => {
         // Always the same ref object, even though the component re-renders.
         const externalRef = refStable;
-        tickSignal.value; // subscribe to force a re-render
+        // eslint-disable-next-line no-unused-expressions -- the read subscribes, forcing a re-render
+        tickSignal.value;
 
         useEffect(() => {
           tickSignal.value = 1;

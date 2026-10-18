@@ -1,5 +1,5 @@
 import { initFlexDetailsSet } from "@jsenv/dom";
-import { Icon, useRunOnMount } from "@jsenv/navi";
+import { Icon, useAsyncData } from "@jsenv/navi";
 import { useLayoutEffect, useRef } from "preact/hooks";
 
 // import { DatabaseSvg } from "../database/database_icons.jsx";
@@ -16,7 +16,8 @@ import "./explorer_store.js";
 import { EXPLORER } from "./explorer_store.js";
 
 export const Explorer = () => {
-  useRunOnMount(EXPLORER.GET, Explorer);
+  // The explorer only fills the counters signals: it draws while they load.
+  useAsyncData(EXPLORER.GET, { run: true, loading: true, error: true });
 
   const role = useCurrentRole();
   // const database = useCurrentDatabase();

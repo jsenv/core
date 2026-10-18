@@ -88,6 +88,8 @@ export const start = ({ transition }) => {
   // "reopen the thread where I left it" into its url does: the id alone is
   // written down — a rank would go stale the moment a row is inserted before
   // it — so what comes back names a row without saying where it sits.
+  // start() runs once to boot the app: it is not a component, whatever JSX it holds
+  // eslint-disable-next-line signals/no-signal-in-component-body
   const heldRowSignal = signal(readHeldRow());
   const writeHeldRow = (next) => {
     if (!next || next.id === undefined) {

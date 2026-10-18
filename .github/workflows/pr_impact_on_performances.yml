@@ -6,7 +6,7 @@ jobs:
   perf_impact:
     strategy:
       matrix:
-        os: [macos-14]
+        os: [macos-26]
         node: [26.10.0]
     runs-on: ${{ matrix.os }}
     name: performance impact

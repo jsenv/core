@@ -9,6 +9,7 @@
   <body>
     <div id="app"></div>
     <script type="module">
+      // eslint-disable-next-line import-x/no-unresolved -- the test installs it
       import { answer } from "bar";
 
       document.querySelector("#app").innerHTML = answer;

@@ -73,7 +73,6 @@
         List,
         ListItem,
         Separator,
-        ListItemHeader,
         useSearchText,
         Input,
         Form,
@@ -748,7 +747,7 @@
                   focusTrap
                 >
                   <List role="listbox">
-                    <ListItemHeader padding="m" borderBottom="1px solid #eee">
+                    <ListItem header padding="m" borderBottom="1px solid #eee">
                       <Input
                         uiAction={(v) => setSearchText(v)}
                         type="search"
@@ -756,7 +755,7 @@
                         value={searchText}
                         expandX
                       />
-                    </ListItemHeader>
+                    </ListItem>
                     {items.map((f, i) => {
                       return (
                         <ListItem

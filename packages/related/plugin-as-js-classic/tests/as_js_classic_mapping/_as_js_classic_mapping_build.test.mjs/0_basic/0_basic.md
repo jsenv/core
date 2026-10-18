@@ -4,17 +4,11 @@
 run()
 ```
 
-# 1/3 console.warn
-
-```console
-discarding unknown file input sourcemap
-```
-
-# 2/3 write 3 files into "./build/"
+# 1/2 write 3 files into "./build/"
 
 see [./build/](./build/)
 
-# 3/3 resolve
+# 2/2 resolve
 
 ```js
 undefined

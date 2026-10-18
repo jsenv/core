@@ -115,8 +115,17 @@ const readAsks = (page) =>
 // This wait is paid eleven times per walk: a second is the margin, not more.
 const settle = (page) => page.waitForTimeout(1000);
 // Nothing is measured on the page opened on the way out — only the movement
-// has to have played out before the way back begins.
-const settleLeaving = (page) => page.waitForTimeout(400);
+// has to have played out before the way back begins. On a loaded machine it
+// can still be playing past the 400ms: a back pressed then takes it over, and
+// the two movements reach the count as one.
+const settleLeaving = async (page) => {
+  await page.waitForTimeout(400);
+  await page.waitForFunction(
+    () =>
+      // eslint-disable-next-line no-undef
+      !document.documentElement.hasAttribute("data-navi-route-transition"),
+  );
+};
 
 // One comparison decides nothing about a failure that comes and goes: a
 // difference that shows up three times out of four passes a single run a

@@ -46,7 +46,7 @@ try {
     {
       "description": "after null",
       "value": null,
-      "validValue": undefined
+      "validValue": 1
     },
     {
       "description": "back to number 2.34",

@@ -107,24 +107,17 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import {
-        RadioFieldset,
-        Radio,
-        Label,
-        Box,
-        Icon,
-        Image,
-      } from "@jsenv/navi";
+      import { Box, Icon, Image, Input, RadioGroup } from "@jsenv/navi";
 
       const App = () => {
         return (
           <div>
-            <ImageRadioFieldsetDemo />
+            <ImageRadioGroupDemo />
           </div>
         );
       };
 
-      const ImageRadioFieldsetDemo = () => {
+      const ImageRadioGroupDemo = () => {
         const [selectedMapType, setSelectedMapType] = useState("street");
 
         return (
@@ -138,7 +131,7 @@
             </p>
 
             <Box column spacing="lg">
-              <RadioFieldset
+              <RadioGroup
                 column
                 name="mapType"
                 value={selectedMapType}
@@ -147,7 +140,8 @@
                   setSelectedMapType(mapType);
                 }}
               >
-                <Radio
+                <Input
+                  type="radio"
                   value="street"
                   variant="button"
                   borderRadius="8"
@@ -160,7 +154,8 @@
                     </Icon>
                   }
                 />
-                <Radio
+                <Input
+                  type="radio"
                   value="satellite"
                   variant="button"
                   borderRadius="8"
@@ -173,7 +168,8 @@
                     />
                   }
                 />
-                <Radio
+                <Input
+                  type="radio"
                   value="discrete"
                   variant="button"
                   borderRadius="8"
@@ -186,7 +182,7 @@
                     />
                   }
                 />
-              </RadioFieldset>
+              </RadioGroup>
             </Box>
 
             <div
@@ -210,7 +206,7 @@
                   toggle buttons
                 </li>
                 <li>
-                  <strong>RadioFieldset Integration:</strong> Coordinated radio
+                  <strong>RadioGroup Integration:</strong> Coordinated radio
                   group with shared state
                 </li>
                 <li>

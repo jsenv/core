@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "41.5.25",
+  "version": "41.5.44",
   "type": "module",
   "description": "Tool to develop, test and build js projects",
   "repository": {
@@ -57,9 +57,10 @@
     "https:setup": "npx @jsenv/https-local setup",
     "md:build": "node ./docs/build.js",
     "monorepo:node_modules_clear": "npx @jsenv/filesystem clear **/node_modules/",
-    "monorepo:publish": "node ./scripts/monorepo/publish_packages.mjs",
+    "monorepo:publish": "node ./scripts/monorepo/prepare_publish.mjs",
     "monorepo:sync_versions": "node ./scripts/monorepo/sync_packages_versions.mjs",
     "monorepo:upgrade_versions": "node ./scripts/monorepo/upgrade_external_versions.mjs",
+    "monorepo:wait_publish": "node ./scripts/monorepo/wait_publish.mjs",
     "oto:start": "npm run start -w oto",
     "performances": "node --expose-gc ./scripts/performance/generate_performance_report.mjs --log --once",
     "playwright:install": "npx playwright install-deps && npx playwright install",
@@ -73,14 +74,14 @@
     "test:snapshot_clear": "npx @jsenv/filesystem clear **/tests/**/side_effects/"
   },
   "dependencies": {
-    "@jsenv/ast": "6.10.6",
-    "@jsenv/js-module-fallback": "1.6.10",
-    "@jsenv/plugin-bundling": "2.10.28",
-    "@jsenv/plugin-minification": "1.7.23",
-    "@jsenv/plugin-supervisor": "1.8.25",
-    "@jsenv/plugin-transpilation": "1.7.10",
-    "@jsenv/server": "17.6.6",
-    "@jsenv/sourcemap": "1.4.9",
+    "@jsenv/ast": "6.10.11",
+    "@jsenv/js-module-fallback": "1.6.15",
+    "@jsenv/plugin-bundling": "2.10.33",
+    "@jsenv/plugin-minification": "1.7.28",
+    "@jsenv/plugin-supervisor": "1.8.30",
+    "@jsenv/plugin-transpilation": "1.7.15",
+    "@jsenv/server": "17.7.2",
+    "@jsenv/sourcemap": "1.4.14",
     "react-table": "7.8.0"
   },
   "devDependencies": {
@@ -157,7 +158,7 @@
     "@playwright/browser-webkit": true
   },
   "volta": {
-    "node": "26.5.0",
+    "node": "26.10.0",
     "npm": "11.17.0"
   }
 }
