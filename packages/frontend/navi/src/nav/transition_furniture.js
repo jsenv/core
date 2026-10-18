@@ -64,18 +64,27 @@
  * being left and arrives with the page arriving, cut at the page's edge — and
  * under the popup's own picture, which stands over the pages (the z-order in
  * route_transition.jsx). The bars are under the wall as much as the page is,
- * and each is a picture of its own: the same stand-in is laid over every bar
- * outside the area. A bar the two states share is one group with two
- * pictures — dimmed on the side that has a wall — and its cross-fade is the
- * wall fading out as the page leaves, or in as it arrives; a bar only one
- * state has carries the wall with it. What no picture covers — the glass
- * beside a narrowed app, the window below a page shorter than it — shows the
- * live document through, and only the live document can paint a wall there:
- * one fixed stand-in over the window, under the pictures, with a hole cut
- * where each picture stands, its opacity taken from the state being left to
- * the state arriving on the movement's own clock. A popup with layer="local"
- * paints its wall inside the page and needs none of this.
+ * and each is a picture of its own, dimmed by a filter rather than a stand-in:
+ * a bar's picture is transparent wherever the bar paints nothing, around what
+ * it paints outside its box (a button standing up out of a tab bar) as much as
+ * anywhere, and a rectangle laid there dims the page a second time, over the
+ * area's own stand-in — no rectangle is right, whatever its size. The filter
+ * floods the wall's colour atop the bar's own pixels, keeping their alpha. It
+ * is worn by the bar, not written on its pictures, for the frames the live
+ * document is shown (the first and the last, see the CSS). A bar the two
+ * states share is one group with two pictures — dimmed on the side that has a
+ * wall — and its cross-fade is the wall fading out as the page leaves, or in
+ * as it arrives; a bar only one state has carries the wall with it. What no
+ * picture covers — the glass beside a narrowed app, the window below a page
+ * shorter than it — shows the live document through, and only the live
+ * document can paint a wall there: one fixed stand-in over the window, under
+ * the pictures, with a hole cut where each picture stands, its opacity taken
+ * from the state being left to the state arriving on the movement's own clock.
+ * A popup with layer="local" paints its wall inside the page and needs none of
+ * this.
  */
+
+import { readBackdropColor } from "./theme_color.js";
 
 // The browser's top layer: painted above everything the document paints, so
 // outside the area's picture whatever the DOM says.
@@ -101,6 +110,11 @@ export const FURNITURE_NAME_PREFIX = "navi-transition-furniture-";
 const TOP_LAYER_WALL_SELECTOR =
   ".navi_dialog:modal, .navi_popover_backdrop:popover-open, .navi_popup_group:modal";
 const WALL_ATTRIBUTE = "data-navi-transition-wall";
+// Worn by a bar dimmed by a filter of navi's; the property holds the whole
+// chain, the bar's own filter first (see dimBarPicture).
+const WALL_FILTER_ATTRIBUTE = "data-navi-transition-wall-filter";
+const WALL_FILTER_PROPERTY = "--navi-transition-wall-filter";
+const WALL_FILTERS_ATTRIBUTE = "data-navi-transition-wall-filters";
 // Which side of the movement a bar is on, worn by the bar and read by the
 // browser as the class of its group (the CSS below): "leaving" from the first
 // picture, "arriving" for a bar the state arriving brought, "shared" for one
@@ -140,8 +154,8 @@ const TRANSITION_FURNITURE_CSS = /* css */ `
     view-transition-class: navi_furniture_shared;
   }
 
-  /* Laid over its target's rectangle from wherever its containing block turns
-     out to be (see paintTransitionWalls), and above everything the target can
+  /* Laid over the area's rectangle from wherever its containing block turns
+     out to be (see paintTransitionWalls), and above everything the pages can
      paint: it stands for the top layer. Deaf to the pointer for the same
      reason the pictures are — the movement holds every press anyway
      (transition_press.js). */
@@ -164,6 +178,23 @@ const TRANSITION_FURNITURE_CSS = /* css */ `
       clip-path: var(--wall-holes);
       transition: opacity var(--navi-route-transition-duration, 300ms) ease;
     }
+  }
+
+  /* A bar's walls, carried on after its own filter (see dimBarPicture), over
+     an inline one too. For the movement the bar is then the containing block
+     of its fixed descendants; a popup in the top layer escapes it. */
+  .navi_fixed_bar[data-navi-transition-wall-filter] {
+    filter: var(--navi-transition-wall-filter) !important;
+  }
+
+  /* Rendered: a filter defined in a display: none subtree is ignored by some
+     browsers. */
+  [data-navi-transition-wall-filters] {
+    position: fixed;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+    overflow: hidden;
   }
 
   /* The last frame: the pictures are dropped and the live document paints
@@ -219,9 +250,13 @@ let namedElements = new Set();
 // The rule giving the one-sided bars their movement, written for one movement
 // and taken down with it.
 let travelStyleElement = null;
-// The stand-ins for the walls open in the top layer, painted for one picture
-// and taken down before the next.
+// The walls open in the top layer, painted for one picture and taken down
+// before the next: the area's stand-ins, the bars wearing a filter for them,
+// and the <svg> holding those filters.
 let wallElements = [];
+let dimmedBars = [];
+let wallFilterSvg = null;
+let wallFilterCount = 0;
 // The stand-ins for what no picture covers, kept for the whole movement, and
 // the opacity they are heading to once it plays.
 let restWallElements = [];
@@ -416,12 +451,13 @@ export const releaseTransitionFurniture = (owner) => {
   removeRestWalls();
 };
 
-// One stand-in per open wall in every picture, walls in document order: they
-// stack in the top layer, and what dims the document is all of them. A wall
-// open anywhere covers everything the document paints, so the sources are
-// looked for in the whole document — a dialog opened from a bar dims the
-// pages too. A bar inside the area is part of the pages' picture, and the
-// area's stand-in answers for it.
+// One stand-in per open wall over the pages, and one filter per open wall on
+// every bar outside them, walls in document order: they stack in the top
+// layer, and what dims the document is all of them. A wall open anywhere
+// covers everything the document paints, so the sources are looked for in the
+// whole document — a dialog opened from a bar dims the pages too. A bar inside
+// the area is part of the pages' picture, and the area's stand-in answers for
+// it.
 const paintTransitionWalls = (areaElement) => {
   removeTransitionWalls();
   const sources = Array.from(
@@ -430,23 +466,24 @@ const paintTransitionWalls = (areaElement) => {
   if (sources.length === 0) {
     return sources;
   }
-  for (const target of pictureTargets(areaElement)) {
-    for (const source of sources) {
-      const wall = createWall(source);
-      target.appendChild(wall);
-      // The target is not necessarily a containing block (the area is a plain
-      // box), and made one for the movement it would move whatever the page
-      // positioned against an ancestor of it: the wall is placed from
-      // wherever its containing block turns out to be, by the offset between
-      // that box and the target's.
-      const targetRect = pictureRect(target);
-      const wallRect = wall.getBoundingClientRect();
-      wall.style.left = `${targetRect.left - wallRect.left}px`;
-      wall.style.top = `${targetRect.top - wallRect.top}px`;
-      wall.style.width = `${targetRect.right - targetRect.left}px`;
-      wall.style.height = `${targetRect.bottom - targetRect.top}px`;
-      wallElements.push(wall);
-    }
+  for (const source of sources) {
+    const wall = createWall(source);
+    areaElement.appendChild(wall);
+    // The area is not necessarily a containing block (it is a plain box), and
+    // made one for the movement it would move whatever the page positioned
+    // against an ancestor of it: the wall is placed from wherever its
+    // containing block turns out to be, by the offset between that box and
+    // the area's.
+    const areaRect = areaElement.getBoundingClientRect();
+    const wallRect = wall.getBoundingClientRect();
+    wall.style.left = `${areaRect.left - wallRect.left}px`;
+    wall.style.top = `${areaRect.top - wallRect.top}px`;
+    wall.style.width = `${areaRect.width}px`;
+    wall.style.height = `${areaRect.height}px`;
+    wallElements.push(wall);
+  }
+  for (const bar of barsOutside(areaElement)) {
+    dimBarPicture(bar, sources);
   }
   return sources;
 };
@@ -456,18 +493,102 @@ const removeTransitionWalls = () => {
     wall.remove();
   }
   wallElements = [];
+  for (const bar of dimmedBars) {
+    bar.removeAttribute(WALL_FILTER_ATTRIBUTE);
+    bar.style.removeProperty(WALL_FILTER_PROPERTY);
+  }
+  dimmedBars = [];
+  if (wallFilterSvg) {
+    wallFilterSvg.remove();
+    wallFilterSvg = null;
+  }
 };
 
-// What is photographed on its own and gets a stand-in in its picture: the
+// What is photographed on its own and carries the wall in its picture: the
 // pages, and every bar outside them.
 const pictureTargets = (areaElement) => {
-  const targets = [areaElement];
+  return [areaElement, ...barsOutside(areaElement)];
+};
+
+const barsOutside = (areaElement) => {
+  const bars = [];
   for (const bar of document.querySelectorAll(FIXED_BAR_SELECTOR)) {
     if (!areaElement.contains(bar)) {
-      targets.push(bar);
+      bars.push(bar);
     }
   }
-  return targets;
+  return bars;
+};
+
+// Room around what a bar's picture holds for what paints past every box — a
+// shadow, the blur of a wall — which no API measures: a filter cuts whatever
+// falls outside its region.
+const WALL_FILTER_INK_ROOM = 100;
+const SVG_NS = "http://www.w3.org/2000/svg";
+
+// The bar's picture dimmed, not a rectangle over it: each wall's colour is
+// flooded atop the bar's own pixels (Porter-Duff source-atop, which no blend
+// mode gives), so what the bar leaves transparent stays so. Composited over
+// the area's picture and its stand-in, that is the wall over the bar over the
+// page: the frame at rest. A wall's filter comes before its colour, as its
+// backdrop-filter does at rest.
+const dimBarPicture = (bar, sources) => {
+  const box = bar.getBoundingClientRect();
+  // The filter region is in objectBoundingBox units, which measure from the
+  // box: one without an area leaves nothing to measure from.
+  if (box.width === 0 || box.height === 0) {
+    return;
+  }
+  const picture = pictureRect(bar);
+  const region = {
+    x: (picture.left - WALL_FILTER_INK_ROOM - box.left) / box.width,
+    y: (picture.top - WALL_FILTER_INK_ROOM - box.top) / box.height,
+    width:
+      (picture.right - picture.left + 2 * WALL_FILTER_INK_ROOM) / box.width,
+    height:
+      (picture.bottom - picture.top + 2 * WALL_FILTER_INK_ROOM) / box.height,
+  };
+  // Read while the bar wears none of navi's: removeTransitionWalls took it.
+  const ownFilter = getComputedStyle(bar).filter;
+  const chain = ownFilter === "none" ? [] : [ownFilter];
+  for (const source of sources) {
+    const backdropFilter = getComputedStyle(source)
+      .getPropertyValue("--backdrop-filter")
+      .trim();
+    if (backdropFilter && backdropFilter !== "none") {
+      chain.push(backdropFilter);
+    }
+    chain.push(`url(#${createWallFilter(source, region).id})`);
+  }
+  bar.style.setProperty(WALL_FILTER_PROPERTY, chain.join(" "));
+  bar.setAttribute(WALL_FILTER_ATTRIBUTE, "");
+  dimmedBars.push(bar);
+};
+
+const createWallFilter = (source, region) => {
+  if (!wallFilterSvg) {
+    wallFilterSvg = document.createElementNS(SVG_NS, "svg");
+    wallFilterSvg.setAttribute(WALL_FILTERS_ATTRIBUTE, "");
+    wallFilterSvg.setAttribute("aria-hidden", "true");
+    document.body.appendChild(wallFilterSvg);
+  }
+  wallFilterCount++;
+  const filter = document.createElementNS(SVG_NS, "filter");
+  filter.id = `navi-transition-wall-${wallFilterCount}`;
+  // linearRGB, the default, floods another colour than the wall's.
+  filter.setAttribute("color-interpolation-filters", "sRGB");
+  filter.setAttribute("x", region.x);
+  filter.setAttribute("y", region.y);
+  filter.setAttribute("width", region.width);
+  filter.setAttribute("height", region.height);
+  const flood = document.createElementNS(SVG_NS, "feFlood");
+  flood.setAttribute("flood-color", readBackdropColor(source));
+  const composite = document.createElementNS(SVG_NS, "feComposite");
+  composite.setAttribute("in2", "SourceGraphic");
+  composite.setAttribute("operator", "atop");
+  filter.append(flood, composite);
+  wallFilterSvg.appendChild(filter);
+  return filter;
 };
 
 const createWall = (source) => {
@@ -481,8 +602,8 @@ const createWall = (source) => {
 };
 
 // One per open wall, over the window, at the opacity of the state they are
-// painted from. A hole is cut where a picture stands, since the picture has
-// a stand-in of its own and shows the live document through nowhere — and on
+// painted from. A hole is cut where a picture stands, since the picture
+// carries the wall itself and shows the live document through nowhere — and on
 // the frames the live document IS shown, the first and the last, a hole is
 // what keeps the two from being painted on top of each other.
 const paintRestWalls = (sources, opacity) => {
@@ -503,10 +624,10 @@ const measurePictureRects = (areaElement) => {
   return rects;
 };
 
-// What the picture holds, which is what the wall covers at rest: a bar's
-// picture carries what its content paints outside its box (a button standing
-// up out of a tab bar), so its rectangle is taken with its descendants'. The
-// pages' is their own box — the movement cuts them at it anyway.
+// What the picture holds: a bar's picture carries what its content paints
+// outside its box (a button standing up out of a tab bar), so its rectangle
+// is taken with its descendants'. The pages' is their own box — the movement
+// cuts them at it anyway.
 const pictureRect = (target) => {
   const rect = target.getBoundingClientRect();
   let { left, top, right, bottom } = rect;
@@ -514,9 +635,6 @@ const pictureRect = (target) => {
     return { left, top, right, bottom };
   }
   for (const descendant of target.querySelectorAll("*")) {
-    if (descendant.hasAttribute(WALL_ATTRIBUTE)) {
-      continue;
-    }
     const descendantRect = descendant.getBoundingClientRect();
     if (descendantRect.width === 0 || descendantRect.height === 0) {
       continue;
