@@ -4739,7 +4739,13 @@ const UnorderedList = ({
                   <ListItemColumnsContext.Provider
                     value={columns ? null : itemColumns || null}
                   >
-                    <ListDeclaredChildren>{children}</ListDeclaredChildren>
+                    {/* A list's slots and groups are its own: a list inside an
+                        item of another starts from none, not from that item's. */}
+                    <ListSlotContext.Provider value={null}>
+                      <ListGroupContext.Provider value={undefined}>
+                        <ListDeclaredChildren>{children}</ListDeclaredChildren>
+                      </ListGroupContext.Provider>
+                    </ListSlotContext.Provider>
                   </ListItemColumnsContext.Provider>
                 </ListRunItemContext.Provider>
               </ListItemsContext.Provider>
