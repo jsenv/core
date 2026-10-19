@@ -14,6 +14,7 @@ What opens a `Dialog` or a `Popover`, and who owns the fact that it is open.
 - [Reacting to open and close](#reacting-to-open-and-close)
 - [Escape cancels, the other gestures keep](#escape-cancels-the-other-gestures-keep)
 - [The close cross](#the-close-cross)
+- [Its name](#its-name)
 - [When the app holds the open state](#when-the-app-holds-the-open-state)
 - [A popup that loads data](#a-popup-that-loads-data)
 - [What the popup holds while it is closed](#what-the-popup-holds-while-it-is-closed)
@@ -182,6 +183,11 @@ the element itself, so the popup element passed as the source resolves to that
 popup — the short form above. To trigger from another element, give it a
 `commandFor` pointing at the popup's `id`.
 
+A picker's `<input>` carries `aria-expanded` too, for assistive tech, beside its
+role (see [Its name](#its-name)). It repeats the state of the picker's root and
+is not a target of its own: a command triggered from that input reaches the
+picker, as one triggered from anything else in it does.
+
 ## The anchor
 
 A popup opens on the place the open names, on the `anchor` prop when the open
@@ -285,13 +291,9 @@ far from every press that opens it, it has to be told what it is about and has
 to answer somebody. The content can still be one component used in every picker:
 "the prompt exists once" is a question about components, not about the DOM.
 
-An `aria-labelledby` on a `Picker` names its trigger, not its popup. The
-popup is named by its title written as `<Popup.Title>` (also `Dialog.Title`,
-`Popover.Title`), whichever mode it opens in; a dialog that pointed at its
-title with `aria-labelledby={TITLE_ID}` drops the id. Without a title it takes
-the trigger's name — "Report this book" for the sheet that press opens.
-`popupAriaLabelledBy`/`popupAriaDescribedBy` are there for a name or a
-description the content holds elsewhere.
+An `aria-labelledby` on a `Picker` names its trigger, not its popup: a shared
+dialog that pointed at its title that way names itself with `<Popup.Title>`
+once it is a picker's popup (see [Its name](#its-name)).
 
 What each row costs depends on what reads the picker's value before anything
 opens. A picker told no value — no `value`, `defaultValue` or `signal` — holds
@@ -623,6 +625,48 @@ outside — same refusals, same "close, keep": a control inside mid-action refus
 it and says why, and a `Picker` validates what its popup holds and runs its
 action on the way out, an invalid value keeping it open. Hiding or disabling the
 cross to hold a popup open only removes the one way out that is visible.
+
+## Its name
+
+A screen reader announces a popup by its name, and
+`getByRole("dialog", { name })` finds it by it; unnamed, it is "dialog" and
+nothing else. The first of these names it:
+
+1. `aria-label` / `aria-labelledby` on the popup — `popupAriaLabel` /
+   `popupAriaLabelledBy` on a `Picker`, whose own `aria-label` names its
+   trigger;
+2. its title, written as `<Popup.Title>` (`<Dialog.Title>`,
+   `<Popover.Title>`): a heading, `h2` unless `as` says otherwise, that names
+   the popup it sits in with no id to wire — and, written in a picker's
+   children, whichever mode the popup opens in;
+3. for a `Picker`'s popup, the trigger's name: its `aria-labelledby` or
+   `aria-label`, the label a picker that picks nothing draws, or the `<Label>`
+   pointing at it. What was pressed is a fair name for what it opened.
+
+```jsx
+<Picker
+  id="report_book"
+  picksNothing
+  standalone
+  ui="Report this book"
+  popupAriaDescribedBy="report_target"
+>
+  <Popup.Title>Report</Popup.Title>
+  <p id="report_target">“Title”, chapter 3</p>
+  <ReportForm />
+</Picker>
+```
+
+A `Popover` has no role of its own, and a name on an element without one is
+read by nobody: a named popover is a `dialog`, unless given another `role`. A
+picker's popover always is, which is what its trigger announces
+(`aria-haspopup="dialog"`, `aria-expanded`). A title inside a
+`mode="callout"` picker names nothing: a callout is read as its message.
+
+A `<label>` wrapping the picker does not name its popup: it holds the trigger
+and the popup with it, so the popup would be named after its own content. A
+hand-written `<label for>` names it once it has an `id`; navi's `<Label>` always
+has one.
 
 ## When the app holds the open state
 

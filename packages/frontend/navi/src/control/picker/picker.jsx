@@ -1094,7 +1094,10 @@ const PickerButton = (props) => {
         icon={undefined}
         // The caller's own role goes onto the host, beside the name (see
         // control_context.js): a role and a name on two different elements
-        // name nothing at all. What the trigger opens is said there too.
+        // name nothing at all. What the trigger opens is said there too, and
+        // aria-haspopup with it. aria-expanded stays here as well: commands.js
+        // and the CSS read the open state off the root (see
+        // expandableRepeatedBy in commands.js).
         role={undefined}
         aria-haspopup={undefined}
         rightSlotIcon={undefined}
@@ -1141,6 +1144,7 @@ const PickerButton = (props) => {
             <PickerInput
               role={hostRole}
               aria-haspopup={props["aria-haspopup"]}
+              aria-expanded={props["aria-expanded"]}
               aria-labelledby={hostLabelId}
               tabIndex={variant === "headless" ? -1 : undefined}
               aria-hidden={variant === "headless" ? "true" : undefined}
@@ -1697,6 +1701,10 @@ const PickerFirstResolver = (props) => {
  * Without `children`, opens the browser-native picker for the given `type`.
  * With `children`, opens a popover (desktop) or dialog (mobile) containing the children.
  * Pass `mode="popover"` or `mode="dialog"` to override the automatic choice.
+ * Either way the popup is a `dialog`, named by a `<Popup.Title>` in the
+ * children (see `popupAriaLabelledBy`), and the trigger answers to `combobox` —
+ * `button` under `picksNothing` — with `aria-haspopup="dialog"` and
+ * `aria-expanded` (see docs/testid.md).
  *
  * `type="confirm"` is the picker that asks "are you sure?" before doing what it
  * stands for: its popup is the question, `ui` its label, and yes runs its

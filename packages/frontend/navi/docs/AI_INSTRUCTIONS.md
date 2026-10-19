@@ -141,8 +141,8 @@ start when unsure which export solves a problem.
 
 - `popup_open.md` — a popup owns its open state; `command` + `commandFor`,
   `triggerNaviCommand` as the last resort; opening ON something; a press that
-  opens and acts is a `Picker`; Escape cancels; the close cross;
-  `signal`/`navState`/`open`; a popup that loads data; `mount`; a closed
+  opens and acts is a `Picker`; Escape cancels; the close cross; its name
+  (`Popup.Title`); `signal`/`navState`/`open`; a popup that loads data; `mount`; a closed
   `Dialog` costs one element until asked (a row may hold the dialogs of its
   own actions). Before passing `open`, calling `triggerNaviCommand`, or
   writing a close button.

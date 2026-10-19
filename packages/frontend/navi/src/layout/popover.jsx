@@ -725,7 +725,10 @@ const css = /* css */ `
  * @param {string} [props.openerAriaLabelledBy] - The id(s) naming what opened
  *   the popover: its accessible name when neither `aria-label`/`aria-labelledby`
  *   nor a `<Popover.Title>` names it. A Picker passes its trigger's.
- * @param {string} [props.openerAriaLabel] - The same, as a string.
+ * @param {string} [props.openerAriaLabel] - The same, as a string. A popover
+ *   something names — these, `aria-label`/`aria-labelledby`, a
+ *   `<Popover.Title>` — is a `dialog`, unless given another `role`: a name on
+ *   an element with no role is read by nobody.
  * @param {import("preact").ComponentChildren} props.children
  */
 export const Popover = (props) => {

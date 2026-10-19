@@ -182,6 +182,10 @@ const css = /* css */ `
  * @param {string} [props.className] - Merged with the shared
  *   `"navi_popup"` class (see this file's own CSS) rather than replacing
  *   it.
+ * @param {string} [props.openerAriaLabelledBy] - Forwarded as-is: the name the
+ *   popup takes when neither `aria-label`/`aria-labelledby` nor a
+ *   `<Popup.Title>` in `children` names it (see `Dialog`/`Popover`).
+ * @param {string} [props.openerAriaLabel] - Forwarded as-is, same.
  * @param {"always"|"idle"|"from-first-open"|"while-opened"} [props.mount] - When
  *   `children` are built and thrown away (see popup_content_mount.js).
  *   `"from-first-open"` (the default) builds them on the first open and keeps

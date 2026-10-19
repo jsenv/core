@@ -40,16 +40,29 @@ export const pickerUIIsNaviOwn = (ui) => {
 
 /*
  * What the picker really is, said on the element that holds the name and takes
- * the focus (the host input in picker.jsx): a picker that picks nothing is a
- * door — its popup is a question (type="confirm") or something to read
- * (mode="callout", which says it for itself) — and a door is pressed. So it
- * answers to "button" rather than to the "textbox" its <input> would otherwise
- * be, which is both what a screen reader announces and what
- * getByRole("button", { name }) finds. A picker holding a value stays a
- * textbox: it does hold text.
+ * the focus (the host input in picker.jsx), which is both what a screen reader
+ * announces and what getByRole(role, { name }) finds:
+ * - a picker that picks nothing is a door — its popup is a question
+ *   (type="confirm") or something to read (mode="callout", which says it for
+ *   itself) — and a door is pressed: "button";
+ * - a picker holding a value and opening a popup of navi's is a select-only
+ *   combobox: it shows a value the user does not type, and opens what changes
+ *   it. A textbox could not say the rest — aria-expanded is not allowed on one,
+ *   so "open" and "closed" would never be announced;
+ * - a picker showing the browser's own picker (no popup of navi's) stays the
+ *   textbox its <input> is.
  */
-export const getPickerHostRole = ({ role, picksNothing }) => {
-  return role ?? (picksNothing ? "button" : undefined);
+export const getPickerHostRole = (props) => {
+  if (props.role !== undefined) {
+    return props.role;
+  }
+  if (props.picksNothing) {
+    return "button";
+  }
+  if (props["aria-haspopup"] !== undefined) {
+    return "combobox";
+  }
+  return undefined;
 };
 
 /*

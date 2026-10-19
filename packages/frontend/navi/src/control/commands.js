@@ -238,8 +238,29 @@ const resolveFirstChildControl = (el) => {
   }
   return startEl.querySelector("[navi-control-host]");
 };
+// The element a popup command is about: the closest one keeping an open state.
 const resolveClosestExpandable = (el) => {
-  return el.closest("[aria-expanded]");
+  const expandable = el.closest("[aria-expanded]");
+  if (!expandable) {
+    return null;
+  }
+  return expandableRepeatedBy(expandable) || expandable;
+};
+// A control's host repeats the aria-expanded of its root, beside its role, for
+// assistive tech to read (a picker's <input>, a combobox or a button). The root
+// is the expandable: the host is a leaf the walk lands on only when it is the
+// source itself, and it carries the control's own `command`/`commandfor`, which
+// a command resolved again from it (a close after a clear) would follow.
+const expandableRepeatedBy = (el) => {
+  const controlRoot = findControlRoot(el);
+  if (
+    controlRoot &&
+    controlRoot !== el &&
+    controlRoot.hasAttribute("aria-expanded")
+  ) {
+    return controlRoot;
+  }
+  return null;
 };
 // The surface a send is decided on: the expandable holding the CONTROL that
 // sends, never one that control is itself. A picker's own root carries
@@ -250,7 +271,7 @@ const resolveClosestExpandable = (el) => {
 const resolveExpandableAround = (source) => {
   const sender = findControlRoot(source) || source;
   const parent = sender.parentElement;
-  return parent ? parent.closest("[aria-expanded]") : null;
+  return parent ? resolveClosestExpandable(parent) : null;
 };
 // An element carrying navi-command-proxy-for="anchorId" stands in for that
 // other element as the command's source when the source is forwarded to
@@ -570,8 +591,12 @@ const sendCommand = (source, event, { requester }) => {
   // looking at, and a decision just taken there is a reason to leave it. The
   // NEAREST surface answers, and only that one — a form inside a slide inside a
   // dialog goes back a slide, it does not also close the dialog.
-  // send inside expandable
-  if (target.getAttribute("aria-expanded") === "true") {
+  // send inside expandable — the control itself when it sends from its host,
+  // whose aria-expanded is its root's (see expandableRepeatedBy)
+  if (
+    target.getAttribute("aria-expanded") === "true" &&
+    !expandableRepeatedBy(target)
+  ) {
     return {
       target,
       implementation: () => {
@@ -1006,7 +1031,7 @@ const requestCloseUpward = (target, detail) => {
       return false;
     }
     const parent = expandable.parentElement;
-    expandable = parent ? parent.closest("[aria-expanded]") : null;
+    expandable = parent ? resolveClosestExpandable(parent) : null;
   }
   return true;
 };

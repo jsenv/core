@@ -90,13 +90,26 @@ found by nothing, while the host is what the user focuses and what
 
 ```html
 <div class="navi_picker" navi-control="picker" aria-expanded="false">
-  <input navi-control-host="picker" aria-label="Aide" readonly />
+  <input
+    navi-control-host="picker"
+    role="combobox"
+    aria-haspopup="dialog"
+    aria-expanded="false"
+    aria-label="Aide"
+    readonly
+  />
 </div>
 ```
 
 Which role that host answers to is what the control really is, not what it is
 drawn like: a button's host is a `<button>`, and a picker's host is an
-`<input>` — a `textbox`, because it holds text the user chose.
+`<input>` that answers to `combobox` — it shows a value the user does not type,
+and opens what changes it. It says whether its popup is open (`aria-expanded`)
+and what that popup is (`aria-haspopup="dialog"`): a `dialog` in every mode,
+found with `getByRole("dialog", { name })` once open (see
+[popup_open.md](./popup_open.md#its-name) for its name). A picker showing the
+browser's own picker (a `type` with no children) is the `textbox` its
+`<input>` is.
 
 A picker that picks nothing is the exception, and answers to `button`: its
 popup is a question (`type="confirm"`) or something to read
