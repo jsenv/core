@@ -108,6 +108,7 @@ import {
   warnPopupHasNoElementToOpen,
 } from "./popup_shared.js";
 import { PopupClose } from "./popup_close.jsx";
+import { PopupTitle, PopupTitleContext, usePopupName } from "./popup_title.jsx";
 import {
   closePopupGroupsInside,
   PopupGroupContext,
@@ -721,6 +722,10 @@ const css = /* css */ `
  *   under `"while-opened"`, only a press on what opens the popup does (a
  *   `--navi-open` button, a picker's trigger), never with an `onOpen`, and a
  *   press that does not open the popup throws it away.
+ * @param {string} [props.openerAriaLabelledBy] - The id(s) naming what opened
+ *   the popover: its accessible name when neither `aria-label`/`aria-labelledby`
+ *   nor a `<Popover.Title>` names it. A Picker passes its trigger's.
+ * @param {string} [props.openerAriaLabel] - The same, as a string.
  * @param {import("preact").ComponentChildren} props.children
  */
 export const Popover = (props) => {
@@ -968,6 +973,9 @@ const usePopoverProps = (props) => {
     onOpen,
     children: childrenProp,
     mount,
+    // Read by usePopupName below, never written on the element.
+    openerAriaLabel,
+    openerAriaLabelledBy,
     ...rest
   } = props;
   // Assigned on every render, like openEffect below, so it always closes over
@@ -978,7 +986,17 @@ const usePopoverProps = (props) => {
     mount,
     anchor,
   });
-  const children = contentMounted ? childrenProp : null;
+  const [nameProps, registerTitle] = usePopupName({
+    ariaLabel: rest["aria-label"],
+    ariaLabelledBy: rest["aria-labelledby"],
+    openerAriaLabel,
+    openerAriaLabelledBy,
+  });
+  const children = contentMounted ? (
+    <PopupTitleContext.Provider value={registerTitle}>
+      {childrenProp}
+    </PopupTitleContext.Provider>
+  ) : null;
   const isTopLayer = layer === "top";
   const ref = props.ref;
   const backdropRef = useRef();
@@ -1871,6 +1889,15 @@ const usePopoverProps = (props) => {
     "navi-hidden": openController.openedInDom ? undefined : "",
     "styleCSSVars": POPUP_STYLE_CSS_VARS,
     ...rest,
+    ...nameProps,
+    // A <div> has no role, and a name on an element without one is read by
+    // nobody: a popover something names is a dialog, unless told what else.
+    "role":
+      rest.role ??
+      (nameProps["aria-labelledby"] === undefined &&
+      nameProps["aria-label"] === undefined
+        ? undefined
+        : "dialog"),
     ...autoFocusProps,
     ref,
     // Not a control, but still something the rest of navi has to be able to
@@ -1998,3 +2025,4 @@ const resolvePositionAreaAndAnimationKind = ({
 };
 
 Popover.Close = PopupClose;
+Popover.Title = PopupTitle;

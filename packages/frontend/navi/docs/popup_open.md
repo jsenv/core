@@ -285,10 +285,13 @@ far from every press that opens it, it has to be told what it is about and has
 to answer somebody. The content can still be one component used in every picker:
 "the prompt exists once" is a question about components, not about the DOM.
 
-An `aria-labelledby` on a `Picker` names its trigger, not its popup. A dialog
-that said `aria-labelledby={TITLE_ID}` says `popupAriaLabelledBy={TITLE_ID}`
-once it is a picker's popup (and `popupAriaDescribedBy` for its description);
-left unnamed, a dialog takes the trigger's name.
+An `aria-labelledby` on a `Picker` names its trigger, not its popup. The
+popup is named by its title written as `<Popup.Title>` (also `Dialog.Title`,
+`Popover.Title`), whichever mode it opens in; a dialog that pointed at its
+title with `aria-labelledby={TITLE_ID}` drops the id. Without a title it takes
+the trigger's name — "Report this book" for the sheet that press opens.
+`popupAriaLabelledBy`/`popupAriaDescribedBy` are there for a name or a
+description the content holds elsewhere.
 
 What each row costs depends on what reads the picker's value before anything
 opens. A picker told no value — no `value`, `defaultValue` or `signal` — holds

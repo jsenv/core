@@ -31,6 +31,7 @@ import {
   usePopupContentMount,
 } from "@jsenv/navi/src/layout/popup_content_mount.js";
 import { Popup } from "@jsenv/navi/src/layout/popup.jsx";
+import { PopupTitleContext } from "@jsenv/navi/src/layout/popup_title.jsx";
 import {
   renderResolver,
   useNextResolver,
@@ -123,7 +124,7 @@ const css = /* css */ `
     }
   }
 
-  .navi_picker[aria-haspopup="listbox"][aria-expanded="true"][navi-popover-mode="overlay"] {
+  .navi_picker[navi-popover-mode="overlay"][aria-expanded="true"] {
     /* When sizes uses float AND the border uses border-radius it's possible it's possible to see some pixels
     of the underlying select borders. We hide them to ensure this cannot happen.  */
     border-color: transparent;
@@ -1055,6 +1056,24 @@ const isPressDisputedByHold = (pickerEl) =>
 export const getPickerInput = (pickerEl) => {
   return pickerEl.querySelector(".navi_picker_input");
 };
+
+// The <label>s naming a picker's trigger, by id. Read off the document: it is
+// the one place a label[for] and its control meet (navi's own Label carries an
+// id for this). A label wrapping the picker is left out — it holds the trigger
+// and the popup with it, and the popup would be named after its own content.
+const getTriggerLabelIds = (pickerEl) => {
+  const labels = pickerEl && getPickerInput(pickerEl)?.labels;
+  if (!labels) {
+    return undefined;
+  }
+  const ids = [];
+  for (const label of labels) {
+    if (label.id && !label.contains(pickerEl)) {
+      ids.push(label.id);
+    }
+  }
+  return ids.length === 0 ? undefined : ids.join(" ");
+};
 const getPickerInputUIState = (pickerEl) => {
   const pickerInput = getPickerInput(pickerEl);
   return getUIStateFromElement(pickerInput);
@@ -1144,26 +1163,27 @@ const PickerContentInsidePopup = (props) => {
   } = props;
   const isPopover = mode === "popover";
   const isCallout = mode === "callout";
-  // A dialog nobody named is announced as "dialog" and nothing else. Left
-  // unsaid, it takes the trigger's name: "Report this book" is a fair name for
-  // the sheet it opens. A popover is left alone, it has no role to carry one.
-  let popupLabel = popupAriaLabel;
-  let popupLabelledBy = popupAriaLabelledBy;
-  if (
-    mode === "dialog" &&
-    popupLabel === undefined &&
-    popupLabelledBy === undefined
-  ) {
-    popupLabelledBy =
-      rest["aria-labelledby"] ?? getPickerHostLabelId(props.id, props);
-    if (popupLabelledBy === undefined) {
-      popupLabel = rest["aria-label"];
+  // The trigger's name, in the order the browser reads it, for the popup to
+  // take when neither the caller nor a <Popup.Title> names it: "Report this
+  // book" is a fair name for the sheet it opens, "Start date" for a calendar.
+  let openerAriaLabelledBy =
+    rest["aria-labelledby"] ?? getPickerHostLabelId(props.id, props);
+  let openerAriaLabel;
+  if (openerAriaLabelledBy === undefined) {
+    openerAriaLabel = rest["aria-label"];
+    // Read only while open: the labels are a question for the document, and
+    // a closed popup has nobody to announce it.
+    if (openerAriaLabel === undefined && rest["aria-expanded"]) {
+      openerAriaLabelledBy = getTriggerLabelIds(props.ref.current);
     }
   }
 
   return (
     <Next
-      aria-haspopup={isPopover ? "listbox" : "dialog"}
+      // A dialog in either mode: what a picker opens is content of the
+      // caller's, never a listbox (a selectable List is a group of radios or
+      // checkboxes). The popover says so with its role, below.
+      aria-haspopup="dialog"
       navi-popover-mode={isPopover ? popoverMode : undefined}
       {...rest}
       // On popupProps already (see the picker's popup assembly); they mean
@@ -1209,16 +1229,25 @@ const PickerContentInsidePopup = (props) => {
           pressOutside={pressOutside}
         >
           <PopupModeContext.Provider value={mode}>
-            {children}
+            {/* A callout is read as its message: a title in there names
+                nothing, and certainly not a popup around the picker. */}
+            <PopupTitleContext.Provider value={null}>
+              {children}
+            </PopupTitleContext.Provider>
           </PopupModeContext.Provider>
         </PickerCalloutPopup>
       ) : (
         <Popup
           {...popupProps}
           data-testid={popupTestId}
-          aria-label={popupLabel}
-          aria-labelledby={popupLabelledBy}
+          // What the trigger's aria-haspopup announces; a <dialog> says it
+          // for itself.
+          role={isPopover ? "dialog" : undefined}
+          aria-label={popupAriaLabel}
+          aria-labelledby={popupAriaLabelledBy}
           aria-describedby={popupAriaDescribedBy}
+          openerAriaLabel={openerAriaLabel}
+          openerAriaLabelledBy={openerAriaLabelledBy}
           // What the CSS above keys on: this picker's own popup, and no other
           // popup below the picker.
           data-picker-popup=""

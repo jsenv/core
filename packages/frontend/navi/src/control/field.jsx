@@ -181,6 +181,10 @@ export const Label = (props) => {
     requiredIndicator,
   } = props;
   const controlId = useContext(ControlIdContext);
+  // What a popup opened from the control is named by (see getTriggerLabelIds
+  // in picker_custom.jsx): aria-labelledby can only point at an id.
+  const idDefault = useId();
+  props.id = props.id || `label_${idDefault}`;
   const [disabled, setDisabled] = useState(false);
   const [readOnly, setReadOnly] = useState(false);
   const [required, setRequired] = useState(false);

@@ -151,6 +151,7 @@ import {
   warnPopupHasNoElementToOpen,
 } from "./popup_shared.js";
 import { PopupClose } from "./popup_close.jsx";
+import { PopupTitle, PopupTitleContext, usePopupName } from "./popup_title.jsx";
 import {
   closePopupGroupsInside,
   PopupGroupContext,
@@ -1235,6 +1236,10 @@ const css = /* css */ `
  *   under `"while-opened"`, only a press on what opens the popup does (a
  *   `--navi-open` button, a picker's trigger), never with an `onOpen`, and a
  *   press that does not open the popup throws it away.
+ * @param {string} [props.openerAriaLabelledBy] - The id(s) naming what opened
+ *   the dialog: its accessible name when neither `aria-label`/`aria-labelledby`
+ *   nor a `<Dialog.Title>` names it. A Picker passes its trigger's.
+ * @param {string} [props.openerAriaLabel] - The same, as a string.
  * @param {import("preact").ComponentChildren} props.children
  */
 export const Dialog = (props) => {
@@ -1622,6 +1627,9 @@ const useDialogProps = (props) => {
     onOpen,
     children: childrenProp,
     mount,
+    // Read by usePopupName below, never written on the element.
+    openerAriaLabel,
+    openerAriaLabelledBy,
     ...rest
   } = props;
   // Assigned on every render, like openEffect below, so it always closes over
@@ -1632,7 +1640,17 @@ const useDialogProps = (props) => {
     mount,
     anchor,
   });
-  const children = contentMounted ? childrenProp : null;
+  const [nameProps, registerTitle] = usePopupName({
+    ariaLabel: rest["aria-label"],
+    ariaLabelledBy: rest["aria-labelledby"],
+    openerAriaLabel,
+    openerAriaLabelledBy,
+  });
+  const children = contentMounted ? (
+    <PopupTitleContext.Provider value={registerTitle}>
+      {childrenProp}
+    </PopupTitleContext.Provider>
+  ) : null;
   // Where it is placed, and whether there is a wall — the two questions that
   // pick the show call (see this file's top comment).
   const isTopLayer = layer === "top";
@@ -2550,6 +2568,7 @@ const useDialogProps = (props) => {
     "backdropFilter": backdrop ? backdropFilter : undefined,
     "styleCSSVars": DIALOG_STYLE_CSS_VARS,
     ...rest,
+    ...nameProps,
     ...autoFocusProps,
     "as": "dialog",
     ref,
@@ -2776,3 +2795,4 @@ const DIALOG_STYLE_CSS_VARS = {
 };
 
 Dialog.Close = PopupClose;
+Dialog.Title = PopupTitle;

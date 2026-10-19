@@ -26,6 +26,7 @@ import { Dialog } from "./dialog.jsx";
 import { Popover } from "./popover.jsx";
 import { PopupModeContext, useResolvedPopupMode } from "./popup_mode.jsx";
 import { PopupClose } from "./popup_close.jsx";
+import { PopupTitle } from "./popup_title.jsx";
 
 const css = /* css */ `
   @layer navi {
@@ -289,6 +290,7 @@ export const Popup = (props) => {
 };
 
 Popup.Close = PopupClose;
+Popup.Title = PopupTitle;
 
 // What Dialog's own animation values mean to a popover, which has no lift
 // (see the `animation` doc above).

@@ -1094,8 +1094,9 @@ const PickerButton = (props) => {
         icon={undefined}
         // The caller's own role goes onto the host, beside the name (see
         // control_context.js): a role and a name on two different elements
-        // name nothing at all.
+        // name nothing at all. What the trigger opens is said there too.
         role={undefined}
+        aria-haspopup={undefined}
         rightSlotIcon={undefined}
         rightSlotIconSize={undefined}
         rightSlot={undefined}
@@ -1139,6 +1140,7 @@ const PickerButton = (props) => {
             )}
             <PickerInput
               role={hostRole}
+              aria-haspopup={props["aria-haspopup"]}
               aria-labelledby={hostLabelId}
               tabIndex={variant === "headless" ? -1 : undefined}
               aria-hidden={variant === "headless" ? "true" : undefined}
@@ -2230,13 +2232,15 @@ const PickerFirstResolver = (props) => {
  *   not only what it holds, which a testid inside the children already names.
  *   Under `mode="callout"` it names the callout element — the control's own,
  *   shared with its constraint messages — while the children are shown in it.
- * @param {string} [popupAriaLabelledBy] The id(s) of what names the popup,
- *   usually the title the children draw: `aria-labelledby` on the popup
- *   element. `aria-label`/`aria-labelledby` on the picker itself name the
- *   trigger. Left out, together with `popupAriaLabel`, a dialog takes the
- *   trigger's own name — the picker's `aria-labelledby`, its `aria-label`, or
- *   the label a picker that picks nothing draws. A popover has no role to
- *   carry a name, and a `mode="callout"` popup is read as its message.
+ * @param {string} [popupAriaLabelledBy] The id(s) of what names the popup:
+ *   `aria-labelledby` on the popup element, which is a dialog in either mode
+ *   (the trigger says `aria-haspopup="dialog"`). `aria-label`/`aria-labelledby`
+ *   on the picker itself name the trigger. Rarely needed: a `<Popup.Title>`
+ *   in the children names the popup with nothing to wire, and without one
+ *   the popup takes the trigger's own name — the picker's `aria-labelledby`,
+ *   the label a picker that picks nothing draws, its `aria-label`, or the
+ *   `<Label>`/`<label for>` pointing at it (one that has an id, and does not
+ *   wrap the picker). A `mode="callout"` popup is read as its message.
  * @param {string} [popupAriaLabel] The same, as a string, for a popup whose
  *   title is not an element.
  * @param {string} [popupAriaDescribedBy] The id(s) of what describes the
