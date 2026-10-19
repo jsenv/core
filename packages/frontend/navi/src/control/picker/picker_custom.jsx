@@ -55,7 +55,7 @@ import {
   ParentUIStateControllerContext,
   readStatesAtOpen,
 } from "../ui_state_controller.js";
-import { pickerUIIsNaviOwn } from "./picker_context.jsx";
+import { getPickerHostLabelId, pickerUIIsNaviOwn } from "./picker_context.jsx";
 
 const css = /* css */ `
   /* Popover and Dialog size, pad and scroll themselves. What is written here
@@ -1078,6 +1078,11 @@ const PickerContentInsidePopup = (props) => {
     // Same reason: a `data-testid` on the picker names the trigger (see
     // docs/testid.md) — this one names the popup.
     popupTestId,
+    // Same again for the accessible name: aria-label/aria-labelledby on the
+    // picker name the trigger (see control_context.js), these the popup.
+    popupAriaLabel,
+    popupAriaLabelledBy,
+    popupAriaDescribedBy,
     positionArea,
     popoverMode = "nearby",
     popoverSpacing = popoverMode === "nearby" ? 5 : 0,
@@ -1139,6 +1144,22 @@ const PickerContentInsidePopup = (props) => {
   } = props;
   const isPopover = mode === "popover";
   const isCallout = mode === "callout";
+  // A dialog nobody named is announced as "dialog" and nothing else. Left
+  // unsaid, it takes the trigger's name: "Report this book" is a fair name for
+  // the sheet it opens. A popover is left alone, it has no role to carry one.
+  let popupLabel = popupAriaLabel;
+  let popupLabelledBy = popupAriaLabelledBy;
+  if (
+    mode === "dialog" &&
+    popupLabel === undefined &&
+    popupLabelledBy === undefined
+  ) {
+    popupLabelledBy =
+      rest["aria-labelledby"] ?? getPickerHostLabelId(props.id, props);
+    if (popupLabelledBy === undefined) {
+      popupLabel = rest["aria-label"];
+    }
+  }
 
   return (
     <Next
@@ -1195,6 +1216,9 @@ const PickerContentInsidePopup = (props) => {
         <Popup
           {...popupProps}
           data-testid={popupTestId}
+          aria-label={popupLabel}
+          aria-labelledby={popupLabelledBy}
+          aria-describedby={popupAriaDescribedBy}
           // What the CSS above keys on: this picker's own popup, and no other
           // popup below the picker.
           data-picker-popup=""

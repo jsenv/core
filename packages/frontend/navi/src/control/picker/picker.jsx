@@ -39,6 +39,8 @@ import {
 import { sendClosedPickerChange } from "./picker_closed_change.js";
 import { PickerConfirmResolver } from "./picker_confirm.jsx";
 import {
+  getPickerHostLabelId,
+  getPickerHostRole,
   PickerContext,
   pickerUIIsNaviOwn,
   usePickerContext,
@@ -922,11 +924,6 @@ const PickerButton = (props) => {
     // confirm resolver (see picker_confirm.jsx), which is the picker that is
     // one — a caller whose popup is a menu of actions says it for themselves.
     picksNothing,
-    // Where the caller's own role goes: onto the host, beside the name (see
-    // control_context.js) — a role and a name on two different elements name
-    // nothing at all. Left unsaid, a picker that picks nothing takes "button"
-    // (see PickerInput below).
-    role,
     readOnly,
     error,
     // Who draws the loading outline. Left unsaid, the picker does, around its
@@ -1026,28 +1023,8 @@ const PickerButton = (props) => {
   const interactive =
     !basePseudoState[":disabled"] && !basePseudoState[":read-only"] && !loading;
   usePickerErrorCallout(uiStateController, error);
-  // What the picker really is, said on the element that holds the name and
-  // takes the focus (the host input below): a picker that picks nothing is a
-  // door — its popup is a question (type="confirm") or something to read
-  // (mode="callout", which says it for itself) — and a door is pressed. So it
-  // answers to "button" rather than to the "textbox" its <input> would
-  // otherwise be, which is both what a screen reader announces and what
-  // getByRole("button", { name }) finds. A picker holding a value stays a
-  // textbox: it does hold text.
-  const hostRole = role ?? (picksNothing ? "button" : undefined);
-  // And what that button is called, when the caller wrote it as a drawing
-  // rather than as a word: a door draws no value, so what sits in its value
-  // slot IS its label — the `ui` a caller gave it, or its placeholder. Skipped
-  // the moment the caller names it themselves (aria-label/aria-labelledby),
-  // which is the only way to name a door drawn as an icon.
-  const hostLabelId =
-    hostRole === "button" &&
-    inputProps["aria-label"] === undefined &&
-    inputProps["aria-labelledby"] === undefined &&
-    variant !== "headless" &&
-    ui !== "default"
-      ? `${inputProps.id}_picker_label`
-      : undefined;
+  const hostRole = getPickerHostRole(props);
+  const hostLabelId = getPickerHostLabelId(inputProps.id, props);
   // What the picker knows about itself, for the pieces it does not place: the
   // drawings of its value (Picker.UI.*), and the affordances a caller may put
   // in their own `ui` (Picker.Clear) as much as the ones it puts in its slot.
@@ -1115,6 +1092,9 @@ const PickerButton = (props) => {
         styleCSSVars={PickerStyleCSSVars}
         variant={undefined}
         icon={undefined}
+        // The caller's own role goes onto the host, beside the name (see
+        // control_context.js): a role and a name on two different elements
+        // name nothing at all.
         role={undefined}
         rightSlotIcon={undefined}
         rightSlotIconSize={undefined}
@@ -1788,6 +1768,9 @@ const PickerFirstResolver = (props) => {
  *   standalone?: boolean,
  *   popupLayer?: "top" | "local",
  *   popupTestId?: string,
+ *   popupAriaLabel?: string,
+ *   popupAriaLabelledBy?: string,
+ *   popupAriaDescribedBy?: string,
  *   confirmTestId?: string,
  *   cancelTestId?: string,
  *   mount?: "always" | "idle" | "from-first-open" | "while-opened",
@@ -2247,6 +2230,17 @@ const PickerFirstResolver = (props) => {
  *   not only what it holds, which a testid inside the children already names.
  *   Under `mode="callout"` it names the callout element — the control's own,
  *   shared with its constraint messages — while the children are shown in it.
+ * @param {string} [popupAriaLabelledBy] The id(s) of what names the popup,
+ *   usually the title the children draw: `aria-labelledby` on the popup
+ *   element. `aria-label`/`aria-labelledby` on the picker itself name the
+ *   trigger. Left out, together with `popupAriaLabel`, a dialog takes the
+ *   trigger's own name — the picker's `aria-labelledby`, its `aria-label`, or
+ *   the label a picker that picks nothing draws. A popover has no role to
+ *   carry a name, and a `mode="callout"` popup is read as its message.
+ * @param {string} [popupAriaLabel] The same, as a string, for a popup whose
+ *   title is not an element.
+ * @param {string} [popupAriaDescribedBy] The id(s) of what describes the
+ *   popup: `aria-describedby` on the popup element.
  * @param {string} [confirmTestId] `type="confirm"`, default body: the
  *   `data-testid` of the yes button; `cancelTestId` that of the no button.
  *   Both are elements navi builds, which a test may not name by class (see
