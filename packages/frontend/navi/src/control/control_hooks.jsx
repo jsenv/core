@@ -1472,8 +1472,8 @@ export const useControlgroupProps = (
   );
   // Mirror single-input behaviour: a controlled value with nobody listening
   // makes the group read-only so children don't appear interactive when they
-  // can't change. A form or a group around it IS someone listening — that is
-  // what will send the value and hand a new one back.
+  // can't change. A form or a group collecting it IS someone listening — that
+  // is what will send the value and hand a new one back.
   const listenedTo = useIsControlListenedTo(props, uiGroupStateController);
   const implicitReadOnlyWarnedRef = useRef(false);
   const implicitReadOnly = uiGroupStateController.hasValueProp && !listenedTo;

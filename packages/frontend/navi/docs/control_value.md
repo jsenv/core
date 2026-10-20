@@ -33,8 +33,9 @@ somewhere else in the app.
 | `value` (or `checked`) | you                 | nothing moves until you hand a new one down                                           |
 
 A control given `value` and nothing to listen to it (`uiAction`, `action`, a
-`signal`, a surrounding form) is read-only, and says so in dev: it is showing
-something nobody can change.
+`signal`, a `command`, a form or group collecting it) is read-only, and says so
+in dev: it is showing something nobody can change. A `<Details>` around it
+collects nothing, and a `standalone` control is collected by nobody.
 
 ## A bound signal works in both directions
 

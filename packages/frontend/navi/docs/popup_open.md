@@ -299,15 +299,16 @@ What each row costs depends on what reads the picker's value before anything
 opens. A picker told no value — no `value`, `defaultValue` or `signal` — holds
 what the control in its popup holds, so that popup is built, closed, as soon as
 something reads the value: the trigger navi draws (no `ui`, a `Picker.UI.*`, a
-component `ui` handed `value`), the clear cross, a form or group collecting it,
-an element `ui` calling `usePickerState()`. A hundred such rows is then a
-hundred closed popups. One heavy enough to matter can say
-`mount="from-first-open"`, and the picker then knows nothing of what that
-control holds until the first opening: its trigger cannot draw it, and nothing
-reading the picker sees it. A picker read by nothing before it opens — its
-trigger a drawing of the caller's that does not ask for the value, no name, no
-cross — builds on the first open, like a picker told a value, a
-`type="confirm"` and a `mode="callout"`.
+component `ui` handed `value`), the clear cross, a form or group collecting it
+(a `<Details>` around it collects nothing), an element `ui` calling
+`usePickerState()`. A hundred such rows is then a hundred closed popups. One
+heavy enough to matter can say `mount="from-first-open"`, and the picker then
+knows nothing of what that control holds until the first opening: its trigger
+cannot draw it, and nothing reading the picker sees it. A picker read by nothing
+before it opens — its trigger a drawing of the caller's that does not ask for
+the value, no name, no cross — builds on the first open, like a picker told a
+value, one that picks nothing (`picksNothing`, `type="confirm"`) and a
+`mode="callout"`.
 
 ### Composing a value, or doing work
 
