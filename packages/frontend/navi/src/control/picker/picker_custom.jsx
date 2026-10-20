@@ -354,8 +354,14 @@ const PickerCustom = (props) => {
   // controls are never adopted (see canRegisterAsFacadeChild).
   const valueInPopup =
     !props.picksNothing && !isControlValueGivenByProps(props);
+  // Asked of the chain, not read off the context: a control above may only
+  // pass registration along (a <Details> holds none of the values it folds),
+  // and a group may hand a picker further up or drop it. "picker" is what the
+  // picker's own controller registers as (see picker.jsx).
   const parentController = useContext(ParentUIStateControllerContext);
-  const answersToGroup = Boolean(parentController) && !props.standalone;
+  const answersToGroup =
+    !props.standalone &&
+    Boolean(parentController?.collectsChild({ controlType: "picker", props }));
   // Same narrow-container/maxWidth-compact heuristic Popup itself uses (see
   // popup_mode.jsx's own useResolvedPopupMode) — frozen for the lifetime of an opening
   // (computed when closed, stable while open, so a screen resize mid-session

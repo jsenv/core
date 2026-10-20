@@ -72,6 +72,7 @@ const useRenderScope = (init, update) => {
  *   registerChild(child): void;   // Called on child mount
  *   onChildUIAction(child, e, { stateChanged: boolean }): void; // Called when a child fires a UI action
  *   unregisterChild(child): void; // Called on child unmount
+ *   collectsChild(child): boolean; // Whether registerChild(child) would put it in a value, here or above
  *   props: Object;
  *   ref: Ref; // Used to dispatch DOM events
  *   getManagedControls(): UIStateController[]; // Returns controls whose validity is managed by this controller
@@ -797,6 +798,10 @@ export const useUIStateController = (
         unregisterChild: (childUIStateController) => {
           s.parentUIStateController?.unregisterChild(childUIStateController);
         },
+        collectsChild: (childUIStateController) =>
+          Boolean(
+            s.parentUIStateController?.collectsChild(childUIStateController),
+          ),
         onChildUIAction: (childUIStateController, e, options) => {
           s.parentUIStateController?.onChildUIAction(
             childUIStateController,
@@ -1183,10 +1188,13 @@ const readNamedChildUIStates = (children, { warnNameless }) => {
 // Looked up in useUIGroupStateController to fill in omitted aggregateChildStates /
 // distributeChildUIState. If neither a default nor an explicit impl is found for a
 // group, creation throws so the caller knows it must supply them.
+// The radio/checkbox filters read `props.type`, which controlHostProps copies:
+// a child is also asked about while rendering, before its first render has
+// built controlHostProps (see collectsChild).
 const GROUP_DEFAULTS = {
   radio_group: {
     childControlFilter: (child) =>
-      child.controlType === "input" && child.controlHostProps?.type === "radio",
+      child.controlType === "input" && child.props?.type === "radio",
     aggregateChildStates: keptOrFirstDefinedChildUIState,
     distributeChildUIState: (newUIState, childUIStateController) => {
       const childSelected = childUIStateController.props.value === newUIState;
@@ -1198,8 +1206,7 @@ const GROUP_DEFAULTS = {
   },
   checkbox_group: {
     childControlFilter: (child) =>
-      child.controlType === "input" &&
-      child.controlHostProps?.type === "checkbox",
+      child.controlType === "input" && child.props?.type === "checkbox",
     aggregateChildStates: keptAndCheckedChildUIStates,
     distributeChildUIState: (newUIState, childUIStateController) => {
       const childSelected =
@@ -1744,6 +1751,9 @@ export const useUIGroupStateController = (
 
       const controller = {
         controlType,
+        // Published from the first render, like a leaf's: a group asks its
+        // parent whether anyone listens before its first update.
+        parentUIStateController,
         id,
         name,
         value,
@@ -1966,6 +1976,18 @@ export const useUIGroupStateController = (
           onChange(new CustomEvent(`${childControlType}_mount`), {
             notifyExternal: "silent",
           });
+        },
+        // registerChild above, asked ahead: monitored here, handed up, or
+        // captured and dropped.
+        collectsChild: (childUIStateController) => {
+          if (isMonitoringChild(childUIStateController)) {
+            return true;
+          }
+          const currentParent = s.parentUIStateController;
+          if (allowCapture || !currentParent) {
+            return false;
+          }
+          return currentParent.collectsChild(childUIStateController);
         },
         onChildUIAction: (
           childUIStateController,
@@ -2444,6 +2466,9 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
             s.realUIStateController.facadeChild = null;
           }
         },
+        // A refused child is not handed further up: the popup's controls
+        // answer to the picker or to nobody.
+        collectsChild: (child) => canRegisterAsFacadeChild(child),
         getManagedControls: () => {
           const child = firstChildControllerRef.current;
           if (!child) {

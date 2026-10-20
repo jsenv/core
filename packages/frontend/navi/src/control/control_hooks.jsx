@@ -268,8 +268,6 @@ export const useControlProps = (
   };
 
   const controlInfo = createControlInfo(props, { controlType });
-  const readOnlyUncontrolled = useReadOnlyUncontrolled(props, controlInfo);
-  controlInfo.readOnlyUncontrolled = readOnlyUncontrolled;
   const uiStateController = useUIStateController(props, {
     controlInfo,
     syncDomState,
@@ -277,6 +275,13 @@ export const useControlProps = (
     persists,
     uiActionInternal,
   });
+  // After the controller: whether a group listens is asked of the parent it
+  // registers into. Read by useInteractiveProps below.
+  controlInfo.readOnlyUncontrolled = useReadOnlyUncontrolled(
+    props,
+    controlInfo,
+    uiStateController,
+  );
   // What the control draws is what it holds by itself, and this read is what
   // re-renders it when that changes. A button inheriting the value of the
   // control around it (a submit in a form, see ownUIStateSignal) draws none of
@@ -1378,22 +1383,25 @@ const INPUT_TYPE_SUPPORTING_READONLY_SET = new Set([
 // warning below so a group can ask the same question a single control does: a
 // control with a `value` and nobody listening cannot be changed by hand, and
 // that is true whatever the control is.
-const useIsControlListenedTo = (props) => {
+// The group is asked, not assumed from a controller being above: a control in
+// between may only pass registration along (a <Details> holds none of the
+// values it folds), and a group may hand the control further up or drop it.
+const useIsControlListenedTo = (props, uiStateController) => {
   const isProxy = Boolean(props["navi-control-proxy-for"]);
   const formContext = useContext(FormContext);
-  const parentUIStateController = useContext(ParentUIStateControllerContext);
+  const { parentUIStateController } = uiStateController;
   return Boolean(
     props.signal || // a bound signal is written back on uiAction → interactive
     props.uiAction ||
     props.action ||
     formContext ||
-    parentUIStateController ||
+    parentUIStateController?.collectsChild(uiStateController) ||
     isProxy ||
     props.command,
   );
 };
-const useReadOnlyUncontrolled = (props, controlInfo) => {
-  const listenedTo = useIsControlListenedTo(props);
+const useReadOnlyUncontrolled = (props, controlInfo, uiStateController) => {
+  const listenedTo = useIsControlListenedTo(props, uiStateController);
   const warnedRef = useRef(false);
   if (!controlInfo.hasStateProp) {
     return false;
@@ -1466,7 +1474,7 @@ export const useControlgroupProps = (
   // makes the group read-only so children don't appear interactive when they
   // can't change. A form or a group around it IS someone listening — that is
   // what will send the value and hand a new one back.
-  const listenedTo = useIsControlListenedTo(props);
+  const listenedTo = useIsControlListenedTo(props, uiGroupStateController);
   const implicitReadOnlyWarnedRef = useRef(false);
   const implicitReadOnly = uiGroupStateController.hasValueProp && !listenedTo;
   if (implicitReadOnly && !props.readOnly) {
